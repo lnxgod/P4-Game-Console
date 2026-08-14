@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T16:20:49-0700",
+  "result": "safe-prewrite-refusal-live-predecessor-prefix-proven",
+  "device_binding": {
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "serial_path": "/dev/cu.wchusbserial10",
+    "serial_role": "J1 CH340K"
+  },
+  "attempt": {
+    "source_commit": "23e1f5e2b2b8bf53e36d311864e1b63736f4dcdc",
+    "authorization_sha256": "6aaf8ff2b947758a5dbf9c69896aacf9590bab8747db74b8b665a8df763059a2",
+    "full_live_flash_read_completed": true,
+    "full_live_flash_persisted_by_attempt": false,
+    "refusal_reason": "live factory bootloader differed from the build-only bootloader that the route did not write",
+    "ledger_phase": "reserved",
+    "ledger_restore_required": false,
+    "install_write_attempt_count": 0,
+    "restore_attempt_count": 0,
+    "application_launch_count": 0,
+    "flash_bytes_written": 0
+  },
+  "read_only_live_prefix_capture": {
+    "path": "hardware/local-state/console-os-usb-storage-live-prefix-20260814/live-prefix.bin",
+    "git_ignored": true,
+    "mode": "0600",
+    "bytes": 65536,
+    "sha256": "e5d433d688c85b7f57999e2f5b30e0413dc340094ab8ace649d03bd135849798",
+    "preserved_prefix_bytes": 32768,
+    "preserved_prefix_sha256": "8df69412cbb2e018a5813b4bb1a121ccc5286039f95163fa6fa062eb85dd5537",
+    "boot_region_bytes": 24576,
+    "boot_region_sha256": "4b6d12198905ebaf223446483acfecced0b705a3aee9400abef4b908e3918301",
+    "boot_payload_bytes": 22912,
+    "boot_payload_sha256": "c54924e0f486311e2f647a54051ca46dcac83bff0a911db00757660ac2cf9280",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+    "nvs_phy_range_bytes": 28672,
+    "nvs_phy_range_sha256": "116f19a1e28be83e49146208aacae703a542bb9664efacaa04a19a12a8006ee9",
+    "after_action": "hard-reset-via-RTS"
+  },
+  "preserved_image_comparison": {
+    "factory_backup_sha256": "3e3f5f687f59938963d9040d6c8e9dc1a687baa512790680830422c22bd6ab3c",
+    "pre_e6_live_backup_sha256": "c567d0a4d960156b59216e4c424d78856e7b8dbe52e05810d47a69a3e58f4217",
+    "first_65536_bytes_match_both": true,
+    "preserved_prefix_matches_both": true,
+    "predecessor_partition_table_matches_both": true
+  },
+  "corrective_contract": {
+    "validate_preserved_live_prefix_instead_of_unwritten_build_bootloader": true,
+    "seal_full_live_flash_before_compatibility_checks": true,
+    "continue_to_preserve_0x0000_through_0x7fff": true,
+    "continue_to_preserve_0x9000_through_0xffff": true,
+    "write_authorization_issued": false
+  },
+  "claims_not_made": [
+    "No firmware or partition-table bytes were written by this attempt.",
+    "The USB-storage firmware was not launched or accepted by this attempt.",
+    "The read-only prefix capture is not a replacement for the required complete live-flash preimage before a write."
+  ]
+}

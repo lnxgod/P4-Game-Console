@@ -50,7 +50,7 @@
   },
   "installer": {
     "path": "scripts/console-os-usb-install.py",
-    "sha256": "e6e4388555e085e608e86784a868c7e798c786282db9324af0dbff799be9220a"
+    "sha256": "f911c52b63460ec1c972265a35662e7d900dc3eee54e8b452e0cac95ef125b70"
   },
   "transport": {
     "path": "scripts/doom-e6-install.py",
@@ -66,6 +66,7 @@
     "clean_esp32p4_build": "pass",
     "installer_success_transaction": "pass-simulated-16MiB",
     "installer_failure_automatic_restore": "pass-simulated-16MiB",
+    "unexpected_predecessor_prefix_prewrite_refusal": "pass-simulated-full-preimage-sealed-zero-write",
     "retained_uart_capture_analyzer": "pass",
     "git_diff_check": "pass",
     "broad_historical_make_check": "not-pass-known-stale-E5-gate-contradiction-after-new-tests-pass"
@@ -90,7 +91,7 @@
     "components/platform_game_storage/src/game_storage_model.h": "66d5b0123e24edad6e95e5c56a4691d06a78cba7e29fe01290dcca6587297c06",
     "components/platform_game_storage/src/platform_game_storage.c": "0c7344ed7c62f456e6595f6e0cad0b587ee1c369a893c855963ca4cd950f6255",
     "scripts/capture-console-os-usb-runtime.py": "9ae5feda450d9ce6e050ae575a7863cb8b1887c9106faf4a06c415f9839446a4",
-    "scripts/console-os-usb-install.py": "e6e4388555e085e608e86784a868c7e798c786282db9324af0dbff799be9220a",
+    "scripts/console-os-usb-install.py": "f911c52b63460ec1c972265a35662e7d900dc3eee54e8b452e0cac95ef125b70",
     "scripts/doom-e6-install.py": "f5d2255f37ca9373fdaf42ebe711968c31dc51b3dbbc2f7e501a235fbb546471",
     "scripts/normalize-game-storage-image.py": "c79d8a2ed49237e4a894027503f094c999282435351adc27110e49b1071df676",
     "scripts/verify-console-os.py": "a1e709d5d38f1104f499f46f80e6959a6020036b8b24f45766b318f405ab62a3",
@@ -99,7 +100,9 @@
     "hardware/evidence/elecrow-10.1-usb-device-storage-path.json": "0f704fe274454f42c848b2fda61504e34dd10f8fac2dc02fe328432d9aeea820"
   },
   "hardware_status": {
-    "exact_unit_authorization_pending_at_build_time": true,
+    "safe_read_only_preflight_attempted": true,
+    "live_predecessor_prefix_proven": true,
+    "first_install_attempt_refused_before_write": true,
     "flash_attempted": false,
     "bytes_written": 0,
     "j16_usb_enumeration": "not-run",

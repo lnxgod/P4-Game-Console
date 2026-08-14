@@ -69,7 +69,7 @@ def targets(directory: pathlib.Path) -> tuple[MODULE.TargetSegment, ...]:
     return tuple(result)
 
 
-def run_case(*, accept: bool) -> None:
+def run_case(*, accept: bool, prefix_match: bool = True) -> None:
     with tempfile.TemporaryDirectory(prefix="console-usb-install-test-") as temp:
         root = pathlib.Path(temp)
         recovery = root / "recovery"
@@ -87,7 +87,12 @@ def run_case(*, accept: bool) -> None:
         ])
         original = bytes(memory)
         old_predecessor_hash = MODULE.EXPECTED_PREDECESSOR_PARTITION_SHA256
+        old_prefix_hash = MODULE.EXPECTED_PREDECESSOR_PREFIX_SHA256
         MODULE.EXPECTED_PREDECESSOR_PARTITION_SHA256 = sha(predecessor)
+        MODULE.EXPECTED_PREDECESSOR_PREFIX_SHA256 = (
+            sha(bytes(memory[:MODULE.PARTITION_TABLE_OFFSET]))
+            if prefix_match else "0" * 64
+        )
 
         writes: list[str] = []
         resets: list[str] = []
@@ -138,11 +143,32 @@ def run_case(*, accept: bool) -> None:
                 b"startup", {"schema": 1, "result": "pass" if accept else "fail"}
             )
             runtime = FakeRuntime(resets)
+            if not prefix_match:
+                try:
+                    MODULE.install_same_handle(
+                        device=types.SimpleNamespace(), runtime=runtime,
+                        targets=selected, recovery_directory=recovery,
+                        factory_backup_binding={"sha256": "f" * 64},
+                        authorization_sha256="a" * 64,
+                        capture_seconds=30.0,
+                    )
+                except MODULE.InstallError as error:
+                    assert "unexpected preserved boot prefix" in str(error)
+                else:
+                    raise AssertionError("unexpected predecessor prefix was accepted")
+                assert writes == []
+                assert resets == []
+                preimage = recovery / MODULE.FULL_PREIMAGE_NAME
+                assert preimage.stat().st_size == MODULE.FLASH_BYTES
+                assert sha(preimage.read_bytes()) == sha(original)
+                ledger = json.loads((recovery / MODULE.LEDGER_NAME).read_text())
+                assert ledger["phase"] == "full-preimage-sealed"
+                assert ledger["restore_required"] is False
+                return
             if accept:
                 result = MODULE.install_same_handle(
                     device=types.SimpleNamespace(), runtime=runtime,
-                    bootloader=bootloader, targets=selected,
-                    recovery_directory=recovery,
+                    targets=selected, recovery_directory=recovery,
                     factory_backup_binding={"sha256": "f" * 64},
                     authorization_sha256="a" * 64,
                     capture_seconds=30.0,
@@ -161,8 +187,7 @@ def run_case(*, accept: bool) -> None:
                 try:
                     MODULE.install_same_handle(
                         device=types.SimpleNamespace(), runtime=runtime,
-                        bootloader=bootloader, targets=selected,
-                        recovery_directory=recovery,
+                        targets=selected, recovery_directory=recovery,
                         factory_backup_binding={"sha256": "f" * 64},
                         authorization_sha256="a" * 64,
                         capture_seconds=30.0,
@@ -195,6 +220,7 @@ def run_case(*, accept: bool) -> None:
             )
         finally:
             MODULE.EXPECTED_PREDECESSOR_PARTITION_SHA256 = old_predecessor_hash
+            MODULE.EXPECTED_PREDECESSOR_PREFIX_SHA256 = old_prefix_hash
             MODULE.TRANSPORT._load_stub = saved["load_stub"]
             MODULE.TRANSPORT._read_exact = saved["read_exact"]
             MODULE.TRANSPORT._write_span = saved["write_span"]
@@ -210,6 +236,7 @@ def run_case(*, accept: bool) -> None:
 def main() -> None:
     run_case(accept=True)
     run_case(accept=False)
+    run_case(accept=False, prefix_match=False)
     print("Console OS USB installer transaction tests passed")
 
 

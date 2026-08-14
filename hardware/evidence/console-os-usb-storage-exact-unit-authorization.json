@@ -11,6 +11,7 @@
     "flash_bytes": 16777216
   },
   "predecessor_partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+  "predecessor_prefix_sha256": "8df69412cbb2e018a5813b4bb1a121ccc5286039f95163fa6fa062eb85dd5537",
   "exact_artifacts": {
     "bootloader": {
       "path": "apps/console_os/build/bootloader/bootloader.bin",
@@ -48,7 +49,11 @@
   },
   "build_evidence": {
     "path": "test-runs/2026-08-14-console-os-usb-storage-build.json",
-    "sha256": "7154b5482446d61d33dd041e77e5ef3d6edccbfc379084a2c34df184099c9136"
+    "sha256": "2e62d96587c3f5cb0b735cf5113874c830c2d3891a20ced0b9b6f9d842fa7abd"
+  },
+  "predecessor_prefix_evidence": {
+    "path": "test-runs/2026-08-14-console-os-usb-storage-preflight.json",
+    "sha256": "5009ef1b2afccea964c0fb9c550f7b15ad6336826fc81d73662b4357955c2198"
   },
   "usb_device_evidence": {
     "path": "hardware/evidence/elecrow-10.1-usb-device-storage-path.json",
