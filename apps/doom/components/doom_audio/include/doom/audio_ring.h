@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include "doom/audio_mixer.h"
+#include "doom/music_synth.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,6 +21,10 @@ enum {
 typedef enum {
     DOOM_AUDIO_COMMAND_START = 1,
     DOOM_AUDIO_COMMAND_UPDATE = 2,
+    DOOM_AUDIO_COMMAND_MUSIC_PLAY = 3,
+    DOOM_AUDIO_COMMAND_MUSIC_STOP = 4,
+    DOOM_AUDIO_COMMAND_MUSIC_PAUSE = 5,
+    DOOM_AUDIO_COMMAND_MUSIC_RESUME = 6,
 } doom_audio_command_type_t;
 
 typedef struct {
@@ -29,6 +34,8 @@ typedef struct {
     uint8_t separation;
     uint32_t desired_state;
     const doom_audio_sample_t *sample;
+    doom_music_song_t *music_song;
+    bool music_looping;
 } doom_audio_command_t;
 
 /**

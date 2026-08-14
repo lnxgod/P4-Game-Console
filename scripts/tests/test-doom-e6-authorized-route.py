@@ -25,15 +25,21 @@ route = load_route()
 source = ROUTE_PATH.read_text(encoding="utf-8")
 installer_source = INSTALLER_PATH.read_text(encoding="utf-8")
 
-# The independently issued digest is intentionally absent. The wrapper refuses
-# before it loads or executes any installer/runtime byte.
-assert route.ISSUED_AUTH_SHA256 == "0" * 64
-try:
-    route._require_issued()
-except route.RouteError as error:
-    assert "has not been independently issued" in str(error)
+# Before issuance the wrapper refuses before it loads or executes any
+# installer/runtime byte. After issuance it accepts only the digest frozen in
+# this outer route; no caller can select a different authorization.
+issued = route.ISSUED_AUTH_SHA256
+assert len(issued) == 64 and issued == issued.lower()
+assert all(character in "0123456789abcdef" for character in issued)
+if issued == "0" * 64:
+    try:
+        route._require_issued()
+    except route.RouteError as error:
+        assert "has not been independently issued" in str(error)
+    else:
+        raise AssertionError("unissued E6 route passed")
 else:
-    raise AssertionError("unissued E6 route passed")
+    assert route._require_issued() == issued
 assert source.index("issued_digest = _require_issued()") < source.index(
     "installer = _load_frozen_installer()"
 )
@@ -43,7 +49,10 @@ assert "--authorization-sha256" not in source
 assert route.EXPECTED_INSTALLER_SHA256 == hashlib.sha256(
     INSTALLER_PATH.read_bytes()
 ).hexdigest()
-assert 'ISSUED_AUTH_SHA256 = "0" * 64' in source
+if issued == "0" * 64:
+    assert 'ISSUED_AUTH_SHA256 = "0" * 64' in source
+else:
+    assert f'ISSUED_AUTH_SHA256 = "{issued}"' in source
 
 # Direct installer execution is recovery-only; the generic caller cannot
 # choose its own authorization digest and reach mutation.

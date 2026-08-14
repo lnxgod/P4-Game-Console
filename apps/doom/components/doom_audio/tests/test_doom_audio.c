@@ -2,6 +2,7 @@
 
 #include "doom/audio_mixer.h"
 #include "doom/audio_ring.h"
+#include "doom/music_synth.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -41,6 +42,35 @@ static void write_u32_le(uint8_t *bytes, uint32_t value)
     bytes[1] = (uint8_t)(value >> 8U);
     bytes[2] = (uint8_t)(value >> 16U);
     bytes[3] = (uint8_t)(value >> 24U);
+}
+
+static void write_u16_le(uint8_t *bytes, uint16_t value)
+{
+    bytes[0] = (uint8_t)value;
+    bytes[1] = (uint8_t)(value >> 8U);
+}
+
+static void build_test_mus(uint8_t song[27])
+{
+    memset(song, 0, 27U);
+    memcpy(song, "MUS\x1a", 4U);
+    write_u16_le(&song[4], UINT16_C(11));
+    write_u16_le(&song[6], UINT16_C(16));
+    write_u16_le(&song[8], UINT16_C(1));
+
+    size_t cursor = 16U;
+    song[cursor++] = UINT8_C(0x40); /* Program change, same event group. */
+    song[cursor++] = UINT8_C(0x00);
+    song[cursor++] = UINT8_C(24);
+    song[cursor++] = UINT8_C(0x90); /* Note on, end group. */
+    song[cursor++] = UINT8_C(0xc5); /* Note 69 plus explicit velocity. */
+    song[cursor++] = UINT8_C(127);
+    song[cursor++] = UINT8_C(1);    /* One 140 Hz tick. */
+    song[cursor++] = UINT8_C(0x80); /* Note off, end group. */
+    song[cursor++] = UINT8_C(69);
+    song[cursor++] = UINT8_C(1);
+    song[cursor++] = UINT8_C(0x60); /* Score end. */
+    EXPECT_EQ(27, cursor);
 }
 
 static void test_dmx_parser(void)
@@ -156,6 +186,78 @@ static void test_mixer_update_saturation_and_bounds(void)
     EXPECT_FALSE(doom_audio_mixer_start(&mixer, 0U, &loud, 128U, 127U));
     EXPECT_FALSE(doom_audio_mixer_render(&mixer, NULL, 1U));
     EXPECT_FALSE(doom_audio_mixer_render(&mixer, frame, 0U));
+}
+
+static void test_mus_validation_synthesis_loop_and_bounds(void)
+{
+    uint8_t song_bytes[27];
+    build_test_mus(song_bytes);
+    EXPECT_TRUE(doom_music_validate_mus(song_bytes, sizeof(song_bytes)));
+    doom_music_song_t *song =
+        doom_music_song_create(song_bytes, sizeof(song_bytes));
+    EXPECT_TRUE(song != NULL);
+    EXPECT_EQ(27, doom_music_song_length(song));
+
+    doom_music_player_t player;
+    doom_music_player_init(&player);
+    EXPECT_TRUE(doom_music_player_start(&player, song, false));
+    doom_music_song_release(song);
+    int16_t output[512] = {0};
+    EXPECT_TRUE(doom_music_player_mix(&player, output, 256U));
+    int32_t peak = 0;
+    for (size_t index = 0U; index < 512U; ++index) {
+        const int32_t value = output[index];
+        const int32_t magnitude = value < 0 ? -value : value;
+        if (magnitude > peak) {
+            peak = magnitude;
+        }
+    }
+    EXPECT_TRUE(peak > 0);
+    EXPECT_FALSE(doom_music_player_is_playing(&player));
+    doom_music_stats_t stats = {0};
+    doom_music_player_get_stats(&player, &stats);
+    EXPECT_EQ(1, stats.songs_started);
+    EXPECT_EQ(1, stats.notes_started);
+    EXPECT_EQ(0, stats.parse_failures);
+    EXPECT_TRUE(stats.maximum_absolute_mix > 0U);
+
+    song = doom_music_song_create(song_bytes, sizeof(song_bytes));
+    EXPECT_TRUE(song != NULL);
+    EXPECT_TRUE(doom_music_player_start(&player, song, true));
+    doom_music_song_release(song);
+    doom_music_player_pause(&player);
+    memset(output, 0, sizeof(output));
+    EXPECT_TRUE(doom_music_player_mix(&player, output, 64U));
+    EXPECT_EQ(0, output[0]);
+    doom_music_player_resume(&player);
+    EXPECT_TRUE(doom_music_player_set_volume(&player, 0U));
+    EXPECT_TRUE(doom_music_player_mix(&player, output, 224U));
+    EXPECT_TRUE(doom_music_player_mix(&player, output, 224U));
+    EXPECT_TRUE(doom_music_player_is_playing(&player));
+    doom_music_player_get_stats(&player, &stats);
+    EXPECT_TRUE(stats.loops_completed >= 1U);
+    doom_music_player_stop(&player);
+    EXPECT_FALSE(doom_music_player_is_playing(&player));
+
+    uint8_t invalid[sizeof(song_bytes)];
+    memcpy(invalid, song_bytes, sizeof(invalid));
+    invalid[0] = 0U;
+    EXPECT_FALSE(doom_music_validate_mus(invalid, sizeof(invalid)));
+    memcpy(invalid, song_bytes, sizeof(invalid));
+    write_u16_le(&invalid[6], UINT16_C(28));
+    EXPECT_FALSE(doom_music_validate_mus(invalid, sizeof(invalid)));
+    memcpy(invalid, song_bytes, sizeof(invalid));
+    invalid[16] = UINT8_C(0x50); /* Undefined event type. */
+    EXPECT_FALSE(doom_music_validate_mus(invalid, sizeof(invalid)));
+    memcpy(invalid, song_bytes, sizeof(invalid));
+    invalid[26] = UINT8_C(0x00); /* No score-end marker. */
+    EXPECT_FALSE(doom_music_validate_mus(invalid, sizeof(invalid)));
+    EXPECT_FALSE(doom_music_validate_mus(NULL, sizeof(song_bytes)));
+    EXPECT_TRUE(doom_music_song_create(invalid, sizeof(invalid)) == NULL);
+    EXPECT_FALSE(doom_music_player_mix(NULL, output, 1U));
+    EXPECT_FALSE(doom_music_player_mix(&player, NULL, 1U));
+    EXPECT_FALSE(doom_music_player_mix(&player, output, 0U));
+    EXPECT_FALSE(doom_music_player_set_volume(&player, UINT8_C(128)));
 }
 
 static doom_audio_command_t command_for(uint32_t sequence)
@@ -283,6 +385,7 @@ int main(void)
     test_dmx_parser();
     test_mixer_pan_resample_and_end();
     test_mixer_update_saturation_and_bounds();
+    test_mus_validation_synthesis_loop_and_bounds();
     test_command_ring_full_empty_and_wrap();
     test_command_ring_threaded_spsc();
     if (failures != 0U) {
@@ -290,6 +393,6 @@ int main(void)
         return 1;
     }
     puts("P4_DOOM_AUDIO HOST PASS dmx=bounded mixer=pcm16-stereo-16khz "
-         "ring=spsc-nonblocking sanitizers=enabled");
+         "music=mus-140hz-16voice ring=spsc-nonblocking sanitizers=enabled");
     return 0;
 }

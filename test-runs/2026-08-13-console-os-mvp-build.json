@@ -1,0 +1,170 @@
+{
+  "schema": 1,
+  "recorded_on": "2026-08-13",
+  "timezone": "America/Los_Angeles",
+  "result": "console-os-mvp-build-and-host-visual-verification-pass-not-hardware-tested",
+  "app": "console_os",
+  "stage": "native-shell-mvp-build-only",
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "target": "esp32p4",
+    "silicon_revision_min_full": 100,
+    "silicon_revision_max_full": 199,
+    "cross_compiler": "riscv32-esp-elf GNU 14.2.0",
+    "component_lock_matches_apps_doom_embedded_touch_audio": true
+  },
+  "game_data": {
+    "path": "local-data/doom/doom1.wad",
+    "identity": "Doom v1.9 shareware IWAD",
+    "bytes": 4196020,
+    "sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+    "git_ignored": true,
+    "committed": false,
+    "redistribution_authorized": false
+  },
+  "software_acceptance": {
+    "console_shell_host": {
+      "command": "make console-shell-host",
+      "result": "pass",
+      "sanitizers": ["AddressSanitizer", "UndefinedBehaviorSanitizer"],
+      "coverage": [
+        "registry validation and unique bounded IDs",
+        "RGB565 framebuffer canaries and stride padding",
+        "1024x600 physical to 320x200 viewport mapping",
+        "press/release navigation and external app launch",
+        "movement, invalid-frame, out-of-viewport, and multitouch cancellation",
+        "valid-neutral-frame rearm after malformed input",
+        "runtime state and built-in page rendering",
+        "2000 randomized bounded and malformed touch snapshots"
+      ]
+    },
+    "doom_audio_host": {
+      "command": "make doom-audio-host",
+      "result": "3/3 CTest tests passed",
+      "includes_mus_parser_synth_and_wad_tests": true
+    },
+    "doom_touch_audio_regression": {
+      "command": "make doom-touch-audio-host",
+      "result": "all platform factory audio, touch, Doom lifecycle, source contract, and adapter tests passed",
+      "standalone_app_main_preserved": true
+    },
+    "esp32p4_build": {
+      "command": "./scripts/build.sh console_os",
+      "result": "pass",
+      "warnings_fatal_for_project_sources": true,
+      "partition_fit": "57-percent-free"
+    },
+    "build_verifier": {
+      "command": "python3 scripts/verify-console-os.py apps/console_os/build",
+      "result": "pass",
+      "checks": [
+        "toolchain and managed component locks",
+        "build-only flash policy",
+        "exact ignored WAD identity",
+        "launcher has no platform audio backend calls",
+        "touch-I2C-display cleanup order before Doom",
+        "required and forbidden component graph",
+        "flash geometry and app offset",
+        "required and forbidden final ELF symbols"
+      ]
+    },
+    "visual_preview": {
+      "result": "all-pages-visually-inspected-pass",
+      "method": "the real console_shell RGB565 renderer was executed on the host and each 320x200 frame was nearest-neighbor enlarged to 640x400 PNG",
+      "local_ignored_outputs": {
+        "home": "7769c05d3116bac2154f475c7d55b677cfb1cf07f069a0032173fdf44342c645",
+        "colors": "b2a1554c64dcec85ed4801bc36f787a8b259886e0d7091be949f551cc18dc406",
+        "touch": "b21d12752373ec6a816cf7dd3b20c83b8e1718653e3192dc307d593026e47056",
+        "system": "9ca3239ca30285a91f3f7b6a97d812f9005829caa06a1b54756109c04b3694c1",
+        "audio": "53d429bc1b58f4aeb55b2e9ce49f278dc31f09242729371f2e2ca1e1aebe59e0"
+      }
+    }
+  },
+  "artifact": {
+    "application": {
+      "path": "apps/console_os/build/p4_console_os.bin",
+      "bytes": 4928288,
+      "sha256": "0d4af27f3a51c2a623b68bf8fba4765634edafda5f7874f0d25b0222ffe93934",
+      "partition_offset": "0x10000",
+      "partition_bytes": 11534336,
+      "partition_free_bytes": 6606048,
+      "contains_wad": true,
+      "git_ignored": true
+    },
+    "elf": {
+      "path": "apps/console_os/build/p4_console_os.elf",
+      "bytes": 14081176,
+      "sha256": "c6204a8f2798fc4eb5ea77177b446715fd35135755674e9219565280170c0804"
+    },
+    "bootloader": {
+      "path": "apps/console_os/build/bootloader/bootloader.bin",
+      "bytes": 22912,
+      "sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9"
+    },
+    "partition_table": {
+      "path": "apps/console_os/build/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433"
+    }
+  },
+  "source_identity": {
+    "components/console_shell/include/console/shell.h": "5bbcbf3a9cc1f585b1fa72ad02d3e8a9df806c9ef3db67aeba59fb9ee666aaac",
+    "components/console_shell/src/console_shell.c": "50293325ce4aaf0b37350dd4ecc2b66cac73d6d834a21d2d00d52ad5410f007d",
+    "components/console_shell/tests/test_console_shell.c": "c48f2de07b1f673d599c9d3e18093ea77489500d8fdf0833ab64a41b77598200",
+    "apps/console_os/main/console_os_main.c": "fef64e44bc7f870bca536453bea8b3a690bc2ba8b1229c8fefc836f1753ab536",
+    "apps/console_os/main/CMakeLists.txt": "4cd168a8998ff5c7f2b17f278393ca567abce4d331c900d41408f7dbface63e2",
+    "apps/console_os/dependencies.lock": "4c76fedab597d4db6e03555060dec22e53c93a13572c94ad50a718cd14f0e9b3",
+    "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c": "718d660496f8d027ce9fdb7307fa5e382410c7f483f399d65b99a8e07ea8b404",
+    "scripts/verify-console-os.py": "78b16ffb9e7f61e8a84bba034e6eb19dfff30da221978d5c00295c17b5038f03"
+  },
+  "runtime_design": {
+    "launcher_audio_hardware_calls": 0,
+    "amplifier_energized_by_launcher": false,
+    "doom_handoff": "exclusive-one-way-until-restart",
+    "cleanup_order": [
+      "backlight-dark",
+      "touch-borrower-destroy",
+      "shared-i2c1-owner-destroy",
+      "display-deinitialize",
+      "shell-framebuffer-free",
+      "doom-enter"
+    ],
+    "doom_audio": {
+      "rate_hz": 16000,
+      "format": "signed-pcm16-stereo",
+      "volume_step": "6/10",
+      "sfx": true,
+      "mus": true,
+      "music_voices_max": 16,
+      "external_midi_required": false
+    }
+  },
+  "hardware_status": {
+    "hardware_execution_authorized": false,
+    "flash_authorized": false,
+    "flash_attempted": false,
+    "application_bytes_written": 0,
+    "serial_capture_attempted": false,
+    "serial_candidates_present_at_final_check": [],
+    "artifact_runtime_result": "not-run",
+    "display_result": "not-run-by-this-artifact",
+    "touch_result": "not-run-by-this-artifact",
+    "audio_result": "not-run-by-this-artifact",
+    "installed_working_doom_image_mutated_by_this_task": false
+  },
+  "hardware_blocker": {
+    "path": "hardware/local-state/doom-e6-install-20260813-mus/e6-install-ledger.json",
+    "phase": "restore-failed",
+    "restore_required": true,
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "required_before_console_install": "close the exact recovery journal on the retained device, then create a new exact-artifact guarded installer and acceptance record"
+  },
+  "claims_not_made": [
+    "The Console OS artifact was flashed, booted, or accepted on hardware.",
+    "The launcher-to-Doom teardown and reinitialization sequence has been observed on-device.",
+    "The launcher itself produced sound or drove GPIO30 low.",
+    "Doom can return to the launcher without restarting.",
+    "The WAD-bearing artifact may be committed or redistributed."
+  ]
+}

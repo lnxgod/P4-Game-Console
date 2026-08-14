@@ -435,17 +435,29 @@ class InstallTests(unittest.TestCase):
             INSTALL._validate_runtime_binding(binding)
 
     def test_serial_runtime_hash_drift_is_rejected(self) -> None:
-        paths = {
-            name: pathlib.Path(value["path"])
-            for name, value in INSTALL.EXPECTED_SERIAL_RUNTIME.items()
-        }
-        original = INSTALL.EXPECTED_SERIAL_RUNTIME["termios"]["sha256"]
-        INSTALL.EXPECTED_SERIAL_RUNTIME["termios"]["sha256"] = "0" * 64
-        try:
-            with self.assertRaisesRegex(INSTALL.InstallError, "serial runtime changed: termios"):
-                INSTALL._validate_serial_runtime_paths(paths)
-        finally:
-            INSTALL.EXPECTED_SERIAL_RUNTIME["termios"]["sha256"] = original
+        original = INSTALL.EXPECTED_SERIAL_RUNTIME
+        with tempfile.TemporaryDirectory() as temp:
+            paths = {}
+            expected = {}
+            for index, name in enumerate(original):
+                path = pathlib.Path(temp) / name
+                contents = bytes((index, index + 1, index + 2))
+                path.write_bytes(contents)
+                paths[name] = path
+                expected[name] = {
+                    "path": str(path.resolve()),
+                    "bytes": len(contents),
+                    "sha256": hashlib.sha256(contents).hexdigest(),
+                }
+            expected["termios"]["sha256"] = "0" * 64
+            INSTALL.EXPECTED_SERIAL_RUNTIME = expected
+            try:
+                with self.assertRaisesRegex(
+                    INSTALL.InstallError, "serial runtime changed: termios"
+                ):
+                    INSTALL._validate_serial_runtime_paths(paths)
+            finally:
+                INSTALL.EXPECTED_SERIAL_RUNTIME = original
 
     def test_source_bans_reopen_and_ambiguous_launch_paths(self) -> None:
         source = MODULE_PATH.read_text(encoding="utf-8")

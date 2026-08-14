@@ -1,0 +1,378 @@
+// SPDX-License-Identifier: MIT
+
+#include "console/shell.h"
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+enum {
+    APP_DOOM = 1,
+    APP_COLORS = 2,
+    APP_TOUCH = 3,
+    APP_SYSTEM = 4,
+    APP_AUDIO = 5,
+};
+
+static int s_failures;
+
+#define CHECK(condition) do { \
+        if (!(condition)) { \
+            fprintf(stderr, "FAIL %s:%d: %s\n", \
+                    __FILE__, __LINE__, #condition); \
+            ++s_failures; \
+        } \
+    } while (0)
+
+static const console_app_descriptor_t s_apps[] = {
+    {
+        .id = APP_DOOM,
+        .title = "DOOM",
+        .subtitle = "SHAREWARE 1.9",
+        .accent_rgb565 = UINT16_C(0xF904),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                        CONSOLE_CAPABILITY_TOUCH |
+                        CONSOLE_CAPABILITY_AUDIO |
+                        CONSOLE_CAPABILITY_STORAGE,
+        .page = CONSOLE_PAGE_EXTERNAL,
+        .enabled = true,
+    },
+    {
+        .id = APP_COLORS,
+        .title = "COLORS",
+        .subtitle = "DISPLAY TEST",
+        .accent_rgb565 = UINT16_C(0x5FFF),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY,
+        .page = CONSOLE_PAGE_COLORS,
+        .enabled = true,
+    },
+    {
+        .id = APP_TOUCH,
+        .title = "TOUCH",
+        .subtitle = "GT911 CONTACTS",
+        .accent_rgb565 = UINT16_C(0xFFE0),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                        CONSOLE_CAPABILITY_TOUCH,
+        .page = CONSOLE_PAGE_TOUCH,
+        .enabled = true,
+    },
+    {
+        .id = APP_SYSTEM,
+        .title = "SYSTEM",
+        .subtitle = "RTOS STATUS",
+        .accent_rgb565 = UINT16_C(0x5FEA),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                        CONSOLE_CAPABILITY_TOUCH,
+        .page = CONSOLE_PAGE_SYSTEM,
+        .enabled = true,
+    },
+    {
+        .id = APP_AUDIO,
+        .title = "AUDIO",
+        .subtitle = "DOOM SOUND PATH",
+        .accent_rgb565 = UINT16_C(0xF81F),
+        .capabilities = CONSOLE_CAPABILITY_AUDIO,
+        .page = CONSOLE_PAGE_AUDIO,
+        .enabled = true,
+    },
+};
+
+static console_shell_contact_t physical_point(unsigned gui_x, unsigned gui_y)
+{
+    const console_shell_contact_t point = {
+        .x = (uint16_t)(CONSOLE_SHELL_VIEWPORT_LEFT +
+                        gui_x * CONSOLE_SHELL_VIEWPORT_SCALE),
+        .y = (uint16_t)(gui_y * CONSOLE_SHELL_VIEWPORT_SCALE),
+    };
+    return point;
+}
+
+static console_shell_action_t tap(console_shell_t *shell,
+                                  unsigned gui_x,
+                                  unsigned gui_y)
+{
+    const console_shell_contact_t point = physical_point(gui_x, gui_y);
+    const console_shell_action_t down =
+        console_shell_handle_touch(shell, true, &point, 1U);
+    CHECK(down.type == CONSOLE_ACTION_NONE);
+    return console_shell_handle_touch(shell, true, NULL, 0U);
+}
+
+static void test_registry_validation(void)
+{
+    console_shell_t shell;
+    CHECK(!console_shell_init(NULL, s_apps, 5U));
+    CHECK(!console_shell_init(&shell, NULL, 5U));
+    CHECK(!console_shell_init(&shell, s_apps, 0U));
+    CHECK(!console_shell_init(
+        &shell, s_apps, CONSOLE_SHELL_MAX_APPS + 1U));
+    CHECK(console_shell_init(&shell, s_apps, 5U));
+    CHECK(shell.page == CONSOLE_PAGE_HOME);
+    CHECK(shell.dirty);
+    CHECK(shell.pressed_index == SIZE_MAX);
+
+    console_app_descriptor_t invalid[2] = {s_apps[0], s_apps[1]};
+    invalid[1].id = invalid[0].id;
+    CHECK(!console_shell_init(&shell, invalid, 2U));
+    invalid[1] = s_apps[1];
+    invalid[1].id = 0U;
+    CHECK(!console_shell_init(&shell, invalid, 2U));
+    invalid[1] = s_apps[1];
+    invalid[1].page = CONSOLE_PAGE_HOME;
+    CHECK(!console_shell_init(&shell, invalid, 2U));
+    invalid[1] = s_apps[1];
+    invalid[1].capabilities = UINT32_C(0x80000000);
+    CHECK(!console_shell_init(&shell, invalid, 2U));
+    invalid[1] = s_apps[1];
+    invalid[1].title = "1234567890123456";
+    CHECK(!console_shell_init(&shell, invalid, 2U));
+    invalid[1] = s_apps[1];
+    invalid[1].subtitle = NULL;
+    CHECK(!console_shell_init(&shell, invalid, 2U));
+}
+
+static void test_launcher_pagination(void)
+{
+    console_app_descriptor_t apps[7];
+    for (size_t i = 0U; i < 7U; ++i) {
+        apps[i] = s_apps[i % 5U];
+        apps[i].id = (uint32_t)(100U + i);
+    }
+    apps[6].title = "PAGE TWO";
+    apps[6].subtitle = "SEVENTH APP";
+
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, apps, 7U));
+    CHECK(shell.home_page == 0U);
+    CHECK(tap(&shell, 302U, 18U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_page == 1U);
+    console_shell_action_t action = tap(&shell, 20U, 50U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(action.app_id == apps[6].id);
+
+    console_shell_show_home(&shell);
+    CHECK(shell.home_page == 1U);
+    CHECK(tap(&shell, 274U, 18U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_page == 0U);
+}
+
+static void test_render_bounds_and_stride(void)
+{
+    enum {
+        GUARD = 19,
+        STRIDE = CONSOLE_SHELL_WIDTH + 7,
+        FRAME_WORDS = STRIDE * CONSOLE_SHELL_HEIGHT,
+        TOTAL_WORDS = GUARD + FRAME_WORDS + GUARD,
+    };
+    uint16_t *const allocation = calloc(TOTAL_WORDS, sizeof(*allocation));
+    CHECK(allocation != NULL);
+    if (allocation == NULL) {
+        return;
+    }
+    for (size_t i = 0U; i < TOTAL_WORDS; ++i) {
+        allocation[i] = UINT16_C(0xA55A);
+    }
+    uint16_t *const frame = allocation + GUARD;
+    for (size_t row = 0U; row < CONSOLE_SHELL_HEIGHT; ++row) {
+        for (size_t column = 0U; column < STRIDE; ++column) {
+            frame[row * STRIDE + column] = UINT16_C(0xBEEF);
+        }
+    }
+
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, 5U));
+    CHECK(!console_shell_render_rgb565(&shell, frame,
+                                       CONSOLE_SHELL_WIDTH - 1U));
+    CHECK(console_shell_is_dirty(&shell));
+    CHECK(console_shell_render_rgb565(&shell, frame, STRIDE));
+    CHECK(!console_shell_is_dirty(&shell));
+    CHECK(shell.render_generation == 1U);
+    CHECK(frame[0] != UINT16_C(0xBEEF));
+
+    for (size_t i = 0U; i < GUARD; ++i) {
+        CHECK(allocation[i] == UINT16_C(0xA55A));
+        CHECK(allocation[GUARD + FRAME_WORDS + i] == UINT16_C(0xA55A));
+    }
+    for (size_t row = 0U; row < CONSOLE_SHELL_HEIGHT; ++row) {
+        for (size_t column = CONSOLE_SHELL_WIDTH; column < STRIDE; ++column) {
+            CHECK(frame[row * STRIDE + column] == UINT16_C(0xBEEF));
+        }
+    }
+    free(allocation);
+}
+
+static void test_navigation_and_launch(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, 5U));
+
+    console_shell_action_t action = tap(&shell, 20U, 50U);
+    CHECK(action.type == CONSOLE_ACTION_LAUNCH);
+    CHECK(action.app_id == APP_DOOM);
+    CHECK(shell.page == CONSOLE_PAGE_HOME);
+
+    action = tap(&shell, 170U, 50U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(action.app_id == APP_COLORS);
+    CHECK(shell.page == CONSOLE_PAGE_COLORS);
+    CHECK(shell.active_app_id == APP_COLORS);
+
+    action = tap(&shell, 10U, 10U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(action.app_id == 0U);
+    CHECK(shell.page == CONSOLE_PAGE_HOME);
+
+    action = tap(&shell, 20U, 100U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(action.app_id == APP_TOUCH);
+    CHECK(shell.page == CONSOLE_PAGE_TOUCH);
+}
+
+static void test_fail_closed_gestures(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, 5U));
+    const console_shell_contact_t doom = physical_point(20U, 50U);
+    const console_shell_contact_t colors = physical_point(170U, 50U);
+    console_shell_contact_t pair[2] = {doom, colors};
+
+    CHECK(console_shell_handle_touch(&shell, true, &doom, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_touch(&shell, true, &colors, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_touch(&shell, true, NULL, 0U).type ==
+          CONSOLE_ACTION_NONE);
+
+    CHECK(console_shell_handle_touch(&shell, true, &doom, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_touch(&shell, true, pair, 2U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_touch(&shell, true, NULL, 0U).type ==
+          CONSOLE_ACTION_NONE);
+
+    CHECK(console_shell_handle_touch(&shell, true, &doom, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_touch(&shell, false, NULL, 0U).type ==
+          CONSOLE_ACTION_NONE);
+    /* A contact still present after an invalid frame cannot become a tap. */
+    CHECK(console_shell_handle_touch(&shell, true, &doom, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_touch(&shell, true, NULL, 0U).type ==
+          CONSOLE_ACTION_NONE);
+
+    const console_shell_contact_t margin = {.x = 10U, .y = 100U};
+    CHECK(console_shell_handle_touch(&shell, true, &margin, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_touch(&shell, true, NULL, 0U).type ==
+          CONSOLE_ACTION_NONE);
+
+    CHECK(console_shell_handle_touch(&shell, true, pair, 6U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(!shell.press_active);
+}
+
+static void test_touch_page_and_runtime(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, 5U));
+    CHECK(tap(&shell, 20U, 100U).app_id == APP_TOUCH);
+
+    console_shell_contact_t contacts[CONSOLE_SHELL_MAX_CONTACTS];
+    for (size_t i = 0U; i < CONSOLE_SHELL_MAX_CONTACTS; ++i) {
+        contacts[i] = physical_point(80U + (unsigned)i * 20U,
+                                     80U + (unsigned)i * 10U);
+    }
+    shell.dirty = false;
+    CHECK(console_shell_handle_touch(&shell, true, contacts,
+                                     CONSOLE_SHELL_MAX_CONTACTS).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(shell.contact_count == CONSOLE_SHELL_MAX_CONTACTS);
+    CHECK(shell.dirty);
+
+    uint16_t *const frame = calloc(
+        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
+        sizeof(*frame));
+    CHECK(frame != NULL);
+    if (frame != NULL) {
+        CHECK(console_shell_render_rgb565(&shell, frame,
+                                           CONSOLE_SHELL_WIDTH));
+        free(frame);
+    }
+
+    console_shell_show_home(&shell);
+    shell.dirty = false;
+    const console_shell_runtime_info_t runtime = {
+        .uptime_seconds = 123U,
+        .internal_free_kib = 456U,
+        .psram_free_kib = 789U,
+        .touch_ready = true,
+        .audio_handoff_ready = true,
+    };
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(!shell.dirty);
+    CHECK(shell.runtime.uptime_seconds == 123U);
+
+    CHECK(tap(&shell, 170U, 100U).app_id == APP_SYSTEM);
+    shell.dirty = false;
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(!shell.dirty);
+    console_shell_runtime_info_t changed = runtime;
+    changed.uptime_seconds = 124U;
+    console_shell_set_runtime_info(&shell, &changed);
+    CHECK(shell.dirty);
+}
+
+static uint32_t next_random(uint32_t *state)
+{
+    *state = *state * UINT32_C(1664525) + UINT32_C(1013904223);
+    return *state;
+}
+
+static void test_input_fuzz(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, 5U));
+    uint16_t *const frame = calloc(
+        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
+        sizeof(*frame));
+    CHECK(frame != NULL);
+    if (frame == NULL) {
+        return;
+    }
+
+    uint32_t state = UINT32_C(0xC001D00D);
+    console_shell_contact_t contacts[CONSOLE_SHELL_MAX_CONTACTS];
+    for (size_t iteration = 0U; iteration < 2000U; ++iteration) {
+        for (size_t i = 0U; i < CONSOLE_SHELL_MAX_CONTACTS; ++i) {
+            contacts[i].x = (uint16_t)next_random(&state);
+            contacts[i].y = (uint16_t)next_random(&state);
+        }
+        const size_t count = (size_t)(next_random(&state) % 7U);
+        const bool valid = (next_random(&state) & 3U) != 0U;
+        const console_shell_contact_t *const pointer =
+            (next_random(&state) & 7U) == 0U ? NULL : contacts;
+        (void)console_shell_handle_touch(&shell, valid, pointer, count);
+        if (console_shell_is_dirty(&shell)) {
+            CHECK(console_shell_render_rgb565(&shell, frame,
+                                               CONSOLE_SHELL_WIDTH));
+        }
+    }
+    free(frame);
+}
+
+int main(void)
+{
+    test_registry_validation();
+    test_render_bounds_and_stride();
+    test_navigation_and_launch();
+    test_launcher_pagination();
+    test_fail_closed_gestures();
+    test_touch_page_and_runtime();
+    test_input_fuzz();
+    if (s_failures != 0) {
+        fprintf(stderr, "%d console shell test failure(s)\n", s_failures);
+        return EXIT_FAILURE;
+    }
+    puts("console shell tests passed");
+    return EXIT_SUCCESS;
+}

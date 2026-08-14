@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T08:35:19-0700",
+  "result": "pass-console-launcher-runtime-doom-handoff-and-acoustic-confirmation-pending",
+  "hardware": {
+    "product": "Elecrow CrowPanel Advanced 10.1 in DHE04310D",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "serial_port": "/dev/cu.wchusbserial10"
+  },
+  "artifact": {
+    "path": "apps/console_os/build/p4_console_os.bin",
+    "offset": "0x10000",
+    "bytes": 4928880,
+    "sha256": "5c4cdc811fa0da1ba21c72dae0bdf5862f02ecdd6d2c468b9075d8c530d58957",
+    "mutation_span_bytes": 4931584,
+    "mutation_span_sha256": "ccc6b5f89d2a1990f9f11ee376939aba675952ffe54c4835ba775a9e45bb7be2",
+    "readback_sha256": "ccc6b5f89d2a1990f9f11ee376939aba675952ffe54c4835ba775a9e45bb7be2"
+  },
+  "transaction": {
+    "same_uart_handle": true,
+    "exclusive_uart_open_count": 1,
+    "uart_reopen_count": 0,
+    "loader_entry_reset_count": 1,
+    "application_launch_count": 1,
+    "app_partition_only": true,
+    "restore_required": false,
+    "rollback_performed": false,
+    "transfer_baud": 460800,
+    "application_baud": 115200,
+    "ledger": {
+      "path": "hardware/local-state/console-os-install-20260814/e6-install-ledger.json",
+      "sha256": "5ff5cc02e8506a839b7f7cd8f7202bc36a410dff671738a37611c2b495e08aaf",
+      "phase": "e6-runtime-accepted"
+    },
+    "note": "The e6 filenames and phase label are retained compatibility names from the frozen crash-safe transport; the bound artifact is Console OS."
+  },
+  "retained_uart_acceptance": {
+    "result": "pass",
+    "raw": {
+      "path": "hardware/local-state/console-os-install-20260814/e6-startup.raw",
+      "bytes": 5467,
+      "sha256": "21b962bfcdf9cd877a2d348391a04a7d69e4faa30c2164c68bb5f257936ec32c"
+    },
+    "summary": {
+      "path": "hardware/local-state/console-os-install-20260814/e6-startup.json",
+      "bytes": 1338,
+      "sha256": "c8de52ec01d5a607695e6c8f0bd9afdba6b0a4da25b3cbde06d794af616cc70e"
+    },
+    "fixed_markers_ordered": true,
+    "display_submits": 1,
+    "display_completions": 1,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "touch_ready": true,
+    "touch_polls_observed": 600,
+    "touch_failures": 0,
+    "amplifier_energized": false,
+    "doom_handoffs": 0
+  },
+  "post_install_passive_observation": {
+    "duration_seconds": 160,
+    "serial_transmitted_bytes": 0,
+    "reset_performed": false,
+    "latest_launcher_loops": 15600,
+    "latest_touch_polls": 15600,
+    "touch_failures": 0,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "amplifier_energized": false,
+    "doom_handoffs": 0
+  },
+  "doom_audio_contract": {
+    "sfx_compiled": true,
+    "wad_mus_music_compiled": true,
+    "volume_step": "6/10",
+    "external_midi_required": false,
+    "initialization_deferred_until_user_handoff": true
+  },
+  "manual_acceptance_pending": [
+    "operator confirms the launcher is visible",
+    "operator taps Doom and the exclusive handoff is observed",
+    "Doom video and touch are confirmed after handoff",
+    "SFX and recognizable MUS music are acoustically confirmed at reduced volume",
+    "restart returns to the launcher"
+  ],
+  "claims_not_made": [
+    "The user selected Doom during this recorded run.",
+    "The Console OS handoff has yet produced acoustic output in this recorded run.",
+    "The current MVP returns directly from Doom without restarting."
+  ]
+}

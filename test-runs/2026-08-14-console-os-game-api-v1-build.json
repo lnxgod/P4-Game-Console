@@ -1,0 +1,133 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T10:05:32-0700",
+  "result": "console-os-native-game-api-v1-build-verified-not-hardware-tested",
+  "app": "console_os",
+  "stage": "native-game-api-v1-build-candidate",
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "target": "esp32p4",
+    "silicon_revision_min_full": 100,
+    "silicon_revision_max_full": 199,
+    "component_lock": "apps/console_os/dependencies.lock"
+  },
+  "native_game_contract": {
+    "format": "p4-native-static-v1",
+    "api_version": 1,
+    "machine_code": "riscv32-esp-elf-statically-linked",
+    "esp_idf_outputs": [
+      "p4_console_os.elf",
+      "p4_console_os.bin"
+    ],
+    "uf2_supported": false,
+    "surface": "rgb565-320x200",
+    "normalized_buttons": [
+      "up",
+      "down",
+      "left",
+      "right",
+      "a",
+      "b",
+      "start",
+      "back"
+    ],
+    "audio": "optional-bounded-tone-mixer-pcm16-stereo-16000-hz",
+    "audio_backend_volume_step": "6/10",
+    "return_to_launcher": true,
+    "launcher_apps_per_page": 6,
+    "launcher_maximum_apps": 32
+  },
+  "prototype_game": {
+    "id": "org.p4console.maze-chase",
+    "component": "maze_chase",
+    "entry_symbol": "p4_maze_chase_game",
+    "launcher_id": 100,
+    "implementation": "original-clean-room-code-rendered-shapes-only",
+    "third_party_arcade_rom_map_sprite_sound_or_artwork": false,
+    "host_preview": {
+      "path": "build-host/maze_chase/maze_chase-preview.png",
+      "sha256": "f9dcf257cce2f7bc884ad30951654ea9a47100ac06fc3558e563127ecb4397cf",
+      "git_ignored": true,
+      "visually_inspected": true
+    }
+  },
+  "software_acceptance": {
+    "environment_verifier": "pass",
+    "p4_game_api_host": "pass-address-and-undefined-behavior-sanitizers",
+    "p4_game_platform_host": "pass-mocked-exact-audio-lifecycle",
+    "maze_chase_host": "pass-address-and-undefined-behavior-sanitizers",
+    "console_shell_host": "pass-address-and-undefined-behavior-sanitizers-including-pagination",
+    "game_registry_validation": "pass",
+    "game_registry_adversarial_tests": "pass",
+    "new_game_creator_and_generated_source_compile": "pass",
+    "esp32p4_build": "pass",
+    "console_build_verifier": "pass-required-components-symbols-format-and-forbidden-services",
+    "git_diff_check": "pass",
+    "broad_historical_make_check": "not-pass-stale-E5-authorization-and-D0.5-exact-artifact-bindings-precede-current-Doom-successor-state"
+  },
+  "exact_artifact": {
+    "offset": "0x10000",
+    "app_binary_bytes": 4941776,
+    "app_binary_sha256": "f4426c370b9f251aa5a3ae5049b99a4c068067390c351dc680d1b7d36492be36",
+    "elf_bytes": 14207252,
+    "elf_sha256": "dfea256bcb77fbff71d4be15f2a622044591cd3b871101d6528b0ccaf479c1c4",
+    "bootloader_bytes": 22912,
+    "bootloader_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+    "app_partition_bytes": 11534336,
+    "partition_free_bytes": 6592560,
+    "mutation_span_bytes": 4947968,
+    "mutation_tail_byte": "ff",
+    "contains_ignored_shareware_wad": true,
+    "redistribution_authorized": false
+  },
+  "source_inventory": {
+    "apps/console_os/CMakeLists.txt": "d950199e24582a8e51830b7bcab9a50f5149c0e5b6e99b4fe3a1b69321edf6d3",
+    "apps/console_os/app-metadata.json": "d883fca8585adaf0dddc2a22b09198fc2270c98f5dd8ce6526fe1a7f181ad471",
+    "apps/console_os/main/CMakeLists.txt": "f00c98400e93ec8b1e3d6b1192a4dafc342e653f53c82f62c4d202cd04569259",
+    "apps/console_os/main/console_os_main.c": "e5cb73f2ca594e62b32cb9115926968bb77c1b1bed603f2f349d6ec67f7adac3",
+    "components/console_shell/include/console/shell.h": "473c7bab82d072f71b2b864d99972fe69bd9f95d0ccd3d0a7040a7967272c8fb",
+    "components/console_shell/src/console_shell.c": "bede0c30fba968f5d6c00d67c8f527531be2fa6104b11e4775138a09a47e7085",
+    "components/console_shell/tests/test_console_shell.c": "f7b0d402f9bf6a9a78c1630420c08726e2a7ccd68f34f7c5706dc2b7bd645d2f",
+    "components/p4_game_api/CMakeLists.txt": "ef784e8e1ee2077db11786b1fe418bbcbf05d686074c7395286cd4f51fd3008c",
+    "components/p4_game_api/include/p4/audio.h": "eb8361e1ba52d7a14d7f51d374b59ab98616572969e19b118b67b69a1931ddd8",
+    "components/p4_game_api/include/p4/draw.h": "9739007caddbb65e04aa2f3057f496391f98480d56c14defd8fdab392e5a7fc6",
+    "components/p4_game_api/include/p4/game.h": "28dcf4af9a1641e898285e458814109fea9e73eea1efcba34765d49a1cdb7bd6",
+    "components/p4_game_api/include/p4/input.h": "920dbe60d4cde64f8e1a9c3bf4854676d93dc69df16ed05c35ba960f0f0ef3a8",
+    "components/p4_game_api/src/audio_mixer.c": "dc735ecdd7ed9e864e5ea25998bcd1ce7173a62697457bd8916706841f58e06e",
+    "components/p4_game_api/src/draw.c": "3975b393602aa9c4ceb5d0d09f7428376e6e7051c692b3ed8d4285d12b840bbc",
+    "components/p4_game_api/src/game_runtime.c": "38fb7f267c1be9783c700b34bb6a9c12aeac2283a9a1492be428c28b72d02c1b",
+    "components/p4_game_api/src/input.c": "32ae97f79e3fa76e1a0454efd1cd7dca5b092c72c1365b71d92b3c6b0d3bef17",
+    "components/p4_game_platform/CMakeLists.txt": "5af402a12cb78146630e4b009d390bdc46370a18e201f458d4e8448ff19a5d0b",
+    "components/p4_game_platform/include/p4/platform.h": "d0ffe11b76864c617851fba65e97d0bd0c84e8344311f3a5e0a5cdd292fd71ac",
+    "components/p4_game_platform/src/audio_session.c": "683ac5c11c7abf297a4d40d64f6500441428bc7ef951357b7aa7e388f9a6df38",
+    "games/maze_chase/CMakeLists.txt": "f9d9ec65919e1a331ec37f1202b289529eacff7f2883c5ed696f4a02e5746ae0",
+    "games/maze_chase/game.json": "a6f090a26b9845884a6827121dc7e011c3d025b4713a67cd3ac497dcc757021e",
+    "games/maze_chase/src/maze_chase.c": "94ff1649fbda926d7fba3fe4e5820c71924b731d6683ac1e4de1853104e1c31c",
+    "scripts/generate-game-registry.py": "9ee1b9badad3db1d18c0bd0e2d1972535179400c780a12ac8797d55340397c2d",
+    "scripts/new-game.py": "5b02ff9e1362a00df2d8717fcae150c454c689dafc194ceabb71a3724ee60529",
+    "scripts/verify-console-os.py": "660c8dbfe5ed529c7768e6c48f10674b2ab82d2ecc2695c0b7403a21a251ed73",
+    "toolchain.lock.json": "0539c66e7aa2de5d5564afea86e6412174185602fdea8efbe068676b51867936"
+  },
+  "hardware_status": {
+    "hardware_execution_authorized": false,
+    "flash_authorized": false,
+    "flash_attempted": false,
+    "application_bytes_written": 0,
+    "artifact_runtime_result": "not-run",
+    "maze_chase_display_result": "not-run",
+    "maze_chase_control_result": "not-run",
+    "maze_chase_audio_result": "not-run",
+    "maze_chase_return_to_launcher_result": "not-run",
+    "installed_console_image_mutated_by_this_build_task": false
+  },
+  "claims_not_made": [
+    "This Game API v1 artifact was flashed, booted, or accepted on hardware.",
+    "Maze Chase display, touch, sound, or return-to-launcher behavior passed on the tablet.",
+    "Doom now uses the reentrant native Game API lifecycle.",
+    "Console OS supports UF2 or separately installable game executables.",
+    "The WAD-bearing application binary may be committed or redistributed."
+  ]
+}

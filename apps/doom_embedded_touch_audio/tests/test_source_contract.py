@@ -18,8 +18,8 @@ FACTORY_AUDIO_HEADER_SHA256 = "4fb0957057a66b61c1b3e0c20eee86025e0ca5c2739e44023
 FACTORY_AUDIO_SOURCE_SHA256 = "75aa8d1a388bd0d999844a360af2adc989893cee2ea9f406cb90a9f0b549c725"
 FACTORY_AUDIO_POLICY_SHA256 = "83543ee750b5128b7ece1566fb08021d5b665153108a791cb1b0b76d9f230dfd"
 FACTORY_AUDIO_POLICY_HEADER_SHA256 = "cc70be430cd3d384efb7fc9587a7c2ea5ad14ee62ffd009a64c3ee969a882b65"
-ADAPTER_HEADER_SHA256 = "0f1706d29cc6a3b0f0d8a9543c5da88fe695e0f22af943af7c20980e79ff738b"
-ADAPTER_SOURCE_SHA256 = "fe3b4d04a495958b6ac9bfb2479dc6c4aa5c7815d6934d6745e2a49027a0222e"
+ADAPTER_HEADER_SHA256 = "583a7d19fe21c61cc6cb5a974b6adb9740f39bdd7f609ba93219a3753deff6f7"
+ADAPTER_SOURCE_SHA256 = "07f38b306044c7718b06bab1abd9a15b2c1cd03a4363aed1993de380d50710cc"
 
 
 def sha256(path: pathlib.Path) -> str:
@@ -127,17 +127,22 @@ def main() -> None:
     assert first_safe < first_display
     assert "platform_audio_factory_" not in main_source
     assert "P4_DOOM_E6 START input=gt911-multitouch" in main_source
-    assert "sound=factory-complete-i2s0-pdm-rx-i2s1-speaker-tx-sfx" in main_source
+    assert "sound=factory-complete-i2s0-pdm-rx-i2s1-speaker-tx-sfx-mus" in main_source
     assert '"runtime=exact-unit-factory-audio");' in main_source
     assert "SOUND_BOUND backend=factory-complete-audio-init" in main_source
-    assert '"sfx_request=%s music=disabled usb=absent",' in main_source
-    assert '"sfx_request=%s music=disabled usb=absent ",' not in main_source
+    assert '"sfx_request=%s music_request=%s "' in main_source
+    assert '"music_synth=procedural-16voice usb=absent",' in main_source
     assert '"pdm_i2s_port=0 pdm_clk_gpio=24 pdm_clk_hz=1024000 "' in main_source
     assert '"pdm_din_gpio=26 gpio24_may_feed_codec_mclk=1 "' in main_source
     assert '"speaker_i2s_port=1 rate_hz=%u format=pcm16-stereo channels=%u "' in main_source
     assert '"lrclk_gpio=21 bclk_gpio=22 dout_gpio=23 tx_mclk=none "' in main_source
     assert '"codec_i2c_transactions=0 required_startup_zero_ms=350 "' in main_source
-    assert '"backend_volume_step=10/10 gain=unity-no-amplification "' in main_source
+    assert '#define DOOM_BACKEND_VOLUME_STEP UINT8_C(6)' in main_source
+    assert '.volume_percent = DOOM_BACKEND_VOLUME_STEP' in main_source
+    assert '"backend_volume_step=6/10 gain=attenuated-60-percent "' in main_source
+    assert '"music_pipeline=wad-mus-procedural-16voice "' in main_source
+    assert '"-gfxmode", "rgba8888",\n    };' in main_source
+    assert '"-gfxmode", "rgba8888", "-nosound", "-nomusic",' in main_source
     assert '" composite_gate=%u touch_gate=%u audio_gate=%u"' in main_source
     assert '" audio_mutating_calls=%" PRIu32' in main_source
     assert '" audio_telemetry_snapshot_valid=%u audio_start_proof=%s"' in main_source
@@ -172,8 +177,29 @@ def main() -> None:
         "backend_rollback_attempts", "backend_rollback_successes",
         "backend_rollback_high_proofs", "backend_resources_retained",
         "backend_resources_owned", "audio_frames", "audio_write_failures",
+        "music_playing", "music_paused", "music_songs", "music_events",
+        "music_notes", "music_loops", "music_frames",
+        "music_parse_failures", "music_peak",
     ):
         assert stats_format.count(f" {stats_key}=") == 1, stats_key
+
+    music_header = (
+        ROOT / "apps/doom/components/doom_audio/include/doom/music_synth.h"
+    ).read_text()
+    music_source = (
+        ROOT / "apps/doom/components/doom_audio/src/doom_music_synth.c"
+    ).read_text()
+    sound_module = (
+        ROOT / "apps/doom/components/doom_audio/src/doom_audio_sound_module.c"
+    ).read_text()
+    audio_cmake = (ROOT / "apps/doom/components/doom_audio/CMakeLists.txt").read_text()
+    assert "DOOM_MUSIC_MAX_VOICES = 16" in music_header
+    assert "DOOM_MUSIC_TICKS_PER_SECOND = 140" in music_header
+    assert "doom_music_validate_mus" in music_source
+    assert "doom_music_player_mix" in music_source
+    assert "src/doom_music_synth.c" in audio_cmake
+    assert "doom_music_song_create" in sound_module
+    assert "doom_audio_runtime_music_play" in sound_module
     assert "platform_audio_invocation_count()" in main_source
     assert "platform_audio_get_state" not in main_source
     assert "AUDIO_SAFETY_FAULT" in main_source

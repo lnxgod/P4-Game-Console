@@ -64,6 +64,7 @@ class Device:
         self.exclusive = True
         self.dtr = False
         self.rts = False
+        self.baudrate = INSTALL.APP_UART_BAUD
         self.mode = mode
         self.events: list[object] = []
         self.flash = bytearray(0x90000)
@@ -100,6 +101,7 @@ class LaunchReset:
 
     def reset(self) -> None:
         assert not self.device.dtr
+        assert self.device.baudrate == INSTALL.APP_UART_BAUD
         self.device.events.append("direct-hard-reset-launch")
 
 
@@ -160,6 +162,12 @@ class Stub(ROM):
             self.device.events.append("physical-flash-id")
         return self.cache["flash_id"]
 
+    def change_baud(self, baud: int) -> None:
+        assert self.device.baudrate == INSTALL.APP_UART_BAUD
+        assert baud == INSTALL.TRANSFER_UART_BAUD
+        self.device.baudrate = baud
+        self.device.events.append(("change-baud", baud))
+
     def read_spiflash_sfdp(self, address: int, length: int) -> int:
         assert (address, length) == (0x10, 8)
         return 0xC8
@@ -212,6 +220,7 @@ class Capture:
     def capture_open_handle(device: Device, seconds: float, min_stats: int = 2):
         assert seconds == 10.0 and min_stats == 2
         assert device.is_open and device.exclusive and not device.dtr and not device.rts
+        assert device.baudrate == INSTALL.APP_UART_BAUD
         device.events.append("capture-retained-handle")
         result = "fail" if device.mode in {"capture-fail", "restore-write-fail"} else "pass"
         return b"exact-startup\n", {"schema": 1, "result": result}
@@ -824,6 +833,7 @@ class InstallTests(unittest.TestCase):
             "active": True,
             "classification": "exact-unit-operator-accepted-factory-audio-release",
             "scope": "one-device-e6-complete-factory-audio-init",
+            "operator_direction": "Add actual WAD MUS music, turn the volume down, flash it, and record honest test notes.",
             "exact_unit": {
                 "identity_sha256": INSTALL.EXPECTED_DEVICE_SHA256,
                 "chip": "ESP32-P4", "chip_revision": "v1.3",
@@ -867,6 +877,26 @@ class InstallTests(unittest.TestCase):
                 "path": "hardware/test-runs/2026-08-13-audio-direct-d23-attempt2.json",
                 "sha256": "74568d7b388dd437a9dd2a0a672bb635b343329b60baa0778c7740f87350925b",
             },
+            "prior_e6_operator_observation": {
+                "operator_statement": "we had sound",
+                "doom_sfx_audible": True,
+                "music_status": "not-tested",
+                "scope": "earlier E6 attempt on this exact connected unit",
+            },
+            "software_audio_extension": {
+                "wad_sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+                "music_source": "unmodified-MUS-lumps-from-exact-embedded-WAD",
+                "music_playback": "bounded-16-voice-procedural-software-synth",
+                "music_timing_hz": 140,
+                "output_rate_hz": 16000,
+                "backend_volume_step": "6/10",
+                "gain": "linear-60-percent-final-output",
+                "external_midi_hardware_required": False,
+                "soundfont_required": False,
+                "bit_exact_opl_claimed": False,
+                "software_counters_are_acoustic_proof": False,
+                "human_acceptance": "recognizable-title-or-E1M1-music-and-simultaneous-SFX",
+            },
             "rollback_identity": {
                 "offset": "0x10000", "e5_artifact_bytes": INSTALL.INSTALLED_E5_BYTES,
                 "e5_artifact_sha256": INSTALL.INSTALLED_E5_SHA256,
@@ -883,30 +913,77 @@ class InstallTests(unittest.TestCase):
         changed["complete_factory_initializer"]["pdm_clock_gpio"] = 25
         with self.assertRaisesRegex(INSTALL.InstallError, "release semantics"):
             INSTALL._validate_exact_unit_audio_release(changed)
+        changed = json.loads(json.dumps(release))
+        changed["software_audio_extension"]["backend_volume_step"] = "10/10"
+        with self.assertRaisesRegex(INSTALL.InstallError, "release semantics"):
+            INSTALL._validate_exact_unit_audio_release(changed)
 
-        saved = (
-            INSTALL.INSTALLED_E5_BYTES, INSTALL.INSTALLED_E5_SHA256,
-            INSTALL.INSTALLED_E5_PADDED_SPAN_BYTES,
-            INSTALL.INSTALLED_E5_PADDED_SPAN_SHA256,
-        )
-        INSTALL.INSTALLED_E5_BYTES = self.old_e5_bytes
-        INSTALL.INSTALLED_E5_SHA256 = self.old_e5_hash
-        INSTALL.INSTALLED_E5_PADDED_SPAN_BYTES = self.old_e5_padded_bytes
-        INSTALL.INSTALLED_E5_PADDED_SPAN_SHA256 = self.old_e5_padded_hash
-        try:
-            manifest_path = ROOT / "test-runs/doom-e6-rollback-2026-08-13/rollback-bundle.json"
-            manifest = json.loads(manifest_path.read_text())
-            INSTALL._validate_rollback_bundle(manifest)
-            changed = json.loads(json.dumps(manifest))
-            changed["installed_identity"]["padded_span"]["sha256"] = "0" * 64
-            with self.assertRaisesRegex(INSTALL.InstallError, "file bindings"):
-                INSTALL._validate_rollback_bundle(changed)
-        finally:
-            (
+        with tempfile.TemporaryDirectory() as temp:
+            old_root = INSTALL.ROOT
+            old_rollback = (
                 INSTALL.INSTALLED_E5_BYTES, INSTALL.INSTALLED_E5_SHA256,
                 INSTALL.INSTALLED_E5_PADDED_SPAN_BYTES,
                 INSTALL.INSTALLED_E5_PADDED_SPAN_SHA256,
-            ) = saved
+            )
+            artifact_bytes = ORIGINAL[:-16]
+            padded_bytes = artifact_bytes + b"\xff" * 16
+            INSTALL.INSTALLED_E5_BYTES = len(artifact_bytes)
+            INSTALL.INSTALLED_E5_SHA256 = hashlib.sha256(artifact_bytes).hexdigest()
+            INSTALL.INSTALLED_E5_PADDED_SPAN_BYTES = len(padded_bytes)
+            INSTALL.INSTALLED_E5_PADDED_SPAN_SHA256 = hashlib.sha256(padded_bytes).hexdigest()
+            INSTALL.ROOT = pathlib.Path(temp)
+            bundle = INSTALL.ROOT / "test-runs/doom-e6-rollback-2026-08-13"
+            bundle.mkdir(parents=True)
+            artifact_path = bundle / "installed-e5-exact.bin"
+            padded_path = bundle / "installed-e5-span-4898816.bin"
+            artifact_path.write_bytes(artifact_bytes)
+            padded_path.write_bytes(padded_bytes)
+            artifact_path.chmod(0o400)
+            padded_path.chmod(0o400)
+            manifest = {
+                "schema": "p4-doom-e6-rollback-bundle-v1",
+                "future_install_requirement": {
+                    "minimum_preimage_bytes": len(padded_bytes),
+                    "preimage_rule": "ceil(successor_artifact_bytes/16384)*16384",
+                    "restore_rule": "restore and exact-readback the entire sealed live successor mutation span after any post-mutation failure",
+                    "same_handle_live_preimage_required": True,
+                },
+                "installed_identity": {
+                    "app": "doom_embedded_touch_audio",
+                    "stage": "E5-touch-only-persistent",
+                    "offset": "0x10000",
+                    "artifact_prefix_bytes": len(artifact_bytes),
+                    "padded_span_bytes": len(padded_bytes),
+                    "padded_tail_bytes": 16,
+                    "padded_tail_value": "0xff",
+                    "stub_write_block_bytes": INSTALL.WRITE_BLOCK_BYTES,
+                    "artifact": {
+                        "path": "test-runs/doom-e6-rollback-2026-08-13/installed-e5-exact.bin",
+                        "mode": "0400", "size_bytes": len(artifact_bytes),
+                        "sha256": hashlib.sha256(artifact_bytes).hexdigest(),
+                        "regular": True, "symlink": False,
+                    },
+                    "padded_span": {
+                        "path": "test-runs/doom-e6-rollback-2026-08-13/installed-e5-span-4898816.bin",
+                        "mode": "0400", "size_bytes": len(padded_bytes),
+                        "sha256": hashlib.sha256(padded_bytes).hexdigest(),
+                        "regular": True, "symlink": False,
+                    },
+                },
+            }
+            try:
+                INSTALL._validate_rollback_bundle(manifest)
+                changed = json.loads(json.dumps(manifest))
+                changed["installed_identity"]["padded_span"]["sha256"] = "0" * 64
+                with self.assertRaisesRegex(INSTALL.InstallError, "file bindings"):
+                    INSTALL._validate_rollback_bundle(changed)
+            finally:
+                INSTALL.ROOT = old_root
+                (
+                    INSTALL.INSTALLED_E5_BYTES, INSTALL.INSTALLED_E5_SHA256,
+                    INSTALL.INSTALLED_E5_PADDED_SPAN_BYTES,
+                    INSTALL.INSTALLED_E5_PADDED_SPAN_SHA256,
+                ) = old_rollback
 
     def test_source_bans_reopen_tx_flush_and_ambiguous_launch(self) -> None:
         source = MODULE_PATH.read_text()

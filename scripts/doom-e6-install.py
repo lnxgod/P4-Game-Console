@@ -39,6 +39,8 @@ EXPECTED_DEVICE_SHA256 = "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c32711
 EXPECTED_OFFSET = 0x10000
 WRITE_BLOCK_BYTES = 0x4000
 RESTORE_BLOCK_BYTES = 0x1000
+APP_UART_BAUD = 115_200
+TRANSFER_UART_BAUD = 460_800
 MAX_READBACK_CHUNK_BYTES = 512 * 1024
 MAX_JSON_RECORD_BYTES = 2 * 1024 * 1024
 MAX_BOUND_FILE_BYTES = 64 * 1024 * 1024
@@ -53,9 +55,9 @@ INSTALLED_E5_SHA256 = "68e97df1e89c28428d6a66c2ca4ab26c4eade76ff9357479f80d01ebc
 INSTALLED_E5_PADDED_SPAN_BYTES = 4_898_816
 INSTALLED_E5_PADDED_SPAN_SHA256 = "9c288a83ecfb061cdbec510e679166bb85e2fcf44f3a21f8a2f79e440c1303f9"
 EXPECTED_BOOTSTRAP_HELPER_SHA256 = {
-    "doom-e5-install.py": "cd84e329fa00fcab7726e45ba81bc94d4c50de188ab64087e180d40a9f565008",
+    "doom-e5-install.py": "4371a5985968053dc59c7d29c8a2d425ea35210f5cc0b36b924ecce0045497c1",
     "gamepad-diag-restore.py": "5be16e889116cc8a9e9009d730c2d0bcd3438ac07ead2d726ac1a346a5f0e244",
-    "capture-doom-e6-runtime.py": "b8832bda1292f708d26b274a53a69a4b766b58dce18951f83f995655e5e0a2e5",
+    "capture-doom-e6-runtime.py": "81f8e6e2b48f2f23aaa9d8c6c768926ee5469475fdb843f89b5850b30104d93c",
 }
 
 
@@ -460,6 +462,8 @@ def _validate_exact_unit_audio_release(record: Mapping[str, Any]) -> None:
     factory = record.get("pinned_factory_source")
     initializer = record.get("complete_factory_initializer")
     prior = record.get("prior_nondamaging_run")
+    prior_e6 = record.get("prior_e6_operator_observation")
+    extension = record.get("software_audio_extension")
     rollback = record.get("rollback_identity")
     if not (
         record.get("schema") == 1
@@ -467,6 +471,8 @@ def _validate_exact_unit_audio_release(record: Mapping[str, Any]) -> None:
         and record.get("classification")
             == "exact-unit-operator-accepted-factory-audio-release"
         and record.get("scope") == "one-device-e6-complete-factory-audio-init"
+        and record.get("operator_direction")
+            == "Add actual WAD MUS music, turn the volume down, flash it, and record honest test notes."
         and exact_unit == {
             "identity_sha256": EXPECTED_DEVICE_SHA256,
             "chip": "ESP32-P4", "chip_revision": "v1.3",
@@ -512,6 +518,26 @@ def _validate_exact_unit_audio_release(record: Mapping[str, Any]) -> None:
             == "hardware/test-runs/2026-08-13-audio-direct-d23-attempt2.json"
         and prior.get("sha256")
             == "74568d7b388dd437a9dd2a0a672bb635b343329b60baa0778c7740f87350925b"
+        and prior_e6 == {
+            "operator_statement": "we had sound",
+            "doom_sfx_audible": True,
+            "music_status": "not-tested",
+            "scope": "earlier E6 attempt on this exact connected unit",
+        }
+        and extension == {
+            "wad_sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+            "music_source": "unmodified-MUS-lumps-from-exact-embedded-WAD",
+            "music_playback": "bounded-16-voice-procedural-software-synth",
+            "music_timing_hz": 140,
+            "output_rate_hz": 16000,
+            "backend_volume_step": "6/10",
+            "gain": "linear-60-percent-final-output",
+            "external_midi_hardware_required": False,
+            "soundfont_required": False,
+            "bit_exact_opl_claimed": False,
+            "software_counters_are_acoustic_proof": False,
+            "human_acceptance": "recognizable-title-or-E1M1-music-and-simultaneous-SFX",
+        }
         and rollback == {
             "offset": "0x10000",
             "e5_artifact_bytes": INSTALLED_E5_BYTES,
@@ -669,6 +695,10 @@ def _contract_from_authorization(
         "apps/doom_embedded_touch_audio/main/runtime_gate.c",
         "apps/doom_embedded_touch_audio/main/audio_lifecycle.c",
         "apps/doom_embedded_touch_audio/components/platform_audio/src/platform_audio_adapter.c",
+        "apps/doom/components/doom_audio/include/doom/music_synth.h",
+        "apps/doom/components/doom_audio/src/doom_music_synth.c",
+        "apps/doom/components/doom_audio/src/doom_audio_sound_module.c",
+        "apps/doom/components/doom_audio/tests/test_doom_audio_wad.c",
         "components/platform_audio_factory/include/platform_audio_factory/audio.h",
         "components/platform_audio_factory/src/platform_audio_factory.c",
         "hardware/board-profile.json",
@@ -677,6 +707,7 @@ def _contract_from_authorization(
         "scripts/tests/test-doom-e6-install.py",
         "scripts/tests/test-doom-e6-runtime-capture.py",
         "scripts/verify-doom-embedded-touch-audio.py",
+        "docs/DOOM_MUSIC_TEST.md",
         ".agents/skills/develop-esp32-p4-platform/references/elecrow-10-in-variant.md",
     }
     if not isinstance(inventory, dict) or not required <= set(inventory):
@@ -924,10 +955,18 @@ def _validate_sealed_recovery_contract(
 
 def _load_stub(device: Any, handle: tuple[int, int, int, int, int],
                runtime: Any) -> Any:
+    E5._assert_same_handle(device, handle)
+    if getattr(device, "baudrate", None) not in {
+        APP_UART_BAUD, TRANSFER_UART_BAUD,
+    }:
+        raise InstallError("UART baud is outside the exact transaction pair")
+    device.baudrate = APP_UART_BAUD
+    if getattr(device, "baudrate", None) != APP_UART_BAUD:
+        raise InstallError("UART did not return to loader-entry baud")
     runtime.loader_reset_class(device).reset()
     E5._set_controls_false(device)
     E5._assert_same_handle(device, handle)
-    rom = runtime.rom_class(device, 115200, False)
+    rom = runtime.rom_class(device, APP_UART_BAUD, False)
     rom.connect("no_reset", attempts=1, warnings=False)
     E5._assert_same_handle(device, handle, rom)
     RESTORE._validate_live_rom(rom, device, EXPECTED_DEVICE_SHA256)
@@ -952,7 +991,27 @@ def _load_stub(device: Any, handle: tuple[int, int, int, int, int],
         raise InstallError("RAM stub did not remain active")
     E5._prepare_exact_flash_after_stub(stub)
     E5._assert_same_handle(device, handle, stub)
+    if getattr(device, "baudrate", None) != APP_UART_BAUD:
+        raise InstallError("UART did not enter the stub at the exact app baud")
+    stub.change_baud(TRANSFER_UART_BAUD)
+    if getattr(device, "baudrate", None) != TRANSFER_UART_BAUD:
+        raise InstallError("UART did not switch to the exact transfer baud")
+    E5._assert_same_handle(device, handle, stub)
     return stub
+
+
+def _restore_app_uart_baud(
+    device: Any, handle: tuple[int, int, int, int, int], transport: Any,
+) -> None:
+    """Return the retained descriptor to the firmware console baud."""
+
+    E5._assert_same_handle(device, handle, transport)
+    if getattr(device, "baudrate", None) != TRANSFER_UART_BAUD:
+        raise InstallError("UART left the exact transfer baud before launch")
+    device.baudrate = APP_UART_BAUD
+    if getattr(device, "baudrate", None) != APP_UART_BAUD:
+        raise InstallError("UART did not return to the exact app baud")
+    E5._assert_same_handle(device, handle, transport)
 
 
 def _decode_legacy_stub_payload(payload: bytes) -> Any:
@@ -1033,6 +1092,7 @@ def _restore_e5_same_handle(device: Any, runtime: Any,
     RESTORE._validate_live_rom(stub, device, EXPECTED_DEVICE_SHA256)
     E5._fresh_exact_flash_id(stub, "e5-restore-prelaunch")
     E5._set_controls_false(device)
+    _restore_app_uart_baud(device, handle, stub)
     runtime.launch_reset_class(device, uses_usb=False).reset()
     E5._set_controls_false(device)
     E5._assert_same_handle(device, handle)
@@ -1048,6 +1108,8 @@ def _restore_e5_same_handle(device: Any, runtime: Any,
         "e5_padded_span_bytes": INSTALLED_E5_PADDED_SPAN_BYTES,
         "e5_padded_span_sha256": INSTALLED_E5_PADDED_SPAN_SHA256,
         "arm_transmitted_bytes": 0,
+        "transfer_baud": TRANSFER_UART_BAUD,
+        "application_baud": APP_UART_BAUD,
     }
     _transition(
         ledger_path, state, "restored-e5-launched",
@@ -1216,6 +1278,7 @@ def install_same_handle(
         RESTORE._validate_live_rom(stub, device, EXPECTED_DEVICE_SHA256)
         E5._fresh_exact_flash_id(stub, "e6-prelaunch")
         E5._set_controls_false(device)
+        _restore_app_uart_baud(device, handle, stub)
         _transition(
             ledger_path, state, "e6-launch-attempted",
             restore_required=True, application_launch_count=1,
@@ -1304,6 +1367,8 @@ def install_same_handle(
             "restore_required": False,
             "audio_gate": 1,
             "usb_runtime": False,
+            "transfer_baud": TRANSFER_UART_BAUD,
+            "application_baud": APP_UART_BAUD,
         }
         _transition(
             ledger_path, state, "e6-runtime-accepted",

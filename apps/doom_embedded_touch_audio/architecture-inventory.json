@@ -38,8 +38,8 @@
   "E6_sound_successor": {
     "status": "build_only_audio_electrical_release_pending",
     "runtime_gates": "1/1/1",
-    "sound": "same_frozen_doom_audio_to_counted_app_local_platform_audio_adapter_to_vendor_complete_audio_init_shape",
-    "factory_i2s": "i2s0_pdm_rx_clk24_approx1_024mhz_din26_then_i2s1_speaker_tx_16khz_pcm16_stereo_lrclk21_bclk22_dout23_tx_mclk_unused_backend_step10_of10_unity_music_disabled",
+    "sound": "doom_sfx_plus_validated_wad_mus_procedural_synth_to_one_16khz_mixer_then_counted_app_local_platform_audio_adapter_to_vendor_complete_audio_init_shape",
+    "factory_i2s": "i2s0_pdm_rx_clk24_approx1_024mhz_din26_then_i2s1_speaker_tx_16khz_pcm16_stereo_lrclk21_bclk22_dout23_tx_mclk_unused_backend_step6_of10_linear_attenuation",
     "gpio24_qualification": "PDM RX clock output and may feed codec MCLK through board strapping; only I2S1 TX MCLK is unused",
     "gpio30": "first_audio_call_proves_high; backend_start_alone_may_prove_low_after_zero_dma_prime_and_350ms_settle",
     "control_bus": "audio_uses_no_i2c_or_codec; shared_i2c1_remains_touch_only",

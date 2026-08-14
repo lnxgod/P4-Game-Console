@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "app": "console_os",
+  "stage": "native-game-api-v1-build-candidate",
+  "purpose": "FreeRTOS-native touch console with shared platform services, a versioned native game API, an original Maze Chase sample, built-in diagnostics, and an exclusive handoff to the proven Doom SFX plus MUS integration.",
+  "runtime_supported": false,
+  "top_level_runtime_authorized": false,
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "hardware_access_allowed": false,
+  "game_data_embedded": true,
+  "game_data_committed": false,
+  "game_data_redistribution_authorized": false,
+  "toolchain": {
+    "idf": "5.5.3",
+    "target": "esp32p4",
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432
+  },
+  "shell": {
+    "model": "monolithic-static-app-registry",
+    "scheduler": "FreeRTOS via ESP-IDF",
+    "surface": "RGB565 320x200 scaled 3x into the 1024x600 panel",
+    "input": "bounded GT911 polling with up to five contacts",
+    "built_in_apps": ["colors", "touch", "system", "audio-status"],
+    "apps_per_page": 6,
+    "maximum_registered_apps": 32,
+    "dynamic_executable_loading": false
+  },
+  "native_game_api": {
+    "api_version": 1,
+    "format": "p4-native-static-v1",
+    "code_model": "RISC-V machine code statically linked into the Console OS ELF",
+    "build_outputs": ["p4_console_os.elf", "p4_console_os.bin"],
+    "uf2_supported": false,
+    "uf2_note": "UF2 is a flashing container, not the executable format used by this ESP-IDF project.",
+    "surface": "RGB565 320x200",
+    "controls": ["up", "down", "left", "right", "a", "b", "start", "back"],
+    "audio": "optional bounded tone service at PCM16 stereo 16000 Hz",
+    "return_to_home_supported": true,
+    "registered_games": ["org.p4console.maze-chase"]
+  },
+  "doom_handoff": {
+    "mode": "exclusive-one-way-until-restart",
+    "shell_display_touch_and_i2c_released_first": true,
+    "audio_initialized_by_shell": false,
+    "audio_initialized_by_doom": true,
+    "sample_rate_hz": 16000,
+    "format": "pcm16-stereo",
+    "volume_step": "6/10",
+    "music": "WAD MUS procedural 16-voice synth",
+    "external_midi_device_required": false,
+    "return_to_home_supported": false
+  },
+  "hardware_interfaces_explicitly_absent": [
+    "usb_host",
+    "usb_hid",
+    "sd_card",
+    "wireless",
+    "codec_i2c"
+  ],
+  "next_hardware_step": "After build verification, bind and authorize the exact new console artifact before any guarded flash and record separate on-device acceptance evidence."
+}

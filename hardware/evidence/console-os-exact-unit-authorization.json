@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "active": true,
+  "recorded_at": "2026-08-14T08:21:12-0700",
+  "scope": "exact-unit-console-os-mvp",
+  "operator_direction": "go",
+  "device_binding": {
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216
+  },
+  "exact_artifact": {
+    "offset": "0x10000",
+    "app_binary_bytes": 4928880,
+    "app_binary_sha256": "5c4cdc811fa0da1ba21c72dae0bdf5862f02ecdd6d2c468b9075d8c530d58957",
+    "elf_bytes": 14082476,
+    "elf_sha256": "82ef6c7eeea36034b042cc059e70649cf1944f189c92d83f9f6d12a926114ae6",
+    "bootloader_bytes": 22912,
+    "bootloader_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+    "mutation_span_bytes": 4931584,
+    "mutation_tail_byte": "ff"
+  },
+  "build_evidence": {
+    "path": "test-runs/2026-08-14-console-os-exact-unit-build.json",
+    "sha256": "c147da3bd281999ab660112c1e7996d17d50f7f298d925cdefb8ba38ebcb28d0"
+  },
+  "exact_unit_audio_release": {
+    "path": "hardware/evidence/doom-embedded-touch-audio-e6-exact-unit-audio-release.json",
+    "sha256": "da0a25bb4e3ba07cf46bd3e300ffca89ace1e2d9545debb34e943a5cd4c828b3"
+  },
+  "predecessor_recovery_closure": {
+    "path": "hardware/evidence/doom-e6-recovery-closure-20260814.json",
+    "sha256": "d78496a13582809b80148875211f065ec51ee83d0ba756f3d44eae28ac305250"
+  },
+  "execution_contract": {
+    "same_uart_handle": true,
+    "live_full_span_preimage_required": true,
+    "app_partition_only": true,
+    "retained_launcher_capture_required": true,
+    "automatic_restore_on_capture_failure": true,
+    "shell_audio_hardware_calls": 0,
+    "doom_audio_deferred_until_user_handoff": true,
+    "usb_runtime": false,
+    "recovery_directory": "hardware/local-state/console-os-install-20260814"
+  }
+}

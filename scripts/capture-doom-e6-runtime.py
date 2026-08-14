@@ -28,9 +28,9 @@ ANSI_COLOR_RE = re.compile(rb"\x1b\[[0-9;]*m")
 
 START = (
     b"P4_DOOM_E6 START input=gt911-multitouch "
-    b"sound=factory-complete-i2s0-pdm-rx-i2s1-speaker-tx-sfx "
+    b"sound=factory-complete-i2s0-pdm-rx-i2s1-speaker-tx-sfx-mus "
     b"pdm_clk_gpio24_may_feed_codec_mclk=1 codec_i2c_transactions=0 "
-    b"tx_mclk=none music=disabled usb=absent "
+    b"tx_mclk=none music=wad-mus-procedural-16voice usb=absent "
     b"runtime=exact-unit-factory-audio"
 )
 MODE = (
@@ -70,12 +70,14 @@ SOUND_BOUND_RE = re.compile(
     rb"speaker_i2s_port=1 rate_hz=16000 format=pcm16-stereo channels=2 "
     rb"lrclk_gpio=21 bclk_gpio=22 dout_gpio=23 tx_mclk=none "
     rb"codec_i2c_transactions=0 required_startup_zero_ms=350 "
-    rb"backend_volume_step=10/10 gain=unity-no-amplification "
-    rb"music=disabled activation=doom-sfx-init-pending audio_calls=(\d+)"
+    rb"backend_volume_step=6/10 gain=attenuated-60-percent "
+    rb"music=wad-mus synth=procedural-16voice "
+    rb"activation=doom-sfx-init-pending audio_calls=(\d+)"
 )
 ENGINE_START_RE = re.compile(
     rb"P4_DOOM_E6 ENGINE_START wad=/doom/doom1\.wad touch=ready "
-    rb"overlay=visible sfx_request=enabled music=disabled usb=absent"
+    rb"overlay=visible sfx_request=enabled music_request=enabled "
+    rb"music_synth=procedural-16voice usb=absent"
 )
 VIDEO_READY = (
     b"P4_DOOM_E6 VIDEO_READY input=0x00RRGGBB overlay=touch "
@@ -84,7 +86,8 @@ VIDEO_READY = (
 SOUND_READY_RE = re.compile(
     rb"P4_DOOM_E6 SOUND_READY state=running "
     rb"gpio30=low-readback-proven-at-start "
-    rb"backend_volume_step=10/10 gain=unity-no-amplification "
+    rb"backend_volume_step=6/10 gain=attenuated-60-percent "
+    rb"music_pipeline=wad-mus-procedural-16voice "
     rb"audio_calls=(\d+)"
 )
 
@@ -109,6 +112,9 @@ STATS_FIELDS = (
     "backend_rollback_attempts", "backend_rollback_successes",
     "backend_rollback_high_proofs", "backend_resources_retained",
     "backend_resources_owned", "audio_frames", "audio_write_failures",
+    "audio_worker_stack_hwm", "music_playing", "music_paused",
+    "music_songs", "music_events", "music_notes", "music_loops",
+    "music_frames", "music_parse_failures", "music_peak",
 )
 STATS_RE = re.compile(
     rb"P4_DOOM_E6 STATS frames=(\d+) submits=(\d+) completions=(\d+) "
@@ -135,7 +141,10 @@ STATS_RE = re.compile(
     rb"backend_rollback_attempts=(\d+) backend_rollback_successes=(\d+) "
     rb"backend_rollback_high_proofs=(\d+) backend_resources_retained=(\d+) "
     rb"backend_resources_owned=(\d+) audio_frames=(\d+) "
-    rb"audio_write_failures=(\d+)"
+    rb"audio_write_failures=(\d+) audio_worker_stack_hwm=(\d+) "
+    rb"music_playing=(\d+) music_paused=(\d+) music_songs=(\d+) "
+    rb"music_events=(\d+) music_notes=(\d+) music_loops=(\d+) "
+    rb"music_frames=(\d+) music_parse_failures=(\d+) music_peak=(\d+)"
 )
 
 FIXED = {
@@ -212,7 +221,7 @@ def _u32_record(record: dict[str, int | str]) -> bool:
 def _record_exact(record: dict[str, int | str]) -> bool:
     return (
         record["frames"] > 0
-        and record["frames"] % 300 == 0
+        and record["frames"] % 150 == 0
         and record["submits"] == record["frames"] + 1
         and record["completions"] == record["submits"]
         and record["video_timeouts"] == 0
@@ -287,6 +296,16 @@ def _record_exact(record: dict[str, int | str]) -> bool:
         and 0 < record["audio_frames"] <= record["audio_frames_forwarded"]
         and record["audio_frames"] % 128 == 0
         and record["audio_write_failures"] == 0
+        and 512 <= record["audio_worker_stack_hwm"] <= 6144
+        and record["music_playing"] in (0, 1)
+        and record["music_paused"] == 0
+        and record["music_songs"] > 0
+        and record["music_events"] > 0
+        and record["music_notes"] > 0
+        and 0 <= record["music_loops"] <= record["music_events"]
+        and 0 < record["music_frames"] <= record["audio_frames"]
+        and record["music_parse_failures"] == 0
+        and 0 < record["music_peak"] <= 32768
     )
 
 
@@ -300,14 +319,20 @@ def _monotonic(earlier: dict[str, int | str],
         "backend_write_successes", "backend_frames_written",
         "backend_samples_written", "backend_nonzero_frames",
         "backend_nonzero_samples", "audio_frames",
+        "music_frames",
     )
     nondecreasing = (
         "touch_failures", "touch_retries", "audio_peak",
         "backend_max_abs", "backend_rollback_attempts",
         "backend_rollback_successes", "backend_rollback_high_proofs",
+        "music_songs", "music_events", "music_notes", "music_loops",
+        "music_peak",
     )
-    return all(later[name] > earlier[name] for name in increasing) and all(
-        later[name] >= earlier[name] for name in nondecreasing
+    return (
+        all(later[name] > earlier[name] for name in increasing)
+        and all(later[name] >= earlier[name] for name in nondecreasing)
+        and later["audio_worker_stack_hwm"]
+            <= earlier["audio_worker_stack_hwm"]
     )
 
 
@@ -395,6 +420,10 @@ def analyze(payload: bytes, min_stats: int = 2) -> dict[str, Any]:
         "reject_markers": reject_markers,
         "software_audio_witness": (
             "nonzero Doom mixer PCM accepted by the full factory PDM+TX backend"
+            if passed else "not proven"
+        ),
+        "software_music_witness": (
+            "real WAD MUS events and notes produced nonzero procedural-synth PCM"
             if passed else "not proven"
         ),
         "acoustic_output": "not inferred; requires separate microphone/user evidence",

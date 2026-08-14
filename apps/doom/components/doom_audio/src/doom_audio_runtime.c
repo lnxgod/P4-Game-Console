@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include "doom/audio_ring.h"
+#include "doom/music_synth.h"
 #pragma GCC diagnostic push
 /* ESP-IDF 5.5.3 has two sign-conversion warnings in inline RISC-V headers. */
 #pragma GCC diagnostic ignored "-Wsign-conversion"
@@ -18,7 +19,7 @@
 #pragma GCC diagnostic pop
 
 #define DOOM_AUDIO_WORKER_CHUNK_FRAMES ((size_t)128U)
-#define DOOM_AUDIO_WORKER_STACK_BYTES ((uint32_t)4096U)
+#define DOOM_AUDIO_WORKER_STACK_BYTES ((uint32_t)6144U)
 #define DOOM_AUDIO_WORKER_PRIORITY ((UBaseType_t)(tskIDLE_PRIORITY + 3U))
 #define DOOM_AUDIO_STOP_TIMEOUT_MS UINT32_C(250)
 #define DOOM_AUDIO_STATE_ACTIVE UINT32_C(1)
@@ -42,6 +43,16 @@ static atomic_uint_least32_t s_commands_enqueued;
 static atomic_uint_least32_t s_commands_dropped;
 static atomic_uint_least32_t s_frames_rendered;
 static atomic_uint_least32_t s_write_failures;
+static atomic_uint_least32_t s_music_songs_started;
+static atomic_uint_least32_t s_music_events_processed;
+static atomic_uint_least32_t s_music_notes_started;
+static atomic_uint_least32_t s_music_loops_completed;
+static atomic_uint_least32_t s_music_mixed_frames;
+static atomic_uint_least32_t s_music_parse_failures;
+static atomic_uint_least32_t s_music_maximum_absolute_mix;
+static atomic_uint_least32_t s_music_volume;
+static atomic_bool s_music_playing;
+static atomic_bool s_music_paused;
 /* A constant static initializer is the C11 equivalent of ATOMIC_VAR_INIT. */
 static atomic_uint_least32_t s_worker_stack_hwm_bytes = UINT32_MAX;
 static SemaphoreHandle_t s_worker_gate;
@@ -142,10 +153,33 @@ static void mark_voice_finished(size_t voice_index, uint32_t expected_state)
 }
 
 static void process_commands(doom_audio_mixer_t *mixer,
+                             doom_music_player_t *music,
                              uint32_t actual_state[DOOM_AUDIO_MAX_VOICES])
 {
     doom_audio_command_t command;
     while (doom_audio_command_ring_pop(&s_command_ring, &command)) {
+        if (command.type == DOOM_AUDIO_COMMAND_MUSIC_PLAY) {
+            const bool started = doom_music_player_start(
+                music, command.music_song, command.music_looping);
+            doom_music_song_release(command.music_song);
+            if (!started) {
+                atomic_store_explicit(
+                    &s_music_playing, false, memory_order_release);
+            }
+            continue;
+        }
+        if (command.type == DOOM_AUDIO_COMMAND_MUSIC_STOP) {
+            doom_music_player_stop(music);
+            continue;
+        }
+        if (command.type == DOOM_AUDIO_COMMAND_MUSIC_PAUSE) {
+            doom_music_player_pause(music);
+            continue;
+        }
+        if (command.type == DOOM_AUDIO_COMMAND_MUSIC_RESUME) {
+            doom_music_player_resume(music);
+            continue;
+        }
         const size_t voice_index = command.voice_index;
         if (voice_index >= (size_t)DOOM_AUDIO_MAX_VOICES) {
             continue;
@@ -165,6 +199,43 @@ static void process_commands(doom_audio_mixer_t *mixer,
                 mixer, voice_index, command.volume, command.separation);
         } else {
             mark_voice_finished(voice_index, desired);
+        }
+    }
+}
+
+static void publish_music_stats(const doom_music_player_t *music)
+{
+    doom_music_stats_t stats = {0};
+    doom_music_player_get_stats(music, &stats);
+    atomic_store_explicit(
+        &s_music_songs_started, stats.songs_started, memory_order_relaxed);
+    atomic_store_explicit(
+        &s_music_events_processed, stats.events_processed,
+        memory_order_relaxed);
+    atomic_store_explicit(
+        &s_music_notes_started, stats.notes_started, memory_order_relaxed);
+    atomic_store_explicit(
+        &s_music_loops_completed, stats.loops_completed,
+        memory_order_relaxed);
+    atomic_store_explicit(
+        &s_music_mixed_frames, stats.mixed_frames, memory_order_relaxed);
+    atomic_store_explicit(
+        &s_music_parse_failures, stats.parse_failures, memory_order_relaxed);
+    atomic_store_explicit(
+        &s_music_maximum_absolute_mix, stats.maximum_absolute_mix,
+        memory_order_relaxed);
+    atomic_store_explicit(
+        &s_music_playing, stats.playing, memory_order_release);
+    atomic_store_explicit(
+        &s_music_paused, stats.paused, memory_order_release);
+}
+
+static void release_queued_music_references(void)
+{
+    doom_audio_command_t command;
+    while (doom_audio_command_ring_pop(&s_command_ring, &command)) {
+        if (command.type == DOOM_AUDIO_COMMAND_MUSIC_PLAY) {
+            doom_music_song_release(command.music_song);
         }
     }
 }
@@ -202,15 +273,21 @@ static void worker_task(void *unused)
 {
     (void)unused;
     doom_audio_mixer_t mixer;
+    doom_music_player_t music;
     uint32_t actual_state[DOOM_AUDIO_MAX_VOICES] = {0};
     int16_t output[DOOM_AUDIO_WORKER_CHUNK_FRAMES *
                    (size_t)DOOM_AUDIO_CHANNEL_COUNT];
     doom_audio_mixer_init(&mixer);
+    doom_music_player_init(&music);
     publish_worker_stack_hwm();
 
     (void)xSemaphoreTake(s_worker_gate, portMAX_DELAY);
     while (!atomic_load_explicit(&s_stop_requested, memory_order_acquire)) {
-        process_commands(&mixer, actual_state);
+        (void)doom_music_player_set_volume(
+            &music,
+            (uint8_t)atomic_load_explicit(
+                &s_music_volume, memory_order_relaxed));
+        process_commands(&mixer, &music, actual_state);
         reconcile_stops(&mixer, actual_state);
         if (!doom_audio_mixer_render(
                 &mixer, output, DOOM_AUDIO_WORKER_CHUNK_FRAMES)) {
@@ -218,6 +295,11 @@ static void worker_task(void *unused)
                 &s_runtime_state, RUNTIME_FAILED, memory_order_release);
             break;
         }
+        if (!doom_music_player_mix(
+                &music, output, DOOM_AUDIO_WORKER_CHUNK_FRAMES)) {
+            doom_music_player_stop(&music);
+        }
+        publish_music_stats(&music);
         publish_finished_voices(&mixer, actual_state);
         const esp_err_t write_result = platform_audio_write_frames(
             s_platform_audio, output, DOOM_AUDIO_WORKER_CHUNK_FRAMES);
@@ -234,6 +316,9 @@ static void worker_task(void *unused)
         publish_worker_stack_hwm();
     }
 
+    doom_music_player_stop(&music);
+    release_queued_music_references();
+    publish_music_stats(&music);
     const int state =
         atomic_load_explicit(&s_runtime_state, memory_order_acquire);
     if (state == RUNTIME_FAILED) {
@@ -262,6 +347,24 @@ static void reset_runtime_queues(void)
                           memory_order_relaxed);
     atomic_store_explicit(&s_write_failures, UINT32_C(0),
                           memory_order_relaxed);
+    atomic_store_explicit(&s_music_songs_started, UINT32_C(0),
+                          memory_order_relaxed);
+    atomic_store_explicit(&s_music_events_processed, UINT32_C(0),
+                          memory_order_relaxed);
+    atomic_store_explicit(&s_music_notes_started, UINT32_C(0),
+                          memory_order_relaxed);
+    atomic_store_explicit(&s_music_loops_completed, UINT32_C(0),
+                          memory_order_relaxed);
+    atomic_store_explicit(&s_music_mixed_frames, UINT32_C(0),
+                          memory_order_relaxed);
+    atomic_store_explicit(&s_music_parse_failures, UINT32_C(0),
+                          memory_order_relaxed);
+    atomic_store_explicit(&s_music_maximum_absolute_mix, UINT32_C(0),
+                          memory_order_relaxed);
+    atomic_store_explicit(&s_music_volume, UINT32_C(64),
+                          memory_order_relaxed);
+    atomic_store_explicit(&s_music_playing, false, memory_order_relaxed);
+    atomic_store_explicit(&s_music_paused, false, memory_order_relaxed);
     atomic_store_explicit(&s_worker_stack_hwm_bytes, UINT32_MAX,
                           memory_order_relaxed);
 }
@@ -463,6 +566,82 @@ bool doom_audio_runtime_voice_active(size_t voice_index)
             DOOM_AUDIO_STATE_ACTIVE) != 0U;
 }
 
+static bool enqueue_music_command(doom_audio_command_type_t type,
+                                  doom_music_song_t *song,
+                                  bool looping)
+{
+    if (atomic_load_explicit(&s_runtime_state, memory_order_acquire) !=
+        RUNTIME_RUNNING) {
+        return false;
+    }
+    const doom_audio_command_t command = {
+        .type = type,
+        .voice_index = 0U,
+        .volume = 0U,
+        .separation = 0U,
+        .desired_state = 0U,
+        .sample = NULL,
+        .music_song = song,
+        .music_looping = looping,
+    };
+    if (!doom_audio_command_ring_push(&s_command_ring, &command)) {
+        (void)atomic_fetch_add_explicit(
+            &s_commands_dropped, UINT32_C(1), memory_order_relaxed);
+        return false;
+    }
+    (void)atomic_fetch_add_explicit(
+        &s_commands_enqueued, UINT32_C(1), memory_order_relaxed);
+    return true;
+}
+
+bool doom_audio_runtime_music_play(doom_music_song_t *song, bool looping)
+{
+    if (!doom_music_song_retain(song)) {
+        return false;
+    }
+    if (!enqueue_music_command(
+            DOOM_AUDIO_COMMAND_MUSIC_PLAY, song, looping)) {
+        doom_music_song_release(song);
+        return false;
+    }
+    return true;
+}
+
+bool doom_audio_runtime_music_stop(void)
+{
+    return enqueue_music_command(
+        DOOM_AUDIO_COMMAND_MUSIC_STOP, NULL, false);
+}
+
+bool doom_audio_runtime_music_pause(void)
+{
+    return enqueue_music_command(
+        DOOM_AUDIO_COMMAND_MUSIC_PAUSE, NULL, false);
+}
+
+bool doom_audio_runtime_music_resume(void)
+{
+    return enqueue_music_command(
+        DOOM_AUDIO_COMMAND_MUSIC_RESUME, NULL, false);
+}
+
+bool doom_audio_runtime_music_set_volume(uint8_t volume)
+{
+    if (volume > UINT8_C(127) ||
+        atomic_load_explicit(&s_runtime_state, memory_order_acquire) !=
+            RUNTIME_RUNNING) {
+        return false;
+    }
+    atomic_store_explicit(
+        &s_music_volume, (uint32_t)volume, memory_order_release);
+    return true;
+}
+
+bool doom_audio_runtime_music_is_playing(void)
+{
+    return atomic_load_explicit(&s_music_playing, memory_order_acquire);
+}
+
 esp_err_t doom_audio_runtime_get_stats(doom_audio_runtime_stats_t *out_stats)
 {
     if (out_stats == NULL) {
@@ -478,5 +657,23 @@ esp_err_t doom_audio_runtime_get_stats(doom_audio_runtime_stats_t *out_stats)
         &s_write_failures, memory_order_relaxed);
     out_stats->worker_stack_hwm_bytes = atomic_load_explicit(
         &s_worker_stack_hwm_bytes, memory_order_relaxed);
+    out_stats->music_songs_started = atomic_load_explicit(
+        &s_music_songs_started, memory_order_relaxed);
+    out_stats->music_events_processed = atomic_load_explicit(
+        &s_music_events_processed, memory_order_relaxed);
+    out_stats->music_notes_started = atomic_load_explicit(
+        &s_music_notes_started, memory_order_relaxed);
+    out_stats->music_loops_completed = atomic_load_explicit(
+        &s_music_loops_completed, memory_order_relaxed);
+    out_stats->music_mixed_frames = atomic_load_explicit(
+        &s_music_mixed_frames, memory_order_relaxed);
+    out_stats->music_parse_failures = atomic_load_explicit(
+        &s_music_parse_failures, memory_order_relaxed);
+    out_stats->music_maximum_absolute_mix = atomic_load_explicit(
+        &s_music_maximum_absolute_mix, memory_order_relaxed);
+    out_stats->music_playing = atomic_load_explicit(
+        &s_music_playing, memory_order_acquire);
+    out_stats->music_paused = atomic_load_explicit(
+        &s_music_paused, memory_order_acquire);
     return ESP_OK;
 }

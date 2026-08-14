@@ -47,7 +47,8 @@
 #define DOOM_SUBMIT_TIMEOUT_MS UINT32_C(100)
 #define DOOM_FIRST_FRAME_TIMEOUT_MS UINT32_C(250)
 #define DOOM_MAX_SLEEP_MS UINT32_C(60000)
-#define DOOM_STATS_INTERVAL_FRAMES UINT32_C(300)
+#define DOOM_STATS_INTERVAL_FRAMES UINT32_C(150)
+#define DOOM_BACKEND_VOLUME_STEP UINT8_C(6)
 #define TOUCH_POLL_INTERVAL_MS UINT32_C(16)
 #define TOUCH_RETRY_INTERVAL_MS UINT32_C(5000)
 #define TOUCH_DEGRADED_LOG_INTERVAL_MS UINT32_C(2000)
@@ -425,7 +426,7 @@ static bool try_audio_enable(void)
     const platform_audio_config_t config = {
         .control_bus = NULL,
         .sample_rate_hz = (uint32_t)DOOM_AUDIO_OUTPUT_RATE_HZ,
-        .volume_percent = 10U,
+        .volume_percent = DOOM_BACKEND_VOLUME_STEP,
     };
     s_audio_lifecycle.released = false;
     esp_err_t result = platform_audio_create(
@@ -481,8 +482,8 @@ static bool try_audio_enable(void)
              "speaker_i2s_port=1 rate_hz=%u format=pcm16-stereo channels=%u "
              "lrclk_gpio=21 bclk_gpio=22 dout_gpio=23 tx_mclk=none "
              "codec_i2c_transactions=0 required_startup_zero_ms=350 "
-             "backend_volume_step=10/10 gain=unity-no-amplification "
-             "music=disabled "
+             "backend_volume_step=6/10 gain=attenuated-60-percent "
+             "music=wad-mus synth=procedural-16voice "
              "activation=doom-sfx-init-pending audio_calls=%" PRIu32,
              (unsigned)DOOM_AUDIO_OUTPUT_RATE_HZ,
              (unsigned)PLATFORM_AUDIO_CHANNEL_COUNT,
@@ -548,7 +549,14 @@ static void log_runtime_stats(void)
              " backend_rollback_successes=%" PRIu32
              " backend_rollback_high_proofs=%" PRIu32
              " backend_resources_retained=%u backend_resources_owned=%" PRIu32
-             " audio_frames=%" PRIu32 " audio_write_failures=%" PRIu32,
+             " audio_frames=%" PRIu32 " audio_write_failures=%" PRIu32
+             " audio_worker_stack_hwm=%" PRIu32
+             " music_playing=%u music_paused=%u"
+             " music_songs=%" PRIu32 " music_events=%" PRIu32
+             " music_notes=%" PRIu32 " music_loops=%" PRIu32
+             " music_frames=%" PRIu32
+             " music_parse_failures=%" PRIu32
+             " music_peak=%" PRIu32,
              s_frame_count, video_stats.submits_started,
              video_stats.submits_completed, video_stats.submit_timeouts,
              video_stats.submit_failures, s_touch_polls,
@@ -601,12 +609,54 @@ static void log_runtime_stats(void)
              have_backend_stats && backend_stats.resources_retained ? 1U : 0U,
              have_backend_stats ? backend_stats.resources_owned : UINT32_MAX,
              have_audio_stats ? audio_stats.frames_rendered : 0U,
-             have_audio_stats ? audio_stats.write_failures : 0U);
+             have_audio_stats ? audio_stats.write_failures : 0U,
+             have_audio_stats ? audio_stats.worker_stack_hwm_bytes : UINT32_MAX,
+             have_audio_stats && audio_stats.music_playing ? 1U : 0U,
+             have_audio_stats && audio_stats.music_paused ? 1U : 0U,
+             have_audio_stats ? audio_stats.music_songs_started : 0U,
+             have_audio_stats ? audio_stats.music_events_processed : 0U,
+             have_audio_stats ? audio_stats.music_notes_started : 0U,
+             have_audio_stats ? audio_stats.music_loops_completed : 0U,
+             have_audio_stats ? audio_stats.music_mixed_frames : 0U,
+             have_audio_stats ? audio_stats.music_parse_failures : UINT32_MAX,
+             have_audio_stats
+                 ? audio_stats.music_maximum_absolute_mix : 0U);
 }
 
 static void verify_audio_start_or_safe_degrade(bool sound_requested)
 {
     if (!sound_requested) {
+        return;
+    }
+    platform_audio_telemetry_t backend = {0};
+    const esp_err_t telemetry_result = platform_audio_get_telemetry(&backend);
+    const doom_touch_audio_factory_start_witness_t witness = {
+        .snapshot_valid = telemetry_result == ESP_OK,
+        .state = (uint32_t)backend.state,
+        .running = backend.running,
+        .pdm_created = backend.pdm_created,
+        .pdm_enabled = backend.pdm_enabled,
+        .tx_created = backend.tx_created,
+        .tx_enabled = backend.tx_enabled,
+        .zero_preload_frames = backend.zero_preload_frames,
+        .gpio30_low_attempts = backend.gpio30_low_attempts,
+        .gpio30_low_successes = backend.gpio30_low_successes,
+        .gpio30_low_initial_readbacks =
+            backend.gpio30_low_initial_readback_successes,
+        .measured_settle_us = backend.measured_settle_us,
+        .gpio30_low_second_readbacks =
+            backend.gpio30_low_second_readback_successes,
+        .resources_retained = backend.resources_retained,
+        .resources_owned = backend.resources_owned,
+    };
+    if (doom_touch_audio_factory_start_proven(&witness)) {
+        ESP_LOGI(TAG,
+                 "P4_DOOM_E6 SOUND_READY state=running "
+                 "gpio30=low-readback-proven-at-start "
+                 "backend_volume_step=6/10 gain=attenuated-60-percent "
+                 "music_pipeline=wad-mus-procedural-16voice "
+                 "audio_calls=%" PRIu32,
+                 platform_audio_invocation_count());
         return;
     }
     platform_audio_adapter_stats_t adapter_stats = {0};
@@ -615,7 +665,8 @@ static void verify_audio_start_or_safe_degrade(bool sound_requested)
         ESP_LOGI(TAG,
                  "P4_DOOM_E6 SOUND_READY state=running "
                  "gpio30=low-readback-proven-at-start "
-                 "backend_volume_step=10/10 gain=unity-no-amplification "
+                 "backend_volume_step=6/10 gain=attenuated-60-percent "
+                 "music_pipeline=wad-mus-procedural-16voice "
                  "audio_calls=%" PRIu32,
                  adapter_stats.invocations);
         return;
@@ -630,7 +681,12 @@ static void verify_audio_start_or_safe_degrade(bool sound_requested)
     }
     ESP_LOGE(TAG,
              "P4_DOOM_E6 AUDIO_SAFETY_FAULT stage=doom-sfx-start "
-             "running_low_proven=0 ready_muted_zero_dma_proven=0 halt=1");
+             "running_low_proven=0 ready_muted_zero_dma_proven=0 "
+             "backend_snapshot_valid=%u backend_state=%u "
+             "backend_running=%u halt=1",
+             telemetry_result == ESP_OK ? 1U : 0U,
+             telemetry_result == ESP_OK ? (unsigned)backend.state : 2U,
+             telemetry_result == ESP_OK && backend.running ? 1U : 0U);
     halt_dark("audio-start-safety", ESP_ERR_INVALID_STATE);
 }
 
@@ -726,7 +782,11 @@ void DG_SetWindowTitle(const char *title)
     (void)title;
 }
 
+#ifdef P4_CONSOLE_OS_EMBEDDED
+void console_os_launch_doom(void)
+#else
 void app_main(void)
+#endif
 {
     doom_touch_audio_runtime_gate_t gate = {0};
     doom_touch_audio_runtime_gate_read(&gate);
@@ -735,10 +795,10 @@ void app_main(void)
         doom_touch_audio_runtime_gate_mode(&gate);
     ESP_LOGI(TAG,
              "P4_DOOM_E6 START input=gt911-multitouch "
-             "sound=factory-complete-i2s0-pdm-rx-i2s1-speaker-tx-sfx "
+             "sound=factory-complete-i2s0-pdm-rx-i2s1-speaker-tx-sfx-mus "
              "pdm_clk_gpio24_may_feed_codec_mclk=1 "
              "codec_i2c_transactions=0 tx_mclk=none "
-             "music=disabled usb=absent "
+             "music=wad-mus-procedural-16voice usb=absent "
              "runtime=exact-unit-factory-audio");
     if (mode == DOOM_TOUCH_AUDIO_RUNTIME_BLOCKED) {
         ESP_LOGW(TAG,
@@ -860,7 +920,7 @@ void app_main(void)
 
     char *sound_argv[] = {
         "doom", "-iwad", EMBEDDED_WAD_PATH,
-        "-gfxmode", "rgba8888", "-nomusic",
+        "-gfxmode", "rgba8888",
     };
     char *silent_argv[] = {
         "doom", "-iwad", EMBEDDED_WAD_PATH,
@@ -868,8 +928,10 @@ void app_main(void)
     };
     ESP_LOGI(TAG,
              "P4_DOOM_E6 ENGINE_START wad=%s touch=%s overlay=visible "
-             "sfx_request=%s music=disabled usb=absent",
+             "sfx_request=%s music_request=%s "
+             "music_synth=procedural-16voice usb=absent",
              EMBEDDED_WAD_PATH, s_touch_ready ? "ready" : "degraded",
+             sound_enabled ? "enabled" : "fallback-silent",
              sound_enabled ? "enabled" : "fallback-silent");
     key_prevweapon = '[';
     key_nextweapon = ']';

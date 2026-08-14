@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T08:21:12-0700",
+  "result": "console-os-exact-unit-candidate-build-verified",
+  "app": "console_os",
+  "target": "esp32p4",
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "component_lock": "apps/console_os/dependencies.lock"
+  },
+  "exact_artifact": {
+    "offset": "0x10000",
+    "app_binary_bytes": 4928880,
+    "app_binary_sha256": "5c4cdc811fa0da1ba21c72dae0bdf5862f02ecdd6d2c468b9075d8c530d58957",
+    "elf_bytes": 14082476,
+    "elf_sha256": "82ef6c7eeea36034b042cc059e70649cf1944f189c92d83f9f6d12a926114ae6",
+    "bootloader_bytes": 22912,
+    "bootloader_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+    "mutation_span_bytes": 4931584,
+    "mutation_tail_byte": "ff"
+  },
+  "installer_transport": {
+    "path": "scripts/doom-e6-install.py",
+    "sha256": "f5d2255f37ca9373fdaf42ebe711968c31dc51b3dbbc2f7e501a235fbb546471"
+  },
+  "startup_capture": {
+    "path": "scripts/capture-console-os-runtime.py",
+    "sha256": "cdb2c124f0f1e58aaaac7f13d416eff00cb044cc0f13232afa8537d8645aa571"
+  },
+  "test_results": {
+    "console_shell_host": "pass-with-address-and-undefined-behavior-sanitizers",
+    "console_runtime_capture_unit_tests": "pass",
+    "esp32p4_build": "pass",
+    "console_build_verifier": "pass"
+  },
+  "runtime_design": {
+    "shell_audio_hardware_calls": 0,
+    "shell_amplifier_energized": false,
+    "doom_handoff": "exclusive-one-way-until-restart",
+    "doom_sfx": true,
+    "doom_mus_music": true,
+    "doom_audio_volume_step": "6/10",
+    "usb_runtime": false
+  },
+  "game_data": {
+    "path": "local-data/doom/doom1.wad",
+    "bytes": 4196020,
+    "sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+    "git_ignored": true,
+    "redistribution_authorized": false
+  },
+  "source_inventory": {
+    "apps/console_os/main/console_os_main.c": "92fbba18129e405667da47216f67ee7b1ee20038fe285c6624c7ee9c460cd538",
+    "apps/console_os/main/CMakeLists.txt": "4cd168a8998ff5c7f2b17f278393ca567abce4d331c900d41408f7dbface63e2",
+    "apps/console_os/dependencies.lock": "4c76fedab597d4db6e03555060dec22e53c93a13572c94ad50a718cd14f0e9b3",
+    "components/console_shell/include/console/shell.h": "5bbcbf3a9cc1f585b1fa72ad02d3e8a9df806c9ef3db67aeba59fb9ee666aaac",
+    "components/console_shell/src/console_shell.c": "50293325ce4aaf0b37350dd4ecc2b66cac73d6d834a21d2d00d52ad5410f007d",
+    "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c": "718d660496f8d027ce9fdb7307fa5e382410c7f483f399d65b99a8e07ea8b404",
+    "apps/doom_embedded_touch_audio/components/platform_audio/src/platform_audio_adapter.c": "07f38b306044c7718b06bab1abd9a15b2c1cd03a4363aed1993de380d50710cc",
+    "apps/doom/components/doom_audio/src/doom_music_synth.c": "14414a06d9c97c0cd7f463256ba0f444882159f61b154609a6e93971333324f9",
+    "components/platform_audio_factory/src/platform_audio_factory.c": "75aa8d1a388bd0d999844a360af2adc989893cee2ea9f406cb90a9f0b549c725",
+    "scripts/console-os-install.py": "0887dbcc43d79f48e06628eca21c518974ef900ff8f8cb025d63bb2bbf44c491",
+    "scripts/capture-console-os-runtime.py": "cdb2c124f0f1e58aaaac7f13d416eff00cb044cc0f13232afa8537d8645aa571",
+    "scripts/doom-e6-install.py": "f5d2255f37ca9373fdaf42ebe711968c31dc51b3dbbc2f7e501a235fbb546471",
+    "scripts/doom-e5-install.py": "4371a5985968053dc59c7d29c8a2d425ea35210f5cc0b36b924ecce0045497c1",
+    "scripts/gamepad-diag-restore.py": "5be16e889116cc8a9e9009d730c2d0bcd3438ac07ead2d726ac1a346a5f0e244",
+    "scripts/verify-console-os.py": "78b16ffb9e7f61e8a84bba034e6eb19dfff30da221978d5c00295c17b5038f03",
+    "toolchain.lock.json": "0539c66e7aa2de5d5564afea86e6412174185602fdea8efbe068676b51867936",
+    "hardware/board-profile.json": "f5c38e1aceabc633aaf78b844f8b1f5f1f82d25adbf75291479c57d7c1fe2701"
+  }
+}

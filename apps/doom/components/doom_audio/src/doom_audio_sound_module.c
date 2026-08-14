@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 /*
- * Project-owned sound-effect adapter for the pinned doomgeneric engine.
- * Music deliberately remains a fail-quiet stub for this milestone.
+ * Project-owned sound and MUS-music adapter for the pinned doomgeneric engine.
+ * The worker mixes both sources; no external MIDI service or hardware is used.
  */
 
 #include <stdbool.h>
@@ -14,6 +14,7 @@
 #include "deh_str.h"
 #include "doom/audio_mixer.h"
 #include "doom/audio_runtime.h"
+#include "doom/music_synth.h"
 #include "doomtype.h"
 #include "esp_err.h"
 #include "i_sound.h"
@@ -30,6 +31,7 @@ typedef struct {
 } cached_sound_t;
 
 static bool s_initialized;
+static bool s_music_initialized;
 static bool s_use_sfx_prefix;
 static sfxinfo_t *s_sound_table;
 static size_t s_sound_count;
@@ -271,57 +273,94 @@ sound_module_t DG_sound_module = {
 
 static boolean music_init(void)
 {
-    return false;
+    if (!s_initialized) {
+        return false;
+    }
+    s_music_initialized = true;
+    return true;
 }
 
-static void music_noop(void)
+static void music_shutdown(void)
 {
+    if (s_music_initialized) {
+        (void)doom_audio_runtime_music_stop();
+        s_music_initialized = false;
+    }
 }
 
 static void music_set_volume(int volume)
 {
-    (void)volume;
+    if (s_music_initialized && volume >= 0 && volume <= 127) {
+        (void)doom_audio_runtime_music_set_volume((uint8_t)volume);
+    }
 }
 
 static void *music_register(void *data, int length)
 {
-    (void)data;
-    (void)length;
-    return NULL;
+    if (!s_music_initialized || data == NULL || length <= 0 ||
+        (size_t)length > (size_t)DOOM_MUSIC_MAX_SONG_BYTES) {
+        return NULL;
+    }
+    return doom_music_song_create(data, (size_t)length);
 }
 
 static void music_unregister(void *handle)
 {
-    (void)handle;
+    doom_music_song_release(handle);
 }
 
 static void music_play(void *handle, boolean looping)
 {
-    (void)handle;
-    (void)looping;
+    if (s_music_initialized && handle != NULL) {
+        (void)doom_audio_runtime_music_play(
+            handle, looping != false);
+    }
+}
+
+static void music_pause(void)
+{
+    if (s_music_initialized) {
+        (void)doom_audio_runtime_music_pause();
+    }
+}
+
+static void music_resume(void)
+{
+    if (s_music_initialized) {
+        (void)doom_audio_runtime_music_resume();
+    }
+}
+
+static void music_stop(void)
+{
+    if (s_music_initialized) {
+        (void)doom_audio_runtime_music_stop();
+    }
 }
 
 static boolean music_is_playing(void)
 {
-    return false;
+    return s_music_initialized && doom_audio_runtime_music_is_playing();
 }
 
 static snddevice_t s_music_devices[] = {
-    SNDDEVICE_NONE,
+    SNDDEVICE_SB,
+    SNDDEVICE_ADLIB,
+    SNDDEVICE_GENMIDI,
 };
 
 music_module_t DG_music_module = {
     s_music_devices,
     (int)(sizeof(s_music_devices) / sizeof(s_music_devices[0])),
     music_init,
-    music_noop,
+    music_shutdown,
     music_set_volume,
-    music_noop,
-    music_noop,
+    music_pause,
+    music_resume,
     music_register,
     music_unregister,
     music_play,
-    music_noop,
+    music_stop,
     music_is_playing,
     NULL,
 };

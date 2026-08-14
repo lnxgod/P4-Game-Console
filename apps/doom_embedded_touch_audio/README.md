@@ -44,9 +44,17 @@ GPIO30 is active-low. The first audio hardware call latches it high and proves
 the pad readback. Backend start then re-primes all 1,536 TX DMA frames with
 zero, makes exactly one initial low request/readback, measures at least 350 ms
 of zero clocks, and performs the second low readback before RUNNING. Backend
-volume step 10/10 is exact bit-for-bit PCM16 unity with no amplification; the
-range is `[-32768,32767]` and maximum absolute magnitude is 32768. Music stays
-disabled.
+volume step 6/10 applies 60% linear PCM amplitude at the final backend stage.
+The range before attenuation remains `[-32768,32767]` and maximum absolute
+magnitude is 32768.
+
+Doom's real MUS lumps now run through the project-owned bounded 140 Hz,
+16-voice procedural synthesizer on the same worker as SFX. Music and effects
+are saturated together before the counted platform gateway. No external MIDI
+device, SoundFont, generated song, or test-tone fallback is present. This is a
+lightweight retro synth rather than bit-exact OPL emulation. The complete
+repeatable software, serial, and human acoustic procedure is in
+`docs/DOOM_MUSIC_TEST.md`.
 
 Normal cleanup stops and joins the Doom audio worker before stop/safe/destroy.
 A sound-init failure that returned the runtime to BOUND is accepted only after

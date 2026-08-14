@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "format": "p4-native-static-v1",
+  "api_version": 1,
+  "component": "maze_chase",
+  "entry_symbol": "p4_maze_chase_game",
+  "launcher_id": 100,
+  "id": "org.p4console.maze-chase",
+  "title": "MAZE CHASE",
+  "subtitle": "P4 GAME API V1",
+  "accent_rgb565": "0xffe0",
+  "required_capabilities": ["video", "controls"],
+  "optional_capabilities": ["audio-tone"],
+  "license": "MIT",
+  "assets": "original-code-rendered-shapes-only",
+  "enabled": true
+}

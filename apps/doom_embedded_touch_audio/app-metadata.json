@@ -3,7 +3,7 @@
   "app": "doom_embedded_touch_audio",
   "stage": "E6-sound-successor-build-only-electrical-release-pending",
   "evidence_class": "build-tested-sound-successor-not-runtime-authorized",
-  "purpose": "Build-only successor to the installed E5 touch-only Doom image, preserving display/WAD/video/touch while selecting the vendor complete audio-init shape (I2S0 PDM RX plus I2S1 speaker TX) through the counted app-local adapter.",
+  "purpose": "Build-only successor to the installed E5 touch-only Doom image, preserving display/WAD/video/touch while mixing Doom sound effects with WAD MUS music in software and selecting the vendor complete audio-init shape (I2S0 PDM RX plus I2S1 speaker TX) through the counted app-local adapter.",
   "runtime_supported": false,
   "build_evidence": "test-runs/2026-08-13-doom-embedded-touch-audio-e6-sound-build.json",
   "runtime_basis": "hardware/evidence/elecrow-10.1-factory-touch-audio-runtime-basis.json",
@@ -37,7 +37,7 @@
       "manifest": {
         "path": "test-runs/doom-e6-rollback-2026-08-13/rollback-bundle.json",
         "mode": "0400",
-        "sha256": "f841baf4f2ce0ec1872a44ea1219ecb07d5a4f310d08621493d23533f1646a85"
+        "sha256": "00a670a6c1034768a8ccbcb53ef0ea9c18bbd604905b5fa8846994ee5a15949b"
       },
       "artifact": {
         "path": "test-runs/doom-e6-rollback-2026-08-13/installed-e5-exact.bin",
@@ -130,18 +130,22 @@
       "dout_gpio": 23,
       "tx_mclk": "unused",
       "codec_i2c_transactions": 0,
-      "backend_volume_step": "10/10",
-      "gain": "unity-no-amplification",
+      "backend_volume_step": "6/10",
+      "gain": "attenuated-60-percent-linear-pcm",
       "signed_pcm16_range": [-32768, 32767],
       "maximum_absolute_magnitude": 32768,
-      "music_enabled": false
+      "music_enabled": true,
+      "music_source": "unmodified MUS lumps from the exact embedded WAD",
+      "music_timing_hz": 140,
+      "music_synth": "bounded-16-voice-procedural-software-synth",
+      "external_midi_hardware_required": false,
+      "soundfont_required": false,
+      "bit_exact_opl_claimed": false
     },
     "first_audio_hardware_call": "platform_audio_force_safe_shutdown",
     "audio_invocation_counter_scope": "mutating-control-data backend calls only; thread-safe coherent telemetry snapshots are excluded and reported separately",
     "gpio30_startup": "high-pad-readback-before-I2S-create; low-pad-readback plus at-least-350ms-zero-settle only during platform_audio_start",
-    "doom_arguments": [
-      "-nomusic"
-    ],
+    "doom_arguments": [],
     "usb_calls": 0
   },
   "release_blockers": [

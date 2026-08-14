@@ -518,6 +518,22 @@ def verify_policy(mode: str, evidence: dict) -> None:
 
 
 def main() -> None:
+    metadata_path = APP / "app-metadata.json"
+    try:
+        metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as error:
+        fail(f"cannot read {metadata_path}: {error}")
+    if isinstance(metadata, dict) and str(metadata.get("stage", "")).startswith("E6-"):
+        helper_path = ROOT / "scripts/verify-doom-embedded-touch-audio-e6.py"
+        spec = importlib.util.spec_from_file_location(
+            "doom_embedded_touch_audio_e6_verifier", helper_path
+        )
+        require(spec is not None and spec.loader is not None,
+                "cannot load the E6 verifier")
+        helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(helper)
+        helper.main(sys.argv)
+        return
     if len(sys.argv) != 3:
         fail("usage: verify-doom-embedded-touch-audio.py BUILD_DIR build-only|app-flash|post-run")
     build = pathlib.Path(sys.argv[1]).resolve()

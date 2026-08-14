@@ -2,6 +2,12 @@
 
 This repository is the experimental firmware platform for a future ESP32-P4 badge. Doom is the first end-to-end acceptance game; USB controllers, display, storage, audio, and lifecycle services are reusable platform components rather than Doom-specific code.
 
+Console OS now has a versioned native C game API for RGB565 drawing, normalized
+touch controls, bounded tone audio, and return-to-launcher lifecycle. Games are
+manifest-discovered RISC-V components linked into the ESP-IDF ELF/BIN image;
+they are not UF2 files. The first clean-room sample is Maze Chase. See
+[the P4 Game SDK](docs/GAME_SDK.md).
+
 ## Current target
 
 The attached board has been identified non-destructively as an ESP32-P4 revision 1.3 with 16 MB flash. Its saved pre-project image identifies itself as `ESP32-P4-Elecrow-Advance`; more importantly, it contains Elecrow's complete, commit-pinned 10.1-inch loading-background asset at flash offset `0x71004`, while the full 7- and 9-inch assets are absent. The working classification is therefore the 10.1-inch/DHE04310D **factory-firmware variant** with very high confidence. This is not a physical-label or PCB-revision claim: `pcb_revision` remains null and every pin map remains unauthorized until the board silkscreen is photographed.
@@ -26,7 +32,7 @@ The reusable tier-1 gamepad software path now builds under the pinned target: a 
 4. Run Doom with legal game data from SD, RGB565 video, I²S audio, and the shared input API.
 5. Extract only proven procedures into repository skills and hardware acceptance tests.
 
-See [the architecture](docs/ARCHITECTURE.md), [hardware facts and open questions](docs/HARDWARE.md), [the Doom acceptance design](docs/DOOM.md), and [the acceptance roadmap](docs/ROADMAP.md).
+See [the architecture](docs/ARCHITECTURE.md), [the native console shell](docs/CONSOLE_OS.md), [hardware facts and open questions](docs/HARDWARE.md), [the Doom acceptance design](docs/DOOM.md), and [the acceptance roadmap](docs/ROADMAP.md).
 
 ## Reproducible commands
 
@@ -39,6 +45,9 @@ make build APP=bringup
 make build APP=display_diag
 make gamepad-host
 make gamepad-idf
+make console-shell-host
+make game-sdk-host
+make console-os-idf
 ```
 
 Hardware writes always require an explicit port. For the first pin-independent
@@ -69,6 +78,7 @@ OTG adapter; see `docs/HARDWARE.md` first.
 ```text
 apps/          ESP-IDF applications and acceptance firmware
 components/    Reusable badge services and board support
+games/         Native P4 Game API games and manifests
 docs/          Architecture, decisions, and test criteria
 hardware/      Board profile, schematics/host-shim notes, backup metadata
 scripts/       Reproducible setup/build/flash/monitor commands

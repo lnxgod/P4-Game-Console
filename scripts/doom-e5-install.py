@@ -49,27 +49,27 @@ EXPECTED_RUNTIME_HASHES = {
 EXPECTED_RESTORE_SHA256 = "5be16e889116cc8a9e9009d730c2d0bcd3438ac07ead2d726ac1a346a5f0e244"
 EXPECTED_SERIAL_RUNTIME = {
     "python": {
-        "path": "/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
-        "bytes": 52_448,
-        "sha256": "5c3ea934d18a7979253ca08ff16151db78a896be29dbc37fd9bf7e7c549593b8",
+        "path": "/Users/billh/.pyenv/versions/3.11.15/bin/python3.11",
+        "bytes": 33_816,
+        "sha256": "2956845d0de97a51eaef2f754f926dc17d294822a91bb69951bd71b0237d5378",
     },
     "serial": {"bytes": 3_212, "sha256": "5dec897fdef45a0eaf63eacda1e01d62e1e75490302584ae0238f75376592344"},
     "serialposix": {"bytes": 35_127, "sha256": "5d56f98513391e1766a1847a04e2e1202ced4172a152803ba1c823a149a9b6f9"},
     "serialutil": {"bytes": 21_797, "sha256": "3c84f8c7c319f161a85d6f8db5bedc4f65255714589bdcbeee6f2daf65a17c0a"},
     "termios": {
-        "path": "/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/lib/python3.14/lib-dynload/termios.cpython-314-darwin.so",
-        "bytes": 71_952,
-        "sha256": "18c723dc5d61cc411f12c75bf1b3de2be917490eb9733a226bc8d0c7a18c028f",
+        "path": "/Users/billh/.pyenv/versions/3.11.15/lib/python3.11/lib-dynload/termios.cpython-311-darwin.so",
+        "bytes": 55_392,
+        "sha256": "08310a972fce4fb76076d6b1e574564b4d0ba9f5a2e5e9f7b44e03fa6f5406e0",
     },
     "fcntl": {
-        "path": "/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/lib/python3.14/lib-dynload/fcntl.cpython-314-darwin.so",
-        "bytes": 70_832,
-        "sha256": "0a54b8fc819837d545ee95da563421303e0cfaae73c5a4881ef56d32da3d667d",
+        "path": "/Users/billh/.pyenv/versions/3.11.15/lib/python3.11/lib-dynload/fcntl.cpython-311-darwin.so",
+        "bytes": 53_400,
+        "sha256": "4935bc7ef90e289896e2adff7bfa3506b7ab9b2dd584cad6b1a79cc26500f6fc",
     },
 }
-EXPECTED_SERIAL_RUNTIME["serial"]["path"] = "/Users/billh/.espressif/python_env/idf5.5_py3.14_env/lib/python3.14/site-packages/serial/__init__.py"
-EXPECTED_SERIAL_RUNTIME["serialposix"]["path"] = "/Users/billh/.espressif/python_env/idf5.5_py3.14_env/lib/python3.14/site-packages/serial/serialposix.py"
-EXPECTED_SERIAL_RUNTIME["serialutil"]["path"] = "/Users/billh/.espressif/python_env/idf5.5_py3.14_env/lib/python3.14/site-packages/serial/serialutil.py"
+EXPECTED_SERIAL_RUNTIME["serial"]["path"] = "/Users/billh/.espressif/python_env/idf5.5_py3.11_env/lib/python3.11/site-packages/serial/__init__.py"
+EXPECTED_SERIAL_RUNTIME["serialposix"]["path"] = "/Users/billh/.espressif/python_env/idf5.5_py3.11_env/lib/python3.11/site-packages/serial/serialposix.py"
+EXPECTED_SERIAL_RUNTIME["serialutil"]["path"] = "/Users/billh/.espressif/python_env/idf5.5_py3.11_env/lib/python3.11/site-packages/serial/serialutil.py"
 EXPECTED_AUTH_RUNTIME_BINDING = {
     "esptool_version": "4.12.0",
     "loader_sha256": EXPECTED_RUNTIME_HASHES["loader"],

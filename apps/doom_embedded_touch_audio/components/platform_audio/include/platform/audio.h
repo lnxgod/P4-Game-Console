@@ -72,8 +72,10 @@ esp_err_t platform_audio_destroy(platform_audio_t **audio);
 uint32_t platform_audio_invocation_count(void);
 
 /**
- * Take a coherent nonblocking snapshot without invoking the backend.
- * Returns an all-zero fail-closed snapshot if a mutating call is in progress.
+ * Take a stable nonblocking snapshot without invoking the backend. While one
+ * blocking I2S write is in flight, the snapshot publishes the last completed
+ * write and excludes that unfinished invocation from the reported count.
+ * Returns all zeros only if bounded lock-free publication retries are exhausted.
  */
 void platform_audio_adapter_get_stats(platform_audio_adapter_stats_t *out_stats);
 

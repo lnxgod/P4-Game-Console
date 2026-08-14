@@ -89,6 +89,16 @@ def stats(frames: int, *, audio_peak: int, touch_failures: int = 0,
         "backend_resources_owned": 2,
         "audio_frames": forwarded,
         "audio_write_failures": 0,
+        "audio_worker_stack_hwm": 4096,
+        "music_playing": 1,
+        "music_paused": 0,
+        "music_songs": 1,
+        "music_events": frames * 3,
+        "music_notes": frames,
+        "music_loops": frames // 300,
+        "music_frames": forwarded // 2,
+        "music_parse_failures": 0,
+        "music_peak": max(1, audio_peak // 2),
     }
     if overrides:
         values.update(overrides)
@@ -116,18 +126,21 @@ def startup() -> bytes:
             b"speaker_i2s_port=1 rate_hz=16000 format=pcm16-stereo channels=2 "
             b"lrclk_gpio=21 bclk_gpio=22 dout_gpio=23 tx_mclk=none "
             b"codec_i2c_transactions=0 required_startup_zero_ms=350 "
-            b"backend_volume_step=10/10 gain=unity-no-amplification "
-            b"music=disabled activation=doom-sfx-init-pending audio_calls=3"
+            b"backend_volume_step=6/10 gain=attenuated-60-percent "
+            b"music=wad-mus synth=procedural-16voice "
+            b"activation=doom-sfx-init-pending audio_calls=3"
         ),
         (
             b"P4_DOOM_E6 ENGINE_START wad=/doom/doom1.wad touch=ready "
-            b"overlay=visible sfx_request=enabled music=disabled usb=absent"
+            b"overlay=visible sfx_request=enabled music_request=enabled "
+            b"music_synth=procedural-16voice usb=absent"
         ),
         capture.VIDEO_READY,
         (
             b"P4_DOOM_E6 SOUND_READY state=running "
             b"gpio30=low-readback-proven-at-start "
-            b"backend_volume_step=10/10 gain=unity-no-amplification "
+            b"backend_volume_step=6/10 gain=attenuated-60-percent "
+            b"music_pipeline=wad-mus-procedural-16voice "
             b"audio_calls=5"
         ),
     )
@@ -198,6 +211,14 @@ drifts: tuple[tuple[str, int | str], ...] = (
     ("backend_rollback_high_proofs", 1),
     ("backend_resources_retained", 1),
     ("audio_write_failures", 1),
+    ("audio_worker_stack_hwm", 511),
+    ("music_paused", 1),
+    ("music_songs", 0),
+    ("music_events", 0),
+    ("music_notes", 0),
+    ("music_frames", 0),
+    ("music_parse_failures", 1),
+    ("music_peak", 0),
 )
 for field, value in drifts:
     payload = startup() + stats(300, audio_peak=12000) + stats(

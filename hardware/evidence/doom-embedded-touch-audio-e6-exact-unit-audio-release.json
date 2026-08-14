@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "active": true,
+  "classification": "exact-unit-operator-accepted-factory-audio-release",
+  "scope": "one-device-e6-complete-factory-audio-init",
+  "recorded_at_local_date": "2026-08-13",
+  "operator_direction": "Add actual WAD MUS music, turn the volume down, flash it, and record honest test notes.",
+  "exact_unit": {
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216
+  },
+  "operator_risk_acceptance": {
+    "unresolved_amplifier_topology_risk_accepted": true,
+    "gpio24_pdm_clock_may_feed_codec_mclk": true,
+    "population_or_continuity_proof_available": false,
+    "connected_unit_only": true,
+    "reusable_authorization": false,
+    "cross_unit_authorization": false,
+    "acoustic_output_not_yet_proven": true
+  },
+  "operator_attestation": {
+    "exact_connected_unit_prior_run_no_damage_observed": true,
+    "factory_image_speaker_was_audible_to_operator": true,
+    "direction": "replay-complete-pinned-factory-hardware-initializer",
+    "accepts_unresolved_topology_risk_for_this_unit": true
+  },
+  "pinned_factory_source": {
+    "commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+    "archive_sha256": "73b32c4d4dc89cc0b091388d6a7862d827d6548412717bcb1f36f7adb8da2e28",
+    "board_source_sha256": "f0aa354307710744f37d57b8ea23942b13d6ae38c26a98ad118c606ae5b11b69",
+    "codec_control_source_sha256": "f80ee68cd9e079725e9ea68d218b04c06438a86a91988e98750dfbc4b319ee18"
+  },
+  "complete_factory_initializer": {
+    "pdm_rx_controller": 0,
+    "pdm_clock_gpio": 24,
+    "pdm_clock_hz": 1024000,
+    "pdm_data_input_gpio": 26,
+    "pdm_samples_consumed": false,
+    "speaker_tx_controller": 1,
+    "sample_rate_hz": 16000,
+    "format": "signed-pcm16-stereo",
+    "lrclk_gpio": 21,
+    "bclk_gpio": 22,
+    "dout_gpio": 23,
+    "tx_mclk": "unused",
+    "amplifier_shutdown_gpio": 30,
+    "amplifier_enable_level": 0,
+    "external_codec_i2c_transactions": 0,
+    "usb_runtime": false
+  },
+  "prior_nondamaging_run": {
+    "path": "hardware/test-runs/2026-08-13-audio-direct-d23-attempt2.json",
+    "sha256": "74568d7b388dd437a9dd2a0a672bb635b343329b60baa0778c7740f87350925b",
+    "record_result": "fail-no-microphone-detected-tone",
+    "serial_result": "pass",
+    "microphone_result": "fail",
+    "connected_unit_speaker_path_accepted": false
+  },
+  "prior_e6_operator_observation": {
+    "operator_statement": "we had sound",
+    "doom_sfx_audible": true,
+    "music_status": "not-tested",
+    "scope": "earlier E6 attempt on this exact connected unit"
+  },
+  "software_audio_extension": {
+    "wad_sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+    "music_source": "unmodified-MUS-lumps-from-exact-embedded-WAD",
+    "music_playback": "bounded-16-voice-procedural-software-synth",
+    "music_timing_hz": 140,
+    "output_rate_hz": 16000,
+    "backend_volume_step": "6/10",
+    "gain": "linear-60-percent-final-output",
+    "external_midi_hardware_required": false,
+    "soundfont_required": false,
+    "bit_exact_opl_claimed": false,
+    "software_counters_are_acoustic_proof": false,
+    "human_acceptance": "recognizable-title-or-E1M1-music-and-simultaneous-SFX"
+  },
+  "pre_e6_full_flash_backup": {
+    "path": "hardware/backups/pre-e6-live-20260813.bin",
+    "bytes": 16777216,
+    "sha256": "c567d0a4d960156b59216e4c424d78856e7b8dbe52e05810d47a69a3e58f4217"
+  },
+  "rollback_identity": {
+    "offset": "0x10000",
+    "e5_artifact_bytes": 4898400,
+    "e5_artifact_sha256": "68e97df1e89c28428d6a66c2ca4ab26c4eade76ff9357479f80d01ebc08609c8",
+    "e5_padded_span_bytes": 4898816,
+    "e5_padded_span_sha256": "9c288a83ecfb061cdbec510e679166bb85e2fcf44f3a21f8a2f79e440c1303f9"
+  }
+}

@@ -2,6 +2,7 @@
 
 set(DOOM_AUDIO_CORE_SOURCES
     src/doom_audio_mixer.c
+    src/doom_music_synth.c
     src/doom_audio_ring.c
 )
 

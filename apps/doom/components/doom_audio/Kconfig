@@ -3,7 +3,8 @@ menu "Doom audio integration"
         bool "Build the project Doom sound-effect adapter"
         default n
         help
-            Builds the FEATURE_SOUND adapter, fixed 16 kHz stereo mixer, and
-            platform_audio worker. This is a compile-time integration seam,
-            not permission to flash or energize the speaker path.
+            Builds the FEATURE_SOUND adapter, fixed 16 kHz stereo SFX mixer,
+            bounded MUS software synthesizer, and platform_audio worker. This
+            is a compile-time integration seam, not permission to flash or
+            energize the speaker path.
 endmenu

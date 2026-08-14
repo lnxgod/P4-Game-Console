@@ -98,7 +98,9 @@ D0.5 was not flashed or executed. It does not prove boot, WAD loading, memory pl
 ### D3 — sound and persistence
 
 - Reuse Doom's mixer but send PCM through the CrowPanel's direct I²S/NS4168 service.
-- Add sound effects first; music is a separate resource/timing milestone.
+- Sound effects are complete. The E6 successor adds the real WAD MUS tracks
+  with a bounded 140 Hz, 16-voice procedural synth mixed on the audio worker;
+  use `docs/DOOM_MUSIC_TEST.md` for its separate timing/acoustic acceptance.
 - Put saves/configuration on SD through the storage service and verify recovery from interrupted writes.
 
 ### D4 — endurance acceptance

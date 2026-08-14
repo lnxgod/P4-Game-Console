@@ -115,11 +115,14 @@ independent acoustic measurement. It does justify a factory-compatible,
 build-tested backend: `platform_audio_factory` first latches
 and pad-readback-verifies GPIO30 high, preloads a complete 1536-frame zero DMA
 ring, makes one high-to-low transition, holds exact zeros for at least 350 ms,
-then rechecks low before accepting PCM. At volume 10 the backend preserves the
-complete signed PCM16 range `[-32768,32767]` bit-for-bit without amplification
-(maximum absolute magnitude 32768); lower settings attenuate proportionally.
-Music is disabled. The PDM RX channel is initialized and clocked exactly like
-the factory source, but Doom does not consume its microphone samples. No
+then rechecks low before accepting PCM. Volume step 10/10 preserves the complete
+signed PCM16 range `[-32768,32767]` bit-for-bit without amplification; this Doom
+image deliberately uses step 6/10 for proportional final-output attenuation.
+Doom sound effects and validated MUS lumps from the exact embedded WAD are mixed
+at 16 kHz by a bounded 16-voice procedural software synthesizer above the stable
+platform boundary. It requires no external MIDI hardware or SoundFont and does
+not claim bit-exact OPL emulation. The PDM RX channel is initialized and clocked
+exactly like the factory source, but Doom does not consume its microphone samples. No
 external codec I2C transaction is made and no alternate codec path is selected.
 Any failure requests high shutdown before retaining or releasing resources.
 
@@ -132,9 +135,10 @@ source/initializer, an exact reviewed artifact, preserved E5 rollback, and the
 same-handle app-only write/readback/launch route. This operator-accepted
 exception does not rewrite the historical topology review or authorize audio
 on another board. Until that immutable authorization and independent preflash
-audit are complete, E6 remains unflashable. After launch, acceptance requires rising
-audio frame counts with zero write failures plus a person confirming audible,
-undistorted output. See
+audit are complete, E6 remains unflashable. After launch, acceptance requires
+rising audio frame counts, music event/note/frame counters, non-zero music PCM,
+and zero parse/write failures plus a person separately confirming audible,
+undistorted title/E1M1 music and simultaneous sound effects. See
 `hardware/evidence/elecrow-10.1-audio-path-review.json`,
 `hardware/evidence/elecrow-10.1-factory-audio-semantics.json`, and
 `hardware/evidence/elecrow-10.1-factory-touch-audio-runtime-basis.json`.

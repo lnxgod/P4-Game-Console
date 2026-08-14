@@ -48,8 +48,11 @@ exception to another unit, PCB revision, or general pin map.
   pinned factory `my_codec` control object is an in-memory register shim.
 - Use `components/platform_audio_factory`; applications consume the counted
   `platform/audio.h` adapter and do not own raw I2S or GPIO handles.
-- Keep Doom music disabled. Feed its native 16 kHz effects at backend volume
-  step 10/10 for unity gain without amplification. Do not call that 10 percent;
+- On the exact-unit E6 path, mix validated Doom WAD MUS lumps with native 16 kHz
+  effects above the stable platform boundary using the bounded procedural synth.
+  It requires no external MIDI hardware, codec traffic, or SoundFont and does
+  not claim bit-exact OPL emulation. Feed the combined stream at backend volume
+  step 6/10 for linear final-output attenuation. Do not call the step a percent;
   the factory UI's usual stored/default volume applies separate attenuation.
 
 ## Start and stop without pops
@@ -64,6 +67,31 @@ Keep the factory electrical path while using the stricter project lifecycle:
 5. Drive GPIO30 low once, keep zeros flowing for at least 350 ms, prove low
    again, and only then publish RUNNING.
 6. Accept bounded PCM writes only after the service enters RUNNING.
+
+For a music-enabled acceptance, require rising MUS event, note, and mixed-frame
+counters, non-zero music PCM, zero MUS parse failures, and separate human
+confirmation of recognizable title/E1M1 music plus simultaneous sound effects.
+Software counters never prove acoustic output.
+
+## Interpret attenuated telemetry correctly
+
+The counted adapter observes PCM before the factory backend applies its volume
+step; backend telemetry observes PCM afterward. For backend step `v` in 1..10:
+
+- require `backend_peak >= floor(adapter_peak * v / 10)` once every
+  adapter-counted write is known to have completed in the backend;
+- cap the backend peak with `platform_audio_factory_peak_for_volume(v)`;
+- never require post-attenuation non-zero counts to equal or exceed the adapter
+  counts, because integer attenuation can quantize small samples to zero;
+- when snapshots are taken independently, bound any backend surplus by
+  `backend_frames_written - adapter_frames_forwarded` and the corresponding
+  sample delta rather than pretending the snapshots are atomic.
+
+For step 6/10, a pre-volume peak of 15599 truthfully becomes 9359 and the
+absolute backend limit is 19660. Treat that as expected attenuation, not a
+silent-audio failure. Make retained-UART capture return and persist success as
+soon as the required exact startup sequence and minimum valid records pass;
+unnecessarily waiting exposes a completed proof to later cable disconnects.
 
 On any create, start, write, stop, or cleanup failure, request and read back
 GPIO30 high first. Retain ownership when cleanup is not proven, publish

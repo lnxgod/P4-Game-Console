@@ -20,6 +20,17 @@
     "sha256": "3e3f5f687f59938963d9040d6c8e9dc1a687baa512790680830422c22bd6ab3c",
     "git_ignored": true
   },
+  "pre_e6_live_backup": {
+    "captured_at": "2026-08-14T03:47:17Z",
+    "file": "hardware/backups/pre-e6-live-20260813.bin",
+    "bytes": 16777216,
+    "sha256": "c567d0a4d960156b59216e4c424d78856e7b8dbe52e05810d47a69a3e58f4217",
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "source": "complete live flash immediately before the E6 sound install",
+    "contains_installed_stage": "E5-touch-only-persistent",
+    "git_ignored": true,
+    "mode": "0600"
+  },
   "factory_partition_table": [
     {
       "name": "nvs",

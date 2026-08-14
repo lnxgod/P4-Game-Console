@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include "doom/audio_mixer.h"
+#include "doom/music_synth.h"
 #include "esp_err.h"
 #include "platform/audio.h"
 
@@ -35,6 +36,15 @@ typedef struct {
     uint32_t write_failures;
     /** Minimum worker stack headroom in bytes; UINT32_MAX until sampled. */
     uint32_t worker_stack_hwm_bytes;
+    uint32_t music_songs_started;
+    uint32_t music_events_processed;
+    uint32_t music_notes_started;
+    uint32_t music_loops_completed;
+    uint32_t music_mixed_frames;
+    uint32_t music_parse_failures;
+    uint32_t music_maximum_absolute_mix;
+    bool music_playing;
+    bool music_paused;
 } doom_audio_runtime_stats_t;
 
 /**
@@ -65,6 +75,14 @@ bool doom_audio_runtime_update_voice(size_t voice_index,
                                      uint8_t volume,
                                      uint8_t separation);
 bool doom_audio_runtime_voice_active(size_t voice_index);
+
+/** Nonblocking music controls used by the engine's MUS adapter. */
+bool doom_audio_runtime_music_play(doom_music_song_t *song, bool looping);
+bool doom_audio_runtime_music_stop(void);
+bool doom_audio_runtime_music_pause(void);
+bool doom_audio_runtime_music_resume(void);
+bool doom_audio_runtime_music_set_volume(uint8_t volume);
+bool doom_audio_runtime_music_is_playing(void);
 
 /** Snapshot monotonic diagnostics without waiting for the worker. */
 esp_err_t doom_audio_runtime_get_stats(doom_audio_runtime_stats_t *out_stats);

@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "active": true,
+  "scope": "exact-unit-e6-factory-audio",
+  "device_binding": {
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216
+  },
+  "gates": {
+    "composite": 1,
+    "touch": 1,
+    "audio": 1
+  },
+  "exact_artifact": {
+    "offset": "0x10000",
+    "app_binary_bytes": 4917344,
+    "app_binary_sha256": "366a793dc58d03590023d82ca15aa9390834fb9a49b60becc19b4058e1e1123c",
+    "elf_bytes": 13994200,
+    "elf_sha256": "db0631b103882ffa875fc77068bfda8fc3784fef913e613c4f7244da85ad546a",
+    "bootloader_bytes": 22912,
+    "bootloader_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+    "mutation_span_bytes": 4931584,
+    "mutation_tail_byte": "ff"
+  },
+  "build_evidence": {
+    "path": "test-runs/2026-08-13-doom-embedded-touch-audio-e6-sound-build.json",
+    "sha256": "4bda8e8b5bb1a816897bf555ed4334da144f8c9c6035cce99da81b8cc5380324"
+  },
+  "exact_unit_audio_release": {
+    "path": "hardware/evidence/doom-embedded-touch-audio-e6-exact-unit-audio-release.json",
+    "sha256": "da0a25bb4e3ba07cf46bd3e300ffca89ace1e2d9545debb34e943a5cd4c828b3"
+  },
+  "installed_predecessor_rollback": {
+    "path": "test-runs/doom-e6-rollback-2026-08-13/rollback-bundle.json",
+    "sha256": "00a670a6c1034768a8ccbcb53ef0ea9c18bbd604905b5fa8846994ee5a15949b"
+  },
+  "pre_e6_full_flash_backup": {
+    "path": "hardware/backups/pre-e6-live-20260813.bin",
+    "bytes": 16777216,
+    "sha256": "c567d0a4d960156b59216e4c424d78856e7b8dbe52e05810d47a69a3e58f4217"
+  },
+  "execution_contract": {
+    "same_uart_handle": true,
+    "live_full_span_preimage_required": true,
+    "retained_startup_capture_required": true,
+    "automatic_restore_on_capture_failure": true,
+    "usb_runtime": false
+  }
+}

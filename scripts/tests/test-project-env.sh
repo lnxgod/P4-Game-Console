@@ -40,9 +40,12 @@ if p4_require_flash_authorized gamepad_diag flash >/dev/null 2>&1; then
     printf 'gamepad diagnostic full-project flash was authorized\n' >&2
     exit 1
 fi
-p4_require_flash_authorized doom_embedded_touch_audio app-flash
+if p4_require_flash_authorized doom_embedded_touch_audio app-flash >/dev/null 2>&1; then
+    printf 'E6 sound successor app flash was authorized\n' >&2
+    exit 1
+fi
 if p4_require_flash_authorized doom_embedded_touch_audio flash >/dev/null 2>&1; then
-    printf 'E5 touch-only full-project flash was authorized\n' >&2
+    printf 'E6 sound successor full-project flash was authorized\n' >&2
     exit 1
 fi
 if p4_require_flash_authorized bringup not-a-flash-target >/dev/null 2>&1; then

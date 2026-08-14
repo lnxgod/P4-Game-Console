@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T08:21:12-0700",
+  "result": "exact-e5-restored-and-launched",
+  "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+  "phase": "restored-e5-launched",
+  "restore_required": false,
+  "restoration_verified": true,
+  "restored_span_bytes": 4931584,
+  "restored_span_sha256": "b87b93073b51d14e308fce2d5f2c4e490234101d2f4a536fec1bea0036559477",
+  "closed_ledger": {
+    "path": "hardware/local-state/doom-e6-install-20260813-mus/e6-install-ledger.json",
+    "sha256": "91f0f351a23f373c0ede0a0f79543ac851a4e9191dd7bad16d3e189e10150eb9"
+  }
+}

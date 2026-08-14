@@ -1,0 +1,153 @@
+# P4 Console OS architecture and test notes
+
+## Status
+
+The original FreeRTOS-native shell was installed on the exact bound 10.1-inch tablet on
+2026-08-14. Its 4,928,880-byte app image was verified by complete padded-span
+readback, launched once on the retained UART, and passed a 30-second launcher
+capture. A further 160-second receive-only observation reached 15,600 touch
+polls with zero touch, display, or timeout failures. The shell kept the
+amplifier unenergized. The user subsequently confirmed that the launcher was
+visible and that selecting Doom launched it. That confirmation does not by
+itself claim a separately observed Console-OS-to-Doom acoustic pass.
+
+The P4 Game API v1, paginated manifest registry, and original Maze Chase game
+described below are a newer build candidate. They have host/software evidence
+only and have not yet been installed or accepted on hardware.
+
+The shell deliberately uses a monolithic firmware with statically registered
+apps. ESP-IDF and FreeRTOS provide tasks, timers, memory, and drivers; this MVP
+does not pretend to be a desktop OS with dynamically loaded executables.
+
+## Foreground model
+
+```text
+boot
+  -> platform_display owns DSI/panel/backlight
+  -> platform_i2c_shared owns I2C1
+  -> platform_touch borrows I2C1 for GT911
+  -> console_shell renders the home screen and built-in pages
+       |-- Colors
+       |-- Touch
+       |-- System
+       |-- Audio status (read-only; amplifier remains safe)
+       |-- native API game selected
+       |     -> console retains display/touch ownership
+       |     -> game receives normalized controls + RGB565 surface
+       |     -> optional bounded audio session starts for the game
+       |     `-> Back stops the game/audio and returns home
+       `-- Doom selected
+             -> backlight dark
+             -> destroy touch borrower
+             -> destroy shared I2C1 owner
+             -> deinitialize display
+             -> enter Doom composite
+                  -> Doom recreates display/touch
+                  -> Doom alone initializes SFX + MUS audio
+```
+
+This first Doom transition is exclusive and one-way. Restarting returns to the
+launcher. Returning directly from Doom will require a reviewed engine teardown
+that releases its VFS blob, audio worker/backend, touch client, I2C bus, video,
+display, overlays, and exit callbacks in a deterministic order.
+
+## Shared service contract
+
+| Resource | Launcher owner | Doom owner | Transition rule |
+|---|---|---|---|
+| MIPI-DSI display | `platform_display` | `platform_display` | Launcher deinitializes it before Doom starts |
+| RGB565 surface | 320x200 shell buffer | Doom video adapter | Never shared concurrently |
+| I2C1 GPIO45/46 | `platform_i2c_shared` | `platform_i2c_shared` | Touch borrower is destroyed before bus owner |
+| GT911 touch | `platform_touch` | `platform_touch` + Doom input | Invalid/malformed frames neutralize input |
+| Speaker audio | none on home; reviewed session for native games | Doom audio adapter/factory backend | Only one foreground owner; close must re-prove amplifier shutdown |
+| Doom WAD | none | immutable embedded read-only blob | Exact ignored shareware input only |
+
+The launcher surface is standard RGB565 at 320x200. The proven display service
+scales it 3x into a 960x600 viewport with 32-pixel black margins on the
+1024x600 panel. Touch coordinates outside that viewport cannot activate UI.
+
+## App registry
+
+`components/console_shell/include/console/shell.h` is the launcher boundary.
+Each app has a nonzero unique ID, bounded title/subtitle, capability flags,
+accent color, enabled state, and either a built-in page or external handoff.
+The shell owns no heap memory, accepts at most 32 apps and five contacts, and
+shows six apps per page with bounded previous/next controls.
+
+To add another built-in app:
+
+1. Add a page enum and bounded renderer/input behavior to `console_shell`.
+2. Register one descriptor in `apps/console_os/main/console_os_main.c`.
+3. Add host navigation, malformed-input, and framebuffer-bound tests.
+
+To add a reentrant native game, run `scripts/new-game.py`, implement it against
+the headers in `components/p4_game_api/include/p4/`, and leave its validated
+manifest enabled. Configure-time generation discovers and registers it. See
+`docs/GAME_SDK.md`. Doom remains a special legacy handoff until its engine has
+a reviewed reentrant teardown.
+
+## Sound behavior
+
+The Audio page reports the compiled handoff contract only. It does not start
+I2S, drive GPIO30 low, or generate a test tone. A native game may request the
+Game API tone capability; Console OS then owns a bounded audio session for that
+foreground game and closes it before returning home. Doom retains its working
+exclusive path:
+
+- 16,000 Hz signed PCM16 stereo
+- Doom sound effects plus WAD MUS procedural synthesis
+- up to 16 music voices
+- backend volume step 6/10
+- factory I2S1 speaker TX route, with the pinned factory PDM-clock side effect
+- no external MIDI device or soundfont
+
+Do not make the home shell, a native game, and Doom own the factory backend at
+the same time.
+
+## Reproducible software checks
+
+From the repository root:
+
+```sh
+make console-shell-host
+make game-sdk-host
+make console-os-idf
+```
+
+The host targets use AddressSanitizer and UndefinedBehaviorSanitizer. They test
+launcher pagination and registry bounds, framebuffer guards/stride padding,
+physical-to-logical touch mapping, press/release semantics, malformed frames,
+the bounded tone mixer and platform audio lifecycle, Maze Chase state and
+randomized input, plus manifest/scaffolder rejection behavior.
+
+The IDF target builds with the locked ESP-IDF 5.5.3 and managed component
+versions, checks ESP32-P4 revision 1.x bounds, and runs
+`scripts/verify-console-os.py`. The verifier confirms the WAD identity and Git
+ignore status, build-only flash policy, handoff cleanup order, component graph,
+partition/flash geometry, required symbols, and absence of USB/SD/codec entry
+points in the final ELF.
+
+## Guarded hardware acceptance
+
+The first install used the exact-unit route rather than generic `idf.py flash`:
+
+1. The predecessor recovery journal was closed and bound by digest.
+2. The new installer captured the complete live 4,931,584-byte app-span
+   preimage before writing.
+3. It wrote only the factory app partition and verified the complete padded
+   span byte-for-byte.
+4. It launched once and retained the same exclusive UART for startup capture.
+5. The launcher proved display completion, GT911 polling, and amplifier-off
+   state with no rollback required.
+
+The exact install record is
+`hardware/test-runs/2026-08-14-console-os-mvp-install.json`. The launcher's
+visibility and launcher-to-Doom transition were later confirmed by the
+operator. A separately recorded simultaneous SFX/MUS observation under the
+Console OS handoff is still required. The newer native Game API/Maze Chase
+candidate also needs its own guarded install and manual display, control,
+sound, exit, and launcher-return acceptance. Do not convert those pending
+checks into pass claims without the operator's observation.
+
+WADs, WAD-bearing firmware binaries, and local recovery images remain local
+and must never be pushed to GitHub.

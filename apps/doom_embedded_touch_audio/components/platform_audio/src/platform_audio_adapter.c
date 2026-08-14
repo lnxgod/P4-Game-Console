@@ -25,6 +25,8 @@ static atomic_uint_least32_t s_nonzero_samples_forwarded;
 static atomic_uint_least16_t s_observed_absolute_peak;
 static atomic_bool s_running_low_readback_proven_at_start;
 static atomic_bool s_ready_muted_zero_dma_proven;
+static atomic_bool s_write_call_inflight;
+static atomic_uint_least32_t s_stats_sequence;
 /*
  * The factory backend is a task-context singleton with an externally
  * serialized API.  Doom's worker owns normal writes, while timeout recovery
@@ -85,6 +87,18 @@ static void count_invocation(void)
     }
 }
 
+static void stats_publish_begin(void)
+{
+    (void)atomic_fetch_add_explicit(
+        &s_stats_sequence, UINT32_C(1), memory_order_acq_rel);
+}
+
+static void stats_publish_end(void)
+{
+    (void)atomic_fetch_add_explicit(
+        &s_stats_sequence, UINT32_C(1), memory_order_release);
+}
+
 uint32_t platform_audio_invocation_count(void)
 {
     return (uint32_t)atomic_load_explicit(
@@ -97,28 +111,48 @@ void platform_audio_adapter_get_stats(platform_audio_adapter_stats_t *out_stats)
         return;
     }
     *out_stats = (platform_audio_adapter_stats_t){0};
-    if (!try_backend_call()) {
+    for (uint32_t attempt = 0U; attempt < UINT32_C(16); ++attempt) {
+        const uint32_t before = (uint32_t)atomic_load_explicit(
+            &s_stats_sequence, memory_order_acquire);
+        if ((before & UINT32_C(1)) != 0U) {
+            continue;
+        }
+        const bool inflight = atomic_load_explicit(
+            &s_write_call_inflight, memory_order_acquire);
+        uint32_t invocations = (uint32_t)atomic_load_explicit(
+            &s_invocation_count, memory_order_relaxed);
+        platform_audio_adapter_stats_t snapshot = {
+            .write_calls_succeeded = (uint32_t)atomic_load_explicit(
+                &s_write_calls_succeeded, memory_order_relaxed),
+            .frames_forwarded = (uint32_t)atomic_load_explicit(
+                &s_frames_forwarded, memory_order_relaxed),
+            .nonzero_frames_forwarded = (uint32_t)atomic_load_explicit(
+                &s_nonzero_frames_forwarded, memory_order_relaxed),
+            .nonzero_samples_forwarded = (uint32_t)atomic_load_explicit(
+                &s_nonzero_samples_forwarded, memory_order_relaxed),
+            .observed_absolute_peak = (uint16_t)atomic_load_explicit(
+                &s_observed_absolute_peak, memory_order_relaxed),
+            .running_low_readback_proven_at_start = atomic_load_explicit(
+                &s_running_low_readback_proven_at_start,
+                memory_order_relaxed),
+            .ready_muted_zero_dma_proven = atomic_load_explicit(
+                &s_ready_muted_zero_dma_proven, memory_order_relaxed),
+        };
+        const uint32_t after = (uint32_t)atomic_load_explicit(
+            &s_stats_sequence, memory_order_acquire);
+        const bool inflight_after = atomic_load_explicit(
+            &s_write_call_inflight, memory_order_acquire);
+        if (before != after || (after & UINT32_C(1)) != 0U ||
+            inflight != inflight_after) {
+            continue;
+        }
+        if (inflight && invocations != 0U) {
+            --invocations;
+        }
+        snapshot.invocations = invocations;
+        *out_stats = snapshot;
         return;
     }
-    *out_stats = (platform_audio_adapter_stats_t){
-        .invocations = (uint32_t)atomic_load_explicit(
-            &s_invocation_count, memory_order_relaxed),
-        .write_calls_succeeded = (uint32_t)atomic_load_explicit(
-            &s_write_calls_succeeded, memory_order_relaxed),
-        .frames_forwarded = (uint32_t)atomic_load_explicit(
-            &s_frames_forwarded, memory_order_relaxed),
-        .nonzero_frames_forwarded = (uint32_t)atomic_load_explicit(
-            &s_nonzero_frames_forwarded, memory_order_relaxed),
-        .nonzero_samples_forwarded = (uint32_t)atomic_load_explicit(
-            &s_nonzero_samples_forwarded, memory_order_relaxed),
-        .observed_absolute_peak = (uint16_t)atomic_load_explicit(
-            &s_observed_absolute_peak, memory_order_relaxed),
-        .running_low_readback_proven_at_start = atomic_load_explicit(
-            &s_running_low_readback_proven_at_start, memory_order_relaxed),
-        .ready_muted_zero_dma_proven = atomic_load_explicit(
-            &s_ready_muted_zero_dma_proven, memory_order_relaxed),
-    };
-    finish_backend_call();
 }
 
 esp_err_t platform_audio_force_safe_shutdown(void)
@@ -206,11 +240,19 @@ esp_err_t platform_audio_write_frames(platform_audio_t *audio,
     if (!try_backend_call()) {
         return ESP_ERR_TIMEOUT;
     }
+    stats_publish_begin();
     count_invocation();
+    atomic_store_explicit(&s_write_call_inflight, true,
+                          memory_order_release);
+    stats_publish_end();
     if (interleaved_pcm == NULL || frame_count == 0U ||
         frame_count > (size_t)PLATFORM_AUDIO_MAX_WRITE_FRAMES) {
         const esp_err_t result = platform_audio_factory_write_frames(
             audio, interleaved_pcm, frame_count);
+        stats_publish_begin();
+        atomic_store_explicit(&s_write_call_inflight, false,
+                              memory_order_release);
+        stats_publish_end();
         finish_backend_call();
         return result;
     }
@@ -240,6 +282,7 @@ esp_err_t platform_audio_write_frames(platform_audio_t *audio,
     }
     const esp_err_t result = platform_audio_factory_write_frames(
         audio, interleaved_pcm, frame_count);
+    stats_publish_begin();
     if (result == ESP_OK) {
         saturating_add(&s_write_calls_succeeded, UINT32_C(1));
         saturating_add(&s_frames_forwarded, (uint_least32_t)frame_count);
@@ -252,6 +295,9 @@ esp_err_t platform_audio_write_frames(platform_audio_t *audio,
         atomic_store_explicit(&s_ready_muted_zero_dma_proven, false,
                               memory_order_release);
     }
+    atomic_store_explicit(&s_write_call_inflight, false,
+                          memory_order_release);
+    stats_publish_end();
     finish_backend_call();
     return result;
 }

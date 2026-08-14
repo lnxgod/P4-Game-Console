@@ -144,8 +144,10 @@ int main(void)
     assert(platform_audio_write_frames(audio, frame, 1U) == ESP_OK);
     s_try_reentrant_safe_call = false;
     assert(s_reentrant_safe_result == ESP_ERR_TIMEOUT);
-    assert(s_reentrant_stats.invocations == 0U);
+    /* Five calls completed before the in-flight write; do not count it yet. */
+    assert(s_reentrant_stats.invocations == 5U);
     assert(s_reentrant_stats.write_calls_succeeded == 0U);
+    assert(s_reentrant_stats.running_low_readback_proven_at_start);
     assert(s_force_safe_backend_calls == 0U);
     assert(s_last_write_frames == 1U);
     assert(s_last_write[0] == INT16_MIN);
