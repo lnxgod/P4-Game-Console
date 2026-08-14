@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "id": "display-m1-build-2026-08-12",
+  "timestamp_utc": "2026-08-13T03:42:41Z",
+  "classification": "build-tested",
+  "result": "pass",
+  "scope": "display-only",
+  "authorization_evidence": "hardware/evidence/elecrow-10.1-display-path.json",
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "compiler": "riscv32-esp-elf GCC 14.2.0_20251107"
+  },
+  "dependencies": {
+    "lock_file": "apps/display_diag/dependencies.lock",
+    "lock_file_sha256": "a444148460bc071992c1463794413b62b56f62bfe74bcef9154748cc0804fdd2",
+    "esp_lcd_ek79007_version": "1.0.2",
+    "esp_lcd_ek79007_component_hash": "07c1afab7e9fd4dd2fd06ff9245e65327c5bbd5485efec199496e19a9304d47b"
+  },
+  "build": {
+    "command": "make build APP=display_diag",
+    "reproducible_build": true,
+    "compile_time_date_enabled": false,
+    "clean_builds_compared": 2,
+    "independent_build_directories_compared": 2,
+    "identical_binary": true,
+    "identical_elf": true,
+    "target": "esp32p4",
+    "silicon_family": "revision_1_x",
+    "minimum_revision_full": 100,
+    "maximum_revision_full": 199,
+    "flash_size_bytes": 16777216,
+    "scoped_display_authorization_enabled": true,
+    "dsi_stall_watchdog_panics": true,
+    "global_pin_map_authorized": false
+  },
+  "artifacts": {
+    "app_partition_bytes": 1048576,
+    "app_binary_bytes": 226560,
+    "app_binary_sha256": "b41f24f629344d2b34181c649721f5cfa26f0adc5ad49f127202ced4c6781584",
+    "app_partition_free_bytes": 822016,
+    "elf_bytes": 5172164,
+    "elf_sha256": "9b69c38aa81fec43cbcb9edd8307b0682ab2fca63c450dfe0ec706bea856a23b"
+  },
+  "linked_features": [
+    "platform_display_init",
+    "esp_lcd_new_panel_ek79007",
+    "esp_lcd_dpi_panel_set_pattern"
+  ],
+  "interfaces_in_scope": [
+    "mipi_dsi_bus_0_dedicated_pins",
+    "internal_ldo_channel_3_at_2500_mv",
+    "internal_ldo_channel_4_at_3300_mv",
+    "gpio31_lcd_backlight_enable_pwm"
+  ],
+  "interfaces_not_initialized": [
+    "gpio29_lcd_backlight_optional_power_gate",
+    "gpio41_lcd_reset",
+    "touch",
+    "sd_card",
+    "audio",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "execution": {
+    "firmware_flashed": false,
+    "firmware_executed": false,
+    "runtime_supported": false
+  },
+  "claims_not_made": [
+    "Firmware booted on an ESP32-P4",
+    "The panel displayed a visible or correctly timed image",
+    "GPIO31 backlight PWM was electrically observed",
+    "Any touch, storage, audio, camera, wireless, or USB interface works"
+  ]
+}

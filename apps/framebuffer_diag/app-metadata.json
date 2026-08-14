@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "app": "framebuffer_diag",
+  "stage": "M2-hardware-tested",
+  "evidence_class": "hardware-tested",
+  "purpose": "Qualify bounded RGB565 framebuffer submission, exact Doom viewport geometry, color order, refresh completion, and moving-pattern behavior.",
+  "runtime_supported": true,
+  "authorization_evidence": "hardware/evidence/elecrow-10.1-display-path.json",
+  "build_evidence": "test-runs/2026-08-12-framebuffer-m2-build.json",
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "hardware_interfaces": [
+    "mipi_dsi_bus_0",
+    "internal_ldo_3_2500mv",
+    "internal_ldo_4_3300mv",
+    "gpio31_backlight_pwm"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "gpio29",
+    "gpio41",
+    "touch",
+    "sd_card",
+    "audio",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "runtime_evidence": "hardware/test-runs/2026-08-12-framebuffer-m2.json",
+  "runtime_blockers": []
+}

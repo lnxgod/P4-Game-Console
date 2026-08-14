@@ -1,0 +1,4 @@
+interface:
+  display_name: "ESP32-P4 USB Gamepad"
+  short_description: "Add and verify reusable USB gamepad input"
+  default_prompt: "Use $add-usb-gamepad-support to add controller input to this game."

@@ -1,0 +1,195 @@
+{
+  "schema": 1,
+  "app": "doom_embedded_touch_audio",
+  "stage": "E6-sound-successor-build-only-electrical-release-pending",
+  "evidence_class": "build-tested-sound-successor-not-runtime-authorized",
+  "purpose": "Build-only successor to the installed E5 touch-only Doom image, preserving display/WAD/video/touch while selecting the vendor complete audio-init shape (I2S0 PDM RX plus I2S1 speaker TX) through the counted app-local adapter.",
+  "runtime_supported": false,
+  "build_evidence": "test-runs/2026-08-13-doom-embedded-touch-audio-e6-sound-build.json",
+  "runtime_basis": "hardware/evidence/elecrow-10.1-factory-touch-audio-runtime-basis.json",
+  "top_level_runtime_authorized": false,
+  "touch_runtime_authorized": true,
+  "audio_runtime_authorized": false,
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "game_data_embedded": true,
+  "game_data_committed": false,
+  "game_data_redistribution_authorized": false,
+  "installed_predecessor": {
+    "mode": "E5-touch-only-1/1/0",
+    "artifact_sha256": "68e97df1e89c28428d6a66c2ca4ab26c4eade76ff9357479f80d01ebc08609c8",
+    "post_run": {
+      "path": "hardware/test-runs/2026-08-13-doom-e5-touch-only-persistent.json",
+      "sha256": "42cf1c97af54f0d37c6c4160f9d4b0b731819aad20c6084df406ed6fc3e6eb45"
+    },
+    "executed_preflash_authorization": {
+      "path": "hardware/evidence/doom-embedded-touch-audio-e5-persistent-demo-authorization-executed.json",
+      "sha256": "14a8fe401bd3f3109a025cbf7a57eb3b94f982ca0126a2e37d30ca980fdcf160"
+    },
+    "executed_build_evidence": {
+      "path": "test-runs/2026-08-13-doom-embedded-touch-audio-e5-build-executed.json",
+      "sha256": "6216eadaf11302f4e68b1dc0c1af9751bc6e000ddbddfde369ee9819e947e037"
+    },
+    "private_rollback_bundle": {
+      "directory": "test-runs/doom-e6-rollback-2026-08-13",
+      "directory_mode": "0700",
+      "manifest": {
+        "path": "test-runs/doom-e6-rollback-2026-08-13/rollback-bundle.json",
+        "mode": "0400",
+        "sha256": "f841baf4f2ce0ec1872a44ea1219ecb07d5a4f310d08621493d23533f1646a85"
+      },
+      "artifact": {
+        "path": "test-runs/doom-e6-rollback-2026-08-13/installed-e5-exact.bin",
+        "mode": "0400",
+        "bytes": 4898400,
+        "sha256": "68e97df1e89c28428d6a66c2ca4ab26c4eade76ff9357479f80d01ebc08609c8"
+      },
+      "padded_span": {
+        "path": "test-runs/doom-e6-rollback-2026-08-13/installed-e5-span-4898816.bin",
+        "mode": "0400",
+        "bytes": 4898816,
+        "sha256": "9c288a83ecfb061cdbec510e679166bb85e2fcf44f3a21f8a2f79e440c1303f9"
+      },
+      "future_install_requirement": "seal and bind the exact live full successor mutation span on the retained UART handle before any E6 write; restore/readback it after any post-mutation failure"
+    }
+  },
+  "baseline": {
+    "app": "doom_embedded_touch_audio",
+    "installed_stage": "E5-touch-only",
+    "preserved_services": [
+      "platform_display",
+      "doom_video",
+      "platform_readonly_blob",
+      "platform_i2c_shared",
+      "platform_touch",
+      "doom_touch_input",
+      "doom_engine_audio",
+      "embedded_exact_shareware_wad"
+    ]
+  },
+  "planned_runtime_hardware_interfaces": [
+    "mipi_dsi_bus_0",
+    "internal_ldo_3_2500mv",
+    "internal_ldo_4_3300mv",
+    "gpio31_backlight_pwm",
+    "shared_i2c1_gpio45_gpio46",
+    "gt911_gpio40_reset_gpio42_address_latch",
+    "gt911_touch_polling",
+    "i2s0_pdm_clk_gpio24_din_gpio26_factory_microphone_rx_unused_by_doom",
+    "i2s1_lrclk_gpio21_bclk_gpio22_dout_gpio23_tx_mclk_unused",
+    "gpio30_active_low_factory_amplifier_shutdown"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "usb_host",
+    "usb_hid",
+    "platform_usb_host",
+    "platform_gamepad_usb",
+    "sd_card",
+    "gpio29",
+    "gpio41",
+    "es8311",
+    "camera",
+    "wireless",
+    "codec_i2c"
+  ],
+  "shared_bus_contract": {
+    "owner": "app_via_platform_i2c_shared",
+    "controller": "i2c1",
+    "sda_gpio": 45,
+    "scl_gpio": 46,
+    "created_after_display_init": true,
+    "borrowers": [
+      "platform_touch"
+    ],
+    "audio_control_bus_calls": 0,
+    "deleted_only_after_touch_client_release": true
+  },
+  "successor_mode": {
+    "required_exact_gates": {
+      "composite": 1,
+      "touch": 1,
+      "audio": 1
+    },
+    "artifact_execution_authorized": false,
+    "audio_backend": "platform_audio_factory-via-counted-app-local-platform_audio-adapter",
+    "audio_format": {
+      "vendor_complete_init": true,
+      "pdm_rx_i2s_port": 0,
+      "pdm_clock_gpio": 24,
+      "pdm_clock_hz_approx": 1024000,
+      "pdm_data_input_gpio": 26,
+      "pdm_audio_consumed_by_doom": false,
+      "gpio24_board_effect": "PDM RX clock output; board strapping may also feed the codec MCLK net",
+      "speaker_tx_i2s_port": 1,
+      "sample_rate_hz": 16000,
+      "channels": 2,
+      "bits_per_sample": 16,
+      "lrclk_gpio": 21,
+      "bclk_gpio": 22,
+      "dout_gpio": 23,
+      "tx_mclk": "unused",
+      "codec_i2c_transactions": 0,
+      "backend_volume_step": "10/10",
+      "gain": "unity-no-amplification",
+      "signed_pcm16_range": [-32768, 32767],
+      "maximum_absolute_magnitude": 32768,
+      "music_enabled": false
+    },
+    "first_audio_hardware_call": "platform_audio_force_safe_shutdown",
+    "audio_invocation_counter_scope": "mutating-control-data backend calls only; thread-safe coherent telemetry snapshots are excluded and reported separately",
+    "gpio30_startup": "high-pad-readback-before-I2S-create; low-pad-readback plus at-least-350ms-zero-settle only during platform_audio_start",
+    "doom_arguments": [
+      "-nomusic"
+    ],
+    "usb_calls": 0
+  },
+  "release_blockers": [
+    "reusable and cross-unit audio board-profile authorization remains false",
+    "the exact-unit operator release must immutably record acceptance of the unresolved amplifier-topology risk rather than claim continuity or population proof",
+    "an exact successor artifact authorization must be reviewed",
+    "the retained-UART installer must seal the live full successor mutation span and preserve the E5 rollback path",
+    "independent preflash audit, explicit device-owner approval, and a fail-closed startup capture are required"
+  ],
+  "degraded_runtime_policy": {
+    "dark_halt_failures": [
+      "display",
+      "immutable_wad",
+      "video"
+    ],
+    "continue_silent_or_neutral_failures": [
+      "shared_i2c",
+      "touch_create",
+      "touch_poll",
+      "audio_create",
+      "audio_bind",
+      "audio_start"
+    ],
+    "invalid_touch_poll_neutralizes_immediately": true,
+    "audio_failure_requests_gpio30_high_and_never_selects_a_codec_fallback": true,
+    "audio_failure_continues_silently_only_after": "ready-muted-zero-dma and GPIO30-high safety are positively proven; otherwise AUDIO_SAFETY_FAULT dark-halts and retains ownership for retry",
+    "overlay_remains_visible": true
+  },
+  "execution_contract": {
+    "build_only": true,
+    "app_flash_allowed": false,
+    "project_flash_allowed": false,
+    "hardware_access_allowed": false,
+    "runtime_capture_allowed": false,
+    "predecessor_remains_installed": true
+  },
+  "hardware_acceptance": {
+    "successor_artifact": "not-flashed-not-run",
+    "audio": "not-electrically-released-not-run-not-acoustically-tested",
+    "touch_response": "not-tested-by-successor",
+    "usb_runtime": "absent-from-component-graph-not-physically-tested"
+  },
+  "claims_not_made": [
+    "The E6 sound-enabled successor is authorized to flash or run.",
+    "GPIO30 was driven or the audio path was energized by this build task.",
+    "Sound was audible, clean, or electrically safe on the connected unit.",
+    "Touch response was independently accepted for the successor.",
+    "Physical USB state was tested.",
+    "The WAD-bearing firmware is authorized for redistribution."
+  ]
+}

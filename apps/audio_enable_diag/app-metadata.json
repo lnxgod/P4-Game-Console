@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "app": "audio_enable_diag",
+  "stage": "D2.5-source-only-corrected-direct-enable-sequence",
+  "evidence_class": "source-integrated",
+  "purpose": "Test one bounded direct-I2S tone with the official GPIO30 playback-enable sequence without changing reusable audio or Doom.",
+  "runtime_supported": false,
+  "authorization_evidence": null,
+  "build_evidence": null,
+  "runtime_evidence": null,
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "hardware_interfaces": [
+    "internal_ldo3_2500mv_ldo4_3300mv_standalone_test_ownership",
+    "i2s1_gpio21_lrclk_gpio22_bclk_gpio23_dout_no_mclk",
+    "gpio30_audio_out_sd_u4_shutdown_and_optional_q10_ns4168_ctrl",
+    "candidate_direct_digital_speaker_output_bounded_440hz_peak4096"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "display",
+    "touch",
+    "sd_card",
+    "i2c",
+    "audio_codec",
+    "mclk",
+    "microphone_input",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "runtime_blockers": [
+    "The source has no one-shot execution authorization, build evidence, frozen verifier, capture transport, or hardware result.",
+    "GPIO30 high shuts down populated U4 and requests the optional Q10/NS4168 path off if its not-fitted parts are populated; GPIO30 low follows the official factory playback request and may enable that optional path only if populated.",
+    "The candidate direct amplifiers use unswitched VDD5; LDO3/LDO4 ownership is not claimed to switch their power.",
+    "Reusable platform audio, Doom audio, board-wide audio, app-only flash, and full-project flash remain unauthorized."
+  ]
+}

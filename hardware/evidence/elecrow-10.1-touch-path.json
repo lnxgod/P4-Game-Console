@@ -1,0 +1,155 @@
+{
+  "schema": 1,
+  "classification": "cross-revision-touch-path",
+  "result": "pass-build-authorization",
+  "recorded_at": "2026-08-13",
+  "scope": "gt911_touch_client_on_shared_i2c1",
+  "official_source": {
+    "vendor": "Elecrow",
+    "repository": "https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen",
+    "commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+    "model": "DHE04310D",
+    "hardware_revisions_compared": ["V1.0", "V1.1", "V1.2"]
+  },
+  "schematics": [
+    {
+      "revision": "V1.0",
+      "path": "Eagle_SCH&PCB/1.0/ESP32-P4 Display 10.1 inch V1.0.sch",
+      "sha256": "a31422d5b0e9ec7fe75c7f5c973b0c5b40d5e5148605caa817aedc1a6e4455a3"
+    },
+    {
+      "revision": "V1.1",
+      "path": "Eagle_SCH&PCB/1.1/ESP32-P4 Display 10.1 inch V1.1.sch",
+      "sha256": "c4f7e1d61f490290ada1b312d6200a6b2838802f4d780af9699ca3797e35cadd"
+    },
+    {
+      "revision": "V1.2",
+      "path": "Eagle_SCH&PCB/1.2/ESP32-P4 Display 10.1 inch V1.2.sch",
+      "sha256": "7f9ac57dab96110467e4a9728cfb71b46024ea57f28a2d9d8b545b3ff0d0c172"
+    }
+  ],
+  "cross_revision_invariants": {
+    "touch_fpc": "FPC2",
+    "controller": "GT911 on attached touch FPC/display module",
+    "coordinate_space": {
+      "width": 1024,
+      "height": 600,
+      "swap_xy": false,
+      "mirror_x": false,
+      "mirror_y": false,
+      "maximum_contacts": 5
+    },
+    "shared_i2c": {
+      "controller": 1,
+      "sda_gpio": 45,
+      "scl_gpio": 46,
+      "fpc_sda_pin": 2,
+      "fpc_scl_pin": 1,
+      "clock_hz": 400000,
+      "address_primary_7bit": "0x5d",
+      "address_backup_7bit": "0x14",
+      "owner_policy": "platform_i2c_shared is the sole bus owner; platform_touch borrows the bus and owns only its GT911 panel-IO device",
+      "shared_clients": ["gt911_touch", "es8311_codec_candidate", "board_i2c_headers"]
+    },
+    "existing_hardware_evidence": {
+      "test_run": "hardware/test-runs/2026-08-12-audio-diag-d22.json",
+      "observed_address_7bit": "0x5d",
+      "claim": "A device at Elecrow's documented GT911 address acknowledged on I2C1 GPIO45/GPIO46 during D2.2",
+      "claim_limit": "An address ACK proves bus presence only; it does not prove coordinate reads, touch geometry, multi-touch, or the exact responding silicon"
+    },
+    "reset": {
+      "net": "RESET_TP",
+      "gpio": 40,
+      "fpc_pin": 6,
+      "active_level": 0,
+      "policy": "narrowly authorized for the pinned GT911 driver's active-low reset and address-latch sequence"
+    },
+    "interrupt": {
+      "net": "INT_TP",
+      "gpio": 42,
+      "fpc_pin": 3,
+      "active_level": 0,
+      "policy": "narrowly authorized for the pinned GT911 driver's address latch and input mode; runtime is polling-only and registers no ISR callback"
+    },
+    "power": {
+      "fpc_power_pin": 5,
+      "ground_pins": [4, 7, 8],
+      "effective_voltage_mv": 3300,
+      "source": "existing display/pad 3.3 V rail; platform_touch never acquires or releases a rail",
+      "cross_revision_note": "V1.0/V1.1 name the pin LCD_VDD and V1.2 names it VDD_3V3; V1.0/V1.1 populate R65=0R between those nets, so the effective supply is 3.3 V in all revisions"
+    },
+    "revision_differences": {
+      "v1_0": "R74/R75/R97/R98 are 4.7K pull-ups",
+      "v1_1_v1_2": "R74/R97/R98 are 2K and R75 is 2K_NC",
+      "safe_common_driver_policy": "the pinned driver actively drives GPIO40 reset and GPIO42 low/high only during address selection, then leaves GPIO42 as an input with no ISR callback; polling does not depend on the unpopulated V1.1/V1.2 INT pull-up"
+    }
+  },
+  "official_known_good_demo": {
+    "commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+    "paths": [
+      "example/V1.0/idf-code/Lesson05-Touchscreen/peripheral/bsp_display/bsp_display.c",
+      "example/V1.1/idf-code/Lesson05-Touchscreen/peripheral/bsp_display/bsp_display.c",
+      "example/V1.2/idf-code/Lesson05-Touchscreen/peripheral/bsp_display/bsp_display.c",
+      "example/V1.0/idf-code/Lesson05-Touchscreen/peripheral/bsp_i2c/bsp_i2c.c",
+      "example/V1.1/idf-code/Lesson05-Touchscreen/peripheral/bsp_i2c/bsp_i2c.c",
+      "example/V1.2/idf-code/Lesson05-Touchscreen/peripheral/bsp_i2c/bsp_i2c.c"
+    ],
+    "v1_0_v1_1_touch_blob": "c4f0e331c453ab2f8a315aba765eae5492cac58b",
+    "v1_2_touch_blob": "dd710cb513aea12901428585b9f367409fcb32a9",
+    "reviewed_semantics": [
+      "GPIO45 SDA and GPIO46 SCL on one caller-created shared I2C bus",
+      "400 kHz GT911 panel-IO device",
+      "1024x600 with swap_xy=false, mirror_x=false, mirror_y=false",
+      "active-low GPIO40 reset and GPIO42 interrupt/address latch",
+      "primary 0x5d then 0x14 fallback",
+      "polling reads; no application dependence on a runtime interrupt"
+    ],
+    "platform_differences": [
+      "platform_touch bounds output to five contacts instead of the lesson's single contact",
+      "platform_touch deletes the failed primary panel-IO before creating the fallback device",
+      "platform_touch provides fail-closed frames and retryable cleanup ownership"
+    ]
+  },
+  "pinned_driver": {
+    "component": "espressif/esp_lcd_touch_gt911",
+    "version": "1.1.3",
+    "component_hash": "acc1c184358aa29ef72506f618c9c76a8cc2bf12af38a2bff3d44d84f3a08857",
+    "source_commit": "08b53c32b53d2b4c3c4ecbf2cb6f1fc91a0441fd",
+    "transitive_touch_component": "espressif/esp_lcd_touch",
+    "transitive_touch_version": "1.1.2",
+    "transitive_component_hash": "779b4ba2464a3ae85681e4b860caa5fdc35801458c23f3039ee761bae7f442a4",
+    "reviewed_behavior": [
+      "GT911 1.1.3 rejects controller-reported contact counts above five",
+      "the configured esp_lcd_touch core buffer is exactly five points",
+      "the public coordinate API returns at most the caller-provided maximum",
+      "GT911 1.1.3 polls status, bounds the point payload to 40 bytes, and clears the ready register",
+      "the public driver does not expose GT911 track IDs; consumers use set-union hit testing"
+    ]
+  },
+  "authorization": {
+    "authorized": true,
+    "classification": "build-only-until-touch-diagnostic-hardware-pass",
+    "scope": [
+      "borrowed_i2c1_handle_for_gt911_only",
+      "gt911_400khz_primary_0x5d_then_cleaned_0x14_fallback",
+      "gpio40_active_low_gt911_reset",
+      "gpio42_gt911_address_latch_then_input_without_isr_callback",
+      "1024x600_coordinates_up_to_five_contacts"
+    ],
+    "explicitly_not_authorized": [
+      "creating_or_deleting_i2c1_inside_platform_touch",
+      "gpio42_runtime_isr_registration",
+      "touch_firmware_or_configuration_writes_other_than_gt911_status_clear_and_driver_reset_sequence",
+      "audio_codec_initialization",
+      "display_gpio29_or_gpio41",
+      "storage",
+      "camera",
+      "wireless",
+      "usb_host",
+      "all_other_gpio"
+    ],
+    "hardware_test": null,
+    "flash_authorized": false,
+    "rationale": "The complete GT911 I2C, reset, interrupt/address-latch, power, and ground topology is equivalent across every published 10.1-inch revision. The pinned Elecrow Lesson05 source uses the same GPIO40/GPIO42 active-low address-selection sequence across V1.0/V1.1/V1.2. This grants a narrow build authorization only; a build is not hardware verification."
+  }
+}

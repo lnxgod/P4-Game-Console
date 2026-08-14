@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "app": "doom_embedded_gamepad_audio",
+  "stage": "E4-native-usb-audio-composite-build-only-electrically-inert",
+  "evidence_class": "build-tested-electrically-inert",
+  "purpose": "Separate embedded Doom compile/link composite combining native ESP32-P4 USB gamepad input with the existing audited Doom SFX seam; no Mac relay and no authorized runtime hardware path.",
+  "runtime_supported": false,
+  "build_evidence": null,
+  "runtime_evidence": null,
+  "top_level_runtime_authorized": false,
+  "usb_runtime_authorized": false,
+  "audio_runtime_authorized": false,
+  "fixture_authorized": false,
+  "fixture_evidence": null,
+  "fixture_evidence_sha256": null,
+  "audio_authorization_evidence": null,
+  "authorization_evidence": [
+    "hardware/evidence/elecrow-10.1-display-path.json"
+  ],
+  "blocking_review_evidence": [
+    "hardware/evidence/elecrow-10.1-audio-path-review.json"
+  ],
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "game_data_embedded": true,
+  "game_data_committed": false,
+  "game_data_redistribution_authorized": false,
+  "audio_compile_link_seam": {
+    "component": "platform_audio",
+    "classification": "obsolete-for-runtime-direct-i2s-compile-link-seam-only",
+    "final_sound_path": false,
+    "runtime_called_in_committed_build": false
+  },
+  "compiled_hardware_interfaces": [
+    "mipi_dsi_bus_0",
+    "internal_ldo_3_2500mv",
+    "internal_ldo_4_3300mv",
+    "gpio31_backlight_pwm",
+    "esp32p4_usb_otg_hs_peripheral_0",
+    "i2s1_direct_speaker_candidate_compile_only",
+    "gpio21_gpio22_gpio23_direct_i2s_compile_only",
+    "gpio30_shared_u4_q10_control_compile_only"
+  ],
+  "runtime_hardware_interfaces": [],
+  "hardware_interfaces_explicitly_absent": [
+    "crowpanel_vbus_source_gpio",
+    "esp32p4_usb_otg_fs_gpio26_gpio27",
+    "passive_otg_adapter",
+    "unqualified_usb_hub",
+    "sd_card",
+    "touch",
+    "i2c",
+    "audio_codec",
+    "mclk",
+    "camera",
+    "wireless"
+  ],
+  "runtime_blockers": [
+    "Three independent flash-resident volatile app-source gates are immutable zeroes, so app_main returns before display, USB Host, GPIO30, I2S, or any other hardware initialization while preserving the complete guarded graph in the link; no Kconfig toggle can enable them.",
+    "The reusable USB host component's independent fixture authorization is false, and its fallback evidence is invalid by construction.",
+    "J16 reaches the native ESP32-P4 HS data pair but cannot source protected controller VBUS; no reviewed powered, current-limited, backfeed-isolated direct-data fixture is bound.",
+    "The current platform_audio direct-I2S backend is only a compile/link seam, not the final sound path: connected-unit amplifier-family population/isolation is unproven and optional direct and expected U4 outputs can converge on J4/J6.",
+    "The linked backend uses a 20 ms post-enable settle, which conflicts with the latest review's at-least-350 ms zero-data U4 startup requirement.",
+    "A future speaker runtime requires a codec-only backend/refactor after the expected ES8311 path is proven, or physical proof that a direct NS4168 path is populated and isolated, followed by a new exact runtime authorization.",
+    "This app is absent from the central flash/readback/single-launch allowlist and has not been flashed or hardware-tested.",
+    "No formal reproducible-build evidence record has been added; the current local canonical build is a compile/link result only.",
+    "The WAD-bearing local firmware artifact is not authorized for redistribution."
+  ]
+}

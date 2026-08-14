@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "app": "audio_direct_diag",
+  "stage": "D2.3-reusable-direct-audio-build-only",
+  "evidence_class": "source-integrated",
+  "purpose": "Exercise the reusable direct-I2S platform_audio service with one bounded full-scale-input tone whose hardware output is capped by the service.",
+  "runtime_supported": false,
+  "authorization_evidence": "hardware/evidence/audio-direct-diag-d23-one-shot-authorization-attempt2.json",
+  "build_evidence": null,
+  "runtime_evidence": null,
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "hardware_interfaces": [
+    "internal_ldo3_2500mv_ldo4_3300mv_standalone_test_ownership",
+    "i2s1_gpio21_lrclk_gpio22_bclk_gpio23_dout_no_mclk",
+    "gpio30_active_low_amplifier_shutdown_candidate",
+    "speaker_output_bounded_440hz_tone"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "display",
+    "touch",
+    "sd_card",
+    "i2c",
+    "audio_codec",
+    "mclk",
+    "microphone_input",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "runtime_blockers": [
+    "The exact reproducible firmware is unchanged, but attempt 2 has not completed its refreshed host-transport gate.",
+    "Attempt 1 failed safely before host ARM and is preserved at hardware/test-runs/2026-08-13-audio-direct-d23-attempt1.json; its authorization was consumed and revoked.",
+    "The connected unit has not yet produced synchronized microphone detection and contemporaneous operator audibility confirmation for this exact diagnostic.",
+    "No attempt-2 app-only execution authorization has been activated; broad and full-project flash remain denied."
+  ]
+}

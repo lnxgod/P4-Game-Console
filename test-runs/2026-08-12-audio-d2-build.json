@@ -1,0 +1,199 @@
+{
+  "schema": 1,
+  "id": "audio-d2.1-power-fix-build-2026-08-12",
+  "timestamp_utc": "2026-08-13T06:07:59Z",
+  "classification": "build-tested",
+  "result": "pass-build-only-runtime-denied",
+  "scope": "es8311_to_ns4263b_bounded_playback_driver",
+  "authorization_evidence": "hardware/evidence/elecrow-10.1-audio-driver-path.json",
+  "one_shot_authorization_evidence": "hardware/evidence/audio-diag-one-shot-authorization.json",
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "compiler": "riscv32-esp-elf GCC 14.2.0_20251107"
+  },
+  "managed_codec": {
+    "component": "espressif/esp_codec_dev",
+    "version": "1.3.4",
+    "registry_component_hash": "18c22e1411224ba6103c4aca1b01bc740af33926756e9e106370a477d52bcba1",
+    "dependencies_lock_sha256": "3215c4561eb715bf74f0bba99161c215c478c7296936492e6802a050afe3deda"
+  },
+  "source_inventory": {
+    "apps/audio_diag/CMakeLists.txt": "be8a6da7e751d7676ae8440c42ea725d08a798276e4848cc834daa6a96a3186e",
+    "apps/audio_diag/main/CMakeLists.txt": "85f97cd94018e39158642c64b53070fcba8e350b6544ce76dba6ade4e3d54c3b",
+    "apps/audio_diag/main/audio_diag_main.c": "dd4639d27025ba8412df55dc8ea10597386b2550cdbfeacfaeeb005659d97363",
+    "apps/audio_diag/main/idf_component.yml": "c02968cafb1b7543f0f5452ec63ac9e87652e71ecd27ebc60a2cc3d43fe6ee5a",
+    "apps/audio_diag/sdkconfig.defaults": "56f1079c72f31e67138d02bde961a1a46bbdcc93e7fbc64a2bd99ce4faec652f",
+    "apps/audio_diag/dependencies.lock": "3215c4561eb715bf74f0bba99161c215c478c7296936492e6802a050afe3deda",
+    "components/platform_audio/CMakeLists.txt": "4fce36702e3d18e44bc59f8e65d91fdeb9b81072b57a37b79f62212162827653",
+    "components/platform_audio/Kconfig": "b77a0fb7d46bf421ad7df80aa4485f77051b482aeec55de14350074ae38e8835",
+    "components/platform_audio/include/platform/audio.h": "78c6ea13ea20b0920a502e2beac534818ece0556a60c5231bde89bdac2029c53",
+    "components/platform_audio/include/platform/audio_tone.h": "90b8715f51f049cf8f73ce3dfc64a023f44bd7cc73a2d7f9011d300731434978",
+    "components/platform_audio/src/platform_audio.c": "a296a8fe8a5bc0378b2d55f1a920755928f913a52abaf9ecb5611608506d8412",
+    "components/platform_audio/src/platform_audio_policy.c": "ae13993595492c277ddd399825b87a9818dcea5eb13f0add4ef7bdcacb3528c1",
+    "components/platform_audio/src/platform_audio_policy.h": "189186874e3a3700730765552472990e89304d85984f7165a9066e84b6b6249c",
+    "components/platform_audio/src/platform_audio_tone.c": "a1e482a8ef5d8b4c26ca391f3a8d9152956e21794a584728245eeed42ee6252c",
+    "components/platform_audio/tests/CMakeLists.txt": "64daaa7077f56eff72e56c8de9708c9ad28007b6be18cd9fa4c49bcaff9def5c",
+    "components/platform_audio/tests/test_platform_audio.c": "e917aa9f5e898b10d901e634d7e281ca17ca2fe5442d0030336aad951e89aee5"
+  },
+  "build": {
+    "canonical_command": "./scripts/build.sh audio_diag",
+    "independent_command": "idf.py -C apps/audio_diag -B <independent-build-directory>/build -DIDF_TARGET=esp32p4 -DSDKCONFIG=<independent-build-directory>/sdkconfig build",
+    "reproducible_build": true,
+    "compile_time_date_enabled": false,
+    "clean_builds_compared": 3,
+    "independent_build_directories_compared": 2,
+    "canonical_build_also_compared": true,
+    "identical_binary": true,
+    "identical_elf": true,
+    "identical_bootloader": true,
+    "identical_partition_table": true,
+    "no_reset_before_readback": true,
+    "app_main_static_frame_bytes": 112,
+    "first_app_main_call": "platform_audio_force_safe_shutdown",
+    "vendor_ldo_power_prerequisite_added": true,
+    "explicit_codec_probe_before_driver": true,
+    "prior_runtime_failure_bound": "hardware/test-runs/2026-08-12-audio-diag-d2.json",
+    "pinned_codec_error_loss_mitigated_by_raw_readback": true,
+    "target": "esp32p4",
+    "silicon_family": "revision_1_x",
+    "minimum_revision_full": 100,
+    "maximum_revision_full": 199,
+    "flash_size_bytes": 16777216,
+    "reviewed_build_only_kconfig_enabled": true,
+    "global_pin_map_authorized": false,
+    "audio_runtime_authorized": false
+  },
+  "artifacts": {
+    "app_offset": "0x10000",
+    "generated_app_partition_bytes": 1048576,
+    "saved_factory_app_partition_bytes": 11534336,
+    "app_binary_bytes": 244752,
+    "app_binary_sha256": "920b8100411416c0dd197cb7c1f2c1986335ae1ebf0d30585f4be80ad4da8c98",
+    "generated_app_partition_free_bytes": 803824,
+    "saved_factory_app_partition_free_bytes": 11289584,
+    "elf_bytes": 4944612,
+    "elf_sha256": "800d380c95cfc38c083df3797a591a7e34a655bd3a00fd5f3dff6da3783b1a65",
+    "bootloader_bytes": 22912,
+    "bootloader_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "7f00b6c042a89b15b0cac534f82ed988caf29278ff5700b0c511eb1b5bb7c820"
+  },
+  "tests": {
+    "host_policy_and_waveform": {
+      "command": "cmake -S components/platform_audio -B /private/tmp/p4-audio-d21-host-20260813 -G Ninja -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_AUDIO_ENABLE_SANITIZERS=ON && cmake --build /private/tmp/p4-audio-d21-host-20260813 && ctest --test-dir /private/tmp/p4-audio-d21-host-20260813 --output-on-failure",
+      "result": "pass",
+      "cases": [
+        "V1.0-V1.2 invariant pins and ES8311 address",
+        "active-low amplifier policy",
+        "supported rates and ten-percent bring-up volume ceiling",
+        "bounded deterministic stereo waveform",
+        "zero endpoints, fades, peak, DC balance, and invalid configurations",
+        "large valid fade envelope at INT16_MAX peak without signed overflow",
+        "LDO3 then LDO4 vendor board-power acquisition before I2C",
+        "fail-safe reverse cleanup releases LDO4 then LDO3"
+      ],
+      "sanitizers": [
+        "AddressSanitizer",
+        "UndefinedBehaviorSanitizer"
+      ]
+    },
+    "cross_revision_and_pinned_api_verifier": {
+      "result": "pass",
+      "vendor_tree_commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+      "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+      "esp_codec_dev_version": "1.3.4",
+      "published_revisions": [
+        "V1.0",
+        "V1.1",
+        "V1.2"
+      ],
+      "vendor_lesson12_power_sequence_verified": true,
+      "schematic_vddpst_5_i2c_dependency_verified": true
+    }
+  },
+  "diagnostic_policy": {
+    "board_power": {
+      "ldo3_channel": 3,
+      "ldo3_voltage_mv": 2500,
+      "ldo4_channel": 4,
+      "ldo4_voltage_mv": 3300,
+      "settle_ms": 20,
+      "acquisition_order": "ldo3_then_ldo4",
+      "release_order": "ldo4_then_ldo3"
+    },
+    "codec_probe_address_7bit": "0x18",
+    "codec_probe_timeout_ms": 100,
+    "tone_count": 1,
+    "frequency_hz": 440,
+    "duration_ms": 600,
+    "fade_ms": 80,
+    "pcm_peak": 512,
+    "pcm_full_scale": 32767,
+    "codec_volume_percent": 5,
+    "bringup_volume_ceiling_percent": 10,
+    "amplifier_shutdown_level": 1,
+    "amplifier_enable_level": 0,
+    "codec_pa_pin": -1,
+    "codec_guard_registers": {
+      "clock_and_format": [
+        "REG01=0x3f",
+        "REG02=0x00",
+        "REG03&0x7f=0x10",
+        "REG04&0x7f=0x20",
+        "REG05=0x00",
+        "REG06&0x3f=0x03",
+        "REG07&0x3f=0x00",
+        "REG08=0xff",
+        "REG09&0x1f=0x0c"
+      ],
+      "mute_register": "0x31",
+      "mute_mask": "0x60",
+      "muted_value": "0x60",
+      "unmuted_value": "0x00",
+      "volume_register": "0x32",
+      "volume_value_at_five_percent": "0x60",
+      "failure_action": "gpio30_high"
+    }
+  },
+  "interfaces_in_scope": [
+    "internal_ldo3_2500mv_ldo4_3300mv_vendor_power_prerequisite",
+    "i2s1_gpio21_lrclk_gpio22_bclk_gpio23_dout_gpio24_mclk",
+    "i2c0_gpio45_sda_gpio46_scl_es8311_addr7_0x18",
+    "gpio30_ns4263b_active_low_shutdown",
+    "speaker_output_bounded_quiet_tone"
+  ],
+  "interfaces_not_initialized": [
+    "microphone",
+    "display",
+    "touch",
+    "sd_card",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "execution": {
+    "firmware_flashed": false,
+    "firmware_executed": false,
+    "hardware_accessed": false,
+    "audio_path_energized": false,
+    "runtime_supported": false,
+    "serial_evidence": null
+  },
+  "prior_runtime_failure": {
+    "evidence": "hardware/test-runs/2026-08-12-audio-diag-d2.json",
+    "artifact_bytes": 243184,
+    "artifact_sha256": "4c87744b31fd4317d978a5f922ec22904b223d5d5a1a1b945d1c6306484a7e6a",
+    "result": "fail-safe-codec-i2c-no-ack",
+    "root_cause": "The prior image omitted internal LDO4 at 3.3 V, leaving VDDPST_5 and the GPIO45/GPIO46 pull-up and Q8/Q9 gate domain unpowered.",
+    "amp_remained_shutdown": true
+  },
+  "claims_not_made": [
+    "The connected PCB revision is physically identified.",
+    "The ES8311 acknowledges at address 0x18 on the connected unit.",
+    "The NS4263B or either speaker produces audio.",
+    "The bounded tone is audible, pop-free, or safe for every attached speaker.",
+    "Audio can coexist with touch or another GPIO45/GPIO46 client.",
+    "This corrected build has been flashed or executed."
+  ]
+}

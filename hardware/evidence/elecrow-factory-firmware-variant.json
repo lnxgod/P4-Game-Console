@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "captured_at": "2026-08-12",
+  "classification": "factory-firmware-variant",
+  "result": "pass",
+  "factory_backup": {
+    "manifest": "hardware/backups/manifest.json",
+    "file": "hardware/backups/elecrow-p4-factory-before-project.bin",
+    "bytes": 16777216,
+    "sha256": "3e3f5f687f59938963d9040d6c8e9dc1a687baa512790680830422c22bd6ab3c"
+  },
+  "method": {
+    "summary": "Extract each candidate's selected LVGL loading-background byte array from its exact Elecrow factory-source archive, verify the archive, selector source, asset source, asset length, and asset SHA-256, then search the complete saved factory flash for exact full-array occurrences.",
+    "candidate_set": "Elecrow 7, 9, and 10.1 inch CrowPanel Advanced ESP32-P4 variants using the common 1024x600 EK79007/GT911 Brookesia factory path",
+    "lvgl_source_condition": "LV_COLOR_DEPTH == 16 && LV_COLOR_16_SWAP == 0",
+    "lvgl_color_format": "LV_IMG_CF_TRUE_COLOR_ALPHA",
+    "width_pixels": 1024,
+    "height_pixels": 600,
+    "bytes_per_pixel": 3,
+    "asset_bytes": 1843200,
+    "search_unit": "complete compiled asset; partial/shared regions do not count"
+  },
+  "reference_variants": [
+    {
+      "id": "inch7",
+      "screen_inches": 7.0,
+      "sku": "DHE04107D",
+      "repository": "https://github.com/Elecrow-RD/CrowPanel-Advanced-7inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen",
+      "repository_commit": "7b90882c68033d32702b1e243238d3d5a5b1afaf",
+      "factory_source_archive": {
+        "path": "factory_sourcecode/V1.0/ESP32-P4-Adcance-brookesia_phone_inch7.zip",
+        "url": "https://raw.githubusercontent.com/Elecrow-RD/CrowPanel-Advanced-7inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen/7b90882c68033d32702b1e243238d3d5a5b1afaf/factory_sourcecode/V1.0/ESP32-P4-Adcance-brookesia_phone_inch7.zip",
+        "git_blob_sha1": "db76e53fdb3489dc2128e8b97d08814a3773a430",
+        "bytes": 13819156,
+        "sha256": "2564ac5cfc7e2b09a198db26205f2e26035859fa4a446290be1ac20073747a66"
+      },
+      "selector": {
+        "source_path": "components/espressif__esp32_p4_function_ev_board/elecrow_ui/elecrow_ui.c",
+        "source_sha256": "ffc71f4c0fe05019486265df319a252c30a8168933d6728ab043e75e8a447314",
+        "expected_statement": "lv_img_set_src(Load_bg_img, &loading_background_inch7);"
+      },
+      "asset": {
+        "source_path": "components/espressif__esp32_p4_function_ev_board/elecrow_ui/images/loading_background_inch7.c",
+        "source_sha256": "e932f4249071514730cdc77e91b8edb573a9af19c04926a39a9af21442d42cef",
+        "bytes": 1843200,
+        "sha256": "66cc6cb25c3dcf74f64f9687930fdc90a8420480b73d1c3fd22263c28f237892"
+      },
+      "backup_full_asset_occurrence_offsets": []
+    },
+    {
+      "id": "inch9",
+      "screen_inches": 9.0,
+      "sku": "DHE04209D",
+      "repository": "https://github.com/Elecrow-RD/CrowPanel-Advanced-9inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen",
+      "repository_commit": "4074b31dc611229e5f12357620a61606da70ef37",
+      "factory_source_archive": {
+        "path": "factory_sourcecode/V1.0/ESP32-P4-Adcance-brookesia_phone_inch9.zip",
+        "url": "https://raw.githubusercontent.com/Elecrow-RD/CrowPanel-Advanced-9inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen/4074b31dc611229e5f12357620a61606da70ef37/factory_sourcecode/V1.0/ESP32-P4-Adcance-brookesia_phone_inch9.zip",
+        "git_blob_sha1": "e7aedd8e838f15da7f992734e99688a970c5b216",
+        "bytes": 13819155,
+        "sha256": "6a66bdde99af0f8ff06e97b2ecaba6efacce8e4c4c717ac7a9761dc69784aec7"
+      },
+      "selector": {
+        "source_path": "components/espressif__esp32_p4_function_ev_board/elecrow_ui/elecrow_ui.c",
+        "source_sha256": "6715a59be33af74c9395180b26a6bff6ced15ab4460edd404b4cfb7e4316f749",
+        "expected_statement": "lv_img_set_src(Load_bg_img, &loading_background_inch9);"
+      },
+      "asset": {
+        "source_path": "components/espressif__esp32_p4_function_ev_board/elecrow_ui/images/loading_background_inch9.c",
+        "source_sha256": "4dbb431776444bfd85bb176ab7590c7bbebc0823fb3d6025ffff946b66d33b68",
+        "bytes": 1843200,
+        "sha256": "718f96264e6b00ce3225cdf5f43bb607af1e85344c605e944bc5bee2b5d89dd3"
+      },
+      "backup_full_asset_occurrence_offsets": []
+    },
+    {
+      "id": "inch10_1",
+      "screen_inches": 10.1,
+      "sku": "DHE04310D",
+      "repository": "https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen",
+      "repository_commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+      "factory_source_archive": {
+        "path": "factory_sourcecode/V1.0/ESP32-P4-Adcance-brookesia_phone_inch10_1.zip",
+        "url": "https://raw.githubusercontent.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen/c5a437311b951aaa9d17115bf420877a8f1f7b83/factory_sourcecode/V1.0/ESP32-P4-Adcance-brookesia_phone_inch10_1.zip",
+        "git_blob_sha1": "2a941e65d2ebb41f59ce596c78e40eea5fd5c4ec",
+        "bytes": 13819158,
+        "sha256": "73b32c4d4dc89cc0b091388d6a7862d827d6548412717bcb1f36f7adb8da2e28"
+      },
+      "selector": {
+        "source_path": "components/espressif__esp32_p4_function_ev_board/elecrow_ui/elecrow_ui.c",
+        "source_sha256": "357366a19a0ad3c037f53de8b3981531c379597d3d5a8287899e9648f3be4be2",
+        "expected_statement": "lv_img_set_src(Load_bg_img, &loading_background_inch10_1);"
+      },
+      "asset": {
+        "source_path": "components/espressif__esp32_p4_function_ev_board/elecrow_ui/images/loading_background_inch10_1.c",
+        "source_sha256": "2f9934443626c0b41681ff08d0145e15bf39253b05184c88a76953a74f4a6b7b",
+        "bytes": 1843200,
+        "sha256": "a202c0cfd6552091ecfb7064c0029e7261747dc1a54ed8030269e1a483580d3c"
+      },
+      "backup_full_asset_occurrence_offsets": [
+        "0x71004"
+      ]
+    }
+  ],
+  "conclusion": {
+    "scope": "factory_firmware_variant",
+    "screen_inches": 10.1,
+    "sku": "DHE04310D",
+    "confidence": "very_high",
+    "physical_screen_sku_confirmed": false,
+    "pcb_revision": null,
+    "pin_map_authorized": false,
+    "rationale": "The saved pre-project flash contains the complete pinned 10.1-inch asset exactly once and contains no complete pinned 7- or 9-inch asset. Firmware can be reflashed independently of the attached panel, so this identifies the firmware variant but is not physical-label evidence."
+  },
+  "claims_not_made": [
+    "The physical display label or diagonal was observed.",
+    "The PCB silkscreen revision was observed.",
+    "The attached hardware still has the factory-intended firmware-to-panel pairing.",
+    "Any revision-sensitive peripheral pin map is authorized."
+  ]
+}

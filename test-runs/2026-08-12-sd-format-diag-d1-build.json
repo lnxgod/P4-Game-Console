@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "id": "sd-format-diag-d1-build-2026-08-12",
+  "timestamp_utc": "2026-08-13T05:16:41Z",
+  "classification": "build-tested",
+  "result": "pass",
+  "scope": "one-shot-destructive-j5-sd-fat32-format",
+  "authorization_evidence": "hardware/evidence/sd-format-diag-one-shot-authorization.json",
+  "electrical_evidence": "hardware/evidence/elecrow-10.1-storage-path.json",
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "compiler": "riscv32-esp-elf GCC 14.2.0_20251107"
+  },
+  "source_inventory": {
+    "apps/sd_format_diag/CMakeLists.txt": "de29c227615d30b274a5c280a1c6c38b0765c3d09fc25e6bf815875d416ab7c5",
+    "apps/sd_format_diag/main/CMakeLists.txt": "717dfd9e252ce99ef709dbf6a11dce7286188c78ec7911aedd68854a7892d976",
+    "apps/sd_format_diag/main/Kconfig.projbuild": "0e179becc83e292a93ed4a8e657cd4378c8c49875788dab9a31881ed0653bab9",
+    "apps/sd_format_diag/main/sd_format_diag_main.c": "9693472b99f454ee560ba7b83c5f5eca98dc693b9f3c8a24a61ad4d1fa2d84ac",
+    "apps/sd_format_diag/sdkconfig.defaults": "7a82d1fb447d47ad30cb666ea0d03fa4be4bd2dbc55148659fff5f0dafe686b2"
+  },
+  "build": {
+    "command": "idf.py -C apps/sd_format_diag -B <independent-build-directory> -D IDF_TARGET=esp32p4 -D SDKCONFIG=<fresh-sdkconfig> build",
+    "reproducible_build": true,
+    "compile_time_date_enabled": false,
+    "fresh_independent_build_directories_compared": 2,
+    "committed_defaults_only_build_compared": true,
+    "identical_binary": true,
+    "identical_elf": true,
+    "target": "esp32p4",
+    "silicon_family": "revision_1_x",
+    "minimum_revision_full": 100,
+    "maximum_revision_full": 199,
+    "flash_size_bytes": 16777216,
+    "destructive_formatter_kconfig_enabled": true,
+    "main_task_stack_bytes": 16384,
+    "app_main_stack_frame_bytes": 352,
+    "large_formatter_state_heap_allocated": true,
+    "global_pin_map_authorized": false
+  },
+  "artifacts": {
+    "application_offset": 65536,
+    "generated_app_partition_bytes": 1048576,
+    "saved_factory_app_partition_bytes": 11534336,
+    "app_binary_bytes": 284688,
+    "app_binary_sha256": "23685f08504a699d5f75555c11ff5be053bf9f64c4aecdce85894667b74c6310",
+    "generated_app_partition_free_bytes": 763888,
+    "saved_factory_app_partition_free_bytes": 11249648,
+    "elf_bytes": 5564184,
+    "elf_sha256": "2e0643023f05a7e8cd6941a5508e8caaa65c54d2492c8b07f69ee9695a5f20f5"
+  },
+  "destructive_operation": {
+    "target": "inserted_j5_micro_sd_only",
+    "clock_khz": 1000,
+    "bus_width": 1,
+    "partitioning": "FatFs f_fdisk with one 100-percent partition",
+    "format": "FatFs f_mkfs with FM_FAT32, two FATs, 16384-byte allocation unit",
+    "layout_checks": [
+      "MBR signature",
+      "valid boot flag",
+      "FAT32 partition type",
+      "single nonempty primary partition",
+      "partition ends at card capacity",
+      "VBR signature and FAT32 BPB invariants",
+      "BPB hidden sectors equals partition start",
+      "BPB cluster size equals requested 16384-byte allocation unit",
+      "BPB total sectors equals partition sectors",
+      "FAT32 cluster-count threshold",
+      "FatFs fs_type equals FS_FAT32"
+    ],
+    "filesystem_checks": [
+      "4096-byte deterministic write",
+      "fflush and fsync",
+      "byte-exact readback",
+      "file removal",
+      "unmount and remount with formatting disabled",
+      "removed-file ENOENT persistence",
+      "second write-read-remove cycle"
+    ]
+  },
+  "policy": {
+    "user_destructive_authorization_recorded": true,
+    "reusable_platform_storage_read_only_policy_unchanged": true,
+    "app_flash_authorized": false,
+    "full_project_flash_authorized": false,
+    "hardware_accessed_during_build": false,
+    "hardware_execution_recorded": false,
+    "flash_after_action": "no_reset_until_exact_readback_then_explicit_run"
+  },
+  "claims_not_made": [
+    "The inserted card accepts raw writes on the connected board",
+    "Formatting or remounting succeeds on the connected board",
+    "Any WAD is present after formatting",
+    "Any display, touch, audio, camera, wireless, or USB interface works"
+  ]
+}

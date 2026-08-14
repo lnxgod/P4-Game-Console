@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "classification": "cross-revision-display-path",
+  "result": "pass",
+  "recorded_at": "2026-08-12",
+  "scope": "display_only",
+  "official_source": {
+    "vendor": "Elecrow",
+    "repository": "https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen",
+    "commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+    "model": "DHE04310D",
+    "hardware_revisions_compared": [
+      "V1.0",
+      "V1.1",
+      "V1.2"
+    ]
+  },
+  "schematics": [
+    {
+      "revision": "V1.0",
+      "path": "Eagle_SCH&PCB/1.0/ESP32-P4 Display 10.1 inch V1.0.sch",
+      "sha256": "a31422d5b0e9ec7fe75c7f5c973b0c5b40d5e5148605caa817aedc1a6e4455a3"
+    },
+    {
+      "revision": "V1.1",
+      "path": "Eagle_SCH&PCB/1.1/ESP32-P4 Display 10.1 inch V1.1.sch",
+      "sha256": "c4f7e1d61f490290ada1b312d6200a6b2838802f4d780af9699ca3797e35cadd"
+    },
+    {
+      "revision": "V1.2",
+      "path": "Eagle_SCH&PCB/1.2/ESP32-P4 Display 10.1 inch V1.2.sch",
+      "sha256": "7f9ac57dab96110467e4a9728cfb71b46024ea57f28a2d9d8b545b3ff0d0c172"
+    }
+  ],
+  "cross_revision_invariants": {
+    "panel_connector": "J21",
+    "resolution": {
+      "width": 1024,
+      "height": 600
+    },
+    "controller": "EK79007",
+    "mipi_dsi": {
+      "bus_id": 0,
+      "data_lanes": 2,
+      "dedicated_signal_nets": [
+        "DSI_CLK_P",
+        "DSI_CLK_N",
+        "DSI_DATA0_P",
+        "DSI_DATA0_N",
+        "DSI_DATA1_P",
+        "DSI_DATA1_N"
+      ]
+    },
+    "power": {
+      "ldo3_mv": 2500,
+      "ldo4_mv": 3300
+    },
+    "backlight": {
+      "enable_net": "LCD_BK_EN",
+      "gpio": 31,
+      "driver": "MT9201",
+      "pwm_hz": 30000,
+      "power_gate_gpio_29_required": false,
+      "power_gate_reason": "Q11 is marked AO3401_NC and the VDD5V-to-LCD_BK_VDD path is populated through R184=0R in every published revision"
+    },
+    "reset": {
+      "schematic_gpio": 41,
+      "driver_gpio": -1,
+      "policy": "do_not_drive"
+    }
+  },
+  "official_lesson_07": {
+    "v1_1": {
+      "driver_path": "example/V1.1/idf-code/Lesson07-Turn_on_the_screen/peripheral/bsp_illuminate/bsp_illuminate.c",
+      "driver_sha256": "5f5bea825d1dbeece9060da49adb67d13a4d5bd4a8cad0ee8828db5fcf4a5e9e",
+      "header_sha256": "558d3379e18f263c98da3ce64331a4de5dfa495457e5f1da1bb6524045b3b062"
+    },
+    "v1_2": {
+      "driver_path": "example/V1.2/idf-code/Lesson07-Turn_on_the_screen/peripheral/bsp_illuminate/bsp_illuminate.c",
+      "driver_sha256": "2b709d05b49350ef9cf56fe538795db263dffae38cf68a510f0a419c929a9e8f",
+      "header_sha256": "e99f235099bb7aa57cc0c6bea24769d060089ae5c1055bf22af4fbedbcc5b4f3"
+    },
+    "effective_settings_match": true,
+    "lane_bit_rate_mbps": 900,
+    "dpi_clock_mhz": 51,
+    "bits_per_pixel": 16,
+    "horizontal_timing": {
+      "back_porch": 160,
+      "pulse_width": 70,
+      "front_porch": 160
+    },
+    "vertical_timing": {
+      "back_porch": 23,
+      "pulse_width": 10,
+      "front_porch": 12
+    }
+  },
+  "authorization": {
+    "authorized": true,
+    "scope": [
+      "mipi_dsi_bus_0_dedicated_pins",
+      "internal_ldo_channel_3_at_2500_mv",
+      "internal_ldo_channel_4_at_3300_mv",
+      "gpio31_lcd_backlight_enable_pwm"
+    ],
+    "explicitly_not_authorized": [
+      "gpio29_lcd_backlight_optional_power_gate",
+      "gpio41_lcd_reset",
+      "touch",
+      "sd_card",
+      "audio",
+      "camera",
+      "wireless",
+      "usb_host",
+      "all_other_gpio"
+    ],
+    "rationale": "The authorized display-only electrical path and effective driver parameters are identical in all three official 10.1-inch hardware revisions, so the unreadable final PCB-revision characters do not affect this bounded diagnostic."
+  }
+}

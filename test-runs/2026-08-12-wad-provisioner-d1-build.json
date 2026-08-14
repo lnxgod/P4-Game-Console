@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "id": "wad-provisioner-d1-build-2026-08-12",
+  "timestamp_utc": "2026-08-13T05:31:44Z",
+  "classification": "build-tested",
+  "result": "pass",
+  "scope": "one-shot-local-shareware-wad-provisioning",
+  "authorization_evidence": "hardware/evidence/elecrow-10.1-storage-path.json",
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "compiler": "riscv32-esp-elf GCC 14.2.0_20251107"
+  },
+  "source_inventory": {
+    "apps/wad_provisioner/CMakeLists.txt": "69acf4e8f6c6082be2c07f8e812552c16f1ea7c263bde518d8b9023ac5ef8e65",
+    "apps/wad_provisioner/main/CMakeLists.txt": "dc00a0dada1b23e5211e949d68c02b8e543a55f937d0bf23e5a4533c8374c6dc",
+    "apps/wad_provisioner/main/wad_provisioner_main.c": "873091670b9a96b98a67b7546be0f283daf131df87afde1140fac3de44142881",
+    "apps/wad_provisioner/partitions.csv": "99c9a328dae43e6b6346bcf08b67c9114bfa3813398295f53753b49c1c6eafe1",
+    "apps/wad_provisioner/sdkconfig.defaults": "dc95b3a8fc3bc7642b992d3847961026769840b3c85dd2cbafd7c9cdb3dc41d1",
+    "components/platform_storage/CMakeLists.txt": "2d1c0f8a5550912a9b8af3318cd682c5ff4e62fb738882586faa2c0c72c6ed3b",
+    "components/platform_storage/Kconfig": "b57a86f21e06f54574e0c1702064382b525b32c7d78298b8d51f029422d3fb0f",
+    "components/platform_storage/include/platform/storage.h": "14232433d13029884a8f2a2c8b216bec06333ad0c9ea905e27f40aa610bec6be",
+    "components/platform_storage/src/platform_storage.c": "6c6499974ccf6eeee09b81fba8a5b49e15f2ecdb15cb6b90c5543f7ade3733b9",
+    "components/platform_storage/src/platform_storage_wad.c": "80e3b958ff767b0bdf80de777f5550098a19d5366963923d178fcd56e1c88ec4",
+    "components/platform_storage/src/platform_storage_wad.h": "ac84f321b855d45b8a263596de0cfdbf958ac877775dddbff062367df8e9c3ff"
+  },
+  "build": {
+    "canonical_command": "scripts/build.sh wad_provisioner",
+    "independent_command": "idf.py -C apps/wad_provisioner -B <independent-build-directory> -D IDF_TARGET=esp32p4 -D SDKCONFIG=<fresh-sdkconfig-path> build",
+    "reproducible_build": true,
+    "compile_time_date_enabled": false,
+    "fresh_independent_build_directories_compared": 1,
+    "build_directories_compared": 2,
+    "committed_defaults_only_build_compared": true,
+    "identical_binary": true,
+    "identical_elf": true,
+    "target": "esp32p4",
+    "silicon_family": "revision_1_x",
+    "minimum_revision_full": 100,
+    "maximum_revision_full": 199,
+    "flash_size_bytes": 16777216,
+    "scoped_storage_authorization_enabled": true,
+    "storage_frequency_khz": 1000,
+    "runtime_filename_mode": "uppercase-8.3-compatible",
+    "flash_after_action": "no_reset_until_exact_readback_then_explicit_run",
+    "global_pin_map_authorized": false
+  },
+  "artifacts": {
+    "application_offset": 65536,
+    "saved_factory_app_partition_bytes": 11534336,
+    "app_binary_bytes": 4477600,
+    "app_binary_sha256": "dcad4daf0502486488617ab43ead5b7c2b5bccf52665e564fc0d9e063eb809e1",
+    "saved_factory_app_partition_free_bytes": 7056736,
+    "elf_bytes": 9749752,
+    "elf_sha256": "b99f4e3e46287618b6bf4eefe1d4fb21b0af399029d24b4b1246bd2fc0706982"
+  },
+  "embedded_wad": {
+    "source_path": "local-data/doom/doom1.wad",
+    "identity": "doom-shareware-1.9",
+    "size_bytes": 4196020,
+    "sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+    "binary_occurrences": 1,
+    "binary_offset": 288,
+    "start_symbol": "_binary_p4_provision_wad_start",
+    "end_symbol": "_binary_p4_provision_wad_end",
+    "symbol_span_bytes": 4196020
+  },
+  "policy": {
+    "local_artifact_only": true,
+    "wad_tracked": false,
+    "wad_ignored": true,
+    "redistributable": false,
+    "app_only_flash_authorized": false,
+    "full_project_flash_authorized": false,
+    "format": false,
+    "overwrite": false,
+    "delete": false,
+    "temp_exclusive_create": true,
+    "temp_file_fsync_before_close": true,
+    "temp_full_hash_readback_before_rename": true,
+    "target_absence_rechecked_before_rename": true,
+    "fat_rename_refuses_existing_destination": true,
+    "fat_rename_power_fail_atomic": false,
+    "final_full_hash_readback": true,
+    "stable_power_required": true,
+    "target_path": "/sdcard/DOOM1.WAD",
+    "temporary_path": "/sdcard/P4WAD.TMP",
+    "runtime_filename_mode": "uppercase-8.3-compatible",
+    "storage_frequency_khz": 1000,
+    "flash_after_action": "no_reset_until_exact_readback_then_explicit_run",
+    "readback_chunk_bytes_max": 524288,
+    "readback_baud_retry_sequence": [
+      460800,
+      230400,
+      115200
+    ],
+    "small_readback_baud_retry_sequence": [
+      921600,
+      460800,
+      230400
+    ],
+    "resume_readback_baud_retry_sequence": [
+      460800,
+      230400,
+      115200
+    ],
+    "resume_readback_rewrites_application": false
+  },
+  "verification": {
+    "configure_gate": "pass",
+    "exact_source_inventory": "pass",
+    "artifact_hash_and_size": "pass",
+    "embedded_wad_occurrence_and_symbol_span": "pass",
+    "local_ignore_and_distribution_policy": "pass",
+    "central_app_flash_hook": "pass",
+    "deferred_launch_after_exact_readback": "pass",
+    "uppercase_8_3_runtime_paths": "pass",
+    "connected_unit_1mhz_operating_point": "pass",
+    "build_only_positive_test": "pass",
+    "app_flash_negative_test_while_unauthorized": "pass",
+    "app_flash_positive_test_with_in_memory_authorization_mock": "pass",
+    "source_inventory_tamper_rejection_mock": "pass"
+  },
+  "execution": {
+    "firmware_flashed": false,
+    "firmware_executed": false,
+    "runtime_supported": true
+  },
+  "claims_not_made": [
+    "The inserted card needs provisioning",
+    "The WAD was written to the card",
+    "A FAT rename is power-fail atomic",
+    "The local artifact is redistributable",
+    "A full-project flash is authorized"
+  ]
+}

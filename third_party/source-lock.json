@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "sources": {
+    "doomgeneric": {
+      "repository": "https://github.com/ozkl/doomgeneric.git",
+      "commit": "dcb7a8dbc7a16ce3dda29382ac9aae9d77d21284",
+      "tree": "413539bdaa1521af167d9b34e9db0cd193367624",
+      "vendor_path": "third_party/doomgeneric",
+      "vendor_manifest": "third_party/doomgeneric.git-tree",
+      "vendor_manifest_sha256": "499fd1de6e8809099ba1ae5c75fb5eebde7a66f68950acfb9c72683c5279f2fe",
+      "vendor_paths": [
+        "LICENSE",
+        "README.TXT",
+        "README.md",
+        "doomgeneric"
+      ],
+      "usage": "vendored engine source for apps/doom",
+      "license": "GPL-2.0-or-later"
+    },
+    "esp32p4doom_reference": {
+      "repository": "https://github.com/alexkid77/ESP32P4DOOM.git",
+      "commit": "b808177bcb1fc76eb48072fbaa0643966faea376",
+      "usage": "reference-only; do not import repository history or WAD content",
+      "license": "GPL-2.0"
+    },
+    "freedoom": {
+      "repository": "https://github.com/freedoom/freedoom.git",
+      "tag": "v0.13.0",
+      "commit": "cfb8644b1a8dc7d7d2177e6a892ccaa2922bdaae",
+      "usage": "optional user-provided SD-card game data; never vendor WAD files",
+      "license": "BSD-3-Clause"
+    }
+  }
+}

@@ -1,0 +1,14 @@
+menu "P4 read-only storage probe"
+
+    config PLATFORM_STORAGE_PROBE_ELECROW_10_1_CROSS_REVISION_AUTHORIZED
+        bool "Authorize the reviewed Elecrow 10.1-inch read-only SDMMC probe"
+        default n
+        help
+            Allows this diagnostic component to operate only SDMMC slot 0 in
+            one-bit SDR mode at or below 10 MHz on GPIO43 (CLK), GPIO44 (CMD),
+            and GPIO39 (D0). It exposes no write operation. Its FatFs disk
+            adapter rejects every write as write-protected and no format API
+            is called. D1-D7, card detect, write protect, and every unrelated
+            GPIO/peripheral remain unauthorized.
+
+endmenu

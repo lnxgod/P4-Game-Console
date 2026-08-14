@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "app": "doom",
+  "stage": "D0.5",
+  "evidence_class": "build-tested",
+  "purpose": "Cross-compile and whole-archive link the pinned doomgeneric engine and pin-independent ESP-IDF seam for ESP32-P4 revision 1.x.",
+  "runtime_supported": false,
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "game_data_embedded": false,
+  "hardware_interfaces": [],
+  "runtime_blockers": [
+    "No platform storage service or WAD path is connected.",
+    "Display, audio, input, SD, and USB services are intentionally absent.",
+    "The physical product label and PCB revision remain unconfirmed, so the peripheral pin map is unauthorized."
+  ]
+}

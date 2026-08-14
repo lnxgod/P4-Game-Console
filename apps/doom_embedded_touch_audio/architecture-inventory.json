@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "captured_on": "2026-08-13",
+  "baseline_apps": {
+    "E1": {
+      "app": "doom_embedded",
+      "main_sha256": "c7c4bdfd1b14460d19635c47c2d47a56580fd0c72e82f5eecd0b70a5877a8502",
+      "main_cmake_sha256": "d1fc689258bff5f8a4a2aeada7c3845e6b6f8f5f858a1f61448859656049320e",
+      "decision": "preserve_exact_wad_readonly_vfs_display_and_video_engine"
+    },
+    "E2": {
+      "app": "doom_embedded_audio",
+      "main_sha256": "d42ce8e2b9b7ea06284cdd9c6f1c452d4022cfa3520bc1a25a4564621f3204e8",
+      "main_cmake_sha256": "1ba0ad37c2fc85a6958648f568771cd0fa3dfe8b5a905fd81cd667a0228d2545",
+      "decision": "reuse_frozen_doom_audio_lifecycle_not_obsolete_direct_i2s_backend"
+    },
+    "E3": {
+      "app": "doom_embedded_gamepad",
+      "main_sha256": "8d3a03d0fa52124fe632f72ad495d0c6ac6b48e2dc6b47a5d1ca3f6134522181",
+      "main_cmake_sha256": "b0b6b9b38ae6b8b4adb752c3aaedb20e6efebf16a6e438b506c08a772d8a3c72",
+      "decision": "exclude_usb_gamepad_graph"
+    },
+    "E4": {
+      "app": "doom_embedded_gamepad_audio",
+      "main_sha256": "7a6a773ff64d450bab8fc893c8a754a29dd4c2d87f92ddeac77400738815b93e",
+      "main_cmake_sha256": "a727e5ae5915aa8ad54be13ee2ed0c19495767e5ad005182f034dca254f717aa",
+      "decision": "reuse_only_fail_closed_composite_lifecycle_pattern"
+    }
+  },
+  "E5_seams": {
+    "video": "DG_ScreenBuffer_to_app_xrgb8888_overlay_to_unchanged_doom_video_submit",
+    "input": "platform_touch_snapshot_to_doom_touch_frame_to_bounded_Doom_key_events",
+    "sound": "historical_E5_touch_only_record_used_the_frozen_doom_audio_and_app_local_ABI_with_a_TX_only_factory_analysis_backend_linked_build_only_and_never_audio_runtime_authorized",
+    "control_bus": "one_platform_i2c_shared_owner_borrowed_only_by_touch",
+    "cleanup": "audio_touch_shared_bus_attempt_then_display_dark_then_video_then_display_then_readonly_blob",
+    "usb": "absent"
+  },
+  "E6_sound_successor": {
+    "status": "build_only_audio_electrical_release_pending",
+    "runtime_gates": "1/1/1",
+    "sound": "same_frozen_doom_audio_to_counted_app_local_platform_audio_adapter_to_vendor_complete_audio_init_shape",
+    "factory_i2s": "i2s0_pdm_rx_clk24_approx1_024mhz_din26_then_i2s1_speaker_tx_16khz_pcm16_stereo_lrclk21_bclk22_dout23_tx_mclk_unused_backend_step10_of10_unity_music_disabled",
+    "gpio24_qualification": "PDM RX clock output and may feed codec MCLK through board strapping; only I2S1 TX MCLK is unused",
+    "gpio30": "first_audio_call_proves_high; backend_start_alone_may_prove_low_after_zero_dma_prime_and_350ms_settle",
+    "control_bus": "audio_uses_no_i2c_or_codec; shared_i2c1_remains_touch_only",
+    "display_touch_wad": "unchanged_from_E5",
+    "usb": "absent",
+    "flash_or_run": "denied_until_board_profile_audio_release_exact_artifact_authorization_independent_audit_and_owner_approval"
+  }
+}

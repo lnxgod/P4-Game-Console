@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "id": "wad-provisioner-d1-2026-08-12",
+  "timestamp_local": "2026-08-12T22:41:00-07:00",
+  "result": "pass",
+  "app": "wad_provisioner",
+  "artifact": {
+    "offset": "0x10000",
+    "bytes": 4477600,
+    "sha256": "dcad4daf0502486488617ab43ead5b7c2b5bccf52665e564fc0d9e063eb809e1",
+    "on_chip_flash_hash_verified_by_esptool": true,
+    "exact_host_readback_verified": true,
+    "readback_baud": 460800,
+    "launch_deferred_until_after_exact_readback": true
+  },
+  "storage": {
+    "interface": "SDMMC0 1-bit",
+    "frequency_khz": 1000,
+    "filesystem": "FAT32",
+    "path": "/sdcard/DOOM1.WAD",
+    "action": "created-fsync-readback-renamed",
+    "bytes": 4196020,
+    "sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
+  },
+  "serial": {
+    "start_marker_seen": true,
+    "pass_marker_seen": true,
+    "pass_uptime_ms": 127630,
+    "panic_seen": false,
+    "watchdog_seen": false,
+    "failure_marker_seen": false
+  },
+  "authorization": {
+    "app_only": true,
+    "project_flash": false,
+    "one_shot_authorization_revoked_after_pass": true
+  },
+  "conclusion": "The canonical Doom 1.9 shareware IWAD is durably present on the inserted FAT32 microSD and matches the expected byte count and SHA-256 after final-path readback."
+}

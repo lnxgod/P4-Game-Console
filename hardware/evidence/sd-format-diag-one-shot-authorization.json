@@ -1,0 +1,56 @@
+{
+  "schema": 1,
+  "id": "sd-format-diag-one-shot-authorization-2026-08-12",
+  "classification": "user-authorized-destructive-one-shot",
+  "result": "authorized-pending-exact-app-preflash-review",
+  "scope": "inserted_j5_micro_sd_only",
+  "authorization_source": {
+    "actor": "user",
+    "date": "2026-08-12",
+    "record": "active_task_conversation",
+    "authorized_actions": [
+      "erase_inserted_sd_card",
+      "replace_partition_table_with_one_full-card-partition",
+      "format_partition_as_fat32",
+      "write_read_remove_test_file",
+      "unmount_remount_verification"
+    ]
+  },
+  "inherited_electrical_path": {
+    "evidence": "hardware/evidence/elecrow-10.1-storage-path.json",
+    "vendor": "Elecrow",
+    "model": "DHE04310D",
+    "published_revisions": [
+      "V1.0",
+      "V1.1",
+      "V1.2"
+    ],
+    "interface": "SDMMC0",
+    "connector": "J5",
+    "bus_width": 1,
+    "maximum_clock_khz": 1000,
+    "gpio": {
+      "clock": 43,
+      "command": 44,
+      "data0": 39
+    },
+    "internal_pullups": true
+  },
+  "exception_boundary": {
+    "supersedes_read_only_policy_for_this_app_once": true,
+    "reusable_platform_storage_policy_unchanged": true,
+    "target": "physical microSD inserted in J5 at run time",
+    "external_spi_flash_data_partition_mutation": false,
+    "application_flash_scope": "factory_app_partition_only_at_0x10000",
+    "full_project_flash_authorized": false,
+    "other_gpio_or_peripherals_authorized": false
+  },
+  "preflash_gate": {
+    "metadata_flag_required": "apps/sd_format_diag/app-metadata.json:flash_app_authorized=true",
+    "exact_build_verifier": "scripts/verify-sd-format-diag.py",
+    "central_flash_hook": "scripts/flash.sh",
+    "flash_mode": "app-flash",
+    "readback_required": true,
+    "hardware_execution_record_pending": true
+  }
+}

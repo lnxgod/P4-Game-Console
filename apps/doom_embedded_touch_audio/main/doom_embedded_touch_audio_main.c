@@ -1,0 +1,899 @@
+// SPDX-License-Identifier: GPL-2.0-or-later
+/*
+ * Isolated E6 Doom composite. Its three app-local source-bound runtime bytes
+ * select the exact 1/1/1 touch-and-factory-audio successor. This source is
+ * build-only while the board profile's GPIO30-low electrical release remains
+ * closed; repository metadata and the central verifier deny every flash/run
+ * route. The branch preserves E1's exact WAD/display/video path, routes every
+ * audio call through the counted app-local adapter, and keeps USB absent.
+ */
+
+#include <inttypes.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+
+#include "degraded_policy.h"
+#include "audio_lifecycle.h"
+#include "doom/audio_mixer.h"
+#include "doom/audio_runtime.h"
+#include "doom/video.h"
+#include "doomgeneric.h"
+#include "i_system.h"
+#include "m_controls.h"
+#include "runtime_gate.h"
+#include "touch_controls.h"
+#pragma GCC diagnostic push
+/* ESP-IDF 5.5.3 has two sign-conversion warnings in inline RISC-V headers. */
+#pragma GCC diagnostic ignored "-Wsign-conversion"
+#include "esp_err.h"
+#include "esp_heap_caps.h"
+#include "esp_log.h"
+#include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "mbedtls/sha256.h"
+#pragma GCC diagnostic pop
+#include "platform/audio.h"
+#include "platform/display.h"
+#include "platform/readonly_blob.h"
+#include "platform/touch.h"
+#include "platform_i2c_shared/bus.h"
+
+#define DOOM_SUBMIT_TIMEOUT_MS UINT32_C(100)
+#define DOOM_FIRST_FRAME_TIMEOUT_MS UINT32_C(250)
+#define DOOM_MAX_SLEEP_MS UINT32_C(60000)
+#define DOOM_STATS_INTERVAL_FRAMES UINT32_C(300)
+#define TOUCH_POLL_INTERVAL_MS UINT32_C(16)
+#define TOUCH_RETRY_INTERVAL_MS UINT32_C(5000)
+#define TOUCH_DEGRADED_LOG_INTERVAL_MS UINT32_C(2000)
+#define EMBEDDED_WAD_BYTES ((size_t)4196020U)
+#define EMBEDDED_WAD_PATH "/doom/doom1.wad"
+#define OVERLAY_PIXELS \
+    ((size_t)DOOM_TOUCH_FRAME_WIDTH * (size_t)DOOM_TOUCH_FRAME_HEIGHT)
+
+extern const uint8_t _binary_doom_shareware_wad_start[];
+extern const uint8_t _binary_doom_shareware_wad_end[];
+
+static const uint8_t s_expected_wad_sha256[32] = {
+    0x1d, 0x7d, 0x43, 0xbe, 0x50, 0x1e, 0x67, 0xd9,
+    0x27, 0xe4, 0x15, 0xe0, 0xb8, 0xf3, 0xe2, 0x9c,
+    0x3b, 0xf3, 0x30, 0x75, 0xe8, 0x59, 0x72, 0x18,
+    0x16, 0xf6, 0x52, 0xa5, 0x26, 0xca, 0xc7, 0x71,
+};
+
+static const char *const TAG = "p4_doom_touch_audio";
+static esp_err_t s_frame_error = ESP_OK;
+static uint32_t s_frame_count;
+static uint32_t *s_overlay_buffer;
+
+static doom_touch_input_t s_touch_input;
+static platform_i2c_shared_t *s_shared_bus;
+static platform_touch_t *s_touch;
+static bool s_touch_ready;
+static bool s_touch_cleanup_proven = true;
+static uint32_t s_last_touch_poll_ms;
+static uint32_t s_last_touch_retry_ms;
+static uint32_t s_last_touch_degraded_log_ms;
+static uint32_t s_touch_polls;
+static uint32_t s_touch_poll_failures;
+static uint32_t s_touch_retries;
+
+static bool s_audio_gate_enabled;
+static bool s_audio_calls_allowed;
+static doom_e6_audio_lifecycle_t s_audio_lifecycle = {
+    .released = true,
+};
+static doom_touch_audio_runtime_gate_t s_runtime_gate;
+
+static bool s_display_initialized;
+static bool s_video_initialized;
+static bool s_blob_registered;
+static bool s_cleanup_active;
+static bool s_cleanup_complete;
+
+_Static_assert(sizeof(pixel_t) == sizeof(uint32_t),
+               "E5 requires the engine's default 32-bit pixels");
+_Static_assert(DOOM_AUDIO_OUTPUT_RATE_HZ == PLATFORM_AUDIO_SAMPLE_RATE_HZ,
+               "Doom mixer and factory backend rates must remain aligned");
+_Static_assert(PLATFORM_TOUCH_WIDTH == DOOM_TOUCH_SCREEN_WIDTH &&
+                   PLATFORM_TOUCH_HEIGHT == DOOM_TOUCH_SCREEN_HEIGHT,
+               "touch and overlay coordinate spaces must match");
+
+static uint32_t ticks_ms(void)
+{
+    return (uint32_t)((uint64_t)esp_timer_get_time() / UINT64_C(1000));
+}
+
+static void log_sound_disabled(void)
+{
+    const uint32_t audio_calls = platform_audio_invocation_count();
+    const char *const gpio30_state =
+        s_runtime_gate.audio_authorized == 0U && audio_calls == 0U
+            ? "untouched" : "not-proven";
+    ESP_LOGI(TAG,
+             "P4_DOOM_E6 SOUND_DISABLED audio_gate=%u audio_calls=%" PRIu32
+             " gpio30=%s hardware_pullup=R71",
+             (unsigned)s_runtime_gate.audio_authorized,
+             audio_calls, gpio30_state);
+}
+
+static uint32_t read_u32_le(const uint8_t bytes[4])
+{
+    return (uint32_t)bytes[0] |
+        ((uint32_t)bytes[1] << 8U) |
+        ((uint32_t)bytes[2] << 16U) |
+        ((uint32_t)bytes[3] << 24U);
+}
+
+static esp_err_t verify_embedded_wad(const uint8_t *data, size_t size_bytes)
+{
+    if (data == NULL || size_bytes != EMBEDDED_WAD_BYTES) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+    if (memcmp(data, "IWAD", 4U) != 0) {
+        return ESP_ERR_INVALID_RESPONSE;
+    }
+    const uint32_t lump_count = read_u32_le(&data[4]);
+    const uint32_t directory_offset = read_u32_le(&data[8]);
+    const uint64_t directory_bytes = (uint64_t)lump_count * UINT64_C(16);
+    if (lump_count == 0U ||
+        (uint64_t)directory_offset > (uint64_t)size_bytes ||
+        directory_bytes >
+            (uint64_t)size_bytes - (uint64_t)directory_offset) {
+        return ESP_ERR_INVALID_RESPONSE;
+    }
+    uint8_t digest[32];
+    if (mbedtls_sha256(data, size_bytes, digest, 0) != 0) {
+        return ESP_FAIL;
+    }
+    return memcmp(digest, s_expected_wad_sha256, sizeof(digest)) == 0
+        ? ESP_OK
+        : ESP_ERR_INVALID_CRC;
+}
+
+static esp_err_t verify_readonly_vfs(void)
+{
+    struct stat metadata;
+    if (stat(EMBEDDED_WAD_PATH, &metadata) != 0 ||
+        !S_ISREG(metadata.st_mode) ||
+        metadata.st_size != (off_t)EMBEDDED_WAD_BYTES ||
+        (metadata.st_mode & 0222) != 0) {
+        return ESP_ERR_INVALID_RESPONSE;
+    }
+    FILE *const file = fopen(EMBEDDED_WAD_PATH, "rb");
+    if (file == NULL) {
+        return ESP_FAIL;
+    }
+    uint8_t header[12];
+    esp_err_t result = ESP_OK;
+    if (fread(header, 1U, sizeof(header), file) != sizeof(header) ||
+        memcmp(header, "IWAD", 4U) != 0 ||
+        fseek(file, 0L, SEEK_END) != 0 ||
+        ftell(file) != (long)EMBEDDED_WAD_BYTES) {
+        result = ESP_ERR_INVALID_RESPONSE;
+    }
+    if (fclose(file) != 0 && result == ESP_OK) {
+        result = ESP_FAIL;
+    }
+    return result;
+}
+
+static void log_touch_degraded(const char *stage, esp_err_t error,
+                               bool force)
+{
+    const uint32_t now_ms = ticks_ms();
+    if (force ||
+        (uint32_t)(now_ms - s_last_touch_degraded_log_ms) >=
+            TOUCH_DEGRADED_LOG_INTERVAL_MS) {
+        ESP_LOGW(TAG,
+                 "P4_DOOM_E6 TOUCH_DEGRADED stage=%s error=%s neutral=1 "
+                 "overlay=visible cleanup_proven=%u bus_owned=%u",
+                 stage, esp_err_to_name(error),
+                 s_touch_cleanup_proven ? 1U : 0U,
+                 s_shared_bus != NULL ? 1U : 0U);
+        s_last_touch_degraded_log_ms = now_ms;
+    }
+}
+
+static void neutralize_touch_input(void)
+{
+    (void)doom_touch_audio_force_neutral(&s_touch_input);
+}
+
+static bool release_retained_touch(void)
+{
+    if (s_touch == NULL) {
+        s_touch_ready = false;
+        s_touch_cleanup_proven = true;
+        return true;
+    }
+    const esp_err_t result = platform_touch_destroy(&s_touch);
+    if (result != ESP_OK) {
+        s_touch_ready = false;
+        s_touch_cleanup_proven = false;
+        log_touch_degraded("touch-destroy", result, true);
+        return false;
+    }
+    s_touch_ready = false;
+    s_touch_cleanup_proven = true;
+    return true;
+}
+
+static bool try_touch_create(bool force_log)
+{
+    ++s_touch_retries;
+    if (s_touch != NULL && !s_touch_ready && !release_retained_touch()) {
+        return false;
+    }
+    if (s_shared_bus == NULL) {
+        const esp_err_t bus_result =
+            platform_i2c_shared_create(&s_shared_bus);
+        if (bus_result != ESP_OK) {
+            log_touch_degraded("shared-i2c-create", bus_result, force_log);
+            return false;
+        }
+        ESP_LOGI(TAG,
+                 "P4_DOOM_E6 SHARED_I2C_READY port=1 sda=45 scl=46 "
+                 "hz=%u owner=app borrowers=touch-only",
+                 (unsigned)PLATFORM_I2C_SHARED_CLOCK_HZ);
+    }
+
+    platform_touch_config_t config;
+    platform_touch_config_init(
+        &config, platform_i2c_shared_handle(s_shared_bus));
+    const esp_err_t result = platform_touch_create(&config, &s_touch);
+    if (result != ESP_OK) {
+        s_touch_ready = false;
+        s_touch_cleanup_proven = s_touch == NULL;
+        if (s_touch != NULL) {
+            (void)release_retained_touch();
+        }
+        log_touch_degraded("gt911-create", result, force_log);
+        return false;
+    }
+    s_touch_ready = true;
+    s_touch_cleanup_proven = true;
+    ESP_LOGI(TAG,
+             "P4_DOOM_E6 TOUCH_READY primary=0x%02x fallback=0x%02x "
+             "resolution=%ux%u contacts=%u poll_ms=%u i2c_device_hz=%u "
+             "gpio40=reset-active-low gpio42=address-latch-input-active-low "
+             "interrupt_callback=none",
+             (unsigned)config.address_7bit,
+             (unsigned)PLATFORM_TOUCH_GT911_BACKUP_ADDRESS,
+             (unsigned)PLATFORM_TOUCH_WIDTH,
+             (unsigned)PLATFORM_TOUCH_HEIGHT,
+             (unsigned)PLATFORM_TOUCH_MAX_CONTACTS,
+             (unsigned)TOUCH_POLL_INTERVAL_MS,
+             (unsigned)PLATFORM_TOUCH_I2C_CLOCK_HZ);
+    return true;
+}
+
+static void service_touch(void)
+{
+    if (!doom_touch_input_idle(&s_touch_input)) {
+        return;
+    }
+    const uint32_t now_ms = ticks_ms();
+    if (!s_touch_ready) {
+        neutralize_touch_input();
+        const bool bus_state_proven =
+            s_shared_bus != NULL || s_touch == NULL;
+        if (doom_touch_audio_retry_due(
+                now_ms, s_last_touch_retry_ms, TOUCH_RETRY_INTERVAL_MS,
+                s_touch_cleanup_proven, bus_state_proven)) {
+            s_last_touch_retry_ms = now_ms;
+            (void)try_touch_create(false);
+        }
+        return;
+    }
+    if ((uint32_t)(now_ms - s_last_touch_poll_ms) <
+        TOUCH_POLL_INTERVAL_MS) {
+        return;
+    }
+    s_last_touch_poll_ms = now_ms;
+    ++s_touch_polls;
+
+    platform_touch_frame_t platform_frame;
+    const esp_err_t result = platform_touch_poll(s_touch, &platform_frame);
+    doom_touch_frame_t touch_frame;
+    const bool converted = doom_touch_audio_frame_from_platform(
+        result == ESP_OK ? &platform_frame : NULL, &touch_frame);
+    if (result != ESP_OK || !converted) {
+        ++s_touch_poll_failures;
+        neutralize_touch_input();
+        log_touch_degraded("gt911-poll",
+                           result != ESP_OK ? result
+                                            : ESP_ERR_INVALID_RESPONSE,
+                           false);
+        s_touch_ready = false;
+        s_last_touch_retry_ms = now_ms;
+        (void)release_retained_touch();
+        return;
+    }
+    (void)doom_touch_input_update(&s_touch_input, &touch_frame);
+}
+
+static bool release_audio(void)
+{
+    doom_e6_audio_release_result_t release_result;
+    const esp_err_t result = doom_e6_audio_release(
+        &s_audio_lifecycle, &release_result);
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG,
+                 "P4_DOOM_E6 AUDIO_SAFETY_FAULT stage=cleanup "
+                 "stop=%s unbind=%s destroy=%s recover=%s "
+                 "runtime_bound=%u handle_retained=%u safe_high=%u",
+                 esp_err_to_name(release_result.stop_result),
+                 esp_err_to_name(release_result.unbind_result),
+                 esp_err_to_name(release_result.destroy_result),
+                 esp_err_to_name(release_result.recover_result),
+                 s_audio_lifecycle.runtime_bound ? 1U : 0U,
+                 s_audio_lifecycle.audio != NULL ? 1U : 0U,
+                 s_audio_lifecycle.safe_high_proven ? 1U : 0U);
+    }
+    return release_result.complete;
+}
+
+static void composite_cleanup(void)
+{
+    if (s_cleanup_active || s_cleanup_complete) {
+        return;
+    }
+    s_cleanup_active = true;
+    const bool audio_released = release_audio();
+    const bool touch_released = release_retained_touch();
+
+    esp_err_t bus_result = ESP_OK;
+    if (touch_released && s_shared_bus != NULL) {
+        bus_result = platform_i2c_shared_destroy(&s_shared_bus);
+    }
+    const bool bus_released = s_shared_bus == NULL;
+
+    esp_err_t dark_result = ESP_OK;
+    if (s_display_initialized) {
+        dark_result = platform_display_set_brightness(0U);
+    }
+    esp_err_t video_result = ESP_OK;
+    if (audio_released && bus_released && s_video_initialized) {
+        video_result = doom_video_deinit();
+        if (video_result == ESP_OK) {
+            s_video_initialized = false;
+            free(s_overlay_buffer);
+            s_overlay_buffer = NULL;
+        }
+    }
+    esp_err_t display_result = ESP_OK;
+    if (audio_released && bus_released && !s_video_initialized &&
+        s_display_initialized) {
+        display_result = platform_display_deinit();
+        if (display_result == ESP_OK) {
+            s_display_initialized = false;
+        }
+    }
+    esp_err_t blob_result = ESP_OK;
+    if (audio_released && bus_released && !s_video_initialized &&
+        !s_display_initialized && s_blob_registered) {
+        blob_result = platform_readonly_blob_unregister();
+        if (blob_result == ESP_OK) {
+            s_blob_registered = false;
+        }
+    }
+    s_cleanup_complete = audio_released && touch_released && bus_released &&
+        !s_video_initialized && !s_display_initialized && !s_blob_registered;
+    ESP_LOGI(TAG,
+             "P4_DOOM_E6 CLEANUP audio_released=%u touch_released=%u "
+             "bus=%s dark=%s video=%s display=%s blob=%s complete=%u "
+             "retained=%u",
+             audio_released ? 1U : 0U, touch_released ? 1U : 0U,
+             esp_err_to_name(bus_result), esp_err_to_name(dark_result),
+             esp_err_to_name(video_result), esp_err_to_name(display_result),
+             esp_err_to_name(blob_result),
+             s_cleanup_complete ? 1U : 0U,
+             s_cleanup_complete ? 0U : 1U);
+    s_cleanup_active = false;
+}
+
+static void halt_dark(const char *stage, esp_err_t error)
+{
+    composite_cleanup();
+    ESP_LOGE(TAG, "P4_DOOM_E6 HALT stage=%s error=%s",
+             stage, esp_err_to_name(error));
+    for (;;) {
+        vTaskDelay(pdMS_TO_TICKS(1000U));
+        composite_cleanup();
+    }
+}
+
+static void engine_exit_composite(void)
+{
+    composite_cleanup();
+}
+
+static bool try_audio_enable(void)
+{
+    if (!s_audio_calls_allowed) {
+        if (!s_audio_gate_enabled) {
+            log_sound_disabled();
+        }
+        return false;
+    }
+    const platform_audio_config_t config = {
+        .control_bus = NULL,
+        .sample_rate_hz = (uint32_t)DOOM_AUDIO_OUTPUT_RATE_HZ,
+        .volume_percent = 10U,
+    };
+    s_audio_lifecycle.released = false;
+    esp_err_t result = platform_audio_create(
+        &config, &s_audio_lifecycle.audio);
+    if (result != ESP_OK) {
+        doom_e6_audio_release_result_t release_result;
+        const esp_err_t recover_result = doom_e6_audio_release(
+            &s_audio_lifecycle, &release_result);
+        if (recover_result != ESP_OK) {
+            ESP_LOGE(TAG,
+                     "P4_DOOM_E6 AUDIO_SAFETY_FAULT "
+                     "stage=factory-audio-create error=%s recover=%s halt=1",
+                     esp_err_to_name(result),
+                     esp_err_to_name(recover_result));
+            halt_dark("audio-create-safety", recover_result);
+        }
+        ESP_LOGW(TAG,
+                 "P4_DOOM_E6 SOUND_DEGRADED stage=factory-audio-create "
+                 "error=%s recover=%s fallback=silent auto_fallback=0",
+                 esp_err_to_name(result), esp_err_to_name(recover_result));
+        return false;
+    }
+    const doom_audio_runtime_config_t runtime_config = {
+        .platform_audio = s_audio_lifecycle.audio,
+        .sample_rate_hz = (uint32_t)DOOM_AUDIO_OUTPUT_RATE_HZ,
+        .display_owns_ldo3_ldo4 = true,
+    };
+    result = doom_audio_runtime_bind(&runtime_config);
+    if (result != ESP_OK) {
+        doom_e6_audio_release_result_t release_result;
+        const esp_err_t recover_result = doom_e6_audio_release(
+            &s_audio_lifecycle, &release_result);
+        if (recover_result != ESP_OK) {
+            ESP_LOGE(TAG,
+                     "P4_DOOM_E6 AUDIO_SAFETY_FAULT "
+                     "stage=doom-audio-bind error=%s recover=%s halt=1",
+                     esp_err_to_name(result),
+                     esp_err_to_name(recover_result));
+            halt_dark("audio-bind-safety", recover_result);
+        }
+        ESP_LOGW(TAG,
+                 "P4_DOOM_E6 SOUND_DEGRADED stage=doom-audio-bind "
+                 "error=%s recover=%s fallback=silent auto_fallback=0",
+                 esp_err_to_name(result), esp_err_to_name(recover_result));
+        return false;
+    }
+    s_audio_lifecycle.runtime_bound = true;
+    ESP_LOGI(TAG,
+             "P4_DOOM_E6 SOUND_BOUND backend=factory-complete-audio-init "
+             "state=ready-muted gpio30=high-pad-readback-proven "
+             "pdm_i2s_port=0 pdm_clk_gpio=24 pdm_clk_hz=1024000 "
+             "pdm_din_gpio=26 gpio24_may_feed_codec_mclk=1 "
+             "speaker_i2s_port=1 rate_hz=%u format=pcm16-stereo channels=%u "
+             "lrclk_gpio=21 bclk_gpio=22 dout_gpio=23 tx_mclk=none "
+             "codec_i2c_transactions=0 required_startup_zero_ms=350 "
+             "backend_volume_step=10/10 gain=unity-no-amplification "
+             "music=disabled "
+             "activation=doom-sfx-init-pending audio_calls=%" PRIu32,
+             (unsigned)DOOM_AUDIO_OUTPUT_RATE_HZ,
+             (unsigned)PLATFORM_AUDIO_CHANNEL_COUNT,
+             platform_audio_invocation_count());
+    return true;
+}
+
+static void log_runtime_stats(void)
+{
+    platform_display_stats_t video_stats;
+    if (platform_display_get_stats(&video_stats) != ESP_OK) {
+        return;
+    }
+    doom_audio_runtime_stats_t audio_stats = {0};
+    const bool have_audio_stats = s_audio_lifecycle.runtime_bound &&
+        doom_audio_runtime_get_stats(&audio_stats) == ESP_OK;
+    platform_audio_adapter_stats_t adapter_stats = {0};
+    platform_audio_adapter_get_stats(&adapter_stats);
+    platform_audio_telemetry_t backend_stats = {0};
+    const bool have_backend_stats =
+        platform_audio_get_telemetry(&backend_stats) == ESP_OK;
+    const char *const start_proof =
+        adapter_stats.running_low_readback_proven_at_start
+            ? "low-readback-proven-at-start" : "not-proven";
+    ESP_LOGI(TAG,
+             "P4_DOOM_E6 STATS frames=%" PRIu32 " submits=%" PRIu32
+             " completions=%" PRIu32 " video_timeouts=%" PRIu32
+             " video_failures=%" PRIu32 " touch_polls=%" PRIu32
+             " touch_failures=%" PRIu32 " touch_retries=%" PRIu32
+             " composite_gate=%u touch_gate=%u audio_gate=%u"
+             " audio_mutating_calls=%" PRIu32
+             " audio_telemetry_snapshot_valid=%u audio_start_proof=%s"
+             " audio_write_calls=%" PRIu32
+             " audio_frames_forwarded=%" PRIu32
+             " audio_nonzero_frames=%" PRIu32
+             " audio_nonzero_samples=%" PRIu32
+             " audio_peak=%u backend_telemetry_valid=%u"
+             " backend_snapshot_sequence=%" PRIu32
+             " backend_gpio30_high_attempts=%" PRIu32
+             " backend_gpio30_high_successes=%" PRIu32
+             " backend_gpio30_high_readbacks=%" PRIu32
+             " backend_state=%u backend_running=%u"
+             " pdm_created=%u pdm_enabled=%u"
+             " pdm_create_successes=%" PRIu32
+             " pdm_enable_successes=%" PRIu32
+             " tx_created=%u tx_enabled=%u"
+             " tx_create_successes=%" PRIu32
+             " tx_enable_successes=%" PRIu32
+             " zero_preload_frames=%" PRIu32
+             " gpio30_low_attempts=%" PRIu32
+             " gpio30_low_successes=%" PRIu32
+             " gpio30_low_initial_readbacks=%" PRIu32
+             " measured_settle_us=%" PRIu32
+             " gpio30_low_second_readbacks=%" PRIu32
+             " backend_write_successes=%" PRIu32
+             " backend_write_failures=%" PRIu32
+             " backend_frames_written=%" PRIu32
+             " backend_samples_written=%" PRIu32
+             " backend_nonzero_frames=%" PRIu32
+             " backend_nonzero_samples=%" PRIu32
+             " backend_max_abs=%" PRIu32
+             " backend_rollback_attempts=%" PRIu32
+             " backend_rollback_successes=%" PRIu32
+             " backend_rollback_high_proofs=%" PRIu32
+             " backend_resources_retained=%u backend_resources_owned=%" PRIu32
+             " audio_frames=%" PRIu32 " audio_write_failures=%" PRIu32,
+             s_frame_count, video_stats.submits_started,
+             video_stats.submits_completed, video_stats.submit_timeouts,
+             video_stats.submit_failures, s_touch_polls,
+             s_touch_poll_failures, s_touch_retries,
+             (unsigned)s_runtime_gate.composite_authorized,
+             (unsigned)s_runtime_gate.touch_authorized,
+             (unsigned)s_runtime_gate.audio_authorized,
+             adapter_stats.invocations, have_backend_stats ? 1U : 0U,
+             start_proof,
+             adapter_stats.write_calls_succeeded,
+             adapter_stats.frames_forwarded,
+             adapter_stats.nonzero_frames_forwarded,
+             adapter_stats.nonzero_samples_forwarded,
+             (unsigned)adapter_stats.observed_absolute_peak,
+             have_backend_stats ? 1U : 0U,
+             have_backend_stats ? backend_stats.snapshot_sequence : 0U,
+             have_backend_stats ? backend_stats.gpio30_high_attempts : 0U,
+             have_backend_stats ? backend_stats.gpio30_high_successes : 0U,
+             have_backend_stats
+                 ? backend_stats.gpio30_high_readback_successes : 0U,
+             have_backend_stats ? (unsigned)backend_stats.state : 2U,
+             have_backend_stats && backend_stats.running ? 1U : 0U,
+             have_backend_stats && backend_stats.pdm_created ? 1U : 0U,
+             have_backend_stats && backend_stats.pdm_enabled ? 1U : 0U,
+             have_backend_stats ? backend_stats.pdm_create_successes : 0U,
+             have_backend_stats ? backend_stats.pdm_enable_successes : 0U,
+             have_backend_stats && backend_stats.tx_created ? 1U : 0U,
+             have_backend_stats && backend_stats.tx_enabled ? 1U : 0U,
+             have_backend_stats ? backend_stats.tx_create_successes : 0U,
+             have_backend_stats ? backend_stats.tx_enable_successes : 0U,
+             have_backend_stats ? backend_stats.zero_preload_frames : 0U,
+             have_backend_stats ? backend_stats.gpio30_low_attempts : 0U,
+             have_backend_stats ? backend_stats.gpio30_low_successes : 0U,
+             have_backend_stats
+                 ? backend_stats.gpio30_low_initial_readback_successes : 0U,
+             have_backend_stats ? backend_stats.measured_settle_us : 0U,
+             have_backend_stats
+                 ? backend_stats.gpio30_low_second_readback_successes : 0U,
+             have_backend_stats ? backend_stats.write_successes : 0U,
+             have_backend_stats ? backend_stats.write_failures : UINT32_MAX,
+             have_backend_stats ? backend_stats.frames_written : 0U,
+             have_backend_stats ? backend_stats.samples_written : 0U,
+             have_backend_stats ? backend_stats.nonzero_frames : 0U,
+             have_backend_stats ? backend_stats.nonzero_samples : 0U,
+             have_backend_stats
+                 ? backend_stats.maximum_absolute_magnitude : 0U,
+             have_backend_stats ? backend_stats.rollback_attempts : 0U,
+             have_backend_stats ? backend_stats.rollback_successes : 0U,
+             have_backend_stats ? backend_stats.rollback_high_proofs : 0U,
+             have_backend_stats && backend_stats.resources_retained ? 1U : 0U,
+             have_backend_stats ? backend_stats.resources_owned : UINT32_MAX,
+             have_audio_stats ? audio_stats.frames_rendered : 0U,
+             have_audio_stats ? audio_stats.write_failures : 0U);
+}
+
+static void verify_audio_start_or_safe_degrade(bool sound_requested)
+{
+    if (!sound_requested) {
+        return;
+    }
+    platform_audio_adapter_stats_t adapter_stats = {0};
+    platform_audio_adapter_get_stats(&adapter_stats);
+    if (adapter_stats.running_low_readback_proven_at_start) {
+        ESP_LOGI(TAG,
+                 "P4_DOOM_E6 SOUND_READY state=running "
+                 "gpio30=low-readback-proven-at-start "
+                 "backend_volume_step=10/10 gain=unity-no-amplification "
+                 "audio_calls=%" PRIu32,
+                 adapter_stats.invocations);
+        return;
+    }
+    if (adapter_stats.ready_muted_zero_dma_proven) {
+        ESP_LOGW(TAG,
+                 "P4_DOOM_E6 SOUND_DEGRADED stage=doom-sfx-start "
+                 "safety=ready-muted-zero-dma-proven fallback=silent "
+                 "auto_fallback=0 audio_calls=%" PRIu32,
+                 adapter_stats.invocations);
+        return;
+    }
+    ESP_LOGE(TAG,
+             "P4_DOOM_E6 AUDIO_SAFETY_FAULT stage=doom-sfx-start "
+             "running_low_proven=0 ready_muted_zero_dma_proven=0 halt=1");
+    halt_dark("audio-start-safety", ESP_ERR_INVALID_STATE);
+}
+
+void DG_Init(void)
+{
+    if (DG_ScreenBuffer == NULL || s_overlay_buffer == NULL) {
+        halt_dark("engine-frame-buffer", ESP_ERR_NO_MEM);
+    }
+    ESP_LOGI(TAG,
+             "P4_DOOM_E6 VIDEO_READY input=0x00RRGGBB overlay=touch "
+             "output=rgb565 source=320x200 viewport=960x600 margins=32/32");
+}
+
+void DG_DrawFrame(void)
+{
+    if (s_frame_error != ESP_OK) {
+        return;
+    }
+    if (DG_ScreenBuffer == NULL || s_overlay_buffer == NULL) {
+        s_frame_error = ESP_ERR_INVALID_STATE;
+        return;
+    }
+    if (!doom_touch_audio_compose_frame(
+            (const uint32_t *)DG_ScreenBuffer, DOOM_VIDEO_WIDTH,
+            s_overlay_buffer, DOOM_VIDEO_WIDTH, &s_touch_input)) {
+        doom_touch_input_init(&s_touch_input);
+        if (!doom_touch_audio_compose_frame(
+                (const uint32_t *)DG_ScreenBuffer, DOOM_VIDEO_WIDTH,
+                s_overlay_buffer, DOOM_VIDEO_WIDTH, &s_touch_input)) {
+            s_frame_error = ESP_ERR_INVALID_STATE;
+            return;
+        }
+        ESP_LOGW(TAG,
+                 "P4_DOOM_E6 TOUCH_DEGRADED stage=input-model-reset "
+                 "error=ESP_ERR_INVALID_STATE neutral=1 overlay=visible");
+    }
+    s_frame_error = doom_video_submit_xrgb8888(
+        s_overlay_buffer, DOOM_VIDEO_WIDTH, DOOM_SUBMIT_TIMEOUT_MS);
+    if (s_frame_error != ESP_OK) {
+        return;
+    }
+    ++s_frame_count;
+    if ((s_frame_count % DOOM_STATS_INTERVAL_FRAMES) == 0U) {
+        log_runtime_stats();
+    }
+}
+
+void DG_SleepMs(uint32_t milliseconds)
+{
+    const uint32_t bounded = milliseconds > DOOM_MAX_SLEEP_MS
+        ? DOOM_MAX_SLEEP_MS
+        : milliseconds;
+    if (bounded == 0U) {
+        taskYIELD();
+        return;
+    }
+    const TickType_t ticks = pdMS_TO_TICKS(bounded);
+    vTaskDelay(ticks > 0 ? ticks : 1);
+}
+
+uint32_t DG_GetTicksMs(void)
+{
+    return ticks_ms();
+}
+
+int DG_GetKey(int *pressed, unsigned char *key)
+{
+    if (pressed == NULL || key == NULL) {
+        return 0;
+    }
+    *pressed = 0;
+    *key = 0U;
+    service_touch();
+    doom_touch_event_t event;
+    while (doom_touch_input_next(&s_touch_input, &event)) {
+        unsigned char mapped_key = 0U;
+        if (!doom_touch_audio_action_key(event.action, &mapped_key)) {
+            continue;
+        }
+        if (pressed != NULL) {
+            *pressed = event.pressed == 1U ? 1 : 0;
+        }
+        if (key != NULL) {
+            *key = mapped_key;
+        }
+        return 1;
+    }
+    return 0;
+}
+
+void DG_SetWindowTitle(const char *title)
+{
+    (void)title;
+}
+
+void app_main(void)
+{
+    doom_touch_audio_runtime_gate_t gate = {0};
+    doom_touch_audio_runtime_gate_read(&gate);
+    s_runtime_gate = gate;
+    const doom_touch_audio_runtime_mode_t mode =
+        doom_touch_audio_runtime_gate_mode(&gate);
+    ESP_LOGI(TAG,
+             "P4_DOOM_E6 START input=gt911-multitouch "
+             "sound=factory-complete-i2s0-pdm-rx-i2s1-speaker-tx-sfx "
+             "pdm_clk_gpio24_may_feed_codec_mclk=1 "
+             "codec_i2c_transactions=0 tx_mclk=none "
+             "music=disabled usb=absent "
+             "runtime=exact-unit-factory-audio");
+    if (mode == DOOM_TOUCH_AUDIO_RUNTIME_BLOCKED) {
+        ESP_LOGW(TAG,
+                 "P4_DOOM_E6 BLOCKED composite_gate=%u touch_gate=%u "
+                 "audio_gate=%u display_initialized=0 shared_i2c_created=0 "
+                 "touch_initialized=0 audio_initialized=0 doom_started=0",
+                 (unsigned)gate.composite_authorized,
+                 (unsigned)gate.touch_authorized,
+                 (unsigned)gate.audio_authorized);
+        return;
+    }
+    ESP_LOGI(TAG,
+             "P4_DOOM_E6 MODE composite_gate=%u touch_gate=%u audio_gate=%u "
+             "mode=%s",
+             (unsigned)s_runtime_gate.composite_authorized,
+             (unsigned)s_runtime_gate.touch_authorized,
+             (unsigned)s_runtime_gate.audio_authorized,
+             mode == DOOM_TOUCH_AUDIO_RUNTIME_TOUCH_ONLY
+                 ? "touch-only" : "touch-and-audio");
+
+    doom_touch_input_init(&s_touch_input);
+    s_audio_gate_enabled =
+        mode == DOOM_TOUCH_AUDIO_RUNTIME_TOUCH_AND_AUDIO;
+    s_audio_calls_allowed = s_audio_gate_enabled;
+    if (s_audio_calls_allowed) {
+        s_audio_lifecycle.hardware_touched = true;
+        const esp_err_t safe_result = platform_audio_force_safe_shutdown();
+        if (safe_result != ESP_OK) {
+            s_audio_calls_allowed = false;
+            ESP_LOGE(TAG,
+                     "P4_DOOM_E6 AUDIO_SAFETY_FAULT stage=initial-safe "
+                     "error=%s gpio30=high-not-proven halt=1",
+                     esp_err_to_name(safe_result));
+            halt_dark("audio-initial-safe", safe_result);
+        } else {
+            s_audio_lifecycle.safe_high_proven = true;
+            ESP_LOGI(TAG,
+                     "P4_DOOM_E6 AUDIO_SAFE gpio30=high-pad-readback-proven "
+                     "source=platform-first-call audio_calls=%" PRIu32,
+                     platform_audio_invocation_count());
+        }
+    } else {
+        log_sound_disabled();
+    }
+
+    esp_err_t result = platform_display_init();
+    if (result != ESP_OK) {
+        halt_dark("display-init", result);
+    }
+    s_display_initialized = true;
+    I_AtExit(engine_exit_composite, true);
+    ESP_LOGI(TAG,
+             "P4_DOOM_E6 CLEANUP_REGISTERED "
+             "order=audio-touch-bus-dark-video-display-blob");
+
+    s_last_touch_retry_ms = ticks_ms();
+    (void)try_touch_create(true);
+
+    const uint8_t *const wad_start = _binary_doom_shareware_wad_start;
+    const uint8_t *const wad_end = _binary_doom_shareware_wad_end;
+    const uintptr_t wad_start_address = (uintptr_t)wad_start;
+    const uintptr_t wad_end_address = (uintptr_t)wad_end;
+    if (wad_end_address < wad_start_address) {
+        halt_dark("wad-linker-range", ESP_ERR_INVALID_SIZE);
+    }
+    const size_t wad_size =
+        (size_t)(wad_end_address - wad_start_address);
+    result = verify_embedded_wad(wad_start, wad_size);
+    if (result != ESP_OK) {
+        halt_dark("wad-validate", result);
+    }
+    ESP_LOGI(TAG,
+             "P4_DOOM_E6 WAD_VERIFIED identity=doom-shareware-1.9 "
+             "bytes=%u sha256=%s",
+             (unsigned)EMBEDDED_WAD_BYTES,
+             "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771");
+
+    const platform_readonly_blob_config_t blob_config = {
+        .base_path = "/doom",
+        .file_name = "doom1.wad",
+        .data = wad_start,
+        .size_bytes = wad_size,
+    };
+    result = platform_readonly_blob_register(&blob_config);
+    if (result != ESP_OK) {
+        halt_dark("wad-vfs-register", result);
+    }
+    s_blob_registered = true;
+    result = verify_readonly_vfs();
+    if (result != ESP_OK) {
+        halt_dark("wad-vfs-readback", result);
+    }
+    ESP_LOGI(TAG,
+             "P4_DOOM_E6 VFS_READY path=%s mode=read-only max_open=%u",
+             EMBEDDED_WAD_PATH,
+             (unsigned)PLATFORM_READONLY_BLOB_MAX_OPEN_FILES);
+
+    result = doom_video_init();
+    if (result != ESP_OK) {
+        halt_dark("video-adapter-init", result);
+    }
+    s_video_initialized = true;
+    s_overlay_buffer = heap_caps_calloc(
+        OVERLAY_PIXELS, sizeof(*s_overlay_buffer),
+        MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (s_overlay_buffer == NULL) {
+        halt_dark("overlay-buffer", ESP_ERR_NO_MEM);
+    }
+    result = doom_video_submit_black(DOOM_FIRST_FRAME_TIMEOUT_MS);
+    if (result != ESP_OK) {
+        halt_dark("first-black-frame", result);
+    }
+
+    const bool sound_enabled = try_audio_enable();
+    result = platform_display_set_brightness(25U);
+    if (result != ESP_OK) {
+        halt_dark("backlight", result);
+    }
+
+    char *sound_argv[] = {
+        "doom", "-iwad", EMBEDDED_WAD_PATH,
+        "-gfxmode", "rgba8888", "-nomusic",
+    };
+    char *silent_argv[] = {
+        "doom", "-iwad", EMBEDDED_WAD_PATH,
+        "-gfxmode", "rgba8888", "-nosound", "-nomusic",
+    };
+    ESP_LOGI(TAG,
+             "P4_DOOM_E6 ENGINE_START wad=%s touch=%s overlay=visible "
+             "sfx_request=%s music=disabled usb=absent",
+             EMBEDDED_WAD_PATH, s_touch_ready ? "ready" : "degraded",
+             sound_enabled ? "enabled" : "fallback-silent");
+    key_prevweapon = '[';
+    key_nextweapon = ']';
+    if (sound_enabled) {
+        /* Doom sound Init may transition GPIO30 from proven-high to low. */
+        s_audio_lifecycle.safe_high_proven = false;
+    }
+    if (sound_enabled) {
+        doomgeneric_Create(
+            (int)(sizeof(sound_argv) / sizeof(sound_argv[0])), sound_argv);
+    } else {
+        doomgeneric_Create(
+            (int)(sizeof(silent_argv) / sizeof(silent_argv[0])), silent_argv);
+    }
+    verify_audio_start_or_safe_degrade(sound_enabled);
+    key_prevweapon = '[';
+    key_nextweapon = ']';
+    if (s_frame_error != ESP_OK) {
+        halt_dark("engine-first-frame", s_frame_error);
+    }
+    for (;;) {
+        doomgeneric_Tick();
+        if (s_frame_error != ESP_OK) {
+            halt_dark("engine-frame", s_frame_error);
+        }
+    }
+}

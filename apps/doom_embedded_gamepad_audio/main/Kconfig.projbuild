@@ -1,0 +1,2 @@
+# E4 runtime gates are immutable fail-closed source bytes in runtime_gate.c.
+# No Kconfig option may turn this compile/link image into a runtime image.

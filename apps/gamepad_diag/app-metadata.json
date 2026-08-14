@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "app": "gamepad_diag",
+  "stage": "D1-host-arm-restore-gate-prepared-runtime-electrically-blocked",
+  "evidence_class": "build-tested-electrically-inert-install-gate-inactive",
+  "purpose": "Bounded native ESP32-P4 HS USB Host/HID gamepad diagnostic with exact 0079:0011 descriptor-profile reporting, private per-artifact host ARM, and mandatory verified restoration of the live pre-install flash span, prepared behind an inactive exact app-only gate.",
+  "runtime_supported": false,
+  "build_evidence": "test-runs/2026-08-13-gamepad-d1-build.json",
+  "one_shot_authorization_evidence": "hardware/evidence/gamepad-diag-d1-one-shot-authorization.json",
+  "one_shot_authorization_active": false,
+  "usb_runtime_authorized": false,
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "fixture_authorized": false,
+  "fixture_evidence": null,
+  "fixture_evidence_sha256": null,
+  "compiled_hardware_interface": "esp32p4_usb_otg_hs_peripheral_0",
+  "runtime_hardware_interfaces": [],
+  "hardware_interfaces_explicitly_absent": [
+    "crowpanel_vbus_source_gpio",
+    "esp32p4_usb_otg_fs_gpio26_gpio27",
+    "passive_otg_adapter",
+    "unqualified_usb_hub",
+    "display",
+    "audio",
+    "touch",
+    "sd_card"
+  ],
+  "runtime_blockers": [
+    "the app-local and shared platform build-authorization bytes are both zero; the committed invalid fallback evidence cannot match a valid fixture record",
+    "the committed image embeds an all-zero impossible ARM-token digest and no private ARM token exists",
+    "the board profile has no narrowly scoped USB Host peripheral authorization",
+    "published V1.0-V1.2 schematics prove J16 reaches the P4 HS DP/DM pads but is sink-wired and cannot source protected controller VBUS",
+    "no committed reviewed fixture evidence proves J16-side VBUS physically open, controller-side regulated current-limited 5 V, backfeed blocking, common ground, direct DP/DM, a compliant source role, a visible fault, and the exact board path",
+    "the exact 0079:0011 descriptor/profile is host-tested, but native on-device hotplug and disconnect acceptance have not run"
+  ]
+}

@@ -1,0 +1,11 @@
+menu "ESP32-P4 ES8311 platform audio"
+    config PLATFORM_AUDIO_ES8311_ELECROW_10_1_BUILD_ONLY
+        bool "Compile the reviewed Elecrow 10.1-inch ES8311 path"
+        default n
+        help
+            Compiles only the expected ES8311-to-NS4263B speaker path. This is
+            a build gate, not permission to flash or drive GPIO30 low. Runtime
+            remains blocked until connected-unit population/continuity proves
+            the optional NS4168 outputs are absent or isolated and address
+            0x18 is observed on the shared control bus.
+endmenu

@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "captured_at": "2026-08-13T03:46:05Z",
+  "result": "pass",
+  "classification": "hardware-tested",
+  "scope": "M1 display-only EK79007 MIPI-DSI initialization, pattern generation, backlight, and sustained cycling",
+  "build_evidence": "test-runs/2026-08-12-display-m1-build.json",
+  "hardware": {
+    "family": "Elecrow CrowPanel Advanced ESP32-P4 HMI AI Display",
+    "screen_inches": 10.1,
+    "sku": "DHE04310D",
+    "screen_sku_scope": "factory_firmware_variant plus visually operating attached panel",
+    "physical_screen_sku_confirmed": false,
+    "pcb_revision": null,
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "device_identity_source": "normalized base MAC; raw value not stored",
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432
+  },
+  "firmware": {
+    "app": "display_diag",
+    "app_version": "0.1.0",
+    "binary_bytes": 226560,
+    "binary_sha256": "b41f24f629344d2b34181c649721f5cfa26f0adc5ad49f127202ced4c6781584",
+    "elf_bytes": 5172164,
+    "elf_sha256": "9b69c38aa81fec43cbcb9edd8307b0682ab2fca63c450dfe0ec706bea856a23b",
+    "git_commit": null,
+    "git_state": "initial uncommitted repository scaffold",
+    "write_scope": "application partition only at 0x10000; existing bootloader, partition table, NVS, and storage preserved"
+  },
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_tag": "v5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "panel_component": "espressif/esp_lcd_ek79007",
+    "panel_component_version": "1.0.2",
+    "panel_component_hash": "07c1afab7e9fd4dd2fd06ff9245e65327c5bbd5485efec199496e19a9304d47b"
+  },
+  "official_board_source": {
+    "repository": "https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen",
+    "commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+    "electrical_evidence": "hardware/evidence/elecrow-10.1-display-path.json",
+    "published_revisions_compared": [
+      "V1.0",
+      "V1.1",
+      "V1.2"
+    ]
+  },
+  "fixture": {
+    "serial_port": "/dev/cu.wchusbserial10",
+    "power_arrangement": "existing user-connected board cabling; supply voltage/current were not instrumented for this run",
+    "backlight_percent": 25,
+    "visual_observer": "user",
+    "visual_observation_source": "live Photo Booth image and user statement: we got test patterns"
+  },
+  "checks": {
+    "factory_backup_sha256_verified_before_write": true,
+    "matching_hashed_device_identity_gate": "pass",
+    "live_flash_size_gate": "pass",
+    "secure_boot": "disabled",
+    "flash_encryption": "disabled",
+    "silicon_family_min_revision": "v1.0",
+    "silicon_family_max_revision": "v1.99",
+    "two_clean_builds_byte_identical": true,
+    "preflash_scoped_artifact_verifier": "pass",
+    "installed_app_readback_matches_binary": true,
+    "installed_app_readback_offset": "0x10000",
+    "installed_app_readback_bytes": 226560,
+    "installed_app_readback_sha256": "b41f24f629344d2b34181c649721f5cfa26f0adc5ad49f127202ced4c6781584",
+    "panel_controller_reported_version": "1.0.2",
+    "panel_ready": {
+      "resolution": "1024x600",
+      "format": "rgb565",
+      "lane_bit_rate_mbps": 900,
+      "dpi_clock_mhz": 51
+    },
+    "serial_markers": [
+      "P4_DISPLAY M1 START profile=elecrow-10.1-ek79007",
+      "P4_DISPLAY M1 SCOPE display-only gpio29=untouched gpio41=untouched",
+      "P4_DISPLAY M1 BACKLIGHT_DARK gpio=31 pwm_hz=30000",
+      "P4_DISPLAY M1 POWER_READY ldo3_mv=2500 ldo4_mv=3300",
+      "P4_DISPLAY M1 PANEL_READY resolution=1024x600 format=rgb565 lane_mbps=900 dpi_mhz=51",
+      "P4_DISPLAY M1 PATTERN name=bars-vertical",
+      "P4_DISPLAY M1 BACKLIGHT_SET brightness_percent=25 visibility=pending-observation",
+      "P4_DISPLAY M1 PATTERN name=bars-horizontal",
+      "P4_DISPLAY M1 PATTERN name=ber-vertical",
+      "P4_DISPLAY M1 HEARTBEAT pattern_index=0",
+      "P4_DISPLAY M1 HEARTBEAT pattern_index=1",
+      "P4_DISPLAY M1 HEARTBEAT pattern_index=2"
+    ],
+    "failure_markers_observed": false,
+    "visible_test_patterns_observed": true,
+    "captured_visible_frame": "vertical color bars fill the active panel area without gross static corruption",
+    "continued_pattern_cycle_serial_seconds": 31
+  },
+  "claims_not_made": [
+    "the unresolved PCB revision is not inferred from this display-only pass",
+    "the physical diagonal and printed SKU label are not confirmed by measurement or a readable label",
+    "a still image does not qualify moving-image tearing or long-duration scanout stability",
+    "touch, SD, audio, camera, wireless, and USB Host were not initialized or tested",
+    "the power supply margin and current draw were not measured"
+  ]
+}

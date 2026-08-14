@@ -1,0 +1,134 @@
+{
+  "schema": 1,
+  "id": "doom-embedded-touch-audio-e5-touch-only-persistent-demo-2026-08-13",
+  "classification": "user-requested-touch-only-persistent-demo-active",
+  "active": true,
+  "scope": "touch-only-persistent-demo",
+  "user_authorization": "The device owner explicitly requested that the prepared Doom touchscreen image be installed and made persistent; audio remains disabled pending its separate electrical release condition.",
+  "hardware_accessed_before_issuance": false,
+  "device_binding": {
+    "identity_kind": "sha256-of-normalized-base-identity",
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "flash_bytes": 16777216,
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3"
+  },
+  "exact_artifact": {
+    "offset": "0x10000",
+    "app_binary_bytes": 4898400,
+    "app_binary_sha256": "68e97df1e89c28428d6a66c2ca4ab26c4eade76ff9357479f80d01ebc08609c8",
+    "elf_bytes": 13728404,
+    "elf_sha256": "dc61e5ab1d9b2a6f88b0453cb7499d92bb7cb62632c23b2ff77eef828f3bb620",
+    "bootloader_bytes": 22912,
+    "bootloader_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433"
+  },
+  "build_evidence": {
+    "path": "test-runs/2026-08-13-doom-embedded-touch-audio-e5-build.json",
+    "sha256": "6216eadaf11302f4e68b1dc0c1af9751bc6e000ddbddfde369ee9819e947e037"
+  },
+  "runtime_basis": {
+    "path": "hardware/evidence/elecrow-10.1-factory-touch-audio-runtime-basis.json",
+    "sha256": "eaba0e61ccfd8c11e95b688709358bf13c47554421840cb8d8a8ced4b5c6c416"
+  },
+  "board_profile": {
+    "path": "hardware/board-profile.json",
+    "sha256": "f5c38e1aceabc633aaf78b844f8b1f5f1f82d25adbf75291479c57d7c1fe2701"
+  },
+  "install_runtime_binding": {
+    "esptool_version": "4.12.0",
+    "loader_sha256": "6c5f0c4a9d2047adb1c9164aee66208018789a0f6531922204f6b280168c80e8",
+    "reset_sha256": "410334df7cb09cafc01efa8d32acb1903bbc5ba6f03df3a0b39823c433b0edef",
+    "esp32p4_sha256": "0319aa7ee6e2e45c3ceb2e3424fb98a2ae9734873a2206767085abf75e74bf37",
+    "esp32_sha256": "32b5e7f8b3e971705f57bb9cdf54e847eefd96e2168baa6120d3643beb224bb5",
+    "legacy_rev1_stub_sha256": "3c0f27938055192977123cd4b503bf27d1676c59a7fd7e3f93de8e95b0cf63bf",
+    "runtime_helper_sha256": "5be16e889116cc8a9e9009d730c2d0bcd3438ac07ead2d726ac1a346a5f0e244",
+    "loader_entry_reset_class": "UnixTightReset",
+    "application_launch_reset_class": "HardReset",
+    "custom_reset_sequence_allowed": false,
+    "python_executable_sha256": "5c3ea934d18a7979253ca08ff16151db78a896be29dbc37fd9bf7e7c549593b8",
+    "pyserial_init_sha256": "5dec897fdef45a0eaf63eacda1e01d62e1e75490302584ae0238f75376592344",
+    "pyserial_serialposix_sha256": "5d56f98513391e1766a1847a04e2e1202ced4172a152803ba1c823a149a9b6f9",
+    "pyserial_serialutil_sha256": "3c84f8c7c319f161a85d6f8db5bedc4f65255714589bdcbeee6f2daf65a17c0a",
+    "python_executable_path": "/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
+    "pyserial_init_path": "/Users/billh/.espressif/python_env/idf5.5_py3.14_env/lib/python3.14/site-packages/serial/__init__.py",
+    "pyserial_serialposix_path": "/Users/billh/.espressif/python_env/idf5.5_py3.14_env/lib/python3.14/site-packages/serial/serialposix.py",
+    "pyserial_serialutil_path": "/Users/billh/.espressif/python_env/idf5.5_py3.14_env/lib/python3.14/site-packages/serial/serialutil.py",
+    "termios_path": "/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/lib/python3.14/lib-dynload/termios.cpython-314-darwin.so",
+    "termios_sha256": "18c723dc5d61cc411f12c75bf1b3de2be917490eb9733a226bc8d0c7a18c028f",
+    "fcntl_path": "/opt/homebrew/Cellar/python@3.14/3.14.4/Frameworks/Python.framework/Versions/3.14/lib/python3.14/lib-dynload/fcntl.cpython-314-darwin.so",
+    "fcntl_sha256": "0a54b8fc819837d545ee95da563421303e0cfaae73c5a4881ef56d32da3d667d",
+    "flash_jedec_low24": "0x1840c8",
+    "allowed_raw_flash_ids": [
+      "0x001840c8",
+      "0xff1840c8"
+    ],
+    "canonical_flash_id": "0x1840c8"
+  },
+  "gates": {
+    "composite": 1,
+    "touch": 1,
+    "audio": 0
+  },
+  "execution_contract": {
+    "app_partition_only": true,
+    "full_project_flash": false,
+    "shell_live_probe_count": 0,
+    "exclusive_uart_open_count": 1,
+    "exclusive_uart_reopen_count": 0,
+    "exclusive_transaction_loader_entry_reset_count": 1,
+    "loader_connect_no_reset_attempts": 1,
+    "write_transport": "same-handle-pinned-rev1-ram-stub",
+    "write_span_bytes": 4898816,
+    "flash_jedec_low24": "0x1840c8",
+    "allowed_raw_flash_ids": [
+      "0x001840c8",
+      "0xff1840c8"
+    ],
+    "canonical_flash_id": "0x1840c8",
+    "stub_flash_finish_sync_count": 1,
+    "stub_flash_finish_sync_launch_count": 0,
+    "readback_max_chunk_bytes": 524288,
+    "readback_scope": "same-handle-full-padded-mutation-span",
+    "ordered_aggregate_sha256_required": true,
+    "application_launch_after_exact_readback": true,
+    "application_launch_mechanism": "direct-hash-bound-HardReset-rts-only-dtr-false",
+    "exclusive_transaction_application_launch_reset_count": 1,
+    "application_launch_count": 1,
+    "soft_reset_count": 0,
+    "esptool_run_count": 0,
+    "persistent_across_future_resets": true,
+    "audio_runtime": false,
+    "gpio30_access": false,
+    "usb_runtime": false
+  },
+  "prewrite_attempt_history": [
+    {
+      "occurred_after_authorization_issuance": true,
+      "recorded_at": "2026-08-13",
+      "result": "failed-closed-before-mutation",
+      "stage": "post-stub-prewrite-density-recheck",
+      "initial_raw_flash_id": "0x001840c8",
+      "later_raw_flash_id": "0xff1840c8",
+      "canonical_flash_id": "0x1840c8",
+      "flash_begin_called": false,
+      "application_bytes_written": 0,
+      "partition_modified": false,
+      "application_launched": false,
+      "device_end_state": "ram-stub-probable"
+    }
+  ],
+  "acceptance_after_install": {
+    "exact_app_readback_required_before_launch": true,
+    "late_attach_serial_may_prove_sustained_mode": true,
+    "human_touch_response_observation_pending": true,
+    "audio_acceptance_out_of_scope": true
+  },
+  "claims_not_made": [
+    "This authorization does not claim the E5 image has already been flashed or executed.",
+    "This authorization does not enable audio, GPIO30 access, USB, or full-project flashing.",
+    "This authorization does not claim independent coordinate or multi-touch gameplay acceptance.",
+    "This authorization does not permit redistribution of the embedded WAD."
+  ]
+}

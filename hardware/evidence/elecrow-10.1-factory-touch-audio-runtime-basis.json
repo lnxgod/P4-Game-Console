@@ -1,0 +1,144 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-13",
+  "classification": "exact-unit-user-attested-factory-touch-audio-runtime-basis",
+  "result": "touch-runtime-authorized-audio-implementation-basis-only",
+  "variant_name": "10 in variant",
+  "vendor_model": "Elecrow CrowPanel Advanced 10.1-inch ESP32-P4 DHE04310D",
+  "connected_unit": {
+    "identity_source": "base_mac_sha256",
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "raw_identity_stored": false,
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432
+  },
+  "operator_attestation": {
+    "source": "device owner in the active 2026-08-13 implementation session",
+    "statement_paraphrase": "The firmware supplied on this exact device supported touchscreen input and played audio out of the box.",
+    "scope": [
+      "factory_touch_functioned_on_the_connected_unit",
+      "factory_speaker_audio_functioned_on_the_connected_unit"
+    ],
+    "classification": "user-attested exact-unit runtime history",
+    "independently_observed_by_project": false
+  },
+  "saved_factory_image": {
+    "manifest": "hardware/backups/manifest.json",
+    "path": "hardware/backups/elecrow-p4-factory-before-project.bin",
+    "bytes": 16777216,
+    "sha256": "3e3f5f687f59938963d9040d6c8e9dc1a687baa512790680830422c22bd6ab3c",
+    "factory_project": "esp_brookesia_demo",
+    "factory_version": "1.0.1",
+    "factory_image_validation_sha256": "c61c44b2009d4558d317e69fb952501cb136a850c585cda25f81ec4279a34ade",
+    "exact_strings": [
+      {
+        "file_offset_hex": "0x309ec",
+        "value": "bsp_audio_init(NULL)"
+      },
+      {
+        "file_offset_hex": "0x30df4",
+        "value": "bsp_touch_new(((void *)0), &tp)"
+      },
+      {
+        "file_offset_hex": "0x30e18",
+        "value": "disp_indev = bsp_display_indev_init(disp)"
+      },
+      {
+        "file_offset_hex": "0x313ac",
+        "value": "gt911 touch found"
+      },
+      {
+        "file_offset_hex": "0x65aa0",
+        "value": "bsp_audio_codec_speaker_init"
+      }
+    ],
+    "claim_limit": "Strings prove the relevant factory implementation was linked into the saved exact-unit image; they do not independently prove which branch executed or acoustic output."
+  },
+  "pinned_factory_source": {
+    "repository": "https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen",
+    "commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+    "archive_path": "factory_sourcecode/V1.0/ESP32-P4-Adcance-brookesia_phone_inch10_1.zip",
+    "archive_bytes": 13819158,
+    "archive_sha256": "73b32c4d4dc89cc0b091388d6a7862d827d6548412717bcb1f36f7adb8da2e28",
+    "factory_board_source_sha256": "f0aa354307710744f37d57b8ea23942b13d6ae38c26a98ad118c606ae5b11b69",
+    "factory_codec_control_source_sha256": "f80ee68cd9e079725e9ea68d218b04c06438a86a91988e98750dfbc4b319ee18",
+    "touch_semantics_evidence": "hardware/evidence/elecrow-10.1-touch-path.json",
+    "audio_semantics_evidence": "hardware/evidence/elecrow-10.1-factory-audio-semantics.json"
+  },
+  "narrow_touch_contract": {
+    "shared_bus_owner": "platform_i2c_shared",
+    "i2c_controller": 1,
+    "sda_gpio": 45,
+    "scl_gpio": 46,
+    "device_clock_hz": 400000,
+    "reset_gpio": 40,
+    "address_latch_input_gpio": 42,
+    "primary_address_7bit": "0x5d",
+    "fallback_address_7bit": "0x14",
+    "runtime_interrupt_callback": false,
+    "coordinate_width": 1024,
+    "coordinate_height": 600,
+    "maximum_contacts": 5
+  },
+  "narrow_audio_contract": {
+    "backend": "factory-direct-i2s1",
+    "sample_rate_hz": 16000,
+    "format": "signed_pcm16_stereo",
+    "lrclk_gpio": 21,
+    "bclk_gpio": 22,
+    "dout_gpio": 23,
+    "mclk": "unused",
+    "amplifier_control_gpio": 30,
+    "amplifier_enable_level": 0,
+    "external_codec_i2c_transactions": false,
+    "startup_zero_data_minimum_ms": 350,
+    "maximum_output_peak_pcm": 32767,
+    "amplitude_policy": "volume 10 preserves the signed PCM16 input without amplification; lower values attenuate proportionally",
+    "music_enabled": false,
+    "fail_closed_level": 1
+  },
+  "touch_authorization_decision": {
+    "authorized": true,
+    "basis": "The complete GT911 bus, reset, address-latch, power, and ground path is invariant across published V1.0/V1.1/V1.2 designs; the pinned factory source selects the same settings; the saved image links the GT911 service; and the device owner attests that factory touch worked on this exact unit. This permits one narrow persistent touch demo while independent coordinate acceptance remains pending.",
+    "scope": [
+      "gt911_touch_contract_above",
+      "app_partition_only_write_after_exact_readback"
+    ],
+    "explicitly_not_authorized": [
+      "usb_host",
+      "usb_hid",
+      "sd_card",
+      "camera",
+      "wireless",
+      "all_audio_runtime",
+      "full_project_flash",
+      "any_unlisted_gpio_or_peripheral"
+    ]
+  },
+  "audio_authorization_decision": {
+    "authorized": false,
+    "implementation_build_authorized": true,
+    "basis": "Pinned factory source and the exact-unit owner report justify implementing and build-testing the factory-direct backend, but they do not satisfy the existing power-off release condition for converging amplifier outputs.",
+    "blocking_evidence": "hardware/evidence/elecrow-10.1-audio-path-review.json",
+    "release_condition": "With power removed, prove by physical population and continuity that one speaker-output amplifier family is absent or electrically isolated before any GPIO30-low run.",
+    "required_runtime_gate": 0,
+    "required_gpio30_access": false
+  },
+  "independent_acceptance_required_after_install": [
+    "exact app-partition readback matches the reviewed artifact",
+    "serial confirms GT911 initialization at 0x5d or 0x14 without repeated failures",
+    "serial confirms monotonically increasing Doom frames with zero video failures",
+    "a person physically confirms touch controls change the game state",
+    "after the separate audio release condition, serial confirms increasing audio frames with zero write failures and a person confirms audible undistorted SFX"
+  ],
+  "claims_not_made": [
+    "The project independently observed the original factory touch session.",
+    "The project independently measured the original factory acoustic output.",
+    "A power-off population inventory proved which speaker-amplifier family is stuffed.",
+    "The published NC markings alone prove the direct amplifier population.",
+    "Serial audio frame counts prove acoustic output.",
+    "Touch initialization proves coordinate or gesture correctness."
+  ]
+}

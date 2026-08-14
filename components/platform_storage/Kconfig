@@ -1,0 +1,14 @@
+menu "P4 platform storage service"
+
+    config PLATFORM_STORAGE_ELECROW_10_1_CROSS_REVISION_AUTHORIZED
+        bool "Authorize the reviewed Elecrow 10.1-inch SDMMC path"
+        default n
+        help
+            Allows this component to operate only SDMMC slot 0 in one-bit
+            mode on GPIO43 (CLK), GPIO44 (CMD), and GPIO39 (D0), as
+            documented in hardware/evidence/elecrow-10.1-storage-path.json.
+            Mounting never formats the card. This option does not authorize
+            D1-D7, card-detect, write-protect, display, touch, audio, camera,
+            wireless, USB, or any other GPIO.
+
+endmenu

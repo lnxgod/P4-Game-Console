@@ -1,0 +1,442 @@
+{
+  "schema": 1,
+  "classification": "cross-revision-audio-path-review",
+  "result": "conditional-direct-i2s-branch-physical-inventory-required",
+  "scope": "speaker_topology_review_no_pin_driver_flash_or_runtime_authorization",
+  "official_source": {
+    "vendor": "Elecrow",
+    "model": "DHE04310D",
+    "repository": "https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen",
+    "commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+    "hardware_revisions_compared": [
+      "V1.0",
+      "V1.1",
+      "V1.2"
+    ]
+  },
+  "schematics": [
+    {
+      "revision": "V1.0",
+      "path": "Eagle_SCH&PCB/1.0/ESP32-P4 Display 10.1 inch V1.0.sch",
+      "sha256": "a31422d5b0e9ec7fe75c7f5c973b0c5b40d5e5148605caa817aedc1a6e4455a3"
+    },
+    {
+      "revision": "V1.1",
+      "path": "Eagle_SCH&PCB/1.1/ESP32-P4 Display 10.1 inch V1.1.sch",
+      "sha256": "c4f7e1d61f490290ada1b312d6200a6b2838802f4d780af9699ca3797e35cadd"
+    },
+    {
+      "revision": "V1.2",
+      "path": "Eagle_SCH&PCB/1.2/ESP32-P4 Display 10.1 inch V1.2.sch",
+      "sha256": "7f9ac57dab96110467e4a9728cfb71b46024ea57f28a2d9d8b545b3ff0d0c172"
+    }
+  ],
+  "boards": [
+    {
+      "revision": "V1.0",
+      "path": "Eagle_SCH&PCB/1.0/ESP32-P4 Display 10.1 inch V1.0.brd",
+      "sha256": "9980aa46688e39f8bc08ed413423cc5b2dda79f787060a9f8f9c5e68ee1dde47"
+    },
+    {
+      "revision": "V1.1",
+      "path": "Eagle_SCH&PCB/1.1/ESP32-P4 Display 10.1 inch V1.1.brd",
+      "sha256": "1ce114923582fd7c5fc38db8f1a915e5780576d786c884adfba4ff994efd41e1"
+    },
+    {
+      "revision": "V1.2",
+      "path": "Eagle_SCH&PCB/1.2/ESP32-P4 Display 10.1 inch V1.2.brd",
+      "sha256": "29cd4115b1d16de5b1c5f99582b83e8fb3ef5616acd920dfa609b7d7424f9430"
+    }
+  ],
+  "normalized_cross_revision_graphs": {
+    "scope": "audio-relevant reviewed parts, ESP32-P4 audio/control pins, power links, route-selection links, output filters, and speaker connectors",
+    "schematic": {
+      "canonical_row_format": "part|value|pin|net, UTF-8 LF, bytewise sorted",
+      "row_count_per_revision": 125,
+      "sha256_per_revision": {
+        "V1.0": "19e2bbd262b4875bed5ce99acdfa7b47ee2d44fc215af92766f6ec61b699e42e",
+        "V1.1": "19e2bbd262b4875bed5ce99acdfa7b47ee2d44fc215af92766f6ec61b699e42e",
+        "V1.2": "19e2bbd262b4875bed5ce99acdfa7b47ee2d44fc215af92766f6ec61b699e42e"
+      },
+      "cross_revision_identical": true
+    },
+    "board": {
+      "canonical_row_format": "element|value|pad|signal, UTF-8 LF, bytewise sorted",
+      "row_count_per_revision": 140,
+      "sha256_per_revision": {
+        "V1.0": "ed7926b72954ab3c14ab7ee69e19d183736a8093f8f76e3602e58769247a1fa0",
+        "V1.1": "ed7926b72954ab3c14ab7ee69e19d183736a8093f8f76e3602e58769247a1fa0",
+        "V1.2": "ed7926b72954ab3c14ab7ee69e19d183736a8093f8f76e3602e58769247a1fa0"
+      },
+      "cross_revision_identical": true
+    },
+    "meaning": "The reviewed audio graph is invariant in the three published design files. This does not prove the connected board revision or which NC-designated parts were physically stuffed."
+  },
+  "cross_revision_invariant_topology": {
+    "direct_i2s_speaker_amplifier": {
+      "status": "conditional_nc_design_intent_branch",
+      "absolute_false_retracted": true,
+      "physical_population_proven": false,
+      "meaning": "GPIO21, GPIO22, and GPIO23 do have physical PCB routes to optional NS4168 footprints, but every data bridge, the NS4168 parts, their control paths, and their output ferrites are marked NC in the published design. NC is design intent, not connected-unit population evidence."
+    },
+    "expected_population_path": {
+      "digital_codec": {
+        "reference": "IC6",
+        "part": "ES8311",
+        "i2s": {
+          "lrck": "GPIO21 -> R130=0R -> IC6 pin8 LRCK",
+          "bclk": "GPIO22 -> R128=0R -> IC6 pin6 SCLK",
+          "data_out_from_p4": "GPIO23 -> R111=0R -> IC6 pin9 DSDIN",
+          "mclk": "GPIO24 -> R126=0R -> IC6 pin2 MCLK"
+        },
+        "control": {
+          "sda": "GPIO45 -> Q8 BSS138W_SOT323 level shifter -> IC6 CDATA",
+          "scl": "GPIO46 -> Q9 BSS138W_SOT323 level shifter -> IC6 CCLK",
+          "ce_pin": "IC6 pin20 CE is tied to GND and is the I2C address bit, not a chip-enable pin",
+          "datasheet_address_with_ce_low": "0x18"
+        },
+        "analog_output_to_u4": {
+          "outn": "IC6 OUTN -> C140=1uF -> R146=0R -> C135=100nF -> R178=20K -> U4 pin11 INRN",
+          "outp": "IC6 OUTP -> C141=1uF -> R148=0R -> C147=100nF -> R179=20K -> U4 pin6 INLN"
+        },
+        "requirements_not_satisfied_by_direct_i2s_only": [
+          "A valid GPIO24 MCLK relationship is required.",
+          "ES8311 I2C register initialization is required.",
+          "The GPIO45/GPIO46 level-shifter and pull-up domains must be powered and electrically verified."
+        ]
+      },
+      "analog_power_amplifier": {
+        "reference": "U4",
+        "part": "NS4263B",
+        "input_type": "analog_from_es8311",
+        "shutdown_and_mode": "GPIO30 AUDIO_OUT_SD -> R147 schematic literal OR -> U4 pin1 SD",
+        "shutdown_pullup": "R71=10K to VDD_3V3",
+        "mode_straps": {
+          "ncn": "U4 pin8 NCN -> R185 schematic literal OR -> AGND; NCN function disabled",
+          "hp_in": "U4 pin16 HP-IN -> R79 schematic literal OR -> AGND; bridge-speaker mode",
+          "vref": "U4 pin10 VREF -> C143=1uF -> AGND",
+          "pin9": "unconnected"
+        },
+        "outputs": {
+          "left": "U4 left bridge outputs -> populated FB9/FB12 -> J4 VOLP/VOLN",
+          "right": "U4 right bridge outputs -> populated FB8/FB7 -> J6 VORP/VORN"
+        }
+      }
+    },
+    "conditional_direct_i2s_path": {
+      "left": {
+        "reference": "U13",
+        "part_value": "NS4168-NC",
+        "lrck": "GPIO21 -> R149=0R_NC -> I2SOUT_LRCK1 -> U13 pin2 LRCLK",
+        "bclk": "GPIO22 -> R129=0R_NC -> U13 pin3 BCLK",
+        "data": "GPIO23 -> R112=0R_NC -> U13 pin4 SDATA",
+        "control": "AUDIO_CTRL -> R139=100K_NC -> U13 pin1 CTRL; R143=50K_NC pulls CTRL to AGND",
+        "control_if_entire_q10_path_is_populated": "GPIO30 low turns Q10 on and the R139/R143 divider produces approximately 1.10V, selecting the NS4168 left channel; GPIO30 high turns Q10 off and R143 requests shutdown.",
+        "power": "VDD5V -> FB17=0R/2A -> AUDIO_VDD1 -> U13 pin6 VDD",
+        "outputs": "U13 bridge outputs -> FB10/FB11=1K/ferrite_NC -> J4 VOLP/VOLN"
+      },
+      "right": {
+        "reference": "U3",
+        "part_value": "NS4168-NC",
+        "lrck": "GPIO21 -> R114=0R_NC -> U3 pin2 LRCLK",
+        "bclk": "GPIO22 -> R113=0R_NC -> U3 pin3 BCLK",
+        "data": "GPIO23 -> R115=0R_NC -> U3 pin4 SDATA",
+        "control": "AUDIO_CTRL -> R117=100K_NC -> U3 pin1 CTRL",
+        "control_if_entire_q10_path_is_populated": "GPIO30 low turns Q10 on and raises CTRL to approximately 3.3V, selecting the NS4168 right channel. GPIO30 high turns Q10 off, but no external U3 CTRL pulldown is shown, so deterministic U3 shutdown must not be claimed from the schematic alone.",
+        "power": "VDD5V -> FB18=0R/2A -> AUDIO_VDD2 -> U3 pin6 VDD",
+        "outputs": "U3 bridge outputs -> FB2/FB3=1K/ferrite_NC -> J6 VORP/VORN"
+      },
+      "standard_i2s_compatibility": "The NS4168 datasheet supports 16kHz standard I2S operation without an MCLK pin, including a 32fs BCLK ratio, only if the relevant optional components are physically populated."
+    },
+    "gpio30_shared_control": {
+      "net": "AUDIO_OUT_SD",
+      "p4_pin": "U7 GPIO30",
+      "populated_u4_branch": "GPIO30 -> R147 schematic literal OR -> U4 pin1 SD",
+      "conditional_direct_branch": "GPIO30 -> Q10 pin1 gate; Q10 value AO3401_NC, pin2 source=VDD_3V3, pin3 drain=AUDIO_CTRL",
+      "gpio30_high": "Requests U4 shutdown and turns optional P-MOS Q10 off. If the optional left control network is stuffed, R143 pulls U13 CTRL to shutdown. U3 CTRL is not externally pulled down and is undefined when the optional Q10 path is off.",
+      "gpio30_low": "Requests U4 operation and, if Q10 plus the NC control paths are physically stuffed, turns Q10 on and drives AUDIO_CTRL for U13/U3.",
+      "u4_only_claim_valid": false,
+      "direct_amp_enable_claim_unconditional": false,
+      "reason": "GPIO30 is shared by the expected U4 branch and a population-dependent Q10/NS4168 control branch."
+    },
+    "unswitched_audio_supplies": {
+      "u4": "VDD5V -> FB15=0R/2A -> net AUDIO_OUT_3V3 -> U4 pins4/13 VDD",
+      "u13": "VDD5V -> FB17=0R/2A -> AUDIO_VDD1 -> optional U13",
+      "u3": "VDD5V -> FB18=0R/2A -> AUDIO_VDD2 -> optional U3",
+      "ic6": "VDD5V -> IC7 ME6211C33, whose CE is hardware-pulled up by R181=10K -> AUDIO_VDD_3V3 -> FB14 -> CODEC_3V3; AVDD is fed through FB13",
+      "controlled_by_esp32_p4_ldo3_or_ldo4": false,
+      "meaning": "Acquiring or releasing ESP32-P4 LDO3/LDO4 does not switch the codec or speaker-amplifier supplies shown in the reviewed schematics."
+    },
+    "output_convergence_and_contention": {
+      "left": "U13 and U4-left converge on J4 VOLP/VOLN after their separate output ferrites.",
+      "right": "U3 and U4-right converge on J6 VORP/VORN after their separate output ferrites.",
+      "expected_design_intent": "The U4 family is populated and the NS4168 family routes are NC, making the families mutually exclusive by BOM intent.",
+      "hazard": "If the direct-amplifier parts, bridges, and output ferrites were unexpectedly stuffed while the U4 output branch remained populated, GPIO30 low could activate both amplifier families onto the same speaker pairs and create output contention.",
+      "blocks_gpio30_low_runtime": true,
+      "release_condition": "Power-off physical population and continuity evidence must prove one output family absent or electrically isolated before any GPIO30-low run."
+    }
+  },
+  "u4_startup_and_mode_contract": {
+    "datasheet_facts": {
+      "shutdown": "SD high for more than 100us selects shutdown.",
+      "class_ab_selection": "An initial low or one falling edge selects Class AB.",
+      "class_d_selection": "Two falling-edge pulses with high and low pulse widths in the 1us to 12us range select Class D.",
+      "typical_startup_ms_at_5v_with_1uf_bypass": 250,
+      "typical_startup_ms_at_3v_with_1uf_bypass": 330
+    },
+    "board_inference": "The populated 1uF VREF capacitor and single high-to-low GPIO30 transition imply bridge-speaker Class AB startup for a simple enable sequence.",
+    "conservative_project_requirement_before_nonzero_pcm_ms": 350,
+    "zero_data_required_during_settle": true,
+    "twenty_ms_settle_sufficient": false,
+    "note": "The 350ms value is this review's conservative bound above the datasheet's 330ms typical 3V case; it is not represented as a datasheet maximum."
+  },
+  "datasheets": [
+    {
+      "part": "NS4168",
+      "revision": "Apr.2023 V1.2",
+      "source": "https://datasheet.lcsc.com/datasheet/pdf/d3e8c6e77860e1345ae29923805289c4.pdf?productCode=C910588",
+      "sha256": "2f8e302b0f69ccad330f8e467b173e6a1eb2ae04f3eeb6640bf3c7afd3c808d4",
+      "reviewed_facts": [
+        "CTRL 0V to 0.4V selects shutdown.",
+        "CTRL 0.9V to 1.15V selects the left channel.",
+        "CTRL 1.5V to VDD selects the right channel.",
+        "The device is a standard-I2S slave with no MCLK pin and supports 16kHz operation."
+      ]
+    },
+    {
+      "part": "NS4263B",
+      "revision": "Jun.2023 V1.0",
+      "source": "https://atta.szlcsc.com/upload/public/pdf/source/20240723/A4C23324CBEADB3DCF9750E7545A6E89.pdf",
+      "sha256": "776585313d645d7daee30d7c95a9947a3b4d2c4938850dfa5cd2a3aedbb27736",
+      "reviewed_facts": [
+        "SD high for more than 100us selects shutdown.",
+        "One falling edge selects Class AB and two bounded falling-edge pulses select Class D.",
+        "Typical startup is 250ms at 5V and 330ms at 3V with a 1uF bypass capacitor."
+      ]
+    },
+    {
+      "part": "ES8311",
+      "revision": "Rev 7.0 Jan.2020",
+      "source": "https://dl.espressif.com/dl/schematics/Audio_ES8311.pdf",
+      "sha256": "533e1a2ef7bb37ada87926633e602e57c6d0a0a6d93e2e242435544cf2564b68",
+      "reviewed_facts": [
+        "CE is the I2C address-select input, not a power-enable input.",
+        "CE low selects 7-bit I2C address 0x18.",
+        "The expected board route requires MCLK plus I2C register configuration before codec playback."
+      ]
+    }
+  ],
+  "official_lesson_12_review": {
+    "lesson": "Lesson12-Playing_Loca_Music_from_SD_Card",
+    "revisions": [
+      {
+        "revision": "V1.0",
+        "driver_path": "example/V1.0/idf-code/Lesson12-Playing_Loca_Music_from_SD_Card/peripheral/bsp_audio/bsp_audio.c",
+        "driver_sha256": "1295d1539cd7af62de44a37f30ea5b9b9c7cb1d6a28bcf00dfa5710c3a7e9a3b",
+        "header_path": "example/V1.0/idf-code/Lesson12-Playing_Loca_Music_from_SD_Card/peripheral/bsp_audio/include/bsp_audio.h",
+        "header_sha256": "53babe2d14917f817c803257fa2462e45564444861d9fffa1e915569aa53c8c1",
+        "main_path": "example/V1.0/idf-code/Lesson12-Playing_Loca_Music_from_SD_Card/main/main.c",
+        "main_sha256": "58b9e4560de5a086ee921aad37b577110336115dbff6c4c9287a67a62c2e556a"
+      },
+      {
+        "revision": "V1.1",
+        "driver_path": "example/V1.1/idf-code/Lesson12-Playing_Loca_Music_from_SD_Card/peripheral/bsp_audio/bsp_audio.c",
+        "driver_sha256": "1295d1539cd7af62de44a37f30ea5b9b9c7cb1d6a28bcf00dfa5710c3a7e9a3b",
+        "header_path": "example/V1.1/idf-code/Lesson12-Playing_Loca_Music_from_SD_Card/peripheral/bsp_audio/include/bsp_audio.h",
+        "header_sha256": "53babe2d14917f817c803257fa2462e45564444861d9fffa1e915569aa53c8c1",
+        "main_path": "example/V1.1/idf-code/Lesson12-Playing_Loca_Music_from_SD_Card/main/main.c",
+        "main_sha256": "58b9e4560de5a086ee921aad37b577110336115dbff6c4c9287a67a62c2e556a"
+      },
+      {
+        "revision": "V1.2",
+        "driver_path": "example/V1.2/idf-code/Lesson12-Playing_Loca_Music_from_SD_Card/peripheral/bsp_audio/bsp_audio.c",
+        "driver_sha256": "bcd16101a0c20775be8c2792cd2f5b85752cd86ab88f0597c3820f113818a5d5",
+        "header_path": "example/V1.2/idf-code/Lesson12-Playing_Loca_Music_from_SD_Card/peripheral/bsp_audio/include/bsp_audio.h",
+        "header_sha256": "21e3a89bcf4a55b9b76cfa59f6dff353cdf0a47b4a53ea10f815cff61c1cd39c",
+        "main_path": "example/V1.2/idf-code/Lesson12-Playing_Loca_Music_from_SD_Card/main/main.c",
+        "main_sha256": "e4d96ae727b1369007991f4a7419653f2362b0a46a5d344f95dbe44b7a163936"
+      }
+    ],
+    "effective_i2s_settings": {
+      "controller": "I2S_NUM_1",
+      "role": "master",
+      "sample_rate_hz": 16000,
+      "data_bits": 16,
+      "slot_mode": "stereo",
+      "lrck_gpio": 21,
+      "bclk_gpio": 22,
+      "data_gpio": 23,
+      "mclk_gpio": null,
+      "mclk_setting": "I2S_GPIO_UNUSED",
+      "amplifier_control_gpio": 30,
+      "amplifier_control_active_low": true
+    },
+    "behavior": [
+      "Init acquires ESP32-P4 LDO3 at 2500mV and LDO4 at 3300mV, initializes GPIO30 high, then enables I2S1.",
+      "Playback drives GPIO30 low immediately before the first PCM read/write loop and high after the loop.",
+      "PCM16 samples are multiplied by ten and clamped to the signed 16-bit range.",
+      "No ES8311 I2C register initialization is present.",
+      "GPIO24 MCLK is not driven.",
+      "No 350ms all-zero U4 startup interval exists between GPIO30 low and nonzero playback data."
+    ],
+    "interpretation": "Lesson12 corroborates GPIO21/22/23, I2S1, and active-low GPIO30 usage, but it is not a complete or safe reference for the expected ES8311-to-U4 BOM. Its MCLK-free waveform is compatible with the optional NS4168 branch only if the NC-designated path is actually populated and electrically exclusive."
+  },
+  "pinned_idf_reference": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "example_source": "examples/peripherals/i2s/i2s_codec/i2s_es8311/main/i2s_es8311_example.c",
+    "example_source_sha256": "9ec0378cb72d0a823dc7c11dd00e9ea041a59dab5a441964621335e4a87e6eb2",
+    "component_manifest": "examples/peripherals/i2s/i2s_codec/i2s_es8311/main/idf_component.yml",
+    "component_manifest_sha256": "23ce50a858ea77a02e5c5a323a6b2f6a73df5d1beace028cfd009914c00251d9",
+    "component_requirement": "espressif/esp_codec_dev: ^1.3.4",
+    "component_is_locked_by_platform": false
+  },
+  "hardware_result_interpretation": {
+    "d23": {
+      "evidence": "hardware/test-runs/2026-08-13-audio-direct-d23-attempt2.json",
+      "evidence_sha256": "74568d7b388dd437a9dd2a0a672bb635b343329b60baa0778c7740f87350925b",
+      "classification": "hardware-serial-pass-acoustic-fail",
+      "result": "fail-no-microphone-detected-tone",
+      "executed_control": "GPIO30 was driven low through the platform_audio active-low amplifier policy.",
+      "waveform": "16kHz PCM16 stereo direct I2S1, no MCLK, bounded peak 512 (-36.1dBFS), 20ms post-enable settle.",
+      "interpretation": [
+        "If the connected board follows expected BOM intent, the optional NS4168 parts and route links are absent, so direct GPIO21/22/23 I2S cannot reach the speakers.",
+        "The expected ES8311-to-U4 path was not exercised because D2.3 supplied neither GPIO24 MCLK nor ES8311 configuration.",
+        "If an optional NS4168 branch is physically present, GPIO30 low can conditionally enable it through Q10, but population was not proven and the 20ms settle does not satisfy this review's U4 startup bound.",
+        "The synchronized no-acoustic result does not prove GPIO21/22/23 failed to toggle, that either amplifier family is absent, or that the speakers failed."
+      ]
+    },
+    "d24": {
+      "evidence": "hardware/test-runs/2026-08-13-audio-level-d24.json",
+      "evidence_sha256": "dfcc8208a6072a5da7afb4017130d49f39afedb109058c559038dd9af6433c40",
+      "classification": "hardware-serial-pass-microphone-fail-control-path-postmortem",
+      "result": "fail-no-synchronized-microphone-tone-candidate-direct-path-disabled",
+      "executed_control": "GPIO30 was held high for the entire D2.4 waveform lifecycle.",
+      "waveform": "16kHz PCM16 stereo direct I2S1, no MCLK, bounded triangle peak 4096 (-18.06dBFS).",
+      "interpretation": [
+        "GPIO30 high shut down populated U4 and turned optional Q10 off.",
+        "If the optional left control network is stuffed, R143 requested U13 shutdown; the schematic does not prove a deterministic U3 CTRL state while Q10 is off.",
+        "The synchronized microphone result is a trustworthy negative for the exact executed waveform and lifecycle, but it is not a valid test of an enabled expected U4 path or enabled optional direct-amplifier path.",
+        "D2.4's former GPIO30-U4-only/direct-amplifier-unaffected premise is electrically false and must not be reused."
+      ]
+    },
+    "codec_probe_context": {
+      "d21_evidence": "hardware/test-runs/2026-08-12-audio-diag-d21.json",
+      "d21_evidence_sha256": "d75acbc461268e99132c8b95421043647b8bcd01561265520dbfa733fc9a9289",
+      "d22_evidence": "hardware/test-runs/2026-08-12-audio-diag-d22.json",
+      "d22_evidence_sha256": "579aeb6cbafb686aac483ceebac752d7894cc9b4ed86631d44e878d14a0be035",
+      "finding": "No ES8311 ACK was observed at 0x18. This leaves IC6 population, IC7/CODEC_3V3 power, pull-up domains, and Q8/Q9 level-shifter behavior unresolved; it does not by itself prove the codec is absent."
+    },
+    "combined_conclusion": "D2.3 and D2.4 produced valid bounded serial lifecycles and no qualifying microphone event, but neither run proves an enabled, correctly initialized physical speaker path. The next action is an unpowered population/continuity inventory, not another GPIO30-low playback run."
+  },
+  "required_next_step": {
+    "classification": "power-off-physical-population-and-continuity-inventory",
+    "runtime_or_flash_authorized": false,
+    "preconditions": [
+      "Disconnect USB, battery, bench supply, speakers, and every other external power or signal source.",
+      "Verify the board is fully unpowered before photography, resistance, or continuity work.",
+      "Keep J4/J6 speakers disconnected during continuity and resistance measurements."
+    ],
+    "v1_2_board_coordinates": {
+      "IC6": {
+        "x": 28.01,
+        "y": -53.467
+      },
+      "U4": {
+        "x": 42.5472,
+        "y": -152.7
+      },
+      "U13": {
+        "x": 60.6072,
+        "y": -155.777
+      },
+      "U3": {
+        "x": 205.2986,
+        "y": -139.459321875
+      },
+      "Q10": {
+        "x": 197.2183625,
+        "y": -132.248
+      },
+      "R147": {
+        "x": 39.4972,
+        "y": -153.0
+      }
+    },
+    "macro_photo_and_marking_inventory": [
+      "IC6 ES8311",
+      "U4 NS4263B",
+      "U13 NS4168-NC footprint",
+      "U3 NS4168-NC footprint",
+      "Q10 AO3401_NC footprint",
+      "R147 and R71 GPIO30 path",
+      "R149/R129/R112 left direct-I2S bridges",
+      "R114/R113/R115 right direct-I2S bridges",
+      "R139/R143/R117 direct-amplifier control network",
+      "FB9/FB12/FB8/FB7 U4 output ferrites",
+      "FB10/FB11/FB2/FB3 optional NS4168 output ferrites",
+      "FB15/FB17/FB18 amplifier power links",
+      "C140/R146/C135/R178 and C141/R148/C147/R179 codec-to-U4 analog paths"
+    ],
+    "unpowered_continuity_and_resistance_inventory": [
+      "GPIO21/GPIO22/GPIO23 to the appropriate IC6 pads and to both optional NS4168 footprint pads through each named bridge",
+      "GPIO30 through R147 to U4 SD and to Q10 gate",
+      "Q10 source to VDD_3V3, drain to AUDIO_CTRL, and AUDIO_CTRL through R139/R117 to the optional CTRL pads",
+      "U4 outputs through FB9/FB12/FB8/FB7 to J4/J6",
+      "Optional NS4168 outputs through FB10/FB11/FB2/FB3 to J4/J6",
+      "VDD5V through FB15/FB17/FB18 to each amplifier supply domain",
+      "Photograph meter setup and record measured resistance, not only pass/fail continuity beeps."
+    ],
+    "decision_gate": {
+      "optional_direct_path": "Consider a new direct-I2S authorization only if the relevant NS4168, Q10/control, data bridges, power link, and output ferrites are all proven populated and U4 outputs are absent or electrically isolated.",
+      "expected_codec_path": "If IC6 and U4 are populated, first diagnose IC7/CODEC_3V3, both sides of Q8/Q9, address 0x18, GPIO24 MCLK, and exact ES8311 configuration while GPIO30 remains high; only then design a separately authorized U4 run with at least 350ms of zero data after enable.",
+      "both_families_present": "Do not drive GPIO30 low until one amplifier family is electrically isolated from J4/J6.",
+      "population_unknown": "Do not run audio."
+    }
+  },
+  "authorization": {
+    "authorized": false,
+    "pin_authorized": false,
+    "runtime_authorized": false,
+    "flash_authorized": false,
+    "app_flash_authorized": false,
+    "project_flash_authorized": false,
+    "hardware_test_authorized": false,
+    "doom_audio_authorized": false,
+    "reusable_audio_authorized": false,
+    "scope": [],
+    "explicitly_not_authorized": [
+      "gpio21_audio_lrck",
+      "gpio22_audio_bclk",
+      "gpio23_audio_data",
+      "gpio24_audio_mclk",
+      "gpio30_shared_u4_q10_control",
+      "gpio45_codec_i2c_sda",
+      "gpio46_codec_i2c_scl",
+      "i2s_controller_1",
+      "es8311_codec",
+      "ns4263b_power_amplifier",
+      "ns4168_optional_direct_amplifiers",
+      "q10_optional_control_path",
+      "speaker_output",
+      "any_gpio30_low_run",
+      "doom_audio",
+      "reusable_platform_audio"
+    ],
+    "blockers": [
+      "Connected-unit IC6/U4/U13/U3/Q10, bridge, power-link, and output-ferrite population has not been proven.",
+      "Optional and expected amplifier outputs converge on J4/J6; simultaneous population would create a GPIO30-low contention risk.",
+      "The expected ES8311 path has not ACKed at 0x18 and its power, level-shifter, MCLK, and configuration requirements remain unresolved.",
+      "No reviewed runtime presently provides the expected codec path plus an NS4263B-safe zero-data startup and shutdown sequence.",
+      "A new immutable app-specific authorization, exact artifact, capture gate, and operator plan would be required after the physical topology is proven."
+    ]
+  },
+  "limits": [
+    "The reviewed audio graph is invariant across the pinned V1.0-V1.2 SCH/BRD files, but this record intentionally grants no pin, flash, runtime, hardware-test, Doom, or reusable-audio authorization.",
+    "NC suffixes are retained as vendor design intent and are not treated as proof that the connected board footprint is unpopulated.",
+    "Schematic value OR is preserved verbatim for R147, R185, and R79 and is not silently normalized to 0R.",
+    "The 350ms U4 zero-data settle is a conservative project requirement derived from reviewed typical startup values, not a claimed datasheet maximum.",
+    "D2.3/D2.4 serial success does not prove I2S pin waveforms, physical population, codec initialization, amplifier enablement, speaker health, gain, or audibility.",
+    "No energized measurement, flash, reset, GPIO drive, or hardware mutation was performed for this review."
+  ]
+}

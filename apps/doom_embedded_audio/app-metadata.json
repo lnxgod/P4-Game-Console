@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "app": "doom_embedded_audio",
+  "stage": "E2-composite-build-tested-runtime-denied",
+  "evidence_class": "build-tested",
+  "purpose": "Separate audio-enabled Doom composite using the ignored local shareware WAD, proven display service, audited Doom SFX adapter, and direct-I2S platform audio API.",
+  "runtime_supported": false,
+  "build_evidence": "test-runs/2026-08-13-doom-embedded-audio-e2-build.json",
+  "runtime_evidence": null,
+  "one_shot_authorization_evidence": null,
+  "authorization_evidence": [
+    "hardware/evidence/elecrow-10.1-display-path.json"
+  ],
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "game_data_embedded": true,
+  "game_data_committed": false,
+  "game_data_redistribution_authorized": false,
+  "hardware_interfaces": [
+    "mipi_dsi_bus_0",
+    "internal_ldo_3_2500mv",
+    "internal_ldo_4_3300mv",
+    "gpio31_backlight_pwm",
+    "i2s1_direct_speaker_candidate",
+    "gpio30_amplifier_shutdown_candidate"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "gpio29",
+    "gpio41",
+    "sd_card",
+    "touch",
+    "i2c",
+    "audio_codec",
+    "mclk",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "runtime_blockers": [
+    "The new composite has not been authorized, flashed, read back, or hardware-tested.",
+    "The E2 verifier is build-only until reusable-backend D2.3 acoustic acceptance and an exact connected-unit one-shot E2 authorization record exist.",
+    "The central flash hook, no-reset readback membership, and single deferred-launch membership are intentionally pending.",
+    "Controller input remains neutral because the panel cannot safely source controller VBUS without the external protected host shim.",
+    "The WAD-bearing local firmware artifact is not authorized for redistribution."
+  ]
+}

@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "app": "display_diag",
+  "stage": "M1-hardware-test",
+  "evidence_class": "hardware-tested",
+  "purpose": "Display-only EK79007 MIPI-DSI self-test pattern diagnostic for the cross-revision Elecrow 10.1-inch path.",
+  "runtime_supported": true,
+  "authorization_evidence": "hardware/evidence/elecrow-10.1-display-path.json",
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "hardware_interfaces": [
+    "mipi_dsi_bus_0",
+    "internal_ldo_3_2500mv",
+    "internal_ldo_4_3300mv",
+    "gpio31_backlight_pwm"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "gpio29",
+    "gpio41",
+    "touch",
+    "sd_card",
+    "audio",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "runtime_evidence": "hardware/test-runs/2026-08-12-display-m1.json",
+  "runtime_blockers": [
+    "The reusable platform_display component advanced after the recorded M1 artifact; the historical hardware result remains valid only for its recorded hashes.",
+    "Use the separately reviewed framebuffer_diag artifact for M2 framebuffer qualification."
+  ]
+}

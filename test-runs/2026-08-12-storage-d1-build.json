@@ -1,0 +1,112 @@
+{
+  "schema": 1,
+  "id": "storage-d1-build-2026-08-12",
+  "timestamp_utc": "2026-08-13T04:22:43Z",
+  "classification": "build-tested",
+  "result": "pass",
+  "scope": "storage-read-only",
+  "authorization_evidence": "hardware/evidence/elecrow-10.1-storage-path.json",
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "compiler": "riscv32-esp-elf GCC 14.2.0_20251107"
+  },
+  "source_inventory": {
+    "apps/storage_diag/CMakeLists.txt": "4c5ef28e086c5cacc700163e70f2a97230e908c107b18e031c738dbed9694e5c",
+    "apps/storage_diag/main/CMakeLists.txt": "f70bbd90651d1e990f73a54a20b02b56b6f1310c6c9b8892ce9d62d977d82c6a",
+    "apps/storage_diag/main/storage_diag_main.c": "9d261193581adcee3dba9fe78bf791b34550bf2aa9f7b484f617925a67dc9b6f",
+    "apps/storage_diag/sdkconfig.defaults": "26f7106304e8cf35d77afa4c58fc2c3df6e4e0bd9df80a5973edb1567fa4e103",
+    "components/platform_storage/CMakeLists.txt": "2d1c0f8a5550912a9b8af3318cd682c5ff4e62fb738882586faa2c0c72c6ed3b",
+    "components/platform_storage/Kconfig": "b57a86f21e06f54574e0c1702064382b525b32c7d78298b8d51f029422d3fb0f",
+    "components/platform_storage/include/platform/storage.h": "cfabf13d9c959549945e33d1fa44ab0e527d82258f3a692cf0f03a79c657dc42",
+    "components/platform_storage/src/platform_storage.c": "5458ad657e3d5d0f9d448800cb4caa0ffde4041d57a3e6cf65b8df0d05fd7aed",
+    "components/platform_storage/src/platform_storage_wad.c": "80e3b958ff767b0bdf80de777f5550098a19d5366963923d178fcd56e1c88ec4",
+    "components/platform_storage/src/platform_storage_wad.h": "ac84f321b855d45b8a263596de0cfdbf958ac877775dddbff062367df8e9c3ff"
+  },
+  "build": {
+    "command": "idf.py -C apps/storage_diag -B <independent-build-directory> -D IDF_TARGET=esp32p4 build",
+    "reproducible_build": true,
+    "compile_time_date_enabled": false,
+    "clean_builds_compared": 2,
+    "independent_build_directories_compared": 2,
+    "identical_binary": true,
+    "identical_elf": true,
+    "target": "esp32p4",
+    "silicon_family": "revision_1_x",
+    "minimum_revision_full": 100,
+    "maximum_revision_full": 199,
+    "flash_size_bytes": 16777216,
+    "scoped_storage_authorization_enabled": true,
+    "global_pin_map_authorized": false
+  },
+  "artifacts": {
+    "generated_app_partition_bytes": 1048576,
+    "saved_factory_app_partition_bytes": 11534336,
+    "app_binary_bytes": 279984,
+    "app_binary_sha256": "8bccadc8af37f1567aa0c4515a9be882eddb4cb7ee9117998f33eb0d63f61dc0",
+    "generated_app_partition_free_bytes": 768592,
+    "saved_factory_app_partition_free_bytes": 11254352,
+    "elf_bytes": 5539356,
+    "elf_sha256": "010bb255c49bf9e56a0c85e84c232cb0f05bd7454591f92d24c2641beb0e54dc"
+  },
+  "tests": {
+    "host_wad_parser_and_identity": {
+      "result": "pass",
+      "sanitizers": [
+        "AddressSanitizer",
+        "UndefinedBehaviorSanitizer"
+      ]
+    },
+    "cross_revision_storage_verifier": {
+      "result": "pass",
+      "vendor_tree_commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+      "published_revisions": [
+        "V1.0",
+        "V1.1",
+        "V1.2"
+      ]
+    }
+  },
+  "wad_policy": {
+    "search_order": [
+      "/sdcard/doom1.wad",
+      "/sdcard/doom/doom1.wad"
+    ],
+    "identity": "doom-shareware-1.9",
+    "size_bytes": 4196020,
+    "sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+    "bytes_committed": false,
+    "bytes_embedded": false,
+    "invalid_first_candidate_fails_closed": true
+  },
+  "interfaces_in_scope": [
+    "sdmmc_slot_0_one_bit_at_10000_khz",
+    "gpio43_sd_clock",
+    "gpio44_sd_command",
+    "gpio39_sd_data0",
+    "read_and_hash_existing_files"
+  ],
+  "interfaces_not_initialized": [
+    "sd_data1_through_data7",
+    "sd_card_detect",
+    "sd_write_protect",
+    "display",
+    "touch",
+    "audio",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "execution": {
+    "firmware_flashed": false,
+    "firmware_executed": false,
+    "runtime_supported": false
+  },
+  "claims_not_made": [
+    "The SD card mounted on the connected board",
+    "The card or filesystem is healthy",
+    "A shareware WAD exists on the inserted card",
+    "The WAD can be read at sustained game-play rates",
+    "Any display, touch, audio, camera, wireless, or USB interface works"
+  ]
+}

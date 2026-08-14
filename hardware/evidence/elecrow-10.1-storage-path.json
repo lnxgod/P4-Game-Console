@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "classification": "cross-revision-storage-path",
+  "result": "pass",
+  "scope": "sdmmc_read_only_service_no_format",
+  "official_source": {
+    "vendor": "Elecrow",
+    "model": "DHE04310D",
+    "repository": "https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen",
+    "commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+    "hardware_revisions_compared": [
+      "V1.0",
+      "V1.1",
+      "V1.2"
+    ]
+  },
+  "schematics": [
+    {
+      "revision": "V1.0",
+      "path": "Eagle_SCH&PCB/1.0/ESP32-P4 Display 10.1 inch V1.0.sch",
+      "sha256": "a31422d5b0e9ec7fe75c7f5c973b0c5b40d5e5148605caa817aedc1a6e4455a3"
+    },
+    {
+      "revision": "V1.1",
+      "path": "Eagle_SCH&PCB/1.1/ESP32-P4 Display 10.1 inch V1.1.sch",
+      "sha256": "c4f7e1d61f490290ada1b312d6200a6b2838802f4d780af9699ca3797e35cadd"
+    },
+    {
+      "revision": "V1.2",
+      "path": "Eagle_SCH&PCB/1.2/ESP32-P4 Display 10.1 inch V1.2.sch",
+      "sha256": "7f9ac57dab96110467e4a9728cfb71b46024ea57f28a2d9d8b545b3ff0d0c172"
+    }
+  ],
+  "cross_revision_invariants": {
+    "controller": {
+      "host": "SDMMC",
+      "slot": 0,
+      "bus_width": 1,
+      "maximum_clock_khz": 10000,
+      "internal_pullups": true
+    },
+    "connector": {
+      "reference": "J5",
+      "deviceset": "HOLDER-MICROSD-9P",
+      "power_net": "VDD_3V3",
+      "ground_net": "GND"
+    },
+    "signals": {
+      "clock": {
+        "gpio": 43,
+        "series_resistor": "R192",
+        "series_resistor_value": "0R",
+        "card_pin": "SCLK",
+        "card_net": "SD1_SCK"
+      },
+      "command": {
+        "gpio": 44,
+        "series_resistor": "R193",
+        "series_resistor_value": "0R",
+        "card_pin": "DI",
+        "card_net": "SD1_CMD",
+        "pullup": "R28",
+        "pullup_value": "10K"
+      },
+      "data0": {
+        "gpio": 39,
+        "series_resistor": "R191",
+        "series_resistor_value": "0R",
+        "card_pin": "DO",
+        "card_net": "SD1_D0",
+        "pullup": "R27",
+        "pullup_value": "10K"
+      }
+    },
+    "revision_local_passives": {
+      "V1.0": "No R140 clock pull-up or C167-C169 shunt capacitors are populated in the published schematic; the invariant vendor configuration enables internal pull-ups.",
+      "V1.1": "Adds R140 10K on SD1_SCK and C167-C169 22pF shunt capacitors.",
+      "V1.2": "Matches the V1.1 SD signal passives."
+    },
+    "card_detect": null,
+    "write_protect": null
+  },
+  "official_lesson_08": {
+    "effective_settings_match": true,
+    "mount_point": "/sdcard",
+    "format_if_mount_failed": false,
+    "slot": 0,
+    "maximum_clock_khz": 10000,
+    "bus_width": 1,
+    "internal_pullups": true,
+    "revisions": [
+      {
+        "revision": "V1.0",
+        "driver_path": "example/V1.0/idf-code/Lesson08-SD_Card_File_Reading/peripheral/bsp_sd/bsp_sd.c",
+        "driver_sha256": "328c2dfa60b4f954868355db9ae9fc87a873d7ead152b5482fd7c709153338e6",
+        "header_path": "example/V1.0/idf-code/Lesson08-SD_Card_File_Reading/peripheral/bsp_sd/include/bsp_sd.h",
+        "header_sha256": "1f2550d37f2b527b94ab27c3109e7103a8be65e45caa64bff6290ae2851da56d"
+      },
+      {
+        "revision": "V1.1",
+        "driver_path": "example/V1.1/idf-code/Lesson08-SD_Card_File_Reading/peripheral/bsp_sd/bsp_sd.c",
+        "driver_sha256": "328c2dfa60b4f954868355db9ae9fc87a873d7ead152b5482fd7c709153338e6",
+        "header_path": "example/V1.1/idf-code/Lesson08-SD_Card_File_Reading/peripheral/bsp_sd/include/bsp_sd.h",
+        "header_sha256": "1f2550d37f2b527b94ab27c3109e7103a8be65e45caa64bff6290ae2851da56d"
+      },
+      {
+        "revision": "V1.2",
+        "driver_path": "example/V1.2/idf-code/Lesson08-SD_Card_File_Reading/peripheral/bsp_sd/bsp_sd.c",
+        "driver_sha256": "fdfa0df7d470ea51f8e09c608871c585aa84e9e98bbe89aff88e1d35dd3d54c4",
+        "header_path": "example/V1.2/idf-code/Lesson08-SD_Card_File_Reading/peripheral/bsp_sd/include/bsp_sd.h",
+        "header_sha256": "1a7b76d0dc82cf4c02f1c9051fd8b1d46eae21269b09b88483c77c61748b0072"
+      }
+    ]
+  },
+  "connected_unit_operating_point": {
+    "hardware_test": "hardware/test-runs/2026-08-12-sd-format-diag-d1.json",
+    "configured_maximum_clock_khz": 1000,
+    "measured_real_frequency_khz": 1000,
+    "bus_width": 1,
+    "result": "card-init-raw-layout-and-nonformatting-fat32-remount-pass",
+    "runtime_filename_mode": "uppercase-8.3-compatible",
+    "note": "The prior 10 MHz storage diagnostic timed out on its first sector read. The destructive formatter subsequently completed card initialization, repartitioning, FAT32 creation, raw layout proof, host cleanup, and a non-formatting remount at 1 MHz. Its later file probe failed only because that diagnostic used an incompatible hidden long filename. Reusable storage therefore uses the proven 1 MHz operating point."
+  },
+  "authorization": {
+    "authorized": true,
+    "scope": [
+      "sdmmc_slot_0_one_bit_at_or_below_10000_khz",
+      "gpio43_sd_clock",
+      "gpio44_sd_command",
+      "gpio39_sd_data0",
+      "internal_sdmmc_pullups",
+      "micro_sd_connector_j5_on_existing_vdd_3v3_rail",
+      "fat_mount_at_sdcard_with_format_if_mount_failed_false",
+      "read_and_hash_existing_files"
+    ],
+    "explicitly_not_authorized": [
+      "sd_data1_through_data7",
+      "gpio40",
+      "gpio41",
+      "gpio42",
+      "gpio45",
+      "gpio46",
+      "gpio47",
+      "gpio48",
+      "card_detect",
+      "write_protect",
+      "formatting",
+      "file_mutation_by_reusable_platform_storage_service",
+      "all_other_gpio",
+      "all_other_peripherals"
+    ]
+  },
+  "limits": [
+    "This is a bounded cross-revision electrical and source authorization, not an on-device acceptance result.",
+    "The ESP-IDF FAT VFS is not a hardware-enforced read-only filesystem; the reusable service limits its public API to read and inspect operations.",
+    "Card compatibility, signal margin, filesystem integrity, mount success, and WAD presence remain to be measured on the connected unit."
+  ]
+}

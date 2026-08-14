@@ -1,0 +1,35 @@
+add_executable(platform_audio_es8311_policy_tests
+    test_platform_audio_es8311_policy.c)
+target_link_libraries(platform_audio_es8311_policy_tests
+    PRIVATE platform_audio_es8311_policy)
+target_include_directories(platform_audio_es8311_policy_tests PRIVATE
+    mocks
+    ../src
+)
+target_compile_features(platform_audio_es8311_policy_tests PRIVATE c_std_11)
+
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(platform_audio_es8311_policy_tests PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wconversion
+        -Wshadow
+        -Werror
+    )
+    option(PLATFORM_AUDIO_ES8311_ENABLE_SANITIZERS
+           "Enable ASan and UBSan for native ES8311 policy tests" ON)
+    if(PLATFORM_AUDIO_ES8311_ENABLE_SANITIZERS)
+        target_compile_options(platform_audio_es8311_policy PRIVATE
+            -fsanitize=address,undefined -fno-omit-frame-pointer)
+        target_link_options(platform_audio_es8311_policy PRIVATE
+            -fsanitize=address,undefined)
+        target_compile_options(platform_audio_es8311_policy_tests PRIVATE
+            -fsanitize=address,undefined -fno-omit-frame-pointer)
+        target_link_options(platform_audio_es8311_policy_tests PRIVATE
+            -fsanitize=address,undefined)
+    endif()
+endif()
+
+add_test(NAME platform_audio_es8311_policy_tests
+         COMMAND platform_audio_es8311_policy_tests)

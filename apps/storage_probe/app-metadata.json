@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "app": "storage_probe",
+  "stage": "D1-read-only-lower-clock-probe-build",
+  "evidence_class": "build-pending",
+  "purpose": "Distinguish SD card initialization, hashed identity and geometry, repeated raw-sector stability, lower-clock behavior, and exact FatFs mount result without writes.",
+  "runtime_supported": true,
+  "authorization_evidence": "hardware/evidence/elecrow-10.1-storage-path.json",
+  "build_evidence": null,
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "game_data_embedded": false,
+  "hardware_interfaces": [
+    "sdmmc_slot_0_1bit_sdr",
+    "gpio43_sd_clk",
+    "gpio44_sd_cmd",
+    "gpio39_sd_d0",
+    "clock_profiles_khz_10000_5000_1000"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "sd_d1_through_d7",
+    "sd_card_detect",
+    "sd_write_protect",
+    "sd_ddr",
+    "display",
+    "touch",
+    "audio",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "storage_mutation_policy": {
+    "raw_sector_write": false,
+    "file_write": false,
+    "partition": false,
+    "format": false,
+    "erase": false,
+    "fatfs_write_callback": "always_RES_WRPRT"
+  },
+  "runtime_evidence": null,
+  "runtime_blockers": [
+    "Exact source and artifact evidence plus an independent app-only preflash review are pending."
+  ]
+}

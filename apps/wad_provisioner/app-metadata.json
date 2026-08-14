@@ -1,0 +1,42 @@
+{
+  "schema": 1,
+  "app": "wad_provisioner",
+  "stage": "D1-local-provisioning",
+  "evidence_class": "build-tested",
+  "purpose": "One-shot, no-overwrite provisioning of the exact local Doom 1.9 shareware IWAD onto microSD.",
+  "runtime_supported": true,
+  "authorization_evidence": "hardware/evidence/elecrow-10.1-storage-path.json",
+  "build_evidence": "test-runs/2026-08-12-wad-provisioner-d1-build.json",
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "game_data_embedded": true,
+  "redistributable": false,
+  "local_artifact_only": true,
+  "hardware_interfaces": [
+    "sdmmc_slot_0_1bit",
+    "gpio43_sd_clk",
+    "gpio44_sd_cmd",
+    "gpio39_sd_d0"
+  ],
+  "storage_mutation_policy": {
+    "format": false,
+    "overwrite": false,
+    "delete": false,
+    "target": "/sdcard/DOOM1.WAD",
+    "temporary_path": "/sdcard/P4WAD.TMP",
+    "write_sequence": [
+      "exclusive-create-temp",
+      "write-exact-gated-bytes",
+      "fsync-and-close",
+      "read-back-size-and-sha256",
+      "rename-only-while-target-absent-not-power-fail-atomic-on-fat",
+      "read-back-final-size-and-sha256"
+    ],
+    "power_failure_policy": "Use stable power. FatFs rename refuses an occupied target but is not power-fail atomic and contains a non-transactional interruption window; final readback verifies success but cannot make the FAT update transactional."
+  },
+  "runtime_evidence": "hardware/test-runs/2026-08-12-wad-provisioner-d1.json",
+  "runtime_blockers": [
+    "None for the completed one-shot provisioning run; app-only authorization was revoked after PASS."
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "id": "sd-format-diag-d1-stack-failure-2026-08-12",
+  "timestamp_local": "2026-08-12T22:10:00-07:00",
+  "result": "fail-before-sd-access",
+  "app": "sd_format_diag",
+  "artifact": {
+    "offset": "0x10000",
+    "bytes": 284592,
+    "sha256": "363f99873d2e23b76c3c9beab97cdc92a9288c9007cd03cf7943e6c1d8530733",
+    "readback_verified": true
+  },
+  "device": {
+    "chip": "ESP32-P4",
+    "revision": "v1.3",
+    "flash_bytes": 16777216
+  },
+  "observed": {
+    "panic": "Stack protection fault",
+    "task": "main",
+    "app_main_pc": "0x4000b2c4",
+    "app_main_static_frame_bytes": 4640,
+    "first_destructive_marker_seen": false,
+    "format_begin_marker_seen": false,
+    "sd_mutation_observed": false,
+    "reboot_loop_stopped_in_rom_loader": true
+  },
+  "diagnosis": "The formatter overflowed the default main-task stack at app_main entry before its first log or any SDMMC initialization. The exact ELF prologue allocated 4640 bytes, primarily because FATFS was inlined as a large local object.",
+  "remediation": "Heap-allocate FATFS and sdmmc_card_t, set and bind a 16384-byte main-task stack, require a small app_main static frame, rebuild reproducibly, and repeat the exact app-only/readback-deferred launch flow."
+}

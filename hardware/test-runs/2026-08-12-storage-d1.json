@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "captured_at": "2026-08-13T04:51:00Z",
+  "result": "fail",
+  "classification": "hardware-tested",
+  "scope": "D1 non-formatting SDMMC mount and exact shareware-WAD discovery",
+  "build_evidence": "test-runs/2026-08-12-storage-d1-build.json",
+  "hardware": {
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "flash_bytes": 16777216,
+    "pcb_revision": null
+  },
+  "firmware": {
+    "app": "storage_diag",
+    "binary_bytes": 279984,
+    "binary_sha256": "8bccadc8af37f1567aa0c4515a9be882eddb4cb7ee9117998f33eb0d63f61dc0",
+    "elf_bytes": 5539356,
+    "elf_sha256": "010bb255c49bf9e56a0c85e84c232cb0f05bd7454591f92d24c2641beb0e54dc",
+    "write_scope": "application partition only at 0x10000; microSD was not written",
+    "installed_app_readback_matches_binary": true
+  },
+  "attempts": [
+    {
+      "configuration": "SDMMC slot 0, one bit, 10 MHz maximum, internal pull-ups, GPIO43/44/39",
+      "format_if_mount_failed": false,
+      "result": "fail",
+      "failure": "first filesystem-sector read timed out while waiting for card idle",
+      "markers": [
+        "sdmmc_wait_for_idle: sdmmc_send_cmd_send_status returned 0x107",
+        "sdmmc_read_sectors_dma: sdmmc_wait_for_idle timeout",
+        "diskio_sdmmc: sdmmc_read_blocks failed (0x107)",
+        "P4_STORAGE D1 FAIL stage=mount error=ESP_FAIL"
+      ]
+    },
+    {
+      "configuration": "same reviewed image after a second controlled CPU reset",
+      "format_if_mount_failed": false,
+      "result": "same-failure"
+    }
+  ],
+  "conclusion": {
+    "mount_passed": false,
+    "filesystem_classified": false,
+    "wad_searched": false,
+    "micro_sd_written": false,
+    "format_authorized_by_result": false,
+    "reason_format_is_blocked": "A timeout or disk I/O error is not proof of FR_NO_FILESYSTEM; formatting cannot repair an unstable bus or unseated card.",
+    "next_step": "Run an independently reviewed read-only raw-sector probe at progressively lower clocks, recording card identity/geometry and repeated sector stability before any destructive operation."
+  }
+}

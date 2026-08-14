@@ -1,0 +1,13 @@
+menu "P4 platform display service"
+
+    config PLATFORM_DISPLAY_ELECROW_10_1_CROSS_REVISION_AUTHORIZED
+        bool "Authorize the reviewed Elecrow 10.1-inch display-only path"
+        default n
+        help
+            Allows this component to operate only the MIPI-DSI bus, internal
+            LDO3/LDO4, and GPIO31 backlight path documented in
+            hardware/evidence/elecrow-10.1-display-path.json. This option does
+            not authorize GPIO29, GPIO41, touch, storage, audio, camera,
+            wireless, USB, or any other GPIO.
+
+endmenu

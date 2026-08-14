@@ -1,0 +1,30 @@
+CONFIG_IDF_TARGET="esp32p4"
+
+# Keep application metadata and path handling deterministic. Two independent
+# clean builds must produce byte-identical BIN and ELF artifacts.
+CONFIG_APP_REPRODUCIBLE_BUILD=y
+CONFIG_APP_COMPILE_TIME_DATE=n
+
+# The pinned IDF 5.5.3 DSI bus setup contains unbounded hardware wait loops.
+# Reset instead of hanging forever if an idle-task watchdog is starved there.
+CONFIG_ESP_TASK_WDT_PANIC=y
+
+# The connected P4 is silicon revision v1.3. ESP32-P4 <3.0 and >=3.0
+# firmware are mutually incompatible, so make this target family explicit.
+CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y
+CONFIG_ESP32P4_REV_MIN_100=y
+
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_HEX=y
+CONFIG_SPIRAM_SPEED_200M=y
+CONFIG_SPIRAM_USE_CAPS_ALLOC=y
+CONFIG_COMPILER_OPTIMIZATION_PERF=y
+
+# MIPI-DSI remains an experimental ESP-IDF 5.5 API.
+CONFIG_IDF_EXPERIMENTAL_FEATURES=y
+
+# This is deliberately narrower than the global pin-map gate. It authorizes
+# only the cross-revision path recorded in the named hardware evidence file.
+CONFIG_PLATFORM_DISPLAY_ELECROW_10_1_CROSS_REVISION_AUTHORIZED=y

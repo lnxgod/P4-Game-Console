@@ -1,0 +1,6 @@
+{
+  "schema": 1,
+  "purpose": "Pin-independent chip, flash, PSRAM, heap, and console bring-up",
+  "flash_app_authorized": true,
+  "flash_project_authorized": false
+}

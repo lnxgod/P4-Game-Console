@@ -1,0 +1,270 @@
+{
+  "schema": 1,
+  "classification": "cross-revision-audio-driver-path",
+  "result": "pass-build-only-runtime-denied",
+  "scope": "es8311_to_ns4263b_bounded_playback_driver",
+  "official_elecrow_source": {
+    "vendor": "Elecrow",
+    "model": "DHE04310D",
+    "repository": "https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen",
+    "commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+    "hardware_revisions_compared": [
+      "V1.0",
+      "V1.1",
+      "V1.2"
+    ]
+  },
+  "schematics": [
+    {
+      "revision": "V1.0",
+      "path": "Eagle_SCH&PCB/1.0/ESP32-P4 Display 10.1 inch V1.0.sch",
+      "sha256": "a31422d5b0e9ec7fe75c7f5c973b0c5b40d5e5148605caa817aedc1a6e4455a3"
+    },
+    {
+      "revision": "V1.1",
+      "path": "Eagle_SCH&PCB/1.1/ESP32-P4 Display 10.1 inch V1.1.sch",
+      "sha256": "c4f7e1d61f490290ada1b312d6200a6b2838802f4d780af9699ca3797e35cadd"
+    },
+    {
+      "revision": "V1.2",
+      "path": "Eagle_SCH&PCB/1.2/ESP32-P4 Display 10.1 inch V1.2.sch",
+      "sha256": "7f9ac57dab96110467e4a9728cfb71b46024ea57f28a2d9d8b545b3ff0d0c172"
+    }
+  ],
+  "cross_revision_invariants": {
+    "board_power_prerequisite": {
+      "ldo3": {
+        "channel": 3,
+        "voltage_mv": 2500,
+        "output_net": "ESP32_LDO3",
+        "destination": "VDD_MIPI_DPHY",
+        "series": "R80=0R"
+      },
+      "ldo4": {
+        "channel": 4,
+        "voltage_mv": 3300,
+        "output_net": "ESP32_LDO4",
+        "destination": "VDDPST_5",
+        "series": "R109=0R",
+        "audio_dependency": "GPIO45/GPIO46 pad pull-ups and Q8/Q9 gates"
+      },
+      "diagnostic_order": "gpio30_high_then_ldo3_then_ldo4_then_i2c",
+      "scope_note": "LDO4 is the audio-control dependency. LDO3 feeds the MIPI DPHY domain and is included only because every pinned Elecrow Lesson12 revision acquires the pair before audio; audio_diag does not initialize display or DSI."
+    },
+    "codec": {
+      "reference": "IC6",
+      "part": "ES8311",
+      "fixed_control_address": {
+        "esp_codec_dev_legacy_8bit_value": "0x30",
+        "idf_5_5_3_master_7bit_value": "0x18",
+        "derivation": "0x30 >> 1"
+      },
+      "data_path": {
+        "controller": "I2S_NUM_1",
+        "role": "p4_master_es8311_slave",
+        "format": "philips_i2s_pcm16_stereo",
+        "mclk_multiple": 256,
+        "lrclk": {
+          "p4_gpio": 21,
+          "p4_net": "I2S_LRCK",
+          "series": "R130=0R",
+          "codec_net": "I2S_LRCK_N",
+          "codec_pin": "LRCK",
+          "inverted": false
+        },
+        "bclk": {
+          "p4_gpio": 22,
+          "p4_net": "I2S_SCLK",
+          "series": "R128=0R",
+          "codec_net": "I2S_SCLK_N",
+          "codec_pin": "SCLK/DMIC_SCL",
+          "inverted": false
+        },
+        "dout": {
+          "p4_gpio": 23,
+          "p4_net": "I2S_SDOUT",
+          "series": "R111=0R",
+          "codec_net": "I2S_SDOUT_N",
+          "codec_pin": "DSDIN"
+        },
+        "mclk": {
+          "p4_gpio": 24,
+          "p4_net": "I2S_MCLK",
+          "series": "R126=0R",
+          "codec_net": "I2S_MCLK_N",
+          "codec_pin": "MCLK",
+          "inverted": false
+        }
+      },
+      "control_path": {
+        "idf_controller": "I2C_NUM_0",
+        "speed_hz": 100000,
+        "p4_sda_gpio": 45,
+        "p4_sda_net": "I2C1_SDA",
+        "sda_level_shifter": "Q8=BSS138W_SOT323",
+        "codec_sda_net": "I2C1_SDA_3V3",
+        "codec_sda_pin": "CDATA",
+        "p4_scl_gpio": 46,
+        "p4_scl_net": "I2C1_SCL",
+        "scl_level_shifter": "Q9=BSS138W_SOT323",
+        "codec_scl_net": "I2C1_SCL_3V3",
+        "codec_scl_pin": "CCLK"
+      },
+      "analog_output": {
+        "outn_coupling": "C140=1uF",
+        "outp_coupling": "C141=1uF",
+        "destination": "NS4263B differential analog inputs"
+      }
+    },
+    "power_amplifier": {
+      "reference": "U4",
+      "part": "NS4263B",
+      "control_path": "GPIO30 -> AUDIO_OUT_SD -> R147=OR -> U4 pin 1 SD",
+      "enabled_gpio_level": 0,
+      "shutdown_gpio_level": 1,
+      "active_low": true,
+      "speaker_connectors": [
+        "J4",
+        "J6"
+      ]
+    },
+    "not_populated": [
+      "U13=NS4168-NC with R112/R129/R149=0R_NC",
+      "U3=NS4168-NC with R113/R114/R115=0R_NC"
+    ]
+  },
+  "elecrow_active_level_evidence": [
+    {
+      "revision": "V1.0",
+      "driver_path": "example/V1.0/idf-code/Lesson11-Playback_After_Recording/peripheral/bsp_audio/bsp_audio.c",
+      "driver_sha256": "ab626e22a9c74bd671353c92f4bab2dd50d129d2e538e078cf56e3a4d6b8eccc",
+      "header_path": "example/V1.0/idf-code/Lesson11-Playback_After_Recording/peripheral/bsp_audio/include/bsp_audio.h",
+      "header_sha256": "11eb268266acb4e6913cf9b7ff04b92fa5d945d3adc600e7f0c64687a98bfc33",
+      "main_path": "example/V1.0/idf-code/Lesson11-Playback_After_Recording/main/main.c",
+      "main_sha256": "6b6ac2c114b6ffc50d7f9e5b080a96630deaa09f845ff35eb942b427a8f69c74"
+    },
+    {
+      "revision": "V1.1",
+      "driver_path": "example/V1.1/idf-code/Lesson11-Playback_After_Recording/peripheral/bsp_audio/bsp_audio.c",
+      "driver_sha256": "ab626e22a9c74bd671353c92f4bab2dd50d129d2e538e078cf56e3a4d6b8eccc",
+      "header_path": "example/V1.1/idf-code/Lesson11-Playback_After_Recording/peripheral/bsp_audio/include/bsp_audio.h",
+      "header_sha256": "11eb268266acb4e6913cf9b7ff04b92fa5d945d3adc600e7f0c64687a98bfc33",
+      "main_path": "example/V1.1/idf-code/Lesson11-Playback_After_Recording/main/main.c",
+      "main_sha256": "6b6ac2c114b6ffc50d7f9e5b080a96630deaa09f845ff35eb942b427a8f69c74"
+    },
+    {
+      "revision": "V1.2",
+      "driver_path": "example/V1.2/idf-code/Lesson11-Playback_After_Recording/peripheral/bsp_audio/bsp_audio.c",
+      "driver_sha256": "3c267a3a1529290e694b218527a49d567803c931282fac0af9fdbc633df2cdf6",
+      "header_path": "example/V1.2/idf-code/Lesson11-Playback_After_Recording/peripheral/bsp_audio/include/bsp_audio.h",
+      "header_sha256": "383b6100510bd26e7180ae52c23380e6b0c4f2f22ebffc146c37702bf2fe2c97",
+      "main_path": "example/V1.2/idf-code/Lesson11-Playback_After_Recording/main/main.c",
+      "main_sha256": "56cea3182defa966eeb096bede964e039e2db67481775401eec59638d875c45b"
+    }
+  ],
+  "elecrow_power_sequence_evidence": [
+    {
+      "revision": "V1.0",
+      "main_path": "example/V1.0/idf-code/Lesson12-Playing_Loca_Music_from_SD_Card/main/main.c",
+      "main_sha256": "58b9e4560de5a086ee921aad37b577110336115dbff6c4c9287a67a62c2e556a"
+    },
+    {
+      "revision": "V1.1",
+      "main_path": "example/V1.1/idf-code/Lesson12-Playing_Loca_Music_from_SD_Card/main/main.c",
+      "main_sha256": "58b9e4560de5a086ee921aad37b577110336115dbff6c4c9287a67a62c2e556a"
+    },
+    {
+      "revision": "V1.2",
+      "main_path": "example/V1.2/idf-code/Lesson12-Playing_Loca_Music_from_SD_Card/main/main.c",
+      "main_sha256": "e4d96ae727b1369007991f4a7419653f2362b0a46a5d344f95dbe44b7a163936"
+    }
+  ],
+  "pinned_espressif_references": {
+    "esp_idf": {
+      "version": "5.5.3",
+      "commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+      "example_source": "examples/peripherals/i2s/i2s_codec/i2s_es8311/main/i2s_es8311_example.c",
+      "example_source_sha256": "9ec0378cb72d0a823dc7c11dd00e9ea041a59dab5a441964621335e4a87e6eb2",
+      "example_manifest": "examples/peripherals/i2s/i2s_codec/i2s_es8311/main/idf_component.yml",
+      "example_manifest_sha256": "23ce50a858ea77a02e5c5a323a6b2f6a73df5d1beace028cfd009914c00251d9",
+      "example_sdkconfig_defaults": "examples/peripherals/i2s/i2s_codec/i2s_es8311/sdkconfig.defaults",
+      "example_sdkconfig_defaults_sha256": "f3afd3a71e901b22db0e311a1eab7bb5591a102bed06b4d3acd331fbb729890a"
+    },
+    "esp_codec_dev": {
+      "registry": "https://components.espressif.com/components/espressif/esp_codec_dev/versions/1.3.4",
+      "version": "1.3.4",
+      "registry_component_hash": "18c22e1411224ba6103c4aca1b01bc740af33926756e9e106370a477d52bcba1",
+      "repository": "https://github.com/espressif/esp-adf/tree/60054d26e02b358de2ac3db0d2b631a46ae240b8/components/esp_codec_dev",
+      "repository_commit": "60054d26e02b358de2ac3db0d2b631a46ae240b8",
+      "source_hashes": {
+        "device/include/es8311_codec.h": "e10f30ab57a2bb6b46d257a7ccba9726b61e1f201182eec2c71731e837db3dca",
+        "device/es8311/es8311.c": "61ebdb8a3c7607d70ce4b4df599b182584d0e1854b6221ca39bfa0cdf194a293",
+        "platform/audio_codec_ctrl_i2c.c": "aa399a105b52b3f077c6a08a7dc4448d04c7dd8581ebc91c63f22aab9b0b3620",
+        "include/esp_codec_dev.h": "3d97d77974011272c53b13deb62e3db9b737a886593687767215aeb3de008c51"
+      }
+    }
+  },
+  "driver_safety_contract": {
+    "amp_control_owner": "platform_audio_not_esp_codec_dev",
+    "esp_codec_dev_pa_pin": -1,
+    "reason": "esp_codec_dev 1.3.4 enables its configured PA pin during es8311_codec_new before the high-level device is muted",
+    "pinned_driver_error_mitigation": {
+      "defect": "esp_codec_dev 1.3.4 discards codec data-interface format/enable and codec set-volume/set-mute return values; its ES8311 set_fs discards the bits/format/sample helper results; and its mute helper discards the REG31 write result",
+      "policy": "never treat the high-level setter result as proof that the ES8311 accepted a safety-critical setting",
+      "mute_readback": "REG31 mask 0x60 must equal 0x60 while muted and 0x00 while unmuted",
+      "volume_readback": "REG32 must equal 0x60 for the exact five-percent diagnostic volume",
+      "clock_and_format_readback": "Immediately before amplifier enable, REG01..REG09 must match the reviewed 16 kHz, 4.096 MHz MCLK, slave Philips-I2S PCM16 configuration using masks for documented preserved bits",
+      "failure_action": "drive GPIO30 high immediately on setter failure, read failure, or register mismatch"
+    },
+    "startup_order": [
+      "drive GPIO30 high before logging, power, bus, or clock creation",
+      "acquire internal LDO3 at 2500 mV, then LDO4 at 3300 mV, and wait 20 ms",
+      "create I2C0 and require an explicit acknowledgement at 7-bit address 0x18",
+      "start I2S1 with GPIO24 MCLK while amplifier remains shut down",
+      "initialize ES8311 at 7-bit address 0x18",
+      "open codec, set mute, cap volume at 10 percent, and read back REG31 and REG32",
+      "submit zero preroll and re-read the reviewed clock, format, mute, and volume registers immediately before amplifier enable",
+      "drive GPIO30 low, wait 20 ms while muted, then unmute"
+    ],
+    "shutdown_order": [
+      "mute ES8311 DAC and verify REG31 mute bits by readback",
+      "wait 10 ms",
+      "drive GPIO30 high",
+      "close codec and clocks",
+      "delete I2C0",
+      "drive GPIO30 high again, then release LDO4 followed by LDO3"
+    ],
+    "tone_limit": {
+      "count": 1,
+      "frequency_hz": 440,
+      "duration_ms": 600,
+      "pcm_peak": 512,
+      "pcm_full_scale": 32767,
+      "fade_ms": 80,
+      "codec_volume_percent": 5
+    },
+    "any_error_action": "drive GPIO30 high, destroy codec and I2C ownership, and release LDO4 then LDO3 before halt",
+    "concurrency_contract": "platform_audio_t is single-owner task state; all calls on one handle require external serialization and are forbidden from ISR context"
+  },
+  "authorization": {
+    "authorized": false,
+    "build_review_complete": true,
+    "flash_app_authorized": false,
+    "flash_project_authorized": false,
+    "hardware_test": null,
+    "blockers": [
+      "The repository board profile still denies every audio GPIO and runtime claim.",
+      "The reusable board profile remains runtime-denied; only the separately reviewed one-shot audio_diag exception may authorize an app-only run.",
+      "GPIO45/GPIO46 ownership must be exclusive or provided by a future shared I2C service.",
+      "Speaker impedance, analog gain, current, pop behavior, and audible level remain unmeasured."
+    ]
+  },
+  "claims_not_made": [
+    "The connected PCB revision is physically identified.",
+    "The ES8311 acknowledges at address 0x18 on the connected unit.",
+    "The NS4263B or either speaker produces audio.",
+    "The chosen volume is audible, pop-free, or safe for every attached speaker.",
+    "Audio can coexist with touch or another GPIO45/GPIO46 client.",
+    "This build has been flashed or executed."
+  ]
+}

@@ -1,0 +1,12 @@
+menu "ESP32-P4 platform touch"
+    config PLATFORM_TOUCH_ELECROW_10_1_CROSS_REVISION_AUTHORIZED
+        bool "Compile the bounded Elecrow 10.1-inch GT911 touch client"
+        default n
+        help
+            Enables only the reviewed cross-revision touch path: a borrowed
+            shared I2C1 handle with a 400 kHz GT911 device, GPIO40 reset,
+            GPIO42 address-latch/interrupt input, primary 0x5d then cleaned
+            0x14 fallback, polling-only runtime with no ISR callback, and
+            1024x600 frames with at most five contacts. This build gate does
+            not authorize flashing and is not hardware verification.
+endmenu

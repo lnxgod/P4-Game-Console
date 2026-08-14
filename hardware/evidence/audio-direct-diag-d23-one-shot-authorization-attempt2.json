@@ -1,0 +1,222 @@
+{
+  "schema": 1,
+  "id": "audio-direct-diag-d23-one-shot-authorization-2026-08-13",
+  "attempt": 2,
+  "classification": "user-requested-bounded-reusable-audio-one-shot",
+  "result": "authorized-exact-app-preflash-reviewed",
+  "scope": "audio_direct_diag_d2_3_single_bounded_service_tone_on_connected_unit_attempt2",
+  "authorization_source": {
+    "actor": "user",
+    "date": "2026-08-12",
+    "record": "active_task_conversation",
+    "requested_outcome": "Get Doom running with joystick and sound by morning; do whatever is required within the connected device scope.",
+    "authorized_actions": [
+      "app-only-write-to-saved-factory-app-offset",
+      "acquire-internal-ldo3-2500mv-then-ldo4-3300mv-for-standalone-test",
+      "exercise-reusable-direct-i2s1-platform-audio-service",
+      "enable-active-low-gpio30-amplifier-candidate-after-full-ring-zero-prime",
+      "play-one-bounded-quiet-tone",
+      "record-external-mac-microphone-evidence"
+    ]
+  },
+  "source_evidence": {
+    "factory_semantics": "hardware/evidence/elecrow-10.1-factory-audio-semantics.json",
+    "prior_serial_run": "hardware/test-runs/2026-08-12-audio-diag-d22.json",
+    "build_evidence": "test-runs/2026-08-13-audio-d23-build.json"
+  },
+  "previous_attempt": {
+    "attempt": 1,
+    "authorization_record": "hardware/evidence/audio-direct-diag-d23-one-shot-authorization.json",
+    "authorization_sha256": "368d8a7028d30d4dcd6f2ac76121efde511634380a75a693b3ce9c0d9aeebd76",
+    "failure_evidence": "hardware/test-runs/2026-08-13-audio-direct-d23-attempt1.json",
+    "failure_evidence_sha256": "ffdd3c0e63950081c671d8e158dda4810af567c8695e5f014be466a430f0e78d",
+    "result": "fail-safe-no-tone",
+    "receipt_consumed_once": true,
+    "authorization_revoked": true,
+    "host_arm_transmitted": false,
+    "tone_played": false
+  },
+  "exact_artifact": {
+    "offset": "0x10000",
+    "bytes": 196896,
+    "sha256": "6500b7a86d56ef4e007b6ac979c8cb81017eaca09c4e779a22fdb5286d635c60"
+  },
+  "exact_host_arm": {
+    "authorization_id": "audio-direct-diag-d23-one-shot-authorization-2026-08-13",
+    "nonce_derivation": "sha256-ascii-authorization-id-space-host-arm-space-v1",
+    "nonce": "0c47666f7da543e93831e0dfdcb7fecd6bb9887f0d0d0c72ee4422826b573562",
+    "frame_bytes": 138,
+    "frame_sha256": "cce24d670298f6d62755d240d14f928c212d82fea6246517eb8edaf48f0fade9",
+    "line_ending": "LF-only",
+    "silent_force_safe_delay_ms": 2000,
+    "arm_timeout_ms": 15000,
+    "duplicate_guard_ms": 100,
+    "rails_off_until_arm_accepted": true,
+    "amplifier_shutdown_until_backend_start": true,
+    "no_missing_malformed_duplicate_or_timed_out_frame_may_energize_audio": true
+  },
+  "exact_runtime_limits": {
+    "i2s_controller": 1,
+    "lrclk_gpio": 21,
+    "bclk_gpio": 22,
+    "dout_gpio": 23,
+    "mclk": "unused",
+    "sample_rate_hz": 16000,
+    "channels": 2,
+    "sample_bits": 16,
+    "dma_descriptor_count": 6,
+    "dma_frames_per_descriptor": 256,
+    "public_write_frames": 128,
+    "write_timeout_ms": 100,
+    "tone_count": 1,
+    "frequency_hz": 440,
+    "duration_ms": 400,
+    "fade_ms": 50,
+    "input_pcm_peak": 32767,
+    "maximum_i2s_pcm_peak": 512,
+    "amplifier_shutdown_gpio": 30,
+    "amplifier_shutdown_level": 1
+  },
+  "exact_host_tooling": {
+    "capture_cli": {
+      "path": "scripts/capture-audio-direct-diag.py",
+      "sha256": "92944401d288e6f3bc90603bb85b7350e57afd48dca2f98e9189f9fbb00c4649"
+    },
+    "capture_transport": {
+      "path": "scripts/d23_capture_transport.py",
+      "sha256": "7e908368ae7fc3a9efb7e928ad52ee7c779b640127c3f81256957bc7e7fa950a"
+    },
+    "capture_transport_test": {
+      "path": "scripts/tests/test-d23-capture-transport.py",
+      "sha256": "95e74b0a4c4d78356f4ef061786ebddb6a0c873fbbd371563b17b7d12abcbcb4"
+    },
+    "analyzer": {
+      "path": "scripts/analyze-audio-tone.py",
+      "sha256": "1126a0f2f556a9ffefef8cc2eaa11ea1bc994c3a8d5d51d16d76f218d39571f0"
+    },
+    "central_flash": {
+      "path": "scripts/flash.sh",
+      "sha256": "db9a3390d3c641f955ac91a096699c28ec1fa5b1bf46ae3e3285e561f6658fc2"
+    }
+  },
+  "attempt2_launch_transport": {
+    "ledger_path": "hardware/local-state/audio-direct-d23-attempt2.json",
+    "same_open_pyserial_handle": true,
+    "uart_transport_only": true,
+    "live_device_identity_checked_before_receipt_consumption": true,
+    "esptool_flush_input_before_receipt_consumption": true,
+    "pre_run_rx_bytes_required": 0,
+    "receipt_atomically_consumed_before_launch": true,
+    "esptool_version": "4.12.0",
+    "custom_hard_reset_sequence_required": null,
+    "launch_sequence": [
+      "esp.run",
+      "esp.hard_reset",
+      "restore_dtr_false",
+      "restore_rts_false",
+      "start_serial_read_without_post_launch_flush"
+    ],
+    "run_count": 1,
+    "hard_reset_count": 1,
+    "hard_reset_rts_en_pulse_ms": 100,
+    "dtr_assertion_count": 0,
+    "exactly_one_allowed_reset_reason_required_before_serial_attach": true,
+    "reset_or_rom_banner_rejected_from_serial_attach_onward": true
+  },
+  "one_shot_transport": {
+    "deferred_capture_flag_required_before_hardware": true,
+    "launch_receipt_argument_required_before_host_preflight": true,
+    "independent_host_preflight_runs": 3,
+    "minimum_microphone_capture_seconds_per_preflight": 1,
+    "preflights_complete_before_receipt_reservation": true,
+    "receipt_private_path_validation_before_reservation_and_board_probe": true,
+    "receipt_parent_mode": "0700",
+    "receipt_file_mode": "0600",
+    "reservation_is_atomic_and_durable": true,
+    "reservation_precedes_any_board_probe": true,
+    "reservation_binds_authorization_artifact_and_saved_device_identity": true,
+    "one_pending_or_consumed_receipt_per_authorization_hash": true,
+    "failure_after_reservation_is_terminal": true,
+    "failure_after_consumption_requires_new_authorization": true,
+    "exact_snapshot_mode": "0400",
+    "direct_app_only_write_after": "no_reset",
+    "exact_chunked_readback_before_receipt_emit": true,
+    "central_flash_never_runs_d2_3": true,
+    "microphone_capture_started_before_run": true,
+    "arm_frame_tx_count": 1,
+    "signals_fail_active_reservation": [
+      "EXIT",
+      "HUP",
+      "INT",
+      "TERM"
+    ]
+  },
+  "exception_boundary": {
+    "supersedes_audio_runtime_denial_for_this_exact_app_once": true,
+    "reusable_board_profile_audio_policy_unchanged_until_acceptance_passes": true,
+    "application_flash_scope": "factory_app_partition_only_at_0x10000",
+    "full_project_flash_authorized": false,
+    "single_launch_after_exact_readback_and_receipt_consumption": true,
+    "display_touch_storage_usb_i2c_codec_mclk_camera_wireless_authorized": false,
+    "connected_unit_only": true,
+    "doom_composite_authorized": false,
+    "hardware_pass_requires_serial_microphone_and_operator_audibility_evidence": true
+  },
+  "serial_acceptance": {
+    "exact_marker_order": [
+      "SERIAL_ATTACH",
+      "WAIT_ARM",
+      "ARM_ACCEPTED",
+      "START",
+      "SAFE",
+      "POWER_READY",
+      "BACKEND_READY",
+      "CAPTURE_ARM",
+      "TONE_BEGIN",
+      "POSTROLL",
+      "PASS",
+      "HEARTBEAT"
+    ],
+    "each_exact_marker_count": 1,
+    "reject_markers_absent": true,
+    "host_wait_after_heartbeat_seconds_minimum": 1
+  },
+  "acoustic_acceptance": {
+    "capture_device": "MacBook Pro Microphone",
+    "capture_format": "mono_pcm_s16le_wav_48000hz",
+    "capture_must_span": "before_capture_arm_through_heartbeat_and_at_least_tone_begin_plus_1.35_seconds",
+    "analyzer": "scripts/analyze-audio-tone.py",
+    "analyzer_sha256": "1126a0f2f556a9ffefef8cc2eaa11ea1bc994c3a8d5d51d16d76f218d39571f0",
+    "analyzer_schema": 1,
+    "analyzer_thresholds_not_cli_overridable": true,
+    "ordered_serial_markers_required": [
+      "CAPTURE_ARM",
+      "TONE_BEGIN",
+      "POSTROLL",
+      "PASS",
+      "HEARTBEAT"
+    ],
+    "serial_correlated_tone_window_required": true,
+    "capture_span_wall_clock_verified_from_capture_arm_through_heartbeat": true,
+    "portaudio_frames_per_callback": 480,
+    "portaudio_callback_status_flags": 0,
+    "portaudio_adc_continuity_required": true,
+    "portaudio_to_monotonic_start_uncertainty_max_ns": 2000000,
+    "portaudio_to_monotonic_end_uncertainty_max_ns": 2000000,
+    "portaudio_to_monotonic_offset_jump_max_ns": 2000000,
+    "monotonic_to_wall_offset_jump_max_ns": 2000000,
+    "expected_dominant_frequency_hz": 440,
+    "frequency_tolerance_hz": 5,
+    "minimum_dominant_over_pre_post_noise_db": 12,
+    "minimum_adjacent_band_margin_db": 6,
+    "guaranteed_full_pre_post_baselines_required": true,
+    "exactly_one_sustained_tone_event_required": true,
+    "tone_event_duration_min_ms": 300,
+    "tone_event_duration_max_ms": 650,
+    "full_acoustic_pass_requires": [
+      "synchronized_microphone_detection_pass",
+      "contemporaneous_operator_audibility_confirmation"
+    ],
+    "pop_observation_recorded_separately": true
+  }
+}

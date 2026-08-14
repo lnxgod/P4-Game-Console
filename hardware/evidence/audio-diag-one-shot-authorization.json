@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "id": "audio-diag-one-shot-authorization-2026-08-12",
+  "classification": "user-requested-bounded-audio-one-shot",
+  "result": "authorized-exact-app-preflash-reviewed",
+  "scope": "audio_diag_single_bounded_tone",
+  "authorization_source": {
+    "actor": "user",
+    "date": "2026-08-12",
+    "record": "active_task_conversation",
+    "requested_outcome": "Get Doom running with joystick and sound, beginning with a bounded speaker-path diagnostic.",
+    "authorized_actions": [
+      "app-only-write-to-saved-factory-app-offset",
+      "acquire-internal-ldo3-2500mv-and-ldo4-3300mv-for-vendor-board-power-prerequisite",
+      "initialize-reviewed-es8311-i2s-and-i2c-path",
+      "probe-es8311-address-0x18-before-codec-initialization",
+      "enable-ns4263b-only-after-verified-codec-guard",
+      "play-one-bounded-quiet-tone"
+    ]
+  },
+  "inherited_electrical_path": {
+    "evidence": "hardware/evidence/elecrow-10.1-audio-driver-path.json",
+    "vendor": "Elecrow",
+    "model": "DHE04310D",
+    "published_revisions": [
+      "V1.0",
+      "V1.1",
+      "V1.2"
+    ],
+    "board_power": {
+      "ldo3_channel": 3,
+      "ldo3_voltage_mv": 2500,
+      "ldo4_channel": 4,
+      "ldo4_voltage_mv": 3300,
+      "settle_ms": 20,
+      "acquisition_order": "ldo3_then_ldo4",
+      "release_order": "ldo4_then_ldo3",
+      "ldo4_audio_dependency": "VDDPST_5_GPIO45_GPIO46_and_Q8_Q9_gate_domain"
+    },
+    "codec": "ES8311",
+    "power_amplifier": "NS4263B",
+    "i2s_controller": 1,
+    "i2s_gpio": {
+      "lrclk": 21,
+      "bclk": 22,
+      "dout": 23,
+      "mclk": 24
+    },
+    "i2c_controller": 0,
+    "i2c_gpio": {
+      "sda": 45,
+      "scl": 46
+    },
+    "codec_address_7bit": "0x18",
+    "amplifier_shutdown_gpio": 30,
+    "amplifier_shutdown_active_level": 1
+  },
+  "exact_runtime_limits": {
+    "codec_probe_address_7bit": "0x18",
+    "codec_probe_timeout_ms": 100,
+    "tone_count": 1,
+    "frequency_hz": 440,
+    "duration_ms": 600,
+    "fade_ms": 80,
+    "pcm_peak": 512,
+    "pcm_full_scale": 32767,
+    "codec_volume_percent": 5,
+    "bringup_volume_ceiling_percent": 10,
+    "codec_pa_pin": -1,
+    "verified_codec_registers_before_amplifier_enable": {
+      "clock_and_format": [
+        "REG01=0x3f",
+        "REG02=0x00",
+        "REG03&0x7f=0x10",
+        "REG04&0x7f=0x20",
+        "REG05=0x00",
+        "REG06&0x3f=0x03",
+        "REG07&0x3f=0x00",
+        "REG08=0xff",
+        "REG09&0x1f=0x0c"
+      ],
+      "mute_register": "0x31",
+      "mute_mask": "0x60",
+      "expected_muted_bits": "0x60",
+      "volume_register": "0x32",
+      "expected_value": "0x60"
+    }
+  },
+  "exception_boundary": {
+    "supersedes_audio_runtime_denial_for_this_app_once": true,
+    "reusable_board_profile_audio_policy_unchanged": true,
+    "shared_i2c_bus_must_have_no_other_owner": true,
+    "internal_ldo3_ldo4_owned_only_by_standalone_diagnostic": true,
+    "display_and_dsi_remain_uninitialized_while_ldo3_is_energized": true,
+    "application_flash_scope": "factory_app_partition_only_at_0x10000",
+    "full_project_flash_authorized": false,
+    "display_touch_storage_usb_camera_wireless_authorized": false,
+    "hardware_pass_requires_serial_and_observed_output_evidence": true
+  },
+  "preflash_gate": {
+    "metadata_flag_required": "apps/audio_diag/app-metadata.json:flash_app_authorized=true",
+    "exact_build_verifier": "scripts/verify-audio-diag.py",
+    "exact_build_evidence": "test-runs/2026-08-12-audio-d2-build.json",
+    "reviewed_app_binary_bytes": 244752,
+    "reviewed_app_binary_sha256": "920b8100411416c0dd197cb7c1f2c1986335ae1ebf0d30585f4be80ad4da8c98",
+    "exact_app_preflash_review_complete": true,
+    "build_only_verifier_result": "pass",
+    "central_flash_hook": "scripts/flash.sh",
+    "central_flash_hook_verified": true,
+    "flash_mode": "app-flash",
+    "readback_required_before_launch": true,
+    "deferred_readback_and_single_run_verified": true,
+    "hardware_execution_record_pending": true
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "id": "audio-direct-d23-connected-unit-attempt2-2026-08-13",
+  "timestamp_utc": "2026-08-13T08:55:27.119532Z",
+  "classification": "hardware-serial-pass-acoustic-fail",
+  "result": "fail-no-microphone-detected-tone",
+  "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+  "exact_artifact": {
+    "offset": "0x10000",
+    "bytes": 196896,
+    "sha256": "6500b7a86d56ef4e007b6ac979c8cb81017eaca09c4e779a22fdb5286d635c60",
+    "write_verified_by_esptool": true,
+    "exact_application_readback_verified": true,
+    "readback_chunks": 1
+  },
+  "authorization": {
+    "record": "hardware/evidence/audio-direct-diag-d23-one-shot-authorization-attempt2.json",
+    "sha256": "1c52e293ac67249a20f19c68e7e02b013d99cad742e8556f7a9a2457cd13ad9a",
+    "receipt_sha256": "997746989cc7b5f862f928356d7ac8ebe3e9e88dd152d0c2d7ebf6c9c0aa4963",
+    "consumed_once": true,
+    "revoked_after_completion": true
+  },
+  "transport": {
+    "capture_tool_sha256": "92944401d288e6f3bc90603bb85b7350e57afd48dca2f98e9189f9fbb00c4649",
+    "capture_transport_sha256": "7e908368ae7fc3a9efb7e928ad52ee7c779b640127c3f81256957bc7e7fa950a",
+    "timing_sha256": "33c6dcee3d6ffc6d893cf0160fac86cd589a55577565107d971fd34a3af186f4",
+    "status": "completed",
+    "launch_count": 1,
+    "same_serial_handle": true,
+    "hard_reset_count": 1,
+    "arm_frame_transmitted_count": 1
+  },
+  "serial_result": {
+    "result": "pass",
+    "exact_markers_once_and_ordered": [
+      "SERIAL_ATTACH",
+      "WAIT_ARM",
+      "ARM_ACCEPTED",
+      "START",
+      "SAFE",
+      "POWER_READY",
+      "BACKEND_READY",
+      "CAPTURE_ARM",
+      "TONE_BEGIN",
+      "POSTROLL",
+      "PASS",
+      "HEARTBEAT"
+    ],
+    "tone_write_calls": 62,
+    "partial_writes": 0,
+    "amp_shutdown_after_tone": true,
+    "ldo3_released": true,
+    "ldo4_released": true,
+    "panic_watchdog_assert_halt_markers": 0
+  },
+  "microphone_result": {
+    "result": "fail",
+    "capture_device": "MacBook Pro Microphone",
+    "format": "mono_pcm16_48000hz",
+    "capture_seconds": 9.34,
+    "wav_bytes": 896684,
+    "wav_sha256": "9b67f2adf03fa176950bf2407a99a842a5c2e06bfeee43bb9177e152f9f3493f",
+    "analyzer_sha256": "1126a0f2f556a9ffefef8cc2eaa11ea1bc994c3a8d5d51d16d76f218d39571f0",
+    "dominant_hz": 440.0,
+    "frequency_within_5_hz": true,
+    "dominant_amplitude_pcm": 3.573377370930767,
+    "baseline_440_amplitude_pcm": 5.1455356310571,
+    "noise_rms_pcm": 44.59581772244269,
+    "dominant_over_baseline_db": -3.167034141139026,
+    "tone_event_count": 0,
+    "exactly_one_tone_event": false,
+    "analyzer_pass": false,
+    "operator_audibility_confirmation": null,
+    "operator_pop_observation": null
+  },
+  "conclusion": "The direct-I2S service and safe lifecycle ran successfully, but synchronized microphone evidence did not detect an audible 440 Hz event. The connected-unit speaker path is not accepted. Do not authorize Doom audio or globally promote this backend until electrical routing and level are diagnosed with a new explicit test authorization."
+}

@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "id": "doom-embedded-e1-connected-unit-2026-08-13",
+  "timestamp_utc": "2026-08-13T10:22:13Z",
+  "timestamp_local": "2026-08-13T03:22:13-07:00",
+  "classification": "hardware-serial-runtime-pass-visual-pending",
+  "result": "serial-runtime-pass-visual-pending",
+  "app": "doom_embedded",
+  "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+  "artifact": {
+    "offset": "0x10000",
+    "bytes": 4821648,
+    "sha256": "971aa57f154fdc7f3932d339b95a5dd62d659e72c11edb4cf448f412f3299f7e",
+    "elf_bytes": 12912728,
+    "elf_sha256": "3518df8ae9bb4c9b63e4304461a4344c0cfde6787041d5ad0b7fc359ad7fd47c",
+    "build_evidence_path": "test-runs/2026-08-12-doom-embedded-e1-build.json",
+    "build_evidence_sha256": "ad9c32d9087576ca6598b6a61bd27f41bd02f82bd3e5fdbc9e3e1ee64327ab3c",
+    "verifier_path": "scripts/verify-doom-embedded.py",
+    "verifier_sha256": "937c2184d3a47239abc7f9111a89b3284ef5ff7201c6d70fa686fa61b1ad9a49"
+  },
+  "installation": {
+    "app_only": true,
+    "project_flash": false,
+    "bootloader_written": false,
+    "partition_table_written": false,
+    "esptool_write_hash_verified": true,
+    "exact_chunked_host_readback_verified": true,
+    "readback_chunks": 10,
+    "readback_max_chunk_bytes": 524288,
+    "readback_bytes": 4821648,
+    "readback_sha256": "971aa57f154fdc7f3932d339b95a5dd62d659e72c11edb4cf448f412f3299f7e",
+    "launch_deferred_until_after_exact_readback": true,
+    "launch_count": 1,
+    "flash_route_path": "scripts/flash.sh",
+    "flash_route_sha256": "db9a3390d3c641f955ac91a096699c28ec1fa5b1bf46ae3e3285e561f6658fc2"
+  },
+  "runtime": {
+    "wad_identity": "doom-shareware-1.9",
+    "wad_bytes": 4196020,
+    "wad_sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+    "wad_location": "embedded-read-only-vfs",
+    "sd_card_used": false,
+    "input": "neutral",
+    "audio": "disabled",
+    "panel_mode": "1024x600-rgb565-2lane-900mbps-51mhz",
+    "viewport": "960x600",
+    "margins_px": [
+      32,
+      32
+    ],
+    "capture_started_after_launch": true,
+    "startup_markers_sampled": false,
+    "latest_stats": {
+      "frames": 2100,
+      "submits": 2101,
+      "completions": 2101,
+      "timeouts": 0,
+      "failures": 0,
+      "refreshes": 8438,
+      "underruns": "unavailable"
+    },
+    "panic_seen": false,
+    "watchdog_seen": false,
+    "brownout_seen": false,
+    "halt_seen": false,
+    "exit_seen": false,
+    "board_left_running": true
+  },
+  "serial_capture": {
+    "result": "pass",
+    "capture_tool_path": "scripts/capture-doom-embedded-serial.py",
+    "capture_tool_sha256": "c9d89ed0f10f73e2ca34325c901e0d818f8d92dba3c706056a86c5760dd8cc55",
+    "raw_path": "hardware/local-state/doom-embedded-e1-2026-08-13.serial.bin",
+    "raw_bytes": 326,
+    "raw_sha256": "c45ed3a8f92df115652e37e6e4f492bb61fae4168c531ff4f045fe8de431902d",
+    "summary_path": "hardware/local-state/doom-embedded-e1-2026-08-13.serial.json",
+    "summary_bytes": 857,
+    "summary_sha256": "7e597e35b1db3d07ee9c9f6a54a46cc0ef6c21d7b2cd8b5169947efcf9d5d439",
+    "baud": 115200,
+    "serial_exclusive": true,
+    "dtr": false,
+    "rts": false,
+    "hupcl": false,
+    "transmitted_bytes": 0,
+    "duration_seconds": 30.024556,
+    "stats_count": 2,
+    "stats": [
+      {
+        "frames": 1800,
+        "submits": 1801,
+        "completions": 1801,
+        "timeouts": 0,
+        "failures": 0,
+        "refreshes": 7237
+      },
+      {
+        "frames": 2100,
+        "submits": 2101,
+        "completions": 2101,
+        "timeouts": 0,
+        "failures": 0,
+        "refreshes": 8438
+      }
+    ],
+    "stats_valid": true,
+    "stats_monotonic": true,
+    "reject_markers": []
+  },
+  "visual": {
+    "photobooth_inspected": true,
+    "capture_path": "hardware/local-state/doom-embedded-e1-2026-08-13-photobooth.jpeg",
+    "capture_bytes": 157029,
+    "capture_sha256": "7cda465140f9fd74f983e580364cd777742f18160d5ad8bf8cdc94ed1e96538d",
+    "panel_readable_in_frame": false,
+    "doom_image_confirmed": false,
+    "reason": "The live Photo Booth frame showed the room but did not contain a readable view of the CrowPanel; no visual claim was inferred from distant objects."
+  },
+  "authorization": {
+    "user_authorized_completion_work": true,
+    "app_only": true,
+    "project_flash": false,
+    "one_shot_app_authorization_revoked_after_run": true,
+    "runtime_supported": false
+  },
+  "conclusion": "The exact embedded-WAD silent Doom image was written only to the application partition, independently read back byte-for-byte, and launched once. A receive-only no-reset serial attachment then observed increasing 1800- and 2100-frame checkpoints with one completion per submission and zero timeout, failure, panic, watchdog, brownout, halt, or exit markers. Visual acceptance remains pending because the CrowPanel was not readable in the Photo Booth frame; this E1 fallback deliberately has neutral input and no audio."
+}

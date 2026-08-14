@@ -1,0 +1,47 @@
+{
+  "schema": 1,
+  "id": "doom-embedded-e1-2026-08-12",
+  "timestamp_local": "2026-08-12T22:53:00-07:00",
+  "result": "serial-runtime-pass-visual-pending",
+  "app": "doom_embedded",
+  "artifact": {
+    "offset": "0x10000",
+    "bytes": 4821648,
+    "sha256": "971aa57f154fdc7f3932d339b95a5dd62d659e72c11edb4cf448f412f3299f7e",
+    "on_chip_flash_hash_verified_by_esptool": true,
+    "exact_chunked_host_readback_verified": true,
+    "readback_chunks": 10,
+    "launch_deferred_until_after_exact_readback": true
+  },
+  "runtime": {
+    "wad_identity": "doom-shareware-1.9",
+    "wad_bytes": 4196020,
+    "wad_sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+    "wad_vfs": "read-only",
+    "panel_ready": "1024x600-rgb565-2lane-900mbps-51mhz",
+    "viewport": "960x600",
+    "margins_px": [32, 32],
+    "frames": 1200,
+    "submits": 1201,
+    "completions": 1201,
+    "timeouts": 0,
+    "failures": 0,
+    "refreshes": 4836,
+    "panic_seen": false,
+    "watchdog_seen": false,
+    "halt_seen": false,
+    "underrun_literal_seen": false,
+    "input": "neutral",
+    "audio": "disabled"
+  },
+  "visual": {
+    "observed": false,
+    "reason": "The live Photo Booth frame no longer contained the panel; a recognizable Doom image and tear check remain pending."
+  },
+  "authorization": {
+    "app_only": true,
+    "project_flash": false,
+    "one_shot_authorization_revoked_after_run": true
+  },
+  "conclusion": "Doom, the exact embedded shareware WAD, and the display submission path ran for at least 1200 frames with one completion per submission and no timeout or failure. Visual acceptance remains pending because the panel was outside the camera frame."
+}

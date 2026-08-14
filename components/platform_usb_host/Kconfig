@@ -1,0 +1,70 @@
+menu "ESP32-P4 external USB host fixture gate"
+
+config PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
+    bool "A reviewed powered/backfeed-safe USB host fixture is attached"
+    default n
+    help
+        Keep this disabled until the exact CrowPanel PCB path and the external
+        host fixture have review evidence. Enabling it alone is insufficient;
+        every property below and a non-empty evidence ID are also required.
+
+config PLATFORM_USB_HOST_FIXTURE_EVIDENCE_ID
+    string "Fixture evidence record ID"
+    default ""
+    depends on PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
+
+config PLATFORM_USB_HOST_FIXTURE_EVIDENCE_SHA256
+    string "SHA-256 of committed fixture evidence JSON"
+    default ""
+    depends on PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
+    help
+        A repository verifier must bind this 64-digit value and the evidence ID
+        to a committed, reviewed fixture record before an authorized build.
+
+config PLATFORM_USB_HOST_FIXTURE_CURRENT_LIMIT_MA
+    int "Measured VBUS current limit (mA)"
+    range 100 500
+    default 100
+    depends on PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
+
+config PLATFORM_USB_HOST_FIXTURE_EXTERNAL_VBUS
+    bool "Fixture, not CrowPanel, supplies switched 5 V VBUS"
+    default n
+    depends on PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
+
+config PLATFORM_USB_HOST_FIXTURE_CURRENT_LIMITED
+    bool "VBUS current limiting was measured"
+    default n
+    depends on PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
+
+config PLATFORM_USB_HOST_FIXTURE_BACKFEED_BLOCKED
+    bool "Backfeed into CrowPanel and programmer is blocked"
+    default n
+    depends on PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
+
+config PLATFORM_USB_HOST_FIXTURE_COMMON_GROUND
+    bool "Fixture and CrowPanel have a verified common ground"
+    default n
+    depends on PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
+
+config PLATFORM_USB_HOST_FIXTURE_DATA_PAIR_DIRECT
+    bool "D+/D- route directly without an unqualified HS hub"
+    default n
+    depends on PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
+
+config PLATFORM_USB_HOST_FIXTURE_SOURCE_ROLE_COMPLIANT
+    bool "Receptacle advertises a standards-compliant source role"
+    default n
+    depends on PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
+
+config PLATFORM_USB_HOST_FIXTURE_FAULT_VISIBLE
+    bool "Overcurrent/fault state is observable"
+    default n
+    depends on PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
+
+config PLATFORM_USB_HOST_BOARD_PATH_REVIEWED
+    bool "Exact physical PCB USB data and VBUS path was reviewed"
+    default n
+    depends on PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
+
+endmenu

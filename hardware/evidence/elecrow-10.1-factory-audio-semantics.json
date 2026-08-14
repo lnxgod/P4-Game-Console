@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "classification": "exact-official-factory-source-audio-semantics",
+  "result": "pass-source-audit-build-input-runtime-unproven",
+  "scope": "audio_diag_d2_2_controller_and_direct_i2s_probe_selection",
+  "official_source": {
+    "vendor": "Elecrow",
+    "model": "DHE04310D",
+    "repository": "https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen",
+    "commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+    "archive_repository_path": "factory_sourcecode/V1.0/ESP32-P4-Adcance-brookesia_phone_inch10_1.zip",
+    "archive_bytes": 13819158,
+    "archive_sha256": "73b32c4d4dc89cc0b091388d6a7862d827d6548412717bcb1f36f7adb8da2e28"
+  },
+  "reviewed_members": [
+    {
+      "path": "components/espressif__esp32_p4_function_ev_board/esp32_p4_function_ev_board.c",
+      "bytes": 25517,
+      "sha256": "f0aa354307710744f37d57b8ea23942b13d6ae38c26a98ad118c606ae5b11b69"
+    },
+    {
+      "path": "components/espressif__esp32_p4_function_ev_board/include/bsp/esp32_p4_function_ev_board.h",
+      "bytes": 12418,
+      "sha256": "b9dba4a11ff952ac42f20314ef8fec7db7e87affbe04667ce62e5d0c655c7341"
+    },
+    {
+      "path": "components/espressif__esp32_p4_function_ev_board/my_codec.c",
+      "bytes": 12051,
+      "sha256": "f80ee68cd9e079725e9ea68d218b04c06438a86a91988e98750dfbc4b319ee18"
+    },
+    {
+      "path": "sdkconfig",
+      "bytes": 105671,
+      "sha256": "a695398707cc2a541be38a68090e0fc8447f3e6c3285346035ca625f80aec189"
+    }
+  ],
+  "source_semantics": {
+    "controller_selection": {
+      "sdkconfig_i2c": "CONFIG_BSP_I2C_NUM=1",
+      "sdkconfig_i2s": "CONFIG_BSP_I2S_NUM=1",
+      "bsp_i2c_binding": ".i2c_port = BSP_I2C_NUM",
+      "bsp_i2s_binding": ".id = CONFIG_BSP_I2S_NUM"
+    },
+    "speaker_tx": {
+      "controller": 1,
+      "sample_rate_hz": 16000,
+      "pcm": "stereo_signed_16_bit_factory_slot_configuration",
+      "lrclk_gpio": 21,
+      "bclk_gpio": 22,
+      "dout_gpio": 23,
+      "mclk": "I2S_GPIO_UNUSED",
+      "amplifier_shutdown_gpio": 30,
+      "amplifier_enable_level": 0,
+      "ordering": "i2s_channel_enable_before_gpio30_low"
+    },
+    "codec_control": {
+      "implementation": "fake_in_memory_register_array",
+      "constructor": "my_codec_ctrl_new",
+      "read_semantics": "data_is_loaded_from_ctrl_if_reg_addr",
+      "write_semantics": "data_is_stored_to_ctrl_if_reg_addr",
+      "external_i2c_transactions": false,
+      "conclusion": "The factory source does not initialize or prove an external ES8311 even though bsp_audio_codec_speaker_init first calls bsp_i2c_init."
+    },
+    "microphone_path_excluded": {
+      "factory_rx_controller": 0,
+      "pdm_clock_gpio": 24,
+      "pdm_data_gpio": 26,
+      "d2_2_initializes_rx": false
+    }
+  },
+  "d2_2_derived_contract": {
+    "gpio30_high_before_any_log_power_bus_or_clock": true,
+    "ldo3_mv": 2500,
+    "ldo4_mv": 3300,
+    "i2c_controller": 1,
+    "i2c_scan_first_7bit": "0x08",
+    "i2c_scan_last_7bit": "0x77",
+    "i2c_probe_timeout_per_address_ms": 10,
+    "ack_addresses_logged": true,
+    "es8311_ack_path": "retain_project_guarded_es8311_driver_with_gpio24_mclk",
+    "es8311_no_ack_path": "delete_i2c_bus_then_factory_style_i2s1_tx_gpio21_gpio22_gpio23_without_mclk",
+    "zero_preroll_frames": 256,
+    "amplifier_enable_after_i2s_ready_and_zero_preroll": true,
+    "tone_count": 1,
+    "tone_duration_ms": 400,
+    "tone_peak_pcm": 512,
+    "any_error_action": "gpio30_high_then_delete_owned_bus_and_clock_objects_then_release_ldo4_then_ldo3"
+  },
+  "claims_not_made": [
+    "The factory source contains a real ES8311 register driver.",
+    "The exact connected PCB uses the same populated audio path as the factory source.",
+    "The direct-I2S path produces sound on the connected unit.",
+    "The D2.2 image is authorized to flash or execute.",
+    "The microphone, display, touch, storage, USB, camera, or wireless paths are initialized by D2.2."
+  ]
+}

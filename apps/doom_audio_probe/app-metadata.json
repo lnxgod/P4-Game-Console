@@ -1,0 +1,18 @@
+{
+  "schema": 1,
+  "app": "doom_audio_probe",
+  "stage": "P0",
+  "evidence_class": "build-only",
+  "purpose": "Cross-compile the bounded 16 kHz stereo Doom SFX seam without starting Doom or any hardware service.",
+  "runtime_supported": false,
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "game_data_embedded": false,
+  "hardware_interfaces": [],
+  "runtime_blockers": [
+    "The audio-enabled composite Doom lifecycle is intentionally absent.",
+    "This probe does not create an I2C bus, codec, amplifier, display, or WAD service.",
+    "Audio runtime authorization and corrected standalone hardware acceptance are still required before integration."
+  ]
+}

@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "id": "doom-d05-idf-build-2026-08-12",
+  "timestamp_utc": "2026-08-13T01:24:57Z",
+  "classification": "build-tested",
+  "result": "pass",
+  "engine": {
+    "repository": "https://github.com/ozkl/doomgeneric.git",
+    "commit": "dcb7a8dbc7a16ce3dda29382ac9aae9d77d21284",
+    "tree": "413539bdaa1521af167d9b34e9db0cd193367624",
+    "vendor_files_verified": 205,
+    "vendor_files_modified": false
+  },
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "compiler": "riscv32-esp-elf GCC 14.2.0_20251107"
+  },
+  "build": {
+    "command": "./scripts/build.sh doom",
+    "target": "esp32p4",
+    "silicon_family": "revision_1_x",
+    "minimum_revision_full": 100,
+    "maximum_revision_full": 199,
+    "reproducible_build": true,
+    "independent_build_directories_compared": 2,
+    "identical_binary": true,
+    "identical_elf": true
+  },
+  "link": {
+    "selected_engine_sources": 80,
+    "archive_members": 80,
+    "map_members": 80,
+    "whole_archive": true,
+    "project_adapter_warnings_as_errors": true,
+    "immutable_upstream_compiler_warnings": 43,
+    "immutable_upstream_warning_classes": {
+      "absolute-value": 1,
+      "dangling-pointer": 2,
+      "format": 13,
+      "format-truncation": 4,
+      "implicit-fallthrough": 7,
+      "missing-field-initializers": 2,
+      "type-limits": 1,
+      "unused-but-set-parameter": 6,
+      "unused-but-set-variable": 1,
+      "unused-const-variable": 4,
+      "unused-variable": 2
+    },
+    "newlib_linker_warnings": 1,
+    "newlib_linker_warning": "mkdir is not implemented and will always fail",
+    "warning_scope": "Observed during the recorded clean build under the pinned compiler; counts are diagnostic evidence, not a portable acceptance threshold."
+  },
+  "artifacts": {
+    "app_partition_bytes": 1048576,
+    "app_binary_bytes": 475776,
+    "app_binary_sha256": "9230b297e267eee2dc91908eb591fce1e9983cb002a8b48db5ddcc4cd54f7b8c",
+    "app_partition_free_bytes": 572800,
+    "elf_bytes": 5847788,
+    "elf_sha256": "d9d0a916d9dfab0a3c053a3454866d45c3255a0c22300e6dae85e1a76ec35a41"
+  },
+  "game_data": {
+    "wad_files_committed": false,
+    "wad_bytes_embedded": false
+  },
+  "execution": {
+    "firmware_flashed": false,
+    "firmware_executed": false,
+    "runtime_supported": false
+  },
+  "acceptance_markers": [
+    "Component idf::doom_engine will be linked with -Wl,--whole-archive",
+    "p4_doom_build_probe.bin binary size 0x74280 bytes",
+    "P4_DOOM_D05 VERIFY PASS"
+  ],
+  "claims_not_made": [
+    "Firmware boot or Doom engine execution on an ESP32-P4",
+    "WAD loading, frame rendering, or embedded memory allocation",
+    "CrowPanel display scanout or board pin correctness",
+    "microSD access",
+    "audio output",
+    "USB host electrical safety or controller input",
+    "interactive gameplay"
+  ]
+}

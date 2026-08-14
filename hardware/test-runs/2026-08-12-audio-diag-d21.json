@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "id": "audio-diag-d21-2026-08-12",
+  "timestamp_local": "2026-08-12T23:11:00-07:00",
+  "result": "fail-safe-codec-probe-no-ack-after-board-power",
+  "app": "audio_diag",
+  "artifact": {
+    "offset": "0x10000",
+    "bytes": 244752,
+    "sha256": "920b8100411416c0dd197cb7c1f2c1986335ae1ebf0d30585f4be80ad4da8c98",
+    "readback_verified": true,
+    "readback_chunks": 1,
+    "launch_deferred_until_after_exact_readback": true
+  },
+  "runtime": {
+    "board_power_sequence": "gpio30-high-then-ldo3-2500mv-then-ldo4-3300mv-then-20ms-settle",
+    "board_power_ready_marker_seen": true,
+    "codec": "ES8311",
+    "codec_address_7bit": "0x18",
+    "i2c_controller": 0,
+    "i2c_gpio": {
+      "sda": 45,
+      "scl": 46
+    },
+    "i2c_result": "ESP_ERR_NOT_FOUND",
+    "halt_stage": "codec-probe",
+    "cleanup_result": "ESP_OK",
+    "tone_started": false,
+    "amp_enabled": false,
+    "amp_shutdown_gpio30": 1,
+    "panic_seen": false,
+    "watchdog_seen": false
+  },
+  "serial_capture": {
+    "local_path": "/private/tmp/p4-audio-d21-serial.log",
+    "bytes": 2488,
+    "sha256": "4c019e28879a3a4aad5ff85146038d027c2d3dd69ce90e414ddb1647343df53f"
+  },
+  "authorization": {
+    "app_only": true,
+    "project_flash": false,
+    "one_shot_authorization_revoked_after_run": true
+  },
+  "conclusion": "Restoring the vendor LDO3/LDO4 prerequisite was necessary but not sufficient: the ES8311 still did not acknowledge. The exact factory source must be audited because it may use a direct-I2S population path instead of the schematic codec path. The amplifier remained disabled and no tone was emitted."
+}

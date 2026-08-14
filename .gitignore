@@ -1,0 +1,29 @@
+.DS_Store
+
+# ESP-IDF build products. Keep dependency lockfiles committed.
+build/
+build-*/
+apps/*/build/
+apps/*/sdkconfig
+apps/*/sdkconfig.old
+managed_components/
+.tools/
+
+# Local IDE and Python state.
+.idea/
+.vscode/
+__pycache__/
+*.pyc
+
+# Local source/reference archives used only by provenance verifiers.
+*.zip
+
+# Doom game data is supplied locally and never committed or embedded.
+*.[Ww][Aa][Dd]
+
+# Device-specific recovery images are kept locally, never in Git.
+hardware/backups/*.bin
+test-runs/doom-e6-rollback-*/
+
+# Per-device one-shot authorization ledgers and launch receipts are local only.
+hardware/local-state/

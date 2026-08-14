@@ -1,0 +1,13 @@
+menu "P4 destructive SD format diagnostic"
+
+    config SD_FORMAT_DIAG_DESTRUCTIVE_AUTHORIZED
+        bool "Compile the explicitly authorized destructive SD formatter"
+        default n
+        help
+            Enables destructive repartitioning and FAT32 formatting only for
+            the reviewed Elecrow 10.1-inch J5 microSD path: SDMMC slot 0,
+            one-bit at 1 MHz, GPIO43 CLK, GPIO44 CMD, GPIO39 D0. This erases
+            the inserted card. D1-D7, card detect, write protect, and every
+            unrelated GPIO/peripheral remain disabled.
+
+endmenu

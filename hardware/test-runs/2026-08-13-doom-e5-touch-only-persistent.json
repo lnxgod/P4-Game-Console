@@ -1,0 +1,191 @@
+{
+  "schema": 1,
+  "captured_at": "2026-08-13T22:10:12Z",
+  "result": "pass-install-readback-and-late-attach-steady-state-touch-response-pending",
+  "classification": "hardware-tested-install-and-steady-state-runtime",
+  "scope": "E5 touch-only persistent Doom app: exact same-UART install, full padded-span readback, one application launch, and receive-only late-attach steady-state counters; no contact-response or audio claim",
+  "hardware": {
+    "family": "Elecrow CrowPanel Advanced ESP32-P4 HMI AI Display",
+    "screen_inches": 10.1,
+    "sku": "DHE04310D",
+    "physical_screen_sku_confirmed": false,
+    "pcb_revision": null,
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "device_identity_source": "normalized base MAC; raw value not stored",
+    "flash_bytes": 16777216,
+    "flash_jedec_low24": "0x1840c8",
+    "accepted_raw_flash_ids": [
+      "0x001840c8",
+      "0xff1840c8"
+    ],
+    "canonical_flash_id": "0x1840c8"
+  },
+  "executed_preflash_records": {
+    "build_evidence": {
+      "path": "test-runs/2026-08-13-doom-embedded-touch-audio-e5-build-executed.json",
+      "bytes": 28640,
+      "sha256": "6216eadaf11302f4e68b1dc0c1af9751bc6e000ddbddfde369ee9819e947e037",
+      "file_mode": "0444",
+      "provenance": "byte-exact record validated by the successful helper process"
+    },
+    "authorization": {
+      "path": "hardware/evidence/doom-embedded-touch-audio-e5-persistent-demo-authorization-executed.json",
+      "bytes": 6633,
+      "sha256": "14a8fe401bd3f3109a025cbf7a57eb3b94f982ca0126a2e37d30ca980fdcf160",
+      "file_mode": "0444",
+      "provenance": "byte-exact authorization validated by the successful helper process"
+    },
+    "historical_snapshot_note": "These immutable-path copies preserve the exact executed bytes; later mutable build/auth copies are not used to authorize this run."
+  },
+  "firmware": {
+    "app": "doom_embedded_touch_audio",
+    "mode": "touch-only",
+    "runtime_gates": {
+      "composite": 1,
+      "touch": 1,
+      "audio": 0
+    },
+    "offset": "0x10000",
+    "artifact_bytes": 4898400,
+    "artifact_sha256": "68e97df1e89c28428d6a66c2ca4ab26c4eade76ff9357479f80d01ebc08609c8",
+    "mutation_span_bytes": 4898816,
+    "mutation_span_sha256": "9c288a83ecfb061cdbec510e679166bb85e2fcf44f3a21f8a2f79e440c1303f9",
+    "padding_bytes": 416,
+    "padding_value": "0xff",
+    "audio_runtime": false,
+    "gpio30_access": false,
+    "usb_runtime": false
+  },
+  "install": {
+    "result": "pass",
+    "fact_source": "operator-supplied exact result from the guarded helper and shell validation",
+    "result_file_retention": "the helper result was validated before success and removed with the private verified-app temporary directory; the exact fields used by this closure are preserved in this record",
+    "installer": {
+      "path": "scripts/doom-e5-install.py",
+      "sha256": "cd84e329fa00fcab7726e45ba81bc94d4c50de188ab64087e180d40a9f565008"
+    },
+    "guarded_flash_route": {
+      "path": "scripts/flash.sh",
+      "sha256": "f6b88d781cfc3bee7a2893547c9e42400820df75977261b24970f59572b913c8"
+    },
+    "write_scope": "factory application partition only; bootloader, partition table, NVS, and storage were preserved",
+    "same_uart_handle": true,
+    "exclusive_uart": true,
+    "shell_live_probe_count": 0,
+    "exclusive_uart_open_count": 1,
+    "exclusive_uart_reopen_count": 0,
+    "loader_entry_reset_count": 1,
+    "loader_connect_no_reset_attempts": 1,
+    "write_transport": "same-handle-pinned-rev1-ram-stub",
+    "stub_flash_finish_sync_count": 1,
+    "stub_flash_finish_sync_launch_count": 0,
+    "readback_bytes": 4898816,
+    "readback_chunks": 10,
+    "readback_max_chunk_bytes": 524288,
+    "readback_sha256": "9c288a83ecfb061cdbec510e679166bb85e2fcf44f3a21f8a2f79e440c1303f9",
+    "readback_matches_full_padded_span": true,
+    "prelaunch_identity_revision_security_density_revalidated": true,
+    "application_launch_mechanism": "direct-hash-bound-HardReset-rts-only-dtr-false",
+    "application_launch_reset_count": 1,
+    "application_launch_count": 1,
+    "soft_reset_count": 0,
+    "esptool_run_count": 0,
+    "observed_raw_flash_ids": [
+      "0x001840c8",
+      "0xff1840c8"
+    ],
+    "flash_id_observation_source": "live installer console output retained in the task transcript: initial/post-66-99 0x001840c8; prewrite/write-boundary/prelaunch 0xff1840c8",
+    "canonical_flash_id": "0x1840c8"
+  },
+  "fixture": {
+    "serial_port": "/dev/cu.wchusbserial10",
+    "power_arrangement": "existing user-connected board supply; voltage, current, and margin were not instrumented",
+    "install_serial_control": "one exclusive programming UART retained through identity, write, readback, and launch",
+    "runtime_capture_serial_control": "exclusive receive-only attachment; DTR/RTS inactive, HUPCL disabled, zero transmitted bytes, no reset or launch"
+  },
+  "runtime_capture": {
+    "summary": {
+      "path": "hardware/test-runs/2026-08-13-doom-e5-touch-only-runtime.json",
+      "bytes": 3116,
+      "sha256": "6ccc6276689a84f06a200a197e43f8ecde10234cca0cdbfe2593ecf597cd4a3e",
+      "file_mode": "0444"
+    },
+    "raw": {
+      "path": "hardware/test-runs/2026-08-13-doom-e5-touch-only-runtime.raw",
+      "bytes": 598,
+      "sha256": "6e54fea48d8ca40cb7df0c84c7fa89a15fdffbd5660a489892a866b30fdb8047",
+      "file_mode": "0444"
+    },
+    "capture_tool": {
+      "path": "scripts/capture-doom-e5-runtime.py",
+      "sha256": "de38e4eca1c1b947535ecd23c1e291c63c0b5c3c92e67ea7c07bf4e8ab3160b5"
+    },
+    "capture_mode": "receive-only-late-attach-no-reset",
+    "duration_seconds": 45.053268,
+    "startup_status": "not-sampled-late-attach",
+    "startup_complete": false,
+    "stats_count": 2,
+    "first_stats": {
+      "frames": 300,
+      "submits": 301,
+      "completions": 301,
+      "video_timeouts": 0,
+      "video_failures": 0,
+      "touch_polls": 288,
+      "touch_failures": 0,
+      "touch_retries": 1,
+      "composite_gate": 1,
+      "touch_gate": 1,
+      "audio_gate": 0,
+      "audio_calls": 0,
+      "gpio30": "untouched",
+      "audio_enabled": 0,
+      "audio_frames": 0,
+      "audio_write_failures": 0
+    },
+    "last_stats": {
+      "frames": 600,
+      "submits": 601,
+      "completions": 601,
+      "video_timeouts": 0,
+      "video_failures": 0,
+      "touch_polls": 588,
+      "touch_failures": 0,
+      "touch_retries": 1,
+      "composite_gate": 1,
+      "touch_gate": 1,
+      "audio_gate": 0,
+      "audio_calls": 0,
+      "gpio30": "untouched",
+      "audio_enabled": 0,
+      "audio_frames": 0,
+      "audio_write_failures": 0
+    },
+    "monotonic_frames": true,
+    "monotonic_submits_and_completions": true,
+    "monotonic_successful_touch_polls": true,
+    "runtime_gate_contract_exact": true,
+    "fault_or_reject_markers": [],
+    "usb_runtime_markers_seen": false,
+    "result": "pass"
+  },
+  "accepted_claims": [
+    "the exact E5 application plus its 0xff-padded write span was written and read back through one exclusive UART transaction before one application launch",
+    "late-attach serial proves sustained video submission/completion through frame 600 with zero video timeouts or failures",
+    "late-attach serial proves increasing successful GT911 poll counts from 288 to 588 with zero poll failures",
+    "every captured periodic record proves retained runtime gates composite=1 touch=1 audio=0 and counted audio_calls=0; its gpio30=untouched field is firmware-reported and derived from that sole counted audio API path, not an electrical measurement",
+    "the captured interval contains no USB-runtime, reset-loop, panic, watchdog, brownout, halt, or other reject marker"
+  ],
+  "claims_not_made": [
+    "late attachment did not sample START, MODE, initialization, WAD, VFS, VIDEO_READY, or ENGINE_START markers",
+    "successful polling does not prove a contact was present, mapped correctly, or changed Doom state",
+    "touch coordinates, multi-touch behavior, and visible control response remain pending person observation",
+    "audio was disabled; no GPIO30-low, audio frame, acoustic, or sound-backend hardware claim is made",
+    "USB runtime was disabled and absent from the firmware component graph; physical USB state was not tested",
+    "the uninstrumented power supply has not been margin-tested",
+    "the unresolved physical PCB revision is not inferred from this scoped run",
+    "the WAD-bearing firmware is not authorized for redistribution"
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "id": "sd-format-diag-d1-2026-08-12",
+  "timestamp_local": "2026-08-12T22:22:00-07:00",
+  "result": "fat32-format-pass-file-probe-name-fail",
+  "app": "sd_format_diag",
+  "artifact": {
+    "offset": "0x10000",
+    "bytes": 284688,
+    "sha256": "23685f08504a699d5f75555c11ff5be053bf9f64c4aecdce85894667b74c6310",
+    "readback_verified": true
+  },
+  "card": {
+    "capacity_bytes": 32010928128,
+    "real_frequency_khz": 1000,
+    "sector_bytes": 512
+  },
+  "fat32": {
+    "partition_result": "FR_OK",
+    "mkfs_result": "FR_OK",
+    "fatfs_type": 3,
+    "mbr_signature_valid": true,
+    "partition_type": "0x0c",
+    "partition_lba": 63,
+    "partition_sectors": 62521281,
+    "vbr_valid": true,
+    "fat_count": 2,
+    "bytes_per_sector": 512,
+    "sectors_per_cluster": 32,
+    "raw_cleanup": "ESP_OK",
+    "remount": "ESP_OK"
+  },
+  "file_probe": {
+    "result": "fail",
+    "stage": "post-format-verify-file-not-absent",
+    "errno": 22,
+    "diagnosis": "The hidden long verification filename is incompatible with this build's 8.3-only FatFs filename mode. This occurred after formatting, raw layout proof, cleanup, and a successful non-formatting mount."
+  },
+  "conclusion": "The inserted card is successfully repartitioned and formatted as FAT32. Use 8.3-compatible filenames for provisioning and runtime."
+}

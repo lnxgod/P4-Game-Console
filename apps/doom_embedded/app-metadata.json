@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "app": "doom_embedded",
+  "stage": "E1-preflash-reviewed",
+  "evidence_class": "build-tested",
+  "purpose": "SD-independent silent Doom fallback using the exact ignored local shareware WAD through a single-file read-only VFS.",
+  "runtime_supported": false,
+  "build_evidence": "test-runs/2026-08-12-doom-embedded-e1-build.json",
+  "runtime_evidence": "hardware/test-runs/2026-08-13-doom-embedded-e1.json",
+  "authorization_evidence": [
+    "hardware/evidence/elecrow-10.1-display-path.json"
+  ],
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "game_data_embedded": true,
+  "game_data_committed": false,
+  "game_data_redistribution_authorized": false,
+  "hardware_interfaces": [
+    "mipi_dsi_bus_0",
+    "internal_ldo_3_2500mv",
+    "internal_ldo_4_3300mv",
+    "gpio31_backlight_pwm"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "gpio29",
+    "gpio41",
+    "sd_card",
+    "touch",
+    "audio",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "runtime_blockers": [
+    "Fresh serial runtime evidence is recorded at hardware/test-runs/2026-08-13-doom-embedded-e1.json; visual acceptance remains pending because the panel was not readable in the Photo Booth frame.",
+    "This fallback deliberately has neutral input and no audio.",
+    "The WAD-bearing local firmware artifact is not authorized for redistribution."
+  ]
+}

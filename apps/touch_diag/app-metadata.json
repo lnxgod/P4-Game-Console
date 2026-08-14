@@ -1,0 +1,31 @@
+{
+  "schema": 1,
+  "app": "touch_diag",
+  "stage": "T1-visible-build-only",
+  "evidence_class": "build-tested-after-successful-build",
+  "purpose": "Qualify Elecrow-compatible GT911 reset/address fallback, coordinate and multi-touch reads with a visible five-contact overlay.",
+  "runtime_supported": true,
+  "authorization_evidence": "hardware/evidence/elecrow-10.1-touch-path.json",
+  "build_evidence": "test-runs/2026-08-13-touch-t1-build.json",
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "hardware_interfaces": [
+    "shared_i2c1_borrowed_gpio45_gpio46",
+    "gt911_400khz_primary_0x5d_fallback_0x14",
+    "gt911_gpio40_reset_gpio42_address_latch_no_isr",
+    "display_crosshair_coordinate_overlay"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "storage",
+    "audio",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "runtime_evidence": null,
+  "runtime_blockers": [
+    "No on-device GT911 coordinate or multi-touch run has been captured.",
+    "The diagnostic is deliberately excluded from repository flash authorization until its exact build and run gate is reviewed."
+  ]
+}

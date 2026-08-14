@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "captured_at": "2026-08-13T04:44:00Z",
+  "result": "pass",
+  "classification": "hardware-tested",
+  "scope": "M2 RGB565 framebuffer submission, 320x200-to-960x600 scaling, refresh completion, and sustained moving-pattern scanout",
+  "build_evidence": "test-runs/2026-08-12-framebuffer-m2-build.json",
+  "hardware": {
+    "family": "Elecrow CrowPanel Advanced ESP32-P4 HMI AI Display",
+    "screen_inches": 10.1,
+    "sku": "DHE04310D",
+    "pcb_revision": null,
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "device_identity_source": "normalized base MAC; raw value not stored",
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432
+  },
+  "firmware": {
+    "app": "framebuffer_diag",
+    "binary_bytes": 230464,
+    "binary_sha256": "41de10f20b29b4a9a73e65c6b1b7a63a7f91988d458b3cd55541d49110b2300c",
+    "elf_bytes": 5197496,
+    "elf_sha256": "25feddce9998310991bc22c0288d903293969e2ae55aa854728f5194d88fa51e",
+    "write_scope": "application partition only at 0x10000; bootloader, partition table, NVS, and microSD were not written",
+    "installed_app_readback_matches_binary": true,
+    "installed_app_readback_offset": "0x10000",
+    "installed_app_readback_bytes": 230464,
+    "installed_app_readback_sha256": "41de10f20b29b4a9a73e65c6b1b7a63a7f91988d458b3cd55541d49110b2300c"
+  },
+  "fixture": {
+    "serial_port": "/dev/cu.wchusbserial10",
+    "serial_control": "DTR and RTS held inactive; no bytes transmitted during soak",
+    "backlight_percent": 25,
+    "visual_source": "live Photo Booth preview",
+    "power_arrangement": "existing user-connected board supply; voltage, current, and margin were not instrumented"
+  },
+  "serial_capture": {
+    "requested_seconds": 600,
+    "first_heartbeat_device_ms": 136412,
+    "last_heartbeat_device_ms": 731532,
+    "heartbeat_span_ms": 595120,
+    "heartbeat_count": 160,
+    "raw_log_bytes": 25515,
+    "raw_log_sha256": "157b50c63f0f8feec6c690b57e7d684f81a31003bdca6dc8583d3dd5d016dda5",
+    "raw_log_retention": "local temporary diagnostic artifact; summary and hash recorded here"
+  },
+  "checks": {
+    "matching_hashed_device_identity_gate": "pass",
+    "live_flash_size_gate": "pass",
+    "secure_boot": "disabled",
+    "flash_encryption": "disabled",
+    "preflash_exact_artifact_verifier": "pass",
+    "two_independent_builds_byte_identical": true,
+    "first_heartbeat": {
+      "frame": 2160,
+      "submits": 2161,
+      "completions": 2161,
+      "timeouts": 0,
+      "failures": 0,
+      "refreshes": 7538
+    },
+    "last_heartbeat": {
+      "frame": 11700,
+      "submits": 11701,
+      "completions": 11701,
+      "timeouts": 0,
+      "failures": 0,
+      "refreshes": 40812
+    },
+    "all_heartbeat_counter_invariants": "submits == completions == frame + 1",
+    "refresh_counter_strictly_monotonic": true,
+    "submit_timeouts_observed": 0,
+    "submit_failures_observed": 0,
+    "psram_underrun_literal_occurrences": 0,
+    "halt_or_fail_markers_observed": 0,
+    "panic_watchdog_brownout_or_reset_markers_observed": 0,
+    "visual_rgb565_fields": "red, green, blue, white, and black appeared in the expected order",
+    "visual_geometry": "checkerboard and corner/edge labels filled a centered 960x600 viewport with 32-pixel black side margins",
+    "visual_motion": "the high-contrast vertical bar was observed at multiple positions, including six sequential camera samples after the soak",
+    "gross_corruption_observed": false,
+    "tearing_visible_in_sampled_frames": false
+  },
+  "claims_not_made": [
+    "sampled camera frames are not a calibrated continuous tear measurement",
+    "the uninstrumented board supply has not been margin-tested",
+    "touch, SD, audio, camera, wireless, and USB Host were not initialized by this image",
+    "the unresolved physical PCB revision is not inferred from this cross-revision display test"
+  ]
+}

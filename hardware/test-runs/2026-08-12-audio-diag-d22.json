@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "app": "audio_diag",
+  "stage": "D2.2-factory-semantics-dual-path-hardware-test",
+  "result": "pass-direct-i2s-serial-audibility-unconfirmed",
+  "timestamp_local": "2026-08-12T23:38:00-07:00",
+  "device": {
+    "chip": "ESP32-P4",
+    "revision": "v1.3",
+    "flash_bytes": 16777216,
+    "secure_boot": false,
+    "flash_encryption": false,
+    "port": "/dev/cu.wchusbserial10"
+  },
+  "artifact": {
+    "offset": "0x10000",
+    "bytes": 246224,
+    "sha256": "dc2816363f84600675e5ac84de58133a2a0193c7a1c98b48643ccaae7ab2da16",
+    "elf_bytes": 5026624,
+    "elf_sha256": "b31bff4875593c102ad76697139cd76e40ffb651c9a01ec7d3b8dbf254989fb2",
+    "app_only_write": true,
+    "readback_verified": true,
+    "readback_offset": "0x10000",
+    "readback_bytes": 246224,
+    "readback_chunks": 1,
+    "successful_readback_baud": 460800,
+    "higher_baud_transport_retry_observed": true,
+    "launch_deferred_until_exact_readback": true,
+    "launch_count": 1
+  },
+  "runtime": {
+    "gpio30_safe_first_marker_seen": true,
+    "board_power_ready_marker_seen": true,
+    "ldo3_mv": 2500,
+    "ldo4_mv": 3300,
+    "i2c_controller": 1,
+    "i2c_ack_addresses_7bit": [
+      "0x2f",
+      "0x5d"
+    ],
+    "i2c_ack_interpretation": {
+      "0x2f": "Elecrow factory BSP STC8H1KXX controller address",
+      "0x5d": "Elecrow-documented GT911 touch-controller address"
+    },
+    "es8311_address_0x18_ack": false,
+    "selected_path": "factory-direct-i2s",
+    "i2s_controller": 1,
+    "lrclk_gpio": 21,
+    "bclk_gpio": 22,
+    "dout_gpio": 23,
+    "mclk": "unused",
+    "tone_begin_marker_seen": true,
+    "tone_frequency_hz": 440,
+    "tone_duration_ms": 400,
+    "tone_peak_pcm": 512,
+    "pass_marker_seen": true,
+    "amp_shutdown_gpio30": 1,
+    "ldo3_released": true,
+    "ldo4_released": true,
+    "heartbeat_after_pass_seen": true,
+    "halt_seen": false,
+    "panic_seen": false,
+    "watchdog_seen": false,
+    "assert_seen": false,
+    "audible_tone_operator_confirmation": null
+  },
+  "serial_evidence": {
+    "local_path": "/private/tmp/p4-audio-d22-serial.log",
+    "bytes": 3225,
+    "sha256": "be51b182b39ef2e12773b9f4c72783790e25fb190607f56beeb57220e1915bfa",
+    "pass_marker": "P4_AUDIO D2.2 PASS path=factory-direct-i2s tone_count=1 bounded_ms=400 amp_shutdown=1 ldo3_released=1 ldo4_released=1"
+  },
+  "authorization": {
+    "record": "hardware/evidence/audio-diag-d22-one-shot-authorization.json",
+    "app_flag_revoked_after_run": true,
+    "broad_flash_authorized": false,
+    "full_project_flash_authorized": false
+  },
+  "conclusion": "The connected unit does not expose an ES8311 at 0x18 on the factory-selected I2C1 bus. The exact factory-style direct-I2S1 path completed its bounded write sequence and returned the amplifier and internal rails to their safe state. Serial evidence proves firmware and lifecycle success; the unattended run does not independently prove that the acoustic tone was audible."
+}

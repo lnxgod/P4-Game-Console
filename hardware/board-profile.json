@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "status": "framebuffer-hardware-tested-touch-narrow-runtime-authorized-audio-build-only-other-peripherals-locked",
+  "vendor": "Elecrow",
+  "family": "CrowPanel Advanced ESP32-P4 HMI AI Display",
+  "screen_inches": 10.1,
+  "sku": "DHE04310D",
+  "pcb_revision": null,
+  "identification": {
+    "screen_sku_scope": "factory_firmware_variant",
+    "physical_screen_sku_confirmed": false,
+    "confidence": "very_high",
+    "evidence": "hardware/evidence/elecrow-factory-firmware-variant.json",
+    "required_next_evidence": "a sharper PCB-revision photo before authorizing any revision-sensitive peripheral beyond the cross-revision display and storage paths"
+  },
+  "device_identity": {
+    "source": "base_mac",
+    "normalization": "lowercase hexadecimal without separators",
+    "sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "raw_value_stored": false
+  },
+  "measured": {
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432,
+    "psram_configured_speed_mhz": 200,
+    "psram_write_read_test_bytes": 1048576,
+    "bringup_acceptance": "pass",
+    "display_acceptance": "pass",
+    "framebuffer_acceptance": "pass",
+    "factory_display_resolution_hint": "1024x600",
+    "factory_panel_driver_hint": "EK79007",
+    "factory_touch_driver_hint": "GT911"
+  },
+  "last_hardware_test": "hardware/test-runs/2026-08-12-bringup.json",
+  "pin_map_authorized": false,
+  "peripheral_authorizations": {
+    "display": {
+      "authorized": true,
+      "scope": "display_only_cross_revision_v1_0_through_v1_2",
+      "evidence": "hardware/evidence/elecrow-10.1-display-path.json",
+      "hardware_test": "hardware/test-runs/2026-08-12-display-m1.json",
+      "framebuffer_hardware_test": "hardware/test-runs/2026-08-12-framebuffer-m2.json"
+    },
+    "storage": {
+      "authorized": true,
+      "scope": "sdmmc_read_only_service_no_format_cross_revision_v1_0_through_v1_2",
+      "evidence": "hardware/evidence/elecrow-10.1-storage-path.json",
+      "hardware_test": null,
+      "failed_hardware_probe": "hardware/test-runs/2026-08-12-storage-d1.json"
+    },
+    "touch": {
+      "authorized": true,
+      "scope": "gt911_shared_i2c1_gpio40_reset_gpio42_latch_cross_revision_v1_0_through_v1_2_narrow_runtime",
+      "evidence": "hardware/evidence/elecrow-10.1-factory-touch-audio-runtime-basis.json",
+      "topology_evidence": "hardware/evidence/elecrow-10.1-touch-path.json",
+      "hardware_test": null
+    },
+    "audio": {
+      "authorized": false,
+      "scope": "factory_direct_i2s1_backend_build_only_gpio30_low_runtime_blocked",
+      "evidence": "hardware/evidence/elecrow-10.1-factory-touch-audio-runtime-basis.json",
+      "topology_review": "hardware/evidence/elecrow-10.1-audio-path-review.json",
+      "factory_semantics": "hardware/evidence/elecrow-10.1-factory-audio-semantics.json",
+      "runtime_blocker": "power_off_population_and_continuity_must_prove_one_converging_output_family_absent_or_isolated",
+      "hardware_test": null
+    }
+  }
+}

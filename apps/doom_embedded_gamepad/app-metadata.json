@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "app": "doom_embedded_gamepad",
+  "stage": "E3-installed-exact-app-native-usb-dormant-runtime-unobserved",
+  "evidence_class": "hardware-installed-exact-readback-one-launch-usb-electrically-inert",
+  "purpose": "Install-useful silent embedded Doom image: the authorized display, immutable embedded WAD, and Doom baseline run while the complete native ESP32-P4 USB gamepad stack remains linked behind two independent zero authorization gates and makes no USB call.",
+  "runtime_supported": false,
+  "build_evidence": "test-runs/2026-08-13-doom-embedded-gamepad-e3-build.json",
+  "runtime_evidence": "hardware/test-runs/2026-08-13-doom-embedded-gamepad-e3.json",
+  "one_shot_authorization_evidence": "hardware/evidence/doom-embedded-gamepad-e3-one-shot-authorization.json",
+  "one_shot_authorization_active": false,
+  "fixture_authorized": false,
+  "fixture_evidence": null,
+  "fixture_evidence_sha256": null,
+  "authorization_evidence": [
+    "hardware/evidence/elecrow-10.1-display-path.json"
+  ],
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "game_data_embedded": true,
+  "game_data_committed": false,
+  "game_data_redistribution_authorized": false,
+  "runtime_features": {
+    "display": true,
+    "immutable_embedded_wad": true,
+    "doom": true,
+    "silent": true,
+    "neutral_input": true,
+    "native_usb_gamepad": false,
+    "audio": false
+  },
+  "compiled_hardware_interfaces": [
+    "mipi_dsi_bus_0",
+    "internal_ldo_3_2500mv",
+    "internal_ldo_4_3300mv",
+    "gpio31_backlight_pwm",
+    "esp32p4_usb_otg_hs_peripheral_0"
+  ],
+  "runtime_hardware_interfaces": [
+    "mipi_dsi_bus_0",
+    "internal_ldo_3_2500mv",
+    "internal_ldo_4_3300mv",
+    "gpio31_backlight_pwm"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "crowpanel_vbus_source_gpio",
+    "esp32p4_usb_otg_fs_gpio26_gpio27",
+    "passive_otg_adapter",
+    "unqualified_usb_hub",
+    "sd_card",
+    "touch",
+    "audio",
+    "camera",
+    "wireless"
+  ],
+  "runtime_blockers": [
+    "The exact app-only one-shot was consumed and revoked after one verified install and launch; another write requires new authorization and a new durable ledger.",
+    "The app-local flash-resident volatile USB gate is zero and the reusable host component's independent flash-resident volatile authorization gate is also zero.",
+    "The zero-gate path initializes the proven display/WAD/video baseline, publishes neutral input, makes no platform USB call, and runs Doom with -nosound and -nomusic.",
+    "The compiled fallback fixture record is invalid by construction and no reviewed powered, current-limited, backfeed-isolated direct-data fixture is bound to this image.",
+    "Published CrowPanel V1.0-V1.2 schematics show that J16 reaches the P4 HS data pair but cannot source protected controller VBUS; USB runtime and fixture authorization remain false.",
+    "Native controller hotplug and gameplay acceptance have not run; this image must not be described as working controller support.",
+    "The WAD-bearing local firmware artifact is not authorized for redistribution."
+  ]
+}

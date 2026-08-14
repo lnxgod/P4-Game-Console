@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "app": "audio_diag",
+  "stage": "D2.2-factory-semantics-dual-path-build-test",
+  "evidence_class": "hardware-tested-serial-pass",
+  "purpose": "Scan the exact Elecrow factory I2C1 controller and run one bounded quiet tone through the guarded ES8311 path only when 0x18 ACKs, otherwise through the factory-style direct-I2S1 no-MCLK path.",
+  "runtime_supported": false,
+  "authorization_evidence": "hardware/evidence/elecrow-10.1-audio-driver-path.json",
+  "factory_source_evidence": "hardware/evidence/elecrow-10.1-factory-audio-semantics.json",
+  "prior_one_shot_authorization_evidence": "hardware/evidence/audio-diag-one-shot-authorization.json",
+  "one_shot_authorization_evidence": null,
+  "build_evidence": "test-runs/2026-08-12-audio-d22-build.json",
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "hardware_interfaces": [
+    "internal_ldo3_2500mv_ldo4_3300mv_vendor_power_prerequisite",
+    "i2c1_gpio45_sda_gpio46_scl_bounded_scan_addr7_0x08_through_0x77",
+    "i2s1_gpio21_lrclk_gpio22_bclk_gpio23_dout_no_mclk_factory_direct_fallback",
+    "i2s1_gpio21_lrclk_gpio22_bclk_gpio23_dout_gpio24_mclk_guarded_es8311_if_addr7_0x18_acks",
+    "gpio30_ns4263b_active_low_shutdown",
+    "speaker_output_bounded_quiet_tone"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "microphone",
+    "display",
+    "touch",
+    "sd_card",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "prior_runtime_evidence": [
+    "hardware/test-runs/2026-08-12-audio-diag-d2.json",
+    "hardware/test-runs/2026-08-12-audio-diag-d21.json"
+  ],
+  "runtime_evidence": "hardware/test-runs/2026-08-12-audio-diag-d22.json",
+  "runtime_blockers": [
+    "The reusable board profile still denies audio runtime authorization; only the recorded one-shot diagnostic exception can supersede it.",
+    "The exact D2.2 app-only authorization was consumed and revoked after the serial PASS; broad and full-project flash remain denied.",
+    "GPIO45/GPIO46 shared-bus ownership must remain exclusive during this diagnostic.",
+    "D2.0 failed without the vendor LDO prerequisite and D2.1 still observed no ES8311 ACK on I2C0 after restoring it; both exact failures remain bound as historical evidence.",
+    "The direct-I2S path completed on the connected unit, but the unattended run did not provide operator or microphone confirmation that its acoustic tone was audible.",
+    "No speaker impedance, gain, pop, current, or audible level has been measured on this unit."
+  ]
+}

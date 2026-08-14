@@ -1,0 +1,65 @@
+{
+  "schema": 1,
+  "captured_at": "2026-08-12",
+  "board_identity_from_factory_image": "ESP32-P4-Elecrow-Advance",
+  "device": {
+    "chip": "ESP32-P4",
+    "revision": "v1.3",
+    "crystal_mhz": 40,
+    "flash_bytes": 16777216,
+    "identity": {
+      "source": "base_mac",
+      "normalization": "lowercase hexadecimal without separators",
+      "sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+      "raw_value_stored": false
+    }
+  },
+  "backup": {
+    "file": "hardware/backups/elecrow-p4-factory-before-project.bin",
+    "bytes": 16777216,
+    "sha256": "3e3f5f687f59938963d9040d6c8e9dc1a687baa512790680830422c22bd6ab3c",
+    "git_ignored": true
+  },
+  "factory_partition_table": [
+    {
+      "name": "nvs",
+      "type": "data",
+      "subtype": "nvs",
+      "offset": "0x9000",
+      "size": "24K"
+    },
+    {
+      "name": "phy_init",
+      "type": "data",
+      "subtype": "phy",
+      "offset": "0xf000",
+      "size": "4K"
+    },
+    {
+      "name": "factory",
+      "type": "app",
+      "subtype": "factory",
+      "offset": "0x10000",
+      "size": "11M"
+    },
+    {
+      "name": "storage",
+      "type": "data",
+      "subtype": "spiffs",
+      "offset": "0xb10000",
+      "size": "4M"
+    }
+  ],
+  "factory_application": {
+    "project": "esp_brookesia_demo",
+    "version": "1.0.1",
+    "esp_idf": "v5.5",
+    "compile_time": "2025-09-28T17:07:28",
+    "image_validation_sha256": "c61c44b2009d4558d317e69fb952501cb136a850c585cda25f81ec4279a34ade"
+  },
+  "restore": {
+    "requires_manual_confirmation": true,
+    "requires_matching_live_device_identity": true,
+    "command_template": "After separately validating the live identity hash and security state, use esptool.py --chip esp32p4 --port <SERIAL_PORT> --baud 921600 write_flash 0x0 hardware/backups/elecrow-p4-factory-before-project.bin"
+  }
+}

@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "classification": "user-requested-bounded-audio-one-shot",
+  "result": "authorized-exact-app-preflash-reviewed",
+  "scope": "audio_diag_d2_2_i2c1_scan_single_bounded_tone",
+  "authorization_source": {
+    "actor": "user",
+    "date": "2026-08-12",
+    "record": "active_task_conversation",
+    "requested_outcome": "Get Doom running with joystick and sound by morning; do whatever is required within the connected device scope."
+  },
+  "factory_source_evidence": "hardware/evidence/elecrow-10.1-factory-audio-semantics.json",
+  "build_evidence": "test-runs/2026-08-12-audio-d22-build.json",
+  "exact_artifact": {
+    "offset": "0x10000",
+    "bytes": 246224,
+    "sha256": "dc2816363f84600675e5ac84de58133a2a0193c7a1c98b48643ccaae7ab2da16"
+  },
+  "exact_runtime_limits": {
+    "i2c_controller": 1,
+    "scan_first_7bit": "0x08",
+    "scan_last_7bit": "0x77",
+    "probe_timeout_per_address_ms": 10,
+    "tone_count": 1,
+    "frequency_hz": 440,
+    "duration_ms": 400,
+    "fade_ms": 50,
+    "pcm_peak": 512,
+    "zero_preroll_frames": 256,
+    "amplifier_shutdown_gpio": 30,
+    "amplifier_shutdown_level": 1
+  },
+  "exception_boundary": {
+    "application_flash_scope": "factory_app_partition_only_at_0x10000",
+    "full_project_flash_authorized": false,
+    "single_launch_after_exact_readback": true,
+    "reusable_board_profile_audio_policy_unchanged": true,
+    "prior_runtime_evidence": [
+      "hardware/test-runs/2026-08-12-audio-diag-d2.json",
+      "hardware/test-runs/2026-08-12-audio-diag-d21.json"
+    ]
+  }
+}

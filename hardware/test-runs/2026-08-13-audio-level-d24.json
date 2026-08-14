@@ -1,0 +1,207 @@
+{
+  "schema": 1,
+  "id": "audio-level-d24-connected-unit-2026-08-13",
+  "timestamp_utc": "2026-08-13T09:59:57.370059Z",
+  "classification": "hardware-serial-pass-microphone-fail-control-path-postmortem",
+  "result": "fail-no-synchronized-microphone-tone-candidate-direct-path-disabled",
+  "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+  "exact_artifact": {
+    "offset": "0x10000",
+    "bytes": 196176,
+    "sha256": "2932520cc5dc7511b5032007a30931fc1cc59cb664966717ed01512636d7d37a",
+    "write_verified_by_esptool": true,
+    "exact_application_readback_verified": true,
+    "readback_chunks": 1
+  },
+  "build_evidence": {
+    "path": "test-runs/2026-08-13-audio-d24-build.json",
+    "bytes": 4862,
+    "sha256": "0b3a50e747af64ffb484dad6322e7dab3228b2b74b0ce321dfafadb74e88d5b8",
+    "canonical_and_two_independent_builds_identical": true
+  },
+  "authorization": {
+    "record": "hardware/evidence/audio-level-diag-d24-one-shot-authorization.json",
+    "active_sha256_used_by_receipt": "28cd70f51b3ca6c5ddbcf91103b75cfa4f9a8c8269084b3939dbadeae7e918d8",
+    "revoked_sha256": "a9e95335e8b2a2ea7125c325204da29f5debbc205cfbe5ac24600ea90a4ff2b6",
+    "consumed_once": true,
+    "launch_count": 1,
+    "ledger_status": "completed",
+    "ledger_outcome": "completed",
+    "revoked_after_completion": true,
+    "active": false,
+    "another_attempt_requires_new_authorization_and_ledger": true
+  },
+  "transport": {
+    "route": {
+      "path": "scripts/flash-audio-level-diag.sh",
+      "sha256": "261a1f321a5b2cff6d3b83d5c673e99ea5cc3b118d6d0386bee58f84e1e93404"
+    },
+    "verifier": {
+      "path": "scripts/verify-audio-level-diag.py",
+      "sha256": "480b55008ca4cc3a688249a1a86f6af0f525b3e9d2a43b6d6bc63f029dddd812"
+    },
+    "capture_cli": {
+      "path": "scripts/capture-audio-level-diag.py",
+      "sha256": "3428bad49ee71b9d8c38e31e569c38f3d5196985fde736c0e8e7922cf5539673"
+    },
+    "capture_transport": {
+      "path": "scripts/d24_capture_transport.py",
+      "sha256": "5398ba6392770c321943979dae5ca1360a7f4f8d42d2bda844928229bd650f31"
+    },
+    "analyzer": {
+      "path": "scripts/analyze-audio-level-tone.py",
+      "sha256": "1402af8a005602b3a4c4d9c9a705214459926f8a61a7dc501a04cd0324f27b20"
+    },
+    "ledger": {
+      "path": "hardware/local-state/audio-level-d24.json",
+      "bytes": 1287,
+      "sha256": "be54f0bbc71cf4499551475f725854732250c033df9280914ba583106596f59e",
+      "status": "completed",
+      "launch_count": 1
+    },
+    "same_serial_handle": true,
+    "hard_reset_count": 1,
+    "arm_frame_transmitted_count": 1,
+    "transport_finalized": true,
+    "serial_close_count": 1,
+    "audio_close_count": 1
+  },
+  "preserved_private_artifacts": {
+    "directory": "hardware/local-state/audio-level-d24-artifacts",
+    "directory_mode": "0700",
+    "files_mode": "0600",
+    "consumed_receipt": {
+      "path": "hardware/local-state/audio-level-d24-artifacts/consumed-receipt.json",
+      "bytes": 5833,
+      "sha256": "1244e2e0124b20535faf2c95f0ebe96eb781297beca0132d5818c49e308c8478"
+    },
+    "timing": {
+      "path": "hardware/local-state/audio-level-d24-artifacts/timing.json",
+      "bytes": 17593,
+      "sha256": "5edff649bc16eac65c7f26a06e5e230be5d813b1db70d7eddd9c837f0d2bb337"
+    },
+    "serial": {
+      "path": "hardware/local-state/audio-level-d24-artifacts/serial.raw",
+      "bytes": 4762,
+      "sha256": "f7609b877c573ef4792914d6094ad37c85272124e73ccf061c1abdb726a6db9a"
+    },
+    "wav": {
+      "path": "hardware/local-state/audio-level-d24-artifacts/capture.wav",
+      "bytes": 903404,
+      "sha256": "002d3c43b6a0c37f4a0634f87e7a4fac899e7ca2dff23ee0d08b77c8412c92e1",
+      "pcm_bytes": 903360,
+      "pcm_sha256": "05c6b47ff9cc8f19521c40e76994a54676f910372d70fc54ad5e074a8a008c58"
+    },
+    "analysis": {
+      "path": "hardware/local-state/audio-level-d24-artifacts/analysis.json",
+      "bytes": 2143,
+      "sha256": "8017b7845964d0d45c603592b84cac1c492cb559cd1a699f27927ddf62af3f8b"
+    }
+  },
+  "serial_result": {
+    "result": "pass",
+    "exact_markers_once_and_ordered": [
+      "SERIAL_ATTACH",
+      "WAIT_ARM",
+      "ARM_ACCEPTED",
+      "START",
+      "SAFE",
+      "BACKEND_READY",
+      "POWER_READY",
+      "CAPTURE_ARM",
+      "TONE_BEGIN",
+      "POSTROLL",
+      "PASS",
+      "HEARTBEAT"
+    ],
+    "tone_write_calls": 62,
+    "partial_writes": 0,
+    "direct_output_zeroed_after_tone": true,
+    "i2s_released": true,
+    "u4_shutdown": true,
+    "ldo3_released": true,
+    "ldo4_released": true,
+    "panic_watchdog_assert_halt_markers": 0
+  },
+  "microphone_result": {
+    "result": "fail",
+    "acceptance_classification": "fail-microphone-detection",
+    "analyzer_exit_code": 1,
+    "analyzer_pass": false,
+    "full_acoustic_acceptance": false,
+    "capture_device": "MacBook Pro Microphone",
+    "format": "mono_pcm16_48000hz",
+    "capture_seconds": 9.41,
+    "callback_count": 941,
+    "callback_status_flags_nonzero": 0,
+    "capture_clipped": false,
+    "capture_peak_pcm": 219.0,
+    "dominant_hz": 440.0,
+    "dominant_amplitude_pcm": 7.298567578832507,
+    "noise_rms_pcm": 55.12463699804894,
+    "dominant_over_noise_db": -17.56216218028485,
+    "dominant_over_baseline_440_db": 2.1042792045701706,
+    "dominant_over_adjacent_band_db": 3.769618464179281,
+    "tone_event_count": 0,
+    "exactly_one_tone_event": false,
+    "tone_event_correlated_to_serial": false
+  },
+  "operator_result": {
+    "availability": "unavailable",
+    "audibility": "unavailable",
+    "pop_observation": "unavailable",
+    "confirmed_by": null,
+    "confirmed_at_utc": null,
+    "contemporaneous": false
+  },
+  "electrical_truth": {
+    "firmware_waveform": "triangle",
+    "firmware_peak_pcm": 4096,
+    "firmware_peak_dbfs": -18.06153466347849,
+    "gpio30_controls_populated_u4_shutdown": true,
+    "gpio30_also_drives_optional_q10_gate": true,
+    "optional_q10_source": "VDD_3V3",
+    "optional_q10_drain": "AUDIO_CTRL",
+    "optional_audio_ctrl_paths": [
+      "R139=100K_NC to U13 NS4168 CTRL with R143=50K_NC pulldown",
+      "R117=100K_NC to U3 NS4168 CTRL"
+    ],
+    "ns4168_ctrl_zero_to_0_4v_is_shutdown": true,
+    "d24_held_gpio30_high_during_tone": true,
+    "d24_likely_disabled_optional_direct_amplifiers": true,
+    "candidate_direct_amplifier_vdd5v_is_unswitched": true,
+    "lifecycle_pass_does_not_prove_pin_waveform_or_speaker_output": true
+  },
+  "acceptance": {
+    "serial_lifecycle_accepted": true,
+    "synchronized_microphone_tone_accepted": false,
+    "operator_audibility_accepted": false,
+    "connected_unit_speaker_path_accepted": false,
+    "reusable_platform_audio_authorized": false,
+    "doom_audio_authorized": false,
+    "board_wide_audio_authorized": false,
+    "app_flash_authorized": false,
+    "full_project_flash_authorized": false
+  },
+  "post_run_topology_correction": {
+    "discovered_after_execution": true,
+    "cross_revision_scope": [
+      "V1.0",
+      "V1.1",
+      "V1.2"
+    ],
+    "gpio30_low_effect": "Enables populated analog U4 and, if Q10/R139/R117/U13/U3 options are populated, drives NS4168 CTRL into a channel-select operating range.",
+    "gpio30_high_effect": "Shuts down U4, turns optional P-MOS Q10 off, and leaves the optional U13 CTRL pulled to shutdown; therefore D2.4 did not validly test an enabled optional direct-amplifier path.",
+    "factory_corroboration": "All pinned Lesson12 revisions drive GPIO30 low immediately before playback and high afterward.",
+    "datasheet": {
+      "part": "NS4168",
+      "revision": "Apr.2023 V1.2",
+      "source": "https://datasheet.lcsc.com/datasheet/pdf/d3e8c6e77860e1345ae29923805289c4.pdf?productCode=C910588",
+      "sha256": "2f8e302b0f69ccad330f8e467b173e6a1eb2ae04f3eeb6640bf3c7afd3c808d4",
+      "ctrl_shutdown_range_v": "0.0-0.4",
+      "ctrl_left_range_v": "0.9-1.15",
+      "ctrl_right_range_v": "1.5-VDD"
+    }
+  },
+  "conclusion": "The exact app write/readback and bounded firmware lifecycle passed safely, and the synchronized microphone capture contained no qualifying 440 Hz event. A post-run cross-revision net audit showed that D2.4 held GPIO30 in the state that shuts down U4 and likely disables the optional NS4168 direct-amplifier path through Q10. The acoustic result is therefore a trustworthy negative for the executed waveform but inconclusive for an enabled direct speaker path. Reusable and Doom audio remain unauthorized pending a fresh bounded GPIO30-low playback test."
+}

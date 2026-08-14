@@ -1,0 +1,43 @@
+{
+  "schema": 1,
+  "policy": {
+    "bytes_in_git": false,
+    "bytes_in_firmware": false,
+    "redistribution_by_project": false
+  },
+  "game_data": [
+    {
+      "id": "doom-shareware-1.9",
+      "filename": "doom1.wad",
+      "local_path": "local-data/doom/doom1.wad",
+      "kind": "IWAD",
+      "version": "1.9 shareware",
+      "size_bytes": 4196020,
+      "md5": "f0cefca49926d00903cf57551d901abe",
+      "sha1": "5b2e249b9c5133ec987b3ea77596381dc0d6bc1d",
+      "sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+      "local_copy_obtained_from": "https://archive.org/download/wadarchive/DATA/5b.zip/5b%2F2e249b9c5133ec987b3ea77596381dc0d6bc1d%2F5b2e249b9c5133ec987b3ea77596381dc0d6bc1d.wad.gz",
+      "source_archive": {
+        "filename": "doom19s.zip",
+        "url": "https://www.gamers.org/pub/idgames/idstuff/doom/doom19s.zip",
+        "mirror_used_for_local_test": "https://ftp.fu-berlin.de/pc/games/idgames/idstuff/doom/doom19s.zip",
+        "size_bytes": 2450688,
+        "md5": "244d181457c9be5f28b91b488e67e042",
+        "sha256": "cacf0142b31ca1af00796b4a0339e07992ac5f21bc3f81e7532fe1b5e1b486e6",
+        "publisher": "id Software"
+      },
+      "notice": "Local development input only. Do not commit, embed, mirror, or redistribute it from this project. Preserve the original shareware-package terms/notices when distribution is independently authorized."
+    },
+    {
+      "id": "freedoom-0.13.0-phase-1",
+      "filename": "freedoom1.wad",
+      "local_path": null,
+      "kind": "IWAD",
+      "version": "0.13.0",
+      "source": "https://github.com/freedoom/freedoom/releases/tag/v0.13.0",
+      "source_commit": "cfb8644b1a8dc7d7d2177e6a892ccaa2922bdaae",
+      "license": "BSD-3-Clause",
+      "notice": "Preferred redistributable game data for public reproducibility; supply separately and preserve Freedoom notices."
+    }
+  ]
+}

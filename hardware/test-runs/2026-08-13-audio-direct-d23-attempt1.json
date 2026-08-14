@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "id": "audio-direct-d23-connected-unit-attempt1-2026-08-13",
+  "timestamp_utc": "2026-08-13T08:38:57.836196Z",
+  "classification": "hardware-test-failed-safe-before-host-arm",
+  "result": "fail-safe-no-tone",
+  "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+  "exact_artifact": {
+    "offset": "0x10000",
+    "bytes": 196896,
+    "sha256": "6500b7a86d56ef4e007b6ac979c8cb81017eaca09c4e779a22fdb5286d635c60",
+    "write_verified_by_esptool": true,
+    "exact_application_readback_verified": true,
+    "readback_chunks": 1
+  },
+  "authorization": {
+    "record": "hardware/evidence/audio-direct-diag-d23-one-shot-authorization.json",
+    "sha256": "368d8a7028d30d4dcd6f2ac76121efde511634380a75a693b3ce9c0d9aeebd76",
+    "receipt_sha256": "3a8ce041d8be7604c25cd8eb8a5d94c50e4dfda1a6e8881c04592af3543028d2",
+    "consumed_once": true,
+    "revoked_after_failure": true
+  },
+  "transport": {
+    "capture_tool_sha256": "92944401d288e6f3bc90603bb85b7350e57afd48dca2f98e9189f9fbb00c4649",
+    "capture_transport_sha256": "d770e5cec94e6a0de813fec662aecf0e27a72ae516d7577b0da730755c94669c",
+    "same_serial_handle": true,
+    "outcome": "launched-capture-failed: CaptureError: exact WAIT_ARM was not observed",
+    "host_arm_frame_transmitted": false,
+    "serial_acceptance_markers_observed": 0,
+    "microphone_evidence_created": false
+  },
+  "safety_observation": {
+    "firmware_requires_exact_host_arm_before_board_power_or_audio": true,
+    "no_host_arm_means_amp_shutdown_and_rails_off": true,
+    "tone_played": false,
+    "pass_marker_observed": false,
+    "post_failure_passive_serial_listen_seconds": 6,
+    "post_failure_passive_serial_bytes": 0
+  },
+  "diagnosis": {
+    "cause": "The direct esptool ESPLoader.run call did not perform the CLI post-operation hard reset required to boot this ESP32-P4 from the ROM loader.",
+    "evidence": "Pinned esptool 4.12 run command calls esp.run(), then main applies args.after=hard_reset via esp.hard_reset(); the transport performed only esp.run().",
+    "required_before_another_attempt": [
+      "new explicit one-shot authorization record and durable ledger",
+      "same-handle launch sequence that includes one reviewed deliberate hard reset",
+      "refreshed transport hashes, receipt contract, and exact verifier",
+      "app-only flash authorization remains false until the new gate passes"
+    ]
+  }
+}

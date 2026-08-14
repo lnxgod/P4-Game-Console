@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "id": "doom-d0-host-2026-08-12",
+  "timestamp_utc": "2026-08-13T01:04:00Z",
+  "classification": "host-tested",
+  "result": "pass",
+  "host": {
+    "os": "Darwin 25.6.0",
+    "architecture": "arm64",
+    "compiler": "Apple clang 21.0.0 (clang-2100.0.123.102)",
+    "compiler_target": "arm64-apple-darwin25.6.0",
+    "c_standard": "C99"
+  },
+  "engine": {
+    "repository": "https://github.com/ozkl/doomgeneric.git",
+    "commit": "dcb7a8dbc7a16ce3dda29382ac9aae9d77d21284",
+    "tree": "413539bdaa1521af167d9b34e9db0cd193367624",
+    "vendor_files_verified": 205,
+    "adapter_warnings_as_errors": true,
+    "immutable_upstream_warnings": {
+      "acceptance_criterion": false,
+      "note": "Compiler/version-dependent legacy diagnostics are captured, not counted as durable evidence.",
+      "local_log": "build-host/doom/upstream-warnings.log"
+    }
+  },
+  "game_data": {
+    "id": "doom-shareware-1.9",
+    "filename": "doom1.wad",
+    "local_path": "local-data/doom/doom1.wad",
+    "bytes_committed": false,
+    "bytes_embedded": false,
+    "size_bytes": 4196020,
+    "sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
+  },
+  "test": {
+    "commands": [
+      "make doom-provenance",
+      "make doom-host",
+      "make doom-smoke"
+    ],
+    "framebuffer": {
+      "width": 320,
+      "height": 200,
+      "pixel_type": "upstream doomgeneric 32-bit pixel_t"
+    },
+    "frames_requested": 8,
+    "frames_presented": 8,
+    "frame_checksum": {
+      "algorithm": "FNV-1a-64 over each presented uint32 pixel serialized least-significant byte first",
+      "value": "ca2ae564e8675a45"
+    },
+    "acceptance_markers": [
+      "P4_DOOM_D0 PROVENANCE PASS",
+      "P4_DOOM_D0 BUILD PASS",
+      "P4_DOOM_D0 WAD VERIFIED",
+      "P4_DOOM_D0 PASS frames=8 checksum=ca2ae564e8675a45",
+      "P4_DOOM_D0 SMOKE PASS"
+    ]
+  },
+  "scope": "Silent headless native engine proof using an ignored local shareware IWAD",
+  "claims_not_made": [
+    "ESP32-P4 firmware compilation or execution",
+    "CrowPanel display scanout or board pin correctness",
+    "PSRAM allocation or embedded memory headroom",
+    "microSD access",
+    "audio output",
+    "USB host electrical safety or gamepad input",
+    "interactive gameplay",
+    "public redistribution authorization for game-data bytes"
+  ]
+}

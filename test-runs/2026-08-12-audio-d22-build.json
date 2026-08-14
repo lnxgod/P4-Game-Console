@@ -1,0 +1,244 @@
+{
+  "schema": 1,
+  "id": "audio-d2.2-factory-semantics-dual-path-build-2026-08-12",
+  "timestamp_utc": "2026-08-13T06:31:25Z",
+  "classification": "build-tested",
+  "result": "pass-build-only-runtime-denied",
+  "scope": "elecrow_factory_semantics_dual_path_bounded_audio_probe",
+  "authorization_evidence": "hardware/evidence/elecrow-10.1-audio-driver-path.json",
+  "factory_source_evidence": "hardware/evidence/elecrow-10.1-factory-audio-semantics.json",
+  "prior_one_shot_authorization_evidence": "hardware/evidence/audio-diag-one-shot-authorization.json",
+  "current_one_shot_authorization_evidence": null,
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "compiler": "riscv32-esp-elf GCC 14.2.0_20251107"
+  },
+  "managed_codec": {
+    "component": "espressif/esp_codec_dev",
+    "version": "1.3.4",
+    "registry_component_hash": "18c22e1411224ba6103c4aca1b01bc740af33926756e9e106370a477d52bcba1",
+    "dependencies_lock_sha256": "3215c4561eb715bf74f0bba99161c215c478c7296936492e6802a050afe3deda"
+  },
+  "source_inventory": {
+    "apps/audio_diag/CMakeLists.txt": "be8a6da7e751d7676ae8440c42ea725d08a798276e4848cc834daa6a96a3186e",
+    "apps/audio_diag/main/CMakeLists.txt": "35c411e95e57839806869b58ded7a07f1624e7da5b50989f4f8d70d6398fec4d",
+    "apps/audio_diag/main/audio_diag_main.c": "ae81644bda59a23b587945783fe24d71c0be8461aa5a12869e729f455045f79c",
+    "apps/audio_diag/main/idf_component.yml": "c02968cafb1b7543f0f5452ec63ac9e87652e71ecd27ebc60a2cc3d43fe6ee5a",
+    "apps/audio_diag/sdkconfig.defaults": "233f4bee9fd3e46206c67ea1b352f54fe81ff0c0c0a55efdd49ad2c5d7dde1e7",
+    "apps/audio_diag/dependencies.lock": "3215c4561eb715bf74f0bba99161c215c478c7296936492e6802a050afe3deda",
+    "components/platform_audio/CMakeLists.txt": "4fce36702e3d18e44bc59f8e65d91fdeb9b81072b57a37b79f62212162827653",
+    "components/platform_audio/Kconfig": "b77a0fb7d46bf421ad7df80aa4485f77051b482aeec55de14350074ae38e8835",
+    "components/platform_audio/include/platform/audio.h": "78c6ea13ea20b0920a502e2beac534818ece0556a60c5231bde89bdac2029c53",
+    "components/platform_audio/include/platform/audio_tone.h": "90b8715f51f049cf8f73ce3dfc64a023f44bd7cc73a2d7f9011d300731434978",
+    "components/platform_audio/src/platform_audio.c": "a296a8fe8a5bc0378b2d55f1a920755928f913a52abaf9ecb5611608506d8412",
+    "components/platform_audio/src/platform_audio_policy.c": "ae13993595492c277ddd399825b87a9818dcea5eb13f0add4ef7bdcacb3528c1",
+    "components/platform_audio/src/platform_audio_policy.h": "189186874e3a3700730765552472990e89304d85984f7165a9066e84b6b6249c",
+    "components/platform_audio/src/platform_audio_tone.c": "a1e482a8ef5d8b4c26ca391f3a8d9152956e21794a584728245eeed42ee6252c",
+    "components/platform_audio/tests/CMakeLists.txt": "64daaa7077f56eff72e56c8de9708c9ad28007b6be18cd9fa4c49bcaff9def5c",
+    "components/platform_audio/tests/test_platform_audio.c": "e917aa9f5e898b10d901e634d7e281ca17ca2fe5442d0030336aad951e89aee5"
+  },
+  "build": {
+    "canonical_command": "./scripts/build.sh audio_diag",
+    "independent_command": "idf.py -C apps/audio_diag -B <independent-build-directory>/build -DIDF_TARGET=esp32p4 -DSDKCONFIG=<independent-build-directory>/sdkconfig -DCCACHE_ENABLE=0 build",
+    "reproducible_build": true,
+    "compile_time_date_enabled": false,
+    "clean_builds_compared": 3,
+    "independent_build_directories_compared": 2,
+    "canonical_build_also_compared": true,
+    "identical_binary": true,
+    "identical_elf": true,
+    "identical_bootloader": true,
+    "identical_partition_table": true,
+    "no_reset_before_readback": true,
+    "first_app_main_call": "platform_audio_force_safe_shutdown",
+    "platform_audio_component_modified_for_d22": false,
+    "exact_factory_archive_rehashed_locally": true,
+    "i2c1_bounded_full_legal_address_scan": true,
+    "factory_direct_i2s_fallback_no_mclk": true,
+    "guarded_es8311_path_retained_on_ack": true,
+    "prior_runtime_failures_bound": [
+      "hardware/test-runs/2026-08-12-audio-diag-d2.json",
+      "hardware/test-runs/2026-08-12-audio-diag-d21.json"
+    ],
+    "stack_review": {
+      "configured_main_task_stack_bytes": 3584,
+      "idf_newlib_extra_stack_bytes": 512,
+      "allocated_main_task_stack_bytes": 4096,
+      "idf_main_task_static_frame_bytes": 32,
+      "app_main_static_frame_bytes": 208,
+      "app_main_local_static_headroom_before_callees_bytes": 3888,
+      "main_task_chain_static_headroom_before_app_callees_bytes": 3856,
+      "direct_zero_buffer_storage": "bss",
+      "direct_zero_buffer_bytes": 1024,
+      "dynamic_tone_storage": "heap_calloc_25600_bytes",
+      "scope_caveat": "static_frames_only_excludes_called_driver_library_and_interrupt_frames"
+    },
+    "target": "esp32p4",
+    "silicon_family": "revision_1_x",
+    "minimum_revision_full": 100,
+    "maximum_revision_full": 199,
+    "flash_size_bytes": 16777216,
+    "reviewed_build_only_kconfig_enabled": true,
+    "global_pin_map_authorized": false,
+    "audio_runtime_authorized": false
+  },
+  "artifacts": {
+    "app_offset": "0x10000",
+    "generated_app_partition_bytes": 1048576,
+    "saved_factory_app_partition_bytes": 11534336,
+    "app_binary_bytes": 246224,
+    "app_binary_sha256": "dc2816363f84600675e5ac84de58133a2a0193c7a1c98b48643ccaae7ab2da16",
+    "generated_app_partition_free_bytes": 802352,
+    "saved_factory_app_partition_free_bytes": 11288112,
+    "elf_bytes": 5026624,
+    "elf_sha256": "b31bff4875593c102ad76697139cd76e40ffb651c9a01ec7d3b8dbf254989fb2",
+    "bootloader_bytes": 22912,
+    "bootloader_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "7f00b6c042a89b15b0cac534f82ed988caf29278ff5700b0c511eb1b5bb7c820"
+  },
+  "tests": {
+    "host_policy_and_waveform": {
+      "command": "cmake -S components/platform_audio -B /private/tmp/p4-audio-d22-host-20260813 -G Ninja -DCMAKE_BUILD_TYPE=Debug -DPLATFORM_AUDIO_ENABLE_SANITIZERS=ON && cmake --build /private/tmp/p4-audio-d22-host-20260813 && ctest --test-dir /private/tmp/p4-audio-d22-host-20260813 --output-on-failure",
+      "result": "pass",
+      "cases": 1,
+      "sanitizers": [
+        "AddressSanitizer",
+        "UndefinedBehaviorSanitizer"
+      ]
+    },
+    "clean_reproducibility": {
+      "result": "pass",
+      "directories": [
+        "apps/audio_diag/build",
+        "/private/tmp/p4-audio-d22-independent-g/build",
+        "/private/tmp/p4-audio-d22-independent-h/build"
+      ],
+      "exact_artifacts_compared": [
+        "application binary",
+        "application ELF",
+        "bootloader binary",
+        "partition table binary"
+      ]
+    }
+  },
+  "diagnostic_policy": {
+    "board_power": {
+      "ldo3_channel": 3,
+      "ldo3_voltage_mv": 2500,
+      "ldo4_channel": 4,
+      "ldo4_voltage_mv": 3300,
+      "settle_ms": 20,
+      "acquisition_order": "ldo3_then_ldo4",
+      "release_order": "ldo4_then_ldo3"
+    },
+    "i2c_scan": {
+      "controller": 1,
+      "sda_gpio": 45,
+      "scl_gpio": 46,
+      "first_7bit": "0x08",
+      "last_7bit": "0x77",
+      "probe_timeout_per_address_ms": 10,
+      "ack_addresses_logged": true,
+      "guarded_codec_address_7bit": "0x18"
+    },
+    "tone": {
+      "count": 1,
+      "frequency_hz": 440,
+      "duration_ms": 400,
+      "fade_ms": 50,
+      "pcm_peak": 512,
+      "pcm_full_scale": 32767
+    },
+    "direct_fallback": {
+      "i2s_controller": 1,
+      "lrclk_gpio": 21,
+      "bclk_gpio": 22,
+      "dout_gpio": 23,
+      "mclk": "unused",
+      "sample_rate_hz": 16000,
+      "channels": 2,
+      "bits_per_sample": 16,
+      "zero_preroll_frames": 256,
+      "zero_postroll_frames": 256,
+      "amp_enable_after_i2s_ready_and_zero_preroll": true,
+      "amp_settle_ms": 20,
+      "write_timeout_ms": 100,
+      "exact_write_accounting": {
+        "bytes_per_frame": 4,
+        "preroll_write_calls": 1,
+        "preroll_bytes": 1024,
+        "tone_write_calls": 50,
+        "tone_bytes_per_call": 512,
+        "tone_bytes": 25600,
+        "postroll_write_calls": 1,
+        "postroll_bytes": 1024,
+        "total_write_calls": 52,
+        "total_bytes": 27648,
+        "every_call_requires_bytes_written_equal_requested": true
+      }
+    },
+    "guarded_codec_path": {
+      "selected_only_if_addr7_0x18_acks_on_i2c1": true,
+      "i2s_controller": 1,
+      "mclk_gpio": 24,
+      "mclk_hz": 4096000,
+      "codec_volume_percent": 5,
+      "raw_register_readback_guards_retained": true
+    },
+    "amplifier": {
+      "gpio": 30,
+      "shutdown_level": 1,
+      "enable_level": 0
+    }
+  },
+  "serial_acceptance": {
+    "pass_no_ack_exact": "P4_AUDIO D2.2 PASS path=factory-direct-i2s tone_count=1 bounded_ms=400 amp_shutdown=1 ldo3_released=1 ldo4_released=1",
+    "pass_ack_exact": "P4_AUDIO D2.2 PASS path=guarded-es8311 tone_count=1 bounded_ms=400 amp_shutdown=1 ldo3_released=1 ldo4_released=1",
+    "halt_prefix": "P4_AUDIO D2.2 HALT stage=",
+    "halt_suffix": "amp_shutdown_requested=1",
+    "reject_markers": [
+      "P4_AUDIO D2.2 HALT",
+      "Guru Meditation Error",
+      "Task watchdog got triggered",
+      "assert failed"
+    ],
+    "runtime_pass_requirements": [
+      "exact application readback verified before the single launch",
+      "exactly one path-specific PASS marker",
+      "operator confirms the bounded tone was audible",
+      "no reject marker"
+    ]
+  },
+  "execution": {
+    "firmware_flashed": false,
+    "firmware_executed": false,
+    "hardware_accessed": false,
+    "audio_path_energized": false,
+    "runtime_supported": false,
+    "serial_evidence": null
+  },
+  "prior_runtime_failures": [
+    {
+      "evidence": "hardware/test-runs/2026-08-12-audio-diag-d2.json",
+      "result": "fail-safe-codec-i2c-no-ack",
+      "artifact_bytes": 243184,
+      "artifact_sha256": "4c87744b31fd4317d978a5f922ec22904b223d5d5a1a1b945d1c6306484a7e6a"
+    },
+    {
+      "evidence": "hardware/test-runs/2026-08-12-audio-diag-d21.json",
+      "result": "fail-safe-codec-probe-no-ack-after-board-power",
+      "artifact_bytes": 244752,
+      "artifact_sha256": "920b8100411416c0dd197cb7c1f2c1986335ae1ebf0d30585f4be80ad4da8c98"
+    }
+  ],
+  "claims_not_made": [
+    "The connected PCB revision or populated codec is physically identified.",
+    "The direct-I2S path produces sound on the connected unit.",
+    "The bounded tone is audible, pop-free, or safe for every attached speaker.",
+    "The D2.2 image is authorized to flash or execute.",
+    "This diagnostic-only direct-I2S path is a promoted reusable platform_audio backend.",
+    "The microphone, display, touch, storage, USB, camera, or wireless paths are initialized."
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "id": "doom-embedded-gamepad-e3-one-shot-authorization-2026-08-13",
+  "classification": "user-requested-doom-e3-app-only-one-shot-consumed-revoked",
+  "requested_at_utc": "2026-08-13T15:40:00Z",
+  "active": false,
+  "consumed": true,
+  "consumed_at_utc": "2026-08-13T15:54:00Z",
+  "terminal_outcome": "completed",
+  "runtime_evidence": "hardware/test-runs/2026-08-13-doom-embedded-gamepad-e3.json",
+  "durable_ledger": {
+    "path": "hardware/local-state/doom-embedded-gamepad-e3-one-shot.json",
+    "bytes": 554,
+    "sha256": "33da02f3130d81a82601f3134a2ed37a3cdade8e2e5f8ef408e8ab109869d19e",
+    "status": "completed",
+    "terminal": true
+  },
+  "user_authorization": "The user explicitly authorized completing and installing the prepared Doom image in this task.",
+  "device_binding": {
+    "identity_kind": "sha256-of-normalized-base-identity",
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "flash_bytes": 16777216,
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3"
+  },
+  "scope": {
+    "app": "doom_embedded_gamepad",
+    "app_partition_only": true,
+    "full_project_flash": false,
+    "bootloader_write": false,
+    "partition_table_write": false,
+    "data_partition_write": false,
+    "erase_flash": false,
+    "display_wad_doom_runtime": true,
+    "audio_runtime": false,
+    "usb_runtime": false,
+    "usb_fixture_authorized": false,
+    "controller_acceptance_run": false
+  },
+  "exact_artifact": {
+    "offset": "0x10000",
+    "bytes": 4927824,
+    "sha256": "32814a97b72b3b227e2ace02393222178ceebf02d18a4f0b35bead1f4584ea24",
+    "build_evidence": "test-runs/2026-08-13-doom-embedded-gamepad-e3-build.json"
+  },
+  "execution_contract": {
+    "maximum_terminal_attempts": 1,
+    "durable_local_state": "hardware/local-state/doom-embedded-gamepad-e3-one-shot.json",
+    "reservation_is_consumed_on_success_or_failure": true,
+    "require_factory_backup_and_bound_live_identity": true,
+    "require_secure_boot_disabled": true,
+    "require_flash_encryption_disabled": true,
+    "require_exact_verifier_app_flash_mode": true,
+    "require_sealed_read_only_artifact_snapshot": true,
+    "rebuild_after_verification": false,
+    "write_after_action": "no_reset",
+    "readback": "ordered-512KiB-max-chunks-no-reset",
+    "explicit_run_after_exact_readback": true,
+    "explicit_run_count": 1
+  },
+  "activation_contract": {
+    "metadata_flag": "apps/doom_embedded_gamepad/app-metadata.json:flash_app_authorized=true",
+    "metadata_one_shot_flag": "apps/doom_embedded_gamepad/app-metadata.json:one_shot_authorization_active=true",
+    "authorization_classification": "user-requested-doom-e3-app-only-one-shot-active",
+    "authorization_active": true,
+    "all_broad_and_full_project_flags_remain_false": true,
+    "usb_authorization_flags_remain_false": true,
+    "consumed_record_must_be_revoked_after_the_terminal_attempt": true
+  },
+  "claims_not_made": [
+    "The one explicit launch proves ongoing Doom runtime behavior or visual output without serial or visual observation.",
+    "Native USB gamepad input is electrically or operationally authorized.",
+    "The controller has passed on-device acceptance.",
+    "Audio is included or authorized.",
+    "The WAD-bearing artifact is authorized for redistribution."
+  ]
+}

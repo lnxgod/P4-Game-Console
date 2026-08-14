@@ -1,0 +1,119 @@
+{
+  "schema": 1,
+  "id": "touch-t1-visible-build-2026-08-13",
+  "timestamp_utc": "2026-08-13T20:34:46Z",
+  "classification": "build-and-host-tested-no-hardware-execution",
+  "result": "pass",
+  "scope": "display plus bounded GT911 shared-I2C client and five-contact visible overlay",
+  "authorization_evidence": "hardware/evidence/elecrow-10.1-touch-path.json",
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "compiler": "riscv32-esp-elf GCC 14.2.0_20251107",
+    "toolchain_lock_sha256": "0539c66e7aa2de5d5564afea86e6412174185602fdea8efbe068676b51867936"
+  },
+  "dependencies": {
+    "lock_file": "apps/touch_diag/dependencies.lock",
+    "lock_file_sha256": "229b2b1cbd4142953913a788caced1e9fdd1c0cc9defc69a594ebc561e5b20b4",
+    "esp_lcd_touch_version": "1.1.2",
+    "esp_lcd_touch_component_hash": "779b4ba2464a3ae85681e4b860caa5fdc35801458c23f3039ee761bae7f442a4",
+    "esp_lcd_touch_gt911_version": "1.1.3",
+    "esp_lcd_touch_gt911_component_hash": "acc1c184358aa29ef72506f618c9c76a8cc2bf12af38a2bff3d44d84f3a08857",
+    "esp_lcd_ek79007_version": "1.0.2",
+    "esp_lcd_ek79007_component_hash": "07c1afab7e9fd4dd2fd06ff9245e65327c5bbd5485efec199496e19a9304d47b"
+  },
+  "official_known_good_comparison": {
+    "elecrow_commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+    "v1_0_v1_1_touch_source_blob": "c4f0e331c453ab2f8a315aba765eae5492cac58b",
+    "v1_2_touch_source_blob": "dd710cb513aea12901428585b9f367409fcb32a9",
+    "mirrored_semantics": [
+      "400_khz_gt911_device",
+      "gpio40_active_low_reset",
+      "gpio42_primary_0x5d_backup_0x14_address_latch",
+      "1024x600_no_swap_no_mirror",
+      "polling_without_runtime_isr_callback"
+    ],
+    "hardened_difference": "failed primary panel-IO is deleted before backup creation"
+  },
+  "source_files": {
+    "apps/touch_diag/main/touch_diag_main.c": "ebd6da0b7004cf438b2a29d37883c63698d47706250ce06cf902e910326ac452",
+    "apps/touch_diag/main/CMakeLists.txt": "c942a6ebba74552945256796d1666ac7d189a59ad9b5062d700305ab71a9a3d6",
+    "apps/touch_diag/main/idf_component.yml": "bac2a0b4cb9f41cb58701d38329a39fea27ffd3f13ec0d1ce2ef3b43b6aa6b98",
+    "apps/touch_diag/sdkconfig.defaults": "d241fd49c0be215e560a090654b5eb7385d9ed53511cb262658569468b3ca3fb",
+    "components/platform_touch/include/platform/touch.h": "6e035718e0f21ff4c4334bc6290a67f0d8555b515d5c140ef9200f8bbd491c6e",
+    "components/platform_touch/src/platform_touch.c": "b761a0356a072592c7e9fc5833c53d49aad00a977aaef7732fe9fe608cb204da",
+    "components/platform_touch/src/platform_touch_frame.c": "c13e1305f494d302218d12f425aeea70dc726a4d79601723fadc464d439074fa",
+    "components/platform_touch/src/platform_touch_frame.h": "7ef6dd8094d134cfda944436c11a621b39e84fefa568cdfc21d3f6ddac7f531b",
+    "components/platform_touch/CMakeLists.txt": "e1301f40a39acc53b7adbb674718369be1a5a9ab6f03e8ae7ec7ad257c1bf9cf",
+    "components/platform_touch/Kconfig": "626c5b03cd5e7c6c61d75fc6dd69c894bfe25dc9480313813b4a2fb020a021f6",
+    "components/platform_touch/tests/CMakeLists.txt": "08f79101124d614c473357aa1b0cf1bab45b73fab650a0574308ce5eceb819d0",
+    "components/platform_touch/tests/test_platform_touch_frame.c": "29a9990487cb0974f269e0bde268b4f0597dc0f3dbdce2deb7ff8d74b3c4b582",
+    "components/platform_touch/tests/test_platform_touch_runtime.c": "6983da9d663d0dbc4830f4d27628fd27be0feb7d067a1e4b4bbdccdf429c8d6c"
+  },
+  "build": {
+    "command": "make build APP=touch_diag",
+    "target": "esp32p4",
+    "silicon_family": "revision_1_x",
+    "minimum_revision_full": 100,
+    "maximum_revision_full": 199,
+    "flash_size_bytes": 16777216,
+    "application_offset": "0x10000",
+    "application_partition_bytes": 1048576,
+    "reproducible_build_config_enabled": true,
+    "compile_time_date_enabled": false,
+    "display_authorization_enabled": true,
+    "touch_authorization_enabled": true,
+    "touch_max_points": 5,
+    "touch_max_buttons": 0
+  },
+  "artifacts": {
+    "app_binary_bytes": 276544,
+    "app_binary_sha256": "3a839d37de48324526e95ecda1a612be6605f2860a7247e4385132186379651c",
+    "app_partition_free_bytes": 772032,
+    "elf_bytes": 5654644,
+    "elf_sha256": "a87870f166e303cc20c56f87ad4fcdd94c89b64356b40e7055227dcba0dd5b3d",
+    "bootloader_bytes": 22912,
+    "bootloader_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "7f00b6c042a89b15b0cac534f82ed988caf29278ff5700b0c511eb1b5bb7c820"
+  },
+  "host_tests": {
+    "command": "make platform-touch-host",
+    "suites": 2,
+    "result": "pass",
+    "sanitizers": ["AddressSanitizer", "UndefinedBehaviorSanitizer"],
+    "coverage": [
+      "five_contact_frame_and_1024x600_bounds",
+      "exact_400khz_0x5d_gpio40_gpio42_no_isr_driver_config",
+      "primary_0x5d_failure_cleanup_before_0x14_fallback",
+      "backup_failure_cleanup_and_retryable_ownership",
+      "read_error_invalid_zero_contact_frame",
+      "greater_than_five_and_out_of_bounds_rejection",
+      "destroy_failure_retains_owner_and_borrowed_bus"
+    ]
+  },
+  "source_and_link_audit": {
+    "platform_touch_creates_or_deletes_i2c_bus": false,
+    "platform_touch_direct_gpio_calls": false,
+    "platform_touch_registers_isr": false,
+    "platform_touch_undefined_symbols": [
+      "esp_lcd_new_panel_io_i2c_v2",
+      "esp_lcd_panel_io_del",
+      "esp_lcd_touch_new_i2c_gt911",
+      "esp_lcd_touch_read_data",
+      "esp_lcd_touch_get_coordinates",
+      "esp_lcd_touch_del"
+    ]
+  },
+  "execution": {
+    "firmware_flashed": false,
+    "firmware_executed": false,
+    "hardware_verified": false
+  },
+  "claims_not_made": [
+    "GT911 initialized on the connected board",
+    "coordinates or five simultaneous contacts were observed",
+    "the visible overlay was displayed",
+    "touch and audio coexistence was tested"
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "id": "audio-diag-d2-2026-08-12",
+  "timestamp_local": "2026-08-12T22:55:00-07:00",
+  "result": "fail-safe-codec-i2c-no-ack",
+  "app": "audio_diag",
+  "artifact": {
+    "offset": "0x10000",
+    "bytes": 243184,
+    "sha256": "4c87744b31fd4317d978a5f922ec22904b223d5d5a1a1b945d1c6306484a7e6a",
+    "readback_verified": true,
+    "launch_deferred_until_after_exact_readback": true
+  },
+  "runtime": {
+    "codec": "ES8311",
+    "codec_address_7bit": "0x18",
+    "i2c_result": "repeated write and read failures",
+    "halt_stage": "codec-create",
+    "halt_error": "ESP_FAIL",
+    "tone_started": false,
+    "amp_enabled": false,
+    "amp_shutdown_gpio30": 1,
+    "panic_seen": false,
+    "watchdog_seen": false
+  },
+  "authorization": {
+    "app_only": true,
+    "project_flash": false,
+    "one_shot_authorization_revoked_after_run": true
+  },
+  "conclusion": "The exact diagnostic failed dark and quiet because the ES8311 did not acknowledge on I2C. GPIO30 remained high, so the active-low NS4263B amplifier was never enabled. Codec power, reset, level shifting, or I2C routing must be diagnosed before another audible test."
+}

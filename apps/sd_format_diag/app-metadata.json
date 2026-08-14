@@ -1,0 +1,49 @@
+{
+  "schema": 1,
+  "app": "sd_format_diag",
+  "stage": "D1-destructive-sd-fat32-format-build",
+  "evidence_class": "build-tested",
+  "purpose": "Destructively replace the inserted J5 microSD contents with a fresh FAT32 filesystem, then verify durable write/read/remove across unmount and remount.",
+  "runtime_supported": true,
+  "authorization_evidence": "hardware/evidence/sd-format-diag-one-shot-authorization.json",
+  "electrical_evidence": "hardware/evidence/elecrow-10.1-storage-path.json",
+  "user_destructive_authorization": "Explicitly granted in the active task on 2026-08-12 for the inserted board SD card.",
+  "build_evidence": "test-runs/2026-08-12-sd-format-diag-d1-build.json",
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "game_data_embedded": false,
+  "hardware_interfaces": [
+    "sdmmc_slot_0_1bit_sdr",
+    "gpio43_sd_clk",
+    "gpio44_sd_cmd",
+    "gpio39_sd_d0",
+    "clock_khz_1000",
+    "micro_sd_connector_j5"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "sd_d1_through_d7",
+    "sd_card_detect",
+    "sd_write_protect",
+    "sd_ddr",
+    "display",
+    "touch",
+    "audio",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "storage_mutation_policy": {
+    "scope": "inserted_j5_micro_sd_only",
+    "destructive": true,
+    "repartition": true,
+    "format": "FAT32",
+    "verify_file_write_read_remove": true,
+    "remount_verify": true,
+    "external_spi_flash_mutation": false
+  },
+  "runtime_evidence": null,
+  "runtime_blockers": [
+    "App-only flash authorization remains false pending the final exact-image preflash decision."
+  ]
+}

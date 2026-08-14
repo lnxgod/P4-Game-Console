@@ -1,0 +1,14 @@
+menu "ESP32-P4 Elecrow factory-path audio"
+    config PLATFORM_AUDIO_FACTORY_ELECROW_10_1_BUILD_ONLY
+        bool "Compile the reviewed Elecrow 10.1-inch factory audio initializer"
+        default n
+        help
+            Builds the complete pinned factory hardware initializer: PDM RX
+            I2S0 first at 16 kHz mono DSR_8S on GPIO24 clock (1.024 MHz) and
+            GPIO26 input, followed by speaker TX I2S1 at 16 kHz PCM16 stereo
+            on GPIO21/22/23 with TX MCLK unused and active-low GPIO30. GPIO24
+            may fan out through board strapping toward the codec MCLK net.
+            This option is a source/build gate for the exact-unit replay
+            scope. It is not continuity/population proof, acoustic proof, or
+            permission to flash or energize another unit's speakers.
+endmenu

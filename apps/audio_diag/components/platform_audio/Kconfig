@@ -1,0 +1,10 @@
+menu "ESP32-P4 platform audio"
+    config PLATFORM_AUDIO_ELECROW_10_1_REVIEWED_BUILD_ONLY
+        bool "Compile the reviewed Elecrow 10.1-inch ES8311 speaker path"
+        default n
+        help
+            Enables only the cross-revision V1.0-V1.2 speaker path reviewed in
+            hardware/evidence/elecrow-10.1-audio-driver-path.json. This option
+            is a build gate, not permission to flash or energize the speakers.
+            The first hardware run still requires separate app-only review.
+endmenu

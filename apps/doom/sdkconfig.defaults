@@ -1,0 +1,13 @@
+# SPDX-License-Identifier: GPL-2.0-or-later
+
+CONFIG_IDF_TARGET="esp32p4"
+
+# The connected prototype is P4 revision v1.3. Keep the incompatible v3.x
+# silicon family out of every image, including build-only link probes.
+CONFIG_ESP32P4_SELECTS_REV_LESS_V3=y
+CONFIG_ESP32P4_REV_MIN_100=y
+
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHFREQ_80M=y
+CONFIG_APP_REPRODUCIBLE_BUILD=y
+CONFIG_COMPILER_OPTIMIZATION_SIZE=y

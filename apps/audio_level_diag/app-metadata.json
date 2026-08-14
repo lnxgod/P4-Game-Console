@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "app": "audio_level_diag",
+  "stage": "D2.4-hardware-serial-pass-microphone-fail-control-path-postmortem",
+  "evidence_class": "hardware-tested-inconclusive-control-path-disabled",
+  "purpose": "Run one host-armed, synchronized 440 Hz direct-I2S diagnostic at a 4096 PCM peak without changing the reusable Doom audio backend.",
+  "runtime_supported": false,
+  "authorization_evidence": "hardware/evidence/audio-level-diag-d24-one-shot-authorization.json",
+  "build_evidence": "test-runs/2026-08-13-audio-d24-build.json",
+  "runtime_evidence": "hardware/test-runs/2026-08-13-audio-level-d24.json",
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "hardware_interfaces": [
+    "internal_ldo3_2500mv_ldo4_3300mv_standalone_test_ownership",
+    "i2s1_gpio21_lrclk_gpio22_bclk_gpio23_dout_no_mclk",
+    "gpio30_audio_out_sd_u4_shutdown_and_optional_q10_ns4168_ctrl",
+    "candidate_direct_digital_speaker_output_bounded_440hz_peak4096"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "display",
+    "touch",
+    "sd_card",
+    "i2c",
+    "audio_codec",
+    "mclk",
+    "microphone_input",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "runtime_blockers": [
+    "The exact D2.4 firmware lifecycle passed, but synchronized microphone analysis found no qualifying 440 Hz event at peak PCM 4096.",
+    "A post-run cross-revision net audit showed GPIO30 also gates optional Q10 to the NS4168 CTRL pins; D2.4 held GPIO30 high and therefore likely disabled the candidate direct-amplifier path during its tone.",
+    "No operator was present for contemporaneous audibility or pop confirmation.",
+    "The one-shot authorization was consumed and revoked; another execution requires a new authorization record and ledger.",
+    "GPIO30 high shuts down U4 and turns optional Q10 off; a valid optional-direct-path test must request GPIO30 low only inside a zero-prime and zero-drain safety window.",
+    "Reusable platform audio, Doom audio, board-wide audio, app-only flash, and full-project flash remain unauthorized."
+  ]
+}

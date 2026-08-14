@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "app": "storage_diag",
+  "stage": "D1-hardware-test-failed",
+  "evidence_class": "hardware-tested",
+  "purpose": "No-format SDMMC mount and exact Doom shareware WAD discovery diagnostic.",
+  "runtime_supported": false,
+  "authorization_evidence": "hardware/evidence/elecrow-10.1-storage-path.json",
+  "build_evidence": "test-runs/2026-08-12-storage-d1-build.json",
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "game_data_embedded": false,
+  "hardware_interfaces": [
+    "sdmmc_slot_0_1bit",
+    "gpio43_sd_clk",
+    "gpio44_sd_cmd",
+    "gpio39_sd_d0"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "sd_d1_through_d7",
+    "sd_card_detect",
+    "sd_write_protect",
+    "display",
+    "touch",
+    "audio",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "runtime_evidence": "hardware/test-runs/2026-08-12-storage-d1.json",
+  "runtime_blockers": [
+    "Two non-formatting mount attempts reached the card but timed out on the first sector read.",
+    "A read-only lower-clock raw-sector probe must distinguish signal/card failure from an unsupported filesystem before formatting is considered."
+  ]
+}

@@ -1,0 +1,12 @@
+menu "ESP32-P4 platform audio"
+    config PLATFORM_AUDIO_ELECROW_10_1_REVIEWED_BUILD_ONLY
+        bool "Compile the reviewed Elecrow factory direct-I2S candidate"
+        default n
+        help
+            Enables only the factory-matched direct-I2S candidate for the
+            connected population:
+            I2S1, GPIO21/22/23, no MCLK, and active-low GPIO30 amplifier
+            control. The caller/display owns already-on LDO3/LDO4. This option
+            is a build gate, not proof of audible output or permission to
+            flash or energize speakers.
+endmenu

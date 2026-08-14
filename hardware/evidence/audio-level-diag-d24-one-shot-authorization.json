@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "id": "audio-level-diag-d24-one-shot-authorization-2026-08-13",
+  "classification": "user-requested-bounded-diagnostic-one-shot-consumed-revoked",
+  "result": "executed-serial-pass-microphone-fail-operator-unavailable",
+  "scope": "audio_level_diag_d2_4_single_bounded_peak4096_tone_connected_unit",
+  "authorization_source": {
+    "actor": "user",
+    "date": "2026-08-12",
+    "record": "active_task_conversation",
+    "requested_outcome": "Get Doom running with sound on the connected device and perform whatever bounded diagnostics are required."
+  },
+  "exact_artifact": {
+    "offset": "0x10000",
+    "bytes": 196176,
+    "sha256": "2932520cc5dc7511b5032007a30931fc1cc59cb664966717ed01512636d7d37a"
+  },
+  "exact_host_arm": {
+    "authorization_id": "audio-level-diag-d24-one-shot-authorization-2026-08-13",
+    "nonce_derivation": "sha256-ascii-authorization-id-space-host-arm-space-v1",
+    "nonce": "ff9175223ffd30ffa0fbf940aa5c705d40a7fd1f6d6bbf9adec6a95d22edb3f3",
+    "frame_bytes": 137,
+    "frame_sha256": "662cb2434971bb6810cd1c35d51d5a2cacda12a12bf79e5b986e9cb7653a9c62",
+    "line_ending": "LF-only",
+    "silent_attach_ms": 2000,
+    "timeout_ms": 15000,
+    "duplicate_guard_ms": 100,
+    "ldo3_ldo4_off_until_arm": true,
+    "direct_output_unclocked_until_arm": true
+  },
+  "runtime_limits": {
+    "controller": 1,
+    "lrclk_gpio": 21,
+    "bclk_gpio": 22,
+    "dout_gpio": 23,
+    "mclk": "unused",
+    "sample_rate_hz": 16000,
+    "channels": 2,
+    "bits": 16,
+    "dma_descriptors": 6,
+    "dma_frames_each": 256,
+    "zero_preload_frames": 1536,
+    "write_frames": 128,
+    "write_timeout_ms": 100,
+    "waveform": "triangle",
+    "frequency_hz": 440,
+    "duration_ms": 400,
+    "fade_ms": 80,
+    "peak_pcm": 4096,
+    "postroll_zero_frames": 1536,
+    "postroll_drain_ms": 120,
+    "exact_write_calls": 62
+  },
+  "electrical_truth": {
+    "gpio30_scope": "alternate_analog_u4_only",
+    "gpio30_does_not_mute_candidate_direct_amps": true,
+    "direct_amp_vdd5v_unswitched": true,
+    "ldo3_ldo4_not_claimed_to_gate_direct_amp_power": true,
+    "direct_path_control": "zero_data_then_unclock_i2s"
+  },
+  "one_shot_transport": {
+    "route": "scripts/flash-audio-level-diag.sh",
+    "capture_cli": "scripts/capture-audio-level-diag.py",
+    "capture_transport": "scripts/d24_capture_transport.py",
+    "analyzer": "scripts/analyze-audio-level-tone.py",
+    "ledger": "hardware/local-state/audio-level-d24.json",
+    "three_host_preflights_before_reservation": true,
+    "fresh_private_receipt_required": true,
+    "exact_immutable_snapshot_write": true,
+    "exact_chunked_readback_before_receipt": true,
+    "central_flash_route_never_runs_app": true,
+    "receipt_atomically_consumed_before_same_handle_launch": true,
+    "run_count": 1,
+    "hard_reset_count": 1
+  },
+  "exact_host_tooling": {
+    "scripts/verify-audio-level-diag.py": "480b55008ca4cc3a688249a1a86f6af0f525b3e9d2a43b6d6bc63f029dddd812",
+    "scripts/flash-audio-level-diag.sh": "261a1f321a5b2cff6d3b83d5c673e99ea5cc3b118d6d0386bee58f84e1e93404",
+    "scripts/capture-audio-level-diag.py": "3428bad49ee71b9d8c38e31e569c38f3d5196985fde736c0e8e7922cf5539673",
+    "scripts/d24_capture_transport.py": "5398ba6392770c321943979dae5ca1360a7f4f8d42d2bda844928229bd650f31",
+    "scripts/analyze-audio-level-tone.py": "1402af8a005602b3a4c4d9c9a705214459926f8a61a7dc501a04cd0324f27b20",
+    "scripts/tests/test-d24-gate.py": "29b1fad2fc0c0848c5051826da361fce21a9beff479bac87e66818ce770ad8b8",
+    "scripts/lib/app-readback.sh": "6d536bd07b096677003bcc34f56e5a1f7d1a48472f43180519e8bde786bd365e",
+    "scripts/lib/project-env.sh": "cf99993aadb6500cca498a62c134ff8fde168f4c394d8ce30aa306cde9050891",
+    "scripts/build.sh": "306b96d43a749eb8ee255ac4e272b91c84d0c7ef0f9f66c3d691ea7dabe74783",
+    "scripts/verify-readback-chunks.py": "2c65cee3b156f58fd01c3d3b7445e89b026dd0df079535f41ca05824374d35ee",
+    "scripts/verify-metadata.py": "19e5d511ddb2d1b0610ecff8f76c3b4c9fae9f7ba34765cf3f03bba108b5044e",
+    "scripts/verify-env.sh": "7f2d9edd3830167941957f27f2fa499ef66cf01e16e26e95562f2e8307d8798c",
+    "toolchain.lock.json": "0539c66e7aa2de5d5564afea86e6412174185602fdea8efbe068676b51867936",
+    "hardware/backups/manifest.json": "f0d4acbb021614604f32ed73440d20a3d6f657dc096113bdfb497e70606dc881"
+  },
+  "acceptance": {
+    "serial_markers_exact_once_and_ordered": [
+      "SERIAL_ATTACH",
+      "WAIT_ARM",
+      "ARM_ACCEPTED",
+      "START",
+      "SAFE",
+      "BACKEND_READY",
+      "POWER_READY",
+      "CAPTURE_ARM",
+      "TONE_BEGIN",
+      "POSTROLL",
+      "PASS",
+      "HEARTBEAT"
+    ],
+    "synchronized_microphone_detection_required": true,
+    "clipped_capture_rejected": true,
+    "contemporaneous_operator_confirmation_separate": true,
+    "classifications": [
+      "fail-microphone-detection",
+      "pass-serial-microphone-operator-pending",
+      "mixed-microphone-pass-operator-not-heard",
+      "mixed-microphone-heard-pop-observed",
+      "pass-serial-microphone-operator-confirmed"
+    ],
+    "full_reusable_hardware_acceptance_requires_operator_heard": true,
+    "full_reusable_hardware_acceptance_requires_pop_not_observed": true
+  },
+  "exception_boundary": {
+    "active": false,
+    "metadata_flags_remain_false": true,
+    "connected_unit_only": true,
+    "app_partition_only": true,
+    "full_project_flash_authorized": false,
+    "doom_composite_authorized": false,
+    "reusable_platform_audio_authorized": false,
+    "display_touch_storage_usb_codec_mclk_authorized": false
+  }
+}

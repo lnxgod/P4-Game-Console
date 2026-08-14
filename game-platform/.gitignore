@@ -1,0 +1,5 @@
+/build-host/
+/firmware/apps/*/build/
+/firmware/apps/*/sdkconfig
+/firmware/apps/*/sdkconfig.old
+

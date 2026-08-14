@@ -1,0 +1,38 @@
+{
+  "schema": 1,
+  "app": "doom_runtime",
+  "stage": "D1-preflash-reviewed",
+  "evidence_class": "build-tested",
+  "purpose": "Run the pinned doomgeneric engine from an exact-hash-gated external shareware IWAD through reusable storage and framebuffer services.",
+  "runtime_supported": false,
+  "authorization_evidence": [
+    "hardware/evidence/elecrow-10.1-display-path.json",
+    "hardware/evidence/elecrow-10.1-storage-path.json"
+  ],
+  "build_evidence": "test-runs/2026-08-12-doom-d1-build.json",
+  "flash_authorized": false,
+  "flash_app_authorized": false,
+  "flash_project_authorized": false,
+  "game_data_embedded": false,
+  "hardware_interfaces": [
+    "mipi_dsi_bus_0",
+    "internal_ldo_3_2500mv",
+    "internal_ldo_4_3300mv",
+    "gpio31_backlight_pwm",
+    "sdmmc_slot_0_1bit_gpio43_gpio44_gpio39"
+  ],
+  "hardware_interfaces_explicitly_absent": [
+    "gpio29",
+    "gpio41",
+    "touch",
+    "audio",
+    "camera",
+    "wireless",
+    "usb_host"
+  ],
+  "runtime_blockers": [
+    "The SDMMC diagnostic currently fails on the first sector read, so a stable mount and exact on-card shareware-WAD validation have not passed.",
+    "This D1 image deliberately has neutral input and no audio while video and storage are isolated.",
+    "The exact runtime binary has not received app-only flash review or readback evidence."
+  ]
+}
