@@ -33,6 +33,9 @@ AUTH_PATH = (
 BUILD_EVIDENCE_PATH = (
     ROOT / "test-runs/2026-08-14-console-os-usb-storage-build.json"
 )
+PREFLIGHT_EVIDENCE_PATH = (
+    ROOT / "test-runs/2026-08-14-console-os-usb-storage-preflight.json"
+)
 USB_EVIDENCE_PATH = (
     ROOT / "hardware/evidence/elecrow-10.1-usb-device-storage-path.json"
 )
@@ -52,6 +55,9 @@ EXPECTED_DEVICE_SHA256 = (
 )
 EXPECTED_PREDECESSOR_PARTITION_SHA256 = (
     "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433"
+)
+EXPECTED_PREDECESSOR_PREFIX_SHA256 = (
+    "8df69412cbb2e018a5813b4bb1a121ccc5286039f95163fa6fa062eb85dd5537"
 )
 EXPECTED_FACTORY_BACKUP_SHA256 = (
     "3e3f5f687f59938963d9040d6c8e9dc1a687baa512790680830422c22bd6ab3c"
@@ -276,7 +282,7 @@ def _segment_from_record(
     return TargetSegment(name, exact_path, offset, payload, span, block_bytes)
 
 
-def _load_targets(auth: Mapping[str, Any]) -> tuple[bytes, tuple[TargetSegment, ...]]:
+def _load_targets(auth: Mapping[str, Any]) -> tuple[TargetSegment, ...]:
     artifacts = auth.get("exact_artifacts")
     if not isinstance(artifacts, Mapping):
         raise InstallError("authorization omits exact artifacts")
@@ -290,7 +296,7 @@ def _load_targets(auth: Mapping[str, Any]) -> tuple[bytes, tuple[TargetSegment, 
         or int(str(boot_record.get("offset")), 0) != BOOTLOADER_OFFSET
     ):
         raise InstallError("bootloader path or offset differs")
-    bootloader = _read_sealed_payload(
+    _read_sealed_payload(
         boot_path, "bootloader", int(boot_record.get("payload_bytes")),
         str(boot_record.get("payload_sha256")),
     )
@@ -317,12 +323,12 @@ def _load_targets(auth: Mapping[str, Any]) -> tuple[bytes, tuple[TargetSegment, 
     )
     if len(targets[-1].payload) != PARTITION_TABLE_PAYLOAD_BYTES:
         raise InstallError("partition-table payload size differs")
-    return bootloader, targets
+    return targets
 
 
 def _contract_from_authorization(
     authorization: pathlib.Path, authorization_sha256: str,
-) -> tuple[dict[str, Any], bytes, tuple[TargetSegment, ...]]:
+) -> tuple[dict[str, Any], tuple[TargetSegment, ...]]:
     if authorization.resolve(strict=True) != AUTH_PATH.resolve(strict=True):
         raise InstallError("authorization path differs")
     auth = _read_json(
@@ -343,6 +349,8 @@ def _contract_from_authorization(
         }
         and auth.get("predecessor_partition_table_sha256")
             == EXPECTED_PREDECESSOR_PARTITION_SHA256
+        and auth.get("predecessor_prefix_sha256")
+            == EXPECTED_PREDECESSOR_PREFIX_SHA256
     ):
         raise InstallError("authorization scope or exact-unit binding differs")
 
@@ -361,6 +369,10 @@ def _contract_from_authorization(
         auth.get("factory_backup_manifest", {}), BACKUP_MANIFEST_PATH,
         "factory backup manifest",
     )
+    preflight = _bound_json(
+        auth.get("predecessor_prefix_evidence", {}), PREFLIGHT_EVIDENCE_PATH,
+        "predecessor-prefix evidence",
+    )
     TRANSPORT._validate_exact_unit_audio_release(audio)
     if not (
         usb.get("authorization", {}).get("authorized") is True
@@ -369,6 +381,15 @@ def _contract_from_authorization(
         and manifest.get("backup", {}).get("bytes") == FLASH_BYTES
         and manifest.get("backup", {}).get("sha256")
             == EXPECTED_FACTORY_BACKUP_SHA256
+        and preflight.get("result")
+            == "safe-prewrite-refusal-live-predecessor-prefix-proven"
+        and preflight.get("attempt", {}).get("flash_bytes_written") == 0
+        and preflight.get("read_only_live_prefix_capture", {}).get(
+            "preserved_prefix_sha256"
+        ) == EXPECTED_PREDECESSOR_PREFIX_SHA256
+        and preflight.get("preserved_image_comparison", {}).get(
+            "first_65536_bytes_match_both"
+        ) is True
         and build.get("result")
             == "console-os-usb-storage-exact-unit-build-verified"
         and build.get("exact_artifacts") == auth.get("exact_artifacts")
@@ -420,8 +441,8 @@ def _contract_from_authorization(
             "hardware/local-state/console-os-usb-storage-install-20260814",
     }:
         raise InstallError("execution contract differs")
-    bootloader, targets = _load_targets(auth)
-    return auth, bootloader, targets
+    targets = _load_targets(auth)
+    return auth, targets
 
 
 def _validate_factory_backup(path: pathlib.Path) -> dict[str, Any]:
@@ -476,6 +497,10 @@ def _validate_preimage(
     )
     if len(payload) != FLASH_BYTES:
         raise InstallError("full live preimage size differs")
+    if _sha256(payload[:PARTITION_TABLE_OFFSET]) != (
+        EXPECTED_PREDECESSOR_PREFIX_SHA256
+    ):
+        raise InstallError("full preimage has an unexpected preserved boot prefix")
     predecessor = payload[
         PARTITION_TABLE_OFFSET:
         PARTITION_TABLE_OFFSET + PARTITION_TABLE_PAYLOAD_BYTES
@@ -556,8 +581,8 @@ def _restore_same_handle(
 
 
 def install_same_handle(
-    *, device: Any, runtime: Any, bootloader: bytes,
-    targets: tuple[TargetSegment, ...], recovery_directory: pathlib.Path,
+    *, device: Any, runtime: Any, targets: tuple[TargetSegment, ...],
+    recovery_directory: pathlib.Path,
     factory_backup_binding: Mapping[str, Any], authorization_sha256: str,
     capture_seconds: float,
 ) -> dict[str, Any]:
@@ -607,14 +632,6 @@ def install_same_handle(
         )
         if len(live) != FLASH_BYTES:
             raise InstallError("full live flash capture is incomplete")
-        if live[BOOTLOADER_OFFSET:BOOTLOADER_OFFSET + len(bootloader)] != bootloader:
-            raise InstallError("live bootloader differs from the pinned build")
-        predecessor_table = live[
-            PARTITION_TABLE_OFFSET:
-            PARTITION_TABLE_OFFSET + PARTITION_TABLE_PAYLOAD_BYTES
-        ]
-        if _sha256(predecessor_table) != EXPECTED_PREDECESSOR_PARTITION_SHA256:
-            raise InstallError("live predecessor partition table differs")
         full_binding = TRANSPORT._write_new_private(
             recovery_directory / FULL_PREIMAGE_NAME, live
         )
@@ -624,10 +641,14 @@ def install_same_handle(
         )
         if _validate_preimage(state, targets, runtime) != live:
             raise InstallError("sealed full preimage differs before mutation")
+        predecessor_table = live[
+            PARTITION_TABLE_OFFSET:
+            PARTITION_TABLE_OFFSET + PARTITION_TABLE_PAYLOAD_BYTES
+        ]
         if TRANSPORT._read_exact(
-            stub, device, handle, BOOTLOADER_OFFSET, len(bootloader)
-        ) != bootloader:
-            raise InstallError("live bootloader changed before mutation")
+            stub, device, handle, 0, PARTITION_TABLE_OFFSET
+        ) != live[:PARTITION_TABLE_OFFSET]:
+            raise InstallError("preserved boot prefix changed before mutation")
         if TRANSPORT._read_exact(
             stub, device, handle, PARTITION_TABLE_OFFSET,
             PARTITION_TABLE_PAYLOAD_BYTES,
@@ -787,7 +808,7 @@ def install_from_trust_anchor(
 ) -> dict[str, Any]:
     """Install only when called by the separately frozen issuance route."""
 
-    _auth, bootloader, targets = _contract_from_authorization(
+    _auth, targets = _contract_from_authorization(
         authorization, authorization_sha256
     )
     factory_binding = _validate_factory_backup(factory_backup)
@@ -806,8 +827,8 @@ def install_from_trust_anchor(
         runtime = TRANSPORT.E5._production_runtime()
         device = TRANSPORT.E5.open_serial_once(port)
         result = install_same_handle(
-            device=device, runtime=runtime, bootloader=bootloader,
-            targets=targets, recovery_directory=recovery_directory,
+            device=device, runtime=runtime, targets=targets,
+            recovery_directory=recovery_directory,
             factory_backup_binding=factory_binding,
             authorization_sha256=authorization_sha256,
             capture_seconds=capture_seconds,
@@ -851,7 +872,7 @@ def recover(port: str, recovery_directory: pathlib.Path) -> dict[str, Any]:
     authorization_sha256 = state.get("authorization_sha256")
     if not isinstance(authorization_sha256, str):
         raise InstallError("ledger omits authorization binding")
-    _auth, _bootloader, targets = _contract_from_authorization(
+    _auth, targets = _contract_from_authorization(
         AUTH_PATH, authorization_sha256
     )
     previous = TRANSPORT._arm_signals()
