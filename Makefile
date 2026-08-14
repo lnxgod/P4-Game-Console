@@ -4,7 +4,7 @@ WAD ?= local-data/doom/doom1.wad
 DOOM_FRAMES ?= 8
 DOOMGENERIC_SOURCE ?=
 
-.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf platform-audio-host platform-audio-factory-host platform-touch-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host p4-game-api-host p4-game-platform-host maze-chase-host game-registry-check game-sdk-host console-os-idf gamepad-host gamepad-idf
+.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf platform-audio-host platform-audio-factory-host platform-touch-host platform-game-storage-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host p4-game-api-host p4-game-platform-host maze-chase-host game-registry-check game-sdk-host console-os-idf gamepad-host gamepad-idf
 
 setup:
 	./scripts/install-esp-idf.sh
@@ -69,6 +69,11 @@ platform-touch-host:
 	cmake --build build-host/platform_touch
 	ctest --test-dir build-host/platform_touch --output-on-failure
 
+platform-game-storage-host:
+	cmake -S components/platform_game_storage -B build-host/platform_game_storage -G Ninja
+	cmake --build build-host/platform_game_storage
+	ctest --test-dir build-host/platform_game_storage --output-on-failure
+
 doom-touch-host:
 	cmake -S components/doom_touch_input -B build-host/doom_touch_input -G Ninja
 	cmake --build build-host/doom_touch_input
@@ -113,7 +118,7 @@ game-registry-check:
 
 game-sdk-host: p4-game-api-host p4-game-platform-host maze-chase-host game-registry-check
 
-console-os-idf: console-shell-host game-sdk-host
+console-os-idf: console-shell-host platform-game-storage-host game-sdk-host
 	./scripts/build.sh console_os
 	python3 ./scripts/verify-console-os.py apps/console_os/build
 

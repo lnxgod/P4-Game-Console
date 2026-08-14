@@ -100,8 +100,11 @@ int main(int argc, char **argv)
         .uptime_seconds = 3723U,
         .internal_free_kib = 221U,
         .psram_free_kib = 30128U,
+        .game_storage_kib = 9052U,
+        .game_storage_state = CONSOLE_STORAGE_READY,
         .touch_ready = true,
         .audio_handoff_ready = true,
+        .doom_wad_ready = true,
     };
     console_shell_set_runtime_info(&shell, &runtime);
     if (shell.page == CONSOLE_PAGE_TOUCH) {

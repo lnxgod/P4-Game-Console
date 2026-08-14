@@ -10,6 +10,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 
 #include "console/shell.h"
 #pragma GCC diagnostic push
@@ -28,6 +29,7 @@
 #include "p4/platform.h"
 #include "p4_game_registry.h"
 #include "platform/display.h"
+#include "platform/game_storage.h"
 #include "platform/touch.h"
 #include "platform_i2c_shared/bus.h"
 #include "runtime_gate.h"
@@ -58,6 +60,11 @@ static uint32_t s_loop_count;
 static uint32_t s_touch_polls;
 static uint32_t s_touch_poll_failures;
 static uint32_t s_doom_handoff_count;
+static bool s_game_storage_initialized;
+static bool s_game_storage_status_seen;
+static platform_game_storage_status_t s_game_storage_status;
+static char s_doom_subtitle[CONSOLE_SHELL_SUBTITLE_MAX_BYTES] =
+    "STORAGE CHECKING";
 static int16_t s_native_audio_pcm[
     CONSOLE_NATIVE_AUDIO_FRAMES_PER_TICK *
     P4_GAME_PLATFORM_AUDIO_CHANNEL_COUNT];
@@ -70,7 +77,7 @@ static size_t s_app_count;
 static const console_app_descriptor_t s_doom_app = {
     .id = CONSOLE_APP_DOOM,
     .title = "DOOM",
-    .subtitle = "SHAREWARE 1.9",
+    .subtitle = s_doom_subtitle,
     .accent_rgb565 = UINT16_C(0xF904),
     .capabilities = CONSOLE_CAPABILITY_DISPLAY |
                     CONSOLE_CAPABILITY_TOUCH |
@@ -228,15 +235,127 @@ static uint32_t free_kib(uint32_t capabilities)
     return (uint32_t)(bytes / 1024U);
 }
 
+static console_shell_storage_state_t shell_storage_state(
+    platform_game_storage_state_t state)
+{
+    switch (state) {
+    case PLATFORM_GAME_STORAGE_APP_READY:
+        return CONSOLE_STORAGE_READY;
+    case PLATFORM_GAME_STORAGE_USB_HOST:
+        return CONSOLE_STORAGE_USB_HOST;
+    case PLATFORM_GAME_STORAGE_USB_FORMAT_REQUIRED:
+        return CONSOLE_STORAGE_FORMAT_REQUIRED;
+    case PLATFORM_GAME_STORAGE_APP_MISSING:
+        return CONSOLE_STORAGE_MISSING;
+    case PLATFORM_GAME_STORAGE_APP_INVALID:
+        return CONSOLE_STORAGE_INVALID;
+    case PLATFORM_GAME_STORAGE_GAME_LOCKED:
+        return CONSOLE_STORAGE_LOCKED;
+    case PLATFORM_GAME_STORAGE_FAULT:
+        return CONSOLE_STORAGE_FAULT;
+    case PLATFORM_GAME_STORAGE_UNINITIALIZED:
+    case PLATFORM_GAME_STORAGE_APP_SCANNING:
+    case PLATFORM_GAME_STORAGE_TRANSITION:
+    default:
+        return CONSOLE_STORAGE_STARTING;
+    }
+}
+
+static void set_doom_storage_state(platform_game_storage_state_t state)
+{
+    const char *subtitle = "STORAGE CHECKING";
+    const bool ready = state == PLATFORM_GAME_STORAGE_APP_READY;
+    switch (state) {
+    case PLATFORM_GAME_STORAGE_APP_READY:
+        subtitle = "SHAREWARE 1.9 / READY";
+        break;
+    case PLATFORM_GAME_STORAGE_USB_HOST:
+        subtitle = "USB STORAGE ACTIVE";
+        break;
+    case PLATFORM_GAME_STORAGE_USB_FORMAT_REQUIRED:
+        subtitle = "HOST FORMAT REQUIRED";
+        break;
+    case PLATFORM_GAME_STORAGE_APP_MISSING:
+        subtitle = "COPY DOOM1.WAD OVER USB";
+        break;
+    case PLATFORM_GAME_STORAGE_APP_INVALID:
+        subtitle = "DOOM1.WAD INVALID";
+        break;
+    case PLATFORM_GAME_STORAGE_GAME_LOCKED:
+        subtitle = "GAME STORAGE LOCKED";
+        break;
+    case PLATFORM_GAME_STORAGE_FAULT:
+        subtitle = "STORAGE OFFLINE";
+        break;
+    case PLATFORM_GAME_STORAGE_UNINITIALIZED:
+    case PLATFORM_GAME_STORAGE_APP_SCANNING:
+    case PLATFORM_GAME_STORAGE_TRANSITION:
+    default:
+        break;
+    }
+    const size_t length = strlen(subtitle);
+    const size_t copy = length < sizeof(s_doom_subtitle) - 1U
+        ? length : sizeof(s_doom_subtitle) - 1U;
+    memcpy(s_doom_subtitle, subtitle, copy);
+    s_doom_subtitle[copy] = '\0';
+    for (size_t index = 0U; index < s_app_count; ++index) {
+        if (s_apps[index].id == CONSOLE_APP_DOOM) {
+            s_apps[index].enabled = ready;
+            break;
+        }
+    }
+}
+
+static void sync_game_storage(void)
+{
+    platform_game_storage_status_t status = {
+        .state = PLATFORM_GAME_STORAGE_FAULT,
+        .last_error = ESP_ERR_INVALID_STATE,
+    };
+    if (s_game_storage_initialized) {
+        (void)platform_game_storage_refresh();
+        if (platform_game_storage_get_status(&status) != ESP_OK) {
+            status.state = PLATFORM_GAME_STORAGE_FAULT;
+            status.last_error = ESP_FAIL;
+        }
+    }
+    const bool changed = !s_game_storage_status_seen ||
+        status.state != s_game_storage_status.state ||
+        status.usb_attached != s_game_storage_status.usb_attached ||
+        status.generation != s_game_storage_status.generation ||
+        status.last_error != s_game_storage_status.last_error;
+    s_game_storage_status = status;
+    s_game_storage_status_seen = true;
+    set_doom_storage_state(status.state);
+    if (changed) {
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS GAME_STORAGE state=%s usb_attached=%u "
+                 "generation=%lu capacity=%llu last_error=%s",
+                 platform_game_storage_state_name(status.state),
+                 status.usb_attached ? 1U : 0U,
+                 (unsigned long)status.generation,
+                 (unsigned long long)status.capacity_bytes,
+                 esp_err_to_name(status.last_error));
+    }
+}
+
 static console_shell_runtime_info_t runtime_info(void)
 {
+    const uint64_t capacity_kib = s_game_storage_status.capacity_bytes / 1024U;
     const console_shell_runtime_info_t info = {
         .uptime_seconds = uptime_seconds(),
         .internal_free_kib = free_kib(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
         .psram_free_kib = free_kib(MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT),
+        .game_storage_kib = capacity_kib > UINT32_MAX
+            ? UINT32_MAX : (uint32_t)capacity_kib,
+        .game_storage_state = shell_storage_state(
+            s_game_storage_status.state),
         .touch_ready = s_touch_ready,
         /* Compiled handoff only; the shell itself never starts audio. */
         .audio_handoff_ready = true,
+        .game_storage_usb_attached = s_game_storage_status.usb_attached,
+        .doom_wad_ready =
+            s_game_storage_status.state == PLATFORM_GAME_STORAGE_APP_READY,
     };
     return info;
 }
@@ -324,7 +443,8 @@ static void log_runtime_stats(const console_shell_t *shell)
              "touch_ready=%u touch_polls=%lu touch_failures=%lu "
              "display_submits=%lu display_completions=%lu "
              "display_timeouts=%lu display_failures=%lu "
-             "amp_energized=0 doom_handoffs=%lu",
+             "amp_energized=0 doom_handoffs=%lu storage=%s "
+             "storage_generation=%lu usb_attached=%u",
              (unsigned long)s_loop_count,
              (unsigned)shell->page,
              (unsigned long)shell->render_generation,
@@ -335,7 +455,10 @@ static void log_runtime_stats(const console_shell_t *shell)
              (unsigned long)display.submits_completed,
              (unsigned long)display.submit_timeouts,
              (unsigned long)display.submit_failures,
-             (unsigned long)s_doom_handoff_count);
+             (unsigned long)s_doom_handoff_count,
+             platform_game_storage_state_name(s_game_storage_status.state),
+             (unsigned long)s_game_storage_status.generation,
+             s_game_storage_status.usb_attached ? 1U : 0U);
 }
 
 static esp_err_t present(console_shell_t *shell)
@@ -610,13 +733,28 @@ static esp_err_t run_native_game(console_shell_t *shell,
     return game_result == P4_GAME_EXIT_TO_LAUNCHER ? ESP_OK : result;
 }
 
-static void launch_doom_exclusive(void)
+static void launch_doom_exclusive(console_shell_t *shell)
 {
+    esp_err_t result = platform_game_storage_lock_for_game();
+    sync_game_storage();
+    if (result != ESP_OK) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS HANDOFF_REJECTED app=doom storage=%s "
+                 "error=%s action=eject-usb-and-retry",
+                 platform_game_storage_state_name(
+                     s_game_storage_status.state),
+                 esp_err_to_name(result));
+        console_shell_show_home(shell);
+        const console_shell_runtime_info_t current_runtime = runtime_info();
+        console_shell_set_runtime_info(shell, &current_runtime);
+        return;
+    }
     ++s_doom_handoff_count;
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS HANDOFF_BEGIN app=doom mode=exclusive-one-way "
-             "audio_owner=doom volume_step=6/10");
-    esp_err_t result = platform_display_set_brightness(0U);
+             "audio_owner=doom volume_step=6/10 storage=game-locked "
+             "usb_device=stopped");
+    result = platform_display_set_brightness(0U);
     if (result != ESP_OK) {
         halt_dark("handoff-backlight", result);
     }
@@ -645,15 +783,26 @@ static void launch_doom_exclusive(void)
 
 void app_main(void)
 {
+    const esp_err_t storage_result = platform_game_storage_init();
+    s_game_storage_initialized = storage_result == ESP_OK;
+    if (!s_game_storage_initialized) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS GAME_STORAGE_DEGRADED error=%s "
+                 "native_apps=available doom=disabled",
+                 esp_err_to_name(storage_result));
+    }
+    sync_game_storage();
     if (!build_app_registry()) {
         halt_dark("app-registry", ESP_ERR_INVALID_ARG);
     }
+    sync_game_storage();
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS START shell=freertos-native apps=%u "
              "surface=rgb565-320x200 touch=gt911 "
              "native_game_api=1 native_format=p4-native-static-v1 "
-             "execution=build-candidate",
-             (unsigned)s_app_count);
+             "game_storage=%s execution=build-candidate",
+             (unsigned)s_app_count,
+             platform_game_storage_state_name(s_game_storage_status.state));
 
     console_shell_t shell;
     if (!console_shell_init(
@@ -691,12 +840,13 @@ void app_main(void)
     TickType_t last_wake = xTaskGetTickCount();
     for (;;) {
         ++s_loop_count;
+        sync_game_storage();
         const console_shell_action_t action = poll_touch(&shell);
         const console_shell_runtime_info_t current_runtime = runtime_info();
         console_shell_set_runtime_info(&shell, &current_runtime);
         if (action.type == CONSOLE_ACTION_LAUNCH &&
             action.app_id == CONSOLE_APP_DOOM) {
-            launch_doom_exclusive();
+            launch_doom_exclusive(&shell);
         } else if (action.type == CONSOLE_ACTION_LAUNCH) {
             const p4_game_descriptor_t *const game =
                 p4_generated_game_by_launcher_id(action.app_id);

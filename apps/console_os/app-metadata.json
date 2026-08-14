@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "app": "console_os",
-  "stage": "native-game-api-v1-build-candidate",
-  "purpose": "FreeRTOS-native touch console with shared platform services, a versioned native game API, an original Maze Chase sample, built-in diagnostics, and an exclusive handoff to the proven Doom SFX plus MUS integration.",
+  "stage": "usb-game-storage-build-candidate",
+  "purpose": "FreeRTOS-native touch console with shared platform services, laptop-accessible persistent game data, a versioned native game API, an original Maze Chase sample, built-in diagnostics, and an exclusive handoff to the proven Doom SFX plus MUS integration.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
   "flash_authorized": false,
@@ -53,6 +53,19 @@
     "external_midi_device_required": false,
     "return_to_home_supported": false
   },
+  "game_storage": {
+    "partition_label": "game_data",
+    "partition_offset": "0x710000",
+    "partition_bytes": 9371648,
+    "filesystem": "wear-levelled FAT",
+    "usb_role": "high-speed MSC device on J16",
+    "concurrency": "automatic exclusive app-or-host ownership plus terminal game lease",
+    "runtime_format_allowed": false,
+    "full_project_image_seeds_volume": true,
+    "app_only_update_preserves_volume": true,
+    "doom_path": "/DOOM1.WAD",
+    "hardware_tested": false
+  },
   "hardware_interfaces_explicitly_absent": [
     "usb_host",
     "usb_hid",
@@ -60,5 +73,5 @@
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "After build verification, bind and authorize the exact new console artifact before any guarded flash and record separate on-device acceptance evidence."
+  "next_hardware_step": "After build verification, bind and authorize the exact full-project artifact before a guarded partition-table plus game-data install; then verify J16 enumeration, copy/delete/eject/reconnect behavior, reboot persistence, contention rejection, Doom launch, and corruption recovery on the exact board."
 }

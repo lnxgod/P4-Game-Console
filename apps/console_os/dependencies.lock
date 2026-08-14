@@ -49,6 +49,41 @@ dependencies:
       registry_url: https://components.espressif.com/
       type: service
     version: 1.1.3
+  espressif/esp_tinyusb:
+    component_hash: a8558cc89dae68552cb7a20123ffcb8db81a8a25bd560bc4d5b2f60a12bd6afb
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    - name: espressif/tinyusb
+      registry_url: https://components.espressif.com
+      require: public
+      version: '>=0.17.0'
+    source:
+      registry_url: https://components.espressif.com/
+      type: service
+    targets:
+    - esp32s2
+    - esp32s3
+    - esp32p4
+    - esp32h4
+    version: 2.0.1
+  espressif/tinyusb:
+    component_hash: a72b7d67472914ab76309340fd50d578b31e310963d45ad0f81144bde3314752
+    dependencies:
+    - name: idf
+      require: private
+      version: '>=5.0'
+    source:
+      registry_url: https://components.espressif.com
+      type: service
+    targets:
+    - esp32s2
+    - esp32s3
+    - esp32p4
+    - esp32h4
+    - esp32s31
+    version: 0.21.0~1
   idf:
     source:
       type: idf
@@ -57,7 +92,8 @@ direct_dependencies:
 - espressif/esp_lcd_ek79007
 - espressif/esp_lcd_touch
 - espressif/esp_lcd_touch_gt911
+- espressif/esp_tinyusb
 - idf
-manifest_hash: 36b4f412259be8c4bd4fea6a2357cc37e82bf3db285ec2fdae6c9fd53b6d8321
+manifest_hash: 682a1f14f7b114e6cebfcea49efd1f6efd6b1de21b91f52d2ec8c0a3cd6b3111
 target: esp32p4
 version: 2.0.0

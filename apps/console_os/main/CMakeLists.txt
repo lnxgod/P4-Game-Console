@@ -64,6 +64,7 @@ idf_component_register(
         p4_game_platform
         platform_audio
         platform_display
+        platform_game_storage
         platform_i2c_shared
         platform_readonly_blob
         platform_touch

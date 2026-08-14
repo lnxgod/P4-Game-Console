@@ -210,6 +210,23 @@ Espressif's current high-speed hub implementation lacks a transaction
 translator, so full/low-speed devices behind a high-speed hub are not a
 reliable baseline. Test a controller directly before qualifying any hub.
 
+### USB device game-storage candidate
+
+J16's sink advertisement and inward VBUS path are appropriate for the opposite
+role: a laptop can be the USB host and power/enumerate the ESP32-P4 as a USB
+device. Console OS now has a build-only MSC candidate on that path, backed by
+an internal wear-levelled FAT partition. This does not authorize a flash and
+has not yet proved enumeration, host write/eject behavior, persistence, or
+recovery on the attached board. J1 remains the CH340 serial/programming path.
+
+Hardware acceptance must use J16 with an ordinary data-capable laptop cable,
+retain J1 for serial capture, copy and remove `DOOM1.WAD`, eject cleanly,
+reconnect, restart, and verify the full volume and Doom hash each time. An
+intentional cable-pull test must demonstrate fail-closed status and filesystem
+repair behavior; it must not be recorded as safe simply because the next boot
+mounts. Controller-host testing still requires the powered isolation shim
+described above and must not be combined with this device-mode test.
+
 ## Primary references
 
 - [Elecrow 10.1-inch product repository](https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen)

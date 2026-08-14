@@ -9,6 +9,7 @@ import pathlib
 import re
 import subprocess
 import sys
+import tempfile
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -17,7 +18,8 @@ EXPECTED_WAD_BYTES = 4_196_020
 EXPECTED_WAD_SHA256 = (
     "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
 )
-EXPECTED_APP_PARTITION_BYTES = 11 * 1024 * 1024
+EXPECTED_APP_PARTITION_BYTES = 7 * 1024 * 1024
+EXPECTED_GAME_PARTITION_BYTES = 0x8F0000
 
 
 def fail(message: str) -> None:
@@ -66,11 +68,15 @@ def main() -> None:
         "min_revision_full": 100,
         "max_revision_full": 199,
     }, "unexpected target lock")
-    require(
-        (APP / "dependencies.lock").read_bytes()
-        == (ROOT / "apps/doom_embedded_touch_audio/dependencies.lock").read_bytes(),
-        "console component lock diverged from the pinned Doom lock",
-    )
+    require(toolchain["managed_components"].get("espressif/esp_tinyusb") ==
+            "2.0.1", "unexpected ESP-TinyUSB lock")
+    dependency_lock = (APP / "dependencies.lock").read_text(encoding="utf-8")
+    require(re.search(
+        r"(?ms)^  espressif/esp_tinyusb:.*?^    version: 2\.0\.1$",
+        dependency_lock) is not None, "console lock is missing esp_tinyusb 2.0.1")
+    require(re.search(
+        r"(?ms)^  idf:.*?^    version: 5\.5\.3$", dependency_lock) is not None,
+        "console lock is missing IDF 5.5.3")
 
     metadata = read_json(APP / "app-metadata.json")
     require(metadata.get("app") == "console_os", "wrong app metadata")
@@ -91,6 +97,16 @@ def main() -> None:
             "shell must not initialize Doom audio")
     require(metadata["doom_handoff"]["return_to_home_supported"] is False,
             "MVP must not claim a reentrant Doom return")
+    game_storage = metadata.get("game_storage", {})
+    require(game_storage.get("partition_label") == "game_data",
+            "game storage partition is not disclosed")
+    require(game_storage.get("partition_offset") == "0x710000" and
+            game_storage.get("partition_bytes") == EXPECTED_GAME_PARTITION_BYTES,
+            "game storage geometry is wrong")
+    require(game_storage.get("runtime_format_allowed") is False,
+            "runtime formatting must remain disabled")
+    require(game_storage.get("hardware_tested") is False,
+            "build candidate must not claim hardware validation")
     native_api = metadata.get("native_game_api", {})
     require(native_api.get("api_version") == 1,
             "native game API version must be 1")
@@ -134,10 +150,11 @@ def main() -> None:
     require("CONSOLE_PAGE_SYSTEM" in shell_main, "System app missing")
     require("CONSOLE_PAGE_AUDIO" in shell_main, "Audio status app missing")
     handoff = shell_main[
-        shell_main.index("static void launch_doom_exclusive(void)"):
+        shell_main.index("static void launch_doom_exclusive("):
         shell_main.index("void app_main(void)")
     ]
     require_order(handoff, [
+        "platform_game_storage_lock_for_game()",
         "platform_display_set_brightness(0U)",
         "destroy_touch_for_handoff()",
         "destroy_bus_for_handoff()",
@@ -165,7 +182,8 @@ def main() -> None:
     required_components = {
         "console_shell", "doom_audio", "doom_engine_audio", "doom_touch_input",
         "doom_video", "platform_audio", "platform_audio_factory",
-        "platform_display", "platform_i2c_shared", "platform_readonly_blob",
+        "platform_display", "platform_game_storage", "platform_i2c_shared",
+        "platform_readonly_blob", "fatfs", "wear_levelling",
         "platform_touch", "p4_game_api", "p4_game_platform", "maze_chase",
     }
     forbidden_components = {
@@ -174,6 +192,12 @@ def main() -> None:
         "espressif__usb_host_hid", "espressif__usb",
     }
     require(required_components <= components, "required component missing")
+    require(any(component == "esp_tinyusb" or
+                component.endswith("__esp_tinyusb")
+                for component in components),
+            "ESP-TinyUSB component missing")
+    require(any(component == "tinyusb" or component.endswith("__tinyusb")
+                for component in components), "TinyUSB component missing")
     require(not (forbidden_components & components), "forbidden component linked")
 
     flasher = read_json(build / "flasher_args.json")
@@ -182,12 +206,60 @@ def main() -> None:
     }, "unexpected flash geometry")
     require(flasher.get("flash_files", {}).get("0x10000") == "p4_console_os.bin",
             "unexpected application offset")
+    game_image_name = flasher.get("flash_files", {}).get("0x710000")
+    require(game_image_name is not None,
+            "game-data seed is missing from the full-project image")
 
     binary = build / str(project.get("app_bin"))
     elf = build / str(project.get("app_elf"))
     require(binary.is_file() and elf.is_file(), "missing build artifacts")
     require(binary.stat().st_size < EXPECTED_APP_PARTITION_BYTES,
-            "application does not fit the 11 MiB partition")
+            "application does not fit the 7 MiB partition")
+    game_image = build / str(game_image_name)
+    require(game_image.is_file(), "missing generated game-data image")
+    require(game_image.stat().st_size == EXPECTED_GAME_PARTITION_BYTES,
+            "game-data image does not fill the declared partition")
+    normalized = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/normalize-game-storage-image.py"),
+         str(game_image), "--check"], cwd=ROOT, check=False,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+    )
+    require(normalized.returncode == 0,
+            f"game-data image is not reproducible: {normalized.stderr.strip()}")
+    seeded_wad = build / "game-storage-seed/DOOM1.WAD"
+    seeded_readme = build / "game-storage-seed/README.TXT"
+    require(seeded_wad.is_file() and seeded_readme.is_file(),
+            "missing staged game-data seed inputs")
+    require(seeded_wad.stat().st_size == EXPECTED_WAD_BYTES and
+            sha256(seeded_wad) == EXPECTED_WAD_SHA256,
+            "generated game-data seed has the wrong WAD")
+    cmake_cache = (build / "CMakeCache.txt").read_text(encoding="utf-8")
+    python_match = re.search(r"(?m)^PYTHON:[^=]+=(.+)$", cmake_cache)
+    require(python_match is not None, "build does not record its pinned Python")
+    fat_parser = (pathlib.Path(str(project.get("idf_path"))) /
+                  "components/fatfs/fatfsparse.py")
+    require(fat_parser.is_file(), "missing pinned FAT image parser")
+    with tempfile.TemporaryDirectory(prefix="p4-game-data-") as temporary:
+        parsed = subprocess.run(
+            [python_match.group(1), str(fat_parser), str(game_image),
+             "--wl-layer", "enabled"], cwd=temporary, check=False,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        )
+        require(parsed.returncode == 0,
+                f"cannot parse game-data image: {parsed.stderr.strip()}")
+        extracted_root = pathlib.Path(temporary)
+        extracted_wads = list(extracted_root.rglob("DOOM1.WAD"))
+        extracted_readmes = list(extracted_root.rglob("README.TXT"))
+        require(len(extracted_wads) == 1 and len(extracted_readmes) == 1,
+                "generated FAT image has unexpected root files")
+        require(extracted_wads[0].parent.name == "P4 GAMES",
+                "generated FAT image has the wrong volume label")
+        require(extracted_wads[0].stat().st_size == EXPECTED_WAD_BYTES and
+                sha256(extracted_wads[0]) == EXPECTED_WAD_SHA256,
+                "generated FAT image contains the wrong WAD")
+        require(extracted_readmes[0].read_bytes() ==
+                (APP / "game-storage/README.TXT").read_bytes(),
+                "generated FAT image contains the wrong README")
 
     compiler = pathlib.Path(str(project.get("c_compiler")))
     nm = compiler.with_name(compiler.name.removesuffix("gcc") + "nm")
@@ -205,6 +277,8 @@ def main() -> None:
         "p4_game_instance_start", "p4_game_input_mapper_update",
         "p4_game_platform_audio_open", "p4_maze_chase_game",
         "p4_generated_game_by_launcher_id",
+        "platform_game_storage_init", "platform_game_storage_lock_for_game",
+        "tinyusb_driver_install", "tinyusb_msc_new_storage_spiflash",
         "_binary_doom_shareware_wad_start",
     ):
         require(f" {symbol}\n" in symbols, f"missing ELF symbol {symbol}")
@@ -223,6 +297,11 @@ def main() -> None:
             "path": str(binary.relative_to(ROOT)),
             "bytes": binary.stat().st_size,
             "sha256": sha256(binary),
+        },
+        "game_data": {
+            "path": str(game_image.relative_to(ROOT)),
+            "bytes": game_image.stat().st_size,
+            "sha256": sha256(game_image),
         },
         "elf": {
             "path": str(elf.relative_to(ROOT)),

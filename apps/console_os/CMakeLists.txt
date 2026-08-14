@@ -20,8 +20,9 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_video"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_audio_factory"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_display"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_game_storage"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_i2c_shared"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_readonly_blob"
+    "${CMAKE_CURRENT_LIST_DIR}/components/platform_readonly_blob"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_touch"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_platform"
@@ -33,3 +34,30 @@ set(EXTRA_COMPONENT_DIRS
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 idf_build_set_property(MINIMAL_BUILD ON)
 project(p4_console_os)
+
+# A reviewed full-project install seeds a valid wear-levelled FAT volume.
+# Subsequent app-only updates leave this persistent partition untouched.
+set(P4_GAME_STORAGE_SEED_DIR "${CMAKE_BINARY_DIR}/game-storage-seed")
+set(P4_LOCAL_DOOM_WAD
+    "${CMAKE_CURRENT_LIST_DIR}/../../local-data/doom/doom1.wad")
+file(MAKE_DIRECTORY "${P4_GAME_STORAGE_SEED_DIR}")
+configure_file(
+    "${CMAKE_CURRENT_LIST_DIR}/game-storage/README.TXT"
+    "${P4_GAME_STORAGE_SEED_DIR}/README.TXT"
+    COPYONLY
+)
+configure_file(
+    "${P4_LOCAL_DOOM_WAD}"
+    "${P4_GAME_STORAGE_SEED_DIR}/DOOM1.WAD"
+    COPYONLY
+)
+fatfs_create_spiflash_image(
+    game_data "${P4_GAME_STORAGE_SEED_DIR}" FLASH_IN_PROJECT)
+idf_build_get_property(P4_IDF_PYTHON PYTHON)
+add_custom_command(TARGET fatfs_game_data_bin POST_BUILD
+    COMMAND
+        "${P4_IDF_PYTHON}"
+        "${CMAKE_CURRENT_LIST_DIR}/../../scripts/normalize-game-storage-image.py"
+        "${CMAKE_BINARY_DIR}/game_data.bin"
+    VERBATIM
+)

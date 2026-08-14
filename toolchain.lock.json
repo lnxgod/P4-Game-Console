@@ -13,6 +13,7 @@
     "max_revision_full": 199
   },
   "managed_components": {
+    "espressif/esp_tinyusb": "2.0.1",
     "espressif/usb": "1.5.0",
     "espressif/usb_host_hid": "1.2.0"
   },

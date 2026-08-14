@@ -305,12 +305,17 @@ static void test_touch_page_and_runtime(void)
         .uptime_seconds = 123U,
         .internal_free_kib = 456U,
         .psram_free_kib = 789U,
+        .game_storage_kib = 8192U,
+        .game_storage_state = CONSOLE_STORAGE_READY,
         .touch_ready = true,
         .audio_handoff_ready = true,
+        .game_storage_usb_attached = false,
+        .doom_wad_ready = true,
     };
     console_shell_set_runtime_info(&shell, &runtime);
-    CHECK(!shell.dirty);
+    CHECK(shell.dirty);
     CHECK(shell.runtime.uptime_seconds == 123U);
+    shell.dirty = false;
 
     CHECK(tap(&shell, 170U, 100U).app_id == APP_SYSTEM);
     shell.dirty = false;
@@ -318,6 +323,14 @@ static void test_touch_page_and_runtime(void)
     CHECK(!shell.dirty);
     console_shell_runtime_info_t changed = runtime;
     changed.uptime_seconds = 124U;
+    console_shell_set_runtime_info(&shell, &changed);
+    CHECK(shell.dirty);
+
+    console_shell_show_home(&shell);
+    shell.dirty = false;
+    changed.game_storage_state = CONSOLE_STORAGE_USB_HOST;
+    changed.game_storage_usb_attached = true;
+    changed.doom_wad_ready = false;
     console_shell_set_runtime_info(&shell, &changed);
     CHECK(shell.dirty);
 }
