@@ -56,12 +56,27 @@ typedef struct {
     uint16_t y;
 } console_shell_contact_t;
 
+typedef enum {
+    CONSOLE_STORAGE_STARTING = 0,
+    CONSOLE_STORAGE_READY,
+    CONSOLE_STORAGE_USB_HOST,
+    CONSOLE_STORAGE_FORMAT_REQUIRED,
+    CONSOLE_STORAGE_MISSING,
+    CONSOLE_STORAGE_INVALID,
+    CONSOLE_STORAGE_LOCKED,
+    CONSOLE_STORAGE_FAULT,
+} console_shell_storage_state_t;
+
 typedef struct {
     uint32_t uptime_seconds;
     uint32_t internal_free_kib;
     uint32_t psram_free_kib;
+    uint32_t game_storage_kib;
+    console_shell_storage_state_t game_storage_state;
     bool touch_ready;
     bool audio_handoff_ready;
+    bool game_storage_usb_attached;
+    bool doom_wad_ready;
 } console_shell_runtime_info_t;
 
 typedef enum {
@@ -111,7 +126,7 @@ console_shell_action_t console_shell_handle_touch(
     const console_shell_contact_t *contacts,
     size_t contact_count);
 
-/** Update non-sensitive runtime counters displayed by the System page. */
+/** Update non-sensitive runtime and game-storage status. */
 void console_shell_set_runtime_info(
     console_shell_t *shell,
     const console_shell_runtime_info_t *runtime);

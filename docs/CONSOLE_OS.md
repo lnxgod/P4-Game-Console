@@ -15,6 +15,10 @@ The P4 Game API v1, paginated manifest registry, and original Maze Chase game
 described below are a newer build candidate. They have host/software evidence
 only and have not yet been installed or accepted on hardware.
 
+The USB game-storage work is newer again. It changes the flash partition table
+and has no on-device evidence yet; all prior Console OS acceptance applies only
+to the predecessor image.
+
 The shell deliberately uses a monolithic firmware with statically registered
 apps. ESP-IDF and FreeRTOS provide tasks, timers, memory, and drivers; this MVP
 does not pretend to be a desktop OS with dynamically loaded executables.
@@ -23,6 +27,7 @@ does not pretend to be a desktop OS with dynamically loaded executables.
 
 ```text
 boot
+  -> platform_game_storage mounts persistent FAT and starts USB MSC on J16
   -> platform_display owns DSI/panel/backlight
   -> platform_i2c_shared owns I2C1
   -> platform_touch borrows I2C1 for GT911
@@ -37,6 +42,8 @@ boot
        |     -> optional bounded audio session starts for the game
        |     `-> Back stops the game/audio and returns home
        `-- Doom selected
+             -> stop USB device, remount FAT, and re-hash DOOM1.WAD
+             -> retain exclusive game-storage lease until restart
              -> backlight dark
              -> destroy touch borrower
              -> destroy shared I2C1 owner
@@ -60,7 +67,8 @@ display, overlays, and exit callbacks in a deterministic order.
 | I2C1 GPIO45/46 | `platform_i2c_shared` | `platform_i2c_shared` | Touch borrower is destroyed before bus owner |
 | GT911 touch | `platform_touch` | `platform_touch` + Doom input | Invalid/malformed frames neutralize input |
 | Speaker audio | none on home; reviewed session for native games | Doom audio adapter/factory backend | Only one foreground owner; close must re-prove amplifier shutdown |
-| Doom WAD | none | immutable embedded read-only blob | Exact ignored shareware input only |
+| Game-data FAT | launcher or laptop, never both | terminal game lease | Clean eject returns ownership; host access is revoked and WAD re-hashed before Doom |
+| Doom WAD | validated `/game-data/DOOM1.WAD` | read-only VFS adapter | Exact ignored shareware identity only; host changes invalidate cache |
 
 The launcher surface is standard RGB565 at 320x200. The proven display service
 scales it 3x into a 960x600 viewport with 32-pixel black margins on the
@@ -110,6 +118,7 @@ From the repository root:
 
 ```sh
 make console-shell-host
+make platform-game-storage-host
 make game-sdk-host
 make console-os-idf
 ```
@@ -117,6 +126,7 @@ make console-os-idf
 The host targets use AddressSanitizer and UndefinedBehaviorSanitizer. They test
 launcher pagination and registry bounds, framebuffer guards/stride padding,
 physical-to-logical touch mapping, press/release semantics, malformed frames,
+storage handoff/cache generations and terminal game leases,
 the bounded tone mixer and platform audio lifecycle, Maze Chase state and
 randomized input, plus manifest/scaffolder rejection behavior.
 
@@ -124,8 +134,16 @@ The IDF target builds with the locked ESP-IDF 5.5.3 and managed component
 versions, checks ESP32-P4 revision 1.x bounds, and runs
 `scripts/verify-console-os.py`. The verifier confirms the WAD identity and Git
 ignore status, build-only flash policy, handoff cleanup order, component graph,
-partition/flash geometry, required symbols, and absence of USB/SD/codec entry
-points in the final ELF.
+partition/flash geometry, FAT seed identity, required USB-device/storage
+symbols, and absence of USB-host/SD/codec entry points in the final ELF.
+
+The first install of this candidate cannot be app-only: the factory app shrinks
+to 7 MiB and `game_data` occupies `0x710000..0xFFFFFF`. A reviewed full-project
+image seeds the FAT volume. Later app-only updates preserve it; another full
+project flash deliberately overwrites it with the seed. On-device acceptance
+must cover J16 enumeration, copy/remove/eject, abrupt disconnect recovery,
+reboot persistence, launch rejection during host ownership, and Doom startup
+after a clean eject.
 
 ## Guarded hardware acceptance
 

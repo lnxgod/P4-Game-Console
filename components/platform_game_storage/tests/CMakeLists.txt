@@ -1,0 +1,17 @@
+add_executable(test_platform_game_storage_model
+    test_game_storage_model.c
+)
+target_link_libraries(test_platform_game_storage_model
+    PRIVATE platform_game_storage_model
+)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(test_platform_game_storage_model PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer
+    )
+    target_link_options(test_platform_game_storage_model PRIVATE
+        -fsanitize=address,undefined
+    )
+endif()
+add_test(NAME platform_game_storage_model
+         COMMAND test_platform_game_storage_model)

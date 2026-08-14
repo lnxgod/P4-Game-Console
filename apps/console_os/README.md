@@ -14,6 +14,29 @@ The home screen currently exposes:
 - System (RTOS, heap, PSRAM, and uptime status)
 - Audio (the compiled Doom audio contract and safe ownership status)
 
+## Laptop game storage
+
+Console OS exposes the persistent `game_data` FAT volume through the board's
+J16 ESP32-P4 USB port. Its USB product is **P4 Game Storage** and its FAT volume
+label is **P4 GAMES**. J1 remains the CH340 programming/serial port. While a
+laptop owns the volume, the firmware unmounts it, invalidates its file cache,
+changes the Doom tile to `USB STORAGE ACTIVE`,
+and rejects a Doom launch. A clean host eject remounts it for the app and
+triggers a fresh size/header/SHA-256 validation.
+
+The current Doom integration accepts `DOOM1.WAD` at the drive root, with the
+exact shareware identity recorded in `third_party/game-data.json`. Copying or
+removing that file does not require a firmware rebuild. Eject the drive before
+launching Doom. Doom launch stops the USB device, remounts the volume, and
+rehashes the WAD before taking a terminal game lease; USB cannot remount below
+the running engine.
+
+The full project image includes a reviewed FAT seed. After that first guarded
+partition-table install, use app-only firmware updates to preserve files.
+Flashing a full project image again intentionally restores the seed volume and
+overwrites laptop changes. Runtime code never auto-formats a damaged volume;
+the System page instead reports the repair state.
+
 The launcher is generated from validated `games/*/game.json` manifests, shows
 six entries per page, and supports up to 32 entries. Create a native starter
 without editing the launcher:
@@ -53,10 +76,12 @@ The exact ignored shareware WAD documented in the repository is required at
 
 ```sh
 make console-shell-host
+make platform-game-storage-host
 make game-sdk-host
 make console-os-idf
 ```
 
 The app metadata is build-only. A successful build is not permission to flash
-or a hardware acceptance result. Bind and authorize the exact new artifact
-before preparing another guarded console install.
+or a hardware acceptance result. This change needs a new guarded full-project
+install because the partition table changed; preserve the complete factory
+flash first and bind/authorize the exact artifacts before writing them.

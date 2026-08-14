@@ -27,9 +27,12 @@ Elecrow revision-aware BSP
 - The gamepad service publishes complete lock-protected snapshots containing session, VID/PID, interface, report-descriptor SHA-256, capabilities, sequence/timestamp, buttons, D-pad, sticks, and triggers. A stale report or disconnect from a prior session cannot mutate a reconnected controller.
 - Disconnect neutralization occurs in the HID callback before close finalization. The transport explicitly completes `usb_host_hid` 1.2.0's two-phase local-close handshake, copies descriptor storage before use, and invalidates it only after confirmed close.
 - Doom consumes one controller snapshot per game tic and remains ignorant of USB addresses and handles.
+- Console OS uses the same P4 high-speed peripheral in USB **device** mode, not host mode, to expose a wear-levelled FAT `game_data` partition. The device-storage and controller-host stacks are separate firmware configurations and are never linked or active together.
+- `platform_game_storage` serializes every mount transition. The FAT volume has exactly one owner: the app, the laptop MSC initiator, or a terminal running-game lease. Host ownership unmounts the app before block I/O; a clean eject remounts the app and increments a cache generation.
+- Doom launch first uninstalls the USB device stack, restores app ownership, and revalidates the entire WAD. Only then may the launcher release display/touch services. This prevents a host remount beneath open game files.
 - Display output is an RGB565 surface contract. Board-specific scanout and scaling live below it.
 - The hardware-tested display owner is `platform_display`; its M1 pattern proof does not yet qualify framebuffer submission or Doom scaling.
-- Game data and saves use the storage service. Commercial WAD data is never compiled into or committed with firmware.
+- Game data and saves use the storage service. WADs are never committed; only the exact local shareware development input may seed the build-only Console OS image. Commercial WAD data must never be compiled into, seeded into, or committed with firmware.
 
 ## Input compatibility tiers
 

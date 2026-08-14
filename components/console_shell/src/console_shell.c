@@ -374,14 +374,26 @@ void console_shell_set_runtime_info(
         shell->runtime.uptime_seconds != runtime->uptime_seconds ||
         shell->runtime.internal_free_kib != runtime->internal_free_kib ||
         shell->runtime.psram_free_kib != runtime->psram_free_kib ||
+        shell->runtime.game_storage_kib != runtime->game_storage_kib ||
+        shell->runtime.game_storage_state != runtime->game_storage_state ||
         shell->runtime.touch_ready != runtime->touch_ready ||
-        shell->runtime.audio_handoff_ready != runtime->audio_handoff_ready;
+        shell->runtime.audio_handoff_ready != runtime->audio_handoff_ready ||
+        shell->runtime.game_storage_usb_attached !=
+            runtime->game_storage_usb_attached ||
+        shell->runtime.doom_wad_ready != runtime->doom_wad_ready;
     if (!changed) {
         return;
     }
+    const bool storage_changed =
+        shell->runtime.game_storage_kib != runtime->game_storage_kib ||
+        shell->runtime.game_storage_state != runtime->game_storage_state ||
+        shell->runtime.game_storage_usb_attached !=
+            runtime->game_storage_usb_attached ||
+        shell->runtime.doom_wad_ready != runtime->doom_wad_ready;
     shell->runtime = *runtime;
     if (shell->page == CONSOLE_PAGE_SYSTEM ||
-        shell->page == CONSOLE_PAGE_AUDIO) {
+        shell->page == CONSOLE_PAGE_AUDIO ||
+        (shell->page == CONSOLE_PAGE_HOME && storage_changed)) {
         shell->dirty = true;
     }
 }
@@ -752,8 +764,51 @@ static void draw_system(const console_shell_t *shell,
     draw_text(pixels, stride, 112, 130,
               shell->runtime.touch_ready ? "READY" : "OFFLINE",
               shell->runtime.touch_ready ? COLOR_GREEN : COLOR_RED, 1U, 7U);
-    draw_text(pixels, stride, 12, 166, "STATIC APPS / SHARED SERVICES",
-              COLOR_CYAN, 1U, 28U);
+    draw_text(pixels, stride, 12, 148, "GAME STORAGE", COLOR_MUTED, 1U, 12U);
+    const char *storage = "STARTING";
+    uint16_t storage_color = COLOR_YELLOW;
+    switch (shell->runtime.game_storage_state) {
+    case CONSOLE_STORAGE_READY:
+        storage = "APP READY";
+        storage_color = COLOR_GREEN;
+        break;
+    case CONSOLE_STORAGE_USB_HOST:
+        storage = "USB HOST";
+        storage_color = COLOR_CYAN;
+        break;
+    case CONSOLE_STORAGE_FORMAT_REQUIRED:
+        storage = "FORMAT NEEDED";
+        storage_color = COLOR_RED;
+        break;
+    case CONSOLE_STORAGE_MISSING:
+        storage = "WAD MISSING";
+        storage_color = COLOR_YELLOW;
+        break;
+    case CONSOLE_STORAGE_INVALID:
+        storage = "WAD INVALID";
+        storage_color = COLOR_RED;
+        break;
+    case CONSOLE_STORAGE_LOCKED:
+        storage = "GAME LOCKED";
+        storage_color = COLOR_GREEN;
+        break;
+    case CONSOLE_STORAGE_FAULT:
+        storage = "OFFLINE";
+        storage_color = COLOR_RED;
+        break;
+    case CONSOLE_STORAGE_STARTING:
+    default:
+        break;
+    }
+    draw_text(pixels, stride, 112, 148, storage,
+              storage_color, 1U, 14U);
+    draw_text(pixels, stride, 12, 166, "DOOM1.WAD", COLOR_MUTED, 1U, 9U);
+    draw_text(pixels, stride, 112, 166,
+              shell->runtime.doom_wad_ready ? "VERIFIED" : "NOT READY",
+              shell->runtime.doom_wad_ready ? COLOR_GREEN : COLOR_YELLOW,
+              1U, 9U);
+    draw_text(pixels, stride, 12, 184, "EJECT USB BEFORE GAME",
+              COLOR_CYAN, 1U, 21U);
 }
 
 static void draw_audio(const console_shell_t *shell,

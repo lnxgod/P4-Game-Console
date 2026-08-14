@@ -79,6 +79,7 @@ for P4_NATIVE_COMPONENT in \
     doom_touch_input \
     platform_i2c_shared \
     platform_display \
+    platform_game_storage \
     platform_touch \
     doom_video
 do
