@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "framebuffer-hardware-tested-touch-narrow-runtime-authorized-audio-build-only-other-peripherals-locked",
+  "status": "framebuffer-hardware-tested-touch-and-usb-device-narrow-runtime-authorized-audio-build-only-other-peripherals-locked",
   "vendor": "Elecrow",
   "family": "CrowPanel Advanced ESP32-P4 HMI AI Display",
   "screen_inches": 10.1,
@@ -64,6 +64,12 @@
       "topology_review": "hardware/evidence/elecrow-10.1-audio-path-review.json",
       "factory_semantics": "hardware/evidence/elecrow-10.1-factory-audio-semantics.json",
       "runtime_blocker": "power_off_population_and_continuity_must_prove_one_converging_output_family_absent_or_isolated",
+      "hardware_test": null
+    },
+    "usb_device_storage": {
+      "authorized": true,
+      "scope": "j16_dedicated_usb_device_sink_path_cross_revision_v1_0_through_v1_2",
+      "evidence": "hardware/evidence/elecrow-10.1-usb-device-storage-path.json",
       "hardware_test": null
     }
   }
