@@ -38,6 +38,11 @@ static const console_app_descriptor_t s_apps[] = {
      .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0xF81F),
      .capabilities = CONSOLE_CAPABILITY_AUDIO,
      .page = CONSOLE_PAGE_AUDIO, .enabled = true},
+    {.id = 6U, .title = "FILE MANAGER", .subtitle = "P4 GAMES USB",
+     .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0xFD20),
+     .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
+         CONSOLE_CAPABILITY_STORAGE,
+     .page = CONSOLE_PAGE_FILES, .enabled = true},
 };
 
 static bool select_page(console_shell_t *shell, const char *name)
@@ -67,6 +72,7 @@ static bool select_page(console_shell_t *shell, const char *name)
         case CONSOLE_PAGE_COLORS: expected = "colors"; break;
         case CONSOLE_PAGE_TOUCH: expected = "touch"; break;
         case CONSOLE_PAGE_SYSTEM: expected = "system"; break;
+        case CONSOLE_PAGE_FILES: expected = "files"; break;
         case CONSOLE_PAGE_AUDIO: expected = "audio"; break;
         default: break;
         }
@@ -119,7 +125,7 @@ int main(int argc, char **argv)
     if (argc != 3) {
         fprintf(stderr,
                 "usage: %s home|all|games|arcade|system-folder|"
-                "colors|touch|system|audio output.ppm\n",
+                "colors|touch|system|files|audio output.ppm\n",
                 argv[0]);
         return EXIT_FAILURE;
     }
@@ -141,6 +147,29 @@ int main(int argc, char **argv)
         .doom_wad_ready = true,
     };
     console_shell_set_runtime_info(&shell, &runtime);
+    if (shell.page == CONSOLE_PAGE_FILES) {
+        const console_shell_file_listing_t files = {
+            .entries = {
+                {.source_index = 1U, .label = "DOOM1.WAD",
+                 .size_kib = 4098U, .removable = true},
+                {.source_index = 2U, .label = "README.TXT",
+                 .size_kib = 1U, .removable = true},
+                {.source_index = 3U, .label = "SAVES",
+                 .is_directory = true, .removable = false},
+                {.source_index = 4U, .label = "MODPACK.WAD",
+                 .size_kib = 512U, .removable = true},
+            },
+            .entry_count = 4U,
+            .total_visible_entries = 4U,
+            .hidden_entries = 1U,
+            .storage_generation = 3U,
+            .revision = 1U,
+            .available = true,
+        };
+        if (!console_shell_set_file_listing(&shell, &files)) {
+            return EXIT_FAILURE;
+        }
+    }
     if (shell.page == CONSOLE_PAGE_TOUCH) {
         shell.contact_count = 2U;
         shell.contacts[0] = (console_shell_contact_t){.x = 360U, .y = 330U};

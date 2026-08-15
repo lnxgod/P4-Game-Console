@@ -14,6 +14,7 @@
 #include "esp_partition.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
+#include "game_storage_files.h"
 #include "game_storage_model.h"
 #include "mbedtls/sha256.h"
 #include "tinyusb.h"
@@ -44,6 +45,7 @@ static bool s_usb_driver_running;
 static uint64_t s_capacity_bytes;
 static uint32_t s_sector_size_bytes;
 static uint32_t s_scans;
+static uint32_t s_file_mutations;
 static esp_err_t s_last_error = ESP_ERR_INVALID_STATE;
 static uint8_t s_hash_buffer[GAME_STORAGE_HASH_BUFFER_BYTES];
 
@@ -396,6 +398,82 @@ esp_err_t platform_game_storage_get_status(
     out_status->last_error = s_last_error;
     unlock_storage();
     return ESP_OK;
+}
+
+static esp_err_t storage_errno_to_esp(int error)
+{
+    switch (error) {
+    case 0:
+        return ESP_OK;
+    case EINVAL:
+    case EISDIR:
+        return ESP_ERR_INVALID_ARG;
+    case ENOENT:
+        return ESP_ERR_NOT_FOUND;
+    case ENAMETOOLONG:
+        return ESP_ERR_INVALID_SIZE;
+    case ENOMEM:
+        return ESP_ERR_NO_MEM;
+    case EBUSY:
+        return ESP_ERR_INVALID_STATE;
+    default:
+        return ESP_FAIL;
+    }
+}
+
+esp_err_t platform_game_storage_list_root(
+    platform_game_storage_file_listing_t *out_listing)
+{
+    if (out_listing == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    memset(out_listing, 0, sizeof(*out_listing));
+    if (!s_initialized || !lock_storage()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (!game_storage_model_files_available(&s_model)) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    const int files_result = game_storage_files_list_root(
+        PLATFORM_GAME_STORAGE_MOUNT_POINT, out_listing);
+    const esp_err_t result = storage_errno_to_esp(files_result);
+    if (result == ESP_OK) {
+        out_listing->storage_generation = s_model.generation;
+        out_listing->mutation_count = s_file_mutations;
+    }
+    unlock_storage();
+    return result;
+}
+
+esp_err_t platform_game_storage_remove_root_file(const char *name)
+{
+    if (!game_storage_files_root_name_valid(name)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!s_initialized || !lock_storage()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (!game_storage_model_files_available(&s_model)) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    const int files_result = game_storage_files_remove_root_file(
+        PLATFORM_GAME_STORAGE_MOUNT_POINT, name);
+    const esp_err_t result = storage_errno_to_esp(files_result);
+    if (result == ESP_OK) {
+        if (s_file_mutations != UINT32_MAX) {
+            ++s_file_mutations;
+        }
+        s_model.content = GAME_STORAGE_CONTENT_UNKNOWN;
+        s_last_error = ESP_OK;
+    } else {
+        s_last_error = result;
+    }
+    unlock_storage();
+    return result;
 }
 
 esp_err_t platform_game_storage_lock_for_game(void)

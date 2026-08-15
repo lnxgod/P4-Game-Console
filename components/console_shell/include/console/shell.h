@@ -28,6 +28,9 @@ enum {
     CONSOLE_SHELL_SUBTITLE_MAX_BYTES = 32,
     CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES = 16,
     CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES = 32,
+    CONSOLE_SHELL_FILE_MAX_ENTRIES = 32,
+    CONSOLE_SHELL_FILE_LABEL_MAX_BYTES = 25,
+    CONSOLE_SHELL_FILE_VISIBLE_ROWS = 5,
 };
 
 typedef enum {
@@ -43,6 +46,7 @@ typedef enum {
     CONSOLE_PAGE_COLORS,
     CONSOLE_PAGE_TOUCH,
     CONSOLE_PAGE_SYSTEM,
+    CONSOLE_PAGE_FILES,
     CONSOLE_PAGE_AUDIO,
 } console_page_t;
 
@@ -86,15 +90,44 @@ typedef struct {
     bool doom_wad_ready;
 } console_shell_runtime_info_t;
 
+typedef struct {
+    uint32_t source_index;
+    char label[CONSOLE_SHELL_FILE_LABEL_MAX_BYTES];
+    uint32_t size_kib;
+    bool is_directory;
+    bool removable;
+} console_shell_file_entry_t;
+
+typedef struct {
+    console_shell_file_entry_t entries[CONSOLE_SHELL_FILE_MAX_ENTRIES];
+    size_t entry_count;
+    uint32_t total_visible_entries;
+    uint32_t hidden_entries;
+    uint32_t omitted_entries;
+    uint32_t storage_generation;
+    uint32_t revision;
+    bool available;
+} console_shell_file_listing_t;
+
+typedef enum {
+    CONSOLE_FILE_NOTICE_NONE = 0,
+    CONSOLE_FILE_NOTICE_REFRESHED,
+    CONSOLE_FILE_NOTICE_DELETED,
+    CONSOLE_FILE_NOTICE_ERROR,
+} console_shell_file_notice_t;
+
 typedef enum {
     CONSOLE_ACTION_NONE = 0,
     CONSOLE_ACTION_PAGE_CHANGED,
     CONSOLE_ACTION_LAUNCH,
+    CONSOLE_ACTION_FILE_REFRESH,
+    CONSOLE_ACTION_FILE_DELETE,
 } console_action_type_t;
 
 typedef struct {
     console_action_type_t type;
     uint32_t app_id;
+    uint32_t file_source_index;
 } console_shell_action_t;
 
 typedef struct {
@@ -107,6 +140,10 @@ typedef struct {
     size_t press_start_scroll_row;
     console_page_t page;
     uint32_t active_app_id;
+    console_shell_file_listing_t files;
+    size_t file_selected_index;
+    size_t file_first_visible;
+    console_shell_file_notice_t file_notice;
     uint16_t press_start_gui_x;
     uint16_t press_start_gui_y;
     char home_folder_path[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
@@ -115,6 +152,7 @@ typedef struct {
     bool scroll_candidate;
     bool scroll_gesture;
     bool home_all_programs;
+    bool file_delete_confirm;
     bool dirty;
     uint32_t render_generation;
     console_shell_runtime_info_t runtime;
@@ -146,6 +184,16 @@ console_shell_action_t console_shell_handle_touch(
 void console_shell_set_runtime_info(
     console_shell_t *shell,
     const console_shell_runtime_info_t *runtime);
+
+/** Replace the bounded File Manager snapshot. */
+bool console_shell_set_file_listing(
+    console_shell_t *shell,
+    const console_shell_file_listing_t *listing);
+
+/** Set the result banner after a refresh or confirmed file operation. */
+void console_shell_set_file_notice(
+    console_shell_t *shell,
+    console_shell_file_notice_t notice);
 
 /** Return to the launcher without synthesizing an app launch. */
 void console_shell_show_home(console_shell_t *shell);

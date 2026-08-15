@@ -14,3 +14,8 @@ Doom currently accepts only this file at the volume root:
 You may replace or remove data files without reflashing firmware. This volume
 stores game data, not executable apps. Do not copy registered or commercial
 Doom data unless you legally own it and your use permits the copy.
+
+Console OS also includes a File Manager under SYSTEM. After ejecting P4 GAMES
+on the laptop, use it to refresh the root listing or remove one regular file
+with a two-step confirmation. The console deliberately hides host metadata,
+does not delete directories, and refuses file operations while USB owns FAT.

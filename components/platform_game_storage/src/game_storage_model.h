@@ -44,6 +44,7 @@ void game_storage_model_mount_failed(game_storage_model_t *model,
 bool game_storage_model_begin_scan(game_storage_model_t *model);
 void game_storage_model_finish_scan(game_storage_model_t *model,
                                     game_storage_content_t content);
+bool game_storage_model_files_available(const game_storage_model_t *model);
 bool game_storage_model_begin_game_lock(game_storage_model_t *model);
 void game_storage_model_finish_game_lock(game_storage_model_t *model,
                                          bool success);

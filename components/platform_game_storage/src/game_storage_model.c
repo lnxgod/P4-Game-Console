@@ -95,6 +95,12 @@ void game_storage_model_finish_scan(game_storage_model_t *model,
     }
 }
 
+bool game_storage_model_files_available(const game_storage_model_t *model)
+{
+    return model != NULL && model->owner == GAME_STORAGE_OWNER_APP &&
+        !model->format_required && !model->launch_pending;
+}
+
 bool game_storage_model_begin_game_lock(game_storage_model_t *model)
 {
     if (model == NULL || model->owner != GAME_STORAGE_OWNER_APP ||

@@ -8,6 +8,11 @@ manifest-discovered RISC-V components linked into the ESP-IDF ELF/BIN image;
 they are not UF2 files. The first clean-room sample is Maze Chase. See
 [the P4 Game SDK](docs/GAME_SDK.md).
 
+The Program Manager shell also exposes the persistent `P4 GAMES` FAT volume
+to a laptop through J16 USB device mode. Its File Manager app can browse the
+root after a clean host eject and remove a regular file with two-step
+confirmation; it refuses access while USB or a running game owns storage.
+
 ## Current target
 
 The attached board has been identified non-destructively as an ESP32-P4 revision 1.3 with 16 MB flash. Its saved pre-project image identifies itself as `ESP32-P4-Elecrow-Advance`; more importantly, it contains Elecrow's complete, commit-pinned 10.1-inch loading-background asset at flash offset `0x71004`, while the full 7- and 9-inch assets are absent. The working classification is therefore the 10.1-inch/DHE04310D **factory-firmware variant** with very high confidence. This is not a physical-label or PCB-revision claim: `pcb_revision` remains null and every pin map remains unauthorized until the board silkscreen is photographed.
@@ -46,6 +51,7 @@ make build APP=display_diag
 make gamepad-host
 make gamepad-idf
 make console-shell-host
+make platform-game-storage-host
 make game-sdk-host
 make console-os-idf
 ```

@@ -42,6 +42,20 @@ enum {
     SCROLL_TRACK_HEIGHT = 100,
     SCROLL_DRAG_THRESHOLD = 18,
     SCROLL_DRAG_ROW_STEP = 32,
+    FILE_LIST_LEFT = 8,
+    FILE_LIST_TOP = 48,
+    FILE_LIST_WIDTH = 304,
+    FILE_ROW_HEIGHT = 20,
+    FILE_BUTTON_TOP = 174,
+    FILE_BUTTON_HEIGHT = 20,
+    FILE_PREV_LEFT = 8,
+    FILE_PREV_WIDTH = 56,
+    FILE_NEXT_LEFT = 68,
+    FILE_NEXT_WIDTH = 56,
+    FILE_REFRESH_LEFT = 128,
+    FILE_REFRESH_WIDTH = 83,
+    FILE_DELETE_LEFT = 215,
+    FILE_DELETE_WIDTH = 97,
 };
 
 static const uint16_t COLOR_BLACK = UINT16_C(0x0000);
@@ -79,6 +93,14 @@ typedef struct {
 
 enum {
     HOME_ITEM_CAPACITY = CONSOLE_SHELL_MAX_APPS + 1,
+    FILE_ROW_CONTROL_BASE = HOME_ITEM_CONTROL_BASE + HOME_ITEM_CAPACITY,
+    FILE_PREV_CONTROL =
+        FILE_ROW_CONTROL_BASE + CONSOLE_SHELL_FILE_VISIBLE_ROWS,
+    FILE_NEXT_CONTROL,
+    FILE_REFRESH_CONTROL,
+    FILE_DELETE_CONTROL,
+    FILE_CANCEL_CONTROL,
+    FILE_CONFIRM_CONTROL,
 };
 
 static size_t bounded_length(const char *text, size_t limit)
@@ -427,6 +449,50 @@ static size_t home_first_visible_index(const console_shell_t *shell)
     return shell->home_scroll_row * CONSOLE_SHELL_APP_COLUMNS;
 }
 
+static size_t file_last_visible_index(const console_shell_t *shell)
+{
+    const size_t end = shell->file_first_visible +
+        CONSOLE_SHELL_FILE_VISIBLE_ROWS;
+    return end < shell->files.entry_count ? end : shell->files.entry_count;
+}
+
+static bool file_can_page_previous(const console_shell_t *shell)
+{
+    return shell->file_first_visible > 0U;
+}
+
+static bool file_can_page_next(const console_shell_t *shell)
+{
+    return file_last_visible_index(shell) < shell->files.entry_count;
+}
+
+static bool file_selected_is_removable(const console_shell_t *shell)
+{
+    return shell->files.available &&
+        shell->file_selected_index < shell->files.entry_count &&
+        shell->files.entries[shell->file_selected_index].removable;
+}
+
+static void normalize_file_selection(console_shell_t *shell)
+{
+    if (shell->files.entry_count == 0U) {
+        shell->file_selected_index = 0U;
+        shell->file_first_visible = 0U;
+        shell->file_delete_confirm = false;
+        return;
+    }
+    if (shell->file_selected_index >= shell->files.entry_count) {
+        shell->file_selected_index = shell->files.entry_count - 1U;
+    }
+    const size_t page = shell->file_selected_index /
+        CONSOLE_SHELL_FILE_VISIBLE_ROWS;
+    shell->file_first_visible =
+        page * CONSOLE_SHELL_FILE_VISIBLE_ROWS;
+    if (!file_selected_is_removable(shell)) {
+        shell->file_delete_confirm = false;
+    }
+}
+
 static void select_first_visible_item(console_shell_t *shell)
 {
     home_item_t items[HOME_ITEM_CAPACITY];
@@ -464,10 +530,61 @@ static size_t control_at(const console_shell_t *shell,
                          uint16_t gui_y)
 {
     if (shell->page != CONSOLE_PAGE_HOME) {
-        return point_in_rect(gui_x, gui_y,
-                             BACK_LEFT, BACK_TOP,
-                             BACK_WIDTH, BACK_HEIGHT)
-                   ? BACK_CONTROL : SIZE_MAX;
+        if (point_in_rect(gui_x, gui_y,
+                          BACK_LEFT, BACK_TOP,
+                          BACK_WIDTH, BACK_HEIGHT)) {
+            return BACK_CONTROL;
+        }
+        if (shell->page != CONSOLE_PAGE_FILES) {
+            return SIZE_MAX;
+        }
+        if (shell->file_delete_confirm) {
+            if (point_in_rect(gui_x, gui_y,
+                              FILE_REFRESH_LEFT, FILE_BUTTON_TOP,
+                              FILE_REFRESH_WIDTH, FILE_BUTTON_HEIGHT)) {
+                return FILE_CANCEL_CONTROL;
+            }
+            return point_in_rect(gui_x, gui_y,
+                                 FILE_DELETE_LEFT, FILE_BUTTON_TOP,
+                                 FILE_DELETE_WIDTH, FILE_BUTTON_HEIGHT)
+                ? FILE_CONFIRM_CONTROL : SIZE_MAX;
+        }
+        for (size_t row = 0U;
+             row < CONSOLE_SHELL_FILE_VISIBLE_ROWS; ++row) {
+            const size_t index = shell->file_first_visible + row;
+            if (index < shell->files.entry_count &&
+                point_in_rect(gui_x, gui_y,
+                              FILE_LIST_LEFT,
+                              FILE_LIST_TOP +
+                                  (unsigned)row * FILE_ROW_HEIGHT,
+                              FILE_LIST_WIDTH, FILE_ROW_HEIGHT)) {
+                return FILE_ROW_CONTROL_BASE + row;
+            }
+        }
+        if (file_can_page_previous(shell) &&
+            point_in_rect(gui_x, gui_y,
+                          FILE_PREV_LEFT, FILE_BUTTON_TOP,
+                          FILE_PREV_WIDTH, FILE_BUTTON_HEIGHT)) {
+            return FILE_PREV_CONTROL;
+        }
+        if (file_can_page_next(shell) &&
+            point_in_rect(gui_x, gui_y,
+                          FILE_NEXT_LEFT, FILE_BUTTON_TOP,
+                          FILE_NEXT_WIDTH, FILE_BUTTON_HEIGHT)) {
+            return FILE_NEXT_CONTROL;
+        }
+        if (point_in_rect(gui_x, gui_y,
+                          FILE_REFRESH_LEFT, FILE_BUTTON_TOP,
+                          FILE_REFRESH_WIDTH, FILE_BUTTON_HEIGHT)) {
+            return FILE_REFRESH_CONTROL;
+        }
+        if (file_selected_is_removable(shell) &&
+            point_in_rect(gui_x, gui_y,
+                          FILE_DELETE_LEFT, FILE_BUTTON_TOP,
+                          FILE_DELETE_WIDTH, FILE_BUTTON_HEIGHT)) {
+            return FILE_DELETE_CONTROL;
+        }
+        return SIZE_MAX;
     }
 
     if ((shell->home_all_programs || shell->home_folder_path[0] != '\0') &&
@@ -600,6 +717,17 @@ static console_shell_action_t no_action(void)
     const console_shell_action_t action = {
         .type = CONSOLE_ACTION_NONE,
         .app_id = 0U,
+        .file_source_index = UINT32_MAX,
+    };
+    return action;
+}
+
+static console_shell_action_t page_changed(uint32_t app_id)
+{
+    const console_shell_action_t action = {
+        .type = CONSOLE_ACTION_PAGE_CHANGED,
+        .app_id = app_id,
+        .file_source_index = UINT32_MAX,
     };
     return action;
 }
@@ -708,19 +836,73 @@ console_shell_action_t console_shell_handle_touch(
         shell->dirty = true;
         if (released_control == BACK_CONTROL) {
             console_shell_show_home(shell);
-            const console_shell_action_t action = {
-                .type = CONSOLE_ACTION_PAGE_CHANGED,
-                .app_id = 0U,
-            };
-            return action;
+            return page_changed(0U);
+        }
+        if (shell->page == CONSOLE_PAGE_FILES) {
+            shell->file_notice = CONSOLE_FILE_NOTICE_NONE;
+            if (released_control >= FILE_ROW_CONTROL_BASE &&
+                released_control < FILE_ROW_CONTROL_BASE +
+                    CONSOLE_SHELL_FILE_VISIBLE_ROWS) {
+                const size_t row = released_control - FILE_ROW_CONTROL_BASE;
+                const size_t index = shell->file_first_visible + row;
+                if (index < shell->files.entry_count) {
+                    shell->file_selected_index = index;
+                    shell->file_delete_confirm = false;
+                    return page_changed(shell->active_app_id);
+                }
+                return no_action();
+            }
+            if (released_control == FILE_PREV_CONTROL &&
+                file_can_page_previous(shell)) {
+                const size_t step = CONSOLE_SHELL_FILE_VISIBLE_ROWS;
+                shell->file_first_visible = step > shell->file_first_visible
+                    ? 0U : shell->file_first_visible - step;
+                shell->file_selected_index = shell->file_first_visible;
+                shell->file_delete_confirm = false;
+                return page_changed(shell->active_app_id);
+            }
+            if (released_control == FILE_NEXT_CONTROL &&
+                file_can_page_next(shell)) {
+                shell->file_first_visible +=
+                    CONSOLE_SHELL_FILE_VISIBLE_ROWS;
+                shell->file_selected_index = shell->file_first_visible;
+                shell->file_delete_confirm = false;
+                return page_changed(shell->active_app_id);
+            }
+            if (released_control == FILE_REFRESH_CONTROL) {
+                shell->file_delete_confirm = false;
+                const console_shell_action_t action = {
+                    .type = CONSOLE_ACTION_FILE_REFRESH,
+                    .app_id = shell->active_app_id,
+                    .file_source_index = UINT32_MAX,
+                };
+                return action;
+            }
+            if (released_control == FILE_DELETE_CONTROL &&
+                file_selected_is_removable(shell)) {
+                shell->file_delete_confirm = true;
+                return page_changed(shell->active_app_id);
+            }
+            if (released_control == FILE_CANCEL_CONTROL) {
+                shell->file_delete_confirm = false;
+                return page_changed(shell->active_app_id);
+            }
+            if (released_control == FILE_CONFIRM_CONTROL &&
+                file_selected_is_removable(shell)) {
+                shell->file_delete_confirm = false;
+                const console_shell_action_t action = {
+                    .type = CONSOLE_ACTION_FILE_DELETE,
+                    .app_id = shell->active_app_id,
+                    .file_source_index = shell->files.entries[
+                        shell->file_selected_index].source_index,
+                };
+                return action;
+            }
+            return no_action();
         }
         if (released_control == FOLDER_UP_CONTROL) {
             navigate_home_up(shell);
-            const console_shell_action_t action = {
-                .type = CONSOLE_ACTION_PAGE_CHANGED,
-                .app_id = 0U,
-            };
-            return action;
+            return page_changed(0U);
         }
         if (released_control == SCROLL_UP_CONTROL ||
             released_control == SCROLL_DOWN_CONTROL) {
@@ -728,11 +910,7 @@ console_shell_action_t console_shell_handle_touch(
                 ? shell->home_scroll_row - 1U
                 : shell->home_scroll_row + 1U;
             (void)set_home_scroll_row(shell, requested);
-            const console_shell_action_t action = {
-                .type = CONSOLE_ACTION_PAGE_CHANGED,
-                .app_id = 0U,
-            };
-            return action;
+            return page_changed(0U);
         }
         if (released_control < HOME_ITEM_CONTROL_BASE) {
             return no_action();
@@ -746,19 +924,11 @@ console_shell_action_t console_shell_handle_touch(
         shell->selected_home_item = item_index;
         if (items[item_index].kind == HOME_ITEM_ALL_PROGRAMS) {
             open_all_programs(shell);
-            const console_shell_action_t action = {
-                .type = CONSOLE_ACTION_PAGE_CHANGED,
-                .app_id = 0U,
-            };
-            return action;
+            return page_changed(0U);
         }
         if (items[item_index].kind == HOME_ITEM_FOLDER) {
             open_home_folder(shell, items[item_index].title);
-            const console_shell_action_t action = {
-                .type = CONSOLE_ACTION_PAGE_CHANGED,
-                .app_id = 0U,
-            };
-            return action;
+            return page_changed(0U);
         }
         if (items[item_index].app_index >= shell->app_count) {
             return no_action();
@@ -771,16 +941,18 @@ console_shell_action_t console_shell_handle_touch(
             const console_shell_action_t action = {
                 .type = CONSOLE_ACTION_LAUNCH,
                 .app_id = app->id,
+                .file_source_index = UINT32_MAX,
             };
             return action;
         }
         shell->page = app->page;
         shell->active_app_id = app->id;
-        const console_shell_action_t action = {
-            .type = CONSOLE_ACTION_PAGE_CHANGED,
-            .app_id = app->id,
-        };
-        return action;
+        if (app->page == CONSOLE_PAGE_FILES) {
+            shell->file_delete_confirm = false;
+            shell->file_notice = CONSOLE_FILE_NOTICE_NONE;
+            normalize_file_selection(shell);
+        }
+        return page_changed(app->id);
     }
 
     if (contact_count != 1U) {
@@ -872,8 +1044,53 @@ void console_shell_set_runtime_info(
         shell->runtime.doom_wad_ready != runtime->doom_wad_ready;
     shell->runtime = *runtime;
     if (shell->page == CONSOLE_PAGE_SYSTEM ||
+        shell->page == CONSOLE_PAGE_FILES ||
         shell->page == CONSOLE_PAGE_AUDIO ||
         (shell->page == CONSOLE_PAGE_HOME && storage_changed)) {
+        shell->dirty = true;
+    }
+}
+
+bool console_shell_set_file_listing(
+    console_shell_t *shell,
+    const console_shell_file_listing_t *listing)
+{
+    if (shell == NULL || listing == NULL ||
+        listing->entry_count > CONSOLE_SHELL_FILE_MAX_ENTRIES ||
+        listing->total_visible_entries < listing->entry_count) {
+        return false;
+    }
+    for (size_t i = 0U; i < listing->entry_count; ++i) {
+        const console_shell_file_entry_t *const entry = &listing->entries[i];
+        const size_t label_length = bounded_length(
+            entry->label, CONSOLE_SHELL_FILE_LABEL_MAX_BYTES);
+        if (label_length == 0U ||
+            label_length >= CONSOLE_SHELL_FILE_LABEL_MAX_BYTES ||
+            (entry->is_directory && entry->removable)) {
+            return false;
+        }
+    }
+    shell->files = *listing;
+    normalize_file_selection(shell);
+    if (shell->page == CONSOLE_PAGE_FILES) {
+        shell->dirty = true;
+    }
+    return true;
+}
+
+void console_shell_set_file_notice(
+    console_shell_t *shell,
+    console_shell_file_notice_t notice)
+{
+    if (shell == NULL || notice < CONSOLE_FILE_NOTICE_NONE ||
+        notice > CONSOLE_FILE_NOTICE_ERROR) {
+        return;
+    }
+    if (shell->file_notice == notice) {
+        return;
+    }
+    shell->file_notice = notice;
+    if (shell->page == CONSOLE_PAGE_FILES) {
         shell->dirty = true;
     }
 }
@@ -889,6 +1106,7 @@ void console_shell_show_home(console_shell_t *shell)
     shell->press_active = false;
     shell->scroll_candidate = false;
     shell->scroll_gesture = false;
+    shell->file_delete_confirm = false;
     shell->pressed_index = SIZE_MAX;
     shell->dirty = true;
 }
@@ -1016,6 +1234,7 @@ static void glyph_rows(char character, uint8_t rows[7])
     case '<': GLYPH(2,4,8,16,8,4,2); break;
     case '>': GLYPH(8,4,2,1,2,4,8); break;
     case '?': GLYPH(14,17,1,2,4,0,4); break;
+    case '_': GLYPH(0,0,0,0,0,0,31); break;
     default: break;
     }
 #undef GLYPH
@@ -1441,6 +1660,172 @@ static void draw_system(const console_shell_t *shell,
               COLOR_CYAN, 1U, 21U);
 }
 
+static void draw_file_button(console_shell_t *shell,
+                             uint16_t *pixels, size_t stride,
+                             int left, int width, size_t control,
+                             const char *label, bool enabled)
+{
+    const bool pressed = enabled && shell->press_active &&
+        shell->pressed_index == control;
+    bevel_rect(pixels, stride, left, FILE_BUTTON_TOP,
+               width, FILE_BUTTON_HEIGHT, COLOR_FACE, pressed);
+    draw_centered_text(pixels, stride, left, FILE_BUTTON_TOP + 7,
+                       width, label,
+                       enabled ? COLOR_BLACK : COLOR_SHADOW, 10U);
+}
+
+static void draw_file_listing_status(const console_shell_t *shell,
+                                     uint16_t *pixels, size_t stride)
+{
+    if (!shell->files.available) {
+        const char *message = "STORAGE NOT AVAILABLE";
+        if (shell->runtime.game_storage_state == CONSOLE_STORAGE_USB_HOST) {
+            message = "EJECT P4 GAMES ON LAPTOP";
+        } else if (shell->runtime.game_storage_state ==
+                   CONSOLE_STORAGE_FORMAT_REQUIRED) {
+            message = "FORMAT P4 GAMES ON LAPTOP";
+        } else if (shell->runtime.game_storage_state ==
+                   CONSOLE_STORAGE_STARTING) {
+            message = "STORAGE SWITCHING OWNERS";
+        }
+        draw_text(pixels, stride, 12, 83, message,
+                  COLOR_TITLE, 1U, 29U);
+        draw_text(pixels, stride, 12, 101,
+                  "USB AND APP NEVER SHARE FAT",
+                  COLOR_DARK, 1U, 27U);
+        return;
+    }
+    if (shell->files.entry_count == 0U) {
+        draw_text(pixels, stride, 12, 83, "NO VISIBLE FILES",
+                  COLOR_TITLE, 1U, 16U);
+        draw_text(pixels, stride, 12, 101,
+                  "COPY FILES WITH J16 USB",
+                  COLOR_DARK, 1U, 24U);
+    }
+}
+
+static void draw_files(console_shell_t *shell,
+                       uint16_t *pixels, size_t stride)
+{
+    fill_rect(pixels, stride, 0, 32, CONSOLE_SHELL_WIDTH,
+              CONSOLE_SHELL_HEIGHT - 32, COLOR_FACE);
+    draw_text(pixels, stride, 12, 37, "NAME", COLOR_DARK, 1U, 4U);
+    draw_text(pixels, stride, 248, 37, "SIZE KIB", COLOR_DARK, 1U, 8U);
+    fill_rect(pixels, stride, FILE_LIST_LEFT, FILE_LIST_TOP,
+              FILE_LIST_WIDTH,
+              FILE_ROW_HEIGHT * CONSOLE_SHELL_FILE_VISIBLE_ROWS,
+              COLOR_GROUP);
+    outline_rect(pixels, stride, FILE_LIST_LEFT, FILE_LIST_TOP,
+                 FILE_LIST_WIDTH,
+                 FILE_ROW_HEIGHT * CONSOLE_SHELL_FILE_VISIBLE_ROWS,
+                 COLOR_DARK);
+
+    if (shell->files.available && shell->files.entry_count > 0U) {
+        const size_t last = file_last_visible_index(shell);
+        for (size_t index = shell->file_first_visible;
+             index < last; ++index) {
+            const size_t row = index - shell->file_first_visible;
+            const int top = FILE_LIST_TOP + (int)row * FILE_ROW_HEIGHT;
+            const console_shell_file_entry_t *const entry =
+                &shell->files.entries[index];
+            const bool selected = index == shell->file_selected_index;
+            fill_rect(pixels, stride, FILE_LIST_LEFT + 1, top + 1,
+                      FILE_LIST_WIDTH - 2, FILE_ROW_HEIGHT - 1,
+                      selected ? COLOR_TITLE : COLOR_GROUP);
+            if (row > 0U) {
+                fill_rect(pixels, stride, FILE_LIST_LEFT + 1, top,
+                          FILE_LIST_WIDTH - 2, 1, COLOR_SHADOW);
+            }
+            const uint16_t text_color = selected ? COLOR_WHITE : COLOR_BLACK;
+            if (entry->is_directory) {
+                fill_rect(pixels, stride, 13, top + 6, 12, 8,
+                          selected ? COLOR_YELLOW : UINT16_C(0xFD20));
+                fill_rect(pixels, stride, 15, top + 4, 6, 3,
+                          selected ? COLOR_YELLOW : UINT16_C(0xFD20));
+            } else {
+                bevel_rect(pixels, stride, 13, top + 4, 12, 12,
+                           COLOR_FACE, false);
+                fill_rect(pixels, stride, 16, top + 7, 6, 1,
+                          entry->removable ? COLOR_CYAN : COLOR_SHADOW);
+                fill_rect(pixels, stride, 16, top + 10, 6, 1,
+                          COLOR_DARK);
+            }
+            draw_text(pixels, stride, 30, top + 7, entry->label,
+                      text_color, 1U, 24U);
+            if (entry->is_directory) {
+                draw_text(pixels, stride, 264, top + 7, "DIR",
+                          selected ? COLOR_WHITE : COLOR_DARK, 1U, 3U);
+            } else {
+                draw_u32(pixels, stride, 258, top + 7,
+                         entry->size_kib, text_color);
+            }
+        }
+    } else {
+        draw_file_listing_status(shell, pixels, stride);
+    }
+
+    draw_text(pixels, stride, 8, 153, "VISIBLE", COLOR_DARK, 1U, 7U);
+    draw_u32(pixels, stride, 56, 153,
+             shell->files.total_visible_entries, COLOR_BLACK);
+    draw_text(pixels, stride, 104, 153, "HIDDEN", COLOR_DARK, 1U, 6U);
+    draw_u32(pixels, stride, 146, 153,
+             shell->files.hidden_entries, COLOR_BLACK);
+    draw_text(pixels, stride, 190, 153, "GEN", COLOR_DARK, 1U, 3U);
+    draw_u32(pixels, stride, 214, 153,
+             shell->files.storage_generation, COLOR_BLACK);
+
+    const char *notice = "USB ADDS / FILE MANAGER REMOVES";
+    uint16_t notice_color = COLOR_DARK;
+    if (shell->file_delete_confirm && file_selected_is_removable(shell)) {
+        notice = "CONFIRM DELETE SELECTED FILE";
+        notice_color = COLOR_RED;
+    } else if (shell->file_notice == CONSOLE_FILE_NOTICE_REFRESHED) {
+        notice = "FILE LIST REFRESHED";
+        notice_color = COLOR_GREEN;
+    } else if (shell->file_notice == CONSOLE_FILE_NOTICE_DELETED) {
+        notice = "FILE DELETED";
+        notice_color = COLOR_GREEN;
+    } else if (shell->file_notice == CONSOLE_FILE_NOTICE_ERROR) {
+        notice = "OPERATION FAILED / CHECK USB";
+        notice_color = COLOR_RED;
+    } else if (shell->files.omitted_entries > 0U) {
+        notice = "MORE FILES NOT SHOWN";
+        notice_color = COLOR_YELLOW;
+    }
+    draw_text(pixels, stride, 8, 163, notice, notice_color, 1U, 31U);
+
+    if (shell->file_delete_confirm) {
+        draw_file_button(shell, pixels, stride,
+                         FILE_PREV_LEFT, FILE_PREV_WIDTH,
+                         FILE_PREV_CONTROL, "PREV", false);
+        draw_file_button(shell, pixels, stride,
+                         FILE_NEXT_LEFT, FILE_NEXT_WIDTH,
+                         FILE_NEXT_CONTROL, "NEXT", false);
+        draw_file_button(shell, pixels, stride,
+                         FILE_REFRESH_LEFT, FILE_REFRESH_WIDTH,
+                         FILE_CANCEL_CONTROL, "CANCEL", true);
+        draw_file_button(shell, pixels, stride,
+                         FILE_DELETE_LEFT, FILE_DELETE_WIDTH,
+                         FILE_CONFIRM_CONTROL, "DELETE", true);
+    } else {
+        draw_file_button(shell, pixels, stride,
+                         FILE_PREV_LEFT, FILE_PREV_WIDTH,
+                         FILE_PREV_CONTROL, "PREV",
+                         file_can_page_previous(shell));
+        draw_file_button(shell, pixels, stride,
+                         FILE_NEXT_LEFT, FILE_NEXT_WIDTH,
+                         FILE_NEXT_CONTROL, "NEXT",
+                         file_can_page_next(shell));
+        draw_file_button(shell, pixels, stride,
+                         FILE_REFRESH_LEFT, FILE_REFRESH_WIDTH,
+                         FILE_REFRESH_CONTROL, "REFRESH", true);
+        draw_file_button(shell, pixels, stride,
+                         FILE_DELETE_LEFT, FILE_DELETE_WIDTH,
+                         FILE_DELETE_CONTROL, "DELETE",
+                         file_selected_is_removable(shell));
+    }
+}
+
 static void draw_audio(const console_shell_t *shell,
                        uint16_t *pixels, size_t stride)
 {
@@ -1489,6 +1874,9 @@ bool console_shell_render_rgb565(console_shell_t *shell,
             break;
         case CONSOLE_PAGE_SYSTEM:
             draw_system(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_FILES:
+            draw_files(shell, pixels, stride_pixels);
             break;
         case CONSOLE_PAGE_AUDIO:
             draw_audio(shell, pixels, stride_pixels);

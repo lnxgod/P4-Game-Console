@@ -4,9 +4,11 @@
 #define P4_PLATFORM_GAME_STORAGE_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "esp_err.h"
+#include "platform/game_storage_types.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -58,6 +60,26 @@ esp_err_t platform_game_storage_refresh(void);
 /** Copy a coherent status snapshot. */
 esp_err_t platform_game_storage_get_status(
     platform_game_storage_status_t *out_status);
+
+/**
+ * List a bounded, sorted snapshot of the FAT root while the app owns it.
+ *
+ * Host ownership, mount transitions, and the terminal game lease return
+ * ESP_ERR_INVALID_STATE. Hidden host metadata is counted but not returned.
+ * Names are copied into fixed buffers; entries that cannot be represented
+ * safely are counted as omitted and never truncated.
+ */
+esp_err_t platform_game_storage_list_root(
+    platform_game_storage_file_listing_t *out_listing);
+
+/**
+ * Remove one regular file from the FAT root while the app owns it.
+ *
+ * The name must be one exact entry returned by the listing API. Paths,
+ * traversal tokens, control characters, directories, and overlong names are
+ * rejected. Successful removal invalidates the cached Doom identity.
+ */
+esp_err_t platform_game_storage_remove_root_file(const char *name);
 
 /**
  * Revoke USB access, remount for the app, re-hash DOOM1.WAD, and retain an

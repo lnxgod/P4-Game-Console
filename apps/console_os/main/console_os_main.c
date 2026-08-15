@@ -40,6 +40,7 @@ enum {
     CONSOLE_APP_TOUCH = 3,
     CONSOLE_APP_SYSTEM = 4,
     CONSOLE_APP_AUDIO = 5,
+    CONSOLE_APP_FILES = 6,
     CONSOLE_FRAME_INTERVAL_MS = 16,
     CONSOLE_SUBMIT_TIMEOUT_MS = 250,
     CONSOLE_BACKLIGHT_PERCENT = 25,
@@ -63,6 +64,12 @@ static uint32_t s_doom_handoff_count;
 static bool s_game_storage_initialized;
 static bool s_game_storage_status_seen;
 static platform_game_storage_status_t s_game_storage_status;
+static platform_game_storage_file_listing_t s_platform_file_listing;
+static console_shell_file_listing_t s_shell_file_listing;
+static bool s_file_listing_seen;
+static platform_game_storage_state_t s_file_listing_storage_state;
+static uint32_t s_file_listing_storage_generation;
+static uint32_t s_file_listing_revision;
 static char s_doom_subtitle[CONSOLE_SHELL_SUBTITLE_MAX_BYTES] =
     "STORAGE CHECKING";
 static int16_t s_native_audio_pcm[
@@ -131,6 +138,18 @@ static const console_app_descriptor_t s_builtin_apps[] = {
         .page = CONSOLE_PAGE_AUDIO,
         .enabled = true,
     },
+    {
+        .id = CONSOLE_APP_FILES,
+        .title = "FILE MANAGER",
+        .subtitle = "P4 GAMES USB",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0xFD20),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                        CONSOLE_CAPABILITY_TOUCH |
+                        CONSOLE_CAPABILITY_STORAGE,
+        .page = CONSOLE_PAGE_FILES,
+        .enabled = true,
+    },
 };
 
 _Static_assert(CONSOLE_NATIVE_AUDIO_FRAMES_PER_TICK == 256,
@@ -186,7 +205,7 @@ static bool build_app_registry(void)
     for (size_t i = 0U; i < p4_generated_game_count; ++i) {
         const p4_game_descriptor_t *const game = p4_generated_games[i];
         if (!p4_game_descriptor_valid(game) ||
-            game->launcher_id <= CONSOLE_APP_AUDIO) {
+            game->launcher_id <= CONSOLE_APP_FILES) {
             return false;
         }
         const console_app_descriptor_t launcher = {
@@ -343,6 +362,160 @@ static void sync_game_storage(void)
                  (unsigned long long)status.capacity_bytes,
                  esp_err_to_name(status.last_error));
     }
+}
+
+static void make_file_label(
+    const char *name,
+    char label[CONSOLE_SHELL_FILE_LABEL_MAX_BYTES])
+{
+    size_t output = 0U;
+    bool truncated = false;
+    while (name != NULL && name[output] != '\0' &&
+           output + 1U < CONSOLE_SHELL_FILE_LABEL_MAX_BYTES) {
+        const unsigned char byte = (unsigned char)name[output];
+        const bool supported =
+            (byte >= (unsigned char)'A' && byte <= (unsigned char)'Z') ||
+            (byte >= (unsigned char)'a' && byte <= (unsigned char)'z') ||
+            (byte >= (unsigned char)'0' && byte <= (unsigned char)'9') ||
+            byte == (unsigned char)' ' || byte == (unsigned char)'-' ||
+            byte == (unsigned char)'.' || byte == (unsigned char)'_';
+        label[output] = supported ? (char)byte : '?';
+        ++output;
+    }
+    if (name != NULL && name[output] != '\0') {
+        truncated = true;
+    }
+    if (output == 0U) {
+        memcpy(label, "UNNAMED", sizeof("UNNAMED"));
+        return;
+    }
+    if (truncated) {
+        label[output - 1U] = '>';
+    }
+    label[output] = '\0';
+}
+
+static uint32_t file_size_kib(uint64_t bytes)
+{
+    uint64_t kib = bytes / UINT64_C(1024);
+    if (bytes % UINT64_C(1024) != 0U) {
+        ++kib;
+    }
+    return kib > UINT32_MAX ? UINT32_MAX : (uint32_t)kib;
+}
+
+static esp_err_t reload_file_listing(
+    console_shell_t *shell,
+    console_shell_file_notice_t requested_notice)
+{
+    memset(&s_platform_file_listing, 0, sizeof(s_platform_file_listing));
+    memset(&s_shell_file_listing, 0, sizeof(s_shell_file_listing));
+    if (s_file_listing_revision != UINT32_MAX) {
+        ++s_file_listing_revision;
+    }
+    s_shell_file_listing.revision = s_file_listing_revision;
+    s_shell_file_listing.storage_generation =
+        s_game_storage_status.generation;
+
+    esp_err_t result = ESP_ERR_INVALID_STATE;
+    if (s_game_storage_initialized) {
+        result = platform_game_storage_list_root(&s_platform_file_listing);
+    }
+    if (result == ESP_OK) {
+        s_shell_file_listing.available = true;
+        s_shell_file_listing.storage_generation =
+            s_platform_file_listing.storage_generation;
+        s_shell_file_listing.hidden_entries =
+            s_platform_file_listing.hidden_entries;
+        s_shell_file_listing.omitted_entries =
+            s_platform_file_listing.omitted_entries;
+        for (size_t source = 0U;
+             source < s_platform_file_listing.entry_count; ++source) {
+            const platform_game_storage_file_entry_t *const input =
+                &s_platform_file_listing.entries[source];
+            if (s_shell_file_listing.entry_count >=
+                CONSOLE_SHELL_FILE_MAX_ENTRIES) {
+                if (s_shell_file_listing.omitted_entries != UINT32_MAX) {
+                    ++s_shell_file_listing.omitted_entries;
+                }
+                continue;
+            }
+            console_shell_file_entry_t *const output =
+                &s_shell_file_listing.entries[
+                    s_shell_file_listing.entry_count++];
+            output->source_index = (uint32_t)source;
+            make_file_label(input->name, output->label);
+            output->size_kib = file_size_kib(input->size_bytes);
+            output->is_directory = input->is_directory;
+            output->removable = !input->is_directory;
+        }
+        s_shell_file_listing.total_visible_entries =
+            s_platform_file_listing.total_entries >=
+                    s_platform_file_listing.hidden_entries
+                ? s_platform_file_listing.total_entries -
+                    s_platform_file_listing.hidden_entries
+                : 0U;
+    }
+
+    if (!console_shell_set_file_listing(shell, &s_shell_file_listing)) {
+        result = ESP_ERR_INVALID_RESPONSE;
+    }
+    console_shell_set_file_notice(
+        shell, result == ESP_OK ? requested_notice : CONSOLE_FILE_NOTICE_ERROR);
+    s_file_listing_seen = true;
+    s_file_listing_storage_state = s_game_storage_status.state;
+    s_file_listing_storage_generation = s_game_storage_status.generation;
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS FILES_REFRESH storage=%s available=%u "
+             "visible=%lu hidden=%lu omitted=%lu generation=%lu result=%s",
+             platform_game_storage_state_name(s_game_storage_status.state),
+             s_shell_file_listing.available ? 1U : 0U,
+             (unsigned long)s_shell_file_listing.total_visible_entries,
+             (unsigned long)s_shell_file_listing.hidden_entries,
+             (unsigned long)s_shell_file_listing.omitted_entries,
+             (unsigned long)s_shell_file_listing.storage_generation,
+             esp_err_to_name(result));
+    return result;
+}
+
+static bool file_listing_needs_reload(void)
+{
+    return !s_file_listing_seen ||
+        s_file_listing_storage_state != s_game_storage_status.state ||
+        s_file_listing_storage_generation != s_game_storage_status.generation;
+}
+
+static void handle_file_action(
+    console_shell_t *shell,
+    const console_shell_action_t *action)
+{
+    if (action->type == CONSOLE_ACTION_FILE_REFRESH) {
+        sync_game_storage();
+        (void)reload_file_listing(shell, CONSOLE_FILE_NOTICE_REFRESHED);
+        return;
+    }
+    if (action->type != CONSOLE_ACTION_FILE_DELETE) {
+        return;
+    }
+
+    esp_err_t result = ESP_ERR_INVALID_ARG;
+    char label[CONSOLE_SHELL_FILE_LABEL_MAX_BYTES] = "INVALID";
+    const size_t source = action->file_source_index;
+    if (source < s_platform_file_listing.entry_count) {
+        const platform_game_storage_file_entry_t *const entry =
+            &s_platform_file_listing.entries[source];
+        make_file_label(entry->name, label);
+        if (!entry->is_hidden && !entry->is_directory) {
+            result = platform_game_storage_remove_root_file(entry->name);
+        }
+    }
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS FILES_DELETE file=%s result=%s",
+             label, esp_err_to_name(result));
+    sync_game_storage();
+    (void)reload_file_listing(
+        shell, result == ESP_OK
+            ? CONSOLE_FILE_NOTICE_DELETED : CONSOLE_FILE_NOTICE_ERROR);
 }
 
 static console_shell_runtime_info_t runtime_info(void)
@@ -847,10 +1020,23 @@ void app_main(void)
     for (;;) {
         ++s_loop_count;
         sync_game_storage();
+        if (shell.page == CONSOLE_PAGE_FILES &&
+            file_listing_needs_reload()) {
+            (void)reload_file_listing(
+                &shell, CONSOLE_FILE_NOTICE_NONE);
+        }
         const console_shell_action_t action = poll_touch(&shell);
         const console_shell_runtime_info_t current_runtime = runtime_info();
         console_shell_set_runtime_info(&shell, &current_runtime);
-        if (action.type == CONSOLE_ACTION_LAUNCH &&
+        if (action.type == CONSOLE_ACTION_PAGE_CHANGED &&
+            action.app_id == CONSOLE_APP_FILES &&
+            file_listing_needs_reload()) {
+            (void)reload_file_listing(
+                &shell, CONSOLE_FILE_NOTICE_NONE);
+        } else if (action.type == CONSOLE_ACTION_FILE_REFRESH ||
+                   action.type == CONSOLE_ACTION_FILE_DELETE) {
+            handle_file_action(&shell, &action);
+        } else if (action.type == CONSOLE_ACTION_LAUNCH &&
             action.app_id == CONSOLE_APP_DOOM) {
             launch_doom_exclusive(&shell);
         } else if (action.type == CONSOLE_ACTION_LAUNCH) {
