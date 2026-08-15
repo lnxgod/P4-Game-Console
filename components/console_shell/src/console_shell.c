@@ -6,24 +6,42 @@
 #include <string.h>
 
 enum {
-    TILE_LEFT = 8,
-    TILE_TOP = 43,
-    TILE_WIDTH = 148,
-    TILE_HEIGHT = 44,
-    TILE_COLUMN_GAP = 8,
-    TILE_ROW_GAP = 6,
+    WINDOW_LEFT = 3,
+    WINDOW_TOP = 3,
+    WINDOW_WIDTH = 314,
+    WINDOW_HEIGHT = 194,
+    TITLE_LEFT = 7,
+    TITLE_TOP = 7,
+    TITLE_WIDTH = 306,
+    TITLE_HEIGHT = 17,
+    TILE_LEFT = 11,
+    TILE_TOP = 44,
+    TILE_WIDTH = 91,
+    TILE_HEIGHT = 61,
+    TILE_COLUMN_GAP = 4,
+    TILE_ROW_GAP = 5,
+    GRID_WIDTH = CONSOLE_SHELL_APP_COLUMNS * TILE_WIDTH +
+        (CONSOLE_SHELL_APP_COLUMNS - 1) * TILE_COLUMN_GAP,
+    GRID_HEIGHT = CONSOLE_SHELL_VISIBLE_APP_ROWS * TILE_HEIGHT +
+        (CONSOLE_SHELL_VISIBLE_APP_ROWS - 1) * TILE_ROW_GAP,
     BACK_LEFT = 6,
     BACK_TOP = 6,
     BACK_WIDTH = 54,
     BACK_HEIGHT = 20,
     BACK_CONTROL = CONSOLE_SHELL_MAX_APPS,
-    PAGE_PREVIOUS_CONTROL,
-    PAGE_NEXT_CONTROL,
-    PAGE_BUTTON_TOP = 7,
-    PAGE_BUTTON_WIDTH = 24,
-    PAGE_BUTTON_HEIGHT = 24,
-    PAGE_PREVIOUS_LEFT = 262,
-    PAGE_NEXT_LEFT = 291,
+    FOLDER_UP_CONTROL,
+    SCROLL_UP_CONTROL,
+    SCROLL_DOWN_CONTROL,
+    HOME_ITEM_CONTROL_BASE,
+    SCROLL_LEFT = 297,
+    SCROLL_WIDTH = 15,
+    SCROLL_UP_TOP = 43,
+    SCROLL_DOWN_TOP = 158,
+    SCROLL_BUTTON_HEIGHT = 15,
+    SCROLL_TRACK_TOP = 58,
+    SCROLL_TRACK_HEIGHT = 100,
+    SCROLL_DRAG_THRESHOLD = 18,
+    SCROLL_DRAG_ROW_STEP = 32,
 };
 
 static const uint16_t COLOR_BLACK = UINT16_C(0x0000);
@@ -35,6 +53,33 @@ static const uint16_t COLOR_CYAN = UINT16_C(0x5FFF);
 static const uint16_t COLOR_GREEN = UINT16_C(0x5FEA);
 static const uint16_t COLOR_YELLOW = UINT16_C(0xFFE0);
 static const uint16_t COLOR_RED = UINT16_C(0xF904);
+static const uint16_t COLOR_DESKTOP = UINT16_C(0x0410);
+static const uint16_t COLOR_FACE = UINT16_C(0xC618);
+static const uint16_t COLOR_LIGHT = UINT16_C(0xFFFF);
+static const uint16_t COLOR_SHADOW = UINT16_C(0x8410);
+static const uint16_t COLOR_DARK = UINT16_C(0x4208);
+static const uint16_t COLOR_TITLE = UINT16_C(0x0010);
+static const uint16_t COLOR_GROUP = UINT16_C(0xE71C);
+
+typedef enum {
+    HOME_ITEM_APP = 0,
+    HOME_ITEM_FOLDER,
+    HOME_ITEM_ALL_PROGRAMS,
+} home_item_kind_t;
+
+typedef struct {
+    home_item_kind_t kind;
+    size_t app_index;
+    char title[CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES];
+    uint16_t accent_rgb565;
+    uint32_t capabilities;
+    size_t program_count;
+    bool enabled;
+} home_item_t;
+
+enum {
+    HOME_ITEM_CAPACITY = CONSOLE_SHELL_MAX_APPS + 1,
+};
 
 static size_t bounded_length(const char *text, size_t limit)
 {
@@ -46,6 +91,51 @@ static size_t bounded_length(const char *text, size_t limit)
         ++length;
     }
     return length;
+}
+
+static bool folder_lead_character(char character)
+{
+    return (character >= 'A' && character <= 'Z') ||
+           (character >= '0' && character <= '9');
+}
+
+static bool folder_character(char character)
+{
+    return folder_lead_character(character) ||
+           character == ' ' || character == '-';
+}
+
+static bool folder_path_is_valid(const char *path)
+{
+    const size_t length = bounded_length(
+        path, CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES);
+    if (length == 0U || length >= CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES) {
+        return false;
+    }
+
+    size_t segment_length = 0U;
+    unsigned slash_count = 0U;
+    for (size_t i = 0U; i < length; ++i) {
+        const char character = path[i];
+        if (character == '/') {
+            if (segment_length == 0U ||
+                segment_length >= CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES ||
+                slash_count != 0U) {
+                return false;
+            }
+            ++slash_count;
+            segment_length = 0U;
+            continue;
+        }
+        if ((segment_length == 0U && !folder_lead_character(character)) ||
+            !folder_character(character) ||
+            segment_length + 1U >=
+                CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES) {
+            return false;
+        }
+        ++segment_length;
+    }
+    return segment_length > 0U;
 }
 
 static bool valid_page(console_page_t page)
@@ -74,6 +164,7 @@ static bool registry_is_valid(const console_app_descriptor_t *apps,
                 CONSOLE_SHELL_TITLE_MAX_BYTES ||
             bounded_length(app->subtitle, CONSOLE_SHELL_SUBTITLE_MAX_BYTES) >=
                 CONSOLE_SHELL_SUBTITLE_MAX_BYTES ||
+            !folder_path_is_valid(app->folder_path) ||
             !valid_page(app->page) ||
             (app->capabilities & ~known_capabilities) != 0U) {
             return false;
@@ -139,10 +230,233 @@ static bool point_in_rect(uint16_t x, uint16_t y,
            point_y >= top && point_y < top + height;
 }
 
-static size_t home_page_count(const console_shell_t *shell)
+static bool path_is_at_or_below(const char *path, const char *prefix)
 {
-    return (shell->app_count + CONSOLE_SHELL_APPS_PER_PAGE - 1U) /
-        CONSOLE_SHELL_APPS_PER_PAGE;
+    const size_t prefix_length = bounded_length(
+        prefix, CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES);
+    return prefix_length > 0U &&
+           strncmp(path, prefix, prefix_length) == 0 &&
+           (path[prefix_length] == '\0' || path[prefix_length] == '/');
+}
+
+static bool immediate_child_segment(
+    const char *path,
+    const char *parent,
+    char segment[CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES])
+{
+    const char *remainder = path;
+    if (parent[0] != '\0') {
+        const size_t parent_length = bounded_length(
+            parent, CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES);
+        if (strncmp(path, parent, parent_length) != 0 ||
+            path[parent_length] != '/') {
+            return false;
+        }
+        remainder = path + parent_length + 1U;
+    }
+    size_t length = 0U;
+    while (remainder[length] != '\0' && remainder[length] != '/' &&
+           length + 1U < CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES) {
+        segment[length] = remainder[length];
+        ++length;
+    }
+    if (length == 0U) {
+        return false;
+    }
+    segment[length] = '\0';
+    return true;
+}
+
+static bool item_title_equal(const home_item_t *item, const char *title)
+{
+    return item->kind == HOME_ITEM_FOLDER &&
+           strncmp(item->title, title,
+                   CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES) == 0;
+}
+
+static bool compose_child_path(
+    const char *parent,
+    const char *segment,
+    char path[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES])
+{
+    const size_t parent_length = bounded_length(
+        parent, CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES);
+    const size_t segment_length = bounded_length(
+        segment, CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES);
+    const size_t separator = parent_length == 0U ? 0U : 1U;
+    if (segment_length == 0U ||
+        parent_length + separator + segment_length >=
+            CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES) {
+        return false;
+    }
+    if (parent_length > 0U) {
+        memcpy(path, parent, parent_length);
+        path[parent_length] = '/';
+    }
+    memcpy(path + parent_length + separator, segment, segment_length);
+    path[parent_length + separator + segment_length] = '\0';
+    return true;
+}
+
+static void populate_folder_item(
+    const console_shell_t *shell,
+    const char *parent,
+    const char *segment,
+    home_item_t *item)
+{
+    memset(item, 0, sizeof(*item));
+    item->kind = HOME_ITEM_FOLDER;
+    item->app_index = SIZE_MAX;
+    const size_t title_length = bounded_length(
+        segment, sizeof(item->title) - 1U);
+    memcpy(item->title, segment, title_length);
+    item->title[title_length] = '\0';
+    char path[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
+    if (!compose_child_path(parent, segment, path)) {
+        return;
+    }
+    bool have_accent = false;
+    for (size_t i = 0U; i < shell->app_count; ++i) {
+        const console_app_descriptor_t *const app = &shell->apps[i];
+        if (!path_is_at_or_below(app->folder_path, path)) {
+            continue;
+        }
+        ++item->program_count;
+        item->capabilities |= app->capabilities;
+        if (!have_accent || (!item->enabled && app->enabled)) {
+            item->accent_rgb565 = app->accent_rgb565;
+            have_accent = true;
+        }
+        item->enabled = item->enabled || app->enabled;
+    }
+}
+
+static size_t build_home_items(
+    const console_shell_t *shell,
+    home_item_t items[HOME_ITEM_CAPACITY])
+{
+    size_t count = 0U;
+    if (shell->home_all_programs) {
+        for (size_t i = 0U;
+             i < shell->app_count && count < HOME_ITEM_CAPACITY; ++i) {
+            items[count++] = (home_item_t){
+                .kind = HOME_ITEM_APP,
+                .app_index = i,
+                .accent_rgb565 = shell->apps[i].accent_rgb565,
+                .capabilities = shell->apps[i].capabilities,
+                .program_count = 1U,
+                .enabled = shell->apps[i].enabled,
+            };
+        }
+        return count;
+    }
+
+    if (shell->home_folder_path[0] == '\0') {
+        home_item_t all = {
+            .kind = HOME_ITEM_ALL_PROGRAMS,
+            .app_index = SIZE_MAX,
+            .accent_rgb565 = COLOR_TITLE,
+            .program_count = shell->app_count,
+        };
+        for (size_t i = 0U; i < shell->app_count; ++i) {
+            all.capabilities |= shell->apps[i].capabilities;
+            all.enabled = all.enabled || shell->apps[i].enabled;
+        }
+        memcpy(all.title, "ALL PROGRAMS", sizeof("ALL PROGRAMS"));
+        items[count++] = all;
+    }
+
+    for (size_t i = 0U; i < shell->app_count; ++i) {
+        char segment[CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES];
+        if (!immediate_child_segment(shell->apps[i].folder_path,
+                                     shell->home_folder_path, segment)) {
+            continue;
+        }
+        bool duplicate = false;
+        for (size_t j = 0U; j < count; ++j) {
+            if (item_title_equal(&items[j], segment)) {
+                duplicate = true;
+                break;
+            }
+        }
+        if (!duplicate && count < HOME_ITEM_CAPACITY) {
+            populate_folder_item(shell, shell->home_folder_path,
+                                 segment, &items[count++]);
+        }
+    }
+
+    for (size_t i = 0U;
+         i < shell->app_count && count < HOME_ITEM_CAPACITY; ++i) {
+        if (strcmp(shell->apps[i].folder_path,
+                   shell->home_folder_path) == 0) {
+            items[count++] = (home_item_t){
+                .kind = HOME_ITEM_APP,
+                .app_index = i,
+                .accent_rgb565 = shell->apps[i].accent_rgb565,
+                .capabilities = shell->apps[i].capabilities,
+                .program_count = 1U,
+                .enabled = shell->apps[i].enabled,
+            };
+        }
+    }
+    return count;
+}
+
+static size_t home_item_count(const console_shell_t *shell)
+{
+    home_item_t items[HOME_ITEM_CAPACITY];
+    return build_home_items(shell, items);
+}
+
+static size_t home_row_count(const console_shell_t *shell)
+{
+    const size_t count = home_item_count(shell);
+    return (count + CONSOLE_SHELL_APP_COLUMNS - 1U) /
+        CONSOLE_SHELL_APP_COLUMNS;
+}
+
+static size_t home_max_scroll_row(const console_shell_t *shell)
+{
+    const size_t rows = home_row_count(shell);
+    return rows > CONSOLE_SHELL_VISIBLE_APP_ROWS
+        ? rows - CONSOLE_SHELL_VISIBLE_APP_ROWS : 0U;
+}
+
+static size_t home_first_visible_index(const console_shell_t *shell)
+{
+    return shell->home_scroll_row * CONSOLE_SHELL_APP_COLUMNS;
+}
+
+static void select_first_visible_item(console_shell_t *shell)
+{
+    home_item_t items[HOME_ITEM_CAPACITY];
+    const size_t count = build_home_items(shell, items);
+    const size_t first = home_first_visible_index(shell);
+    const size_t last = first + CONSOLE_SHELL_APPS_PER_VIEW < count
+        ? first + CONSOLE_SHELL_APPS_PER_VIEW : count;
+    shell->selected_home_item = first < count ? first : 0U;
+    for (size_t index = first; index < last; ++index) {
+        if (items[index].enabled) {
+            shell->selected_home_item = index;
+            if (items[index].kind == HOME_ITEM_APP) {
+                shell->selected_index = items[index].app_index;
+            }
+            return;
+        }
+    }
+}
+
+static bool set_home_scroll_row(console_shell_t *shell, size_t row)
+{
+    const size_t maximum = home_max_scroll_row(shell);
+    const size_t bounded = row > maximum ? maximum : row;
+    if (bounded == shell->home_scroll_row) {
+        return false;
+    }
+    shell->home_scroll_row = bounded;
+    select_first_visible_item(shell);
+    shell->dirty = true;
+    return true;
 }
 
 static size_t control_at(const console_shell_t *shell,
@@ -156,33 +470,45 @@ static size_t control_at(const console_shell_t *shell,
                    ? BACK_CONTROL : SIZE_MAX;
     }
 
-    if (home_page_count(shell) > 1U) {
+    if ((shell->home_all_programs || shell->home_folder_path[0] != '\0') &&
+        point_in_rect(gui_x, gui_y, 8U, 26U, 31U, 13U)) {
+        return FOLDER_UP_CONTROL;
+    }
+
+    if (home_max_scroll_row(shell) > 0U) {
         if (point_in_rect(gui_x, gui_y,
-                          PAGE_PREVIOUS_LEFT, PAGE_BUTTON_TOP,
-                          PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT)) {
-            return PAGE_PREVIOUS_CONTROL;
+                          SCROLL_LEFT, SCROLL_UP_TOP,
+                          SCROLL_WIDTH, SCROLL_BUTTON_HEIGHT) &&
+            shell->home_scroll_row > 0U) {
+            return SCROLL_UP_CONTROL;
         }
         if (point_in_rect(gui_x, gui_y,
-                          PAGE_NEXT_LEFT, PAGE_BUTTON_TOP,
-                          PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT)) {
-            return PAGE_NEXT_CONTROL;
+                          SCROLL_LEFT, SCROLL_DOWN_TOP,
+                          SCROLL_WIDTH, SCROLL_BUTTON_HEIGHT) &&
+            shell->home_scroll_row < home_max_scroll_row(shell)) {
+            return SCROLL_DOWN_CONTROL;
         }
     }
 
-    const size_t first = shell->home_page * CONSOLE_SHELL_APPS_PER_PAGE;
-    const size_t last = first + CONSOLE_SHELL_APPS_PER_PAGE < shell->app_count
-        ? first + CONSOLE_SHELL_APPS_PER_PAGE : shell->app_count;
+    home_item_t items[HOME_ITEM_CAPACITY];
+    const size_t count = build_home_items(shell, items);
+    const size_t first = home_first_visible_index(shell);
+    const size_t last = first + CONSOLE_SHELL_APPS_PER_VIEW < count
+        ? first + CONSOLE_SHELL_APPS_PER_VIEW : count;
     for (size_t index = first; index < last; ++index) {
-        const size_t page_index = index - first;
-        const unsigned column = (unsigned)(page_index % 2U);
-        const unsigned row = (unsigned)(page_index / 2U);
+        const size_t view_index = index - first;
+        const unsigned column =
+            (unsigned)(view_index % CONSOLE_SHELL_APP_COLUMNS);
+        const unsigned row =
+            (unsigned)(view_index / CONSOLE_SHELL_APP_COLUMNS);
         const unsigned left = TILE_LEFT +
             column * (TILE_WIDTH + TILE_COLUMN_GAP);
         const unsigned top = TILE_TOP +
             row * (TILE_HEIGHT + TILE_ROW_GAP);
         if (point_in_rect(gui_x, gui_y, left, top,
                           TILE_WIDTH, TILE_HEIGHT)) {
-            return shell->apps[index].enabled ? index : SIZE_MAX;
+            return items[index].enabled
+                ? HOME_ITEM_CONTROL_BASE + index : SIZE_MAX;
         }
     }
     return SIZE_MAX;
@@ -224,6 +550,51 @@ static void remember_contacts(console_shell_t *shell,
     }
 }
 
+static void reset_home_grid(console_shell_t *shell)
+{
+    shell->home_scroll_row = 0U;
+    shell->selected_home_item = 0U;
+    select_first_visible_item(shell);
+    shell->dirty = true;
+}
+
+static void open_home_folder(console_shell_t *shell, const char *segment)
+{
+    char path[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
+    if (!compose_child_path(shell->home_folder_path, segment, path)) {
+        return;
+    }
+    const size_t length = bounded_length(
+        path, CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES);
+    memcpy(shell->home_folder_path, path, length + 1U);
+    shell->home_all_programs = false;
+    reset_home_grid(shell);
+}
+
+static void open_all_programs(console_shell_t *shell)
+{
+    shell->home_folder_path[0] = '\0';
+    shell->home_all_programs = true;
+    reset_home_grid(shell);
+}
+
+static void navigate_home_up(console_shell_t *shell)
+{
+    if (shell->home_all_programs) {
+        shell->home_all_programs = false;
+        shell->home_folder_path[0] = '\0';
+        reset_home_grid(shell);
+        return;
+    }
+    char *const separator = strrchr(shell->home_folder_path, '/');
+    if (separator != NULL) {
+        *separator = '\0';
+    } else {
+        shell->home_folder_path[0] = '\0';
+    }
+    reset_home_grid(shell);
+}
+
 static console_shell_action_t no_action(void)
 {
     const console_shell_action_t action = {
@@ -231,6 +602,52 @@ static console_shell_action_t no_action(void)
         .app_id = 0U,
     };
     return action;
+}
+
+static bool update_home_drag(console_shell_t *shell,
+                             uint16_t gui_x,
+                             uint16_t gui_y)
+{
+    if (!shell->scroll_candidate || shell->page != CONSOLE_PAGE_HOME ||
+        home_max_scroll_row(shell) == 0U) {
+        return false;
+    }
+    const int vertical = (int)shell->press_start_gui_y - (int)gui_y;
+    const int horizontal = (int)shell->press_start_gui_x - (int)gui_x;
+    const int vertical_magnitude = vertical < 0 ? -vertical : vertical;
+    const int horizontal_magnitude = horizontal < 0 ? -horizontal : horizontal;
+    if (vertical_magnitude < SCROLL_DRAG_THRESHOLD ||
+        vertical_magnitude < horizontal_magnitude) {
+        return false;
+    }
+
+    int row_delta = 0;
+    if (vertical > 0) {
+        row_delta = 1 +
+            (vertical - SCROLL_DRAG_THRESHOLD) / SCROLL_DRAG_ROW_STEP;
+    } else {
+        row_delta = -1 +
+            (vertical + SCROLL_DRAG_THRESHOLD) / SCROLL_DRAG_ROW_STEP;
+    }
+    size_t requested = shell->press_start_scroll_row;
+    if (row_delta > 0) {
+        const size_t increase = (size_t)row_delta;
+        const size_t maximum = home_max_scroll_row(shell);
+        requested = increase > maximum - requested
+            ? maximum : requested + increase;
+    } else {
+        const size_t decrease = (size_t)(-row_delta);
+        requested = decrease > requested ? 0U : requested - decrease;
+    }
+    const bool was_pressed = shell->press_active;
+    shell->scroll_gesture = true;
+    shell->press_active = false;
+    shell->pressed_index = SIZE_MAX;
+    if (was_pressed) {
+        shell->dirty = true;
+    }
+    (void)set_home_scroll_row(shell, requested);
+    return true;
 }
 
 console_shell_action_t console_shell_handle_touch(
@@ -252,6 +669,8 @@ console_shell_action_t console_shell_handle_touch(
         /* Require one later valid neutral frame before input can re-arm. */
         shell->contact_down = true;
         shell->press_active = false;
+        shell->scroll_candidate = false;
+        shell->scroll_gesture = false;
         shell->pressed_index = SIZE_MAX;
         return no_action();
     }
@@ -261,6 +680,23 @@ console_shell_action_t console_shell_handle_touch(
             return no_action();
         }
         shell->contact_down = false;
+        shell->scroll_candidate = false;
+        if (shell->scroll_gesture) {
+            const bool changed =
+                shell->home_scroll_row != shell->press_start_scroll_row;
+            shell->scroll_gesture = false;
+            shell->press_active = false;
+            shell->pressed_index = SIZE_MAX;
+            shell->dirty = true;
+            if (changed) {
+                const console_shell_action_t action = {
+                    .type = CONSOLE_ACTION_PAGE_CHANGED,
+                    .app_id = 0U,
+                };
+                return action;
+            }
+            return no_action();
+        }
         if (!shell->press_active) {
             shell->pressed_index = SIZE_MAX;
             return no_action();
@@ -278,31 +714,59 @@ console_shell_action_t console_shell_handle_touch(
             };
             return action;
         }
-        if (released_control == PAGE_PREVIOUS_CONTROL ||
-            released_control == PAGE_NEXT_CONTROL) {
-            const size_t page_count = home_page_count(shell);
-            if (released_control == PAGE_PREVIOUS_CONTROL) {
-                shell->home_page = shell->home_page == 0U
-                    ? page_count - 1U : shell->home_page - 1U;
-            } else {
-                shell->home_page = (shell->home_page + 1U) % page_count;
-            }
-            const size_t first =
-                shell->home_page * CONSOLE_SHELL_APPS_PER_PAGE;
-            shell->selected_index = first;
+        if (released_control == FOLDER_UP_CONTROL) {
+            navigate_home_up(shell);
             const console_shell_action_t action = {
                 .type = CONSOLE_ACTION_PAGE_CHANGED,
                 .app_id = 0U,
             };
             return action;
         }
-        if (released_control >= shell->app_count) {
+        if (released_control == SCROLL_UP_CONTROL ||
+            released_control == SCROLL_DOWN_CONTROL) {
+            const size_t requested = released_control == SCROLL_UP_CONTROL
+                ? shell->home_scroll_row - 1U
+                : shell->home_scroll_row + 1U;
+            (void)set_home_scroll_row(shell, requested);
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_PAGE_CHANGED,
+                .app_id = 0U,
+            };
+            return action;
+        }
+        if (released_control < HOME_ITEM_CONTROL_BASE) {
+            return no_action();
+        }
+        home_item_t items[HOME_ITEM_CAPACITY];
+        const size_t item_count = build_home_items(shell, items);
+        const size_t item_index = released_control - HOME_ITEM_CONTROL_BASE;
+        if (item_index >= item_count || !items[item_index].enabled) {
+            return no_action();
+        }
+        shell->selected_home_item = item_index;
+        if (items[item_index].kind == HOME_ITEM_ALL_PROGRAMS) {
+            open_all_programs(shell);
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_PAGE_CHANGED,
+                .app_id = 0U,
+            };
+            return action;
+        }
+        if (items[item_index].kind == HOME_ITEM_FOLDER) {
+            open_home_folder(shell, items[item_index].title);
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_PAGE_CHANGED,
+                .app_id = 0U,
+            };
+            return action;
+        }
+        if (items[item_index].app_index >= shell->app_count) {
             return no_action();
         }
 
-        const console_app_descriptor_t *const app =
-            &shell->apps[released_control];
-        shell->selected_index = released_control;
+        const size_t app_index = items[item_index].app_index;
+        const console_app_descriptor_t *const app = &shell->apps[app_index];
+        shell->selected_index = app_index;
         if (app->page == CONSOLE_PAGE_EXTERNAL) {
             const console_shell_action_t action = {
                 .type = CONSOLE_ACTION_LAUNCH,
@@ -325,6 +789,8 @@ console_shell_action_t console_shell_handle_touch(
         }
         shell->contact_down = true;
         shell->press_active = false;
+        shell->scroll_candidate = false;
+        shell->scroll_gesture = false;
         shell->pressed_index = SIZE_MAX;
         return no_action();
     }
@@ -338,6 +804,8 @@ console_shell_action_t console_shell_handle_touch(
         }
         shell->contact_down = true;
         shell->press_active = false;
+        shell->scroll_candidate = false;
+        shell->scroll_gesture = false;
         shell->pressed_index = SIZE_MAX;
         return no_action();
     }
@@ -345,11 +813,23 @@ console_shell_action_t console_shell_handle_touch(
     const size_t control = control_at(shell, gui_x, gui_y);
     if (!shell->contact_down) {
         shell->contact_down = true;
+        shell->press_start_gui_x = gui_x;
+        shell->press_start_gui_y = gui_y;
+        shell->press_start_scroll_row = shell->home_scroll_row;
+        shell->scroll_candidate = shell->page == CONSOLE_PAGE_HOME &&
+            home_max_scroll_row(shell) > 0U &&
+            point_in_rect(gui_x, gui_y, TILE_LEFT, TILE_TOP,
+                          GRID_WIDTH, GRID_HEIGHT);
+        shell->scroll_gesture = false;
         shell->pressed_index = control;
         shell->press_active = control != SIZE_MAX;
         if (shell->press_active) {
             shell->dirty = true;
         }
+        return no_action();
+    }
+
+    if (update_home_drag(shell, gui_x, gui_y)) {
         return no_action();
     }
 
@@ -407,6 +887,8 @@ void console_shell_show_home(console_shell_t *shell)
     shell->active_app_id = 0U;
     shell->contact_down = false;
     shell->press_active = false;
+    shell->scroll_candidate = false;
+    shell->scroll_gesture = false;
     shell->pressed_index = SIZE_MAX;
     shell->dirty = true;
 }
@@ -457,6 +939,25 @@ static void outline_rect(uint16_t *pixels, size_t stride,
     fill_rect(pixels, stride, x, y + height - 1, width, 1, color);
     fill_rect(pixels, stride, x, y, 1, height, color);
     fill_rect(pixels, stride, x + width - 1, y, 1, height, color);
+}
+
+static void bevel_rect(uint16_t *pixels, size_t stride,
+                       int x, int y, int width, int height,
+                       uint16_t face, bool pressed)
+{
+    fill_rect(pixels, stride, x, y, width, height, face);
+    const uint16_t upper = pressed ? COLOR_DARK : COLOR_LIGHT;
+    const uint16_t lower = pressed ? COLOR_LIGHT : COLOR_DARK;
+    fill_rect(pixels, stride, x, y, width, 1, upper);
+    fill_rect(pixels, stride, x, y, 1, height, upper);
+    fill_rect(pixels, stride, x, y + height - 1, width, 1, lower);
+    fill_rect(pixels, stride, x + width - 1, y, 1, height, lower);
+    if (width > 3 && height > 3) {
+        fill_rect(pixels, stride, x + 1, y + 1, width - 2, 1,
+                  pressed ? COLOR_SHADOW : COLOR_FACE);
+        fill_rect(pixels, stride, x + 1, y + 1, 1, height - 2,
+                  pressed ? COLOR_SHADOW : COLOR_FACE);
+    }
 }
 
 static void glyph_rows(char character, uint8_t rows[7])
@@ -577,97 +1078,226 @@ static void draw_u32(uint16_t *pixels, size_t stride,
     }
 }
 
-static void draw_capabilities(uint16_t *pixels, size_t stride,
-                              int x, int y, uint32_t capabilities)
+static void draw_centered_text(uint16_t *pixels, size_t stride,
+                               int left, int top, int width,
+                               const char *text, uint16_t color,
+                               size_t max_characters)
 {
-    int cursor = x;
-    const struct {
-        uint32_t bit;
-        char letter;
-    } entries[] = {
-        { CONSOLE_CAPABILITY_DISPLAY, 'V' },
-        { CONSOLE_CAPABILITY_TOUCH, 'T' },
-        { CONSOLE_CAPABILITY_AUDIO, 'A' },
-        { CONSOLE_CAPABILITY_STORAGE, 'S' },
-    };
-    for (size_t i = 0U; i < sizeof(entries) / sizeof(entries[0]); ++i) {
-        if ((capabilities & entries[i].bit) == 0U) {
-            continue;
-        }
-        char label[2] = {entries[i].letter, '\0'};
-        fill_rect(pixels, stride, cursor, y, 9, 9, UINT16_C(0x2104));
-        draw_text(pixels, stride, cursor + 2, y + 1, label, COLOR_CYAN, 1U, 1U);
-        cursor += 11;
+    size_t length = bounded_length(text, max_characters);
+    if (length > max_characters) {
+        length = max_characters;
     }
+    const int text_width = (int)(length * 6U);
+    const int x = text_width < width
+        ? left + (width - text_width) / 2 : left;
+    draw_text(pixels, stride, x, top, text, color, 1U, max_characters);
+}
+
+static void draw_program_icon(uint16_t *pixels, size_t stride,
+                              int tile_left, int tile_top,
+                              const console_app_descriptor_t *app)
+{
+    const int left = tile_left + (TILE_WIDTH - 26) / 2;
+    const int top = tile_top + 4;
+    bevel_rect(pixels, stride, left, top, 26, 22, COLOR_FACE, false);
+    const uint16_t accent = app->enabled
+        ? app->accent_rgb565 : COLOR_SHADOW;
+    fill_rect(pixels, stride, left + 3, top + 3, 20, 4, accent);
+    fill_rect(pixels, stride, left + 4, top + 9, 8, 8, COLOR_GROUP);
+    outline_rect(pixels, stride, left + 4, top + 9, 8, 8, COLOR_DARK);
+    fill_rect(pixels, stride, left + 15, top + 9, 7, 2, accent);
+    fill_rect(pixels, stride, left + 15, top + 13, 7, 2, COLOR_SHADOW);
+    fill_rect(pixels, stride, left + 15, top + 17, 5, 1, COLOR_DARK);
+}
+
+static void draw_folder_icon(uint16_t *pixels, size_t stride,
+                             int tile_left, int tile_top,
+                             uint16_t accent, bool enabled)
+{
+    const int left = tile_left + (TILE_WIDTH - 30) / 2;
+    const int top = tile_top + 5;
+    const uint16_t face = enabled ? COLOR_YELLOW : COLOR_SHADOW;
+    fill_rect(pixels, stride, left + 2, top + 1, 12, 5, face);
+    outline_rect(pixels, stride, left + 2, top + 1, 12, 5, COLOR_DARK);
+    bevel_rect(pixels, stride, left, top + 5, 30, 18, face, false);
+    fill_rect(pixels, stride, left + 4, top + 10, 22, 2,
+              enabled ? accent : COLOR_DARK);
+}
+
+static size_t decimal_width(uint32_t value)
+{
+    size_t count = 1U;
+    while (value >= 10U) {
+        value /= 10U;
+        ++count;
+    }
+    return count * 6U;
+}
+
+static void draw_program_count(uint16_t *pixels, size_t stride,
+                               int left, int top, int width,
+                               size_t count, uint16_t color)
+{
+    const uint32_t bounded = count > UINT32_MAX
+        ? UINT32_MAX : (uint32_t)count;
+    const size_t label_width = decimal_width(bounded) + 6U + 8U * 6U;
+    const int x = label_width < (size_t)width
+        ? left + (width - (int)label_width) / 2 : left;
+    draw_u32(pixels, stride, x, top, bounded, color);
+    draw_text(pixels, stride, x + (int)decimal_width(bounded) + 6,
+              top, "PROGRAMS", color, 1U, 8U);
+}
+
+static void draw_scroll_arrow(uint16_t *pixels, size_t stride,
+                              int top, bool up, bool enabled,
+                              bool pressed)
+{
+    bevel_rect(pixels, stride, SCROLL_LEFT, top,
+               SCROLL_WIDTH, SCROLL_BUTTON_HEIGHT,
+               COLOR_FACE, pressed);
+    const uint16_t color = enabled ? COLOR_BLACK : COLOR_SHADOW;
+    const int center = SCROLL_LEFT + SCROLL_WIDTH / 2;
+    for (int row = 0; row < 4; ++row) {
+        const int width = up ? row * 2 + 1 : (4 - row) * 2 - 1;
+        const int y = up ? top + 4 + row : top + 4 + row;
+        fill_rect(pixels, stride, center - width / 2, y, width, 1, color);
+    }
+}
+
+static void draw_scrollbar(console_shell_t *shell,
+                           uint16_t *pixels, size_t stride)
+{
+    const size_t maximum = home_max_scroll_row(shell);
+    const bool can_up = shell->home_scroll_row > 0U;
+    const bool can_down = shell->home_scroll_row < maximum;
+    draw_scroll_arrow(
+        pixels, stride, SCROLL_UP_TOP, true, can_up,
+        shell->press_active && shell->pressed_index == SCROLL_UP_CONTROL);
+    draw_scroll_arrow(
+        pixels, stride, SCROLL_DOWN_TOP, false, can_down,
+        shell->press_active && shell->pressed_index == SCROLL_DOWN_CONTROL);
+    fill_rect(pixels, stride, SCROLL_LEFT, SCROLL_TRACK_TOP,
+              SCROLL_WIDTH, SCROLL_TRACK_HEIGHT, COLOR_SHADOW);
+    outline_rect(pixels, stride, SCROLL_LEFT, SCROLL_TRACK_TOP,
+                 SCROLL_WIDTH, SCROLL_TRACK_HEIGHT, COLOR_DARK);
+
+    const int inner_top = SCROLL_TRACK_TOP + 2;
+    const int inner_height = SCROLL_TRACK_HEIGHT - 4;
+    const size_t rows = home_row_count(shell);
+    int thumb_height = inner_height;
+    if (rows > CONSOLE_SHELL_VISIBLE_APP_ROWS) {
+        thumb_height = (int)((size_t)inner_height *
+            CONSOLE_SHELL_VISIBLE_APP_ROWS / rows);
+        if (thumb_height < 12) {
+            thumb_height = 12;
+        }
+    }
+    const int travel = inner_height - thumb_height;
+    const int thumb_top = maximum == 0U ? inner_top :
+        inner_top + (int)((size_t)travel * shell->home_scroll_row / maximum);
+    bevel_rect(pixels, stride, SCROLL_LEFT + 2, thumb_top,
+               SCROLL_WIDTH - 4, thumb_height, COLOR_FACE, false);
 }
 
 static void draw_home(console_shell_t *shell, uint16_t *pixels, size_t stride)
 {
-    draw_text(pixels, stride, 8, 6, "P4 CONSOLE", COLOR_WHITE, 2U, 10U);
-    draw_text(pixels, stride, 9, 25, "FREERTOS NATIVE SHELL",
-              COLOR_CYAN, 1U, 22U);
-    fill_rect(pixels, stride, 0, 38, CONSOLE_SHELL_WIDTH, 1, COLOR_CYAN);
+    fill_rect(pixels, stride, 0, 0, CONSOLE_SHELL_WIDTH,
+              CONSOLE_SHELL_HEIGHT, COLOR_DESKTOP);
+    bevel_rect(pixels, stride, WINDOW_LEFT, WINDOW_TOP,
+               WINDOW_WIDTH, WINDOW_HEIGHT, COLOR_FACE, false);
+    fill_rect(pixels, stride, TITLE_LEFT, TITLE_TOP,
+              TITLE_WIDTH, TITLE_HEIGHT, COLOR_TITLE);
+    fill_rect(pixels, stride, TITLE_LEFT + 3, TITLE_TOP + 4,
+              7, 7, COLOR_FACE);
+    outline_rect(pixels, stride, TITLE_LEFT + 3, TITLE_TOP + 4,
+                 7, 7, COLOR_LIGHT);
+    draw_text(pixels, stride, TITLE_LEFT + 15, TITLE_TOP + 5,
+              "P4 PROGRAM MANAGER", COLOR_WHITE, 1U, 18U);
+    bevel_rect(pixels, stride, 281, TITLE_TOP + 2, 13, 13,
+               COLOR_FACE, false);
+    bevel_rect(pixels, stride, 297, TITLE_TOP + 2, 13, 13,
+               COLOR_FACE, false);
+    fill_rect(pixels, stride, 285, TITLE_TOP + 10, 5, 1, COLOR_BLACK);
+    outline_rect(pixels, stride, 300, TITLE_TOP + 5, 7, 6, COLOR_BLACK);
+    if (shell->home_all_programs || shell->home_folder_path[0] != '\0') {
+        const bool up_pressed = shell->press_active &&
+            shell->pressed_index == FOLDER_UP_CONTROL;
+        bevel_rect(pixels, stride, 8, 26, 31, 13,
+                   COLOR_FACE, up_pressed);
+        draw_text(pixels, stride, 14, 29, "< UP",
+                  COLOR_BLACK, 1U, 4U);
+        draw_text(pixels, stride, 47, 29,
+                  shell->home_all_programs
+                      ? "ALL PROGRAMS" : shell->home_folder_path,
+                  COLOR_BLACK, 1U, 31U);
+    } else {
+        draw_text(pixels, stride, 11, 29, "FILE", COLOR_BLACK, 1U, 4U);
+        draw_text(pixels, stride, 47, 29, "OPTIONS", COLOR_BLACK, 1U, 7U);
+        draw_text(pixels, stride, 101, 29, "HELP", COLOR_BLACK, 1U, 4U);
+    }
+    fill_rect(pixels, stride, 8, 40, 305, 135, COLOR_GROUP);
+    outline_rect(pixels, stride, 8, 40, 305, 135, COLOR_DARK);
 
-    const size_t first = shell->home_page * CONSOLE_SHELL_APPS_PER_PAGE;
-    const size_t last = first + CONSOLE_SHELL_APPS_PER_PAGE < shell->app_count
-        ? first + CONSOLE_SHELL_APPS_PER_PAGE : shell->app_count;
+    home_item_t items[HOME_ITEM_CAPACITY];
+    const size_t item_count = build_home_items(shell, items);
+    const size_t first = home_first_visible_index(shell);
+    const size_t last = first + CONSOLE_SHELL_APPS_PER_VIEW < item_count
+        ? first + CONSOLE_SHELL_APPS_PER_VIEW : item_count;
     for (size_t index = first; index < last; ++index) {
-        const console_app_descriptor_t *const app = &shell->apps[index];
-        const size_t page_index = index - first;
-        const int column = (int)(page_index % 2U);
-        const int row = (int)(page_index / 2U);
+        const home_item_t *const item = &items[index];
+        const console_app_descriptor_t *const app =
+            item->kind == HOME_ITEM_APP && item->app_index < shell->app_count
+                ? &shell->apps[item->app_index] : NULL;
+        const size_t view_index = index - first;
+        const int column =
+            (int)(view_index % CONSOLE_SHELL_APP_COLUMNS);
+        const int row =
+            (int)(view_index / CONSOLE_SHELL_APP_COLUMNS);
         const int left = TILE_LEFT + column * (TILE_WIDTH + TILE_COLUMN_GAP);
         const int top = TILE_TOP + row * (TILE_HEIGHT + TILE_ROW_GAP);
         const bool pressed = shell->press_active &&
-                             shell->pressed_index == index;
-        const uint16_t panel = pressed ? COLOR_PANEL_PRESSED : COLOR_PANEL;
-        fill_rect(pixels, stride, left, top, TILE_WIDTH, TILE_HEIGHT, panel);
-        fill_rect(pixels, stride, left, top, 4, TILE_HEIGHT,
-                  app->enabled ? app->accent_rgb565 : COLOR_MUTED);
-        outline_rect(pixels, stride, left, top, TILE_WIDTH, TILE_HEIGHT,
-                     app->enabled ? UINT16_C(0x4A69) : UINT16_C(0x2945));
-        draw_text(pixels, stride, left + 9, top + 5, app->title,
-                  app->enabled ? COLOR_WHITE : COLOR_MUTED, 1U, 15U);
-        draw_text(pixels, stride, left + 9, top + 17, app->subtitle,
-                  COLOR_MUTED, 1U, 22U);
-        draw_capabilities(pixels, stride, left + 9, top + 31,
-                          app->capabilities);
-        if (!app->enabled) {
-            draw_text(pixels, stride, left + 87, top + 31, "OFFLINE",
-                      COLOR_RED, 1U, 7U);
+            shell->pressed_index == HOME_ITEM_CONTROL_BASE + index;
+        fill_rect(pixels, stride, left, top, TILE_WIDTH, TILE_HEIGHT,
+                  pressed ? COLOR_TITLE : COLOR_GROUP);
+        if (shell->selected_home_item == index || pressed) {
+            outline_rect(pixels, stride, left, top, TILE_WIDTH, TILE_HEIGHT,
+                         pressed ? COLOR_WHITE : COLOR_TITLE);
+        }
+        if (app != NULL) {
+            draw_program_icon(pixels, stride, left, top, app);
+        } else {
+            draw_folder_icon(pixels, stride, left, top,
+                             item->accent_rgb565, item->enabled);
+        }
+        const uint16_t label_color = pressed ? COLOR_WHITE :
+            (item->enabled ? COLOR_BLACK : COLOR_SHADOW);
+        draw_centered_text(pixels, stride, left, top + 30, TILE_WIDTH,
+                           app != NULL ? app->title : item->title,
+                           label_color, 15U);
+        if (app != NULL) {
+            draw_centered_text(pixels, stride, left, top + 40, TILE_WIDTH,
+                               app->enabled ? app->subtitle : "OFFLINE",
+                               pressed ? COLOR_WHITE : COLOR_DARK, 13U);
+        } else {
+            draw_program_count(pixels, stride, left, top + 41, TILE_WIDTH,
+                               item->program_count,
+                               pressed ? COLOR_WHITE : COLOR_DARK);
         }
     }
-    const size_t page_count = home_page_count(shell);
-    if (page_count > 1U) {
-        const bool previous_pressed = shell->press_active &&
-            shell->pressed_index == PAGE_PREVIOUS_CONTROL;
-        const bool next_pressed = shell->press_active &&
-            shell->pressed_index == PAGE_NEXT_CONTROL;
-        fill_rect(pixels, stride, PAGE_PREVIOUS_LEFT, PAGE_BUTTON_TOP,
-                  PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT,
-                  previous_pressed ? COLOR_PANEL_PRESSED : COLOR_PANEL);
-        fill_rect(pixels, stride, PAGE_NEXT_LEFT, PAGE_BUTTON_TOP,
-                  PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT,
-                  next_pressed ? COLOR_PANEL_PRESSED : COLOR_PANEL);
-        outline_rect(pixels, stride, PAGE_PREVIOUS_LEFT, PAGE_BUTTON_TOP,
-                     PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT, COLOR_CYAN);
-        outline_rect(pixels, stride, PAGE_NEXT_LEFT, PAGE_BUTTON_TOP,
-                     PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT, COLOR_CYAN);
-        draw_text(pixels, stride, PAGE_PREVIOUS_LEFT + 9,
-                  PAGE_BUTTON_TOP + 8, "<", COLOR_WHITE, 1U, 1U);
-        draw_text(pixels, stride, PAGE_NEXT_LEFT + 9,
-                  PAGE_BUTTON_TOP + 8, ">", COLOR_WHITE, 1U, 1U);
-        draw_text(pixels, stride, 8, 191, "PAGE",
-                  COLOR_MUTED, 1U, 4U);
-        draw_u32(pixels, stride, 38, 191,
-                 (uint32_t)(shell->home_page + 1U), COLOR_WHITE);
-        draw_text(pixels, stride, 46, 191, "/",
-                  COLOR_MUTED, 1U, 1U);
-        draw_u32(pixels, stride, 54, 191,
-                 (uint32_t)page_count, COLOR_WHITE);
-    } else {
-        draw_text(pixels, stride, 8, 191, "TAP AN APP",
-                  COLOR_MUTED, 1U, 10U);
+    draw_scrollbar(shell, pixels, stride);
+    bevel_rect(pixels, stride, 8, 178, 305, 15, COLOR_FACE, true);
+    draw_u32(pixels, stride, 13, 182, (uint32_t)item_count,
+             COLOR_BLACK);
+    draw_text(pixels, stride, 31, 182,
+              shell->home_all_programs ? "PROGRAMS" : "ITEMS",
+              COLOR_BLACK, 1U, 8U);
+    if (home_max_scroll_row(shell) > 0U) {
+        draw_text(pixels, stride, 220, 182, "ROW", COLOR_DARK, 1U, 3U);
+        draw_u32(pixels, stride, 244, 182,
+                 (uint32_t)(shell->home_scroll_row + 1U), COLOR_BLACK);
+        draw_text(pixels, stride, 254, 182, "/", COLOR_DARK, 1U, 1U);
+        draw_u32(pixels, stride, 264, 182,
+                 (uint32_t)home_row_count(shell), COLOR_BLACK);
     }
 }
 
@@ -814,7 +1444,7 @@ static void draw_system(const console_shell_t *shell,
 static void draw_audio(const console_shell_t *shell,
                        uint16_t *pixels, size_t stride)
 {
-    draw_text(pixels, stride, 12, 40, "DOOM AUDIO HANDOFF",
+    draw_text(pixels, stride, 12, 40, "GAME AUDIO SERVICE",
               COLOR_WHITE, 1U, 18U);
     draw_text(pixels, stride, 12, 56,
               shell->runtime.audio_handoff_ready ? "READY" : "BLOCKED",
@@ -822,18 +1452,18 @@ static void draw_audio(const console_shell_t *shell,
               2U, 7U);
     draw_text(pixels, stride, 12, 78, "PCM16 STEREO / 16000 HZ",
               COLOR_MUTED, 1U, 23U);
-    draw_text(pixels, stride, 12, 94, "SFX + MUS / 16 VOICES",
-              COLOR_MUTED, 1U, 22U);
-    draw_text(pixels, stride, 12, 110, "VOLUME 6 / 10",
-              COLOR_YELLOW, 1U, 13U);
-    draw_text(pixels, stride, 12, 126, "FACTORY I2S1 GPIO30 PATH",
+    draw_text(pixels, stride, 12, 94, "TONE MIXER / 8 VOICES",
+              COLOR_MUTED, 1U, 21U);
+    draw_text(pixels, stride, 12, 110, "NATIVE GAMES / HOST OWNED",
               COLOR_MUTED, 1U, 25U);
-    draw_text(pixels, stride, 12, 150, "SHELL KEEPS AMP SAFE",
-              COLOR_CYAN, 1U, 20U);
-    draw_text(pixels, stride, 12, 166, "AUDIO STARTS INSIDE DOOM",
-              COLOR_CYAN, 1U, 24U);
-    draw_text(pixels, stride, 12, 188, "NO EXTERNAL MIDI DEVICE",
-              COLOR_MUTED, 1U, 23U);
+    draw_text(pixels, stride, 12, 126, "VOLUME 6 / 10",
+              COLOR_YELLOW, 1U, 13U);
+    draw_text(pixels, stride, 12, 142, "FACTORY I2S1 GPIO30 PATH",
+              COLOR_MUTED, 1U, 25U);
+    draw_text(pixels, stride, 12, 166, "HOME AMP OFF / GAME OWNED",
+              COLOR_CYAN, 1U, 25U);
+    draw_text(pixels, stride, 12, 188, "DOOM SFX + MUS ON HANDOFF",
+              COLOR_MUTED, 1U, 26U);
 }
 
 bool console_shell_render_rgb565(console_shell_t *shell,

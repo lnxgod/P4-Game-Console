@@ -11,9 +11,12 @@ amplifier unenergized. The user subsequently confirmed that the launcher was
 visible and that selecting Doom launched it. That confirmation does not by
 itself claim a separately observed Console-OS-to-Doom acoustic pass.
 
-The P4 Game API v1, paginated manifest registry, and original Maze Chase game
-described below are a newer build candidate. They have host/software evidence
-only and have not yet been installed or accepted on hardware.
+The accepted Program Manager successor uses a bounded folder registry with
+All Programs, Games/Action, Games/Arcade, and System views. Its nested
+navigation, scrolling, Maze Chase, Space Invaders, Doom handoff, sound, and
+return behavior were manually accepted on this exact tablet before the USB
+storage work. The integrated build below preserves that renderer and input
+model while adding laptop-accessible persistent game data.
 
 The USB game-storage work is newer again. It changes the flash partition table
 and has no on-device evidence yet; all prior Console OS acceptance applies only
@@ -32,10 +35,11 @@ boot
   -> platform_i2c_shared owns I2C1
   -> platform_touch borrows I2C1 for GT911
   -> console_shell renders the home screen and built-in pages
-       |-- Colors
-       |-- Touch
-       |-- System
-       |-- Audio status (read-only; amplifier remains safe)
+       |-- All Programs (scrollable flat view)
+       |-- Games
+       |     |-- Action -> Doom
+       |     `-- Arcade -> Maze Chase / Space Invaders
+       |-- System -> Colors / Touch / System / Audio status
        |-- native API game selected
        |     -> console retains display/touch ownership
        |     -> game receives normalized controls + RGB565 surface
@@ -77,10 +81,18 @@ scales it 3x into a 960x600 viewport with 32-pixel black margins on the
 ## App registry
 
 `components/console_shell/include/console/shell.h` is the launcher boundary.
-Each app has a nonzero unique ID, bounded title/subtitle, capability flags,
-accent color, enabled state, and either a built-in page or external handoff.
-The shell owns no heap memory, accepts at most 32 apps and five contacts, and
-shows six apps per page with bounded previous/next controls.
+Each app has a nonzero unique ID, bounded title/subtitle, one required folder
+path, capability flags, accent color, enabled state, and either a built-in page
+or external handoff. Folder paths contain one or two uppercase segments, each
+at most 15 bytes. The shell derives its views by scanning the fixed registry
+of at most 32 apps; it owns no heap, filesystem, recursion, or dynamic loader.
+Root exposes All Programs plus unique top-level folders.
+
+The shell accepts at most five contacts and shows a three-column, two-row
+viewport. Bounded up/down controls and vertical one-finger swipes scroll whole
+rows without wrapping; a recognized swipe suppresses tile launch. The
+Program Manager chrome, program/folder icons, scrollbar, and status bar are
+RGB565 primitives and require no bitmap asset.
 
 To add another built-in app:
 
@@ -88,11 +100,12 @@ To add another built-in app:
 2. Register one descriptor in `apps/console_os/main/console_os_main.c`.
 3. Add host navigation, malformed-input, and framebuffer-bound tests.
 
-To add a reentrant native game, run `scripts/new-game.py`, implement it against
-the headers in `components/p4_game_api/include/p4/`, and leave its validated
-manifest enabled. Configure-time generation discovers and registers it. See
-`docs/GAME_SDK.md`. Doom remains a special legacy handoff until its engine has
-a reviewed reentrant teardown.
+To add a reentrant native game, run `scripts/new-game.py`, choose a bounded
+manifest path such as `GAMES/ARCADE`, implement it against the headers in
+`components/p4_game_api/include/p4/`, and leave its validated manifest enabled.
+Configure-time generation discovers and registers both the game and its folder
+metadata. See `docs/GAME_SDK.md`. Doom remains a special legacy handoff until
+its engine has a reviewed reentrant teardown.
 
 ## Sound behavior
 

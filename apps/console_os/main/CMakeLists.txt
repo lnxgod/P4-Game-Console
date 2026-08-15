@@ -17,6 +17,9 @@ else()
     )
 endif()
 find_program(P4_PYTHON3_EXECUTABLE NAMES python3 REQUIRED)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${P4_REPOSITORY_ROOT}/scripts/generate-game-registry.py"
+)
 file(MAKE_DIRECTORY "${P4_GAME_REGISTRY_DIR}")
 execute_process(
     COMMAND

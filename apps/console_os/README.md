@@ -5,14 +5,14 @@ This is the first FreeRTOS-native console shell for the Elecrow ESP32-P4
 registry, not a desktop process loader. The launcher and built-in pages share
 the reviewed platform display and touch services.
 
-The home screen currently exposes:
+The home screen keeps the accepted Program Manager-style interface and
+organizes the static registry as:
 
-- Doom (exclusive foreground handoff)
-- Maze Chase (original P4 Game API v1 sample; returns to the launcher)
-- Colors (panel test)
-- Touch (live GT911 contacts)
-- System (RTOS, heap, PSRAM, and uptime status)
-- Audio (the compiled Doom audio contract and safe ownership status)
+- All Programs (every entry in one scrollable view)
+- Games
+  - Action: Doom (exclusive foreground handoff)
+  - Arcade: Maze Chase and Space Invaders (reentrant Game API games)
+- System: Colors, Touch, System status, and Audio status
 
 ## Laptop game storage
 
@@ -37,12 +37,16 @@ Flashing a full project image again intentionally restores the seed volume and
 overwrites laptop changes. Runtime code never auto-formats a damaged volume;
 the System page instead reports the repair state.
 
-The launcher is generated from validated `games/*/game.json` manifests, shows
-six entries per page, and supports up to 32 entries. Create a native starter
-without editing the launcher:
+The launcher is generated from validated `games/*/game.json` manifests. Its
+lightweight desktop view shows three columns by two rows, scrolls with vertical
+arrows or a one-finger swipe, and supports up to 32 apps. It derives at most
+two folder levels from validated manifest metadata; there is no heap-backed
+filesystem or dynamic executable loader. The skin is drawn with RGB565
+primitives and adds no launcher bitmap asset. Create a native starter without
+editing the launcher:
 
 ```sh
-python3 scripts/new-game.py "Star Hop"
+python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE
 make game-sdk-host
 ```
 
