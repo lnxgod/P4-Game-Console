@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "app": "console_os",
-  "stage": "program-manager-file-manager-build-candidate",
+  "stage": "program-manager-file-manager-installed-candidate",
   "purpose": "FreeRTOS-native touch console with the accepted Program Manager-style folder launcher, a bounded on-device File Manager for laptop-provisioned game data, shared platform services, versioned native game APIs, original Maze Chase and Space Invaders samples, built-in diagnostics, and an exclusive handoff to the proven Doom SFX plus MUS integration.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
@@ -88,5 +88,5 @@
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "Install the exact File Manager app-only successor while preserving the already-provisioned game_data volume; verify the accepted Program Manager UI, browse and refresh after a J16 eject, two-step deletion of a disposable probe, host-ownership rejection, Doom preservation, and reboot persistence on the exact board."
+  "next_hardware_step": "Visually verify the accepted Program Manager UI, browse and refresh after a J16 eject, complete two-step deletion of a disposable probe, prove host-ownership rejection, Doom preservation, and reboot persistence on the exact board."
 }

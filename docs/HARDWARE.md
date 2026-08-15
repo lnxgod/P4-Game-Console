@@ -226,11 +226,16 @@ J1 remains the CH340 serial/programming path.
 The File Manager successor adds a build-tested on-device root listing and
 confirmed regular-file deletion behind that same exclusive owner. It never
 mounts beneath the laptop, never deletes directories, and rejects path-like or
-unrepresentable names. Its exact artifact still needs app-only installation,
-panel/touch observation, deletion of a disposable probe, contention rejection,
-clean J16 remount, Doom re-verification, and reboot persistence before this new
-UI can be called hardware-tested. An intentional cable-pull test must still
-demonstrate fail-closed status and filesystem repair behavior; it must not be
+unrepresentable names. Its exact app-only installation passed on 2026-08-14:
+the complete 7 MiB application span read back exactly, retained-UART startup
+reported eight apps with display/touch healthy, no backup was created, and the
+live `game_data` digest was preserved. See
+`hardware/test-runs/2026-08-14-console-os-file-manager-install.json`.
+Panel/touch observation, deletion of a disposable probe, contention rejection,
+clean J16 remount, Doom re-verification, and reboot persistence remain before
+this new UI can be called fully hardware-tested. An intentional cable-pull test
+must still demonstrate fail-closed status and filesystem repair behavior; it
+must not be
 recorded as safe simply because the next boot mounts, and it must use a
 disposable probe rather than the real WAD as its only copy. The frozen
 `scripts/console-os-file-manager-install.py` route creates no new backup and

@@ -41,14 +41,18 @@ entries, hides host metadata, pages five rows at a time, refreshes explicitly,
 and removes one regular file only after a second confirmation. Directories,
 paths, traversal tokens, control characters, overlong names, mount
 transitions, USB ownership, and the terminal Doom lease all fail closed. This
-successor is host- and build-tested; it is not hardware-tested until its exact
-artifact is installed and observed on the panel.
+successor is host-, build-, and retained-UART-startup-tested on the exact unit;
+it is not fully hardware-tested until its UI and file operations are observed
+on the panel and through a clean J16 cycle.
 
 The no-new-backup, app-only route is frozen in
 `scripts/console-os-file-manager-install.py`. It accepts only the already
 installed Program Manager plus USB application span and the exact final File
 Manager artifact, while preserving the partition table and live `game_data`
 bytes.
+The 2026-08-14 transaction passed complete app-span readback and startup with
+eight registered apps while preserving the live volume byte-for-byte. See
+`hardware/test-runs/2026-08-14-console-os-file-manager-install.json`.
 
 ## Foreground model
 
