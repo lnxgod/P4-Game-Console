@@ -4,10 +4,12 @@ set -eu
 
 P4_PORT=
 P4_OUTPUT=
+P4_MANUAL_LOADER=false
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --port) P4_PORT=${2:-}; shift 2 ;;
         --output) P4_OUTPUT=${2:-}; shift 2 ;;
+        --manual-loader) P4_MANUAL_LOADER=true; shift ;;
         *) printf 'Unknown argument: %s\n' "$1" >&2; exit 2 ;;
     esac
 done
@@ -17,6 +19,16 @@ P4_SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$P4_SCRIPT_DIR/lib/project-env.sh"
 p4_require_port "$P4_PORT"
 p4_activate_idf
+
+P4_PROBE_BEFORE=default_reset
+P4_PROBE_AFTER=hard_reset
+if [ "$P4_MANUAL_LOADER" = true ]; then
+    # A native USB Serial/JTAG connection cannot assert the BOOT strap. Once
+    # the operator has entered the ROM loader with BOOT/RST, another automatic
+    # reset would immediately leave it again. Keep every probe in that session.
+    P4_PROBE_BEFORE=no_reset
+    P4_PROBE_AFTER=no_reset
+fi
 
 if [ -z "$P4_OUTPUT" ]; then
     P4_TIMESTAMP=$(date -u '+%Y%m%dT%H%M%SZ')
@@ -39,7 +51,8 @@ p4_remove_partial_backup() {
     rm -f "$P4_PARTIAL_OUTPUT"
 }
 trap p4_remove_partial_backup EXIT HUP INT TERM
-P4_FLASH_ID_OUTPUT=$(esptool.py --chip esp32p4 --port "$P4_PORT" flash_id 2>&1) || {
+P4_FLASH_ID_OUTPUT=$(esptool.py --chip esp32p4 --port "$P4_PORT" \
+    --before "$P4_PROBE_BEFORE" --after "$P4_PROBE_AFTER" flash_id 2>&1) || {
     printf '%s\n' "$P4_FLASH_ID_OUTPUT" | p4_redact_device_identifiers >&2
     printf 'Backup failed: live ESP32-P4 flash probe failed.\n' >&2
     exit 1
@@ -48,15 +61,18 @@ printf '%s\n' "$P4_FLASH_ID_OUTPUT" | p4_redact_device_identifiers
 P4_DETECTED_FLASH_BYTES=$(printf '%s\n' "$P4_FLASH_ID_OUTPUT" | \
     p4_flash_size_bytes_from_esptool_output)
 
-P4_DEVICE_IDENTITY_BEFORE=$(p4_read_device_identity_hash "$P4_PORT")
+P4_DEVICE_IDENTITY_BEFORE=$(p4_read_device_identity_hash \
+    "$P4_PORT" "$P4_PROBE_AFTER" "$P4_PROBE_BEFORE")
 P4_READ_OUTPUT=$(esptool.py --chip esp32p4 --port "$P4_PORT" --baud 921600 \
+    --before "$P4_PROBE_BEFORE" --after "$P4_PROBE_AFTER" \
     read_flash --flash_size detect 0x0 ALL "$P4_PARTIAL_OUTPUT" 2>&1) || {
     printf '%s\n' "$P4_READ_OUTPUT" | p4_redact_device_identifiers >&2
     printf 'Backup failed while reading flash.\n' >&2
     exit 1
 }
 printf '%s\n' "$P4_READ_OUTPUT" | p4_redact_device_identifiers
-P4_DEVICE_IDENTITY_AFTER=$(p4_read_device_identity_hash "$P4_PORT")
+P4_DEVICE_IDENTITY_AFTER=$(p4_read_device_identity_hash \
+    "$P4_PORT" "$P4_PROBE_AFTER" "$P4_PROBE_BEFORE")
 if [ "$P4_DEVICE_IDENTITY_BEFORE" != "$P4_DEVICE_IDENTITY_AFTER" ]; then
     printf 'Backup failed: device identity changed during capture; do not register this image.\n' >&2
     exit 1

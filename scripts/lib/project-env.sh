@@ -213,6 +213,7 @@ print(values.pop())
 p4_read_device_identity_hash() {
     p4_require_port "${1:-}" || return
     P4_IDENTITY_AFTER=${2:-hard_reset}
+    P4_IDENTITY_BEFORE=${3:-default_reset}
     case "$P4_IDENTITY_AFTER" in
         hard_reset|no_reset) ;;
         *)
@@ -220,8 +221,16 @@ p4_read_device_identity_hash() {
             return 2
             ;;
     esac
+    case "$P4_IDENTITY_BEFORE" in
+        default_reset|usb_reset|no_reset) ;;
+        *)
+            printf 'Invalid device-identity before-action: %s\n' "$P4_IDENTITY_BEFORE" >&2
+            return 2
+            ;;
+    esac
     P4_IDENTITY_PROBE_OUTPUT=$(esptool.py --chip esp32p4 --port "$1" \
-        --after "$P4_IDENTITY_AFTER" read_mac 2>&1) || {
+        --before "$P4_IDENTITY_BEFORE" --after "$P4_IDENTITY_AFTER" \
+        read_mac 2>&1) || {
         printf 'Unable to read the ESP32-P4 device identity. Raw probe output is suppressed.\n' >&2
         return 1
     }

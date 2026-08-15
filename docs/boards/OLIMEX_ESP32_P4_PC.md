@@ -91,8 +91,18 @@ unplugging a device neutralizes its held state before the next game update.
 
 Before any write, enter the ROM loader through the board's documented
 BOOT/RESET controls and create a complete 16 MiB backup with the repository
-backup command. Record its byte count and SHA-256 and bind it to a hash of the
-live device identity without storing the raw identifier. Only then may
+backup command. Hold BOOT, tap and release RST, then release BOOT and use the
+manual-loader route so the native USB probe does not reset back into the
+factory application:
+
+```sh
+./scripts/backup-flash.sh --manual-loader \
+  --port /dev/cu.usbmodemXXXX \
+  --output hardware/backups/olimex-esp32-p4-pc-rev-b-factory-before-project.bin
+```
+
+Record its byte count and SHA-256 and bind it to a hash of the live device
+identity without storing the raw identifier. Only then may
 `flash_authorized` be reviewed and enabled for that exact unit.
 
 The first full flash must use the generated bootloader, partition table, OTA
