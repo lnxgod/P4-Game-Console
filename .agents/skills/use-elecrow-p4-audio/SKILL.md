@@ -10,6 +10,10 @@ speaker TX branch distinct from the PDM receiver that the complete factory
 audio initializer also starts; do not infer a codec transaction from schematic
 labels when the exact factory source is the requested behavior.
 
+If a game only calls the existing P4 tone API, use `$develop-p4-games` and its
+focused game tests. Do not run this factory-audio workflow unless the request
+changes the platform audio path or diagnoses actual device sound.
+
 ## Load the exact contract
 
 Read these files before changing or enabling audio:
@@ -98,9 +102,19 @@ GPIO30 high first. Retain ownership when cleanup is not proven, publish
 FAILED_SAFE, and reject restart until recovery succeeds. Never add a fallback
 codec or alternate pin route.
 
-## Build and verify
+## Build and verify proportionally
 
-Run the focused host and artifact checks before any write:
+Run only the checks that cover the changed seam:
+
+- Tone calls or game sound timing: use that game's focused host tests.
+- The shared game tone mixer or adapter: run its focused component test.
+- `platform_audio_factory`: run `make platform-audio-factory-host`.
+- The combined Doom audio integration or its reviewed artifact graph: run the
+  complete sequence below.
+
+Do not run repo-wide `make check`, unrelated display/gamepad/USB tests, or the
+combined Doom build for an isolated game or component change. For the complete
+integration path, run:
 
 ```sh
 make verify
@@ -110,6 +124,10 @@ make build APP=doom_embedded_touch_audio
 python3 scripts/verify-doom-embedded-touch-audio.py \
   apps/doom_embedded_touch_audio/build build-only
 ```
+
+Do not repeat an unchanged build or image. After the focused checks pass, use
+one hardware acceptance for the changed acoustic behavior and repeat only when
+the firmware or test conditions change.
 
 Require the final ELF/map audit to prove the app-facing adapter is the only
 caller of every `platform_audio_factory_*` entry point, the runtime gate bytes

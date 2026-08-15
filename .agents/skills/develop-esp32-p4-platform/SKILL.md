@@ -24,6 +24,11 @@ For speaker audio on this variant, also use `$use-elecrow-p4-audio`. It owns the
 low-freedom factory I2S1/GPIO30 contract and prevents schematic codec labels
 from replacing the exact pinned factory behavior.
 
+For a game that only consumes the stable P4 video, controls, tone, timing, and
+lifecycle APIs, use `$develop-p4-games` instead. Escalate to this platform skill
+only when the task changes Console OS, a shared service, the package/loader
+boundary, an ESP-IDF build, or physical hardware behavior.
+
 ## Choose the safe scope
 
 - If `pin_map_authorized` is false, restrict work to pin-independent bring-up plus any subsystem explicitly enabled under `peripheral_authorizations`. Use only the resources named by that authorization; every other pin and peripheral remains locked.
@@ -33,15 +38,28 @@ from replacing the exact pinned factory behavior.
 - Keep generated `sdkconfig`, build output, managed components, firmware binaries, WADs, and local backups out of Git.
 - Pin ESP-IDF, managed components, third-party source, and board references. Commit dependency lockfiles once generated.
 
-## Build and verify
+## Verify in proportion to the change
 
-Run, in order:
+Choose the smallest proof that covers the modified boundary:
 
-```sh
-make verify
-make check
-make build APP=<app>
-```
+- Documentation or skill changes need only their focused validators and
+  reference checks; do not build firmware.
+- A host-testable component change needs that component's existing `*-host`
+  target, not every host suite.
+- An ESP-IDF app change needs `make verify` when the environment has not already
+  been proven, then `make build APP=<app>` and that app's focused verifier.
+- A package or full Console OS integration change needs its documented build
+  target once after focused host checks pass.
+- Run repo-wide `make check` only when the user requests it, a toolchain or lock
+  changes, or a genuinely cross-cutting change spans maintained applications.
+- Flash only when on-device behavior must be established. Run one named
+  acceptance for the changed behavior and repeat only after the image or test
+  conditions change.
+
+Do not invoke display, audio, USB, or gamepad diagnostics merely because a game
+uses their stable APIs. Do not repeat an unchanged build or flash. Stop when
+the risk-matched checks pass and report unrelated failures without widening
+the task.
 
 Resolve warnings that indicate incompatible APIs, implicit declarations, invalid configuration, or memory misuse. Do not hide them with global suppressions.
 

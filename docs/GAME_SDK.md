@@ -41,10 +41,15 @@ engine has a reviewed reentrant teardown.
 From the repository root:
 
 ```sh
+python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE --dry-run
 python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE
-make game-sdk-host
-make console-os-idf
+cmake -S games/star_hop -B build-host/star_hop -G Ninja
+cmake --build build-host/star_hop
 ```
+
+The starter compiles on the host immediately. Before adding nontrivial game
+logic, follow an existing game's `tests/` and CMake wiring, then run
+`ctest --test-dir build-host/star_hop --output-on-failure`.
 
 The creator chooses the next free launcher ID and writes:
 
@@ -61,6 +66,12 @@ The Console OS build validates every enabled manifest and produces:
 ```text
 apps/console_os/build/game-storage-seed/STAR_HOP.P4G
 ```
+
+Run `make console-os-idf` after the focused game test when a distributable
+cartridge or device install is needed. Use `make game-registry-check` for a
+manifest or generator change and `make game-sdk-host` for shared API, package,
+loader, or cross-game changes. Do not run repo-wide `make check` for an
+isolated game change.
 
 Connect the laptop to J16, copy `STAR_HOP.P4G` to the root of `P4 GAMES`,
 eject the volume cleanly, and open Game Manager. The game appears in the
@@ -110,8 +121,8 @@ capability is not exposed in v1.
 - Bound state, loops, sprite dimensions, text, and audio requests.
 - Use original or correctly licensed code and assets.
 - Never commit commercial Doom WADs, WAD-bearing binaries, or recovery images.
-- Run host sanitizers and the pinned ESP-IDF verifier before copying a package
-  to hardware.
+- Run the changed game's focused host sanitizer tests. Run the pinned Console
+  OS build/verifier only when producing a cartridge for hardware.
 
 Maze Chase and Space Invaders are complete clean-room examples using only
 code-rendered shapes and P4 APIs.

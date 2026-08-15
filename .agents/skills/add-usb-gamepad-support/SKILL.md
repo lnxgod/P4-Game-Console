@@ -7,6 +7,11 @@ description: Add, change, diagnose, or test USB controller input for any game on
 
 Implement controller support once in the platform and expose normalized state to every game. Do not put USB Host calls, descriptor parsing, VID/PID quirks, or pin configuration inside a game.
 
+If a game only maps the existing normalized P4 buttons to game actions, use
+`$develop-p4-games` and that game's focused host tests. Use this skill when the
+canonical input contract, parser, profile, lifecycle, transport, or physical
+controller support changes.
+
 ## Pass the hardware gate first
 
 Read `hardware/board-profile.json`, `docs/HARDWARE.md`, and `references/architecture.md`.
@@ -59,6 +64,16 @@ Assign support tiers honestly:
 3. Xbox/XInput/GIP or another vendor-class transport.
 4. Output reports such as rumble and LEDs.
 
-## Verify
+## Verify proportionally
 
-Run `make gamepad-host` before the firmware build. That command covers the parser/state core, USB lifecycle model, transport publication model, and Doom action adapter under ASan/UBSan. Then follow `references/acceptance.md`. A controller is supported only after descriptor capture, input mapping, hotplug, disconnect neutralization, malformed-report behavior, and a named hardware run through the safe fixture have passed.
+- A game-only action mapping needs only that game's host tests.
+- A parser, profile, lifecycle, transport, canonical-state, or shared adapter
+  change needs `make gamepad-host` before the exact firmware build.
+- A physical transport or newly supported controller needs the relevant cases
+  from `references/acceptance.md` and one named run through the safe fixture.
+
+Do not run repo-wide `make check`, unrelated peripheral suites, or a physical
+fixture acceptance for an isolated game mapping. Do not repeat an unchanged
+firmware build or hardware run. A controller is supported only after its
+descriptor capture, input mapping, hotplug, disconnect neutralization,
+malformed-report behavior, and named hardware run have passed.
