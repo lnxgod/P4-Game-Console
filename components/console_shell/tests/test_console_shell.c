@@ -13,6 +13,7 @@ enum {
     APP_SYSTEM = 4,
     APP_AUDIO = 5,
     APP_FILES = 6,
+    APP_GAMES = 7,
     APP_MAZE = 100,
     APP_SPACE = 101,
 };
@@ -117,6 +118,18 @@ static const console_app_descriptor_t s_apps[] = {
                         CONSOLE_CAPABILITY_TOUCH |
                         CONSOLE_CAPABILITY_STORAGE,
         .page = CONSOLE_PAGE_FILES,
+        .enabled = true,
+    },
+    {
+        .id = APP_GAMES,
+        .title = "GAME MANAGER",
+        .subtitle = "USB GAMES + OS",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0x5FEA),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                        CONSOLE_CAPABILITY_TOUCH |
+                        CONSOLE_CAPABILITY_STORAGE,
+        .page = CONSOLE_PAGE_GAMES,
         .enabled = true,
     },
 };
@@ -544,6 +557,52 @@ static void test_file_manager(void)
     CHECK(!console_shell_set_file_listing(&shell, &invalid));
 }
 
+static void test_game_manager(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    CHECK(tap(&shell, 220U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    console_shell_action_t action = tap(&shell, 220U, 120U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(action.app_id == APP_GAMES);
+    CHECK(shell.page == CONSOLE_PAGE_GAMES);
+
+    console_shell_file_listing_t listing = {
+        .entry_count = 2U,
+        .total_visible_entries = 2U,
+        .storage_generation = 4U,
+        .revision = 1U,
+        .available = true,
+    };
+    listing.entries[0].source_index = 3U;
+    (void)strcpy(listing.entries[0].label, "MAZE CHASE 1.0.0");
+    listing.entries[0].size_kib = 9U;
+    listing.entries[0].removable = true;
+    listing.entries[1].source_index = UINT32_MAX;
+    (void)strcpy(listing.entries[1].label, "OS 0.2.0");
+    listing.entries[1].size_kib = 889U;
+    listing.entries[1].installable = true;
+    CHECK(console_shell_set_file_listing(&shell, &listing));
+
+    CHECK(tap(&shell, 250U, 180U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    action = tap(&shell, 250U, 180U);
+    CHECK(action.type == CONSOLE_ACTION_GAME_REMOVE);
+    CHECK(action.file_source_index == 3U);
+
+    action = tap(&shell, 50U, 72U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.file_selected_index == 1U);
+    CHECK(tap(&shell, 250U, 180U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    action = tap(&shell, 250U, 180U);
+    CHECK(action.type == CONSOLE_ACTION_OS_UPDATE_INSTALL);
+    CHECK(action.file_source_index == UINT32_MAX);
+    action = tap(&shell, 160U, 180U);
+    CHECK(action.type == CONSOLE_ACTION_GAME_REFRESH);
+
+    listing.entries[0].installable = true;
+    CHECK(!console_shell_set_file_listing(&shell, &listing));
+}
+
 static uint32_t next_random(uint32_t *state)
 {
     *state = *state * UINT32_C(1664525) + UINT32_C(1013904223);
@@ -591,6 +650,7 @@ int main(void)
     test_fail_closed_gestures();
     test_touch_page_and_runtime();
     test_file_manager();
+    test_game_manager();
     test_input_fuzz();
     if (s_failures != 0) {
         fprintf(stderr, "%d console shell test failure(s)\n", s_failures);

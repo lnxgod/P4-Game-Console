@@ -30,9 +30,9 @@ and clean eject passed. The exact record is
 its operator-visible UI and Doom-launch fields remain pending until explicitly
 confirmed on the panel.
 
-The shell deliberately uses a monolithic firmware with statically registered
-apps. ESP-IDF and FreeRTOS provide tasks, timers, memory, and drivers; this MVP
-does not pretend to be a desktop OS with dynamically loaded executables.
+That accepted build used statically registered apps. The current successor
+keeps the same shell and Doom handoff while moving reentrant games into
+validated storage cartridges.
 
 The next app-only successor adds File Manager under System. It uses USB only
 as the transport: the laptop adds files while J16 owns FAT, then a clean eject
@@ -54,6 +54,14 @@ The 2026-08-14 transaction passed complete app-span readback and startup with
 eight registered apps while preserving the live volume byte-for-byte. See
 `hardware/test-runs/2026-08-14-console-os-file-manager-install.json`.
 
+The current successor adds Game Manager, storage-loaded `.P4G` cartridges,
+and dual-slot `.P4U` OS updates while retaining the same window-manager
+renderer. Maze Chase and Space Invaders are no longer linked into the OS
+binary: they are 9 KiB-class seed packages copied to `P4 GAMES`. The app image
+is consequently under 1 MiB instead of carrying a duplicate 4.2 MiB Doom WAD.
+This successor is host-tested and build-verified; its one-time partition
+migration and cartridge launches still require the hardware record below.
+
 ## Foreground model
 
 ```text
@@ -67,9 +75,11 @@ boot
        |-- Games
        |     |-- Action -> Doom
        |     `-- Arcade -> Maze Chase / Space Invaders
-       |-- System -> Colors / Touch / System / Audio status / File Manager
-       |     `-- File Manager -> bounded root list / refresh / confirmed delete
-       |-- native API game selected
+       |-- System -> diagnostics / File Manager / Game Manager
+       |     |-- File Manager -> bounded root list / confirmed delete
+       |     `-- Game Manager -> package status / remove / OS update
+       |-- storage cartridge selected
+       |     -> reload, re-hash, validate, and relocate into PSRAM
        |     -> console retains display/touch ownership
        |     -> game receives normalized controls + RGB565 surface
        |     -> optional bounded audio session starts for the game
@@ -103,6 +113,8 @@ display, overlays, and exit callbacks in a deterministic order.
 | Game-data FAT | launcher or laptop, never both | terminal game lease | Clean eject returns ownership; host access is revoked and WAD re-hashed before Doom |
 | Doom WAD | validated `/game-data/DOOM1.WAD` | read-only VFS adapter | Exact ignored shareware identity only; host changes invalidate cache |
 | File Manager | `console_shell` view plus `platform_game_storage` operations | unavailable | Lists/deletes only while the app owns FAT; host and game ownership reject every operation |
+| Game cartridge | validated package bytes, then relocated PSRAM image | unavailable | Catalog and launch revalidate SHA/ELF; cartridge receives only the host callback table |
+| OS update | inactive OTA slot | unavailable | USB stops during streaming; boot slot changes only after final image verification |
 
 The launcher surface is standard RGB565 at 320x200. The proven display service
 scales it 3x into a 960x600 viewport with 32-pixel black margins on the
@@ -113,10 +125,10 @@ scales it 3x into a 960x600 viewport with 32-pixel black margins on the
 `components/console_shell/include/console/shell.h` is the launcher boundary.
 Each app has a nonzero unique ID, bounded title/subtitle, one required folder
 path, capability flags, accent color, enabled state, and either a built-in page
-or external handoff. Folder paths contain one or two uppercase segments, each
-at most 15 bytes. The shell derives its views by scanning the fixed registry
-of at most 32 apps; it owns no heap, filesystem, recursion, or dynamic loader.
-Root exposes All Programs plus unique top-level folders.
+or external handoff. Fixed built-ins are combined with a bounded runtime
+catalog of validated packages. Folder paths contain one or two uppercase
+segments, each at most 15 bytes. The shell itself owns no heap, filesystem, or
+recursion; storage and loading remain reusable platform services.
 
 The shell accepts at most five contacts and shows a three-column, two-row
 viewport. Bounded up/down controls and vertical one-finger swipes scroll whole
@@ -131,11 +143,10 @@ To add another built-in app:
 3. Add host navigation, malformed-input, and framebuffer-bound tests.
 
 To add a reentrant native game, run `scripts/new-game.py`, choose a bounded
-manifest path such as `GAMES/ARCADE`, implement it against the headers in
-`components/p4_game_api/include/p4/`, and leave its validated manifest enabled.
-Configure-time generation discovers and registers both the game and its folder
-metadata. See `docs/GAME_SDK.md`. Doom remains a special legacy handoff until
-its engine has a reviewed reentrant teardown.
+manifest path such as `GAMES/ARCADE`, and implement it against the headers in
+`components/p4_game_api/include/p4/`. The build emits one `.P4G` file. Copy it
+to `P4 GAMES` and eject J16; no OS installation is needed. See
+`docs/GAME_SDK.md`.
 
 ## Sound behavior
 
@@ -178,6 +189,9 @@ truncation, traversal rejection, regular-file deletion, and directory-delete
 refusal. The shell suite covers File Manager paging, selection, refresh,
 confirmation/cancel, non-removable directories, unavailable storage, and
 malformed snapshots.
+Game/package tests additionally cover malformed headers, reserved fields,
+ELF/string-table bounds, real seed cartridges, Game Manager remove/install
+confirmation, and the platform-neutral `.P4U` envelope parser.
 
 The IDF target builds with the locked ESP-IDF 5.5.3 and managed component
 versions, checks ESP32-P4 revision 1.x bounds, and runs
@@ -186,15 +200,14 @@ ignore status, build-only flash policy, handoff cleanup order, component graph,
 partition/flash geometry, FAT seed identity, required USB-device/storage
 symbols, and absence of USB-host/SD/codec entry points in the final ELF.
 
-The first migration from the pre-USB layout cannot be app-only: the factory app
-shrinks to 7 MiB and `game_data` occupies `0x710000..0xFFFFFF`. A reviewed
-full-project image seeds the FAT volume. The Program Manager successor was then
-installed app-only and preserved that live partition byte-for-byte. Another
-full-project flash deliberately overwrites it with the seed. On-device
-acceptance now covers J16 enumeration, copy/remove, FAT repair and clean
-reverification, WAD persistence, and clean eject. Abrupt disconnect recovery
-and launch rejection while the laptop owns the volume remain separate negative
-tests.
+The one-time Game Manager migration cannot be app-only because the former
+7 MiB app range becomes `ota_0` (`0x20000..0x38ffff`) plus `ota_1`
+(`0x390000..0x70ffff`) and OTA data at `0x10000`. The guarded J1 transaction
+writes only the bootloader, partition table, OTA data, and OTA-0 image; it does
+not write `0x710000..0xffffff`, so the live `P4 GAMES` volume is preserved.
+Subsequent OS updates use `P4UPDATE.P4U` over J16 and target only the inactive
+slot. Bootloader rollback remains pending until storage, display, and the first
+ready frame succeed.
 
 ## Guarded hardware acceptance
 

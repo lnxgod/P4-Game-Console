@@ -32,7 +32,9 @@ def main() -> None:
         assert (created / "CMakeLists.txt").is_file()
         assert (created / "src/star_hop.c").is_file()
         manifest = json.loads((created / "game.json").read_text())
-        assert manifest["format"] == "p4-native-static-v1"
+        assert manifest["format"] == "p4-native-elf-v1"
+        assert manifest["version"] == "1.0.0"
+        assert manifest["package_file"] == "STAR_HOP.P4G"
         assert manifest["folder"] == "GAMES/ARCADE"
         assert "GAMES/ARCADE" in (created / "README.md").read_text()
         compile_result = subprocess.run(

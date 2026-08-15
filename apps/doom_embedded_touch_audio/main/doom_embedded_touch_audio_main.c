@@ -57,15 +57,18 @@
 #define OVERLAY_PIXELS \
     ((size_t)DOOM_TOUCH_FRAME_WIDTH * (size_t)DOOM_TOUCH_FRAME_HEIGHT)
 
+#ifndef P4_CONSOLE_OS_EMBEDDED
 extern const uint8_t _binary_doom_shareware_wad_start[];
 extern const uint8_t _binary_doom_shareware_wad_end[];
-
 static const uint8_t s_expected_wad_sha256[32] = {
     0x1d, 0x7d, 0x43, 0xbe, 0x50, 0x1e, 0x67, 0xd9,
     0x27, 0xe4, 0x15, 0xe0, 0xb8, 0xf3, 0xe2, 0x9c,
     0x3b, 0xf3, 0x30, 0x75, 0xe8, 0x59, 0x72, 0x18,
     0x16, 0xf6, 0x52, 0xa5, 0x26, 0xca, 0xc7, 0x71,
 };
+#else
+static const uint8_t s_console_storage_wad_marker;
+#endif
 
 static const char *const TAG = "p4_doom_touch_audio";
 static esp_err_t s_frame_error = ESP_OK;
@@ -123,6 +126,7 @@ static void log_sound_disabled(void)
              audio_calls, gpio30_state);
 }
 
+#ifndef P4_CONSOLE_OS_EMBEDDED
 static uint32_t read_u32_le(const uint8_t bytes[4])
 {
     return (uint32_t)bytes[0] |
@@ -156,6 +160,7 @@ static esp_err_t verify_embedded_wad(const uint8_t *data, size_t size_bytes)
         ? ESP_OK
         : ESP_ERR_INVALID_CRC;
 }
+#endif
 
 static esp_err_t verify_readonly_vfs(void)
 {
@@ -857,6 +862,10 @@ void app_main(void)
     s_last_touch_retry_ms = ticks_ms();
     (void)try_touch_create(true);
 
+#ifdef P4_CONSOLE_OS_EMBEDDED
+    const uint8_t *const wad_start = &s_console_storage_wad_marker;
+    const size_t wad_size = EMBEDDED_WAD_BYTES;
+#else
     const uint8_t *const wad_start = _binary_doom_shareware_wad_start;
     const uint8_t *const wad_end = _binary_doom_shareware_wad_end;
     const uintptr_t wad_start_address = (uintptr_t)wad_start;
@@ -870,6 +879,7 @@ void app_main(void)
     if (result != ESP_OK) {
         halt_dark("wad-validate", result);
     }
+#endif
     ESP_LOGI(TAG,
              "P4_DOOM_E6 WAD_VERIFIED identity=doom-shareware-1.9 "
              "bytes=%u sha256=%s",

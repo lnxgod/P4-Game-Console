@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail-closed source and build verifier for the P4 Console OS MVP."""
+"""Fail-closed source and build verifier for Console OS game management."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import hashlib
 import json
 import pathlib
 import re
+import struct
 import subprocess
 import sys
 import tempfile
@@ -14,12 +15,16 @@ import tempfile
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = ROOT / "apps/console_os"
-EXPECTED_WAD_BYTES = 4_196_020
-EXPECTED_WAD_SHA256 = (
+WAD_BYTES = 4_196_020
+WAD_SHA256 = (
     "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
 )
-EXPECTED_APP_PARTITION_BYTES = 7 * 1024 * 1024
-EXPECTED_GAME_PARTITION_BYTES = 0x8F0000
+OTA0_BYTES = 0x370000
+OTA1_BYTES = 0x380000
+GAME_DATA_OFFSET = 0x710000
+GAME_DATA_BYTES = 0x8F0000
+P4G_HEADER_BYTES = 256
+P4U_HEADER_BYTES = 256
 
 
 def fail(message: str) -> None:
@@ -56,316 +61,413 @@ def require_order(text: str, tokens: list[str], label: str) -> None:
     require(positions == sorted(positions), f"unsafe order in {label}")
 
 
+def c_string(field: bytes, label: str) -> str:
+    require(b"\0" in field, f"{label} is not terminated")
+    value, padding = field.split(b"\0", 1)
+    require(value and not any(padding), f"{label} is empty or has dirty padding")
+    try:
+        return value.decode("ascii")
+    except UnicodeDecodeError as error:
+        fail(f"{label} is not ASCII: {error}")
+
+
+def verify_game_package(path: pathlib.Path, manifest: dict) -> dict:
+    data = path.read_bytes()
+    require(P4G_HEADER_BYTES < len(data) <= 512 * 1024,
+            f"{path.name} size is outside the package bound")
+    require(data[:8] == b"P4GAME1\0", f"{path.name} has wrong magic")
+    fields = struct.unpack_from("<9IHH", data, 8)
+    (
+        header_bytes, package_bytes, payload_offset, payload_bytes,
+        format_version, api_version, launcher_id, required, optional,
+        accent, flags,
+    ) = fields
+    require(header_bytes == payload_offset == P4G_HEADER_BYTES,
+            f"{path.name} has wrong header layout")
+    require(package_bytes == len(data) and
+            payload_bytes == len(data) - payload_offset,
+            f"{path.name} has wrong package lengths")
+    require(format_version == api_version == 1,
+            f"{path.name} has wrong format/API version")
+    require(launcher_id == manifest["launcher_id"],
+            f"{path.name} launcher ID differs from its manifest")
+    require((required & 1) != 0 and required & optional == 0,
+            f"{path.name} capability masks are invalid")
+    require(accent == int(manifest["accent_rgb565"], 16),
+            f"{path.name} accent differs from its manifest")
+    require(flags == 1, f"{path.name} must disclose development native code")
+    payload = data[payload_offset:]
+    require(hashlib.sha256(payload).digest() == data[48:80],
+            f"{path.name} payload digest differs")
+    require(payload[:4] == b"\x7fELF" and payload[4:7] == b"\x01\x01\x01",
+            f"{path.name} payload is not ELF32 little-endian")
+    require(c_string(data[80:128], "game id") == manifest["id"],
+            f"{path.name} game ID differs")
+    require(c_string(data[128:144], "game title") == manifest["title"],
+            f"{path.name} title differs")
+    require(c_string(data[176:208], "game folder") == manifest["folder"],
+            f"{path.name} folder differs")
+    require(c_string(data[208:224], "game version") == manifest["version"],
+            f"{path.name} version differs")
+    require(not any(data[240:256]), f"{path.name} reserved bytes are dirty")
+    return {
+        "file": path.name,
+        "bytes": len(data),
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "payload_sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def verify_os_update(path: pathlib.Path, app_binary: pathlib.Path) -> dict:
+    data = path.read_bytes()
+    image = app_binary.read_bytes()
+    require(data[:8] == b"P4OSUP1\0", "P4UPDATE.P4U has wrong magic")
+    fields = struct.unpack_from("<6I", data, 8)
+    header, package, offset, payload, version, flags = fields
+    require(header == offset == P4U_HEADER_BYTES and package == len(data),
+            "P4UPDATE.P4U layout differs")
+    require(payload == len(image) and data[offset:] == image,
+            "P4UPDATE.P4U payload differs from the app binary")
+    require(version == 1 and flags == 0,
+            "P4UPDATE.P4U format version or flags differ")
+    require(hashlib.sha256(image).digest() == data[32:64],
+            "P4UPDATE.P4U payload digest differs")
+    package_version = c_string(data[64:96], "OS update version")
+    build = c_string(data[96:160], "OS update build")
+    require(c_string(data[160:176], "OS update target") == "esp32p4",
+            "P4UPDATE.P4U has wrong target")
+    require(not any(data[176:256]), "P4UPDATE.P4U reserved bytes are dirty")
+    return {
+        "file": path.name,
+        "bytes": len(data),
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "image_sha256": hashlib.sha256(image).hexdigest(),
+        "version": package_version,
+        "build": build,
+    }
+
+
 def main() -> None:
-    build = pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else APP / "build"
+    build = (
+        pathlib.Path(sys.argv[1]).resolve()
+        if len(sys.argv) > 1 else APP / "build"
+    )
     require(build.is_dir(), f"missing build directory: {build}")
 
     toolchain = read_json(ROOT / "toolchain.lock.json")
-    require(toolchain["esp_idf"]["version"] == "5.5.3", "unexpected IDF lock")
+    require(toolchain["esp_idf"]["version"] == "5.5.3",
+            "unexpected ESP-IDF lock")
     require(toolchain["target"] == {
         "chip": "esp32p4",
         "silicon_family": "revision_1_x",
         "min_revision_full": 100,
         "max_revision_full": 199,
     }, "unexpected target lock")
-    require(toolchain["managed_components"].get("espressif/esp_tinyusb") ==
-            "2.0.1", "unexpected ESP-TinyUSB lock")
     dependency_lock = (APP / "dependencies.lock").read_text(encoding="utf-8")
-    require(re.search(
-        r"(?ms)^  espressif/esp_tinyusb:.*?^    version: 2\.0\.1$",
-        dependency_lock) is not None, "console lock is missing esp_tinyusb 2.0.1")
-    require(re.search(
-        r"(?ms)^  idf:.*?^    version: 5\.5\.3$", dependency_lock) is not None,
-        "console lock is missing IDF 5.5.3")
+    for component, version in (
+        ("espressif/esp_tinyusb", "2.0.1"),
+        ("espressif/elf_loader", "1.3.1"),
+        ("idf", "5.5.3"),
+    ):
+        require(re.search(
+            rf"(?ms)^  {re.escape(component)}:.*?^    version: "
+            rf"{re.escape(version)}$", dependency_lock) is not None,
+            f"dependency lock is missing {component} {version}")
 
     sdkconfig = (build / "config/sdkconfig.h").read_text(encoding="utf-8")
-    require("#define CONFIG_FATFS_SECTOR_512 1" in sdkconfig,
-            "FAT must use the USB/WL 512-byte logical sector geometry")
-    require("#define CONFIG_WL_SECTOR_SIZE 512" in sdkconfig,
-            "wear levelling must expose 512-byte logical sectors")
+    for setting in (
+        "CONFIG_FATFS_SECTOR_512",
+        "CONFIG_WL_SECTOR_SIZE_512",
+        "CONFIG_BOOTLOADER_APP_ROLLBACK_ENABLE",
+        "CONFIG_ELF_LOADER",
+        "CONFIG_ELF_LOADER_LOAD_PSRAM",
+        "CONFIG_ELF_LOADER_LIBC_SYMBOLS",
+    ):
+        require(f"#define {setting} 1" in sdkconfig,
+                f"build is missing {setting}")
+    require("CONFIG_ELF_LOADER_ESPIDF_SYMBOLS" not in sdkconfig,
+            "cartridges must not resolve arbitrary ESP-IDF symbols")
+    require("CONFIG_ELF_DYNAMIC_LOAD_SHARED_OBJECT" not in sdkconfig,
+            "shared-object-to-shared-object linking must remain disabled")
 
     metadata = read_json(APP / "app-metadata.json")
-    require(metadata.get("app") == "console_os", "wrong app metadata")
+    require(metadata.get("stage") == "usb-game-manager-ota-build-candidate",
+            "unexpected app stage")
     for key in (
-        "runtime_supported",
-        "top_level_runtime_authorized",
-        "flash_authorized",
-        "flash_app_authorized",
-        "flash_project_authorized",
-        "hardware_access_allowed",
-        "game_data_committed",
+        "runtime_supported", "top_level_runtime_authorized",
+        "flash_authorized", "flash_app_authorized",
+        "flash_project_authorized", "hardware_access_allowed",
+        "game_data_embedded", "game_data_committed",
         "game_data_redistribution_authorized",
     ):
         require(metadata.get(key) is False, f"metadata must deny {key}")
-    require(metadata.get("game_data_embedded") is True,
-            "metadata must disclose embedded game data")
-    require(metadata["doom_handoff"]["audio_initialized_by_shell"] is False,
-            "shell must not initialize Doom audio")
-    require(metadata["doom_handoff"]["return_to_home_supported"] is False,
-            "MVP must not claim a reentrant Doom return")
-    game_storage = metadata.get("game_storage", {})
-    require(game_storage.get("partition_label") == "game_data",
-            "game storage partition is not disclosed")
-    require(game_storage.get("partition_offset") == "0x710000" and
-            game_storage.get("partition_bytes") == EXPECTED_GAME_PARTITION_BYTES,
-            "game storage geometry is wrong")
-    require(game_storage.get("runtime_format_allowed") is False,
-            "runtime formatting must remain disabled")
-    require(game_storage.get("hardware_tested") is False,
-            "build candidate must not claim hardware validation")
-    native_api = metadata.get("native_game_api", {})
-    require(native_api.get("api_version") == 1,
-            "native game API version must be 1")
-    require(native_api.get("format") == "p4-native-static-v1",
-            "native game format must remain explicit")
-    require(native_api.get("return_to_home_supported") is True,
-            "native games must support returning to the launcher")
-    require(native_api.get("uf2_supported") is False,
-            "metadata must not mislabel ESP-IDF output as UF2")
-    require(native_api.get("registered_games") == [
-        "org.p4console.maze-chase",
-        "org.p4console.space-invaders",
-    ], "metadata must name both generated games")
-    shell_metadata = metadata.get("shell", {})
-    require(shell_metadata.get("maximum_folder_depth") == 2,
-            "launcher folder depth must remain bounded")
-    require(shell_metadata.get("dynamic_executable_loading") is False,
-            "folder UI must not imply dynamic executable loading")
-    require("file-manager" in shell_metadata.get("built_in_apps", []),
-            "File Manager is missing from shell metadata")
-    file_manager = game_storage.get("file_manager", {})
-    require(file_manager.get("maximum_listed_entries") == 32 and
-            file_manager.get("directory_deletion_allowed") is False and
-            file_manager.get("path_traversal_allowed") is False and
-            file_manager.get("host_owned_access_allowed") is False,
-            "unsafe or incomplete File Manager metadata")
+    native = metadata.get("native_game_api", {})
+    require(native.get("format") == "p4-native-elf-v1" and
+            native.get("api_version") == 1 and
+            native.get("native_code_is_security_sandboxed") is False,
+            "native cartridge metadata differs")
+    require(native.get("seed_packages") == ["MAZE.P4G", "INVADERS.P4G"],
+            "seed packages differ")
+    shell = metadata.get("shell", {})
+    require(shell.get("dynamic_executable_loading") is True and
+            "game-manager" in shell.get("built_in_apps", []),
+            "Game Manager shell metadata differs")
+    storage = metadata.get("game_storage", {})
+    require(storage.get("partition_offset") == "0x710000" and
+            storage.get("partition_bytes") == GAME_DATA_BYTES and
+            storage.get("runtime_format_allowed") is False and
+            storage.get("hardware_tested") is False,
+            "persistent storage metadata differs")
+    update = metadata.get("os_update", {})
+    require(update.get("target") == "inactive OTA slot only" and
+            update.get("rollback_until_first_ready_frame") is True and
+            update.get("preserves_game_data") is True,
+            "OTA update metadata differs")
 
-    registry_check = subprocess.run(
-        ["python3", str(ROOT / "scripts/generate-game-registry.py"),
+    manifest_check = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/generate-game-registry.py"),
          "--games-root", str(ROOT / "games"), "--check"],
-        cwd=ROOT, check=False, stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE, text=True,
+        cwd=ROOT, check=False, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
-    require(registry_check.returncode == 0,
-            f"invalid game registry: {registry_check.stderr.strip()}")
+    require(manifest_check.returncode == 0,
+            f"invalid game manifests: {manifest_check.stderr.strip()}")
 
     wad = ROOT / "local-data/doom/doom1.wad"
-    require(wad.is_file(), "missing ignored exact Doom shareware WAD")
-    require(wad.stat().st_size == EXPECTED_WAD_BYTES, "wrong WAD byte count")
-    require(sha256(wad) == EXPECTED_WAD_SHA256, "wrong WAD SHA-256")
+    require(wad.is_file() and wad.stat().st_size == WAD_BYTES and
+            sha256(wad) == WAD_SHA256, "local Doom shareware WAD differs")
     ignored = subprocess.run(
-        ["git", "check-ignore", "-q", str(wad)], cwd=ROOT, check=False
-    )
-    require(ignored.returncode == 0, "local WAD is not ignored by Git")
-
-    shell_main = (APP / "main/console_os_main.c").read_text(encoding="utf-8")
-    require(re.search(r"\bplatform_audio_", shell_main) is None,
-            "launcher source must not call the audio backend")
-    require("p4_game_platform_audio_open" in shell_main,
-            "reviewed native-game audio adapter is missing")
-    require("p4-native-static-v1" in shell_main,
-            "native game format log is missing")
-    require("p4_generated_game_by_launcher_id" in shell_main,
-            "generated native game dispatch is missing")
-    require("p4_generated_game_folders" in shell_main,
-            "generated native game folder metadata is missing")
-    require("CONSOLE_PAGE_EXTERNAL" in shell_main, "Doom launcher entry missing")
-    require("CONSOLE_PAGE_COLORS" in shell_main, "Colors app missing")
-    require("CONSOLE_PAGE_TOUCH" in shell_main, "Touch app missing")
-    require("CONSOLE_PAGE_SYSTEM" in shell_main, "System app missing")
-    require("CONSOLE_PAGE_FILES" in shell_main, "File Manager app missing")
-    require("CONSOLE_PAGE_AUDIO" in shell_main, "Audio status app missing")
-    require("platform_game_storage_list_root" in shell_main and
-            "platform_game_storage_remove_root_file" in shell_main,
-            "File Manager is not routed through the storage service")
-    handoff = shell_main[
-        shell_main.index("static void launch_doom_exclusive("):
-        shell_main.index("void app_main(void)")
-    ]
-    require_order(handoff, [
-        "platform_game_storage_lock_for_game()",
-        "platform_display_set_brightness(0U)",
-        "destroy_touch_for_handoff()",
-        "destroy_bus_for_handoff()",
-        "platform_display_deinit()",
-        "heap_caps_free(s_pixels)",
-        "console_os_launch_doom()",
-    ], "Doom handoff")
-
-    doom_main = (
-        ROOT / "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c"
-    ).read_text(encoding="utf-8")
-    require("#ifdef P4_CONSOLE_OS_EMBEDDED" in doom_main,
-            "Doom console entrypoint guard missing")
-    require("void console_os_launch_doom(void)" in doom_main,
-            "Doom console entrypoint missing")
-    require("void app_main(void)" in doom_main,
-            "standalone Doom entrypoint was not preserved")
+        ["git", "check-ignore", "-q", str(wad)], cwd=ROOT, check=False)
+    require(ignored.returncode == 0, "local Doom WAD is not ignored")
 
     project = read_json(build / "project_description.json")
-    require(project.get("project_name") == "p4_console_os", "wrong project name")
-    require(project.get("target") == "esp32p4", "wrong build target")
-    require(project.get("min_rev") == "100" and project.get("max_rev") == "199",
-            "wrong silicon revision bounds")
+    require(project.get("project_name") == "p4_console_os" and
+            project.get("target") == "esp32p4" and
+            project.get("min_rev") == "100" and
+            project.get("max_rev") == "199",
+            "project target or revision bounds differ")
     components = set(project.get("build_components", []))
     required_components = {
-        "console_shell", "doom_audio", "doom_engine_audio", "doom_touch_input",
-        "doom_video", "platform_audio", "platform_audio_factory",
-        "platform_display", "platform_game_storage", "platform_i2c_shared",
+        "console_shell", "p4_game_api", "p4_game_package",
+        "p4_os_update_package", "platform_game_catalog",
+        "platform_game_loader", "platform_game_storage",
+        "platform_os_update", "platform_display", "platform_touch",
         "platform_readonly_blob", "fatfs", "wear_levelling",
-        "platform_touch", "p4_game_api", "p4_game_platform", "maze_chase",
-        "space_invaders",
-    }
-    forbidden_components = {
-        "doom_gamepad_input", "platform_audio_es8311",
-        "platform_gamepad_usb", "platform_usb_host", "usb_host_hid",
-        "espressif__usb_host_hid", "espressif__usb",
     }
     require(required_components <= components, "required component missing")
-    require(any(component == "esp_tinyusb" or
-                component.endswith("__esp_tinyusb")
-                for component in components),
-            "ESP-TinyUSB component missing")
-    require(any(component == "tinyusb" or component.endswith("__tinyusb")
-                for component in components), "TinyUSB component missing")
-    require(not (forbidden_components & components), "forbidden component linked")
+    require(any(name.endswith("elf_loader") for name in components),
+            "pinned ELF loader component missing")
+    require("maze_chase" not in components and
+            "space_invaders" not in components,
+            "sample games were linked back into the OS image")
+    forbidden_components = {
+        "doom_gamepad_input", "platform_gamepad_usb", "platform_usb_host",
+        "usb_host_hid", "espressif__usb_host_hid", "espressif__usb",
+    }
+    require(not (forbidden_components & components),
+            "forbidden USB-host component linked")
 
     flasher = read_json(build / "flasher_args.json")
     require(flasher.get("flash_settings") == {
-        "flash_mode": "dio", "flash_size": "16MB", "flash_freq": "80m"
+        "flash_mode": "dio", "flash_size": "16MB", "flash_freq": "80m",
     }, "unexpected flash geometry")
-    require(flasher.get("flash_files", {}).get("0x10000") == "p4_console_os.bin",
-            "unexpected application offset")
-    game_image_name = flasher.get("flash_files", {}).get("0x710000")
-    require(game_image_name is not None,
-            "game-data seed is missing from the full-project image")
+    expected_flash_files = {
+        "0x2000": "bootloader/bootloader.bin",
+        "0x8000": "partition_table/partition-table.bin",
+        "0x10000": "ota_data_initial.bin",
+        "0x20000": "p4_console_os.bin",
+        "0x710000": "game_data.bin",
+    }
+    require(flasher.get("flash_files") == expected_flash_files,
+            "full-project flash map differs")
 
-    binary = build / str(project.get("app_bin"))
-    elf = build / str(project.get("app_elf"))
-    require(binary.is_file() and elf.is_file(), "missing build artifacts")
-    require(binary.stat().st_size < EXPECTED_APP_PARTITION_BYTES,
-            "application does not fit the 7 MiB partition")
-    installer_source = (
-        ROOT / "scripts/console-os-file-manager-install.py"
-    ).read_text(encoding="utf-8")
-    binary_sha256 = sha256(binary)
-    padded_digest = hashlib.sha256()
-    padded_digest.update(binary.read_bytes())
-    padded_digest.update(
-        b"\xff" * (EXPECTED_APP_PARTITION_BYTES - binary.stat().st_size)
+    partition_tool = (
+        pathlib.Path(str(project["idf_path"])) /
+        "components/partition_table/gen_esp32part.py"
     )
-    require(
-        f"EXPECTED_FILE_MANAGER_APP_BYTES = {binary.stat().st_size:_}"
-        in installer_source and binary_sha256 in installer_source and
-        padded_digest.hexdigest() in installer_source and
-        'b"P4_CONSOLE_OS START shell=freertos-native apps=8 "'
-        in installer_source,
-        "File Manager app-only installer is not pinned to this build",
+    partition_result = subprocess.run(
+        [sys.executable, str(partition_tool),
+         str(build / "partition_table/partition-table.bin")],
+        cwd=ROOT, check=False, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
-    game_image = build / str(game_image_name)
-    require(game_image.is_file(), "missing generated game-data image")
-    require(game_image.stat().st_size == EXPECTED_GAME_PARTITION_BYTES,
-            "game-data image does not fill the declared partition")
-    game_image_bytes = game_image.read_bytes()
-    fat_sector_bytes = int.from_bytes(game_image_bytes[4096 + 11:4096 + 13],
-                                      "little")
-    require(fat_sector_bytes == 512,
-            "generated FAT sector size does not match USB/WL geometry")
-    normalized = subprocess.run(
-        [sys.executable, str(ROOT / "scripts/normalize-game-storage-image.py"),
-         str(game_image), "--check"], cwd=ROOT, check=False,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-    )
-    require(normalized.returncode == 0,
-            f"game-data image is not reproducible: {normalized.stderr.strip()}")
-    seeded_wad = build / "game-storage-seed/DOOM1.WAD"
-    seeded_readme = build / "game-storage-seed/README.TXT"
-    require(seeded_wad.is_file() and seeded_readme.is_file(),
-            "missing staged game-data seed inputs")
-    require(seeded_wad.stat().st_size == EXPECTED_WAD_BYTES and
-            sha256(seeded_wad) == EXPECTED_WAD_SHA256,
-            "generated game-data seed has the wrong WAD")
-    cmake_cache = (build / "CMakeCache.txt").read_text(encoding="utf-8")
-    python_match = re.search(r"(?m)^PYTHON:[^=]+=(.+)$", cmake_cache)
-    require(python_match is not None, "build does not record its pinned Python")
-    fat_parser = (pathlib.Path(str(project.get("idf_path"))) /
-                  "components/fatfs/fatfsparse.py")
-    require(fat_parser.is_file(), "missing pinned FAT image parser")
-    with tempfile.TemporaryDirectory(prefix="p4-game-data-") as temporary:
+    require(partition_result.returncode == 0,
+            f"partition binary cannot be decoded: {partition_result.stderr}")
+    partition_text = partition_result.stdout
+    for row in (
+        "otadata,data,ota,0x10000,8K,",
+        "ota_0,app,ota_0,0x20000,3520K,",
+        "ota_1,app,ota_1,0x390000,3584K,",
+        "game_data,data,fat,0x710000,9152K,",
+    ):
+        require(row in partition_text, f"partition table is missing {row}")
+    require(0x390000 + OTA1_BYTES == GAME_DATA_OFFSET,
+            "OTA slots no longer end at the persistent-data boundary")
+
+    app_binary = build / str(project["app_bin"])
+    app_elf = build / str(project["app_elf"])
+    require(app_binary.is_file() and app_elf.is_file(),
+            "missing app build artifacts")
+    require(app_binary.stat().st_size <= OTA0_BYTES,
+            "app does not fit the smaller OTA slot")
+    os_update = verify_os_update(build / "P4UPDATE.P4U", app_binary)
+
+    package_reports: list[dict] = []
+    manifests: list[dict] = []
+    for path in sorted((ROOT / "games").glob("*/game.json")):
+        manifest = read_json(path)
+        if manifest.get("enabled") is True:
+            manifests.append(manifest)
+            package_reports.append(verify_game_package(
+                build / "game-storage-seed" / manifest["package_file"],
+                manifest,
+            ))
+    require([item["file"] for item in package_reports] ==
+            ["MAZE.P4G", "INVADERS.P4G"],
+            "built seed cartridge set differs")
+    parser_test = ROOT / "build-host/p4_game_package/tests/test_p4_game_package"
+    if parser_test.is_file():
         parsed = subprocess.run(
-            [python_match.group(1), str(fat_parser), str(game_image),
-             "--wl-layer", "enabled"], cwd=temporary, check=False,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+            [str(parser_test),
+             str(build / "game-storage-seed/MAZE.P4G"),
+             str(build / "game-storage-seed/INVADERS.P4G")],
+            cwd=ROOT, check=False, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         require(parsed.returncode == 0,
-                f"cannot parse game-data image: {parsed.stderr.strip()}")
-        extracted_root = pathlib.Path(temporary)
-        extracted_wads = list(extracted_root.rglob("DOOM1.WAD"))
-        extracted_readmes = list(extracted_root.rglob("README.TXT"))
-        require(len(extracted_wads) == 1 and len(extracted_readmes) == 1,
-                "generated FAT image has unexpected root files")
-        require(extracted_wads[0].parent.name == "P4 GAMES",
-                "generated FAT image has the wrong volume label")
-        require(extracted_wads[0].stat().st_size == EXPECTED_WAD_BYTES and
-                sha256(extracted_wads[0]) == EXPECTED_WAD_SHA256,
-                "generated FAT image contains the wrong WAD")
-        require(extracted_readmes[0].read_bytes() ==
-                (APP / "game-storage/README.TXT").read_bytes(),
-                "generated FAT image contains the wrong README")
+                f"native package parser rejected real cartridges: "
+                f"{parsed.stderr.strip()}")
 
-    compiler = pathlib.Path(str(project.get("c_compiler")))
-    nm = compiler.with_name(compiler.name.removesuffix("gcc") + "nm")
-    require(nm.is_file(), f"missing pinned nm tool: {nm}")
-    symbols_result = subprocess.run(
-        [str(nm), "-g", str(elf)], check=False,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+    game_image = build / "game_data.bin"
+    require(game_image.is_file() and
+            game_image.stat().st_size == GAME_DATA_BYTES,
+            "generated game-data image has wrong size")
+    game_image_bytes = game_image.read_bytes()
+    require(int.from_bytes(game_image_bytes[4096 + 11:4096 + 13],
+                           "little") == 512,
+            "generated FAT uses the wrong logical sector size")
+    normalized = subprocess.run(
+        [sys.executable, str(ROOT / "scripts/normalize-game-storage-image.py"),
+         str(game_image), "--check"], cwd=ROOT, check=False, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
-    require(symbols_result.returncode == 0, "cannot inspect ELF symbols")
+    require(normalized.returncode == 0,
+            f"game-data image is not normalized: {normalized.stderr.strip()}")
+    fat_parser = (
+        pathlib.Path(str(project["idf_path"])) /
+        "components/fatfs/fatfsparse.py"
+    )
+    cmake_cache = (build / "CMakeCache.txt").read_text(encoding="utf-8")
+    python_match = re.search(r"(?m)^PYTHON:[^=]+=(.+)$", cmake_cache)
+    require(python_match is not None, "build does not record pinned Python")
+    idf_python = python_match.group(1)
+    with tempfile.TemporaryDirectory(prefix="p4-game-data-") as temporary:
+        extracted = subprocess.run(
+            [idf_python, str(fat_parser), str(game_image),
+             "--wl-layer", "enabled"],
+            cwd=temporary, check=False, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        require(extracted.returncode == 0,
+                f"cannot parse game-data image: {extracted.stderr.strip()}")
+        root = pathlib.Path(temporary)
+        volume_roots = [path for path in root.rglob("P4 GAMES") if path.is_dir()]
+        require(len(volume_roots) == 1, "generated FAT has wrong volume label")
+        volume = volume_roots[0]
+        require(sorted(item.name for item in volume.iterdir()) ==
+                ["DOOM1.WAD", "INVADERS.P4G", "MAZE.P4G", "README.TXT"],
+                "generated FAT root contents differ")
+        require((volume / "DOOM1.WAD").stat().st_size == WAD_BYTES and
+                sha256(volume / "DOOM1.WAD") == WAD_SHA256,
+                "generated FAT contains wrong Doom WAD")
+        require((volume / "README.TXT").read_bytes() ==
+                (APP / "game-storage/README.TXT").read_bytes(),
+                "generated FAT README differs")
+        for manifest in manifests:
+            name = manifest["package_file"]
+            require((volume / name).read_bytes() ==
+                    (build / "game-storage-seed" / name).read_bytes(),
+                    f"generated FAT contains wrong {name}")
+
+    compiler = pathlib.Path(str(project["c_compiler"]))
+    nm = compiler.with_name(compiler.name.removesuffix("gcc") + "nm")
+    symbols_result = subprocess.run(
+        [str(nm), "-g", str(app_elf)], check=False, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    require(symbols_result.returncode == 0, "cannot inspect app ELF symbols")
     symbols = symbols_result.stdout
     for symbol in (
-        "app_main", "console_os_launch_doom", "console_shell_init",
-        "console_shell_handle_touch", "doomgeneric_Tick",
-        "doom_music_player_mix", "platform_audio_factory_start",
-        "p4_game_instance_start", "p4_game_input_mapper_update",
-        "p4_game_platform_audio_open", "p4_maze_chase_game",
-        "p4_space_invaders_game", "p4_generated_game_by_launcher_id",
-        "p4_generated_game_folders",
-        "platform_game_storage_init", "platform_game_storage_lock_for_game",
-        "platform_game_storage_list_root",
-        "platform_game_storage_remove_root_file",
+        "app_main", "console_os_launch_doom", "platform_game_catalog_scan",
+        "platform_game_loader_run", "p4_game_package_parse",
+        "p4_os_update_package_parse", "platform_os_update_install",
+        "esp_elf_relocate", "esp_ota_set_boot_partition",
+        "platform_game_storage_stream_root_file_exclusive",
         "tinyusb_driver_install", "tinyusb_msc_new_storage_spiflash",
-        "_binary_doom_shareware_wad_start",
     ):
         require(f" {symbol}\n" in symbols, f"missing ELF symbol {symbol}")
     for symbol in (
-        "usb_host_install", "hid_host_install", "platform_usb_host_start",
-        "platform_gamepad_usb_start", "esp_vfs_fat_sdmmc_mount",
-        "esp_codec_dev_new", "es8311_codec_new",
+        "p4_maze_chase_game", "p4_space_invaders_game",
+        "_binary_doom_shareware_wad_start", "usb_host_install",
+        "hid_host_install", "platform_usb_host_start",
+        "esp_vfs_fat_sdmmc_mount", "es8311_codec_new",
     ):
-        require(f" {symbol}\n" not in symbols, f"forbidden ELF symbol {symbol}")
+        require(f" {symbol}\n" not in symbols,
+                f"forbidden ELF symbol {symbol}")
+
+    shell_main = (APP / "main/console_os_main.c").read_text(encoding="utf-8")
+    require("CONSOLE_PAGE_GAMES" in shell_main and
+            "native_format=p4-native-elf-v1" in shell_main and
+            "platform_game_loader_run" in shell_main,
+            "Game Manager/cartridge route is absent from Console OS")
+    require_order(shell_main, [
+        "result = present(&shell);",
+        "platform_display_set_brightness(CONSOLE_BACKLIGHT_PERCENT)",
+        "platform_os_update_mark_running_valid(",
+    ], "first-frame OTA confirmation")
+    update_source = (
+        ROOT / "components/platform_os_update/src/platform_os_update.c"
+    ).read_text(encoding="utf-8")
+    require_order(update_source, [
+        "platform_game_storage_stream_root_file_exclusive(",
+        "esp_ota_end(stream.handle)",
+        "esp_ota_set_boot_partition(target)",
+    ], "OTA commit")
+    storage_source = (
+        ROOT / "components/platform_game_storage/src/platform_game_storage.c"
+    ).read_text(encoding="utf-8")
+    require_order(storage_source[
+        storage_source.index(
+            "esp_err_t platform_game_storage_stream_root_file_exclusive("):
+        storage_source.index(
+            "esp_err_t platform_game_storage_lock_for_game(")
+    ], [
+        "s_maintenance = true",
+        "tinyusb_driver_uninstall()",
+        "fopen(path, \"rb\")",
+        "install_usb_driver()",
+        "s_maintenance = false",
+    ], "exclusive update stream")
 
     report = {
-        "result": "console-os-build-verified-not-hardware-tested",
+        "result": "console-os-game-manager-build-verified-not-hardware-tested",
         "target": "esp32p4-revision-1.x",
         "idf": "5.5.3",
-        "binary": {
-            "path": str(binary.relative_to(ROOT)),
-            "bytes": binary.stat().st_size,
-            "sha256": sha256(binary),
+        "app": {
+            "path": str(app_binary.relative_to(ROOT)),
+            "bytes": app_binary.stat().st_size,
+            "sha256": sha256(app_binary),
+            "smallest_ota_free_bytes": OTA0_BYTES - app_binary.stat().st_size,
         },
+        "os_update": os_update,
+        "game_packages": package_reports,
         "game_data": {
             "path": str(game_image.relative_to(ROOT)),
-            "bytes": game_image.stat().st_size,
+            "bytes": GAME_DATA_BYTES,
             "sha256": sha256(game_image),
-        },
-        "elf": {
-            "path": str(elf.relative_to(ROOT)),
-            "bytes": elf.stat().st_size,
-            "sha256": sha256(elf),
+            "offset": hex(GAME_DATA_OFFSET),
         },
         "hardware_execution_authorized": False,
-        "native_game_format": "p4-native-static-v1",
-        "native_game_api": 1,
     }
     print(json.dumps(report, indent=2, sort_keys=True))
 

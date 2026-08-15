@@ -1,0 +1,120 @@
+// SPDX-License-Identifier: MIT
+
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include "p4/cartridge.h"
+#include "p4/game.h"
+
+#ifndef P4_GAME_ENTRY_SYMBOL
+#error "P4_GAME_ENTRY_SYMBOL must name one p4_game_descriptor_t"
+#endif
+
+extern const p4_game_descriptor_t P4_GAME_ENTRY_SYMBOL;
+
+static bool host_play_tone(void *opaque, const p4_tone_t *tone)
+{
+    p4_cartridge_host_v1_t *const host = opaque;
+    return host != NULL && host->play_tone != NULL &&
+        host->play_tone(host->context, tone);
+}
+
+static void host_stop_audio(void *opaque)
+{
+    p4_cartridge_host_v1_t *const host = opaque;
+    if (host != NULL && host->stop_audio != NULL) {
+        host->stop_audio(host->context);
+    }
+}
+
+static bool host_valid(const p4_cartridge_host_v1_t *host)
+{
+    return host != NULL && host->magic == P4_CARTRIDGE_HOST_MAGIC &&
+        host->api_version == P4_CARTRIDGE_HOST_API_VERSION &&
+        host->struct_bytes >= sizeof(*host) &&
+        host->expected_game_id != NULL && host->surface.pixels != NULL &&
+        host->surface.width == P4_GAME_SURFACE_WIDTH &&
+        host->surface.height == P4_GAME_SURFACE_HEIGHT &&
+        host->surface.stride_pixels >= P4_GAME_SURFACE_WIDTH &&
+        host->poll_frame != NULL && host->present != NULL;
+}
+
+int app_main(int argc, char *argv[])
+{
+    if (argc != 1 || argv == NULL || argv[0] == NULL) {
+        return P4_CARTRIDGE_EXIT_BAD_HOST;
+    }
+    p4_cartridge_host_v1_t *const host =
+        (p4_cartridge_host_v1_t *)(void *)argv[0];
+    if (!host_valid(host)) {
+        return P4_CARTRIDGE_EXIT_BAD_HOST;
+    }
+
+    const p4_game_descriptor_t *const game = &P4_GAME_ENTRY_SYMBOL;
+    if (!p4_game_descriptor_valid(game) ||
+        strcmp(game->id, host->expected_game_id) != 0) {
+        return P4_CARTRIDGE_EXIT_ID_MISMATCH;
+    }
+    if ((game->required_capabilities &
+         ~host->available_capabilities) != 0U) {
+        return P4_CARTRIDGE_EXIT_CAPABILITY_MISSING;
+    }
+
+    void *const state = calloc(1U, game->state_bytes);
+    if (state == NULL) {
+        return P4_CARTRIDGE_EXIT_NO_MEMORY;
+    }
+    const p4_game_services_t services = {
+        .available_capabilities = host->available_capabilities,
+        .audio_context = host,
+        .play_tone = host->play_tone == NULL ? NULL : host_play_tone,
+        .submit_pcm16_stereo = NULL,
+        .stop_audio = host->stop_audio == NULL ? NULL : host_stop_audio,
+    };
+    p4_game_instance_t instance = {0};
+    if (!p4_game_instance_start(
+            &instance, game, &services, state, game->state_bytes)) {
+        free(state);
+        return P4_CARTRIDGE_EXIT_START_FAILED;
+    }
+
+    p4_cartridge_exit_t exit_code = P4_CARTRIDGE_EXIT_OK;
+    p4_game_result_t result = P4_GAME_CONTINUE;
+    if (!p4_game_instance_render(&instance, &host->surface) ||
+        !host->present(host->context)) {
+        exit_code = P4_CARTRIDGE_EXIT_RENDER_FAILED;
+        result = P4_GAME_ERROR;
+    }
+
+    while (result == P4_GAME_CONTINUE) {
+        p4_game_input_t input;
+        uint32_t elapsed_ms = 0U;
+        if (!host->poll_frame(host->context, &input, &elapsed_ms)) {
+            exit_code = P4_CARTRIDGE_EXIT_HOST_FAILED;
+            result = P4_GAME_ERROR;
+            break;
+        }
+        result = p4_game_instance_update(&instance, &input, elapsed_ms);
+        if (result == P4_GAME_ERROR) {
+            exit_code = P4_CARTRIDGE_EXIT_GAME_FAILED;
+            break;
+        }
+        if (result == P4_GAME_CONTINUE &&
+            (!p4_game_instance_render(&instance, &host->surface) ||
+             !host->present(host->context))) {
+            exit_code = P4_CARTRIDGE_EXIT_RENDER_FAILED;
+            result = P4_GAME_ERROR;
+            break;
+        }
+    }
+
+    p4_game_instance_stop(&instance);
+    free(state);
+    if (host->finished != NULL) {
+        host->finished(host->context, result);
+    }
+    return exit_code;
+}

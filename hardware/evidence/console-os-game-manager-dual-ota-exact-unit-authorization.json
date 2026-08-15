@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "active": true,
+  "recorded_at": "2026-08-14T23:00:00-0700",
+  "scope": "exact-unit-console-os-game-manager-dual-ota-migration-v1",
+  "operator_direction": [
+    "flash away",
+    "i want a full game manager",
+    "set a goal and work on this",
+    "we dont need to keep maing backups we just need to write hte enwe os flash it and test it"
+  ],
+  "device_binding": {
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432,
+    "product": "Elecrow CrowPanel Advanced 10.1 in DHE04310D"
+  },
+  "existing_complete_backup": {
+    "manifest": "hardware/backups/manifest.json",
+    "kind": "pre-e6-complete-live-flash",
+    "bytes": 16777216,
+    "sha256": "c567d0a4d960156b59216e4c424d78856e7b8dbe52e05810d47a69a3e58f4217",
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0"
+  },
+  "execution_contract": {
+    "new_backup_created": false,
+    "j1_role": "one retained exclusive UART for identity, loader, readback, launch, and serial acceptance",
+    "j16_role": "disconnected or cleanly ejected during migration; USB mass storage after accepted boot",
+    "committed_clean_source_required": true,
+    "locked_build_verifier_required": true,
+    "p4update_build_id_must_equal_source_commit": true,
+    "write_order": [
+      "bootloader",
+      "ota_0",
+      "partition_table",
+      "ota_data"
+    ],
+    "write_ranges": [
+      "0x2000..0x7fff",
+      "0x8000..0x8fff",
+      "0x10000..0x11fff",
+      "0x20000..0x38ffff"
+    ],
+    "never_write_range": "game_data 0x710000..0xffffff",
+    "preserve_ranges_sampled_before_and_after": [
+      "NVS and PHY 0x9000..0xffff",
+      "P4 GAMES first sector 0x710000..0x710fff",
+      "OTA1 first and last sectors"
+    ],
+    "exact_readback_before_launch": true,
+    "in_memory_predecessor_rollback_on_ordinary_failure": true,
+    "durable_target_resume_after_process_or_host_interruption": true,
+    "retained_uart_acceptance_required": true
+  },
+  "predecessor_binding": {
+    "partition_table_span_sha256": "a10833df35f52d59601ef03d7250330c59b65a348597aeb603085b6e2d94b88d",
+    "application_payload_bytes": 5070112,
+    "application_payload_sha256": "ac187a9906109c8b3a47cff91a222e33fb2e36285abeae7f15aa465535604693",
+    "application_span_bytes": 7340032,
+    "application_span_sha256": "59a158418e3bb26a44e0c1126f371b73c186d2fcfaba9623b4ed04fd47291861"
+  },
+  "authorization_boundaries": {
+    "exact_one_time_migration_only": true,
+    "game_data_reformat_authorized": false,
+    "game_data_firmware_seed_write_authorized": false,
+    "new_flash_backup_authorized": false,
+    "usb_host_role_authorized": false,
+    "passive_otg_adapter_authorized": false,
+    "commercial_wad_redistribution_authorized": false
+  },
+  "required_post_install_acceptance": [
+    "retained J1 serial proves storage, catalog, display, touch, first frame, and OTA health",
+    "J16 mounts as P4 GAMES after accepted boot",
+    "MAZE.P4G and INVADERS.P4G copy through J16 and appear as launchers",
+    "both stored cartridges launch and return to the Program Manager",
+    "P4UPDATE.P4U installs to the inactive slot and the new boot is accepted",
+    "existing Doom WAD and user files remain on P4 GAMES"
+  ]
+}

@@ -43,6 +43,11 @@ static const console_app_descriptor_t s_apps[] = {
      .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
          CONSOLE_CAPABILITY_STORAGE,
      .page = CONSOLE_PAGE_FILES, .enabled = true},
+    {.id = 7U, .title = "GAME MANAGER", .subtitle = "USB GAMES + OS",
+     .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0x5FEA),
+     .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
+         CONSOLE_CAPABILITY_STORAGE,
+     .page = CONSOLE_PAGE_GAMES, .enabled = true},
 };
 
 static bool select_page(console_shell_t *shell, const char *name)
@@ -73,6 +78,7 @@ static bool select_page(console_shell_t *shell, const char *name)
         case CONSOLE_PAGE_TOUCH: expected = "touch"; break;
         case CONSOLE_PAGE_SYSTEM: expected = "system"; break;
         case CONSOLE_PAGE_FILES: expected = "files"; break;
+        case CONSOLE_PAGE_GAMES: expected = "manager"; break;
         case CONSOLE_PAGE_AUDIO: expected = "audio"; break;
         default: break;
         }
@@ -125,7 +131,7 @@ int main(int argc, char **argv)
     if (argc != 3) {
         fprintf(stderr,
                 "usage: %s home|all|games|arcade|system-folder|"
-                "colors|touch|system|files|audio output.ppm\n",
+                "colors|touch|system|files|manager|audio output.ppm\n",
                 argv[0]);
         return EXIT_FAILURE;
     }
@@ -167,6 +173,26 @@ int main(int argc, char **argv)
             .available = true,
         };
         if (!console_shell_set_file_listing(&shell, &files)) {
+            return EXIT_FAILURE;
+        }
+    }
+    if (shell.page == CONSOLE_PAGE_GAMES) {
+        const console_shell_file_listing_t games = {
+            .entries = {
+                {.source_index = 0U, .label = "MAZE CHASE 1.0.0",
+                 .size_kib = 9U, .removable = true},
+                {.source_index = 1U, .label = "SPACE INVADERS 1.0.0",
+                 .size_kib = 9U, .removable = true},
+                {.source_index = UINT32_MAX, .label = "OS 0.2.0",
+                 .size_kib = 889U, .installable = true},
+            },
+            .entry_count = 3U,
+            .total_visible_entries = 3U,
+            .storage_generation = 4U,
+            .revision = 1U,
+            .available = true,
+        };
+        if (!console_shell_set_file_listing(&shell, &games)) {
             return EXIT_FAILURE;
         }
     }

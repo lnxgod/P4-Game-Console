@@ -4,7 +4,7 @@ WAD ?= local-data/doom/doom1.wad
 DOOM_FRAMES ?= 8
 DOOMGENERIC_SOURCE ?=
 
-.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf platform-audio-host platform-audio-factory-host platform-touch-host platform-game-storage-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host p4-game-api-host p4-game-platform-host maze-chase-host space-invaders-host game-registry-check game-sdk-host console-os-idf gamepad-host gamepad-idf
+.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf platform-audio-host platform-audio-factory-host platform-touch-host platform-game-storage-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host p4-game-api-host p4-game-package-host p4-os-update-package-host p4-game-platform-host maze-chase-host space-invaders-host game-registry-check game-sdk-host console-os-idf gamepad-host gamepad-idf
 
 setup:
 	./scripts/install-esp-idf.sh
@@ -101,6 +101,16 @@ p4-game-api-host:
 	cmake --build build-host/p4_game_api
 	ctest --test-dir build-host/p4_game_api --output-on-failure
 
+p4-game-package-host:
+	cmake -S components/p4_game_package -B build-host/p4_game_package -G Ninja
+	cmake --build build-host/p4_game_package
+	ctest --test-dir build-host/p4_game_package --output-on-failure
+
+p4-os-update-package-host:
+	cmake -S components/p4_os_update_package -B build-host/p4_os_update_package -G Ninja
+	cmake --build build-host/p4_os_update_package
+	ctest --test-dir build-host/p4_os_update_package --output-on-failure
+
 p4-game-platform-host:
 	cmake -S components/p4_game_platform -B build-host/p4_game_platform -G Ninja
 	cmake --build build-host/p4_game_platform
@@ -121,11 +131,13 @@ game-registry-check:
 	python3 scripts/tests/test-game-registry.py
 	python3 scripts/tests/test-new-game.py
 
-game-sdk-host: p4-game-api-host p4-game-platform-host maze-chase-host space-invaders-host game-registry-check
+game-sdk-host: p4-game-api-host p4-game-package-host p4-os-update-package-host p4-game-platform-host maze-chase-host space-invaders-host game-registry-check
 
 console-os-idf: console-shell-host platform-game-storage-host game-sdk-host
 	./scripts/build.sh console_os
 	python3 ./scripts/verify-console-os.py apps/console_os/build
+	python3 ./scripts/tests/test-console-os-game-manager-runtime-capture.py
+	python3 ./scripts/tests/test-console-os-game-manager-migrate.py
 
 gamepad-host:
 	cmake -S apps/gamepad_diag/tests -B build-host/gamepad_diag_arm -G Ninja

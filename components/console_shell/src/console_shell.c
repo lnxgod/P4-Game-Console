@@ -473,6 +473,19 @@ static bool file_selected_is_removable(const console_shell_t *shell)
         shell->files.entries[shell->file_selected_index].removable;
 }
 
+static bool file_selected_is_installable(const console_shell_t *shell)
+{
+    return shell != NULL && shell->files.available &&
+        shell->file_selected_index < shell->files.entry_count &&
+        shell->files.entries[shell->file_selected_index].installable;
+}
+
+static bool file_selected_is_actionable(const console_shell_t *shell)
+{
+    return file_selected_is_removable(shell) ||
+        file_selected_is_installable(shell);
+}
+
 static void normalize_file_selection(console_shell_t *shell)
 {
     if (shell->files.entry_count == 0U) {
@@ -488,7 +501,7 @@ static void normalize_file_selection(console_shell_t *shell)
         CONSOLE_SHELL_FILE_VISIBLE_ROWS;
     shell->file_first_visible =
         page * CONSOLE_SHELL_FILE_VISIBLE_ROWS;
-    if (!file_selected_is_removable(shell)) {
+    if (!file_selected_is_actionable(shell)) {
         shell->file_delete_confirm = false;
     }
 }
@@ -535,7 +548,8 @@ static size_t control_at(const console_shell_t *shell,
                           BACK_WIDTH, BACK_HEIGHT)) {
             return BACK_CONTROL;
         }
-        if (shell->page != CONSOLE_PAGE_FILES) {
+        if (shell->page != CONSOLE_PAGE_FILES &&
+            shell->page != CONSOLE_PAGE_GAMES) {
             return SIZE_MAX;
         }
         if (shell->file_delete_confirm) {
@@ -578,7 +592,7 @@ static size_t control_at(const console_shell_t *shell,
                           FILE_REFRESH_WIDTH, FILE_BUTTON_HEIGHT)) {
             return FILE_REFRESH_CONTROL;
         }
-        if (file_selected_is_removable(shell) &&
+        if (file_selected_is_actionable(shell) &&
             point_in_rect(gui_x, gui_y,
                           FILE_DELETE_LEFT, FILE_BUTTON_TOP,
                           FILE_DELETE_WIDTH, FILE_BUTTON_HEIGHT)) {
@@ -838,7 +852,8 @@ console_shell_action_t console_shell_handle_touch(
             console_shell_show_home(shell);
             return page_changed(0U);
         }
-        if (shell->page == CONSOLE_PAGE_FILES) {
+        if (shell->page == CONSOLE_PAGE_FILES ||
+            shell->page == CONSOLE_PAGE_GAMES) {
             shell->file_notice = CONSOLE_FILE_NOTICE_NONE;
             if (released_control >= FILE_ROW_CONTROL_BASE &&
                 released_control < FILE_ROW_CONTROL_BASE +
@@ -872,14 +887,16 @@ console_shell_action_t console_shell_handle_touch(
             if (released_control == FILE_REFRESH_CONTROL) {
                 shell->file_delete_confirm = false;
                 const console_shell_action_t action = {
-                    .type = CONSOLE_ACTION_FILE_REFRESH,
+                    .type = shell->page == CONSOLE_PAGE_GAMES
+                        ? CONSOLE_ACTION_GAME_REFRESH
+                        : CONSOLE_ACTION_FILE_REFRESH,
                     .app_id = shell->active_app_id,
                     .file_source_index = UINT32_MAX,
                 };
                 return action;
             }
             if (released_control == FILE_DELETE_CONTROL &&
-                file_selected_is_removable(shell)) {
+                file_selected_is_actionable(shell)) {
                 shell->file_delete_confirm = true;
                 return page_changed(shell->active_app_id);
             }
@@ -888,10 +905,14 @@ console_shell_action_t console_shell_handle_touch(
                 return page_changed(shell->active_app_id);
             }
             if (released_control == FILE_CONFIRM_CONTROL &&
-                file_selected_is_removable(shell)) {
+                file_selected_is_actionable(shell)) {
                 shell->file_delete_confirm = false;
                 const console_shell_action_t action = {
-                    .type = CONSOLE_ACTION_FILE_DELETE,
+                    .type = shell->page == CONSOLE_PAGE_GAMES
+                        ? (file_selected_is_installable(shell)
+                            ? CONSOLE_ACTION_OS_UPDATE_INSTALL
+                            : CONSOLE_ACTION_GAME_REMOVE)
+                        : CONSOLE_ACTION_FILE_DELETE,
                     .app_id = shell->active_app_id,
                     .file_source_index = shell->files.entries[
                         shell->file_selected_index].source_index,
@@ -947,7 +968,8 @@ console_shell_action_t console_shell_handle_touch(
         }
         shell->page = app->page;
         shell->active_app_id = app->id;
-        if (app->page == CONSOLE_PAGE_FILES) {
+        if (app->page == CONSOLE_PAGE_FILES ||
+            app->page == CONSOLE_PAGE_GAMES) {
             shell->file_delete_confirm = false;
             shell->file_notice = CONSOLE_FILE_NOTICE_NONE;
             normalize_file_selection(shell);
@@ -1045,6 +1067,7 @@ void console_shell_set_runtime_info(
     shell->runtime = *runtime;
     if (shell->page == CONSOLE_PAGE_SYSTEM ||
         shell->page == CONSOLE_PAGE_FILES ||
+        shell->page == CONSOLE_PAGE_GAMES ||
         shell->page == CONSOLE_PAGE_AUDIO ||
         (shell->page == CONSOLE_PAGE_HOME && storage_changed)) {
         shell->dirty = true;
@@ -1066,13 +1089,16 @@ bool console_shell_set_file_listing(
             entry->label, CONSOLE_SHELL_FILE_LABEL_MAX_BYTES);
         if (label_length == 0U ||
             label_length >= CONSOLE_SHELL_FILE_LABEL_MAX_BYTES ||
-            (entry->is_directory && entry->removable)) {
+            (entry->is_directory &&
+             (entry->removable || entry->installable)) ||
+            (entry->removable && entry->installable)) {
             return false;
         }
     }
     shell->files = *listing;
     normalize_file_selection(shell);
-    if (shell->page == CONSOLE_PAGE_FILES) {
+    if (shell->page == CONSOLE_PAGE_FILES ||
+        shell->page == CONSOLE_PAGE_GAMES) {
         shell->dirty = true;
     }
     return true;
@@ -1083,14 +1109,15 @@ void console_shell_set_file_notice(
     console_shell_file_notice_t notice)
 {
     if (shell == NULL || notice < CONSOLE_FILE_NOTICE_NONE ||
-        notice > CONSOLE_FILE_NOTICE_ERROR) {
+        notice > CONSOLE_FILE_NOTICE_UPDATING) {
         return;
     }
     if (shell->file_notice == notice) {
         return;
     }
     shell->file_notice = notice;
-    if (shell->page == CONSOLE_PAGE_FILES) {
+    if (shell->page == CONSOLE_PAGE_FILES ||
+        shell->page == CONSOLE_PAGE_GAMES) {
         shell->dirty = true;
     }
 }
@@ -1696,10 +1723,13 @@ static void draw_file_listing_status(const console_shell_t *shell,
         return;
     }
     if (shell->files.entry_count == 0U) {
-        draw_text(pixels, stride, 12, 83, "NO VISIBLE FILES",
+        const bool games = shell->page == CONSOLE_PAGE_GAMES;
+        draw_text(pixels, stride, 12, 83,
+                  games ? "NO GAME PACKAGES" : "NO VISIBLE FILES",
                   COLOR_TITLE, 1U, 16U);
         draw_text(pixels, stride, 12, 101,
-                  "COPY FILES WITH J16 USB",
+                  games ? "COPY .P4G WITH J16 USB"
+                        : "COPY FILES WITH J16 USB",
                   COLOR_DARK, 1U, 24U);
     }
 }
@@ -1707,10 +1737,15 @@ static void draw_file_listing_status(const console_shell_t *shell,
 static void draw_files(console_shell_t *shell,
                        uint16_t *pixels, size_t stride)
 {
+    const bool games = shell->page == CONSOLE_PAGE_GAMES;
     fill_rect(pixels, stride, 0, 32, CONSOLE_SHELL_WIDTH,
               CONSOLE_SHELL_HEIGHT - 32, COLOR_FACE);
-    draw_text(pixels, stride, 12, 37, "NAME", COLOR_DARK, 1U, 4U);
-    draw_text(pixels, stride, 248, 37, "SIZE KIB", COLOR_DARK, 1U, 8U);
+    draw_text(pixels, stride, 12, 37,
+              games ? "GAME / UPDATE" : "NAME",
+              COLOR_DARK, 1U, 13U);
+    draw_text(pixels, stride, 248, 37,
+              games ? "KIB" : "SIZE KIB",
+              COLOR_DARK, 1U, 8U);
     fill_rect(pixels, stride, FILE_LIST_LEFT, FILE_LIST_TOP,
               FILE_LIST_WIDTH,
               FILE_ROW_HEIGHT * CONSOLE_SHELL_FILE_VISIBLE_ROWS,
@@ -1746,7 +1781,8 @@ static void draw_files(console_shell_t *shell,
                 bevel_rect(pixels, stride, 13, top + 4, 12, 12,
                            COLOR_FACE, false);
                 fill_rect(pixels, stride, 16, top + 7, 6, 1,
-                          entry->removable ? COLOR_CYAN : COLOR_SHADOW);
+                          entry->installable ? COLOR_GREEN :
+                          (entry->removable ? COLOR_CYAN : COLOR_SHADOW));
                 fill_rect(pixels, stride, 16, top + 10, 6, 1,
                           COLOR_DARK);
             }
@@ -1774,20 +1810,28 @@ static void draw_files(console_shell_t *shell,
     draw_u32(pixels, stride, 214, 153,
              shell->files.storage_generation, COLOR_BLACK);
 
-    const char *notice = "USB ADDS / FILE MANAGER REMOVES";
+    const char *notice = games
+        ? "NATIVE CODE - TRUST PACKAGES"
+        : "USB ADDS / FILE MANAGER REMOVES";
     uint16_t notice_color = COLOR_DARK;
-    if (shell->file_delete_confirm && file_selected_is_removable(shell)) {
-        notice = "CONFIRM DELETE SELECTED FILE";
+    if (shell->file_delete_confirm && file_selected_is_actionable(shell)) {
+        notice = file_selected_is_installable(shell)
+            ? "CONFIRM INSTALL NEW CONSOLE OS"
+            : (games ? "CONFIRM REMOVE GAME PACKAGE"
+                     : "CONFIRM DELETE SELECTED FILE");
         notice_color = COLOR_RED;
     } else if (shell->file_notice == CONSOLE_FILE_NOTICE_REFRESHED) {
         notice = "FILE LIST REFRESHED";
         notice_color = COLOR_GREEN;
     } else if (shell->file_notice == CONSOLE_FILE_NOTICE_DELETED) {
-        notice = "FILE DELETED";
+        notice = games ? "GAME PACKAGE REMOVED" : "FILE DELETED";
         notice_color = COLOR_GREEN;
     } else if (shell->file_notice == CONSOLE_FILE_NOTICE_ERROR) {
         notice = "OPERATION FAILED / CHECK USB";
         notice_color = COLOR_RED;
+    } else if (shell->file_notice == CONSOLE_FILE_NOTICE_UPDATING) {
+        notice = "WRITING INACTIVE OS SLOT...";
+        notice_color = COLOR_YELLOW;
     } else if (shell->files.omitted_entries > 0U) {
         notice = "MORE FILES NOT SHOWN";
         notice_color = COLOR_YELLOW;
@@ -1806,7 +1850,10 @@ static void draw_files(console_shell_t *shell,
                          FILE_CANCEL_CONTROL, "CANCEL", true);
         draw_file_button(shell, pixels, stride,
                          FILE_DELETE_LEFT, FILE_DELETE_WIDTH,
-                         FILE_CONFIRM_CONTROL, "DELETE", true);
+                         FILE_CONFIRM_CONTROL,
+                         file_selected_is_installable(shell)
+                            ? "INSTALL" : (games ? "REMOVE" : "DELETE"),
+                         true);
     } else {
         draw_file_button(shell, pixels, stride,
                          FILE_PREV_LEFT, FILE_PREV_WIDTH,
@@ -1821,8 +1868,10 @@ static void draw_files(console_shell_t *shell,
                          FILE_REFRESH_CONTROL, "REFRESH", true);
         draw_file_button(shell, pixels, stride,
                          FILE_DELETE_LEFT, FILE_DELETE_WIDTH,
-                         FILE_DELETE_CONTROL, "DELETE",
-                         file_selected_is_removable(shell));
+                         FILE_DELETE_CONTROL,
+                         file_selected_is_installable(shell)
+                            ? "INSTALL" : (games ? "REMOVE" : "DELETE"),
+                         file_selected_is_actionable(shell));
     }
 }
 
@@ -1876,6 +1925,9 @@ bool console_shell_render_rgb565(console_shell_t *shell,
             draw_system(shell, pixels, stride_pixels);
             break;
         case CONSOLE_PAGE_FILES:
+            draw_files(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_GAMES:
             draw_files(shell, pixels, stride_pixels);
             break;
         case CONSOLE_PAGE_AUDIO:

@@ -15,6 +15,7 @@ if(COMMAND idf_component_register)
             esp_tinyusb
             fatfs
             freertos
+            heap
             mbedtls
             wear_levelling
     )

@@ -4,14 +4,15 @@ This repository is the experimental firmware platform for a future ESP32-P4 badg
 
 Console OS now has a versioned native C game API for RGB565 drawing, normalized
 touch controls, bounded tone audio, and return-to-launcher lifecycle. Games are
-manifest-discovered RISC-V components linked into the ESP-IDF ELF/BIN image;
-they are not UF2 files. The first clean-room sample is Maze Chase. See
+bounded `.P4G` RISC-V cartridges loaded from the persistent `P4 GAMES` volume;
+they are not UF2 files and do not require an OS reflash. Maze Chase and Space
+Invaders are clean-room samples. See
 [the P4 Game SDK](docs/GAME_SDK.md).
 
-The Program Manager shell also exposes the persistent `P4 GAMES` FAT volume
-to a laptop through J16 USB device mode. Its File Manager app can browse the
-root after a clean host eject and remove a regular file with two-step
-confirmation; it refuses access while USB or a running game owns storage.
+The Program Manager shell exposes that FAT volume to a laptop through J16 USB
+device mode. Game Manager discovers/removes cartridges and installs verified
+`P4UPDATE.P4U` images into the inactive OTA slot; File Manager handles other
+root files. Both refuse access while USB owns storage.
 
 ## Current target
 

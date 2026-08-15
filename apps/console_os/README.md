@@ -1,18 +1,19 @@
 # P4 Console OS
 
-This is the first FreeRTOS-native console shell for the Elecrow ESP32-P4
-10.1-inch tablet. It is a monolithic ESP-IDF firmware with a small static app
-registry, not a desktop process loader. The launcher and built-in pages share
-the reviewed platform display and touch services.
+This is the FreeRTOS-native console shell for the Elecrow ESP32-P4 10.1-inch
+tablet. Fixed system apps and Doom live in the OS image. Other Game API apps
+are validated `.P4G` cartridges loaded from persistent storage, so adding or
+removing a game does not require an OS reflash.
 
 The home screen keeps the accepted Program Manager-style interface and
-organizes the static registry as:
+organizes built-ins plus the current storage catalog as:
 
 - All Programs (every entry in one scrollable view)
 - Games
   - Action: Doom (exclusive foreground handoff)
-  - Arcade: Maze Chase and Space Invaders (reentrant Game API games)
-- System: Colors, Touch, System status, and Audio status
+  - Arcade: installed reentrant Game API cartridges
+- System: Colors, Touch, System status, Audio status, File Manager, and Game
+  Manager
 
 ## Laptop game storage
 
@@ -31,28 +32,32 @@ launching Doom. Doom launch stops the USB device, remounts the volume, and
 rehashes the WAD before taking a terminal game lease; USB cannot remount below
 the running engine.
 
-The full project image includes a reviewed FAT seed. After that first guarded
-partition-table install, use app-only firmware updates to preserve files.
-Flashing a full project image again intentionally restores the seed volume and
-overwrites laptop changes. Runtime code never auto-formats a damaged volume;
-the System page instead reports the repair state.
+The full project image can generate a reviewed FAT seed, but the one-time
+dual-OTA migration deliberately does not write `game_data`, preserving the
+live Doom file and other user data. Later OS releases are copied to J16 as
+`P4UPDATE.P4U` and installed from Game Manager into the inactive OTA slot.
+The consumed update package is removed before reboot when storage ownership
+is still available; otherwise it can be removed safely from Game Manager.
+Runtime code never auto-formats a damaged volume.
 
-The launcher is generated from validated `games/*/game.json` manifests. Its
+Seed cartridges are generated from validated `games/*/game.json` manifests.
+At runtime the launcher catalog comes from validated `.P4G` files. Its
 lightweight desktop view shows three columns by two rows, scrolls with vertical
 arrows or a one-finger swipe, and supports up to 32 apps. It derives at most
-two folder levels from validated manifest metadata; there is no heap-backed
-filesystem or dynamic executable loader. The skin is drawn with RGB565
-primitives and adds no launcher bitmap asset. Create a native starter without
-editing the launcher:
+two folder levels from validated package metadata. The skin is drawn with
+RGB565 primitives and adds no launcher bitmap asset. Create a native starter
+without editing the launcher:
 
 ```sh
 python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE
 make game-sdk-host
+make console-os-idf
 ```
 
-See `docs/GAME_SDK.md` for the API and executable-format explanation. Native
-games are RISC-V code statically linked into `p4_console_os.elf`; ESP-IDF emits
-the flashable `p4_console_os.bin`. This project does not use UF2.
+Copy the resulting cartridge from
+`build/game-storage-seed/` to `P4 GAMES` over J16 and eject. See
+`docs/GAME_SDK.md` for the API and package contract. This project does not use
+UF2.
 
 ## Doom and audio lifecycle
 
@@ -85,7 +90,10 @@ make game-sdk-host
 make console-os-idf
 ```
 
-The app metadata is build-only. A successful build is not permission to flash
-or a hardware acceptance result. This change needs a new guarded full-project
-install because the partition table changed; preserve the complete factory
-flash first and bind/authorize the exact artifacts before writing them.
+The first migration needs a guarded J1 write for the bootloader, partition
+table, OTA data, and OTA-0 image. It must not write `game_data`. After that,
+normal game and OS updates use J16.
+The exact-unit route is `scripts/console-os-game-manager-migrate.py`. It
+requires clean committed artifacts, reuses the existing complete backup,
+creates no new backup, and retains J1 through exact readback and startup
+acceptance.

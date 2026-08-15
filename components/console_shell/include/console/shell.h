@@ -47,6 +47,7 @@ typedef enum {
     CONSOLE_PAGE_TOUCH,
     CONSOLE_PAGE_SYSTEM,
     CONSOLE_PAGE_FILES,
+    CONSOLE_PAGE_GAMES,
     CONSOLE_PAGE_AUDIO,
 } console_page_t;
 
@@ -96,6 +97,7 @@ typedef struct {
     uint32_t size_kib;
     bool is_directory;
     bool removable;
+    bool installable;
 } console_shell_file_entry_t;
 
 typedef struct {
@@ -114,6 +116,7 @@ typedef enum {
     CONSOLE_FILE_NOTICE_REFRESHED,
     CONSOLE_FILE_NOTICE_DELETED,
     CONSOLE_FILE_NOTICE_ERROR,
+    CONSOLE_FILE_NOTICE_UPDATING,
 } console_shell_file_notice_t;
 
 typedef enum {
@@ -122,6 +125,9 @@ typedef enum {
     CONSOLE_ACTION_LAUNCH,
     CONSOLE_ACTION_FILE_REFRESH,
     CONSOLE_ACTION_FILE_DELETE,
+    CONSOLE_ACTION_GAME_REFRESH,
+    CONSOLE_ACTION_GAME_REMOVE,
+    CONSOLE_ACTION_OS_UPDATE_INSTALL,
 } console_action_type_t;
 
 typedef struct {
