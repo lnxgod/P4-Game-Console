@@ -210,22 +210,38 @@ Espressif's current high-speed hub implementation lacks a transaction
 translator, so full/low-speed devices behind a high-speed hub are not a
 reliable baseline. Test a controller directly before qualifying any hub.
 
-### USB device game-storage candidate
+### USB device game storage and File Manager
 
 J16's sink advertisement and inward VBUS path are appropriate for the opposite
 role: a laptop can be the USB host and power/enumerate the ESP32-P4 as a USB
-device. Console OS now has a build-only MSC candidate on that path, backed by
-an internal wear-levelled FAT partition. This does not authorize a flash and
-has not yet proved enumeration, host write/eject behavior, persistence, or
-recovery on the attached board. J1 remains the CH340 serial/programming path.
+device. On 2026-08-14 the exact bound tablet enumerated Console OS as a writable
+9,289,728-byte FAT16 MSC volume with 512-byte sectors. Laptop copy/remove,
+exact Doom identity, FAT verification, repair of a pre-existing orphan-cluster
+condition, a second clean mutation cycle, and clean eject passed. The app-only
+firmware transaction preserved the live `game_data` partition byte-for-byte.
+See
+`hardware/test-runs/2026-08-14-console-os-program-manager-usb-install.json`.
+J1 remains the CH340 serial/programming path.
 
-Hardware acceptance must use J16 with an ordinary data-capable laptop cable,
-retain J1 for serial capture, copy and remove `DOOM1.WAD`, eject cleanly,
-reconnect, restart, and verify the full volume and Doom hash each time. An
-intentional cable-pull test must demonstrate fail-closed status and filesystem
-repair behavior; it must not be recorded as safe simply because the next boot
-mounts. Controller-host testing still requires the powered isolation shim
-described above and must not be combined with this device-mode test.
+The File Manager successor adds a build-tested on-device root listing and
+confirmed regular-file deletion behind that same exclusive owner. It never
+mounts beneath the laptop, never deletes directories, and rejects path-like or
+unrepresentable names. Its exact app-only installation passed on 2026-08-14:
+the complete 7 MiB application span read back exactly, retained-UART startup
+reported eight apps with display/touch healthy, no backup was created, and the
+live `game_data` digest was preserved. See
+`hardware/test-runs/2026-08-14-console-os-file-manager-install.json`.
+Panel/touch observation, deletion of a disposable probe, contention rejection,
+clean J16 remount, Doom re-verification, and reboot persistence remain before
+this new UI can be called fully hardware-tested. An intentional cable-pull test
+must still demonstrate fail-closed status and filesystem repair behavior; it
+must not be
+recorded as safe simply because the next boot mounts, and it must use a
+disposable probe rather than the real WAD as its only copy. The frozen
+`scripts/console-os-file-manager-install.py` route creates no new backup and
+accepts only the exact currently installed predecessor. Controller-host
+testing still requires the powered isolation shim described above and must not
+be combined with this device-mode test.
 
 ## Primary references
 

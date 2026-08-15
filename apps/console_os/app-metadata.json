@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "app": "console_os",
-  "stage": "program-manager-usb-game-storage-build-candidate",
-  "purpose": "FreeRTOS-native touch console with the accepted Program Manager-style folder launcher, shared platform services, laptop-accessible persistent game data, versioned native game APIs, original Maze Chase and Space Invaders samples, built-in diagnostics, and an exclusive handoff to the proven Doom SFX plus MUS integration.",
+  "stage": "program-manager-file-manager-installed-candidate",
+  "purpose": "FreeRTOS-native touch console with the accepted Program Manager-style folder launcher, a bounded on-device File Manager for laptop-provisioned game data, shared platform services, versioned native game APIs, original Maze Chase and Space Invaders samples, built-in diagnostics, and an exclusive handoff to the proven Doom SFX plus MUS integration.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
   "flash_authorized": false,
@@ -23,7 +23,7 @@
     "scheduler": "FreeRTOS via ESP-IDF",
     "surface": "RGB565 320x200 scaled 3x into the 1024x600 panel",
     "input": "bounded GT911 polling with up to five contacts",
-    "built_in_apps": ["colors", "touch", "system", "audio-status"],
+    "built_in_apps": ["colors", "touch", "system", "audio-status", "file-manager"],
     "apps_per_page": 6,
     "maximum_registered_apps": 32,
     "folder_model": "manifest-driven fixed two-level hierarchy",
@@ -70,6 +70,15 @@
     "full_project_image_seeds_volume": true,
     "app_only_update_preserves_volume": true,
     "doom_path": "/DOOM1.WAD",
+    "file_manager": {
+      "scope": "bounded FAT root listing and confirmed regular-file deletion",
+      "maximum_listed_entries": 32,
+      "hidden_entries_visible": false,
+      "directory_deletion_allowed": false,
+      "path_traversal_allowed": false,
+      "host_owned_access_allowed": false,
+      "adds_files": "laptop over J16 USB MSC after exclusive ownership handoff"
+    },
     "hardware_tested": false
   },
   "hardware_interfaces_explicitly_absent": [
@@ -79,5 +88,5 @@
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "After build verification, install the exact app-only successor while preserving the already-provisioned game_data volume; then verify the accepted Program Manager UI, J16 enumeration, seeded Doom identity, copy/delete/eject/reconnect behavior, reboot persistence, contention rejection, and Doom launch on the exact board."
+  "next_hardware_step": "Visually verify the accepted Program Manager UI, browse and refresh after a J16 eject, complete two-step deletion of a disposable probe, prove host-ownership rejection, Doom preservation, and reboot persistence on the exact board."
 }

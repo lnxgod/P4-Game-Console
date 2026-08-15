@@ -15,3 +15,21 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
 endif()
 add_test(NAME platform_game_storage_model
          COMMAND test_platform_game_storage_model)
+
+add_executable(test_platform_game_storage_files
+    test_game_storage_files.c
+)
+target_link_libraries(test_platform_game_storage_files
+    PRIVATE platform_game_storage_model
+)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(test_platform_game_storage_files PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer
+    )
+    target_link_options(test_platform_game_storage_files PRIVATE
+        -fsanitize=address,undefined
+    )
+endif()
+add_test(NAME platform_game_storage_files
+         COMMAND test_platform_game_storage_files)

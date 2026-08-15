@@ -12,6 +12,7 @@ enum {
     APP_TOUCH = 3,
     APP_SYSTEM = 4,
     APP_AUDIO = 5,
+    APP_FILES = 6,
     APP_MAZE = 100,
     APP_SPACE = 101,
 };
@@ -104,6 +105,18 @@ static const console_app_descriptor_t s_apps[] = {
         .accent_rgb565 = UINT16_C(0xF81F),
         .capabilities = CONSOLE_CAPABILITY_AUDIO,
         .page = CONSOLE_PAGE_AUDIO,
+        .enabled = true,
+    },
+    {
+        .id = APP_FILES,
+        .title = "FILE MANAGER",
+        .subtitle = "P4 GAMES USB",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0xFD20),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                        CONSOLE_CAPABILITY_TOUCH |
+                        CONSOLE_CAPABILITY_STORAGE,
+        .page = CONSOLE_PAGE_FILES,
         .enabled = true,
     },
 };
@@ -430,6 +443,107 @@ static void test_touch_page_and_runtime(void)
     CHECK(shell.dirty);
 }
 
+static void test_file_manager(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    CHECK(tap(&shell, 220U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    console_shell_action_t action = tap(&shell, 120U, 120U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(action.app_id == APP_FILES);
+    CHECK(shell.page == CONSOLE_PAGE_FILES);
+
+    console_shell_file_listing_t listing = {
+        .entry_count = 7U,
+        .total_visible_entries = 7U,
+        .hidden_entries = 1U,
+        .omitted_entries = 0U,
+        .storage_generation = 3U,
+        .revision = 1U,
+        .available = true,
+    };
+    for (size_t i = 0U; i < listing.entry_count; ++i) {
+        listing.entries[i].source_index = (uint32_t)(10U + i);
+        (void)snprintf(listing.entries[i].label,
+                       sizeof(listing.entries[i].label),
+                       "FILE%u.WAD", (unsigned)i);
+        listing.entries[i].size_kib = (uint32_t)(100U + i);
+        listing.entries[i].removable = true;
+    }
+    (void)strcpy(listing.entries[1].label, "SAVES");
+    listing.entries[1].is_directory = true;
+    listing.entries[1].removable = false;
+    CHECK(console_shell_set_file_listing(&shell, &listing));
+    CHECK(shell.file_selected_index == 0U);
+    CHECK(shell.file_first_visible == 0U);
+
+    uint16_t *const frame = calloc(
+        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
+        sizeof(*frame));
+    CHECK(frame != NULL);
+    if (frame != NULL) {
+        CHECK(console_shell_render_rgb565(&shell, frame,
+                                           CONSOLE_SHELL_WIDTH));
+        free(frame);
+    }
+
+    action = tap(&shell, 250U, 180U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.file_delete_confirm);
+    action = tap(&shell, 160U, 180U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(!shell.file_delete_confirm);
+
+    CHECK(tap(&shell, 250U, 180U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    action = tap(&shell, 250U, 180U);
+    CHECK(action.type == CONSOLE_ACTION_FILE_DELETE);
+    CHECK(action.file_source_index == 10U);
+    CHECK(!shell.file_delete_confirm);
+
+    action = tap(&shell, 50U, 72U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.file_selected_index == 1U);
+    CHECK(tap(&shell, 250U, 180U).type == CONSOLE_ACTION_NONE);
+
+    action = tap(&shell, 80U, 180U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.file_first_visible == 5U);
+    CHECK(shell.file_selected_index == 5U);
+    CHECK(tap(&shell, 250U, 180U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    action = tap(&shell, 250U, 180U);
+    CHECK(action.type == CONSOLE_ACTION_FILE_DELETE);
+    CHECK(action.file_source_index == 15U);
+
+    action = tap(&shell, 160U, 180U);
+    CHECK(action.type == CONSOLE_ACTION_FILE_REFRESH);
+    CHECK(action.file_source_index == UINT32_MAX);
+
+    console_shell_set_file_notice(&shell, CONSOLE_FILE_NOTICE_DELETED);
+    CHECK(shell.file_notice == CONSOLE_FILE_NOTICE_DELETED);
+    listing.entry_count = 0U;
+    listing.total_visible_entries = 0U;
+    listing.available = false;
+    ++listing.revision;
+    CHECK(console_shell_set_file_listing(&shell, &listing));
+    CHECK(shell.file_first_visible == 0U);
+    CHECK(shell.file_selected_index == 0U);
+    CHECK(tap(&shell, 160U, 180U).type == CONSOLE_ACTION_FILE_REFRESH);
+
+    console_shell_file_listing_t invalid = listing;
+    invalid.entry_count = CONSOLE_SHELL_FILE_MAX_ENTRIES + 1U;
+    CHECK(!console_shell_set_file_listing(&shell, &invalid));
+    invalid = (console_shell_file_listing_t){
+        .entry_count = 1U,
+        .total_visible_entries = 1U,
+        .available = true,
+    };
+    CHECK(!console_shell_set_file_listing(&shell, &invalid));
+    (void)strcpy(invalid.entries[0].label, "FOLDER");
+    invalid.entries[0].is_directory = true;
+    invalid.entries[0].removable = true;
+    CHECK(!console_shell_set_file_listing(&shell, &invalid));
+}
+
 static uint32_t next_random(uint32_t *state)
 {
     *state = *state * UINT32_C(1664525) + UINT32_C(1013904223);
@@ -476,6 +590,7 @@ int main(void)
     test_launcher_scrolling();
     test_fail_closed_gestures();
     test_touch_page_and_runtime();
+    test_file_manager();
     test_input_fuzz();
     if (s_failures != 0) {
         fprintf(stderr, "%d console shell test failure(s)\n", s_failures);

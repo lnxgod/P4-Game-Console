@@ -11,6 +11,7 @@ static void test_host_handoff_invalidates_cache(void)
     game_storage_model_init(&model);
     game_storage_model_mount_complete(&model, GAME_STORAGE_OWNER_APP);
     assert(model.owner == GAME_STORAGE_OWNER_APP);
+    assert(game_storage_model_files_available(&model));
     assert(model.generation == 1U);
     assert(game_storage_model_begin_scan(&model));
     game_storage_model_finish_scan(&model, GAME_STORAGE_CONTENT_READY);
@@ -23,6 +24,7 @@ static void test_host_handoff_invalidates_cache(void)
     assert(model.content == GAME_STORAGE_CONTENT_UNKNOWN);
     game_storage_model_mount_complete(&model, GAME_STORAGE_OWNER_USB);
     assert(model.owner == GAME_STORAGE_OWNER_USB);
+    assert(!game_storage_model_files_available(&model));
     assert(!game_storage_model_begin_scan(&model));
 
     game_storage_model_mount_start(&model, GAME_STORAGE_OWNER_USB);
@@ -41,6 +43,7 @@ static void test_game_lock_is_terminal_and_exclusive(void)
     assert(game_storage_model_begin_scan(&model));
     game_storage_model_finish_scan(&model, GAME_STORAGE_CONTENT_READY);
     assert(game_storage_model_begin_game_lock(&model));
+    assert(!game_storage_model_files_available(&model));
     /* The launch path invalidates and re-hashes while USB is revoked. */
     model.content = GAME_STORAGE_CONTENT_UNKNOWN;
     assert(game_storage_model_begin_scan(&model));
@@ -48,6 +51,7 @@ static void test_game_lock_is_terminal_and_exclusive(void)
     assert(!game_storage_model_begin_game_lock(&model));
     game_storage_model_finish_game_lock(&model, true);
     assert(model.owner == GAME_STORAGE_OWNER_GAME);
+    assert(!game_storage_model_files_available(&model));
     assert(!model.launch_pending);
     assert(!game_storage_model_begin_scan(&model));
 }

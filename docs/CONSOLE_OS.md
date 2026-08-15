@@ -34,6 +34,26 @@ The shell deliberately uses a monolithic firmware with statically registered
 apps. ESP-IDF and FreeRTOS provide tasks, timers, memory, and drivers; this MVP
 does not pretend to be a desktop OS with dynamically loaded executables.
 
+The next app-only successor adds File Manager under System. It uses USB only
+as the transport: the laptop adds files while J16 owns FAT, then a clean eject
+returns ownership to Console OS. The on-device app lists at most 32 sorted root
+entries, hides host metadata, pages five rows at a time, refreshes explicitly,
+and removes one regular file only after a second confirmation. Directories,
+paths, traversal tokens, control characters, overlong names, mount
+transitions, USB ownership, and the terminal Doom lease all fail closed. This
+successor is host-, build-, and retained-UART-startup-tested on the exact unit;
+it is not fully hardware-tested until its UI and file operations are observed
+on the panel and through a clean J16 cycle.
+
+The no-new-backup, app-only route is frozen in
+`scripts/console-os-file-manager-install.py`. It accepts only the already
+installed Program Manager plus USB application span and the exact final File
+Manager artifact, while preserving the partition table and live `game_data`
+bytes.
+The 2026-08-14 transaction passed complete app-span readback and startup with
+eight registered apps while preserving the live volume byte-for-byte. See
+`hardware/test-runs/2026-08-14-console-os-file-manager-install.json`.
+
 ## Foreground model
 
 ```text
@@ -47,7 +67,8 @@ boot
        |-- Games
        |     |-- Action -> Doom
        |     `-- Arcade -> Maze Chase / Space Invaders
-       |-- System -> Colors / Touch / System / Audio status
+       |-- System -> Colors / Touch / System / Audio status / File Manager
+       |     `-- File Manager -> bounded root list / refresh / confirmed delete
        |-- native API game selected
        |     -> console retains display/touch ownership
        |     -> game receives normalized controls + RGB565 surface
@@ -81,6 +102,7 @@ display, overlays, and exit callbacks in a deterministic order.
 | Speaker audio | none on home; reviewed session for native games | Doom audio adapter/factory backend | Only one foreground owner; close must re-prove amplifier shutdown |
 | Game-data FAT | launcher or laptop, never both | terminal game lease | Clean eject returns ownership; host access is revoked and WAD re-hashed before Doom |
 | Doom WAD | validated `/game-data/DOOM1.WAD` | read-only VFS adapter | Exact ignored shareware identity only; host changes invalidate cache |
+| File Manager | `console_shell` view plus `platform_game_storage` operations | unavailable | Lists/deletes only while the app owns FAT; host and game ownership reject every operation |
 
 The launcher surface is standard RGB565 at 320x200. The proven display service
 scales it 3x into a 960x600 viewport with 32-pixel black margins on the
@@ -150,6 +172,12 @@ physical-to-logical touch mapping, press/release semantics, malformed frames,
 storage handoff/cache generations and terminal game leases,
 the bounded tone mixer and platform audio lifecycle, Maze Chase state and
 randomized input, plus manifest/scaffolder rejection behavior.
+The storage host suite also exercises root-name validation, sorted bounded
+listings, hidden-entry exclusion, directory classification, capacity
+truncation, traversal rejection, regular-file deletion, and directory-delete
+refusal. The shell suite covers File Manager paging, selection, refresh,
+confirmation/cancel, non-removable directories, unavailable storage, and
+malformed snapshots.
 
 The IDF target builds with the locked ESP-IDF 5.5.3 and managed component
 versions, checks ESP32-P4 revision 1.x bounds, and runs

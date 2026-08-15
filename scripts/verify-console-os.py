@@ -131,6 +131,14 @@ def main() -> None:
             "launcher folder depth must remain bounded")
     require(shell_metadata.get("dynamic_executable_loading") is False,
             "folder UI must not imply dynamic executable loading")
+    require("file-manager" in shell_metadata.get("built_in_apps", []),
+            "File Manager is missing from shell metadata")
+    file_manager = game_storage.get("file_manager", {})
+    require(file_manager.get("maximum_listed_entries") == 32 and
+            file_manager.get("directory_deletion_allowed") is False and
+            file_manager.get("path_traversal_allowed") is False and
+            file_manager.get("host_owned_access_allowed") is False,
+            "unsafe or incomplete File Manager metadata")
 
     registry_check = subprocess.run(
         ["python3", str(ROOT / "scripts/generate-game-registry.py"),
@@ -165,7 +173,11 @@ def main() -> None:
     require("CONSOLE_PAGE_COLORS" in shell_main, "Colors app missing")
     require("CONSOLE_PAGE_TOUCH" in shell_main, "Touch app missing")
     require("CONSOLE_PAGE_SYSTEM" in shell_main, "System app missing")
+    require("CONSOLE_PAGE_FILES" in shell_main, "File Manager app missing")
     require("CONSOLE_PAGE_AUDIO" in shell_main, "Audio status app missing")
+    require("platform_game_storage_list_root" in shell_main and
+            "platform_game_storage_remove_root_file" in shell_main,
+            "File Manager is not routed through the storage service")
     handoff = shell_main[
         shell_main.index("static void launch_doom_exclusive("):
         shell_main.index("void app_main(void)")
@@ -233,6 +245,23 @@ def main() -> None:
     require(binary.is_file() and elf.is_file(), "missing build artifacts")
     require(binary.stat().st_size < EXPECTED_APP_PARTITION_BYTES,
             "application does not fit the 7 MiB partition")
+    installer_source = (
+        ROOT / "scripts/console-os-file-manager-install.py"
+    ).read_text(encoding="utf-8")
+    binary_sha256 = sha256(binary)
+    padded_digest = hashlib.sha256()
+    padded_digest.update(binary.read_bytes())
+    padded_digest.update(
+        b"\xff" * (EXPECTED_APP_PARTITION_BYTES - binary.stat().st_size)
+    )
+    require(
+        f"EXPECTED_FILE_MANAGER_APP_BYTES = {binary.stat().st_size:_}"
+        in installer_source and binary_sha256 in installer_source and
+        padded_digest.hexdigest() in installer_source and
+        'b"P4_CONSOLE_OS START shell=freertos-native apps=8 "'
+        in installer_source,
+        "File Manager app-only installer is not pinned to this build",
+    )
     game_image = build / str(game_image_name)
     require(game_image.is_file(), "missing generated game-data image")
     require(game_image.stat().st_size == EXPECTED_GAME_PARTITION_BYTES,
@@ -302,6 +331,8 @@ def main() -> None:
         "p4_space_invaders_game", "p4_generated_game_by_launcher_id",
         "p4_generated_game_folders",
         "platform_game_storage_init", "platform_game_storage_lock_for_game",
+        "platform_game_storage_list_root",
+        "platform_game_storage_remove_root_file",
         "tinyusb_driver_install", "tinyusb_msc_new_storage_spiflash",
         "_binary_doom_shareware_wad_start",
     ):

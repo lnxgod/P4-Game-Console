@@ -1,5 +1,6 @@
 set(PLATFORM_GAME_STORAGE_MODEL_SOURCES
     src/game_storage_model.c
+    src/game_storage_files.c
 )
 
 if(COMMAND idf_component_register)
@@ -30,7 +31,7 @@ else()
         ${PLATFORM_GAME_STORAGE_MODEL_SOURCES}
     )
     target_include_directories(platform_game_storage_model
-        PUBLIC src
+        PUBLIC src include
     )
     target_compile_features(platform_game_storage_model PUBLIC c_std_11)
     if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
