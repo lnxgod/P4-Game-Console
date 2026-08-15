@@ -567,7 +567,8 @@ esp_err_t platform_game_storage_load_root_file(
     } else {
         heap_caps_free(data);
     }
-    s_last_error = result;
+    /* Optional catalog/update probes use NOT_FOUND as ordinary absence. */
+    s_last_error = result == ESP_ERR_NOT_FOUND ? ESP_OK : result;
     unlock_storage();
     return result;
 }
