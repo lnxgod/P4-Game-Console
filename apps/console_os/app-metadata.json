@@ -1,54 +1,70 @@
 {
   "schema": 1,
   "app": "console_os",
-  "stage": "program-manager-file-manager-installed-candidate",
-  "purpose": "FreeRTOS-native touch console with the accepted Program Manager-style folder launcher, a bounded on-device File Manager for laptop-provisioned game data, shared platform services, versioned native game APIs, original Maze Chase and Space Invaders samples, built-in diagnostics, and an exclusive handoff to the proven Doom SFX plus MUS integration.",
+  "stage": "usb-game-manager-ota-build-candidate",
+  "purpose": "FreeRTOS-native Program Manager shell with persistent J16 USB game storage, a bounded Game Manager for storage-loaded cartridges, atomic dual-slot OS updates, built-in diagnostics, and an exclusive Doom handoff.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
   "flash_authorized": false,
   "flash_app_authorized": false,
   "flash_project_authorized": false,
   "hardware_access_allowed": false,
-  "game_data_embedded": true,
+  "game_data_embedded": false,
   "game_data_committed": false,
   "game_data_redistribution_authorized": false,
   "toolchain": {
     "idf": "5.5.3",
     "target": "esp32p4",
     "flash_bytes": 16777216,
-    "psram_bytes": 33554432
+    "psram_bytes": 33554432,
+    "elf_loader": "espressif/elf_loader 1.3.1"
   },
   "shell": {
-    "model": "monolithic-static-app-registry",
+    "model": "fixed-builtins-plus-storage-cartridge-catalog",
     "scheduler": "FreeRTOS via ESP-IDF",
     "surface": "RGB565 320x200 scaled 3x into the 1024x600 panel",
     "input": "bounded GT911 polling with up to five contacts",
-    "built_in_apps": ["colors", "touch", "system", "audio-status", "file-manager"],
+    "built_in_apps": [
+      "colors",
+      "touch",
+      "system",
+      "audio-status",
+      "file-manager",
+      "game-manager"
+    ],
     "apps_per_page": 6,
     "maximum_registered_apps": 32,
-    "folder_model": "manifest-driven fixed two-level hierarchy",
+    "folder_model": "bounded two-level hierarchy from built-ins and validated package metadata",
     "root_folders": ["all-programs", "games", "system"],
     "maximum_folder_depth": 2,
-    "dynamic_executable_loading": false
+    "dynamic_executable_loading": true
   },
   "native_game_api": {
     "api_version": 1,
-    "format": "p4-native-static-v1",
-    "code_model": "RISC-V machine code statically linked into the Console OS ELF",
-    "build_outputs": ["p4_console_os.elf", "p4_console_os.bin"],
+    "format": "p4-native-elf-v1",
+    "code_model": "bounded ESP32-P4 ET_DYN cartridge relocated into PSRAM by pinned elf_loader",
+    "package_header_bytes": 256,
+    "maximum_package_bytes": 524288,
+    "undefined_symbol_allowlist": [
+      "calloc",
+      "free",
+      "memcmp",
+      "memcpy",
+      "memset",
+      "strcmp"
+    ],
+    "native_code_is_security_sandboxed": false,
     "uf2_supported": false,
-    "uf2_note": "UF2 is a flashing container, not the executable format used by this ESP-IDF project.",
     "surface": "RGB565 320x200",
     "controls": ["up", "down", "left", "right", "a", "b", "start", "back"],
     "audio": "optional bounded tone service at PCM16 stereo 16000 Hz",
     "return_to_home_supported": true,
-    "registered_games": [
-      "org.p4console.maze-chase",
-      "org.p4console.space-invaders"
-    ]
+    "seed_packages": ["MAZE.P4G", "INVADERS.P4G"]
   },
   "doom_handoff": {
     "mode": "exclusive-one-way-until-restart",
+    "wad_source": "/DOOM1.WAD on P4 GAMES",
+    "wad_embedded_in_app": false,
     "shell_display_touch_and_i2c_released_first": true,
     "audio_initialized_by_shell": false,
     "audio_initialized_by_doom": true,
@@ -56,8 +72,13 @@
     "format": "pcm16-stereo",
     "volume_step": "6/10",
     "music": "WAD MUS procedural 16-voice synth",
-    "external_midi_device_required": false,
     "return_to_home_supported": false
+  },
+  "partitions": {
+    "ota_data": {"offset": "0x10000", "bytes": 8192},
+    "ota_0": {"offset": "0x20000", "bytes": 3604480},
+    "ota_1": {"offset": "0x390000", "bytes": 3670016},
+    "game_data": {"offset": "0x710000", "bytes": 9371648}
   },
   "game_storage": {
     "partition_label": "game_data",
@@ -65,28 +86,44 @@
     "partition_bytes": 9371648,
     "filesystem": "wear-levelled FAT",
     "usb_role": "high-speed MSC device on J16",
-    "concurrency": "automatic exclusive app-or-host ownership plus terminal game lease",
+    "concurrency": "automatic exclusive app-or-host ownership; USB is stopped during update streaming and Doom's terminal lease",
     "runtime_format_allowed": false,
     "full_project_image_seeds_volume": true,
-    "app_only_update_preserves_volume": true,
+    "ota_update_preserves_volume": true,
     "doom_path": "/DOOM1.WAD",
     "file_manager": {
       "scope": "bounded FAT root listing and confirmed regular-file deletion",
       "maximum_listed_entries": 32,
-      "hidden_entries_visible": false,
       "directory_deletion_allowed": false,
       "path_traversal_allowed": false,
-      "host_owned_access_allowed": false,
-      "adds_files": "laptop over J16 USB MSC after exclusive ownership handoff"
+      "host_owned_access_allowed": false
+    },
+    "game_manager": {
+      "catalog_limit": 16,
+      "install_or_update": "copy or replace one .P4G file through J16, then eject",
+      "remove": "two-step on-device confirmation",
+      "invalid_packages_visible": true,
+      "host_owned_access_allowed": false
     },
     "hardware_tested": false
+  },
+  "os_update": {
+    "format": "p4-os-update-v1",
+    "file": "UPDATE/P4UPDATE.P4U",
+    "transport": "P4 GAMES over J16 USB",
+    "maximum_image_bytes": 3604480,
+    "target": "inactive OTA slot only",
+    "digest": "SHA-256 before and during write",
+    "boot_selection": "changed only after esp_ota_end succeeds",
+    "rollback_until_first_ready_frame": true,
+    "preserves_game_data": true
   },
   "hardware_interfaces_explicitly_absent": [
     "usb_host",
     "usb_hid",
-    "sd_card",
+    "physical_sd_card",
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "Visually verify the accepted Program Manager UI, browse and refresh after a J16 eject, complete two-step deletion of a disposable probe, prove host-ownership rejection, Doom preservation, and reboot persistence on the exact board."
+  "next_hardware_step": "Install the app-only verified-MSC-write build through J1, then repeat a large P4UPDATE copy through J16 and record exact host hash, serial counters, cartridge launch/remove, and OTA rollback acceptance on the bound tablet."
 }

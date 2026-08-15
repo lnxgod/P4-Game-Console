@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "required_console_features": [
+    "window_manager",
+    "program_manager",
+    "file_manager",
+    "game_manager",
+    "native_cartridges",
+    "maze_chase",
+    "space_invaders",
+    "doom",
+    "persistent_game_storage",
+    "atomic_os_updates",
+    "audio"
+  ],
+  "hardware_adaptations": {
+    "touch": "optional when the target has no touch hardware",
+    "navigation_input": "at least one of touch, gamepad, keyboard, or mouse",
+    "laptop_content_transfer": "USB device MSC or powered-off removable media"
+  },
+  "adapter_templates": {
+    "elecrow-crowpanel-advanced-10": {
+      "board_profile": "hardware/board-profile.json",
+      "sdkconfig_defaults": "hardware/boards/elecrow-crowpanel-advanced-10/sdkconfig.defaults",
+      "build_command": "make console-os-idf",
+      "adapters": {
+        "display": "components/platform_display/src/platform_display.c",
+        "storage": "components/platform_game_storage/src/platform_game_storage.c",
+        "input": "components/platform_touch",
+        "audio": "apps/doom_embedded_touch_audio/components/platform_audio",
+        "dependencies": "components/board_deps_elecrow"
+      }
+    },
+    "olimex-esp32-p4-pc": {
+      "board_profile": "hardware/boards/olimex-esp32-p4-pc-rev-b.json",
+      "sdkconfig_defaults": "hardware/boards/olimex-esp32-p4-pc-rev-b/sdkconfig.defaults",
+      "build_command": "make console-os-olimex-idf",
+      "adapters": {
+        "display": "components/platform_display/src/platform_display_olimex.c",
+        "storage": "components/platform_game_storage/src/platform_game_storage.c",
+        "input": "components/platform_gamepad_usb/src/platform_usb_input_olimex.c",
+        "audio": "components/olimex/platform_audio",
+        "dependencies": "components/board_deps_olimex"
+      }
+    }
+  },
+  "targets": {
+    "elecrow-crowpanel-advanced-10": {
+      "template": "elecrow-crowpanel-advanced-10",
+      "features": {
+        "window_manager": true,
+        "program_manager": true,
+        "file_manager": true,
+        "game_manager": true,
+        "native_cartridges": true,
+        "maze_chase": true,
+        "space_invaders": true,
+        "doom": true,
+        "persistent_game_storage": true,
+        "atomic_os_updates": true,
+        "audio": true
+      },
+      "inputs": ["touch"],
+      "touch": true,
+      "laptop_content_transfer": "usb-device-msc",
+      "exact_target_seen_on_hardware": true,
+      "full_feature_set_hardware_tested": false
+    },
+    "olimex-esp32-p4-pc": {
+      "template": "olimex-esp32-p4-pc",
+      "features": {
+        "window_manager": true,
+        "program_manager": true,
+        "file_manager": true,
+        "game_manager": true,
+        "native_cartridges": true,
+        "maze_chase": true,
+        "space_invaders": true,
+        "doom": true,
+        "persistent_game_storage": true,
+        "atomic_os_updates": true,
+        "audio": true
+      },
+      "inputs": ["gamepad", "keyboard", "mouse"],
+      "touch": false,
+      "laptop_content_transfer": "powered-off-removable-media",
+      "exact_target_seen_on_hardware": false,
+      "full_feature_set_hardware_tested": false
+    }
+  }
+}

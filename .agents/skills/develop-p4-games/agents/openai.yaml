@@ -1,0 +1,4 @@
+interface:
+  display_name: "P4 Console Game Development"
+  short_description: "Create, package, and test P4 console games"
+  default_prompt: "Use $develop-p4-games to create or update a storage-installed game for P4 Console OS."

@@ -47,6 +47,7 @@ typedef enum {
     CONSOLE_PAGE_TOUCH,
     CONSOLE_PAGE_SYSTEM,
     CONSOLE_PAGE_FILES,
+    CONSOLE_PAGE_GAMES,
     CONSOLE_PAGE_AUDIO,
 } console_page_t;
 
@@ -85,6 +86,10 @@ typedef struct {
     uint32_t game_storage_kib;
     console_shell_storage_state_t game_storage_state;
     bool touch_ready;
+    bool controller_ready;
+    bool keyboard_ready;
+    bool mouse_ready;
+    bool sd_card_storage;
     bool audio_handoff_ready;
     bool game_storage_usb_attached;
     bool doom_wad_ready;
@@ -96,6 +101,7 @@ typedef struct {
     uint32_t size_kib;
     bool is_directory;
     bool removable;
+    bool installable;
 } console_shell_file_entry_t;
 
 typedef struct {
@@ -114,6 +120,7 @@ typedef enum {
     CONSOLE_FILE_NOTICE_REFRESHED,
     CONSOLE_FILE_NOTICE_DELETED,
     CONSOLE_FILE_NOTICE_ERROR,
+    CONSOLE_FILE_NOTICE_UPDATING,
 } console_shell_file_notice_t;
 
 typedef enum {
@@ -122,7 +129,22 @@ typedef enum {
     CONSOLE_ACTION_LAUNCH,
     CONSOLE_ACTION_FILE_REFRESH,
     CONSOLE_ACTION_FILE_DELETE,
+    CONSOLE_ACTION_GAME_REFRESH,
+    CONSOLE_ACTION_GAME_REMOVE,
+    CONSOLE_ACTION_OS_UPDATE_INSTALL,
 } console_action_type_t;
+
+typedef enum {
+    CONSOLE_BUTTON_UP = UINT32_C(1) << 0U,
+    CONSOLE_BUTTON_DOWN = UINT32_C(1) << 1U,
+    CONSOLE_BUTTON_LEFT = UINT32_C(1) << 2U,
+    CONSOLE_BUTTON_RIGHT = UINT32_C(1) << 3U,
+    CONSOLE_BUTTON_ACCEPT = UINT32_C(1) << 4U,
+    CONSOLE_BUTTON_BACK = UINT32_C(1) << 5U,
+    CONSOLE_BUTTON_REFRESH = UINT32_C(1) << 6U,
+} console_button_t;
+
+#define CONSOLE_BUTTON_MASK UINT32_C(0x0000007f)
 
 typedef struct {
     console_action_type_t type;
@@ -154,6 +176,11 @@ typedef struct {
     bool home_all_programs;
     bool file_delete_confirm;
     bool dirty;
+    uint32_t previous_buttons;
+    uint16_t pointer_x;
+    uint16_t pointer_y;
+    bool pointer_visible;
+    bool pointer_pressed;
     uint32_t render_generation;
     console_shell_runtime_info_t runtime;
     console_shell_contact_t contacts[CONSOLE_SHELL_MAX_CONTACTS];
@@ -179,6 +206,22 @@ console_shell_action_t console_shell_handle_touch(
     bool valid,
     const console_shell_contact_t *contacts,
     size_t contact_count);
+
+/**
+ * Consume one sanitized controller snapshot.
+ *
+ * Actions are edge-triggered. Calling with zero immediately neutralizes the
+ * controller state, so a disconnect cannot leave navigation held.
+ */
+console_shell_action_t console_shell_handle_buttons(
+    console_shell_t *shell, uint32_t held_buttons);
+
+/** Show, move, or hide the bounded desktop pointer. */
+void console_shell_set_pointer(console_shell_t *shell,
+                               bool visible,
+                               uint16_t x,
+                               uint16_t y,
+                               bool pressed);
 
 /** Update non-sensitive runtime and game-storage status. */
 void console_shell_set_runtime_info(

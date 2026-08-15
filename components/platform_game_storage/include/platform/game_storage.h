@@ -16,8 +16,16 @@ extern "C" {
 
 #define PLATFORM_GAME_STORAGE_PARTITION_LABEL "game_data"
 #define PLATFORM_GAME_STORAGE_MOUNT_POINT "/game-data"
+#define PLATFORM_GAME_STORAGE_UPDATE_DIRECTORY_NAME "UPDATE"
+#define PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT \
+    PLATFORM_GAME_STORAGE_MOUNT_POINT "/" \
+    PLATFORM_GAME_STORAGE_UPDATE_DIRECTORY_NAME
 #define PLATFORM_GAME_STORAGE_DOOM_WAD_PATH "/game-data/DOOM1.WAD"
 #define PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES UINT64_C(4196020)
+
+typedef esp_err_t (*platform_game_storage_stream_fn)(
+    void *context, const uint8_t *data, size_t size_bytes,
+    uint64_t file_offset);
 
 typedef enum {
     PLATFORM_GAME_STORAGE_UNINITIALIZED = 0,
@@ -42,15 +50,19 @@ typedef struct {
     uint32_t ownership_transfers;
     uint32_t mount_failures;
     uint32_t scans;
+    uint32_t usb_verified_writes;
+    uint32_t usb_write_failures;
     esp_err_t last_error;
 } platform_game_storage_status_t;
 
 /**
- * Initialize the wear-levelled FAT volume and the ESP32-P4 USB MSC device.
+ * Initialize the selected board's persistent game-data FAT volume.
  *
  * The filesystem is never formatted at runtime. A missing/corrupt filesystem
  * is exposed fail-closed and must be restored from a reviewed image or by the
- * host. App and USB ownership are mutually exclusive.
+ * host. On boards with USB device storage, app and USB ownership are mutually
+ * exclusive. The Olimex profile mounts microSD for app-only access and never
+ * advertises that card over its programming USB-C connector.
  */
 esp_err_t platform_game_storage_init(void);
 
@@ -80,6 +92,39 @@ esp_err_t platform_game_storage_list_root(
  * rejected. Successful removal invalidates the cached Doom identity.
  */
 esp_err_t platform_game_storage_remove_root_file(const char *name);
+
+/**
+ * Read one bounded regular root file into PSRAM (or internal RAM fallback).
+ * The returned allocation must be released with the matching function.
+ */
+esp_err_t platform_game_storage_load_root_file(
+    const char *name, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes);
+
+/** Read one bounded regular file from the fixed UPDATE directory. */
+esp_err_t platform_game_storage_load_update_file(
+    const char *name, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes);
+
+void platform_game_storage_release_file(uint8_t *data);
+
+/**
+ * Hold an exclusive storage maintenance lease and stream one root file.
+ * The callback must not call another game-storage API.
+ */
+esp_err_t platform_game_storage_stream_root_file_exclusive(
+    const char *name, size_t maximum_bytes,
+    platform_game_storage_stream_fn consume, void *context,
+    size_t *out_size_bytes);
+
+/** Hold an exclusive maintenance lease and stream one file from UPDATE. */
+esp_err_t platform_game_storage_stream_update_file_exclusive(
+    const char *name, size_t maximum_bytes,
+    platform_game_storage_stream_fn consume, void *context,
+    size_t *out_size_bytes);
+
+/** Remove one regular file from the fixed UPDATE directory. */
+esp_err_t platform_game_storage_remove_update_file(const char *name);
 
 /**
  * Revoke USB access, remount for the app, re-hash DOOM1.WAD, and retain an

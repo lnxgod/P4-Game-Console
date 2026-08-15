@@ -243,7 +243,54 @@ accepts only the exact currently installed predecessor. Controller-host
 testing still requires the powered isolation shim described above and must not
 be combined with this device-mode test.
 
+## Olimex ESP32-P4-PC Rev.B development target
+
+The additive `olimex-esp32-p4-pc` profile is based on Olimex's Rev.B schematic,
+manual, and production-test source at commit
+`99a802ec029f531692102b2c754e20dae2226038`. It describes an ESP32-P4NRW32 with
+16 MiB flash and 32 MiB PSRAM. The source documents and their SHA-256 values are
+pinned in `hardware/boards/olimex-esp32-p4-pc-rev-b.json`; the review record is
+`hardware/evidence/olimex-esp32-p4-pc-rev-b-source-review.json`.
+
+The port uses the onboard LT8912B bridge over I2C1 GPIO7/GPIO8 for
+1280x720p60 HDMI, with two MIPI-DSI lanes and internal LDO3 at 2.5 V. Console
+OS keeps its 320x200 RGB565 logical surface and scales it to a centered 960x600
+viewport before RGB888 scanout. The microSD interface is four-bit SDMMC on
+CLK/CMD/D0-D3 GPIO43/44/39/40/41/42 with its active-low GPIO45 power gate and
+LDO4 at 3.3 V. Mount retries use decreasing clock rates; runtime formatting and
+hot-removal are intentionally disabled.
+
+The ESP32-P4 high-speed USB root is wired to an onboard, powered FE1.1s
+four-port USB-A host hub. GPIO21 holds the hub in reset until the host service
+is ready; the board supplies protected VBUS through its CH217K path. Console OS
+can therefore own one generic HID gamepad, one boot keyboard, and one boot
+mouse at the same time. Descriptor/report lengths are bounded and each device
+is neutralized on disconnect. The USB-C connector is native USB Serial/JTAG
+for programming and monitoring; it cannot expose the microSD card as MSC.
+
+Audio uses Olimex's official ES8311 path on the display-owned I2C1 bus
+(GPIO7/GPIO8) and I2S1 MCLK/BCLK/LRCLK/DOUT/DIN GPIO13/12/10/9/11. GPIO53 is
+held low until the codec has opened muted and the bounded audio stream is
+ready. Console OS and Doom share the reusable `platform_audio` API; no game
+owns the codec or pins. This source path builds with pinned
+`espressif/esp_codec_dev` 1.5.4, but audible output at the 3.5mm jack remains a
+required physical acceptance item.
+
+This target is source-reviewed and build-tested only. The connected USB serial
+endpoint has been observed, but a successful ROM-loader identity read, complete
+16 MiB factory backup, HDMI observation, card test, audible audio test, and
+named HID device run are still required. `flash_authorized` must remain false
+until the backup has
+the exact byte count, SHA-256, and hashed live-device binding required by the
+repository flash gate. See `docs/boards/OLIMEX_ESP32_P4_PC.md` for the operator
+workflow.
+
 ## Primary references
+
+- [Olimex ESP32-P4-PC product page](https://www.olimex.com/Products/IoT/ESP32-P4/ESP32-P4-PC/open-source-hardware)
+- [Olimex ESP32-P4-PC official repository](https://github.com/OLIMEX/ESP32-P4-PC)
+- [Olimex ESP32-P4-PC Rev.B schematic](https://github.com/OLIMEX/ESP32-P4-PC/blob/main/HARDWARE/ESP32-P4-PC-Rev.B/ESP32-P4-PC_Rev_B.pdf)
+- [Olimex ESP32-P4-PC user manual](https://github.com/OLIMEX/ESP32-P4-PC/blob/main/DOCUMENTS/ESP32-P4-PC-user-manual.pdf)
 
 - [Elecrow 10.1-inch product repository](https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen)
 - [Exact Elecrow 10.1-inch factory-source archive used by the verifier](https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen/blob/c5a437311b951aaa9d17115bf420877a8f1f7b83/factory_sourcecode/V1.0/ESP32-P4-Adcance-brookesia_phone_inch10_1.zip)

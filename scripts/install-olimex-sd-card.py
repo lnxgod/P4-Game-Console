@@ -1,0 +1,176 @@
+#!/usr/bin/env python3
+
+"""Atomically copy the reviewed Console OS bundle to a mounted microSD card."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import pathlib
+import shutil
+import struct
+import tempfile
+
+
+ROOT = pathlib.Path(__file__).resolve().parents[1]
+DEFAULT_BUNDLE = ROOT / "apps/console_os/build-olimex-esp32-p4-pc/sd-card"
+FILES = (
+    pathlib.Path("MAZE.P4G"),
+    pathlib.Path("INVADERS.P4G"),
+    pathlib.Path("DOOM1.WAD"),
+    pathlib.Path("README.TXT"),
+    pathlib.Path("UPDATE/P4UPDATE.P4U"),
+)
+DOOM_BYTES = 4_196_020
+DOOM_SHA256 = "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
+
+
+def sha256(path: pathlib.Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as source:
+        for block in iter(lambda: source.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def mounted_card(path: pathlib.Path) -> pathlib.Path:
+    resolved = path.expanduser().resolve(strict=True)
+    forbidden = {pathlib.Path("/"), pathlib.Path.home().resolve(), ROOT.resolve()}
+    if resolved in forbidden or ROOT.resolve() in resolved.parents:
+        raise SystemExit(f"refusing unsafe target: {resolved}")
+    if not resolved.is_dir() or not os.path.ismount(resolved):
+        raise SystemExit(f"target must be an existing mounted filesystem: {resolved}")
+    return resolved
+
+
+def c_string(field: bytes, label: str) -> str:
+    if b"\0" not in field:
+        raise SystemExit(f"{label} is not terminated")
+    value, padding = field.split(b"\0", 1)
+    if not value or any(padding):
+        raise SystemExit(f"{label} padding is invalid")
+    try:
+        return value.decode("ascii")
+    except UnicodeDecodeError as error:
+        raise SystemExit(f"{label} is not ASCII") from error
+
+
+def validate_game(path: pathlib.Path, manifest: dict[str, object]) -> None:
+    package = path.read_bytes()
+    if not 256 < len(package) <= 512 * 1024 or package[:8] != b"P4GAME1\0":
+        raise SystemExit(f"invalid game package: {path.name}")
+    fields = struct.unpack_from("<9IHH", package, 8)
+    header, total, offset, payload, fmt, api, launcher, required, optional, _, flags = fields
+    if not (
+        header == offset == 256
+        and total == len(package)
+        and payload == len(package) - offset
+        and fmt == api == 1
+        and launcher == manifest["launcher_id"]
+        and required & 1
+        and not required & optional
+        and flags == 1
+        and package[48:80] == hashlib.sha256(package[offset:]).digest()
+        and c_string(package[80:128], f"{path.name} game id") == manifest["id"]
+    ):
+        raise SystemExit(f"game package validation failed: {path.name}")
+
+
+def validate_update(path: pathlib.Path) -> None:
+    package = path.read_bytes()
+    if len(package) <= 256 or package[:8] != b"P4OSUP1\0":
+        raise SystemExit("invalid P4UPDATE.P4U")
+    header, total, offset, payload, version, flags = struct.unpack_from(
+        "<6I", package, 8
+    )
+    if not (
+        header == offset == 256
+        and total == len(package)
+        and payload == len(package) - offset
+        and version == 1
+        and flags == 0
+        and package[32:64] == hashlib.sha256(package[offset:]).digest()
+        and c_string(package[160:176], "update target") == "esp32p4"
+        and not any(package[176:256])
+    ):
+        raise SystemExit("P4UPDATE.P4U validation failed")
+
+
+def validate_bundle(bundle: pathlib.Path) -> None:
+    missing = [str(relative) for relative in FILES if not (bundle / relative).is_file()]
+    if missing:
+        raise SystemExit("bundle is incomplete: " + ", ".join(missing))
+    doom = bundle / "DOOM1.WAD"
+    if doom.stat().st_size != DOOM_BYTES or sha256(doom) != DOOM_SHA256:
+        raise SystemExit("DOOM1.WAD identity does not match the pinned shareware input")
+    expected_readme = ROOT / "apps/console_os/game-storage/README-OLIMEX.TXT"
+    if (bundle / "README.TXT").read_bytes() != expected_readme.read_bytes():
+        raise SystemExit("README.TXT does not match the Olimex storage contract")
+    manifests = {
+        manifest["package_file"]: manifest
+        for manifest in (
+            json.loads(path.read_text(encoding="utf-8"))
+            for path in sorted((ROOT / "games").glob("*/game.json"))
+        )
+        if manifest.get("enabled") is True
+    }
+    for name in ("MAZE.P4G", "INVADERS.P4G"):
+        if name not in manifests:
+            raise SystemExit(f"missing enabled game manifest for {name}")
+        validate_game(bundle / name, manifests[name])
+    validate_update(bundle / "UPDATE/P4UPDATE.P4U")
+
+
+def copy_atomic(source: pathlib.Path, destination: pathlib.Path) -> dict[str, object]:
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    source_hash = sha256(source)
+    if destination.is_file() and destination.stat().st_size == source.stat().st_size:
+        if sha256(destination) == source_hash:
+            return {"path": str(destination), "bytes": source.stat().st_size,
+                    "sha256": source_hash, "result": "unchanged"}
+    descriptor, temporary_name = tempfile.mkstemp(
+        prefix=".p4-copy-", dir=destination.parent
+    )
+    temporary = pathlib.Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as output, source.open("rb") as input_file:
+            shutil.copyfileobj(input_file, output, length=1024 * 1024)
+            output.flush()
+            os.fsync(output.fileno())
+        if temporary.stat().st_size != source.stat().st_size or sha256(temporary) != source_hash:
+            raise SystemExit(f"copy verification failed before commit: {destination.name}")
+        os.replace(temporary, destination)
+        directory_fd = os.open(destination.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    finally:
+        if temporary.exists():
+            temporary.unlink()
+    return {"path": str(destination), "bytes": source.stat().st_size,
+            "sha256": source_hash, "result": "installed"}
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--target", required=True, type=pathlib.Path)
+    parser.add_argument("--bundle", type=pathlib.Path, default=DEFAULT_BUNDLE)
+    arguments = parser.parse_args()
+    target = mounted_card(arguments.target)
+    bundle = arguments.bundle.expanduser().resolve(strict=True)
+    if not bundle.is_dir():
+        raise SystemExit(f"bundle is not a directory: {bundle}")
+    validate_bundle(bundle)
+    required = sum((bundle / relative).stat().st_size for relative in FILES)
+    if shutil.disk_usage(target).free < required + 1024 * 1024:
+        raise SystemExit("microSD card does not have enough free space")
+    installed = [copy_atomic(bundle / relative, target / relative) for relative in FILES]
+    print(json.dumps({"result": "olimex-sd-card-ready", "target": str(target),
+                      "files": installed}, sort_keys=True))
+
+
+if __name__ == "__main__":
+    main()

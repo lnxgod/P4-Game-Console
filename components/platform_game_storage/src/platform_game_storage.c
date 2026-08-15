@@ -3,6 +3,7 @@
 #include "platform/game_storage.h"
 
 #include <errno.h>
+#include <inttypes.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -11,21 +12,55 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#include "esp_heap_caps.h"
+#include "sdkconfig.h"
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#include "driver/gpio.h"
+#include "driver/sdmmc_host.h"
+#include "esp_log.h"
+#include "esp_vfs_fat.h"
+#include "freertos/task.h"
+#include "sd_pwr_ctrl_by_on_chip_ldo.h"
+#include "sdmmc_cmd.h"
+#else
 #include "esp_partition.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/semphr.h"
-#include "game_storage_files.h"
-#include "game_storage_model.h"
-#include "mbedtls/sha256.h"
 #include "tinyusb.h"
 #include "tinyusb_default_config.h"
 #include "tinyusb_msc.h"
 #include "wear_levelling.h"
+#endif
+#include "freertos/FreeRTOS.h"
+#include "freertos/semphr.h"
+#include "game_storage_files.h"
+#include "game_storage_model.h"
+#include "msc_write_policy.h"
+#include "platform_game_storage_internal.h"
+#include "mbedtls/sha256.h"
 
 enum {
     GAME_STORAGE_MAX_FILES = 8,
     GAME_STORAGE_HASH_BUFFER_BYTES = 8192,
+    GAME_STORAGE_STREAM_BUFFER_BYTES = 16384,
+    GAME_STORAGE_PATH_BYTES =
+        sizeof(PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT) +
+        PLATFORM_GAME_STORAGE_FILE_NAME_MAX_BYTES + 1,
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    GAME_STORAGE_SD_SLOT = SDMMC_HOST_SLOT_0,
+    GAME_STORAGE_SD_BUS_WIDTH = 4,
+    GAME_STORAGE_SD_POWER_GPIO = 45,
+    GAME_STORAGE_SD_LDO_CHANNEL = 4,
+    GAME_STORAGE_SD_CLK_GPIO = 43,
+    GAME_STORAGE_SD_CMD_GPIO = 44,
+    GAME_STORAGE_SD_D0_GPIO = 39,
+    GAME_STORAGE_SD_D1_GPIO = 40,
+    GAME_STORAGE_SD_D2_GPIO = 41,
+    GAME_STORAGE_SD_D3_GPIO = 42,
+#endif
 };
+
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+static const char *TAG = "game_storage_sd";
+#endif
 
 static const uint8_t s_expected_doom_sha256[32] = {
     0x1d, 0x7d, 0x43, 0xbe, 0x50, 0x1e, 0x67, 0xd9,
@@ -37,8 +72,13 @@ static const uint8_t s_expected_doom_sha256[32] = {
 static game_storage_model_t s_model;
 static StaticSemaphore_t s_lock_storage;
 static SemaphoreHandle_t s_lock;
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+static sdmmc_card_t *s_card;
+static sd_pwr_ctrl_handle_t s_sd_power;
+#else
 static wl_handle_t s_wl_handle = WL_INVALID_HANDLE;
 static tinyusb_msc_storage_handle_t s_storage;
+#endif
 static bool s_initialized;
 static bool s_usb_attached;
 static bool s_usb_driver_running;
@@ -46,8 +86,16 @@ static uint64_t s_capacity_bytes;
 static uint32_t s_sector_size_bytes;
 static uint32_t s_scans;
 static uint32_t s_file_mutations;
+static uint32_t s_usb_verified_writes;
+static uint32_t s_usb_write_failures;
 static esp_err_t s_last_error = ESP_ERR_INVALID_STATE;
 static uint8_t s_hash_buffer[GAME_STORAGE_HASH_BUFFER_BYTES];
+static bool s_maintenance;
+
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+_Static_assert(GAME_STORAGE_HASH_BUFFER_BYTES >= CONFIG_TINYUSB_MSC_BUFSIZE,
+               "USB write verification buffer must hold one MSC transfer");
+#endif
 
 static bool lock_storage(void)
 {
@@ -60,6 +108,7 @@ static void unlock_storage(void)
     (void)xSemaphoreGiveRecursive(s_lock);
 }
 
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 static game_storage_owner_t owner_from_mount(
     tinyusb_msc_mount_point_t mount_point)
 {
@@ -124,6 +173,7 @@ static esp_err_t install_usb_driver(void)
     }
     return result;
 }
+#endif
 
 static bool doom_header_valid(const uint8_t header[12], uint64_t size_bytes)
 {
@@ -234,7 +284,7 @@ static platform_game_storage_state_t public_state_locked(void)
     if (s_model.format_required) {
         return PLATFORM_GAME_STORAGE_USB_FORMAT_REQUIRED;
     }
-    if (s_model.owner == GAME_STORAGE_OWNER_TRANSITION ||
+    if (s_maintenance || s_model.owner == GAME_STORAGE_OWNER_TRANSITION ||
         s_model.launch_pending) {
         return PLATFORM_GAME_STORAGE_TRANSITION;
     }
@@ -271,6 +321,111 @@ static esp_err_t fail_initialization(esp_err_t error)
     return error;
 }
 
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+static void sd_power_set(bool enabled)
+{
+    (void)gpio_set_level(GAME_STORAGE_SD_POWER_GPIO, enabled ? 0 : 1);
+}
+
+static void release_sd_resources(void)
+{
+    if (s_card != NULL) {
+        (void)esp_vfs_fat_sdcard_unmount(
+            PLATFORM_GAME_STORAGE_MOUNT_POINT, s_card);
+        s_card = NULL;
+    }
+    if (s_sd_power != NULL) {
+        (void)sd_pwr_ctrl_del_on_chip_ldo(s_sd_power);
+        s_sd_power = NULL;
+    }
+    sd_power_set(false);
+}
+
+static esp_err_t mount_sd_at_frequency(uint32_t frequency_khz)
+{
+    sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+    host.slot = GAME_STORAGE_SD_SLOT;
+    host.flags = SDMMC_HOST_FLAG_4BIT | SDMMC_HOST_FLAG_1BIT;
+    host.max_freq_khz = (int)frequency_khz;
+
+    const sd_pwr_ctrl_ldo_config_t ldo_config = {
+        .ldo_chan_id = GAME_STORAGE_SD_LDO_CHANNEL,
+    };
+    esp_err_t result =
+        sd_pwr_ctrl_new_on_chip_ldo(&ldo_config, &s_sd_power);
+    if (result != ESP_OK) {
+        return result;
+    }
+    host.pwr_ctrl_handle = s_sd_power;
+
+    sdmmc_slot_config_t slot = SDMMC_SLOT_CONFIG_DEFAULT();
+    slot.clk = GAME_STORAGE_SD_CLK_GPIO;
+    slot.cmd = GAME_STORAGE_SD_CMD_GPIO;
+    slot.d0 = GAME_STORAGE_SD_D0_GPIO;
+    slot.d1 = GAME_STORAGE_SD_D1_GPIO;
+    slot.d2 = GAME_STORAGE_SD_D2_GPIO;
+    slot.d3 = GAME_STORAGE_SD_D3_GPIO;
+    slot.d4 = GPIO_NUM_NC;
+    slot.d5 = GPIO_NUM_NC;
+    slot.d6 = GPIO_NUM_NC;
+    slot.d7 = GPIO_NUM_NC;
+    slot.cd = GPIO_NUM_NC;
+    slot.wp = GPIO_NUM_NC;
+    slot.width = GAME_STORAGE_SD_BUS_WIDTH;
+    slot.flags = SDMMC_SLOT_FLAG_INTERNAL_PULLUP;
+
+    const esp_vfs_fat_sdmmc_mount_config_t mount_config = {
+        .format_if_mount_failed = false,
+        .max_files = GAME_STORAGE_MAX_FILES,
+        .allocation_unit_size = 16U * 1024U,
+        .disk_status_check_enable = true,
+        .use_one_fat = false,
+    };
+    result = esp_vfs_fat_sdmmc_mount(
+        PLATFORM_GAME_STORAGE_MOUNT_POINT, &host, &slot, &mount_config,
+        &s_card);
+    if (result != ESP_OK) {
+        if (s_sd_power != NULL) {
+            (void)sd_pwr_ctrl_del_on_chip_ldo(s_sd_power);
+            s_sd_power = NULL;
+        }
+        s_card = NULL;
+    }
+    return result;
+}
+
+static esp_err_t mount_sd_with_fallback(void)
+{
+    static const uint32_t frequencies_khz[] = {
+        20000U, 10000U, 1000U, 400U,
+    };
+    esp_err_t result = ESP_FAIL;
+    for (size_t attempt = 0U;
+         attempt < sizeof(frequencies_khz) / sizeof(frequencies_khz[0]);
+         ++attempt) {
+        if (attempt != 0U) {
+            sd_power_set(false);
+            vTaskDelay(pdMS_TO_TICKS(150));
+            sd_power_set(true);
+            vTaskDelay(pdMS_TO_TICKS(100));
+        }
+        result = mount_sd_at_frequency(frequencies_khz[attempt]);
+        if (result == ESP_OK) {
+            ESP_LOGI(TAG,
+                     "P4_GAME_STORAGE SD_READY frequency_khz=%" PRIu32
+                     " fallback=%u",
+                     frequencies_khz[attempt], (unsigned)attempt);
+            return ESP_OK;
+        }
+        ESP_LOGW(TAG,
+                 "P4_GAME_STORAGE SD_RETRY frequency_khz=%" PRIu32
+                 " error=%s",
+                 frequencies_khz[attempt], esp_err_to_name(result));
+    }
+    return result;
+}
+#endif
+
 esp_err_t platform_game_storage_init(void)
 {
     if (s_initialized) {
@@ -283,6 +438,55 @@ esp_err_t platform_game_storage_init(void)
     }
     s_initialized = true;
 
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    const gpio_config_t power_gpio = {
+        .pin_bit_mask = UINT64_C(1) << GAME_STORAGE_SD_POWER_GPIO,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    esp_err_t result = gpio_config(&power_gpio);
+    if (result == ESP_OK) {
+        sd_power_set(true);
+        vTaskDelay(pdMS_TO_TICKS(100));
+        result = mount_sd_with_fallback();
+    }
+    if (result != ESP_OK || s_card == NULL) {
+        release_sd_resources();
+        return fail_initialization(result == ESP_OK ? ESP_FAIL : result);
+    }
+    if (s_card->csd.sector_size <= 0 || s_card->csd.capacity == 0U) {
+        release_sd_resources();
+        return fail_initialization(ESP_ERR_INVALID_RESPONSE);
+    }
+    s_sector_size_bytes = (uint32_t)s_card->csd.sector_size;
+    s_capacity_bytes = (uint64_t)s_card->csd.capacity *
+        (uint64_t)s_sector_size_bytes;
+
+    if (mkdir(PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT, 0775) != 0) {
+        struct stat update_directory;
+        if (errno != EEXIST ||
+            stat(PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT,
+                 &update_directory) != 0 ||
+            !S_ISDIR(update_directory.st_mode)) {
+            const int directory_error = errno;
+            release_sd_resources();
+            return fail_initialization(
+                directory_error == ENOSPC ? ESP_ERR_NO_MEM : ESP_FAIL);
+        }
+    }
+    if (lock_storage()) {
+        game_storage_model_mount_complete(&s_model, GAME_STORAGE_OWNER_APP);
+        (void)refresh_locked();
+        unlock_storage();
+    }
+    ESP_LOGI(TAG,
+             "P4_GAME_STORAGE READY backend=microSD capacity=%" PRIu64
+             " usb_device_export=0 hot_remove=0",
+             s_capacity_bytes);
+    return ESP_OK;
+#else
     const esp_partition_t *partition = esp_partition_find_first(
         ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_FAT,
         PLATFORM_GAME_STORAGE_PARTITION_LABEL);
@@ -362,6 +566,7 @@ esp_err_t platform_game_storage_init(void)
 
     result = install_usb_driver();
     return result == ESP_OK ? ESP_OK : fail_initialization(result);
+#endif
 }
 
 esp_err_t platform_game_storage_refresh(void)
@@ -395,10 +600,61 @@ esp_err_t platform_game_storage_get_status(
     out_status->ownership_transfers = s_model.ownership_transfers;
     out_status->mount_failures = s_model.mount_failures;
     out_status->scans = s_scans;
+    out_status->usb_verified_writes = s_usb_verified_writes;
+    out_status->usb_write_failures = s_usb_write_failures;
     out_status->last_error = s_last_error;
     unlock_storage();
     return ESP_OK;
 }
+
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+esp_err_t platform_game_storage_msc_write10(
+    uint8_t lun, uint32_t lba, uint32_t offset,
+    const uint8_t *data, size_t size_bytes)
+{
+    if (data == NULL || !s_initialized || !lock_storage()) {
+        return data == NULL ? ESP_ERR_INVALID_ARG : ESP_ERR_INVALID_STATE;
+    }
+    esp_err_t result = ESP_OK;
+    size_t address = 0U;
+    const int validation = msc_write_policy_validate(
+        lun, lba, offset, size_bytes, s_sector_size_bytes,
+        s_capacity_bytes, CONFIG_TINYUSB_MSC_BUFSIZE, &address);
+    if (validation != 0) {
+        result = validation == EOVERFLOW
+            ? ESP_ERR_INVALID_SIZE : ESP_ERR_INVALID_ARG;
+    } else if (s_model.owner != GAME_STORAGE_OWNER_USB || s_maintenance ||
+               !s_usb_driver_running || s_wl_handle == WL_INVALID_HANDLE) {
+        result = ESP_ERR_INVALID_STATE;
+    } else {
+        result = wl_erase_range(s_wl_handle, address, size_bytes);
+        if (result == ESP_OK) {
+            result = wl_write(s_wl_handle, address, data, size_bytes);
+        }
+        if (result == ESP_OK) {
+            result = wl_read(
+                s_wl_handle, address, s_hash_buffer, size_bytes);
+        }
+        if (result == ESP_OK &&
+            memcmp(data, s_hash_buffer, size_bytes) != 0) {
+            result = ESP_ERR_INVALID_CRC;
+        }
+    }
+
+    if (result == ESP_OK) {
+        if (s_usb_verified_writes != UINT32_MAX) {
+            ++s_usb_verified_writes;
+        }
+    } else {
+        if (s_usb_write_failures != UINT32_MAX) {
+            ++s_usb_write_failures;
+        }
+        s_last_error = result;
+    }
+    unlock_storage();
+    return result;
+}
+#endif
 
 static esp_err_t storage_errno_to_esp(int error)
 {
@@ -431,7 +687,7 @@ esp_err_t platform_game_storage_list_root(
     if (!s_initialized || !lock_storage()) {
         return ESP_ERR_INVALID_STATE;
     }
-    if (!game_storage_model_files_available(&s_model)) {
+    if (s_maintenance || !game_storage_model_files_available(&s_model)) {
         unlock_storage();
         return ESP_ERR_INVALID_STATE;
     }
@@ -455,7 +711,7 @@ esp_err_t platform_game_storage_remove_root_file(const char *name)
     if (!s_initialized || !lock_storage()) {
         return ESP_ERR_INVALID_STATE;
     }
-    if (!game_storage_model_files_available(&s_model)) {
+    if (s_maintenance || !game_storage_model_files_available(&s_model)) {
         unlock_storage();
         return ESP_ERR_INVALID_STATE;
     }
@@ -476,6 +732,285 @@ esp_err_t platform_game_storage_remove_root_file(const char *name)
     return result;
 }
 
+esp_err_t platform_game_storage_remove_update_file(const char *name)
+{
+    if (!game_storage_files_root_name_valid(name)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!s_initialized || !lock_storage()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (s_maintenance || !game_storage_model_files_available(&s_model)) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    const int files_result = game_storage_files_remove_root_file(
+        PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT, name);
+    const esp_err_t result = storage_errno_to_esp(files_result);
+    if (result == ESP_OK) {
+        if (s_file_mutations != UINT32_MAX) {
+            ++s_file_mutations;
+        }
+        s_last_error = ESP_OK;
+    } else {
+        s_last_error = result;
+    }
+    unlock_storage();
+    return result;
+}
+
+static esp_err_t compose_file_path(
+    const char *directory, const char *name,
+    char path[GAME_STORAGE_PATH_BYTES])
+{
+    if (directory == NULL || !game_storage_files_root_name_valid(name)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    const int written = snprintf(
+        path, GAME_STORAGE_PATH_BYTES, "%s/%s", directory, name);
+    return written > 0 && (size_t)written < GAME_STORAGE_PATH_BYTES
+        ? ESP_OK : ESP_ERR_INVALID_SIZE;
+}
+
+static esp_err_t regular_file_size(const char *path, size_t maximum_bytes,
+                                   size_t *out_size_bytes)
+{
+    struct stat metadata;
+    if (path == NULL || out_size_bytes == NULL || maximum_bytes == 0U) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (stat(path, &metadata) != 0) {
+        return storage_errno_to_esp(errno);
+    }
+    if (!S_ISREG(metadata.st_mode) || metadata.st_size <= 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    const uint64_t bytes = (uint64_t)metadata.st_size;
+    if (bytes > maximum_bytes || bytes > SIZE_MAX) {
+        return ESP_ERR_INVALID_SIZE;
+    }
+    *out_size_bytes = (size_t)bytes;
+    return ESP_OK;
+}
+
+static esp_err_t load_regular_file(
+    const char *path, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes)
+{
+    if (out_data == NULL || out_size_bytes == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_data = NULL;
+    *out_size_bytes = 0U;
+    if (!s_initialized || !lock_storage()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (s_maintenance || !game_storage_model_files_available(&s_model)) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+    size_t file_bytes = 0U;
+    esp_err_t result = regular_file_size(path, maximum_bytes, &file_bytes);
+    uint8_t *data = NULL;
+    FILE *file = NULL;
+    if (result == ESP_OK) {
+        data = heap_caps_malloc(
+            file_bytes, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+        if (data == NULL) {
+            data = heap_caps_malloc(file_bytes, MALLOC_CAP_8BIT);
+        }
+        if (data == NULL) {
+            result = ESP_ERR_NO_MEM;
+        }
+    }
+    if (result == ESP_OK) {
+        file = fopen(path, "rb");
+        if (file == NULL || fread(data, 1U, file_bytes, file) != file_bytes ||
+            ferror(file) != 0 || fgetc(file) != EOF) {
+            result = ESP_FAIL;
+        }
+    }
+    if (file != NULL && fclose(file) != 0 && result == ESP_OK) {
+        result = ESP_FAIL;
+    }
+    if (result == ESP_OK) {
+        *out_data = data;
+        *out_size_bytes = file_bytes;
+    } else {
+        heap_caps_free(data);
+    }
+    /* Optional catalog/update probes use NOT_FOUND as ordinary absence. */
+    s_last_error = result == ESP_ERR_NOT_FOUND ? ESP_OK : result;
+    unlock_storage();
+    return result;
+}
+
+esp_err_t platform_game_storage_load_root_file(
+    const char *name, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes)
+{
+    if (out_data == NULL || out_size_bytes == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_data = NULL;
+    *out_size_bytes = 0U;
+    char path[GAME_STORAGE_PATH_BYTES];
+    const esp_err_t result = compose_file_path(
+        PLATFORM_GAME_STORAGE_MOUNT_POINT, name, path);
+    if (result != ESP_OK) {
+        return result;
+    }
+    return load_regular_file(
+        path, maximum_bytes, out_data, out_size_bytes);
+}
+
+esp_err_t platform_game_storage_load_update_file(
+    const char *name, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes)
+{
+    if (out_data == NULL || out_size_bytes == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_data = NULL;
+    *out_size_bytes = 0U;
+    char path[GAME_STORAGE_PATH_BYTES];
+    const esp_err_t result = compose_file_path(
+        PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT, name, path);
+    if (result != ESP_OK) {
+        return result;
+    }
+    return load_regular_file(
+        path, maximum_bytes, out_data, out_size_bytes);
+}
+
+void platform_game_storage_release_file(uint8_t *data)
+{
+    heap_caps_free(data);
+}
+
+static esp_err_t stream_regular_file_exclusive(
+    const char *path, size_t maximum_bytes,
+    platform_game_storage_stream_fn consume, void *context,
+    size_t *out_size_bytes)
+{
+    if (consume == NULL || out_size_bytes == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_size_bytes = 0U;
+    if (!s_initialized || !lock_storage()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (s_maintenance || !game_storage_model_files_available(&s_model)) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+    size_t file_bytes = 0U;
+    esp_err_t result = regular_file_size(path, maximum_bytes, &file_bytes);
+    if (result == ESP_OK) {
+        s_maintenance = true;
+    }
+    unlock_storage();
+    if (result != ESP_OK) {
+        return result;
+    }
+
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    result = tinyusb_driver_uninstall();
+    const bool usb_driver_stopped = result == ESP_OK;
+    if (lock_storage()) {
+        s_usb_driver_running = result != ESP_OK;
+        s_usb_attached = false;
+        unlock_storage();
+    }
+#endif
+    uint8_t *buffer = NULL;
+    FILE *file = NULL;
+    if (result == ESP_OK) {
+        buffer = heap_caps_malloc(
+            GAME_STORAGE_STREAM_BUFFER_BYTES,
+            MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+        result = buffer == NULL ? ESP_ERR_NO_MEM : ESP_OK;
+    }
+    if (result == ESP_OK) {
+        file = fopen(path, "rb");
+        result = file == NULL ? ESP_FAIL : ESP_OK;
+    }
+    uint64_t offset = 0U;
+    while (result == ESP_OK && offset < file_bytes) {
+        size_t requested = GAME_STORAGE_STREAM_BUFFER_BYTES;
+        if ((uint64_t)requested > file_bytes - offset) {
+            requested = (size_t)(file_bytes - offset);
+        }
+        const size_t count = fread(buffer, 1U, requested, file);
+        if (count != requested) {
+            result = ESP_FAIL;
+            break;
+        }
+        result = consume(context, buffer, count, offset);
+        offset += count;
+    }
+    if (file != NULL && fclose(file) != 0 && result == ESP_OK) {
+        result = ESP_FAIL;
+    }
+    heap_caps_free(buffer);
+
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    const esp_err_t reinstall = ESP_OK;
+#else
+    const esp_err_t reinstall = usb_driver_stopped
+        ? install_usb_driver() : ESP_OK;
+#endif
+    if (lock_storage()) {
+        s_maintenance = false;
+        s_last_error = result != ESP_OK ? result : reinstall;
+        unlock_storage();
+    }
+    if (result == ESP_OK && reinstall == ESP_OK) {
+        *out_size_bytes = file_bytes;
+        return ESP_OK;
+    }
+    return result != ESP_OK ? result : reinstall;
+}
+
+esp_err_t platform_game_storage_stream_root_file_exclusive(
+    const char *name, size_t maximum_bytes,
+    platform_game_storage_stream_fn consume, void *context,
+    size_t *out_size_bytes)
+{
+    if (out_size_bytes == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_size_bytes = 0U;
+    char path[GAME_STORAGE_PATH_BYTES];
+    const esp_err_t result = compose_file_path(
+        PLATFORM_GAME_STORAGE_MOUNT_POINT, name, path);
+    if (result != ESP_OK) {
+        return result;
+    }
+    return stream_regular_file_exclusive(
+        path, maximum_bytes, consume, context, out_size_bytes);
+}
+
+esp_err_t platform_game_storage_stream_update_file_exclusive(
+    const char *name, size_t maximum_bytes,
+    platform_game_storage_stream_fn consume, void *context,
+    size_t *out_size_bytes)
+{
+    if (out_size_bytes == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_size_bytes = 0U;
+    char path[GAME_STORAGE_PATH_BYTES];
+    const esp_err_t result = compose_file_path(
+        PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT, name, path);
+    if (result != ESP_OK) {
+        return result;
+    }
+    return stream_regular_file_exclusive(
+        path, maximum_bytes, consume, context, out_size_bytes);
+}
+
 esp_err_t platform_game_storage_lock_for_game(void)
 {
     if (!s_initialized || !lock_storage()) {
@@ -487,6 +1022,18 @@ esp_err_t platform_game_storage_lock_for_game(void)
         unlock_storage();
         return error;
     }
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    s_model.content = GAME_STORAGE_CONTENT_UNKNOWN;
+    const esp_err_t result = refresh_locked();
+    const bool ready = result == ESP_OK &&
+        s_model.owner == GAME_STORAGE_OWNER_APP &&
+        s_model.content == GAME_STORAGE_CONTENT_READY;
+    game_storage_model_finish_game_lock(&s_model, ready);
+    s_last_error = ready ? ESP_OK : result;
+    unlock_storage();
+    return ready ? ESP_OK :
+        (result == ESP_OK ? ESP_ERR_INVALID_STATE : result);
+#else
     unlock_storage();
 
     esp_err_t result = tinyusb_driver_uninstall();
@@ -533,6 +1080,7 @@ esp_err_t platform_game_storage_lock_for_game(void)
     const esp_err_t reinstall = install_usb_driver();
     return result != ESP_OK ? result :
         (reinstall != ESP_OK ? reinstall : ESP_ERR_INVALID_STATE);
+#endif
 }
 
 bool platform_game_storage_game_locked(void)

@@ -2,6 +2,7 @@
 
 Use the repository skills in `.agents/skills` whenever their descriptions match:
 
+- `develop-p4-games` for creating, porting, modifying, packaging, installing, or testing storage-installed `.P4G` games.
 - `develop-esp32-p4-platform` for toolchain, build, flash, monitor, recovery, or board bring-up work.
 - `use-elecrow-p4-audio` for the 10 in variant factory I2S1/GPIO30 speaker path, Doom sound effects, audio diagnostics, or acoustic acceptance.
 - `use-elecrow-p4-display` for the 10 in variant panel, framebuffer, backlight, or game-video path.

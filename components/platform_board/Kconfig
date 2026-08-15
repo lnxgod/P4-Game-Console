@@ -1,0 +1,15 @@
+menu "P4 Console board profile"
+
+choice P4_BOARD
+    prompt "Target board"
+    default P4_BOARD_ELECROW_CROWPANEL_ADVANCED_10
+
+config P4_BOARD_ELECROW_CROWPANEL_ADVANCED_10
+    bool "Elecrow CrowPanel Advanced 10.1-inch"
+
+config P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    bool "Olimex ESP32-P4-PC Rev.B"
+
+endchoice
+
+endmenu

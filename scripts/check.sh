@@ -33,6 +33,7 @@ python3 "$P4_SCRIPT_DIR/tests/test-gamepad-diag-install.py"
 python3 "$P4_SCRIPT_DIR/tests/test-gamepad-diag-restore.py"
 python3 "$P4_SCRIPT_DIR/tests/test-gamepad-diag-flash-route.py"
 python3 "$P4_SCRIPT_DIR/tests/test-console-os-usb-runtime-capture.py"
+python3 "$P4_SCRIPT_DIR/tests/test-console-os-game-manager-runtime-capture.py"
 python3 "$P4_SCRIPT_DIR/tests/test-console-os-usb-install.py"
 python3 "$P4_SCRIPT_DIR/tests/test-console-os-file-manager-install.py"
 python3 "$P4_SCRIPT_DIR/tests/test-doom-e5-runtime-capture.py"
@@ -102,3 +103,5 @@ ctest --test-dir "$P4_E5_AUDIO_ADAPTER_BUILD" --output-on-failure
 "$P4_SCRIPT_DIR/build.sh" doom_embedded_touch_audio
 python3 "$P4_SCRIPT_DIR/verify-doom-embedded-touch-audio.py" \
     "$P4_SCRIPT_DIR/../apps/doom_embedded_touch_audio/build" build-only
+
+make -C "$P4_SCRIPT_DIR/.." game-sdk-host

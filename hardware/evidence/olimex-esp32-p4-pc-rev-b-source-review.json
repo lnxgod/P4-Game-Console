@@ -1,0 +1,37 @@
+{
+  "schema": 1,
+  "classification": "published-board-source-review",
+  "result": "source-reviewed",
+  "board_profile": "hardware/boards/olimex-esp32-p4-pc-rev-b.json",
+  "reviewed_at": "2026-08-15",
+  "official_source": {
+    "repository": "https://github.com/OLIMEX/ESP32-P4-PC",
+    "commit": "99a802ec029f531692102b2c754e20dae2226038",
+    "manual_sha256": "cbe0a46291060fc521c81857d75f67c2c075371b8db471c8da4f2a94798cb7bf",
+    "schematic_sha256": "8b2810225ef03937aff43ae04db28c52a39db6102009a40e1c034f008c5653f7",
+    "production_test": "SOFTWARE/ESP-IDF/p4_production_test"
+  },
+  "reviewed_paths": [
+    "LT8912B HDMI bridge over two-lane MIPI-DSI and I2C1 GPIO7/GPIO8",
+    "microSD four-bit SDMMC with active-low GPIO45 power gate",
+    "FE1.1s powered four-port USB host hub with active-low GPIO21 reset",
+    "native USB Serial/JTAG programming connector on GPIO24/GPIO25",
+    "ES8311 on shared I2C1 GPIO7/GPIO8 with I2S1 GPIO13/12/10/9/11 and active-high amplifier control GPIO53"
+  ],
+  "transport_conclusion": {
+    "persistent_game_storage": "microSD",
+    "usb_a_role": "host-only through onboard hub",
+    "usb_c_role": "programming and serial/JTAG, not P4 Game Storage MSC",
+    "safe_game_update_methods": [
+      "copy files to microSD from another computer/card reader",
+      "import a reviewed package from a USB flash drive in a future host-import service",
+      "network transfer in a future authenticated update service"
+    ]
+  },
+  "authorization": {
+    "build_candidate": true,
+    "hardware_execution": false,
+    "flash": false,
+    "reason": "the exact live board still requires a complete factory backup and hashed identity binding before first write"
+  }
+}

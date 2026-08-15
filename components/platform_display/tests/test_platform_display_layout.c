@@ -129,14 +129,72 @@ static void test_standard_rgb565_target_byte_order(void)
     EXPECT_TRUE(memcmp(expected_bytes, actual_bytes, sizeof(actual_bytes)) == 0);
 }
 
+static void test_hdmi_rgb888_layout(void)
+{
+    enum {
+        HDMI_WIDTH = 1280,
+        HDMI_HEIGHT = 720,
+        HDMI_STRIDE = (HDMI_WIDTH * 3) + 7,
+        HDMI_ROWS = HDMI_HEIGHT + 2,
+        LEFT = 160,
+        TOP = 60,
+    };
+    uint16_t *source = calloc(SOURCE_STRIDE * SOURCE_HEIGHT,
+                              sizeof(*source));
+    uint8_t *destination = malloc(HDMI_STRIDE * HDMI_ROWS);
+    EXPECT_TRUE(source != NULL);
+    EXPECT_TRUE(destination != NULL);
+    if (source == NULL || destination == NULL) {
+        free(destination);
+        free(source);
+        return;
+    }
+    memset(destination, 0xa5, HDMI_STRIDE * HDMI_ROWS);
+    source[0] = UINT16_C(0xf800);
+    source[1] = UINT16_C(0x07e0);
+    source[SOURCE_STRIDE] = UINT16_C(0x001f);
+
+    EXPECT_TRUE(platform_display_layout_rgb565_to_rgb888_1280x720(
+        source, SOURCE_STRIDE, destination, HDMI_STRIDE, HDMI_ROWS));
+    const size_t red = (TOP * HDMI_STRIDE) + (LEFT * 3U);
+    EXPECT_EQ(0xff, destination[red]);
+    EXPECT_EQ(0x00, destination[red + 1U]);
+    EXPECT_EQ(0x00, destination[red + 2U]);
+    EXPECT_EQ(0xff, destination[red + 3U]);
+    const size_t green = red + 9U;
+    EXPECT_EQ(0x00, destination[green]);
+    EXPECT_EQ(0xff, destination[green + 1U]);
+    EXPECT_EQ(0x00, destination[green + 2U]);
+    const size_t blue = ((TOP + 3U) * HDMI_STRIDE) + (LEFT * 3U);
+    EXPECT_EQ(0x00, destination[blue]);
+    EXPECT_EQ(0x00, destination[blue + 1U]);
+    EXPECT_EQ(0xff, destination[blue + 2U]);
+    EXPECT_EQ(0x00, destination[0]);
+    EXPECT_EQ(0x00, destination[(HDMI_HEIGHT - 1U) * HDMI_STRIDE]);
+    EXPECT_EQ(0xa5, destination[HDMI_WIDTH * 3U]);
+    EXPECT_EQ(0xa5, destination[HDMI_HEIGHT * HDMI_STRIDE]);
+
+    EXPECT_TRUE(!platform_display_layout_rgb565_to_rgb888_1280x720(
+        source, SOURCE_WIDTH - 1U, destination, HDMI_STRIDE, HDMI_ROWS));
+    EXPECT_TRUE(!platform_display_layout_rgb565_to_rgb888_1280x720(
+        source, SOURCE_STRIDE, destination, (HDMI_WIDTH * 3U) - 1U,
+        HDMI_ROWS));
+    EXPECT_TRUE(!platform_display_layout_rgb565_to_rgb888_1280x720(
+        source, SOURCE_STRIDE, destination, HDMI_STRIDE, HDMI_HEIGHT - 1U));
+
+    free(destination);
+    free(source);
+}
+
 int main(void)
 {
     test_bounds_and_scaling();
     test_standard_rgb565_target_byte_order();
+    test_hdmi_rgb888_layout();
     if (failures != 0U) {
         fprintf(stderr, "platform display layout tests failed: %u\n", failures);
         return 1;
     }
-    puts("P4_DISPLAY_LAYOUT HOST PASS scale=3 viewport=960x600 margins=32/32 byte_order=rgb565-le");
+    puts("P4_DISPLAY_LAYOUT HOST PASS rgb565=1024x600 rgb888=1280x720 viewport=960x600");
     return 0;
 }

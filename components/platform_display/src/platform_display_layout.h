@@ -15,4 +15,10 @@ bool platform_display_layout_rgb565_320x200(const uint16_t *source,
                                             size_t destination_stride_pixels,
                                             size_t destination_height);
 
+/* Olimex HDMI scanout is RGB888 at 1280x720. Destination stride is bytes. */
+bool platform_display_layout_rgb565_to_rgb888_1280x720(
+    const uint16_t *source, size_t source_stride_pixels,
+    uint8_t *destination, size_t destination_stride_bytes,
+    size_t destination_height);
+
 #endif

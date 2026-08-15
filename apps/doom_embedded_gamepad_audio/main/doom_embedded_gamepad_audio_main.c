@@ -41,7 +41,9 @@
 #include "platform/readonly_blob.h"
 #include "platform_gamepad_usb/platform_gamepad_usb.h"
 #include "platform_usb_host/platform_usb_host.h"
+#ifndef P4_CONSOLE_OS_EMBEDDED
 #include "runtime_gate.h"
+#endif
 
 #define DOOM_SUBMIT_TIMEOUT_MS UINT32_C(100)
 #define DOOM_FIRST_FRAME_TIMEOUT_MS UINT32_C(250)
@@ -51,16 +53,20 @@
 #define EMBEDDED_WAD_BYTES ((size_t)4196020U)
 #define EMBEDDED_WAD_PATH "/doom/doom1.wad"
 
+#ifndef P4_CONSOLE_OS_EMBEDDED
 extern const uint8_t _binary_doom_shareware_wad_start[];
 extern const uint8_t _binary_doom_shareware_wad_end[];
-
 static const uint8_t s_expected_wad_sha256[32] = {
     0x1d, 0x7d, 0x43, 0xbe, 0x50, 0x1e, 0x67, 0xd9,
     0x27, 0xe4, 0x15, 0xe0, 0xb8, 0xf3, 0xe2, 0x9c,
     0x3b, 0xf3, 0x30, 0x75, 0xe8, 0x59, 0x72, 0x18,
     0x16, 0xf6, 0x52, 0xa5, 0x26, 0xca, 0xc7, 0x71,
 };
+#else
+static const uint8_t s_console_storage_wad_marker;
+#endif
 
+#ifndef P4_CONSOLE_OS_EMBEDDED
 static const platform_usb_fixture_evidence_t s_fixture_evidence = {
     .version = PLATFORM_USB_FIXTURE_EVIDENCE_VERSION,
     .size = (uint16_t)sizeof(platform_usb_fixture_evidence_t),
@@ -93,6 +99,7 @@ static const platform_usb_fixture_evidence_t s_fixture_evidence = {
     .evidence_sha256 = "",
 #endif
 };
+#endif
 
 static const char *const TAG = "p4_doom_e4";
 static esp_err_t s_frame_error = ESP_OK;
@@ -107,9 +114,11 @@ static bool s_audio_bound;
 static bool s_display_initialized;
 static bool s_video_initialized;
 static bool s_blob_registered;
+#ifndef P4_CONSOLE_OS_EMBEDDED
 static bool s_host_started;
 static bool s_host_quiesced;
 static bool s_gamepad_started;
+#endif
 static bool s_cleanup_active;
 static bool s_cleanup_complete;
 static bool s_engine_heap_logged;
@@ -120,6 +129,7 @@ _Static_assert(sizeof(pixel_t) == sizeof(uint32_t),
 _Static_assert(DOOM_AUDIO_OUTPUT_RATE_HZ == 16000,
                "E4 Doom mixer and compile-only backend rate must align");
 
+#ifndef P4_CONSOLE_OS_EMBEDDED
 static uint32_t read_u32_le(const uint8_t bytes[4])
 {
     return (uint32_t)bytes[0]
@@ -127,6 +137,7 @@ static uint32_t read_u32_le(const uint8_t bytes[4])
         | ((uint32_t)bytes[2] << 16U)
         | ((uint32_t)bytes[3] << 24U);
 }
+#endif
 
 static void log_memory_snapshot(const char *stage)
 {
@@ -200,6 +211,9 @@ static void composite_cleanup(void)
         s_audio == NULL && destroy_confirmed && recover_result == ESP_OK;
 
     esp_err_t quiesce_result = ESP_OK;
+    esp_err_t gamepad_result = ESP_OK;
+    esp_err_t host_result = ESP_OK;
+#ifndef P4_CONSOLE_OS_EMBEDDED
     if (s_host_started && !s_host_quiesced) {
         quiesce_result = platform_usb_host_quiesce();
         if (quiesce_result == ESP_OK) {
@@ -207,7 +221,6 @@ static void composite_cleanup(void)
         }
     }
 
-    esp_err_t gamepad_result = ESP_OK;
     if (s_gamepad_started && s_host_quiesced) {
         gamepad_result = platform_gamepad_usb_stop(
             pdMS_TO_TICKS(DOOM_USB_STOP_TIMEOUT_MS));
@@ -216,7 +229,6 @@ static void composite_cleanup(void)
         }
     }
 
-    esp_err_t host_result = ESP_OK;
     if (s_host_started && s_host_quiesced && !s_gamepad_started) {
         host_result = platform_usb_host_stop(
             pdMS_TO_TICKS(DOOM_USB_STOP_TIMEOUT_MS));
@@ -225,6 +237,7 @@ static void composite_cleanup(void)
             s_host_quiesced = false;
         }
     }
+#endif
 
     esp_err_t dark_result = ESP_ERR_INVALID_STATE;
     esp_err_t video_result = ESP_ERR_INVALID_STATE;
@@ -255,8 +268,11 @@ static void composite_cleanup(void)
     }
 
     s_cleanup_complete = audio_backend_released && !audio_retained &&
-        !s_host_started && !s_gamepad_started && !s_video_initialized &&
-        !s_display_initialized && !s_blob_registered;
+#ifndef P4_CONSOLE_OS_EMBEDDED
+        !s_host_started && !s_gamepad_started &&
+#endif
+        !s_video_initialized && !s_display_initialized &&
+        !s_blob_registered;
     ESP_LOGI(TAG,
              "P4_DOOM_E4 CLEANUP force_safe=%s audio_stop=%s "
              "audio_state_result=%s audio_state=%u stop_accepted=%u "
@@ -293,6 +309,7 @@ static void engine_exit_composite(void)
     composite_cleanup();
 }
 
+#ifndef P4_CONSOLE_OS_EMBEDDED
 static esp_err_t verify_embedded_wad(const uint8_t *data, size_t size_bytes)
 {
     if (data == NULL || size_bytes != EMBEDDED_WAD_BYTES) {
@@ -315,6 +332,7 @@ static esp_err_t verify_embedded_wad(const uint8_t *data, size_t size_bytes)
     return memcmp(digest, s_expected_wad_sha256, sizeof(digest)) == 0
         ? ESP_OK : ESP_ERR_INVALID_CRC;
 }
+#endif
 
 static esp_err_t verify_readonly_vfs(void)
 {
@@ -343,6 +361,7 @@ static esp_err_t verify_readonly_vfs(void)
     return result;
 }
 
+#ifndef P4_CONSOLE_OS_EMBEDDED
 static esp_err_t start_native_gamepad(void)
 {
     esp_err_t result = platform_usb_host_start(&s_fixture_evidence);
@@ -363,6 +382,7 @@ static esp_err_t start_native_gamepad(void)
     }
     return ESP_OK;
 }
+#endif
 
 static bool action_key(uint8_t action, unsigned char *key)
 {
@@ -427,16 +447,96 @@ static bool action_key(uint8_t action, unsigned char *key)
 static void refresh_input(void)
 {
     platform_gamepad_snapshot_t snapshot;
-    gamepad_state_t neutral;
+    gamepad_state_t merged;
     const esp_err_t snapshot_result =
         platform_gamepad_usb_get_snapshot(&snapshot);
-    const gamepad_state_t *state = &snapshot.state;
-    if (snapshot_result != ESP_OK) {
-        gamepad_state_init(&neutral);
-        state = &neutral;
+    if (snapshot_result == ESP_OK) {
+        merged = snapshot.state;
+    } else {
+        gamepad_state_init(&merged);
     }
 
-    const uint32_t session = snapshot_result == ESP_OK ? snapshot.session : 0U;
+    platform_usb_input_snapshot_t auxiliary;
+    memset(&auxiliary, 0, sizeof(auxiliary));
+    const esp_err_t auxiliary_result =
+        platform_gamepad_usb_get_input_snapshot(&auxiliary);
+    const bool keyboard_connected = auxiliary_result == ESP_OK &&
+        auxiliary.version == PLATFORM_USB_INPUT_SNAPSHOT_VERSION &&
+        auxiliary.size == sizeof(auxiliary) &&
+        auxiliary.keyboard.connected != 0U;
+    const bool mouse_connected = auxiliary_result == ESP_OK &&
+        auxiliary.version == PLATFORM_USB_INPUT_SNAPSHOT_VERSION &&
+        auxiliary.size == sizeof(auxiliary) &&
+        auxiliary.mouse.connected != 0U;
+    if ((keyboard_connected || mouse_connected) && merged.connected == 0U) {
+        (void)gamepad_state_connect(&merged, auxiliary.keyboard.timestamp_us);
+    }
+    if (keyboard_connected) {
+        const platform_usb_keyboard_state_t *const keyboard =
+            &auxiliary.keyboard;
+        const bool up = platform_usb_keyboard_key_down(
+            keyboard, PLATFORM_USB_KEY_UP) ||
+            platform_usb_keyboard_key_down(keyboard, PLATFORM_USB_KEY_W);
+        const bool down = platform_usb_keyboard_key_down(
+            keyboard, PLATFORM_USB_KEY_DOWN) ||
+            platform_usb_keyboard_key_down(keyboard, PLATFORM_USB_KEY_S);
+        const bool left = platform_usb_keyboard_key_down(
+            keyboard, PLATFORM_USB_KEY_LEFT) ||
+            platform_usb_keyboard_key_down(keyboard, PLATFORM_USB_KEY_A);
+        const bool right = platform_usb_keyboard_key_down(
+            keyboard, PLATFORM_USB_KEY_RIGHT) ||
+            platform_usb_keyboard_key_down(keyboard, PLATFORM_USB_KEY_D);
+        if (up != down) {
+            merged.dpad |= up ? GAMEPAD_DPAD_UP : GAMEPAD_DPAD_DOWN;
+        }
+        if (left != right) {
+            merged.dpad |= left ? GAMEPAD_DPAD_LEFT : GAMEPAD_DPAD_RIGHT;
+        }
+        if (platform_usb_keyboard_key_down(keyboard, PLATFORM_USB_KEY_Z) ||
+            platform_usb_keyboard_key_down(keyboard, PLATFORM_USB_KEY_SPACE) ||
+            (keyboard->modifier & UINT8_C(0x11)) != 0U) {
+            merged.buttons |= GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_SOUTH);
+        }
+        if (platform_usb_keyboard_key_down(keyboard, PLATFORM_USB_KEY_X)) {
+            merged.buttons |= GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_EAST);
+        }
+        if ((keyboard->modifier & UINT8_C(0x22)) != 0U) {
+            merged.buttons |= GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_WEST);
+        }
+        if (platform_usb_keyboard_key_down(
+                keyboard, PLATFORM_USB_KEY_ENTER)) {
+            merged.buttons |= GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_START);
+        }
+        if (platform_usb_keyboard_key_down(
+                keyboard, PLATFORM_USB_KEY_ESCAPE) ||
+            platform_usb_keyboard_key_down(
+                keyboard, PLATFORM_USB_KEY_BACKSPACE)) {
+            merged.buttons |= GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_BACK);
+        }
+    }
+    if (mouse_connected) {
+        if ((auxiliary.mouse.buttons & UINT8_C(0x01)) != 0U) {
+            merged.buttons |= GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_SOUTH);
+        }
+        if ((auxiliary.mouse.buttons & UINT8_C(0x02)) != 0U) {
+            merged.buttons |= GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_EAST);
+        }
+        if ((auxiliary.mouse.buttons & UINT8_C(0x04)) != 0U) {
+            merged.buttons |= GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_GUIDE);
+        }
+        if (auxiliary.mouse.wheel > 0) {
+            merged.buttons |= GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_NORTH);
+        } else if (auxiliary.mouse.wheel < 0) {
+            merged.buttons |=
+                GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_RIGHT_STICK);
+        }
+    }
+
+    const gamepad_state_t *const state = &merged;
+    const uint32_t session = snapshot_result == ESP_OK
+        ? snapshot.session
+        : (keyboard_connected ? auxiliary.keyboard.session
+                              : auxiliary.mouse.session);
     const uint8_t connected = state->connected;
     if (!s_input_connection_known || connected != s_input_connected
         || session != s_input_session) {
@@ -596,14 +696,28 @@ void DG_SetWindowTitle(const char *title)
     (void)title;
 }
 
+#ifdef P4_CONSOLE_OS_EMBEDDED
+void console_os_launch_doom(void)
+#else
 void app_main(void)
+#endif
 {
+#ifndef P4_CONSOLE_OS_EMBEDDED
     doom_gamepad_audio_runtime_gate_t gate = {0};
     doom_gamepad_audio_runtime_gate_read(&gate);
+#endif
+#ifdef P4_CONSOLE_OS_EMBEDDED
+    ESP_LOGI(TAG,
+             "P4_DOOM_E4 START wad=storage-exact vfs=read-only "
+             "input=usb-gamepad-keyboard-mouse sfx=enabled music=enabled "
+             "audio_backend=olimex-es8311-i2s1");
+#else
     ESP_LOGI(TAG,
              "P4_DOOM_E4 START wad=embedded-exact vfs=read-only "
              "input=native-p4-hs-usb sfx=compiled music=disabled "
              "audio_backend=compile-link-only");
+#endif
+#ifndef P4_CONSOLE_OS_EMBEDDED
     if (gate.composite_authorized != 1U || gate.usb_authorized != 1U ||
         gate.audio_authorized != 1U) {
         ESP_LOGW(TAG,
@@ -615,13 +729,14 @@ void app_main(void)
                  (unsigned)gate.audio_authorized);
         return;
     }
+#endif
 
     /* First hardware action after every independent authorization gate. */
     esp_err_t result = platform_audio_force_safe_shutdown();
     if (result != ESP_OK) {
         halt_dark("audio-initial-safe", result);
     }
-    ESP_LOGI(TAG, "P4_DOOM_E4 SAFE amp_gpio30=high");
+    ESP_LOGI(TAG, "P4_DOOM_E4 SAFE amplifier=disabled");
 
     result = platform_display_init();
     if (result != ESP_OK) {
@@ -632,6 +747,10 @@ void app_main(void)
     ESP_LOGI(TAG,
              "P4_DOOM_E4 CLEANUP_REGISTERED order=audio-usb-display-vfs");
 
+#ifdef P4_CONSOLE_OS_EMBEDDED
+    const uint8_t *const wad_start = &s_console_storage_wad_marker;
+    const size_t wad_size = EMBEDDED_WAD_BYTES;
+#else
     const uint8_t *const wad_start = _binary_doom_shareware_wad_start;
     const uint8_t *const wad_end = _binary_doom_shareware_wad_end;
     const uintptr_t wad_start_address = (uintptr_t)wad_start;
@@ -644,6 +763,7 @@ void app_main(void)
     if (result != ESP_OK) {
         halt_dark("wad-validate", result);
     }
+#endif
     ESP_LOGI(TAG,
              "P4_DOOM_E4 WAD_VERIFIED identity=doom-shareware-1.9 "
              "bytes=%u sha256=%s",
@@ -682,6 +802,7 @@ void app_main(void)
 
     doom_gamepad_input_init(&s_input);
     s_input_ready = true;
+#ifndef P4_CONSOLE_OS_EMBEDDED
     result = start_native_gamepad();
     if (result != ESP_OK) {
         halt_dark("native-gamepad-start", result);
@@ -691,6 +812,11 @@ void app_main(void)
              "tier=1-generic-hid fixture=%s evidence_sha256=%s",
              s_fixture_evidence.evidence_id,
              s_fixture_evidence.evidence_sha256);
+#else
+    ESP_LOGI(TAG,
+             "P4_DOOM_E4 USB_READY owner=console-os "
+             "classes=gamepad,keyboard,mouse topology=integrated-hub");
+#endif
 
     log_memory_snapshot("pre-audio-create");
     const platform_audio_config_t audio_config = {
@@ -720,6 +846,15 @@ void app_main(void)
         halt_dark("backlight", result);
     }
 
+#ifdef P4_CONSOLE_OS_EMBEDDED
+    char *argv[] = {
+        "doom",
+        "-iwad",
+        EMBEDDED_WAD_PATH,
+        "-gfxmode",
+        "rgba8888",
+    };
+#else
     char *argv[] = {
         "doom",
         "-iwad",
@@ -728,14 +863,23 @@ void app_main(void)
         "rgba8888",
         "-nomusic",
     };
+#endif
     const int argc = (int)(sizeof(argv) / sizeof(argv[0]));
     key_prevweapon = '[';
     key_nextweapon = ']';
+#ifdef P4_CONSOLE_OS_EMBEDDED
+    ESP_LOGI(TAG,
+             "P4_DOOM_E4 ENGINE_START gfxmode=rgba8888 wad=%s "
+             "sfx=enabled music=enabled input=canonical-snapshot "
+             "audio_bound=1 video_seam=xrgb8888_to_rgb565",
+             EMBEDDED_WAD_PATH);
+#else
     ESP_LOGI(TAG,
              "P4_DOOM_E4 ENGINE_START gfxmode=rgba8888 wad=%s "
              "sfx=enabled music=disabled input=canonical-snapshot "
              "audio_bound=1 video_seam=xrgb8888_to_rgb565",
              EMBEDDED_WAD_PATH);
+#endif
     s_engine_invoked = true;
     doomgeneric_Create(argc, argv);
     /* M_LoadDefaults runs inside Create; enforce nonzero weapon bindings. */

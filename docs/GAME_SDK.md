@@ -1,40 +1,57 @@
 # P4 Game SDK v1
 
-P4 Game SDK v1 is the small native C interface used by games inside Console
-OS. A game owns gameplay state and draws a 320x200 RGB565 frame. Console OS
-owns the panel, touch controller, audio hardware, timing, and app lifecycle.
-That separation lets a game use controls and sound without knowing Elecrow pin
-maps or calling ESP-IDF peripheral drivers.
+P4 Game SDK v1 is the stable C interface for storage-installed Console OS
+games. A game owns bounded gameplay state and draws a 320x200 RGB565 frame.
+Console OS owns the panel, touch, audio, timing, USB, filesystem, and app
+lifecycle.
 
-## What format Doom actually uses
+## Package format
 
-Doom is not a UF2 or a separately launched desktop-style executable. ESP-IDF
-first links RISC-V machine code into `p4_console_os.elf`; its image tools then
-produce the flashable `p4_console_os.bin`. Doom is currently statically linked
-into that same ELF and receives an exclusive one-way handoff from the launcher.
+Native games use `p4-native-elf-v1`. A `.P4G` file contains a fixed 256-byte
+little-endian header followed by one stripped ESP32-P4 ELF32 `ET_DYN` payload.
+The header carries bounded launcher metadata, capability masks, and the
+payload SHA-256.
 
-Native SDK games use the explicit format name `p4-native-static-v1`. They are
-also RISC-V machine code statically linked into the Console OS ELF, but use the
-reentrant Game API lifecycle and can return to the launcher. Adding a game
-currently means rebuilding and safely installing the complete Console OS app
-image.
+Before invoking Espressif's pinned `elf_loader` 1.3.1, firmware verifies:
 
-UF2 is a block-oriented flashing container, not a CPU executable format. This
-repository does not currently produce or accept UF2. A future removable-game
-format should be a signed/versioned P4 package with a reviewed loader and
-resource limits; renaming an ELF or BIN file to `.uf2` would not provide that.
+- the entire package layout and reserved bytes;
+- ASCII IDs, titles, versions, licenses, and two-level folder names;
+- package size, payload digest, and duplicate launcher/game IDs;
+- RISC-V ELF class, machine, headers, load ranges, memory limit, entry point,
+  section/string bounds, relocation count/types, and referenced symbols;
+- an undefined-symbol allowlist limited to the libc calls used by the SDK
+  wrapper.
 
-## Make a game
+The relocated cartridge receives only a versioned host table containing the
+RGB565 surface and callbacks for sanitized input, frame presentation, bounded
+tone audio, and completion. It receives no display, touch, audio, USB, or
+filesystem handles.
+
+Native machine code is not a security sandbox. A structurally valid malicious
+cartridge can still execute CPU instructions, so install only packages you
+trust. This format is not UF2; UF2 is a flashing container, while `.P4G` is a
+Console OS runtime package.
+
+Doom remains a special legacy case. Its engine is linked into the OS, but its
+WAD is read from `P4 GAMES`; it uses an exclusive one-way handoff until the
+engine has a reviewed reentrant teardown.
+
+## Make and install a game
 
 From the repository root:
 
 ```sh
+python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE --dry-run
 python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE
-make game-sdk-host
-make console-os-idf
+cmake -S games/star_hop -B build-host/star_hop -G Ninja
+cmake --build build-host/star_hop
 ```
 
-The creator picks the next free launcher ID and writes:
+The starter compiles on the host immediately. Before adding nontrivial game
+logic, follow an existing game's `tests/` and CMake wiring, then run
+`ctest --test-dir build-host/star_hop --output-on-failure`.
+
+The creator chooses the next free launcher ID and writes:
 
 ```text
 games/star_hop/
@@ -44,64 +61,72 @@ games/star_hop/
   src/star_hop.c
 ```
 
-`game.json` is the launcher/build contract. The registry generator validates
-every enabled manifest, rejects duplicate IDs and symbols, and automatically
-links the component. Its required `folder` field contains one or two uppercase
-segments of at most 15 ASCII characters each, such as `GAMES/ARCADE` or
-`SYSTEM`. Root shows derived `ALL PROGRAMS`, `GAMES`, and `SYSTEM` folders;
-`GAMES` then shows type folders such as `ACTION` and `ARCADE`.
+The Console OS build validates every enabled manifest and produces either:
 
-The launcher shows three columns by two rows and supports up to 32 registered
-apps. Use the vertical arrows or swipe the app area to scroll by rows. Folder
-discovery scans that fixed registry without heap allocation, recursion, a
-filesystem, or a dynamic executable loader. No central source list needs to
-be edited.
+```text
+apps/console_os/build/game-storage-seed/STAR_HOP.P4G
+apps/console_os/build-olimex-esp32-p4-pc/sd-card/STAR_HOP.P4G
+```
 
-Use `--dry-run` to inspect the plan or `--help` for title, slug, folder, color,
-and launcher-ID options. New games default to `GAMES/ARCADE`; choose another
-bounded path with `--folder`. The generator never overwrites an existing game.
+Run `make console-os-idf` after the focused game test when a distributable
+cartridge or device install is needed. Use `make game-registry-check` for a
+manifest or generator change and `make game-sdk-host` for shared API, package,
+loader, or cross-game changes. Do not run repo-wide `make check` for an
+isolated game change.
+
+On Elecrow, connect the laptop to J16, copy `STAR_HOP.P4G` to the root of
+`P4 GAMES`, eject the volume cleanly, and open Game Manager. On Olimex Rev.B,
+power off, move the microSD card to the laptop, copy the cartridge to its root
+(or rebuild the complete card bundle and run `make install-olimex-sd-card
+SD_MOUNT=/Volumes/P4GAMES`), eject it, reinstall it, and power on. Replacing the
+file updates the game; removing it in Game Manager uninstalls it. Neither path
+requires an OS reflash.
+
+`game.json` is the source/package contract. Its important fields are:
+
+- `format`: `p4-native-elf-v1`;
+- `api_version`: `1`;
+- `version`: a bounded semantic version;
+- `package_file`: an uppercase root `.P4G` filename;
+- unique `id` and `launcher_id`;
+- bounded `title`, `subtitle`, `folder`, `license`, and RGB565 accent;
+- required and optional capabilities.
+
+Use `scripts/new-game.py --dry-run` to inspect a starter plan. The creator
+never overwrites an existing game.
 
 ## API at a glance
 
-Include only the stable headers under `components/p4_game_api/include/p4/`:
+Include only headers under `components/p4_game_api/include/p4/`:
 
-- `p4/game.h`: descriptor, start/update/render/stop lifecycle, capabilities,
-  launcher return, and audio service calls.
-- `p4/input.h`: normalized Up, Down, Left, Right, A, B, Start, and Back states,
-  plus standard on-screen controls.
-- `p4/draw.h`: clipped pixels, rectangles, circles, text, and RGB565 sprites.
-- `p4/audio.h`: the host-owned, eight-voice square/triangle tone mixer.
+- `p4/game.h`: descriptor, lifecycle, capabilities, launcher return, and
+  service calls;
+- `p4/input.h`: Up, Down, Left, Right, A, B, Start, Back, and standard
+  on-screen controls;
+- `p4/draw.h`: clipped pixels, shapes, text, and RGB565 sprites;
+- `p4/audio.h`: the host-owned eight-voice square/triangle tone mixer.
 
-The `update` callback receives bounded elapsed time and complete `held`,
-`pressed`, and `released` button snapshots. Return
-`P4_GAME_EXIT_TO_LAUNCHER` when Back is pressed. The `render` callback receives
-a caller-owned 320x200 surface; every supplied drawing primitive clips to its
-bounds.
+`update` receives bounded elapsed time plus complete `held`, `pressed`, and
+`released` snapshots. Return `P4_GAME_EXIT_TO_LAUNCHER` when Back is pressed.
+`render` receives the caller-owned surface; supplied drawing primitives clip
+to its bounds.
 
-Tone audio is optional. Call `p4_game_play_tone()` and accept a `false` result
-when sound is unavailable. On the authorized 10.1-inch unit, Console OS opens
-the reviewed 16 kHz PCM16-stereo factory speaker session at volume step 6/10,
-mixes at most eight voices, and restores proven active-high amplifier shutdown
-when the game leaves or any backend operation fails. Game code never owns I2S,
-GPIO30, or the audio backend.
+Tone audio is optional. `p4_game_play_tone()` may return false when sound is
+unavailable. On the authorized 10.1-inch unit, Console OS opens the reviewed
+16 kHz PCM16-stereo speaker session only for the foreground game, then restores
+the proven active-high amplifier shutdown state. The reserved PCM-stream
+capability is not exposed in v1.
 
-The API has a reserved PCM stream capability, but Console OS v1 intentionally
-does not expose it yet. Games should request only capabilities they use and
-must still function when an optional capability is absent.
-
-## Rules for portable games
+## Portable-game rules
 
 - Keep hardware access out of `games/`; reusable services belong in
   `components/`.
-- Treat input as a snapshot. Never retain touch pointers or assume one contact.
-- Bound all state, loops, sprite dimensions, text lengths, and audio requests.
-- Use original or correctly licensed code and assets. Do not copy arcade ROMs,
-  maps, sprites, fonts, or sounds.
-- Do not commit commercial Doom WADs or WAD-bearing firmware artifacts.
-- Run the host sanitizer suite before the pinned ESP-IDF build. A successful
-  build is not hardware acceptance or permission to flash.
+- Treat input as a snapshot and never retain touch pointers.
+- Bound state, loops, sprite dimensions, text, and audio requests.
+- Use original or correctly licensed code and assets.
+- Never commit commercial Doom WADs, WAD-bearing binaries, or recovery images.
+- Run the changed game's focused host sanitizer tests. Run the pinned Console
+  OS build/verifier only when producing a cartridge for hardware.
 
-Maze Chase under `games/maze_chase/` and Space Invaders under
-`games/space_invaders/` are complete clean-room examples. Both use only
-code-rendered shapes and the P4 API; neither contains arcade ROM, map, sprite,
-font, art, or sound assets.
+Maze Chase and Space Invaders are complete clean-room examples using only
+code-rendered shapes and P4 APIs.

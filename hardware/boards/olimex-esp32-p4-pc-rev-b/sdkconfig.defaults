@@ -1,0 +1,21 @@
+# SPDX-License-Identifier: MIT
+
+CONFIG_P4_BOARD_ELECROW_CROWPANEL_ADVANCED_10=n
+CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B=y
+
+# Board profile selects HDMI, microSD, and the integrated powered USB-A hub.
+# No USB-device MSC component is present in this profile.
+
+# User content lives on microSD, so all remaining flash is split evenly across
+# two rollback-capable OS slots instead of reserving an internal FAT volume.
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-olimex.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions-olimex.csv"
+
+# The board has 16 MiB flash and 32 MiB octal PSRAM, matching the base image.
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_SPIRAM=y
+CONFIG_SPIRAM_MODE_HEX=y
+CONFIG_SPIRAM_SPEED_200M=y
+
+# Use the reviewed Doom engine adapter with the Olimex ES8311 backend.
+CONFIG_DOOM_AUDIO_ENGINE_ADAPTER=y

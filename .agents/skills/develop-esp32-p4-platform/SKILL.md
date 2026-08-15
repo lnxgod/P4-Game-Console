@@ -1,6 +1,6 @@
 ---
 name: develop-esp32-p4-platform
-description: Build, diagnose, flash, monitor, or extend firmware for this ESP32-P4 badge platform, including the Elecrow CrowPanel Advanced 10 in variant. Use for ESP-IDF apps, board support and pin changes, display, SD, audio, touch or USB bring-up, toolchain setup, recovery, and hardware verification on the Elecrow CrowPanel Advanced family.
+description: Build, diagnose, flash, monitor, or extend firmware for this ESP32-P4 platform, including the Elecrow CrowPanel Advanced 10 in variant and Olimex ESP32-P4-PC Rev.B. Use for ESP-IDF apps, board support and pin changes, display, SD, audio, touch or USB bring-up, toolchain setup, recovery, and hardware verification.
 ---
 
 # Develop the ESP32-P4 platform
@@ -12,7 +12,8 @@ Build every app on the same pinned platform and leave reproducible evidence. Tre
 Read these files before changing firmware:
 
 1. `toolchain.lock.json`
-2. `hardware/board-profile.json`
+2. `hardware/board-profile.json` for Elecrow, or the selected profile under
+   `hardware/boards/`
 3. `AGENTS.md`
 4. `docs/HARDWARE.md` when work touches pins, rails, connectors, or peripherals
 
@@ -20,9 +21,44 @@ Use the repository scripts and Make targets rather than ad-hoc `idf.py` commands
 
 For the Elecrow 10.1-inch hardware, use the user-facing name **10 in variant** and read `references/elecrow-10-in-variant.md` before changing display, touch, audio, USB, or combined game firmware. Keep that reference current as new exact-unit evidence is recorded.
 
-For speaker audio on this variant, also use `$use-elecrow-p4-audio`. It owns the
+For Olimex, select `olimex-esp32-p4-pc` explicitly. Read
+`docs/boards/OLIMEX_ESP32_P4_PC.md` and
+`hardware/boards/olimex-esp32-p4-pc-rev-b.json`. Its USB-C connector is native
+Serial/JTAG, while the powered USB-A hub is the HID-host path; persistent game
+storage is microSD, not USB MSC. Never flash a newly connected P4-PC until its
+complete 16 MiB factory image and hashed live identity have been recorded and
+the profile's write gate has been deliberately authorized.
+
+Keep the build target and physical target paired exactly:
+
+- `elecrow-crowpanel-advanced-10` / `make console-os-idf` means the Elecrow
+  CrowPanel Advanced 10.1-inch device only.
+- `olimex-esp32-p4-pc` / `make console-os-olimex-idf` means the Olimex
+  ESP32-P4-PC **Rev.B development board** only.
+- Any third target needs its own ID and source-pinned profile through the board
+  port contract. Reusing an adapter never permits reusing a board identity.
+
+For another ESP32-P4 board, use `scripts/board-port.py` and
+`docs/BOARD_PORTING.md`. Start with `check` and `matrix`, then feed a
+source-pinned hardware spec to `plan` and `scaffold`. The generated adapter map
+keeps the Console OS feature contract shared and exposes only genuine board
+driver gaps. Never reuse a backend merely because connectors or chips have the
+same names; require hash-bound schematic compatibility evidence.
+
+For speaker audio on the Elecrow 10 in variant, also use
+`$use-elecrow-p4-audio`. It owns the
 low-freedom factory I2S1/GPIO30 contract and prevents schematic codec labels
 from replacing the exact pinned factory behavior.
+
+For Olimex audio, do not use the Elecrow audio route. Use the official Rev.B
+ES8311 service in `components/olimex/platform_audio` on shared I2C1 and I2S1;
+the external result is the board's 3.5mm audio jack and remains hardware
+unverified until a named acceptance run.
+
+For a game that only consumes the stable P4 video, controls, tone, timing, and
+lifecycle APIs, use `$develop-p4-games` instead. Escalate to this platform skill
+only when the task changes Console OS, a shared service, the package/loader
+boundary, an ESP-IDF build, or physical hardware behavior.
 
 ## Choose the safe scope
 
@@ -33,15 +69,28 @@ from replacing the exact pinned factory behavior.
 - Keep generated `sdkconfig`, build output, managed components, firmware binaries, WADs, and local backups out of Git.
 - Pin ESP-IDF, managed components, third-party source, and board references. Commit dependency lockfiles once generated.
 
-## Build and verify
+## Verify in proportion to the change
 
-Run, in order:
+Choose the smallest proof that covers the modified boundary:
 
-```sh
-make verify
-make check
-make build APP=<app>
-```
+- Documentation or skill changes need only their focused validators and
+  reference checks; do not build firmware.
+- A host-testable component change needs that component's existing `*-host`
+  target, not every host suite.
+- An ESP-IDF app change needs `make verify` when the environment has not already
+  been proven, then `make build APP=<app>` and that app's focused verifier.
+- A package or full Console OS integration change needs its documented build
+  target once after focused host checks pass.
+- Run repo-wide `make check` only when the user requests it, a toolchain or lock
+  changes, or a genuinely cross-cutting change spans maintained applications.
+- Flash only when on-device behavior must be established. Run one named
+  acceptance for the changed behavior and repeat only after the image or test
+  conditions change.
+
+Do not invoke display, audio, USB, or gamepad diagnostics merely because a game
+uses their stable APIs. Do not repeat an unchanged build or flash. Stop when
+the risk-matched checks pass and report unrelated failures without widening
+the task.
 
 Resolve warnings that indicate incompatible APIs, implicit declarations, invalid configuration, or memory misuse. Do not hide them with global suppressions.
 
@@ -52,6 +101,17 @@ Label evidence accurately:
 - `hardware-tested`: a named image ran on a named board revision and its serial acceptance markers were captured.
 
 A successful build is not hardware proof.
+
+For the two Console OS profiles, use exactly one physically matching target
+after focused tests:
+
+```sh
+make console-os-idf          # Elecrow CrowPanel Advanced 10.1-inch
+make console-os-olimex-idf   # Olimex ESP32-P4-PC Rev.B development board
+```
+
+Run both only when shared Console OS or board-selection code changed. Do not
+repeat either build after documentation-only edits.
 
 ## Flash and monitor
 

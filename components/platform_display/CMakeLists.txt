@@ -1,18 +1,32 @@
 if(COMMAND idf_component_register)
+    idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
+    if(P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
+        set(PLATFORM_DISPLAY_DRIVER_SOURCE "src/platform_display_olimex.c")
+        set(PLATFORM_DISPLAY_DRIVER_REQUIREMENTS
+            esp_driver_i2c
+            espressif__esp_lcd_lt8912b
+        )
+    else()
+        set(PLATFORM_DISPLAY_DRIVER_SOURCE "src/platform_display.c")
+        set(PLATFORM_DISPLAY_DRIVER_REQUIREMENTS
+            esp_driver_gpio
+            esp_driver_ledc
+            espressif__esp_lcd_ek79007
+        )
+    endif()
     idf_component_register(
         SRCS
-            "src/platform_display.c"
+            "${PLATFORM_DISPLAY_DRIVER_SOURCE}"
             "src/platform_display_layout.c"
         INCLUDE_DIRS "include"
         PRIV_INCLUDE_DIRS "src"
         REQUIRES
-            esp_driver_gpio
-            esp_driver_ledc
             esp_hw_support
             esp_lcd
-            esp_lcd_ek79007
             freertos
             heap
+        PRIV_REQUIRES
+            ${PLATFORM_DISPLAY_DRIVER_REQUIREMENTS}
     )
 
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)

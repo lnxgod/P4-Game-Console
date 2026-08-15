@@ -7,6 +7,10 @@ description: Add, change, diagnose, flash, or test screen output on the Elecrow 
 
 Use the hardware-tested display service and the pinned vendor/Espressif sources. Do not recreate the EK79007 driver or copy panel code into a game.
 
+If a game only renders through the existing P4 surface and `p4/draw.h` APIs,
+use `$develop-p4-games` and its focused game tests. Do not run panel diagnostics
+unless the request changes the display service or diagnoses physical output.
+
 ## Load the display contract
 
 Read these repository files before changing display-facing code:
@@ -47,9 +51,18 @@ Allow zero brightness during cleanup, but reject nonzero brightness until panel 
 
 Do not call `esp_lcd_panel_disp_on_off()` with EK79007 1.0.2: this driver does not install that operation and ESP-IDF 5.5.3 returns `ESP_ERR_NOT_SUPPORTED`. The official Elecrow Lesson07 also omits it.
 
-## Build and test
+## Build and test proportionally
 
-For the established diagnostic:
+Choose checks at the boundary that changed:
+
+- Game pixels, layout, or animation through stable P4 APIs: run only that
+  game's host tests.
+- Scaling, submit, cache, or framebuffer ownership in `platform_display`: run
+  the focused component tests and build the exact consuming app.
+- Panel power, MIPI-DSI, DPI timing, pixel format, or backlight: run the
+  established diagnostic sequence below and one physical acceptance.
+
+For that panel-level diagnostic:
 
 ```sh
 make verify
@@ -58,7 +71,12 @@ make build APP=display_diag
 python3 scripts/verify-display-diag.py apps/display_diag/build app-flash
 ```
 
-Run `make check` before handing off a platform change. Keep reproducible builds enabled and update the reviewed build evidence only after two clean build directories produce byte-identical BIN and ELF files.
+Do not run repo-wide `make check` by default or run unrelated audio, touch,
+storage, USB, and controller suites. Reserve a full suite for an explicit user
+request, lock/toolchain work, or a genuinely cross-cutting platform change. Do
+not repeat an unchanged build or diagnostic. Keep reproducible builds enabled
+and update reviewed reproducibility evidence only when that evidence is part of
+the changed contract.
 
 Use only the guarded app-partition write for the diagnostic:
 

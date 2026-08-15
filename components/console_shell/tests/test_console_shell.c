@@ -13,6 +13,7 @@ enum {
     APP_SYSTEM = 4,
     APP_AUDIO = 5,
     APP_FILES = 6,
+    APP_GAMES = 7,
     APP_MAZE = 100,
     APP_SPACE = 101,
 };
@@ -119,6 +120,18 @@ static const console_app_descriptor_t s_apps[] = {
         .page = CONSOLE_PAGE_FILES,
         .enabled = true,
     },
+    {
+        .id = APP_GAMES,
+        .title = "GAME MANAGER",
+        .subtitle = "USB GAMES + OS",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0x5FEA),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                        CONSOLE_CAPABILITY_TOUCH |
+                        CONSOLE_CAPABILITY_STORAGE,
+        .page = CONSOLE_PAGE_GAMES,
+        .enabled = true,
+    },
 };
 
 enum {
@@ -159,6 +172,16 @@ static console_shell_action_t drag(console_shell_t *shell,
     CHECK(console_shell_handle_touch(shell, true, &end, 1U).type ==
           CONSOLE_ACTION_NONE);
     return console_shell_handle_touch(shell, true, NULL, 0U);
+}
+
+static console_shell_action_t press_button(console_shell_t *shell,
+                                           uint32_t button)
+{
+    const console_shell_action_t action =
+        console_shell_handle_buttons(shell, button);
+    CHECK(console_shell_handle_buttons(shell, 0U).type ==
+          CONSOLE_ACTION_NONE);
+    return action;
 }
 
 static void test_registry_validation(void)
@@ -294,6 +317,74 @@ static void test_render_bounds_and_stride(void)
     free(allocation);
 }
 
+static uint64_t frame_hash(const uint16_t *frame)
+{
+    uint64_t hash = UINT64_C(1469598103934665603);
+    for (size_t index = 0U;
+         index < (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT;
+         ++index) {
+        hash ^= frame[index];
+        hash *= UINT64_C(1099511628211);
+    }
+    return hash;
+}
+
+static void check_frame_hash(uint64_t actual, uint64_t expected,
+                             const char *label)
+{
+    if (actual != expected) {
+        fprintf(stderr,
+                "FAIL %s frame changed: actual=0x%016llx expected=0x%016llx\n",
+                label, (unsigned long long)actual,
+                (unsigned long long)expected);
+        ++s_failures;
+    }
+}
+
+static void test_window_manager_visual_contract(void)
+{
+    uint16_t *const frame = calloc(
+        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
+        sizeof(*frame));
+    CHECK(frame != NULL);
+    if (frame == NULL) {
+        return;
+    }
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    check_frame_hash(frame_hash(frame), UINT64_C(0x2d1b375664ef19c7),
+                     "desktop");
+
+    shell.page = CONSOLE_PAGE_SYSTEM;
+    shell.active_app_id = APP_SYSTEM;
+    shell.runtime = (console_shell_runtime_info_t){
+        .uptime_seconds = 123U,
+        .internal_free_kib = 456U,
+        .psram_free_kib = 789U,
+        .game_storage_kib = 8192U,
+        .game_storage_state = CONSOLE_STORAGE_READY,
+        .touch_ready = true,
+        .audio_handoff_ready = true,
+        .doom_wad_ready = true,
+    };
+    shell.dirty = true;
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    check_frame_hash(frame_hash(frame), UINT64_C(0x5d183411be77a48f),
+                     "Elecrow system window");
+
+    shell.runtime.touch_ready = false;
+    shell.runtime.controller_ready = true;
+    shell.runtime.keyboard_ready = true;
+    shell.runtime.mouse_ready = true;
+    shell.runtime.sd_card_storage = true;
+    shell.dirty = true;
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    check_frame_hash(frame_hash(frame), UINT64_C(0x386848c2aff39660),
+                     "Olimex system window");
+    free(frame);
+}
+
 static void test_navigation_and_launch(void)
 {
     console_shell_t shell;
@@ -333,6 +424,48 @@ static void test_navigation_and_launch(void)
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(shell.page == CONSOLE_PAGE_HOME);
     CHECK(strcmp(shell.home_folder_path, "SYSTEM") == 0);
+}
+
+static void test_controller_navigation(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+
+    /* The root controller focus starts on All Programs. */
+    CHECK(press_button(&shell, CONSOLE_BUTTON_RIGHT).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.home_folder_path, "GAMES") == 0);
+
+    CHECK(press_button(&shell, CONSOLE_BUTTON_RIGHT).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.home_folder_path, "GAMES/ARCADE") == 0);
+    console_shell_action_t action = press_button(&shell,
+                                                  CONSOLE_BUTTON_ACCEPT);
+    CHECK(action.type == CONSOLE_ACTION_LAUNCH);
+    CHECK(action.app_id == APP_MAZE);
+
+    CHECK(press_button(&shell, CONSOLE_BUTTON_BACK).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.home_folder_path, "GAMES") == 0);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_BACK).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_folder_path[0] == '\0');
+
+    /* Held buttons are edge-triggered, and unknown bits are ignored. */
+    action = console_shell_handle_buttons(
+        &shell, CONSOLE_BUTTON_RIGHT | UINT32_C(0xffff0000));
+    CHECK(action.type == CONSOLE_ACTION_NONE);
+    const size_t selected = shell.selected_home_item;
+    CHECK(console_shell_handle_buttons(
+              &shell, CONSOLE_BUTTON_RIGHT | UINT32_C(0xffff0000)).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(shell.selected_home_item == selected);
+    CHECK(console_shell_handle_buttons(&shell, 0U).type ==
+          CONSOLE_ACTION_NONE);
 }
 
 static void test_fail_closed_gestures(void)
@@ -416,6 +549,10 @@ static void test_touch_page_and_runtime(void)
         .game_storage_kib = 8192U,
         .game_storage_state = CONSOLE_STORAGE_READY,
         .touch_ready = true,
+        .controller_ready = false,
+        .keyboard_ready = false,
+        .mouse_ready = false,
+        .sd_card_storage = false,
         .audio_handoff_ready = true,
         .game_storage_usb_attached = false,
         .doom_wad_ready = true,
@@ -440,6 +577,17 @@ static void test_touch_page_and_runtime(void)
     changed.game_storage_usb_attached = true;
     changed.doom_wad_ready = false;
     console_shell_set_runtime_info(&shell, &changed);
+    CHECK(shell.dirty);
+
+    shell.dirty = false;
+    console_shell_set_pointer(&shell, true, 400U, 300U, false);
+    CHECK(shell.pointer_visible);
+    CHECK(shell.pointer_x == CONSOLE_SHELL_WIDTH - 1U);
+    CHECK(shell.pointer_y == CONSOLE_SHELL_HEIGHT - 1U);
+    CHECK(shell.dirty);
+    shell.dirty = false;
+    console_shell_set_pointer(&shell, false, 0U, 0U, false);
+    CHECK(!shell.pointer_visible);
     CHECK(shell.dirty);
 }
 
@@ -544,6 +692,114 @@ static void test_file_manager(void)
     CHECK(!console_shell_set_file_listing(&shell, &invalid));
 }
 
+static void test_game_manager(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    CHECK(tap(&shell, 220U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    console_shell_action_t action = tap(&shell, 220U, 120U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(action.app_id == APP_GAMES);
+    CHECK(shell.page == CONSOLE_PAGE_GAMES);
+
+    console_shell_file_listing_t listing = {
+        .entry_count = 2U,
+        .total_visible_entries = 2U,
+        .storage_generation = 4U,
+        .revision = 1U,
+        .available = true,
+    };
+    listing.entries[0].source_index = 3U;
+    (void)strcpy(listing.entries[0].label, "MAZE CHASE 1.0.0");
+    listing.entries[0].size_kib = 9U;
+    listing.entries[0].removable = true;
+    listing.entries[1].source_index = UINT32_MAX;
+    (void)strcpy(listing.entries[1].label, "OS 0.2.0");
+    listing.entries[1].size_kib = 889U;
+    listing.entries[1].installable = true;
+    CHECK(console_shell_set_file_listing(&shell, &listing));
+
+    CHECK(tap(&shell, 250U, 180U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    action = tap(&shell, 250U, 180U);
+    CHECK(action.type == CONSOLE_ACTION_GAME_REMOVE);
+    CHECK(action.file_source_index == 3U);
+
+    action = tap(&shell, 50U, 72U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.file_selected_index == 1U);
+    CHECK(tap(&shell, 250U, 180U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    action = tap(&shell, 250U, 180U);
+    CHECK(action.type == CONSOLE_ACTION_OS_UPDATE_INSTALL);
+    CHECK(action.file_source_index == UINT32_MAX);
+    action = tap(&shell, 160U, 180U);
+    CHECK(action.type == CONSOLE_ACTION_GAME_REFRESH);
+
+    listing.entries[0].installable = true;
+    CHECK(!console_shell_set_file_listing(&shell, &listing));
+}
+
+static void test_controller_game_manager(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+
+    /* Root -> System -> Game Manager using only normalized buttons. */
+    CHECK(press_button(&shell, CONSOLE_BUTTON_RIGHT).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_RIGHT).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.home_folder_path, "SYSTEM") == 0);
+    (void)press_button(&shell, CONSOLE_BUTTON_DOWN);
+    (void)press_button(&shell, CONSOLE_BUTTON_RIGHT);
+    (void)press_button(&shell, CONSOLE_BUTTON_RIGHT);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.page == CONSOLE_PAGE_GAMES);
+
+    console_shell_file_listing_t listing = {
+        .entry_count = 7U,
+        .total_visible_entries = 7U,
+        .storage_generation = 8U,
+        .revision = 1U,
+        .available = true,
+    };
+    for (size_t i = 0U; i < listing.entry_count; ++i) {
+        listing.entries[i].source_index = (uint32_t)(20U + i);
+        (void)snprintf(listing.entries[i].label,
+                       sizeof(listing.entries[i].label),
+                       "GAME %u", (unsigned)i);
+        listing.entries[i].removable = true;
+    }
+    CHECK(console_shell_set_file_listing(&shell, &listing));
+
+    for (unsigned i = 0U; i < 6U; ++i) {
+        (void)press_button(&shell, CONSOLE_BUTTON_DOWN);
+    }
+    CHECK(shell.file_selected_index == 6U);
+    CHECK(shell.file_first_visible == 5U);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.file_delete_confirm);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_BACK).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(!shell.file_delete_confirm);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    console_shell_action_t action =
+        press_button(&shell, CONSOLE_BUTTON_ACCEPT);
+    CHECK(action.type == CONSOLE_ACTION_GAME_REMOVE);
+    CHECK(action.file_source_index == 26U);
+
+    action = press_button(&shell, CONSOLE_BUTTON_REFRESH);
+    CHECK(action.type == CONSOLE_ACTION_GAME_REFRESH);
+    CHECK(action.file_source_index == UINT32_MAX);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_BACK).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.page == CONSOLE_PAGE_HOME);
+}
+
 static uint32_t next_random(uint32_t *state)
 {
     *state = *state * UINT32_C(1664525) + UINT32_C(1013904223);
@@ -574,6 +830,10 @@ static void test_input_fuzz(void)
         const console_shell_contact_t *const pointer =
             (next_random(&state) & 7U) == 0U ? NULL : contacts;
         (void)console_shell_handle_touch(&shell, valid, pointer, count);
+        (void)console_shell_handle_buttons(&shell, next_random(&state));
+        if ((iteration & 7U) == 0U) {
+            (void)console_shell_handle_buttons(&shell, 0U);
+        }
         if (console_shell_is_dirty(&shell)) {
             CHECK(console_shell_render_rgb565(&shell, frame,
                                                CONSOLE_SHELL_WIDTH));
@@ -586,11 +846,15 @@ int main(void)
 {
     test_registry_validation();
     test_render_bounds_and_stride();
+    test_window_manager_visual_contract();
     test_navigation_and_launch();
+    test_controller_navigation();
     test_launcher_scrolling();
     test_fail_closed_gestures();
     test_touch_page_and_runtime();
     test_file_manager();
+    test_game_manager();
+    test_controller_game_manager();
     test_input_fuzz();
     if (s_failures != 0) {
         fprintf(stderr, "%d console shell test failure(s)\n", s_failures);

@@ -15,8 +15,10 @@ GENERATOR = ROOT / "scripts/generate-game-registry.py"
 def manifest(component: str, launcher_id: int) -> dict:
     return {
         "schema": 1,
-        "format": "p4-native-static-v1",
+        "format": "p4-native-elf-v1",
         "api_version": 1,
+        "version": "1.0.0",
+        "package_file": f"{component.upper()}.P4G",
         "component": component,
         "entry_symbol": f"p4_{component}_game",
         "launcher_id": launcher_id,
@@ -55,15 +57,10 @@ def main() -> None:
         generated = pathlib.Path(temporary) / "generated"
         result = run(
             "--games-root", str(games),
-            "--output-c", str(generated / "registry.c"),
-            "--output-h", str(generated / "registry.h"),
             "--output-cmake", str(generated / "games.cmake"))
         assert result.returncode == 0, result.stderr
-        assert "p4_first_game_game" in (generated / "registry.c").read_text()
-        assert '"GAMES/ARCADE"' in (generated / "registry.c").read_text()
-        assert "p4_generated_game_folders" in (
-            generated / "registry.h").read_text()
-        assert "first_game" in (generated / "games.cmake").read_text()
+        cmake = (generated / "games.cmake").read_text()
+        assert 'p4_add_seed_game("FIRST_GAME.P4G" "first_game")' in cmake
 
         write_manifest(games, "duplicate", manifest("duplicate", 100))
         result = run("--games-root", str(games), "--check")
