@@ -23,6 +23,7 @@ def manifest(component: str, launcher_id: int) -> dict:
         "id": f"org.example.{component.replace('_', '-')}",
         "title": component.upper(),
         "subtitle": "P4 GAME API V1",
+        "folder": "GAMES/ARCADE",
         "accent_rgb565": "0x5fea",
         "required_capabilities": ["video", "controls"],
         "optional_capabilities": ["audio-tone"],
@@ -59,6 +60,9 @@ def main() -> None:
             "--output-cmake", str(generated / "games.cmake"))
         assert result.returncode == 0, result.stderr
         assert "p4_first_game_game" in (generated / "registry.c").read_text()
+        assert '"GAMES/ARCADE"' in (generated / "registry.c").read_text()
+        assert "p4_generated_game_folders" in (
+            generated / "registry.h").read_text()
         assert "first_game" in (generated / "games.cmake").read_text()
 
         write_manifest(games, "duplicate", manifest("duplicate", 100))
@@ -71,6 +75,30 @@ def main() -> None:
         write_manifest(games, "bad_caps", bad)
         result = run("--games-root", str(games), "--check")
         assert result.returncode != 0
+
+    invalid_folders = (
+        None,
+        "",
+        "/GAMES",
+        "GAMES/",
+        "GAMES//ARCADE",
+        "GAMES/ARCADE/MAZE",
+        "games/arcade",
+        "GAMES/THIS TITLE IS TOO LONG",
+    )
+    for index, folder in enumerate(invalid_folders):
+        with tempfile.TemporaryDirectory() as temporary:
+            games = pathlib.Path(temporary) / "games"
+            games.mkdir()
+            bad_folder = manifest(f"bad_folder_{index}", 200 + index)
+            if folder is None:
+                del bad_folder["folder"]
+            else:
+                bad_folder["folder"] = folder
+            write_manifest(games, f"bad_folder_{index}", bad_folder)
+            result = run("--games-root", str(games), "--check")
+            assert result.returncode != 0, folder
+            assert "folder" in result.stderr
 
     print("game registry tests passed")
 

@@ -78,6 +78,7 @@ static const console_app_descriptor_t s_doom_app = {
     .id = CONSOLE_APP_DOOM,
     .title = "DOOM",
     .subtitle = s_doom_subtitle,
+    .folder_path = "GAMES/ACTION",
     .accent_rgb565 = UINT16_C(0xF904),
     .capabilities = CONSOLE_CAPABILITY_DISPLAY |
                     CONSOLE_CAPABILITY_TOUCH |
@@ -92,6 +93,7 @@ static const console_app_descriptor_t s_builtin_apps[] = {
         .id = CONSOLE_APP_COLORS,
         .title = "COLORS",
         .subtitle = "DISPLAY TEST",
+        .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x5FFF),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY,
         .page = CONSOLE_PAGE_COLORS,
@@ -101,6 +103,7 @@ static const console_app_descriptor_t s_builtin_apps[] = {
         .id = CONSOLE_APP_TOUCH,
         .title = "TOUCH",
         .subtitle = "GT911 CONTACTS",
+        .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0xFFE0),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
                         CONSOLE_CAPABILITY_TOUCH,
@@ -111,6 +114,7 @@ static const console_app_descriptor_t s_builtin_apps[] = {
         .id = CONSOLE_APP_SYSTEM,
         .title = "SYSTEM",
         .subtitle = "RTOS STATUS",
+        .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x5FEA),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
                         CONSOLE_CAPABILITY_TOUCH,
@@ -121,6 +125,7 @@ static const console_app_descriptor_t s_builtin_apps[] = {
         .id = CONSOLE_APP_AUDIO,
         .title = "AUDIO",
         .subtitle = "DOOM SOUND PATH",
+        .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0xF81F),
         .capabilities = CONSOLE_CAPABILITY_AUDIO,
         .page = CONSOLE_PAGE_AUDIO,
@@ -188,6 +193,7 @@ static bool build_app_registry(void)
             .id = game->launcher_id,
             .title = game->title,
             .subtitle = game->subtitle,
+            .folder_path = p4_generated_game_folders[i],
             .accent_rgb565 = game->accent_rgb565,
             .capabilities = shell_capabilities(
                 game->required_capabilities | game->optional_capabilities),

@@ -18,11 +18,16 @@ enum {
     CONSOLE_SHELL_PHYSICAL_HEIGHT = 600,
     CONSOLE_SHELL_VIEWPORT_LEFT = 32,
     CONSOLE_SHELL_VIEWPORT_SCALE = 3,
-    CONSOLE_SHELL_APPS_PER_PAGE = 6,
+    CONSOLE_SHELL_APP_COLUMNS = 3,
+    CONSOLE_SHELL_VISIBLE_APP_ROWS = 2,
+    CONSOLE_SHELL_APPS_PER_VIEW =
+        CONSOLE_SHELL_APP_COLUMNS * CONSOLE_SHELL_VISIBLE_APP_ROWS,
     CONSOLE_SHELL_MAX_APPS = 32,
     CONSOLE_SHELL_MAX_CONTACTS = 5,
     CONSOLE_SHELL_TITLE_MAX_BYTES = 16,
     CONSOLE_SHELL_SUBTITLE_MAX_BYTES = 32,
+    CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES = 16,
+    CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES = 32,
 };
 
 typedef enum {
@@ -45,6 +50,8 @@ typedef struct {
     uint32_t id;
     const char *title;
     const char *subtitle;
+    /** One or two uppercase path segments, for example GAMES/ARCADE. */
+    const char *folder_path;
     uint16_t accent_rgb565;
     uint32_t capabilities;
     console_page_t page;
@@ -94,12 +101,20 @@ typedef struct {
     const console_app_descriptor_t *apps;
     size_t app_count;
     size_t selected_index;
-    size_t home_page;
+    size_t selected_home_item;
+    size_t home_scroll_row;
     size_t pressed_index;
+    size_t press_start_scroll_row;
     console_page_t page;
     uint32_t active_app_id;
+    uint16_t press_start_gui_x;
+    uint16_t press_start_gui_y;
+    char home_folder_path[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
     bool contact_down;
     bool press_active;
+    bool scroll_candidate;
+    bool scroll_gesture;
+    bool home_all_programs;
     bool dirty;
     uint32_t render_generation;
     console_shell_runtime_info_t runtime;
@@ -115,10 +130,11 @@ bool console_shell_init(console_shell_t *shell,
 /**
  * Consume one complete physical 1024x600 touch snapshot.
  *
- * Invalid frames, more than one contact, out-of-viewport coordinates, and
- * contact movement between controls cancel the pending press. A launch or
- * page change is emitted only when one valid contact is released over the
- * control where it began.
+ * Invalid frames, more than one contact, and out-of-viewport coordinates
+ * cancel the pending press. On the home view, a bounded one-finger vertical
+ * drag scrolls whole app rows and suppresses launch. Otherwise, movement
+ * between controls cancels the pending press. A launch or page change is
+ * emitted only after a valid release.
  */
 console_shell_action_t console_shell_handle_touch(
     console_shell_t *shell,

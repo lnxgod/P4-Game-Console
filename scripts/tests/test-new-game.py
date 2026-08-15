@@ -33,6 +33,8 @@ def main() -> None:
         assert (created / "src/star_hop.c").is_file()
         manifest = json.loads((created / "game.json").read_text())
         assert manifest["format"] == "p4-native-static-v1"
+        assert manifest["folder"] == "GAMES/ARCADE"
+        assert "GAMES/ARCADE" in (created / "README.md").read_text()
         compile_result = subprocess.run(
             ["cc", "-std=c11", "-Wall", "-Wextra", "-Wpedantic",
              "-Wconversion", "-Wshadow", "-Werror",
@@ -53,6 +55,17 @@ def main() -> None:
         assert dry_run.returncode == 0, dry_run.stderr
         assert not (games / "moon_run").exists()
         assert json.loads(dry_run.stdout)["launcher_id"] == 101
+
+        folder_dry_run = run(
+            CREATOR, "Puzzle Box", "--folder", "GAMES/PUZZLE",
+            "--games-root", str(games), "--dry-run")
+        assert folder_dry_run.returncode == 0, folder_dry_run.stderr
+        assert json.loads(folder_dry_run.stdout)["folder"] == "GAMES/PUZZLE"
+
+        invalid_folder = run(
+            CREATOR, "Bad Folder", "--folder", "GAMES/TOO/DEEP",
+            "--games-root", str(games), "--dry-run")
+        assert invalid_folder.returncode != 0
 
         invalid = run(
             CREATOR, "Bad/Game", "--games-root", str(games))

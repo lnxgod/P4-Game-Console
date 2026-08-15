@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "app": "console_os",
-  "stage": "usb-game-storage-build-candidate",
-  "purpose": "FreeRTOS-native touch console with shared platform services, laptop-accessible persistent game data, a versioned native game API, an original Maze Chase sample, built-in diagnostics, and an exclusive handoff to the proven Doom SFX plus MUS integration.",
+  "stage": "program-manager-usb-game-storage-build-candidate",
+  "purpose": "FreeRTOS-native touch console with the accepted Program Manager-style folder launcher, shared platform services, laptop-accessible persistent game data, versioned native game APIs, original Maze Chase and Space Invaders samples, built-in diagnostics, and an exclusive handoff to the proven Doom SFX plus MUS integration.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
   "flash_authorized": false,
@@ -26,6 +26,9 @@
     "built_in_apps": ["colors", "touch", "system", "audio-status"],
     "apps_per_page": 6,
     "maximum_registered_apps": 32,
+    "folder_model": "manifest-driven fixed two-level hierarchy",
+    "root_folders": ["all-programs", "games", "system"],
+    "maximum_folder_depth": 2,
     "dynamic_executable_loading": false
   },
   "native_game_api": {
@@ -39,7 +42,10 @@
     "controls": ["up", "down", "left", "right", "a", "b", "start", "back"],
     "audio": "optional bounded tone service at PCM16 stereo 16000 Hz",
     "return_to_home_supported": true,
-    "registered_games": ["org.p4console.maze-chase"]
+    "registered_games": [
+      "org.p4console.maze-chase",
+      "org.p4console.space-invaders"
+    ]
   },
   "doom_handoff": {
     "mode": "exclusive-one-way-until-restart",
@@ -73,5 +79,5 @@
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "After build verification, bind and authorize the exact full-project artifact before a guarded partition-table plus game-data install; then verify J16 enumeration, copy/delete/eject/reconnect behavior, reboot persistence, contention rejection, Doom launch, and corruption recovery on the exact board."
+  "next_hardware_step": "After build verification, install the exact app-only successor while preserving the already-provisioned game_data volume; then verify the accepted Program Manager UI, J16 enumeration, seeded Doom identity, copy/delete/eject/reconnect behavior, reboot persistence, contention rejection, and Doom launch on the exact board."
 }

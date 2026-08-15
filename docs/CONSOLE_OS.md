@@ -11,13 +11,24 @@ amplifier unenergized. The user subsequently confirmed that the launcher was
 visible and that selecting Doom launched it. That confirmation does not by
 itself claim a separately observed Console-OS-to-Doom acoustic pass.
 
-The P4 Game API v1, paginated manifest registry, and original Maze Chase game
-described below are a newer build candidate. They have host/software evidence
-only and have not yet been installed or accepted on hardware.
+The accepted Program Manager successor uses a bounded folder registry with
+All Programs, Games/Action, Games/Arcade, and System views. Its nested
+navigation, scrolling, Maze Chase, Space Invaders, Doom handoff, sound, and
+return behavior were manually accepted on this exact tablet before the USB
+storage work. The integrated build below preserves that renderer and input
+model while adding laptop-accessible persistent game data.
 
-The USB game-storage work is newer again. It changes the flash partition table
-and has no on-device evidence yet; all prior Console OS acceptance applies only
-to the predecessor image.
+The integrated Program Manager and USB game-storage build was installed on the
+same bound tablet on 2026-08-14. The complete 7 MiB app span passed readback,
+the existing game-data partition was unchanged by the app-only transaction,
+and retained-UART startup reported storage ready, seven apps, a completed
+1024x600 display submit, 600 successful touch polls, and an unenergized
+amplifier. J16 then enumerated as a writable 9,289,728-byte FAT16 volume with
+512-byte sectors. Laptop copy/remove, clean FAT verification, Doom identity,
+and clean eject passed. The exact record is
+`hardware/test-runs/2026-08-14-console-os-program-manager-usb-install.json`;
+its operator-visible UI and Doom-launch fields remain pending until explicitly
+confirmed on the panel.
 
 The shell deliberately uses a monolithic firmware with statically registered
 apps. ESP-IDF and FreeRTOS provide tasks, timers, memory, and drivers; this MVP
@@ -32,10 +43,11 @@ boot
   -> platform_i2c_shared owns I2C1
   -> platform_touch borrows I2C1 for GT911
   -> console_shell renders the home screen and built-in pages
-       |-- Colors
-       |-- Touch
-       |-- System
-       |-- Audio status (read-only; amplifier remains safe)
+       |-- All Programs (scrollable flat view)
+       |-- Games
+       |     |-- Action -> Doom
+       |     `-- Arcade -> Maze Chase / Space Invaders
+       |-- System -> Colors / Touch / System / Audio status
        |-- native API game selected
        |     -> console retains display/touch ownership
        |     -> game receives normalized controls + RGB565 surface
@@ -77,10 +89,18 @@ scales it 3x into a 960x600 viewport with 32-pixel black margins on the
 ## App registry
 
 `components/console_shell/include/console/shell.h` is the launcher boundary.
-Each app has a nonzero unique ID, bounded title/subtitle, capability flags,
-accent color, enabled state, and either a built-in page or external handoff.
-The shell owns no heap memory, accepts at most 32 apps and five contacts, and
-shows six apps per page with bounded previous/next controls.
+Each app has a nonzero unique ID, bounded title/subtitle, one required folder
+path, capability flags, accent color, enabled state, and either a built-in page
+or external handoff. Folder paths contain one or two uppercase segments, each
+at most 15 bytes. The shell derives its views by scanning the fixed registry
+of at most 32 apps; it owns no heap, filesystem, recursion, or dynamic loader.
+Root exposes All Programs plus unique top-level folders.
+
+The shell accepts at most five contacts and shows a three-column, two-row
+viewport. Bounded up/down controls and vertical one-finger swipes scroll whole
+rows without wrapping; a recognized swipe suppresses tile launch. The
+Program Manager chrome, program/folder icons, scrollbar, and status bar are
+RGB565 primitives and require no bitmap asset.
 
 To add another built-in app:
 
@@ -88,11 +108,12 @@ To add another built-in app:
 2. Register one descriptor in `apps/console_os/main/console_os_main.c`.
 3. Add host navigation, malformed-input, and framebuffer-bound tests.
 
-To add a reentrant native game, run `scripts/new-game.py`, implement it against
-the headers in `components/p4_game_api/include/p4/`, and leave its validated
-manifest enabled. Configure-time generation discovers and registers it. See
-`docs/GAME_SDK.md`. Doom remains a special legacy handoff until its engine has
-a reviewed reentrant teardown.
+To add a reentrant native game, run `scripts/new-game.py`, choose a bounded
+manifest path such as `GAMES/ARCADE`, implement it against the headers in
+`components/p4_game_api/include/p4/`, and leave its validated manifest enabled.
+Configure-time generation discovers and registers both the game and its folder
+metadata. See `docs/GAME_SDK.md`. Doom remains a special legacy handoff until
+its engine has a reviewed reentrant teardown.
 
 ## Sound behavior
 
@@ -137,13 +158,15 @@ ignore status, build-only flash policy, handoff cleanup order, component graph,
 partition/flash geometry, FAT seed identity, required USB-device/storage
 symbols, and absence of USB-host/SD/codec entry points in the final ELF.
 
-The first install of this candidate cannot be app-only: the factory app shrinks
-to 7 MiB and `game_data` occupies `0x710000..0xFFFFFF`. A reviewed full-project
-image seeds the FAT volume. Later app-only updates preserve it; another full
-project flash deliberately overwrites it with the seed. On-device acceptance
-must cover J16 enumeration, copy/remove/eject, abrupt disconnect recovery,
-reboot persistence, launch rejection during host ownership, and Doom startup
-after a clean eject.
+The first migration from the pre-USB layout cannot be app-only: the factory app
+shrinks to 7 MiB and `game_data` occupies `0x710000..0xFFFFFF`. A reviewed
+full-project image seeds the FAT volume. The Program Manager successor was then
+installed app-only and preserved that live partition byte-for-byte. Another
+full-project flash deliberately overwrites it with the seed. On-device
+acceptance now covers J16 enumeration, copy/remove, FAT repair and clean
+reverification, WAD persistence, and clean eject. Abrupt disconnect recovery
+and launch rejection while the laptop owns the volume remain separate negative
+tests.
 
 ## Guarded hardware acceptance
 
@@ -158,14 +181,14 @@ The first install used the exact-unit route rather than generic `idf.py flash`:
 5. The launcher proved display completion, GT911 polling, and amplifier-off
    state with no rollback required.
 
-The exact install record is
-`hardware/test-runs/2026-08-14-console-os-mvp-install.json`. The launcher's
-visibility and launcher-to-Doom transition were later confirmed by the
-operator. A separately recorded simultaneous SFX/MUS observation under the
-Console OS handoff is still required. The newer native Game API/Maze Chase
-candidate also needs its own guarded install and manual display, control,
-sound, exit, and launcher-return acceptance. Do not convert those pending
-checks into pass claims without the operator's observation.
+The original MVP install record is
+`hardware/test-runs/2026-08-14-console-os-mvp-install.json`; the integrated
+Program Manager/USB update is recorded in
+`hardware/test-runs/2026-08-14-console-os-program-manager-usb-install.json`.
+The original launcher's visibility and launcher-to-Doom transition were later
+confirmed by the operator. Do not convert the integrated build's pending
+operator-visible UI, Doom, or audio fields into pass claims without a new
+observation on the panel.
 
 WADs, WAD-bearing firmware binaries, and local recovery images remain local
 and must never be pushed to GitHub.

@@ -29,7 +29,7 @@ resource limits; renaming an ELF or BIN file to `.uf2` would not provide that.
 From the repository root:
 
 ```sh
-python3 scripts/new-game.py "Star Hop"
+python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE
 make game-sdk-host
 make console-os-idf
 ```
@@ -46,11 +46,20 @@ games/star_hop/
 
 `game.json` is the launcher/build contract. The registry generator validates
 every enabled manifest, rejects duplicate IDs and symbols, and automatically
-links the component. The launcher shows six apps per page and supports up to
-32 registered entries. No central source list needs to be edited.
+links the component. Its required `folder` field contains one or two uppercase
+segments of at most 15 ASCII characters each, such as `GAMES/ARCADE` or
+`SYSTEM`. Root shows derived `ALL PROGRAMS`, `GAMES`, and `SYSTEM` folders;
+`GAMES` then shows type folders such as `ACTION` and `ARCADE`.
 
-Use `--dry-run` to inspect the plan or `--help` for title, slug, color, and
-launcher-ID options. The generator never overwrites an existing game.
+The launcher shows three columns by two rows and supports up to 32 registered
+apps. Use the vertical arrows or swipe the app area to scroll by rows. Folder
+discovery scans that fixed registry without heap allocation, recursion, a
+filesystem, or a dynamic executable loader. No central source list needs to
+be edited.
+
+Use `--dry-run` to inspect the plan or `--help` for title, slug, folder, color,
+and launcher-ID options. New games default to `GAMES/ARCADE`; choose another
+bounded path with `--folder`. The generator never overwrites an existing game.
 
 ## API at a glance
 
@@ -92,6 +101,7 @@ must still function when an optional capability is absent.
 - Run the host sanitizer suite before the pinned ESP-IDF build. A successful
   build is not hardware acceptance or permission to flash.
 
-Maze Chase under `games/maze_chase/` is the complete clean-room example. It
-uses only code-rendered shapes and the P4 API; it does not contain Pac-Man ROM,
-map, sprite, sound, or artwork data.
+Maze Chase under `games/maze_chase/` and Space Invaders under
+`games/space_invaders/` are complete clean-room examples. Both use only
+code-rendered shapes and the P4 API; neither contains arcade ROM, map, sprite,
+font, art, or sound assets.

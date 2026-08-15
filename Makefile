@@ -4,7 +4,7 @@ WAD ?= local-data/doom/doom1.wad
 DOOM_FRAMES ?= 8
 DOOMGENERIC_SOURCE ?=
 
-.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf platform-audio-host platform-audio-factory-host platform-touch-host platform-game-storage-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host p4-game-api-host p4-game-platform-host maze-chase-host game-registry-check game-sdk-host console-os-idf gamepad-host gamepad-idf
+.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf platform-audio-host platform-audio-factory-host platform-touch-host platform-game-storage-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host p4-game-api-host p4-game-platform-host maze-chase-host space-invaders-host game-registry-check game-sdk-host console-os-idf gamepad-host gamepad-idf
 
 setup:
 	./scripts/install-esp-idf.sh
@@ -111,12 +111,17 @@ maze-chase-host:
 	cmake --build build-host/maze_chase
 	ctest --test-dir build-host/maze_chase --output-on-failure
 
+space-invaders-host:
+	cmake -S games/space_invaders -B build-host/space_invaders -G Ninja
+	cmake --build build-host/space_invaders
+	ctest --test-dir build-host/space_invaders --output-on-failure
+
 game-registry-check:
 	python3 scripts/generate-game-registry.py --games-root games --check
 	python3 scripts/tests/test-game-registry.py
 	python3 scripts/tests/test-new-game.py
 
-game-sdk-host: p4-game-api-host p4-game-platform-host maze-chase-host game-registry-check
+game-sdk-host: p4-game-api-host p4-game-platform-host maze-chase-host space-invaders-host game-registry-check
 
 console-os-idf: console-shell-host platform-game-storage-host game-sdk-host
 	./scripts/build.sh console_os

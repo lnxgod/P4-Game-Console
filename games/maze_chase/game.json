@@ -8,6 +8,7 @@
   "id": "org.p4console.maze-chase",
   "title": "MAZE CHASE",
   "subtitle": "P4 GAME API V1",
+  "folder": "GAMES/ARCADE",
   "accent_rgb565": "0xffe0",
   "required_capabilities": ["video", "controls"],
   "optional_capabilities": ["audio-tone"],

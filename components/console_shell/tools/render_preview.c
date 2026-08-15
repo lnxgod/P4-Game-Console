@@ -7,25 +7,58 @@
 #include <string.h>
 
 static const console_app_descriptor_t s_apps[] = {
-    {1U, "DOOM", "SHAREWARE 1.9", UINT16_C(0xF904),
-     CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
+    {.id = 1U, .title = "DOOM", .subtitle = "SHAREWARE 1.9",
+     .folder_path = "GAMES/ACTION", .accent_rgb565 = UINT16_C(0xF904),
+     .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
          CONSOLE_CAPABILITY_AUDIO | CONSOLE_CAPABILITY_STORAGE,
-     CONSOLE_PAGE_EXTERNAL, true},
-    {2U, "COLORS", "DISPLAY TEST", UINT16_C(0x5FFF),
-     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_COLORS, true},
-    {3U, "TOUCH", "GT911 CONTACTS", UINT16_C(0xFFE0),
-     CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH,
-     CONSOLE_PAGE_TOUCH, true},
-    {4U, "SYSTEM", "RTOS STATUS", UINT16_C(0x5FEA),
-     CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH,
-     CONSOLE_PAGE_SYSTEM, true},
-    {5U, "AUDIO", "DOOM SOUND PATH", UINT16_C(0xF81F),
-     CONSOLE_CAPABILITY_AUDIO, CONSOLE_PAGE_AUDIO, true},
+     .page = CONSOLE_PAGE_EXTERNAL, .enabled = true},
+    {.id = 100U, .title = "MAZE CHASE", .subtitle = "ORIGINAL GAME",
+     .folder_path = "GAMES/ARCADE", .accent_rgb565 = UINT16_C(0x07E0),
+     .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
+         CONSOLE_CAPABILITY_AUDIO,
+     .page = CONSOLE_PAGE_EXTERNAL, .enabled = true},
+    {.id = 101U, .title = "SPACE INVADERS", .subtitle = "DEFEND THE P4",
+     .folder_path = "GAMES/ARCADE", .accent_rgb565 = UINT16_C(0x07FF),
+     .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
+         CONSOLE_CAPABILITY_AUDIO,
+     .page = CONSOLE_PAGE_EXTERNAL, .enabled = true},
+    {.id = 2U, .title = "COLORS", .subtitle = "DISPLAY TEST",
+     .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0x5FFF),
+     .capabilities = CONSOLE_CAPABILITY_DISPLAY,
+     .page = CONSOLE_PAGE_COLORS, .enabled = true},
+    {.id = 3U, .title = "TOUCH", .subtitle = "GT911 CONTACTS",
+     .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0xFFE0),
+     .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH,
+     .page = CONSOLE_PAGE_TOUCH, .enabled = true},
+    {.id = 4U, .title = "SYSTEM", .subtitle = "RTOS STATUS",
+     .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0x5FEA),
+     .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH,
+     .page = CONSOLE_PAGE_SYSTEM, .enabled = true},
+    {.id = 5U, .title = "AUDIO", .subtitle = "DOOM SOUND PATH",
+     .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0xF81F),
+     .capabilities = CONSOLE_CAPABILITY_AUDIO,
+     .page = CONSOLE_PAGE_AUDIO, .enabled = true},
 };
 
 static bool select_page(console_shell_t *shell, const char *name)
 {
     if (strcmp(name, "home") == 0) {
+        return true;
+    }
+    if (strcmp(name, "all") == 0) {
+        shell->home_all_programs = true;
+        return true;
+    }
+    if (strcmp(name, "games") == 0) {
+        (void)strcpy(shell->home_folder_path, "GAMES");
+        return true;
+    }
+    if (strcmp(name, "arcade") == 0) {
+        (void)strcpy(shell->home_folder_path, "GAMES/ARCADE");
+        return true;
+    }
+    if (strcmp(name, "system-folder") == 0) {
+        (void)strcpy(shell->home_folder_path, "SYSTEM");
         return true;
     }
     for (size_t i = 1U; i < sizeof(s_apps) / sizeof(s_apps[0]); ++i) {
@@ -85,7 +118,8 @@ int main(int argc, char **argv)
 {
     if (argc != 3) {
         fprintf(stderr,
-                "usage: %s home|colors|touch|system|audio output.ppm\n",
+                "usage: %s home|all|games|arcade|system-folder|"
+                "colors|touch|system|audio output.ppm\n",
                 argv[0]);
         return EXIT_FAILURE;
     }

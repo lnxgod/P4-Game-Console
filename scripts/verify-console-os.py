@@ -78,6 +78,12 @@ def main() -> None:
         r"(?ms)^  idf:.*?^    version: 5\.5\.3$", dependency_lock) is not None,
         "console lock is missing IDF 5.5.3")
 
+    sdkconfig = (build / "config/sdkconfig.h").read_text(encoding="utf-8")
+    require("#define CONFIG_FATFS_SECTOR_512 1" in sdkconfig,
+            "FAT must use the USB/WL 512-byte logical sector geometry")
+    require("#define CONFIG_WL_SECTOR_SIZE 512" in sdkconfig,
+            "wear levelling must expose 512-byte logical sectors")
+
     metadata = read_json(APP / "app-metadata.json")
     require(metadata.get("app") == "console_os", "wrong app metadata")
     for key in (
@@ -116,6 +122,15 @@ def main() -> None:
             "native games must support returning to the launcher")
     require(native_api.get("uf2_supported") is False,
             "metadata must not mislabel ESP-IDF output as UF2")
+    require(native_api.get("registered_games") == [
+        "org.p4console.maze-chase",
+        "org.p4console.space-invaders",
+    ], "metadata must name both generated games")
+    shell_metadata = metadata.get("shell", {})
+    require(shell_metadata.get("maximum_folder_depth") == 2,
+            "launcher folder depth must remain bounded")
+    require(shell_metadata.get("dynamic_executable_loading") is False,
+            "folder UI must not imply dynamic executable loading")
 
     registry_check = subprocess.run(
         ["python3", str(ROOT / "scripts/generate-game-registry.py"),
@@ -144,6 +159,8 @@ def main() -> None:
             "native game format log is missing")
     require("p4_generated_game_by_launcher_id" in shell_main,
             "generated native game dispatch is missing")
+    require("p4_generated_game_folders" in shell_main,
+            "generated native game folder metadata is missing")
     require("CONSOLE_PAGE_EXTERNAL" in shell_main, "Doom launcher entry missing")
     require("CONSOLE_PAGE_COLORS" in shell_main, "Colors app missing")
     require("CONSOLE_PAGE_TOUCH" in shell_main, "Touch app missing")
@@ -185,6 +202,7 @@ def main() -> None:
         "platform_display", "platform_game_storage", "platform_i2c_shared",
         "platform_readonly_blob", "fatfs", "wear_levelling",
         "platform_touch", "p4_game_api", "p4_game_platform", "maze_chase",
+        "space_invaders",
     }
     forbidden_components = {
         "doom_gamepad_input", "platform_audio_es8311",
@@ -219,6 +237,11 @@ def main() -> None:
     require(game_image.is_file(), "missing generated game-data image")
     require(game_image.stat().st_size == EXPECTED_GAME_PARTITION_BYTES,
             "game-data image does not fill the declared partition")
+    game_image_bytes = game_image.read_bytes()
+    fat_sector_bytes = int.from_bytes(game_image_bytes[4096 + 11:4096 + 13],
+                                      "little")
+    require(fat_sector_bytes == 512,
+            "generated FAT sector size does not match USB/WL geometry")
     normalized = subprocess.run(
         [sys.executable, str(ROOT / "scripts/normalize-game-storage-image.py"),
          str(game_image), "--check"], cwd=ROOT, check=False,
@@ -276,7 +299,8 @@ def main() -> None:
         "doom_music_player_mix", "platform_audio_factory_start",
         "p4_game_instance_start", "p4_game_input_mapper_update",
         "p4_game_platform_audio_open", "p4_maze_chase_game",
-        "p4_generated_game_by_launcher_id",
+        "p4_space_invaders_game", "p4_generated_game_by_launcher_id",
+        "p4_generated_game_folders",
         "platform_game_storage_init", "platform_game_storage_lock_for_game",
         "tinyusb_driver_install", "tinyusb_msc_new_storage_spiflash",
         "_binary_doom_shareware_wad_start",
