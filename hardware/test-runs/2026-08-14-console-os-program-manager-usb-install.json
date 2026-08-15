@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T20:00:12-0700",
+  "result": "pass-install-startup-and-usb-storage-manual-ui-and-doom-launch-pending",
+  "hardware": {
+    "product": "Elecrow CrowPanel Advanced 10.1 in DHE04310D",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432,
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "programming_port": "/dev/cu.wchusbserial10",
+    "mass_storage_port": "J16"
+  },
+  "source": {
+    "commit": "1ce7ac51b32c2411bfc5461b8097204de3b767a4",
+    "branch": "codex/usb-game-storage-program-manager",
+    "pull_request": "https://github.com/lnxgod/esp32-p4-console/pull/4"
+  },
+  "artifact": {
+    "path": "apps/console_os/build/p4_console_os.bin",
+    "offset": "0x10000",
+    "bytes": 5062208,
+    "sha256": "bcf38ab8f3c0fbb56e7dd4eca6e31975cdb276fe42d426dec6d9ba5bed77f5d1",
+    "padded_span_bytes": 7340032,
+    "padded_span_sha256": "43544cbe4ce096f016dd9d78460c26accc1e4a542768e19912f53e59c2b57b42",
+    "readback_sha256": "43544cbe4ce096f016dd9d78460c26accc1e4a542768e19912f53e59c2b57b42",
+    "elf_bytes": 15435832,
+    "elf_sha256": "078d6f69daa02ae22c52661513cf7ba979a4a1ef345a062eb4534fb45dafdde5"
+  },
+  "software_acceptance": {
+    "make_console_shell_host": "pass-asan-ubsan",
+    "make_platform_game_storage_host": "pass-asan-ubsan",
+    "make_game_sdk_host": "pass-asan-ubsan",
+    "make_console_os_idf": "pass-locked-esp-idf-5.5.3",
+    "program_manager_home_preview_sha256": "c83e07997a530741bb19cd3490ad6d246f3b4f35d83f1442ed32abc164ab35a7",
+    "preview_matches_pre_usb_accepted_renderer": true
+  },
+  "transaction": {
+    "classification": "program-manager-usb-app-only-accepted",
+    "write_scope": "application-only-0x10000..0x70ffff",
+    "same_uart_handle": true,
+    "application_launch_count": 1,
+    "new_backup_created": false,
+    "predecessor_span_sha256": "31574964e47513d1ddf06daaeb6ea035c702626d4cc70e944a169c1846d2c083",
+    "game_data_before_sha256": "1216f3e7ff720120a0530c94640d8122f9ef58d96629d0e513ca002cb4643943",
+    "game_data_after_sha256": "1216f3e7ff720120a0530c94640d8122f9ef58d96629d0e513ca002cb4643943",
+    "partition_table_preserved": true,
+    "boot_prefix_preserved": true,
+    "nvs_preserved": true,
+    "phy_init_preserved": true,
+    "restore_required": false,
+    "rollback_performed": false,
+    "ledger": {
+      "path": "hardware/local-state/console-os-program-manager-usb-update-20260814/program-manager-usb-update-ledger.json",
+      "sha256": "cb7e28253afc64b20e6c0829af1977eac441c033d4defa8c599bea444ca57b7e",
+      "phase": "runtime-accepted"
+    }
+  },
+  "retained_uart_acceptance": {
+    "result": "pass",
+    "raw": {
+      "path": "hardware/local-state/console-os-program-manager-usb-update-20260814/program-manager-usb-startup.raw",
+      "bytes": 8101,
+      "sha256": "b436812b8fb5151d62aa2c8e32ed58104f0e7efabaf24c1d6bea7c592bebe3e0"
+    },
+    "summary": {
+      "path": "hardware/local-state/console-os-program-manager-usb-update-20260814/program-manager-usb-startup.json",
+      "bytes": 1516,
+      "sha256": "d2eab0eb7dc7d46e63c1c238bf02477812bf3af469ea0f2bafa326620eac6fab"
+    },
+    "storage_state": "app-ready",
+    "storage_capacity_bytes": 9289728,
+    "registered_apps": 7,
+    "display_resolution": "1024x600",
+    "display_pixel_format": "RGB565",
+    "display_lane_rate_mbps": 900,
+    "display_pixel_clock_mhz": 51,
+    "display_submits": 1,
+    "display_completions": 1,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "touch_ready": true,
+    "touch_polls_observed": 600,
+    "touch_failures": 0,
+    "amplifier_energized": false,
+    "rejected_markers": []
+  },
+  "post_flash_usb_acceptance": {
+    "result": "pass-after-repair-and-clean-retest",
+    "device_node": "/dev/disk4",
+    "device_name": "TEST MSC Storage",
+    "volume_name": "P4 GAMES",
+    "volume_uuid": "81F2722D-27D1-36A2-86EB-16DCBA54963A",
+    "filesystem": "MS-DOS FAT16",
+    "capacity_bytes": 9289728,
+    "logical_sector_bytes": 512,
+    "allocation_block_bytes": 512,
+    "writable": true,
+    "copy_compare": "pass",
+    "remove": "pass",
+    "clean_eject": "pass",
+    "doom": {
+      "path": "/DOOM1.WAD",
+      "bytes": 4196020,
+      "sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+      "matches_ignored_local_input": true,
+      "committed_to_git": false
+    },
+    "repair_observation": {
+      "initial_file_bytes_and_sha256_passed": true,
+      "initial_fsck_result": "512 orphaned FAT clusters",
+      "repair": "fsck_msdos -y marked the 512 orphaned clusters free",
+      "post_repair_old_wad_sha256": "85f33ff3f244cf66c7b5ac6f055aebae2514c04c55412170078717930bbf8800",
+      "post_repair_first_difference_byte": 29185,
+      "action": "replaced only DOOM1.WAD from the pinned ignored local input",
+      "final_fsck_result": "clean",
+      "final_copy_compare_remove_retest": "pass",
+      "final_doom_sha256_retest": "pass",
+      "note": "The orphaned clusters predated the clean-filesystem retest. A second copy/remove cycle on the repaired volume remained clean and did not alter Doom."
+    }
+  },
+  "operator_acceptance": {
+    "program_manager_visible": null,
+    "program_manager_layout_correct": null,
+    "doom_launch_from_games_action": null,
+    "doom_video_correct": null,
+    "doom_audio_correct": null
+  },
+  "manual_acceptance_pending": [
+    "operator confirms the restored Program Manager UI is visible and correct",
+    "operator selects Games / Action / Doom after the clean J16 eject and confirms launch",
+    "operator confirms Doom video and audio from the USB-backed WAD"
+  ],
+  "claims_not_made": [
+    "The operator has visually accepted this exact flashed Program Manager build.",
+    "Doom has launched from the repaired USB-backed filesystem in this recorded run.",
+    "Abrupt host disconnect recovery has been exercised on this exact build."
+  ]
+}
