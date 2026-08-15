@@ -56,11 +56,13 @@ typedef struct {
 } platform_game_storage_status_t;
 
 /**
- * Initialize the wear-levelled FAT volume and the ESP32-P4 USB MSC device.
+ * Initialize the selected board's persistent game-data FAT volume.
  *
  * The filesystem is never formatted at runtime. A missing/corrupt filesystem
  * is exposed fail-closed and must be restored from a reviewed image or by the
- * host. App and USB ownership are mutually exclusive.
+ * host. On boards with USB device storage, app and USB ownership are mutually
+ * exclusive. The Olimex profile mounts microSD for app-only access and never
+ * advertises that card over its programming USB-C connector.
  */
 esp_err_t platform_game_storage_init(void);
 
@@ -107,7 +109,7 @@ esp_err_t platform_game_storage_load_update_file(
 void platform_game_storage_release_file(uint8_t *data);
 
 /**
- * Stop J16 USB temporarily and stream one root file to a consumer.
+ * Hold an exclusive storage maintenance lease and stream one root file.
  * The callback must not call another game-storage API.
  */
 esp_err_t platform_game_storage_stream_root_file_exclusive(
@@ -115,7 +117,7 @@ esp_err_t platform_game_storage_stream_root_file_exclusive(
     platform_game_storage_stream_fn consume, void *context,
     size_t *out_size_bytes);
 
-/** Stop J16 USB temporarily and stream one file from UPDATE. */
+/** Hold an exclusive maintenance lease and stream one file from UPDATE. */
 esp_err_t platform_game_storage_stream_update_file_exclusive(
     const char *name, size_t maximum_bytes,
     platform_game_storage_stream_fn consume, void *context,

@@ -12,6 +12,7 @@
 #include "freertos/task.h"
 #include "gamepad/hid_gamepad.h"
 #include "mbedtls/sha256.h"
+#include "platform_gamepad_usb/input_model.h"
 #include "platform_usb_host/platform_usb_host.h"
 #include "usb/hid_host.h"
 
@@ -104,6 +105,7 @@ static portMUX_TYPE s_service_lock = portMUX_INITIALIZER_UNLOCKED;
 static portMUX_TYPE s_snapshot_lock = portMUX_INITIALIZER_UNLOCKED;
 static gamepad_service_t s_service;
 static platform_gamepad_model_t s_model;
+static platform_usb_input_model_t s_aux_input_model;
 
 static bool wait_for_callbacks_to_drain(TickType_t timeout_ticks);
 static void complete_active_close(hid_host_device_handle_t handle,
@@ -970,6 +972,7 @@ esp_err_t platform_gamepad_usb_start(void)
 
     taskENTER_CRITICAL(&s_snapshot_lock);
     platform_gamepad_model_init(&s_model);
+    platform_usb_input_model_init(&s_aux_input_model);
     taskEXIT_CRITICAL(&s_snapshot_lock);
     s_service.event_queue =
         xQueueCreate(GAMEPAD_EVENT_QUEUE_LENGTH, sizeof(gamepad_event_t));
@@ -1114,4 +1117,17 @@ esp_err_t platform_gamepad_usb_get_stats(platform_gamepad_usb_stats_t *stats)
     *stats = s_service.stats;
     taskEXIT_CRITICAL(&s_service_lock);
     return ESP_OK;
+}
+
+esp_err_t platform_gamepad_usb_get_input_snapshot(
+    platform_usb_input_snapshot_t *snapshot)
+{
+    if (snapshot == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    taskENTER_CRITICAL(&s_snapshot_lock);
+    const platform_usb_input_status_t status =
+        platform_usb_input_model_take(&s_aux_input_model, snapshot);
+    taskEXIT_CRITICAL(&s_snapshot_lock);
+    return status == PLATFORM_USB_INPUT_OK ? ESP_OK : ESP_ERR_INVALID_STATE;
 }

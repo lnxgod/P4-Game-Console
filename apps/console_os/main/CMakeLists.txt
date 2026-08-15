@@ -2,41 +2,79 @@
 
 set(P4_DOOM_TOUCH_AUDIO_MAIN
     "${CMAKE_CURRENT_LIST_DIR}/../../doom_embedded_touch_audio/main")
+set(P4_DOOM_GAMEPAD_AUDIO_MAIN
+    "${CMAKE_CURRENT_LIST_DIR}/../../doom_embedded_gamepad_audio/main")
 
-idf_component_register(
-    SRCS
-        "console_os_main.c"
+set(P4_CONSOLE_MAIN_SOURCES "console_os_main.c")
+set(P4_CONSOLE_MAIN_INCLUDE_DIRS ".")
+set(P4_CONSOLE_MAIN_REQUIREMENTS
+    console_shell
+    esp_timer
+    freertos
+    heap
+    log
+    lwip
+    mbedtls
+    p4_game_api
+    platform_board
+    platform_display
+    platform_game_catalog
+    platform_game_loader
+    platform_game_storage
+    platform_os_update
+    vfs
+)
+
+idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
+if(P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
+    list(APPEND P4_CONSOLE_MAIN_SOURCES
+        "${P4_DOOM_GAMEPAD_AUDIO_MAIN}/doom_embedded_gamepad_audio_main.c"
+    )
+    list(APPEND P4_CONSOLE_MAIN_INCLUDE_DIRS
+        "${P4_DOOM_GAMEPAD_AUDIO_MAIN}"
+    )
+    list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
+        board_deps_olimex
+        doom_audio
+        doom_engine_audio
+        doom_gamepad_input
+        doom_video
+        gamepad_core
+        p4_game_platform
+        platform_audio
+        platform_gamepad_usb
+        platform_readonly_blob
+        platform_usb_host
+    )
+else()
+    list(APPEND P4_CONSOLE_MAIN_SOURCES
         "${P4_DOOM_TOUCH_AUDIO_MAIN}/doom_embedded_touch_audio_main.c"
         "${P4_DOOM_TOUCH_AUDIO_MAIN}/audio_lifecycle.c"
         "${P4_DOOM_TOUCH_AUDIO_MAIN}/degraded_policy.c"
         "${P4_DOOM_TOUCH_AUDIO_MAIN}/runtime_gate.c"
         "${P4_DOOM_TOUCH_AUDIO_MAIN}/touch_controls.c"
-    INCLUDE_DIRS
-        "."
+    )
+    list(APPEND P4_CONSOLE_MAIN_INCLUDE_DIRS
         "${P4_DOOM_TOUCH_AUDIO_MAIN}"
-    PRIV_REQUIRES
-        console_shell
+    )
+    list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
+        board_deps_elecrow
         doom_audio
         doom_engine_audio
         doom_touch_input
         doom_video
-        esp_timer
-        freertos
-        heap
-        log
-        mbedtls
-        p4_game_api
         p4_game_platform
         platform_audio
-        platform_display
-        platform_game_catalog
-        platform_game_loader
-        platform_game_storage
         platform_i2c_shared
-        platform_os_update
         platform_readonly_blob
         platform_touch
-        vfs
+    )
+endif()
+
+idf_component_register(
+    SRCS ${P4_CONSOLE_MAIN_SOURCES}
+    INCLUDE_DIRS ${P4_CONSOLE_MAIN_INCLUDE_DIRS}
+    PRIV_REQUIRES ${P4_CONSOLE_MAIN_REQUIREMENTS}
 )
 
 target_include_directories(${COMPONENT_LIB} PRIVATE

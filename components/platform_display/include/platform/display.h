@@ -6,20 +6,35 @@
 #include <stdint.h>
 
 #include "esp_err.h"
+#include "sdkconfig.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 enum {
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    PLATFORM_DISPLAY_WIDTH = 1280,
+    PLATFORM_DISPLAY_HEIGHT = 720,
+#else
     PLATFORM_DISPLAY_WIDTH = 1024,
     PLATFORM_DISPLAY_HEIGHT = 600,
+#endif
     PLATFORM_DISPLAY_GAME_WIDTH = 320,
     PLATFORM_DISPLAY_GAME_HEIGHT = 200,
     PLATFORM_DISPLAY_GAME_SCALE = 3,
     PLATFORM_DISPLAY_GAME_VIEWPORT_WIDTH = 960,
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    PLATFORM_DISPLAY_GAME_MARGIN_LEFT = 160,
+    PLATFORM_DISPLAY_GAME_MARGIN_RIGHT = 160,
+    PLATFORM_DISPLAY_GAME_MARGIN_TOP = 60,
+    PLATFORM_DISPLAY_GAME_MARGIN_BOTTOM = 60,
+#else
     PLATFORM_DISPLAY_GAME_MARGIN_LEFT = 32,
     PLATFORM_DISPLAY_GAME_MARGIN_RIGHT = 32,
+    PLATFORM_DISPLAY_GAME_MARGIN_TOP = 0,
+    PLATFORM_DISPLAY_GAME_MARGIN_BOTTOM = 0,
+#endif
 };
 
 typedef enum {
@@ -42,8 +57,9 @@ typedef struct {
 /**
  * Initialize the display-only hardware path and keep the backlight dark.
  *
- * This service owns the panel power domains, MIPI-DSI host, EK79007 driver,
- * frame buffer, and backlight PWM. Games must not access those resources.
+ * This service owns the selected board's display power domains, MIPI-DSI
+ * host, bridge/panel driver, frame buffer, and brightness control. Games must
+ * not access those resources.
  */
 esp_err_t platform_display_init(void);
 
@@ -58,9 +74,9 @@ esp_err_t platform_display_show_pattern(platform_display_pattern_t pattern);
  *
  * Each input word uses R[15:11], G[10:5], B[4:0]. The service performs a
  * nearest-neighbor 3x expansion into a centered 960x600 viewport with black
- * 32-pixel side margins. `source_stride_pixels` must be at least 320. The
- * caller retains ownership and may reuse the source only after this call
- * returns.
+ * margins appropriate to the selected display. `source_stride_pixels` must
+ * be at least 320. The caller retains ownership and may reuse the source only
+ * after this call returns.
  *
  * Initialization, pattern changes, brightness, and submits are serialized.
  * `timeout_ms` bounds lock acquisition and refresh completion; zero performs

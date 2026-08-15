@@ -6,9 +6,16 @@ description: Create, port, modify, package, install, or test storage-installed g
 # Develop P4 Console games
 
 Build games against the stable P4 Game API, then install their `.P4G` files
-through the `P4 GAMES` USB volume. Keep Console OS in charge of hardware,
-storage, and lifecycle services so adding or removing a game never requires an
-OS reflash.
+through the Elecrow `P4 GAMES` USB volume or the offline Olimex microSD card.
+Keep Console OS in charge of hardware, storage, and lifecycle services so
+adding or removing a game never requires an OS reflash.
+
+Target names are exact: `elecrow-crowpanel-advanced-10` is the Elecrow 10 in
+device, while `olimex-esp32-p4-pc` is the Olimex ESP32-P4-PC Rev.B development
+board. A package remains board-independent, but its Console OS build and copy
+workflow must match the physical target. Any new target must first appear in
+`hardware/boards/console-os-port-contract.json`; never infer a board from its
+display connector or reuse another board's identity.
 
 ## Load the game contract
 
@@ -85,7 +92,8 @@ Choose the smallest proof that covers the modified boundary:
 - A shared game API, package format, loader contract, or change spanning every
   maintained game: run `make game-sdk-host`.
 - A distributable cartridge or Console OS integration change: after focused
-  host checks pass, run `make console-os-idf` once.
+  host checks pass, run exactly one matching build: `make console-os-idf` for
+  Elecrow or `make console-os-olimex-idf` for Olimex Rev.B.
 
 Do not run repo-wide `make check` by default. Reserve it for an explicit user
 request, a pinned toolchain or dependency change, or a genuinely cross-cutting
@@ -95,18 +103,21 @@ report unrelated failures without expanding the task.
 
 ## Package and install without flashing
 
-The Console OS build writes each enabled cartridge to:
+The board-specific Console OS builds write each enabled cartridge to:
 
 ```text
 apps/console_os/build/game-storage-seed/<PACKAGE>.P4G
+apps/console_os/build-olimex-esp32-p4-pc/sd-card/<PACKAGE>.P4G
 ```
 
-To install or update a game, connect the laptop to J16, copy the `.P4G` file to
-the root of `P4 GAMES`, verify the destination byte count or hash, and eject
-the volume cleanly. Open Game Manager to refresh and launch it. Remove a game
-through Game Manager or while the safely exported volume is host-owned. Do not
-flash the OS for a game-only update and never let the host and firmware mount
-the writable filesystem at the same time.
+To install or update on Elecrow, connect the laptop to J16, copy the `.P4G`
+file to the root of `P4 GAMES`, verify the destination byte count or hash, and
+eject cleanly. On Olimex, power the board off, move the microSD card to a laptop
+reader, copy the cartridge to its root, verify it, eject, reinstall, and power
+on. The Olimex USB-C programming port is not storage and live card removal is
+unsupported. Open Game Manager to refresh and launch it. Do not flash the OS
+for a game-only update and never let the host and firmware mount the writable
+filesystem at the same time.
 
 For a hardware acceptance, perform one named run that launches the changed
 game, exercises its changed behavior, and returns to the launcher with Back.

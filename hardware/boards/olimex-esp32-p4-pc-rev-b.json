@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "id": "olimex-esp32-p4-pc-rev-b",
+  "status": "source-reviewed-build-candidate-hardware-unverified",
+  "vendor": "Olimex",
+  "product": "ESP32-P4-PC",
+  "pcb_revision": "B",
+  "soc": "ESP32-P4NRW32",
+  "memory": {
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432
+  },
+  "official_source": {
+    "repository": "https://github.com/OLIMEX/ESP32-P4-PC",
+    "commit": "99a802ec029f531692102b2c754e20dae2226038",
+    "manual": "DOCUMENTS/ESP32-P4-PC-user-manual.pdf",
+    "manual_sha256": "cbe0a46291060fc521c81857d75f67c2c075371b8db471c8da4f2a94798cb7bf",
+    "schematic": "HARDWARE/ESP32-P4-PC-Rev.B/ESP32-P4-PC_Rev_B.pdf",
+    "schematic_sha256": "8b2810225ef03937aff43ae04db28c52a39db6102009a40e1c034f008c5653f7"
+  },
+  "interfaces": {
+    "display": {
+      "connector": "HDMI",
+      "bridge": "LT8912B",
+      "width": 1280,
+      "height": 720,
+      "mipi_dsi_lanes": 2,
+      "i2c_port": 1,
+      "i2c_sda_gpio": 7,
+      "i2c_scl_gpio": 8,
+      "dphy_ldo_channel": 3,
+      "dphy_ldo_mv": 2500
+    },
+    "storage": {
+      "type": "microSD",
+      "bus_width": 4,
+      "clk_gpio": 43,
+      "cmd_gpio": 44,
+      "d0_gpio": 39,
+      "d1_gpio": 40,
+      "d2_gpio": 41,
+      "d3_gpio": 42,
+      "power_enable_gpio": 45,
+      "power_enable_active_level": 0,
+      "power_ldo_channel": 4,
+      "power_ldo_mv": 3300,
+      "runtime_format_allowed": false,
+      "hot_removal_supported": false
+    },
+    "flash_layout": {
+      "partition_table": "apps/console_os/partitions-olimex.csv",
+      "ota_slot_bytes": 8323072,
+      "persistent_game_storage": "microSD"
+    },
+    "usb_host": {
+      "topology": "ESP32-P4 high-speed root to FE1.1s four-port powered hub",
+      "hub_reset_gpio": 21,
+      "hub_reset_active_level": 0,
+      "vbus": "board-supplied through CH217K current limiter"
+    },
+    "programming_usb": {
+      "connector": "USB-C",
+      "function": "native USB Serial/JTAG",
+      "game_storage_mass_storage": false
+    },
+    "audio": {
+      "codec": "ES8311",
+      "output": "3.5mm audio jack",
+      "control_i2c_port": 1,
+      "control_i2c_sda_gpio": 7,
+      "control_i2c_scl_gpio": 8,
+      "i2s_port": 1,
+      "i2s_mclk_gpio": 13,
+      "i2s_bclk_gpio": 12,
+      "i2s_lrclk_gpio": 10,
+      "i2s_dout_gpio": 9,
+      "i2s_din_gpio": 11,
+      "amplifier_enable_gpio": 53,
+      "amplifier_enable_active_level": 1,
+      "codec_component": "espressif/esp_codec_dev@1.5.4",
+      "implementation": "components/olimex/platform_audio",
+      "implemented": true,
+      "hardware_tested": false
+    },
+    "touch": {
+      "present": false
+    }
+  },
+  "device_identity": null,
+  "factory_backup": null,
+  "hardware_tested": false,
+  "flash_authorized": false
+}

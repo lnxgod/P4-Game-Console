@@ -61,10 +61,11 @@ games/star_hop/
   src/star_hop.c
 ```
 
-The Console OS build validates every enabled manifest and produces:
+The Console OS build validates every enabled manifest and produces either:
 
 ```text
 apps/console_os/build/game-storage-seed/STAR_HOP.P4G
+apps/console_os/build-olimex-esp32-p4-pc/sd-card/STAR_HOP.P4G
 ```
 
 Run `make console-os-idf` after the focused game test when a distributable
@@ -73,10 +74,13 @@ manifest or generator change and `make game-sdk-host` for shared API, package,
 loader, or cross-game changes. Do not run repo-wide `make check` for an
 isolated game change.
 
-Connect the laptop to J16, copy `STAR_HOP.P4G` to the root of `P4 GAMES`,
-eject the volume cleanly, and open Game Manager. The game appears in the
-folder from its package metadata. Replacing that file updates the game;
-removing it in Game Manager uninstalls it. No OS reflash is needed.
+On Elecrow, connect the laptop to J16, copy `STAR_HOP.P4G` to the root of
+`P4 GAMES`, eject the volume cleanly, and open Game Manager. On Olimex Rev.B,
+power off, move the microSD card to the laptop, copy the cartridge to its root
+(or rebuild the complete card bundle and run `make install-olimex-sd-card
+SD_MOUNT=/Volumes/P4GAMES`), eject it, reinstall it, and power on. Replacing the
+file updates the game; removing it in Game Manager uninstalls it. Neither path
+requires an OS reflash.
 
 `game.json` is the source/package contract. Its important fields are:
 

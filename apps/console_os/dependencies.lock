@@ -116,6 +116,6 @@ direct_dependencies:
 - espressif/esp_lcd_touch_gt911
 - espressif/esp_tinyusb
 - idf
-manifest_hash: 7cd83a02b37f9990e036ee4fc8525cdca7b6f3e9888ae4d056de562226027d3a
+manifest_hash: 9cb43f29b035bb612bfc4c4b53e4ff0fc53daea399133a66198cc4841c8a7e12
 target: esp32p4
 version: 2.0.0

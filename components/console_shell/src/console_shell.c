@@ -746,6 +746,222 @@ static console_shell_action_t page_changed(uint32_t app_id)
     return action;
 }
 
+static console_shell_action_t activate_home_selection(console_shell_t *shell)
+{
+    home_item_t items[HOME_ITEM_CAPACITY];
+    const size_t item_count = build_home_items(shell, items);
+    const size_t item_index = shell->selected_home_item;
+    if (item_index >= item_count || !items[item_index].enabled) {
+        return no_action();
+    }
+    if (items[item_index].kind == HOME_ITEM_ALL_PROGRAMS) {
+        open_all_programs(shell);
+        return page_changed(0U);
+    }
+    if (items[item_index].kind == HOME_ITEM_FOLDER) {
+        open_home_folder(shell, items[item_index].title);
+        return page_changed(0U);
+    }
+    if (items[item_index].app_index >= shell->app_count) {
+        return no_action();
+    }
+    const size_t app_index = items[item_index].app_index;
+    const console_app_descriptor_t *const app = &shell->apps[app_index];
+    shell->selected_index = app_index;
+    shell->dirty = true;
+    if (app->page == CONSOLE_PAGE_EXTERNAL) {
+        const console_shell_action_t action = {
+            .type = CONSOLE_ACTION_LAUNCH,
+            .app_id = app->id,
+            .file_source_index = UINT32_MAX,
+        };
+        return action;
+    }
+    shell->page = app->page;
+    shell->active_app_id = app->id;
+    if (app->page == CONSOLE_PAGE_FILES ||
+        app->page == CONSOLE_PAGE_GAMES) {
+        shell->file_delete_confirm = false;
+        shell->file_notice = CONSOLE_FILE_NOTICE_NONE;
+        normalize_file_selection(shell);
+    }
+    return page_changed(app->id);
+}
+
+static void select_home_direction(console_shell_t *shell, int row_delta,
+                                  int column_delta)
+{
+    home_item_t items[HOME_ITEM_CAPACITY];
+    const size_t count = build_home_items(shell, items);
+    if (count == 0U) {
+        return;
+    }
+    size_t current = shell->selected_home_item < count
+        ? shell->selected_home_item : 0U;
+    const size_t row = current / CONSOLE_SHELL_APP_COLUMNS;
+    const size_t column = current % CONSOLE_SHELL_APP_COLUMNS;
+    size_t target = current;
+    if (row_delta < 0 && row > 0U) {
+        target = current - CONSOLE_SHELL_APP_COLUMNS;
+    } else if (row_delta > 0 &&
+               current + CONSOLE_SHELL_APP_COLUMNS < count) {
+        target = current + CONSOLE_SHELL_APP_COLUMNS;
+    } else if (column_delta < 0 && column > 0U) {
+        target = current - 1U;
+    } else if (column_delta > 0 &&
+               column + 1U < CONSOLE_SHELL_APP_COLUMNS &&
+               current + 1U < count) {
+        target = current + 1U;
+    }
+    if (target == current || !items[target].enabled) {
+        return;
+    }
+    shell->selected_home_item = target;
+    if (items[target].kind == HOME_ITEM_APP) {
+        shell->selected_index = items[target].app_index;
+    }
+    const size_t target_row = target / CONSOLE_SHELL_APP_COLUMNS;
+    if (target_row < shell->home_scroll_row) {
+        shell->home_scroll_row = target_row;
+    } else if (target_row >= shell->home_scroll_row +
+                              CONSOLE_SHELL_VISIBLE_APP_ROWS) {
+        shell->home_scroll_row = target_row -
+            (CONSOLE_SHELL_VISIBLE_APP_ROWS - 1U);
+    }
+    shell->dirty = true;
+}
+
+static console_shell_action_t file_selected_action(console_shell_t *shell)
+{
+    if (!file_selected_is_actionable(shell)) {
+        return no_action();
+    }
+    if (!shell->file_delete_confirm) {
+        shell->file_delete_confirm = true;
+        shell->file_notice = CONSOLE_FILE_NOTICE_NONE;
+        shell->dirty = true;
+        return page_changed(shell->active_app_id);
+    }
+    shell->file_delete_confirm = false;
+    shell->dirty = true;
+    const console_shell_action_t action = {
+        .type = shell->page == CONSOLE_PAGE_GAMES
+            ? (file_selected_is_installable(shell)
+                ? CONSOLE_ACTION_OS_UPDATE_INSTALL
+                : CONSOLE_ACTION_GAME_REMOVE)
+            : CONSOLE_ACTION_FILE_DELETE,
+        .app_id = shell->active_app_id,
+        .file_source_index = shell->files.entries[
+            shell->file_selected_index].source_index,
+    };
+    return action;
+}
+
+console_shell_action_t console_shell_handle_buttons(
+    console_shell_t *shell, uint32_t held_buttons)
+{
+    if (shell == NULL) {
+        return no_action();
+    }
+    const uint32_t held = held_buttons & CONSOLE_BUTTON_MASK;
+    const uint32_t pressed = held & ~shell->previous_buttons;
+    shell->previous_buttons = held;
+    if (pressed == 0U) {
+        return no_action();
+    }
+
+    if ((pressed & CONSOLE_BUTTON_BACK) != 0U) {
+        if (shell->page == CONSOLE_PAGE_HOME) {
+            if (shell->home_all_programs ||
+                shell->home_folder_path[0] != '\0') {
+                navigate_home_up(shell);
+                return page_changed(0U);
+            }
+            return no_action();
+        }
+        if ((shell->page == CONSOLE_PAGE_FILES ||
+             shell->page == CONSOLE_PAGE_GAMES) &&
+            shell->file_delete_confirm) {
+            shell->file_delete_confirm = false;
+            shell->dirty = true;
+            return page_changed(shell->active_app_id);
+        }
+        console_shell_show_home(shell);
+        return page_changed(0U);
+    }
+
+    if (shell->page == CONSOLE_PAGE_HOME) {
+        if ((pressed & CONSOLE_BUTTON_UP) != 0U) {
+            select_home_direction(shell, -1, 0);
+        } else if ((pressed & CONSOLE_BUTTON_DOWN) != 0U) {
+            select_home_direction(shell, 1, 0);
+        } else if ((pressed & CONSOLE_BUTTON_LEFT) != 0U) {
+            select_home_direction(shell, 0, -1);
+        } else if ((pressed & CONSOLE_BUTTON_RIGHT) != 0U) {
+            select_home_direction(shell, 0, 1);
+        } else if ((pressed & CONSOLE_BUTTON_ACCEPT) != 0U) {
+            return activate_home_selection(shell);
+        }
+        return no_action();
+    }
+
+    if (shell->page != CONSOLE_PAGE_FILES &&
+        shell->page != CONSOLE_PAGE_GAMES) {
+        return no_action();
+    }
+    shell->file_notice = CONSOLE_FILE_NOTICE_NONE;
+    if ((pressed & CONSOLE_BUTTON_REFRESH) != 0U) {
+        shell->file_delete_confirm = false;
+        shell->dirty = true;
+        const console_shell_action_t action = {
+            .type = shell->page == CONSOLE_PAGE_GAMES
+                ? CONSOLE_ACTION_GAME_REFRESH
+                : CONSOLE_ACTION_FILE_REFRESH,
+            .app_id = shell->active_app_id,
+            .file_source_index = UINT32_MAX,
+        };
+        return action;
+    }
+    if ((pressed & CONSOLE_BUTTON_UP) != 0U &&
+        shell->file_selected_index > 0U) {
+        --shell->file_selected_index;
+        normalize_file_selection(shell);
+        shell->file_delete_confirm = false;
+        shell->dirty = true;
+        return page_changed(shell->active_app_id);
+    }
+    if ((pressed & CONSOLE_BUTTON_DOWN) != 0U &&
+        shell->file_selected_index + 1U < shell->files.entry_count) {
+        ++shell->file_selected_index;
+        normalize_file_selection(shell);
+        shell->file_delete_confirm = false;
+        shell->dirty = true;
+        return page_changed(shell->active_app_id);
+    }
+    if ((pressed & CONSOLE_BUTTON_LEFT) != 0U &&
+        file_can_page_previous(shell)) {
+        const size_t step = CONSOLE_SHELL_FILE_VISIBLE_ROWS;
+        shell->file_first_visible = step > shell->file_first_visible
+            ? 0U : shell->file_first_visible - step;
+        shell->file_selected_index = shell->file_first_visible;
+        shell->file_delete_confirm = false;
+        shell->dirty = true;
+        return page_changed(shell->active_app_id);
+    }
+    if ((pressed & CONSOLE_BUTTON_RIGHT) != 0U &&
+        file_can_page_next(shell)) {
+        shell->file_first_visible += CONSOLE_SHELL_FILE_VISIBLE_ROWS;
+        shell->file_selected_index = shell->file_first_visible;
+        shell->file_delete_confirm = false;
+        shell->dirty = true;
+        return page_changed(shell->active_app_id);
+    }
+    if ((pressed & CONSOLE_BUTTON_ACCEPT) != 0U) {
+        return file_selected_action(shell);
+    }
+    return no_action();
+}
+
 static bool update_home_drag(console_shell_t *shell,
                              uint16_t gui_x,
                              uint16_t gui_y)
@@ -1051,6 +1267,10 @@ void console_shell_set_runtime_info(
         shell->runtime.game_storage_kib != runtime->game_storage_kib ||
         shell->runtime.game_storage_state != runtime->game_storage_state ||
         shell->runtime.touch_ready != runtime->touch_ready ||
+        shell->runtime.controller_ready != runtime->controller_ready ||
+        shell->runtime.keyboard_ready != runtime->keyboard_ready ||
+        shell->runtime.mouse_ready != runtime->mouse_ready ||
+        shell->runtime.sd_card_storage != runtime->sd_card_storage ||
         shell->runtime.audio_handoff_ready != runtime->audio_handoff_ready ||
         shell->runtime.game_storage_usb_attached !=
             runtime->game_storage_usb_attached ||
@@ -1072,6 +1292,33 @@ void console_shell_set_runtime_info(
         (shell->page == CONSOLE_PAGE_HOME && storage_changed)) {
         shell->dirty = true;
     }
+}
+
+void console_shell_set_pointer(console_shell_t *shell,
+                               bool visible,
+                               uint16_t x,
+                               uint16_t y,
+                               bool pressed)
+{
+    if (shell == NULL) {
+        return;
+    }
+    if (x >= CONSOLE_SHELL_WIDTH) {
+        x = CONSOLE_SHELL_WIDTH - 1U;
+    }
+    if (y >= CONSOLE_SHELL_HEIGHT) {
+        y = CONSOLE_SHELL_HEIGHT - 1U;
+    }
+    if (shell->pointer_visible == visible &&
+        (!visible || (shell->pointer_x == x && shell->pointer_y == y &&
+                      shell->pointer_pressed == pressed))) {
+        return;
+    }
+    shell->pointer_visible = visible;
+    shell->pointer_x = x;
+    shell->pointer_y = y;
+    shell->pointer_pressed = visible && pressed;
+    shell->dirty = true;
 }
 
 bool console_shell_set_file_listing(
@@ -1150,6 +1397,28 @@ static void put_pixel(uint16_t *pixels, size_t stride,
         y >= 0 && y < CONSOLE_SHELL_HEIGHT) {
         pixels[(size_t)y * stride + (size_t)x] = color;
     }
+}
+
+static void draw_pointer(const console_shell_t *shell,
+                         uint16_t *pixels, size_t stride)
+{
+    if (!shell->pointer_visible) {
+        return;
+    }
+    const int left = shell->pointer_x;
+    const int top = shell->pointer_y;
+    const uint16_t fill = shell->pointer_pressed ? COLOR_CYAN : COLOR_WHITE;
+    /* Compact classic desktop arrow with a dark one-pixel outline. */
+    for (int row = 0; row < 11; ++row) {
+        const int width = row < 8 ? row / 2 + 1 : 3;
+        for (int column = 0; column < width; ++column) {
+            const bool edge = column == 0 || column == width - 1 ||
+                row == 0 || row == 10;
+            put_pixel(pixels, stride, left + column, top + row,
+                      edge ? COLOR_BLACK : fill);
+        }
+    }
+    put_pixel(pixels, stride, left + 1, top + 1, fill);
 }
 
 static void fill_rect(uint16_t *pixels, size_t stride,
@@ -1626,21 +1895,53 @@ static void draw_touch(const console_shell_t *shell,
 static void draw_system(const console_shell_t *shell,
                         uint16_t *pixels, size_t stride)
 {
-    draw_text(pixels, stride, 12, 40, "SOC", COLOR_MUTED, 1U, 3U);
-    draw_text(pixels, stride, 112, 40, "ESP32-P4 V1.3", COLOR_WHITE, 1U, 13U);
-    draw_text(pixels, stride, 12, 58, "RTOS", COLOR_MUTED, 1U, 4U);
-    draw_text(pixels, stride, 112, 58, "FREERTOS / IDF 5.5.3", COLOR_WHITE, 1U, 20U);
-    draw_text(pixels, stride, 12, 76, "UPTIME SEC", COLOR_MUTED, 1U, 10U);
-    draw_u32(pixels, stride, 112, 76, shell->runtime.uptime_seconds, COLOR_GREEN);
-    draw_text(pixels, stride, 12, 94, "INTERNAL FREE KIB", COLOR_MUTED, 1U, 17U);
-    draw_u32(pixels, stride, 142, 94, shell->runtime.internal_free_kib, COLOR_GREEN);
-    draw_text(pixels, stride, 12, 112, "PSRAM FREE KIB", COLOR_MUTED, 1U, 14U);
-    draw_u32(pixels, stride, 142, 112, shell->runtime.psram_free_kib, COLOR_GREEN);
-    draw_text(pixels, stride, 12, 130, "TOUCH", COLOR_MUTED, 1U, 5U);
-    draw_text(pixels, stride, 112, 130,
-              shell->runtime.touch_ready ? "READY" : "OFFLINE",
-              shell->runtime.touch_ready ? COLOR_GREEN : COLOR_RED, 1U, 7U);
-    draw_text(pixels, stride, 12, 148, "GAME STORAGE", COLOR_MUTED, 1U, 12U);
+    const bool gamepad_board = shell->runtime.sd_card_storage;
+    draw_text(pixels, stride, 12, 37, "BOARD", COLOR_MUTED, 1U, 5U);
+    draw_text(pixels, stride, 76, 37,
+              gamepad_board ? "OLIMEX ESP32-P4-PC REV.B"
+                            : "ELECROW 10 IN VARIANT",
+              COLOR_WHITE, 1U, gamepad_board ? 23U : 21U);
+    draw_text(pixels, stride, 12, 53, "SOC", COLOR_MUTED, 1U, 3U);
+    draw_text(pixels, stride, 112, 53,
+              gamepad_board ? "ESP32-P4NRW32" : "ESP32-P4 V1.3",
+              COLOR_WHITE, 1U, 13U);
+    draw_text(pixels, stride, 12, 69, "RTOS", COLOR_MUTED, 1U, 4U);
+    draw_text(pixels, stride, 112, 69, "FREERTOS / IDF 5.5.3",
+              COLOR_WHITE, 1U, 20U);
+    draw_text(pixels, stride, 12, 85, "UPTIME SEC", COLOR_MUTED, 1U, 10U);
+    draw_u32(pixels, stride, 112, 85, shell->runtime.uptime_seconds,
+             COLOR_GREEN);
+    draw_text(pixels, stride, 12, 101, "INTERNAL FREE KIB",
+              COLOR_MUTED, 1U, 17U);
+    draw_u32(pixels, stride, 142, 101, shell->runtime.internal_free_kib,
+             COLOR_GREEN);
+    draw_text(pixels, stride, 12, 117, "PSRAM FREE KIB",
+              COLOR_MUTED, 1U, 14U);
+    draw_u32(pixels, stride, 142, 117, shell->runtime.psram_free_kib,
+             COLOR_GREEN);
+    draw_text(pixels, stride, 12, 133,
+              gamepad_board ? "USB INPUT" : "TOUCH",
+              COLOR_MUTED, 1U, gamepad_board ? 9U : 5U);
+    const bool input_ready = gamepad_board
+        ? shell->runtime.controller_ready : shell->runtime.touch_ready;
+    if (gamepad_board) {
+        char status[] = "PAD- KBD- MOUSE-";
+        status[3] = shell->runtime.controller_ready ? '+' : '-';
+        status[8] = shell->runtime.keyboard_ready ? '+' : '-';
+        status[15] = shell->runtime.mouse_ready ? '+' : '-';
+        draw_text(pixels, stride, 112, 133, status,
+                  (shell->runtime.controller_ready ||
+                   shell->runtime.keyboard_ready ||
+                   shell->runtime.mouse_ready) ? COLOR_GREEN : COLOR_YELLOW,
+                  1U, 16U);
+    } else {
+        draw_text(pixels, stride, 112, 133,
+                  input_ready ? "READY" : "OFFLINE",
+                  input_ready ? COLOR_GREEN : COLOR_YELLOW, 1U,
+                  input_ready ? 5U : 7U);
+    }
+    draw_text(pixels, stride, 12, 149, "GAME STORAGE",
+              COLOR_MUTED, 1U, 12U);
     const char *storage = "STARTING";
     uint16_t storage_color = COLOR_YELLOW;
     switch (shell->runtime.game_storage_state) {
@@ -1657,8 +1958,10 @@ static void draw_system(const console_shell_t *shell,
         storage_color = COLOR_RED;
         break;
     case CONSOLE_STORAGE_MISSING:
-        storage = "WAD MISSING";
-        storage_color = COLOR_YELLOW;
+        storage = shell->runtime.sd_card_storage
+            ? "SD READY" : "WAD MISSING";
+        storage_color = shell->runtime.sd_card_storage
+            ? COLOR_GREEN : COLOR_YELLOW;
         break;
     case CONSOLE_STORAGE_INVALID:
         storage = "WAD INVALID";
@@ -1676,15 +1979,20 @@ static void draw_system(const console_shell_t *shell,
     default:
         break;
     }
-    draw_text(pixels, stride, 112, 148, storage,
+    draw_text(pixels, stride, 112, 149, storage,
               storage_color, 1U, 14U);
-    draw_text(pixels, stride, 12, 166, "DOOM1.WAD", COLOR_MUTED, 1U, 9U);
-    draw_text(pixels, stride, 112, 166,
+    draw_text(pixels, stride, 12, 165, "DOOM1.WAD", COLOR_MUTED, 1U, 9U);
+    draw_text(pixels, stride, 112, 165,
               shell->runtime.doom_wad_ready ? "VERIFIED" : "NOT READY",
               shell->runtime.doom_wad_ready ? COLOR_GREEN : COLOR_YELLOW,
               1U, 9U);
     draw_text(pixels, stride, 12, 184, "EJECT USB BEFORE GAME",
               COLOR_CYAN, 1U, 21U);
+    if (shell->runtime.sd_card_storage) {
+        fill_rect(pixels, stride, 8, 181, 304, 15, COLOR_FACE);
+        draw_text(pixels, stride, 12, 184, "POWER OFF TO REMOVE SD",
+                  COLOR_CYAN, 1U, 22U);
+    }
 }
 
 static void draw_file_button(console_shell_t *shell,
@@ -1718,7 +2026,9 @@ static void draw_file_listing_status(const console_shell_t *shell,
         draw_text(pixels, stride, 12, 83, message,
                   COLOR_TITLE, 1U, 29U);
         draw_text(pixels, stride, 12, 101,
-                  "USB AND APP NEVER SHARE FAT",
+                  shell->runtime.sd_card_storage
+                    ? "POWER OFF BEFORE SD REMOVAL"
+                    : "USB AND APP NEVER SHARE FAT",
                   COLOR_DARK, 1U, 27U);
         return;
     }
@@ -1728,8 +2038,11 @@ static void draw_file_listing_status(const console_shell_t *shell,
                   games ? "NO GAME PACKAGES" : "NO VISIBLE FILES",
                   COLOR_TITLE, 1U, 16U);
         draw_text(pixels, stride, 12, 101,
-                  games ? "COPY .P4G WITH J16 USB"
-                        : "COPY FILES WITH J16 USB",
+                  shell->runtime.sd_card_storage
+                    ? (games ? "COPY .P4G TO MICROSD"
+                             : "COPY FILES TO MICROSD")
+                    : (games ? "COPY .P4G WITH J16 USB"
+                             : "COPY FILES WITH J16 USB"),
                   COLOR_DARK, 1U, 24U);
     }
 }
@@ -1812,7 +2125,9 @@ static void draw_files(console_shell_t *shell,
 
     const char *notice = games
         ? "NATIVE CODE - TRUST PACKAGES"
-        : "USB ADDS / FILE MANAGER REMOVES";
+        : (shell->runtime.sd_card_storage
+            ? "SD ADDS / FILE MANAGER REMOVES"
+            : "USB ADDS / FILE MANAGER REMOVES");
     uint16_t notice_color = COLOR_DARK;
     if (shell->file_delete_confirm && file_selected_is_actionable(shell)) {
         notice = file_selected_is_installable(shell)
@@ -1943,6 +2258,7 @@ bool console_shell_render_rgb565(console_shell_t *shell,
             break;
         }
     }
+    draw_pointer(shell, pixels, stride_pixels);
     shell->dirty = false;
     ++shell->render_generation;
     return true;

@@ -3,22 +3,23 @@
 The platform separates hardware ownership from games so every acceptance game exercises the same production-shaped interfaces.
 
 ```text
-Elecrow revision-aware BSP
-  display | touch | audio | SD | USB VBUS policy
-       |       |       |      |          |
-       +-------+-------+------+----------+
-                         |
-              reusable platform services
-     video surface | audio mixer | storage | gamepad service
-                         |
-                  stable game-facing API
-                         |
-                    Doom adapter
+selected board profile
+  Elecrow: DSI panel | touch | speaker | flash FAT | USB device MSC
+  Olimex:  HDMI      | no touch | ES8311 | microSD  | USB-A host hub
+                              |
+                   reusable platform services
+       video | audio | storage | keyboard/mouse/gamepad input
+                              |
+                     stable game-facing API
+                              |
+                    cartridge / Doom adapter
 ```
 
 ## Ownership rules
 
-- The BSP owns pin maps, rails, clocks, and electrical policy for one recorded board revision.
+- `platform_board` selects exactly one source-reviewed board profile. The BSP
+  owns pin maps, rails, clocks, and electrical policy for that recorded board
+  revision; the default remains the Elecrow 10 in variant.
 - A singleton USB-host service owns host installation and its daemon task. Class drivers register with it; games never initialize USB.
 - `platform_usb_host` selects P4 USB peripheral 0 (the dedicated HS controller), installs with the root port unpowered, validates build-bound fixture evidence, and only then enables the root port. It never controls CrowPanel VBUS circuitry.
 - Class drivers hold generation-bound exclusive leases. Teardown is two-stage: host quiesce blocks new leases and disables the P4 root port (the external fixture still owns physical VBUS); existing class owners drain disconnect callbacks, uninstall, and release; final host stop then frees devices and the daemon. Uncertain cleanup enters a terminal fault state and retains resources instead of freeing synchronization objects beneath a live task.
@@ -27,11 +28,32 @@ Elecrow revision-aware BSP
 - The gamepad service publishes complete lock-protected snapshots containing session, VID/PID, interface, report-descriptor SHA-256, capabilities, sequence/timestamp, buttons, D-pad, sticks, and triggers. A stale report or disconnect from a prior session cannot mutate a reconnected controller.
 - Disconnect neutralization occurs in the HID callback before close finalization. The transport explicitly completes `usb_host_hid` 1.2.0's two-phase local-close handshake, copies descriptor storage before use, and invalidates it only after confirmed close.
 - Doom consumes one controller snapshot per game tic and remains ignorant of USB addresses and handles.
-- Console OS uses the same P4 high-speed peripheral in USB **device** mode, not host mode, to expose a wear-levelled FAT `game_data` partition. The device-storage and controller-host stacks are separate firmware configurations and are never linked or active together.
-- `platform_game_storage` serializes every mount transition. The FAT volume has exactly one owner: the app, the laptop MSC initiator, or a terminal running-game lease. Host ownership unmounts the app before block I/O; a clean eject remounts the app and increments a cache generation.
+- On Elecrow, Console OS uses the P4 high-speed peripheral in USB **device**
+  mode to expose a wear-levelled FAT `game_data` partition. Its device-storage
+  and controller-host stacks remain separate firmware configurations.
+- On Olimex Rev.B, the P4 high-speed root feeds the onboard powered FE1.1s
+  four-port USB-A hub. One transport owns HID class lifecycle and can publish a
+  generic gamepad, boot keyboard, and boot mouse concurrently. Reports are
+  bounded and copied before parsing; a short/malformed report or disconnect
+  immediately neutralizes only the affected session. The USB-C connector stays
+  native Serial/JTAG and is not a game-storage MSC path.
+- `platform_game_storage` serializes every mount transition. On Elecrow, the FAT
+  volume has exactly one owner: the app, laptop MSC initiator, or a terminal
+  running-game lease. On Olimex, persistent content is a locally mounted
+  microSD volume; laptop mutation requires powering off and removing the card.
+  The Olimex runtime never formats the card and does not claim hot-removal.
 - The pinned TinyUSB MSC helper's deferred single buffer is bypassed by a link-time platform wrapper. WRITE(10) ranges are bounded and sector-aligned, then synchronously erased, written, and read back before success reaches the laptop; a failed commit is surfaced as SCSI failure.
 - File Manager consumes bounded root-list and regular-file-delete operations from `platform_game_storage`; it never mounts FAT, handles raw blocks, deletes directories, or accepts path-like names. A second touch confirmation is required before deletion, and an ownership change invalidates the visible snapshot.
-- Doom launch first uninstalls the USB device stack, restores app ownership, and revalidates the entire WAD. Only then may the launcher release display/touch services. This prevents a host remount beneath open game files.
+- Doom launch first obtains an exclusive game-storage lease and revalidates the
+  entire WAD. Elecrow uninstalls its USB-device stack and restores app
+  ownership before releasing display/touch. Olimex keeps the USB host/HID
+  owner alive for gamepad, keyboard, and mouse, while the microSD lease blocks
+  manager mutation. Both paths prevent storage ownership from changing beneath
+  an open game file.
+- The Olimex ES8311 backend borrows the display-created I2C1 controller, owns
+  I2S1 only while an audio client is open, bounds writes to 128 stereo frames,
+  and holds GPIO53 inactive during create, stop, failure, and teardown. Games
+  consume the shared audio API and never see codec or I2S handles.
 - Display output is an RGB565 surface contract. Board-specific scanout and scaling live below it.
 - The hardware-tested display owner is `platform_display`; its M1 pattern proof does not yet qualify framebuffer submission or Doom scaling.
 - Game data and saves use the storage service. WADs are never committed; only the exact local shareware development input may seed the build-only Console OS image. Commercial WAD data must never be compiled into, seeded into, or committed with firmware.

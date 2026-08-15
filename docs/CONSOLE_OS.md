@@ -62,6 +62,45 @@ is consequently under 1 MiB instead of carrying a duplicate 4.2 MiB Doom WAD.
 This successor is host-tested and build-verified; its one-time partition
 migration and cartridge launches still require the hardware record below.
 
+## Board-specific runtime
+
+The Elecrow build remains the default and preserves the accepted
+window-manager renderer, touch/audio paths, Doom handoff, and J16 laptop MSC
+workflow. The additive Olimex Rev.B build uses that same shell and native-game
+loader with these substitutions:
+
+| Service | Elecrow 10 in | Olimex ESP32-P4-PC Rev.B |
+|---|---|---|
+| Display | 1024x600 DSI panel, 3x centered viewport | 1280x720 HDMI, 3x centered viewport |
+| Persistent content | internal FAT exported over J16 | removable FAT microSD at `/game-data` |
+| Input | touch in Console OS | USB-A generic HID pad + boot keyboard + boot mouse concurrently |
+| Audio | reviewed factory speaker path | official ES8311/I2S path to 3.5mm jack |
+| Doom | exclusive embedded handoff | exclusive storage-backed handoff with pad/keyboard/mouse |
+| Programming | J1 UART bridge | native USB-C Serial/JTAG |
+
+For Olimex, build and verify once with `make console-os-olimex-idf`. The build
+creates `apps/console_os/build-olimex-esp32-p4-pc/sd-card/` with
+`MAZE.P4G`, `INVADERS.P4G`, the locally supplied exact shareware `DOOM1.WAD`,
+and `UPDATE/P4UPDATE.P4U`. Power the board off and move the card to a laptop,
+then copy the known bundle with:
+
+```sh
+make install-olimex-sd-card SD_MOUNT=/Volumes/P4GAMES
+```
+
+The installer refuses broad or unmounted destinations, validates source and
+destination hashes, and preserves unrelated card files. Console OS never
+formats this card and does not support live removal. The USB-C connector is
+not a mass-storage endpoint.
+
+Olimex launcher controls are: D-pad or arrow/WASD to navigate, gamepad A or
+Z/Space/Enter to accept, gamepad B or X/Escape/Backspace to go back, and R/F5
+to refresh. A boot mouse drives the shell pointer; left click activates, right
+click goes back, middle click refreshes, and the wheel moves selection. Native
+games receive the normalized gamepad/keyboard buttons, with mouse left/right
+mapped to A/B. A disconnect publishes a neutral input snapshot before the
+next foreground update.
+
 ## Foreground model
 
 ```text
@@ -173,8 +212,10 @@ From the repository root:
 ```sh
 make console-shell-host
 make platform-game-storage-host
+make gamepad-host
 make game-sdk-host
 make console-os-idf
+make console-os-olimex-idf
 ```
 
 The host targets use AddressSanitizer and UndefinedBehaviorSanitizer. They test

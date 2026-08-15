@@ -4,30 +4,64 @@ cmake_minimum_required(VERSION 3.16)
 
 set(PROJECT_VER "0.2.0")
 
+if(NOT DEFINED P4_BOARD_PROFILE)
+    set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")
+endif()
+if(NOT P4_BOARD_PROFILE STREQUAL "elecrow-crowpanel-advanced-10" AND
+   NOT P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
+    message(FATAL_ERROR "unsupported P4_BOARD_PROFILE=${P4_BOARD_PROFILE}")
+endif()
+
 set(EXTRA_COMPONENT_DIRS
-    "${CMAKE_CURRENT_LIST_DIR}/../doom_embedded_touch_audio/components/platform_audio"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/console_shell"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_touch_input"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_video"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_audio_factory"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_board"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_display"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_game_catalog"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_game_loader"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_game_storage"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_i2c_shared"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_os_update"
     "${CMAKE_CURRENT_LIST_DIR}/components/platform_readonly_blob"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_touch"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_package"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_os_update_package"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_platform"
-    "${CMAKE_CURRENT_LIST_DIR}/../doom/components/doom_audio"
-    "${CMAKE_CURRENT_LIST_DIR}/../doom_audio_probe/components/doom_engine_audio"
 )
 
+if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
+    list(APPEND EXTRA_COMPONENT_DIRS
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/board_deps_olimex"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/olimex/platform_audio"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_gamepad_input"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_video"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/gamepad_core"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_platform"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad_usb"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_usb_host"
+        "${CMAKE_CURRENT_LIST_DIR}/../doom/components/doom_audio"
+        "${CMAKE_CURRENT_LIST_DIR}/../doom_audio_probe/components/doom_engine_audio"
+    )
+else()
+    list(APPEND EXTRA_COMPONENT_DIRS
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/board_deps_elecrow"
+        "${CMAKE_CURRENT_LIST_DIR}/../doom_embedded_touch_audio/components/platform_audio"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_touch_input"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_video"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_audio_factory"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_i2c_shared"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_touch"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_platform"
+        "${CMAKE_CURRENT_LIST_DIR}/../doom/components/doom_audio"
+        "${CMAKE_CURRENT_LIST_DIR}/../doom_audio_probe/components/doom_engine_audio"
+    )
+endif()
+
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
+    # The two hardware profiles intentionally resolve different managed
+    # component graphs. Keep each resolution independently authoritative.
+    idf_build_set_property(DEPENDENCIES_LOCK dependencies-olimex.lock)
+endif()
 idf_build_set_property(MINIMAL_BUILD ON)
+idf_build_set_property(P4_BOARD_PROFILE "${P4_BOARD_PROFILE}")
 project(p4_console_os)
 idf_build_get_property(P4_IDF_PYTHON PYTHON)
 get_filename_component(P4_REPOSITORY_ROOT
@@ -35,7 +69,11 @@ get_filename_component(P4_REPOSITORY_ROOT
 
 # A reviewed full-project install seeds a valid wear-levelled FAT volume.
 # Subsequent app-only updates leave this persistent partition untouched.
-set(P4_GAME_STORAGE_SEED_DIR "${CMAKE_BINARY_DIR}/game-storage-seed")
+if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
+    set(P4_GAME_STORAGE_SEED_DIR "${CMAKE_BINARY_DIR}/sd-card")
+else()
+    set(P4_GAME_STORAGE_SEED_DIR "${CMAKE_BINARY_DIR}/game-storage-seed")
+endif()
 set(P4_LOCAL_DOOM_WAD
     "${CMAKE_CURRENT_LIST_DIR}/../../local-data/doom/doom1.wad")
 if(NOT EXISTS "${P4_LOCAL_DOOM_WAD}")
@@ -56,6 +94,13 @@ configure_file(
     "${P4_GAME_STORAGE_SEED_DIR}/README.TXT"
     COPYONLY
 )
+if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
+    configure_file(
+        "${CMAKE_CURRENT_LIST_DIR}/game-storage/README-OLIMEX.TXT"
+        "${P4_GAME_STORAGE_SEED_DIR}/README.TXT"
+        COPYONLY
+    )
+endif()
 configure_file(
     "${P4_LOCAL_DOOM_WAD}"
     "${P4_GAME_STORAGE_SEED_DIR}/DOOM1.WAD"
@@ -121,16 +166,23 @@ message(STATUS "${P4_GAME_MANIFEST_REPORT}")
 include("${P4_GENERATED_GAMES_CMAKE}")
 add_custom_target(p4_game_packages ALL DEPENDS ${P4_SEEDED_GAME_PACKAGES})
 
-fatfs_create_spiflash_image(
-    game_data "${P4_GAME_STORAGE_SEED_DIR}" FLASH_IN_PROJECT)
-add_dependencies(fatfs_game_data_bin p4_game_packages)
-add_custom_command(TARGET fatfs_game_data_bin POST_BUILD
-    COMMAND
-        "${P4_IDF_PYTHON}"
-        "${CMAKE_CURRENT_LIST_DIR}/../../scripts/normalize-game-storage-image.py"
-        "${CMAKE_BINARY_DIR}/game_data.bin"
-    VERBATIM
-)
+if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
+    add_custom_target(p4_sd_card_bundle ALL
+        DEPENDS p4_game_packages
+        COMMENT "Preparing Olimex microSD game/update bundle"
+    )
+else()
+    fatfs_create_spiflash_image(
+        game_data "${P4_GAME_STORAGE_SEED_DIR}" FLASH_IN_PROJECT)
+    add_dependencies(fatfs_game_data_bin p4_game_packages)
+    add_custom_command(TARGET fatfs_game_data_bin POST_BUILD
+        COMMAND
+            "${P4_IDF_PYTHON}"
+            "${CMAKE_CURRENT_LIST_DIR}/../../scripts/normalize-game-storage-image.py"
+            "${CMAKE_BINARY_DIR}/game_data.bin"
+        VERBATIM
+    )
+endif()
 
 set(P4_OS_UPDATE_OUTPUT "${CMAKE_BINARY_DIR}/P4UPDATE.P4U")
 add_custom_target(p4_os_update_package ALL
@@ -147,3 +199,11 @@ add_custom_target(p4_os_update_package ALL
     BYPRODUCTS "${P4_OS_UPDATE_OUTPUT}"
     VERBATIM
 )
+if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
+    add_custom_command(TARGET p4_os_update_package POST_BUILD
+        COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${P4_OS_UPDATE_OUTPUT}"
+            "${P4_GAME_STORAGE_SEED_DIR}/UPDATE/P4UPDATE.P4U"
+        VERBATIM
+    )
+endif()

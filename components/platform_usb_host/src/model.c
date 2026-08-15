@@ -38,17 +38,10 @@ void platform_usb_host_model_init(platform_usb_host_model_t *model)
     model->state = PLATFORM_USB_HOST_STOPPED;
 }
 
-platform_usb_status_t platform_usb_host_model_begin_start(
-    platform_usb_host_model_t *model,
-    const platform_usb_fixture_evidence_t *evidence)
+static platform_usb_status_t begin_start(platform_usb_host_model_t *model)
 {
     if (!model_valid(model)) {
         return PLATFORM_USB_STATUS_INVALID_ARGUMENT;
-    }
-    const platform_usb_status_t evidence_status =
-        platform_usb_fixture_evidence_validate(evidence);
-    if (evidence_status != PLATFORM_USB_STATUS_OK) {
-        return evidence_status;
     }
     if (model->state != PLATFORM_USB_HOST_STOPPED || model->lease_mask != 0U) {
         return PLATFORM_USB_STATUS_INVALID_STATE;
@@ -60,6 +53,22 @@ platform_usb_status_t platform_usb_host_model_begin_start(
     }
     model->state = PLATFORM_USB_HOST_STARTING;
     return PLATFORM_USB_STATUS_OK;
+}
+
+platform_usb_status_t platform_usb_host_model_begin_start(
+    platform_usb_host_model_t *model,
+    const platform_usb_fixture_evidence_t *evidence)
+{
+    const platform_usb_status_t evidence_status =
+        platform_usb_fixture_evidence_validate(evidence);
+    return evidence_status == PLATFORM_USB_STATUS_OK
+        ? begin_start(model) : evidence_status;
+}
+
+platform_usb_status_t platform_usb_host_model_begin_integrated_start(
+    platform_usb_host_model_t *model)
+{
+    return begin_start(model);
 }
 
 platform_usb_status_t platform_usb_host_model_complete_start(

@@ -16,6 +16,19 @@ controller support changes.
 
 Read `hardware/board-profile.json`, `docs/HARDWARE.md`, and `references/architecture.md`.
 
+Resolve the exact target before touching USB code:
+
+- `elecrow-crowpanel-advanced-10` is the Elecrow CrowPanel Advanced 10.1-inch.
+  Its J16 connector is sink-wired and requires the reviewed powered,
+  current-limited, backfeed-safe host fixture for controller testing. Console
+  OS normally uses J16 as USB-device game storage instead of USB Host.
+- `olimex-esp32-p4-pc` is the Olimex ESP32-P4-PC Rev.B development board. Its
+  ESP32-P4 high-speed root feeds the onboard powered FE1.1s USB-A hub; use that
+  path directly for gamepad, boot keyboard, and boot mouse. Its USB-C is only
+  native Serial/JTAG and is not a controller or storage connector.
+- A third target must have its own source-pinned board-port profile and USB
+  adapter plan. Never inherit either identity from a connector name.
+
 Elecrow's published CrowPanel Advanced reference circuit wires the USB-C connector as a sink/device port: its CC pins use `Rd`, and VBUS feeds the board rather than sourcing a controller. Until the exact unit and PCB revision are confirmed and their circuit is reviewed, treat this physical port the same way. Do not connect a passive USB-A adapter or enable host mode until a powered, current-limited, backfeed-safe host fixture has been reviewed for the exact board revision.
 
 Firmware cannot fix missing USB VBUS source circuitry. A build may still be tested without claiming physical USB success.
@@ -77,3 +90,8 @@ fixture acceptance for an isolated game mapping. Do not repeat an unchanged
 firmware build or hardware run. A controller is supported only after its
 descriptor capture, input mapping, hotplug, disconnect neutralization,
 malformed-report behavior, and named hardware run have passed.
+
+For Console OS integration, the exact firmware builds are
+`make console-os-idf` for Elecrow and `make console-os-olimex-idf` for the
+Olimex Rev.B development board. Do not run both unless shared input code or the
+board-selection boundary changed.

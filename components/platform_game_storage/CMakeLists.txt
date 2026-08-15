@@ -5,21 +5,40 @@ set(PLATFORM_GAME_STORAGE_MODEL_SOURCES
 )
 
 if(COMMAND idf_component_register)
-    idf_component_register(
-        SRCS
+    idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
+    if(P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
+        set(PLATFORM_GAME_STORAGE_BACKEND_SOURCES
+            src/platform_game_storage.c
+        )
+        set(PLATFORM_GAME_STORAGE_BACKEND_REQUIREMENTS
+            esp_driver_gpio
+            esp_driver_sdmmc
+            fatfs
+            sdmmc
+        )
+    else()
+        set(PLATFORM_GAME_STORAGE_BACKEND_SOURCES
             src/platform_game_storage.c
             src/msc_write10_wrapper.c
+        )
+        set(PLATFORM_GAME_STORAGE_BACKEND_REQUIREMENTS
+            esp_partition
+            esp_tinyusb
+            fatfs
+            wear_levelling
+        )
+    endif()
+    idf_component_register(
+        SRCS
+            ${PLATFORM_GAME_STORAGE_BACKEND_SOURCES}
             ${PLATFORM_GAME_STORAGE_MODEL_SOURCES}
         INCLUDE_DIRS include
         PRIV_INCLUDE_DIRS src
         REQUIRES
-            esp_partition
-            esp_tinyusb
-            fatfs
             freertos
             heap
             mbedtls
-            wear_levelling
+            ${PLATFORM_GAME_STORAGE_BACKEND_REQUIREMENTS}
     )
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)
     target_compile_options(${COMPONENT_LIB} PRIVATE
@@ -29,10 +48,12 @@ if(COMMAND idf_component_register)
     # esp_tinyusb 2.0.1 defers WRITE(10) after copying into one reusable
     # buffer. Route the callback through the platform service so a transfer is
     # committed and read back before the host receives success.
-    target_link_options(${COMPONENT_LIB} INTERFACE
-        "LINKER:--wrap=tud_msc_write10_cb"
-        "LINKER:--undefined=__wrap_tud_msc_write10_cb"
-    )
+    if(NOT P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
+        target_link_options(${COMPONENT_LIB} INTERFACE
+            "LINKER:--wrap=tud_msc_write10_cb"
+            "LINKER:--undefined=__wrap_tud_msc_write10_cb"
+        )
+    endif()
 else()
     cmake_minimum_required(VERSION 3.16)
     project(platform_game_storage VERSION 0.1.0 LANGUAGES C)

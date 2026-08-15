@@ -1,4 +1,5 @@
 #include "platform_gamepad_usb/model.h"
+#include "platform_gamepad_usb/input_model.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -180,12 +181,104 @@ static void test_report_commit_is_transactional(void)
     EXPECT_TRUE(memcmp(&before, &after, sizeof(after)) == 0);
 }
 
+static void test_keyboard_and_mouse_are_independent_and_bounded(void)
+{
+    platform_usb_input_model_t model;
+    platform_usb_input_model_init(&model);
+    uint32_t keyboard_session = 0U;
+    uint32_t mouse_session = 0U;
+    EXPECT_EQ(PLATFORM_USB_INPUT_OK,
+              platform_usb_input_model_connect(
+                  &model, PLATFORM_USB_INPUT_KIND_KEYBOARD, 1U,
+                  &keyboard_session));
+    EXPECT_EQ(PLATFORM_USB_INPUT_OK,
+              platform_usb_input_model_connect(
+                  &model, PLATFORM_USB_INPUT_KIND_MOUSE, 2U,
+                  &mouse_session));
+
+    const uint8_t keyboard[8] = {0x02, 0, 0x52, 0x04, 0, 0, 0, 0};
+    const uint8_t mouse[4] = {0x01, 12, (uint8_t)-7, (uint8_t)-1};
+    EXPECT_EQ(PLATFORM_USB_INPUT_OK,
+              platform_usb_input_model_commit_boot_report(
+                  &model, PLATFORM_USB_INPUT_KIND_KEYBOARD,
+                  keyboard_session, keyboard, sizeof(keyboard), 3U));
+    EXPECT_EQ(PLATFORM_USB_INPUT_OK,
+              platform_usb_input_model_commit_boot_report(
+                  &model, PLATFORM_USB_INPUT_KIND_MOUSE,
+                  mouse_session, mouse, sizeof(mouse), 4U));
+
+    platform_usb_input_snapshot_t snapshot;
+    EXPECT_EQ(PLATFORM_USB_INPUT_OK,
+              platform_usb_input_model_take(&model, &snapshot));
+    EXPECT_TRUE(snapshot.keyboard.connected != 0U);
+    EXPECT_TRUE(snapshot.mouse.connected != 0U);
+    EXPECT_TRUE(platform_usb_keyboard_key_down(&snapshot.keyboard, 0x52));
+    EXPECT_TRUE(platform_usb_keyboard_key_down(&snapshot.keyboard, 0x04));
+    EXPECT_EQ(12, snapshot.mouse.delta_x);
+    EXPECT_EQ(-7, snapshot.mouse.delta_y);
+    EXPECT_EQ(-1, snapshot.mouse.wheel);
+    EXPECT_EQ(1, snapshot.mouse.buttons);
+
+    EXPECT_EQ(PLATFORM_USB_INPUT_OK,
+              platform_usb_input_model_take(&model, &snapshot));
+    EXPECT_EQ(0, snapshot.mouse.delta_x);
+    EXPECT_EQ(0, snapshot.mouse.delta_y);
+    EXPECT_EQ(0, snapshot.mouse.wheel);
+    EXPECT_EQ(1, snapshot.mouse.buttons);
+
+    const uint8_t duplicate_key[8] = {0, 0, 0x04, 0x04, 0, 0, 0, 0};
+    EXPECT_EQ(PLATFORM_USB_INPUT_ERR_MALFORMED_REPORT,
+              platform_usb_input_model_commit_boot_report(
+                  &model, PLATFORM_USB_INPUT_KIND_KEYBOARD,
+                  keyboard_session, duplicate_key, sizeof(duplicate_key), 5U));
+    EXPECT_EQ(PLATFORM_USB_INPUT_OK,
+              platform_usb_input_model_disconnect(
+                  &model, PLATFORM_USB_INPUT_KIND_KEYBOARD,
+                  keyboard_session, 6U));
+    EXPECT_EQ(PLATFORM_USB_INPUT_OK,
+              platform_usb_input_model_take(&model, &snapshot));
+    EXPECT_TRUE(snapshot.keyboard.connected == 0U);
+    EXPECT_TRUE(snapshot.mouse.connected != 0U);
+    EXPECT_TRUE(!platform_usb_keyboard_key_down(&snapshot.keyboard, 0x52));
+}
+
+static void test_disconnect_rejects_stale_reports_and_neutralizes_mouse(void)
+{
+    platform_usb_input_model_t model;
+    platform_usb_input_model_init(&model);
+    uint32_t session = 0U;
+    EXPECT_EQ(PLATFORM_USB_INPUT_OK,
+              platform_usb_input_model_connect(
+                  &model, PLATFORM_USB_INPUT_KIND_MOUSE, 1U, &session));
+    const uint8_t mouse[3] = {0x07, 127, 127};
+    EXPECT_EQ(PLATFORM_USB_INPUT_OK,
+              platform_usb_input_model_commit_boot_report(
+                  &model, PLATFORM_USB_INPUT_KIND_MOUSE, session,
+                  mouse, sizeof(mouse), 2U));
+    EXPECT_EQ(PLATFORM_USB_INPUT_OK,
+              platform_usb_input_model_disconnect(
+                  &model, PLATFORM_USB_INPUT_KIND_MOUSE, session, 3U));
+    EXPECT_EQ(PLATFORM_USB_INPUT_ERR_DISCONNECTED,
+              platform_usb_input_model_commit_boot_report(
+                  &model, PLATFORM_USB_INPUT_KIND_MOUSE, session,
+                  mouse, sizeof(mouse), 4U));
+    platform_usb_input_snapshot_t snapshot;
+    EXPECT_EQ(PLATFORM_USB_INPUT_OK,
+              platform_usb_input_model_take(&model, &snapshot));
+    EXPECT_TRUE(snapshot.mouse.connected == 0U);
+    EXPECT_EQ(0, snapshot.mouse.buttons);
+    EXPECT_EQ(0, snapshot.mouse.delta_x);
+    EXPECT_EQ(0, snapshot.mouse.delta_y);
+}
+
 int main(void)
 {
     test_usb_open_guard_clears_failure_and_preserves_success();
     test_disconnect_neutralizes_and_rejects_queued_report();
     test_old_session_cannot_clear_or_update_reconnected_device();
     test_report_commit_is_transactional();
+    test_keyboard_and_mouse_are_independent_and_bounded();
+    test_disconnect_rejects_stale_reports_and_neutralizes_mouse();
     if (failures != 0) {
         fprintf(stderr, "%d platform_gamepad model test(s) failed\n", failures);
         return 1;

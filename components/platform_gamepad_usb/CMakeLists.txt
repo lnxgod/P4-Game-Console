@@ -1,8 +1,17 @@
 if(COMMAND idf_component_register)
+    idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
+    if(P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
+        set(PLATFORM_GAMEPAD_USB_TRANSPORT
+            src/platform_usb_input_olimex.c)
+    else()
+        set(PLATFORM_GAMEPAD_USB_TRANSPORT
+            src/platform_gamepad_usb.c)
+    endif()
     idf_component_register(
         SRCS
             src/model.c
-            src/platform_gamepad_usb.c
+            src/input_model.c
+            ${PLATFORM_GAMEPAD_USB_TRANSPORT}
             src/usb_host_open_guard.c
             src/usb_host_open_wrapper.c
         INCLUDE_DIRS include
@@ -34,6 +43,7 @@ else()
 
     add_library(platform_gamepad_model STATIC
         src/model.c
+        src/input_model.c
         src/usb_host_open_guard.c
         ../gamepad_core/src/gamepad.c
     )

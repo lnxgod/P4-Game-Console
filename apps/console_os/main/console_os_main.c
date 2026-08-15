@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include "console/shell.h"
+#include "sdkconfig.h"
 #pragma GCC diagnostic push
 /* ESP-IDF 5.5.3 has sign-conversion warnings in inline RISC-V headers. */
 #pragma GCC diagnostic ignored "-Wsign-conversion"
@@ -29,14 +30,21 @@
 #include "p4/game.h"
 #include "p4/input.h"
 #include "p4/platform.h"
+#include "platform/board.h"
 #include "platform/display.h"
 #include "platform/game_catalog.h"
 #include "platform/game_loader.h"
 #include "platform/game_storage.h"
 #include "platform/os_update.h"
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#include "gamepad/gamepad.h"
+#include "platform_gamepad_usb/platform_gamepad_usb.h"
+#include "platform_usb_host/platform_usb_host.h"
+#else
 #include "platform/touch.h"
 #include "platform_i2c_shared/bus.h"
 #include "runtime_gate.h"
+#endif
 
 enum {
     CONSOLE_APP_DOOM = 1,
@@ -49,6 +57,9 @@ enum {
     CONSOLE_FRAME_INTERVAL_MS = 16,
     CONSOLE_SUBMIT_TIMEOUT_MS = 250,
     CONSOLE_BACKLIGHT_PERCENT = 25,
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    CONSOLE_GAMEPAD_STICK_THRESHOLD = 12000,
+#endif
     CONSOLE_CLEANUP_ATTEMPTS = 3,
     CONSOLE_NATIVE_AUDIO_VOLUME_STEP = 6,
     CONSOLE_NATIVE_AUDIO_FRAMES_PER_TICK =
@@ -57,15 +68,29 @@ enum {
 };
 
 static const char *const TAG = "p4_console_os";
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 static platform_i2c_shared_t *s_shared_bus;
 static platform_touch_t *s_touch;
+#endif
 static uint16_t *s_pixels;
 static bool s_display_initialized;
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+static bool s_gamepad_ready;
+static bool s_gamepad_connected;
+static bool s_keyboard_connected;
+static bool s_mouse_connected;
+static uint32_t s_gamepad_polls;
+static uint32_t s_gamepad_poll_failures;
+static uint32_t s_aux_input_poll_failures;
+static uint16_t s_mouse_x = CONSOLE_SHELL_WIDTH / 2U;
+static uint16_t s_mouse_y = CONSOLE_SHELL_HEIGHT / 2U;
+#else
 static bool s_touch_ready;
-static uint32_t s_loop_count;
 static uint32_t s_touch_polls;
 static uint32_t s_touch_poll_failures;
+#endif
 static uint32_t s_doom_handoff_count;
+static uint32_t s_loop_count;
 static bool s_game_storage_initialized;
 static bool s_game_storage_status_seen;
 static platform_game_storage_status_t s_game_storage_status;
@@ -105,7 +130,9 @@ static const console_app_descriptor_t s_doom_app = {
     .folder_path = "GAMES/ACTION",
     .accent_rgb565 = UINT16_C(0xF904),
     .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
                     CONSOLE_CAPABILITY_TOUCH |
+#endif
                     CONSOLE_CAPABILITY_AUDIO |
                     CONSOLE_CAPABILITY_STORAGE,
     .page = CONSOLE_PAGE_EXTERNAL,
@@ -123,6 +150,7 @@ static const console_app_descriptor_t s_builtin_apps[] = {
         .page = CONSOLE_PAGE_COLORS,
         .enabled = true,
     },
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
     {
         .id = CONSOLE_APP_TOUCH,
         .title = "TOUCH",
@@ -134,14 +162,18 @@ static const console_app_descriptor_t s_builtin_apps[] = {
         .page = CONSOLE_PAGE_TOUCH,
         .enabled = true,
     },
+#endif
     {
         .id = CONSOLE_APP_SYSTEM,
         .title = "SYSTEM",
         .subtitle = "RTOS STATUS",
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x5FEA),
-        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
-                        CONSOLE_CAPABILITY_TOUCH,
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+                        | CONSOLE_CAPABILITY_TOUCH
+#endif
+                        ,
         .page = CONSOLE_PAGE_SYSTEM,
         .enabled = true,
     },
@@ -158,11 +190,17 @@ static const console_app_descriptor_t s_builtin_apps[] = {
     {
         .id = CONSOLE_APP_FILES,
         .title = "FILE MANAGER",
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+        .subtitle = "MICROSD GAMES",
+#else
         .subtitle = "P4 GAMES USB",
+#endif
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0xFD20),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
                         CONSOLE_CAPABILITY_TOUCH |
+#endif
                         CONSOLE_CAPABILITY_STORAGE,
         .page = CONSOLE_PAGE_FILES,
         .enabled = true,
@@ -174,7 +212,9 @@ static const console_app_descriptor_t s_builtin_apps[] = {
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x5FEA),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
                         CONSOLE_CAPABILITY_TOUCH |
+#endif
                         CONSOLE_CAPABILITY_STORAGE,
         .page = CONSOLE_PAGE_GAMES,
         .enabled = true,
@@ -190,12 +230,14 @@ _Static_assert((int)CONSOLE_SHELL_WIDTH ==
 _Static_assert((int)CONSOLE_SHELL_HEIGHT ==
                    (int)PLATFORM_DISPLAY_GAME_HEIGHT,
                "console height must match the platform game surface");
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 _Static_assert(CONSOLE_SHELL_PHYSICAL_WIDTH == PLATFORM_TOUCH_WIDTH,
                "console touch width must match GT911 coordinates");
 _Static_assert(CONSOLE_SHELL_PHYSICAL_HEIGHT == PLATFORM_TOUCH_HEIGHT,
                "console touch height must match GT911 coordinates");
 _Static_assert(CONSOLE_SHELL_MAX_CONTACTS == PLATFORM_TOUCH_MAX_CONTACTS,
                "console contact bound must match the touch service");
+#endif
 
 static bool append_app(const console_app_descriptor_t *app)
 {
@@ -213,7 +255,9 @@ static uint32_t shell_capabilities(uint32_t game_capabilities)
         capabilities |= CONSOLE_CAPABILITY_DISPLAY;
     }
     if ((game_capabilities & P4_GAME_CAP_CONTROLS) != 0U) {
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
         capabilities |= CONSOLE_CAPABILITY_TOUCH;
+#endif
     }
     if ((game_capabilities &
          (P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM)) != 0U) {
@@ -335,7 +379,11 @@ static void set_doom_storage_state(platform_game_storage_state_t state)
         subtitle = "HOST FORMAT REQUIRED";
         break;
     case PLATFORM_GAME_STORAGE_APP_MISSING:
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+        subtitle = "COPY DOOM1.WAD TO MICROSD";
+#else
         subtitle = "COPY DOOM1.WAD OVER USB";
+#endif
         break;
     case PLATFORM_GAME_STORAGE_APP_INVALID:
         subtitle = "DOOM1.WAD INVALID";
@@ -376,7 +424,11 @@ static void set_game_manager_update_state(platform_os_update_state_t state)
         subtitle = "BAD UPDATE - REMOVE";
         break;
     case PLATFORM_OS_UPDATE_UNAVAILABLE:
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+        subtitle = "CHECK MICROSD UPDATE";
+#else
         subtitle = "EJECT USB TO CHECK";
+#endif
         break;
     case PLATFORM_OS_UPDATE_ABSENT:
     default:
@@ -823,9 +875,22 @@ static console_shell_runtime_info_t runtime_info(void)
             ? UINT32_MAX : (uint32_t)capacity_kib,
         .game_storage_state = shell_storage_state(
             s_game_storage_status.state),
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+        .touch_ready = false,
+        .controller_ready = s_gamepad_connected,
+        .keyboard_ready = s_keyboard_connected,
+        .mouse_ready = s_mouse_connected,
+        .sd_card_storage = true,
+        .audio_handoff_ready = true,
+#else
         .touch_ready = s_touch_ready,
+        .controller_ready = false,
+        .keyboard_ready = false,
+        .mouse_ready = false,
+        .sd_card_storage = false,
         /* Compiled handoff only; the shell itself never starts audio. */
         .audio_handoff_ready = true,
+#endif
         .game_storage_usb_attached = s_game_storage_status.usb_attached,
         .doom_wad_ready =
             s_game_storage_status.state == PLATFORM_GAME_STORAGE_APP_READY,
@@ -833,6 +898,331 @@ static console_shell_runtime_info_t runtime_info(void)
     return info;
 }
 
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+static bool gamepad_button_pressed(const gamepad_state_t *state,
+                                   gamepad_button_t button)
+{
+    return state != NULL &&
+        (state->buttons & GAMEPAD_BUTTON_MASK(button)) != 0U;
+}
+
+static uint32_t gamepad_p4_buttons(const gamepad_state_t *state)
+{
+    if (state == NULL || state->connected == 0U) {
+        return 0U;
+    }
+    uint32_t buttons = 0U;
+    const bool up = (state->dpad & GAMEPAD_DPAD_UP) != 0U ||
+        state->left_y <= -CONSOLE_GAMEPAD_STICK_THRESHOLD;
+    const bool down = (state->dpad & GAMEPAD_DPAD_DOWN) != 0U ||
+        state->left_y >= CONSOLE_GAMEPAD_STICK_THRESHOLD;
+    const bool left = (state->dpad & GAMEPAD_DPAD_LEFT) != 0U ||
+        state->left_x <= -CONSOLE_GAMEPAD_STICK_THRESHOLD;
+    const bool right = (state->dpad & GAMEPAD_DPAD_RIGHT) != 0U ||
+        state->left_x >= CONSOLE_GAMEPAD_STICK_THRESHOLD;
+    if (up != down) {
+        buttons |= up ? P4_BUTTON_UP : P4_BUTTON_DOWN;
+    }
+    if (left != right) {
+        buttons |= left ? P4_BUTTON_LEFT : P4_BUTTON_RIGHT;
+    }
+    if (gamepad_button_pressed(state, GAMEPAD_BUTTON_SOUTH)) {
+        buttons |= P4_BUTTON_A;
+    }
+    if (gamepad_button_pressed(state, GAMEPAD_BUTTON_EAST)) {
+        buttons |= P4_BUTTON_B;
+    }
+    if (gamepad_button_pressed(state, GAMEPAD_BUTTON_START)) {
+        buttons |= P4_BUTTON_START;
+    }
+    if (gamepad_button_pressed(state, GAMEPAD_BUTTON_BACK)) {
+        buttons |= P4_BUTTON_BACK;
+    }
+    return buttons;
+}
+
+static bool read_gamepad_snapshot(platform_gamepad_snapshot_t *snapshot)
+{
+    if (snapshot == NULL) {
+        return false;
+    }
+    memset(snapshot, 0, sizeof(*snapshot));
+    if (!s_gamepad_ready) {
+        s_gamepad_connected = false;
+        return false;
+    }
+    if (s_gamepad_polls != UINT32_MAX) {
+        ++s_gamepad_polls;
+    }
+    const esp_err_t result = platform_gamepad_usb_get_snapshot(snapshot);
+    const bool valid = result == ESP_OK &&
+        snapshot->version == PLATFORM_GAMEPAD_SNAPSHOT_VERSION &&
+        snapshot->size == sizeof(*snapshot) &&
+        snapshot->state.version == GAMEPAD_STATE_VERSION &&
+        snapshot->state.size == sizeof(snapshot->state);
+    if (!valid) {
+        s_gamepad_connected = false;
+        if (s_gamepad_poll_failures != UINT32_MAX) {
+            ++s_gamepad_poll_failures;
+        }
+        if (s_gamepad_poll_failures == 1U ||
+            s_gamepad_poll_failures % 120U == 0U) {
+            ESP_LOGW(TAG,
+                     "P4_CONSOLE_OS GAMEPAD_POLL_FAIL count=%lu error=%s",
+                     (unsigned long)s_gamepad_poll_failures,
+                     esp_err_to_name(result));
+        }
+        memset(snapshot, 0, sizeof(*snapshot));
+        return false;
+    }
+    s_gamepad_connected = snapshot->state.connected != 0U;
+    return s_gamepad_connected;
+}
+
+static uint32_t gamepad_shell_buttons(const gamepad_state_t *state)
+{
+    const uint32_t game = gamepad_p4_buttons(state);
+    uint32_t shell = 0U;
+    if ((game & P4_BUTTON_UP) != 0U) {
+        shell |= CONSOLE_BUTTON_UP;
+    }
+    if ((game & P4_BUTTON_DOWN) != 0U) {
+        shell |= CONSOLE_BUTTON_DOWN;
+    }
+    if ((game & P4_BUTTON_LEFT) != 0U) {
+        shell |= CONSOLE_BUTTON_LEFT;
+    }
+    if ((game & P4_BUTTON_RIGHT) != 0U) {
+        shell |= CONSOLE_BUTTON_RIGHT;
+    }
+    if ((game & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
+        shell |= CONSOLE_BUTTON_ACCEPT;
+    }
+    if ((game & (P4_BUTTON_B | P4_BUTTON_BACK)) != 0U) {
+        shell |= CONSOLE_BUTTON_BACK;
+    }
+    if (gamepad_button_pressed(state, GAMEPAD_BUTTON_NORTH)) {
+        shell |= CONSOLE_BUTTON_REFRESH;
+    }
+    return shell;
+}
+
+static bool read_aux_input_snapshot(platform_usb_input_snapshot_t *snapshot)
+{
+    if (snapshot == NULL) {
+        return false;
+    }
+    memset(snapshot, 0, sizeof(*snapshot));
+    if (!s_gamepad_ready) {
+        s_keyboard_connected = false;
+        s_mouse_connected = false;
+        return false;
+    }
+    const esp_err_t result =
+        platform_gamepad_usb_get_input_snapshot(snapshot);
+    const bool valid = result == ESP_OK &&
+        snapshot->version == PLATFORM_USB_INPUT_SNAPSHOT_VERSION &&
+        snapshot->size == sizeof(*snapshot) &&
+        snapshot->keyboard.connected <= 1U &&
+        snapshot->mouse.connected <= 1U;
+    if (!valid) {
+        s_keyboard_connected = false;
+        s_mouse_connected = false;
+        if (s_aux_input_poll_failures != UINT32_MAX) {
+            ++s_aux_input_poll_failures;
+        }
+        if (s_aux_input_poll_failures == 1U ||
+            s_aux_input_poll_failures % 120U == 0U) {
+            ESP_LOGW(TAG,
+                     "P4_CONSOLE_OS USB_INPUT_POLL_FAIL count=%lu error=%s",
+                     (unsigned long)s_aux_input_poll_failures,
+                     esp_err_to_name(result));
+        }
+        memset(snapshot, 0, sizeof(*snapshot));
+        return false;
+    }
+    s_keyboard_connected = snapshot->keyboard.connected != 0U;
+    s_mouse_connected = snapshot->mouse.connected != 0U;
+    return true;
+}
+
+static bool key_down(const platform_usb_keyboard_state_t *keyboard,
+                     platform_usb_key_usage_t key)
+{
+    return platform_usb_keyboard_key_down(keyboard, (uint8_t)key);
+}
+
+static uint32_t keyboard_p4_buttons(
+    const platform_usb_keyboard_state_t *keyboard)
+{
+    if (keyboard == NULL || keyboard->connected == 0U) {
+        return 0U;
+    }
+    uint32_t buttons = 0U;
+    const bool up = key_down(keyboard, PLATFORM_USB_KEY_UP) ||
+        key_down(keyboard, PLATFORM_USB_KEY_W);
+    const bool down = key_down(keyboard, PLATFORM_USB_KEY_DOWN) ||
+        key_down(keyboard, PLATFORM_USB_KEY_S);
+    const bool left = key_down(keyboard, PLATFORM_USB_KEY_LEFT) ||
+        key_down(keyboard, PLATFORM_USB_KEY_A);
+    const bool right = key_down(keyboard, PLATFORM_USB_KEY_RIGHT) ||
+        key_down(keyboard, PLATFORM_USB_KEY_D);
+    if (up != down) {
+        buttons |= up ? P4_BUTTON_UP : P4_BUTTON_DOWN;
+    }
+    if (left != right) {
+        buttons |= left ? P4_BUTTON_LEFT : P4_BUTTON_RIGHT;
+    }
+    if (key_down(keyboard, PLATFORM_USB_KEY_Z) ||
+        key_down(keyboard, PLATFORM_USB_KEY_SPACE)) {
+        buttons |= P4_BUTTON_A;
+    }
+    if (key_down(keyboard, PLATFORM_USB_KEY_X)) {
+        buttons |= P4_BUTTON_B;
+    }
+    if (key_down(keyboard, PLATFORM_USB_KEY_ENTER)) {
+        buttons |= P4_BUTTON_START;
+    }
+    if (key_down(keyboard, PLATFORM_USB_KEY_ESCAPE) ||
+        key_down(keyboard, PLATFORM_USB_KEY_BACKSPACE)) {
+        buttons |= P4_BUTTON_BACK;
+    }
+    return buttons;
+}
+
+static uint32_t keyboard_shell_buttons(
+    const platform_usb_keyboard_state_t *keyboard)
+{
+    const uint32_t game = keyboard_p4_buttons(keyboard);
+    uint32_t shell = 0U;
+    if ((game & P4_BUTTON_UP) != 0U) {
+        shell |= CONSOLE_BUTTON_UP;
+    }
+    if ((game & P4_BUTTON_DOWN) != 0U) {
+        shell |= CONSOLE_BUTTON_DOWN;
+    }
+    if ((game & P4_BUTTON_LEFT) != 0U) {
+        shell |= CONSOLE_BUTTON_LEFT;
+    }
+    if ((game & P4_BUTTON_RIGHT) != 0U) {
+        shell |= CONSOLE_BUTTON_RIGHT;
+    }
+    if ((game & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
+        shell |= CONSOLE_BUTTON_ACCEPT;
+    }
+    if ((game & (P4_BUTTON_B | P4_BUTTON_BACK)) != 0U) {
+        shell |= CONSOLE_BUTTON_BACK;
+    }
+    if (key_down(keyboard, PLATFORM_USB_KEY_F5) ||
+        key_down(keyboard, PLATFORM_USB_KEY_R)) {
+        shell |= CONSOLE_BUTTON_REFRESH;
+    }
+    return shell;
+}
+
+static uint16_t move_pointer_axis(uint16_t current, int32_t delta,
+                                  uint16_t limit)
+{
+    const int64_t moved = (int64_t)current + delta;
+    if (moved <= 0) {
+        return 0U;
+    }
+    if (moved >= (int64_t)limit) {
+        return (uint16_t)(limit - 1U);
+    }
+    return (uint16_t)moved;
+}
+
+static void create_usb_input_or_continue(void)
+{
+    esp_err_t result = platform_usb_host_start(NULL);
+    if (result != ESP_OK) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS USB_INPUT_DEGRADED stage=usb-host error=%s",
+                 esp_err_to_name(result));
+        return;
+    }
+    result = platform_gamepad_usb_start();
+    if (result != ESP_OK) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS USB_INPUT_DEGRADED stage=hid error=%s",
+                 esp_err_to_name(result));
+        (void)platform_usb_host_stop(pdMS_TO_TICKS(1000U));
+        return;
+    }
+    result = platform_usb_host_enable_root_port();
+    if (result != ESP_OK) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS USB_INPUT_DEGRADED stage=root-port error=%s",
+                 esp_err_to_name(result));
+        if (platform_usb_host_quiesce() == ESP_OK) {
+            (void)platform_gamepad_usb_stop(pdMS_TO_TICKS(1000U));
+            (void)platform_usb_host_stop(pdMS_TO_TICKS(1000U));
+        }
+        return;
+    }
+    s_gamepad_ready = true;
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS USB_INPUT_READY "
+             "classes=gamepad,keyboard,mouse transport=usb-hid "
+             "topology=integrated-powered-hub ports=4");
+}
+
+static console_shell_action_t poll_input(console_shell_t *shell)
+{
+    platform_gamepad_snapshot_t gamepad;
+    uint32_t buttons = read_gamepad_snapshot(&gamepad)
+        ? gamepad_shell_buttons(&gamepad.state) : 0U;
+    platform_usb_input_snapshot_t input;
+    const bool input_valid = read_aux_input_snapshot(&input);
+    if (input_valid) {
+        buttons |= keyboard_shell_buttons(&input.keyboard);
+        if (input.mouse.connected != 0U) {
+            if ((input.mouse.buttons & UINT8_C(0x02)) != 0U) {
+                buttons |= CONSOLE_BUTTON_BACK;
+            }
+            if ((input.mouse.buttons & UINT8_C(0x04)) != 0U) {
+                buttons |= CONSOLE_BUTTON_REFRESH;
+            }
+            if (input.mouse.wheel < 0) {
+                buttons |= CONSOLE_BUTTON_DOWN;
+            } else if (input.mouse.wheel > 0) {
+                buttons |= CONSOLE_BUTTON_UP;
+            }
+        }
+    }
+    const console_shell_action_t button_action =
+        console_shell_handle_buttons(shell, buttons);
+
+    console_shell_action_t pointer_action = {0};
+    if (input_valid && input.mouse.connected != 0U) {
+        s_mouse_x = move_pointer_axis(
+            s_mouse_x, input.mouse.delta_x, CONSOLE_SHELL_WIDTH);
+        s_mouse_y = move_pointer_axis(
+            s_mouse_y, input.mouse.delta_y, CONSOLE_SHELL_HEIGHT);
+        const bool left_down =
+            (input.mouse.buttons & UINT8_C(0x01)) != 0U;
+        console_shell_set_pointer(
+            shell, true, s_mouse_x, s_mouse_y, left_down);
+        const console_shell_contact_t contact = {
+            .x = (uint16_t)((uint32_t)CONSOLE_SHELL_VIEWPORT_LEFT +
+                (uint32_t)s_mouse_x *
+                    (uint32_t)CONSOLE_SHELL_VIEWPORT_SCALE + UINT32_C(1)),
+            .y = (uint16_t)((uint32_t)s_mouse_y *
+                (uint32_t)CONSOLE_SHELL_VIEWPORT_SCALE + UINT32_C(1)),
+        };
+        pointer_action = console_shell_handle_touch(
+            shell, true, left_down ? &contact : NULL,
+            left_down ? 1U : 0U);
+    } else {
+        console_shell_set_pointer(shell, false, 0U, 0U, false);
+        pointer_action = console_shell_handle_touch(
+            shell, false, NULL, 0U);
+    }
+    return button_action.type != CONSOLE_ACTION_NONE
+        ? button_action : pointer_action;
+}
+#else
 static void create_touch_or_continue(void)
 {
     esp_err_t result = platform_i2c_shared_create(&s_shared_bus);
@@ -886,7 +1276,7 @@ static bool read_touch_frame(platform_touch_frame_t *frame)
     return true;
 }
 
-static console_shell_action_t poll_touch(console_shell_t *shell)
+static console_shell_action_t poll_input(console_shell_t *shell)
 {
     platform_touch_frame_t frame;
     if (!read_touch_frame(&frame)) {
@@ -901,6 +1291,7 @@ static console_shell_action_t poll_touch(console_shell_t *shell)
     return console_shell_handle_touch(
         shell, true, count == 0U ? NULL : contacts, count);
 }
+#endif
 
 static void log_runtime_stats(const console_shell_t *shell)
 {
@@ -911,6 +1302,32 @@ static void log_runtime_stats(const console_shell_t *shell)
                  esp_err_to_name(result));
         return;
     }
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS STATS loops=%lu page=%u renders=%lu "
+             "usb_input_ready=%u gamepad=%u keyboard=%u mouse=%u "
+             "input_polls=%lu gamepad_failures=%lu aux_failures=%lu "
+             "display_submits=%lu "
+             "display_completions=%lu display_timeouts=%lu "
+             "display_failures=%lu audio=es8311-ready storage=%s "
+             "storage_generation=%lu storage_media=microsd",
+             (unsigned long)s_loop_count,
+             (unsigned)shell->page,
+             (unsigned long)shell->render_generation,
+             s_gamepad_ready ? 1U : 0U,
+             s_gamepad_connected ? 1U : 0U,
+             s_keyboard_connected ? 1U : 0U,
+             s_mouse_connected ? 1U : 0U,
+             (unsigned long)s_gamepad_polls,
+             (unsigned long)s_gamepad_poll_failures,
+             (unsigned long)s_aux_input_poll_failures,
+             (unsigned long)display.submits_started,
+             (unsigned long)display.submits_completed,
+             (unsigned long)display.submit_timeouts,
+             (unsigned long)display.submit_failures,
+             platform_game_storage_state_name(s_game_storage_status.state),
+             (unsigned long)s_game_storage_status.generation);
+#else
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS STATS loops=%lu page=%u renders=%lu "
              "touch_ready=%u touch_polls=%lu touch_failures=%lu "
@@ -932,6 +1349,7 @@ static void log_runtime_stats(const console_shell_t *shell)
              platform_game_storage_state_name(s_game_storage_status.state),
              (unsigned long)s_game_storage_status.generation,
              s_game_storage_status.usb_attached ? 1U : 0U);
+#endif
 }
 
 static esp_err_t present(console_shell_t *shell)
@@ -944,6 +1362,7 @@ static esp_err_t present(console_shell_t *shell)
         s_pixels, CONSOLE_SHELL_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
 }
 
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 static esp_err_t destroy_touch_for_handoff(void)
 {
     if (s_touch == NULL) {
@@ -978,13 +1397,18 @@ static esp_err_t destroy_bus_for_handoff(void)
     }
     return s_shared_bus == NULL ? ESP_OK : result;
 }
+#endif
 
 static bool native_audio_runtime_allowed(void)
 {
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    return true;
+#else
     doom_touch_audio_runtime_gate_t gate = {0};
     doom_touch_audio_runtime_gate_read(&gate);
     return doom_touch_audio_runtime_gate_mode(&gate) ==
         DOOM_TOUCH_AUDIO_RUNTIME_TOUCH_AND_AUDIO;
+#endif
 }
 
 static bool pump_native_audio(p4_game_platform_audio_t *audio,
@@ -1080,6 +1504,26 @@ static bool cartridge_poll_frame(void *opaque,
     if (context == NULL || out_input == NULL || out_elapsed_ms == NULL) {
         return false;
     }
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    platform_gamepad_snapshot_t gamepad;
+    uint32_t digital_buttons = read_gamepad_snapshot(&gamepad)
+        ? gamepad_p4_buttons(&gamepad.state) : 0U;
+    platform_usb_input_snapshot_t input;
+    if (read_aux_input_snapshot(&input)) {
+        digital_buttons |= keyboard_p4_buttons(&input.keyboard);
+        if (input.mouse.connected != 0U) {
+            if ((input.mouse.buttons & UINT8_C(0x01)) != 0U) {
+                digital_buttons |= P4_BUTTON_A;
+            }
+            if ((input.mouse.buttons & UINT8_C(0x02)) != 0U) {
+                digital_buttons |= P4_BUTTON_B;
+            }
+        }
+    }
+    p4_game_input_mapper_update(
+        &context->input_mapper, false, NULL, 0U,
+        digital_buttons, out_input);
+#else
     platform_touch_frame_t frame;
     const bool valid = read_touch_frame(&frame);
     p4_physical_touch_t touches[P4_INPUT_MAX_TOUCHES];
@@ -1092,6 +1536,7 @@ static bool cartridge_poll_frame(void *opaque,
         &context->input_mapper, valid,
         touch_count == 0U ? NULL : touches,
         touch_count, 0U, out_input);
+#endif
     if (context->audio_running) {
         context->audio_running = pump_native_audio(
             &context->audio, &context->mixer);
@@ -1100,6 +1545,20 @@ static bool cartridge_poll_frame(void *opaque,
         ++context->frames;
     }
     if (context->frames != 0U && context->frames % 300U == 0U) {
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS CARTRIDGE_STATS app=%s frames=%lu "
+                 "gamepad=%u keyboard=%u mouse=%u input_polls=%lu "
+                 "gamepad_failures=%lu audio_running=%u audio_frames=%lu",
+                 context->game_id, (unsigned long)context->frames,
+                 s_gamepad_connected ? 1U : 0U,
+                 s_keyboard_connected ? 1U : 0U,
+                 s_mouse_connected ? 1U : 0U,
+                 (unsigned long)s_gamepad_polls,
+                 (unsigned long)s_gamepad_poll_failures,
+                 context->audio_running ? 1U : 0U,
+                 (unsigned long)context->audio.frames_written);
+#else
         p4_audio_mixer_stats_t stats = {0};
         p4_audio_mixer_get_stats(&context->mixer, &stats);
         ESP_LOGI(TAG,
@@ -1112,6 +1571,7 @@ static bool cartridge_poll_frame(void *opaque,
                  context->audio_running ? 1U : 0U,
                  (unsigned long)stats.tones_started,
                  (unsigned long)context->audio.frames_written);
+#endif
     }
     *out_elapsed_ms = CONSOLE_FRAME_INTERVAL_MS;
     vTaskDelayUntil(&context->last_wake,
@@ -1225,12 +1685,12 @@ static void launch_doom_exclusive(console_shell_t *shell)
     ++s_doom_handoff_count;
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS HANDOFF_BEGIN app=doom mode=exclusive-one-way "
-             "audio_owner=doom volume_step=6/10 storage=game-locked "
-             "usb_device=stopped");
+             "audio_owner=doom storage=game-locked input_owner=platform");
     result = platform_display_set_brightness(0U);
     if (result != ESP_OK) {
         halt_dark("handoff-backlight", result);
     }
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
     result = destroy_touch_for_handoff();
     if (result != ESP_OK) {
         halt_dark("handoff-touch-destroy", result);
@@ -1239,6 +1699,7 @@ static void launch_doom_exclusive(console_shell_t *shell)
     if (result != ESP_OK) {
         halt_dark("handoff-bus-destroy", result);
     }
+#endif
     result = platform_display_deinit();
     if (result != ESP_OK) {
         halt_dark("handoff-display-deinit", result);
@@ -1256,12 +1717,21 @@ static void launch_doom_exclusive(console_shell_t *shell)
 
 void app_main(void)
 {
+    const platform_board_descriptor_t *const board = platform_board_get();
+    if (board == NULL) {
+        halt_dark("board-descriptor", ESP_ERR_INVALID_STATE);
+    }
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS BOARD_ID vendor=%s product=%s revision=%s "
+             "profile=%s flash_bytes=%" PRIu32 " psram_bytes=%" PRIu32,
+             board->vendor, board->product, board->revision, board->slug,
+             board->flash_bytes, board->psram_bytes);
     const esp_err_t storage_result = platform_game_storage_init();
     s_game_storage_initialized = storage_result == ESP_OK;
     if (!s_game_storage_initialized) {
         ESP_LOGW(TAG,
                  "P4_CONSOLE_OS GAME_STORAGE_DEGRADED error=%s "
-                 "native_apps=available doom=disabled",
+                 "native_apps=available",
                  esp_err_to_name(storage_result));
     }
     sync_game_storage();
@@ -1278,10 +1748,16 @@ void app_main(void)
     sync_game_storage();
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS START shell=freertos-native apps=%u "
-             "surface=rgb565-320x200 touch=gt911 "
+             "board=%s surface=rgb565-320x200 input=%s "
+             "storage_media=%s "
              "native_game_api=1 native_format=p4-native-elf-v1 "
              "game_storage=%s execution=build-candidate",
              (unsigned)s_app_count,
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+             board->slug, "usb-hid-pad+kbd+mouse", "microsd",
+#else
+             board->slug, "gt911-touch", "internal-fat",
+#endif
              platform_game_storage_state_name(s_game_storage_status.state));
 
     console_shell_t shell;
@@ -1302,7 +1778,11 @@ void app_main(void)
         halt_dark("framebuffer-allocation", ESP_ERR_NO_MEM);
     }
 
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    create_usb_input_or_continue();
+#else
     create_touch_or_continue();
+#endif
     const console_shell_runtime_info_t initial_runtime = runtime_info();
     console_shell_set_runtime_info(&shell, &initial_runtime);
     result = present(&shell);
@@ -1313,9 +1793,16 @@ void app_main(void)
     if (result != ESP_OK) {
         halt_dark("backlight", result);
     }
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS READY page=home display=hdmi "
+             "audio=es8311-deferred-until-app "
+             "storage=microsd removal=power-off-first");
+#else
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS READY page=home amp_energized=0 "
              "doom_audio=deferred-until-exclusive-handoff");
+#endif
     bool ota_was_pending = false;
     const esp_err_t ota_valid = platform_os_update_mark_running_valid(
         &ota_was_pending);
@@ -1340,7 +1827,7 @@ void app_main(void)
             (void)reload_file_listing(
                 &shell, CONSOLE_FILE_NOTICE_NONE);
         }
-        const console_shell_action_t action = poll_touch(&shell);
+        const console_shell_action_t action = poll_input(&shell);
         const console_shell_runtime_info_t current_runtime = runtime_info();
         console_shell_set_runtime_info(&shell, &current_runtime);
         if (action.type == CONSOLE_ACTION_PAGE_CHANGED &&

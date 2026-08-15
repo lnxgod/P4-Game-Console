@@ -4,6 +4,9 @@
 #include <string.h>
 
 #include "sdkconfig.h"
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#include "driver/gpio.h"
+#endif
 #include "esp_log.h"
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
@@ -24,6 +27,59 @@ static bool s_stop_requested;
 static EventGroupHandle_t s_events;
 static TaskHandle_t s_daemon_task;
 
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+enum {
+    PLATFORM_USB_HOST_OLIMEX_HUB_RESET_GPIO = 21,
+    PLATFORM_USB_HOST_OLIMEX_RESET_ASSERT_MS = 20,
+    PLATFORM_USB_HOST_OLIMEX_ENUMERATION_DELAY_MS = 100,
+};
+
+static bool s_integrated_hub_gpio_configured;
+
+static esp_err_t integrated_hub_hold_reset(void)
+{
+    const gpio_config_t configuration = {
+        .pin_bit_mask = UINT64_C(1) <<
+            PLATFORM_USB_HOST_OLIMEX_HUB_RESET_GPIO,
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE,
+    };
+    esp_err_t result = gpio_set_level(
+        PLATFORM_USB_HOST_OLIMEX_HUB_RESET_GPIO, 0U);
+    if (result == ESP_OK && !s_integrated_hub_gpio_configured) {
+        result = gpio_config(&configuration);
+        if (result == ESP_OK) {
+            s_integrated_hub_gpio_configured = true;
+        }
+    }
+    if (result == ESP_OK) {
+        result = gpio_set_level(
+            PLATFORM_USB_HOST_OLIMEX_HUB_RESET_GPIO, 0U);
+    }
+    if (result == ESP_OK) {
+        vTaskDelay(pdMS_TO_TICKS(
+            PLATFORM_USB_HOST_OLIMEX_RESET_ASSERT_MS));
+    }
+    return result;
+}
+
+static esp_err_t integrated_hub_release_reset(void)
+{
+    if (!s_integrated_hub_gpio_configured) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    const esp_err_t result = gpio_set_level(
+        PLATFORM_USB_HOST_OLIMEX_HUB_RESET_GPIO, 1U);
+    if (result == ESP_OK) {
+        vTaskDelay(pdMS_TO_TICKS(
+            PLATFORM_USB_HOST_OLIMEX_ENUMERATION_DELAY_MS));
+    }
+    return result;
+}
+#endif
+
 /*
  * Keep the complete post-authorization host implementation in build-only,
  * electrically inert images. A preprocessor `return false` here lets O3 and
@@ -38,7 +94,8 @@ static TaskHandle_t s_daemon_task;
  * record before this independent build gate, while the build gate itself also
  * remains false.
  */
-#if CONFIG_PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B && \
+    CONFIG_PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
 static const volatile uint8_t s_build_authorization_gate = 1U;
 static const platform_usb_fixture_evidence_t s_build_expected_evidence = {
     .version = PLATFORM_USB_FIXTURE_EVIDENCE_VERSION,
@@ -57,7 +114,7 @@ static const platform_usb_fixture_evidence_t s_build_expected_evidence = {
     .evidence_id = CONFIG_PLATFORM_USB_HOST_FIXTURE_EVIDENCE_ID,
     .evidence_sha256 = CONFIG_PLATFORM_USB_HOST_FIXTURE_EVIDENCE_SHA256,
 };
-#else
+#elif !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 static const volatile uint8_t s_build_authorization_gate = 0U;
 static const platform_usb_fixture_evidence_t s_build_expected_evidence = {
     .version = PLATFORM_USB_FIXTURE_EVIDENCE_VERSION,
@@ -76,10 +133,12 @@ static const platform_usb_fixture_evidence_t s_build_expected_evidence = {
 };
 #endif
 
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 static bool __attribute__((noinline)) build_authorization_enabled(void)
 {
     return s_build_authorization_gate == 1U;
 }
+#endif
 
 static void ensure_model_initialized_locked(void)
 {
@@ -184,6 +243,7 @@ static void mark_fault(void)
     taskEXIT_CRITICAL(&s_model_lock);
 }
 
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 static bool fixture_matches_build_authorization(
     const platform_usb_fixture_evidence_t *evidence)
 {
@@ -211,10 +271,18 @@ static bool fixture_matches_build_authorization(
            evidence->board_path_reviewed ==
                s_build_expected_evidence.board_path_reviewed;
 }
+#endif
 
 esp_err_t platform_usb_host_start(
     const platform_usb_fixture_evidence_t *fixture_evidence)
 {
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    if (fixture_evidence != NULL) {
+        ESP_LOGE(TAG,
+                 "USB_HOST_BLOCKED reason=integrated-hub-requires-null-fixture");
+        return ESP_ERR_INVALID_ARG;
+    }
+#else
     const platform_usb_status_t fixture_status =
         platform_usb_fixture_evidence_validate(fixture_evidence);
     if (fixture_status != PLATFORM_USB_STATUS_OK) {
@@ -227,16 +295,33 @@ esp_err_t platform_usb_host_start(
                  "USB_HOST_BLOCKED reason=build-authorization-or-evidence-mismatch");
         return ESP_ERR_INVALID_STATE;
     }
+#endif
 
     platform_usb_status_t model_status;
     taskENTER_CRITICAL(&s_model_lock);
     ensure_model_initialized_locked();
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    model_status =
+        platform_usb_host_model_begin_integrated_start(&s_model);
+#else
     model_status =
         platform_usb_host_model_begin_start(&s_model, fixture_evidence);
+#endif
     taskEXIT_CRITICAL(&s_model_lock);
     if (model_status != PLATFORM_USB_STATUS_OK) {
         return status_to_esp(model_status);
     }
+
+    esp_err_t result = ESP_OK;
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    result = integrated_hub_hold_reset();
+    if (result != ESP_OK) {
+        complete_start(false);
+        ESP_LOGE(TAG, "USB_HOST_START_FAILED stage=hub-reset error=%s",
+                 esp_err_to_name(result));
+        return result;
+    }
+#endif
 
     s_events = xEventGroupCreate();
     if (s_events == NULL) {
@@ -256,7 +341,7 @@ esp_err_t platform_usb_host_start(
         .fifo_settings_custom = {0},
         .peripheral_map = PLATFORM_USB_HOST_HS_PERIPHERAL_MAP,
     };
-    esp_err_t result = usb_host_install(&host_config);
+    result = usb_host_install(&host_config);
     if (result != ESP_OK) {
         vEventGroupDelete(s_events);
         s_events = NULL;
@@ -282,11 +367,18 @@ esp_err_t platform_usb_host_start(
     }
 
     complete_start(true);
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    ESP_LOGI(TAG,
+             "USB_HOST_READY controller=p4-hs peripheral=0 "
+             "root_port_enabled=0 topology=olimex-fe1.1s-powered-hub "
+             "hub_reset_gpio=21 hub_reset=asserted");
+#else
     ESP_LOGI(TAG,
              "USB_HOST_READY controller=p4-hs peripheral=0 root_port_enabled=0 "
              "fixture=%s limit_ma=%u",
              fixture_evidence->evidence_id,
              (unsigned)fixture_evidence->current_limit_ma);
+#endif
     return ESP_OK;
 }
 
@@ -301,7 +393,24 @@ esp_err_t platform_usb_host_enable_root_port(void)
         return status_to_esp(model_status);
     }
 
-    const esp_err_t result = usb_host_lib_set_root_port_power(true);
+    esp_err_t result = usb_host_lib_set_root_port_power(true);
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    if (result == ESP_OK) {
+        result = integrated_hub_release_reset();
+        if (result != ESP_OK) {
+            const esp_err_t rollback =
+                usb_host_lib_set_root_port_power(false);
+            if (rollback != ESP_OK) {
+                mark_fault();
+                ESP_LOGE(TAG,
+                         "USB_HOST_FAULT stage=hub-release-rollback "
+                         "release=%s rollback=%s resources=retained",
+                         esp_err_to_name(result), esp_err_to_name(rollback));
+                return rollback;
+            }
+        }
+    }
+#endif
     const platform_usb_status_t completion_status =
         complete_root_port_enable(result == ESP_OK);
     if (completion_status != PLATFORM_USB_STATUS_OK) {
@@ -319,7 +428,15 @@ esp_err_t platform_usb_host_enable_root_port(void)
         return result;
     }
 
-    ESP_LOGI(TAG, "USB_HOST_ROOT_PORT_ENABLED class_leases_present=1");
+    ESP_LOGI(TAG,
+             "USB_HOST_ROOT_PORT_ENABLED class_leases_present=1 "
+             "integrated_hub=%u",
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+             1U
+#else
+             0U
+#endif
+    );
     return ESP_OK;
 }
 
@@ -334,7 +451,15 @@ esp_err_t platform_usb_host_quiesce(void)
         return status_to_esp(model_status);
     }
 
-    const esp_err_t result = usb_host_lib_set_root_port_power(false);
+    esp_err_t result = ESP_OK;
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    result = integrated_hub_hold_reset();
+#endif
+    const esp_err_t root_result =
+        usb_host_lib_set_root_port_power(false);
+    if (result == ESP_OK) {
+        result = root_result;
+    }
     const platform_usb_status_t completion_status =
         complete_quiesce(result == ESP_OK);
     if (completion_status != PLATFORM_USB_STATUS_OK) {
@@ -380,8 +505,15 @@ esp_err_t platform_usb_host_stop(TickType_t timeout_ticks)
     }
 
     if (quiesce_required) {
-        const esp_err_t power_result =
+        esp_err_t power_result = ESP_OK;
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+        power_result = integrated_hub_hold_reset();
+#endif
+        const esp_err_t root_result =
             usb_host_lib_set_root_port_power(false);
+        if (power_result == ESP_OK) {
+            power_result = root_result;
+        }
         const platform_usb_status_t completion_status =
             complete_quiesce(power_result == ESP_OK);
         if (completion_status != PLATFORM_USB_STATUS_OK) {

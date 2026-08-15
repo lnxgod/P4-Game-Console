@@ -10,6 +10,7 @@ if(COMMAND idf_component_register)
             src/platform_usb_host.c
         INCLUDE_DIRS include
         REQUIRES
+            esp_driver_gpio
             freertos
             log
             usb

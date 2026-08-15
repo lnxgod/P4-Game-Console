@@ -22,9 +22,10 @@ typedef struct {
  *
  * The library and daemon are installed with the root data port disabled. A
  * successful return leaves the service in PLATFORM_USB_HOST_READY so class
- * drivers can register without racing enumeration. This service never toggles
- * a CrowPanel VBUS GPIO and assumes the reviewed fixture owns switched,
- * current-limited, backfeed-safe 5 V.
+ * drivers can register without racing enumeration. Elecrow builds require a
+ * reviewed external-fixture record. The Olimex ESP32-P4-PC build instead
+ * requires NULL and holds its source-reviewed onboard hub in reset until the
+ * class driver is ready.
  */
 esp_err_t platform_usb_host_start(
     const platform_usb_fixture_evidence_t *fixture_evidence);
@@ -43,7 +44,8 @@ esp_err_t platform_usb_host_enable_root_port(void);
  *
  * Existing class owners retain valid leases so they can drain disconnects,
  * uninstall, and release their leases. The external fixture still owns its
- * physical VBUS switch; this API does not control that supply.
+ * physical VBUS switch. On Olimex, this call asserts the onboard hub reset;
+ * board-supplied, current-limited VBUS remains physically present.
  */
 esp_err_t platform_usb_host_quiesce(void);
 
