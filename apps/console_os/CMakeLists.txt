@@ -50,6 +50,7 @@ if(NOT P4_LOCAL_DOOM_WAD_BYTES EQUAL 4196020 OR
     message(FATAL_ERROR "local Doom shareware WAD identity does not match")
 endif()
 file(MAKE_DIRECTORY "${P4_GAME_STORAGE_SEED_DIR}")
+file(MAKE_DIRECTORY "${P4_GAME_STORAGE_SEED_DIR}/UPDATE")
 configure_file(
     "${CMAKE_CURRENT_LIST_DIR}/game-storage/README.TXT"
     "${P4_GAME_STORAGE_SEED_DIR}/README.TXT"

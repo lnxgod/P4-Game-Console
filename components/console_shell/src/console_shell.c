@@ -1821,7 +1821,7 @@ static void draw_files(console_shell_t *shell,
                      : "CONFIRM DELETE SELECTED FILE");
         notice_color = COLOR_RED;
     } else if (shell->file_notice == CONSOLE_FILE_NOTICE_REFRESHED) {
-        notice = "FILE LIST REFRESHED";
+        notice = games ? "GAMES + UPDATES CHECKED" : "FILE LIST REFRESHED";
         notice_color = COLOR_GREEN;
     } else if (shell->file_notice == CONSOLE_FILE_NOTICE_DELETED) {
         notice = games ? "GAME PACKAGE REMOVED" : "FILE DELETED";
@@ -1865,7 +1865,8 @@ static void draw_files(console_shell_t *shell,
                          file_can_page_next(shell));
         draw_file_button(shell, pixels, stride,
                          FILE_REFRESH_LEFT, FILE_REFRESH_WIDTH,
-                         FILE_REFRESH_CONTROL, "REFRESH", true);
+                         FILE_REFRESH_CONTROL,
+                         games ? "CHECK" : "REFRESH", true);
         draw_file_button(shell, pixels, stride,
                          FILE_DELETE_LEFT, FILE_DELETE_WIDTH,
                          FILE_DELETE_CONTROL,

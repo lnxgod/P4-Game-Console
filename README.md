@@ -11,7 +11,7 @@ Invaders are clean-room samples. See
 
 The Program Manager shell exposes that FAT volume to a laptop through J16 USB
 device mode. Game Manager discovers/removes cartridges and installs verified
-`P4UPDATE.P4U` images into the inactive OTA slot; File Manager handles other
+`UPDATE/P4UPDATE.P4U` images into the inactive OTA slot; File Manager handles other
 root files. Both refuse access while USB owns storage.
 
 ## Current target

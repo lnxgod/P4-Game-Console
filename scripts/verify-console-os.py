@@ -375,8 +375,12 @@ def main() -> None:
         require(len(volume_roots) == 1, "generated FAT has wrong volume label")
         volume = volume_roots[0]
         require(sorted(item.name for item in volume.iterdir()) ==
-                ["DOOM1.WAD", "INVADERS.P4G", "MAZE.P4G", "README.TXT"],
+                ["DOOM1.WAD", "INVADERS.P4G", "MAZE.P4G", "README.TXT",
+                 "UPDATE"],
                 "generated FAT root contents differ")
+        require((volume / "UPDATE").is_dir() and
+                not any((volume / "UPDATE").iterdir()),
+                "generated FAT UPDATE directory differs")
         require((volume / "DOOM1.WAD").stat().st_size == WAD_BYTES and
                 sha256(volume / "DOOM1.WAD") == WAD_SHA256,
                 "generated FAT contains wrong Doom WAD")
@@ -402,7 +406,8 @@ def main() -> None:
         "platform_game_loader_run", "p4_game_package_parse",
         "p4_os_update_package_parse", "platform_os_update_install",
         "esp_elf_relocate", "esp_ota_set_boot_partition",
-        "platform_game_storage_stream_root_file_exclusive",
+        "platform_game_storage_stream_update_file_exclusive",
+        "__wrap_tud_msc_write10_cb",
         "tinyusb_driver_install", "tinyusb_msc_new_storage_spiflash",
     ):
         require(f" {symbol}\n" in symbols, f"missing ELF symbol {symbol}")
@@ -414,6 +419,19 @@ def main() -> None:
     ):
         require(f" {symbol}\n" not in symbols,
                 f"forbidden ELF symbol {symbol}")
+
+    objdump = compiler.with_name(
+        compiler.name.removesuffix("gcc") + "objdump")
+    disassembly_result = subprocess.run(
+        [str(objdump), "-d", str(app_elf)], check=False, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    require(disassembly_result.returncode == 0,
+            "cannot disassemble app ELF")
+    require(re.search(
+                r"\b(jal|j)\s+[0-9a-f]+\s+<__wrap_tud_msc_write10_cb>",
+                disassembly_result.stdout) is not None,
+            "TinyUSB WRITE(10) does not call the verified platform wrapper")
 
     shell_main = (APP / "main/console_os_main.c").read_text(encoding="utf-8")
     require("CONSOLE_PAGE_GAMES" in shell_main and
@@ -429,16 +447,23 @@ def main() -> None:
         ROOT / "components/platform_os_update/src/platform_os_update.c"
     ).read_text(encoding="utf-8")
     require_order(update_source, [
-        "platform_game_storage_stream_root_file_exclusive(",
+        "platform_game_storage_stream_update_file_exclusive(",
         "esp_ota_end(stream.handle)",
         "esp_ota_set_boot_partition(target)",
     ], "OTA commit")
     storage_source = (
         ROOT / "components/platform_game_storage/src/platform_game_storage.c"
     ).read_text(encoding="utf-8")
+    require_order(storage_source, [
+        "msc_write_policy_validate(",
+        "wl_erase_range(s_wl_handle, address, size_bytes)",
+        "wl_write(s_wl_handle, address, data, size_bytes)",
+        "wl_read(",
+        "memcmp(data, s_hash_buffer, size_bytes)",
+    ], "verified USB block write")
     require_order(storage_source[
         storage_source.index(
-            "esp_err_t platform_game_storage_stream_root_file_exclusive("):
+            "static esp_err_t stream_regular_file_exclusive("):
         storage_source.index(
             "esp_err_t platform_game_storage_lock_for_game(")
     ], [

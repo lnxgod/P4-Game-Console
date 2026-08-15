@@ -35,7 +35,9 @@ the running engine.
 The full project image can generate a reviewed FAT seed, but the one-time
 dual-OTA migration deliberately does not write `game_data`, preserving the
 live Doom file and other user data. Later OS releases are copied to J16 as
-`P4UPDATE.P4U` and installed from Game Manager into the inactive OTA slot.
+`UPDATE/P4UPDATE.P4U` and installed from Game Manager into the inactive OTA
+slot. Program Manager exposes ready/invalid update status on the Game Manager
+app before it is opened.
 The consumed update package is removed before reboot when storage ownership
 is still available; otherwise it can be removed safely from Game Manager.
 Runtime code never auto-formats a damaged volume.

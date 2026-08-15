@@ -69,7 +69,7 @@ esp_err_t platform_os_update_inspect(platform_os_update_info_t *out_info)
     memset(out_info, 0, sizeof(*out_info));
     uint8_t *data = NULL;
     size_t size_bytes = 0U;
-    const esp_err_t loaded = platform_game_storage_load_root_file(
+    const esp_err_t loaded = platform_game_storage_load_update_file(
         PLATFORM_OS_UPDATE_FILE_NAME, PLATFORM_OS_UPDATE_MAX_PACKAGE_BYTES,
         &data, &size_bytes);
     if (loaded == ESP_ERR_NOT_FOUND) {
@@ -168,7 +168,7 @@ esp_err_t platform_os_update_install(
     }
     stream.sha_started = true;
     size_t streamed_bytes = 0U;
-    result = platform_game_storage_stream_root_file_exclusive(
+    result = platform_game_storage_stream_update_file_exclusive(
         PLATFORM_OS_UPDATE_FILE_NAME,
         PLATFORM_OS_UPDATE_MAX_PACKAGE_BYTES,
         consume_update, &stream, &streamed_bytes);

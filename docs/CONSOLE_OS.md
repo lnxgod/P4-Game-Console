@@ -205,7 +205,7 @@ The one-time Game Manager migration cannot be app-only because the former
 (`0x390000..0x70ffff`) and OTA data at `0x10000`. The guarded J1 transaction
 writes only the bootloader, partition table, OTA data, and OTA-0 image; it does
 not write `0x710000..0xffffff`, so the live `P4 GAMES` volume is preserved.
-Subsequent OS updates use `P4UPDATE.P4U` over J16 and target only the inactive
+Subsequent OS updates use `UPDATE/P4UPDATE.P4U` over J16 and target only the inactive
 slot. Bootloader rollback remains pending until storage, display, and the first
 ready frame succeed.
 

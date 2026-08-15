@@ -17,6 +17,8 @@
 #include "freertos/semphr.h"
 #include "game_storage_files.h"
 #include "game_storage_model.h"
+#include "msc_write_policy.h"
+#include "platform_game_storage_internal.h"
 #include "mbedtls/sha256.h"
 #include "tinyusb.h"
 #include "tinyusb_default_config.h"
@@ -27,8 +29,8 @@ enum {
     GAME_STORAGE_MAX_FILES = 8,
     GAME_STORAGE_HASH_BUFFER_BYTES = 8192,
     GAME_STORAGE_STREAM_BUFFER_BYTES = 16384,
-    GAME_STORAGE_ROOT_PATH_BYTES =
-        sizeof(PLATFORM_GAME_STORAGE_MOUNT_POINT) +
+    GAME_STORAGE_PATH_BYTES =
+        sizeof(PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT) +
         PLATFORM_GAME_STORAGE_FILE_NAME_MAX_BYTES + 1,
 };
 
@@ -51,9 +53,14 @@ static uint64_t s_capacity_bytes;
 static uint32_t s_sector_size_bytes;
 static uint32_t s_scans;
 static uint32_t s_file_mutations;
+static uint32_t s_usb_verified_writes;
+static uint32_t s_usb_write_failures;
 static esp_err_t s_last_error = ESP_ERR_INVALID_STATE;
 static uint8_t s_hash_buffer[GAME_STORAGE_HASH_BUFFER_BYTES];
 static bool s_maintenance;
+
+_Static_assert(GAME_STORAGE_HASH_BUFFER_BYTES >= CONFIG_TINYUSB_MSC_BUFSIZE,
+               "USB write verification buffer must hold one MSC transfer");
 
 static bool lock_storage(void)
 {
@@ -401,9 +408,58 @@ esp_err_t platform_game_storage_get_status(
     out_status->ownership_transfers = s_model.ownership_transfers;
     out_status->mount_failures = s_model.mount_failures;
     out_status->scans = s_scans;
+    out_status->usb_verified_writes = s_usb_verified_writes;
+    out_status->usb_write_failures = s_usb_write_failures;
     out_status->last_error = s_last_error;
     unlock_storage();
     return ESP_OK;
+}
+
+esp_err_t platform_game_storage_msc_write10(
+    uint8_t lun, uint32_t lba, uint32_t offset,
+    const uint8_t *data, size_t size_bytes)
+{
+    if (data == NULL || !s_initialized || !lock_storage()) {
+        return data == NULL ? ESP_ERR_INVALID_ARG : ESP_ERR_INVALID_STATE;
+    }
+    esp_err_t result = ESP_OK;
+    size_t address = 0U;
+    const int validation = msc_write_policy_validate(
+        lun, lba, offset, size_bytes, s_sector_size_bytes,
+        s_capacity_bytes, CONFIG_TINYUSB_MSC_BUFSIZE, &address);
+    if (validation != 0) {
+        result = validation == EOVERFLOW
+            ? ESP_ERR_INVALID_SIZE : ESP_ERR_INVALID_ARG;
+    } else if (s_model.owner != GAME_STORAGE_OWNER_USB || s_maintenance ||
+               !s_usb_driver_running || s_wl_handle == WL_INVALID_HANDLE) {
+        result = ESP_ERR_INVALID_STATE;
+    } else {
+        result = wl_erase_range(s_wl_handle, address, size_bytes);
+        if (result == ESP_OK) {
+            result = wl_write(s_wl_handle, address, data, size_bytes);
+        }
+        if (result == ESP_OK) {
+            result = wl_read(
+                s_wl_handle, address, s_hash_buffer, size_bytes);
+        }
+        if (result == ESP_OK &&
+            memcmp(data, s_hash_buffer, size_bytes) != 0) {
+            result = ESP_ERR_INVALID_CRC;
+        }
+    }
+
+    if (result == ESP_OK) {
+        if (s_usb_verified_writes != UINT32_MAX) {
+            ++s_usb_verified_writes;
+        }
+    } else {
+        if (s_usb_write_failures != UINT32_MAX) {
+            ++s_usb_write_failures;
+        }
+        s_last_error = result;
+    }
+    unlock_storage();
+    return result;
 }
 
 static esp_err_t storage_errno_to_esp(int error)
@@ -482,16 +538,44 @@ esp_err_t platform_game_storage_remove_root_file(const char *name)
     return result;
 }
 
-static esp_err_t compose_root_path(
-    const char *name, char path[GAME_STORAGE_ROOT_PATH_BYTES])
+esp_err_t platform_game_storage_remove_update_file(const char *name)
 {
     if (!game_storage_files_root_name_valid(name)) {
         return ESP_ERR_INVALID_ARG;
     }
+    if (!s_initialized || !lock_storage()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (s_maintenance || !game_storage_model_files_available(&s_model)) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    const int files_result = game_storage_files_remove_root_file(
+        PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT, name);
+    const esp_err_t result = storage_errno_to_esp(files_result);
+    if (result == ESP_OK) {
+        if (s_file_mutations != UINT32_MAX) {
+            ++s_file_mutations;
+        }
+        s_last_error = ESP_OK;
+    } else {
+        s_last_error = result;
+    }
+    unlock_storage();
+    return result;
+}
+
+static esp_err_t compose_file_path(
+    const char *directory, const char *name,
+    char path[GAME_STORAGE_PATH_BYTES])
+{
+    if (directory == NULL || !game_storage_files_root_name_valid(name)) {
+        return ESP_ERR_INVALID_ARG;
+    }
     const int written = snprintf(
-        path, GAME_STORAGE_ROOT_PATH_BYTES, "%s/%s",
-        PLATFORM_GAME_STORAGE_MOUNT_POINT, name);
-    return written > 0 && (size_t)written < GAME_STORAGE_ROOT_PATH_BYTES
+        path, GAME_STORAGE_PATH_BYTES, "%s/%s", directory, name);
+    return written > 0 && (size_t)written < GAME_STORAGE_PATH_BYTES
         ? ESP_OK : ESP_ERR_INVALID_SIZE;
 }
 
@@ -516,8 +600,8 @@ static esp_err_t regular_file_size(const char *path, size_t maximum_bytes,
     return ESP_OK;
 }
 
-esp_err_t platform_game_storage_load_root_file(
-    const char *name, size_t maximum_bytes,
+static esp_err_t load_regular_file(
+    const char *path, size_t maximum_bytes,
     uint8_t **out_data, size_t *out_size_bytes)
 {
     if (out_data == NULL || out_size_bytes == NULL) {
@@ -525,11 +609,6 @@ esp_err_t platform_game_storage_load_root_file(
     }
     *out_data = NULL;
     *out_size_bytes = 0U;
-    char path[GAME_STORAGE_ROOT_PATH_BYTES];
-    esp_err_t result = compose_root_path(name, path);
-    if (result != ESP_OK) {
-        return result;
-    }
     if (!s_initialized || !lock_storage()) {
         return ESP_ERR_INVALID_STATE;
     }
@@ -538,7 +617,7 @@ esp_err_t platform_game_storage_load_root_file(
         return ESP_ERR_INVALID_STATE;
     }
     size_t file_bytes = 0U;
-    result = regular_file_size(path, maximum_bytes, &file_bytes);
+    esp_err_t result = regular_file_size(path, maximum_bytes, &file_bytes);
     uint8_t *data = NULL;
     FILE *file = NULL;
     if (result == ESP_OK) {
@@ -573,13 +652,51 @@ esp_err_t platform_game_storage_load_root_file(
     return result;
 }
 
+esp_err_t platform_game_storage_load_root_file(
+    const char *name, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes)
+{
+    if (out_data == NULL || out_size_bytes == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_data = NULL;
+    *out_size_bytes = 0U;
+    char path[GAME_STORAGE_PATH_BYTES];
+    const esp_err_t result = compose_file_path(
+        PLATFORM_GAME_STORAGE_MOUNT_POINT, name, path);
+    if (result != ESP_OK) {
+        return result;
+    }
+    return load_regular_file(
+        path, maximum_bytes, out_data, out_size_bytes);
+}
+
+esp_err_t platform_game_storage_load_update_file(
+    const char *name, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes)
+{
+    if (out_data == NULL || out_size_bytes == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_data = NULL;
+    *out_size_bytes = 0U;
+    char path[GAME_STORAGE_PATH_BYTES];
+    const esp_err_t result = compose_file_path(
+        PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT, name, path);
+    if (result != ESP_OK) {
+        return result;
+    }
+    return load_regular_file(
+        path, maximum_bytes, out_data, out_size_bytes);
+}
+
 void platform_game_storage_release_file(uint8_t *data)
 {
     heap_caps_free(data);
 }
 
-esp_err_t platform_game_storage_stream_root_file_exclusive(
-    const char *name, size_t maximum_bytes,
+static esp_err_t stream_regular_file_exclusive(
+    const char *path, size_t maximum_bytes,
     platform_game_storage_stream_fn consume, void *context,
     size_t *out_size_bytes)
 {
@@ -587,11 +704,6 @@ esp_err_t platform_game_storage_stream_root_file_exclusive(
         return ESP_ERR_INVALID_ARG;
     }
     *out_size_bytes = 0U;
-    char path[GAME_STORAGE_ROOT_PATH_BYTES];
-    esp_err_t result = compose_root_path(name, path);
-    if (result != ESP_OK) {
-        return result;
-    }
     if (!s_initialized || !lock_storage()) {
         return ESP_ERR_INVALID_STATE;
     }
@@ -600,7 +712,7 @@ esp_err_t platform_game_storage_stream_root_file_exclusive(
         return ESP_ERR_INVALID_STATE;
     }
     size_t file_bytes = 0U;
-    result = regular_file_size(path, maximum_bytes, &file_bytes);
+    esp_err_t result = regular_file_size(path, maximum_bytes, &file_bytes);
     if (result == ESP_OK) {
         s_maintenance = true;
     }
@@ -659,6 +771,44 @@ esp_err_t platform_game_storage_stream_root_file_exclusive(
         return ESP_OK;
     }
     return result != ESP_OK ? result : reinstall;
+}
+
+esp_err_t platform_game_storage_stream_root_file_exclusive(
+    const char *name, size_t maximum_bytes,
+    platform_game_storage_stream_fn consume, void *context,
+    size_t *out_size_bytes)
+{
+    if (out_size_bytes == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_size_bytes = 0U;
+    char path[GAME_STORAGE_PATH_BYTES];
+    const esp_err_t result = compose_file_path(
+        PLATFORM_GAME_STORAGE_MOUNT_POINT, name, path);
+    if (result != ESP_OK) {
+        return result;
+    }
+    return stream_regular_file_exclusive(
+        path, maximum_bytes, consume, context, out_size_bytes);
+}
+
+esp_err_t platform_game_storage_stream_update_file_exclusive(
+    const char *name, size_t maximum_bytes,
+    platform_game_storage_stream_fn consume, void *context,
+    size_t *out_size_bytes)
+{
+    if (out_size_bytes == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_size_bytes = 0U;
+    char path[GAME_STORAGE_PATH_BYTES];
+    const esp_err_t result = compose_file_path(
+        PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT, name, path);
+    if (result != ESP_OK) {
+        return result;
+    }
+    return stream_regular_file_exclusive(
+        path, maximum_bytes, consume, context, out_size_bytes);
 }
 
 esp_err_t platform_game_storage_lock_for_game(void)

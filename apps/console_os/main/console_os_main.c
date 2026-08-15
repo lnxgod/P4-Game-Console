@@ -83,6 +83,8 @@ static uint32_t s_file_listing_revision;
 static uint32_t s_manager_listing_revision;
 static char s_doom_subtitle[CONSOLE_SHELL_SUBTITLE_MAX_BYTES] =
     "STORAGE CHECKING";
+static char s_game_manager_subtitle[CONSOLE_SHELL_SUBTITLE_MAX_BYTES] =
+    "GAMES + OS UPDATE";
 static int16_t s_native_audio_pcm[
     CONSOLE_NATIVE_AUDIO_FRAMES_PER_TICK *
     P4_GAME_PLATFORM_AUDIO_CHANNEL_COUNT];
@@ -168,7 +170,7 @@ static const console_app_descriptor_t s_builtin_apps[] = {
     {
         .id = CONSOLE_APP_GAMES,
         .title = "GAME MANAGER",
-        .subtitle = "USB GAMES + OS",
+        .subtitle = s_game_manager_subtitle,
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x5FEA),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
@@ -363,6 +365,30 @@ static void set_doom_storage_state(platform_game_storage_state_t state)
     }
 }
 
+static void set_game_manager_update_state(platform_os_update_state_t state)
+{
+    const char *subtitle = "GAMES + OS UPDATE";
+    switch (state) {
+    case PLATFORM_OS_UPDATE_READY:
+        subtitle = "OS UPDATE READY - OPEN";
+        break;
+    case PLATFORM_OS_UPDATE_INVALID:
+        subtitle = "BAD UPDATE - REMOVE";
+        break;
+    case PLATFORM_OS_UPDATE_UNAVAILABLE:
+        subtitle = "EJECT USB TO CHECK";
+        break;
+    case PLATFORM_OS_UPDATE_ABSENT:
+    default:
+        break;
+    }
+    const size_t length = strlen(subtitle);
+    const size_t copy = length < sizeof(s_game_manager_subtitle) - 1U
+        ? length : sizeof(s_game_manager_subtitle) - 1U;
+    memcpy(s_game_manager_subtitle, subtitle, copy);
+    s_game_manager_subtitle[copy] = '\0';
+}
+
 static void sync_game_storage(void)
 {
     platform_game_storage_status_t status = {
@@ -385,6 +411,9 @@ static void sync_game_storage(void)
     s_game_storage_status_seen = true;
     set_doom_storage_state(status.state);
     const bool stored_games_ready = storage_app_owned();
+    if (!stored_games_ready) {
+        set_game_manager_update_state(PLATFORM_OS_UPDATE_UNAVAILABLE);
+    }
     for (size_t index = 0U; index < s_app_count; ++index) {
         if (s_apps[index].id >= 100U) {
             s_apps[index].enabled = stored_games_ready;
@@ -393,11 +422,14 @@ static void sync_game_storage(void)
     if (changed) {
         ESP_LOGI(TAG,
                  "P4_CONSOLE_OS GAME_STORAGE state=%s usb_attached=%u "
-                 "generation=%lu capacity=%llu last_error=%s",
+                 "generation=%lu capacity=%llu verified_writes=%lu "
+                 "write_failures=%lu last_error=%s",
                  platform_game_storage_state_name(status.state),
                  status.usb_attached ? 1U : 0U,
                  (unsigned long)status.generation,
                  (unsigned long long)status.capacity_bytes,
+                 (unsigned long)status.usb_verified_writes,
+                 (unsigned long)status.usb_write_failures,
                  esp_err_to_name(status.last_error));
     }
 }
@@ -429,6 +461,7 @@ static esp_err_t reload_game_catalog(void)
         memset(&s_game_catalog, 0, sizeof(s_game_catalog));
     }
     s_os_update_info = update;
+    set_game_manager_update_state(s_os_update_info.state);
     s_catalog_seen = catalog_result == ESP_OK;
     s_catalog_storage_generation = s_game_storage_status.generation;
     ESP_LOGI(TAG,
@@ -699,9 +732,10 @@ static void handle_manager_action(
         }
         ESP_LOGI(TAG,
                  "P4_CONSOLE_OS UPDATE_BEGIN version=%s bytes=%lu "
-                 "source=usb-game-storage target=inactive-ota",
+                 "source=%s target=inactive-ota",
                  s_os_update_info.version,
-                 (unsigned long)s_os_update_info.image_bytes);
+                 (unsigned long)s_os_update_info.image_bytes,
+                 PLATFORM_OS_UPDATE_RELATIVE_PATH);
         const esp_err_t result =
             platform_os_update_install(&s_os_update_info);
         ESP_LOGI(TAG,
@@ -711,7 +745,7 @@ static void handle_manager_action(
                  result == ESP_OK ? 1U : 0U);
         if (result == ESP_OK) {
             const esp_err_t cleanup =
-                platform_game_storage_remove_root_file(
+                platform_game_storage_remove_update_file(
                     PLATFORM_OS_UPDATE_FILE_NAME);
             ESP_LOGI(TAG,
                      "P4_CONSOLE_OS UPDATE_PACKAGE_REMOVE result=%s",
@@ -727,7 +761,7 @@ static void handle_manager_action(
     }
     esp_err_t result;
     if (action->file_source_index == UINT32_MAX) {
-        result = platform_game_storage_remove_root_file(
+        result = platform_game_storage_remove_update_file(
             PLATFORM_OS_UPDATE_FILE_NAME);
     } else {
         result = platform_game_catalog_remove(

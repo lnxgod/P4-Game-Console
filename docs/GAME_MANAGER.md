@@ -42,8 +42,9 @@ The original 7 MiB factory-app range is split into two OTA slots while the
 | OTA 1 | `0x390000` | `0x380000` |
 | P4 GAMES | `0x710000` | `0x8f0000` |
 
-`P4UPDATE.P4U` has a bounded header plus one raw ESP-IDF app image. After a
-clean USB eject, the Game Manager verifies it, temporarily stops the USB
+`UPDATE/P4UPDATE.P4U` has a bounded header plus one raw ESP-IDF app image.
+After a clean USB eject, the Game Manager verifies it, changes its Program
+Manager subtitle to `OS UPDATE READY - OPEN`, temporarily stops the USB
 device, streams only to the inactive OTA slot, verifies the ESP image, and
 changes the boot selection only after every byte succeeds. A reset or power
 loss before that final selection continues booting the old slot. Bootloader
@@ -58,15 +59,22 @@ apps/console_os/build/game-storage-seed/INVADERS.P4G
 apps/console_os/build/P4UPDATE.P4U
 ```
 
-After the migration, update the OS by copying only `P4UPDATE.P4U` to the root
-of `P4 GAMES`, ejecting cleanly, opening System > Game Manager, selecting the
-OS row, and confirming Install. The file is integrity checked but is not
-cryptographically signed on this development unit.
+After the migration, update the OS by copying only `P4UPDATE.P4U` into the
+`UPDATE` folder on `P4 GAMES`, ejecting cleanly, opening System > Game Manager,
+selecting the OS row, and confirming Install. The file is integrity checked
+but is not cryptographically signed on this development unit.
 
-After a successful install, Console OS removes the consumed `P4UPDATE.P4U`
-before rebooting when it still owns the volume. If a host retakes the volume
-first, the update remains harmlessly visible and can be removed from Game
-Manager after the next clean eject.
+After a successful install, Console OS removes the consumed
+`UPDATE/P4UPDATE.P4U` before rebooting when it still owns the volume. If a host
+retakes the volume first, the update remains harmlessly visible and can be
+removed from Game Manager after the next clean eject.
+
+The pinned `esp_tinyusb` storage helper uses one reusable deferred-write
+buffer. Console OS wraps its WRITE(10) callback: each bounded, sector-aligned
+transfer is erased, written, and read back before USB success is returned.
+Invalid ranges fail closed, flash errors are reported to the laptop, and the
+app/USB ownership gate remains in force. This trades peak copy speed for a
+storage path that cannot silently acknowledge an unwritten range.
 
 The first migration to this partition table still requires J1 because the
 bootloader and partition table themselves must change once. Later OS updates

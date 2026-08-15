@@ -17,9 +17,10 @@ sandbox; install only packages you trust.
 
 Console OS updates use:
 
-  P4UPDATE.P4U   verified update for the inactive OS slot
+  UPDATE/P4UPDATE.P4U   verified update for the inactive OS slot
 
-After copying and ejecting, select the update in Game Manager and confirm
+Copy the package into the UPDATE folder. After copying and ejecting, Program
+Manager shows OS UPDATE READY on the Game Manager app. Open it and confirm
 INSTALL. Games, WADs, and saves stay in this volume across the update.
 
 Doom accepts this file at the volume root:

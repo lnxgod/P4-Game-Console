@@ -109,7 +109,7 @@
   },
   "os_update": {
     "format": "p4-os-update-v1",
-    "file": "P4UPDATE.P4U",
+    "file": "UPDATE/P4UPDATE.P4U",
     "transport": "P4 GAMES over J16 USB",
     "maximum_image_bytes": 3604480,
     "target": "inactive OTA slot only",
@@ -125,5 +125,5 @@
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "Perform the one-time J1 dual-OTA partition migration without writing game_data, copy MAZE.P4G and INVADERS.P4G through J16, and record serial plus visible launch/remove/update acceptance on the exact bound tablet."
+  "next_hardware_step": "Install the app-only verified-MSC-write build through J1, then repeat a large P4UPDATE copy through J16 and record exact host hash, serial counters, cartridge launch/remove, and OTA rollback acceptance on the bound tablet."
 }

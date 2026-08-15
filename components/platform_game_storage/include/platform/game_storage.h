@@ -16,6 +16,10 @@ extern "C" {
 
 #define PLATFORM_GAME_STORAGE_PARTITION_LABEL "game_data"
 #define PLATFORM_GAME_STORAGE_MOUNT_POINT "/game-data"
+#define PLATFORM_GAME_STORAGE_UPDATE_DIRECTORY_NAME "UPDATE"
+#define PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT \
+    PLATFORM_GAME_STORAGE_MOUNT_POINT "/" \
+    PLATFORM_GAME_STORAGE_UPDATE_DIRECTORY_NAME
 #define PLATFORM_GAME_STORAGE_DOOM_WAD_PATH "/game-data/DOOM1.WAD"
 #define PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES UINT64_C(4196020)
 
@@ -46,6 +50,8 @@ typedef struct {
     uint32_t ownership_transfers;
     uint32_t mount_failures;
     uint32_t scans;
+    uint32_t usb_verified_writes;
+    uint32_t usb_write_failures;
     esp_err_t last_error;
 } platform_game_storage_status_t;
 
@@ -93,6 +99,11 @@ esp_err_t platform_game_storage_load_root_file(
     const char *name, size_t maximum_bytes,
     uint8_t **out_data, size_t *out_size_bytes);
 
+/** Read one bounded regular file from the fixed UPDATE directory. */
+esp_err_t platform_game_storage_load_update_file(
+    const char *name, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes);
+
 void platform_game_storage_release_file(uint8_t *data);
 
 /**
@@ -103,6 +114,15 @@ esp_err_t platform_game_storage_stream_root_file_exclusive(
     const char *name, size_t maximum_bytes,
     platform_game_storage_stream_fn consume, void *context,
     size_t *out_size_bytes);
+
+/** Stop J16 USB temporarily and stream one file from UPDATE. */
+esp_err_t platform_game_storage_stream_update_file_exclusive(
+    const char *name, size_t maximum_bytes,
+    platform_game_storage_stream_fn consume, void *context,
+    size_t *out_size_bytes);
+
+/** Remove one regular file from the fixed UPDATE directory. */
+esp_err_t platform_game_storage_remove_update_file(const char *name);
 
 /**
  * Revoke USB access, remount for the app, re-hash DOOM1.WAD, and retain an
