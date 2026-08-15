@@ -247,7 +247,11 @@ print(
     re.sub(
         r"(?i)(\bMAC(?: address)?:\s*)((?:[0-9a-f]{2}:){5}[0-9a-f]{2})",
         r"\1[redacted]",
-        text,
+        re.sub(
+            r"(?i)(\bserial\s*\()((?:[0-9a-f]{2}:){5}[0-9a-f]{2})(\))",
+            r"\1[redacted]\3",
+            text,
+        ),
     ),
     end="",
 )
