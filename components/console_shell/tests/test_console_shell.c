@@ -550,7 +550,6 @@ static void test_library_and_multiplayer_pages(void)
         .content_scan_complete = true,
         .valid_cart_count = 3U,
         .invalid_cart_count = 1U,
-        .quake_shareware_ready = true,
         .multiplayer_core_ready = true,
     };
     console_shell_set_runtime_info(&shell, &runtime);
@@ -573,7 +572,7 @@ static void test_desktop_pages(void)
     p4_file_list_init(&files);
     CHECK(p4_file_list_add(&files, "SMALL.P4CART", 1024U,
                            P4_FILE_KIND_CARTRIDGE, true));
-    CHECK(p4_file_list_add(&files, "PAK0.PAK", 18689235U,
+    CHECK(p4_file_list_add(&files, "MUSIC.PCM", 18689235U,
                            P4_FILE_KIND_GAME_DATA, true));
     console_shell_set_file_list(&shell, &files);
     shell.page = CONSOLE_PAGE_FILES;

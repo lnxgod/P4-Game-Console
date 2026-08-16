@@ -10,10 +10,10 @@ The home screen currently organizes the static registry as:
 
 - All Programs (every entry in one scrollable view)
 - Games
-  - Action: Doom plus the SD-gated Quake easter egg
+  - Action: Doom
   - Arcade/Platform: manifest-discovered reentrant Game API games
-- System: Colors, Touch, System status, Audio, Achievements, Library, and
-  Multiplayer
+- System: Colors, Touch, System status, Audio, Achievements, Game Manager,
+  Multiplayer, File Manager, Save Manager, and Terminal
 
 The launcher is generated from validated `games/*/game.json` manifests. Its
 lightweight Program Manager-style home view shows three columns by two rows,
@@ -74,13 +74,13 @@ second rendered frame for a steady 31.25 FPS target close to 30 FPS.
 ## SD content and multiplayer
 
 At boot, Console OS performs a no-format microSD mount and a bounded read-only
-catalog scan. Library reports valid/rejected P4 Carts, USB copy status, and can
-retry the scan.
+P4 Cart catalog scan. Library reports valid/rejected carts and can retry the
+scan without hashing unrelated large game-data files.
 The cart Lua runtime is still pending, so valid carts are listed but not
-launched. Quake is enabled only when its separately supplied shareware PAK
-passes the exact full-file identity check. Keep the card in the badge and use
-`python3 scripts/p4-usb-content.py quake` through the H1 programming USB port;
-the complete bounded staging workflow is in `docs/CONTENT_LIBRARY.md`.
+launched. Copy reviewed carts to removable media with
+`python3 scripts/p4-content.py cart`; the bounded workflow is in
+`docs/CONTENT_LIBRARY.md`. Device-side USB import remains visibly unavailable
+until a general-purpose, path-bounded protocol is reviewed.
 
 The Multiplayer page currently reports the allocation-free v1 packet/session
 core. The ESP32-C6 Wi-Fi transport and playable lobby remain pending, and games
@@ -89,8 +89,7 @@ never receive sockets. See `docs/MULTIPLAYER.md`.
 ## Local build
 
 The exact ignored Doom shareware WAD documented in the repository is required
-at `local-data/doom/doom1.wad`. Quake data is not needed to build because it is
-never embedded. Then run:
+at `local-data/doom/doom1.wad`. Then run:
 
 ```sh
 make game-sdk-host

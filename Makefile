@@ -204,7 +204,7 @@ game-sdk-host: p4-desktop-host p4-game-api-host p4-game-platform-host p4-content
 
 console-os-idf: console-os-waveshare-idf
 
-console-os-waveshare-idf: console-shell-host game-sdk-host quake-provenance
+console-os-waveshare-idf: console-shell-host game-sdk-host
 	./scripts/build-waveshare-console-os.sh
 	python3 ./scripts/verify-console-os.py apps/console_os/build-waveshare-landscape
 

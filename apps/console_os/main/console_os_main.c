@@ -33,8 +33,6 @@
 #include "p4/game.h"
 #include "p4/input.h"
 #include "p4/multiplayer.h"
-#include "p4/quake.h"
-#include "p4/content_transfer.h"
 #include "p4/platform.h"
 #include "p4_game_registry.h"
 #include "platform/board.h"
@@ -53,7 +51,6 @@ enum {
     CONSOLE_APP_ACHIEVEMENTS = 12,
     CONSOLE_APP_LIBRARY = 6,
     CONSOLE_APP_MULTIPLAYER = 7,
-    CONSOLE_APP_QUAKE = 8,
     CONSOLE_APP_FILES = 9,
     CONSOLE_APP_SAVES = 10,
     CONSOLE_APP_TERMINAL = 11,
@@ -124,20 +121,6 @@ static const console_app_descriptor_t s_doom_app = {
                     CONSOLE_CAPABILITY_STORAGE,
     .page = CONSOLE_PAGE_EXTERNAL,
     .enabled = true,
-};
-
-static const console_app_descriptor_t s_quake_app = {
-    .id = CONSOLE_APP_QUAKE,
-    .title = "QUAKE",
-    .subtitle = "SD SHAREWARE 1.06",
-    .folder_path = "GAMES/ACTION",
-    .accent_rgb565 = UINT16_C(0xFD20),
-    .capabilities = CONSOLE_CAPABILITY_DISPLAY |
-                    CONSOLE_CAPABILITY_TOUCH |
-                    CONSOLE_CAPABILITY_AUDIO |
-                    CONSOLE_CAPABILITY_STORAGE,
-    .page = CONSOLE_PAGE_EXTERNAL,
-    .enabled = false,
 };
 
 static const console_app_descriptor_t s_builtin_apps[] = {
@@ -298,9 +281,6 @@ static bool build_app_registry(void)
     if (!append_app(&s_doom_app)) {
         return false;
     }
-    if (!append_app(&s_quake_app)) {
-        return false;
-    }
     for (size_t i = 0U; i < p4_generated_game_count; ++i) {
         const p4_game_descriptor_t *const game = p4_generated_games[i];
         if (!p4_game_descriptor_valid(game) ||
@@ -361,8 +341,6 @@ static uint32_t free_kib(uint32_t capabilities)
 
 static console_shell_runtime_info_t runtime_info(void)
 {
-    const p4_content_transfer_info_t transfer =
-        p4_content_transfer_info();
     const console_shell_runtime_info_t info = {
         .uptime_seconds = uptime_seconds(),
         .internal_free_kib = free_kib(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
@@ -375,13 +353,12 @@ static console_shell_runtime_info_t runtime_info(void)
         .storage_writable = false,
         .content_scan_complete = s_content_scan_complete,
         .content_truncated = s_content_catalog.directory_truncated,
-        .quake_shareware_ready = s_content_catalog.quake_shareware_ready,
-        .usb_content_ready = transfer.ready,
-        .usb_content_busy = transfer.busy,
-        .usb_content_progress_percent = transfer.progress_percent,
+        .usb_content_ready = false,
+        .usb_content_busy = false,
+        .usb_content_progress_percent = 0U,
         .valid_cart_count = s_content_catalog.valid_cart_count,
         .invalid_cart_count = s_content_catalog.invalid_cart_count,
-        .builtin_game_count = (uint16_t)(p4_generated_game_count + 2U),
+        .builtin_game_count = (uint16_t)(p4_generated_game_count + 1U),
         .save_slot_count = 0U,
         .save_total_bytes = 0U,
         .save_management_ready = false,
@@ -406,12 +383,6 @@ static void update_desktop_catalog(console_shell_t *shell)
         (void)p4_file_list_add(&files, "P4/SAVES", 0U,
                                P4_FILE_KIND_FOLDER, true);
     }
-    if (s_content_catalog.quake_shareware_ready) {
-        (void)p4_file_list_add(
-            &files, "PAK0.PAK",
-            s_content_catalog.quake_shareware.size_bytes,
-            P4_FILE_KIND_GAME_DATA, true);
-    }
     const size_t cart_count = s_content_catalog.valid_cart_count <
             P4_CONTENT_MAX_CARTS
         ? s_content_catalog.valid_cart_count : P4_CONTENT_MAX_CARTS;
@@ -429,16 +400,6 @@ static void update_desktop_catalog(console_shell_t *shell)
     p4_save_catalog_t saves;
     p4_save_catalog_init(&saves, false);
     console_shell_set_save_catalog(shell, &saves);
-}
-
-static void set_quake_enabled(bool enabled)
-{
-    for (size_t index = 0U; index < s_app_count; ++index) {
-        if (s_apps[index].id == CONSOLE_APP_QUAKE) {
-            s_apps[index].enabled = enabled;
-            return;
-        }
-    }
 }
 
 static bool content_scan_running(void)
@@ -486,25 +447,18 @@ static bool finish_content_catalog_scan(void)
         return true;
     }
     s_content_scan_complete = true;
-    set_quake_enabled(s_content_catalog.quake_shareware_ready);
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS CONTENT_READY carts=%u rejected=%u "
-             "candidates=%u truncated=%u quake_shareware=%u writes=0",
+             "candidates=%u truncated=%u writes=0",
              (unsigned)s_content_catalog.valid_cart_count,
              (unsigned)s_content_catalog.invalid_cart_count,
              (unsigned)s_content_catalog.candidates_seen,
-             s_content_catalog.directory_truncated ? 1U : 0U,
-             s_content_catalog.quake_shareware_ready ? 1U : 0U);
+             s_content_catalog.directory_truncated ? 1U : 0U);
     return true;
 }
 
 static void refresh_content_catalog(void)
 {
-    if (p4_content_transfer_info().busy) {
-        ESP_LOGW(TAG,
-                 "P4_CONSOLE_OS CONTENT_SCAN_SKIPPED reason=usb-copy-active");
-        return;
-    }
     if (content_scan_running()) {
         ESP_LOGW(TAG,
                  "P4_CONSOLE_OS CONTENT_SCAN_SKIPPED reason=already-running");
@@ -513,7 +467,6 @@ static void refresh_content_catalog(void)
     s_content_scan_complete = false;
     memset(&s_content_catalog, 0, sizeof(s_content_catalog));
     memset(&s_content_scan_staging, 0, sizeof(s_content_scan_staging));
-    set_quake_enabled(false);
     if (!s_storage_mounted) {
         const esp_err_t mount_result = platform_storage_init();
         if (mount_result != ESP_OK) {
@@ -543,21 +496,6 @@ static void refresh_content_catalog(void)
     }
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS CONTENT_SCAN_BEGIN mode=background writes=0");
-}
-
-static void start_usb_content_transfer(void)
-{
-    if (!s_storage_mounted || content_scan_running() ||
-        p4_content_transfer_info().ready) {
-        return;
-    }
-    const esp_err_t result = p4_content_transfer_init(
-        PLATFORM_STORAGE_MOUNT_POINT);
-    if (result != ESP_OK) {
-        ESP_LOGW(TAG,
-                 "P4_CONSOLE_OS USB_CONTENT_DEGRADED error=%s",
-                 esp_err_to_name(result));
-    }
 }
 
 static void create_touch_or_continue(void)
@@ -649,7 +587,7 @@ static void log_runtime_stats(const console_shell_t *shell)
              "touch_ready=%u touch_polls=%lu touch_failures=%lu "
              "display_submits=%lu display_completions=%lu "
              "display_timeouts=%lu display_failures=%lu "
-             "storage_ready=%u carts=%u quake=%u multiplayer_peers=%u "
+             "storage_ready=%u carts=%u multiplayer_peers=%u "
              "amp_energized=0 doom_handoffs=%lu",
              (unsigned long)s_loop_count,
              (unsigned)shell->page,
@@ -663,7 +601,6 @@ static void log_runtime_stats(const console_shell_t *shell)
              (unsigned long)display.submit_failures,
              s_storage_mounted ? 1U : 0U,
              (unsigned)s_content_catalog.valid_cart_count,
-             s_content_catalog.quake_shareware_ready ? 1U : 0U,
              (unsigned)p4_mp_session_peer_count(&s_multiplayer_session),
              (unsigned long)s_doom_handoff_count);
 }
@@ -1132,39 +1069,6 @@ static void launch_doom_exclusive(uint8_t master_volume_step)
               ESP_ERR_INVALID_STATE);
 }
 
-static void launch_quake_exclusive(uint8_t master_volume_step)
-{
-    if (!s_storage_mounted || !s_content_catalog.quake_shareware_ready) {
-        ESP_LOGW(TAG,
-                 "P4_CONSOLE_OS QUAKE_REJECTED reason=shareware-not-validated");
-        return;
-    }
-    ESP_LOGI(TAG,
-             "P4_CONSOLE_OS HANDOFF_BEGIN app=quake mode=exclusive-restart "
-             "canvas=768x480 storage=read-only volume_step=%u/10",
-             (unsigned)master_volume_step);
-    const p4_quake_config_t config = {
-        .basedir = PLATFORM_STORAGE_MOUNT_POINT "/GAMES/QUAKE",
-        .touch = s_touch,
-        .audio_control_bus = platform_i2c_shared_handle(s_shared_bus),
-        .master_volume_step = master_volume_step,
-        .audio_runtime_authorized = native_audio_runtime_allowed(),
-    };
-    const esp_err_t result = p4_quake_run(&config);
-    ESP_LOGI(TAG,
-             "P4_CONSOLE_OS HANDOFF_RETURN app=quake result=%s action=restart",
-             esp_err_to_name(result));
-    if (s_storage_mounted) {
-        const esp_err_t storage_result = platform_storage_deinit();
-        if (storage_result != ESP_OK) {
-            halt_dark("quake-storage-deinit", storage_result);
-        }
-        s_storage_mounted = false;
-    }
-    esp_restart();
-    halt_dark("quake-restart-returned", ESP_ERR_INVALID_STATE);
-}
-
 void app_main(void)
 {
     p4_mp_session_init(&s_multiplayer_session);
@@ -1217,7 +1121,6 @@ void app_main(void)
     }
     refresh_content_catalog();
     update_desktop_catalog(&shell);
-    start_usb_content_transfer();
     const console_shell_runtime_info_t content_runtime = runtime_info();
     console_shell_set_runtime_info(&shell, &content_runtime);
     if (console_shell_is_dirty(&shell)) {
@@ -1251,17 +1154,9 @@ void app_main(void)
         ++s_loop_count;
         if (finish_content_catalog_scan()) {
             update_desktop_catalog(&shell);
-            start_usb_content_transfer();
         }
         const bool scan_running = content_scan_running();
-        if (!scan_running) {
-            p4_content_transfer_poll();
-        }
-        const p4_content_transfer_info_t transfer =
-            p4_content_transfer_info();
-        console_shell_action_t action = transfer.busy ?
-            (console_shell_action_t){.type = CONSOLE_ACTION_NONE} :
-            poll_touch(&shell);
+        console_shell_action_t action = poll_touch(&shell);
         if (scan_running &&
             (action.type == CONSOLE_ACTION_LAUNCH ||
              action.type == CONSOLE_ACTION_LIBRARY_REFRESH)) {
@@ -1285,7 +1180,6 @@ void app_main(void)
         } else if (action.type == CONSOLE_ACTION_LIBRARY_REFRESH) {
             refresh_content_catalog();
             update_desktop_catalog(&shell);
-            start_usb_content_transfer();
             const console_shell_runtime_info_t refreshed = runtime_info();
             console_shell_set_runtime_info(&shell, &refreshed);
         } else if (action.type == CONSOLE_ACTION_USB_EXPORT) {
@@ -1298,10 +1192,6 @@ void app_main(void)
         } else if (action.type == CONSOLE_ACTION_LAUNCH &&
             action.app_id == CONSOLE_APP_DOOM) {
             launch_doom_exclusive(
-                console_shell_master_volume_step(&shell));
-        } else if (action.type == CONSOLE_ACTION_LAUNCH &&
-                   action.app_id == CONSOLE_APP_QUAKE) {
-            launch_quake_exclusive(
                 console_shell_master_volume_step(&shell));
         } else if (action.type == CONSOLE_ACTION_LAUNCH) {
             const p4_game_descriptor_t *const game =
@@ -1331,7 +1221,7 @@ void app_main(void)
                 halt_dark("frame-submit", result);
             }
         }
-        if (!transfer.busy && s_loop_count % 300U == 0U) {
+        if (s_loop_count % 300U == 0U) {
             log_runtime_stats(&shell);
         }
         vTaskDelayUntil(&last_wake,

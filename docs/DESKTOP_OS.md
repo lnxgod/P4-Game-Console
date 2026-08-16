@@ -21,9 +21,9 @@ the UI has no bitmap-theme dependency.
 
 The File and Save managers are read-only in the current Waveshare build. That
 is intentional: the exact hardware authorization covers the no-format,
-read-only SD path, while the existing H1 USB receiver has one separately
-reviewed write target for the exact Quake shareware PAK. Disabled controls are
-shown as `USB LOCKED` or `READ ONLY` rather than silently attempting a write.
+read-only SD path, and no device-side USB content receiver is linked. Disabled
+controls are shown as `USB LOCKED` or `READ ONLY` rather than silently
+attempting a write.
 
 ## Storage namespace and transaction contract
 
@@ -33,7 +33,6 @@ boundary:
 ```text
 /P4/GAMES/<validated-name>.P4CART
 /P4/SAVES/<game-id>/<slot>.P4SAVE
-/GAMES/QUAKE/ID1/PAK0.PAK
 ```
 
 Every future mutation must be implemented by an OS service, not by shell or
@@ -44,9 +43,9 @@ recoverable journal. Formatting is never an implicit recovery action.
 
 ## USB behavior
 
-H1 is the programming USB-C port behind a CH343 USB-UART bridge. The existing
-`scripts/p4-usb-content.py` transfer runs over that serial link; H1 cannot
-appear as a normal Finder mass-storage volume through firmware.
+H1 is the programming USB-C port behind a CH343 USB-UART bridge. Current
+Console OS does not run a content-transfer protocol over that serial link, and
+H1 cannot appear as a normal Finder mass-storage volume through firmware.
 
 H2 is sink/device wired in the reviewed schematic and is not authorized as a
 VBUS source or keyboard host. A future drag/drop experience can use either a

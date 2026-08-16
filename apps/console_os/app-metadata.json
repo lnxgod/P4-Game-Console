@@ -2,7 +2,7 @@
   "schema": 1,
   "app": "console_os",
   "stage": "waveshare-4.3-build-candidate",
-  "purpose": "FreeRTOS-native Waveshare 4.3 touch console with a fixed 768x480 landscape contract, Windows 3.1-style file/game/save/terminal tools, shared platform services, open game formats, bounded SD content discovery, multiplayer session primitives, and exclusive Doom and Quake easter-egg handoffs.",
+  "purpose": "FreeRTOS-native Waveshare 4.3 touch console with a fixed 768x480 landscape contract, Windows 3.1-style file/game/save/terminal tools, shared platform services, open game formats, bounded SD content discovery, multiplayer session primitives, and an exclusive Doom handoff.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
   "flash_authorized": false,
@@ -24,7 +24,7 @@
     "logical_surface": "rgb565-768x480",
     "surface": "board-independent 768x480 OS landscape canvas; the launcher and p4-native-static-v1 games retain a scaled 320x200 compatibility surface",
     "input": "bounded GT911 polling with up to five contacts",
-    "built_in_apps": ["colors", "touch", "system", "audio-control", "game-manager", "multiplayer", "file-manager", "save-manager", "terminal"],
+    "built_in_apps": ["colors", "touch", "system", "audio-control", "achievements", "game-manager", "multiplayer", "file-manager", "save-manager", "terminal"],
     "apps_per_page": 6,
     "maximum_registered_apps": 32,
     "folder_model": "manifest-driven fixed two-level hierarchy",
@@ -49,7 +49,7 @@
     "save_manager": "bounded per-game slot catalog; atomic write/import/export activation remains gated",
     "terminal": "bounded command prompt with touch keyboard and a sanitized physical-key entry point",
     "ssh": "terminal UX and OS transport boundary implemented; Wi-Fi/TCP/crypto transport not yet qualified",
-    "usb_export": "UI and action boundary implemented but disabled; current H1 protocol accepts only the exact Quake shareware PAK"
+    "usb_export": "UI and action boundary implemented but disabled; no device-side content receiver is linked"
   },
   "native_game_api": {
     "api_version": 1,
@@ -73,15 +73,12 @@
     "maximum_listed_carts": 16,
     "cart_hash_and_payload_validation": true,
     "cart_runtime_available": false,
-    "host_copy_tool": "scripts/p4-usb-content.py",
+    "host_copy_tool": "scripts/p4-content.py",
     "usb_copy": {
-      "physical_port": "H1 programming USB-C through CH343 USB-UART",
-      "transfer_baud": 921600,
-      "chunk_bytes": 4096,
+      "runtime_available": false,
       "host_supplied_paths": false,
       "formatting_allowed": false,
-      "activation": "fsync-readback-hash-atomic-rename",
-      "current_target": "exact Quake v1.06 shareware PAK only"
+      "current_target": "none"
     }
   },
   "doom_handoff": {
@@ -95,23 +92,6 @@
     "music": "WAD MUS procedural 16-voice synth",
     "external_midi_device_required": false,
     "return_to_home_supported": false
-  },
-  "quake_handoff": {
-    "role": "optional easter egg",
-    "engine": "pinned GPL quakegeneric source",
-    "pak_embedded": false,
-    "sd_path": "/sdcard/GAMES/QUAKE/ID1/PAK0.PAK",
-    "sd_hash_gated": true,
-    "surface": "512x300 engine scaled to 768x450 inside the 768x480 OS canvas",
-    "audio": "software-mixed PCM through the OS-owned 16000 Hz stereo session",
-    "engine_task": {
-      "stack_bytes": 98304,
-      "memory": "external-PSRAM",
-      "isolated_from_console_main_task": true,
-      "first_frame_stack_telemetry": true
-    },
-    "network_transport": "loopback-only-pending-os-wifi",
-    "return_mode": "restart-console-os"
   },
   "multiplayer": {
     "core_version": 1,

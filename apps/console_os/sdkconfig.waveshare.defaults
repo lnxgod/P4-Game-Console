@@ -13,7 +13,3 @@ CONFIG_PLATFORM_AUDIO_ES8311_WAVESHARE_4_3_BUILD_ONLY=y
 # CONFIG_CODEC_I2C_BACKWARD_COMPATIBLE is not set
 CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y
 CONFIG_ESPTOOLPY_FLASHSIZE="32MB"
-
-# The pinned Quake port marks its large renderer/server tables explicitly for
-# PSRAM. Keep internal DRAM available for display, audio, SDMMC, and tasks.
-CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y

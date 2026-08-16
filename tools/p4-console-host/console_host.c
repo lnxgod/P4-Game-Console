@@ -21,10 +21,6 @@ static const console_app_descriptor_t apps[] = {
      CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
          CONSOLE_CAPABILITY_AUDIO,
      CONSOLE_PAGE_EXTERNAL, true},
-    {8U, "QUAKE", "SD SHAREWARE", "GAMES/ACTION", UINT16_C(0xFD20),
-     CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
-         CONSOLE_CAPABILITY_AUDIO | CONSOLE_CAPABILITY_STORAGE,
-     CONSOLE_PAGE_EXTERNAL, true},
     {100U, "MAZE CHASE", "ORIGINAL GAME", "GAMES/ARCADE",
      UINT16_C(0xFFE0), CONSOLE_CAPABILITY_DISPLAY |
          CONSOLE_CAPABILITY_TOUCH | CONSOLE_CAPABILITY_AUDIO,
@@ -109,10 +105,9 @@ static void populate_desktop(console_shell_t *shell)
         .audio_handoff_ready = true,
         .storage_ready = true,
         .content_scan_complete = true,
-        .quake_shareware_ready = true,
-        .usb_content_ready = true,
+        .usb_content_ready = false,
         .valid_cart_count = 1U,
-        .builtin_game_count = 11U,
+        .builtin_game_count = 10U,
         .multiplayer_core_ready = true,
         .physical_keyboard_ready = true,
     };
@@ -123,8 +118,6 @@ static void populate_desktop(console_shell_t *shell)
                            P4_FILE_KIND_FOLDER, true);
     (void)p4_file_list_add(&files, "P4/SAVES", 0U,
                            P4_FILE_KIND_FOLDER, true);
-    (void)p4_file_list_add(&files, "PAK0.PAK", UINT64_C(18689235),
-                           P4_FILE_KIND_GAME_DATA, true);
     (void)p4_file_list_add(&files, "BOUNCE-LAB.P4CART", UINT64_C(18342),
                            P4_FILE_KIND_CARTRIDGE, true);
     console_shell_set_file_list(shell, &files);

@@ -125,7 +125,6 @@ typedef struct {
     bool storage_writable;
     bool content_scan_complete;
     bool content_truncated;
-    bool quake_shareware_ready;
     bool usb_content_ready;
     bool usb_content_busy;
     uint8_t usb_content_progress_percent;

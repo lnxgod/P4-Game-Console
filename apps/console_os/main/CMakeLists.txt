@@ -70,8 +70,6 @@ idf_component_register(
         p4_content_catalog
         p4_desktop
         p4_multiplayer
-        p4_quake
-        p4_usb_content_transfer
         platform_audio
         platform_board
         platform_display

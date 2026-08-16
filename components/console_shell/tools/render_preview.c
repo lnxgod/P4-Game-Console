@@ -158,8 +158,7 @@ int main(int argc, char **argv)
         .audio_handoff_ready = true,
         .storage_ready = true,
         .content_scan_complete = true,
-        .quake_shareware_ready = true,
-        .usb_content_ready = true,
+        .usb_content_ready = false,
         .valid_cart_count = 2U,
         .builtin_game_count = 10U,
     };
@@ -170,8 +169,6 @@ int main(int argc, char **argv)
                            P4_FILE_KIND_FOLDER, true);
     (void)p4_file_list_add(&files, "P4/SAVES", 0U,
                            P4_FILE_KIND_FOLDER, true);
-    (void)p4_file_list_add(&files, "PAK0.PAK", UINT64_C(18689235),
-                           P4_FILE_KIND_GAME_DATA, true);
     (void)p4_file_list_add(&files, "BOUNCE-LAB.P4CART", UINT64_C(18342),
                            P4_FILE_KIND_CARTRIDGE, true);
     console_shell_set_file_list(&shell, &files);

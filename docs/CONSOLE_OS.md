@@ -28,24 +28,21 @@ instead faulted in `Con_CheckResize` on Console OS's 24 KiB main stack. These
 are retained failure records, not acceptance evidence.
 
 The active product targets are the SDL3 PC runner and the Waveshare
-ESP32-P4-WIFI6-Touch-LCD-4.3. The current installed source candidate builds to
-5,508,000 bytes with SHA-256
-`0918b38a2e5c010ddc8f615e01e148dda32dfbd2354d06d3b66f9502f605a88c`.
-It contains 15 static entries: Doom, the SD-gated Quake easter egg, seven
-native games, and six built-in pages. The build verifier passes for the fixed
-768x480 landscape contract, no-format SD catalog, Quake data exclusion,
-loopback-only embedded Quake network path, and 31 FPS native render target.
-On 2026-08-16 its guarded app-only install and complete on-device digest check
-passed. Serial acceptance reached the 15-app launcher with the 64 KiB internal
-DMA reserve intact, then powered and mounted the inserted microSD through the
-Waveshare LDO4 path without formatting. The bounded catalog found zero carts
-and no Quake PAK. Visual game and Quake acceptance remain pending.
+ESP32-P4-WIFI6-Touch-LCD-4.3. Current source removes Quake from the launcher,
+runtime handoff, boot catalog, and device-side USB receiver. The dormant port,
+pinned source, and exact historical evidence remain for reference. The active
+catalog now scans only bounded P4 Cart candidates, so an unrelated large PAK
+cannot hold the launcher in an apparent offline state. The verified build has
+20 static entries: Doom, nine native games, and ten built-in OS pages. Its
+5,249,584-byte BIN has SHA-256
+`94f0e33e8c8a22f735915856482d6620f1740c184d9fc4f98808572ba8acc7f7`.
+This successor has not been flashed or hardware-accepted yet.
 
 The installed 2026-08-15 predecessor was 5,112,832 bytes with SHA-256
 `d2bc620d213d4ed240251b97003c54cc5987418b07a1a26494b59841d971e426`.
 Its serial evidence proved the 800x480 landscape profile, 768x480 viewport,
 12-app registry, touch polling with zero failures, 8/10 default master volume,
-and 31 FPS target. Those results do not transfer to the new SD/Quake candidate.
+and 31 FPS target. Those results do not transfer to the current source.
 
 ### Archived 10.1-inch test history
 
@@ -119,10 +116,6 @@ boot
        |     -> game receives normalized controls + RGB565 surface
        |     -> optional bounded audio session starts for the game
        |     `-> Back stops the game/audio and returns home
-       |-- Quake selected after exact SD PAK validation
-       |     -> retain OS display/touch/I2C/storage ownership
-       |     -> run the read-only adapter on the 768x480 canvas
-       |     `-> restart Console OS after engine return
        `-- Doom selected
              -> backlight dark
              -> destroy touch borrower
@@ -147,8 +140,8 @@ display, overlays, and exit callbacks in a deterministic order.
 | I2C1 GPIO7/8 | `platform_i2c_shared` | `platform_i2c_shared` | Touch/codec borrowers are destroyed before bus owner |
 | GT911 touch | `platform_touch` | `platform_touch` + Doom input | Invalid/malformed frames neutralize input |
 | Speaker audio | none on home; reviewed ES8311 session for native games | Doom ES8311 adapter | Only one foreground owner; close must re-prove GPIO53 amplifier shutdown |
-| SD card | no-format mount + bounded read-only catalog + fixed-path atomic USB receiver | Quake reads one hash-gated PAK | Transfer and games are mutually exclusive; unmount before Doom handoff |
-| Game data | Quake PAK remains separate on SD | Doom uses immutable embedded WAD | Neither is committed; Quake is never embedded |
+| SD card | no-format mount + bounded read-only P4 Cart catalog | none | Unmount before Doom handoff; no device-side writer is linked |
+| Game data | none | Doom uses immutable embedded WAD | The local WAD is ignored and never committed |
 
 The Console OS display contract is a 768x480 landscape viewport with 16-pixel
 left/right margins on the 800x480 landscape panel, then a rotation into the
@@ -246,9 +239,9 @@ The IDF target builds with the locked ESP-IDF 5.5.3 and managed component
 versions, checks ESP32-P4 revision 1.x bounds, and runs
 `scripts/verify-console-os.py`. The verifier confirms the WAD identity and Git
 ignore status, build-only flash policy, handoff cleanup order, component graph,
-partition/flash geometry, required ES8311/SD/catalog/Quake symbols, Quake data
-exclusion, loopback-only embedded networking, and absence of USB entry points
-in the final ELF.
+partition/flash geometry, required ES8311/SD/catalog symbols, the absence of
+Quake and USB content-receiver integration, and the absence of USB host entry
+points in the final ELF.
 
 ## Guarded hardware acceptance
 

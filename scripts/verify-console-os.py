@@ -20,7 +20,6 @@ EXPECTED_WAD_SHA256 = (
     "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
 )
 EXPECTED_APP_PARTITION_BYTES = 11 * 1024 * 1024
-EXPECTED_QUAKE_SOURCE_COMMIT = "fe81f2840bc658bc4b009e77b1c6302572446e46"
 
 
 def fail(message: str) -> None:
@@ -150,55 +149,14 @@ def main() -> None:
             content.get("cart_runtime_available") is False,
             "SD catalog policy changed unexpectedly")
     usb_copy = content.get("usb_copy", {})
-    require(content.get("host_copy_tool") == "scripts/p4-usb-content.py" and
-            usb_copy.get("transfer_baud") == 921600 and
-            usb_copy.get("chunk_bytes") == 4096 and
+    require(content.get("host_copy_tool") == "scripts/p4-content.py" and
+            usb_copy.get("runtime_available") is False and
             usb_copy.get("host_supplied_paths") is False and
             usb_copy.get("formatting_allowed") is False and
-            usb_copy.get("activation") ==
-            "fsync-readback-hash-atomic-rename",
-            "bounded USB content-copy contract changed")
-    quake = metadata.get("quake_handoff", {})
-    require(quake.get("pak_embedded") is False and
-            quake.get("sd_hash_gated") is True and
-            quake.get("network_transport") == "loopback-only-pending-os-wifi",
-            "Quake handoff policy changed unexpectedly")
-    quake_task = quake.get("engine_task", {})
-    require(quake_task.get("stack_bytes") == 96 * 1024 and
-            quake_task.get("memory") == "external-PSRAM" and
-            quake_task.get("isolated_from_console_main_task") is True and
-            quake_task.get("first_frame_stack_telemetry") is True,
-            "Quake external-stack metadata changed unexpectedly")
-
-    source_lock = read_json(ROOT / "third_party/source-lock.json")
-    quake_source = source_lock.get("sources", {}).get("quakegeneric_esp32p4", {})
-    require(quake_source.get("commit") == EXPECTED_QUAKE_SOURCE_COMMIT,
-            "unexpected quakegeneric source lock")
-    quake_linker = (
-        ROOT / "components/p4_quake/linker.lf"
-    ).read_text(encoding="utf-8")
-    for token in (
-        "archive: libp4_quake.a",
-        "bss -> extern_ram",
-        "common -> extern_ram",
-    ):
-        require(token in quake_linker,
-                f"Quake external-state linker contract is missing {token!r}")
-    quake_adapter = (
-        ROOT / "ports/quake/embedded/quake_embedded.c"
-    ).read_text(encoding="utf-8")
-    for token in (
-        "ENGINE_TASK_STACK_BYTES = 96 * 1024",
-        "MAX_CONSECUTIVE_DISPLAY_TIMEOUTS = 3",
-        "xTaskCreateWithCaps(",
-        "MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT",
-        "P4_QUAKE FRAME_DROPPED reason=display-timeout",
-        "P4_QUAKE DISPLAY_RECOVERED timeouts=",
-        "P4_QUAKE FIRST_FRAME stack_low_water_bytes=",
-        "vTaskDeleteWithCaps(task)",
-    ):
-        require(token in quake_adapter,
-                f"Quake external-stack contract is missing {token!r}")
+            usb_copy.get("current_target") == "none",
+            "disabled USB content-copy boundary changed")
+    require("quake_handoff" not in metadata,
+            "retired Quake handoff must not be advertised")
 
     registry_check = subprocess.run(
         ["python3", str(ROOT / "scripts/generate-game-registry.py"),
@@ -251,24 +209,14 @@ def main() -> None:
             "desktop file catalog integration missing")
     require("p4_content_catalog_scan" in shell_main,
             "SD content catalog integration missing")
-    require("p4_content_transfer_init" in shell_main and
-            "p4_content_transfer_poll" in shell_main,
-            "OS-owned USB content transfer integration missing")
-    require("p4_quake_run" in shell_main, "Quake handoff missing")
-    transfer_source = (
-        ROOT / "components/p4_usb_content_transfer/src/content_transfer.c"
-    ).read_text(encoding="utf-8")
     for token in (
-        '"/GAMES/QUAKE/ID1/PAK0.PAK"',
-        '"/GAMES/QUAKE/ID1/P4Q.TMP"',
-        "P4_CONTENT_QUAKE_SHAREWARE_BYTES",
-        "p4_content_validate_quake_shareware",
-        "fsync(s_transfer.descriptor)",
-        "rename(s_transfer.temp_path, s_transfer.target_path)",
-        "CONFIG_ESP_CONSOLE_UART_NUM",
+        "CONSOLE_APP_QUAKE",
+        "p4_quake_run",
+        "p4_content_transfer_",
+        "quake_shareware",
     ):
-        require(token in transfer_source,
-                f"USB content receiver is missing {token!r}")
+        require(token not in shell_main,
+                f"retired Quake integration remains in launcher source: {token}")
     handoff = shell_main[
         shell_main.index(
             "static void launch_doom_exclusive(uint8_t master_volume_step)"):
@@ -323,11 +271,11 @@ def main() -> None:
         "platform_display", "platform_i2c_shared", "platform_readonly_blob",
         "platform_storage", "platform_touch", "p4_content_catalog",
         "p4_desktop",
-        "p4_game_api", "p4_game_platform", "p4_multiplayer", "p4_quake",
+        "p4_game_api", "p4_game_platform", "p4_multiplayer",
         "maze_chase", "space_invaders", "solitaire",
     }
     forbidden_components = {
-        "doom_gamepad_input",
+        "doom_gamepad_input", "p4_quake", "p4_usb_content_transfer",
         "platform_gamepad_usb", "platform_usb_host", "usb_host_hid",
         "espressif__usb_host_hid", "espressif__usb",
     }
@@ -340,7 +288,6 @@ def main() -> None:
     for setting in (
         "CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3=y",
         "CONFIG_PLATFORM_STORAGE_WAVESHARE_4_3_AUTHORIZED=y",
-        "CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y",
     ):
         require(setting in sdkconfig, f"missing required config {setting}")
 
@@ -374,8 +321,8 @@ def main() -> None:
         "p4_game_platform_audio_open", "p4_maze_chase_game",
         "p4_space_invaders_game", "p4_generated_game_by_launcher_id",
         "p4_generated_game_folders", "p4_content_catalog_scan",
-        "p4_mp_session_init", "p4_mp_session_peer_count", "p4_quake_run",
-        "platform_display_submit_content_rgb565", "platform_storage_init",
+        "p4_mp_session_init", "p4_mp_session_peer_count",
+        "platform_display_submit_rgb565", "platform_storage_init",
         "esp_vfs_fat_sdmmc_mount", "sd_pwr_ctrl_new_on_chip_ldo",
         "sd_pwr_ctrl_del_on_chip_ldo",
         "_binary_doom_shareware_wad_start",
@@ -384,31 +331,10 @@ def main() -> None:
     for symbol in (
         "usb_host_install", "hid_host_install", "platform_usb_host_start",
         "platform_gamepad_usb_start", "UDP_Init", "UDP_Read", "UDP_Write",
-        "_binary_quake_shareware_pak_start",
+        "_binary_quake_shareware_pak_start", "p4_quake_run",
+        "p4_content_transfer_init",
     ):
         require(f" {symbol}\n" not in symbols, f"forbidden ELF symbol {symbol}")
-
-    sized_symbols_result = subprocess.run(
-        [str(nm), "-S", "--defined-only", str(elf)], check=False,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
-    )
-    require(sized_symbols_result.returncode == 0,
-            "cannot inspect ELF state placement")
-    symbol_addresses: dict[str, int] = {}
-    for line in sized_symbols_result.stdout.splitlines():
-        fields = line.split()
-        if len(fields) >= 4:
-            try:
-                symbol_addresses[fields[3]] = int(fields[0], 16)
-            except ValueError:
-                continue
-    for symbol in ("cl", "cl_static_entities", "cl_temp_entities",
-                   "mod_known", "p4_quake_edge_scratch",
-                   "p4_quake_surface_scratch", "sv"):
-        address = symbol_addresses.get(symbol)
-        require(address is not None, f"missing Quake state symbol {symbol}")
-        require(0x48000000 <= address < 0x4C000000,
-                f"Quake state symbol {symbol} is not in external PSRAM")
 
     report = {
         "result": "console-os-build-verified-not-hardware-tested",

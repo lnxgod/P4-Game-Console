@@ -50,10 +50,6 @@ owns a driver, allocates memory, or invokes game callbacks.
    exact cart ID, API version, content SHA-256, player count, and session seed.
    The OS exchanges delayed input frames and periodic state hashes; a mismatch
    ends the match rather than allowing divergent state.
-4. Quake keeps its original protocol-15 UDP gameplay. The OS lobby may supply
-   a validated endpoint, but P4 multiplayer packets do not wrap or reinterpret
-   Quake traffic.
-
 The intended first network scope is local LAN only: no account, cloud relay,
 public matchmaking, or arbitrary Internet listener. The ESP32-C6/Wi-Fi 6
 transport dependency must be pinned and independently qualified before the

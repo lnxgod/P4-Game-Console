@@ -1225,7 +1225,6 @@ void console_shell_set_runtime_info(
         shell->runtime.storage_ready != runtime->storage_ready ||
         shell->runtime.content_scan_complete != runtime->content_scan_complete ||
         shell->runtime.content_truncated != runtime->content_truncated ||
-        shell->runtime.quake_shareware_ready != runtime->quake_shareware_ready ||
         shell->runtime.valid_cart_count != runtime->valid_cart_count ||
         shell->runtime.invalid_cart_count != runtime->invalid_cart_count ||
         shell->runtime.storage_writable != runtime->storage_writable ||
@@ -1969,11 +1968,8 @@ static void draw_library(const console_shell_t *shell,
     draw_u32(pixels, stride, 142, 94,
              shell->runtime.invalid_cart_count,
              shell->runtime.invalid_cart_count == 0U ? COLOR_GREEN : COLOR_RED);
-    draw_text(pixels, stride, 12, 112, "QUAKE SHAREWARE", COLOR_MUTED, 1U, 15U);
-    draw_text(pixels, stride, 142, 112,
-              shell->runtime.quake_shareware_ready ? "READY" : "MISSING",
-              shell->runtime.quake_shareware_ready ? COLOR_GREEN : COLOR_YELLOW,
-              1U, 7U);
+    draw_text(pixels, stride, 12, 112, "CART RUNTIME", COLOR_MUTED, 1U, 12U);
+    draw_text(pixels, stride, 142, 112, "PLANNED", COLOR_YELLOW, 1U, 7U);
     draw_text(pixels, stride, 12, 132,
               "USB COPY", COLOR_MUTED, 1U, 8U);
     if (shell->runtime.usb_content_busy) {
@@ -1990,7 +1986,7 @@ static void draw_library(const console_shell_t *shell,
               shell->runtime.content_truncated
                   ? "CATALOG LIMIT REACHED" :
                 (shell->runtime.content_scan_complete
-                  ? "HASH GATED / ATOMIC COPY" : "SCAN NOT RUN"),
+                  ? "HASH GATED / READ ONLY" : "SCAN NOT RUN"),
               shell->runtime.content_truncated ? COLOR_RED : COLOR_CYAN,
               1U, 24U);
     const bool refresh_pressed = shell->press_active &&
