@@ -539,16 +539,6 @@ p4_content_status_t p4_content_catalog_scan(
     }
     catalog_out->storage_available = true;
 
-    char quake_path[P4_CONTENT_PATH_BYTES];
-    if (join_path(
-            quake_path, storage_root,
-            P4_CONTENT_QUAKE_SHAREWARE_RELATIVE_PATH)) {
-        const p4_content_status_t quake_status =
-            p4_content_validate_quake_shareware(
-                quake_path, &catalog_out->quake_shareware);
-        catalog_out->quake_shareware_ready = quake_status == P4_CONTENT_OK;
-    }
-
     char game_directory[P4_CONTENT_PATH_BYTES];
     if (!join_path(game_directory, storage_root, P4_CONTENT_CART_DIRECTORY)) {
         return P4_CONTENT_LIMIT_REACHED;

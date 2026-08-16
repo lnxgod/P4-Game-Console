@@ -19,7 +19,3 @@ CONFIG_PARTITION_TABLE_FILENAME="partitions-olimex.csv"
 CONFIG_DOOM_AUDIO_ENGINE_ADAPTER=y
 CONFIG_ESP_LCD_TOUCH_MAX_POINTS=5
 CONFIG_ESP_LCD_TOUCH_MAX_BUTTONS=0
-
-# The pinned Quake port marks its large renderer/server tables explicitly for
-# PSRAM. Keep internal DRAM available for display, audio, SDMMC, and tasks.
-CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y

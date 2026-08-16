@@ -19,26 +19,18 @@ int main(int argc, char **argv)
         return EXIT_FAILURE;
     }
     printf("P4_CONTENT_SCAN PASS storage=%u candidates=%u carts=%u invalid=%u "
-           "truncated=%u quake=%u\n",
+           "truncated=%u\n",
            catalog.storage_available ? 1U : 0U,
            (unsigned)catalog.candidates_seen,
            (unsigned)catalog.valid_cart_count,
            (unsigned)catalog.invalid_cart_count,
-           catalog.directory_truncated ? 1U : 0U,
-           catalog.quake_shareware_ready ? 1U : 0U);
+           catalog.directory_truncated ? 1U : 0U);
     for (size_t index = 0U; index < catalog.valid_cart_count; ++index) {
         char digest[65];
         p4_content_sha256_hex(catalog.carts[index].sha256, digest);
         printf("P4_CONTENT_CART name=%s bytes=%llu sha256=%s\n",
                catalog.carts[index].name,
                (unsigned long long)catalog.carts[index].size_bytes,
-               digest);
-    }
-    if (catalog.quake_shareware_ready) {
-        char digest[65];
-        p4_content_sha256_hex(catalog.quake_shareware.sha256, digest);
-        printf("P4_CONTENT_QUAKE bytes=%llu sha256=%s\n",
-               (unsigned long long)catalog.quake_shareware.size_bytes,
                digest);
     }
     return EXIT_SUCCESS;

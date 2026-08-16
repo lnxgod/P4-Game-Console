@@ -48,12 +48,10 @@ typedef struct {
 typedef struct {
     bool storage_available;
     bool directory_truncated;
-    bool quake_shareware_ready;
     uint16_t candidates_seen;
     uint16_t valid_cart_count;
     uint16_t invalid_cart_count;
     p4_content_item_t carts[P4_CONTENT_MAX_CARTS];
-    p4_content_item_t quake_shareware;
 } p4_content_catalog_t;
 
 /**
@@ -68,7 +66,11 @@ p4_content_status_t p4_content_validate_cart_file(
     const char *path,
     p4_content_item_t *item_out);
 
-/** Validate the exact Quake v1.06 shareware PAK identity. */
+/**
+ * Validate the exact Quake v1.06 shareware PAK identity for retired tooling.
+ *
+ * The active Console OS catalog does not call this compatibility helper.
+ */
 p4_content_status_t p4_content_validate_quake_shareware(
     const char *path,
     p4_content_item_t *item_out);

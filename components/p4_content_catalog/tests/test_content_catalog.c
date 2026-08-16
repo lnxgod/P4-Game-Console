@@ -166,9 +166,6 @@ static void test_cart_and_catalog(void)
     CHECK(catalog.valid_cart_count == 1U);
     CHECK(catalog.invalid_cart_count == 1U);
     CHECK(strcmp(catalog.carts[0].name, "z-good.p4cart") == 0);
-    CHECK(!catalog.quake_shareware_ready);
-    CHECK(catalog.quake_shareware.status == P4_CONTENT_NOT_FOUND);
-
     CHECK(unlink(good_path) == 0);
     CHECK(unlink(bad_path) == 0);
     CHECK(rmdir(games_dir) == 0);
