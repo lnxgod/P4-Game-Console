@@ -107,6 +107,9 @@ static platform_game_storage_file_listing_t s_platform_file_listing;
 static console_shell_file_listing_t s_shell_file_listing;
 static console_shell_file_listing_t s_manager_listing;
 static platform_game_catalog_t s_game_catalog;
+static platform_game_catalog_t s_catalog_staging;
+static platform_os_update_info_t s_update_staging;
+static console_shell_t s_shell;
 static p4_achievement_catalog_t s_achievements;
 static platform_os_update_info_t s_os_update_info;
 static bool s_catalog_seen;
@@ -531,24 +534,25 @@ static bool catalog_needs_reload(void)
 
 static esp_err_t reload_game_catalog(void)
 {
-    platform_game_catalog_t catalog;
-    const esp_err_t storage_result = platform_game_catalog_scan(&catalog);
+    const esp_err_t storage_result =
+        platform_game_catalog_scan(&s_catalog_staging);
     const size_t default_game_bytes =
         (size_t)(_binary_bytebud_p4g_end - _binary_bytebud_p4g_start);
     const esp_err_t default_result =
         platform_game_catalog_add_embedded_fallback(
-            &catalog, "BYTEBUD.P4G", _binary_bytebud_p4g_start,
+            &s_catalog_staging, "BYTEBUD.P4G", _binary_bytebud_p4g_start,
             default_game_bytes);
-    platform_os_update_info_t update = {0};
-    const esp_err_t update_result = platform_os_update_inspect(&update);
+    memset(&s_update_staging, 0, sizeof(s_update_staging));
+    const esp_err_t update_result =
+        platform_os_update_inspect(&s_update_staging);
     const bool catalog_available =
         storage_result == ESP_OK || default_result == ESP_OK;
     if (catalog_available) {
-        s_game_catalog = catalog;
+        s_game_catalog = s_catalog_staging;
     } else {
         memset(&s_game_catalog, 0, sizeof(s_game_catalog));
     }
-    s_os_update_info = update;
+    s_os_update_info = s_update_staging;
     set_game_manager_update_state(s_os_update_info.state);
     s_catalog_seen = catalog_available;
     s_catalog_storage_generation = s_game_storage_status.generation;
@@ -1941,6 +1945,10 @@ void app_main(void)
                  esp_err_to_name(storage_result));
     }
     sync_game_storage();
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS MAIN_STACK stage=storage-ready "
+             "low_water_bytes=%u",
+             (unsigned)uxTaskGetStackHighWaterMark(NULL));
     if (storage_app_owned()) {
         (void)reload_game_catalog();
     } else {
@@ -1968,12 +1976,12 @@ void app_main(void)
 #endif
              platform_game_storage_state_name(s_game_storage_status.state));
 
-    console_shell_t shell;
+    console_shell_t *const shell = &s_shell;
     if (!console_shell_init(
-            &shell, s_apps, s_app_count)) {
+            shell, s_apps, s_app_count)) {
         halt_dark("shell-init", ESP_ERR_INVALID_ARG);
     }
-    console_shell_set_achievement_catalog(&shell, &s_achievements);
+    console_shell_set_achievement_catalog(shell, &s_achievements);
 
     esp_err_t result = platform_display_init();
     if (result != ESP_OK) {
@@ -2002,8 +2010,8 @@ void app_main(void)
     }
     play_boot_chime();
     const console_shell_runtime_info_t initial_runtime = runtime_info();
-    console_shell_set_runtime_info(&shell, &initial_runtime);
-    result = present(&shell);
+    console_shell_set_runtime_info(shell, &initial_runtime);
+    result = present(shell);
     if (result != ESP_OK) {
         halt_dark("first-frame", result);
     }
@@ -2034,20 +2042,20 @@ void app_main(void)
         sync_game_storage();
         if (catalog_needs_reload()) {
             (void)reload_game_catalog();
-            rebuild_shell_registry(&shell);
-            if (shell.page == CONSOLE_PAGE_GAMES) {
+            rebuild_shell_registry(shell);
+            if (shell->page == CONSOLE_PAGE_GAMES) {
                 (void)reload_manager_listing(
-                    &shell, CONSOLE_FILE_NOTICE_NONE);
+                    shell, CONSOLE_FILE_NOTICE_NONE);
             }
         }
-        if (shell.page == CONSOLE_PAGE_FILES &&
+        if (shell->page == CONSOLE_PAGE_FILES &&
             file_listing_needs_reload()) {
             (void)reload_file_listing(
-                &shell, CONSOLE_FILE_NOTICE_NONE);
+                shell, CONSOLE_FILE_NOTICE_NONE);
         }
-        const console_shell_action_t action = poll_input(&shell);
+        const console_shell_action_t action = poll_input(shell);
         const console_shell_runtime_info_t current_runtime = runtime_info();
-        console_shell_set_runtime_info(&shell, &current_runtime);
+        console_shell_set_runtime_info(shell, &current_runtime);
         if (action.type == CONSOLE_ACTION_COLOR_MODE_CHANGED) {
             ESP_LOGI(TAG,
                      "P4_CONSOLE_OS COLOR_MODE mode=%u persistence=session-only",
@@ -2055,21 +2063,21 @@ void app_main(void)
         } else if (action.type == CONSOLE_ACTION_PAGE_CHANGED &&
             action.app_id == CONSOLE_APP_FILES) {
             (void)reload_file_listing(
-                &shell, CONSOLE_FILE_NOTICE_NONE);
+                shell, CONSOLE_FILE_NOTICE_NONE);
         } else if (action.type == CONSOLE_ACTION_PAGE_CHANGED &&
                    action.app_id == CONSOLE_APP_GAMES) {
             (void)reload_manager_listing(
-                &shell, CONSOLE_FILE_NOTICE_NONE);
+                shell, CONSOLE_FILE_NOTICE_NONE);
         } else if (action.type == CONSOLE_ACTION_FILE_REFRESH ||
                    action.type == CONSOLE_ACTION_FILE_DELETE) {
-            handle_file_action(&shell, &action);
+            handle_file_action(shell, &action);
         } else if (action.type == CONSOLE_ACTION_GAME_REFRESH ||
                    action.type == CONSOLE_ACTION_GAME_REMOVE ||
                    action.type == CONSOLE_ACTION_OS_UPDATE_INSTALL) {
-            handle_manager_action(&shell, &action);
+            handle_manager_action(shell, &action);
         } else if (action.type == CONSOLE_ACTION_LAUNCH &&
             action.app_id == CONSOLE_APP_DOOM) {
-            launch_doom_exclusive(&shell);
+            launch_doom_exclusive(shell);
         } else if (action.type == CONSOLE_ACTION_LAUNCH) {
             const platform_game_catalog_entry_t *const game =
                 platform_game_catalog_find_launcher(
@@ -2080,7 +2088,7 @@ void app_main(void)
                          "reason=not-registered",
                          (unsigned long)action.app_id);
             } else {
-                const esp_err_t game_result = run_stored_game(&shell, game);
+                const esp_err_t game_result = run_stored_game(shell, game);
                 if (game_result != ESP_OK) {
                     ESP_LOGW(TAG,
                              "P4_CONSOLE_OS NATIVE_GAME_DEGRADED app=%s "
@@ -2091,14 +2099,14 @@ void app_main(void)
                 last_wake = xTaskGetTickCount();
             }
         }
-        if (console_shell_is_dirty(&shell)) {
-            result = present(&shell);
+        if (console_shell_is_dirty(shell)) {
+            result = present(shell);
             if (result != ESP_OK) {
                 halt_dark("frame-submit", result);
             }
         }
         if (s_loop_count % 300U == 0U) {
-            log_runtime_stats(&shell);
+            log_runtime_stats(shell);
         }
         vTaskDelayUntil(&last_wake,
                         pdMS_TO_TICKS(CONSOLE_FRAME_INTERVAL_MS));

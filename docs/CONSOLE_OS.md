@@ -67,6 +67,8 @@ The reconciled 0.3.0 candidate also adds the official Game Changers AI boot
 logo, an original A4-C#5-E5 startup chord, four session-only shell color
 modes, a bounded session achievement catalog, and the original Byte Buddy
 virtual-pet cartridge. It deliberately adds no CRT filter or multiplayer.
+The long-lived shell and catalog staging objects use static storage so the
+24 KiB ESP-IDF main-task stack stays bounded across slow microSD scans.
 
 ## Board-specific runtime
 

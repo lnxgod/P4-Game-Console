@@ -215,8 +215,13 @@ def main() -> None:
         "_binary_bytebud_p4g_start",
         "platform_game_catalog_add_embedded_fallback",
         'game->embedded ? "embedded-default" : "removable-storage"',
+        "static console_shell_t s_shell",
+        "static platform_game_catalog_t s_catalog_staging",
+        "P4_CONSOLE_OS MAIN_STACK stage=storage-ready",
     ):
         require(token in source, f"firmware source is missing {token}")
+    require("console_shell_t shell;" not in source,
+            "large shell state must not live on the main task stack")
 
     manifests = [
         read_json(path) for path in sorted((ROOT / "games").glob("*/game.json"))
