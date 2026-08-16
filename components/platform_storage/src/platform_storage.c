@@ -14,19 +14,26 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "mbedtls/sha256.h"
+#include "platform/board.h"
 #include "platform_storage_wad.h"
 #include "sdmmc_cmd.h"
+#if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+#include "sd_pwr_ctrl_by_on_chip_ldo.h"
+#endif
 
 #define STORAGE_SDMMC_SLOT SDMMC_HOST_SLOT_0
 #define STORAGE_SDMMC_FREQUENCY_KHZ 1000
 #define STORAGE_SDMMC_BUS_WIDTH 1
-#define STORAGE_SDMMC_CLK GPIO_NUM_43
-#define STORAGE_SDMMC_CMD GPIO_NUM_44
-#define STORAGE_SDMMC_D0 GPIO_NUM_39
+#define STORAGE_SDMMC_CLK ((gpio_num_t)PLATFORM_BOARD_SDMMC_CLK_GPIO)
+#define STORAGE_SDMMC_CMD ((gpio_num_t)PLATFORM_BOARD_SDMMC_CMD_GPIO)
+#define STORAGE_SDMMC_D0 ((gpio_num_t)PLATFORM_BOARD_SDMMC_D0_GPIO)
 #define STORAGE_HASH_BUFFER_BYTES 4096U
 #define STORAGE_HASH_YIELD_BYTES (64U * 1024U)
 
 static sdmmc_card_t *s_card;
+#if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+static sd_pwr_ctrl_handle_t s_power_control;
+#endif
 
 static esp_err_t copy_path(char destination[PLATFORM_STORAGE_PATH_CAPACITY], const char *source)
 {
@@ -40,10 +47,20 @@ static esp_err_t copy_path(char destination[PLATFORM_STORAGE_PATH_CAPACITY], con
 
 esp_err_t platform_storage_init(void)
 {
+#if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+#if !CONFIG_PLATFORM_STORAGE_WAVESHARE_4_3_AUTHORIZED
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+#else
 #if !CONFIG_PLATFORM_STORAGE_ELECROW_10_1_CROSS_REVISION_AUTHORIZED
     return ESP_ERR_NOT_SUPPORTED;
-#else
-    if (s_card != NULL) {
+#endif
+#endif
+    if (s_card != NULL
+#if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+        || s_power_control != NULL
+#endif
+    ) {
         return ESP_ERR_INVALID_STATE;
     }
 
@@ -54,8 +71,22 @@ esp_err_t platform_storage_init(void)
     };
 
     sdmmc_host_t host = SDMMC_HOST_DEFAULT();
+    host.flags = SDMMC_HOST_FLAG_1BIT | SDMMC_HOST_FLAG_DEINIT_ARG;
     host.slot = STORAGE_SDMMC_SLOT;
     host.max_freq_khz = STORAGE_SDMMC_FREQUENCY_KHZ;
+
+#if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+    const sd_pwr_ctrl_ldo_config_t ldo_config = {
+        .ldo_chan_id = PLATFORM_BOARD_SDMMC_POWER_LDO_CHANNEL,
+    };
+    sd_pwr_ctrl_handle_t power_control = NULL;
+    const esp_err_t power_create_result = sd_pwr_ctrl_new_on_chip_ldo(
+        &ldo_config, &power_control);
+    if (power_create_result != ESP_OK) {
+        return power_create_result;
+    }
+    host.pwr_ctrl_handle = power_control;
+#endif
 
     sdmmc_slot_config_t slot = SDMMC_SLOT_CONFIG_DEFAULT();
     slot.clk = STORAGE_SDMMC_CLK;
@@ -82,11 +113,20 @@ esp_err_t platform_storage_init(void)
         &mounted_card
     );
     if (result != ESP_OK) {
+#if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+        const esp_err_t power_result =
+            sd_pwr_ctrl_del_on_chip_ldo(power_control);
+        if (power_result != ESP_OK) {
+            return power_result;
+        }
+#endif
         return result;
     }
     s_card = mounted_card;
-    return ESP_OK;
+#if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+    s_power_control = power_control;
 #endif
+    return ESP_OK;
 }
 
 esp_err_t platform_storage_get_card_info(platform_storage_card_info_t *out_info)
@@ -262,8 +302,21 @@ esp_err_t platform_storage_deinit(void)
     );
     if (result != ESP_OK) {
         s_card = mounted_card;
+        return result;
     }
-    return result;
+#if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+    sd_pwr_ctrl_handle_t const power_control = s_power_control;
+    s_power_control = NULL;
+    if (power_control != NULL) {
+        const esp_err_t power_result =
+            sd_pwr_ctrl_del_on_chip_ldo(power_control);
+        if (power_result != ESP_OK) {
+            s_power_control = power_control;
+            return power_result;
+        }
+    }
+#endif
+    return ESP_OK;
 }
 
 const char *platform_storage_wad_id_name(platform_storage_wad_id_t identity)

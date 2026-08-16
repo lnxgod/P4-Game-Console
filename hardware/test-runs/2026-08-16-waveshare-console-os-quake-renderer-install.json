@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-16T15:02:07-0700",
+  "result": "installed-and-launcher-stable-quake-launch-pending",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "authorization": {
+    "path": "hardware/evidence/waveshare-console-os-quake-renderer-20260816-exact-unit-authorization.json",
+    "sha256": "1d271d3b47772bc5b894f1b11290c836cfd9f06e5039b7699cca10ffd1911242"
+  },
+  "install": {
+    "route": "scripts/flash-waveshare-console-os-quake-renderer-fix.sh",
+    "serial_port": "/dev/cu.wchusbserial5C371865781",
+    "factory_backup_reused": true,
+    "new_backup_created": false,
+    "whole_flash_erased": false,
+    "app_offset": "0x10000",
+    "only_application_written": true,
+    "bootloader_readback_sha256": "8daaf8dfa70f2b4bd79d9eb97bb39b1909cbc568352e72bca5199351674a9e68",
+    "partition_table_readback_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+    "predecessor_readback_bytes": 5550288,
+    "predecessor_readback_sha256": "ce54c906a77c0c4a2b4d00b13f766f83ee9234cc5faf97660b69216a91b1df63",
+    "application_bytes": 5550784,
+    "application_sha256": "b64b93a943711ca9330e8f065b2ab71f33c1f4fd6e90bb7403d7d1c3768566c9",
+    "elf_bytes": 18293780,
+    "elf_sha256": "610ee1e46614cc28222d28f57af19e815f90de1c518f3c25ba3e834e9323fa76",
+    "on_device_application_digest": "pass",
+    "sd_formatted": false,
+    "sd_modified": false
+  },
+  "software_proof": {
+    "idf": "5.5.3",
+    "verifier": "pass",
+    "r_edge_drawing_stack_frame_before_bytes": 128128,
+    "r_edge_drawing_stack_frame_after_bytes": 32,
+    "edge_scratch_address": "0x4808df28",
+    "edge_scratch_bytes": 76832,
+    "surface_scratch_address": "0x480816e8",
+    "surface_scratch_bytes": 51264,
+    "scratch_region": "external-PSRAM-BSS"
+  },
+  "runtime": {
+    "capture_mode": "receive-only with DTR and RTS inactive",
+    "elf_sha256_prefix": "610ee1e46",
+    "logical_surface": "768x480",
+    "registered_apps": 19,
+    "touch_ready": true,
+    "touch_initialization": "first GT911 probe failed and the bounded fallback succeeded",
+    "content_ready": true,
+    "quake_shareware": true,
+    "launcher_observation_ms": 428705,
+    "touch_polls": 42600,
+    "touch_failures": 0,
+    "display_submits": 2,
+    "display_completions": 2,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "launcher_amp_energized": false,
+    "panic_observed": false,
+    "watchdog_observed": false,
+    "brownout_observed": false
+  },
+  "quake_acceptance": {
+    "launch_observed": false,
+    "task_ready_observed": false,
+    "first_frame_observed": false,
+    "demo_or_map_render_observed": false,
+    "safe_claim": false,
+    "reason": "The operator did not launch Quake during the bounded post-install serial watches. Build and launcher evidence cannot qualify gameplay runtime."
+  },
+  "conclusion": "The exact app-only successor was installed and digest-verified without a new backup or any SD write. Console OS remained stable for more than seven minutes and enabled the exact hash-gated Quake PAK. Quake itself remains unaccepted and must not be called safe until a launch reaches sustained demo or map rendering without a panic, watchdog, or repeated display timeout."
+}

@@ -16,6 +16,8 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 SLUG_RE = re.compile(r"^[a-z][a-z0-9_]{2,31}$")
 TITLE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._-]*$")
 ACCENT_RE = re.compile(r"^0x[0-9a-fA-F]{4}$")
+FOLDER_RE = re.compile(
+    r"^[A-Z0-9][A-Z0-9 -]{0,14}(?:/[A-Z0-9][A-Z0-9 -]{0,14})?$")
 
 
 def die(message: str) -> "NoReturn":
@@ -200,12 +202,13 @@ const p4_game_descriptor_t {symbol} = {{
 """
 
 
-def readme_text(title: str) -> str:
+def readme_text(title: str, folder: str) -> str:
     return f"""# {title}
 
 This starter is a native P4 Game API v1 component. Edit the file in `src/`,
 then run `make game-sdk-host` and `make console-os-idf` from the repository
-root. The launcher discovers `game.json` automatically.
+root. The launcher discovers `game.json` automatically and places this game
+under `{folder}`.
 
 Use only the `p4/` headers for display, controls, drawing, and sound. Keep
 board drivers and raw ESP-IDF peripheral ownership in platform components.
@@ -230,6 +233,8 @@ def main() -> int:
     parser.add_argument("--launcher-id", type=int)
     parser.add_argument("--accent", default="0x5fea",
                         help="RGB565 color such as 0x5fea")
+    parser.add_argument("--folder", default="GAMES/ARCADE",
+                        help="one or two uppercase launcher folders")
     parser.add_argument("--games-root", type=pathlib.Path,
                         default=ROOT / "games")
     parser.add_argument("--dry-run", action="store_true")
@@ -242,6 +247,8 @@ def main() -> int:
         die("slug must match [a-z][a-z0-9_]{2,31}")
     if not ACCENT_RE.fullmatch(args.accent):
         die("--accent must be a four-digit RGB565 value such as 0x5fea")
+    if not FOLDER_RE.fullmatch(args.folder):
+        die("--folder must contain one or two uppercase 1..15 byte segments")
 
     games_root = args.games_root.resolve()
     if not games_root.is_dir():
@@ -262,6 +269,7 @@ def main() -> int:
         "id": game_id,
         "title": args.title.upper(),
         "subtitle": "P4 GAME API V1",
+        "folder": args.folder,
         "accent_rgb565": args.accent.lower(),
         "required_capabilities": ["video", "controls"],
         "optional_capabilities": ["audio-tone"],
@@ -276,7 +284,7 @@ def main() -> int:
         (pathlib.Path("src") / f"{slug}.c",
          source_text(slug, game_id, args.title, launcher_id,
                      args.accent.lower())),
-        (pathlib.Path("README.md"), readme_text(args.title)),
+        (pathlib.Path("README.md"), readme_text(args.title, args.folder)),
     )
     result = {
         "result": "p4-game-starter-planned" if args.dry_run
@@ -285,6 +293,7 @@ def main() -> int:
         "component": slug,
         "game_id": game_id,
         "launcher_id": launcher_id,
+        "folder": args.folder,
         "files": [str(relative) for relative, _ in files],
     }
     if not args.dry_run:

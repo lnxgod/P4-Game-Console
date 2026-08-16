@@ -9,11 +9,25 @@
 
 #include "esp_err.h"
 #include "platform_audio_factory/audio.h"
+#if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+#include "platform_audio_es8311/audio.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+#define PLATFORM_AUDIO_CHANNEL_COUNT PLATFORM_AUDIO_ES8311_CHANNEL_COUNT
+#define PLATFORM_AUDIO_BITS_PER_SAMPLE PLATFORM_AUDIO_ES8311_BITS_PER_SAMPLE
+#define PLATFORM_AUDIO_SAMPLE_RATE_HZ PLATFORM_AUDIO_ES8311_SAMPLE_RATE_HZ
+#define PLATFORM_AUDIO_MAX_WRITE_FRAMES \
+    PLATFORM_AUDIO_ES8311_MAX_WRITE_FRAMES
+#define PLATFORM_AUDIO_MAX_OUTPUT_PEAK PLATFORM_AUDIO_ES8311_MAX_OUTPUT_PEAK
+#define PLATFORM_AUDIO_MAX_BRINGUP_VOLUME_PERCENT \
+    PLATFORM_AUDIO_ES8311_MAX_VOLUME_PERCENT
+typedef platform_audio_es8311_t platform_audio_t;
+#else
 #define PLATFORM_AUDIO_CHANNEL_COUNT PLATFORM_AUDIO_FACTORY_CHANNEL_COUNT
 #define PLATFORM_AUDIO_BITS_PER_SAMPLE PLATFORM_AUDIO_FACTORY_BITS_PER_SAMPLE
 #define PLATFORM_AUDIO_SAMPLE_RATE_HZ PLATFORM_AUDIO_FACTORY_SAMPLE_RATE_HZ
@@ -22,12 +36,12 @@ extern "C" {
 #define PLATFORM_AUDIO_MAX_OUTPUT_PEAK PLATFORM_AUDIO_FACTORY_MAX_OUTPUT_PEAK
 #define PLATFORM_AUDIO_MAX_BRINGUP_VOLUME_PERCENT \
     PLATFORM_AUDIO_FACTORY_MAX_VOLUME_PERCENT
-
 typedef platform_audio_factory_t platform_audio_t;
+#endif
 typedef platform_audio_factory_telemetry_t platform_audio_telemetry_t;
 
 typedef struct {
-    /** Must remain NULL. Factory audio has no I2C control client. */
+    /** Shared I2C handle for Waveshare ES8311; NULL for Elecrow factory audio. */
     void *control_bus;
     uint32_t sample_rate_hz;
     uint8_t volume_percent;

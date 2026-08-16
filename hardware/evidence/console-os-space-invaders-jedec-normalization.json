@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "active": true,
+  "recorded_at": "2026-08-14T12:08:24-0700",
+  "classification": "exact-unit-pinned-runtime-artifact-bound-rdid-high-byte-normalization",
+  "result": "release-observed-0xab-high-byte-with-exact-low24-before-flash-begin",
+  "scope": "console-os-space-invaders-exact-unit-install-boundaries",
+  "exact_unit": {
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "raw_identity_stored": false
+  },
+  "exact_artifact": {
+    "offset": "0x10000",
+    "app_binary_bytes": 4948512,
+    "app_binary_sha256": "9596617fd86d9cd9abd12a539329c6df2d06e696ca4de6814daa644e56090303",
+    "mutation_span_bytes": 4964352
+  },
+  "pinned_runtime": {
+    "esptool_version": "4.12.0",
+    "loader_sha256": "6c5f0c4a9d2047adb1c9164aee66208018789a0f6531922204f6b280168c80e8",
+    "commands_sha256": "d9786dda365985a97504153b5a45bebf55bdf5b8272bf16891ca682b47e2c3af",
+    "esp32p4_target_sha256": "0319aa7ee6e2e45c3ceb2e3424fb98a2ae9734873a2206767085abf75e74bf37",
+    "legacy_rev1_stub_sha256": "3c0f27938055192977123cd4b503bf27d1676c59a7fd7e3f93de8e95b0cf63bf"
+  },
+  "prior_exact_unit_evidence": {
+    "path": "hardware/evidence/console-os-game-api-v1-jedec-normalization.json",
+    "sha256": "041a521af4050c1dfdd944adb64dae8ffa5f340d8b0a2ff7255dfe47b7fd33e9",
+    "observed_write_boundary_raw": "0xfc1840c8",
+    "observed_prelaunch_raw": "0xff1840c8"
+  },
+  "current_exact_observation": {
+    "path": "hardware/test-runs/2026-08-14-console-os-space-invaders-install-attempt1.json",
+    "sha256": "56cf96b2d90f1b412ae818176f30fc5e483f3b99ed96e1da7450628b4733335b",
+    "stage": "e6-write-boundary-before-flash-begin",
+    "raw_value": "0xab1840c8",
+    "canonical_low24": "0x1840c8",
+    "writes_attempted": 0,
+    "restore_required": false
+  },
+  "normalization_contract": {
+    "accepted_high_bytes": ["0x00", "0xab", "0xfc", "0xff"],
+    "required_low_24_bits": "0x1840c8",
+    "wrong_low_24_bits_fail_closed": true,
+    "all_other_high_bytes_fail_closed": true,
+    "exact_device_identity_still_required": true,
+    "exact_16_mib_flash_geometry_still_required": true,
+    "validated_partition_table_still_required": true,
+    "sealed_live_preimage_still_required": true,
+    "scope_is_cross_unit": false,
+    "scope_is_reusable": false
+  },
+  "basis": "The successor uses the identical pinned esptool, stub, exact tablet identity, flash geometry, partition table, retained-UART transaction engine, and low-24 RDID identity as the prior successful install. Its first guarded attempt reproduced the exact canonical 0x1840c8 identity with 0xab only in the unused 32-bit container byte and stopped before flash_begin with zero writes. This release narrowly binds that observation to the frozen successor without broadening it to another unit, runtime, or artifact.",
+  "claims_not_made": [
+    "0xfc is a JEDEC identity byte.",
+    "Any low-24 flash identity is accepted.",
+    "Any high byte is accepted.",
+    "This normalization applies to another tablet, esptool version, stub, or artifact."
+  ]
+}

@@ -37,6 +37,20 @@ static unsigned drain(
     return count;
 }
 
+static doom_touch_contact_t physical(unsigned frame_x, unsigned frame_y)
+{
+    return (doom_touch_contact_t){
+        .x = (uint16_t)(DOOM_TOUCH_VIEWPORT_LEFT +
+                        ((2U * frame_x + 1U) *
+                         DOOM_TOUCH_VIEWPORT_WIDTH) /
+                            (2U * DOOM_TOUCH_FRAME_WIDTH)),
+        .y = (uint16_t)(DOOM_TOUCH_VIEWPORT_TOP +
+                        ((2U * frame_y + 1U) *
+                         DOOM_TOUCH_VIEWPORT_HEIGHT) /
+                            (2U * DOOM_TOUCH_FRAME_HEIGHT)),
+    };
+}
+
 static void test_multitouch_mapping_and_release(void)
 {
     doom_touch_input_t input;
@@ -44,9 +58,9 @@ static void test_multitouch_mapping_and_release(void)
     doom_touch_frame_t frame;
     doom_touch_frame_init(&frame);
     frame.contact_count = 3U;
-    frame.contacts[0] = (doom_touch_contact_t){110U, 365U};
-    frame.contacts[1] = (doom_touch_contact_t){900U, 455U};
-    frame.contacts[2] = (doom_touch_contact_t){770U, 350U};
+    frame.contacts[0] = physical(26U, 121U);
+    frame.contacts[1] = physical(289U, 151U);
+    frame.contacts[2] = physical(246U, 117U);
     EXPECT_TRUE(doom_touch_input_update(&input, &frame));
 
     doom_touch_event_t events[DOOM_TOUCH_EVENT_CAPACITY];
@@ -79,14 +93,14 @@ static void test_all_discrete_controls(void)
         uint16_t y;
         doom_touch_action_t action;
     } cases[] = {
-        {742U, 486U, DOOM_TOUCH_ACTION_USE},
-        {640U, 430U, DOOM_TOUCH_ACTION_STRAFE},
-        {80U, 68U, DOOM_TOUCH_ACTION_MAP},
-        {178U, 68U, DOOM_TOUCH_ACTION_MENU_BACK},
-        {625U, 68U, DOOM_TOUCH_ACTION_WEAPON_PREVIOUS},
-        {723U, 68U, DOOM_TOUCH_ACTION_WEAPON_NEXT},
-        {840U, 68U, DOOM_TOUCH_ACTION_MENU_ACCEPT},
-        {945U, 68U, DOOM_TOUCH_ACTION_PAUSE},
+        {237U, 162U, DOOM_TOUCH_ACTION_USE},
+        {203U, 143U, DOOM_TOUCH_ACTION_STRAFE},
+        {16U, 23U, DOOM_TOUCH_ACTION_MAP},
+        {49U, 23U, DOOM_TOUCH_ACTION_MENU_BACK},
+        {197U, 23U, DOOM_TOUCH_ACTION_WEAPON_PREVIOUS},
+        {230U, 23U, DOOM_TOUCH_ACTION_WEAPON_NEXT},
+        {269U, 23U, DOOM_TOUCH_ACTION_MENU_ACCEPT},
+        {304U, 23U, DOOM_TOUCH_ACTION_PAUSE},
     };
     for (size_t index = 0U; index < sizeof(cases) / sizeof(cases[0]); ++index) {
         doom_touch_input_t input;
@@ -94,8 +108,7 @@ static void test_all_discrete_controls(void)
         doom_touch_frame_t frame;
         doom_touch_frame_init(&frame);
         frame.contact_count = 1U;
-        frame.contacts[0] = (doom_touch_contact_t){cases[index].x,
-                                                   cases[index].y};
+        frame.contacts[0] = physical(cases[index].x, cases[index].y);
         EXPECT_TRUE(doom_touch_input_update(&input, &frame));
         doom_touch_event_t event;
         EXPECT_TRUE(doom_touch_input_next(&input, &event));
@@ -111,7 +124,7 @@ static void test_fail_closed_frames_and_queue(void)
     doom_touch_frame_t frame;
     doom_touch_frame_init(&frame);
     frame.contact_count = 1U;
-    frame.contacts[0] = (doom_touch_contact_t){900U, 455U};
+    frame.contacts[0] = physical(289U, 151U);
     EXPECT_TRUE(doom_touch_input_update(&input, &frame));
     EXPECT_TRUE(!doom_touch_input_update(&input, &frame));
 
@@ -124,7 +137,7 @@ static void test_fail_closed_frames_and_queue(void)
     EXPECT_EQ(0, events[1].pressed);
     EXPECT_TRUE(doom_touch_input_idle(&input));
 
-    frame.contacts[0].x = 900U;
+    frame.contacts[0] = physical(289U, 151U);
     frame.valid = 2U;
     EXPECT_TRUE(!doom_touch_input_update(&input, &frame));
     EXPECT_TRUE(doom_touch_input_idle(&input));

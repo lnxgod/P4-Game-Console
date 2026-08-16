@@ -49,13 +49,22 @@ code may call `platform_audio_factory_*`, I2S, or GPIO30 directly.
 
 ## Evidence boundaries
 
-The exact unit's owner reports that its supplied factory firmware produced
-speaker audio. Treat that as exact-unit operating history, not a substitute for
-the new image's acceptance. A passing project run still requires exact flash
-readback, increasing audio-frame counters with zero write failures, and a human
-hearing clean effects. If sound is absent, keep the project path unchanged and
-diagnose the observed factory-compatible waveform before introducing any
-codec, MCLK, alternate GPIO, or amplifier assumption.
+The exact unit's owner confirmed that the project Doom image produced sound
+effects and recognizable MUS music through this path. Console OS Game API v1
+then received its own exact-unit audio release and installed successfully. The
+path is therefore working and runtime-authorized on the bound device identity
+`4ea036…`; it is not merely build-only or blocked there. A changed artifact
+still requires exact flash readback, rising delivery counters with zero write
+failures, a fresh artifact-bound release, and a human hearing clean effects.
+If sound is absent, keep the project path unchanged and diagnose the observed
+factory-compatible waveform before introducing any codec, MCLK, alternate
+GPIO, or amplifier assumption.
+
+The newer uninstalled Game API v1 implementation accepts copied blocks of
+1–256 signed 16 kHz PCM16-stereo frames into a 512-frame software FIFO and
+mixes them with its bounded tone voices before the counted platform adapter.
+That software path is host/build-tested, not yet acoustically accepted on the
+tablet. It does not change the factory initializer or GPIO ownership above.
 
 Published topology still permits two output families to converge. Prefer a
 powered-off population/continuity release. An owner-directed exception is valid

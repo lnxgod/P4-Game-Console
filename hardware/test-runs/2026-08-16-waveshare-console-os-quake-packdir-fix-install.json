@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "completed_at": "2026-08-16T13:59:05-0700",
+  "result": "install-and-launcher-pass-quake-launch-fail-stack-protection",
+  "hardware": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+    "programming_port": "H1 CH343 USB-UART",
+    "sd_card_remained_installed": true
+  },
+  "diagnosis": {
+    "operator_observation": "Quake showed black/blue, reset, and returned to Program Manager unusable",
+    "predecessor_serial_failure": "HP_SYS_HP_WDT_RESET after Host_Init",
+    "root_cause": "upstream COM_LoadPackFile placed dpackfile_t info[2048], approximately 128 KiB, on app_main's 24 KiB stack",
+    "pak_missing": false,
+    "pak_bad": false
+  },
+  "source_fix": {
+    "vendor_tree_remained_verbatim": true,
+    "generator": "ports/quake/embedded/prepare_embedded_common.py",
+    "generator_sha256": "089ca5b620719f278304f11c38b5ee967fe3236b1f4325b0c7063d144e103a0a",
+    "generated_delta": "PAK directory workspace is allocated from Quake's existing 20 MiB PSRAM hunk; directory length and truncated reads are rejected",
+    "compiled_COM_LoadPackFile_stack_bytes": 64,
+    "bounded_sd_read_chunk_bytes": 4096
+  },
+  "firmware": {
+    "install_mode": "guarded application-only successor",
+    "offset": "0x10000",
+    "bytes": 5538320,
+    "sha256": "f0a7a6130ef9f73c2c8886a2312f4e7f13c006bf9b6ac1d9fe54ae55c59f1402",
+    "elf_sha256": "be2e8042d09154da60f35571838622d5122f7f6ca08a7848fa14adb07cff4c62",
+    "bootloader_readback": "pass",
+    "partition_table_readback": "pass",
+    "application_digest_verify": "pass",
+    "new_factory_backup_created": false,
+    "flash_erased": false,
+    "sd_formatted": false,
+    "sd_modified": false
+  },
+  "route": {
+    "authorization": "hardware/evidence/waveshare-console-os-quake-packdir-fix-20260816-exact-unit-authorization.json",
+    "authorization_sha256": "a035620070589acdd78c5726e9fd0a79b0a4376306e772a8e41174d86cefa067",
+    "wrapper": "scripts/flash-waveshare-console-os-quake-packdir-fix.sh",
+    "wrapper_sha256": "4ee1dfb71b6b06539f3f6f41891a89ac07e24350861966408aab3294016b9aff"
+  },
+  "automated_acceptance": {
+    "console_surface": "768x480 landscape",
+    "background_pak_validation_completed_ms": 177562,
+    "pak_bytes": 18689235,
+    "pak_sha256": "35a9c55e5e5a284a159ad2a62e0e8def23d829561fe2f54eb402dbc0a9a946af",
+    "quake_shareware_ready": true,
+    "touch_polls_observed": 37200,
+    "touch_failures": 0,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "launcher_amp_energized": false,
+    "launcher_watchdog_reset": false
+  },
+  "manual_acceptance": {
+    "updated_at": "2026-08-16T14:31:00-0700",
+    "serial_port": "/dev/cu.wchusbserial5C371865781",
+    "capture_mode": "receive-only with DTR and RTS held inactive",
+    "quake_launch_event_observed": true,
+    "quake_added_packfile_marker_observed": true,
+    "quake_first_frame_observed": false,
+    "pak_and_audio_initialization_observed": true,
+    "failure": "Core 0 stack protection fault in main task after execing quake.rc",
+    "decoded_fault": "Con_CheckResize console.c:207 called by SCR_SetUpToDrawConsole/SCR_UpdateScreen",
+    "root_cause": "Con_CheckResize has a 16384-byte automatic tbuf on the 24576-byte Console OS main stack",
+    "operator_observation": "Quake crashed on its own immediately after launch and Console OS rebooted",
+    "corrected_unflashed_candidate": {
+      "bytes": 5550288,
+      "sha256": "ce54c906a77c0c4a2b4d00b13f766f83ee9234cc5faf97660b69216a91b1df63",
+      "elf_sha256": "7d02187e3351106db456c282a22893804dea431b8c8c84845e54b66de6d232d5",
+      "fix": "run the complete Quake engine on a dedicated 98304-byte PSRAM task stack",
+      "hardware_tested": false
+    }
+  }
+}

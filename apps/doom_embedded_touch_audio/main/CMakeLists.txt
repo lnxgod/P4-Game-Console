@@ -19,6 +19,7 @@ idf_component_register(
         log
         mbedtls
         platform_audio
+        platform_board
         platform_display
         platform_i2c_shared
         platform_readonly_blob

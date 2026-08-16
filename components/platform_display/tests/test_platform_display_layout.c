@@ -1,4 +1,5 @@
 #include "platform_display_layout.h"
+#include "platform/board.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -9,12 +10,16 @@ enum {
     SOURCE_WIDTH = 320,
     SOURCE_HEIGHT = 200,
     SOURCE_STRIDE = 323,
-    DESTINATION_WIDTH = 1024,
-    DESTINATION_HEIGHT = 600,
-    DESTINATION_STRIDE = 1031,
-    DESTINATION_ROWS = 603,
-    LEFT_MARGIN = 32,
-    SCALE = 3,
+    LOGICAL_WIDTH = PLATFORM_BOARD_DISPLAY_WIDTH,
+    LOGICAL_HEIGHT = PLATFORM_BOARD_DISPLAY_HEIGHT,
+    DESTINATION_WIDTH = PLATFORM_BOARD_DISPLAY_NATIVE_WIDTH,
+    DESTINATION_HEIGHT = PLATFORM_BOARD_DISPLAY_NATIVE_HEIGHT,
+    DESTINATION_STRIDE = DESTINATION_WIDTH + 7,
+    DESTINATION_ROWS = DESTINATION_HEIGHT + 3,
+    VIEWPORT_WIDTH = PLATFORM_BOARD_GAME_VIEWPORT_WIDTH,
+    VIEWPORT_HEIGHT = PLATFORM_BOARD_GAME_VIEWPORT_HEIGHT,
+    LEFT_MARGIN = PLATFORM_BOARD_GAME_MARGIN_LEFT,
+    TOP_MARGIN = PLATFORM_BOARD_GAME_MARGIN_TOP,
 };
 
 static unsigned failures;
@@ -46,6 +51,23 @@ static uint16_t source_pixel(size_t x, size_t y)
     return (uint16_t)(((x * 31U) ^ (y * 257U) ^ 0x4321U) & 0xffffU);
 }
 
+static uint16_t content_pixel(size_t x, size_t y)
+{
+    return (uint16_t)(((x * 17U) ^ (y * 129U) ^ 0x2468U) & 0xffffU);
+}
+
+static void native_to_logical(size_t native_x, size_t native_y,
+                              size_t *logical_x, size_t *logical_y)
+{
+#if PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES == 90U
+    *logical_x = (size_t)LOGICAL_WIDTH - 1U - native_y;
+    *logical_y = native_x;
+#else
+    *logical_x = native_x;
+    *logical_y = native_y;
+#endif
+}
+
 static void test_bounds_and_scaling(void)
 {
     const size_t source_count = SOURCE_STRIDE * SOURCE_HEIGHT;
@@ -75,11 +97,20 @@ static void test_bounds_and_scaling(void)
         DESTINATION_ROWS));
 
     for (size_t y = 0; y < DESTINATION_HEIGHT; ++y) {
-        const size_t source_y = y / SCALE;
         for (size_t x = 0; x < DESTINATION_WIDTH; ++x) {
+            size_t logical_x = 0U;
+            size_t logical_y = 0U;
+            native_to_logical(x, y, &logical_x, &logical_y);
             uint16_t expected = 0;
-            if (x >= LEFT_MARGIN && x < LEFT_MARGIN + (SOURCE_WIDTH * SCALE)) {
-                expected = source_pixel((x - LEFT_MARGIN) / SCALE, source_y);
+            if (logical_x >= LEFT_MARGIN &&
+                logical_x < LEFT_MARGIN + VIEWPORT_WIDTH &&
+                logical_y >= TOP_MARGIN &&
+                logical_y < TOP_MARGIN + VIEWPORT_HEIGHT) {
+                expected = source_pixel(
+                    ((logical_x - LEFT_MARGIN) * SOURCE_WIDTH) /
+                        VIEWPORT_WIDTH,
+                    ((logical_y - TOP_MARGIN) * SOURCE_HEIGHT) /
+                        VIEWPORT_HEIGHT);
             }
             EXPECT_EQ(expected, destination[(y * DESTINATION_STRIDE) + x]);
         }
@@ -129,14 +160,77 @@ static void test_standard_rgb565_target_byte_order(void)
     EXPECT_TRUE(memcmp(expected_bytes, actual_bytes, sizeof(actual_bytes)) == 0);
 }
 
+static void test_content_768x480_layout(void)
+{
+    enum {
+        CONTENT_WIDTH = 768,
+        CONTENT_HEIGHT = 480,
+        CONTENT_STRIDE = 771,
+    };
+    const size_t source_count = CONTENT_STRIDE * CONTENT_HEIGHT;
+    const size_t destination_count = DESTINATION_STRIDE * DESTINATION_ROWS;
+    uint16_t *const source = malloc(source_count * sizeof(*source));
+    uint16_t *const destination = malloc(destination_count * sizeof(*destination));
+    EXPECT_TRUE(source != NULL);
+    EXPECT_TRUE(destination != NULL);
+    if (source == NULL || destination == NULL) {
+        free(destination);
+        free(source);
+        return;
+    }
+    for (size_t y = 0U; y < CONTENT_HEIGHT; ++y) {
+        for (size_t x = 0U; x < CONTENT_STRIDE; ++x) {
+            source[y * CONTENT_STRIDE + x] =
+                x < CONTENT_WIDTH ? content_pixel(x, y) : UINT16_C(0xdead);
+        }
+    }
+    for (size_t index = 0U; index < destination_count; ++index) {
+        destination[index] = UINT16_C(0xa55a);
+    }
+    EXPECT_TRUE(platform_display_layout_rgb565_768x480(
+        source, CONTENT_STRIDE, destination, DESTINATION_STRIDE,
+        DESTINATION_ROWS));
+    for (size_t y = 0U; y < DESTINATION_HEIGHT; ++y) {
+        for (size_t x = 0U; x < DESTINATION_WIDTH; ++x) {
+            size_t logical_x = 0U;
+            size_t logical_y = 0U;
+            native_to_logical(x, y, &logical_x, &logical_y);
+            uint16_t expected = 0U;
+            if (logical_x >= LEFT_MARGIN &&
+                logical_x < LEFT_MARGIN + VIEWPORT_WIDTH &&
+                logical_y >= TOP_MARGIN &&
+                logical_y < TOP_MARGIN + VIEWPORT_HEIGHT) {
+                expected = content_pixel(
+                    (logical_x - LEFT_MARGIN) * CONTENT_WIDTH / VIEWPORT_WIDTH,
+                    (logical_y - TOP_MARGIN) * CONTENT_HEIGHT / VIEWPORT_HEIGHT);
+            }
+            EXPECT_EQ(expected, destination[y * DESTINATION_STRIDE + x]);
+        }
+    }
+    EXPECT_TRUE(!platform_display_layout_rgb565_768x480(
+        source, CONTENT_WIDTH - 1U, destination, DESTINATION_STRIDE,
+        DESTINATION_ROWS));
+    free(destination);
+    free(source);
+}
+
 int main(void)
 {
     test_bounds_and_scaling();
+    test_content_768x480_layout();
     test_standard_rgb565_target_byte_order();
     if (failures != 0U) {
         fprintf(stderr, "platform display layout tests failed: %u\n", failures);
         return 1;
     }
-    puts("P4_DISPLAY_LAYOUT HOST PASS scale=3 viewport=960x600 margins=32/32 byte_order=rgb565-le");
+    printf("P4_DISPLAY_LAYOUT HOST PASS logical=%ux%u native=%ux%u "
+           "rotation_cw=%u viewport=%ux%u margins=%u/%u "
+           "byte_order=rgb565-le\n",
+           (unsigned)LOGICAL_WIDTH, (unsigned)LOGICAL_HEIGHT,
+           (unsigned)DESTINATION_WIDTH, (unsigned)DESTINATION_HEIGHT,
+           (unsigned)PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES,
+           (unsigned)VIEWPORT_WIDTH, (unsigned)VIEWPORT_HEIGHT,
+           (unsigned)LEFT_MARGIN,
+           (unsigned)TOP_MARGIN);
     return 0;
 }

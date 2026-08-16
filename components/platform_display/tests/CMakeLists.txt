@@ -27,3 +27,34 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
 endif()
 
 add_test(NAME platform_display_layout_tests COMMAND platform_display_layout_tests)
+
+add_executable(platform_display_layout_waveshare_tests
+    test_platform_display_layout.c
+    ../src/platform_display_layout.c
+)
+target_include_directories(platform_display_layout_waveshare_tests PRIVATE
+    ../src
+    ../../platform_board/include
+)
+target_compile_definitions(platform_display_layout_waveshare_tests PRIVATE
+    CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3=1
+)
+target_compile_features(platform_display_layout_waveshare_tests PRIVATE c_std_11)
+
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(platform_display_layout_waveshare_tests PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wconversion
+        -Wshadow
+        -Werror
+        -fsanitize=address,undefined
+        -fno-omit-frame-pointer
+    )
+    target_link_options(platform_display_layout_waveshare_tests PRIVATE
+        -fsanitize=address,undefined)
+endif()
+
+add_test(NAME platform_display_layout_waveshare_tests
+         COMMAND platform_display_layout_waveshare_tests)

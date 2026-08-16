@@ -12,6 +12,7 @@ if(COMMAND idf_component_register)
         REQUIRES
             freertos
             log
+            platform_board
             usb
     )
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)

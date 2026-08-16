@@ -5,20 +5,25 @@
 
 #include "driver/i2c_types.h"
 #include "esp_err.h"
+#include "platform/board.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 #define PLATFORM_TOUCH_VERSION 1U
-#define PLATFORM_TOUCH_WIDTH 1024U
-#define PLATFORM_TOUCH_HEIGHT 600U
+#define PLATFORM_TOUCH_WIDTH PLATFORM_BOARD_DISPLAY_WIDTH
+#define PLATFORM_TOUCH_HEIGHT PLATFORM_BOARD_DISPLAY_HEIGHT
+#define PLATFORM_TOUCH_NATIVE_WIDTH PLATFORM_BOARD_DISPLAY_NATIVE_WIDTH
+#define PLATFORM_TOUCH_NATIVE_HEIGHT PLATFORM_BOARD_DISPLAY_NATIVE_HEIGHT
+#define PLATFORM_TOUCH_ROTATION_CW_DEGREES \
+    PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES
 #define PLATFORM_TOUCH_MAX_CONTACTS 5U
 #define PLATFORM_TOUCH_I2C_CLOCK_HZ 400000U
 #define PLATFORM_TOUCH_GT911_PRIMARY_ADDRESS 0x5dU
 #define PLATFORM_TOUCH_GT911_BACKUP_ADDRESS 0x14U
-#define PLATFORM_TOUCH_RESET_GPIO 40
-#define PLATFORM_TOUCH_INTERRUPT_GPIO 42
+#define PLATFORM_TOUCH_RESET_GPIO PLATFORM_BOARD_TOUCH_RESET_GPIO
+#define PLATFORM_TOUCH_INTERRUPT_GPIO PLATFORM_BOARD_TOUCH_INTERRUPT_GPIO
 
 typedef struct platform_touch platform_touch_t;
 
@@ -68,12 +73,14 @@ esp_err_t platform_touch_create(const platform_touch_config_t *config,
                                 platform_touch_t **out_touch);
 
 /**
- * Poll one complete 1024x600 touch frame with up to five contacts.
+ * Poll one complete logical-display touch frame with up to five contacts.
  *
  * This function is task-context-only and must be externally serialized with
- * create/destroy. It polls and never depends on GPIO interrupts. `out_frame` is initialized
- * to an invalid, zero-contact frame before touching hardware; therefore every
- * error releases all controls in a fail-closed consumer.
+ * create/destroy. It polls and never depends on GPIO interrupts. On a rotated
+ * board target, native controller coordinates are transformed into the same
+ * landscape coordinate space used by games. `out_frame` is initialized to an
+ * invalid, zero-contact frame before touching hardware; therefore every error
+ * releases all controls in a fail-closed consumer.
  */
 esp_err_t platform_touch_poll(platform_touch_t *touch,
                               platform_touch_frame_t *out_frame);

@@ -12,6 +12,13 @@ enum {
     APP_TOUCH = 3,
     APP_SYSTEM = 4,
     APP_AUDIO = 5,
+    APP_LIBRARY = 6,
+    APP_MULTIPLAYER = 7,
+    APP_FILES = 8,
+    APP_SAVES = 9,
+    APP_TERMINAL = 10,
+    APP_MAZE = 100,
+    APP_SPACE = 101,
 };
 
 static int s_failures;
@@ -29,6 +36,7 @@ static const console_app_descriptor_t s_apps[] = {
         .id = APP_DOOM,
         .title = "DOOM",
         .subtitle = "SHAREWARE 1.9",
+        .folder_path = "GAMES/ACTION",
         .accent_rgb565 = UINT16_C(0xF904),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
                         CONSOLE_CAPABILITY_TOUCH |
@@ -38,9 +46,34 @@ static const console_app_descriptor_t s_apps[] = {
         .enabled = true,
     },
     {
+        .id = APP_MAZE,
+        .title = "MAZE CHASE",
+        .subtitle = "ORIGINAL GAME",
+        .folder_path = "GAMES/ARCADE",
+        .accent_rgb565 = UINT16_C(0x07E0),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                        CONSOLE_CAPABILITY_TOUCH |
+                        CONSOLE_CAPABILITY_AUDIO,
+        .page = CONSOLE_PAGE_EXTERNAL,
+        .enabled = true,
+    },
+    {
+        .id = APP_SPACE,
+        .title = "SPACE INVADERS",
+        .subtitle = "DEFEND THE P4",
+        .folder_path = "GAMES/ARCADE",
+        .accent_rgb565 = UINT16_C(0x07FF),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                        CONSOLE_CAPABILITY_TOUCH |
+                        CONSOLE_CAPABILITY_AUDIO,
+        .page = CONSOLE_PAGE_EXTERNAL,
+        .enabled = true,
+    },
+    {
         .id = APP_COLORS,
         .title = "COLORS",
         .subtitle = "DISPLAY TEST",
+        .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x5FFF),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY,
         .page = CONSOLE_PAGE_COLORS,
@@ -50,6 +83,7 @@ static const console_app_descriptor_t s_apps[] = {
         .id = APP_TOUCH,
         .title = "TOUCH",
         .subtitle = "GT911 CONTACTS",
+        .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0xFFE0),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
                         CONSOLE_CAPABILITY_TOUCH,
@@ -60,6 +94,7 @@ static const console_app_descriptor_t s_apps[] = {
         .id = APP_SYSTEM,
         .title = "SYSTEM",
         .subtitle = "RTOS STATUS",
+        .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x5FEA),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
                         CONSOLE_CAPABILITY_TOUCH,
@@ -70,19 +105,79 @@ static const console_app_descriptor_t s_apps[] = {
         .id = APP_AUDIO,
         .title = "AUDIO",
         .subtitle = "DOOM SOUND PATH",
+        .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0xF81F),
         .capabilities = CONSOLE_CAPABILITY_AUDIO,
         .page = CONSOLE_PAGE_AUDIO,
         .enabled = true,
     },
+    {
+        .id = APP_LIBRARY,
+        .title = "LIBRARY",
+        .subtitle = "SD GAME CONTENT",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0x07FF),
+        .capabilities = CONSOLE_CAPABILITY_STORAGE,
+        .page = CONSOLE_PAGE_LIBRARY,
+        .enabled = true,
+    },
+    {
+        .id = APP_MULTIPLAYER,
+        .title = "MULTIPLAYER",
+        .subtitle = "LOCAL LOBBY",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0xFFE0),
+        .capabilities = 0U,
+        .page = CONSOLE_PAGE_MULTIPLAYER,
+        .enabled = true,
+    },
+    {
+        .id = APP_FILES,
+        .title = "FILE MANAGER",
+        .subtitle = "LIST / SORT / COPY",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0x07FF),
+        .capabilities = CONSOLE_CAPABILITY_STORAGE,
+        .page = CONSOLE_PAGE_FILES,
+        .enabled = true,
+    },
+    {
+        .id = APP_SAVES,
+        .title = "SAVE MANAGER",
+        .subtitle = "GAME SAVE SLOTS",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0xFFE0),
+        .capabilities = CONSOLE_CAPABILITY_STORAGE,
+        .page = CONSOLE_PAGE_SAVES,
+        .enabled = true,
+    },
+    {
+        .id = APP_TERMINAL,
+        .title = "TERMINAL",
+        .subtitle = "COMMANDS + SSH",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0x5FEA),
+        .capabilities = CONSOLE_CAPABILITY_TOUCH,
+        .page = CONSOLE_PAGE_TERMINAL,
+        .enabled = true,
+    },
+};
+
+enum {
+    TEST_APP_COUNT = sizeof(s_apps) / sizeof(s_apps[0]),
 };
 
 static console_shell_contact_t physical_point(unsigned gui_x, unsigned gui_y)
 {
     const console_shell_contact_t point = {
         .x = (uint16_t)(CONSOLE_SHELL_VIEWPORT_LEFT +
-                        gui_x * CONSOLE_SHELL_VIEWPORT_SCALE),
-        .y = (uint16_t)(gui_y * CONSOLE_SHELL_VIEWPORT_SCALE),
+                        ((2U * gui_x + 1U) *
+                         CONSOLE_SHELL_VIEWPORT_WIDTH) /
+                            (2U * CONSOLE_SHELL_WIDTH)),
+        .y = (uint16_t)(CONSOLE_SHELL_VIEWPORT_TOP +
+                        ((2U * gui_y + 1U) *
+                         CONSOLE_SHELL_VIEWPORT_HEIGHT) /
+                            (2U * CONSOLE_SHELL_HEIGHT)),
     };
     return point;
 }
@@ -98,16 +193,33 @@ static console_shell_action_t tap(console_shell_t *shell,
     return console_shell_handle_touch(shell, true, NULL, 0U);
 }
 
+static console_shell_action_t drag(console_shell_t *shell,
+                                   unsigned start_x,
+                                   unsigned start_y,
+                                   unsigned end_x,
+                                   unsigned end_y)
+{
+    const console_shell_contact_t start = physical_point(start_x, start_y);
+    const console_shell_contact_t end = physical_point(end_x, end_y);
+    CHECK(console_shell_handle_touch(shell, true, &start, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_touch(shell, true, &end, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    return console_shell_handle_touch(shell, true, NULL, 0U);
+}
+
 static void test_registry_validation(void)
 {
     console_shell_t shell;
-    CHECK(!console_shell_init(NULL, s_apps, 5U));
-    CHECK(!console_shell_init(&shell, NULL, 5U));
+    CHECK(!console_shell_init(NULL, s_apps, TEST_APP_COUNT));
+    CHECK(!console_shell_init(&shell, NULL, TEST_APP_COUNT));
     CHECK(!console_shell_init(&shell, s_apps, 0U));
     CHECK(!console_shell_init(
         &shell, s_apps, CONSOLE_SHELL_MAX_APPS + 1U));
-    CHECK(console_shell_init(&shell, s_apps, 5U));
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
     CHECK(shell.page == CONSOLE_PAGE_HOME);
+    CHECK(console_shell_master_volume_step(&shell) ==
+          CONSOLE_SHELL_MASTER_VOLUME_DEFAULT);
     CHECK(shell.dirty);
     CHECK(shell.pressed_index == SIZE_MAX);
 
@@ -129,13 +241,79 @@ static void test_registry_validation(void)
     invalid[1] = s_apps[1];
     invalid[1].subtitle = NULL;
     CHECK(!console_shell_init(&shell, invalid, 2U));
+    invalid[1] = s_apps[1];
+    invalid[1].folder_path = NULL;
+    CHECK(!console_shell_init(&shell, invalid, 2U));
+    invalid[1].folder_path = "/GAMES";
+    CHECK(!console_shell_init(&shell, invalid, 2U));
+    invalid[1].folder_path = "GAMES//ARCADE";
+    CHECK(!console_shell_init(&shell, invalid, 2U));
+    invalid[1].folder_path = "GAMES/ARCADE/MAZE";
+    CHECK(!console_shell_init(&shell, invalid, 2U));
+    invalid[1].folder_path = "games/arcade";
+    CHECK(!console_shell_init(&shell, invalid, 2U));
 }
 
-static void test_launcher_pagination(void)
+static void test_audio_volume_control(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    CHECK(console_shell_master_volume_step(NULL) ==
+          CONSOLE_SHELL_MASTER_VOLUME_DEFAULT);
+
+    /* Root -> System -> Audio. */
+    CHECK(tap(&shell, 220U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    console_shell_action_t action = tap(&shell, 20U, 120U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(action.app_id == APP_AUDIO);
+    CHECK(shell.page == CONSOLE_PAGE_AUDIO);
+
+    action = tap(&shell, 109U, 135U);
+    CHECK(action.type == CONSOLE_ACTION_VOLUME_CHANGED);
+    CHECK(action.volume_step == 7U);
+    CHECK(console_shell_master_volume_step(&shell) == 7U);
+
+    action = tap(&shell, 217U, 135U);
+    CHECK(action.type == CONSOLE_ACTION_VOLUME_CHANGED);
+    CHECK(action.volume_step == CONSOLE_SHELL_MASTER_VOLUME_DEFAULT);
+
+    for (unsigned step = CONSOLE_SHELL_MASTER_VOLUME_DEFAULT;
+         step < CONSOLE_SHELL_MASTER_VOLUME_MAX; ++step) {
+        action = tap(&shell, 217U, 135U);
+        CHECK(action.type == CONSOLE_ACTION_VOLUME_CHANGED);
+    }
+    CHECK(console_shell_master_volume_step(&shell) ==
+          CONSOLE_SHELL_MASTER_VOLUME_MAX);
+    CHECK(tap(&shell, 217U, 135U).type == CONSOLE_ACTION_NONE);
+}
+
+static void test_color_modes(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    CHECK(console_shell_color_mode(&shell) ==
+          CONSOLE_COLOR_MODE_GAMECHANGERS);
+    shell.page = CONSOLE_PAGE_COLORS;
+    shell.active_app_id = APP_COLORS;
+
+    console_shell_action_t action = tap(&shell, 235U, 72U);
+    CHECK(action.type == CONSOLE_ACTION_COLOR_MODE_CHANGED);
+    CHECK(action.app_id == APP_COLORS);
+    CHECK(action.color_mode == CONSOLE_COLOR_MODE_ARCADE);
+    CHECK(console_shell_color_mode(&shell) == CONSOLE_COLOR_MODE_ARCADE);
+    CHECK(tap(&shell, 235U, 72U).type == CONSOLE_ACTION_NONE);
+
+    action = tap(&shell, 78U, 128U);
+    CHECK(action.type == CONSOLE_ACTION_COLOR_MODE_CHANGED);
+    CHECK(action.color_mode == CONSOLE_COLOR_MODE_OCEAN);
+    CHECK(console_shell_color_mode(&shell) == CONSOLE_COLOR_MODE_OCEAN);
+}
+
+static void test_launcher_scrolling(void)
 {
     console_app_descriptor_t apps[7];
     for (size_t i = 0U; i < 7U; ++i) {
-        apps[i] = s_apps[i % 5U];
+        apps[i] = s_apps[i % TEST_APP_COUNT];
         apps[i].id = (uint32_t)(100U + i);
     }
     apps[6].title = "PAGE TWO";
@@ -143,17 +321,36 @@ static void test_launcher_pagination(void)
 
     console_shell_t shell;
     CHECK(console_shell_init(&shell, apps, 7U));
-    CHECK(shell.home_page == 0U);
-    CHECK(tap(&shell, 302U, 18U).type == CONSOLE_ACTION_PAGE_CHANGED);
-    CHECK(shell.home_page == 1U);
-    console_shell_action_t action = tap(&shell, 20U, 50U);
+    CHECK(shell.home_scroll_row == 0U);
+    CHECK(tap(&shell, 20U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_all_programs);
+    CHECK(tap(&shell, 304U, 165U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_scroll_row == 1U);
+    console_shell_action_t action = tap(&shell, 20U, 120U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(action.app_id == apps[6].id);
 
     console_shell_show_home(&shell);
-    CHECK(shell.home_page == 1U);
-    CHECK(tap(&shell, 274U, 18U).type == CONSOLE_ACTION_PAGE_CHANGED);
-    CHECK(shell.home_page == 0U);
+    CHECK(shell.home_scroll_row == 1U);
+    CHECK(tap(&shell, 304U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_scroll_row == 0U);
+    CHECK(tap(&shell, 304U, 50U).type == CONSOLE_ACTION_NONE);
+
+    console_app_descriptor_t more_apps[10];
+    for (size_t i = 0U; i < 10U; ++i) {
+        more_apps[i] = s_apps[i % TEST_APP_COUNT];
+        more_apps[i].id = (uint32_t)(200U + i);
+    }
+    CHECK(console_shell_init(&shell, more_apps, 10U));
+    CHECK(tap(&shell, 20U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_all_programs);
+    action = drag(&shell, 50U, 130U, 50U, 100U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(action.app_id == 0U);
+    CHECK(shell.home_scroll_row == 1U);
+    action = drag(&shell, 50U, 80U, 50U, 110U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_scroll_row == 0U);
 }
 
 static void test_render_bounds_and_stride(void)
@@ -180,7 +377,7 @@ static void test_render_bounds_and_stride(void)
     }
 
     console_shell_t shell;
-    CHECK(console_shell_init(&shell, s_apps, 5U));
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
     CHECK(!console_shell_render_rgb565(&shell, frame,
                                        CONSOLE_SHELL_WIDTH - 1U));
     CHECK(console_shell_is_dirty(&shell));
@@ -204,36 +401,50 @@ static void test_render_bounds_and_stride(void)
 static void test_navigation_and_launch(void)
 {
     console_shell_t shell;
-    CHECK(console_shell_init(&shell, s_apps, 5U));
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
 
-    console_shell_action_t action = tap(&shell, 20U, 50U);
+    /* Root is a bounded synthetic view: All Programs, Games, System. */
+    console_shell_action_t action = tap(&shell, 120U, 50U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.home_folder_path, "GAMES") == 0);
+    CHECK(!shell.home_all_programs);
+
+    /* Games contains type folders; Arcade contains the two native games. */
+    action = tap(&shell, 120U, 50U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.home_folder_path, "GAMES/ARCADE") == 0);
+    action = tap(&shell, 20U, 50U);
     CHECK(action.type == CONSOLE_ACTION_LAUNCH);
-    CHECK(action.app_id == APP_DOOM);
+    CHECK(action.app_id == APP_MAZE);
     CHECK(shell.page == CONSOLE_PAGE_HOME);
 
-    action = tap(&shell, 170U, 50U);
+    action = tap(&shell, 20U, 31U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.home_folder_path, "GAMES") == 0);
+    action = tap(&shell, 20U, 31U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_folder_path[0] == '\0');
+
+    /* A built-in page returns to the System folder, not the root. */
+    action = tap(&shell, 220U, 50U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.home_folder_path, "SYSTEM") == 0);
+    action = tap(&shell, 20U, 50U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(action.app_id == APP_COLORS);
     CHECK(shell.page == CONSOLE_PAGE_COLORS);
-    CHECK(shell.active_app_id == APP_COLORS);
-
     action = tap(&shell, 10U, 10U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
-    CHECK(action.app_id == 0U);
     CHECK(shell.page == CONSOLE_PAGE_HOME);
-
-    action = tap(&shell, 20U, 100U);
-    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
-    CHECK(action.app_id == APP_TOUCH);
-    CHECK(shell.page == CONSOLE_PAGE_TOUCH);
+    CHECK(strcmp(shell.home_folder_path, "SYSTEM") == 0);
 }
 
 static void test_fail_closed_gestures(void)
 {
     console_shell_t shell;
-    CHECK(console_shell_init(&shell, s_apps, 5U));
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
     const console_shell_contact_t doom = physical_point(20U, 50U);
-    const console_shell_contact_t colors = physical_point(170U, 50U);
+    const console_shell_contact_t colors = physical_point(120U, 50U);
     console_shell_contact_t pair[2] = {doom, colors};
 
     CHECK(console_shell_handle_touch(&shell, true, &doom, 1U).type ==
@@ -274,8 +485,9 @@ static void test_fail_closed_gestures(void)
 static void test_touch_page_and_runtime(void)
 {
     console_shell_t shell;
-    CHECK(console_shell_init(&shell, s_apps, 5U));
-    CHECK(tap(&shell, 20U, 100U).app_id == APP_TOUCH);
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    CHECK(tap(&shell, 220U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(tap(&shell, 120U, 50U).app_id == APP_TOUCH);
 
     console_shell_contact_t contacts[CONSOLE_SHELL_MAX_CONTACTS];
     for (size_t i = 0U; i < CONSOLE_SHELL_MAX_CONTACTS; ++i) {
@@ -312,7 +524,7 @@ static void test_touch_page_and_runtime(void)
     CHECK(!shell.dirty);
     CHECK(shell.runtime.uptime_seconds == 123U);
 
-    CHECK(tap(&shell, 170U, 100U).app_id == APP_SYSTEM);
+    CHECK(tap(&shell, 220U, 50U).app_id == APP_SYSTEM);
     shell.dirty = false;
     console_shell_set_runtime_info(&shell, &runtime);
     CHECK(!shell.dirty);
@@ -320,6 +532,78 @@ static void test_touch_page_and_runtime(void)
     changed.uptime_seconds = 124U;
     console_shell_set_runtime_info(&shell, &changed);
     CHECK(shell.dirty);
+}
+
+static void test_library_and_multiplayer_pages(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    CHECK(tap(&shell, 220U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+
+    /* System row two: Audio, Library, Multiplayer. */
+    console_shell_action_t action = tap(&shell, 120U, 120U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(action.app_id == APP_LIBRARY);
+    CHECK(shell.page == CONSOLE_PAGE_LIBRARY);
+    const console_shell_runtime_info_t runtime = {
+        .storage_ready = true,
+        .content_scan_complete = true,
+        .valid_cart_count = 3U,
+        .invalid_cart_count = 1U,
+        .quake_shareware_ready = true,
+        .multiplayer_core_ready = true,
+    };
+    console_shell_set_runtime_info(&shell, &runtime);
+    action = tap(&shell, 260U, 173U);
+    CHECK(action.type == CONSOLE_ACTION_LIBRARY_REFRESH);
+    CHECK(action.app_id == APP_LIBRARY);
+
+    CHECK(tap(&shell, 10U, 10U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    action = tap(&shell, 220U, 120U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(action.app_id == APP_MULTIPLAYER);
+    CHECK(shell.page == CONSOLE_PAGE_MULTIPLAYER);
+}
+
+static void test_desktop_pages(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    p4_file_list_t files;
+    p4_file_list_init(&files);
+    CHECK(p4_file_list_add(&files, "SMALL.P4CART", 1024U,
+                           P4_FILE_KIND_CARTRIDGE, true));
+    CHECK(p4_file_list_add(&files, "PAK0.PAK", 18689235U,
+                           P4_FILE_KIND_GAME_DATA, true));
+    console_shell_set_file_list(&shell, &files);
+    shell.page = CONSOLE_PAGE_FILES;
+    shell.active_app_id = APP_FILES;
+    console_shell_action_t action = tap(&shell, 250U, 46U);
+    CHECK(action.type == CONSOLE_ACTION_FILE_SORT_CHANGED);
+    CHECK(shell.files.sort == P4_FILE_SORT_SIZE);
+    action = tap(&shell, 20U, 62U);
+    CHECK(action.type == CONSOLE_ACTION_FILE_SELECTED);
+    CHECK(action.item_index == 0U);
+
+    shell.page = CONSOLE_PAGE_TERMINAL;
+    shell.active_app_id = APP_TERMINAL;
+    CHECK(console_shell_handle_text_key(&shell, 's').type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_text_key(&shell, 's').type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_text_key(&shell, 'h').type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_text_key(&shell, '\n').type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(strstr(shell.terminal.lines[shell.terminal.line_count - 1U],
+                 "OFFLINE") != NULL);
+
+    p4_save_catalog_t saves;
+    p4_save_catalog_init(&saves, false);
+    CHECK(p4_save_catalog_add(&saves, "org.p4console.solitaire",
+                              "AUTO", 512U, 1U));
+    console_shell_set_save_catalog(&shell, &saves);
+    CHECK(shell.saves.count == 1U);
 }
 
 static uint32_t next_random(uint32_t *state)
@@ -331,7 +615,7 @@ static uint32_t next_random(uint32_t *state)
 static void test_input_fuzz(void)
 {
     console_shell_t shell;
-    CHECK(console_shell_init(&shell, s_apps, 5U));
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
     uint16_t *const frame = calloc(
         (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
         sizeof(*frame));
@@ -365,9 +649,13 @@ int main(void)
     test_registry_validation();
     test_render_bounds_and_stride();
     test_navigation_and_launch();
-    test_launcher_pagination();
+    test_launcher_scrolling();
     test_fail_closed_gestures();
     test_touch_page_and_runtime();
+    test_audio_volume_control();
+    test_color_modes();
+    test_library_and_multiplayer_pages();
+    test_desktop_pages();
     test_input_fuzz();
     if (s_failures != 0) {
         fprintf(stderr, "%d console shell test failure(s)\n", s_failures);

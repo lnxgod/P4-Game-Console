@@ -5,20 +5,21 @@
 
 #include "driver/i2c_master.h"
 #include "esp_err.h"
+#include "platform/board.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define PLATFORM_I2C_SHARED_PORT I2C_NUM_1
-#define PLATFORM_I2C_SHARED_SDA_GPIO 45
-#define PLATFORM_I2C_SHARED_SCL_GPIO 46
+#define PLATFORM_I2C_SHARED_PORT ((i2c_port_num_t)PLATFORM_BOARD_I2C_PORT)
+#define PLATFORM_I2C_SHARED_SDA_GPIO PLATFORM_BOARD_I2C_SDA_GPIO
+#define PLATFORM_I2C_SHARED_SCL_GPIO PLATFORM_BOARD_I2C_SCL_GPIO
 #define PLATFORM_I2C_SHARED_CLOCK_HZ 100000U
 
 typedef struct platform_i2c_shared platform_i2c_shared_t;
 
 /**
- * Create the board's sole GPIO45/GPIO46 I2C1 bus owner.
+ * Create the selected board's sole shared I2C bus owner.
  *
  * The caller must already own the board rail that powers VDDPST_5. Touch and
  * audio borrow the returned ESP-IDF handle and must release every device

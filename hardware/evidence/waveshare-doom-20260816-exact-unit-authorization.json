@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-16T02:33:41Z",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-doom-first-install",
+  "operator_direction": "flash the connected 4.3 with our Doom setup",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "physical_confirmation": "operator photo shows exact back-side silkscreen",
+    "pcb_revision": null,
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "candidate": {
+    "build_directory": "apps/doom_embedded_touch_audio/build-waveshare-port2",
+    "write_flash_args": [
+      "--flash-mode",
+      "dio",
+      "--flash-size",
+      "32MB",
+      "--flash-freq",
+      "80m"
+    ],
+    "artifacts": [
+      {
+        "role": "bootloader",
+        "offset": "0x2000",
+        "path": "apps/doom_embedded_touch_audio/build-waveshare-port2/bootloader/bootloader.bin",
+        "bytes": 22912,
+        "sha256": "8daaf8dfa70f2b4bd79d9eb97bb39b1909cbc568352e72bca5199351674a9e68"
+      },
+      {
+        "role": "partition-table",
+        "offset": "0x8000",
+        "path": "apps/doom_embedded_touch_audio/build-waveshare-port2/partition_table/partition-table.bin",
+        "bytes": 3072,
+        "sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433"
+      },
+      {
+        "role": "application",
+        "offset": "0x10000",
+        "path": "apps/doom_embedded_touch_audio/build-waveshare-port2/p4_doom_embedded_touch_audio.bin",
+        "bytes": 4947984,
+        "sha256": "bd41a720eb141e8367d9754bd6ece798f6a57bb1a73f25af1d864a6cbbbeb26f"
+      }
+    ]
+  },
+  "reason_full_project_write_is_required": "The factory partition table places NVS at 0x3b000 and the factory app at 0x110000. Both overlap the candidate factory app at 0x10000; the interrupted app-only attempt was altered at app-relative 0x2b000 by live NVS writes. The candidate bootloader, partition table, and app must therefore be installed together.",
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "write_only_listed_artifacts": true,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "read_back_every_written_artifact": true,
+    "raw_device_identity_must_not_be_recorded": true,
+    "usb_host_enabled": false,
+    "usb_vbus_source_authorized": false
+  },
+  "hardware_classification_after_install": "installed-and-readback-verified only; display, touch, audio, and USB acceptance remain pending"
+}

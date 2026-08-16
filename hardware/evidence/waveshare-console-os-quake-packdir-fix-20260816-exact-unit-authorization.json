@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-16T13:23:00-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-quake-packdir-psram-successor",
+  "operator_direction": "Fix the Quake black/blue-screen reset by moving the upstream maximum 128 KiB PAK directory workspace off app_main's 24 KiB stack and into Quake's existing PSRAM hunk.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e",
+    "reused": true
+  },
+  "predecessor": {
+    "offset": "0x10000",
+    "bytes": 5538176,
+    "sha256": "00a6436c7c8f7b7b48f78fab32fd3f4ee216b267080b2ea2190e9df66d3df254",
+    "elf_sha256": "8ed0a0d583e2dbfaf1673d17c35f7445ba1784e20e8c5ae847a06919f62443bd",
+    "observed_failure": "Quake handoff showed black/blue video, reset, and returned to Program Manager without a usable game",
+    "root_cause": "COM_LoadPackFile reserved dpackfile_t info[2048], approximately 128 KiB, on app_main's 24 KiB stack"
+  },
+  "candidate": {
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "software_contract": {
+      "console_surface": "768x480 landscape",
+      "quake_pak_path": "/sdcard/GAMES/QUAKE/ID1/PAK0.PAK",
+      "quake_pak_identity": "Quake v1.06 shareware; 18689235 bytes; SHA-256 35a9c55e5e5a284a159ad2a62e0e8def23d829561fe2f54eb402dbc0a9a946af",
+      "vendor_tree_modified": false,
+      "embedded_port_delta": "generate pinned common.c with PAK directory workspace allocated from the 20 MiB Quake PSRAM hunk",
+      "compiled_COM_LoadPackFile_stack_bytes": 64,
+      "sd_read_chunk_bytes": 4096,
+      "usb_host_enabled": false,
+      "usb_vbus_policy_changed": false
+    },
+    "artifacts": [
+      {
+        "role": "bootloader",
+        "offset": "0x2000",
+        "path": "apps/console_os/build-waveshare-landscape/bootloader/bootloader.bin",
+        "bytes": 22912,
+        "sha256": "8daaf8dfa70f2b4bd79d9eb97bb39b1909cbc568352e72bca5199351674a9e68",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "partition-table",
+        "offset": "0x8000",
+        "path": "apps/console_os/build-waveshare-landscape/partition_table/partition-table.bin",
+        "bytes": 3072,
+        "sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "application",
+        "offset": "0x10000",
+        "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+        "bytes": 5538320,
+        "sha256": "f0a7a6130ef9f73c2c8886a2312f4e7f13c006bf9b6ac1d9fe54ae55c59f1402",
+        "action": "write-and-on-device-digest-verify"
+      }
+    ],
+    "elf": {
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.elf",
+      "bytes": 18188460,
+      "sha256": "be2e8042d09154da60f35571838622d5122f7f6ca08a7848fa14adb07cff4c62"
+    }
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_new_factory_backup": false,
+    "write_only_application": true,
+    "verify_live_identity_before_write": true,
+    "verify_installed_bootloader_before_write": true,
+    "verify_installed_partition_table_before_write": true,
+    "verify_application_on_device_digest_after_write": true,
+    "format_sd_card": false,
+    "modify_sd_card": false
+  },
+  "acceptance_required_after_install": [
+    "Console OS remains 768x480 landscape and touch-responsive",
+    "background catalog reports quake_shareware=1",
+    "Quake prints Added packfile after Host_Init",
+    "Quake reaches its first rendered frame without a watchdog reset",
+    "launcher amplifier remains off until Quake owns audio"
+  ]
+}

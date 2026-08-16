@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "active": true,
+  "recorded_at": "2026-08-14T12:14:28-0700",
+  "scope": "exact-unit-console-os-space-invaders",
+  "operator_direction": "push-this-game",
+  "device_binding": {
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216
+  },
+  "exact_artifact": {
+    "offset": "0x10000",
+    "app_binary_bytes": 4948512,
+    "app_binary_sha256": "9596617fd86d9cd9abd12a539329c6df2d06e696ca4de6814daa644e56090303",
+    "elf_bytes": 14275244,
+    "elf_sha256": "b0eac8b7af8b7db4bc184d133bdb9a768bd9ebfc218cd9be623ad5f370c78fa6",
+    "bootloader_bytes": 22912,
+    "bootloader_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+    "app_partition_bytes": 11534336,
+    "partition_free_bytes": 6585824,
+    "mutation_span_bytes": 4964352,
+    "mutation_span_sha256": "8a4c7be1bd6dab0fbc24d16217c8d44f18e6ec4aca3a3eb5b7bc3259b25b1ffe",
+    "mutation_tail_byte": "ff",
+    "contains_ignored_shareware_wad": true,
+    "redistribution_authorized": false
+  },
+  "build_evidence": {
+    "path": "test-runs/2026-08-14-console-os-space-invaders-build.json",
+    "sha256": "1ba05b3eed3913470e3e4812130ec7d2fdd81b1b6108faea45c7d68fde720537"
+  },
+  "exact_unit_audio_release": {
+    "path": "hardware/evidence/console-os-space-invaders-exact-unit-audio-release.json",
+    "sha256": "a9320abb67c5cab2f11aeb69994fbc45c1474b4f9871ff46de86da3d5c678d1f"
+  },
+  "jedec_normalization": {
+    "path": "hardware/evidence/console-os-space-invaders-jedec-normalization.json",
+    "sha256": "ad5eb401db052ff3945edfd4c05ae2b9862b33fe041bf41b99b696e52f1508b8"
+  },
+  "installed_predecessor": {
+    "path": "hardware/test-runs/2026-08-14-console-os-game-api-v1-install.json",
+    "sha256": "4b4f803d6567da035734c7fd505448a646778f8ad75db03440f6de6c400bf0e5"
+  },
+  "preceding_fail_closed_attempts": [
+    {
+      "path": "hardware/test-runs/2026-08-14-console-os-space-invaders-install-attempt1.json",
+      "sha256": "56cf96b2d90f1b412ae818176f30fc5e483f3b99ed96e1da7450628b4733335b",
+      "writes_attempted": 0,
+      "restore_required": false
+    },
+    {
+      "path": "hardware/test-runs/2026-08-14-console-os-space-invaders-install-attempt2.json",
+      "sha256": "b2fb1715e45ac24c7448daf696ac809bf4a0bf2dbb245d121d2bb0b6f5685388",
+      "writes_attempted": 0,
+      "restore_required": false
+    }
+  ],
+  "frozen_primitives": {
+    "base_installer_sha256": "0887dbcc43d79f48e06628eca21c518974ef900ff8f8cb025d63bb2bbf44c491",
+    "predecessor_installer_sha256": "406d0b6da57029890f2e4f92bb6d6aed32e3fc2e0f4c81ee7ddbddc48e08ff86",
+    "transport_sha256": "f5d2255f37ca9373fdaf42ebe711968c31dc51b3dbbc2f7e501a235fbb546471",
+    "startup_capture_sha256": "cdb2c124f0f1e58aaaac7f13d416eff00cb044cc0f13232afa8537d8645aa571",
+    "startup_signature": "P4_CONSOLE_OS START shell=freertos-native apps=7 surface=rgb565-320x200 touch=gt911 native_game_api=1 native_format=p4-native-static-v1 execution=build-candidate",
+    "accepted_rdid_high_bytes": ["0x00", "0xab", "0xfc", "0xff"]
+  },
+  "execution_contract": {
+    "same_uart_handle": true,
+    "live_full_span_preimage_required": true,
+    "app_partition_only": true,
+    "retained_launcher_capture_required": true,
+    "automatic_restore_on_capture_failure": true,
+    "launcher_audio_hardware_calls": 0,
+    "native_game_audio_deferred_until_user_launch": true,
+    "usb_runtime": false,
+    "recovery_directory": "hardware/local-state/console-os-space-invaders-install-20260814-attempt3"
+  }
+}

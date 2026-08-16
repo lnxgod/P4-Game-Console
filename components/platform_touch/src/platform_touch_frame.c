@@ -3,11 +3,49 @@
 #include <stddef.h>
 #include <string.h>
 
+#include "sdkconfig.h"
+#include "platform/board.h"
+
 _Static_assert(PLATFORM_TOUCH_MAX_CONTACTS == 5U,
                "GT911 driver review is bounded to five contacts");
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+_Static_assert(PLATFORM_TOUCH_WIDTH == 800U &&
+                   PLATFORM_TOUCH_HEIGHT == 480U &&
+                   PLATFORM_TOUCH_NATIVE_WIDTH == 480U &&
+                   PLATFORM_TOUCH_NATIVE_HEIGHT == 800U &&
+                   PLATFORM_TOUCH_ROTATION_CW_DEGREES == 90U,
+               "Waveshare touch must map native portrait into landscape");
+#else
 _Static_assert(PLATFORM_TOUCH_WIDTH == 1024U &&
-                   PLATFORM_TOUCH_HEIGHT == 600U,
-               "touch coordinates must match the proven panel geometry");
+                   PLATFORM_TOUCH_HEIGHT == 600U &&
+                   PLATFORM_TOUCH_NATIVE_WIDTH == 1024U &&
+                   PLATFORM_TOUCH_NATIVE_HEIGHT == 600U &&
+                   PLATFORM_TOUCH_ROTATION_CW_DEGREES == 0U,
+               "touch coordinates must match the Elecrow panel geometry");
+#endif
+
+bool platform_touch_coordinates_native_to_logical(uint16_t *x,
+                                                  uint16_t *y,
+                                                  uint8_t contact_count)
+{
+    if (contact_count > PLATFORM_TOUCH_MAX_CONTACTS ||
+        (contact_count > 0U && (x == NULL || y == NULL))) {
+        return false;
+    }
+    for (uint8_t index = 0U; index < contact_count; ++index) {
+        if (x[index] >= PLATFORM_TOUCH_NATIVE_WIDTH ||
+            y[index] >= PLATFORM_TOUCH_NATIVE_HEIGHT) {
+            return false;
+        }
+#if PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES == 90U
+        const uint16_t native_x = x[index];
+        const uint16_t native_y = y[index];
+        x[index] = (uint16_t)(PLATFORM_TOUCH_WIDTH - 1U - native_y);
+        y[index] = native_x;
+#endif
+    }
+    return true;
+}
 
 void platform_touch_frame_fail_closed(platform_touch_frame_t *frame,
                                       uint32_t sequence,

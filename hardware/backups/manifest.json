@@ -72,5 +72,38 @@
     "requires_manual_confirmation": true,
     "requires_matching_live_device_identity": true,
     "command_template": "After separately validating the live identity hash and security state, use esptool.py --chip esp32p4 --port <SERIAL_PORT> --baud 921600 write_flash 0x0 hardware/backups/elecrow-p4-factory-before-project.bin"
-  }
+  },
+  "additional_devices": [
+    {
+      "captured_at": "2026-08-15T19:26:00Z",
+      "board_claim": "Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 (physical silkscreen confirmed by operator photo; PCB revision marking not present/legible)",
+      "physical_confirmation": {
+        "source": "operator_photo_2026-08-16",
+        "silkscreen": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+        "variant": "standard 4.3; no -C suffix visible",
+        "pcb_revision": null
+      },
+      "port": "/dev/cu.wchusbserial5C371865781",
+      "device": {
+        "chip": "ESP32-P4",
+        "revision": "v1.3",
+        "crystal_mhz": 40,
+        "flash_bytes": 33554432,
+        "identity": {
+          "source": "base_mac",
+          "normalization": "lowercase hexadecimal without separators",
+          "sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+          "raw_value_stored": false
+        }
+      },
+      "backup": {
+        "file": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+        "bytes": 33554432,
+        "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e",
+        "git_ignored": true,
+        "mode": "0600"
+      },
+      "write_status": "ready-for-guarded-app-only-write; peripheral runtime acceptance remains pending"
+    }
+  ]
 }

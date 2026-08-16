@@ -23,6 +23,29 @@
       "usage": "reference-only; do not import repository history or WAD content",
       "license": "GPL-2.0"
     },
+    "quakegeneric_esp32p4": {
+      "repository": "https://github.com/espressif/esp32-quake.git",
+      "commit": "fe81f2840bc658bc4b009e77b1c6302572446e46",
+      "tree": "3e949e001acf9acddf7e611f86cee81c1144a9d9",
+      "selected_subtree_last_commit": "c9ce1e4b9c4b8105a190e1e59abe4cda058a7d8f",
+      "source_subtree": "components/quakegeneric/quakegeneric",
+      "vendor_path": "third_party/quakegeneric",
+      "vendor_manifest": "third_party/quakegeneric.git-tree",
+      "vendor_manifest_sha256": "e091862082c1d57fe433dd21686ec82c78285bf9d7ee287d5464a42d14300fba",
+      "vendor_paths": [
+        "LICENSE",
+        "README.md",
+        "source"
+      ],
+      "usage": "verbatim Quake engine source; platform adapters remain outside the vendor tree",
+      "license": "GPL-2.0-or-later"
+    },
+    "id_quake_reference": {
+      "repository": "https://github.com/id-Software/Quake.git",
+      "commit": "bf4ac424ce754894ac8f1dae6a3981954bc9852d",
+      "usage": "official provenance and license reference; no game-data bytes",
+      "license": "GPL-2.0"
+    },
     "freedoom": {
       "repository": "https://github.com/freedoom/freedoom.git",
       "tag": "v0.13.0",

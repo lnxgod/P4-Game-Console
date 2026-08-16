@@ -5,6 +5,17 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#ifdef ESP_PLATFORM
+#include "platform/board.h"
+#define DOOM_TOUCH_SCREEN_WIDTH PLATFORM_BOARD_DISPLAY_WIDTH
+#define DOOM_TOUCH_SCREEN_HEIGHT PLATFORM_BOARD_DISPLAY_HEIGHT
+#else
+#ifndef DOOM_TOUCH_SCREEN_WIDTH
+#define DOOM_TOUCH_SCREEN_WIDTH 1024U
+#define DOOM_TOUCH_SCREEN_HEIGHT 600U
+#endif
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -12,10 +23,32 @@ extern "C" {
 #define DOOM_TOUCH_INPUT_VERSION 1U
 #define DOOM_TOUCH_MAX_CONTACTS 5U
 #define DOOM_TOUCH_EVENT_CAPACITY 32U
-#define DOOM_TOUCH_SCREEN_WIDTH 1024U
-#define DOOM_TOUCH_SCREEN_HEIGHT 600U
 #define DOOM_TOUCH_FRAME_WIDTH 320U
 #define DOOM_TOUCH_FRAME_HEIGHT 200U
+
+#ifdef ESP_PLATFORM
+#define DOOM_TOUCH_VIEWPORT_WIDTH PLATFORM_BOARD_GAME_VIEWPORT_WIDTH
+#define DOOM_TOUCH_VIEWPORT_HEIGHT PLATFORM_BOARD_GAME_VIEWPORT_HEIGHT
+#define DOOM_TOUCH_VIEWPORT_LEFT PLATFORM_BOARD_GAME_MARGIN_LEFT
+#define DOOM_TOUCH_VIEWPORT_TOP PLATFORM_BOARD_GAME_MARGIN_TOP
+#else
+#define DOOM_TOUCH_VIEWPORT_WIDTH \
+    ((DOOM_TOUCH_SCREEN_WIDTH * DOOM_TOUCH_FRAME_HEIGHT) <= \
+             (DOOM_TOUCH_SCREEN_HEIGHT * DOOM_TOUCH_FRAME_WIDTH) \
+         ? DOOM_TOUCH_SCREEN_WIDTH \
+         : (DOOM_TOUCH_SCREEN_HEIGHT * DOOM_TOUCH_FRAME_WIDTH) / \
+               DOOM_TOUCH_FRAME_HEIGHT)
+#define DOOM_TOUCH_VIEWPORT_HEIGHT \
+    ((DOOM_TOUCH_SCREEN_WIDTH * DOOM_TOUCH_FRAME_HEIGHT) <= \
+             (DOOM_TOUCH_SCREEN_HEIGHT * DOOM_TOUCH_FRAME_WIDTH) \
+         ? (DOOM_TOUCH_SCREEN_WIDTH * DOOM_TOUCH_FRAME_HEIGHT) / \
+               DOOM_TOUCH_FRAME_WIDTH \
+         : DOOM_TOUCH_SCREEN_HEIGHT)
+#define DOOM_TOUCH_VIEWPORT_LEFT \
+    ((DOOM_TOUCH_SCREEN_WIDTH - DOOM_TOUCH_VIEWPORT_WIDTH) / 2U)
+#define DOOM_TOUCH_VIEWPORT_TOP \
+    ((DOOM_TOUCH_SCREEN_HEIGHT - DOOM_TOUCH_VIEWPORT_HEIGHT) / 2U)
+#endif
 
 typedef enum {
     DOOM_TOUCH_ACTION_UP = 0,
@@ -92,7 +125,7 @@ bool doom_touch_input_idle(const doom_touch_input_t *input);
  *
  * Source and destination may be identical. Strides are measured in pixels and
  * must be at least 320. The overlay is intentionally rendered in the game's
- * logical surface so the existing proven 3x display adapter remains unchanged.
+ * logical surface so every board uses the same aspect-fit display adapter.
  */
 bool doom_touch_overlay_render_xrgb8888(
     const uint32_t *source,

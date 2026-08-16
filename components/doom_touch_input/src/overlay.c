@@ -10,7 +10,7 @@ typedef struct {
     doom_touch_action_t action;
 } logical_control_t;
 
-/* Screen coordinates mapped through the proven 32 + 3*x viewport. */
+/* Controls live in the shared 320x200 surface and map through its viewport. */
 static const logical_control_t s_controls[] = {
     {49, 148, 50, DOOM_TOUCH_ACTION_UP},
     {289, 151, 35, DOOM_TOUCH_ACTION_FIRE},

@@ -17,19 +17,23 @@ bool p4_game_map_physical_touch(uint16_t physical_x,
                                 uint16_t physical_y,
                                 p4_game_point_t *out_logical)
 {
-    const uint16_t viewport_right = (uint16_t)(
-        P4_INPUT_VIEWPORT_LEFT +
-        P4_GAME_SURFACE_WIDTH * P4_INPUT_VIEWPORT_SCALE);
+    /* A point before an offset wraps past the bounded viewport, which keeps
+     * this mapping valid when an offset is zero for the 10 in panel. */
+    const uint16_t relative_x =
+        (uint16_t)(physical_x - P4_INPUT_VIEWPORT_LEFT);
+    const uint16_t relative_y =
+        (uint16_t)(physical_y - P4_INPUT_VIEWPORT_TOP);
     if (out_logical == NULL ||
-        physical_x < P4_INPUT_VIEWPORT_LEFT ||
-        physical_x >= viewport_right ||
-        physical_y >= P4_INPUT_PHYSICAL_HEIGHT) {
+        relative_x >= P4_INPUT_VIEWPORT_WIDTH ||
+        relative_y >= P4_INPUT_VIEWPORT_HEIGHT) {
         return false;
     }
     out_logical->x = (uint16_t)(
-        (physical_x - P4_INPUT_VIEWPORT_LEFT) / P4_INPUT_VIEWPORT_SCALE);
+        ((uint32_t)relative_x * P4_GAME_SURFACE_WIDTH) /
+        P4_INPUT_VIEWPORT_WIDTH);
     out_logical->y = (uint16_t)(
-        physical_y / P4_INPUT_VIEWPORT_SCALE);
+        ((uint32_t)relative_y * P4_GAME_SURFACE_HEIGHT) /
+        P4_INPUT_VIEWPORT_HEIGHT);
     return out_logical->x < P4_GAME_SURFACE_WIDTH &&
         out_logical->y < P4_GAME_SURFACE_HEIGHT;
 }

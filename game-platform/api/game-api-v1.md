@@ -1,13 +1,12 @@
 # P4 game API v1
 
-Status: device runtime foundation. The browser shim and executable cartridge
-engine are follow-on work, but they must implement this contract without
+Status: device runtime foundation. The PC preview and executable Lua cartridge
+adapter are follow-on work, but they must implement this contract without
 changing its observable behavior.
 
-This document does not define a `.p4cart` container, a compiler target, or an
-executable format. A cartridge must never contain raw native ESP32-P4 code.
-Those decisions require a reviewed sandboxed backend and a separate container
-specification.
+The `.p4cart` bytes and source/runtime rules are defined separately by
+`cartridge-container-v1.md` and `p4-lua-api-v1.md`. A cartridge must never
+contain raw native ESP32-P4 code or Lua bytecode.
 
 ## Execution model
 
@@ -17,9 +16,9 @@ increasing integer tick and a fixed delta of `1/60`; wall-clock delays never
 change that delta. A slow renderer may drop intermediate frames, but it may not
 slow or alter game simulation.
 
-The native structs in `p4/game_api.h` are an embedding boundary inside the
-device firmware, not a WebAssembly memory ABI. A future WebAssembly engine and
-the browser preview expose equivalent scalar operations:
+The native structs in `p4/game_api.h` are an embedding boundary inside device
+firmware, not a cartridge memory ABI. The P4 Lua adapter and PC preview expose
+equivalent scalar operations:
 
 ```text
 time.tick() -> u64
@@ -39,7 +38,9 @@ This avoids copying compiler-dependent C structure layouts into a cartridge.
 
 ## Canvas and color
 
-The logical canvas is 320 by 200 pixels. Coordinates are signed integers.
+The logical canvas is the Console OS 768 by 480 landscape viewport. Coordinates
+are signed integers. The Waveshare panel's rotated 480x800 scanout geometry is
+an OS/display-driver detail and is never visible to a game.
 Rectangles with a non-positive width or height are rejected. The renderer clips
 valid rectangles and sprites to the canvas. Colors are RGB565 integer values;
 the browser shim must quantize to RGB565 before drawing so preview colors match
@@ -51,7 +52,7 @@ continues. Drawing backpressure is never visible to game logic.
 
 The host owns the physical display and chooses its scaling, centering,
 backlight, framebuffer, and scanout policy. Cartridge code sees only this
-logical 320x200 RGB565 canvas and may not infer panel dimensions or hardware.
+logical 768x480 RGB565 canvas and may not infer panel dimensions or hardware.
 
 ## Host-owned services
 

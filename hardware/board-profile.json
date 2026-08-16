@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "status": "framebuffer-hardware-tested-touch-narrow-runtime-authorized-audio-build-only-other-peripherals-locked",
+  "status": "framebuffer-hardware-tested-touch-runtime-authorized-exact-unit-audio-operator-released-other-peripherals-locked",
   "vendor": "Elecrow",
   "family": "CrowPanel Advanced ESP32-P4 HMI AI Display",
   "screen_inches": 10.1,
@@ -33,7 +33,7 @@
     "factory_panel_driver_hint": "EK79007",
     "factory_touch_driver_hint": "GT911"
   },
-  "last_hardware_test": "hardware/test-runs/2026-08-12-bringup.json",
+  "last_hardware_test": "hardware/test-runs/2026-08-14-console-os-folder-clean-install.json",
   "pin_map_authorized": false,
   "peripheral_authorizations": {
     "display": {
@@ -58,13 +58,15 @@
       "hardware_test": null
     },
     "audio": {
-      "authorized": false,
-      "scope": "factory_direct_i2s1_backend_build_only_gpio30_low_runtime_blocked",
-      "evidence": "hardware/evidence/elecrow-10.1-factory-touch-audio-runtime-basis.json",
+      "authorized": true,
+      "scope": "exact_bound_unit_factory_audio_runtime_operator_accepted_artifact_bound_not_cross_unit",
+      "evidence": "hardware/evidence/console-os-folder-clean-exact-unit-audio-release.json",
       "topology_review": "hardware/evidence/elecrow-10.1-audio-path-review.json",
       "factory_semantics": "hardware/evidence/elecrow-10.1-factory-audio-semantics.json",
-      "runtime_blocker": "power_off_population_and_continuity_must_prove_one_converging_output_family_absent_or_isolated",
-      "hardware_test": null
+      "prior_release": "hardware/evidence/console-os-space-invaders-exact-unit-audio-release.json",
+      "hardware_test": "hardware/test-runs/2026-08-14-console-os-folder-clean-install.json",
+      "reusable_across_units": false,
+      "new_artifact_requires_new_release": true
     }
   }
 }

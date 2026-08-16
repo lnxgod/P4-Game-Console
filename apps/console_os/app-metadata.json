@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "app": "console_os",
-  "stage": "native-game-api-v1-build-candidate",
-  "purpose": "FreeRTOS-native touch console with shared platform services, a versioned native game API, an original Maze Chase sample, built-in diagnostics, and an exclusive handoff to the proven Doom SFX plus MUS integration.",
+  "stage": "waveshare-4.3-build-candidate",
+  "purpose": "FreeRTOS-native Waveshare 4.3 touch console with a fixed 768x480 landscape contract, Windows 3.1-style file/game/save/terminal tools, shared platform services, open game formats, bounded SD content discovery, multiplayer session primitives, and exclusive Doom and Quake easter-egg handoffs.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
   "flash_authorized": false,
@@ -15,18 +15,41 @@
   "toolchain": {
     "idf": "5.5.3",
     "target": "esp32p4",
-    "flash_bytes": 16777216,
+    "flash_bytes": 33554432,
     "psram_bytes": 33554432
   },
   "shell": {
     "model": "monolithic-static-app-registry",
     "scheduler": "FreeRTOS via ESP-IDF",
-    "surface": "RGB565 320x200 scaled 3x into the 1024x600 panel",
+    "logical_surface": "rgb565-768x480",
+    "surface": "board-independent 768x480 OS landscape canvas; the launcher and p4-native-static-v1 games retain a scaled 320x200 compatibility surface",
     "input": "bounded GT911 polling with up to five contacts",
-    "built_in_apps": ["colors", "touch", "system", "audio-status"],
+    "built_in_apps": ["colors", "touch", "system", "audio-control", "game-manager", "multiplayer", "file-manager", "save-manager", "terminal"],
     "apps_per_page": 6,
     "maximum_registered_apps": 32,
-    "dynamic_executable_loading": false
+    "folder_model": "manifest-driven fixed two-level hierarchy",
+    "root_folders": ["all-programs", "games", "system"],
+    "maximum_folder_depth": 2,
+    "dynamic_executable_loading": false,
+    "master_volume": {
+      "default_step": 8,
+      "minimum_step": 1,
+      "maximum_step": 10,
+      "applies_on_next_game_launch": true
+    },
+    "native_game_timing": {
+      "update_and_audio_service_ms": 16,
+      "render_every_service_ticks": 2,
+      "render_target_fps": 31
+    }
+  },
+  "desktop_services": {
+    "style": "Windows 3.1-inspired primitive-drawn Program Manager",
+    "file_manager": "bounded SD catalog with name/type/size sorting; read-only on the current hardware authorization",
+    "save_manager": "bounded per-game slot catalog; atomic write/import/export activation remains gated",
+    "terminal": "bounded command prompt with touch keyboard and a sanitized physical-key entry point",
+    "ssh": "terminal UX and OS transport boundary implemented; Wi-Fi/TCP/crypto transport not yet qualified",
+    "usb_export": "UI and action boundary implemented but disabled; current H1 protocol accepts only the exact Quake shareware PAK"
   },
   "native_game_api": {
     "api_version": 1,
@@ -37,9 +60,29 @@
     "uf2_note": "UF2 is a flashing container, not the executable format used by this ESP-IDF project.",
     "surface": "RGB565 320x200",
     "controls": ["up", "down", "left", "right", "a", "b", "start", "back"],
-    "audio": "optional bounded tone service at PCM16 stereo 16000 Hz",
+    "audio": "optional bounded tone and copied PCM-stream services at PCM16 stereo 16000 Hz",
     "return_to_home_supported": true,
-    "registered_games": ["org.p4console.maze-chase"]
+    "registry": "all enabled games/*/game.json manifests discovered at configure time",
+    "hardware_access": "forbidden; games use only the p4_game_api services"
+  },
+  "sd_content": {
+    "mount_mode": "no-format",
+    "catalog_is_read_only": true,
+    "cart_directory": "/sdcard/P4/GAMES",
+    "maximum_cart_candidates": 128,
+    "maximum_listed_carts": 16,
+    "cart_hash_and_payload_validation": true,
+    "cart_runtime_available": false,
+    "host_copy_tool": "scripts/p4-usb-content.py",
+    "usb_copy": {
+      "physical_port": "H1 programming USB-C through CH343 USB-UART",
+      "transfer_baud": 921600,
+      "chunk_bytes": 4096,
+      "host_supplied_paths": false,
+      "formatting_allowed": false,
+      "activation": "fsync-readback-hash-atomic-rename",
+      "current_target": "exact Quake v1.06 shareware PAK only"
+    }
   },
   "doom_handoff": {
     "mode": "exclusive-one-way-until-restart",
@@ -48,17 +91,39 @@
     "audio_initialized_by_doom": true,
     "sample_rate_hz": 16000,
     "format": "pcm16-stereo",
-    "volume_step": "6/10",
+    "volume_step": "OS master volume, default 8/10",
     "music": "WAD MUS procedural 16-voice synth",
     "external_midi_device_required": false,
     "return_to_home_supported": false
   },
+  "quake_handoff": {
+    "role": "optional easter egg",
+    "engine": "pinned GPL quakegeneric source",
+    "pak_embedded": false,
+    "sd_path": "/sdcard/GAMES/QUAKE/ID1/PAK0.PAK",
+    "sd_hash_gated": true,
+    "surface": "512x300 engine scaled to 768x450 inside the 768x480 OS canvas",
+    "audio": "software-mixed PCM through the OS-owned 16000 Hz stereo session",
+    "engine_task": {
+      "stack_bytes": 98304,
+      "memory": "external-PSRAM",
+      "isolated_from_console_main_task": true,
+      "first_frame_stack_telemetry": true
+    },
+    "network_transport": "loopback-only-pending-os-wifi",
+    "return_mode": "restart-console-os"
+  },
+  "multiplayer": {
+    "core_version": 1,
+    "maximum_players": 4,
+    "transport": "pending",
+    "network_owned_by_os": true,
+    "game_socket_access": false
+  },
   "hardware_interfaces_explicitly_absent": [
     "usb_host",
     "usb_hid",
-    "sd_card",
-    "wireless",
-    "codec_i2c"
+    "wireless"
   ],
   "next_hardware_step": "After build verification, bind and authorize the exact new console artifact before any guarded flash and record separate on-device acceptance evidence."
 }

@@ -1,0 +1,54 @@
+{
+  "format": "p4-cart-source-v1",
+  "game": {
+    "id": "8d8d0de4-c7b8-4bde-a60f-52d0d1900653",
+    "slug": "bounce-lab",
+    "title": "Bounce Lab",
+    "version": "1.0.0",
+    "summary": "Move the paddle, keep the ball alive, and remix the rules.",
+    "category": "ARCADE",
+    "players": {
+      "min": 1,
+      "max": 1
+    }
+  },
+  "runtime": {
+    "id": "p4-lua-5.4-v1",
+    "api": 1,
+    "entry": "main.lua",
+    "logical_width": 768,
+    "logical_height": 480,
+    "update_hz": 60,
+    "present_hz": 30,
+    "heap_bytes": 131072,
+    "save_bytes": 0,
+    "capabilities": [
+      "audio-tone",
+      "draw",
+      "input"
+    ]
+  },
+  "license": {
+    "code": "MIT",
+    "assets": "CC0-1.0",
+    "notice": "LICENSES/NOTICE.txt"
+  },
+  "remix": {
+    "source_included": true,
+    "parent": null
+  },
+  "files": [
+    {
+      "path": "LICENSES/NOTICE.txt",
+      "kind": "license"
+    },
+    {
+      "path": "README.md",
+      "kind": "documentation"
+    },
+    {
+      "path": "main.lua",
+      "kind": "runtime-source"
+    }
+  ]
+}

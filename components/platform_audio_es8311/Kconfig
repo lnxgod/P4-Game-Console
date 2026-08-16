@@ -8,4 +8,12 @@ menu "ESP32-P4 ES8311 platform audio"
             remains blocked until connected-unit population/continuity proves
             the optional NS4168 outputs are absent or isolated and address
             0x18 is observed on the shared control bus.
+
+    config PLATFORM_AUDIO_ES8311_WAVESHARE_4_3_BUILD_ONLY
+        bool "Compile the Waveshare 4.3-inch ES8311 path"
+        default n
+        help
+            Enables the Waveshare I2S GPIO13/12/10/9 path and active-high
+            GPIO53 amplifier control. This is a build-only gate; codec
+            presence, speaker wiring, and acoustic output remain unverified.
 endmenu

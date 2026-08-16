@@ -1,12 +1,13 @@
-set(PLATFORM_AUDIO_ES8311_POLICY_SOURCES
+set(PLATFORM_AUDIO_ES8311_SOURCES
     src/platform_audio_es8311_policy.c
 )
+if(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+    list(APPEND PLATFORM_AUDIO_ES8311_SOURCES src/platform_audio_es8311.c)
+endif()
 
 if(COMMAND idf_component_register)
     idf_component_register(
-        SRCS
-            src/platform_audio_es8311.c
-            ${PLATFORM_AUDIO_ES8311_POLICY_SOURCES}
+        SRCS ${PLATFORM_AUDIO_ES8311_SOURCES}
         INCLUDE_DIRS include
         PRIV_INCLUDE_DIRS src
         REQUIRES
@@ -15,6 +16,7 @@ if(COMMAND idf_component_register)
             esp_driver_i2c
             esp_driver_i2s
             freertos
+            platform_board
     )
 
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)
@@ -31,10 +33,10 @@ else()
     project(platform_audio_es8311_policy VERSION 0.1.0 LANGUAGES C)
 
     add_library(platform_audio_es8311_policy STATIC
-        ${PLATFORM_AUDIO_ES8311_POLICY_SOURCES})
+        src/platform_audio_es8311_policy.c)
     target_include_directories(platform_audio_es8311_policy
         PUBLIC include
-        PRIVATE src
+        PRIVATE src "${CMAKE_CURRENT_LIST_DIR}/../platform_board/include"
     )
     target_compile_features(platform_audio_es8311_policy PUBLIC c_std_11)
 

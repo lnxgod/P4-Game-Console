@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "started_at": "2026-08-16T11:48:00-0700",
+  "completed_at": "2026-08-16T12:12:06-0700",
+  "result": "pass-with-host-timeout-corrected",
+  "hardware": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+    "programming_port": "H1 CH343 USB-UART",
+    "sd_card_remained_in_console": true
+  },
+  "firmware": {
+    "install_mode": "guarded application-only successor",
+    "offset": "0x10000",
+    "bytes": 5534976,
+    "sha256": "0d49d3b1d72f7670ca8115139a6bc80f999b312589085fa058ff53cd2c34ef11",
+    "elf_sha256": "d8c060d7bc149869b4f87bb4e7b99f9aad13e185e9e393995598855d96be6761",
+    "bootloader_readback": "pass",
+    "partition_table_readback": "pass",
+    "application_digest_verify": "pass",
+    "new_factory_backup_created": false,
+    "flash_erased": false
+  },
+  "content_transfer": {
+    "source": "local-data/quake/id1/pak0.pak",
+    "source_gitignored": true,
+    "source_bytes": 18689235,
+    "source_sha256": "35a9c55e5e5a284a159ad2a62e0e8def23d829561fe2f54eb402dbc0a9a946af",
+    "idle_baud": 115200,
+    "transfer_baud": 921600,
+    "chunk_bytes": 4096,
+    "chunks_acknowledged": 4563,
+    "observed_payload_rate_kib_per_second": 25,
+    "payload_progress_reached_percent": 100,
+    "device_completion_status": 0,
+    "device_completion_bytes": 18689235,
+    "device_completion_sha256": "35a9c55e5e5a284a159ad2a62e0e8def23d829561fe2f54eb402dbc0a9a946af",
+    "activation": "fixed staging path, fsync, full readback hash, atomic rename",
+    "format_performed": false,
+    "unrelated_sd_paths_modified": false
+  },
+  "acceptance": {
+    "automatic_reboot_observed": true,
+    "live_console_stats_observed": true,
+    "quake_shareware_ready": true,
+    "quake_launcher_enabled_by_registry_logic": true,
+    "usb_host_enabled": false,
+    "vbus_policy_changed": false,
+    "visual_quake_launch_tested_this_run": false
+  },
+  "host_timeout_correction": {
+    "initial_behavior": "the first host process reached 100 percent but its 90-second completion and 120-second reboot windows expired while the slow card was still hashing",
+    "device_behavior": "the device continued safely, emitted status 0 with the exact completion proof, rebooted, and later reported quake_shareware=1",
+    "source_fix": "line-buffer progress, remove redundant host tcdrain per acknowledged chunk, allow 900 seconds for activation and 600 seconds for boot catalog validation"
+  }
+}

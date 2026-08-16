@@ -86,10 +86,11 @@ bool p4_game_instance_start(p4_game_instance_t *instance,
     memset(instance, 0, sizeof(*instance));
     memset(state_memory, 0, descriptor->state_bytes);
     instance->descriptor = descriptor;
+    instance->services = *services;
     instance->context = (p4_game_context_t){
         .state = state_memory,
         .state_bytes = descriptor->state_bytes,
-        .services = services,
+        .services = &instance->services,
         .elapsed_ms = 0U,
         .frame_index = 0U,
     };
@@ -213,6 +214,41 @@ bool p4_game_submit_pcm16_stereo(p4_game_context_t *context,
         context->services->submit_pcm16_stereo(
             context->services->audio_context,
             interleaved_stereo, frame_count);
+}
+
+bool p4_game_unlock_achievement(p4_game_context_t *context,
+                                const char *achievement_id,
+                                const char *title,
+                                const char *description)
+{
+    if (context == NULL || context->services == NULL ||
+        context->services->unlock_achievement == NULL ||
+        context->services->achievement_context == NULL ||
+        bounded_length(achievement_id, P4_GAME_ACHIEVEMENT_ID_MAX_BYTES) == 0U ||
+        bounded_length(achievement_id, P4_GAME_ACHIEVEMENT_ID_MAX_BYTES) >=
+            P4_GAME_ACHIEVEMENT_ID_MAX_BYTES ||
+        bounded_length(title, P4_GAME_ACHIEVEMENT_TITLE_MAX_BYTES) == 0U ||
+        bounded_length(title, P4_GAME_ACHIEVEMENT_TITLE_MAX_BYTES) >=
+            P4_GAME_ACHIEVEMENT_TITLE_MAX_BYTES ||
+        bounded_length(description,
+                       P4_GAME_ACHIEVEMENT_DESCRIPTION_MAX_BYTES) == 0U ||
+        bounded_length(description,
+                       P4_GAME_ACHIEVEMENT_DESCRIPTION_MAX_BYTES) >=
+            P4_GAME_ACHIEVEMENT_DESCRIPTION_MAX_BYTES) {
+        return false;
+    }
+    const p4_game_achievement_t achievement = {
+        .game_id = context->services->game_id,
+        .id = achievement_id,
+        .title = title,
+        .description = description,
+        .unlocked_at_elapsed_ms = context->elapsed_ms,
+    };
+    return bounded_length(achievement.game_id, P4_GAME_ID_MAX_BYTES) > 0U &&
+        bounded_length(achievement.game_id, P4_GAME_ID_MAX_BYTES) <
+            P4_GAME_ID_MAX_BYTES &&
+        context->services->unlock_achievement(
+            context->services->achievement_context, &achievement);
 }
 
 void p4_game_stop_audio(p4_game_context_t *context)

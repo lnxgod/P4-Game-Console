@@ -1,0 +1,19 @@
+# Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 landscape overlay.
+# Use together with sdkconfig.defaults. The platform services keep the ST7701
+# at native 480x800 timing while exposing one 800x480 landscape coordinate
+# space to the launcher, native games, Doom, and touch input.
+
+CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3=y
+CONFIG_PLATFORM_STORAGE_WAVESHARE_4_3_AUTHORIZED=y
+CONFIG_PLATFORM_DISPLAY_WAVESHARE_4_3_BUILD_ONLY=y
+CONFIG_PLATFORM_TOUCH_WAVESHARE_4_3_BUILD_ONLY=y
+CONFIG_PLATFORM_AUDIO_ES8311_WAVESHARE_4_3_BUILD_ONLY=y
+# The ES8311 backend uses the pinned ESP-IDF 5.5 I2C master bus API shared
+# with GT911, not esp_codec_dev's deprecated self-owned legacy bus.
+# CONFIG_CODEC_I2C_BACKWARD_COMPATIBLE is not set
+CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="32MB"
+
+# The pinned Quake port marks its large renderer/server tables explicitly for
+# PSRAM. Keep internal DRAM available for display, audio, SDMMC, and tasks.
+CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y

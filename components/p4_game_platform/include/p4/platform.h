@@ -41,6 +41,8 @@ void p4_game_platform_audio_init(p4_game_platform_audio_t *session);
 esp_err_t p4_game_platform_audio_open(
     p4_game_platform_audio_t *session,
     bool exact_unit_runtime_authorized,
+    /** Borrowed board-control bus for codec boards; NULL for direct I2S. */
+    void *control_bus,
     uint8_t volume_step);
 
 /** Write 1..128 signed PCM16 stereo frames; failure immediately fails safe. */

@@ -15,6 +15,7 @@ if(COMMAND idf_component_register)
             fatfs
             freertos
             mbedtls
+            platform_board
             sdmmc
     )
 

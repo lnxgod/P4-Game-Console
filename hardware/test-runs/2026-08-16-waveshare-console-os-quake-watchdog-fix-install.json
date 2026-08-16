@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "started_at": "2026-08-16T12:54:00-0700",
+  "completed_at": "2026-08-16T13:12:41-0700",
+  "result": "install-pass-quake-launch-pending-operator-tap",
+  "hardware": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+    "programming_port": "H1 CH343 USB-UART",
+    "sd_card_remained_in_console": true
+  },
+  "predecessor_failure": {
+    "quake_shareware_ready": true,
+    "last_engine_marker": "Host_Init",
+    "reset_reason": "HP_SYS_HP_WDT_RESET",
+    "saved_pc": "_panic_handler",
+    "interpretation": "synchronous Quake SD startup starved the system watchdog; the PAK identity was not the failure"
+  },
+  "firmware": {
+    "install_mode": "guarded application-only successor",
+    "offset": "0x10000",
+    "bytes": 5538176,
+    "sha256": "00a6436c7c8f7b7b48f78fab32fd3f4ee216b267080b2ea2190e9df66d3df254",
+    "elf_sha256": "8ed0a0d583e2dbfaf1673d17c35f7445ba1784e20e8c5ae847a06919f62443bd",
+    "bootloader_readback": "pass",
+    "partition_table_readback": "pass",
+    "application_digest_verify": "pass",
+    "new_factory_backup_created": false,
+    "flash_erased": false,
+    "sd_formatted": false
+  },
+  "corrections": {
+    "quake_file_reads": "bounded to 4096 bytes with one scheduler tick between chunks",
+    "boot_catalog": "exact PAK hash moved to a background task with a PSRAM stack",
+    "foreground_policy": "touch, rendering, and volume remain serviced while launch and refresh actions are deferred during validation"
+  },
+  "acceptance": {
+    "launcher_booted": true,
+    "landscape_surface": "768x480",
+    "background_validation_completed_ms": 177582,
+    "touch_polls_at_validation_completion": 17700,
+    "touch_failures_at_validation_completion": 0,
+    "quake_pak_bytes": 18689235,
+    "quake_pak_sha256": "35a9c55e5e5a284a159ad2a62e0e8def23d829561fe2f54eb402dbc0a9a946af",
+    "quake_shareware_ready": true,
+    "quake_launcher_enabled": true,
+    "watchdog_reset_during_boot_validation": false,
+    "quake_first_frame_observed": false,
+    "quake_first_frame_pending_reason": "no physical launcher tap was observed during the serial acceptance window"
+  }
+}

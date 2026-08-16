@@ -1,0 +1,20 @@
+menu "P4 platform board target"
+
+    choice PLATFORM_BOARD_TARGET
+        prompt "Board target"
+        default PLATFORM_BOARD_TARGET_ELECROW_10_1
+        help
+            Select exactly one physical board contract. This is a compile-time
+            boundary only; it does not authorize flashing or hardware use.
+
+        config PLATFORM_BOARD_TARGET_ELECROW_10_1
+            bool "Elecrow CrowPanel Advanced 10.1-inch"
+
+        config PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+            bool "Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3"
+            help
+                Select only for the board-specific Waveshare port. Do not
+                reuse Elecrow display, touch, audio, or USB assumptions.
+    endchoice
+
+endmenu

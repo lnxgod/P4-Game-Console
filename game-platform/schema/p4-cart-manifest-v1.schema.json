@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://p4console.dev/schema/p4-cart-manifest-v1.schema.json",
+  "title": "P4 Cart source manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["format", "game", "runtime", "license", "remix", "files"],
+  "properties": {
+    "format": {"const": "p4-cart-source-v1"},
+    "game": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "slug", "title", "version", "summary", "category", "players"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"},
+        "slug": {"type": "string", "pattern": "^[a-z][a-z0-9]*(?:-[a-z0-9]+)*$", "maxLength": 31},
+        "title": {"type": "string", "minLength": 1, "maxLength": 32},
+        "version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+        "summary": {"type": "string", "minLength": 1, "maxLength": 96},
+        "category": {"enum": ["ACTION", "ADVENTURE", "ARCADE", "PLATFORM", "PUZZLE", "RACING"]},
+        "players": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["min", "max"],
+          "properties": {
+            "min": {"type": "integer", "minimum": 1, "maximum": 4},
+            "max": {"type": "integer", "minimum": 1, "maximum": 4}
+          }
+        }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "api", "entry", "logical_width", "logical_height", "update_hz", "present_hz", "heap_bytes", "save_bytes", "capabilities"],
+      "properties": {
+        "id": {"const": "p4-lua-5.4-v1"},
+        "api": {"const": 1},
+        "entry": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,62}$"},
+        "logical_width": {"const": 768},
+        "logical_height": {"const": 480},
+        "update_hz": {"const": 60},
+        "present_hz": {"const": 30},
+        "heap_bytes": {"type": "integer", "minimum": 65536, "maximum": 524288, "multipleOf": 4096},
+        "save_bytes": {"type": "integer", "minimum": 0, "maximum": 4096},
+        "capabilities": {
+          "type": "array",
+          "maxItems": 8,
+          "uniqueItems": true,
+          "items": {"enum": ["draw", "input", "touch", "audio-tone", "save", "local-multiplayer", "lan-lockstep"]}
+        }
+      }
+    },
+    "license": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "assets", "notice"],
+      "properties": {
+        "code": {"enum": ["0BSD", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "GPL-2.0-only", "GPL-2.0-or-later", "GPL-3.0-only", "GPL-3.0-or-later", "ISC", "LGPL-2.1-only", "LGPL-2.1-or-later", "LGPL-3.0-only", "LGPL-3.0-or-later", "MIT", "MPL-2.0", "Unlicense"]},
+        "assets": {"enum": ["0BSD", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "CC0-1.0", "CC-BY-4.0", "CC-BY-SA-4.0", "GPL-2.0-only", "GPL-2.0-or-later", "GPL-3.0-only", "GPL-3.0-or-later", "ISC", "MIT", "OFL-1.1", "Unlicense"]},
+        "notice": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,62}$"}
+      }
+    },
+    "remix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source_included", "parent"],
+      "properties": {
+        "source_included": {"const": true},
+        "parent": {
+          "oneOf": [
+            {"type": "null"},
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "version", "sha256"],
+              "properties": {
+                "id": {"type": "string", "pattern": "^[0-9a-f-]{36}$"},
+                "version": {"type": "string", "pattern": "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)$"},
+                "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}
+              }
+            }
+          ]
+        }
+      }
+    },
+    "files": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["path", "kind"],
+        "properties": {
+          "path": {"type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._/-]{0,62}$"},
+          "kind": {"enum": ["runtime-source", "runtime-asset", "source-asset", "documentation", "license"]},
+          "asset_id": {"type": "integer", "minimum": 1, "maximum": 4095}
+        }
+      }
+    }
+  }
+}

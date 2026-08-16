@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T12:14:28-0700",
+  "result": "fail-closed-before-write-boundary-usb-serial-disconnected-during-second-live-verification",
+  "hardware": {
+    "product": "Elecrow CrowPanel Advanced 10.1 in DHE04310D",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "raw_identity_stored": false,
+    "serial_port": "/dev/cu.wchusbserial10"
+  },
+  "artifact": {
+    "path": "apps/console_os/build-space-invaders/p4_console_os.bin",
+    "offset": "0x10000",
+    "bytes": 4948512,
+    "sha256": "9596617fd86d9cd9abd12a539329c6df2d06e696ca4de6814daa644e56090303",
+    "mutation_span_bytes": 4964352,
+    "mutation_span_sha256": "8a4c7be1bd6dab0fbc24d16217c8d44f18e6ec4aca3a3eb5b7bc3259b25b1ffe"
+  },
+  "transaction": {
+    "phase": "preimage-sealed",
+    "same_uart_handle": true,
+    "install_write_attempt_count": 0,
+    "application_launch_count": 0,
+    "restore_required": false,
+    "restore_attempt_count": 0,
+    "restore_write_attempt_count": 0,
+    "failure_boundary": "second-live-partition-table-verification-before-write-boundary",
+    "failure": "serial read failed: Errno 6 Device not configured",
+    "port_reenumerated_after_process_exit": true
+  },
+  "preserved_predecessor": {
+    "directory": "hardware/local-state/console-os-space-invaders-install-20260814-attempt2",
+    "ledger": {
+      "path": "hardware/local-state/console-os-space-invaders-install-20260814-attempt2/e6-install-ledger.json",
+      "bytes": 3984,
+      "sha256": "435213df270aea442d87e02191b9bd629e678efd07be64d3e0c072371cd874b8"
+    },
+    "live_preimage": {
+      "path": "hardware/local-state/console-os-space-invaders-install-20260814-attempt2/live-preimage.bin",
+      "bytes": 4964352,
+      "sha256": "b06fa55270e819a4edd207012a4e076cc057992c36494ad7ca45da7c39124284",
+      "installed_prefix_bytes": 4941776,
+      "installed_prefix_sha256": "f4426c370b9f251aa5a3ae5049b99a4c068067390c351dc680d1b7d36492be36",
+      "installed_padded_span_bytes": 4947968,
+      "installed_padded_span_sha256": "23ec0f631b86bf3b8bbd44e1fc791d2fcf699de9a36b6d6c6c8075c4ea996092"
+    },
+    "partition_table": {
+      "path": "hardware/local-state/console-os-space-invaders-install-20260814-attempt2/live-partition-table.bin",
+      "bytes": 3072,
+      "sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433"
+    }
+  },
+  "frozen_route": {
+    "authorized_route_sha256": "433e20ee6165e8a2e8bcba82f0edcdffe701e9e662cde2e71951369679eb8c3c",
+    "installer_sha256": "c3e22c3f6dd4f991d9f0a319d22f13ae8e7596fa3c6ae53fb8a05b55f0699192",
+    "authorization_sha256": "095cd7a325b56858ef05715218c487bf684629c216d2071c61cd0bac787391a8",
+    "jedec_release_sha256": "ad5eb401db052ff3945edfd4c05ae2b9862b33fe041bf41b99b696e52f1508b8"
+  },
+  "claims_not_made": [
+    "The serial disconnect was caused by the firmware or tablet rather than the cable, bridge, host, or power path.",
+    "Any application flash command began.",
+    "Recovery or restoration was required."
+  ]
+}

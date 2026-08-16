@@ -1,0 +1,90 @@
+{
+  "schema": 1,
+  "status": "official-schematic-reviewed-no-local-hardware-acceptance",
+  "vendor": "Waveshare",
+  "family": "ESP32-P4-WIFI6-Touch-LCD",
+  "screen_inches": 4.3,
+  "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+  "sku_variants": [
+    "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "ESP32-P4-WIFI6-Touch-LCD-4.3-C"
+  ],
+  "pcb_revision": null,
+  "identification": {
+    "source": "official_waveshare_product_page_and_schematic",
+    "product_page": "https://www.waveshare.com/esp32-p4-wifi6-touch-lcd-4.3.htm",
+    "schematic": "https://files.waveshare.com/wiki/ESP32-P4-WIFI6-Touch-LCD-4.3/ESP32-P4-WIFI6-Touch-LCD-4.3-schematic.pdf",
+    "physical_board_confirmed": false,
+    "required_next_evidence": "board label, PCB revision, LCD FPC/panel part, touch controller, and measured connector rails"
+  },
+  "measured": {
+    "chip": "ESP32-P4",
+    "flash_bytes": 33554432,
+    "psram_bytes": 33554432,
+    "display_resolution_portrait": "480x800",
+    "display_orientation_default": "portrait",
+    "wifi_coprocessor": "ESP32-C6-MINI-1",
+    "camera_variant": "OV5647 optional"
+  },
+  "official_schematic_facts": {
+    "display": "two-lane MIPI-DSI; official Waveshare BSP selects ST7701, 480x800 portrait, 500 Mbps lane rate, and MIPI PHY LDO3 at 2500 mV",
+    "display_bsp_pins": {
+      "backlight_gpio": 26,
+      "reset_gpio": 27
+    },
+    "touch": "GT911 capacitive touch; official Waveshare BSP selects I2C SDA GPIO7, SCL GPIO8, reset GPIO23, and no interrupt GPIO",
+    "audio": "ES8311 codec, ES7210 echo-cancellation input, and 8-ohm 2W speaker header; official BSP selects I2S MCLK GPIO13, BCLK GPIO12, LRCLK GPIO10, DOUT GPIO9, DIN GPIO11, and amplifier GPIO53",
+    "storage": "official BSP selects ESP32-P4 on-chip LDO channel 4 for socket power, then SD D0/D1/D2/D3 GPIO39/40/41/42, CMD GPIO44, and CLK GPIO43",
+    "usb_uart": "H1 Type-C through CH343P USB-UART; USB0_5V/VBUS is the programming/power connector path",
+    "usb_otg": "H2 Type-C routes USBD_N/USBD_P to ESP32-P4 GPIO24/GPIO25 and exposes VBUS on the connector"
+  },
+  "peripheral_authorizations": {
+    "display": {
+      "authorized": false,
+      "scope": "official-schematic-review-only",
+      "blocker": "exact LCD controller, timing, reset/power/backlight behavior, and physical revision are not yet confirmed"
+    },
+    "touch": {
+      "authorized": false,
+      "scope": "official-schematic-review-only",
+      "blocker": "exact touch controller, address, reset, interrupt, and I2C mapping are not yet confirmed"
+    },
+    "audio": {
+      "authorized": false,
+      "scope": "official-schematic-review-only",
+      "blocker": "Waveshare codec/amplifier initialization and GPIO route are not the Elecrow factory contract"
+    },
+    "storage": {
+      "authorized": true,
+      "scope": "exact-unit-read-only-console-os-mount",
+      "resources": "on-chip LDO channel 4; SDMMC0 at 1 MHz in one-bit mode on GPIO43 CLK, GPIO44 CMD, and GPIO39 D0",
+      "evidence": "hardware/test-runs/2026-08-16-waveshare-console-os-quake-sd-install.json",
+      "formatting_authorized": false,
+      "writes_authorized": false
+    },
+    "usb_host": {
+      "authorized": false,
+      "scope": "official-schematic-review-only",
+      "blocker": "CC1/CC2 are 5.1 kOhm pulldowns; VBUS presence is not proof of a protected host-source path"
+    }
+  },
+  "usb_vbus_assessment": {
+    "otg_connector_has_vbus": true,
+    "otg_data_pins": [24, 25],
+    "cc1_cc2_resistors_ohms": 5100,
+    "advertised_role_from_schematic": "sink/device",
+    "controller_host_power_ready": false,
+    "required_next_test": "measure H2 VBUS with board powered, measure direction/backfeed with board unpowered, and qualify a current-limited powered host fixture"
+  },
+  "port_policy": {
+    "elecrow_10_in_firmware_reuse": "reuse game API, shell, storage abstractions, and platform boundaries only",
+    "do_not_reuse": "Elecrow EK79007/GT911/GPIO31/GPIO40/GPIO42/GPIO45/GPIO46/GPIO30 assumptions",
+    "first_image": "pin-independent bring-up plus board-specific display diagnostic"
+  },
+  "official_bsp": {
+    "repository": "https://github.com/waveshareteam/ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "source_reviewed": true,
+    "hardware_acceptance": false,
+    "usb_host_power_hint": "BSP_USB_HOST_POWER_MODE_USB_DEV is documented as power from the USB DEV port; this does not replace bench proof of VBUS source current, backfeed protection, or fault behavior"
+  }
+}

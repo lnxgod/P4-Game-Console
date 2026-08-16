@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T12:08:24-0700",
+  "result": "fail-closed-before-flash-begin-new-unused-rdid-container-byte",
+  "hardware": {
+    "product": "Elecrow CrowPanel Advanced 10.1 in DHE04310D",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "raw_identity_stored": false,
+    "serial_port": "/dev/cu.wchusbserial10"
+  },
+  "artifact": {
+    "path": "apps/console_os/build-space-invaders/p4_console_os.bin",
+    "offset": "0x10000",
+    "bytes": 4948512,
+    "sha256": "9596617fd86d9cd9abd12a539329c6df2d06e696ca4de6814daa644e56090303",
+    "mutation_span_bytes": 4964352,
+    "mutation_span_sha256": "8a4c7be1bd6dab0fbc24d16217c8d44f18e6ec4aca3a3eb5b7bc3259b25b1ffe"
+  },
+  "transaction": {
+    "phase": "preimage-sealed",
+    "same_uart_handle": true,
+    "install_write_attempt_count": 0,
+    "application_launch_count": 0,
+    "restore_required": false,
+    "restore_attempt_count": 0,
+    "restore_write_attempt_count": 0,
+    "failure_boundary": "e6-write-boundary-before-flash-begin",
+    "failure": "exact flash JEDEC check failed at e6-write-boundary: raw=0xab1840c8"
+  },
+  "jedec_observation": {
+    "post_stub_initial_raw": "0x001840c8",
+    "post_reset_sequence_raw": "0x001840c8",
+    "write_boundary_raw": "0xab1840c8",
+    "canonical_low24": "0x1840c8",
+    "unused_container_high_byte": "0xab",
+    "writes_attempted": 0
+  },
+  "preserved_predecessor": {
+    "directory": "hardware/local-state/console-os-space-invaders-install-20260814",
+    "ledger": {
+      "path": "hardware/local-state/console-os-space-invaders-install-20260814/e6-install-ledger.json",
+      "bytes": 3966,
+      "sha256": "11806151e2eb9383af0582262825fa75237c5ce62721c141d34700a6fa4265df"
+    },
+    "live_preimage": {
+      "path": "hardware/local-state/console-os-space-invaders-install-20260814/live-preimage.bin",
+      "bytes": 4964352,
+      "sha256": "b06fa55270e819a4edd207012a4e076cc057992c36494ad7ca45da7c39124284",
+      "installed_prefix_bytes": 4941776,
+      "installed_prefix_sha256": "f4426c370b9f251aa5a3ae5049b99a4c068067390c351dc680d1b7d36492be36",
+      "installed_padded_span_bytes": 4947968,
+      "installed_padded_span_sha256": "23ec0f631b86bf3b8bbd44e1fc791d2fcf699de9a36b6d6c6c8075c4ea996092"
+    },
+    "partition_table": {
+      "path": "hardware/local-state/console-os-space-invaders-install-20260814/live-partition-table.bin",
+      "bytes": 3072,
+      "sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433"
+    }
+  },
+  "frozen_route": {
+    "authorized_route_sha256": "57baf85944e47ea29e83ddbae91255111b854be9f36fd609fe4763f0afaf7c91",
+    "installer_sha256": "14d0340c163159c6456681036affb41eba3e5aedd91618772501f4e76b3800f2",
+    "authorization_sha256": "ff7ef2cad74a9f70b11b4b8404c23e2fb44a6befbb91621dba2e43fbd87bb3db",
+    "jedec_release_sha256": "0e1f62ee6a016eceaaf714fa350b6ac01415e89527c2fca5c44ac3ebef88028a"
+  },
+  "claims_not_made": [
+    "The 0xab unused container byte is an official JEDEC identity byte.",
+    "Any unused high container byte may be accepted.",
+    "This observation does not authorize another tablet, runtime, stub, or artifact."
+  ]
+}

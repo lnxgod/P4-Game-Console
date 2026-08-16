@@ -1,0 +1,11 @@
+# Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 build overlay.
+# Use together with sdkconfig.defaults only after the ST7701 and ES8311
+# dependencies are resolved from the repository lockfile. This overlay is a
+# build target boundary, not hardware authorization.
+
+CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3=y
+CONFIG_PLATFORM_DISPLAY_WAVESHARE_4_3_BUILD_ONLY=y
+CONFIG_PLATFORM_TOUCH_WAVESHARE_4_3_BUILD_ONLY=y
+CONFIG_PLATFORM_AUDIO_ES8311_WAVESHARE_4_3_BUILD_ONLY=y
+CONFIG_ESPTOOLPY_FLASHSIZE_32MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="32MB"

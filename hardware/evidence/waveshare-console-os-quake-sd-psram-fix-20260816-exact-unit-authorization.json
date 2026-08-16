@@ -1,0 +1,105 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-16T10:55:00-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-quake-sd-psram-corrected-successor",
+  "operator_direction": "Complete the requested latest Console OS update on the exact connected Waveshare 4.3, reusing the existing complete factory backup and leaving the inserted SD card untouched unless formatting is proven necessary.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e",
+    "reused": true
+  },
+  "failed_predecessor": {
+    "offset": "0x10000",
+    "bytes": 5505920,
+    "sha256": "5d0aef32355c391525251b46c9564e2f997ac7faa7084a1c7f4c3ce4bd9d47e3",
+    "elf_sha256": "5fb98e6354f21a994bd4439b464f08c2bd6c49a4b023b0254fae3769ce9c29cc",
+    "install_digest_verified": true,
+    "boot_result": "failed before app_main in a reset loop because the 64 KiB internal DMA reserve could not be allocated",
+    "root_cause": "Quake vendor BSS/common state remained in internal DRAM despite external-BSS support being enabled"
+  },
+  "candidate": {
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "correction": "A component linker fragment maps all libp4_quake.a BSS and common state to external PSRAM. The verifier requires both the linker contract and representative Quake state symbols in the external 0x48000000 memory window. The 64 KiB internal DMA reserve remains unchanged.",
+    "software_contract": {
+      "console_surface": "768x480 landscape",
+      "registered_apps": 15,
+      "native_render_target_fps": 31,
+      "master_volume_default": "8/10",
+      "content_library": "bounded read-only microSD catalog with no formatting or writes",
+      "quake": "optional exact-hash-gated SD easter egg",
+      "multiplayer": "bounded OS-owned core with network transport disabled",
+      "usb_host_enabled": false
+    },
+    "storage_contract": {
+      "controller": "SDMMC0",
+      "mode": "one-bit SDR",
+      "frequency_khz": 1000,
+      "clk_gpio": 43,
+      "cmd_gpio": 44,
+      "d0_gpio": 39,
+      "format_if_mount_failed": false,
+      "firmware_writes": false
+    },
+    "artifacts": [
+      {
+        "role": "bootloader",
+        "offset": "0x2000",
+        "path": "apps/console_os/build-waveshare-landscape/bootloader/bootloader.bin",
+        "bytes": 22912,
+        "sha256": "8daaf8dfa70f2b4bd79d9eb97bb39b1909cbc568352e72bca5199351674a9e68",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "partition-table",
+        "offset": "0x8000",
+        "path": "apps/console_os/build-waveshare-landscape/partition_table/partition-table.bin",
+        "bytes": 3072,
+        "sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "application",
+        "offset": "0x10000",
+        "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+        "bytes": 5505920,
+        "sha256": "5f1aaeabf89c68117453e6152c7bde8c8d53534f8e895488016f312475f7f2e1",
+        "action": "write-and-on-device-digest-verify"
+      }
+    ],
+    "elf": {
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.elf",
+      "bytes": 18099996,
+      "sha256": "edef81e7a56dd450d919a5332e91d3a44f4caa3524595e7652373e67cd2b45dd"
+    }
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_new_factory_backup": false,
+    "verify_installed_bootloader_before_write": true,
+    "verify_installed_partition_table_before_write": true,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "write_only_application": true,
+    "verify_application_on_device_digest_after_write": true,
+    "format_sd_card": false,
+    "write_sd_card": false,
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "boot reaches app_main without an internal DMA reservation failure",
+    "ELF prefix edef81e7a and 15-app registry appear",
+    "768x480 display and touch initialize",
+    "SD reports either CONTENT_READY or bounded STORAGE_DEGRADED without formatting",
+    "launcher amplifier remains off and no panic occurs"
+  ]
+}

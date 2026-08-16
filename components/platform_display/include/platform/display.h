@@ -6,20 +6,31 @@
 #include <stdint.h>
 
 #include "esp_err.h"
+#include "platform/board.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 enum {
-    PLATFORM_DISPLAY_WIDTH = 1024,
-    PLATFORM_DISPLAY_HEIGHT = 600,
-    PLATFORM_DISPLAY_GAME_WIDTH = 320,
-    PLATFORM_DISPLAY_GAME_HEIGHT = 200,
-    PLATFORM_DISPLAY_GAME_SCALE = 3,
-    PLATFORM_DISPLAY_GAME_VIEWPORT_WIDTH = 960,
-    PLATFORM_DISPLAY_GAME_MARGIN_LEFT = 32,
-    PLATFORM_DISPLAY_GAME_MARGIN_RIGHT = 32,
+    PLATFORM_DISPLAY_WIDTH = PLATFORM_BOARD_DISPLAY_WIDTH,
+    PLATFORM_DISPLAY_HEIGHT = PLATFORM_BOARD_DISPLAY_HEIGHT,
+    PLATFORM_DISPLAY_NATIVE_WIDTH = PLATFORM_BOARD_DISPLAY_NATIVE_WIDTH,
+    PLATFORM_DISPLAY_NATIVE_HEIGHT = PLATFORM_BOARD_DISPLAY_NATIVE_HEIGHT,
+    PLATFORM_DISPLAY_ROTATION_CW_DEGREES =
+        PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES,
+    PLATFORM_DISPLAY_GAME_WIDTH = PLATFORM_BOARD_GAME_SURFACE_WIDTH,
+    PLATFORM_DISPLAY_GAME_HEIGHT = PLATFORM_BOARD_GAME_SURFACE_HEIGHT,
+    PLATFORM_DISPLAY_GAME_VIEWPORT_WIDTH =
+        PLATFORM_BOARD_GAME_VIEWPORT_WIDTH,
+    PLATFORM_DISPLAY_GAME_VIEWPORT_HEIGHT =
+        PLATFORM_BOARD_GAME_VIEWPORT_HEIGHT,
+    PLATFORM_DISPLAY_GAME_MARGIN_LEFT = PLATFORM_BOARD_GAME_MARGIN_LEFT,
+    PLATFORM_DISPLAY_GAME_MARGIN_RIGHT = PLATFORM_BOARD_GAME_MARGIN_RIGHT,
+    PLATFORM_DISPLAY_GAME_MARGIN_TOP = PLATFORM_BOARD_GAME_MARGIN_TOP,
+    PLATFORM_DISPLAY_GAME_MARGIN_BOTTOM = PLATFORM_BOARD_GAME_MARGIN_BOTTOM,
+    PLATFORM_DISPLAY_CONTENT_WIDTH = 768,
+    PLATFORM_DISPLAY_CONTENT_HEIGHT = 480,
 };
 
 typedef enum {
@@ -57,10 +68,12 @@ esp_err_t platform_display_show_pattern(platform_display_pattern_t pattern);
  * Copy and present one standard RGB565 320x200 game surface.
  *
  * Each input word uses R[15:11], G[10:5], B[4:0]. The service performs a
- * nearest-neighbor 3x expansion into a centered 960x600 viewport with black
- * 32-pixel side margins. `source_stride_pixels` must be at least 320. The
- * caller retains ownership and may reuse the source only after this call
- * returns.
+ * nearest-neighbor aspect-preserving expansion into the largest centered
+ * viewport that fits the selected board's logical display. On the Waveshare
+ * 4.3-inch target this is a 768x480 viewport with 16-pixel side bars in an
+ * 800x480 landscape canvas, rotated into the panel's native 480x800 scanout.
+ * `source_stride_pixels` must be at least 320. The caller retains ownership
+ * and may reuse the source only after this call returns.
  *
  * Initialization, pattern changes, brightness, and submits are serialized.
  * `timeout_ms` bounds lock acquisition and refresh completion; zero performs
@@ -70,6 +83,19 @@ esp_err_t platform_display_show_pattern(platform_display_pattern_t pattern);
 esp_err_t platform_display_submit_rgb565(const uint16_t *source,
                                          size_t source_stride_pixels,
                                          uint32_t timeout_ms);
+
+/**
+ * Copy and present one direct 768x480 Console OS content surface.
+ *
+ * This is the native surface for P4 Carts and reviewed legacy-engine adapters.
+ * The display service alone scales/centers it for the selected landscape
+ * viewport and rotates it into native panel scanout. Callers never infer the
+ * panel orientation or write DSI buffers directly.
+ */
+esp_err_t platform_display_submit_content_rgb565(
+    const uint16_t *source,
+    size_t source_stride_pixels,
+    uint32_t timeout_ms);
 
 /** Copy the service's monotonic diagnostic counters. */
 esp_err_t platform_display_get_stats(platform_display_stats_t *out_stats);

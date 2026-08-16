@@ -7,6 +7,8 @@ set(P4_GAME_REGISTRY_DIR "${CMAKE_CURRENT_BINARY_DIR}/p4_game_registry")
 set(P4_GAME_REGISTRY_C "${P4_GAME_REGISTRY_DIR}/p4_game_registry.c")
 set(P4_GAME_REGISTRY_H "${P4_GAME_REGISTRY_DIR}/p4_game_registry.h")
 set(P4_GAME_REGISTRY_CMAKE "${P4_GAME_REGISTRY_DIR}/games.cmake")
+set(P4_GAMECHANGERS_AI_LOGO
+    "${CMAKE_CURRENT_LIST_DIR}/assets/gamechangers_ai_logo.rgb565")
 if(CMAKE_SCRIPT_MODE_FILE)
     file(GLOB P4_GAME_MANIFESTS
         "${P4_REPOSITORY_ROOT}/games/*/game.json"
@@ -17,6 +19,9 @@ else()
     )
 endif()
 find_program(P4_PYTHON3_EXECUTABLE NAMES python3 REQUIRED)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${P4_REPOSITORY_ROOT}/scripts/generate-game-registry.py"
+)
 file(MAKE_DIRECTORY "${P4_GAME_REGISTRY_DIR}")
 execute_process(
     COMMAND
@@ -62,10 +67,17 @@ idf_component_register(
         mbedtls
         p4_game_api
         p4_game_platform
+        p4_content_catalog
+        p4_desktop
+        p4_multiplayer
+        p4_quake
+        p4_usb_content_transfer
         platform_audio
+        platform_board
         platform_display
         platform_i2c_shared
         platform_readonly_blob
+        platform_storage
         platform_touch
         vfs
         ${P4_GENERATED_GAME_COMPONENTS}
@@ -100,6 +112,16 @@ target_add_binary_data(
     "${P4_LOCAL_DOOM_WAD}"
     BINARY
     RENAME_TO doom_shareware_wad
+)
+
+if(NOT EXISTS "${P4_GAMECHANGERS_AI_LOGO}")
+    message(FATAL_ERROR "Console OS requires the Game Changers AI boot logo asset")
+endif()
+target_add_binary_data(
+    ${COMPONENT_LIB}
+    "${P4_GAMECHANGERS_AI_LOGO}"
+    BINARY
+    RENAME_TO gamechangers_ai_logo_rgb565
 )
 
 target_compile_definitions(${COMPONENT_LIB} PRIVATE

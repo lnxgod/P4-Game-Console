@@ -21,9 +21,9 @@ bit-exact Yamaha OPL2/OPL3 emulator and does not load arbitrary external MIDI
 files or a SoundFont. It does play the actual level/title MUS sequences; there
 is no canned test melody or hidden fallback tone.
 
-The factory backend remains in its proven format and pin configuration. Its
-volume is now step 6/10, which is 60% linear PCM amplitude at that final
-backend stage. The Doom music menu volume remains independently effective.
+The backend remains in its proven format and pin configuration. Standalone
+Doom defaults to step 8/10; Console OS passes its selected 1–10 master step at
+handoff. The Doom music menu volume remains independently effective.
 
 ## Before building
 
@@ -88,7 +88,7 @@ records. Across those records:
 - music parse failures, audio/backend write failures, video failures, and
   touch failures must remain zero;
 - adapter/backend nonzero-frame counters and peaks must be nonzero;
-- the startup record must show backend volume step 6/10 and the MUS
+- the startup record must show the selected backend volume step and the MUS
   procedural-16voice pipeline;
 - no `SOUND_DEGRADED`, `AUDIO_SAFETY_FAULT`, `HALT`, reset, panic, or USB
   runtime marker may appear.

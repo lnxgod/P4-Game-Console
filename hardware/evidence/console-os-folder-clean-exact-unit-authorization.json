@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "active": true,
+  "recorded_at": "2026-08-14T12:33:13-0700",
+  "scope": "exact-unit-console-os-folder-clean",
+  "operator_direction": "flash-the-folder-image-without-developer-capability-badges",
+  "device_binding": {
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216
+  },
+  "exact_artifact": {
+    "offset": "0x10000",
+    "app_binary_bytes": 4951552,
+    "app_binary_sha256": "636ee38221197c0c7b02c5d04ea19ddfac0a3c6dbd9b2719d8bb21dfb1658a7d",
+    "elf_bytes": 14302372,
+    "elf_sha256": "5925c2db5a2a4c27b3bf5019deb13cf13a33d69e8ec53a4e52283c1b44570e15",
+    "bootloader_bytes": 22912,
+    "bootloader_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+    "app_partition_bytes": 11534336,
+    "partition_free_bytes": 6582784,
+    "mutation_span_bytes": 4964352,
+    "mutation_span_sha256": "ad863f0b1b8377692a22168cad5601b3f3f49fa5b7ab126b12d4df98c83a8f96",
+    "mutation_tail_byte": "ff",
+    "contains_ignored_shareware_wad": true,
+    "redistribution_authorized": false
+  },
+  "build_evidence": {
+    "path": "test-runs/2026-08-14-console-os-folder-clean-build.json",
+    "sha256": "c98c28ea3124beed854efcb96f2172a463c937f852373d56cd2f793ba607d40c"
+  },
+  "exact_unit_audio_release": {
+    "path": "hardware/evidence/console-os-folder-clean-exact-unit-audio-release.json",
+    "sha256": "e5f8cf589518766320de4dc50f0de9e74f8e2591de36e43bd0c1c5a1e65e7c0e"
+  },
+  "jedec_normalization": {
+    "path": "hardware/evidence/console-os-folder-clean-jedec-normalization.json",
+    "sha256": "180b7303752f9407ffeb44124730d8d97ccbfba671120d8c6dda85d10253ce4c"
+  },
+  "installed_predecessor": {
+    "path": "hardware/test-runs/2026-08-14-console-os-space-invaders-install.json",
+    "sha256": "d88bcb6023730d2fe70f0b6f9f28c3cd15762d3c79983d358536fbbd3e90f4e8",
+    "artifact_sha256": "9596617fd86d9cd9abd12a539329c6df2d06e696ca4de6814daa644e56090303",
+    "mutation_span_sha256": "8a4c7be1bd6dab0fbc24d16217c8d44f18e6ec4aca3a3eb5b7bc3259b25b1ffe",
+    "completed_ledger": {
+      "path": "hardware/local-state/console-os-space-invaders-install-20260814-attempt3/e6-install-ledger.json",
+      "sha256": "efa9983ac3d376443253a5a6d235529db5cc2dcb5d5bd6182264199091f026e1",
+      "phase": "e6-runtime-accepted",
+      "restore_required": false
+    }
+  },
+  "launcher_contract": {
+    "registered_app_count": 7,
+    "root_tiles": ["ALL PROGRAMS", "GAMES", "SYSTEM"],
+    "game_type_folders": ["ACTION", "ARCADE"],
+    "kid_facing_capability_badges_visible": false,
+    "capability_metadata_retained_internally": true
+  },
+  "frozen_primitives": {
+    "predecessor_installer_sha256": "2166d7997fe49003d0d17a389373e68818bd3abd4536c274488c7c6bf54cbc27",
+    "base_installer_sha256": "0887dbcc43d79f48e06628eca21c518974ef900ff8f8cb025d63bb2bbf44c491",
+    "transport_sha256": "f5d2255f37ca9373fdaf42ebe711968c31dc51b3dbbc2f7e501a235fbb546471",
+    "startup_capture_sha256": "cdb2c124f0f1e58aaaac7f13d416eff00cb044cc0f13232afa8537d8645aa571",
+    "startup_signature": "P4_CONSOLE_OS START shell=freertos-native apps=7 surface=rgb565-320x200 touch=gt911 native_game_api=1 native_format=p4-native-static-v1 execution=build-candidate",
+    "accepted_rdid_high_bytes": ["0x00", "0xab", "0xfc", "0xff"]
+  },
+  "execution_contract": {
+    "same_uart_handle": true,
+    "live_full_span_preimage_required": true,
+    "app_partition_only": true,
+    "retained_launcher_capture_required": true,
+    "automatic_restore_on_capture_failure": true,
+    "launcher_audio_hardware_calls": 0,
+    "native_game_audio_deferred_until_user_launch": true,
+    "usb_runtime": false,
+    "recovery_directory": "hardware/local-state/console-os-folder-clean-install-20260814"
+  }
+}

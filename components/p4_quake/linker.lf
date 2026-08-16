@@ -1,0 +1,9 @@
+[scheme:p4_quake_external_state]
+entries:
+    bss -> extern_ram
+    common -> extern_ram
+
+[mapping:p4_quake_external_state]
+archive: libp4_quake.a
+entries:
+    * (p4_quake_external_state)

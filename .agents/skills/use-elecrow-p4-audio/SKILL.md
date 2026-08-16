@@ -32,6 +32,13 @@ binds the one device identity, pinned factory source, prior nondamaging run,
 allowed GPIOs, recovery image, and explicit risk acceptance. Never promote that
 exception to another unit, PCB revision, or general pin map.
 
+The repository already records that exception for the bound tablet identity
+`4ea036…`: Doom SFX and recognizable MUS music were operator-confirmed, and
+Console OS Game API v1 has an active exact-unit factory-audio release. Do not
+describe this tablet's audio as runtime-blocked. A changed artifact still needs
+its own immutable release and guarded install route; the exception remains
+non-reusable and does not authorize another unit.
+
 ## Preserve the factory-compatible path
 
 - Use I2S1 as master at 16 kHz, signed PCM16 stereo.
@@ -48,6 +55,11 @@ exception to another unit, PCB revision, or general pin map.
   pinned factory `my_codec` control object is an in-memory register shim.
 - Use `components/platform_audio_factory`; applications consume the counted
   `platform/audio.h` adapter and do not own raw I2S or GPIO handles.
+- Native Console OS games request `P4_GAME_CAP_AUDIO_TONE`,
+  `P4_GAME_CAP_AUDIO_STREAM`, or both. Stream clients submit 1–256 already
+  mixed 16 kHz PCM16-stereo frames; the host copies whole accepted blocks into
+  its fixed 512-frame FIFO and is the only code that writes the platform
+  adapter. A full FIFO returns `false`; games drop/degrade rather than spin.
 - On the exact-unit E6 path, mix validated Doom WAD MUS lumps with native 16 kHz
   effects above the stable platform boundary using the bounded procedural synth.
   It requires no external MIDI hardware, codec traffic, or SoundFont and does

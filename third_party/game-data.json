@@ -38,6 +38,27 @@
       "source_commit": "cfb8644b1a8dc7d7d2177e6a892ccaa2922bdaae",
       "license": "BSD-3-Clause",
       "notice": "Preferred redistributable game data for public reproducibility; supply separately and preserve Freedoom notices."
+    },
+    {
+      "id": "quake-shareware-1.06-pak0",
+      "filename": "pak0.pak",
+      "local_path": "local-data/quake/id1/pak0.pak",
+      "sd_path": "/sdcard/GAMES/QUAKE/ID1/PAK0.PAK",
+      "kind": "Quake PAK",
+      "version": "1.06 shareware episode",
+      "size_bytes": 18689235,
+      "md5": "5906e5998fc3d896ddaf5e6a62e03abb",
+      "sha256": "35a9c55e5e5a284a159ad2a62e0e8def23d829561fe2f54eb402dbc0a9a946af",
+      "source_archive": {
+        "filename": "quake106.zip",
+        "url": "https://ftp.gwdg.de/pub/misc/ftp.idsoftware.com/idstuff/quake/quake106.zip",
+        "size_bytes": 9094045,
+        "sha256": "ec6c9d34b1ae0252ac0066045b6611a7919c2a0d78a3a66d9387a8f597553239",
+        "publisher": "id Software",
+        "contained_archive": "resource.1",
+        "license_file": "SLICNSE.TXT"
+      },
+      "notice": "Local development and user-supplied SD input only. Do not commit, embed, modify, or redistribute the extracted PAK from this project. The original shareware license permits only constrained distribution of the complete unmodified package with its agreement."
     }
   ]
 }

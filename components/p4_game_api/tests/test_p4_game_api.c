@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "p4/audio.h"
+#include "p4/achievements.h"
 #include "p4/draw.h"
 #include "p4/game.h"
 #include "p4/input.h"
@@ -67,7 +68,8 @@ static const p4_game_descriptor_t s_fixture_game = {
     .subtitle = "HOST TEST",
     .accent_rgb565 = UINT16_C(0x07e0),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,
+    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
+                             P4_GAME_CAP_AUDIO_STREAM,
     .state_bytes = sizeof(fixture_state_t),
     .start = fixture_start,
     .update = fixture_update,
@@ -79,8 +81,13 @@ static p4_physical_touch_t physical(unsigned logical_x, unsigned logical_y)
 {
     const p4_physical_touch_t point = {
         .x = (uint16_t)(P4_INPUT_VIEWPORT_LEFT +
-                        logical_x * P4_INPUT_VIEWPORT_SCALE),
-        .y = (uint16_t)(logical_y * P4_INPUT_VIEWPORT_SCALE),
+                        ((2U * logical_x + 1U) *
+                         P4_INPUT_VIEWPORT_WIDTH) /
+                            (2U * P4_GAME_SURFACE_WIDTH)),
+        .y = (uint16_t)(P4_INPUT_VIEWPORT_TOP +
+                        ((2U * logical_y + 1U) *
+                         P4_INPUT_VIEWPORT_HEIGHT) /
+                            (2U * P4_GAME_SURFACE_HEIGHT)),
     };
     return point;
 }
@@ -88,13 +95,21 @@ static p4_physical_touch_t physical(unsigned logical_x, unsigned logical_y)
 static void test_input_mapper(void)
 {
     p4_game_point_t logical;
-    CHECK(p4_game_map_physical_touch(32U, 0U, &logical));
+    CHECK(p4_game_map_physical_touch(P4_INPUT_VIEWPORT_LEFT,
+                                     P4_INPUT_VIEWPORT_TOP, &logical));
     CHECK(logical.x == 0U && logical.y == 0U);
-    CHECK(p4_game_map_physical_touch(991U, 599U, &logical));
+    CHECK(p4_game_map_physical_touch(
+        P4_INPUT_VIEWPORT_LEFT + P4_INPUT_VIEWPORT_WIDTH - 1U,
+        P4_INPUT_VIEWPORT_TOP + P4_INPUT_VIEWPORT_HEIGHT - 1U, &logical));
     CHECK(logical.x == 319U && logical.y == 199U);
-    CHECK(!p4_game_map_physical_touch(31U, 100U, &logical));
-    CHECK(!p4_game_map_physical_touch(992U, 100U, &logical));
-    CHECK(!p4_game_map_physical_touch(100U, 600U, &logical));
+    CHECK(!p4_game_map_physical_touch(P4_INPUT_VIEWPORT_LEFT - 1U,
+                                      P4_INPUT_VIEWPORT_TOP, &logical));
+    CHECK(!p4_game_map_physical_touch(
+        P4_INPUT_VIEWPORT_LEFT + P4_INPUT_VIEWPORT_WIDTH,
+        P4_INPUT_VIEWPORT_TOP, &logical));
+    CHECK(!p4_game_map_physical_touch(
+        P4_INPUT_VIEWPORT_LEFT,
+        P4_INPUT_VIEWPORT_TOP + P4_INPUT_VIEWPORT_HEIGHT, &logical));
 
     p4_game_input_mapper_t mapper;
     p4_game_input_mapper_init(&mapper);
@@ -213,6 +228,94 @@ static void test_audio_mixer(void)
     CHECK(stats.active_voices == 0U);
 }
 
+static void test_audio_stream(void)
+{
+    p4_audio_mixer_t mixer;
+    p4_audio_mixer_init(&mixer);
+    int16_t source[P4_GAME_MAX_AUDIO_STREAM_FRAMES * 2U];
+    int16_t output[P4_GAME_MAX_AUDIO_STREAM_FRAMES * 2U];
+    for (size_t frame = 0U;
+         frame < P4_GAME_MAX_AUDIO_STREAM_FRAMES; ++frame) {
+        source[frame * 2U] = (int16_t)frame;
+        source[frame * 2U + 1U] = (int16_t)(-(int16_t)frame);
+    }
+    CHECK(p4_audio_mixer_submit_pcm16_stereo(
+        &mixer, source, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
+    memset(source, 0, sizeof(source));
+    CHECK(p4_audio_mixer_render(
+        &mixer, output, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
+    for (size_t frame = 0U;
+         frame < P4_GAME_MAX_AUDIO_STREAM_FRAMES; ++frame) {
+        CHECK(output[frame * 2U] == (int16_t)frame);
+        CHECK(output[frame * 2U + 1U] == (int16_t)(-(int16_t)frame));
+    }
+
+    p4_audio_mixer_stats_t stats;
+    p4_audio_mixer_get_stats(&mixer, &stats);
+    CHECK(stats.stream_blocks_submitted == 1U);
+    CHECK(stats.stream_frames_submitted ==
+          P4_GAME_MAX_AUDIO_STREAM_FRAMES);
+    CHECK(stats.stream_queued_frames == 0U);
+    CHECK(stats.stream_active);
+    CHECK(stats.stream_underrun_frames == 0U);
+    CHECK(p4_audio_mixer_render(&mixer, output, 1U));
+    CHECK(output[0] == 0 && output[1] == 0);
+    p4_audio_mixer_get_stats(&mixer, &stats);
+    CHECK(stats.stream_underrun_frames == 1U);
+
+    for (size_t sample = 0U; sample < sizeof(source) / sizeof(source[0]);
+         ++sample) {
+        source[sample] = INT16_C(1234);
+    }
+    p4_audio_mixer_stop_all(&mixer);
+    CHECK(p4_audio_mixer_submit_pcm16_stereo(
+        &mixer, source, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
+    CHECK(p4_audio_mixer_submit_pcm16_stereo(
+        &mixer, source, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
+    CHECK(!p4_audio_mixer_submit_pcm16_stereo(&mixer, source, 1U));
+    CHECK(p4_audio_mixer_render(
+        &mixer, output, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
+    CHECK(p4_audio_mixer_submit_pcm16_stereo(
+        &mixer, source, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
+    CHECK(p4_audio_mixer_render(
+        &mixer, output, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
+    CHECK(p4_audio_mixer_render(
+        &mixer, output, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
+    for (size_t sample = 0U; sample < sizeof(output) / sizeof(output[0]);
+         ++sample) {
+        CHECK(output[sample] == INT16_C(1234));
+    }
+    p4_audio_mixer_get_stats(&mixer, &stats);
+    CHECK(stats.stream_blocks_rejected == 1U);
+    CHECK(stats.stream_queued_frames == 0U);
+
+    p4_audio_mixer_stop_all(&mixer);
+    const int16_t loud[] = {INT16_C(30000), INT16_C(-32000)};
+    const p4_tone_t tone = {
+        .frequency_hz = 440U,
+        .duration_ms = 10U,
+        .volume_step = 10U,
+        .waveform = P4_WAVE_SQUARE,
+    };
+    CHECK(p4_audio_mixer_submit_pcm16_stereo(&mixer, loud, 1U));
+    CHECK(p4_audio_mixer_play_tone(&mixer, &tone));
+    CHECK(p4_audio_mixer_render(&mixer, output, 1U));
+    CHECK(output[0] == INT16_MAX);
+    CHECK(output[1] == INT16_C(-28000));
+    p4_audio_mixer_get_stats(&mixer, &stats);
+    CHECK(stats.clipped_samples == 1U);
+
+    CHECK(!p4_audio_mixer_submit_pcm16_stereo(NULL, source, 1U));
+    CHECK(!p4_audio_mixer_submit_pcm16_stereo(&mixer, NULL, 1U));
+    CHECK(!p4_audio_mixer_submit_pcm16_stereo(&mixer, source, 0U));
+    CHECK(!p4_audio_mixer_submit_pcm16_stereo(
+        &mixer, source, P4_GAME_MAX_AUDIO_STREAM_FRAMES + 1U));
+    p4_audio_mixer_stop_all(&mixer);
+    p4_audio_mixer_get_stats(&mixer, &stats);
+    CHECK(!stats.stream_active);
+    CHECK(stats.stream_queued_frames == 0U);
+}
+
 static void test_game_runtime(void)
 {
     CHECK(p4_game_descriptor_valid(&s_fixture_game));
@@ -226,20 +329,49 @@ static void test_game_runtime(void)
 
     p4_audio_mixer_t mixer;
     p4_audio_mixer_init(&mixer);
+    p4_achievement_catalog_t achievements;
+    p4_achievement_catalog_init(&achievements);
     const p4_game_services_t services = {
         .available_capabilities = P4_GAME_CAP_VIDEO |
                                   P4_GAME_CAP_CONTROLS |
-                                  P4_GAME_CAP_AUDIO_TONE,
+                                  P4_GAME_CAP_AUDIO_TONE |
+                                  P4_GAME_CAP_AUDIO_STREAM,
         .audio_context = &mixer,
+        .game_id = s_fixture_game.id,
         .play_tone = p4_audio_mixer_service_play_tone,
-        .submit_pcm16_stereo = NULL,
+        .submit_pcm16_stereo =
+            p4_audio_mixer_service_submit_pcm16_stereo,
         .stop_audio = p4_audio_mixer_service_stop,
+        .achievement_context = &achievements,
+        .unlock_achievement = p4_achievement_catalog_service_unlock,
     };
+    p4_game_services_t invalid_services = services;
+    invalid_services.submit_pcm16_stereo = NULL;
+    p4_game_instance_t rejected = {0};
+    fixture_state_t rejected_state;
+    CHECK(!p4_game_instance_start(
+        &rejected, &s_fixture_game, &invalid_services,
+        &rejected_state, sizeof(rejected_state)));
     fixture_state_t state;
     p4_game_instance_t instance = {0};
     CHECK(p4_game_instance_start(&instance, &s_fixture_game, &services,
                                  &state, sizeof(state)));
     CHECK(state.starts == 1U);
+    CHECK(p4_game_unlock_achievement(
+        &instance.context, "hello", "HELLO WORLD", "UNLOCK A BADGE"));
+    CHECK(achievements.count == 1U);
+    CHECK(strcmp(achievements.entries[0].game_id, s_fixture_game.id) == 0);
+    CHECK(p4_game_unlock_achievement(
+        &instance.context, "hello", "HELLO WORLD", "UNLOCK A BADGE"));
+    CHECK(achievements.count == 1U);
+    CHECK(achievements.duplicate_events == 1U);
+    const int16_t pcm[] = {INT16_C(100), INT16_C(-100)};
+    CHECK(p4_game_submit_pcm16_stereo(&instance.context, pcm, 1U));
+    CHECK(!p4_game_submit_pcm16_stereo(
+        &instance.context, pcm, P4_GAME_MAX_AUDIO_STREAM_FRAMES + 1U));
+    p4_audio_mixer_stats_t audio_stats;
+    p4_audio_mixer_get_stats(&mixer, &audio_stats);
+    CHECK(audio_stats.stream_queued_frames == 1U);
     p4_game_input_t input = {
         .touch_valid = true,
     };
@@ -271,12 +403,29 @@ static void test_game_runtime(void)
     CHECK(!instance.active);
 }
 
+static void test_achievement_bounds(void)
+{
+    p4_achievement_catalog_t achievements;
+    p4_achievement_catalog_init(&achievements);
+    const p4_game_achievement_t invalid = {
+        .game_id = "org.p4.fixture",
+        .id = "",
+        .title = "INVALID",
+        .description = "NO ID",
+    };
+    CHECK(!p4_achievement_catalog_unlock(&achievements, &invalid));
+    CHECK(achievements.rejected_events == 1U);
+    CHECK(p4_achievement_catalog_get(&achievements, 0U) == NULL);
+}
+
 int main(void)
 {
     test_input_mapper();
     test_draw_bounds();
     test_audio_mixer();
+    test_audio_stream();
     test_game_runtime();
+    test_achievement_bounds();
     if (s_failures != 0) {
         fprintf(stderr, "%d p4 game API test failure(s)\n", s_failures);
         return EXIT_FAILURE;

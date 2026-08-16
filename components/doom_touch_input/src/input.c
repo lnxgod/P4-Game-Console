@@ -15,16 +15,16 @@ typedef struct {
 } round_control_t;
 
 static const round_control_t s_round_controls[] = {
-    {900U, 455U, 105U, DOOM_TOUCH_ACTION_FIRE},
-    {742U, 486U, 58U, DOOM_TOUCH_ACTION_USE},
-    {770U, 350U, 54U, DOOM_TOUCH_ACTION_RUN},
-    {640U, 430U, 50U, DOOM_TOUCH_ACTION_STRAFE},
-    {80U, 68U, 42U, DOOM_TOUCH_ACTION_MAP},
-    {178U, 68U, 42U, DOOM_TOUCH_ACTION_MENU_BACK},
-    {625U, 68U, 42U, DOOM_TOUCH_ACTION_WEAPON_PREVIOUS},
-    {723U, 68U, 42U, DOOM_TOUCH_ACTION_WEAPON_NEXT},
-    {840U, 68U, 42U, DOOM_TOUCH_ACTION_MENU_ACCEPT},
-    {945U, 68U, 42U, DOOM_TOUCH_ACTION_PAUSE},
+    {289U, 151U, 35U, DOOM_TOUCH_ACTION_FIRE},
+    {237U, 162U, 19U, DOOM_TOUCH_ACTION_USE},
+    {246U, 117U, 18U, DOOM_TOUCH_ACTION_RUN},
+    {203U, 143U, 17U, DOOM_TOUCH_ACTION_STRAFE},
+    {16U, 23U, 14U, DOOM_TOUCH_ACTION_MAP},
+    {49U, 23U, 14U, DOOM_TOUCH_ACTION_MENU_BACK},
+    {197U, 23U, 14U, DOOM_TOUCH_ACTION_WEAPON_PREVIOUS},
+    {230U, 23U, 14U, DOOM_TOUCH_ACTION_WEAPON_NEXT},
+    {269U, 23U, 14U, DOOM_TOUCH_ACTION_MENU_ACCEPT},
+    {304U, 23U, 14U, DOOM_TOUCH_ACTION_PAUSE},
 };
 
 static uint32_t action_bit(doom_touch_action_t action)
@@ -57,15 +57,36 @@ static bool frame_valid(const doom_touch_frame_t *frame)
 }
 
 static bool inside_round(
-    const doom_touch_contact_t *contact,
+    uint16_t x,
+    uint16_t y,
     const round_control_t *control
 )
 {
-    const int32_t dx = (int32_t)contact->x - (int32_t)control->center_x;
-    const int32_t dy = (int32_t)contact->y - (int32_t)control->center_y;
+    const int32_t dx = (int32_t)x - (int32_t)control->center_x;
+    const int32_t dy = (int32_t)y - (int32_t)control->center_y;
     const uint32_t distance_squared =
         (uint32_t)(dx * dx) + (uint32_t)(dy * dy);
     return distance_squared <= (uint32_t)control->radius * control->radius;
+}
+
+static bool map_to_frame(const doom_touch_contact_t *contact,
+                         uint16_t *frame_x,
+                         uint16_t *frame_y)
+{
+    const uint16_t relative_x =
+        (uint16_t)(contact->x - DOOM_TOUCH_VIEWPORT_LEFT);
+    const uint16_t relative_y =
+        (uint16_t)(contact->y - DOOM_TOUCH_VIEWPORT_TOP);
+    if (relative_x >= DOOM_TOUCH_VIEWPORT_WIDTH ||
+        relative_y >= DOOM_TOUCH_VIEWPORT_HEIGHT) {
+        return false;
+    }
+    *frame_x = (uint16_t)(((uint32_t)relative_x * DOOM_TOUCH_FRAME_WIDTH) /
+                          DOOM_TOUCH_VIEWPORT_WIDTH);
+    *frame_y = (uint16_t)(((uint32_t)relative_y * DOOM_TOUCH_FRAME_HEIGHT) /
+                          DOOM_TOUCH_VIEWPORT_HEIGHT);
+    return *frame_x < DOOM_TOUCH_FRAME_WIDTH &&
+        *frame_y < DOOM_TOUCH_FRAME_HEIGHT;
 }
 
 static uint32_t desired_actions(const doom_touch_frame_t *frame)
@@ -73,22 +94,27 @@ static uint32_t desired_actions(const doom_touch_frame_t *frame)
     uint32_t actions = 0U;
     for (unsigned index = 0U; index < frame->contact_count; ++index) {
         const doom_touch_contact_t *const contact = &frame->contacts[index];
+        uint16_t frame_x = 0U;
+        uint16_t frame_y = 0U;
+        if (!map_to_frame(contact, &frame_x, &frame_y)) {
+            continue;
+        }
 
         /* A bounded virtual stick occupies the lower-left portion. */
-        if (contact->x <= 390U && contact->y >= 250U) {
-            const int32_t dx = (int32_t)contact->x - INT32_C(180);
-            const int32_t dy = (int32_t)contact->y - INT32_C(445);
+        if (frame_x <= 119U && frame_y >= 83U) {
+            const int32_t dx = (int32_t)frame_x - INT32_C(49);
+            const int32_t dy = (int32_t)frame_y - INT32_C(148);
             const uint32_t radius_squared =
                 (uint32_t)(dx * dx) + (uint32_t)(dy * dy);
-            if (radius_squared <= UINT32_C(40000)) {
-                if (dx <= -45) {
+            if (radius_squared <= UINT32_C(4489)) {
+                if (dx <= -15) {
                     actions |= action_bit(DOOM_TOUCH_ACTION_LEFT);
-                } else if (dx >= 45) {
+                } else if (dx >= 15) {
                     actions |= action_bit(DOOM_TOUCH_ACTION_RIGHT);
                 }
-                if (dy <= -45) {
+                if (dy <= -15) {
                     actions |= action_bit(DOOM_TOUCH_ACTION_UP);
-                } else if (dy >= 45) {
+                } else if (dy >= 15) {
                     actions |= action_bit(DOOM_TOUCH_ACTION_DOWN);
                 }
             }
@@ -100,7 +126,7 @@ static uint32_t desired_actions(const doom_touch_frame_t *frame)
              ++control_index) {
             const round_control_t *const control =
                 &s_round_controls[control_index];
-            if (inside_round(contact, control)) {
+            if (inside_round(frame_x, frame_y, control)) {
                 actions |= action_bit(control->action);
                 if (control->action == DOOM_TOUCH_ACTION_FIRE) {
                     actions |= action_bit(DOOM_TOUCH_ACTION_MENU_ACCEPT);

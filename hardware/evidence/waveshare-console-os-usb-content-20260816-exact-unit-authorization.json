@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-16T13:05:14-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-h1-usb-content-successor",
+  "operator_direction": "Install the app-only Console OS successor that keeps the launcher responsive during SD validation and prevents Quake startup from starving the system watchdog. Reuse the exact Quake shareware PAK already installed on SD.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e",
+    "reused": true
+  },
+  "predecessor": {
+    "offset": "0x10000",
+    "bytes": 5538016,
+    "sha256": "e45842fd43736b9e11a55a78a9a81cf9df691ffb090553080f9e0313b07981db",
+    "elf_sha256": "f99881d5a3bc1814e25b79f615b9a7333b9681351117be51fbc67b3078e5edde",
+    "acceptance": "booted the 15-app 768x480 launcher immediately; background SD validation completed without a watchdog reset; exact Quake shareware PAK validation passed",
+    "content_result": "PAK0.PAK is present and exact; foreground touch remained paused during the background validation, requiring one final scheduler-policy correction"
+  },
+  "candidate": {
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "software_contract": {
+      "console_surface": "768x480 landscape",
+      "registered_apps": 15,
+      "native_render_target_fps": 31,
+      "master_volume_default": "8/10",
+      "sd_mount": "no-format with Waveshare on-chip LDO channel 4",
+      "content_transport": "H1 programming USB-C through CH343 UART",
+      "idle_baud": 115200,
+      "transfer_baud": 921600,
+      "chunk_bytes": 4096,
+      "chunk_crc32": true,
+      "host_supplied_paths": false,
+      "staging_path": "/sdcard/GAMES/QUAKE/ID1/P4Q.TMP",
+      "destination_path": "/sdcard/GAMES/QUAKE/ID1/PAK0.PAK",
+      "activation": "exact-size-and-sha256 gate, fsync, full readback validation, atomic same-filesystem rename, reboot and boot-catalog revalidation",
+      "boot_catalog_scan": "background task with PSRAM stack; foreground touch and rendering remain serviced",
+      "quake_sd_reads": "4096-byte bounded reads with a scheduler delay between chunks",
+      "usb_host_enabled": false,
+      "usb_vbus_policy_changed": false
+    },
+    "artifacts": [
+      {
+        "role": "bootloader",
+        "offset": "0x2000",
+        "path": "apps/console_os/build-waveshare-landscape/bootloader/bootloader.bin",
+        "bytes": 22912,
+        "sha256": "8daaf8dfa70f2b4bd79d9eb97bb39b1909cbc568352e72bca5199351674a9e68",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "partition-table",
+        "offset": "0x8000",
+        "path": "apps/console_os/build-waveshare-landscape/partition_table/partition-table.bin",
+        "bytes": 3072,
+        "sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "application",
+        "offset": "0x10000",
+        "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+        "bytes": 5538176,
+        "sha256": "00a6436c7c8f7b7b48f78fab32fd3f4ee216b267080b2ea2190e9df66d3df254",
+        "action": "write-and-on-device-digest-verify"
+      }
+    ],
+    "elf": {
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.elf",
+      "bytes": 18187968,
+      "sha256": "8ed0a0d583e2dbfaf1673d17c35f7445ba1784e20e8c5ae847a06919f62443bd"
+    }
+  },
+  "content_input": {
+    "path": "local-data/quake/id1/pak0.pak",
+    "bytes": 18689235,
+    "sha256": "35a9c55e5e5a284a159ad2a62e0e8def23d829561fe2f54eb402dbc0a9a946af",
+    "identity": "Quake v1.06 shareware PAK",
+    "gitignored": true,
+    "redistribution": false
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_new_factory_backup": false,
+    "verify_installed_bootloader_before_write": true,
+    "verify_installed_partition_table_before_write": true,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "write_only_application": true,
+    "verify_application_on_device_digest_after_write": true,
+    "format_sd_card": false,
+    "usb_content_write_after_verified_boot": true,
+    "content_write_scope": "reserved Quake staging and final paths only",
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "boot reaches the 15-app 768x480 launcher without panic and remains touch-responsive while content validation runs",
+    "the 64 KiB internal DMA reserve succeeds",
+    "SD mounts and the Library reports USB COPY READY",
+    "H1 transport negotiates 921600 baud and acknowledges every CRC-protected chunk",
+    "device reports the exact 18689235-byte SHA-256 completion proof",
+    "background catalog validation reports CONTENT_READY with quake_shareware=1",
+    "Quake launcher entry is enabled",
+    "Quake passes Host_Init and presents its first frame without a watchdog reset",
+    "launcher amplifier remains off",
+    "USB host and VBUS behavior remain unchanged"
+  ]
+}

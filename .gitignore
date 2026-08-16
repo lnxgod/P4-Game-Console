@@ -21,9 +21,13 @@ __pycache__/
 # Doom game data is supplied locally and never committed or embedded.
 *.[Ww][Aa][Dd]
 
+# Quake game data is supplied locally/on SD and never committed or embedded.
+*.[Pp][Aa][Kk]
+
 # Device-specific recovery images are kept locally, never in Git.
 hardware/backups/*.bin
 test-runs/doom-e6-rollback-*/
 
 # Per-device one-shot authorization ledgers and launch receipts are local only.
 hardware/local-state/
+local-data/quake/id1/pak0.pak

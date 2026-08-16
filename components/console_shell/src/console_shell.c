@@ -3,38 +3,195 @@
 #include "console/shell.h"
 
 #include <limits.h>
+#include <stdio.h>
 #include <string.h>
 
 enum {
-    TILE_LEFT = 8,
-    TILE_TOP = 43,
-    TILE_WIDTH = 148,
-    TILE_HEIGHT = 44,
-    TILE_COLUMN_GAP = 8,
-    TILE_ROW_GAP = 6,
+    WINDOW_LEFT = 3,
+    WINDOW_TOP = 3,
+    WINDOW_WIDTH = 314,
+    WINDOW_HEIGHT = 194,
+    TITLE_LEFT = 7,
+    TITLE_TOP = 7,
+    TITLE_WIDTH = 306,
+    TITLE_HEIGHT = 17,
+    TILE_LEFT = 11,
+    TILE_TOP = 44,
+    TILE_WIDTH = 91,
+    TILE_HEIGHT = 61,
+    TILE_COLUMN_GAP = 4,
+    TILE_ROW_GAP = 5,
+    GRID_WIDTH = CONSOLE_SHELL_APP_COLUMNS * TILE_WIDTH +
+        (CONSOLE_SHELL_APP_COLUMNS - 1) * TILE_COLUMN_GAP,
+    GRID_HEIGHT = CONSOLE_SHELL_VISIBLE_APP_ROWS * TILE_HEIGHT +
+        (CONSOLE_SHELL_VISIBLE_APP_ROWS - 1) * TILE_ROW_GAP,
     BACK_LEFT = 6,
     BACK_TOP = 6,
     BACK_WIDTH = 54,
     BACK_HEIGHT = 20,
     BACK_CONTROL = CONSOLE_SHELL_MAX_APPS,
-    PAGE_PREVIOUS_CONTROL,
-    PAGE_NEXT_CONTROL,
-    PAGE_BUTTON_TOP = 7,
-    PAGE_BUTTON_WIDTH = 24,
-    PAGE_BUTTON_HEIGHT = 24,
-    PAGE_PREVIOUS_LEFT = 262,
-    PAGE_NEXT_LEFT = 291,
+    FOLDER_UP_CONTROL,
+    SCROLL_UP_CONTROL,
+    SCROLL_DOWN_CONTROL,
+    VOLUME_DOWN_CONTROL,
+    VOLUME_UP_CONTROL,
+    COLOR_MODE_CONTROL_BASE,
+    COLOR_MODE_CONTROL_LIMIT =
+        COLOR_MODE_CONTROL_BASE + CONSOLE_COLOR_MODE_COUNT,
+    LIBRARY_REFRESH_CONTROL,
+    FILE_SORT_NAME_CONTROL,
+    FILE_SORT_TYPE_CONTROL,
+    FILE_SORT_SIZE_CONTROL,
+    FILE_USB_EXPORT_CONTROL,
+    FILE_ROW_CONTROL_BASE,
+    TERMINAL_KEY_CONTROL_BASE = FILE_ROW_CONTROL_BASE +
+        P4_DESKTOP_MAX_FILES,
+    TERMINAL_SPACE_CONTROL = TERMINAL_KEY_CONTROL_BASE + 40,
+    HOME_ITEM_CONTROL_BASE,
+    SCROLL_LEFT = 297,
+    SCROLL_WIDTH = 15,
+    SCROLL_UP_TOP = 43,
+    SCROLL_DOWN_TOP = 158,
+    SCROLL_BUTTON_HEIGHT = 15,
+    SCROLL_TRACK_TOP = 58,
+    SCROLL_TRACK_HEIGHT = 100,
+    SCROLL_DRAG_THRESHOLD = 18,
+    SCROLL_DRAG_ROW_STEP = 32,
+    VOLUME_DOWN_LEFT = 88,
+    VOLUME_UP_LEFT = 196,
+    VOLUME_BUTTON_TOP = 120,
+    VOLUME_BUTTON_WIDTH = 42,
+    VOLUME_BUTTON_HEIGHT = 30,
+    LIBRARY_REFRESH_LEFT = 218,
+    LIBRARY_REFRESH_TOP = 160,
+    LIBRARY_REFRESH_WIDTH = 91,
+    LIBRARY_REFRESH_HEIGHT = 27,
+    FILE_HEADER_TOP = 39,
+    FILE_HEADER_HEIGHT = 16,
+    FILE_ROW_TOP = 57,
+    FILE_ROW_HEIGHT = 17,
+    FILE_VISIBLE_ROWS = 6,
+    TERMINAL_KEY_LEFT = 10,
+    TERMINAL_KEY_TOP = 96,
+    TERMINAL_KEY_WIDTH = 29,
+    TERMINAL_KEY_HEIGHT = 17,
+    TERMINAL_KEY_GAP = 1,
+    COLOR_MODE_LEFT = 12,
+    COLOR_MODE_TOP = 51,
+    COLOR_MODE_WIDTH = 142,
+    COLOR_MODE_HEIGHT = 44,
+    COLOR_MODE_COLUMN_GAP = 12,
+    COLOR_MODE_ROW_GAP = 11,
 };
 
-static const uint16_t COLOR_BLACK = UINT16_C(0x0000);
-static const uint16_t COLOR_PANEL = UINT16_C(0x10A2);
-static const uint16_t COLOR_PANEL_PRESSED = UINT16_C(0x2945);
-static const uint16_t COLOR_WHITE = UINT16_C(0xFFFF);
-static const uint16_t COLOR_MUTED = UINT16_C(0x9CF3);
-static const uint16_t COLOR_CYAN = UINT16_C(0x5FFF);
-static const uint16_t COLOR_GREEN = UINT16_C(0x5FEA);
-static const uint16_t COLOR_YELLOW = UINT16_C(0xFFE0);
-static const uint16_t COLOR_RED = UINT16_C(0xF904);
+typedef struct {
+    uint16_t black;
+    uint16_t panel;
+    uint16_t panel_pressed;
+    uint16_t white;
+    uint16_t muted;
+    uint16_t cyan;
+    uint16_t green;
+    uint16_t yellow;
+    uint16_t red;
+    uint16_t desktop;
+    uint16_t face;
+    uint16_t light;
+    uint16_t shadow;
+    uint16_t dark;
+    uint16_t title;
+    uint16_t group;
+} console_palette_t;
+
+static const console_palette_t s_color_palettes[CONSOLE_COLOR_MODE_COUNT] = {
+    [CONSOLE_COLOR_MODE_GAMECHANGERS] = {
+        .black = UINT16_C(0x0000), .panel = UINT16_C(0x1082),
+        .panel_pressed = UINT16_C(0x2945), .white = UINT16_C(0xFFFF),
+        .muted = UINT16_C(0x9CF3), .cyan = UINT16_C(0xFD20),
+        .green = UINT16_C(0x5FEA), .yellow = UINT16_C(0xFD20),
+        .red = UINT16_C(0xF904), .desktop = UINT16_C(0x0000),
+        .face = UINT16_C(0x18E3), .light = UINT16_C(0xDEF7),
+        .shadow = UINT16_C(0x0841), .dark = UINT16_C(0x0000),
+        .title = UINT16_C(0x0000), .group = UINT16_C(0x0841),
+    },
+    [CONSOLE_COLOR_MODE_ARCADE] = {
+        .black = UINT16_C(0x0000), .panel = UINT16_C(0x10A2),
+        .panel_pressed = UINT16_C(0x2945), .white = UINT16_C(0xFFFF),
+        .muted = UINT16_C(0x9CF3), .cyan = UINT16_C(0x5FFF),
+        .green = UINT16_C(0x5FEA), .yellow = UINT16_C(0xFFE0),
+        .red = UINT16_C(0xF904), .desktop = UINT16_C(0x0410),
+        .face = UINT16_C(0xC618), .light = UINT16_C(0xFFFF),
+        .shadow = UINT16_C(0x8410), .dark = UINT16_C(0x4208),
+        .title = UINT16_C(0x0010), .group = UINT16_C(0xE71C),
+    },
+    [CONSOLE_COLOR_MODE_OCEAN] = {
+        .black = UINT16_C(0x0006), .panel = UINT16_C(0x0821),
+        .panel_pressed = UINT16_C(0x10A3), .white = UINT16_C(0xEFFF),
+        .muted = UINT16_C(0x7DF7), .cyan = UINT16_C(0x07FF),
+        .green = UINT16_C(0x07E0), .yellow = UINT16_C(0xFFE0),
+        .red = UINT16_C(0xF81F), .desktop = UINT16_C(0x0010),
+        .face = UINT16_C(0x18C7), .light = UINT16_C(0xAFFF),
+        .shadow = UINT16_C(0x0842), .dark = UINT16_C(0x0008),
+        .title = UINT16_C(0x001F), .group = UINT16_C(0x0844),
+    },
+    [CONSOLE_COLOR_MODE_SUNSET] = {
+        .black = UINT16_C(0x1004), .panel = UINT16_C(0x39A7),
+        .panel_pressed = UINT16_C(0x59E9), .white = UINT16_C(0xFFFF),
+        .muted = UINT16_C(0xD57B), .cyan = UINT16_C(0xF81F),
+        .green = UINT16_C(0xAFE0), .yellow = UINT16_C(0xFD20),
+        .red = UINT16_C(0xF8B4), .desktop = UINT16_C(0x180C),
+        .face = UINT16_C(0x7A4F), .light = UINT16_C(0xFFFF),
+        .shadow = UINT16_C(0x390E), .dark = UINT16_C(0x1004),
+        .title = UINT16_C(0x780F), .group = UINT16_C(0x5A2F),
+    },
+};
+
+static const char *const s_color_mode_names[CONSOLE_COLOR_MODE_COUNT] = {
+    [CONSOLE_COLOR_MODE_GAMECHANGERS] = "GOLD",
+    [CONSOLE_COLOR_MODE_ARCADE] = "ARCADE",
+    [CONSOLE_COLOR_MODE_OCEAN] = "OCEAN",
+    [CONSOLE_COLOR_MODE_SUNSET] = "SUNSET",
+};
+
+static const console_palette_t *s_palette =
+    &s_color_palettes[CONSOLE_COLOR_MODE_GAMECHANGERS];
+
+#define COLOR_BLACK (s_palette->black)
+#define COLOR_PANEL (s_palette->panel)
+#define COLOR_PANEL_PRESSED (s_palette->panel_pressed)
+#define COLOR_WHITE (s_palette->white)
+#define COLOR_MUTED (s_palette->muted)
+#define COLOR_CYAN (s_palette->cyan)
+#define COLOR_GREEN (s_palette->green)
+#define COLOR_YELLOW (s_palette->yellow)
+#define COLOR_RED (s_palette->red)
+#define COLOR_DESKTOP (s_palette->desktop)
+#define COLOR_FACE (s_palette->face)
+#define COLOR_LIGHT (s_palette->light)
+#define COLOR_SHADOW (s_palette->shadow)
+#define COLOR_DARK (s_palette->dark)
+#define COLOR_TITLE (s_palette->title)
+#define COLOR_GROUP (s_palette->group)
+
+typedef enum {
+    HOME_ITEM_APP = 0,
+    HOME_ITEM_FOLDER,
+    HOME_ITEM_ALL_PROGRAMS,
+} home_item_kind_t;
+
+typedef struct {
+    home_item_kind_t kind;
+    size_t app_index;
+    char title[CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES];
+    uint16_t accent_rgb565;
+    uint32_t capabilities;
+    size_t program_count;
+    bool enabled;
+} home_item_t;
+
+enum {
+    HOME_ITEM_CAPACITY = CONSOLE_SHELL_MAX_APPS + 1,
+};
 
 static size_t bounded_length(const char *text, size_t limit)
 {
@@ -48,9 +205,54 @@ static size_t bounded_length(const char *text, size_t limit)
     return length;
 }
 
+static bool folder_lead_character(char character)
+{
+    return (character >= 'A' && character <= 'Z') ||
+           (character >= '0' && character <= '9');
+}
+
+static bool folder_character(char character)
+{
+    return folder_lead_character(character) ||
+           character == ' ' || character == '-';
+}
+
+static bool folder_path_is_valid(const char *path)
+{
+    const size_t length = bounded_length(
+        path, CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES);
+    if (length == 0U || length >= CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES) {
+        return false;
+    }
+
+    size_t segment_length = 0U;
+    unsigned slash_count = 0U;
+    for (size_t i = 0U; i < length; ++i) {
+        const char character = path[i];
+        if (character == '/') {
+            if (segment_length == 0U ||
+                segment_length >= CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES ||
+                slash_count != 0U) {
+                return false;
+            }
+            ++slash_count;
+            segment_length = 0U;
+            continue;
+        }
+        if ((segment_length == 0U && !folder_lead_character(character)) ||
+            !folder_character(character) ||
+            segment_length + 1U >=
+                CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES) {
+            return false;
+        }
+        ++segment_length;
+    }
+    return segment_length > 0U;
+}
+
 static bool valid_page(console_page_t page)
 {
-    return page >= CONSOLE_PAGE_EXTERNAL && page <= CONSOLE_PAGE_AUDIO;
+    return page >= CONSOLE_PAGE_EXTERNAL && page <= CONSOLE_PAGE_TERMINAL;
 }
 
 static bool registry_is_valid(const console_app_descriptor_t *apps,
@@ -74,6 +276,7 @@ static bool registry_is_valid(const console_app_descriptor_t *apps,
                 CONSOLE_SHELL_TITLE_MAX_BYTES ||
             bounded_length(app->subtitle, CONSOLE_SHELL_SUBTITLE_MAX_BYTES) >=
                 CONSOLE_SHELL_SUBTITLE_MAX_BYTES ||
+            !folder_path_is_valid(app->folder_path) ||
             !valid_page(app->page) ||
             (app->capabilities & ~known_capabilities) != 0U) {
             return false;
@@ -99,6 +302,12 @@ bool console_shell_init(console_shell_t *shell,
     shell->app_count = app_count;
     shell->pressed_index = SIZE_MAX;
     shell->page = CONSOLE_PAGE_HOME;
+    shell->master_volume_step = CONSOLE_SHELL_MASTER_VOLUME_DEFAULT;
+    shell->selected_file_index = SIZE_MAX;
+    p4_file_list_init(&shell->files);
+    p4_save_catalog_init(&shell->saves, false);
+    p4_achievement_catalog_init(&shell->achievements);
+    p4_terminal_init(&shell->terminal, false);
     shell->dirty = true;
     for (size_t i = 0U; i < app_count; ++i) {
         if (apps[i].enabled) {
@@ -114,18 +323,22 @@ static bool map_physical_to_gui(uint16_t physical_x,
                                 uint16_t *gui_x,
                                 uint16_t *gui_y)
 {
-    const uint16_t viewport_right =
-        (uint16_t)(CONSOLE_SHELL_VIEWPORT_LEFT +
-                   CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_VIEWPORT_SCALE);
-    if (physical_x < CONSOLE_SHELL_VIEWPORT_LEFT ||
-        physical_x >= viewport_right ||
-        physical_y >= CONSOLE_SHELL_PHYSICAL_HEIGHT ||
+    /* Unsigned subtraction turns a point before either viewport edge into
+     * a value beyond the bounded viewport dimensions.  This keeps the same
+     * check valid when an axis offset is zero on the 10 in panel. */
+    const uint16_t relative_x =
+        (uint16_t)(physical_x - CONSOLE_SHELL_VIEWPORT_LEFT);
+    const uint16_t relative_y =
+        (uint16_t)(physical_y - CONSOLE_SHELL_VIEWPORT_TOP);
+    if (relative_x >= CONSOLE_SHELL_VIEWPORT_WIDTH ||
+        relative_y >= CONSOLE_SHELL_VIEWPORT_HEIGHT ||
         gui_x == NULL || gui_y == NULL) {
         return false;
     }
-    *gui_x = (uint16_t)((physical_x - CONSOLE_SHELL_VIEWPORT_LEFT) /
-                       CONSOLE_SHELL_VIEWPORT_SCALE);
-    *gui_y = (uint16_t)(physical_y / CONSOLE_SHELL_VIEWPORT_SCALE);
+    *gui_x = (uint16_t)(((uint32_t)relative_x * CONSOLE_SHELL_WIDTH) /
+                        CONSOLE_SHELL_VIEWPORT_WIDTH);
+    *gui_y = (uint16_t)(((uint32_t)relative_y * CONSOLE_SHELL_HEIGHT) /
+                        CONSOLE_SHELL_VIEWPORT_HEIGHT);
     return *gui_x < CONSOLE_SHELL_WIDTH && *gui_y < CONSOLE_SHELL_HEIGHT;
 }
 
@@ -139,10 +352,251 @@ static bool point_in_rect(uint16_t x, uint16_t y,
            point_y >= top && point_y < top + height;
 }
 
-static size_t home_page_count(const console_shell_t *shell)
+static bool path_is_at_or_below(const char *path, const char *prefix)
 {
-    return (shell->app_count + CONSOLE_SHELL_APPS_PER_PAGE - 1U) /
-        CONSOLE_SHELL_APPS_PER_PAGE;
+    const size_t prefix_length = bounded_length(
+        prefix, CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES);
+    return prefix_length > 0U &&
+           strncmp(path, prefix, prefix_length) == 0 &&
+           (path[prefix_length] == '\0' || path[prefix_length] == '/');
+}
+
+static bool immediate_child_segment(
+    const char *path,
+    const char *parent,
+    char segment[CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES])
+{
+    const char *remainder = path;
+    if (parent[0] != '\0') {
+        const size_t parent_length = bounded_length(
+            parent, CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES);
+        if (strncmp(path, parent, parent_length) != 0 ||
+            path[parent_length] != '/') {
+            return false;
+        }
+        remainder = path + parent_length + 1U;
+    }
+    size_t length = 0U;
+    while (remainder[length] != '\0' && remainder[length] != '/' &&
+           length + 1U < CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES) {
+        segment[length] = remainder[length];
+        ++length;
+    }
+    if (length == 0U) {
+        return false;
+    }
+    segment[length] = '\0';
+    return true;
+}
+
+static bool item_title_equal(const home_item_t *item, const char *title)
+{
+    return item->kind == HOME_ITEM_FOLDER &&
+           strncmp(item->title, title,
+                   CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES) == 0;
+}
+
+static bool compose_child_path(
+    const char *parent,
+    const char *segment,
+    char path[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES])
+{
+    const size_t parent_length = bounded_length(
+        parent, CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES);
+    const size_t segment_length = bounded_length(
+        segment, CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES);
+    const size_t separator = parent_length == 0U ? 0U : 1U;
+    if (segment_length == 0U ||
+        parent_length + separator + segment_length >=
+            CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES) {
+        return false;
+    }
+    if (parent_length > 0U) {
+        memcpy(path, parent, parent_length);
+        path[parent_length] = '/';
+    }
+    memcpy(path + parent_length + separator, segment, segment_length);
+    path[parent_length + separator + segment_length] = '\0';
+    return true;
+}
+
+static void populate_folder_item(
+    const console_shell_t *shell,
+    const char *parent,
+    const char *segment,
+    home_item_t *item)
+{
+    memset(item, 0, sizeof(*item));
+    item->kind = HOME_ITEM_FOLDER;
+    item->app_index = SIZE_MAX;
+    const size_t title_length = bounded_length(
+        segment, sizeof(item->title) - 1U);
+    memcpy(item->title, segment, title_length);
+    item->title[title_length] = '\0';
+    char path[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
+    if (!compose_child_path(parent, segment, path)) {
+        return;
+    }
+    bool have_accent = false;
+    for (size_t i = 0U; i < shell->app_count; ++i) {
+        const console_app_descriptor_t *const app = &shell->apps[i];
+        if (!path_is_at_or_below(app->folder_path, path)) {
+            continue;
+        }
+        ++item->program_count;
+        item->capabilities |= app->capabilities;
+        if (!have_accent || (!item->enabled && app->enabled)) {
+            item->accent_rgb565 = app->accent_rgb565;
+            have_accent = true;
+        }
+        item->enabled = item->enabled || app->enabled;
+    }
+}
+
+static size_t build_home_items(
+    const console_shell_t *shell,
+    home_item_t items[HOME_ITEM_CAPACITY])
+{
+    size_t count = 0U;
+    if (shell->home_all_programs) {
+        for (size_t i = 0U;
+             i < shell->app_count && count < HOME_ITEM_CAPACITY; ++i) {
+            items[count++] = (home_item_t){
+                .kind = HOME_ITEM_APP,
+                .app_index = i,
+                .accent_rgb565 = shell->apps[i].accent_rgb565,
+                .capabilities = shell->apps[i].capabilities,
+                .program_count = 1U,
+                .enabled = shell->apps[i].enabled,
+            };
+        }
+        return count;
+    }
+
+    if (shell->home_folder_path[0] == '\0') {
+        home_item_t all = {
+            .kind = HOME_ITEM_ALL_PROGRAMS,
+            .app_index = SIZE_MAX,
+            .accent_rgb565 = COLOR_TITLE,
+            .program_count = shell->app_count,
+        };
+        for (size_t i = 0U; i < shell->app_count; ++i) {
+            all.capabilities |= shell->apps[i].capabilities;
+            all.enabled = all.enabled || shell->apps[i].enabled;
+        }
+        memcpy(all.title, "ALL PROGRAMS", sizeof("ALL PROGRAMS"));
+        items[count++] = all;
+    }
+
+    for (size_t i = 0U; i < shell->app_count; ++i) {
+        char segment[CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES];
+        if (!immediate_child_segment(shell->apps[i].folder_path,
+                                     shell->home_folder_path, segment)) {
+            continue;
+        }
+        bool duplicate = false;
+        for (size_t j = 0U; j < count; ++j) {
+            if (item_title_equal(&items[j], segment)) {
+                duplicate = true;
+                break;
+            }
+        }
+        if (!duplicate && count < HOME_ITEM_CAPACITY) {
+            populate_folder_item(shell, shell->home_folder_path,
+                                 segment, &items[count++]);
+        }
+    }
+
+    for (size_t i = 0U;
+         i < shell->app_count && count < HOME_ITEM_CAPACITY; ++i) {
+        if (strcmp(shell->apps[i].folder_path,
+                   shell->home_folder_path) == 0) {
+            items[count++] = (home_item_t){
+                .kind = HOME_ITEM_APP,
+                .app_index = i,
+                .accent_rgb565 = shell->apps[i].accent_rgb565,
+                .capabilities = shell->apps[i].capabilities,
+                .program_count = 1U,
+                .enabled = shell->apps[i].enabled,
+            };
+        }
+    }
+    return count;
+}
+
+static size_t home_item_count(const console_shell_t *shell)
+{
+    home_item_t items[HOME_ITEM_CAPACITY];
+    return build_home_items(shell, items);
+}
+
+static size_t home_row_count(const console_shell_t *shell)
+{
+    const size_t count = home_item_count(shell);
+    return (count + CONSOLE_SHELL_APP_COLUMNS - 1U) /
+        CONSOLE_SHELL_APP_COLUMNS;
+}
+
+static size_t home_max_scroll_row(const console_shell_t *shell)
+{
+    const size_t rows = home_row_count(shell);
+    return rows > CONSOLE_SHELL_VISIBLE_APP_ROWS
+        ? rows - CONSOLE_SHELL_VISIBLE_APP_ROWS : 0U;
+}
+
+static size_t home_first_visible_index(const console_shell_t *shell)
+{
+    return shell->home_scroll_row * CONSOLE_SHELL_APP_COLUMNS;
+}
+
+static void select_first_visible_item(console_shell_t *shell)
+{
+    home_item_t items[HOME_ITEM_CAPACITY];
+    const size_t count = build_home_items(shell, items);
+    const size_t first = home_first_visible_index(shell);
+    const size_t last = first + CONSOLE_SHELL_APPS_PER_VIEW < count
+        ? first + CONSOLE_SHELL_APPS_PER_VIEW : count;
+    shell->selected_home_item = first < count ? first : 0U;
+    for (size_t index = first; index < last; ++index) {
+        if (items[index].enabled) {
+            shell->selected_home_item = index;
+            if (items[index].kind == HOME_ITEM_APP) {
+                shell->selected_index = items[index].app_index;
+            }
+            return;
+        }
+    }
+}
+
+static bool set_home_scroll_row(console_shell_t *shell, size_t row)
+{
+    const size_t maximum = home_max_scroll_row(shell);
+    const size_t bounded = row > maximum ? maximum : row;
+    if (bounded == shell->home_scroll_row) {
+        return false;
+    }
+    shell->home_scroll_row = bounded;
+    select_first_visible_item(shell);
+    shell->dirty = true;
+    return true;
+}
+
+static bool color_mode_is_valid(console_color_mode_t mode)
+{
+    return mode >= CONSOLE_COLOR_MODE_GAMECHANGERS &&
+           mode < CONSOLE_COLOR_MODE_COUNT;
+}
+
+static int color_mode_tile_left(size_t mode_index)
+{
+    return COLOR_MODE_LEFT + (int)(mode_index % 2U) *
+        (COLOR_MODE_WIDTH + COLOR_MODE_COLUMN_GAP);
+}
+
+static int color_mode_tile_top(size_t mode_index)
+{
+    return COLOR_MODE_TOP + (int)(mode_index / 2U) *
+        (COLOR_MODE_HEIGHT + COLOR_MODE_ROW_GAP);
 }
 
 static size_t control_at(const console_shell_t *shell,
@@ -150,39 +604,130 @@ static size_t control_at(const console_shell_t *shell,
                          uint16_t gui_y)
 {
     if (shell->page != CONSOLE_PAGE_HOME) {
-        return point_in_rect(gui_x, gui_y,
-                             BACK_LEFT, BACK_TOP,
-                             BACK_WIDTH, BACK_HEIGHT)
-                   ? BACK_CONTROL : SIZE_MAX;
+        if (point_in_rect(gui_x, gui_y,
+                          BACK_LEFT, BACK_TOP,
+                          BACK_WIDTH, BACK_HEIGHT)) {
+            return BACK_CONTROL;
+        }
+        if (shell->page == CONSOLE_PAGE_AUDIO) {
+            if (shell->master_volume_step > CONSOLE_SHELL_MASTER_VOLUME_MIN &&
+                point_in_rect(gui_x, gui_y,
+                              VOLUME_DOWN_LEFT, VOLUME_BUTTON_TOP,
+                              VOLUME_BUTTON_WIDTH, VOLUME_BUTTON_HEIGHT)) {
+                return VOLUME_DOWN_CONTROL;
+            }
+            if (shell->master_volume_step < CONSOLE_SHELL_MASTER_VOLUME_MAX &&
+                point_in_rect(gui_x, gui_y,
+                              VOLUME_UP_LEFT, VOLUME_BUTTON_TOP,
+                              VOLUME_BUTTON_WIDTH, VOLUME_BUTTON_HEIGHT)) {
+                return VOLUME_UP_CONTROL;
+            }
+        }
+        if (shell->page == CONSOLE_PAGE_COLORS) {
+            for (size_t mode = 0U; mode < CONSOLE_COLOR_MODE_COUNT; ++mode) {
+                if (point_in_rect(gui_x, gui_y,
+                                  (unsigned)color_mode_tile_left(mode),
+                                  (unsigned)color_mode_tile_top(mode),
+                                  COLOR_MODE_WIDTH, COLOR_MODE_HEIGHT)) {
+                    return COLOR_MODE_CONTROL_BASE + mode;
+                }
+            }
+        }
+        if (shell->page == CONSOLE_PAGE_LIBRARY &&
+            point_in_rect(gui_x, gui_y,
+                          LIBRARY_REFRESH_LEFT, LIBRARY_REFRESH_TOP,
+                          LIBRARY_REFRESH_WIDTH, LIBRARY_REFRESH_HEIGHT)) {
+            return LIBRARY_REFRESH_CONTROL;
+        }
+        if (shell->page == CONSOLE_PAGE_FILES) {
+            if (point_in_rect(gui_x, gui_y, 11U, FILE_HEADER_TOP,
+                              135U, FILE_HEADER_HEIGHT)) {
+                return FILE_SORT_NAME_CONTROL;
+            }
+            if (point_in_rect(gui_x, gui_y, 146U, FILE_HEADER_TOP,
+                              70U, FILE_HEADER_HEIGHT)) {
+                return FILE_SORT_TYPE_CONTROL;
+            }
+            if (point_in_rect(gui_x, gui_y, 216U, FILE_HEADER_TOP,
+                              93U, FILE_HEADER_HEIGHT)) {
+                return FILE_SORT_SIZE_CONTROL;
+            }
+            const size_t visible = shell->files.count < FILE_VISIBLE_ROWS
+                ? shell->files.count : FILE_VISIBLE_ROWS;
+            for (size_t index = 0U; index < visible; ++index) {
+                if (point_in_rect(gui_x, gui_y, 11U,
+                                  FILE_ROW_TOP +
+                                      (unsigned)index * FILE_ROW_HEIGHT,
+                                  298U, FILE_ROW_HEIGHT)) {
+                    return FILE_ROW_CONTROL_BASE + index;
+                }
+            }
+            if (shell->runtime.usb_export_ready &&
+                shell->selected_file_index < shell->files.count &&
+                point_in_rect(gui_x, gui_y, 221U, 164U, 88U, 26U)) {
+                return FILE_USB_EXPORT_CONTROL;
+            }
+        }
+        if (shell->page == CONSOLE_PAGE_TERMINAL) {
+            for (size_t index = 0U; index < 40U; ++index) {
+                const unsigned column = (unsigned)(index % 10U);
+                const unsigned row = (unsigned)(index / 10U);
+                if (point_in_rect(
+                        gui_x, gui_y,
+                        TERMINAL_KEY_LEFT + column *
+                            (TERMINAL_KEY_WIDTH + TERMINAL_KEY_GAP),
+                        TERMINAL_KEY_TOP + row *
+                            (TERMINAL_KEY_HEIGHT + TERMINAL_KEY_GAP),
+                        TERMINAL_KEY_WIDTH, TERMINAL_KEY_HEIGHT)) {
+                    return TERMINAL_KEY_CONTROL_BASE + index;
+                }
+            }
+            if (point_in_rect(gui_x, gui_y, 68U, 170U, 184U, 19U)) {
+                return TERMINAL_SPACE_CONTROL;
+            }
+        }
+        return SIZE_MAX;
     }
 
-    if (home_page_count(shell) > 1U) {
+    if ((shell->home_all_programs || shell->home_folder_path[0] != '\0') &&
+        point_in_rect(gui_x, gui_y, 8U, 26U, 31U, 13U)) {
+        return FOLDER_UP_CONTROL;
+    }
+
+    if (home_max_scroll_row(shell) > 0U) {
         if (point_in_rect(gui_x, gui_y,
-                          PAGE_PREVIOUS_LEFT, PAGE_BUTTON_TOP,
-                          PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT)) {
-            return PAGE_PREVIOUS_CONTROL;
+                          SCROLL_LEFT, SCROLL_UP_TOP,
+                          SCROLL_WIDTH, SCROLL_BUTTON_HEIGHT) &&
+            shell->home_scroll_row > 0U) {
+            return SCROLL_UP_CONTROL;
         }
         if (point_in_rect(gui_x, gui_y,
-                          PAGE_NEXT_LEFT, PAGE_BUTTON_TOP,
-                          PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT)) {
-            return PAGE_NEXT_CONTROL;
+                          SCROLL_LEFT, SCROLL_DOWN_TOP,
+                          SCROLL_WIDTH, SCROLL_BUTTON_HEIGHT) &&
+            shell->home_scroll_row < home_max_scroll_row(shell)) {
+            return SCROLL_DOWN_CONTROL;
         }
     }
 
-    const size_t first = shell->home_page * CONSOLE_SHELL_APPS_PER_PAGE;
-    const size_t last = first + CONSOLE_SHELL_APPS_PER_PAGE < shell->app_count
-        ? first + CONSOLE_SHELL_APPS_PER_PAGE : shell->app_count;
+    home_item_t items[HOME_ITEM_CAPACITY];
+    const size_t count = build_home_items(shell, items);
+    const size_t first = home_first_visible_index(shell);
+    const size_t last = first + CONSOLE_SHELL_APPS_PER_VIEW < count
+        ? first + CONSOLE_SHELL_APPS_PER_VIEW : count;
     for (size_t index = first; index < last; ++index) {
-        const size_t page_index = index - first;
-        const unsigned column = (unsigned)(page_index % 2U);
-        const unsigned row = (unsigned)(page_index / 2U);
+        const size_t view_index = index - first;
+        const unsigned column =
+            (unsigned)(view_index % CONSOLE_SHELL_APP_COLUMNS);
+        const unsigned row =
+            (unsigned)(view_index / CONSOLE_SHELL_APP_COLUMNS);
         const unsigned left = TILE_LEFT +
             column * (TILE_WIDTH + TILE_COLUMN_GAP);
         const unsigned top = TILE_TOP +
             row * (TILE_HEIGHT + TILE_ROW_GAP);
         if (point_in_rect(gui_x, gui_y, left, top,
                           TILE_WIDTH, TILE_HEIGHT)) {
-            return shell->apps[index].enabled ? index : SIZE_MAX;
+            return items[index].enabled
+                ? HOME_ITEM_CONTROL_BASE + index : SIZE_MAX;
         }
     }
     return SIZE_MAX;
@@ -224,6 +769,51 @@ static void remember_contacts(console_shell_t *shell,
     }
 }
 
+static void reset_home_grid(console_shell_t *shell)
+{
+    shell->home_scroll_row = 0U;
+    shell->selected_home_item = 0U;
+    select_first_visible_item(shell);
+    shell->dirty = true;
+}
+
+static void open_home_folder(console_shell_t *shell, const char *segment)
+{
+    char path[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
+    if (!compose_child_path(shell->home_folder_path, segment, path)) {
+        return;
+    }
+    const size_t length = bounded_length(
+        path, CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES);
+    memcpy(shell->home_folder_path, path, length + 1U);
+    shell->home_all_programs = false;
+    reset_home_grid(shell);
+}
+
+static void open_all_programs(console_shell_t *shell)
+{
+    shell->home_folder_path[0] = '\0';
+    shell->home_all_programs = true;
+    reset_home_grid(shell);
+}
+
+static void navigate_home_up(console_shell_t *shell)
+{
+    if (shell->home_all_programs) {
+        shell->home_all_programs = false;
+        shell->home_folder_path[0] = '\0';
+        reset_home_grid(shell);
+        return;
+    }
+    char *const separator = strrchr(shell->home_folder_path, '/');
+    if (separator != NULL) {
+        *separator = '\0';
+    } else {
+        shell->home_folder_path[0] = '\0';
+    }
+    reset_home_grid(shell);
+}
+
 static console_shell_action_t no_action(void)
 {
     const console_shell_action_t action = {
@@ -231,6 +821,106 @@ static console_shell_action_t no_action(void)
         .app_id = 0U,
     };
     return action;
+}
+
+static console_shell_action_t terminal_apply_key(
+    console_shell_t *shell, char key)
+{
+    if (shell == NULL || shell->page != CONSOLE_PAGE_TERMINAL) {
+        return no_action();
+    }
+    bool changed = false;
+    p4_terminal_command_t command = P4_TERMINAL_COMMAND_NONE;
+    if (key == '\b' || key == 127) {
+        changed = p4_terminal_backspace(&shell->terminal);
+    } else if (key == '\n' || key == '\r') {
+        command = p4_terminal_submit(&shell->terminal);
+        changed = command != P4_TERMINAL_COMMAND_NONE;
+        char line[P4_TERMINAL_LINE_BYTES];
+        if (command == P4_TERMINAL_COMMAND_STATUS) {
+            (void)snprintf(line, sizeof(line),
+                           "UP %lu SEC  PSRAM %lu KIB",
+                           (unsigned long)shell->runtime.uptime_seconds,
+                           (unsigned long)shell->runtime.psram_free_kib);
+            p4_terminal_write_line(&shell->terminal, line);
+        } else if (command == P4_TERMINAL_COMMAND_GAMES) {
+            (void)snprintf(line, sizeof(line),
+                           "%u BUILTIN  %u CARTS",
+                           (unsigned)shell->runtime.builtin_game_count,
+                           (unsigned)shell->runtime.valid_cart_count);
+            p4_terminal_write_line(&shell->terminal, line);
+        } else if (command == P4_TERMINAL_COMMAND_FILES) {
+            (void)snprintf(line, sizeof(line), "%u FILES VISIBLE",
+                           (unsigned)shell->files.count);
+            p4_terminal_write_line(&shell->terminal, line);
+        }
+    } else {
+        changed = p4_terminal_input_char(&shell->terminal, key);
+    }
+    if (changed) {
+        shell->dirty = true;
+    }
+    if (command == P4_TERMINAL_COMMAND_SSH &&
+        shell->runtime.ssh_transport_ready) {
+        const console_shell_action_t action = {
+            .type = CONSOLE_ACTION_SSH_CONNECT,
+            .app_id = shell->active_app_id,
+        };
+        return action;
+    }
+    return no_action();
+}
+
+console_shell_action_t console_shell_handle_text_key(
+    console_shell_t *shell, char key)
+{
+    return terminal_apply_key(shell, key);
+}
+
+static bool update_home_drag(console_shell_t *shell,
+                             uint16_t gui_x,
+                             uint16_t gui_y)
+{
+    if (!shell->scroll_candidate || shell->page != CONSOLE_PAGE_HOME ||
+        home_max_scroll_row(shell) == 0U) {
+        return false;
+    }
+    const int vertical = (int)shell->press_start_gui_y - (int)gui_y;
+    const int horizontal = (int)shell->press_start_gui_x - (int)gui_x;
+    const int vertical_magnitude = vertical < 0 ? -vertical : vertical;
+    const int horizontal_magnitude = horizontal < 0 ? -horizontal : horizontal;
+    if (vertical_magnitude < SCROLL_DRAG_THRESHOLD ||
+        vertical_magnitude < horizontal_magnitude) {
+        return false;
+    }
+
+    int row_delta = 0;
+    if (vertical > 0) {
+        row_delta = 1 +
+            (vertical - SCROLL_DRAG_THRESHOLD) / SCROLL_DRAG_ROW_STEP;
+    } else {
+        row_delta = -1 +
+            (vertical + SCROLL_DRAG_THRESHOLD) / SCROLL_DRAG_ROW_STEP;
+    }
+    size_t requested = shell->press_start_scroll_row;
+    if (row_delta > 0) {
+        const size_t increase = (size_t)row_delta;
+        const size_t maximum = home_max_scroll_row(shell);
+        requested = increase > maximum - requested
+            ? maximum : requested + increase;
+    } else {
+        const size_t decrease = (size_t)(-row_delta);
+        requested = decrease > requested ? 0U : requested - decrease;
+    }
+    const bool was_pressed = shell->press_active;
+    shell->scroll_gesture = true;
+    shell->press_active = false;
+    shell->pressed_index = SIZE_MAX;
+    if (was_pressed) {
+        shell->dirty = true;
+    }
+    (void)set_home_scroll_row(shell, requested);
+    return true;
 }
 
 console_shell_action_t console_shell_handle_touch(
@@ -252,6 +942,8 @@ console_shell_action_t console_shell_handle_touch(
         /* Require one later valid neutral frame before input can re-arm. */
         shell->contact_down = true;
         shell->press_active = false;
+        shell->scroll_candidate = false;
+        shell->scroll_gesture = false;
         shell->pressed_index = SIZE_MAX;
         return no_action();
     }
@@ -261,6 +953,23 @@ console_shell_action_t console_shell_handle_touch(
             return no_action();
         }
         shell->contact_down = false;
+        shell->scroll_candidate = false;
+        if (shell->scroll_gesture) {
+            const bool changed =
+                shell->home_scroll_row != shell->press_start_scroll_row;
+            shell->scroll_gesture = false;
+            shell->press_active = false;
+            shell->pressed_index = SIZE_MAX;
+            shell->dirty = true;
+            if (changed) {
+                const console_shell_action_t action = {
+                    .type = CONSOLE_ACTION_PAGE_CHANGED,
+                    .app_id = 0U,
+                };
+                return action;
+            }
+            return no_action();
+        }
         if (!shell->press_active) {
             shell->pressed_index = SIZE_MAX;
             return no_action();
@@ -278,31 +987,157 @@ console_shell_action_t console_shell_handle_touch(
             };
             return action;
         }
-        if (released_control == PAGE_PREVIOUS_CONTROL ||
-            released_control == PAGE_NEXT_CONTROL) {
-            const size_t page_count = home_page_count(shell);
-            if (released_control == PAGE_PREVIOUS_CONTROL) {
-                shell->home_page = shell->home_page == 0U
-                    ? page_count - 1U : shell->home_page - 1U;
-            } else {
-                shell->home_page = (shell->home_page + 1U) % page_count;
-            }
-            const size_t first =
-                shell->home_page * CONSOLE_SHELL_APPS_PER_PAGE;
-            shell->selected_index = first;
+        if (released_control == FOLDER_UP_CONTROL) {
+            navigate_home_up(shell);
             const console_shell_action_t action = {
                 .type = CONSOLE_ACTION_PAGE_CHANGED,
                 .app_id = 0U,
             };
             return action;
         }
-        if (released_control >= shell->app_count) {
+        if (released_control == VOLUME_DOWN_CONTROL ||
+            released_control == VOLUME_UP_CONTROL) {
+            if (released_control == VOLUME_DOWN_CONTROL &&
+                shell->master_volume_step > CONSOLE_SHELL_MASTER_VOLUME_MIN) {
+                --shell->master_volume_step;
+            } else if (released_control == VOLUME_UP_CONTROL &&
+                       shell->master_volume_step <
+                           CONSOLE_SHELL_MASTER_VOLUME_MAX) {
+                ++shell->master_volume_step;
+            }
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_VOLUME_CHANGED,
+                .app_id = 0U,
+                .volume_step = shell->master_volume_step,
+            };
+            return action;
+        }
+        if (released_control >= COLOR_MODE_CONTROL_BASE &&
+            released_control < COLOR_MODE_CONTROL_LIMIT) {
+            const console_color_mode_t requested =
+                (console_color_mode_t)(released_control -
+                                       COLOR_MODE_CONTROL_BASE);
+            if (!color_mode_is_valid(requested) ||
+                shell->color_mode == requested) {
+                return no_action();
+            }
+            shell->color_mode = requested;
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_COLOR_MODE_CHANGED,
+                .app_id = shell->active_app_id,
+                .color_mode = requested,
+            };
+            return action;
+        }
+        if (released_control == LIBRARY_REFRESH_CONTROL) {
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_LIBRARY_REFRESH,
+                .app_id = shell->active_app_id,
+            };
+            return action;
+        }
+        if (released_control == FILE_SORT_NAME_CONTROL ||
+            released_control == FILE_SORT_TYPE_CONTROL ||
+            released_control == FILE_SORT_SIZE_CONTROL) {
+            const p4_file_sort_t requested =
+                released_control == FILE_SORT_NAME_CONTROL
+                    ? P4_FILE_SORT_NAME :
+                released_control == FILE_SORT_TYPE_CONTROL
+                    ? P4_FILE_SORT_TYPE : P4_FILE_SORT_SIZE;
+            const bool descending = shell->files.sort == requested
+                ? !shell->files.descending : false;
+            p4_file_list_set_sort(&shell->files, requested, descending);
+            shell->selected_file_index = SIZE_MAX;
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_FILE_SORT_CHANGED,
+                .app_id = shell->active_app_id,
+                .file_sort = requested,
+            };
+            return action;
+        }
+        if (released_control >= FILE_ROW_CONTROL_BASE &&
+            released_control < FILE_ROW_CONTROL_BASE +
+                P4_DESKTOP_MAX_FILES) {
+            const size_t index = released_control - FILE_ROW_CONTROL_BASE;
+            if (index < shell->files.count) {
+                shell->selected_file_index = index;
+                const console_shell_action_t action = {
+                    .type = CONSOLE_ACTION_FILE_SELECTED,
+                    .app_id = shell->active_app_id,
+                    .item_index = index,
+                };
+                return action;
+            }
+            return no_action();
+        }
+        if (released_control == FILE_USB_EXPORT_CONTROL) {
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_USB_EXPORT,
+                .app_id = shell->active_app_id,
+                .item_index = shell->selected_file_index,
+            };
+            return action;
+        }
+        if (released_control >= TERMINAL_KEY_CONTROL_BASE &&
+            released_control < TERMINAL_KEY_CONTROL_BASE + 40U) {
+            static const char terminal_keys[40] = {
+                '1','2','3','4','5','6','7','8','9','0',
+                'Q','W','E','R','T','Y','U','I','O','P',
+                'A','S','D','F','G','H','J','K','L','\b',
+                'Z','X','C','V','B','N','M','.','/','\n',
+            };
+            return terminal_apply_key(
+                shell, terminal_keys[
+                    released_control - TERMINAL_KEY_CONTROL_BASE]);
+        }
+        if (released_control == TERMINAL_SPACE_CONTROL) {
+            return terminal_apply_key(shell, ' ');
+        }
+        if (released_control == SCROLL_UP_CONTROL ||
+            released_control == SCROLL_DOWN_CONTROL) {
+            const size_t requested = released_control == SCROLL_UP_CONTROL
+                ? shell->home_scroll_row - 1U
+                : shell->home_scroll_row + 1U;
+            (void)set_home_scroll_row(shell, requested);
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_PAGE_CHANGED,
+                .app_id = 0U,
+            };
+            return action;
+        }
+        if (released_control < HOME_ITEM_CONTROL_BASE) {
+            return no_action();
+        }
+        home_item_t items[HOME_ITEM_CAPACITY];
+        const size_t item_count = build_home_items(shell, items);
+        const size_t item_index = released_control - HOME_ITEM_CONTROL_BASE;
+        if (item_index >= item_count || !items[item_index].enabled) {
+            return no_action();
+        }
+        shell->selected_home_item = item_index;
+        if (items[item_index].kind == HOME_ITEM_ALL_PROGRAMS) {
+            open_all_programs(shell);
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_PAGE_CHANGED,
+                .app_id = 0U,
+            };
+            return action;
+        }
+        if (items[item_index].kind == HOME_ITEM_FOLDER) {
+            open_home_folder(shell, items[item_index].title);
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_PAGE_CHANGED,
+                .app_id = 0U,
+            };
+            return action;
+        }
+        if (items[item_index].app_index >= shell->app_count) {
             return no_action();
         }
 
-        const console_app_descriptor_t *const app =
-            &shell->apps[released_control];
-        shell->selected_index = released_control;
+        const size_t app_index = items[item_index].app_index;
+        const console_app_descriptor_t *const app = &shell->apps[app_index];
+        shell->selected_index = app_index;
         if (app->page == CONSOLE_PAGE_EXTERNAL) {
             const console_shell_action_t action = {
                 .type = CONSOLE_ACTION_LAUNCH,
@@ -325,6 +1160,8 @@ console_shell_action_t console_shell_handle_touch(
         }
         shell->contact_down = true;
         shell->press_active = false;
+        shell->scroll_candidate = false;
+        shell->scroll_gesture = false;
         shell->pressed_index = SIZE_MAX;
         return no_action();
     }
@@ -338,6 +1175,8 @@ console_shell_action_t console_shell_handle_touch(
         }
         shell->contact_down = true;
         shell->press_active = false;
+        shell->scroll_candidate = false;
+        shell->scroll_gesture = false;
         shell->pressed_index = SIZE_MAX;
         return no_action();
     }
@@ -345,11 +1184,23 @@ console_shell_action_t console_shell_handle_touch(
     const size_t control = control_at(shell, gui_x, gui_y);
     if (!shell->contact_down) {
         shell->contact_down = true;
+        shell->press_start_gui_x = gui_x;
+        shell->press_start_gui_y = gui_y;
+        shell->press_start_scroll_row = shell->home_scroll_row;
+        shell->scroll_candidate = shell->page == CONSOLE_PAGE_HOME &&
+            home_max_scroll_row(shell) > 0U &&
+            point_in_rect(gui_x, gui_y, TILE_LEFT, TILE_TOP,
+                          GRID_WIDTH, GRID_HEIGHT);
+        shell->scroll_gesture = false;
         shell->pressed_index = control;
         shell->press_active = control != SIZE_MAX;
         if (shell->press_active) {
             shell->dirty = true;
         }
+        return no_action();
+    }
+
+    if (update_home_drag(shell, gui_x, gui_y)) {
         return no_action();
     }
 
@@ -370,18 +1221,100 @@ void console_shell_set_runtime_info(
     if (shell == NULL || runtime == NULL) {
         return;
     }
+    const bool content_changed =
+        shell->runtime.storage_ready != runtime->storage_ready ||
+        shell->runtime.content_scan_complete != runtime->content_scan_complete ||
+        shell->runtime.content_truncated != runtime->content_truncated ||
+        shell->runtime.quake_shareware_ready != runtime->quake_shareware_ready ||
+        shell->runtime.valid_cart_count != runtime->valid_cart_count ||
+        shell->runtime.invalid_cart_count != runtime->invalid_cart_count ||
+        shell->runtime.storage_writable != runtime->storage_writable ||
+        shell->runtime.builtin_game_count != runtime->builtin_game_count ||
+        shell->runtime.save_slot_count != runtime->save_slot_count ||
+        shell->runtime.save_total_bytes != runtime->save_total_bytes ||
+        shell->runtime.save_management_ready !=
+            runtime->save_management_ready ||
+        shell->runtime.usb_export_ready != runtime->usb_export_ready;
     const bool changed =
         shell->runtime.uptime_seconds != runtime->uptime_seconds ||
         shell->runtime.internal_free_kib != runtime->internal_free_kib ||
         shell->runtime.psram_free_kib != runtime->psram_free_kib ||
         shell->runtime.touch_ready != runtime->touch_ready ||
-        shell->runtime.audio_handoff_ready != runtime->audio_handoff_ready;
-    if (!changed) {
+        shell->runtime.audio_handoff_ready != runtime->audio_handoff_ready ||
+        content_changed ||
+        shell->runtime.multiplayer_core_ready != runtime->multiplayer_core_ready ||
+        shell->runtime.multiplayer_transport_ready !=
+            runtime->multiplayer_transport_ready ||
+        shell->runtime.multiplayer_peer_count != runtime->multiplayer_peer_count;
+    const bool terminal_changed =
+        shell->runtime.ssh_transport_ready != runtime->ssh_transport_ready ||
+        shell->runtime.physical_keyboard_ready !=
+            runtime->physical_keyboard_ready;
+    if (!changed && !terminal_changed) {
         return;
     }
     shell->runtime = *runtime;
+    shell->terminal.network_ready = runtime->ssh_transport_ready;
     if (shell->page == CONSOLE_PAGE_SYSTEM ||
-        shell->page == CONSOLE_PAGE_AUDIO) {
+        shell->page == CONSOLE_PAGE_AUDIO ||
+        shell->page == CONSOLE_PAGE_LIBRARY ||
+        shell->page == CONSOLE_PAGE_MULTIPLAYER ||
+        shell->page == CONSOLE_PAGE_FILES ||
+        shell->page == CONSOLE_PAGE_SAVES ||
+        shell->page == CONSOLE_PAGE_TERMINAL ||
+        (shell->page == CONSOLE_PAGE_HOME && content_changed)) {
+        shell->dirty = true;
+    }
+}
+
+void console_shell_set_file_list(console_shell_t *shell,
+                                 const p4_file_list_t *files)
+{
+    if (shell == NULL || files == NULL ||
+        files->count > P4_DESKTOP_MAX_FILES) {
+        return;
+    }
+    const p4_file_sort_t sort = shell->files.sort;
+    const bool descending = shell->files.descending;
+    shell->files = *files;
+    p4_file_list_set_sort(&shell->files, sort, descending);
+    if (shell->selected_file_index >= shell->files.count) {
+        shell->selected_file_index = SIZE_MAX;
+    }
+    if (shell->page == CONSOLE_PAGE_FILES ||
+        shell->page == CONSOLE_PAGE_LIBRARY) {
+        shell->dirty = true;
+    }
+}
+
+void console_shell_set_save_catalog(console_shell_t *shell,
+                                    const p4_save_catalog_t *saves)
+{
+    if (shell == NULL || saves == NULL ||
+        saves->count > P4_DESKTOP_MAX_SAVE_SLOTS) {
+        return;
+    }
+    shell->saves = *saves;
+    if (shell->page == CONSOLE_PAGE_SAVES) {
+        shell->dirty = true;
+    }
+}
+
+void console_shell_set_achievement_catalog(
+    console_shell_t *shell,
+    const p4_achievement_catalog_t *achievements)
+{
+    if (shell == NULL || achievements == NULL ||
+        achievements->count > P4_ACHIEVEMENT_MAX_ENTRIES) {
+        return;
+    }
+    if (shell->achievements.count == achievements->count &&
+        shell->achievements.unlock_events == achievements->unlock_events &&
+        shell->achievements.rejected_events == achievements->rejected_events) {
+        return;
+    }
+    shell->achievements = *achievements;
+    if (shell->page == CONSOLE_PAGE_ACHIEVEMENTS) {
         shell->dirty = true;
     }
 }
@@ -395,8 +1328,22 @@ void console_shell_show_home(console_shell_t *shell)
     shell->active_app_id = 0U;
     shell->contact_down = false;
     shell->press_active = false;
+    shell->scroll_candidate = false;
+    shell->scroll_gesture = false;
     shell->pressed_index = SIZE_MAX;
     shell->dirty = true;
+}
+
+uint8_t console_shell_master_volume_step(const console_shell_t *shell)
+{
+    return shell != NULL ? shell->master_volume_step
+                         : CONSOLE_SHELL_MASTER_VOLUME_DEFAULT;
+}
+
+console_color_mode_t console_shell_color_mode(const console_shell_t *shell)
+{
+    return shell != NULL && color_mode_is_valid(shell->color_mode)
+        ? shell->color_mode : CONSOLE_COLOR_MODE_GAMECHANGERS;
 }
 
 bool console_shell_is_dirty(const console_shell_t *shell)
@@ -445,6 +1392,25 @@ static void outline_rect(uint16_t *pixels, size_t stride,
     fill_rect(pixels, stride, x, y + height - 1, width, 1, color);
     fill_rect(pixels, stride, x, y, 1, height, color);
     fill_rect(pixels, stride, x + width - 1, y, 1, height, color);
+}
+
+static void bevel_rect(uint16_t *pixels, size_t stride,
+                       int x, int y, int width, int height,
+                       uint16_t face, bool pressed)
+{
+    fill_rect(pixels, stride, x, y, width, height, face);
+    const uint16_t upper = pressed ? COLOR_DARK : COLOR_LIGHT;
+    const uint16_t lower = pressed ? COLOR_LIGHT : COLOR_DARK;
+    fill_rect(pixels, stride, x, y, width, 1, upper);
+    fill_rect(pixels, stride, x, y, 1, height, upper);
+    fill_rect(pixels, stride, x, y + height - 1, width, 1, lower);
+    fill_rect(pixels, stride, x + width - 1, y, 1, height, lower);
+    if (width > 3 && height > 3) {
+        fill_rect(pixels, stride, x + 1, y + 1, width - 2, 1,
+                  pressed ? COLOR_SHADOW : COLOR_FACE);
+        fill_rect(pixels, stride, x + 1, y + 1, 1, height - 2,
+                  pressed ? COLOR_SHADOW : COLOR_FACE);
+    }
 }
 
 static void glyph_rows(char character, uint8_t rows[7])
@@ -503,6 +1469,9 @@ static void glyph_rows(char character, uint8_t rows[7])
     case '<': GLYPH(2,4,8,16,8,4,2); break;
     case '>': GLYPH(8,4,2,1,2,4,8); break;
     case '?': GLYPH(14,17,1,2,4,0,4); break;
+    case '_': GLYPH(0,0,0,0,0,0,31); break;
+    case '=': GLYPH(0,31,0,31,0,0,0); break;
+    case '@': GLYPH(14,17,23,21,23,16,14); break;
     default: break;
     }
 #undef GLYPH
@@ -565,97 +1534,226 @@ static void draw_u32(uint16_t *pixels, size_t stride,
     }
 }
 
-static void draw_capabilities(uint16_t *pixels, size_t stride,
-                              int x, int y, uint32_t capabilities)
+static void draw_centered_text(uint16_t *pixels, size_t stride,
+                               int left, int top, int width,
+                               const char *text, uint16_t color,
+                               size_t max_characters)
 {
-    int cursor = x;
-    const struct {
-        uint32_t bit;
-        char letter;
-    } entries[] = {
-        { CONSOLE_CAPABILITY_DISPLAY, 'V' },
-        { CONSOLE_CAPABILITY_TOUCH, 'T' },
-        { CONSOLE_CAPABILITY_AUDIO, 'A' },
-        { CONSOLE_CAPABILITY_STORAGE, 'S' },
-    };
-    for (size_t i = 0U; i < sizeof(entries) / sizeof(entries[0]); ++i) {
-        if ((capabilities & entries[i].bit) == 0U) {
-            continue;
-        }
-        char label[2] = {entries[i].letter, '\0'};
-        fill_rect(pixels, stride, cursor, y, 9, 9, UINT16_C(0x2104));
-        draw_text(pixels, stride, cursor + 2, y + 1, label, COLOR_CYAN, 1U, 1U);
-        cursor += 11;
+    size_t length = bounded_length(text, max_characters);
+    if (length > max_characters) {
+        length = max_characters;
     }
+    const int text_width = (int)(length * 6U);
+    const int x = text_width < width
+        ? left + (width - text_width) / 2 : left;
+    draw_text(pixels, stride, x, top, text, color, 1U, max_characters);
+}
+
+static void draw_program_icon(uint16_t *pixels, size_t stride,
+                              int tile_left, int tile_top,
+                              const console_app_descriptor_t *app)
+{
+    const int left = tile_left + (TILE_WIDTH - 26) / 2;
+    const int top = tile_top + 4;
+    bevel_rect(pixels, stride, left, top, 26, 22, COLOR_FACE, false);
+    const uint16_t accent = app->enabled
+        ? app->accent_rgb565 : COLOR_SHADOW;
+    fill_rect(pixels, stride, left + 3, top + 3, 20, 4, accent);
+    fill_rect(pixels, stride, left + 4, top + 9, 8, 8, COLOR_GROUP);
+    outline_rect(pixels, stride, left + 4, top + 9, 8, 8, COLOR_DARK);
+    fill_rect(pixels, stride, left + 15, top + 9, 7, 2, accent);
+    fill_rect(pixels, stride, left + 15, top + 13, 7, 2, COLOR_SHADOW);
+    fill_rect(pixels, stride, left + 15, top + 17, 5, 1, COLOR_DARK);
+}
+
+static void draw_folder_icon(uint16_t *pixels, size_t stride,
+                             int tile_left, int tile_top,
+                             uint16_t accent, bool enabled)
+{
+    const int left = tile_left + (TILE_WIDTH - 30) / 2;
+    const int top = tile_top + 5;
+    const uint16_t face = enabled ? COLOR_YELLOW : COLOR_SHADOW;
+    fill_rect(pixels, stride, left + 2, top + 1, 12, 5, face);
+    outline_rect(pixels, stride, left + 2, top + 1, 12, 5, COLOR_DARK);
+    bevel_rect(pixels, stride, left, top + 5, 30, 18, face, false);
+    fill_rect(pixels, stride, left + 4, top + 10, 22, 2,
+              enabled ? accent : COLOR_DARK);
+}
+
+static size_t decimal_width(uint32_t value)
+{
+    size_t count = 1U;
+    while (value >= 10U) {
+        value /= 10U;
+        ++count;
+    }
+    return count * 6U;
+}
+
+static void draw_program_count(uint16_t *pixels, size_t stride,
+                               int left, int top, int width,
+                               size_t count, uint16_t color)
+{
+    const uint32_t bounded = count > UINT32_MAX
+        ? UINT32_MAX : (uint32_t)count;
+    const size_t label_width = decimal_width(bounded) + 6U + 8U * 6U;
+    const int x = label_width < (size_t)width
+        ? left + (width - (int)label_width) / 2 : left;
+    draw_u32(pixels, stride, x, top, bounded, color);
+    draw_text(pixels, stride, x + (int)decimal_width(bounded) + 6,
+              top, "PROGRAMS", color, 1U, 8U);
+}
+
+static void draw_scroll_arrow(uint16_t *pixels, size_t stride,
+                              int top, bool up, bool enabled,
+                              bool pressed)
+{
+    bevel_rect(pixels, stride, SCROLL_LEFT, top,
+               SCROLL_WIDTH, SCROLL_BUTTON_HEIGHT,
+               COLOR_FACE, pressed);
+    const uint16_t color = enabled ? COLOR_BLACK : COLOR_SHADOW;
+    const int center = SCROLL_LEFT + SCROLL_WIDTH / 2;
+    for (int row = 0; row < 4; ++row) {
+        const int width = up ? row * 2 + 1 : (4 - row) * 2 - 1;
+        const int y = up ? top + 4 + row : top + 4 + row;
+        fill_rect(pixels, stride, center - width / 2, y, width, 1, color);
+    }
+}
+
+static void draw_scrollbar(console_shell_t *shell,
+                           uint16_t *pixels, size_t stride)
+{
+    const size_t maximum = home_max_scroll_row(shell);
+    const bool can_up = shell->home_scroll_row > 0U;
+    const bool can_down = shell->home_scroll_row < maximum;
+    draw_scroll_arrow(
+        pixels, stride, SCROLL_UP_TOP, true, can_up,
+        shell->press_active && shell->pressed_index == SCROLL_UP_CONTROL);
+    draw_scroll_arrow(
+        pixels, stride, SCROLL_DOWN_TOP, false, can_down,
+        shell->press_active && shell->pressed_index == SCROLL_DOWN_CONTROL);
+    fill_rect(pixels, stride, SCROLL_LEFT, SCROLL_TRACK_TOP,
+              SCROLL_WIDTH, SCROLL_TRACK_HEIGHT, COLOR_SHADOW);
+    outline_rect(pixels, stride, SCROLL_LEFT, SCROLL_TRACK_TOP,
+                 SCROLL_WIDTH, SCROLL_TRACK_HEIGHT, COLOR_DARK);
+
+    const int inner_top = SCROLL_TRACK_TOP + 2;
+    const int inner_height = SCROLL_TRACK_HEIGHT - 4;
+    const size_t rows = home_row_count(shell);
+    int thumb_height = inner_height;
+    if (rows > CONSOLE_SHELL_VISIBLE_APP_ROWS) {
+        thumb_height = (int)((size_t)inner_height *
+            CONSOLE_SHELL_VISIBLE_APP_ROWS / rows);
+        if (thumb_height < 12) {
+            thumb_height = 12;
+        }
+    }
+    const int travel = inner_height - thumb_height;
+    const int thumb_top = maximum == 0U ? inner_top :
+        inner_top + (int)((size_t)travel * shell->home_scroll_row / maximum);
+    bevel_rect(pixels, stride, SCROLL_LEFT + 2, thumb_top,
+               SCROLL_WIDTH - 4, thumb_height, COLOR_FACE, false);
 }
 
 static void draw_home(console_shell_t *shell, uint16_t *pixels, size_t stride)
 {
-    draw_text(pixels, stride, 8, 6, "P4 CONSOLE", COLOR_WHITE, 2U, 10U);
-    draw_text(pixels, stride, 9, 25, "FREERTOS NATIVE SHELL",
-              COLOR_CYAN, 1U, 22U);
-    fill_rect(pixels, stride, 0, 38, CONSOLE_SHELL_WIDTH, 1, COLOR_CYAN);
+    fill_rect(pixels, stride, 0, 0, CONSOLE_SHELL_WIDTH,
+              CONSOLE_SHELL_HEIGHT, COLOR_DESKTOP);
+    bevel_rect(pixels, stride, WINDOW_LEFT, WINDOW_TOP,
+               WINDOW_WIDTH, WINDOW_HEIGHT, COLOR_FACE, false);
+    fill_rect(pixels, stride, TITLE_LEFT, TITLE_TOP,
+              TITLE_WIDTH, TITLE_HEIGHT, COLOR_TITLE);
+    fill_rect(pixels, stride, TITLE_LEFT + 3, TITLE_TOP + 4,
+              7, 7, COLOR_FACE);
+    outline_rect(pixels, stride, TITLE_LEFT + 3, TITLE_TOP + 4,
+                 7, 7, COLOR_LIGHT);
+    draw_text(pixels, stride, TITLE_LEFT + 15, TITLE_TOP + 5,
+              "P4 PROGRAM MANAGER", COLOR_WHITE, 1U, 18U);
+    bevel_rect(pixels, stride, 281, TITLE_TOP + 2, 13, 13,
+               COLOR_FACE, false);
+    bevel_rect(pixels, stride, 297, TITLE_TOP + 2, 13, 13,
+               COLOR_FACE, false);
+    fill_rect(pixels, stride, 285, TITLE_TOP + 10, 5, 1, COLOR_BLACK);
+    outline_rect(pixels, stride, 300, TITLE_TOP + 5, 7, 6, COLOR_BLACK);
+    if (shell->home_all_programs || shell->home_folder_path[0] != '\0') {
+        const bool up_pressed = shell->press_active &&
+            shell->pressed_index == FOLDER_UP_CONTROL;
+        bevel_rect(pixels, stride, 8, 26, 31, 13,
+                   COLOR_FACE, up_pressed);
+        draw_text(pixels, stride, 14, 29, "< UP",
+                  COLOR_BLACK, 1U, 4U);
+        draw_text(pixels, stride, 47, 29,
+                  shell->home_all_programs
+                      ? "ALL PROGRAMS" : shell->home_folder_path,
+                  COLOR_BLACK, 1U, 31U);
+    } else {
+        draw_text(pixels, stride, 11, 29, "FILE", COLOR_BLACK, 1U, 4U);
+        draw_text(pixels, stride, 47, 29, "OPTIONS", COLOR_BLACK, 1U, 7U);
+        draw_text(pixels, stride, 101, 29, "HELP", COLOR_BLACK, 1U, 4U);
+    }
+    fill_rect(pixels, stride, 8, 40, 305, 135, COLOR_GROUP);
+    outline_rect(pixels, stride, 8, 40, 305, 135, COLOR_DARK);
 
-    const size_t first = shell->home_page * CONSOLE_SHELL_APPS_PER_PAGE;
-    const size_t last = first + CONSOLE_SHELL_APPS_PER_PAGE < shell->app_count
-        ? first + CONSOLE_SHELL_APPS_PER_PAGE : shell->app_count;
+    home_item_t items[HOME_ITEM_CAPACITY];
+    const size_t item_count = build_home_items(shell, items);
+    const size_t first = home_first_visible_index(shell);
+    const size_t last = first + CONSOLE_SHELL_APPS_PER_VIEW < item_count
+        ? first + CONSOLE_SHELL_APPS_PER_VIEW : item_count;
     for (size_t index = first; index < last; ++index) {
-        const console_app_descriptor_t *const app = &shell->apps[index];
-        const size_t page_index = index - first;
-        const int column = (int)(page_index % 2U);
-        const int row = (int)(page_index / 2U);
+        const home_item_t *const item = &items[index];
+        const console_app_descriptor_t *const app =
+            item->kind == HOME_ITEM_APP && item->app_index < shell->app_count
+                ? &shell->apps[item->app_index] : NULL;
+        const size_t view_index = index - first;
+        const int column =
+            (int)(view_index % CONSOLE_SHELL_APP_COLUMNS);
+        const int row =
+            (int)(view_index / CONSOLE_SHELL_APP_COLUMNS);
         const int left = TILE_LEFT + column * (TILE_WIDTH + TILE_COLUMN_GAP);
         const int top = TILE_TOP + row * (TILE_HEIGHT + TILE_ROW_GAP);
         const bool pressed = shell->press_active &&
-                             shell->pressed_index == index;
-        const uint16_t panel = pressed ? COLOR_PANEL_PRESSED : COLOR_PANEL;
-        fill_rect(pixels, stride, left, top, TILE_WIDTH, TILE_HEIGHT, panel);
-        fill_rect(pixels, stride, left, top, 4, TILE_HEIGHT,
-                  app->enabled ? app->accent_rgb565 : COLOR_MUTED);
-        outline_rect(pixels, stride, left, top, TILE_WIDTH, TILE_HEIGHT,
-                     app->enabled ? UINT16_C(0x4A69) : UINT16_C(0x2945));
-        draw_text(pixels, stride, left + 9, top + 5, app->title,
-                  app->enabled ? COLOR_WHITE : COLOR_MUTED, 1U, 15U);
-        draw_text(pixels, stride, left + 9, top + 17, app->subtitle,
-                  COLOR_MUTED, 1U, 22U);
-        draw_capabilities(pixels, stride, left + 9, top + 31,
-                          app->capabilities);
-        if (!app->enabled) {
-            draw_text(pixels, stride, left + 87, top + 31, "OFFLINE",
-                      COLOR_RED, 1U, 7U);
+            shell->pressed_index == HOME_ITEM_CONTROL_BASE + index;
+        fill_rect(pixels, stride, left, top, TILE_WIDTH, TILE_HEIGHT,
+                  pressed ? COLOR_TITLE : COLOR_GROUP);
+        if (shell->selected_home_item == index || pressed) {
+            outline_rect(pixels, stride, left, top, TILE_WIDTH, TILE_HEIGHT,
+                         pressed ? COLOR_WHITE : COLOR_TITLE);
+        }
+        if (app != NULL) {
+            draw_program_icon(pixels, stride, left, top, app);
+        } else {
+            draw_folder_icon(pixels, stride, left, top,
+                             item->accent_rgb565, item->enabled);
+        }
+        const uint16_t label_color = pressed ? COLOR_WHITE :
+            (item->enabled ? COLOR_BLACK : COLOR_SHADOW);
+        draw_centered_text(pixels, stride, left, top + 30, TILE_WIDTH,
+                           app != NULL ? app->title : item->title,
+                           label_color, 15U);
+        if (app != NULL) {
+            draw_centered_text(pixels, stride, left, top + 40, TILE_WIDTH,
+                               app->enabled ? app->subtitle : "OFFLINE",
+                               pressed ? COLOR_WHITE : COLOR_DARK, 13U);
+        } else {
+            draw_program_count(pixels, stride, left, top + 41, TILE_WIDTH,
+                               item->program_count,
+                               pressed ? COLOR_WHITE : COLOR_DARK);
         }
     }
-    const size_t page_count = home_page_count(shell);
-    if (page_count > 1U) {
-        const bool previous_pressed = shell->press_active &&
-            shell->pressed_index == PAGE_PREVIOUS_CONTROL;
-        const bool next_pressed = shell->press_active &&
-            shell->pressed_index == PAGE_NEXT_CONTROL;
-        fill_rect(pixels, stride, PAGE_PREVIOUS_LEFT, PAGE_BUTTON_TOP,
-                  PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT,
-                  previous_pressed ? COLOR_PANEL_PRESSED : COLOR_PANEL);
-        fill_rect(pixels, stride, PAGE_NEXT_LEFT, PAGE_BUTTON_TOP,
-                  PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT,
-                  next_pressed ? COLOR_PANEL_PRESSED : COLOR_PANEL);
-        outline_rect(pixels, stride, PAGE_PREVIOUS_LEFT, PAGE_BUTTON_TOP,
-                     PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT, COLOR_CYAN);
-        outline_rect(pixels, stride, PAGE_NEXT_LEFT, PAGE_BUTTON_TOP,
-                     PAGE_BUTTON_WIDTH, PAGE_BUTTON_HEIGHT, COLOR_CYAN);
-        draw_text(pixels, stride, PAGE_PREVIOUS_LEFT + 9,
-                  PAGE_BUTTON_TOP + 8, "<", COLOR_WHITE, 1U, 1U);
-        draw_text(pixels, stride, PAGE_NEXT_LEFT + 9,
-                  PAGE_BUTTON_TOP + 8, ">", COLOR_WHITE, 1U, 1U);
-        draw_text(pixels, stride, 8, 191, "PAGE",
-                  COLOR_MUTED, 1U, 4U);
-        draw_u32(pixels, stride, 38, 191,
-                 (uint32_t)(shell->home_page + 1U), COLOR_WHITE);
-        draw_text(pixels, stride, 46, 191, "/",
-                  COLOR_MUTED, 1U, 1U);
-        draw_u32(pixels, stride, 54, 191,
-                 (uint32_t)page_count, COLOR_WHITE);
-    } else {
-        draw_text(pixels, stride, 8, 191, "TAP AN APP",
-                  COLOR_MUTED, 1U, 10U);
+    draw_scrollbar(shell, pixels, stride);
+    bevel_rect(pixels, stride, 8, 178, 305, 15, COLOR_FACE, true);
+    draw_u32(pixels, stride, 13, 182, (uint32_t)item_count,
+             COLOR_BLACK);
+    draw_text(pixels, stride, 31, 182,
+              shell->home_all_programs ? "PROGRAMS" : "ITEMS",
+              COLOR_BLACK, 1U, 8U);
+    if (home_max_scroll_row(shell) > 0U) {
+        draw_text(pixels, stride, 220, 182, "ROW", COLOR_DARK, 1U, 3U);
+        draw_u32(pixels, stride, 244, 182,
+                 (uint32_t)(shell->home_scroll_row + 1U), COLOR_BLACK);
+        draw_text(pixels, stride, 254, 182, "/", COLOR_DARK, 1U, 1U);
+        draw_u32(pixels, stride, 264, 182,
+                 (uint32_t)home_row_count(shell), COLOR_BLACK);
     }
 }
 
@@ -690,21 +1788,42 @@ static void draw_detail_header(console_shell_t *shell,
     fill_rect(pixels, stride, 0, 31, CONSOLE_SHELL_WIDTH, 1, COLOR_CYAN);
 }
 
-static void draw_colors(uint16_t *pixels, size_t stride)
+static void draw_colors(const console_shell_t *shell,
+                        uint16_t *pixels, size_t stride)
 {
-    const uint16_t colors[] = {
-        UINT16_C(0xF800), UINT16_C(0x07E0), UINT16_C(0x001F),
-        UINT16_C(0xFFE0), UINT16_C(0x07FF), UINT16_C(0xF81F),
-    };
-    const char *const labels[] = {"RED", "GREEN", "BLUE", "YELLOW", "CYAN", "MAGENTA"};
-    for (size_t i = 0U; i < sizeof(colors) / sizeof(colors[0]); ++i) {
-        const int top = 36 + (int)i * 26;
-        fill_rect(pixels, stride, 10, top, 300, 21, colors[i]);
-        outline_rect(pixels, stride, 10, top, 300, 21, COLOR_WHITE);
-        draw_text(pixels, stride, 18, top + 7, labels[i],
-                  i == 3U || i == 4U ? COLOR_BLACK : COLOR_WHITE,
-                  1U, 8U);
+    draw_text(pixels, stride, 12, 39, "PICK A COLOR MODE",
+              COLOR_WHITE, 1U, 17U);
+    for (size_t mode = 0U; mode < CONSOLE_COLOR_MODE_COUNT; ++mode) {
+        const console_palette_t *const preview = &s_color_palettes[mode];
+        const int left = color_mode_tile_left(mode);
+        const int top = color_mode_tile_top(mode);
+        const bool selected = shell->color_mode ==
+            (console_color_mode_t)mode;
+        const bool pressed = shell->press_active &&
+            shell->pressed_index == COLOR_MODE_CONTROL_BASE + mode;
+        fill_rect(pixels, stride, left, top,
+                  COLOR_MODE_WIDTH, COLOR_MODE_HEIGHT, preview->desktop);
+        outline_rect(pixels, stride, left, top,
+                     COLOR_MODE_WIDTH, COLOR_MODE_HEIGHT,
+                     selected ? COLOR_YELLOW : preview->cyan);
+        fill_rect(pixels, stride, left + 3, top + 3,
+                  COLOR_MODE_WIDTH - 6, 8, preview->title);
+        if (pressed) {
+            outline_rect(pixels, stride, left + 2, top + 2,
+                         COLOR_MODE_WIDTH - 4, COLOR_MODE_HEIGHT - 4,
+                         preview->white);
+        }
+        draw_centered_text(pixels, stride, left, top + 17,
+                           COLOR_MODE_WIDTH, s_color_mode_names[mode],
+                           preview->white, 10U);
+        draw_centered_text(pixels, stride, left, top + 30,
+                           COLOR_MODE_WIDTH,
+                           selected ? "ACTIVE" : "TAP TO USE",
+                           selected ? preview->yellow : preview->muted,
+                           10U);
     }
+    draw_centered_text(pixels, stride, 0, 177, CONSOLE_SHELL_WIDTH,
+                       "SESSION ONLY - NO CRT FILTER", COLOR_MUTED, 29U);
 }
 
 static void draw_touch(const console_shell_t *shell,
@@ -759,7 +1878,7 @@ static void draw_system(const console_shell_t *shell,
 static void draw_audio(const console_shell_t *shell,
                        uint16_t *pixels, size_t stride)
 {
-    draw_text(pixels, stride, 12, 40, "DOOM AUDIO HANDOFF",
+    draw_text(pixels, stride, 12, 40, "GAME AUDIO SERVICE",
               COLOR_WHITE, 1U, 18U);
     draw_text(pixels, stride, 12, 56,
               shell->runtime.audio_handoff_ready ? "READY" : "BLOCKED",
@@ -767,18 +1886,307 @@ static void draw_audio(const console_shell_t *shell,
               2U, 7U);
     draw_text(pixels, stride, 12, 78, "PCM16 STEREO / 16000 HZ",
               COLOR_MUTED, 1U, 23U);
-    draw_text(pixels, stride, 12, 94, "SFX + MUS / 16 VOICES",
-              COLOR_MUTED, 1U, 22U);
-    draw_text(pixels, stride, 12, 110, "VOLUME 6 / 10",
-              COLOR_YELLOW, 1U, 13U);
-    draw_text(pixels, stride, 12, 126, "FACTORY I2S1 GPIO30 PATH",
+    draw_text(pixels, stride, 12, 94, "MASTER VOLUME / NEXT GAME",
               COLOR_MUTED, 1U, 25U);
-    draw_text(pixels, stride, 12, 150, "SHELL KEEPS AMP SAFE",
-              COLOR_CYAN, 1U, 20U);
-    draw_text(pixels, stride, 12, 166, "AUDIO STARTS INSIDE DOOM",
-              COLOR_CYAN, 1U, 24U);
-    draw_text(pixels, stride, 12, 188, "NO EXTERNAL MIDI DEVICE",
-              COLOR_MUTED, 1U, 23U);
+    const bool down_pressed = shell->press_active &&
+        shell->pressed_index == VOLUME_DOWN_CONTROL;
+    const bool up_pressed = shell->press_active &&
+        shell->pressed_index == VOLUME_UP_CONTROL;
+    bevel_rect(pixels, stride,
+               VOLUME_DOWN_LEFT, VOLUME_BUTTON_TOP,
+               VOLUME_BUTTON_WIDTH, VOLUME_BUTTON_HEIGHT,
+               shell->master_volume_step > CONSOLE_SHELL_MASTER_VOLUME_MIN
+                   ? COLOR_FACE : COLOR_SHADOW,
+               down_pressed);
+    bevel_rect(pixels, stride,
+               VOLUME_UP_LEFT, VOLUME_BUTTON_TOP,
+               VOLUME_BUTTON_WIDTH, VOLUME_BUTTON_HEIGHT,
+               shell->master_volume_step < CONSOLE_SHELL_MASTER_VOLUME_MAX
+                   ? COLOR_FACE : COLOR_SHADOW,
+               up_pressed);
+    draw_centered_text(pixels, stride,
+                       VOLUME_DOWN_LEFT, VOLUME_BUTTON_TOP + 11,
+                       VOLUME_BUTTON_WIDTH, "-", COLOR_BLACK, 1U);
+    draw_centered_text(pixels, stride,
+                       VOLUME_UP_LEFT, VOLUME_BUTTON_TOP + 11,
+                       VOLUME_BUTTON_WIDTH, "+", COLOR_BLACK, 1U);
+    draw_u32(pixels, stride, 154, 128,
+             (uint32_t)shell->master_volume_step, COLOR_YELLOW);
+    draw_text(pixels, stride, 166, 128, "/ 10", COLOR_YELLOW, 1U, 4U);
+    draw_text(pixels, stride, 12, 162, "OS OWNS CODEC / GAMES USE API",
+              COLOR_CYAN, 1U, 28U);
+    draw_text(pixels, stride, 12, 181, "DOOM SFX + MUS / NATIVE TONE + PCM",
+              COLOR_MUTED, 1U, 36U);
+}
+
+static void draw_achievements(const console_shell_t *shell,
+                              uint16_t *pixels, size_t stride)
+{
+    draw_text(pixels, stride, 12, 40, "SESSION UNLOCKS", COLOR_WHITE, 1U, 15U);
+    draw_u32(pixels, stride, 118, 40,
+             (uint32_t)shell->achievements.count, COLOR_YELLOW);
+    draw_text(pixels, stride, 136, 40, "/ 32", COLOR_MUTED, 1U, 4U);
+    if (shell->achievements.count == 0U) {
+        draw_centered_text(pixels, stride, 36, 88, 248,
+                           "NO BADGES YET", COLOR_BLACK, 13U);
+        draw_centered_text(pixels, stride, 36, 106, 248,
+                           "PLAY A BUILT-IN GAME", COLOR_CYAN, 20U);
+    } else {
+        const size_t visible = shell->achievements.count < 5U
+            ? shell->achievements.count : 5U;
+        for (size_t index = 0U; index < visible; ++index) {
+            const p4_achievement_entry_t *const entry =
+                p4_achievement_catalog_get(&shell->achievements, index);
+            if (entry == NULL) {
+                continue;
+            }
+            const int top = 59 + (int)index * 23;
+            fill_rect(pixels, stride, 10, top, 300, 19, COLOR_PANEL);
+            outline_rect(pixels, stride, 10, top, 300, 19, COLOR_CYAN);
+            draw_text(pixels, stride, 17, top + 4, entry->title,
+                      COLOR_YELLOW, 1U, 23U);
+            draw_text(pixels, stride, 17, top + 12, entry->description,
+                      COLOR_MUTED, 1U, 47U);
+        }
+    }
+    draw_text(pixels, stride, 12, 181,
+              "PERSISTENCE ARRIVES WITH SAVES", COLOR_MUTED, 1U, 32U);
+}
+
+static void draw_library(const console_shell_t *shell,
+                         uint16_t *pixels, size_t stride)
+{
+    draw_text(pixels, stride, 12, 40, "REMOVABLE GAME LIBRARY",
+              COLOR_WHITE, 1U, 22U);
+    draw_text(pixels, stride, 12, 58, "SD CARD", COLOR_MUTED, 1U, 7U);
+    draw_text(pixels, stride, 112, 58,
+              shell->runtime.storage_ready ? "READY" : "NOT FOUND",
+              shell->runtime.storage_ready ? COLOR_GREEN : COLOR_RED, 1U, 9U);
+    draw_text(pixels, stride, 12, 76, "VERIFIED CARTS", COLOR_MUTED, 1U, 14U);
+    draw_u32(pixels, stride, 142, 76,
+             shell->runtime.valid_cart_count, COLOR_GREEN);
+    draw_text(pixels, stride, 12, 94, "REJECTED CARTS", COLOR_MUTED, 1U, 14U);
+    draw_u32(pixels, stride, 142, 94,
+             shell->runtime.invalid_cart_count,
+             shell->runtime.invalid_cart_count == 0U ? COLOR_GREEN : COLOR_RED);
+    draw_text(pixels, stride, 12, 112, "QUAKE SHAREWARE", COLOR_MUTED, 1U, 15U);
+    draw_text(pixels, stride, 142, 112,
+              shell->runtime.quake_shareware_ready ? "READY" : "MISSING",
+              shell->runtime.quake_shareware_ready ? COLOR_GREEN : COLOR_YELLOW,
+              1U, 7U);
+    draw_text(pixels, stride, 12, 132,
+              "USB COPY", COLOR_MUTED, 1U, 8U);
+    if (shell->runtime.usb_content_busy) {
+        draw_u32(pixels, stride, 142, 132,
+                 shell->runtime.usb_content_progress_percent, COLOR_YELLOW);
+        draw_text(pixels, stride, 160, 132, "%", COLOR_YELLOW, 1U, 1U);
+    } else {
+        draw_text(pixels, stride, 142, 132,
+                  shell->runtime.usb_content_ready ? "READY" : "UNAVAILABLE",
+                  shell->runtime.usb_content_ready ? COLOR_GREEN : COLOR_RED,
+                  1U, 11U);
+    }
+    draw_text(pixels, stride, 12, 150,
+              shell->runtime.content_truncated
+                  ? "CATALOG LIMIT REACHED" :
+                (shell->runtime.content_scan_complete
+                  ? "HASH GATED / ATOMIC COPY" : "SCAN NOT RUN"),
+              shell->runtime.content_truncated ? COLOR_RED : COLOR_CYAN,
+              1U, 24U);
+    const bool refresh_pressed = shell->press_active &&
+        shell->pressed_index == LIBRARY_REFRESH_CONTROL;
+    bevel_rect(pixels, stride,
+               LIBRARY_REFRESH_LEFT, LIBRARY_REFRESH_TOP,
+               LIBRARY_REFRESH_WIDTH, LIBRARY_REFRESH_HEIGHT,
+               COLOR_FACE, refresh_pressed);
+    draw_centered_text(pixels, stride,
+                       LIBRARY_REFRESH_LEFT, LIBRARY_REFRESH_TOP + 9,
+                       LIBRARY_REFRESH_WIDTH, "REFRESH", COLOR_BLACK, 7U);
+}
+
+static const char *sort_arrow(const p4_file_list_t *files,
+                              p4_file_sort_t sort)
+{
+    if (files->sort != sort) {
+        return "";
+    }
+    return files->descending ? " <" : " >";
+}
+
+static void draw_files(const console_shell_t *shell,
+                       uint16_t *pixels, size_t stride)
+{
+    fill_rect(pixels, stride, 8, 36, 304, 157, COLOR_FACE);
+    outline_rect(pixels, stride, 8, 36, 304, 157, COLOR_DARK);
+    fill_rect(pixels, stride, 11, FILE_HEADER_TOP, 298,
+              FILE_HEADER_HEIGHT, COLOR_TITLE);
+    draw_text(pixels, stride, 14, 44, "NAME", COLOR_WHITE, 1U, 4U);
+    draw_text(pixels, stride, 44, 44,
+              sort_arrow(&shell->files, P4_FILE_SORT_NAME),
+              COLOR_YELLOW, 1U, 2U);
+    draw_text(pixels, stride, 150, 44, "TYPE", COLOR_WHITE, 1U, 4U);
+    draw_text(pixels, stride, 180, 44,
+              sort_arrow(&shell->files, P4_FILE_SORT_TYPE),
+              COLOR_YELLOW, 1U, 2U);
+    draw_text(pixels, stride, 220, 44, "SIZE", COLOR_WHITE, 1U, 4U);
+    draw_text(pixels, stride, 250, 44,
+              sort_arrow(&shell->files, P4_FILE_SORT_SIZE),
+              COLOR_YELLOW, 1U, 2U);
+
+    const size_t visible = shell->files.count < FILE_VISIBLE_ROWS
+        ? shell->files.count : FILE_VISIBLE_ROWS;
+    for (size_t index = 0U; index < visible; ++index) {
+        const p4_file_entry_t *const entry = &shell->files.entries[index];
+        const int top = FILE_ROW_TOP + (int)index * FILE_ROW_HEIGHT;
+        const bool selected = shell->selected_file_index == index;
+        fill_rect(pixels, stride, 11, top, 298, FILE_ROW_HEIGHT,
+                  selected ? UINT16_C(0x001F) : COLOR_LIGHT);
+        draw_text(pixels, stride, 14, top + 5, entry->name,
+                  selected ? COLOR_WHITE : COLOR_BLACK, 1U, 21U);
+        draw_text(pixels, stride, 150, top + 5,
+                  p4_file_kind_name(entry->kind),
+                  selected ? COLOR_WHITE : COLOR_DARK, 1U, 8U);
+        char size[16];
+        if (entry->kind == P4_FILE_KIND_FOLDER) {
+            memcpy(size, "<DIR>", 6U);
+        } else {
+            p4_format_file_size(entry->size_bytes, size);
+        }
+        draw_text(pixels, stride, 220, top + 5, size,
+                  selected ? COLOR_WHITE : COLOR_BLACK, 1U, 14U);
+    }
+    if (visible == 0U) {
+        draw_text(pixels, stride, 20, 74, "NO MANAGED FILES",
+                  COLOR_DARK, 1U, 16U);
+    }
+    draw_text(pixels, stride, 13, 177,
+              shell->runtime.storage_writable
+                  ? "SD READ/WRITE" : "SD READ ONLY",
+              shell->runtime.storage_writable ? COLOR_GREEN : COLOR_RED,
+              1U, 13U);
+    const bool export_pressed = shell->press_active &&
+        shell->pressed_index == FILE_USB_EXPORT_CONTROL;
+    bevel_rect(pixels, stride, 221, 164, 88, 26,
+               shell->runtime.usb_export_ready ? COLOR_FACE : COLOR_SHADOW,
+               export_pressed);
+    draw_centered_text(pixels, stride, 221, 173, 88,
+                       shell->runtime.usb_export_ready
+                           ? "COPY USB" : "USB LOCKED",
+                       COLOR_BLACK, 10U);
+}
+
+static void draw_saves(const console_shell_t *shell,
+                       uint16_t *pixels, size_t stride)
+{
+    draw_text(pixels, stride, 12, 40, "SAVE GAME MANAGER",
+              COLOR_WHITE, 1U, 17U);
+    draw_text(pixels, stride, 12, 56, "STORE", COLOR_MUTED, 1U, 5U);
+    draw_text(pixels, stride, 80, 56, "/P4/SAVES/<GAME>",
+              COLOR_CYAN, 1U, 17U);
+    draw_text(pixels, stride, 12, 72, "STATUS", COLOR_MUTED, 1U, 6U);
+    draw_text(pixels, stride, 80, 72,
+              shell->runtime.save_management_ready
+                  ? "ATOMIC WRITE READY" : "READ ONLY - WRITE GATED",
+              shell->runtime.save_management_ready ? COLOR_GREEN : COLOR_RED,
+              1U, 22U);
+    if (shell->saves.count == 0U) {
+        bevel_rect(pixels, stride, 36, 98, 248, 48, COLOR_FACE, false);
+        draw_centered_text(pixels, stride, 36, 112, 248,
+                           "NO SAVE SLOTS YET", COLOR_BLACK, 17U);
+        draw_centered_text(pixels, stride, 36, 128, 248,
+                           "GAME API HOOK IS NEXT", COLOR_DARK, 21U);
+    } else {
+        const size_t visible = shell->saves.count < 5U
+            ? shell->saves.count : 5U;
+        for (size_t index = 0U; index < visible; ++index) {
+            const p4_save_slot_t *const slot = &shell->saves.slots[index];
+            const int top = 92 + (int)index * 17;
+            draw_text(pixels, stride, 14, top, slot->slot_name,
+                      slot->valid ? COLOR_WHITE : COLOR_RED, 1U, 12U);
+            draw_text(pixels, stride, 92, top, slot->game_id,
+                      COLOR_MUTED, 1U, 25U);
+            char size[16];
+            p4_format_file_size(slot->size_bytes, size);
+            draw_text(pixels, stride, 246, top, size,
+                      COLOR_YELLOW, 1U, 10U);
+        }
+    }
+    char total[16];
+    p4_format_file_size(shell->runtime.save_total_bytes, total);
+    draw_text(pixels, stride, 12, 174, "TOTAL", COLOR_MUTED, 1U, 5U);
+    draw_text(pixels, stride, 52, 174, total, COLOR_YELLOW, 1U, 12U);
+    draw_text(pixels, stride, 160, 174, "EXPORT / RESTORE GATED",
+              COLOR_MUTED, 1U, 22U);
+}
+
+static void draw_terminal(const console_shell_t *shell,
+                          uint16_t *pixels, size_t stride)
+{
+    fill_rect(pixels, stride, 8, 35, 304, 57, COLOR_BLACK);
+    outline_rect(pixels, stride, 8, 35, 304, 57, COLOR_SHADOW);
+    for (size_t index = 0U; index < shell->terminal.line_count; ++index) {
+        draw_text(pixels, stride, 12, 38 + (int)index * 9,
+                  shell->terminal.lines[index], COLOR_MUTED, 1U, 47U);
+    }
+    draw_text(pixels, stride, 12, 82, ">", COLOR_GREEN, 1U, 1U);
+    draw_text(pixels, stride, 24, 82, shell->terminal.input,
+              COLOR_WHITE, 1U, 46U);
+
+    static const char key_labels[40] = {
+        '1','2','3','4','5','6','7','8','9','0',
+        'Q','W','E','R','T','Y','U','I','O','P',
+        'A','S','D','F','G','H','J','K','L','<',
+        'Z','X','C','V','B','N','M','.','/','E',
+    };
+    for (size_t index = 0U; index < 40U; ++index) {
+        const unsigned column = (unsigned)(index % 10U);
+        const unsigned row = (unsigned)(index / 10U);
+        const int left = TERMINAL_KEY_LEFT + (int)column *
+            (TERMINAL_KEY_WIDTH + TERMINAL_KEY_GAP);
+        const int top = TERMINAL_KEY_TOP + (int)row *
+            (TERMINAL_KEY_HEIGHT + TERMINAL_KEY_GAP);
+        const bool pressed = shell->press_active &&
+            shell->pressed_index == TERMINAL_KEY_CONTROL_BASE + index;
+        bevel_rect(pixels, stride, left, top,
+                   TERMINAL_KEY_WIDTH, TERMINAL_KEY_HEIGHT,
+                   COLOR_FACE, pressed);
+        char label[2] = {key_labels[index], '\0'};
+        draw_centered_text(pixels, stride, left, top + 5,
+                           TERMINAL_KEY_WIDTH, label, COLOR_BLACK, 1U);
+    }
+    const bool space_pressed = shell->press_active &&
+        shell->pressed_index == TERMINAL_SPACE_CONTROL;
+    bevel_rect(pixels, stride, 68, 170, 184, 19, COLOR_FACE, space_pressed);
+    draw_centered_text(pixels, stride, 68, 176, 184,
+                       shell->runtime.physical_keyboard_ready
+                           ? "SPACE - USB KEYBOARD READY" : "SPACE - TOUCH KEYBOARD",
+                       COLOR_BLACK, 26U);
+}
+
+static void draw_multiplayer(const console_shell_t *shell,
+                             uint16_t *pixels, size_t stride)
+{
+    draw_text(pixels, stride, 12, 40, "LOCAL MULTIPLAYER",
+              COLOR_WHITE, 1U, 17U);
+    draw_text(pixels, stride, 12, 62, "SESSION CORE", COLOR_MUTED, 1U, 12U);
+    draw_text(pixels, stride, 142, 62,
+              shell->runtime.multiplayer_core_ready ? "READY V1" : "BLOCKED",
+              shell->runtime.multiplayer_core_ready ? COLOR_GREEN : COLOR_RED,
+              1U, 8U);
+    draw_text(pixels, stride, 12, 82, "WI-FI TRANSPORT", COLOR_MUTED, 1U, 15U);
+    draw_text(pixels, stride, 142, 82,
+              shell->runtime.multiplayer_transport_ready ? "READY" : "PENDING",
+              shell->runtime.multiplayer_transport_ready ? COLOR_GREEN : COLOR_YELLOW,
+              1U, 7U);
+    draw_text(pixels, stride, 12, 102, "REMOTE PLAYERS", COLOR_MUTED, 1U, 14U);
+    draw_u32(pixels, stride, 142, 102,
+             shell->runtime.multiplayer_peer_count, COLOR_GREEN);
+    draw_text(pixels, stride, 12, 126, "LOCAL LAN / UP TO 4 PLAYERS",
+              COLOR_CYAN, 1U, 27U);
+    draw_text(pixels, stride, 12, 146, "OS OWNS NETWORK + LOBBY",
+              COLOR_MUTED, 1U, 24U);
+    draw_text(pixels, stride, 12, 166, "GAMES RECEIVE SAFE EVENTS",
+              COLOR_MUTED, 1U, 25U);
 }
 
 bool console_shell_render_rgb565(console_shell_t *shell,
@@ -789,6 +2197,7 @@ bool console_shell_render_rgb565(console_shell_t *shell,
         stride_pixels < CONSOLE_SHELL_WIDTH) {
         return false;
     }
+    s_palette = &s_color_palettes[console_shell_color_mode(shell)];
     fill_rect(pixels, stride_pixels, 0, 0,
               CONSOLE_SHELL_WIDTH, CONSOLE_SHELL_HEIGHT, COLOR_BLACK);
     if (shell->page == CONSOLE_PAGE_HOME) {
@@ -797,7 +2206,7 @@ bool console_shell_render_rgb565(console_shell_t *shell,
         draw_detail_header(shell, pixels, stride_pixels);
         switch (shell->page) {
         case CONSOLE_PAGE_COLORS:
-            draw_colors(pixels, stride_pixels);
+            draw_colors(shell, pixels, stride_pixels);
             break;
         case CONSOLE_PAGE_TOUCH:
             draw_touch(shell, pixels, stride_pixels);
@@ -807,6 +2216,24 @@ bool console_shell_render_rgb565(console_shell_t *shell,
             break;
         case CONSOLE_PAGE_AUDIO:
             draw_audio(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_ACHIEVEMENTS:
+            draw_achievements(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_LIBRARY:
+            draw_library(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_MULTIPLAYER:
+            draw_multiplayer(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_FILES:
+            draw_files(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_SAVES:
+            draw_saves(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_TERMINAL:
+            draw_terminal(shell, pixels, stride_pixels);
             break;
         case CONSOLE_PAGE_EXTERNAL:
             draw_text(pixels, stride_pixels, 12, 60,

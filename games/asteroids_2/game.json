@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "format": "p4-native-static-v1",
+  "api_version": 1,
+  "component": "asteroids_2",
+  "entry_symbol": "p4_asteroids_2_game",
+  "launcher_id": 104,
+  "id": "org.p4console.asteroids-2",
+  "title": "ASTEROIDS 2",
+  "subtitle": "P4 GAME API V1",
+  "folder": "GAMES/ARCADE",
+  "accent_rgb565": "0x5fea",
+  "required_capabilities": [
+    "video",
+    "controls"
+  ],
+  "optional_capabilities": [
+    "audio-tone"
+  ],
+  "license": "MIT",
+  "assets": "original-code-rendered-shapes-only",
+  "enabled": true
+}

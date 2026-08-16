@@ -11,7 +11,12 @@
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 #include "driver/gpio.h"
 #include "driver/ledc.h"
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+#include "esp_lcd_st7701.h"
+#include "waveshare_st7701_init.h"
+#else
 #include "esp_lcd_ek79007.h"
+#endif
 #include "esp_lcd_mipi_dsi.h"
 #include "esp_lcd_panel_io.h"
 #include "esp_lcd_panel_ops.h"
@@ -32,6 +37,16 @@ static const char *TAG = "platform_display";
  */
 #define DISPLAY_DSI_BUS_ID 0
 #define DISPLAY_DSI_DATA_LANES 2
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+#define DISPLAY_DSI_LANE_RATE_MBPS 500
+#define DISPLAY_DPI_CLOCK_MHZ 30
+#define DISPLAY_DPI_HBP 42
+#define DISPLAY_DPI_HSYNC 12
+#define DISPLAY_DPI_HFP 42
+#define DISPLAY_DPI_VBP 2
+#define DISPLAY_DPI_VSYNC 8
+#define DISPLAY_DPI_VFP 60
+#else
 #define DISPLAY_DSI_LANE_RATE_MBPS 900
 #define DISPLAY_DPI_CLOCK_MHZ 51
 #define DISPLAY_DPI_HBP 160
@@ -40,16 +55,19 @@ static const char *TAG = "platform_display";
 #define DISPLAY_DPI_VBP 23
 #define DISPLAY_DPI_VSYNC 10
 #define DISPLAY_DPI_VFP 12
+#endif
 #define DISPLAY_DPHY_LDO_CHANNEL 3
 #define DISPLAY_DPHY_LDO_MV 2500
 #define DISPLAY_PANEL_LDO_CHANNEL 4
 #define DISPLAY_PANEL_LDO_MV 3300
-#define DISPLAY_BACKLIGHT_GPIO GPIO_NUM_31
+#define DISPLAY_BACKLIGHT_GPIO \
+    ((gpio_num_t)PLATFORM_BOARD_LCD_BACKLIGHT_GPIO)
 #define DISPLAY_BACKLIGHT_PWM_HZ 30000
 #define DISPLAY_BACKLIGHT_DUTY_BITS LEDC_TIMER_11_BIT
 #define DISPLAY_BACKLIGHT_MAX_DUTY 2047U
 #define DISPLAY_FRAME_PIXELS \
-    ((size_t)PLATFORM_DISPLAY_WIDTH * (size_t)PLATFORM_DISPLAY_HEIGHT)
+    ((size_t)PLATFORM_DISPLAY_NATIVE_WIDTH * \
+     (size_t)PLATFORM_DISPLAY_NATIVE_HEIGHT)
 #define DISPLAY_FRAME_BYTES (DISPLAY_FRAME_PIXELS * sizeof(uint16_t))
 
 static esp_ldo_channel_handle_t s_dphy_ldo;
@@ -261,9 +279,16 @@ esp_err_t platform_display_set_brightness(uint8_t percent)
 
 esp_err_t platform_display_init(void)
 {
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+#if !CONFIG_PLATFORM_DISPLAY_WAVESHARE_4_3_BUILD_ONLY
+    ESP_LOGE(TAG, "P4_DISPLAY AUTHORIZATION_DENIED board=waveshare-4.3");
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
+#else
 #if !CONFIG_PLATFORM_DISPLAY_ELECROW_10_1_CROSS_REVISION_AUTHORIZED
     ESP_LOGE(TAG, "P4_DISPLAY M1 AUTHORIZATION_DENIED scope=display-only");
     return ESP_ERR_NOT_SUPPORTED;
+#endif
 #endif
 
     if (!ensure_sync_objects()) {
@@ -278,8 +303,16 @@ esp_err_t platform_display_init(void)
         return ESP_ERR_INVALID_STATE;
     }
 
-    ESP_LOGI(TAG, "P4_DISPLAY M1 START profile=elecrow-10.1-ek79007");
+    ESP_LOGI(TAG, "P4_DISPLAY M1 START profile=%s", platform_board_name());
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+    ESP_LOGI(TAG,
+             "P4_DISPLAY M1 SCOPE waveshare-st7701 backlight_gpio=%d "
+             "reset_gpio=%d",
+             PLATFORM_BOARD_LCD_BACKLIGHT_GPIO,
+             PLATFORM_BOARD_LCD_RESET_GPIO);
+#else
     ESP_LOGI(TAG, "P4_DISPLAY M1 SCOPE display-only gpio29=untouched gpio41=untouched");
+#endif
 
     esp_err_t err = configure_backlight_dark();
     if (err != ESP_OK) {
@@ -287,7 +320,9 @@ esp_err_t platform_display_init(void)
         (void)xSemaphoreGive(s_api_lock);
         return err;
     }
-    ESP_LOGI(TAG, "P4_DISPLAY M1 BACKLIGHT_DARK gpio=31 pwm_hz=30000");
+    ESP_LOGI(TAG, "P4_DISPLAY M1 BACKLIGHT_DARK gpio=%d pwm_hz=%u",
+             PLATFORM_BOARD_LCD_BACKLIGHT_GPIO,
+             (unsigned)DISPLAY_BACKLIGHT_PWM_HZ);
 
     const esp_ldo_channel_config_t dphy_ldo_config = {
         .chan_id = DISPLAY_DPHY_LDO_CHANNEL,
@@ -301,6 +336,7 @@ esp_err_t platform_display_init(void)
         return err;
     }
 
+#if !CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
     const esp_ldo_channel_config_t panel_ldo_config = {
         .chan_id = DISPLAY_PANEL_LDO_CHANNEL,
         .voltage_mv = DISPLAY_PANEL_LDO_MV,
@@ -312,7 +348,16 @@ esp_err_t platform_display_init(void)
         (void)xSemaphoreGive(s_api_lock);
         return err;
     }
-    ESP_LOGI(TAG, "P4_DISPLAY M1 POWER_READY ldo3_mv=2500 ldo4_mv=3300");
+#endif
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+    ESP_LOGI(TAG,
+             "P4_DISPLAY M1 POWER_READY ldo3_mv=%u panel_rail=board-owned",
+             (unsigned)DISPLAY_DPHY_LDO_MV);
+#else
+    ESP_LOGI(TAG, "P4_DISPLAY M1 POWER_READY ldo3_mv=%u ldo4_mv=%u",
+             (unsigned)DISPLAY_DPHY_LDO_MV,
+             (unsigned)DISPLAY_PANEL_LDO_MV);
+#endif
 
     const esp_lcd_dsi_bus_config_t dsi_bus_config = {
         .bus_id = DISPLAY_DSI_BUS_ID,
@@ -348,8 +393,8 @@ esp_err_t platform_display_init(void)
         .pixel_format = LCD_COLOR_PIXEL_FORMAT_RGB565,
         .num_fbs = 1,
         .video_timing = {
-            .h_size = PLATFORM_DISPLAY_WIDTH,
-            .v_size = PLATFORM_DISPLAY_HEIGHT,
+            .h_size = PLATFORM_DISPLAY_NATIVE_WIDTH,
+            .v_size = PLATFORM_DISPLAY_NATIVE_HEIGHT,
             .hsync_back_porch = DISPLAY_DPI_HBP,
             .hsync_pulse_width = DISPLAY_DPI_HSYNC,
             .hsync_front_porch = DISPLAY_DPI_HFP,
@@ -359,6 +404,20 @@ esp_err_t platform_display_init(void)
         },
         .flags.use_dma2d = false,
     };
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+    const st7701_vendor_config_t vendor_config = {
+        .init_cmds = waveshare_st7701_init_cmds,
+        .init_cmds_size = sizeof(waveshare_st7701_init_cmds) /
+            sizeof(waveshare_st7701_init_cmds[0]),
+        .flags = {
+            .use_mipi_interface = 1,
+        },
+        .mipi_config = {
+            .dsi_bus = s_dsi_bus,
+            .dpi_config = &dpi_config,
+        },
+    };
+#else
     const ek79007_vendor_config_t vendor_config = {
         .mipi_config = {
             .dsi_bus = s_dsi_bus,
@@ -366,13 +425,18 @@ esp_err_t platform_display_init(void)
             .lane_num = DISPLAY_DSI_DATA_LANES,
         },
     };
+#endif
     const esp_lcd_panel_dev_config_t panel_config = {
-        .reset_gpio_num = GPIO_NUM_NC,
+        .reset_gpio_num = (gpio_num_t)PLATFORM_BOARD_LCD_RESET_GPIO,
         .rgb_ele_order = LCD_RGB_ELEMENT_ORDER_RGB,
         .bits_per_pixel = 16,
         .vendor_config = (void *)&vendor_config,
     };
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+    err = esp_lcd_new_panel_st7701(s_dbi_io, &panel_config, &s_panel);
+#else
     err = esp_lcd_new_panel_ek79007(s_dbi_io, &panel_config, &s_panel);
+#endif
     if (err != ESP_OK) {
         ESP_LOGE(TAG, "P4_DISPLAY M1 FAIL stage=panel-new error=%s", esp_err_to_name(err));
         release_owned_resources();
@@ -408,7 +472,15 @@ esp_err_t platform_display_init(void)
 
     s_initialized = true;
     ESP_LOGI(TAG,
-             "P4_DISPLAY M1 PANEL_READY resolution=1024x600 format=rgb565 lane_mbps=900 dpi_mhz=51");
+             "P4_DISPLAY M1 PANEL_READY native=%ux%u logical=%ux%u "
+             "rotation_cw=%u format=rgb565 lane_mbps=%u dpi_mhz=%u board=%s",
+             (unsigned)PLATFORM_DISPLAY_NATIVE_WIDTH,
+             (unsigned)PLATFORM_DISPLAY_NATIVE_HEIGHT,
+             (unsigned)PLATFORM_DISPLAY_WIDTH,
+             (unsigned)PLATFORM_DISPLAY_HEIGHT,
+             (unsigned)PLATFORM_DISPLAY_ROTATION_CW_DEGREES,
+             DISPLAY_DSI_LANE_RATE_MBPS, DISPLAY_DPI_CLOCK_MHZ,
+             platform_board_name());
     (void)xSemaphoreGive(s_api_lock);
     return ESP_OK;
 }
@@ -475,11 +547,18 @@ esp_err_t platform_display_show_pattern(platform_display_pattern_t pattern)
     return err;
 }
 
-esp_err_t platform_display_submit_rgb565(const uint16_t *source,
-                                         size_t source_stride_pixels,
-                                         uint32_t timeout_ms)
+typedef bool (*display_layout_fn_t)(
+    const uint16_t *, size_t, uint16_t *, size_t, size_t);
+
+static esp_err_t submit_rgb565(
+    const uint16_t *source,
+    size_t source_stride_pixels,
+    size_t minimum_stride,
+    uint32_t timeout_ms,
+    display_layout_fn_t layout)
 {
-    if (source == NULL || source_stride_pixels < PLATFORM_DISPLAY_GAME_WIDTH) {
+    if (source == NULL || source_stride_pixels < minimum_stride ||
+        layout == NULL) {
         __atomic_fetch_add(&s_stats.submit_failures, 1U, __ATOMIC_RELAXED);
         return ESP_ERR_INVALID_ARG;
     }
@@ -510,9 +589,10 @@ esp_err_t platform_display_submit_rgb565(const uint16_t *source,
             goto fail_dark;
         }
     }
-    if (!platform_display_layout_rgb565_320x200(
+    if (!layout(
             source, source_stride_pixels, s_submit_frame,
-            PLATFORM_DISPLAY_WIDTH, PLATFORM_DISPLAY_HEIGHT)) {
+            PLATFORM_DISPLAY_NATIVE_WIDTH,
+            PLATFORM_DISPLAY_NATIVE_HEIGHT)) {
         err = ESP_ERR_INVALID_ARG;
         goto fail;
     }
@@ -523,8 +603,10 @@ esp_err_t platform_display_submit_rgb565(const uint16_t *source,
     }
     while (xSemaphoreTake(s_refresh_signal, 0) == pdTRUE) {
     }
-    err = esp_lcd_panel_draw_bitmap(s_panel, 0, 0, PLATFORM_DISPLAY_WIDTH,
-                                    PLATFORM_DISPLAY_HEIGHT, s_submit_frame);
+    err = esp_lcd_panel_draw_bitmap(s_panel, 0, 0,
+                                    PLATFORM_DISPLAY_NATIVE_WIDTH,
+                                    PLATFORM_DISPLAY_NATIVE_HEIGHT,
+                                    s_submit_frame);
     if (err != ESP_OK) {
         goto fail_dark;
     }
@@ -558,6 +640,25 @@ fail:
              esp_err_to_name(err));
     (void)xSemaphoreGive(s_api_lock);
     return err;
+}
+
+esp_err_t platform_display_submit_rgb565(const uint16_t *source,
+                                         size_t source_stride_pixels,
+                                         uint32_t timeout_ms)
+{
+    return submit_rgb565(
+        source, source_stride_pixels, PLATFORM_DISPLAY_GAME_WIDTH,
+        timeout_ms, platform_display_layout_rgb565_320x200);
+}
+
+esp_err_t platform_display_submit_content_rgb565(
+    const uint16_t *source,
+    size_t source_stride_pixels,
+    uint32_t timeout_ms)
+{
+    return submit_rgb565(
+        source, source_stride_pixels, PLATFORM_DISPLAY_CONTENT_WIDTH,
+        timeout_ms, platform_display_layout_rgb565_768x480);
 }
 
 esp_err_t platform_display_get_stats(platform_display_stats_t *out_stats)

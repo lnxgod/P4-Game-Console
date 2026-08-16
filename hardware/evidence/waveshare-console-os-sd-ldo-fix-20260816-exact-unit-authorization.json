@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-16T11:05:00-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-sd-ldo-corrected-successor",
+  "operator_direction": "Finish the latest Console OS update and initialize the inserted card. Reuse the retained factory backup. Format only if the powered card initializes and proves its filesystem unusable.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e",
+    "reused": true
+  },
+  "predecessor": {
+    "offset": "0x10000",
+    "bytes": 5505920,
+    "sha256": "5f1aaeabf89c68117453e6152c7bde8c8d53534f8e895488016f312475f7f2e1",
+    "elf_sha256": "edef81e7a56dd450d919a5332e91d3a44f4caa3524595e7652373e67cd2b45dd",
+    "acceptance": "digest verified; two boots reached the 15-app 768x480 launcher with touch and the 64 KiB DMA reserve intact",
+    "storage_result": "SDMMC send_op_cond timed out before card identification because the socket power controller was absent"
+  },
+  "candidate": {
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "correction": {
+      "official_source_repository": "https://github.com/waveshareteam/ESP32-P4-WIFI6-Touch-LCD-4.3",
+      "official_source_commit": "74d1a8117ea1be5b3edd0e03999d750fb59a2a4f",
+      "power_path": "ESP32-P4 on-chip LDO channel 4 through the SD power-control API",
+      "lifecycle": "create before mount, attach to the SDMMC host, delete after mount failure or successful unmount",
+      "format_if_mount_failed": false,
+      "firmware_writes": false
+    },
+    "software_contract": {
+      "console_surface": "768x480 landscape",
+      "registered_apps": 15,
+      "native_render_target_fps": 31,
+      "master_volume_default": "8/10",
+      "quake": "optional exact-hash-gated SD easter egg",
+      "multiplayer": "bounded OS-owned core with transport disabled",
+      "quake_state": "BSS and common data verified in external PSRAM",
+      "internal_dma_reserve_bytes": 65536,
+      "usb_host_enabled": false
+    },
+    "artifacts": [
+      {
+        "role": "bootloader",
+        "offset": "0x2000",
+        "path": "apps/console_os/build-waveshare-landscape/bootloader/bootloader.bin",
+        "bytes": 22912,
+        "sha256": "8daaf8dfa70f2b4bd79d9eb97bb39b1909cbc568352e72bca5199351674a9e68",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "partition-table",
+        "offset": "0x8000",
+        "path": "apps/console_os/build-waveshare-landscape/partition_table/partition-table.bin",
+        "bytes": 3072,
+        "sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "application",
+        "offset": "0x10000",
+        "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+        "bytes": 5508000,
+        "sha256": "0918b38a2e5c010ddc8f615e01e148dda32dfbd2354d06d3b66f9502f605a88c",
+        "action": "write-and-on-device-digest-verify"
+      }
+    ],
+    "elf": {
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.elf",
+      "bytes": 18112340,
+      "sha256": "82643eb99a3fcc7e50522ec070f4e630021b60bcc2712030a05f704cac2d79b5"
+    }
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_new_factory_backup": false,
+    "verify_installed_bootloader_before_write": true,
+    "verify_installed_partition_table_before_write": true,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "write_only_application": true,
+    "verify_application_on_device_digest_after_write": true,
+    "format_sd_card": false,
+    "write_sd_card": false,
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "ELF prefix 82643eb99 and 15-app registry appear",
+    "boot reaches the 768x480 launcher without panic",
+    "the 64 KiB internal DMA reserve succeeds",
+    "SD card proceeds beyond send_op_cond and reports either CONTENT_READY or a filesystem-specific failure",
+    "no formatting or card write occurs",
+    "launcher amplifier remains off"
+  ]
+}

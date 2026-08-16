@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "active": true,
+  "recorded_at": "2026-08-14T10:42:24-0700",
+  "classification": "exact-unit-pinned-runtime-unused-rdid-high-byte-normalization",
+  "result": "release-observed-0xfc-high-byte-with-exact-low24",
+  "scope": "console-os-game-api-v1-exact-unit-install-boundaries",
+  "exact_unit": {
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "raw_identity_stored": false
+  },
+  "pinned_runtime": {
+    "esptool_version": "4.12.0",
+    "loader_sha256": "6c5f0c4a9d2047adb1c9164aee66208018789a0f6531922204f6b280168c80e8",
+    "commands_sha256": "d9786dda365985a97504153b5a45bebf55bdf5b8272bf16891ca682b47e2c3af",
+    "esp32p4_target_sha256": "0319aa7ee6e2e45c3ceb2e3424fb98a2ae9734873a2206767085abf75e74bf37",
+    "legacy_rev1_stub_sha256": "3c0f27938055192977123cd4b503bf27d1676c59a7fd7e3f93de8e95b0cf63bf"
+  },
+  "source_semantics": {
+    "flash_id_command": "0x9f",
+    "requested_reply_bits": 24,
+    "returned_container_bits": 32,
+    "w0_register_cleared_before_command": true,
+    "returned_value_postmasked_by_loader": false,
+    "official_identity_fields": {
+      "manufacturer": "value & 0xff",
+      "device_type": "(value >> 8) & 0xff",
+      "capacity": "(value >> 16) & 0xff"
+    },
+    "high_byte_is_part_of_requested_rdid": false,
+    "canonical_exact_identity": "0x1840c8"
+  },
+  "exact_observations": [
+    {
+      "record": "hardware/test-runs/2026-08-14-console-os-game-api-v1-install-attempt1.json",
+      "stage": "e6-write-boundary",
+      "raw_value": "0xfc1840c8",
+      "canonical_low24": "0x1840c8",
+      "writes_attempted": 0
+    },
+    {
+      "record": "hardware/test-runs/2026-08-14-console-os-game-api-v1-install-attempt2.json",
+      "stage": "e6-write-boundary",
+      "raw_value": "0xfc1840c8",
+      "canonical_low24": "0x1840c8",
+      "writes_attempted": 0
+    }
+  ],
+  "normalization_contract": {
+    "accepted_high_bytes": ["0x00", "0xfc", "0xff"],
+    "required_low_24_bits": "0x1840c8",
+    "wrong_low_24_bits_fail_closed": true,
+    "all_other_high_bytes_fail_closed": true,
+    "exact_device_identity_still_required": true,
+    "exact_16_mib_flash_geometry_still_required": true,
+    "validated_partition_table_still_required": true,
+    "sealed_live_preimage_still_required": true,
+    "scope_is_cross_unit": false,
+    "scope_is_reusable": false
+  },
+  "basis": "The pinned esptool requests exactly 24 reply bits for RDID and derives manufacturer, device type, and capacity exclusively from the low 24 bits. Two independent retained-UART attempts on the bound unit reproduced 0xfc only in the unused container byte while the exact low-24 identity, device binding, flash geometry, partition table, and predecessor bytes all matched. Both attempts stopped before flash_begin.",
+  "claims_not_made": [
+    "0xfc is a JEDEC identity byte.",
+    "Any low-24 flash identity is accepted.",
+    "Any high byte is accepted.",
+    "This normalization applies to another tablet, esptool version, or stub."
+  ]
+}

@@ -83,6 +83,7 @@ static esp_err_t fail_safe(p4_game_platform_audio_t *session)
 esp_err_t p4_game_platform_audio_open(
     p4_game_platform_audio_t *session,
     bool exact_unit_runtime_authorized,
+    void *control_bus,
     uint8_t volume_step)
 {
     if (session == NULL || session->backend != NULL || session->running ||
@@ -105,7 +106,7 @@ esp_err_t p4_game_platform_audio_open(
     }
     session->safe_high_proven = true;
     const platform_audio_config_t config = {
-        .control_bus = NULL,
+        .control_bus = control_bus,
         .sample_rate_hz = P4_GAME_PLATFORM_AUDIO_SAMPLE_RATE_HZ,
         .volume_percent = volume_step,
     };

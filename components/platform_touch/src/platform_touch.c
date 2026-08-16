@@ -15,8 +15,14 @@ _Static_assert(CONFIG_ESP_LCD_TOUCH_MAX_POINTS ==
                "esp_lcd_touch point buffer must be exactly five");
 _Static_assert(CONFIG_ESP_LCD_TOUCH_MAX_BUTTONS == 0,
                "CrowPanel GT911 has no authorized touch buttons");
+#if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+#ifndef CONFIG_PLATFORM_TOUCH_WAVESHARE_4_3_BUILD_ONLY
+#error "Waveshare touch requires its explicit build-only authorization"
+#endif
+#else
 #ifndef CONFIG_PLATFORM_TOUCH_ELECROW_10_1_CROSS_REVISION_AUTHORIZED
 #error "platform_touch requires the reviewed Elecrow 10.1-inch GT911 authorization"
+#endif
 #endif
 
 struct platform_touch {
@@ -81,8 +87,8 @@ static esp_err_t create_driver_at_address(platform_touch_t *touch,
 
     touch->driver_config.dev_addr = address_7bit;
     const esp_lcd_touch_config_t touch_config = {
-        .x_max = PLATFORM_TOUCH_WIDTH,
-        .y_max = PLATFORM_TOUCH_HEIGHT,
+        .x_max = PLATFORM_TOUCH_NATIVE_WIDTH,
+        .y_max = PLATFORM_TOUCH_NATIVE_HEIGHT,
         .rst_gpio_num = (gpio_num_t)PLATFORM_TOUCH_RESET_GPIO,
         .int_gpio_num = (gpio_num_t)PLATFORM_TOUCH_INTERRUPT_GPIO,
         .levels = {
@@ -181,6 +187,9 @@ esp_err_t platform_touch_poll(platform_touch_t *touch,
         touch->driver, x, y, strength, &count,
         PLATFORM_TOUCH_MAX_CONTACTS
     );
+    if (!platform_touch_coordinates_native_to_logical(x, y, count)) {
+        return ESP_ERR_INVALID_RESPONSE;
+    }
     if (!platform_touch_frame_from_raw(
             out_frame, sequence, timestamp_us, x, y, strength, count)) {
         return ESP_ERR_INVALID_RESPONSE;

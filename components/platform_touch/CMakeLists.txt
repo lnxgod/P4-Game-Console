@@ -12,6 +12,7 @@ if(COMMAND idf_component_register)
             esp_timer
             espressif__esp_lcd_touch
             espressif__esp_lcd_touch_gt911
+            platform_board
     )
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)
     target_compile_options(${COMPONENT_LIB} PRIVATE
@@ -21,7 +22,12 @@ else()
     cmake_minimum_required(VERSION 3.16)
     project(platform_touch_frame VERSION 0.1.0 LANGUAGES C)
     add_library(platform_touch_frame STATIC ${PLATFORM_TOUCH_PURE_SOURCES})
-    target_include_directories(platform_touch_frame PUBLIC include host/include PRIVATE src)
+    target_include_directories(platform_touch_frame
+        PUBLIC
+            include
+            host/include
+            "${CMAKE_CURRENT_LIST_DIR}/../platform_board/include"
+        PRIVATE src)
     target_compile_features(platform_touch_frame PUBLIC c_std_11)
     if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
         target_compile_options(platform_touch_frame PRIVATE

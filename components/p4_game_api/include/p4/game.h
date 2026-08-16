@@ -22,6 +22,9 @@ enum {
     P4_GAME_SUBTITLE_MAX_BYTES = 32,
     P4_GAME_MAX_FRAME_DELTA_MS = 100,
     P4_GAME_MAX_AUDIO_STREAM_FRAMES = 256,
+    P4_GAME_ACHIEVEMENT_ID_MAX_BYTES = 24,
+    P4_GAME_ACHIEVEMENT_TITLE_MAX_BYTES = 24,
+    P4_GAME_ACHIEVEMENT_DESCRIPTION_MAX_BYTES = 48,
 };
 
 typedef enum {
@@ -85,12 +88,29 @@ typedef bool (*p4_game_submit_pcm_fn)(void *context,
                                       size_t frame_count);
 typedef void (*p4_game_stop_audio_fn)(void *context);
 
+/** A bounded, game-owned achievement declaration sent to the OS. */
+typedef struct {
+    const char *game_id;
+    const char *id;
+    const char *title;
+    const char *description;
+    uint64_t unlocked_at_elapsed_ms;
+} p4_game_achievement_t;
+
+typedef bool (*p4_game_unlock_achievement_fn)(
+    void *context,
+    const p4_game_achievement_t *achievement);
+
 typedef struct {
     uint32_t available_capabilities;
     void *audio_context;
+    /** The descriptor ID of the foreground game, owned by the Console OS. */
+    const char *game_id;
     p4_game_play_tone_fn play_tone;
     p4_game_submit_pcm_fn submit_pcm16_stereo;
     p4_game_stop_audio_fn stop_audio;
+    void *achievement_context;
+    p4_game_unlock_achievement_fn unlock_achievement;
 } p4_game_services_t;
 
 typedef struct {
@@ -134,6 +154,8 @@ typedef struct {
 
 typedef struct {
     const p4_game_descriptor_t *descriptor;
+    /** A copied service table keeps callback pointers valid for the session. */
+    p4_game_services_t services;
     p4_game_context_t context;
     bool active;
 } p4_game_instance_t;
@@ -161,9 +183,25 @@ bool p4_game_play_tone(p4_game_context_t *context,
                        uint8_t volume_step,
                        p4_waveform_t waveform);
 
+/**
+ * Submit 1..256 frames of already-mixed signed 16 kHz PCM16 stereo.
+ *
+ * The host copies accepted frames before returning. A false result means the
+ * optional stream service is unavailable, the request is invalid, or its
+ * bounded FIFO is full; callers must never spin waiting for space.
+ */
 bool p4_game_submit_pcm16_stereo(p4_game_context_t *context,
                                  const int16_t *interleaved_stereo,
                                  size_t frame_count);
+
+/**
+ * Ask the OS to unlock one bounded, game-scoped achievement. The call is
+ * idempotent: an already-unlocked ID is treated as success by the catalog.
+ */
+bool p4_game_unlock_achievement(p4_game_context_t *context,
+                                const char *achievement_id,
+                                const char *title,
+                                const char *description);
 
 void p4_game_stop_audio(p4_game_context_t *context);
 

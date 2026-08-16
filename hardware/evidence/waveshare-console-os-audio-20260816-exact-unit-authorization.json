@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-16T03:31:49Z",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-landscape-audio-successor",
+  "operator_direction": "restore Console OS with selectable Doom and fix missing Doom sound and music while keeping every screen in landscape",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "physical_confirmation": "operator photo shows exact back-side silkscreen",
+    "pcb_revision": null,
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "predecessor": {
+    "application_role": "landscape-doom-direct",
+    "offset": "0x10000",
+    "bytes": 4948240,
+    "sha256": "20cafc9d04a847b0b449c746ab7e93479f8426ebdd0b8cb765f39c40a3c5ab78",
+    "acceptance": "exact readback passed; operator visually accepted landscape Doom; operator reported no sound, music, or launcher"
+  },
+  "candidate": {
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "layout": {
+      "logical": "800x480",
+      "native_scanout": "480x800",
+      "rotation_clockwise_degrees": 90,
+      "game_viewport": "640x400",
+      "margins_left_right_top_bottom": "80/80/40/40",
+      "touch_transform": "inverse-clockwise mapping from native GT911 coordinates into logical landscape"
+    },
+    "foreground_model": "Console OS launcher owns platform services; native games use Game API; selecting Doom performs the existing exclusive one-way handoff",
+    "audio_change": {
+      "backend": "Waveshare ES8311 at 0x18 with I2S MCLK/BCLK/LRCLK/DOUT GPIO13/12/10/9 and active-high amplifier GPIO53",
+      "safe_sequence": "amplifier inactive-low, codec muted, complete zero preroll, amplifier active-high, second zero settle, verified unmute",
+      "level": "Console level 6/10 maps to ES8311 volume 60/100 with immutable full-scale PCM",
+      "console_native_audio": "borrowed shared I2C handle is forwarded by the Console OS platform audio session",
+      "official_reference": {
+        "repository": "https://github.com/waveshareteam/ESP32-P4-WIFI6-Touch-LCD-4.3",
+        "commit": "74d1a8117ea1be5b3edd0e03999d750fb59a2a4f",
+        "basis": "official 06_I2SCodec example uses the same pins, active-high GPIO53, ordinary PCM, and default codec volume 60"
+      }
+    },
+    "write_flash_args": [
+      "--flash-mode",
+      "dio",
+      "--flash-size",
+      "32MB",
+      "--flash-freq",
+      "80m"
+    ],
+    "artifacts": [
+      {
+        "role": "bootloader",
+        "offset": "0x2000",
+        "path": "apps/console_os/build-waveshare-landscape/bootloader/bootloader.bin",
+        "bytes": 22912,
+        "sha256": "8daaf8dfa70f2b4bd79d9eb97bb39b1909cbc568352e72bca5199351674a9e68",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "partition-table",
+        "offset": "0x8000",
+        "path": "apps/console_os/build-waveshare-landscape/partition_table/partition-table.bin",
+        "bytes": 3072,
+        "sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "application",
+        "offset": "0x10000",
+        "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+        "bytes": 5055200,
+        "sha256": "3b74be810e8191d4bf1ce88c21b822ca1d07dc118c18e388299f541b3e34206b",
+        "action": "write-and-readback"
+      }
+    ]
+  },
+  "reason_targeted_successor_write_is_safe": "The installed bootloader and partition table are byte-identical to this candidate and must be read back before mutation. Only the factory application span at 0x10000 changes. The prior run already exercised the same codec, amplifier GPIO, clocks, and mute/start sequence without a reported electrical fault; this successor corrects its inaudible gain policy and adds the existing Console OS foreground shell.",
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "verify_installed_bootloader_before_write": true,
+    "verify_installed_partition_table_before_write": true,
+    "verify_installed_predecessor_application_before_write": true,
+    "write_only_application": true,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "read_back_application_after_write": true,
+    "raw_device_identity_must_not_be_recorded": true,
+    "usb_host_enabled": false,
+    "usb_vbus_source_authorized": false
+  },
+  "hardware_classification_after_install": "application-installed-and-readback-verified plus prior landscape visual acceptance only; launcher visibility, audible native tones, Doom SFX/music, touch navigation, storage, and USB remain pending operator acceptance"
+}

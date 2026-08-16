@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T12:24:31-0700",
+  "result": "pass-exact-install-seven-app-launcher-gameplay-acceptance-pending",
+  "hardware": {
+    "product": "Elecrow CrowPanel Advanced 10.1 in DHE04310D",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432,
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "raw_identity_stored": false,
+    "serial_port": "/dev/cu.wchusbserial10"
+  },
+  "artifact": {
+    "path": "apps/console_os/build-space-invaders/p4_console_os.bin",
+    "offset": "0x10000",
+    "bytes": 4948512,
+    "sha256": "9596617fd86d9cd9abd12a539329c6df2d06e696ca4de6814daa644e56090303",
+    "mutation_span_bytes": 4964352,
+    "mutation_span_sha256": "8a4c7be1bd6dab0fbc24d16217c8d44f18e6ec4aca3a3eb5b7bc3259b25b1ffe",
+    "readback_sha256": "8a4c7be1bd6dab0fbc24d16217c8d44f18e6ec4aca3a3eb5b7bc3259b25b1ffe",
+    "readback_chunks": 10,
+    "app_partition_only": true,
+    "contains_ignored_shareware_wad": true,
+    "redistribution_authorized": false
+  },
+  "transaction": {
+    "same_uart_handle": true,
+    "exclusive_uart_open_count": 1,
+    "uart_reopen_count": 0,
+    "loader_entry_reset_count": 1,
+    "application_launch_count": 1,
+    "install_write_attempt_count": 1,
+    "restore_required": false,
+    "restore_attempt_count": 0,
+    "restore_write_attempt_count": 0,
+    "transfer_baud": 460800,
+    "application_baud": 115200,
+    "ledger": {
+      "path": "hardware/local-state/console-os-space-invaders-install-20260814-attempt3/e6-install-ledger.json",
+      "bytes": 6254,
+      "sha256": "efa9983ac3d376443253a5a6d235529db5cc2dcb5d5bd6182264199091f026e1",
+      "phase": "e6-runtime-accepted"
+    }
+  },
+  "preserved_predecessor": {
+    "path": "hardware/local-state/console-os-space-invaders-install-20260814-attempt3/live-preimage.bin",
+    "bytes": 4964352,
+    "sha256": "b06fa55270e819a4edd207012a4e076cc057992c36494ad7ca45da7c39124284",
+    "installed_prefix_bytes": 4941776,
+    "installed_prefix_sha256": "f4426c370b9f251aa5a3ae5049b99a4c068067390c351dc680d1b7d36492be36",
+    "installed_padded_span_bytes": 4947968,
+    "installed_padded_span_sha256": "23ec0f631b86bf3b8bbd44e1fc791d2fcf699de9a36b6d6c6c8075c4ea996092",
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433"
+  },
+  "jedec_boundaries": {
+    "canonical_low_24_bits": "0x1840c8",
+    "post_stub_initial_raw": "0x001840c8",
+    "post_reset_sequence_raw": "0x001840c8",
+    "write_boundary_raw": "0xab1840c8",
+    "prelaunch_raw": "0xff1840c8",
+    "normalization_evidence": {
+      "path": "hardware/evidence/console-os-space-invaders-jedec-normalization.json",
+      "sha256": "ad5eb401db052ff3945edfd4c05ae2b9862b33fe041bf41b99b696e52f1508b8"
+    },
+    "wrong_low_24_identity_accepted": false
+  },
+  "retained_uart_startup": {
+    "result": "pass",
+    "raw": {
+      "path": "hardware/local-state/console-os-space-invaders-install-20260814-attempt3/e6-startup.raw",
+      "bytes": 5482,
+      "sha256": "cc7f4d166bbcbb4ba54b45130f099b679392eb0fa16cc78bd5536b00af2dce76"
+    },
+    "summary": {
+      "path": "hardware/local-state/console-os-space-invaders-install-20260814-attempt3/e6-startup.json",
+      "bytes": 1338,
+      "sha256": "98a858f0a113d908b8ad52826596836c723f8c14428e6216bd00c3951a913346"
+    },
+    "startup_signature": "apps=7 native_game_api=1 native_format=p4-native-static-v1",
+    "fixed_markers_ordered": true,
+    "stats_records": 2,
+    "latest_loops": 600,
+    "latest_touch_polls": 600,
+    "touch_failures": 0,
+    "display_submits": 1,
+    "display_completions": 1,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "amplifier_energized": false,
+    "doom_handoffs": 0,
+    "rejected_markers": []
+  },
+  "native_game_contract": {
+    "api_version": 1,
+    "format": "p4-native-static-v1",
+    "new_game": "org.p4console.space-invaders",
+    "launcher_entries": 7,
+    "implementation": "original-clean-room-code-rendered-geometry-only",
+    "controls": ["left", "right", "a", "b", "start", "back"],
+    "tone_audio": "optional bounded mixer at 16000 Hz PCM16 stereo",
+    "backend_volume_step": "6/10",
+    "back_returns_to_launcher": true
+  },
+  "frozen_route": {
+    "authorized_route_sha256": "352f5acb6d7c46e7d64b4b58f7a757ef14415b5e10cad8ab6d35977c64fb9fac",
+    "installer_sha256": "2166d7997fe49003d0d17a389373e68818bd3abd4536c274488c7c6bf54cbc27",
+    "authorization_sha256": "52ae32b585a8464fae518b66a792706e3b9260d91c443c445ff2a5db8f5b4f22",
+    "audio_release_sha256": "a9320abb67c5cab2f11aeb69994fbc45c1474b4f9871ff46de86da3d5c678d1f",
+    "jedec_release_sha256": "ad5eb401db052ff3945edfd4c05ae2b9862b33fe041bf41b99b696e52f1508b8"
+  },
+  "preceding_fail_closed_attempts": [
+    "hardware/test-runs/2026-08-14-console-os-space-invaders-install-attempt1.json",
+    "hardware/test-runs/2026-08-14-console-os-space-invaders-install-attempt2.json"
+  ],
+  "manual_acceptance_pending": [
+    "operator confirms the seven-entry launcher and Space Invaders tile are visible",
+    "operator launches Space Invaders and confirms player movement, firing, collisions, lives, waves, pause/restart, and BACK return",
+    "operator confirms clean Space Invaders tones at the reduced volume",
+    "operator confirms Maze Chase and Doom still launch"
+  ],
+  "claims_not_made": [
+    "Space Invaders gameplay, controls, or acoustic output have been manually accepted on the tablet.",
+    "Maze Chase or Doom regressions have been manually accepted after this install.",
+    "The WAD-bearing firmware may be committed or redistributed.",
+    "The exact-unit audio or JEDEC exceptions apply to another tablet."
+  ]
+}

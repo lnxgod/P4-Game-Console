@@ -6,6 +6,13 @@ Use the repository skills in `.agents/skills` whenever their descriptions match:
 - `use-elecrow-p4-audio` for the 10 in variant factory I2S1/GPIO30 speaker path, Doom sound effects, audio diagnostics, or acoustic acceptance.
 - `use-elecrow-p4-display` for the 10 in variant panel, framebuffer, backlight, or game-video path.
 - `add-usb-gamepad-support` for USB HID controllers or game input integration.
+- `test-console-os-builds` for fresh-session Console OS/Game API build tests,
+  guarded successor installs, recovery, and honest manual game acceptance.
+- `develop-p4-console-games` for creating or changing native games, choosing
+  their `GAMES/<TYPE>` folder, and integrating Game API drawing, controls, and
+  sound without giving games raw hardware ownership.
+- `test-p4-games-locally` for the required SDL3 play-test, sanitizer smoke,
+  and gameplay-tuning loop before building native-game firmware candidates.
 
 Keep these rules true for every change:
 

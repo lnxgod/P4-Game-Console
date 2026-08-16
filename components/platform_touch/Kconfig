@@ -9,4 +9,12 @@ menu "ESP32-P4 platform touch"
             0x14 fallback, polling-only runtime with no ISR callback, and
             1024x600 frames with at most five contacts. This build gate does
             not authorize flashing and is not hardware verification.
+
+    config PLATFORM_TOUCH_WAVESHARE_4_3_BUILD_ONLY
+        bool "Compile the Waveshare 4.3-inch GT911 touch client"
+        default n
+        help
+            Enables the Waveshare GPIO7/GPIO8 I2C path with GPIO23 touch
+            reset and no interrupt GPIO. This is a build-only seam; it does
+            not authorize hardware acceptance or USB use.
 endmenu

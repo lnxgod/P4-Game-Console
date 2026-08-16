@@ -224,8 +224,8 @@ static void test_exact_vendor_configuration(void)
     EXPECT_EQ(1, s_mock.io_configs[0].flags.disable_control_phase);
     EXPECT_EQ(PLATFORM_TOUCH_GT911_PRIMARY_ADDRESS,
               s_mock.driver_addresses[0]);
-    EXPECT_EQ(PLATFORM_TOUCH_WIDTH, s_mock.touch_configs[0].x_max);
-    EXPECT_EQ(PLATFORM_TOUCH_HEIGHT, s_mock.touch_configs[0].y_max);
+    EXPECT_EQ(PLATFORM_TOUCH_NATIVE_WIDTH, s_mock.touch_configs[0].x_max);
+    EXPECT_EQ(PLATFORM_TOUCH_NATIVE_HEIGHT, s_mock.touch_configs[0].y_max);
     EXPECT_EQ(PLATFORM_TOUCH_RESET_GPIO,
               s_mock.touch_configs[0].rst_gpio_num);
     EXPECT_EQ(PLATFORM_TOUCH_INTERRUPT_GPIO,

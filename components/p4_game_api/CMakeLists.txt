@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: MIT
 
 set(P4_GAME_API_SOURCES
+    "src/achievements.c"
     "src/audio_mixer.c"
     "src/draw.c"
     "src/game_runtime.c"
@@ -11,6 +12,7 @@ if(COMMAND idf_component_register)
     idf_component_register(
         SRCS ${P4_GAME_API_SOURCES}
         INCLUDE_DIRS "include"
+        REQUIRES platform_board
     )
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)
     target_compile_options(${COMPONENT_LIB} PRIVATE

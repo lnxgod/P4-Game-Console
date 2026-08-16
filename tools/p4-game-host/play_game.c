@@ -11,6 +11,7 @@
 #include <string.h>
 
 #include "p4/audio.h"
+#include "p4/achievements.h"
 #include "p4/game.h"
 #include "p4/input.h"
 
@@ -18,7 +19,11 @@ extern const p4_game_descriptor_t P4_HOST_GAME_DESCRIPTOR;
 
 enum {
     HOST_SCALE = 3,
-    HOST_FRAME_MS = 16,
+    HOST_SERVICE_INTERVAL_MS = 16,
+    HOST_RENDER_DIVISOR = 2,
+    HOST_RENDER_TARGET_FPS =
+        1000 / (HOST_SERVICE_INTERVAL_MS * HOST_RENDER_DIVISOR),
+    HOST_MASTER_VOLUME_STEP = 8,
     HOST_AUDIO_FRAMES = 256,
     HOST_MAX_SMOKE_FRAMES = 100000,
 };
@@ -46,6 +51,17 @@ static void host_stop_audio(void *context)
     p4_audio_mixer_stop_all(&audio->mixer);
 }
 
+static bool host_submit_pcm16_stereo(
+    void *context,
+    const int16_t *interleaved_stereo,
+    size_t frame_count)
+{
+    host_audio_t *const audio = context;
+    return audio != NULL && audio->stream != NULL &&
+        p4_audio_mixer_submit_pcm16_stereo(
+            &audio->mixer, interleaved_stereo, frame_count);
+}
+
 static bool start_audio(host_audio_t *audio)
 {
     if (audio == NULL) {
@@ -64,7 +80,15 @@ static bool start_audio(host_audio_t *audio)
         fprintf(stderr, "audio disabled: %s\n", SDL_GetError());
         return false;
     }
-    return SDL_ResumeAudioStreamDevice(audio->stream);
+    if (!SDL_SetAudioStreamGain(
+            audio->stream, (float)HOST_MASTER_VOLUME_STEP / 10.0F) ||
+        !SDL_ResumeAudioStreamDevice(audio->stream)) {
+        fprintf(stderr, "audio disabled: %s\n", SDL_GetError());
+        SDL_DestroyAudioStream(audio->stream);
+        audio->stream = NULL;
+        return false;
+    }
+    return true;
 }
 
 static bool pump_audio(host_audio_t *audio)
@@ -113,6 +137,52 @@ static uint32_t digital_buttons(void)
     return buttons;
 }
 
+static uint32_t button_for_key(SDL_Keycode key)
+{
+    switch (key) {
+    case SDLK_UP: case SDLK_W: return P4_BUTTON_UP;
+    case SDLK_DOWN: case SDLK_S: return P4_BUTTON_DOWN;
+    case SDLK_LEFT: case SDLK_A: return P4_BUTTON_LEFT;
+    case SDLK_RIGHT: case SDLK_D: return P4_BUTTON_RIGHT;
+    case SDLK_SPACE: case SDLK_Z: return P4_BUTTON_A;
+    case SDLK_X: case SDLK_LSHIFT: return P4_BUTTON_B;
+    case SDLK_RETURN: case SDLK_P: return P4_BUTTON_START;
+    case SDLK_ESCAPE: case SDLK_BACKSPACE: case SDLK_Q:
+        return P4_BUTTON_BACK;
+    default: return 0U;
+    }
+}
+
+static bool touch_from_window(SDL_Renderer *renderer,
+                              float window_x,
+                              float window_y,
+                              p4_physical_touch_t *touch)
+{
+    if (touch == NULL) {
+        return false;
+    }
+    float logical_x = 0.0F;
+    float logical_y = 0.0F;
+    if (!SDL_RenderCoordinatesFromWindow(
+            renderer, window_x, window_y, &logical_x, &logical_y) ||
+        logical_x < 0.0F || logical_y < 0.0F ||
+        logical_x >= (float)P4_GAME_SURFACE_WIDTH ||
+        logical_y >= (float)P4_GAME_SURFACE_HEIGHT) {
+        return false;
+    }
+    const uint16_t x = (uint16_t)logical_x;
+    const uint16_t y = (uint16_t)logical_y;
+    *touch = (p4_physical_touch_t){
+        .x = (uint16_t)(P4_INPUT_VIEWPORT_LEFT +
+                        ((uint32_t)x * P4_INPUT_VIEWPORT_WIDTH) /
+                            P4_GAME_SURFACE_WIDTH),
+        .y = (uint16_t)(P4_INPUT_VIEWPORT_TOP +
+                        ((uint32_t)y * P4_INPUT_VIEWPORT_HEIGHT) /
+                            P4_GAME_SURFACE_HEIGHT),
+    };
+    return true;
+}
+
 static size_t mouse_touch(SDL_Renderer *renderer,
                           p4_physical_touch_t touch[1])
 {
@@ -122,26 +192,8 @@ static size_t mouse_touch(SDL_Renderer *renderer,
     if ((state & SDL_BUTTON_LMASK) == 0U) {
         return 0U;
     }
-    float logical_x = 0.0F;
-    float logical_y = 0.0F;
-    if (!SDL_RenderCoordinatesFromWindow(
-            renderer, window_x, window_y, &logical_x, &logical_y) ||
-        logical_x < 0.0F || logical_y < 0.0F ||
-        logical_x >= (float)P4_GAME_SURFACE_WIDTH ||
-        logical_y >= (float)P4_GAME_SURFACE_HEIGHT) {
-        return 0U;
-    }
-    const uint16_t x = (uint16_t)logical_x;
-    const uint16_t y = (uint16_t)logical_y;
-    touch[0] = (p4_physical_touch_t){
-        .x = (uint16_t)(P4_INPUT_VIEWPORT_LEFT +
-                        ((uint32_t)x * P4_INPUT_VIEWPORT_WIDTH) /
-                            P4_GAME_SURFACE_WIDTH),
-        .y = (uint16_t)(P4_INPUT_VIEWPORT_TOP +
-                        ((uint32_t)y * P4_INPUT_VIEWPORT_HEIGHT) /
-                            P4_GAME_SURFACE_HEIGHT),
-    };
-    return 1U;
+    return touch_from_window(renderer, window_x, window_y, &touch[0])
+        ? 1U : 0U;
 }
 
 static bool parse_max_frames(int argc, char **argv, uint32_t *max_frames)
@@ -234,13 +286,20 @@ int main(int argc, char **argv)
 
     host_audio_t audio;
     const bool audio_ready = start_audio(&audio);
+    p4_achievement_catalog_t achievements;
+    p4_achievement_catalog_init(&achievements);
     const p4_game_services_t services = {
         .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
-            (audio_ready ? P4_GAME_CAP_AUDIO_TONE : 0U),
+            (audio_ready
+                ? P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM : 0U),
         .audio_context = audio_ready ? &audio : NULL,
+        .game_id = P4_HOST_GAME_DESCRIPTOR.id,
         .play_tone = audio_ready ? host_play_tone : NULL,
-        .submit_pcm16_stereo = NULL,
+        .submit_pcm16_stereo = audio_ready
+            ? host_submit_pcm16_stereo : NULL,
         .stop_audio = audio_ready ? host_stop_audio : NULL,
+        .achievement_context = &achievements,
+        .unlock_achievement = p4_achievement_catalog_service_unlock,
     };
     p4_game_instance_t instance = {0};
     if (!p4_game_instance_start(
@@ -262,6 +321,10 @@ int main(int argc, char **argv)
            P4_HOST_GAME_DESCRIPTOR.id);
     printf("Arrows/WASD move | Space/Z A | X/Shift B | "
            "Enter/P Start | Esc/Backspace/Q Back | mouse = touch\n");
+    printf("Timing: %d ms updates/audio | %d FPS render target | "
+           "master volume %d/10\n",
+           HOST_SERVICE_INTERVAL_MS, HOST_RENDER_TARGET_FPS,
+           HOST_MASTER_VOLUME_STEP);
 
     p4_game_input_mapper_t mapper;
     p4_game_input_mapper_init(&mapper);
@@ -272,25 +335,39 @@ int main(int argc, char **argv)
         .height = P4_GAME_SURFACE_HEIGHT,
     };
     bool running = true;
+    uint32_t service_updates = 0U;
     uint32_t rendered_frames = 0U;
+    unsigned render_phase = 0U;
     Uint64 previous_tick = SDL_GetTicks();
     while (running) {
+        uint32_t pulsed_buttons = 0U;
+        p4_physical_touch_t pulsed_touch = {0};
+        bool pulsed_touch_valid = false;
         SDL_Event event;
         while (SDL_PollEvent(&event) != 0) {
             if (event.type == SDL_EVENT_QUIT) {
                 running = false;
+            } else if (event.type == SDL_EVENT_KEY_DOWN &&
+                       !event.key.repeat) {
+                pulsed_buttons |= button_for_key(event.key.key);
+            } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN &&
+                       event.button.button == SDL_BUTTON_LEFT) {
+                pulsed_touch_valid = touch_from_window(
+                    renderer, event.button.x, event.button.y, &pulsed_touch);
             }
         }
         if (!running) {
             break;
         }
         Uint64 now = SDL_GetTicks();
-        if (max_frames == 0U && now - previous_tick < HOST_FRAME_MS) {
-            SDL_Delay((Uint32)(HOST_FRAME_MS - (now - previous_tick)));
+        if (max_frames == 0U &&
+            now - previous_tick < HOST_SERVICE_INTERVAL_MS) {
+            SDL_Delay((Uint32)(HOST_SERVICE_INTERVAL_MS -
+                               (now - previous_tick)));
             now = SDL_GetTicks();
         }
         uint64_t elapsed64 = max_frames == 0U
-            ? now - previous_tick : HOST_FRAME_MS;
+            ? now - previous_tick : HOST_SERVICE_INTERVAL_MS;
         previous_tick = now;
         if (elapsed64 == 0U) {
             elapsed64 = 1U;
@@ -300,20 +377,36 @@ int main(int argc, char **argv)
         }
 
         p4_physical_touch_t touch[1];
-        const size_t touch_count = mouse_touch(renderer, touch);
+        size_t touch_count = mouse_touch(renderer, touch);
+        if (touch_count == 0U && pulsed_touch_valid) {
+            touch[0] = pulsed_touch;
+            touch_count = 1U;
+        }
         p4_game_input_t input;
         p4_game_input_mapper_update(
             &mapper, true, touch, touch_count,
-            digital_buttons(), &input);
+            digital_buttons() | pulsed_buttons, &input);
         const p4_game_result_t result = p4_game_instance_update(
             &instance, &input, (uint32_t)elapsed64);
         if (result == P4_GAME_EXIT_TO_LAUNCHER) {
             running = false;
             continue;
         }
-        if ((audio_ready && !pump_audio(&audio)) ||
-            result != P4_GAME_CONTINUE ||
-            !p4_game_instance_render(&instance, &surface) ||
+        if (result != P4_GAME_CONTINUE ||
+            (audio_ready && !pump_audio(&audio))) {
+            fprintf(stderr, "game update/audio failed: %s\n", SDL_GetError());
+            running = false;
+            continue;
+        }
+        if (service_updates != UINT32_MAX) {
+            ++service_updates;
+        }
+        ++render_phase;
+        if (render_phase < HOST_RENDER_DIVISOR) {
+            continue;
+        }
+        render_phase = 0U;
+        if (!p4_game_instance_render(&instance, &surface) ||
             !SDL_UpdateTexture(
                 texture, NULL, pixels,
                 P4_GAME_SURFACE_WIDTH * (int)sizeof(*pixels)) ||
@@ -332,10 +425,15 @@ int main(int argc, char **argv)
     }
 
     p4_game_instance_stop(&instance);
+    if (achievements.count != 0U) {
+        printf("Unlocked %zu achievement%s\n", achievements.count,
+               achievements.count == 1U ? "" : "s");
+    }
     if (audio_ready) {
         SDL_DestroyAudioStream(audio.stream);
     }
-    printf("Stopped after %" PRIu32 " frames\n", rendered_frames);
+    printf("Stopped after %" PRIu32 " renders / %" PRIu32
+           " service updates\n", rendered_frames, service_updates);
     free(state_memory);
     free(pixels);
     SDL_DestroyTexture(texture);

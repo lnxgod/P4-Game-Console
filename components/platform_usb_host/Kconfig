@@ -67,4 +67,13 @@ config PLATFORM_USB_HOST_BOARD_PATH_REVIEWED
     default n
     depends on PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
 
+config PLATFORM_USB_HOST_WAVESHARE_4_3_PATH_REVIEWED
+    bool "Exact Waveshare H2 USB data/VBUS path is reviewed"
+    default n
+    help
+        Keep disabled until the Waveshare H2 connector is bench-qualified.
+        The schematic shows GPIO24/GPIO25 data, VBUS, and 5.1 kOhm CC
+        pulldowns; this option does not claim that H2 can source controller
+        power.
+
 endmenu

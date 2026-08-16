@@ -8,6 +8,7 @@
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
 #include "usb/usb_host.h"
+#include "platform/board.h"
 
 #define PLATFORM_USB_HOST_DAEMON_STACK_BYTES 4096U
 #define PLATFORM_USB_HOST_DAEMON_PRIORITY 5U
@@ -215,6 +216,15 @@ static bool fixture_matches_build_authorization(
 esp_err_t platform_usb_host_start(
     const platform_usb_fixture_evidence_t *fixture_evidence)
 {
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3 && \
+    !CONFIG_PLATFORM_USB_HOST_WAVESHARE_4_3_PATH_REVIEWED
+    ESP_LOGE(TAG,
+             "USB_HOST_BLOCKED board=waveshare-4.3 reason=h2-vbus-path-unreviewed "
+             "data_gpio=%u/%u vbus_present=1 source_authorized=0",
+             (unsigned)PLATFORM_BOARD_USB_DATA_N_GPIO,
+             (unsigned)PLATFORM_BOARD_USB_DATA_P_GPIO);
+    return ESP_ERR_NOT_SUPPORTED;
+#endif
     const platform_usb_status_t fixture_status =
         platform_usb_fixture_evidence_validate(fixture_evidence);
     if (fixture_status != PLATFORM_USB_STATUS_OK) {

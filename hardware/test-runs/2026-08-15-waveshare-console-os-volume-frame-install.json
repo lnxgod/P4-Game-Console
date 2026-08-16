@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-15T21:20:00-0700",
+  "result": "pass-app-install-digest-and-automated-boot-manual-game-acceptance-pending",
+  "hardware": {
+    "product": "Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "psram_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+    "raw_identity_stored": false
+  },
+  "artifact": {
+    "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+    "offset": "0x10000",
+    "bytes": 5112832,
+    "sha256": "d2bc620d213d4ed240251b97003c54cc5987418b07a1a26494b59841d971e426",
+    "app_partition_only": true,
+    "contains_ignored_shareware_wad": true,
+    "redistribution_authorized": false
+  },
+  "install": {
+    "factory_backup_reused": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "new_backup_created": false,
+    "bootloader_sha256_verified": "8daaf8dfa70f2b4bd79d9eb97bb39b1909cbc568352e72bca5199351674a9e68",
+    "partition_table_sha256_verified": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+    "esptool_write_hash_verified": true,
+    "on_device_application_digest_verified": true,
+    "erase_entire_flash": false
+  },
+  "serial_boot": {
+    "capture_method": "short interactive idf.py monitor; summary recorded, raw stream not retained",
+    "project": "p4_console_os",
+    "elf_sha256_prefix": "35f304ea7",
+    "registered_apps": 12,
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3",
+    "panel_native": "480x800",
+    "panel_logical": "800x480",
+    "rotation_clockwise_degrees": 90,
+    "viewport": "768x480",
+    "viewport_margins": "16/16/0/0",
+    "touch_ready": true,
+    "touch_polls_latest": 900,
+    "touch_failures": 0,
+    "display_submits": 1,
+    "display_completions": 1,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "master_volume_default": "8/10",
+    "native_service_interval_ms": 16,
+    "native_render_target_fps": 31,
+    "amplifier_energized_on_launcher": false,
+    "panic_or_halt_observed": false
+  },
+  "manual_acceptance": {
+    "launcher_visual": "pending for this artifact",
+    "audio_panel_minus_plus": "pending",
+    "native_game_loudness_at_8_of_10": "pending",
+    "native_game_smoothness_near_30_fps": "pending",
+    "native_game_return_to_launcher": "pending",
+    "doom_sfx_and_music_at_selected_volume": "pending"
+  }
+}

@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-16T14:50:43-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-quake-renderer-psram-successor",
+  "operator_direction": "Take one final bounded Quake fix attempt, then focus platform work on the kid-facing Game API, multiplayer, and joystick support.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e",
+    "reused": true
+  },
+  "predecessor": {
+    "offset": "0x10000",
+    "bytes": 5550288,
+    "sha256": "ce54c906a77c0c4a2b4d00b13f766f83ee9234cc5faf97660b69216a91b1df63",
+    "elf_sha256": "7d02187e3351106db456c282a22893804dea431b8c8c84845e54b66de6d232d5",
+    "observed_progress": "Quake loaded the exact PAK, initialized audio, and submitted its first frame",
+    "observed_failure": "A later render overflowed the 96 KiB engine task and a single display timeout was treated as fatal",
+    "decoded_fault": "R_EdgeDrawing allocated about 128 KiB of edge and surface scratch on its automatic stack",
+    "pak_missing": false,
+    "pak_bad": false
+  },
+  "candidate": {
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "software_contract": {
+      "console_surface": "768x480 landscape",
+      "registered_apps": 19,
+      "quake_engine_stack_bytes": 98304,
+      "quake_engine_stack_memory": "external-PSRAM",
+      "quake_renderer_scratch_memory": "external-PSRAM-BSS",
+      "quake_renderer_stack_frame_bytes": 32,
+      "display_timeout_policy": "drop-one-recover-on-success-stop-after-three-consecutive",
+      "quake_pak_path": "/sdcard/GAMES/QUAKE/ID1/PAK0.PAK",
+      "sd_mount": "no-format",
+      "sd_writes": false,
+      "usb_host_enabled": false,
+      "usb_vbus_policy_changed": false
+    },
+    "artifacts": [
+      {
+        "role": "bootloader",
+        "offset": "0x2000",
+        "path": "apps/console_os/build-waveshare-landscape/bootloader/bootloader.bin",
+        "bytes": 22912,
+        "sha256": "8daaf8dfa70f2b4bd79d9eb97bb39b1909cbc568352e72bca5199351674a9e68",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "partition-table",
+        "offset": "0x8000",
+        "path": "apps/console_os/build-waveshare-landscape/partition_table/partition-table.bin",
+        "bytes": 3072,
+        "sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "application",
+        "offset": "0x10000",
+        "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+        "bytes": 5550784,
+        "sha256": "b64b93a943711ca9330e8f065b2ab71f33c1f4fd6e90bb7403d7d1c3768566c9",
+        "action": "write-and-on-device-digest-verify"
+      }
+    ],
+    "elf": {
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.elf",
+      "bytes": 18293780,
+      "sha256": "610ee1e46614cc28222d28f57af19e815f90de1c518f3c25ba3e834e9323fa76"
+    }
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_new_factory_backup": false,
+    "write_only_application": true,
+    "verify_live_identity_before_write": true,
+    "verify_installed_bootloader_before_write": true,
+    "verify_installed_partition_table_before_write": true,
+    "verify_installed_predecessor_before_write": true,
+    "verify_application_on_device_digest_after_write": true,
+    "format_sd_card": false,
+    "modify_sd_card": false
+  },
+  "acceptance_required_after_install": [
+    "Console OS reports 19 apps on its fixed 768x480 landscape surface",
+    "touch and display initialize without panic",
+    "background catalog reports quake_shareware=1",
+    "Quake reports TASK_READY and FIRST_FRAME",
+    "Quake renders the demo or map for a sustained observation without panic, watchdog, or stack-protection reset",
+    "no single display timeout terminates Quake",
+    "launcher amplifier remains off until a foreground game owns audio"
+  ]
+}

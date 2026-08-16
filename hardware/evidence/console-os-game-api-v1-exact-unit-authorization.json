@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "active": true,
+  "recorded_at": "2026-08-14T10:26:08-0700",
+  "scope": "exact-unit-console-os-game-api-v1",
+  "operator_direction": "show-it-on-the-tablet",
+  "device_binding": {
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216
+  },
+  "exact_artifact": {
+    "offset": "0x10000",
+    "app_binary_bytes": 4941776,
+    "app_binary_sha256": "f4426c370b9f251aa5a3ae5049b99a4c068067390c351dc680d1b7d36492be36",
+    "elf_bytes": 14207252,
+    "elf_sha256": "dfea256bcb77fbff71d4be15f2a622044591cd3b871101d6528b0ccaf479c1c4",
+    "bootloader_bytes": 22912,
+    "bootloader_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+    "app_partition_bytes": 11534336,
+    "partition_free_bytes": 6592560,
+    "mutation_span_bytes": 4947968,
+    "mutation_tail_byte": "ff",
+    "contains_ignored_shareware_wad": true,
+    "redistribution_authorized": false
+  },
+  "build_evidence": {
+    "path": "test-runs/2026-08-14-console-os-game-api-v1-build.json",
+    "sha256": "f94868ec95744044b0c7c2da79c61c943460d4e967b513b3090992cc6ab81a85"
+  },
+  "exact_unit_audio_release": {
+    "path": "hardware/evidence/console-os-game-api-v1-exact-unit-audio-release.json",
+    "sha256": "c01638869e7859fc509cbde001f0dcf02ef875778d4d19e0af832f2709242722"
+  },
+  "jedec_normalization": {
+    "path": "hardware/evidence/console-os-game-api-v1-jedec-normalization.json",
+    "sha256": "041a521af4050c1dfdd944adb64dae8ffa5f340d8b0a2ff7255dfe47b7fd33e9"
+  },
+  "installed_predecessor": {
+    "path": "hardware/test-runs/2026-08-14-console-os-mvp-install.json",
+    "sha256": "a5172268fcb4d338bf2159a68302a417aa92e95644658672e0a9cdb9859df7ac"
+  },
+  "frozen_primitives": {
+    "base_installer_sha256": "0887dbcc43d79f48e06628eca21c518974ef900ff8f8cb025d63bb2bbf44c491",
+    "transport_sha256": "f5d2255f37ca9373fdaf42ebe711968c31dc51b3dbbc2f7e501a235fbb546471",
+    "startup_capture_sha256": "cdb2c124f0f1e58aaaac7f13d416eff00cb044cc0f13232afa8537d8645aa571",
+    "startup_signature": "P4_CONSOLE_OS START shell=freertos-native apps=6 surface=rgb565-320x200 touch=gt911 native_game_api=1 native_format=p4-native-static-v1 execution=build-candidate",
+    "accepted_rdid_high_bytes": ["0x00", "0xfc", "0xff"]
+  },
+  "execution_contract": {
+    "same_uart_handle": true,
+    "live_full_span_preimage_required": true,
+    "app_partition_only": true,
+    "retained_launcher_capture_required": true,
+    "automatic_restore_on_capture_failure": true,
+    "launcher_audio_hardware_calls": 0,
+    "native_game_audio_deferred_until_user_launch": true,
+    "usb_runtime": false,
+    "recovery_directory": "hardware/local-state/console-os-game-api-v1-install-20260814"
+  }
+}

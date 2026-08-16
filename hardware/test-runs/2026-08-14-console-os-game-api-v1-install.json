@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T10:53:28-0700",
+  "result": "pass-exact-install-launcher-and-maze-operator-confirmed",
+  "hardware": {
+    "product": "Elecrow CrowPanel Advanced 10.1 in DHE04310D",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432,
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "raw_identity_stored": false,
+    "serial_port": "/dev/cu.wchusbserial10"
+  },
+  "artifact": {
+    "path": "apps/console_os/build/p4_console_os.bin",
+    "offset": "0x10000",
+    "bytes": 4941776,
+    "sha256": "f4426c370b9f251aa5a3ae5049b99a4c068067390c351dc680d1b7d36492be36",
+    "mutation_span_bytes": 4947968,
+    "mutation_span_sha256": "23ec0f631b86bf3b8bbd44e1fc791d2fcf699de9a36b6d6c6c8075c4ea996092",
+    "readback_sha256": "23ec0f631b86bf3b8bbd44e1fc791d2fcf699de9a36b6d6c6c8075c4ea996092",
+    "readback_chunks": 10,
+    "app_partition_only": true
+  },
+  "transaction": {
+    "same_uart_handle": true,
+    "exclusive_uart_open_count": 1,
+    "uart_reopen_count": 0,
+    "loader_entry_reset_count": 1,
+    "application_launch_count": 1,
+    "install_write_attempt_count": 1,
+    "restore_required": false,
+    "restore_attempt_count": 0,
+    "restore_write_attempt_count": 0,
+    "transfer_baud": 460800,
+    "application_baud": 115200,
+    "ledger": {
+      "path": "hardware/local-state/console-os-game-api-v1-install-20260814/e6-install-ledger.json",
+      "bytes": 6182,
+      "sha256": "9736aa6004178d1d96d8428a5ad368e534f86adaa5cdfe3409ac0fe01072e801",
+      "phase": "e6-runtime-accepted"
+    }
+  },
+  "preserved_predecessor": {
+    "path": "hardware/local-state/console-os-game-api-v1-install-20260814/live-preimage.bin",
+    "bytes": 4947968,
+    "sha256": "f1b386d0c764a8d1e96cae1f1ea30bba1494c96a7477e983ca396557f6ad3557",
+    "installed_prefix_bytes": 4928880,
+    "installed_prefix_sha256": "5c4cdc811fa0da1ba21c72dae0bdf5862f02ecdd6d2c468b9075d8c530d58957",
+    "installed_padded_span_bytes": 4931584,
+    "installed_padded_span_sha256": "ccc6b5f89d2a1990f9f11ee376939aba675952ffe54c4835ba775a9e45bb7be2",
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433"
+  },
+  "jedec_boundaries": {
+    "canonical_low_24_bits": "0x1840c8",
+    "post_stub_initial_raw": "0x001840c8",
+    "post_reset_sequence_raw": "0x001840c8",
+    "write_boundary_raw": "0xfc1840c8",
+    "prelaunch_raw": "0xff1840c8",
+    "normalization_evidence": {
+      "path": "hardware/evidence/console-os-game-api-v1-jedec-normalization.json",
+      "sha256": "041a521af4050c1dfdd944adb64dae8ffa5f340d8b0a2ff7255dfe47b7fd33e9"
+    },
+    "wrong_low_24_identity_accepted": false
+  },
+  "retained_uart_startup": {
+    "result": "pass",
+    "raw": {
+      "path": "hardware/local-state/console-os-game-api-v1-install-20260814/e6-startup.raw",
+      "bytes": 5482,
+      "sha256": "3e505bd81a889371f4ea6758c8d34e97c07b85a16dd36870f0af768064814983"
+    },
+    "summary": {
+      "path": "hardware/local-state/console-os-game-api-v1-install-20260814/e6-startup.json",
+      "bytes": 1338,
+      "sha256": "890113bebcf1646fe1f8e0b34109d2ec0a2fa55b5e2bd3d5eba04f1ee4208a3b"
+    },
+    "startup_signature": "apps=6 native_game_api=1 native_format=p4-native-static-v1",
+    "fixed_markers_ordered": true,
+    "stats_records": 2,
+    "latest_loops": 600,
+    "latest_touch_polls": 600,
+    "touch_failures": 0,
+    "display_submits": 1,
+    "display_completions": 1,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "amplifier_energized": false,
+    "doom_handoffs": 0,
+    "rejected_markers": []
+  },
+  "post_install_passive_observation": {
+    "serial_transmitted_bytes": 0,
+    "reset_performed": false,
+    "latest_loops": 3000,
+    "latest_touch_polls": 3264,
+    "latest_renders": 5,
+    "latest_display_submits": 269,
+    "latest_display_completions": 269,
+    "touch_failures": 0,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "amplifier_energized": false,
+    "doom_handoffs": 0,
+    "note": "Display submission growth beyond the launcher startup proves foreground rendering occurred, but the late passive attachment did not retain the app-start marker and therefore does not identify or manually accept a game."
+  },
+  "native_game_contract": {
+    "api_version": 1,
+    "format": "p4-native-static-v1",
+    "prototype": "org.p4console.maze-chase",
+    "launcher_entries": 6,
+    "prototype_visuals": "code-rendered RGB565 shapes; no external image asset is required",
+    "image_api": "bounded clipped RGB565 sprite drawing is supported for future games",
+    "tone_audio": "optional bounded eight-voice mixer at 16000 Hz PCM16 stereo",
+    "backend_volume_step": "6/10",
+    "back_returns_to_launcher": true
+  },
+  "operator_acceptance": {
+    "recorded_at": "2026-08-14T10:55:11-0700",
+    "statement": "it worked i played maze chase",
+    "launcher_visible": true,
+    "maze_chase_launched": true,
+    "maze_chase_visuals_visible": true,
+    "maze_chase_controls_playable": true,
+    "maze_chase_audio_confirmed": false,
+    "back_to_launcher_confirmed": false,
+    "doom_regression_confirmed": false,
+    "classification": "exact-unit operator observation; acoustic and exit-path checks remain separate"
+  },
+  "frozen_route": {
+    "authorized_route_sha256": "4864c13fabe9dcddd156bf06531e7e72680a2d1f5efe0a553422b209609234f6",
+    "installer_sha256": "406d0b6da57029890f2e4f92bb6d6aed32e3fc2e0f4c81ee7ddbddc48e08ff86",
+    "authorization_sha256": "d1f072d0d9d62784a8911bf22ea3ebf22caf4965f38624c9eb64b13f3aa5012d",
+    "audio_release_sha256": "c01638869e7859fc509cbde001f0dcf02ef875778d4d19e0af832f2709242722"
+  },
+  "preceding_fail_closed_attempts": [
+    "hardware/test-runs/2026-08-14-console-os-game-api-v1-install-attempt1.json",
+    "hardware/test-runs/2026-08-14-console-os-game-api-v1-install-attempt2.json"
+  ],
+  "manual_acceptance_pending": [
+    "operator confirms clean audible Maze Chase tones at the reduced volume",
+    "operator taps BACK and confirms return to the launcher with the speaker safely shut down",
+    "operator confirms Doom still launches and retains SFX plus MUS music"
+  ],
+  "claims_not_made": [
+    "The operator has manually accepted Maze Chase sound or launcher return.",
+    "The passive serial observation identifies which foreground app rendered extra frames.",
+    "The WAD-bearing firmware may be committed or redistributed.",
+    "The exact-unit audio or JEDEC exceptions apply to another tablet."
+  ]
+}

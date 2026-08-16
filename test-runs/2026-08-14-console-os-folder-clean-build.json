@@ -1,0 +1,138 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T12:33:13-0700",
+  "result": "console-os-folder-clean-host-and-esp32p4-build-verified-not-hardware-tested",
+  "app": "console_os",
+  "stage": "folder-hierarchy-kid-facing-clean-build-candidate",
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "target": "esp32p4",
+    "silicon_revision_min_full": 100,
+    "silicon_revision_max_full": 199,
+    "toolchain_lock_sha256": "0539c66e7aa2de5d5564afea86e6412174185602fdea8efbe068676b51867936",
+    "component_lock_sha256": "4c76fedab597d4db6e03555060dec22e53c93a13572c94ad50a718cd14f0e9b3"
+  },
+  "launcher_model": {
+    "registered_app_count": 7,
+    "root_tiles": ["ALL PROGRAMS", "GAMES", "SYSTEM"],
+    "game_type_folders": ["ACTION", "ARCADE"],
+    "action_apps": ["DOOM"],
+    "arcade_apps": ["MAZE CHASE", "SPACE INVADERS"],
+    "system_apps": ["COLORS", "TOUCH", "SYSTEM", "AUDIO"],
+    "maximum_registered_apps": 32,
+    "maximum_folder_depth": 2,
+    "folder_segment_maximum_bytes": 15,
+    "heap_allocation": false,
+    "filesystem": false,
+    "dynamic_executable_loading": false,
+    "rendering": "rgb565-code-drawn-primitives-only",
+    "kid_facing_capability_badges_visible": false,
+    "capability_metadata_retained_internally": true
+  },
+  "software_acceptance": {
+    "environment_verifier": "pass",
+    "doom_wad_identity_and_ignore_check": "pass",
+    "console_shell_asan_ubsan": "pass",
+    "p4_game_api_host": "pass",
+    "p4_game_platform_host": "pass",
+    "maze_chase_host": "pass",
+    "space_invaders_host": "pass",
+    "game_registry_and_scaffolder_tests": "pass",
+    "folder_validation_and_navigation_tests": "pass",
+    "console_os_esp32p4_build": "pass",
+    "console_build_verifier": "pass",
+    "broad_historical_make_check": "not-pass-stale-E5-flash_app_authorized-assertion-predates-current-candidate"
+  },
+  "preview_acceptance": {
+    "dimensions": "640x400 presentation of 320x200 RGB565 surface",
+    "visually_inspected": true,
+    "capability_badges_absent": true,
+    "root": {
+      "path": "build-host/console_shell/console-shell-home.png",
+      "bytes": 7974,
+      "sha256": "c83e07997a530741bb19cd3490ad6d246f3b4f35d83f1442ed32abc164ab35a7"
+    },
+    "games": {
+      "path": "build-host/console_shell/console-shell-games.png",
+      "bytes": 7491,
+      "sha256": "8c5763aa5ab30d3a0d129cc8800de7bff578d22df8600ba866471ae90ff51aa9"
+    },
+    "arcade": {
+      "path": "build-host/console_shell/console-shell-arcade.png",
+      "bytes": 7989,
+      "sha256": "b7b9d9b06e51e4af4d98e8fa0943c8a26ddaf5b526f7dfcd5abebcc20fb140f6"
+    },
+    "system": {
+      "path": "build-host/console_shell/console-shell-system-folder.png",
+      "bytes": 8428,
+      "sha256": "5534817473490f1ae1cceeb09e600556acc711fd17488a4e3f57f2c9f38518ab"
+    },
+    "all_programs": {
+      "path": "build-host/console_shell/console-shell-all.png",
+      "bytes": 9844,
+      "sha256": "3f5bbdd6db4f0b328d54747dec158d0fde1bb0bc6523514fa725904319075947"
+    }
+  },
+  "exact_artifact": {
+    "build_directory": "apps/console_os/build-folder-clean",
+    "build_directory_git_ignored": true,
+    "offset": "0x10000",
+    "app_binary_bytes": 4951552,
+    "app_binary_sha256": "636ee38221197c0c7b02c5d04ea19ddfac0a3c6dbd9b2719d8bb21dfb1658a7d",
+    "elf_bytes": 14302372,
+    "elf_sha256": "5925c2db5a2a4c27b3bf5019deb13cf13a33d69e8ec53a4e52283c1b44570e15",
+    "bootloader_bytes": 22912,
+    "bootloader_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+    "app_partition_bytes": 11534336,
+    "partition_free_bytes": 6582784,
+    "mutation_span_bytes": 4964352,
+    "mutation_span_sha256": "ad863f0b1b8377692a22168cad5601b3f3f49fa5b7ab126b12d4df98c83a8f96",
+    "mutation_tail_byte": "ff",
+    "contains_ignored_shareware_wad": true,
+    "redistribution_authorized": false
+  },
+  "generated_registry": {
+    "path": "apps/console_os/build-folder-clean/esp-idf/main/p4_game_registry/p4_game_registry.c",
+    "sha256": "a19da762c90bf7801af9ce759bec6ed1ea16b5f13af99fab822cabbc8ae83f06",
+    "registered_game_count": 2,
+    "parallel_folder_table_present": true,
+    "folders": ["GAMES/ARCADE", "GAMES/ARCADE"]
+  },
+  "source_inventory": {
+    "components/console_shell/include/console/shell.h": "ddb15896f706575f4a225ff9b03c78c3781fbbed8f33efdeb6465a3b25e4babc",
+    "components/console_shell/src/console_shell.c": "94d831d346ab40eef6d0e49ec0146397a3dd1dfe519f2f8f06d7af8cf8d83d6e",
+    "components/console_shell/tests/test_console_shell.c": "73fabc4db9c04d7984bbd92a3861810fbdf6bbaab79de04a4757814dfff7e37b",
+    "components/console_shell/tools/render_preview.c": "e0d1e7e2fa6bca7522c74da87d772d9947e635af1aa177babb6b2dfe8a39d235",
+    "games/maze_chase/game.json": "fd0f77c3d43cca986b62572308bc56a3dad21465813fc4273febc5abb7e3eca6",
+    "games/space_invaders/game.json": "00b75e6cc88db45d05a1640ac540879ed93ab9ba09cd80e6b6f9cb3cb0ea4106",
+    "scripts/generate-game-registry.py": "580f000b76879018bee448126fd5a84081c798689b9cc6d322feaf1bb0e4f4e9",
+    "toolchain.lock.json": "0539c66e7aa2de5d5564afea86e6412174185602fdea8efbe068676b51867936"
+  },
+  "installed_predecessor": {
+    "path": "hardware/test-runs/2026-08-14-console-os-space-invaders-install.json",
+    "sha256": "d88bcb6023730d2fe70f0b6f9f28c3cd15762d3c79983d358536fbbd3e90f4e8",
+    "artifact_sha256": "9596617fd86d9cd9abd12a539329c6df2d06e696ca4de6814daa644e56090303",
+    "completed_ledger_sha256": "efa9983ac3d376443253a5a6d235529db5cc2dcb5d5bd6182264199091f026e1"
+  },
+  "hardware_status": {
+    "hardware_execution_authorized": false,
+    "flash_authorized": false,
+    "flash_attempted": false,
+    "application_bytes_written": 0,
+    "installed_predecessor_changed": false,
+    "folder_display_result": "not-run",
+    "folder_touch_result": "not-run",
+    "native_game_result": "not-run",
+    "audio_result": "not-run",
+    "doom_regression_result": "not-run"
+  },
+  "claims_not_made": [
+    "The badge-free folder candidate was flashed, booted, or accepted on hardware.",
+    "Folder navigation, game launch, touch, sound, or Doom regression passed on the tablet.",
+    "The WAD-bearing application binary may be committed or redistributed.",
+    "A historical flat-launcher authorization authorizes this changed binary."
+  ]
+}

@@ -137,9 +137,9 @@ def main() -> None:
     assert '"speaker_i2s_port=1 rate_hz=%u format=pcm16-stereo channels=%u "' in main_source
     assert '"lrclk_gpio=21 bclk_gpio=22 dout_gpio=23 tx_mclk=none "' in main_source
     assert '"codec_i2c_transactions=0 required_startup_zero_ms=350 "' in main_source
-    assert '#define DOOM_BACKEND_VOLUME_STEP UINT8_C(6)' in main_source
-    assert '.volume_percent = DOOM_BACKEND_VOLUME_STEP' in main_source
-    assert '"backend_volume_step=6/10 gain=attenuated-60-percent "' in main_source
+    assert '#define DOOM_BACKEND_VOLUME_DEFAULT_STEP UINT8_C(8)' in main_source
+    assert '.volume_percent = s_backend_volume_step' in main_source
+    assert '"backend_volume_step=%u/10 gain=volume-step-linear-pcm "' in main_source
     assert '"music_pipeline=wad-mus-procedural-16voice "' in main_source
     assert '"-gfxmode", "rgba8888",\n    };' in main_source
     assert '"-gfxmode", "rgba8888", "-nosound", "-nomusic",' in main_source

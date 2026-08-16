@@ -10,4 +10,12 @@ menu "P4 platform display service"
             not authorize GPIO29, GPIO41, touch, storage, audio, camera,
             wireless, USB, or any other GPIO.
 
+    config PLATFORM_DISPLAY_WAVESHARE_4_3_BUILD_ONLY
+        bool "Compile the Waveshare 4.3-inch ST7701 display client"
+        default n
+        help
+            Enables the board-specific 480x800 portrait ST7701 seam. This is
+            a build-only gate and does not prove LCD FPC identity, timing, or
+            panel output.
+
 endmenu

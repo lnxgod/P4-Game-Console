@@ -55,9 +55,12 @@ def main() -> None:
     display_test = load(display_test_path)
     test_path = profile["last_hardware_test"]
     test_run = load(test_path)
+    backup_baseline_path = "hardware/test-runs/2026-08-12-bringup.json"
+    backup_baseline = load(backup_baseline_path)
 
     require(
-        manifest.get("schema") == profile.get("schema") == test_run.get("schema") == 1,
+        manifest.get("schema") == profile.get("schema") ==
+        test_run.get("schema") == backup_baseline.get("schema") == 1,
         "unsupported or inconsistent hardware metadata schema",
     )
 
@@ -370,28 +373,32 @@ def main() -> None:
             "saved backup does not contain the pinned 10.1-inch asset at the recorded offset",
         )
 
-        prefix_offset = int(test_run["checks"]["factory_prefix_readback_offset"], 0)
-        prefix_bytes = test_run["checks"]["factory_prefix_readback_bytes"]
+        prefix_offset = int(
+            backup_baseline["checks"]["factory_prefix_readback_offset"], 0)
+        prefix_bytes = backup_baseline["checks"]["factory_prefix_readback_bytes"]
         require(prefix_offset == 0, "M0 factory-prefix evidence must start at offset 0")
         with backup_path.open("rb") as source:
             expected_prefix_hash = hashlib.sha256(source.read(prefix_bytes)).hexdigest()
         require(
-            expected_prefix_hash == test_run["checks"]["factory_prefix_readback_sha256"],
+            expected_prefix_hash ==
+            backup_baseline["checks"]["factory_prefix_readback_sha256"],
             "recorded factory-prefix hash differs from the saved backup",
         )
 
-    checks = test_run["checks"]
+    checks = backup_baseline["checks"]
     require(checks["factory_backup_bytes"] == backup["bytes"], "test run backup byte count differs from manifest")
     require(checks["factory_backup_sha256"] == backup["sha256"], "test run backup hash differs from manifest")
     require(checks["factory_backup_sha256_verified_before_write"] is True, "pre-write backup check not recorded")
     require(checks["factory_prefix_readback_matches_backup"] is True, "factory-prefix readback did not pass")
     require(checks["installed_app_readback_matches_binary"] is True, "application readback did not pass")
     require(
-        checks["installed_app_readback_bytes"] == test_run["firmware"]["binary_bytes"],
+        checks["installed_app_readback_bytes"] ==
+        backup_baseline["firmware"]["binary_bytes"],
         "application readback byte count differs from recorded binary",
     )
     require(
-        checks["installed_app_readback_sha256"] == test_run["firmware"]["binary_sha256"],
+        checks["installed_app_readback_sha256"] ==
+        backup_baseline["firmware"]["binary_sha256"],
         "application readback hash differs from recorded binary",
     )
 
@@ -403,6 +410,7 @@ def main() -> None:
         display_test_path,
         display_test.get("build_evidence"),
         test_path,
+        backup_baseline_path,
     ):
         require(
             RAW_MAC_RE.search((ROOT / relative_path).read_text()) is None,

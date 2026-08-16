@@ -37,6 +37,9 @@
 #ifndef CONFIG_PLATFORM_AUDIO_ES8311_ELECROW_10_1_BUILD_ONLY
 #define CONFIG_PLATFORM_AUDIO_ES8311_ELECROW_10_1_BUILD_ONLY 0
 #endif
+#ifndef CONFIG_PLATFORM_AUDIO_ES8311_WAVESHARE_4_3_BUILD_ONLY
+#define CONFIG_PLATFORM_AUDIO_ES8311_WAVESHARE_4_3_BUILD_ONLY 0
+#endif
 
 _Static_assert(
     ES8311_CODEC_DEFAULT_ADDR ==
@@ -363,7 +366,9 @@ static esp_err_t set_amplifier_enabled(bool enabled)
 {
     const gpio_num_t pin =
         (gpio_num_t)PLATFORM_AUDIO_ES8311_GPIO_AMP_SHUTDOWN;
-    const uint32_t expected = enabled ? 0U : 1U;
+    const uint32_t expected = enabled
+        ? (uint32_t)PLATFORM_AUDIO_ES8311_AMP_ACTIVE_LEVEL
+        : (uint32_t)(1 - PLATFORM_AUDIO_ES8311_AMP_ACTIVE_LEVEL);
     const esp_err_t result = gpio_set_level(pin, expected);
     if (result != ESP_OK) {
         return result;
@@ -376,7 +381,9 @@ esp_err_t platform_audio_es8311_force_safe_shutdown(void)
 {
     const gpio_num_t pin =
         (gpio_num_t)PLATFORM_AUDIO_ES8311_GPIO_AMP_SHUTDOWN;
-    esp_err_t result = gpio_set_level(pin, 1U);
+    const uint32_t safe_level =
+        (uint32_t)(1 - PLATFORM_AUDIO_ES8311_AMP_ACTIVE_LEVEL);
+    esp_err_t result = gpio_set_level(pin, safe_level);
     if (result != ESP_OK) {
         return result;
     }
@@ -393,17 +400,19 @@ esp_err_t platform_audio_es8311_force_safe_shutdown(void)
     if (result != ESP_OK) {
         return result;
     }
-    result = gpio_set_level(pin, 1U);
+    result = gpio_set_level(pin, safe_level);
     if (result != ESP_OK) {
         return result;
     }
-    return gpio_get_level(pin) == 1 ? ESP_OK : ESP_ERR_INVALID_RESPONSE;
+    return gpio_get_level(pin) == (int)safe_level
+        ? ESP_OK : ESP_ERR_INVALID_RESPONSE;
 }
 
 static uint8_t expected_volume_register(uint8_t volume_percent)
 {
     /* esp_codec_dev 1.3.4's default curve maps 1..100 to -49.5..0 dB. */
-    return (uint8_t)(UINT8_C(91) + volume_percent);
+    return (uint8_t)(UINT8_C(91) +
+        platform_audio_es8311_codec_volume_percent(volume_percent));
 }
 
 static esp_err_t read_codec_register(platform_audio_es8311_t *audio,
@@ -509,8 +518,10 @@ static esp_err_t set_codec_volume_verified(platform_audio_es8311_t *audio)
     if (audio == NULL || audio->codec_device == NULL) {
         return ESP_ERR_INVALID_STATE;
     }
+    const uint8_t codec_volume =
+        platform_audio_es8311_codec_volume_percent(audio->volume_percent);
     const esp_err_t result = codec_status(esp_codec_dev_set_out_vol(
-        audio->codec_device, (int)audio->volume_percent
+        audio->codec_device, (int)codec_volume
     ));
     return result == ESP_OK ? verify_codec_volume(audio) : result;
 }
@@ -860,7 +871,8 @@ esp_err_t platform_audio_es8311_create(
     platform_audio_es8311_t **out_audio
 )
 {
-#if !CONFIG_PLATFORM_AUDIO_ES8311_ELECROW_10_1_BUILD_ONLY
+#if !CONFIG_PLATFORM_AUDIO_ES8311_ELECROW_10_1_BUILD_ONLY && \
+    !CONFIG_PLATFORM_AUDIO_ES8311_WAVESHARE_4_3_BUILD_ONLY
     (void)config;
     (void)out_audio;
     return ESP_ERR_NOT_SUPPORTED;

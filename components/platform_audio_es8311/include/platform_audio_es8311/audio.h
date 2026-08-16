@@ -15,7 +15,16 @@ extern "C" {
 #define PLATFORM_AUDIO_ES8311_SAMPLE_RATE_HZ 16000U
 #define PLATFORM_AUDIO_ES8311_MCLK_MULTIPLE 256U
 #define PLATFORM_AUDIO_ES8311_MAX_WRITE_FRAMES 128U
+#if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+/*
+ * Waveshare's official codec example feeds ordinary PCM to the ES8311 and
+ * controls loudness in the codec.  Preserve the full signed PCM16 range;
+ * volume_step 1..10 is mapped to codec volume 10..100 by the backend.
+ */
+#define PLATFORM_AUDIO_ES8311_MAX_OUTPUT_PEAK 32768U
+#else
 #define PLATFORM_AUDIO_ES8311_MAX_OUTPUT_PEAK 512U
+#endif
 #define PLATFORM_AUDIO_ES8311_MAX_VOLUME_PERCENT 10U
 #define PLATFORM_AUDIO_ES8311_STARTUP_ZERO_MS 350U
 
@@ -29,6 +38,7 @@ typedef struct {
      */
     void *control_bus;
     uint32_t sample_rate_hz;
+    /** Bounded user level 1..10; Waveshare maps it to codec percent 10..100. */
     uint8_t volume_percent;
 } platform_audio_es8311_config_t;
 
@@ -71,8 +81,10 @@ esp_err_t platform_audio_es8311_create(
 esp_err_t platform_audio_es8311_start(platform_audio_es8311_t *audio);
 
 /**
- * Write 1..128 frames. Input remains immutable; component-owned staging caps
- * the PCM peak at 512 before the separately bounded codec volume is applied.
+ * Write 1..128 frames. Input remains immutable. The Waveshare target keeps
+ * full-scale PCM and applies the requested 1..10 level as codec volume
+ * 10..100; the older Elecrow build-only policy retains its conservative PCM
+ * cap.
  */
 esp_err_t platform_audio_es8311_write_frames(
     platform_audio_es8311_t *audio,

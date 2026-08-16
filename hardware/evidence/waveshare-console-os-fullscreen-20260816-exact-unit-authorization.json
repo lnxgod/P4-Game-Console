@@ -1,0 +1,94 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-16T04:18:24Z",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-volume-and-frame-pacing-successor",
+  "operator_direction": "focus Console OS on PC and Waveshare 4.3, raise default sound to 80 percent, add OS volume control, target about 30 FPS for native games, and clean up the simple game format",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "physical_confirmation": "operator photo shows exact back-side silkscreen",
+    "pcb_revision": null,
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "predecessor": {
+    "application_role": "waveshare-landscape-console-os-fullscreen-corrected",
+    "offset": "0x10000",
+    "bytes": 5056096,
+    "sha256": "ac4926a941918a98875794f91918cf40642979f45ebf1fccecc04354d671391d",
+    "acceptance": "esptool write hash verified; operator confirmed the corrected full-screen landscape resolution and working game sound"
+  },
+  "candidate": {
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "layout": {
+      "logical": "800x480",
+      "native_scanout": "480x800",
+      "rotation_clockwise_degrees": 90,
+      "source_surface": "320x200",
+      "aspect_preserving_viewport": "768x480",
+      "margins_left_right_top_bottom": "16/16/0/0",
+      "scale": "fractional nearest-neighbor 12/5",
+      "touch_transform": "native-to-landscape rotation followed by exact inverse aspect-fit viewport mapping for launcher, Game API, and Doom controls"
+    },
+    "audio_change": "OS-owned master control defaults to step 8/10 and passes the selected bounded step into native-game audio sessions and Doom without changing the proven ES8311 clock, I2S, amplifier, SFX, or MUS paths",
+    "native_game_timing": "input/update/audio service remains 16 ms; display render/submit occurs every second service tick for a 31.25 FPS target",
+    "game_boundary": "enabled manifests are rejected if game source or component metadata references OS-owned board, display, touch, audio, GPIO, I2S, USB, or FreeRTOS headers/services",
+    "write_flash_args": [
+      "--flash-mode",
+      "dio",
+      "--flash-size",
+      "32MB",
+      "--flash-freq",
+      "80m"
+    ],
+    "artifacts": [
+      {
+        "role": "bootloader",
+        "offset": "0x2000",
+        "path": "apps/console_os/build-waveshare-landscape/bootloader/bootloader.bin",
+        "bytes": 22912,
+        "sha256": "8daaf8dfa70f2b4bd79d9eb97bb39b1909cbc568352e72bca5199351674a9e68",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "partition-table",
+        "offset": "0x8000",
+        "path": "apps/console_os/build-waveshare-landscape/partition_table/partition-table.bin",
+        "bytes": 3072,
+        "sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "application",
+        "offset": "0x10000",
+        "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+        "bytes": 5112832,
+        "sha256": "d2bc620d213d4ed240251b97003c54cc5987418b07a1a26494b59841d971e426",
+        "action": "write-and-on-device-digest-verify"
+      }
+    ]
+  },
+  "reason_targeted_successor_write_is_safe": "The complete factory backup is already preserved and verified. The installed bootloader and partition table are byte-identical to this candidate and are checked before mutation. The currently running predecessor was installed with esptool hash verification and visually accepted. This successor changes only OS policy, bounded codec volume selection, native-game scheduling, software scaling, and build-time game isolation; it preserves the already working Waveshare pin, rail, clock, I2S, codec, amplifier, display, and touch configuration.",
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "verify_installed_bootloader_before_write": true,
+    "verify_installed_partition_table_before_write": true,
+    "verify_installed_predecessor_application_before_write": false,
+    "write_only_application": true,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "verify_application_on_device_digest_after_write": true,
+    "raw_device_identity_must_not_be_recorded": true,
+    "usb_host_enabled": false,
+    "usb_vbus_source_authorized": false
+  },
+  "hardware_classification_after_install": "application-installed-and-on-device-digest-verified only; default 8/10 loudness, Audio-panel adjustment, native-game smoothness, Doom sound/music, and return-to-launcher acceptance remain pending"
+}

@@ -1,10 +1,12 @@
 # P4 Game SDK v1
 
 P4 Game SDK v1 is the small native C interface used by games inside Console
-OS. A game owns gameplay state and draws a 320x200 RGB565 frame. Console OS
+OS. Console OS owns a 768x480 landscape viewport. Existing native-static games
+draw a 320x200 RGB565 compatibility frame which the OS scales into that
+viewport. Console OS
 owns the panel, touch controller, audio hardware, timing, and app lifecycle.
-That separation lets a game use controls and sound without knowing Elecrow pin
-maps or calling ESP-IDF peripheral drivers.
+That separation lets a game use controls and sound without knowing Waveshare
+pin maps or calling ESP-IDF peripheral drivers.
 
 ## Delivery formats and current status
 
@@ -20,33 +22,34 @@ currently means rebuilding and safely installing the complete Console OS app
 image.
 
 UF2 is a block-oriented flashing container, not a CPU executable format. This
-repository does not currently produce or accept UF2. A future removable-game
-format should be a signed/versioned P4 package with a reviewed loader and
-resource limits; renaming an ELF or BIN file to `.uf2` would not provide that.
+repository does not produce or accept UF2. Removable games use the versioned,
+source-included P4 Cart package; renaming an ELF or BIN file does not create one.
 
-### P4Cart Console API (planned, not buildable yet)
+### P4Cart Console API (catalog implemented, runtime pending)
 
-`game-platform/` contains the P4Cart transfer framing and a generic fixed-rate
-runtime foundation. It does **not** yet define P4Cart container bytes, provide a
-`.p4cart` packer/compiler, load cartridges from storage, connect to Console OS,
-or execute cartridge code. Do not rename a native ELF, BIN, C source, or ZIP
-file to `.p4cart`; there is no supported command that can compile today's
-native games into an executable cartridge.
+`game-platform/` now defines P4 Cart source projects, deterministic container
+bytes, the P4 Lua v1 API, transfer framing, validation/pack/unpack tooling, and
+the open Bounce Lab template. Console OS now mounts microSD without formatting,
+hash-validates a bounded `/P4/GAMES` catalog, and reports valid carts in its
+Library page. The host installer stages, syncs, read-back validates, and
+atomically activates complete files. It does **not** yet execute Lua or preview
+a cart, so cataloged carts are not launchable. Do not rename a native ELF, BIN,
+C source, ZIP, or ROM to `.p4cart`. See `docs/CONTENT_LIBRARY.md`.
 
 The intended delivery split is:
 
 - Console OS, Doom, and any other reviewed native engine remain in the
   statically linked `p4_console_os.bin`.
-- A future P4Cart game must use a reviewed sandboxed execution backend and the
-  cartridge container/packer introduced with that backend. It will receive
+- A P4Cart game targets the 768x480 landscape Console OS canvas through a
+  reviewed sandboxed execution backend and cartridge container/packer. It will receive
   logical time, input, drawing, and approved assets through the Console API;
   it will never receive raw ESP-IDF, display, touch, audio, filesystem, USB,
   or storage handles.
 
-The P4Cart API currently has no sound operation. Cartridge games must remain
-silent until a bounded, host-owned audio contract and its matching runtime are
-implemented. See `game-platform/README.md` and its API documents for the
-current, intentionally incomplete boundary.
+The P4 Lua API defines four bounded tone voices through the OS-owned mixer.
+That adapter is not implemented yet, so validated carts are not currently
+launchable or audible. See `game-platform/README.md` and its API documents for
+the exact boundary.
 
 ## Make a game
 
@@ -56,7 +59,7 @@ From the repository root:
 python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE
 make game-sdk-host
 make play-game GAME=star_hop
-make console-os-idf
+make console-os-waveshare-idf
 ```
 
 To play and tune any enabled native game locally before rebuilding or flashing
@@ -90,8 +93,9 @@ games/star_hop/
 ```
 
 `game.json` is the launcher/build contract. The registry generator validates
-every enabled manifest, rejects duplicate IDs and symbols, and automatically
-links the component. Its required `folder` field contains one or two uppercase
+every enabled manifest, rejects duplicate IDs and symbols, rejects direct
+hardware/RTOS dependencies, and automatically links the component. Its
+required `folder` field contains one or two uppercase
 segments of at most 15 ASCII characters each, such as `GAMES/ARCADE` or
 `SYSTEM`. Root shows derived `ALL PROGRAMS`, `GAMES`, and `SYSTEM` folders;
 `GAMES` then shows type folders such as `ACTION` and `ARCADE`.
@@ -116,6 +120,9 @@ Include only the stable headers under `components/p4_game_api/include/p4/`:
   plus standard on-screen controls.
 - `p4/draw.h`: clipped pixels, rectangles, circles, text, and RGB565 sprites.
 - `p4/audio.h`: the host-owned tone plus copied-PCM mixer.
+- `p4/achievements.h`: the fixed, in-session achievement catalog used by
+  Console OS and host tools. Games declare achievements through
+  `p4_game_unlock_achievement()` in `p4/game.h`.
 
 The `update` callback receives bounded elapsed time and complete `held`,
 `pressed`, and `released` button snapshots. Return
@@ -123,13 +130,23 @@ The `update` callback receives bounded elapsed time and complete `held`,
 a caller-owned 320x200 surface; every supplied drawing primitive clips to its
 bounds.
 
+## Unlock achievements
+
+An active game may call `p4_game_unlock_achievement(context, id, title,
+description)` for a short, game-scoped badge. IDs, titles, and descriptions
+are bounded; repeated IDs for the same game are treated as an already-unlocked
+success. Console OS keeps up to 32 entries in RAM and shows them in its
+Achievements page. Do not treat this as a save API: persistence will be added
+only with the separately reviewed storage policy.
+
 ## OS resource inheritance
 
 Games inherit a stable logical console rather than a board definition:
 
-- Rendering is always clipped RGB565 at 320x200. Console OS scales and centers
-  it on the physical display; games must not infer panel resolution, pin maps,
-  stride layout, or backlight behavior.
+- The existing native-static compatibility API is clipped RGB565 at 320x200,
+  and Console OS scales it into the 768x480 landscape viewport. New P4 Cart
+  games target 768x480 directly. Neither format may infer scanout rotation,
+  pin maps, stride layout, or backlight behavior.
 - Input is a complete normalized snapshot. Use only the Game API buttons,
   touch points, and standard on-screen controls; never retain a touch pointer
   or talk to GT911/USB directly.
@@ -160,10 +177,11 @@ degrade that block—never busy-wait inside a game callback. In every game,
 `stop` must call `p4_game_stop_audio()` (directly or through the provided game
 helper) before returning to the launcher.
 
-On the authorized 10.1-inch unit, Console OS opens the reviewed factory
-speaker session at volume step 6/10 only while a requesting native game runs,
-then restores proven active-high amplifier shutdown. Games never own I2S,
-GPIO30, or the backend. The stream call was already reserved in API v1, so
+On the Waveshare 4.3, Console OS opens the reviewed ES8311 speaker session at
+the selected 1–10 master step only while a requesting native game runs. The
+default is 8/10, and session teardown restores the GPIO53 amplifier-safe
+state. Games never own I2S, codec I2C, GPIO53, or the backend. The stream call
+was already reserved in API v1, so
 activating this bounded implementation does not change the native format or
 API version.
 

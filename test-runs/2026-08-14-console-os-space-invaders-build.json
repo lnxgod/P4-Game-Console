@@ -1,0 +1,124 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T11:38:26-0700",
+  "result": "space-invaders-host-and-console-os-build-verified-not-hardware-tested",
+  "app": "console_os",
+  "stage": "space-invaders-game-api-v1-build-candidate",
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "target": "esp32p4",
+    "silicon_revision_min_full": 100,
+    "silicon_revision_max_full": 199,
+    "component_lock": "apps/console_os/dependencies.lock"
+  },
+  "game": {
+    "id": "org.p4console.space-invaders",
+    "component": "space_invaders",
+    "entry_symbol": "p4_space_invaders_game",
+    "launcher_id": 101,
+    "format": "p4-native-static-v1",
+    "api_version": 1,
+    "surface": "rgb565-320x200",
+    "controls": ["left", "right", "a", "b", "start", "back"],
+    "audio": "optional-bounded-tone-mixer",
+    "implementation": "original-clean-room-code-rendered-geometry-only",
+    "third_party_arcade_rom_sprite_font_sound_map_or_artwork": false
+  },
+  "host_acceptance": {
+    "address_sanitizer": "pass",
+    "undefined_behavior_sanitizer": "pass",
+    "randomized_update_iterations": 5000,
+    "framebuffer_guard_and_stride_padding": "pass",
+    "movement_fire_collision_wave_life_pause_restart_exit_and_tone_tests": "pass",
+    "registry_validation": "pass-two-native-games",
+    "preview": {
+      "path": "build-host/space_invaders/space_invaders_preview.png",
+      "bytes": 4187,
+      "dimensions": "320x200",
+      "sha256": "3f117307372ec39d8f800d63da7a573f364d8cb04dc1c48f3ebafad1c9ed476a",
+      "git_ignored": true,
+      "visually_inspected": true
+    }
+  },
+  "software_acceptance": {
+    "environment_verifier": "pass",
+    "doom_wad_identity_and_ignore_check": "pass",
+    "p4_game_api_host": "pass",
+    "p4_game_platform_host": "pass",
+    "maze_chase_host": "pass",
+    "space_invaders_host": "pass",
+    "console_shell_host": "pass",
+    "game_registry_and_scaffolder_tests": "pass",
+    "console_os_esp32p4_build": "pass",
+    "console_build_verifier": "pass",
+    "git_diff_check": "pass",
+    "broad_historical_make_check": "not-pass-stale-E5-flash_app_authorized-assertion-predates-current-candidate"
+  },
+  "exact_artifact": {
+    "build_directory": "apps/console_os/build-space-invaders",
+    "build_directory_git_ignored": true,
+    "offset": "0x10000",
+    "app_binary_bytes": 4948512,
+    "app_binary_sha256": "9596617fd86d9cd9abd12a539329c6df2d06e696ca4de6814daa644e56090303",
+    "elf_bytes": 14275244,
+    "elf_sha256": "b0eac8b7af8b7db4bc184d133bdb9a768bd9ebfc218cd9be623ad5f370c78fa6",
+    "bootloader_bytes": 22912,
+    "bootloader_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9",
+    "partition_table_bytes": 3072,
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+    "app_partition_bytes": 11534336,
+    "partition_free_bytes": 6585824,
+    "mutation_span_bytes": 4964352,
+    "contains_ignored_shareware_wad": true,
+    "redistribution_authorized": false
+  },
+  "source_inventory": {
+    "games/space_invaders/CMakeLists.txt": "c8ba631333c06f8962672abb37602fcd85d8bf14d600b3f732a3672e8bf17a92",
+    "games/space_invaders/game.json": "062551e4bc772f90f9715db961511166873b91a647dcba6dc2c87aefae1069d1",
+    "games/space_invaders/include/p4_games/space_invaders.h": "e164af58e291575eb0f1467b21400cccca6601383404ffbeb35b288c9cf8732c",
+    "games/space_invaders/src/space_invaders.c": "e0ac1c0b1f4fc8e7fbbfe0ed454fc629e6e07428cf80ef2d2052ab4b871e085d",
+    "games/space_invaders/src/space_invaders_internal.h": "fde73a07f137ea65e23f27369a6584c76b12ce465a20a0f079c16b4d1391a0a9",
+    "games/space_invaders/tests/test_space_invaders.c": "6bb15aef5ae7fd4d34fbef8c174a71ea334c1f160b95ca365fab902afc1fb921",
+    "games/space_invaders/tools/render_preview.c": "9829b62d8c06af9862bd15d3398f5cf16db84f706f56daf97428f5b8a14cc760",
+    "toolchain.lock.json": "0539c66e7aa2de5d5564afea86e6412174185602fdea8efbe068676b51867936"
+  },
+  "post_build_provenance_checks": {
+    "recorded_at": "2026-08-14T12:01:25-0700",
+    "transport_mutation_span_correction": {
+      "originally_recorded_rounding": "4-KiB",
+      "required_frozen_transport_rounding": "16-KiB",
+      "corrected_mutation_span_bytes": 4964352,
+      "corrected_mutation_span_sha256": "8a4c7be1bd6dab0fbc24d16217c8d44f18e6ec4aca3a3eb5b7bc3259b25b1ffe",
+      "artifact_bytes_changed": false,
+      "hardware_writes_before_correction": 0
+    },
+    "live_manifest_after_build": {
+      "path": "games/space_invaders/game.json",
+      "sha256": "00b75e6cc88db45d05a1640ac540879ed93ab9ba09cd80e6b6f9cb3cb0ea4106",
+      "byte_identical_to_recorded_build_input": false,
+      "generated_registry_path": "apps/console_os/build-space-invaders/esp-idf/main/p4_game_registry/p4_game_registry.c",
+      "generated_registry_sha256": "1e728c42b7ffaddcfa739c0253673854f81bbf2905f4f570d778781e37a53b16",
+      "generated_registry_contains_space_invaders_entry": true,
+      "exact_binary_contains_id_title_and_subtitle": true,
+      "rebuild_performed": false
+    }
+  },
+  "hardware_status": {
+    "hardware_execution_authorized": false,
+    "flash_authorized": false,
+    "flash_attempted": false,
+    "application_bytes_written": 0,
+    "space_invaders_display_result": "not-run",
+    "space_invaders_control_result": "not-run",
+    "space_invaders_audio_result": "not-run",
+    "space_invaders_return_to_launcher_result": "not-run",
+    "installed_console_image_mutated_by_this_task": false
+  },
+  "claims_not_made": [
+    "The Space Invaders candidate was flashed, booted, or accepted on hardware.",
+    "Space Invaders display, touch, sound, or launcher return passed on the tablet.",
+    "The WAD-bearing application binary may be committed or redistributed.",
+    "The prior exact-artifact Console OS install route authorizes this changed binary."
+  ]
+}

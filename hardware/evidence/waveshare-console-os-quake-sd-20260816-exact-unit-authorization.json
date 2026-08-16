@@ -1,0 +1,114 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-16T10:47:51-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-quake-sd-successor",
+  "operator_direction": "The owner inserted the microSD card previously used with the 10 in variant into the Waveshare 4.3 and requested the latest Console OS. Reuse the existing complete factory backup; do not create another backup. Formatting the card is permitted if necessary, but this candidate deliberately mounts it without formatting or writing.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "physical_confirmation": "operator photos show the exact back-side silkscreen",
+    "pcb_revision": null,
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e",
+    "reused": true
+  },
+  "predecessor": {
+    "application_role": "waveshare-console-os-volume-and-frame-pacing",
+    "offset": "0x10000",
+    "bytes": 5112832,
+    "sha256": "d2bc620d213d4ed240251b97003c54cc5987418b07a1a26494b59841d971e426",
+    "serial_identity": "project p4_console_os, ELF SHA-256 prefix 35f304ea7, 12 registered apps",
+    "acceptance": "previous app-only install and digest verification passed; owner accepted the 768x480 presentation, game audio, and native-game resolution"
+  },
+  "candidate": {
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "software_contract": {
+      "console_surface": "768x480 landscape",
+      "native_panel_scanout": "480x800 rotated clockwise 90 degrees",
+      "registered_apps": 15,
+      "native_render_target_fps": 31,
+      "master_volume_default": "8/10",
+      "content_library": "bounded read-only microSD catalog; no format, create, rename, delete, or repair",
+      "quake": "optional SD-backed easter egg enabled only by the exact shareware PAK size and SHA-256",
+      "multiplayer": "OS-owned bounded packet/session core; Wi-Fi transport remains disabled",
+      "usb_host_enabled": false
+    },
+    "storage_contract": {
+      "controller": "SDMMC0",
+      "mode": "one-bit SDR",
+      "frequency_khz": 1000,
+      "clk_gpio": 43,
+      "cmd_gpio": 44,
+      "d0_gpio": 39,
+      "source": "official Waveshare BSP and schematic",
+      "format_if_mount_failed": false,
+      "firmware_writes": false
+    },
+    "write_flash_args": [
+      "--flash-mode",
+      "dio",
+      "--flash-size",
+      "32MB",
+      "--flash-freq",
+      "80m"
+    ],
+    "artifacts": [
+      {
+        "role": "bootloader",
+        "offset": "0x2000",
+        "path": "apps/console_os/build-waveshare-landscape/bootloader/bootloader.bin",
+        "bytes": 22912,
+        "sha256": "8daaf8dfa70f2b4bd79d9eb97bb39b1909cbc568352e72bca5199351674a9e68",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "partition-table",
+        "offset": "0x8000",
+        "path": "apps/console_os/build-waveshare-landscape/partition_table/partition-table.bin",
+        "bytes": 3072,
+        "sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+        "action": "verify-installed-only"
+      },
+      {
+        "role": "application",
+        "offset": "0x10000",
+        "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+        "bytes": 5505920,
+        "sha256": "5d0aef32355c391525251b46c9564e2f997ac7faa7084a1c7f4c3ce4bd9d47e3",
+        "action": "write-and-on-device-digest-verify"
+      }
+    ]
+  },
+  "reason_targeted_successor_write_is_safe": "The exact live identity, 32 MB flash, installed predecessor boot log, retained complete factory backup, bootloader, partition map, and candidate artifact are independently checked. The installer writes only the existing factory app partition. The new SD path uses the official Waveshare mapping at a conservative one-bit 1 MHz operating point and is read-only at the Console OS service boundary.",
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_new_factory_backup": false,
+    "verify_installed_bootloader_before_write": true,
+    "verify_installed_partition_table_before_write": true,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "write_only_application": true,
+    "verify_application_on_device_digest_after_write": true,
+    "format_sd_card": false,
+    "write_sd_card": false,
+    "raw_device_identity_must_not_be_recorded": true,
+    "usb_host_enabled": false,
+    "usb_vbus_source_authorized": false
+  },
+  "acceptance_required_after_install": [
+    "new ELF identity and 15-app registry appear in the serial boot",
+    "768x480 viewport, display, touch, and launcher initialize without panic",
+    "SD either reports CONTENT_READY or a bounded STORAGE_DEGRADED result without formatting",
+    "Quake remains disabled unless the exact PAK is already present",
+    "amplifier remains off on the launcher"
+  ],
+  "hardware_classification_after_install": "app-installed and on-device digest verified after the guarded write; SD mount/catalog and visual behavior require the post-install serial and operator checks"
+}

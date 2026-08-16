@@ -10,6 +10,10 @@ void platform_touch_frame_fail_closed(platform_touch_frame_t *frame,
                                       uint32_t sequence,
                                       int64_t timestamp_us);
 
+bool platform_touch_coordinates_native_to_logical(uint16_t *x,
+                                                  uint16_t *y,
+                                                  uint8_t contact_count);
+
 bool platform_touch_frame_from_raw(platform_touch_frame_t *frame,
                                    uint32_t sequence,
                                    int64_t timestamp_us,

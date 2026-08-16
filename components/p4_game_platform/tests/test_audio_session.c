@@ -19,6 +19,7 @@ static esp_err_t s_start_result;
 static esp_err_t s_write_result;
 static esp_err_t s_stop_result;
 static esp_err_t s_destroy_result;
+static void *s_expected_control_bus;
 
 #define CHECK(condition) do { \
         if (!(condition)) { \
@@ -47,6 +48,7 @@ static void reset_fixture(void)
     s_write_result = ESP_OK;
     s_stop_result = ESP_OK;
     s_destroy_result = ESP_OK;
+    s_expected_control_bus = NULL;
 }
 
 esp_err_t platform_audio_force_safe_shutdown(void)
@@ -66,7 +68,7 @@ esp_err_t platform_audio_create(const platform_audio_config_t *config,
 {
     record('C');
     CHECK(config != NULL);
-    CHECK(config->control_bus == NULL);
+    CHECK(config->control_bus == s_expected_control_bus);
     CHECK(config->sample_rate_hz == 16000U);
     CHECK(config->volume_percent == 6U);
     CHECK(out_audio != NULL);
@@ -116,11 +118,14 @@ static void test_gate_and_success(void)
     reset_fixture();
     p4_game_platform_audio_t session;
     p4_game_platform_audio_init(&session);
-    CHECK(p4_game_platform_audio_open(&session, false, 6U) ==
+    CHECK(p4_game_platform_audio_open(&session, false, NULL, 6U) ==
           ESP_ERR_NOT_ALLOWED);
     CHECK(s_call_count == 0U);
     CHECK(!session.hardware_touched);
-    CHECK(p4_game_platform_audio_open(&session, true, 6U) == ESP_OK);
+    uint32_t bus_marker = UINT32_C(0x8311);
+    s_expected_control_bus = &bus_marker;
+    CHECK(p4_game_platform_audio_open(
+              &session, true, s_expected_control_bus, 6U) == ESP_OK);
     CHECK(strcmp(s_calls, "HCS") == 0);
     CHECK(p4_game_platform_audio_running(&session));
     CHECK(!session.safe_high_proven);
@@ -142,20 +147,23 @@ static void test_open_and_write_fail_safe(void)
     p4_game_platform_audio_t session;
     p4_game_platform_audio_init(&session);
     s_create_result = ESP_FAIL;
-    CHECK(p4_game_platform_audio_open(&session, true, 6U) == ESP_FAIL);
+    CHECK(p4_game_platform_audio_open(
+              &session, true, NULL, 6U) == ESP_FAIL);
     CHECK(strcmp(s_calls, "HCRH") == 0);
     CHECK(session.safe_high_proven);
 
     reset_fixture();
     p4_game_platform_audio_init(&session);
     s_start_result = ESP_FAIL;
-    CHECK(p4_game_platform_audio_open(&session, true, 6U) == ESP_FAIL);
+    CHECK(p4_game_platform_audio_open(
+              &session, true, NULL, 6U) == ESP_FAIL);
     CHECK(strcmp(s_calls, "HCSDRH") == 0);
     CHECK(session.safe_high_proven);
 
     reset_fixture();
     p4_game_platform_audio_init(&session);
-    CHECK(p4_game_platform_audio_open(&session, true, 6U) == ESP_OK);
+    CHECK(p4_game_platform_audio_open(
+              &session, true, NULL, 6U) == ESP_OK);
     s_write_result = ESP_FAIL;
     int16_t pcm[128U * 2U] = {0};
     CHECK(p4_game_platform_audio_write(&session, pcm, 128U) == ESP_FAIL);
@@ -170,7 +178,8 @@ static void test_cleanup_failure_is_retained(void)
     reset_fixture();
     p4_game_platform_audio_t session;
     p4_game_platform_audio_init(&session);
-    CHECK(p4_game_platform_audio_open(&session, true, 6U) == ESP_OK);
+    CHECK(p4_game_platform_audio_open(
+              &session, true, NULL, 6U) == ESP_OK);
     s_destroy_result = ESP_FAIL;
     CHECK(p4_game_platform_audio_close(&session) == ESP_FAIL);
     CHECK(session.backend == &s_audio);

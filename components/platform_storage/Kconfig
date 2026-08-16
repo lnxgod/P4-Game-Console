@@ -11,4 +11,15 @@ menu "P4 platform storage service"
             D1-D7, card-detect, write-protect, display, touch, audio, camera,
             wireless, USB, or any other GPIO.
 
+    config PLATFORM_STORAGE_WAVESHARE_4_3_AUTHORIZED
+        bool "Authorize the Waveshare 4.3 SDMMC path"
+        depends on PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+        default n
+        help
+            Allows this component to mount the Waveshare 4.3 microSD socket
+            without formatting, using only SDMMC0 one-bit SDR on the
+            documented GPIO43 (CLK), GPIO44 (CMD), and GPIO39 (D0) subset.
+            D1-D3, card detect, write protect, and unrelated peripherals stay
+            disabled. Enable only in the board-specific Console OS profile.
+
 endmenu

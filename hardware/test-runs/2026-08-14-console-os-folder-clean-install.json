@@ -1,0 +1,175 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T12:48:48-0700",
+  "result": "pass-exact-install-folder-launcher-all-manual-tests-accepted",
+  "hardware": {
+    "product": "Elecrow CrowPanel Advanced 10.1 in DHE04310D",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432,
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "raw_identity_stored": false,
+    "serial_port": "/dev/cu.wchusbserial10"
+  },
+  "artifact": {
+    "path": "apps/console_os/build-folder-clean/p4_console_os.bin",
+    "offset": "0x10000",
+    "bytes": 4951552,
+    "sha256": "636ee38221197c0c7b02c5d04ea19ddfac0a3c6dbd9b2719d8bb21dfb1658a7d",
+    "mutation_span_bytes": 4964352,
+    "mutation_span_sha256": "ad863f0b1b8377692a22168cad5601b3f3f49fa5b7ab126b12d4df98c83a8f96",
+    "readback_sha256": "ad863f0b1b8377692a22168cad5601b3f3f49fa5b7ab126b12d4df98c83a8f96",
+    "readback_chunks": 10,
+    "sealed_mode": "0400",
+    "app_partition_only": true,
+    "contains_ignored_shareware_wad": true,
+    "redistribution_authorized": false
+  },
+  "pre_uart_fail_closed_attempt": {
+    "result": "fail-closed-before-production-runtime-import",
+    "reason": "unpinned shell Python lacked the esptool module",
+    "artifact_was_sealed": true,
+    "uart_opened": false,
+    "device_reads": 0,
+    "install_write_attempt_count": 0,
+    "restore_required": false,
+    "recovery_children_created": 0,
+    "retry_change": "used-the-pinned-idf5.5-python-interpreter-only"
+  },
+  "transaction": {
+    "same_uart_handle": true,
+    "exclusive_uart_open_count": 1,
+    "uart_reopen_count": 0,
+    "loader_entry_reset_count": 1,
+    "application_launch_count": 1,
+    "install_write_attempt_count": 1,
+    "restore_required": false,
+    "restore_attempt_count": 0,
+    "restore_write_attempt_count": 0,
+    "transfer_baud": 460800,
+    "application_baud": 115200,
+    "ledger": {
+      "path": "hardware/local-state/console-os-folder-clean-install-20260814/e6-install-ledger.json",
+      "bytes": 6188,
+      "sha256": "060cc2c4f28976f8a84b0fb1c7f51925c79868d5978e0a4e806e32062b2e4090",
+      "phase": "e6-runtime-accepted"
+    }
+  },
+  "preserved_predecessor": {
+    "path": "hardware/local-state/console-os-folder-clean-install-20260814/live-preimage.bin",
+    "bytes": 4964352,
+    "sha256": "8a4c7be1bd6dab0fbc24d16217c8d44f18e6ec4aca3a3eb5b7bc3259b25b1ffe",
+    "installed_prefix_bytes": 4948512,
+    "installed_prefix_sha256": "9596617fd86d9cd9abd12a539329c6df2d06e696ca4de6814daa644e56090303",
+    "installed_padded_span_bytes": 4964352,
+    "installed_padded_span_sha256": "8a4c7be1bd6dab0fbc24d16217c8d44f18e6ec4aca3a3eb5b7bc3259b25b1ffe",
+    "partition_table_path": "hardware/local-state/console-os-folder-clean-install-20260814/live-partition-table.bin",
+    "partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433"
+  },
+  "jedec_boundaries": {
+    "canonical_low_24_bits": "0x1840c8",
+    "post_stub_initial_raw": "0x001840c8",
+    "post_reset_sequence_raw": "0x001840c8",
+    "write_boundary_raw": "0xff1840c8",
+    "prelaunch_raw": "0xff1840c8",
+    "normalization_evidence": {
+      "path": "hardware/evidence/console-os-folder-clean-jedec-normalization.json",
+      "sha256": "180b7303752f9407ffeb44124730d8d97ccbfba671120d8c6dda85d10253ce4c"
+    },
+    "wrong_low_24_identity_accepted": false
+  },
+  "retained_uart_startup": {
+    "result": "pass",
+    "raw": {
+      "path": "hardware/local-state/console-os-folder-clean-install-20260814/e6-startup.raw",
+      "bytes": 5482,
+      "sha256": "1be49e4dcdd6f783cf7e42b2801d628ed15ffe737a5b4a3b3e8d9a7b01fbe447"
+    },
+    "summary": {
+      "path": "hardware/local-state/console-os-folder-clean-install-20260814/e6-startup.json",
+      "bytes": 1338,
+      "sha256": "26b8ef8fe24339ff9c4a90f9848a9c72dc37ddb3575ed134abe30d5fc5adbcd6"
+    },
+    "startup_signature": "apps=7 native_game_api=1 native_format=p4-native-static-v1",
+    "fixed_markers_ordered": true,
+    "stats_records": 2,
+    "latest_loops": 600,
+    "latest_touch_polls": 600,
+    "touch_failures": 0,
+    "display_submits": 3,
+    "display_completions": 3,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "amplifier_energized": false,
+    "doom_handoffs": 0,
+    "rejected_markers": []
+  },
+  "launcher_contract": {
+    "registered_apps": 7,
+    "root_tiles": ["ALL PROGRAMS", "GAMES", "SYSTEM"],
+    "game_type_folders": ["ACTION", "ARCADE"],
+    "arcade_games": ["MAZE CHASE", "SPACE INVADERS"],
+    "action_games": ["DOOM"],
+    "kid_facing_capability_badges_visible": false,
+    "capability_metadata_retained_internally": true,
+    "scrolling_enabled": true,
+    "native_game_api": 1,
+    "native_format": "p4-native-static-v1"
+  },
+  "audio_contract": {
+    "launcher_audio_hardware_calls": 0,
+    "launcher_amplifier_energized": false,
+    "native_game_audio_deferred_until_game_launch": true,
+    "backend_volume_step": "6/10",
+    "exact_unit_release": {
+      "path": "hardware/evidence/console-os-folder-clean-exact-unit-audio-release.json",
+      "sha256": "e5f8cf589518766320de4dc50f0de9e74f8e2591de36e43bd0c1c5a1e65e7c0e"
+    }
+  },
+  "frozen_route": {
+    "authorized_route_sha256": "d5502231e4781fdff3b3bc41a855c8967cbd2af7940cd53ca2319265c43c9bce",
+    "installer_sha256": "5aa5dbc13beeb3ccdc15c81bfd1db561ab91082b0817ee78ac27b6369dff8956",
+    "authorization_sha256": "af4fa60c211a7e94a48c50c5534582ed2a7d09ec64eb0d99d98219bae0cbfa58",
+    "audio_release_sha256": "e5f8cf589518766320de4dc50f0de9e74f8e2591de36e43bd0c1c5a1e65e7c0e",
+    "jedec_release_sha256": "180b7303752f9407ffeb44124730d8d97ccbfba671120d8c6dda85d10253ce4c",
+    "build_evidence_sha256": "c98c28ea3124beed854efcb96f2172a463c937f852373d56cd2f793ba607d40c"
+  },
+  "software_acceptance": {
+    "environment_verifier": "pass",
+    "console_shell_asan_ubsan": "pass",
+    "game_api_and_platform_host_tests": "pass",
+    "maze_chase_and_space_invaders_host_tests": "pass",
+    "folder_registry_and_scaffolder_tests": "pass",
+    "console_os_esp32p4_build_and_verifier": "pass",
+    "preview_root_and_arcade_visually_inspected_without_capability_badges": true,
+    "broad_historical_make_check": "not-pass-stale-E5-flash_app_authorized-assertion-predates-current-candidate"
+  },
+  "operator_acceptance": {
+    "recorded_at": "2026-08-14T12:52:52-0700",
+    "statement": "this is perfect! its running good",
+    "follow_up_statements": [
+      "i did test it all",
+      "we are good",
+      "all games work"
+    ],
+    "accepted": [
+      "folder-style Console OS home screen is visibly running on the tablet",
+      "ALL PROGRAMS, GAMES, and SYSTEM replace the prior flat launcher",
+      "developer-facing V/T/A/S capability letters are absent",
+      "overall launcher presentation is accepted",
+      "Games, Action, Arcade, All Programs, and System folder navigation and scrolling work",
+      "Maze Chase launches, plays, produces sound, and returns to its folder",
+      "Space Invaders launches, plays, produces sound, and returns to its folder",
+      "Doom launches with sound effects and MUS music",
+      "built-in System pages and Home return work",
+      "restart returns to the folder launcher"
+    ],
+    "not_inferred": []
+  },
+  "manual_acceptance_pending": [],
+  "claims_not_made": [
+    "The WAD-bearing firmware may be committed or redistributed.",
+    "The exact-unit audio or JEDEC exceptions apply to another tablet."
+  ]
+}

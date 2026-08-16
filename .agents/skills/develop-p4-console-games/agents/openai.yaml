@@ -1,0 +1,4 @@
+interface:
+  display_name: "P4 Console Game Development"
+  short_description: "Build native games with folders and shared APIs"
+  default_prompt: "Use $develop-p4-console-games to create a native Console OS game in the right launcher folder."

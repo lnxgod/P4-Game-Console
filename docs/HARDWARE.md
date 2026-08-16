@@ -88,7 +88,7 @@ requires the touch diagnostic or the combined Doom acceptance run. See
 `hardware/evidence/elecrow-10.1-touch-path.json` and
 `hardware/evidence/elecrow-10.1-factory-touch-audio-runtime-basis.json`.
 
-## Factory audio history and exact-unit E6 exception under review
+## Factory audio working on the exact unit; cross-unit topology unresolved
 
 The populated speaker path is not a direct digital I²S amplifier. Across the
 three published revisions, GPIO21/22/23 and GPIO24 route LRCK, BCLK, data, and
@@ -126,22 +126,27 @@ exactly like the factory source, but Doom does not consume its microphone sample
 external codec I2C transaction is made and no alternate codec path is selected.
 Any failure requests high shutdown before retaining or releasing resources.
 
-The reusable/cross-unit runtime remains blocked because the expected U4 outputs and optional direct
-amplifier outputs converge on the same speaker pairs. The exact-unit factory
-history makes the direct implementation plausible but does not prove one
-family absent. A separate narrow exact-unit E6 authorization may accept that
-unresolved risk only for device identity `4ea036…`, the exact frozen factory
-source/initializer, an exact reviewed artifact, preserved E5 rollback, and the
-same-handle app-only write/readback/launch route. This operator-accepted
-exception does not rewrite the historical topology review or authorize audio
-on another board. Until that immutable authorization and independent preflash
-audit are complete, E6 remains unflashable. After launch, acceptance requires
-rising audio frame counts, music event/note/frame counters, non-zero music PCM,
-and zero parse/write failures plus a person separately confirming audible,
-undistorted title/E1M1 music and simultaneous sound effects. See
-`hardware/evidence/elecrow-10.1-audio-path-review.json`,
-`hardware/evidence/elecrow-10.1-factory-audio-semantics.json`, and
-`hardware/evidence/elecrow-10.1-factory-touch-audio-runtime-basis.json`.
+The bound tablet has now exercised this path successfully under explicit
+operator-accepted exact-unit releases. The owner confirmed audible Doom sound
+effects and recognizable MUS music at reduced volume; Console OS Game API v1
+was subsequently installed with the same complete factory initializer and an
+optional native-game tone session. The launcher keeps the amplifier off and
+opens audio only for the foreground game. The latest badge-free folder image
+has its own exact-artifact release and passed guarded startup with the
+amplifier still off; this is delivery/safety evidence, not a new acoustic game
+test. See
+`hardware/evidence/doom-embedded-touch-audio-e6-exact-unit-audio-release.json`,
+`hardware/evidence/console-os-folder-clean-exact-unit-audio-release.json`,
+`hardware/test-runs/2026-08-14-console-os-mvp-install.json`, and
+`hardware/test-runs/2026-08-14-console-os-folder-clean-install.json`.
+
+This is a working, authorized path for the device identity `4ea036…`; it is no
+longer classified as runtime-blocked on that tablet. The unresolved amplifier
+population/topology still prevents treating it as a reusable cross-unit pin
+authorization. Every changed WAD-bearing or audio-capable firmware artifact
+must receive a fresh exact-artifact release, preserve rollback, use the guarded
+same-handle app-only write/readback/launch route, and keep the global pin map
+locked. Software counters remain delivery evidence rather than acoustic proof.
 
 ## Firmware variant identified; physical PCB still to confirm
 

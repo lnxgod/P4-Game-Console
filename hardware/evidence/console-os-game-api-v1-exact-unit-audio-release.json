@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "active": true,
+  "classification": "exact-unit-operator-accepted-console-os-game-api-v1-audio-release",
+  "scope": "one-device-console-os-game-api-v1-factory-audio",
+  "recorded_at": "2026-08-14T10:26:08-0700",
+  "operator_direction": "The owner previously accepted the unresolved amplifier-topology risk for this exact tablet, confirmed that Doom sound and music worked, and now asked to flash the Console OS Game API v1 build so it can be seen and tested on the tablet.",
+  "exact_unit": {
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432,
+    "raw_identity_stored": false
+  },
+  "exact_artifact": {
+    "offset": "0x10000",
+    "app_binary_bytes": 4941776,
+    "app_binary_sha256": "f4426c370b9f251aa5a3ae5049b99a4c068067390c351dc680d1b7d36492be36",
+    "mutation_span_bytes": 4947968,
+    "mutation_tail_byte": "ff"
+  },
+  "operator_risk_acceptance": {
+    "unresolved_amplifier_topology_risk_accepted": true,
+    "gpio24_pdm_clock_may_feed_codec_mclk": true,
+    "population_or_continuity_proof_available": false,
+    "connected_unit_only": true,
+    "reusable_authorization": false,
+    "cross_unit_authorization": false,
+    "prior_exact_unit_doom_sfx_and_music_audible": true
+  },
+  "authorized_audio_runtime": {
+    "launcher_audio_hardware_calls": 0,
+    "launcher_amplifier_energized": false,
+    "native_game_audio_deferred_until_game_launch": true,
+    "native_game_audio_optional": true,
+    "backend": "complete-pinned-factory-initializer",
+    "pdm_rx_controller": 0,
+    "pdm_clock_gpio": 24,
+    "pdm_clock_hz": 1024000,
+    "pdm_data_input_gpio": 26,
+    "pdm_samples_consumed": false,
+    "speaker_tx_controller": 1,
+    "sample_rate_hz": 16000,
+    "format": "signed-pcm16-stereo",
+    "lrclk_gpio": 21,
+    "bclk_gpio": 22,
+    "dout_gpio": 23,
+    "tx_mclk": "unused",
+    "amplifier_shutdown_gpio": 30,
+    "amplifier_enable_level": 0,
+    "external_codec_i2c_transactions": 0,
+    "backend_volume_step": "6/10",
+    "fail_closed_level": 1,
+    "usb_runtime": false
+  },
+  "software_scope": {
+    "native_game": "org.p4console.maze-chase",
+    "native_game_audio": "bounded-tone-mixer-pcm16-stereo",
+    "doom_audio": "existing-SFX-plus-WAD-MUS-software-synth",
+    "new_gpio_or_peripheral_assumptions": false,
+    "global_pin_map_authorized": false
+  },
+  "prior_audio_release": {
+    "path": "hardware/evidence/doom-embedded-touch-audio-e6-exact-unit-audio-release.json",
+    "sha256": "da0a25bb4e3ba07cf46bd3e300ffca89ace1e2d9545debb34e943a5cd4c828b3"
+  },
+  "installed_predecessor": {
+    "path": "hardware/test-runs/2026-08-14-console-os-mvp-install.json",
+    "sha256": "a5172268fcb4d338bf2159a68302a417aa92e95644658672e0a9cdb9859df7ac"
+  },
+  "execution_safety": {
+    "app_partition_only": true,
+    "same_uart_handle": true,
+    "live_full_successor_span_preimage_required": true,
+    "exact_readback_required": true,
+    "automatic_predecessor_restore_on_startup_rejection": true,
+    "startup_acceptance_keeps_amplifier_off": true,
+    "manual_maze_audio_acceptance_after_launcher_boot": true
+  },
+  "claims_not_made": [
+    "The unresolved amplifier topology is safe on a different board.",
+    "GPIO30 readback proves the physical amplifier state.",
+    "The new artifact has already produced sound or passed on-device acceptance.",
+    "Software audio counters alone prove acoustic output."
+  ]
+}

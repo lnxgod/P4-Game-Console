@@ -39,17 +39,46 @@ static void test_neutral_and_fail_closed(void)
 
 static void test_five_contacts_and_strength(void)
 {
-    const uint16_t x[5] = {0U, 1023U, 180U, 900U, 742U};
-    const uint16_t y[5] = {0U, 599U, 445U, 455U, 486U};
+    const uint16_t x[5] = {
+        0U, PLATFORM_TOUCH_WIDTH - 1U, 180U,
+        PLATFORM_TOUCH_WIDTH / 2U, PLATFORM_TOUCH_WIDTH - 2U};
+    const uint16_t y[5] = {
+        0U, PLATFORM_TOUCH_HEIGHT - 1U, 145U,
+        PLATFORM_TOUCH_HEIGHT / 2U, PLATFORM_TOUCH_HEIGHT - 2U};
     const uint16_t strength[5] = {1U, 2U, 3U, 4U, 65535U};
     platform_touch_frame_t frame;
     EXPECT_TRUE(platform_touch_frame_from_raw(
         &frame, 42U, 9000, x, y, strength, 5U));
     EXPECT_EQ(1, frame.valid);
     EXPECT_EQ(5, frame.contact_count);
-    EXPECT_EQ(1023, frame.contacts[1].x);
-    EXPECT_EQ(599, frame.contacts[1].y);
+    EXPECT_EQ(PLATFORM_TOUCH_WIDTH - 1U, frame.contacts[1].x);
+    EXPECT_EQ(PLATFORM_TOUCH_HEIGHT - 1U, frame.contacts[1].y);
     EXPECT_EQ(65535, frame.contacts[4].strength);
+}
+
+static void test_native_to_logical_coordinates(void)
+{
+    uint16_t x[3] = {0U, PLATFORM_TOUCH_NATIVE_WIDTH - 1U,
+                     PLATFORM_TOUCH_NATIVE_WIDTH / 2U};
+    uint16_t y[3] = {0U, PLATFORM_TOUCH_NATIVE_HEIGHT - 1U,
+                     PLATFORM_TOUCH_NATIVE_HEIGHT / 2U};
+    EXPECT_TRUE(platform_touch_coordinates_native_to_logical(x, y, 3U));
+#if PLATFORM_TOUCH_ROTATION_CW_DEGREES == 90U
+    EXPECT_EQ(PLATFORM_TOUCH_WIDTH - 1U, x[0]);
+    EXPECT_EQ(0U, y[0]);
+    EXPECT_EQ(0U, x[1]);
+    EXPECT_EQ(PLATFORM_TOUCH_HEIGHT - 1U, y[1]);
+#else
+    EXPECT_EQ(0U, x[0]);
+    EXPECT_EQ(0U, y[0]);
+    EXPECT_EQ(PLATFORM_TOUCH_WIDTH - 1U, x[1]);
+    EXPECT_EQ(PLATFORM_TOUCH_HEIGHT - 1U, y[1]);
+#endif
+
+    x[0] = PLATFORM_TOUCH_NATIVE_WIDTH;
+    y[0] = 0U;
+    EXPECT_TRUE(!platform_touch_coordinates_native_to_logical(x, y, 1U));
+    EXPECT_TRUE(!platform_touch_coordinates_native_to_logical(NULL, y, 1U));
 }
 
 static void test_malformed_input_neutralizes(void)
@@ -85,11 +114,18 @@ int main(void)
 {
     test_neutral_and_fail_closed();
     test_five_contacts_and_strength();
+    test_native_to_logical_coordinates();
     test_malformed_input_neutralizes();
     if (failures != 0U) {
         fprintf(stderr, "platform touch frame failures: %u\n", failures);
         return 1;
     }
-    puts("P4_TOUCH_FRAME HOST PASS contacts=5 bounds=1024x600 fail_closed=true");
+    printf("P4_TOUCH_FRAME HOST PASS contacts=5 logical=%ux%u native=%ux%u "
+           "rotation_cw=%u fail_closed=true\n",
+           (unsigned)PLATFORM_TOUCH_WIDTH,
+           (unsigned)PLATFORM_TOUCH_HEIGHT,
+           (unsigned)PLATFORM_TOUCH_NATIVE_WIDTH,
+           (unsigned)PLATFORM_TOUCH_NATIVE_HEIGHT,
+           (unsigned)PLATFORM_TOUCH_ROTATION_CW_DEGREES);
     return 0;
 }

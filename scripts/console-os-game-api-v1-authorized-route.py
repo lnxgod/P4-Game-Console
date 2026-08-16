@@ -1,0 +1,131 @@
+#!/usr/bin/env python3
+
+"""Issued outer route for the exact-unit Console OS Game API v1 install.
+
+The caller cannot choose the installer bytes or authorization digest. The
+sealed successor installer exposes recovery through its own CLI and accepts an
+installation only through this exact trust anchor.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+import pathlib
+import stat
+import sys
+import types
+from typing import Any
+
+
+SCRIPT_PATH = pathlib.Path(__file__).resolve(strict=True)
+SCRIPT_DIR = SCRIPT_PATH.parent
+INSTALLER_PATH = SCRIPT_DIR / "console-os-game-api-v1-install.py"
+EXPECTED_INSTALLER_SHA256 = (
+    "406d0b6da57029890f2e4f92bb6d6aed32e3fc2e0f4c81ee7ddbddc48e08ff86"
+)
+ISSUED_AUTH_SHA256 = (
+    "d1f072d0d9d62784a8911bf22ea3ebf22caf4965f38624c9eb64b13f3aa5012d"
+)
+MAX_INSTALLER_BYTES = 2 * 1024 * 1024
+
+
+class RouteError(RuntimeError):
+    """The separately issued Game API v1 route is not exact."""
+
+
+def _require_issued() -> str:
+    value = ISSUED_AUTH_SHA256
+    if value == "0" * 64:
+        raise RouteError("Game API v1 exact-unit authorization is not issued")
+    if not isinstance(value, str) or len(value) != 64:
+        raise RouteError("issued authorization digest has invalid shape")
+    try:
+        bytes.fromhex(value)
+    except ValueError as error:
+        raise RouteError("issued authorization digest has invalid shape") from error
+    return value
+
+
+def _load_frozen_installer() -> Any:
+    path = INSTALLER_PATH.resolve(strict=True)
+    if path != SCRIPT_DIR / "console-os-game-api-v1-install.py":
+        raise RouteError("installer path differs from the exact sibling")
+    before = path.lstat()
+    if (
+        not stat.S_ISREG(before.st_mode)
+        or stat.S_ISLNK(before.st_mode)
+        or before.st_uid != os.getuid()
+        or stat.S_IMODE(before.st_mode) != 0o755
+        or not 0 < before.st_size <= MAX_INSTALLER_BYTES
+    ):
+        raise RouteError("installer metadata or bounded size differs")
+    descriptor = os.open(path, os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0))
+    try:
+        opened = os.fstat(descriptor)
+        if (
+            (opened.st_dev, opened.st_ino, opened.st_size)
+            != (before.st_dev, before.st_ino, before.st_size)
+            or stat.S_IMODE(opened.st_mode) != 0o755
+        ):
+            raise RouteError("installer changed while opening")
+        chunks: list[bytes] = []
+        remaining = opened.st_size
+        while remaining:
+            chunk = os.read(descriptor, min(1024 * 1024, remaining))
+            if not chunk:
+                raise RouteError("installer was truncated while reading")
+            chunks.append(chunk)
+            remaining -= len(chunk)
+        if os.read(descriptor, 1):
+            raise RouteError("installer grew while reading")
+        after = os.fstat(descriptor)
+        if (
+            (after.st_dev, after.st_ino, after.st_size)
+            != (opened.st_dev, opened.st_ino, opened.st_size)
+        ):
+            raise RouteError("installer changed while reading")
+        payload = b"".join(chunks)
+    finally:
+        os.close(descriptor)
+    if hashlib.sha256(payload).hexdigest() != EXPECTED_INSTALLER_SHA256:
+        raise RouteError("frozen Game API v1 installer bytes changed")
+    name = "console_os_game_api_v1_frozen_authorized_installer"
+    module = types.ModuleType(name)
+    module.__file__ = str(path)
+    module.__package__ = ""
+    sys.modules[name] = module
+    try:
+        exec(compile(payload, str(path), "exec"), module.__dict__)
+    except BaseException:
+        sys.modules.pop(name, None)
+        raise
+    return module
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", required=True)
+    parser.add_argument("--artifact", type=pathlib.Path, required=True)
+    parser.add_argument("--authorization", type=pathlib.Path, required=True)
+    parser.add_argument("--recovery-directory", type=pathlib.Path, required=True)
+    parser.add_argument("--capture-seconds", type=float, default=30.0)
+    args = parser.parse_args()
+
+    installer = _load_frozen_installer()
+    result = installer.install_from_trust_anchor(
+        port=args.port,
+        artifact=args.artifact,
+        authorization=args.authorization,
+        authorization_sha256=_require_issued(),
+        recovery_directory=args.recovery_directory,
+        capture_seconds=args.capture_seconds,
+    )
+    print(json.dumps(result, separators=(",", ":")))
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

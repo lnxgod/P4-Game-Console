@@ -4,11 +4,10 @@ This protocol transfers one opaque `.p4cart` bundle. Web Serial is only one
 transport adapter; framing, validation, staging, and atomic activation remain
 independent from browser APIs and USB drivers.
 
-This is a transfer protocol, not a P4Cart container specification. The
-repository currently defines neither cartridge bytes nor a packer/compiler or
-executable loader. `stage_verify` is deliberately an integration callback: a
-future storage owner must validate the then-reviewed container before COMMIT.
-Do not label an arbitrary archive or native executable `.p4cart`.
+The transferred bytes use `cartridge-container-v1.md`. `stage_verify` remains
+an integration callback: the storage owner must validate that complete format,
+its overall hash, every entry hash, and the manifest before COMMIT. Do not label
+an arbitrary archive or native executable `.p4cart`.
 
 ## Framing
 
