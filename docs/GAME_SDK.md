@@ -6,7 +6,7 @@ owns the panel, touch controller, audio hardware, timing, and app lifecycle.
 That separation lets a game use controls and sound without knowing Elecrow pin
 maps or calling ESP-IDF peripheral drivers.
 
-## What format Doom actually uses
+## Delivery formats and current status
 
 Doom is not a UF2 or a separately launched desktop-style executable. ESP-IDF
 first links RISC-V machine code into `p4_console_os.elf`; its image tools then
@@ -24,15 +24,60 @@ repository does not currently produce or accept UF2. A future removable-game
 format should be a signed/versioned P4 package with a reviewed loader and
 resource limits; renaming an ELF or BIN file to `.uf2` would not provide that.
 
+### P4Cart Console API (planned, not buildable yet)
+
+`game-platform/` contains the P4Cart transfer framing and a generic fixed-rate
+runtime foundation. It does **not** yet define P4Cart container bytes, provide a
+`.p4cart` packer/compiler, load cartridges from storage, connect to Console OS,
+or execute cartridge code. Do not rename a native ELF, BIN, C source, or ZIP
+file to `.p4cart`; there is no supported command that can compile today's
+native games into an executable cartridge.
+
+The intended delivery split is:
+
+- Console OS, Doom, and any other reviewed native engine remain in the
+  statically linked `p4_console_os.bin`.
+- A future P4Cart game must use a reviewed sandboxed execution backend and the
+  cartridge container/packer introduced with that backend. It will receive
+  logical time, input, drawing, and approved assets through the Console API;
+  it will never receive raw ESP-IDF, display, touch, audio, filesystem, USB,
+  or storage handles.
+
+The P4Cart API currently has no sound operation. Cartridge games must remain
+silent until a bounded, host-owned audio contract and its matching runtime are
+implemented. See `game-platform/README.md` and its API documents for the
+current, intentionally incomplete boundary.
+
 ## Make a game
 
 From the repository root:
 
 ```sh
-python3 scripts/new-game.py "Star Hop"
+python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE
 make game-sdk-host
+make play-game GAME=star_hop
 make console-os-idf
 ```
+
+To play and tune any enabled native game locally before rebuilding or flashing
+Console OS, use the SDL3 host runner:
+
+```sh
+make play-game GAME=space_invaders
+make play-game GAME=maze_chase
+```
+
+This links the selected game's real C source against the same Game API drawing,
+input, lifecycle, and tone-mixer code used by Console OS. Use arrows or WASD
+for movement, Space/Z for A, X/Shift for B, Enter/P for Start, and
+Escape/Backspace/Q for Back. A mouse click exercises the standard touchscreen
+control regions. Local play is software validation, not tablet acceptance.
+
+For a new or behavior-changing native game, this is the required development
+order: run the sanitizer-backed host checks, play and tune the selected game
+locally, rerun the checks after meaningful changes, and only then build a
+firmware candidate. The guarded tablet workflow remains required for physical
+display, touch, speaker, USB, resource, launcher, and install acceptance.
 
 The creator picks the next free launcher ID and writes:
 
@@ -46,11 +91,20 @@ games/star_hop/
 
 `game.json` is the launcher/build contract. The registry generator validates
 every enabled manifest, rejects duplicate IDs and symbols, and automatically
-links the component. The launcher shows six apps per page and supports up to
-32 registered entries. No central source list needs to be edited.
+links the component. Its required `folder` field contains one or two uppercase
+segments of at most 15 ASCII characters each, such as `GAMES/ARCADE` or
+`SYSTEM`. Root shows derived `ALL PROGRAMS`, `GAMES`, and `SYSTEM` folders;
+`GAMES` then shows type folders such as `ACTION` and `ARCADE`.
 
-Use `--dry-run` to inspect the plan or `--help` for title, slug, color, and
-launcher-ID options. The generator never overwrites an existing game.
+The launcher shows three columns by two rows and supports up to 32 registered
+apps. Use the vertical arrows or swipe the app area to scroll by rows. Folder
+discovery scans that fixed registry without heap allocation, recursion, a
+filesystem, or a dynamic executable loader. No central source list needs to
+be edited.
+
+Use `--dry-run` to inspect the plan or `--help` for title, slug, folder, color,
+and launcher-ID options. New games default to `GAMES/ARCADE`; choose another
+bounded path with `--folder`. The generator never overwrites an existing game.
 
 ## API at a glance
 
@@ -61,7 +115,7 @@ Include only the stable headers under `components/p4_game_api/include/p4/`:
 - `p4/input.h`: normalized Up, Down, Left, Right, A, B, Start, and Back states,
   plus standard on-screen controls.
 - `p4/draw.h`: clipped pixels, rectangles, circles, text, and RGB565 sprites.
-- `p4/audio.h`: the host-owned, eight-voice square/triangle tone mixer.
+- `p4/audio.h`: the host-owned tone plus copied-PCM mixer.
 
 The `update` callback receives bounded elapsed time and complete `held`,
 `pressed`, and `released` button snapshots. Return
@@ -69,16 +123,76 @@ The `update` callback receives bounded elapsed time and complete `held`,
 a caller-owned 320x200 surface; every supplied drawing primitive clips to its
 bounds.
 
-Tone audio is optional. Call `p4_game_play_tone()` and accept a `false` result
-when sound is unavailable. On the authorized 10.1-inch unit, Console OS opens
-the reviewed 16 kHz PCM16-stereo factory speaker session at volume step 6/10,
-mixes at most eight voices, and restores proven active-high amplifier shutdown
-when the game leaves or any backend operation fails. Game code never owns I2S,
-GPIO30, or the audio backend.
+## OS resource inheritance
 
-The API has a reserved PCM stream capability, but Console OS v1 intentionally
-does not expose it yet. Games should request only capabilities they use and
-must still function when an optional capability is absent.
+Games inherit a stable logical console rather than a board definition:
+
+- Rendering is always clipped RGB565 at 320x200. Console OS scales and centers
+  it on the physical display; games must not infer panel resolution, pin maps,
+  stride layout, or backlight behavior.
+- Input is a complete normalized snapshot. Use only the Game API buttons,
+  touch points, and standard on-screen controls; never retain a touch pointer
+  or talk to GT911/USB directly.
+- Lifecycle, timing, launcher return, and audio sessions belong to Console OS.
+  A game requests a capability in `game.json`, then uses only the matching
+  `p4/` function. It never opens I2S, configures GPIO, owns an audio worker,
+  or starts a FreeRTOS task.
+
+## Make sound through the host-owned API
+
+Audio is optional and must be original or correctly licensed. Use one of these
+two native-API paths:
+
+1. For hops, hits, UI feedback, and other short effects, request `audio-tone`
+   and call `p4_game_play_tone()` with a bounded frequency, duration, volume,
+   and square or triangle waveform. The host mixes at most eight voices.
+2. For original music or more detailed effects, request `audio-stream`, add
+   `P4_GAME_CAP_AUDIO_STREAM`, mix signed 16 kHz PCM16 stereo in game-owned
+   fixed buffers, and submit 1–256 frames with
+   `p4_game_submit_pcm16_stereo()`.
+
+Each accepted stream call copies 1–256 frames of already-mixed signed 16 kHz
+PCM16 stereo into a fixed 512-frame FIFO; the caller may reuse its buffer as
+soon as the call returns. Stream audio and tones are saturating-mixed before
+Console OS writes the shared backend. A `false` result means the optional
+service is unavailable, the request is invalid, or the FIFO is full. Drop or
+degrade that block—never busy-wait inside a game callback. In every game,
+`stop` must call `p4_game_stop_audio()` (directly or through the provided game
+helper) before returning to the launcher.
+
+On the authorized 10.1-inch unit, Console OS opens the reviewed factory
+speaker session at volume step 6/10 only while a requesting native game runs,
+then restores proven active-high amplifier shutdown. Games never own I2S,
+GPIO30, or the backend. The stream call was already reserved in API v1, so
+activating this bounded implementation does not change the native format or
+API version.
+
+## Make animated art with ImageGen
+
+New or materially revised raster animation art **must use ImageGen** as its
+source. A game that has no raster animation may use code-drawn primitives;
+this requirement applies when adding animation frames, sprites, or a sprite
+atlas. Do not substitute copied arcade, console, web, or commercial-game art.
+
+Use this workflow:
+
+1. Ask ImageGen for one crop-safe animation atlas: state the exact frame grid,
+   cell size, every animation row, a shared baseline, transparent background,
+   limited palette, hard pixel edges, and no text, borders, shadows, or scenery
+   outside a frame.
+2. Inspect every frame before committing. Regenerate it when a frame bleeds
+   into another cell, loses the shared baseline, has opaque background pixels,
+   or cannot be cropped independently.
+3. Save the selected PNG at `games/<slug>/assets/`, record the ImageGen prompt,
+   purpose, grid, license/provenance, and source filename in that game's
+   README, and keep any source-only art out of runtime dependencies.
+4. Commit a game-local deterministic converter in `games/<slug>/tools/` that
+   produces a bounded RGB565 include in `src/generated/`. Use nearest-neighbor
+   conversion and one explicit transparent chroma key. Runtime code must never
+   decode PNGs or allocate an image loader.
+5. Test regeneration: the converter output must exactly match the committed
+   generated include. Account for `width * height * 2` bytes in the game’s
+   static flash budget and draw cells with `p4_draw_sprite_rgb565()`.
 
 ## Rules for portable games
 
@@ -88,10 +202,13 @@ must still function when an optional capability is absent.
 - Bound all state, loops, sprite dimensions, text lengths, and audio requests.
 - Use original or correctly licensed code and assets. Do not copy arcade ROMs,
   maps, sprites, fonts, or sounds.
+- Record ImageGen animation-art provenance and use a deterministic RGB565
+  conversion path for every animated raster asset.
 - Do not commit commercial Doom WADs or WAD-bearing firmware artifacts.
 - Run the host sanitizer suite before the pinned ESP-IDF build. A successful
   build is not hardware acceptance or permission to flash.
 
-Maze Chase under `games/maze_chase/` is the complete clean-room example. It
-uses only code-rendered shapes and the P4 API; it does not contain Pac-Man ROM,
-map, sprite, sound, or artwork data.
+Maze Chase under `games/maze_chase/` and Space Invaders under
+`games/space_invaders/` are complete clean-room examples. Both use only
+code-rendered shapes and the P4 API; neither contains arcade ROM, map, sprite,
+font, art, or sound assets.

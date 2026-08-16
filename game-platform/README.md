@@ -1,10 +1,10 @@
 # P4 Game Platform
 
 This subtree is the first device-side slice of a kid-friendly game platform for
-the Elecrow ESP32-P4 console. A game will use one small API in the browser, be
-packaged as a `.p4cart`, and later be installed over a byte-clean Web Serial
-connection. The browser preview and device runtime must agree on inputs, fixed
-time, drawing commands, limits, and error behavior.
+the Elecrow ESP32-P4 console. A future game will use one small API in the
+browser, be packaged as a `.p4cart`, and later be installed over a byte-clean
+Web Serial connection. The browser preview and device runtime must agree on
+inputs, fixed time, drawing commands, limits, and error behavior.
 
 The current slice deliberately stops before display, controller, storage, and
 USB-serial integration. It contains:
@@ -44,6 +44,22 @@ limits and implement a prompt interrupt signal. Render sinks must also use a
 bounded platform-service timeout. The runtime detects a returned over-budget
 callback and exposes bounded stop waits, but it never forcibly deletes a task
 that may own VM or renderer state.
+
+## P4Cart readiness
+
+The transfer protocol's `kind = 1` label is not a cartridge container format.
+There is currently no P4Cart manifest schema, packer/compiler, executable
+backend, durable two-slot store, Web Serial adapter, or Console OS launcher
+integration. Therefore no game may claim to be a runnable `.p4cart` yet, and
+no native C/RISC-V ELF or BIN may be renamed to that extension.
+
+Until this changes, Console OS demo games use `p4-native-static-v1` and are
+statically linked into `p4_console_os.bin`. A future P4Cart implementation must
+use a reviewed sandboxed backend, validate every asset and resource limit,
+provide only logical 320x200 RGB565 rendering plus normalized input, and keep
+all display, touch, audio, storage, USB, timing, and lifecycle ownership in
+the OS. The current cartridge Game API has no audio operations; portable
+cartridge audio must wait for a separately reviewed contract.
 
 ## Local verification
 

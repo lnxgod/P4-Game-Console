@@ -4,6 +4,11 @@ Status: device runtime foundation. The browser shim and executable cartridge
 engine are follow-on work, but they must implement this contract without
 changing its observable behavior.
 
+This document does not define a `.p4cart` container, a compiler target, or an
+executable format. A cartridge must never contain raw native ESP32-P4 code.
+Those decisions require a reviewed sandboxed backend and a separate container
+specification.
+
 ## Execution model
 
 A game has `load`, `tick`, and `unload` lifecycle callbacks. `tick` runs at an
@@ -43,6 +48,18 @@ the device.
 Each tick may emit at most 256 drawing commands. Additional commands are
 ignored for presentation and reported to the host runtime, but the simulation
 continues. Drawing backpressure is never visible to game logic.
+
+The host owns the physical display and chooses its scaling, centering,
+backlight, framebuffer, and scanout policy. Cartridge code sees only this
+logical 320x200 RGB565 canvas and may not infer panel dimensions or hardware.
+
+## Host-owned services
+
+The API exposes logical time, normalized input, and bounded drawing only. It
+does not expose filesystem paths, USB, touch-controller handles, display
+drivers, ESP-IDF, FreeRTOS, audio hardware, or a sound API. A future sound
+addition must be host-owned, bounded, and specified here before a cartridge
+may generate or submit audio.
 
 ## Input snapshots
 
