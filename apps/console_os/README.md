@@ -1,9 +1,10 @@
 # P4 Console OS
 
-This is the FreeRTOS-native console shell for the Elecrow ESP32-P4 10.1-inch
-tablet. Fixed system apps and Doom live in the OS image. Other Game API apps
-are validated `.P4G` cartridges loaded from persistent storage, so adding or
-removing a game does not require an OS reflash.
+This is the FreeRTOS-native console shell for the ESP32-P4 console boards.
+Fixed system apps, Doom, and one validated `BYTEBUD.P4G` fallback live in the
+OS image. Other Game API apps are loaded from persistent storage, so adding or
+removing a game does not require an OS reflash. A valid `BYTEBUD.P4G` on
+storage replaces the embedded fallback for that boot.
 
 The home screen keeps the accepted Program Manager-style interface and
 organizes built-ins plus the current storage catalog as:
@@ -48,7 +49,8 @@ is still available; otherwise it can be removed safely from Game Manager.
 Runtime code never auto-formats a damaged volume.
 
 Seed cartridges are generated from validated `games/*/game.json` manifests.
-At runtime the launcher catalog comes from validated `.P4G` files. Its
+Byte Buddy is also embedded as the always-available default cartridge; the
+rest of the runtime launcher catalog comes from validated `.P4G` files. Its
 lightweight desktop view shows three columns by two rows, scrolls with vertical
 arrows or a one-finger swipe, and supports up to 32 apps. It derives at most
 two folder levels from validated package metadata. The skin is drawn with
@@ -66,8 +68,9 @@ Copy the resulting cartridge from
 `docs/GAME_SDK.md` for the API and package contract. This project does not use
 UF2.
 
-The Waveshare 4.3 build uses the same cartridge catalog on a read-only-at-
-runtime microSD card. Build and verify it with `make console-os-waveshare-idf`.
+The Waveshare 4.3 build always exposes the embedded Byte Buddy fallback and
+uses the same cartridge catalog for additional games on a read-only-at-runtime
+microSD card. Build and verify it with `make console-os-waveshare-idf`.
 With the board powered off, move the card to a laptop and run
 `make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES`; the installer
 validates all nine cartridges and preserves unrelated files.

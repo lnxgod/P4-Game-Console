@@ -212,6 +212,9 @@ def main() -> None:
     for token in (
         "present_boot_screen", "play_boot_chime",
         "CONSOLE_ACTION_COLOR_MODE_CHANGED", "cartridge_unlock_achievement",
+        "_binary_bytebud_p4g_start",
+        "platform_game_catalog_add_embedded_fallback",
+        'game->embedded ? "embedded-default" : "removable-storage"',
     ):
         require(token in source, f"firmware source is missing {token}")
 
@@ -226,6 +229,13 @@ def main() -> None:
     expected = read_json(APP / "app-metadata.json")["native_game_api"]["seed_packages"]
     require([item["file"] for item in reports] == expected,
             "built cartridge list differs from app metadata")
+    default_game = bundle / "BYTEBUD.P4G"
+    require(default_game.read_bytes() in app.read_bytes(),
+            "BYTEBUD.P4G is not embedded as the firmware fallback")
+    metadata = read_json(APP / "app-metadata.json")["native_game_api"]
+    require(metadata.get("embedded_fallback_package") == "BYTEBUD.P4G" and
+            metadata.get("embedded_fallback_replaceable_from_storage") is True,
+            "embedded default-game policy differs")
     update = verify_update(bundle / "UPDATE/P4UPDATE.P4U", app)
 
     print(json.dumps({
@@ -233,6 +243,8 @@ def main() -> None:
         "build": str(build),
         "application": {"bytes": app.stat().st_size, "sha256": sha256(app)},
         "logo_sha256": LOGO_SHA256,
+        "embedded_default": next(
+            item for item in reports if item["file"] == "BYTEBUD.P4G"),
         "games": reports,
         "update": update,
         "storage_policy": "read-only-at-runtime; install bundle with powered-off card reader",

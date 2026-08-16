@@ -2,7 +2,7 @@
   "schema": 1,
   "app": "console_os",
   "stage": "usb-game-manager-ota-build-candidate",
-  "purpose": "FreeRTOS-native 90s Program Manager shell with a branded boot sequence, session color modes, achievements, storage-loaded P4G cartridges, atomic dual-slot OS updates, and an exclusive Doom handoff.",
+  "purpose": "FreeRTOS-native 90s Program Manager shell with a branded boot sequence, session color modes, achievements, an embedded Byte Buddy fallback plus storage-loaded P4G cartridges, atomic dual-slot OS updates, and an exclusive Doom handoff.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
   "flash_authorized": false,
@@ -60,6 +60,8 @@
     "controls": ["up", "down", "left", "right", "a", "b", "start", "back"],
     "audio": "optional bounded tone service at PCM16 stereo 16000 Hz",
     "return_to_home_supported": true,
+    "embedded_fallback_package": "BYTEBUD.P4G",
+    "embedded_fallback_replaceable_from_storage": true,
     "seed_packages": [
       "ASTEROID.P4G",
       "ASTER2.P4G",

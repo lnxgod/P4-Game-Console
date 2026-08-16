@@ -55,6 +55,7 @@ eight registered apps while preserving the live volume byte-for-byte. See
 `hardware/test-runs/2026-08-14-console-os-file-manager-install.json`.
 
 The current successor adds Game Manager, storage-loaded `.P4G` cartridges,
+an always-available embedded `BYTEBUD.P4G` fallback,
 and dual-slot `.P4U` OS updates while retaining the same window-manager
 renderer. Maze Chase and Space Invaders are no longer linked into the OS
 binary: they are 9 KiB-class seed packages copied to `P4 GAMES`. The app image
@@ -124,7 +125,7 @@ boot
        |-- All Programs (scrollable flat view)
        |-- Games
        |     |-- Action -> Doom
-       |     `-- Arcade -> installed P4G cartridges, including Byte Buddy
+       |     `-- Arcade -> embedded Byte Buddy plus installed P4G cartridges
        |-- System -> diagnostics / Colors / Achievements / File Manager / Game Manager
        |     |-- File Manager -> bounded root list / confirmed delete
        |     `-- Game Manager -> package status / remove / OS update
@@ -163,7 +164,7 @@ display, overlays, and exit callbacks in a deterministic order.
 | Game-data FAT | launcher or laptop, never both | terminal game lease | Clean eject returns ownership; host access is revoked and WAD re-hashed before Doom |
 | Doom WAD | validated `/game-data/DOOM1.WAD` | read-only VFS adapter | Exact ignored shareware identity only; host changes invalidate cache |
 | File Manager | `console_shell` view plus `platform_game_storage` operations | unavailable | Lists/deletes only while the app owns FAT; host and game ownership reject every operation |
-| Game cartridge | validated package bytes, then relocated PSRAM image | unavailable | Catalog and launch revalidate SHA/ELF; cartridge receives only the host callback table |
+| Game cartridge | validated package bytes, then relocated PSRAM image | embedded Byte Buddy fallback | Storage can replace the fallback by ID; catalog and launch revalidate SHA/ELF; cartridge receives only the host callback table |
 | OS update | inactive OTA slot | unavailable | USB stops during streaming; boot slot changes only after final image verification |
 
 The launcher surface is standard RGB565 at 320x200. The proven display service
