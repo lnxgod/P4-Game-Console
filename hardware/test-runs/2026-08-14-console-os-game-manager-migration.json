@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T23:15:49-0700",
+  "result": "pass-j1-dual-ota-migration-and-retained-uart-startup-j16-cartridge-and-ota-acceptance-pending",
+  "hardware": {
+    "product": "Elecrow CrowPanel Advanced 10.1 in DHE04310D",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432,
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "programming_port": "/dev/cu.wchusbserial10",
+    "mass_storage_port": "J16"
+  },
+  "source": {
+    "commit": "a9a28662ebc0c185ff124848782c5fcb14e2b94d",
+    "branch": "codex/game-manager-usb-updates",
+    "pull_request": "https://github.com/lnxgod/esp32-p4-console/pull/6"
+  },
+  "software_acceptance": {
+    "make_console_os_idf": "pass-locked-esp-idf-5.5.3",
+    "console_shell_host": "pass-asan-ubsan",
+    "platform_game_storage_host": "pass-asan-ubsan",
+    "game_sdk_host": "pass",
+    "game_package_parser": "pass-asan-ubsan",
+    "os_update_package_parser": "pass-asan-ubsan",
+    "migration_artifact_contract": "pass",
+    "console_os_verifier": "console-os-game-manager-build-verified-not-hardware-tested"
+  },
+  "migration_artifacts": {
+    "bootloader": {
+      "offset": "0x2000",
+      "payload_bytes": 23056,
+      "payload_sha256": "540ee63ca69394fea4c34ca632f525168dcab0f58d6a73629494c23b53f85f63",
+      "span_bytes": 24576,
+      "readback_sha256": "e7afae6b94a4434d91a046701e399cf88b6314776a051ddde5fa7ad171526505"
+    },
+    "ota_0": {
+      "offset": "0x20000",
+      "payload_bytes": 910512,
+      "payload_sha256": "8216435c609694608718110f261e275661be365ff5d50cbceb7486c9c3bcd543",
+      "span_bytes": 3604480,
+      "readback_sha256": "7df906d4f9a2bfdc8b0e2b3bc1b1315774ad0109f1c3c8ff5c0a469373319647"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "payload_bytes": 3072,
+      "payload_sha256": "02e5f52a43dc6df2045b1a5e4e83c235586646f5f403f982d8328641927bc225",
+      "span_bytes": 4096,
+      "readback_sha256": "ba4e5678eeb7a75c51f491c6bfaf07a0fc1e02df75a9623ea50d0d36a80ba6c0"
+    },
+    "ota_data": {
+      "offset": "0x10000",
+      "payload_bytes": 8192,
+      "payload_sha256": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f",
+      "span_bytes": 8192,
+      "readback_sha256": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f"
+    }
+  },
+  "transaction": {
+    "classification": "game-manager-dual-ota-migration-accepted",
+    "write_scope": [
+      "0x2000..0x7fff",
+      "0x8000..0x8fff",
+      "0x10000..0x11fff",
+      "0x20000..0x38ffff"
+    ],
+    "game_data_offset": "0x710000",
+    "write_scope_excludes_game_data": true,
+    "new_backup_created": false,
+    "existing_complete_backup_sha256": "c567d0a4d960156b59216e4c424d78856e7b8dbe52e05810d47a69a3e58f4217",
+    "predecessor_partition_table_span_sha256": "a10833df35f52d59601ef03d7250330c59b65a348597aeb603085b6e2d94b88d",
+    "predecessor_application_payload_sha256": "ac187a9906109c8b3a47cff91a222e33fb2e36285abeae7f15aa465535604693",
+    "predecessor_application_span_sha256": "59a158418e3bb26a44e0c1126f371b73c186d2fcfaba9623b4ed04fd47291861",
+    "preserved_nvs_phy": true,
+    "preserved_game_data_header": true,
+    "preserved_ota1_samples": true,
+    "same_uart_handle": true,
+    "application_launch_count": 1,
+    "restore_required": false,
+    "rollback_performed": false,
+    "ledger": {
+      "path": "hardware/local-state/console-os-game-manager-dual-ota-20260814/game-manager-dual-ota-migration-ledger.json",
+      "bytes": 5197,
+      "sha256": "d84852931045fa5cf293338f461f65caee9d3c906a43cd1d0833c6dcf99d1e41",
+      "phase": "runtime-accepted"
+    }
+  },
+  "retained_uart_acceptance": {
+    "result": "pass",
+    "raw": {
+      "path": "hardware/local-state/console-os-game-manager-dual-ota-20260814/game-manager-dual-ota-startup.raw",
+      "bytes": 8593,
+      "sha256": "fff4f4da783e64b046ad4058f3b0a0d13b012a8fd80169483bf3c3066a1bd73d"
+    },
+    "summary": {
+      "path": "hardware/local-state/console-os-game-manager-dual-ota-20260814/game-manager-dual-ota-startup.json",
+      "bytes": 1598,
+      "sha256": "26180bf1b94d53679821c857929d7fd440a03332d5696919a323ec525c87535e"
+    },
+    "storage_state": "app-ready",
+    "storage_capacity_bytes": 9289728,
+    "catalog_packages": 0,
+    "catalog_valid_packages": 0,
+    "registered_apps": 7,
+    "display_resolution": "1024x600",
+    "display_pixel_format": "RGB565",
+    "display_submits": 1,
+    "display_completions": 1,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "touch_ready": true,
+    "touch_polls_observed": 600,
+    "touch_failures": 0,
+    "ota_boot_valid_result": "ESP_OK",
+    "ota_was_pending": false,
+    "amplifier_energized": false,
+    "rejected_markers": []
+  },
+  "followup_usb_ota_candidate": {
+    "source_commit": "e88d1cea9c8c63a1c494b1e5529deca4a7c4aaaa",
+    "app_bytes": 910560,
+    "app_sha256": "3bd74ee6c6652580bbcb6bdfc27a8bec12e1e487c27329dea3a21c5484c55f61",
+    "package_bytes": 910816,
+    "package_sha256": "b609a9e039bdf9b2f87fdbd07e2313e1a345946c58be5877d8ab1d7a6d742972",
+    "purpose": "exercise J16 inactive-slot update and keep absent optional update probes healthy"
+  },
+  "manual_acceptance_pending": [
+    "operator connects J16 and host mounts P4 GAMES",
+    "host copies MAZE.P4G and INVADERS.P4G and ejects cleanly",
+    "operator confirms both storage-loaded games appear, launch, and return",
+    "host copies P4UPDATE.P4U and ejects cleanly",
+    "operator confirms the inactive-slot update and accepted reboot",
+    "operator visually confirms the window-manager layout is preserved"
+  ],
+  "claims_not_made": [
+    "J16 enumeration has been observed on this exact dual-OTA build.",
+    "Maze Chase or Space Invaders has been launched from storage on hardware.",
+    "The USB-delivered OTA path has been accepted on hardware.",
+    "The operator has visually accepted this exact build."
+  ]
+}

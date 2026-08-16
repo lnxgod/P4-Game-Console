@@ -216,6 +216,20 @@ static void test_failed_start_is_retryable_with_new_generation(void)
     EXPECT_TRUE(model.generation != first_generation);
 }
 
+static void test_integrated_start_uses_same_lifecycle_guards(void)
+{
+    platform_usb_host_model_t model;
+    platform_usb_host_model_init(&model);
+    EXPECT_EQ(PLATFORM_USB_STATUS_OK,
+              platform_usb_host_model_begin_integrated_start(&model));
+    EXPECT_EQ(PLATFORM_USB_HOST_STARTING, model.state);
+    EXPECT_EQ(PLATFORM_USB_STATUS_INVALID_STATE,
+              platform_usb_host_model_begin_integrated_start(&model));
+    EXPECT_EQ(PLATFORM_USB_STATUS_OK,
+              platform_usb_host_model_complete_start(&model, false));
+    EXPECT_EQ(PLATFORM_USB_HOST_STOPPED, model.state);
+}
+
 static void test_uncertain_cleanup_enters_terminal_fault(void)
 {
     platform_usb_host_model_t model;
@@ -273,6 +287,7 @@ int main(void)
     test_class_leases_block_teardown_and_reject_stale_release();
     test_root_port_enable_requires_registered_class_and_retries();
     test_failed_start_is_retryable_with_new_generation();
+    test_integrated_start_uses_same_lifecycle_guards();
     test_uncertain_cleanup_enters_terminal_fault();
     test_stop_requires_quiesce_even_without_leases();
     test_failed_quiesce_enters_terminal_fault();

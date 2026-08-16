@@ -1,0 +1,117 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T21:31:50-0700",
+  "result": "pass-install-and-retained-uart-startup-manual-file-manager-and-j16-acceptance-pending",
+  "hardware": {
+    "product": "Elecrow CrowPanel Advanced 10.1 in DHE04310D",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432,
+    "device_identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "programming_port": "/dev/cu.wchusbserial10",
+    "mass_storage_port": "J16"
+  },
+  "source": {
+    "commit": "d3c4a542da3c9495f4c200991b38e929238ba495",
+    "branch": "codex/program-manager-file-manager",
+    "pull_request": "https://github.com/lnxgod/esp32-p4-console/pull/5"
+  },
+  "artifact": {
+    "path": "apps/console_os/build/p4_console_os.bin",
+    "offset": "0x10000",
+    "bytes": 5070112,
+    "sha256": "ac187a9906109c8b3a47cff91a222e33fb2e36285abeae7f15aa465535604693",
+    "padded_span_bytes": 7340032,
+    "padded_span_sha256": "59a158418e3bb26a44e0c1126f371b73c186d2fcfaba9623b4ed04fd47291861",
+    "readback_sha256": "59a158418e3bb26a44e0c1126f371b73c186d2fcfaba9623b4ed04fd47291861",
+    "elf_bytes": 15568104,
+    "elf_sha256": "737397aa15cade15e8b1ea5e5e3c14d24891457e961d0c5e20a669a76a81e07f"
+  },
+  "software_acceptance": {
+    "make_verify": "pass-locked-esp-idf-5.5.3",
+    "make_console_shell_host": "pass-asan-ubsan",
+    "make_platform_game_storage_host": "pass-asan-ubsan",
+    "make_game_sdk_host": "pass-asan-ubsan",
+    "make_console_os_idf": "pass-locked-esp-idf-5.5.3",
+    "file_manager_exact_update_contract": "pass",
+    "program_manager_home_preview_sha256": "a344419b6982ec4171c115699896535cb1bbfb30e3978e7ce38c41e645e8a0d4",
+    "system_folder_preview_sha256": "4976eaf493af24cc98226aa6d0ddb8dced9b0c7d7b537b6bbb9c08531b6021df",
+    "file_manager_preview_sha256": "89c5d4c06b6dc9f3438d30d0a5ac60aec446680cfc5932bf79d39b190fcc0f48",
+    "repository_check": {
+      "file_manager_and_preceding_tests": "pass",
+      "stopped_at_unrelated_baseline": "scripts/tests/test-doom-e5-gate.py expects flash_app_authorized=true while the unchanged app metadata records false",
+      "baseline_files_differ_from_origin_main": false
+    }
+  },
+  "transaction": {
+    "classification": "program-manager-usb-app-only-accepted",
+    "write_scope": "application-only-0x10000..0x70ffff",
+    "same_uart_handle": true,
+    "application_launch_count": 1,
+    "new_backup_created": false,
+    "predecessor_span_sha256": "43544cbe4ce096f016dd9d78460c26accc1e4a542768e19912f53e59c2b57b42",
+    "game_data_before_sha256": "d24e58fa3021a5d22fb350cba94e1ccb88611f0f21e488d1f57dda4f91fbb146",
+    "game_data_after_sha256": "d24e58fa3021a5d22fb350cba94e1ccb88611f0f21e488d1f57dda4f91fbb146",
+    "partition_table_preserved": true,
+    "boot_prefix_preserved": true,
+    "nvs_preserved": true,
+    "phy_init_preserved": true,
+    "restore_required": false,
+    "rollback_performed": false,
+    "ledger": {
+      "path": "hardware/local-state/console-os-file-manager-install-20260814/file-manager-update-ledger.json",
+      "sha256": "9aa3eee4cc53cae45d5d1ee209b4bb63bebb006dcc6dda18cc0ff5551f884b04",
+      "phase": "runtime-accepted"
+    }
+  },
+  "retained_uart_acceptance": {
+    "result": "pass",
+    "raw": {
+      "path": "hardware/local-state/console-os-file-manager-install-20260814/file-manager-startup.raw",
+      "bytes": 8101,
+      "sha256": "07c256cc979f5b995e3a850e35471d7bfd9c9efe9ef7f7de80645bc519230890"
+    },
+    "summary": {
+      "path": "hardware/local-state/console-os-file-manager-install-20260814/file-manager-startup.json",
+      "bytes": 1516,
+      "sha256": "10334b71c157a7f93642d8d2ed09d0ef5dc3c966ae8898ed47d22765dc37f001"
+    },
+    "storage_state": "app-ready",
+    "storage_capacity_bytes": 9289728,
+    "registered_apps": 8,
+    "display_resolution": "1024x600",
+    "display_pixel_format": "RGB565",
+    "display_submits": 1,
+    "display_completions": 1,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "touch_ready": true,
+    "touch_polls_observed": 600,
+    "touch_failures": 0,
+    "amplifier_energized": false,
+    "rejected_markers": []
+  },
+  "operator_acceptance": {
+    "program_manager_visible": null,
+    "program_manager_layout_correct": null,
+    "system_folder_file_manager_visible": null,
+    "file_manager_list_visible": null,
+    "file_manager_refresh_touch": null,
+    "file_manager_two_step_delete": null
+  },
+  "manual_acceptance_pending": [
+    "operator confirms the existing Program Manager visual layout is preserved",
+    "operator opens System / File Manager and confirms the bounded root list",
+    "J16 host creates a disposable probe and cleanly ejects P4 GAMES",
+    "operator refreshes, confirms, and deletes only the disposable probe",
+    "J16 remount proves the probe absent, Doom exact, and FAT clean",
+    "operator confirms Doom still launches after the clean J16 eject"
+  ],
+  "claims_not_made": [
+    "The operator has visually accepted this exact flashed File Manager build.",
+    "On-device deletion has been observed on this exact build.",
+    "Host-versus-File-Manager contention has been manually exercised on this exact build.",
+    "Abrupt host disconnect recovery has been exercised on this exact build."
+  ]
+}

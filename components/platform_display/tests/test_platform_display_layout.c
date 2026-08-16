@@ -1,5 +1,4 @@
 #include "platform_display_layout.h"
-#include "platform/board.h"
 
 #include <stdint.h>
 #include <stdio.h>
@@ -10,16 +9,21 @@ enum {
     SOURCE_WIDTH = 320,
     SOURCE_HEIGHT = 200,
     SOURCE_STRIDE = 323,
-    LOGICAL_WIDTH = PLATFORM_BOARD_DISPLAY_WIDTH,
-    LOGICAL_HEIGHT = PLATFORM_BOARD_DISPLAY_HEIGHT,
-    DESTINATION_WIDTH = PLATFORM_BOARD_DISPLAY_NATIVE_WIDTH,
-    DESTINATION_HEIGHT = PLATFORM_BOARD_DISPLAY_NATIVE_HEIGHT,
-    DESTINATION_STRIDE = DESTINATION_WIDTH + 7,
-    DESTINATION_ROWS = DESTINATION_HEIGHT + 3,
-    VIEWPORT_WIDTH = PLATFORM_BOARD_GAME_VIEWPORT_WIDTH,
-    VIEWPORT_HEIGHT = PLATFORM_BOARD_GAME_VIEWPORT_HEIGHT,
-    LEFT_MARGIN = PLATFORM_BOARD_GAME_MARGIN_LEFT,
-    TOP_MARGIN = PLATFORM_BOARD_GAME_MARGIN_TOP,
+#if defined(CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3) && \
+    CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    DESTINATION_WIDTH = 480,
+    DESTINATION_HEIGHT = 800,
+    DESTINATION_STRIDE = 487,
+    DESTINATION_ROWS = 803,
+    LEFT_MARGIN = 16,
+#else
+    DESTINATION_WIDTH = 1024,
+    DESTINATION_HEIGHT = 600,
+    DESTINATION_STRIDE = 1031,
+    DESTINATION_ROWS = 603,
+    LEFT_MARGIN = 32,
+#endif
+    SCALE = 3,
 };
 
 static unsigned failures;
@@ -49,23 +53,6 @@ static unsigned failures;
 static uint16_t source_pixel(size_t x, size_t y)
 {
     return (uint16_t)(((x * 31U) ^ (y * 257U) ^ 0x4321U) & 0xffffU);
-}
-
-static uint16_t content_pixel(size_t x, size_t y)
-{
-    return (uint16_t)(((x * 17U) ^ (y * 129U) ^ 0x2468U) & 0xffffU);
-}
-
-static void native_to_logical(size_t native_x, size_t native_y,
-                              size_t *logical_x, size_t *logical_y)
-{
-#if PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES == 90U
-    *logical_x = (size_t)LOGICAL_WIDTH - 1U - native_y;
-    *logical_y = native_x;
-#else
-    *logical_x = native_x;
-    *logical_y = native_y;
-#endif
 }
 
 static void test_bounds_and_scaling(void)
@@ -98,20 +85,23 @@ static void test_bounds_and_scaling(void)
 
     for (size_t y = 0; y < DESTINATION_HEIGHT; ++y) {
         for (size_t x = 0; x < DESTINATION_WIDTH; ++x) {
-            size_t logical_x = 0U;
-            size_t logical_y = 0U;
-            native_to_logical(x, y, &logical_x, &logical_y);
             uint16_t expected = 0;
+#if defined(CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3) && \
+    CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+            const size_t logical_x = 799U - y;
             if (logical_x >= LEFT_MARGIN &&
-                logical_x < LEFT_MARGIN + VIEWPORT_WIDTH &&
-                logical_y >= TOP_MARGIN &&
-                logical_y < TOP_MARGIN + VIEWPORT_HEIGHT) {
-                expected = source_pixel(
-                    ((logical_x - LEFT_MARGIN) * SOURCE_WIDTH) /
-                        VIEWPORT_WIDTH,
-                    ((logical_y - TOP_MARGIN) * SOURCE_HEIGHT) /
-                        VIEWPORT_HEIGHT);
+                logical_x < LEFT_MARGIN + 768U) {
+                const size_t source_x =
+                    (logical_x - LEFT_MARGIN) * SOURCE_WIDTH / 768U;
+                const size_t source_y = x * SOURCE_HEIGHT / 480U;
+                expected = source_pixel(source_x, source_y);
             }
+#else
+            const size_t source_y = y / SCALE;
+            if (x >= LEFT_MARGIN && x < LEFT_MARGIN + (SOURCE_WIDTH * SCALE)) {
+                expected = source_pixel((x - LEFT_MARGIN) / SCALE, source_y);
+            }
+#endif
             EXPECT_EQ(expected, destination[(y * DESTINATION_STRIDE) + x]);
         }
         for (size_t x = DESTINATION_WIDTH; x < DESTINATION_STRIDE; ++x) {
@@ -160,17 +150,19 @@ static void test_standard_rgb565_target_byte_order(void)
     EXPECT_TRUE(memcmp(expected_bytes, actual_bytes, sizeof(actual_bytes)) == 0);
 }
 
-static void test_content_768x480_layout(void)
+static void test_hdmi_rgb888_layout(void)
 {
     enum {
-        CONTENT_WIDTH = 768,
-        CONTENT_HEIGHT = 480,
-        CONTENT_STRIDE = 771,
+        HDMI_WIDTH = 1280,
+        HDMI_HEIGHT = 720,
+        HDMI_STRIDE = (HDMI_WIDTH * 3) + 7,
+        HDMI_ROWS = HDMI_HEIGHT + 2,
+        LEFT = 160,
+        TOP = 60,
     };
-    const size_t source_count = CONTENT_STRIDE * CONTENT_HEIGHT;
-    const size_t destination_count = DESTINATION_STRIDE * DESTINATION_ROWS;
-    uint16_t *const source = malloc(source_count * sizeof(*source));
-    uint16_t *const destination = malloc(destination_count * sizeof(*destination));
+    uint16_t *source = calloc(SOURCE_STRIDE * SOURCE_HEIGHT,
+                              sizeof(*source));
+    uint8_t *destination = malloc(HDMI_STRIDE * HDMI_ROWS);
     EXPECT_TRUE(source != NULL);
     EXPECT_TRUE(destination != NULL);
     if (source == NULL || destination == NULL) {
@@ -178,38 +170,39 @@ static void test_content_768x480_layout(void)
         free(source);
         return;
     }
-    for (size_t y = 0U; y < CONTENT_HEIGHT; ++y) {
-        for (size_t x = 0U; x < CONTENT_STRIDE; ++x) {
-            source[y * CONTENT_STRIDE + x] =
-                x < CONTENT_WIDTH ? content_pixel(x, y) : UINT16_C(0xdead);
-        }
-    }
-    for (size_t index = 0U; index < destination_count; ++index) {
-        destination[index] = UINT16_C(0xa55a);
-    }
-    EXPECT_TRUE(platform_display_layout_rgb565_768x480(
-        source, CONTENT_STRIDE, destination, DESTINATION_STRIDE,
-        DESTINATION_ROWS));
-    for (size_t y = 0U; y < DESTINATION_HEIGHT; ++y) {
-        for (size_t x = 0U; x < DESTINATION_WIDTH; ++x) {
-            size_t logical_x = 0U;
-            size_t logical_y = 0U;
-            native_to_logical(x, y, &logical_x, &logical_y);
-            uint16_t expected = 0U;
-            if (logical_x >= LEFT_MARGIN &&
-                logical_x < LEFT_MARGIN + VIEWPORT_WIDTH &&
-                logical_y >= TOP_MARGIN &&
-                logical_y < TOP_MARGIN + VIEWPORT_HEIGHT) {
-                expected = content_pixel(
-                    (logical_x - LEFT_MARGIN) * CONTENT_WIDTH / VIEWPORT_WIDTH,
-                    (logical_y - TOP_MARGIN) * CONTENT_HEIGHT / VIEWPORT_HEIGHT);
-            }
-            EXPECT_EQ(expected, destination[y * DESTINATION_STRIDE + x]);
-        }
-    }
-    EXPECT_TRUE(!platform_display_layout_rgb565_768x480(
-        source, CONTENT_WIDTH - 1U, destination, DESTINATION_STRIDE,
-        DESTINATION_ROWS));
+    memset(destination, 0xa5, HDMI_STRIDE * HDMI_ROWS);
+    source[0] = UINT16_C(0xf800);
+    source[1] = UINT16_C(0x07e0);
+    source[SOURCE_STRIDE] = UINT16_C(0x001f);
+
+    EXPECT_TRUE(platform_display_layout_rgb565_to_rgb888_1280x720(
+        source, SOURCE_STRIDE, destination, HDMI_STRIDE, HDMI_ROWS));
+    const size_t red = (TOP * HDMI_STRIDE) + (LEFT * 3U);
+    EXPECT_EQ(0xff, destination[red]);
+    EXPECT_EQ(0x00, destination[red + 1U]);
+    EXPECT_EQ(0x00, destination[red + 2U]);
+    EXPECT_EQ(0xff, destination[red + 3U]);
+    const size_t green = red + 9U;
+    EXPECT_EQ(0x00, destination[green]);
+    EXPECT_EQ(0xff, destination[green + 1U]);
+    EXPECT_EQ(0x00, destination[green + 2U]);
+    const size_t blue = ((TOP + 3U) * HDMI_STRIDE) + (LEFT * 3U);
+    EXPECT_EQ(0x00, destination[blue]);
+    EXPECT_EQ(0x00, destination[blue + 1U]);
+    EXPECT_EQ(0xff, destination[blue + 2U]);
+    EXPECT_EQ(0x00, destination[0]);
+    EXPECT_EQ(0x00, destination[(HDMI_HEIGHT - 1U) * HDMI_STRIDE]);
+    EXPECT_EQ(0xa5, destination[HDMI_WIDTH * 3U]);
+    EXPECT_EQ(0xa5, destination[HDMI_HEIGHT * HDMI_STRIDE]);
+
+    EXPECT_TRUE(!platform_display_layout_rgb565_to_rgb888_1280x720(
+        source, SOURCE_WIDTH - 1U, destination, HDMI_STRIDE, HDMI_ROWS));
+    EXPECT_TRUE(!platform_display_layout_rgb565_to_rgb888_1280x720(
+        source, SOURCE_STRIDE, destination, (HDMI_WIDTH * 3U) - 1U,
+        HDMI_ROWS));
+    EXPECT_TRUE(!platform_display_layout_rgb565_to_rgb888_1280x720(
+        source, SOURCE_STRIDE, destination, HDMI_STRIDE, HDMI_HEIGHT - 1U));
+
     free(destination);
     free(source);
 }
@@ -217,20 +210,17 @@ static void test_content_768x480_layout(void)
 int main(void)
 {
     test_bounds_and_scaling();
-    test_content_768x480_layout();
     test_standard_rgb565_target_byte_order();
+    test_hdmi_rgb888_layout();
     if (failures != 0U) {
         fprintf(stderr, "platform display layout tests failed: %u\n", failures);
         return 1;
     }
-    printf("P4_DISPLAY_LAYOUT HOST PASS logical=%ux%u native=%ux%u "
-           "rotation_cw=%u viewport=%ux%u margins=%u/%u "
-           "byte_order=rgb565-le\n",
-           (unsigned)LOGICAL_WIDTH, (unsigned)LOGICAL_HEIGHT,
-           (unsigned)DESTINATION_WIDTH, (unsigned)DESTINATION_HEIGHT,
-           (unsigned)PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES,
-           (unsigned)VIEWPORT_WIDTH, (unsigned)VIEWPORT_HEIGHT,
-           (unsigned)LEFT_MARGIN,
-           (unsigned)TOP_MARGIN);
+#if defined(CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3) && \
+    CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    puts("P4_DISPLAY_LAYOUT HOST PASS rgb565=480x800 rotated viewport=768x480");
+#else
+    puts("P4_DISPLAY_LAYOUT HOST PASS rgb565=1024x600 rgb888=1280x720 viewport=960x600");
+#endif
     return 0;
 }

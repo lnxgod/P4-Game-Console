@@ -12,7 +12,7 @@ Linking doomgeneric makes the distributed Doom firmware a GPL-covered work. Keep
 
 ## Local game data
 
-The current development default is the unmodified Doom v1.9 shareware IWAD at the ignored path `local-data/doom/doom1.wad`. It remains outside Git and outside firmware images. Its expected identity is recorded in `third_party/game-data.json`; tests fail closed if a data entry with a required hash does not match.
+The current development default is the unmodified Doom v1.9 shareware IWAD at the ignored path `local-data/doom/doom1.wad`. It remains outside Git. Its expected identity is recorded in `third_party/game-data.json`; tests fail closed if a data entry with a required hash does not match. The build-only Console OS target currently embeds that exact local input for its proven legacy handoff and also seeds it into the persistent USB-accessible `game_data` partition. WAD-bearing build artifacts remain local and must never be pushed to GitHub.
 
 The source distribution for the shareware IWAD was id Software's `doom19s.zip`, historically distributed through the `/idgames/idstuff/doom` archive. The exact archive and local WAD acquisition URLs and both sets of hashes are recorded in `third_party/game-data.json`. This project does not mirror or redistribute either the archive or IWAD. Keep the original shareware package notices with any independently redistributed copy and reassess distribution rights before a public badge release.
 

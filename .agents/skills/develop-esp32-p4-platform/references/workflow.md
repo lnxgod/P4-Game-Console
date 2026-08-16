@@ -4,16 +4,24 @@
 
 `scripts/lib/project-env.sh` resolves the pinned ESP-IDF checkout from an explicit `P4_IDF_PATH`, the repository-local tool directory, the versioned standard user checkout, or a matching ambient `IDF_PATH`, in that order. `scripts/verify-env.sh` rejects an incompatible target, version, Git commit, dirty tracked checkout, or incomplete submodule set.
 
-Use this sequence:
+Install and verify the pinned environment only when needed:
 
 ```sh
 make setup
 make verify
-make check
-make build APP=bringup
 ```
 
-`setup` is needed only when the pinned toolchain is absent. Do not silently upgrade ESP-IDF or managed components to make a build pass. Change the lock deliberately, explain the migration, regenerate dependency locks, and rebuild every maintained app.
+`setup` is needed only when the pinned toolchain is absent. After that, run the
+smallest existing `*-host` target that covers the changed component and build
+only the affected app with `make build APP=<app>`. Documentation and skill-only
+changes need no firmware build. Run repo-wide `make check` only for an explicit
+request, a deliberate toolchain or dependency-lock migration, or a genuinely
+cross-cutting change spanning maintained applications. Do not repeat an
+unchanged build, flash, or hardware run.
+
+Do not silently upgrade ESP-IDF or managed components to make a build pass.
+Change the lock deliberately, explain the migration, regenerate dependency
+locks, and rebuild every maintained app.
 
 ## Application structure
 

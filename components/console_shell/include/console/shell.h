@@ -8,7 +8,6 @@
 #include <stdint.h>
 
 #include "p4/achievements.h"
-#include "p4/desktop.h"
 
 #if defined(ESP_PLATFORM) && !defined(CONSOLE_SHELL_TARGET_WIDTH)
 #include "sdkconfig.h"
@@ -30,10 +29,8 @@ enum {
     CONSOLE_SHELL_PHYSICAL_WIDTH = CONSOLE_SHELL_TARGET_WIDTH,
     CONSOLE_SHELL_PHYSICAL_HEIGHT = CONSOLE_SHELL_TARGET_HEIGHT,
 #if defined(ESP_PLATFORM)
-    CONSOLE_SHELL_VIEWPORT_WIDTH =
-        PLATFORM_BOARD_GAME_VIEWPORT_WIDTH,
-    CONSOLE_SHELL_VIEWPORT_HEIGHT =
-        PLATFORM_BOARD_GAME_VIEWPORT_HEIGHT,
+    CONSOLE_SHELL_VIEWPORT_WIDTH = PLATFORM_BOARD_GAME_VIEWPORT_WIDTH,
+    CONSOLE_SHELL_VIEWPORT_HEIGHT = PLATFORM_BOARD_GAME_VIEWPORT_HEIGHT,
 #else
     CONSOLE_SHELL_VIEWPORT_WIDTH =
         CONSOLE_SHELL_PHYSICAL_WIDTH * CONSOLE_SHELL_HEIGHT <=
@@ -62,9 +59,9 @@ enum {
     CONSOLE_SHELL_SUBTITLE_MAX_BYTES = 32,
     CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES = 16,
     CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES = 32,
-    CONSOLE_SHELL_MASTER_VOLUME_MIN = 1,
-    CONSOLE_SHELL_MASTER_VOLUME_MAX = 10,
-    CONSOLE_SHELL_MASTER_VOLUME_DEFAULT = 8,
+    CONSOLE_SHELL_FILE_MAX_ENTRIES = 32,
+    CONSOLE_SHELL_FILE_LABEL_MAX_BYTES = 25,
+    CONSOLE_SHELL_FILE_VISIBLE_ROWS = 5,
 };
 
 typedef enum {
@@ -80,16 +77,13 @@ typedef enum {
     CONSOLE_PAGE_COLORS,
     CONSOLE_PAGE_TOUCH,
     CONSOLE_PAGE_SYSTEM,
+    CONSOLE_PAGE_FILES,
+    CONSOLE_PAGE_GAMES,
     CONSOLE_PAGE_AUDIO,
     CONSOLE_PAGE_ACHIEVEMENTS,
-    CONSOLE_PAGE_LIBRARY,
-    CONSOLE_PAGE_MULTIPLAYER,
-    CONSOLE_PAGE_FILES,
-    CONSOLE_PAGE_SAVES,
-    CONSOLE_PAGE_TERMINAL,
 } console_page_t;
 
-/** OS-only palette choices. Games keep control of their own presentation. */
+/** Shell-only palettes; games retain full control of their own colors. */
 typedef enum {
     CONSOLE_COLOR_MODE_GAMECHANGERS = 0,
     CONSOLE_COLOR_MODE_ARCADE,
@@ -115,54 +109,90 @@ typedef struct {
     uint16_t y;
 } console_shell_contact_t;
 
+typedef enum {
+    CONSOLE_STORAGE_STARTING = 0,
+    CONSOLE_STORAGE_READY,
+    CONSOLE_STORAGE_USB_HOST,
+    CONSOLE_STORAGE_FORMAT_REQUIRED,
+    CONSOLE_STORAGE_MISSING,
+    CONSOLE_STORAGE_INVALID,
+    CONSOLE_STORAGE_LOCKED,
+    CONSOLE_STORAGE_FAULT,
+} console_shell_storage_state_t;
+
 typedef struct {
     uint32_t uptime_seconds;
     uint32_t internal_free_kib;
     uint32_t psram_free_kib;
+    uint32_t game_storage_kib;
+    console_shell_storage_state_t game_storage_state;
     bool touch_ready;
+    bool controller_ready;
+    bool keyboard_ready;
+    bool mouse_ready;
+    bool sd_card_storage;
     bool audio_handoff_ready;
-    bool storage_ready;
-    bool storage_writable;
-    bool content_scan_complete;
-    bool content_truncated;
-    bool quake_shareware_ready;
-    bool usb_content_ready;
-    bool usb_content_busy;
-    uint8_t usb_content_progress_percent;
-    uint16_t valid_cart_count;
-    uint16_t invalid_cart_count;
-    uint16_t builtin_game_count;
-    uint16_t save_slot_count;
-    uint64_t save_total_bytes;
-    bool save_management_ready;
-    bool usb_export_ready;
-    bool ssh_transport_ready;
-    bool physical_keyboard_ready;
-    bool multiplayer_core_ready;
-    bool multiplayer_transport_ready;
-    uint8_t multiplayer_peer_count;
+    bool game_storage_usb_attached;
+    bool doom_wad_ready;
 } console_shell_runtime_info_t;
+
+typedef struct {
+    uint32_t source_index;
+    char label[CONSOLE_SHELL_FILE_LABEL_MAX_BYTES];
+    uint32_t size_kib;
+    bool is_directory;
+    bool removable;
+    bool installable;
+} console_shell_file_entry_t;
+
+typedef struct {
+    console_shell_file_entry_t entries[CONSOLE_SHELL_FILE_MAX_ENTRIES];
+    size_t entry_count;
+    uint32_t total_visible_entries;
+    uint32_t hidden_entries;
+    uint32_t omitted_entries;
+    uint32_t storage_generation;
+    uint32_t revision;
+    bool available;
+} console_shell_file_listing_t;
+
+typedef enum {
+    CONSOLE_FILE_NOTICE_NONE = 0,
+    CONSOLE_FILE_NOTICE_REFRESHED,
+    CONSOLE_FILE_NOTICE_DELETED,
+    CONSOLE_FILE_NOTICE_ERROR,
+    CONSOLE_FILE_NOTICE_UPDATING,
+} console_shell_file_notice_t;
 
 typedef enum {
     CONSOLE_ACTION_NONE = 0,
     CONSOLE_ACTION_PAGE_CHANGED,
     CONSOLE_ACTION_LAUNCH,
-    CONSOLE_ACTION_VOLUME_CHANGED,
+    CONSOLE_ACTION_FILE_REFRESH,
+    CONSOLE_ACTION_FILE_DELETE,
+    CONSOLE_ACTION_GAME_REFRESH,
+    CONSOLE_ACTION_GAME_REMOVE,
+    CONSOLE_ACTION_OS_UPDATE_INSTALL,
     CONSOLE_ACTION_COLOR_MODE_CHANGED,
-    CONSOLE_ACTION_LIBRARY_REFRESH,
-    CONSOLE_ACTION_FILE_SORT_CHANGED,
-    CONSOLE_ACTION_FILE_SELECTED,
-    CONSOLE_ACTION_USB_EXPORT,
-    CONSOLE_ACTION_SSH_CONNECT,
 } console_action_type_t;
+
+typedef enum {
+    CONSOLE_BUTTON_UP = UINT32_C(1) << 0U,
+    CONSOLE_BUTTON_DOWN = UINT32_C(1) << 1U,
+    CONSOLE_BUTTON_LEFT = UINT32_C(1) << 2U,
+    CONSOLE_BUTTON_RIGHT = UINT32_C(1) << 3U,
+    CONSOLE_BUTTON_ACCEPT = UINT32_C(1) << 4U,
+    CONSOLE_BUTTON_BACK = UINT32_C(1) << 5U,
+    CONSOLE_BUTTON_REFRESH = UINT32_C(1) << 6U,
+} console_button_t;
+
+#define CONSOLE_BUTTON_MASK UINT32_C(0x0000007f)
 
 typedef struct {
     console_action_type_t type;
     uint32_t app_id;
-    uint8_t volume_step;
+    uint32_t file_source_index;
     console_color_mode_t color_mode;
-    size_t item_index;
-    p4_file_sort_t file_sort;
 } console_shell_action_t;
 
 typedef struct {
@@ -175,9 +205,12 @@ typedef struct {
     size_t press_start_scroll_row;
     console_page_t page;
     uint32_t active_app_id;
-    uint8_t master_volume_step;
     console_color_mode_t color_mode;
-    size_t selected_file_index;
+    p4_achievement_catalog_t achievements;
+    console_shell_file_listing_t files;
+    size_t file_selected_index;
+    size_t file_first_visible;
+    console_shell_file_notice_t file_notice;
     uint16_t press_start_gui_x;
     uint16_t press_start_gui_y;
     char home_folder_path[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
@@ -186,13 +219,15 @@ typedef struct {
     bool scroll_candidate;
     bool scroll_gesture;
     bool home_all_programs;
+    bool file_delete_confirm;
     bool dirty;
+    uint32_t previous_buttons;
+    uint16_t pointer_x;
+    uint16_t pointer_y;
+    bool pointer_visible;
+    bool pointer_pressed;
     uint32_t render_generation;
     console_shell_runtime_info_t runtime;
-    p4_file_list_t files;
-    p4_save_catalog_t saves;
-    p4_achievement_catalog_t achievements;
-    p4_terminal_t terminal;
     console_shell_contact_t contacts[CONSOLE_SHELL_MAX_CONTACTS];
     size_t contact_count;
 } console_shell_t;
@@ -203,7 +238,7 @@ bool console_shell_init(console_shell_t *shell,
                         size_t app_count);
 
 /**
- * Consume one complete board-logical landscape touch snapshot.
+ * Consume one complete physical 1024x600 touch snapshot.
  *
  * Invalid frames, more than one contact, and out-of-viewport coordinates
  * cancel the pending press. On the home view, a bounded one-finger vertical
@@ -217,35 +252,46 @@ console_shell_action_t console_shell_handle_touch(
     const console_shell_contact_t *contacts,
     size_t contact_count);
 
-/** Update non-sensitive runtime counters displayed by the System page. */
+/**
+ * Consume one sanitized controller snapshot.
+ *
+ * Actions are edge-triggered. Calling with zero immediately neutralizes the
+ * controller state, so a disconnect cannot leave navigation held.
+ */
+console_shell_action_t console_shell_handle_buttons(
+    console_shell_t *shell, uint32_t held_buttons);
+
+/** Show, move, or hide the bounded desktop pointer. */
+void console_shell_set_pointer(console_shell_t *shell,
+                               bool visible,
+                               uint16_t x,
+                               uint16_t y,
+                               bool pressed);
+
+/** Update non-sensitive runtime and game-storage status. */
 void console_shell_set_runtime_info(
     console_shell_t *shell,
     const console_shell_runtime_info_t *runtime);
 
-/** Replace the bounded File Manager snapshot and preserve its sort choice. */
-void console_shell_set_file_list(console_shell_t *shell,
-                                 const p4_file_list_t *files);
+/** Replace the bounded File Manager snapshot. */
+bool console_shell_set_file_listing(
+    console_shell_t *shell,
+    const console_shell_file_listing_t *listing);
 
-/** Replace the bounded Save Manager snapshot. */
-void console_shell_set_save_catalog(console_shell_t *shell,
-                                    const p4_save_catalog_t *saves);
+/** Set the result banner after a refresh or confirmed file operation. */
+void console_shell_set_file_notice(
+    console_shell_t *shell,
+    console_shell_file_notice_t notice);
 
 /** Replace the bounded, OS-owned session achievement catalog. */
 void console_shell_set_achievement_catalog(
     console_shell_t *shell,
     const p4_achievement_catalog_t *achievements);
 
-/** Feed one sanitized printable, backspace, or enter key to Terminal. */
-console_shell_action_t console_shell_handle_text_key(
-    console_shell_t *shell, char key);
-
 /** Return to the launcher without synthesizing an app launch. */
 void console_shell_show_home(console_shell_t *shell);
 
-/** Return the OS-owned master output level in steps 1..10. */
-uint8_t console_shell_master_volume_step(const console_shell_t *shell);
-
-/** Return the selected OS palette; it is retained for this shell session. */
+/** Return the selected shell palette. The setting is session-only. */
 console_color_mode_t console_shell_color_mode(const console_shell_t *shell);
 
 /** True when input or runtime state changed since the most recent render. */

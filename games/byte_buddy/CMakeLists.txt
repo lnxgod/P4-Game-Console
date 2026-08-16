@@ -27,4 +27,6 @@ else()
             -fsanitize=address,undefined -fno-omit-frame-pointer
         )
     endif()
+    include(CTest)
+    add_subdirectory(tests)
 endif()

@@ -38,6 +38,7 @@ target_include_directories(platform_display_layout_waveshare_tests PRIVATE
 )
 target_compile_definitions(platform_display_layout_waveshare_tests PRIVATE
     CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3=1
+    CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3=1
 )
 target_compile_features(platform_display_layout_waveshare_tests PRIVATE c_std_11)
 

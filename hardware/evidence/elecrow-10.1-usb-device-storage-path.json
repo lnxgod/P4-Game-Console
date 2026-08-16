@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "classification": "cross-revision-j16-usb-device-path",
+  "result": "pass-electrical-review-runtime-unproven",
+  "recorded_at": "2026-08-14",
+  "scope": "usb_device_only",
+  "official_source": {
+    "vendor": "Elecrow",
+    "repository": "https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen",
+    "commit": "c5a437311b951aaa9d17115bf420877a8f1f7b83",
+    "model": "DHE04310D",
+    "hardware_revisions_compared": ["V1.0", "V1.1", "V1.2"]
+  },
+  "schematics": [
+    {
+      "revision": "V1.0",
+      "path": "Eagle_SCH&PCB/1.0/ESP32-P4 Display 10.1 inch V1.0.sch",
+      "sha256": "a31422d5b0e9ec7fe75c7f5c973b0c5b40d5e5148605caa817aedc1a6e4455a3"
+    },
+    {
+      "revision": "V1.1",
+      "path": "Eagle_SCH&PCB/1.1/ESP32-P4 Display 10.1 inch V1.1.sch",
+      "sha256": "c4f7e1d61f490290ada1b312d6200a6b2838802f4d780af9699ca3797e35cadd"
+    },
+    {
+      "revision": "V1.2",
+      "path": "Eagle_SCH&PCB/1.2/ESP32-P4 Display 10.1 inch V1.2.sch",
+      "sha256": "7f9ac57dab96110467e4a9728cfb71b46024ea57f28a2d9d8b545b3ff0d0c172"
+    }
+  ],
+  "cross_revision_invariants": {
+    "connector": "J16",
+    "data_role": "ESP32-P4 dedicated high-speed USB DP/DM device path",
+    "cc1_pull_down_ohms": 5100,
+    "cc2_pull_down_ohms": 5100,
+    "type_c_advertisement": "sink-device",
+    "vbus_direction": "connector-to-board-through-inward-facing-Schottky-diodes",
+    "board_vbus_source_switch_present": false,
+    "firmware_gpio_required": false,
+    "j1_role": "CH340K programming and serial capture only"
+  },
+  "authorization": {
+    "authorized": true,
+    "scope": [
+      "j16_dedicated_usb_device_dp_dm",
+      "high_speed_mass_storage_device",
+      "ordinary_data_capable_laptop_cable",
+      "j1_serial_capture_while_j16_is_device"
+    ],
+    "explicitly_not_authorized": [
+      "usb_host_role",
+      "controller_vbus_source",
+      "passive_otg_adapter",
+      "vbus_bridging",
+      "cc_resistor_modification",
+      "any_unlisted_gpio_or_peripheral"
+    ],
+    "rationale": "All published revisions route the dedicated P4 USB data pair to J16 and advertise a sink with 5.1 kOhm CC pull-downs. The inward VBUS path is compatible with a laptop-hosted USB device and does not grant host-power capability."
+  },
+  "runtime_status": {
+    "enumeration_tested": false,
+    "host_write_eject_tested": false,
+    "persistence_tested": false,
+    "abrupt_disconnect_recovery_tested": false
+  }
+}

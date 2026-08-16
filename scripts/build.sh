@@ -3,6 +3,7 @@
 set -eu
 
 P4_APP=${1:-bringup}
+P4_BOARD=${2:-elecrow-crowpanel-advanced-10}
 P4_SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 # shellcheck disable=SC1091
 . "$P4_SCRIPT_DIR/lib/project-env.sh"
@@ -10,8 +11,34 @@ p4_require_app "$P4_APP"
 p4_activate_idf
 
 P4_APP_DIR="$P4_PROJECT_ROOT/apps/$P4_APP"
-P4_BUILD_DIR="$P4_APP_DIR/build"
-idf.py -C "$P4_APP_DIR" -B "$P4_BUILD_DIR" -D IDF_TARGET=esp32p4 build
+case "$P4_BOARD" in
+    elecrow-crowpanel-advanced-10)
+        P4_BUILD_DIR="$P4_APP_DIR/build"
+        P4_BOARD_DEFAULTS="$P4_PROJECT_ROOT/hardware/boards/elecrow-crowpanel-advanced-10/sdkconfig.defaults"
+        P4_BOARD_ARGUMENTS="$P4_APP_DIR/sdkconfig.defaults;$P4_BOARD_DEFAULTS"
+        ;;
+    olimex-esp32-p4-pc)
+        P4_BUILD_DIR="$P4_APP_DIR/build-olimex-esp32-p4-pc"
+        P4_BOARD_DEFAULTS="$P4_PROJECT_ROOT/hardware/boards/olimex-esp32-p4-pc-rev-b/sdkconfig.defaults"
+        P4_BOARD_ARGUMENTS="$P4_APP_DIR/sdkconfig.defaults;$P4_BOARD_DEFAULTS"
+        ;;
+    waveshare-esp32-p4-wifi6-touch-lcd-4.3)
+        P4_BUILD_DIR="$P4_APP_DIR/build-waveshare-landscape"
+        P4_BOARD_DEFAULTS="$P4_PROJECT_ROOT/hardware/boards/waveshare-esp32-p4-wifi6-touch-lcd-4.3/sdkconfig.defaults"
+        P4_BOARD_ARGUMENTS="$P4_APP_DIR/sdkconfig.defaults;$P4_BOARD_DEFAULTS"
+        ;;
+    *)
+        printf 'Unsupported board: %s\n' "$P4_BOARD" >&2
+        printf '%s\n' 'Known boards: elecrow-crowpanel-advanced-10, olimex-esp32-p4-pc, waveshare-esp32-p4-wifi6-touch-lcd-4.3' >&2
+        exit 2
+        ;;
+esac
+
+idf.py -C "$P4_APP_DIR" -B "$P4_BUILD_DIR" \
+    -D IDF_TARGET=esp32p4 \
+    -D "P4_BOARD_PROFILE=$P4_BOARD" \
+    -D "SDKCONFIG=$P4_BUILD_DIR/sdkconfig" \
+    -D "SDKCONFIG_DEFAULTS=$P4_BOARD_ARGUMENTS" build
 
 python3 -c '
 import json, pathlib, sys

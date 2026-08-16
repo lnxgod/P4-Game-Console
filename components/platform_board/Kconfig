@@ -1,20 +1,26 @@
-menu "P4 platform board target"
+menu "P4 Console board profile"
 
-    choice PLATFORM_BOARD_TARGET
-        prompt "Board target"
-        default PLATFORM_BOARD_TARGET_ELECROW_10_1
-        help
-            Select exactly one physical board contract. This is a compile-time
-            boundary only; it does not authorize flashing or hardware use.
+choice P4_BOARD
+    prompt "Target board"
+    default P4_BOARD_ELECROW_CROWPANEL_ADVANCED_10
 
-        config PLATFORM_BOARD_TARGET_ELECROW_10_1
-            bool "Elecrow CrowPanel Advanced 10.1-inch"
+config P4_BOARD_ELECROW_CROWPANEL_ADVANCED_10
+    bool "Elecrow CrowPanel Advanced 10.1-inch"
 
-        config PLATFORM_BOARD_TARGET_WAVESHARE_4_3
-            bool "Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3"
-            help
-                Select only for the board-specific Waveshare port. Do not
-                reuse Elecrow display, touch, audio, or USB assumptions.
-    endchoice
+config P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    bool "Olimex ESP32-P4-PC Rev.B"
+
+config P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    bool "Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3"
+
+endchoice
+
+config PLATFORM_BOARD_TARGET_ELECROW_10_1
+    bool
+    default y if P4_BOARD_ELECROW_CROWPANEL_ADVANCED_10
+
+config PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+    bool
+    default y if P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
 
 endmenu

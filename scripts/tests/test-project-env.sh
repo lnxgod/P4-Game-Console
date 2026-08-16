@@ -128,5 +128,14 @@ if printf '%s\n' "$P4_REDACTED" | grep -F '02:00:00:00:00:01' >/dev/null || \
     printf 'device identifier redaction failed\n' >&2
     exit 1
 fi
+P4_JTAG_REDACTED=$(printf 'Info : esp_usb_jtag: serial (02:00:00:00:00:01)\n' | \
+    p4_redact_device_identifiers)
+if printf '%s\n' "$P4_JTAG_REDACTED" | \
+   grep -F '02:00:00:00:00:01' >/dev/null || \
+   ! printf '%s\n' "$P4_JTAG_REDACTED" | \
+   grep -F 'serial ([redacted])' >/dev/null; then
+    printf 'JTAG serial identifier redaction failed\n' >&2
+    exit 1
+fi
 
 printf 'project-env tests: PASS\n'

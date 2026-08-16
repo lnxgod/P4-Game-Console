@@ -4,9 +4,40 @@ This repository is the experimental firmware platform for a future ESP32-P4 badg
 
 Console OS now has a versioned native C game API for RGB565 drawing, normalized
 touch controls, bounded tone audio, and return-to-launcher lifecycle. Games are
-manifest-discovered RISC-V components linked into the ESP-IDF ELF/BIN image;
-they are not UF2 files. The first clean-room sample is Maze Chase. See
+bounded `.P4G` RISC-V cartridges loaded from the persistent `P4 GAMES` volume;
+they are not UF2 files and do not require an OS reflash. Maze Chase and Space
+Invaders are clean-room samples. See
 [the P4 Game SDK](docs/GAME_SDK.md).
+
+On the Elecrow target, the Program Manager shell exposes that FAT volume to a
+laptop through J16 USB device mode. On the Olimex ESP32-P4-PC target, games and
+updates live on removable microSD instead: power the board off, move the card to
+the laptop, and use the generated `sd-card/` bundle. Game Manager discovers and
+removes cartridges and installs verified `UPDATE/P4UPDATE.P4U` images into the
+inactive OTA slot; File Manager handles other root files. Each backend has one
+filesystem owner at a time.
+
+## Board profiles
+
+- `elecrow-crowpanel-advanced-10` remains the default target and the only one
+  already seen on exact hardware. Its display/framebuffer and selected runtime
+  paths have hardware evidence; the complete new Console OS feature set still
+  needs one integrated hardware pass. It keeps the existing 1024x600
+  window-manager UI, touch, speaker path, J16 game-storage MSC, and guarded
+  exact-device flash workflow.
+- `olimex-esp32-p4-pc` is an additive Rev.B development target. It uses the
+  LT8912B HDMI bridge at 1280x720, onboard microSD for persistent content, and
+  the powered four-port USB-A hub for a generic HID gamepad, boot keyboard, and
+  boot mouse concurrently. It has no touch; the official ES8311/I2S path drives
+  its 3.5mm audio jack, and Doom uses the same storage-backed exclusive handoff
+  as the default Console OS. It is build-tested but
+  remains write-locked until the connected unit has a complete factory backup
+  and identity-bound manifest.
+
+See [the Olimex board guide](docs/boards/OLIMEX_ESP32_P4_PC.md) for connectors,
+card installation, input mappings, and the hardware acceptance checklist. See
+[the deterministic board-port workflow](docs/BOARD_PORTING.md) before adding a
+third target; its parity contract prevents a new BSP from dropping shared apps.
 
 ## Current target
 
@@ -46,8 +77,10 @@ make build APP=display_diag
 make gamepad-host
 make gamepad-idf
 make console-shell-host
+make platform-game-storage-host
 make game-sdk-host
 make console-os-idf
+make console-os-olimex-idf
 ```
 
 Hardware writes always require an explicit port. For the first pin-independent

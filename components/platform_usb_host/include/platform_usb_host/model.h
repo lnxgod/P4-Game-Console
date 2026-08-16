@@ -51,6 +51,13 @@ void platform_usb_host_model_init(platform_usb_host_model_t *model);
 platform_usb_status_t platform_usb_host_model_begin_start(
     platform_usb_host_model_t *model,
     const platform_usb_fixture_evidence_t *evidence);
+/**
+ * Begin a host start after the wrapper has matched a compiled, source-reviewed
+ * integrated board path. This bypasses only the external-fixture record; all
+ * lifecycle and lease checks remain identical.
+ */
+platform_usb_status_t platform_usb_host_model_begin_integrated_start(
+    platform_usb_host_model_t *model);
 platform_usb_status_t platform_usb_host_model_complete_start(
     platform_usb_host_model_t *model,
     bool success);

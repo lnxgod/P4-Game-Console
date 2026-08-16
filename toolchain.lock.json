@@ -13,6 +13,9 @@
     "max_revision_full": 199
   },
   "managed_components": {
+    "espressif/esp_codec_dev": "1.5.4",
+    "espressif/esp_lcd_lt8912b": "0.2.0",
+    "espressif/esp_tinyusb": "2.0.1",
     "espressif/usb": "1.5.0",
     "espressif/usb_host_hid": "1.2.0"
   },

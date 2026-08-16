@@ -49,15 +49,27 @@ Use **10 in variant** as the stable project name for the Elecrow CrowPanel Advan
 - The P4 high-speed USB data peripheral can enumerate low/full/high-speed devices, but that does not make the panel connector a protected host-power source.
 - Never use a passive OTG adapter. Native controller work still requires the repository's powered, current-limited, backfeed-safe direct-data fixture authorization. A powered hub is not accepted merely because it lights the controller; review VBUS isolation and topology first.
 
-## Current qualification commands
+## Current qualification scope
 
-```sh
-make verify
-make check
-make platform-touch-host
-make doom-touch-host
-make build APP=touch_diag
-make build APP=doom_embedded_touch_audio
-```
+Select only the commands that cover the changed boundary:
 
-Run the app-specific verifier before any write, use the guarded app-only route, and verify the exact aggregate flash readback before one explicit launch. For touch-only mode, record touch initialization/contact evidence, monotonically increasing video statistics, zero audio calls, and no GPIO30 access. Only after the separate audio release condition is satisfied may an audio-enabled image record increasing audio statistics; a human must still confirm audible output and actual touch response before those claims become hardware-tested.
+- Touch component: `make platform-touch-host`.
+- Doom touch adapter: `make doom-touch-host`.
+- Touch diagnostic integration: `make build APP=touch_diag`.
+- Combined Doom/touch/audio integration: after its focused host targets, run
+  `make build APP=doom_embedded_touch_audio`.
+
+Run `make verify` when the environment has not already been established. Do not
+run repo-wide `make check`, every command above, or unrelated peripheral suites
+by default. Reserve them for an explicit request, a lock/toolchain migration,
+or a genuinely cross-cutting change. Do not repeat an unchanged build or
+hardware run.
+
+Run the affected app's verifier before any write, use the guarded app-only
+route, and verify the exact aggregate flash readback before one explicit
+launch. For touch-only mode, record touch initialization/contact evidence,
+monotonically increasing video statistics, zero audio calls, and no GPIO30
+access. Only after the separate audio release condition is satisfied may an
+audio-enabled image record increasing audio statistics; a human must still
+confirm audible output and actual touch response before those claims become
+hardware-tested.

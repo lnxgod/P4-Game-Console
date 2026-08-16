@@ -1,25 +1,27 @@
-#ifndef PLATFORM_BOARD_H
-#define PLATFORM_BOARD_H
+// SPDX-License-Identifier: MIT
+
+#ifndef P4_PLATFORM_BOARD_H
+#define P4_PLATFORM_BOARD_H
+
+#include <stdbool.h>
+#include <stdint.h>
 
 #if defined(ESP_PLATFORM)
-/* Board selection is an ESP-IDF sdkconfig option.  Include it here so every
- * translation unit gets the same profile, including pure layout modules that
- * otherwise have no ESP-IDF headers of their own. */
 #include "sdkconfig.h"
 #endif
 
-#if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
 /*
- * The ST7701 scanout remains at its proven native 480x800 timing. Games and
- * touch use an 800x480 landscape coordinate space; platform_display rotates
- * that logical surface clockwise into the native frame buffer.
+ * Logical display geometry is part of the stable platform contract. The
+ * Waveshare panel scans out at 480x800 but all shell/game input is exposed as
+ * an 800x480 clockwise-rotated landscape surface.
  */
+#if defined(CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3) && \
+    CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
 #define PLATFORM_BOARD_DISPLAY_WIDTH 800U
 #define PLATFORM_BOARD_DISPLAY_HEIGHT 480U
 #define PLATFORM_BOARD_DISPLAY_NATIVE_WIDTH 480U
 #define PLATFORM_BOARD_DISPLAY_NATIVE_HEIGHT 800U
 #define PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES 90U
-#define PLATFORM_BOARD_DISPLAY_ORIENTATION_PORTRAIT 0
 #define PLATFORM_BOARD_LCD_BACKLIGHT_GPIO 26
 #define PLATFORM_BOARD_LCD_RESET_GPIO 27
 #define PLATFORM_BOARD_TOUCH_RESET_GPIO 23
@@ -41,13 +43,40 @@
 #define PLATFORM_BOARD_SDMMC_CMD_GPIO 44
 #define PLATFORM_BOARD_SDMMC_D0_GPIO 39
 #define PLATFORM_BOARD_SDMMC_POWER_LDO_CHANNEL 4
+#elif defined(CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B) && \
+      CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#define PLATFORM_BOARD_DISPLAY_WIDTH 1280U
+#define PLATFORM_BOARD_DISPLAY_HEIGHT 720U
+#define PLATFORM_BOARD_DISPLAY_NATIVE_WIDTH 1280U
+#define PLATFORM_BOARD_DISPLAY_NATIVE_HEIGHT 720U
+#define PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES 0U
+#define PLATFORM_BOARD_LCD_BACKLIGHT_GPIO (-1)
+#define PLATFORM_BOARD_LCD_RESET_GPIO (-1)
+#define PLATFORM_BOARD_TOUCH_RESET_GPIO (-1)
+#define PLATFORM_BOARD_TOUCH_INTERRUPT_GPIO (-1)
+#define PLATFORM_BOARD_I2C_SDA_GPIO 7
+#define PLATFORM_BOARD_I2C_SCL_GPIO 8
+#define PLATFORM_BOARD_I2C_PORT 1
+#define PLATFORM_BOARD_AUDIO_MCLK_GPIO 13
+#define PLATFORM_BOARD_AUDIO_BCLK_GPIO 12
+#define PLATFORM_BOARD_AUDIO_LRCLK_GPIO 10
+#define PLATFORM_BOARD_AUDIO_DOUT_GPIO 9
+#define PLATFORM_BOARD_AUDIO_DIN_GPIO 11
+#define PLATFORM_BOARD_AUDIO_AMP_GPIO 53
+#define PLATFORM_BOARD_USB_DATA_N_GPIO (-1)
+#define PLATFORM_BOARD_USB_DATA_P_GPIO (-1)
+#define PLATFORM_BOARD_USB_VBUS_PRESENT 0
+#define PLATFORM_BOARD_USB_HOST_SOURCE_AUTHORIZED 1
+#define PLATFORM_BOARD_SDMMC_CLK_GPIO 43
+#define PLATFORM_BOARD_SDMMC_CMD_GPIO 44
+#define PLATFORM_BOARD_SDMMC_D0_GPIO 39
+#define PLATFORM_BOARD_SDMMC_POWER_LDO_CHANNEL 4
 #else
 #define PLATFORM_BOARD_DISPLAY_WIDTH 1024U
 #define PLATFORM_BOARD_DISPLAY_HEIGHT 600U
 #define PLATFORM_BOARD_DISPLAY_NATIVE_WIDTH 1024U
 #define PLATFORM_BOARD_DISPLAY_NATIVE_HEIGHT 600U
 #define PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES 0U
-#define PLATFORM_BOARD_DISPLAY_ORIENTATION_PORTRAIT 0
 #define PLATFORM_BOARD_LCD_BACKLIGHT_GPIO 31
 #define PLATFORM_BOARD_LCD_RESET_GPIO (-1)
 #define PLATFORM_BOARD_TOUCH_RESET_GPIO 40
@@ -65,22 +94,20 @@
 #define PLATFORM_BOARD_USB_DATA_P_GPIO (-1)
 #define PLATFORM_BOARD_USB_VBUS_PRESENT 0
 #define PLATFORM_BOARD_USB_HOST_SOURCE_AUTHORIZED 0
-/* Scoped 1-bit path authorized by the recorded Elecrow storage evidence. */
 #define PLATFORM_BOARD_SDMMC_CLK_GPIO 43
 #define PLATFORM_BOARD_SDMMC_CMD_GPIO 44
 #define PLATFORM_BOARD_SDMMC_D0_GPIO 39
 #define PLATFORM_BOARD_SDMMC_POWER_LDO_CHANNEL (-1)
 #endif
 
-/*
- * Every Console OS screen and game renders through the same 320x200 surface.
- * Fit that surface to the selected board with the largest centered viewport
- * that preserves its 8:5 aspect ratio. This deliberately permits fractional
- * nearest-neighbor scaling: the Waveshare target becomes 768x480 instead of
- * being limited to the much smaller integer-2x 640x400 viewport.
- */
 #define PLATFORM_BOARD_GAME_SURFACE_WIDTH 320U
 #define PLATFORM_BOARD_GAME_SURFACE_HEIGHT 200U
+#if defined(CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B) && \
+    CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+/* Match the reviewed HDMI scaler: integer 3x in a centered 960x600 area. */
+#define PLATFORM_BOARD_GAME_VIEWPORT_WIDTH 960U
+#define PLATFORM_BOARD_GAME_VIEWPORT_HEIGHT 600U
+#else
 #if (PLATFORM_BOARD_DISPLAY_WIDTH * PLATFORM_BOARD_GAME_SURFACE_HEIGHT) <= \
     (PLATFORM_BOARD_DISPLAY_HEIGHT * PLATFORM_BOARD_GAME_SURFACE_WIDTH)
 #define PLATFORM_BOARD_GAME_VIEWPORT_WIDTH PLATFORM_BOARD_DISPLAY_WIDTH
@@ -92,6 +119,7 @@
     ((PLATFORM_BOARD_DISPLAY_HEIGHT * PLATFORM_BOARD_GAME_SURFACE_WIDTH) / \
      PLATFORM_BOARD_GAME_SURFACE_HEIGHT)
 #define PLATFORM_BOARD_GAME_VIEWPORT_HEIGHT PLATFORM_BOARD_DISPLAY_HEIGHT
+#endif
 #endif
 #define PLATFORM_BOARD_GAME_MARGIN_LEFT \
     ((PLATFORM_BOARD_DISPLAY_WIDTH - PLATFORM_BOARD_GAME_VIEWPORT_WIDTH) / 2U)
@@ -109,10 +137,39 @@ extern "C" {
 #endif
 
 typedef enum {
-    PLATFORM_BOARD_ELECROW_10_1 = 0,
-    PLATFORM_BOARD_WAVESHARE_4_3,
-} platform_board_kind_t;
+    PLATFORM_BOARD_ELECROW_CROWPANEL_ADVANCED_10 = 0,
+    PLATFORM_BOARD_OLIMEX_ESP32_P4_PC_REV_B,
+    PLATFORM_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3,
+} platform_board_id_t;
 
+/* Compatibility names retained for the already-reviewed Waveshare adapters. */
+typedef platform_board_id_t platform_board_kind_t;
+#define PLATFORM_BOARD_ELECROW_10_1 \
+    PLATFORM_BOARD_ELECROW_CROWPANEL_ADVANCED_10
+#define PLATFORM_BOARD_WAVESHARE_4_3 \
+    PLATFORM_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+
+typedef struct {
+    platform_board_id_t id;
+    const char *slug;
+    const char *vendor;
+    const char *product;
+    const char *revision;
+    uint16_t display_width;
+    uint16_t display_height;
+    uint32_t flash_bytes;
+    uint32_t psram_bytes;
+    bool has_touch;
+    bool has_hdmi;
+    bool has_sd_card;
+    bool has_usb_device_game_storage;
+    bool has_integrated_usb_host_hub;
+    bool has_speaker;
+    bool has_headphone_codec;
+} platform_board_descriptor_t;
+
+const platform_board_descriptor_t *platform_board_get(void);
+bool platform_board_is(platform_board_id_t board);
 platform_board_kind_t platform_board_kind(void);
 const char *platform_board_name(void);
 

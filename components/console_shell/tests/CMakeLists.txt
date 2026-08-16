@@ -20,7 +20,6 @@ add_executable(console_shell_waveshare_tests
 )
 target_include_directories(console_shell_waveshare_tests PRIVATE ../include)
 target_link_libraries(console_shell_waveshare_tests PRIVATE
-    p4_desktop
     p4_game_api
 )
 target_compile_definitions(console_shell_waveshare_tests PRIVATE

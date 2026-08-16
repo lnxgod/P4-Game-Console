@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-14T15:58:31-0700",
+  "result": "console-os-usb-storage-exact-unit-build-verified",
+  "app": "console_os",
+  "stage": "usb-game-storage-device-install-candidate",
+  "source_commit": "2c2ea8a3671a39b731b443385ced01683e487309",
+  "toolchain": {
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "target": "esp32p4",
+    "silicon_revision_min_full": 100,
+    "silicon_revision_max_full": 199,
+    "component_lock": "apps/console_os/dependencies.lock"
+  },
+  "exact_artifacts": {
+    "bootloader": {
+      "path": "apps/console_os/build/bootloader/bootloader.bin",
+      "offset": "0x2000",
+      "payload_bytes": 22912,
+      "payload_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9"
+    },
+    "partition_table": {
+      "path": "apps/console_os/build/partition_table/partition-table.bin",
+      "offset": "0x8000",
+      "payload_bytes": 3072,
+      "payload_sha256": "e37415cea759a971142ccb81c158453f1a6c1950c278bee7366429d9626dbd02",
+      "span_bytes": 4096,
+      "span_sha256": "a10833df35f52d59601ef03d7250330c59b65a348597aeb603085b6e2d94b88d",
+      "tail_byte": "ff"
+    },
+    "application": {
+      "path": "apps/console_os/build/p4_console_os.bin",
+      "offset": "0x10000",
+      "payload_bytes": 5053248,
+      "payload_sha256": "74b2de76d447654270a610389c6800abb7ef53adfc9bee8833b3b7361e27240b",
+      "span_bytes": 7340032,
+      "span_sha256": "31574964e47513d1ddf06daaeb6ea035c702626d4cc70e944a169c1846d2c083",
+      "tail_byte": "ff"
+    },
+    "game_data": {
+      "path": "apps/console_os/build/game_data.bin",
+      "offset": "0x710000",
+      "payload_bytes": 9371648,
+      "payload_sha256": "b30446d34550374e1e0e930748bf246ae010f20a700357e0779fd0fc69d8763d",
+      "span_bytes": 9371648,
+      "span_sha256": "b30446d34550374e1e0e930748bf246ae010f20a700357e0779fd0fc69d8763d",
+      "tail_byte": "ff"
+    }
+  },
+  "installer": {
+    "path": "scripts/console-os-usb-install.py",
+    "sha256": "f911c52b63460ec1c972265a35662e7d900dc3eee54e8b452e0cac95ef125b70"
+  },
+  "transport": {
+    "path": "scripts/doom-e6-install.py",
+    "sha256": "f5d2255f37ca9373fdaf42ebe711968c31dc51b3dbbc2f7e501a235fbb546471"
+  },
+  "startup_capture": {
+    "path": "scripts/capture-console-os-usb-runtime.py",
+    "sha256": "9ae5feda450d9ce6e050ae575a7863cb8b1887c9106faf4a06c415f9839446a4"
+  },
+  "software_acceptance": {
+    "environment_verifier": "pass",
+    "console_build_verifier": "pass",
+    "clean_esp32p4_build": "pass",
+    "installer_success_transaction": "pass-simulated-16MiB",
+    "installer_failure_automatic_restore": "pass-simulated-16MiB",
+    "unexpected_predecessor_prefix_prewrite_refusal": "pass-simulated-full-preimage-sealed-zero-write",
+    "retained_uart_capture_analyzer": "pass",
+    "git_diff_check": "pass",
+    "broad_historical_make_check": "not-pass-known-stale-E5-gate-contradiction-after-new-tests-pass"
+  },
+  "source_inventory": {
+    "apps/console_os/CMakeLists.txt": "dcceaed5eedf6177d80c81ce0624a0bb04156d18d0664ad5724ec2f23dd374b4",
+    "apps/console_os/app-metadata.json": "78fd4bdeec60ad55b2a994f1af10927197a00d96e8fadfcc581d6f04812b9b45",
+    "apps/console_os/components/platform_readonly_blob/CMakeLists.txt": "94a358af7d32f40cd4bb30dd8be4e8e56123984f205d6bab239337a50ad29d3c",
+    "apps/console_os/components/platform_readonly_blob/platform_game_storage_blob.c": "fbc64645dcd0686347c9b1d741ca361209d4ab80450b65e8f7973643117eb822",
+    "apps/console_os/dependencies.lock": "0e62685d09d8d6f9ff0e2e37500f5b452616e69fba1b7936762300069bbbf528",
+    "apps/console_os/game-storage/README.TXT": "f9afb297a83a646483bd4483f1fe6645826331148226b354386f606bd7c220fd",
+    "apps/console_os/main/CMakeLists.txt": "f578f16ce296d23b5670c01b140420ec2b4846a994daaefc37ead04047a1c412",
+    "apps/console_os/main/console_os_main.c": "6588a9df24cc6af4924df6bddd2da26bd552eb12de9eb8d9a1c8fa11170bb3cd",
+    "apps/console_os/main/idf_component.yml": "9481676f684a1d30050b36e04cd819ffbcb2194dd87666b68cc1264a7a4485de",
+    "apps/console_os/partitions.csv": "a79af6ac3dca8429356e6e2a8d53f07bc3652d4ea84a7741878f3aa914b1be8b",
+    "apps/console_os/sdkconfig.defaults": "000a2d9c05ee572d7b199c1de7150dcbaaa1292d25eb6467285d15f0a0a41c86",
+    "components/console_shell/include/console/shell.h": "8545926bda30061bc67586c6464ced15a2711243888f0c06101c3872d28a1dc1",
+    "components/console_shell/src/console_shell.c": "2dd6c5567bf09b892d57975098dec5b93e370dffb376b3c34fb28cb15070863b",
+    "components/platform_game_storage/CMakeLists.txt": "e32471e37571b6de58bea1ba838ae18ebaaf37906def9b7270e019ac879b32e1",
+    "components/platform_game_storage/include/platform/game_storage.h": "0c48d4de55fd50a3cf0c692c6f53e820a9f0b82091ec2dcd43bbbb45178e0e72",
+    "components/platform_game_storage/src/game_storage_model.c": "35257684fad35cd6c08e7610d8575b7e5af3c8f94030addb62c3602077192132",
+    "components/platform_game_storage/src/game_storage_model.h": "66d5b0123e24edad6e95e5c56a4691d06a78cba7e29fe01290dcca6587297c06",
+    "components/platform_game_storage/src/platform_game_storage.c": "0c7344ed7c62f456e6595f6e0cad0b587ee1c369a893c855963ca4cd950f6255",
+    "scripts/capture-console-os-usb-runtime.py": "9ae5feda450d9ce6e050ae575a7863cb8b1887c9106faf4a06c415f9839446a4",
+    "scripts/console-os-usb-install.py": "f911c52b63460ec1c972265a35662e7d900dc3eee54e8b452e0cac95ef125b70",
+    "scripts/doom-e6-install.py": "f5d2255f37ca9373fdaf42ebe711968c31dc51b3dbbc2f7e501a235fbb546471",
+    "scripts/normalize-game-storage-image.py": "c79d8a2ed49237e4a894027503f094c999282435351adc27110e49b1071df676",
+    "scripts/verify-console-os.py": "a1e709d5d38f1104f499f46f80e6959a6020036b8b24f45766b318f405ab62a3",
+    "toolchain.lock.json": "6004325638ae17ef3e470c1f0408522a49239d292f7d3b19e7d46d35490c5bfa",
+    "hardware/board-profile.json": "085ed526cff2b4d20fef891e626603e431117af90fd3028d754b71995de54713",
+    "hardware/evidence/elecrow-10.1-usb-device-storage-path.json": "0f704fe274454f42c848b2fda61504e34dd10f8fac2dc02fe328432d9aeea820"
+  },
+  "hardware_status": {
+    "safe_read_only_preflight_attempted": true,
+    "live_predecessor_prefix_proven": true,
+    "first_install_attempt_refused_before_write": true,
+    "flash_attempted": false,
+    "bytes_written": 0,
+    "j16_usb_enumeration": "not-run",
+    "host_write_eject": "not-run",
+    "persistence_after_reboot": "not-run"
+  },
+  "claims_not_made": [
+    "This exact artifact has been flashed or accepted on hardware.",
+    "J16 USB mass-storage enumeration has passed on a laptop.",
+    "Host writes, clean eject, persistence, or abrupt-disconnect recovery have passed on hardware.",
+    "The WAD-bearing binaries may be committed, pushed, or redistributed."
+  ]
+}

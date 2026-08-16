@@ -3,11 +3,5 @@
 set -eu
 
 P4_SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-# shellcheck disable=SC1091
-. "$P4_SCRIPT_DIR/lib/project-env.sh"
-p4_activate_idf
-
-cd "$P4_PROJECT_ROOT/apps/console_os"
-idf.py -B build-waveshare-landscape \
-    -D 'SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.waveshare.defaults' \
-    build
+exec "$P4_SCRIPT_DIR/build.sh" console_os \
+    waveshare-esp32-p4-wifi6-touch-lcd-4.3

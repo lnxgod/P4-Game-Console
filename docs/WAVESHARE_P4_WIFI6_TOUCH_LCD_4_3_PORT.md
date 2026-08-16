@@ -64,15 +64,14 @@ current-limited host fixture and do not use a passive OTG adapter.
 7. Only then port the Console OS shell and native games behind the existing
    platform APIs.
 
-The first selectable build boundary is `PLATFORM_BOARD_TARGET`: Elecrow stays
-the default for the existing Doom artifact, while Waveshare is an explicit
-target that must select its own display, touch, audio, storage, and USB
-implementations. The current Doom app still links the Elecrow implementations;
-the `sdkconfig.waveshare.defaults` overlay now selects the Waveshare board,
-display, touch, audio, and 32 MB flash contracts. The ST7701 component and
-Waveshare audio adapter still need to be resolved into the locked IDF
-dependency graph before that overlay is a buildable firmware candidate; this
-is an intentional port gate, not a claim that Waveshare is already runnable.
+The selectable build boundary is `P4_BOARD_PROFILE`: Elecrow stays the
+default, while Waveshare selects its own display, touch, audio, and microSD
+implementations. `make console-os-waveshare-idf` now resolves the pinned
+ST7701, GT911, ES8311, ELF-loader, and ESP-IDF 5.5.3 graph and emits the
+firmware plus a validated nine-cartridge microSD bundle. This proves the
+software candidate only. Each changed binary still needs a fresh exact-unit
+authorization, guarded install, retained-UART boot capture, and manual game
+launch/return acceptance before it inherits any hardware claim.
 
 The board profile now authorizes only the exact-unit, read-only Console OS
 storage subset described above. Formatting, card writes, USB host power, and

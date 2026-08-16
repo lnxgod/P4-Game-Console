@@ -24,6 +24,7 @@ do
     python3 -m json.tool "$P4_METADATA_FILE" >/dev/null
 done
 python3 "$P4_SCRIPT_DIR/verify-metadata.py"
+python3 "$P4_SCRIPT_DIR/verify-board-profiles.py"
 
 printf 'Environment OK: ESP-IDF %s (%s) at %s\n' \
     "$P4_PINNED_IDF_VERSION" "$P4_PINNED_IDF_TAG" "$P4_RESOLVED_IDF_PATH"

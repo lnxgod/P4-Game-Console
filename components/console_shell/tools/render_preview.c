@@ -38,22 +38,16 @@ static const console_app_descriptor_t s_apps[] = {
      .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0xF81F),
      .capabilities = CONSOLE_CAPABILITY_AUDIO,
      .page = CONSOLE_PAGE_AUDIO, .enabled = true},
-    {.id = 6U, .title = "GAME MANAGER", .subtitle = "BUILTINS + CARTS",
-     .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0x07FF),
-     .capabilities = CONSOLE_CAPABILITY_STORAGE,
-     .page = CONSOLE_PAGE_LIBRARY, .enabled = true},
-    {.id = 8U, .title = "FILE MANAGER", .subtitle = "LIST / SORT / COPY",
-     .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0x07FF),
-     .capabilities = CONSOLE_CAPABILITY_STORAGE,
+    {.id = 6U, .title = "FILE MANAGER", .subtitle = "P4 GAMES USB",
+     .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0xFD20),
+     .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
+         CONSOLE_CAPABILITY_STORAGE,
      .page = CONSOLE_PAGE_FILES, .enabled = true},
-    {.id = 9U, .title = "SAVE MANAGER", .subtitle = "GAME SAVE SLOTS",
-     .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0xFFE0),
-     .capabilities = CONSOLE_CAPABILITY_STORAGE,
-     .page = CONSOLE_PAGE_SAVES, .enabled = true},
-    {.id = 10U, .title = "TERMINAL", .subtitle = "COMMANDS + SSH",
+    {.id = 7U, .title = "GAME MANAGER", .subtitle = "USB GAMES + OS",
      .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0x5FEA),
-     .capabilities = CONSOLE_CAPABILITY_TOUCH,
-     .page = CONSOLE_PAGE_TERMINAL, .enabled = true},
+     .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
+         CONSOLE_CAPABILITY_STORAGE,
+     .page = CONSOLE_PAGE_GAMES, .enabled = true},
 };
 
 static bool select_page(console_shell_t *shell, const char *name)
@@ -83,11 +77,9 @@ static bool select_page(console_shell_t *shell, const char *name)
         case CONSOLE_PAGE_COLORS: expected = "colors"; break;
         case CONSOLE_PAGE_TOUCH: expected = "touch"; break;
         case CONSOLE_PAGE_SYSTEM: expected = "system"; break;
-        case CONSOLE_PAGE_AUDIO: expected = "audio"; break;
-        case CONSOLE_PAGE_LIBRARY: expected = "games-manager"; break;
         case CONSOLE_PAGE_FILES: expected = "files"; break;
-        case CONSOLE_PAGE_SAVES: expected = "saves"; break;
-        case CONSOLE_PAGE_TERMINAL: expected = "terminal"; break;
+        case CONSOLE_PAGE_GAMES: expected = "manager"; break;
+        case CONSOLE_PAGE_AUDIO: expected = "audio"; break;
         default: break;
         }
         if (expected != NULL && strcmp(name, expected) == 0) {
@@ -139,7 +131,7 @@ int main(int argc, char **argv)
     if (argc != 3) {
         fprintf(stderr,
                 "usage: %s home|all|games|arcade|system-folder|"
-                "colors|touch|system|audio|games-manager|files|saves|terminal output.ppm\n",
+                "colors|touch|system|files|manager|audio output.ppm\n",
                 argv[0]);
         return EXIT_FAILURE;
     }
@@ -154,33 +146,55 @@ int main(int argc, char **argv)
         .uptime_seconds = 3723U,
         .internal_free_kib = 221U,
         .psram_free_kib = 30128U,
+        .game_storage_kib = 9052U,
+        .game_storage_state = CONSOLE_STORAGE_READY,
         .touch_ready = true,
         .audio_handoff_ready = true,
-        .storage_ready = true,
-        .content_scan_complete = true,
-        .quake_shareware_ready = true,
-        .usb_content_ready = true,
-        .valid_cart_count = 2U,
-        .builtin_game_count = 10U,
+        .doom_wad_ready = true,
     };
     console_shell_set_runtime_info(&shell, &runtime);
-    p4_file_list_t files;
-    p4_file_list_init(&files);
-    (void)p4_file_list_add(&files, "P4/GAMES", 0U,
-                           P4_FILE_KIND_FOLDER, true);
-    (void)p4_file_list_add(&files, "P4/SAVES", 0U,
-                           P4_FILE_KIND_FOLDER, true);
-    (void)p4_file_list_add(&files, "PAK0.PAK", UINT64_C(18689235),
-                           P4_FILE_KIND_GAME_DATA, true);
-    (void)p4_file_list_add(&files, "BOUNCE-LAB.P4CART", UINT64_C(18342),
-                           P4_FILE_KIND_CARTRIDGE, true);
-    console_shell_set_file_list(&shell, &files);
-    if (shell.page == CONSOLE_PAGE_TERMINAL) {
-        (void)console_shell_handle_text_key(&shell, 'h');
-        (void)console_shell_handle_text_key(&shell, 'e');
-        (void)console_shell_handle_text_key(&shell, 'l');
-        (void)console_shell_handle_text_key(&shell, 'p');
-        (void)console_shell_handle_text_key(&shell, '\n');
+    if (shell.page == CONSOLE_PAGE_FILES) {
+        const console_shell_file_listing_t files = {
+            .entries = {
+                {.source_index = 1U, .label = "DOOM1.WAD",
+                 .size_kib = 4098U, .removable = true},
+                {.source_index = 2U, .label = "README.TXT",
+                 .size_kib = 1U, .removable = true},
+                {.source_index = 3U, .label = "SAVES",
+                 .is_directory = true, .removable = false},
+                {.source_index = 4U, .label = "MODPACK.WAD",
+                 .size_kib = 512U, .removable = true},
+            },
+            .entry_count = 4U,
+            .total_visible_entries = 4U,
+            .hidden_entries = 1U,
+            .storage_generation = 3U,
+            .revision = 1U,
+            .available = true,
+        };
+        if (!console_shell_set_file_listing(&shell, &files)) {
+            return EXIT_FAILURE;
+        }
+    }
+    if (shell.page == CONSOLE_PAGE_GAMES) {
+        const console_shell_file_listing_t games = {
+            .entries = {
+                {.source_index = 0U, .label = "MAZE CHASE 1.0.0",
+                 .size_kib = 9U, .removable = true},
+                {.source_index = 1U, .label = "SPACE INVADERS 1.0.0",
+                 .size_kib = 9U, .removable = true},
+                {.source_index = UINT32_MAX, .label = "OS 0.2.0",
+                 .size_kib = 889U, .installable = true},
+            },
+            .entry_count = 3U,
+            .total_visible_entries = 3U,
+            .storage_generation = 4U,
+            .revision = 1U,
+            .available = true,
+        };
+        if (!console_shell_set_file_listing(&shell, &games)) {
+            return EXIT_FAILURE;
+        }
     }
     if (shell.page == CONSOLE_PAGE_TOUCH) {
         shell.contact_count = 2U;

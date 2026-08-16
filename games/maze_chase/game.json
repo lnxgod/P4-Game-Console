@@ -1,7 +1,9 @@
 {
   "schema": 1,
-  "format": "p4-native-static-v1",
+  "format": "p4-native-elf-v1",
   "api_version": 1,
+  "version": "1.0.0",
+  "package_file": "MAZE.P4G",
   "component": "maze_chase",
   "entry_symbol": "p4_maze_chase_game",
   "launcher_id": 100,

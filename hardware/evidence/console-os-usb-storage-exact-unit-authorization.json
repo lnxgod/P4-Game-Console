@@ -1,0 +1,110 @@
+{
+  "schema": 1,
+  "active": true,
+  "recorded_at": "2026-08-14T15:58:31-0700",
+  "scope": "exact-unit-console-os-usb-storage-v1",
+  "operator_direction": "merge it and push it to the device please",
+  "device_binding": {
+    "identity_sha256": "4ea0363808ba7d7788b89a352285396a44d1959fc9f20881c327110e7fbee9f0",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 16777216
+  },
+  "predecessor_partition_table_sha256": "5b5bfa656e96706d5144b352bf9294ab455a7e1e49136ea5521cf15902a9e433",
+  "predecessor_prefix_sha256": "8df69412cbb2e018a5813b4bb1a121ccc5286039f95163fa6fa062eb85dd5537",
+  "exact_artifacts": {
+    "bootloader": {
+      "path": "apps/console_os/build/bootloader/bootloader.bin",
+      "offset": "0x2000",
+      "payload_bytes": 22912,
+      "payload_sha256": "fcb629f826b8cd79fb21533b8691650a775804f337db37451b03127e36a32ca9"
+    },
+    "partition_table": {
+      "path": "apps/console_os/build/partition_table/partition-table.bin",
+      "offset": "0x8000",
+      "payload_bytes": 3072,
+      "payload_sha256": "e37415cea759a971142ccb81c158453f1a6c1950c278bee7366429d9626dbd02",
+      "span_bytes": 4096,
+      "span_sha256": "a10833df35f52d59601ef03d7250330c59b65a348597aeb603085b6e2d94b88d",
+      "tail_byte": "ff"
+    },
+    "application": {
+      "path": "apps/console_os/build/p4_console_os.bin",
+      "offset": "0x10000",
+      "payload_bytes": 5053248,
+      "payload_sha256": "74b2de76d447654270a610389c6800abb7ef53adfc9bee8833b3b7361e27240b",
+      "span_bytes": 7340032,
+      "span_sha256": "31574964e47513d1ddf06daaeb6ea035c702626d4cc70e944a169c1846d2c083",
+      "tail_byte": "ff"
+    },
+    "game_data": {
+      "path": "apps/console_os/build/game_data.bin",
+      "offset": "0x710000",
+      "payload_bytes": 9371648,
+      "payload_sha256": "b30446d34550374e1e0e930748bf246ae010f20a700357e0779fd0fc69d8763d",
+      "span_bytes": 9371648,
+      "span_sha256": "b30446d34550374e1e0e930748bf246ae010f20a700357e0779fd0fc69d8763d",
+      "tail_byte": "ff"
+    }
+  },
+  "build_evidence": {
+    "path": "test-runs/2026-08-14-console-os-usb-storage-build.json",
+    "sha256": "2e62d96587c3f5cb0b735cf5113874c830c2d3891a20ced0b9b6f9d842fa7abd"
+  },
+  "predecessor_prefix_evidence": {
+    "path": "test-runs/2026-08-14-console-os-usb-storage-preflight.json",
+    "sha256": "5009ef1b2afccea964c0fb9c550f7b15ad6336826fc81d73662b4357955c2198"
+  },
+  "usb_device_evidence": {
+    "path": "hardware/evidence/elecrow-10.1-usb-device-storage-path.json",
+    "sha256": "0f704fe274454f42c848b2fda61504e34dd10f8fac2dc02fe328432d9aeea820"
+  },
+  "exact_unit_audio_release": {
+    "path": "hardware/evidence/doom-embedded-touch-audio-e6-exact-unit-audio-release.json",
+    "sha256": "da0a25bb4e3ba07cf46bd3e300ffca89ace1e2d9545debb34e943a5cd4c828b3"
+  },
+  "factory_backup_manifest": {
+    "path": "hardware/backups/manifest.json",
+    "sha256": "a4ffc0ed1ff2bd2717b15b53fc21c8c8792a9869309d7294f9c6de4d83fa2b3f"
+  },
+  "execution_contract": {
+    "same_uart_handle": true,
+    "full_live_flash_preimage_required": true,
+    "preserve_ranges": [
+      "0x0000..0x7fff",
+      "0x9000..0xffff"
+    ],
+    "write_order": [
+      "game_data",
+      "application",
+      "partition_table"
+    ],
+    "partition_table_committed_last": true,
+    "exact_readback_before_launch": true,
+    "single_launch": true,
+    "retained_launcher_capture_required": true,
+    "automatic_restore_on_failure": true,
+    "shell_audio_hardware_calls": 0,
+    "doom_audio_deferred_until_user_handoff": true,
+    "usb_device_role": "J16 MSC",
+    "recovery_directory": "hardware/local-state/console-os-usb-storage-install-20260814"
+  },
+  "authorization_boundaries": {
+    "broad_project_flash_flags_changed": false,
+    "exact_one_shot_route_only": true,
+    "j1_role": "exclusive retained UART for loader and acceptance capture",
+    "j16_role": "USB mass-storage device after accepted boot",
+    "j16_must_be_disconnected_during_install_acceptance": true,
+    "usb_host_role_authorized": false,
+    "shell_audio_hardware_calls_authorized": 0,
+    "doom_audio_behavior": "unchanged and deferred until explicit user handoff",
+    "game_data_redistribution_authorized": false
+  },
+  "hardware_acceptance_required_after_install": [
+    "J1 retained-UART launcher startup acceptance",
+    "J16 enumeration on a data-capable laptop cable",
+    "copy a legal test game file, cleanly eject, reconnect, and verify persistence",
+    "remove the test file, cleanly eject, reconnect, and verify persistence",
+    "confirm the launcher never mounts the filesystem while the host owns it"
+  ]
+}

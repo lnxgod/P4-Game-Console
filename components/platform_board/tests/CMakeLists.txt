@@ -1,0 +1,13 @@
+add_executable(test_platform_board test_platform_board.c)
+target_link_libraries(test_platform_board PRIVATE platform_board)
+add_test(NAME platform_board_descriptor COMMAND test_platform_board)
+
+add_executable(test_platform_board_olimex test_platform_board_olimex.c)
+target_link_libraries(test_platform_board_olimex PRIVATE platform_board_olimex)
+add_test(NAME platform_board_olimex_descriptor COMMAND test_platform_board_olimex)
+
+add_executable(test_platform_board_waveshare test_platform_board_waveshare.c)
+target_link_libraries(test_platform_board_waveshare
+    PRIVATE platform_board_waveshare)
+add_test(NAME platform_board_waveshare_descriptor
+         COMMAND test_platform_board_waveshare)

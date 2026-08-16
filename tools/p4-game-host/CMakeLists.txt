@@ -20,7 +20,7 @@ string(JSON P4_GAME_FORMAT GET "${P4_GAME_JSON}" format)
 string(JSON P4_GAME_API_VERSION GET "${P4_GAME_JSON}" api_version)
 string(JSON P4_GAME_ENTRY GET "${P4_GAME_JSON}" entry_symbol)
 string(JSON P4_GAME_ENABLED GET "${P4_GAME_JSON}" enabled)
-if(NOT P4_GAME_FORMAT STREQUAL "p4-native-static-v1" OR
+if(NOT P4_GAME_FORMAT STREQUAL "p4-native-elf-v1" OR
    NOT P4_GAME_API_VERSION EQUAL 1 OR NOT P4_GAME_ENABLED)
     message(FATAL_ERROR "${P4_GAME} is not an enabled P4 Game API v1 game")
 endif()

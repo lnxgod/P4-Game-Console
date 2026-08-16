@@ -1,60 +1,84 @@
 # P4 Console OS
 
-This is the FreeRTOS-native console shell for the Waveshare ESP32-P4-WIFI6
-Touch LCD 4.3, with the SDL3 host runner as the fast PC development target.
-It is a monolithic ESP-IDF firmware with a small static app registry, not a
-desktop process loader. The launcher and built-in pages share OS-owned
-display, touch, and audio services.
+This is the FreeRTOS-native console shell for the Elecrow ESP32-P4 10.1-inch
+tablet. Fixed system apps and Doom live in the OS image. Other Game API apps
+are validated `.P4G` cartridges loaded from persistent storage, so adding or
+removing a game does not require an OS reflash.
 
-The home screen currently organizes the static registry as:
+The home screen keeps the accepted Program Manager-style interface and
+organizes built-ins plus the current storage catalog as:
 
 - All Programs (every entry in one scrollable view)
 - Games
-  - Action: Doom plus the SD-gated Quake easter egg
-  - Arcade/Platform: manifest-discovered reentrant Game API games
-- System: Colors, Touch, System status, Audio, Achievements, Library, and
-  Multiplayer
+  - Action: Doom (exclusive foreground handoff)
+  - Arcade: installed reentrant Game API cartridges
+- System: Colors, Touch, System status, Audio status, Achievements, File
+  Manager, and Game Manager
 
-The launcher is generated from validated `games/*/game.json` manifests. Its
-lightweight Program Manager-style home view shows three columns by two rows,
-scrolls with vertical arrows or a one-finger swipe, and supports up to 32
-apps. It derives at most two folder levels from validated manifest metadata;
-there is no heap-backed filesystem or dynamic loader. The entire skin is drawn
-with RGB565 primitives; it adds no launcher bitmap asset. Create a native
-starter without editing the launcher:
+Boot first displays the official Game Changers AI logo and an original
+A4-C#5-E5 startup chord; it does not copy the THX/Dolby recording. The Colors
+app switches the shell among Gold, Arcade, Ocean, and Sunset palettes for the
+current session. There is no CRT filter.
+
+## Laptop game storage
+
+Console OS exposes the persistent `game_data` FAT volume through the board's
+J16 ESP32-P4 USB port. Its USB product is **P4 Game Storage** and its FAT volume
+label is **P4 GAMES**. J1 remains the CH340 programming/serial port. While a
+laptop owns the volume, the firmware unmounts it, invalidates its file cache,
+changes the Doom tile to `USB STORAGE ACTIVE`,
+and rejects a Doom launch. A clean host eject remounts it for the app and
+triggers a fresh size/header/SHA-256 validation.
+
+The current Doom integration accepts `DOOM1.WAD` at the drive root, with the
+exact shareware identity recorded in `third_party/game-data.json`. Copying or
+removing that file does not require a firmware rebuild. Eject the drive before
+launching Doom. Doom launch stops the USB device, remounts the volume, and
+rehashes the WAD before taking a terminal game lease; USB cannot remount below
+the running engine.
+
+The full project image can generate a reviewed FAT seed, but the one-time
+dual-OTA migration deliberately does not write `game_data`, preserving the
+live Doom file and other user data. Later OS releases are copied to J16 as
+`UPDATE/P4UPDATE.P4U` and installed from Game Manager into the inactive OTA
+slot. Program Manager exposes ready/invalid update status on the Game Manager
+app before it is opened.
+The consumed update package is removed before reboot when storage ownership
+is still available; otherwise it can be removed safely from Game Manager.
+Runtime code never auto-formats a damaged volume.
+
+Seed cartridges are generated from validated `games/*/game.json` manifests.
+At runtime the launcher catalog comes from validated `.P4G` files. Its
+lightweight desktop view shows three columns by two rows, scrolls with vertical
+arrows or a one-finger swipe, and supports up to 32 apps. It derives at most
+two folder levels from validated package metadata. The skin is drawn with
+RGB565 primitives and adds no launcher bitmap asset. Create a native starter
+without editing the launcher:
 
 ```sh
 python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE
 make game-sdk-host
+make console-os-idf
 ```
 
-See `docs/GAME_SDK.md` for the API and executable-format explanation. Native
-games are RISC-V code statically linked into `p4_console_os.elf`; ESP-IDF emits
-the flashable `p4_console_os.bin`. This project does not use UF2.
+Copy the resulting cartridge from
+`build/game-storage-seed/` to `P4 GAMES` over J16 and eject. See
+`docs/GAME_SDK.md` for the API and package contract. This project does not use
+UF2.
 
-## Boot and color modes
-
-Boot presents the official Game Changers AI logo on a clean black screen with
-an original three-note startup chord and a short progress animation. The logo
-asset provenance and its resampled RGB565 form are recorded in
-`main/assets/README.md`; it is an authorized brand asset, not a generic game
-art dependency.
-
-The **Colors** system page has four shell-only modes: Gold (the Game Changers
-default), Arcade, Ocean, and Sunset. A choice takes effect immediately across
-the launcher and built-in pages; native games retain their own visual design.
-The selected mode is deliberately session-only until persistent settings are
-reviewed alongside the storage policy. It does not apply a CRT filter.
+The Waveshare 4.3 build uses the same cartridge catalog on a read-only-at-
+runtime microSD card. Build and verify it with `make console-os-waveshare-idf`.
+With the board powered off, move the card to a laptop and run
+`make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES`; the installer
+validates all nine cartridges and preserves unrelated files.
 
 ## Doom and audio lifecycle
 
-The home shell never energizes the amplifier. Its Audio panel owns a bounded
-1–10 master setting, defaults to 8/10, and applies changes when the next game
-starts. When Doom is selected, the shell
+The home shell never energizes the amplifier. When Doom is selected, the shell
 darkens the panel and releases touch, I2C1, and display ownership before
 entering the existing Doom composite. Doom then reinitializes those services
-and owns the exact 16 kHz PCM16-stereo SFX + procedural MUS path at the
-selected master volume.
+and owns the exact 16 kHz PCM16-stereo SFX + procedural MUS path at volume
+step 6/10.
 
 This first handoff is deliberately one-way. The imported Doom engine does not
 yet have a reviewed reentrant shutdown path, so returning home requires a
@@ -64,39 +88,25 @@ restart. A future lifecycle milestone can add explicit `prepare`, `enter`,
 Native Game API apps use a different, reentrant path. Console OS retains the
 display and touch services, supplies normalized controls and drawing helpers,
 and opens the reviewed factory speaker session only while a game requesting
-tone or PCM-stream audio is active. The stream service copies bounded 16 kHz
-PCM16-stereo blocks into the shared mixer; games still never own I2S, codec
-I2C, or GPIO53.
-Back exits directly to the launcher and restores the amplifier-safe state.
-Native game updates, touch, and audio run every 16 ms; the OS submits every
-second rendered frame for a steady 31.25 FPS target close to 30 FPS.
-
-## SD content and multiplayer
-
-At boot, Console OS performs a no-format microSD mount and a bounded read-only
-catalog scan. Library reports valid/rejected P4 Carts, USB copy status, and can
-retry the scan.
-The cart Lua runtime is still pending, so valid carts are listed but not
-launched. Quake is enabled only when its separately supplied shareware PAK
-passes the exact full-file identity check. Keep the card in the badge and use
-`python3 scripts/p4-usb-content.py quake` through the H1 programming USB port;
-the complete bounded staging workflow is in `docs/CONTENT_LIBRARY.md`.
-
-The Multiplayer page currently reports the allocation-free v1 packet/session
-core. The ESP32-C6 Wi-Fi transport and playable lobby remain pending, and games
-never receive sockets. See `docs/MULTIPLAYER.md`.
+tone audio is active. Back exits directly to the launcher and restores the
+amplifier-safe state.
 
 ## Local build
 
-The exact ignored Doom shareware WAD documented in the repository is required
-at `local-data/doom/doom1.wad`. Quake data is not needed to build because it is
-never embedded. Then run:
+The exact ignored shareware WAD documented in the repository is required at
+`local-data/doom/doom1.wad`. Then run:
 
 ```sh
+make console-shell-host
+make platform-game-storage-host
 make game-sdk-host
-make console-os-waveshare-idf
+make console-os-idf
 ```
 
-The app metadata is build-only. A successful build is not permission to flash
-or a hardware acceptance result. Bind and authorize the exact new artifact
-before preparing another guarded console install.
+The first migration needs a guarded J1 write for the bootloader, partition
+table, OTA data, and OTA-0 image. It must not write `game_data`. After that,
+normal game and OS updates use J16.
+The exact-unit route is `scripts/console-os-game-manager-migrate.py`. It
+requires clean committed artifacts, reuses the existing complete backup,
+creates no new backup, and retains J1 through exact readback and startup
+acceptance.
