@@ -12,6 +12,16 @@ jump, B to launch a pulse that disables patrol bots, Start to pause, and the Exi
 launcher. The campaign contains four fixed stages, a three-life run, restart,
 title, pause, route-clear, and end screens, plus bounded original tone cues.
 
+## Cartridge
+
+Skyline Leap's source, artwork, manifest, and package identity live together
+in this folder. Its manifest produces `SKYLINE.P4G`; after an Elecrow Console
+OS build, the USB-share-ready cartridge is generated at
+`apps/console_os/build/game-storage-seed/GAMES/SKYLINE.P4G`. Copy that file to
+the root of the console's `P4 GAMES` USB share when the device is connected. The
+generated cartridge is a build artifact, so the repository tracks this source
+folder rather than a stale binary copy.
+
 ## ImageGen art provenance
 
 `assets/skyline_leap_animation_atlas_v1.png` is original ImageGen output with

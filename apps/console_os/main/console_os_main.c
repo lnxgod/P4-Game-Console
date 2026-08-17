@@ -1894,6 +1894,15 @@ static bool cartridge_play_tone(void *opaque, const p4_tone_t *tone)
         p4_audio_mixer_service_play_tone(&context->mixer, tone);
 }
 
+static bool cartridge_submit_pcm16_stereo(
+    void *opaque, const int16_t *interleaved_stereo, size_t frame_count)
+{
+    cartridge_run_context_t *const context = opaque;
+    return context != NULL && context->audio_running &&
+        p4_audio_mixer_service_submit_pcm16_stereo(
+            &context->mixer, interleaved_stereo, frame_count);
+}
+
 static void cartridge_stop_audio(void *opaque)
 {
     cartridge_run_context_t *const context = opaque;
@@ -2023,7 +2032,8 @@ static esp_err_t run_stored_game(
     p4_game_platform_audio_init(&context.audio);
     const uint32_t capabilities = game->package.required_capabilities |
         game->package.optional_capabilities;
-    if ((capabilities & P4_GAME_CAP_AUDIO_TONE) != 0U) {
+    if ((capabilities &
+         (P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM)) != 0U) {
         const esp_err_t audio_result = p4_game_platform_audio_open(
             &context.audio, native_audio_runtime_allowed(),
             native_audio_control_bus(), CONSOLE_NATIVE_AUDIO_VOLUME_STEP);
@@ -2042,7 +2052,8 @@ static esp_err_t run_stored_game(
         .struct_bytes = sizeof(host),
         .available_capabilities = P4_GAME_CAP_VIDEO |
             P4_GAME_CAP_CONTROLS |
-            (context.audio_running ? P4_GAME_CAP_AUDIO_TONE : 0U),
+            (context.audio_running
+                ? P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM : 0U),
         .expected_game_id = game->package.id,
         .surface = {
             .pixels = s_pixels,
@@ -2054,6 +2065,8 @@ static esp_err_t run_stored_game(
         .poll_frame = cartridge_poll_frame,
         .present = cartridge_present,
         .play_tone = context.audio_running ? cartridge_play_tone : NULL,
+        .submit_pcm16_stereo = context.audio_running
+            ? cartridge_submit_pcm16_stereo : NULL,
         .stop_audio = context.audio_running ? cartridge_stop_audio : NULL,
         .finished = cartridge_finished,
         .unlock_achievement = cartridge_unlock_achievement,

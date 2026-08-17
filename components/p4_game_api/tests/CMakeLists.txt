@@ -16,7 +16,9 @@ add_executable(p4_game_api_waveshare_tests
     test_p4_game_api.c
     ../src/achievements.c
     ../src/audio_mixer.c
+    ../src/audio_pack.c
     ../src/draw.c
+    ../src/feedback.c
     ../src/game_runtime.c
     ../src/input.c
 )

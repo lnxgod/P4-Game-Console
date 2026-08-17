@@ -8,6 +8,7 @@
 
 #include "breakout_internal.h"
 #include "p4/draw.h"
+#include "p4/feedback.h"
 #include "p4/input.h"
 
 enum {
@@ -100,6 +101,8 @@ static void lose_ball(p4_game_context_t *context, breakout_state_t *state)
         --state->lives;
     }
     play_tone(context, 110U, 220U, 5U, P4_WAVE_TRIANGLE);
+    (void)p4_game_audio_effect_play(
+        context, &state->audio, P4_GAME_AUDIO_EFFECT_FAIL);
     if (state->lives == 0U) {
         state->game_over = true;
     } else {
@@ -225,6 +228,11 @@ static bool hit_brick(p4_game_context_t *context, breakout_state_t *state)
             if (state->bricks == 0U) {
                 state->won = true;
                 play_tone(context, 1047U, 300U, 5U, P4_WAVE_TRIANGLE);
+                (void)p4_game_audio_effect_play(
+                    context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
+            } else {
+                (void)p4_game_audio_effect_play(
+                    context, &state->audio, P4_GAME_AUDIO_EFFECT_IMPACT);
             }
             return true;
         }
@@ -264,6 +272,7 @@ static p4_game_result_t game_update(p4_game_context_t *context,
                                     uint32_t elapsed_ms)
 {
     breakout_state_t *const state = context->state;
+    (void)p4_game_audio_effect_service(context, &state->audio);
     state->held_buttons = input->held;
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
         return P4_GAME_EXIT_TO_LAUNCHER;
@@ -383,6 +392,12 @@ static bool game_render(p4_game_context_t *context,
                  BREAKOUT_FIELD_BOTTOM - BREAKOUT_FIELD_TOP,
                  UINT16_C(0x4208));
     draw_bricks(surface, state);
+    p4_game_feedback_draw(
+        surface, state->game_over ? P4_GAME_FX_FAIL :
+        (state->won ? P4_GAME_FX_REWARD : P4_GAME_FX_ACTION),
+        state->game_over || state->won ? 160 : state->ball_x,
+        state->game_over || state->won ? 88 : state->ball_y,
+        context->frame_index);
     p4_draw_fill_rect(surface,
                       state->paddle_x - BREAKOUT_PADDLE_WIDTH / 2,
                       BREAKOUT_PADDLE_Y, BREAKOUT_PADDLE_WIDTH,
@@ -422,7 +437,8 @@ const p4_game_descriptor_t p4_breakout_game = {
     .subtitle = "TOUCH BRICK BREAKER",
     .accent_rgb565 = UINT16_C(0xfbe0),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,
+    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
+                             P4_GAME_CAP_AUDIO_STREAM,
     .state_bytes = sizeof(breakout_state_t),
     .start = game_start,
     .update = game_update,

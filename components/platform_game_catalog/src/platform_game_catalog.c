@@ -42,12 +42,16 @@ static p4_game_package_result_t validate_data(
 }
 
 static p4_game_package_result_t validate_file(
-    const char *name, p4_game_package_info_t *out_info)
+    const char *name, bool in_games_directory,
+    p4_game_package_info_t *out_info)
 {
     uint8_t *data = NULL;
     size_t size_bytes = 0U;
-    const esp_err_t loaded = platform_game_storage_load_root_file(
-        name, P4_GAME_PACKAGE_MAX_BYTES, &data, &size_bytes);
+    const esp_err_t loaded = in_games_directory
+        ? platform_game_storage_load_game_file(
+            name, P4_GAME_PACKAGE_MAX_BYTES, &data, &size_bytes)
+        : platform_game_storage_load_root_file(
+            name, P4_GAME_PACKAGE_MAX_BYTES, &data, &size_bytes);
     if (loaded != ESP_OK) {
         return loaded == ESP_ERR_INVALID_SIZE
             ? P4_GAME_PACKAGE_BAD_SIZE : P4_GAME_PACKAGE_BAD_LAYOUT;
@@ -74,11 +78,40 @@ static void invalidate_duplicates(platform_game_catalog_t *catalog,
              strcmp(previous->package.id, current->package.id) != 0)) {
             continue;
         }
-        previous->valid = false;
-        previous->validation = P4_GAME_PACKAGE_BAD_METADATA;
+        /* GAMES is scanned first and is the canonical install location. */
         current->valid = false;
         current->validation = P4_GAME_PACKAGE_BAD_METADATA;
         return;
+    }
+}
+
+static void scan_listing(
+    platform_game_catalog_t *catalog,
+    const platform_game_storage_file_listing_t *files,
+    bool in_games_directory)
+{
+    for (size_t index = 0U; index < files->entry_count; ++index) {
+        const platform_game_storage_file_entry_t *const file =
+            &files->entries[index];
+        if (file->is_directory || !package_file_name(file->name)) {
+            continue;
+        }
+        if (catalog->entry_count >= PLATFORM_GAME_CATALOG_MAX_ENTRIES) {
+            if (catalog->omitted_packages != UINT32_MAX) {
+                ++catalog->omitted_packages;
+            }
+            continue;
+        }
+        platform_game_catalog_entry_t *const entry =
+            &catalog->entries[catalog->entry_count];
+        memcpy(entry->file_name, file->name, strlen(file->name) + 1U);
+        entry->file_bytes = file->size_bytes;
+        entry->in_games_directory = in_games_directory;
+        entry->validation = validate_file(
+            file->name, in_games_directory, &entry->package);
+        entry->valid = entry->validation == P4_GAME_PACKAGE_VALID;
+        invalidate_duplicates(catalog, catalog->entry_count);
+        ++catalog->entry_count;
     }
 }
 
@@ -88,34 +121,25 @@ esp_err_t platform_game_catalog_scan(platform_game_catalog_t *out_catalog)
         return ESP_ERR_INVALID_ARG;
     }
     memset(out_catalog, 0, sizeof(*out_catalog));
-    platform_game_storage_file_listing_t files;
-    const esp_err_t listed = platform_game_storage_list_root(&files);
-    if (listed != ESP_OK) {
-        return listed;
+    platform_game_storage_file_listing_t root_files;
+    const esp_err_t root_listed =
+        platform_game_storage_list_root(&root_files);
+    if (root_listed != ESP_OK) {
+        return root_listed;
     }
     out_catalog->available = true;
-    out_catalog->storage_generation = files.storage_generation;
-    for (size_t index = 0U; index < files.entry_count; ++index) {
-        const platform_game_storage_file_entry_t *const file =
-            &files.entries[index];
-        if (file->is_directory || !package_file_name(file->name)) {
-            continue;
-        }
-        if (out_catalog->entry_count >= PLATFORM_GAME_CATALOG_MAX_ENTRIES) {
-            if (out_catalog->omitted_packages != UINT32_MAX) {
-                ++out_catalog->omitted_packages;
-            }
-            continue;
-        }
-        platform_game_catalog_entry_t *const entry =
-            &out_catalog->entries[out_catalog->entry_count];
-        memcpy(entry->file_name, file->name, strlen(file->name) + 1U);
-        entry->file_bytes = file->size_bytes;
-        entry->validation = validate_file(file->name, &entry->package);
-        entry->valid = entry->validation == P4_GAME_PACKAGE_VALID;
-        invalidate_duplicates(out_catalog, out_catalog->entry_count);
-        ++out_catalog->entry_count;
+    out_catalog->storage_generation = root_files.storage_generation;
+
+    platform_game_storage_file_listing_t game_files;
+    const esp_err_t games_listed =
+        platform_game_storage_list_games(&game_files);
+    if (games_listed == ESP_OK) {
+        scan_listing(out_catalog, &game_files, true);
+    } else if (games_listed != ESP_ERR_NOT_FOUND) {
+        return games_listed;
     }
+    /* Root packages remain readable for cards created by Console OS 0.3. */
+    scan_listing(out_catalog, &root_files, false);
     for (size_t index = 0U; index < out_catalog->entry_count; ++index) {
         if (out_catalog->entries[index].valid) {
             ++out_catalog->valid_count;
@@ -202,6 +226,9 @@ esp_err_t platform_game_catalog_remove(
     if (catalog->entries[index].embedded) {
         return ESP_ERR_NOT_SUPPORTED;
     }
-    return platform_game_storage_remove_root_file(
-        catalog->entries[index].file_name);
+    return catalog->entries[index].in_games_directory
+        ? platform_game_storage_remove_game_file(
+            catalog->entries[index].file_name)
+        : platform_game_storage_remove_root_file(
+            catalog->entries[index].file_name);
 }

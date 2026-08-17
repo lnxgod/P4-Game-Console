@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "p4/audio_pack.h"
+
 enum {
     MAZE_CHASE_WIDTH = 19,
     MAZE_CHASE_HEIGHT = 13,
@@ -42,6 +44,7 @@ typedef struct {
     uint32_t frightened_ms;
     uint32_t enemy_step;
     uint32_t held_buttons;
+    p4_game_audio_effect_player_t audio;
     bool paused;
     bool game_over;
     bool won;

@@ -129,7 +129,9 @@ def build_elf(
     inputs = [
         root / "game-platform" / "runtime" / "cartridge_main.c",
         source,
+        root / "components" / "p4_game_api" / "src" / "audio_pack.c",
         root / "components" / "p4_game_api" / "src" / "draw.c",
+        root / "components" / "p4_game_api" / "src" / "feedback.c",
         root / "components" / "p4_game_api" / "src" / "game_runtime.c",
         root / "components" / "p4_game_api" / "src" / "input.c",
     ]

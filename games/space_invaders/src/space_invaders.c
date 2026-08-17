@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "p4/draw.h"
+#include "p4/feedback.h"
 #include "p4/input.h"
 #include "space_invaders_internal.h"
 
@@ -213,6 +214,8 @@ static void player_fire(p4_game_context_t *context,
                          state->player_x, SPACE_PLAYER_Y - 6)) {
         state->player_cooldown_ms = SPACE_PLAYER_COOLDOWN_MS;
         play_tone(context, 880U, 55U, 4U, P4_WAVE_SQUARE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_ACTION);
     }
 }
 
@@ -283,9 +286,13 @@ static void hit_alien(p4_game_context_t *context,
     state->score += (uint32_t)(SPACE_INVADER_ROWS - row) * 10U;
     play_tone(context, (uint16_t)(260U + row * 55U),
               75U, 4U, P4_WAVE_TRIANGLE);
+    (void)p4_game_audio_effect_play(
+        context, &state->audio, P4_GAME_AUDIO_EFFECT_IMPACT);
     if (state->invaders_remaining == 0U) {
         state->wave_delay_ms = SPACE_WAVE_DELAY_MS;
         play_tone(context, 1047U, 320U, 5U, P4_WAVE_TRIANGLE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
     }
 }
 
@@ -333,6 +340,8 @@ static void player_hit(p4_game_context_t *context,
         --state->lives;
     }
     play_tone(context, 82U, 420U, 6U, P4_WAVE_TRIANGLE);
+    (void)p4_game_audio_effect_play(
+        context, &state->audio, P4_GAME_AUDIO_EFFECT_FAIL);
     clear_projectiles(state);
     if (state->lives == 0U) {
         state->game_over = true;
@@ -447,6 +456,7 @@ static p4_game_result_t game_update(p4_game_context_t *context,
                                     uint32_t elapsed_ms)
 {
     space_invaders_state_t *const state = context->state;
+    (void)p4_game_audio_effect_service(context, &state->audio);
     state->held_buttons = input->held;
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
         return P4_GAME_EXIT_TO_LAUNCHER;
@@ -624,6 +634,10 @@ static bool game_render(p4_game_context_t *context,
     }
     draw_shields(surface, state);
     draw_projectiles(surface, state);
+    p4_game_feedback_draw(
+        surface, state->game_over ? P4_GAME_FX_FAIL : P4_GAME_FX_ACTION,
+        state->game_over ? 160 : state->player_x,
+        state->game_over ? 88 : SPACE_PLAYER_Y - 4, context->frame_index);
     draw_player(surface, state);
     p4_game_draw_standard_controls(
         surface, UINT16_C(0x4208), UINT16_C(0x07ff), state->held_buttons);
@@ -657,7 +671,8 @@ const p4_game_descriptor_t p4_space_invaders_game = {
     .subtitle = "DEFEND THE P4",
     .accent_rgb565 = UINT16_C(0x07ff),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,
+    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
+                             P4_GAME_CAP_AUDIO_STREAM,
     .state_bytes = sizeof(space_invaders_state_t),
     .start = game_start,
     .update = game_update,

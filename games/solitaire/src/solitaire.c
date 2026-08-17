@@ -6,7 +6,9 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "p4/audio_pack.h"
 #include "p4/draw.h"
+#include "p4/feedback.h"
 #include "p4/game.h"
 #include "p4/input.h"
 
@@ -53,6 +55,7 @@ typedef struct {
     uint32_t held_buttons;
     uint32_t deal_number;
     uint32_t moves;
+    p4_game_audio_effect_player_t audio;
     bool won;
 } solitaire_state_t;
 
@@ -318,9 +321,14 @@ static void activate_cursor(p4_game_context_t *context,
     }
     if (!moved) {
         tone(context, 130U, 90U, 3U);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_IMPACT);
     } else {
         tone(context, state->won ? 880U : 660U,
              state->won ? 240U : 70U, 3U);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, state->won ?
+            P4_GAME_AUDIO_EFFECT_REWARD : P4_GAME_AUDIO_EFFECT_ACTION);
     }
 }
 
@@ -336,10 +344,15 @@ static void quick_foundation(p4_game_context_t *context,
         !move_to_foundation(state, card_suit(card))) {
         cancel_selection(state);
         tone(context, 130U, 80U, 2U);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_IMPACT);
         return;
     }
     tone(context, state->won ? 880U : 720U,
          state->won ? 240U : 70U, 3U);
+    (void)p4_game_audio_effect_play(
+        context, &state->audio, state->won ?
+        P4_GAME_AUDIO_EFFECT_REWARD : P4_GAME_AUDIO_EFFECT_ACTION);
 }
 
 static void move_cursor(solitaire_state_t *state, uint32_t pressed)
@@ -399,6 +412,7 @@ static p4_game_result_t game_update(
 {
     (void)elapsed_ms;
     solitaire_state_t *const state = context->state;
+    (void)p4_game_audio_effect_service(context, &state->audio);
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
         return P4_GAME_EXIT_TO_LAUNCHER;
     }
@@ -590,6 +604,12 @@ static bool game_render(p4_game_context_t *context,
     }
     draw_selection(state, surface);
     draw_cursor(state, surface);
+    p4_game_feedback_draw(
+        surface, state->won ? P4_GAME_FX_REWARD : P4_GAME_FX_ACTION,
+        state->won ? 160 : card_x(state->cursor_column) + CARD_WIDTH / 2,
+        state->won ? 100 :
+        (state->cursor_area == CURSOR_TOP ? CARD_TOP + CARD_HEIGHT / 2 : 100),
+        context->frame_index);
     if (state->won) {
         p4_draw_fill_rect(surface, 70, 76, 180, 48, UINT16_C(0x0010));
         p4_draw_rect(surface, 70, 76, 180, 48, UINT16_C(0xFFE0));
@@ -616,7 +636,8 @@ const p4_game_descriptor_t p4_solitaire_game = {
     .subtitle = "ORIGINAL KLONDIKE",
     .accent_rgb565 = UINT16_C(0x07E0),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,
+    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
+                             P4_GAME_CAP_AUDIO_STREAM,
     .state_bytes = sizeof(solitaire_state_t),
     .start = game_start,
     .update = game_update,

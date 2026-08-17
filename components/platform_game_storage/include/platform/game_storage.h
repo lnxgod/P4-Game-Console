@@ -16,6 +16,10 @@ extern "C" {
 
 #define PLATFORM_GAME_STORAGE_PARTITION_LABEL "game_data"
 #define PLATFORM_GAME_STORAGE_MOUNT_POINT "/game-data"
+#define PLATFORM_GAME_STORAGE_GAMES_DIRECTORY_NAME "GAMES"
+#define PLATFORM_GAME_STORAGE_GAMES_MOUNT_POINT \
+    PLATFORM_GAME_STORAGE_MOUNT_POINT "/" \
+    PLATFORM_GAME_STORAGE_GAMES_DIRECTORY_NAME
 #define PLATFORM_GAME_STORAGE_UPDATE_DIRECTORY_NAME "UPDATE"
 #define PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT \
     PLATFORM_GAME_STORAGE_MOUNT_POINT "/" \
@@ -84,6 +88,10 @@ esp_err_t platform_game_storage_get_status(
 esp_err_t platform_game_storage_list_root(
     platform_game_storage_file_listing_t *out_listing);
 
+/** List the bounded, sorted contents of the fixed GAMES directory. */
+esp_err_t platform_game_storage_list_games(
+    platform_game_storage_file_listing_t *out_listing);
+
 /**
  * Remove one regular file from the FAT root while the app owns it.
  *
@@ -93,11 +101,19 @@ esp_err_t platform_game_storage_list_root(
  */
 esp_err_t platform_game_storage_remove_root_file(const char *name);
 
+/** Remove one regular file from the fixed GAMES directory. */
+esp_err_t platform_game_storage_remove_game_file(const char *name);
+
 /**
  * Read one bounded regular root file into PSRAM (or internal RAM fallback).
  * The returned allocation must be released with the matching function.
  */
 esp_err_t platform_game_storage_load_root_file(
+    const char *name, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes);
+
+/** Read one bounded regular file from the fixed GAMES directory. */
+esp_err_t platform_game_storage_load_game_file(
     const char *name, size_t maximum_bytes,
     uint8_t **out_data, size_t *out_size_bytes);
 

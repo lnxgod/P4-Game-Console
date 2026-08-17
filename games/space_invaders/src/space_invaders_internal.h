@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "p4/audio_pack.h"
+
 enum {
     SPACE_INVADER_ROWS = 4,
     SPACE_INVADER_COLUMNS = 8,
@@ -32,6 +34,7 @@ typedef struct {
     uint32_t respawn_ms;
     uint32_t wave_delay_ms;
     uint32_t held_buttons;
+    p4_game_audio_effect_player_t audio;
     int16_t formation_x;
     int16_t formation_y;
     int16_t player_x;

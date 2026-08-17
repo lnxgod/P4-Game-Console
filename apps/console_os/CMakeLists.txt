@@ -161,7 +161,13 @@ set(P4_PACKAGE_SCRIPT
 set(P4_CARTRIDGE_COMMON_SOURCES
     "${P4_PACKAGE_SCRIPT}"
     "${CMAKE_CURRENT_LIST_DIR}/../../game-platform/runtime/cartridge_main.c"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/audio_pack.h"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/feedback.h"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/audio_pack.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/draw.c"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/feedback.c"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/generated/audio_pack.inc"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/generated/feedback_atlas.inc"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/game_runtime.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/input.c"
 )
@@ -170,7 +176,7 @@ function(p4_add_seed_game PACKAGE_NAME GAME_NAME)
     set(P4_GAME_DIR
         "${P4_REPOSITORY_ROOT}/games/${GAME_NAME}")
     set(P4_PACKAGE_OUTPUT
-        "${P4_GAME_STORAGE_SEED_DIR}/${PACKAGE_NAME}")
+        "${P4_GAME_STORAGE_SEED_DIR}/GAMES/${PACKAGE_NAME}")
     file(GLOB_RECURSE P4_GAME_SOURCES CONFIGURE_DEPENDS
         "${P4_GAME_DIR}/*.c" "${P4_GAME_DIR}/*.h")
     add_custom_command(
@@ -219,7 +225,7 @@ add_custom_target(p4_game_packages ALL DEPENDS ${P4_SEEDED_GAME_PACKAGES})
 # on storage takes precedence at runtime, making the fallback replaceable
 # without changing the firmware image.
 set(P4_DEFAULT_GAME_PACKAGE
-    "${P4_GAME_STORAGE_SEED_DIR}/BYTEBUD.P4G")
+    "${P4_GAME_STORAGE_SEED_DIR}/GAMES/BYTEBUD.P4G")
 target_add_binary_data(
     ${CMAKE_PROJECT_NAME}.elf
     "${P4_DEFAULT_GAME_PACKAGE}"
