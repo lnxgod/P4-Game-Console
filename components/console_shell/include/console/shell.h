@@ -8,6 +8,7 @@
 #include <stdint.h>
 
 #include "p4/achievements.h"
+#include "p4/desktop.h"
 
 #if defined(ESP_PLATFORM) && !defined(CONSOLE_SHELL_TARGET_WIDTH)
 #include "sdkconfig.h"
@@ -79,8 +80,13 @@ typedef enum {
     CONSOLE_PAGE_SYSTEM,
     CONSOLE_PAGE_FILES,
     CONSOLE_PAGE_GAMES,
+    /** Compatibility name used by the PC desktop host. */
+    CONSOLE_PAGE_LIBRARY = CONSOLE_PAGE_GAMES,
     CONSOLE_PAGE_AUDIO,
     CONSOLE_PAGE_ACHIEVEMENTS,
+    CONSOLE_PAGE_MULTIPLAYER,
+    CONSOLE_PAGE_SAVES,
+    CONSOLE_PAGE_TERMINAL,
 } console_page_t;
 
 /** Shell-only palettes; games retain full control of their own colors. */
@@ -120,12 +126,20 @@ typedef enum {
     CONSOLE_STORAGE_FAULT,
 } console_shell_storage_state_t;
 
+typedef enum {
+    CONSOLE_BOARD_ELECROW_10 = 0,
+    CONSOLE_BOARD_OLIMEX_P4_PC,
+    CONSOLE_BOARD_WAVESHARE_4_3,
+    CONSOLE_BOARD_HOST_PREVIEW,
+} console_shell_board_kind_t;
+
 typedef struct {
     uint32_t uptime_seconds;
     uint32_t internal_free_kib;
     uint32_t psram_free_kib;
     uint32_t game_storage_kib;
     console_shell_storage_state_t game_storage_state;
+    console_shell_board_kind_t board_kind;
     bool touch_ready;
     bool controller_ready;
     bool keyboard_ready;
@@ -134,6 +148,12 @@ typedef struct {
     bool audio_handoff_ready;
     bool game_storage_usb_attached;
     bool doom_wad_ready;
+    bool content_scan_complete;
+    bool usb_content_ready;
+    bool multiplayer_core_ready;
+    bool physical_keyboard_ready;
+    uint16_t valid_cart_count;
+    uint16_t builtin_game_count;
 } console_shell_runtime_info_t;
 
 typedef struct {
@@ -207,6 +227,9 @@ typedef struct {
     uint32_t active_app_id;
     console_color_mode_t color_mode;
     p4_achievement_catalog_t achievements;
+    p4_file_list_t desktop_files;
+    p4_save_catalog_t saves;
+    p4_terminal_t terminal;
     console_shell_file_listing_t files;
     size_t file_selected_index;
     size_t file_first_visible;
@@ -277,6 +300,19 @@ void console_shell_set_runtime_info(
 bool console_shell_set_file_listing(
     console_shell_t *shell,
     const console_shell_file_listing_t *listing);
+
+/** Replace File Manager contents with a sorted desktop-service snapshot. */
+bool console_shell_set_file_list(
+    console_shell_t *shell,
+    const p4_file_list_t *files);
+
+/** Replace the bounded, OS-owned save-slot metadata snapshot. */
+bool console_shell_set_save_catalog(
+    console_shell_t *shell,
+    const p4_save_catalog_t *saves);
+
+/** Feed one sanitized physical or on-screen key to the Terminal page. */
+bool console_shell_handle_text_key(console_shell_t *shell, char key);
 
 /** Set the result banner after a refresh or confirmed file operation. */
 void console_shell_set_file_notice(

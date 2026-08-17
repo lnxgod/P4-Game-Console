@@ -208,8 +208,9 @@ def readme_text(title: str, folder: str) -> str:
 This starter is a native P4 Game API v1 component. Edit the file in `src/`,
 then run `make game-sdk-host` and `make console-os-idf` from the repository
 root. The build discovers `game.json` automatically and creates a `.P4G`
-cartridge under `apps/console_os/build/game-storage-seed/`. Copy that file to
-the `P4 GAMES` USB volume and eject it; the launcher places the game under
+cartridge under `apps/console_os/build/game-storage-seed/GAMES/`. Copy that
+file into the `GAMES` directory on the `P4 GAMES` USB volume and eject it; the
+launcher places the game under
 `{folder}` without an OS reflash.
 
 Use only the `p4/` headers for display, controls, drawing, and sound. Keep

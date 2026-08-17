@@ -634,10 +634,10 @@ static bool game_render(p4_game_context_t *context,
     }
     draw_shields(surface, state);
     draw_projectiles(surface, state);
-    p4_game_feedback_draw(
-        surface, state->game_over ? P4_GAME_FX_FAIL : P4_GAME_FX_ACTION,
+    p4_game_feedback_draw_audio_effect(
+        surface, &state->audio,
         state->game_over ? 160 : state->player_x,
-        state->game_over ? 88 : SPACE_PLAYER_Y - 4, context->frame_index);
+        state->game_over ? 88 : SPACE_PLAYER_Y - 4);
     draw_player(surface, state);
     p4_game_draw_standard_controls(
         surface, UINT16_C(0x4208), UINT16_C(0x07ff), state->held_buttons);

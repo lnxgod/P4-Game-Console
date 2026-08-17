@@ -553,11 +553,10 @@ static bool game_render(p4_game_context_t *context,
     }
     if (state->respawn_ms == 0U ||
         ((state->respawn_ms / 100U) & 1U) == 0U) {
-        p4_game_feedback_draw(
-            surface, state->game_over ? P4_GAME_FX_FAIL : P4_GAME_FX_ACTION,
+        p4_game_feedback_draw_audio_effect(
+            surface, &state->audio,
             state->game_over ? 160 : state->frog_x,
-            state->game_over ? 92 : row_top(state->frog_row) + 7,
-            context->frame_index);
+            state->game_over ? 92 : row_top(state->frog_row) + 7);
         draw_frame(surface, state->frog_x - FRAME_WIDTH / 2,
                    row_top(state->frog_row) - 5, FROG_ROW,
                    state->animation_frame);

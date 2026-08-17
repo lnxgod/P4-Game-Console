@@ -204,7 +204,8 @@ def main() -> None:
     for manifest_path in sorted((ROOT / "games").glob("*/game.json")):
         manifest = read_json(manifest_path)
         if manifest.get("enabled") is True:
-            games.append(verify_game(bundle / manifest["package_file"], manifest))
+            games.append(verify_game(
+                bundle / "GAMES" / manifest["package_file"], manifest))
     expected_games = read_json(APP / "app-metadata.json")[
         "native_game_api"]["seed_packages"]
     require([game["file"] for game in games] == expected_games,

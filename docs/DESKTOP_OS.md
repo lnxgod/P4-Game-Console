@@ -9,9 +9,9 @@ the UI has no bitmap-theme dependency.
 
 - File Manager receives a bounded OS-owned catalog, lists file type and binary
   size, and sorts by name, type, or size in either direction.
-- Game Manager distinguishes firmware-linked built-ins from validated P4 Cart
-  files. Built-ins are read-only and carts remain data until the sandboxed
-  cartridge runtime exists.
+- Game Manager distinguishes firmware-linked built-ins from validated
+  `GAMES/*.P4G` cartridges. The directory is scanned at boot and after refresh;
+  root `.P4G` files remain a compatibility fallback for older cards.
 - Save Manager owns a bounded eight-slot metadata model with total-size and
   write-capability state. No game receives a filesystem handle.
 - Terminal has bounded input/scrollback, a touch QWERTY keyboard, a sanitized
@@ -31,8 +31,8 @@ The planned writable namespace is fixed and non-recursive at each management
 boundary:
 
 ```text
-/P4/GAMES/<validated-name>.P4CART
-/P4/SAVES/<game-id>/<slot>.P4SAVE
+/GAMES/<validated-name>.P4G
+/SAVES/<game-id>/<slot>.P4SAVE
 ```
 
 Every future mutation must be implemented by an OS service, not by shell or

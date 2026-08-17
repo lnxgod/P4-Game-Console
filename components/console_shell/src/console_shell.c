@@ -3,6 +3,7 @@
 #include "console/shell.h"
 
 #include <limits.h>
+#include <stdio.h>
 #include <string.h>
 
 enum {
@@ -182,7 +183,16 @@ enum {
     FILE_DELETE_CONTROL,
     FILE_CANCEL_CONTROL,
     FILE_CONFIRM_CONTROL,
+    TERMINAL_KEY_CONTROL_BASE,
+    TERMINAL_LETTER_KEY_COUNT = 26,
+    TERMINAL_SPACE_CONTROL =
+        TERMINAL_KEY_CONTROL_BASE + TERMINAL_LETTER_KEY_COUNT,
+    TERMINAL_BACKSPACE_CONTROL,
+    TERMINAL_ENTER_CONTROL,
+    TERMINAL_KEY_CONTROL_LIMIT,
 };
+
+static const char s_terminal_keys[] = "QWERTYUIOPASDFGHJKLZXCVBNM";
 
 static size_t bounded_length(const char *text, size_t limit)
 {
@@ -244,7 +254,7 @@ static bool folder_path_is_valid(const char *path)
 static bool valid_page(console_page_t page)
 {
     return page >= CONSOLE_PAGE_EXTERNAL &&
-        page <= CONSOLE_PAGE_ACHIEVEMENTS;
+        page <= CONSOLE_PAGE_TERMINAL;
 }
 
 static bool registry_is_valid(const console_app_descriptor_t *apps,
@@ -296,6 +306,9 @@ bool console_shell_init(console_shell_t *shell,
     shell->page = CONSOLE_PAGE_HOME;
     shell->color_mode = CONSOLE_COLOR_MODE_GAMECHANGERS;
     p4_achievement_catalog_init(&shell->achievements);
+    p4_file_list_init(&shell->desktop_files);
+    p4_save_catalog_init(&shell->saves, false);
+    p4_terminal_init(&shell->terminal, false);
     shell->dirty = true;
     for (size_t i = 0U; i < app_count; ++i) {
         if (apps[i].enabled) {
@@ -643,6 +656,42 @@ static int color_mode_tile_top(size_t mode_index)
         (COLOR_MODE_HEIGHT + COLOR_MODE_ROW_GAP);
 }
 
+static size_t terminal_control_at(uint16_t gui_x, uint16_t gui_y)
+{
+    for (size_t index = 0U; index < TERMINAL_LETTER_KEY_COUNT; ++index) {
+        unsigned row = 0U;
+        unsigned column = 0U;
+        unsigned left = 8U;
+        unsigned top = 111U;
+        if (index >= 19U) {
+            row = 2U;
+            column = (unsigned)(index - 19U);
+            left = 53U;
+        } else if (index >= 10U) {
+            row = 1U;
+            column = (unsigned)(index - 10U);
+            left = 23U;
+        } else {
+            column = (unsigned)index;
+        }
+        top += row * 21U;
+        if (point_in_rect(gui_x, gui_y, left + column * 30U,
+                          top, 28U, 18U)) {
+            return TERMINAL_KEY_CONTROL_BASE + index;
+        }
+    }
+    if (point_in_rect(gui_x, gui_y, 8U, 174U, 170U, 20U)) {
+        return TERMINAL_SPACE_CONTROL;
+    }
+    if (point_in_rect(gui_x, gui_y, 182U, 174U, 60U, 20U)) {
+        return TERMINAL_BACKSPACE_CONTROL;
+    }
+    if (point_in_rect(gui_x, gui_y, 246U, 174U, 66U, 20U)) {
+        return TERMINAL_ENTER_CONTROL;
+    }
+    return SIZE_MAX;
+}
+
 static size_t control_at(const console_shell_t *shell,
                          uint16_t gui_x,
                          uint16_t gui_y)
@@ -663,6 +712,9 @@ static size_t control_at(const console_shell_t *shell,
                     return COLOR_MODE_CONTROL_BASE + mode;
                 }
             }
+        }
+        if (shell->page == CONSOLE_PAGE_TERMINAL) {
+            return terminal_control_at(gui_x, gui_y);
         }
         if (shell->page != CONSOLE_PAGE_FILES &&
             shell->page != CONSOLE_PAGE_GAMES) {
@@ -1102,6 +1154,65 @@ console_shell_action_t console_shell_handle_buttons(
     return no_action();
 }
 
+bool console_shell_handle_text_key(console_shell_t *shell, char key)
+{
+    if (shell == NULL || shell->page != CONSOLE_PAGE_TERMINAL) {
+        return false;
+    }
+    bool changed = false;
+    if (key == '\b' || key == 127) {
+        changed = p4_terminal_backspace(&shell->terminal);
+    } else if (key == '\n' || key == '\r') {
+        const p4_terminal_command_t command =
+            p4_terminal_submit(&shell->terminal);
+        changed = command != P4_TERMINAL_COMMAND_NONE;
+        char response[P4_TERMINAL_LINE_BYTES];
+        switch (command) {
+        case P4_TERMINAL_COMMAND_STATUS:
+            (void)snprintf(response, sizeof(response),
+                           "STORAGE %s  AUDIO %s",
+                           shell->runtime.game_storage_state ==
+                                   CONSOLE_STORAGE_READY
+                               ? "READY" : "OFFLINE",
+                           shell->runtime.audio_handoff_ready
+                               ? "READY" : "OFFLINE");
+            p4_terminal_write_line(&shell->terminal, response);
+            break;
+        case P4_TERMINAL_COMMAND_GAMES:
+            (void)snprintf(response, sizeof(response),
+                           "%u CARTS + %u BUILTINS",
+                           (unsigned)shell->runtime.valid_cart_count,
+                           (unsigned)shell->runtime.builtin_game_count);
+            p4_terminal_write_line(&shell->terminal, response);
+            break;
+        case P4_TERMINAL_COMMAND_FILES:
+            (void)snprintf(response, sizeof(response),
+                           "%u FILES  SORT %s",
+                           (unsigned)shell->desktop_files.count,
+                           shell->desktop_files.sort == P4_FILE_SORT_SIZE
+                               ? "SIZE"
+                               : (shell->desktop_files.sort ==
+                                      P4_FILE_SORT_TYPE
+                                      ? "TYPE" : "NAME"));
+            p4_terminal_write_line(&shell->terminal, response);
+            break;
+        case P4_TERMINAL_COMMAND_NONE:
+        case P4_TERMINAL_COMMAND_HELP:
+        case P4_TERMINAL_COMMAND_CLEAR:
+        case P4_TERMINAL_COMMAND_SSH:
+        case P4_TERMINAL_COMMAND_UNKNOWN:
+        default:
+            break;
+        }
+    } else {
+        changed = p4_terminal_input_char(&shell->terminal, key);
+    }
+    if (changed) {
+        shell->dirty = true;
+    }
+    return changed;
+}
+
 static bool update_home_drag(console_shell_t *shell,
                              uint16_t gui_x,
                              uint16_t gui_y)
@@ -1225,6 +1336,25 @@ console_shell_action_t console_shell_handle_touch(
                 .color_mode = requested,
             };
             return action;
+        }
+        if (shell->page == CONSOLE_PAGE_TERMINAL &&
+            released_control >= TERMINAL_KEY_CONTROL_BASE &&
+            released_control < TERMINAL_KEY_CONTROL_LIMIT) {
+            char key = '\0';
+            if (released_control < TERMINAL_SPACE_CONTROL) {
+                key = s_terminal_keys[
+                    released_control - TERMINAL_KEY_CONTROL_BASE];
+            } else if (released_control == TERMINAL_SPACE_CONTROL) {
+                key = ' ';
+            } else if (released_control == TERMINAL_BACKSPACE_CONTROL) {
+                key = '\b';
+            } else if (released_control == TERMINAL_ENTER_CONTROL) {
+                key = '\n';
+            }
+            if (key != '\0' && console_shell_handle_text_key(shell, key)) {
+                return page_changed(shell->active_app_id);
+            }
+            return no_action();
         }
         if (shell->page == CONSOLE_PAGE_FILES ||
             shell->page == CONSOLE_PAGE_GAMES) {
@@ -1424,6 +1554,7 @@ void console_shell_set_runtime_info(
         shell->runtime.psram_free_kib != runtime->psram_free_kib ||
         shell->runtime.game_storage_kib != runtime->game_storage_kib ||
         shell->runtime.game_storage_state != runtime->game_storage_state ||
+        shell->runtime.board_kind != runtime->board_kind ||
         shell->runtime.touch_ready != runtime->touch_ready ||
         shell->runtime.controller_ready != runtime->controller_ready ||
         shell->runtime.keyboard_ready != runtime->keyboard_ready ||
@@ -1432,7 +1563,16 @@ void console_shell_set_runtime_info(
         shell->runtime.audio_handoff_ready != runtime->audio_handoff_ready ||
         shell->runtime.game_storage_usb_attached !=
             runtime->game_storage_usb_attached ||
-        shell->runtime.doom_wad_ready != runtime->doom_wad_ready;
+        shell->runtime.doom_wad_ready != runtime->doom_wad_ready ||
+        shell->runtime.content_scan_complete !=
+            runtime->content_scan_complete ||
+        shell->runtime.usb_content_ready != runtime->usb_content_ready ||
+        shell->runtime.multiplayer_core_ready !=
+            runtime->multiplayer_core_ready ||
+        shell->runtime.physical_keyboard_ready !=
+            runtime->physical_keyboard_ready ||
+        shell->runtime.valid_cart_count != runtime->valid_cart_count ||
+        shell->runtime.builtin_game_count != runtime->builtin_game_count;
     if (!changed) {
         return;
     }
@@ -1447,6 +1587,8 @@ void console_shell_set_runtime_info(
         shell->page == CONSOLE_PAGE_FILES ||
         shell->page == CONSOLE_PAGE_GAMES ||
         shell->page == CONSOLE_PAGE_AUDIO ||
+        shell->page == CONSOLE_PAGE_MULTIPLAYER ||
+        shell->page == CONSOLE_PAGE_TERMINAL ||
         (shell->page == CONSOLE_PAGE_HOME && storage_changed)) {
         shell->dirty = true;
     }
@@ -1504,6 +1646,78 @@ bool console_shell_set_file_listing(
     normalize_file_selection(shell);
     if (shell->page == CONSOLE_PAGE_FILES ||
         shell->page == CONSOLE_PAGE_GAMES) {
+        shell->dirty = true;
+    }
+    return true;
+}
+
+bool console_shell_set_file_list(
+    console_shell_t *shell,
+    const p4_file_list_t *files)
+{
+    if (shell == NULL || files == NULL ||
+        files->count > P4_DESKTOP_MAX_FILES ||
+        files->count > CONSOLE_SHELL_FILE_MAX_ENTRIES ||
+        files->sort < P4_FILE_SORT_NAME || files->sort > P4_FILE_SORT_TYPE) {
+        return false;
+    }
+    console_shell_file_listing_t listing = {
+        .entry_count = files->count,
+        .total_visible_entries = (uint32_t)files->count,
+        .omitted_entries = files->truncated ? 1U : 0U,
+        .revision = shell->files.revision + 1U,
+        .available = true,
+    };
+    for (size_t index = 0U; index < files->count; ++index) {
+        const p4_file_entry_t *const source = &files->entries[index];
+        const size_t name_length = bounded_length(
+            source->name, P4_DESKTOP_FILE_NAME_BYTES);
+        if (name_length == 0U || name_length >= P4_DESKTOP_FILE_NAME_BYTES ||
+            source->kind < P4_FILE_KIND_FOLDER ||
+            source->kind > P4_FILE_KIND_OTHER) {
+            return false;
+        }
+        console_shell_file_entry_t *const target = &listing.entries[index];
+        target->source_index = (uint32_t)index;
+        const size_t copied = name_length < sizeof(target->label) - 1U
+            ? name_length : sizeof(target->label) - 1U;
+        memcpy(target->label, source->name, copied);
+        target->label[copied] = '\0';
+        const uint64_t size_kib = source->size_bytes / UINT64_C(1024) +
+            (source->size_bytes % UINT64_C(1024) != 0U ? 1U : 0U);
+        target->size_kib = size_kib > UINT32_MAX
+            ? UINT32_MAX : (uint32_t)size_kib;
+        target->is_directory = source->kind == P4_FILE_KIND_FOLDER;
+        target->removable = !target->is_directory && !source->read_only;
+    }
+    shell->desktop_files = *files;
+    return console_shell_set_file_listing(shell, &listing);
+}
+
+bool console_shell_set_save_catalog(
+    console_shell_t *shell,
+    const p4_save_catalog_t *saves)
+{
+    if (shell == NULL || saves == NULL ||
+        saves->count > P4_DESKTOP_MAX_SAVE_SLOTS) {
+        return false;
+    }
+    for (size_t index = 0U; index < saves->count; ++index) {
+        const p4_save_slot_t *const slot = &saves->slots[index];
+        const size_t game_id_length = bounded_length(
+            slot->game_id, P4_DESKTOP_SAVE_GAME_ID_BYTES);
+        const size_t slot_name_length = bounded_length(
+            slot->slot_name, P4_DESKTOP_SAVE_SLOT_NAME_BYTES);
+        if (!slot->valid ||
+            game_id_length == 0U ||
+            game_id_length >= P4_DESKTOP_SAVE_GAME_ID_BYTES ||
+            slot_name_length == 0U ||
+            slot_name_length >= P4_DESKTOP_SAVE_SLOT_NAME_BYTES) {
+            return false;
+        }
+    }
+    shell->saves = *saves;
+    if (shell->page == CONSOLE_PAGE_SAVES) {
         shell->dirty = true;
     }
     return true;
@@ -2100,15 +2314,25 @@ static void draw_touch(const console_shell_t *shell,
 static void draw_system(const console_shell_t *shell,
                         uint16_t *pixels, size_t stride)
 {
-    const bool gamepad_board = shell->runtime.sd_card_storage;
+    const bool gamepad_board =
+        shell->runtime.board_kind == CONSOLE_BOARD_OLIMEX_P4_PC;
+    const char *board_name = "ELECROW 10 IN VARIANT";
+    const char *soc_name = "ESP32-P4 V1.3";
+    if (shell->runtime.board_kind == CONSOLE_BOARD_OLIMEX_P4_PC) {
+        board_name = "OLIMEX ESP32-P4-PC REV.B";
+        soc_name = "ESP32-P4NRW32";
+    } else if (shell->runtime.board_kind == CONSOLE_BOARD_WAVESHARE_4_3) {
+        board_name = "WAVESHARE P4 LCD 4.3";
+        soc_name = "ESP32-P4NRW32";
+    } else if (shell->runtime.board_kind == CONSOLE_BOARD_HOST_PREVIEW) {
+        board_name = "PC 768X480 PREVIEW";
+        soc_name = "HOST SDL3";
+    }
     draw_text(pixels, stride, 12, 37, "BOARD", COLOR_MUTED, 1U, 5U);
-    draw_text(pixels, stride, 76, 37,
-              gamepad_board ? "OLIMEX ESP32-P4-PC REV.B"
-                            : "ELECROW 10 IN VARIANT",
-              COLOR_WHITE, 1U, gamepad_board ? 23U : 21U);
+    draw_text(pixels, stride, 76, 37, board_name,
+              COLOR_WHITE, 1U, 23U);
     draw_text(pixels, stride, 12, 53, "SOC", COLOR_MUTED, 1U, 3U);
-    draw_text(pixels, stride, 112, 53,
-              gamepad_board ? "ESP32-P4NRW32" : "ESP32-P4 V1.3",
+    draw_text(pixels, stride, 112, 53, soc_name,
               COLOR_WHITE, 1U, 13U);
     draw_text(pixels, stride, 12, 69, "RTOS", COLOR_MUTED, 1U, 4U);
     draw_text(pixels, stride, 112, 69, "FREERTOS / IDF 5.5.3",
@@ -2456,6 +2680,130 @@ static void draw_achievements(const console_shell_t *shell,
               "PERSISTENCE ARRIVES WITH SAVES", COLOR_MUTED, 1U, 32U);
 }
 
+static void draw_multiplayer(const console_shell_t *shell,
+                             uint16_t *pixels, size_t stride)
+{
+    draw_text(pixels, stride, 12, 40, "MULTIPLAYER CORE",
+              COLOR_WHITE, 1U, 16U);
+    draw_text(pixels, stride, 12, 58,
+              shell->runtime.multiplayer_core_ready ? "READY" : "OFFLINE",
+              shell->runtime.multiplayer_core_ready ? COLOR_GREEN : COLOR_RED,
+              2U, 7U);
+    draw_text(pixels, stride, 12, 84, "PLAYERS", COLOR_MUTED, 1U, 7U);
+    draw_text(pixels, stride, 112, 84, "1 LOCAL / 4 MAX",
+              COLOR_YELLOW, 1U, 15U);
+    draw_text(pixels, stride, 12, 102, "INPUT MODEL", COLOR_MUTED, 1U, 11U);
+    draw_text(pixels, stride, 112, 102, "TICK + STATE HASH",
+              COLOR_WHITE, 1U, 17U);
+    draw_text(pixels, stride, 12, 120, "DISCONNECT", COLOR_MUTED, 1U, 10U);
+    draw_text(pixels, stride, 112, 120, "NEUTRALIZES PLAYER",
+              COLOR_GREEN, 1U, 18U);
+    draw_text(pixels, stride, 12, 151, "LAN TRANSPORT OFFLINE",
+              COLOR_YELLOW, 1U, 21U);
+    draw_text(pixels, stride, 12, 172,
+              "GAMES USE OS SESSION API", COLOR_CYAN, 1U, 24U);
+    draw_text(pixels, stride, 12, 188,
+              "NO RAW SOCKETS IN GAMES", COLOR_MUTED, 1U, 23U);
+}
+
+static void draw_saves(const console_shell_t *shell,
+                       uint16_t *pixels, size_t stride)
+{
+    fill_rect(pixels, stride, 0, 32, CONSOLE_SHELL_WIDTH,
+              CONSOLE_SHELL_HEIGHT - 32, COLOR_FACE);
+    draw_text(pixels, stride, 12, 38, "SAVE SLOT", COLOR_DARK, 1U, 9U);
+    draw_text(pixels, stride, 246, 38, "SIZE", COLOR_DARK, 1U, 4U);
+    if (shell->saves.count == 0U) {
+        draw_centered_text(pixels, stride, 28, 83, 264,
+                           "NO SAVE GAMES YET", COLOR_TITLE, 17U);
+        draw_centered_text(pixels, stride, 28, 103, 264,
+                           "GAMES OWN DATA THROUGH OS API",
+                           COLOR_DARK, 29U);
+    } else {
+        const size_t visible = shell->saves.count < 5U
+            ? shell->saves.count : 5U;
+        for (size_t index = 0U; index < visible; ++index) {
+            const p4_save_slot_t *const slot = &shell->saves.slots[index];
+            const int top = 51 + (int)index * 23;
+            fill_rect(pixels, stride, 8, top, 304, 20, COLOR_GROUP);
+            outline_rect(pixels, stride, 8, top, 304, 20, COLOR_SHADOW);
+            draw_text(pixels, stride, 14, top + 4, slot->slot_name,
+                      COLOR_BLACK, 1U, 18U);
+            draw_text(pixels, stride, 94, top + 4, slot->game_id,
+                      COLOR_DARK, 1U, 23U);
+            char size[16];
+            p4_format_file_size(slot->size_bytes, size);
+            draw_text(pixels, stride, 250, top + 4, size,
+                      COLOR_BLACK, 1U, 10U);
+        }
+    }
+    char total[16];
+    p4_format_file_size(shell->saves.total_bytes, total);
+    draw_text(pixels, stride, 10, 169, "TOTAL", COLOR_DARK, 1U, 5U);
+    draw_text(pixels, stride, 48, 169, total, COLOR_BLACK, 1U, 15U);
+    draw_text(pixels, stride, 180, 169,
+              shell->saves.writable ? "OS MANAGED" : "READ ONLY",
+              shell->saves.writable ? COLOR_GREEN : COLOR_RED, 1U, 10U);
+    draw_text(pixels, stride, 10, 187,
+              "NO GAME GETS A FILESYSTEM HANDLE", COLOR_DARK, 1U, 33U);
+}
+
+static void draw_terminal_key(const console_shell_t *shell,
+                              uint16_t *pixels, size_t stride,
+                              int left, int top, int width,
+                              size_t control, const char *label)
+{
+    const bool pressed = shell->press_active &&
+        shell->pressed_index == control;
+    bevel_rect(pixels, stride, left, top, width, 18, COLOR_FACE, pressed);
+    draw_centered_text(pixels, stride, left, top + 6, width,
+                       label, COLOR_BLACK, 6U);
+}
+
+static void draw_terminal(const console_shell_t *shell,
+                          uint16_t *pixels, size_t stride)
+{
+    fill_rect(pixels, stride, 0, 32, CONSOLE_SHELL_WIDTH,
+              CONSOLE_SHELL_HEIGHT - 32, COLOR_BLACK);
+    for (size_t index = 0U; index < shell->terminal.line_count; ++index) {
+        draw_text(pixels, stride, 8, 36 + (int)index * 10,
+                  shell->terminal.lines[index], COLOR_MUTED, 1U, 47U);
+    }
+    fill_rect(pixels, stride, 6, 88, 308, 18, COLOR_PANEL);
+    outline_rect(pixels, stride, 6, 88, 308, 18, COLOR_CYAN);
+    draw_text(pixels, stride, 10, 94, ">", COLOR_GREEN, 1U, 1U);
+    draw_text(pixels, stride, 20, 94, shell->terminal.input,
+              COLOR_WHITE, 1U, 47U);
+
+    for (size_t index = 0U; index < TERMINAL_LETTER_KEY_COUNT; ++index) {
+        unsigned row = 0U;
+        unsigned column = 0U;
+        int left = 8;
+        if (index >= 19U) {
+            row = 2U;
+            column = (unsigned)(index - 19U);
+            left = 53;
+        } else if (index >= 10U) {
+            row = 1U;
+            column = (unsigned)(index - 10U);
+            left = 23;
+        } else {
+            column = (unsigned)index;
+        }
+        char label[2] = {s_terminal_keys[index], '\0'};
+        draw_terminal_key(shell, pixels, stride,
+                          left + (int)column * 30,
+                          111 + (int)row * 21, 28,
+                          TERMINAL_KEY_CONTROL_BASE + index, label);
+    }
+    draw_terminal_key(shell, pixels, stride, 8, 174, 170,
+                      TERMINAL_SPACE_CONTROL, "SPACE");
+    draw_terminal_key(shell, pixels, stride, 182, 174, 60,
+                      TERMINAL_BACKSPACE_CONTROL, "BACK");
+    draw_terminal_key(shell, pixels, stride, 246, 174, 66,
+                      TERMINAL_ENTER_CONTROL, "ENTER");
+}
+
 bool console_shell_render_rgb565(console_shell_t *shell,
                                  uint16_t *pixels,
                                  size_t stride_pixels)
@@ -2492,6 +2840,15 @@ bool console_shell_render_rgb565(console_shell_t *shell,
             break;
         case CONSOLE_PAGE_ACHIEVEMENTS:
             draw_achievements(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_MULTIPLAYER:
+            draw_multiplayer(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_SAVES:
+            draw_saves(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_TERMINAL:
+            draw_terminal(shell, pixels, stride_pixels);
             break;
         case CONSOLE_PAGE_EXTERNAL:
             draw_text(pixels, stride_pixels, 12, 60,

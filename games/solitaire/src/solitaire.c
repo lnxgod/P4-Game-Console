@@ -604,12 +604,11 @@ static bool game_render(p4_game_context_t *context,
     }
     draw_selection(state, surface);
     draw_cursor(state, surface);
-    p4_game_feedback_draw(
-        surface, state->won ? P4_GAME_FX_REWARD : P4_GAME_FX_ACTION,
+    p4_game_feedback_draw_audio_effect(
+        surface, &state->audio,
         state->won ? 160 : card_x(state->cursor_column) + CARD_WIDTH / 2,
         state->won ? 100 :
-        (state->cursor_area == CURSOR_TOP ? CARD_TOP + CARD_HEIGHT / 2 : 100),
-        context->frame_index);
+        (state->cursor_area == CURSOR_TOP ? CARD_TOP + CARD_HEIGHT / 2 : 100));
     if (state->won) {
         p4_draw_fill_rect(surface, 70, 76, 180, 48, UINT16_C(0x0010));
         p4_draw_rect(surface, 70, 76, 180, 48, UINT16_C(0xFFE0));

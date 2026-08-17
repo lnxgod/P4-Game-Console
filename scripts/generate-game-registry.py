@@ -106,7 +106,7 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
         fail(path, "version must fit in 15 ASCII bytes")
     if (not isinstance(package_file, str) or
             not PACKAGE_RE.fullmatch(package_file)):
-        fail(path, "package_file must be an uppercase root .P4G name")
+        fail(path, "package_file must be an uppercase .P4G basename")
     bounded_text(value, path, "title", 16)
     bounded_text(value, path, "subtitle", 32)
     folder = bounded_text(value, path, "folder", 32)

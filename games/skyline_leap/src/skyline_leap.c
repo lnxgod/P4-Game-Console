@@ -741,12 +741,10 @@ static bool game_render(p4_game_context_t *context,
         return true;
     }
     draw_stage(surface, state);
-    p4_game_feedback_draw(
-        surface, state->game_over ? P4_GAME_FX_FAIL :
-        (state->finale ? P4_GAME_FX_REWARD : P4_GAME_FX_ACTION),
+    p4_game_feedback_draw_audio_effect(
+        surface, &state->audio,
         state->game_over || state->finale ? 160 : state->player_x,
-        state->game_over || state->finale ? 94 : state->player_y + 9,
-        context->frame_index);
+        state->game_over || state->finale ? 94 : state->player_y + 9);
     if (state->paused) {
         draw_center_panel(surface, "PAUSED", "START TO RESUME", COLOR_TEAL);
     } else if (state->clearing) {

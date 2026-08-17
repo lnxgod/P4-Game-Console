@@ -392,12 +392,10 @@ static bool game_render(p4_game_context_t *context,
                  BREAKOUT_FIELD_BOTTOM - BREAKOUT_FIELD_TOP,
                  UINT16_C(0x4208));
     draw_bricks(surface, state);
-    p4_game_feedback_draw(
-        surface, state->game_over ? P4_GAME_FX_FAIL :
-        (state->won ? P4_GAME_FX_REWARD : P4_GAME_FX_ACTION),
+    p4_game_feedback_draw_audio_effect(
+        surface, &state->audio,
         state->game_over || state->won ? 160 : state->ball_x,
-        state->game_over || state->won ? 88 : state->ball_y,
-        context->frame_index);
+        state->game_over || state->won ? 88 : state->ball_y);
     p4_draw_fill_rect(surface,
                       state->paddle_x - BREAKOUT_PADDLE_WIDTH / 2,
                       BREAKOUT_PADDLE_Y, BREAKOUT_PADDLE_WIDTH,

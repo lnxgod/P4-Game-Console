@@ -58,7 +58,7 @@ The current successor adds Game Manager, storage-loaded `.P4G` cartridges,
 an always-available embedded `BYTEBUD.P4G` fallback,
 and dual-slot `.P4U` OS updates while retaining the same window-manager
 renderer. Maze Chase and Space Invaders are no longer linked into the OS
-binary: they are 9 KiB-class seed packages copied to `P4 GAMES`. The app image
+binary: they are seed packages copied into `GAMES` on `P4 GAMES`. The app image
 is consequently under 1 MiB instead of carrying a duplicate 4.2 MiB Doom WAD.
 This successor is host-tested and build-verified; its one-time partition
 migration and cartridge launches still require the hardware record below.
@@ -87,8 +87,8 @@ loader with these substitutions:
 | Programming | J1 UART bridge | native USB-C Serial/JTAG | H1 CH343 UART bridge |
 
 For Olimex, build and verify once with `make console-os-olimex-idf`. The build
-creates `apps/console_os/build-olimex-esp32-p4-pc/sd-card/` with
-all enabled `.P4G` cartridges, the locally supplied exact shareware `DOOM1.WAD`,
+creates `apps/console_os/build-olimex-esp32-p4-pc/sd-card/` with all enabled
+`.P4G` cartridges under `GAMES/`, the locally supplied exact shareware `DOOM1.WAD`,
 and `UPDATE/P4UPDATE.P4U`. Power the board off and move the card to a laptop,
 then copy the known bundle with:
 
@@ -104,7 +104,7 @@ not a mass-storage endpoint.
 For Waveshare, run `make console-os-waveshare-idf`. Power the board off,
 move its card to the laptop, then run `make install-waveshare-sd-card
 SD_MOUNT=/Volumes/P4GAMES`. The same guarded installer copies all enabled
-packages (including `BYTEBUD.P4G`), verifies every hash, and leaves unrelated
+packages (including `GAMES/BYTEBUD.P4G`), verifies every hash, and leaves unrelated
 card data untouched. Live card writes and formatting remain forbidden.
 
 Olimex launcher controls are: D-pad or arrow/WASD to navigate, gamepad A or
@@ -128,9 +128,12 @@ boot
        |-- Games
        |     |-- Action -> Doom
        |     `-- Arcade -> embedded Byte Buddy plus installed P4G cartridges
-       |-- System -> diagnostics / Colors / Achievements / File Manager / Game Manager
+       |-- System -> diagnostics / Colors / Audio / Achievements
        |     |-- File Manager -> bounded root list / confirmed delete
-       |     `-- Game Manager -> package status / remove / OS update
+       |     |-- Game Manager -> scans GAMES/*.P4G / remove / OS update
+       |     |-- Save Manager -> bounded OS-owned slot catalog
+       |     |-- Multiplayer -> local session core / transport status
+       |     `-- Terminal -> local commands / touch or physical keyboard
        |-- storage cartridge selected
        |     -> reload, re-hash, validate, and relocate into PSRAM
        |     -> console retains display/touch ownership
@@ -198,7 +201,7 @@ To add another built-in app:
 To add a reentrant native game, run `scripts/new-game.py`, choose a bounded
 manifest path such as `GAMES/ARCADE`, and implement it against the headers in
 `components/p4_game_api/include/p4/`. The build emits one `.P4G` file. Copy it
-to `P4 GAMES` and eject J16; no OS installation is needed. See
+into `GAMES` on `P4 GAMES` and eject J16; no OS installation is needed. See
 `docs/GAME_SDK.md`.
 
 ## Sound behavior

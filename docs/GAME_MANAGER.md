@@ -7,7 +7,8 @@ filesystem simultaneously.
 
 ## Stored games
 
-Games are single `*.P4G` files in the volume root. Format
+Games are single `GAMES/*.P4G` files. Console OS scans the `GAMES` directory
+first, then accepts root `*.P4G` files from older cards for compatibility. Format
 `p4-native-elf-v1` consists of a fixed 256-byte little-endian header followed
 by one ESP32-P4 RISC-V ELF payload. The header contains bounded launcher
 metadata and the payload SHA-256. Firmware checks the complete layout, text
@@ -16,7 +17,7 @@ undefined-symbol allowlist before the Espressif ELF loader receives bytes.
 
 ELF text and data are relocated into PSRAM. A cartridge gets one versioned
 host table for sanitized input, the 320x200 RGB565 surface, presentation, and
-bounded tone audio. It never owns display, touch, audio, USB, or filesystem
+bounded tone/copied-PCM audio. It never owns display, touch, audio, USB, or filesystem
 handles. Native cartridges are not a security sandbox: structurally valid
 development packages can execute machine code. The Game Manager labels this
 trust level and rejects partial or corrupt copies.
@@ -25,8 +26,8 @@ The SHA-256 detects damaged or partially copied packages; it is not a digital
 signature. Kid-facing distribution should use one trusted catalog or an
 adult-controlled source until a signing-key policy is added.
 
-Install or update a game by copying/replacing its `.P4G` file while the laptop
-owns `P4 GAMES`, then ejecting the volume. The catalog is rebuilt only after
+Install or update a game by copying/replacing its `.P4G` file in `GAMES` while
+the laptop owns `P4 GAMES`, then ejecting the volume. The catalog is rebuilt only after
 the app regains ownership. Removal is a confirmed Game Manager action.
 
 ## Atomic OS updates
@@ -54,8 +55,8 @@ first frame successfully.
 The build emits the user-copyable artifacts together:
 
 ```text
-apps/console_os/build/game-storage-seed/MAZE.P4G
-apps/console_os/build/game-storage-seed/INVADERS.P4G
+apps/console_os/build/game-storage-seed/GAMES/MAZE.P4G
+apps/console_os/build/game-storage-seed/GAMES/INVADERS.P4G
 apps/console_os/build/P4UPDATE.P4U
 ```
 

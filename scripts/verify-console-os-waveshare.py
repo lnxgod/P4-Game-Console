@@ -158,7 +158,8 @@ def main() -> None:
             "project identity or silicon range differs")
     components = set(project.get("build_components", []))
     required_components = {
-        "board_deps_waveshare", "console_shell", "p4_game_api",
+        "board_deps_waveshare", "console_shell", "p4_desktop",
+        "p4_game_api", "p4_multiplayer",
         "platform_board", "platform_display", "platform_touch",
         "platform_game_catalog", "platform_game_loader",
         "platform_game_storage", "platform_os_update",
@@ -190,15 +191,19 @@ def main() -> None:
     require(partition.returncode == 0, "partition table cannot be decoded")
     for row in (
         "otadata,data,ota,0x10000,8K,",
-        "ota_0,app,ota_0,0x20000,8128K,",
-        "ota_1,app,ota_1,0x810000,8128K,",
+        "ota_0,app,ota_0,0x20000,3520K,",
+        "ota_1,app,ota_1,0x390000,3584K,",
+        "game_data,data,fat,0x710000,9152K,",
     ):
         require(row in partition.stdout, f"partition table is missing {row}")
 
     app = build / str(project["app_bin"])
-    require(app.is_file() and app.stat().st_size <= 0x7F0000,
+    require(app.is_file() and app.stat().st_size <= 0x370000,
             "application is missing or does not fit OTA")
     bundle = build / "sd-card"
+    require(sorted(item.name for item in bundle.iterdir()) ==
+            ["DOOM1.WAD", "GAMES", "README.TXT", "UPDATE"],
+            "SD bundle root differs")
     wad = bundle / "DOOM1.WAD"
     require(wad.is_file() and wad.stat().st_size == WAD_BYTES and
             sha256(wad) == WAD_SHA256, "bundle Doom WAD differs")
@@ -228,13 +233,13 @@ def main() -> None:
         if read_json(path).get("enabled") is True
     ]
     reports = [
-        verify_game(bundle / manifest["package_file"], manifest)
+        verify_game(bundle / "GAMES" / manifest["package_file"], manifest)
         for manifest in manifests
     ]
     expected = read_json(APP / "app-metadata.json")["native_game_api"]["seed_packages"]
     require([item["file"] for item in reports] == expected,
             "built cartridge list differs from app metadata")
-    default_game = bundle / "BYTEBUD.P4G"
+    default_game = bundle / "GAMES/BYTEBUD.P4G"
     require(default_game.read_bytes() in app.read_bytes(),
             "BYTEBUD.P4G is not embedded as the firmware fallback")
     metadata = read_json(APP / "app-metadata.json")["native_game_api"]

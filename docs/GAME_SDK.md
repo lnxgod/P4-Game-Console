@@ -64,9 +64,9 @@ games/star_hop/
 The Console OS build validates every enabled manifest and produces either:
 
 ```text
-apps/console_os/build/game-storage-seed/STAR_HOP.P4G
-apps/console_os/build-olimex-esp32-p4-pc/sd-card/STAR_HOP.P4G
-apps/console_os/build-waveshare-landscape/sd-card/STAR_HOP.P4G
+apps/console_os/build/game-storage-seed/GAMES/STAR_HOP.P4G
+apps/console_os/build-olimex-esp32-p4-pc/sd-card/GAMES/STAR_HOP.P4G
+apps/console_os/build-waveshare-landscape/sd-card/GAMES/STAR_HOP.P4G
 ```
 
 Run `make console-os-idf` after the focused game test when a distributable
@@ -75,10 +75,11 @@ manifest or generator change and `make game-sdk-host` for shared API, package,
 loader, or cross-game changes. Do not run repo-wide `make check` for an
 isolated game change.
 
-On Elecrow, connect the laptop to J16, copy `STAR_HOP.P4G` to the root of
-`P4 GAMES`, eject the volume cleanly, and open Game Manager. On Olimex Rev.B,
-power off, move the microSD card to the laptop, copy the cartridge to its root
-(or rebuild the complete card bundle and run `make install-olimex-sd-card
+On Elecrow, connect the laptop to J16, copy `STAR_HOP.P4G` into the `GAMES`
+directory on `P4 GAMES`, eject the volume cleanly, and open Game Manager. On
+Olimex Rev.B, power off, move the microSD card to the laptop, copy the cartridge
+into `GAMES` (or rebuild the complete card bundle and run
+`make install-olimex-sd-card
 SD_MOUNT=/Volumes/P4GAMES`), eject it, reinstall it, and power on. Replacing the
 file updates the game; removing it in Game Manager uninstalls it. Neither path
 requires an OS reflash.
@@ -92,7 +93,7 @@ SD_MOUNT=/Volumes/P4GAMES` for the validated complete bundle.
 - `format`: `p4-native-elf-v1`;
 - `api_version`: `1`;
 - `version`: a bounded semantic version;
-- `package_file`: an uppercase root `.P4G` filename;
+- `package_file`: an uppercase `.P4G` basename stored under `GAMES`;
 - unique `id` and `launcher_id`;
 - bounded `title`, `subtitle`, `folder`, `license`, and RGB565 accent;
 - required and optional capabilities.
@@ -135,8 +136,9 @@ The current catalog lasts for the boot session; persistent saves are deferred.
 Games inherit a stable logical console rather than a board definition:
 
 - Every `.P4G` targets a clipped 320x200 RGB565 Game API surface. Console OS
-  places that stable surface in its board-specific viewport. A game must not
-  infer scanout rotation, pin maps, stride layout, or backlight behavior.
+  places that stable surface in its board-specific viewport. On Waveshare 4.3,
+  the OS viewport is always 768x480 landscape. A game must not infer scanout
+  rotation, pin maps, stride layout, or backlight behavior.
 - Input is a complete normalized snapshot. Use only the Game API buttons,
   touch points, and standard on-screen controls; never retain a touch pointer
   or talk to GT911/USB directly.
@@ -169,7 +171,7 @@ helper) before returning to the launcher.
 
 On the Waveshare 4.3, Console OS opens the reviewed ES8311 speaker session at
 the selected 1–10 master step only while a requesting native game runs. The
-default is 8/10, and session teardown restores the GPIO53 amplifier-safe
+current default is 6/10, and session teardown restores the GPIO53 amplifier-safe
 state. Games never own I2S, codec I2C, GPIO53, or the backend. The stream call
 was already reserved in API v1, so
 activating this bounded implementation does not change the native format or
@@ -186,8 +188,8 @@ once per update. The trigger itself queues at most one initial block. If
 streaming is unavailable, retain a short `p4_game_play_tone()` fallback. The
 pack never busy-waits.
 
-Use `p4_game_feedback_draw()` for crop-safe, clipped original action, impact,
-reward, or fail overlays. It consumes the shared ImageGen atlas in
+Use `p4_game_feedback_draw_audio_effect()` for event-bound, crop-safe, clipped
+original action, impact, reward, or fail overlays. It consumes the shared ImageGen atlas in
 `components/p4_game_api/`, not a PNG decoder in the game. Asset provenance,
 deterministic conversion commands, and the exact regeneration constraints live
 in `components/p4_game_api/README.md`.

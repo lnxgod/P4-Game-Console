@@ -6,14 +6,15 @@ J16 USB GAME STORAGE port. Eject the volume in the laptop before launching a
 game. If a cable is removed during a write, reconnect and eject cleanly, then
 restart the console before using the changed files.
 
-Installed games are single files at the volume root:
+Installed games are single files in the GAMES directory:
 
-  *.P4G       P4 Game API v1 cartridge
+  GAMES/*.P4G       P4 Game API v1 cartridge
 
-Copy or replace a P4G file, eject P4 GAMES cleanly, then open Game Manager.
+Copy or replace a P4G file in GAMES, eject P4 GAMES cleanly, then open Game Manager.
 Game Manager lists valid and broken copies and can remove a package after a
 second confirmation. P4G files contain native code and are not a security
-sandbox; install only packages you trust.
+sandbox; install only packages you trust. Console OS also reads root P4G files
+from older cards so upgrades do not strand installed games.
 
 Console OS updates use:
 

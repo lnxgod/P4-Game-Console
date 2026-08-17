@@ -323,7 +323,8 @@ def main() -> None:
         if manifest.get("enabled") is True:
             manifests.append(manifest)
             package_reports.append(verify_game_package(
-                build / "game-storage-seed" / manifest["package_file"],
+                build / "game-storage-seed/GAMES" /
+                    manifest["package_file"],
                 manifest,
             ))
     require([item["file"] for item in package_reports] ==
@@ -333,8 +334,8 @@ def main() -> None:
     if parser_test.is_file():
         parsed = subprocess.run(
             [str(parser_test),
-             str(build / "game-storage-seed/MAZE.P4G"),
-             str(build / "game-storage-seed/INVADERS.P4G")],
+             str(build / "game-storage-seed/GAMES/MAZE.P4G"),
+             str(build / "game-storage-seed/GAMES/INVADERS.P4G")],
             cwd=ROOT, check=False, text=True,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
@@ -379,9 +380,12 @@ def main() -> None:
         require(len(volume_roots) == 1, "generated FAT has wrong volume label")
         volume = volume_roots[0]
         require(sorted(item.name for item in volume.iterdir()) ==
-                sorted(["DOOM1.WAD", "README.TXT", "UPDATE",
-                        *expected_seed_packages]),
+                sorted(["DOOM1.WAD", "GAMES", "README.TXT", "UPDATE"]),
                 "generated FAT root contents differ")
+        require((volume / "GAMES").is_dir() and
+                sorted(item.name for item in (volume / "GAMES").iterdir()) ==
+                    sorted(expected_seed_packages),
+                "generated FAT GAMES directory differs")
         require((volume / "UPDATE").is_dir() and
                 not any((volume / "UPDATE").iterdir()),
                 "generated FAT UPDATE directory differs")
@@ -393,8 +397,8 @@ def main() -> None:
                 "generated FAT README differs")
         for manifest in manifests:
             name = manifest["package_file"]
-            require((volume / name).read_bytes() ==
-                    (build / "game-storage-seed" / name).read_bytes(),
+            require((volume / "GAMES" / name).read_bytes() ==
+                    (build / "game-storage-seed/GAMES" / name).read_bytes(),
                     f"generated FAT contains wrong {name}")
 
     compiler = pathlib.Path(str(project["c_compiler"]))

@@ -360,17 +360,16 @@ static bool game_render(p4_game_context_t *context,
     p4_draw_text(surface, 59, 7, "BYTE BUDDY", UINT16_C(0xFFFF), 1U, 15U);
     p4_draw_text(surface, 220, 7, mood(state), UINT16_C(0x07FF), 1U, 11U);
     if (state->mini_game) {
-        p4_game_feedback_draw(surface, P4_GAME_FX_REWARD,
-                              state->star_x, state->star_y,
-                              context->frame_index);
+        p4_game_feedback_draw_audio_effect(
+            surface, &state->audio, state->star_x, state->star_y);
         draw_play_game(surface, state);
     } else {
         draw_bar(surface, 34, "FULL", state->hunger, UINT16_C(0x07E0));
         draw_bar(surface, 44, "JOY", state->joy, UINT16_C(0xFFE0));
         draw_bar(surface, 54, "CLEAN", state->hygiene, UINT16_C(0x07FF));
         draw_bar(surface, 64, "ENERGY", state->energy, UINT16_C(0xF81F));
-        p4_game_feedback_draw(surface, P4_GAME_FX_ACTION, 160, 101,
-                              context->frame_index);
+        p4_game_feedback_draw_audio_effect(
+            surface, &state->audio, 160, 101);
         draw_buddy(surface, state);
         p4_draw_text(surface, 118, 138, s_actions[state->selected_action],
                      UINT16_C(0xFFFF), 2U, 8U);
