@@ -219,18 +219,19 @@ def main() -> None:
     require(partition.returncode == 0, "partition table cannot be decoded")
     for row in (
         "otadata,data,ota,0x10000,8K,",
-        "ota_0,app,ota_0,0x20000,3520K,",
-        "ota_1,app,ota_1,0x390000,3584K,",
-        "game_data,data,fat,0x710000,9152K,",
+        "ota_0,app,ota_0,0x20000,8128K,",
+        "ota_1,app,ota_1,0x810000,8128K,",
     ):
         require(row in partition.stdout, f"partition table is missing {row}")
+    require("game_data" not in partition.stdout,
+            "Waveshare must not contain the internal game-data partition")
 
     app = build / str(project["app_bin"])
-    require(app.is_file() and app.stat().st_size <= 0x370000,
+    require(app.is_file() and app.stat().st_size <= 0x7F0000,
             "application is missing or does not fit OTA")
     bundle = build / "sd-card"
     require(sorted(item.name for item in bundle.iterdir()) ==
-            ["DOOM1.WAD", "GAMES", "README.TXT", "UPDATE"],
+            ["DOOM1.WAD", "GAMES", "P4", "README.TXT", "UPDATE"],
             "SD bundle root differs")
     wad = bundle / "DOOM1.WAD"
     require(wad.is_file() and wad.stat().st_size == WAD_BYTES and
