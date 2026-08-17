@@ -1,8 +1,8 @@
 {
   "schema": 1,
   "app": "console_os",
-  "stage": "usb-game-manager-ota-build-candidate",
-  "purpose": "FreeRTOS-native 90s Program Manager shell with a branded boot sequence, session color modes, achievements, an embedded Byte Buddy fallback plus storage-loaded P4G games, restored validated P4CART catalog compatibility, atomic dual-slot OS updates, and an exclusive Doom handoff.",
+  "stage": "sd-only-game-catalog-p4cart-ota-launcher-candidate",
+  "purpose": "FreeRTOS-native 90s Program Manager shell with a branded boot sequence, session color modes, achievements, SD-only executable P4G apps, validated P4CART catalog compatibility, atomic dual-slot launcher updates, and an exclusive Doom handoff.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
   "flash_authorized": false,
@@ -15,7 +15,11 @@
   "toolchain": {
     "idf": "5.5.3",
     "target": "esp32p4",
-    "flash_bytes": 16777216,
+    "flash_bytes_by_board": {
+      "elecrow-crowpanel-advanced-10": 16777216,
+      "olimex-esp32-p4-pc": 16777216,
+      "waveshare-esp32-p4-wifi6-touch-lcd-4-3": 33554432
+    },
     "psram_bytes": 33554432,
     "elf_loader": "espressif/elf_loader 1.3.1"
   },
@@ -63,14 +67,17 @@
     "controls": ["up", "down", "left", "right", "a", "b", "start", "back"],
     "audio": "optional bounded tone and copied PCM16-stereo services at 16000 Hz",
     "return_to_home_supported": true,
-    "embedded_fallback_package": "BYTEBUD.P4G",
-    "embedded_fallback_replaceable_from_storage": true,
+    "games_embedded_in_ota": false,
+    "execution_source": "microSD /GAMES/*.P4G; root *.P4G compatibility only",
     "seed_packages": [
       "ASTEROID.P4G",
       "ASTER2.P4G",
+      "AVTEST.P4G",
       "BREAKOUT.P4G",
       "BYTEBUD.P4G",
+      "CALC.P4G",
       "FROGHOP.P4G",
+      "INPUT.P4G",
       "MAZE.P4G",
       "SKYLINE.P4G",
       "SOLITAIR.P4G",
@@ -159,6 +166,23 @@
     },
     "hardware_tested": false
   },
+  "board_storage_overrides": {
+    "olimex-esp32-p4-pc": {
+      "medium": "removable microSD",
+      "runtime_access": "read-only",
+      "laptop_transfer": "powered-off removable media",
+      "internal_game_data_partition": false,
+      "ota_slot_bytes": 8323072
+    },
+    "waveshare-esp32-p4-wifi6-touch-lcd-4-3": {
+      "medium": "removable microSD",
+      "runtime_access": "read-only",
+      "laptop_transfer": "powered-off removable media",
+      "internal_game_data_partition": false,
+      "ota_slot_bytes": 8323072,
+      "landscape_viewport": "768x480"
+    }
+  },
   "os_update": {
     "format": "p4-os-update-v1",
     "file": "UPDATE/P4UPDATE.P4U",
@@ -170,12 +194,12 @@
     "rollback_until_first_ready_frame": true,
     "preserves_game_data": true
   },
-  "hardware_interfaces_explicitly_absent": [
+  "default_elecrow_hardware_interfaces_explicitly_absent": [
     "usb_host",
     "usb_hid",
     "physical_sd_card",
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "Install the app-only verified-MSC-write build through J1, then repeat a large P4UPDATE copy through J16 and record exact host hash, serial counters, cartridge launch/remove, and OTA rollback acceptance on the bound tablet."
+  "next_hardware_step": "Authorize the exact Waveshare successor artifact, install it through the guarded route, then record boot, landscape touch, audio, SD catalog, cartridge launch/return, and OTA rollback acceptance on the bound unit."
 }

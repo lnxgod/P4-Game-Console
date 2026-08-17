@@ -210,6 +210,11 @@ def main() -> None:
         "native_game_api"]["seed_packages"]
     require([game["file"] for game in games] == expected_games,
             "SD seed game set differs")
+    app_data = app.read_bytes()
+    for game in games:
+        package = bundle / "GAMES" / str(game["file"])
+        require(package.read_bytes() not in app_data,
+                f"{package.name} leaked into the OTA application")
 
     compiler = pathlib.Path(project["c_compiler"])
     nm = compiler.with_name(compiler.name.removesuffix("gcc") + "nm")
@@ -231,6 +236,8 @@ def main() -> None:
         "platform_touch_create",
         "tinyusb_driver_install", "__wrap_tud_msc_write10_cb",
         "p4_maze_chase_game", "p4_space_invaders_game",
+        "_binary_bytebud_p4g_start",
+        "platform_game_catalog_add_embedded_fallback",
     ):
         require(f" {symbol}\n" not in symbols, f"forbidden ELF symbol {symbol}")
 

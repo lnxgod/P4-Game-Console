@@ -1,10 +1,10 @@
 # P4 Console OS
 
 This is the FreeRTOS-native console shell for the ESP32-P4 console boards.
-Fixed system apps, Doom, and one validated `BYTEBUD.P4G` fallback live in the
-OS image. Other Game API apps are loaded from persistent storage, so adding or
-removing a game does not require an OS reflash. A valid `BYTEBUD.P4G` on
-storage replaces the embedded fallback for that boot.
+The OTA image contains the launcher, fixed system apps, platform services, and
+the legacy Doom engine only. Every executable Game API cartridge—including
+Byte Buddy, Calculator, Input Test, and AV Test—loads from microSD, so adding
+or removing one never requires an OS reflash.
 
 The home screen keeps the accepted Program Manager-style interface and
 organizes built-ins plus the current storage catalog as:
@@ -15,6 +15,8 @@ organizes built-ins plus the current storage catalog as:
   - Arcade: installed reentrant Game API cartridges
 - System: Colors, Touch, System status, Audio status, Achievements, File
   Manager, Game Manager, Multiplayer, Save Manager, and Terminal
+  - Tools: Calculator
+  - Tests: Input Test and AV Test
 
 Boot first displays the official Game Changers AI logo and an original
 A4-C#5-E5 startup chord; it does not copy the THX/Dolby recording. The Colors
@@ -23,13 +25,17 @@ current session. There is no CRT filter.
 
 ## Laptop game storage
 
-Console OS exposes the persistent `game_data` FAT volume through the board's
-J16 ESP32-P4 USB port. Its USB product is **P4 Game Storage** and its FAT volume
-label is **P4 GAMES**. J1 remains the CH340 programming/serial port. While a
-laptop owns the volume, the firmware unmounts it, invalidates its file cache,
-changes the Doom tile to `USB STORAGE ACTIVE`,
-and rejects a Doom launch. A clean host eject remounts it for the app and
-triggers a fresh size/header/SHA-256 validation.
+On Elecrow, Console OS exposes the internal persistent `game_data` FAT volume
+through the board's J16 ESP32-P4 USB port as **P4 Game Storage**; J1 remains
+the CH340 programming/serial port. While a laptop owns the volume, the
+firmware unmounts it, invalidates its file cache, changes the Doom tile to
+`USB STORAGE ACTIVE`, and rejects a Doom launch. A clean host eject remounts
+it and triggers fresh size/header/SHA-256 validation.
+
+Waveshare 4.3 and Olimex use removable microSD instead. Console OS keeps that
+card read-only at runtime. Power the console off and use a laptop card reader
+for app, WAD, save, and update-file transfer; their USB programming connection
+is not presented as game-storage MSC.
 
 The current Doom integration accepts `DOOM1.WAD` at the drive root, with the
 exact shareware identity recorded in `third_party/game-data.json`. Copying or
@@ -38,12 +44,13 @@ launching Doom. Doom launch stops the USB device, remounts the volume, and
 rehashes the WAD before taking a terminal game lease; USB cannot remount below
 the running engine.
 
-The full project image can generate a reviewed FAT seed, but the one-time
-dual-OTA migration deliberately does not write `game_data`, preserving the
-live Doom file and other user data. Later OS releases are copied to J16 as
-`UPDATE/P4UPDATE.P4U` and installed from Game Manager into the inactive OTA
-slot. Program Manager exposes ready/invalid update status on the Game Manager
-app before it is opened.
+The Elecrow full project image can generate a reviewed FAT seed, but its
+one-time dual-OTA migration deliberately does not write `game_data`,
+preserving live content. Later OS releases are placed at
+`UPDATE/P4UPDATE.P4U` through the board's supported storage-transfer route and
+installed from Game Manager into the inactive OTA slot. Program Manager
+exposes ready/invalid update status on the Game Manager app before it is
+opened.
 The consumed update package is removed before reboot when storage ownership
 is still available; otherwise it can be removed safely from Game Manager.
 Runtime code never auto-formats a damaged volume.
@@ -52,9 +59,9 @@ Seed cartridges are generated from validated `games/*/game.json` manifests
 into `GAMES/*.P4G`. At boot the OS scans that directory, validates each
 package, and builds the launcher from the result; root `.P4G` files are read
 only for compatibility with older cards.
-Byte Buddy is also embedded as the always-available default cartridge; the
-rest of the runtime launcher catalog comes from validated `.P4G` files. Its
-lightweight desktop view shows three columns by two rows, scrolls with vertical
+No `.P4G` cartridge is linked into the OTA application. The complete runtime
+launcher catalog comes from validated microSD files. Its lightweight desktop
+view shows three columns by two rows, scrolls with vertical
 arrows or a one-finger swipe, and supports up to 32 apps. It derives at most
 two folder levels from validated package metadata. The skin is drawn with
 RGB565 primitives and adds no launcher bitmap asset. Create a native starter
@@ -79,12 +86,12 @@ them: the original project did not finish the required sandboxed Lua 5.4
 backend. The generated storage bundle includes the MIT-licensed Bounce Lab
 reference cart so this compatibility path is reproducible.
 
-The Waveshare 4.3 build always exposes the embedded Byte Buddy fallback and
-uses the same cartridge catalog for additional games on a read-only-at-runtime
-microSD card. Build and verify it with `make console-os-waveshare-idf`.
+The Waveshare 4.3 build obtains its complete executable cartridge catalog from
+a read-only-at-runtime microSD card while retaining the P4CART compatibility
+catalog. Build and verify it with `make console-os-waveshare-idf`.
 With the board powered off, move the card to a laptop and run
 `make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES`; the installer
-validates all nine cartridges and preserves unrelated files.
+validates every enabled cartridge and preserves unrelated files.
 
 ## Doom and audio lifecycle
 

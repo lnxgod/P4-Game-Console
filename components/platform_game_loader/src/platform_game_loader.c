@@ -39,25 +39,13 @@ esp_err_t platform_game_loader_run(
     }
     uint8_t *data = NULL;
     size_t size_bytes = 0U;
-    bool release_data = false;
-    esp_err_t result = ESP_OK;
-    if (entry->embedded) {
-        data = (uint8_t *)(uintptr_t)entry->embedded_data;
-        size_bytes = entry->embedded_bytes;
-        if (data == NULL || size_bytes == 0U ||
-            size_bytes > P4_GAME_PACKAGE_MAX_BYTES) {
-            result = ESP_ERR_INVALID_SIZE;
-        }
-    } else {
-        result = entry->in_games_directory
-            ? platform_game_storage_load_game_file(
-                entry->file_name, P4_GAME_PACKAGE_MAX_BYTES,
-                &data, &size_bytes)
-            : platform_game_storage_load_root_file(
-                entry->file_name, P4_GAME_PACKAGE_MAX_BYTES,
-                &data, &size_bytes);
-        release_data = result == ESP_OK;
-    }
+    esp_err_t result = entry->in_games_directory
+        ? platform_game_storage_load_game_file(
+            entry->file_name, P4_GAME_PACKAGE_MAX_BYTES,
+            &data, &size_bytes)
+        : platform_game_storage_load_root_file(
+            entry->file_name, P4_GAME_PACKAGE_MAX_BYTES,
+            &data, &size_bytes);
     p4_game_package_info_t package;
     if (result == ESP_OK &&
         p4_game_package_parse(data, size_bytes, &package) !=
@@ -86,7 +74,7 @@ esp_err_t platform_game_loader_run(
             &elf, data + package.payload_offset) != 0) {
         result = ESP_ERR_INVALID_RESPONSE;
     }
-    if (release_data) {
+    if (data != NULL) {
         platform_game_storage_release_file(data);
     }
     data = NULL;

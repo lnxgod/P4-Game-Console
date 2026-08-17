@@ -54,19 +54,19 @@ The 2026-08-14 transaction passed complete app-span readback and startup with
 eight registered apps while preserving the live volume byte-for-byte. See
 `hardware/test-runs/2026-08-14-console-os-file-manager-install.json`.
 
-The current successor adds Game Manager, storage-loaded `.P4G` cartridges,
-an always-available embedded `BYTEBUD.P4G` fallback,
-and dual-slot `.P4U` OS updates while retaining the same window-manager
+The current successor adds Game Manager, microSD-loaded `.P4G` cartridges,
+and dual-slot `.P4U` launcher updates while retaining the same window-manager
 renderer. Maze Chase and Space Invaders are no longer linked into the OS
 binary: they are seed packages copied into `GAMES` on `P4 GAMES`. The app image
 is consequently under 1 MiB instead of carrying a duplicate 4.2 MiB Doom WAD.
 This successor is host-tested and build-verified; its one-time partition
 migration and cartridge launches still require the hardware record below.
 
-The reconciled 0.3.0 candidate also adds the official Game Changers AI boot
+The reconciled 0.4.0 candidate also adds the official Game Changers AI boot
 logo, an original A4-C#5-E5 startup chord, four session-only shell color
 modes, a bounded session achievement catalog, and the original Byte Buddy
-virtual-pet cartridge. It deliberately adds no CRT filter or multiplayer.
+virtual-pet cartridge. It deliberately adds no CRT filter and retains the
+bounded local multiplayer session core from the overhaul.
 The long-lived shell and catalog staging objects use static storage so the
 24 KiB ESP-IDF main-task stack stays bounded across slow microSD scans.
 
@@ -127,7 +127,7 @@ next foreground update.
 
 ```text
 boot
-  -> platform_game_storage mounts FAT; Elecrow may hand it to USB MSC on J16
+  -> platform_game_storage mounts board storage; Elecrow may hand FAT to J16
   -> platform_display owns DSI/panel/backlight
   -> platform_i2c_shared owns I2C1
   -> platform_touch borrows I2C1 for GT911
@@ -135,8 +135,10 @@ boot
        |-- All Programs (scrollable flat view)
        |-- Games
        |     |-- Action -> Doom
-       |     `-- Arcade -> embedded Byte Buddy plus installed P4G cartridges
+       |     `-- installed microSD P4G games grouped by manifest folder
        |-- System -> diagnostics / Colors / Audio / Achievements
+       |     |-- Tools -> Calculator
+       |     |-- Tests -> Input Test / AV Test
        |     |-- File Manager -> bounded root list / confirmed delete
        |     |-- Game Manager -> P4G status/remove, P4CART catalog, OS update
        |     |-- Save Manager -> bounded OS-owned slot catalog
@@ -175,9 +177,9 @@ display, overlays, and exit callbacks in a deterministic order.
 | GT911 touch | `platform_touch` | `platform_touch` + Doom input | Invalid/malformed frames neutralize input |
 | Speaker audio | none on home; reviewed session for native games | Doom audio adapter/factory backend | Only one foreground owner; close must re-prove amplifier shutdown |
 | Game-data FAT | launcher or laptop, never both | terminal game lease | Clean eject returns ownership; host access is revoked and WAD re-hashed before Doom |
-| Doom WAD | validated `/game-data/DOOM1.WAD` | read-only VFS adapter | Exact ignored shareware identity only; host changes invalidate cache |
+| Doom WAD | validated logical-root `/DOOM1.WAD` | read-only VFS adapter | Exact ignored shareware identity only; host changes invalidate cache |
 | File Manager | `console_shell` view plus `platform_game_storage` operations | unavailable | Lists/deletes only while the app owns FAT; host and game ownership reject every operation |
-| Game cartridge | validated package bytes, then relocated PSRAM image | embedded Byte Buddy fallback | Storage can replace the fallback by ID; catalog and launch revalidate SHA/ELF; cartridge receives only the host callback table |
+| Game cartridge | validated microSD package bytes, then relocated PSRAM image | unavailable | Catalog and launch revalidate SHA/ELF; cartridge receives only the host callback table; OTA contains no `.P4G` payload |
 | OS update | inactive OTA slot | unavailable | USB stops during streaming; boot slot changes only after final image verification |
 
 The launcher surface is standard RGB565 at 320x200. The proven display service
@@ -211,6 +213,10 @@ manifest path such as `GAMES/ARCADE`, and implement it against the headers in
 `components/p4_game_api/include/p4/`. The build emits one `.P4G` file. Copy it
 into `GAMES` on `P4 GAMES` and eject J16; no OS installation is needed. See
 `docs/GAME_SDK.md`.
+
+The standard SD bundle also includes Calculator under `SYSTEM/TOOLS` plus
+Input Test and AV Test under `SYSTEM/TESTS`. They use the same P4G boundary as
+games and are removable without changing the launcher firmware.
 
 ## Sound behavior
 

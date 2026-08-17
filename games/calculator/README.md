@@ -1,0 +1,14 @@
+# Calculator
+
+Calculator is an original, code-rendered integer desk calculator packaged as
+`CALC.P4G`. It appears under `SYSTEM/TOOLS` and runs entirely through P4 Game
+API v1, so it can be added, replaced, or removed from microSD without changing
+Console OS.
+
+Use the D-pad to select a key and A to press it. B erases one digit, Start
+equals, Back returns to Program Manager, and the keypad can be tapped directly.
+Results are bounded to -999,999,999 through 999,999,999; overflow and division
+by zero fail closed with `ERROR`.
+
+All visuals are original code-rendered RGB565 primitives. No raster or
+third-party assets are used. License: MIT.

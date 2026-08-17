@@ -95,6 +95,11 @@ Waveshare uses the same powered-off microSD workflow and keeps the card
 read-only while Console OS runs. Use `make install-waveshare-sd-card
 SD_MOUNT=/Volumes/P4GAMES` for the validated complete bundle.
 
+Executable `.P4G` packages are never linked into the OTA application. The
+launcher and loader support only storage-backed catalog entries, while the
+separate P4CART compatibility catalog remains non-executable until its Lua
+sandbox is implemented.
+
 `game.json` is the source/package contract. Its important fields are:
 
 - `format`: `p4-native-elf-v1`;
@@ -255,3 +260,5 @@ Use this workflow:
 Maze Chase, Space Invaders, and Byte Buddy are complete original examples.
 Byte Buddy demonstrates virtual-pet care, a mini-game, tones, achievements,
 and direct return to the launcher using only code-rendered shapes and P4 APIs.
+Calculator, Input Test, and AV Test demonstrate removable utility and
+diagnostic cartridges under the System hierarchy.

@@ -281,10 +281,11 @@ complete factory backup, verified size and SHA-256, and hashed identity binding.
 |---|---|---|
 {rows}
 
-The standard Console OS contract includes the window manager, Program/File/Game
-Managers, storage-installed native cartridges, Maze Chase, Space Invaders,
-Doom, persistent game storage, atomic OS updates, and audio. Touch is required
-only when the hardware provides it. This target declares input through
+The standard Console OS contract includes the window manager, Program/File/Game/
+Save Managers, themes, achievements, terminal, multiplayer core, native and
+legacy cartridge catalogs, bundled utility/test cartridges, Doom, persistent
+game storage, atomic OS updates, and audio. Touch is required only when the
+hardware provides it. This target declares input through
 {', '.join(spec['inputs'])} and laptop content transfer through
 `{spec['laptop_content_transfer']}`.
 

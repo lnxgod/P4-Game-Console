@@ -68,7 +68,8 @@ The selectable build boundary is `P4_BOARD_PROFILE`: Elecrow stays the
 default, while Waveshare selects its own display, touch, audio, and microSD
 implementations. `make console-os-waveshare-idf` now resolves the pinned
 ST7701, GT911, ES8311, ELF-loader, and ESP-IDF 5.5.3 graph and emits the
-firmware plus a validated nine-cartridge microSD bundle. This proves the
+launcher firmware plus a validated microSD app bundle. Executable `.P4G`
+packages are never linked into OTA. This proves the
 software candidate only. Each changed binary still needs a fresh exact-unit
 authorization, guarded install, retained-UART boot capture, and manual game
 launch/return acceptance before it inherits any hardware claim.

@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.3.0")
+set(PROJECT_VER "0.4.0")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")
@@ -96,6 +96,10 @@ if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" OR
    P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
     set(P4_GAME_STORAGE_SEED_DIR "${CMAKE_BINARY_DIR}/sd-card")
+    # This is a generated staging tree, never a mounted user card. Recreate it
+    # on configure so stale packages and host-created duplicate filenames can
+    # never leak into a release bundle.
+    file(REMOVE_RECURSE "${P4_GAME_STORAGE_SEED_DIR}")
 else()
     set(P4_GAME_STORAGE_SEED_DIR "${CMAKE_BINARY_DIR}/game-storage-seed")
 endif()
@@ -221,20 +225,6 @@ endif()
 message(STATUS "${P4_GAME_MANIFEST_REPORT}")
 include("${P4_GENERATED_GAMES_CMAKE}")
 add_custom_target(p4_game_packages ALL DEPENDS ${P4_SEEDED_GAME_PACKAGES})
-
-# Keep one complete Game API cartridge in firmware so a new or temporarily
-# missing removable card still has a real game to launch. A valid BYTEBUD.P4G
-# on storage takes precedence at runtime, making the fallback replaceable
-# without changing the firmware image.
-set(P4_DEFAULT_GAME_PACKAGE
-    "${P4_GAME_STORAGE_SEED_DIR}/GAMES/BYTEBUD.P4G")
-target_add_binary_data(
-    ${CMAKE_PROJECT_NAME}.elf
-    "${P4_DEFAULT_GAME_PACKAGE}"
-    BINARY
-    DEPENDS p4_game_packages
-    RENAME_TO bytebud_p4g
-)
 
 if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" OR
    P4_BOARD_PROFILE STREQUAL

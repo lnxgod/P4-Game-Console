@@ -246,15 +246,25 @@ def main() -> None:
     for token in (
         "present_boot_screen", "play_boot_chime",
         "CONSOLE_ACTION_COLOR_MODE_CHANGED", "cartridge_unlock_achievement",
-        "_binary_bytebud_p4g_start",
-        "platform_game_catalog_add_embedded_fallback",
-        'game->embedded ? "embedded-default" : "removable-storage"',
+        "platform_game_catalog_scan",
+        '"microsd-games-directory" : "microsd-root-compat"',
         "static console_shell_t s_shell",
         "static platform_game_catalog_t s_catalog_staging",
         "P4_CONSOLE_OS MAIN_STACK stage=storage-ready",
         "P4CART_SCAN_BEGIN", "P4CART_READY",
     ):
         require(token in source, f"firmware source is missing {token}")
+    for token in (
+        "_binary_bytebud_p4g_start",
+        "platform_game_catalog_add_embedded_fallback",
+        "embedded-default",
+    ):
+        require(token not in source,
+                f"firmware source still supports embedded games: {token}")
+    cmake = (APP / "CMakeLists.txt").read_text(encoding="utf-8")
+    require("RENAME_TO bytebud_p4g" not in cmake and
+            "P4_DEFAULT_GAME_PACKAGE" not in cmake,
+            "firmware build still embeds a default cartridge")
     require("console_shell_t shell;" not in source,
             "large shell state must not live on the main task stack")
 
@@ -266,7 +276,8 @@ def main() -> None:
         verify_game(bundle / "GAMES" / manifest["package_file"], manifest)
         for manifest in manifests
     ]
-    expected = read_json(APP / "app-metadata.json")["native_game_api"]["seed_packages"]
+    metadata = read_json(APP / "app-metadata.json")["native_game_api"]
+    expected = metadata["seed_packages"]
     require([item["file"] for item in reports] == expected,
             "built cartridge list differs from app metadata")
     legacy = read_json(APP / "app-metadata.json")["legacy_p4cart"]
@@ -275,13 +286,31 @@ def main() -> None:
             legacy.get("runtime_implemented") is False and
             legacy.get("seed_cart") == str(P4CART_SEED),
             "legacy P4 Cart metadata differs")
-    default_game = bundle / "GAMES/BYTEBUD.P4G"
-    require(default_game.read_bytes() in app.read_bytes(),
-            "BYTEBUD.P4G is not embedded as the firmware fallback")
-    metadata = read_json(APP / "app-metadata.json")["native_game_api"]
-    require(metadata.get("embedded_fallback_package") == "BYTEBUD.P4G" and
-            metadata.get("embedded_fallback_replaceable_from_storage") is True,
-            "embedded default-game policy differs")
+    require(metadata.get("games_embedded_in_ota") is False and
+            metadata.get("execution_source") ==
+                "microSD /GAMES/*.P4G; root *.P4G compatibility only",
+            "SD-only game execution policy differs")
+    app_data = app.read_bytes()
+    for report in reports:
+        package = bundle / "GAMES" / str(report["file"])
+        require(package.read_bytes() not in app_data,
+                f"{package.name} leaked into the OTA application")
+
+    elf = build / str(project["app_elf"])
+    compiler = pathlib.Path(str(project["c_compiler"]))
+    nm = compiler.with_name(compiler.name.removesuffix("gcc") + "nm")
+    symbols_result = subprocess.run(
+        [str(nm), "-g", str(elf)], check=False, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    require(symbols_result.returncode == 0, "cannot inspect app ELF symbols")
+    for symbol in (
+        "_binary_bytebud_p4g_start",
+        "_binary_bytebud_p4g_end",
+        "platform_game_catalog_add_embedded_fallback",
+    ):
+        require(f" {symbol}\n" not in symbols_result.stdout,
+                f"OTA ELF still exports embedded-game symbol {symbol}")
     update = verify_update(bundle / "UPDATE/P4UPDATE.P4U", app)
     p4cart = verify_p4cart(bundle / P4CART_SEED)
 
@@ -290,8 +319,8 @@ def main() -> None:
         "build": str(build),
         "application": {"bytes": app.stat().st_size, "sha256": sha256(app)},
         "logo_sha256": LOGO_SHA256,
-        "embedded_default": next(
-            item for item in reports if item["file"] == "BYTEBUD.P4G"),
+        "game_execution_source": "microSD-only",
+        "games_embedded_in_ota": False,
         "games": reports,
         "legacy_p4cart": p4cart,
         "update": update,

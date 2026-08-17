@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "format": "p4-native-elf-v1",
+  "api_version": 1,
+  "version": "1.0.0",
+  "package_file": "AVTEST.P4G",
+  "component": "av_test",
+  "entry_symbol": "p4_av_test_game",
+  "launcher_id": 111,
+  "id": "org.p4console.av-test",
+  "title": "AV TEST",
+  "subtitle": "DISPLAY MOTION AND TONES",
+  "folder": "SYSTEM/TESTS",
+  "accent_rgb565": "0xf81f",
+  "required_capabilities": ["video", "controls"],
+  "optional_capabilities": ["audio-tone"],
+  "license": "MIT",
+  "assets": "original-code-rendered-shapes-only",
+  "enabled": true
+}

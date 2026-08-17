@@ -154,8 +154,6 @@ static int16_t s_native_audio_pcm[
     P4_GAME_PLATFORM_AUDIO_CHANNEL_COUNT];
 
 extern const uint8_t _binary_gamechangers_ai_logo_rgb565_start[];
-extern const uint8_t _binary_bytebud_p4g_start[];
-extern const uint8_t _binary_bytebud_p4g_end[];
 
 static esp_err_t present(console_shell_t *shell);
 static console_shell_runtime_info_t runtime_info(void);
@@ -726,17 +724,10 @@ static esp_err_t reload_game_catalog(void)
 {
     const esp_err_t storage_result =
         platform_game_catalog_scan(&s_catalog_staging);
-    const size_t default_game_bytes =
-        (size_t)(_binary_bytebud_p4g_end - _binary_bytebud_p4g_start);
-    const esp_err_t default_result =
-        platform_game_catalog_add_embedded_fallback(
-            &s_catalog_staging, "BYTEBUD.P4G", _binary_bytebud_p4g_start,
-            default_game_bytes);
     memset(&s_update_staging, 0, sizeof(s_update_staging));
     const esp_err_t update_result =
         platform_os_update_inspect(&s_update_staging);
-    const bool catalog_available =
-        storage_result == ESP_OK || default_result == ESP_OK;
+    const bool catalog_available = storage_result == ESP_OK;
     if (catalog_available) {
         s_game_catalog = s_catalog_staging;
     } else {
@@ -744,26 +735,24 @@ static esp_err_t reload_game_catalog(void)
     }
     s_os_update_info = s_update_staging;
     set_game_manager_update_state(s_os_update_info.state);
-    s_catalog_seen = catalog_available;
+    /* One scan attempt completes this storage generation. A card ownership or
+     * mount change increments the generation and triggers the next attempt. */
+    s_catalog_seen = true;
     s_catalog_storage_generation = s_game_storage_status.generation;
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS GAME_CATALOG available=%u packages=%u "
-             "valid=%u omitted=%lu generation=%lu embedded_default=%u "
+             "valid=%u omitted=%lu generation=%lu source=microsd-only "
              "storage_result=%s update=%u result=%s",
              s_game_catalog.available ? 1U : 0U,
              (unsigned)s_game_catalog.entry_count,
              (unsigned)s_game_catalog.valid_count,
              (unsigned long)s_game_catalog.omitted_packages,
              (unsigned long)s_catalog_storage_generation,
-             default_result == ESP_OK ? 1U : 0U,
              esp_err_to_name(storage_result),
              (unsigned)s_os_update_info.state,
-             esp_err_to_name(!catalog_available
-                ? (default_result != ESP_OK
-                    ? default_result : storage_result)
-                : update_result));
-    return catalog_available ? ESP_OK :
-        (default_result != ESP_OK ? default_result : storage_result);
+             esp_err_to_name(catalog_available
+                ? update_result : storage_result));
+    return storage_result;
 }
 
 static void make_file_label(
@@ -911,7 +900,7 @@ static esp_err_t reload_manager_listing(
             &s_manager_listing.entries[s_manager_listing.entry_count++];
         target->source_index = (uint32_t)index;
         target->size_kib = file_size_kib(source->file_bytes);
-        target->removable = !source->embedded;
+        target->removable = true;
         if (source->valid) {
             const int written = snprintf(
                 target->label, sizeof(target->label), "%s %s",
@@ -2230,7 +2219,8 @@ static esp_err_t run_stored_game(
              "P4_CONSOLE_OS CARTRIDGE_START app=%s file=%s api=1 "
              "source=%s runtime=psram-elf audio=%s",
              game->package.id, game->file_name,
-             game->embedded ? "embedded-default" : "removable-storage",
+             game->in_games_directory
+                ? "microsd-games-directory" : "microsd-root-compat",
              context.audio_running ? "ready" : "silent");
     esp_err_t result = platform_game_loader_run(game, &host);
     close_native_audio_or_halt(&context.audio);

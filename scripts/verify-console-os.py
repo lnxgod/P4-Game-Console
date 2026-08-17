@@ -219,7 +219,8 @@ def main() -> None:
             "shared-object-to-shared-object linking must remain disabled")
 
     metadata = read_json(APP / "app-metadata.json")
-    require(metadata.get("stage") == "usb-game-manager-ota-build-candidate",
+    require(metadata.get("stage") ==
+                "sd-only-game-catalog-p4cart-ota-launcher-candidate",
             "unexpected app stage")
     for key in (
         "runtime_supported", "top_level_runtime_authorized",
@@ -232,7 +233,8 @@ def main() -> None:
     native = metadata.get("native_game_api", {})
     require(native.get("format") == "p4-native-elf-v1" and
             native.get("api_version") == 1 and
-            native.get("native_code_is_security_sandboxed") is False,
+            native.get("native_code_is_security_sandboxed") is False and
+            native.get("games_embedded_in_ota") is False,
             "native cartridge metadata differs")
     expected_seed_packages = native.get("seed_packages")
     require(isinstance(expected_seed_packages, list) and
@@ -365,6 +367,11 @@ def main() -> None:
     require([item["file"] for item in package_reports] ==
             expected_seed_packages,
             "built seed cartridge set differs")
+    app_binary_data = app_binary.read_bytes()
+    for manifest in manifests:
+        package = build / "game-storage-seed/GAMES" / manifest["package_file"]
+        require(package.read_bytes() not in app_binary_data,
+                f"{package.name} leaked into the OTA application")
     parser_test = ROOT / "build-host/p4_game_package/tests/test_p4_game_package"
     if parser_test.is_file():
         parsed = subprocess.run(
@@ -461,7 +468,8 @@ def main() -> None:
         require(f" {symbol}\n" in symbols, f"missing ELF symbol {symbol}")
     for symbol in (
         "p4_maze_chase_game", "p4_space_invaders_game",
-        "_binary_doom_shareware_wad_start", "usb_host_install",
+        "_binary_doom_shareware_wad_start", "_binary_bytebud_p4g_start",
+        "platform_game_catalog_add_embedded_fallback", "usb_host_install",
         "hid_host_install", "platform_usb_host_start",
         "esp_vfs_fat_sdmmc_mount", "es8311_codec_new",
     ):

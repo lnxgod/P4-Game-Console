@@ -523,6 +523,78 @@ static void test_navigation_and_launch(void)
     CHECK(strcmp(shell.home_folder_path, "SYSTEM") == 0);
 }
 
+static void test_system_cartridge_folders(void)
+{
+    static const console_app_descriptor_t system_apps[] = {
+        {
+            .id = 109U,
+            .title = "CALCULATOR",
+            .subtitle = "INTEGER DESK CALC",
+            .folder_path = "SYSTEM/TOOLS",
+            .accent_rgb565 = UINT16_C(0x07FF),
+            .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                            CONSOLE_CAPABILITY_TOUCH,
+            .page = CONSOLE_PAGE_EXTERNAL,
+            .enabled = true,
+        },
+        {
+            .id = 110U,
+            .title = "INPUT TEST",
+            .subtitle = "BUTTONS + TOUCH",
+            .folder_path = "SYSTEM/TESTS",
+            .accent_rgb565 = UINT16_C(0xFFE0),
+            .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                            CONSOLE_CAPABILITY_TOUCH,
+            .page = CONSOLE_PAGE_EXTERNAL,
+            .enabled = true,
+        },
+        {
+            .id = 111U,
+            .title = "AV TEST",
+            .subtitle = "VIDEO + TONES",
+            .folder_path = "SYSTEM/TESTS",
+            .accent_rgb565 = UINT16_C(0xF81F),
+            .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                            CONSOLE_CAPABILITY_TOUCH |
+                            CONSOLE_CAPABILITY_AUDIO,
+            .page = CONSOLE_PAGE_EXTERNAL,
+            .enabled = true,
+        },
+    };
+    console_shell_t shell;
+    CHECK(console_shell_init(
+        &shell, system_apps,
+        sizeof(system_apps) / sizeof(system_apps[0])));
+
+    /* Root: All Programs, then System. */
+    CHECK(press_button(&shell, CONSOLE_BUTTON_RIGHT).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.home_folder_path, "SYSTEM") == 0);
+
+    /* Child folders retain manifest order: Tools, then Tests. */
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.home_folder_path, "SYSTEM/TOOLS") == 0);
+    console_shell_action_t action =
+        press_button(&shell, CONSOLE_BUTTON_ACCEPT);
+    CHECK(action.type == CONSOLE_ACTION_LAUNCH);
+    CHECK(action.app_id == 109U);
+
+    CHECK(press_button(&shell, CONSOLE_BUTTON_BACK).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.home_folder_path, "SYSTEM") == 0);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_RIGHT).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.home_folder_path, "SYSTEM/TESTS") == 0);
+    action = press_button(&shell, CONSOLE_BUTTON_ACCEPT);
+    CHECK(action.type == CONSOLE_ACTION_LAUNCH);
+    CHECK(action.app_id == 110U);
+}
+
 static void test_controller_navigation(void)
 {
     console_shell_t shell;
@@ -947,6 +1019,7 @@ int main(void)
     test_color_modes_and_achievements();
     test_desktop_pages();
     test_navigation_and_launch();
+    test_system_cartridge_folders();
     test_controller_navigation();
     test_launcher_scrolling();
     test_fail_closed_gestures();

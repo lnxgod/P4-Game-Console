@@ -6,7 +6,7 @@ DOOM_FRAMES ?= 8
 DOOMGENERIC_SOURCE ?=
 GAME ?= space_invaders
 
-.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf platform-board-host platform-audio-host platform-audio-factory-host platform-touch-host platform-game-storage-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host console-os-host play-console-os p4-desktop-host p4-game-api-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host maze-chase-host space-invaders-host breakout-host asteroids-host asteroids-2-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host play-game game-registry-check game-sdk-host board-port-check console-os-idf console-os-olimex-idf console-os-waveshare-idf gamepad-host gamepad-idf install-olimex-sd-card install-waveshare-sd-card
+.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf platform-board-host platform-audio-host platform-audio-factory-host platform-touch-host platform-game-storage-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host console-os-host play-console-os p4-desktop-host p4-game-api-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host maze-chase-host space-invaders-host breakout-host asteroids-host asteroids-2-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host calculator-host input-test-host av-test-host play-game game-registry-check game-sdk-host board-port-check console-os-idf console-os-olimex-idf console-os-waveshare-idf gamepad-host gamepad-idf install-olimex-sd-card install-waveshare-sd-card
 
 setup:
 	./scripts/install-esp-idf.sh
@@ -202,6 +202,28 @@ solitaire-host:
 	cmake --build build-host/play-solitaire
 	ctest --test-dir build-host/play-solitaire --output-on-failure
 
+calculator-host:
+	cmake -S games/calculator -B build-host/calculator -G Ninja
+	cmake --build build-host/calculator
+	ctest --test-dir build-host/calculator --output-on-failure
+	cmake -S tools/p4-game-host -B build-host/play-calculator -G Ninja -DP4_GAME=calculator
+	cmake --build build-host/play-calculator
+	ctest --test-dir build-host/play-calculator --output-on-failure
+
+input-test-host:
+	cmake -S games/input_test -B build-host/input_test -G Ninja
+	cmake --build build-host/input_test
+	cmake -S tools/p4-game-host -B build-host/play-input_test -G Ninja -DP4_GAME=input_test
+	cmake --build build-host/play-input_test
+	ctest --test-dir build-host/play-input_test --output-on-failure
+
+av-test-host:
+	cmake -S games/av_test -B build-host/av_test -G Ninja
+	cmake --build build-host/av_test
+	cmake -S tools/p4-game-host -B build-host/play-av_test -G Ninja -DP4_GAME=av_test
+	cmake --build build-host/play-av_test
+	ctest --test-dir build-host/play-av_test --output-on-failure
+
 play-game:
 	cmake -S tools/p4-game-host -B "build-host/play-$(GAME)" -G Ninja -DP4_GAME="$(GAME)"
 	cmake --build "build-host/play-$(GAME)"
@@ -212,7 +234,7 @@ game-registry-check:
 	python3 scripts/tests/test-game-registry.py
 	python3 scripts/tests/test-new-game.py
 
-game-sdk-host: p4-desktop-host p4-game-api-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host maze-chase-host space-invaders-host breakout-host asteroids-host asteroids-2-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host game-registry-check
+game-sdk-host: p4-desktop-host p4-game-api-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host maze-chase-host space-invaders-host breakout-host asteroids-host asteroids-2-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host calculator-host input-test-host av-test-host game-registry-check
 
 board-port-check:
 	python3 scripts/board-port.py check

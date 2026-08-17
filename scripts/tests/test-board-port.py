@@ -28,7 +28,7 @@ def main() -> None:
     matrix_report = json.loads(matrix.stdout)
     assert matrix_report["result"] == "console-os-board-parity-valid"
     assert matrix_report["targets"]["olimex-esp32-p4-pc"]["touch"] is False
-    assert matrix_report["targets"]["olimex-esp32-p4-pc"]["feature_count"] == 11
+    assert matrix_report["targets"]["olimex-esp32-p4-pc"]["feature_count"] == 20
     assert matrix_report["targets"]["elecrow-crowpanel-advanced-10"][
         "exact_target_seen_on_hardware"] is True
     assert matrix_report["targets"]["elecrow-crowpanel-advanced-10"][

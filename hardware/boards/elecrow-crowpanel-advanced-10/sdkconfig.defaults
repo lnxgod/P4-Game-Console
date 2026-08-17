@@ -3,6 +3,13 @@
 CONFIG_P4_BOARD_ELECROW_CROWPANEL_ADVANCED_10=y
 CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B=n
 
+# This board keeps its game storage on the internal FAT partition exposed over
+# J16, with two rollback-capable launcher slots in the remaining 16 MiB flash.
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_ESPTOOLPY_FLASHSIZE="16MB"
+CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions.csv"
+CONFIG_PARTITION_TABLE_FILENAME="partitions.csv"
+
 # J16 is the ESP32-P4 HS device port. The shared FAT volume is automatically
 # handed between the app and the USB host; both sides are never mounted at once.
 CONFIG_TINYUSB_MSC_ENABLED=y

@@ -46,8 +46,9 @@ linked. The port's separate game data remains ignored and unredistributed.
 
 ## Device behavior
 
-- A missing or unmountable card leaves the embedded Byte Buddy game usable and
-  marks removable storage unavailable.
+- A missing or unmountable card leaves Console OS and its built-in pages usable
+  but exposes no executable P4G apps and marks removable storage unavailable;
+  restoring the card rebuilds the catalog.
 - Game Manager refresh performs a new bounded background P4 Cart scan without
   blocking the launcher or writing the card.
 - Device-side USB import reports unavailable; it never formats the card or
