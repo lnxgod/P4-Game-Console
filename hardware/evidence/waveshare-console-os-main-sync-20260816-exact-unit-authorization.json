@@ -1,0 +1,103 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-16T18:11:01-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-main-sync-successor",
+  "operator_direction": "Replace only the installed P4CART compatibility application with the verified Console OS successor merged with current main, including native feedback audio and the canonical GAMES directory while preserving root-level P4G compatibility and legacy P4CART cataloging.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "preinstall_backup": {
+    "path": "hardware/backups/waveshare-pre-console-os-0.3-20260816.bin",
+    "bytes": 33554432,
+    "sha256": "9cdbeaa98914b4bf5ee21a1e6302a931ca1e33c6fba3c8187ad7ce0250da5b04",
+    "captured_immediately_before_full_layout_migration": true,
+    "git_ignored": true,
+    "mode": "0600"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "ota_data": {
+      "offset": "0x10000",
+      "bytes": 8192,
+      "initial_artifact_sha256": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f",
+      "live_policy": "mutable boot-selection state; preserve without writing or requiring the initial digest"
+    }
+  },
+  "predecessor": {
+    "offset": "0x20000",
+    "bytes": 978896,
+    "sha256": "54681d5620253ff80a96f504adde6ab52f4c7b01797777081a9da7bd41f41254",
+    "install_digest_verified": true,
+    "boot_progress": "reached READY, preserved the native P4G catalog, completed a read-only empty P4CART scan, and remained stable for nine periodic runtime reports",
+    "test_record": "hardware/test-runs/2026-08-16-waveshare-console-os-p4cart-install.json"
+  },
+  "candidate": {
+    "source_commit": "f6d8f78f88091e06fb25966dc4db8751ef19ab2f",
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "correction": "Merge current main feedback audio and native cartridge changes, complete the canonical GAMES-directory migration across builders, verifiers, documentation, and the SD installer, retain root-level P4G scanning for 0.3 cards, and retain the bounded P4CART1 catalog scan.",
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+      "bytes": 1116256,
+      "sha256": "ec8d6ab8c5a04c10bf089ae3c40493854301e8ebe50191c25b16e810fcd8c670",
+      "action": "write-and-on-device-digest-verify"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.elf",
+      "bytes": 11938180,
+      "sha256": "7c2bb47fb4bf42032d16c412b83563fa7329711d22429cc2cffb728cf9220e2b"
+    },
+    "embedded_default": {
+      "file": "GAMES/BYTEBUD.P4G",
+      "bytes": 145672,
+      "sha256": "39b11e6f590479a8e9857c7dd4b5de62fb32901f4de195bf78280dfb1c8cfadd"
+    },
+    "legacy_p4cart_seed": {
+      "file": "P4/GAMES/BOUNCE-LAB.P4CART",
+      "bytes": 5975,
+      "sha256": "25d65203d1cd22fbf68e5ea0cb18fbe8c132e6113c4dffe331765cbf5c706fab",
+      "runtime_policy": "catalog and display only; sandboxed Lua execution remains a separate unimplemented milestone"
+    }
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "verify_live_identity_before_write": true,
+    "verify_factory_and_preinstall_backups_before_write": true,
+    "verify_installed_bootloader_and_partition_table_before_write": true,
+    "preserve_live_ota_data_without_write": true,
+    "verify_installed_predecessor_application_before_write": true,
+    "write_only_primary_application": true,
+    "verify_application_on_device_after_write": true,
+    "format_sd_card": false,
+    "write_sd_card": false,
+    "execute_p4cart_lua": false,
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "main-stack telemetry remains positive",
+    "native catalog accepts the existing root-level P4G package and the embedded fallback remains valid",
+    "P4CART scan begins after Console OS readiness and completes with bounded counts, runtime=lua-pending, and writes=0",
+    "boot reaches P4_CONSOLE_OS READY without panic or reset",
+    "launcher remains alive for at least two periodic runtime reports with stable touch, display, storage, and P4CART state",
+    "no SD format or write occurs during installation or catalog validation"
+  ]
+}
