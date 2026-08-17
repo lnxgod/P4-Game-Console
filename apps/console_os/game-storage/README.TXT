@@ -10,11 +10,20 @@ Installed games are single files in the GAMES directory:
 
   GAMES/*.P4G       P4 Game API v1 cartridge
 
-Copy or replace a P4G file in GAMES, eject P4 GAMES cleanly, then open Game Manager.
-Game Manager lists valid and broken copies and can remove a package after a
-second confirmation. P4G files contain native code and are not a security
-sandbox; install only packages you trust. Console OS also reads root P4G files
-from older cards so upgrades do not strand installed games.
+Copy or replace a P4G file in GAMES, eject P4 GAMES cleanly, then open Game
+Manager. Game Manager lists valid and broken copies and can remove a package
+after a second confirmation. P4G files contain native code and are not a
+security sandbox; install only packages you trust. Console OS also reads root
+P4G files from older cards so upgrades do not strand installed games. The copy
+under GAMES takes precedence when both locations contain the same game.
+
+Open, source-included P4 Cart v1 files keep their original layout:
+
+  P4/GAMES/*.P4CART   validated Lua-source cartridges
+
+Game Manager verifies and lists these carts without renaming them to P4G.
+The Lua 5.4 sandbox is not in this firmware yet, so P4CART entries are
+catalog-only and cannot launch. BOUNCE-LAB.P4CART is the open reference cart.
 
 Console OS updates use:
 

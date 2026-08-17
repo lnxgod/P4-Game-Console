@@ -1,0 +1,104 @@
+{
+  "schema": 1,
+  "captured_at": "2026-08-16T18:25:35-0700",
+  "result": "pass-restored-desktop-current-main-install-digest-p4g-p4cart-and-launcher-soak",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "identity_check": "matched preserved factory-backup manifest; raw identity not recorded"
+  },
+  "source": {
+    "candidate_commit": "023e5cc2887dff2d3f11219529bd6609b8da7666",
+    "restored_desktop_main_commit": "b410964c5ae3e899be9e12a7f79b384a97406b59",
+    "p4cart_feature_commit": "e456c26b7663d53f52b76f97207fe4946bbf6b25",
+    "branch": "codex/waveshare-console-os",
+    "pull_request": 9
+  },
+  "install": {
+    "authorization": "hardware/evidence/waveshare-console-os-desktop-sync-20260816-exact-unit-authorization.json",
+    "route": "scripts/install-waveshare-console-os-desktop-sync.sh",
+    "write_scope": "application only at 0x20000; live OTA data and SD preserved",
+    "preflight_without_write_passed": true,
+    "bootloader_digest_verified": true,
+    "partition_table_digest_verified": true,
+    "predecessor_digest_verified": true,
+    "predecessor_application_sha256": "ec8d6ab8c5a04c10bf089ae3c40493854301e8ebe50191c25b16e810fcd8c670",
+    "application_bytes": 1121088,
+    "application_sha256": "c2650e525434ba173d3c7b49aa9a738a856d98519de74bb2e2384ba5fb7a2065",
+    "application_readback_verified": true,
+    "erase_entire_flash": false,
+    "ota_data_written": false,
+    "sd_formatted": false,
+    "sd_written": false
+  },
+  "build_acceptance": {
+    "pinned_esp_idf": "5.5.3",
+    "full_console_os_waveshare_target_passed": true,
+    "host_desktop_and_shell_tests_passed": true,
+    "host_p4_game_api_feedback_audio_passed": true,
+    "host_p4_content_sanitizer_passed": true,
+    "host_game_suite_passed": true,
+    "waveshare_artifact_verifier_passed": true,
+    "exact_waveshare_ota_slot_bytes": 8323072,
+    "embedded_default": {
+      "file": "GAMES/BYTEBUD.P4G",
+      "bytes": 145692,
+      "sha256": "1cf7612ab97611fddcb91666a2dfa8ce070f7582ca334cbb4c14b127ab5a9f96"
+    },
+    "legacy_p4cart_seed": {
+      "file": "P4/GAMES/BOUNCE-LAB.P4CART",
+      "bytes": 5975,
+      "sha256": "25d65203d1cd22fbf68e5ea0cb18fbe8c132e6113c4dffe331765cbf5c706fab"
+    }
+  },
+  "serial_capture": {
+    "mode": "exclusive receive-only with DTR and RTS inactive after explicit hard reset",
+    "baud": 115200,
+    "transmitted_bytes": 0,
+    "seconds": 75,
+    "raw_bytes": 9880,
+    "raw_sha256": "5b7e2e592aa4f8223dda9093d7181b295333db84fc2af6365bc9bfe178153403",
+    "raw_retention": "temporary local capture; digest and parsed evidence retained here"
+  },
+  "serial_acceptance": {
+    "storage_backend": "microSD read-only",
+    "storage_capacity_bytes": 32010928128,
+    "storage_generation": 1,
+    "storage_verified_writes": 0,
+    "storage_write_failures": 0,
+    "main_stack_low_water_bytes_after_storage": 22360,
+    "native_p4g_catalog_available": true,
+    "native_p4g_packages": 1,
+    "native_p4g_valid": 1,
+    "native_p4g_embedded_default": true,
+    "registered_apps": 12,
+    "previous_registered_apps": 9,
+    "restored_system_app_delta": 3,
+    "ready_marker": "P4_CONSOLE_OS READY page=home display=mipi-dsi storage=microsd-read-only removal=power-off-first",
+    "ota_mark_valid_result": "ESP_OK",
+    "p4cart_scan_begin_after_ready": true,
+    "p4cart_scan_directory": "/game-data/P4/GAMES",
+    "p4cart_candidates": 0,
+    "p4cart_valid": 0,
+    "p4cart_rejected": 0,
+    "p4cart_runtime": "lua-pending",
+    "p4cart_writes": 0,
+    "runtime_reports_observed": 9,
+    "last_observed_loop": 2700,
+    "touch_failures": 0,
+    "display_submits": 7,
+    "display_completions": 7,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "panic_or_reset": false
+  },
+  "physical_acceptance": {
+    "desktop_visually_confirmed": false,
+    "p4g_game_launch_observed": false,
+    "p4cart_row_visually_confirmed": false,
+    "reason_pending": "Serial proves the restored twelve-app registry, dynamic P4G catalog, P4CART scanner, and launcher stability. Visual and touch acceptance require operator interaction; the inserted card contains no P4CART file."
+  },
+  "conclusion": "The exact restored-desktop Console OS successor is installed and digest-verified. Current main, feedback audio, the twelve-app desktop/catalog restoration, old root P4G compatibility, the embedded Byte Buddy fallback, and the bounded P4CART scanner coexist without serial faults or SD writes."
+}

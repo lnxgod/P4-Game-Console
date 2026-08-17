@@ -25,6 +25,7 @@ GAME_DATA_OFFSET = 0x710000
 GAME_DATA_BYTES = 0x8F0000
 P4G_HEADER_BYTES = 256
 P4U_HEADER_BYTES = 256
+P4CART_SEED = pathlib.Path("P4/GAMES/BOUNCE-LAB.P4CART")
 
 
 def fail(message: str) -> None:
@@ -147,6 +148,33 @@ def verify_os_update(path: pathlib.Path, app_binary: pathlib.Path) -> dict:
     }
 
 
+def verify_p4cart(path: pathlib.Path) -> dict:
+    inspect = subprocess.run(
+        [sys.executable,
+         str(ROOT / "game-platform/scripts/p4cart.py"),
+         "inspect", str(path)],
+        cwd=ROOT, check=False, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    require(inspect.returncode == 0,
+            f"seed P4 Cart is invalid: {inspect.stderr.strip()}")
+    with tempfile.TemporaryDirectory(prefix="p4cart-seed-") as temporary:
+        rebuilt = pathlib.Path(temporary) / "BOUNCE-LAB.P4CART"
+        packed = subprocess.run(
+            [sys.executable,
+             str(ROOT / "game-platform/scripts/p4cart.py"),
+             "pack", str(ROOT / "game-platform/templates/bounce-lab"),
+             str(rebuilt)],
+            cwd=ROOT, check=False, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        require(packed.returncode == 0 and rebuilt.read_bytes() == path.read_bytes(),
+                f"seed P4 Cart is not the deterministic Bounce Lab package: "
+                f"{packed.stderr.strip()}")
+    return {"file": str(P4CART_SEED), "bytes": path.stat().st_size,
+            "sha256": sha256(path)}
+
+
 def main() -> None:
     build = (
         pathlib.Path(sys.argv[1]).resolve()
@@ -212,6 +240,12 @@ def main() -> None:
             all(isinstance(name, str) and name.endswith(".P4G")
                 for name in expected_seed_packages),
             "seed package metadata differs")
+    legacy = metadata.get("legacy_p4cart", {})
+    require(legacy.get("format") == "p4-cart-source-v1" and
+            legacy.get("game_manager_visible") is True and
+            legacy.get("runtime_implemented") is False and
+            legacy.get("seed_cart") == str(P4CART_SEED),
+            "legacy P4 Cart metadata differs")
     shell = metadata.get("shell", {})
     require(shell.get("dynamic_executable_loading") is True and
             "game-manager" in shell.get("built_in_apps", []),
@@ -253,7 +287,7 @@ def main() -> None:
     components = set(project.get("build_components", []))
     required_components = {
         "console_shell", "p4_game_api", "p4_game_package",
-        "p4_os_update_package", "platform_game_catalog",
+        "p4_content_catalog", "p4_os_update_package", "platform_game_catalog",
         "platform_game_loader", "platform_game_storage",
         "platform_os_update", "platform_display", "platform_touch",
         "platform_readonly_blob", "fatfs", "wear_levelling",
@@ -315,6 +349,7 @@ def main() -> None:
     require(app_binary.stat().st_size <= OTA0_BYTES,
             "app does not fit the smaller OTA slot")
     os_update = verify_os_update(build / "P4UPDATE.P4U", app_binary)
+    p4cart = verify_p4cart(build / "game-storage-seed" / P4CART_SEED)
 
     package_reports: list[dict] = []
     manifests: list[dict] = []
@@ -324,7 +359,7 @@ def main() -> None:
             manifests.append(manifest)
             package_reports.append(verify_game_package(
                 build / "game-storage-seed/GAMES" /
-                    manifest["package_file"],
+                manifest["package_file"],
                 manifest,
             ))
     require([item["file"] for item in package_reports] ==
@@ -380,12 +415,16 @@ def main() -> None:
         require(len(volume_roots) == 1, "generated FAT has wrong volume label")
         volume = volume_roots[0]
         require(sorted(item.name for item in volume.iterdir()) ==
-                sorted(["DOOM1.WAD", "GAMES", "README.TXT", "UPDATE"]),
+                sorted(["DOOM1.WAD", "README.TXT", "GAMES", "UPDATE",
+                        "P4"]),
                 "generated FAT root contents differ")
         require((volume / "GAMES").is_dir() and
                 sorted(item.name for item in (volume / "GAMES").iterdir()) ==
-                    sorted(expected_seed_packages),
-                "generated FAT GAMES directory differs")
+                sorted(expected_seed_packages),
+                "generated FAT GAMES contents differ")
+        require((volume / P4CART_SEED).read_bytes() ==
+                (build / "game-storage-seed" / P4CART_SEED).read_bytes(),
+                "generated FAT contains the wrong P4 Cart seed")
         require((volume / "UPDATE").is_dir() and
                 not any((volume / "UPDATE").iterdir()),
                 "generated FAT UPDATE directory differs")
@@ -411,6 +450,7 @@ def main() -> None:
     symbols = symbols_result.stdout
     for symbol in (
         "app_main", "console_os_launch_doom", "platform_game_catalog_scan",
+        "p4_content_catalog_scan",
         "platform_game_loader_run", "p4_game_package_parse",
         "p4_os_update_package_parse", "platform_os_update_install",
         "esp_elf_relocate", "esp_ota_set_boot_partition",
@@ -444,7 +484,9 @@ def main() -> None:
     shell_main = (APP / "main/console_os_main.c").read_text(encoding="utf-8")
     require("CONSOLE_PAGE_GAMES" in shell_main and
             "native_format=p4-native-elf-v1" in shell_main and
-            "platform_game_loader_run" in shell_main,
+            "platform_game_loader_run" in shell_main and
+            "P4CART_SCAN_BEGIN" in shell_main and
+            "P4CART_READY" in shell_main,
             "Game Manager/cartridge route is absent from Console OS")
     require_order(shell_main, [
         "result = present(&shell);",
@@ -493,6 +535,7 @@ def main() -> None:
             "smallest_ota_free_bytes": OTA0_BYTES - app_binary.stat().st_size,
         },
         "os_update": os_update,
+        "legacy_p4cart": p4cart,
         "game_packages": package_reports,
         "game_data": {
             "path": str(game_image.relative_to(ROOT)),

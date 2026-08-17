@@ -24,11 +24,13 @@
 #include "esp_system.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/idf_additions.h"
 #include "freertos/task.h"
 #pragma GCC diagnostic pop
 #include "p4/audio.h"
 #include "p4/achievements.h"
 #include "p4/cartridge.h"
+#include "p4/content_catalog.h"
 #include "p4/desktop.h"
 #include "p4/draw.h"
 #include "p4/game.h"
@@ -76,6 +78,7 @@ enum {
     CONSOLE_BOOT_ANIMATION_STEPS = 5,
     CONSOLE_BOOT_LOGO_WIDTH = 298,
     CONSOLE_BOOT_LOGO_HEIGHT = 43,
+    CONSOLE_P4CART_SCAN_STACK_BYTES = 12 * 1024,
     CONSOLE_NATIVE_AUDIO_FRAMES_PER_TICK =
         P4_GAME_PLATFORM_AUDIO_SAMPLE_RATE_HZ *
         CONSOLE_FRAME_INTERVAL_MS / 1000,
@@ -115,6 +118,20 @@ static console_shell_file_listing_t s_shell_file_listing;
 static console_shell_file_listing_t s_manager_listing;
 static platform_game_catalog_t s_game_catalog;
 static platform_game_catalog_t s_catalog_staging;
+static p4_content_catalog_t s_p4cart_catalog;
+static p4_content_catalog_t s_p4cart_scan_staging;
+static p4_content_status_t s_p4cart_scan_result;
+static TaskHandle_t s_p4cart_scan_task;
+static portMUX_TYPE s_p4cart_scan_lock = portMUX_INITIALIZER_UNLOCKED;
+typedef enum {
+    P4CART_SCAN_IDLE = 0,
+    P4CART_SCAN_RUNNING,
+    P4CART_SCAN_DONE,
+} p4cart_scan_state_t;
+static p4cart_scan_state_t s_p4cart_scan_state;
+static bool s_p4cart_scan_seen;
+static uint32_t s_p4cart_scan_generation;
+static uint32_t s_p4cart_catalog_generation;
 static platform_os_update_info_t s_update_staging;
 static console_shell_t s_shell;
 static p4_achievement_catalog_t s_achievements;
@@ -131,7 +148,7 @@ static uint32_t s_manager_listing_revision;
 static char s_doom_subtitle[CONSOLE_SHELL_SUBTITLE_MAX_BYTES] =
     "STORAGE CHECKING";
 static char s_game_manager_subtitle[CONSOLE_SHELL_SUBTITLE_MAX_BYTES] =
-    "GAMES + OS UPDATE";
+    "P4G + P4CART + OS";
 static int16_t s_native_audio_pcm[
     CONSOLE_NATIVE_AUDIO_FRAMES_PER_TICK *
     P4_GAME_PLATFORM_AUDIO_CHANNEL_COUNT];
@@ -500,7 +517,7 @@ static void set_doom_storage_state(platform_game_storage_state_t state)
 
 static void set_game_manager_update_state(platform_os_update_state_t state)
 {
-    const char *subtitle = "GAMES + OS UPDATE";
+    const char *subtitle = "P4G + P4CART + OS";
     switch (state) {
     case PLATFORM_OS_UPDATE_READY:
         subtitle = "OS UPDATE READY - OPEN";
@@ -585,6 +602,124 @@ static bool catalog_needs_reload(void)
     return storage_app_owned() &&
         (!s_catalog_seen || s_catalog_storage_generation !=
             s_game_storage_status.generation);
+}
+
+static p4cart_scan_state_t p4cart_scan_state(void)
+{
+    portENTER_CRITICAL(&s_p4cart_scan_lock);
+    const p4cart_scan_state_t state = s_p4cart_scan_state;
+    portEXIT_CRITICAL(&s_p4cart_scan_lock);
+    return state;
+}
+
+static bool p4cart_scan_running(void)
+{
+    return p4cart_scan_state() == P4CART_SCAN_RUNNING;
+}
+
+static bool p4cart_scan_needs_reload(void)
+{
+    return storage_app_owned() &&
+        p4cart_scan_state() == P4CART_SCAN_IDLE &&
+        (!s_p4cart_scan_seen || s_p4cart_catalog_generation !=
+            s_game_storage_status.generation);
+}
+
+static void p4cart_scan_worker(void *unused)
+{
+    (void)unused;
+    const p4_content_status_t result = p4_content_catalog_scan(
+        PLATFORM_GAME_STORAGE_MOUNT_POINT, &s_p4cart_scan_staging);
+    portENTER_CRITICAL(&s_p4cart_scan_lock);
+    s_p4cart_scan_result = result;
+    s_p4cart_scan_state = P4CART_SCAN_DONE;
+    portEXIT_CRITICAL(&s_p4cart_scan_lock);
+    vTaskSuspend(NULL);
+}
+
+static esp_err_t start_p4cart_scan(void)
+{
+    if (!storage_app_owned()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (p4cart_scan_state() != P4CART_SCAN_IDLE) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    memset(&s_p4cart_scan_staging, 0, sizeof(s_p4cart_scan_staging));
+    portENTER_CRITICAL(&s_p4cart_scan_lock);
+    if (s_p4cart_scan_state != P4CART_SCAN_IDLE) {
+        portEXIT_CRITICAL(&s_p4cart_scan_lock);
+        return ESP_ERR_INVALID_STATE;
+    }
+    s_p4cart_scan_generation = s_game_storage_status.generation;
+    s_p4cart_scan_state = P4CART_SCAN_RUNNING;
+    portEXIT_CRITICAL(&s_p4cart_scan_lock);
+
+    const BaseType_t created = xTaskCreateWithCaps(
+        p4cart_scan_worker, "p4cart_scan",
+        CONSOLE_P4CART_SCAN_STACK_BYTES, NULL, tskIDLE_PRIORITY + 1U,
+        &s_p4cart_scan_task, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (created != pdPASS) {
+        portENTER_CRITICAL(&s_p4cart_scan_lock);
+        s_p4cart_scan_state = P4CART_SCAN_IDLE;
+        portEXIT_CRITICAL(&s_p4cart_scan_lock);
+        s_p4cart_scan_seen = true;
+        s_p4cart_catalog_generation = s_game_storage_status.generation;
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS P4CART_SCAN_DEGRADED "
+                 "status=task-create-failed writes=0");
+        return ESP_ERR_NO_MEM;
+    }
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS P4CART_SCAN_BEGIN directory=%s/%s "
+             "mode=background generation=%lu writes=0",
+             PLATFORM_GAME_STORAGE_MOUNT_POINT,
+             P4_CONTENT_CART_DIRECTORY,
+             (unsigned long)s_p4cart_scan_generation);
+    return ESP_OK;
+}
+
+static bool finish_p4cart_scan(void)
+{
+    p4_content_status_t scan_result = P4_CONTENT_INVALID_ARGUMENT;
+    uint32_t scan_generation = 0U;
+    TaskHandle_t completed_task = NULL;
+    portENTER_CRITICAL(&s_p4cart_scan_lock);
+    if (s_p4cart_scan_state != P4CART_SCAN_DONE) {
+        portEXIT_CRITICAL(&s_p4cart_scan_lock);
+        return false;
+    }
+    scan_result = s_p4cart_scan_result;
+    scan_generation = s_p4cart_scan_generation;
+    completed_task = s_p4cart_scan_task;
+    s_p4cart_scan_task = NULL;
+    s_p4cart_scan_state = P4CART_SCAN_IDLE;
+    portEXIT_CRITICAL(&s_p4cart_scan_lock);
+
+    s_p4cart_catalog = s_p4cart_scan_staging;
+    s_p4cart_scan_seen = true;
+    s_p4cart_catalog_generation = scan_generation;
+    if (completed_task != NULL) {
+        vTaskDeleteWithCaps(completed_task);
+    }
+    if (scan_result != P4_CONTENT_OK) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS P4CART_SCAN_DEGRADED status=%s "
+                 "generation=%lu writes=0",
+                 p4_content_status_name(scan_result),
+                 (unsigned long)scan_generation);
+        return true;
+    }
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS P4CART_READY valid=%u rejected=%u "
+             "candidates=%u truncated=%u generation=%lu "
+             "runtime=lua-pending writes=0",
+             (unsigned)s_p4cart_catalog.valid_cart_count,
+             (unsigned)s_p4cart_catalog.invalid_cart_count,
+             (unsigned)s_p4cart_catalog.candidates_seen,
+             s_p4cart_catalog.directory_truncated ? 1U : 0U,
+             (unsigned long)scan_generation);
+    return true;
 }
 
 static esp_err_t reload_game_catalog(void)
@@ -792,6 +927,57 @@ static esp_err_t reload_manager_listing(
                 written > 0 ? invalid : source->file_name, target->label);
         }
     }
+    if (p4cart_scan_running()) {
+        if (s_manager_listing.entry_count <
+            CONSOLE_SHELL_FILE_MAX_ENTRIES) {
+            console_shell_file_entry_t *const pending =
+                &s_manager_listing.entries[s_manager_listing.entry_count++];
+            pending->source_index = UINT32_MAX - 1U;
+            memcpy(pending->label, "P4CART CHECKING",
+                   sizeof("P4CART CHECKING"));
+        } else {
+            ++s_manager_listing.omitted_entries;
+        }
+    } else if (s_p4cart_scan_seen) {
+        for (size_t index = 0U;
+             index < s_p4cart_catalog.valid_cart_count; ++index) {
+            if (s_manager_listing.entry_count >=
+                CONSOLE_SHELL_FILE_MAX_ENTRIES) {
+                ++s_manager_listing.omitted_entries;
+                continue;
+            }
+            const p4_content_item_t *const source =
+                &s_p4cart_catalog.carts[index];
+            console_shell_file_entry_t *const target =
+                &s_manager_listing.entries[s_manager_listing.entry_count++];
+            target->source_index = UINT32_MAX - 2U - (uint32_t)index;
+            target->size_kib = file_size_kib(source->size_bytes);
+            char name[P4_CONTENT_NAME_BYTES + 6U];
+            const int written = snprintf(
+                name, sizeof(name), "CART %s", source->name);
+            make_file_label(written > 0 ? name : source->name, target->label);
+        }
+        if (s_p4cart_catalog.invalid_cart_count > 0U &&
+            s_manager_listing.entry_count <
+                CONSOLE_SHELL_FILE_MAX_ENTRIES) {
+            console_shell_file_entry_t *const rejected =
+                &s_manager_listing.entries[s_manager_listing.entry_count++];
+            rejected->source_index = UINT32_MAX - 1U;
+            const int written = snprintf(
+                rejected->label, sizeof(rejected->label),
+                "BAD P4CARTS %u",
+                (unsigned)s_p4cart_catalog.invalid_cart_count);
+            if (written <= 0 ||
+                (size_t)written >= sizeof(rejected->label)) {
+                memcpy(rejected->label, "BAD P4CART",
+                       sizeof("BAD P4CART"));
+            }
+        }
+        if (s_p4cart_catalog.directory_truncated &&
+            s_manager_listing.omitted_entries != UINT32_MAX) {
+            ++s_manager_listing.omitted_entries;
+        }
+    }
     if (s_os_update_info.state == PLATFORM_OS_UPDATE_READY ||
         s_os_update_info.state == PLATFORM_OS_UPDATE_INVALID) {
         if (s_manager_listing.entry_count <
@@ -873,9 +1059,19 @@ static void handle_manager_action(
     console_shell_t *shell,
     const console_shell_action_t *action)
 {
+    if (p4cart_scan_running()) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS GAME_ACTION_DEFERRED "
+                 "reason=p4cart-scan action=%u",
+                 (unsigned)action->type);
+        console_shell_set_file_notice(shell, CONSOLE_FILE_NOTICE_ERROR);
+        return;
+    }
     if (action->type == CONSOLE_ACTION_GAME_REFRESH) {
         sync_game_storage();
         (void)reload_game_catalog();
+        s_p4cart_scan_seen = false;
+        (void)start_p4cart_scan();
         rebuild_shell_registry(shell);
         (void)reload_manager_listing(
             shell, CONSOLE_FILE_NOTICE_REFRESHED);
@@ -940,6 +1136,14 @@ static void handle_file_action(
     console_shell_t *shell,
     const console_shell_action_t *action)
 {
+    if (p4cart_scan_running()) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS FILE_ACTION_DEFERRED "
+                 "reason=p4cart-scan action=%u",
+                 (unsigned)action->type);
+        console_shell_set_file_notice(shell, CONSOLE_FILE_NOTICE_ERROR);
+        return;
+    }
     if (action->type == CONSOLE_ACTION_FILE_REFRESH) {
         sync_game_storage();
         (void)reload_file_listing(shell, CONSOLE_FILE_NOTICE_REFRESHED);
@@ -1516,7 +1720,8 @@ static void log_runtime_stats(const console_shell_t *shell)
              "display_submits=%lu "
              "display_completions=%lu display_timeouts=%lu "
              "display_failures=%lu audio=es8311-ready storage=%s "
-             "storage_generation=%lu storage_media=microsd",
+             "storage_generation=%lu storage_media=microsd "
+             "p4cart_scan=%u p4cart_valid=%u p4cart_rejected=%u",
              (unsigned long)s_loop_count,
              (unsigned)shell->page,
              (unsigned long)shell->render_generation,
@@ -1532,7 +1737,10 @@ static void log_runtime_stats(const console_shell_t *shell)
              (unsigned long)display.submit_timeouts,
              (unsigned long)display.submit_failures,
              platform_game_storage_state_name(s_game_storage_status.state),
-             (unsigned long)s_game_storage_status.generation);
+             (unsigned long)s_game_storage_status.generation,
+             (unsigned)p4cart_scan_state(),
+             (unsigned)s_p4cart_catalog.valid_cart_count,
+             (unsigned)s_p4cart_catalog.invalid_cart_count);
 #else
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS STATS loops=%lu page=%u renders=%lu "
@@ -1540,7 +1748,8 @@ static void log_runtime_stats(const console_shell_t *shell)
              "display_submits=%lu display_completions=%lu "
              "display_timeouts=%lu display_failures=%lu "
              "amp_energized=0 doom_handoffs=%lu storage=%s "
-             "storage_generation=%lu usb_attached=%u",
+             "storage_generation=%lu usb_attached=%u "
+             "p4cart_scan=%u p4cart_valid=%u p4cart_rejected=%u",
              (unsigned long)s_loop_count,
              (unsigned)shell->page,
              (unsigned long)shell->render_generation,
@@ -1554,7 +1763,10 @@ static void log_runtime_stats(const console_shell_t *shell)
              (unsigned long)s_doom_handoff_count,
              platform_game_storage_state_name(s_game_storage_status.state),
              (unsigned long)s_game_storage_status.generation,
-             s_game_storage_status.usb_attached ? 1U : 0U);
+             s_game_storage_status.usb_attached ? 1U : 0U,
+             (unsigned)p4cart_scan_state(),
+             (unsigned)s_p4cart_catalog.valid_cart_count,
+             (unsigned)s_p4cart_catalog.invalid_cart_count);
 #endif
 }
 
@@ -2211,9 +2423,21 @@ void app_main(void)
     for (;;) {
         ++s_loop_count;
         sync_game_storage();
+        if (finish_p4cart_scan() &&
+            shell->page == CONSOLE_PAGE_GAMES) {
+            (void)reload_manager_listing(
+                shell, CONSOLE_FILE_NOTICE_NONE);
+        }
         if (catalog_needs_reload()) {
             (void)reload_game_catalog();
             rebuild_shell_registry(shell);
+            if (shell->page == CONSOLE_PAGE_GAMES) {
+                (void)reload_manager_listing(
+                    shell, CONSOLE_FILE_NOTICE_NONE);
+            }
+        }
+        if (p4cart_scan_needs_reload()) {
+            (void)start_p4cart_scan();
             if (shell->page == CONSOLE_PAGE_GAMES) {
                 (void)reload_manager_listing(
                     shell, CONSOLE_FILE_NOTICE_NONE);
@@ -2246,6 +2470,12 @@ void app_main(void)
                    action.type == CONSOLE_ACTION_GAME_REMOVE ||
                    action.type == CONSOLE_ACTION_OS_UPDATE_INSTALL) {
             handle_manager_action(shell, &action);
+        } else if (action.type == CONSOLE_ACTION_LAUNCH &&
+                   p4cart_scan_running()) {
+            ESP_LOGW(TAG,
+                     "P4_CONSOLE_OS LAUNCH_DEFERRED id=%lu "
+                     "reason=p4cart-scan",
+                     (unsigned long)action.app_id);
         } else if (action.type == CONSOLE_ACTION_LAUNCH &&
             action.app_id == CONSOLE_APP_DOOM) {
             launch_doom_exclusive(shell);

@@ -7,9 +7,11 @@ scan unrelated large game-data files at boot. A bad cart is counted and
 ignored; it is never executed.
 
 The current P4 Cart milestone is a safe catalog, not an executable cartridge
-runtime. Valid carts appear in Library diagnostics, but remain non-runnable
-until the pinned Lua sandbox is integrated. Native C games remain compiled into
-the firmware.
+runtime. The restored background scanner adds valid carts to Game Manager as
+non-removable `CART` entries and reports rejected containers without treating
+them as native games. They remain non-runnable until the pinned Lua sandbox is
+integrated. Native `.P4G` games continue to use the separate reviewed ELF
+loader.
 
 ## Copy an open P4 Cart
 
@@ -44,9 +46,10 @@ linked. The port's separate game data remains ignored and unredistributed.
 
 ## Device behavior
 
-- A missing or unmountable card leaves built-in games usable and marks Library
-  storage unavailable.
-- Library refresh retries the no-format mount and performs a new bounded scan.
+- A missing or unmountable card leaves the embedded Byte Buddy game usable and
+  marks removable storage unavailable.
+- Game Manager refresh performs a new bounded background P4 Cart scan without
+  blocking the launcher or writing the card.
 - Device-side USB import reports unavailable; it never formats the card or
   accepts a host-supplied destination path.
 - Mounted-card imports use the host tool's validate, stage, sync, read-back,

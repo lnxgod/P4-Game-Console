@@ -71,6 +71,14 @@ Copy the resulting cartridge from `build/game-storage-seed/GAMES/` into
 `docs/GAME_SDK.md` for the API and package contract. This project does not use
 UF2.
 
+Game Manager also restores the original open P4 Cart catalog. Source-included
+`P4CART1` files live under `P4/GAMES/*.P4CART`; the firmware scans them on a
+bounded background task, verifies their complete container and payload hashes,
+and lists valid carts alongside P4G packages. This does not rename or execute
+them: the original project did not finish the required sandboxed Lua 5.4
+backend. The generated storage bundle includes the MIT-licensed Bounce Lab
+reference cart so this compatibility path is reproducible.
+
 The Waveshare 4.3 build always exposes the embedded Byte Buddy fallback and
 uses the same cartridge catalog for additional games on a read-only-at-runtime
 microSD card. Build and verify it with `make console-os-waveshare-idf`.

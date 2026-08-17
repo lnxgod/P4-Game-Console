@@ -32,6 +32,13 @@ cartridge can still execute CPU instructions, so install only packages you
 trust. This format is not UF2; UF2 is a flashing container, while `.P4G` is a
 Console OS runtime package.
 
+The earlier `.P4CART` format remains supported as a distinct open-source
+container under `P4/GAMES/*.P4CART`. Console OS bounds and hashes those
+`P4CART1` Lua-source packages and shows valid entries in Game Manager. They
+must never be renamed to `.P4G`: the reviewed `p4-lua-5.4-v1` sandbox is still
+pending, so this compatibility path validates and catalogs carts but does not
+execute them yet. See `docs/CONTENT_LIBRARY.md`.
+
 Doom remains a special legacy case. Its engine is linked into the OS, but its
 WAD is read from `P4 GAMES`; it uses an exclusive one-way handoff until the
 engine has a reviewed reentrant teardown.

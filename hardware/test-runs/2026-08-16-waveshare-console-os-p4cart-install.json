@@ -1,0 +1,88 @@
+{
+  "schema": 1,
+  "captured_at": "2026-08-16T18:07:30-0700",
+  "result": "pass-install-digest-boot-p4g-catalog-p4cart-empty-catalog-and-launcher-soak",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "identity_check": "matched preserved factory-backup manifest; raw identity not recorded"
+  },
+  "source": {
+    "feature_commit": "e456c26b7663d53f52b76f97207fe4946bbf6b25",
+    "branch": "codex/waveshare-console-os",
+    "pull_request": 9
+  },
+  "install": {
+    "authorization": "hardware/evidence/waveshare-console-os-p4cart-20260816-exact-unit-authorization.json",
+    "route": "scripts/install-waveshare-console-os-p4cart.sh",
+    "write_scope": "application only at 0x20000; live OTA data and SD preserved",
+    "preflight_without_write_passed": true,
+    "bootloader_digest_verified": true,
+    "partition_table_digest_verified": true,
+    "predecessor_digest_verified": true,
+    "application_bytes": 978896,
+    "application_sha256": "54681d5620253ff80a96f504adde6ab52f4c7b01797777081a9da7bd41f41254",
+    "application_readback_verified": true,
+    "erase_entire_flash": false,
+    "ota_data_written": false,
+    "sd_formatted": false,
+    "sd_written": false
+  },
+  "serial_capture": {
+    "mode": "exclusive receive-only with DTR and RTS inactive after explicit hard reset",
+    "baud": 115200,
+    "transmitted_bytes": 0,
+    "seconds": 75,
+    "raw_bytes": 9898,
+    "raw_sha256": "0832fb2cf5dbc2c9c615676cb00d06d6c5f05b0272785bbbc8ab97f0bb43f308",
+    "raw_retention": "temporary local capture; digest and parsed evidence retained here"
+  },
+  "serial_acceptance": {
+    "storage_backend": "microSD read-only",
+    "storage_capacity_bytes": 32010928128,
+    "storage_generation": 1,
+    "storage_verified_writes": 0,
+    "storage_write_failures": 0,
+    "main_stack_low_water_bytes_after_storage": 22392,
+    "native_p4g_catalog_available": true,
+    "native_p4g_packages": 1,
+    "native_p4g_valid": 1,
+    "native_p4g_embedded_default": true,
+    "registered_apps": 9,
+    "ready_marker": "P4_CONSOLE_OS READY page=home display=mipi-dsi storage=microsd-read-only removal=power-off-first",
+    "ota_mark_valid_result": "ESP_OK",
+    "p4cart_scan_begin_after_ready": true,
+    "p4cart_scan_directory": "/game-data/P4/GAMES",
+    "p4cart_scan_mode": "background",
+    "p4cart_candidates": 0,
+    "p4cart_valid": 0,
+    "p4cart_rejected": 0,
+    "p4cart_truncated": 0,
+    "p4cart_runtime": "lua-pending",
+    "p4cart_writes": 0,
+    "runtime_reports_observed": 9,
+    "last_observed_loop": 2700,
+    "last_touch_polls": 2700,
+    "touch_failures": 0,
+    "display_submits": 7,
+    "display_completions": 7,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "panic_or_reset": false
+  },
+  "artifact_acceptance": {
+    "legacy_seed_file": "P4/GAMES/BOUNCE-LAB.P4CART",
+    "legacy_seed_bytes": 5975,
+    "legacy_seed_sha256": "25d65203d1cd22fbf68e5ea0cb18fbe8c132e6113c4dffe331765cbf5c706fab",
+    "deterministic_repack_passed": true,
+    "host_parser_and_sanitizer_passed": true,
+    "sd_install_status": "not installed because runtime and guarded firmware route are read-only; the physical card currently has no P4CART candidates"
+  },
+  "physical_acceptance": {
+    "p4cart_row_visually_confirmed": false,
+    "reason_pending": "The inserted SD card contains no P4CART file. The generated open Bounce Lab seed is in the offline SD bundle and was not written while the tablet was powered."
+  },
+  "conclusion": "The exact P4CART compatibility successor is installed and digest-verified. Serial evidence proves the restored bounded scan runs after launcher readiness, performs no writes, completes without error, preserves native P4G registration, and remains stable. The inserted card has zero P4CART files, so hardware validation of a visible CART row remains pending; Lua execution was never part of the prior implementation and is not claimed."
+}

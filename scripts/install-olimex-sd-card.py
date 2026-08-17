@@ -11,6 +11,8 @@ import os
 import pathlib
 import shutil
 import struct
+import subprocess
+import sys
 import tempfile
 
 
@@ -18,6 +20,7 @@ ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_BUNDLE = ROOT / "apps/console_os/build-olimex-esp32-p4-pc/sd-card"
 DOOM_BYTES = 4_196_020
 DOOM_SHA256 = "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
+P4CART_SEED = pathlib.Path("P4/GAMES/BOUNCE-LAB.P4CART")
 
 
 def sha256(path: pathlib.Path) -> str:
@@ -91,6 +94,19 @@ def validate_update(path: pathlib.Path) -> None:
         raise SystemExit("P4UPDATE.P4U validation failed")
 
 
+def validate_p4cart(path: pathlib.Path) -> None:
+    result = subprocess.run(
+        [sys.executable,
+         str(ROOT / "game-platform/scripts/p4cart.py"),
+         "inspect", str(path)],
+        cwd=ROOT, check=False, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip()
+        raise SystemExit(f"P4 Cart validation failed: {detail}")
+
+
 def enabled_manifests() -> dict[str, dict[str, object]]:
     return {
         manifest["package_file"]: manifest
@@ -106,6 +122,7 @@ def bundle_files(manifests: dict[str, dict[str, object]]) -> tuple[pathlib.Path,
     return tuple(pathlib.Path("GAMES") / name for name in manifests) + (
         pathlib.Path("DOOM1.WAD"),
         pathlib.Path("README.TXT"),
+        P4CART_SEED,
         pathlib.Path("UPDATE/P4UPDATE.P4U"),
     )
 
@@ -127,6 +144,7 @@ def validate_bundle(bundle: pathlib.Path) -> tuple[pathlib.Path, ...]:
         raise SystemExit("README.TXT does not match the Olimex storage contract")
     for name in manifests:
         validate_game(bundle / "GAMES" / name, manifests[name])
+    validate_p4cart(bundle / P4CART_SEED)
     validate_update(bundle / "UPDATE/P4UPDATE.P4U")
     return files
 

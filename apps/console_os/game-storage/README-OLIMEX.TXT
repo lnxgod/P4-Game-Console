@@ -11,12 +11,21 @@ Installed games are single files in the GAMES directory:
 
   GAMES/MAZE.P4G       Maze Chase
   GAMES/INVADERS.P4G   Space Invaders
-  GAMES/*.P4G           Other P4 Game API v1 cartridges
+  GAMES/*.P4G          Other P4 Game API v1 cartridges
 
 Game Manager also reads root P4G files from older cards. It lists valid and
-broken packages and can remove a game after a
-second confirmation. P4G files contain native code and are not a security
-sandbox; install only packages you trust.
+broken packages and can remove a game after a second confirmation. P4G files
+contain native code and are not a security sandbox; install only packages you
+trust. The copy under GAMES takes precedence when both locations contain the
+same game.
+
+The original open P4 Cart layout is also preserved:
+
+  P4/GAMES/*.P4CART   validated Lua-source cartridges
+
+Game Manager verifies and lists these carts. The Lua 5.4 sandbox is not in
+this firmware yet, so P4CART entries remain catalog-only. The bundle includes
+the open BOUNCE-LAB.P4CART reference cart.
 
 Console OS updates use:
 
