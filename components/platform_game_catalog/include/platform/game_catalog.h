@@ -26,6 +26,7 @@ typedef struct {
     p4_game_package_result_t validation;
     const uint8_t *embedded_data;
     size_t embedded_bytes;
+    bool in_games_directory;
     bool embedded;
     bool valid;
 } platform_game_catalog_entry_t;

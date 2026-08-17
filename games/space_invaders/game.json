@@ -13,7 +13,7 @@
   "folder": "GAMES/ARCADE",
   "accent_rgb565": "0x07ff",
   "required_capabilities": ["video", "controls"],
-  "optional_capabilities": ["audio-tone"],
+  "optional_capabilities": ["audio-tone", "audio-stream"],
   "license": "MIT",
   "assets": "original-clean-room-code-rendered-geometry-only",
   "enabled": true

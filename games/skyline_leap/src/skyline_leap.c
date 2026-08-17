@@ -5,7 +5,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "p4/audio_pack.h"
 #include "p4/draw.h"
+#include "p4/feedback.h"
 #include "p4/game.h"
 #include "p4/input.h"
 #include "generated/skyline_leap_animation_atlas.inc"
@@ -89,6 +91,7 @@ typedef struct {
     uint8_t lives;
     uint8_t shards;
     uint8_t animation_frame;
+    p4_game_audio_effect_player_t audio;
     bool shard_collected[SHARD_COUNT];
     bool bot_active[MAX_BOTS];
     bool pulse_active;
@@ -456,6 +459,8 @@ static void start_pulse(p4_game_context_t *context,
     state->pulse_y = (int16_t)(state->player_y + PLAYER_HEIGHT / 2);
     state->pulse_cooldown_ms = 260U;
     play_tone(context, 1040U, 55U, 4U, P4_WAVE_SQUARE);
+    (void)p4_game_audio_effect_play(
+        context, &state->audio, P4_GAME_AUDIO_EFFECT_ACTION);
 }
 
 static void update_attack_cooldown(skyline_leap_state_t *state,
@@ -475,6 +480,8 @@ static void lose_life(p4_game_context_t *context, skyline_leap_state_t *state)
         return;
     }
     play_tone(context, 120U, 240U, 5U, P4_WAVE_SQUARE);
+    (void)p4_game_audio_effect_play(
+        context, &state->audio, P4_GAME_AUDIO_EFFECT_FAIL);
     if (state->lives != 0U) {
         --state->lives;
     }
@@ -586,6 +593,8 @@ static void collect_shards(p4_game_context_t *context,
         ++state->shards;
         state->score += 100U;
         play_tone(context, 940U, 70U, 4U, P4_WAVE_TRIANGLE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
     }
 }
 
@@ -656,6 +665,7 @@ static p4_game_result_t game_update(
         return P4_GAME_ERROR;
     }
     skyline_leap_state_t *const state = context->state;
+    (void)p4_game_audio_effect_service(context, &state->audio);
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
         return P4_GAME_EXIT_TO_LAUNCHER;
     }
@@ -731,6 +741,12 @@ static bool game_render(p4_game_context_t *context,
         return true;
     }
     draw_stage(surface, state);
+    p4_game_feedback_draw(
+        surface, state->game_over ? P4_GAME_FX_FAIL :
+        (state->finale ? P4_GAME_FX_REWARD : P4_GAME_FX_ACTION),
+        state->game_over || state->finale ? 160 : state->player_x,
+        state->game_over || state->finale ? 94 : state->player_y + 9,
+        context->frame_index);
     if (state->paused) {
         draw_center_panel(surface, "PAUSED", "START TO RESUME", COLOR_TEAL);
     } else if (state->clearing) {
@@ -758,7 +774,8 @@ const p4_game_descriptor_t p4_skyline_leap_game = {
     .subtitle = "4 STAGE COURIER",
     .accent_rgb565 = UINT16_C(0x05dd),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,
+    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
+                             P4_GAME_CAP_AUDIO_STREAM,
     .state_bytes = sizeof(skyline_leap_state_t),
     .start = game_start,
     .update = game_update,

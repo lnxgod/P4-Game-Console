@@ -21,6 +21,8 @@ typedef bool (*p4_cartridge_poll_frame_fn)(
 typedef bool (*p4_cartridge_present_fn)(void *context);
 typedef bool (*p4_cartridge_play_tone_fn)(
     void *context, const p4_tone_t *tone);
+typedef bool (*p4_cartridge_submit_pcm_fn)(
+    void *context, const int16_t *interleaved_stereo, size_t frame_count);
 typedef void (*p4_cartridge_stop_audio_fn)(void *context);
 typedef bool (*p4_cartridge_unlock_achievement_fn)(
     void *context, const p4_game_achievement_t *achievement);
@@ -49,6 +51,8 @@ typedef struct {
     p4_cartridge_finished_fn finished;
     /** Optional v1 extension; old cartridges safely ignore this tail field. */
     p4_cartridge_unlock_achievement_fn unlock_achievement;
+    /** Optional v1 extension for copied, bounded PCM16-stereo blocks. */
+    p4_cartridge_submit_pcm_fn submit_pcm16_stereo;
 } p4_cartridge_host_v1_t;
 
 typedef enum {

@@ -3,7 +3,9 @@
 set(P4_GAME_API_SOURCES
     "src/achievements.c"
     "src/audio_mixer.c"
+    "src/audio_pack.c"
     "src/draw.c"
+    "src/feedback.c"
     "src/game_runtime.c"
     "src/input.c"
 )

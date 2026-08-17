@@ -22,6 +22,15 @@ static bool host_play_tone(void *opaque, const p4_tone_t *tone)
         host->play_tone(host->context, tone);
 }
 
+static bool host_submit_pcm16_stereo(
+    void *opaque, const int16_t *interleaved_stereo, size_t frame_count)
+{
+    p4_cartridge_host_v1_t *const host = opaque;
+    return host != NULL && host->submit_pcm16_stereo != NULL &&
+        host->submit_pcm16_stereo(
+            host->context, interleaved_stereo, frame_count);
+}
+
 static void host_stop_audio(void *opaque)
 {
     p4_cartridge_host_v1_t *const host = opaque;
@@ -42,7 +51,8 @@ static bool host_valid(const p4_cartridge_host_v1_t *host)
 {
     return host != NULL && host->magic == P4_CARTRIDGE_HOST_MAGIC &&
         host->api_version == P4_CARTRIDGE_HOST_API_VERSION &&
-        host->struct_bytes >= sizeof(*host) &&
+        host->struct_bytes >=
+            offsetof(p4_cartridge_host_v1_t, unlock_achievement) &&
         host->expected_game_id != NULL && host->surface.pixels != NULL &&
         host->surface.width == P4_GAME_SURFACE_WIDTH &&
         host->surface.height == P4_GAME_SURFACE_HEIGHT &&
@@ -66,8 +76,17 @@ int app_main(int argc, char *argv[])
         strcmp(game->id, host->expected_game_id) != 0) {
         return P4_CARTRIDGE_EXIT_ID_MISMATCH;
     }
-    if ((game->required_capabilities &
-         ~host->available_capabilities) != 0U) {
+    const bool has_unlock_achievement = host->struct_bytes >=
+        offsetof(p4_cartridge_host_v1_t, submit_pcm16_stereo);
+    const bool has_submit_pcm = host->struct_bytes >= sizeof(*host);
+    uint32_t available_capabilities = host->available_capabilities;
+    if (host->play_tone == NULL) {
+        available_capabilities &= ~P4_GAME_CAP_AUDIO_TONE;
+    }
+    if (!has_submit_pcm || host->submit_pcm16_stereo == NULL) {
+        available_capabilities &= ~P4_GAME_CAP_AUDIO_STREAM;
+    }
+    if ((game->required_capabilities & ~available_capabilities) != 0U) {
         return P4_CARTRIDGE_EXIT_CAPABILITY_MISSING;
     }
 
@@ -76,14 +95,17 @@ int app_main(int argc, char *argv[])
         return P4_CARTRIDGE_EXIT_NO_MEMORY;
     }
     const p4_game_services_t services = {
-        .available_capabilities = host->available_capabilities,
+        .available_capabilities = available_capabilities,
         .audio_context = host,
         .game_id = game->id,
         .play_tone = host->play_tone == NULL ? NULL : host_play_tone,
-        .submit_pcm16_stereo = NULL,
+        .submit_pcm16_stereo =
+            (available_capabilities & P4_GAME_CAP_AUDIO_STREAM) != 0U
+            ? host_submit_pcm16_stereo : NULL,
         .stop_audio = host->stop_audio == NULL ? NULL : host_stop_audio,
         .achievement_context = host,
-        .unlock_achievement = host->unlock_achievement == NULL
+        .unlock_achievement = !has_unlock_achievement ||
+            host->unlock_achievement == NULL
             ? NULL : host_unlock_achievement,
     };
     p4_game_instance_t instance = {0};

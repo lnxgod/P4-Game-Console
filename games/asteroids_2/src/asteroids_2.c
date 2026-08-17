@@ -5,7 +5,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "p4/audio_pack.h"
 #include "p4/draw.h"
+#include "p4/feedback.h"
 #include "p4/game.h"
 #include "p4/input.h"
 
@@ -32,6 +34,7 @@ typedef struct {
     rock_t rocks[ROCK_COUNT];
     shot_t shots[SHOT_COUNT];
     spark_t sparks[18];
+    p4_game_audio_effect_player_t audio;
 } asteroids_2_state_t;
 
 static const int8_t s_dx[16] = {10,9,7,4,0,-4,-7,-9,-10,-9,-7,-4,0,4,7,9};
@@ -130,6 +133,8 @@ static void fire(p4_game_context_t *context, asteroids_2_state_t *state)
         shot->vy = (int8_t)(s_dy[state->heading] / 2 + state->ship_vy);
         shot->ttl_ms = 900U; shot->active = 1U; state->cooldown_ms = 190U;
         tone(context, 820U, 35U, 3U, P4_WAVE_SQUARE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_ACTION);
         return;
     }
 }
@@ -219,6 +224,8 @@ static void update_shots(p4_game_context_t *context, asteroids_2_state_t *state)
                 state->saucer_active = 0U; shot->active = 0U;
                 add_score(state, 200U); burst(state, state->saucer_x, state->saucer_y);
                 tone(context, 720U, 110U, 4U, P4_WAVE_TRIANGLE);
+                (void)p4_game_audio_effect_play(
+                    context, &state->audio, P4_GAME_AUDIO_EFFECT_IMPACT);
                 continue;
             }
         }
@@ -233,6 +240,8 @@ static void update_shots(p4_game_context_t *context, asteroids_2_state_t *state)
             split_rock(state, &destroyed);
             tone(context, (uint16_t)(220U + destroyed.radius * 13U), 60U, 4U,
                  P4_WAVE_TRIANGLE);
+            (void)p4_game_audio_effect_play(
+                context, &state->audio, P4_GAME_AUDIO_EFFECT_IMPACT);
             break;
         }
     }
@@ -268,6 +277,8 @@ static void update_ship(p4_game_context_t *context, asteroids_2_state_t *state)
         if (state->lives != 0U) --state->lives;
         burst(state, state->ship_x, state->ship_y);
         tone(context, 90U, 180U, 5U, P4_WAVE_TRIANGLE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_FAIL);
         if (state->lives == 0U) state->ended = 1U; else reset_ship(state);
         return;
     }
@@ -302,6 +313,8 @@ static void step(p4_game_context_t *context, asteroids_2_state_t *state)
             if (state->lives != 0U) --state->lives;
             if (state->lives == 0U) state->ended = 1U; else reset_ship(state);
             tone(context, 110U, 180U, 5U, P4_WAVE_TRIANGLE);
+            (void)p4_game_audio_effect_play(
+                context, &state->audio, P4_GAME_AUDIO_EFFECT_FAIL);
         }
     } else {
         state->enemy_ttl_ms = 0U;
@@ -310,6 +323,8 @@ static void step(p4_game_context_t *context, asteroids_2_state_t *state)
     if (!rocks_remain(state) && !state->ended) {
         ++state->level; begin_level(state);
         tone(context, 1047U, 100U, 4U, P4_WAVE_TRIANGLE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
     }
 }
 
@@ -386,6 +401,7 @@ static p4_game_result_t game_update(p4_game_context_t *context,
                                     const p4_game_input_t *input, uint32_t elapsed_ms)
 {
     asteroids_2_state_t *const state = context->state;
+    (void)p4_game_audio_effect_service(context, &state->audio);
     if ((input->pressed & P4_BUTTON_BACK) != 0U) return P4_GAME_EXIT_TO_LAUNCHER;
     state->held_buttons = input->held;
     if ((input->pressed & P4_BUTTON_START) != 0U && !state->ended) {
@@ -435,6 +451,10 @@ static bool game_render(p4_game_context_t *context, p4_game_surface_t *surface)
         line(surface, state->saucer_x - 3, state->saucer_y - 4, state->saucer_x + 3, state->saucer_y - 4, UINT16_C(0xf81f));
         line(surface, state->saucer_x + 3, state->saucer_y - 4, state->saucer_x + 6, state->saucer_y, UINT16_C(0xf81f));
     }
+    p4_game_feedback_draw(
+        surface, state->ended ? P4_GAME_FX_FAIL : P4_GAME_FX_ACTION,
+        state->ended ? 160 : state->ship_x,
+        state->ended ? 92 : state->ship_y, context->frame_index);
     if (!state->ended && (state->shield_ms == 0U || (state->shield_ms / 100U) % 2U == 0U)) draw_ship(surface, state);
     if (state->paused) p4_draw_text(surface, 132, 83, "PAUSED", UINT16_C(0xffe0), 1U, 6U);
     if (state->ended) { p4_draw_text(surface, 116, 78, "GAME OVER", UINT16_C(0xf81f), 1U, 9U); p4_draw_text(surface, 99, 91, "A RESTART", UINT16_C(0xffff), 1U, 9U); }
@@ -450,6 +470,7 @@ const p4_game_descriptor_t p4_asteroids_2_game = {
     .id = "org.p4console.asteroids-2", .title = "ASTEROIDS 2",
     .subtitle = "P4 GAME API V1", .accent_rgb565 = UINT16_C(0x5fea),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE, .state_bytes = sizeof(asteroids_2_state_t),
+    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM,
+    .state_bytes = sizeof(asteroids_2_state_t),
     .start = game_start, .update = game_update, .render = game_render, .stop = game_stop,
 };

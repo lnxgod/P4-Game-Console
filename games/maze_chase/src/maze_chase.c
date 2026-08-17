@@ -13,6 +13,7 @@
 
 #include "maze_chase_internal.h"
 #include "p4/draw.h"
+#include "p4/feedback.h"
 #include "p4/input.h"
 
 enum {
@@ -199,6 +200,8 @@ static void collect_pellet(p4_game_context_t *context,
         state->score += 50U;
         state->frightened_ms = FRIGHTENED_DURATION_MS;
         play_tone(context, 392U, 100U, 5U, P4_WAVE_TRIANGLE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
     } else {
         state->score += 10U;
         const uint16_t note = (state->score & UINT32_C(0x10)) != 0U
@@ -208,6 +211,8 @@ static void collect_pellet(p4_game_context_t *context,
     if (state->pellets_remaining == 0U) {
         state->won = true;
         play_tone(context, 1047U, 500U, 6U, P4_WAVE_TRIANGLE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
     }
 }
 
@@ -285,12 +290,16 @@ static void resolve_collisions(p4_game_context_t *context,
             state->score += 200U;
             reset_enemy(enemy, i);
             play_tone(context, 1319U, 140U, 5U, P4_WAVE_TRIANGLE);
+            (void)p4_game_audio_effect_play(
+                context, &state->audio, P4_GAME_AUDIO_EFFECT_IMPACT);
             continue;
         }
         if (state->lives != 0U) {
             --state->lives;
         }
         play_tone(context, 110U, 500U, 6U, P4_WAVE_TRIANGLE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_FAIL);
         if (state->lives == 0U) {
             state->game_over = true;
         } else {
@@ -326,6 +335,7 @@ static p4_game_result_t maze_update(
     uint32_t elapsed_ms)
 {
     maze_chase_state_t *const state = context->state;
+    (void)p4_game_audio_effect_service(context, &state->audio);
     state->held_buttons = input->held;
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
         return P4_GAME_EXIT_TO_LAUNCHER;
@@ -499,6 +509,14 @@ static bool maze_render(p4_game_context_t *context,
             }
         }
     }
+    p4_game_feedback_draw(
+        surface, state->game_over ? P4_GAME_FX_FAIL :
+        (state->won ? P4_GAME_FX_REWARD : P4_GAME_FX_ACTION),
+        state->game_over || state->won ? 160 :
+        MAZE_ORIGIN_X + (int)state->player_x * MAZE_TILE_SIZE + 4,
+        state->game_over || state->won ? 88 :
+        MAZE_ORIGIN_Y + (int)state->player_y * MAZE_TILE_SIZE + 4,
+        context->frame_index);
     draw_player(surface, state);
     for (size_t i = 0U; i < MAZE_CHASE_ENEMY_COUNT; ++i) {
         draw_enemy(surface, &state->enemies[i], state->frightened_ms != 0U);
@@ -534,7 +552,8 @@ const p4_game_descriptor_t p4_maze_chase_game = {
     .subtitle = "P4 GAME API V1",
     .accent_rgb565 = UINT16_C(0xffe0),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,
+    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
+                             P4_GAME_CAP_AUDIO_STREAM,
     .state_bytes = sizeof(maze_chase_state_t),
     .start = maze_start,
     .update = maze_update,

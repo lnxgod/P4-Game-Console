@@ -5,7 +5,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "p4/audio_pack.h"
 #include "p4/draw.h"
+#include "p4/feedback.h"
 #include "p4/game.h"
 #include "p4/input.h"
 #include "generated/space_background.inc"
@@ -46,6 +48,7 @@ typedef struct {
     uint32_t fire_cooldown_ms;
     uint32_t respawn_safe_ms;
     uint32_t explosion_ms;
+    p4_game_audio_effect_player_t audio;
     int16_t explosion_x;
     int16_t explosion_y;
     asteroid_t asteroids[12];
@@ -196,6 +199,8 @@ static void update_physics(p4_game_context_t *context, asteroids_state_t *state)
                 play_tone(context,
                           (uint16_t)(180U + (uint16_t)asteroid->radius * 12U),
                           70U, 4U, P4_WAVE_TRIANGLE);
+                (void)p4_game_audio_effect_play(
+                    context, &state->audio, P4_GAME_AUDIO_EFFECT_IMPACT);
                 if (asteroid->radius > 10U) {
                     for (size_t k = 0U; k < sizeof(state->asteroids) / sizeof(state->asteroids[0]); ++k) {
                         if (!state->asteroids[k].active) {
@@ -224,12 +229,16 @@ static void update_physics(p4_game_context_t *context, asteroids_state_t *state)
             state->x = 160; state->y = 105; state->vx = 0; state->vy = 0;
             state->respawn_safe_ms = 1100U;
             play_tone(context, 90U, 180U, 5U, P4_WAVE_SQUARE);
+            (void)p4_game_audio_effect_play(
+                context, &state->audio, P4_GAME_AUDIO_EFFECT_FAIL);
             if (state->lives == 0U) state->game_over = 1U;
         }
     }
     if (!asteroids_remaining(state)) {
         start_next_wave(state);
         play_tone(context, 880U, 100U, 4U, P4_WAVE_TRIANGLE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
     }
 }
 
@@ -287,6 +296,7 @@ static p4_game_result_t game_update(
     uint32_t elapsed_ms)
 {
     asteroids_state_t *const state = context->state;
+    (void)p4_game_audio_effect_service(context, &state->audio);
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
         return P4_GAME_EXIT_TO_LAUNCHER;
     }
@@ -299,6 +309,8 @@ static p4_game_result_t game_update(
     if ((input->pressed & P4_BUTTON_A) != 0U && state->fire_cooldown_ms == 0U && spawn_bullet(state)) {
         state->fire_cooldown_ms = 180U;
         play_tone(context, 740U, 45U, 3U, P4_WAVE_SQUARE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_ACTION);
     }
     state->simulation_ms += elapsed_ms;
     while (state->simulation_ms >= FIXED_MS) {
@@ -338,6 +350,10 @@ static bool game_render(p4_game_context_t *context,
     if (state->explosion_ms != 0U) {
         draw_sprite(surface, state->explosion_x, state->explosion_y, 3U);
     }
+    p4_game_feedback_draw(
+        surface, state->game_over ? P4_GAME_FX_FAIL : P4_GAME_FX_ACTION,
+        state->game_over ? 160 : state->x,
+        state->game_over ? 92 : state->y, context->frame_index);
     if (!state->game_over && (state->respawn_safe_ms == 0U ||
                               (state->respawn_safe_ms / 100U) % 2U == 0U)) {
         draw_sprite(surface, state->x, state->y, 0U);
@@ -365,7 +381,8 @@ const p4_game_descriptor_t p4_asteroids_game = {
     .subtitle = "P4 GAME API V1",
     .accent_rgb565 = UINT16_C(0x5fea),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,
+    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
+                             P4_GAME_CAP_AUDIO_STREAM,
     .state_bytes = sizeof(asteroids_state_t),
     .start = game_start,
     .update = game_update,

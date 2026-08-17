@@ -17,7 +17,8 @@
     "controls"
   ],
   "optional_capabilities": [
-    "audio-tone"
+    "audio-tone",
+    "audio-stream"
   ],
   "license": "MIT",
   "assets": "original-ImageGen-4x4-courier-bot-and-collectible-animation-atlas-and-code-rendered-backgrounds",

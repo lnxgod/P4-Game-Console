@@ -5,7 +5,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "p4/audio_pack.h"
 #include "p4/draw.h"
+#include "p4/feedback.h"
 #include "p4/game.h"
 #include "p4/input.h"
 #include "generated/frog_hop_animation_atlas.inc"
@@ -71,6 +73,7 @@ typedef struct {
     uint8_t level;
     uint8_t homes;
     uint8_t animation_frame;
+    p4_game_audio_effect_player_t audio;
     bool intro;
     bool paused;
     bool game_over;
@@ -360,6 +363,8 @@ static void lose_life(p4_game_context_t *context, frog_hop_state_t *state)
     reset_frog(state);
     state->respawn_ms = 550U;
     play_tone(context, 110U, 220U, 5U, P4_WAVE_SQUARE);
+    (void)p4_game_audio_effect_play(
+        context, &state->audio, P4_GAME_AUDIO_EFFECT_FAIL);
     if (state->lives == 0U) {
         state->game_over = true;
     }
@@ -383,6 +388,8 @@ static void reach_home(p4_game_context_t *context, frog_hop_state_t *state)
         state->homes = (uint8_t)(state->homes | home_bit);
         state->score += 100U + (uint32_t)state->level * 20U;
         play_tone(context, 880U, 90U, 4U, P4_WAVE_TRIANGLE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
         reset_frog(state);
         state->respawn_ms = 350U;
         if (state->homes == HOME_MASK) {
@@ -445,6 +452,8 @@ static void move_frog(p4_game_context_t *context, frog_hop_state_t *state,
     if (moved) {
         state->animation_frame = 2U;
         play_tone(context, 440U, 45U, 3U, P4_WAVE_TRIANGLE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_ACTION);
     }
 }
 
@@ -480,6 +489,7 @@ static p4_game_result_t game_update(
         return P4_GAME_ERROR;
     }
     frog_hop_state_t *const state = context->state;
+    (void)p4_game_audio_effect_service(context, &state->audio);
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
         return P4_GAME_EXIT_TO_LAUNCHER;
     }
@@ -543,6 +553,11 @@ static bool game_render(p4_game_context_t *context,
     }
     if (state->respawn_ms == 0U ||
         ((state->respawn_ms / 100U) & 1U) == 0U) {
+        p4_game_feedback_draw(
+            surface, state->game_over ? P4_GAME_FX_FAIL : P4_GAME_FX_ACTION,
+            state->game_over ? 160 : state->frog_x,
+            state->game_over ? 92 : row_top(state->frog_row) + 7,
+            context->frame_index);
         draw_frame(surface, state->frog_x - FRAME_WIDTH / 2,
                    row_top(state->frog_row) - 5, FROG_ROW,
                    state->animation_frame);
@@ -577,7 +592,8 @@ const p4_game_descriptor_t p4_frog_hop_game = {
     .subtitle = "P4 GAME API V1",
     .accent_rgb565 = UINT16_C(0x6e4f),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,
+    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
+                             P4_GAME_CAP_AUDIO_STREAM,
     .state_bytes = sizeof(frog_hop_state_t),
     .start = game_start,
     .update = game_update,

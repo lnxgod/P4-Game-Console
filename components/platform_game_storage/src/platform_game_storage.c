@@ -705,10 +705,11 @@ static esp_err_t storage_errno_to_esp(int error)
     }
 }
 
-esp_err_t platform_game_storage_list_root(
+static esp_err_t list_directory(
+    const char *directory,
     platform_game_storage_file_listing_t *out_listing)
 {
-    if (out_listing == NULL) {
+    if (directory == NULL || out_listing == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
     memset(out_listing, 0, sizeof(*out_listing));
@@ -721,7 +722,7 @@ esp_err_t platform_game_storage_list_root(
     }
 
     const int files_result = game_storage_files_list_root(
-        PLATFORM_GAME_STORAGE_MOUNT_POINT, out_listing);
+        directory, out_listing);
     const esp_err_t result = storage_errno_to_esp(files_result);
     if (result == ESP_OK) {
         out_listing->storage_generation = s_model.generation;
@@ -729,6 +730,20 @@ esp_err_t platform_game_storage_list_root(
     }
     unlock_storage();
     return result;
+}
+
+esp_err_t platform_game_storage_list_root(
+    platform_game_storage_file_listing_t *out_listing)
+{
+    return list_directory(
+        PLATFORM_GAME_STORAGE_MOUNT_POINT, out_listing);
+}
+
+esp_err_t platform_game_storage_list_games(
+    platform_game_storage_file_listing_t *out_listing)
+{
+    return list_directory(
+        PLATFORM_GAME_STORAGE_GAMES_MOUNT_POINT, out_listing);
 }
 
 esp_err_t platform_game_storage_remove_root_file(const char *name)
@@ -756,6 +771,39 @@ esp_err_t platform_game_storage_remove_root_file(const char *name)
             ++s_file_mutations;
         }
         s_model.content = GAME_STORAGE_CONTENT_UNKNOWN;
+        s_last_error = ESP_OK;
+    } else {
+        s_last_error = result;
+    }
+    unlock_storage();
+    return result;
+#endif
+}
+
+esp_err_t platform_game_storage_remove_game_file(const char *name)
+{
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    (void)name;
+    return ESP_ERR_NOT_ALLOWED;
+#else
+    if (!game_storage_files_root_name_valid(name)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!s_initialized || !lock_storage()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (s_maintenance || !game_storage_model_files_available(&s_model)) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    const int files_result = game_storage_files_remove_root_file(
+        PLATFORM_GAME_STORAGE_GAMES_MOUNT_POINT, name);
+    const esp_err_t result = storage_errno_to_esp(files_result);
+    if (result == ESP_OK) {
+        if (s_file_mutations != UINT32_MAX) {
+            ++s_file_mutations;
+        }
         s_last_error = ESP_OK;
     } else {
         s_last_error = result;
@@ -896,6 +944,25 @@ esp_err_t platform_game_storage_load_root_file(
     char path[GAME_STORAGE_PATH_BYTES];
     const esp_err_t result = compose_file_path(
         PLATFORM_GAME_STORAGE_MOUNT_POINT, name, path);
+    if (result != ESP_OK) {
+        return result;
+    }
+    return load_regular_file(
+        path, maximum_bytes, out_data, out_size_bytes);
+}
+
+esp_err_t platform_game_storage_load_game_file(
+    const char *name, size_t maximum_bytes,
+    uint8_t **out_data, size_t *out_size_bytes)
+{
+    if (out_data == NULL || out_size_bytes == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_data = NULL;
+    *out_size_bytes = 0U;
+    char path[GAME_STORAGE_PATH_BYTES];
+    const esp_err_t result = compose_file_path(
+        PLATFORM_GAME_STORAGE_GAMES_MOUNT_POINT, name, path);
     if (result != ESP_OK) {
         return result;
     }

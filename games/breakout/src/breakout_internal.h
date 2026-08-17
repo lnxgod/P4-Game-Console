@@ -6,6 +6,8 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "p4/audio_pack.h"
+
 enum {
     BREAKOUT_COLUMNS = 10,
     BREAKOUT_ROWS = 5,
@@ -23,6 +25,7 @@ typedef struct {
     int8_t ball_dy;
     uint32_t simulation_accumulator_ms;
     uint32_t held_buttons;
+    p4_game_audio_effect_player_t audio;
     bool paused;
     bool game_over;
     bool won;

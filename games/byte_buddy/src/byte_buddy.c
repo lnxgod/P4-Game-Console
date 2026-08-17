@@ -8,7 +8,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "p4/audio_pack.h"
 #include "p4/draw.h"
+#include "p4/feedback.h"
 #include "p4/game.h"
 #include "p4/input.h"
 
@@ -53,6 +55,7 @@ typedef struct {
     int16_t star_y;
     bool mini_game;
     uint32_t achievement_mask;
+    p4_game_audio_effect_player_t audio;
 } byte_buddy_state_t;
 
 static const char *const s_actions[ACTION_COUNT] = {
@@ -137,8 +140,12 @@ static void care_for_buddy(p4_game_context_t *context,
             state->energy = decrease(state->energy, 8U);
             start_play(state);
             play_tone(context, 659U, 100U);
+            (void)p4_game_audio_effect_play(
+                context, &state->audio, P4_GAME_AUDIO_EFFECT_ACTION);
         } else {
             play_tone(context, 196U, 120U);
+            (void)p4_game_audio_effect_play(
+                context, &state->audio, P4_GAME_AUDIO_EFFECT_FAIL);
         }
         return;
     case ACTION_CLEAN:
@@ -157,6 +164,8 @@ static void care_for_buddy(p4_game_context_t *context,
     default:
         return;
     }
+    (void)p4_game_audio_effect_play(
+        context, &state->audio, P4_GAME_AUDIO_EFFECT_ACTION);
     if (state->care_actions < UINT16_MAX) {
         ++state->care_actions;
     }
@@ -215,8 +224,12 @@ static void update_play(p4_game_context_t *context, byte_buddy_state_t *state,
             }
             state->joy = increase(state->joy, 5U);
             play_tone(context, 988U, 65U);
+            (void)p4_game_audio_effect_play(
+                context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
         } else {
             play_tone(context, 220U, 45U);
+            (void)p4_game_audio_effect_play(
+                context, &state->audio, P4_GAME_AUDIO_EFFECT_IMPACT);
         }
         reset_star(state);
     }
@@ -259,6 +272,7 @@ static p4_game_result_t game_update(
         return P4_GAME_ERROR;
     }
     byte_buddy_state_t *const state = context->state;
+    (void)p4_game_audio_effect_service(context, &state->audio);
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
         return P4_GAME_EXIT_TO_LAUNCHER;
     }
@@ -346,12 +360,17 @@ static bool game_render(p4_game_context_t *context,
     p4_draw_text(surface, 59, 7, "BYTE BUDDY", UINT16_C(0xFFFF), 1U, 15U);
     p4_draw_text(surface, 220, 7, mood(state), UINT16_C(0x07FF), 1U, 11U);
     if (state->mini_game) {
+        p4_game_feedback_draw(surface, P4_GAME_FX_REWARD,
+                              state->star_x, state->star_y,
+                              context->frame_index);
         draw_play_game(surface, state);
     } else {
         draw_bar(surface, 34, "FULL", state->hunger, UINT16_C(0x07E0));
         draw_bar(surface, 44, "JOY", state->joy, UINT16_C(0xFFE0));
         draw_bar(surface, 54, "CLEAN", state->hygiene, UINT16_C(0x07FF));
         draw_bar(surface, 64, "ENERGY", state->energy, UINT16_C(0xF81F));
+        p4_game_feedback_draw(surface, P4_GAME_FX_ACTION, 160, 101,
+                              context->frame_index);
         draw_buddy(surface, state);
         p4_draw_text(surface, 118, 138, s_actions[state->selected_action],
                      UINT16_C(0xFFFF), 2U, 8U);
@@ -382,7 +401,8 @@ const p4_game_descriptor_t p4_byte_buddy_game = {
     .subtitle = "VIRTUAL PET",
     .accent_rgb565 = UINT16_C(0xF81F),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,
+    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
+                             P4_GAME_CAP_AUDIO_STREAM,
     .state_bytes = sizeof(byte_buddy_state_t),
     .start = game_start,
     .update = game_update,

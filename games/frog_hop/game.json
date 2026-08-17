@@ -17,7 +17,8 @@
     "controls"
   ],
   "optional_capabilities": [
-    "audio-tone"
+    "audio-tone",
+    "audio-stream"
   ],
   "license": "MIT",
   "assets": "original-ImageGen-8bit-animation-atlas-and-code-rendered-backgrounds",

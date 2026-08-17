@@ -49,8 +49,13 @@ esp_err_t platform_game_loader_run(
             result = ESP_ERR_INVALID_SIZE;
         }
     } else {
-        result = platform_game_storage_load_root_file(
-            entry->file_name, P4_GAME_PACKAGE_MAX_BYTES, &data, &size_bytes);
+        result = entry->in_games_directory
+            ? platform_game_storage_load_game_file(
+                entry->file_name, P4_GAME_PACKAGE_MAX_BYTES,
+                &data, &size_bytes)
+            : platform_game_storage_load_root_file(
+                entry->file_name, P4_GAME_PACKAGE_MAX_BYTES,
+                &data, &size_bytes);
         release_data = result == ESP_OK;
     }
     p4_game_package_info_t package;

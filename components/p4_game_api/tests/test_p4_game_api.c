@@ -1,8 +1,10 @@
 // SPDX-License-Identifier: MIT
 
 #include "p4/audio.h"
+#include "p4/audio_pack.h"
 #include "p4/achievements.h"
 #include "p4/draw.h"
+#include "p4/feedback.h"
 #include "p4/game.h"
 #include "p4/input.h"
 
@@ -316,6 +318,78 @@ static void test_audio_stream(void)
     CHECK(stats.stream_queued_frames == 0U);
 }
 
+static void test_standard_feedback_pack(void)
+{
+    p4_audio_mixer_t mixer;
+    p4_audio_mixer_init(&mixer);
+    const p4_game_services_t services = {
+        .available_capabilities = P4_GAME_CAP_AUDIO_STREAM,
+        .audio_context = &mixer,
+        .submit_pcm16_stereo =
+            p4_audio_mixer_service_submit_pcm16_stereo,
+    };
+    p4_game_context_t context = {
+        .services = &services,
+    };
+    p4_game_audio_effect_player_t player;
+    p4_game_audio_effect_player_init(&player);
+    CHECK(!p4_game_audio_effect_active(&player));
+    CHECK(p4_game_audio_effect_play(
+        &context, &player, P4_GAME_AUDIO_EFFECT_ACTION));
+    CHECK(p4_game_audio_effect_active(&player));
+    int16_t output[P4_GAME_MAX_AUDIO_STREAM_FRAMES * 2U];
+    bool nonzero = false;
+    for (unsigned block = 0U;
+         block < 64U && p4_game_audio_effect_active(&player); ++block) {
+        CHECK(p4_audio_mixer_render(
+            &mixer, output, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
+        for (size_t sample = 0U; sample < sizeof(output) / sizeof(output[0]);
+             ++sample) {
+            nonzero = nonzero || output[sample] != 0;
+        }
+        (void)p4_game_audio_effect_service(&context, &player);
+    }
+    CHECK(nonzero);
+    CHECK(!p4_game_audio_effect_active(&player));
+    CHECK(!p4_game_audio_effect_play(
+        &context, &player, P4_GAME_AUDIO_EFFECT_COUNT));
+
+    uint16_t *const pixels = calloc(
+        (size_t)P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT,
+        sizeof(*pixels));
+    CHECK(pixels != NULL);
+    if (pixels == NULL) {
+        return;
+    }
+    p4_game_surface_t surface = {
+        .pixels = pixels,
+        .stride_pixels = P4_GAME_SURFACE_WIDTH,
+        .width = P4_GAME_SURFACE_WIDTH,
+        .height = P4_GAME_SURFACE_HEIGHT,
+    };
+    p4_draw_clear(&surface, UINT16_C(0x1234));
+    p4_game_feedback_draw(
+        &surface, P4_GAME_FX_ACTION, 160, 100, 0U);
+    bool visible = false;
+    for (size_t pixel = 0U;
+         pixel < (size_t)P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT;
+         ++pixel) {
+        visible = visible || pixels[pixel] != UINT16_C(0x1234);
+    }
+    CHECK(visible);
+    p4_draw_clear(&surface, UINT16_C(0x1234));
+    p4_game_feedback_draw(
+        &surface, P4_GAME_FX_ACTION, 160, 100, 20U);
+    bool idle_clear = true;
+    for (size_t pixel = 0U;
+         pixel < (size_t)P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT;
+         ++pixel) {
+        idle_clear = idle_clear && pixels[pixel] == UINT16_C(0x1234);
+    }
+    CHECK(idle_clear);
+    free(pixels);
+}
+
 static void test_game_runtime(void)
 {
     CHECK(p4_game_descriptor_valid(&s_fixture_game));
@@ -424,6 +498,7 @@ int main(void)
     test_draw_bounds();
     test_audio_mixer();
     test_audio_stream();
+    test_standard_feedback_pack();
     test_game_runtime();
     test_achievement_bounds();
     if (s_failures != 0) {
