@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "captured_at": "2026-08-16T17:02:43-0700",
+  "result": "pass-install-digest-boot-launcher-and-embedded-default-registration-gameplay-pending",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "psram_bytes": 33554432,
+    "identity_check": "matched preserved factory-backup manifest; raw identity not recorded"
+  },
+  "source": {
+    "feature_commit": "f3fd0e22550eeff16ec6c84b12015928460750a3",
+    "main_stack_fix_commit": "709af11e51ff7888408fa92bf9067cae141a928d",
+    "branch": "codex/waveshare-console-os",
+    "base_main": "e994790b818810d721f51927aada77a138362a64",
+    "pull_request": 9
+  },
+  "recovery": {
+    "factory_backup": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "factory_backup_sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e",
+    "preinstall_backup": "hardware/backups/waveshare-pre-console-os-0.3-20260816.bin",
+    "preinstall_backup_bytes": 33554432,
+    "preinstall_backup_sha256": "9cdbeaa98914b4bf5ee21a1e6302a931ca1e33c6fba3c8187ad7ce0250da5b04",
+    "preinstall_backup_git_ignored": true,
+    "preinstall_backup_mode": "0600"
+  },
+  "layout_install": {
+    "authorization": "hardware/evidence/waveshare-console-os-0.3-default-game-20260816-exact-unit-authorization.json",
+    "route": "scripts/install-waveshare-console-os-0.3.sh",
+    "erase_entire_flash": false,
+    "nvs_and_phy_preserved": true,
+    "bootloader_digest_verified": true,
+    "partition_table_digest_verified": true,
+    "ota_data_initial_digest_verified": true,
+    "application_digest_verified": true,
+    "sd_formatted": false,
+    "sd_written": false
+  },
+  "first_candidate": {
+    "application_bytes": 969648,
+    "application_sha256": "18763575bd2b81cdd1851399aa05e98835a3515278e3d779e8ac79f431914b77",
+    "install_digest_verified": true,
+    "boot_progress": "read-only microSD reached app-ready",
+    "failure": "Core 0 stack protection fault in task main after the slow microSD scan returned",
+    "accepted": false
+  },
+  "corrected_successor": {
+    "authorization": "hardware/evidence/waveshare-console-os-0.3-main-stack-fix-20260816-exact-unit-authorization.json",
+    "route": "scripts/install-waveshare-console-os-0.3-stack-fix.sh",
+    "write_scope": "application only at 0x20000; live OTA data preserved",
+    "application_bytes": 970112,
+    "application_sha256": "46ddbd517a871a8b0a6f7fdf401b85f93bd6afdca02961155ff831d64fc6613a",
+    "elf_bytes": 11737032,
+    "elf_sha256": "ecee5fad61300da1e247e8e380c2decfe2646b6804ca6b9c972e6b669434b2ba",
+    "application_digest_verified": true,
+    "embedded_default": {
+      "file": "BYTEBUD.P4G",
+      "bytes": 8832,
+      "sha256": "1d788d0bd5789537785a268e941cc03bddff0caaf4888eb57ebc60db1ea0178a"
+    }
+  },
+  "serial_acceptance": {
+    "storage_backend": "microSD read-only",
+    "storage_capacity_bytes": 32010928128,
+    "storage_generation": 1,
+    "storage_write_failures": 0,
+    "main_stack_low_water_bytes_after_storage": 22424,
+    "catalog_available": true,
+    "catalog_packages": 1,
+    "catalog_valid": 1,
+    "catalog_embedded_default": true,
+    "registered_apps": 9,
+    "display": "MIPI-DSI ST7701 480x800 native rotated to 800x480 logical",
+    "touch": "GT911 ready with five-contact bound",
+    "boot_chime": "played original A4-C#5-E5 chord",
+    "ready_marker": "P4_CONSOLE_OS READY page=home display=mipi-dsi storage=microsd-read-only",
+    "ota_mark_valid_result": "ESP_OK",
+    "runtime_reports_observed": 12,
+    "last_observed_loop": 3600,
+    "last_touch_polls": 3600,
+    "touch_failures": 0,
+    "display_submits": 7,
+    "display_completions": 7,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "launcher_amplifier_energized": false,
+    "panic_or_reset_after_fix": false
+  },
+  "visual_and_gameplay_acceptance": {
+    "boot_logo_visually_confirmed": false,
+    "home_screen_visually_confirmed": false,
+    "byte_buddy_tile_visually_confirmed": false,
+    "byte_buddy_launch_observed": false,
+    "byte_buddy_back_to_launcher_observed": false,
+    "reason_pending": "These checks require the operator to view and touch the physical panel; serial evidence alone cannot qualify them."
+  },
+  "conclusion": "The exact corrected Console OS 0.3 successor is installed and digest-verified. Serial evidence proves stable launcher boot, positive main-stack headroom, embedded Byte Buddy registration, touch polling, display submissions, read-only storage, and no reset through twelve periodic reports. Physical Byte Buddy launch and Back-to-launcher remain pending and are not claimed."
+}
