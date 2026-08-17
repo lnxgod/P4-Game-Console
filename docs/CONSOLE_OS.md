@@ -70,6 +70,14 @@ virtual-pet cartridge. It deliberately adds no CRT filter or multiplayer.
 The long-lived shell and catalog staging objects use static storage so the
 24 KiB ESP-IDF main-task stack stays bounded across slow microSD scans.
 
+The current compatibility successor also restores the original P4 Cart
+Library boundary without replacing the native `.P4G` loader. A bounded PSRAM
+background task scans `P4/GAMES/*.P4CART`, validates complete `P4CART1`
+container geometry plus whole-file and per-payload hashes, and adds valid carts
+to Game Manager. The original codebase never completed its sandboxed Lua 5.4
+executor, so these entries are deliberately labeled catalog-only rather than
+being sent to the native ELF loader.
+
 ## Board-specific runtime
 
 The Elecrow build remains the default and preserves the accepted
@@ -130,7 +138,7 @@ boot
        |     `-- Arcade -> embedded Byte Buddy plus installed P4G cartridges
        |-- System -> diagnostics / Colors / Achievements / File Manager / Game Manager
        |     |-- File Manager -> bounded root list / confirmed delete
-       |     `-- Game Manager -> package status / remove / OS update
+       |     `-- Game Manager -> P4G status/remove, P4CART catalog, OS update
        |-- storage cartridge selected
        |     -> reload, re-hash, validate, and relocate into PSRAM
        |     -> console retains display/touch ownership
@@ -246,8 +254,9 @@ refusal. The shell suite covers File Manager paging, selection, refresh,
 confirmation/cancel, non-removable directories, unavailable storage, and
 malformed snapshots.
 Game/package tests additionally cover malformed headers, reserved fields,
-ELF/string-table bounds, real seed cartridges, Game Manager remove/install
-confirmation, and the platform-neutral `.P4U` envelope parser.
+ELF/string-table bounds, real seed cartridges, deterministic P4CART packing,
+complete P4CART/payload hashes, Game Manager remove/install confirmation, and
+the platform-neutral `.P4U` envelope parser.
 
 The IDF target builds with the locked ESP-IDF 5.5.3 and managed component
 versions, checks ESP32-P4 revision 1.x bounds, and runs

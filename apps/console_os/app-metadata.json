@@ -2,7 +2,7 @@
   "schema": 1,
   "app": "console_os",
   "stage": "usb-game-manager-ota-build-candidate",
-  "purpose": "FreeRTOS-native 90s Program Manager shell with a branded boot sequence, session color modes, achievements, an embedded Byte Buddy fallback plus storage-loaded P4G cartridges, atomic dual-slot OS updates, and an exclusive Doom handoff.",
+  "purpose": "FreeRTOS-native 90s Program Manager shell with a branded boot sequence, session color modes, achievements, an embedded Byte Buddy fallback plus storage-loaded P4G games, restored validated P4CART catalog compatibility, atomic dual-slot OS updates, and an exclusive Doom handoff.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
   "flash_authorized": false,
@@ -74,6 +74,19 @@
       "INVADERS.P4G"
     ]
   },
+  "legacy_p4cart": {
+    "format": "p4-cart-source-v1",
+    "container_magic": "P4CART1",
+    "storage_path": "/P4/GAMES/*.P4CART",
+    "maximum_candidates": 128,
+    "maximum_listed_valid_carts": 16,
+    "maximum_cart_bytes": 8388608,
+    "validation": "bounded container geometry plus whole-container and per-payload SHA-256",
+    "game_manager_visible": true,
+    "runtime": "p4-lua-5.4-v1",
+    "runtime_implemented": false,
+    "seed_cart": "P4/GAMES/BOUNCE-LAB.P4CART"
+  },
   "boot": {
     "brand": "Game Changers AI",
     "logo_asset": "main/assets/gamechangers_ai_logo.rgb565",
@@ -132,6 +145,7 @@
       "install_or_update": "copy or replace one .P4G file through J16, then eject",
       "remove": "two-step on-device confirmation",
       "invalid_packages_visible": true,
+      "legacy_p4cart_catalog": "validates and lists P4/GAMES/*.P4CART without executing it",
       "host_owned_access_allowed": false
     },
     "hardware_tested": false

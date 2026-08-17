@@ -2329,7 +2329,7 @@ static void draw_files(console_shell_t *shell,
              shell->files.storage_generation, COLOR_BLACK);
 
     const char *notice = games
-        ? "NATIVE CODE - TRUST PACKAGES"
+        ? "P4G RUNS / P4CART LUA PENDING"
         : (shell->runtime.sd_card_storage
             ? "SD ADDS / FILE MANAGER REMOVES"
             : "USB ADDS / FILE MANAGER REMOVES");

@@ -17,6 +17,14 @@ Game Manager lists valid and broken packages and can remove a game after a
 second confirmation. P4G files contain native code and are not a security
 sandbox; install only packages you trust.
 
+The original open P4 Cart layout is also preserved:
+
+  P4/GAMES/*.P4CART   validated Lua-source cartridges
+
+Game Manager verifies and lists these carts. The Lua 5.4 sandbox is not in
+this firmware yet, so P4CART entries remain catalog-only. The bundle includes
+the open BOUNCE-LAB.P4CART reference cart.
+
 Console OS updates use:
 
   UPDATE/P4UPDATE.P4U   verified update for the inactive OS slot

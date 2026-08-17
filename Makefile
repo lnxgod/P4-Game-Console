@@ -5,7 +5,7 @@ WAD ?= local-data/doom/doom1.wad
 DOOM_FRAMES ?= 8
 DOOMGENERIC_SOURCE ?=
 
-.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf platform-board-host platform-audio-host platform-audio-factory-host platform-touch-host platform-game-storage-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host p4-game-api-host p4-game-package-host p4-os-update-package-host p4-game-platform-host maze-chase-host space-invaders-host byte-buddy-host game-registry-check game-sdk-host board-port-check console-os-idf console-os-olimex-idf console-os-waveshare-idf gamepad-host gamepad-idf install-olimex-sd-card install-waveshare-sd-card
+.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf platform-board-host platform-audio-host platform-audio-factory-host platform-touch-host platform-game-storage-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host p4-game-api-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host maze-chase-host space-invaders-host byte-buddy-host game-registry-check game-sdk-host board-port-check console-os-idf console-os-olimex-idf console-os-waveshare-idf gamepad-host gamepad-idf install-olimex-sd-card install-waveshare-sd-card
 
 setup:
 	./scripts/install-esp-idf.sh
@@ -123,6 +123,12 @@ p4-game-platform-host:
 	cmake --build build-host/p4_game_platform
 	ctest --test-dir build-host/p4_game_platform --output-on-failure
 
+p4-content-host:
+	cmake -S components/p4_content_catalog -B build-host/p4_content_catalog -G Ninja
+	cmake --build build-host/p4_content_catalog
+	ctest --test-dir build-host/p4_content_catalog --output-on-failure
+	python3 scripts/tests/test-p4-content.py
+
 maze-chase-host:
 	cmake -S games/maze_chase -B build-host/maze_chase -G Ninja
 	cmake --build build-host/maze_chase
@@ -143,7 +149,7 @@ game-registry-check:
 	python3 scripts/tests/test-game-registry.py
 	python3 scripts/tests/test-new-game.py
 
-game-sdk-host: p4-game-api-host p4-game-package-host p4-os-update-package-host p4-game-platform-host maze-chase-host space-invaders-host byte-buddy-host game-registry-check
+game-sdk-host: p4-game-api-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host maze-chase-host space-invaders-host byte-buddy-host game-registry-check
 
 board-port-check:
 	python3 scripts/board-port.py check

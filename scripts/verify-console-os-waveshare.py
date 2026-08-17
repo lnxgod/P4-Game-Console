@@ -10,6 +10,7 @@ import re
 import struct
 import subprocess
 import sys
+import tempfile
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -19,6 +20,7 @@ WAD_BYTES = 4_196_020
 WAD_SHA256 = "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
 LOGO_BYTES = 25_628
 LOGO_SHA256 = "6f3963e2d3182eadacbf0ac4397b719578395bff894bb00c07ca65849c9e570f"
+P4CART_SEED = pathlib.Path("P4/GAMES/BOUNCE-LAB.P4CART")
 
 
 def require(condition: bool, message: str) -> None:
@@ -97,6 +99,32 @@ def verify_update(path: pathlib.Path, app: pathlib.Path) -> dict[str, object]:
     return {"file": path.name, "bytes": len(package), "sha256": sha256(path)}
 
 
+def verify_p4cart(path: pathlib.Path) -> dict[str, object]:
+    inspect = subprocess.run(
+        [sys.executable,
+         str(ROOT / "game-platform/scripts/p4cart.py"),
+         "inspect", str(path)],
+        cwd=ROOT, check=False, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    require(inspect.returncode == 0,
+            f"seed P4 Cart is invalid: {inspect.stderr.strip()}")
+    with tempfile.TemporaryDirectory(prefix="p4cart-seed-") as temporary:
+        rebuilt = pathlib.Path(temporary) / "BOUNCE-LAB.P4CART"
+        packed = subprocess.run(
+            [sys.executable,
+             str(ROOT / "game-platform/scripts/p4cart.py"),
+             "pack", str(ROOT / "game-platform/templates/bounce-lab"),
+             str(rebuilt)],
+            cwd=ROOT, check=False, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        require(packed.returncode == 0 and rebuilt.read_bytes() == path.read_bytes(),
+                f"seed P4 Cart is not deterministic: {packed.stderr.strip()}")
+    return {"file": str(P4CART_SEED), "bytes": path.stat().st_size,
+            "sha256": sha256(path)}
+
+
 def main() -> None:
     build = pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else DEFAULT_BUILD
     require(build.is_dir(), f"missing build directory: {build}")
@@ -159,6 +187,7 @@ def main() -> None:
     components = set(project.get("build_components", []))
     required_components = {
         "board_deps_waveshare", "console_shell", "p4_game_api",
+        "p4_content_catalog",
         "platform_board", "platform_display", "platform_touch",
         "platform_game_catalog", "platform_game_loader",
         "platform_game_storage", "platform_os_update",
@@ -218,6 +247,7 @@ def main() -> None:
         "static console_shell_t s_shell",
         "static platform_game_catalog_t s_catalog_staging",
         "P4_CONSOLE_OS MAIN_STACK stage=storage-ready",
+        "P4CART_SCAN_BEGIN", "P4CART_READY",
     ):
         require(token in source, f"firmware source is missing {token}")
     require("console_shell_t shell;" not in source,
@@ -234,6 +264,12 @@ def main() -> None:
     expected = read_json(APP / "app-metadata.json")["native_game_api"]["seed_packages"]
     require([item["file"] for item in reports] == expected,
             "built cartridge list differs from app metadata")
+    legacy = read_json(APP / "app-metadata.json")["legacy_p4cart"]
+    require(legacy.get("format") == "p4-cart-source-v1" and
+            legacy.get("game_manager_visible") is True and
+            legacy.get("runtime_implemented") is False and
+            legacy.get("seed_cart") == str(P4CART_SEED),
+            "legacy P4 Cart metadata differs")
     default_game = bundle / "BYTEBUD.P4G"
     require(default_game.read_bytes() in app.read_bytes(),
             "BYTEBUD.P4G is not embedded as the firmware fallback")
@@ -242,6 +278,7 @@ def main() -> None:
             metadata.get("embedded_fallback_replaceable_from_storage") is True,
             "embedded default-game policy differs")
     update = verify_update(bundle / "UPDATE/P4UPDATE.P4U", app)
+    p4cart = verify_p4cart(bundle / P4CART_SEED)
 
     print(json.dumps({
         "result": "waveshare-console-os-build-verified",
@@ -251,6 +288,7 @@ def main() -> None:
         "embedded_default": next(
             item for item in reports if item["file"] == "BYTEBUD.P4G"),
         "games": reports,
+        "legacy_p4cart": p4cart,
         "update": update,
         "storage_policy": "read-only-at-runtime; install bundle with powered-off card reader",
         "hardware_tested": False,

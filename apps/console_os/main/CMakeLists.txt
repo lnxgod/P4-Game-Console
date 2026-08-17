@@ -15,6 +15,7 @@ set(P4_CONSOLE_MAIN_REQUIREMENTS
     log
     lwip
     mbedtls
+    p4_content_catalog
     p4_game_api
     platform_board
     platform_display

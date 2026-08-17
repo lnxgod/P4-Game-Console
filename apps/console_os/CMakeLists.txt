@@ -23,6 +23,7 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_game_storage"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_os_update"
     "${CMAKE_CURRENT_LIST_DIR}/components/platform_readonly_blob"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_content_catalog"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_package"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_os_update_package"
@@ -111,6 +112,7 @@ if(NOT P4_LOCAL_DOOM_WAD_BYTES EQUAL 4196020 OR
 endif()
 file(MAKE_DIRECTORY "${P4_GAME_STORAGE_SEED_DIR}")
 file(MAKE_DIRECTORY "${P4_GAME_STORAGE_SEED_DIR}/UPDATE")
+file(MAKE_DIRECTORY "${P4_GAME_STORAGE_SEED_DIR}/P4/GAMES")
 configure_file(
     "${CMAKE_CURRENT_LIST_DIR}/game-storage/README.TXT"
     "${P4_GAME_STORAGE_SEED_DIR}/README.TXT"
@@ -128,6 +130,30 @@ configure_file(
     "${P4_GAME_STORAGE_SEED_DIR}/DOOM1.WAD"
     COPYONLY
 )
+
+# Preserve the original open, source-included P4 Cart format alongside the
+# native P4G runtime. The Lua executor remains a separately reviewed sandbox
+# milestone, but the deterministic cart is validated and visible on-device.
+set(P4_LEGACY_CART_OUTPUT
+    "${P4_GAME_STORAGE_SEED_DIR}/P4/GAMES/BOUNCE-LAB.P4CART")
+file(GLOB_RECURSE P4_LEGACY_CART_SOURCES CONFIGURE_DEPENDS
+    "${P4_REPOSITORY_ROOT}/game-platform/templates/bounce-lab/*")
+add_custom_command(
+    OUTPUT "${P4_LEGACY_CART_OUTPUT}"
+    COMMAND "${CMAKE_COMMAND}" -E rm -f "${P4_LEGACY_CART_OUTPUT}"
+    COMMAND
+        "${P4_IDF_PYTHON}"
+        "${P4_REPOSITORY_ROOT}/game-platform/scripts/p4cart.py"
+        pack
+        "${P4_REPOSITORY_ROOT}/game-platform/templates/bounce-lab"
+        "${P4_LEGACY_CART_OUTPUT}"
+    DEPENDS
+        "${P4_REPOSITORY_ROOT}/game-platform/scripts/p4cart.py"
+        ${P4_LEGACY_CART_SOURCES}
+    VERBATIM
+)
+add_custom_target(p4_legacy_cart_seed ALL
+    DEPENDS "${P4_LEGACY_CART_OUTPUT}")
 
 string(REPLACE "-gcc" "-strip" P4_RISCV_STRIP "${CMAKE_C_COMPILER}")
 set(P4_PACKAGE_SCRIPT
@@ -206,13 +232,14 @@ if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" OR
    P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
     add_custom_target(p4_sd_card_bundle ALL
-        DEPENDS p4_game_packages
+        DEPENDS p4_game_packages p4_legacy_cart_seed
         COMMENT "Preparing removable microSD game/update bundle"
     )
 else()
     fatfs_create_spiflash_image(
         game_data "${P4_GAME_STORAGE_SEED_DIR}" FLASH_IN_PROJECT)
-    add_dependencies(fatfs_game_data_bin p4_game_packages)
+    add_dependencies(
+        fatfs_game_data_bin p4_game_packages p4_legacy_cart_seed)
     add_custom_command(TARGET fatfs_game_data_bin POST_BUILD
         COMMAND
             "${P4_IDF_PYTHON}"
