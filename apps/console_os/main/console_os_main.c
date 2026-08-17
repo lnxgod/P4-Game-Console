@@ -31,9 +31,11 @@
 #include "p4/achievements.h"
 #include "p4/cartridge.h"
 #include "p4/content_catalog.h"
+#include "p4/desktop.h"
 #include "p4/draw.h"
 #include "p4/game.h"
 #include "p4/input.h"
+#include "p4/multiplayer.h"
 #include "p4/platform.h"
 #include "platform/board.h"
 #include "platform/display.h"
@@ -60,7 +62,10 @@ enum {
     CONSOLE_APP_FILES = 6,
     CONSOLE_APP_GAMES = 7,
     CONSOLE_APP_ACHIEVEMENTS = 8,
-    CONSOLE_BUILTIN_APP_ID_MAX = CONSOLE_APP_ACHIEVEMENTS,
+    CONSOLE_APP_MULTIPLAYER = 9,
+    CONSOLE_APP_SAVES = 10,
+    CONSOLE_APP_TERMINAL = 11,
+    CONSOLE_BUILTIN_APP_ID_MAX = CONSOLE_APP_TERMINAL,
     CONSOLE_FRAME_INTERVAL_MS = 16,
     CONSOLE_SUBMIT_TIMEOUT_MS = 250,
     CONSOLE_BACKLIGHT_PERCENT = 25,
@@ -91,6 +96,8 @@ static bool s_gamepad_ready;
 static bool s_gamepad_connected;
 static bool s_keyboard_connected;
 static bool s_mouse_connected;
+static uint32_t s_terminal_keyboard_session;
+static uint8_t s_previous_terminal_keys[PLATFORM_USB_KEYBOARD_BOOT_KEY_COUNT];
 static uint32_t s_gamepad_polls;
 static uint32_t s_gamepad_poll_failures;
 static uint32_t s_aux_input_poll_failures;
@@ -128,6 +135,8 @@ static uint32_t s_p4cart_catalog_generation;
 static platform_os_update_info_t s_update_staging;
 static console_shell_t s_shell;
 static p4_achievement_catalog_t s_achievements;
+static p4_save_catalog_t s_saves;
+static p4_mp_session_t s_multiplayer_session;
 static platform_os_update_info_t s_os_update_info;
 static bool s_catalog_seen;
 static uint32_t s_catalog_storage_generation;
@@ -262,6 +271,52 @@ static const console_app_descriptor_t s_builtin_apps[] = {
 #endif
                         CONSOLE_CAPABILITY_STORAGE,
         .page = CONSOLE_PAGE_GAMES,
+        .enabled = true,
+    },
+    {
+        .id = CONSOLE_APP_MULTIPLAYER,
+        .title = "MULTIPLAYER",
+        .subtitle = "LOCAL SESSION CORE",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0xFFE0),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+                        CONSOLE_CAPABILITY_TOUCH,
+#else
+                        0U,
+#endif
+        .page = CONSOLE_PAGE_MULTIPLAYER,
+        .enabled = true,
+    },
+    {
+        .id = CONSOLE_APP_SAVES,
+        .title = "SAVE MANAGER",
+        .subtitle = "OS OWNED SAVE SLOTS",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0x07FF),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                        CONSOLE_CAPABILITY_STORAGE |
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+                        CONSOLE_CAPABILITY_TOUCH,
+#else
+                        0U,
+#endif
+        .page = CONSOLE_PAGE_SAVES,
+        .enabled = true,
+    },
+    {
+        .id = CONSOLE_APP_TERMINAL,
+        .title = "TERMINAL",
+        .subtitle = "COMMANDS + SSH STATUS",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0x5FEA),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+                        CONSOLE_CAPABILITY_TOUCH,
+#else
+                        0U,
+#endif
+        .page = CONSOLE_PAGE_TERMINAL,
         .enabled = true,
     },
 };
@@ -967,6 +1022,7 @@ static void rebuild_shell_registry(console_shell_t *shell)
     const console_page_t previous_page = shell->page;
     const uint32_t previous_app = shell->active_app_id;
     const bool previous_all_programs = shell->home_all_programs;
+    const p4_terminal_t previous_terminal = shell->terminal;
     char previous_folder[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
     memcpy(previous_folder, shell->home_folder_path,
            sizeof(previous_folder));
@@ -977,6 +1033,9 @@ static void rebuild_shell_registry(console_shell_t *shell)
     memcpy(shell->home_folder_path, previous_folder,
            sizeof(shell->home_folder_path));
     shell->home_all_programs = previous_all_programs;
+    shell->terminal = previous_terminal;
+    console_shell_set_achievement_catalog(shell, &s_achievements);
+    (void)console_shell_set_save_catalog(shell, &s_saves);
     if (previous_page != CONSOLE_PAGE_HOME &&
         previous_page != CONSOLE_PAGE_EXTERNAL) {
         for (size_t index = 0U; index < s_app_count; ++index) {
@@ -1126,6 +1185,7 @@ static console_shell_runtime_info_t runtime_info(void)
         .game_storage_state = shell_storage_state(
             s_game_storage_status.state),
 #if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+        .board_kind = CONSOLE_BOARD_OLIMEX_P4_PC,
         .touch_ready = false,
         .controller_ready = s_gamepad_connected,
         .keyboard_ready = s_keyboard_connected,
@@ -1133,6 +1193,12 @@ static console_shell_runtime_info_t runtime_info(void)
         .sd_card_storage = true,
         .audio_handoff_ready = true,
 #else
+        .board_kind =
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+            CONSOLE_BOARD_WAVESHARE_4_3,
+#else
+            CONSOLE_BOARD_ELECROW_10,
+#endif
         .touch_ready = s_touch_ready,
         .controller_ready = false,
         .keyboard_ready = false,
@@ -1149,6 +1215,18 @@ static console_shell_runtime_info_t runtime_info(void)
         .game_storage_usb_attached = s_game_storage_status.usb_attached,
         .doom_wad_ready =
             s_game_storage_status.state == PLATFORM_GAME_STORAGE_APP_READY,
+        .content_scan_complete = s_catalog_seen,
+        .usb_content_ready = false,
+        .multiplayer_core_ready = true,
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+        .physical_keyboard_ready = s_keyboard_connected,
+#else
+        .physical_keyboard_ready = false,
+#endif
+        .valid_cart_count = s_game_catalog.valid_count > UINT16_MAX
+            ? UINT16_MAX : (uint16_t)s_game_catalog.valid_count,
+        .builtin_game_count = (uint16_t)(
+            1U + sizeof(s_builtin_apps) / sizeof(s_builtin_apps[0])),
     };
     return info;
 }
@@ -1307,6 +1385,74 @@ static bool key_down(const platform_usb_keyboard_state_t *keyboard,
     return platform_usb_keyboard_key_down(keyboard, (uint8_t)key);
 }
 
+static bool keyboard_contains_usage(
+    const uint8_t keys[PLATFORM_USB_KEYBOARD_BOOT_KEY_COUNT], uint8_t usage)
+{
+    for (size_t index = 0U;
+         index < PLATFORM_USB_KEYBOARD_BOOT_KEY_COUNT; ++index) {
+        if (keys[index] == usage) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static char keyboard_usage_character(uint8_t usage)
+{
+    if (usage >= UINT8_C(0x04) && usage <= UINT8_C(0x1d)) {
+        return (char)('A' + (char)(usage - UINT8_C(0x04)));
+    }
+    if (usage >= UINT8_C(0x1e) && usage <= UINT8_C(0x26)) {
+        return (char)('1' + (char)(usage - UINT8_C(0x1e)));
+    }
+    if (usage == UINT8_C(0x27)) {
+        return '0';
+    }
+    if (usage == (uint8_t)PLATFORM_USB_KEY_SPACE) {
+        return ' ';
+    }
+    if (usage == (uint8_t)PLATFORM_USB_KEY_BACKSPACE) {
+        return '\b';
+    }
+    if (usage == (uint8_t)PLATFORM_USB_KEY_ENTER) {
+        return '\n';
+    }
+    return '\0';
+}
+
+static void service_terminal_keyboard(
+    console_shell_t *shell,
+    const platform_usb_keyboard_state_t *keyboard)
+{
+    if (keyboard == NULL || keyboard->connected == 0U) {
+        memset(s_previous_terminal_keys, 0,
+               sizeof(s_previous_terminal_keys));
+        s_terminal_keyboard_session = 0U;
+        return;
+    }
+    if (s_terminal_keyboard_session != keyboard->session) {
+        memset(s_previous_terminal_keys, 0,
+               sizeof(s_previous_terminal_keys));
+        s_terminal_keyboard_session = keyboard->session;
+    }
+    if (shell != NULL && shell->page == CONSOLE_PAGE_TERMINAL) {
+        for (size_t index = 0U;
+             index < PLATFORM_USB_KEYBOARD_BOOT_KEY_COUNT; ++index) {
+            const uint8_t usage = keyboard->keys[index];
+            if (usage == 0U || keyboard_contains_usage(
+                    s_previous_terminal_keys, usage)) {
+                continue;
+            }
+            const char character = keyboard_usage_character(usage);
+            if (character != '\0') {
+                (void)console_shell_handle_text_key(shell, character);
+            }
+        }
+    }
+    memcpy(s_previous_terminal_keys, keyboard->keys,
+           sizeof(s_previous_terminal_keys));
+}
+
 static uint32_t keyboard_p4_buttons(
     const platform_usb_keyboard_state_t *keyboard)
 {
@@ -1431,7 +1577,14 @@ static console_shell_action_t poll_input(console_shell_t *shell)
     platform_usb_input_snapshot_t input;
     const bool input_valid = read_aux_input_snapshot(&input);
     if (input_valid) {
-        buttons |= keyboard_shell_buttons(&input.keyboard);
+        service_terminal_keyboard(shell, &input.keyboard);
+        if (shell->page == CONSOLE_PAGE_TERMINAL) {
+            if (key_down(&input.keyboard, PLATFORM_USB_KEY_ESCAPE)) {
+                buttons |= CONSOLE_BUTTON_BACK;
+            }
+        } else {
+            buttons |= keyboard_shell_buttons(&input.keyboard);
+        }
         if (input.mouse.connected != 0U) {
             if ((input.mouse.buttons & UINT8_C(0x02)) != 0U) {
                 buttons |= CONSOLE_BUTTON_BACK;
@@ -1445,6 +1598,8 @@ static console_shell_action_t poll_input(console_shell_t *shell)
                 buttons |= CONSOLE_BUTTON_UP;
             }
         }
+    } else {
+        service_terminal_keyboard(shell, NULL);
     }
     const console_shell_action_t button_action =
         console_shell_handle_buttons(shell, buttons);
@@ -2152,6 +2307,8 @@ static void launch_doom_exclusive(console_shell_t *shell)
 void app_main(void)
 {
     p4_achievement_catalog_init(&s_achievements);
+    p4_save_catalog_init(&s_saves, false);
+    p4_mp_session_init(&s_multiplayer_session);
     const platform_board_descriptor_t *const board = platform_board_get();
     if (board == NULL) {
         halt_dark("board-descriptor", ESP_ERR_INVALID_STATE);
@@ -2207,6 +2364,7 @@ void app_main(void)
         halt_dark("shell-init", ESP_ERR_INVALID_ARG);
     }
     console_shell_set_achievement_catalog(shell, &s_achievements);
+    (void)console_shell_set_save_catalog(shell, &s_saves);
 
     esp_err_t result = platform_display_init();
     if (result != ESP_OK) {

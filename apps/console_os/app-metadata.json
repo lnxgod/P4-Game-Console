@@ -22,8 +22,8 @@
   "shell": {
     "model": "fixed-builtins-plus-storage-cartridge-catalog",
     "scheduler": "FreeRTOS via ESP-IDF",
-    "surface": "RGB565 320x200 scaled 3x into the 1024x600 panel",
-    "input": "bounded GT911 polling with up to five contacts",
+    "surface": "RGB565 320x200 logical shell; 768x480 landscape viewport on Waveshare 4.3 and PC",
+    "input": "bounded board service: GT911 touch or OS-owned USB gamepad, keyboard, and mouse",
     "built_in_apps": [
       "colors",
       "touch",
@@ -31,7 +31,10 @@
       "audio-status",
       "achievements",
       "file-manager",
-      "game-manager"
+      "game-manager",
+      "multiplayer",
+      "save-manager",
+      "terminal"
     ],
     "apps_per_page": 6,
     "maximum_registered_apps": 32,
@@ -58,7 +61,7 @@
     "uf2_supported": false,
     "surface": "RGB565 320x200",
     "controls": ["up", "down", "left", "right", "a", "b", "start", "back"],
-    "audio": "optional bounded tone service at PCM16 stereo 16000 Hz",
+    "audio": "optional bounded tone and copied PCM16-stereo services at 16000 Hz",
     "return_to_home_supported": true,
     "embedded_fallback_package": "BYTEBUD.P4G",
     "embedded_fallback_replaceable_from_storage": true,
@@ -133,6 +136,7 @@
     "full_project_image_seeds_volume": true,
     "ota_update_preserves_volume": true,
     "doom_path": "/DOOM1.WAD",
+    "game_directory": "/GAMES with root-package compatibility",
     "file_manager": {
       "scope": "bounded FAT root listing and confirmed regular-file deletion",
       "maximum_listed_entries": 32,
@@ -142,11 +146,16 @@
     },
     "game_manager": {
       "catalog_limit": 16,
-      "install_or_update": "copy or replace one .P4G file through J16, then eject",
+      "install_or_update": "copy or replace one .P4G file in GAMES through J16, then eject",
       "remove": "two-step on-device confirmation",
       "invalid_packages_visible": true,
       "legacy_p4cart_catalog": "validates and lists P4/GAMES/*.P4CART without executing it",
       "host_owned_access_allowed": false
+    },
+    "save_manager": {
+      "maximum_slots": 8,
+      "waveshare_runtime_writable": false,
+      "games_receive_filesystem_handles": false
     },
     "hardware_tested": false
   },

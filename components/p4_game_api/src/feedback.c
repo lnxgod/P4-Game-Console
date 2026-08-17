@@ -52,8 +52,7 @@ void p4_game_feedback_draw_audio_effect(
     int center_x, int center_y)
 {
     if (player == NULL || !player->active ||
-        player->effect < P4_GAME_AUDIO_EFFECT_ACTION ||
-        player->effect > P4_GAME_AUDIO_EFFECT_FAIL) {
+        player->effect >= P4_GAME_AUDIO_EFFECT_COUNT) {
         return;
     }
     p4_game_feedback_draw(

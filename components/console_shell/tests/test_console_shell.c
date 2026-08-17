@@ -377,6 +377,7 @@ static void test_window_manager_visual_contract(void)
                      "Elecrow system window");
 
     shell.runtime.touch_ready = false;
+    shell.runtime.board_kind = CONSOLE_BOARD_OLIMEX_P4_PC;
     shell.runtime.controller_ready = true;
     shell.runtime.keyboard_ready = true;
     shell.runtime.mouse_ready = true;
@@ -421,6 +422,60 @@ static void test_color_modes_and_achievements(void)
         sizeof(*frame));
     CHECK(frame != NULL);
     if (frame != NULL) {
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        free(frame);
+    }
+}
+
+static void test_desktop_pages(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+
+    p4_file_list_t files;
+    p4_file_list_init(&files);
+    CHECK(p4_file_list_add(&files, "GAMES", 0U,
+                           P4_FILE_KIND_FOLDER, true));
+    CHECK(p4_file_list_add(&files, "GAMES/MAZE.P4G", 4097U,
+                           P4_FILE_KIND_CARTRIDGE, true));
+    p4_file_list_set_sort(&files, P4_FILE_SORT_SIZE, true);
+    CHECK(console_shell_set_file_list(&shell, &files));
+    CHECK(shell.desktop_files.sort == P4_FILE_SORT_SIZE);
+    CHECK(shell.files.entry_count == 2U);
+    CHECK(shell.files.entries[0].size_kib == 5U);
+
+    p4_save_catalog_t saves;
+    p4_save_catalog_init(&saves, false);
+    CHECK(p4_save_catalog_add(
+        &saves, "ORG.P4CONSOLE.SOLITAIRE", "AUTO", 512U, 1U));
+    CHECK(console_shell_set_save_catalog(&shell, &saves));
+    CHECK(shell.saves.count == 1U);
+
+    shell.page = CONSOLE_PAGE_TERMINAL;
+    shell.active_app_id = 11U;
+    CHECK(console_shell_handle_text_key(&shell, 'h'));
+    CHECK(console_shell_handle_text_key(&shell, 'e'));
+    CHECK(console_shell_handle_text_key(&shell, 'l'));
+    CHECK(console_shell_handle_text_key(&shell, 'p'));
+    CHECK(console_shell_handle_text_key(&shell, '\n'));
+    CHECK(shell.terminal.line_count > 2U);
+    CHECK(strstr(shell.terminal.lines[shell.terminal.line_count - 1U],
+                 "STATUS") != NULL);
+    CHECK(tap(&shell, 10U, 112U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.terminal.input, "Q") == 0);
+
+    uint16_t *const frame = calloc(
+        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
+        sizeof(*frame));
+    CHECK(frame != NULL);
+    if (frame != NULL) {
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        shell.page = CONSOLE_PAGE_SAVES;
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        shell.page = CONSOLE_PAGE_MULTIPLAYER;
         CHECK(console_shell_render_rgb565(
             &shell, frame, CONSOLE_SHELL_WIDTH));
         free(frame);
@@ -890,6 +945,7 @@ int main(void)
     test_render_bounds_and_stride();
     test_window_manager_visual_contract();
     test_color_modes_and_achievements();
+    test_desktop_pages();
     test_navigation_and_launch();
     test_controller_navigation();
     test_launcher_scrolling();

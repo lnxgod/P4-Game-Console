@@ -13,12 +13,11 @@ Installed games are single files in the GAMES directory:
   GAMES/INVADERS.P4G   Space Invaders
   GAMES/*.P4G          Other P4 Game API v1 cartridges
 
-Game Manager lists valid and broken packages and can remove a game after a
-second confirmation. P4G files contain native code and are not a security
-sandbox; install only packages you trust.
-
-Console OS also scans root-level `*.P4G` files from 0.3-era cards, with the
-copy under GAMES taking precedence when both locations contain the same game.
+Game Manager also reads root P4G files from older cards. It lists valid and
+broken packages and can remove a game after a second confirmation. P4G files
+contain native code and are not a security sandbox; install only packages you
+trust. The copy under GAMES takes precedence when both locations contain the
+same game.
 
 The original open P4 Cart layout is also preserved:
 

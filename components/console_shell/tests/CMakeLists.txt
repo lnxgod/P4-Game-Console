@@ -20,9 +20,11 @@ add_executable(console_shell_waveshare_tests
 )
 target_include_directories(console_shell_waveshare_tests PRIVATE ../include)
 target_link_libraries(console_shell_waveshare_tests PRIVATE
+    p4_desktop
     p4_game_api
 )
 target_compile_definitions(console_shell_waveshare_tests PRIVATE
+    # The panel is 800x480; its centered Console OS viewport is 768x480.
     CONSOLE_SHELL_TARGET_WIDTH=800U
     CONSOLE_SHELL_TARGET_HEIGHT=480U
 )

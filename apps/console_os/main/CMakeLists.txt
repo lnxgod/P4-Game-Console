@@ -16,7 +16,9 @@ set(P4_CONSOLE_MAIN_REQUIREMENTS
     lwip
     mbedtls
     p4_content_catalog
+    p4_desktop
     p4_game_api
+    p4_multiplayer
     platform_board
     platform_display
     platform_game_catalog

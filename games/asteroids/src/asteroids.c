@@ -350,10 +350,10 @@ static bool game_render(p4_game_context_t *context,
     if (state->explosion_ms != 0U) {
         draw_sprite(surface, state->explosion_x, state->explosion_y, 3U);
     }
-    p4_game_feedback_draw(
-        surface, state->game_over ? P4_GAME_FX_FAIL : P4_GAME_FX_ACTION,
+    p4_game_feedback_draw_audio_effect(
+        surface, &state->audio,
         state->game_over ? 160 : state->x,
-        state->game_over ? 92 : state->y, context->frame_index);
+        state->game_over ? 92 : state->y);
     if (!state->game_over && (state->respawn_safe_ms == 0U ||
                               (state->respawn_safe_ms / 100U) % 2U == 0U)) {
         draw_sprite(surface, state->x, state->y, 0U);

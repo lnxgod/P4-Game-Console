@@ -451,10 +451,10 @@ static bool game_render(p4_game_context_t *context, p4_game_surface_t *surface)
         line(surface, state->saucer_x - 3, state->saucer_y - 4, state->saucer_x + 3, state->saucer_y - 4, UINT16_C(0xf81f));
         line(surface, state->saucer_x + 3, state->saucer_y - 4, state->saucer_x + 6, state->saucer_y, UINT16_C(0xf81f));
     }
-    p4_game_feedback_draw(
-        surface, state->ended ? P4_GAME_FX_FAIL : P4_GAME_FX_ACTION,
+    p4_game_feedback_draw_audio_effect(
+        surface, &state->audio,
         state->ended ? 160 : state->ship_x,
-        state->ended ? 92 : state->ship_y, context->frame_index);
+        state->ended ? 92 : state->ship_y);
     if (!state->ended && (state->shield_ms == 0U || (state->shield_ms / 100U) % 2U == 0U)) draw_ship(surface, state);
     if (state->paused) p4_draw_text(surface, 132, 83, "PAUSED", UINT16_C(0xffe0), 1U, 6U);
     if (state->ended) { p4_draw_text(surface, 116, 78, "GAME OVER", UINT16_C(0xf81f), 1U, 9U); p4_draw_text(surface, 99, 91, "A RESTART", UINT16_C(0xffff), 1U, 9U); }

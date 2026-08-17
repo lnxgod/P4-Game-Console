@@ -101,15 +101,18 @@ static void populate_desktop(console_shell_t *shell)
         .uptime_seconds = 1U,
         .internal_free_kib = 512U,
         .psram_free_kib = 32768U,
+        .game_storage_kib = 32768U,
+        .game_storage_state = CONSOLE_STORAGE_READY,
+        .board_kind = CONSOLE_BOARD_HOST_PREVIEW,
         .touch_ready = true,
         .audio_handoff_ready = true,
-        .storage_ready = true,
         .content_scan_complete = true,
         .usb_content_ready = false,
-        .valid_cart_count = 1U,
+        .valid_cart_count = 3U,
         .builtin_game_count = 10U,
         .multiplayer_core_ready = true,
         .physical_keyboard_ready = true,
+        .keyboard_ready = true,
     };
     console_shell_set_runtime_info(shell, &runtime);
     p4_file_list_t files;
@@ -120,7 +123,12 @@ static void populate_desktop(console_shell_t *shell)
                            P4_FILE_KIND_FOLDER, true);
     (void)p4_file_list_add(&files, "BOUNCE-LAB.P4CART", UINT64_C(18342),
                            P4_FILE_KIND_CARTRIDGE, true);
-    console_shell_set_file_list(shell, &files);
+    (void)console_shell_set_file_list(shell, &files);
+    p4_save_catalog_t saves;
+    p4_save_catalog_init(&saves, false);
+    (void)p4_save_catalog_add(
+        &saves, "ORG.P4CONSOLE.SOLITAIRE", "AUTO", 768U, 1U);
+    (void)console_shell_set_save_catalog(shell, &saves);
 }
 
 static void click_back(console_shell_t *shell)

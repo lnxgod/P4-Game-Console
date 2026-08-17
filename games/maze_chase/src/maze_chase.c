@@ -509,14 +509,12 @@ static bool maze_render(p4_game_context_t *context,
             }
         }
     }
-    p4_game_feedback_draw(
-        surface, state->game_over ? P4_GAME_FX_FAIL :
-        (state->won ? P4_GAME_FX_REWARD : P4_GAME_FX_ACTION),
+    p4_game_feedback_draw_audio_effect(
+        surface, &state->audio,
         state->game_over || state->won ? 160 :
         MAZE_ORIGIN_X + (int)state->player_x * MAZE_TILE_SIZE + 4,
         state->game_over || state->won ? 88 :
-        MAZE_ORIGIN_Y + (int)state->player_y * MAZE_TILE_SIZE + 4,
-        context->frame_index);
+        MAZE_ORIGIN_Y + (int)state->player_y * MAZE_TILE_SIZE + 4);
     draw_player(surface, state);
     for (size_t i = 0U; i < MAZE_CHASE_ENEMY_COUNT; ++i) {
         draw_enemy(surface, &state->enemies[i], state->frightened_ms != 0U);

@@ -47,8 +47,8 @@ changed.
 The build emits an `sd-card/` tree containing:
 
 ```text
-MAZE.P4G
-INVADERS.P4G
+GAMES/MAZE.P4G
+GAMES/INVADERS.P4G
 DOOM1.WAD
 README.TXT
 UPDATE/P4UPDATE.P4U
@@ -67,7 +67,8 @@ unrelated files alone. Eject the card cleanly before moving it back. Console OS
 mounts it at `/game-data`, never formats it, and does not support hot-removal.
 USB-C does not expose this filesystem to the laptop.
 
-Game Manager validates/removes root `.P4G` cartridges. File Manager lists and
+Game Manager validates/removes `GAMES/*.P4G` cartridges and accepts root
+packages from older cards. File Manager lists and
 removes other bounded regular root files after confirmation. Selecting the OS
 update validates `UPDATE/P4UPDATE.P4U`, streams it to the inactive OTA slot,
 and changes the boot target only after its final digest passes.

@@ -14,7 +14,7 @@ organizes built-ins plus the current storage catalog as:
   - Action: Doom (exclusive foreground handoff)
   - Arcade: installed reentrant Game API cartridges
 - System: Colors, Touch, System status, Audio status, Achievements, File
-  Manager, and Game Manager
+  Manager, Game Manager, Multiplayer, Save Manager, and Terminal
 
 Boot first displays the official Game Changers AI logo and an original
 A4-C#5-E5 startup chord; it does not copy the THX/Dolby recording. The Colors
@@ -48,7 +48,10 @@ The consumed update package is removed before reboot when storage ownership
 is still available; otherwise it can be removed safely from Game Manager.
 Runtime code never auto-formats a damaged volume.
 
-Seed cartridges are generated from validated `games/*/game.json` manifests.
+Seed cartridges are generated from validated `games/*/game.json` manifests
+into `GAMES/*.P4G`. At boot the OS scans that directory, validates each
+package, and builds the launcher from the result; root `.P4G` files are read
+only for compatibility with older cards.
 Byte Buddy is also embedded as the always-available default cartridge; the
 rest of the runtime launcher catalog comes from validated `.P4G` files. Its
 lightweight desktop view shows three columns by two rows, scrolls with vertical
@@ -63,8 +66,8 @@ make game-sdk-host
 make console-os-idf
 ```
 
-Copy the resulting cartridge from
-`build/game-storage-seed/` to `P4 GAMES` over J16 and eject. See
+Copy the resulting cartridge from `build/game-storage-seed/GAMES/` into
+`GAMES` on `P4 GAMES` over J16 and eject. See
 `docs/GAME_SDK.md` for the API and package contract. This project does not use
 UF2.
 

@@ -24,8 +24,10 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_os_update"
     "${CMAKE_CURRENT_LIST_DIR}/components/platform_readonly_blob"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_content_catalog"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_desktop"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_package"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_multiplayer"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_os_update_package"
 )
 
