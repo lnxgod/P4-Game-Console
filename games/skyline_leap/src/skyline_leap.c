@@ -22,7 +22,7 @@ enum {
     PLAYER_HEIGHT = 18,
     BOT_WIDTH = 16,
     BOT_HEIGHT = 14,
-    PULSE_SIZE = 8,
+    PULSE_SIZE = 10,
     PULSE_SPEED = 6,
     MAX_PLATFORMS = 7,
     MAX_BOTS = 3,
@@ -76,6 +76,8 @@ typedef struct {
     int16_t player_y;
     int16_t pulse_x;
     int16_t pulse_y;
+    int16_t feedback_x;
+    int16_t feedback_y;
     int8_t velocity_y;
     int8_t facing;
     int8_t pulse_direction;
@@ -86,6 +88,7 @@ typedef struct {
     uint32_t score;
     uint16_t transition_ms;
     uint16_t animation_ms;
+    uint16_t attack_flash_ms;
     uint16_t pulse_cooldown_ms;
     uint8_t level;
     uint8_t lives;
@@ -158,6 +161,14 @@ static int clamp_int(int value, int lower, int upper)
         return lower;
     }
     return value > upper ? upper : value;
+}
+
+static void set_feedback_position(skyline_leap_state_t *state, int x, int y)
+{
+    state->feedback_x = (int16_t)clamp_int(
+        x, 0, P4_GAME_SURFACE_WIDTH - 1);
+    state->feedback_y = (int16_t)clamp_int(
+        y, PLAY_TOP, P4_GAME_SURFACE_HEIGHT - 1);
 }
 
 static bool ranges_overlap(int first_left, int first_width,
@@ -294,13 +305,23 @@ static void draw_stage(p4_game_surface_t *surface,
     }
     if (state->pulse_active) {
         const int trail_x = state->pulse_direction > 0
-            ? state->pulse_x - PULSE_SIZE - 3 : state->pulse_x + 3;
+            ? state->pulse_x - PULSE_SIZE - 5 : state->pulse_x + 5;
+        p4_draw_fill_rect(surface, trail_x, state->pulse_y - 2,
+                          PULSE_SIZE + 6, 5, COLOR_TEAL);
         p4_draw_fill_rect(surface, trail_x, state->pulse_y - 1,
-                          PULSE_SIZE, 3, COLOR_TEAL_LIGHT);
+                          PULSE_SIZE + 4, 3, COLOR_TEAL_LIGHT);
+        p4_draw_fill_circle(surface, state->pulse_x, state->pulse_y,
+                            PULSE_SIZE / 2 + 2, COLOR_TEAL_LIGHT);
         p4_draw_fill_circle(surface, state->pulse_x, state->pulse_y,
                             PULSE_SIZE / 2, COLOR_GOLD);
+        p4_draw_fill_circle(surface, state->pulse_x, state->pulse_y,
+                            3, COLOR_WHITE);
     }
     draw_courier(surface, state);
+    if (state->attack_flash_ms != 0U) {
+        p4_draw_rect(surface, state->player_x - 4, state->player_y - 4,
+                     PLAYER_WIDTH + 8, PLAYER_HEIGHT + 8, COLOR_GOLD);
+    }
     draw_hud(surface, state);
 }
 
@@ -344,7 +365,10 @@ static void reset_stage(skyline_leap_state_t *state)
     state->player_y = FLOOR_TOP - PLAYER_HEIGHT;
     state->velocity_y = 0;
     state->facing = 1;
+    set_feedback_position(state, state->player_x + PLAYER_WIDTH / 2,
+                          state->player_y + PLAYER_HEIGHT / 2);
     state->pulse_active = false;
+    state->attack_flash_ms = 0U;
     state->pulse_cooldown_ms = 0U;
     state->shards = 0U;
     state->simulation_ms = 0U;
@@ -441,7 +465,11 @@ static void update_pulse(p4_game_context_t *context,
         state->bot_active[bot] = false;
         state->pulse_active = false;
         state->score += 50U;
+        set_feedback_position(state, state->bot_x[bot] + BOT_WIDTH / 2,
+                              bot_y + BOT_HEIGHT / 2);
         play_tone(context, 220U, 100U, 4U, P4_WAVE_SQUARE);
+        (void)p4_game_audio_effect_play(
+            context, &state->audio, P4_GAME_AUDIO_EFFECT_IMPACT);
         return;
     }
 }
@@ -457,6 +485,8 @@ static void start_pulse(p4_game_context_t *context,
     state->pulse_x = (int16_t)(state->player_x +
         (state->pulse_direction > 0 ? PLAYER_WIDTH + 2 : -2));
     state->pulse_y = (int16_t)(state->player_y + PLAYER_HEIGHT / 2);
+    set_feedback_position(state, state->pulse_x, state->pulse_y);
+    state->attack_flash_ms = 96U;
     state->pulse_cooldown_ms = 260U;
     play_tone(context, 1040U, 55U, 4U, P4_WAVE_SQUARE);
     (void)p4_game_audio_effect_play(
@@ -472,6 +502,12 @@ static void update_attack_cooldown(skyline_leap_state_t *state,
     } else {
         state->pulse_cooldown_ms = 0U;
     }
+    if (state->attack_flash_ms > elapsed_ms) {
+        state->attack_flash_ms =
+            (uint16_t)(state->attack_flash_ms - elapsed_ms);
+    } else {
+        state->attack_flash_ms = 0U;
+    }
 }
 
 static void lose_life(p4_game_context_t *context, skyline_leap_state_t *state)
@@ -479,6 +515,8 @@ static void lose_life(p4_game_context_t *context, skyline_leap_state_t *state)
     if (state->clearing || state->game_over || state->finale) {
         return;
     }
+    set_feedback_position(state, state->player_x + PLAYER_WIDTH / 2,
+                          state->player_y + PLAYER_HEIGHT / 2);
     play_tone(context, 120U, 240U, 5U, P4_WAVE_SQUARE);
     (void)p4_game_audio_effect_play(
         context, &state->audio, P4_GAME_AUDIO_EFFECT_FAIL);
@@ -518,7 +556,11 @@ static bool check_bot_contacts(p4_game_context_t *context,
             state->player_y = (int16_t)(bot_y - PLAYER_HEIGHT);
             state->velocity_y = -5;
             state->score += 50U;
+            set_feedback_position(state, state->bot_x[bot] + BOT_WIDTH / 2,
+                                  bot_y + BOT_HEIGHT / 2);
             play_tone(context, 180U, 90U, 4U, P4_WAVE_SQUARE);
+            (void)p4_game_audio_effect_play(
+                context, &state->audio, P4_GAME_AUDIO_EFFECT_IMPACT);
             return true;
         }
         lose_life(context, state);
@@ -592,6 +634,8 @@ static void collect_shards(p4_game_context_t *context,
         state->shard_collected[item] = true;
         ++state->shards;
         state->score += 100U;
+        set_feedback_position(state, s_shards[stage][item].x,
+                              s_shards[stage][item].y);
         play_tone(context, 940U, 70U, 4U, P4_WAVE_TRIANGLE);
         (void)p4_game_audio_effect_play(
             context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
@@ -742,9 +786,7 @@ static bool game_render(p4_game_context_t *context,
     }
     draw_stage(surface, state);
     p4_game_feedback_draw_audio_effect(
-        surface, &state->audio,
-        state->game_over || state->finale ? 160 : state->player_x,
-        state->game_over || state->finale ? 94 : state->player_y + 9);
+        surface, &state->audio, state->feedback_x, state->feedback_y);
     if (state->paused) {
         draw_center_panel(surface, "PAUSED", "START TO RESUME", COLOR_TEAL);
     } else if (state->clearing) {

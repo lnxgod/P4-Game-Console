@@ -79,7 +79,7 @@ int main(int argc, char **argv)
     };
     success = success && p4_game_instance_update(&instance, &start, 16U) ==
         P4_GAME_CONTINUE;
-    for (unsigned frame = 0U; success && frame < 14U; ++frame) {
+    for (unsigned frame = 0U; success && frame < 4U; ++frame) {
         const p4_game_input_t input = {
             .held = P4_BUTTON_RIGHT | (frame == 0U ? P4_BUTTON_B : 0U),
             .pressed = frame == 0U ? P4_BUTTON_B : 0U,
