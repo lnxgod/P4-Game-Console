@@ -7,15 +7,18 @@ files, power the board off, move the card to the laptop, copy the files, eject
 the card cleanly, reinstall it, and then power the board on. Never remove the
 card while Console OS is running.
 
-Installed games are single files at the card root:
+Installed games are single files in the GAMES directory:
 
-  MAZE.P4G       Maze Chase
-  INVADERS.P4G   Space Invaders
-  *.P4G           Other P4 Game API v1 cartridges
+  GAMES/MAZE.P4G       Maze Chase
+  GAMES/INVADERS.P4G   Space Invaders
+  GAMES/*.P4G          Other P4 Game API v1 cartridges
 
 Game Manager lists valid and broken packages and can remove a game after a
 second confirmation. P4G files contain native code and are not a security
 sandbox; install only packages you trust.
+
+Console OS also scans root-level `*.P4G` files from 0.3-era cards, with the
+copy under GAMES taking precedence when both locations contain the same game.
 
 The original open P4 Cart layout is also preserved:
 

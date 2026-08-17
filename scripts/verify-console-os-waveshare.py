@@ -258,7 +258,7 @@ def main() -> None:
         if read_json(path).get("enabled") is True
     ]
     reports = [
-        verify_game(bundle / manifest["package_file"], manifest)
+        verify_game(bundle / "GAMES" / manifest["package_file"], manifest)
         for manifest in manifests
     ]
     expected = read_json(APP / "app-metadata.json")["native_game_api"]["seed_packages"]
@@ -270,7 +270,7 @@ def main() -> None:
             legacy.get("runtime_implemented") is False and
             legacy.get("seed_cart") == str(P4CART_SEED),
             "legacy P4 Cart metadata differs")
-    default_game = bundle / "BYTEBUD.P4G"
+    default_game = bundle / "GAMES/BYTEBUD.P4G"
     require(default_game.read_bytes() in app.read_bytes(),
             "BYTEBUD.P4G is not embedded as the firmware fallback")
     metadata = read_json(APP / "app-metadata.json")["native_game_api"]

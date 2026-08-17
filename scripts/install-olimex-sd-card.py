@@ -119,7 +119,7 @@ def enabled_manifests() -> dict[str, dict[str, object]]:
 
 
 def bundle_files(manifests: dict[str, dict[str, object]]) -> tuple[pathlib.Path, ...]:
-    return tuple(pathlib.Path(name) for name in manifests) + (
+    return tuple(pathlib.Path("GAMES") / name for name in manifests) + (
         pathlib.Path("DOOM1.WAD"),
         pathlib.Path("README.TXT"),
         P4CART_SEED,
@@ -143,7 +143,7 @@ def validate_bundle(bundle: pathlib.Path) -> tuple[pathlib.Path, ...]:
     if (bundle / "README.TXT").read_bytes() != expected_readme.read_bytes():
         raise SystemExit("README.TXT does not match the Olimex storage contract")
     for name in manifests:
-        validate_game(bundle / name, manifests[name])
+        validate_game(bundle / "GAMES" / name, manifests[name])
     validate_p4cart(bundle / P4CART_SEED)
     validate_update(bundle / "UPDATE/P4UPDATE.P4U")
     return files
