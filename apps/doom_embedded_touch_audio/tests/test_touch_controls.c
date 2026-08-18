@@ -129,6 +129,10 @@ static void test_app_compositor(void)
         DOOM_TOUCH_FRAME_WIDTH, &input));
     assert(destination[151U * DOOM_TOUCH_FRAME_WIDTH + 289U] !=
            source[151U * DOOM_TOUCH_FRAME_WIDTH + 289U]);
+    assert(destination[16U * DOOM_TOUCH_FRAME_WIDTH + 264U] ==
+           UINT32_C(0x00ffffff));
+    assert(destination[16U * DOOM_TOUCH_FRAME_WIDTH + 45U] ==
+           UINT32_C(0x00ffffff));
 
     input.version = 0U;
     assert(!doom_touch_audio_compose_frame(

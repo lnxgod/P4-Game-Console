@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "format": "p4-native-elf-v1",
+  "api_version": 1,
+  "version": "0.2.0",
+  "package_file": "LORD.P4G",
+  "component": "lord",
+  "entry_symbol": "p4_lord_game",
+  "launcher_id": 112,
+  "id": "org.p4console.lord",
+  "title": "LORD",
+  "subtitle": "LEGEND OF THE RED DRAGON",
+  "folder": "GAMES/ADVENTURE",
+  "accent_rgb565": "0xfaaa",
+  "required_capabilities": [
+    "video",
+    "controls"
+  ],
+  "optional_capabilities": [
+    "audio-tone"
+  ],
+  "license": "LORD-PERMISSION",
+  "assets": "authorized-upstream-text-generated-and-code-rendered-ansi-rip-ui",
+  "enabled": true
+}

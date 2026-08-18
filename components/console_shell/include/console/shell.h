@@ -20,13 +20,31 @@
 #define CONSOLE_SHELL_TARGET_HEIGHT 600U
 #endif
 
+#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+#define CONSOLE_SHELL_NATIVE_BBS 1
+#include "p4/bbs_ui.h"
+#else
+#define CONSOLE_SHELL_NATIVE_BBS 0
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 enum {
-    CONSOLE_SHELL_WIDTH = 320,
-    CONSOLE_SHELL_HEIGHT = 200,
+    /* Stable UI coordinate space used for layout and bounded input. */
+    CONSOLE_SHELL_LAYOUT_WIDTH = 320,
+    CONSOLE_SHELL_LAYOUT_HEIGHT = 200,
+#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+    /* Waveshare desktop renders directly into its centered 768x480 viewport. */
+    CONSOLE_SHELL_WIDTH = 768,
+    CONSOLE_SHELL_HEIGHT = 480,
+#else
+    CONSOLE_SHELL_WIDTH = CONSOLE_SHELL_LAYOUT_WIDTH,
+    CONSOLE_SHELL_HEIGHT = CONSOLE_SHELL_LAYOUT_HEIGHT,
+#endif
     CONSOLE_SHELL_PHYSICAL_WIDTH = CONSOLE_SHELL_TARGET_WIDTH,
     CONSOLE_SHELL_PHYSICAL_HEIGHT = CONSOLE_SHELL_TARGET_HEIGHT,
 #if defined(ESP_PLATFORM)
@@ -34,16 +52,16 @@ enum {
     CONSOLE_SHELL_VIEWPORT_HEIGHT = PLATFORM_BOARD_GAME_VIEWPORT_HEIGHT,
 #else
     CONSOLE_SHELL_VIEWPORT_WIDTH =
-        CONSOLE_SHELL_PHYSICAL_WIDTH * CONSOLE_SHELL_HEIGHT <=
-                CONSOLE_SHELL_PHYSICAL_HEIGHT * CONSOLE_SHELL_WIDTH
+        CONSOLE_SHELL_PHYSICAL_WIDTH * CONSOLE_SHELL_LAYOUT_HEIGHT <=
+                CONSOLE_SHELL_PHYSICAL_HEIGHT * CONSOLE_SHELL_LAYOUT_WIDTH
             ? CONSOLE_SHELL_PHYSICAL_WIDTH
-            : CONSOLE_SHELL_PHYSICAL_HEIGHT * CONSOLE_SHELL_WIDTH /
-                CONSOLE_SHELL_HEIGHT,
+            : CONSOLE_SHELL_PHYSICAL_HEIGHT * CONSOLE_SHELL_LAYOUT_WIDTH /
+                CONSOLE_SHELL_LAYOUT_HEIGHT,
     CONSOLE_SHELL_VIEWPORT_HEIGHT =
-        CONSOLE_SHELL_PHYSICAL_WIDTH * CONSOLE_SHELL_HEIGHT <=
-                CONSOLE_SHELL_PHYSICAL_HEIGHT * CONSOLE_SHELL_WIDTH
-            ? CONSOLE_SHELL_PHYSICAL_WIDTH * CONSOLE_SHELL_HEIGHT /
-                CONSOLE_SHELL_WIDTH
+        CONSOLE_SHELL_PHYSICAL_WIDTH * CONSOLE_SHELL_LAYOUT_HEIGHT <=
+                CONSOLE_SHELL_PHYSICAL_HEIGHT * CONSOLE_SHELL_LAYOUT_WIDTH
+            ? CONSOLE_SHELL_PHYSICAL_WIDTH * CONSOLE_SHELL_LAYOUT_HEIGHT /
+                CONSOLE_SHELL_LAYOUT_WIDTH
             : CONSOLE_SHELL_PHYSICAL_HEIGHT,
 #endif
     CONSOLE_SHELL_VIEWPORT_LEFT =
@@ -62,6 +80,7 @@ enum {
     CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES = 32,
     CONSOLE_SHELL_FILE_MAX_ENTRIES = 32,
     CONSOLE_SHELL_FILE_LABEL_MAX_BYTES = 25,
+    CONSOLE_SHELL_FILE_PATH_LABEL_MAX_BYTES = 40,
     CONSOLE_SHELL_FILE_VISIBLE_ROWS = 5,
 };
 
@@ -86,6 +105,7 @@ typedef enum {
     CONSOLE_PAGE_ACHIEVEMENTS,
     CONSOLE_PAGE_MULTIPLAYER,
     CONSOLE_PAGE_SAVES,
+    CONSOLE_PAGE_USB_DRIVE,
     CONSOLE_PAGE_TERMINAL,
 } console_page_t;
 
@@ -147,6 +167,10 @@ typedef struct {
     bool sd_card_storage;
     bool audio_handoff_ready;
     bool game_storage_usb_attached;
+    bool usb_storage_supported;
+    bool usb_storage_eject_safe;
+    bool usb_drive_active;
+    bool usb_input_host_active;
     bool doom_wad_ready;
     bool content_scan_complete;
     bool usb_content_ready;
@@ -154,6 +178,9 @@ typedef struct {
     bool physical_keyboard_ready;
     uint16_t valid_cart_count;
     uint16_t builtin_game_count;
+    uint8_t boot_volume_step;
+    uint8_t game_volume_step;
+    bool audio_settings_persistent;
 } console_shell_runtime_info_t;
 
 typedef struct {
@@ -173,7 +200,9 @@ typedef struct {
     uint32_t omitted_entries;
     uint32_t storage_generation;
     uint32_t revision;
+    char path_label[CONSOLE_SHELL_FILE_PATH_LABEL_MAX_BYTES];
     bool available;
+    bool can_go_up;
 } console_shell_file_listing_t;
 
 typedef enum {
@@ -189,11 +218,17 @@ typedef enum {
     CONSOLE_ACTION_PAGE_CHANGED,
     CONSOLE_ACTION_LAUNCH,
     CONSOLE_ACTION_FILE_REFRESH,
+    CONSOLE_ACTION_FILE_OPEN,
+    CONSOLE_ACTION_FILE_UP,
     CONSOLE_ACTION_FILE_DELETE,
     CONSOLE_ACTION_GAME_REFRESH,
     CONSOLE_ACTION_GAME_REMOVE,
     CONSOLE_ACTION_OS_UPDATE_INSTALL,
     CONSOLE_ACTION_COLOR_MODE_CHANGED,
+    CONSOLE_ACTION_USB_MODE_ENABLE,
+    CONSOLE_ACTION_USB_MODE_DISABLE,
+    CONSOLE_ACTION_BOOT_VOLUME_SET,
+    CONSOLE_ACTION_GAME_VOLUME_SET,
 } console_action_type_t;
 
 typedef enum {
@@ -213,6 +248,7 @@ typedef struct {
     uint32_t app_id;
     uint32_t file_source_index;
     console_color_mode_t color_mode;
+    uint8_t volume_step;
 } console_shell_action_t;
 
 typedef struct {
@@ -230,9 +266,13 @@ typedef struct {
     p4_file_list_t desktop_files;
     p4_save_catalog_t saves;
     p4_terminal_t terminal;
+#if CONSOLE_SHELL_NATIVE_BBS
+    p4_ansi_terminal_t bbs_terminal;
+#endif
     console_shell_file_listing_t files;
     size_t file_selected_index;
     size_t file_first_visible;
+    size_t audio_selected_row;
     console_shell_file_notice_t file_notice;
     uint16_t press_start_gui_x;
     uint16_t press_start_gui_y;

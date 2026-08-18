@@ -152,7 +152,7 @@
       },
       "inputs": ["touch"],
       "touch": true,
-      "laptop_content_transfer": "powered-off-removable-media",
+      "laptop_content_transfer": "usb-device-msc",
       "exact_target_seen_on_hardware": true,
       "full_feature_set_hardware_tested": false
     }

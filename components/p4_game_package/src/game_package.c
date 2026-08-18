@@ -435,7 +435,7 @@ p4_game_package_result_t p4_game_package_parse(
     const uint32_t known_capabilities =
         P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
         P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM |
-        P4_GAME_CAP_STORAGE;
+        P4_GAME_CAP_STORAGE | P4_GAME_CAP_SIGNAL_SCAN;
     if (out_info->launcher_id < 100U || !id_valid(out_info->id) ||
         !folder_valid(out_info->folder) ||
         (out_info->required_capabilities & P4_GAME_CAP_VIDEO) == 0U ||

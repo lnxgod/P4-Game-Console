@@ -24,6 +24,7 @@ OTA1_BYTES = 0x380000
 GAME_DATA_OFFSET = 0x710000
 GAME_DATA_BYTES = 0x8F0000
 P4G_HEADER_BYTES = 256
+P4R_HEADER_BYTES = 128
 P4U_HEADER_BYTES = 256
 P4CART_SEED = pathlib.Path("P4/GAMES/BOUNCE-LAB.P4CART")
 
@@ -116,6 +117,32 @@ def verify_game_package(path: pathlib.Path, manifest: dict) -> dict:
         "bytes": len(data),
         "sha256": hashlib.sha256(data).hexdigest(),
         "payload_sha256": hashlib.sha256(payload).hexdigest(),
+    }
+
+
+def verify_game_resource(path: pathlib.Path, manifest: dict) -> dict:
+    data = path.read_bytes()
+    require(P4R_HEADER_BYTES < len(data) <= 8 * 1024 * 1024,
+            f"{path.name} size is outside the resource bound")
+    require(data[:8] == b"P4RES01\0", f"{path.name} has wrong magic")
+    header, package, offset, payload, version, flags = struct.unpack_from(
+        "<6I", data, 8
+    )
+    require(header == offset == P4R_HEADER_BYTES and package == len(data) and
+            payload == len(data) - offset,
+            f"{path.name} has wrong resource layout")
+    require(version == 1 and flags == 0,
+            f"{path.name} format version or flags differ")
+    require(hashlib.sha256(data[offset:]).digest() == data[32:64],
+            f"{path.name} payload digest differs")
+    require(c_string(data[64:112], "resource game id") == manifest["id"],
+            f"{path.name} game ID differs")
+    require(not any(data[112:128]), f"{path.name} reserved bytes are dirty")
+    return {
+        "file": path.name,
+        "bytes": len(data),
+        "sha256": hashlib.sha256(data).hexdigest(),
+        "payload_sha256": hashlib.sha256(data[offset:]).hexdigest(),
     }
 
 
@@ -289,7 +316,8 @@ def main() -> None:
     components = set(project.get("build_components", []))
     required_components = {
         "console_shell", "p4_game_api", "p4_game_package",
-        "p4_content_catalog", "p4_os_update_package", "platform_game_catalog",
+        "p4_content_catalog", "p4_multiplayer", "p4_os_update_package",
+        "platform_game_catalog",
         "platform_game_loader", "platform_game_storage",
         "platform_os_update", "platform_display", "platform_touch",
         "platform_readonly_blob", "fatfs", "wear_levelling",
@@ -364,6 +392,21 @@ def main() -> None:
                 manifest["package_file"],
                 manifest,
             ))
+    expected_seed_resources = sorted(
+        manifest["resource_file"] for manifest in manifests
+        if isinstance(manifest.get("resource_file"), str)
+    )
+    resource_reports = [
+        verify_game_resource(
+            build / "game-storage-seed/GAMES" / manifest["resource_file"],
+            manifest,
+        )
+        for manifest in manifests
+        if isinstance(manifest.get("resource_file"), str)
+    ]
+    require([item["file"] for item in resource_reports] ==
+            expected_seed_resources,
+            "built seed resource set differs")
     require([item["file"] for item in package_reports] ==
             expected_seed_packages,
             "built seed cartridge set differs")
@@ -427,7 +470,7 @@ def main() -> None:
                 "generated FAT root contents differ")
         require((volume / "GAMES").is_dir() and
                 sorted(item.name for item in (volume / "GAMES").iterdir()) ==
-                sorted(expected_seed_packages),
+                sorted(expected_seed_packages + expected_seed_resources),
                 "generated FAT GAMES contents differ")
         require((volume / P4CART_SEED).read_bytes() ==
                 (build / "game-storage-seed" / P4CART_SEED).read_bytes(),
@@ -446,6 +489,12 @@ def main() -> None:
             require((volume / "GAMES" / name).read_bytes() ==
                     (build / "game-storage-seed/GAMES" / name).read_bytes(),
                     f"generated FAT contains wrong {name}")
+            resource_name = manifest.get("resource_file")
+            if isinstance(resource_name, str):
+                require((volume / "GAMES" / resource_name).read_bytes() ==
+                        (build / "game-storage-seed/GAMES" /
+                         resource_name).read_bytes(),
+                        f"generated FAT contains wrong {resource_name}")
 
     compiler = pathlib.Path(str(project["c_compiler"]))
     nm = compiler.with_name(compiler.name.removesuffix("gcc") + "nm")
@@ -458,6 +507,7 @@ def main() -> None:
     for symbol in (
         "app_main", "console_os_launch_doom", "platform_game_catalog_scan",
         "p4_content_catalog_scan",
+        "p4_mp_session_init",
         "platform_game_loader_run", "p4_game_package_parse",
         "p4_os_update_package_parse", "platform_os_update_install",
         "esp_elf_relocate", "esp_ota_set_boot_partition",
@@ -466,6 +516,21 @@ def main() -> None:
         "tinyusb_driver_install", "tinyusb_msc_new_storage_spiflash",
     ):
         require(f" {symbol}\n" in symbols, f"missing ELF symbol {symbol}")
+    multiplayer_archive = (
+        build / "esp-idf/p4_multiplayer/libp4_multiplayer.a"
+    )
+    archive_symbols_result = subprocess.run(
+        [str(nm), "-g", str(multiplayer_archive)], check=False, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    require(archive_symbols_result.returncode == 0,
+            "cannot inspect multiplayer archive symbols")
+    for symbol in (
+        "p4_mp_packet_decode", "p4_mp_stream_consume",
+        "p4_mp_session_init",
+    ):
+        require(f" {symbol}\n" in archive_symbols_result.stdout,
+                f"multiplayer archive is missing {symbol}")
     for symbol in (
         "p4_maze_chase_game", "p4_space_invaders_game",
         "_binary_doom_shareware_wad_start", "_binary_bytebud_p4g_start",
@@ -496,9 +561,35 @@ def main() -> None:
             "P4CART_SCAN_BEGIN" in shell_main and
             "P4CART_READY" in shell_main,
             "Game Manager/cartridge route is absent from Console OS")
-    require_order(shell_main, [
-        "result = present(&shell);",
+    for token in (
+        "CONSOLE_APP_FILES", "CONSOLE_APP_GAMES",
+        "CONSOLE_APP_ACHIEVEMENTS", "CONSOLE_APP_MULTIPLAYER",
+        "CONSOLE_APP_SAVES", "CONSOLE_APP_TERMINAL",
+        "p4_mp_session_init(&s_multiplayer_session)",
+        "CONSOLE_BOOT_DTMF_TONE_MS = 160",
+        "CONSOLE_BOOT_DTMF_GAP_MS = 90",
+        "CONSOLE_BOOT_DTMF_DASH_MS = 220",
+        "digit_tone_ms=%u digit_gap_ms=%u group_gap_ms=%u",
+    ):
+        require(token in shell_main,
+                f"10 in Console OS feature parity is missing {token}")
+    shell_source = (
+        ROOT / "components/console_shell/src/console_shell.c"
+    ).read_text(encoding="utf-8")
+    for token in (
+        "draw_multiplayer", "draw_saves", "draw_files",
+        "P4_TERMINAL_COMMAND_SSH",
+        "WIRED STREAM CORE READY", "HOST RELAY REQUIRED",
+    ):
+        require(token in shell_source,
+                f"10 in system-app surface is missing {token}")
+    app_main_source = shell_main[shell_main.index("void app_main") :]
+    require_order(app_main_source, [
+        "result = present_boot_screen(0U, \"STARTING...\");",
         "platform_display_set_brightness(CONSOLE_BACKLIGHT_PERCENT)",
+        "start_game_storage_initialization()",
+        "wait_for_game_storage_with_boot_animation()",
+        "result = present(shell);",
         "platform_os_update_mark_running_valid(",
     ], "first-frame OTA confirmation")
     update_source = (
@@ -512,6 +603,16 @@ def main() -> None:
     storage_source = (
         ROOT / "components/platform_game_storage/src/platform_game_storage.c"
     ).read_text(encoding="utf-8")
+    write_policy_header = (
+        ROOT / "components/platform_game_storage/src/msc_write_policy.h"
+    ).read_text(encoding="utf-8")
+    write_policy_source = (
+        ROOT / "components/platform_game_storage/src/msc_write_policy.c"
+    ).read_text(encoding="utf-8")
+    require("uint64_t *out_address" in write_policy_header and
+            "uint64_t byte_address" in storage_source and
+            "address > SIZE_MAX" not in write_policy_source,
+            "USB MSC block addressing is not 64-bit safe")
     require_order(storage_source, [
         "msc_write_policy_validate(",
         "wl_erase_range(s_wl_handle, address, size_bytes)",
@@ -545,6 +646,7 @@ def main() -> None:
         "os_update": os_update,
         "legacy_p4cart": p4cart,
         "game_packages": package_reports,
+        "game_resources": resource_reports,
         "game_data": {
             "path": str(game_image.relative_to(ROOT)),
             "bytes": GAME_DATA_BYTES,
@@ -552,6 +654,14 @@ def main() -> None:
             "offset": hex(GAME_DATA_OFFSET),
         },
         "hardware_execution_authorized": False,
+        "feature_parity": {
+            "system_apps": [
+                "file-manager", "game-manager", "achievements",
+                "multiplayer", "save-manager", "terminal-ssh-ui",
+            ],
+            "multiplayer_core_linked": True,
+            "physical_transport": "host-relay-pending",
+        },
     }
     print(json.dumps(report, indent=2, sort_keys=True))
 

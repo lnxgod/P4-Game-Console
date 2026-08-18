@@ -23,4 +23,38 @@ config PLATFORM_BOARD_TARGET_WAVESHARE_4_3
     bool
     default y if P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
 
+config P4_WAVESHARE_H2_USB_HOST_MODE
+    bool "Use Waveshare H2 as an externally powered USB host"
+    default n
+    depends on P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    help
+        Select the mutually exclusive, operator-authorized H2 host test image.
+        The microSD remains app-owned and USB-device MSC is unavailable in
+        this image. Firmware never sources H2 VBUS; a self-powered,
+        backfeed-safe external path is required before enabling this option.
+
+config P4_WAVESHARE_H2_FORCE_FULL_SPEED_HOST
+    bool "Force Waveshare H2 host root to USB full speed"
+    default y
+    depends on P4_WAVESHARE_H2_USB_HOST_MODE
+    help
+        Keep the ESP32-P4 high-speed-capable H2 controller in its documented
+        full-/low-speed-only host mode. A high-speed hub then enumerates as a
+        full-speed hub, allowing low/full-speed HID devices without the
+        unsupported high-speed-hub transaction-translator scheduler. This
+        deliberately caps H2 at 12 Mbit/s, which is ample for HID input.
+
+config P4_WAVESHARE_H2_RUNTIME_ROLE_SWITCH
+    bool "Allow the Console OS USB Drive app to switch H2 roles"
+    default y
+    depends on P4_WAVESHARE_H2_USB_HOST_MODE
+    help
+        Build both the bounded USB Host/HID services and TinyUSB device MSC,
+        but install only one controller owner at a time. Console OS boots in
+        controller-host mode. The explicit USB Drive app first quiesces and
+        uninstalls Host/HID before exporting microSD through H2; returning to
+        controller mode first uninstalls TinyUSB and remounts microSD for the
+        OS. Any failed transition leaves H2 quiesced instead of starting both
+        roles. Firmware still never sources physical VBUS.
+
 endmenu

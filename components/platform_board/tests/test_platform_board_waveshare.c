@@ -18,7 +18,7 @@ int main(void)
     assert(board->psram_bytes == 32U * 1024U * 1024U);
     assert(board->has_touch);
     assert(board->has_sd_card);
-    assert(!board->has_usb_device_game_storage);
+    assert(board->has_usb_device_game_storage);
     assert(!board->has_integrated_usb_host_hub);
     return 0;
 }

@@ -2,6 +2,7 @@
 
 #include "platform_game_storage_internal.h"
 
+#include <stdbool.h>
 #include <inttypes.h>
 #include <stdint.h>
 
@@ -53,4 +54,23 @@ int32_t __wrap_tud_msc_write10_cb(uint8_t lun, uint32_t lba,
              " offset=%" PRIu32 " bytes=%" PRIu32 " error=%s",
              (unsigned)lun, lba, offset, bufsize, esp_err_to_name(result));
     return TUD_MSC_RET_ERROR;
+}
+
+bool __real_tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition,
+                                  bool start, bool load_eject);
+
+/*
+ * Keep esp_tinyusb's SCSI behavior, but remember the host's clean eject.
+ * Manual USB-off is rejected until this event or a physical disconnect, so
+ * the launcher never remounts FAT beneath a laptop that still owns it.
+ */
+bool __wrap_tud_msc_start_stop_cb(uint8_t lun, uint8_t power_condition,
+                                  bool start, bool load_eject)
+{
+    const bool accepted = __real_tud_msc_start_stop_cb(
+        lun, power_condition, start, load_eject);
+    if (accepted) {
+        platform_game_storage_msc_start_stop(lun, start, load_eject);
+    }
+    return accepted;
 }

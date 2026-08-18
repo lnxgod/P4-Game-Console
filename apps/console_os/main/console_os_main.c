@@ -8,6 +8,7 @@
 
 #include <stdbool.h>
 #include <inttypes.h>
+#include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -29,6 +30,7 @@
 #pragma GCC diagnostic pop
 #include "p4/audio.h"
 #include "p4/achievements.h"
+#include "p4/bbs_ui.h"
 #include "p4/cartridge.h"
 #include "p4/content_catalog.h"
 #include "p4/desktop.h"
@@ -38,16 +40,33 @@
 #include "p4/multiplayer.h"
 #include "p4/platform.h"
 #include "platform/board.h"
+#include "platform/console_settings.h"
 #include "platform/display.h"
 #include "platform/game_catalog.h"
 #include "platform/game_loader.h"
 #include "platform/game_storage.h"
 #include "platform/os_update.h"
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
+    !CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE
+#define P4_CONSOLE_SIGNAL_SCAN 1
+#include "platform/signal_scan.h"
+#else
+#define P4_CONSOLE_SIGNAL_SCAN 0
+#endif
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
+    (CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
+     CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE)
+#define P4_CONSOLE_USB_INPUT 1
+#else
+#define P4_CONSOLE_USB_INPUT 0
+#endif
+
+#if P4_CONSOLE_USB_INPUT
 #include "gamepad/gamepad.h"
 #include "platform_gamepad_usb/platform_gamepad_usb.h"
 #include "platform_usb_host/platform_usb_host.h"
-#else
+#endif
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 #include "platform/touch.h"
 #include "platform_i2c_shared/bus.h"
 #include "runtime_gate.h"
@@ -65,23 +84,95 @@ enum {
     CONSOLE_APP_MULTIPLAYER = 9,
     CONSOLE_APP_SAVES = 10,
     CONSOLE_APP_TERMINAL = 11,
-    CONSOLE_BUILTIN_APP_ID_MAX = CONSOLE_APP_TERMINAL,
+    CONSOLE_APP_USB_DRIVE = 12,
+    CONSOLE_BUILTIN_APP_ID_MAX = CONSOLE_APP_USB_DRIVE,
     CONSOLE_FRAME_INTERVAL_MS = 16,
     CONSOLE_SUBMIT_TIMEOUT_MS = 250,
     CONSOLE_BACKLIGHT_PERCENT = 25,
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#if P4_CONSOLE_USB_INPUT
     CONSOLE_GAMEPAD_STICK_THRESHOLD = 12000,
+    CONSOLE_USB_ENUM_GUARD_CONFIRM_LOOPS = 600,
 #endif
     CONSOLE_CLEANUP_ATTEMPTS = 3,
-    CONSOLE_NATIVE_AUDIO_VOLUME_STEP = 6,
-    CONSOLE_BOOT_CHIME_TICKS = 44,
+    CONSOLE_BOOT_POST_BEEP_MS = 220,
+    CONSOLE_BOOT_POST_GAP_MS = 180,
+    CONSOLE_BOOT_DTMF_TONE_MS = 160,
+    CONSOLE_BOOT_DTMF_GAP_MS = 90,
+    CONSOLE_BOOT_DTMF_DASH_MS = 220,
     CONSOLE_BOOT_ANIMATION_STEPS = 5,
-    CONSOLE_BOOT_LOGO_WIDTH = 298,
-    CONSOLE_BOOT_LOGO_HEIGHT = 43,
-    CONSOLE_P4CART_SCAN_STACK_BYTES = 12 * 1024,
+    CONSOLE_STORAGE_LOADING_FRAME_MS = 160,
+    CONSOLE_BBS_CONNECT_HOLD_MS = 260,
+    CONSOLE_BBS_HOME_REVEAL_STEPS = 6,
+    CONSOLE_BBS_HOME_REVEAL_DELAY_MS = 45,
+    CONSOLE_BOOT_SUBMIT_ATTEMPTS = 3,
+    CONSOLE_BOOT_SUBMIT_RETRY_MS = 20,
+    CONSOLE_BOOT_LOGO_WIDTH = 112,
+    CONSOLE_BOOT_LOGO_HEIGHT = 112,
+    CONSOLE_STORAGE_INIT_STACK_BYTES = 12 * 1024,
+    CONSOLE_P4CART_SCAN_STACK_BYTES = 24 * 1024,
     CONSOLE_NATIVE_AUDIO_FRAMES_PER_TICK =
         P4_GAME_PLATFORM_AUDIO_SAMPLE_RATE_HZ *
         CONSOLE_FRAME_INTERVAL_MS / 1000,
+};
+
+typedef struct {
+    const char *name;
+    uint16_t low_hz;
+    uint16_t high_hz;
+    uint16_t duration_ms;
+    uint16_t gap_ms;
+    uint8_t low_volume_step;
+    uint8_t high_volume_step;
+    p4_waveform_t waveform;
+} console_boot_modem_phase_t;
+
+typedef struct {
+    char digit;
+    uint16_t low_hz;
+    uint16_t high_hz;
+} console_boot_dial_digit_t;
+
+/*
+ * A compact, standards-shaped V.25/V.22bis call sequence. This is a boot
+ * effect rather than a data modem, but its frequencies and the important
+ * V.22bis training intervals are real: 1300 Hz calling tone, 2100 Hz answer
+ * tone, 1200/2400 Hz channel carriers, and the low-level 1800 Hz guard tone.
+ */
+static const console_boot_modem_phase_t s_boot_modem_phases[] = {
+    {"calling-tone", 1300U, 0U, 180U, 90U, 6U, 0U,
+     P4_WAVE_TRIANGLE},
+    {"answer-tone", 2100U, 0U, 260U, 30U, 6U, 0U,
+     P4_WAVE_TRIANGLE},
+    {"channel-carriers", 2400U, 1800U, 130U, 55U, 6U, 2U,
+     P4_WAVE_TRIANGLE},
+    {"00-11-training", 1200U, 2400U, 140U, 24U, 6U, 6U,
+     P4_WAVE_SQUARE},
+    {"2400-bps-scrambled-ones", 1200U, 2400U, 260U, 24U, 5U, 7U,
+     P4_WAVE_SQUARE},
+    {"carrier-lock", 1200U, 2400U, 180U, 0U, 4U, 6U,
+     P4_WAVE_TRIANGLE},
+};
+
+/* Deliberately separated pulses sound like discrete hard-disk head seeks. */
+static const console_boot_modem_phase_t s_boot_hdd_phases[] = {
+    {"seek-1", 105U, 2700U, 34U, 72U, 9U, 4U, P4_WAVE_SQUARE},
+    {"seek-2", 145U, 3150U, 30U, 84U, 9U, 4U, P4_WAVE_SQUARE},
+    {"seek-3", 88U, 2400U, 38U, 68U, 9U, 4U, P4_WAVE_SQUARE},
+    {"seek-4", 170U, 3300U, 28U, 92U, 9U, 4U, P4_WAVE_SQUARE},
+    {"seek-5", 120U, 2850U, 36U, 120U, 9U, 4U, P4_WAVE_SQUARE},
+};
+
+static const console_boot_dial_digit_t s_boot_dial[] = {
+    {'6', 770U, 1477U},
+    {'1', 697U, 1209U},
+    {'4', 770U, 1209U},
+    {'2', 697U, 1336U},
+    {'7', 852U, 1209U},
+    {'6', 770U, 1477U},
+    {'3', 697U, 1477U},
+    {'6', 770U, 1477U},
+    {'3', 697U, 1477U},
+    {'9', 852U, 1477U},
 };
 
 static const char *const TAG = "p4_console_os";
@@ -91,7 +182,7 @@ static platform_touch_t *s_touch;
 #endif
 static uint16_t *s_pixels;
 static bool s_display_initialized;
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#if P4_CONSOLE_USB_INPUT
 static bool s_gamepad_ready;
 static bool s_gamepad_connected;
 static bool s_keyboard_connected;
@@ -101,20 +192,38 @@ static uint8_t s_previous_terminal_keys[PLATFORM_USB_KEYBOARD_BOOT_KEY_COUNT];
 static uint32_t s_gamepad_polls;
 static uint32_t s_gamepad_poll_failures;
 static uint32_t s_aux_input_poll_failures;
-static uint16_t s_mouse_x = CONSOLE_SHELL_WIDTH / 2U;
-static uint16_t s_mouse_y = CONSOLE_SHELL_HEIGHT / 2U;
-#else
+static uint16_t s_mouse_x = CONSOLE_SHELL_LAYOUT_WIDTH / 2U;
+static uint16_t s_mouse_y = CONSOLE_SHELL_LAYOUT_HEIGHT / 2U;
+static bool s_usb_enum_probe_allowed;
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
+    CONFIG_P4_WAVESHARE_H2_FORCE_FULL_SPEED_HOST
+static bool s_usb_enum_probe_started;
+static bool s_usb_enum_probe_confirm_attempted;
+#endif
+#endif
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 static bool s_touch_ready;
 static uint32_t s_touch_polls;
 static uint32_t s_touch_poll_failures;
 #endif
 static uint32_t s_doom_handoff_count;
 static uint32_t s_loop_count;
-static bool s_game_storage_initialized;
 static bool s_game_storage_status_seen;
 static platform_game_storage_status_t s_game_storage_status;
+typedef enum {
+    CONSOLE_STORAGE_INIT_NOT_STARTED = 0,
+    CONSOLE_STORAGE_INIT_RUNNING,
+    CONSOLE_STORAGE_INIT_READY,
+    CONSOLE_STORAGE_INIT_FAILED,
+} console_storage_init_state_t;
+static console_storage_init_state_t s_game_storage_init_state;
+static esp_err_t s_game_storage_init_result = ESP_ERR_INVALID_STATE;
+static int64_t s_game_storage_init_started_us;
+static portMUX_TYPE s_game_storage_init_lock = portMUX_INITIALIZER_UNLOCKED;
 static platform_game_storage_file_listing_t s_platform_file_listing;
 static console_shell_file_listing_t s_shell_file_listing;
+static char s_file_directory[
+    PLATFORM_GAME_STORAGE_RELATIVE_PATH_MAX_BYTES];
 static console_shell_file_listing_t s_manager_listing;
 static platform_game_catalog_t s_game_catalog;
 static platform_game_catalog_t s_catalog_staging;
@@ -132,11 +241,19 @@ static p4cart_scan_state_t s_p4cart_scan_state;
 static bool s_p4cart_scan_seen;
 static uint32_t s_p4cart_scan_generation;
 static uint32_t s_p4cart_catalog_generation;
+static unsigned s_p4cart_scan_low_water_bytes;
 static platform_os_update_info_t s_update_staging;
 static console_shell_t s_shell;
 static p4_achievement_catalog_t s_achievements;
 static p4_save_catalog_t s_saves;
 static p4_mp_session_t s_multiplayer_session;
+static platform_console_settings_t s_console_settings = {
+    .version = PLATFORM_CONSOLE_SETTINGS_VERSION,
+    .size = (uint16_t)sizeof(platform_console_settings_t),
+    .boot_volume_step = PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT,
+    .game_volume_step = PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT,
+    .persistent = false,
+};
 static platform_os_update_info_t s_os_update_info;
 static bool s_catalog_seen;
 static uint32_t s_catalog_storage_generation;
@@ -154,12 +271,21 @@ static int16_t s_native_audio_pcm[
     P4_GAME_PLATFORM_AUDIO_CHANNEL_COUNT];
 
 extern const uint8_t _binary_gamechangers_ai_logo_rgb565_start[];
+extern const uint8_t _binary_gamechangers_ai_logo_rgb565_end[];
 
 static esp_err_t present(console_shell_t *shell);
 static console_shell_runtime_info_t runtime_info(void);
 static bool storage_app_owned(void);
+#if P4_CONSOLE_USB_INPUT
+static esp_err_t start_usb_input(void);
+static esp_err_t stop_usb_input_for_role_switch(void);
+#endif
 
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 void console_os_launch_doom(void);
+#else
+void console_os_launch_doom(uint8_t master_volume_step);
+#endif
 
 static console_app_descriptor_t s_apps[CONSOLE_SHELL_MAX_APPS];
 static size_t s_app_count;
@@ -183,8 +309,8 @@ static const console_app_descriptor_t s_doom_app = {
 static const console_app_descriptor_t s_builtin_apps[] = {
     {
         .id = CONSOLE_APP_COLORS,
-        .title = "COLORS",
-        .subtitle = "OS COLOR MODES",
+        .title = "APPEARANCE",
+        .subtitle = "BBS / WINDOWS",
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x5FFF),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY,
@@ -302,6 +428,20 @@ static const console_app_descriptor_t s_builtin_apps[] = {
         .page = CONSOLE_PAGE_SAVES,
         .enabled = true,
     },
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    {
+        .id = CONSOLE_APP_USB_DRIVE,
+        .title = "USB DRIVE",
+        .subtitle = "SD CARD TO MAC",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0x07FF),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                        CONSOLE_CAPABILITY_TOUCH |
+                        CONSOLE_CAPABILITY_STORAGE,
+        .page = CONSOLE_PAGE_USB_DRIVE,
+        .enabled = true,
+    },
+#endif
     {
         .id = CONSOLE_APP_TERMINAL,
         .title = "TERMINAL",
@@ -322,18 +462,28 @@ static const console_app_descriptor_t s_builtin_apps[] = {
 _Static_assert(CONSOLE_NATIVE_AUDIO_FRAMES_PER_TICK == 256,
                "16 ms must produce exactly 256 16 kHz frames");
 
-_Static_assert((int)CONSOLE_SHELL_WIDTH ==
+_Static_assert((int)CONSOLE_SHELL_LAYOUT_WIDTH ==
                    (int)PLATFORM_DISPLAY_GAME_WIDTH,
-               "console width must match the platform game surface");
-_Static_assert((int)CONSOLE_SHELL_HEIGHT ==
+               "console input layout must match the game width");
+_Static_assert((int)CONSOLE_SHELL_LAYOUT_HEIGHT ==
                    (int)PLATFORM_DISPLAY_GAME_HEIGHT,
-               "console height must match the platform game surface");
+               "console input layout must match the game height");
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+_Static_assert((int)CONSOLE_SHELL_WIDTH ==
+                   (int)PLATFORM_DISPLAY_CONTENT_WIDTH &&
+                   (int)CONSOLE_SHELL_HEIGHT ==
+                   (int)PLATFORM_DISPLAY_CONTENT_HEIGHT,
+               "Waveshare Console OS must render native 768x480 content");
+#endif
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
-_Static_assert(CONSOLE_SHELL_PHYSICAL_WIDTH == PLATFORM_TOUCH_WIDTH,
+_Static_assert((int)CONSOLE_SHELL_PHYSICAL_WIDTH ==
+                   (int)PLATFORM_TOUCH_WIDTH,
                "console touch width must match GT911 coordinates");
-_Static_assert(CONSOLE_SHELL_PHYSICAL_HEIGHT == PLATFORM_TOUCH_HEIGHT,
+_Static_assert((int)CONSOLE_SHELL_PHYSICAL_HEIGHT ==
+                   (int)PLATFORM_TOUCH_HEIGHT,
                "console touch height must match GT911 coordinates");
-_Static_assert(CONSOLE_SHELL_MAX_CONTACTS == PLATFORM_TOUCH_MAX_CONTACTS,
+_Static_assert((int)CONSOLE_SHELL_MAX_CONTACTS ==
+                   (int)PLATFORM_TOUCH_MAX_CONTACTS,
                "console contact bound must match the touch service");
 #endif
 
@@ -542,18 +692,89 @@ static void set_game_manager_update_state(platform_os_update_state_t state)
     s_game_manager_subtitle[copy] = '\0';
 }
 
+static void game_storage_init_snapshot(
+    console_storage_init_state_t *out_state, esp_err_t *out_result)
+{
+    portENTER_CRITICAL(&s_game_storage_init_lock);
+    *out_state = s_game_storage_init_state;
+    *out_result = s_game_storage_init_result;
+    portEXIT_CRITICAL(&s_game_storage_init_lock);
+}
+
+static void game_storage_init_publish(console_storage_init_state_t state,
+                                      esp_err_t result)
+{
+    portENTER_CRITICAL(&s_game_storage_init_lock);
+    s_game_storage_init_state = state;
+    s_game_storage_init_result = result;
+    portEXIT_CRITICAL(&s_game_storage_init_lock);
+}
+
+static void game_storage_init_worker(void *unused)
+{
+    (void)unused;
+    const esp_err_t result = platform_game_storage_init();
+    const int64_t elapsed_us =
+        esp_timer_get_time() - s_game_storage_init_started_us;
+    const unsigned low_water_bytes =
+        (unsigned)uxTaskGetStackHighWaterMark(NULL);
+    game_storage_init_publish(
+        result == ESP_OK ? CONSOLE_STORAGE_INIT_READY
+                         : CONSOLE_STORAGE_INIT_FAILED,
+        result);
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS STORAGE_INIT status=%s result=%s "
+             "elapsed_ms=%" PRIi64 " worker_low_water_bytes=%u",
+             result == ESP_OK ? "ready" : "degraded",
+             esp_err_to_name(result), elapsed_us / INT64_C(1000),
+             low_water_bytes);
+    vTaskDelete(NULL);
+}
+
+static esp_err_t start_game_storage_initialization(void)
+{
+    console_storage_init_state_t state;
+    esp_err_t previous_result;
+    game_storage_init_snapshot(&state, &previous_result);
+    (void)previous_result;
+    if (state != CONSOLE_STORAGE_INIT_NOT_STARTED) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    s_game_storage_init_started_us = esp_timer_get_time();
+    game_storage_init_publish(CONSOLE_STORAGE_INIT_RUNNING, ESP_OK);
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS STORAGE_INIT_BEGIN mode=background "
+             "boot_screen=active writes=0");
+    const BaseType_t created = xTaskCreate(
+        game_storage_init_worker, "storage_init",
+        CONSOLE_STORAGE_INIT_STACK_BYTES, NULL, tskIDLE_PRIORITY + 1U,
+        NULL);
+    if (created != pdPASS) {
+        game_storage_init_publish(
+            CONSOLE_STORAGE_INIT_FAILED, ESP_ERR_NO_MEM);
+        return ESP_ERR_NO_MEM;
+    }
+    return ESP_OK;
+}
+
 static void sync_game_storage(void)
 {
     platform_game_storage_status_t status = {
-        .state = PLATFORM_GAME_STORAGE_FAULT,
-        .last_error = ESP_ERR_INVALID_STATE,
+        .state = PLATFORM_GAME_STORAGE_UNINITIALIZED,
+        .last_error = ESP_OK,
     };
-    if (s_game_storage_initialized) {
+    console_storage_init_state_t init_state;
+    esp_err_t init_result;
+    game_storage_init_snapshot(&init_state, &init_result);
+    if (init_state == CONSOLE_STORAGE_INIT_READY) {
         (void)platform_game_storage_refresh();
         if (platform_game_storage_get_status(&status) != ESP_OK) {
             status.state = PLATFORM_GAME_STORAGE_FAULT;
             status.last_error = ESP_FAIL;
         }
+    } else if (init_state == CONSOLE_STORAGE_INIT_FAILED) {
+        status.state = PLATFORM_GAME_STORAGE_FAULT;
+        status.last_error = init_result;
     }
     const bool changed = !s_game_storage_status_seen ||
         status.state != s_game_storage_status.state ||
@@ -628,8 +849,11 @@ static void p4cart_scan_worker(void *unused)
     (void)unused;
     const p4_content_status_t result = p4_content_catalog_scan(
         PLATFORM_GAME_STORAGE_MOUNT_POINT, &s_p4cart_scan_staging);
+    const unsigned low_water_bytes =
+        (unsigned)uxTaskGetStackHighWaterMark(NULL);
     portENTER_CRITICAL(&s_p4cart_scan_lock);
     s_p4cart_scan_result = result;
+    s_p4cart_scan_low_water_bytes = low_water_bytes;
     s_p4cart_scan_state = P4CART_SCAN_DONE;
     portEXIT_CRITICAL(&s_p4cart_scan_lock);
     vTaskSuspend(NULL);
@@ -670,9 +894,10 @@ static esp_err_t start_p4cart_scan(void)
     }
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS P4CART_SCAN_BEGIN directory=%s/%s "
-             "mode=background generation=%lu writes=0",
+             "mode=background stack_bytes=%u generation=%lu writes=0",
              PLATFORM_GAME_STORAGE_MOUNT_POINT,
              P4_CONTENT_CART_DIRECTORY,
+             (unsigned)CONSOLE_P4CART_SCAN_STACK_BYTES,
              (unsigned long)s_p4cart_scan_generation);
     return ESP_OK;
 }
@@ -711,12 +936,13 @@ static bool finish_p4cart_scan(void)
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS P4CART_READY valid=%u rejected=%u "
              "candidates=%u truncated=%u generation=%lu "
-             "runtime=lua-pending writes=0",
+             "worker_low_water_bytes=%u runtime=lua-pending writes=0",
              (unsigned)s_p4cart_catalog.valid_cart_count,
              (unsigned)s_p4cart_catalog.invalid_cart_count,
              (unsigned)s_p4cart_catalog.candidates_seen,
              s_p4cart_catalog.directory_truncated ? 1U : 0U,
-             (unsigned long)scan_generation);
+             (unsigned long)scan_generation,
+             s_p4cart_scan_low_water_bytes);
     return true;
 }
 
@@ -795,6 +1021,58 @@ static uint32_t file_size_kib(uint64_t bytes)
     return kib > UINT32_MAX ? UINT32_MAX : (uint32_t)kib;
 }
 
+static void make_file_path_label(
+    const char *relative_path,
+    char label[CONSOLE_SHELL_FILE_PATH_LABEL_MAX_BYTES])
+{
+    static const char prefix[] = "SD:/";
+    memcpy(label, prefix, sizeof(prefix));
+    if (relative_path == NULL || relative_path[0] == '\0') {
+        return;
+    }
+
+    const size_t path_length = strnlen(
+        relative_path, PLATFORM_GAME_STORAGE_RELATIVE_PATH_MAX_BYTES);
+    const size_t prefix_length = sizeof(prefix) - 1U;
+    const size_t available =
+        CONSOLE_SHELL_FILE_PATH_LABEL_MAX_BYTES - prefix_length - 1U;
+    const char *source = relative_path;
+    size_t source_length = path_length;
+    bool abbreviated = false;
+    if (source_length > available) {
+        const char *leaf = strrchr(relative_path, '/');
+        source = leaf == NULL ? relative_path : leaf + 1U;
+        source_length = strlen(source);
+        memcpy(label + prefix_length, ".../", sizeof(".../") - 1U);
+        const size_t marker_length = sizeof(".../") - 1U;
+        const size_t leaf_available = available - marker_length;
+        if (source_length > leaf_available) {
+            source_length = leaf_available;
+            abbreviated = true;
+        }
+        size_t output = prefix_length + marker_length;
+        for (size_t index = 0U; index < source_length; ++index) {
+            const unsigned char byte = (unsigned char)source[index];
+            label[output++] = byte >= UINT8_C(0x20) &&
+                    byte < UINT8_C(0x7f)
+                ? (char)byte : '?';
+        }
+        if (abbreviated && output > prefix_length + marker_length) {
+            label[output - 1U] = '>';
+        }
+        label[output] = '\0';
+        return;
+    }
+
+    size_t output = prefix_length;
+    for (size_t index = 0U; index < source_length; ++index) {
+        const unsigned char byte = (unsigned char)source[index];
+        label[output++] = byte >= UINT8_C(0x20) && byte < UINT8_C(0x7f)
+            ? (char)byte : '?';
+    }
+    label[output] = '\0';
+}
+
 static esp_err_t reload_file_listing(
     console_shell_t *shell,
     console_shell_file_notice_t requested_notice)
@@ -809,11 +1087,15 @@ static esp_err_t reload_file_listing(
         s_game_storage_status.generation;
 
     esp_err_t result = ESP_ERR_INVALID_STATE;
-    if (s_game_storage_initialized) {
-        result = platform_game_storage_list_root(&s_platform_file_listing);
+    if (storage_app_owned()) {
+        result = platform_game_storage_list_directory(
+            s_file_directory, &s_platform_file_listing);
     }
     if (result == ESP_OK) {
         s_shell_file_listing.available = true;
+        s_shell_file_listing.can_go_up = s_file_directory[0] != '\0';
+        make_file_path_label(
+            s_file_directory, s_shell_file_listing.path_label);
         s_shell_file_listing.storage_generation =
             s_platform_file_listing.storage_generation;
         s_shell_file_listing.hidden_entries =
@@ -838,7 +1120,11 @@ static esp_err_t reload_file_listing(
             make_file_label(input->name, output->label);
             output->size_kib = file_size_kib(input->size_bytes);
             output->is_directory = input->is_directory;
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+            output->removable = false;
+#else
             output->removable = !input->is_directory;
+#endif
         }
         s_shell_file_listing.total_visible_entries =
             s_platform_file_listing.total_entries >=
@@ -857,8 +1143,9 @@ static esp_err_t reload_file_listing(
     s_file_listing_storage_state = s_game_storage_status.state;
     s_file_listing_storage_generation = s_game_storage_status.generation;
     ESP_LOGI(TAG,
-             "P4_CONSOLE_OS FILES_REFRESH storage=%s available=%u "
+             "P4_CONSOLE_OS FILES_REFRESH directory=%s storage=%s available=%u "
              "visible=%lu hidden=%lu omitted=%lu generation=%lu result=%s",
+             s_file_directory[0] != '\0' ? s_file_directory : "/",
              platform_game_storage_state_name(s_game_storage_status.state),
              s_shell_file_listing.available ? 1U : 0U,
              (unsigned long)s_shell_file_listing.total_visible_entries,
@@ -1138,6 +1425,57 @@ static void handle_file_action(
         (void)reload_file_listing(shell, CONSOLE_FILE_NOTICE_REFRESHED);
         return;
     }
+    if (action->type == CONSOLE_ACTION_FILE_UP) {
+        if (s_file_directory[0] == '\0') {
+            console_shell_set_file_notice(shell, CONSOLE_FILE_NOTICE_ERROR);
+            return;
+        }
+        char *const slash = strrchr(s_file_directory, '/');
+        if (slash == NULL) {
+            s_file_directory[0] = '\0';
+        } else {
+            *slash = '\0';
+        }
+        shell->file_selected_index = 0U;
+        shell->file_first_visible = 0U;
+        (void)reload_file_listing(shell, CONSOLE_FILE_NOTICE_NONE);
+        return;
+    }
+    if (action->type == CONSOLE_ACTION_FILE_OPEN) {
+        esp_err_t result = ESP_ERR_INVALID_ARG;
+        const size_t source = action->file_source_index;
+        if (source < s_platform_file_listing.entry_count &&
+            s_platform_file_listing.entries[source].is_directory) {
+            const char *const name =
+                s_platform_file_listing.entries[source].name;
+            char candidate[
+                PLATFORM_GAME_STORAGE_RELATIVE_PATH_MAX_BYTES] = {0};
+            const int written = s_file_directory[0] == '\0'
+                ? snprintf(candidate, sizeof(candidate), "%s", name)
+                : snprintf(candidate, sizeof(candidate), "%s/%s",
+                           s_file_directory, name);
+            if (written > 0 && (size_t)written < sizeof(candidate)) {
+                char previous[PLATFORM_GAME_STORAGE_RELATIVE_PATH_MAX_BYTES];
+                memcpy(previous, s_file_directory, sizeof(previous));
+                memcpy(s_file_directory, candidate, sizeof(candidate));
+                shell->file_selected_index = 0U;
+                shell->file_first_visible = 0U;
+                result = reload_file_listing(
+                    shell, CONSOLE_FILE_NOTICE_NONE);
+                if (result != ESP_OK) {
+                    memcpy(s_file_directory, previous, sizeof(previous));
+                    (void)reload_file_listing(
+                        shell, CONSOLE_FILE_NOTICE_ERROR);
+                }
+            }
+        }
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS FILES_OPEN source=%lu directory=%s result=%s",
+                 (unsigned long)source,
+                 s_file_directory[0] != '\0' ? s_file_directory : "/",
+                 esp_err_to_name(result));
+        return;
+    }
     if (action->type != CONSOLE_ACTION_FILE_DELETE) {
         return;
     }
@@ -1150,16 +1488,104 @@ static void handle_file_action(
             &s_platform_file_listing.entries[source];
         make_file_label(entry->name, label);
         if (!entry->is_hidden && !entry->is_directory) {
-            result = platform_game_storage_remove_root_file(entry->name);
+            result = platform_game_storage_remove_file(
+                s_file_directory, entry->name);
         }
     }
     ESP_LOGI(TAG,
-             "P4_CONSOLE_OS FILES_DELETE file=%s result=%s",
+             "P4_CONSOLE_OS FILES_DELETE directory=%s file=%s result=%s",
+             s_file_directory[0] != '\0' ? s_file_directory : "/",
              label, esp_err_to_name(result));
     sync_game_storage();
     (void)reload_file_listing(
         shell, result == ESP_OK
             ? CONSOLE_FILE_NOTICE_DELETED : CONSOLE_FILE_NOTICE_ERROR);
+}
+
+static void handle_usb_mode_action(
+    console_shell_t *shell,
+    const console_shell_action_t *action)
+{
+    const bool enabled =
+        action->type == CONSOLE_ACTION_USB_MODE_ENABLE;
+    if (enabled && p4cart_scan_running()) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS USB_MODE_DEFERRED reason=p4cart-scan");
+        return;
+    }
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
+    CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE && \
+    CONFIG_P4_WAVESHARE_H2_RUNTIME_ROLE_SWITCH
+    esp_err_t result = ESP_OK;
+    if (enabled) {
+        result = stop_usb_input_for_role_switch();
+        (void)console_shell_handle_buttons(shell, 0U);
+        if (result == ESP_OK) {
+            result = platform_game_storage_set_usb_mode(true);
+        }
+        if (result != ESP_OK) {
+            platform_game_storage_status_t failed_status;
+            memset(&failed_status, 0, sizeof(failed_status));
+            const esp_err_t status_result =
+                platform_game_storage_get_status(&failed_status);
+            const esp_err_t recovery =
+                status_result == ESP_OK && !failed_status.usb_driver_running
+                ? start_usb_input() : ESP_ERR_INVALID_STATE;
+            ESP_LOGE(TAG,
+                     "P4_CONSOLE_OS USB_ROLE_FAIL target=usb-drive "
+                     "error=%s controller_recovery=%s",
+                     esp_err_to_name(result), esp_err_to_name(recovery));
+        }
+    } else {
+        result = platform_game_storage_set_usb_mode(false);
+        if (result == ESP_OK) {
+            result = start_usb_input();
+        }
+    }
+#else
+    const esp_err_t result = platform_game_storage_set_usb_mode(enabled);
+#endif
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS USB_MODE requested=%s result=%s "
+             "target_role=%s",
+             enabled ? "on" : "off", esp_err_to_name(result),
+             enabled ? "usb-drive" : "controller-host");
+    s_file_listing_seen = false;
+    if (result == ESP_OK && !enabled) {
+        s_catalog_seen = false;
+        s_p4cart_scan_seen = false;
+    }
+    sync_game_storage();
+    const console_shell_runtime_info_t current_runtime = runtime_info();
+    console_shell_set_runtime_info(shell, &current_runtime);
+}
+
+static void handle_audio_volume_action(
+    console_shell_t *shell,
+    const console_shell_action_t *action)
+{
+    if (shell == NULL || action == NULL) {
+        return;
+    }
+    esp_err_t result = ESP_ERR_INVALID_ARG;
+    const char *setting = "invalid";
+    if (action->type == CONSOLE_ACTION_BOOT_VOLUME_SET) {
+        setting = "boot";
+        result = platform_console_settings_set_boot_volume(
+            &s_console_settings, action->volume_step);
+    } else if (action->type == CONSOLE_ACTION_GAME_VOLUME_SET) {
+        setting = "game";
+        result = platform_console_settings_set_game_volume(
+            &s_console_settings, action->volume_step);
+    }
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS AUDIO_SETTING name=%s level=%u "
+             "persistent=%u result=%s",
+             setting, (unsigned)action->volume_step,
+             s_console_settings.persistent ? 1U : 0U,
+             esp_err_to_name(result));
+    const console_shell_runtime_info_t current_runtime = runtime_info();
+    console_shell_set_runtime_info(shell, &current_runtime);
 }
 
 static console_shell_runtime_info_t runtime_info(void)
@@ -1176,11 +1602,6 @@ static console_shell_runtime_info_t runtime_info(void)
 #if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
         .board_kind = CONSOLE_BOARD_OLIMEX_P4_PC,
         .touch_ready = false,
-        .controller_ready = s_gamepad_connected,
-        .keyboard_ready = s_keyboard_connected,
-        .mouse_ready = s_mouse_connected,
-        .sd_card_storage = true,
-        .audio_handoff_ready = true,
 #else
         .board_kind =
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
@@ -1189,25 +1610,42 @@ static console_shell_runtime_info_t runtime_info(void)
             CONSOLE_BOARD_ELECROW_10,
 #endif
         .touch_ready = s_touch_ready,
+#endif
+#if P4_CONSOLE_USB_INPUT
+        .controller_ready = s_gamepad_connected,
+        .keyboard_ready = s_keyboard_connected,
+        .mouse_ready = s_mouse_connected,
+#else
         .controller_ready = false,
         .keyboard_ready = false,
         .mouse_ready = false,
+#endif
         .sd_card_storage =
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
+    CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
             true,
 #else
             false,
 #endif
         /* Compiled handoff only; the shell itself never starts audio. */
         .audio_handoff_ready = true,
-#endif
         .game_storage_usb_attached = s_game_storage_status.usb_attached,
+        .usb_storage_supported =
+            s_game_storage_status.usb_mode_supported,
+        .usb_storage_eject_safe =
+            s_game_storage_status.usb_host_ejected,
+        .usb_drive_active = s_game_storage_status.usb_driver_running,
+#if P4_CONSOLE_USB_INPUT
+        .usb_input_host_active = s_gamepad_ready,
+#else
+        .usb_input_host_active = false,
+#endif
         .doom_wad_ready =
             s_game_storage_status.state == PLATFORM_GAME_STORAGE_APP_READY,
         .content_scan_complete = s_catalog_seen,
         .usb_content_ready = false,
         .multiplayer_core_ready = true,
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#if P4_CONSOLE_USB_INPUT
         .physical_keyboard_ready = s_keyboard_connected,
 #else
         .physical_keyboard_ready = false,
@@ -1216,11 +1654,14 @@ static console_shell_runtime_info_t runtime_info(void)
             ? UINT16_MAX : (uint16_t)s_game_catalog.valid_count,
         .builtin_game_count = (uint16_t)(
             1U + sizeof(s_builtin_apps) / sizeof(s_builtin_apps[0])),
+        .boot_volume_step = s_console_settings.boot_volume_step,
+        .game_volume_step = s_console_settings.game_volume_step,
+        .audio_settings_persistent = s_console_settings.persistent,
     };
     return info;
 }
 
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#if P4_CONSOLE_USB_INPUT
 static bool gamepad_button_pressed(const gamepad_state_t *state,
                                    gamepad_button_t button)
 {
@@ -1523,14 +1964,89 @@ static uint16_t move_pointer_axis(uint16_t current, int32_t delta,
     return (uint16_t)moved;
 }
 
-static void create_usb_input_or_continue(void)
+static void neutralize_usb_input_state(void)
 {
+    s_gamepad_ready = false;
+    s_gamepad_connected = false;
+    s_keyboard_connected = false;
+    s_mouse_connected = false;
+    s_terminal_keyboard_session = 0U;
+    memset(s_previous_terminal_keys, 0, sizeof(s_previous_terminal_keys));
+    s_mouse_x = CONSOLE_SHELL_LAYOUT_WIDTH / 2U;
+    s_mouse_y = CONSOLE_SHELL_LAYOUT_HEIGHT / 2U;
+}
+
+/*
+ * The generated external-port overlay references this symbol weakly. Keeping
+ * ownership in Console OS lets the application arm durable recovery before
+ * Host/HID starts and fail closed if the prior boot did not reach stability.
+ */
+bool p4_usb_ext_port_enum_retry_allowed(void)
+{
+    return s_usb_enum_probe_allowed;
+}
+
+/* The generated HCD overlay uses the same durable one-boot decision. */
+bool p4_usb_hs_fsls_reapply_allowed(void)
+{
+    return s_usb_enum_probe_allowed;
+}
+
+static void begin_usb_enum_probe_or_suppress(void)
+{
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
+    CONFIG_P4_WAVESHARE_H2_FORCE_FULL_SPEED_HOST
+    bool allowed = false;
+    bool prior_boot_incomplete = false;
+    const esp_err_t result =
+        platform_console_settings_begin_usb_enum_probe(
+            &s_console_settings, &allowed, &prior_boot_incomplete);
+    s_usb_enum_probe_allowed = result == ESP_OK && allowed;
+    s_usb_enum_probe_started = result == ESP_OK;
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS USB_ENUM_GUARD state=%s allowed=%u "
+             "prior_boot_incomplete=%u result=%s",
+             result != ESP_OK ? "fail-closed" :
+                 (prior_boot_incomplete ? "safe-mode" : "armed"),
+             s_usb_enum_probe_allowed ? 1U : 0U,
+             prior_boot_incomplete ? 1U : 0U,
+             esp_err_to_name(result));
+#else
+    s_usb_enum_probe_allowed = false;
+#endif
+}
+
+static void confirm_usb_enum_probe_after_stable_runtime(void)
+{
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
+    CONFIG_P4_WAVESHARE_H2_FORCE_FULL_SPEED_HOST
+    if (!s_usb_enum_probe_started || s_usb_enum_probe_confirm_attempted ||
+        s_loop_count < CONSOLE_USB_ENUM_GUARD_CONFIRM_LOOPS) {
+        return;
+    }
+    s_usb_enum_probe_confirm_attempted = true;
+    const esp_err_t result =
+        platform_console_settings_confirm_usb_enum_probe(
+            &s_console_settings);
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS USB_ENUM_GUARD state=%s loops=%lu result=%s",
+             result == ESP_OK ? "confirmed" : "confirm-failed",
+             (unsigned long)s_loop_count, esp_err_to_name(result));
+#endif
+}
+
+static esp_err_t start_usb_input(void)
+{
+    if (s_gamepad_ready) {
+        return ESP_OK;
+    }
     esp_err_t result = platform_usb_host_start(NULL);
     if (result != ESP_OK) {
         ESP_LOGW(TAG,
                  "P4_CONSOLE_OS USB_INPUT_DEGRADED stage=usb-host error=%s",
                  esp_err_to_name(result));
-        return;
+        neutralize_usb_input_state();
+        return result;
     }
     result = platform_gamepad_usb_start();
     if (result != ESP_OK) {
@@ -1538,7 +2054,8 @@ static void create_usb_input_or_continue(void)
                  "P4_CONSOLE_OS USB_INPUT_DEGRADED stage=hid error=%s",
                  esp_err_to_name(result));
         (void)platform_usb_host_stop(pdMS_TO_TICKS(1000U));
-        return;
+        neutralize_usb_input_state();
+        return result;
     }
     result = platform_usb_host_enable_root_port();
     if (result != ESP_OK) {
@@ -1549,16 +2066,65 @@ static void create_usb_input_or_continue(void)
             (void)platform_gamepad_usb_stop(pdMS_TO_TICKS(1000U));
             (void)platform_usb_host_stop(pdMS_TO_TICKS(1000U));
         }
-        return;
+        neutralize_usb_input_state();
+        return result;
     }
     s_gamepad_ready = true;
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS USB_INPUT_READY "
-             "classes=gamepad,keyboard,mouse transport=usb-hid "
-             "topology=integrated-powered-hub ports=4");
+             "classes=gamepad transport=usb-hid topology=%s "
+             "firmware_vbus_source=0",
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+             "integrated-powered-hub"
+#else
+             "waveshare-h2-self-powered-test"
+#endif
+    );
+    return ESP_OK;
 }
 
-static console_shell_action_t poll_input(console_shell_t *shell)
+static esp_err_t stop_usb_input_for_role_switch(void)
+{
+    if (!s_gamepad_ready) {
+        neutralize_usb_input_state();
+        return ESP_OK;
+    }
+
+    esp_err_t result = platform_usb_host_quiesce();
+    /* No stale key/button/mouse state survives even a failed teardown. */
+    neutralize_usb_input_state();
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG,
+                 "P4_CONSOLE_OS USB_ROLE_STOP_FAIL stage=quiesce error=%s",
+                 esp_err_to_name(result));
+        return result;
+    }
+    result = platform_gamepad_usb_stop(pdMS_TO_TICKS(1500U));
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG,
+                 "P4_CONSOLE_OS USB_ROLE_STOP_FAIL stage=hid error=%s",
+                 esp_err_to_name(result));
+        return result;
+    }
+    result = platform_usb_host_stop(pdMS_TO_TICKS(1500U));
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG,
+                 "P4_CONSOLE_OS USB_ROLE_STOP_FAIL stage=host error=%s",
+                 esp_err_to_name(result));
+        return result;
+    }
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS USB_ROLE_STOPPED old=controller-host "
+             "input=neutral h2_owner=none");
+    return ESP_OK;
+}
+
+static void create_usb_input_or_continue(void)
+{
+    (void)start_usb_input();
+}
+
+static console_shell_action_t poll_usb_input(console_shell_t *shell)
 {
     platform_gamepad_snapshot_t gamepad;
     uint32_t buttons = read_gamepad_snapshot(&gamepad)
@@ -1596,9 +2162,11 @@ static console_shell_action_t poll_input(console_shell_t *shell)
     console_shell_action_t pointer_action = {0};
     if (input_valid && input.mouse.connected != 0U) {
         s_mouse_x = move_pointer_axis(
-            s_mouse_x, input.mouse.delta_x, CONSOLE_SHELL_WIDTH);
+            s_mouse_x, input.mouse.delta_x,
+            CONSOLE_SHELL_LAYOUT_WIDTH);
         s_mouse_y = move_pointer_axis(
-            s_mouse_y, input.mouse.delta_y, CONSOLE_SHELL_HEIGHT);
+            s_mouse_y, input.mouse.delta_y,
+            CONSOLE_SHELL_LAYOUT_HEIGHT);
         const bool left_down =
             (input.mouse.buttons & UINT8_C(0x01)) != 0U;
         console_shell_set_pointer(
@@ -1606,9 +2174,12 @@ static console_shell_action_t poll_input(console_shell_t *shell)
         const console_shell_contact_t contact = {
             .x = (uint16_t)((uint32_t)CONSOLE_SHELL_VIEWPORT_LEFT +
                 (uint32_t)s_mouse_x *
-                    (uint32_t)CONSOLE_SHELL_VIEWPORT_SCALE + UINT32_C(1)),
-            .y = (uint16_t)((uint32_t)s_mouse_y *
-                (uint32_t)CONSOLE_SHELL_VIEWPORT_SCALE + UINT32_C(1)),
+                    (uint32_t)CONSOLE_SHELL_VIEWPORT_WIDTH /
+                    (uint32_t)CONSOLE_SHELL_LAYOUT_WIDTH),
+            .y = (uint16_t)((uint32_t)CONSOLE_SHELL_VIEWPORT_TOP +
+                (uint32_t)s_mouse_y *
+                    (uint32_t)CONSOLE_SHELL_VIEWPORT_HEIGHT /
+                    (uint32_t)CONSOLE_SHELL_LAYOUT_HEIGHT),
         };
         pointer_action = console_shell_handle_touch(
             shell, true, left_down ? &contact : NULL,
@@ -1621,21 +2192,35 @@ static console_shell_action_t poll_input(console_shell_t *shell)
     return button_action.type != CONSOLE_ACTION_NONE
         ? button_action : pointer_action;
 }
-#else
-static void create_touch_or_continue(void)
+#endif
+
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+static bool create_shared_control_bus_or_continue(void)
 {
+    if (s_shared_bus != NULL) {
+        return true;
+    }
     esp_err_t result = platform_i2c_shared_create(&s_shared_bus);
     if (result != ESP_OK) {
         ESP_LOGW(TAG,
-                 "P4_CONSOLE_OS TOUCH_DEGRADED stage=shared-bus error=%s",
+                 "P4_CONSOLE_OS CONTROL_BUS_DEGRADED error=%s",
                  esp_err_to_name(result));
+        return false;
+    }
+    ESP_LOGI(TAG, "P4_CONSOLE_OS CONTROL_BUS_READY clients=audio,touch");
+    return true;
+}
+
+static void create_touch_or_continue(void)
+{
+    if (!create_shared_control_bus_or_continue()) {
         return;
     }
 
     platform_touch_config_t config;
     platform_touch_config_init(
         &config, platform_i2c_shared_handle(s_shared_bus));
-    result = platform_touch_create(&config, &s_touch);
+    const esp_err_t result = platform_touch_create(&config, &s_touch);
     if (result != ESP_OK) {
         ESP_LOGW(TAG,
                  "P4_CONSOLE_OS TOUCH_DEGRADED stage=create error=%s",
@@ -1675,7 +2260,7 @@ static bool read_touch_frame(platform_touch_frame_t *frame)
     return true;
 }
 
-static console_shell_action_t poll_input(console_shell_t *shell)
+static console_shell_action_t poll_touch_input(console_shell_t *shell)
 {
     platform_touch_frame_t frame;
     if (!read_touch_frame(&frame)) {
@@ -1692,6 +2277,22 @@ static console_shell_action_t poll_input(console_shell_t *shell)
 }
 #endif
 
+static console_shell_action_t poll_input(console_shell_t *shell)
+{
+#if P4_CONSOLE_USB_INPUT
+    const console_shell_action_t usb_action = poll_usb_input(shell);
+    if (usb_action.type != CONSOLE_ACTION_NONE) {
+        return usb_action;
+    }
+#endif
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    return poll_touch_input(shell);
+#else
+    const console_shell_action_t no_action = {0};
+    return no_action;
+#endif
+}
+
 static void log_runtime_stats(const console_shell_t *shell)
 {
     platform_display_stats_t display = {0};
@@ -1701,7 +2302,7 @@ static void log_runtime_stats(const console_shell_t *shell)
                  esp_err_to_name(result));
         return;
     }
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#if P4_CONSOLE_USB_INPUT
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS STATS loops=%lu page=%u renders=%lu "
              "usb_input_ready=%u gamepad=%u keyboard=%u mouse=%u "
@@ -1765,15 +2366,30 @@ static esp_err_t present(console_shell_t *shell)
             shell, s_pixels, CONSOLE_SHELL_WIDTH)) {
         return ESP_ERR_INVALID_STATE;
     }
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    return platform_display_submit_content_rgb565(
+        s_pixels, CONSOLE_SHELL_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
+#else
     return platform_display_submit_rgb565(
         s_pixels, CONSOLE_SHELL_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
+#endif
 }
 
+#if !CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
 static void draw_gamechangers_ai_logo(p4_game_surface_t *surface,
                                       int left, int top)
 {
     if (surface == NULL) {
         return;
+    }
+    const size_t expected_bytes =
+        (size_t)CONSOLE_BOOT_LOGO_WIDTH * CONSOLE_BOOT_LOGO_HEIGHT *
+        sizeof(uint16_t);
+    const size_t embedded_bytes = (size_t)(
+        _binary_gamechangers_ai_logo_rgb565_end -
+        _binary_gamechangers_ai_logo_rgb565_start);
+    if (embedded_bytes != expected_bytes) {
+        halt_dark("boot-logo-size", ESP_ERR_INVALID_SIZE);
     }
     for (size_t y = 0U; y < CONSOLE_BOOT_LOGO_HEIGHT; ++y) {
         for (size_t x = 0U; x < CONSOLE_BOOT_LOGO_WIDTH; ++x) {
@@ -1788,20 +2404,82 @@ static void draw_gamechangers_ai_logo(p4_game_surface_t *surface,
         }
     }
 }
+#endif
 
-static esp_err_t present_boot_screen(unsigned animation_step)
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+static p4_bbs_boot_phase_t bbs_boot_phase_for_status(const char *status)
+{
+    if (status == NULL || strstr(status, "START") != NULL ||
+        strstr(status, "POST") != NULL) {
+        return P4_BBS_BOOT_POST;
+    }
+    if (strstr(status, "DISK") != NULL) {
+        return P4_BBS_BOOT_DISK;
+    }
+    if (strstr(status, "DIAL") != NULL) {
+        return P4_BBS_BOOT_DIALING;
+    }
+    if (strstr(status, "V.22") != NULL ||
+        strstr(status, "2400 BAUD") != NULL) {
+        return P4_BBS_BOOT_TRAINING;
+    }
+    if (strstr(status, "DEGRADED") != NULL) {
+        return P4_BBS_BOOT_DEGRADED;
+    }
+    if (strstr(status, "READY") != NULL ||
+        strstr(status, "CONNECT 2400") != NULL ||
+        strstr(status, "CARRIER DETECT") != NULL) {
+        return P4_BBS_BOOT_CONNECTED;
+    }
+    return P4_BBS_BOOT_SYNCING;
+}
+#endif
+
+static esp_err_t present_boot_screen(unsigned animation_step,
+                                     const char *status)
 {
     if (s_pixels == NULL) {
         return ESP_ERR_INVALID_STATE;
     }
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    const p4_bbs_boot_phase_t phase = bbs_boot_phase_for_status(status);
+    const p4_bbs_boot_model_t model = {
+        .phase = phase,
+        .progress_step = phase == P4_BBS_BOOT_CONNECTED
+            ? CONSOLE_BOOT_ANIMATION_STEPS
+            : (uint8_t)(animation_step > CONSOLE_BOOT_ANIMATION_STEPS
+                ? CONSOLE_BOOT_ANIMATION_STEPS : animation_step),
+        .progress_total = CONSOLE_BOOT_ANIMATION_STEPS,
+    };
+    if (!p4_bbs_build_boot_screen(&s_shell.bbs_terminal, &model) ||
+        !p4_ansi_render_rgb565(
+            &s_shell.bbs_terminal, s_pixels, CONSOLE_SHELL_WIDTH,
+            CONSOLE_SHELL_WIDTH, CONSOLE_SHELL_HEIGHT)) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    esp_err_t result = ESP_FAIL;
+    for (unsigned attempt = 0U;
+         attempt < CONSOLE_BOOT_SUBMIT_ATTEMPTS; ++attempt) {
+        result = platform_display_submit_content_rgb565(
+            s_pixels, CONSOLE_SHELL_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
+        if (result != ESP_ERR_TIMEOUT) {
+            break;
+        }
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS BOOT_FRAME_RETRY status=%s attempt=%u",
+                 status == NULL ? "STARTING" : status, attempt + 1U);
+        vTaskDelay(pdMS_TO_TICKS(CONSOLE_BOOT_SUBMIT_RETRY_MS));
+    }
+    return result;
+#else
     p4_game_surface_t surface = {
         .pixels = s_pixels,
-        .stride_pixels = CONSOLE_SHELL_WIDTH,
-        .width = CONSOLE_SHELL_WIDTH,
-        .height = CONSOLE_SHELL_HEIGHT,
+        .stride_pixels = P4_GAME_SURFACE_WIDTH,
+        .width = P4_GAME_SURFACE_WIDTH,
+        .height = P4_GAME_SURFACE_HEIGHT,
     };
     p4_draw_clear(&surface, UINT16_C(0x0000));
-    draw_gamechangers_ai_logo(&surface, 11, 54);
+    draw_gamechangers_ai_logo(&surface, 104, 0);
     p4_draw_fill_rect(&surface, 84, 113, 152, 1, UINT16_C(0x39C7));
     p4_draw_text(&surface, 100, 124, "CONSOLE OS", UINT16_C(0xFFFF),
                  2U, 10U);
@@ -1813,9 +2491,66 @@ static esp_err_t present_boot_screen(unsigned animation_step)
                           segment < animation_step ? UINT16_C(0xFD20) :
                               UINT16_C(0x39C7));
     }
+    p4_draw_text(&surface, 116, 186,
+                 status == NULL ? "STARTING..." : status,
+                 UINT16_C(0xBDF7), 1U, 8U);
     return platform_display_submit_rgb565(
-        s_pixels, CONSOLE_SHELL_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
+        s_pixels, P4_GAME_SURFACE_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
+#endif
 }
+
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+static esp_err_t present_bbs_home_reveal(console_shell_t *shell)
+{
+    if (shell == NULL || s_pixels == NULL ||
+        !console_shell_render_rgb565(
+            shell, s_pixels, CONSOLE_SHELL_WIDTH)) {
+        return ESP_ERR_INVALID_STATE;
+    }
+
+    const size_t pixel_count =
+        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT;
+    uint16_t *const reveal_pixels = heap_caps_calloc(
+        pixel_count, sizeof(*reveal_pixels),
+        MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (reveal_pixels == NULL) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS BBS_REVEAL status=skipped reason=no-memory");
+        return platform_display_submit_content_rgb565(
+            s_pixels, CONSOLE_SHELL_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
+    }
+
+    esp_err_t result = ESP_OK;
+    size_t previous_rows = 0U;
+    for (unsigned step = 1U;
+         step <= CONSOLE_BBS_HOME_REVEAL_STEPS; ++step) {
+        const size_t visible_rows =
+            (size_t)CONSOLE_SHELL_HEIGHT * step /
+            CONSOLE_BBS_HOME_REVEAL_STEPS;
+        const size_t added_rows = visible_rows - previous_rows;
+        memcpy(reveal_pixels + previous_rows * CONSOLE_SHELL_WIDTH,
+               s_pixels + previous_rows * CONSOLE_SHELL_WIDTH,
+               added_rows * CONSOLE_SHELL_WIDTH * sizeof(*s_pixels));
+        result = platform_display_submit_content_rgb565(
+            reveal_pixels, CONSOLE_SHELL_WIDTH,
+            CONSOLE_SUBMIT_TIMEOUT_MS);
+        if (result != ESP_OK) {
+            break;
+        }
+        previous_rows = visible_rows;
+        if (step < CONSOLE_BBS_HOME_REVEAL_STEPS) {
+            vTaskDelay(pdMS_TO_TICKS(CONSOLE_BBS_HOME_REVEAL_DELAY_MS));
+        }
+    }
+    heap_caps_free(reveal_pixels);
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS BBS_REVEAL status=%s rows=%u steps=%u",
+             result == ESP_OK ? "complete" : "failed",
+             (unsigned)previous_rows,
+             (unsigned)CONSOLE_BBS_HOME_REVEAL_STEPS);
+    return result;
+}
+#endif
 
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 static esp_err_t destroy_touch_for_handoff(void)
@@ -1923,81 +2658,308 @@ static void close_native_audio_or_halt(p4_game_platform_audio_t *audio)
     }
 }
 
-static void wait_with_boot_animation(void)
+static void present_boot_dial_frame(size_t digit_index)
 {
-    const unsigned ticks_per_step = CONSOLE_BOOT_CHIME_TICKS /
-        CONSOLE_BOOT_ANIMATION_STEPS;
-    for (unsigned tick = 0U; tick < CONSOLE_BOOT_CHIME_TICKS; ++tick) {
-        if (tick != 0U && tick % ticks_per_step == 0U) {
-            const esp_err_t result =
-                present_boot_screen(tick / ticks_per_step);
-            if (result != ESP_OK) {
-                halt_dark("boot-animation-frame", result);
-            }
-        }
+    const esp_err_t result = present_boot_screen(
+        (unsigned)(digit_index % CONSOLE_BOOT_ANIMATION_STEPS) + 1U,
+        "DIALING 614-276-3639");
+    if (result != ESP_OK) {
+        halt_dark("boot-dial-frame", result);
+    }
+}
+
+static void present_boot_modem_frame(size_t phase_index)
+{
+    const esp_err_t result = present_boot_screen(
+        (unsigned)(phase_index % CONSOLE_BOOT_ANIMATION_STEPS) + 1U,
+        "V.22BIS 2400 BAUD");
+    if (result != ESP_OK) {
+        halt_dark("boot-modem-frame", result);
+    }
+}
+
+static void present_boot_hdd_frame(size_t phase_index)
+{
+    const esp_err_t result = present_boot_screen(
+        (unsigned)(phase_index % CONSOLE_BOOT_ANIMATION_STEPS) + 1U,
+        "CHECKING DISK");
+    if (result != ESP_OK) {
+        halt_dark("boot-hdd-frame", result);
+    }
+}
+
+static void wait_with_boot_audio_animation(void)
+{
+    (void)present_boot_screen(1U, "POST OK");
+    vTaskDelay(pdMS_TO_TICKS(
+        CONSOLE_BOOT_POST_BEEP_MS + CONSOLE_BOOT_POST_GAP_MS));
+    for (size_t phase = 0U;
+         phase < sizeof(s_boot_hdd_phases) /
+                     sizeof(s_boot_hdd_phases[0]); ++phase) {
+        present_boot_hdd_frame(phase);
+        vTaskDelay(pdMS_TO_TICKS(
+            (unsigned)s_boot_hdd_phases[phase].duration_ms +
+            (unsigned)s_boot_hdd_phases[phase].gap_ms));
+    }
+    for (size_t digit = 0U;
+         digit < sizeof(s_boot_dial) / sizeof(s_boot_dial[0]); ++digit) {
+        present_boot_dial_frame(digit);
+        const unsigned gap = digit == 2U || digit == 5U
+            ? CONSOLE_BOOT_DTMF_DASH_MS : CONSOLE_BOOT_DTMF_GAP_MS;
+        vTaskDelay(pdMS_TO_TICKS(CONSOLE_BOOT_DTMF_TONE_MS + gap));
+    }
+    for (size_t phase = 0U;
+         phase < sizeof(s_boot_modem_phases) /
+                     sizeof(s_boot_modem_phases[0]); ++phase) {
+        present_boot_modem_frame(phase);
+        vTaskDelay(pdMS_TO_TICKS(
+            (unsigned)s_boot_modem_phases[phase].duration_ms +
+            (unsigned)s_boot_modem_phases[phase].gap_ms));
+    }
+}
+
+static bool play_boot_tone_pair(p4_game_platform_audio_t *audio,
+                                p4_audio_mixer_t *mixer,
+                                uint16_t low_hz, uint16_t high_hz,
+                                uint16_t duration_ms, uint16_t gap_ms,
+                                uint8_t low_volume_step,
+                                uint8_t high_volume_step,
+                                p4_waveform_t waveform)
+{
+    p4_audio_mixer_stop_all(mixer);
+    bool played = true;
+    if (low_hz != 0U) {
+        const p4_tone_t low = {
+            .frequency_hz = low_hz,
+            .duration_ms = duration_ms,
+            .volume_step = low_volume_step,
+            .waveform = waveform,
+        };
+        played = p4_audio_mixer_play_tone(mixer, &low);
+    }
+    if (played && high_hz != 0U) {
+        const p4_tone_t high = {
+            .frequency_hz = high_hz,
+            .duration_ms = duration_ms,
+            .volume_step = high_volume_step,
+            .waveform = waveform,
+        };
+        played = p4_audio_mixer_play_tone(mixer, &high);
+    }
+    const unsigned tone_ticks =
+        ((unsigned)duration_ms + CONSOLE_FRAME_INTERVAL_MS - 1U) /
+        CONSOLE_FRAME_INTERVAL_MS;
+    for (unsigned tick = 0U; played && tick < tone_ticks; ++tick) {
+        played = pump_native_audio(audio, mixer);
         vTaskDelay(pdMS_TO_TICKS(CONSOLE_FRAME_INTERVAL_MS));
     }
+    p4_audio_mixer_stop_all(mixer);
+    const unsigned gap_ticks =
+        ((unsigned)gap_ms + CONSOLE_FRAME_INTERVAL_MS - 1U) /
+        CONSOLE_FRAME_INTERVAL_MS;
+    for (unsigned tick = 0U; played && tick < gap_ticks; ++tick) {
+        played = pump_native_audio(audio, mixer);
+        vTaskDelay(pdMS_TO_TICKS(CONSOLE_FRAME_INTERVAL_MS));
+    }
+    return played;
 }
 
 static void play_boot_chime(void)
 {
     if (!native_audio_runtime_allowed()) {
         ESP_LOGI(TAG,
-                 "P4_CONSOLE_OS BOOT_CHIME status=silent reason=runtime-gate");
-        wait_with_boot_animation();
+                 "P4_CONSOLE_OS BOOT_POST status=silent reason=runtime-gate");
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS BOOT_HDD status=silent reason=runtime-gate");
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS BOOT_DIAL status=silent digits=614-276-3639 "
+                 "reason=runtime-gate");
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS BOOT_MODEM status=silent "
+                 "reason=runtime-gate");
+        wait_with_boot_audio_animation();
         return;
     }
     p4_game_platform_audio_t audio;
     p4_game_platform_audio_init(&audio);
     const esp_err_t open_result = p4_game_platform_audio_open(
-        &audio, true, native_audio_control_bus(), 5U);
+        &audio, true, native_audio_control_bus(),
+        s_console_settings.boot_volume_step);
     if (open_result != ESP_OK) {
         if (audio.hardware_touched &&
             (!audio.safe_high_proven || audio.backend != NULL)) {
             halt_dark("boot-chime-open-safety", open_result);
         }
         ESP_LOGW(TAG,
-                 "P4_CONSOLE_OS BOOT_CHIME status=silent stage=open error=%s",
+                 "P4_CONSOLE_OS BOOT_DIAL status=silent digits=614-276-3639 "
+                 "stage=open error=%s",
                  esp_err_to_name(open_result));
-        wait_with_boot_animation();
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS BOOT_MODEM status=silent "
+                 "stage=open error=%s",
+                 esp_err_to_name(open_result));
+        wait_with_boot_audio_animation();
         return;
     }
     p4_audio_mixer_t mixer;
     p4_audio_mixer_init(&mixer);
-    static const p4_tone_t chord[] = {
-        {.frequency_hz = 440U, .duration_ms = 680U, .volume_step = 3U,
-         .waveform = P4_WAVE_TRIANGLE},
-        {.frequency_hz = 554U, .duration_ms = 680U, .volume_step = 3U,
-         .waveform = P4_WAVE_TRIANGLE},
-        {.frequency_hz = 659U, .duration_ms = 680U, .volume_step = 3U,
-         .waveform = P4_WAVE_TRIANGLE},
-    };
-    for (size_t index = 0U; index < sizeof(chord) / sizeof(chord[0]);
-         ++index) {
-        (void)p4_audio_mixer_play_tone(&mixer, &chord[index]);
-    }
     bool played = true;
-    const unsigned ticks_per_step = CONSOLE_BOOT_CHIME_TICKS /
-        CONSOLE_BOOT_ANIMATION_STEPS;
-    for (unsigned tick = 0U; tick < CONSOLE_BOOT_CHIME_TICKS; ++tick) {
-        if (!pump_native_audio(&audio, &mixer)) {
-            played = false;
+    (void)present_boot_screen(1U, "POST OK");
+    played = play_boot_tone_pair(
+        &audio, &mixer, 880U, 0U, CONSOLE_BOOT_POST_BEEP_MS,
+        CONSOLE_BOOT_POST_GAP_MS,
+        s_console_settings.boot_volume_step, 0U, P4_WAVE_SQUARE);
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS BOOT_POST status=%s beep_hz=880 duration_ms=%u "
+             "codec_volume=%u tone_volume=%u",
+             played ? "played" : "degraded",
+             (unsigned)CONSOLE_BOOT_POST_BEEP_MS,
+             (unsigned)s_console_settings.boot_volume_step,
+             (unsigned)s_console_settings.boot_volume_step);
+
+    size_t hdd_phases = 0U;
+    for (; played && hdd_phases < sizeof(s_boot_hdd_phases) /
+                                     sizeof(s_boot_hdd_phases[0]);
+         ++hdd_phases) {
+        const console_boot_modem_phase_t *const phase =
+            &s_boot_hdd_phases[hdd_phases];
+        present_boot_hdd_frame(hdd_phases);
+        played = play_boot_tone_pair(
+            &audio, &mixer, phase->low_hz, phase->high_hz,
+            phase->duration_ms, phase->gap_ms,
+            phase->low_volume_step, phase->high_volume_step,
+            phase->waveform);
+    }
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS BOOT_HDD status=%s phases=%u profile=seek-pulses",
+             played ? "played" : "degraded", (unsigned)hdd_phases);
+
+    const int64_t dial_started_us = esp_timer_get_time();
+    for (size_t digit = 0U;
+         digit < sizeof(s_boot_dial) / sizeof(s_boot_dial[0]);
+         ++digit) {
+        present_boot_dial_frame(digit);
+        const unsigned gap_ms = digit == 2U || digit == 5U
+            ? CONSOLE_BOOT_DTMF_DASH_MS : CONSOLE_BOOT_DTMF_GAP_MS;
+        played = play_boot_tone_pair(
+            &audio, &mixer, s_boot_dial[digit].low_hz,
+            s_boot_dial[digit].high_hz,
+            CONSOLE_BOOT_DTMF_TONE_MS, (uint16_t)gap_ms,
+            s_console_settings.boot_volume_step,
+            s_console_settings.boot_volume_step,
+            P4_WAVE_TRIANGLE);
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS BOOT_DIAL_DIGIT index=%u digit=%c "
+                 "low_hz=%u high_hz=%u",
+                 (unsigned)digit, s_boot_dial[digit].digit,
+                 (unsigned)s_boot_dial[digit].low_hz,
+                 (unsigned)s_boot_dial[digit].high_hz);
+        if (!played) {
             break;
         }
-        if (tick != 0U && tick % ticks_per_step == 0U) {
-            const esp_err_t frame_result =
-                present_boot_screen(tick / ticks_per_step);
-            if (frame_result != ESP_OK) {
-                halt_dark("boot-animation-frame", frame_result);
-            }
-        }
-        vTaskDelay(pdMS_TO_TICKS(CONSOLE_FRAME_INTERVAL_MS));
+    }
+    const int64_t dial_elapsed_ms =
+        (esp_timer_get_time() - dial_started_us) / INT64_C(1000);
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS BOOT_DIAL status=%s digits=614-276-3639 "
+             "mode=dual-tone-dtmf codec_volume=%u tone_volume=%u "
+             "digit_tone_ms=%u digit_gap_ms=%u group_gap_ms=%u "
+             "elapsed_ms=%" PRIi64,
+             played ? "played" : "degraded",
+             (unsigned)s_console_settings.boot_volume_step,
+             (unsigned)s_console_settings.boot_volume_step,
+             (unsigned)CONSOLE_BOOT_DTMF_TONE_MS,
+             (unsigned)CONSOLE_BOOT_DTMF_GAP_MS,
+             (unsigned)CONSOLE_BOOT_DTMF_DASH_MS, dial_elapsed_ms);
+
+    const int64_t modem_started_us = esp_timer_get_time();
+    size_t modem_phases = 0U;
+    for (; played && modem_phases < sizeof(s_boot_modem_phases) /
+                                   sizeof(s_boot_modem_phases[0]);
+         ++modem_phases) {
+        const console_boot_modem_phase_t *const phase =
+            &s_boot_modem_phases[modem_phases];
+        present_boot_modem_frame(modem_phases);
+        played = play_boot_tone_pair(
+            &audio, &mixer, phase->low_hz, phase->high_hz,
+            phase->duration_ms, phase->gap_ms,
+            phase->low_volume_step, phase->high_volume_step,
+            phase->waveform);
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS BOOT_MODEM_PHASE index=%u name=%s "
+                 "low_hz=%u high_hz=%u duration_ms=%u gap_ms=%u",
+                 (unsigned)modem_phases, phase->name,
+                 (unsigned)phase->low_hz, (unsigned)phase->high_hz,
+                 (unsigned)phase->duration_ms, (unsigned)phase->gap_ms);
     }
     close_native_audio_or_halt(&audio);
+    const int64_t modem_elapsed_ms =
+        (esp_timer_get_time() - modem_started_us) / INT64_C(1000);
     ESP_LOGI(TAG,
-             "P4_CONSOLE_OS BOOT_CHIME status=%s notes=A4-C#5-E5 "
-             "source=original-startup-chord",
-             played ? "played" : "degraded");
+             "P4_CONSOLE_OS BOOT_MODEM status=%s profile=v22bis-2400 "
+             "phases=%u codec_volume=%u tone_volume=%u elapsed_ms=%" PRIi64,
+             played ? "played" : "degraded", (unsigned)modem_phases,
+             (unsigned)s_console_settings.boot_volume_step,
+             (unsigned)s_console_settings.boot_volume_step,
+             modem_elapsed_ms);
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS AUDIO_PROFILE boot_volume=%u runtime_volume=%u "
+             "runtime_restore=on-next-open",
+             (unsigned)s_console_settings.boot_volume_step,
+             (unsigned)s_console_settings.game_volume_step);
+}
+
+static esp_err_t wait_for_game_storage_with_boot_animation(void)
+{
+    console_storage_init_state_t initial_state;
+    esp_err_t initial_result;
+    game_storage_init_snapshot(&initial_state, &initial_result);
+    if (initial_state == CONSOLE_STORAGE_INIT_NOT_STARTED) {
+        const esp_err_t start_result = start_game_storage_initialization();
+        if (start_result != ESP_OK) {
+            return start_result;
+        }
+    } else if (initial_state == CONSOLE_STORAGE_INIT_FAILED) {
+        return initial_result;
+    }
+
+    unsigned animation_frame = 0U;
+    for (;;) {
+        console_storage_init_state_t state;
+        esp_err_t result;
+        game_storage_init_snapshot(&state, &result);
+        if (state == CONSOLE_STORAGE_INIT_READY ||
+            state == CONSOLE_STORAGE_INIT_FAILED) {
+            const esp_err_t frame_result = present_boot_screen(
+                CONSOLE_BOOT_ANIMATION_STEPS,
+                state == CONSOLE_STORAGE_INIT_READY
+                    ? "GAMES READY" : "SD CARD DEGRADED");
+            if (frame_result != ESP_OK) {
+                halt_dark("storage-loading-frame", frame_result);
+            }
+            ESP_LOGI(TAG,
+                     "P4_CONSOLE_OS LOADING_SCREEN status=%s result=%s "
+                     "frames=%u storage_elapsed_ms=%" PRIi64,
+                     state == CONSOLE_STORAGE_INIT_READY
+                         ? "complete" : "degraded",
+                     esp_err_to_name(result), animation_frame,
+                     (esp_timer_get_time() - s_game_storage_init_started_us) /
+                         INT64_C(1000));
+            return result;
+        }
+
+        const unsigned step =
+            animation_frame % CONSOLE_BOOT_ANIMATION_STEPS + 1U;
+        const esp_err_t frame_result = present_boot_screen(
+            step, "READING SD CARD");
+        if (frame_result != ESP_OK) {
+            halt_dark("storage-loading-frame", frame_result);
+        }
+        if (animation_frame != UINT_MAX) {
+            ++animation_frame;
+        }
+        vTaskDelay(pdMS_TO_TICKS(CONSOLE_STORAGE_LOADING_FRAME_MS));
+    }
 }
 
 typedef struct {
@@ -2030,6 +2992,21 @@ static bool cartridge_unlock_achievement(
     return p4_achievement_catalog_unlock(
         context->achievements, achievement);
 }
+
+#if P4_CONSOLE_SIGNAL_SCAN
+static bool cartridge_request_signal_scan(void *opaque, uint64_t focus_token)
+{
+    (void)opaque;
+    return platform_signal_scan_request(NULL, focus_token);
+}
+
+static bool cartridge_read_signal_scan(
+    void *opaque, p4_game_signal_snapshot_t *snapshot)
+{
+    (void)opaque;
+    return platform_signal_scan_read(NULL, snapshot);
+}
+#endif
 
 static bool cartridge_play_tone(void *opaque, const p4_tone_t *tone)
 {
@@ -2074,7 +3051,7 @@ static bool cartridge_poll_frame(void *opaque,
     if (context == NULL || out_input == NULL || out_elapsed_ms == NULL) {
         return false;
     }
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#if P4_CONSOLE_USB_INPUT
     platform_gamepad_snapshot_t gamepad;
     uint32_t digital_buttons = read_gamepad_snapshot(&gamepad)
         ? gamepad_p4_buttons(&gamepad.state) : 0U;
@@ -2090,10 +3067,10 @@ static bool cartridge_poll_frame(void *opaque,
             }
         }
     }
-    p4_game_input_mapper_update(
-        &context->input_mapper, false, NULL, 0U,
-        digital_buttons, out_input);
 #else
+    const uint32_t digital_buttons = 0U;
+#endif
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
     platform_touch_frame_t frame;
     const bool valid = read_touch_frame(&frame);
     p4_physical_touch_t touches[P4_INPUT_MAX_TOUCHES];
@@ -2102,11 +3079,18 @@ static bool cartridge_poll_frame(void *opaque,
         touches[index].x = frame.contacts[index].x;
         touches[index].y = frame.contacts[index].y;
     }
+#else
+    const bool valid = false;
+    const size_t touch_count = 0U;
+#endif
     p4_game_input_mapper_update(
         &context->input_mapper, valid,
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
         touch_count == 0U ? NULL : touches,
-        touch_count, 0U, out_input);
+#else
+        NULL,
 #endif
+        touch_count, digital_buttons, out_input);
     if (context->audio_running) {
         context->audio_running = pump_native_audio(
             &context->audio, &context->mixer);
@@ -2115,7 +3099,7 @@ static bool cartridge_poll_frame(void *opaque,
         ++context->frames;
     }
     if (context->frames != 0U && context->frames % 300U == 0U) {
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#if P4_CONSOLE_USB_INPUT
         ESP_LOGI(TAG,
                  "P4_CONSOLE_OS CARTRIDGE_STATS app=%s frames=%lu "
                  "gamepad=%u keyboard=%u mouse=%u input_polls=%lu "
@@ -2180,7 +3164,8 @@ static esp_err_t run_stored_game(
          (P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM)) != 0U) {
         const esp_err_t audio_result = p4_game_platform_audio_open(
             &context.audio, native_audio_runtime_allowed(),
-            native_audio_control_bus(), CONSOLE_NATIVE_AUDIO_VOLUME_STEP);
+            native_audio_control_bus(),
+            s_console_settings.game_volume_step);
         if (audio_result == ESP_OK) {
             context.audio_running = true;
         } else if (context.audio.hardware_touched &&
@@ -2190,6 +3175,11 @@ static esp_err_t run_stored_game(
         }
     }
     p4_game_input_mapper_init(&context.input_mapper);
+#if P4_CONSOLE_SIGNAL_SCAN
+    const bool signal_scan_ready = platform_signal_scan_ready();
+#else
+    const bool signal_scan_ready = false;
+#endif
     p4_cartridge_host_v1_t host = {
         .magic = P4_CARTRIDGE_HOST_MAGIC,
         .api_version = P4_CARTRIDGE_HOST_API_VERSION,
@@ -2197,7 +3187,8 @@ static esp_err_t run_stored_game(
         .available_capabilities = P4_GAME_CAP_VIDEO |
             P4_GAME_CAP_CONTROLS |
             (context.audio_running
-                ? P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM : 0U),
+                ? P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM : 0U) |
+            (signal_scan_ready ? P4_GAME_CAP_SIGNAL_SCAN : 0U),
         .expected_game_id = game->package.id,
         .surface = {
             .pixels = s_pixels,
@@ -2214,14 +3205,21 @@ static esp_err_t run_stored_game(
         .stop_audio = context.audio_running ? cartridge_stop_audio : NULL,
         .finished = cartridge_finished,
         .unlock_achievement = cartridge_unlock_achievement,
+#if P4_CONSOLE_SIGNAL_SCAN
+        .request_signal_scan = signal_scan_ready
+            ? cartridge_request_signal_scan : NULL,
+        .read_signal_scan = signal_scan_ready
+            ? cartridge_read_signal_scan : NULL,
+#endif
     };
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS CARTRIDGE_START app=%s file=%s api=1 "
-             "source=%s runtime=psram-elf audio=%s",
+             "source=%s runtime=psram-elf audio=%s signals=%s",
              game->package.id, game->file_name,
              game->in_games_directory
                 ? "microsd-games-directory" : "microsd-root-compat",
-             context.audio_running ? "ready" : "silent");
+             context.audio_running ? "ready" : "silent",
+             signal_scan_ready ? "ready" : "offline");
     esp_err_t result = platform_game_loader_run(game, &host);
     close_native_audio_or_halt(&context.audio);
     if (result == ESP_OK &&
@@ -2289,7 +3287,11 @@ static void launch_doom_exclusive(console_shell_t *shell)
 
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS HANDOFF_COMPLETE app=doom shell_services=released");
+#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
     console_os_launch_doom();
+#else
+    console_os_launch_doom(s_console_settings.game_volume_step);
+#endif
     halt_dark("doom-returned-without-reentrant-teardown",
               ESP_ERR_INVALID_STATE);
 }
@@ -2308,26 +3310,10 @@ void app_main(void)
              "profile=%s flash_bytes=%" PRIu32 " psram_bytes=%" PRIu32,
              board->vendor, board->product, board->revision, board->slug,
              board->flash_bytes, board->psram_bytes);
-    const esp_err_t storage_result = platform_game_storage_init();
-    s_game_storage_initialized = storage_result == ESP_OK;
-    if (!s_game_storage_initialized) {
-        ESP_LOGW(TAG,
-                 "P4_CONSOLE_OS GAME_STORAGE_DEGRADED error=%s "
-                 "native_apps=available",
-                 esp_err_to_name(storage_result));
-    }
+    memset(&s_game_catalog, 0, sizeof(s_game_catalog));
+    memset(&s_os_update_info, 0, sizeof(s_os_update_info));
+    s_os_update_info.state = PLATFORM_OS_UPDATE_UNAVAILABLE;
     sync_game_storage();
-    ESP_LOGI(TAG,
-             "P4_CONSOLE_OS MAIN_STACK stage=storage-ready "
-             "low_water_bytes=%u",
-             (unsigned)uxTaskGetStackHighWaterMark(NULL));
-    if (storage_app_owned()) {
-        (void)reload_game_catalog();
-    } else {
-        memset(&s_game_catalog, 0, sizeof(s_game_catalog));
-        memset(&s_os_update_info, 0, sizeof(s_os_update_info));
-        s_os_update_info.state = PLATFORM_OS_UPDATE_UNAVAILABLE;
-    }
     if (!build_app_registry()) {
         halt_dark("app-registry", ESP_ERR_INVALID_ARG);
     }
@@ -2341,6 +3327,9 @@ void app_main(void)
              (unsigned)s_app_count,
 #if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
              board->slug, "usb-hid-pad+kbd+mouse", "microsd",
+#elif CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
+      CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE
+             board->slug, "gt911-touch+usb-hid-gamepad", "microsd",
 #elif CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
              board->slug, "gt911-touch", "microsd",
 #else
@@ -2368,12 +3357,7 @@ void app_main(void)
         halt_dark("framebuffer-allocation", ESP_ERR_NO_MEM);
     }
 
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
-    create_usb_input_or_continue();
-#else
-    create_touch_or_continue();
-#endif
-    result = present_boot_screen(0U);
+    result = present_boot_screen(0U, "STARTING...");
     if (result != ESP_OK) {
         halt_dark("boot-frame", result);
     }
@@ -2381,10 +3365,71 @@ void app_main(void)
     if (result != ESP_OK) {
         halt_dark("boot-backlight", result);
     }
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS BOOT_SCREEN status=visible "
+             "brand=gamechangers-ai format=ansi-cp437 "
+             "source=official-mark-adaptation storage=pending");
+    const esp_err_t settings_result =
+        platform_console_settings_init(&s_console_settings);
+    if (settings_result != ESP_OK) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS SETTINGS_DEGRADED defaults=1 error=%s",
+                 esp_err_to_name(settings_result));
+    }
+#if P4_CONSOLE_SIGNAL_SCAN
+    const esp_err_t signal_scan_result = platform_signal_scan_start();
+    if (signal_scan_result != ESP_OK) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS SIGNAL_SCAN_DEGRADED error=%s",
+                 esp_err_to_name(signal_scan_result));
+    }
+#endif
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    (void)create_shared_control_bus_or_continue();
+#endif
+    const esp_err_t storage_start_result =
+        start_game_storage_initialization();
+    if (storage_start_result != ESP_OK) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS STORAGE_INIT_START_DEGRADED error=%s",
+                 esp_err_to_name(storage_start_result));
+    }
     play_boot_chime();
+#if P4_CONSOLE_USB_INPUT
+    begin_usb_enum_probe_or_suppress();
+    create_usb_input_or_continue();
+#endif
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    create_touch_or_continue();
+#endif
+    const esp_err_t storage_result =
+        wait_for_game_storage_with_boot_animation();
+    if (storage_result != ESP_OK) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS GAME_STORAGE_DEGRADED error=%s "
+                 "native_apps=available",
+                 esp_err_to_name(storage_result));
+    }
+    sync_game_storage();
+    if (catalog_needs_reload()) {
+        (void)present_boot_screen(
+            CONSOLE_BOOT_ANIMATION_STEPS, "CONNECTING DOORS");
+        (void)reload_game_catalog();
+        rebuild_shell_registry(shell);
+    }
+    result = present_boot_screen(
+        CONSOLE_BOOT_ANIMATION_STEPS, "CONNECT 2400");
+    if (result != ESP_OK) {
+        halt_dark("bbs-connect-frame", result);
+    }
+    vTaskDelay(pdMS_TO_TICKS(CONSOLE_BBS_CONNECT_HOLD_MS));
     const console_shell_runtime_info_t initial_runtime = runtime_info();
     console_shell_set_runtime_info(shell, &initial_runtime);
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    result = present_bbs_home_reveal(shell);
+#else
     result = present(shell);
+#endif
     if (result != ESP_OK) {
         halt_dark("first-frame", result);
     }
@@ -2396,7 +3441,14 @@ void app_main(void)
 #elif CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS READY page=home display=mipi-dsi "
-             "storage=microsd-read-only removal=power-off-first");
+             "storage=microsd-read-only removal=power-off-first "
+             "h2_role=%s",
+#if CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE
+             "usb-host-external-vbus"
+#else
+             "usb-device-storage"
+#endif
+    );
 #else
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS READY page=home amp_energized=0 "
@@ -2408,10 +3460,17 @@ void app_main(void)
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS OTA_BOOT_VALID result=%s was_pending=%u",
              esp_err_to_name(ota_valid), ota_was_pending ? 1U : 0U);
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS MAIN_STACK stage=core-ready "
+             "low_water_bytes=%u",
+             (unsigned)uxTaskGetStackHighWaterMark(NULL));
 
     TickType_t last_wake = xTaskGetTickCount();
     for (;;) {
         ++s_loop_count;
+#if P4_CONSOLE_USB_INPUT
+        confirm_usb_enum_probe_after_stable_runtime();
+#endif
         sync_game_storage();
         if (finish_p4cart_scan() &&
             shell->page == CONSOLE_PAGE_GAMES) {
@@ -2438,6 +3497,7 @@ void app_main(void)
             (void)reload_file_listing(
                 shell, CONSOLE_FILE_NOTICE_NONE);
         }
+        const console_page_t page_before_input = shell->page;
         const console_shell_action_t action = poll_input(shell);
         const console_shell_runtime_info_t current_runtime = runtime_info();
         console_shell_set_runtime_info(shell, &current_runtime);
@@ -2445,15 +3505,28 @@ void app_main(void)
             ESP_LOGI(TAG,
                      "P4_CONSOLE_OS COLOR_MODE mode=%u persistence=session-only",
                      (unsigned)action.color_mode);
+        } else if (action.type == CONSOLE_ACTION_USB_MODE_ENABLE ||
+                   action.type == CONSOLE_ACTION_USB_MODE_DISABLE) {
+            handle_usb_mode_action(shell, &action);
+        } else if (action.type == CONSOLE_ACTION_BOOT_VOLUME_SET ||
+                   action.type == CONSOLE_ACTION_GAME_VOLUME_SET) {
+            handle_audio_volume_action(shell, &action);
         } else if (action.type == CONSOLE_ACTION_PAGE_CHANGED &&
             action.app_id == CONSOLE_APP_FILES) {
-            (void)reload_file_listing(
-                shell, CONSOLE_FILE_NOTICE_NONE);
+            if (page_before_input != CONSOLE_PAGE_FILES) {
+                s_file_directory[0] = '\0';
+                shell->file_selected_index = 0U;
+                shell->file_first_visible = 0U;
+                (void)reload_file_listing(
+                    shell, CONSOLE_FILE_NOTICE_NONE);
+            }
         } else if (action.type == CONSOLE_ACTION_PAGE_CHANGED &&
                    action.app_id == CONSOLE_APP_GAMES) {
             (void)reload_manager_listing(
                 shell, CONSOLE_FILE_NOTICE_NONE);
         } else if (action.type == CONSOLE_ACTION_FILE_REFRESH ||
+                   action.type == CONSOLE_ACTION_FILE_OPEN ||
+                   action.type == CONSOLE_ACTION_FILE_UP ||
                    action.type == CONSOLE_ACTION_FILE_DELETE) {
             handle_file_action(shell, &action);
         } else if (action.type == CONSOLE_ACTION_GAME_REFRESH ||

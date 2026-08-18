@@ -66,6 +66,16 @@ enum {
     COLOR_MODE_HEIGHT = 44,
     COLOR_MODE_COLUMN_GAP = 12,
     COLOR_MODE_ROW_GAP = 11,
+    SYSTEM_USB_LEFT = 8,
+    SYSTEM_USB_TOP = 174,
+    SYSTEM_USB_WIDTH = 304,
+    SYSTEM_USB_HEIGHT = 20,
+    AUDIO_MINUS_LEFT = 174,
+    AUDIO_PLUS_LEFT = 274,
+    AUDIO_BUTTON_WIDTH = 38,
+    AUDIO_BUTTON_HEIGHT = 24,
+    AUDIO_BOOT_TOP = 61,
+    AUDIO_GAME_TOP = 112,
 };
 
 typedef struct {
@@ -131,8 +141,13 @@ static const console_palette_t s_color_palettes[CONSOLE_COLOR_MODE_COUNT] = {
 };
 
 static const char *const s_color_mode_names[CONSOLE_COLOR_MODE_COUNT] = {
+#if CONSOLE_SHELL_NATIVE_BBS
+    [CONSOLE_COLOR_MODE_GAMECHANGERS] = "BBS",
+    [CONSOLE_COLOR_MODE_ARCADE] = "WINDOWS 3.1",
+#else
     [CONSOLE_COLOR_MODE_GAMECHANGERS] = "GOLD",
     [CONSOLE_COLOR_MODE_ARCADE] = "ARCADE",
+#endif
     [CONSOLE_COLOR_MODE_OCEAN] = "OCEAN",
     [CONSOLE_COLOR_MODE_SUNSET] = "SUNSET",
 };
@@ -183,6 +198,11 @@ enum {
     FILE_DELETE_CONTROL,
     FILE_CANCEL_CONTROL,
     FILE_CONFIRM_CONTROL,
+    SYSTEM_USB_CONTROL,
+    AUDIO_BOOT_MINUS_CONTROL,
+    AUDIO_BOOT_PLUS_CONTROL,
+    AUDIO_GAME_MINUS_CONTROL,
+    AUDIO_GAME_PLUS_CONTROL,
     TERMINAL_KEY_CONTROL_BASE,
     TERMINAL_LETTER_KEY_COUNT = 26,
     TERMINAL_SPACE_CONTROL =
@@ -193,6 +213,30 @@ enum {
 };
 
 static const char s_terminal_keys[] = "QWERTYUIOPASDFGHJKLZXCVBNM";
+
+static console_shell_action_t no_action(void);
+
+static bool use_bbs_launcher(const console_shell_t *shell)
+{
+#if CONSOLE_SHELL_NATIVE_BBS && \
+    !defined(CONSOLE_SHELL_FORCE_WINDOWS)
+    return shell != NULL &&
+        shell->color_mode == CONSOLE_COLOR_MODE_GAMECHANGERS;
+#else
+    (void)shell;
+    return false;
+#endif
+}
+
+static size_t home_column_count(const console_shell_t *shell)
+{
+    return use_bbs_launcher(shell) ? 2U : CONSOLE_SHELL_APP_COLUMNS;
+}
+
+static size_t home_visible_row_count(const console_shell_t *shell)
+{
+    return use_bbs_launcher(shell) ? 3U : CONSOLE_SHELL_VISIBLE_APP_ROWS;
+}
 
 static size_t bounded_length(const char *text, size_t limit)
 {
@@ -309,6 +353,9 @@ bool console_shell_init(console_shell_t *shell,
     p4_file_list_init(&shell->desktop_files);
     p4_save_catalog_init(&shell->saves, false);
     p4_terminal_init(&shell->terminal, false);
+#if CONSOLE_SHELL_NATIVE_BBS
+    p4_ansi_init(&shell->bbs_terminal);
+#endif
     shell->dirty = true;
     for (size_t i = 0U; i < app_count; ++i) {
         if (apps[i].enabled) {
@@ -335,11 +382,12 @@ static bool map_physical_to_gui(uint16_t physical_x,
     }
     *gui_x = (uint16_t)(
         (relative_x *
-         CONSOLE_SHELL_WIDTH) / CONSOLE_SHELL_VIEWPORT_WIDTH);
+         CONSOLE_SHELL_LAYOUT_WIDTH) / CONSOLE_SHELL_VIEWPORT_WIDTH);
     *gui_y = (uint16_t)(
         (relative_y *
-         CONSOLE_SHELL_HEIGHT) / CONSOLE_SHELL_VIEWPORT_HEIGHT);
-    return *gui_x < CONSOLE_SHELL_WIDTH && *gui_y < CONSOLE_SHELL_HEIGHT;
+         CONSOLE_SHELL_LAYOUT_HEIGHT) / CONSOLE_SHELL_VIEWPORT_HEIGHT);
+    return *gui_x < CONSOLE_SHELL_LAYOUT_WIDTH &&
+           *gui_y < CONSOLE_SHELL_LAYOUT_HEIGHT;
 }
 
 static bool point_in_rect(uint16_t x, uint16_t y,
@@ -533,21 +581,113 @@ static size_t home_item_count(const console_shell_t *shell)
 static size_t home_row_count(const console_shell_t *shell)
 {
     const size_t count = home_item_count(shell);
-    return (count + CONSOLE_SHELL_APP_COLUMNS - 1U) /
-        CONSOLE_SHELL_APP_COLUMNS;
+    const size_t columns = home_column_count(shell);
+    return (count + columns - 1U) / columns;
 }
 
 static size_t home_max_scroll_row(const console_shell_t *shell)
 {
     const size_t rows = home_row_count(shell);
-    return rows > CONSOLE_SHELL_VISIBLE_APP_ROWS
-        ? rows - CONSOLE_SHELL_VISIBLE_APP_ROWS : 0U;
+    const size_t visible_rows = home_visible_row_count(shell);
+    return rows > visible_rows ? rows - visible_rows : 0U;
 }
 
 static size_t home_first_visible_index(const console_shell_t *shell)
 {
-    return shell->home_scroll_row * CONSOLE_SHELL_APP_COLUMNS;
+    return shell->home_scroll_row * home_column_count(shell);
 }
+
+#if CONSOLE_SHELL_NATIVE_BBS
+static void bbs_copy_text(char *destination, size_t capacity,
+                          const char *source)
+{
+    if (destination == NULL || capacity == 0U) {
+        return;
+    }
+    const size_t length = bounded_length(source, capacity - 1U);
+    if (length > 0U) {
+        memcpy(destination, source, length);
+    }
+    destination[length] = '\0';
+}
+
+static void build_bbs_launcher_model(
+    const console_shell_t *shell,
+    p4_bbs_launcher_model_t *model)
+{
+    static const uint8_t accents[P4_BBS_VISIBLE_DOORS] = {
+        P4_ANSI_COLOR_BRIGHT_CYAN,
+        P4_ANSI_COLOR_YELLOW,
+        P4_ANSI_COLOR_BRIGHT_GREEN,
+        P4_ANSI_COLOR_BRIGHT_MAGENTA,
+        P4_ANSI_COLOR_BRIGHT_RED,
+        P4_ANSI_COLOR_BRIGHT_BLUE,
+    };
+    memset(model, 0, sizeof(*model));
+    bbs_copy_text(model->board_name, sizeof(model->board_name),
+                  "GAME CHANGERS AI BBS");
+    if (shell->home_all_programs) {
+        bbs_copy_text(model->section, sizeof(model->section),
+                      "[ ALL PROGRAMS ]");
+    } else if (shell->home_folder_path[0] != '\0') {
+        bbs_copy_text(model->section, sizeof(model->section),
+                      shell->home_folder_path);
+    } else {
+        bbs_copy_text(model->section, sizeof(model->section),
+                      "[ MAIN DOORS ]");
+    }
+    bbs_copy_text(model->connection, sizeof(model->connection),
+                  shell->runtime.content_scan_complete
+                      ? "ONLINE" : "SCANNING");
+    model->local_board = true;
+    model->can_go_up = shell->home_all_programs ||
+        shell->home_folder_path[0] != '\0';
+    model->page = (uint16_t)(shell->home_scroll_row + 1U);
+    model->page_count = (uint16_t)(home_max_scroll_row(shell) + 1U);
+    model->uploads = shell->runtime.valid_cart_count;
+
+    home_item_t items[HOME_ITEM_CAPACITY];
+    const size_t item_count = build_home_items(shell, items);
+    const size_t first = home_first_visible_index(shell);
+    const size_t last = first + P4_BBS_VISIBLE_DOORS < item_count
+        ? first + P4_BBS_VISIBLE_DOORS : item_count;
+    model->door_count = last > first ? last - first : 0U;
+    for (size_t index = first; index < last; ++index) {
+        const size_t visible = index - first;
+        const home_item_t *const item = &items[index];
+        const console_app_descriptor_t *const app =
+            item->kind == HOME_ITEM_APP && item->app_index < shell->app_count
+                ? &shell->apps[item->app_index] : NULL;
+        p4_bbs_door_t *const door = &model->doors[visible];
+        door->number = (uint16_t)(index + 1U);
+        door->accent = accents[visible];
+        door->enabled = item->enabled;
+        door->menu = app == NULL;
+        bbs_copy_text(door->title, sizeof(door->title),
+                      app != NULL ? app->title : item->title);
+        if (app != NULL) {
+            bbs_copy_text(door->subtitle, sizeof(door->subtitle),
+                          app->subtitle);
+        } else {
+            const int written = snprintf(
+                door->subtitle, sizeof(door->subtitle), "%u DOORS",
+                (unsigned)item->program_count);
+            if (written <= 0 || (size_t)written >= sizeof(door->subtitle)) {
+                bbs_copy_text(door->subtitle, sizeof(door->subtitle),
+                              "DOOR DIRECTORY");
+            }
+        }
+    }
+    size_t selected = shell->selected_home_item;
+    if (shell->press_active &&
+        shell->pressed_index >= HOME_ITEM_CONTROL_BASE &&
+        shell->pressed_index < HOME_ITEM_CONTROL_BASE + item_count) {
+        selected = shell->pressed_index - HOME_ITEM_CONTROL_BASE;
+    }
+    model->selected_door = selected >= first && selected < last
+        ? selected - first : 0U;
+}
+#endif
 
 static size_t file_last_visible_index(const console_shell_t *shell)
 {
@@ -573,6 +713,14 @@ static bool file_selected_is_removable(const console_shell_t *shell)
         shell->files.entries[shell->file_selected_index].removable;
 }
 
+static bool file_selected_is_openable(const console_shell_t *shell)
+{
+    return shell != NULL && shell->page == CONSOLE_PAGE_FILES &&
+        shell->files.available &&
+        shell->file_selected_index < shell->files.entry_count &&
+        shell->files.entries[shell->file_selected_index].is_directory;
+}
+
 static bool file_selected_is_installable(const console_shell_t *shell)
 {
     return shell != NULL && shell->files.available &&
@@ -584,6 +732,12 @@ static bool file_selected_is_actionable(const console_shell_t *shell)
 {
     return file_selected_is_removable(shell) ||
         file_selected_is_installable(shell);
+}
+
+static bool file_selected_has_primary_action(const console_shell_t *shell)
+{
+    return file_selected_is_openable(shell) ||
+        file_selected_is_actionable(shell);
 }
 
 static void normalize_file_selection(console_shell_t *shell)
@@ -692,6 +846,72 @@ static size_t terminal_control_at(uint16_t gui_x, uint16_t gui_y)
     return SIZE_MAX;
 }
 
+static bool usb_mode_active(const console_shell_t *shell)
+{
+    return shell->runtime.usb_drive_active;
+}
+
+static bool system_usb_button_enabled(const console_shell_t *shell)
+{
+    if (!shell->runtime.usb_storage_supported) {
+        return false;
+    }
+    if (usb_mode_active(shell)) {
+        return !shell->runtime.game_storage_usb_attached ||
+            shell->runtime.usb_storage_eject_safe;
+    }
+    return shell->runtime.game_storage_state == CONSOLE_STORAGE_READY ||
+        shell->runtime.game_storage_state == CONSOLE_STORAGE_MISSING ||
+        shell->runtime.game_storage_state == CONSOLE_STORAGE_INVALID ||
+        shell->runtime.game_storage_state == CONSOLE_STORAGE_FORMAT_REQUIRED;
+}
+
+static console_shell_action_t system_usb_action(
+    const console_shell_t *shell)
+{
+    const console_shell_action_t action = {
+        .type = usb_mode_active(shell)
+            ? CONSOLE_ACTION_USB_MODE_DISABLE
+            : CONSOLE_ACTION_USB_MODE_ENABLE,
+        .app_id = shell->active_app_id,
+        .file_source_index = UINT32_MAX,
+    };
+    return action;
+}
+
+static uint8_t bounded_volume(uint8_t volume)
+{
+    if (volume < 1U) {
+        return 1U;
+    }
+    return volume > 10U ? 10U : volume;
+}
+
+static console_shell_action_t audio_volume_action(
+    const console_shell_t *shell, bool boot, int delta)
+{
+    const uint8_t current = bounded_volume(boot
+        ? shell->runtime.boot_volume_step
+        : shell->runtime.game_volume_step);
+    uint8_t requested = current;
+    if (delta < 0 && current > 1U) {
+        requested = (uint8_t)(current - 1U);
+    } else if (delta > 0 && current < 10U) {
+        requested = (uint8_t)(current + 1U);
+    }
+    if (requested == current) {
+        return no_action();
+    }
+    const console_shell_action_t action = {
+        .type = boot ? CONSOLE_ACTION_BOOT_VOLUME_SET
+                     : CONSOLE_ACTION_GAME_VOLUME_SET,
+        .app_id = shell->active_app_id,
+        .file_source_index = UINT32_MAX,
+        .volume_step = requested,
+    };
+    return action;
+}
+
 static size_t control_at(const console_shell_t *shell,
                          uint16_t gui_x,
                          uint16_t gui_y)
@@ -712,6 +932,37 @@ static size_t control_at(const console_shell_t *shell,
                     return COLOR_MODE_CONTROL_BASE + mode;
                 }
             }
+        }
+        if ((shell->page == CONSOLE_PAGE_SYSTEM ||
+             shell->page == CONSOLE_PAGE_USB_DRIVE) &&
+            system_usb_button_enabled(shell) &&
+            point_in_rect(gui_x, gui_y,
+                          SYSTEM_USB_LEFT, SYSTEM_USB_TOP,
+                          SYSTEM_USB_WIDTH, SYSTEM_USB_HEIGHT)) {
+            return SYSTEM_USB_CONTROL;
+        }
+        if (shell->page == CONSOLE_PAGE_AUDIO) {
+            if (point_in_rect(gui_x, gui_y, AUDIO_MINUS_LEFT,
+                              AUDIO_BOOT_TOP, AUDIO_BUTTON_WIDTH,
+                              AUDIO_BUTTON_HEIGHT)) {
+                return AUDIO_BOOT_MINUS_CONTROL;
+            }
+            if (point_in_rect(gui_x, gui_y, AUDIO_PLUS_LEFT,
+                              AUDIO_BOOT_TOP, AUDIO_BUTTON_WIDTH,
+                              AUDIO_BUTTON_HEIGHT)) {
+                return AUDIO_BOOT_PLUS_CONTROL;
+            }
+            if (point_in_rect(gui_x, gui_y, AUDIO_MINUS_LEFT,
+                              AUDIO_GAME_TOP, AUDIO_BUTTON_WIDTH,
+                              AUDIO_BUTTON_HEIGHT)) {
+                return AUDIO_GAME_MINUS_CONTROL;
+            }
+            if (point_in_rect(gui_x, gui_y, AUDIO_PLUS_LEFT,
+                              AUDIO_GAME_TOP, AUDIO_BUTTON_WIDTH,
+                              AUDIO_BUTTON_HEIGHT)) {
+                return AUDIO_GAME_PLUS_CONTROL;
+            }
+            return SIZE_MAX;
         }
         if (shell->page == CONSOLE_PAGE_TERMINAL) {
             return terminal_control_at(gui_x, gui_y);
@@ -760,7 +1011,7 @@ static size_t control_at(const console_shell_t *shell,
                           FILE_REFRESH_WIDTH, FILE_BUTTON_HEIGHT)) {
             return FILE_REFRESH_CONTROL;
         }
-        if (file_selected_is_actionable(shell) &&
+        if (file_selected_has_primary_action(shell) &&
             point_in_rect(gui_x, gui_y,
                           FILE_DELETE_LEFT, FILE_BUTTON_TOP,
                           FILE_DELETE_WIDTH, FILE_BUTTON_HEIGHT)) {
@@ -768,6 +1019,30 @@ static size_t control_at(const console_shell_t *shell,
         }
         return SIZE_MAX;
     }
+
+#if CONSOLE_SHELL_NATIVE_BBS
+    if (use_bbs_launcher(shell)) {
+        p4_bbs_launcher_model_t model;
+        build_bbs_launcher_model(shell, &model);
+        const uint16_t surface_x = (uint16_t)(
+            (uint32_t)gui_x * P4_ANSI_SURFACE_WIDTH /
+            CONSOLE_SHELL_LAYOUT_WIDTH);
+        const uint16_t surface_y = (uint16_t)(
+            (uint32_t)gui_y * P4_ANSI_SURFACE_HEIGHT /
+            CONSOLE_SHELL_LAYOUT_HEIGHT);
+        const p4_bbs_hit_t hit =
+            p4_bbs_hit_test(&model, surface_x, surface_y);
+        if (hit.kind == P4_BBS_HIT_BACK) {
+            return FOLDER_UP_CONTROL;
+        }
+        if (hit.kind == P4_BBS_HIT_DOOR &&
+            hit.door_index < model.door_count) {
+            return HOME_ITEM_CONTROL_BASE +
+                home_first_visible_index(shell) + hit.door_index;
+        }
+        return SIZE_MAX;
+    }
+#endif
 
     if ((shell->home_all_programs || shell->home_folder_path[0] != '\0') &&
         point_in_rect(gui_x, gui_y, 8U, 26U, 31U, 13U)) {
@@ -966,18 +1241,20 @@ static void select_home_direction(console_shell_t *shell, int row_delta,
     }
     size_t current = shell->selected_home_item < count
         ? shell->selected_home_item : 0U;
-    const size_t row = current / CONSOLE_SHELL_APP_COLUMNS;
-    const size_t column = current % CONSOLE_SHELL_APP_COLUMNS;
+    const size_t columns = home_column_count(shell);
+    const size_t visible_rows = home_visible_row_count(shell);
+    const size_t row = current / columns;
+    const size_t column = current % columns;
     size_t target = current;
     if (row_delta < 0 && row > 0U) {
-        target = current - CONSOLE_SHELL_APP_COLUMNS;
+        target = current - columns;
     } else if (row_delta > 0 &&
-               current + CONSOLE_SHELL_APP_COLUMNS < count) {
-        target = current + CONSOLE_SHELL_APP_COLUMNS;
+               current + columns < count) {
+        target = current + columns;
     } else if (column_delta < 0 && column > 0U) {
         target = current - 1U;
     } else if (column_delta > 0 &&
-               column + 1U < CONSOLE_SHELL_APP_COLUMNS &&
+               column + 1U < columns &&
                current + 1U < count) {
         target = current + 1U;
     }
@@ -988,19 +1265,29 @@ static void select_home_direction(console_shell_t *shell, int row_delta,
     if (items[target].kind == HOME_ITEM_APP) {
         shell->selected_index = items[target].app_index;
     }
-    const size_t target_row = target / CONSOLE_SHELL_APP_COLUMNS;
+    const size_t target_row = target / columns;
     if (target_row < shell->home_scroll_row) {
         shell->home_scroll_row = target_row;
-    } else if (target_row >= shell->home_scroll_row +
-                              CONSOLE_SHELL_VISIBLE_APP_ROWS) {
+    } else if (target_row >= shell->home_scroll_row + visible_rows) {
         shell->home_scroll_row = target_row -
-            (CONSOLE_SHELL_VISIBLE_APP_ROWS - 1U);
+            (visible_rows - 1U);
     }
     shell->dirty = true;
 }
 
 static console_shell_action_t file_selected_action(console_shell_t *shell)
 {
+    if (file_selected_is_openable(shell)) {
+        shell->file_delete_confirm = false;
+        shell->dirty = true;
+        const console_shell_action_t action = {
+            .type = CONSOLE_ACTION_FILE_OPEN,
+            .app_id = shell->active_app_id,
+            .file_source_index = shell->files.entries[
+                shell->file_selected_index].source_index,
+        };
+        return action;
+    }
     if (!file_selected_is_actionable(shell)) {
         return no_action();
     }
@@ -1054,6 +1341,15 @@ console_shell_action_t console_shell_handle_buttons(
             shell->dirty = true;
             return page_changed(shell->active_app_id);
         }
+        if (shell->page == CONSOLE_PAGE_FILES &&
+            shell->files.can_go_up) {
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_FILE_UP,
+                .app_id = shell->active_app_id,
+                .file_source_index = UINT32_MAX,
+            };
+            return action;
+        }
         console_shell_show_home(shell);
         return page_changed(0U);
     }
@@ -1087,6 +1383,10 @@ console_shell_action_t console_shell_handle_buttons(
                 ((unsigned)requested + 1U) % CONSOLE_COLOR_MODE_COUNT);
         }
         shell->color_mode = requested;
+        const size_t maximum_scroll = home_max_scroll_row(shell);
+        if (shell->home_scroll_row > maximum_scroll) {
+            shell->home_scroll_row = maximum_scroll;
+        }
         shell->dirty = true;
         const console_shell_action_t action = {
             .type = CONSOLE_ACTION_COLOR_MODE_CHANGED,
@@ -1095,6 +1395,35 @@ console_shell_action_t console_shell_handle_buttons(
             .color_mode = requested,
         };
         return action;
+    }
+
+    if ((shell->page == CONSOLE_PAGE_SYSTEM ||
+         shell->page == CONSOLE_PAGE_USB_DRIVE) &&
+        (pressed & CONSOLE_BUTTON_ACCEPT) != 0U &&
+        system_usb_button_enabled(shell)) {
+        return system_usb_action(shell);
+    }
+
+    if (shell->page == CONSOLE_PAGE_AUDIO) {
+        if ((pressed & CONSOLE_BUTTON_UP) != 0U) {
+            shell->audio_selected_row = 0U;
+            shell->dirty = true;
+            return page_changed(shell->active_app_id);
+        }
+        if ((pressed & CONSOLE_BUTTON_DOWN) != 0U) {
+            shell->audio_selected_row = 1U;
+            shell->dirty = true;
+            return page_changed(shell->active_app_id);
+        }
+        if ((pressed & CONSOLE_BUTTON_LEFT) != 0U) {
+            return audio_volume_action(
+                shell, shell->audio_selected_row == 0U, -1);
+        }
+        if ((pressed & CONSOLE_BUTTON_RIGHT) != 0U) {
+            return audio_volume_action(
+                shell, shell->audio_selected_row == 0U, 1);
+        }
+        return no_action();
     }
 
     if (shell->page != CONSOLE_PAGE_FILES &&
@@ -1316,6 +1645,15 @@ console_shell_action_t console_shell_handle_touch(
         shell->pressed_index = SIZE_MAX;
         shell->dirty = true;
         if (released_control == BACK_CONTROL) {
+            if (shell->page == CONSOLE_PAGE_FILES &&
+                shell->files.can_go_up) {
+                const console_shell_action_t action = {
+                    .type = CONSOLE_ACTION_FILE_UP,
+                    .app_id = shell->active_app_id,
+                    .file_source_index = UINT32_MAX,
+                };
+                return action;
+            }
             console_shell_show_home(shell);
             return page_changed(0U);
         }
@@ -1329,6 +1667,11 @@ console_shell_action_t console_shell_handle_touch(
                 return no_action();
             }
             shell->color_mode = requested;
+            const size_t maximum_scroll = home_max_scroll_row(shell);
+            if (shell->home_scroll_row > maximum_scroll) {
+                shell->home_scroll_row = maximum_scroll;
+            }
+            shell->dirty = true;
             const console_shell_action_t action = {
                 .type = CONSOLE_ACTION_COLOR_MODE_CHANGED,
                 .app_id = shell->active_app_id,
@@ -1336,6 +1679,30 @@ console_shell_action_t console_shell_handle_touch(
                 .color_mode = requested,
             };
             return action;
+        }
+        if ((shell->page == CONSOLE_PAGE_SYSTEM ||
+             shell->page == CONSOLE_PAGE_USB_DRIVE) &&
+            released_control == SYSTEM_USB_CONTROL &&
+            system_usb_button_enabled(shell)) {
+            return system_usb_action(shell);
+        }
+        if (shell->page == CONSOLE_PAGE_AUDIO) {
+            switch (released_control) {
+            case AUDIO_BOOT_MINUS_CONTROL:
+                shell->audio_selected_row = 0U;
+                return audio_volume_action(shell, true, -1);
+            case AUDIO_BOOT_PLUS_CONTROL:
+                shell->audio_selected_row = 0U;
+                return audio_volume_action(shell, true, 1);
+            case AUDIO_GAME_MINUS_CONTROL:
+                shell->audio_selected_row = 1U;
+                return audio_volume_action(shell, false, -1);
+            case AUDIO_GAME_PLUS_CONTROL:
+                shell->audio_selected_row = 1U;
+                return audio_volume_action(shell, false, 1);
+            default:
+                return no_action();
+            }
         }
         if (shell->page == CONSOLE_PAGE_TERMINAL &&
             released_control >= TERMINAL_KEY_CONTROL_BASE &&
@@ -1398,6 +1765,10 @@ console_shell_action_t console_shell_handle_touch(
                     .file_source_index = UINT32_MAX,
                 };
                 return action;
+            }
+            if (released_control == FILE_DELETE_CONTROL &&
+                file_selected_is_openable(shell)) {
+                return file_selected_action(shell);
             }
             if (released_control == FILE_DELETE_CONTROL &&
                 file_selected_is_actionable(shell)) {
@@ -1563,6 +1934,13 @@ void console_shell_set_runtime_info(
         shell->runtime.audio_handoff_ready != runtime->audio_handoff_ready ||
         shell->runtime.game_storage_usb_attached !=
             runtime->game_storage_usb_attached ||
+        shell->runtime.usb_storage_supported !=
+            runtime->usb_storage_supported ||
+        shell->runtime.usb_storage_eject_safe !=
+            runtime->usb_storage_eject_safe ||
+        shell->runtime.usb_drive_active != runtime->usb_drive_active ||
+        shell->runtime.usb_input_host_active !=
+            runtime->usb_input_host_active ||
         shell->runtime.doom_wad_ready != runtime->doom_wad_ready ||
         shell->runtime.content_scan_complete !=
             runtime->content_scan_complete ||
@@ -1572,7 +1950,12 @@ void console_shell_set_runtime_info(
         shell->runtime.physical_keyboard_ready !=
             runtime->physical_keyboard_ready ||
         shell->runtime.valid_cart_count != runtime->valid_cart_count ||
-        shell->runtime.builtin_game_count != runtime->builtin_game_count;
+        shell->runtime.builtin_game_count != runtime->builtin_game_count ||
+        shell->runtime.boot_volume_step != runtime->boot_volume_step ||
+        shell->runtime.game_volume_step != runtime->game_volume_step ||
+        shell->runtime.audio_settings_persistent !=
+            runtime->audio_settings_persistent;
+
     if (!changed) {
         return;
     }
@@ -1581,9 +1964,17 @@ void console_shell_set_runtime_info(
         shell->runtime.game_storage_state != runtime->game_storage_state ||
         shell->runtime.game_storage_usb_attached !=
             runtime->game_storage_usb_attached ||
+        shell->runtime.usb_storage_supported !=
+            runtime->usb_storage_supported ||
+        shell->runtime.usb_storage_eject_safe !=
+            runtime->usb_storage_eject_safe ||
+        shell->runtime.usb_drive_active != runtime->usb_drive_active ||
+        shell->runtime.usb_input_host_active !=
+            runtime->usb_input_host_active ||
         shell->runtime.doom_wad_ready != runtime->doom_wad_ready;
     shell->runtime = *runtime;
     if (shell->page == CONSOLE_PAGE_SYSTEM ||
+        shell->page == CONSOLE_PAGE_USB_DRIVE ||
         shell->page == CONSOLE_PAGE_FILES ||
         shell->page == CONSOLE_PAGE_GAMES ||
         shell->page == CONSOLE_PAGE_AUDIO ||
@@ -1603,11 +1994,11 @@ void console_shell_set_pointer(console_shell_t *shell,
     if (shell == NULL) {
         return;
     }
-    if (x >= CONSOLE_SHELL_WIDTH) {
-        x = CONSOLE_SHELL_WIDTH - 1U;
+    if (x >= CONSOLE_SHELL_LAYOUT_WIDTH) {
+        x = CONSOLE_SHELL_LAYOUT_WIDTH - 1U;
     }
-    if (y >= CONSOLE_SHELL_HEIGHT) {
-        y = CONSOLE_SHELL_HEIGHT - 1U;
+    if (y >= CONSOLE_SHELL_LAYOUT_HEIGHT) {
+        y = CONSOLE_SHELL_LAYOUT_HEIGHT - 1U;
     }
     if (shell->pointer_visible == visible &&
         (!visible || (shell->pointer_x == x && shell->pointer_y == y &&
@@ -1628,6 +2019,11 @@ bool console_shell_set_file_listing(
     if (shell == NULL || listing == NULL ||
         listing->entry_count > CONSOLE_SHELL_FILE_MAX_ENTRIES ||
         listing->total_visible_entries < listing->entry_count) {
+        return false;
+    }
+    const size_t path_length = bounded_length(
+        listing->path_label, CONSOLE_SHELL_FILE_PATH_LABEL_MAX_BYTES);
+    if (path_length >= CONSOLE_SHELL_FILE_PATH_LABEL_MAX_BYTES) {
         return false;
     }
     for (size_t i = 0U; i < listing->entry_count; ++i) {
@@ -1788,12 +2184,48 @@ bool console_shell_is_dirty(const console_shell_t *shell)
     return shell != NULL && shell->dirty;
 }
 
+static int layout_to_output_x(int x)
+{
+    return x * CONSOLE_SHELL_WIDTH / CONSOLE_SHELL_LAYOUT_WIDTH;
+}
+
+static int layout_to_output_y(int y)
+{
+    return y * CONSOLE_SHELL_HEIGHT / CONSOLE_SHELL_LAYOUT_HEIGHT;
+}
+
+static void fill_output_rect(uint16_t *pixels, size_t stride,
+                             int left, int top, int right, int bottom,
+                             uint16_t color)
+{
+    if (left < 0) {
+        left = 0;
+    }
+    if (top < 0) {
+        top = 0;
+    }
+    if (right > CONSOLE_SHELL_WIDTH) {
+        right = CONSOLE_SHELL_WIDTH;
+    }
+    if (bottom > CONSOLE_SHELL_HEIGHT) {
+        bottom = CONSOLE_SHELL_HEIGHT;
+    }
+    for (int row = top; row < bottom; ++row) {
+        for (int column = left; column < right; ++column) {
+            pixels[(size_t)row * stride + (size_t)column] = color;
+        }
+    }
+}
+
 static void put_pixel(uint16_t *pixels, size_t stride,
                       int x, int y, uint16_t color)
 {
-    if (x >= 0 && x < CONSOLE_SHELL_WIDTH &&
-        y >= 0 && y < CONSOLE_SHELL_HEIGHT) {
-        pixels[(size_t)y * stride + (size_t)x] = color;
+    if (x >= 0 && x < CONSOLE_SHELL_LAYOUT_WIDTH &&
+        y >= 0 && y < CONSOLE_SHELL_LAYOUT_HEIGHT) {
+        fill_output_rect(
+            pixels, stride,
+            layout_to_output_x(x), layout_to_output_y(y),
+            layout_to_output_x(x + 1), layout_to_output_y(y + 1), color);
     }
 }
 
@@ -1830,17 +2262,19 @@ static void fill_rect(uint16_t *pixels, size_t stride,
     int top = y < 0 ? 0 : y;
     int right = x + width;
     int bottom = y + height;
-    if (right > CONSOLE_SHELL_WIDTH) {
-        right = CONSOLE_SHELL_WIDTH;
+    if (right > CONSOLE_SHELL_LAYOUT_WIDTH) {
+        right = CONSOLE_SHELL_LAYOUT_WIDTH;
     }
-    if (bottom > CONSOLE_SHELL_HEIGHT) {
-        bottom = CONSOLE_SHELL_HEIGHT;
+    if (bottom > CONSOLE_SHELL_LAYOUT_HEIGHT) {
+        bottom = CONSOLE_SHELL_LAYOUT_HEIGHT;
     }
-    for (int row = top; row < bottom; ++row) {
-        for (int column = left; column < right; ++column) {
-            put_pixel(pixels, stride, column, row, color);
-        }
+    if (left >= right || top >= bottom) {
+        return;
     }
+    fill_output_rect(
+        pixels, stride,
+        layout_to_output_x(left), layout_to_output_y(top),
+        layout_to_output_x(right), layout_to_output_y(bottom), color);
 }
 
 static void outline_rect(uint16_t *pixels, size_t stride,
@@ -2114,8 +2548,8 @@ static void draw_scrollbar(console_shell_t *shell,
 
 static void draw_home(console_shell_t *shell, uint16_t *pixels, size_t stride)
 {
-    fill_rect(pixels, stride, 0, 0, CONSOLE_SHELL_WIDTH,
-              CONSOLE_SHELL_HEIGHT, COLOR_DESKTOP);
+    fill_rect(pixels, stride, 0, 0, CONSOLE_SHELL_LAYOUT_WIDTH,
+              CONSOLE_SHELL_LAYOUT_HEIGHT, COLOR_DESKTOP);
     bevel_rect(pixels, stride, WINDOW_LEFT, WINDOW_TOP,
                WINDOW_WIDTH, WINDOW_HEIGHT, COLOR_FACE, false);
     fill_rect(pixels, stride, TITLE_LEFT, TITLE_TOP,
@@ -2214,6 +2648,20 @@ static void draw_home(console_shell_t *shell, uint16_t *pixels, size_t stride)
     }
 }
 
+#if CONSOLE_SHELL_NATIVE_BBS
+static bool draw_bbs_home(console_shell_t *shell,
+                          uint16_t *pixels,
+                          size_t stride)
+{
+    p4_bbs_launcher_model_t model;
+    build_bbs_launcher_model(shell, &model);
+    return p4_bbs_build_launcher(&shell->bbs_terminal, &model) &&
+        p4_ansi_render_rgb565(
+            &shell->bbs_terminal, pixels, stride,
+            CONSOLE_SHELL_WIDTH, CONSOLE_SHELL_HEIGHT);
+}
+#endif
+
 static const console_app_descriptor_t *active_app(
     const console_shell_t *shell)
 {
@@ -2236,20 +2684,28 @@ static void draw_detail_header(console_shell_t *shell,
     outline_rect(pixels, stride, BACK_LEFT, BACK_TOP,
                  BACK_WIDTH, BACK_HEIGHT, COLOR_CYAN);
     draw_text(pixels, stride, BACK_LEFT + 6, BACK_TOP + 6,
-              "< HOME", COLOR_WHITE, 1U, 6U);
+              shell->page == CONSOLE_PAGE_FILES && shell->files.can_go_up
+                  ? "< UP" : "< HOME",
+              COLOR_WHITE, 1U, 6U);
     const console_app_descriptor_t *const app = active_app(shell);
     draw_text(pixels, stride, 68, 11,
               app != NULL ? app->title : "CONSOLE",
               app != NULL ? app->accent_rgb565 : COLOR_WHITE,
               1U, 15U);
-    fill_rect(pixels, stride, 0, 31, CONSOLE_SHELL_WIDTH, 1, COLOR_CYAN);
+    fill_rect(pixels, stride, 0, 31,
+              CONSOLE_SHELL_LAYOUT_WIDTH, 1, COLOR_CYAN);
 }
 
 static void draw_colors(const console_shell_t *shell,
                         uint16_t *pixels, size_t stride)
 {
+#if CONSOLE_SHELL_NATIVE_BBS
+    draw_text(pixels, stride, 12, 39, "PICK AN INTERFACE",
+              COLOR_WHITE, 1U, 17U);
+#else
     draw_text(pixels, stride, 12, 39, "PICK A COLOR MODE",
               COLOR_WHITE, 1U, 17U);
+#endif
     for (size_t mode = 0U; mode < CONSOLE_COLOR_MODE_COUNT; ++mode) {
         const console_palette_t *const preview = &s_color_palettes[mode];
         const int left = color_mode_tile_left(mode);
@@ -2279,18 +2735,25 @@ static void draw_colors(const console_shell_t *shell,
                            selected ? preview->yellow : preview->muted,
                            10U);
     }
-    draw_centered_text(pixels, stride, 0, 177, CONSOLE_SHELL_WIDTH,
-                       "SESSION ONLY - NO CRT FILTER", COLOR_MUTED, 29U);
+    draw_centered_text(
+        pixels, stride, 0, 177, CONSOLE_SHELL_LAYOUT_WIDTH,
+#if CONSOLE_SHELL_NATIVE_BBS
+        "BBS DEFAULT / WINDOWS FALLBACK",
+#else
+        "SESSION ONLY - NO CRT FILTER",
+#endif
+        COLOR_MUTED, 29U);
 }
 
 static void draw_touch(const console_shell_t *shell,
                        uint16_t *pixels, size_t stride)
 {
-    for (int x = 0; x < CONSOLE_SHELL_WIDTH; x += 32) {
+    for (int x = 0; x < CONSOLE_SHELL_LAYOUT_WIDTH; x += 32) {
         fill_rect(pixels, stride, x, 32, 1, 168, UINT16_C(0x18E3));
     }
-    for (int y = 40; y < CONSOLE_SHELL_HEIGHT; y += 20) {
-        fill_rect(pixels, stride, 0, y, CONSOLE_SHELL_WIDTH, 1,
+    for (int y = 40; y < CONSOLE_SHELL_LAYOUT_HEIGHT; y += 20) {
+        fill_rect(pixels, stride, 0, y,
+                  CONSOLE_SHELL_LAYOUT_WIDTH, 1,
                   UINT16_C(0x18E3));
     }
     draw_text(pixels, stride, 8, 37, "CONTACTS", COLOR_MUTED, 1U, 8U);
@@ -2415,13 +2878,109 @@ static void draw_system(const console_shell_t *shell,
               shell->runtime.doom_wad_ready ? "VERIFIED" : "NOT READY",
               shell->runtime.doom_wad_ready ? COLOR_GREEN : COLOR_YELLOW,
               1U, 9U);
-    draw_text(pixels, stride, 12, 184, "EJECT USB BEFORE GAME",
-              COLOR_CYAN, 1U, 21U);
-    if (shell->runtime.sd_card_storage) {
-        fill_rect(pixels, stride, 8, 181, 304, 15, COLOR_FACE);
-        draw_text(pixels, stride, 12, 184, "POWER OFF TO REMOVE SD",
-                  COLOR_CYAN, 1U, 22U);
+    if (shell->runtime.usb_storage_supported) {
+        const bool active = usb_mode_active(shell);
+        const bool enabled = system_usb_button_enabled(shell);
+        const bool pressed = enabled && shell->press_active &&
+            shell->pressed_index == SYSTEM_USB_CONTROL;
+        const char *label = "USB MODE UNAVAILABLE";
+        if (active && shell->runtime.game_storage_usb_attached &&
+            !shell->runtime.usb_storage_eject_safe) {
+            label = "EJECT ON MAC FIRST";
+        } else if (active) {
+            label = "TURN OFF USB MODE";
+        } else if (enabled) {
+            label = "TURN ON USB MODE";
+        }
+        bevel_rect(pixels, stride, SYSTEM_USB_LEFT, SYSTEM_USB_TOP,
+                   SYSTEM_USB_WIDTH, SYSTEM_USB_HEIGHT,
+                   COLOR_FACE, pressed);
+        draw_centered_text(pixels, stride, SYSTEM_USB_LEFT,
+                           SYSTEM_USB_TOP + 7, SYSTEM_USB_WIDTH,
+                           label, enabled ? COLOR_BLACK : COLOR_SHADOW,
+                           23U);
+    } else {
+        draw_text(pixels, stride, 12, 184, "EJECT USB BEFORE GAME",
+                  COLOR_CYAN, 1U, 21U);
+        if (shell->runtime.sd_card_storage) {
+            fill_rect(pixels, stride, 8, 181, 304, 15, COLOR_FACE);
+            draw_text(pixels, stride, 12, 184, "POWER OFF TO REMOVE SD",
+                      COLOR_CYAN, 1U, 22U);
+        }
     }
+}
+
+static void draw_usb_drive(const console_shell_t *shell,
+                           uint16_t *pixels, size_t stride)
+{
+    const bool active = usb_mode_active(shell);
+    const bool enabled = system_usb_button_enabled(shell);
+    const bool pressed = enabled && shell->press_active &&
+        shell->pressed_index == SYSTEM_USB_CONTROL;
+
+    draw_text(pixels, stride, 12, 38, "H2 USB-C ROLE",
+              COLOR_MUTED, 1U, 13U);
+    const char *role = "QUIESCED";
+    uint16_t role_color = COLOR_YELLOW;
+    if (active) {
+        role = "THUMBDRIVE / MSC";
+        role_color = COLOR_CYAN;
+    } else if (shell->runtime.usb_input_host_active) {
+        role = "CONTROLLER HOST";
+        role_color = COLOR_GREEN;
+    }
+    draw_text(pixels, stride, 122, 38, role, role_color, 1U, 17U);
+
+    draw_text(pixels, stride, 12, 57, "DEFAULT",
+              COLOR_MUTED, 1U, 7U);
+    draw_text(pixels, stride, 122, 57, "WIRED HID CONTROLLERS",
+              COLOR_WHITE, 1U, 21U);
+    draw_text(pixels, stride, 12, 76, "USB DRIVE",
+              COLOR_MUTED, 1U, 9U);
+    draw_text(pixels, stride, 122, 76,
+              active ? "SD OWNED BY MAC" : "OFF UNTIL STARTED",
+              active ? COLOR_CYAN : COLOR_WHITE, 1U, 18U);
+    draw_text(pixels, stride, 12, 95, "POWER",
+              COLOR_MUTED, 1U, 5U);
+    draw_text(pixels, stride, 122, 95, "EXTERNAL POWERED HUB",
+              COLOR_WHITE, 1U, 20U);
+    draw_text(pixels, stride, 12, 114, "CABLE",
+              COLOR_MUTED, 1U, 5U);
+    draw_text(pixels, stride, 122, 114, "H2 DATA; NO FW VBUS",
+              COLOR_WHITE, 1U, 19U);
+
+    const char *host = "NOT ATTACHED";
+    uint16_t host_color = COLOR_MUTED;
+    if (active && shell->runtime.game_storage_usb_attached) {
+        host = shell->runtime.usb_storage_eject_safe
+            ? "EJECTED / SAFE" : "MAC MOUNTED";
+        host_color = shell->runtime.usb_storage_eject_safe
+            ? COLOR_GREEN : COLOR_YELLOW;
+    }
+    draw_text(pixels, stride, 12, 133, "HOST STATUS",
+              COLOR_MUTED, 1U, 11U);
+    draw_text(pixels, stride, 122, 133, host, host_color, 1U, 15U);
+
+    draw_text(pixels, stride, 12, 153,
+              active ? "EJECT OR UNPLUG BEFORE RETURNING"
+                     : "STARTING THIS APP PAUSES ALL USB INPUT",
+              active ? COLOR_YELLOW : COLOR_CYAN, 1U, 37U);
+
+    const char *label = "ROLE SWITCH UNAVAILABLE";
+    if (active && shell->runtime.game_storage_usb_attached &&
+        !shell->runtime.usb_storage_eject_safe) {
+        label = "EJECT ON MAC FIRST";
+    } else if (active) {
+        label = "RETURN TO CONTROLLERS";
+    } else if (enabled) {
+        label = "ENABLE USB THUMBDRIVE";
+    }
+    bevel_rect(pixels, stride, SYSTEM_USB_LEFT, SYSTEM_USB_TOP,
+               SYSTEM_USB_WIDTH, SYSTEM_USB_HEIGHT,
+               COLOR_FACE, pressed);
+    draw_centered_text(pixels, stride, SYSTEM_USB_LEFT,
+                       SYSTEM_USB_TOP + 7, SYSTEM_USB_WIDTH,
+                       label, enabled ? COLOR_BLACK : COLOR_SHADOW, 24U);
 }
 
 static void draw_file_button(console_shell_t *shell,
@@ -2480,11 +3039,13 @@ static void draw_files(console_shell_t *shell,
                        uint16_t *pixels, size_t stride)
 {
     const bool games = shell->page == CONSOLE_PAGE_GAMES;
-    fill_rect(pixels, stride, 0, 32, CONSOLE_SHELL_WIDTH,
-              CONSOLE_SHELL_HEIGHT - 32, COLOR_FACE);
+    fill_rect(pixels, stride, 0, 32, CONSOLE_SHELL_LAYOUT_WIDTH,
+              CONSOLE_SHELL_LAYOUT_HEIGHT - 32, COLOR_FACE);
     draw_text(pixels, stride, 12, 37,
-              games ? "GAME / UPDATE" : "NAME",
-              COLOR_DARK, 1U, 13U);
+              games ? "GAME / UPDATE" :
+                  (shell->files.path_label[0] != '\0'
+                      ? shell->files.path_label : "SD:/"),
+              COLOR_DARK, 1U, games ? 13U : 38U);
     draw_text(pixels, stride, 248, 37,
               games ? "KIB" : "SIZE KIB",
               COLOR_DARK, 1U, 8U);
@@ -2554,7 +3115,9 @@ static void draw_files(console_shell_t *shell,
 
     const char *notice = games
         ? "P4G RUNS / P4CART LUA PENDING"
-        : (shell->runtime.sd_card_storage
+        : (shell->runtime.usb_storage_supported
+            ? "OPEN FOLDERS / USB MODE EDITS"
+            : shell->runtime.sd_card_storage
             ? "SD ADDS / FILE MANAGER REMOVES"
             : "USB ADDS / FILE MANAGER REMOVES");
     uint16_t notice_color = COLOR_DARK;
@@ -2614,35 +3177,75 @@ static void draw_files(console_shell_t *shell,
         draw_file_button(shell, pixels, stride,
                          FILE_DELETE_LEFT, FILE_DELETE_WIDTH,
                          FILE_DELETE_CONTROL,
-                         file_selected_is_installable(shell)
+                         file_selected_is_openable(shell)
+                            ? "OPEN" : file_selected_is_installable(shell)
                             ? "INSTALL" : (games ? "REMOVE" : "DELETE"),
-                         file_selected_is_actionable(shell));
+                         file_selected_has_primary_action(shell));
     }
 }
 
 static void draw_audio(const console_shell_t *shell,
                        uint16_t *pixels, size_t stride)
 {
-    draw_text(pixels, stride, 12, 40, "GAME AUDIO SERVICE",
-              COLOR_WHITE, 1U, 18U);
-    draw_text(pixels, stride, 12, 56,
+    draw_text(pixels, stride, 12, 36, "AUDIO CONTROL PANEL",
+              COLOR_WHITE, 1U, 19U);
+    draw_text(pixels, stride, 218, 36,
               shell->runtime.audio_handoff_ready ? "READY" : "BLOCKED",
               shell->runtime.audio_handoff_ready ? COLOR_GREEN : COLOR_RED,
-              2U, 7U);
-    draw_text(pixels, stride, 12, 78, "PCM16 STEREO / 16000 HZ",
-              COLOR_MUTED, 1U, 23U);
-    draw_text(pixels, stride, 12, 94, "TONE MIXER / 8 VOICES",
-              COLOR_MUTED, 1U, 21U);
-    draw_text(pixels, stride, 12, 110, "NATIVE GAMES / HOST OWNED",
-              COLOR_MUTED, 1U, 25U);
-    draw_text(pixels, stride, 12, 126, "VOLUME 6 / 10",
-              COLOR_YELLOW, 1U, 13U);
-    draw_text(pixels, stride, 12, 142, "FACTORY I2S1 GPIO30 PATH",
-              COLOR_MUTED, 1U, 25U);
-    draw_text(pixels, stride, 12, 166, "HOME AMP OFF / GAME OWNED",
-              COLOR_CYAN, 1U, 25U);
-    draw_text(pixels, stride, 12, 188, "DOOM SFX + MUS ON HANDOFF",
-              COLOR_MUTED, 1U, 26U);
+              1U, 7U);
+
+    const uint8_t levels[2] = {
+        bounded_volume(shell->runtime.boot_volume_step),
+        bounded_volume(shell->runtime.game_volume_step),
+    };
+    const int tops[2] = {AUDIO_BOOT_TOP, AUDIO_GAME_TOP};
+    const size_t minus_controls[2] = {
+        AUDIO_BOOT_MINUS_CONTROL, AUDIO_GAME_MINUS_CONTROL,
+    };
+    const size_t plus_controls[2] = {
+        AUDIO_BOOT_PLUS_CONTROL, AUDIO_GAME_PLUS_CONTROL,
+    };
+    const char *const labels[2] = {"BOOT SOUNDS", "GAME AUDIO"};
+    for (size_t row = 0U; row < 2U; ++row) {
+        const bool selected = shell->audio_selected_row == row;
+        const uint16_t label_color = selected ? COLOR_YELLOW : COLOR_WHITE;
+        draw_text(pixels, stride, 12, tops[row] + 2, labels[row],
+                  label_color, 1U, 11U);
+        for (unsigned segment = 0U; segment < 10U; ++segment) {
+            fill_rect(pixels, stride, 94 + (int)(segment * 7U),
+                      tops[row] + 5, 5, 11,
+                      segment < levels[row] ? COLOR_GREEN : COLOR_SHADOW);
+        }
+        bevel_rect(pixels, stride, AUDIO_MINUS_LEFT, tops[row],
+                   AUDIO_BUTTON_WIDTH, AUDIO_BUTTON_HEIGHT, COLOR_FACE,
+                   shell->pressed_index == minus_controls[row]);
+        draw_centered_text(pixels, stride, AUDIO_MINUS_LEFT,
+                           tops[row] + 8, AUDIO_BUTTON_WIDTH, "-",
+                           COLOR_BLACK, 1U);
+        draw_u32(pixels, stride, 235, tops[row] + 8,
+                 levels[row], COLOR_YELLOW);
+        bevel_rect(pixels, stride, AUDIO_PLUS_LEFT, tops[row],
+                   AUDIO_BUTTON_WIDTH, AUDIO_BUTTON_HEIGHT, COLOR_FACE,
+                   shell->pressed_index == plus_controls[row]);
+        draw_centered_text(pixels, stride, AUDIO_PLUS_LEFT,
+                           tops[row] + 8, AUDIO_BUTTON_WIDTH, "+",
+                           COLOR_BLACK, 1U);
+    }
+
+    draw_text(pixels, stride, 12, 92, "NEXT RESTART",
+              COLOR_MUTED, 1U, 12U);
+    draw_text(pixels, stride, 12, 143, "NEXT GAME LAUNCH",
+              COLOR_MUTED, 1U, 16U);
+    draw_text(pixels, stride, 12, 166,
+              shell->runtime.audio_settings_persistent
+                  ? "SAVES AUTOMATICALLY"
+                  : "SETTINGS NOT PERSISTENT",
+              shell->runtime.audio_settings_persistent
+                  ? COLOR_CYAN : COLOR_RED,
+              1U, 24U);
+    draw_text(pixels, stride, 12, 184,
+              "TOUCH +/- OR USE D-PAD",
+              COLOR_MUTED, 1U, 24U);
 }
 
 static void draw_achievements(const console_shell_t *shell,
@@ -2698,19 +3301,21 @@ static void draw_multiplayer(const console_shell_t *shell,
     draw_text(pixels, stride, 12, 120, "DISCONNECT", COLOR_MUTED, 1U, 10U);
     draw_text(pixels, stride, 112, 120, "NEUTRALIZES PLAYER",
               COLOR_GREEN, 1U, 18U);
-    draw_text(pixels, stride, 12, 151, "LAN TRANSPORT OFFLINE",
-              COLOR_YELLOW, 1U, 21U);
+    draw_text(pixels, stride, 12, 145, "WIRED STREAM CORE READY",
+              COLOR_GREEN, 1U, 23U);
+    draw_text(pixels, stride, 12, 160, "USB2 DEVICE / UART",
+              COLOR_YELLOW, 1U, 18U);
     draw_text(pixels, stride, 12, 172,
-              "GAMES USE OS SESSION API", COLOR_CYAN, 1U, 24U);
+              "HOST RELAY REQUIRED", COLOR_CYAN, 1U, 19U);
     draw_text(pixels, stride, 12, 188,
-              "NO RAW SOCKETS IN GAMES", COLOR_MUTED, 1U, 23U);
+              "GAMES USE OS SESSION API", COLOR_MUTED, 1U, 24U);
 }
 
 static void draw_saves(const console_shell_t *shell,
                        uint16_t *pixels, size_t stride)
 {
-    fill_rect(pixels, stride, 0, 32, CONSOLE_SHELL_WIDTH,
-              CONSOLE_SHELL_HEIGHT - 32, COLOR_FACE);
+    fill_rect(pixels, stride, 0, 32, CONSOLE_SHELL_LAYOUT_WIDTH,
+              CONSOLE_SHELL_LAYOUT_HEIGHT - 32, COLOR_FACE);
     draw_text(pixels, stride, 12, 38, "SAVE SLOT", COLOR_DARK, 1U, 9U);
     draw_text(pixels, stride, 246, 38, "SIZE", COLOR_DARK, 1U, 4U);
     if (shell->saves.count == 0U) {
@@ -2763,8 +3368,8 @@ static void draw_terminal_key(const console_shell_t *shell,
 static void draw_terminal(const console_shell_t *shell,
                           uint16_t *pixels, size_t stride)
 {
-    fill_rect(pixels, stride, 0, 32, CONSOLE_SHELL_WIDTH,
-              CONSOLE_SHELL_HEIGHT - 32, COLOR_BLACK);
+    fill_rect(pixels, stride, 0, 32, CONSOLE_SHELL_LAYOUT_WIDTH,
+              CONSOLE_SHELL_LAYOUT_HEIGHT - 32, COLOR_BLACK);
     for (size_t index = 0U; index < shell->terminal.line_count; ++index) {
         draw_text(pixels, stride, 8, 36 + (int)index * 10,
                   shell->terminal.lines[index], COLOR_MUTED, 1U, 47U);
@@ -2814,9 +3419,19 @@ bool console_shell_render_rgb565(console_shell_t *shell,
     }
     s_palette = &s_color_palettes[console_shell_color_mode(shell)];
     fill_rect(pixels, stride_pixels, 0, 0,
-              CONSOLE_SHELL_WIDTH, CONSOLE_SHELL_HEIGHT, COLOR_BLACK);
+              CONSOLE_SHELL_LAYOUT_WIDTH,
+              CONSOLE_SHELL_LAYOUT_HEIGHT, COLOR_BLACK);
     if (shell->page == CONSOLE_PAGE_HOME) {
+#if CONSOLE_SHELL_NATIVE_BBS
+        if (use_bbs_launcher(shell) &&
+            draw_bbs_home(shell, pixels, stride_pixels)) {
+            /* Native ANSI renderer owns the complete 768x480 home surface. */
+        } else {
+            draw_home(shell, pixels, stride_pixels);
+        }
+#else
         draw_home(shell, pixels, stride_pixels);
+#endif
     } else {
         draw_detail_header(shell, pixels, stride_pixels);
         switch (shell->page) {
@@ -2846,6 +3461,9 @@ bool console_shell_render_rgb565(console_shell_t *shell,
             break;
         case CONSOLE_PAGE_SAVES:
             draw_saves(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_USB_DRIVE:
+            draw_usb_drive(shell, pixels, stride_pixels);
             break;
         case CONSOLE_PAGE_TERMINAL:
             draw_terminal(shell, pixels, stride_pixels);

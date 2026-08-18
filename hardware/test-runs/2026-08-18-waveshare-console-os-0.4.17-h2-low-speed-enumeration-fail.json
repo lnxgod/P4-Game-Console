@@ -1,0 +1,71 @@
+{
+  "schema": 1,
+  "date": "2026-08-18",
+  "result": "FAIL",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "pcb_revision": null,
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART on /dev/cu.wchusbserial5C371865781",
+    "h2": "operator-attested externally powered USB-C hub with power input and an attached USB child",
+    "firmware_vbus_source": false,
+    "electrical_qualification_claimed": false
+  },
+  "artifact": {
+    "version": "0.4.17",
+    "application_offset": "0x20000",
+    "application_bytes": 1182304,
+    "application_sha256": "7875144e9fde06b45895403ff9ff6b272c80e8b6e85818feafd71c755ee055ca",
+    "elf_bytes": 14651632,
+    "elf_sha256": "34054bd498ec4b4671b31c3f31a8d50ab7604047e2e1dfe83b4c29f753320ef5"
+  },
+  "install": {
+    "preflight": "PASS",
+    "write_readback": "PASS",
+    "backup_created": false,
+    "bootloader_written": false,
+    "partition_table_written": false,
+    "ota_data_written": false,
+    "sd_card_written": false
+  },
+  "uart": {
+    "cold_boots_observed": 2,
+    "common_markers": [
+      "App version: 0.4.17",
+      "esp_psram: Reserving pool of 32K of internal memory for DMA/internal allocations",
+      "main_task: Calling app_main()",
+      "P4_GAME_STORAGE SD_READY frequency_khz=10000 fallback=0",
+      "USB_HOST_SPEED_POLICY root=full-speed-only max_mbit=12 reason=no-hs-hub-tt-scheduler",
+      "USB_HOST_READY controller=p4-hs peripheral=0 root_port_enabled=0 topology=waveshare-h2-self-powered-test physical_vbus_source=external firmware_vbus_source=0",
+      "GAMEPAD_USB_READY tier=generic-hid report_max=1024",
+      "USB_HOST_ROOT_PORT_ENABLED class_leases_present=1 integrated_hub=0",
+      "HCD DWC: Low-speed, extra delay will be applied in ISR",
+      "USBH: Dev 0 EP 0 Error",
+      "ENUM: Bad transfer status 1: CHECK_SHORT_DEV_DESC",
+      "ENUM: CHECK_SHORT_DEV_DESC FAILED",
+      "EXT_PORT: Port2 disabled, reset attempts=1",
+      "P4_GAME_STORAGE USB_DEVICE_DEFERRED default_role=controller-host app=usb-drive msc_storage=lazy",
+      "P4_GAME_STORAGE READY backend=microSD",
+      "P4_CONSOLE_OS READY page=home display=mipi-dsi storage=microsd-read-only removal=power-off-first h2_role=usb-host-external-vbus",
+      "gamepad=0 keyboard=0 mouse=0"
+    ],
+    "app_main_reached": true,
+    "console_os_ready": true,
+    "storage_ready": true,
+    "eager_msc_allocation_failure": false,
+    "fatal_display_halt": false,
+    "hub_full_speed_route_observed": true,
+    "downstream_child_speed": "low",
+    "downstream_port": 2,
+    "hid_child_enumerated": false,
+    "panic_or_reboot_loop": false
+  },
+  "classification": "The 0.4.17 recovery succeeded for the core OS: lazy MSC removed the boot-time DMA allocation failure, transient DSI refresh timeouts preserved the backlight and retried, microSD and its dynamic catalog became ready, and the externally powered hub took the intended full-speed route. The attached low-speed child consistently failed its first short descriptor transfer, and espressif/usb 1.5.0 then disabled downstream port 2 because its hidden default permits only one reset attempt.",
+  "corrective_action": "Keep the pinned official USB source and full-speed root policy. Expose the existing bounded downstream retry integer only for the Waveshare controller profile, use three attempts with a 500 ms downstream reset-recovery interval, require those exact values in the release verifier, and issue a new exact-artifact authorization before testing again.",
+  "hardware_tested": true
+}

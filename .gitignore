@@ -14,6 +14,8 @@ managed_components/
 .vscode/
 __pycache__/
 *.pyc
+/tmp/
+/result.json
 
 # Local source/reference archives used only by provenance verifiers.
 *.zip
@@ -31,3 +33,5 @@ test-runs/doom-e6-rollback-*/
 # Per-device one-shot authorization ledgers and launch receipts are local only.
 hardware/local-state/
 local-data/quake/id1/pak0.pak
+local-data/quake/id1/config.cfg
+hardware/backups/.waveshare-readback.*

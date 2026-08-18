@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "date": "2026-08-18",
+  "result": "FAIL",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "pcb_revision": null,
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART on /dev/cu.wchusbserial5C371865781",
+    "h2": "operator-attested externally powered USB-C hub with power input",
+    "firmware_vbus_source": false,
+    "electrical_qualification_claimed": false
+  },
+  "artifact": {
+    "version": "0.4.15",
+    "application_offset": "0x20000",
+    "application_bytes": 1435040,
+    "application_sha256": "4bc0e0f5889b6d844583fb67aebe915b6dddf62fd5d3a8ecc34299d0577580d2",
+    "elf_sha256": "30fec1ad29d00a82bffa9bfca4b832288a22ebdfc6fc40423c401e3545deaa38"
+  },
+  "install": {
+    "preflight": "PASS",
+    "write_readback": "PASS",
+    "backup_created": false,
+    "bootloader_written": false,
+    "partition_table_written": false,
+    "ota_data_written": false,
+    "sd_card_written": false
+  },
+  "uart": {
+    "started_at": "2026-08-18T02:50:51-0700",
+    "markers": [
+      "esp_psram: Reserving pool of 32K of internal memory for DMA/internal allocations",
+      "main_task: Calling app_main()",
+      "P4_GAME_STORAGE SD_READY frequency_khz=10000 fallback=0",
+      "tinyusb_msc_storage: Failed to allocate memory for MSC storage",
+      "P4_CONSOLE_OS STORAGE_INIT status=degraded result=ESP_ERR_NO_MEM",
+      "assert failed: xQueueSemaphoreTake queue.c:1709 (( pxQueue ))",
+      "hosted_sdio_card_init",
+      "sdio_read_task",
+      "rst:0xc (SW_CPU_RESET)"
+    ],
+    "app_main_reached": true,
+    "console_os_ready": false,
+    "boot_loop": true
+  },
+  "classification": "The 32 KiB reserve fixed the pre-app_main failure. The remaining crash came from the unrelated, unqualified ESP-Hosted Wi-Fi/SDIO constructor linked into the controller-first image; it consumed scarce internal memory and asserted while initializing SDMMC slot 1 after microSD slot 0 was active.",
+  "corrective_action": "Keep the 32 KiB reserve, remove ESP-Hosted/remote-Wi-Fi and platform_signal_scan from the controller-first dependency graph, retain passive scan only in the ordinary Waveshare profile, rebuild with a verifier gate proving the components are absent, and issue a new exact-artifact authorization.",
+  "hardware_tested": false
+}

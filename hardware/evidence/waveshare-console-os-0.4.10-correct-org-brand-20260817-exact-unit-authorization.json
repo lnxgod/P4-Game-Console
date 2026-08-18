@@ -1,0 +1,185 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-17T20:10:00-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-0.4.10-correct-org-brand-successor",
+  "operator_direction": "Install Console OS 0.4.10 with the official gamechangersai.org logo, refined boot audio, Doom exit controls, and the bounded multiplayer stream core while preserving SD contents and manual USB ownership.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "ota_data": {
+      "offset": "0x10000",
+      "bytes": 8192,
+      "live_policy": "mutable boot-selection state; preserve without writing"
+    }
+  },
+  "predecessor": {
+    "offset": "0x20000",
+    "bytes": 1043856,
+    "sha256": "5d8d806623e4848e7184666fd5663948fb3f1e163c22f3554cdc9ea517b4c825",
+    "install_digest_verified": true,
+    "manual_result": "0.4.8 booted in 768x480 landscape with dynamic SD games, working audio, and safe File Manager folder navigation"
+  },
+  "candidate": {
+    "source_base_commit": "29e49a35d179f7bcc13058004811b8a0d07aa593",
+    "tracked_diff_sha256": "82446047ec3fe1893a89ba733117328bc6539b3971a12e43869408789234b6cc",
+    "tracked_files": [
+      "Makefile",
+      "apps/console_os/CMakeLists.txt",
+      "apps/console_os/README.md",
+      "apps/console_os/app-metadata.json",
+      "apps/console_os/dependencies-waveshare.lock",
+      "apps/console_os/main/CMakeLists.txt",
+      "apps/console_os/main/assets/README.md",
+      "apps/console_os/main/assets/gamechangers_ai_logo.rgb565",
+      "apps/console_os/main/console_os_main.c",
+      "apps/doom_embedded_touch_audio/main/CMakeLists.txt",
+      "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c",
+      "apps/doom_embedded_touch_audio/tests/CMakeLists.txt",
+      "apps/doom_embedded_touch_audio/tests/test_touch_controls.c",
+      "components/board_deps_waveshare/idf_component.yml",
+      "components/console_shell/include/console/shell.h",
+      "components/console_shell/src/console_shell.c",
+      "components/console_shell/tests/test_console_shell.c",
+      "components/doom_touch_input/src/overlay.c",
+      "components/p4_multiplayer/CMakeLists.txt",
+      "components/p4_multiplayer/include/p4/multiplayer.h",
+      "components/p4_multiplayer/tests/test_p4_multiplayer.c",
+      "components/platform_board/src/platform_board.c",
+      "components/platform_board/tests/test_platform_board_waveshare.c",
+      "components/platform_game_storage/CMakeLists.txt",
+      "components/platform_game_storage/include/platform/game_storage.h",
+      "components/platform_game_storage/include/platform/game_storage_types.h",
+      "components/platform_game_storage/src/game_storage_files.c",
+      "components/platform_game_storage/src/game_storage_files.h",
+      "components/platform_game_storage/src/msc_write10_wrapper.c",
+      "components/platform_game_storage/src/msc_write_policy.c",
+      "components/platform_game_storage/src/msc_write_policy.h",
+      "components/platform_game_storage/src/platform_game_storage.c",
+      "components/platform_game_storage/src/platform_game_storage_internal.h",
+      "components/platform_game_storage/tests/test_game_storage_files.c",
+      "components/platform_game_storage/tests/test_msc_write_policy.c",
+      "docs/CONSOLE_OS.md",
+      "docs/GAME_SDK.md",
+      "docs/MULTIPLAYER.md",
+      "docs/WAVESHARE_P4_WIFI6_TOUCH_LCD_4_3_PORT.md",
+      "games/calculator/src/calculator.c",
+      "games/solitaire/CMakeLists.txt",
+      "games/solitaire/README.md",
+      "games/solitaire/game.json",
+      "games/solitaire/src/solitaire.c",
+      "hardware/board-profiles/waveshare-esp32-p4-wifi6-touch-lcd-4.3.json",
+      "hardware/boards/console-os-port-contract.json",
+      "hardware/boards/waveshare-esp32-p4-wifi6-touch-lcd-4.3/sdkconfig.defaults",
+      "scripts/build-game-package.py",
+      "scripts/build.sh",
+      "scripts/install-olimex-sd-card.py",
+      "scripts/verify-console-os-waveshare.py",
+      "scripts/verify-console-os.py",
+      "third_party/doomgeneric/doomgeneric/doomgeneric.c",
+      "third_party/doomgeneric/doomgeneric/doomgeneric.h",
+      "third_party/doomgeneric/doomgeneric/i_system.c",
+      "third_party/doomgeneric/doomgeneric/m_menu.c"
+    ],
+    "untracked_build_inputs": [
+      {
+        "path": "components/p4_multiplayer/src/stream.c",
+        "bytes": 4921,
+        "sha256": "1f0e4472d1595e49bb6f66ffd977973cae158f2addf4eeb3161dd1e4480d2a34"
+      },
+      {
+        "path": "games/solitaire/src/solitaire_internal.h",
+        "bytes": 1536,
+        "sha256": "45046563de0bdfccd5b39db9d8e8a6fdde1c7af6dd585af1e28251bee3852263"
+      },
+      {
+        "path": "games/solitaire/tests/CMakeLists.txt",
+        "bytes": 749,
+        "sha256": "2241b0c98877186fdfeabe61fb58bbaddd32856f9937eb5019e689aff7b9ffa0"
+      },
+      {
+        "path": "games/solitaire/tests/test_solitaire.c",
+        "bytes": 6733,
+        "sha256": "9015f0060e2be14fc164f305fc0ee5cba9724da9bae77d5eecfa960bc3469ecf"
+      }
+    ],
+    "version": "0.4.10",
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+      "bytes": 1044736,
+      "sha256": "49399d0c471c0605b2fa1d2c5440c3d0c994bac78f12a73e6404fa2537e19117",
+      "action": "write-and-on-device-digest-verify"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.elf",
+      "bytes": 12622288,
+      "sha256": "b3541fd54039ea5c9c7e90dceca42016d7d2806d4ddd1f6538a8777c6ae47a53"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-landscape/P4UPDATE.P4U",
+      "bytes": 1044992,
+      "sha256": "e570314788b5dfd7829ad777f7409ae280d206ef212c908f41963c8fc8dbd58e"
+    },
+    "official_logo": {
+      "source_url": "https://www.gamechangersai.org/assets/gamechangers-128.png",
+      "source_dimensions": "128x128",
+      "source_sha256": "903d20f0b3d52c8b5b785686680cbb5e884ea17a5636fdf381e9752ade92efce",
+      "path": "apps/console_os/main/assets/gamechangers_ai_logo.rgb565",
+      "dimensions": "112x112",
+      "bytes": 25088,
+      "sha256": "48ee7b2a15a744547884ec6ea7f462277ab60e5dde4d0805bf39db9c0b2bd892"
+    },
+    "runtime_contract": [
+      "show the official gamechangersai.org logo during the 768x480 landscape boot sequence",
+      "play a quieter POST beep, hard-drive seek, quick phone dial, and modem handshake at boot volume 4, then restore runtime volume 9",
+      "allow Doom confirmation prompts to accept Y, N, Enter, Escape, keyboard, and touch controls and restart cleanly to Console OS",
+      "provide bounded framing, checksums, disconnect neutralization, and transport-independent hooks for wired multiplayer",
+      "retain dynamic SD game discovery, safe File Manager navigation, and the manual H2 USB ownership policy",
+      "never format the card, alter its contents during installation, or embed P4G games in OTA firmware"
+    ]
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_another_full_backup": false,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "verify_installed_bootloader_and_partition_table_before_write": true,
+    "preserve_live_ota_data_without_write": true,
+    "verify_installed_predecessor_application_before_write": true,
+    "write_only_primary_application": true,
+    "verify_application_on_device_after_write": true,
+    "format_sd_card": false,
+    "write_sd_card": false,
+    "usb_storage_default": "off; application-owned",
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "guarded application-only installer verifies the exact live unit, layout, 0.4.8 predecessor, and complete 0.4.10 readback",
+    "retained H1 UART reaches Console OS READY with no panic or watchdog",
+    "boot reports the 0.4.10 version, official logo asset, staged audio sequence, SD_READY, and dynamic GAME_CATALOG",
+    "official logo appearance and Doom touch exit receive manual on-device confirmation",
+    "storage remains application-owned until USB Mode is explicitly enabled"
+  ]
+}

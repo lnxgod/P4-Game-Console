@@ -1,0 +1,190 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-18T06:49:45-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-0.4.22-serialized-enum-retry",
+  "operator_direction": "Install the verified Console OS 0.4.22 controller-first candidate on the bound Waveshare 4.3 to test serialized downstream hub enumeration recovery. Reuse the existing factory backup; write only the primary application, preserve bootloader, partition table, OTA state, NVS, and microSD, and retain H1 UART for boot-loop-safe acceptance.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART",
+    "h2": "operator-attested externally powered USB-C hub with power input",
+    "firmware_vbus_source": false,
+    "electrical_qualification_claimed": false,
+    "scope": "bounded powered-hub enumeration and controller-first hot-plug behavior"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "ota_data": {
+      "offset": "0x10000",
+      "bytes": 8192,
+      "live_policy": "mutable boot-selection state; preserve without writing"
+    },
+    "nvs": {
+      "live_policy": "preserve; candidate may write only the p4_console/usb_enum_probe recovery marker through NVS APIs"
+    }
+  },
+  "predecessor": {
+    "offset": "0x20000",
+    "version": "0.4.21",
+    "bytes": 1182304,
+    "sha256": "b9914eb9c84dbb04a49bb44db1d03593c48a589f26286f3647d3333ad17ae135",
+    "digest_observed_before_authorization": true,
+    "acceptance_record": "hardware/test-runs/2026-08-18-waveshare-console-os-0.4.21-no-retry-recovery-pass.json"
+  },
+  "candidate": {
+    "source_base_commit": "29e49a35d179f7bcc13058004811b8a0d07aa593",
+    "tracked_diff_sha256": "464a63315a784cd32c41d8de031ba63a7e3ee6552ab0579e5004de2d93bc7cf4",
+    "tracked_diff_bytes": 631177,
+    "version": "0.4.22",
+    "build_id": "29e49a35d179",
+    "build_directory": "apps/console_os/build-waveshare-usb-host",
+    "build_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+      "bytes": 1184000,
+      "sha256": "0753e5f602b717e2e584b30802a1714521e1e1b877c7107c7f503d11a5e3f982",
+      "action": "write-and-on-device-digest-verify"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.elf",
+      "bytes": 14658120,
+      "sha256": "0fd0a07f82f05c74bdf9a64c25aa21f566967a17ac1b348a61e99f55572d59f6"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-usb-host/P4UPDATE.P4U",
+      "bytes": 1184256,
+      "sha256": "d21f9324b6c056db07893a81d367299b570f543f957e45309fb84cdd96632af1"
+    },
+    "official_logo": {
+      "source_url": "https://www.gamechangersai.org/assets/gamechangers-128.png",
+      "path": "apps/console_os/main/assets/gamechangers_ai_logo.rgb565",
+      "bytes": 25088,
+      "sha256": "48ee7b2a15a744547884ec6ea7f462277ab60e5dde4d0805bf39db9c0b2bd892"
+    },
+    "sdkconfig": {
+      "path": "apps/console_os/build-waveshare-usb-host/sdkconfig",
+      "bytes": 74718,
+      "sha256": "0d8651a2c663eb6d40a3a2498e90b55b6c088566855041f5f60ccd38178e68e1",
+      "automatic_enum_retry_attempts": 2
+    },
+    "usb_sources": {
+      "locked_external_port": {
+        "path": "apps/console_os/managed_components/espressif__usb/src/ext_port.c",
+        "bytes": 49731,
+        "sha256": "0760b3c8ef14813db621b66c19d27caea5391793c592ca480b6ce18121797736",
+        "compiled_directly": false
+      },
+      "locked_hub": {
+        "path": "apps/console_os/managed_components/espressif__usb/src/hub.c",
+        "bytes": 52521,
+        "sha256": "2d7c79c8508f63be6b0243178eafae2351f4e4643a87d9cdc73e980b95985afe",
+        "compiled_directly": true,
+        "scheduler_modified": false
+      },
+      "overlay_generator": {
+        "path": "scripts/generate-espressif-usb-ext-port-overlay.py",
+        "bytes": 11368,
+        "sha256": "b38307672e678f931bf9996c78d650b547925b379c6bde41421ee90d19b91e1b"
+      },
+      "generated_external_port": {
+        "path": "apps/console_os/build-waveshare-usb-host/generated/espressif-usb-1.5.0/ext_port.c",
+        "bytes": 53413,
+        "sha256": "6373859f47cd6cb88877186ebd915d8d31f442cfd13f27da814e524ec43355ee",
+        "compiled_directly": true,
+        "markers": [
+          "P4_EXT_PORT_ENUM_RETRY_SERIALIZED",
+          "P4_EXT_PORT_ENUM_RETRY_SUPPRESSED",
+          "P4_EXT_PORT_ENUM_RETRY_EXHAUSTED",
+          "P4_EXT_PORT_ENUM_RECOVERED"
+        ]
+      },
+      "overlay_test": {
+        "path": "scripts/tests/test-espressif-usb-ext-port-overlay.py",
+        "bytes": 6057,
+        "sha256": "05677ac4709a692fc8a666877d73871a366c7107957e5a55f575a0a4db3d2faa",
+        "expected_tests": 6
+      }
+    },
+    "recovery_guard_sources": [
+      {
+        "path": "components/platform_console_settings/CMakeLists.txt",
+        "bytes": 272,
+        "sha256": "93b079983821190f4c81837628a995cabb3780443d6487fd037c0d872e015370"
+      },
+      {
+        "path": "components/platform_console_settings/include/platform/console_settings.h",
+        "bytes": 1929,
+        "sha256": "1d491213280a107a6f582a2859d35274fe136c0d7a28e552cb254f75f56a0a24"
+      },
+      {
+        "path": "components/platform_console_settings/src/platform_console_settings.c",
+        "bytes": 6385,
+        "sha256": "bfc4a0aad2d4f54c5f7ec753900210b909f7f73b13cd212a9de31b7716e48fce"
+      }
+    ],
+    "locks": {
+      "esp_idf": "5.5.3",
+      "espressif_usb": "1.5.0",
+      "usb_host_hid": "1.2.0",
+      "esp_tinyusb": "2.0.1"
+    },
+    "safety_contract": [
+      "leave the locked espressif/usb 1.5.0 hub scheduler byte-for-byte unchanged",
+      "replace only the external-port translation unit at build time from an exact-input generator",
+      "wait for failed-child recycle and the parent hub feature/GetStatus chain to release EP0 before requesting a downstream reset",
+      "bound automatic downstream enumeration recovery to two attempts",
+      "commit a one-boot NVS probe marker before Host/HID starts and fail closed if NVS is unavailable",
+      "suppress retry behavior after an incomplete prior boot and clear the marker only after approximately 9.6 seconds of stable Console OS main-loop runtime",
+      "retain the 500 ms vendor port-reset recovery interval, full-speed-only H2 root policy, bounded HID parsing, and immediate input neutralization on disconnect",
+      "retain direct microSD mount, lazy MSC allocation, and mutually exclusive USB Drive app transition",
+      "preserve the 768x480 BBS shell, official gamechangersai.org logo, boot audio at saved level 3, touch, dynamic SD games, and existing microSD contents"
+    ]
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_another_full_backup": false,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "verify_installed_bootloader_and_partition_table_before_write": true,
+    "preserve_live_ota_data_without_write": true,
+    "preserve_live_nvs_except_candidate_runtime_marker": true,
+    "verify_installed_predecessor_application_before_write": true,
+    "write_only_primary_application": true,
+    "verify_application_on_device_after_write": true,
+    "retain_uart_during_acceptance": true,
+    "format_sd_card": false,
+    "write_sd_card": false,
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "retained H1 UART shows exactly one candidate app start followed by Console OS READY and USB_ENUM_GUARD state=armed",
+    "the exact app version is 0.4.22 and the dynamic microSD catalog reaches ready",
+    "no panic, assert, watchdog, brownout, repeated reset, hub control-pipe ESP_ERR_INVALID_STATE, or usbh_dev_close assertion occurs",
+    "retry markers are bounded to at most two serialized attempts and occur only after failed-device recycle plus parent hub control completion",
+    "after approximately 9.6 seconds of stable runtime UART shows USB_ENUM_GUARD state=confirmed",
+    "if the candidate crashes before confirmation, the immediately following boot must show USB_ENUM_GUARD state=safe-mode with retry suppressed and reach READY; otherwise restore 0.4.21",
+    "the powered hub remains usable and a connected supported HID controller, keyboard, or mouse can enumerate without destabilizing display, audio, touch, or microSD",
+    "USB Drive remains an explicit app-only role switch for later manual acceptance"
+  ]
+}

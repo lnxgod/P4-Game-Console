@@ -14,6 +14,7 @@ idf_component_register(
         doom_touch_input
         doom_video
         esp_timer
+        esp_system
         freertos
         heap
         log

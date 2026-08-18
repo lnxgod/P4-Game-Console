@@ -25,6 +25,24 @@ enum {
 };
 
 typedef enum {
+    P4_MP_WIRED_TRANSPORT_NONE = 0,
+    P4_MP_WIRED_TRANSPORT_UART_RELAY,
+    P4_MP_WIRED_TRANSPORT_USB2_DEVICE_RELAY,
+} p4_mp_wired_transport_kind_t;
+
+typedef struct {
+    p4_mp_wired_transport_kind_t kind;
+    const char *name;
+    bool requires_host_relay;
+    bool console_is_usb_device;
+    bool console_sources_vbus;
+} p4_mp_wired_transport_info_t;
+
+bool p4_mp_wired_transport_info(
+    p4_mp_wired_transport_kind_t kind,
+    p4_mp_wired_transport_info_t *info_out);
+
+typedef enum {
     P4_MP_PACKET_DISCOVER = 1,
     P4_MP_PACKET_OFFER = 2,
     P4_MP_PACKET_JOIN = 3,
@@ -85,6 +103,40 @@ p4_mp_status_t p4_mp_packet_decode(
     const uint8_t *datagram,
     size_t datagram_length,
     p4_mp_packet_view_t *packet_out);
+
+/**
+ * Allocation-free framing for noisy/chunked byte streams such as UART and
+ * USB CDC/vendor endpoints. The decoder searches for P4MP magic, bounds the
+ * advertised payload before buffering it, and validates the complete packet
+ * CRC before returning a datagram to the session core.
+ */
+typedef struct {
+    uint8_t datagram[P4_MP_MAX_DATAGRAM_BYTES];
+    size_t buffered_bytes;
+    size_t expected_bytes;
+    uint32_t discarded_bytes;
+    uint32_t dropped_frames;
+    p4_mp_status_t last_packet_status;
+    uint8_t magic_bytes;
+} p4_mp_stream_decoder_t;
+
+typedef enum {
+    P4_MP_STREAM_NEED_MORE = 0,
+    P4_MP_STREAM_FRAME_READY,
+    P4_MP_STREAM_FRAME_DROPPED,
+    P4_MP_STREAM_INVALID_ARGUMENT,
+} p4_mp_stream_result_t;
+
+void p4_mp_stream_decoder_init(p4_mp_stream_decoder_t *decoder);
+
+p4_mp_stream_result_t p4_mp_stream_consume(
+    p4_mp_stream_decoder_t *decoder,
+    const uint8_t *bytes,
+    size_t bytes_length,
+    size_t *bytes_consumed,
+    uint8_t *datagram_out,
+    size_t datagram_capacity,
+    size_t *datagram_length);
 
 typedef struct {
     uint32_t tick;

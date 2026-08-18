@@ -27,6 +27,15 @@ RGB565 surface and callbacks for sanitized input, frame presentation, bounded
 tone audio, achievements, and completion. It receives no display, touch,
 audio, USB, or filesystem handles.
 
+An enabled game may also declare a same-basename `.P4R` resource sidecar. The
+sidecar has a fixed 128-byte `P4RES01` header, a maximum total size of 8 MiB,
+the owning game ID, format version, exact lengths, and a payload SHA-256.
+Console OS loads it from the package's directory, validates the complete
+layout, ID, and digest, and exposes only an immutable payload pointer for the
+duration of the foreground game. It never exposes a FAT path or handle. A
+missing optional sidecar leaves the storage capability unavailable so a game
+can use built-in fallback assets; a present invalid sidecar rejects launch.
+
 Native machine code is not a security sandbox. A structurally valid malicious
 cartridge can still execute CPU instructions, so install only packages you
 trust. This format is not UF2; UF2 is a flashing container, while `.P4G` is a
@@ -76,6 +85,11 @@ apps/console_os/build-olimex-esp32-p4-pc/sd-card/GAMES/STAR_HOP.P4G
 apps/console_os/build-waveshare-landscape/sd-card/GAMES/STAR_HOP.P4G
 ```
 
+When a manifest declares resources, the build also emits the matching name,
+for example `GAMES/STAR_HOP.P4R`. Install, update, and remove the `.P4G` and its
+same-name `.P4R` as one game. Game Manager removes the sidecar before the
+executable so stale resources cannot be inherited by a later package.
+
 Run `make console-os-idf` after the focused game test when a distributable
 cartridge or device install is needed. Use `make game-registry-check` for a
 manifest or generator change and `make game-sdk-host` for shared API, package,
@@ -93,12 +107,18 @@ requires an OS reflash.
 
 Waveshare uses the same powered-off microSD workflow and keeps the card
 read-only while Console OS runs. Use `make install-waveshare-sd-card
-SD_MOUNT=/Volumes/P4GAMES` for the validated complete bundle.
+SD_MOUNT=/Volumes/P4GAMES` for the validated complete bundle. The installer
+requires an external FAT32 volume named `P4GAMES` and rejects ExFAT.
 
 Executable `.P4G` packages are never linked into the OTA application. The
 launcher and loader support only storage-backed catalog entries, while the
 separate P4CART compatibility catalog remains non-executable until its Lua
 sandbox is implemented.
+
+Packaging fails if a cartridge imports a symbol outside the frozen runtime
+allowlist (`calloc`, `free`, `memcmp`, `memcpy`, `memset`, and `strcmp`). This
+keeps generated bundles aligned with the on-device ELF validator instead of
+letting an unloadable game reach the SD card.
 
 `game.json` is the source/package contract. Its important fields are:
 
@@ -106,6 +126,10 @@ sandbox is implemented.
 - `api_version`: `1`;
 - `version`: a bounded semantic version;
 - `package_file`: an uppercase `.P4G` basename stored under `GAMES`;
+- optional `resource_file`: the matching uppercase `.P4R` basename;
+- optional `resource_payload`: a safe game-relative input path used to build
+  that sidecar; both resource fields must appear together and the manifest must
+  request the optional or required `storage` capability;
 - unique `id` and `launcher_id`;
 - bounded `title`, `subtitle`, `folder`, `license`, and RGB565 accent;
 - required and optional capabilities.
@@ -117,8 +141,8 @@ never overwrites an existing game.
 
 Include only headers under `components/p4_game_api/include/p4/`:
 
-- `p4/game.h`: descriptor, lifecycle, capabilities, launcher return, and
-  service calls;
+- `p4/game.h`: descriptor, lifecycle, capabilities, launcher return, service
+  calls, and the optional immutable resource payload view;
 - `p4/input.h`: Up, Down, Left, Right, A, B, Start, Back, and standard
   on-screen controls;
 - `p4/draw.h`: clipped pixels, shapes, text, and RGB565 sprites;
@@ -142,6 +166,30 @@ Achievements are optional and bounded. Call `p4_game_unlock_achievement()`
 with a short stable ID, title, and description. The host binds the event to
 the running game ID, rejects mismatches, and de-duplicates repeat reports.
 The current catalog lasts for the boot session; persistent saves are deferred.
+
+The `storage` capability currently means a validated read-only `.P4R` payload,
+not general storage. Check the capability bit before reading `resource_data`,
+then validate the game's inner payload format and version. Games still cannot
+list, open, modify, or retain files, and `.P4R` is not a save-data mechanism.
+
+The optional `signal-scan` capability is an OS-owned, non-blocking discovery
+service. Call `p4_game_request_signal_scan()` with zero for a general scan or
+an opaque previously returned token for focused RSSI updates, then poll
+`p4_game_read_signal_scan()` once per update. A snapshot contains at most eight
+results. Each result is limited to a sanitized 24-character display label, a
+session-scoped salted token, RSSI, channel, and hidden/protected flags. Games
+never receive BSSIDs, raw SSID bytes, credentials, sockets, or a radio handle.
+They cannot connect, transmit, deauthenticate, or interfere with a network.
+Treat RSSI as noisy relative feedback rather than distance or direction.
+
+The SDL game host exposes deterministic fictional scan data for development.
+The Waveshare Console OS build has a source-pinned ESP32-P4/ESP32-C6 passive
+scan provider and exposes the cartridge callbacks only after its background
+transport initialization succeeds. Other boards, an unavailable C6, or any
+initialization failure leave the capability absent. Optional games must render
+an honest offline state and continue without the service. The provider is
+build-tested but remains hardware-unqualified until retained-UART evidence
+confirms the exact unit's C6 firmware and live scans.
 
 ## OS resource inheritance
 
@@ -183,7 +231,7 @@ helper) before returning to the launcher.
 
 On the Waveshare 4.3, Console OS opens the reviewed ES8311 speaker session at
 the selected 1–10 master step only while a requesting native game runs. The
-current default is 6/10, and session teardown restores the GPIO53 amplifier-safe
+current Console OS default is 9/10, and session teardown restores the GPIO53 amplifier-safe
 state. Games never own I2S, codec I2C, GPIO53, or the backend. The stream call
 was already reserved in API v1, so
 activating this bounded implementation does not change the native format or
@@ -258,7 +306,8 @@ Use this workflow:
   not hardware acceptance or permission to flash.
 
 Maze Chase, Space Invaders, and Byte Buddy are complete original examples.
-Byte Buddy demonstrates virtual-pet care, a mini-game, tones, achievements,
-and direct return to the launcher using only code-rendered shapes and P4 APIs.
+Byte Buddy demonstrates touch-first virtual-pet care, interaction-driven dragon
+growth, coin upgrades, a mini-game, tones, achievements, PixelLab sprite art,
+and direct return to the launcher through P4 APIs.
 Calculator, Input Test, and AV Test demonstrate removable utility and
 diagnostic cartridges under the System hierarchy.

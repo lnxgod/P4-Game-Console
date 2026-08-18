@@ -76,4 +76,16 @@ config PLATFORM_USB_HOST_WAVESHARE_4_3_PATH_REVIEWED
         pulldowns; this option does not claim that H2 can source controller
         power.
 
+config P4_USB_HOST_EXT_PORT_ENUM_RETRY_ATTEMPTS
+    int "Bounded retries after external-hub child enumeration failure"
+    range 0 2
+    default 0
+    help
+        Keep zero for ordinary builds. The reviewed Waveshare controller-first
+        candidate may set two. A retry is eligible only after enumeration has
+        disabled a still-connected downstream port, the failed USBH device has
+        been freed, and the parent hub's shared control/status chain is idle.
+        A durable one-boot guard suppresses retries after an incomplete boot;
+        physical disconnect resets only the bounded per-port attempt budget.
+
 endmenu

@@ -2,14 +2,16 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.0.0",
+  "version": "3.1.0",
   "package_file": "BYTEBUD.P4G",
+  "resource_file": "BYTEBUD.P4R",
+  "resource_payload": "assets/generated/byte_buddy_dragon_art.bin",
   "component": "byte_buddy",
   "entry_symbol": "p4_byte_buddy_game",
   "launcher_id": 108,
   "id": "org.p4console.byte-buddy",
   "title": "BYTE BUDDY",
-  "subtitle": "VIRTUAL PET",
+  "subtitle": "SIGNAL DRAGONS",
   "folder": "GAMES/ARCADE",
   "accent_rgb565": "0xf81f",
   "required_capabilities": [
@@ -18,9 +20,11 @@
   ],
   "optional_capabilities": [
     "audio-tone",
-    "audio-stream"
+    "audio-stream",
+    "storage",
+    "signal-scan"
   ],
   "license": "MIT",
-  "assets": "original-code-rendered-shapes-only",
+  "assets": "352-frame 64px dragon atlases, tweened motion, signal genetics, SD P4R bank, and animated effects",
   "enabled": true
 }

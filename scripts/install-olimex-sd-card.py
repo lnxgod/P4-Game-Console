@@ -9,6 +9,7 @@ import hashlib
 import json
 import os
 import pathlib
+import plistlib
 import shutil
 import struct
 import subprocess
@@ -39,6 +40,49 @@ def mounted_card(path: pathlib.Path) -> pathlib.Path:
     if not resolved.is_dir() or not os.path.ismount(resolved):
         raise SystemExit(f"target must be an existing mounted filesystem: {resolved}")
     return resolved
+
+
+def require_waveshare_h2_fat32(target: pathlib.Path) -> None:
+    if sys.platform != "darwin":
+        raise SystemExit(
+            "Waveshare H2 target verification currently requires macOS diskutil"
+        )
+    result = subprocess.run(
+        ["diskutil", "info", "-plist", str(target)],
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.decode("utf-8", errors="replace").strip()
+        raise SystemExit(f"cannot inspect Waveshare H2 target: {detail}")
+    try:
+        info = plistlib.loads(result.stdout)
+    except plistlib.InvalidFileException as error:
+        raise SystemExit("diskutil returned invalid target metadata") from error
+    required = {
+        "FilesystemType": "msdos",
+        "Content": "DOS_FAT_32",
+        "VolumeName": "P4GAMES",
+        "BusProtocol": "USB",
+        "Internal": False,
+        "RemovableMediaOrExternalDevice": True,
+        "WritableVolume": True,
+    }
+    mismatches = [
+        f"{key}={info.get(key)!r} (expected {expected!r})"
+        for key, expected in required.items()
+        if info.get(key) != expected
+    ]
+    if info.get("MountPoint") != str(target):
+        mismatches.append(
+            f"MountPoint={info.get('MountPoint')!r} (expected {str(target)!r})"
+        )
+    if mismatches:
+        raise SystemExit(
+            "refusing incompatible Waveshare H2 card; format it as MBR/FAT32 "
+            "named P4GAMES: " + "; ".join(mismatches)
+        )
 
 
 def c_string(field: bytes, label: str) -> str:
@@ -72,6 +116,26 @@ def validate_game(path: pathlib.Path, manifest: dict[str, object]) -> None:
         and c_string(package[80:128], f"{path.name} game id") == manifest["id"]
     ):
         raise SystemExit(f"game package validation failed: {path.name}")
+
+
+def validate_game_resource(path: pathlib.Path, manifest: dict[str, object]) -> None:
+    package = path.read_bytes()
+    if not 128 < len(package) <= 8 * 1024 * 1024 or package[:8] != b"P4RES01\0":
+        raise SystemExit(f"invalid game resource: {path.name}")
+    header, total, offset, payload, version, flags = struct.unpack_from(
+        "<6I", package, 8
+    )
+    if not (
+        header == offset == 128
+        and total == len(package)
+        and payload == len(package) - offset
+        and version == 1
+        and flags == 0
+        and package[32:64] == hashlib.sha256(package[offset:]).digest()
+        and c_string(package[64:112], f"{path.name} game id") == manifest["id"]
+        and not any(package[112:128])
+    ):
+        raise SystemExit(f"game resource validation failed: {path.name}")
 
 
 def validate_update(path: pathlib.Path) -> None:
@@ -119,7 +183,12 @@ def enabled_manifests() -> dict[str, dict[str, object]]:
 
 
 def bundle_files(manifests: dict[str, dict[str, object]]) -> tuple[pathlib.Path, ...]:
-    return tuple(pathlib.Path("GAMES") / name for name in manifests) + (
+    resources = tuple(
+        pathlib.Path("GAMES") / str(manifest["resource_file"])
+        for manifest in manifests.values()
+        if isinstance(manifest.get("resource_file"), str)
+    )
+    return tuple(pathlib.Path("GAMES") / name for name in manifests) + resources + (
         pathlib.Path("DOOM1.WAD"),
         pathlib.Path("README.TXT"),
         P4CART_SEED,
@@ -144,6 +213,11 @@ def validate_bundle(bundle: pathlib.Path) -> tuple[pathlib.Path, ...]:
         raise SystemExit("README.TXT does not match the Olimex storage contract")
     for name in manifests:
         validate_game(bundle / "GAMES" / name, manifests[name])
+        resource_name = manifests[name].get("resource_file")
+        if isinstance(resource_name, str):
+            validate_game_resource(
+                bundle / "GAMES" / resource_name, manifests[name]
+            )
     validate_p4cart(bundle / P4CART_SEED)
     validate_update(bundle / "UPDATE/P4UPDATE.P4U")
     return files
@@ -184,8 +258,11 @@ def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--target", required=True, type=pathlib.Path)
     parser.add_argument("--bundle", type=pathlib.Path, default=DEFAULT_BUNDLE)
+    parser.add_argument("--require-waveshare-h2-fat32", action="store_true")
     arguments = parser.parse_args()
     target = mounted_card(arguments.target)
+    if arguments.require_waveshare_h2_fat32:
+        require_waveshare_h2_fat32(target)
     bundle = arguments.bundle.expanduser().resolve(strict=True)
     if not bundle.is_dir():
         raise SystemExit(f"bundle is not a directory: {bundle}")

@@ -1,0 +1,99 @@
+{
+  "schema": 1,
+  "date": "2026-08-18",
+  "result": "PARTIAL_PASS",
+  "acceptance_scope": "serialized downstream-port retry and durable boot-loop containment; controller enumeration not accepted",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "pcb_revision": null,
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART on /dev/cu.wchusbserial5C371865781",
+    "h2": "operator-attested externally powered USB-C hub with power input and an attached low-speed USB child on downstream port 2",
+    "firmware_vbus_source": false,
+    "electrical_qualification_claimed": false
+  },
+  "artifact": {
+    "version": "0.4.22",
+    "application_offset": "0x20000",
+    "application_bytes": 1184000,
+    "application_sha256": "0753e5f602b717e2e584b30802a1714521e1e1b877c7107c7f503d11a5e3f982",
+    "elf_bytes": 14658120,
+    "elf_sha256": "0fd0a07f82f05c74bdf9a64c25aa21f566967a17ac1b348a61e99f55572d59f6",
+    "update_bytes": 1184256,
+    "update_sha256": "d21f9324b6c056db07893a81d367299b570f543f957e45309fb84cdd96632af1",
+    "locked_external_port_sha256": "0760b3c8ef14813db621b66c19d27caea5391793c592ca480b6ce18121797736",
+    "generated_external_port_sha256": "6373859f47cd6cb88877186ebd915d8d31f442cfd13f27da814e524ec43355ee",
+    "locked_hub_sha256": "2d7c79c8508f63be6b0243178eafae2351f4e4643a87d9cdc73e980b95985afe",
+    "automatic_enum_retry_attempts": 2
+  },
+  "install": {
+    "authorization": "hardware/evidence/waveshare-console-os-0.4.22-serialized-enum-retry-20260818-exact-unit-authorization.json",
+    "preflight": "PASS",
+    "predecessor_version": "0.4.21",
+    "predecessor_application_sha256": "b9914eb9c84dbb04a49bb44db1d03593c48a589f26286f3647d3333ad17ae135",
+    "write_readback": "PASS",
+    "backup_created": false,
+    "bootloader_written": false,
+    "partition_table_written": false,
+    "ota_data_written": false,
+    "sd_card_written": false
+  },
+  "uart": {
+    "capture_seconds": 45,
+    "capture_bytes": 16365,
+    "capture_sha256": "d1ba09c725ed4e820c44b5aeff2ffc02b68a990c18b37ba3abaf2c843bc5f9a3",
+    "rom_boots_observed": 1,
+    "markers": [
+      "App version: 0.4.22",
+      "P4_CONSOLE_OS USB_ENUM_GUARD state=armed allowed=1 prior_boot_incomplete=0 result=ESP_OK",
+      "USB_HOST_SPEED_POLICY root=full-speed-only max_mbit=12 reason=no-hs-hub-tt-scheduler",
+      "USB_HOST_READY controller=p4-hs peripheral=0 root_port_enabled=0 topology=waveshare-h2-self-powered-test physical_vbus_source=external firmware_vbus_source=0",
+      "GAMEPAD_USB_READY tier=generic-hid report_max=1024",
+      "USB_HOST_ROOT_PORT_ENABLED class_leases_present=1 integrated_hub=0",
+      "HCD DWC: Low-speed, extra delay will be applied in ISR",
+      "ENUM: Bad transfer status 1: CHECK_SHORT_DEV_DESC",
+      "P4_EXT_PORT_ENUM_RETRY_SERIALIZED Port2 attempt=1/2",
+      "P4_EXT_PORT_ENUM_RETRY_SERIALIZED Port2 attempt=2/2",
+      "P4_EXT_PORT_ENUM_RETRY_EXHAUSTED Port2 attempts=2",
+      "P4_CONSOLE_OS GAME_CATALOG available=1 packages=12 valid=12 omitted=0 generation=1 source=microsd-only storage_result=ESP_OK update=1 result=ESP_OK",
+      "P4_CONSOLE_OS READY page=home display=mipi-dsi storage=microsd-read-only removal=power-off-first h2_role=usb-host-external-vbus",
+      "P4_CONSOLE_OS USB_ENUM_GUARD state=confirmed loops=600 result=ESP_OK"
+    ],
+    "console_os_ready": true,
+    "storage_ready": true,
+    "catalog_packages": 12,
+    "catalog_valid": 12,
+    "host_hid_ready": true,
+    "serialized_retry_count": 2,
+    "retry_exhausted": true,
+    "guard_confirmed": true,
+    "esp_err_invalid_state_count": 0,
+    "usbh_dev_close_count": 0,
+    "assert_count": 0,
+    "panic_count": 0,
+    "guru_meditation_count": 0,
+    "watchdog_count": 0,
+    "brownout_count": 0,
+    "reboot_loop_observed": false,
+    "hid_child_enumerated": false,
+    "final_stats": {
+      "loops": 1500,
+      "gamepad": 0,
+      "keyboard": 0,
+      "mouse": 0
+    }
+  },
+  "classification": "0.4.22 fixes the 0.4.20 hub-control race: the exact unit completed one boot, bounded both retries, exhausted cleanly, reached Console OS READY, and confirmed its durable recovery marker without an invalid-state error, assertion, panic, or reboot. The attached low-speed child still failed CHECK_SHORT_DEV_DESC, so this run proves boot-loop containment and scheduler serialization only; it does not qualify any HID controller.",
+  "corrective_action": {
+    "finding": "The existing one-shot HCFG.FSLSSupp write is incomplete for a full-speed/low-speed link on the ESP32-P4 HS UTMI root.",
+    "upstream_reference": "https://github.com/peter-marcisovsky/esp-idf/commit/6306c4f6d1660b58ccc431877f4c42f202714072",
+    "next_candidate": "Reapply FS/LS-only mode and UTMI 30 MHz selection before every root reset, then select the post-enable UTMI clock and 1 ms HFIR interval from the observed speed, all behind the existing durable one-boot guard."
+  },
+  "hardware_tested": true,
+  "controller_hardware_accepted": false
+}

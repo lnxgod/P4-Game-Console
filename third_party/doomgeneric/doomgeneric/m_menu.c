@@ -1626,6 +1626,16 @@ boolean M_Responder (event_t* ev)
     {
 	if (messageNeedsInput)
         {
+            // Embedded touch controls use Enter/Escape for OK/Back. Treat
+            // them as the same explicit Yes/No choices as keyboard Y/N.
+            if (key == KEY_ENTER)
+            {
+                key = key_menu_confirm;
+            }
+            else if (key == KEY_ESCAPE)
+            {
+                key = key_menu_abort;
+            }
             if (key != ' ' && key != KEY_ESCAPE
              && key != key_menu_confirm && key != key_menu_abort)
             {
@@ -2122,4 +2132,3 @@ void M_Init (void)
 
     //opldev = M_CheckParm("-opldev") > 0;
 }
-

@@ -1,0 +1,142 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-17T08:49:41-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-0.4.7-manual-usb-mode-successor",
+  "operator_direction": "Install Console OS 0.4.7 with USB mass-storage access off by default, keep the console in ownership of the SD card until USB Mode is explicitly enabled, and require a clean Mac eject or cable disconnect before returning ownership to the console.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "ota_data": {
+      "offset": "0x10000",
+      "bytes": 8192,
+      "live_policy": "mutable boot-selection state; preserve without writing"
+    }
+  },
+  "predecessor": {
+    "offset": "0x20000",
+    "bytes": 1039728,
+    "sha256": "60a57711915219e684ab9d8e4f84f251c4e10fa6ffdf829a7b62a7fa7dc92335",
+    "install_digest_verified": true,
+    "manual_result": "0.4.6 mounted FAT32 at 10 MHz, discovered 12 valid SD packages, completed the P4CART scan with 11624 bytes of stack margin, and remained stable without panic or watchdog"
+  },
+  "candidate": {
+    "source_base_commit": "29e49a35d179f7bcc13058004811b8a0d07aa593",
+    "tracked_diff_sha256": "68bbba0e48f6ecc39cbb92de28259d8922f44d23522a67995be25720dab3f75e",
+    "tracked_files": [
+      "Makefile",
+      "apps/console_os/CMakeLists.txt",
+      "apps/console_os/README.md",
+      "apps/console_os/app-metadata.json",
+      "apps/console_os/dependencies-waveshare.lock",
+      "apps/console_os/main/console_os_main.c",
+      "components/board_deps_waveshare/idf_component.yml",
+      "components/console_shell/include/console/shell.h",
+      "components/console_shell/src/console_shell.c",
+      "components/console_shell/tests/test_console_shell.c",
+      "components/platform_board/src/platform_board.c",
+      "components/platform_board/tests/test_platform_board_waveshare.c",
+      "components/platform_game_storage/CMakeLists.txt",
+      "components/platform_game_storage/include/platform/game_storage.h",
+      "components/platform_game_storage/src/msc_write10_wrapper.c",
+      "components/platform_game_storage/src/msc_write_policy.c",
+      "components/platform_game_storage/src/msc_write_policy.h",
+      "components/platform_game_storage/src/platform_game_storage.c",
+      "components/platform_game_storage/src/platform_game_storage_internal.h",
+      "components/platform_game_storage/tests/test_msc_write_policy.c",
+      "docs/CONSOLE_OS.md",
+      "docs/GAME_SDK.md",
+      "docs/WAVESHARE_P4_WIFI6_TOUCH_LCD_4_3_PORT.md",
+      "games/calculator/src/calculator.c",
+      "hardware/board-profiles/waveshare-esp32-p4-wifi6-touch-lcd-4.3.json",
+      "hardware/boards/console-os-port-contract.json",
+      "hardware/boards/waveshare-esp32-p4-wifi6-touch-lcd-4.3/sdkconfig.defaults",
+      "scripts/build-game-package.py",
+      "scripts/install-olimex-sd-card.py",
+      "scripts/verify-console-os-waveshare.py",
+      "scripts/verify-console-os.py"
+    ],
+    "version": "0.4.7",
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+      "bytes": 1041712,
+      "sha256": "2fef9d89d35d93eeb318ac5e05a24efc71cd3c4225d4dcef3c0927c014b05d5b",
+      "action": "write-and-on-device-digest-verify"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.elf",
+      "bytes": 12595188,
+      "sha256": "d873bca29561b6345787bddaed2b3f96c57d861220c7ca600db97c17775b4f19"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-landscape/P4UPDATE.P4U",
+      "bytes": 1041968,
+      "sha256": "3671131ae14b7d6fc9a5967c6460a553f3dc288e1aec2f424c0c95e7a431d1d7"
+    },
+    "official_logo": {
+      "path": "apps/console_os/main/assets/gamechangers_ai_logo.rgb565",
+      "bytes": 25628,
+      "sha256": "6f3963e2d3182eadacbf0ac4397b719578395bff894bb00c07ca65849c9e570f"
+    },
+    "sd_bundle": {
+      "path": "apps/console_os/build-waveshare-landscape/sd-card",
+      "enabled_p4g_packages": 12,
+      "calculator_bytes": 8216,
+      "calculator_sha256": "9796176b0bc803be71ff0c275aac59aaed2b17e43bc441c205179ba56cfaddc1",
+      "games_embedded_in_firmware": false,
+      "filesystem": "MBR FAT32 named P4GAMES; ExFAT rejected"
+    },
+    "runtime_contract": [
+      "preserve the official 768x480 landscape boot, 555-1212 DTMF, V.22bis-style audio, and dynamic SD game catalog",
+      "keep H2 USB mass-storage ownership disabled at startup so the application owns the SD card",
+      "transfer SD ownership to the Mac only after an explicit System-page TURN ON USB MODE action",
+      "reject TURN OFF USB MODE while a host remains attached unless the host cleanly ejected or disconnected",
+      "capture a clean host eject through the bounded SCSI START STOP UNIT wrapper",
+      "never initiate a card format from firmware and never embed P4G games in OTA firmware"
+    ]
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_another_full_backup": false,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "verify_installed_bootloader_and_partition_table_before_write": true,
+    "preserve_live_ota_data_without_write": true,
+    "verify_installed_predecessor_application_before_write": true,
+    "write_only_primary_application": true,
+    "verify_application_on_device_after_write": true,
+    "format_sd_card": false,
+    "write_sd_card": false,
+    "usb_storage_default": "off; application-owned",
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "guarded application-only installer verifies the exact live unit, layout, predecessor, and 0.4.7 readback",
+    "boot reaches the 768x480 Program Manager with the official logo and no panic or watchdog",
+    "SD_READY and GAME_CATALOG report the existing dynamic SD games",
+    "storage remains application-owned and is not exported merely because the USB cable is attached",
+    "System page exposes the manual USB Mode control"
+  ]
+}

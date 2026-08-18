@@ -25,6 +25,7 @@ CAPABILITIES = {
     "audio-tone": 1 << 2,
     "audio-stream": 1 << 3,
     "storage": 1 << 4,
+    "signal-scan": 1 << 5,
 }
 ID_RE = re.compile(r"[a-z][a-z0-9.-]{2,47}\Z")
 SYMBOL_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
@@ -33,10 +34,37 @@ FOLDER_RE = re.compile(
     r"[A-Z0-9][A-Z0-9 -]{0,14}(?:/[A-Z0-9][A-Z0-9 -]{0,14})?\Z"
 )
 VERSION_RE = re.compile(r"[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?\Z")
+ALLOWED_UNDEFINED_SYMBOLS = {
+    "calloc", "free", "memcmp", "memcpy", "memset", "strcmp",
+}
 
 
 class PackageError(RuntimeError):
     pass
+
+
+def validate_elf_imports(path: pathlib.Path, compiler: pathlib.Path) -> None:
+    readelf = compiler.with_name("riscv32-esp-elf-readelf")
+    if not readelf.is_file():
+        raise PackageError(f"required ELF inspector is missing: {readelf}")
+    inspected = subprocess.run(
+        [str(readelf), "--wide", "--symbols", str(path)],
+        check=True,
+        text=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    undefined: set[str] = set()
+    for line in inspected.stdout.splitlines():
+        fields = line.split()
+        if "UND" not in fields or not fields or fields[-1] == "UND":
+            continue
+        undefined.add(fields[-1].split("@", 1)[0])
+    unsupported = sorted(undefined - ALLOWED_UNDEFINED_SYMBOLS)
+    if unsupported:
+        raise PackageError(
+            "ELF imports unsupported runtime symbols: " + ", ".join(unsupported)
+        )
 
 
 def text_field(manifest: dict[str, Any], key: str, width: int) -> bytes:
@@ -181,6 +209,7 @@ def build_elf(
             ],
             check=True,
         )
+        validate_elf_imports(output, compiler)
         return output.read_bytes()
 
 

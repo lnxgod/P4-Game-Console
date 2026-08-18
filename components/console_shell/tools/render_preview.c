@@ -94,16 +94,20 @@ static bool select_page(console_shell_t *shell, const char *name)
 
 static bool write_ppm(const char *path, const uint16_t *pixels)
 {
+    const unsigned scale = CONSOLE_SHELL_WIDTH ==
+        CONSOLE_SHELL_LAYOUT_WIDTH ? 2U : 1U;
     FILE *const output = fopen(path, "wb");
     if (output == NULL) {
         return false;
     }
-    if (fprintf(output, "P6\n640 400\n255\n") < 0) {
+    if (fprintf(output, "P6\n%u %u\n255\n",
+                (unsigned)CONSOLE_SHELL_WIDTH * scale,
+                (unsigned)CONSOLE_SHELL_HEIGHT * scale) < 0) {
         (void)fclose(output);
         return false;
     }
     for (size_t y = 0U; y < CONSOLE_SHELL_HEIGHT; ++y) {
-        for (unsigned duplicate_y = 0U; duplicate_y < 2U; ++duplicate_y) {
+        for (unsigned duplicate_y = 0U; duplicate_y < scale; ++duplicate_y) {
             for (size_t x = 0U; x < CONSOLE_SHELL_WIDTH; ++x) {
                 const uint16_t pixel = pixels[y * CONSOLE_SHELL_WIDTH + x];
                 const unsigned red5 = (unsigned)((pixel >> 11U) & UINT16_C(0x1F));
@@ -112,7 +116,8 @@ static bool write_ppm(const char *path, const uint16_t *pixels)
                 const unsigned red = (red5 * 255U + 15U) / 31U;
                 const unsigned green = (green6 * 255U + 31U) / 63U;
                 const unsigned blue = (blue5 * 255U + 15U) / 31U;
-                for (unsigned duplicate_x = 0U; duplicate_x < 2U; ++duplicate_x) {
+                for (unsigned duplicate_x = 0U;
+                     duplicate_x < scale; ++duplicate_x) {
                     if (fputc((int)red, output) == EOF ||
                         fputc((int)green, output) == EOF ||
                         fputc((int)blue, output) == EOF) {
@@ -150,6 +155,9 @@ int main(int argc, char **argv)
         .game_storage_state = CONSOLE_STORAGE_READY,
         .touch_ready = true,
         .audio_handoff_ready = true,
+        .boot_volume_step = 3U,
+        .game_volume_step = 8U,
+        .audio_settings_persistent = true,
         .doom_wad_ready = true,
     };
     console_shell_set_runtime_info(&shell, &runtime);

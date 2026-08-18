@@ -346,7 +346,10 @@ static bool game_render(p4_game_context_t *context,
     p4_draw_rect(surface, 12, 24, 296, 28, UINT16_C(0xFFFF));
     char value[16];
     (void)p4_calculator_format(state, value, sizeof(value));
-    const size_t length = strlen(value);
+    size_t length = 0U;
+    while (length < sizeof(value) && value[length] != '\0') {
+        ++length;
+    }
     const int value_x = 296 - (int)length * 12;
     p4_draw_text(surface, value_x, 31, value,
                  state->error ? UINT16_C(0xF800) : UINT16_C(0xFFFF),

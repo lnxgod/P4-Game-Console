@@ -79,6 +79,14 @@ static void test_name_validation(void)
     CHECK(!game_storage_files_root_name_valid("BAD\nNAME"));
     CHECK(game_storage_files_root_name_valid("DOOM1.WAD"));
     CHECK(game_storage_files_root_name_valid(".fseventsd"));
+    CHECK(game_storage_files_relative_path_valid(""));
+    CHECK(game_storage_files_relative_path_valid("GAMES/ARCADE"));
+    CHECK(!game_storage_files_relative_path_valid(NULL));
+    CHECK(!game_storage_files_relative_path_valid("/GAMES"));
+    CHECK(!game_storage_files_relative_path_valid("GAMES/"));
+    CHECK(!game_storage_files_relative_path_valid("GAMES//ARCADE"));
+    CHECK(!game_storage_files_relative_path_valid("GAMES/../SAVES"));
+    CHECK(!game_storage_files_relative_path_valid("GAMES\\ARCADE"));
 
     char unterminated[PLATFORM_GAME_STORAGE_FILE_NAME_MAX_BYTES];
     memset(unterminated, 'A', sizeof(unterminated));
@@ -100,6 +108,7 @@ static void test_listing_and_removal(void)
     char folder[TEST_PATH_BYTES];
     CHECK(compose(folder, root, "FOLDER"));
     CHECK(mkdir(folder, 0700) == 0);
+    CHECK(make_file(folder, "NESTED.TXT", "inside"));
 
     platform_game_storage_file_listing_t listing;
     CHECK(game_storage_files_list_root(root, &listing) == 0);
@@ -107,9 +116,9 @@ static void test_listing_and_removal(void)
     CHECK(listing.entry_count == 3U);
     CHECK(listing.hidden_entries == 1U);
     CHECK(listing.omitted_entries == 0U);
-    CHECK(strcmp(listing.entries[0].name, "A.TXT") == 0);
-    CHECK(strcmp(listing.entries[1].name, "B.WAD") == 0);
-    CHECK(strcmp(listing.entries[2].name, "FOLDER") == 0);
+    CHECK(strcmp(listing.entries[0].name, "FOLDER") == 0);
+    CHECK(strcmp(listing.entries[1].name, "A.TXT") == 0);
+    CHECK(strcmp(listing.entries[2].name, "B.WAD") == 0);
     const platform_game_storage_file_entry_t *const a =
         find_entry(&listing, "A.TXT");
     const platform_game_storage_file_entry_t *const directory =
@@ -118,6 +127,19 @@ static void test_listing_and_removal(void)
     CHECK(find_entry(&listing, ".hidden") == NULL);
     CHECK(directory != NULL && directory->is_directory &&
           directory->size_bytes == 0U);
+
+    CHECK(game_storage_files_list_directory(
+              root, "FOLDER", &listing) == 0);
+    CHECK(listing.total_entries == 1U);
+    CHECK(listing.entry_count == 1U);
+    CHECK(strcmp(listing.entries[0].name, "NESTED.TXT") == 0);
+    CHECK(listing.entries[0].size_bytes == 6U);
+    CHECK(game_storage_files_list_directory(
+              root, "../FOLDER", &listing) == EINVAL);
+    CHECK(game_storage_files_remove_file(
+              root, "FOLDER", "../A.TXT") == EINVAL);
+    CHECK(game_storage_files_remove_file(
+              root, "FOLDER", "NESTED.TXT") == 0);
 
     CHECK(game_storage_files_remove_root_file(root, "../A.TXT") == EINVAL);
     CHECK(game_storage_files_remove_root_file(root, "FOLDER") == EISDIR);
@@ -138,8 +160,13 @@ static void test_listing_and_removal(void)
     CHECK(listing.hidden_entries == 1U);
     CHECK(listing.omitted_entries == 5U);
     for (size_t i = 1U; i < listing.entry_count; ++i) {
-        CHECK(strcmp(listing.entries[i - 1U].name,
-                     listing.entries[i].name) < 0);
+        const platform_game_storage_file_entry_t *const previous =
+            &listing.entries[i - 1U];
+        const platform_game_storage_file_entry_t *const current =
+            &listing.entries[i];
+        CHECK((previous->is_directory && !current->is_directory) ||
+              (previous->is_directory == current->is_directory &&
+               strcmp(previous->name, current->name) < 0));
     }
 
     for (unsigned i = 0U;

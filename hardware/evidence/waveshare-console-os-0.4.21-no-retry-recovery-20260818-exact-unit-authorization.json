@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-18T05:24:49-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-0.4.21-no-retry-recovery",
+  "operator_direction": "Recover the bound Waveshare 4.3 from the revoked 0.4.20 boot loop by installing the verified 0.4.21 controller-first image with the original locked external-port source and automatic downstream enumeration retries disabled. Reuse the existing factory backup; write only the primary application and do not touch the microSD.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART",
+    "h2": "operator-attested externally powered USB-C hub with power input",
+    "firmware_vbus_source": false,
+    "electrical_qualification_claimed": false,
+    "scope": "recovery to stable controller-first hot-plug behavior"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "ota_data": {
+      "offset": "0x10000",
+      "bytes": 8192,
+      "live_policy": "mutable boot-selection state; preserve without writing"
+    }
+  },
+  "predecessor": {
+    "offset": "0x20000",
+    "version": "0.4.20-revoked-downstream-retry-race-boot-loop",
+    "bytes": 1182688,
+    "sha256": "4bddc11758770c7bc55a0446f352635c08e52e70cf8ddbafa1deb6513322655f",
+    "digest_observed_before_authorization": true,
+    "failure_record": "hardware/test-runs/2026-08-18-waveshare-console-os-0.4.20-h2-downstream-retry-race-boot-loop.json"
+  },
+  "candidate": {
+    "source_base_commit": "29e49a35d179f7bcc13058004811b8a0d07aa593",
+    "tracked_diff_sha256": "3506750ebf3ca229d65cf0a343ad1d7a5477fe24b48e5c836b4cc79c08b91c27",
+    "tracked_diff_bytes": 618747,
+    "version": "0.4.21",
+    "build_id": "29e49a35d179",
+    "build_directory": "apps/console_os/build-waveshare-usb-host",
+    "build_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+      "bytes": 1182304,
+      "sha256": "b9914eb9c84dbb04a49bb44db1d03593c48a589f26286f3647d3333ad17ae135",
+      "action": "write-and-on-device-digest-verify"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.elf",
+      "bytes": 14651632,
+      "sha256": "3f73d5cbf06e5c2b16bcc7a0b99c82f58280a92cf24ed433ac717393a0b7f916"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-usb-host/P4UPDATE.P4U",
+      "bytes": 1182560,
+      "sha256": "49c8a04ee8a864e16997945767f7a59ba9de905c33618ea11b3d1c8dbdc7f67e"
+    },
+    "official_logo": {
+      "source_url": "https://www.gamechangersai.org/assets/gamechangers-128.png",
+      "path": "apps/console_os/main/assets/gamechangers_ai_logo.rgb565",
+      "bytes": 25088,
+      "sha256": "48ee7b2a15a744547884ec6ea7f462277ab60e5dde4d0805bf39db9c0b2bd892"
+    },
+    "usb_source": {
+      "path": "apps/console_os/managed_components/espressif__usb/src/ext_port.c",
+      "bytes": 49731,
+      "sha256": "0760b3c8ef14813db621b66c19d27caea5391793c592ca480b6ce18121797736",
+      "compiled_directly": true,
+      "automatic_enum_retry_attempts": 0
+    },
+    "locks": {
+      "esp_idf": "5.5.3",
+      "espressif_usb": "1.5.0",
+      "usb_host_hid": "1.2.0",
+      "esp_tinyusb": "2.0.1"
+    },
+    "recovery_contract": [
+      "compile the original manifest-verified espressif/usb 1.5.0 external-port source directly",
+      "contain none of the revoked 0.4.20 downstream retry markers or behavior",
+      "set automatic downstream enumeration retries to zero",
+      "retain the 500 ms vendor port-reset recovery interval and full-speed-only H2 root policy",
+      "retain ordinary bounded HID hot-plug and immediate input neutralization on disconnect",
+      "retain the controller-first 32768-byte internal/DMA reserve, direct microSD mount, lazy MSC allocation, and mutually exclusive USB Drive transition",
+      "preserve the 768x480 BBS shell, official gamechangersai.org logo, boot audio at saved level 3, touch, dynamic SD games, and existing microSD contents"
+    ]
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_another_full_backup": false,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "verify_installed_bootloader_and_partition_table_before_write": true,
+    "preserve_live_ota_data_without_write": true,
+    "verify_installed_predecessor_application_before_write": true,
+    "write_only_primary_application": true,
+    "verify_application_on_device_after_write": true,
+    "format_sd_card": false,
+    "write_sd_card": false,
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "retained H1 UART reaches app_main and Console OS READY with no panic, assert, watchdog, boot loop, brownout, eager MSC allocation failure, or fatal display halt",
+    "the exact app version is 0.4.21 and the dynamic microSD catalog reaches ready",
+    "the powered hub uses the full-speed root route; the known low-speed child may fail CHECK_SHORT_DEV_DESC and remain unsupported",
+    "no P4_EXT_PORT_ENUM_RETRY marker, hub control-pipe ESP_ERR_INVALID_STATE, or usbh_dev_close assertion occurs",
+    "ordinary Host/HID hot-plug remains initialized and USB Drive remains available for later manual acceptance"
+  ]
+}

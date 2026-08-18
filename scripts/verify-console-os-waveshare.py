@@ -18,9 +18,18 @@ APP = ROOT / "apps/console_os"
 DEFAULT_BUILD = APP / "build-waveshare-landscape"
 WAD_BYTES = 4_196_020
 WAD_SHA256 = "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
-LOGO_BYTES = 25_628
-LOGO_SHA256 = "6f3963e2d3182eadacbf0ac4397b719578395bff894bb00c07ca65849c9e570f"
+LOGO_BYTES = 25_088
+LOGO_SHA256 = "48ee7b2a15a744547884ec6ea7f462277ab60e5dde4d0805bf39db9c0b2bd892"
 P4CART_SEED = pathlib.Path("P4/GAMES/BOUNCE-LAB.P4CART")
+EXT_PORT_UPSTREAM_BYTES = 49_731
+EXT_PORT_UPSTREAM_SHA256 = "0760b3c8ef14813db621b66c19d27caea5391793c592ca480b6ce18121797736"
+EXT_PORT_SERIALIZED_BYTES = 53_413
+EXT_PORT_SERIALIZED_SHA256 = "6373859f47cd6cb88877186ebd915d8d31f442cfd13f27da814e524ec43355ee"
+HCD_UPSTREAM_BYTES = 116_968
+HCD_UPSTREAM_SHA256 = "de0471a749547c7d295af0fe2e3e5b61d1eedf46d88c5b57cf20cec202d6c749"
+HCD_FSLS_BYTES = 120_226
+HCD_FSLS_SHA256 = "c71577cbdcc808828216940671be511a074f51fcd88e4f24ef0948d8aebabb8a"
+HUB_UPSTREAM_SHA256 = "2d7c79c8508f63be6b0243178eafae2351f4e4643a87d9cdc73e980b95985afe"
 
 
 def require(condition: bool, message: str) -> None:
@@ -40,6 +49,49 @@ def sha256(path: pathlib.Path) -> str:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
     return digest.hexdigest()
+
+
+def verify_managed_component_integrity(
+    directory_name: str, expected_component_hash: str
+) -> None:
+    """Reject local edits or extra source files in one locked component."""
+    component = APP / "managed_components" / directory_name
+    require(component.is_dir(), f"missing managed component {directory_name}")
+    component_hash = component / ".component_hash"
+    require(component_hash.is_file() and
+            component_hash.read_text(encoding="utf-8").strip() ==
+            expected_component_hash,
+            f"{directory_name} component hash differs from the lock")
+
+    checksums = read_json(component / "CHECKSUMS.json")
+    require(checksums.get("algorithm") == "sha256" and
+            isinstance(checksums.get("files"), list),
+            f"{directory_name} checksum manifest is invalid")
+    listed: set[str] = set()
+    for entry in checksums["files"]:
+        require(isinstance(entry, dict) and
+                isinstance(entry.get("path"), str) and
+                isinstance(entry.get("size"), int) and
+                isinstance(entry.get("hash"), str),
+                f"{directory_name} checksum entry is invalid")
+        relative = pathlib.PurePosixPath(entry["path"])
+        require(not relative.is_absolute() and ".." not in relative.parts,
+                f"{directory_name} checksum path is unsafe")
+        listed.add(relative.as_posix())
+        path = component.joinpath(*relative.parts)
+        require(path.is_file() and path.stat().st_size == entry["size"] and
+                sha256(path) == entry["hash"],
+                f"{directory_name}/{relative} differs from the locked package")
+
+    for source_root in ("src", "include", "private_include"):
+        root = component / source_root
+        if not root.is_dir():
+            continue
+        for path in root.rglob("*"):
+            if path.is_file():
+                relative = path.relative_to(component).as_posix()
+                require(relative in listed,
+                        f"{directory_name} has unmanifested source {relative}")
 
 
 def c_string(field: bytes, label: str) -> str:
@@ -76,6 +128,25 @@ def verify_game(path: pathlib.Path, manifest: dict) -> dict[str, object]:
     require(c_string(package[208:224], f"{path.name} version") == manifest["version"],
             f"{path.name} version differs")
     require(not any(package[240:256]), f"{path.name} reserved bytes differ")
+    return {"file": path.name, "bytes": len(package), "sha256": sha256(path)}
+
+
+def verify_game_resource(path: pathlib.Path, manifest: dict) -> dict[str, object]:
+    package = path.read_bytes()
+    require(128 < len(package) <= 8 * 1024 * 1024,
+            f"{path.name} size is invalid")
+    require(package[:8] == b"P4RES01\0", f"{path.name} magic differs")
+    header, total, offset, payload, version, flags = struct.unpack_from(
+        "<6I", package, 8
+    )
+    require(header == offset == 128 and total == len(package) and
+            payload == len(package) - offset and version == 1 and flags == 0,
+            f"{path.name} layout differs")
+    require(package[32:64] == hashlib.sha256(package[offset:]).digest(),
+            f"{path.name} payload digest differs")
+    require(c_string(package[64:112], f"{path.name} game ID") == manifest["id"],
+            f"{path.name} game ID differs")
+    require(not any(package[112:128]), f"{path.name} reserved bytes differ")
     return {"file": path.name, "bytes": len(package), "sha256": sha256(path)}
 
 
@@ -145,12 +216,25 @@ def main() -> None:
         ("espressif/esp_lcd_st7701", "1.1.2"),
         ("espressif/esp_lcd_touch", "1.1.2"),
         ("espressif/esp_lcd_touch_gt911", "1.1.3"),
+        ("espressif/esp_tinyusb", "2.0.1"),
+        ("espressif/tinyusb", "0.21.0~1"),
+        ("espressif/usb", "1.5.0"),
+        ("espressif/usb_host_hid", "1.2.0"),
         ("idf", "5.5.3"),
     ):
         require(re.search(
             rf"(?ms)^  {re.escape(component)}:.*?^    version: "
             rf"{re.escape(version)}$", lock) is not None,
             f"dependency lock is missing {component} {version}")
+    usb_hash_match = re.search(
+        r"(?ms)^  espressif/usb:.*?^    component_hash: ([0-9a-f]{64})$",
+        lock,
+    )
+    require(usb_hash_match is not None,
+            "dependency lock is missing the espressif/usb component hash")
+    verify_managed_component_integrity(
+        "espressif__usb", usb_hash_match.group(1)
+    )
 
     profile = read_json(
         ROOT / "hardware/board-profiles/waveshare-esp32-p4-wifi6-touch-lcd-4.3.json"
@@ -158,12 +242,24 @@ def main() -> None:
     storage = profile["peripheral_authorizations"]["storage"]
     require(storage.get("authorized") is True and
             storage.get("formatting_authorized") is False and
-            storage.get("writes_authorized") is False,
-            "microSD contract must remain exact-unit read-only")
+            storage.get("writes_authorized") is True and
+            "exclusive H2 USB-device MSC" in storage.get("scope", ""),
+            "microSD contract must retain exact-unit exclusive H2 MSC writes")
+    require(profile["usb_vbus_assessment"].get("device_mode_authorized") is True,
+            "H2 sink/device authorization is missing")
     require(profile["usb_vbus_assessment"]["controller_host_power_ready"] is False,
             "USB host power gate changed")
 
     sdkconfig = (build / "config/sdkconfig.h").read_text(encoding="utf-8")
+    usb_host_image = (
+        "#define CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE 1" in sdkconfig
+    )
+    retry_match = re.search(
+        r"^#define CONFIG_P4_USB_HOST_EXT_PORT_ENUM_RETRY_ATTEMPTS (\d+)$",
+        sdkconfig,
+        re.MULTILINE,
+    )
+    retry_attempts = int(retry_match.group(1)) if retry_match else 0
     for setting in (
         "CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3",
         "CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3",
@@ -177,6 +273,31 @@ def main() -> None:
                 f"build is missing {setting}")
     require("CONFIG_ELF_LOADER_ESPIDF_SYMBOLS" not in sdkconfig,
             "cartridges must not resolve arbitrary ESP-IDF symbols")
+    if usb_host_image:
+        require("#define CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL 32768" in
+                sdkconfig,
+                "controller-first image must retain a bootable 32 KiB internal/DMA reserve")
+        require("#define CONFIG_TINYUSB_MSC_ENABLED 1" in sdkconfig,
+                "controller-first image must link the USB Drive MSC app")
+        require("#define CONFIG_P4_WAVESHARE_H2_RUNTIME_ROLE_SWITCH 1" in
+                sdkconfig,
+                "controller-first image is missing the guarded H2 role switch")
+        require("#define CONFIG_USB_HOST_HUBS_SUPPORTED 1" in sdkconfig,
+                "USB-host image is missing external hub support")
+        require("#define CONFIG_P4_WAVESHARE_H2_FORCE_FULL_SPEED_HOST 1" in
+                sdkconfig,
+                "USB-host image must avoid the unsupported HS-hub TT path")
+        require("#define CONFIG_USB_HOST_EXT_PORT_RESET_ATTEMPTS 1" in
+                sdkconfig,
+                "controller-first image must retain the pinned port-reset default")
+        require("#define CONFIG_USB_HOST_EXT_PORT_RESET_RECOVERY_DELAY_MS 500" in
+                sdkconfig,
+                "controller-first image must allow slow HID reset recovery")
+        require(retry_attempts in (0, 2),
+                "controller-first retry budget must be stable zero or guarded two")
+    else:
+        require("#define CONFIG_TINYUSB_MSC_ENABLED 1" in sdkconfig,
+                "H2 device image is missing TinyUSB MSC")
 
     project = read_json(build / "project_description.json")
     require(project.get("project_name") == "p4_console_os" and
@@ -189,12 +310,19 @@ def main() -> None:
         "board_deps_waveshare", "console_shell", "p4_desktop",
         "p4_content_catalog", "p4_game_api", "p4_multiplayer",
         "platform_board", "platform_display", "platform_touch",
+        "platform_console_settings",
         "platform_game_catalog", "platform_game_loader",
         "platform_game_storage", "platform_os_update",
+        "espressif__esp_tinyusb", "espressif__tinyusb",
     }
     require(required_components <= components, "required component missing")
-    require(not ({"platform_usb_host", "platform_gamepad_usb"} & components),
-            "USB host components must remain absent")
+    require({"gamepad_core", "platform_usb_host", "platform_gamepad_usb"}
+            <= components,
+            "role-selectable Waveshare input components are missing")
+    if usb_host_image:
+        require(not ({"espressif__esp_hosted", "espressif__esp_wifi_remote",
+                      "platform_signal_scan"} & components),
+                "controller-first image must not autostart the unqualified Wi-Fi/SDIO path")
     require(not ({"asteroids", "byte_buddy", "maze_chase", "space_invaders"} & components),
             "games were linked statically into the OS")
 
@@ -229,6 +357,134 @@ def main() -> None:
     app = build / str(project["app_bin"])
     require(app.is_file() and app.stat().st_size <= 0x7F0000,
             "application is missing or does not fit OTA")
+    app_data = app.read_bytes()
+    for forbidden in (
+        b"TT pipe hub=",
+        b"through HS hub transaction translator",
+        b"Invalid transaction translator route",
+    ):
+        require(forbidden not in app_data,
+                "application contains experimental USB TT scheduler code")
+    if usb_host_image:
+        for marker in (
+            b"msc_storage=lazy",
+            b"MSC_STORAGE_READY allocation=on-demand",
+            b"BOOT_FRAME_RETRY",
+            b"backlight_preserved=1",
+        ):
+            require(marker in app_data,
+                    f"controller-first recovery marker is missing: {marker!r}")
+        ninja = (build / "build.ninja").read_text(encoding="utf-8")
+        ext_port_compile_lines = [
+            line for line in ninja.splitlines()
+            if line.startswith("build ") and "ext_port.c.obj" in line and
+            ": C_COMPILER" in line
+        ]
+        hcd_compile_lines = [
+            line for line in ninja.splitlines()
+            if line.startswith("build ") and "hcd_dwc.c.obj" in line and
+            ": C_COMPILER" in line
+        ]
+        hub_compile_lines = [
+            line for line in ninja.splitlines()
+            if line.startswith("build ") and "src/hub.c.obj" in line and
+            ": C_COMPILER" in line
+        ]
+        require(len(hub_compile_lines) == 1 and
+                "managed_components/espressif__usb/src/hub.c" in
+                hub_compile_lines[0],
+                "controller-first image changed the locked hub scheduler source")
+        hub_source = APP / "managed_components/espressif__usb/src/hub.c"
+        require(sha256(hub_source) == HUB_UPSTREAM_SHA256,
+                "locked hub scheduler hash differs")
+        upstream_ext_port = (
+            APP / "managed_components/espressif__usb/src/ext_port.c"
+        )
+        require(upstream_ext_port.stat().st_size == EXT_PORT_UPSTREAM_BYTES and
+                sha256(upstream_ext_port) == EXT_PORT_UPSTREAM_SHA256,
+                "locked external-port source differs")
+        upstream_hcd = (
+            APP / "managed_components/espressif__usb/src/hcd_dwc.c"
+        )
+        require(upstream_hcd.stat().st_size == HCD_UPSTREAM_BYTES and
+                sha256(upstream_hcd) == HCD_UPSTREAM_SHA256,
+                "locked HCD source differs")
+        generated_hcd = (
+            build / "generated/espressif-usb-1.5.0/hcd_dwc.c"
+        )
+        require(generated_hcd.is_file() and
+                generated_hcd.stat().st_size == HCD_FSLS_BYTES and
+                sha256(generated_hcd) == HCD_FSLS_SHA256,
+                "guarded HCD FS/LS overlay differs")
+        check_hcd_overlay = subprocess.run(
+            [sys.executable,
+             str(ROOT / "scripts/generate-espressif-usb-hcd-fsls-overlay.py"),
+             "--input", str(upstream_hcd),
+             "--output", str(generated_hcd), "--check-output"],
+            check=False, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        require(check_hcd_overlay.returncode == 0,
+                "HCD FS/LS overlay does not reproduce from locked input")
+        require(len(hcd_compile_lines) == 1 and
+                "generated/espressif-usb-1.5.0/hcd_dwc.c" in
+                hcd_compile_lines[0] and
+                "managed_components/espressif__usb/src/hcd_dwc.c" not in
+                hcd_compile_lines[0],
+                "controller-first image did not compile exactly one guarded hcd_dwc.c")
+        for marker in (
+            b"P4_HS_FSLS_ROOT_READY reset=reapplied",
+            b"frame_interval=%u raw_speed=%u effective_speed=%u",
+        ):
+            require(marker in app_data,
+                    f"guarded HCD marker is missing: {marker!r}")
+        if retry_attempts == 0:
+            require(len(ext_port_compile_lines) == 1 and
+                    "managed_components/espressif__usb/src/ext_port.c" in
+                    ext_port_compile_lines[0],
+                    "stable image did not compile exactly one locked ext_port.c")
+            for forbidden in (
+                b"P4_EXT_PORT_ENUM_RETRY",
+                b"P4_EXT_PORT_ENUM_RETRY_EXHAUSTED",
+                b"P4_EXT_PORT_ENUM_RECOVERED",
+            ):
+                require(forbidden not in app_data,
+                        f"retry marker remains in stable image: {forbidden!r}")
+        else:
+            generated = (
+                build / "generated/espressif-usb-1.5.0/ext_port.c"
+            )
+            require(generated.is_file() and
+                    generated.stat().st_size == EXT_PORT_SERIALIZED_BYTES and
+                    sha256(generated) == EXT_PORT_SERIALIZED_SHA256,
+                    "serialized external-port overlay differs")
+            check_overlay = subprocess.run(
+                [sys.executable,
+                 str(ROOT / "scripts/generate-espressif-usb-ext-port-overlay.py"),
+                 "--input", str(upstream_ext_port),
+                 "--output", str(generated), "--check-output"],
+                check=False, text=True,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+            )
+            require(check_overlay.returncode == 0,
+                    "serialized overlay does not reproduce from locked input")
+            require(len(ext_port_compile_lines) == 1 and
+                    "generated/espressif-usb-1.5.0/ext_port.c" in
+                    ext_port_compile_lines[0] and
+                    "managed_components/espressif__usb/src/ext_port.c" not in
+                    ext_port_compile_lines[0],
+                    "guarded image did not compile exactly one generated ext_port.c")
+            for marker in (
+                b"P4_EXT_PORT_ENUM_RETRY_SERIALIZED",
+                b"P4_EXT_PORT_ENUM_RETRY_SUPPRESSED",
+                b"P4_EXT_PORT_ENUM_RETRY_EXHAUSTED",
+                b"P4_EXT_PORT_ENUM_RECOVERED",
+                b"P4_CONSOLE_OS USB_ENUM_GUARD state=",
+            ):
+                require(marker in app_data,
+                        f"guarded retry marker is missing: {marker!r}")
+            require(b"P4_EXT_PORT_ENUM_RETRY Port" not in app_data,
+                    "revoked 0.4.20 immediate retry marker returned")
     bundle = build / "sd-card"
     require(sorted(item.name for item in bundle.iterdir()) ==
             ["DOOM1.WAD", "GAMES", "P4", "README.TXT", "UPDATE"],
@@ -250,10 +506,92 @@ def main() -> None:
         '"microsd-games-directory" : "microsd-root-compat"',
         "static console_shell_t s_shell",
         "static platform_game_catalog_t s_catalog_staging",
-        "P4_CONSOLE_OS MAIN_STACK stage=storage-ready",
+        "P4_CONSOLE_OS BOOT_SCREEN status=visible",
+        "P4_CONSOLE_OS STORAGE_INIT_BEGIN mode=background",
+        "P4_CONSOLE_OS LOADING_SCREEN status=%s",
+        "P4_CONSOLE_OS BOOT_POST status=%s",
+        "P4_CONSOLE_OS BOOT_HDD status=%s",
+        "P4_CONSOLE_OS BOOT_DIAL status=%s digits=614-276-3639",
+        "P4_CONSOLE_OS BOOT_MODEM status=%s profile=v22bis-2400",
+        "P4_CONSOLE_OS BOOT_MODEM_PHASE index=%u name=%s",
+        "DIALING 614-276-3639",
+        "V.22BIS 2400 BAUD",
+        '"calling-tone", 1300U, 0U, 180U, 90U',
+        '"answer-tone", 2100U, 0U, 260U, 30U',
+        '"00-11-training", 1200U, 2400U, 140U, 24U',
+        '"2400-bps-scrambled-ones", 1200U, 2400U, 260U, 24U',
+        '"seek-1", 105U, 2700U, 34U, 72U',
+        'elapsed_ms=%" PRIi64',
+        "READING SD CARD",
+        "P4_CONSOLE_OS MAIN_STACK stage=core-ready",
+        "game_storage_init_worker",
+        "wait_for_game_storage_with_boot_animation",
         "P4CART_SCAN_BEGIN", "P4CART_READY",
+        "CONSOLE_APP_USB_DRIVE", "CONSOLE_PAGE_USB_DRIVE",
+        "stop_usb_input_for_role_switch",
+        "P4_CONSOLE_OS USB_ROLE_STOPPED",
+        "p4_usb_ext_port_enum_retry_allowed",
+        "p4_usb_hs_fsls_reapply_allowed",
+        "begin_usb_enum_probe_or_suppress",
+        "confirm_usb_enum_probe_after_stable_runtime",
+        "P4_CONSOLE_OS USB_ENUM_GUARD state=%s",
     ):
         require(token in source, f"firmware source is missing {token}")
+    for forbidden in (
+        "recover_usb_input_after_cold_boot",
+        "P4_CONSOLE_OS USB_ENUM_RECOVERY_BEGIN",
+        "P4_CONSOLE_OS USB_ENUM_RECOVERY_SUCCESS",
+        "P4_CONSOLE_OS USB_ENUM_RECOVERY_EXHAUSTED",
+    ):
+        require(forbidden not in source,
+                f"obsolete app-level USB recovery remains in firmware source: {forbidden}")
+    usb_host_source = (ROOT / "components/platform_usb_host/src/"
+                       "platform_usb_host.c").read_text(encoding="utf-8")
+    require("usb_dwc_ll_hcfg_set_fsls_supp_only(&USB_DWC_HS)" in
+            usb_host_source and
+            "USB_HOST_SPEED_POLICY root=full-speed-only" in usb_host_source and
+            "reason=no-hs-hub-tt-scheduler" in usb_host_source,
+            "Waveshare host speed policy no longer avoids the TT path")
+    app_main = source.split("void app_main(void)", 1)[1]
+    require(app_main.index("present_boot_screen(0U, \"STARTING...\")") <
+            app_main.index("start_game_storage_initialization()") <
+            app_main.index("play_boot_chime()"),
+            "storage or boot dialing starts before the official boot frame")
+    require(app_main.index("play_boot_chime()") <
+            app_main.index("begin_usb_enum_probe_or_suppress()") <
+            app_main.index("create_usb_input_or_continue()") <
+            app_main.index("create_touch_or_continue()"),
+            "USB recovery guard, controller host, or touch startup is misordered")
+    require(app_main.index("create_touch_or_continue()") <
+            app_main.index("wait_for_game_storage_with_boot_animation()") <
+            app_main.index("present(shell)"),
+            "interactive launcher does not wait for terminal storage state")
+    settings_source = (ROOT / "components/platform_console_settings/src/"
+                       "platform_console_settings.c").read_text(encoding="utf-8")
+    settings_header = (ROOT / "components/platform_console_settings/include/"
+                       "platform/console_settings.h").read_text(encoding="utf-8")
+    require("PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT = 3" in settings_header and
+            "PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT = 3" in settings_header and
+            'SETTINGS_NAMESPACE = "p4_console"' in settings_source and
+            'USB_ENUM_PROBE_KEY = "usb_enum_probe"' in settings_source and
+            "nvs_commit(handle)" in settings_source and
+            "platform_console_settings_begin_usb_enum_probe" in
+                settings_source and
+            "platform_console_settings_confirm_usb_enum_probe" in
+                settings_source and
+            "platform_console_settings_init(&s_console_settings)" in source and
+            "CONSOLE_BOOT_POST_BEEP_MS = 220" in source and
+            "CONSOLE_BOOT_POST_GAP_MS = 180" in source and
+            "CONSOLE_BOOT_DTMF_TONE_MS = 160" in source and
+            "CONSOLE_BOOT_DTMF_GAP_MS = 90" in source and
+            "CONSOLE_BOOT_DTMF_DASH_MS = 220" in source and
+            "digit_tone_ms=%u digit_gap_ms=%u group_gap_ms=%u" in source,
+            "Console OS persistent audio panel or paced DTMF profile differs")
+    require("console_os_launch_doom(s_console_settings.game_volume_step)" in source,
+            "touch Doom handoff does not receive the OS master volume")
+    require("CONSOLE_P4CART_SCAN_STACK_BYTES = 24 * 1024" in source and
+            "worker_low_water_bytes=%u runtime=lua-pending" in source,
+            "legacy cart scan stack regression is not guarded")
     for token in (
         "_binary_bytebud_p4g_start",
         "platform_game_catalog_add_embedded_fallback",
@@ -267,6 +605,62 @@ def main() -> None:
             "firmware build still embeds a default cartridge")
     require("console_shell_t shell;" not in source,
             "large shell state must not live on the main task stack")
+    storage_source = (ROOT / "components/platform_game_storage/src/"
+                      "platform_game_storage.c").read_text(encoding="utf-8")
+    write_policy = (ROOT / "components/platform_game_storage/src/"
+                    "msc_write_policy.c").read_text(encoding="utf-8")
+    for token in (
+        "P4_GAME_STORAGE_USB_EXPORT",
+        "tinyusb_msc_new_storage_sdmmc",
+        "sdmmc_write_sectors",
+        "sdmmc_read_sectors",
+        "install_usb_driver",
+        "P4_GAME_STORAGE RECOVERY_EXPORT",
+        "GAME_STORAGE_SD_TRANSFER_BYTES = 4096",
+        "platform_game_storage_set_usb_mode",
+        "reason=host-not-ejected",
+        ".auto_mount_off = 1U",
+        "P4_GAME_STORAGE_RUNTIME_H2_SWITCH",
+        "P4_GAME_STORAGE_EAGER_USB_STORAGE",
+        "P4_GAME_STORAGE USB_DEVICE_DEFERRED",
+        "create_lazy_msc_storage",
+        "delete_lazy_msc_storage",
+        "MSC_STORAGE_READY allocation=on-demand",
+        "uninstall_usb_driver_if_running",
+    ):
+        require(token in storage_source,
+                f"Waveshare MSC storage source is missing {token}")
+    require("uint64_t byte_address" in storage_source and
+            "uint64_t *out_address" in write_policy and
+            "address > SIZE_MAX" not in write_policy,
+            "Waveshare MSC addressing is not safe above 4 GB")
+    require("10000U, 5000U, 1000U, 400U" in storage_source,
+            "Waveshare SD clock fallback ladder changed")
+    display_source = (ROOT / "components/platform_display/src/"
+                      "platform_display.c").read_text(encoding="utf-8")
+    require("if (s_pattern_active)" in display_source and
+            "backlight_preserved=1" in display_source and
+            "BOOT_FRAME_RETRY" in source,
+            "Waveshare display timeout recovery contract changed")
+    storage_cmake = (ROOT / "components/platform_game_storage/"
+                     "CMakeLists.txt").read_text(encoding="utf-8")
+    require("src/msc_write10_wrapper.c" in storage_cmake and
+            "--wrap=tud_msc_write10_cb" in storage_cmake and
+            "--wrap=tud_msc_start_stop_cb" in storage_cmake,
+            "Waveshare MSC writes/ejects are not routed through the platform")
+    installer = (ROOT / "scripts/install-olimex-sd-card.py").read_text(
+        encoding="utf-8")
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    require("require_waveshare_h2_fat32" in installer and
+            '"FilesystemType": "msdos"' in installer and
+            '"Content": "DOS_FAT_32"' in installer and
+            "--require-waveshare-h2-fat32" in makefile,
+            "Waveshare installer no longer enforces H2 FAT32 media")
+    package_builder = (ROOT / "scripts/build-game-package.py").read_text(
+        encoding="utf-8")
+    require("validate_elf_imports(output, compiler)" in package_builder and
+            "ALLOWED_UNDEFINED_SYMBOLS" in package_builder,
+            "P4G builder no longer rejects unsupported runtime imports")
 
     manifests = [
         read_json(path) for path in sorted((ROOT / "games").glob("*/game.json"))
@@ -276,10 +670,20 @@ def main() -> None:
         verify_game(bundle / "GAMES" / manifest["package_file"], manifest)
         for manifest in manifests
     ]
+    resource_reports = [
+        verify_game_resource(
+            bundle / "GAMES" / manifest["resource_file"], manifest
+        )
+        for manifest in manifests
+        if isinstance(manifest.get("resource_file"), str)
+    ]
     metadata = read_json(APP / "app-metadata.json")["native_game_api"]
     expected = metadata["seed_packages"]
     require([item["file"] for item in reports] == expected,
             "built cartridge list differs from app metadata")
+    require([item["file"] for item in resource_reports] ==
+            metadata.get("seed_resources", []),
+            "built resource sidecar list differs from app metadata")
     legacy = read_json(APP / "app-metadata.json")["legacy_p4cart"]
     require(legacy.get("format") == "p4-cart-source-v1" and
             legacy.get("game_manager_visible") is True and
@@ -288,13 +692,16 @@ def main() -> None:
             "legacy P4 Cart metadata differs")
     require(metadata.get("games_embedded_in_ota") is False and
             metadata.get("execution_source") ==
-                "microSD /GAMES/*.P4G; root *.P4G compatibility only",
+                "microSD /GAMES/*.P4G with optional same-name .P4R resources; root compatibility",
             "SD-only game execution policy differs")
-    app_data = app.read_bytes()
     for report in reports:
         package = bundle / "GAMES" / str(report["file"])
         require(package.read_bytes() not in app_data,
                 f"{package.name} leaked into the OTA application")
+    for report in resource_reports:
+        resource = bundle / "GAMES" / str(report["file"])
+        require(resource.read_bytes() not in app_data,
+                f"{resource.name} leaked into the OTA application")
 
     elf = build / str(project["app_elf"])
     compiler = pathlib.Path(str(project["c_compiler"]))
@@ -317,14 +724,16 @@ def main() -> None:
     print(json.dumps({
         "result": "waveshare-console-os-build-verified",
         "build": str(build),
+        "h2_role": "controller-first-runtime-switch" if usb_host_image else "usb-device-msc",
         "application": {"bytes": app.stat().st_size, "sha256": sha256(app)},
         "logo_sha256": LOGO_SHA256,
         "game_execution_source": "microSD-only",
         "games_embedded_in_ota": False,
         "games": reports,
+        "game_resources": resource_reports,
         "legacy_p4cart": p4cart,
         "update": update,
-        "storage_policy": "read-only-at-runtime; install bundle with powered-off card reader",
+        "storage_policy": "app-owned/controller-host by default; USB Drive app exclusively switches H2 to MSC; return requires host eject or disconnect; firmware never formats",
         "hardware_tested": False,
     }, sort_keys=True))
 

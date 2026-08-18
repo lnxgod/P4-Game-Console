@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "captured_at": "2026-08-17T23:31:43-0700",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip": "ESP32-P4",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+    "raw_identity_recorded": false
+  },
+  "operator_fixture_attestation": {
+    "h1": "Mac programming and retained UART connection",
+    "h2": "externally powered USB-C hub with power input and attached controller",
+    "firmware_vbus_source_enabled": false,
+    "electrical_measurements_captured": false,
+    "electrical_qualification_claimed": false
+  },
+  "candidate": {
+    "version": "0.4.13",
+    "build": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "application_offset": "0x20000",
+    "application_bytes": 1117152,
+    "application_sha256": "cb0684b5d851dc8f73a8afdd8d540374c2c79b850eee13bf0603691970450346",
+    "usb_host_component": "espressif/usb 1.5.0",
+    "hid_component": "espressif/usb_host_hid 1.2.0",
+    "external_hub_support": true,
+    "multi_level_hub_support": false,
+    "tinyusb_msc_enabled": false
+  },
+  "install": {
+    "write_scope": "primary application only",
+    "bootloader_written": false,
+    "partition_table_written": false,
+    "ota_data_written": false,
+    "sd_card_written": false,
+    "new_full_flash_backup_created": false,
+    "factory_backup_digest_verified": true,
+    "live_device_identity_verified": true,
+    "application_readback_verified": true,
+    "result": "pass"
+  },
+  "runtime": {
+    "p4_usb_host_started": true,
+    "root_port_enabled": true,
+    "topology": "waveshare-h2-self-powered-test",
+    "firmware_vbus_source": false,
+    "external_hub_enumerated": true,
+    "downstream_port": 2,
+    "downstream_device_speed": "low-speed",
+    "downstream_controller_enumerated_as_hid": false,
+    "gamepad_connected": false,
+    "usb_poll_failures": 0,
+    "console_os_ready": true,
+    "sd_catalog_packages": 12,
+    "panic_watchdog_or_brownout_observed": false,
+    "decisive_log": "Connected device is LS, transaction translator (TT) is not supported"
+  },
+  "verdict": {
+    "p4_native_h2_host_data_path": "observed working through external-hub enumeration",
+    "tested_hub_controller_path": "not usable with the pinned stack",
+    "cause": "the ESP32-P4 high-speed root sees a low-speed controller behind a high-speed hub, while espressif/usb 1.5.0 does not implement the required hub transaction translator path",
+    "immediate_controller_path": "use a powered, backfeed-safe fixture whose data pair connects the controller directly to H2 without a high-speed hub in the data path",
+    "long_term_path": "implement and qualify high-speed-hub TT/split transactions or select controller hardware that does not require that path"
+  }
+}

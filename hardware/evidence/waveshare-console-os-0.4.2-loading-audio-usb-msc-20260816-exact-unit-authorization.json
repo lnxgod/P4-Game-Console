@@ -1,0 +1,132 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-16T20:36:53-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-0.4.2-loading-audio-usb-msc-successor",
+  "operator_direction": "Keep the official loading screen visible until microSD initialization terminates, set Console OS and game audio to 10/10, expose the inserted card to macOS through H2, recover the confirmed corrupt exFAT card with one fresh P4GAMES format, and install every enabled game.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "ota_data": {
+      "offset": "0x10000",
+      "bytes": 8192,
+      "live_policy": "mutable boot-selection state; preserve without writing"
+    }
+  },
+  "predecessor": {
+    "offset": "0x20000",
+    "bytes": 1024816,
+    "sha256": "f5630d73c0bedd21714492a01335948bf8bb925dd27470363f6216c48295d867",
+    "install_digest_verified": true,
+    "test_record": null,
+    "manual_result": "official logo, loading screen through SD initialization, touch, 10/10 startup audio, and launcher boot passed; H2 enumerated as TEST MSC Storage; first host format exposed an 8 KiB WRITE(10) to SD transaction-size mismatch and was safely interrupted"
+  },
+  "candidate": {
+    "source_base_commit": "29e49a35d179f7bcc13058004811b8a0d07aa593",
+    "tracked_diff_sha256": "c37b93ac0884a8a62d81e8532cafcd878d0ef1406a2ab1cad949cb7cf1865391",
+    "tracked_files": [
+      "apps/console_os/CMakeLists.txt",
+      "apps/console_os/README.md",
+      "apps/console_os/app-metadata.json",
+      "apps/console_os/dependencies-waveshare.lock",
+      "apps/console_os/main/console_os_main.c",
+      "components/board_deps_waveshare/idf_component.yml",
+      "components/platform_game_storage/CMakeLists.txt",
+      "components/platform_game_storage/src/platform_game_storage.c",
+      "docs/CONSOLE_OS.md",
+      "docs/GAME_SDK.md",
+      "docs/WAVESHARE_P4_WIFI6_TOUCH_LCD_4_3_PORT.md",
+      "hardware/board-profiles/waveshare-esp32-p4-wifi6-touch-lcd-4.3.json",
+      "hardware/boards/console-os-port-contract.json",
+      "hardware/boards/waveshare-esp32-p4-wifi6-touch-lcd-4.3/sdkconfig.defaults",
+      "scripts/verify-console-os-waveshare.py"
+    ],
+    "version": "0.4.2",
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+      "bytes": 1036704,
+      "sha256": "ef9d9b2cfba97574d0ef534f990c54ba075ab8831ab43b9b1c7b8e2c7c3b4f5b",
+      "action": "write-and-on-device-digest-verify"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.elf",
+      "bytes": 12567596,
+      "sha256": "cad3fcbe7e760888a019d567fe4ffe039cf1dddcba4cabb263ab82ed303c911a"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-landscape/P4UPDATE.P4U",
+      "bytes": 1036960,
+      "sha256": "f3053a2d50d5c4bf684ae5b598198b49e5f9bcd9c240aab6856e33eb31485af4"
+    },
+    "official_logo": {
+      "path": "apps/console_os/main/assets/gamechangers_ai_logo.rgb565",
+      "bytes": 25628,
+      "sha256": "6f3963e2d3182eadacbf0ac4397b719578395bff894bb00c07ca65849c9e570f"
+    },
+    "sd_bundle": {
+      "path": "apps/console_os/build-waveshare-landscape/sd-card",
+      "enabled_p4g_packages": 12,
+      "install_target": "macOS-mounted H2 MSC volume",
+      "formatting": "one-time host recovery of verified corrupt exFAT"
+    },
+    "runtime_contract": [
+      "initialize the fixed 768x480 landscape viewport and submit the official logo first",
+      "play the original startup chord at codec and tone step 10/10",
+      "initialize touch after the startup chord",
+      "start microSD initialization under the animated branded loading screen",
+      "present Program Manager only after storage reports ready or degraded",
+      "pass the defined 10/10 master volume to native games and Doom",
+      "export microSD only through native H2 in USB sink/device mode",
+      "unmount app VFS before host ownership and remount after eject or disconnect",
+      "perform synchronous readback verification before acknowledging each host WRITE(10)",
+      "split host writes into DMA-safe SD transactions before readback verification",
+      "never format a card from firmware"
+    ]
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_another_full_backup": false,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "verify_installed_bootloader_and_partition_table_before_write": true,
+    "preserve_live_ota_data_without_write": true,
+    "verify_installed_predecessor_application_before_write": true,
+    "write_only_primary_application": true,
+    "verify_application_on_device_after_write": true,
+    "format_sd_card": true,
+    "write_sd_card": true,
+    "sd_write_route": "exclusive H2 USB-device MSC after successor boot; one-time macOS MBR/exFAT P4GAMES recovery then package copy",
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "official logo is the first useful frame and loading animation remains visible through storage initialization",
+    "startup chord is audibly louder at 10/10",
+    "STORAGE_INIT_BEGIN precedes LOADING_SCREEN complete and P4_CONSOLE_OS READY",
+    "H2 enumerates as a macOS mass-storage disk while H1 remains programming UART",
+    "macOS formats only the confirmed corrupt 32 GB H2 disk as MBR/exFAT P4GAMES, then the guarded SD installer copies and verifies all 12 P4G packages",
+    "clean host eject remounts the card and the launcher discovers all 12 packages",
+    "no panic, watchdog, display timeout, concurrent filesystem ownership, SD format, or failed verified host write occurs"
+  ]
+}

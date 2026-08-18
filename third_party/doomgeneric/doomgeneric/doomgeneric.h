@@ -32,6 +32,8 @@ extern "C" {
 
 void doomgeneric_Create(int argc, char **argv);
 void doomgeneric_Tick();
+void doomgeneric_RequestQuit(void);
+int doomgeneric_QuitRequested(void);
 
 
 //Implement below functions for your platform

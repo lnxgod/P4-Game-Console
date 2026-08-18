@@ -1,0 +1,93 @@
+{
+  "schema": 1,
+  "date": "2026-08-18",
+  "result": "FAIL",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "pcb_revision": null,
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART on /dev/cu.wchusbserial5C371865781",
+    "h2": "operator-attested externally powered USB-C hub with power input and an attached USB child",
+    "firmware_vbus_source": false,
+    "electrical_qualification_claimed": false
+  },
+  "artifact": {
+    "version": "0.4.19",
+    "application_offset": "0x20000",
+    "application_bytes": 1183760,
+    "application_sha256": "81f66f841413284c5d2015d67a94f0ee29d4f78c0b3e888c1aff5bced2532b6f",
+    "elf_bytes": 14654860,
+    "elf_sha256": "1fe3e8b9085aaa5a0445d7a538861f0bb6a8d571b063329a2bfffd41311c95f3"
+  },
+  "install": {
+    "preflight": "PASS",
+    "write_readback": "PASS",
+    "backup_created": false,
+    "bootloader_written": false,
+    "partition_table_written": false,
+    "ota_data_written": false,
+    "sd_card_written": false
+  },
+  "uart": {
+    "cold_boots_observed": 1,
+    "capture_seconds": 75,
+    "common_markers": [
+      "App version: 0.4.19",
+      "esp_psram: Reserving pool of 32K of internal memory for DMA/internal allocations",
+      "main_task: Calling app_main()",
+      "P4_GAME_STORAGE SD_READY frequency_khz=10000 fallback=0",
+      "USB_HOST_SPEED_POLICY root=full-speed-only max_mbit=12 reason=no-hs-hub-tt-scheduler",
+      "USB_HOST_READY controller=p4-hs peripheral=0 root_port_enabled=0 topology=waveshare-h2-self-powered-test physical_vbus_source=external firmware_vbus_source=0",
+      "GAMEPAD_USB_READY tier=generic-hid report_max=1024",
+      "USB_HOST_ROOT_PORT_ENABLED class_leases_present=1 integrated_hub=0",
+      "HCD DWC: Low-speed, extra delay will be applied in ISR",
+      "ENUM: Bad transfer status 1: CHECK_SHORT_DEV_DESC",
+      "EXT_PORT: Port2 disabled, reset attempts=1",
+      "P4_GAME_STORAGE USB_DEVICE_DEFERRED default_role=controller-host app=usb-drive msc_storage=lazy",
+      "P4_GAME_STORAGE READY backend=microSD",
+      "P4_CONSOLE_OS GAME_CATALOG available=1 packages=12 valid=12 omitted=0",
+      "P4_CONSOLE_OS READY page=home display=mipi-dsi storage=microsd-read-only removal=power-off-first h2_role=usb-host-external-vbus",
+      "P4_CONSOLE_OS USB_ENUM_RECOVERY_BEGIN attempt=1 max=2 reason=no-hid-after-cold-enumeration",
+      "USB_HOST_QUIESCING root_port_enabled=0",
+      "USB_HOST_STOPPED",
+      "P4_CONSOLE_OS USB_ENUM_RECOVERY_MISS attempt=1 stats=ESP_OK interfaces=0 connections=0",
+      "P4_CONSOLE_OS USB_ENUM_RECOVERY_BEGIN attempt=2 max=2 reason=no-hid-after-cold-enumeration",
+      "P4_CONSOLE_OS USB_ENUM_RECOVERY_MISS attempt=2 stats=ESP_OK interfaces=0 connections=0",
+      "P4_CONSOLE_OS USB_ENUM_RECOVERY_EXHAUSTED attempts=2 input=hotplug-ready",
+      "gamepad=0 keyboard=0 mouse=0"
+    ],
+    "app_main_reached": true,
+    "console_os_ready": true,
+    "storage_ready": true,
+    "catalog_ready": true,
+    "audio_ready": true,
+    "touch_ready": true,
+    "eager_msc_allocation_failure": false,
+    "fatal_display_halt": false,
+    "hub_full_speed_route_observed": true,
+    "downstream_child_speed": "low",
+    "downstream_port": 2,
+    "host_recycle_attempts_configured": 2,
+    "host_recycle_attempts_observed": 2,
+    "fresh_host_graphs_observed": 3,
+    "hid_child_enumerated": false,
+    "ordinary_hotplug_left_ready": true,
+    "panic_or_reboot_loop": false,
+    "final_stats": {
+      "loops": 4200,
+      "gamepad": 0,
+      "keyboard": 0,
+      "mouse": 0,
+      "storage": "app-ready",
+      "audio": "es8311-ready"
+    }
+  },
+  "classification": "The 0.4.19 core OS, direct microSD mount, catalog, audio, touch, display, and bounded recovery lifecycle are stable. Complete Host/HID teardown and reconstruction does not clear the powered hub's low-speed child CHECK_SHORT_DEV_DESC failure: all three fresh host graphs disable downstream port 2 after the first failed short device-descriptor transaction. This disproves host-stack lifetime as the missing recovery boundary for this fixture.",
+  "corrective_action": "Do not add unbounded boot retries or flash this candidate again. Inspect the pinned hub driver's enumeration-failure path and the actual hub/controller descriptors, then either add a narrowly bounded downstream-port power/reset re-enumeration hook above the pinned component or qualify a direct/full-speed wired controller path. Preserve the stable controller-first OS and keep USB Drive role switching mutually exclusive.",
+  "hardware_tested": true
+}

@@ -26,6 +26,10 @@ typedef bool (*p4_cartridge_submit_pcm_fn)(
 typedef void (*p4_cartridge_stop_audio_fn)(void *context);
 typedef bool (*p4_cartridge_unlock_achievement_fn)(
     void *context, const p4_game_achievement_t *achievement);
+typedef bool (*p4_cartridge_request_signal_scan_fn)(
+    void *context, uint64_t focus_token);
+typedef bool (*p4_cartridge_read_signal_scan_fn)(
+    void *context, p4_game_signal_snapshot_t *snapshot);
 typedef void (*p4_cartridge_finished_fn)(
     void *context, p4_game_result_t result);
 
@@ -53,6 +57,13 @@ typedef struct {
     p4_cartridge_unlock_achievement_fn unlock_achievement;
     /** Optional v1 extension for copied, bounded PCM16-stereo blocks. */
     p4_cartridge_submit_pcm_fn submit_pcm16_stereo;
+    /** Optional v1 extension: validated payload from a same-ID .P4R file. */
+    const uint8_t *resource_data;
+    size_t resource_bytes;
+    uint32_t resource_format_version;
+    /** Optional v1 extension for privacy-sanitized, non-blocking scans. */
+    p4_cartridge_request_signal_scan_fn request_signal_scan;
+    p4_cartridge_read_signal_scan_fn read_signal_scan;
 } p4_cartridge_host_v1_t;
 
 typedef enum {

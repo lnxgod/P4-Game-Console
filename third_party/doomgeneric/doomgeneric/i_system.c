@@ -35,6 +35,7 @@
 #endif
 
 #include "config.h"
+#include "doomgeneric.h"
 
 #include "deh_str.h"
 #include "doomtype.h"
@@ -256,6 +257,10 @@ void I_Quit (void)
         entry->func();
         entry = entry->next;
     }
+
+    // DoomGeneric has no process window to close. Tell the platform loop that
+    // cleanup completed so an embedded host can return to its launcher.
+    doomgeneric_RequestQuit();
 
 #if ORIGCODE
     SDL_Quit();
@@ -575,4 +580,3 @@ boolean I_GetMemoryValue(unsigned int offset, void *value, int size)
 
     return false;
 }
-

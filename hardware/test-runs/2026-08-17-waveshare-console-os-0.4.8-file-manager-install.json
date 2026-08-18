@@ -1,0 +1,74 @@
+{
+  "schema": 1,
+  "tested_at": "2026-08-17T17:54:19-0700",
+  "result": "pass",
+  "classification": "app-only-install-and-retained-uart-startup",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+    "programming_port": "H1 CH343 USB-UART"
+  },
+  "authorization": {
+    "path": "hardware/evidence/waveshare-console-os-0.4.8-file-manager-20260817-exact-unit-authorization.json",
+    "sha256": "37b759810418062f22ce8052f016a1e46f1c7e7c246679d2869fa240f2ea84e4"
+  },
+  "application": {
+    "version": "0.4.8",
+    "offset": "0x20000",
+    "bytes": 1043856,
+    "sha256": "5d8d806623e4848e7184666fd5663948fb3f1e163c22f3554cdc9ea517b4c825",
+    "on_device_digest_verified": true,
+    "full_flash_erased": false,
+    "new_factory_backup_created": false,
+    "sd_card_written_or_formatted": false
+  },
+  "guarded_install": {
+    "factory_backup_verified": true,
+    "live_identity_verified": true,
+    "bootloader_digest_verified": true,
+    "partition_table_digest_verified": true,
+    "predecessor_version": "0.4.7",
+    "predecessor_bytes": 1041712,
+    "predecessor_sha256": "2fef9d89d35d93eeb318ac5e05a24efc71cd3c4225d4dcef3c0927c014b05d5b",
+    "predecessor_digest_verified_before_write": true,
+    "ota_data_preserved": true,
+    "write_scope": "primary application only",
+    "application_readback_verified": true
+  },
+  "startup": {
+    "project": "p4_console_os",
+    "version_marker": "0.4.8",
+    "esp_idf": "v5.5.3",
+    "display": "Waveshare ST7701; native 480x800; logical 800x480; clockwise 90-degree landscape",
+    "touch_ready": true,
+    "sd_frequency_khz": 10000,
+    "storage_state": "app-ready",
+    "storage_capacity_bytes": 32010928128,
+    "storage_generation": 1,
+    "storage_init_elapsed_ms": 6824,
+    "game_catalog_packages": 12,
+    "game_catalog_valid": 12,
+    "game_catalog_omitted": 0,
+    "p4cart_valid": 1,
+    "p4cart_rejected": 0,
+    "console_ready": true,
+    "panic_watchdog_or_brownout_marker": false
+  },
+  "transport_observation": {
+    "prewrite_disconnects": 2,
+    "prewrite_disconnect_stage": "redundant predecessor read; write_flash had not started",
+    "successful_transfer_baud": 460800,
+    "write_completed": true,
+    "readback_completed": true,
+    "post_ready_disconnect": true,
+    "classification": "H1 CH343/cable transport instability after valid Console OS READY; not evidence of a firmware panic or reset"
+  },
+  "not_tested": [
+    "manual touch entry into a File Manager directory and BACK-to-parent behavior",
+    "System-page USB Mode enable, clean Finder eject, and disable cycle",
+    "launch and gameplay for all 12 SD games"
+  ]
+}

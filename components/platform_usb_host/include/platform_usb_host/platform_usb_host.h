@@ -25,7 +25,8 @@ typedef struct {
  * drivers can register without racing enumeration. Elecrow builds require a
  * reviewed external-fixture record. The Olimex ESP32-P4-PC build instead
  * requires NULL and holds its source-reviewed onboard hub in reset until the
- * class driver is ready.
+ * class driver is ready. A separately gated Waveshare H2 self-powered test
+ * also requires NULL and never claims or controls a physical VBUS source.
  */
 esp_err_t platform_usb_host_start(
     const platform_usb_fixture_evidence_t *fixture_evidence);

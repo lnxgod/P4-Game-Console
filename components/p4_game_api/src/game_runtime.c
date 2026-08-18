@@ -23,7 +23,8 @@ static uint32_t known_capabilities(void)
         P4_GAME_CAP_CONTROLS |
         P4_GAME_CAP_AUDIO_TONE |
         P4_GAME_CAP_AUDIO_STREAM |
-        P4_GAME_CAP_STORAGE;
+        P4_GAME_CAP_STORAGE |
+        P4_GAME_CAP_SIGNAL_SCAN;
 }
 
 bool p4_game_descriptor_valid(const p4_game_descriptor_t *descriptor)
@@ -64,6 +65,17 @@ static bool services_valid(const p4_game_services_t *services)
     }
     if ((services->available_capabilities & P4_GAME_CAP_AUDIO_STREAM) != 0U &&
         services->submit_pcm16_stereo == NULL) {
+        return false;
+    }
+    if ((services->available_capabilities & P4_GAME_CAP_STORAGE) != 0U &&
+        (services->resource_data == NULL || services->resource_bytes == 0U ||
+         services->resource_format_version == 0U)) {
+        return false;
+    }
+    if ((services->available_capabilities & P4_GAME_CAP_SIGNAL_SCAN) != 0U &&
+        (services->signal_scan_context == NULL ||
+         services->request_signal_scan == NULL ||
+         services->read_signal_scan == NULL)) {
         return false;
     }
     return true;
@@ -249,6 +261,61 @@ bool p4_game_unlock_achievement(p4_game_context_t *context,
             P4_GAME_ID_MAX_BYTES &&
         context->services->unlock_achievement(
             context->services->achievement_context, &achievement);
+}
+
+bool p4_game_request_signal_scan(p4_game_context_t *context,
+                                 uint64_t focus_token)
+{
+    return context != NULL && context->services != NULL &&
+        (context->services->available_capabilities &
+         P4_GAME_CAP_SIGNAL_SCAN) != 0U &&
+        context->services->request_signal_scan != NULL &&
+        context->services->request_signal_scan(
+            context->services->signal_scan_context, focus_token);
+}
+
+static bool signal_snapshot_valid(const p4_game_signal_snapshot_t *snapshot)
+{
+    if (snapshot == NULL || snapshot->status < P4_GAME_SIGNAL_IDLE ||
+        snapshot->status > P4_GAME_SIGNAL_ERROR ||
+        snapshot->count > P4_GAME_SIGNAL_MAX_RESULTS ||
+        (snapshot->status != P4_GAME_SIGNAL_READY && snapshot->count != 0U)) {
+        return false;
+    }
+    for (size_t index = 0U; index < snapshot->count; ++index) {
+        const p4_game_signal_t *const signal = &snapshot->results[index];
+        if (signal->token == 0U || signal->rssi_dbm > 0 ||
+            signal->channel > 196U ||
+            (signal->flags & ~(P4_GAME_SIGNAL_HIDDEN |
+                               P4_GAME_SIGNAL_PROTECTED)) != 0U ||
+            bounded_length(signal->label,
+                           P4_GAME_SIGNAL_LABEL_MAX_BYTES) == 0U ||
+            bounded_length(signal->label,
+                           P4_GAME_SIGNAL_LABEL_MAX_BYTES) >=
+                P4_GAME_SIGNAL_LABEL_MAX_BYTES) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool p4_game_read_signal_scan(p4_game_context_t *context,
+                              p4_game_signal_snapshot_t *snapshot)
+{
+    if (context == NULL || context->services == NULL || snapshot == NULL ||
+        (context->services->available_capabilities &
+         P4_GAME_CAP_SIGNAL_SCAN) == 0U ||
+        context->services->read_signal_scan == NULL) {
+        return false;
+    }
+    p4_game_signal_snapshot_t candidate = {0};
+    if (!context->services->read_signal_scan(
+            context->services->signal_scan_context, &candidate) ||
+        !signal_snapshot_valid(&candidate)) {
+        return false;
+    }
+    *snapshot = candidate;
+    return true;
 }
 
 void p4_game_stop_audio(p4_game_context_t *context)

@@ -1,0 +1,214 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-18T09:07:51-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-0.4.23-guarded-hs-fsls",
+  "operator_direction": "Install the verified Console OS 0.4.23 controller-first candidate on the bound Waveshare 4.3 to test the guarded ESP32-P4 HS-root FS/LS clock correction through the externally powered H2 hub. Reuse the existing factory backup; write only the primary application, preserve bootloader, partition table, OTA state, NVS, and microSD, and retain H1 UART for automatic safe-mode recovery evidence.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART",
+    "h2": "operator-attested externally powered USB-C hub with power input",
+    "firmware_vbus_source": false,
+    "electrical_qualification_claimed": false,
+    "scope": "bounded powered-hub enumeration and controller-first hot-plug behavior"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "ota_data": {
+      "offset": "0x10000",
+      "bytes": 8192,
+      "live_policy": "mutable boot-selection state; preserve without writing"
+    },
+    "nvs": {
+      "live_policy": "preserve; candidate may write only existing Console OS settings and the p4_console/usb_enum_probe recovery marker through NVS APIs"
+    }
+  },
+  "predecessor": {
+    "offset": "0x20000",
+    "version": "0.4.22",
+    "bytes": 1184000,
+    "sha256": "0753e5f602b717e2e584b30802a1714521e1e1b877c7107c7f503d11a5e3f982",
+    "digest_observed_before_authorization": true,
+    "acceptance_record": "hardware/test-runs/2026-08-18-waveshare-console-os-0.4.22-serialized-enum-retry-stable-no-hid.json"
+  },
+  "candidate": {
+    "source_base_commit": "29e49a35d179f7bcc13058004811b8a0d07aa593",
+    "tracked_diff_sha256": "32fd6a45a899e989846089725801a8713fa18af99b92ee88d45335e7d61ae67c",
+    "tracked_diff_bytes": 638547,
+    "version": "0.4.23",
+    "build_id": "29e49a35d179",
+    "build_directory": "apps/console_os/build-waveshare-usb-host",
+    "build_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+      "bytes": 1184816,
+      "sha256": "f9f6b43a2bab73f553af2027cf743a56a4595ad167e3d7de43b19b450b751fee",
+      "action": "write-and-on-device-digest-verify"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.elf",
+      "bytes": 14662244,
+      "sha256": "1e561699f77f858dbfb06221c5d6ebafe709a2f753f47cafba2d36fd4b236984"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-usb-host/P4UPDATE.P4U",
+      "bytes": 1185072,
+      "sha256": "f9efe8fcd6bab5801b2e8de760757f4e588cc9e02ab10b543b4d3839cc34e902"
+    },
+    "official_logo": {
+      "source_url": "https://www.gamechangersai.org/assets/gamechangers-128.png",
+      "path": "apps/console_os/main/assets/gamechangers_ai_logo.rgb565",
+      "bytes": 25088,
+      "sha256": "48ee7b2a15a744547884ec6ea7f462277ab60e5dde4d0805bf39db9c0b2bd892"
+    },
+    "sdkconfig": {
+      "path": "apps/console_os/build-waveshare-usb-host/sdkconfig",
+      "bytes": 74718,
+      "sha256": "0d8651a2c663eb6d40a3a2498e90b55b6c088566855041f5f60ccd38178e68e1",
+      "automatic_enum_retry_attempts": 2,
+      "force_full_speed_host": true
+    },
+    "usb_sources": {
+      "upstream_reference": {
+        "url": "https://github.com/peter-marcisovsky/esp-idf/commit/6306c4f6d1660b58ccc431877f4c42f202714072",
+        "scope": "Espressif engineer's experimental P4/S31 force-FS correction; locally adapted without modifying ESP-IDF or the managed USB package"
+      },
+      "locked_hcd": {
+        "path": "apps/console_os/managed_components/espressif__usb/src/hcd_dwc.c",
+        "bytes": 116968,
+        "sha256": "de0471a749547c7d295af0fe2e3e5b61d1eedf46d88c5b57cf20cec202d6c749",
+        "compiled_directly": false
+      },
+      "hcd_overlay_generator": {
+        "path": "scripts/generate-espressif-usb-hcd-fsls-overlay.py",
+        "bytes": 8102,
+        "sha256": "98803082d049fff4c8cba121d26de4e02af991befcf17ed54a043ea7a95b1d2a"
+      },
+      "generated_hcd": {
+        "path": "apps/console_os/build-waveshare-usb-host/generated/espressif-usb-1.5.0/hcd_dwc.c",
+        "bytes": 120226,
+        "sha256": "c71577cbdcc808828216940671be511a074f51fcd88e4f24ef0948d8aebabb8a",
+        "compiled_directly": true,
+        "marker": "P4_HS_FSLS_ROOT_READY reset=reapplied"
+      },
+      "hcd_overlay_test": {
+        "path": "scripts/tests/test-espressif-usb-hcd-fsls-overlay.py",
+        "bytes": 5560,
+        "sha256": "715ac17984703fc0b5e77b7efe73b554f6b5f0fc38c51eb99eacef3c1cf558ab",
+        "expected_tests": 6
+      },
+      "locked_external_port": {
+        "path": "apps/console_os/managed_components/espressif__usb/src/ext_port.c",
+        "bytes": 49731,
+        "sha256": "0760b3c8ef14813db621b66c19d27caea5391793c592ca480b6ce18121797736",
+        "compiled_directly": false
+      },
+      "external_port_overlay_generator": {
+        "path": "scripts/generate-espressif-usb-ext-port-overlay.py",
+        "bytes": 11368,
+        "sha256": "b38307672e678f931bf9996c78d650b547925b379c6bde41421ee90d19b91e1b"
+      },
+      "generated_external_port": {
+        "path": "apps/console_os/build-waveshare-usb-host/generated/espressif-usb-1.5.0/ext_port.c",
+        "bytes": 53413,
+        "sha256": "6373859f47cd6cb88877186ebd915d8d31f442cfd13f27da814e524ec43355ee",
+        "compiled_directly": true
+      },
+      "external_port_overlay_test": {
+        "path": "scripts/tests/test-espressif-usb-ext-port-overlay.py",
+        "bytes": 6057,
+        "sha256": "05677ac4709a692fc8a666877d73871a366c7107957e5a55f575a0a4db3d2faa",
+        "expected_tests": 6
+      },
+      "locked_hub": {
+        "path": "apps/console_os/managed_components/espressif__usb/src/hub.c",
+        "bytes": 52521,
+        "sha256": "2d7c79c8508f63be6b0243178eafae2351f4e4643a87d9cdc73e980b95985afe",
+        "compiled_directly": true,
+        "scheduler_modified": false
+      }
+    },
+    "recovery_guard_sources": [
+      {
+        "path": "components/platform_console_settings/CMakeLists.txt",
+        "bytes": 272,
+        "sha256": "93b079983821190f4c81837628a995cabb3780443d6487fd037c0d872e015370"
+      },
+      {
+        "path": "components/platform_console_settings/include/platform/console_settings.h",
+        "bytes": 1929,
+        "sha256": "1d491213280a107a6f582a2859d35274fe136c0d7a28e552cb254f75f56a0a24"
+      },
+      {
+        "path": "components/platform_console_settings/src/platform_console_settings.c",
+        "bytes": 6385,
+        "sha256": "bfc4a0aad2d4f54c5f7ec753900210b909f7f73b13cd212a9de31b7716e48fce"
+      }
+    ],
+    "locks": {
+      "esp_idf": "5.5.3",
+      "espressif_usb": "1.5.0",
+      "usb_host_hid": "1.2.0",
+      "esp_tinyusb": "2.0.1"
+    },
+    "safety_contract": [
+      "leave ESP-IDF, the managed espressif/usb 1.5.0 package, and its hub scheduler byte-for-byte unchanged",
+      "generate both replacement translation units only from exact hash-bound upstream inputs",
+      "gate every new HCD register write and downstream retry with the durable one-boot NVS probe",
+      "on an incomplete prior boot, suppress HCD reapplication and retries so the stable 0.4.22 path reaches READY",
+      "before each guarded root reset set FSLSSupp=1 and FSLSPclkSel=0",
+      "after guarded root enable use FSLSPclkSel 2 and HFIR 5999 for low speed, otherwise FSLSPclkSel 0 and HFIR 29999",
+      "report an unexpected high-speed root result as full speed only while the guarded correction is active",
+      "wait for failed-child recycle and parent hub control completion before any bounded downstream retry",
+      "retain direct microSD mount, lazy MSC allocation, and mutually exclusive USB Drive app transition",
+      "preserve the 768x480 BBS shell, official gamechangersai.org logo, saved audio levels, touch, dynamic SD games, and existing microSD contents"
+    ]
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_another_full_backup": false,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "verify_installed_bootloader_and_partition_table_before_write": true,
+    "preserve_live_ota_data_without_write": true,
+    "preserve_live_nvs_except_candidate_runtime_marker": true,
+    "verify_installed_predecessor_application_before_write": true,
+    "write_only_primary_application": true,
+    "verify_application_on_device_after_write": true,
+    "retain_uart_during_acceptance": true,
+    "format_sd_card": false,
+    "write_sd_card": false,
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "retained H1 UART shows exactly one candidate app start, App version 0.4.23, USB_ENUM_GUARD state=armed, and Console OS READY",
+    "P4_HS_FSLS_ROOT_READY reports fslssupp=1, pclk_sel=0, frame_interval=29999, and effective_speed=1 for the full-speed powered hub",
+    "no panic, assert, watchdog, brownout, repeated reset, hub-control ESP_ERR_INVALID_STATE, or usbh_dev_close assertion occurs",
+    "if the candidate crashes before confirmation, the immediately following boot shows USB_ENUM_GUARD state=safe-mode; neither P4_HS_FSLS_ROOT_READY nor a retry dispatch may appear, and Console OS must reach READY",
+    "the low-speed attached child reaches a bounded HID interface and captured descriptor without destabilizing display, audio, touch, or microSD; a failed descriptor remains a failed controller acceptance even if the OS stays stable",
+    "after approximately 9.6 seconds of stable runtime UART shows USB_ENUM_GUARD state=confirmed",
+    "subsequent manual acceptance separately covers every mapped controller input, keyboard, mouse, held-input unplug neutralization, repeated hot-plug, and at least 30 minutes of gameplay",
+    "USB Drive remains an explicit app-only role switch and is qualified separately after controller enumeration"
+  ]
+}

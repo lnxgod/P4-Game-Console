@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "tested_at": "2026-08-16T21:48:00-0700",
+  "result": "pass-with-user-acoustic-confirmation-pending",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "authorization": {
+    "path": "hardware/evidence/waveshare-console-os-0.4.6-catalog-stack-package-gate-20260816-exact-unit-authorization.json",
+    "sha256": "124d7f008f97eb2314b0fa7726a7f61586a823a3b54336ef26fdf185e9511d35"
+  },
+  "application": {
+    "version": "0.4.6",
+    "offset": "0x20000",
+    "bytes": 1039728,
+    "sha256": "60a57711915219e684ab9d8e4f84f251c4e10fa6ffdf829a7b62a7fa7dc92335",
+    "on_device_digest_verified": true,
+    "full_flash_erased": false,
+    "new_factory_backup_created": false
+  },
+  "micro_sd": {
+    "capacity_bytes_reported_by_firmware": 32010928128,
+    "host_filesystem": "MBR FAT32",
+    "volume_name": "P4GAMES",
+    "selected_frequency_khz": 10000,
+    "frequency_fallback_index": 0,
+    "host_transfer_route": "native H2 USB-device MSC",
+    "verified_host_writes": 1287,
+    "host_write_failures": 0,
+    "packages_copied": 12,
+    "package_catalog_entries": 12,
+    "valid_package_catalog_entries": 12,
+    "games_embedded_in_ota": false
+  },
+  "legacy_p4cart": {
+    "candidates": 1,
+    "valid": 1,
+    "rejected": 0,
+    "worker_stack_bytes": 24576,
+    "worker_low_water_bytes": 11624,
+    "panic_after_scan": false
+  },
+  "boot_audio": {
+    "dial": "555-1212",
+    "dial_status": "played",
+    "dial_elapsed_ms": 3027,
+    "modem_profile": "v22bis-2400",
+    "modem_phases": 12,
+    "modem_elapsed_ms": 7206,
+    "codec_volume_step": 10,
+    "tone_volume_step": 10,
+    "serial_runtime_status": "played",
+    "subjective_acoustic_acceptance": "pending user listening"
+  },
+  "runtime_observations": [
+    "official 768x480 landscape boot initialized before storage and audio",
+    "FAT32 card reached SD_READY at 10 MHz without fallback",
+    "macOS mounted P4GAMES and the guarded installer copied or hash-confirmed every bundle file",
+    "after host eject storage transitioned from usb-host to app-ready generation 2",
+    "GAME_CATALOG reported packages=12 valid=12 omitted=0",
+    "P4CART_READY completed with 11624 bytes of stack margin",
+    "launcher statistics continued through loop 7500 with no panic, watchdog, display timeout, or storage write failure"
+  ],
+  "not_tested": [
+    "subjective authenticity of the revised modem effect",
+    "manual touch opening of each of the 12 games",
+    "gameplay and return-to-launcher for every cartridge"
+  ]
+}

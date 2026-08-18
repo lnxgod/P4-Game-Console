@@ -81,6 +81,95 @@ static void test_packet_codec(void)
           P4_MP_BAD_FLAGS);
 }
 
+static void test_wired_stream_boundary(void)
+{
+    p4_mp_wired_transport_info_t info;
+    CHECK(p4_mp_wired_transport_info(
+              P4_MP_WIRED_TRANSPORT_UART_RELAY, &info));
+    CHECK(info.requires_host_relay && !info.console_sources_vbus);
+    CHECK(!info.console_is_usb_device);
+    CHECK(p4_mp_wired_transport_info(
+              P4_MP_WIRED_TRANSPORT_USB2_DEVICE_RELAY, &info));
+    CHECK(info.requires_host_relay && info.console_is_usb_device);
+    CHECK(!info.console_sources_vbus);
+    CHECK(!p4_mp_wired_transport_info(P4_MP_WIRED_TRANSPORT_NONE, &info));
+    CHECK(!p4_mp_wired_transport_info(
+              P4_MP_WIRED_TRANSPORT_UART_RELAY, NULL));
+
+    const p4_mp_input_t input = {.tick = 9U, .buttons = 5U, .left_x = -7};
+    uint8_t payload[P4_MP_INPUT_PAYLOAD_BYTES];
+    p4_mp_input_encode(&input, payload);
+    uint8_t packet[P4_MP_MAX_DATAGRAM_BYTES];
+    const size_t packet_length = encode_packet(
+        P4_MP_PACKET_INPUT, 10U, 20U, 30U,
+        payload, sizeof(payload), packet);
+
+    uint8_t stream[3U + P4_MP_MAX_DATAGRAM_BYTES];
+    stream[0] = UINT8_C(0x00);
+    stream[1] = (uint8_t)'P';
+    stream[2] = UINT8_C(0xff);
+    memcpy(stream + 3U, packet, packet_length);
+    p4_mp_stream_decoder_t decoder;
+    p4_mp_stream_decoder_init(&decoder);
+    uint8_t decoded[P4_MP_MAX_DATAGRAM_BYTES];
+    size_t consumed = 0U;
+    size_t decoded_length = 0U;
+    const size_t first_chunk = 13U;
+    CHECK(p4_mp_stream_consume(
+              &decoder, stream, first_chunk, &consumed,
+              decoded, sizeof(decoded), &decoded_length) ==
+          P4_MP_STREAM_NEED_MORE);
+    CHECK(consumed == first_chunk && decoded_length == 0U);
+    CHECK(p4_mp_stream_consume(
+              &decoder, stream + first_chunk,
+              3U + packet_length - first_chunk, &consumed,
+              decoded, sizeof(decoded), &decoded_length) ==
+          P4_MP_STREAM_FRAME_READY);
+    CHECK(decoded_length == packet_length);
+    CHECK(memcmp(decoded, packet, packet_length) == 0);
+    CHECK(decoder.discarded_bytes >= 3U);
+
+    uint8_t two_packets[2U * P4_MP_MAX_DATAGRAM_BYTES];
+    memcpy(two_packets, packet, packet_length);
+    memcpy(two_packets + packet_length, packet, packet_length);
+    p4_mp_stream_decoder_init(&decoder);
+    CHECK(p4_mp_stream_consume(
+              &decoder, two_packets, 2U * packet_length, &consumed,
+              decoded, sizeof(decoded), &decoded_length) ==
+          P4_MP_STREAM_FRAME_READY);
+    CHECK(consumed == packet_length);
+    CHECK(p4_mp_stream_consume(
+              &decoder, two_packets + consumed, packet_length, &consumed,
+              decoded, sizeof(decoded), &decoded_length) ==
+          P4_MP_STREAM_FRAME_READY);
+    CHECK(consumed == packet_length);
+
+    packet[P4_MP_HEADER_BYTES + 1U] ^= UINT8_C(0x80);
+    p4_mp_stream_decoder_init(&decoder);
+    CHECK(p4_mp_stream_consume(
+              &decoder, packet, packet_length, &consumed,
+              decoded, sizeof(decoded), &decoded_length) ==
+          P4_MP_STREAM_FRAME_DROPPED);
+    CHECK(decoder.last_packet_status == P4_MP_BAD_CRC);
+    CHECK(decoder.dropped_frames == 1U);
+
+    uint8_t oversized_header[P4_MP_HEADER_BYTES] = {
+        'P', '4', 'M', 'P', P4_MP_VERSION, P4_MP_PACKET_INPUT,
+    };
+    oversized_header[24] = UINT8_C(0xff);
+    oversized_header[25] = UINT8_C(0xff);
+    p4_mp_stream_decoder_init(&decoder);
+    CHECK(p4_mp_stream_consume(
+              &decoder, oversized_header, sizeof(oversized_header),
+              &consumed, decoded, sizeof(decoded), &decoded_length) ==
+          P4_MP_STREAM_FRAME_DROPPED);
+    CHECK(decoder.last_packet_status == P4_MP_BAD_LENGTH);
+    CHECK(p4_mp_stream_consume(
+              &decoder, NULL, 0U, &consumed,
+              decoded, P4_MP_HEADER_BYTES, &decoded_length) ==
+          P4_MP_STREAM_INVALID_ARGUMENT);
+}
+
 static void test_host_session(void)
 {
     enum { SESSION_ID = 101, HOST_ID = 1, CLIENT_ID = 2 };
@@ -254,6 +343,7 @@ static void test_bounded_decode_fuzz(void)
 int main(void)
 {
     test_packet_codec();
+    test_wired_stream_boundary();
     test_host_session();
     test_capacity_timeout_and_disconnect();
     test_client_session();

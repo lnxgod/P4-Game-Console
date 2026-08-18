@@ -1,0 +1,129 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-18T03:03:33-0700",
+  "active": false,
+  "revoked_at": "2026-08-18T03:09:00-0700",
+  "revocation_reason": "Hardware UART reached app_main and eliminated the ESP-Hosted reboot loop, but eager TinyUSB MSC storage allocation still failed with ESP_ERR_NO_MEM and a later boot-modem display submit timeout triggered a fatal dark halt. This artifact must never be installed again.",
+  "scope": "exact-unit-waveshare-4.3-console-os-0.4.16-controller-first-successor",
+  "operator_direction": "Recover the bound Waveshare 4.3 from the revoked 0.4.15 ESP-Hosted SDIO reboot loop using the verified 0.4.16 controller-first image. Reuse the existing factory backup; write only the primary application and do not touch the microSD.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART",
+    "h2": "operator-attested externally powered USB-C hub with power input",
+    "firmware_vbus_source": false,
+    "electrical_qualification_claimed": false,
+    "scope": "experimental externally powered H2 data-path acceptance only"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "ota_data": {
+      "offset": "0x10000",
+      "bytes": 8192,
+      "live_policy": "mutable boot-selection state; preserve without writing"
+    }
+  },
+  "predecessor": {
+    "offset": "0x20000",
+    "version": "0.4.15-revoked-boot-loop",
+    "bytes": 1435040,
+    "sha256": "4bc0e0f5889b6d844583fb67aebe915b6dddf62fd5d3a8ecc34299d0577580d2",
+    "digest_observed_before_authorization": true,
+    "failure_record": "hardware/test-runs/2026-08-18-waveshare-console-os-0.4.15-dma-recovery-boot-fail.json"
+  },
+  "candidate": {
+    "source_base_commit": "29e49a35d179f7bcc13058004811b8a0d07aa593",
+    "tracked_diff_sha256": "35c49438988ae418ddf9249173ae887f228fa41978282bed72d9561cd42b846e",
+    "tracked_diff_bytes": 598162,
+    "version": "0.4.16",
+    "build_id": "29e49a35d179",
+    "build_directory": "apps/console_os/build-waveshare-usb-host",
+    "build_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+      "bytes": 1178784,
+      "sha256": "408797688ee45107a2262fc1d5ce8e8995df3017e15112cea76ce97bb42218e8",
+      "action": "write-and-on-device-digest-verify"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.elf",
+      "bytes": 14612052,
+      "sha256": "82b9fd8764b720fb3608ed492ee4a38b844f965a232558fab9ee0b3cb4894c98"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-usb-host/P4UPDATE.P4U",
+      "bytes": 1179040,
+      "sha256": "0a4bc9abc2bddbf560e24f94e8d284cbf333ba45686f924e24d4b81fa4b690be"
+    },
+    "official_logo": {
+      "source_url": "https://www.gamechangersai.org/assets/gamechangers-128.png",
+      "path": "apps/console_os/main/assets/gamechangers_ai_logo.rgb565",
+      "bytes": 25088,
+      "sha256": "48ee7b2a15a744547884ec6ea7f462277ab60e5dde4d0805bf39db9c0b2bd892"
+    },
+    "locks": {
+      "esp_idf": "5.5.3",
+      "espressif_usb": "1.5.0",
+      "usb_host_hid": "1.2.0",
+      "esp_tinyusb": "2.0.1"
+    },
+    "recovery_contract": [
+      "pin the composite Waveshare controller-first internal/DMA reserve to 32768 bytes",
+      "exclude esp_hosted, esp_wifi_remote, platform_signal_scan, and their constructor-driven SDIO transport from the linked component graph",
+      "retain official managed USB component bytes and contain no experimental transaction-translator scheduler",
+      "defer TinyUSB device installation until the explicit USB Drive app requests the mutually exclusive role"
+    ],
+    "runtime_contract": [
+      "boot H2 in externally powered controller-host mode without firmware VBUS sourcing",
+      "force the high-speed-capable H2 root to the supported full-speed-only policy before root-port enable",
+      "support bounded HID gamepad, boot keyboard, and boot mouse hot-plug through one powered hub level",
+      "neutralize all input before Host/HID teardown and on disconnect",
+      "show a dedicated USB Drive launcher app",
+      "quiesce and uninstall Host/HID before installing TinyUSB device MSC",
+      "require clean host eject or disconnect before uninstalling MSC, remounting microSD, rescanning games, and restarting Host/HID",
+      "leave H2 quiesced on any failed transition and never run both roles together",
+      "preserve the 768x480 BBS shell, boot audio, touch, dynamic SD games, and existing microSD contents"
+    ]
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_another_full_backup": false,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "verify_installed_bootloader_and_partition_table_before_write": true,
+    "preserve_live_ota_data_without_write": true,
+    "verify_installed_predecessor_application_before_write": true,
+    "write_only_primary_application": true,
+    "verify_application_on_device_after_write": true,
+    "format_sd_card": false,
+    "write_sd_card": false,
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "retained H1 UART reaches app_main and Console OS READY with no panic, watchdog, boot loop, brownout, or storage allocation failure",
+    "UART reports the 32 KiB internal/DMA reserve, controller-first H2, full-speed root policy, USB Host/HID ready, microSD ready, and the dynamic catalog",
+    "the powered hub enumerates without the unsupported high-speed-hub transaction-translator rejection",
+    "named gamepad, keyboard, and mouse enumerate and hot-unplug neutralizes their state",
+    "USB Drive stops Host/HID, enumerates microSD on macOS, blocks unsafe return, then clean eject returns to Host/HID and rescans games"
+  ]
+}

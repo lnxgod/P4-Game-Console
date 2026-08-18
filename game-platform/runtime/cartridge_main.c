@@ -47,12 +47,35 @@ static bool host_unlock_achievement(
         host->unlock_achievement(host->context, achievement);
 }
 
+static bool host_request_signal_scan(void *opaque, uint64_t focus_token)
+{
+    p4_cartridge_host_v1_t *const host = opaque;
+    return host != NULL && host->request_signal_scan != NULL &&
+        host->request_signal_scan(host->context, focus_token);
+}
+
+static bool host_read_signal_scan(
+    void *opaque, p4_game_signal_snapshot_t *snapshot)
+{
+    p4_cartridge_host_v1_t *const host = opaque;
+    return host != NULL && host->read_signal_scan != NULL &&
+        host->read_signal_scan(host->context, snapshot);
+}
+
+static bool host_field_present(const p4_cartridge_host_v1_t *host,
+                               size_t offset, size_t bytes)
+{
+    return host != NULL && offset <= SIZE_MAX - bytes &&
+        (size_t)host->struct_bytes >= offset + bytes;
+}
+
 static bool host_valid(const p4_cartridge_host_v1_t *host)
 {
     return host != NULL && host->magic == P4_CARTRIDGE_HOST_MAGIC &&
         host->api_version == P4_CARTRIDGE_HOST_API_VERSION &&
-        host->struct_bytes >=
-            offsetof(p4_cartridge_host_v1_t, unlock_achievement) &&
+        host_field_present(
+            host, offsetof(p4_cartridge_host_v1_t, finished),
+            sizeof(host->finished)) &&
         host->expected_game_id != NULL && host->surface.pixels != NULL &&
         host->surface.width == P4_GAME_SURFACE_WIDTH &&
         host->surface.height == P4_GAME_SURFACE_HEIGHT &&
@@ -76,15 +99,32 @@ int app_main(int argc, char *argv[])
         strcmp(game->id, host->expected_game_id) != 0) {
         return P4_CARTRIDGE_EXIT_ID_MISMATCH;
     }
-    const bool has_unlock_achievement = host->struct_bytes >=
-        offsetof(p4_cartridge_host_v1_t, submit_pcm16_stereo);
-    const bool has_submit_pcm = host->struct_bytes >= sizeof(*host);
+    const bool has_unlock_achievement = host_field_present(
+        host, offsetof(p4_cartridge_host_v1_t, unlock_achievement),
+        sizeof(host->unlock_achievement));
+    const bool has_submit_pcm = host_field_present(
+        host, offsetof(p4_cartridge_host_v1_t, submit_pcm16_stereo),
+        sizeof(host->submit_pcm16_stereo));
+    const bool has_resource = host_field_present(
+        host, offsetof(p4_cartridge_host_v1_t, resource_format_version),
+        sizeof(host->resource_format_version));
+    const bool has_signal_scan = host_field_present(
+        host, offsetof(p4_cartridge_host_v1_t, read_signal_scan),
+        sizeof(host->read_signal_scan));
     uint32_t available_capabilities = host->available_capabilities;
     if (host->play_tone == NULL) {
         available_capabilities &= ~P4_GAME_CAP_AUDIO_TONE;
     }
     if (!has_submit_pcm || host->submit_pcm16_stereo == NULL) {
         available_capabilities &= ~P4_GAME_CAP_AUDIO_STREAM;
+    }
+    if (!has_resource || host->resource_data == NULL ||
+        host->resource_bytes == 0U || host->resource_format_version == 0U) {
+        available_capabilities &= ~P4_GAME_CAP_STORAGE;
+    }
+    if (!has_signal_scan || host->request_signal_scan == NULL ||
+        host->read_signal_scan == NULL) {
+        available_capabilities &= ~P4_GAME_CAP_SIGNAL_SCAN;
     }
     if ((game->required_capabilities & ~available_capabilities) != 0U) {
         return P4_CARTRIDGE_EXIT_CAPABILITY_MISSING;
@@ -107,6 +147,17 @@ int app_main(int argc, char *argv[])
         .unlock_achievement = !has_unlock_achievement ||
             host->unlock_achievement == NULL
             ? NULL : host_unlock_achievement,
+        .resource_data = has_resource ? host->resource_data : NULL,
+        .resource_bytes = has_resource ? host->resource_bytes : 0U,
+        .resource_format_version = has_resource
+            ? host->resource_format_version : 0U,
+        .signal_scan_context = host,
+        .request_signal_scan =
+            (available_capabilities & P4_GAME_CAP_SIGNAL_SCAN) != 0U
+            ? host_request_signal_scan : NULL,
+        .read_signal_scan =
+            (available_capabilities & P4_GAME_CAP_SIGNAL_SCAN) != 0U
+            ? host_read_signal_scan : NULL,
     };
     p4_game_instance_t instance = {0};
     if (!p4_game_instance_start(

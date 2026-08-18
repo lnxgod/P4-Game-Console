@@ -106,6 +106,36 @@ static void draw_circle(
     }
 }
 
+static void draw_letter_5x7(
+    uint32_t *destination,
+    size_t stride,
+    int center_x,
+    int center_y,
+    const uint8_t rows[7]
+)
+{
+    const int left = center_x - 5;
+    const int top = center_y - 7;
+    for (int row = 0; row < 7; ++row) {
+        for (int column = 0; column < 5; ++column) {
+            if ((rows[row] & (UINT8_C(1) << (4 - column))) == 0U) {
+                continue;
+            }
+            for (int scale_y = 0; scale_y < 2; ++scale_y) {
+                for (int scale_x = 0; scale_x < 2; ++scale_x) {
+                    const int x = left + column * 2 + scale_x;
+                    const int y = top + row * 2 + scale_y;
+                    if (x >= 0 && x < (int)DOOM_TOUCH_FRAME_WIDTH &&
+                        y >= 0 && y < (int)DOOM_TOUCH_FRAME_HEIGHT) {
+                        destination[(size_t)y * stride + (size_t)x] =
+                            UINT32_C(0x00ffffff);
+                    }
+                }
+            }
+        }
+    }
+}
+
 static void draw_dpad(
     uint32_t *destination,
     size_t stride,
@@ -204,5 +234,17 @@ bool doom_touch_overlay_render_xrgb8888(
         draw_circle(destination, destination_stride_pixels, control,
                     active, color);
     }
+    static const uint8_t yes_rows[7] = {
+        UINT8_C(0x11), UINT8_C(0x11), UINT8_C(0x0a), UINT8_C(0x04),
+        UINT8_C(0x04), UINT8_C(0x04), UINT8_C(0x04),
+    };
+    static const uint8_t no_rows[7] = {
+        UINT8_C(0x11), UINT8_C(0x19), UINT8_C(0x15), UINT8_C(0x13),
+        UINT8_C(0x11), UINT8_C(0x11), UINT8_C(0x11),
+    };
+    draw_letter_5x7(destination, destination_stride_pixels,
+                    269, 23, yes_rows);
+    draw_letter_5x7(destination, destination_stride_pixels,
+                    49, 23, no_rows);
     return true;
 }

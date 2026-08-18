@@ -143,10 +143,10 @@ static console_shell_contact_t physical_point(unsigned gui_x, unsigned gui_y)
     const console_shell_contact_t point = {
         .x = (uint16_t)(CONSOLE_SHELL_VIEWPORT_LEFT +
                         gui_x * CONSOLE_SHELL_VIEWPORT_WIDTH /
-                            CONSOLE_SHELL_WIDTH),
+                            CONSOLE_SHELL_LAYOUT_WIDTH),
         .y = (uint16_t)(CONSOLE_SHELL_VIEWPORT_TOP +
                         gui_y * CONSOLE_SHELL_VIEWPORT_HEIGHT /
-                            CONSOLE_SHELL_HEIGHT),
+                            CONSOLE_SHELL_LAYOUT_HEIGHT),
     };
     return point;
 }
@@ -346,6 +346,16 @@ static void check_frame_hash(uint64_t actual, uint64_t expected,
 
 static void test_window_manager_visual_contract(void)
 {
+#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+    const uint64_t desktop_hash = UINT64_C(0x075498c76cfae1bc);
+    const uint64_t elecrow_system_hash = UINT64_C(0x12a90bf6e03e80ad);
+    const uint64_t olimex_system_hash = UINT64_C(0x1639f83d762d40b3);
+#else
+    const uint64_t desktop_hash = UINT64_C(0xe9f133987b001a44);
+    const uint64_t elecrow_system_hash = UINT64_C(0x8a1d57aa656481e5);
+    const uint64_t olimex_system_hash = UINT64_C(0x451186dcbd09a550);
+#endif
     uint16_t *const frame = calloc(
         (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
         sizeof(*frame));
@@ -356,8 +366,7 @@ static void test_window_manager_visual_contract(void)
     console_shell_t shell;
     CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
     CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
-    check_frame_hash(frame_hash(frame), UINT64_C(0xe9f133987b001a44),
-                     "desktop");
+    check_frame_hash(frame_hash(frame), desktop_hash, "desktop");
 
     shell.page = CONSOLE_PAGE_SYSTEM;
     shell.active_app_id = APP_SYSTEM;
@@ -373,7 +382,7 @@ static void test_window_manager_visual_contract(void)
     };
     shell.dirty = true;
     CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
-    check_frame_hash(frame_hash(frame), UINT64_C(0x8a1d57aa656481e5),
+    check_frame_hash(frame_hash(frame), elecrow_system_hash,
                      "Elecrow system window");
 
     shell.runtime.touch_ready = false;
@@ -384,7 +393,7 @@ static void test_window_manager_visual_contract(void)
     shell.runtime.sd_card_storage = true;
     shell.dirty = true;
     CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
-    check_frame_hash(frame_hash(frame), UINT64_C(0x451186dcbd09a550),
+    check_frame_hash(frame_hash(frame), olimex_system_hash,
                      "Olimex system window");
     free(frame);
 }
@@ -426,6 +435,49 @@ static void test_color_modes_and_achievements(void)
             &shell, frame, CONSOLE_SHELL_WIDTH));
         free(frame);
     }
+}
+
+static void test_usb_mode_button(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    shell.page = CONSOLE_PAGE_SYSTEM;
+    shell.active_app_id = APP_SYSTEM;
+    shell.runtime = (console_shell_runtime_info_t){
+        .game_storage_state = CONSOLE_STORAGE_READY,
+        .usb_storage_supported = true,
+    };
+
+    console_shell_action_t action = tap(&shell, 160U, 182U);
+    CHECK(action.type == CONSOLE_ACTION_USB_MODE_ENABLE);
+    CHECK(action.app_id == APP_SYSTEM);
+
+    shell.runtime.game_storage_state = CONSOLE_STORAGE_USB_HOST;
+    shell.runtime.usb_drive_active = true;
+    shell.runtime.game_storage_usb_attached = true;
+    shell.runtime.usb_storage_eject_safe = false;
+    CHECK(tap(&shell, 160U, 182U).type == CONSOLE_ACTION_NONE);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_NONE);
+
+    shell.runtime.usb_storage_eject_safe = true;
+    action = tap(&shell, 160U, 182U);
+    CHECK(action.type == CONSOLE_ACTION_USB_MODE_DISABLE);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_USB_MODE_DISABLE);
+
+    shell.runtime.game_storage_usb_attached = false;
+    shell.runtime.usb_storage_eject_safe = false;
+    CHECK(tap(&shell, 160U, 182U).type ==
+          CONSOLE_ACTION_USB_MODE_DISABLE);
+
+    shell.page = CONSOLE_PAGE_USB_DRIVE;
+    shell.active_app_id = 12U;
+    shell.runtime.usb_drive_active = false;
+    shell.runtime.game_storage_state = CONSOLE_STORAGE_READY;
+    action = tap(&shell, 160U, 182U);
+    CHECK(action.type == CONSOLE_ACTION_USB_MODE_ENABLE);
+    CHECK(action.app_id == 12U);
 }
 
 static void test_desktop_pages(void)
@@ -476,6 +528,9 @@ static void test_desktop_pages(void)
         CHECK(console_shell_render_rgb565(
             &shell, frame, CONSOLE_SHELL_WIDTH));
         shell.page = CONSOLE_PAGE_MULTIPLAYER;
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        shell.page = CONSOLE_PAGE_USB_DRIVE;
         CHECK(console_shell_render_rgb565(
             &shell, frame, CONSOLE_SHELL_WIDTH));
         free(frame);
@@ -751,8 +806,8 @@ static void test_touch_page_and_runtime(void)
     shell.dirty = false;
     console_shell_set_pointer(&shell, true, 400U, 300U, false);
     CHECK(shell.pointer_visible);
-    CHECK(shell.pointer_x == CONSOLE_SHELL_WIDTH - 1U);
-    CHECK(shell.pointer_y == CONSOLE_SHELL_HEIGHT - 1U);
+    CHECK(shell.pointer_x == CONSOLE_SHELL_LAYOUT_WIDTH - 1U);
+    CHECK(shell.pointer_y == CONSOLE_SHELL_LAYOUT_HEIGHT - 1U);
     CHECK(shell.dirty);
     shell.dirty = false;
     console_shell_set_pointer(&shell, false, 0U, 0U, false);
@@ -777,6 +832,7 @@ static void test_file_manager(void)
         .omitted_entries = 0U,
         .storage_generation = 3U,
         .revision = 1U,
+        .path_label = "SD:/",
         .available = true,
     };
     for (size_t i = 0U; i < listing.entry_count; ++i) {
@@ -820,7 +876,21 @@ static void test_file_manager(void)
     action = tap(&shell, 50U, 72U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(shell.file_selected_index == 1U);
-    CHECK(tap(&shell, 250U, 180U).type == CONSOLE_ACTION_NONE);
+    action = tap(&shell, 250U, 180U);
+    CHECK(action.type == CONSOLE_ACTION_FILE_OPEN);
+    CHECK(action.file_source_index == 11U);
+
+    (void)strcpy(listing.path_label, "SD:/SAVES");
+    listing.can_go_up = true;
+    ++listing.revision;
+    CHECK(console_shell_set_file_listing(&shell, &listing));
+    action = press_button(&shell, CONSOLE_BUTTON_BACK);
+    CHECK(action.type == CONSOLE_ACTION_FILE_UP);
+    CHECK(shell.page == CONSOLE_PAGE_FILES);
+    (void)strcpy(listing.path_label, "SD:/");
+    listing.can_go_up = false;
+    ++listing.revision;
+    CHECK(console_shell_set_file_listing(&shell, &listing));
 
     action = tap(&shell, 80U, 180U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
@@ -1017,6 +1087,7 @@ int main(void)
     test_render_bounds_and_stride();
     test_window_manager_visual_contract();
     test_color_modes_and_achievements();
+    test_usb_mode_button();
     test_desktop_pages();
     test_navigation_and_launch();
     test_system_cartridge_folders();

@@ -20,6 +20,18 @@ string(JSON P4_GAME_FORMAT GET "${P4_GAME_JSON}" format)
 string(JSON P4_GAME_API_VERSION GET "${P4_GAME_JSON}" api_version)
 string(JSON P4_GAME_ENTRY GET "${P4_GAME_JSON}" entry_symbol)
 string(JSON P4_GAME_ENABLED GET "${P4_GAME_JSON}" enabled)
+string(JSON P4_GAME_RESOURCE_PAYLOAD ERROR_VARIABLE P4_GAME_RESOURCE_ERROR
+    GET "${P4_GAME_JSON}" resource_payload)
+if(P4_GAME_RESOURCE_ERROR)
+    set(P4_GAME_RESOURCE_PATH "")
+else()
+    set(P4_GAME_RESOURCE_PATH
+        "${P4_GAME_DIR}/${P4_GAME_RESOURCE_PAYLOAD}")
+    if(NOT EXISTS "${P4_GAME_RESOURCE_PATH}")
+        message(FATAL_ERROR
+            "${P4_GAME} resource payload is missing: ${P4_GAME_RESOURCE_PATH}")
+    endif()
+endif()
 if(NOT P4_GAME_FORMAT STREQUAL "p4-native-elf-v1" OR
    NOT P4_GAME_API_VERSION EQUAL 1 OR NOT P4_GAME_ENABLED)
     message(FATAL_ERROR "${P4_GAME} is not an enabled P4 Game API v1 game")
@@ -39,6 +51,10 @@ add_subdirectory(
     "${P4_REPO_ROOT}/components/p4_game_api"
     "${CMAKE_CURRENT_BINARY_DIR}/p4_game_api"
 )
+add_subdirectory(
+    "${P4_REPO_ROOT}/components/p4_signal_scan"
+    "${CMAKE_CURRENT_BINARY_DIR}/p4_signal_scan"
+)
 
 add_executable(p4_game_host play_game.c ${P4_GAME_SOURCES})
 set_target_properties(p4_game_host PROPERTIES
@@ -52,9 +68,12 @@ target_include_directories(p4_game_host PRIVATE
 )
 target_compile_definitions(p4_game_host PRIVATE
     "P4_HOST_GAME_DESCRIPTOR=${P4_GAME_ENTRY}"
+    "P4_HOST_RESOURCE_PATH=\"${P4_GAME_RESOURCE_PATH}\""
 )
 target_compile_features(p4_game_host PRIVATE c_std_11)
-target_link_libraries(p4_game_host PRIVATE p4_game_api PkgConfig::SDL3)
+target_link_libraries(
+    p4_game_host PRIVATE p4_signal_scan PkgConfig::SDL3
+)
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(p4_game_host PRIVATE

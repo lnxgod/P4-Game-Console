@@ -33,6 +33,7 @@
 #include "esp_err.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "esp_system.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -1053,6 +1054,13 @@ void app_main(void)
     }
     for (;;) {
         doomgeneric_Tick();
+        if (doomgeneric_QuitRequested()) {
+            ESP_LOGI(TAG,
+                     "P4_DOOM_E6 EXIT status=confirmed action=restart-to-home "
+                     "cleanup_complete=%u",
+                     s_cleanup_complete ? 1U : 0U);
+            esp_restart();
+        }
         if (s_frame_error != ESP_OK) {
             halt_dark("engine-frame", s_frame_error);
         }

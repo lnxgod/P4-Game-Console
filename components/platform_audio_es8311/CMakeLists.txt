@@ -1,7 +1,8 @@
 set(PLATFORM_AUDIO_ES8311_SOURCES
     src/platform_audio_es8311_policy.c
 )
-if(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
+if(P4_BOARD_PROFILE STREQUAL "waveshare-esp32-p4-wifi6-touch-lcd-4.3" OR
+   CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
     list(APPEND PLATFORM_AUDIO_ES8311_SOURCES src/platform_audio_es8311.c)
 endif()
 

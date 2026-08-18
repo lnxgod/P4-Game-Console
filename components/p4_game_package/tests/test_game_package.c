@@ -7,6 +7,7 @@
 #include <string.h>
 
 #include "p4/game_package.h"
+#include "p4/game_resource.h"
 
 enum {
     SYNTHETIC_ELF_BYTES = 256,
@@ -80,6 +81,43 @@ static void make_synthetic(uint8_t package[SYNTHETIC_PACKAGE_BYTES])
     memcpy(elf + 220U, "\0.shstrtab\0", 11U);
 }
 
+static void test_resource_package(void)
+{
+    uint8_t resource[P4_GAME_RESOURCE_HEADER_BYTES + 16U] = {0};
+    memcpy(resource, P4_GAME_RESOURCE_MAGIC, 8U);
+    write_u32(resource + 8U, P4_GAME_RESOURCE_HEADER_BYTES);
+    write_u32(resource + 12U, (uint32_t)sizeof(resource));
+    write_u32(resource + 16U, P4_GAME_RESOURCE_HEADER_BYTES);
+    write_u32(resource + 20U, 16U);
+    write_u32(resource + 24U, P4_GAME_RESOURCE_FORMAT_VERSION);
+    memcpy(resource + 64U, "org.test.synthetic",
+           sizeof("org.test.synthetic"));
+    for (size_t index = P4_GAME_RESOURCE_HEADER_BYTES;
+         index < sizeof(resource); ++index) {
+        resource[index] = (uint8_t)index;
+    }
+    p4_game_resource_info_t info;
+    assert(p4_game_resource_parse(resource, sizeof(resource), &info) ==
+           P4_GAME_RESOURCE_VALID);
+    assert(strcmp(info.game_id, "org.test.synthetic") == 0);
+    assert(info.payload_offset == P4_GAME_RESOURCE_HEADER_BYTES);
+    assert(info.payload_bytes == 16U);
+
+    resource[0] ^= UINT8_C(1);
+    assert(p4_game_resource_parse(resource, sizeof(resource), &info) ==
+           P4_GAME_RESOURCE_BAD_MAGIC);
+    resource[0] ^= UINT8_C(1);
+    resource[112] = UINT8_C(1);
+    assert(p4_game_resource_parse(resource, sizeof(resource), &info) ==
+           P4_GAME_RESOURCE_BAD_LAYOUT);
+    resource[112] = UINT8_C(0);
+    resource[64] = 'O';
+    assert(p4_game_resource_parse(resource, sizeof(resource), &info) ==
+           P4_GAME_RESOURCE_BAD_METADATA);
+    assert(strcmp(p4_game_resource_result_name(
+                      P4_GAME_RESOURCE_BAD_DIGEST), "bad-digest") == 0);
+}
+
 static uint8_t *read_file(const char *path, size_t *out_bytes)
 {
     FILE *const file = fopen(path, "rb");
@@ -121,6 +159,7 @@ static void expect_package(const char *path, const char *expected_id)
 int main(int argc, char *argv[])
 {
     assert(argc == 1 || argc == 3);
+    test_resource_package();
     if (argc == 3) {
         expect_package(argv[1], "org.p4console.maze-chase");
         expect_package(argv[2], "org.p4console.space-invaders");

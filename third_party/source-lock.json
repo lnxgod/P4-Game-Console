@@ -52,6 +52,15 @@
       "commit": "cfb8644b1a8dc7d7d2177e6a892ccaa2922bdaae",
       "usage": "optional user-provided SD-card game data; never vendor WAD files",
       "license": "BSD-3-Clause"
+    },
+    "synchronet_lord_reference": {
+      "repository": "https://gitlab.com/SynchronetBBS/sbbs.git",
+      "commit": "25232df05a8ba27a4dd9fcd38b4012c43660fb50",
+      "path": "xtrn/lord/lord.js",
+      "blob": "e3f754eabbb99779bf4ee982bd43be6509bad973",
+      "sha256": "a410a37e0b8e39a72cd8527fbbf37e48698cdeccdb7fa9f7ff296b25dfbec645",
+      "usage": "authorized reference for games/lord; no upstream files vendored",
+      "license": "LicenseRef-LORD-Permission"
     }
   }
 }

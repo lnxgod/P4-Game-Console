@@ -11,53 +11,27 @@
 #include "p4/feedback.h"
 #include "p4/game.h"
 #include "p4/input.h"
+#include "solitaire_internal.h"
 
-enum {
-    SOLITAIRE_PILES = 7,
-    SOLITAIRE_SUITS = 4,
-    SOLITAIRE_DECK = 52,
-    SOLITAIRE_STOCK_MAX = 24,
-    SOLITAIRE_TABLEAU_MAX = 19,
-    CARD_WIDTH = 36,
-    CARD_HEIGHT = 40,
-    CARD_TOP = 27,
-    TABLEAU_TOP = 70,
-    CARD_GAP_X = 7,
-};
+_Static_assert(
+    SOLITAIRE_TABLEAU_TOP +
+        (SOLITAIRE_TABLEAU_MAX - 1) * 2 + SOLITAIRE_CARD_HEIGHT <= 132,
+    "maximum tableau must stay above the standard touch controls");
 
-typedef enum {
-    CURSOR_TOP = 0,
-    CURSOR_TABLEAU,
-} cursor_area_t;
+#define CURSOR_TOP SOLITAIRE_CURSOR_TOP
+#define CURSOR_TABLEAU SOLITAIRE_CURSOR_TABLEAU
+#define SOURCE_NONE SOLITAIRE_SOURCE_NONE
+#define SOURCE_WASTE SOLITAIRE_SOURCE_WASTE
+#define SOURCE_FOUNDATION SOLITAIRE_SOURCE_FOUNDATION
+#define SOURCE_TABLEAU SOLITAIRE_SOURCE_TABLEAU
+#define CARD_WIDTH SOLITAIRE_CARD_WIDTH
+#define CARD_HEIGHT SOLITAIRE_CARD_HEIGHT
+#define CARD_TOP SOLITAIRE_CARD_TOP
+#define TABLEAU_TOP SOLITAIRE_TABLEAU_TOP
+#define CARD_GAP_X SOLITAIRE_CARD_GAP_X
 
-typedef enum {
-    SOURCE_NONE = 0,
-    SOURCE_WASTE,
-    SOURCE_FOUNDATION,
-    SOURCE_TABLEAU,
-} source_kind_t;
-
-typedef struct {
-    uint8_t tableau[SOLITAIRE_PILES][SOLITAIRE_TABLEAU_MAX];
-    uint8_t tableau_count[SOLITAIRE_PILES];
-    uint8_t face_up_from[SOLITAIRE_PILES];
-    uint8_t stock[SOLITAIRE_STOCK_MAX];
-    uint8_t waste[SOLITAIRE_STOCK_MAX];
-    uint8_t foundations[SOLITAIRE_SUITS];
-    uint8_t stock_count;
-    uint8_t waste_count;
-    uint8_t cursor_column;
-    uint8_t cursor_depth;
-    uint8_t selected_pile;
-    uint8_t selected_index;
-    cursor_area_t cursor_area;
-    source_kind_t selected_source;
-    uint32_t held_buttons;
-    uint32_t deal_number;
-    uint32_t moves;
-    p4_game_audio_effect_player_t audio;
-    bool won;
-} solitaire_state_t;
+static int card_x(uint8_t column);
+static int tableau_overlap(uint8_t count);
 
 static uint8_t card_rank(uint8_t card)
 {
@@ -87,8 +61,11 @@ static void cancel_selection(solitaire_state_t *state)
     state->selected_index = 0U;
 }
 
-static void new_deal(solitaire_state_t *state)
+void solitaire_reset(solitaire_state_t *state)
 {
+    if (state == NULL) {
+        return;
+    }
     const uint32_t next_deal = state->deal_number + 1U;
     *state = (solitaire_state_t){
         .deal_number = next_deal,
@@ -355,6 +332,110 @@ static void quick_foundation(p4_game_context_t *context,
         P4_GAME_AUDIO_EFFECT_REWARD : P4_GAME_AUDIO_EFFECT_ACTION);
 }
 
+static bool touch_column(uint16_t x, uint8_t *column_out)
+{
+    if (column_out == NULL) {
+        return false;
+    }
+    for (uint8_t column = 0U; column < SOLITAIRE_PILES; ++column) {
+        const int left = card_x(column);
+        if ((int)x >= left && (int)x < left + CARD_WIDTH) {
+            *column_out = column;
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool cursor_from_touch(solitaire_state_t *state,
+                              const p4_game_point_t *point)
+{
+    uint8_t column = 0U;
+    if (state == NULL || point == NULL ||
+        !touch_column(point->x, &column)) {
+        return false;
+    }
+    if (point->y >= CARD_TOP &&
+        point->y < CARD_TOP + CARD_HEIGHT) {
+        if (column == 2U) {
+            return false;
+        }
+        state->cursor_area = CURSOR_TOP;
+        state->cursor_column = column;
+        state->cursor_depth = 0U;
+        return true;
+    }
+    if (point->y < TABLEAU_TOP ||
+        point->y >= SOLITAIRE_TABLEAU_BOTTOM) {
+        return false;
+    }
+    state->cursor_area = CURSOR_TABLEAU;
+    state->cursor_column = column;
+    state->cursor_depth = 0U;
+    const uint8_t count = state->tableau_count[column];
+    if (count == 0U) {
+        return true;
+    }
+    const int overlap = tableau_overlap(count);
+    const int last_y = TABLEAU_TOP + overlap * ((int)count - 1);
+    if ((int)point->y >= last_y + CARD_HEIGHT) {
+        return false;
+    }
+    uint8_t index = 0U;
+    if (count > 1U) {
+        index = (uint8_t)(((int)point->y - TABLEAU_TOP) / overlap);
+        if (index >= count) {
+            index = (uint8_t)(count - 1U);
+        }
+    }
+    if (index < state->face_up_from[column]) {
+        return false;
+    }
+    state->cursor_depth = (uint8_t)(count - 1U - index);
+    return true;
+}
+
+static bool cursor_is_selected_source(const solitaire_state_t *state)
+{
+    if (state->selected_source == SOURCE_WASTE) {
+        return state->cursor_area == CURSOR_TOP &&
+            state->cursor_column == 1U;
+    }
+    if (state->selected_source == SOURCE_FOUNDATION) {
+        return state->cursor_area == CURSOR_TOP &&
+            state->cursor_column == state->selected_pile + 3U;
+    }
+    if (state->selected_source == SOURCE_TABLEAU &&
+        state->cursor_area == CURSOR_TABLEAU &&
+        state->cursor_column == state->selected_pile) {
+        const uint8_t count = state->tableau_count[state->selected_pile];
+        return count > 0U &&
+            state->selected_index == count - 1U - state->cursor_depth;
+    }
+    return false;
+}
+
+static void activate_touch(p4_game_context_t *context,
+                           solitaire_state_t *state,
+                           const p4_game_point_t *point)
+{
+    if (!cursor_from_touch(state, point)) {
+        tone(context, 140U, 45U, 1U);
+        return;
+    }
+    if (state->cursor_area == CURSOR_TOP &&
+        state->cursor_column == 0U) {
+        draw_from_stock(context, state);
+        return;
+    }
+    if (cursor_is_selected_source(state)) {
+        cancel_selection(state);
+        tone(context, 240U, 35U, 1U);
+        return;
+    }
+    activate_cursor(context, state);
+}
+
 static void move_cursor(solitaire_state_t *state, uint32_t pressed)
 {
     if ((pressed & P4_BUTTON_LEFT) != 0U && state->cursor_column > 0U) {
@@ -400,7 +481,7 @@ static bool game_start(p4_game_context_t *context)
     }
     solitaire_state_t *const state = context->state;
     *state = (solitaire_state_t){0};
-    new_deal(state);
+    solitaire_reset(state);
     tone(context, 523U, 80U, 2U);
     return true;
 }
@@ -413,16 +494,22 @@ static p4_game_result_t game_update(
     (void)elapsed_ms;
     solitaire_state_t *const state = context->state;
     (void)p4_game_audio_effect_service(context, &state->audio);
+    const bool touch_down = input->touch_valid && input->touch_count > 0U;
+    const bool touch_pressed = touch_down && !state->touch_was_down;
+    state->touch_was_down = touch_down;
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
         return P4_GAME_EXIT_TO_LAUNCHER;
     }
     state->held_buttons = input->held;
     if ((input->pressed & P4_BUTTON_START) != 0U) {
-        new_deal(state);
+        solitaire_reset(state);
         tone(context, 523U, 100U, 2U);
         return P4_GAME_CONTINUE;
     }
     move_cursor(state, input->pressed);
+    if (touch_pressed) {
+        activate_touch(context, state, &input->touches[0]);
+    }
     if ((input->pressed & P4_BUTTON_A) != 0U) {
         activate_cursor(context, state);
     }
@@ -447,12 +534,14 @@ static int tableau_overlap(uint8_t count)
     if (count <= 1U) {
         return 0;
     }
-    int overlap = (151 - TABLEAU_TOP - CARD_HEIGHT) / ((int)count - 1);
-    if (overlap > 12) {
-        overlap = 12;
+    int overlap =
+        (SOLITAIRE_TABLEAU_BOTTOM - TABLEAU_TOP - CARD_HEIGHT) /
+        ((int)count - 1);
+    if (overlap > 8) {
+        overlap = 8;
     }
-    if (overlap < 4) {
-        overlap = 4;
+    if (overlap < 2) {
+        overlap = 2;
     }
     return overlap;
 }
@@ -558,8 +647,8 @@ static bool game_render(p4_game_context_t *context,
     }
     const solitaire_state_t *const state = context->state;
     p4_draw_clear(surface, UINT16_C(0x0400));
-    p4_draw_text(surface, 62, 8, "SOLITAIRE  A PICK  B AUTO",
-                 UINT16_C(0xFFFF), 1U, 25U);
+    p4_draw_text(surface, 72, 8, "SOLITAIRE  TAP CARDS",
+                 UINT16_C(0xFFFF), 1U, 20U);
 
     if (state->stock_count > 0U) {
         draw_card_back(surface, card_x(0U), CARD_TOP);

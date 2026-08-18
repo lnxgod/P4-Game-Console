@@ -2,10 +2,13 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.4.0")
+set(PROJECT_VER "0.4.23")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")
+endif()
+if(NOT DEFINED P4_WAVESHARE_CONTROLLER_FIRST_BUILD)
+    set(P4_WAVESHARE_CONTROLLER_FIRST_BUILD OFF)
 endif()
 if(NOT P4_BOARD_PROFILE STREQUAL "elecrow-crowpanel-advanced-10" AND
    NOT P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" AND
@@ -16,7 +19,10 @@ endif()
 
 set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components/console_shell"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_ansi"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_bbs"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_board"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_console_settings"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_display"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_game_catalog"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_game_loader"
@@ -51,14 +57,23 @@ elseif(P4_BOARD_PROFILE STREQUAL
         "${CMAKE_CURRENT_LIST_DIR}/../doom_embedded_touch_audio/components/platform_audio"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_touch_input"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_video"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/gamepad_core"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_audio_es8311"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_audio_factory"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad_usb"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_i2c_shared"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_touch"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_usb_host"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_platform"
         "${CMAKE_CURRENT_LIST_DIR}/../doom/components/doom_audio"
         "${CMAKE_CURRENT_LIST_DIR}/../doom_audio_probe/components/doom_engine_audio"
     )
+    if(NOT P4_WAVESHARE_CONTROLLER_FIRST_BUILD)
+        list(APPEND EXTRA_COMPONENT_DIRS
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_signal_scan"
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_signal_scan"
+        )
+    endif()
 else()
     list(APPEND EXTRA_COMPONENT_DIRS
         "${CMAKE_CURRENT_LIST_DIR}/../../components/board_deps_elecrow"
@@ -85,10 +100,147 @@ elseif(P4_BOARD_PROFILE STREQUAL
 endif()
 idf_build_set_property(MINIMAL_BUILD ON)
 idf_build_set_property(P4_BOARD_PROFILE "${P4_BOARD_PROFILE}")
+idf_build_set_property(P4_WAVESHARE_CONTROLLER_FIRST_BUILD
+    "${P4_WAVESHARE_CONTROLLER_FIRST_BUILD}")
 project(p4_console_os)
 idf_build_get_property(P4_IDF_PYTHON PYTHON)
 get_filename_component(P4_REPOSITORY_ROOT
     "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
+
+# The controller-first candidate may replace only exact locked USB translation
+# units with deterministic build-directory overlays. The managed Component
+# Manager package and hub scheduler remain byte-for-byte untouched.
+set(P4_USB_COMPONENT_OVERLAY_SOURCES)
+if(P4_WAVESHARE_CONTROLLER_FIRST_BUILD AND
+   CONFIG_P4_WAVESHARE_H2_FORCE_FULL_SPEED_HOST)
+    set(P4_USB_HCD_UPSTREAM
+        "${CMAKE_CURRENT_LIST_DIR}/managed_components/espressif__usb/src/hcd_dwc.c")
+    set(P4_USB_HCD_GENERATOR
+        "${P4_REPOSITORY_ROOT}/scripts/generate-espressif-usb-hcd-fsls-overlay.py")
+    set(P4_USB_HCD_GENERATED
+        "${CMAKE_BINARY_DIR}/generated/espressif-usb-1.5.0/hcd_dwc.c")
+    execute_process(
+        COMMAND
+            "${P4_IDF_PYTHON}"
+            "${P4_USB_HCD_GENERATOR}"
+            --input "${P4_USB_HCD_UPSTREAM}"
+            --output "${P4_USB_HCD_GENERATED}"
+        RESULT_VARIABLE P4_USB_HCD_GENERATE_RESULT
+        ERROR_VARIABLE P4_USB_HCD_GENERATE_ERROR
+    )
+    if(NOT P4_USB_HCD_GENERATE_RESULT EQUAL 0)
+        message(FATAL_ERROR
+            "failed to generate guarded hcd_dwc.c FS/LS overlay: "
+            "${P4_USB_HCD_GENERATE_ERROR}")
+    endif()
+    add_custom_command(
+        OUTPUT "${P4_USB_HCD_GENERATED}"
+        COMMAND
+            "${P4_IDF_PYTHON}"
+            "${P4_USB_HCD_GENERATOR}"
+            --input "${P4_USB_HCD_UPSTREAM}"
+            --output "${P4_USB_HCD_GENERATED}"
+        DEPENDS
+            "${P4_USB_HCD_UPSTREAM}"
+            "${P4_USB_HCD_GENERATOR}"
+        VERBATIM
+    )
+    set_source_files_properties(
+        "${P4_USB_HCD_GENERATED}" PROPERTIES GENERATED TRUE)
+    list(APPEND P4_USB_COMPONENT_OVERLAY_SOURCES
+        "${P4_USB_HCD_GENERATED}")
+endif()
+
+if(P4_WAVESHARE_CONTROLLER_FIRST_BUILD AND
+   CONFIG_P4_USB_HOST_EXT_PORT_ENUM_RETRY_ATTEMPTS GREATER 0)
+    set(P4_USB_EXT_PORT_UPSTREAM
+        "${CMAKE_CURRENT_LIST_DIR}/managed_components/espressif__usb/src/ext_port.c")
+    set(P4_USB_EXT_PORT_GENERATOR
+        "${P4_REPOSITORY_ROOT}/scripts/generate-espressif-usb-ext-port-overlay.py")
+    set(P4_USB_EXT_PORT_GENERATED
+        "${CMAKE_BINARY_DIR}/generated/espressif-usb-1.5.0/ext_port.c")
+    execute_process(
+        COMMAND
+            "${P4_IDF_PYTHON}"
+            "${P4_USB_EXT_PORT_GENERATOR}"
+            --input "${P4_USB_EXT_PORT_UPSTREAM}"
+            --output "${P4_USB_EXT_PORT_GENERATED}"
+        RESULT_VARIABLE P4_USB_EXT_PORT_GENERATE_RESULT
+        ERROR_VARIABLE P4_USB_EXT_PORT_GENERATE_ERROR
+    )
+    if(NOT P4_USB_EXT_PORT_GENERATE_RESULT EQUAL 0)
+        message(FATAL_ERROR
+            "failed to generate serialized ext_port.c overlay: "
+            "${P4_USB_EXT_PORT_GENERATE_ERROR}")
+    endif()
+    add_custom_command(
+        OUTPUT "${P4_USB_EXT_PORT_GENERATED}"
+        COMMAND
+            "${P4_IDF_PYTHON}"
+            "${P4_USB_EXT_PORT_GENERATOR}"
+            --input "${P4_USB_EXT_PORT_UPSTREAM}"
+            --output "${P4_USB_EXT_PORT_GENERATED}"
+        DEPENDS
+            "${P4_USB_EXT_PORT_UPSTREAM}"
+            "${P4_USB_EXT_PORT_GENERATOR}"
+        VERBATIM
+    )
+    set_source_files_properties(
+        "${P4_USB_EXT_PORT_GENERATED}" PROPERTIES GENERATED TRUE)
+    list(APPEND P4_USB_COMPONENT_OVERLAY_SOURCES
+        "${P4_USB_EXT_PORT_GENERATED}")
+endif()
+
+if(P4_USB_COMPONENT_OVERLAY_SOURCES)
+    idf_component_get_property(
+        P4_USB_COMPONENT_LIB espressif__usb COMPONENT_LIB)
+    get_target_property(
+        P4_USB_COMPONENT_SOURCES ${P4_USB_COMPONENT_LIB} SOURCES)
+    set(P4_USB_COMPONENT_FILTERED_SOURCES)
+    set(P4_USB_EXT_PORT_SOURCE_MATCHES 0)
+    set(P4_USB_HCD_SOURCE_MATCHES 0)
+    foreach(P4_USB_COMPONENT_SOURCE IN LISTS P4_USB_COMPONENT_SOURCES)
+        set(P4_USB_COMPONENT_SOURCE_REPLACED FALSE)
+        if(DEFINED P4_USB_EXT_PORT_UPSTREAM)
+            if(P4_USB_COMPONENT_SOURCE STREQUAL P4_USB_EXT_PORT_UPSTREAM OR
+               P4_USB_COMPONENT_SOURCE MATCHES
+                   "managed_components/espressif__usb/src/ext_port\\.c$")
+                math(EXPR P4_USB_EXT_PORT_SOURCE_MATCHES
+                    "${P4_USB_EXT_PORT_SOURCE_MATCHES} + 1")
+                set(P4_USB_COMPONENT_SOURCE_REPLACED TRUE)
+            endif()
+        endif()
+        if(DEFINED P4_USB_HCD_UPSTREAM)
+            if(P4_USB_COMPONENT_SOURCE STREQUAL P4_USB_HCD_UPSTREAM OR
+               P4_USB_COMPONENT_SOURCE MATCHES
+                   "managed_components/espressif__usb/src/hcd_dwc\\.c$")
+                math(EXPR P4_USB_HCD_SOURCE_MATCHES
+                    "${P4_USB_HCD_SOURCE_MATCHES} + 1")
+                set(P4_USB_COMPONENT_SOURCE_REPLACED TRUE)
+            endif()
+        endif()
+        if(NOT P4_USB_COMPONENT_SOURCE_REPLACED)
+            list(APPEND P4_USB_COMPONENT_FILTERED_SOURCES
+                "${P4_USB_COMPONENT_SOURCE}")
+        endif()
+    endforeach()
+    if(DEFINED P4_USB_EXT_PORT_UPSTREAM AND
+       NOT P4_USB_EXT_PORT_SOURCE_MATCHES EQUAL 1)
+        message(FATAL_ERROR
+            "expected exactly one locked espressif__usb ext_port.c source; "
+            "found ${P4_USB_EXT_PORT_SOURCE_MATCHES}")
+    endif()
+    if(DEFINED P4_USB_HCD_UPSTREAM AND
+       NOT P4_USB_HCD_SOURCE_MATCHES EQUAL 1)
+        message(FATAL_ERROR
+            "expected exactly one locked espressif__usb hcd_dwc.c source; "
+            "found ${P4_USB_HCD_SOURCE_MATCHES}")
+    endif()
+    set_property(TARGET ${P4_USB_COMPONENT_LIB} PROPERTY SOURCES
+        "${P4_USB_COMPONENT_FILTERED_SOURCES}")
+    target_sources(${P4_USB_COMPONENT_LIB} PRIVATE
+        ${P4_USB_COMPONENT_OVERLAY_SOURCES})
+endif()
 
 # A reviewed full-project install seeds a valid wear-levelled FAT volume.
 # Subsequent app-only updates leave this persistent partition untouched.
@@ -164,9 +316,13 @@ add_custom_target(p4_legacy_cart_seed ALL
 string(REPLACE "-gcc" "-strip" P4_RISCV_STRIP "${CMAKE_C_COMPILER}")
 set(P4_PACKAGE_SCRIPT
     "${CMAKE_CURRENT_LIST_DIR}/../../scripts/build-game-package.py")
+set(P4_RESOURCE_SCRIPT
+    "${CMAKE_CURRENT_LIST_DIR}/../../scripts/build-game-resource.py")
 set(P4_CARTRIDGE_COMMON_SOURCES
     "${P4_PACKAGE_SCRIPT}"
     "${CMAKE_CURRENT_LIST_DIR}/../../game-platform/runtime/cartridge_main.c"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/cartridge.h"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/game.h"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/audio_pack.h"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/feedback.h"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/audio_pack.c"
@@ -178,7 +334,7 @@ set(P4_CARTRIDGE_COMMON_SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/input.c"
 )
 
-function(p4_add_seed_game PACKAGE_NAME GAME_NAME)
+function(p4_add_seed_game PACKAGE_NAME GAME_NAME RESOURCE_NAME RESOURCE_PAYLOAD)
     set(P4_GAME_DIR
         "${P4_REPOSITORY_ROOT}/games/${GAME_NAME}")
     set(P4_PACKAGE_OUTPUT
@@ -203,6 +359,30 @@ function(p4_add_seed_game PACKAGE_NAME GAME_NAME)
     set(P4_SEEDED_GAME_PACKAGES
         ${P4_SEEDED_GAME_PACKAGES} "${P4_PACKAGE_OUTPUT}"
         PARENT_SCOPE)
+    if(NOT RESOURCE_NAME STREQUAL "")
+        set(P4_RESOURCE_PAYLOAD
+            "${P4_GAME_DIR}/${RESOURCE_PAYLOAD}")
+        set(P4_RESOURCE_OUTPUT
+            "${P4_GAME_STORAGE_SEED_DIR}/GAMES/${RESOURCE_NAME}")
+        add_custom_command(
+            OUTPUT "${P4_RESOURCE_OUTPUT}"
+            COMMAND
+                "${P4_IDF_PYTHON}"
+                "${P4_RESOURCE_SCRIPT}"
+                --manifest "${P4_GAME_DIR}/game.json"
+                --payload "${P4_RESOURCE_PAYLOAD}"
+                --output "${P4_RESOURCE_OUTPUT}"
+            DEPENDS
+                "${P4_RESOURCE_SCRIPT}"
+                "${P4_RESOURCE_PAYLOAD}"
+                "${P4_GAME_DIR}/game.json"
+            VERBATIM
+        )
+        set(P4_SEEDED_GAME_PACKAGES
+            ${P4_SEEDED_GAME_PACKAGES} "${P4_PACKAGE_OUTPUT}"
+            "${P4_RESOURCE_OUTPUT}"
+            PARENT_SCOPE)
+    endif()
 endfunction()
 
 file(GLOB P4_GAME_MANIFESTS CONFIGURE_DEPENDS

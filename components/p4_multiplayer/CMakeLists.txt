@@ -5,6 +5,7 @@ if(COMMAND idf_component_register)
         SRCS
             "src/packet.c"
             "src/session.c"
+            "src/stream.c"
         INCLUDE_DIRS "include"
     )
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)
@@ -18,6 +19,7 @@ else()
     add_library(p4_multiplayer STATIC
         src/packet.c
         src/session.c
+        src/stream.c
     )
     target_include_directories(p4_multiplayer PUBLIC include)
     target_compile_features(p4_multiplayer PUBLIC c_std_11)

@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "mbedtls/sha256.h"
+#include "p4/game.h"
 #include "platform/game_storage.h"
 
 static bool package_file_name(const char *name)
@@ -21,6 +22,22 @@ static bool package_file_name(const char *name)
          (name[length - 3U] == 'P' || name[length - 3U] == 'p') &&
          name[length - 2U] == '4' &&
          (name[length - 1U] == 'G' || name[length - 1U] == 'g'));
+}
+
+static bool resource_file_name(
+    const char *package_name,
+    char output[PLATFORM_GAME_STORAGE_FILE_NAME_MAX_BYTES])
+{
+    if (!package_file_name(package_name) || output == NULL) {
+        return false;
+    }
+    const size_t length = strlen(package_name);
+    if (length >= PLATFORM_GAME_STORAGE_FILE_NAME_MAX_BYTES) {
+        return false;
+    }
+    memcpy(output, package_name, length + 1U);
+    output[length - 1U] = 'R';
+    return true;
 }
 
 static p4_game_package_result_t validate_data(
@@ -170,9 +187,24 @@ esp_err_t platform_game_catalog_remove(
         index >= catalog->entry_count) {
         return ESP_ERR_INVALID_ARG;
     }
-    return catalog->entries[index].in_games_directory
-        ? platform_game_storage_remove_game_file(
-            catalog->entries[index].file_name)
-        : platform_game_storage_remove_root_file(
-            catalog->entries[index].file_name);
+    const platform_game_catalog_entry_t *const entry =
+        &catalog->entries[index];
+    const uint32_t capabilities = entry->package.required_capabilities |
+        entry->package.optional_capabilities;
+    if ((capabilities & P4_GAME_CAP_STORAGE) != 0U) {
+        char resource_name[PLATFORM_GAME_STORAGE_FILE_NAME_MAX_BYTES];
+        if (!resource_file_name(entry->file_name, resource_name)) {
+            return ESP_ERR_INVALID_ARG;
+        }
+        const esp_err_t resource_removed = entry->in_games_directory
+            ? platform_game_storage_remove_game_file(resource_name)
+            : platform_game_storage_remove_root_file(resource_name);
+        if (resource_removed != ESP_OK &&
+            resource_removed != ESP_ERR_NOT_FOUND) {
+            return resource_removed;
+        }
+    }
+    return entry->in_games_directory
+        ? platform_game_storage_remove_game_file(entry->file_name)
+        : platform_game_storage_remove_root_file(entry->file_name);
 }

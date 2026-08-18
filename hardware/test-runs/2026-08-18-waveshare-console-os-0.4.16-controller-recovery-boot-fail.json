@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "date": "2026-08-18",
+  "result": "FAIL",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "pcb_revision": null,
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART on /dev/cu.wchusbserial5C371865781",
+    "h2": "operator-attested externally powered USB-C hub with power input",
+    "firmware_vbus_source": false,
+    "electrical_qualification_claimed": false
+  },
+  "artifact": {
+    "version": "0.4.16",
+    "application_offset": "0x20000",
+    "application_bytes": 1178784,
+    "application_sha256": "408797688ee45107a2262fc1d5ce8e8995df3017e15112cea76ce97bb42218e8",
+    "elf_sha256": "82b9fd8764b720fb3608ed492ee4a38b844f965a232558fab9ee0b3cb4894c98"
+  },
+  "install": {
+    "preflight": "PASS",
+    "write_readback": "PASS",
+    "backup_created": false,
+    "bootloader_written": false,
+    "partition_table_written": false,
+    "ota_data_written": false,
+    "sd_card_written": false
+  },
+  "uart": {
+    "started_at": "2026-08-18T03:08:14-0700",
+    "markers": [
+      "App version: 0.4.16",
+      "esp_psram: Reserving pool of 32K of internal memory for DMA/internal allocations",
+      "main_task: Calling app_main()",
+      "P4_DISPLAY M1 PANEL_READY native=480x800 logical=800x480 rotation_cw=90",
+      "P4_GAME_STORAGE SD_READY frequency_khz=10000 fallback=0",
+      "tinyusb_msc_storage: Failed to allocate memory for MSC storage",
+      "P4_CONSOLE_OS STORAGE_INIT status=degraded result=ESP_ERR_NO_MEM",
+      "P4_CONSOLE_OS BOOT_DIAL status=played digits=614-276-3639",
+      "P4_DISPLAY M2 SUBMIT_TIMEOUT timeout_ms=250",
+      "P4_CONSOLE_OS HALT stage=boot-modem-frame error=ESP_ERR_TIMEOUT"
+    ],
+    "app_main_reached": true,
+    "esp_hosted_present": false,
+    "reboot_loop": false,
+    "console_os_ready": false,
+    "fatal_dark_halt": true
+  },
+  "classification": "Removing ESP-Hosted fixed the prior constructor-driven SDIO assertion and reduced the image by 256256 bytes. The controller-first storage path still incorrectly creates the TinyUSB MSC storage object during normal app ownership, making SD readiness depend on internal memory reserved for USB Host. Independently, one display refresh timeout after the long boot-audio sequence is escalated to a permanent dark halt even though display initialization and prior boot frames succeeded.",
+  "corrective_action": "Split normal SD/VFS mounting from on-demand MSC object creation and deletion so controller mode pays no MSC allocation. Make boot-frame submission tolerate and report bounded transient refresh timeouts without blacking out or halting, while preserving fatal handling for initialization, invalid state, and allocation failures. Issue a new exact-artifact authorization only after focused tests and a clean build.",
+  "hardware_tested": true
+}

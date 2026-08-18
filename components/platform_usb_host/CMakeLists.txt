@@ -15,6 +15,9 @@ if(COMMAND idf_component_register)
             log
             platform_board
             usb
+        PRIV_REQUIRES
+            hal
+            soc
     )
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)
     target_compile_options(${COMPONENT_LIB} PRIVATE

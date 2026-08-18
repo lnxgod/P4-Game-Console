@@ -48,6 +48,8 @@ typedef struct {
     platform_game_storage_state_t state;
     bool usb_attached;
     bool usb_driver_running;
+    bool usb_mode_supported;
+    bool usb_host_ejected;
     uint64_t capacity_bytes;
     uint32_t sector_size_bytes;
     uint32_t generation;
@@ -78,6 +80,18 @@ esp_err_t platform_game_storage_get_status(
     platform_game_storage_status_t *out_status);
 
 /**
+ * Give the Waveshare microSD card to H2 USB device MSC, or return it to the
+ * launcher after the laptop has cleanly ejected it (or disconnected). In a
+ * controller-first build, the caller must stop USB Host/HID before enabling
+ * MSC and may restart Host/HID only after disabling MSC succeeds.
+ *
+ * The service rejects USB-off while an attached host has not ejected the
+ * volume. App, USB-device, and controller-host ownership therefore remain
+ * mutually exclusive.
+ */
+esp_err_t platform_game_storage_set_usb_mode(bool enabled);
+
+/**
  * List a bounded, sorted snapshot of the FAT root while the app owns it.
  *
  * Host ownership, mount transitions, and the terminal game lease return
@@ -86,6 +100,17 @@ esp_err_t platform_game_storage_get_status(
  * safely are counted as omitted and never truncated.
  */
 esp_err_t platform_game_storage_list_root(
+    platform_game_storage_file_listing_t *out_listing);
+
+/**
+ * List one directory beneath the game-storage root.
+ *
+ * An empty relative path selects the root. Every non-empty segment must be an
+ * exact safe directory name; absolute paths, dot segments, repeated slashes,
+ * control characters, and overlong paths are rejected.
+ */
+esp_err_t platform_game_storage_list_directory(
+    const char *relative_path,
     platform_game_storage_file_listing_t *out_listing);
 
 /** List the bounded, sorted contents of the fixed GAMES directory. */
@@ -100,6 +125,10 @@ esp_err_t platform_game_storage_list_games(
  * rejected. Successful removal invalidates the cached Doom identity.
  */
 esp_err_t platform_game_storage_remove_root_file(const char *name);
+
+/** Remove one regular file from a validated relative directory. */
+esp_err_t platform_game_storage_remove_file(
+    const char *relative_path, const char *name);
 
 /** Remove one regular file from the fixed GAMES directory. */
 esp_err_t platform_game_storage_remove_game_file(const char *name);

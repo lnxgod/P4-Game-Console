@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "date": "2026-08-18",
+  "result": "FAIL",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "pcb_revision": null,
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART on /dev/cu.wchusbserial5C371865781",
+    "h2": "operator-attested externally powered USB-C hub with power input",
+    "firmware_vbus_source": false,
+    "electrical_qualification_claimed": false
+  },
+  "artifact": {
+    "version": "0.4.14",
+    "application_offset": "0x20000",
+    "application_bytes": 1435040,
+    "application_sha256": "85188ea99509375665e00209340a757b968699a99b56b0e83a85746457e13d54",
+    "elf_bytes": 17526932,
+    "elf_sha256": "0bb1b165f724e6f96933b9b4db200606686a50c0afcf77fec140a77bcc201274",
+    "source_base_commit": "29e49a35d179f7bcc13058004811b8a0d07aa593"
+  },
+  "install": {
+    "mode": "guarded exact-unit app-only successor",
+    "preflight": "PASS",
+    "write_readback": "PASS",
+    "backup_created": false,
+    "bootloader_written": false,
+    "partition_table_written": false,
+    "ota_data_written": false,
+    "sd_card_written": false
+  },
+  "uart": {
+    "started_at": "2026-08-18T02:42:30-0700",
+    "app_version_observed": "0.4.14",
+    "elf_prefix_observed": "0bb1b165f",
+    "markers": [
+      "esp_psram: Reserving pool of 64K of internal memory for DMA/internal allocations",
+      "main_task: Could not reserve internal/DMA pool (error 0x101)",
+      "abort() was called at PC 0x400db8c9 on core 0",
+      "rst:0xc (SW_CPU_RESET)"
+    ],
+    "app_main_reached": false,
+    "console_os_ready": false,
+    "boot_loop": true
+  },
+  "classification": "The experimental TT scheduler was absent and did not cause this failure. Static internal-memory growth from the composite Host/HID/hub/TinyUSB image made the inherited 64 KiB reserve impossible before app_main.",
+  "corrective_action": "Revoke the exact artifact, reduce only the Waveshare controller-first internal/DMA reserve to ESP-IDF's 32 KiB default, pin that setting in the release verifier, rebuild as 0.4.15, and require a new guarded hardware run.",
+  "hardware_tested": false
+}

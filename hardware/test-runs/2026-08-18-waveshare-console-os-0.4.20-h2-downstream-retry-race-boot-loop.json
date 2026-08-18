@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "date": "2026-08-18",
+  "result": "FAIL",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "pcb_revision": null,
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART on /dev/cu.wchusbserial5C371865781",
+    "h2": "operator-attested externally powered USB-C hub with power input and an attached low-speed USB child on downstream port 2",
+    "firmware_vbus_source": false,
+    "electrical_qualification_claimed": false
+  },
+  "artifact": {
+    "version": "0.4.20",
+    "application_offset": "0x20000",
+    "application_bytes": 1182688,
+    "application_sha256": "4bddc11758770c7bc55a0446f352635c08e52e70cf8ddbafa1deb6513322655f",
+    "elf_bytes": 14652356,
+    "elf_sha256": "4bd8a2abc76bc41091726f8f52f247c54d31c81b7dbddc8abe60db04fa23b441",
+    "generated_overlay_bytes": 52259,
+    "generated_overlay_sha256": "74cc01f321927609c62a253286055700f7858a58eb10e65a55611c24f86c512e"
+  },
+  "install": {
+    "preflight": "PASS",
+    "write_readback": "PASS",
+    "backup_created": false,
+    "bootloader_written": false,
+    "partition_table_written": false,
+    "ota_data_written": false,
+    "sd_card_written": false
+  },
+  "uart": {
+    "capture_seconds": 75,
+    "capture_bytes": 68563,
+    "capture_sha256": "33759ba443cec57fd928263833fc66ca4221f1270b5462b895cf727b633fe22c",
+    "app_boots_observed": 4,
+    "asserting_boots_observed": 3,
+    "common_markers": [
+      "App version: 0.4.20",
+      "P4_GAME_STORAGE SD_READY frequency_khz=10000 fallback=0",
+      "USB_HOST_SPEED_POLICY root=full-speed-only max_mbit=12 reason=no-hs-hub-tt-scheduler",
+      "USB_HOST_READY controller=p4-hs peripheral=0 root_port_enabled=0 topology=waveshare-h2-self-powered-test physical_vbus_source=external firmware_vbus_source=0",
+      "GAMEPAD_USB_READY tier=generic-hid report_max=1024",
+      "USB_HOST_ROOT_PORT_ENABLED class_leases_present=1 integrated_hub=0",
+      "HCD DWC: Low-speed, extra delay will be applied in ISR",
+      "ENUM: Bad transfer status 1: CHECK_SHORT_DEV_DESC",
+      "EXT_PORT: Port2 disabled, reset attempts=1",
+      "EXT_PORT: P4_EXT_PORT_ENUM_RETRY Port2 attempt=1/2",
+      "EXT_HUB: Request 0, port 2, feature 0: failed to submit ctrl urb: ESP_ERR_INVALID_STATE",
+      "EXT_HUB: [1] Device is not working properly, wait device removal",
+      "assert failed: usbh_dev_close usbh.c:1334 (dev_obj->dynamic.num_ctrl_xfers_inflight == 0)"
+    ],
+    "app_main_reached": true,
+    "console_os_ready": false,
+    "storage_sd_ready": true,
+    "hub_full_speed_route_observed": true,
+    "downstream_child_speed": "low",
+    "downstream_port": 2,
+    "retry_attempts_configured": 2,
+    "retry_attempt_reached_per_boot": 1,
+    "hid_child_enumerated": false,
+    "panic_or_reboot_loop": true
+  },
+  "classification": "The generated overlay schedules its retry after the failed child USBH node is recycled, but that is not sufficient to prove the external-hub driver's own control endpoint is idle. The immediate downstream reset/status operation overlaps a hub control transfer, the hub request returns ESP_ERR_INVALID_STATE, and hub teardown reaches usbh_dev_close with num_ctrl_xfers_inflight nonzero. This is a repeatable boot loop and the exact candidate is revoked.",
+  "corrective_action": "First restore a stable controller-first image with downstream enumeration retries disabled. Do not retry at the ext_port recycle callback. Any future attempt must be deferred through the external-hub action queue only after its control transfer completion and must have an independent boot-loop-safe gate; otherwise leave the controller unsupported through this hub and continue OS work on the stable image.",
+  "hardware_tested": true
+}

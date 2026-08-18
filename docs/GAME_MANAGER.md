@@ -7,7 +7,8 @@ filesystem simultaneously.
 
 ## Stored games
 
-Games are single `GAMES/*.P4G` files. Console OS scans the `GAMES` directory
+Games use one `GAMES/*.P4G` executable and may declare a same-basename `.P4R`
+read-only resource sidecar. Console OS scans the `GAMES` directory
 first, then accepts root `*.P4G` files from older cards for compatibility. Format
 `p4-native-elf-v1` consists of a fixed 256-byte little-endian header followed
 by one ESP32-P4 RISC-V ELF payload. The header contains bounded launcher
@@ -26,9 +27,11 @@ The SHA-256 detects damaged or partially copied packages; it is not a digital
 signature. Kid-facing distribution should use one trusted catalog or an
 adult-controlled source until a signing-key policy is added.
 
-Install or update a game by copying/replacing its `.P4G` file in `GAMES` while
-the laptop owns `P4 GAMES`, then ejecting the volume. The catalog is rebuilt only after
-the app regains ownership. Removal is a confirmed Game Manager action.
+Install or update a game by copying/replacing its declared `.P4G` and `.P4R`
+files in `GAMES` while the laptop owns `P4 GAMES`, then ejecting the volume.
+The catalog is rebuilt only after the app regains ownership. Removal is a
+confirmed Game Manager action; it removes a declared resource sidecar before
+its executable so an old resource cannot be inherited by a later package.
 
 ## Atomic OS updates
 

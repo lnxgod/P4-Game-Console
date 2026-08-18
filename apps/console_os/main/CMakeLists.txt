@@ -10,16 +10,19 @@ set(P4_CONSOLE_MAIN_INCLUDE_DIRS ".")
 set(P4_CONSOLE_MAIN_REQUIREMENTS
     console_shell
     esp_timer
+    esp_system
     freertos
     heap
     log
     lwip
     mbedtls
     p4_content_catalog
+    p4_bbs
     p4_desktop
     p4_game_api
     p4_multiplayer
     platform_board
+    platform_console_settings
     platform_display
     platform_game_catalog
     platform_game_loader
@@ -29,6 +32,8 @@ set(P4_CONSOLE_MAIN_REQUIREMENTS
 )
 
 idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
+idf_build_get_property(P4_CONTROLLER_FIRST_BUILD
+    P4_WAVESHARE_CONTROLLER_FIRST_BUILD)
 if(P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
     list(APPEND P4_CONSOLE_MAIN_SOURCES
         "${P4_DOOM_GAMEPAD_AUDIO_MAIN}/doom_embedded_gamepad_audio_main.c"
@@ -63,6 +68,22 @@ else()
     if(P4_ACTIVE_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
         set(P4_TOUCH_BOARD_DEPS board_deps_waveshare)
+        # Keep the host/HID platform link available in both mutually exclusive
+        # H2 role images. sdkconfig selects whether Console OS starts it; the
+        # ordinary device/MSC image remains electrically inert as a host.
+        list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
+            gamepad_core
+            platform_gamepad_usb
+            platform_usb_host
+        )
+        # ESP-Hosted autostarts its SDIO transport before app_main. Keep that
+        # unrelated, not-yet-qualified radio path out of the controller-first
+        # H2 image; the ordinary Waveshare image can still opt into scanning.
+        if(NOT P4_CONTROLLER_FIRST_BUILD)
+            list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
+                platform_signal_scan
+            )
+        endif()
     else()
         set(P4_TOUCH_BOARD_DEPS board_deps_elecrow)
     endif()

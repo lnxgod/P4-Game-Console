@@ -11,12 +11,25 @@
 #include "freertos/event_groups.h"
 #include "freertos/task.h"
 #include "usb/usb_host.h"
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
+    CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE && \
+    CONFIG_P4_WAVESHARE_H2_FORCE_FULL_SPEED_HOST
+#include "hal/usb_dwc_ll.h"
+#include "soc/usb_dwc_struct.h"
+#endif
 
 #define PLATFORM_USB_HOST_DAEMON_STACK_BYTES 4096U
 #define PLATFORM_USB_HOST_DAEMON_PRIORITY 5U
 #define PLATFORM_USB_HOST_HS_PERIPHERAL_MAP (1U << 0)
 #define PLATFORM_USB_HOST_EVENT_ALL_FREE (1U << 0)
 #define PLATFORM_USB_HOST_EVENT_DAEMON_STOPPED (1U << 1)
+
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
+    CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE
+#define PLATFORM_USB_HOST_WAVESHARE_SELF_POWERED 1
+#else
+#define PLATFORM_USB_HOST_WAVESHARE_SELF_POWERED 0
+#endif
 
 static const char *const TAG = "platform_usb_host";
 
@@ -26,6 +39,33 @@ static bool s_model_initialized;
 static bool s_stop_requested;
 static EventGroupHandle_t s_events;
 static TaskHandle_t s_daemon_task;
+
+static esp_err_t configure_root_speed_policy(void)
+{
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
+    CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE && \
+    CONFIG_P4_WAVESHARE_H2_FORCE_FULL_SPEED_HOST
+    /*
+     * DWC2 HCFG.FSLSSupp is the controller's FS/LS-only host mode. Set it
+     * after usb_host_install() has enabled the HS peripheral clock, but before
+     * the root port is powered. This is also the known-stable safe-mode
+     * fallback. The guarded Waveshare build overlay reapplies the complete
+     * FS/LS clock policy before each reset because the controller may clear
+     * this bit. An HS-capable hub then negotiates at full speed, avoiding any
+     * need for unsupported TT splits.
+     */
+    usb_dwc_ll_hcfg_set_fsls_supp_only(&USB_DWC_HS);
+    if (USB_DWC_HS.hcfg_reg.fslssupp != 1U) {
+        ESP_LOGE(TAG,
+                 "USB_HOST_SPEED_POLICY_FAILED requested=full-speed-only");
+        return ESP_ERR_INVALID_STATE;
+    }
+    ESP_LOGI(TAG,
+             "USB_HOST_SPEED_POLICY root=full-speed-only max_mbit=12 "
+             "reason=no-hs-hub-tt-scheduler reset_reapply=guarded-nvs-probe");
+#endif
+    return ESP_OK;
+}
 
 #if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 enum {
@@ -95,6 +135,7 @@ static esp_err_t integrated_hub_release_reset(void)
  * remains false.
  */
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B && \
+    !PLATFORM_USB_HOST_WAVESHARE_SELF_POWERED && \
     CONFIG_PLATFORM_USB_HOST_FIXTURE_AUTHORIZED
 static const volatile uint8_t s_build_authorization_gate = 1U;
 static const platform_usb_fixture_evidence_t s_build_expected_evidence = {
@@ -114,7 +155,8 @@ static const platform_usb_fixture_evidence_t s_build_expected_evidence = {
     .evidence_id = CONFIG_PLATFORM_USB_HOST_FIXTURE_EVIDENCE_ID,
     .evidence_sha256 = CONFIG_PLATFORM_USB_HOST_FIXTURE_EVIDENCE_SHA256,
 };
-#elif !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#elif !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B && \
+      !PLATFORM_USB_HOST_WAVESHARE_SELF_POWERED
 static const volatile uint8_t s_build_authorization_gate = 0U;
 static const platform_usb_fixture_evidence_t s_build_expected_evidence = {
     .version = PLATFORM_USB_FIXTURE_EVIDENCE_VERSION,
@@ -133,7 +175,8 @@ static const platform_usb_fixture_evidence_t s_build_expected_evidence = {
 };
 #endif
 
-#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B && \
+    !PLATFORM_USB_HOST_WAVESHARE_SELF_POWERED
 static bool __attribute__((noinline)) build_authorization_enabled(void)
 {
     return s_build_authorization_gate == 1U;
@@ -243,7 +286,8 @@ static void mark_fault(void)
     taskEXIT_CRITICAL(&s_model_lock);
 }
 
-#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+#if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B && \
+    !PLATFORM_USB_HOST_WAVESHARE_SELF_POWERED
 static bool fixture_matches_build_authorization(
     const platform_usb_fixture_evidence_t *evidence)
 {
@@ -282,6 +326,12 @@ esp_err_t platform_usb_host_start(
                  "USB_HOST_BLOCKED reason=integrated-hub-requires-null-fixture");
         return ESP_ERR_INVALID_ARG;
     }
+#elif PLATFORM_USB_HOST_WAVESHARE_SELF_POWERED
+    if (fixture_evidence != NULL) {
+        ESP_LOGE(TAG,
+                 "USB_HOST_BLOCKED reason=waveshare-powered-test-requires-null-fixture");
+        return ESP_ERR_INVALID_ARG;
+    }
 #else
     const platform_usb_status_t fixture_status =
         platform_usb_fixture_evidence_validate(fixture_evidence);
@@ -301,6 +351,9 @@ esp_err_t platform_usb_host_start(
     taskENTER_CRITICAL(&s_model_lock);
     ensure_model_initialized_locked();
 #if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
+    model_status =
+        platform_usb_host_model_begin_integrated_start(&s_model);
+#elif PLATFORM_USB_HOST_WAVESHARE_SELF_POWERED
     model_status =
         platform_usb_host_model_begin_integrated_start(&s_model);
 #else
@@ -349,6 +402,24 @@ esp_err_t platform_usb_host_start(
         return result;
     }
 
+    result = configure_root_speed_policy();
+    if (result != ESP_OK) {
+        const esp_err_t uninstall_result = usb_host_uninstall();
+        if (uninstall_result == ESP_OK) {
+            vEventGroupDelete(s_events);
+            s_events = NULL;
+            complete_start(false);
+            return result;
+        }
+        mark_fault();
+        ESP_LOGE(TAG,
+                 "USB_HOST_FAULT stage=speed-policy-rollback "
+                 "configure=%s rollback=%s resources=retained",
+                 esp_err_to_name(result),
+                 esp_err_to_name(uninstall_result));
+        return uninstall_result;
+    }
+
     if (xTaskCreate(usb_daemon_task, "p4_usb_daemon",
                     PLATFORM_USB_HOST_DAEMON_STACK_BYTES, NULL,
                     PLATFORM_USB_HOST_DAEMON_PRIORITY, &s_daemon_task) != pdPASS) {
@@ -372,6 +443,11 @@ esp_err_t platform_usb_host_start(
              "USB_HOST_READY controller=p4-hs peripheral=0 "
              "root_port_enabled=0 topology=olimex-fe1.1s-powered-hub "
              "hub_reset_gpio=21 hub_reset=asserted");
+#elif PLATFORM_USB_HOST_WAVESHARE_SELF_POWERED
+    ESP_LOGI(TAG,
+             "USB_HOST_READY controller=p4-hs peripheral=0 "
+             "root_port_enabled=0 topology=waveshare-h2-self-powered-test "
+             "physical_vbus_source=external firmware_vbus_source=0");
 #else
     ESP_LOGI(TAG,
              "USB_HOST_READY controller=p4-hs peripheral=0 root_port_enabled=0 "

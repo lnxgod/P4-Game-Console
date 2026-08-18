@@ -77,6 +77,7 @@ static esp_lcd_panel_io_handle_t s_dbi_io;
 static esp_lcd_panel_handle_t s_panel;
 static bool s_backlight_ready;
 static bool s_initialized;
+static bool s_pattern_active;
 static uint16_t *s_submit_frame;
 static StaticSemaphore_t s_api_lock_storage;
 static StaticSemaphore_t s_refresh_signal_storage;
@@ -207,6 +208,7 @@ static esp_err_t configure_backlight_dark(void)
 static void release_owned_resources(void)
 {
     s_initialized = false;
+    s_pattern_active = false;
     if (s_backlight_ready) {
         (void)ledc_set_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
         (void)ledc_update_duty(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0);
@@ -541,6 +543,7 @@ esp_err_t platform_display_show_pattern(platform_display_pattern_t pattern)
 
     esp_err_t err = esp_lcd_dpi_panel_set_pattern(s_panel, dsi_pattern);
     if (err == ESP_OK) {
+        s_pattern_active = dsi_pattern != MIPI_DSI_PATTERN_NONE;
         ESP_LOGI(TAG, "P4_DISPLAY M1 PATTERN name=%s", name);
     }
     (void)xSemaphoreGive(s_api_lock);
@@ -597,9 +600,13 @@ static esp_err_t submit_rgb565(
         goto fail;
     }
 
-    err = esp_lcd_dpi_panel_set_pattern(s_panel, MIPI_DSI_PATTERN_NONE);
-    if (err != ESP_OK) {
-        goto fail_dark;
+    if (s_pattern_active) {
+        err = esp_lcd_dpi_panel_set_pattern(
+            s_panel, MIPI_DSI_PATTERN_NONE);
+        if (err != ESP_OK) {
+            goto fail_dark;
+        }
+        s_pattern_active = false;
     }
     while (xSemaphoreTake(s_refresh_signal, 0) == pdTRUE) {
     }
@@ -621,9 +628,13 @@ static esp_err_t submit_rgb565(
      */
     if (wait_for_refresh_after(refresh_baseline, started, budget) != ESP_OK) {
         __atomic_fetch_add(&s_stats.submit_timeouts, 1U, __ATOMIC_RELAXED);
-        (void)set_brightness_locked(0);
-        ESP_LOGE(TAG, "P4_DISPLAY M2 SUBMIT_TIMEOUT timeout_ms=%" PRIu32,
-                 timeout_ms);
+        const uint32_t refresh_current = __atomic_load_n(
+            &s_stats.refresh_completions, __ATOMIC_ACQUIRE);
+        ESP_LOGE(TAG,
+                 "P4_DISPLAY M2 SUBMIT_TIMEOUT timeout_ms=%" PRIu32
+                 " refresh_baseline=%" PRIu32 " refresh_current=%" PRIu32
+                 " backlight_preserved=1",
+                 timeout_ms, refresh_baseline, refresh_current);
         (void)xSemaphoreGive(s_api_lock);
         return ESP_ERR_TIMEOUT;
     }

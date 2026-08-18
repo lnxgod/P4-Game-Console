@@ -25,6 +25,8 @@ enum {
     P4_GAME_ACHIEVEMENT_ID_MAX_BYTES = 24,
     P4_GAME_ACHIEVEMENT_TITLE_MAX_BYTES = 24,
     P4_GAME_ACHIEVEMENT_DESCRIPTION_MAX_BYTES = 48,
+    P4_GAME_SIGNAL_MAX_RESULTS = 8,
+    P4_GAME_SIGNAL_LABEL_MAX_BYTES = 25,
 };
 
 typedef enum {
@@ -33,6 +35,7 @@ typedef enum {
     P4_GAME_CAP_AUDIO_TONE = UINT32_C(1) << 2U,
     P4_GAME_CAP_AUDIO_STREAM = UINT32_C(1) << 3U,
     P4_GAME_CAP_STORAGE = UINT32_C(1) << 4U,
+    P4_GAME_CAP_SIGNAL_SCAN = UINT32_C(1) << 5U,
 } p4_game_capability_t;
 
 typedef enum {
@@ -101,6 +104,45 @@ typedef bool (*p4_game_unlock_achievement_fn)(
     void *context,
     const p4_game_achievement_t *achievement);
 
+typedef enum {
+    P4_GAME_SIGNAL_IDLE = 0,
+    P4_GAME_SIGNAL_SCANNING,
+    P4_GAME_SIGNAL_READY,
+    P4_GAME_SIGNAL_UNAVAILABLE,
+    P4_GAME_SIGNAL_ERROR,
+} p4_game_signal_status_t;
+
+enum {
+    P4_GAME_SIGNAL_HIDDEN = UINT8_C(1) << 0U,
+    P4_GAME_SIGNAL_PROTECTED = UINT8_C(1) << 1U,
+};
+
+/**
+ * One OS-sanitized signal result. Identity is an opaque, session-scoped,
+ * salted token; games never receive a BSSID, credentials, or raw SSID bytes.
+ */
+typedef struct {
+    uint64_t token;
+    char label[P4_GAME_SIGNAL_LABEL_MAX_BYTES];
+    int8_t rssi_dbm;
+    uint8_t channel;
+    uint8_t flags;
+} p4_game_signal_t;
+
+typedef struct {
+    uint32_t generation;
+    p4_game_signal_status_t status;
+    uint8_t count;
+    p4_game_signal_t results[P4_GAME_SIGNAL_MAX_RESULTS];
+} p4_game_signal_snapshot_t;
+
+/** Request one non-blocking bounded scan. focus_token may be zero. */
+typedef bool (*p4_game_request_signal_scan_fn)(void *context,
+                                               uint64_t focus_token);
+/** Copy the latest bounded snapshot without blocking. */
+typedef bool (*p4_game_read_signal_scan_fn)(
+    void *context, p4_game_signal_snapshot_t *snapshot);
+
 typedef struct {
     uint32_t available_capabilities;
     void *audio_context;
@@ -111,6 +153,16 @@ typedef struct {
     p4_game_stop_audio_fn stop_audio;
     void *achievement_context;
     p4_game_unlock_achievement_fn unlock_achievement;
+    /**
+     * Optional validated, read-only payload from the game's SD resource
+     * sidecar. The host owns this memory for the foreground session.
+     */
+    const uint8_t *resource_data;
+    size_t resource_bytes;
+    uint32_t resource_format_version;
+    void *signal_scan_context;
+    p4_game_request_signal_scan_fn request_signal_scan;
+    p4_game_read_signal_scan_fn read_signal_scan;
 } p4_game_services_t;
 
 typedef struct {
@@ -202,6 +254,17 @@ bool p4_game_unlock_achievement(p4_game_context_t *context,
                                 const char *achievement_id,
                                 const char *title,
                                 const char *description);
+
+/**
+ * Start a non-blocking scan. A nonzero focus token lets an OS-owned provider
+ * prioritize live RSSI updates without revealing the underlying identity.
+ */
+bool p4_game_request_signal_scan(p4_game_context_t *context,
+                                 uint64_t focus_token);
+
+/** Read and validate the OS-owned signal snapshot. */
+bool p4_game_read_signal_scan(p4_game_context_t *context,
+                              p4_game_signal_snapshot_t *snapshot);
 
 void p4_game_stop_audio(p4_game_context_t *context);
 

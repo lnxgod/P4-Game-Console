@@ -21,6 +21,8 @@ ID_RE = re.compile(r"^[a-z0-9][a-z0-9.-]{2,47}$")
 ACCENT_RE = re.compile(r"^0x[0-9a-fA-F]{4}$")
 VERSION_RE = re.compile(r"^[0-9]+\.[0-9]+\.[0-9]+(?:[-+][A-Za-z0-9.-]+)?$")
 PACKAGE_RE = re.compile(r"^[A-Z0-9][A-Z0-9_-]{0,31}\.P4G$")
+RESOURCE_RE = re.compile(r"^[A-Z0-9][A-Z0-9_-]{0,31}\.P4R$")
+RESOURCE_PAYLOAD_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_./-]{0,254}$")
 FOLDER_RE = re.compile(
     r"^[A-Z0-9][A-Z0-9 -]{0,14}(?:/[A-Z0-9][A-Z0-9 -]{0,14})?$")
 CAPABILITIES = {
@@ -29,6 +31,7 @@ CAPABILITIES = {
     "audio-tone": "P4_GAME_CAP_AUDIO_TONE",
     "audio-stream": "P4_GAME_CAP_AUDIO_STREAM",
     "storage": "P4_GAME_CAP_STORAGE",
+    "signal-scan": "P4_GAME_CAP_SIGNAL_SCAN",
 }
 
 
@@ -107,6 +110,25 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
     if (not isinstance(package_file, str) or
             not PACKAGE_RE.fullmatch(package_file)):
         fail(path, "package_file must be an uppercase .P4G basename")
+    resource_file = value.get("resource_file")
+    resource_payload = value.get("resource_payload")
+    if (resource_file is None) != (resource_payload is None):
+        fail(path, "resource_file and resource_payload must appear together")
+    if resource_file is not None:
+        if (not isinstance(resource_file, str) or
+                not RESOURCE_RE.fullmatch(resource_file) or
+                resource_file != package_file[:-1] + "R"):
+            fail(path, "resource_file must be the matching uppercase .P4R basename")
+        if (not isinstance(resource_payload, str) or
+                not RESOURCE_PAYLOAD_RE.fullmatch(resource_payload)):
+            fail(path, "resource_payload must be a safe relative file path")
+        payload_path = path.parent / resource_payload
+        try:
+            payload_path.resolve().relative_to(path.parent.resolve())
+        except ValueError:
+            fail(path, "resource_payload escapes the game directory")
+        if not payload_path.is_file():
+            fail(path, f"resource_payload is missing: {resource_payload}")
     bounded_text(value, path, "title", 16)
     bounded_text(value, path, "subtitle", 32)
     folder = bounded_text(value, path, "folder", 32)
@@ -119,6 +141,8 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
         fail(path, f"required and optional capabilities overlap: {overlap}")
     if "video" not in required:
         fail(path, "video must be a required capability")
+    if resource_file is not None and "storage" not in required + optional:
+        fail(path, "a resource sidecar requires the storage capability")
     bounded_text(value, path, "license", 64)
     bounded_text(value, path, "assets", 128)
     value["_path"] = path
@@ -132,10 +156,13 @@ def discover(games_root: pathlib.Path) -> list[dict[str, Any]]:
     enabled = [manifest for manifest in manifests if manifest["enabled"]]
     for key in (
         "component", "entry_symbol", "id", "launcher_id", "package_file",
+        "resource_file",
     ):
         seen: dict[Any, pathlib.Path] = {}
         for manifest in enabled:
-            value = manifest[key]
+            value = manifest.get(key)
+            if value is None:
+                continue
             if value in seen:
                 fail(manifest["_path"], f"duplicate {key} also used by {seen[value]}")
             seen[value] = manifest["_path"]
@@ -162,7 +189,9 @@ def atomic_write(path: pathlib.Path, content: str) -> None:
 def cmake_text(manifests: list[dict[str, Any]]) -> str:
     calls = "".join(
         f"p4_add_seed_game({json.dumps(item['package_file'])} "
-        f"{json.dumps(item['component'])})\n"
+        f"{json.dumps(item['component'])} "
+        f"{json.dumps(item.get('resource_file', ''))} "
+        f"{json.dumps(item.get('resource_payload', ''))})\n"
         for item in manifests
     )
     return "# Generated; do not edit.\n" + calls
@@ -186,6 +215,8 @@ def main() -> int:
         "enabled_games": [item["id"] for item in manifests],
         "components": [item["component"] for item in manifests],
         "packages": [item["package_file"] for item in manifests],
+        "resources": [item["resource_file"] for item in manifests
+                      if item.get("resource_file")],
     }, sort_keys=True))
     return 0
 

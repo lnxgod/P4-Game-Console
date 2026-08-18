@@ -1,0 +1,150 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-18T05:13:52-0700",
+  "active": false,
+  "revoked_at": "2026-08-18T05:21:58-0700",
+  "revocation_reason": "The exact app flashed and reached the first downstream retry, but the retry raced an external-hub control transfer. The hub rejected the new request with ESP_ERR_INVALID_STATE and usbh_dev_close asserted because one control transfer remained in flight. This repeated on every boot, so the candidate is revoked and must be replaced with a no-retry recovery image before further experimentation.",
+  "scope": "exact-unit-waveshare-4.3-console-os-0.4.20-downstream-enum-retry",
+  "operator_direction": "Install the verified 0.4.20 controller-first successor on the bound Waveshare 4.3 so an actual failed external-hub child enumeration gets at most two downstream-port resets after the failed USBH node is freed. Reuse the existing factory backup; write only the primary application and do not touch the microSD.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART",
+    "h2": "operator-attested externally powered USB-C hub with power input",
+    "firmware_vbus_source": false,
+    "electrical_qualification_claimed": false,
+    "scope": "experimental externally powered H2 data-path acceptance only"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "ota_data": {
+      "offset": "0x10000",
+      "bytes": 8192,
+      "live_policy": "mutable boot-selection state; preserve without writing"
+    }
+  },
+  "predecessor": {
+    "offset": "0x20000",
+    "version": "0.4.19-revoked-bounded-host-recycle-exhausted",
+    "bytes": 1183760,
+    "sha256": "81f66f841413284c5d2015d67a94f0ee29d4f78c0b3e888c1aff5bced2532b6f",
+    "digest_observed_before_authorization": true,
+    "failure_record": "hardware/test-runs/2026-08-18-waveshare-console-os-0.4.19-h2-bounded-recycle-exhausted.json"
+  },
+  "candidate": {
+    "source_base_commit": "29e49a35d179f7bcc13058004811b8a0d07aa593",
+    "tracked_diff_sha256": "f28bd9130a7dadf647db91274e1ab3280c919251c8750c3b52e0318b81c84d02",
+    "tracked_diff_bytes": 620455,
+    "version": "0.4.20",
+    "build_id": "29e49a35d179",
+    "build_directory": "apps/console_os/build-waveshare-usb-host",
+    "build_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+      "bytes": 1182688,
+      "sha256": "4bddc11758770c7bc55a0446f352635c08e52e70cf8ddbafa1deb6513322655f",
+      "action": "write-and-on-device-digest-verify"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.elf",
+      "bytes": 14652356,
+      "sha256": "4bd8a2abc76bc41091726f8f52f247c54d31c81b7dbddc8abe60db04fa23b441"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-usb-host/P4UPDATE.P4U",
+      "bytes": 1182944,
+      "sha256": "e3ef5d1566ccc4d2250b437eea0e20d8880043195a8a51e4831aeacd4e6a5697"
+    },
+    "official_logo": {
+      "source_url": "https://www.gamechangersai.org/assets/gamechangers-128.png",
+      "path": "apps/console_os/main/assets/gamechangers_ai_logo.rgb565",
+      "bytes": 25088,
+      "sha256": "48ee7b2a15a744547884ec6ea7f462277ab60e5dde4d0805bf39db9c0b2bd892"
+    },
+    "usb_overlay": {
+      "upstream_path": "apps/console_os/managed_components/espressif__usb/src/ext_port.c",
+      "upstream_bytes": 49731,
+      "upstream_sha256": "0760b3c8ef14813db621b66c19d27caea5391793c592ca480b6ce18121797736",
+      "generator_path": "scripts/generate-espressif-usb-ext-port-overlay.py",
+      "generator_bytes": 9803,
+      "generator_sha256": "a576812dc98434a7c9ed3426a2104cebcf0399a3ba51cbc134f360471f8be633",
+      "generated_path": "apps/console_os/build-waveshare-usb-host/generated/espressif-usb-1.5.0/ext_port.c",
+      "generated_bytes": 52259,
+      "generated_sha256": "74cc01f321927609c62a253286055700f7858a58eb10e65a55611c24f86c512e"
+    },
+    "locks": {
+      "esp_idf": "5.5.3",
+      "espressif_usb": "1.5.0",
+      "usb_host_hid": "1.2.0",
+      "esp_tinyusb": "2.0.1"
+    },
+    "recovery_contract": [
+      "retain the controller-first 32768-byte internal/DMA reserve",
+      "exclude esp_hosted, esp_wifi_remote, platform_signal_scan, and their constructor-driven SDIO transport from the linked component graph",
+      "mount the application VFS directly during normal boot without allocating a TinyUSB MSC storage object",
+      "allocate and destroy the MSC object only inside the explicit mutually exclusive USB Drive transition",
+      "retry bounded Waveshare boot-frame submissions and preserve the last visible frame and backlight on a transient refresh timeout",
+      "keep the pinned espressif/usb 1.5.0 managed package byte-for-byte unchanged and compile one deterministic generated ext_port.c overlay only in the controller-first profile",
+      "retain the vendor downstream-port reset-attempt default of one and use a 500 ms reset-recovery interval",
+      "classify only an actual enumeration cancellation that disables a still-connected unenumerated external-hub child",
+      "wait until the failed USBH node is freed before resetting only that downstream port and permit at most two retries",
+      "reset the enumeration retry budget only on physical reconnect and leave ordinary hot-plug ready after bounded exhaustion",
+      "never infer controller failure merely because no HID device is attached"
+    ],
+    "runtime_contract": [
+      "boot H2 in externally powered controller-host mode without firmware VBUS sourcing",
+      "force the high-speed-capable H2 root to the supported full-speed-only policy before root-port enable",
+      "support bounded HID gamepad, boot keyboard, and boot mouse hot-plug through one powered hub level",
+      "neutralize all input before Host/HID teardown and on disconnect",
+      "show a dedicated USB Drive launcher app",
+      "quiesce and uninstall Host/HID before unmounting the app VFS and installing TinyUSB device MSC",
+      "require clean host eject or disconnect before uninstalling MSC, deleting its on-demand object, remounting microSD, rescanning games, and restarting Host/HID",
+      "roll back to the app VFS when possible and leave H2 quiesced on any failed transition; never run both roles together",
+      "preserve the 768x480 BBS shell, official gamechangersai.org logo, boot audio, touch, dynamic SD games, and existing microSD contents"
+    ]
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_another_full_backup": false,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "verify_installed_bootloader_and_partition_table_before_write": true,
+    "preserve_live_ota_data_without_write": true,
+    "verify_installed_predecessor_application_before_write": true,
+    "write_only_primary_application": true,
+    "verify_application_on_device_after_write": true,
+    "format_sd_card": false,
+    "write_sd_card": false,
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "retained H1 UART reaches app_main and Console OS READY with no panic, watchdog, boot loop, brownout, eager MSC allocation failure, or fatal display halt",
+    "UART reports the 32 KiB internal/DMA reserve, direct application SD mount, lazy MSC policy, controller-first H2, full-speed root policy, USB Host/HID ready, and the dynamic catalog",
+    "the powered hub enumerates without an unsupported high-speed transaction-translator rejection",
+    "after an initial descriptor failure, UART reports no more than two P4_EXT_PORT_ENUM_RETRY attempts and does not tear down the complete Host/HID graph",
+    "P4_EXT_PORT_ENUM_RECOVERED appears before exhaustion and the attached low-speed HID child reaches the class driver",
+    "the applicable gamepad, keyboard, or mouse connection counter becomes nonzero",
+    "hot-unplug immediately neutralizes the connected device and a later replug enumerates without reboot",
+    "USB Drive stops Host/HID, allocates MSC on demand, enumerates microSD on macOS, blocks unsafe return, then clean eject deletes MSC, returns to Host/HID, and rescans games"
+  ]
+}

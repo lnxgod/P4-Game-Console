@@ -14,8 +14,13 @@
 #include "p4/achievements.h"
 #include "p4/game.h"
 #include "p4/input.h"
+#include "p4/signal_scan.h"
 
 extern const p4_game_descriptor_t P4_HOST_GAME_DESCRIPTOR;
+
+#ifndef P4_HOST_RESOURCE_PATH
+#define P4_HOST_RESOURCE_PATH ""
+#endif
 
 enum {
     HOST_SCALE = 3,
@@ -32,6 +37,122 @@ typedef struct {
     SDL_AudioStream *stream;
     p4_audio_mixer_t mixer;
 } host_audio_t;
+
+typedef struct {
+    p4_game_signal_snapshot_t snapshot;
+    uint64_t focus_token;
+    uint8_t focus_steps;
+} host_signal_scan_t;
+
+static bool host_request_signal_scan(void *context, uint64_t focus_token)
+{
+    static const uint8_t key[P4_SIGNAL_SCAN_KEY_BYTES] = {
+        UINT8_C(0x42), UINT8_C(0x79), UINT8_C(0x74), UINT8_C(0x65),
+        UINT8_C(0x42), UINT8_C(0x75), UINT8_C(0x64), UINT8_C(0x64),
+        UINT8_C(0x79), UINT8_C(0x53), UINT8_C(0x65), UINT8_C(0x65),
+        UINT8_C(0x64), UINT8_C(0x30), UINT8_C(0x30), UINT8_C(0x31),
+    };
+    static const char *const labels[] = {
+        "SKY GARDEN", "LIBRARY MESH", "MOONLIGHT", "STAR PORT", "",
+    };
+    static const uint8_t bssids[][P4_SIGNAL_SCAN_BSSID_BYTES] = {
+        {0x02U, 0x10U, 0x20U, 0x30U, 0x40U, 0x50U},
+        {0x02U, 0x11U, 0x21U, 0x31U, 0x41U, 0x51U},
+        {0x02U, 0x12U, 0x22U, 0x32U, 0x42U, 0x52U},
+        {0x02U, 0x13U, 0x23U, 0x33U, 0x43U, 0x53U},
+        {0x02U, 0x14U, 0x24U, 0x34U, 0x44U, 0x54U},
+    };
+    static const int8_t base_rssi[] = {-84, -73, -67, -78, -62};
+    static const uint8_t channels[] = {1U, 6U, 11U, 36U, 44U};
+    host_signal_scan_t *const scan = context;
+    if (scan == NULL) {
+        return false;
+    }
+    if (focus_token != scan->focus_token) {
+        scan->focus_token = focus_token;
+        scan->focus_steps = 0U;
+    } else if (focus_token != 0U && scan->focus_steps < 7U) {
+        ++scan->focus_steps;
+    }
+    if (focus_token != 0U && scan->focus_steps == 0U) {
+        scan->focus_steps = 1U;
+    }
+    uint32_t generation = scan->snapshot.generation;
+    if (generation != UINT32_MAX) {
+        ++generation;
+    }
+    scan->snapshot = (p4_game_signal_snapshot_t){
+        .generation = generation,
+        .status = P4_GAME_SIGNAL_READY,
+        .count = 5U,
+    };
+    for (size_t index = 0U; index < scan->snapshot.count; ++index) {
+        const size_t label_bytes = strlen(labels[index]);
+        if (!p4_signal_scan_make_game_signal(
+                key, bssids[index], (const uint8_t *)labels[index],
+                label_bytes, base_rssi[index], channels[index],
+                index != 4U, &scan->snapshot.results[index])) {
+            scan->snapshot = (p4_game_signal_snapshot_t){
+                .generation = generation,
+                .status = P4_GAME_SIGNAL_ERROR,
+            };
+            return false;
+        }
+        if (scan->snapshot.results[index].token == focus_token) {
+            int adjusted = (int)base_rssi[index] +
+                (int)scan->focus_steps * 9;
+            if (adjusted > -34) {
+                adjusted = -34;
+            }
+            scan->snapshot.results[index].rssi_dbm = (int8_t)adjusted;
+        }
+    }
+    return true;
+}
+
+static bool host_read_signal_scan(void *context,
+                                  p4_game_signal_snapshot_t *snapshot)
+{
+    const host_signal_scan_t *const scan = context;
+    if (scan == NULL || snapshot == NULL) {
+        return false;
+    }
+    *snapshot = scan->snapshot;
+    return true;
+}
+
+static uint8_t *load_resource(size_t *out_bytes)
+{
+    if (out_bytes == NULL || P4_HOST_RESOURCE_PATH[0] == '\0') {
+        return NULL;
+    }
+    FILE *const file = fopen(P4_HOST_RESOURCE_PATH, "rb");
+    if (file == NULL || fseek(file, 0L, SEEK_END) != 0) {
+        if (file != NULL) {
+            (void)fclose(file);
+        }
+        return NULL;
+    }
+    const long file_bytes = ftell(file);
+    if (file_bytes <= 0L || file_bytes > 8L * 1024L * 1024L ||
+        fseek(file, 0L, SEEK_SET) != 0) {
+        (void)fclose(file);
+        return NULL;
+    }
+    uint8_t *const data = malloc((size_t)file_bytes);
+    if (data == NULL) {
+        (void)fclose(file);
+        return NULL;
+    }
+    const bool read_ok = fread(data, (size_t)file_bytes, 1U, file) == 1U;
+    const bool close_ok = fclose(file) == 0;
+    if (!read_ok || !close_ok) {
+        free(data);
+        return NULL;
+    }
+    *out_bytes = (size_t)file_bytes;
+    return data;
+}
 
 static bool host_play_tone(void *context, const p4_tone_t *tone)
 {
@@ -283,15 +404,32 @@ int main(int argc, char **argv)
         SDL_Quit();
         return EXIT_FAILURE;
     }
+    size_t resource_bytes = 0U;
+    uint8_t *const resource_data = load_resource(&resource_bytes);
+    if (P4_HOST_RESOURCE_PATH[0] != '\0' && resource_data == NULL) {
+        fprintf(stderr, "resource load failed: %s\n", P4_HOST_RESOURCE_PATH);
+        free(state_memory);
+        free(pixels);
+        SDL_DestroyTexture(texture);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return EXIT_FAILURE;
+    }
 
     host_audio_t audio;
     const bool audio_ready = start_audio(&audio);
     p4_achievement_catalog_t achievements;
     p4_achievement_catalog_init(&achievements);
+    host_signal_scan_t signal_scan = {
+        .snapshot = {.status = P4_GAME_SIGNAL_IDLE},
+    };
     const p4_game_services_t services = {
         .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
             (audio_ready
-                ? P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM : 0U),
+                ? P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM : 0U) |
+            (resource_data != NULL ? P4_GAME_CAP_STORAGE : 0U) |
+            P4_GAME_CAP_SIGNAL_SCAN,
         .audio_context = audio_ready ? &audio : NULL,
         .game_id = P4_HOST_GAME_DESCRIPTOR.id,
         .play_tone = audio_ready ? host_play_tone : NULL,
@@ -300,6 +438,12 @@ int main(int argc, char **argv)
         .stop_audio = audio_ready ? host_stop_audio : NULL,
         .achievement_context = &achievements,
         .unlock_achievement = p4_achievement_catalog_service_unlock,
+        .resource_data = resource_data,
+        .resource_bytes = resource_bytes,
+        .resource_format_version = resource_data != NULL ? 1U : 0U,
+        .signal_scan_context = &signal_scan,
+        .request_signal_scan = host_request_signal_scan,
+        .read_signal_scan = host_read_signal_scan,
     };
     p4_game_instance_t instance = {0};
     if (!p4_game_instance_start(
@@ -309,6 +453,7 @@ int main(int argc, char **argv)
         if (audio_ready) {
             SDL_DestroyAudioStream(audio.stream);
         }
+        free(resource_data);
         free(state_memory);
         free(pixels);
         SDL_DestroyTexture(texture);
@@ -436,6 +581,7 @@ int main(int argc, char **argv)
            " service updates\n", rendered_frames, service_updates);
     free(state_memory);
     free(pixels);
+    free(resource_data);
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

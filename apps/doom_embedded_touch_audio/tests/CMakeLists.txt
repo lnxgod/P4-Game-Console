@@ -54,6 +54,7 @@ add_executable(test_doom_touch_controls
 target_include_directories(test_doom_touch_controls PRIVATE
     ../main
     ../../../components/doom_touch_input/include
+    ../../../components/platform_board/include
     ../../../components/platform_touch/include
     ../../../components/platform_touch/host/include
     ../../../third_party/doomgeneric/doomgeneric

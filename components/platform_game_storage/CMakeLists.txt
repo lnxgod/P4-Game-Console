@@ -18,6 +18,19 @@ if(COMMAND idf_component_register)
             fatfs
             sdmmc
         )
+        if(P4_ACTIVE_BOARD_PROFILE STREQUAL
+           "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
+            if(NOT CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE OR
+               CONFIG_P4_WAVESHARE_H2_RUNTIME_ROLE_SWITCH)
+                list(APPEND PLATFORM_GAME_STORAGE_BACKEND_SOURCES
+                    src/msc_write10_wrapper.c
+                )
+                list(APPEND PLATFORM_GAME_STORAGE_BACKEND_REQUIREMENTS
+                    esp_hw_support
+                    esp_tinyusb
+                )
+            endif()
+        endif()
     else()
         set(PLATFORM_GAME_STORAGE_BACKEND_SOURCES
             src/platform_game_storage.c
@@ -51,11 +64,13 @@ if(COMMAND idf_component_register)
     # buffer. Route the callback through the platform service so a transfer is
     # committed and read back before the host receives success.
     if(NOT P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" AND
-       NOT P4_ACTIVE_BOARD_PROFILE STREQUAL
-           "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
+       (NOT CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE OR
+        CONFIG_P4_WAVESHARE_H2_RUNTIME_ROLE_SWITCH))
         target_link_options(${COMPONENT_LIB} INTERFACE
             "LINKER:--wrap=tud_msc_write10_cb"
             "LINKER:--undefined=__wrap_tud_msc_write10_cb"
+            "LINKER:--wrap=tud_msc_start_stop_cb"
+            "LINKER:--undefined=__wrap_tud_msc_start_stop_cb"
         )
     endif()
 else()

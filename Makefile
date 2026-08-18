@@ -6,7 +6,7 @@ DOOM_FRAMES ?= 8
 DOOMGENERIC_SOURCE ?=
 GAME ?= space_invaders
 
-.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf platform-board-host platform-audio-host platform-audio-factory-host platform-touch-host platform-game-storage-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host console-os-host play-console-os p4-desktop-host p4-game-api-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host maze-chase-host space-invaders-host breakout-host asteroids-host asteroids-2-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host calculator-host input-test-host av-test-host play-game game-registry-check game-sdk-host board-port-check console-os-idf console-os-olimex-idf console-os-waveshare-idf gamepad-host gamepad-idf install-olimex-sd-card install-waveshare-sd-card
+.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf platform-board-host platform-audio-host platform-audio-factory-host platform-touch-host platform-game-storage-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host console-os-host play-console-os p4-ansi-host p4-bbs-host p4-desktop-host p4-game-api-host p4-signal-scan-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host maze-chase-host space-invaders-host breakout-host asteroids-host asteroids-2-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host calculator-host input-test-host av-test-host play-game game-registry-check game-sdk-host board-port-check console-os-idf console-os-olimex-idf console-os-waveshare-idf gamepad-host gamepad-idf install-olimex-sd-card install-waveshare-sd-card
 
 setup:
 	./scripts/install-esp-idf.sh
@@ -112,6 +112,16 @@ console-os-host:
 play-console-os: console-os-host
 	"build-host/p4-console-host/p4_console_host.app/Contents/MacOS/p4_console_host"
 
+p4-ansi-host:
+	cmake -S components/p4_ansi -B build-host/p4_ansi -G Ninja
+	cmake --build build-host/p4_ansi
+	ctest --test-dir build-host/p4_ansi --output-on-failure
+
+p4-bbs-host:
+	cmake -S components/p4_bbs -B build-host/p4_bbs -G Ninja
+	cmake --build build-host/p4_bbs
+	ctest --test-dir build-host/p4_bbs --output-on-failure
+
 p4-desktop-host:
 	cmake -S components/p4_desktop -B build-host/p4_desktop -G Ninja
 	cmake --build build-host/p4_desktop
@@ -121,6 +131,11 @@ p4-game-api-host:
 	cmake -S components/p4_game_api -B build-host/p4_game_api -G Ninja
 	cmake --build build-host/p4_game_api
 	ctest --test-dir build-host/p4_game_api --output-on-failure
+
+p4-signal-scan-host:
+	cmake -S components/p4_signal_scan -B build-host/p4_signal_scan -G Ninja
+	cmake --build build-host/p4_signal_scan
+	ctest --test-dir build-host/p4_signal_scan --output-on-failure
 
 p4-game-package-host:
 	cmake -S components/p4_game_package -B build-host/p4_game_package -G Ninja
@@ -147,6 +162,7 @@ p4-multiplayer-host:
 	cmake -S components/p4_multiplayer -B build-host/p4_multiplayer -G Ninja
 	cmake --build build-host/p4_multiplayer
 	ctest --test-dir build-host/p4_multiplayer --output-on-failure
+	python3 scripts/tests/test-p4-multiplayer-relay.py
 
 maze-chase-host:
 	cmake -S games/maze_chase -B build-host/maze_chase -G Ninja
@@ -232,9 +248,10 @@ play-game:
 game-registry-check:
 	python3 scripts/generate-game-registry.py --games-root games --check
 	python3 scripts/tests/test-game-registry.py
+	python3 scripts/tests/test-game-resource.py
 	python3 scripts/tests/test-new-game.py
 
-game-sdk-host: p4-desktop-host p4-game-api-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host maze-chase-host space-invaders-host breakout-host asteroids-host asteroids-2-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host calculator-host input-test-host av-test-host game-registry-check
+game-sdk-host: p4-desktop-host p4-game-api-host p4-signal-scan-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host maze-chase-host space-invaders-host breakout-host asteroids-host asteroids-2-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host calculator-host input-test-host av-test-host game-registry-check
 
 board-port-check:
 	python3 scripts/board-port.py check
@@ -266,9 +283,12 @@ install-waveshare-sd-card:
 	python3 ./scripts/verify-console-os-waveshare.py
 	python3 ./scripts/install-olimex-sd-card.py \
 		--bundle apps/console_os/build-waveshare-landscape/sd-card \
+		--require-waveshare-h2-fat32 \
 		--target "$(SD_MOUNT)"
 
 gamepad-host:
+	python3 scripts/tests/test-espressif-usb-ext-port-overlay.py
+	python3 scripts/tests/test-espressif-usb-hcd-fsls-overlay.py
 	cmake -S apps/gamepad_diag/tests -B build-host/gamepad_diag_arm -G Ninja
 	cmake --build build-host/gamepad_diag_arm
 	ctest --test-dir build-host/gamepad_diag_arm --output-on-failure

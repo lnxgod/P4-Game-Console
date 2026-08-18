@@ -1,0 +1,160 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-17T17:29:40-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-0.4.8-file-manager-successor",
+  "operator_direction": "Install Console OS 0.4.8 with safe SD directory navigation, preserving the existing manual USB ownership policy and all storage contents.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "ota_data": {
+      "offset": "0x10000",
+      "bytes": 8192,
+      "live_policy": "mutable boot-selection state; preserve without writing"
+    }
+  },
+  "predecessor": {
+    "offset": "0x20000",
+    "bytes": 1041712,
+    "sha256": "2fef9d89d35d93eeb318ac5e05a24efc71cd3c4225d4dcef3c0927c014b05d5b",
+    "install_digest_verified": true,
+    "manual_result": "0.4.7 booted in 768x480 landscape, retained app-owned SD storage with 12 dynamic games, and remained stable without panic or watchdog"
+  },
+  "candidate": {
+    "source_base_commit": "29e49a35d179f7bcc13058004811b8a0d07aa593",
+    "tracked_diff_sha256": "02fb77c88a9879f10f3a140f4cb4830322972da1be11a7459a097835ab9d9702",
+    "tracked_files": [
+      "Makefile",
+      "apps/console_os/CMakeLists.txt",
+      "apps/console_os/README.md",
+      "apps/console_os/app-metadata.json",
+      "apps/console_os/dependencies-waveshare.lock",
+      "apps/console_os/main/console_os_main.c",
+      "components/board_deps_waveshare/idf_component.yml",
+      "components/console_shell/include/console/shell.h",
+      "components/console_shell/src/console_shell.c",
+      "components/console_shell/tests/test_console_shell.c",
+      "components/platform_board/src/platform_board.c",
+      "components/platform_board/tests/test_platform_board_waveshare.c",
+      "components/platform_game_storage/CMakeLists.txt",
+      "components/platform_game_storage/include/platform/game_storage.h",
+      "components/platform_game_storage/include/platform/game_storage_types.h",
+      "components/platform_game_storage/src/game_storage_files.c",
+      "components/platform_game_storage/src/game_storage_files.h",
+      "components/platform_game_storage/src/msc_write10_wrapper.c",
+      "components/platform_game_storage/src/msc_write_policy.c",
+      "components/platform_game_storage/src/msc_write_policy.h",
+      "components/platform_game_storage/src/platform_game_storage.c",
+      "components/platform_game_storage/src/platform_game_storage_internal.h",
+      "components/platform_game_storage/tests/test_game_storage_files.c",
+      "components/platform_game_storage/tests/test_msc_write_policy.c",
+      "docs/CONSOLE_OS.md",
+      "docs/GAME_SDK.md",
+      "docs/WAVESHARE_P4_WIFI6_TOUCH_LCD_4_3_PORT.md",
+      "games/calculator/src/calculator.c",
+      "games/solitaire/CMakeLists.txt",
+      "games/solitaire/README.md",
+      "games/solitaire/game.json",
+      "games/solitaire/src/solitaire.c",
+      "hardware/board-profiles/waveshare-esp32-p4-wifi6-touch-lcd-4.3.json",
+      "hardware/boards/console-os-port-contract.json",
+      "hardware/boards/waveshare-esp32-p4-wifi6-touch-lcd-4.3/sdkconfig.defaults",
+      "scripts/build-game-package.py",
+      "scripts/build.sh",
+      "scripts/install-olimex-sd-card.py",
+      "scripts/verify-console-os-waveshare.py",
+      "scripts/verify-console-os.py"
+    ],
+    "untracked_build_inputs": [
+      {
+        "path": "games/solitaire/src/solitaire_internal.h",
+        "bytes": 1536,
+        "sha256": "45046563de0bdfccd5b39db9d8e8a6fdde1c7af6dd585af1e28251bee3852263"
+      },
+      {
+        "path": "games/solitaire/tests/CMakeLists.txt",
+        "bytes": 749,
+        "sha256": "2241b0c98877186fdfeabe61fb58bbaddd32856f9937eb5019e689aff7b9ffa0"
+      },
+      {
+        "path": "games/solitaire/tests/test_solitaire.c",
+        "bytes": 6733,
+        "sha256": "9015f0060e2be14fc164f305fc0ee5cba9724da9bae77d5eecfa960bc3469ecf"
+      }
+    ],
+    "version": "0.4.8",
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+      "bytes": 1043856,
+      "sha256": "5d8d806623e4848e7184666fd5663948fb3f1e163c22f3554cdc9ea517b4c825",
+      "action": "write-and-on-device-digest-verify"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.elf",
+      "bytes": 12615472,
+      "sha256": "b6d10f28202c3f8b052d830a5f6e86380962625a9e629528b8d78af7cf42dc06"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-landscape/P4UPDATE.P4U",
+      "bytes": 1044112,
+      "sha256": "f441bbe88a2620d084720011ce3e456892484f6be180a5819b8588423e95817e"
+    },
+    "official_logo": {
+      "path": "apps/console_os/main/assets/gamechangers_ai_logo.rgb565",
+      "bytes": 25628,
+      "sha256": "6f3963e2d3182eadacbf0ac4397b719578395bff894bb00c07ca65849c9e570f"
+    },
+    "runtime_contract": [
+      "preserve the 768x480 landscape shell, boot audio, dynamic SD game catalog, and manual H2 USB ownership policy",
+      "show a bounded current SD path and sort directories before files",
+      "open only validated relative directory segments and return to the parent before leaving File Manager",
+      "reject absolute paths, dot segments, repeated separators, control characters, and overlong paths",
+      "keep Waveshare app-owned storage read-only and perform edits only through exclusive USB Mode",
+      "never format the card, alter its contents during installation, or embed P4G games in OTA firmware"
+    ]
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_another_full_backup": false,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "verify_installed_bootloader_and_partition_table_before_write": true,
+    "preserve_live_ota_data_without_write": true,
+    "verify_installed_predecessor_application_before_write": true,
+    "write_only_primary_application": true,
+    "verify_application_on_device_after_write": true,
+    "format_sd_card": false,
+    "write_sd_card": false,
+    "usb_storage_default": "off; application-owned",
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "guarded application-only installer verifies the exact live unit, layout, 0.4.7 predecessor, and complete 0.4.8 readback",
+    "retained H1 UART reaches Console OS READY with no panic or watchdog",
+    "SD_READY and GAME_CATALOG retain the existing dynamic SD games",
+    "File Manager displays root contents and accepts safe folder navigation",
+    "storage remains application-owned until USB Mode is explicitly enabled"
+  ]
+}

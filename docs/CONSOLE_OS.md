@@ -2,6 +2,23 @@
 
 ## Status
 
+The current Waveshare successor changes the home surface, not the Game API.
+Console OS renders an 80x30 CP437/ANSI BBS natively in the centered 768x480
+viewport, presents games and folders as numbered doors, and keeps the existing
+Windows 3.1-style Program Manager as the selectable Appearance fallback. Touch
+hit testing, keyboard, and controller navigation share the same two-column,
+three-row door geometry. Native games remain 320x200 RGB565 and are scaled by
+the platform display path.
+
+The first visible Waveshare frame is now an ANSI adaptation of the official
+Game Changers AI lightbulb/circuit mark. Boot advances through visible POST,
+disk seek, `ATDT 6142763639`, V.22bis training, SD door-directory sync, and
+`CONNECT 2400` phases before drawing the home board. This replaces generic
+loading text without hiding real storage progress. The bounded ANSI and BBS
+APIs, host previews, transport policy, and open-content rules are documented
+in `docs/BBS.md`. The USB-host firmware candidate is build-verified but has
+not yet received a new on-device acceptance record.
+
 The original FreeRTOS-native shell was installed on the exact bound 10.1-inch tablet on
 2026-08-14. Its 4,928,880-byte app image was verified by complete padded-span
 readback, launched once on the retained UART, and passed a 30-second launcher
@@ -70,6 +87,163 @@ bounded local multiplayer session core from the overhaul.
 The long-lived shell and catalog staging objects use static storage so the
 24 KiB ESP-IDF main-task stack stays bounded across slow microSD scans.
 
+The 0.4.1 boot correction makes the official logo the first visible frame,
+plays the startup chord at the 8/10 master level, and reaches the interactive
+launcher before starting removable-storage initialization on a dedicated
+task. A slow, missing, or invalid card therefore changes only the asynchronous
+storage status and catalog; it cannot hold the core OS on a black panel.
+
+The 0.4.2 loading and loudness correction keeps that official frame visible
+while the dedicated storage task initializes microSD, cycles a `READING SD
+CARD` indicator from the real task state, and presents Program Manager only
+after storage reports ready or degraded. Boot, native-game, and Console OS Doom
+handoff audio all use the selected 10/10 master step.
+
+The 0.4.3 boot and removable-media correction starts that storage task as soon
+as the official frame is visible, then dials `614-276-3639` with the standard DTMF
+frequency pairs at 10/10 while initialization runs. Hardware logs expose the
+actual dial and SD initialization durations. A fresh or corrupt filesystem is
+left host-owned for explicit recovery through Waveshare H2; firmware never
+formats it. Executable games remain exclusively directory-driven from
+microSD `GAMES/*.P4G` (plus root compatibility), never linked into the OTA app.
+
+The 0.4.5 recovery correction follows the dial with a standards-shaped
+V.25/V.22bis 2400-baud call, answer, carrier, guard, and training sequence
+while the branded loading frame remains visible. USB MSC
+byte-range validation is 64-bit, so writes anywhere on the 32 GB microSD are
+valid on the ESP32-P4's 32-bit ABI; only the small internal-flash backend is
+allowed to narrow an already bounded address. SD writes remain split into
+DMA-safe 4 KiB transactions and synchronously read back before host success.
+The Waveshare SD clock tries 10 MHz, 5 MHz, 1 MHz, then 400 kHz, retaining safe
+fallback while avoiding multi-minute FAT scans on normal cards.
+
+The 0.4.6 catalog correction raises the optional legacy P4CART worker's PSRAM
+stack from 12 KiB to 24 KiB and records its low-water mark. The package builder
+also rejects ELF imports outside the frozen cartridge runtime set, preventing a
+game that the device catalog would reject from being copied into `GAMES`.
+
+The 0.4.7 USB ownership correction makes Waveshare H2 storage opt-in. The
+dedicated **USB Drive** app performs the app-to-host handoff; after Finder
+ejects the volume (or H2 disconnects), **Turn Off USB Mode** remounts the card
+and triggers a fresh game scan. Automatic cable-driven ownership changes are
+disabled, and USB-off remains locked while an attached host has not issued a
+clean eject, so macOS and Console OS can never mount FAT concurrently.
+
+The 0.4.8 File Manager correction replaces the flat root-only view with safe
+relative-directory navigation. Directories sort before files, the current SD
+path remains visible, OPEN enters the selected directory, and BACK walks to
+the parent before returning to Program Manager. Row selection no longer
+rescans the card. Dot segments, absolute paths, repeated separators, control
+characters, and overlong paths remain rejected at the storage boundary. The
+Waveshare app-owned mount stays read-only; its File Manager browses while the
+USB Drive app remains the supported way to edit card contents.
+
+The 0.4.14 controller-first correction combines the supported Host/HID and
+TinyUSB MSC roles in one image without concurrent ownership. Console OS boots
+with H2 dedicated to a powered-hub controller. Opening USB Drive neutralizes
+input and fully stops Host/HID before MSC starts; returning requires clean
+macOS eject or disconnect, uninstalls TinyUSB, remounts and rescans microSD,
+then restarts Host/HID. A failed transition leaves H2 quiesced.
+
+The 0.4.15 hardware-recovery correction scopes the ESP-IDF internal/DMA
+reserve to 32 KiB for the composite Waveshare Host/HID/hub/TinyUSB image.
+The earlier 64 KiB setting exhausted DMA-capable internal regions before
+`app_main` and caused a fail-fast reboot loop. The Waveshare release verifier
+now rejects a controller-first image unless the bootable reserve is pinned.
+
+The 0.4.16 controller-first isolation correction removes the unqualified
+ESP-Hosted Wi-Fi/SDIO transport from the H2 acceptance image. Its constructor
+ran before `app_main`, consumed the memory needed by removable storage, and
+then asserted while sharing the SDMMC host. The ordinary Waveshare profile
+retains the passive-scan candidate; the controller-first profile is limited to
+display, touch, audio, microSD, USB Host/HID, and the explicit USB Drive role.
+
+The 0.4.17 recovery correction makes USB Drive allocation genuinely lazy.
+Controller mode mounts the microSD FAT filesystem directly for Console OS;
+only the explicit USB Drive transition unmounts that VFS, stops Host/HID,
+creates the DMA-backed MSC object, and installs TinyUSB device mode. Returning
+deletes MSC before remounting and rescanning. The Waveshare display path no
+longer toggles the DSI pattern generator on every frame, preserves the last
+visible frame on a refresh timeout, and gives boot frames a bounded retry
+instead of converting one missed VSYNC into a permanent black halt.
+
+Hardware showed that 0.4.18's reset-attempt setting did not retry a failed USB
+descriptor enumeration: it applies only when the downstream port reset itself
+fails. Console OS 0.4.19 then tried at most two complete OS-owned Host/HID
+recycles. Exact-unit testing proved that restarting the P4 host stack cannot
+reset an externally powered hub, so every fresh host graph encountered the
+same disabled downstream port. The attempt exhausted safely without a boot
+loop, but it did not enumerate the controller.
+
+Console OS 0.4.20 moves the bounded recovery to the failed downstream-port
+boundary. The controller-first build verifies the exact locked
+`espressif/usb` 1.5.0 `ext_port.c`, generates a build-directory overlay, and
+compiles that one translation unit in place of the untouched managed source.
+After enumeration disables a still-connected port, the overlay waits for the
+failed USBH device object to be freed and then resets only that port. It permits
+two retries, resets the budget on physical reconnect, and leaves normal
+hot-plug ready after exhaustion. The release verifier reproduces the overlay,
+proves only the generated source was compiled, and retains the 500 ms
+reset-recovery interval. Host/HID still never overlaps TinyUSB MSC.
+
+Exact-unit testing rejected that 0.4.20 experiment. Its first retry overlapped
+an external-hub control transfer, the hub request returned
+`ESP_ERR_INVALID_STATE`, and `usbh_dev_close` asserted with one control
+transfer still in flight. Console OS 0.4.21 is the recovery boundary: it
+compiles the original locked external-port source, disables automatic
+enumeration retries, and preserves ordinary controller hot-plug plus the
+mutually exclusive USB Drive app. No further retry may run from the port
+recycle callback.
+
+Console OS 0.4.22 keeps the byte-exact 1.5.0 hub scheduler and replaces only
+the exact locked `ext_port.c` in the controller-first build. Its retry remains
+pending after device-free until `status_lock`, `status_outdated`, and
+`waiting_recycle` are all clear, so the hub's existing feature-completion and
+GetStatus chain has released the one shared EP0 URB. Two host models cover
+both callback orderings. Before Host/HID starts, Console OS commits an NVS
+one-boot marker; if the previous boot did not survive 600 main-loop frames,
+the next boot suppresses retries and follows the stable 0.4.21 behavior. This
+exact-unit run passed scheduler serialization and boot-loop containment, but
+the attached low-speed child still failed `CHECK_SHORT_DEV_DESC`.
+
+Console OS 0.4.23 therefore generates an additional exact-input overlay of the
+locked USB 1.5.0 HCD source. It follows Espressif's P4 forced-full-speed
+correction: restore FS/LS-only mode and the 30 MHz UTMI clock before every root
+reset, then set the post-enable UTMI clock and one-millisecond frame interval
+from the observed device speed. The same NVS decision gates both this
+low-level reapplication and the downstream retry, so an incomplete first boot
+falls back to the prior stable path. The verifier rejects modified managed
+sources, a substituted hub scheduler, a non-reproducible overlay, or a build
+containing the revoked split-transaction experiment. Retained UART and named
+hot-plug tests remain required for controller acceptance.
+
+The 0.4.9 startup and Doom lifecycle correction rejects an unexpected embedded
+logo byte count and changes boot audio to a quiet 4/10 POST beep, short hard-disk
+seek, fast phone dial, and condensed V.22bis handshake. Native games and Doom
+open at 9/10. Doom's Y/N prompt also accepts touch/keyboard
+Enter/Escape; confirmed quit runs the existing safe composite teardown and
+restarts into Console OS rather than falling back into Doom's infinite loop.
+
+The 0.4.10 brand correction removes the mistakenly sourced `.com` sales-site
+wordmark. The boot surface now centers the square arcade-console mark published
+by `gamechangersai.org`, with its source URL, source SHA-256, converted RGB565
+SHA-256, dimensions, and build-time byte count pinned fail-closed.
+
+The 0.4.11 boot-audio correction raises the boot codec and tones to 9/10,
+lengthens the POST beep and its following pause, separates the hard-drive seek
+clicks so they read as individual mechanisms, and dials `614-276-3639` using
+the standard ten-digit DTMF frequency pairs before the modem handshake.
+
+The 0.4.12 loudness correction raises only the boot codec and tone levels to
+10/10. Native games and Doom remain at the established runtime level of 9/10.
+
+The 0.4.13 parity build slows the ten-digit DTMF sequence to 160 ms tones,
+90 ms ordinary digit gaps, and 220 ms pauses after the `614` and `276`
+groups. This makes the number readable at the full 10/10 boot level without
+lengthening the later V.22bis handshake. The timing lives in the shared
+Console OS layer and is identical on Waveshare 4.3 and the Elecrow 10 in
+variant.
+
 The current compatibility successor also restores the original P4 Cart
 Library boundary without replacing the native `.P4G` loader. A bounded PSRAM
 background task scans `P4/GAMES/*.P4CART`, validates complete `P4CART1`
@@ -88,11 +262,11 @@ loader with these substitutions:
 | Service | Elecrow 10 in | Olimex Rev.B | Waveshare 4.3 |
 |---|---|---|---|
 | Display | 1024x600 DSI, 3x viewport | 1280x720 HDMI, 3x viewport | 480x800 ST7701 rotated to 800x480, 768x480 viewport |
-| Persistent content | internal FAT over J16 | removable microSD | removable microSD, read-only at runtime |
+| Persistent content | internal FAT over J16 | removable microSD | removable microSD; app read-only or exclusive H2 MSC host |
 | Input | GT911 touch | USB-A pad + keyboard + mouse | GT911 touch |
 | Audio | reviewed factory speaker path | ES8311 to 3.5mm jack | ES8311 speaker path behind runtime gate |
 | Doom | exclusive touch handoff | exclusive pad/keyboard/mouse handoff | exclusive touch handoff |
-| Programming | J1 UART bridge | native USB-C Serial/JTAG | H1 CH343 UART bridge |
+| Programming / transfer | J1 UART / J16 MSC | native USB-C Serial/JTAG / card reader | H1 CH343 UART / H2 USB-device MSC |
 
 For Olimex, build and verify once with `make console-os-olimex-idf`. The build
 creates `apps/console_os/build-olimex-esp32-p4-pc/sd-card/` with all enabled
@@ -109,11 +283,19 @@ destination hashes, and preserves unrelated card files. Console OS never
 formats this card and does not support live removal. The USB-C connector is
 not a mass-storage endpoint.
 
-For Waveshare, run `make console-os-waveshare-idf`. Power the board off,
-move its card to the laptop, then run `make install-waveshare-sd-card
-SD_MOUNT=/Volumes/P4GAMES`. The same guarded installer copies all enabled
-packages (including `GAMES/BYTEBUD.P4G`), verifies every hash, and leaves unrelated
-card data untouched. Live card writes and formatting remain forbidden.
+For Waveshare, run `make console-os-waveshare-idf`, connect the native H2
+USB-C device port to the laptop, open System, and press **Turn On USB Mode**.
+After the card volume mounts, run
+`make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES`. Eject it in Finder,
+then press **Turn Off USB Mode** to remount and rescan. The same guarded
+installer copies all enabled packages and declared resource sidecars (including
+`GAMES/BYTEBUD.P4G` and `GAMES/BYTEBUD.P4R`), verifies every hash, and leaves
+unrelated card data untouched. It requires an external
+USB FAT32 volume named `P4GAMES`; ExFAT is rejected because the pinned firmware
+mount does not support it. Recover a card with `diskutil eraseDisk MS-DOS
+P4GAMES MBRFormat /dev/diskN` only after resolving the exact external disk. H1
+remains programming UART. H2 and the app never own the filesystem concurrently,
+and runtime formatting remains forbidden.
 
 Olimex launcher controls are: D-pad or arrow/WASD to navigate, gamepad A or
 Z/Space/Enter to accept, gamepad B or X/Escape/Backspace to go back, and R/F5
@@ -180,6 +362,8 @@ display, overlays, and exit callbacks in a deterministic order.
 | Doom WAD | validated logical-root `/DOOM1.WAD` | read-only VFS adapter | Exact ignored shareware identity only; host changes invalidate cache |
 | File Manager | `console_shell` view plus `platform_game_storage` operations | unavailable | Lists/deletes only while the app owns FAT; host and game ownership reject every operation |
 | Game cartridge | validated microSD package bytes, then relocated PSRAM image | unavailable | Catalog and launch revalidate SHA/ELF; cartridge receives only the host callback table; OTA contains no `.P4G` payload |
+| Game resource | optional same-name `.P4R`, validated and held read-only in PSRAM during launch | unavailable | 8 MiB total bound, exact game-ID binding and payload SHA-256; game receives only the immutable payload view and no filesystem handle |
+| Signal scanner | Waveshare-only `platform_signal_scan`; one foreground cartridge receives sanitized snapshots | dormant/unavailable | Passive background scans publish at most eight session-tokenized results; games receive no radio handle, BSSID, credentials, or socket |
 | OS update | inactive OTA slot | unavailable | USB stops during streaming; boot slot changes only after final image verification |
 
 The launcher surface is standard RGB565 at 320x200. The proven display service
@@ -210,8 +394,9 @@ To add another built-in app:
 
 To add a reentrant native game, run `scripts/new-game.py`, choose a bounded
 manifest path such as `GAMES/ARCADE`, and implement it against the headers in
-`components/p4_game_api/include/p4/`. The build emits one `.P4G` file. Copy it
-into `GAMES` on `P4 GAMES` and eject J16; no OS installation is needed. See
+`components/p4_game_api/include/p4/`. The build emits one `.P4G` file plus an
+optional same-name `.P4R` resource sidecar. Copy the declared files into
+`GAMES` on `P4 GAMES` and eject J16; no OS installation is needed. See
 `docs/GAME_SDK.md`.
 
 The standard SD bundle also includes Calculator under `SYSTEM/TOOLS` plus
@@ -229,7 +414,7 @@ exclusive path:
 - 16,000 Hz signed PCM16 stereo
 - Doom sound effects plus WAD MUS procedural synthesis
 - up to 16 music voices
-- backend volume step 6/10
+- Console OS handoff volume step 9/10
 - factory I2S1 speaker TX route, with the pinned factory PDM-clock side effect
 - no external MIDI device or soundfont
 
@@ -256,10 +441,11 @@ physical-to-logical touch mapping, press/release semantics, malformed frames,
 storage handoff/cache generations and terminal game leases,
 the bounded tone mixer and platform audio lifecycle, Maze Chase state and
 randomized input, plus manifest/scaffolder rejection behavior.
-The storage host suite also exercises root-name validation, sorted bounded
-listings, hidden-entry exclusion, directory classification, capacity
-truncation, traversal rejection, regular-file deletion, and directory-delete
-refusal. The shell suite covers File Manager paging, selection, refresh,
+The storage host suite also exercises root-name and relative-path validation,
+folder-first bounded listings, nested navigation, hidden-entry exclusion,
+directory classification, capacity truncation, traversal rejection,
+regular-file deletion, and directory-delete refusal. The shell suite covers
+File Manager paging, selection, open/up navigation, refresh,
 confirmation/cancel, non-removable directories, unavailable storage, and
 malformed snapshots.
 Game/package tests additionally cover malformed headers, reserved fields,

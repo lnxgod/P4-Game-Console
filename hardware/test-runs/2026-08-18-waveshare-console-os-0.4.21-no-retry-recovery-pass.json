@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "date": "2026-08-18",
+  "result": "PASS",
+  "acceptance_scope": "stable recovery from revoked 0.4.20 boot loop; controller enumeration not accepted",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "pcb_revision": null,
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART on /dev/cu.wchusbserial5C371865781",
+    "h2": "operator-attested externally powered USB-C hub with power input and an attached low-speed USB child on downstream port 2",
+    "firmware_vbus_source": false,
+    "electrical_qualification_claimed": false
+  },
+  "artifact": {
+    "version": "0.4.21",
+    "application_offset": "0x20000",
+    "application_bytes": 1182304,
+    "application_sha256": "b9914eb9c84dbb04a49bb44db1d03593c48a589f26286f3647d3333ad17ae135",
+    "elf_bytes": 14651632,
+    "elf_sha256": "3f73d5cbf06e5c2b16bcc7a0b99c82f58280a92cf24ed433ac717393a0b7f916",
+    "external_port_source": "locked managed espressif/usb 1.5.0 ext_port.c",
+    "external_port_source_sha256": "0760b3c8ef14813db621b66c19d27caea5391793c592ca480b6ce18121797736",
+    "automatic_enum_retry_attempts": 0
+  },
+  "install": {
+    "preflight": "PASS",
+    "predecessor_application_sha256": "4bddc11758770c7bc55a0446f352635c08e52e70cf8ddbafa1deb6513322655f",
+    "write_readback": "PASS",
+    "backup_created": false,
+    "bootloader_written": false,
+    "partition_table_written": false,
+    "ota_data_written": false,
+    "sd_card_written": false
+  },
+  "uart": {
+    "capture_seconds": 45,
+    "capture_bytes": 15545,
+    "capture_sha256": "052372215e00f0eee13b987ff0b34073368bd1e909fcb42c65bbbb194eec5e2f",
+    "app_boots_observed": 1,
+    "markers": [
+      "App version: 0.4.21",
+      "USB_HOST_SPEED_POLICY root=full-speed-only max_mbit=12 reason=no-hs-hub-tt-scheduler",
+      "USB_HOST_READY controller=p4-hs peripheral=0 root_port_enabled=0 topology=waveshare-h2-self-powered-test physical_vbus_source=external firmware_vbus_source=0",
+      "GAMEPAD_USB_READY tier=generic-hid report_max=1024",
+      "USB_HOST_ROOT_PORT_ENABLED class_leases_present=1 integrated_hub=0",
+      "HCD DWC: Low-speed, extra delay will be applied in ISR",
+      "ENUM: Bad transfer status 1: CHECK_SHORT_DEV_DESC",
+      "EXT_PORT: Port2 disabled, reset attempts=1",
+      "P4_GAME_STORAGE READY backend=microSD capacity=32010928128 usb_device_export=1 hot_remove=0",
+      "P4_CONSOLE_OS GAME_CATALOG available=1 packages=12 valid=12 omitted=0 generation=1 source=microsd-only storage_result=ESP_OK update=1 result=ESP_OK",
+      "P4_CONSOLE_OS READY page=home display=mipi-dsi storage=microsd-read-only removal=power-off-first h2_role=usb-host-external-vbus"
+    ],
+    "app_main_reached": true,
+    "console_os_ready": true,
+    "storage_ready": true,
+    "catalog_packages": 12,
+    "catalog_valid": 12,
+    "audio_ready": true,
+    "touch_ready": true,
+    "host_hid_ready": true,
+    "retry_marker_observed": false,
+    "hub_control_invalid_state_observed": false,
+    "assert_or_panic_observed": false,
+    "reboot_loop_observed": false,
+    "hid_child_enumerated": false,
+    "final_stats": {
+      "loops": 1500,
+      "gamepad": 0,
+      "keyboard": 0,
+      "mouse": 0,
+      "input_failures": 0,
+      "display_timeouts": 8,
+      "display_failures": 0,
+      "storage": "app-ready",
+      "audio": "es8311-ready"
+    }
+  },
+  "classification": "0.4.21 safely recovers the exact unit by compiling the original locked external-port source and disabling automatic enumeration retries. The known low-speed child still fails its short descriptor through this powered hub and is not qualified, but the failure remains contained: Console OS reaches READY, all 12 SD games catalog, and the main loop remains stable without the 0.4.20 control-pipe race or reboot loop.",
+  "hardware_tested": true
+}

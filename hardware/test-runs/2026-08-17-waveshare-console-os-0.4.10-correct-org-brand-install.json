@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "tested_at": "2026-08-17T20:39:46-0700",
+  "result": "pass",
+  "classification": "app-only-install-and-retained-uart-startup",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+    "programming_port": "H1 CH343 USB-UART"
+  },
+  "authorization": {
+    "path": "hardware/evidence/waveshare-console-os-0.4.10-correct-org-brand-20260817-exact-unit-authorization.json",
+    "sha256": "a3f1a97f1b1095a661294912356def989cd1f75efa3f14a568926f3b579a15eb"
+  },
+  "application": {
+    "version": "0.4.10",
+    "offset": "0x20000",
+    "bytes": 1044736,
+    "sha256": "49399d0c471c0605b2fa1d2c5440c3d0c994bac78f12a73e6404fa2537e19117",
+    "elf_sha256": "b3541fd54039ea5c9c7e90dceca42016d7d2806d4ddd1f6538a8777c6ae47a53",
+    "on_device_digest_verified": true,
+    "full_flash_erased": false,
+    "new_factory_backup_created": false,
+    "sd_card_written_or_formatted": false
+  },
+  "guarded_install": {
+    "factory_backup_verified": true,
+    "live_identity_verified": true,
+    "bootloader_digest_verified": true,
+    "partition_table_digest_verified": true,
+    "predecessor_version": "0.4.8",
+    "predecessor_bytes": 1043856,
+    "predecessor_sha256": "5d8d806623e4848e7184666fd5663948fb3f1e163c22f3554cdc9ea517b4c825",
+    "predecessor_digest_verified_before_write": true,
+    "ota_data_preserved": true,
+    "write_scope": "primary application only",
+    "application_readback_verified": true,
+    "successful_transfer_baud": 460800
+  },
+  "startup": {
+    "project": "p4_console_os",
+    "version_marker": "0.4.10",
+    "esp_idf": "v5.5.3",
+    "display": "Waveshare ST7701; native 480x800; logical 800x480; clockwise 90-degree landscape",
+    "boot_screen_marker": "visible; brand=gamechangers-ai; asset=official",
+    "boot_audio": "POST beep, five-phase HDD seek, DTMF 555-1212, V.22bis 2400 handshake at codec volume 4; runtime volume 9",
+    "touch_ready": true,
+    "touch_initial_probe_failed_then_fallback_succeeded": true,
+    "sd_frequency_khz": 10000,
+    "storage_state": "app-ready",
+    "storage_capacity_bytes": 32010928128,
+    "storage_generation": 1,
+    "storage_init_elapsed_ms": 8034,
+    "game_catalog_packages": 12,
+    "game_catalog_valid": 12,
+    "game_catalog_omitted": 0,
+    "p4cart_valid": 1,
+    "p4cart_rejected": 0,
+    "console_ready": true,
+    "ota_boot_valid": true,
+    "panic_watchdog_or_brownout_marker": false
+  },
+  "logo": {
+    "source_url": "https://www.gamechangersai.org/assets/gamechangers-128.png",
+    "embedded_rgb565_sha256": "48ee7b2a15a744547884ec6ea7f462277ab60e5dde4d0805bf39db9c0b2bd892",
+    "serial_asset_marker_passed": true,
+    "appearance_manually_confirmed": false
+  },
+  "not_tested": [
+    "manual visual confirmation of the official gamechangersai.org logo",
+    "audible character and loudness of the updated boot sequence",
+    "Doom touch or keyboard exit confirmation",
+    "physical wired multiplayer transport",
+    "launch and gameplay for all 12 SD games"
+  ]
+}

@@ -60,7 +60,8 @@ def main() -> None:
             "--output-cmake", str(generated / "games.cmake"))
         assert result.returncode == 0, result.stderr
         cmake = (generated / "games.cmake").read_text()
-        assert 'p4_add_seed_game("FIRST_GAME.P4G" "first_game")' in cmake
+        assert ('p4_add_seed_game("FIRST_GAME.P4G" "first_game" "" "")'
+                in cmake)
 
         write_manifest(games, "duplicate", manifest("duplicate", 100))
         result = run("--games-root", str(games), "--check")
@@ -72,6 +73,42 @@ def main() -> None:
         write_manifest(games, "bad_caps", bad)
         result = run("--games-root", str(games), "--check")
         assert result.returncode != 0
+
+    with tempfile.TemporaryDirectory() as temporary:
+        games = pathlib.Path(temporary) / "games"
+        games.mkdir()
+        with_resource = manifest("dragon", 150)
+        with_resource["resource_file"] = "DRAGON.P4R"
+        with_resource["resource_payload"] = "assets/dragon.bin"
+        with_resource["optional_capabilities"].append("storage")
+        write_manifest(games, "dragon", with_resource)
+        assets = games / "dragon/assets"
+        assets.mkdir()
+        (assets / "dragon.bin").write_bytes(b"dragon-art")
+        generated = pathlib.Path(temporary) / "games.cmake"
+        result = run("--games-root", str(games),
+                     "--output-cmake", str(generated))
+        assert result.returncode == 0, result.stderr
+        assert ('p4_add_seed_game("DRAGON.P4G" "dragon" "DRAGON.P4R" '
+                '"assets/dragon.bin")' in generated.read_text())
+
+    invalid_resources = (
+        {"resource_file": "BAD.P4R"},
+        {"resource_payload": "assets/art.bin"},
+        {"resource_file": "OTHER.P4R", "resource_payload": "assets/art.bin"},
+        {"resource_file": "BAD_RESOURCE_3.P4R",
+         "resource_payload": "assets/missing.bin"},
+    )
+    for index, fields in enumerate(invalid_resources):
+        with tempfile.TemporaryDirectory() as temporary:
+            games = pathlib.Path(temporary) / "games"
+            games.mkdir()
+            bad_resource = manifest(f"bad_resource_{index}", 160 + index)
+            bad_resource.update(fields)
+            bad_resource["optional_capabilities"].append("storage")
+            write_manifest(games, f"bad_resource_{index}", bad_resource)
+            result = run("--games-root", str(games), "--check")
+            assert result.returncode != 0, fields
 
     invalid_folders = (
         None,

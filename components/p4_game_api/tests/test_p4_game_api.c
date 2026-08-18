@@ -28,6 +28,44 @@ typedef struct {
     uint32_t stops;
 } fixture_state_t;
 
+typedef struct {
+    p4_game_signal_snapshot_t snapshot;
+    uint64_t requested_focus;
+} fixture_signal_t;
+
+static bool fixture_request_signal(void *context, uint64_t focus_token)
+{
+    fixture_signal_t *const signal = context;
+    if (signal == NULL) {
+        return false;
+    }
+    signal->requested_focus = focus_token;
+    signal->snapshot = (p4_game_signal_snapshot_t){
+        .generation = 1U,
+        .status = P4_GAME_SIGNAL_READY,
+        .count = 1U,
+        .results = {{
+            .token = UINT64_C(0x12345678),
+            .label = "FIXTURE SIGNAL",
+            .rssi_dbm = -55,
+            .channel = 6U,
+            .flags = P4_GAME_SIGNAL_PROTECTED,
+        }},
+    };
+    return true;
+}
+
+static bool fixture_read_signal(void *context,
+                                p4_game_signal_snapshot_t *snapshot)
+{
+    const fixture_signal_t *const signal = context;
+    if (signal == NULL || snapshot == NULL) {
+        return false;
+    }
+    *snapshot = signal->snapshot;
+    return true;
+}
+
 static bool fixture_start(p4_game_context_t *context)
 {
     fixture_state_t *const state = context->state;
@@ -405,11 +443,13 @@ static void test_game_runtime(void)
     p4_audio_mixer_init(&mixer);
     p4_achievement_catalog_t achievements;
     p4_achievement_catalog_init(&achievements);
+    fixture_signal_t signal = {0};
     const p4_game_services_t services = {
         .available_capabilities = P4_GAME_CAP_VIDEO |
                                   P4_GAME_CAP_CONTROLS |
                                   P4_GAME_CAP_AUDIO_TONE |
-                                  P4_GAME_CAP_AUDIO_STREAM,
+                                  P4_GAME_CAP_AUDIO_STREAM |
+                                  P4_GAME_CAP_SIGNAL_SCAN,
         .audio_context = &mixer,
         .game_id = s_fixture_game.id,
         .play_tone = p4_audio_mixer_service_play_tone,
@@ -418,11 +458,19 @@ static void test_game_runtime(void)
         .stop_audio = p4_audio_mixer_service_stop,
         .achievement_context = &achievements,
         .unlock_achievement = p4_achievement_catalog_service_unlock,
+        .signal_scan_context = &signal,
+        .request_signal_scan = fixture_request_signal,
+        .read_signal_scan = fixture_read_signal,
     };
     p4_game_services_t invalid_services = services;
     invalid_services.submit_pcm16_stereo = NULL;
     p4_game_instance_t rejected = {0};
     fixture_state_t rejected_state;
+    CHECK(!p4_game_instance_start(
+        &rejected, &s_fixture_game, &invalid_services,
+        &rejected_state, sizeof(rejected_state)));
+    invalid_services = services;
+    invalid_services.read_signal_scan = NULL;
     CHECK(!p4_game_instance_start(
         &rejected, &s_fixture_game, &invalid_services,
         &rejected_state, sizeof(rejected_state)));
@@ -446,6 +494,15 @@ static void test_game_runtime(void)
     p4_audio_mixer_stats_t audio_stats;
     p4_audio_mixer_get_stats(&mixer, &audio_stats);
     CHECK(audio_stats.stream_queued_frames == 1U);
+    CHECK(p4_game_request_signal_scan(
+        &instance.context, UINT64_C(0x12345678)));
+    CHECK(signal.requested_focus == UINT64_C(0x12345678));
+    p4_game_signal_snapshot_t signal_snapshot;
+    CHECK(p4_game_read_signal_scan(&instance.context, &signal_snapshot));
+    CHECK(signal_snapshot.count == 1U);
+    CHECK(strcmp(signal_snapshot.results[0].label, "FIXTURE SIGNAL") == 0);
+    signal.snapshot.results[0].label[0] = '\0';
+    CHECK(!p4_game_read_signal_scan(&instance.context, &signal_snapshot));
     p4_game_input_t input = {
         .touch_valid = true,
     };

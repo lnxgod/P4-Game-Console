@@ -1,0 +1,136 @@
+{
+  "schema": 1,
+  "issued_at": "2026-08-16T21:30:47-0700",
+  "active": true,
+  "scope": "exact-unit-waveshare-4.3-console-os-0.4.5-v22bis-fat32-fast-sd-successor",
+  "operator_direction": "Replace the arbitrary modem chirps with a standards-shaped V.25/V.22bis 2400-baud boot sequence, mount the existing verified FAT32 card at the fastest stable clock with bounded fallback, and dynamically discover all games copied under SD GAMES.",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "ota_data": {
+      "offset": "0x10000",
+      "bytes": 8192,
+      "live_policy": "mutable boot-selection state; preserve without writing"
+    }
+  },
+  "predecessor": {
+    "offset": "0x20000",
+    "bytes": 1039024,
+    "sha256": "dabf5312f60c168a6235c0e1e97b5d50117ff56d481263369feabe7ceee3717e",
+    "install_digest_verified": true,
+    "manual_result": "0.4.4 booted and fixed full-capacity USB MSC writes, but its arbitrary modem chirps were rejected and its 1 MHz SD clock caused a clean 32 GB FAT32 volume to time out during macOS mount and remain unavailable to the launcher"
+  },
+  "candidate": {
+    "source_base_commit": "29e49a35d179f7bcc13058004811b8a0d07aa593",
+    "tracked_diff_sha256": "5efe8246187cb9b37b94e3aac75c550a93cac38eed9600178fc4122ddb8055c5",
+    "tracked_files": [
+      "Makefile",
+      "apps/console_os/CMakeLists.txt",
+      "apps/console_os/README.md",
+      "apps/console_os/app-metadata.json",
+      "apps/console_os/dependencies-waveshare.lock",
+      "apps/console_os/main/console_os_main.c",
+      "components/board_deps_waveshare/idf_component.yml",
+      "components/platform_game_storage/CMakeLists.txt",
+      "components/platform_game_storage/src/msc_write_policy.c",
+      "components/platform_game_storage/src/msc_write_policy.h",
+      "components/platform_game_storage/src/platform_game_storage.c",
+      "components/platform_game_storage/tests/test_msc_write_policy.c",
+      "docs/CONSOLE_OS.md",
+      "docs/GAME_SDK.md",
+      "docs/WAVESHARE_P4_WIFI6_TOUCH_LCD_4_3_PORT.md",
+      "hardware/board-profiles/waveshare-esp32-p4-wifi6-touch-lcd-4.3.json",
+      "hardware/boards/console-os-port-contract.json",
+      "hardware/boards/waveshare-esp32-p4-wifi6-touch-lcd-4.3/sdkconfig.defaults",
+      "scripts/install-olimex-sd-card.py",
+      "scripts/verify-console-os-waveshare.py",
+      "scripts/verify-console-os.py"
+    ],
+    "version": "0.4.5",
+    "build_directory": "apps/console_os/build-waveshare-landscape",
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+      "bytes": 1039648,
+      "sha256": "a80dda810ebc1f19f72a35f0a7a4228f3f4ec9cfc3f49e77a77e1bc088e3a34a",
+      "action": "write-and-on-device-digest-verify"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.elf",
+      "bytes": 12586268,
+      "sha256": "fa01710dcde6ad4f8747635e9a8e96a6b2dc3c7e1c09afaebe4ff2f7c86dd2ff"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-landscape/P4UPDATE.P4U",
+      "bytes": 1039904,
+      "sha256": "3da5d0795ca3b5f6aab8aca8a43dfed3eb22e1bffb2ee47754ade7f503300d1a"
+    },
+    "official_logo": {
+      "path": "apps/console_os/main/assets/gamechangers_ai_logo.rgb565",
+      "bytes": 25628,
+      "sha256": "6f3963e2d3182eadacbf0ac4397b719578395bff894bb00c07ca65849c9e570f"
+    },
+    "sd_bundle": {
+      "path": "apps/console_os/build-waveshare-landscape/sd-card",
+      "enabled_p4g_packages": 12,
+      "install_target": "macOS-mounted H2 FAT32 volume /GAMES",
+      "games_embedded_in_firmware": false,
+      "filesystem": "MBR FAT32 named P4GAMES; ExFAT rejected"
+    },
+    "runtime_contract": [
+      "submit the official 768x480 landscape logo before storage or audio work",
+      "dial 555-1212 with DTMF pairs at 10/10",
+      "play V.25/V.22bis-shaped 1300, 2100, 1200, 1800, and 2400 Hz call/training phases instead of arbitrary chirps",
+      "try Waveshare SD at 10 MHz, 5 MHz, 1 MHz, then 400 kHz and log the selected frequency",
+      "keep the loading screen until storage reaches a terminal state and load the first catalog before Program Manager",
+      "load executable games only from microSD GAMES/*.P4G with root compatibility",
+      "enforce an external USB FAT32 P4GAMES target in the Waveshare installer",
+      "never initiate a card format from firmware"
+    ]
+  },
+  "execution_contract": {
+    "erase_entire_flash": false,
+    "create_another_full_backup": false,
+    "verify_live_identity_before_write": true,
+    "verify_factory_backup_before_write": true,
+    "verify_installed_bootloader_and_partition_table_before_write": true,
+    "preserve_live_ota_data_without_write": true,
+    "verify_installed_predecessor_application_before_write": true,
+    "write_only_primary_application": true,
+    "verify_application_on_device_after_write": true,
+    "format_sd_card": false,
+    "write_sd_card": true,
+    "sd_write_route": "exclusive H2 USB-device MSC after successor boot; verified FAT32 /GAMES package copy",
+    "raw_device_identity_must_not_be_recorded": true
+  },
+  "acceptance_required_after_install": [
+    "official logo is the first useful frame",
+    "555-1212 plays before a recognizable structured V.22bis-style 2400-baud sequence",
+    "SD_READY reports the fastest stable clock selected from the fallback ladder",
+    "the existing FAT32 card mounts through H2 without the former 1 MHz timeout",
+    "the guarded installer copies and verifies all 12 P4G packages under /GAMES",
+    "clean host eject remounts the card and the launcher dynamically discovers all 12 packages",
+    "the OTA application contains no enabled P4G payload",
+    "no panic, watchdog, display timeout, concurrent filesystem ownership, or failed verified host write occurs"
+  ]
+}

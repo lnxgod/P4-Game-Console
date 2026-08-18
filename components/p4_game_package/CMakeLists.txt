@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: MIT
 
-set(P4_GAME_PACKAGE_SOURCES "src/game_package.c")
+set(P4_GAME_PACKAGE_SOURCES
+    "src/game_package.c"
+    "src/game_resource.c"
+)
 
 if(COMMAND idf_component_register)
     idf_component_register(

@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "tested_at": "2026-08-17T08:55:37-0700",
+  "result": "pass",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "authorization": {
+    "path": "hardware/evidence/waveshare-console-os-0.4.7-manual-usb-mode-20260817-exact-unit-authorization.json",
+    "sha256": "255f48ece4bf4ea80f3ee818b017a0868dbd25f5fa6452cb67d52c2f31e9bee0"
+  },
+  "application": {
+    "version": "0.4.7",
+    "offset": "0x20000",
+    "bytes": 1041712,
+    "sha256": "2fef9d89d35d93eeb318ac5e05a24efc71cd3c4225d4dcef3c0927c014b05d5b",
+    "on_device_digest_verified": true,
+    "full_flash_erased": false,
+    "new_factory_backup_created": false,
+    "sd_card_written_or_formatted": false
+  },
+  "manual_usb_mode": {
+    "usb_cable_attached_reported_by_firmware": true,
+    "storage_state_while_attached": "app-ready",
+    "macos_external_physical_disk_present": false,
+    "p4games_volume_mounted": false,
+    "default_usb_storage_access": "off",
+    "automatic_ownership_transfer_observed": false,
+    "host_eject_interlock_implemented": true,
+    "manual_enable_disable_touch_action": "not exercised"
+  },
+  "micro_sd": {
+    "package_catalog_entries": 12,
+    "valid_package_catalog_entries": 12,
+    "omitted_package_catalog_entries": 0,
+    "games_embedded_in_ota": false,
+    "storage_generation": 1,
+    "runtime_state": "app-ready"
+  },
+  "legacy_p4cart": {
+    "candidates": 1,
+    "valid": 1,
+    "rejected": 0,
+    "worker_stack_bytes": 24576,
+    "worker_low_water_bytes": 11624,
+    "panic_after_scan": false
+  },
+  "stability_followup": {
+    "uptime_ms_observed_through": 3341475,
+    "main_loops_observed_through": 332400,
+    "touch_polls_observed_through": 332400,
+    "touch_failures": 0,
+    "display_submissions": 23,
+    "display_completions": 23,
+    "display_timeouts": 0,
+    "display_failures": 0,
+    "storage_state": "app-ready",
+    "usb_cable_attached": true,
+    "panic_watchdog_or_reset_marker": false
+  },
+  "runtime_observations": [
+    "guarded preflight matched the exact board, factory backup, installed bootloader, partition table, and 0.4.6 predecessor before writing",
+    "only the primary application at 0x20000 was written and its complete on-device digest matched",
+    "GAME_CATALOG reported packages=12 valid=12 omitted=0 from microSD",
+    "P4CART_READY completed with 11624 bytes of worker stack margin",
+    "touch polling and display submissions continued without failure",
+    "five consecutive steady-state records reported usb_attached=1 with storage=app-ready, proving cable attachment did not export the card",
+    "macOS exposed neither an external physical disk nor a mounted P4GAMES volume",
+    "a final receive-only capture remained stable through 3341475 ms and 332400 main loops while the display was visible through Photo Booth",
+    "no panic, watchdog, reset loop, display timeout, or touch failure appeared in either observed interval"
+  ],
+  "camera_observation": {
+    "application": "Photo Booth",
+    "preview_available": true,
+    "console_visible_in_frame": true,
+    "checks_attempted": 4,
+    "accepted_at": "2026-08-17T09:49:22-0700",
+    "photo_booth_preview_mirrored": true,
+    "panel_orientation": "landscape",
+    "visible_ui": "Windows 3.1-style Program Manager with coherent window chrome and three folder icons",
+    "full_panel_usage": true,
+    "corruption_observed": false,
+    "rotation_error_observed": false,
+    "tiny_viewport_observed": false,
+    "blank_screen_observed": false,
+    "result": "pass"
+  },
+  "not_tested": [
+    "manual System-page TURN ON USB MODE action",
+    "clean host eject and TURN OFF USB MODE interlock",
+    "launch and gameplay for all 12 SD games"
+  ]
+}
