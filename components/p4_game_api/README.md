@@ -44,22 +44,31 @@ python3 components/p4_game_api/tools/wav_to_audio_pack.py \
 
 ## ImageGen animation provenance
 
-`assets/animation/p4_console_effects_atlas_v1.png` is original built-in
-ImageGen output with an alpha channel. It is a transparent 4x4 source sheet:
-cyan action burst, orange impact burst, gold reward sparkle, and violet
-power-down pulse, with four time-ordered frames per row. The runtime never
-opens the PNG.
+`assets/animation/p4_console_effects_atlas_v2.png` is the active original
+built-in ImageGen output with an alpha channel. It is a transparent 4x4 source
+sheet: cyan directional action burst, orange impact burst, gold reward
+sparkle, and violet power-down pulse, with four time-ordered frames per row.
+It deliberately uses high-contrast silhouettes and generous cell padding so
+the feedback remains readable on the Console OS 320x200 surface. The runtime
+never opens the PNG.
 
 The built-in ImageGen prompt was:
 
 > Create a single original, clean-room 4 columns by 4 rows pixel-art sprite
-> sheet. Each cell is a distinct 40 by 40 pixel animation frame, with generous
-> transparent separation between cells. Row 1: cyan action burst growing across
-> four frames. Row 2: orange impact burst expanding and fading across four
-> frames. Row 3: gold reward sparkle rising and resolving across four frames.
-> Row 4: violet fail/power-down pulse collapsing across four frames. Genuinely
-> transparent background; crisp 16-bit console pixel art; no text, logos,
-> borders, characters, trademarks, or watermark.
+> sheet. Every cell is a distinct, centered 40 by 40 pixel animation frame;
+> leave 6 pixels of genuinely transparent padding inside every cell and keep
+> each effect readable when reduced to a 320x200 16-bit handheld screen. Row
+> 1: cyan directional action pulse that travels right and blooms. Row 2: orange
+> impact burst that expands then fades. Row 3: gold reward sparkle that rises
+> and resolves. Row 4: violet fail/power-down pulse that collapses inward.
+> Crisp high-contrast 16-bit console pixel art; no text, logos, borders,
+> characters, trademarks, or watermark.
+
+The selected v2 source SHA-256 is
+`9527cc5dace3e2275bdae75971e65810a16c1a7d5a871b97da241075be7fc073`.
+The prior `p4_console_effects_atlas_v1.png` and `feedback_atlas.inc` remain in
+the repository as provenance for the initial shared pack; v2 supersedes them
+at runtime.
 
 `tools/png_to_feedback_atlas.py` nearest-neighbor converts that source to a
 160x160 RGB565 include. Alpha below 128 becomes the explicit `0x0000` chroma
@@ -68,6 +77,6 @@ key. `p4_game_feedback_draw()` clips the selected 40x40 cell through
 
 ```sh
 python3 components/p4_game_api/tools/png_to_feedback_atlas.py \
-  components/p4_game_api/assets/animation/p4_console_effects_atlas_v1.png \
-  components/p4_game_api/src/generated/feedback_atlas.inc
+  components/p4_game_api/assets/animation/p4_console_effects_atlas_v2.png \
+  components/p4_game_api/src/generated/feedback_atlas_v2.inc
 ```

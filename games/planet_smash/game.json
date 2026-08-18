@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "format": "p4-native-elf-v1",
+  "api_version": 1,
+  "version": "1.0.0",
+  "package_file": "PLANET_SMASH.P4G",
+  "component": "planet_smash",
+  "entry_symbol": "p4_planet_smash_game",
+  "launcher_id": 110,
+  "id": "org.p4console.planet-smash",
+  "title": "PLANET SMASH",
+  "subtitle": "ORIGINAL ORBIT DEFENSE",
+  "folder": "GAMES/ARCADE",
+  "accent_rgb565": "0xfbe0",
+  "required_capabilities": [
+    "video",
+    "controls"
+  ],
+  "optional_capabilities": [
+    "audio-tone",
+    "audio-stream"
+  ],
+  "license": "MIT",
+  "assets": "original-code-rendered-shapes-and-shared-ImageGen-feedback",
+  "enabled": true
+}

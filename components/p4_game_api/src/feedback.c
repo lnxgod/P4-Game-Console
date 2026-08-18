@@ -17,7 +17,7 @@ enum {
     P4_GAME_FEEDBACK_CYCLE_FRAMES = 120,
 };
 
-#include "generated/feedback_atlas.inc"
+#include "generated/feedback_atlas_v2.inc"
 
 void p4_game_feedback_draw(p4_game_surface_t *surface,
                            p4_game_feedback_effect_t effect,

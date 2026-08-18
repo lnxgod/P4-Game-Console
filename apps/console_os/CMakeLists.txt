@@ -169,7 +169,7 @@ set(P4_CARTRIDGE_COMMON_SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/draw.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/feedback.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/generated/audio_pack.inc"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/generated/feedback_atlas.inc"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/generated/feedback_atlas_v2.inc"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/game_runtime.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/input.c"
 )

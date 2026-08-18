@@ -30,7 +30,8 @@ enum {
     STAGE_COUNT = 4,
     TICK_MS = 16,
     MAX_FALL_SPEED = 7,
-    JUMP_SPEED = -9,
+    /* Clears the y=46 upper ledges and y=29 shards without a double jump. */
+    JUMP_SPEED = -13,
     ATLAS_WIDTH = 160,
     FRAME_WIDTH = 40,
     FRAME_HEIGHT = 40,

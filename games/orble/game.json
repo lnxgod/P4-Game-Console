@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "format": "p4-native-elf-v1",
+  "api_version": 1,
+  "version": "1.0.0",
+  "package_file": "ORBLE.P4G",
+  "component": "orble",
+  "entry_symbol": "p4_orble_game",
+  "launcher_id": 109,
+  "id": "org.p4console.orble",
+  "title": "ORBLE",
+  "subtitle": "ORIGINAL PEG PUZZLE",
+  "folder": "GAMES/PUZZLE",
+  "accent_rgb565": "0x07ff",
+  "required_capabilities": [
+    "video",
+    "controls"
+  ],
+  "optional_capabilities": [
+    "audio-tone",
+    "audio-stream"
+  ],
+  "license": "MIT",
+  "assets": "original-code-rendered-shapes-and-shared-ImageGen-feedback",
+  "enabled": true
+}
