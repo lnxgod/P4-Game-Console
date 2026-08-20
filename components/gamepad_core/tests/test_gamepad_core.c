@@ -615,14 +615,14 @@ static void test_exact_usb_gamepad_profile(void)
                                         &state));
     EXPECT_TRUE(gamepad_state_is_neutral(&state));
 
-    /* Descriptor-derived bit fixtures: hat position 2 and buttons 1 and 5. */
-    const uint8_t right_with_buttons[] = {0xFF, 0x00, 0xA5, 0x5A,
-                                          0x00, 0x12, 0x01, 0x00};
+    /* Retrolink mapping: axis 3 right, with physical Y and L pressed. */
+    const uint8_t right_with_buttons[] = {0x01, 0x7F, 0x7F, 0xFF,
+                                          0x7F, 0x1F, 0x01, 0x00};
     EXPECT_EQ(GAMEPAD_OK,
               gamepad_hid_decode_report(&layout, right_with_buttons,
                                         sizeof(right_with_buttons), 81, &state));
     EXPECT_EQ(GAMEPAD_DPAD_RIGHT, state.dpad);
-    EXPECT_EQ(GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_SOUTH) |
+    EXPECT_EQ(GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_WEST) |
                   GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_LEFT_SHOULDER),
               state.buttons);
     EXPECT_EQ(0, state.left_x);
@@ -630,13 +630,55 @@ static void test_exact_usb_gamepad_profile(void)
     EXPECT_EQ(0, state.right_x);
     EXPECT_EQ(0, state.right_y);
 
-    const uint8_t up_left[] = {0x01, 0x7F, 0x7F, 0x7F,
-                               0x7F, 0x07, 0x00, 0x00};
+    const uint8_t up_left[] = {0x01, 0x7F, 0x7F, 0x00,
+                               0x00, 0x0F, 0x00, 0x00};
     EXPECT_EQ(GAMEPAD_OK,
               gamepad_hid_decode_report(&layout, up_left, sizeof(up_left), 82,
                                         &state));
     EXPECT_EQ(GAMEPAD_DPAD_UP | GAMEPAD_DPAD_LEFT, state.dpad);
     EXPECT_EQ(0, state.buttons);
+
+    const uint8_t down_right[] = {0x01, 0x7F, 0x7F, 0xFF,
+                                  0xFF, 0x0F, 0x00, 0x00};
+    EXPECT_EQ(GAMEPAD_OK,
+              gamepad_hid_decode_report(&layout, down_right,
+                                        sizeof(down_right), 83, &state));
+    EXPECT_EQ(GAMEPAD_DPAD_DOWN | GAMEPAD_DPAD_RIGHT, state.dpad);
+
+    /* HID buttons are Y, B, A, X; canonical face buttons follow labels. */
+    const uint8_t face_buttons[] = {0x01, 0x7F, 0x7F, 0x7F,
+                                    0x7F, 0xFF, 0x00, 0x00};
+    EXPECT_EQ(GAMEPAD_OK,
+              gamepad_hid_decode_report(&layout, face_buttons,
+                                        sizeof(face_buttons), 84, &state));
+    EXPECT_EQ(GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_WEST) |
+                  GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_EAST) |
+                  GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_SOUTH) |
+                  GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_NORTH),
+              state.buttons);
+
+    const uint8_t physical_a[] = {0x01, 0x7F, 0x7F, 0x7F,
+                                  0x7F, 0x4F, 0x00, 0x00};
+    EXPECT_EQ(GAMEPAD_OK,
+              gamepad_hid_decode_report(&layout, physical_a,
+                                        sizeof(physical_a), 85, &state));
+    EXPECT_EQ(GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_SOUTH), state.buttons);
+
+    const uint8_t physical_b[] = {0x01, 0x7F, 0x7F, 0x7F,
+                                  0x7F, 0x2F, 0x00, 0x00};
+    EXPECT_EQ(GAMEPAD_OK,
+              gamepad_hid_decode_report(&layout, physical_b,
+                                        sizeof(physical_b), 86, &state));
+    EXPECT_EQ(GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_EAST), state.buttons);
+
+    const uint8_t select_start[] = {0x01, 0x7F, 0x7F, 0x7F,
+                                    0x7F, 0x0F, 0x30, 0x00};
+    EXPECT_EQ(GAMEPAD_OK,
+              gamepad_hid_decode_report(&layout, select_start,
+                                        sizeof(select_start), 87, &state));
+    EXPECT_EQ(GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_BACK) |
+                  GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_START),
+              state.buttons);
 }
 
 static void test_exact_usb_gamepad_profile_fails_closed(void)

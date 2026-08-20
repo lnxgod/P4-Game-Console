@@ -10,6 +10,7 @@
 #include "p4/feedback.h"
 #include "p4/game.h"
 #include "p4/input.h"
+#include "p4/visual.h"
 #include "generated/space_background.inc"
 #include "generated/asteroids_sprites.inc"
 
@@ -53,6 +54,7 @@ typedef struct {
     int16_t explosion_y;
     asteroid_t asteroids[12];
     bullet_t bullets[5];
+    p4_particle_t particles[24];
 } asteroids_state_t;
 
 enum { FIELD_W = 320, FIELD_H = 170, FIELD_TOP = 25, FIXED_MS = 16 };
@@ -154,6 +156,31 @@ static bool spawn_bullet(asteroids_state_t *state)
     return false;
 }
 
+static void spawn_debris(asteroids_state_t *state, int x, int y,
+                         uint16_t color, size_t requested)
+{
+    size_t spawned = 0U;
+    for (size_t index = 0U;
+         index < sizeof(state->particles) / sizeof(state->particles[0]) &&
+         spawned < requested; ++index) {
+        p4_particle_t *const particle = &state->particles[index];
+        if (particle->active) {
+            continue;
+        }
+        const uint32_t random = next_random(state);
+        const int32_t velocity_x =
+            (int32_t)(random & UINT32_C(0x7f)) - 63;
+        const int32_t velocity_y =
+            (int32_t)((random >> 8U) & UINT32_C(0x7f)) - 63;
+        p4_particle_spawn(
+            particle, p4_q16_from_int(x), p4_q16_from_int(y),
+            p4_q16_from_int(velocity_x), p4_q16_from_int(velocity_y),
+            (uint16_t)(260U + ((random >> 16U) & UINT32_C(0xff))),
+            color, (uint8_t)(1U + ((random >> 24U) & 1U)));
+        ++spawned;
+    }
+}
+
 static void update_physics(p4_game_context_t *context, asteroids_state_t *state)
 {
     if ((state->held_buttons & P4_BUTTON_LEFT) != 0U) state->angle = (uint8_t)((state->angle + 15U) & 15U);
@@ -195,6 +222,11 @@ static void update_physics(p4_game_context_t *context, asteroids_state_t *state)
                 state->explosion_x = asteroid->x;
                 state->explosion_y = asteroid->y;
                 state->explosion_ms = 160U;
+                spawn_debris(
+                    state, asteroid->x, asteroid->y,
+                    asteroid->kind == 0U
+                        ? UINT16_C(0x9cf3) : UINT16_C(0xffdf),
+                    8U);
                 state->score += (uint32_t)(asteroid->kind == 0U ? 20U : 50U);
                 play_tone(context,
                           (uint16_t)(180U + (uint16_t)asteroid->radius * 12U),
@@ -228,6 +260,11 @@ static void update_physics(p4_game_context_t *context, asteroids_state_t *state)
             if (state->lives > 0U) --state->lives;
             state->x = 160; state->y = 105; state->vx = 0; state->vy = 0;
             state->respawn_safe_ms = 1100U;
+            state->explosion_x = (int16_t)(160);
+            state->explosion_y = (int16_t)(105);
+            state->explosion_ms = 220U;
+            spawn_debris(
+                state, 160, 105, UINT16_C(0xf81f), 12U);
             play_tone(context, 90U, 180U, 5U, P4_WAVE_SQUARE);
             (void)p4_game_audio_effect_play(
                 context, &state->audio, P4_GAME_AUDIO_EFFECT_FAIL);
@@ -258,11 +295,21 @@ static void draw_space_background(p4_game_surface_t *surface)
 static void draw_sprite(p4_game_surface_t *surface, int x, int y,
                         size_t cell)
 {
-    /* The four 48x48 cells share a 192-pixel-wide row stride. */
-    const size_t offset = cell * 48U;
-    p4_draw_sprite_rgb565(surface, x - 24, y - 24,
-                          &s_asteroids_sprite_pixels[offset],
-                          48U, 48U, 192U, true, UINT16_C(0x0000));
+    const p4_sprite_t sprite = {
+        .pixels = s_asteroids_sprite_pixels,
+        .sheet_width = 192U,
+        .sheet_height = 48U,
+        .stride_pixels = 192U,
+        .source_x = cell * 48U,
+        .source_y = 0U,
+        .width = 48U,
+        .height = 48U,
+        .transparent_color = UINT16_C(0x0000),
+        .scale = 1U,
+        .flip = P4_SPRITE_FLIP_NONE,
+        .use_transparency = true,
+    };
+    p4_draw_sprite(surface, x - 24, y - 24, &sprite);
 }
 
 static void draw_number(p4_game_surface_t *surface, int x, int y,
@@ -317,6 +364,10 @@ static p4_game_result_t game_update(
         state->simulation_ms -= FIXED_MS;
         update_physics(context, state);
     }
+    p4_particles_update(
+        state->particles,
+        sizeof(state->particles) / sizeof(state->particles[0]),
+        elapsed_ms, 0);
     return P4_GAME_CONTINUE;
 }
 
@@ -327,6 +378,13 @@ static bool game_render(p4_game_context_t *context,
         return false;
     }
     const asteroids_state_t *const state = context->state;
+    int shake_x = 0;
+    int shake_y = 0;
+    if (state->explosion_ms != 0U) {
+        p4_camera_shake(
+            context->frame_index, state->random_state, 3,
+            &shake_x, &shake_y);
+    }
     p4_draw_clear(surface, UINT16_C(0x0000));
     draw_space_background(surface);
     p4_draw_text(surface, 8, 5, "ASTEROIDS", UINT16_C(0xffff), 1U, 9U);
@@ -339,24 +397,34 @@ static bool game_render(p4_game_context_t *context,
     for (size_t i = 0U; i < sizeof(state->asteroids) / sizeof(state->asteroids[0]); ++i) {
         const asteroid_t *asteroid = &state->asteroids[i];
         if (asteroid->active) {
-            draw_sprite(surface, asteroid->x, asteroid->y, 1U);
+            draw_sprite(
+                surface, asteroid->x + shake_x,
+                asteroid->y + shake_y, 1U);
         }
     }
     for (size_t i = 0U; i < sizeof(state->bullets) / sizeof(state->bullets[0]); ++i) {
         if (state->bullets[i].active) {
-            draw_sprite(surface, state->bullets[i].x, state->bullets[i].y, 2U);
+            draw_sprite(
+                surface, state->bullets[i].x + shake_x,
+                state->bullets[i].y + shake_y, 2U);
         }
     }
     if (state->explosion_ms != 0U) {
-        draw_sprite(surface, state->explosion_x, state->explosion_y, 3U);
+        draw_sprite(
+            surface, state->explosion_x + shake_x,
+            state->explosion_y + shake_y, 3U);
     }
+    p4_particles_draw(
+        surface, state->particles,
+        sizeof(state->particles) / sizeof(state->particles[0]),
+        -shake_x, -shake_y);
     p4_game_feedback_draw_audio_effect(
         surface, &state->audio,
         state->game_over ? 160 : state->x,
         state->game_over ? 92 : state->y);
     if (!state->game_over && (state->respawn_safe_ms == 0U ||
                               (state->respawn_safe_ms / 100U) % 2U == 0U)) {
-        draw_sprite(surface, state->x, state->y, 0U);
+        draw_sprite(surface, state->x + shake_x, state->y + shake_y, 0U);
     } else {
         p4_draw_text(surface, 116, 78, "GAME OVER", UINT16_C(0xf81f), 1U, 9U);
         p4_draw_text(surface, 94, 91, "A TO RESTART", UINT16_C(0xffff), 1U, 12U);

@@ -1,0 +1,160 @@
+{
+  "schema": 1,
+  "active": true,
+  "recorded_at": "2026-08-19T14:38:21-0700",
+  "scope": "Exact-unit forward install of Console OS 0.4.33 and atomic replacement of the stale native cartridge suite",
+  "authority": {
+    "source": "operator requests in the active Codex task",
+    "requests": [
+      "vdragon game crashes on launch",
+      "none of the games breakout or any besides doom seem to launch",
+      "i dont want rollback i want to test this on device"
+    ],
+    "automatic_rollback_authorized": false,
+    "post_write_policy": "Preserve the exact 0.4.32 application preimage, install the 0.4.33 forward candidate, atomically replace only the validated current cartridge suite on microSD, and do not automatically restore an older image."
+  },
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "port": "/dev/cu.wchusbserial5C371865781",
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "path": "apps/console_os/build-waveshare-usb-host/bootloader/bootloader.bin",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "path": "apps/console_os/build-waveshare-usb-host/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    }
+  },
+  "predecessor": {
+    "version": "0.4.32",
+    "offset": "0x20000",
+    "application_bytes": 1382976,
+    "application_sha256": "ab8a71fdfdb5eb772d2583252498fe9095e30af900de524768e0596e881d25d1",
+    "preserve_span_bytes": 1384448,
+    "preserve_path": "hardware/local-state/waveshare-console-os-0.4.33-cartridge-runtime-20260819/preimage-0.4.32.bin"
+  },
+  "candidate": {
+    "version": "0.4.33",
+    "source_base_commit": "e338fda8bcb3581eab0e4c6b8accb87a4c99995b",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "h2_role": "controller-first-runtime-switch",
+    "firmware_vbus_source": false,
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-cartridge-runtime-fix/p4_console_os.bin",
+      "bytes": 1383216,
+      "padded_mutation_bytes": 1384448,
+      "sha256": "f1c6d5f213fe1ef1a79bea6beb1b04585cba8d8b116eb60476a165539d77ea8a"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-cartridge-runtime-fix/p4_console_os.elf",
+      "bytes": 17136140,
+      "sha256": "6a72f142d985333b9b42be53b460ae74741b5e9a2da56f815428b652d6fba834"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-cartridge-runtime-fix/P4UPDATE.P4U",
+      "bytes": 1383472,
+      "sha256": "0845ab01af32ef1267e53ada229dc2548959d3fea28d5b92956536699338b38e"
+    },
+    "sdkconfig": {
+      "path": "apps/console_os/build-waveshare-cartridge-runtime-fix/sdkconfig",
+      "bytes": 86844,
+      "sha256": "47d973b65faeda5ef168307ce7519c3eeb2d10ba63fdb3b9d771e6fe98f53957"
+    },
+    "dependencies_lock": {
+      "path": "apps/console_os/dependencies-waveshare.lock",
+      "bytes": 6296,
+      "sha256": "392bb2cc5101cc6019f81dd420cf2c4fbb964bdae2a04e922a12c8e284667248",
+      "elf_loader": "1.3.1",
+      "esp_hosted": "1.4.7",
+      "esp_wifi_remote": "0.14.5"
+    },
+    "byte_buddy_package": {
+      "version": "3.1.1",
+      "path": "apps/console_os/build-waveshare-cartridge-runtime-fix/sd-card/GAMES/BYTEBUD.P4G",
+      "bytes": 363732,
+      "sha256": "996698fbc6fc70d69e8cfe126e07f05fcdbdd4c4ab9bf886b68a49d470f180b7",
+      "stack_frame_limit_bytes": 1024
+    },
+    "byte_buddy_resource": {
+      "path": "apps/console_os/build-waveshare-cartridge-runtime-fix/sd-card/GAMES/BYTEBUD.P4R",
+      "bytes": 732352,
+      "sha256": "9a2d1b88ec84d659a15c1f9d4a3af4ba0f29e7a7b512ff2c1fc9ff442f3dc0ca",
+      "payload_frames": 352
+    },
+    "game_packages": [
+      {"file": "ASTER2.P4G", "bytes": 147044, "sha256": "b8499b2109f4ccf9af0a6902ff0616ec72a0a4b448f56ba765da1b4b26efa788"},
+      {"file": "ASTEROID.P4G", "bytes": 172444, "sha256": "295ba44d5a9159d82a5b864c66cfc6880552e2249de055755773118935254e9e"},
+      {"file": "AVTEST.P4G", "bytes": 7548, "sha256": "6df150d46ac87073f5a96f3e99ab8cf9abca552ab40b4272a01b61fcdd7e93fb"},
+      {"file": "BREAKOUT.P4G", "bytes": 144816, "sha256": "85c41ecb8b2b24a2bd9936d25eb5364f6c31d7b478aaaaf03417b6640766265b"},
+      {"file": "BYTEBUD.P4G", "bytes": 363732, "sha256": "996698fbc6fc70d69e8cfe126e07f05fcdbdd4c4ab9bf886b68a49d470f180b7"},
+      {"file": "CALC.P4G", "bytes": 8816, "sha256": "cb0baefd46d8d8f439dd9f601230096d6ffb9169efcf8506788e5c3aec069057"},
+      {"file": "FROGHOP.P4G", "bytes": 178124, "sha256": "12091134481345dd8cdc9ee9387ab4409d2aefc13f96be29116ee28c7b87b707"},
+      {"file": "INPUT.P4G", "bytes": 7696, "sha256": "b39f5632da210182b8f3c16c68cde601f97e471fdc7e3ab56510f60af37d5ff6"},
+      {"file": "INVADERS.P4G", "bytes": 146384, "sha256": "218723be92f9446f666ccb21c384b074ad4b4b871fa1de54d167ba659c7efafd"},
+      {"file": "LORD.P4G", "bytes": 158784, "sha256": "3459c10ef36feea4186ea7221b892b7a27891c63c19bc13660441a7bc397b3ba"},
+      {"file": "MAZE.P4G", "bytes": 146432, "sha256": "c4c45c46215abbe22ae7c10759b9115eecc54364ac6b8c6b1a07fc8c75edbf62"},
+      {"file": "SKYLINE.P4G", "bytes": 198588, "sha256": "bea42335b893939fc0bdfa3482a17c8b0d0a214e14a87c313d2205bd85311c1a"},
+      {"file": "SOLITAIR.P4G", "bytes": 146820, "sha256": "14651a9c30a706f94c4e1ff340bea1565eca1f4337bfca10b46a14699f71061f"}
+    ],
+    "source_files": [
+      {"path": "apps/console_os/CMakeLists.txt", "bytes": 21732, "sha256": "4e89864adcae69fbafc3bec1c516d512da535cf7eacb3c09e186ff4c71aa23dc"},
+      {"path": "apps/console_os/main/CMakeLists.txt", "bytes": 3937, "sha256": "68428eb5898a6c08a2fe5e5d86e8ca1426436706e84defa406b03904974e2f7f"},
+      {"path": "apps/console_os/main/console_os_main.c", "bytes": 148430, "sha256": "285afa601b4af7a7dba01b0711df50821ddf7d79cf91bb6f130d2042d87ad076"},
+      {"path": "components/platform_game_loader/src/platform_game_loader.c", "bytes": 10967, "sha256": "421fe1893d3843ad1724c3de3115601c4bbc0e59f3ed0f9d95b46f1eb0a9bbfa"},
+      {"path": "games/byte_buddy/src/byte_buddy.c", "bytes": 120582, "sha256": "1bdc13547f51a1a9c4fabe0e19a5a2e996678212f81fa2954c43efc95724f562"},
+      {"path": "games/byte_buddy/game.json", "bytes": 822, "sha256": "fd7e12c5278675560384dedf5251f3286992c19e5393321c128d661352c0bb8d"},
+      {"path": "scripts/build-game-package.py", "bytes": 11592, "sha256": "4a5919bb6f7dd5e470626f4ab9ab69b402ed8d4182506b64e52eef18bc11c78f"},
+      {"path": "scripts/verify-console-os-waveshare.py", "bytes": 42303, "sha256": "9787b836212988a337eed94329cd05df2eb64dcc525cb9a726a02d844e3df785"}
+    ]
+  },
+  "software_checks": {
+    "game_sdk_host": "pass on unchanged game sources from 0.4.32 candidate",
+    "controller_first_build": "pass",
+    "waveshare_build_verifier": "pass",
+    "true_cartridge_exit_capture": true,
+    "memcmp_runtime_symbol": true,
+    "return_home_timeout_recoverable": true,
+    "hardware_tested": false
+  },
+  "mutation": {
+    "allowed": [
+      "0x20000..0x171fff application payload plus flash-sector padding",
+      "mounted external P4GAMES/GAMES current .P4G suite",
+      "mounted external P4GAMES/GAMES/BYTEBUD.P4R"
+    ],
+    "forbidden": [
+      "bootloader",
+      "partition table",
+      "OTA data",
+      "NVS and persistent settings",
+      "unrelated microSD contents",
+      "factory backup"
+    ]
+  },
+  "required_device_checks": [
+    "retained UART reports App version 0.4.33",
+    "USB_INPUT_READY and launcher READY occur without reboot",
+    "current cartridge suite is copied atomically and read back with authorized hashes",
+    "Breakout and Byte Buddy reach P4_CARTRIDGE_ENTRY_BEGIN and render frames",
+    "Byte Buddy renders its animated egg and responds to touch",
+    "signal hunt lists real nearby SSIDs and focused RSSI changes",
+    "one signal battle completes and awards progression",
+    "Back returns to the launcher without a fatal display timeout"
+  ]
+}

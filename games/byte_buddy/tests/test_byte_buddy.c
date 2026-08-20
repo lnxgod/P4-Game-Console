@@ -48,14 +48,16 @@ static bool fake_request_signal_scan(void *context, uint64_t focus_token)
                 .label = "SKY GARDEN",
                 .rssi_dbm = focus_token == 0U ? -82 : -45,
                 .channel = 6U,
-                .flags = P4_GAME_SIGNAL_PROTECTED,
+                .flags = P4_GAME_SIGNAL_PROTECTED |
+                         P4_GAME_SIGNAL_SIMULATED,
             },
             {
                 .token = UINT64_C(0x3ff0000000045678),
                 .label = "HIDDEN SIGNAL",
                 .rssi_dbm = -68,
                 .channel = 11U,
-                .flags = P4_GAME_SIGNAL_HIDDEN,
+                .flags = P4_GAME_SIGNAL_HIDDEN |
+                         P4_GAME_SIGNAL_SIMULATED,
             },
         },
     };
@@ -363,8 +365,10 @@ static void test_signal_hunt_battle_and_reward(void)
     CHECK(s_signal_scan.requests == 1U);
     release_touch(&instance);
     tap(&instance, 70U, 42U);
-    tap(&instance, 70U, 180U);
     CHECK(s_signal_scan.requests == 2U);
+    CHECK(s_signal_scan.focus_token == UINT64_C(0x00123456789abcde));
+    tap(&instance, 70U, 180U);
+    CHECK(s_signal_scan.requests == 3U);
     CHECK(s_signal_scan.focus_token == UINT64_C(0x00123456789abcde));
     release_touch(&instance);
     tap(&instance, 250U, 180U);

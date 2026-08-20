@@ -59,7 +59,7 @@
       "path": "xtrn/lord/lord.js",
       "blob": "e3f754eabbb99779bf4ee982bd43be6509bad973",
       "sha256": "a410a37e0b8e39a72cd8527fbbf37e48698cdeccdb7fa9f7ff296b25dfbec645",
-      "usage": "authorized reference for games/lord; no upstream files vendored",
+      "usage": "authorized reference for games/lord; hash-gated monster data is emitted as generated C and no upstream runtime files are packaged",
       "license": "LicenseRef-LORD-Permission"
     }
   }

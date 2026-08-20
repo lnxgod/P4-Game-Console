@@ -235,6 +235,15 @@ def main() -> None:
     verify_managed_component_integrity(
         "espressif__usb", usb_hash_match.group(1)
     )
+    tinyusb_hash_match = re.search(
+        r"(?ms)^  espressif/tinyusb:.*?^    component_hash: ([0-9a-f]{64})$",
+        lock,
+    )
+    require(tinyusb_hash_match is not None,
+            "dependency lock is missing the espressif/tinyusb component hash")
+    verify_managed_component_integrity(
+        "espressif__tinyusb", tinyusb_hash_match.group(1)
+    )
 
     profile = read_json(
         ROOT / "hardware/board-profiles/waveshare-esp32-p4-wifi6-touch-lcd-4.3.json"
@@ -254,6 +263,11 @@ def main() -> None:
     usb_host_image = (
         "#define CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE 1" in sdkconfig
     )
+    force_full_speed_host = (
+        "#define CONFIG_P4_WAVESHARE_H2_FORCE_FULL_SPEED_HOST 1" in
+        sdkconfig
+    )
+    tinyusb_hs_host_image = usb_host_image and not force_full_speed_host
     retry_match = re.search(
         r"^#define CONFIG_P4_USB_HOST_EXT_PORT_ENUM_RETRY_ATTEMPTS (\d+)$",
         sdkconfig,
@@ -273,10 +287,10 @@ def main() -> None:
                 f"build is missing {setting}")
     require("CONFIG_ELF_LOADER_ESPIDF_SYMBOLS" not in sdkconfig,
             "cartridges must not resolve arbitrary ESP-IDF symbols")
+    require("#define CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL 32768" in
+            sdkconfig,
+            "Waveshare image must retain a bootable 32 KiB internal/DMA reserve")
     if usb_host_image:
-        require("#define CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL 32768" in
-                sdkconfig,
-                "controller-first image must retain a bootable 32 KiB internal/DMA reserve")
         require("#define CONFIG_TINYUSB_MSC_ENABLED 1" in sdkconfig,
                 "controller-first image must link the USB Drive MSC app")
         require("#define CONFIG_P4_WAVESHARE_H2_RUNTIME_ROLE_SWITCH 1" in
@@ -284,17 +298,10 @@ def main() -> None:
                 "controller-first image is missing the guarded H2 role switch")
         require("#define CONFIG_USB_HOST_HUBS_SUPPORTED 1" in sdkconfig,
                 "USB-host image is missing external hub support")
-        require("#define CONFIG_P4_WAVESHARE_H2_FORCE_FULL_SPEED_HOST 1" in
-                sdkconfig,
-                "USB-host image must avoid the unsupported HS-hub TT path")
-        require("#define CONFIG_USB_HOST_EXT_PORT_RESET_ATTEMPTS 1" in
-                sdkconfig,
-                "controller-first image must retain the pinned port-reset default")
-        require("#define CONFIG_USB_HOST_EXT_PORT_RESET_RECOVERY_DELAY_MS 500" in
-                sdkconfig,
-                "controller-first image must allow slow HID reset recovery")
-        require(retry_attempts in (0, 2),
-                "controller-first retry budget must be stable zero or guarded two")
+        require(tinyusb_hs_host_image,
+                "controller-first image must use the pinned TinyUSB HS/TT host path")
+        require("#define CONFIG_TINYUSB_DEBUG_LEVEL 0" in sdkconfig,
+                "controller-first image must disable verbose TinyUSB tracing")
     else:
         require("#define CONFIG_TINYUSB_MSC_ENABLED 1" in sdkconfig,
                 "H2 device image is missing TinyUSB MSC")
@@ -319,10 +326,12 @@ def main() -> None:
     require({"gamepad_core", "platform_usb_host", "platform_gamepad_usb"}
             <= components,
             "role-selectable Waveshare input components are missing")
+    require({"espressif__esp_hosted", "espressif__esp_wifi_remote",
+             "p4_signal_scan", "platform_signal_scan"} <= components,
+            "Waveshare image is missing the passive signal-scan path")
     if usb_host_image:
-        require(not ({"espressif__esp_hosted", "espressif__esp_wifi_remote",
-                      "platform_signal_scan"} & components),
-                "controller-first image must not autostart the unqualified Wi-Fi/SDIO path")
+        require("p4_tinyusb_dual" in components,
+                "controller-first image is missing the dual-role TinyUSB boundary")
     require(not ({"asteroids", "byte_buddy", "maze_chase", "space_invaders"} & components),
             "games were linked statically into the OS")
 
@@ -358,6 +367,12 @@ def main() -> None:
     require(app.is_file() and app.stat().st_size <= 0x7F0000,
             "application is missing or does not fit OTA")
     app_data = app.read_bytes()
+    for marker in (
+        b"P4_CONSOLE_OS SIGNAL_SCAN_START stage=post-ready mode=passive-only",
+        b"C6 passive scanner ready",
+    ):
+        require(marker in app_data,
+                f"passive signal-scan marker is missing: {marker!r}")
     for forbidden in (
         b"TT pipe hub=",
         b"through HS hub transaction translator",
@@ -365,10 +380,45 @@ def main() -> None:
     ):
         require(forbidden not in app_data,
                 "application contains experimental USB TT scheduler code")
-    if usb_host_image:
+    if tinyusb_hs_host_image:
         for marker in (
-            b"msc_storage=lazy",
-            b"MSC_STORAGE_READY allocation=on-demand",
+            b"USB_HOST_READY controller=p4-hs stack=tinyusb root_speed=high",
+            b"USB_HOST_ROOT_PORT_ENABLED stack=tinyusb root_speed=high hub_tt=enabled",
+            b"GAMEPAD_USB_READY stack=tinyusb tier=generic-hid hub_tt=enabled",
+            b"firmware_vbus_source=0",
+            b"msc_storage=boot-resident",
+            b"MSC_STORAGE_READY allocation=boot-resident",
+        ):
+            require(marker in app_data,
+                    f"TinyUSB controller-first marker is missing: {marker!r}")
+        ninja = (build / "build.ninja").read_text(encoding="utf-8")
+        for relative in (
+            "src/host/usbh.c",
+            "src/host/hub.c",
+            "src/class/hid/hid_host.c",
+            "src/portable/synopsys/dwc2/hcd_dwc2.c",
+        ):
+            compile_lines = [
+                line for line in ninja.splitlines()
+                if line.startswith("build ") and
+                f"espressif__tinyusb.dir/{relative}.obj" in line and
+                ": C_COMPILER" in line
+            ]
+            require(len(compile_lines) == 1 and
+                    f"managed_components/espressif__tinyusb/{relative}" in
+                    compile_lines[0],
+                    f"TinyUSB host source is not uniquely locked: {relative}")
+        for source_name in (
+            "platform_usb_host_tinyusb.c",
+            "platform_gamepad_usb_tinyusb.c",
+        ):
+            require(ninja.count(source_name) >= 2,
+                    f"controller-first image did not compile {source_name}")
+
+    if usb_host_image and not tinyusb_hs_host_image:
+        for marker in (
+            b"msc_storage=boot-resident",
+            b"MSC_STORAGE_READY allocation=boot-resident",
             b"BOOT_FRAME_RETRY",
             b"backlight_preserved=1",
         ):
@@ -535,6 +585,12 @@ def main() -> None:
         "begin_usb_enum_probe_or_suppress",
         "confirm_usb_enum_probe_after_stable_runtime",
         "P4_CONSOLE_OS USB_ENUM_GUARD state=%s",
+        "present_interactive",
+        "P4_CONSOLE_OS FRAME_ACK_MISSED action=continue",
+        "result = present_interactive(shell);",
+        "P4_CONSOLE_OS CARTRIDGE_FRAME_ACK_MISSED",
+        "++context->display_ack_misses;",
+        "display_ack_misses=%lu return=launcher",
     ):
         require(token in source, f"firmware source is missing {token}")
     for forbidden in (
@@ -545,13 +601,32 @@ def main() -> None:
     ):
         require(forbidden not in source,
                 f"obsolete app-level USB recovery remains in firmware source: {forbidden}")
-    usb_host_source = (ROOT / "components/platform_usb_host/src/"
-                       "platform_usb_host.c").read_text(encoding="utf-8")
-    require("usb_dwc_ll_hcfg_set_fsls_supp_only(&USB_DWC_HS)" in
-            usb_host_source and
-            "USB_HOST_SPEED_POLICY root=full-speed-only" in usb_host_source and
-            "reason=no-hs-hub-tt-scheduler" in usb_host_source,
-            "Waveshare host speed policy no longer avoids the TT path")
+    if tinyusb_hs_host_image:
+        usb_host_source = (ROOT / "components/platform_usb_host/src/"
+                           "platform_usb_host_tinyusb.c").read_text(
+                               encoding="utf-8")
+        gamepad_source = (ROOT / "components/platform_gamepad_usb/src/"
+                          "platform_gamepad_usb_tinyusb.c").read_text(
+                              encoding="utf-8")
+        require("USB_PHY_SPEED_UNDEFINED" in usb_host_source and
+                "TUSB_SPEED_AUTO" in usb_host_source and
+                "PLATFORM_TUH_TASK_CORE = 1" in usb_host_source and
+                "hub_tt=enabled" in usb_host_source and
+                "firmware_vbus_source=0" in usb_host_source,
+                "TinyUSB HS host policy differs")
+        require("GAMEPAD_HID_MAX_DESCRIPTOR_BYTES" in gamepad_source and
+                "GAMEPAD_HID_MAX_REPORT_BYTES" in gamepad_source and
+                "disconnect_slot" in gamepad_source and
+                "input=neutral" in gamepad_source,
+                "TinyUSB HID bounds or disconnect neutralization differs")
+    else:
+        usb_host_source = (ROOT / "components/platform_usb_host/src/"
+                           "platform_usb_host.c").read_text(encoding="utf-8")
+        require("usb_dwc_ll_hcfg_set_fsls_supp_only(&USB_DWC_HS)" in
+                usb_host_source and
+                "USB_HOST_SPEED_POLICY root=full-speed-only" in usb_host_source and
+                "reason=no-hs-hub-tt-scheduler" in usb_host_source,
+                "Waveshare host speed policy no longer avoids the TT path")
     app_main = source.split("void app_main(void)", 1)[1]
     require(app_main.index("present_boot_screen(0U, \"STARTING...\")") <
             app_main.index("start_game_storage_initialization()") <
@@ -570,9 +645,12 @@ def main() -> None:
                        "platform_console_settings.c").read_text(encoding="utf-8")
     settings_header = (ROOT / "components/platform_console_settings/include/"
                        "platform/console_settings.h").read_text(encoding="utf-8")
-    require("PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT = 3" in settings_header and
-            "PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT = 3" in settings_header and
+    require("PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT = 10" in settings_header and
+            "PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT = 9" in settings_header and
             'SETTINGS_NAMESPACE = "p4_console"' in settings_source and
+            'VOLUME_POLICY_KEY = "volume_policy"' in settings_source and
+            "VOLUME_POLICY_VERSION = 1" in settings_source and
+            "migrate_volume_policy" in settings_source and
             'USB_ENUM_PROBE_KEY = "usb_enum_probe"' in settings_source and
             "nvs_commit(handle)" in settings_source and
             "platform_console_settings_begin_usb_enum_probe" in
@@ -589,6 +667,35 @@ def main() -> None:
             "Console OS persistent audio panel or paced DTMF profile differs")
     require("console_os_launch_doom(s_console_settings.game_volume_step)" in source,
             "touch Doom handoff does not receive the OS master volume")
+    gamepad_core_source = (ROOT / "components/gamepad_core/src/"
+                           "hid_gamepad.c").read_text(encoding="utf-8")
+    for token in (
+        "This controller reports its SNES face buttons in Y, B, A, X order",
+        "GAMEPAD_BUTTON_WEST,",
+        "GAMEPAD_BUTTON_EAST,",
+        "GAMEPAD_BUTTON_SOUTH,",
+        "GAMEPAD_BUTTON_NORTH,",
+        "next.fields[8].map_target = GAMEPAD_HID_MAP_IGNORE;",
+        "next.fields[9].map_target = GAMEPAD_HID_MAP_IGNORE;",
+    ):
+        require(token in gamepad_core_source,
+                f"exact 0079:0011 SNES mapping is missing {token}")
+    doom_source = (ROOT / "apps/doom_embedded_touch_audio/main/"
+                   "doom_embedded_touch_audio_main.c").read_text(
+                       encoding="utf-8")
+    console_main_cmake = (APP / "main/CMakeLists.txt").read_text(
+        encoding="utf-8")
+    for token in (
+        "P4_DOOM_SHARED_USB_GAMEPAD",
+        "platform_gamepad_usb_get_snapshot",
+        "doom_gamepad_input_update",
+        "service_gamepad();",
+        "usb=shared-platform-gamepad",
+    ):
+        require(token in doom_source,
+                f"Waveshare Doom shared controller path is missing {token}")
+    require("doom_gamepad_input" in console_main_cmake,
+            "Waveshare Console OS does not link Doom's normalized input adapter")
     require("CONSOLE_P4CART_SCAN_STACK_BYTES = 24 * 1024" in source and
             "worker_low_water_bytes=%u runtime=lua-pending" in source,
             "legacy cart scan stack regression is not guarded")
@@ -599,12 +706,45 @@ def main() -> None:
     ):
         require(token not in source,
                 f"firmware source still supports embedded games: {token}")
+    loader_source = (ROOT / "components/platform_game_loader/src/"
+                     "platform_game_loader.c").read_text(encoding="utf-8")
+    for token in (
+        "ESP_ELFSYM_EXPORT(memcmp)",
+        "cartridge_exit = elf.entry(1, arguments)",
+        'failure_stage = "cartridge-entry"',
+    ):
+        require(token in loader_source,
+                f"cartridge runtime diagnostics are missing {token}")
+    require(
+        "console_shell_show_home(shell);\n"
+        "    const esp_err_t home_result = present_interactive(shell);" in source,
+        "cartridge return must tolerate a recoverable Waveshare frame ack miss")
     cmake = (APP / "CMakeLists.txt").read_text(encoding="utf-8")
-    require("RENAME_TO bytebud_p4g" not in cmake and
+    require('set(PROJECT_VER "0.4.35")' in cmake and
+            "RENAME_TO bytebud_p4g" not in cmake and
             "P4_DEFAULT_GAME_PACKAGE" not in cmake,
-            "firmware build still embeds a default cartridge")
+            "firmware version differs or build still embeds a default cartridge")
+    signal_scan_source = (ROOT / "components/platform_signal_scan/src/"
+                          "platform_signal_scan.c").read_text(encoding="utf-8")
+    for token in (
+        "ssid_has_visible_name",
+        ".show_hidden = false",
+        "hidden_filtered=%u",
+    ):
+        require(token in signal_scan_source,
+                f"named-only signal scan policy is missing {token}")
+    require(".show_hidden = true" not in signal_scan_source,
+            "Waveshare scanner must not request hidden networks")
     require("console_shell_t shell;" not in source,
             "large shell state must not live on the main task stack")
+    require(
+        ".usb_drive_active =\n"
+        "            s_game_storage_status.state == "
+        "PLATFORM_GAME_STORAGE_USB_HOST ||\n"
+        "            s_game_storage_status.state ==\n"
+        "                PLATFORM_GAME_STORAGE_USB_FORMAT_REQUIRED," in source and
+        ".usb_drive_active = s_game_storage_status.usb_driver_running" not in source,
+        "USB Drive UI must follow storage ownership, not driver attachment state")
     storage_source = (ROOT / "components/platform_game_storage/src/"
                       "platform_game_storage.c").read_text(encoding="utf-8")
     write_policy = (ROOT / "components/platform_game_storage/src/"
@@ -623,13 +763,22 @@ def main() -> None:
         "P4_GAME_STORAGE_RUNTIME_H2_SWITCH",
         "P4_GAME_STORAGE_EAGER_USB_STORAGE",
         "P4_GAME_STORAGE USB_DEVICE_DEFERRED",
-        "create_lazy_msc_storage",
-        "delete_lazy_msc_storage",
-        "MSC_STORAGE_READY allocation=on-demand",
+        "MSC_STORAGE_READY allocation=boot-resident",
+        "sdmmc_host_deinit_slot(GAME_STORAGE_SD_SLOT)",
         "uninstall_usb_driver_if_running",
     ):
         require(token in storage_source,
                 f"Waveshare MSC storage source is missing {token}")
+    require("create_lazy_msc_storage" not in storage_source and
+            "delete_lazy_msc_storage" not in storage_source and
+            "result = sdmmc_host_deinit();" not in storage_source,
+            "runtime USB switching must not allocate MSC late or globally "
+            "deinitialize the C6 SDIO host")
+    board_defaults = (ROOT / "hardware/boards/"
+                      "waveshare-esp32-p4-wifi6-touch-lcd-4.3/"
+                      "sdkconfig.defaults").read_text(encoding="utf-8")
+    require("CONFIG_TINYUSB_MSC_BUFSIZE=4096" in board_defaults,
+            "Waveshare MSC buffer must fit the fragmented internal DMA heap")
     require("uint64_t byte_address" in storage_source and
             "uint64_t *out_address" in write_policy and
             "address > SIZE_MAX" not in write_policy,

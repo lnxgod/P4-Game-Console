@@ -23,20 +23,35 @@ absence of a per-file license header.
 
 ## What was ported
 
-The new C implementation adapts the class choices, core battle formulas,
-eleven training masters and thresholds, sixteen weapons, sixteen armour
-items, representative monsters from every upstream tier, daily forest limits,
-bank/inn/healer services, and Red Dragon victory loop. The local realm,
-mailbox, PvP transactions, romance model, built-in IGMs, save codec, generated
-16-color title art, and code-drawn RIP-style scenes are new bounded
-implementations for the P4 port.
-UI, state management, input handling, rendering, and tests were written for
-P4 Game API v1.
+The C implementation adapts the complete standalone player loop: character
+creation, all three skill trees, battle formulas, eleven training masters,
+sixteen weapons, sixteen armour items, every one of the 131 `monster_stats`
+records, the fifteen forest-event families, town services, the full Red Dragon
+Inn interaction set, Red Dragon victory, directory, mail, PvP, romance,
+marriage/divorce, and family progression.
 
-The cartridge does not vendor or load the upstream `lord.js`, `recorddefs.js`,
-`lord.ini`, `lordtxt.lrd`, `.ICN` graphics, `.LRD` scripts, or database files.
-Their Synchronet/BBS runtime dependencies are consequently not part of the
-P4 package.
+The bounded add-on loops were adapted from these pinned paths in the same
+authorized tree:
+
+- `xtrn/lord/aratime/aratime.js`
+- `xtrn/lord/barak/barak.js`
+- `xtrn/lord/grabbag/grabbag.js`
+- `xtrn/lord/gravyard/gravyard.js`
+- `xtrn/lord/oorphans/oorphans.js`
+- `xtrn/lord/outhouse/outhouse.js`
+- `xtrn/lord/pickle/pickle.js`
+
+`tools/import_upstream_monsters.mjs` refuses any `lord.js` whose SHA-256 does
+not match the value above and deterministically emits
+`src/generated/lord_monsters.h`. UI, state management, persistent local-realm
+models, explicit save format, 16-color title art, code-drawn scenes, input,
+and tests are new P4 Game API v1 work.
+
+The cartridge does not vendor or load the upstream JavaScript, `recorddefs`,
+configuration, `.ICN`, `.LRD`, database, or Synchronet runtime files. The only
+mechanically imported source data is the generated C monster table, recorded
+with the exact hash above. Synchronet/BBS runtime dependencies are not part of
+the P4 package.
 
 LORD, *Legend of the Red Dragon*, and related character or place names remain
 the property of their respective owners. Keep this provenance note with the

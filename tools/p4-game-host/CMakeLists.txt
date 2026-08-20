@@ -55,6 +55,10 @@ add_subdirectory(
     "${P4_REPO_ROOT}/components/p4_signal_scan"
     "${CMAKE_CURRENT_BINARY_DIR}/p4_signal_scan"
 )
+add_subdirectory(
+    "${P4_REPO_ROOT}/components/p4_game_save"
+    "${CMAKE_CURRENT_BINARY_DIR}/p4_game_save"
+)
 
 add_executable(p4_game_host play_game.c ${P4_GAME_SOURCES})
 set_target_properties(p4_game_host PROPERTIES
@@ -72,7 +76,7 @@ target_compile_definitions(p4_game_host PRIVATE
 )
 target_compile_features(p4_game_host PRIVATE c_std_11)
 target_link_libraries(
-    p4_game_host PRIVATE p4_signal_scan PkgConfig::SDL3
+    p4_game_host PRIVATE p4_game_save p4_signal_scan PkgConfig::SDL3
 )
 
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")

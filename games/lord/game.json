@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "0.2.0",
+  "version": "1.0.0",
   "package_file": "LORD.P4G",
   "component": "lord",
   "entry_symbol": "p4_lord_game",
@@ -17,7 +17,8 @@
     "controls"
   ],
   "optional_capabilities": [
-    "audio-tone"
+    "audio-tone",
+    "save"
   ],
   "license": "LORD-PERMISSION",
   "assets": "authorized-upstream-text-generated-and-code-rendered-ansi-rip-ui",

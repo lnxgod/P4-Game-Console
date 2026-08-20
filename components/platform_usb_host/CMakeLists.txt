@@ -4,17 +4,30 @@ set(PLATFORM_USB_HOST_PORTABLE_SOURCES
 )
 
 if(COMMAND idf_component_register)
+    idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
+    if(P4_ACTIVE_BOARD_PROFILE STREQUAL
+       "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
+        set(PLATFORM_USB_HOST_TRANSPORT src/platform_usb_host_tinyusb.c)
+        set(PLATFORM_USB_HOST_DRIVER_REQUIREMENTS
+            esp_tinyusb
+            espressif__tinyusb
+            p4_tinyusb_dual
+            usb)
+    else()
+        set(PLATFORM_USB_HOST_TRANSPORT src/platform_usb_host.c)
+        set(PLATFORM_USB_HOST_DRIVER_REQUIREMENTS usb)
+    endif()
     idf_component_register(
         SRCS
             ${PLATFORM_USB_HOST_PORTABLE_SOURCES}
-            src/platform_usb_host.c
+            ${PLATFORM_USB_HOST_TRANSPORT}
         INCLUDE_DIRS include
         REQUIRES
             esp_driver_gpio
             freertos
             log
             platform_board
-            usb
+            ${PLATFORM_USB_HOST_DRIVER_REQUIREMENTS}
         PRIV_REQUIRES
             hal
             soc

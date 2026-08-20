@@ -32,6 +32,12 @@ CAPABILITIES = {
     "audio-stream": "P4_GAME_CAP_AUDIO_STREAM",
     "storage": "P4_GAME_CAP_STORAGE",
     "signal-scan": "P4_GAME_CAP_SIGNAL_SCAN",
+    "save": "P4_GAME_CAP_SAVE",
+    "text-input": "P4_GAME_CAP_TEXT_INPUT",
+    "realm": "P4_GAME_CAP_REALM",
+    "multiplayer-session": "P4_GAME_CAP_MULTIPLAYER_SESSION",
+    "module-handoff": "P4_GAME_CAP_MODULE_HANDOFF",
+    "vector-scenes": "P4_GAME_CAP_VECTOR_SCENES",
 }
 
 
@@ -107,6 +113,12 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
         fail(path, "version must be a bounded semantic version string")
     if len(version.encode("ascii")) >= 16:
         fail(path, "version must fit in 15 ASCII bytes")
+    stack_frame_limit = value.get("stack_frame_limit_bytes")
+    if (stack_frame_limit is not None and
+            (isinstance(stack_frame_limit, bool) or
+             not isinstance(stack_frame_limit, int) or
+             not 128 <= stack_frame_limit <= 16 * 1024)):
+        fail(path, "stack_frame_limit_bytes must be an integer in 128..16384")
     if (not isinstance(package_file, str) or
             not PACKAGE_RE.fullmatch(package_file)):
         fail(path, "package_file must be an uppercase .P4G basename")

@@ -2,15 +2,37 @@
 
 #include "platform/game_loader.h"
 
+#include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
 #include "esp_elf.h"
+#include "esp_log.h"
 #include "mbedtls/sha256.h"
 #include "p4/game_package.h"
 #include "p4/game_resource.h"
 #include "platform/game_storage.h"
+
+static const char *TAG = "game_loader";
+
+/*
+ * Keep the cartridge import allow-list and the on-device resolver in lockstep.
+ * Espressif ELF Loader 1.3.1 exposes most string primitives but omits memcmp
+ * from its built-in libc table. Register the missing bounded primitive only
+ * while a cartridge is being relocated/executed.
+ */
+static const struct esp_elfsym s_cartridge_runtime_symbols[] = {
+    ESP_ELFSYM_EXPORT(memcmp),
+    ESP_ELFSYM_END,
+};
+
+static bool host_field_present(const p4_cartridge_host_v1_t *host,
+                               size_t offset, size_t bytes)
+{
+    return host != NULL && offset <= SIZE_MAX - bytes &&
+        (size_t)host->struct_bytes >= offset + bytes;
+}
 
 static bool resource_file_name(const char *package_name,
                                char output[
@@ -57,16 +79,29 @@ esp_err_t platform_game_loader_run(
     if (entry == NULL || host == NULL || !entry->valid ||
         host->magic != P4_CARTRIDGE_HOST_MAGIC ||
         host->api_version != P4_CARTRIDGE_HOST_API_VERSION ||
-        host->struct_bytes < sizeof(*host)) {
+        !host_field_present(
+            host, offsetof(p4_cartridge_host_v1_t, finished),
+            sizeof(host->finished))) {
         return ESP_ERR_INVALID_ARG;
     }
+    const bool has_resource_fields = host_field_present(
+        host, offsetof(p4_cartridge_host_v1_t, resource_format_version),
+        sizeof(host->resource_format_version));
     host->available_capabilities &=
         (uint32_t)~(uint32_t)P4_GAME_CAP_STORAGE;
-    host->resource_data = NULL;
-    host->resource_bytes = 0U;
-    host->resource_format_version = 0U;
+    if (has_resource_fields) {
+        host->resource_data = NULL;
+        host->resource_bytes = 0U;
+        host->resource_format_version = 0U;
+    }
     uint8_t *data = NULL;
     size_t size_bytes = 0U;
+    const char *failure_stage = NULL;
+    int cartridge_exit = 0;
+    ESP_LOGI(TAG,
+             "P4_CARTRIDGE_LOAD_BEGIN app=%s file=%s source=%s",
+             entry->package.id, entry->file_name,
+             entry->in_games_directory ? "games-directory" : "root");
     esp_err_t result = entry->in_games_directory
         ? platform_game_storage_load_game_file(
             entry->file_name, P4_GAME_PACKAGE_MAX_BYTES,
@@ -74,11 +109,19 @@ esp_err_t platform_game_loader_run(
         : platform_game_storage_load_root_file(
             entry->file_name, P4_GAME_PACKAGE_MAX_BYTES,
             &data, &size_bytes);
+    if (result != ESP_OK) {
+        failure_stage = "package-read";
+    } else {
+        ESP_LOGI(TAG,
+                 "P4_CARTRIDGE_PACKAGE_READ app=%s bytes=%u",
+                 entry->package.id, (unsigned)size_bytes);
+    }
     p4_game_package_info_t package = {0};
     if (result == ESP_OK &&
         p4_game_package_parse(data, size_bytes, &package) !=
             P4_GAME_PACKAGE_VALID) {
         result = ESP_ERR_INVALID_RESPONSE;
+        failure_stage = "package-parse";
     }
     uint8_t digest[P4_GAME_PACKAGE_SHA256_BYTES];
     if (result == ESP_OK &&
@@ -86,9 +129,16 @@ esp_err_t platform_game_loader_run(
                         package.payload_bytes, digest, 0) != 0 ||
          memcmp(digest, package.payload_sha256, sizeof(digest)) != 0)) {
         result = ESP_ERR_INVALID_CRC;
+        failure_stage = "package-hash";
     }
     if (result == ESP_OK && !package_matches_catalog(&package, entry)) {
         result = ESP_ERR_INVALID_STATE;
+        failure_stage = "catalog-match";
+    }
+    if (result == ESP_OK) {
+        ESP_LOGI(TAG,
+                 "P4_CARTRIDGE_PACKAGE_VERIFIED app=%s payload_bytes=%u",
+                 entry->package.id, (unsigned)package.payload_bytes);
     }
 
     uint8_t *resource_data = NULL;
@@ -96,11 +146,12 @@ esp_err_t platform_game_loader_run(
     p4_game_resource_info_t resource;
     const uint32_t package_capabilities = package.required_capabilities |
         package.optional_capabilities;
-    if (result == ESP_OK &&
+    if (result == ESP_OK && has_resource_fields &&
         (package_capabilities & P4_GAME_CAP_STORAGE) != 0U) {
         char resource_name[PLATFORM_GAME_STORAGE_FILE_NAME_MAX_BYTES];
         if (!resource_file_name(entry->file_name, resource_name)) {
             result = ESP_ERR_INVALID_ARG;
+            failure_stage = "resource-name";
         } else {
             const esp_err_t loaded = entry->in_games_directory
                 ? platform_game_storage_load_game_file(
@@ -111,10 +162,22 @@ esp_err_t platform_game_loader_run(
                     &resource_data, &resource_size_bytes);
             if (loaded != ESP_OK && loaded != ESP_ERR_NOT_FOUND) {
                 result = loaded;
+                failure_stage = "resource-read";
+            } else if (loaded == ESP_OK) {
+                ESP_LOGI(TAG,
+                         "P4_CARTRIDGE_RESOURCE_READ app=%s file=%s "
+                         "bytes=%u",
+                         entry->package.id, resource_name,
+                         (unsigned)resource_size_bytes);
+            } else {
+                ESP_LOGI(TAG,
+                         "P4_CARTRIDGE_RESOURCE_ABSENT app=%s file=%s "
+                         "fallback=cartridge",
+                         entry->package.id, resource_name);
             }
         }
     }
-    if (result == ESP_OK && resource_data != NULL) {
+    if (result == ESP_OK && has_resource_fields && resource_data != NULL) {
         uint8_t resource_digest[P4_GAME_RESOURCE_SHA256_BYTES];
         if (p4_game_resource_parse(
                 resource_data, resource_size_bytes, &resource) !=
@@ -126,24 +189,49 @@ esp_err_t platform_game_loader_run(
             memcmp(resource_digest, resource.payload_sha256,
                    sizeof(resource_digest)) != 0) {
             result = ESP_ERR_INVALID_CRC;
+            failure_stage = "resource-verify";
         } else {
             host->available_capabilities |= P4_GAME_CAP_STORAGE;
             host->resource_data = resource_data + resource.payload_offset;
             host->resource_bytes = resource.payload_bytes;
             host->resource_format_version = resource.format_version;
+            ESP_LOGI(TAG,
+                     "P4_CARTRIDGE_RESOURCE_VERIFIED app=%s "
+                     "format=%lu payload_bytes=%u",
+                     entry->package.id,
+                     (unsigned long)resource.format_version,
+                     (unsigned)resource.payload_bytes);
         }
     }
 
     esp_elf_t elf;
     bool initialized = false;
+    bool runtime_symbols_registered = false;
+    if (result == ESP_OK) {
+        const int registered =
+            esp_elf_register_symbol(s_cartridge_runtime_symbols);
+        runtime_symbols_registered = registered == 0;
+        if (registered != 0 && registered != -EEXIST) {
+            result = ESP_FAIL;
+            failure_stage = "symbol-register";
+        }
+    }
     if (result == ESP_OK) {
         const int initialized_result = esp_elf_init(&elf);
         initialized = initialized_result == 0;
         result = initialized ? ESP_OK : ESP_FAIL;
+        if (!initialized) {
+            failure_stage = "elf-init";
+        }
     }
     if (result == ESP_OK && esp_elf_relocate(
             &elf, data + package.payload_offset) != 0) {
         result = ESP_ERR_INVALID_RESPONSE;
+        failure_stage = "elf-relocate";
+    } else if (result == ESP_OK) {
+        ESP_LOGI(TAG,
+                 "P4_CARTRIDGE_ELF_READY app=%s runtime=psram-relocated",
+                 entry->package.id);
     }
     if (data != NULL) {
         platform_game_storage_release_file(data);
@@ -151,20 +239,45 @@ esp_err_t platform_game_loader_run(
     data = NULL;
     if (result == ESP_OK) {
         char *arguments[] = {(char *)(void *)host};
-        if (esp_elf_request(&elf, 0, 1, arguments) != 0) {
+        ESP_LOGI(TAG, "P4_CARTRIDGE_ENTRY_BEGIN app=%s",
+                 entry->package.id);
+        /* esp_elf_request() in the pinned loader always returns zero and
+         * discards the entry point's result. Call its public entry pointer so
+         * ABI, capability, allocation, and render failures remain observable.
+         */
+        cartridge_exit = elf.entry(1, arguments);
+        if (cartridge_exit != 0) {
             result = ESP_FAIL;
+            failure_stage = "cartridge-entry";
         }
     }
     if (initialized) {
         esp_elf_deinit(&elf);
     }
+    if (runtime_symbols_registered) {
+        (void)esp_elf_unregister_symbol(s_cartridge_runtime_symbols);
+    }
     host->available_capabilities &=
         (uint32_t)~(uint32_t)P4_GAME_CAP_STORAGE;
-    host->resource_data = NULL;
-    host->resource_bytes = 0U;
-    host->resource_format_version = 0U;
+    if (has_resource_fields) {
+        host->resource_data = NULL;
+        host->resource_bytes = 0U;
+        host->resource_format_version = 0U;
+    }
     if (resource_data != NULL) {
         platform_game_storage_release_file(resource_data);
+    }
+    if (result == ESP_OK) {
+        ESP_LOGI(TAG,
+                 "P4_CARTRIDGE_LOAD_DONE app=%s cartridge_exit=%d",
+                 entry->package.id, cartridge_exit);
+    } else {
+        ESP_LOGE(TAG,
+                 "P4_CARTRIDGE_LOAD_FAIL app=%s stage=%s error=%s "
+                 "cartridge_exit=%d",
+                 entry->package.id,
+                 failure_stage == NULL ? "unknown" : failure_stage,
+                 esp_err_to_name(result), cartridge_exit);
     }
     return result;
 }

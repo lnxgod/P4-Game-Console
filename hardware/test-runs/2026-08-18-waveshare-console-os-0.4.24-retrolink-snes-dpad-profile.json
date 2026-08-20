@@ -1,0 +1,70 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-18T17:56:38-0700",
+  "result": "transport-pass-dpad-profile-installed-manual-direction-test-pending",
+  "scope": "Correct the Retrolink/DragonRise 0079:0011 SNES-style controller D-pad mapping in the shared bounded HID profile",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and UART",
+    "h2": "operator-attested Sabrent powered hub with external VBUS",
+    "hub": {
+      "controller": "Genesys Logic",
+      "vendor_id": "05e3",
+      "product_id": "0610",
+      "speed": "high"
+    },
+    "controller": {
+      "description": "generic SNES-style USB controller / Retrolink-compatible mapping",
+      "vendor_id": "0079",
+      "product_id": "0011",
+      "speed": "low",
+      "descriptor_bytes": 101,
+      "descriptor_sha256": "05a151c932362fee13503905962880ce75212bbf8c43c95701527b8290833162",
+      "neutral_report_hex": "017f7f7f7f0f0000",
+      "parent_hub_address": 5,
+      "parent_port": 2
+    },
+    "firmware_vbus_source": false
+  },
+  "mapping": {
+    "prior_error": "the exact profile treated the low nibble at report bit 40 as an eight-way hat; the physical controller keeps that nibble at its neutral value",
+    "horizontal": "report axis 3 / byte 3: 0=left, 127=center, 255=right",
+    "vertical": "report axis 4 / byte 4: 0=up, 127=center, 255=down",
+    "canonical_output": "GAMEPAD_CAP_DPAD with independent horizontal and vertical bits and a centered middle-third dead zone",
+    "identity_gate": "VID, PID, descriptor SHA-256, and parsed-layout shape must all match",
+    "upstream_reference": "https://github.com/libsdl-org/SDL/commit/cfd6b"
+  },
+  "artifact": {
+    "application_offset": "0x20000",
+    "application_path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+    "application_bytes": 1108432,
+    "application_sha256": "177433439dcc8c6b758b1231aeed2fd7559766d7fa97945bbd38a4fe1927e8ec",
+    "elf_sha256": "a453ee0af1635b5a443cc1c10b99ab5cf0784bc5b71f1acd614441d956e84c67",
+    "version": "0.4.24",
+    "source_base_commit": "e338fda8bcb3581eab0e4c6b8accb87a4c99995b",
+    "write_policy": "primary application only; bootloader, partition table, OTA data, NVS, microSD, and factory backup preserved"
+  },
+  "focused_tests": [
+    "make gamepad-host passed",
+    "exact profile fixtures passed neutral, right, up-left, and down-right decoding",
+    "Waveshare controller-first ESP-IDF image built and scripts/verify-console-os-waveshare.py passed"
+  ],
+  "serial_evidence": [
+    "USB_HOST_ROOT_PORT_ENABLED stack=tinyusb root_speed=high hub_tt=enabled class_leases_present=1",
+    "GAMEPAD_CONNECTED vid=0079 pid=0011 descriptor_bytes=101 descriptor_sha256=05a151c932362fee13503905962880ce75212bbf8c43c95701527b8290833162 profile=usb-gamepad-0079-0011 capabilities=0x00000003",
+    "USB_DEVICE_MOUNT addr=1 vid=0079 pid=0011 speed=low parent_hub=5 parent_port=2 identity_ok=1 route_ok=1",
+    "P4_CONSOLE_OS READY page=home display=mipi-dsi storage=microsd-read-only h2_role=usb-host-external-vbus",
+    "P4_CONSOLE_OS STATS usb_input_ready=1 gamepad=1 input_polls=8100 gamepad_failures=0 aux_failures=0"
+  ],
+  "limitations": [
+    "No changed D-pad packet arrived while the filtered diagnostic monitor was open, so physical Up/Right/Down/Left acceptance still requires the operator to press the controls in Console OS or Input Test.",
+    "Button-label placement on generic 0079:0011 clones may vary even when the descriptor matches; this change intentionally affects only D-pad decoding.",
+    "Simultaneous two-controller gameplay remains a separate API and hardware acceptance step."
+  ]
+}

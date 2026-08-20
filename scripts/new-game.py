@@ -18,6 +18,18 @@ TITLE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._-]*$")
 ACCENT_RE = re.compile(r"^0x[0-9a-fA-F]{4}$")
 FOLDER_RE = re.compile(
     r"^[A-Z0-9][A-Z0-9 -]{0,14}(?:/[A-Z0-9][A-Z0-9 -]{0,14})?$")
+CAPABILITIES = {
+    "audio-tone",
+    "audio-stream",
+    "storage",
+    "signal-scan",
+    "save",
+    "text-input",
+    "realm",
+    "multiplayer-session",
+    "module-handoff",
+    "vector-scenes",
+}
 
 
 def die(message: str) -> "NoReturn":
@@ -238,6 +250,13 @@ def main() -> int:
                         help="RGB565 color such as 0x5fea")
     parser.add_argument("--folder", default="GAMES/ARCADE",
                         help="one or two uppercase launcher folders")
+    parser.add_argument(
+        "--optional-capability",
+        action="append",
+        choices=sorted(CAPABILITIES),
+        help=("optional Game API service; repeat as needed "
+              "(default: audio-tone)"),
+    )
     parser.add_argument("--games-root", type=pathlib.Path,
                         default=ROOT / "games")
     parser.add_argument("--dry-run", action="store_true")
@@ -261,6 +280,9 @@ def main() -> int:
         die(f"destination already exists: {destination}")
     launcher_id = choose_launcher_id(
         occupied_launcher_ids(games_root), args.launcher_id)
+    optional_capabilities = args.optional_capability or ["audio-tone"]
+    if len(optional_capabilities) != len(set(optional_capabilities)):
+        die("--optional-capability contains a duplicate")
     game_id = "org.p4console." + slug.replace("_", "-")
     manifest = {
         "schema": 1,
@@ -277,7 +299,7 @@ def main() -> int:
         "folder": args.folder,
         "accent_rgb565": args.accent.lower(),
         "required_capabilities": ["video", "controls"],
-        "optional_capabilities": ["audio-tone"],
+        "optional_capabilities": optional_capabilities,
         "license": "MIT",
         "assets": "original-code-rendered-shapes-only",
         "enabled": True,
@@ -299,6 +321,7 @@ def main() -> int:
         "game_id": game_id,
         "launcher_id": launcher_id,
         "folder": args.folder,
+        "optional_capabilities": optional_capabilities,
         "files": [str(relative) for relative, _ in files],
     }
     if not args.dry_run:

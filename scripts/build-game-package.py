@@ -26,6 +26,12 @@ CAPABILITIES = {
     "audio-stream": 1 << 3,
     "storage": 1 << 4,
     "signal-scan": 1 << 5,
+    "save": 1 << 6,
+    "text-input": 1 << 7,
+    "realm": 1 << 8,
+    "multiplayer-session": 1 << 9,
+    "module-handoff": 1 << 10,
+    "vector-scenes": 1 << 11,
 }
 ID_RE = re.compile(r"[a-z][a-z0-9.-]{2,47}\Z")
 SYMBOL_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
@@ -122,6 +128,14 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
     version = value.get("version")
     if not isinstance(version, str) or not VERSION_RE.fullmatch(version):
         raise PackageError("version must be a semantic version string")
+    stack_frame_limit = value.get("stack_frame_limit_bytes")
+    if (stack_frame_limit is not None and
+            (isinstance(stack_frame_limit, bool) or
+             not isinstance(stack_frame_limit, int) or
+             not 128 <= stack_frame_limit <= 16 * 1024)):
+        raise PackageError(
+            "stack_frame_limit_bytes must be an integer in 128..16384"
+        )
     launcher_id = value.get("launcher_id")
     if isinstance(launcher_id, bool) or not isinstance(launcher_id, int) or not (
         100 <= launcher_id <= 0xFFFFFFFF
@@ -162,6 +176,7 @@ def build_elf(
         root / "components" / "p4_game_api" / "src" / "feedback.c",
         root / "components" / "p4_game_api" / "src" / "game_runtime.c",
         root / "components" / "p4_game_api" / "src" / "input.c",
+        root / "components" / "p4_game_api" / "src" / "visual.c",
     ]
     for item in inputs:
         if not item.is_file():
@@ -187,6 +202,10 @@ def build_elf(
             "-Wl,--allow-shlib-undefined",
             "-Wl,--build-id=none",
             "-Wl,-e,app_main",
+            *(
+                [f"-Werror=frame-larger-than={manifest['stack_frame_limit_bytes']}"]
+                if "stack_frame_limit_bytes" in manifest else []
+            ),
             f"-DP4_GAME_ENTRY_SYMBOL={manifest['entry_symbol']}",
             f"-I{root / 'components' / 'p4_game_api' / 'include'}",
             f"-I{game_dir / 'include'}",
@@ -271,6 +290,9 @@ def main() -> int:
                 "result": "p4-game-package-built",
                 "file": manifest["package_file"],
                 "id": manifest["id"],
+                "stack_frame_limit_bytes": manifest.get(
+                    "stack_frame_limit_bytes"
+                ),
                 "bytes": len(package),
                 "payload_bytes": len(payload),
                 "payload_sha256": hashlib.sha256(payload).hexdigest(),

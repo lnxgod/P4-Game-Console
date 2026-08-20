@@ -36,6 +36,7 @@ enum {
     SIGNAL_HUNT_UNLOCK_RSSI = -65,
     SIGNAL_BATTLE_DURATION_MS = 12000,
     SIGNAL_HIT_DURATION_MS = 260,
+    SIGNAL_TRACK_REFRESH_MS = 1600,
     DRAGON_TWEEN_INTERVAL_MS = 140,
     DRAGON_FRAME_WIDTH = 64,
     DRAGON_FRAME_HEIGHT = 64,
@@ -125,11 +126,15 @@ typedef struct {
     uint32_t signal_battle_elapsed_ms;
     uint32_t signal_battle_bonus_ms;
     uint32_t signal_hit_ms;
+    uint32_t signal_track_refresh_ms;
     int16_t catcher_x;
     int16_t catcher_target_x;
     int16_t catcher_velocity;
     int16_t star_x;
     int16_t star_y;
+    int8_t signal_previous_rssi;
+    int8_t signal_trend_db;
+    uint8_t signal_samples;
     bool mini_game;
     bool upgrade_shop;
     bool style_shop;
@@ -873,6 +878,12 @@ static const p4_game_signal_t *selected_signal(
     return NULL;
 }
 
+static bool signal_is_simulated(const p4_game_signal_t *signal)
+{
+    return signal != NULL &&
+        (signal->flags & P4_GAME_SIGNAL_SIMULATED) != 0U;
+}
+
 static bool request_signal_scan(p4_game_context_t *context,
                                 byte_buddy_state_t *state,
                                 uint64_t focus_token)
@@ -884,7 +895,11 @@ static bool request_signal_scan(p4_game_context_t *context,
         return false;
     }
     state->signal_snapshot.status = P4_GAME_SIGNAL_SCANNING;
-    state->signal_snapshot.count = 0U;
+    if (focus_token == 0U) {
+        state->signal_snapshot.count = 0U;
+    } else {
+        state->signal_track_refresh_ms = 0U;
+    }
     return true;
 }
 
@@ -899,13 +914,44 @@ static void poll_signal_scan(p4_game_context_t *context,
         snapshot.status == state->signal_snapshot.status) {
         return;
     }
+    const p4_game_signal_t *const previous = selected_signal(state);
+    const int8_t previous_rssi = previous == NULL
+        ? state->signal_previous_rssi : previous->rssi_dbm;
     state->signal_snapshot = snapshot;
     state->signal_generation = snapshot.generation;
     for (size_t index = 0U; index < snapshot.count; ++index) {
         if (snapshot.results[index].token == state->signal_selected_token) {
             state->signal_selected_index = (uint8_t)index;
+            const int difference = (int)snapshot.results[index].rssi_dbm -
+                (int)previous_rssi;
+            state->signal_trend_db = (int8_t)(
+                difference > INT8_MAX ? INT8_MAX :
+                difference < INT8_MIN ? INT8_MIN : difference);
+            state->signal_previous_rssi =
+                snapshot.results[index].rssi_dbm;
+            if (state->signal_samples != UINT8_MAX) {
+                ++state->signal_samples;
+            }
             break;
         }
+    }
+}
+
+static void update_signal_tracking(p4_game_context_t *context,
+                                   byte_buddy_state_t *state,
+                                   uint32_t elapsed_ms)
+{
+    if (state->signal_view != BYTE_BUDDY_SIGNAL_TRACKER) {
+        return;
+    }
+    state->signal_track_refresh_ms =
+        state->signal_track_refresh_ms > UINT32_MAX - elapsed_ms
+            ? UINT32_MAX
+            : state->signal_track_refresh_ms + elapsed_ms;
+    if (state->signal_snapshot.status != P4_GAME_SIGNAL_SCANNING &&
+        state->signal_track_refresh_ms >= SIGNAL_TRACK_REFRESH_MS) {
+        (void)request_signal_scan(
+            context, state, state->signal_selected_token);
     }
 }
 
@@ -1046,6 +1092,12 @@ static p4_game_result_t activate_signal_touch(
                 state->signal_selected_index = (uint8_t)index;
                 state->signal_selected_token =
                     state->signal_snapshot.results[index].token;
+                state->signal_previous_rssi =
+                    state->signal_snapshot.results[index].rssi_dbm;
+                state->signal_trend_db = 0;
+                state->signal_samples = 1U;
+                state->signal_track_refresh_ms =
+                    SIGNAL_TRACK_REFRESH_MS;
                 state->signal_view = BYTE_BUDDY_SIGNAL_TRACKER;
             }
         }
@@ -1368,6 +1420,7 @@ static p4_game_result_t game_update(
     apply_decay(state, bounded_elapsed_ms);
     if (state->signal_hunt) {
         poll_signal_scan(context, state);
+        update_signal_tracking(context, state, bounded_elapsed_ms);
         update_signal_battle(context, state, bounded_elapsed_ms);
     }
     const bool touch_now = input->touch_valid && input->touch_count > 0U;
@@ -1526,11 +1579,11 @@ static bool rare_morph_unlocked(const byte_buddy_state_t *state)
     return safe_stage(state) == BYTE_BUDDY_STAGE_ELEMENTAL && levels >= 2U;
 }
 
-static unsigned reaction_frame_count(const byte_buddy_state_t *state,
+static unsigned reaction_frame_count(uint32_t reaction_ms,
                                      unsigned frame_count)
 {
-    const uint32_t elapsed = state->reaction_ms >= REACTION_DURATION_MS
-        ? 0U : REACTION_DURATION_MS - state->reaction_ms;
+    const uint32_t elapsed = reaction_ms >= REACTION_DURATION_MS
+        ? 0U : REACTION_DURATION_MS - reaction_ms;
     const unsigned frame = (unsigned)(elapsed * frame_count /
                                       REACTION_DURATION_MS);
     return frame >= frame_count ? frame_count - 1U : frame;
@@ -1571,19 +1624,22 @@ static unsigned hatch_variant(const byte_buddy_state_t *state)
 }
 
 static void dragon_sheet_frame(const byte_buddy_state_t *state,
+                               uint32_t animation_ms,
+                               uint8_t reaction,
+                               uint32_t reaction_ms,
                                unsigned *out_sheet,
                                unsigned *out_frame)
 {
     const unsigned phase = (unsigned)(
-        (state->animation_ms / DRAGON_TWEEN_INTERVAL_MS) % 8U);
+        (animation_ms / DRAGON_TWEEN_INTERVAL_MS) % 8U);
     const unsigned phase4 = (unsigned)(
-        (state->animation_ms / DRAGON_TWEEN_INTERVAL_MS) % 4U);
+        (animation_ms / DRAGON_TWEEN_INTERVAL_MS) % 4U);
     const unsigned stage = safe_stage(state);
     if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
         stage == BYTE_BUDDY_STAGE_BABY &&
-        state->reaction == REACTION_GROW) {
+        reaction == REACTION_GROW) {
         *out_sheet = DRAGON_HATCH_TRANSITION_SHEET;
-        *out_frame = (1U + reaction_frame_count(state, 3U)) * 4U +
+        *out_frame = (1U + reaction_frame_count(reaction_ms, 3U)) * 4U +
             hatch_variant(state);
         return;
     }
@@ -1612,14 +1668,14 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
     }
     if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
         stage == BYTE_BUDDY_STAGE_BABY) {
-        if (state->reaction != REACTION_IDLE) {
-            const unsigned frame = reaction_frame_count(state, 8U);
+        if (reaction != REACTION_IDLE) {
+            const unsigned frame = reaction_frame_count(reaction_ms, 8U);
             *out_sheet = frame < 4U ? DRAGON_BABY_REACTION_SHEET :
                 DRAGON_BABY_CARE_SHEET;
             *out_frame = reaction_row(state) * 4U + frame % 4U;
             return;
         }
-        unsigned row = (unsigned)((state->animation_ms / 2400U) % 2U);
+        unsigned row = (unsigned)((animation_ms / 2400U) % 2U);
         if (state->energy < 35U) {
             row = 3U;
         } else if (state->joy >= 80U) {
@@ -1633,14 +1689,14 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
         stage == BYTE_BUDDY_STAGE_WINGED) {
         const unsigned style = safe_wing_style(state) ==
             BYTE_BUDDY_WINGS_SHINY ? 1U : 0U;
-        if (state->reaction != REACTION_IDLE) {
-            const unsigned frame = reaction_frame_count(state, 8U);
+        if (reaction != REACTION_IDLE) {
+            const unsigned frame = reaction_frame_count(reaction_ms, 8U);
             if (frame < 4U) {
                 *out_sheet = BYTE_BUDDY_STAGE_WINGED;
                 *out_frame = (style == 0U ? 0U : 8U) + 4U + frame;
             } else {
-                const bool quiet = state->reaction == REACTION_CLEAN ||
-                    state->reaction == REACTION_REST;
+                const bool quiet = reaction == REACTION_CLEAN ||
+                    reaction == REACTION_REST;
                 *out_sheet = DRAGON_WINGED_CARE_SHEET;
                 *out_frame = (style + (quiet ? 2U : 0U)) * 4U +
                     frame % 4U;
@@ -1648,7 +1704,7 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
             return;
         }
         const unsigned active_clip = (unsigned)(
-            (state->animation_ms / 2240U) % 2U);
+            (animation_ms / 2240U) % 2U);
         *out_sheet = DRAGON_WINGED_IDLE_SHEET;
         *out_frame = (style + active_clip * 2U) * 4U + phase4;
         return;
@@ -1657,15 +1713,15 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
         stage == BYTE_BUDDY_STAGE_FLYING) {
         const unsigned style = safe_wing_style(state) ==
             BYTE_BUDDY_WINGS_SHINY ? 1U : 0U;
-        if (state->reaction != REACTION_IDLE) {
-            const unsigned frame = reaction_frame_count(state, 8U);
+        if (reaction != REACTION_IDLE) {
+            const unsigned frame = reaction_frame_count(reaction_ms, 8U);
             *out_sheet = frame < 4U ? DRAGON_FLIGHT_CYCLE_SHEET :
                 DRAGON_FLIGHT_AEROBATICS_SHEET;
             *out_frame = (style + 2U) * 4U + frame % 4U;
             return;
         }
         const bool aerobatics =
-            (state->animation_ms / 2240U) % 2U != 0U;
+            (animation_ms / 2240U) % 2U != 0U;
         *out_sheet = aerobatics ? DRAGON_FLIGHT_AEROBATICS_SHEET :
             DRAGON_FLIGHT_CYCLE_SHEET;
         const unsigned row = aerobatics ? style + 2U : style;
@@ -1674,8 +1730,8 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
     }
     if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
         stage == BYTE_BUDDY_STAGE_ELEMENTAL &&
-        state->reaction != REACTION_IDLE) {
-        const unsigned frame = reaction_frame_count(state, 8U);
+        reaction != REACTION_IDLE) {
+        const unsigned frame = reaction_frame_count(reaction_ms, 8U);
         *out_sheet = frame < 4U ? DRAGON_ELEMENT_BREATH_SHEET :
             DRAGON_ELEMENT_IMPACT_SHEET;
         *out_frame = elemental_row(state) * 4U + frame % 4U;
@@ -1710,7 +1766,7 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
     }
     if (stage == BYTE_BUDDY_STAGE_EGG) {
         const unsigned egg_phase = (unsigned)(
-            (state->animation_ms / DRAGON_TWEEN_INTERVAL_MS) % 8U);
+            (animation_ms / DRAGON_TWEEN_INTERVAL_MS) % 8U);
         *out_sheet = BYTE_BUDDY_STAGE_EGG;
         *out_frame = s_egg_frames[safe_element(state)]
             [s_frame_sequence[egg_phase]];
@@ -1718,13 +1774,13 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
     }
     if (stage == BYTE_BUDDY_STAGE_BABY) {
         unsigned row = 0U;
-        if (state->reaction == REACTION_REST) {
+        if (reaction == REACTION_REST) {
             row = 2U;
-        } else if (state->reaction == REACTION_PET ||
-                   state->reaction == REACTION_PLAY ||
-                   state->reaction == REACTION_GROW) {
+        } else if (reaction == REACTION_PET ||
+                   reaction == REACTION_PLAY ||
+                   reaction == REACTION_GROW) {
             row = 3U;
-        } else if (state->reaction != REACTION_IDLE) {
+        } else if (reaction != REACTION_IDLE) {
             row = 1U;
         }
         *out_sheet = BYTE_BUDDY_STAGE_BABY;
@@ -1735,7 +1791,7 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
         stage == BYTE_BUDDY_STAGE_FLYING) {
         const unsigned family = safe_wing_style(state) ==
             BYTE_BUDDY_WINGS_SPIKED ? 0U : 8U;
-        const unsigned reaction_offset = state->reaction == REACTION_IDLE
+        const unsigned reaction_offset = reaction == REACTION_IDLE
             ? 0U : 4U;
         *out_sheet = stage;
         *out_frame = family + (phase + reaction_offset) % 8U;
@@ -1743,10 +1799,10 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
     }
     unsigned element = safe_element(state);
     if (element == BYTE_BUDDY_ELEMENT_MYSTERY) {
-        element = 1U + (unsigned)((state->animation_ms / 1200U) % 3U);
+        element = 1U + (unsigned)((animation_ms / 1200U) % 3U);
     }
     const unsigned element_index = element - 1U;
-    if (state->reaction != REACTION_IDLE) {
+    if (reaction != REACTION_IDLE) {
         *out_sheet = BYTE_BUDDY_STAGE_ELEMENTAL;
         *out_frame = s_elemental_reaction_frames[element_index]
             [s_frame_sequence[phase] % 2U];
@@ -1957,27 +2013,32 @@ static void draw_dragon_sprite(p4_game_surface_t *surface,
     };
     const uint32_t remainder =
         state->animation_ms % DRAGON_TWEEN_INTERVAL_MS;
-    byte_buddy_state_t first_state = *state;
-    first_state.animation_ms -= remainder;
-    if (first_state.reaction_ms != 0U) {
-        const uint32_t rewound = first_state.reaction_ms + remainder;
-        first_state.reaction_ms = rewound > REACTION_DURATION_MS
+    const uint32_t first_animation_ms = state->animation_ms - remainder;
+    const uint8_t first_reaction = state->reaction;
+    uint32_t first_reaction_ms = state->reaction_ms;
+    if (first_reaction_ms != 0U) {
+        const uint32_t rewound = first_reaction_ms + remainder;
+        first_reaction_ms = rewound > REACTION_DURATION_MS
             ? REACTION_DURATION_MS : rewound;
     }
-    byte_buddy_state_t second_state = first_state;
-    second_state.animation_ms += DRAGON_TWEEN_INTERVAL_MS;
-    if (second_state.reaction_ms > DRAGON_TWEEN_INTERVAL_MS) {
-        second_state.reaction_ms -= DRAGON_TWEEN_INTERVAL_MS;
-    } else if (second_state.reaction_ms != 0U) {
-        second_state.reaction_ms = 0U;
-        second_state.reaction = REACTION_IDLE;
+    const uint32_t second_animation_ms =
+        first_animation_ms + DRAGON_TWEEN_INTERVAL_MS;
+    uint8_t second_reaction = first_reaction;
+    uint32_t second_reaction_ms = first_reaction_ms;
+    if (second_reaction_ms > DRAGON_TWEEN_INTERVAL_MS) {
+        second_reaction_ms -= DRAGON_TWEEN_INTERVAL_MS;
+    } else if (second_reaction_ms != 0U) {
+        second_reaction_ms = 0U;
+        second_reaction = REACTION_IDLE;
     }
     unsigned first_sheet = 0U;
     unsigned first_frame = 0U;
     unsigned second_sheet = 0U;
     unsigned second_frame = 0U;
-    dragon_sheet_frame(&first_state, &first_sheet, &first_frame);
-    dragon_sheet_frame(&second_state, &second_sheet, &second_frame);
+    dragon_sheet_frame(state, first_animation_ms, first_reaction,
+                       first_reaction_ms, &first_sheet, &first_frame);
+    dragon_sheet_frame(state, second_animation_ms, second_reaction,
+                       second_reaction_ms, &second_sheet, &second_frame);
     const dragon_frame_view_t first = dragon_frame_view(
         state, first_sheet, first_frame);
     const dragon_frame_view_t second = dragon_frame_view(
@@ -2790,6 +2851,11 @@ static void draw_signal_list(p4_game_surface_t *surface,
                             profile.reward_coins, UINT16_C(0xffe0));
             }
         }
+        if (rows != 0U && signal_is_simulated(
+                &state->signal_snapshot.results[0])) {
+            p4_draw_text(surface, 241, 27, "SIM DATA",
+                         UINT16_C(0xf81f), 1U, 8U);
+        }
     }
     draw_touch_button(surface, 4, 162, 312, 33, "SCAN CITY", 9U,
                       UINT16_C(0x07ff),
@@ -2836,11 +2902,22 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
         p4_draw_text(surface, 121, 89, "REWARD", UINT16_C(0x7bef), 1U, 6U);
         draw_number(surface, 166, 89, profile.reward_coins,
                     UINT16_C(0xffe0));
+        p4_draw_text(surface, 121, 105,
+                     signal_is_simulated(signal) ? "SIMULATED RSSI" :
+                     state->signal_samples < 2U ? "LIVE RSSI ACQUIRING" :
+                     state->signal_trend_db >= 3 ? "CLOSER" :
+                     state->signal_trend_db <= -3 ? "FARTHER" : "STEADY",
+                     signal_is_simulated(signal) ? UINT16_C(0xf81f) :
+                         UINT16_C(0x07e0),
+                     1U, signal_is_simulated(signal) ? 14U :
+                         state->signal_samples < 2U ? 19U :
+                         state->signal_trend_db >= 3 ? 6U :
+                         state->signal_trend_db <= -3 ? 7U : 6U);
         draw_signal_meter(surface, 25, 126, 270, profile.strength, color);
-        p4_draw_text(surface, 107, 138, "WALK AND PULSE SCAN",
-                     UINT16_C(0xbdf7), 1U, 19U);
+        p4_draw_text(surface, 90, 138, "AUTO REFRESH - WALK AROUND",
+                     UINT16_C(0xbdf7), 1U, 26U);
     }
-    draw_touch_button(surface, 4, 162, 188, 33, "PULSE SCAN", 10U,
+    draw_touch_button(surface, 4, 162, 188, 33, "RESCAN NOW", 10U,
                       UINT16_C(0x07ff),
                       state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING);
     const bool ready = signal != NULL &&

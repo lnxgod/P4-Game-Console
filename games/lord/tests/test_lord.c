@@ -23,7 +23,15 @@ static int s_failures;
 static void enter_town(lord_state_t *state, lord_class_t hero_class)
 {
     lord_initialize(state, UINT32_C(0x12345678));
-    CHECK(state->screen == LORD_SCREEN_TITLE);
+    CHECK(lord_activate(state) == LORD_EVENT_CONFIRM);
+    CHECK(state->screen == LORD_SCREEN_NAME);
+    CHECK(lord_activate(state) == LORD_EVENT_CONFIRM);
+    CHECK(state->screen == LORD_SCREEN_TEXT_EDITOR);
+    (void)strcpy(state->editor_text, "Test Hero");
+    state->selection = 42U;
+    CHECK(lord_activate(state) == LORD_EVENT_CONFIRM);
+    CHECK(state->screen == LORD_SCREEN_SEX);
+    state->selection = 1U;
     CHECK(lord_activate(state) == LORD_EVENT_CONFIRM);
     CHECK(state->screen == LORD_SCREEN_CLASS);
     state->selection = (uint8_t)hero_class;
@@ -33,197 +41,276 @@ static void enter_town(lord_state_t *state, lord_class_t hero_class)
     CHECK(state->screen == LORD_SCREEN_TOWN);
 }
 
-static void test_new_player_and_menu_wrap(void)
+static void test_character_creation_and_core_menu(void)
 {
     lord_state_t state;
     enter_town(&state, LORD_CLASS_MYSTICAL);
+    CHECK(strcmp(state.player.name, "Test Hero") == 0);
+    CHECK(state.player.sex == LORD_SEX_FEMALE);
     CHECK(state.player.hero_class == LORD_CLASS_MYSTICAL);
     CHECK(state.player.level == 1U);
     CHECK(state.player.hit_points == 20);
     CHECK(state.player.gold == 500U);
-    CHECK(state.player.forest_fights == LORD_FOREST_FIGHTS_PER_DAY);
-    CHECK(state.player.skill_uses == LORD_CLASS_SKILLS_PER_DAY);
-    CHECK(lord_menu_count(&state) == 13U);
+    CHECK(state.player.charm == 10U);
+    CHECK(state.player.skill[LORD_CLASS_MYSTICAL] == 5U);
+    CHECK(state.player.skill_uses[LORD_CLASS_MYSTICAL] == 3U);
+    CHECK(lord_menu_count(&state) == 15U);
     lord_move_selection(&state, -1);
-    CHECK(state.selection == 12U);
+    CHECK(state.selection == 14U);
     lord_move_selection(&state, 1);
     CHECK(state.selection == 0U);
+
+    state.screen = LORD_SCREEN_TEXT_EDITOR;
+    state.selection = 0U;
+    lord_move_selection(&state, -6);
+    CHECK(state.selection == 38U);
+    CHECK(strcmp(lord_keyboard_label(42U), "DONE") == 0);
+    CHECK(strcmp(lord_keyboard_label(43U), "DEL") == 0);
 }
 
-static void test_realm_mail_and_pvp(void)
+static void test_shops_bank_and_transfer(void)
+{
+    lord_state_t state;
+    enter_town(&state, LORD_CLASS_DEATH_KNIGHT);
+    state.selection = 1U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    state.selection = 1U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.player.weapon == 1U);
+    CHECK(state.player.gold == 300U);
+    CHECK(state.player.strength == 15);
+
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    state.screen = LORD_SCREEN_BANK;
+    state.selection = 0U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.player.gold == 0U);
+    CHECK(state.player.bank == 300U);
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    state.selection = 2U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.screen == LORD_SCREEN_BANK_TRANSFER);
+    const uint32_t old_gold = state.realm[0].gold;
+    state.selection = 0U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.player.bank == 200U);
+    CHECK(state.realm[0].gold == old_gold + 100U);
+}
+
+static void test_forest_training_skills_and_dragon(void)
+{
+    lord_state_t state;
+    enter_town(&state, LORD_CLASS_THIEF);
+    state.screen = LORD_SCREEN_FOREST;
+    state.selection = 0U;
+    state.rng_state = 1U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.screen == LORD_SCREEN_BATTLE);
+    CHECK(state.battle_kind == LORD_BATTLE_FOREST);
+    CHECK(state.player.forest_fights == LORD_FOREST_FIGHTS_PER_DAY - 1U);
+    CHECK(state.enemy.name[0] != '\0');
+    CHECK(state.enemy.weapon[0] != '\0');
+    state.player.strength = 100000;
+    CHECK(lord_activate(&state) == LORD_EVENT_WIN);
+    CHECK(state.player.experience > 0U);
+
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    state.screen = LORD_SCREEN_TRAINING;
+    state.selection = 0U;
+    state.player.experience = 100U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    state.player.strength = 100000;
+    CHECK(lord_activate(&state) == LORD_EVENT_WIN);
+    CHECK(state.player.level == 2U);
+
+    state.screen = LORD_SCREEN_BATTLE;
+    state.battle_kind = LORD_BATTLE_FOREST;
+    state.player.strength = 10;
+    state.player.skill[LORD_CLASS_DEATH_KNIGHT] = 5U;
+    state.player.skill_uses[LORD_CLASS_DEATH_KNIGHT] = 1U;
+    state.enemy = (lord_enemy_t){
+        .hit_points = 1000, .max_hit_points = 1000,
+        .strength = 1, .death_text = "done",
+    };
+    state.selection = 1U;
+    CHECK(lord_activate(&state) == LORD_EVENT_HIT);
+    CHECK(state.player.skill_uses[LORD_CLASS_DEATH_KNIGHT] == 0U);
+
+    state.player.level = LORD_MAX_LEVEL;
+    state.player.strength = 100000;
+    state.player.hit_points = 5000;
+    state.player.max_hit_points = 5000;
+    state.player.forest_fights = 1U;
+    state.player.seen_dragon = false;
+    state.screen = LORD_SCREEN_FOREST;
+    state.selection = 1U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.battle_kind == LORD_BATTLE_DRAGON);
+    CHECK(lord_activate(&state) == LORD_EVENT_WIN);
+    CHECK(state.player.dragon_kills == 1U);
+}
+
+static void test_mail_pvp_romance_and_family(void)
 {
     lord_state_t state;
     enter_town(&state, LORD_CLASS_DEATH_KNIGHT);
     CHECK(state.mail_count == 2U);
     CHECK(lord_mail_unread_count(&state) == 2U);
 
-    state.selection = 8U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_MAILBOX);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_MAIL_VIEW);
-    CHECK(lord_mail_unread_count(&state) == 1U);
-    CHECK(strcmp(lord_mail_sender(&state, 0U), "Seth Able") == 0);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    state.selection = state.mail_count;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_MAIL_COMPOSE);
+    state.screen = LORD_SCREEN_MAIL_COMPOSE;
     state.selection = 2U;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_MESSAGE);
-    CHECK(state.mail_count == 3U);
-    CHECK(state.mail[2].kind == LORD_MAIL_REPLY);
-    CHECK(state.mail[2].sender == 2U);
-
+    CHECK(state.screen == LORD_SCREEN_TEXT_EDITOR);
+    (void)strcpy(state.editor_text, "MEET ME AT THE INN");
+    state.selection = 42U;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_MAILBOX);
-    CHECK(lord_cancel(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_TOWN);
-    state.selection = 7U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_PLAYERS);
-    CHECK(lord_menu_count(&state) == 5U);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_PLAYER_DETAIL);
-    state.player.strength = 100000;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_BATTLE);
-    CHECK(state.battle_kind == LORD_BATTLE_PVP);
-    CHECK(state.pvp_fights == LORD_PVP_FIGHTS_PER_DAY - 1U);
-    CHECK(lord_activate(&state) == LORD_EVENT_WIN);
-    CHECK(state.screen == LORD_SCREEN_MESSAGE);
-    CHECK(!state.realm[0].alive);
-    CHECK(state.player.pvp_wins == 1U);
     CHECK(state.mail_count == 4U);
+    CHECK(state.mail[2].outgoing);
+    CHECK(strcmp(state.mail[2].body, "MEET ME AT THE INN") == 0);
 
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    state.screen = LORD_SCREEN_PLAYER_DETAIL;
-    state.selected_player = 1U;
-    state.pvp_fights = 0U;
-    state.selection = 0U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_MESSAGE);
-    CHECK(state.battle_kind == LORD_BATTLE_NONE);
-
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    state.screen = LORD_SCREEN_INN;
-    state.selection = 0U;
-    state.igm_used_mask = 7U;
-    state.romance_actions = 0U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.realm[0].alive);
-    CHECK(state.pvp_fights == LORD_PVP_FIGHTS_PER_DAY);
-    CHECK(state.romance_actions == LORD_ROMANCE_ACTIONS_PER_DAY);
-    CHECK(state.igm_used_mask == 0U);
-
-    enter_town(&state, LORD_CLASS_DEATH_KNIGHT);
     state.screen = LORD_SCREEN_PLAYER_DETAIL;
     state.selected_player = 0U;
-    state.realm[0].strength = 100000;
-    state.player.hit_points = 1;
-    state.player.strength = 1;
+    state.selection = 0U;
+    state.player.strength = 100000;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(lord_activate(&state) == LORD_EVENT_LOSE);
-    CHECK(state.screen == LORD_SCREEN_DEAD);
-    CHECK(state.player.pvp_losses == 1U);
+    CHECK(lord_activate(&state) == LORD_EVENT_WIN);
+    CHECK(!state.realm[0].alive);
+    CHECK(state.player.pvp_wins == 1U);
+
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    state.screen = LORD_SCREEN_ROMANCE_ACTION;
+    state.selected_player = 1U;
+    state.realm[1].affection = 70U;
+    state.selection = 2U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.spouse_index == 1);
+    CHECK(state.realm[1].married);
+    CHECK(state.player.max_hit_points >= 25);
+
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    state.screen = LORD_SCREEN_ROMANCE_ACTION;
+    state.selected_player = 1U;
+    state.romance_actions = 1U;
+    state.selection = 3U;
+    for (unsigned attempt = 0U;
+         attempt < 12U && state.player.children == 0U; ++attempt) {
+        state.screen = LORD_SCREEN_ROMANCE_ACTION;
+        state.romance_actions = 1U;
+        state.selection = 3U;
+        (void)lord_activate(&state);
+        if (state.screen == LORD_SCREEN_MESSAGE) {
+            (void)lord_activate(&state);
+        }
+    }
+    CHECK(state.player.children > 0U);
 }
 
-static void test_romance_and_igms(void)
+static void test_full_inn_and_igms(void)
 {
     lord_state_t state;
     enter_town(&state, LORD_CLASS_MYSTICAL);
-    state.selection = 9U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_ROMANCE);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_ROMANCE_ACTION);
+    state.player.gold = 1000000U;
+    state.player.gems = 10U;
+    state.player.charm = 40U;
 
-    state.selection = 1U;
+    state.screen = LORD_SCREEN_BARTENDER;
+    state.selection = 0U;
+    state.player.hit_points = 10;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.realm[0].affection == 30U);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    state.selection = 1U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.realm[0].affection == 60U);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    state.selection = 2U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.spouse_index == 0);
-    CHECK(state.realm[0].married);
-    CHECK(state.player.max_hit_points == 25);
-    CHECK(state.romance_actions == 0U);
-    CHECK(state.mail[state.mail_count - 1U].kind == LORD_MAIL_PROPOSAL);
+    CHECK(state.player.gold == 999990U);
+    CHECK(state.player.hit_points == 12);
 
-    enter_town(&state, LORD_CLASS_THIEF);
-    state.player.hit_points = 1;
-    state.selection = 10U;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_IGM);
-    state.selection = 2U;
+    state.screen = LORD_SCREEN_SETH;
+    state.selection = 4U;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.player.hit_points == state.player.max_hit_points);
-    CHECK(state.player.gold == 450U);
-    CHECK((state.igm_used_mask & 4U) != 0U);
+    CHECK(state.npc_spouse == 0);
+
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    state.selection = 2U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.player.gold == 450U);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    state.screen = LORD_SCREEN_BLACKJACK;
     state.selection = 0U;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK((state.igm_used_mask & 1U) != 0U);
+    CHECK(state.blackjack_wager == 100U);
+    if (state.blackjack_active) {
+        state.selection = 2U;
+        CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+        CHECK(!state.blackjack_active);
+    }
+
+    state.screen = LORD_SCREEN_INN;
+    state.selection = 8U;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    state.selection = 1U;
+    (void)strcpy(state.editor_text, "DRAGON AT MIDNIGHT");
+    state.selection = 42U;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.igm_used_mask == 7U);
+    CHECK(strcmp(state.announcement, "DRAGON AT MIDNIGHT") == 0);
+
+    for (uint8_t module = 0U; module < LORD_IGM_COUNT; ++module) {
+        if (state.screen == LORD_SCREEN_MESSAGE) {
+            (void)lord_activate(&state);
+        }
+        state.screen = LORD_SCREEN_IGM_DETAIL;
+        state.selected_igm = module;
+        state.selection = 0U;
+        state.player.gold = 1000000U;
+        state.player.forest_fights = 10U;
+        CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+        CHECK((state.igm_used_mask & (uint8_t)(1U << module)) != 0U);
+    }
+    CHECK(state.igm_used_mask == UINT8_C(0x7f));
+
+    state.screen = LORD_SCREEN_INN;
+    state.selection = 0U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.igm_used_mask == 0U);
+    CHECK(state.player.forest_fights >= LORD_FOREST_FIGHTS_PER_DAY);
 }
 
-static void test_rip_gallery_and_save_codec(void)
+static void test_save_round_trip(void)
 {
     lord_state_t state;
     enter_town(&state, LORD_CLASS_THIEF);
-    state.selection = 11U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_RIP_GALLERY);
-    state.selection = 4U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_RIP_SCENE);
-    CHECK(state.rip_scene == 4U);
-    CHECK(strcmp(lord_rip_scene_name(state.rip_scene), "Red Dragon") == 0);
-    CHECK(lord_cancel(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_RIP_GALLERY);
-
-    state.screen = LORD_SCREEN_TOWN;
     state.player.gold = 12345U;
     state.player.bank = 67890U;
+    state.player.gems = 9U;
+    state.player.children = 3U;
+    state.player.horse = true;
+    state.player.fairy = true;
+    state.player.amulet = true;
+    state.player.skill[LORD_CLASS_MYSTICAL] = 17U;
+    state.player.skill_uses[LORD_CLASS_MYSTICAL] = 4U;
     state.realm[1].affection = 55U;
-    state.mail[0].unread = false;
     state.spouse_index = 1;
     state.realm[1].married = true;
+    (void)strcpy(state.conversation, "THE DRAGON IS AWAKE");
+    (void)strcpy(state.announcement, "MEET IN THE FOREST");
     state.save_sequence = 42U;
+
     uint8_t encoded[LORD_SAVE_MAX_BYTES];
     uint8_t duplicate[LORD_SAVE_MAX_BYTES];
     const size_t encoded_length = lord_save_encode(
         &state, encoded, sizeof(encoded));
     const size_t duplicate_length = lord_save_encode(
         &state, duplicate, sizeof(duplicate));
-    CHECK(encoded_length > 0U);
-    CHECK(encoded_length == 302U);
+    CHECK(encoded_length > 2000U);
     CHECK(encoded_length < sizeof(encoded));
     CHECK(encoded_length == duplicate_length);
     CHECK(memcmp(encoded, duplicate, encoded_length) == 0);
 
     lord_state_t restored;
-    lord_initialize(&restored, 1U);
     CHECK(lord_save_decode(&restored, encoded, encoded_length));
     CHECK(restored.screen == LORD_SCREEN_TOWN);
-    CHECK(restored.player.hero_class == LORD_CLASS_THIEF);
+    CHECK(strcmp(restored.player.name, "Test Hero") == 0);
     CHECK(restored.player.gold == 12345U);
     CHECK(restored.player.bank == 67890U);
-    CHECK(restored.realm[1].affection == 55U);
+    CHECK(restored.player.gems == 9U);
+    CHECK(restored.player.children == 3U);
+    CHECK(restored.player.horse && restored.player.fairy);
+    CHECK(restored.player.amulet);
+    CHECK(restored.player.skill[LORD_CLASS_MYSTICAL] == 17U);
     CHECK(restored.spouse_index == 1);
-    CHECK(restored.realm[1].married);
-    CHECK(!restored.mail[0].unread);
+    CHECK(strcmp(restored.conversation, "THE DRAGON IS AWAKE") == 0);
     CHECK(restored.save_sequence == 42U);
     CHECK(!restored.save_dirty);
 
@@ -232,134 +319,119 @@ static void test_rip_gallery_and_save_codec(void)
     encoded[encoded_length - 1U] ^= UINT8_C(0x80);
     CHECK(!lord_save_decode(&restored, encoded, encoded_length - 1U));
     CHECK(lord_save_encode(&state, encoded, 16U) == 0U);
-    state.player.level = 0U;
-    const size_t invalid_length = lord_save_encode(
-        &state, encoded, sizeof(encoded));
-    CHECK(invalid_length == 302U);
-    CHECK(!lord_save_decode(&restored, encoded, invalid_length));
 }
 
-static void test_shop_and_bank(void)
-{
-    lord_state_t state;
-    enter_town(&state, LORD_CLASS_DEATH_KNIGHT);
-    state.selection = 1U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_WEAPON_SHOP);
-    state.selection = 1U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.player.weapon == 1U);
-    CHECK(state.player.gold == 300U);
-    CHECK(state.player.strength == 15);
-    CHECK(state.screen == LORD_SCREEN_MESSAGE);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_WEAPON_SHOP);
-    CHECK(lord_cancel(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_TOWN);
+typedef struct {
+    uint8_t payload[LORD_SAVE_MAX_BYTES];
+    size_t bytes;
+    uint32_t expected_sequence;
+    uint32_t sequence;
+    p4_game_save_ticket_t ticket;
+} save_mock_t;
 
-    state.selection = 5U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_BANK);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.player.gold == 0U);
-    CHECK(state.player.bank == 300U);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    state.selection = 1U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.player.gold == 300U);
-    CHECK(state.player.bank == 0U);
+static bool mock_queue_save(void *context, const char *slot_id,
+                            uint32_t schema_version,
+                            uint32_t expected_sequence,
+                            const uint8_t *data, size_t data_bytes,
+                            p4_game_save_ticket_t *ticket_out)
+{
+    save_mock_t *const mock = context;
+    if (strcmp(slot_id, "AUTO") != 0 ||
+        schema_version != LORD_SAVE_FORMAT_VERSION ||
+        data_bytes > sizeof(mock->payload)) {
+        return false;
+    }
+    memcpy(mock->payload, data, data_bytes);
+    mock->bytes = data_bytes;
+    mock->expected_sequence = expected_sequence;
+    mock->ticket = 7U;
+    *ticket_out = mock->ticket;
+    return true;
 }
 
-static void test_forest_training_and_death(void)
+static bool mock_read_save(void *context, p4_game_save_ticket_t ticket,
+                           p4_game_save_status_t *status_out,
+                           uint32_t *sequence_out)
 {
-    lord_state_t state;
-    enter_town(&state, LORD_CLASS_THIEF);
-    state.selection = 0U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_FOREST);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_BATTLE);
-    CHECK(state.battle_kind == LORD_BATTLE_FOREST);
-    CHECK(state.player.forest_fights ==
-          LORD_FOREST_FIGHTS_PER_DAY - 1U);
-    state.player.strength = 100000;
-    CHECK(lord_activate(&state) == LORD_EVENT_WIN);
-    CHECK(state.screen == LORD_SCREEN_MESSAGE);
-    CHECK(state.player.experience > 0U);
-
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(lord_cancel(&state) == LORD_EVENT_CONFIRM);
-    state.selection = 4U;
-    state.player.experience = 100U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_TRAINING);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.screen == LORD_SCREEN_BATTLE);
-    state.player.strength = 100000;
-    CHECK(lord_activate(&state) == LORD_EVENT_WIN);
-    CHECK(state.player.level == 2U);
-    CHECK(state.player.max_hit_points == 30);
-
-    lord_initialize(&state, UINT32_C(0x87654321));
-    state.player = (lord_player_t){
-        .hero_class = LORD_CLASS_DEATH_KNIGHT,
-        .level = 1U,
-        .hit_points = 1,
-        .max_hit_points = 20,
-        .strength = 1,
-        .forest_fights = 1U,
-    };
-    state.screen = LORD_SCREEN_BATTLE;
-    state.battle_kind = LORD_BATTLE_FOREST;
-    state.enemy = (lord_enemy_t){
-        .hit_points = 100,
-        .max_hit_points = 100,
-        .strength = 100000,
-    };
-    CHECK(lord_activate(&state) == LORD_EVENT_LOSE);
-    CHECK(state.screen == LORD_SCREEN_DEAD);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.player.gold == 0U);
-    CHECK(state.player.forest_fights == 0U);
-    CHECK(state.screen == LORD_SCREEN_MESSAGE);
+    save_mock_t *const mock = context;
+    if (ticket != mock->ticket) {
+        return false;
+    }
+    if (mock->sequence == 0U) {
+        mock->sequence = mock->expected_sequence + 1U;
+    }
+    *status_out = P4_GAME_SAVE_COMMITTED;
+    *sequence_out = mock->sequence;
+    return true;
 }
 
-static void test_dragon_victory_rebirth(void)
+static bool start_game(p4_game_instance_t *instance, lord_state_t *state,
+                       const p4_game_services_t *services)
 {
-    lord_state_t state;
-    enter_town(&state, LORD_CLASS_DEATH_KNIGHT);
-    state.player.level = LORD_MAX_LEVEL;
-    state.player.strength = 100000;
-    state.player.hit_points = 5000;
-    state.player.max_hit_points = 5000;
-    state.player.forest_fights = 1U;
-    state.screen = LORD_SCREEN_FOREST;
-    state.selection = 1U;
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.battle_kind == LORD_BATTLE_DRAGON);
-    CHECK(lord_activate(&state) == LORD_EVENT_WIN);
-    CHECK(state.screen == LORD_SCREEN_DRAGON_VICTORY);
-    CHECK(state.player.dragon_kills == 1U);
-    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.player.level == 1U);
-    CHECK(state.player.dragon_kills == 1U);
-    CHECK(state.player.max_hit_points == 25);
-    CHECK(state.player.strength == 12);
-}
-
-static bool start_game(p4_game_instance_t *instance, lord_state_t *state)
-{
-    static const p4_game_services_t services = {
-        .available_capabilities =
-            P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    };
     *instance = (p4_game_instance_t){0};
-    return p4_game_instance_start(instance, &p4_lord_game, &services,
+    return p4_game_instance_start(instance, &p4_lord_game, services,
                                   state, sizeof(*state));
 }
 
-static void test_runtime_render_bounds_and_exit(void)
+static void capture_frame_if_requested(const p4_game_surface_t *surface,
+                                       lord_screen_t screen)
 {
+    const char *const directory = getenv("LORD_CAPTURE_DIR");
+    if (directory == NULL || directory[0] == '\0') {
+        return;
+    }
+    char path[512];
+    const int path_length = snprintf(path, sizeof(path),
+                                     "%s/screen-%02d.ppm", directory,
+                                     (int)screen);
+    CHECK(path_length > 0 && (size_t)path_length < sizeof(path));
+    if (path_length <= 0 || (size_t)path_length >= sizeof(path)) {
+        return;
+    }
+    FILE *const file = fopen(path, "wb");
+    CHECK(file != NULL);
+    if (file == NULL) {
+        return;
+    }
+    (void)fprintf(file, "P6\n%u %u\n255\n", surface->width,
+                  surface->height);
+    for (uint16_t y = 0U; y < surface->height; ++y) {
+        for (uint16_t x = 0U; x < surface->width; ++x) {
+            const uint16_t pixel = surface->pixels[
+                (size_t)y * surface->stride_pixels + x];
+            const uint8_t rgb[3] = {
+                (uint8_t)((((uint32_t)(pixel >> 11U) & 31U) * 255U + 15U) /
+                          31U),
+                (uint8_t)((((uint32_t)(pixel >> 5U) & 63U) * 255U + 31U) /
+                          63U),
+                (uint8_t)(((uint32_t)(pixel & 31U) * 255U + 15U) / 31U),
+            };
+            CHECK(fwrite(rgb, sizeof(rgb), 1U, file) == 1U);
+        }
+    }
+    CHECK(fclose(file) == 0);
+}
+
+static void test_runtime_save_render_and_exit(void)
+{
+    save_mock_t save = {0};
+    const p4_game_services_t services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
+            P4_GAME_CAP_SAVE,
+        .save_context = &save,
+        .queue_save = mock_queue_save,
+        .read_save_status = mock_read_save,
+    };
+    p4_game_instance_t instance;
+    lord_state_t state;
+    CHECK(start_game(&instance, &state, &services));
+    const p4_game_input_t activate = {
+        .held = P4_BUTTON_A, .pressed = P4_BUTTON_A,
+    };
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.screen == LORD_SCREEN_NAME);
+
     enum {
         GUARD = 17,
         STRIDE = P4_GAME_SURFACE_WIDTH + 7,
@@ -368,49 +440,82 @@ static void test_runtime_render_bounds_and_exit(void)
     };
     uint16_t *const allocation = calloc(TOTAL, sizeof(*allocation));
     CHECK(allocation != NULL);
-    if (allocation == NULL) {
-        return;
-    }
-    for (size_t index = 0U; index < TOTAL; ++index) {
-        allocation[index] = UINT16_C(0x5aa5);
-    }
-    p4_game_surface_t surface = {
-        .pixels = allocation + GUARD,
-        .stride_pixels = STRIDE,
-        .width = P4_GAME_SURFACE_WIDTH,
-        .height = P4_GAME_SURFACE_HEIGHT,
-    };
-    p4_game_instance_t instance;
-    lord_state_t state;
-    CHECK(start_game(&instance, &state));
-    CHECK(state.screen == LORD_SCREEN_TITLE);
-    for (int screen = LORD_SCREEN_TITLE; screen <= LORD_SCREEN_RIP_SCENE;
-         ++screen) {
-        state.screen = (lord_screen_t)screen;
-        state.selection = 0U;
-        state.menu_scroll = 0U;
-        CHECK(p4_game_instance_render(&instance, &surface));
-    }
-    for (size_t index = 0U; index < GUARD; ++index) {
-        CHECK(allocation[index] == UINT16_C(0x5aa5));
-        CHECK(allocation[GUARD + WORDS + index] == UINT16_C(0x5aa5));
-    }
-    for (size_t row = 0U; row < P4_GAME_SURFACE_HEIGHT; ++row) {
-        for (size_t column = P4_GAME_SURFACE_WIDTH;
-             column < STRIDE; ++column) {
-            CHECK(surface.pixels[row * STRIDE + column] ==
-                  UINT16_C(0x5aa5));
+    if (allocation != NULL) {
+        for (size_t index = 0U; index < TOTAL; ++index) {
+            allocation[index] = UINT16_C(0x5aa5);
         }
+        p4_game_surface_t surface = {
+            .pixels = allocation + GUARD,
+            .stride_pixels = STRIDE,
+            .width = P4_GAME_SURFACE_WIDTH,
+            .height = P4_GAME_SURFACE_HEIGHT,
+        };
+        (void)strcpy(state.player.name, "Test Hero");
+        state.player.sex = LORD_SEX_FEMALE;
+        state.player.hero_class = LORD_CLASS_MYSTICAL;
+        state.player.level = 3U;
+        state.player.hit_points = 54;
+        state.player.max_hit_points = 70;
+        state.player.strength = 38;
+        state.player.defense = 9;
+        state.player.gold = 4321U;
+        state.player.bank = 9876U;
+        state.player.experience = 1120U;
+        state.player.forest_fights = 11U;
+        state.player.day = 4U;
+        state.player.charm = 22U;
+        state.player.gems = 3U;
+        state.player.children = 1U;
+        state.player.skill[LORD_CLASS_MYSTICAL] = 12U;
+        state.player.skill_uses[LORD_CLASS_MYSTICAL] = 3U;
+        (void)strcpy(state.conversation, "THE DRAGON IS RESTLESS TONIGHT");
+        (void)strcpy(state.editor_text, "MEET ME AT THE INN");
+        for (int screen = LORD_SCREEN_TITLE;
+             screen <= LORD_SCREEN_TEXT_EDITOR; ++screen) {
+            state.screen = (lord_screen_t)screen;
+            state.selection = 0U;
+            state.menu_scroll = 0U;
+            state.selected_igm = 0U;
+            CHECK(p4_game_instance_render(&instance, &surface));
+            capture_frame_if_requested(&surface, state.screen);
+        }
+        for (size_t index = 0U; index < GUARD; ++index) {
+            CHECK(allocation[index] == UINT16_C(0x5aa5));
+            CHECK(allocation[GUARD + WORDS + index] == UINT16_C(0x5aa5));
+        }
+        for (size_t row = 0U; row < P4_GAME_SURFACE_HEIGHT; ++row) {
+            for (size_t column = P4_GAME_SURFACE_WIDTH;
+                 column < STRIDE; ++column) {
+                CHECK(surface.pixels[row * STRIDE + column] ==
+                      UINT16_C(0x5aa5));
+            }
+        }
+        free(allocation);
     }
+    state.player.level = 1U;
+    (void)strcpy(state.player.name, "Saved Hero");
+    state.player.max_hit_points = 20;
+    state.player.hit_points = 20;
+    state.player.strength = 10;
+    state.player.day = 1U;
+    state.save_dirty = true;
+    ++state.save_sequence;
+    uint8_t save_probe[LORD_SAVE_MAX_BYTES];
+    CHECK(state.save_available);
+    CHECK(state.save_ticket == P4_GAME_SAVE_INVALID_TICKET);
+    CHECK(lord_save_encode(&state, save_probe, sizeof(save_probe)) > 0U);
+    const p4_game_input_t idle = {0};
+    (void)p4_game_instance_update(&instance, &idle, 16U);
+    CHECK(save.bytes > 0U);
+    (void)p4_game_instance_update(&instance, &idle, 16U);
+    CHECK(!state.save_dirty);
+
     const p4_game_input_t back = {
-        .held = P4_BUTTON_BACK,
-        .pressed = P4_BUTTON_BACK,
-        .touch_valid = true,
+        .held = P4_BUTTON_BACK, .pressed = P4_BUTTON_BACK,
     };
     CHECK(p4_game_instance_update(&instance, &back, 16U) ==
           P4_GAME_EXIT_TO_LAUNCHER);
     p4_game_instance_stop(&instance);
-    free(allocation);
 }
 
 static p4_physical_touch_t physical_touch_for(uint16_t logical_x,
@@ -428,11 +533,14 @@ static p4_physical_touch_t physical_touch_for(uint16_t logical_x,
 
 static void test_standard_touch_lifecycle(void)
 {
+    static const p4_game_services_t services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+    };
     p4_game_instance_t instance;
     lord_state_t state;
     p4_game_input_mapper_t mapper;
     p4_game_input_t input;
-    CHECK(start_game(&instance, &state));
+    CHECK(start_game(&instance, &state, &services));
     p4_game_input_mapper_init(&mapper);
 
     p4_physical_touch_t touch = physical_touch_for(286U, 158U);
@@ -440,9 +548,8 @@ static void test_standard_touch_lifecycle(void)
     CHECK((input.pressed & P4_BUTTON_A) != 0U);
     CHECK(p4_game_instance_update(&instance, &input, 16U) ==
           P4_GAME_CONTINUE);
-    CHECK(state.screen == LORD_SCREEN_CLASS);
+    CHECK(state.screen == LORD_SCREEN_NAME);
     p4_game_input_mapper_update(&mapper, true, NULL, 0U, 0U, &input);
-    CHECK((input.released & P4_BUTTON_A) != 0U);
 
     touch = physical_touch_for(240U, 176U);
     p4_game_input_mapper_update(&mapper, true, &touch, 1U, 0U, &input);
@@ -466,19 +573,18 @@ int main(void)
     CHECK(p4_lord_game.launcher_id == 112U);
     CHECK(p4_lord_game.state_bytes == sizeof(lord_state_t));
     CHECK(sizeof(lord_state_t) <= P4_GAME_MAX_STATE_BYTES);
-    test_new_player_and_menu_wrap();
-    test_shop_and_bank();
-    test_forest_training_and_death();
-    test_dragon_victory_rebirth();
-    test_realm_mail_and_pvp();
-    test_romance_and_igms();
-    test_rip_gallery_and_save_codec();
-    test_runtime_render_bounds_and_exit();
+    test_character_creation_and_core_menu();
+    test_shops_bank_and_transfer();
+    test_forest_training_skills_and_dragon();
+    test_mail_pvp_romance_and_family();
+    test_full_inn_and_igms();
+    test_save_round_trip();
+    test_runtime_save_render_and_exit();
     test_standard_touch_lifecycle();
     if (s_failures != 0) {
         fprintf(stderr, "%d LORD test failure(s)\n", s_failures);
         return EXIT_FAILURE;
     }
-    puts("LORD tests passed");
+    puts("LORD full-port tests passed");
     return EXIT_SUCCESS;
 }

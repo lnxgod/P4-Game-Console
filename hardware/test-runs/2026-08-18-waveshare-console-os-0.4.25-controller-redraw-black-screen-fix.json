@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-18T18:18:27-0700",
+  "result": "installed-boot-pass-controller-idle-pass-manual-movement-regression-pending",
+  "scope": "Prevent transient Waveshare display refresh acknowledgement timeouts during controller-driven launcher redraws from turning off the backlight and halting Console OS",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART",
+    "h2": "operator-attested Sabrent powered hub with external VBUS",
+    "controller": {
+      "description": "generic SNES-style USB controller / Retrolink-compatible mapping",
+      "vendor_id": "0079",
+      "product_id": "0011",
+      "speed": "low",
+      "descriptor_bytes": 101,
+      "descriptor_sha256": "05a151c932362fee13503905962880ce75212bbf8c43c95701527b8290833162",
+      "parent_hub_address": 5,
+      "parent_port": 2
+    },
+    "firmware_vbus_source": false
+  },
+  "diagnosis": {
+    "observed_prior_behavior": "D-pad navigation worked for several moves and then appeared to crash to a black screen",
+    "serial_basis": "The predecessor reached READY and remained panic-free at idle, but boot had already counted repeated P4_DISPLAY M2 SUBMIT_TIMEOUT events with backlight_preserved=1",
+    "fault_path": "Each selection change marked the shell dirty; the first interactive ESP_ERR_TIMEOUT entered halt_dark, set brightness to zero, and suspended the main loop forever",
+    "correction": "present_interactive converts only ESP_ERR_TIMEOUT on the Waveshare interactive shell path into FRAME_ACK_MISSED action=continue; every hard display error retains the existing fail-closed halt",
+    "regression_gate": "scripts/verify-console-os-waveshare.py requires the nonfatal interactive marker and call site"
+  },
+  "artifact": {
+    "application_offset": "0x20000",
+    "application_path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+    "application_bytes": 1108592,
+    "application_sha256": "f3ea939d130bece59f9b52b851f94f5b3fe5f5094bfb28b3d69d2b3cb35676ba",
+    "elf_sha256": "d84c0a36ca90acd82ea055d4d56aae5561dae9950cf81020be9f561672393fdb",
+    "version": "0.4.25",
+    "source_base_commit": "e338fda8bcb3581eab0e4c6b8accb87a4c99995b",
+    "write_policy": "primary application only; bootloader, partition table, OTA data, NVS, microSD, and factory backup preserved",
+    "readback": "complete application byte count and SHA-256 matched"
+  },
+  "focused_checks": [
+    "Waveshare controller-first ESP-IDF image built successfully",
+    "scripts/verify-console-os-waveshare.py passed before and after install",
+    "guarded app-only writer verified the complete 1108592-byte readback"
+  ],
+  "serial_evidence": [
+    "App version: 0.4.25 and ELF file SHA256 prefix d84c0a36c",
+    "USB_HOST_ROOT_PORT_ENABLED stack=tinyusb root_speed=high hub_tt=enabled class_leases_present=1",
+    "GAMEPAD_CONNECTED vid=0079 pid=0011 descriptor_bytes=101 descriptor_sha256=05a151c932362fee13503905962880ce75212bbf8c43c95701527b8290833162 profile=usb-gamepad-0079-0011 capabilities=0x00000003",
+    "USB_DEVICE_MOUNT addr=1 vid=0079 pid=0011 speed=low parent_hub=5 parent_port=2 identity_ok=1 route_ok=1",
+    "P4_CONSOLE_OS READY page=home display=mipi-dsi storage=microsd-read-only h2_role=usb-host-external-vbus",
+    "P4_CONSOLE_OS STATS loops=24300 gamepad=1 input_polls=24300 gamepad_failures=0 display_failures=0"
+  ],
+  "limitations": [
+    "No D-pad input arrived during the post-install retained-UART window, so repeated physical movement and the FRAME_ACK_MISSED recovery marker remain operator acceptance items.",
+    "This correction prevents the known black-screen halt; it does not claim the underlying refresh acknowledgement timing has been eliminated.",
+    "Keyboard, mouse, repeated hot-plug, two-controller input, and USB Drive role switching remain separate acceptance cases."
+  ]
+}

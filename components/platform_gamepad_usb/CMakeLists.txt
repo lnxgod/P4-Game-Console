@@ -3,17 +3,33 @@ if(COMMAND idf_component_register)
     if(P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
         set(PLATFORM_GAMEPAD_USB_TRANSPORT
             src/platform_usb_input_olimex.c)
+        set(PLATFORM_GAMEPAD_USB_GUARDS
+            src/usb_host_open_guard.c
+            src/usb_host_open_wrapper.c)
+        set(PLATFORM_GAMEPAD_USB_DRIVER_REQUIREMENTS usb_host_hid)
+    elseif(P4_ACTIVE_BOARD_PROFILE STREQUAL
+           "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
+        set(PLATFORM_GAMEPAD_USB_TRANSPORT
+            src/platform_gamepad_usb_tinyusb.c)
+        set(PLATFORM_GAMEPAD_USB_GUARDS)
+        set(PLATFORM_GAMEPAD_USB_DRIVER_REQUIREMENTS
+            esp_tinyusb
+            espressif__tinyusb
+            p4_tinyusb_dual)
     else()
         set(PLATFORM_GAMEPAD_USB_TRANSPORT
             src/platform_gamepad_usb.c)
+        set(PLATFORM_GAMEPAD_USB_GUARDS
+            src/usb_host_open_guard.c
+            src/usb_host_open_wrapper.c)
+        set(PLATFORM_GAMEPAD_USB_DRIVER_REQUIREMENTS usb_host_hid)
     endif()
     idf_component_register(
         SRCS
             src/model.c
             src/input_model.c
             ${PLATFORM_GAMEPAD_USB_TRANSPORT}
-            src/usb_host_open_guard.c
-            src/usb_host_open_wrapper.c
+            ${PLATFORM_GAMEPAD_USB_GUARDS}
         INCLUDE_DIRS include
         REQUIRES
             esp_timer
@@ -22,7 +38,7 @@ if(COMMAND idf_component_register)
             log
             mbedtls
             platform_usb_host
-            usb_host_hid
+            ${PLATFORM_GAMEPAD_USB_DRIVER_REQUIREMENTS}
     )
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)
     target_compile_options(${COMPONENT_LIB} PRIVATE
@@ -31,12 +47,15 @@ if(COMMAND idf_component_register)
         -Wshadow
         -Werror
     )
-    # usb_host_hid 1.2.0 can close an indeterminate local handle when a
-    # NEW_DEV/open race fails. Route every open through the pinned-version guard.
-    target_link_options(${COMPONENT_LIB} INTERFACE
-        "LINKER:--wrap=usb_host_device_open"
-        "LINKER:--undefined=__wrap_usb_host_device_open"
-    )
+    if(NOT P4_ACTIVE_BOARD_PROFILE STREQUAL
+       "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
+        # usb_host_hid 1.2.0 can close an indeterminate local handle when a
+        # NEW_DEV/open race fails. Route every open through the pinned guard.
+        target_link_options(${COMPONENT_LIB} INTERFACE
+            "LINKER:--wrap=usb_host_device_open"
+            "LINKER:--undefined=__wrap_usb_host_device_open"
+        )
+    endif()
 else()
     cmake_minimum_required(VERSION 3.16)
     project(platform_gamepad_usb VERSION 0.1.0 LANGUAGES C)

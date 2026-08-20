@@ -1,45 +1,60 @@
 # LORD — P4 ANSI Door Edition
 
-This is a native, storage-installed P4 Game API v1 port of *Legend of the Red
-Dragon*. It appears in the P4 BBS door catalog under `GAMES/ADVENTURE` and
-runs inside the normal 320×200 game surface; the BBS shell remains the
-launcher and retains ownership of display, input, audio, and storage.
+This is the complete standalone P4 Console port of *Legend of the Red
+Dragon*. It installs under `GAMES/ADVENTURE`, renders at 320×200 in a
+16-color ANSI/RIP-inspired style, and uses only the stable P4 Game API for
+video, controls, tone audio, and optional durable saves.
 
-Version 0.2.0 implements:
+Version 1.0.0 includes:
 
-- ANSI/BBS-inspired text screens and DOS color palette;
-- Death Knight, Mystical, and Thieving class skills;
-- town, forest, shops, healer, bank, inn, and training master;
-- the original eleven training thresholds and item progression;
-- encounters across all twelve monster tiers;
-- bounded turn-based combat, running, death/recovery, and daily limits;
-- the level-12 Red Dragon battle and stronger post-victory rebirth;
-- a four-warrior local realm directory with public character records;
-- daily player-versus-player duels, rewards, deaths, and revival;
-- a six-letter mailbox with read state, preset composition, replies, and
-  duel/romance messages;
-- affection, compliments, gifts, proposals, marriage, and spouse bonuses;
-- built-in Goblin Dice, Old Wizard, and Herbalist IGMs with daily limits;
-- a generated-and-dithered 16-color dragon/castle title scene plus code-drawn
-  RIP-style town, forest, inn, and battle scenes;
-- an explicit, deterministic, CRC-protected version-1 save codec with no raw
-  C structure or padding in the serialized payload.
+- named male or female characters and Death Knight, Mystical, and Thieving
+  professions;
+- independent mastery and daily-use counters for all three skill trees;
+- the town, 16 weapons, 16 armour choices, healer, eleven training masters,
+  bank deposits/withdrawals/transfers, rankings, daily news, and stats;
+- all 131 monster records from the authorized pinned Synchronet source,
+  spanning all twelve levels;
+- the 15 forest-event families: the old man, hag, gold sack, Merry Men, gem,
+  flower garden/Hammer Stone, skill teachers, charm sticks, horse trader,
+  fairies, Olivia, princess rescue, lost gold, troll, and DarkCloak Tavern;
+- combat, running, death/recovery, daily limits, level progression, and the
+  level-12 Red Dragon victory/rebirth loop;
+- the full Red Dragon Inn play set: sleep, bartender drinks and gossip,
+  public conversation, Seth, Violet, bard songs, blackjack, sleeping-player
+  attacks, announcements, and room status;
+- an eight-warrior persistent local realm with public sayings, bank transfer,
+  PvP, mail, courtship, marriage/divorce, children, and daily revival;
+- a twelve-message inbox/sent-mail store and an in-cartridge ANSI keyboard for
+  character names, letters, announcements, sayings, and conversations;
+- charm, gems, children, encounters, horse, fairy, fairy lore, amulet, and
+  high-spirits state;
+- seven bounded ports of the Synchronet LORD add-ons: Aragorn's Math, Barak's
+  House, The Grab Bag, The Graveyard, Olodrin's Orphans, The Outhouse, and The
+  Pickle Goddess;
+- a generated/dithered dragon-and-castle title plus twelve code-drawn
+  ANSI/RIP-style scenes;
+- an explicit, deterministic, CRC-protected version-3 save codec. The game
+  consumes the immutable launch snapshot, queues copied `AUTO` commits, polls
+  completion, and uses optimistic host sequences.
 
-The current Game API does not yet expose writable cartridge storage, realm
-transactions, OS text input, trusted day rollover, or external IGM handoff.
-Until those services land, the new social systems use clearly labeled local
-realm records, mail composition uses bounded preset text, and progress remains
-session-only even though the save codec is ready. Exiting the door therefore
-starts a new character. The exact OS work and game-side connection points are
-in [OS_INTEGRATION.md](OS_INTEGRATION.md) and
-[osupgrade.md](../../osupgrade.md).
+The cartridge is fully playable offline. On a Console OS profile that offers
+`save`, progress survives exit and relaunch. On profiles that deliberately
+withhold writable storage, it remains playable for the current session and
+labels the realm local. Shared remote BBS accounts, real remote opponents,
+remote consent transactions, trusted server-day rollover, and arbitrary
+third-party IGM packages still require the optional OS adapters documented in
+[OS_INTEGRATION.md](OS_INTEGRATION.md) and
+[osupgrade.md](../../osupgrade.md); the complete standalone game does not
+depend on them.
 
 ## Controls
 
-- D-pad or Left/Right: move the highlighted choice
-- A or Start: choose / attack / continue
-- B: return to the previous in-game screen
-- Back (`EXIT`): return immediately to the P4 BBS launcher
+- D-pad: move through menus; move in two dimensions on the ANSI keyboard
+- A or Start: choose, attack, enter a character, or continue
+- B: return to the previous in-game screen; on the keyboard, cancel entry
+- Back (`EXIT`): queue any dirty save and return to the launcher
+
+The keyboard contains letters, digits, space, punctuation, `DONE`, and `DEL`.
 
 ## Build and test
 
@@ -56,13 +71,19 @@ cmake --build build-host/play-lord
 ctest --test-dir build-host/play-lord --output-on-failure
 ```
 
-Run `make play-game GAME=lord` for the interactive SDL3 host preview. A normal
-Console OS cartridge build discovers `game.json` and produces `LORD.P4G` in
-the generated game-storage seed.
+Run `make play-game GAME=lord` for the interactive SDL3 preview. To capture
+all screens without a visible desktop, create a directory and run the unit
+binary with `LORD_CAPTURE_DIR=/absolute/path`; it emits deterministic PPM
+frames after the same sanitizer-backed render-bound checks.
+
+A normal Console OS cartridge build discovers `game.json` and produces
+`LORD.P4G` in the generated game-storage seed. See
+[FEATURE_MATRIX.md](FEATURE_MATRIX.md) for the upstream parity audit.
 
 ## Permission and provenance
 
-This port was authorized for this P4 project by the project owner on
-2026-08-18. It uses newly written C and code-rendered ANSI-style UI; no
-upstream `.ICN`, `.LRD`, player database, or other runtime data file is
-included. Exact source identity and attribution are in [UPSTREAM.md](UPSTREAM.md).
+The project owner authorized this port from the pinned Synchronet source on
+2026-08-18. The new C implementation imports only data covered by that
+permission and uses newly generated/project-rendered art. Exact source hashes,
+add-on paths, and regeneration details are in [UPSTREAM.md](UPSTREAM.md) and
+[assets/README.md](assets/README.md).

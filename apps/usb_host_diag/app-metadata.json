@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "app": "usb_host_diag",
+  "stage": "waveshare-h2-tinyusb-direct-root-port-diagnostic",
+  "purpose": "Minimal UART-only ESP32-P4 HS USB Host diagnostic for externally powered direct devices or one powered hub, with raw read-only H2 line-state reporting and bounded HID input.",
+  "runtime_supported": true,
+  "flash_authorized": true,
+  "flash_app_authorized": true,
+  "flash_project_authorized": false,
+  "hardware_access_allowed": true,
+  "runtime_evidence": "hardware/test-runs/2026-08-18-waveshare-usb-host-diag-direct-external-vbus-no-line.json",
+  "board": "waveshare-esp32-p4-wifi6-touch-lcd-4.3",
+  "usb_connector": "H2",
+  "usb_stack": {
+    "name": "TinyUSB",
+    "component_version": "0.21.0~1",
+    "component_hash": "a72b7d67472914ab76309340fd50d578b31e310963d45ad0f81144bde3314752",
+    "repository_commit": "7049c58a0e895acc92c6407574b05b5536eddfc8",
+    "root_speed": "high",
+    "hub_count": 1,
+    "device_count": 4,
+    "hid_interface_count": 8
+  },
+  "electrical_contract": {
+    "firmware_sources_vbus": false,
+    "external_vbus_fixture_required": true,
+    "operator_attested_external_vbus_for_current_run": true,
+    "backfeed_safe_fixture_required": true
+  },
+  "excluded_services": [
+    "display",
+    "audio",
+    "touch",
+    "sd_card",
+    "wifi",
+    "console_os",
+    "usb_mass_storage_device"
+  ]
+}

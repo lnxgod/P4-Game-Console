@@ -44,6 +44,9 @@ static bool preview_request_signal(void *context, uint64_t focus_token)
              .channel = 44U, .flags = P4_GAME_SIGNAL_HIDDEN},
         },
     };
+    for (size_t index = 0U; index < scan->snapshot.count; ++index) {
+        scan->snapshot.results[index].flags |= P4_GAME_SIGNAL_SIMULATED;
+    }
     return true;
 }
 

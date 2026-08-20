@@ -469,7 +469,10 @@ static esp_err_t release_sd_resources(void)
             result = esp_vfs_fat_sdcard_unmount(
                 PLATFORM_GAME_STORAGE_MOUNT_POINT, s_card);
         } else {
-            result = sdmmc_host_deinit();
+            /* Slot 1 belongs to the C6 ESP-Hosted transport. A global
+             * deinit tears that live transport down underneath its worker
+             * tasks, so storage may release only its own slot 0. */
+            result = sdmmc_host_deinit_slot(GAME_STORAGE_SD_SLOT);
             heap_caps_free(s_card);
         }
         s_card = NULL;
@@ -526,7 +529,7 @@ static esp_err_t mount_sd_at_frequency(uint32_t frequency_khz,
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
     P4_GAME_STORAGE_USB_EXPORT
     if (!mount_app_vfs) {
-    bool host_initialized = false;
+    bool slot_initialized = false;
     s_card = heap_caps_calloc(
         1U, sizeof(*s_card), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     if (s_card == NULL) {
@@ -534,17 +537,17 @@ static esp_err_t mount_sd_at_frequency(uint32_t frequency_khz,
     }
     if (result == ESP_OK) {
         result = sdmmc_host_init();
-        host_initialized = result == ESP_OK;
     }
     if (result == ESP_OK) {
         result = sdmmc_host_init_slot(host.slot, &slot);
+        slot_initialized = result == ESP_OK;
     }
     if (result == ESP_OK) {
         result = sdmmc_card_init(&host, s_card);
     }
     if (result != ESP_OK) {
-        if (host_initialized) {
-            (void)sdmmc_host_deinit();
+        if (slot_initialized) {
+            (void)sdmmc_host_deinit_slot(host.slot);
         }
         heap_caps_free(s_card);
         s_card = NULL;
@@ -633,82 +636,6 @@ static esp_err_t mount_sd_with_fallback(bool mount_app_vfs)
     return result;
 }
 
-#if P4_GAME_STORAGE_RUNTIME_H2_SWITCH
-static esp_err_t create_lazy_msc_storage(void)
-{
-    if (s_card == NULL || s_sd_vfs_mounted || s_storage != NULL) {
-        return ESP_ERR_INVALID_STATE;
-    }
-    const tinyusb_msc_driver_config_t msc_driver = {
-        .user_flags = {
-            .auto_mount_off = 1U,
-        },
-        .callback = storage_event_callback,
-        .callback_arg = NULL,
-    };
-    esp_err_t result = tinyusb_msc_install_driver(&msc_driver);
-    if (result != ESP_OK) {
-        return result;
-    }
-    const tinyusb_msc_storage_config_t storage_config = {
-        .medium.card = s_card,
-        .fat_fs = {
-            .base_path = (char *)PLATFORM_GAME_STORAGE_MOUNT_POINT,
-            .config = {
-                .max_files = GAME_STORAGE_MAX_FILES,
-                .allocation_unit_size = 16U * 1024U,
-                .disk_status_check_enable = true,
-                .use_one_fat = false,
-            },
-            .do_not_format = true,
-            .format_flags = 0,
-        },
-        .mount_point = TINYUSB_MSC_STORAGE_MOUNT_USB,
-    };
-    result = tinyusb_msc_new_storage_sdmmc(&storage_config, &s_storage);
-    if (result != ESP_OK || s_storage == NULL) {
-        (void)tinyusb_msc_uninstall_driver();
-        s_storage = NULL;
-        return result == ESP_OK ? ESP_FAIL : result;
-    }
-    uint32_t sectors = 0U;
-    result = tinyusb_msc_get_storage_sector_size(
-        s_storage, &s_sector_size_bytes);
-    if (result == ESP_OK) {
-        result = tinyusb_msc_get_storage_capacity(s_storage, &sectors);
-    }
-    if (result != ESP_OK) {
-        (void)tinyusb_msc_delete_storage(s_storage);
-        s_storage = NULL;
-        (void)tinyusb_msc_uninstall_driver();
-        return result;
-    }
-    s_capacity_bytes = (uint64_t)sectors * s_sector_size_bytes;
-    ESP_LOGI(TAG,
-             "P4_GAME_STORAGE MSC_STORAGE_READY allocation=on-demand "
-             "capacity=%" PRIu64,
-             s_capacity_bytes);
-    return ESP_OK;
-}
-
-static esp_err_t delete_lazy_msc_storage(void)
-{
-    esp_err_t result = ESP_OK;
-    if (s_storage != NULL) {
-        result = tinyusb_msc_delete_storage(s_storage);
-        if (result != ESP_OK) {
-            return result;
-        }
-        s_storage = NULL;
-    }
-    const esp_err_t driver_result = tinyusb_msc_uninstall_driver();
-    if (driver_result != ESP_OK &&
-        driver_result != ESP_ERR_NOT_SUPPORTED) {
-        result = driver_result;
-    }
-    return result;
-}
-#endif
 #endif
 
 esp_err_t platform_game_storage_init(void)
@@ -726,7 +653,7 @@ esp_err_t platform_game_storage_init(void)
 #if P4_GAME_STORAGE_SD_BACKEND
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
     esp_err_t result = mount_sd_with_fallback(
-        P4_GAME_STORAGE_RUNTIME_H2_SWITCH != 0);
+        P4_GAME_STORAGE_USB_EXPORT == 0);
 #else
     const gpio_config_t power_gpio = {
         .pin_bit_mask = UINT64_C(1) << GAME_STORAGE_SD_POWER_GPIO,
@@ -754,7 +681,8 @@ esp_err_t platform_game_storage_init(void)
     s_capacity_bytes = (uint64_t)s_card->csd.capacity *
         (uint64_t)s_sector_size_bytes;
 
-#if P4_GAME_STORAGE_EAGER_USB_STORAGE
+#if P4_GAME_STORAGE_EAGER_USB_STORAGE || \
+    P4_GAME_STORAGE_RUNTIME_H2_SWITCH
     const tinyusb_msc_driver_config_t msc_driver = {
         .user_flags = {
             /* H2 ownership is controlled only by the Console OS button. */
@@ -800,6 +728,14 @@ esp_err_t platform_game_storage_init(void)
         return fail_initialization(result);
     }
     s_capacity_bytes = (uint64_t)sectors * s_sector_size_bytes;
+#if P4_GAME_STORAGE_RUNTIME_H2_SWITCH
+    ESP_LOGI(TAG,
+             "P4_GAME_STORAGE MSC_STORAGE_READY allocation=boot-resident "
+             "buffer_bytes=%u dma_free=%u dma_largest=%u",
+             (unsigned)CONFIG_TINYUSB_MSC_BUFSIZE,
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_DMA),
+             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
+#endif
 #else
     if (mkdir(PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT, 0775) != 0) {
         struct stat update_directory;
@@ -859,7 +795,8 @@ esp_err_t platform_game_storage_init(void)
 #if P4_GAME_STORAGE_RUNTIME_H2_SWITCH
     ESP_LOGI(TAG,
              "P4_GAME_STORAGE USB_DEVICE_DEFERRED "
-             "default_role=controller-host app=usb-drive msc_storage=lazy");
+             "default_role=controller-host app=usb-drive "
+             "msc_storage=boot-resident");
 #endif
     ESP_LOGI(TAG,
              "P4_GAME_STORAGE READY backend=microSD capacity=%" PRIu64
@@ -1515,7 +1452,7 @@ esp_err_t platform_game_storage_set_usb_mode(bool enabled)
     if ((enabled && owner == GAME_STORAGE_OWNER_USB &&
          s_usb_driver_running && s_storage != NULL) ||
         (!enabled && owner == GAME_STORAGE_OWNER_APP &&
-         !s_usb_driver_running && s_storage == NULL)) {
+         !s_usb_driver_running && s_storage != NULL)) {
 #else
     if ((enabled && owner == GAME_STORAGE_OWNER_USB) ||
         (!enabled && owner == GAME_STORAGE_OWNER_APP)) {
@@ -1554,14 +1491,8 @@ esp_err_t platform_game_storage_set_usb_mode(bool enabled)
 #if P4_GAME_STORAGE_RUNTIME_H2_SWITCH
     esp_err_t rollback_result = ESP_OK;
     if (enabled) {
-        result = release_sd_resources();
-        if (result == ESP_OK) {
-            vTaskDelay(pdMS_TO_TICKS(20));
-            result = mount_sd_with_fallback(false);
-        }
-        if (result == ESP_OK) {
-            result = create_lazy_msc_storage();
-        }
+        result = tinyusb_msc_set_storage_mount_point(
+            s_storage, TINYUSB_MSC_STORAGE_MOUNT_USB);
         if (result == ESP_OK) {
             result = install_usb_driver();
         }
@@ -1570,14 +1501,8 @@ esp_err_t platform_game_storage_set_usb_mode(bool enabled)
             rollback_result = uninstall_usb_driver_if_running(
                 &driver_was_running);
             if (rollback_result == ESP_OK) {
-                rollback_result = delete_lazy_msc_storage();
-            }
-            if (rollback_result == ESP_OK) {
-                rollback_result = release_sd_resources();
-            }
-            if (rollback_result == ESP_OK) {
-                vTaskDelay(pdMS_TO_TICKS(20));
-                rollback_result = mount_sd_with_fallback(true);
+                rollback_result = tinyusb_msc_set_storage_mount_point(
+                    s_storage, TINYUSB_MSC_STORAGE_MOUNT_APP);
             }
             ESP_LOGE(TAG,
                      "P4_GAME_STORAGE USB_ROLE_ROLLBACK "
@@ -1589,14 +1514,8 @@ esp_err_t platform_game_storage_set_usb_mode(bool enabled)
         bool driver_was_running = false;
         result = uninstall_usb_driver_if_running(&driver_was_running);
         if (result == ESP_OK) {
-            result = delete_lazy_msc_storage();
-        }
-        if (result == ESP_OK) {
-            result = release_sd_resources();
-        }
-        if (result == ESP_OK) {
-            vTaskDelay(pdMS_TO_TICKS(20));
-            result = mount_sd_with_fallback(true);
+            result = tinyusb_msc_set_storage_mount_point(
+                s_storage, TINYUSB_MSC_STORAGE_MOUNT_APP);
         }
     }
 

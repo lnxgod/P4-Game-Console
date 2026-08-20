@@ -4,6 +4,15 @@ This component owns the reusable, host-safe feedback pack for native Console
 API games. It contains original audio and animation assets only; games use its
 bounded `p4/` interfaces rather than decoding media or acquiring hardware.
 
+## Allocation-free visual helpers
+
+`p4/visual.h` adds small reusable pieces for polished games without creating a
+scene engine: signed Q16.16 movement, smoothstep easing, looping or ping-pong
+atlas timing, clipped/flipped/integer-scaled RGB565 sprites, deterministic
+camera shake, and bounded caller-owned particles. Cartridge packaging compiles
+these helpers into each game that uses them, so Game API v1 and its frozen
+runtime import allowlist do not change. `games/asteroids` is the reference.
+
 ## Original audio provenance
 
 The four stereo WAV sources under `assets/audio/source/` were generated through

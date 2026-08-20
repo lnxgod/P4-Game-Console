@@ -18,6 +18,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "freertos/task.h"
+#include "nvs.h"
 #pragma GCC diagnostic pop
 #include "p4/signal_scan.h"
 
@@ -33,6 +34,7 @@ static SemaphoreHandle_t s_lock;
 static TaskHandle_t s_task;
 static bool s_ready;
 static bool s_scan_pending;
+static bool s_identity_persistent;
 static uint64_t s_focus_token;
 static uint8_t s_session_key[P4_SIGNAL_SCAN_KEY_BYTES];
 static p4_game_signal_snapshot_t s_snapshot = {
@@ -46,6 +48,49 @@ static size_t bounded_ssid_length(const uint8_t ssid[33])
         ++length;
     }
     return length;
+}
+
+static bool ssid_has_visible_name(const uint8_t *ssid, size_t ssid_bytes)
+{
+    if (ssid == NULL || ssid_bytes == 0U) {
+        return false;
+    }
+    for (size_t index = 0U; index < ssid_bytes; ++index) {
+        if (ssid[index] != (uint8_t)' ') {
+            return true;
+        }
+    }
+    return false;
+}
+
+static esp_err_t load_or_create_identity_key(void)
+{
+    static const char *const identity_namespace = "p4_signal";
+    static const char *const identity_key = "token_key";
+    nvs_handle_t handle;
+    esp_err_t result = nvs_open(
+        identity_namespace, NVS_READWRITE, &handle);
+    if (result != ESP_OK) {
+        return result;
+    }
+    size_t key_bytes = sizeof(s_session_key);
+    result = nvs_get_blob(
+        handle, identity_key, s_session_key, &key_bytes);
+    if (result == ESP_ERR_NVS_NOT_FOUND) {
+        esp_fill_random(s_session_key, sizeof(s_session_key));
+        result = nvs_set_blob(
+            handle, identity_key, s_session_key, sizeof(s_session_key));
+        if (result == ESP_OK) {
+            result = nvs_commit(handle);
+        }
+    } else if (result == ESP_OK && key_bytes != sizeof(s_session_key)) {
+        result = ESP_ERR_INVALID_SIZE;
+    }
+    nvs_close(handle);
+    if (result == ESP_OK) {
+        s_identity_persistent = true;
+    }
+    return result;
 }
 
 static void publish_status(p4_game_signal_status_t status)
@@ -67,12 +112,17 @@ static void publish_results(const wifi_ap_record_t *records, uint16_t count,
     };
     p4_game_signal_t sanitized[PLATFORM_SIGNAL_SCAN_RAW_RESULTS];
     size_t sanitized_count = 0U;
+    size_t hidden_filtered = 0U;
     const uint16_t raw_limit = (uint16_t)PLATFORM_SIGNAL_SCAN_RAW_RESULTS;
     const uint16_t bounded_count = count < raw_limit ? count : raw_limit;
     for (uint16_t index = 0U; index < bounded_count; ++index) {
         const wifi_ap_record_t *const record = &records[index];
         p4_game_signal_t signal;
         const size_t ssid_bytes = bounded_ssid_length(record->ssid);
+        if (!ssid_has_visible_name(record->ssid, ssid_bytes)) {
+            ++hidden_filtered;
+            continue;
+        }
         if (!p4_signal_scan_make_game_signal(
                 s_session_key, record->bssid, record->ssid, ssid_bytes,
                 record->rssi, record->primary,
@@ -110,13 +160,20 @@ static void publish_results(const wifi_ap_record_t *records, uint16_t count,
         s_scan_pending = false;
         (void)xSemaphoreGive(s_lock);
     }
-    ESP_LOGI(TAG, "passive scan complete results=%u",
-             (unsigned)next.count);
+    ESP_LOGI(TAG,
+             "passive scan complete raw=%u named=%u published=%u "
+             "hidden_filtered=%u",
+             (unsigned)bounded_count, (unsigned)sanitized_count,
+             (unsigned)next.count, (unsigned)hidden_filtered);
 }
 
 static esp_err_t initialize_radio(void)
 {
-    esp_err_t result = esp_netif_init();
+    esp_err_t result = esp_hosted_init();
+    if (result != ESP_OK) {
+        return result;
+    }
+    result = esp_netif_init();
     if (result != ESP_OK && result != ESP_ERR_INVALID_STATE) {
         return result;
     }
@@ -171,6 +228,8 @@ static void signal_scan_task(void *argument)
         (void)xSemaphoreGive(s_lock);
     }
     ESP_LOGI(TAG, "C6 passive scanner ready");
+    ESP_LOGI(TAG, "opaque identity scope=%s raw_bssid_exposed=0",
+             s_identity_persistent ? "device" : "boot-session");
 
     for (;;) {
         (void)ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
@@ -180,7 +239,7 @@ static void signal_scan_task(void *argument)
             (void)xSemaphoreGive(s_lock);
         }
         wifi_scan_config_t scan_config = {
-            .show_hidden = true,
+            .show_hidden = false,
             .scan_type = WIFI_SCAN_TYPE_PASSIVE,
             .scan_time.passive = PLATFORM_SIGNAL_SCAN_PASSIVE_CHANNEL_MS,
         };
@@ -217,7 +276,14 @@ esp_err_t platform_signal_scan_start(void)
     if (s_lock == NULL) {
         return ESP_ERR_NO_MEM;
     }
-    esp_fill_random(s_session_key, sizeof(s_session_key));
+    const esp_err_t identity_result = load_or_create_identity_key();
+    if (identity_result != ESP_OK) {
+        esp_fill_random(s_session_key, sizeof(s_session_key));
+        ESP_LOGW(TAG,
+                 "persistent opaque identity unavailable: %s; "
+                 "falling back to boot-session identity",
+                 esp_err_to_name(identity_result));
+    }
     const BaseType_t created = xTaskCreate(
         signal_scan_task, "p4_signal_scan",
         PLATFORM_SIGNAL_SCAN_TASK_STACK_BYTES, NULL,

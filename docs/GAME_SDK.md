@@ -125,6 +125,9 @@ letting an unloadable game reach the SD card.
 - `format`: `p4-native-elf-v1`;
 - `api_version`: `1`;
 - `version`: a bounded semantic version;
+- optional `stack_frame_limit_bytes`: a 128–16384 byte ceiling enforced by
+  the real RISC-V cartridge compiler; use it for games whose launch/runtime
+  stack budget is part of their acceptance contract;
 - `package_file`: an uppercase `.P4G` basename stored under `GAMES`;
 - optional `resource_file`: the matching uppercase `.P4R` basename;
 - optional `resource_payload`: a safe game-relative input path used to build
@@ -146,13 +149,18 @@ Include only headers under `components/p4_game_api/include/p4/`:
 - `p4/input.h`: Up, Down, Left, Right, A, B, Start, Back, and standard
   on-screen controls;
 - `p4/draw.h`: clipped pixels, shapes, text, and RGB565 sprites;
+- `p4/visual.h`: fixed-point motion, atlas frames, animation timing, easing,
+  camera shake, and caller-owned particles;
 - `p4/audio.h`: the host-owned eight-voice tone and copied-PCM mixer;
 - `p4/audio_pack.h`: original reusable PCM effects;
 - `p4/feedback.h`: original reusable animated feedback overlays;
 - `p4/achievements.h`: the bounded OS-owned session catalog.
 
-`update` receives bounded elapsed time plus complete `held`, `pressed`, and
-`released` snapshots. Return `P4_GAME_EXIT_TO_LAUNCHER` when Back is pressed.
+`update` receives measured, bounded elapsed time plus complete `held`,
+`pressed`, and `released` snapshots. Console OS targets 30 Hz, reports the
+actual wall-clock delta clamped to `1..P4_GAME_MAX_FRAME_DELTA_MS`, and does
+not issue catch-up bursts after a slow frame. Return
+`P4_GAME_EXIT_TO_LAUNCHER` when Back is pressed.
 `render` receives the caller-owned surface; supplied drawing primitives clip
 to its bounds.
 
@@ -165,7 +173,13 @@ the game exits. A cartridge never receives a raw audio or GPIO handle.
 Achievements are optional and bounded. Call `p4_game_unlock_achievement()`
 with a short stable ID, title, and description. The host binds the event to
 the running game ID, rejects mismatches, and de-duplicates repeat reports.
-The current catalog lasts for the boot session; persistent saves are deferred.
+The achievement catalog lasts for the boot session. Save data uses the
+separate optional `save` service: games receive one immutable launch snapshot
+and may queue a copied, non-blocking commit without receiving a path or FAT
+handle. The API, host backend, and power-loss-safe save component exist, but
+Console OS exposes the capability only on a board profile that authorizes
+firmware-side writes. The current Waveshare 4.3 profile remains read-only, so
+games must still work in session-only mode there.
 
 The `storage` capability currently means a validated read-only `.P4R` payload,
 not general storage. Check the capability bit before reading `resource_data`,
@@ -206,6 +220,28 @@ Games inherit a stable logical console rather than a board definition:
   A game requests a capability in `game.json`, then uses only the matching
   `p4/` function. It never opens I2S, configures GPIO, owns an audio worker,
   or starts a FreeRTOS task.
+
+## Make motion and effects smooth without an engine
+
+Include `p4/visual.h` and keep the game loop simple:
+
+1. Store slow positions and velocities as signed Q16.16 values. Advance them
+   with `p4_q16_step()` using the supplied `elapsed_ms`, then round only when
+   drawing. This removes low-speed integer judder without using floating point.
+2. Describe one frame in an RGB565 atlas with `p4_sprite_t` and draw it with
+   `p4_draw_sprite()`. The helper clips, supports a chroma key, X/Y flipping,
+   and integer scale 1–8 without allocating.
+3. Select atlas frames with `p4_animation_frame()` and use
+   `p4_ease_smoothstep_u16()` for short UI or movement transitions.
+4. Add impact polish with deterministic `p4_camera_shake()` and a small
+   caller-owned `p4_particle_t` array. Particle updates and draws are bounded;
+   there is no heap allocation or hidden task.
+
+For collision-heavy games, retain a fixed-step accumulator for gameplay and
+use the measured delta only to feed the accumulator. Cap the number of steps
+per update as Asteroids does so a late frame cannot create a spiral of death.
+Render once after the update. These helpers improve presentation while leaving
+physics, collision rules, and game state under the cartridge's control.
 
 ## Make sound through the host-owned API
 
@@ -288,7 +324,8 @@ Use this workflow:
    allocate an image loader.
 5. Test regeneration: the converter output must exactly match the committed
    generated include. Account for `width * height * 2` bytes in the game’s
-   static flash budget and draw cells with `p4_draw_sprite_rgb565()`.
+   static flash budget and draw atlas cells with `p4_draw_sprite()`. The older
+   `p4_draw_sprite_rgb565()` remains available for a simple unscaled frame.
 
 ## Portable-game rules
 
@@ -305,7 +342,9 @@ Use this workflow:
 - Run the changed game's focused host sanitizer tests. A successful build is
   not hardware acceptance or permission to flash.
 
-Maze Chase, Space Invaders, and Byte Buddy are complete original examples.
+Maze Chase, Space Invaders, Asteroids, and Byte Buddy are complete original
+examples. Asteroids is the compact reference for an atlas sprite, fixed-step
+simulation, fixed-point particles, and deterministic camera shake.
 Byte Buddy demonstrates touch-first virtual-pet care, interaction-driven dragon
 growth, coin upgrades, a mini-game, tones, achievements, PixelLab sprite art,
 and direct return to the launcher through P4 APIs.

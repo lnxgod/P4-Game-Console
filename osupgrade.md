@@ -1,18 +1,21 @@
-# Console OS upgrade plan for full LORD support
+# Console OS upgrade plan for full LORD and wired-platform support
 
 ## Purpose
 
 Upgrade Console OS and the native P4 Game API so the `games/lord` cartridge
 can support durable characters, mail, shared player records, asynchronous PvP,
 romance state, real daily rollover, external IGMs, and optional RIP-style
-scenes without giving a cartridge raw filesystem, network, USB, clock, or
-display ownership.
+scenes. The same upgrade also finishes the controller-first wired USB platform
+for the Waveshare 4.3-inch console without giving a cartridge raw filesystem,
+network, USB, clock, or display ownership.
 
-This is an implementation handoff. The current LORD 0.2.0 cartridge has
-playable local realm records, mail, PvP, romance, built-in IGMs, code-drawn
-RIP-style scenes, and a versioned save codec. OS services are still required
-for persistence and shared/remote state. Do not work around the missing
-services by opening files or sockets from `games/lord`.
+This is an implementation handoff. LORD 1.0.0 now has the complete standalone
+game, a persistent local realm, typed controller mail/text, seven built-in
+source-pinned IGMs, twelve ANSI/RIP-style scenes, and a wired version-3 save
+client. OS services are still required for remote/shared state and for durable
+saves on board profiles that deliberately withhold writable storage. Do not
+work around an unavailable service by opening files or sockets from
+`games/lord`.
 
 ## Current state and blockers
 
@@ -25,26 +28,73 @@ services by opening files or sockets from `games/lord`.
 - `components/p4_multiplayer` provides bounded P4MP v1 packet, byte-stream,
   peer, replay, CRC32, timeout, disconnect, and neutral-input handling.
 - `components/p4_desktop` has Save Manager metadata, but not a save backend.
+- The Game API v1 optional tail, host runner, and `components/p4_game_save`
+  now implement copied save requests, status polling, deterministic containers,
+  and simulated interrupted-write recovery without changing old cartridges.
+- Console OS has a non-blocking per-cartridge save worker boundary in source;
+  integrated firmware qualification is still pending.
 - `components/p4_ansi` and `components/p4_bbs` provide bounded ANSI/BBS UI.
 - Console OS owns storage, input, display, audio, networking, and lifecycle.
-- LORD 0.2.0 owns an explicit little-endian save codec capped at 512 bytes,
-  local fallback records for four warriors, a six-message mailbox, daily PvP
-  and romance counters, three built-in IGMs, and five clipped RIP-style scenes.
+- Waveshare H2 has mutually exclusive controller-first USB Host/HID and
+  explicit **USB Drive** device-MSC modes; games see only normalized input.
+- Exact-unit Console OS 0.4.22 proved stable powered-hub discovery, serialized
+  bounded downstream retries, boot-loop containment, and normal OS startup.
+  The low-speed child did not enumerate, so no HID controller was accepted.
+- Console OS 0.4.23 is built and release-verified but intentionally unflashed.
+  It adds a hash-gated ESP32-P4 HS-root FS/LS clock correction behind the
+  existing one-boot recovery guard. See `docs/CONSOLE_OS.md` and
+  `hardware/evidence/waveshare-console-os-0.4.23-guarded-hs-fsls-20260818-exact-unit-authorization.json`.
+- Console OS 0.4.24 adds the BBS touch-arbitration repair: an absent USB mouse
+  no longer invalidates GT911 input, doors are visibly tappable, and bounded
+  Previous/Next touch controls expose every directory page. It requires a new
+  exact-artifact authorization before any install; the 0.4.23 authorization
+  must not be reused.
+- Console OS 0.4.25 is installed on the bound Waveshare 4.3. It adds the exact
+  `0079:0011` SNES D-pad axis profile and makes transient Waveshare display
+  refresh-ack timeouts nonfatal during interactive redraws, preventing D-pad
+  navigation from turning off the backlight and halting the launcher. Retained
+  UART proved boot, READY, microSD, and controller enumeration; repeated manual
+  directional acceptance is still pending.
+- Console OS 0.4.26 is installed on the bound Waveshare 4.3: the exact SNES profile maps
+  physical A to accept and B to back, Waveshare Doom consumes the retained
+  OS-owned canonical gamepad snapshot, and a one-time settings migration
+  restores boot volume 10/10 plus game volume 9/10 without disabling later
+  Control Panel persistence. Build, full app readback, retained-UART READY,
+  microSD catalog, and controller enumeration passed; manual A/B and Doom
+  gameplay acceptance remain pending.
+- LORD 1.0.0 owns an explicit little-endian schema-3 save codec capped at 4
+  KiB, consumes launch snapshots, queues/polls copied `AUTO` commits, and has
+  eight local warriors, twelve typed mail slots, daily news, full tavern/PvP/
+  romance/family state, seven built-in IGMs, and twelve clipped ANSI/RIP-style
+  scenes.
 
 ### Missing
 
 - `P4_GAME_CAP_STORAGE` is read-only `.P4R`; it cannot store saves.
-- No Game API callback loads or queues writable game state.
-- Save Manager is a read-only metadata model.
+- LORD consumes the save snapshot and queues its codec; the SDL host proves
+  commit polling and relaunch data independently of board storage policy.
+- Save Manager does not yet scan durable slots at boot or perform management
+  operations. The current source updates only the session catalog after a
+  successful commit.
+- The Waveshare profile does not authorize firmware-side FAT writes, so it
+  correctly withholds `save` and remains session-only until storage ownership
+  and board policy are deliberately expanded.
 - `p4_multiplayer` is not exposed to cartridges and has no live firmware
   transport/lobby.
 - The BBS transport has no frozen message, realm, or lobby protocol.
 - Games receive one normalized input snapshot, not stable player slots.
-- Games have no OS-owned text-entry request for names or mail composition.
+- Games have no OS-owned text-entry request, but LORD has a complete
+  controller/touch character picker for names, mail, announcements, sayings,
+  and conversation. An OS modal is an optional keyboard acceleration path.
 - Games have no trusted date/day value.
 - There is no typed IGM handoff or sandboxed module runtime.
 - RIP graphics are not a Game API format. Raw RIPscrip must not be fed into
   the ANSI parser or allowed to execute terminal/file commands.
+- No wired HID controller, keyboard, or mouse has completed retained-UART
+  hardware acceptance on the Waveshare 4.3-inch board through the powered
+  H2 fixture/hub.
+- H1 serial framing and P4MP exist as bounded building blocks, but there is no
+  live two-console wired relay/lobby endpoint yet.
 
 ## Compatibility decision
 
@@ -175,23 +225,22 @@ the game continue in session-only mode.
 
 ### LORD save schema
 
-LORD should serialize fields explicitly in little endian. Do not persist C
-enums, pointers, padding, or the raw state structure. Version 1 needs:
+LORD schema 3 is implemented as explicit little endian under game magic
+`LDSV`, with total length, mutation generation, and payload CRC32. Its bounded
+4 KiB staging area persists the full player and three skill trees, eight local
+warriors, twelve typed mail records, twelve news records, daily counters,
+relationships/family, conversation, announcement, and realm revision. It does
+not persist C pointers, raw enum storage, padding, or the raw state structure.
 
-- class, level, weapon, armour, HP/max HP, strength, defence;
-- gold, bank, experience, forest fights, skill uses, dragon kills, day;
-- daily PvP/romance/IGM counters;
-- bounded local/realm relationship state;
-- last applied realm revision and mailbox cursor.
-
-Validate ranges before accepting a decoded save. A failed save must start a
-new character or offer the prior valid backup; it must not partially apply.
+The decoder validates magic, schema, length, CRC, strings, counts, stat ranges,
+relationships, and every bounded record before applying any data. A failed
+snapshot keeps the new-character path; backup selection remains OS owned.
 
 ## 2. OS-owned text entry
 
-Mail and player names need text beyond the eight-button input API. Add an
-asynchronous OS modal rather than passing keyboard events or terminal buffers
-to games.
+LORD already provides a controller/touch ANSI picker for every text flow. Add
+an asynchronous OS modal as an optional physical/touch keyboard acceleration
+path rather than passing raw keyboard events or terminal buffers to games.
 
 Suggested callbacks:
 
@@ -375,7 +424,81 @@ Transport requirements:
 
 CRC32 is corruption detection, not authentication.
 
-## 8. Console UI changes
+## 8. Controller-first USB and wired transport
+
+USB remains an OS-owned platform service, not a new cartridge capability.
+Games consume normalized `p4_game_input_t`, future stable player slots, and
+OS-owned text input. They never receive USB devices, descriptors, endpoints,
+transfers, host handles, UART handles, or role-switch controls.
+
+### Waveshare 4.3-inch role policy
+
+- H2 boots in controller-first USB host mode.
+- The board must not source H2 VBUS. Host-mode testing requires the qualified
+  externally powered, current-limited, backfeed-safe fixture/hub; a passive
+  OTG adapter is not an acceptable substitute.
+- One `platform_usb_host` instance owns the P4 HS controller and all class
+  drivers. Games and apps request bounded services through OS adapters.
+- Support one generic HID/DirectInput gamepad first, then a boot keyboard and
+  boot mouse through the same hub. Profiled pads may follow only after the
+  generic descriptor path is stable.
+- Treat every descriptor and report as hostile input: bound all lengths,
+  counts, collections, usages, and report IDs. A disconnect or malformed
+  report neutralizes the affected input generation immediately.
+- Hub and child recovery is bounded. Never reset or free the parent hub while
+  a control/status transfer is live. Exhaustion leaves hot-plug available and
+  must never reboot-loop the console.
+- Keep the locked ESP-IDF/component versions authoritative. Any local USB
+  source overlay must be generated from an exact hash-bound input, tested,
+  and proven to be the translation unit actually compiled; never edit managed
+  component sources in place.
+- The durable one-boot guard must cover every experimental root-clock,
+  downstream-retry, or hub-scheduler change. If a candidate fails before the
+  stable-loop confirmation, the next boot suppresses the experiment and still
+  reaches Console OS.
+
+### Explicit USB Drive mode
+
+Keep **USB Drive** as an app the user deliberately opens. It performs this
+fail-closed transition:
+
+1. neutralize controller/keyboard/mouse state and stop new host leases;
+2. drain and uninstall HID, hub, and USB host ownership;
+3. unmount Console OS from the microSD card;
+4. lazily allocate and start TinyUSB MSC device mode;
+5. require clean host eject or physical disconnect before leaving;
+6. stop TinyUSB, remount microSD, rescan the dynamic game directories, and
+   restart controller-first Host/HID.
+
+Host/HID and TinyUSB MSC must never overlap. Console OS and a laptop must
+never mount the same FAT volume concurrently. Any failed transition leaves H2
+quiesced and reports the reason; it must not format or repair the card
+implicitly.
+
+### Wired BBS and multiplayer transports
+
+Keep H1 CH343 USB-UART available for logs and the first framed BBS/P4MP relay
+while H2 remains controller-first. A Mac, PC, or small Linux host can relay two
+H1 links. A powered USB hub alone cannot route traffic between two USB-device
+ports. A future H2 CDC/vendor multiplayer mode is an explicit, mutually
+exclusive device-role app/session and cannot run while H2 owns controllers.
+
+Transport adapters expose only bounded lobby, player-slot, text, realm, or
+file-transfer services. Boot logs and framed application traffic need an
+unambiguous mode boundary. Physical UART between consoles is allowed only
+through a documented voltage-safe connector/pin profile and the same bounded
+framing; do not infer one from a USB-C receptacle.
+
+### Current USB checkpoint
+
+Do not flash as part of an ordinary build/test pass. Console OS 0.4.26 is the
+installed exact-unit candidate. It preserves the 768x480 shell, boot/audio
+settings, touch, dynamic SD catalog, and USB Drive role while accepting the
+named low-speed controller through the powered hub. Finish labeled A/B, Doom,
+repeated D-pad, and hot-plug acceptance before promoting it; do not weaken the
+identity, descriptor, report-bound, disconnect-neutralization, or VBUS guards.
+
+## 9. Console UI changes
 
 Upgrade the existing built-in pages:
 
@@ -390,38 +513,42 @@ Upgrade the existing built-in pages:
 Games remain 320×200. Text-entry and system confirmations are OS overlays;
 they must restore the game surface/input generation safely when dismissed.
 
-## 9. LORD integration after the OS services land
+Add visible USB state to the existing built-in pages: current H2 role,
+controller/keyboard/mouse presence, safe-mode state, last bounded host error,
+and whether USB Drive is waiting for eject. Do not claim a controller is ready
+merely because the hub enumerated.
 
-LORD 0.2.0 now has the complete playable local fallback. The following game
-work is complete:
+## 10. LORD integration after the OS services land
 
-- explicit deterministic save encoder/decoder with CRC, truncation, corrupt,
-  range, and round-trip tests;
-- Other Warriors directory and bounded challenge/PvP flow;
-- mailbox read, preset-compose, reply, and event-message flow;
-- courtship, gifts, proposals, marriage, and local spouse bonuses;
-- local daily PvP, romance, and IGM limits;
-- three built-in bounded IGMs;
-- a generated-and-dithered 16-color dragon/title scene plus clipped
-  code-drawn ANSI/RIP-style town, forest, inn, and battle scenes;
-- visible `LOCAL REALM` and session-only labels.
+LORD 1.0.0 has the complete standalone implementation. Completed game-side
+work includes:
 
-The OS integration pass should replace backends, not rebuild these screens or
-rules. Wire the immutable launch save snapshot to `lord_save_decode()` and
-copy the result of `lord_save_encode()` into `queue_save()`. A valid decoded
-snapshot enters the town; missing or rejected data keeps the new-character
-flow. Map local directory/mail/PvP/relationship operations onto realm tickets
-while retaining the arrays as the offline snapshot. Replace preset compose
-with the OS text modal when available, and replace inn-authoritative social
-counter resets with the trusted realm day. Add `OFFLINE`, `SYNCING`,
-`CONFLICT`, and `SAVED` status text from service state.
+- character creation and a controller/touch ANSI text editor;
+- all 131 monsters, the fifteen forest-event families, all three skill trees,
+  town progression, the full tavern, blackjack, Red Dragon, and rebirth;
+- eight persistent local warrior records, typed inbox/sent mail, bank
+  transfers, PvP and sleeping-player attacks;
+- courtship, Seth/Violet, marriage/divorce, children, and daily bonuses;
+- seven bounded adaptations of the pinned Synchronet add-ons;
+- twelve ANSI/RIP-style scenes and a generated/dithered title;
+- deterministic schema-3 save encoding, CRC/range/corruption/round-trip tests,
+  launch decode, copied queue, ticket polling, optimistic host sequence, and
+  commit-aware dirty-state clearing.
 
-External IGM handoff remains an OS adapter task; the three built-in IGMs must
-continue to work without it. LORD must remain playable when every optional
-service is absent and must never receive filesystem, socket, transport, clock,
-or display-driver ownership.
+The OS integration pass should replace optional backends, not rebuild these
+screens or rules. Save wiring is already complete in the cartridge. Map local
+directory/mail/PvP/relationship operations onto opaque realm tickets while
+retaining the arrays as the offline snapshot. The OS text modal may accelerate
+physical/touch keyboard entry, but the in-game picker remains the fallback.
+Replace inn-authoritative remote social resets with the trusted realm day and
+add `OFFLINE`, `SYNCING`, and `CONFLICT` state when a realm adapter exists.
 
-## 10. Required tests
+External IGM handoff remains an OS adapter task; all seven built-in modules
+must continue to work without it. LORD must remain playable when every
+optional service is absent and must never receive filesystem, socket,
+transport, clock, USB, or display-driver ownership.
+
+## 11. Required tests
 
 ### Save component
 
@@ -465,6 +592,24 @@ or display-driver ownership.
 - replay, bad CRC, bad route, timeout, malformed frames, and desync;
 - two-process host relay with loss, duplication, delay, and disconnect.
 
+### USB host, HID, and role switching
+
+- exact old/new `struct_bytes` Game API tests remain independent of USB;
+- fuzzed/truncated HID descriptors and reports, oversized input, and unknown
+  report IDs;
+- gamepad, boot keyboard, and boot mouse through the named powered fixture;
+- per-device disconnect neutralization, reconnect barrier, repeated hot-plug,
+  and hub-child removal in every order;
+- bounded enumeration exhaustion with the launcher, display, touch, audio,
+  microSD, and dynamic game catalog still alive;
+- interrupted-boot safe-mode recovery with no panic, watchdog, brownout, or
+  reboot loop;
+- Host/HID to USB Drive to Host/HID round trip, clean eject enforcement, no
+  concurrent FAT ownership, and no implicit formatting;
+- H1 framed relay while H2 retains a controller, including malformed frame,
+  partial read, replay, disconnect, and neutral-input behavior;
+- retained UART and exact artifact/device identity for every hardware claim.
+
 ### LORD
 
 - save round-trip and corrupt-save fallback;
@@ -476,19 +621,27 @@ or display-driver ownership.
 - renderer guards, Start/B/Back, touch mapping, and tone fallback;
 - fresh `.P4G` build with no unsupported ELF imports.
 
-## 11. Implementation order
+## 12. Implementation order
 
-1. Add durable save component, host-table tail, capability bit, package
+1. Keep the verified, unflashed Waveshare 0.4.23 USB checkpoint frozen while
+   OS APIs are upgraded. Use 0.4.24 or later for integrated UI/service work;
+   never reuse the 0.4.23 authorization for a changed artifact, and do not
+   flash without an explicit request.
+2. Add durable save component, host-table tail, capability bit, package
    validation, SDL in-memory backend, and Save Manager integration.
-2. Add OS text-entry modal and host-runner implementation.
-3. Add local `p4_realm` backend with directory/mail/PvP/relationship tests;
+3. Add OS text-entry modal and host-runner implementation.
+4. Add local `p4_realm` backend with directory/mail/PvP/relationship tests;
    expose it through the Game API.
-4. Add LORD save codec and full local realm UI; keep network status offline.
-5. Add revisioned BBS realm transport and trusted daily rollover.
-6. Expose same-console player slots, then the existing P4MP core as the
+5. Wire the existing LORD save codec and local realm UI to OS services; keep
+   network status offline when no realm is available.
+6. Add revisioned BBS realm transport and trusted daily rollover.
+7. Expose same-console player slots, then the existing P4MP core as the
    multiplayer-session adapter and lobby.
-7. Add built-in LORD IGMs, typed external handoff, and bounded vector scenes.
-8. Run focused host/sanitizer tests, `make game-sdk-host`, BBS/console-shell
+8. Finish H1 framed relay integration and qualify controller-first H2 host,
+   HID gamepad/keyboard/mouse, and explicit USB Drive role switching without
+   exposing USB ownership to games.
+9. Add built-in LORD IGMs, typed external handoff, and bounded vector scenes.
+10. Run focused host/sanitizer tests, `make game-sdk-host`, BBS/console-shell
    tests, one matching Console OS build, and only then the guarded hardware
    workflow if explicitly requested.
 
@@ -504,6 +657,14 @@ or display-driver ownership.
 - External IGMs exchange one typed, bounded, single-use result.
 - RIP-style data cannot execute terminal, file, or network operations.
 - UI reports offline/read-only/conflict states honestly.
+- Waveshare H2 boots controller-first, safely handles the named powered hub
+  and accepted HID devices, neutralizes input on disconnect, and never claims
+  that hub discovery alone proves a working controller.
+- USB Drive is an explicit mutually exclusive role switch; clean eject,
+  remount, and dynamic game rescan work without concurrent FAT ownership or
+  implicit formatting.
+- H1 can carry a bounded wired BBS/P4MP relay while H2 retains controller
+  ownership, and games receive no USB/UART handles.
 - Host and package tests pass under sanitizers.
 - Any physical-device claim names the exact board, artifact hash, serial
   evidence, and observed behavior. A build alone is not hardware acceptance.

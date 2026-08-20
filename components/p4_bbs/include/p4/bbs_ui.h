@@ -51,6 +51,8 @@ typedef enum {
     P4_BBS_HIT_NONE = 0,
     P4_BBS_HIT_DOOR,
     P4_BBS_HIT_BACK,
+    P4_BBS_HIT_PAGE_PREVIOUS,
+    P4_BBS_HIT_PAGE_NEXT,
 } p4_bbs_hit_kind_t;
 
 typedef struct {

@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "active": true,
+  "recorded_at": "2026-08-19T15:59:36-0700",
+  "scope": "Exact-unit forward install of Console OS 0.4.35 so Byte Buddy receives only named Wi-Fi encounters from the real passive C6 scanner",
+  "authority": {
+    "source": "operator request in the active Codex task",
+    "requests": [
+      "the game doesnt properly show ssids",
+      "its show a bunch of hidden which i dont want",
+      "i just want valid ssids"
+    ],
+    "automatic_rollback_authorized": false,
+    "post_write_policy": "Preserve the exact installed 0.4.34 application preimage, install only the 0.4.35 named-signal forward candidate, and test real Byte Buddy scans without automatically restoring an older image."
+  },
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "port": "/dev/cu.wchusbserial5C371865781",
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "path": "apps/console_os/build-waveshare-named-signals/bootloader/bootloader.bin",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "path": "apps/console_os/build-waveshare-named-signals/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    }
+  },
+  "predecessor": {
+    "version": "0.4.34",
+    "offset": "0x20000",
+    "application_bytes": 1376160,
+    "application_sha256": "74ab591eb9f9b60d1dc77a7fd1f5cc83eea8e3cdd5b696bdf8a679dbb34d0bc8",
+    "preserve_span_bytes": 1376256,
+    "preserve_path": "hardware/local-state/waveshare-console-os-0.4.35-named-signals-20260819/preimage-0.4.34.bin"
+  },
+  "candidate": {
+    "version": "0.4.35",
+    "source_base_commit": "e338fda8bcb3581eab0e4c6b8accb87a4c99995b",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "h2_role": "controller-first-runtime-switch",
+    "firmware_vbus_source": false,
+    "signal_policy": {
+      "scan_type": "passive",
+      "show_hidden": false,
+      "publish_only_named": true,
+      "reject_zero_length_or_all_space": true,
+      "preserve_rssi": true,
+      "opaque_bssid_identity": true,
+      "raw_ssid_or_bssid_exposed": false
+    },
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-named-signals/p4_console_os.bin",
+      "bytes": 1376240,
+      "padded_mutation_bytes": 1376256,
+      "sha256": "4b8d6e50a21019015fd1d381fee496d7caf181cbcb5f439594b63be2b148e365"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-named-signals/p4_console_os.elf",
+      "bytes": 17125696,
+      "sha256": "a60879425c4dd8db50333c6534c85cb6a3bf2b49e7805ad88eb016cbe51b5fee"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-named-signals/P4UPDATE.P4U",
+      "bytes": 1376496,
+      "sha256": "80a26a790135424f484f11b568d3f7fcc591e8d82ba8da04ad2e98973d6651e6"
+    },
+    "sdkconfig": {
+      "path": "apps/console_os/build-waveshare-named-signals/sdkconfig",
+      "bytes": 86844,
+      "sha256": "48580ea1e193d540d46d34314bb36eac6cc6c81d5b387f7059b5a18180cabd79"
+    },
+    "dependencies_lock": {
+      "path": "apps/console_os/dependencies-waveshare.lock",
+      "bytes": 6296,
+      "sha256": "392bb2cc5101cc6019f81dd420cf2c4fbb964bdae2a04e922a12c8e284667248",
+      "elf_loader": "1.3.1",
+      "esp_hosted": "1.4.7",
+      "esp_wifi_remote": "0.14.5"
+    },
+    "byte_buddy_package": {
+      "version": "3.1.1",
+      "path": "apps/console_os/build-waveshare-named-signals/sd-card/GAMES/BYTEBUD.P4G",
+      "bytes": 363732,
+      "sha256": "996698fbc6fc70d69e8cfe126e07f05fcdbdd4c4ab9bf886b68a49d470f180b7",
+      "stack_frame_limit_bytes": 1024
+    },
+    "byte_buddy_resource": {
+      "path": "apps/console_os/build-waveshare-named-signals/sd-card/GAMES/BYTEBUD.P4R",
+      "bytes": 732352,
+      "sha256": "9a2d1b88ec84d659a15c1f9d4a3af4ba0f29e7a7b512ff2c1fc9ff442f3dc0ca",
+      "payload_frames": 352
+    },
+    "source_files": [
+      {"path": "apps/console_os/CMakeLists.txt", "bytes": 21732, "sha256": "6c8501532c5fc5953031daedf84f22794fdbee664ae8dc14435881c7f0273c7c"},
+      {"path": "apps/console_os/main/CMakeLists.txt", "bytes": 3937, "sha256": "68428eb5898a6c08a2fe5e5d86e8ca1426436706e84defa406b03904974e2f7f"},
+      {"path": "apps/console_os/main/console_os_main.c", "bytes": 148430, "sha256": "285afa601b4af7a7dba01b0711df50821ddf7d79cf91bb6f130d2042d87ad076"},
+      {"path": "components/platform_game_loader/src/platform_game_loader.c", "bytes": 10967, "sha256": "421fe1893d3843ad1724c3de3115601c4bbc0e59f3ed0f9d95b46f1eb0a9bbfa"},
+      {"path": "components/platform_game_storage/src/platform_game_storage.c", "bytes": 55095, "sha256": "0f603a383af5321014b27d72f03474901391cfe27d4da01e52b82715f27b38e6"},
+      {"path": "components/platform_signal_scan/src/platform_signal_scan.c", "bytes": 11192, "sha256": "e6480683391ff37646b544d1e23196ba1cc1eba980a5f30bd37a150b9bc3d8bd"},
+      {"path": "hardware/boards/waveshare-esp32-p4-wifi6-touch-lcd-4.3/sdkconfig.defaults", "bytes": 2218, "sha256": "b45bcfa6973807df9d91145644b57a2d4d8a33768104c55dd0d845da73eb6342"},
+      {"path": "games/byte_buddy/src/byte_buddy.c", "bytes": 120582, "sha256": "1bdc13547f51a1a9c4fabe0e19a5a2e996678212f81fa2954c43efc95724f562"},
+      {"path": "games/byte_buddy/game.json", "bytes": 822, "sha256": "fd7e12c5278675560384dedf5251f3286992c19e5393321c128d661352c0bb8d"},
+      {"path": "scripts/verify-console-os-waveshare.py", "bytes": 43476, "sha256": "ed574d406b91f99ca9b5581a0a25ca22a11759c599d2f72dc2b1266a5b68618d"}
+    ]
+  },
+  "software_checks": {
+    "locked_environment": "pass",
+    "p4_signal_scan_host": "pass",
+    "controller_first_build": "pass",
+    "waveshare_build_verifier": "pass",
+    "named_only_source_gate": "pass",
+    "hardware_tested": false
+  },
+  "mutation": {
+    "allowed": [
+      "0x20000..0x16ffff application payload plus flash-sector padding"
+    ],
+    "forbidden": [
+      "bootloader",
+      "partition table",
+      "OTA data",
+      "NVS and persistent settings",
+      "microSD contents",
+      "factory backup"
+    ]
+  },
+  "required_device_checks": [
+    "retained UART reports App version 0.4.35",
+    "C6 passive scanner reaches ready after launcher startup",
+    "Byte Buddy Signal Hunt shows named SSIDs only",
+    "scan logs report raw, named, published, and hidden_filtered counts without logging SSIDs or BSSIDs",
+    "focused RSSI tracking and battle flow remain operational",
+    "Back returns to the launcher without a panic or reboot"
+  ]
+}

@@ -1,0 +1,131 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-18T20:58:13-0700",
+  "scope": "Exact-unit application-only install of touch-first Console OS 0.4.28 for live passive Wi-Fi signal hunting and RSSI-driven Byte Buddy progression",
+  "authority": {
+    "source": "operator requests in the active Codex task",
+    "requests": [
+      "ok focus on fixing that",
+      "thats the key piece of this game to leveling your dragons",
+      "i dont want rollback i want to test this on device"
+    ],
+    "automatic_rollback_authorized": false,
+    "post_write_policy": "Leave the 0.4.28 candidate installed for operator testing; preserve an exact predecessor preimage for manual recovery only."
+  },
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "port": "/dev/cu.wchusbserial5C371865781",
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "layout_guards": {
+    "bootloader": {
+      "offset": "0x2000",
+      "path": "apps/console_os/build-waveshare-landscape/bootloader/bootloader.bin",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30",
+      "live_verify_before_write": "pass"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "path": "apps/console_os/build-waveshare-landscape/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871",
+      "live_verify_before_write": "pass"
+    }
+  },
+  "predecessor": {
+    "version": "0.4.27",
+    "offset": "0x20000",
+    "application_bytes": 1111488,
+    "application_sha256": "4176054b87102de5f1cffdb0dc56d77d49c225e5a6b3df0010393ec987f6861e",
+    "preserved_span_bytes": 1355776,
+    "preserved_span_sha256": "55b064eff4392280aeb5a239ad4817b1b368779eb2e20008c49a27707e22468c",
+    "preserved_path": "hardware/local-state/waveshare-console-os-0.4.28-live-signal-20260818/preimage.bin",
+    "mode": "0400",
+    "automatic_restore": false
+  },
+  "candidate": {
+    "version": "0.4.28",
+    "source_base_commit": "e338fda8bcb3581eab0e4c6b8accb87a4c99995b",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3",
+    "h2_role": "usb-device-msc",
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.bin",
+      "bytes": 1354240,
+      "padded_mutation_bytes": 1355776,
+      "sha256": "1f1a7d555a479f75807f40d06d0b5cbbdad48306a4e876b933f08764e822d05d"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-landscape/p4_console_os.elf",
+      "bytes": 16876196,
+      "sha256": "8fab50b057eb24dd0bfdb50e10e5184719d81806d8fbac8718f4d57781f868db"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-landscape/P4UPDATE.P4U",
+      "bytes": 1354496,
+      "sha256": "a3cd584294fb308e9156c77d415d1e2e37825f2ffa20d0ea46668d6a1ffcece6"
+    },
+    "byte_buddy": {
+      "path": "apps/console_os/build-waveshare-landscape/sd-card/GAMES/BYTEBUD.P4G",
+      "bytes": 363840,
+      "sha256": "2d0d9896cb32cbcaf1947a12e537b6c7d401898306a56d88c47688747dcc0a8a",
+      "install_phase": "microSD update after firmware startup acceptance"
+    },
+    "dependencies_lock": {
+      "path": "apps/console_os/dependencies-waveshare.lock",
+      "bytes": 6296,
+      "sha256": "bb6d8aec95f69c15bb189ee9aac2e4a7ff3b1688bc6da3f5eb959a8e12c7e310",
+      "esp_hosted": "1.4.7",
+      "esp_wifi_remote": "0.14.5"
+    }
+  },
+  "radio_policy": {
+    "scan_type": "passive-only",
+    "connection_attempts": 0,
+    "raw_bssid_exposed_to_games": false,
+    "raw_bssid_logged": false,
+    "opaque_identity": "device-local keyed SipHash token over BSSID and SSID",
+    "initialization_stage": "after launcher READY and OTA-valid checkpoint",
+    "managed_component_modified": false,
+    "esp_hosted_constructor_linked": false
+  },
+  "software_checks": {
+    "byte_buddy_sanitizer": "pass",
+    "byte_buddy_sdl_host_smoke": "pass",
+    "game_sdk_host": "pass",
+    "waveshare_build_verifier": "pass",
+    "operator_interactive_simulator": "pass"
+  },
+  "mutation": {
+    "allowed": [
+      "0x20000..0x16afff application payload and flash-sector padding required by esptool"
+    ],
+    "forbidden": [
+      "bootloader",
+      "partition table",
+      "OTA data",
+      "NVS and persistent settings",
+      "microSD contents during the firmware phase",
+      "factory backup"
+    ]
+  },
+  "required_device_checks": [
+    "complete application verify_flash",
+    "retained-UART App version 0.4.28",
+    "launcher READY before SIGNAL_SCAN_START",
+    "ESP-Hosted C6 initialization after READY without reboot",
+    "C6 passive scanner ready",
+    "live Byte Buddy package copied to microSD",
+    "CARTRIDGE_START signals=ready",
+    "operator observes real nearby SSIDs and changing RSSI"
+  ]
+}

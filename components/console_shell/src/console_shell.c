@@ -190,7 +190,10 @@ typedef struct {
 
 enum {
     HOME_ITEM_CAPACITY = CONSOLE_SHELL_MAX_APPS + 1,
-    FILE_ROW_CONTROL_BASE = HOME_ITEM_CONTROL_BASE + HOME_ITEM_CAPACITY,
+    BBS_PAGE_PREVIOUS_CONTROL =
+        HOME_ITEM_CONTROL_BASE + HOME_ITEM_CAPACITY,
+    BBS_PAGE_NEXT_CONTROL,
+    FILE_ROW_CONTROL_BASE,
     FILE_PREV_CONTROL =
         FILE_ROW_CONTROL_BASE + CONSOLE_SHELL_FILE_VISIBLE_ROWS,
     FILE_NEXT_CONTROL,
@@ -1035,6 +1038,12 @@ static size_t control_at(const console_shell_t *shell,
         if (hit.kind == P4_BBS_HIT_BACK) {
             return FOLDER_UP_CONTROL;
         }
+        if (hit.kind == P4_BBS_HIT_PAGE_PREVIOUS) {
+            return BBS_PAGE_PREVIOUS_CONTROL;
+        }
+        if (hit.kind == P4_BBS_HIT_PAGE_NEXT) {
+            return BBS_PAGE_NEXT_CONTROL;
+        }
         if (hit.kind == P4_BBS_HIT_DOOR &&
             hit.door_index < model.door_count) {
             return HOME_ITEM_CONTROL_BASE +
@@ -1795,6 +1804,20 @@ console_shell_action_t console_shell_handle_touch(
                 return action;
             }
             return no_action();
+        }
+        if (use_bbs_launcher(shell) &&
+            released_control == BBS_PAGE_PREVIOUS_CONTROL &&
+            shell->home_scroll_row > 0U) {
+            (void)set_home_scroll_row(
+                shell, shell->home_scroll_row - 1U);
+            return page_changed(0U);
+        }
+        if (use_bbs_launcher(shell) &&
+            released_control == BBS_PAGE_NEXT_CONTROL &&
+            shell->home_scroll_row < home_max_scroll_row(shell)) {
+            (void)set_home_scroll_row(
+                shell, shell->home_scroll_row + 1U);
+            return page_changed(0U);
         }
         if (released_control == FOLDER_UP_CONTROL) {
             navigate_home_up(shell);

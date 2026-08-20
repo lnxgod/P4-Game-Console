@@ -10,6 +10,14 @@ hit testing, keyboard, and controller navigation share the same two-column,
 three-row door geometry. Native games remain 320x200 RGB565 and are scaled by
 the platform display path.
 
+The current source successor keeps game cadence in the OS at a target 30 Hz,
+but passes cartridges measured wall-clock frame time instead of a fabricated
+constant. Deltas are clamped to the Game API bound, the scheduler waits only
+for the remainder of the current frame, and late frames are logged rather than
+followed by rapid catch-up updates. The allocation-free `p4/visual.h` helpers
+then let cartridges add fixed-point motion, atlas animation, shake, and
+particles without taking over display or timing.
+
 The first visible Waveshare frame is now an ANSI adaptation of the official
 Game Changers AI lightbulb/circuit mark. Boot advances through visible POST,
 disk seek, `ATDT 6142763639`, V.22bis training, SD door-directory sync, and
@@ -216,6 +224,38 @@ falls back to the prior stable path. The verifier rejects modified managed
 sources, a substituted hub scheduler, a non-reproducible overlay, or a build
 containing the revoked split-transaction experiment. Retained UART and named
 hot-plug tests remain required for controller acceptance.
+
+Console OS 0.4.24 keeps that guarded USB candidate and fixes pointer-source
+arbitration in the launcher. An absent USB mouse no longer injects an invalid
+pointer frame before each GT911 poll, so controller-first mode cannot
+continually disarm physical touch. The native BBS marks each door as tappable
+and provides bounded touch Previous/Next controls for directories longer than
+six entries. This is host-tested only until a fresh exact-artifact release is
+installed and direct door taps are observed on the Waveshare panel.
+
+Console OS 0.4.25 fixes a controller-triggered black-screen halt. The Waveshare
+DPI submit path sometimes copies a valid frame but misses the later refresh
+acknowledgement window and returns `ESP_ERR_TIMEOUT` with the backlight still
+safe. Interactive launcher redraws now classify only that timeout as a missed
+acknowledgement, log `FRAME_ACK_MISSED`, and continue; hard display errors keep
+the existing fail-closed behavior. The Waveshare verifier pins this policy so
+a future input change cannot silently restore the fatal timeout path.
+
+Console OS 0.4.26 corrects the exact `0079:0011` SNES controller profile so
+physical A is the canonical accept/South button, physical B is back/East, and
+Y/X retain their labeled West/North positions. The Waveshare Doom handoff now
+reads the already-running OS-owned gamepad snapshot, preserving USB host
+ownership and hot-plug neutralization while adding D-pad and button controls.
+A one-time volume-policy migration restores the boot sequence to 10/10 and
+games (including Doom) to 9/10; later Control Panel changes remain persistent.
+
+Console OS 0.4.27 extends the Waveshare missed-refresh-acknowledgement policy
+to storage cartridges. A copied game frame that returns `ESP_ERR_TIMEOUT`
+with the backlight preserved is counted and allowed to continue, while every
+hard display error still fails closed. This prevents the first Byte Buddy
+frame, or a later animation frame, from being misclassified as a cartridge
+render failure after the launcher has already accepted the same panel timing
+condition.
 
 The 0.4.9 startup and Doom lifecycle correction rejects an unexpected embedded
 logo byte count and changes boot audio to a quiet 4/10 POST beep, short hard-disk

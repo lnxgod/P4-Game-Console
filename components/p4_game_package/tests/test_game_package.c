@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "p4/game.h"
 #include "p4/game_package.h"
 #include "p4/game_resource.h"
 
@@ -171,6 +172,16 @@ int main(int argc, char *argv[])
     assert(p4_game_package_parse(package, sizeof(package), &info) ==
            P4_GAME_PACKAGE_VALID);
     assert(strcmp(info.id, "org.test.synthetic") == 0);
+    write_u32(package + 40U,
+              P4_GAME_CAP_SAVE | P4_GAME_CAP_TEXT_INPUT |
+              P4_GAME_CAP_REALM | P4_GAME_CAP_MULTIPLAYER_SESSION |
+              P4_GAME_CAP_MODULE_HANDOFF | P4_GAME_CAP_VECTOR_SCENES);
+    assert(p4_game_package_parse(package, sizeof(package), &info) ==
+           P4_GAME_PACKAGE_VALID);
+    write_u32(package + 40U, UINT32_C(1) << 31U);
+    assert(p4_game_package_parse(package, sizeof(package), &info) ==
+           P4_GAME_PACKAGE_BAD_METADATA);
+    make_synthetic(package);
     package[240] = 1U;
     assert(p4_game_package_parse(package, sizeof(package), &info) ==
            P4_GAME_PACKAGE_BAD_LAYOUT);

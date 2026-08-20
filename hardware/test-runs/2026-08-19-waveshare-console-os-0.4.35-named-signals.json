@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-19T17:01:00-0700",
+  "result": "pass",
+  "classification": [
+    "host-tested",
+    "build-tested",
+    "hardware-tested",
+    "operator-confirmed"
+  ],
+  "scope": "Console OS 0.4.35 named-only passive Wi-Fi results in Byte Buddy",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "pcb_revision": null,
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "psram_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+    "uart": "/dev/cu.wchusbserial5C371865781",
+    "h2_fixture": "disconnected during named-signal acceptance"
+  },
+  "candidate": {
+    "version": "0.4.35",
+    "source_base_commit": "e338fda8bcb3581eab0e4c6b8accb87a4c99995b",
+    "application": {
+      "path": "apps/console_os/build-waveshare-named-signals/p4_console_os.bin",
+      "bytes": 1376240,
+      "sha256": "4b8d6e50a21019015fd1d381fee496d7caf181cbcb5f439594b63be2b148e365"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-named-signals/p4_console_os.elf",
+      "bytes": 17125696,
+      "sha256": "a60879425c4dd8db50333c6534c85cb6a3bf2b49e7805ad88eb016cbe51b5fee"
+    },
+    "byte_buddy_package": {
+      "version": "3.1.1",
+      "bytes": 363732,
+      "sha256": "996698fbc6fc70d69e8cfe126e07f05fcdbdd4c4ab9bf886b68a49d470f180b7"
+    },
+    "byte_buddy_resource": {
+      "bytes": 732352,
+      "sha256": "9a2d1b88ec84d659a15c1f9d4a3af4ba0f29e7a7b512ff2c1fc9ff442f3dc0ca"
+    }
+  },
+  "install": {
+    "authorization": {
+      "path": "hardware/evidence/waveshare-console-os-0.4.35-named-signals-20260819-exact-unit-authorization.json",
+      "bytes": 7001,
+      "sha256": "50687fafed6820e672c21286e9a7c083fe7fb76101ba445f5aee5f6d3a218a77"
+    },
+    "installer": {
+      "path": "scripts/install-waveshare-console-os-0.4.35-named-signals.sh",
+      "bytes": 10840,
+      "sha256": "83e7a4159e865f6d18e499ce76f28f97513d658e8c823f25778b86f43b7723ad"
+    },
+    "write_scope": "application partition only at 0x20000",
+    "predecessor_version": "0.4.34",
+    "preimage_bytes": 1376256,
+    "preimage_sha256": "9cf24354dc1ec8433c1fa400e954fdcf25527e66dca36e3716592e43fa2846da",
+    "padded_readback_sha256": "5995c04d4e2d9d91ef14ce9cc8985307f80500234eadf93c91a9616558517d69",
+    "install_write_attempt_count": 1,
+    "restore_required": false,
+    "automatic_rollback_authorized": false
+  },
+  "software_checks": {
+    "locked_environment": "pass",
+    "p4_signal_scan_host": "pass (1/1)",
+    "game_sdk_host": "pass",
+    "gamepad_host": "pass",
+    "console_shell_and_bbs_host": "pass",
+    "platform_game_storage_host": "pass (3/3)",
+    "board_port_check": "pass",
+    "console_os_host": "pass (7/7)",
+    "lord_host": "pass (1/1)",
+    "waveshare_console_os_build": "pass",
+    "waveshare_exact_build_verifier": "pass",
+    "git_diff_check": "pass",
+    "repository_check": "fails at unchanged scripts/tests/test-doom-e5-gate.py because unchanged Doom E5 metadata has flash_app_authorized=false while that historical test expects true"
+  },
+  "serial_observations": {
+    "boot": [
+      "App version: 0.4.35",
+      "ELF file SHA256: a60879425...",
+      "P4_GAME_STORAGE state=app-ready",
+      "P4_CONSOLE_OS GAME_CATALOG available=1 packages=13 valid=13 omitted=0",
+      "P4_CONSOLE_OS READY page=home",
+      "C6 passive scanner ready",
+      "opaque identity scope=device raw_bssid_exposed=0"
+    ],
+    "scan_samples": [
+      {"raw": 32, "named": 9, "published": 8, "hidden_filtered": 23},
+      {"raw": 32, "named": 11, "published": 8, "hidden_filtered": 21},
+      {"raw": 32, "named": 17, "published": 8, "hidden_filtered": 15},
+      {"raw": 32, "named": 16, "published": 8, "hidden_filtered": 16},
+      {"raw": 32, "named": 9, "published": 8, "hidden_filtered": 23},
+      {"raw": 32, "named": 13, "published": 8, "hidden_filtered": 19},
+      {"raw": 32, "named": 18, "published": 8, "hidden_filtered": 14}
+    ],
+    "game": [
+      "P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.byte-buddy signals=ready",
+      "P4_CARTRIDGE_RESOURCE_VERIFIED payload_bytes=732224",
+      "P4_CARTRIDGE_LOAD_DONE cartridge_exit=0",
+      "P4_CONSOLE_OS CARTRIDGE_STOP result=ESP_OK frames=759 display_ack_misses=0 return=launcher amp_safe=1"
+    ],
+    "privacy": "No raw SSID, BSSID, credential, or opaque token was logged.",
+    "nonblocking_warnings": [
+      "C6 firmware identity RPC timed out, but the passive scanner initialized and completed repeated live scans.",
+      "Seven boot/display submissions timed out and recovered before the game run; the Byte Buddy run had zero display acknowledgement misses."
+    ]
+  },
+  "operator_confirmation": {
+    "statement": "ok its working!!!",
+    "context": "Direct response after being asked to confirm that every Byte Buddy Signal Hunt result had a visible SSID name.",
+    "confirmed": [
+      "Byte Buddy launched on the physical badge",
+      "Signal Hunt displayed named SSIDs rather than HIDDEN SIGNAL encounters"
+    ],
+    "not_claimed": [
+      "signal battle completion",
+      "coin reward accounting",
+      "audible game sound quality",
+      "USB gamepad behavior in this run"
+    ]
+  }
+}

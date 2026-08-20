@@ -1,105 +1,105 @@
-# LORD 0.2.0 OS integration contract
+# LORD 1.0.0 OS integration contract
 
-LORD is feature-complete as a playable local-realm cartridge. This file is
-the short game-side wiring guide for the Console OS work specified in
-[`../../osupgrade.md`](../../osupgrade.md). The shared OS/API must remain the
-owner of storage, text entry, realm transport, time, module launch, display,
-and networking.
+LORD is a complete standalone cartridge. This document describes optional OS
+services that turn its persistent local realm into a shared BBS realm without
+giving the game filesystem, network, clock, USB, display, or raw-input
+ownership.
 
-## Current fallback behavior
+## Services used now
 
-- `video` and `controls` are the only required capabilities.
-- `audio-tone` is optional.
-- Four bounded local warrior records back the directory, PvP, romance, and
-  preset mail flows.
-- Inn rest advances the local day and resets forest, skill, PvP, romance, and
-  IGM limits.
-- Five RIP-style scenes use existing clipped Game API drawing primitives and
-  require no asset or vector-scene capability.
-- UI labels this mode `LOCAL REALM` and `SESSION ONLY`.
+- Required: `video`, `controls`
+- Optional: `audio-tone`, `save`
 
-Do not remove this fallback when optional OS services arrive.
+The save adapter is implemented in `src/lord.c`. At launch it validates
+`save_schema_version == 3`, the nonzero host sequence, and the copied launch
+snapshot before decoding. At safe update boundaries it encodes into a bounded
+4 KiB staging buffer, queues slot `AUTO`, polls the returned ticket, and clears
+`save_dirty` only after `COMMITTED`. Conflicts and unavailable storage fail
+closed while gameplay continues locally.
 
-## Save adapter
+The game-defined `LDSV` payload is explicit little endian and CRC protected.
+It persists the complete player, all three skill trees, daily counters, eight
+local warriors, twelve mail slots with text, twelve news records, marriages,
+children, conversation, announcement, IGM usage, and realm revision. It never
+serializes pointers, raw enums, structure padding, or `lord_state_t` itself.
 
-The game exports these functions from its canonical translation unit:
+The host-level save container remains the OS's responsibility: namespacing,
+SHA-256, optimistic sequence, atomic replacement, backup, journal recovery,
+storage ownership, quota, and Save Manager UI all live outside the cartridge.
 
-```c
-size_t lord_save_encode(const lord_state_t *state, uint8_t *bytes,
-                        size_t capacity);
-bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
-                      size_t length);
-```
+## Controller-only text fallback
 
-Schema 1 is a fixed 302-byte, explicit little-endian payload inside game magic
-`LDSV`. Its 16-byte game header carries schema, total length, payload CRC32,
-and the local mutation sequence. The maximum accepted buffer is 512 bytes.
-It serializes player stats, daily counters, realm revision, all four local
-records, spouse state, and all six compact mailbox slots. It never serializes
-raw `lord_state_t`, pointers, enum storage, or padding.
-
-At game start:
-
-1. Call normal `lord_initialize()`.
-2. If `save` is present and the launch snapshot is nonempty, pass the copied
-   bytes to `lord_save_decode()`.
-3. A valid decode lands on the town screen with `save_dirty == false`.
-4. A rejected snapshot must leave the new-character path intact; let the OS
-   offer its prior valid backup outside the cartridge.
-
-After a successful mutation, `save_dirty` is true and `save_sequence`
-advances. At safe UI boundaries, encode into a 512-byte stack/host staging
-buffer and pass a copied payload to the non-blocking OS `queue_save()` call.
-Clear `save_dirty` only after a committed status. Keep the OS container
-sequence separate from the game header and use the OS sequence for conflict
-checks.
+Names, mail, announcements, public sayings, and conversation already work
+with the cartridge's 44-key ANSI character picker. A future `text-input`
+service should be an optional acceleration path for touch/USB keyboards, not a
+requirement. Copy at most 47 printable characters into `editor_text`, reject
+controls or malformed UTF-8, and preserve the in-cartridge picker when the
+modal is unavailable or cancelled.
 
 ## Realm adapter
 
-The local UI model is `lord_realm_player_t realm[4]`, compact
-`lord_mail_t mail[6]`, `selected_player`, `selected_mail`,
-`realm_revision`, and `spouse_index`. Replace local actions with asynchronous
-realm tickets as follows:
+The offline snapshot consists of:
 
-| Game flow | Realm operation |
+```text
+lord_realm_player_t realm[8]
+lord_mail_t         mail[12]
+lord_log_entry_t    log[12]
+realm_revision, spouse_index, npc_spouse
+```
+
+Map the existing flows to asynchronous, revisioned operations:
+
+| Existing game flow | Optional realm operation |
 |---|---|
-| Other Warriors list | paged directory snapshot |
-| Player challenge | PvP lease/snapshot request |
-| PvP finish | single idempotent outcome commit |
-| Mailbox | headers after cursor, then read/mark-read |
-| Preset letter | send mail with idempotency token |
-| Compliment/gift/proposal | revisioned relationship request |
-| Inn social reset | trusted realm day transition |
+| Other Warriors / rankings | paged directory snapshot |
+| Player challenge / inn attack | lease immutable opponent snapshot |
+| PvP finish | idempotent outcome commit |
+| Inbox / sent mail | list, read, mark-read, send by opaque ID |
+| Courtship / proposal / divorce | consent-based relationship transaction |
+| Bank transfer | idempotent bounded transfer |
+| Daily News / conversation | bounded sanitized feed |
+| Sleep / daily reset | trusted realm-day transition |
 
-Copy and sanitize every bounded result into the game model. Opaque remote IDs,
-match IDs, revisions, and tickets belong in a future adapter substructure;
-never reinterpret array indexes as remote identity. A conflict must not award
-gold or apply marriage locally. Keep asynchronous PvP on `realm`; the
-`multiplayer-session` service is only for a later live-duel mode.
+Opaque remote IDs, revisions, leases, and tickets belong in a future adapter
+tail. Never treat local array indexes as remote identity. A conflict may not
+award gold, kill an opponent, deliver duplicate mail, or create a marriage.
+Remote relationship changes require both players' consent. Offline state must
+never overwrite a newer server revision.
 
-## Text, daily rollover, and IGMs
+Asynchronous classic LORD PvP uses `realm`; `multiplayer-session` is reserved
+for an optional future live duel/tournament mode.
 
-When `text-input` is present, the Compose action should request at most 512
-UTF-8 bytes and render only sanitized returned text. Preset mail remains the
-controller-only fallback.
+## External IGM handoff
 
-When `realm` provides a trusted day ID, apply social/IGM reset exactly once per
-day/revision. Forest rest may remain local, but it must not manufacture remote
-PvP or romance actions.
+Seven source-pinned add-ons are built in and work offline. `module-handoff`
+is only for separately installed packages. The OS must:
 
-The Goblin Dice, Old Wizard, and Herbalist are built in and need no module
-capability. When `module-handoff` is present, add a separate menu section for
-compatible external modules and use only the typed, single-use context/result
-flow in `osupgrade.md`.
+1. accept a copied, versioned, bounded stat context and nonce;
+2. queue LORD's save before normal exit;
+3. launch only a compatible installed module;
+4. validate a bounded one-use result and declared delta limits;
+5. relaunch LORD and consume the result once.
 
-## Manifest transition
+An IGM never opens LORD saves or runs inside LORD's address space. Prefer the
+planned sandbox for untrusted modules. Native modules remain fully trusted
+packages but still exchange only typed data.
 
-Do not add unknown capability names to `game.json` before the package parser,
-registry, loader, host table, and host runner all support them. After that OS
-work lands, add `save`, `text-input`, `realm`, and `module-handoff` as optional
-capabilities. Built-in scenes do not require `vector-scenes`.
+## Vector scenes
 
-The game is ready for OS-side integration when a host test can load a schema-1
-snapshot, mutate one feature, observe a copied queued 302-byte save, relaunch,
-and recover the same character. Realm acceptance additionally requires stale
-revision, duplicate outcome, decline, conflict, offline, and reconnect tests.
+The title and twelve built-in ANSI/RIP-style scenes use clipped RGB565 Game
+API drawing and need no new capability. If `vector-scenes` is implemented for
+shared assets, it must remain a bounded drawing-data format. Never execute
+RIPscrip terminal, file, callback, or download commands.
+
+## Acceptance needed for optional shared services
+
+- Save: launch an empty slot, mutate state, observe a copied schema-3 commit,
+  relaunch with the committed snapshot, recover after interrupted replacement,
+  and prove conflict/read-only/unavailable behavior.
+- Realm: cover stale revisions, duplicate outcomes, declines, consent,
+  disconnect, offline edits, reconnect, and sanitized hostile text.
+- IGM handoff: cover wrong schema/game, expired/replayed nonce, excessive
+  deltas, cancellation, missing module, and save-before-exit recovery.
+
+The standalone cartridge must keep working when all optional services are
+absent.

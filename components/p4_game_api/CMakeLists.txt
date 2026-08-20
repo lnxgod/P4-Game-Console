@@ -8,6 +8,7 @@ set(P4_GAME_API_SOURCES
     "src/feedback.c"
     "src/game_runtime.c"
     "src/input.c"
+    "src/visual.c"
 )
 
 if(COMMAND idf_component_register)

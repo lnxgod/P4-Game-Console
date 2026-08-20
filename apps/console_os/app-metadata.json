@@ -215,5 +215,5 @@
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "Guarded-install Console OS 0.4.23 on the bound Waveshare 4.3 and retain H1 UART. Require P4_HS_FSLS_ROOT_READY to show FSLSSupp=1, the post-enable UTMI clock selector, and the 1 ms HFIR interval; accept the attached low-speed child only if it reaches bounded HID descriptor/report parsing without a panic or reboot. If the first boot fails before the durable marker confirms, require the next safe-mode boot to suppress both HCD reapplication and downstream retries and reach READY. Then qualify repeated gamepad, keyboard, mouse hot-plug and the explicit USB Drive role switch separately."
+  "next_hardware_step": "App-only install Console OS 0.4.35 on the bound Waveshare 4.3 with H1 UART retained. Launch Byte Buddy, run repeated live Signal Hunts, and require named SSIDs only plus passive-scan logs showing hidden_filtered counts; verify RSSI tracking, battle flow, signal rewards, and Back-to-launcher without a panic or reboot. Preserve installed 0.4.34 as the preimage and do not roll back automatically."
 }

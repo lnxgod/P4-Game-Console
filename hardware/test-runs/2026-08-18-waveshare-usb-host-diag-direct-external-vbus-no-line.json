@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-18",
+  "result": "fail-no-usb-line-attach",
+  "scope": "Waveshare H2 direct-controller root-port electrical visibility with operator-supplied external VBUS",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART",
+    "h2": "direct controller through operator-supplied external VBUS circuit",
+    "external_vbus": "operator-attested",
+    "firmware_vbus_source": false,
+    "circuit_schematic_reviewed_by_project": false
+  },
+  "artifact": {
+    "application_offset": "0x20000",
+    "application_path": "apps/usb_host_diag/build-waveshare-landscape/p4_usb_host_diag.bin",
+    "application_bytes": 212976,
+    "application_sha256": "23eeff764ff888cbf6fa7f5bf0b1cf83e61c6c4336701f3322c83a2183a15ede",
+    "elf_sha256": "b3095ae3b90bd18b30ca53687ada9384e5d313535527ac621b77e4896e9a2277",
+    "source_base_commit": "e338fda8bcb3581eab0e4c6b8accb87a4c99995b",
+    "write_policy": "application only; exact readback hash matched; no backup, bootloader, partition-table, NVS, or microSD write"
+  },
+  "serial_evidence": [
+    "USB_DIAG_READY controller=p4-hs rhport=1 root_speed=high firmware_vbus_source=0",
+    "USB_DIAG_ROOT_PORT hprt=0x00001000 connected=0 enabled=0 line_state=0 power_bit=1 speed_code=0 reason=initial",
+    "No mount, HID, or root-port attach event followed during the observation window"
+  ],
+  "conclusion": "The DWC2 host and UTMI PHY initialized, but the P4 observed SE0 instead of a USB device pull-up. The direct fixture did not deliver an electrically visible USB data attach; HID parsing was never reached.",
+  "required_next_check": "At the controller side verify regulated 5 V and common ground, D+ and D- continuity/polarity, and USB-C source-role Rp signaling when a Type-C peripheral is used."
+}

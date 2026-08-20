@@ -21,7 +21,8 @@ enum {
 
 /**
  * Convert one driver-owned result into the only representation games may see.
- * The keyed token covers BSSID plus SSID and is intentionally session-scoped.
+ * The keyed token covers BSSID plus SSID. Key lifetime is owned by Console OS;
+ * games never receive either the key or a raw hardware address.
  */
 bool p4_signal_scan_make_game_signal(
     const uint8_t key[P4_SIGNAL_SCAN_KEY_BYTES],

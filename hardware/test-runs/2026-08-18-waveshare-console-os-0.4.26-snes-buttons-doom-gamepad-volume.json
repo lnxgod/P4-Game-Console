@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-18T19:19:49-0700",
+  "result": "installed-boot-pass-controller-idle-pass-manual-buttons-and-doom-pending",
+  "scope": "Correct the exact 0079:0011 SNES face-button labels, expose the OS-owned gamepad snapshot to Waveshare Doom, and restore loud persistent audio defaults",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART",
+    "h2": "operator-attested Sabrent powered hub with external VBUS",
+    "controller": {
+      "description": "generic SNES-style USB controller / Retrolink-compatible mapping",
+      "vendor_id": "0079",
+      "product_id": "0011",
+      "speed": "low",
+      "descriptor_bytes": 101,
+      "descriptor_sha256": "05a151c932362fee13503905962880ce75212bbf8c43c95701527b8290833162",
+      "parent_hub_address": 5,
+      "parent_port": 2
+    },
+    "firmware_vbus_source": false
+  },
+  "corrections": {
+    "face_buttons": "Exact hash-gated profile maps HID Y/B/A/X order to canonical West/East/South/North, making physical A accept and physical B back in Console OS",
+    "doom_input": "Waveshare embedded Doom polls the retained platform_gamepad_usb snapshot through doom_gamepad_input; it neither restarts nor owns the USB host",
+    "volume": "One-time volume-policy migration sets boot to 10/10 and games/Doom to 9/10, after which Control Panel persistence remains authoritative",
+    "regression_gate": "Host decoder tests and scripts/verify-console-os-waveshare.py pin the exact mapping, shared Doom path, and audio policy"
+  },
+  "artifact": {
+    "application_offset": "0x20000",
+    "application_path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+    "application_bytes": 1111216,
+    "application_sha256": "f0a5bdcb5ff11cbf966ff462c464cf046f12cc7f12298d3e018b6b453c9a59fe",
+    "elf_sha256": "c5f2ea0dfa0c9aaf969d8ea150d751a0c66f45c90b707637da8be2d0dd7fc769",
+    "version": "0.4.26",
+    "source_base_commit": "e338fda8bcb3581eab0e4c6b8accb87a4c99995b",
+    "write_policy": "primary application only; bootloader, partition table, OTA data, NVS, microSD, and factory backup preserved",
+    "readback": "complete application byte count and SHA-256 matched"
+  },
+  "focused_checks": [
+    "Exact 0079:0011 gamepad_core report tests passed",
+    "doom_gamepad_input host tests passed",
+    "Waveshare controller-first ESP-IDF image built successfully",
+    "scripts/verify-console-os-waveshare.py passed",
+    "guarded app-only writer verified the complete 1111216-byte readback"
+  ],
+  "serial_evidence": [
+    "App version: 0.4.26 and ELF file SHA256 prefix c5f2ea0df",
+    "P4_SETTINGS boot=10 game=9 source=volume-policy-1 persistent=1",
+    "P4_CONSOLE_OS AUDIO_PROFILE boot_volume=10 runtime_volume=9 runtime_restore=on-next-open",
+    "GAMEPAD_CONNECTED session=1 vid=0079 pid=0011 descriptor_bytes=101 profile=usb-gamepad-0079-0011 capabilities=0x00000003",
+    "USB_DEVICE_MOUNT addr=1 vid=0079 pid=0011 speed=low parent_hub=5 parent_port=2 identity_ok=1 route_ok=1",
+    "P4_CONSOLE_OS READY page=home display=mipi-dsi storage=microsd-read-only h2_role=usb-host-external-vbus",
+    "P4_CONSOLE_OS STATS loops=3900 gamepad=1 input_polls=3900 gamepad_failures=0 display_failures=0"
+  ],
+  "limitations": [
+    "Physical A, B, Y, and X were not pressed during retained-UART capture; operator acceptance of labeled behavior remains pending.",
+    "Doom was not launched during retained-UART capture; gameplay controls and exit behavior remain operator acceptance items.",
+    "Keyboard, mouse, repeated hot-plug, two-controller input, and USB Drive role switching remain separate acceptance cases."
+  ]
+}

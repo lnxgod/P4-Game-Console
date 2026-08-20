@@ -77,6 +77,23 @@ def main() -> None:
     with tempfile.TemporaryDirectory() as temporary:
         games = pathlib.Path(temporary) / "games"
         games.mkdir()
+        extended = manifest("extended_caps", 120)
+        extended["optional_capabilities"] = [
+            "audio-tone",
+            "save",
+            "text-input",
+            "realm",
+            "multiplayer-session",
+            "module-handoff",
+            "vector-scenes",
+        ]
+        write_manifest(games, "extended_caps", extended)
+        result = run("--games-root", str(games), "--check")
+        assert result.returncode == 0, result.stderr
+
+    with tempfile.TemporaryDirectory() as temporary:
+        games = pathlib.Path(temporary) / "games"
+        games.mkdir()
         with_resource = manifest("dragon", 150)
         with_resource["resource_file"] = "DRAGON.P4R"
         with_resource["resource_payload"] = "assets/dragon.bin"
@@ -133,6 +150,27 @@ def main() -> None:
             result = run("--games-root", str(games), "--check")
             assert result.returncode != 0, folder
             assert "folder" in result.stderr
+
+    invalid_stack_limits = (True, 0, 127, 16385, "512")
+    for index, limit in enumerate(invalid_stack_limits):
+        with tempfile.TemporaryDirectory() as temporary:
+            games = pathlib.Path(temporary) / "games"
+            games.mkdir()
+            bad_stack = manifest(f"bad_stack_{index}", 240 + index)
+            bad_stack["stack_frame_limit_bytes"] = limit
+            write_manifest(games, f"bad_stack_{index}", bad_stack)
+            result = run("--games-root", str(games), "--check")
+            assert result.returncode != 0, limit
+            assert "stack_frame_limit_bytes" in result.stderr
+
+    with tempfile.TemporaryDirectory() as temporary:
+        games = pathlib.Path(temporary) / "games"
+        games.mkdir()
+        bounded_stack = manifest("bounded_stack", 250)
+        bounded_stack["stack_frame_limit_bytes"] = 512
+        write_manifest(games, "bounded_stack", bounded_stack)
+        result = run("--games-root", str(games), "--check")
+        assert result.returncode == 0, result.stderr
 
     print("game registry tests passed")
 

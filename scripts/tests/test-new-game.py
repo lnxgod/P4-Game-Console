@@ -53,10 +53,20 @@ def main() -> None:
         assert duplicate.returncode != 0
 
         dry_run = run(
-            CREATOR, "Moon Run", "--games-root", str(games), "--dry-run")
+            CREATOR, "Moon Run", "--optional-capability", "audio-tone",
+            "--optional-capability", "save",
+            "--games-root", str(games), "--dry-run")
         assert dry_run.returncode == 0, dry_run.stderr
         assert not (games / "moon_run").exists()
-        assert json.loads(dry_run.stdout)["launcher_id"] == 101
+        dry_report = json.loads(dry_run.stdout)
+        assert dry_report["launcher_id"] == 101
+        assert dry_report["optional_capabilities"] == ["audio-tone", "save"]
+
+        duplicate_capability = run(
+            CREATOR, "Bad Save", "--optional-capability", "save",
+            "--optional-capability", "save",
+            "--games-root", str(games), "--dry-run")
+        assert duplicate_capability.returncode != 0
 
         folder_dry_run = run(
             CREATOR, "Puzzle Box", "--folder", "GAMES/PUZZLE",

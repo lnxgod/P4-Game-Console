@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-18T15:13:49-0700",
+  "result": "functional-pass-with-reenumeration-observed",
+  "scope": "Waveshare H2 high-speed USB host, external hub transaction translator, low-speed HID gamepad, and Console OS integration",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "fixture": {
+    "h1": "Mac programming and retained UART",
+    "h2": "operator-attested externally powered, backfeed-safe USB-C hub",
+    "hub": {
+      "vendor_id": "05e3",
+      "product_id": "0610",
+      "descriptor_product": "USB2.1 Hub",
+      "speed": "high"
+    },
+    "controller": {
+      "vendor_id": "0079",
+      "product_id": "0011",
+      "descriptor_product": "USB Gamepad",
+      "speed": "low",
+      "parent_hub_address": 5,
+      "parent_port": 4
+    },
+    "firmware_vbus_source": false
+  },
+  "artifact": {
+    "application_offset": "0x20000",
+    "application_path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+    "application_bytes": 1108080,
+    "application_sha256": "e1417c62a9aa357a200359c06829c91a93c4a3c25082ebf3483fa9a1699cc4a6",
+    "elf_sha256": "b6cf076d883d26e62b15e40e0a68ebc52e5c09d9b78af39b7410e311b35dbd4f",
+    "version": "0.4.24",
+    "source_base_commit": "e338fda8bcb3581eab0e4c6b8accb87a4c99995b",
+    "write_policy": "primary application only; bootloader, partition table, OTA data, NVS, microSD, and existing factory backup preserved"
+  },
+  "usb_stack": {
+    "name": "TinyUSB",
+    "version": "0.21.0~1",
+    "root_speed": "high",
+    "hub_transaction_translator": true,
+    "host_task_core": 1,
+    "host_interrupt_core": 1,
+    "device_mode_role_switch_retained": true
+  },
+  "serial_evidence": [
+    "USB_HOST_ROOT_PORT_ENABLED stack=tinyusb root_speed=high hub_tt=enabled",
+    "GAMEPAD_CONNECTED vid=0079 pid=0011 profile=usb-gamepad-0079-0011 capabilities=0x00000003",
+    "USB_DEVICE_MOUNT speed=low parent_hub=5 parent_port=4 identity_ok=1 route_ok=1",
+    "P4_CONSOLE_OS STATS usb_input_ready=1 gamepad=1 gamepad_failures=0 aux_failures=0",
+    "Console OS main loop continued rendering after USB initialization with no watchdog, panic, or halt",
+    "Launcher subsequently performed a Doom handoff while the controller transport remained active"
+  ],
+  "limitations": [
+    "Two controller disconnect/re-enumeration cycles were observed during the final capture; operator cable movement was not distinguished from transport instability.",
+    "The final capture proves one gamepad. Two-controller simultaneous gameplay and USB Drive role-switch acceptance remain separate tests.",
+    "Boot audio remained at the previously saved level 3 and was not changed by this USB-focused install."
+  ]
+}

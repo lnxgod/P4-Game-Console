@@ -26,6 +26,7 @@
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/idf_additions.h"
+#include "freertos/semphr.h"
 #include "freertos/task.h"
 #pragma GCC diagnostic pop
 #include "p4/audio.h"
@@ -36,6 +37,7 @@
 #include "p4/desktop.h"
 #include "p4/draw.h"
 #include "p4/game.h"
+#include "p4/game_save_service.h"
 #include "p4/input.h"
 #include "p4/multiplayer.h"
 #include "p4/platform.h"
@@ -46,8 +48,7 @@
 #include "platform/game_loader.h"
 #include "platform/game_storage.h"
 #include "platform/os_update.h"
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
-    !CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
 #define P4_CONSOLE_SIGNAL_SCAN 1
 #include "platform/signal_scan.h"
 #else
@@ -110,6 +111,8 @@ enum {
     CONSOLE_BOOT_LOGO_HEIGHT = 112,
     CONSOLE_STORAGE_INIT_STACK_BYTES = 12 * 1024,
     CONSOLE_P4CART_SCAN_STACK_BYTES = 24 * 1024,
+    CONSOLE_GAME_SAVE_STACK_BYTES = 8 * 1024,
+    CONSOLE_GAME_SAVE_STOP_TIMEOUT_MS = 5000,
     CONSOLE_NATIVE_AUDIO_FRAMES_PER_TICK =
         P4_GAME_PLATFORM_AUDIO_SAMPLE_RATE_HZ *
         CONSOLE_FRAME_INTERVAL_MS / 1000,
@@ -187,6 +190,7 @@ static bool s_gamepad_ready;
 static bool s_gamepad_connected;
 static bool s_keyboard_connected;
 static bool s_mouse_connected;
+static bool s_mouse_pointer_active;
 static uint32_t s_terminal_keyboard_session;
 static uint8_t s_previous_terminal_keys[PLATFORM_USB_KEYBOARD_BOOT_KEY_COUNT];
 static uint32_t s_gamepad_polls;
@@ -1634,7 +1638,12 @@ static console_shell_runtime_info_t runtime_info(void)
             s_game_storage_status.usb_mode_supported,
         .usb_storage_eject_safe =
             s_game_storage_status.usb_host_ejected,
-        .usb_drive_active = s_game_storage_status.usb_driver_running,
+        /* The TinyUSB driver also runs while the app owns the SD card so it
+         * can detect H2 attachment. Only USB ownership means Drive mode. */
+        .usb_drive_active =
+            s_game_storage_status.state == PLATFORM_GAME_STORAGE_USB_HOST ||
+            s_game_storage_status.state ==
+                PLATFORM_GAME_STORAGE_USB_FORMAT_REQUIRED,
 #if P4_CONSOLE_USB_INPUT
         .usb_input_host_active = s_gamepad_ready,
 #else
@@ -1970,6 +1979,7 @@ static void neutralize_usb_input_state(void)
     s_gamepad_connected = false;
     s_keyboard_connected = false;
     s_mouse_connected = false;
+    s_mouse_pointer_active = false;
     s_terminal_keyboard_session = 0U;
     memset(s_previous_terminal_keys, 0, sizeof(s_previous_terminal_keys));
     s_mouse_x = CONSOLE_SHELL_LAYOUT_WIDTH / 2U;
@@ -2124,8 +2134,12 @@ static void create_usb_input_or_continue(void)
     (void)start_usb_input();
 }
 
-static console_shell_action_t poll_usb_input(console_shell_t *shell)
+static console_shell_action_t poll_usb_input(
+    console_shell_t *shell, bool *pointer_owned)
 {
+    if (pointer_owned != NULL) {
+        *pointer_owned = false;
+    }
     platform_gamepad_snapshot_t gamepad;
     uint32_t buttons = read_gamepad_snapshot(&gamepad)
         ? gamepad_shell_buttons(&gamepad.state) : 0U;
@@ -2161,6 +2175,10 @@ static console_shell_action_t poll_usb_input(console_shell_t *shell)
 
     console_shell_action_t pointer_action = {0};
     if (input_valid && input.mouse.connected != 0U) {
+        s_mouse_pointer_active = true;
+        if (pointer_owned != NULL) {
+            *pointer_owned = true;
+        }
         s_mouse_x = move_pointer_axis(
             s_mouse_x, input.mouse.delta_x,
             CONSOLE_SHELL_LAYOUT_WIDTH);
@@ -2186,8 +2204,15 @@ static console_shell_action_t poll_usb_input(console_shell_t *shell)
             left_down ? 1U : 0U);
     } else {
         console_shell_set_pointer(shell, false, 0U, 0U, false);
-        pointer_action = console_shell_handle_touch(
-            shell, false, NULL, 0U);
+        if (s_mouse_pointer_active) {
+            /* Release a departing mouse once, then return touch ownership. */
+            s_mouse_pointer_active = false;
+            if (pointer_owned != NULL) {
+                *pointer_owned = true;
+            }
+            pointer_action = console_shell_handle_touch(
+                shell, true, NULL, 0U);
+        }
     }
     return button_action.type != CONSOLE_ACTION_NONE
         ? button_action : pointer_action;
@@ -2280,9 +2305,15 @@ static console_shell_action_t poll_touch_input(console_shell_t *shell)
 static console_shell_action_t poll_input(console_shell_t *shell)
 {
 #if P4_CONSOLE_USB_INPUT
-    const console_shell_action_t usb_action = poll_usb_input(shell);
+    bool usb_pointer_owned = false;
+    const console_shell_action_t usb_action =
+        poll_usb_input(shell, &usb_pointer_owned);
     if (usb_action.type != CONSOLE_ACTION_NONE) {
         return usb_action;
+    }
+    if (usb_pointer_owned) {
+        const console_shell_action_t no_action = {0};
+        return no_action;
     }
 #endif
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
@@ -2373,6 +2404,29 @@ static esp_err_t present(console_shell_t *shell)
     return platform_display_submit_rgb565(
         s_pixels, CONSOLE_SHELL_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
 #endif
+}
+
+/*
+ * The Waveshare DPI driver can finish copying a frame while its refresh
+ * callback lands outside the submitter's qualification window.  The frame
+ * remains valid and the backlight is deliberately preserved, so a timeout is
+ * a dropped acknowledgement rather than a fatal display fault.  Interactive
+ * input must never turn that recoverable condition into a black-screen halt.
+ */
+static esp_err_t present_interactive(console_shell_t *shell)
+{
+    const esp_err_t result = present(shell);
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    if (result == ESP_ERR_TIMEOUT) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS FRAME_ACK_MISSED action=continue "
+                 "backlight_preserved=1 render=%lu",
+                 shell == NULL ? 0UL :
+                     (unsigned long)shell->render_generation);
+        return ESP_OK;
+    }
+#endif
+    return result;
 }
 
 #if !CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
@@ -2531,9 +2585,19 @@ static esp_err_t present_bbs_home_reveal(console_shell_t *shell)
         memcpy(reveal_pixels + previous_rows * CONSOLE_SHELL_WIDTH,
                s_pixels + previous_rows * CONSOLE_SHELL_WIDTH,
                added_rows * CONSOLE_SHELL_WIDTH * sizeof(*s_pixels));
-        result = platform_display_submit_content_rgb565(
-            reveal_pixels, CONSOLE_SHELL_WIDTH,
-            CONSOLE_SUBMIT_TIMEOUT_MS);
+        for (unsigned attempt = 0U;
+             attempt < CONSOLE_BOOT_SUBMIT_ATTEMPTS; ++attempt) {
+            result = platform_display_submit_content_rgb565(
+                reveal_pixels, CONSOLE_SHELL_WIDTH,
+                CONSOLE_SUBMIT_TIMEOUT_MS);
+            if (result != ESP_ERR_TIMEOUT) {
+                break;
+            }
+            ESP_LOGW(TAG,
+                     "P4_CONSOLE_OS BBS_REVEAL_RETRY step=%u attempt=%u",
+                     step, attempt + 1U);
+            vTaskDelay(pdMS_TO_TICKS(CONSOLE_BOOT_SUBMIT_RETRY_MS));
+        }
         if (result != ESP_OK) {
             break;
         }
@@ -2962,18 +3026,276 @@ static esp_err_t wait_for_game_storage_with_boot_animation(void)
     }
 }
 
+enum {
+    CARTRIDGE_SAVE_NOTIFY_WORK = UINT32_C(1) << 0U,
+    CARTRIDGE_SAVE_NOTIFY_STOP = UINT32_C(1) << 1U,
+};
+
+typedef struct {
+    p4_game_save_service_t service;
+    StaticSemaphore_t lock_storage;
+    StaticSemaphore_t stopped_storage;
+    SemaphoreHandle_t lock;
+    SemaphoreHandle_t stopped;
+    TaskHandle_t worker;
+    uint8_t *queue_workspace;
+    uint8_t *object_workspace;
+    uint8_t *launch_snapshot;
+    uint32_t processed_requests;
+    uint32_t callback_busy_rejections;
+    unsigned worker_low_water_bytes;
+} cartridge_save_runtime_t;
+
+static void save_catalog_record(const char *game_id, const char *slot_id,
+                                size_t payload_bytes, uint32_t sequence)
+{
+    if (game_id == NULL || slot_id == NULL || payload_bytes == 0U ||
+        sequence == 0U) {
+        return;
+    }
+    s_saves.writable = storage_app_owned();
+    for (size_t index = 0U; index < s_saves.count; ++index) {
+        p4_save_slot_t *const slot = &s_saves.slots[index];
+        if (slot->valid && strcmp(slot->game_id, game_id) == 0 &&
+            strcmp(slot->slot_name, slot_id) == 0) {
+            s_saves.total_bytes -= slot->size_bytes;
+            slot->size_bytes = payload_bytes;
+            slot->sequence = sequence;
+            s_saves.total_bytes += payload_bytes;
+            return;
+        }
+    }
+    (void)p4_save_catalog_add(
+        &s_saves, game_id, slot_id, payload_bytes, sequence);
+}
+
+static p4_game_save_storage_mode_t cartridge_save_storage_mode(void)
+{
+    platform_game_storage_status_t status;
+    if (platform_game_storage_get_status(&status) != ESP_OK) {
+        return P4_GAME_SAVE_STORAGE_UNAVAILABLE;
+    }
+    if (status.state == PLATFORM_GAME_STORAGE_APP_READY) {
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+        /* The exact Waveshare profile currently authorizes app reads and
+         * exclusive host writes, not firmware-side FAT mutation. */
+        return P4_GAME_SAVE_STORAGE_READ_ONLY;
+#else
+        return P4_GAME_SAVE_STORAGE_WRITABLE;
+#endif
+    }
+    if (status.state == PLATFORM_GAME_STORAGE_USB_HOST ||
+        status.state == PLATFORM_GAME_STORAGE_TRANSITION) {
+        return P4_GAME_SAVE_STORAGE_HOST_OWNED;
+    }
+    return P4_GAME_SAVE_STORAGE_UNAVAILABLE;
+}
+
+static void cartridge_save_worker(void *opaque)
+{
+    cartridge_save_runtime_t *const runtime = opaque;
+    if (runtime == NULL) {
+        vTaskDelete(NULL);
+        return;
+    }
+    for (;;) {
+        uint32_t notifications = 0U;
+        (void)xTaskNotifyWait(
+            0U, UINT32_MAX, &notifications, portMAX_DELAY);
+        if (xSemaphoreTake(runtime->lock, portMAX_DELAY) == pdTRUE) {
+            const size_t processed = p4_game_save_service_process(
+                &runtime->service, P4_GAME_SAVE_MAX_SLOTS);
+            if (UINT32_MAX - runtime->processed_requests < processed) {
+                runtime->processed_requests = UINT32_MAX;
+            } else {
+                runtime->processed_requests += (uint32_t)processed;
+            }
+            (void)xSemaphoreGive(runtime->lock);
+        }
+        if ((notifications & CARTRIDGE_SAVE_NOTIFY_STOP) != 0U) {
+            runtime->worker_low_water_bytes =
+                (unsigned)uxTaskGetStackHighWaterMark(NULL);
+            (void)xSemaphoreGive(runtime->stopped);
+            vTaskDelete(NULL);
+            return;
+        }
+    }
+}
+
+static void cartridge_save_release_allocations(
+    cartridge_save_runtime_t *runtime)
+{
+    if (runtime == NULL) {
+        return;
+    }
+    heap_caps_free(runtime->launch_snapshot);
+    heap_caps_free(runtime->object_workspace);
+    heap_caps_free(runtime->queue_workspace);
+    heap_caps_free(runtime);
+}
+
+static cartridge_save_runtime_t *cartridge_save_open(const char *game_id)
+{
+    cartridge_save_runtime_t *const runtime = heap_caps_calloc(
+        1U, sizeof(*runtime), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+    if (runtime == NULL) {
+        return NULL;
+    }
+    runtime->queue_workspace = heap_caps_malloc(
+        P4_GAME_SAVE_MEMORY_WORKSPACE_BYTES,
+        MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    runtime->object_workspace = heap_caps_malloc(
+        P4_GAME_SAVE_MAX_FILE_BYTES,
+        MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    runtime->launch_snapshot = heap_caps_malloc(
+        P4_GAME_SAVE_MAX_BYTES,
+        MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    runtime->lock = xSemaphoreCreateMutexStatic(&runtime->lock_storage);
+    runtime->stopped = xSemaphoreCreateBinaryStatic(
+        &runtime->stopped_storage);
+    if (runtime->queue_workspace == NULL ||
+        runtime->object_workspace == NULL ||
+        runtime->launch_snapshot == NULL || runtime->lock == NULL ||
+        runtime->stopped == NULL ||
+        !p4_game_save_service_init(
+            &runtime->service, PLATFORM_GAME_STORAGE_MOUNT_POINT,
+            cartridge_save_storage_mode(), game_id, "AUTO",
+            runtime->queue_workspace,
+            P4_GAME_SAVE_MEMORY_WORKSPACE_BYTES,
+            runtime->object_workspace, P4_GAME_SAVE_MAX_FILE_BYTES,
+            runtime->launch_snapshot, P4_GAME_SAVE_MAX_BYTES)) {
+        cartridge_save_release_allocations(runtime);
+        return NULL;
+    }
+    if (!p4_game_save_service_available(&runtime->service)) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS SAVE_DEGRADED app=%s startup=%s "
+                 "capability=unavailable",
+                 game_id, p4_game_save_store_result_name(
+                     runtime->service.startup_result));
+        return runtime;
+    }
+    const BaseType_t created = xTaskCreateWithCaps(
+        cartridge_save_worker, "game_save",
+        CONSOLE_GAME_SAVE_STACK_BYTES, runtime, tskIDLE_PRIORITY + 1U,
+        &runtime->worker, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (created != pdPASS) {
+        p4_game_save_service_set_storage_mode(
+            &runtime->service, P4_GAME_SAVE_STORAGE_UNAVAILABLE);
+        runtime->worker = NULL;
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS SAVE_DEGRADED app=%s "
+                 "startup=worker-allocation capability=unavailable",
+                 game_id);
+    }
+    return runtime;
+}
+
+static bool cartridge_save_close(cartridge_save_runtime_t *runtime,
+                                 const char *game_id)
+{
+    if (runtime == NULL) {
+        return true;
+    }
+    if (runtime->worker != NULL) {
+        (void)xTaskNotify(
+            runtime->worker, CARTRIDGE_SAVE_NOTIFY_STOP, eSetBits);
+        if (xSemaphoreTake(
+                runtime->stopped,
+                pdMS_TO_TICKS(CONSOLE_GAME_SAVE_STOP_TIMEOUT_MS)) !=
+            pdTRUE) {
+            ESP_LOGE(TAG,
+                     "P4_CONSOLE_OS SAVE_WORKER_TIMEOUT app=%s "
+                     "action=retain-runtime",
+                     game_id);
+            return false;
+        }
+    }
+    size_t payload_bytes = 0U;
+    uint32_t schema_version = 0U;
+    uint32_t sequence = 0U;
+    if (p4_game_save_memory_copy_snapshot(
+            &runtime->service.queue, "AUTO", runtime->launch_snapshot,
+            P4_GAME_SAVE_MAX_BYTES, &payload_bytes, &schema_version,
+            &sequence)) {
+        (void)schema_version;
+        save_catalog_record(game_id, "AUTO", payload_bytes, sequence);
+    }
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS SAVE_WORKER_STOP app=%s requests=%lu "
+             "callback_busy=%lu low_water_bytes=%u snapshot_bytes=%u "
+             "sequence=%lu",
+             game_id, (unsigned long)runtime->processed_requests,
+             (unsigned long)runtime->callback_busy_rejections,
+             runtime->worker_low_water_bytes, (unsigned)payload_bytes,
+             (unsigned long)sequence);
+    cartridge_save_release_allocations(runtime);
+    return true;
+}
+
 typedef struct {
     const char *game_id;
     p4_achievement_catalog_t *achievements;
+    cartridge_save_runtime_t *save;
     p4_audio_mixer_t mixer;
     p4_game_platform_audio_t audio;
     p4_game_input_mapper_t input_mapper;
     TickType_t last_wake;
+    int64_t last_frame_us;
     uint32_t frames;
+    uint32_t frame_overruns;
+    uint32_t max_frame_ms;
+    uint32_t display_ack_misses;
     p4_game_result_t game_result;
     bool audio_running;
     bool finished;
 } cartridge_run_context_t;
+
+static bool cartridge_queue_save(
+    void *opaque, const char *slot_id, uint32_t schema_version,
+    uint32_t expected_sequence, const uint8_t *data, size_t data_bytes,
+    p4_game_save_ticket_t *ticket_out)
+{
+    cartridge_run_context_t *const context = opaque;
+    if (ticket_out != NULL) {
+        *ticket_out = P4_GAME_SAVE_INVALID_TICKET;
+    }
+    if (context == NULL || context->save == NULL ||
+        context->save->worker == NULL || ticket_out == NULL ||
+        xSemaphoreTake(context->save->lock, 0U) != pdTRUE) {
+        if (context != NULL && context->save != NULL &&
+            context->save->callback_busy_rejections != UINT32_MAX) {
+            ++context->save->callback_busy_rejections;
+        }
+        return false;
+    }
+    const bool accepted = p4_game_save_service_queue(
+        &context->save->service, slot_id, schema_version,
+        expected_sequence, data, data_bytes, ticket_out);
+    (void)xSemaphoreGive(context->save->lock);
+    if (accepted) {
+        (void)xTaskNotify(
+            context->save->worker, CARTRIDGE_SAVE_NOTIFY_WORK, eSetBits);
+    }
+    return accepted;
+}
+
+static bool cartridge_read_save_status(
+    void *opaque, p4_game_save_ticket_t ticket,
+    p4_game_save_status_t *status_out,
+    uint32_t *committed_sequence_out)
+{
+    cartridge_run_context_t *const context = opaque;
+    if (context == NULL || context->save == NULL ||
+        xSemaphoreTake(context->save->lock, 0U) != pdTRUE) {
+        return false;
+    }
+    const bool read = p4_game_save_service_read_status(
+        &context->save->service, ticket, status_out,
+        committed_sequence_out);
+    (void)xSemaphoreGive(context->save->lock);
+    return read;
+}
 
 static bool cartridge_unlock_achievement(
     void *opaque, const p4_game_achievement_t *achievement)
@@ -3040,6 +3362,23 @@ static bool cartridge_present(void *opaque)
     }
     const esp_err_t result = platform_display_submit_rgb565(
         s_pixels, P4_GAME_SURFACE_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    if (result == ESP_ERR_TIMEOUT) {
+        if (context->display_ack_misses != UINT32_MAX) {
+            ++context->display_ack_misses;
+        }
+        if (context->display_ack_misses == 1U ||
+            context->display_ack_misses % 300U == 0U) {
+            ESP_LOGW(TAG,
+                     "P4_CONSOLE_OS CARTRIDGE_FRAME_ACK_MISSED "
+                     "app=%s action=continue backlight_preserved=1 "
+                     "count=%lu",
+                     context->game_id,
+                     (unsigned long)context->display_ack_misses);
+        }
+        return true;
+    }
+#endif
     return result == ESP_OK;
 }
 
@@ -3050,6 +3389,29 @@ static bool cartridge_poll_frame(void *opaque,
     cartridge_run_context_t *const context = opaque;
     if (context == NULL || out_input == NULL || out_elapsed_ms == NULL) {
         return false;
+    }
+    const TickType_t frame_ticks =
+        pdMS_TO_TICKS(CONSOLE_FRAME_INTERVAL_MS);
+    const TickType_t now_ticks = xTaskGetTickCount();
+    const TickType_t elapsed_ticks = now_ticks - context->last_wake;
+    if (elapsed_ticks < frame_ticks) {
+        vTaskDelay(frame_ticks - elapsed_ticks);
+    } else if (context->frame_overruns != UINT32_MAX) {
+        ++context->frame_overruns;
+    }
+    context->last_wake = xTaskGetTickCount();
+    const int64_t now_us = esp_timer_get_time();
+    int64_t elapsed_ms =
+        (now_us - context->last_frame_us) / INT64_C(1000);
+    context->last_frame_us = now_us;
+    if (elapsed_ms < 1) {
+        elapsed_ms = 1;
+    } else if (elapsed_ms > P4_GAME_MAX_FRAME_DELTA_MS) {
+        elapsed_ms = P4_GAME_MAX_FRAME_DELTA_MS;
+    }
+    *out_elapsed_ms = (uint32_t)elapsed_ms;
+    if (*out_elapsed_ms > context->max_frame_ms) {
+        context->max_frame_ms = *out_elapsed_ms;
     }
 #if P4_CONSOLE_USB_INPUT
     platform_gamepad_snapshot_t gamepad;
@@ -3127,9 +3489,6 @@ static bool cartridge_poll_frame(void *opaque,
                  (unsigned long)context->audio.frames_written);
 #endif
     }
-    *out_elapsed_ms = CONSOLE_FRAME_INTERVAL_MS;
-    vTaskDelayUntil(&context->last_wake,
-                    pdMS_TO_TICKS(CONSOLE_FRAME_INTERVAL_MS));
     return true;
 }
 
@@ -3155,11 +3514,15 @@ static esp_err_t run_stored_game(
         .achievements = &s_achievements,
         .game_result = P4_GAME_ERROR,
         .last_wake = xTaskGetTickCount(),
+        .last_frame_us = esp_timer_get_time(),
     };
     p4_audio_mixer_init(&context.mixer);
     p4_game_platform_audio_init(&context.audio);
     const uint32_t capabilities = game->package.required_capabilities |
         game->package.optional_capabilities;
+    if ((capabilities & P4_GAME_CAP_SAVE) != 0U) {
+        context.save = cartridge_save_open(game->package.id);
+    }
     if ((capabilities &
          (P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM)) != 0U) {
         const esp_err_t audio_result = p4_game_platform_audio_open(
@@ -3180,6 +3543,9 @@ static esp_err_t run_stored_game(
 #else
     const bool signal_scan_ready = false;
 #endif
+    const bool save_ready = context.save != NULL &&
+        context.save->worker != NULL &&
+        p4_game_save_service_available(&context.save->service);
     p4_cartridge_host_v1_t host = {
         .magic = P4_CARTRIDGE_HOST_MAGIC,
         .api_version = P4_CARTRIDGE_HOST_API_VERSION,
@@ -3188,7 +3554,8 @@ static esp_err_t run_stored_game(
             P4_GAME_CAP_CONTROLS |
             (context.audio_running
                 ? P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM : 0U) |
-            (signal_scan_ready ? P4_GAME_CAP_SIGNAL_SCAN : 0U),
+            (signal_scan_ready ? P4_GAME_CAP_SIGNAL_SCAN : 0U) |
+            (save_ready ? P4_GAME_CAP_SAVE : 0U),
         .expected_game_id = game->package.id,
         .surface = {
             .pixels = s_pixels,
@@ -3211,33 +3578,57 @@ static esp_err_t run_stored_game(
         .read_signal_scan = signal_scan_ready
             ? cartridge_read_signal_scan : NULL,
 #endif
+        .save_data = save_ready &&
+            context.save->service.launch_snapshot_bytes != 0U
+            ? context.save->service.launch_snapshot : NULL,
+        .save_bytes = save_ready
+            ? context.save->service.launch_snapshot_bytes : 0U,
+        .save_schema_version = save_ready
+            ? context.save->service.launch_schema_version : 0U,
+        .save_sequence = save_ready
+            ? context.save->service.launch_sequence : 0U,
+        .queue_save = save_ready ? cartridge_queue_save : NULL,
+        .read_save_status = save_ready
+            ? cartridge_read_save_status : NULL,
     };
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS CARTRIDGE_START app=%s file=%s api=1 "
-             "source=%s runtime=psram-elf audio=%s signals=%s",
+             "source=%s runtime=psram-elf audio=%s signals=%s saves=%s "
+             "save_bytes=%u save_sequence=%lu",
              game->package.id, game->file_name,
              game->in_games_directory
                 ? "microsd-games-directory" : "microsd-root-compat",
              context.audio_running ? "ready" : "silent",
-             signal_scan_ready ? "ready" : "offline");
+             signal_scan_ready ? "ready" : "offline",
+             save_ready ? "ready" : "session-only",
+             save_ready
+                 ? (unsigned)context.save->service.launch_snapshot_bytes : 0U,
+             save_ready
+                 ? (unsigned long)context.save->service.launch_sequence : 0UL);
     esp_err_t result = platform_game_loader_run(game, &host);
     close_native_audio_or_halt(&context.audio);
+    (void)cartridge_save_close(context.save, game->package.id);
     if (result == ESP_OK &&
         (!context.finished ||
          context.game_result != P4_GAME_EXIT_TO_LAUNCHER)) {
         result = ESP_FAIL;
     }
     console_shell_set_achievement_catalog(shell, &s_achievements);
+    (void)console_shell_set_save_catalog(shell, &s_saves);
     console_shell_show_home(shell);
-    const esp_err_t home_result = present(shell);
+    const esp_err_t home_result = present_interactive(shell);
     if (home_result != ESP_OK) {
         halt_dark("cartridge-return-home", home_result);
     }
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS CARTRIDGE_STOP app=%s result=%s frames=%lu "
-             "return=launcher amp_safe=%u",
+             "frame_overruns=%lu max_frame_ms=%lu "
+             "display_ack_misses=%lu return=launcher amp_safe=%u",
              game->package.id, esp_err_to_name(result),
              (unsigned long)context.frames,
+             (unsigned long)context.frame_overruns,
+             (unsigned long)context.max_frame_ms,
+             (unsigned long)context.display_ack_misses,
              context.audio.hardware_touched
                 ? (context.audio.safe_high_proven ? 1U : 0U) : 1U);
     return result;
@@ -3376,14 +3767,6 @@ void app_main(void)
                  "P4_CONSOLE_OS SETTINGS_DEGRADED defaults=1 error=%s",
                  esp_err_to_name(settings_result));
     }
-#if P4_CONSOLE_SIGNAL_SCAN
-    const esp_err_t signal_scan_result = platform_signal_scan_start();
-    if (signal_scan_result != ESP_OK) {
-        ESP_LOGW(TAG,
-                 "P4_CONSOLE_OS SIGNAL_SCAN_DEGRADED error=%s",
-                 esp_err_to_name(signal_scan_result));
-    }
-#endif
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
     (void)create_shared_control_bus_or_continue();
 #endif
@@ -3464,6 +3847,18 @@ void app_main(void)
              "P4_CONSOLE_OS MAIN_STACK stage=core-ready "
              "low_water_bytes=%u",
              (unsigned)uxTaskGetStackHighWaterMark(NULL));
+#if P4_CONSOLE_SIGNAL_SCAN
+    const esp_err_t signal_scan_result = platform_signal_scan_start();
+    if (signal_scan_result == ESP_OK) {
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS SIGNAL_SCAN_START stage=post-ready "
+                 "mode=passive-only");
+    } else {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS SIGNAL_SCAN_DEGRADED error=%s",
+                 esp_err_to_name(signal_scan_result));
+    }
+#endif
 
     TickType_t last_wake = xTaskGetTickCount();
     for (;;) {
@@ -3564,7 +3959,7 @@ void app_main(void)
             }
         }
         if (console_shell_is_dirty(shell)) {
-            result = present(shell);
+            result = present_interactive(shell);
             if (result != ESP_OK) {
                 halt_dark("frame-submit", result);
             }

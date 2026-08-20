@@ -1,0 +1,102 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-18T20:21:15-0700",
+  "scope": "Exact-unit application-only install of Console OS 0.4.27 to prevent recoverable Waveshare refresh-ack timeouts from aborting Byte Buddy cartridges",
+  "authority": {
+    "source": "operator request in the active Codex task",
+    "requests": [
+      "push to the console please",
+      "it crashed the game didnt launch needs fixed"
+    ]
+  },
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "port": "/dev/cu.wchusbserial5C371865781",
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "layout_guards": {
+    "bootloader": {
+      "offset": "0x2000",
+      "path": "apps/console_os/build-waveshare-usb-host/bootloader/bootloader.bin",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "path": "apps/console_os/build-waveshare-usb-host/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    }
+  },
+  "predecessor": {
+    "version": "0.4.26",
+    "offset": "0x20000",
+    "bytes": 1111216,
+    "sha256": "f0a5bdcb5ff11cbf966ff462c464cf046f12cc7f12298d3e018b6b453c9a59fe",
+    "live_complete_readback_required": true
+  },
+  "candidate": {
+    "version": "0.4.27",
+    "source_base_commit": "e338fda8bcb3581eab0e4c6b8accb87a4c99995b",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+      "bytes": 1111488,
+      "sha256": "4176054b87102de5f1cffdb0dc56d77d49c225e5a6b3df0010393ec987f6861e"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.elf",
+      "bytes": 14028844,
+      "sha256": "79c6bed7047c032a7956ed62e37589e00be05e077a43bf4287e33f33d89b976c"
+    }
+  },
+  "required_checks": [
+    "pinned ESP-IDF 5.5.3 environment",
+    "exact device identity and 32 MiB geometry",
+    "preserved factory backup size and SHA-256",
+    "installed bootloader and partition table verify byte-for-byte",
+    "complete installed 0.4.26 application readback SHA-256",
+    "controller-first ESP-IDF build and Waveshare verifier pass",
+    "Byte Buddy sanitizer unit suite and Game API host smoke pass",
+    "Byte Buddy 1200-frame SDL sanitizer run and scripted 140-frame touch journey pass",
+    "complete post-write application verify_flash",
+    "retained-UART 0.4.27 boot and launcher READY evidence"
+  ],
+  "mutation": {
+    "allowed": [
+      "0x20000..0x12ffff application payload and flash-sector padding required by esptool"
+    ],
+    "forbidden": [
+      "bootloader",
+      "partition table",
+      "OTA data",
+      "NVS and persistent settings",
+      "microSD contents",
+      "factory backup"
+    ],
+    "write_args": [
+      "--flash_mode",
+      "dio",
+      "--flash_size",
+      "32MB",
+      "--flash_freq",
+      "80m",
+      "0x20000",
+      "apps/console_os/build-waveshare-usb-host/p4_console_os.bin"
+    ]
+  },
+  "remaining_acceptance": [
+    "Launch Byte Buddy on the panel and observe CARTRIDGE_START",
+    "Exercise touch care animation without render failure or reboot",
+    "Return to the launcher and observe CARTRIDGE_STOP"
+  ]
+}

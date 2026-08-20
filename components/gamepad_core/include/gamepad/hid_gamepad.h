@@ -44,6 +44,8 @@ typedef enum {
     GAMEPAD_HID_MAP_RIGHT_TRIGGER,
     GAMEPAD_HID_MAP_HAT,
     GAMEPAD_HID_MAP_BUTTON,
+    GAMEPAD_HID_MAP_DPAD_X,
+    GAMEPAD_HID_MAP_DPAD_Y,
 } gamepad_hid_map_target_t;
 
 typedef enum {

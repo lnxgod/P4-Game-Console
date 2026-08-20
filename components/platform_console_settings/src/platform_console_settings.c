@@ -12,7 +12,12 @@ static const char *const TAG = "p4_settings";
 static const char *const SETTINGS_NAMESPACE = "p4_console";
 static const char *const BOOT_VOLUME_KEY = "boot_volume";
 static const char *const GAME_VOLUME_KEY = "game_volume";
+static const char *const VOLUME_POLICY_KEY = "volume_policy";
 static const char *const USB_ENUM_PROBE_KEY = "usb_enum_probe";
+
+enum {
+    VOLUME_POLICY_VERSION = 1,
+};
 
 bool platform_console_settings_volume_valid(uint8_t volume_step)
 {
@@ -29,6 +34,44 @@ static void set_defaults(platform_console_settings_t *settings)
         .game_volume_step = PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT,
         .persistent = false,
     };
+}
+
+static esp_err_t migrate_volume_policy(nvs_handle_t handle,
+                                       platform_console_settings_t *settings,
+                                       bool *migrated)
+{
+    if (settings == NULL || migrated == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *migrated = false;
+    uint8_t version = 0U;
+    esp_err_t result = nvs_get_u8(handle, VOLUME_POLICY_KEY, &version);
+    if (result == ESP_ERR_NVS_NOT_FOUND) {
+        result = ESP_OK;
+    }
+    if (result != ESP_OK || version >= VOLUME_POLICY_VERSION) {
+        return result;
+    }
+
+    result = nvs_set_u8(
+        handle, BOOT_VOLUME_KEY, PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT);
+    if (result == ESP_OK) {
+        result = nvs_set_u8(
+            handle, GAME_VOLUME_KEY, PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT);
+    }
+    if (result == ESP_OK) {
+        result = nvs_set_u8(
+            handle, VOLUME_POLICY_KEY, VOLUME_POLICY_VERSION);
+    }
+    if (result == ESP_OK) {
+        result = nvs_commit(handle);
+    }
+    if (result == ESP_OK) {
+        settings->boot_volume_step = PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT;
+        settings->game_volume_step = PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT;
+        *migrated = true;
+    }
+    return result;
 }
 
 esp_err_t platform_console_settings_init(
@@ -49,19 +92,32 @@ esp_err_t platform_console_settings_init(
 
     nvs_handle_t handle;
     esp_err_t result = nvs_open(
-        SETTINGS_NAMESPACE, NVS_READONLY, &handle);
-    if (result == ESP_ERR_NVS_NOT_FOUND) {
-        settings->persistent = true;
-        ESP_LOGI(TAG,
-                 "P4_SETTINGS boot=%u game=%u source=defaults persistent=1",
-                 settings->boot_volume_step, settings->game_volume_step);
-        return ESP_OK;
-    }
+        SETTINGS_NAMESPACE, NVS_READWRITE, &handle);
     if (result != ESP_OK) {
         ESP_LOGW(TAG,
                  "P4_SETTINGS defaults=1 persistence=0 open=%s",
                  esp_err_to_name(result));
         return result;
+    }
+
+    bool migrated = false;
+    result = migrate_volume_policy(handle, settings, &migrated);
+    if (result != ESP_OK) {
+        nvs_close(handle);
+        ESP_LOGW(TAG,
+                 "P4_SETTINGS defaults=1 persistence=0 migration=%s",
+                 esp_err_to_name(result));
+        return result;
+    }
+    if (migrated) {
+        nvs_close(handle);
+        settings->persistent = true;
+        ESP_LOGI(TAG,
+                 "P4_SETTINGS boot=%u game=%u source=volume-policy-%u "
+                 "persistent=1",
+                 settings->boot_volume_step, settings->game_volume_step,
+                 (unsigned)VOLUME_POLICY_VERSION);
+        return ESP_OK;
     }
 
     uint8_t value = 0U;

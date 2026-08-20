@@ -396,10 +396,16 @@ if [ "$P4_APP" = gamepad_diag ]; then
     export P4_GAMEPAD_DIAG_ARM_TOKEN_SHA256
     "$P4_SCRIPT_DIR/build.sh" "$P4_APP"
     unset P4_GAMEPAD_DIAG_ARM_TOKEN_SHA256
+elif [ "$P4_APP" = usb_host_diag ]; then
+    "$P4_SCRIPT_DIR/build-waveshare-usb-host-diag.sh"
 else
     "$P4_SCRIPT_DIR/build.sh" "$P4_APP"
 fi
-P4_BUILD_DIR="$P4_PROJECT_ROOT/apps/$P4_APP/build"
+if [ "$P4_APP" = usb_host_diag ]; then
+    P4_BUILD_DIR="$P4_PROJECT_ROOT/apps/$P4_APP/build-waveshare-landscape"
+else
+    P4_BUILD_DIR="$P4_PROJECT_ROOT/apps/$P4_APP/build"
+fi
 P4_BUILT_APP_OFFSET=$(python3 -c '
 import json, pathlib, sys
 args = pathlib.Path(sys.argv[1]) / "flasher_args.json"

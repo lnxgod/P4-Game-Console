@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.4.23")
+set(PROJECT_VER "0.4.35")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")
@@ -32,6 +32,7 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_content_catalog"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_desktop"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_save"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_package"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_multiplayer"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_os_update_package"
@@ -55,9 +56,11 @@ elseif(P4_BOARD_PROFILE STREQUAL
     list(APPEND EXTRA_COMPONENT_DIRS
         "${CMAKE_CURRENT_LIST_DIR}/../../components/board_deps_waveshare"
         "${CMAKE_CURRENT_LIST_DIR}/../doom_embedded_touch_audio/components/platform_audio"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_gamepad_input"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_touch_input"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_video"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/gamepad_core"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_tinyusb_dual"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_audio_es8311"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_audio_factory"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad_usb"
@@ -68,12 +71,10 @@ elseif(P4_BOARD_PROFILE STREQUAL
         "${CMAKE_CURRENT_LIST_DIR}/../doom/components/doom_audio"
         "${CMAKE_CURRENT_LIST_DIR}/../doom_audio_probe/components/doom_engine_audio"
     )
-    if(NOT P4_WAVESHARE_CONTROLLER_FIRST_BUILD)
-        list(APPEND EXTRA_COMPONENT_DIRS
-            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_signal_scan"
-            "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_signal_scan"
-        )
-    endif()
+    list(APPEND EXTRA_COMPONENT_DIRS
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_signal_scan"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_signal_scan"
+    )
 else()
     list(APPEND EXTRA_COMPONENT_DIRS
         "${CMAKE_CURRENT_LIST_DIR}/../../components/board_deps_elecrow"
@@ -242,6 +243,40 @@ if(P4_USB_COMPONENT_OVERLAY_SOURCES)
         ${P4_USB_COMPONENT_OVERLAY_SOURCES})
 endif()
 
+# The locked ESP-Hosted 1.4.7 component registers a C constructor that starts
+# SDIO before app_main. Console OS owns storage and launch ordering, so the
+# Waveshare images remove only that constructor translation unit and call
+# esp_hosted_init() from platform_signal_scan after the launcher reaches READY.
+# This keeps the controller-first H2 image from losing Byte Buddy's passive
+# signal capability while preserving explicit OS-owned startup ordering. The
+# managed component contents remain untouched and authoritative.
+if(P4_BOARD_PROFILE STREQUAL
+       "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
+    idf_component_get_property(
+        P4_HOSTED_COMPONENT_LIB espressif__esp_hosted COMPONENT_LIB)
+    get_target_property(
+        P4_HOSTED_COMPONENT_SOURCES ${P4_HOSTED_COMPONENT_LIB} SOURCES)
+    set(P4_HOSTED_COMPONENT_FILTERED_SOURCES)
+    set(P4_HOSTED_AUTOSTART_SOURCE_MATCHES 0)
+    foreach(P4_HOSTED_COMPONENT_SOURCE IN LISTS P4_HOSTED_COMPONENT_SOURCES)
+        if(P4_HOSTED_COMPONENT_SOURCE MATCHES
+           "(^|/)host/esp_hosted_host_init\\.c$")
+            math(EXPR P4_HOSTED_AUTOSTART_SOURCE_MATCHES
+                "${P4_HOSTED_AUTOSTART_SOURCE_MATCHES} + 1")
+        else()
+            list(APPEND P4_HOSTED_COMPONENT_FILTERED_SOURCES
+                "${P4_HOSTED_COMPONENT_SOURCE}")
+        endif()
+    endforeach()
+    if(NOT P4_HOSTED_AUTOSTART_SOURCE_MATCHES EQUAL 1)
+        message(FATAL_ERROR
+            "expected exactly one locked ESP-Hosted autostart source; "
+            "found ${P4_HOSTED_AUTOSTART_SOURCE_MATCHES}")
+    endif()
+    set_property(TARGET ${P4_HOSTED_COMPONENT_LIB} PROPERTY SOURCES
+        "${P4_HOSTED_COMPONENT_FILTERED_SOURCES}")
+endif()
+
 # A reviewed full-project install seeds a valid wear-levelled FAT volume.
 # Subsequent app-only updates leave this persistent partition untouched.
 if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" OR
@@ -325,6 +360,7 @@ set(P4_CARTRIDGE_COMMON_SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/game.h"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/audio_pack.h"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/feedback.h"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/visual.h"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/audio_pack.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/draw.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/feedback.c"
@@ -332,6 +368,7 @@ set(P4_CARTRIDGE_COMMON_SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/generated/feedback_atlas.inc"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/game_runtime.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/input.c"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/visual.c"
 )
 
 function(p4_add_seed_game PACKAGE_NAME GAME_NAME RESOURCE_NAME RESOURCE_PAYLOAD)

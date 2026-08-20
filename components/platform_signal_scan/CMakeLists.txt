@@ -11,6 +11,7 @@ idf_component_register(
         esp_wifi
         esp_wifi_remote
         freertos
+        nvs_flash
         p4_game_api
         p4_signal_scan
 )

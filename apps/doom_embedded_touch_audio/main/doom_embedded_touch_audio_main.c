@@ -5,7 +5,9 @@
  * build-only while the board profile's GPIO30-low electrical release remains
  * closed; repository metadata and the central verifier deny every flash/run
  * route. The branch preserves E1's exact WAD/display/video path, routes every
- * audio call through the counted app-local adapter, and keeps USB absent.
+ * audio call through the counted app-local adapter. The standalone successor
+ * keeps USB absent; the Waveshare Console OS integration consumes the shared
+ * platform gamepad snapshot without taking ownership of the USB host.
  */
 
 #include <inttypes.h>
@@ -23,10 +25,19 @@
 #include "doom/audio_runtime.h"
 #include "doom/video.h"
 #include "doomgeneric.h"
+#include "doomkeys.h"
 #include "i_system.h"
 #include "m_controls.h"
 #include "runtime_gate.h"
 #include "touch_controls.h"
+#if defined(P4_CONSOLE_OS_EMBEDDED) && \
+    defined(CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3) && \
+    CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#define P4_DOOM_SHARED_USB_GAMEPAD 1
+#include "doom_gamepad/input.h"
+#else
+#define P4_DOOM_SHARED_USB_GAMEPAD 0
+#endif
 #pragma GCC diagnostic push
 /* ESP-IDF 5.5.3 has two sign-conversion warnings in inline RISC-V headers. */
 #pragma GCC diagnostic ignored "-Wsign-conversion"
@@ -45,6 +56,9 @@
 #include "platform/readonly_blob.h"
 #include "platform/touch.h"
 #include "platform_i2c_shared/bus.h"
+#if P4_DOOM_SHARED_USB_GAMEPAD
+#include "platform_gamepad_usb/platform_gamepad_usb.h"
+#endif
 
 #define DOOM_SUBMIT_TIMEOUT_MS UINT32_C(100)
 #define DOOM_FIRST_FRAME_TIMEOUT_MS UINT32_C(250)
@@ -91,6 +105,15 @@ static uint32_t s_last_touch_degraded_log_ms;
 static uint32_t s_touch_polls;
 static uint32_t s_touch_poll_failures;
 static uint32_t s_touch_retries;
+
+#if P4_DOOM_SHARED_USB_GAMEPAD
+static doom_gamepad_input_t s_gamepad_input;
+static bool s_gamepad_connection_known;
+static uint8_t s_gamepad_connected;
+static uint32_t s_gamepad_session;
+static uint32_t s_gamepad_polls;
+static uint32_t s_gamepad_poll_failures;
+#endif
 
 static bool s_audio_gate_enabled;
 static bool s_audio_calls_allowed;
@@ -346,6 +369,136 @@ static void service_touch(void)
     }
     (void)doom_touch_input_update(&s_touch_input, &touch_frame);
 }
+
+#if P4_DOOM_SHARED_USB_GAMEPAD
+static bool doom_gamepad_action_key(uint8_t action, unsigned char *key)
+{
+    if (key == NULL) {
+        return false;
+    }
+    switch ((doom_gamepad_action_t)action) {
+    case DOOM_GAMEPAD_ACTION_UP:
+        *key = (unsigned char)KEY_UPARROW;
+        return true;
+    case DOOM_GAMEPAD_ACTION_DOWN:
+        *key = (unsigned char)KEY_DOWNARROW;
+        return true;
+    case DOOM_GAMEPAD_ACTION_LEFT:
+        *key = (unsigned char)KEY_LEFTARROW;
+        return true;
+    case DOOM_GAMEPAD_ACTION_RIGHT:
+        *key = (unsigned char)KEY_RIGHTARROW;
+        return true;
+    case DOOM_GAMEPAD_ACTION_FIRE:
+        *key = (unsigned char)KEY_FIRE;
+        return true;
+    case DOOM_GAMEPAD_ACTION_USE:
+        *key = (unsigned char)KEY_USE;
+        return true;
+    case DOOM_GAMEPAD_ACTION_RUN:
+        *key = (unsigned char)KEY_RSHIFT;
+        return true;
+    case DOOM_GAMEPAD_ACTION_STRAFE:
+        *key = (unsigned char)KEY_RALT;
+        return true;
+    case DOOM_GAMEPAD_ACTION_STRAFE_LEFT:
+        *key = (unsigned char)KEY_STRAFE_L;
+        return true;
+    case DOOM_GAMEPAD_ACTION_STRAFE_RIGHT:
+        *key = (unsigned char)KEY_STRAFE_R;
+        return true;
+    case DOOM_GAMEPAD_ACTION_MENU_ACCEPT:
+        *key = (unsigned char)KEY_ENTER;
+        return true;
+    case DOOM_GAMEPAD_ACTION_MENU_BACK:
+        *key = (unsigned char)KEY_ESCAPE;
+        return true;
+    case DOOM_GAMEPAD_ACTION_MAP:
+        *key = (unsigned char)KEY_TAB;
+        return true;
+    case DOOM_GAMEPAD_ACTION_WEAPON_NEXT:
+        *key = (unsigned char)']';
+        return true;
+    case DOOM_GAMEPAD_ACTION_WEAPON_PREVIOUS:
+        *key = (unsigned char)'[';
+        return true;
+    case DOOM_GAMEPAD_ACTION_PAUSE:
+        *key = (unsigned char)KEY_PAUSE;
+        return true;
+    case DOOM_GAMEPAD_ACTION_COUNT:
+    default:
+        return false;
+    }
+}
+
+static bool gamepad_snapshot_valid(
+    const platform_gamepad_snapshot_t *snapshot)
+{
+    return snapshot != NULL &&
+        snapshot->version == PLATFORM_GAMEPAD_SNAPSHOT_VERSION &&
+        snapshot->size == sizeof(*snapshot) &&
+        snapshot->state.version == GAMEPAD_STATE_VERSION &&
+        snapshot->state.size == sizeof(snapshot->state) &&
+        snapshot->state.connected <= 1U &&
+        (snapshot->state.dpad &
+         ~(GAMEPAD_DPAD_UP | GAMEPAD_DPAD_RIGHT | GAMEPAD_DPAD_DOWN |
+           GAMEPAD_DPAD_LEFT)) == 0U;
+}
+
+static void service_gamepad(void)
+{
+    if (!doom_gamepad_input_idle(&s_gamepad_input)) {
+        return;
+    }
+    if (s_gamepad_polls != UINT32_MAX) {
+        ++s_gamepad_polls;
+    }
+
+    platform_gamepad_snapshot_t snapshot;
+    memset(&snapshot, 0, sizeof(snapshot));
+    const esp_err_t result = platform_gamepad_usb_get_snapshot(&snapshot);
+    const bool valid = result == ESP_OK && gamepad_snapshot_valid(&snapshot);
+    gamepad_state_t neutral;
+    gamepad_state_init(&neutral);
+    const gamepad_state_t *const state = valid ? &snapshot.state : &neutral;
+    const uint32_t session = valid ? snapshot.session : 0U;
+
+    if (!valid) {
+        if (s_gamepad_poll_failures != UINT32_MAX) {
+            ++s_gamepad_poll_failures;
+        }
+        if (s_gamepad_poll_failures == 1U ||
+            (s_gamepad_poll_failures % 300U) == 0U) {
+            ESP_LOGW(TAG,
+                     "P4_DOOM_E6 GAMEPAD_POLL_FAIL count=%" PRIu32
+                     " error=%s state=neutral",
+                     s_gamepad_poll_failures, esp_err_to_name(result));
+        }
+    }
+
+    if (!s_gamepad_connection_known ||
+        state->connected != s_gamepad_connected ||
+        session != s_gamepad_session) {
+        ESP_LOGI(TAG,
+                 "P4_DOOM_E6 GAMEPAD session=%" PRIu32
+                 " connected=%u sequence=%" PRIu32
+                 " source=shared-platform-snapshot",
+                 session, (unsigned)state->connected, state->sequence);
+        s_gamepad_connection_known = true;
+        s_gamepad_connected = state->connected;
+        s_gamepad_session = session;
+    }
+
+    const gamepad_status_t input_result =
+        doom_gamepad_input_update(&s_gamepad_input, state);
+    if (input_result != GAMEPAD_OK) {
+        ESP_LOGW(TAG,
+                 "P4_DOOM_E6 GAMEPAD_UPDATE_FAIL error=%s state=neutral",
+                 gamepad_status_name(input_result));
+        doom_gamepad_input_init(&s_gamepad_input);
+    }
+}
+#endif
 
 static bool release_audio(void)
 {
@@ -829,6 +982,19 @@ int DG_GetKey(int *pressed, unsigned char *key)
     }
     *pressed = 0;
     *key = 0U;
+#if P4_DOOM_SHARED_USB_GAMEPAD
+    service_gamepad();
+    doom_gamepad_event_t gamepad_event;
+    while (doom_gamepad_input_next(&s_gamepad_input, &gamepad_event)) {
+        unsigned char mapped_key = 0U;
+        if (!doom_gamepad_action_key(gamepad_event.action, &mapped_key)) {
+            continue;
+        }
+        *pressed = gamepad_event.pressed == 1U ? 1 : 0;
+        *key = mapped_key;
+        return 1;
+    }
+#endif
     service_touch();
     doom_touch_event_t event;
     while (doom_touch_input_next(&s_touch_input, &event)) {
@@ -836,12 +1002,8 @@ int DG_GetKey(int *pressed, unsigned char *key)
         if (!doom_touch_audio_action_key(event.action, &mapped_key)) {
             continue;
         }
-        if (pressed != NULL) {
-            *pressed = event.pressed == 1U ? 1 : 0;
-        }
-        if (key != NULL) {
-            *key = mapped_key;
-        }
+        *pressed = event.pressed == 1U ? 1 : 0;
+        *key = mapped_key;
         return 1;
     }
     return 0;
@@ -874,7 +1036,8 @@ void app_main(void)
                  "P4_DOOM_E6 START board=%s input=gt911-multitouch "
                  "sound=es8311-i2s1-speaker-sfx-mus amp_gpio=53 "
                  "codec_i2c_addr=0x18 music=wad-mus-procedural-16voice "
-                 "usb=absent runtime=exact-unit-waveshare-audio",
+                 "usb=shared-platform-gamepad "
+                 "runtime=exact-unit-waveshare-audio",
                  platform_board_name());
     } else {
         ESP_LOGI(TAG,
@@ -906,6 +1069,9 @@ void app_main(void)
                  ? "touch-only" : "touch-and-audio");
 
     doom_touch_input_init(&s_touch_input);
+#if P4_DOOM_SHARED_USB_GAMEPAD
+    doom_gamepad_input_init(&s_gamepad_input);
+#endif
     s_audio_gate_enabled =
         mode == DOOM_TOUCH_AUDIO_RUNTIME_TOUCH_AND_AUDIO;
     s_audio_calls_allowed = s_audio_gate_enabled;
@@ -1026,6 +1192,16 @@ void app_main(void)
         "doom", "-iwad", EMBEDDED_WAD_PATH,
         "-gfxmode", "rgba8888", "-nosound", "-nomusic",
     };
+#if P4_DOOM_SHARED_USB_GAMEPAD
+    ESP_LOGI(TAG,
+             "P4_DOOM_E6 ENGINE_START wad=%s touch=%s overlay=visible "
+             "sfx_request=%s music_request=%s "
+             "music_synth=procedural-16voice "
+             "usb=shared-platform-gamepad",
+             EMBEDDED_WAD_PATH, s_touch_ready ? "ready" : "degraded",
+             sound_enabled ? "enabled" : "fallback-silent",
+             sound_enabled ? "enabled" : "fallback-silent");
+#else
     ESP_LOGI(TAG,
              "P4_DOOM_E6 ENGINE_START wad=%s touch=%s overlay=visible "
              "sfx_request=%s music_request=%s "
@@ -1033,6 +1209,7 @@ void app_main(void)
              EMBEDDED_WAD_PATH, s_touch_ready ? "ready" : "degraded",
              sound_enabled ? "enabled" : "fallback-silent",
              sound_enabled ? "enabled" : "fallback-silent");
+#endif
     key_prevweapon = '[';
     key_nextweapon = ']';
     if (sound_enabled) {

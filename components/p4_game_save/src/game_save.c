@@ -1,0 +1,282 @@
+// SPDX-License-Identifier: MIT
+
+#include "p4/game_save.h"
+
+#include <string.h>
+
+#include "sha256.h"
+
+enum {
+    SAVE_MAGIC = 0,
+    SAVE_HEADER_BYTES = 8,
+    SAVE_TOTAL_BYTES = 12,
+    SAVE_PAYLOAD_OFFSET = 16,
+    SAVE_PAYLOAD_BYTES = 20,
+    SAVE_FORMAT_VERSION = 24,
+    SAVE_SCHEMA_VERSION = 28,
+    SAVE_SEQUENCE = 32,
+    SAVE_FLAGS = 36,
+    SAVE_GAME_ID = 40,
+    SAVE_SLOT_ID = 88,
+    SAVE_PAYLOAD_SHA256 = 104,
+    SAVE_OBJECT_SHA256 = 136,
+    SAVE_RESERVED = 168,
+    SAVE_RESERVED_BYTES = 88,
+};
+
+static const uint8_t s_magic[8] = {
+    'P', '4', 'S', 'A', 'V', 'E', '1', 0,
+};
+
+static size_t bounded_length(const char *text, size_t limit)
+{
+    if (text == NULL) {
+        return limit;
+    }
+    size_t length = 0U;
+    while (length < limit && text[length] != '\0') {
+        ++length;
+    }
+    return length;
+}
+
+bool p4_game_save_game_id_valid(const char *game_id)
+{
+    const size_t length = bounded_length(game_id, P4_GAME_ID_MAX_BYTES);
+    if (length < 3U || length >= P4_GAME_ID_MAX_BYTES ||
+        game_id[0] < 'a' || game_id[0] > 'z') {
+        return false;
+    }
+    for (size_t index = 1U; index < length; ++index) {
+        const char character = game_id[index];
+        if (!((character >= 'a' && character <= 'z') ||
+              (character >= '0' && character <= '9') ||
+              character == '.' || character == '-')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool p4_game_save_slot_id_valid(const char *slot_id)
+{
+    const size_t length = bounded_length(slot_id,
+                                         P4_GAME_SAVE_SLOT_ID_BYTES);
+    if (length == 0U || length >= P4_GAME_SAVE_SLOT_ID_BYTES) {
+        return false;
+    }
+    for (size_t index = 0U; index < length; ++index) {
+        const char character = slot_id[index];
+        const bool alpha_numeric =
+            (character >= 'A' && character <= 'Z') ||
+            (character >= 'a' && character <= 'z') ||
+            (character >= '0' && character <= '9');
+        if (!alpha_numeric &&
+            (index == 0U || (character != '_' && character != '-'))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void write_u32(uint8_t *data, uint32_t value)
+{
+    data[0] = (uint8_t)value;
+    data[1] = (uint8_t)(value >> 8U);
+    data[2] = (uint8_t)(value >> 16U);
+    data[3] = (uint8_t)(value >> 24U);
+}
+
+static uint32_t read_u32(const uint8_t *data)
+{
+    return (uint32_t)data[0] | ((uint32_t)data[1] << 8U) |
+        ((uint32_t)data[2] << 16U) | ((uint32_t)data[3] << 24U);
+}
+
+static bool all_zero(const uint8_t *data, size_t bytes)
+{
+    for (size_t index = 0U; index < bytes; ++index) {
+        if (data[index] != 0U) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool copy_field(char *output, size_t output_bytes,
+                       const uint8_t *field, size_t field_bytes)
+{
+    const uint8_t *const terminator = memchr(field, 0, field_bytes);
+    if (output == NULL || output_bytes != field_bytes || terminator == NULL) {
+        return false;
+    }
+    const size_t length = (size_t)(terminator - field);
+    if (!all_zero(field + length + 1U, field_bytes - length - 1U)) {
+        return false;
+    }
+    memcpy(output, field, field_bytes);
+    return true;
+}
+
+static void hash_bytes(const uint8_t *data, size_t bytes,
+                       uint8_t digest[P4_GAME_SAVE_SHA256_BYTES])
+{
+    p4_game_save_sha256_t hash;
+    p4_game_save_sha256_init(&hash);
+    p4_game_save_sha256_update(&hash, data, bytes);
+    p4_game_save_sha256_finish(&hash, digest);
+}
+
+static void hash_object(const uint8_t *data, size_t bytes,
+                        uint8_t digest[P4_GAME_SAVE_SHA256_BYTES])
+{
+    static const uint8_t zero_digest[P4_GAME_SAVE_SHA256_BYTES] = {0};
+    p4_game_save_sha256_t hash;
+    p4_game_save_sha256_init(&hash);
+    p4_game_save_sha256_update(&hash, data, SAVE_OBJECT_SHA256);
+    p4_game_save_sha256_update(&hash, zero_digest, sizeof(zero_digest));
+    p4_game_save_sha256_update(
+        &hash, data + SAVE_OBJECT_SHA256 + P4_GAME_SAVE_SHA256_BYTES,
+        bytes - SAVE_OBJECT_SHA256 - P4_GAME_SAVE_SHA256_BYTES);
+    p4_game_save_sha256_finish(&hash, digest);
+}
+
+p4_game_save_result_t p4_game_save_encode(
+    const char *game_id,
+    const char *slot_id,
+    uint32_t schema_version,
+    uint32_t sequence,
+    const uint8_t *payload,
+    size_t payload_bytes,
+    uint8_t *output,
+    size_t output_capacity,
+    size_t *output_bytes)
+{
+    if (output_bytes != NULL) {
+        *output_bytes = 0U;
+    }
+    if (output == NULL || output_bytes == NULL || payload == NULL) {
+        return P4_GAME_SAVE_BAD_ARGUMENT;
+    }
+    if (!p4_game_save_game_id_valid(game_id) ||
+        !p4_game_save_slot_id_valid(slot_id)) {
+        return P4_GAME_SAVE_BAD_ID;
+    }
+    if (schema_version == 0U || sequence == 0U || payload_bytes == 0U ||
+        payload_bytes > P4_GAME_SAVE_MAX_BYTES ||
+        payload_bytes > SIZE_MAX - P4_GAME_SAVE_HEADER_BYTES) {
+        return P4_GAME_SAVE_BAD_SIZE;
+    }
+    const size_t total_bytes = P4_GAME_SAVE_HEADER_BYTES + payload_bytes;
+    if (output_capacity < total_bytes || total_bytes > UINT32_MAX) {
+        return P4_GAME_SAVE_BAD_SIZE;
+    }
+    memset(output, 0, P4_GAME_SAVE_HEADER_BYTES);
+    memcpy(output + SAVE_MAGIC, s_magic, sizeof(s_magic));
+    write_u32(output + SAVE_HEADER_BYTES, P4_GAME_SAVE_HEADER_BYTES);
+    write_u32(output + SAVE_TOTAL_BYTES, (uint32_t)total_bytes);
+    write_u32(output + SAVE_PAYLOAD_OFFSET, P4_GAME_SAVE_HEADER_BYTES);
+    write_u32(output + SAVE_PAYLOAD_BYTES, (uint32_t)payload_bytes);
+    write_u32(output + SAVE_FORMAT_VERSION, P4_GAME_SAVE_FORMAT_VERSION);
+    write_u32(output + SAVE_SCHEMA_VERSION, schema_version);
+    write_u32(output + SAVE_SEQUENCE, sequence);
+    memcpy(output + SAVE_GAME_ID, game_id, strlen(game_id));
+    memcpy(output + SAVE_SLOT_ID, slot_id, strlen(slot_id));
+    memmove(output + P4_GAME_SAVE_HEADER_BYTES, payload, payload_bytes);
+    hash_bytes(output + P4_GAME_SAVE_HEADER_BYTES, payload_bytes,
+               output + SAVE_PAYLOAD_SHA256);
+    uint8_t object_digest[P4_GAME_SAVE_SHA256_BYTES];
+    hash_object(output, total_bytes, object_digest);
+    memcpy(output + SAVE_OBJECT_SHA256, object_digest,
+           sizeof(object_digest));
+    *output_bytes = total_bytes;
+    return P4_GAME_SAVE_VALID;
+}
+
+p4_game_save_result_t p4_game_save_parse(
+    const uint8_t *data,
+    size_t data_bytes,
+    const char *expected_game_id,
+    const char *expected_slot_id,
+    p4_game_save_info_t *out_info)
+{
+    if (data == NULL || out_info == NULL) {
+        return P4_GAME_SAVE_BAD_ARGUMENT;
+    }
+    memset(out_info, 0, sizeof(*out_info));
+    if (data_bytes <= P4_GAME_SAVE_HEADER_BYTES ||
+        data_bytes > P4_GAME_SAVE_MAX_FILE_BYTES) {
+        return P4_GAME_SAVE_BAD_SIZE;
+    }
+    if (memcmp(data + SAVE_MAGIC, s_magic, sizeof(s_magic)) != 0) {
+        return P4_GAME_SAVE_BAD_MAGIC;
+    }
+    if (read_u32(data + SAVE_FORMAT_VERSION) !=
+            P4_GAME_SAVE_FORMAT_VERSION) {
+        return P4_GAME_SAVE_BAD_VERSION;
+    }
+    const uint32_t total_bytes = read_u32(data + SAVE_TOTAL_BYTES);
+    const uint32_t payload_offset = read_u32(data + SAVE_PAYLOAD_OFFSET);
+    const uint32_t payload_bytes = read_u32(data + SAVE_PAYLOAD_BYTES);
+    if (read_u32(data + SAVE_HEADER_BYTES) != P4_GAME_SAVE_HEADER_BYTES ||
+        total_bytes != data_bytes ||
+        payload_offset != P4_GAME_SAVE_HEADER_BYTES || payload_bytes == 0U ||
+        payload_bytes > P4_GAME_SAVE_MAX_BYTES ||
+        payload_bytes != total_bytes - payload_offset ||
+        read_u32(data + SAVE_FLAGS) != 0U ||
+        !all_zero(data + SAVE_RESERVED, SAVE_RESERVED_BYTES)) {
+        return P4_GAME_SAVE_BAD_LAYOUT;
+    }
+    out_info->schema_version = read_u32(data + SAVE_SCHEMA_VERSION);
+    out_info->sequence = read_u32(data + SAVE_SEQUENCE);
+    if (out_info->schema_version == 0U || out_info->sequence == 0U) {
+        return P4_GAME_SAVE_BAD_LAYOUT;
+    }
+    if (!copy_field(out_info->game_id, sizeof(out_info->game_id),
+                    data + SAVE_GAME_ID, P4_GAME_ID_MAX_BYTES) ||
+        !copy_field(out_info->slot_id, sizeof(out_info->slot_id),
+                    data + SAVE_SLOT_ID, P4_GAME_SAVE_SLOT_ID_BYTES) ||
+        !p4_game_save_game_id_valid(out_info->game_id) ||
+        !p4_game_save_slot_id_valid(out_info->slot_id)) {
+        return P4_GAME_SAVE_BAD_ID;
+    }
+    if ((expected_game_id != NULL &&
+         (!p4_game_save_game_id_valid(expected_game_id) ||
+          strcmp(out_info->game_id, expected_game_id) != 0)) ||
+        (expected_slot_id != NULL &&
+         (!p4_game_save_slot_id_valid(expected_slot_id) ||
+          strcmp(out_info->slot_id, expected_slot_id) != 0))) {
+        return P4_GAME_SAVE_BAD_ID;
+    }
+    uint8_t digest[P4_GAME_SAVE_SHA256_BYTES];
+    hash_bytes(data + payload_offset, payload_bytes, digest);
+    if (memcmp(digest, data + SAVE_PAYLOAD_SHA256, sizeof(digest)) != 0) {
+        return P4_GAME_SAVE_BAD_DIGEST;
+    }
+    hash_object(data, data_bytes, digest);
+    if (memcmp(digest, data + SAVE_OBJECT_SHA256, sizeof(digest)) != 0) {
+        return P4_GAME_SAVE_BAD_DIGEST;
+    }
+    out_info->payload_offset = payload_offset;
+    out_info->payload_bytes = payload_bytes;
+    memcpy(out_info->payload_sha256, data + SAVE_PAYLOAD_SHA256,
+           sizeof(out_info->payload_sha256));
+    memcpy(out_info->object_sha256, data + SAVE_OBJECT_SHA256,
+           sizeof(out_info->object_sha256));
+    return P4_GAME_SAVE_VALID;
+}
+
+const char *p4_game_save_result_name(p4_game_save_result_t result)
+{
+    switch (result) {
+    case P4_GAME_SAVE_VALID: return "valid";
+    case P4_GAME_SAVE_BAD_ARGUMENT: return "bad-argument";
+    case P4_GAME_SAVE_BAD_SIZE: return "bad-size";
+    case P4_GAME_SAVE_BAD_MAGIC: return "bad-magic";
+    case P4_GAME_SAVE_BAD_VERSION: return "bad-version";
+    case P4_GAME_SAVE_BAD_LAYOUT: return "bad-layout";
+    case P4_GAME_SAVE_BAD_ID: return "bad-id";
+    case P4_GAME_SAVE_BAD_DIGEST: return "bad-digest";
+    default: return "unknown";
+    }
+}

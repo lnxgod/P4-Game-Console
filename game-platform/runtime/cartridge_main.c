@@ -62,6 +62,33 @@ static bool host_read_signal_scan(
         host->read_signal_scan(host->context, snapshot);
 }
 
+static bool host_queue_save(
+    void *opaque,
+    const char *slot_id,
+    uint32_t schema_version,
+    uint32_t expected_sequence,
+    const uint8_t *data,
+    size_t data_bytes,
+    p4_game_save_ticket_t *ticket_out)
+{
+    p4_cartridge_host_v1_t *const host = opaque;
+    return host != NULL && host->queue_save != NULL &&
+        host->queue_save(host->context, slot_id, schema_version,
+                         expected_sequence, data, data_bytes, ticket_out);
+}
+
+static bool host_read_save_status(
+    void *opaque,
+    p4_game_save_ticket_t ticket,
+    p4_game_save_status_t *status_out,
+    uint32_t *committed_sequence_out)
+{
+    p4_cartridge_host_v1_t *const host = opaque;
+    return host != NULL && host->read_save_status != NULL &&
+        host->read_save_status(host->context, ticket, status_out,
+                               committed_sequence_out);
+}
+
 static bool host_field_present(const p4_cartridge_host_v1_t *host,
                                size_t offset, size_t bytes)
 {
@@ -81,6 +108,28 @@ static bool host_valid(const p4_cartridge_host_v1_t *host)
         host->surface.height == P4_GAME_SURFACE_HEIGHT &&
         host->surface.stride_pixels >= P4_GAME_SURFACE_WIDTH &&
         host->poll_frame != NULL && host->present != NULL;
+}
+
+static uint32_t supported_service_capabilities(void)
+{
+    return P4_GAME_CAP_VIDEO |
+        P4_GAME_CAP_CONTROLS |
+        P4_GAME_CAP_AUDIO_TONE |
+        P4_GAME_CAP_AUDIO_STREAM |
+        P4_GAME_CAP_STORAGE |
+        P4_GAME_CAP_SIGNAL_SCAN |
+        P4_GAME_CAP_SAVE;
+}
+
+static bool host_save_snapshot_valid(const p4_cartridge_host_v1_t *host)
+{
+    if (host->save_bytes == 0U) {
+        return host->save_data == NULL && host->save_schema_version == 0U &&
+            host->save_sequence == 0U;
+    }
+    return host->save_data != NULL &&
+        host->save_bytes <= P4_GAME_SAVE_MAX_BYTES &&
+        host->save_schema_version != 0U && host->save_sequence != 0U;
 }
 
 int app_main(int argc, char *argv[])
@@ -111,20 +160,33 @@ int app_main(int argc, char *argv[])
     const bool has_signal_scan = host_field_present(
         host, offsetof(p4_cartridge_host_v1_t, read_signal_scan),
         sizeof(host->read_signal_scan));
-    uint32_t available_capabilities = host->available_capabilities;
+    const bool has_save = host_field_present(
+        host, offsetof(p4_cartridge_host_v1_t, read_save_status),
+        sizeof(host->read_save_status));
+    uint32_t available_capabilities = host->available_capabilities &
+        supported_service_capabilities();
     if (host->play_tone == NULL) {
-        available_capabilities &= ~P4_GAME_CAP_AUDIO_TONE;
+        available_capabilities &=
+            (uint32_t)~(uint32_t)P4_GAME_CAP_AUDIO_TONE;
     }
     if (!has_submit_pcm || host->submit_pcm16_stereo == NULL) {
-        available_capabilities &= ~P4_GAME_CAP_AUDIO_STREAM;
+        available_capabilities &=
+            (uint32_t)~(uint32_t)P4_GAME_CAP_AUDIO_STREAM;
     }
     if (!has_resource || host->resource_data == NULL ||
         host->resource_bytes == 0U || host->resource_format_version == 0U) {
-        available_capabilities &= ~P4_GAME_CAP_STORAGE;
+        available_capabilities &=
+            (uint32_t)~(uint32_t)P4_GAME_CAP_STORAGE;
     }
     if (!has_signal_scan || host->request_signal_scan == NULL ||
         host->read_signal_scan == NULL) {
-        available_capabilities &= ~P4_GAME_CAP_SIGNAL_SCAN;
+        available_capabilities &=
+            (uint32_t)~(uint32_t)P4_GAME_CAP_SIGNAL_SCAN;
+    }
+    if (!has_save || host->queue_save == NULL ||
+        host->read_save_status == NULL || !host_save_snapshot_valid(host)) {
+        available_capabilities &=
+            (uint32_t)~(uint32_t)P4_GAME_CAP_SAVE;
     }
     if ((game->required_capabilities & ~available_capabilities) != 0U) {
         return P4_CARTRIDGE_EXIT_CAPABILITY_MISSING;
@@ -158,6 +220,22 @@ int app_main(int argc, char *argv[])
         .read_signal_scan =
             (available_capabilities & P4_GAME_CAP_SIGNAL_SCAN) != 0U
             ? host_read_signal_scan : NULL,
+        .save_context =
+            (available_capabilities & P4_GAME_CAP_SAVE) != 0U ? host : NULL,
+        .save_data = (available_capabilities & P4_GAME_CAP_SAVE) != 0U
+            ? host->save_data : NULL,
+        .save_bytes = (available_capabilities & P4_GAME_CAP_SAVE) != 0U
+            ? host->save_bytes : 0U,
+        .save_schema_version =
+            (available_capabilities & P4_GAME_CAP_SAVE) != 0U
+            ? host->save_schema_version : 0U,
+        .save_sequence = (available_capabilities & P4_GAME_CAP_SAVE) != 0U
+            ? host->save_sequence : 0U,
+        .queue_save = (available_capabilities & P4_GAME_CAP_SAVE) != 0U
+            ? host_queue_save : NULL,
+        .read_save_status =
+            (available_capabilities & P4_GAME_CAP_SAVE) != 0U
+            ? host_read_save_status : NULL,
     };
     p4_game_instance_t instance = {0};
     if (!p4_game_instance_start(
@@ -201,5 +279,5 @@ int app_main(int argc, char *argv[])
     if (host->finished != NULL) {
         host->finished(host->context, result);
     }
-    return exit_code;
+    return (int)exit_code;
 }

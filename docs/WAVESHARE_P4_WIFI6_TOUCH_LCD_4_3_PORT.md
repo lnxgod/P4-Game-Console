@@ -168,10 +168,13 @@ H2 can remain controller-first; see `docs/BBS.md`.
 display label and a per-boot keyed token before game code can see it. The
 Waveshare-only `platform_signal_scan` candidate performs passive scans on a
 background task, keeps raw observations in one fixed 32-record buffer, and
-publishes no more than eight results. It never configures credentials or calls
-connect, and Console OS advertises the optional cartridge capability only
-after initialization succeeds. ESP-IDF 5.5.3, `esp_hosted` 1.4.7, and
-`esp_wifi_remote` 0.14.5 are exact locked dependencies.
+publishes no more than eight results. It requests named networks only and
+defensively removes zero-length or all-space SSIDs before results reach a
+game; RSSI and opaque BSSID-derived identity remain available for those named
+networks. It never configures credentials or calls connect, and Console OS
+advertises the optional cartridge capability only after initialization
+succeeds. ESP-IDF 5.5.3, `esp_hosted` 1.4.7, and `esp_wifi_remote` 0.14.5 are
+exact locked dependencies.
 
 `make console-os-waveshare-idf` proves this transport and Byte Buddy package
 compile together; it is not live-radio acceptance. Before enabling a hardware

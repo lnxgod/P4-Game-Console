@@ -54,6 +54,14 @@ int main(void)
     model.can_go_up = true;
     const p4_bbs_hit_t back = p4_bbs_hit_test(&model, 62U, 98U);
     CHECK(back.kind == P4_BBS_HIT_BACK);
+    model.page = 2U;
+    model.page_count = 3U;
+    const p4_bbs_hit_t previous_page =
+        p4_bbs_hit_test(&model, 80U, 408U);
+    CHECK(previous_page.kind == P4_BBS_HIT_PAGE_PREVIOUS);
+    const p4_bbs_hit_t next_page =
+        p4_bbs_hit_test(&model, 620U, 408U);
+    CHECK(next_page.kind == P4_BBS_HIT_PAGE_NEXT);
     p4_bbs_launcher_model_t unterminated = model;
     memset(unterminated.board_name, 'X', sizeof(unterminated.board_name));
     CHECK(!p4_bbs_build_launcher(&terminal, &unterminated));
@@ -61,6 +69,9 @@ int main(void)
     CHECK(!p4_bbs_build_launcher(&terminal, &model));
     model.selected_door = 0U;
     model.door_count = P4_BBS_VISIBLE_DOORS + 1U;
+    CHECK(!p4_bbs_build_launcher(&terminal, &model));
+    model.door_count = 2U;
+    model.page = 0U;
     CHECK(!p4_bbs_build_launcher(&terminal, &model));
     const p4_bbs_boot_model_t boot = {
         .phase = P4_BBS_BOOT_CONNECTED,

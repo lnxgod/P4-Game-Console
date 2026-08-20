@@ -42,26 +42,35 @@ static const char *const s_class_menu[] = {
     "Thieving Skills",
 };
 
+static const char *const s_sex_menu[] = {
+    "Male warrior",
+    "Female warrior",
+};
+
 static const char *const s_town_menu[] = {
     "The Dark Forest",
-    "Weapon Shop",
-    "Armour Shop",
-    "Violet's Healing Hut",
-    "Turgon's Training",
+    "King Arthur's Weapons",
+    "Abdul's Armour",
+    "The Healer's Hut",
+    "Turgon's Warrior Training",
     "The First Bank",
-    "The Inn",
-    "Other Warriors",
+    "The Red Dragon Inn",
+    "Slaughter Other Warriors",
     "The Post Office",
-    "Romance",
-    "In-Game Modules",
+    "Other Places (IGMs)",
+    "The Daily News",
+    "Hall of Rankings",
     "RIP Art Gallery",
     "Character Stats",
+    "Skill Mastery",
 };
 
 static const char *const s_forest_menu[] = {
     "Hunt for a creature",
     "Search for the Red Dragon",
+    "Visit the healer's hut",
     "Return to town",
+    "Ride to DarkCloak Tavern",
 };
 
 static const char *const s_healer_menu[] = {
@@ -78,49 +87,103 @@ static const char *const s_training_menu[] = {
 static const char *const s_bank_menu[] = {
     "Deposit all carried gold",
     "Withdraw entire account",
+    "Transfer 100 gold",
     "Return to town",
 };
 
 static const char *const s_inn_menu[] = {
-    "Rest until a new day",
-    "Listen to the bard",
+    "Sleep until a new day",
+    "Talk with the bartender",
+    "Join the conversation",
+    "Spend time with Seth Able",
+    "Spend time with Violet",
+    "Listen to the bard's song",
+    "Play blackjack",
+    "Attack a sleeping warrior",
+    "Make an announcement",
+    "Check your room",
     "Return to town",
+};
+
+static const char *const s_bartender_menu[] = {
+    "Buy dark ale (10 gold)",
+    "Ask about Violet",
+    "Ask about Seth Able",
+    "Ask about the Red Dragon",
+    "Drinking contest",
+    "Return to the inn",
+};
+
+static const char *const s_converse_menu[] = {
+    "Read the latest conversation",
+    "Add to the conversation",
+    "Return to the inn",
+};
+
+static const char *const s_npc_romance_menu[] = {
+    "Talk",
+    "Flirt",
+    "Kiss",
+    "Give a gem",
+    "Propose or divorce",
+    "Return to the inn",
+};
+
+static const char *const s_blackjack_menu[] = {
+    "Deal a hand (100 gold)",
+    "Hit",
+    "Stand",
+    "Leave the table",
 };
 
 static const char *const s_battle_menu[] = {
     "Attack",
-    "Use class skill",
+    "Death Knight attack",
+    "Mystical attack",
+    "Thieving attack",
     "Run",
     "View stats",
 };
 
 static const char *const s_player_detail_menu[] = {
     "Challenge to a duel",
-    "Send a sealed letter",
+    "Write a sealed letter",
     "Court this warrior",
+    "Edit local saying",
     "Return to player list",
 };
 
 static const char *const s_romance_action_menu[] = {
     "Offer a compliment",
     "Give a gift (100 gold)",
-    "Propose marriage",
-    "Return to romance list",
+    "Propose marriage / divorce",
+    "Try to have a child",
+    "Return to player record",
 };
 
-static const char *const s_igm_menu[] = {
-    "Goblin Dice (100 gold)",
-    "The Old Wizard",
-    "The Herbalist (50 gold)",
-    "Return to town",
+static const char *const s_igm_actions[LORD_IGM_COUNT][4] = {
+    {"Wager 100 gold", "Wager 1000 gold", "Read the rules", "Return"},
+    {"Raid Barak's house", "Ask Barak for sugar", "Skill lesson", "Return"},
+    {"Answer trivia", "Sleep at a cabin", "Accept invitation", "Return"},
+    {"Rob a grave", "Read an epitaph", "Pay your respects", "Return"},
+    {"Adopt an orphan", "Catch a runaway", "Trade children for horse", "Return"},
+    {"Search the outhouse", "Look behind the trees", "Write on the wall", "Return"},
+    {"Eat a pickle", "Read the warning", "Pray to the goddess", "Return"},
 };
 
 static const char *const s_rip_gallery_menu[] = {
     "Town Square",
     "Dark Forest",
-    "The Inn",
+    "Red Dragon Inn",
     "Battle Arena",
     "Red Dragon",
+    "King Arthur's",
+    "Abdul's Armour",
+    "Healer's Hut",
+    "Turgon's Gym",
+    "First Bank",
+    "Graveyard",
+    "DarkCloak Tavern",
     "Return to town",
 };
 
@@ -215,7 +278,7 @@ static void draw_menu(p4_game_surface_t *surface, const lord_state_t *state,
                       int first_y)
 {
     const size_t scroll = state->menu_scroll;
-    const size_t end = scroll + 8U < count ? scroll + 8U : count;
+    const size_t end = scroll + 7U < count ? scroll + 7U : count;
     const int visible = (int)(end - scroll);
     p4_draw_fill_rect(surface, 8, first_y - 6, 304,
                       visible * 12 + 8, ANSI_PANEL);
@@ -236,14 +299,45 @@ static void draw_menu(p4_game_surface_t *surface, const lord_state_t *state,
     }
 }
 
+static void draw_compact_menu(p4_game_surface_t *surface,
+                              const lord_state_t *state,
+                              const char *const *labels, size_t count,
+                              int first_y)
+{
+    const size_t scroll = state->menu_scroll;
+    const size_t end = scroll + 7U < count ? scroll + 7U : count;
+    const int visible = (int)(end - scroll);
+    p4_draw_fill_rect(surface, 8, first_y - 4, 304,
+                      visible * 10 + 6, ANSI_PANEL);
+    p4_draw_rect(surface, 8, first_y - 4, 304,
+                 visible * 10 + 6, ANSI_BLUE);
+    int row = 0;
+    for (size_t index = scroll; index < end; ++index) {
+        const bool selected = index == state->selection;
+        if (selected) {
+            p4_draw_fill_rect(surface, 10, first_y + row * 10 - 1,
+                              300, 9, ANSI_RED);
+        }
+        draw_text(surface, 12, first_y + row * 10,
+                  selected ? ">" : " ", ANSI_YELLOW);
+        draw_text(surface, 24, first_y + row * 10, labels[index],
+                  selected ? ANSI_WHITE : ANSI_LIGHT_GRAY);
+        ++row;
+    }
+}
+
 static void draw_realm_menu(p4_game_surface_t *surface,
                             const lord_state_t *state,
                             bool show_affection,
                             const char *return_label)
 {
-    p4_draw_fill_rect(surface, 8, 33, 304, 82, ANSI_PANEL);
-    p4_draw_rect(surface, 8, 33, 304, 82, ANSI_BLUE);
-    for (size_t index = 0U; index <= LORD_REALM_PLAYER_COUNT; ++index) {
+    const size_t count = LORD_REALM_PLAYER_COUNT + 1U;
+    const size_t scroll = state->menu_scroll;
+    const size_t end = scroll + 7U < count ? scroll + 7U : count;
+    p4_draw_fill_rect(surface, 8, 33, 304, 96, ANSI_PANEL);
+    p4_draw_rect(surface, 8, 33, 304, 96, ANSI_BLUE);
+    int row = 0;
+    for (size_t index = scroll; index < end; ++index) {
         const bool selected = index == state->selection;
         char line[52];
         line_clear(line, sizeof(line));
@@ -262,13 +356,14 @@ static void draw_realm_menu(p4_game_surface_t *surface,
                             player->alive ? "  READY" : "  DEFEATED");
             }
         }
-        const int y = 39 + (int)index * 16;
+        const int y = 39 + row * 11;
         if (selected) {
             p4_draw_fill_rect(surface, 10, y - 2, 300, 12, ANSI_RED);
         }
         draw_text(surface, 12, y, selected ? ">" : " ", ANSI_YELLOW);
         draw_text(surface, 24, y, line,
                   selected ? ANSI_WHITE : ANSI_LIGHT_GRAY);
+        ++row;
     }
 }
 
@@ -304,7 +399,8 @@ static void draw_player_detail(p4_game_surface_t *surface,
     line_append_u32(line, sizeof(line), player->affection);
     line_append(line, sizeof(line), player->married ? "  MARRIED" : "");
     draw_text(surface, 10, 55, line, ANSI_YELLOW);
-    draw_menu(surface, state, s_player_detail_menu, 4U, 73);
+    draw_text(surface, 10, 67, player->saying, ANSI_LIGHT_GRAY);
+    draw_compact_menu(surface, state, s_player_detail_menu, 5U, 78);
 }
 
 static void draw_mailbox(p4_game_surface_t *surface,
@@ -312,7 +408,7 @@ static void draw_mailbox(p4_game_surface_t *surface,
 {
     const size_t count = lord_menu_count(state);
     const size_t scroll = state->menu_scroll;
-    const size_t end = scroll + 8U < count ? scroll + 8U : count;
+    const size_t end = scroll + 7U < count ? scroll + 7U : count;
     const int panel_height = (int)(end - scroll) * 11 + 8;
     p4_draw_fill_rect(surface, 8, 39, 304, panel_height, ANSI_PANEL);
     p4_draw_rect(surface, 8, 39, 304, panel_height, ANSI_BLUE);
@@ -328,7 +424,7 @@ static void draw_mailbox(p4_game_surface_t *surface,
             line_append(line, sizeof(line), ": ");
             line_append(line, sizeof(line), lord_mail_subject(state, index));
         } else if (index == state->mail_count) {
-            line_append(line, sizeof(line), "Compose preset letter");
+            line_append(line, sizeof(line), "Write a new letter");
         } else {
             line_append(line, sizeof(line), "Return to town");
         }
@@ -387,7 +483,7 @@ static void draw_town(p4_game_surface_t *surface,
     p4_draw_rect(surface, 6, 29, 198, 101, ANSI_BLUE);
     const size_t scroll = state->menu_scroll;
     const size_t count = sizeof(s_town_menu) / sizeof(s_town_menu[0]);
-    const size_t end = scroll + 8U < count ? scroll + 8U : count;
+    const size_t end = scroll + 7U < count ? scroll + 7U : count;
     int row = 0;
     for (size_t index = scroll; index < end; ++index) {
         const bool selected = index == state->selection;
@@ -403,7 +499,9 @@ static void draw_town(p4_game_surface_t *surface,
 
     p4_draw_fill_rect(surface, 210, 29, 104, 101, ANSI_PANEL_ALT);
     p4_draw_rect(surface, 210, 29, 104, 101, ANSI_RED);
-    draw_text(surface, 218, 35, "LOCAL REALM", ANSI_YELLOW);
+    draw_text(surface, 218, 35,
+              state->save_available ? "SAVED REALM" : "LOCAL REALM",
+              ANSI_YELLOW);
     p4_draw_fill_rect(surface, 216, 46, 92, 1, ANSI_RED);
     char line[24];
     line_clear(line, sizeof(line));
@@ -437,7 +535,7 @@ static void draw_town(p4_game_surface_t *surface,
     line_clear(line, sizeof(line));
     line_append(line, sizeof(line), "MENU ");
     line_append_u32(line, sizeof(line), (uint32_t)state->selection + 1U);
-    line_append(line, sizeof(line), "/13");
+    line_append(line, sizeof(line), "/15");
     draw_text(surface, 218, 120, line, ANSI_DARK_GRAY);
 }
 
@@ -449,7 +547,7 @@ static void draw_title(p4_game_surface_t *surface)
     p4_draw_fill_rect(surface, 18, 98, 284, 31, ANSI_BLACK);
     p4_draw_rect(surface, 18, 98, 284, 31, ANSI_BRIGHT_RED);
     draw_text(surface, 76, 104, "P4 ANSI DOOR EDITION", ANSI_WHITE);
-    draw_text(surface, 40, 118, "A/START ENTER  -  LOCAL SESSION",
+    draw_text(surface, 28, 118, "A/START ENTER  -  PERSISTENT REALM",
               ANSI_YELLOW);
 }
 
@@ -499,13 +597,20 @@ static void draw_stats(p4_game_surface_t *surface,
     char line[52];
     p4_draw_fill_rect(surface, 8, 28, 304, 102, ANSI_PANEL);
     p4_draw_rect(surface, 8, 28, 304, 102, ANSI_BLUE);
-    draw_text(surface, 12, 31, lord_class_name(state->player.hero_class),
-              ANSI_BRIGHT_MAGENTA);
     line_clear(line, sizeof(line));
-    line_append(line, sizeof(line), "Level ");
+    line_append(line, sizeof(line), state->player.name);
+    line_append(line, sizeof(line), "  ");
+    line_append(line, sizeof(line), lord_sex_name(state->player.sex));
+    line_append(line, sizeof(line), "  ");
+    line_append(line, sizeof(line), lord_class_name(state->player.hero_class));
+    draw_text(surface, 12, 31, line, ANSI_BRIGHT_MAGENTA);
+    line_clear(line, sizeof(line));
+    line_append(line, sizeof(line), "LV ");
     line_append_u32(line, sizeof(line), state->player.level);
-    line_append(line, sizeof(line), "   Day ");
+    line_append(line, sizeof(line), "  DAY ");
     line_append_u32(line, sizeof(line), state->player.day);
+    line_append(line, sizeof(line), "  DRAGONS ");
+    line_append_u32(line, sizeof(line), state->player.dragon_kills);
     draw_text(surface, 12, 44, line, ANSI_WHITE);
     line_clear(line, sizeof(line));
     line_append(line, sizeof(line), "HP ");
@@ -518,14 +623,18 @@ static void draw_stats(p4_game_surface_t *surface,
     line_append_i32(line, sizeof(line), state->player.defense);
     draw_text(surface, 12, 57, line, ANSI_BRIGHT_CYAN);
     line_clear(line, sizeof(line));
-    line_append(line, sizeof(line), "Gold ");
+    line_append(line, sizeof(line), "GOLD ");
     line_append_u32(line, sizeof(line), state->player.gold);
-    line_append(line, sizeof(line), "   Bank ");
+    line_append(line, sizeof(line), "  BANK ");
     line_append_u32(line, sizeof(line), state->player.bank);
     draw_text(surface, 12, 70, line, ANSI_YELLOW);
     line_clear(line, sizeof(line));
-    line_append(line, sizeof(line), "Experience ");
+    line_append(line, sizeof(line), "XP ");
     line_append_u32(line, sizeof(line), state->player.experience);
+    line_append(line, sizeof(line), "  CHARM ");
+    line_append_u32(line, sizeof(line), state->player.charm);
+    line_append(line, sizeof(line), "  GEMS ");
+    line_append_u32(line, sizeof(line), state->player.gems);
     draw_text(surface, 12, 83, line, ANSI_BRIGHT_GREEN);
     const lord_item_t *const weapon = lord_weapon(state->player.weapon);
     const lord_item_t *const armor = lord_armor(state->player.armor);
@@ -534,18 +643,21 @@ static void draw_stats(p4_game_surface_t *surface,
     draw_text(surface, 156, 96, armor != NULL ? armor->name : "Nothing",
               ANSI_LIGHT_GRAY);
     line_clear(line, sizeof(line));
-    line_append(line, sizeof(line), "Forest fights ");
+    line_append(line, sizeof(line), "FIGHTS ");
     line_append_u32(line, sizeof(line), state->player.forest_fights);
-    line_append(line, sizeof(line), "  Skills ");
-    line_append_u32(line, sizeof(line), state->player.skill_uses);
+    line_append(line, sizeof(line), "  KIDS ");
+    line_append_u32(line, sizeof(line), state->player.children);
+    line_append(line, sizeof(line), "  LAID ");
+    line_append_u32(line, sizeof(line), state->player.laid);
     draw_text(surface, 12, 109, line, ANSI_BRIGHT_CYAN);
     line_clear(line, sizeof(line));
-    line_append(line, sizeof(line), "PvP ");
+    line_append(line, sizeof(line), state->player.horse ? "HORSE " : "");
+    line_append(line, sizeof(line), state->player.fairy ? "FAIRY " : "");
+    line_append(line, sizeof(line), state->player.amulet ? "AMULET " : "");
+    line_append(line, sizeof(line), " PVP ");
     line_append_u32(line, sizeof(line), state->player.pvp_wins);
     line_append(line, sizeof(line), "-");
     line_append_u32(line, sizeof(line), state->player.pvp_losses);
-    line_append(line, sizeof(line), "  Duels left ");
-    line_append_u32(line, sizeof(line), state->pvp_fights);
     draw_text(surface, 12, 122, line, ANSI_BRIGHT_GREEN);
 }
 
@@ -564,7 +676,7 @@ static void draw_battle(p4_game_surface_t *surface,
     draw_text(surface, 174, 29, line, ANSI_RED);
     draw_player_status(surface, state, 42);
     draw_text(surface, 10, 56, state->battle_line, ANSI_YELLOW);
-    draw_menu(surface, state, s_battle_menu, 4U, 72);
+    draw_compact_menu(surface, state, s_battle_menu, 6U, 66);
 }
 
 static int positive_distance(int left, int right)
@@ -667,6 +779,34 @@ static void draw_rip_dragon(p4_game_surface_t *surface)
                           LORD_TITLE_ART_WIDTH, false, 0U);
 }
 
+static void draw_rip_building(p4_game_surface_t *surface, uint8_t scene)
+{
+    const uint16_t walls[] = {
+        ANSI_BROWN, ANSI_RED, ANSI_GREEN, ANSI_BRIGHT_BLUE,
+        ANSI_YELLOW, ANSI_DARK_GRAY, ANSI_MAGENTA,
+    };
+    const uint16_t wall = walls[(size_t)(scene - 5U) %
+        (sizeof(walls) / sizeof(walls[0]))];
+    p4_draw_fill_circle(surface, 270, 44, 12, ANSI_YELLOW);
+    p4_draw_fill_rect(surface, 34, 66, 252, 61, wall);
+    draw_line(surface, 25, 66, 160, 35, ANSI_BRIGHT_RED);
+    draw_line(surface, 160, 35, 295, 66, ANSI_BRIGHT_RED);
+    p4_draw_fill_rect(surface, 139, 88, 42, 39, ANSI_BLACK);
+    p4_draw_fill_rect(surface, 55, 80, 38, 24, ANSI_BRIGHT_CYAN);
+    p4_draw_fill_rect(surface, 227, 80, 38, 24, ANSI_BRIGHT_CYAN);
+    if (scene == 9U) {
+        p4_draw_fill_circle(surface, 160, 58, 10, ANSI_YELLOW);
+        draw_text(surface, 153, 55, "$", ANSI_BLACK);
+    } else if (scene == 10U) {
+        for (int x = 53; x < 278; x += 45) {
+            p4_draw_fill_rect(surface, x, 111, 22, 7, ANSI_LIGHT_GRAY);
+        }
+    } else if (scene == 11U) {
+        p4_draw_fill_rect(surface, 108, 75, 104, 12, ANSI_RED);
+        draw_text(surface, 118, 77, "DARKCLOAK", ANSI_WHITE);
+    }
+}
+
 static void draw_rip_scene(p4_game_surface_t *surface,
                            const lord_state_t *state)
 {
@@ -675,12 +815,140 @@ static void draw_rip_scene(p4_game_surface_t *surface,
     case 1U: draw_rip_forest(surface); break;
     case 2U: draw_rip_inn(surface); break;
     case 3U: draw_rip_battle(surface); break;
-    default: draw_rip_dragon(surface); break;
+    case 4U: draw_rip_dragon(surface); break;
+    default: draw_rip_building(surface, state->rip_scene); break;
     }
     p4_draw_fill_rect(surface, 0, 118, 320, 14, ANSI_BLACK);
     draw_text(surface, 8, 121, lord_rip_scene_name(state->rip_scene),
               ANSI_BRIGHT_CYAN);
     draw_text(surface, 214, 121, "A/B: GALLERY", ANSI_YELLOW);
+}
+
+static void draw_keyboard(p4_game_surface_t *surface,
+                          const lord_state_t *state)
+{
+    p4_draw_fill_rect(surface, 8, 28, 304, 24, ANSI_PANEL);
+    p4_draw_rect(surface, 8, 28, 304, 24, ANSI_BLUE);
+    draw_text(surface, 13, 36,
+              state->editor_text[0] == '\0' ? "_" : state->editor_text,
+              ANSI_WHITE);
+    for (size_t index = 0U; index < LORD_KEYBOARD_COUNT; ++index) {
+        const int column = (int)(index % 6U);
+        const int row = (int)(index / 6U);
+        const int x = 10 + column * 51;
+        const int y = 56 + row * 9;
+        const bool selected = index == state->selection;
+        if (selected) {
+            p4_draw_fill_rect(surface, x, y - 1, 47, 9, ANSI_RED);
+        }
+        const char *const label = lord_keyboard_label(index);
+        draw_text(surface, x + (index >= 42U ? 4 : 19), y, label,
+                  selected ? ANSI_WHITE : ANSI_LIGHT_GRAY);
+    }
+}
+
+static void draw_news(p4_game_surface_t *surface, const lord_state_t *state)
+{
+    p4_draw_fill_rect(surface, 8, 29, 304, 99, ANSI_PANEL);
+    p4_draw_rect(surface, 8, 29, 304, 99, ANSI_BLUE);
+    if (state->log_count == 0U) {
+        draw_text(surface, 16, 40, "No news has reached the town crier.",
+                  ANSI_LIGHT_GRAY);
+    }
+    const size_t first = state->log_count > 7U ? state->log_count - 7U : 0U;
+    int row = 0;
+    for (size_t index = first; index < state->log_count; ++index) {
+        char line[52];
+        line_clear(line, sizeof(line));
+        line_append(line, sizeof(line), "D");
+        line_append_u32(line, sizeof(line), state->log[index].day);
+        line_append(line, sizeof(line), " ");
+        line_append(line, sizeof(line), state->log[index].text);
+        draw_text(surface, 14, 37 + row * 12, line,
+                  row % 2 == 0 ? ANSI_WHITE : ANSI_LIGHT_GRAY);
+        ++row;
+    }
+}
+
+static void draw_rankings(p4_game_surface_t *surface,
+                          const lord_state_t *state)
+{
+    p4_draw_fill_rect(surface, 8, 29, 304, 99, ANSI_PANEL);
+    p4_draw_rect(surface, 8, 29, 304, 99, ANSI_BLUE);
+    char line[52];
+    line_clear(line, sizeof(line));
+    line_append(line, sizeof(line), "1  ");
+    line_append(line, sizeof(line), state->player.name);
+    line_append(line, sizeof(line), "  LV ");
+    line_append_u32(line, sizeof(line), state->player.level);
+    line_append(line, sizeof(line), "  DR ");
+    line_append_u32(line, sizeof(line), state->player.dragon_kills);
+    draw_text(surface, 14, 36, line, ANSI_YELLOW);
+    for (size_t index = 0U; index < 7U; ++index) {
+        line_clear(line, sizeof(line));
+        line_append_u32(line, sizeof(line), (uint32_t)index + 2U);
+        line_append(line, sizeof(line), "  ");
+        line_append(line, sizeof(line), state->realm[index].name);
+        line_append(line, sizeof(line), "  LV ");
+        line_append_u32(line, sizeof(line), state->realm[index].level);
+        line_append(line, sizeof(line), "  PVP ");
+        line_append_u32(line, sizeof(line), state->realm[index].pvp_wins);
+        draw_text(surface, 14, 48 + (int)index * 11, line,
+                  index % 2U == 0U ? ANSI_WHITE : ANSI_LIGHT_GRAY);
+    }
+}
+
+static void draw_skills(p4_game_surface_t *surface,
+                        const lord_state_t *state)
+{
+    p4_draw_fill_rect(surface, 8, 29, 304, 99, ANSI_PANEL);
+    p4_draw_rect(surface, 8, 29, 304, 99, ANSI_BLUE);
+    const char *const names[LORD_SKILL_COUNT] = {
+        "Death Knight", "Mystical", "Thieving",
+    };
+    for (size_t index = 0U; index < LORD_SKILL_COUNT; ++index) {
+        char line[52];
+        line_clear(line, sizeof(line));
+        line_append(line, sizeof(line), names[index]);
+        line_append(line, sizeof(line), "  mastery ");
+        line_append_u32(line, sizeof(line), state->player.skill[index]);
+        line_append(line, sizeof(line), "/40  uses ");
+        line_append_u32(line, sizeof(line), state->player.skill_uses[index]);
+        draw_text(surface, 17, 42 + (int)index * 24, line,
+                  index == (size_t)state->player.hero_class ?
+                    ANSI_BRIGHT_MAGENTA : ANSI_BRIGHT_CYAN);
+    }
+    draw_text(surface, 17, 115,
+              "Forest teachers and IGMs increase mastery.",
+              ANSI_LIGHT_GRAY);
+}
+
+static void draw_blackjack(p4_game_surface_t *surface,
+                           const lord_state_t *state)
+{
+    char line[52];
+    line_clear(line, sizeof(line));
+    line_append(line, sizeof(line), "YOU ");
+    line_append_u32(line, sizeof(line), state->blackjack_player);
+    line_append(line, sizeof(line), "  DEALER ");
+    line_append_u32(line, sizeof(line), state->blackjack_dealer);
+    line_append(line, sizeof(line), "  GOLD ");
+    line_append_u32(line, sizeof(line), state->player.gold);
+    draw_text(surface, 10, 29, line, ANSI_YELLOW);
+    draw_text(surface, 10, 42, state->battle_line, ANSI_BRIGHT_CYAN);
+    draw_menu(surface, state, s_blackjack_menu, 4U, 62);
+}
+
+static void draw_igm_menu(p4_game_surface_t *surface,
+                          const lord_state_t *state)
+{
+    const size_t count = LORD_IGM_COUNT + 1U;
+    const char *labels[LORD_IGM_COUNT + 1U];
+    for (size_t index = 0U; index < LORD_IGM_COUNT; ++index) {
+        labels[index] = lord_igm_name(index);
+    }
+    labels[LORD_IGM_COUNT] = "Return to town";
+    draw_menu(surface, state, labels, count, 43);
 }
 
 static void render_screen(p4_game_surface_t *surface,
@@ -690,6 +958,21 @@ static void render_screen(p4_game_surface_t *surface,
     case LORD_SCREEN_TITLE:
         draw_header(surface, "LEGEND OF THE RED DRAGON");
         draw_title(surface);
+        break;
+    case LORD_SCREEN_NAME:
+        draw_header(surface, "NAME YOUR WARRIOR");
+        draw_text(surface, 32, 38,
+                  "Use the built-in ANSI keyboard.", ANSI_BRIGHT_CYAN);
+        draw_text(surface, 33, 57,
+                  "Names are stored in your save realm.", ANSI_LIGHT_GRAY);
+        draw_text(surface, 76, 88,
+                  "PRESS A TO ENTER A NAME", ANSI_YELLOW);
+        break;
+    case LORD_SCREEN_SEX:
+        draw_header(surface, "CHOOSE YOUR WARRIOR");
+        draw_text(surface, 10, 29, state->player.name,
+                  ANSI_BRIGHT_MAGENTA);
+        draw_menu(surface, state, s_sex_menu, 2U, 50);
         break;
     case LORD_SCREEN_CLASS:
         draw_header(surface, "CHOOSE YOUR SKILL");
@@ -705,7 +988,8 @@ static void render_screen(p4_game_surface_t *surface,
         draw_header(surface, "THE DARK FOREST");
         draw_text(surface, 10, 29, "Twisted branches hide old dangers.",
                   ANSI_GREEN);
-        draw_menu(surface, state, s_forest_menu, 3U, 50);
+        draw_menu(surface, state, s_forest_menu,
+                  state->player.horse ? 5U : 4U, 47);
         char line[52];
         line_clear(line, sizeof(line));
         line_append(line, sizeof(line), "Fights remaining: ");
@@ -753,14 +1037,50 @@ static void render_screen(p4_game_surface_t *surface,
         line_append(line, sizeof(line), "   Account: ");
         line_append_u32(line, sizeof(line), state->player.bank);
         draw_text(surface, 10, 29, line, ANSI_YELLOW);
-        draw_menu(surface, state, s_bank_menu, 3U, 52);
+        draw_menu(surface, state, s_bank_menu, 4U, 52);
         break;
     }
+    case LORD_SCREEN_BANK_TRANSFER:
+        draw_header(surface, "TRANSFER 100 GOLD");
+        draw_realm_menu(surface, state, false, "Return to bank");
+        break;
     case LORD_SCREEN_INN:
-        draw_header(surface, "THE INN");
+        draw_header(surface, "THE RED DRAGON INN");
         draw_text(surface, 10, 29,
                   "Firelight, rumors, and a safe bed.", ANSI_BROWN);
-        draw_menu(surface, state, s_inn_menu, 3U, 52);
+        draw_menu(surface, state, s_inn_menu, 11U, 43);
+        break;
+    case LORD_SCREEN_BARTENDER:
+        draw_header(surface, "TALK WITH THE BARTENDER");
+        draw_text(surface, 10, 29,
+                  "Ale, gossip, and a dangerous contest.", ANSI_BROWN);
+        draw_menu(surface, state, s_bartender_menu, 6U, 48);
+        break;
+    case LORD_SCREEN_CONVERSE:
+        draw_header(surface, "TAVERN CONVERSATION");
+        draw_text(surface, 10, 29,
+                  state->conversation[0] == '\0' ?
+                    "No one has spoken yet." : state->conversation,
+                  ANSI_BRIGHT_CYAN);
+        draw_menu(surface, state, s_converse_menu, 3U, 54);
+        break;
+    case LORD_SCREEN_SETH:
+        draw_header(surface, "SETH ABLE THE BARD");
+        draw_text(surface, 10, 29,
+                  "A grin, a lute, and a dangerous heart.",
+                  ANSI_BRIGHT_MAGENTA);
+        draw_menu(surface, state, s_npc_romance_menu, 6U, 48);
+        break;
+    case LORD_SCREEN_VIOLET:
+        draw_header(surface, "VIOLET OF THE INN");
+        draw_text(surface, 10, 29,
+                  "Violet watches the room with bright eyes.",
+                  ANSI_BRIGHT_MAGENTA);
+        draw_menu(surface, state, s_npc_romance_menu, 6U, 48);
+        break;
+    case LORD_SCREEN_BLACKJACK:
+        draw_header(surface, "RED DRAGON BLACKJACK");
+        draw_blackjack(surface, state);
         break;
     case LORD_SCREEN_PLAYERS: {
         draw_header(surface, "LOCAL REALM: WARRIORS");
@@ -794,7 +1114,7 @@ static void render_screen(p4_game_surface_t *surface,
     case LORD_SCREEN_MAIL_COMPOSE:
         draw_header(surface, "CHOOSE A RECIPIENT");
         draw_text(surface, 10, 28,
-                  "Preset text is used until OS text input arrives.",
+                  "Write with the cartridge's ANSI keyboard.",
                   ANSI_BRIGHT_CYAN);
         draw_realm_menu(surface, state, false, "Return to mailbox");
         break;
@@ -813,26 +1133,44 @@ static void render_screen(p4_game_surface_t *surface,
         const char *name = state->selected_player < LORD_REALM_PLAYER_COUNT ?
             state->realm[state->selected_player].name : "Unknown";
         draw_text(surface, 10, 29, name, ANSI_BRIGHT_MAGENTA);
-        draw_menu(surface, state, s_romance_action_menu, 4U, 48);
+        draw_menu(surface, state, s_romance_action_menu, 5U, 48);
         break;
     }
     case LORD_SCREEN_IGM: {
-        draw_header(surface, "IN-GAME MODULES");
+        draw_header(surface, "OTHER PLACES: IGMS");
         draw_text(surface, 10, 29,
-                  "Each module may be visited once per day.",
+                  "Seven Synchronet modules, once each per day.",
                   ANSI_BRIGHT_CYAN);
-        draw_menu(surface, state, s_igm_menu, 4U, 48);
-        char line[52];
-        line_clear(line, sizeof(line));
-        line_append(line, sizeof(line), "Used module mask: ");
-        line_append_u32(line, sizeof(line), state->igm_used_mask);
-        draw_text(surface, 10, 112, line, ANSI_DARK_GRAY);
+        draw_igm_menu(surface, state);
         break;
     }
+    case LORD_SCREEN_IGM_DETAIL:
+        draw_header(surface, lord_igm_name(state->selected_igm));
+        draw_text(surface, 10, 29,
+                  (state->igm_used_mask &
+                   (uint8_t)(1U << state->selected_igm)) != 0U ?
+                    "This place is closed to you today." :
+                    "Choose one encounter for today's visit.",
+                  ANSI_BRIGHT_CYAN);
+        draw_menu(surface, state, s_igm_actions[state->selected_igm],
+                  4U, 50);
+        break;
+    case LORD_SCREEN_NEWS:
+        draw_header(surface, "THE DAILY NEWS");
+        draw_news(surface, state);
+        break;
+    case LORD_SCREEN_RANKINGS:
+        draw_header(surface, "HALL OF RANKINGS");
+        draw_rankings(surface, state);
+        break;
+    case LORD_SCREEN_SKILLS:
+        draw_header(surface, "SKILL MASTERY");
+        draw_skills(surface, state);
+        break;
     case LORD_SCREEN_RIP_GALLERY:
         draw_header(surface, "RIP ART GALLERY");
         draw_text(surface, 10, 29,
-                  "Code-drawn BBS scenes; choose an exhibit.",
+                  "ANSI/RIP-style scenes; choose an exhibit.",
                   ANSI_BRIGHT_CYAN);
         draw_menu(surface, state, s_rip_gallery_menu,
                   LORD_RIP_SCENE_COUNT + 1U, 48);
@@ -876,6 +1214,10 @@ static void render_screen(p4_game_surface_t *surface,
         draw_text(surface, 72, 111,
                   "PRESS A TO PLAY AGAIN", ANSI_BRIGHT_CYAN);
         break;
+    case LORD_SCREEN_TEXT_EDITOR:
+        draw_header(surface, "ANSI TEXT EDITOR");
+        draw_keyboard(surface, state);
+        break;
     }
 }
 
@@ -914,10 +1256,78 @@ static bool game_start(p4_game_context_t *context)
         context->state_bytes != sizeof(lord_state_t)) {
         return false;
     }
-    lord_initialize(context->state, UINT32_C(0x4c4f5244));
+    lord_state_t *const state = context->state;
+    lord_initialize(state, UINT32_C(0x4c4f5244));
+    state->save_available = context->services != NULL &&
+        (context->services->available_capabilities & P4_GAME_CAP_SAVE) != 0U;
+    if (state->save_available && context->services->save_bytes != 0U) {
+        if (context->services->save_schema_version !=
+                LORD_SAVE_FORMAT_VERSION ||
+            context->services->save_sequence == 0U ||
+            !lord_save_decode(state, context->services->save_data,
+                              context->services->save_bytes)) {
+            lord_initialize(state, UINT32_C(0x4c4f5244));
+            state->save_available = true;
+            state->save_error = true;
+        } else {
+            state->host_save_sequence = context->services->save_sequence;
+            state->save_available = true;
+        }
+    }
     (void)p4_game_play_tone(context, 392U, 90U, 3U,
                             P4_WAVE_TRIANGLE);
     return true;
+}
+
+static void service_save(p4_game_context_t *context, lord_state_t *state)
+{
+    if (!state->save_available) {
+        return;
+    }
+    if (state->save_ticket != P4_GAME_SAVE_INVALID_TICKET) {
+        p4_game_save_status_t status = P4_GAME_SAVE_NONE;
+        uint32_t committed_sequence = 0U;
+        if (!p4_game_read_save_status(context, state->save_ticket, &status,
+                                      &committed_sequence)) {
+            return;
+        }
+        if (status == P4_GAME_SAVE_QUEUED ||
+            status == P4_GAME_SAVE_READY || status == P4_GAME_SAVE_NONE) {
+            return;
+        }
+        state->save_ticket = P4_GAME_SAVE_INVALID_TICKET;
+        if (status == P4_GAME_SAVE_COMMITTED && committed_sequence != 0U) {
+            state->host_save_sequence = committed_sequence;
+            if (state->save_sequence == state->save_queued_generation) {
+                state->save_dirty = false;
+            }
+        } else {
+            state->save_error = true;
+            if (status == P4_GAME_SAVE_UNAVAILABLE ||
+                status == P4_GAME_SAVE_CONFLICT) {
+                state->save_available = false;
+            }
+            return;
+        }
+    }
+    if (!state->save_dirty ||
+        state->save_ticket != P4_GAME_SAVE_INVALID_TICKET) {
+        return;
+    }
+    uint8_t payload[LORD_SAVE_MAX_BYTES];
+    const size_t payload_bytes = lord_save_encode(
+        state, payload, sizeof(payload));
+    p4_game_save_ticket_t ticket = P4_GAME_SAVE_INVALID_TICKET;
+    if (payload_bytes == 0U) {
+        state->save_error = true;
+        return;
+    }
+    if (p4_game_queue_save(context, "AUTO", LORD_SAVE_FORMAT_VERSION,
+                           state->host_save_sequence, payload,
+                           payload_bytes, &ticket)) {
+        state->save_ticket = ticket;
+        state->save_queued_generation = state->save_sequence;
+    }
 }
 
 static p4_game_result_t game_update(p4_game_context_t *context,
@@ -928,9 +1338,24 @@ static p4_game_result_t game_update(p4_game_context_t *context,
     lord_state_t *const state = context->state;
     state->held_buttons = input->held;
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
+        service_save(context, state);
         return P4_GAME_EXIT_TO_LAUNCHER;
     }
-    if ((input->pressed & (P4_BUTTON_UP | P4_BUTTON_LEFT)) != 0U) {
+    if (state->screen == LORD_SCREEN_TEXT_EDITOR) {
+        if ((input->pressed & P4_BUTTON_LEFT) != 0U) {
+            lord_move_selection(state, -1);
+            play_event_tone(context, LORD_EVENT_MOVE);
+        } else if ((input->pressed & P4_BUTTON_RIGHT) != 0U) {
+            lord_move_selection(state, 1);
+            play_event_tone(context, LORD_EVENT_MOVE);
+        } else if ((input->pressed & P4_BUTTON_UP) != 0U) {
+            lord_move_selection(state, -6);
+            play_event_tone(context, LORD_EVENT_MOVE);
+        } else if ((input->pressed & P4_BUTTON_DOWN) != 0U) {
+            lord_move_selection(state, 6);
+            play_event_tone(context, LORD_EVENT_MOVE);
+        }
+    } else if ((input->pressed & (P4_BUTTON_UP | P4_BUTTON_LEFT)) != 0U) {
         lord_move_selection(state, -1);
         play_event_tone(context, LORD_EVENT_MOVE);
     } else if ((input->pressed & (P4_BUTTON_DOWN | P4_BUTTON_RIGHT)) != 0U) {
@@ -944,6 +1369,7 @@ static p4_game_result_t game_update(p4_game_context_t *context,
         event = lord_cancel(state);
     }
     play_event_tone(context, event);
+    service_save(context, state);
     return P4_GAME_CONTINUE;
 }
 
@@ -973,7 +1399,7 @@ const p4_game_descriptor_t p4_lord_game = {
     .subtitle = "LEGEND OF THE RED DRAGON",
     .accent_rgb565 = ANSI_BRIGHT_RED,
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,
+    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_SAVE,
     .state_bytes = sizeof(lord_state_t),
     .start = game_start,
     .update = game_update,

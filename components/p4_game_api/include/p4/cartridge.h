@@ -30,6 +30,19 @@ typedef bool (*p4_cartridge_request_signal_scan_fn)(
     void *context, uint64_t focus_token);
 typedef bool (*p4_cartridge_read_signal_scan_fn)(
     void *context, p4_game_signal_snapshot_t *snapshot);
+typedef bool (*p4_cartridge_queue_save_fn)(
+    void *context,
+    const char *slot_id,
+    uint32_t schema_version,
+    uint32_t expected_sequence,
+    const uint8_t *data,
+    size_t data_bytes,
+    p4_game_save_ticket_t *ticket_out);
+typedef bool (*p4_cartridge_read_save_status_fn)(
+    void *context,
+    p4_game_save_ticket_t ticket,
+    p4_game_save_status_t *status_out,
+    uint32_t *committed_sequence_out);
 typedef void (*p4_cartridge_finished_fn)(
     void *context, p4_game_result_t result);
 
@@ -64,6 +77,14 @@ typedef struct {
     /** Optional v1 extension for privacy-sanitized, non-blocking scans. */
     p4_cartridge_request_signal_scan_fn request_signal_scan;
     p4_cartridge_read_signal_scan_fn read_signal_scan;
+    /** Optional v1 extension: immutable OS-selected launch save snapshot. */
+    const uint8_t *save_data;
+    size_t save_bytes;
+    uint32_t save_schema_version;
+    uint32_t save_sequence;
+    /** Optional v1 extension: copied, queued save commits and ticket status. */
+    p4_cartridge_queue_save_fn queue_save;
+    p4_cartridge_read_save_status_fn read_save_status;
 } p4_cartridge_host_v1_t;
 
 typedef enum {

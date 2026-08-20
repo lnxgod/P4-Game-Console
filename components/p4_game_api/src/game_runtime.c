@@ -24,7 +24,37 @@ static uint32_t known_capabilities(void)
         P4_GAME_CAP_AUDIO_TONE |
         P4_GAME_CAP_AUDIO_STREAM |
         P4_GAME_CAP_STORAGE |
-        P4_GAME_CAP_SIGNAL_SCAN;
+        P4_GAME_CAP_SIGNAL_SCAN |
+        P4_GAME_CAP_SAVE |
+        P4_GAME_CAP_TEXT_INPUT |
+        P4_GAME_CAP_REALM |
+        P4_GAME_CAP_MULTIPLAYER_SESSION |
+        P4_GAME_CAP_MODULE_HANDOFF |
+        P4_GAME_CAP_VECTOR_SCENES;
+}
+
+static uint32_t implemented_service_capabilities(void)
+{
+    return P4_GAME_CAP_VIDEO |
+        P4_GAME_CAP_CONTROLS |
+        P4_GAME_CAP_AUDIO_TONE |
+        P4_GAME_CAP_AUDIO_STREAM |
+        P4_GAME_CAP_STORAGE |
+        P4_GAME_CAP_SIGNAL_SCAN |
+        P4_GAME_CAP_SAVE;
+}
+
+static bool save_snapshot_valid(const p4_game_services_t *services)
+{
+    if (services->save_bytes == 0U) {
+        return services->save_data == NULL &&
+            services->save_schema_version == 0U &&
+            services->save_sequence == 0U;
+    }
+    return services->save_data != NULL &&
+        services->save_bytes <= P4_GAME_SAVE_MAX_BYTES &&
+        services->save_schema_version != 0U &&
+        services->save_sequence != 0U;
 }
 
 bool p4_game_descriptor_valid(const p4_game_descriptor_t *descriptor)
@@ -56,7 +86,8 @@ bool p4_game_descriptor_valid(const p4_game_descriptor_t *descriptor)
 static bool services_valid(const p4_game_services_t *services)
 {
     if (services == NULL ||
-        (services->available_capabilities & ~known_capabilities()) != 0U) {
+        (services->available_capabilities &
+         ~implemented_service_capabilities()) != 0U) {
         return false;
     }
     if ((services->available_capabilities & P4_GAME_CAP_AUDIO_TONE) != 0U &&
@@ -76,6 +107,12 @@ static bool services_valid(const p4_game_services_t *services)
         (services->signal_scan_context == NULL ||
          services->request_signal_scan == NULL ||
          services->read_signal_scan == NULL)) {
+        return false;
+    }
+    if ((services->available_capabilities & P4_GAME_CAP_SAVE) != 0U &&
+        (services->save_context == NULL || services->queue_save == NULL ||
+         services->read_save_status == NULL ||
+         !save_snapshot_valid(services))) {
         return false;
     }
     return true;
@@ -287,7 +324,8 @@ static bool signal_snapshot_valid(const p4_game_signal_snapshot_t *snapshot)
         if (signal->token == 0U || signal->rssi_dbm > 0 ||
             signal->channel > 196U ||
             (signal->flags & ~(P4_GAME_SIGNAL_HIDDEN |
-                               P4_GAME_SIGNAL_PROTECTED)) != 0U ||
+                               P4_GAME_SIGNAL_PROTECTED |
+                               P4_GAME_SIGNAL_SIMULATED)) != 0U ||
             bounded_length(signal->label,
                            P4_GAME_SIGNAL_LABEL_MAX_BYTES) == 0U ||
             bounded_length(signal->label,
@@ -315,6 +353,96 @@ bool p4_game_read_signal_scan(p4_game_context_t *context,
         return false;
     }
     *snapshot = candidate;
+    return true;
+}
+
+static bool save_slot_id_valid(const char *slot_id)
+{
+    const size_t length = bounded_length(slot_id,
+                                         P4_GAME_SAVE_SLOT_ID_BYTES);
+    if (length == 0U || length >= P4_GAME_SAVE_SLOT_ID_BYTES) {
+        return false;
+    }
+    for (size_t index = 0U; index < length; ++index) {
+        const unsigned char character = (unsigned char)slot_id[index];
+        const bool alpha_numeric =
+            (character >= (unsigned char)'A' &&
+             character <= (unsigned char)'Z') ||
+            (character >= (unsigned char)'a' &&
+             character <= (unsigned char)'z') ||
+            (character >= (unsigned char)'0' &&
+             character <= (unsigned char)'9');
+        if (!alpha_numeric &&
+            (index == 0U ||
+             (character != (unsigned char)'_' &&
+              character != (unsigned char)'-'))) {
+            return false;
+        }
+    }
+    return true;
+}
+
+bool p4_game_queue_save(p4_game_context_t *context,
+                        const char *slot_id,
+                        uint32_t schema_version,
+                        uint32_t expected_sequence,
+                        const uint8_t *data,
+                        size_t data_bytes,
+                        p4_game_save_ticket_t *ticket_out)
+{
+    if (ticket_out != NULL) {
+        *ticket_out = P4_GAME_SAVE_INVALID_TICKET;
+    }
+    if (context == NULL || context->services == NULL || ticket_out == NULL ||
+        (context->services->available_capabilities & P4_GAME_CAP_SAVE) == 0U ||
+        context->services->save_context == NULL ||
+        context->services->queue_save == NULL ||
+        !save_slot_id_valid(slot_id) || schema_version == 0U || data == NULL ||
+        data_bytes == 0U || data_bytes > P4_GAME_SAVE_MAX_BYTES) {
+        return false;
+    }
+    p4_game_save_ticket_t candidate = P4_GAME_SAVE_INVALID_TICKET;
+    if (!context->services->queue_save(
+            context->services->save_context, slot_id, schema_version,
+            expected_sequence, data, data_bytes, &candidate) ||
+        candidate == P4_GAME_SAVE_INVALID_TICKET) {
+        return false;
+    }
+    *ticket_out = candidate;
+    return true;
+}
+
+bool p4_game_read_save_status(p4_game_context_t *context,
+                              p4_game_save_ticket_t ticket,
+                              p4_game_save_status_t *status_out,
+                              uint32_t *committed_sequence_out)
+{
+    if (status_out != NULL) {
+        *status_out = P4_GAME_SAVE_NONE;
+    }
+    if (committed_sequence_out != NULL) {
+        *committed_sequence_out = 0U;
+    }
+    if (context == NULL || context->services == NULL || status_out == NULL ||
+        committed_sequence_out == NULL ||
+        ticket == P4_GAME_SAVE_INVALID_TICKET ||
+        (context->services->available_capabilities & P4_GAME_CAP_SAVE) == 0U ||
+        context->services->save_context == NULL ||
+        context->services->read_save_status == NULL) {
+        return false;
+    }
+    p4_game_save_status_t candidate_status = P4_GAME_SAVE_NONE;
+    uint32_t candidate_sequence = 0U;
+    if (!context->services->read_save_status(
+            context->services->save_context, ticket, &candidate_status,
+            &candidate_sequence) || candidate_status < P4_GAME_SAVE_NONE ||
+        candidate_status > P4_GAME_SAVE_ERROR ||
+        (candidate_status == P4_GAME_SAVE_COMMITTED &&
+         candidate_sequence == 0U)) {
+        return false;
+    }
+    *status_out = candidate_status;
+    *committed_sequence_out = candidate_sequence;
     return true;
 }
 

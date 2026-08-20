@@ -27,6 +27,9 @@ enum {
     P4_GAME_ACHIEVEMENT_DESCRIPTION_MAX_BYTES = 48,
     P4_GAME_SIGNAL_MAX_RESULTS = 8,
     P4_GAME_SIGNAL_LABEL_MAX_BYTES = 25,
+    P4_GAME_SAVE_MAX_BYTES = 16 * 1024,
+    P4_GAME_SAVE_MAX_SLOTS = 2,
+    P4_GAME_SAVE_SLOT_ID_BYTES = 16,
 };
 
 typedef enum {
@@ -36,6 +39,12 @@ typedef enum {
     P4_GAME_CAP_AUDIO_STREAM = UINT32_C(1) << 3U,
     P4_GAME_CAP_STORAGE = UINT32_C(1) << 4U,
     P4_GAME_CAP_SIGNAL_SCAN = UINT32_C(1) << 5U,
+    P4_GAME_CAP_SAVE = UINT32_C(1) << 6U,
+    P4_GAME_CAP_TEXT_INPUT = UINT32_C(1) << 7U,
+    P4_GAME_CAP_REALM = UINT32_C(1) << 8U,
+    P4_GAME_CAP_MULTIPLAYER_SESSION = UINT32_C(1) << 9U,
+    P4_GAME_CAP_MODULE_HANDOFF = UINT32_C(1) << 10U,
+    P4_GAME_CAP_VECTOR_SCENES = UINT32_C(1) << 11U,
 } p4_game_capability_t;
 
 typedef enum {
@@ -115,6 +124,8 @@ typedef enum {
 enum {
     P4_GAME_SIGNAL_HIDDEN = UINT8_C(1) << 0U,
     P4_GAME_SIGNAL_PROTECTED = UINT8_C(1) << 1U,
+    /** Test-host observation. Hardware radio services never set this bit. */
+    P4_GAME_SIGNAL_SIMULATED = UINT8_C(1) << 2U,
 };
 
 /**
@@ -143,6 +154,43 @@ typedef bool (*p4_game_request_signal_scan_fn)(void *context,
 typedef bool (*p4_game_read_signal_scan_fn)(
     void *context, p4_game_signal_snapshot_t *snapshot);
 
+typedef uint32_t p4_game_save_ticket_t;
+
+#define P4_GAME_SAVE_INVALID_TICKET UINT32_C(0)
+
+typedef enum {
+    P4_GAME_SAVE_NONE = 0,
+    P4_GAME_SAVE_READY,
+    P4_GAME_SAVE_QUEUED,
+    P4_GAME_SAVE_COMMITTED,
+    P4_GAME_SAVE_CONFLICT,
+    P4_GAME_SAVE_UNAVAILABLE,
+    P4_GAME_SAVE_ERROR,
+} p4_game_save_status_t;
+
+/**
+ * Queue one optimistic save commit without performing storage I/O inline.
+ *
+ * An accepting host copies all payload and slot bytes before returning. It
+ * never retains cartridge-owned memory. expected_sequence is zero for a new
+ * slot and otherwise names the immutable launch/last-commit sequence.
+ */
+typedef bool (*p4_game_queue_save_fn)(
+    void *context,
+    const char *slot_id,
+    uint32_t schema_version,
+    uint32_t expected_sequence,
+    const uint8_t *data,
+    size_t data_bytes,
+    p4_game_save_ticket_t *ticket_out);
+
+/** Copy the current bounded status for a previously accepted save ticket. */
+typedef bool (*p4_game_read_save_status_fn)(
+    void *context,
+    p4_game_save_ticket_t ticket,
+    p4_game_save_status_t *status_out,
+    uint32_t *committed_sequence_out);
+
 typedef struct {
     uint32_t available_capabilities;
     void *audio_context;
@@ -163,6 +211,14 @@ typedef struct {
     void *signal_scan_context;
     p4_game_request_signal_scan_fn request_signal_scan;
     p4_game_read_signal_scan_fn read_signal_scan;
+    /** Optional v1 tail: immutable snapshot selected by Console OS at launch. */
+    void *save_context;
+    const uint8_t *save_data;
+    size_t save_bytes;
+    uint32_t save_schema_version;
+    uint32_t save_sequence;
+    p4_game_queue_save_fn queue_save;
+    p4_game_read_save_status_fn read_save_status;
 } p4_game_services_t;
 
 typedef struct {
@@ -265,6 +321,24 @@ bool p4_game_request_signal_scan(p4_game_context_t *context,
 /** Read and validate the OS-owned signal snapshot. */
 bool p4_game_read_signal_scan(p4_game_context_t *context,
                               p4_game_signal_snapshot_t *snapshot);
+
+/**
+ * Queue a copied save payload. slot_id is 1..15 ASCII alphanumeric, `_`, or
+ * `-` bytes and must begin with an alphanumeric byte.
+ */
+bool p4_game_queue_save(p4_game_context_t *context,
+                        const char *slot_id,
+                        uint32_t schema_version,
+                        uint32_t expected_sequence,
+                        const uint8_t *data,
+                        size_t data_bytes,
+                        p4_game_save_ticket_t *ticket_out);
+
+/** Read and validate a non-blocking save-ticket status snapshot. */
+bool p4_game_read_save_status(p4_game_context_t *context,
+                              p4_game_save_ticket_t ticket,
+                              p4_game_save_status_t *status_out,
+                              uint32_t *committed_sequence_out);
 
 void p4_game_stop_audio(p4_game_context_t *context);
 

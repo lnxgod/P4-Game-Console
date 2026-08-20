@@ -121,7 +121,7 @@ static bool layout_valid(const gamepad_hid_layout_t *layout)
     for (uint16_t field_index = 0; field_index < layout->field_count; ++field_index) {
         const gamepad_hid_field_t *field = &layout->fields[field_index];
         if (field->logical_max <= field->logical_min || field->bit_size == 0U ||
-            field->bit_size > 32U || field->map_target > GAMEPAD_HID_MAP_BUTTON ||
+            field->bit_size > 32U || field->map_target > GAMEPAD_HID_MAP_DPAD_Y ||
             !logical_range_fits_bits(field->logical_min, field->logical_max,
                                      field->bit_size) ||
             (field->flags & ~(GAMEPAD_HID_FIELD_NULL_STATE | GAMEPAD_HID_FIELD_ARRAY)) !=
@@ -972,7 +972,7 @@ gamepad_status_t gamepad_hid_set_field_mapping(gamepad_hid_layout_t *layout,
         return GAMEPAD_ERR_INVALID_STATE;
     }
     if (field_index >= layout->field_count || target < GAMEPAD_HID_MAP_IGNORE ||
-        target > GAMEPAD_HID_MAP_BUTTON) {
+        target > GAMEPAD_HID_MAP_DPAD_Y) {
         return GAMEPAD_ERR_INVALID_ARGUMENT;
     }
     if (target == GAMEPAD_HID_MAP_BUTTON && map_index >= GAMEPAD_BUTTON_COUNT) {
@@ -1045,27 +1045,51 @@ static gamepad_status_t apply_usb_gamepad_0079_0011_profile(
 
     gamepad_hid_layout_t next = *layout;
     next.fields[0].map_target = GAMEPAD_HID_MAP_IGNORE;
-    next.fields[1].map_target = GAMEPAD_HID_MAP_IGNORE;
+    next.fields[1].map_target = GAMEPAD_HID_MAP_DPAD_Y;
 
     /*
-     * This controller declares a four-bit, eight-position, null-state input at
-     * bit 40, but gives it Usage 0 instead of Hat Switch (0x39). The exact
-     * descriptor hash below is the authority for this narrowly scoped repair.
-     * Its five byte-wide axes remain ignored because their repeated X usages
-     * do not establish a trustworthy semantic mapping.
+     * This controller reports its SNES face buttons in Y, B, A, X order.
+     * Publish physical labels into the canonical layout so Console OS sees
+     * A as South/accept and B as East/back. The remaining two unnamed HID
+     * buttons are deliberately ignored; Select and Start are usages 9/10.
+     */
+    static const gamepad_button_t button_map[10] = {
+        GAMEPAD_BUTTON_WEST,
+        GAMEPAD_BUTTON_EAST,
+        GAMEPAD_BUTTON_SOUTH,
+        GAMEPAD_BUTTON_NORTH,
+        GAMEPAD_BUTTON_LEFT_SHOULDER,
+        GAMEPAD_BUTTON_RIGHT_SHOULDER,
+        GAMEPAD_BUTTON_MISC_1,
+        GAMEPAD_BUTTON_PADDLE_1,
+        GAMEPAD_BUTTON_BACK,
+        GAMEPAD_BUTTON_START,
+    };
+    for (size_t button = 0U; button < 10U; ++button) {
+        next.fields[button + 2U].map_index = (uint8_t)button_map[button];
+    }
+    next.fields[8].map_target = GAMEPAD_HID_MAP_IGNORE;
+    next.fields[9].map_target = GAMEPAD_HID_MAP_IGNORE;
+
+    /*
+     * Retrolink's exact mapping uses axis 3 for left/right and axis 4 for
+     * up/down. The malformed descriptor declares four consecutive X usages,
+     * so the generic parser intentionally retains only the first one. Restore
+     * the fourth declared axis from bit 24 and pair it with the retained Y
+     * axis at bit 32. The exact descriptor hash below keeps this quirk narrow.
      */
     next.fields[next.field_count++] = (gamepad_hid_field_t){
         .logical_min = 0,
-        .logical_max = 7,
+        .logical_max = 255,
         .usage_page = GAMEPAD_HID_USAGE_PAGE_GENERIC_DESKTOP,
-        .usage = 0U,
-        .usage_max = 0U,
-        .bit_offset = 40U,
-        .bit_size = 4U,
+        .usage = GAMEPAD_HID_USAGE_X,
+        .usage_max = GAMEPAD_HID_USAGE_X,
+        .bit_offset = 24U,
+        .bit_size = 8U,
         .report_id = 0U,
-        .map_target = GAMEPAD_HID_MAP_HAT,
+        .map_target = GAMEPAD_HID_MAP_DPAD_X,
         .map_index = 0U,
-        .flags = GAMEPAD_HID_FIELD_NULL_STATE,
+        .flags = 0U,
         .reserved = 0U,
     };
     if (!layout_valid(&next)) {
@@ -1138,6 +1162,8 @@ uint32_t gamepad_hid_capabilities(const gamepad_hid_layout_t *layout)
             capabilities |= GAMEPAD_CAP_BUTTONS;
             break;
         case GAMEPAD_HID_MAP_HAT:
+        case GAMEPAD_HID_MAP_DPAD_X:
+        case GAMEPAD_HID_MAP_DPAD_Y:
             capabilities |= GAMEPAD_CAP_DPAD;
             break;
         case GAMEPAD_HID_MAP_LEFT_X:
@@ -1260,6 +1286,34 @@ static gamepad_status_t decode_hat(const gamepad_hid_field_t *field,
     return GAMEPAD_ERR_UNSUPPORTED;
 }
 
+static gamepad_status_t decode_dpad_axis(const gamepad_hid_field_t *field,
+                                         int64_t value,
+                                         bool horizontal,
+                                         uint8_t *dpad)
+{
+    if (field == NULL || dpad == NULL ||
+        field->logical_max <= field->logical_min ||
+        value < field->logical_min || value > field->logical_max) {
+        return GAMEPAD_ERR_MALFORMED;
+    }
+
+    const int64_t span =
+        (int64_t)field->logical_max - field->logical_min;
+    const int64_t low = field->logical_min + span / 3;
+    const int64_t high = field->logical_max - span / 3;
+    const uint8_t negative = horizontal
+        ? GAMEPAD_DPAD_LEFT : GAMEPAD_DPAD_UP;
+    const uint8_t positive = horizontal
+        ? GAMEPAD_DPAD_RIGHT : GAMEPAD_DPAD_DOWN;
+    *dpad &= (uint8_t)~(negative | positive);
+    if (value <= low) {
+        *dpad |= negative;
+    } else if (value >= high) {
+        *dpad |= positive;
+    }
+    return GAMEPAD_OK;
+}
+
 static gamepad_status_t clear_array_buttons(const gamepad_hid_field_t *field,
                                             gamepad_state_t *state)
 {
@@ -1363,6 +1417,14 @@ static gamepad_status_t apply_field(const gamepad_hid_field_t *field,
         case GAMEPAD_HID_MAP_HAT:
             state->dpad = GAMEPAD_DPAD_CENTERED;
             return GAMEPAD_OK;
+        case GAMEPAD_HID_MAP_DPAD_X:
+            state->dpad &=
+                (uint8_t)~(GAMEPAD_DPAD_LEFT | GAMEPAD_DPAD_RIGHT);
+            return GAMEPAD_OK;
+        case GAMEPAD_HID_MAP_DPAD_Y:
+            state->dpad &=
+                (uint8_t)~(GAMEPAD_DPAD_UP | GAMEPAD_DPAD_DOWN);
+            return GAMEPAD_OK;
         case GAMEPAD_HID_MAP_BUTTON:
             if (field->map_index >= GAMEPAD_BUTTON_COUNT) {
                 return GAMEPAD_ERR_INVALID_STATE;
@@ -1401,6 +1463,10 @@ static gamepad_status_t apply_field(const gamepad_hid_field_t *field,
         return GAMEPAD_OK;
     case GAMEPAD_HID_MAP_HAT:
         return decode_hat(field, value, &state->dpad);
+    case GAMEPAD_HID_MAP_DPAD_X:
+        return decode_dpad_axis(field, value, true, &state->dpad);
+    case GAMEPAD_HID_MAP_DPAD_Y:
+        return decode_dpad_axis(field, value, false, &state->dpad);
     case GAMEPAD_HID_MAP_BUTTON:
         if (field->map_index >= GAMEPAD_BUTTON_COUNT) {
             return GAMEPAD_ERR_INVALID_STATE;

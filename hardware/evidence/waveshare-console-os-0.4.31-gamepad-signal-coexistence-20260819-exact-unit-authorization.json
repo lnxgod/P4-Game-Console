@@ -1,0 +1,149 @@
+{
+  "schema": 1,
+  "active": true,
+  "recorded_at": "2026-08-19T10:35:58-0700",
+  "scope": "Exact-unit app-only forward install of Console OS 0.4.31 with Waveshare H2 Host/HID and the ESP32-C6 passive signal scanner enabled together",
+  "authority": {
+    "source": "operator requests in the active Codex task",
+    "requests": [
+      "gamepad isnt working",
+      "signal tracking ... real its important",
+      "i dont want rollback i want to test this on device"
+    ],
+    "automatic_rollback_authorized": false,
+    "post_write_policy": "Preserve the exact 0.4.30 preimage and test the 0.4.31 forward fix on-device; do not automatically restore an older image."
+  },
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "port": "/dev/cu.wchusbserial5C371865781",
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "offset": "0x2000",
+      "path": "apps/console_os/build-waveshare-usb-host/bootloader/bootloader.bin",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "offset": "0x8000",
+      "path": "apps/console_os/build-waveshare-usb-host/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    }
+  },
+  "predecessor": {
+    "version": "0.4.30",
+    "offset": "0x20000",
+    "application_bytes": 1367168,
+    "application_sha256": "0200c18a971035295f8d61270b344e3c4ecdd83e03a55da908363f9251201fa5",
+    "preserve_span_bytes": 1384448,
+    "preserve_path": "hardware/local-state/waveshare-console-os-0.4.31-gamepad-signal-coexistence-20260819/preimage-0.4.30.bin"
+  },
+  "candidate": {
+    "version": "0.4.31",
+    "source_base_commit": "e338fda8bcb3581eab0e4c6b8accb87a4c99995b",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "h2_role": "controller-first-runtime-switch",
+    "firmware_vbus_source": false,
+    "application": {
+      "offset": "0x20000",
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+      "bytes": 1381488,
+      "padded_mutation_bytes": 1384448,
+      "sha256": "473193f936fabe3e78e5fe44283e23cc15701c92911a5c36662bff72276ce8ee"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.elf",
+      "bytes": 17125944,
+      "sha256": "25ef30ddfeee3f49521d9c47bc579252d550215f0a869a66beff5ddcca7682b0"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-usb-host/P4UPDATE.P4U",
+      "bytes": 1381744,
+      "sha256": "7b19ca219ecd35e3dc1eac5a6d96bc143fdb9adbe3d7bb4a25f167804fd5d215"
+    },
+    "sdkconfig": {
+      "path": "apps/console_os/build-waveshare-usb-host/sdkconfig",
+      "bytes": 86844,
+      "sha256": "47d973b65faeda5ef168307ce7519c3eeb2d10ba63fdb3b9d771e6fe98f53957"
+    },
+    "dependencies_lock": {
+      "path": "apps/console_os/dependencies-waveshare.lock",
+      "bytes": 6296,
+      "sha256": "392bb2cc5101cc6019f81dd420cf2c4fbb964bdae2a04e922a12c8e284667248",
+      "esp_hosted": "1.4.7",
+      "esp_wifi_remote": "0.14.5",
+      "esp_tinyusb": "2.0.1",
+      "tinyusb": "0.21.0~1"
+    },
+    "source_files": [
+      {
+        "path": "apps/console_os/CMakeLists.txt",
+        "bytes": 21732,
+        "sha256": "9aa6b6de175556a739d0da440c4673e9867f9b6b03b547f81c0ad2009e5d745a"
+      },
+      {
+        "path": "apps/console_os/main/CMakeLists.txt",
+        "bytes": 3937,
+        "sha256": "68428eb5898a6c08a2fe5e5d86e8ca1426436706e84defa406b03904974e2f7f"
+      },
+      {
+        "path": "apps/console_os/main/console_os_main.c",
+        "bytes": 148418,
+        "sha256": "5862575fd4b03874fef3662091374ac292f8d5e37b110638971d8c1c023fad1b"
+      },
+      {
+        "path": "scripts/verify-console-os-waveshare.py",
+        "bytes": 41670,
+        "sha256": "d5bdf37aa073059b281b31c2150061b2cd356368965959e967d88ecbae6d384b"
+      }
+    ]
+  },
+  "software_checks": {
+    "gamepad_host": "pass",
+    "p4_signal_scan_host": "pass",
+    "controller_first_build": "pass",
+    "waveshare_build_verifier": "pass",
+    "esp_hosted_constructor_removed": "pass",
+    "scanner_start_order": "after-launcher-ready",
+    "hardware_tested": false
+  },
+  "usb_fixture_policy": {
+    "h2_board_vbus_source_authorized": false,
+    "required": "externally powered, current-limited, backfeed-safe H2 host fixture",
+    "passive_otg_adapter_allowed": false,
+    "existing_experimental_evidence": "hardware/test-runs/2026-08-17-waveshare-h2-powered-hub-controller-host.json"
+  },
+  "mutation": {
+    "allowed": [
+      "0x20000..0x171fff application payload plus flash-sector padding"
+    ],
+    "forbidden": [
+      "bootloader",
+      "partition table",
+      "OTA data",
+      "NVS and persistent settings",
+      "microSD contents",
+      "factory backup"
+    ]
+  },
+  "required_device_checks": [
+    "complete application write verification",
+    "retained UART reports App version 0.4.31",
+    "USB_INPUT_READY before launcher READY without reboot",
+    "launcher READY before SIGNAL_SCAN_START",
+    "C6 passive scanner ready",
+    "named gamepad enumerates and button input changes",
+    "Byte Buddy launches with signals=ready",
+    "real nearby SSIDs and changing RSSI remain operator-observed"
+  ]
+}

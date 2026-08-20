@@ -39,6 +39,23 @@ static const console_app_descriptor_t s_apps[] = {
     },
 };
 
+static const console_app_descriptor_t s_paged_apps[] = {
+    {1U, "ONE", "DOOR", "ONE", UINT16_C(0x07ff),
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+    {2U, "TWO", "DOOR", "TWO", UINT16_C(0xffe0),
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+    {3U, "THREE", "DOOR", "THREE", UINT16_C(0x07e0),
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+    {4U, "FOUR", "DOOR", "FOUR", UINT16_C(0xf81f),
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+    {5U, "FIVE", "DOOR", "FIVE", UINT16_C(0xf800),
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+    {6U, "SIX", "DOOR", "SIX", UINT16_C(0x001f),
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+    {7U, "SEVEN", "DOOR", "SEVEN", UINT16_C(0xffff),
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+};
+
 static console_shell_action_t release_touch(console_shell_t *shell)
 {
     return console_shell_handle_touch(shell, true, NULL, 0U);
@@ -117,6 +134,17 @@ int main(void)
     action = console_shell_handle_buttons(&shell, CONSOLE_BUTTON_ACCEPT);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(strcmp(shell.home_folder_path, "GAMES") == 0);
+
+    CHECK(console_shell_init(
+        &shell, s_paged_apps,
+        sizeof(s_paged_apps) / sizeof(s_paged_apps[0])));
+    CHECK(shell.home_scroll_row == 0U);
+    action = tap_surface(&shell, 620U, 408U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_scroll_row == 1U);
+    action = tap_surface(&shell, 80U, 408U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_scroll_row == 0U);
 
     if (s_failures != 0) {
         fprintf(stderr, "%d BBS shell test failure(s)\n", s_failures);

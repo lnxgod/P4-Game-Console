@@ -30,6 +30,10 @@ enum {
     BBS_DOOR_TOP_ROW = 9,
     BBS_DOOR_COLUMN_CELLS = 31,
     BBS_DOOR_ROW_CELLS = 3,
+    BBS_PAGE_CONTROL_ROW = 26,
+    BBS_PAGE_PREVIOUS_COLUMN = 5,
+    BBS_PAGE_NEXT_COLUMN = 65,
+    BBS_PAGE_BUTTON_CELLS = 11,
 };
 
 static bool write_bytes(p4_ansi_terminal_t *terminal,
@@ -275,9 +279,9 @@ static bool draw_door(p4_ansi_terminal_t *terminal,
                          : P4_ANSI_COLOR_DARK_GRAY);
     const uint8_t background = selected
         ? P4_ANSI_COLOR_YELLOW : P4_ANSI_COLOR_BLUE;
-    char label[32];
+    char label[40];
     const int written = snprintf(
-        label, sizeof(label), "[%02u] %-16s",
+        label, sizeof(label), "[%02u] %-16s [TAP]",
         (unsigned)(door->number == 0U ? index + 1U : door->number),
         door->title[0] == '\0' ? (door->menu ? "MORE DOORS" : "UNTITLED")
                                : door->title);
@@ -293,6 +297,29 @@ static bool draw_door(p4_ansi_terminal_t *terminal,
                  selected ? P4_ANSI_COLOR_YELLOW
                           : P4_ANSI_COLOR_BLACK,
                  false, false);
+}
+
+static bool draw_touch_controls(p4_ansi_terminal_t *terminal,
+                                const p4_bbs_launcher_model_t *model)
+{
+    if (model->page > 1U &&
+        !field(terminal, BBS_PAGE_CONTROL_ROW,
+               BBS_PAGE_PREVIOUS_COLUMN, BBS_PAGE_BUTTON_CELLS,
+               "[<] PREV", P4_ANSI_COLOR_WHITE,
+               P4_ANSI_COLOR_BLUE, true, true)) {
+        return false;
+    }
+    if (!field(terminal, BBS_PAGE_CONTROL_ROW, 18U, 44U,
+               "TOUCH A DOOR TO OPEN",
+               P4_ANSI_COLOR_YELLOW,
+               P4_ANSI_COLOR_BLACK, true, true)) {
+        return false;
+    }
+    return model->page >= model->page_count ||
+        field(terminal, BBS_PAGE_CONTROL_ROW,
+              BBS_PAGE_NEXT_COLUMN, BBS_PAGE_BUTTON_CELLS,
+              "NEXT [>]", P4_ANSI_COLOR_WHITE,
+              P4_ANSI_COLOR_BLUE, true, true);
 }
 
 static bool draw_rocket(p4_ansi_terminal_t *terminal)
@@ -333,6 +360,8 @@ bool p4_bbs_build_launcher(p4_ansi_terminal_t *terminal,
     if (terminal == NULL || model == NULL ||
         model->door_count > P4_BBS_VISIBLE_DOORS ||
         (model->door_count > 0U && model->selected_door >= model->door_count) ||
+        model->page == 0U || model->page_count == 0U ||
+        model->page > model->page_count ||
         !model_strings_are_terminated(model)) {
         return false;
     }
@@ -350,18 +379,15 @@ bool p4_bbs_build_launcher(p4_ansi_terminal_t *terminal,
         }
     }
     if (!draw_rocket(terminal) ||
-        !field(terminal, 26U, 5U, 15U, "SELECT DOOR:",
+        !draw_touch_controls(terminal, model) ||
+        !field(terminal, 27U, 5U, 15U, "SELECTED:",
                P4_ANSI_COLOR_WHITE, P4_ANSI_COLOR_BLACK, true, false) ||
-        !number_field(terminal, 26U, 21U,
+        !number_field(terminal, 27U, 21U,
                       model->door_count == 0U ? 0U :
                       (model->doors[model->selected_door].number == 0U
                            ? (uint16_t)(model->selected_door + 1U)
                            : model->doors[model->selected_door].number),
-                      P4_ANSI_COLOR_YELLOW) ||
-        !field(terminal, 27U, 5U, 26U,
-               "ARROWS MOVE / ENTER OPENS",
-               P4_ANSI_COLOR_LIGHT_GRAY,
-               P4_ANSI_COLOR_BLACK, false, false)) {
+                      P4_ANSI_COLOR_YELLOW)) {
         return false;
     }
     char transfer[40];
@@ -552,6 +578,32 @@ p4_bbs_hit_t p4_bbs_hit_test(const p4_bbs_launcher_model_t *model,
             .kind = P4_BBS_HIT_BACK,
             .door_index = SIZE_MAX,
         };
+    }
+    const unsigned page_top =
+        (BBS_PAGE_CONTROL_ROW - 1U) * P4_ANSI_CELL_HEIGHT;
+    if (surface_y >= page_top &&
+        surface_y < page_top + 2U * P4_ANSI_CELL_HEIGHT) {
+        const unsigned previous_left = BBS_TEXT_LEFT +
+            (BBS_PAGE_PREVIOUS_COLUMN - 1U) * P4_ANSI_CELL_WIDTH;
+        if (model->page > 1U && surface_x >= previous_left &&
+            surface_x < previous_left +
+                BBS_PAGE_BUTTON_CELLS * P4_ANSI_CELL_WIDTH) {
+            return (p4_bbs_hit_t){
+                .kind = P4_BBS_HIT_PAGE_PREVIOUS,
+                .door_index = SIZE_MAX,
+            };
+        }
+        const unsigned next_left = BBS_TEXT_LEFT +
+            (BBS_PAGE_NEXT_COLUMN - 1U) * P4_ANSI_CELL_WIDTH;
+        if (model->page < model->page_count &&
+            surface_x >= next_left &&
+            surface_x < next_left +
+                BBS_PAGE_BUTTON_CELLS * P4_ANSI_CELL_WIDTH) {
+            return (p4_bbs_hit_t){
+                .kind = P4_BBS_HIT_PAGE_NEXT,
+                .door_index = SIZE_MAX,
+            };
+        }
     }
     const unsigned door_top =
         (BBS_DOOR_TOP_ROW - 1U) * P4_ANSI_CELL_HEIGHT;

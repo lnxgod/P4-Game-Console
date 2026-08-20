@@ -13,6 +13,7 @@
 #include "p4/audio.h"
 #include "p4/achievements.h"
 #include "p4/game.h"
+#include "p4/game_save.h"
 #include "p4/input.h"
 #include "p4/signal_scan.h"
 
@@ -98,6 +99,7 @@ static bool host_request_signal_scan(void *context, uint64_t focus_token)
             };
             return false;
         }
+        scan->snapshot.results[index].flags |= P4_GAME_SIGNAL_SIMULATED;
         if (scan->snapshot.results[index].token == focus_token) {
             int adjusted = (int)base_rssi[index] +
                 (int)scan->focus_steps * 9;
@@ -394,8 +396,12 @@ int main(int argc, char **argv)
         sizeof(*pixels));
     void *const state_memory = calloc(
         1U, P4_HOST_GAME_DESCRIPTOR.state_bytes);
-    if (texture == NULL || pixels == NULL || state_memory == NULL) {
+    uint8_t *const save_workspace =
+        malloc(P4_GAME_SAVE_MEMORY_WORKSPACE_BYTES);
+    if (texture == NULL || pixels == NULL || state_memory == NULL ||
+        save_workspace == NULL) {
         fprintf(stderr, "host game allocation failed: %s\n", SDL_GetError());
+        free(save_workspace);
         free(state_memory);
         free(pixels);
         SDL_DestroyTexture(texture);
@@ -408,6 +414,7 @@ int main(int argc, char **argv)
     uint8_t *const resource_data = load_resource(&resource_bytes);
     if (P4_HOST_RESOURCE_PATH[0] != '\0' && resource_data == NULL) {
         fprintf(stderr, "resource load failed: %s\n", P4_HOST_RESOURCE_PATH);
+        free(save_workspace);
         free(state_memory);
         free(pixels);
         SDL_DestroyTexture(texture);
@@ -424,12 +431,30 @@ int main(int argc, char **argv)
     host_signal_scan_t signal_scan = {
         .snapshot = {.status = P4_GAME_SIGNAL_IDLE},
     };
+    p4_game_save_memory_t save_memory;
+    if (!p4_game_save_memory_init(
+            &save_memory, P4_HOST_GAME_DESCRIPTOR.id, save_workspace,
+            P4_GAME_SAVE_MEMORY_WORKSPACE_BYTES)) {
+        fprintf(stderr, "save service init failed\n");
+        if (audio_ready) {
+            SDL_DestroyAudioStream(audio.stream);
+        }
+        free(resource_data);
+        free(save_workspace);
+        free(state_memory);
+        free(pixels);
+        SDL_DestroyTexture(texture);
+        SDL_DestroyRenderer(renderer);
+        SDL_DestroyWindow(window);
+        SDL_Quit();
+        return EXIT_FAILURE;
+    }
     const p4_game_services_t services = {
         .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
             (audio_ready
                 ? P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM : 0U) |
             (resource_data != NULL ? P4_GAME_CAP_STORAGE : 0U) |
-            P4_GAME_CAP_SIGNAL_SCAN,
+            P4_GAME_CAP_SIGNAL_SCAN | P4_GAME_CAP_SAVE,
         .audio_context = audio_ready ? &audio : NULL,
         .game_id = P4_HOST_GAME_DESCRIPTOR.id,
         .play_tone = audio_ready ? host_play_tone : NULL,
@@ -444,6 +469,9 @@ int main(int argc, char **argv)
         .signal_scan_context = &signal_scan,
         .request_signal_scan = host_request_signal_scan,
         .read_signal_scan = host_read_signal_scan,
+        .save_context = &save_memory,
+        .queue_save = p4_game_save_memory_queue,
+        .read_save_status = p4_game_save_memory_read_status,
     };
     p4_game_instance_t instance = {0};
     if (!p4_game_instance_start(
@@ -454,6 +482,7 @@ int main(int argc, char **argv)
             SDL_DestroyAudioStream(audio.stream);
         }
         free(resource_data);
+        free(save_workspace);
         free(state_memory);
         free(pixels);
         SDL_DestroyTexture(texture);
@@ -533,6 +562,8 @@ int main(int argc, char **argv)
             digital_buttons() | pulsed_buttons, &input);
         const p4_game_result_t result = p4_game_instance_update(
             &instance, &input, (uint32_t)elapsed64);
+        (void)p4_game_save_memory_process(
+            &save_memory, P4_GAME_SAVE_MAX_SLOTS);
         if (result == P4_GAME_EXIT_TO_LAUNCHER) {
             running = false;
             continue;
@@ -582,6 +613,7 @@ int main(int argc, char **argv)
     free(state_memory);
     free(pixels);
     free(resource_data);
+    free(save_workspace);
     SDL_DestroyTexture(texture);
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);

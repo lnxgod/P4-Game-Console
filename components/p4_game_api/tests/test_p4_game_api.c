@@ -7,6 +7,7 @@
 #include "p4/feedback.h"
 #include "p4/game.h"
 #include "p4/input.h"
+#include "p4/visual.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,6 +33,17 @@ typedef struct {
     p4_game_signal_snapshot_t snapshot;
     uint64_t requested_focus;
 } fixture_signal_t;
+
+typedef struct {
+    char slot_id[P4_GAME_SAVE_SLOT_ID_BYTES];
+    uint8_t data[64];
+    size_t data_bytes;
+    uint32_t schema_version;
+    uint32_t expected_sequence;
+    p4_game_save_ticket_t ticket;
+    p4_game_save_status_t status;
+    uint32_t committed_sequence;
+} fixture_save_t;
 
 static bool fixture_request_signal(void *context, uint64_t focus_token)
 {
@@ -63,6 +75,54 @@ static bool fixture_read_signal(void *context,
         return false;
     }
     *snapshot = signal->snapshot;
+    return true;
+}
+
+static bool fixture_queue_save(
+    void *context,
+    const char *slot_id,
+    uint32_t schema_version,
+    uint32_t expected_sequence,
+    const uint8_t *data,
+    size_t data_bytes,
+    p4_game_save_ticket_t *ticket_out)
+{
+    fixture_save_t *const save = context;
+    if (save == NULL || slot_id == NULL || data == NULL ||
+        data_bytes == 0U || data_bytes > sizeof(save->data) ||
+        ticket_out == NULL) {
+        return false;
+    }
+    const size_t slot_bytes = strlen(slot_id);
+    if (slot_bytes == 0U || slot_bytes >= sizeof(save->slot_id)) {
+        return false;
+    }
+    memcpy(save->slot_id, slot_id, slot_bytes + 1U);
+    memcpy(save->data, data, data_bytes);
+    save->data_bytes = data_bytes;
+    save->schema_version = schema_version;
+    save->expected_sequence = expected_sequence;
+    save->ticket = UINT32_C(7);
+    save->status = P4_GAME_SAVE_QUEUED;
+    save->committed_sequence = 0U;
+    *ticket_out = save->ticket;
+    return true;
+}
+
+static bool fixture_read_save_status(
+    void *context,
+    p4_game_save_ticket_t ticket,
+    p4_game_save_status_t *status_out,
+    uint32_t *committed_sequence_out)
+{
+    const fixture_save_t *const save = context;
+    if (save == NULL || ticket == P4_GAME_SAVE_INVALID_TICKET ||
+        ticket != save->ticket || status_out == NULL ||
+        committed_sequence_out == NULL) {
+        return false;
+    }
+    *status_out = save->status;
+    *committed_sequence_out = save->committed_sequence;
     return true;
 }
 
@@ -109,7 +169,8 @@ static const p4_game_descriptor_t s_fixture_game = {
     .accent_rgb565 = UINT16_C(0x07e0),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
-                             P4_GAME_CAP_AUDIO_STREAM,
+                             P4_GAME_CAP_AUDIO_STREAM |
+                             P4_GAME_CAP_SAVE,
     .state_bytes = sizeof(fixture_state_t),
     .start = fixture_start,
     .update = fixture_update,
@@ -227,6 +288,88 @@ static void test_draw_bounds(void)
         }
     }
     free(allocation);
+}
+
+static void test_visual_helpers(void)
+{
+    CHECK(p4_q16_to_int_round(p4_q16_from_int(12)) == 12);
+    CHECK(p4_q16_to_int_round(p4_q16_from_int(-12)) == -12);
+    CHECK(p4_q16_to_int_round(p4_q16_step(
+              p4_q16_from_int(10), p4_q16_from_int(60), 500U)) == 16);
+    CHECK(p4_q16_to_int_round(p4_q16_step(
+              p4_q16_from_int(10), p4_q16_from_int(60), 100U)) == 16);
+    CHECK(p4_ease_smoothstep_u16(0U) == 0U);
+    CHECK(p4_ease_smoothstep_u16(UINT16_MAX) == UINT16_MAX);
+    CHECK(p4_ease_smoothstep_u16(UINT16_C(32768)) >= UINT16_C(32767));
+    CHECK(p4_animation_frame(0U, 100U, 4U, false) == 0U);
+    CHECK(p4_animation_frame(350U, 100U, 4U, false) == 3U);
+    CHECK(p4_animation_frame(450U, 100U, 4U, true) == 2U);
+
+    int shake_x = 99;
+    int shake_y = 99;
+    p4_camera_shake(7U, UINT32_C(1234), 5, &shake_x, &shake_y);
+    CHECK(shake_x >= -5 && shake_x <= 5);
+    CHECK(shake_y >= -5 && shake_y <= 5);
+    int duplicate_x = 0;
+    int duplicate_y = 0;
+    p4_camera_shake(
+        7U, UINT32_C(1234), 5, &duplicate_x, &duplicate_y);
+    CHECK(duplicate_x == shake_x && duplicate_y == shake_y);
+
+    uint16_t pixels[P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT];
+    p4_game_surface_t surface = {
+        .pixels = pixels,
+        .stride_pixels = P4_GAME_SURFACE_WIDTH,
+        .width = P4_GAME_SURFACE_WIDTH,
+        .height = P4_GAME_SURFACE_HEIGHT,
+    };
+    p4_draw_clear(&surface, UINT16_C(0x1111));
+    static const uint16_t sheet[] = {
+        UINT16_C(1), UINT16_C(2), UINT16_C(3),
+        UINT16_C(4), UINT16_C(5), UINT16_C(6),
+    };
+    const p4_sprite_t sprite = {
+        .pixels = sheet,
+        .sheet_width = 3U,
+        .sheet_height = 2U,
+        .stride_pixels = 3U,
+        .source_x = 1U,
+        .source_y = 0U,
+        .width = 2U,
+        .height = 2U,
+        .transparent_color = UINT16_C(5),
+        .scale = 2U,
+        .flip = P4_SPRITE_FLIP_X,
+        .use_transparency = true,
+    };
+    CHECK(p4_sprite_valid(&sprite));
+    p4_sprite_t oversized = sprite;
+    oversized.sheet_width = 512U;
+    oversized.sheet_height = 512U;
+    oversized.stride_pixels = 512U;
+    oversized.source_x = 0U;
+    oversized.width = 512U;
+    oversized.height = 512U;
+    oversized.scale = 1U;
+    CHECK(!p4_sprite_valid(&oversized));
+    p4_draw_sprite(&surface, 10, 20, &sprite);
+    CHECK(pixels[20U * P4_GAME_SURFACE_WIDTH + 10U] == UINT16_C(3));
+    CHECK(pixels[20U * P4_GAME_SURFACE_WIDTH + 12U] == UINT16_C(2));
+    CHECK(pixels[22U * P4_GAME_SURFACE_WIDTH + 10U] == UINT16_C(6));
+    CHECK(pixels[22U * P4_GAME_SURFACE_WIDTH + 12U] == UINT16_C(0x1111));
+
+    p4_particle_t particle;
+    p4_particle_spawn(
+        &particle, p4_q16_from_int(30), p4_q16_from_int(40),
+        p4_q16_from_int(10), p4_q16_from_int(0), 200U,
+        UINT16_C(0xffff), 2U);
+    CHECK(particle.active);
+    p4_particles_update(&particle, 1U, 100U, p4_q16_from_int(100));
+    CHECK(particle.active && particle.age_ms == 100U);
+    p4_particles_draw(&surface, &particle, 1U, 0, 0);
+    CHECK(pixels[41U * P4_GAME_SURFACE_WIDTH + 31U] == UINT16_C(0xffff));
+    p4_particles_update(&particle, 1U, 100U, p4_q16_from_int(100));
+    CHECK(!particle.active);
 }
 
 static void test_audio_mixer(void)
@@ -444,12 +587,15 @@ static void test_game_runtime(void)
     p4_achievement_catalog_t achievements;
     p4_achievement_catalog_init(&achievements);
     fixture_signal_t signal = {0};
+    fixture_save_t save = {0};
+    static const uint8_t initial_save[] = {1U, 2U, 3U};
     const p4_game_services_t services = {
         .available_capabilities = P4_GAME_CAP_VIDEO |
                                   P4_GAME_CAP_CONTROLS |
                                   P4_GAME_CAP_AUDIO_TONE |
                                   P4_GAME_CAP_AUDIO_STREAM |
-                                  P4_GAME_CAP_SIGNAL_SCAN,
+                                  P4_GAME_CAP_SIGNAL_SCAN |
+                                  P4_GAME_CAP_SAVE,
         .audio_context = &mixer,
         .game_id = s_fixture_game.id,
         .play_tone = p4_audio_mixer_service_play_tone,
@@ -461,6 +607,13 @@ static void test_game_runtime(void)
         .signal_scan_context = &signal,
         .request_signal_scan = fixture_request_signal,
         .read_signal_scan = fixture_read_signal,
+        .save_context = &save,
+        .save_data = initial_save,
+        .save_bytes = sizeof(initial_save),
+        .save_schema_version = 3U,
+        .save_sequence = 4U,
+        .queue_save = fixture_queue_save,
+        .read_save_status = fixture_read_save_status,
     };
     p4_game_services_t invalid_services = services;
     invalid_services.submit_pcm16_stereo = NULL;
@@ -471,6 +624,21 @@ static void test_game_runtime(void)
         &rejected_state, sizeof(rejected_state)));
     invalid_services = services;
     invalid_services.read_signal_scan = NULL;
+    CHECK(!p4_game_instance_start(
+        &rejected, &s_fixture_game, &invalid_services,
+        &rejected_state, sizeof(rejected_state)));
+    invalid_services = services;
+    invalid_services.queue_save = NULL;
+    CHECK(!p4_game_instance_start(
+        &rejected, &s_fixture_game, &invalid_services,
+        &rejected_state, sizeof(rejected_state)));
+    invalid_services = services;
+    invalid_services.save_data = NULL;
+    CHECK(!p4_game_instance_start(
+        &rejected, &s_fixture_game, &invalid_services,
+        &rejected_state, sizeof(rejected_state)));
+    invalid_services = services;
+    invalid_services.available_capabilities |= P4_GAME_CAP_TEXT_INPUT;
     CHECK(!p4_game_instance_start(
         &rejected, &s_fixture_game, &invalid_services,
         &rejected_state, sizeof(rejected_state)));
@@ -501,8 +669,53 @@ static void test_game_runtime(void)
     CHECK(p4_game_read_signal_scan(&instance.context, &signal_snapshot));
     CHECK(signal_snapshot.count == 1U);
     CHECK(strcmp(signal_snapshot.results[0].label, "FIXTURE SIGNAL") == 0);
+    signal.snapshot.results[0].flags |= P4_GAME_SIGNAL_SIMULATED;
+    CHECK(p4_game_read_signal_scan(&instance.context, &signal_snapshot));
+    CHECK((signal_snapshot.results[0].flags &
+           P4_GAME_SIGNAL_SIMULATED) != 0U);
+    signal.snapshot.results[0].flags |= UINT8_C(0x80);
+    CHECK(!p4_game_read_signal_scan(&instance.context, &signal_snapshot));
+    signal.snapshot.results[0].flags = P4_GAME_SIGNAL_PROTECTED;
     signal.snapshot.results[0].label[0] = '\0';
     CHECK(!p4_game_read_signal_scan(&instance.context, &signal_snapshot));
+    uint8_t save_payload[] = {9U, 8U, 7U, 6U};
+    p4_game_save_ticket_t save_ticket = UINT32_C(99);
+    CHECK(!p4_game_queue_save(
+        &instance.context, "_BAD", 3U, 4U, save_payload,
+        sizeof(save_payload), &save_ticket));
+    CHECK(save_ticket == P4_GAME_SAVE_INVALID_TICKET);
+    CHECK(!p4_game_queue_save(
+        &instance.context, "AUTO", 0U, 4U, save_payload,
+        sizeof(save_payload), &save_ticket));
+    CHECK(!p4_game_queue_save(
+        &instance.context, "AUTO", 3U, 4U, save_payload, 0U,
+        &save_ticket));
+    CHECK(p4_game_queue_save(
+        &instance.context, "AUTO", 3U, 4U, save_payload,
+        sizeof(save_payload), &save_ticket));
+    CHECK(save_ticket == UINT32_C(7));
+    save_payload[0] = 0U;
+    CHECK(save.data[0] == 9U);
+    CHECK(strcmp(save.slot_id, "AUTO") == 0);
+    CHECK(save.schema_version == 3U);
+    CHECK(save.expected_sequence == 4U);
+    p4_game_save_status_t save_status = P4_GAME_SAVE_ERROR;
+    uint32_t committed_sequence = UINT32_MAX;
+    CHECK(p4_game_read_save_status(
+        &instance.context, save_ticket, &save_status, &committed_sequence));
+    CHECK(save_status == P4_GAME_SAVE_QUEUED);
+    CHECK(committed_sequence == 0U);
+    save.status = P4_GAME_SAVE_COMMITTED;
+    save.committed_sequence = 5U;
+    CHECK(p4_game_read_save_status(
+        &instance.context, save_ticket, &save_status, &committed_sequence));
+    CHECK(save_status == P4_GAME_SAVE_COMMITTED);
+    CHECK(committed_sequence == 5U);
+    save.status = (p4_game_save_status_t)99;
+    CHECK(!p4_game_read_save_status(
+        &instance.context, save_ticket, &save_status, &committed_sequence));
+    CHECK(save_status == P4_GAME_SAVE_NONE);
+    CHECK(committed_sequence == 0U);
     p4_game_input_t input = {
         .touch_valid = true,
     };
@@ -553,6 +766,7 @@ int main(void)
 {
     test_input_mapper();
     test_draw_bounds();
+    test_visual_helpers();
     test_audio_mixer();
     test_audio_stream();
     test_standard_feedback_pack();
