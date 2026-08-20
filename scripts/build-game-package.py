@@ -171,6 +171,7 @@ def build_elf(
     inputs = [
         root / "game-platform" / "runtime" / "cartridge_main.c",
         source,
+        root / "components" / "p4_cp437" / "src" / "cp437.c",
         root / "components" / "p4_game_api" / "src" / "audio_pack.c",
         root / "components" / "p4_game_api" / "src" / "draw.c",
         root / "components" / "p4_game_api" / "src" / "feedback.c",
@@ -208,6 +209,7 @@ def build_elf(
             ),
             f"-DP4_GAME_ENTRY_SYMBOL={manifest['entry_symbol']}",
             f"-I{root / 'components' / 'p4_game_api' / 'include'}",
+            f"-I{root / 'components' / 'p4_cp437' / 'include'}",
             f"-I{game_dir / 'include'}",
             f"-I{game_dir / 'src'}",
             *(str(item) for item in inputs),

@@ -18,6 +18,13 @@ followed by rapid catch-up updates. The allocation-free `p4/visual.h` helpers
 then let cartridges add fixed-point motion, atlas animation, shake, and
 particles without taking over display or timing.
 
+Console OS 0.4.36 is the BBS readability successor. Printable ASCII carrying
+the ANSI bold attribute gains one right-hand pixel inside the existing 9x16
+cell. This slightly enlarges headings, door names, and controls while retaining
+the exact 80x30 grid, CP437 line art, 768x480 framebuffer, and pointer hit
+geometry. It is host-previewed and requires a fresh exact-artifact authorization
+plus on-panel readability/touch acceptance before any hardware claim.
+
 The first visible Waveshare frame is now an ANSI adaptation of the official
 Game Changers AI lightbulb/circuit mark. Boot advances through visible POST,
 disk seek, `ATDT 6142763639`, V.22bis training, SD door-directory sync, and

@@ -5,6 +5,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "p4/cp437.h"
+
 bool p4_surface_valid(const p4_game_surface_t *surface)
 {
     return surface != NULL && surface->pixels != NULL &&
@@ -183,6 +185,68 @@ void p4_draw_text(p4_game_surface_t *surface,
             }
         }
         cursor += (int)(6U * scale);
+    }
+}
+
+void p4_draw_cp437_glyph(p4_game_surface_t *surface,
+                         int x, int y, uint8_t character,
+                         uint16_t foreground, uint16_t background,
+                         unsigned cell_height)
+{
+    if (!p4_surface_valid(surface) ||
+        (cell_height != P4_DRAW_CP437_COMPACT_HEIGHT &&
+         cell_height != P4_DRAW_CP437_FULL_HEIGHT)) {
+        return;
+    }
+    const size_t glyph = (size_t)character * P4_CP437_GLYPH_HEIGHT;
+    for (unsigned row = 0U; row < cell_height; ++row) {
+        uint8_t bits;
+        if (cell_height == P4_DRAW_CP437_COMPACT_HEIGHT) {
+            const size_t source_row = (size_t)row * 2U;
+            bits = (uint8_t)(p4_cp437_font_8x16[glyph + source_row] |
+                             p4_cp437_font_8x16[glyph + source_row + 1U]);
+        } else {
+            bits = p4_cp437_font_8x16[glyph + row];
+        }
+        const int64_t destination_y = (int64_t)y + row;
+        if (destination_y < 0 || destination_y >= surface->height) {
+            continue;
+        }
+        for (unsigned column = 0U;
+             column < P4_DRAW_CP437_CELL_WIDTH; ++column) {
+            const int64_t destination_x = (int64_t)x + column;
+            if (destination_x < 0 || destination_x >= surface->width) {
+                continue;
+            }
+            const uint8_t mask = (uint8_t)(UINT8_C(0x80) >> column);
+            surface->pixels[(size_t)destination_y * surface->stride_pixels +
+                            (size_t)destination_x] =
+                (bits & mask) != 0U ? foreground : background;
+        }
+    }
+}
+
+void p4_draw_cp437_text(p4_game_surface_t *surface,
+                        int x, int y,
+                        const uint8_t *bytes, size_t byte_count,
+                        uint16_t foreground, uint16_t background,
+                        unsigned cell_height)
+{
+    if (!p4_surface_valid(surface) ||
+        (byte_count > 0U && bytes == NULL) ||
+        byte_count > P4_DRAW_CP437_MAX_TEXT_BYTES ||
+        (cell_height != P4_DRAW_CP437_COMPACT_HEIGHT &&
+         cell_height != P4_DRAW_CP437_FULL_HEIGHT)) {
+        return;
+    }
+    for (size_t index = 0U; index < byte_count; ++index) {
+        const int64_t cell_x = (int64_t)x +
+            (int64_t)index * P4_DRAW_CP437_CELL_WIDTH;
+        if (cell_x > INT32_MAX || cell_x < INT32_MIN) {
+            continue;
+        }
+        p4_draw_cp437_glyph(surface, (int)cell_x, y, bytes[index],
+                            foreground, background, cell_height);
     }
 }
 

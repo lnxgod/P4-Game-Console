@@ -26,7 +26,8 @@
   "shell": {
     "model": "fixed-builtins-plus-storage-cartridge-catalog",
     "scheduler": "FreeRTOS via ESP-IDF",
-    "surface": "Native 768x480 CP437/ANSI BBS home on Waveshare 4.3; stable 320x200 logical coordinates for Windows detail panels and all Game API surfaces",
+    "surface": "Native 768x480 CP437/ANSI BBS home on Waveshare 4.3 with slightly enlarged bold ASCII strokes; stable 320x200 logical coordinates for Windows detail panels and all Game API surfaces",
+    "font_rendering": "Pinned 8x16 CP437 in 9x16 cells; bold printable ASCII gains one right-hand pixel while cell geometry and line art remain unchanged",
     "input": "bounded board service: GT911 touch or OS-owned USB gamepad, keyboard, and mouse",
     "built_in_apps": [
       "colors",
@@ -215,5 +216,5 @@
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "App-only install Console OS 0.4.35 on the bound Waveshare 4.3 with H1 UART retained. Launch Byte Buddy, run repeated live Signal Hunts, and require named SSIDs only plus passive-scan logs showing hidden_filtered counts; verify RSSI tracking, battle flow, signal rewards, and Back-to-launcher without a panic or reboot. Preserve installed 0.4.34 as the preimage and do not roll back automatically."
+  "next_hardware_step": "Create a fresh exact-artifact authorization before any Console OS 0.4.36 install. On the bound Waveshare 4.3 with H1 UART retained, visually confirm the larger bold BBS headings, door names, and controls remain aligned and tappable; then repeat controller navigation, Byte Buddy launch/return, and named-signal smoke checks. Do not reuse the 0.4.35 authorization."
 }

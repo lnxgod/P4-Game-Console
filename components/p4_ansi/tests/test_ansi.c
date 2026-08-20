@@ -114,12 +114,49 @@ static void test_cp437_render_bounds(void)
     free(allocation);
 }
 
+static void test_bold_ascii_uses_larger_glyph(void)
+{
+    p4_ansi_terminal_t terminal;
+    p4_ansi_init(&terminal);
+    terminal.cursor_visible = false;
+    write_text(&terminal, "\x1b[97mA\x1b[1mA");
+    uint16_t *const frame = calloc(
+        (size_t)P4_ANSI_SURFACE_WIDTH * P4_ANSI_SURFACE_HEIGHT,
+        sizeof(*frame));
+    CHECK(frame != NULL);
+    if (frame == NULL) {
+        return;
+    }
+    CHECK(p4_ansi_render_rgb565(
+        &terminal, frame, P4_ANSI_SURFACE_WIDTH,
+        P4_ANSI_SURFACE_WIDTH, P4_ANSI_SURFACE_HEIGHT));
+    const size_t left =
+        (P4_ANSI_SURFACE_WIDTH - P4_ANSI_TEXT_WIDTH) / 2U;
+    size_t normal_pixels = 0U;
+    size_t bold_pixels = 0U;
+    for (size_t row = 0U; row < P4_ANSI_CELL_HEIGHT; ++row) {
+        for (size_t column = 0U; column < P4_ANSI_CELL_WIDTH; ++column) {
+            if (frame[row * P4_ANSI_SURFACE_WIDTH + left + column] != 0U) {
+                ++normal_pixels;
+            }
+            if (frame[row * P4_ANSI_SURFACE_WIDTH + left +
+                      P4_ANSI_CELL_WIDTH + column] != 0U) {
+                ++bold_pixels;
+            }
+        }
+    }
+    CHECK(normal_pixels > 0U);
+    CHECK(bold_pixels > normal_pixels);
+    free(frame);
+}
+
 int main(void)
 {
     test_text_and_sgr();
     test_cursor_erase_and_private_mode();
     test_scroll_and_untrusted_sequences();
     test_cp437_render_bounds();
+    test_bold_ascii_uses_larger_glyph();
     if (s_failures != 0) {
         fprintf(stderr, "%d p4 ANSI test failure(s)\n", s_failures);
         return EXIT_FAILURE;

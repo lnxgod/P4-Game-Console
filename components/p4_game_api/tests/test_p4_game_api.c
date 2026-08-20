@@ -269,6 +269,22 @@ static void test_draw_bounds(void)
     p4_draw_fill_rect(&surface, -20, -20, 40, 40, UINT16_C(0x2222));
     p4_draw_fill_circle(&surface, 319, 199, 20, UINT16_C(0x3333));
     p4_draw_text(&surface, 4, 4, "P4 GAME API 1", UINT16_C(0xffff), 1U, 13U);
+    p4_draw_cp437_glyph(&surface, -3, 32, UINT8_C(0xdb),
+                        UINT16_C(0xf800), UINT16_C(0x001f),
+                        P4_DRAW_CP437_COMPACT_HEIGHT);
+    CHECK(pixels[32U * STRIDE] == UINT16_C(0xf800));
+    p4_draw_cp437_glyph(&surface, 20, 32, (uint8_t)' ',
+                        UINT16_C(0xf800), UINT16_C(0x001f),
+                        P4_DRAW_CP437_FULL_HEIGHT);
+    CHECK(pixels[32U * STRIDE + 20U] == UINT16_C(0x001f));
+    const uint8_t box_text[] = {0xdaU, 0xc4U, 0xbfU};
+    p4_draw_cp437_text(&surface, 36, 32, box_text, sizeof(box_text),
+                       UINT16_C(0xffff), UINT16_C(0x0000),
+                       P4_DRAW_CP437_COMPACT_HEIGHT);
+    const uint16_t before_invalid = pixels[60U * STRIDE + 60U];
+    p4_draw_cp437_glyph(&surface, 60, 60, UINT8_C(0xdb),
+                        UINT16_C(0xffff), UINT16_C(0x0000), 7U);
+    CHECK(pixels[60U * STRIDE + 60U] == before_invalid);
     const uint16_t sprite[] = {
         UINT16_C(1), UINT16_C(2),
         UINT16_C(3), UINT16_C(4),

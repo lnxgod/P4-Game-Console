@@ -720,10 +720,20 @@ def main() -> None:
         "    const esp_err_t home_result = present_interactive(shell);" in source,
         "cartridge return must tolerate a recoverable Waveshare frame ack miss")
     cmake = (APP / "CMakeLists.txt").read_text(encoding="utf-8")
-    require('set(PROJECT_VER "0.4.35")' in cmake and
+    require('set(PROJECT_VER "0.4.36")' in cmake and
             "RENAME_TO bytebud_p4g" not in cmake and
             "P4_DEFAULT_GAME_PACKAGE" not in cmake,
             "firmware version differs or build still embeds a default cartridge")
+    ansi_source = (ROOT / "components/p4_ansi/src/ansi.c").read_text(
+        encoding="utf-8")
+    for token in (
+        "const bool embolden",
+        "cell->character >= UINT8_C(0x20)",
+        "cell->character <= UINT8_C(0x7e)",
+        "set = set ||",
+    ):
+        require(token in ansi_source,
+                f"larger bold BBS font policy is missing {token}")
     signal_scan_source = (ROOT / "components/platform_signal_scan/src/"
                           "platform_signal_scan.c").read_text(encoding="utf-8")
     for token in (

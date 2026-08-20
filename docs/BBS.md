@@ -21,6 +21,11 @@ renderer. The parser bounds parameters and escape-sequence length, discards
 OSC/DCS-style strings, ignores unsupported controls, and never allocates.
 Remote bytes are untrusted input.
 
+Bold printable ASCII is rendered with a one-pixel right-hand stroke inside its
+existing 9x16 cell. This makes launcher headings, door names, and controls
+slightly larger and easier to read without changing the 80x30 geometry, CP437
+line art, 768x480 framebuffer, or touch hit regions.
+
 `components/p4_bbs` is the product UI. `p4_bbs_build_launcher()` consumes a
 sanitized six-door page model and emits ANSI through the same parser used for
 remote boards. `p4_bbs_hit_test()` maps native pixels back to door or Back

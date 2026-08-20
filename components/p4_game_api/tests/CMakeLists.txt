@@ -24,6 +24,7 @@ add_executable(p4_game_api_waveshare_tests
     ../src/visual.c
 )
 target_include_directories(p4_game_api_waveshare_tests PRIVATE ../include)
+target_link_libraries(p4_game_api_waveshare_tests PRIVATE p4_cp437)
 target_compile_definitions(p4_game_api_waveshare_tests PRIVATE
     P4_INPUT_TARGET_WIDTH=800U
     P4_INPUT_TARGET_HEIGHT=480U

@@ -5,7 +5,7 @@
 #include <limits.h>
 #include <string.h>
 
-#include "font_pc_80x25.h"
+#include "p4/cp437.h"
 
 static const uint16_t s_dos_palette[16] = {
     UINT16_C(0x0000), UINT16_C(0x0015), UINT16_C(0x0540),
@@ -509,19 +509,30 @@ bool p4_ansi_render_rgb565(const p4_ansi_terminal_t *terminal,
             }
             const size_t cell_left = left + column * P4_ANSI_CELL_WIDTH;
             const size_t cell_top = row * P4_ANSI_CELL_HEIGHT;
+            const bool embolden =
+                (cell->attributes & P4_ANSI_ATTR_BOLD) != 0U &&
+                cell->character >= UINT8_C(0x20) &&
+                cell->character <= UINT8_C(0x7e);
             for (size_t glyph_row = 0U;
                  glyph_row < P4_ANSI_CELL_HEIGHT; ++glyph_row) {
-                const uint8_t bits = font_pc_80x25[
+                const uint8_t bits = p4_cp437_font_8x16[
                     (size_t)cell->character * P4_ANSI_CELL_HEIGHT +
                     glyph_row];
                 for (size_t glyph_column = 0U;
                      glyph_column < P4_ANSI_CELL_WIDTH; ++glyph_column) {
                     bool set = false;
                     if (glyph_column < 8U) {
-                        set = (bits & (uint8_t)(UINT8_C(0x80) >>
-                            glyph_column)) != 0U;
+                        const uint8_t mask = (uint8_t)(
+                            UINT8_C(0x80) >> glyph_column);
+                        set = (bits & mask) != 0U;
+                        if (embolden && glyph_column > 0U) {
+                            set = set ||
+                                (bits & (uint8_t)(mask << 1U)) != 0U;
+                        }
                     } else if (cell->character >= UINT8_C(0xc0) &&
                                cell->character <= UINT8_C(0xdf)) {
+                        set = (bits & UINT8_C(0x01)) != 0U;
+                    } else if (embolden) {
                         set = (bits & UINT8_C(0x01)) != 0U;
                     }
                     pixels[(cell_top + glyph_row) * stride_pixels +
