@@ -3,9 +3,9 @@
 This is the complete standalone P4 Console port of *Legend of the Red
 Dragon*. It installs under `GAMES/ADVENTURE`, renders at 320×200 in a
 16-color ANSI/RIP-inspired style, and uses only the stable P4 Game API for
-video, controls, tone audio, and optional durable saves.
+video, controls, tone audio, shared CP437 drawing, and optional durable saves.
 
-Version 1.0.0 includes:
+Version 1.1.0 includes:
 
 - named male or female characters and Death Knight, Mystical, and Thieving
   professions;
@@ -31,8 +31,10 @@ Version 1.0.0 includes:
 - seven bounded ports of the Synchronet LORD add-ons: Aragorn's Math, Barak's
   House, The Grab Bag, The Graveyard, Olodrin's Orphans, The Outhouse, and The
   Pickle Goddess;
+- the same pinned 8×16 CP437 font as the Console OS BBS, compacted safely for
+  real DOS box, arrow, heart, block, and shade glyphs at 320×200;
 - a generated/dithered dragon-and-castle title plus twelve code-drawn
-  ANSI/RIP-style scenes;
+  ANSI/RIP-style scenes with CP437 texture and framing;
 - an explicit, deterministic, CRC-protected version-3 save codec. The game
   consumes the immutable launch snapshot, queues copied `AUTO` commits, polls
   completion, and uses optimistic host sequences.

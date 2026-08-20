@@ -64,6 +64,9 @@ void TryRunTics (void);
 // Called at start of game loop to initialize timers
 void D_StartGameLoop(void);
 
+// Deliver one complete lockstep tic from an external transport adapter.
+void D_ReceiveTic(ticcmd_t *ticcmds, boolean *players_mask);
+
 // Initialize networking code and connect to server.
 
 boolean D_InitNetGame(net_connect_data_t *connect_data);
@@ -78,4 +81,3 @@ extern boolean singletics;
 extern int gametic, ticdup;
 
 #endif
-

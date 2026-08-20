@@ -43,10 +43,11 @@ Console OS runtime package.
 
 The earlier `.P4CART` format remains supported as a distinct open-source
 container under `P4/GAMES/*.P4CART`. Console OS bounds and hashes those
-`P4CART1` Lua-source packages and shows valid entries in Game Manager. They
-must never be renamed to `.P4G`: the reviewed `p4-lua-5.4-v1` sandbox is still
-pending, so this compatibility path validates and catalogs carts but does not
-execute them yet. See `docs/CONTENT_LIBRARY.md`.
+`P4CART1` Lua-source packages, shows valid entries in the launcher, revalidates
+their source before every launch, and executes them with the bounded
+`p4-lua-5.4-v1` sandbox. They must never be renamed to `.P4G`; native machine
+code and source cartridges remain separate execution paths. See
+`docs/CONTENT_LIBRARY.md`.
 
 Doom remains a special legacy case. Its engine is linked into the OS, but its
 WAD is read from `P4 GAMES`; it uses an exclusive one-way handoff until the
@@ -111,9 +112,9 @@ SD_MOUNT=/Volumes/P4GAMES` for the validated complete bundle. The installer
 requires an external FAT32 volume named `P4GAMES` and rejects ExFAT.
 
 Executable `.P4G` packages are never linked into the OTA application. The
-launcher and loader support only storage-backed catalog entries, while the
-separate P4CART compatibility catalog remains non-executable until its Lua
-sandbox is implemented.
+launcher and loader support storage-backed native entries. The separate
+P4CART launcher executes source games through its Lua sandbox and never sends
+them to the native ELF loader.
 
 Packaging fails if a cartridge imports a symbol outside the frozen runtime
 allowlist (`calloc`, `free`, `memcmp`, `memcpy`, `memset`, and `strcmp`). This
@@ -148,7 +149,8 @@ Include only headers under `components/p4_game_api/include/p4/`:
   calls, and the optional immutable resource payload view;
 - `p4/input.h`: Up, Down, Left, Right, A, B, Start, Back, and standard
   on-screen controls;
-- `p4/draw.h`: clipped pixels, shapes, text, and RGB565 sprites;
+- `p4/draw.h`: clipped pixels, shapes, text, shared CP437 glyphs, and RGB565
+  sprites;
 - `p4/visual.h`: fixed-point motion, atlas frames, animation timing, easing,
   camera shake, and caller-owned particles;
 - `p4/audio.h`: the host-owned eight-voice tone and copied-PCM mixer;
@@ -220,6 +222,16 @@ Games inherit a stable logical console rather than a board definition:
   A game requests a capability in `game.json`, then uses only the matching
   `p4/` function. It never opens I2S, configures GPIO, owns an audio worker,
   or starts a FreeRTOS task.
+
+### Match the native ANSI/BBS look inside a cartridge
+
+The BBS home page is an 80×30 native terminal, but games remain portable
+320×200 surfaces. Use `p4_draw_cp437_glyph()` or `p4_draw_cp437_text()` when a
+game needs authentic DOS boxes, arrows, blocks, shading, or text. Select the
+8-pixel compact height for game chrome and the native 16-pixel height for
+larger art. Both use the same pinned CP437 font as `components/p4_ansi`, while
+remaining ordinary clipped Game API drawing with no shell, parser, transport,
+or terminal-geometry dependency.
 
 ## Make motion and effects smooth without an engine
 

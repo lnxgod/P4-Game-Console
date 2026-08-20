@@ -225,10 +225,10 @@ static bool render_animation_sequence(p4_game_instance_t *instance,
 
 int main(int argc, char **argv)
 {
-    if (argc != 12 && argc != 3) {
-        fprintf(stderr, "usage: %s ART.bin EGG.ppm HATCH.ppm STYLE.ppm "
-                        "CUSTOM.ppm FLYING.ppm ELEMENTAL.ppm PLAY.ppm "
-                        "SIGNALS.ppm TRACK.ppm BATTLE.ppm\n"
+    if (argc != 13 && argc != 3) {
+        fprintf(stderr, "usage: %s ART.bin EGG.ppm HATCH.ppm POWER.ppm "
+                        "STYLE.ppm CUSTOM.ppm FLYING.ppm ELEMENTAL.ppm "
+                        "PLAY.ppm SIGNALS.ppm TRACK.ppm BATTLE.ppm\n"
                         "   or: %s ART.bin ANIMATION_PREFIX\n",
                 argv[0],
                 argv[0]);
@@ -283,30 +283,33 @@ int main(int argc, char **argv)
     }
     success = success && animate(&instance, 8U) &&
         render_to(&instance, &surface, argv[3]) &&
-        tap(&instance, 180U, 180U) && tap(&instance, 220U, 32U) &&
-        tap(&instance, 130U, 60U) && tap(&instance, 300U, 60U) &&
+        tap(&instance, 180U, 180U) &&
         render_to(&instance, &surface, argv[4]) &&
-        tap(&instance, 160U, 180U) && tap(&instance, 260U, 180U) &&
-        animate(&instance, 18U) && render_to(&instance, &surface, argv[5]);
+        tap(&instance, 220U, 32U) &&
+        tap(&instance, 130U, 60U) && tap(&instance, 300U, 60U) &&
+        tap(&instance, 80U, 180U) &&
+        render_to(&instance, &surface, argv[5]) &&
+        tap(&instance, 240U, 180U) && tap(&instance, 260U, 180U) &&
+        animate(&instance, 18U) && render_to(&instance, &surface, argv[6]);
     for (unsigned stage = 0U; success && stage < 2U; ++stage) {
         success = tap(&instance, 260U, 180U);
     }
     success = success && animate(&instance, 18U) &&
-        render_to(&instance, &surface, argv[6]) &&
+        render_to(&instance, &surface, argv[7]) &&
         tap(&instance, 260U, 180U) && tap(&instance, 20U, 145U) &&
         animate(&instance, 18U) &&
-        render_to(&instance, &surface, argv[7]) &&
+        render_to(&instance, &surface, argv[8]) &&
         tap(&instance, 110U, 145U) && tap(&instance, 280U, 80U) &&
         animate(&instance, 8U) &&
-        render_to(&instance, &surface, argv[8]) &&
+        render_to(&instance, &surface, argv[9]) &&
         tap(&instance, 280U, 12U) && tap(&instance, 70U, 180U) &&
         animate(&instance, 2U) &&
-        render_to(&instance, &surface, argv[9]) &&
+        render_to(&instance, &surface, argv[10]) &&
         tap(&instance, 70U, 42U) && tap(&instance, 70U, 180U) &&
         animate(&instance, 2U) &&
-        render_to(&instance, &surface, argv[10]) &&
+        render_to(&instance, &surface, argv[11]) &&
         tap(&instance, 250U, 180U) && animate(&instance, 2U) &&
-        render_to(&instance, &surface, argv[11]);
+        render_to(&instance, &surface, argv[12]);
     p4_game_instance_stop(&instance);
     free(art);
     free(state);

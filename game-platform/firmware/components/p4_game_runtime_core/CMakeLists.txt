@@ -6,20 +6,12 @@ if(COMMAND idf_component_register)
             "src/render_list.c"
             "src/scheduler.c"
         INCLUDE_DIRS "include"
-        REQUIRES p4_game_api
     )
 
     target_compile_options(${COMPONENT_LIB} PRIVATE
         -Wall -Wextra -Werror -Wconversion -Wshadow -std=c11
     )
 else()
-    if(NOT TARGET p4_game_api)
-        add_subdirectory(
-            "${CMAKE_CURRENT_SOURCE_DIR}/../p4_game_api"
-            "${CMAKE_CURRENT_BINARY_DIR}/p4_game_api"
-        )
-    endif()
-
     add_library(p4_game_runtime_core STATIC
         src/input_latch.c
         src/lifecycle.c
@@ -27,7 +19,6 @@ else()
         src/scheduler.c
     )
     target_include_directories(p4_game_runtime_core PUBLIC include)
-    target_link_libraries(p4_game_runtime_core PUBLIC p4_game_api)
     target_compile_features(p4_game_runtime_core PUBLIC c_std_11)
     target_compile_options(p4_game_runtime_core PRIVATE
         -Wall -Wextra -Werror -Wpedantic -Wconversion -Wsign-conversion -Wshadow

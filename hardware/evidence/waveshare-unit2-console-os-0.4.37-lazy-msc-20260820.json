@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "authorization_id": "waveshare-unit2-console-os-0.4.37-lazy-msc-20260820",
+  "status": "authorized-for-one-guarded-application-update",
+  "scope": "Replace only the primary Console OS application on Waveshare 4.3 unit 2 to restore direct SD mounting and on-demand USB Drive MSC allocation. No erase-all, bootloader, partition-table, OTA-data, or filesystem write.",
+  "board": {
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "unit_label": "waveshare-4.3-unit2",
+    "chip": "ESP32-P4",
+    "revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+    "raw_identity_stored": false
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-unit2-factory-20260820.bin",
+    "bytes": 33554432,
+    "sha256": "240a730a882e6437f31729c78ae69db35b132b1aa78f820fec9d88b3397b39e6"
+  },
+  "predecessor": {
+    "offset": "0x20000",
+    "bytes": 1582416,
+    "sha256": "2cb2551ddae599cefff2c1ee99f76cc3b870798f661989568cf2cf8a09f8007c",
+    "app_version": "0.4.36"
+  },
+  "candidate": {
+    "source_commit": "8788d6aca625064f0fc71a81ca6927a156ecfcd6",
+    "source_state": "dirty-working-tree prototype; the exact artifact hashes below are authoritative",
+    "build_target": "console_os waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "app_version": "0.4.37",
+    "application": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+      "offset": "0x20000",
+      "bytes": 1585376,
+      "sha256": "1c9885d47d9398ff82fb9a73a5718fc5e62d7343aa8541791f71438785206c56"
+    },
+    "elf_evidence": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.elf",
+      "bytes": 19084308,
+      "sha256": "1f4c3edfcd92d0e1641e36148da54d537b3c78a4d27c84b67a9579a993a50844"
+    }
+  },
+  "write_policy": {
+    "erase_all": false,
+    "write_only_primary_application": true,
+    "flash_mode": "dio",
+    "flash_size": "32MB",
+    "flash_frequency": "80m",
+    "verify_live_identity_before_write": true,
+    "verify_installed_predecessor_before_write": true,
+    "verify_application_after_write": true,
+    "hard_reset_after_verification": true
+  },
+  "acceptance": [
+    "Console OS reaches READY without panic or reboot",
+    "microSD reports SD_READY and storage is not fault",
+    "normal controller-first boot reports msc_storage=on-demand without allocating MSC",
+    "USB Host and HID remain ready on H2"
+  ]
+}

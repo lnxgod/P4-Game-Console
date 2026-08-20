@@ -9,24 +9,35 @@ touch UI, growth, levels, battle stats, and the coin economy.
 Version 3 adds Signal City, a privacy-bounded Wi-Fi-inspired hunt, and local
 fantasy signal battles. Version 3.1 raises the runtime dragon art to 64×64,
 adds authored hatch and signal-genetic atlases, and blends adjacent poses at
-frame time for smoother movement. The artwork and mechanics are original and
-do not use characters, names, capture devices, or interface designs from
-another game.
+frame time for smoother movement. Version 3.2 makes Star Catcher motion
+elapsed-time based, replaces flat late-game leveling with widening bounded
+requirements, slows the later growth stages, and adds a capped success-driven
+pace plus original reward art. The artwork and mechanics are original and do
+not use characters, names, capture devices, or interface designs from another
+game.
+
+Version 3.3 fills the remaining text-only item presentation with original care,
+Power, Style, and Remix icons. The Style shop can now deterministically remix
+owned components into a numbered look recipe while preserving player purchases.
 
 ## Touch play
 
 - Tap **Feed**, **Play**, **Clean**, or **Rest** to provide care.
 - Tap the egg or dragon directly to pet it.
 - **Play** opens Star Catcher. Swipe anywhere in the full-width lane to send
-  the dragon sliding under falling stars, then tap **Done** to return.
+  the dragon sliding under falling rewards, then tap **Done** to return.
+  Successful catches build a gently faster streak, misses reset it, and calm
+  crystals ease the pace back. The displayed pace never exceeds the hard cap.
+- With a controller or keyboard, press **Start** to open Star Catcher, hold
+  **Left/Right** to steer with the same spring motion, and press **B** to return
+  to care. Touch and controller steering share the same bounded speed model.
 - Tap **Upgrades**, then use the touch-only **Power** and **Style** tabs.
   Power buys Wings, Aura, Nest, and Magnet levels. Style buys and equips Body,
   Eyes, Horns, and Trail choices independently; the right side of each style
   card buys the next color and the left side cycles owned colors.
 - **Dev Stage** is the temporary preview cheat. Each tap advances one visual
   stage; once mature, it cycles the elemental preview.
-- Tap **Exit** to return safely to Console OS. The platform Back action remains
-  a lifecycle fallback, but gameplay has no D-pad, A/B, or arrow UI.
+- Tap **Exit** or use the platform **Back** action to return safely to Console OS.
 
 ### Signal Hunt
 
@@ -80,6 +91,10 @@ Style choices are runtime palette channels, so one motion frame supports many
 combinations without duplicating art. Current choices are eight body palettes,
 six eye colors, five horn colors, and five colored/animated trail families.
 Purchased choices remain independently equipped for the session.
+The inherited two-family wing trait and eight mutation hues extend that to
+19,200 bounded look recipes. **Remix** recombines only unlocked choices, always
+changes a component when that category has alternatives, and shows the stable
+mixed-radix `LOOK` number for the resulting recipe.
 
 ## Growth and inherited traits
 
@@ -89,16 +104,17 @@ natural stages are:
 | Interactions | Stage |
 | ---: | --- |
 | 0–7 | Egg |
-| 8–23 | Baby |
-| 24–47 | Winged |
-| 48–79 | Flying |
-| 80+ | Elemental |
+| 8–27 | Baby |
+| 28–59 | Winged |
+| 60–103 | Flying |
+| 104+ | Elemental |
 
-Dragon level is `1 + interactions / 8`, capped at 99. Power, Speed, Guard, and
-Magic are deterministic battle-ready stats derived from that level, care mix,
-and the four Power upgrades. They are already visible in the shop so a future
-battle mode can consume the same values without maintaining a second leveling
-system.
+Dragon levels use widening requirements: level 2 costs 8 interactions, then
+each next level costs two more until the per-level requirement caps at 24.
+Level remains capped at 99. This keeps the early feedback quick while stopping
+late stats from racing ahead. Power, Speed, Guard, and Magic are deterministic
+battle-ready stats derived from that level, care mix, and the four Power
+upgrades.
 
 Care style determines the mature branch rather than a menu choice:
 
@@ -112,12 +128,13 @@ Care style determines the mature branch rather than a menu choice:
   early stages and choose a dedicated PixelLab adult family when rare art is
   unlocked.
 
-Animation uses 352 authored 64×64 source frames: four-frame ambient clips,
+Animation and UI use 384 authored 64×64 source frames: four-frame ambient clips,
 eight-frame care and power reactions, a dedicated shell-to-baby hatch, four
-signal-genetic flight families, and stage-specific idle changes. The renderer
-interpolates palette color between adjacent poses and uses ordered edge
-dithering for appearing/disappearing pixels, so every authored transition has
-smooth frame-time intermediate phases without blurring the pixel silhouette.
+signal-genetic flight families, four Star Catcher reward/effect loops, and
+sixteen care/Power/Style/Remix item sprites. The renderer eases palette color between adjacent
+poses while switching non-overlapping silhouette pixels together at the
+midpoint. This avoids the ghosted double silhouettes caused by per-pixel edge
+dithering while preserving crisp authored poses.
 A 32-step eased hover/bounce curve, smooth drag following,
 spring-and-inertia catcher motion, speed trails, star trails, a responsive
 shadow, and upgrade-sensitive particles provide secondary motion. Baby idle
@@ -154,17 +171,17 @@ images, which are preserved rather than destructively resized.
 Byte Buddy remains on the stable 320×200 Game API v1 surface. On Waveshare
 4.3, Console OS maps that surface to its exact-aspect 768×480 viewport. A
 Byte-Buddy-only native framebuffer would require a new shared render/input
-contract. Version 3.1 instead preserves more art detail with 64×64 sprites,
+contract. Version 3.1 and later instead preserve more art detail with 64×64 sprites,
 while Console OS keeps the compatible stable surface and touch mapping.
 
 ## Generated source art
 
-The twenty-three PNGs in `assets/` are original project inputs generated in
+The twenty-five PNGs in `assets/` are original project inputs generated in
 PixelLab or ImageGen for this game. Six PixelLab gameplay sheets are transparent
 256×256 4-by-4 grids, and the retained 64×64 style anchor keeps later ImageGen
-sheets cohesive. Sixteen 1254×1254 ImageGen grids add two egg families, baby
+sheets cohesive. Eighteen 1254×1254 ImageGen grids add two egg families, baby
 reactions, flight cycles, elemental breath, nine motion expansions, a hatch
-transition, and signal-genetic motion. Some
+transition, signal-genetic motion, and Star Catcher rewards. Some
 ImageGen grids have a baked neutral checkerboard; the deterministic converter
 removes only border-connected neutral pixels and leaves source files untouched.
 
@@ -193,6 +210,8 @@ removes only border-connected neutral pixels and leaves source files untouched.
 | `byte_buddy_dragon_elemental_impacts_imagegen_v2.png` | `859c3f149a71043f2316c687cfc7bf7ae50e972175c453046ab069a580fcf611` |
 | `byte_buddy_dragon_hatch_transitions_imagegen_v3.png` | `e23e20adcd51a907e3e39152183a34d78153de1ff23b351abfa9f93a430c020d` |
 | `byte_buddy_dragon_signal_genetics_imagegen_v3.png` | `eddef200a2449753a08dedbfc5cf4c69fe75b8f154b141f80a031e8303bc9937` |
+| `byte_buddy_star_catcher_rewards_imagegen_v4.png` | `166f98b052a89f1d30b9a59fbce317f350a1df4a1dc48be30662ec623b5bc67f` |
+| `byte_buddy_items_components_imagegen_v5.png` | `e8fade6f70766057b1915d0d3b0f2143f6fe7c2ce723ee1004cd5243e8732b68` |
 
 The exact prompts are retained here so later sheets can match the same art
 direction.
@@ -329,6 +348,61 @@ scenery, floor, shadow, watermark, merged cells, or overlap.
 | `byte_buddy_dragon_hatch_transitions_imagegen_v3.png` | Columns preserve Nebula, Sungold, Jade, and Glacier shells. Rows progress from closed wobble/first crack, to eyes and one horn peeking, to head and forepaws emerging, to a happy baby sitting in the broken lower shell. |
 | `byte_buddy_dragon_signal_genetics_imagegen_v3.png` | Columns preserve Arc circuit wings, Prism crystal wings, Thorn spiked wings, and Comet star wings. Rows progress through low hover/downstroke, rising blink/pulse, high-hover signal charge, and happy settling spark. A neutral violet/cyan/coral palette supports eight runtime mutation recolors. |
 
+### ImageGen Star Catcher rewards
+
+`byte_buddy_star_catcher_rewards_imagegen_v4.png` was generated with the
+built-in OpenAI ImageGen tool on 2026-08-19 as original project art under the
+user's explicit authorization. The existing style-anchor and flying-dragon
+sheets were identity/style references only; the prompt explicitly excluded the
+dragon so every cell is a reusable reward or effect. The accepted source is a
+1254×1254 alpha PNG with an exact crop-safe 4-by-4 layout.
+
+> Use case: stylized-concept. Asset type: game sprite animation sheet for Byte
+> Buddy Star Catcher. Create exactly four columns by four rows: sixteen
+> independently crop-safe equal square cells. Row 1 is one golden five-point
+> star progressing through a calm four-frame twinkle loop. Row 2 is one cyan
+> moon-shaped calm crystal progressing through a soft four-frame pulse loop.
+> Row 3 is one coral heart comet progressing through a compact four-frame glide
+> loop, with its tiny trail contained in each cell. Row 4 is one small
+> jewel-tone catch burst progressing through a four-frame sparkle-and-settle
+> loop. Use original hand-crafted 16-bit pixel art, hard pixel edges, a chunky
+> two-pixel midnight-navy outline, and the limited violet, cyan, coral, gold,
+> and white jewel palette. Keep one complete centered object per cell with
+> consistent scale and transparent padding. No checkerboard, grid, borders,
+> text, labels, numbers, logo, watermark, floor, shadow, scenery, character,
+> dragon, extra objects, merged cells, overlap, or frame bleed.
+
+### ImageGen item and component atlas
+
+`byte_buddy_items_components_imagegen_v5.png` was generated with the built-in
+OpenAI ImageGen tool on 2026-08-20 as original project art under the user's
+explicit authorization. The accepted source is a 1254×1254 RGBA PNG with an
+exact crop-safe 4-by-4 layout and real transparency. Rows provide care items,
+Power upgrades, Style categories, and a four-frame Remix prism respectively.
+
+> Use case: stylized-concept. Asset type: game UI item and component sprite
+> atlas for the original Byte Buddy dragon virtual-pet game. Create exactly
+> four columns by four rows: sixteen independently crop-safe equal square
+> cells. Row 1, left to right: one golden berry-and-treat bowl icon for FEED;
+> one coral bouncing star ball icon for PLAY; one cyan soap bubble with a tiny
+> cleaning brush icon for CLEAN; one violet crescent moon resting on a small
+> gold pillow icon for REST. Row 2, left to right: one paired dragon-wing
+> feather icon for WINGS; one luminous elemental orb with a thin ring for AURA;
+> one warm woven nest icon for NEST; one horseshoe magnet pulling a tiny gold
+> star for MAGNET. Row 3, left to right: one compact dragon scale patch icon for
+> BODY; one bright expressive dragon eye gem icon for EYES; one paired crescent
+> dragon-horn crest icon for HORNS; one curling sparkling comet trail icon for
+> TRAIL. Row 4: the same small faceted DNA/remix prism in a four-frame
+> animation—closed dim prism, opening color split, bright recombination swirl,
+> settled rainbow jewel. Original hand-crafted 16-bit pixel art, hard pixel
+> edges, chunky two-pixel midnight-navy outline, and a limited violet, cyan,
+> coral, gold, emerald, white, and deep-indigo jewel palette. One complete
+> centered icon per cell, consistent scale, generous transparent padding, and
+> no object crossing a cell boundary. Transparent background; no checkerboard,
+> grid, borders, text, letters, labels, numbers, logo, watermark, floor, cast
+> shadow, scenery, dragon character, extra objects, merged cells, overlap, or
+> frame bleed. Every cell remains readable at 64×64 pixels.
+
 ## Deterministic atlas conversion
 
 `tools/png_to_dragon_atlas.py` scales each source sheet to 256×256 with
@@ -338,8 +412,8 @@ two 4-bit indices are packed per byte. A frame therefore occupies 2,080 bytes
 instead of 8,192 bytes of raw RGB565.
 
 The first six sheets form a 199,744-byte built-in `BBDART2` fallback inside the
-`.P4G`. All twenty-two gameplay sheets contain 352 master frames in a
-732,224-byte
+`.P4G`. All twenty-four gameplay sheets contain 384 master frames in a
+798,784-byte
 resource payload. The
 Console OS build wraps that payload as `BYTEBUD.P4R`: a bounded, same-ID,
 SHA-256-verified read-only SD sidecar. The executable remains under the existing
@@ -380,7 +454,9 @@ python3 games/byte_buddy/tools/png_to_dragon_atlas.py \
   games/byte_buddy/assets/byte_buddy_dragon_elemental_mastery_imagegen_v2.png \
   games/byte_buddy/assets/byte_buddy_dragon_elemental_impacts_imagegen_v2.png \
   games/byte_buddy/assets/byte_buddy_dragon_hatch_transitions_imagegen_v3.png \
-  games/byte_buddy/assets/byte_buddy_dragon_signal_genetics_imagegen_v3.png
+  games/byte_buddy/assets/byte_buddy_dragon_signal_genetics_imagegen_v3.png \
+  games/byte_buddy/assets/byte_buddy_star_catcher_rewards_imagegen_v4.png \
+  games/byte_buddy/assets/byte_buddy_items_components_imagegen_v5.png
 
 python3 scripts/build-game-resource.py \
   --manifest games/byte_buddy/game.json \
@@ -391,11 +467,12 @@ python3 scripts/build-game-resource.py \
 Current deterministic art identities:
 
 - built-in include: `450156a7e0b1179934f5286b24208906f6350dd1b823affb3aba0a42a122ece2`;
-- full `BBDART2` payload: `85f61c74e53159bf93ae3a81ff3b20ca874be24859a39bec9691d43170f70682`;
-- wrapped `BYTEBUD.P4R`: 732,352 bytes,
-  `9a2d1b88ec84d659a15c1f9d4a3af4ba0f29e7a7b512ff2c1fc9ff442f3dc0ca`;
-- v3.1 `BYTEBUD.P4G`: 363,100 bytes,
-  `9fd86759e1ea129d048077539411daac575dbe185c6a690ee53fc1a3619abf96`.
+- full `BBDART2` payload: `2ffea92ef62ef42912fe0c69e36995066a73da278130492ac23cd684bd3f4f69`;
+- wrapped `BYTEBUD.P4R`: 798,912 bytes,
+  `952577cf147580aa92d1932a649c71cc33079a099593f9d6983f5fc118877d9f`.
+
+No v3.3 `.P4G` hash is claimed by this host-only art conversion. Record it
+only after the focused RISC-V cartridge build and verifier pass.
 
 ## Verification
 
@@ -412,15 +489,16 @@ make play-game GAME=byte_buddy
 ```
 
 `byte_buddy_touch_previews` accepts the generated art payload and renders
-deterministic closed egg, cracking egg, style shop, customized baby, flying,
+deterministic closed egg, cracking egg, Power shop, Style shop, customized baby, flying,
 elemental, mini-game, signal-list, focused tracker, and battle frames for
 visual QA. Its two-argument animation mode also renders 140 chronological
 gameplay frames covering every expanded stage clip, the multi-step hatch, and
 signal-fed genetics. The tests cover touch hit areas,
-care achievements, shop spending paths, preview progression, drag play, trait
-selection, customization costs, levels/battle stats, signal profile scaling,
-focused scans, battle rewards, privacy-service validation, and guarded
-rendering.
+care achievements, shop spending paths, preview progression, drag and
+controller Star Catcher play, trait selection, customization costs,
+all 19,200 collision-free look recipe IDs, deterministic owned-choice Remix,
+levels/battle stats, signal profile scaling, focused scans, battle rewards,
+privacy-service validation, and guarded rendering.
 
 Care, coins, upgrades, and growth are session-only until the platform exposes a
 reviewed writable save service. The game owns no display, touch, audio, or

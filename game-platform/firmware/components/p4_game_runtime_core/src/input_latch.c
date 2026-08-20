@@ -30,6 +30,7 @@ void p4_input_latch_reset(p4_input_latch_t *latch)
 
     advance_epoch(latch);
     latch->previous_down = 0U;
+    latch->previous_dpad = 0U;
     latch->source_epoch = 0U;
     latch->source_seen = false;
     latch->previous_connected = false;
@@ -38,13 +39,14 @@ void p4_input_latch_reset(p4_input_latch_t *latch)
 
 void p4_input_latch_sample(
     p4_input_latch_t *latch,
-    const p4_raw_input_t *raw,
+    const p4_script_raw_input_t *raw,
     uint64_t tick,
-    p4_input_frame_t *frame_out)
+    p4_script_input_frame_t *frame_out)
 {
     bool connected;
     bool source_changed = false;
     uint64_t down = 0U;
+    uint8_t dpad = 0U;
 
     if (latch == NULL || frame_out == NULL) {
         return;
@@ -52,7 +54,7 @@ void p4_input_latch_sample(
 
     memset(frame_out, 0, sizeof(*frame_out));
     frame_out->tick = tick;
-    frame_out->version = P4_GAME_API_VERSION;
+    frame_out->version = P4_SCRIPT_GAME_API_VERSION;
     frame_out->size = (uint16_t)sizeof(*frame_out);
 
     connected = raw != NULL && raw->connected != 0U;
@@ -70,6 +72,7 @@ void p4_input_latch_sample(
     if (source_changed) {
         advance_epoch(latch);
         latch->previous_down = 0U;
+        latch->previous_dpad = 0U;
         latch->previous_connected = false;
         latch->neutral_barrier = true;
     }
@@ -80,7 +83,9 @@ void p4_input_latch_sample(
             latch->neutral_barrier = true;
         }
         frame_out->released = latch->previous_down;
+        frame_out->dpad_released = latch->previous_dpad;
         latch->previous_down = 0U;
+        latch->previous_dpad = 0U;
         latch->previous_connected = false;
         frame_out->input_epoch = latch->input_epoch;
         return;
@@ -89,12 +94,14 @@ void p4_input_latch_sample(
     if (latch->neutral_barrier) {
         latch->neutral_barrier = false;
         latch->previous_down = 0U;
+        latch->previous_dpad = 0U;
         latch->previous_connected = true;
         frame_out->input_epoch = latch->input_epoch;
         return;
     }
 
-    down = raw->down & P4_BUTTON_MASK;
+    down = raw->down & P4_SCRIPT_BUTTON_MASK;
+    dpad = raw->dpad & P4_SCRIPT_DPAD_MASK;
     frame_out->down = down;
     frame_out->pressed = down & ~latch->previous_down;
     frame_out->released = latch->previous_down & ~down;
@@ -104,11 +111,34 @@ void p4_input_latch_sample(
     frame_out->right_y = raw->right_y;
     frame_out->left_trigger = raw->left_trigger;
     frame_out->right_trigger = raw->right_trigger;
-    frame_out->dpad = raw->dpad & P4_DPAD_MASK;
+    frame_out->dpad = dpad;
+    frame_out->dpad_pressed = dpad & (uint8_t)~latch->previous_dpad;
+    frame_out->dpad_released = latch->previous_dpad & (uint8_t)~dpad;
     frame_out->connected = 1U;
     frame_out->input_epoch = latch->input_epoch;
 
+    frame_out->touch_count = raw->touch_count;
+    if (frame_out->touch_count > P4_SCRIPT_TOUCH_MAX_POINTS) {
+        frame_out->touch_count = (uint8_t)P4_SCRIPT_TOUCH_MAX_POINTS;
+    }
+    for (uint8_t index = 0U; index < frame_out->touch_count; ++index) {
+        p4_script_touch_point_t point = raw->touches[index];
+        if (point.x < 0) {
+            point.x = 0;
+        } else if ((uint32_t)point.x >= P4_SCRIPT_SCREEN_WIDTH) {
+            point.x = (int16_t)(P4_SCRIPT_SCREEN_WIDTH - 1U);
+        }
+        if (point.y < 0) {
+            point.y = 0;
+        } else if ((uint32_t)point.y >= P4_SCRIPT_SCREEN_HEIGHT) {
+            point.y = (int16_t)(P4_SCRIPT_SCREEN_HEIGHT - 1U);
+        }
+        point.pressed = point.pressed != 0U ? 1U : 0U;
+        memset(point.reserved, 0, sizeof(point.reserved));
+        frame_out->touches[index] = point;
+    }
+
     latch->previous_down = down;
+    latch->previous_dpad = dpad;
     latch->previous_connected = true;
 }
-

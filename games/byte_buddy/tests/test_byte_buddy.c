@@ -128,6 +128,17 @@ static void tap(p4_game_instance_t *instance, uint16_t x, uint16_t y)
     release_touch(instance);
 }
 
+static p4_game_result_t buttons(p4_game_instance_t *instance,
+                                uint32_t held, uint32_t pressed,
+                                uint32_t elapsed_ms)
+{
+    const p4_game_input_t input = {
+        .held = held,
+        .pressed = pressed,
+    };
+    return p4_game_instance_update(instance, &input, elapsed_ms);
+}
+
 static void test_care_achievements_and_exit(void)
 {
     CHECK(p4_game_descriptor_valid(&p4_byte_buddy_game));
@@ -222,12 +233,12 @@ static void test_dragon_growth_and_traits(void)
     CHECK(byte_buddy_stage_for_interactions(0U) == BYTE_BUDDY_STAGE_EGG);
     CHECK(byte_buddy_stage_for_interactions(7U) == BYTE_BUDDY_STAGE_EGG);
     CHECK(byte_buddy_stage_for_interactions(8U) == BYTE_BUDDY_STAGE_BABY);
-    CHECK(byte_buddy_stage_for_interactions(23U) == BYTE_BUDDY_STAGE_BABY);
-    CHECK(byte_buddy_stage_for_interactions(24U) == BYTE_BUDDY_STAGE_WINGED);
-    CHECK(byte_buddy_stage_for_interactions(47U) == BYTE_BUDDY_STAGE_WINGED);
-    CHECK(byte_buddy_stage_for_interactions(48U) == BYTE_BUDDY_STAGE_FLYING);
-    CHECK(byte_buddy_stage_for_interactions(79U) == BYTE_BUDDY_STAGE_FLYING);
-    CHECK(byte_buddy_stage_for_interactions(80U) ==
+    CHECK(byte_buddy_stage_for_interactions(27U) == BYTE_BUDDY_STAGE_BABY);
+    CHECK(byte_buddy_stage_for_interactions(28U) == BYTE_BUDDY_STAGE_WINGED);
+    CHECK(byte_buddy_stage_for_interactions(59U) == BYTE_BUDDY_STAGE_WINGED);
+    CHECK(byte_buddy_stage_for_interactions(60U) == BYTE_BUDDY_STAGE_FLYING);
+    CHECK(byte_buddy_stage_for_interactions(103U) == BYTE_BUDDY_STAGE_FLYING);
+    CHECK(byte_buddy_stage_for_interactions(104U) ==
           BYTE_BUDDY_STAGE_ELEMENTAL);
     CHECK(byte_buddy_stage_for_interactions(UINT16_MAX) ==
           BYTE_BUDDY_STAGE_ELEMENTAL);
@@ -257,18 +268,55 @@ static void test_dragon_growth_and_traits(void)
     CHECK(byte_buddy_morph_for_nurture(0U, 0U, 0U, 0U, 3U) ==
           BYTE_BUDDY_MORPH_NEBULA);
 
-    int16_t slide_position = 160;
-    int16_t slide_velocity = 0;
-    for (unsigned frame = 0U; frame < 20U; ++frame) {
-        slide_position = byte_buddy_slide_position(
-            slide_position, 296, &slide_velocity);
+    CHECK(byte_buddy_star_fall_speed(BYTE_BUDDY_STAGE_EGG, 0U) == 58U);
+    CHECK(byte_buddy_star_fall_speed(BYTE_BUDDY_STAGE_BABY, 0U) >
+          byte_buddy_star_fall_speed(BYTE_BUDDY_STAGE_EGG, 0U));
+    CHECK(byte_buddy_star_fall_speed(BYTE_BUDDY_STAGE_ELEMENTAL, 0U) ==
+          82U);
+    CHECK(byte_buddy_star_fall_speed(BYTE_BUDDY_STAGE_ELEMENTAL, 6U) ==
+          100U);
+    CHECK(byte_buddy_star_fall_speed(UINT8_MAX, UINT8_MAX) == 100U);
+
+    const int32_t start_q16 = INT32_C(160) * INT32_C(65536);
+    const int32_t target_q16 = INT32_C(296) * INT32_C(65536);
+    int32_t fast_frames = start_q16;
+    int32_t fast_velocity = 0;
+    for (unsigned frame = 0U; frame < 10U; ++frame) {
+        fast_frames = byte_buddy_catcher_step_q16(
+            fast_frames, target_q16, &fast_velocity, 16U);
     }
-    CHECK(slide_position > 240 && slide_position <= 296);
-    for (unsigned frame = 0U; frame < 40U; ++frame) {
-        slide_position = byte_buddy_slide_position(
-            slide_position, 24, &slide_velocity);
+    int32_t slow_frames = start_q16;
+    int32_t slow_velocity = 0;
+    for (unsigned frame = 0U; frame < 5U; ++frame) {
+        slow_frames = byte_buddy_catcher_step_q16(
+            slow_frames, target_q16, &slow_velocity, 32U);
     }
-    CHECK(slide_position >= 24 && slide_position < 100);
+    int64_t frame_difference = (int64_t)fast_frames - slow_frames;
+    if (frame_difference < 0) {
+        frame_difference = -frame_difference;
+    }
+    CHECK(fast_frames > start_q16 && fast_frames <= target_q16);
+    CHECK(slow_frames > start_q16 && slow_frames <= target_q16);
+    CHECK(frame_difference < INT32_C(4) * INT32_C(65536));
+    CHECK(byte_buddy_catcher_step_q16(
+              start_q16, target_q16, NULL, 16U) == start_q16);
+
+    const int32_t controller_right =
+        byte_buddy_controller_catcher_target_q16(
+            start_q16, start_q16, P4_BUTTON_RIGHT, 160U);
+    const int32_t controller_left =
+        byte_buddy_controller_catcher_target_q16(
+            start_q16, start_q16, P4_BUTTON_LEFT, 160U);
+    CHECK(controller_right > start_q16);
+    CHECK(controller_left < start_q16);
+    CHECK(byte_buddy_controller_catcher_target_q16(
+              start_q16, controller_right, 0U, 16U) == start_q16);
+    CHECK(byte_buddy_controller_catcher_target_q16(
+              start_q16, start_q16, P4_BUTTON_LEFT | P4_BUTTON_RIGHT,
+              16U) == start_q16);
+    CHECK(byte_buddy_controller_catcher_target_q16(
+              target_q16, target_q16, P4_BUTTON_RIGHT, 100U) ==
+          target_q16);
 
     CHECK(byte_buddy_upgrade_cost(0U) == 2U);
     CHECK(byte_buddy_upgrade_cost(1U) == 5U);
@@ -281,18 +329,59 @@ static void test_dragon_growth_and_traits(void)
           UINT16_MAX);
     CHECK(byte_buddy_style_cost(BYTE_BUDDY_STYLE_TRAIL, 4U) ==
           UINT16_MAX);
+    CHECK(byte_buddy_remix_choice(UINT32_C(0x12345678), 0U, 0U) == 0U);
+    const uint8_t remix = byte_buddy_remix_choice(
+        UINT32_C(0x12345678), 2U, 4U);
+    CHECK(remix <= 4U);
+    CHECK(remix != 2U);
+    CHECK(byte_buddy_remix_choice(
+              UINT32_C(0x12345678), 2U, 4U) == remix);
+    CHECK(byte_buddy_style_recipe_id(0U, 0U, 0U, 0U, 0U, 0U) == 0U);
+    CHECK(byte_buddy_style_recipe_id(7U, 5U, 4U, 4U, 1U, 7U) ==
+          19199U);
+    CHECK(byte_buddy_style_recipe_id(
+              UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX,
+              UINT8_MAX, UINT8_MAX) == 0U);
+    static bool recipe_seen[19200];
+    uint32_t recipe_count = 0U;
+    for (uint8_t body = 0U; body < 8U; ++body) {
+        for (uint8_t eyes = 0U; eyes < 6U; ++eyes) {
+            for (uint8_t horns = 0U; horns < 5U; ++horns) {
+                for (uint8_t trail = 0U; trail < 5U; ++trail) {
+                    for (uint8_t wings = 0U; wings < 2U; ++wings) {
+                        for (uint8_t hue = 0U; hue < 8U; ++hue) {
+                            const uint32_t recipe_id =
+                                byte_buddy_style_recipe_id(
+                                    body, eyes, horns, trail, wings, hue);
+                            CHECK(recipe_id < 19200U);
+                            if (recipe_id < 19200U) {
+                                CHECK(!recipe_seen[recipe_id]);
+                                recipe_seen[recipe_id] = true;
+                                ++recipe_count;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    CHECK(recipe_count == 19200U);
 
     CHECK(byte_buddy_level_for_interactions(0U) == 1U);
     CHECK(byte_buddy_level_for_interactions(7U) == 1U);
     CHECK(byte_buddy_level_for_interactions(8U) == 2U);
+    CHECK(byte_buddy_level_for_interactions(17U) == 2U);
+    CHECK(byte_buddy_level_for_interactions(18U) == 3U);
+    CHECK(byte_buddy_level_for_interactions(29U) == 3U);
+    CHECK(byte_buddy_level_for_interactions(30U) == 4U);
     CHECK(byte_buddy_level_for_interactions(UINT16_MAX) == 99U);
     const byte_buddy_battle_stats_t stats = byte_buddy_battle_stats(
         8U, 6U, 3U, 3U, 4U, 1U, 2U, 1U, 2U);
-    CHECK(stats.level == 4U);
-    CHECK(stats.power == 11U);
-    CHECK(stats.speed == 13U);
-    CHECK(stats.guard == 9U);
-    CHECK(stats.magic == 12U);
+    CHECK(stats.level == 3U);
+    CHECK(stats.power == 10U);
+    CHECK(stats.speed == 12U);
+    CHECK(stats.guard == 8U);
+    CHECK(stats.magic == 11U);
 
     CHECK(byte_buddy_touch_target(20U, 12U, false, false, false) ==
           BYTE_BUDDY_TOUCH_EXIT);
@@ -320,6 +409,10 @@ static void test_dragon_growth_and_traits(void)
           BYTE_BUDDY_TOUCH_STYLE_HORNS_SELECT);
     CHECK(byte_buddy_touch_target(130U, 120U, true, true, false) ==
           BYTE_BUDDY_TOUCH_STYLE_HORNS_BUY);
+    CHECK(byte_buddy_touch_target(80U, 180U, true, true, false) ==
+          BYTE_BUDDY_TOUCH_STYLE_REMIX);
+    CHECK(byte_buddy_touch_target(220U, 180U, true, true, false) ==
+          BYTE_BUDDY_TOUCH_CLOSE_SHOP);
     CHECK(byte_buddy_touch_target(200U, 80U, false, false, true) ==
           BYTE_BUDDY_TOUCH_MOVE_DRAGON);
     CHECK(byte_buddy_touch_target(280U, 12U, false, false, true) ==
@@ -382,6 +475,34 @@ static void test_signal_hunt_battle_and_reward(void)
     free(state);
 }
 
+static void test_controller_star_catcher(void)
+{
+    void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state == NULL) {
+        return;
+    }
+    p4_game_instance_t instance;
+    p4_audio_mixer_t mixer;
+    p4_achievement_catalog_t achievements;
+    CHECK(start_game(&instance, state, &mixer, &achievements));
+    CHECK(buttons(&instance, P4_BUTTON_START, P4_BUTTON_START, 16U) ==
+          P4_GAME_CONTINUE);
+    for (unsigned frame = 0U; frame < 60U; ++frame) {
+        CHECK(buttons(&instance, P4_BUTTON_RIGHT, 0U, 16U) ==
+              P4_GAME_CONTINUE);
+    }
+    for (unsigned frame = 0U; frame < 20U; ++frame) {
+        CHECK(buttons(&instance, 0U, 0U, 16U) == P4_GAME_CONTINUE);
+    }
+    CHECK(buttons(&instance, P4_BUTTON_B, P4_BUTTON_B, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, P4_BUTTON_BACK, P4_BUTTON_BACK, 16U) ==
+          P4_GAME_EXIT_TO_LAUNCHER);
+    p4_game_instance_stop(&instance);
+    free(state);
+}
+
 static void test_invalid_extended_art_fails_closed(void)
 {
     uint8_t malformed_art[64] = {0};
@@ -409,6 +530,7 @@ int main(void)
     test_care_achievements_and_exit();
     test_render_bounds();
     test_dragon_growth_and_traits();
+    test_controller_star_catcher();
     test_signal_hunt_battle_and_reward();
     test_invalid_extended_art_fails_closed();
     if (s_failures != 0) {

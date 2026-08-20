@@ -22,6 +22,14 @@ enum {
     P4_MP_MAX_REMOTE_PEERS = P4_MP_MAX_PLAYERS - 1,
     P4_MP_DEFAULT_TIMEOUT_MS = 3000,
     P4_MP_INPUT_PAYLOAD_BYTES = 24,
+    P4_MP_LOBBY_SCHEMA = 1,
+    P4_MP_GAME_ID_BYTES = 32,
+    P4_MP_SHA256_BYTES = 32,
+    P4_MP_COMPATIBILITY_MATERIAL_BYTES = 80,
+    P4_MP_OFFER_PAYLOAD_BYTES = 120,
+    P4_MP_JOIN_PAYLOAD_BYTES = 40,
+    P4_MP_ACCEPT_PAYLOAD_BYTES = 16,
+    P4_MP_PLAYER_SLOT_ANY = 0xff,
 };
 
 typedef enum {
@@ -159,6 +167,87 @@ p4_mp_status_t p4_mp_input_decode(
     const uint8_t *payload,
     size_t payload_length,
     p4_mp_input_t *input_out);
+
+typedef enum {
+    P4_MP_GAME_MODE_NONE = 0,
+    P4_MP_GAME_MODE_HOST_AUTHORITATIVE = 1,
+    P4_MP_GAME_MODE_LOCKSTEP = 2,
+} p4_mp_game_mode_t;
+
+/**
+ * Fixed lobby identity advertised by a host. compatibility_sha256 is supplied
+ * by the OS and covers the exact game ID, Game API version, package/content
+ * hash, game protocol, simulation rate, input delay, capacity, and mode. It
+ * deliberately excludes mutable player count and the per-session seed.
+ */
+typedef struct {
+    p4_mp_game_mode_t mode;
+    uint8_t game_api_major;
+    uint8_t game_api_minor;
+    uint8_t players_present;
+    uint8_t player_capacity;
+    uint8_t input_delay_tics;
+    uint16_t tick_rate_hz;
+    uint16_t game_protocol;
+    uint64_t session_seed;
+    char game_id[P4_MP_GAME_ID_BYTES];
+    uint8_t content_sha256[P4_MP_SHA256_BYTES];
+    uint8_t compatibility_sha256[P4_MP_SHA256_BYTES];
+} p4_mp_lobby_offer_t;
+
+typedef struct {
+    uint8_t requested_player_slot;
+    uint32_t join_nonce;
+    uint8_t compatibility_sha256[P4_MP_SHA256_BYTES];
+} p4_mp_lobby_join_t;
+
+typedef struct {
+    uint8_t assigned_player_slot;
+    uint8_t player_count;
+    uint8_t input_delay_tics;
+    uint32_t start_tic;
+    uint64_t session_seed;
+} p4_mp_lobby_accept_t;
+
+/** Build the canonical fixed bytes the OS hashes into compatibility_sha256. */
+p4_mp_status_t p4_mp_lobby_compatibility_material(
+    const p4_mp_lobby_offer_t *offer,
+    uint8_t material[P4_MP_COMPATIBILITY_MATERIAL_BYTES]);
+
+p4_mp_status_t p4_mp_lobby_offer_encode(
+    const p4_mp_lobby_offer_t *offer,
+    uint8_t payload[P4_MP_OFFER_PAYLOAD_BYTES]);
+
+p4_mp_status_t p4_mp_lobby_offer_decode(
+    const uint8_t *payload,
+    size_t payload_length,
+    p4_mp_lobby_offer_t *offer_out);
+
+p4_mp_status_t p4_mp_lobby_join_encode(
+    const p4_mp_lobby_join_t *join,
+    uint8_t payload[P4_MP_JOIN_PAYLOAD_BYTES]);
+
+p4_mp_status_t p4_mp_lobby_join_decode(
+    const uint8_t *payload,
+    size_t payload_length,
+    p4_mp_lobby_join_t *join_out);
+
+p4_mp_status_t p4_mp_lobby_accept_encode(
+    const p4_mp_lobby_accept_t *accept,
+    uint8_t payload[P4_MP_ACCEPT_PAYLOAD_BYTES]);
+
+p4_mp_status_t p4_mp_lobby_accept_decode(
+    const uint8_t *payload,
+    size_t payload_length,
+    p4_mp_lobby_accept_t *accept_out);
+
+bool p4_mp_lobby_offers_compatible(
+    const p4_mp_lobby_offer_t *local,
+    const p4_mp_lobby_offer_t *remote);
+
+bool p4_mp_lobby_join_matches_offer(
+    const p4_mp_lobby_offer_t *offer,
+    const p4_mp_lobby_join_t *join);
 
 typedef enum {
     P4_MP_ROLE_NONE = 0,

@@ -24,11 +24,11 @@ typedef struct {
 typedef struct {
     void *context;
     /* Trusted platform callback; must return promptly and never block indefinitely. */
-    p4_status_t (*load)(void *context, const p4_cartridge_ref_t *cartridge);
+    p4_script_status_t (*load)(void *context, const p4_cartridge_ref_t *cartridge);
     /* Trusted platform callback; must return promptly and never block indefinitely. */
-    p4_status_t (*tick)(
+    p4_script_status_t (*tick)(
         void *context,
-        const p4_tick_frame_t *tick,
+        const p4_script_tick_frame_t *tick,
         p4_render_writer_t *render);
     /*
      * May run concurrently with load/tick. It must only signal a trusted VM
@@ -36,19 +36,19 @@ typedef struct {
      */
     void (*request_interrupt)(void *context);
     /* Trusted platform callback; must return promptly and never block indefinitely. */
-    p4_status_t (*unload)(void *context);
+    p4_script_status_t (*unload)(void *context);
 } p4_cartridge_backend_t;
 
 typedef struct {
     void *context;
     /* Trusted platform callback; must return promptly and publish one complete snapshot. */
-    bool (*read)(void *context, p4_raw_input_t *input_out);
+    bool (*read)(void *context, uint8_t player, p4_script_raw_input_t *input_out);
 } p4_input_source_t;
 
 typedef struct {
     void *context;
     /* Must return within its own bounded device-service timeout. */
-    p4_status_t (*submit)(void *context, const p4_render_packet_t *packet);
+    p4_script_status_t (*submit)(void *context, const p4_script_render_packet_t *packet);
 } p4_render_sink_t;
 
 typedef struct {
@@ -79,13 +79,13 @@ typedef struct {
     uint32_t max_update_us;
     uint32_t game_stack_min_free_bytes;
     uint32_t render_stack_min_free_bytes;
-    p4_status_t last_error;
+    p4_script_status_t last_error;
     bool game_watchdog_subscribed;
 } p4_runtime_stats_t;
 
 void p4_runtime_default_config(p4_runtime_config_t *config_out);
 
-p4_status_t p4_runtime_start(
+p4_script_status_t p4_runtime_start(
     const p4_runtime_config_t *config,
     const p4_cartridge_ref_t *cartridge,
     const p4_cartridge_backend_t *backend,
@@ -93,7 +93,7 @@ p4_status_t p4_runtime_start(
     const p4_render_sink_t *render);
 
 /* Public runtime calls have one serialized supervisor owner. */
-p4_status_t p4_runtime_request_stop(uint32_t timeout_ms);
+p4_script_status_t p4_runtime_request_stop(uint32_t timeout_ms);
 void p4_runtime_get_stats(p4_runtime_stats_t *stats_out);
 p4_lifecycle_state_t p4_runtime_get_state(void);
 

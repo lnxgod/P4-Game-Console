@@ -55,6 +55,7 @@ def main() -> None:
         "<I", zlib.crc32(discover_header) & 0xFFFFFFFF
     )
     assert relay.frame_valid(discover)
+    assert relay.discover_frame() == discover
     print("p4 multiplayer relay tests PASS")
 
 

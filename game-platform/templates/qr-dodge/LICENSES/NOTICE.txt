@@ -1,0 +1,5 @@
+QR Dodge source code is Copyright 2026 Game Changers AI contributors and is
+licensed under the MIT License.
+
+The game carries no external art, music, sound samples, fonts, or other media.
+Its code-drawn shapes and procedural presentation may be remixed under CC0-1.0.

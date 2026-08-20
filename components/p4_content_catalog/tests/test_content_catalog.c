@@ -66,9 +66,11 @@ static void write_entry(
 static bool write_fixture(const char *path, bool corrupt_payload)
 {
     static const char manifest[] =
-        "{\"format\":\"p4-cart-source-v1\",\"id\":\"p4-lua-5.4-v1\","
-        "\"logical_height\":480,\"logical_width\":768,\"present_hz\":30,"
-        "\"source_included\":true,\"update_hz\":60}\n";
+        "{\"format\":\"p4-cart-source-v1\",\"runtime\":{"
+        "\"entry\":\"main.lua\",\"heap_bytes\":65536,"
+        "\"id\":\"p4-lua-5.4-v1\",\"logical_height\":480,"
+        "\"logical_width\":768,\"present_hz\":30,\"save_bytes\":0,"
+        "\"update_hz\":60},\"source_included\":true}\n";
     static const uint8_t license[] = "MIT\n";
     static const uint8_t readme[] = "# Test\n";
     static const uint8_t source[] = "function update() end\n";
@@ -158,6 +160,17 @@ static void test_cart_and_catalog(void)
     CHECK(item.status == P4_CONTENT_OK && item.size_bytes > 128U);
     CHECK(strcmp(item.name, "z-good.p4cart") == 0);
     CHECK(p4_content_validate_cart_file(bad_path, &item) == P4_CONTENT_BAD_HASH);
+
+    uint8_t source[64];
+    p4_content_cart_runtime_t runtime;
+    CHECK(p4_content_load_cart_source(
+              good_path, source, sizeof(source), &runtime) == P4_CONTENT_OK);
+    CHECK(strcmp(runtime.entry_path, "main.lua") == 0);
+    CHECK(runtime.heap_bytes == 65536U && runtime.save_bytes == 0U);
+    CHECK(runtime.source_bytes == sizeof("function update() end\n") - 1U);
+    CHECK(memcmp(source, "function update() end\n", runtime.source_bytes) == 0);
+    CHECK(p4_content_load_cart_source(
+              good_path, source, 4U, &runtime) == P4_CONTENT_LIMIT_REACHED);
 
     p4_content_catalog_t catalog;
     CHECK(p4_content_catalog_scan(root, &catalog) == P4_CONTENT_OK);

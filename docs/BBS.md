@@ -15,11 +15,12 @@ commercial software.
 
 ## Components
 
-`components/p4_ansi` is the terminal primitive. It owns the pinned 8x16 CP437
-font, DOS 16-color palette, 80x30 cell grid, ECMA-48 parser, and RGB565
-renderer. The parser bounds parameters and escape-sequence length, discards
-OSC/DCS-style strings, ignores unsupported controls, and never allocates.
-Remote bytes are untrusted input.
+`components/p4_cp437` owns the one pinned 8x16 CP437 font shared by the native
+terminal and compact Game API drawing. `components/p4_ansi` is the terminal
+primitive. It owns the DOS 16-color palette, 80x30 cell grid, ECMA-48 parser,
+and RGB565 renderer. The parser bounds parameters and escape-sequence length,
+discards OSC/DCS-style strings, ignores unsupported controls, and never
+allocates. Remote bytes are untrusted input.
 
 Bold printable ASCII is rendered with a one-pixel right-hand stroke inside its
 existing 9x16 cell. This makes launcher headings, door names, and controls

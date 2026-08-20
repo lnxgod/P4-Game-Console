@@ -9,7 +9,6 @@ idf_component_register(
         esp_timer
         esp_system
         freertos
-        p4_game_api
         p4_game_runtime_core
 )
 

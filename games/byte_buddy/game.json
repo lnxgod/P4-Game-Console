@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "3.1.1",
+  "version": "3.3.0",
   "stack_frame_limit_bytes": 1024,
   "package_file": "BYTEBUD.P4G",
   "resource_file": "BYTEBUD.P4R",
@@ -26,6 +26,6 @@
     "signal-scan"
   ],
   "license": "MIT",
-  "assets": "352-frame 64px dragon atlases, tweened motion, signal genetics, SD P4R bank, and animated effects",
+  "assets": "384-frame 64px dragon/reward/item atlases, combinatorial looks, tweened motion, signal genetics, and SD P4R bank",
   "enabled": true
 }

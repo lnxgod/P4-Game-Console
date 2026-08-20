@@ -34,6 +34,24 @@ enum {
     ANSI_PANEL = 0x0842,
     ANSI_PANEL_ALT = 0x108a,
     ANSI_CONTROL = 0x4a75,
+    CP437_HEART = 0x03,
+    CP437_ARROW_RIGHT = 0x10,
+    CP437_SHADE_LIGHT = 0xb0,
+    CP437_SHADE_MEDIUM = 0xb1,
+    CP437_SHADE_DARK = 0xb2,
+    CP437_VERTICAL = 0xb3,
+    CP437_TOP_RIGHT = 0xbf,
+    CP437_BOTTOM_LEFT = 0xc0,
+    CP437_HORIZONTAL = 0xc4,
+    CP437_BOTTOM_RIGHT = 0xd9,
+    CP437_TOP_LEFT = 0xda,
+    CP437_BLOCK = 0xdb,
+    CP437_DOUBLE_VERTICAL = 0xba,
+    CP437_DOUBLE_TOP_RIGHT = 0xbb,
+    CP437_DOUBLE_BOTTOM_RIGHT = 0xbc,
+    CP437_DOUBLE_BOTTOM_LEFT = 0xc8,
+    CP437_DOUBLE_TOP_LEFT = 0xc9,
+    CP437_DOUBLE_HORIZONTAL = 0xcd,
 };
 
 static const char *const s_class_menu[] = {
@@ -251,6 +269,71 @@ static void draw_text(p4_game_surface_t *surface, int x, int y,
     p4_draw_text(surface, x, y, text, color, 1U, 50U);
 }
 
+static void draw_cp437(p4_game_surface_t *surface, int x, int y,
+                       uint8_t character, uint16_t foreground,
+                       uint16_t background)
+{
+    p4_draw_cp437_glyph(surface, x, y, character, foreground, background,
+                        P4_DRAW_CP437_COMPACT_HEIGHT);
+}
+
+static void draw_ansi_box(p4_game_surface_t *surface,
+                          int x, int y, int width, int height,
+                          uint16_t foreground, uint16_t background,
+                          bool double_line)
+{
+    if (width < 16 || height < 16 || width > 320 || height > 200 ||
+        width % P4_DRAW_CP437_CELL_WIDTH != 0 ||
+        height % P4_DRAW_CP437_COMPACT_HEIGHT != 0) {
+        return;
+    }
+    const unsigned columns = (unsigned)width /
+        P4_DRAW_CP437_CELL_WIDTH;
+    const unsigned rows = (unsigned)height /
+        P4_DRAW_CP437_COMPACT_HEIGHT;
+    const uint8_t top_left = double_line ?
+        CP437_DOUBLE_TOP_LEFT : CP437_TOP_LEFT;
+    const uint8_t top_right = double_line ?
+        CP437_DOUBLE_TOP_RIGHT : CP437_TOP_RIGHT;
+    const uint8_t bottom_left = double_line ?
+        CP437_DOUBLE_BOTTOM_LEFT : CP437_BOTTOM_LEFT;
+    const uint8_t bottom_right = double_line ?
+        CP437_DOUBLE_BOTTOM_RIGHT : CP437_BOTTOM_RIGHT;
+    const uint8_t horizontal = double_line ?
+        CP437_DOUBLE_HORIZONTAL : CP437_HORIZONTAL;
+    const uint8_t vertical = double_line ?
+        CP437_DOUBLE_VERTICAL : CP437_VERTICAL;
+    p4_draw_fill_rect(surface, x, y, width, height, background);
+    for (unsigned column = 0U; column < columns; ++column) {
+        const uint8_t top = column == 0U ? top_left :
+            (column + 1U == columns ? top_right : horizontal);
+        const uint8_t bottom = column == 0U ? bottom_left :
+            (column + 1U == columns ? bottom_right : horizontal);
+        const int cell_x = x + (int)(column * P4_DRAW_CP437_CELL_WIDTH);
+        draw_cp437(surface, cell_x, y, top, foreground, background);
+        draw_cp437(surface, cell_x,
+                   y + height - P4_DRAW_CP437_COMPACT_HEIGHT,
+                   bottom, foreground, background);
+    }
+    for (unsigned row = 1U; row + 1U < rows; ++row) {
+        const int cell_y = y +
+            (int)(row * P4_DRAW_CP437_COMPACT_HEIGHT);
+        draw_cp437(surface, x, cell_y, vertical, foreground, background);
+        draw_cp437(surface,
+                   x + width - P4_DRAW_CP437_CELL_WIDTH, cell_y,
+                   vertical, foreground, background);
+    }
+}
+
+static void draw_ansi_selector(p4_game_surface_t *surface,
+                               int x, int y, bool selected,
+                               uint16_t background)
+{
+    draw_cp437(surface, x, y,
+               selected ? CP437_ARROW_RIGHT : (uint8_t)' ',
+               ANSI_YELLOW, background);
+}
+
 static void draw_header(p4_game_surface_t *surface, const char *title)
 {
     const size_t title_length = line_length(title, 50U);
@@ -259,9 +342,14 @@ static void draw_header(p4_game_surface_t *surface, const char *title)
         title_x = 56;
     }
     p4_draw_fill_rect(surface, 0, 0, 320, 25, ANSI_PANEL);
-    p4_draw_fill_rect(surface, 0, 23, 320, 2, ANSI_BRIGHT_RED);
-    p4_draw_fill_rect(surface, 55, 5, 3, 14, ANSI_RED);
-    p4_draw_fill_rect(surface, 262, 5, 3, 14, ANSI_RED);
+    for (int x = 0; x < 320; x += P4_DRAW_CP437_CELL_WIDTH) {
+        draw_cp437(surface, x, 17, CP437_DOUBLE_HORIZONTAL,
+                   ANSI_BRIGHT_RED, ANSI_PANEL);
+    }
+    draw_cp437(surface, 48, 1, CP437_DOUBLE_VERTICAL,
+               ANSI_RED, ANSI_PANEL);
+    draw_cp437(surface, 264, 1, CP437_DOUBLE_VERTICAL,
+               ANSI_RED, ANSI_PANEL);
     draw_text(surface, title_x, 8, title, ANSI_YELLOW);
 }
 
@@ -280,19 +368,19 @@ static void draw_menu(p4_game_surface_t *surface, const lord_state_t *state,
     const size_t scroll = state->menu_scroll;
     const size_t end = scroll + 7U < count ? scroll + 7U : count;
     const int visible = (int)(end - scroll);
-    p4_draw_fill_rect(surface, 8, first_y - 6, 304,
-                      visible * 12 + 8, ANSI_PANEL);
-    p4_draw_rect(surface, 8, first_y - 6, 304,
-                 visible * 12 + 8, ANSI_BLUE);
+    const int top = ((first_y - 6) / 8) * 8;
+    const int height = ((visible * 12 + 15) / 8) * 8;
+    draw_ansi_box(surface, 8, top, 304, height,
+                  ANSI_BRIGHT_BLUE, ANSI_PANEL, false);
     int row = 0;
     for (size_t index = scroll; index < end; ++index) {
         const bool selected = index == state->selection;
         if (selected) {
-            p4_draw_fill_rect(surface, 10, first_y + row * 12 - 2,
-                              300, 11, ANSI_RED);
+            p4_draw_fill_rect(surface, 16, first_y + row * 12 - 2,
+                              288, 11, ANSI_RED);
         }
-        draw_text(surface, 12, first_y + row * 12,
-                  selected ? ">" : " ", ANSI_YELLOW);
+        draw_ansi_selector(surface, 16, first_y + row * 12 - 2,
+                           selected, selected ? ANSI_RED : ANSI_PANEL);
         draw_text(surface, 24, first_y + row * 12, labels[index],
                   selected ? ANSI_WHITE : ANSI_LIGHT_GRAY);
         ++row;
@@ -307,19 +395,19 @@ static void draw_compact_menu(p4_game_surface_t *surface,
     const size_t scroll = state->menu_scroll;
     const size_t end = scroll + 7U < count ? scroll + 7U : count;
     const int visible = (int)(end - scroll);
-    p4_draw_fill_rect(surface, 8, first_y - 4, 304,
-                      visible * 10 + 6, ANSI_PANEL);
-    p4_draw_rect(surface, 8, first_y - 4, 304,
-                 visible * 10 + 6, ANSI_BLUE);
+    const int top = ((first_y - 4) / 8) * 8;
+    const int height = ((visible * 10 + 13) / 8) * 8;
+    draw_ansi_box(surface, 8, top, 304, height,
+                  ANSI_BRIGHT_BLUE, ANSI_PANEL, false);
     int row = 0;
     for (size_t index = scroll; index < end; ++index) {
         const bool selected = index == state->selection;
         if (selected) {
-            p4_draw_fill_rect(surface, 10, first_y + row * 10 - 1,
-                              300, 9, ANSI_RED);
+            p4_draw_fill_rect(surface, 16, first_y + row * 10 - 1,
+                              288, 9, ANSI_RED);
         }
-        draw_text(surface, 12, first_y + row * 10,
-                  selected ? ">" : " ", ANSI_YELLOW);
+        draw_ansi_selector(surface, 16, first_y + row * 10 - 1,
+                           selected, selected ? ANSI_RED : ANSI_PANEL);
         draw_text(surface, 24, first_y + row * 10, labels[index],
                   selected ? ANSI_WHITE : ANSI_LIGHT_GRAY);
         ++row;
@@ -334,8 +422,8 @@ static void draw_realm_menu(p4_game_surface_t *surface,
     const size_t count = LORD_REALM_PLAYER_COUNT + 1U;
     const size_t scroll = state->menu_scroll;
     const size_t end = scroll + 7U < count ? scroll + 7U : count;
-    p4_draw_fill_rect(surface, 8, 33, 304, 96, ANSI_PANEL);
-    p4_draw_rect(surface, 8, 33, 304, 96, ANSI_BLUE);
+    draw_ansi_box(surface, 8, 32, 304, 96,
+                  ANSI_BRIGHT_BLUE, ANSI_PANEL, false);
     int row = 0;
     for (size_t index = scroll; index < end; ++index) {
         const bool selected = index == state->selection;
@@ -358,9 +446,10 @@ static void draw_realm_menu(p4_game_surface_t *surface,
         }
         const int y = 39 + row * 11;
         if (selected) {
-            p4_draw_fill_rect(surface, 10, y - 2, 300, 12, ANSI_RED);
+            p4_draw_fill_rect(surface, 16, y - 2, 288, 12, ANSI_RED);
         }
-        draw_text(surface, 12, y, selected ? ">" : " ", ANSI_YELLOW);
+        draw_ansi_selector(surface, 16, y - 2, selected,
+                           selected ? ANSI_RED : ANSI_PANEL);
         draw_text(surface, 24, y, line,
                   selected ? ANSI_WHITE : ANSI_LIGHT_GRAY);
         ++row;
@@ -398,7 +487,9 @@ static void draw_player_detail(p4_game_surface_t *surface,
     line_append(line, sizeof(line), "Affection ");
     line_append_u32(line, sizeof(line), player->affection);
     line_append(line, sizeof(line), player->married ? "  MARRIED" : "");
-    draw_text(surface, 10, 55, line, ANSI_YELLOW);
+    draw_cp437(surface, 10, 53, CP437_HEART,
+               ANSI_BRIGHT_RED, ANSI_BLACK);
+    draw_text(surface, 24, 55, line, ANSI_YELLOW);
     draw_text(surface, 10, 67, player->saying, ANSI_LIGHT_GRAY);
     draw_compact_menu(surface, state, s_player_detail_menu, 5U, 78);
 }
@@ -410,8 +501,9 @@ static void draw_mailbox(p4_game_surface_t *surface,
     const size_t scroll = state->menu_scroll;
     const size_t end = scroll + 7U < count ? scroll + 7U : count;
     const int panel_height = (int)(end - scroll) * 11 + 8;
-    p4_draw_fill_rect(surface, 8, 39, 304, panel_height, ANSI_PANEL);
-    p4_draw_rect(surface, 8, 39, 304, panel_height, ANSI_BLUE);
+    const int ansi_height = ((panel_height + 7) / 8) * 8;
+    draw_ansi_box(surface, 8, 40, 304, ansi_height,
+                  ANSI_BRIGHT_BLUE, ANSI_PANEL, false);
     int row = 0;
     for (size_t index = scroll; index < end; ++index) {
         const bool selected = index == state->selection;
@@ -430,9 +522,10 @@ static void draw_mailbox(p4_game_surface_t *surface,
         }
         const int y = 44 + row * 11;
         if (selected) {
-            p4_draw_fill_rect(surface, 10, y - 2, 300, 12, ANSI_RED);
+            p4_draw_fill_rect(surface, 16, y - 2, 288, 12, ANSI_RED);
         }
-        draw_text(surface, 12, y, selected ? ">" : " ", ANSI_YELLOW);
+        draw_ansi_selector(surface, 16, y - 2, selected,
+                           selected ? ANSI_RED : ANSI_PANEL);
         draw_text(surface, 24, y, line,
                   selected ? ANSI_WHITE : ANSI_LIGHT_GRAY);
         ++row;
@@ -452,10 +545,10 @@ static void draw_mail_view(p4_game_surface_t *surface,
     line_append(line, sizeof(line), "Subject: ");
     line_append(line, sizeof(line), lord_mail_subject(state, index));
     draw_text(surface, 12, 46, line, ANSI_YELLOW);
-    p4_draw_fill_rect(surface, 8, 60, 304, 52, ANSI_PANEL);
-    p4_draw_rect(surface, 8, 60, 304, 52, ANSI_BLUE);
-    draw_text(surface, 16, 72, lord_mail_body_1(state, index), ANSI_WHITE);
-    draw_text(surface, 16, 88, lord_mail_body_2(state, index),
+    draw_ansi_box(surface, 8, 56, 304, 56,
+                  ANSI_BRIGHT_BLUE, ANSI_PANEL, false);
+    draw_text(surface, 16, 68, lord_mail_body_1(state, index), ANSI_WHITE);
+    draw_text(surface, 16, 84, lord_mail_body_2(state, index),
               ANSI_LIGHT_GRAY);
     draw_text(surface, 84, 118, "A/B: RETURN TO MAILBOX", ANSI_DARK_GRAY);
 }
@@ -479,64 +572,63 @@ static void draw_player_status(p4_game_surface_t *surface,
 static void draw_town(p4_game_surface_t *surface,
                       const lord_state_t *state)
 {
-    p4_draw_fill_rect(surface, 6, 29, 198, 101, ANSI_PANEL);
-    p4_draw_rect(surface, 6, 29, 198, 101, ANSI_BLUE);
+    draw_ansi_box(surface, 8, 32, 200, 96,
+                  ANSI_BRIGHT_BLUE, ANSI_PANEL, false);
     const size_t scroll = state->menu_scroll;
     const size_t count = sizeof(s_town_menu) / sizeof(s_town_menu[0]);
     const size_t end = scroll + 7U < count ? scroll + 7U : count;
     int row = 0;
     for (size_t index = scroll; index < end; ++index) {
         const bool selected = index == state->selection;
-        const int y = 35 + row * 12;
+        const int y = 43 + row * 11;
         if (selected) {
-            p4_draw_fill_rect(surface, 9, y - 2, 192, 11, ANSI_RED);
+            p4_draw_fill_rect(surface, 16, y - 2, 184, 11, ANSI_RED);
         }
-        draw_text(surface, 13, y, selected ? ">" : " ", ANSI_YELLOW);
+        draw_ansi_selector(surface, 16, y - 2, selected,
+                           selected ? ANSI_RED : ANSI_PANEL);
         draw_text(surface, 25, y, s_town_menu[index],
                   selected ? ANSI_WHITE : ANSI_LIGHT_GRAY);
         ++row;
     }
 
-    p4_draw_fill_rect(surface, 210, 29, 104, 101, ANSI_PANEL_ALT);
-    p4_draw_rect(surface, 210, 29, 104, 101, ANSI_RED);
-    draw_text(surface, 218, 35,
+    draw_ansi_box(surface, 208, 32, 104, 96,
+                  ANSI_BRIGHT_RED, ANSI_PANEL_ALT, true);
+    draw_text(surface, 218, 41,
               state->save_available ? "SAVED REALM" : "LOCAL REALM",
               ANSI_YELLOW);
-    p4_draw_fill_rect(surface, 216, 46, 92, 1, ANSI_RED);
+    for (int x = 216; x < 304; x += P4_DRAW_CP437_CELL_WIDTH) {
+        draw_cp437(surface, x, 50, CP437_HORIZONTAL,
+                   ANSI_RED, ANSI_PANEL_ALT);
+    }
     char line[24];
     line_clear(line, sizeof(line));
     line_append(line, sizeof(line), "DAY ");
     line_append_u32(line, sizeof(line), state->player.day);
-    draw_text(surface, 218, 52, line, ANSI_LIGHT_GRAY);
+    draw_text(surface, 218, 57, line, ANSI_LIGHT_GRAY);
     line_clear(line, sizeof(line));
     line_append(line, sizeof(line), "LEVEL ");
     line_append_u32(line, sizeof(line), state->player.level);
-    draw_text(surface, 218, 64, line, ANSI_BRIGHT_CYAN);
+    draw_text(surface, 218, 68, line, ANSI_BRIGHT_CYAN);
     line_clear(line, sizeof(line));
     line_append(line, sizeof(line), "HP ");
     line_append_i32(line, sizeof(line), state->player.hit_points);
     line_append(line, sizeof(line), "/");
     line_append_i32(line, sizeof(line), state->player.max_hit_points);
-    draw_text(surface, 218, 76, line, ANSI_BRIGHT_GREEN);
+    draw_text(surface, 218, 79, line, ANSI_BRIGHT_GREEN);
     line_clear(line, sizeof(line));
     line_append(line, sizeof(line), "GOLD ");
     line_append_u32(line, sizeof(line), state->player.gold);
-    draw_text(surface, 218, 88, line, ANSI_YELLOW);
+    draw_text(surface, 218, 90, line, ANSI_YELLOW);
     line_clear(line, sizeof(line));
     line_append(line, sizeof(line), "MAIL ");
     line_append_u32(line, sizeof(line),
                     (uint32_t)lord_mail_unread_count(state));
     line_append(line, sizeof(line), " NEW");
-    draw_text(surface, 218, 100, line, ANSI_BRIGHT_MAGENTA);
+    draw_text(surface, 218, 101, line, ANSI_BRIGHT_MAGENTA);
     line_clear(line, sizeof(line));
     line_append(line, sizeof(line), "PVP LEFT ");
     line_append_u32(line, sizeof(line), state->pvp_fights);
     draw_text(surface, 218, 112, line, ANSI_BRIGHT_RED);
-    line_clear(line, sizeof(line));
-    line_append(line, sizeof(line), "MENU ");
-    line_append_u32(line, sizeof(line), (uint32_t)state->selection + 1U);
-    line_append(line, sizeof(line), "/15");
-    draw_text(surface, 218, 120, line, ANSI_DARK_GRAY);
 }
 
 static void draw_title(p4_game_surface_t *surface)
@@ -544,8 +636,8 @@ static void draw_title(p4_game_surface_t *surface)
     p4_draw_sprite_rgb565(surface, 0, 25, s_lord_title_art,
                           LORD_TITLE_ART_WIDTH, LORD_TITLE_ART_HEIGHT,
                           LORD_TITLE_ART_WIDTH, false, 0U);
-    p4_draw_fill_rect(surface, 18, 98, 284, 31, ANSI_BLACK);
-    p4_draw_rect(surface, 18, 98, 284, 31, ANSI_BRIGHT_RED);
+    draw_ansi_box(surface, 16, 92, 288, 40,
+                  ANSI_BRIGHT_RED, ANSI_BLACK, true);
     draw_text(surface, 76, 104, "P4 ANSI DOOR EDITION", ANSI_WHITE);
     draw_text(surface, 28, 118, "A/START ENTER  -  PERSISTENT REALM",
               ANSI_YELLOW);
@@ -578,8 +670,8 @@ static void draw_shop(p4_game_surface_t *surface,
             p4_draw_fill_rect(surface, 8, 29 + row * 12 - 2,
                               304, 11, ANSI_BLUE);
         }
-        draw_text(surface, 12, 29 + row * 12,
-                  selected ? ">" : " ", ANSI_YELLOW);
+        draw_ansi_selector(surface, 8, 27 + row * 12, selected,
+                           selected ? ANSI_BLUE : ANSI_BLACK);
         draw_text(surface, 24, 29 + row * 12, line,
                   selected ? ANSI_WHITE : ANSI_LIGHT_GRAY);
         ++row;
@@ -726,6 +818,11 @@ static void draw_rip_town(p4_game_surface_t *surface)
     }
     p4_draw_fill_rect(surface, 150, 80, 5, 32, ANSI_DARK_GRAY);
     p4_draw_fill_rect(surface, 136, 78, 34, 4, ANSI_DARK_GRAY);
+    for (int x = 0; x < 320; x += P4_DRAW_CP437_CELL_WIDTH) {
+        draw_cp437(surface, x, 112,
+                   x % 24 == 0 ? CP437_SHADE_DARK : CP437_SHADE_MEDIUM,
+                   ANSI_BRIGHT_GREEN, ANSI_GREEN);
+    }
 }
 
 static void draw_rip_forest(p4_game_surface_t *surface)
@@ -736,6 +833,8 @@ static void draw_rip_forest(p4_game_surface_t *surface)
         p4_draw_fill_circle(surface, x + 19, 68, 21, ANSI_GREEN);
         p4_draw_fill_circle(surface, x + 6, 79, 14, ANSI_GREEN);
         p4_draw_fill_circle(surface, x + 32, 79, 14, ANSI_GREEN);
+        draw_cp437(surface, x + 15, 58, UINT8_C(0x06),
+                   ANSI_BRIGHT_GREEN, ANSI_BLACK);
     }
     p4_draw_fill_rect(surface, 0, 122, 320, 14, ANSI_DARK_GRAY);
     draw_line(surface, 145, 136, 162, 105, ANSI_YELLOW);
@@ -754,7 +853,13 @@ static void draw_rip_inn(p4_game_surface_t *surface)
     for (int x = 151; x <= 247; x += 32) {
         p4_draw_fill_circle(surface, x, 89, 6, ANSI_YELLOW);
     }
-    draw_text(surface, 146, 53, "TALES  ALE  REST", ANSI_WHITE);
+    draw_ansi_box(surface, 128, 48, 152, 24,
+                  ANSI_YELLOW, ANSI_RED, true);
+    draw_text(surface, 146, 57, "TALES  ALE  REST", ANSI_WHITE);
+    for (int x = 128; x < 280; x += P4_DRAW_CP437_CELL_WIDTH) {
+        draw_cp437(surface, x, 104, CP437_SHADE_LIGHT,
+                   ANSI_BRIGHT_RED, ANSI_RED);
+    }
 }
 
 static void draw_rip_battle(p4_game_surface_t *surface)
@@ -770,6 +875,10 @@ static void draw_rip_battle(p4_game_surface_t *surface)
     p4_draw_fill_rect(surface, 0, 119, 320, 17, ANSI_BROWN);
     draw_line(surface, 110, 43, 207, 111, ANSI_BRIGHT_RED);
     draw_text(surface, 126, 55, "CLASH!", ANSI_YELLOW);
+    draw_cp437(surface, 108, 39, UINT8_C(0x2f),
+               ANSI_WHITE, ANSI_BLACK);
+    draw_cp437(surface, 204, 39, UINT8_C(0x5c),
+               ANSI_WHITE, ANSI_BLACK);
 }
 
 static void draw_rip_dragon(p4_game_surface_t *surface)
@@ -794,6 +903,10 @@ static void draw_rip_building(p4_game_surface_t *surface, uint8_t scene)
     p4_draw_fill_rect(surface, 139, 88, 42, 39, ANSI_BLACK);
     p4_draw_fill_rect(surface, 55, 80, 38, 24, ANSI_BRIGHT_CYAN);
     p4_draw_fill_rect(surface, 227, 80, 38, 24, ANSI_BRIGHT_CYAN);
+    draw_cp437(surface, 64, 88, CP437_SHADE_LIGHT,
+               ANSI_WHITE, ANSI_BRIGHT_CYAN);
+    draw_cp437(surface, 240, 88, CP437_SHADE_LIGHT,
+               ANSI_WHITE, ANSI_BRIGHT_CYAN);
     if (scene == 9U) {
         p4_draw_fill_circle(surface, 160, 58, 10, ANSI_YELLOW);
         draw_text(surface, 153, 55, "$", ANSI_BLACK);
@@ -818,7 +931,11 @@ static void draw_rip_scene(p4_game_surface_t *surface,
     case 4U: draw_rip_dragon(surface); break;
     default: draw_rip_building(surface, state->rip_scene); break;
     }
-    p4_draw_fill_rect(surface, 0, 118, 320, 14, ANSI_BLACK);
+    for (int x = 0; x < 320; x += P4_DRAW_CP437_CELL_WIDTH) {
+        draw_cp437(surface, x, 116, CP437_SHADE_DARK,
+                   ANSI_RED, ANSI_BLACK);
+    }
+    p4_draw_fill_rect(surface, 0, 124, 320, 8, ANSI_BLACK);
     draw_text(surface, 8, 121, lord_rip_scene_name(state->rip_scene),
               ANSI_BRIGHT_CYAN);
     draw_text(surface, 214, 121, "A/B: GALLERY", ANSI_YELLOW);
@@ -827,9 +944,9 @@ static void draw_rip_scene(p4_game_surface_t *surface,
 static void draw_keyboard(p4_game_surface_t *surface,
                           const lord_state_t *state)
 {
-    p4_draw_fill_rect(surface, 8, 28, 304, 24, ANSI_PANEL);
-    p4_draw_rect(surface, 8, 28, 304, 24, ANSI_BLUE);
-    draw_text(surface, 13, 36,
+    draw_ansi_box(surface, 8, 24, 304, 32,
+                  ANSI_BRIGHT_BLUE, ANSI_PANEL, false);
+    draw_text(surface, 16, 36,
               state->editor_text[0] == '\0' ? "_" : state->editor_text,
               ANSI_WHITE);
     for (size_t index = 0U; index < LORD_KEYBOARD_COUNT; ++index) {
@@ -849,8 +966,8 @@ static void draw_keyboard(p4_game_surface_t *surface,
 
 static void draw_news(p4_game_surface_t *surface, const lord_state_t *state)
 {
-    p4_draw_fill_rect(surface, 8, 29, 304, 99, ANSI_PANEL);
-    p4_draw_rect(surface, 8, 29, 304, 99, ANSI_BLUE);
+    draw_ansi_box(surface, 8, 32, 304, 96,
+                  ANSI_BRIGHT_BLUE, ANSI_PANEL, false);
     if (state->log_count == 0U) {
         draw_text(surface, 16, 40, "No news has reached the town crier.",
                   ANSI_LIGHT_GRAY);
@@ -864,7 +981,7 @@ static void draw_news(p4_game_surface_t *surface, const lord_state_t *state)
         line_append_u32(line, sizeof(line), state->log[index].day);
         line_append(line, sizeof(line), " ");
         line_append(line, sizeof(line), state->log[index].text);
-        draw_text(surface, 14, 37 + row * 12, line,
+        draw_text(surface, 16, 42 + row * 11, line,
                   row % 2 == 0 ? ANSI_WHITE : ANSI_LIGHT_GRAY);
         ++row;
     }
@@ -873,8 +990,8 @@ static void draw_news(p4_game_surface_t *surface, const lord_state_t *state)
 static void draw_rankings(p4_game_surface_t *surface,
                           const lord_state_t *state)
 {
-    p4_draw_fill_rect(surface, 8, 29, 304, 99, ANSI_PANEL);
-    p4_draw_rect(surface, 8, 29, 304, 99, ANSI_BLUE);
+    draw_ansi_box(surface, 8, 32, 304, 96,
+                  ANSI_BRIGHT_BLUE, ANSI_PANEL, false);
     char line[52];
     line_clear(line, sizeof(line));
     line_append(line, sizeof(line), "1  ");
@@ -883,7 +1000,7 @@ static void draw_rankings(p4_game_surface_t *surface,
     line_append_u32(line, sizeof(line), state->player.level);
     line_append(line, sizeof(line), "  DR ");
     line_append_u32(line, sizeof(line), state->player.dragon_kills);
-    draw_text(surface, 14, 36, line, ANSI_YELLOW);
+    draw_text(surface, 16, 42, line, ANSI_YELLOW);
     for (size_t index = 0U; index < 7U; ++index) {
         line_clear(line, sizeof(line));
         line_append_u32(line, sizeof(line), (uint32_t)index + 2U);
@@ -893,7 +1010,7 @@ static void draw_rankings(p4_game_surface_t *surface,
         line_append_u32(line, sizeof(line), state->realm[index].level);
         line_append(line, sizeof(line), "  PVP ");
         line_append_u32(line, sizeof(line), state->realm[index].pvp_wins);
-        draw_text(surface, 14, 48 + (int)index * 11, line,
+        draw_text(surface, 16, 53 + (int)index * 10, line,
                   index % 2U == 0U ? ANSI_WHITE : ANSI_LIGHT_GRAY);
     }
 }
@@ -901,8 +1018,8 @@ static void draw_rankings(p4_game_surface_t *surface,
 static void draw_skills(p4_game_surface_t *surface,
                         const lord_state_t *state)
 {
-    p4_draw_fill_rect(surface, 8, 29, 304, 99, ANSI_PANEL);
-    p4_draw_rect(surface, 8, 29, 304, 99, ANSI_BLUE);
+    draw_ansi_box(surface, 8, 32, 304, 96,
+                  ANSI_BRIGHT_BLUE, ANSI_PANEL, false);
     const char *const names[LORD_SKILL_COUNT] = {
         "Death Knight", "Mystical", "Thieving",
     };
@@ -918,7 +1035,7 @@ static void draw_skills(p4_game_surface_t *surface,
                   index == (size_t)state->player.hero_class ?
                     ANSI_BRIGHT_MAGENTA : ANSI_BRIGHT_CYAN);
     }
-    draw_text(surface, 17, 115,
+    draw_text(surface, 17, 111,
               "Forest teachers and IGMs increase mastery.",
               ANSI_LIGHT_GRAY);
 }
@@ -1189,7 +1306,8 @@ static void render_screen(p4_game_surface_t *surface,
         break;
     case LORD_SCREEN_MESSAGE:
         draw_header(surface, "WORD FROM THE REALM");
-        p4_draw_rect(surface, 8, 38, 304, 58, ANSI_BLUE);
+        draw_ansi_box(surface, 8, 40, 304, 56,
+                      ANSI_BRIGHT_BLUE, ANSI_PANEL, false);
         draw_text(surface, 18, 52, state->message_line_1, ANSI_WHITE);
         draw_text(surface, 18, 69, state->message_line_2,
                   ANSI_BRIGHT_CYAN);

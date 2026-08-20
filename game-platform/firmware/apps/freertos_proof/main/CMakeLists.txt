@@ -5,7 +5,6 @@ idf_component_register(
         freertos
         log
         p4_cartridge_transfer
-        p4_game_api
         p4_game_runtime_core
         p4_game_runtime_freertos
 )

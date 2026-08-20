@@ -175,6 +175,12 @@ typedef struct {
     bool content_scan_complete;
     bool usb_content_ready;
     bool multiplayer_core_ready;
+    bool multiplayer_transport_ready;
+    bool multiplayer_peer_seen;
+    bool multiplayer_lobby_ready;
+    uint8_t multiplayer_player_slot;
+    uint32_t multiplayer_rx_frames;
+    uint32_t multiplayer_tx_frames;
     bool physical_keyboard_ready;
     uint16_t valid_cart_count;
     uint16_t builtin_game_count;
@@ -229,6 +235,7 @@ typedef enum {
     CONSOLE_ACTION_USB_MODE_DISABLE,
     CONSOLE_ACTION_BOOT_VOLUME_SET,
     CONSOLE_ACTION_GAME_VOLUME_SET,
+    CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM,
 } console_action_type_t;
 
 typedef enum {

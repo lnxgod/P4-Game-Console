@@ -28,8 +28,12 @@
 #include "doomkeys.h"
 #include "i_system.h"
 #include "m_controls.h"
+#include "p4_doom_net.h"
 #include "runtime_gate.h"
 #include "touch_controls.h"
+#ifdef P4_CONSOLE_OS_EMBEDDED
+#include "p4/doom_multiplayer.h"
+#endif
 #if defined(P4_CONSOLE_OS_EMBEDDED) && \
     defined(CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3) && \
     CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
@@ -959,6 +963,7 @@ void DG_DrawFrame(void)
 
 void DG_SleepMs(uint32_t milliseconds)
 {
+    P4_DoomNetPoll();
     const uint32_t bounded = milliseconds > DOOM_MAX_SLEEP_MS
         ? DOOM_MAX_SLEEP_MS
         : milliseconds;
@@ -1015,12 +1020,16 @@ void DG_SetWindowTitle(const char *title)
 }
 
 #ifdef P4_CONSOLE_OS_EMBEDDED
-void console_os_launch_doom(uint8_t master_volume_step)
+void console_os_launch_doom(
+    uint8_t master_volume_step,
+    const p4_doom_mp_launch_config_t *multiplayer)
 #else
 void app_main(void)
 #endif
 {
 #ifdef P4_CONSOLE_OS_EMBEDDED
+    const bool multiplayer_enabled =
+        multiplayer != NULL && multiplayer->enabled;
     s_backend_volume_step =
         master_volume_step >= DOOM_BACKEND_VOLUME_MIN_STEP &&
         master_volume_step <= DOOM_BACKEND_VOLUME_MAX_STEP
@@ -1036,9 +1045,15 @@ void app_main(void)
                  "P4_DOOM_E6 START board=%s input=gt911-multitouch "
                  "sound=es8311-i2s1-speaker-sfx-mus amp_gpio=53 "
                  "codec_i2c_addr=0x18 music=wad-mus-procedural-16voice "
-                 "usb=shared-platform-gamepad "
+                 "usb=shared-platform-gamepad multiplayer=%s "
                  "runtime=exact-unit-waveshare-audio",
-                 platform_board_name());
+                 platform_board_name(),
+#ifdef P4_CONSOLE_OS_EMBEDDED
+                 multiplayer_enabled ? "p4mp-lockstep" : "single-player"
+#else
+                 "single-player"
+#endif
+        );
     } else {
         ESP_LOGI(TAG,
                  "P4_DOOM_E6 START board=%s input=gt911-multitouch "

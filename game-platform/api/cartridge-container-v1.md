@@ -1,8 +1,8 @@
 # P4 Cart container v1
 
-Status: format frozen for host tooling; the Console OS loader is not yet
-implemented. A file is a runnable P4 Cart only after it passes this format's
-validation and the matching sandboxed Lua runtime exists.
+Status: format frozen; host tooling and the Console OS sandboxed loader are
+implemented. A file is runnable only after complete validation by the matching
+`p4-lua-5.4-v1` runtime path.
 
 P4 Cart is the open, removable game format for P4 Console OS. It is designed
 for original, source-included arcade games that can be copied to an SD card,
@@ -125,7 +125,7 @@ The removable layout is:
 
 ```text
 /P4/GAMES/<any-name>.p4cart
-/P4/SAVES/<game-uuid>.p4save       # OS-owned; never visible as a path to Lua
+/P4/SAVES/<game-uuid>.p4save       # planned durable backend; never visible to Lua
 /P4/INBOX/                         # optional staging, never directly launched
 ```
 
@@ -133,6 +133,10 @@ Console OS scans only `/P4/GAMES`, does not recurse, and bounds the directory
 to 128 candidates. It validates the complete header, manifest, table, overall
 hash, and every referenced payload before adding a cart to the Library. A bad
 cart gets a readable error tile and cannot run.
+
+The current runtime provides a private save namespace across relaunches during
+one boot. It does not yet write the planned `/P4/SAVES` files, so carts must
+remain playable when durable persistence is unavailable.
 
 Serial or Wi-Fi installs write a new file under `INBOX`, sync it, validate it,
 and atomically rename it into `GAMES`. Removing or replacing a cart never

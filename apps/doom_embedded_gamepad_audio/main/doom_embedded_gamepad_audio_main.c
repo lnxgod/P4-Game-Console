@@ -24,6 +24,10 @@
 #include "gamepad/gamepad.h"
 #include "i_system.h"
 #include "m_controls.h"
+#include "p4_doom_net.h"
+#ifdef P4_CONSOLE_OS_EMBEDDED
+#include "p4/doom_multiplayer.h"
+#endif
 #pragma GCC diagnostic push
 /* ESP-IDF 5.5.3 has two sign-conversion warnings in inline RISC-V headers. */
 #pragma GCC diagnostic ignored "-Wsign-conversion"
@@ -649,6 +653,7 @@ void DG_DrawFrame(void)
 
 void DG_SleepMs(uint32_t milliseconds)
 {
+    P4_DoomNetPoll();
     const uint32_t bounded = milliseconds > DOOM_MAX_SLEEP_MS
         ? DOOM_MAX_SLEEP_MS : milliseconds;
     if (bounded == 0U) {
@@ -697,7 +702,8 @@ void DG_SetWindowTitle(const char *title)
 }
 
 #ifdef P4_CONSOLE_OS_EMBEDDED
-void console_os_launch_doom(void)
+void console_os_launch_doom(
+    const p4_doom_mp_launch_config_t *multiplayer)
 #else
 void app_main(void)
 #endif
@@ -710,7 +716,9 @@ void app_main(void)
     ESP_LOGI(TAG,
              "P4_DOOM_E4 START wad=storage-exact vfs=read-only "
              "input=usb-gamepad-keyboard-mouse sfx=enabled music=enabled "
-             "audio_backend=olimex-es8311-i2s1");
+             "audio_backend=olimex-es8311-i2s1 multiplayer=%s",
+             multiplayer != NULL && multiplayer->enabled
+                 ? "p4mp-lockstep" : "single-player");
 #else
     ESP_LOGI(TAG,
              "P4_DOOM_E4 START wad=embedded-exact vfs=read-only "

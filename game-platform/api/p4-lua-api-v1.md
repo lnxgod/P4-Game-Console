@@ -1,11 +1,11 @@
 # P4 Lua API v1
 
-Status: normative game-facing design; host preview and device interpreter are
-not yet implemented.
+Status: normative game-facing contract and shared Lua runtime implemented;
+graphical PC preview and on-device hardware acceptance remain pending.
 
-P4 Lua is the source language for open P4 Cart v1 games. Runtime v1 pins Lua
-5.4 language behavior and will vendor an exact reviewed Lua release under the
-repository source lock. Packages contain text source rather than precompiled
+P4 Lua is the source language for open P4 Cart v1 games. Runtime v1 pins and
+vendors Lua 5.4.8 under the repository source lock. Packages contain text
+source rather than precompiled
 Lua chunks so they remain inspectable, portable, and AI-remixable.
 
 ## Lifecycle
@@ -45,7 +45,10 @@ must never reboot Console OS.
 
 The environment contains Lua arithmetic, comparisons, tables, strings, and a
 bounded subset of `math`, `string`, `table`, and `utf8`, plus one read-only
-global named `p4`. It does not expose `io`, `os`, `package`, `debug`,
+global named `p4`. `p4.arcade` is the additive host-provided shorthand library
+defined by `p4-lua-arcade-v1.md`; it reduces source size without removing
+direct access to the complete API below. The environment does not expose
+`io`, `os`, `package`, `debug`,
 `coroutine`, `require`, `dofile`, `loadfile`, `load`, `string.dump`, native C
 modules, environment variables, or process functions.
 
@@ -131,14 +134,18 @@ volume is 0 through 255. The host owns mixing and master volume. Calls beyond
 the four-voice/cart budget return false; they never wait.
 
 Save keys are lowercase ASCII `[a-z][a-z0-9_.-]{0,31}` and values are UTF-8
-strings of at most 256 bytes. The OS batches writes outside game callbacks and
-commits atomically. A cart can access only its own UUID namespace.
+strings of at most 256 bytes. A cart can access only its own namespace. The
+current Console OS runner keys that namespace by exact cartridge SHA-256 and
+retains it across relaunches during one boot. Durable, atomic storage across a
+reboot is the next backend milestone and games must tolerate its absence.
 
 ## Input and multiplayer
 
-Local multiplayer works without game networking code: Console OS maps up to
-four local controllers/touch control sets into player slots. Disconnect is
-neutral in the same update and reconnect inserts one neutral barrier update.
+The API supports local multiplayer without game networking code: Console OS
+maps controllers or touch control sets into up to four player slots.
+Disconnect is neutral in the same update and reconnect inserts one neutral
+barrier update. The first integrated adapter currently populates player one;
+additional controller-slot assignment remains to be wired.
 
 LAN multiplayer will use the same player-slot input API. Console OS owns
 discovery, sessions, packet parsing, timeouts, content-hash matching, and peer
@@ -161,7 +168,8 @@ bounds commands, and discards work from an old generation after exit. Games
 never receive pointers to framebuffers, input structs, audio buffers, saves,
 network packets, or platform services.
 
-The PC preview uses the same interpreter source, limits, fixed tick schedule,
-RGB565 conversion, input rules, and error behavior. Differences in panel
-rotation, physical scaling, speaker wiring, and controller drivers stay below
-the Game API boundary.
+The nonvisual host smoke tool already uses the same interpreter source,
+limits, fixed tick schedule, RGB565 command validation, input rules, and error
+behavior. The future graphical PC player must keep that runtime and add only
+presentation and host input. Differences in panel rotation, physical scaling,
+speaker wiring, and controller drivers stay below the Game API boundary.

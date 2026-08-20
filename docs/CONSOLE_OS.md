@@ -295,9 +295,11 @@ The current compatibility successor also restores the original P4 Cart
 Library boundary without replacing the native `.P4G` loader. A bounded PSRAM
 background task scans `P4/GAMES/*.P4CART`, validates complete `P4CART1`
 container geometry plus whole-file and per-payload hashes, and adds valid carts
-to Game Manager. The original codebase never completed its sandboxed Lua 5.4
-executor, so these entries are deliberately labeled catalog-only rather than
-being sent to the native ELF loader.
+to the launcher. At launch, Console OS revalidates and hashes the selected
+source, then runs it in the source-locked Lua 5.4.8 sandbox with bounded heap,
+instructions, host calls, drawing, tone audio, and OS-owned exit handling.
+Source carts never enter the native ELF loader. Saves currently persist across
+relaunches within one boot; durable SD commits remain pending.
 
 ## Board-specific runtime
 
@@ -369,7 +371,7 @@ boot
        |     |-- Tools -> Calculator
        |     |-- Tests -> Input Test / AV Test
        |     |-- File Manager -> bounded root list / confirmed delete
-       |     |-- Game Manager -> P4G status/remove, P4CART catalog, OS update
+       |     |-- Game Manager -> P4G status/remove, P4CART launch, OS update
        |     |-- Save Manager -> bounded OS-owned slot catalog
        |     |-- Multiplayer -> local session core / transport status
        |     `-- Terminal -> local commands / touch or physical keyboard

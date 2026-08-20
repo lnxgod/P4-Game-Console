@@ -4,9 +4,15 @@ if(COMMAND idf_component_register)
     idf_component_register(
         SRCS
             "src/packet.c"
+            "src/lobby.c"
             "src/session.c"
             "src/stream.c"
+            "src/uart_endpoint.c"
         INCLUDE_DIRS "include"
+        REQUIRES
+            esp_driver_uart
+            freertos
+            log
     )
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)
     target_compile_options(${COMPONENT_LIB} PRIVATE
@@ -18,6 +24,7 @@ else()
 
     add_library(p4_multiplayer STATIC
         src/packet.c
+        src/lobby.c
         src/session.c
         src/stream.c
     )

@@ -44,11 +44,11 @@ static bool payload_length_valid(p4_mp_packet_type_t type, uint16_t length)
         case P4_MP_PACKET_DISCOVER:
             return length == 0U;
         case P4_MP_PACKET_OFFER:
-            return length >= 40U && length <= 128U;
+            return length == P4_MP_OFFER_PAYLOAD_BYTES;
         case P4_MP_PACKET_JOIN:
-            return length >= 36U && length <= 64U;
+            return length == P4_MP_JOIN_PAYLOAD_BYTES;
         case P4_MP_PACKET_ACCEPT:
-            return length == 16U;
+            return length == P4_MP_ACCEPT_PAYLOAD_BYTES;
         case P4_MP_PACKET_INPUT:
             return length == P4_MP_INPUT_PAYLOAD_BYTES;
         case P4_MP_PACKET_STATE_HASH:

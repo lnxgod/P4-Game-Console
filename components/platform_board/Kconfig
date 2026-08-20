@@ -52,9 +52,10 @@ config P4_WAVESHARE_H2_RUNTIME_ROLE_SWITCH
         Build both the bounded USB Host/HID services and TinyUSB device MSC,
         but install only one controller owner at a time. Console OS boots in
         controller-host mode. The explicit USB Drive app first quiesces and
-        uninstalls Host/HID before exporting microSD through H2; returning to
-        controller mode first uninstalls TinyUSB and remounts microSD for the
-        OS. Any failed transition leaves H2 quiesced instead of starting both
-        roles. Firmware still never sources physical VBUS.
+        uninstalls Host/HID, unmounts microSD, and allocates MSC on demand
+        before exporting it through H2. Returning to controller mode first
+        uninstalls TinyUSB, frees MSC, and remounts microSD for the OS. Any
+        failed transition leaves H2 quiesced instead of starting both roles.
+        Firmware still never sources physical VBUS.
 
 endmenu

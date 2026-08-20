@@ -19,8 +19,8 @@ MAX_PAYLOAD_BYTES = 1024
 MAX_DATAGRAM_BYTES = HEADER_BYTES + MAX_PAYLOAD_BYTES + TRAILER_BYTES
 VALID_PAYLOAD_LENGTHS = {
     1: {0},
-    2: range(40, 129),
-    3: range(36, 65),
+    2: {120},
+    3: {40},
     4: {16},
     5: {24},
     6: {12},
@@ -57,6 +57,28 @@ def frame_valid(frame: bytes) -> bool:
         return False
     expected_crc = struct.unpack_from("<I", frame, len(frame) - 4)[0]
     return expected_crc == zlib.crc32(frame[:-4]) & 0xFFFFFFFF
+
+
+def discover_frame(sequence: int = 1) -> bytes:
+    if not 1 <= sequence <= 0xFFFFFFFF:
+        raise ValueError("sequence must be in [1, 0xffffffff]")
+    header = struct.pack(
+        "<4sBBHIIIIHH",
+        MAGIC,
+        VERSION,
+        1,
+        0,
+        0,
+        0,
+        sequence,
+        0,
+        0,
+        0,
+    )
+    frame = header + struct.pack("<I", zlib.crc32(header) & 0xFFFFFFFF)
+    if not frame_valid(frame):
+        raise RuntimeError("internal Discover encoder produced an invalid frame")
+    return frame
 
 
 @dataclasses.dataclass
@@ -163,7 +185,14 @@ def forward(source: Link, destination: Link) -> None:
         source.frames_forwarded += 1
 
 
-def run(left_path: str, right_path: str, baud: int) -> int:
+def run(
+    left_path: str,
+    right_path: str,
+    baud: int,
+    *,
+    probe: bool = False,
+    duration: float = 0.0,
+) -> int:
     if left_path == right_path:
         raise ValueError("left and right serial ports must differ")
     left_device = open_serial(left_path, baud)
@@ -178,6 +207,16 @@ def run(left_path: str, right_path: str, baud: int) -> int:
         f"P4MP relay ready left={left_path} right={right_path} baud={baud}",
         file=sys.stderr,
     )
+    if probe:
+        frame = discover_frame()
+        written = left_device.write(frame)
+        if written != len(frame):
+            right_device.close()
+            left_device.close()
+            raise RuntimeError("short write while injecting Discover probe")
+        left_device.flush()
+        print("P4MP Discover probe injected into left console", file=sys.stderr)
+    deadline = time.monotonic() + duration if duration > 0 else None
     next_status = time.monotonic() + 5.0
     try:
         while True:
@@ -194,6 +233,20 @@ def run(left_path: str, right_path: str, baud: int) -> int:
                     file=sys.stderr,
                 )
                 next_status = now + 5.0
+            if deadline is not None and now >= deadline:
+                passed = not probe or (
+                    left.frames_received >= 1 and right.frames_received >= 1
+                )
+                print(
+                    "P4MP relay result "
+                    f"status={'pass' if passed else 'fail'} "
+                    f"left_rx={left.frames_received} "
+                    f"left_drop={left.decoder.dropped_frames} "
+                    f"right_rx={right.frames_received} "
+                    f"right_drop={right.decoder.dropped_frames}",
+                    file=sys.stderr,
+                )
+                return 0 if passed else 1
             time.sleep(0.002)
     except KeyboardInterrupt:
         return 0
@@ -212,10 +265,34 @@ def main() -> int:
     parser.add_argument("--left", required=True)
     parser.add_argument("--right", required=True)
     parser.add_argument("--baud", type=int, default=115200)
+    parser.add_argument(
+        "--probe",
+        action="store_true",
+        help=(
+            "inject one valid Discover into the left console and require "
+            "frames back from both consoles"
+        ),
+    )
+    parser.add_argument(
+        "--duration",
+        type=float,
+        default=0.0,
+        help="stop after this many seconds; zero runs until interrupted",
+    )
     args = parser.parse_args()
     if not 9600 <= args.baud <= 2_000_000:
         parser.error("baud must be in [9600, 2000000]")
-    return run(args.left, args.right, args.baud)
+    if not 0 <= args.duration <= 86400:
+        parser.error("duration must be in [0, 86400]")
+    if args.probe and args.duration <= 0:
+        parser.error("--probe requires a positive --duration")
+    return run(
+        args.left,
+        args.right,
+        args.baud,
+        probe=args.probe,
+        duration=args.duration,
+    )
 
 
 if __name__ == "__main__":

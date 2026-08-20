@@ -104,6 +104,37 @@
         "mode": "0600"
       },
       "write_status": "ready-for-guarded-app-only-write; peripheral runtime acceptance remains pending"
+    },
+    {
+      "captured_at": "2026-08-20T21:36:10Z",
+      "board_claim": "Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 unit 2 (operator-identified new board with factory image; PCB revision not yet recorded)",
+      "physical_confirmation": {
+        "source": "operator_attestation_2026-08-20",
+        "silkscreen": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+        "variant": "standard 4.3",
+        "pcb_revision": null
+      },
+      "port": "/dev/cu.wchusbserial5B901593451",
+      "device": {
+        "chip": "ESP32-P4",
+        "revision": "v1.3",
+        "crystal_mhz": 40,
+        "flash_bytes": 33554432,
+        "identity": {
+          "source": "base_mac",
+          "normalization": "lowercase hexadecimal without separators",
+          "sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+          "raw_value_stored": false
+        }
+      },
+      "backup": {
+        "file": "hardware/backups/waveshare-4.3-unit2-factory-20260820.bin",
+        "bytes": 33554432,
+        "sha256": "240a730a882e6437f31729c78ae69db35b132b1aa78f820fec9d88b3397b39e6",
+        "git_ignored": true,
+        "mode": "0600"
+      },
+      "write_status": "ready-for-guarded-first-console-os-layout-write; peripheral acceptance remains shared-code build evidence until observed on unit 2"
     }
   ]
 }

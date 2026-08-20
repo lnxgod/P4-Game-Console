@@ -9,7 +9,7 @@ scenes. The same upgrade also finishes the controller-first wired USB platform
 for the Waveshare 4.3-inch console without giving a cartridge raw filesystem,
 network, USB, clock, or display ownership.
 
-This is an implementation handoff. LORD 1.0.0 now has the complete standalone
+This is an implementation handoff. LORD 1.1.0 now has the complete standalone
 game, a persistent local realm, typed controller mail/text, seven built-in
 source-pinned IGMs, twelve ANSI/RIP-style scenes, and a wired version-3 save
 client. OS services are still required for remote/shared state and for durable
@@ -33,7 +33,8 @@ work around an unavailable service by opening files or sockets from
   and simulated interrupted-write recovery without changing old cartridges.
 - Console OS has a non-blocking per-cartridge save worker boundary in source;
   integrated firmware qualification is still pending.
-- `components/p4_ansi` and `components/p4_bbs` provide bounded ANSI/BBS UI.
+- `components/p4_cp437` owns the pinned font shared by the bounded
+  `components/p4_ansi`, `components/p4_bbs`, and Game API drawing paths.
 - Console OS owns storage, input, display, audio, networking, and lifecycle.
 - Waveshare H2 has mutually exclusive controller-first USB Host/HID and
   explicit **USB Drive** device-MSC modes; games see only normalized input.
@@ -62,7 +63,7 @@ work around an unavailable service by opening files or sockets from
   Control Panel persistence. Build, full app readback, retained-UART READY,
   microSD catalog, and controller enumeration passed; manual A/B and Doom
   gameplay acceptance remain pending.
-- LORD 1.0.0 owns an explicit little-endian schema-3 save codec capped at 4
+- LORD 1.1.0 owns an explicit little-endian schema-3 save codec capped at 4
   KiB, consumes launch snapshots, queues/polls copied `AUTO` commits, and has
   eight local warriors, twelve typed mail slots, daily news, full tavern/PvP/
   romance/family state, seven built-in IGMs, and twelve clipped ANSI/RIP-style
@@ -520,7 +521,7 @@ merely because the hub enumerated.
 
 ## 10. LORD integration after the OS services land
 
-LORD 1.0.0 has the complete standalone implementation. Completed game-side
+LORD 1.1.0 has the complete standalone implementation. Completed game-side
 work includes:
 
 - character creation and a controller/touch ANSI text editor;

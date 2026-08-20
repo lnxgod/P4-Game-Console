@@ -30,43 +30,43 @@ typedef struct {
 static const char *const TAG = "p4_game_proof";
 static proof_context_t proof_context;
 
-static p4_status_t proof_load(void *context, const p4_cartridge_ref_t *cartridge)
+static p4_script_status_t proof_load(void *context, const p4_cartridge_ref_t *cartridge)
 {
     proof_context_t *proof = context;
     if (cartridge == NULL || cartridge->generation == 0U ||
-        cartridge->game_api_version != P4_GAME_API_VERSION) {
-        return P4_STATUS_INVALID_ARGUMENT;
+        cartridge->game_api_version != P4_SCRIPT_GAME_API_VERSION) {
+        return P4_SCRIPT_STATUS_INVALID_ARGUMENT;
     }
     proof->load_calls++;
     proof->active_generation = cartridge->generation;
     proof->saw_tick = false;
-    return P4_STATUS_OK;
+    return P4_SCRIPT_STATUS_OK;
 }
 
-static p4_status_t proof_tick(
+static p4_script_status_t proof_tick(
     void *context,
-    const p4_tick_frame_t *tick,
+    const p4_script_tick_frame_t *tick,
     p4_render_writer_t *render)
 {
     proof_context_t *proof = context;
     int32_t x;
 
-    if (tick == NULL || render == NULL || tick->version != P4_GAME_API_VERSION ||
-        tick->dt_numerator != 1U || tick->dt_denominator != P4_GAME_TICK_HZ) {
-        return P4_STATUS_INVALID_ARGUMENT;
+    if (tick == NULL || render == NULL || tick->version != P4_SCRIPT_GAME_API_VERSION ||
+        tick->dt_numerator != 1U || tick->dt_denominator != P4_SCRIPT_TICK_HZ) {
+        return P4_SCRIPT_STATUS_INVALID_ARGUMENT;
     }
     if (proof->saw_tick && tick->tick != proof->previous_tick + 1U) {
-        return P4_STATUS_INVALID_STATE;
+        return P4_SCRIPT_STATUS_INVALID_STATE;
     }
 
     proof->saw_tick = true;
     proof->previous_tick = tick->tick;
     proof->tick_calls++;
     proof->total_ticks++;
-    x = (int32_t)(tick->tick % (uint64_t)(P4_GAME_SCREEN_WIDTH - 24U));
+    x = (int32_t)(tick->tick % (uint64_t)(P4_SCRIPT_SCREEN_WIDTH - 24U));
     p4_render_clear(render, UINT16_C(0x0010));
     p4_render_rect(render, x, 88, 24, 24, UINT16_C(0xffe0));
-    return P4_STATUS_OK;
+    return P4_SCRIPT_STATUS_OK;
 }
 
 static void proof_interrupt(void *context)
@@ -75,43 +75,44 @@ static void proof_interrupt(void *context)
     proof->interrupt_calls++;
 }
 
-static p4_status_t proof_unload(void *context)
+static p4_script_status_t proof_unload(void *context)
 {
     proof_context_t *proof = context;
     proof->unload_calls++;
-    return P4_STATUS_OK;
+    return P4_SCRIPT_STATUS_OK;
 }
 
-static bool proof_read_input(void *context, p4_raw_input_t *input_out)
+static bool proof_read_input(
+    void *context, uint8_t player, p4_script_raw_input_t *input_out)
 {
     (void)context;
     if (input_out == NULL) {
         return false;
     }
     memset(input_out, 0, sizeof(*input_out));
-    input_out->source_epoch = 1U;
+    input_out->source_epoch = (uint32_t)player + 1U;
     return true;
 }
 
-static p4_status_t proof_submit(void *context, const p4_render_packet_t *packet)
+static p4_script_status_t proof_submit(void *context, const p4_script_render_packet_t *packet)
 {
     proof_context_t *proof = context;
-    if (p4_render_packet_validate(packet, proof->active_generation) != P4_STATUS_OK ||
+    if (p4_render_packet_validate(packet, proof->active_generation) != P4_SCRIPT_STATUS_OK ||
         packet->command_count != 2U) {
-        return P4_STATUS_INVALID_STATE;
+        return P4_SCRIPT_STATUS_INVALID_STATE;
     }
     proof->submit_calls++;
-    return P4_STATUS_OK;
+    return P4_SCRIPT_STATUS_OK;
 }
 
 void app_main(void)
 {
     p4_runtime_config_t config;
     p4_runtime_stats_t stats;
-    p4_status_t result;
+    p4_script_status_t result;
     p4_cartridge_ref_t cartridge = {
         .generation = 1U,
-        .game_api_version = P4_GAME_API_VERSION,
+        .game_api_version = P4_SCRIPT_GAME_API_VERSION,
         .code_bytes = 1U,
         .asset_bytes = 0U,
         .storage_id = 1U,
@@ -133,13 +134,13 @@ void app_main(void)
     };
 
     memset(&proof_context, 0, sizeof(proof_context));
-    ESP_LOGI(TAG, "F0_START peripheral_free=true tick_hz=%" PRIu32, P4_GAME_TICK_HZ);
+    ESP_LOGI(TAG, "F0_START peripheral_free=true tick_hz=%" PRIu32, P4_SCRIPT_TICK_HZ);
 
     p4_runtime_default_config(&config);
     config.stop_timeout_ms = 1000U;
     for (cartridge.generation = 1U; cartridge.generation <= 2U; ++cartridge.generation) {
         result = p4_runtime_start(&config, &cartridge, &backend, &input, &render);
-        if (result != P4_STATUS_OK) {
+        if (result != P4_SCRIPT_STATUS_OK) {
             ESP_LOGE(
                 TAG,
                 "F0_FAIL start generation=%" PRIu32 " status=%" PRId32,
@@ -150,7 +151,7 @@ void app_main(void)
 
         vTaskDelay(pdMS_TO_TICKS(PROOF_RUNTIME_MS));
         result = p4_runtime_request_stop(config.stop_timeout_ms);
-        if (result != P4_STATUS_OK) {
+        if (result != P4_SCRIPT_STATUS_OK) {
             ESP_LOGE(
                 TAG,
                 "F0_FAIL stop generation=%" PRIu32 " status=%" PRId32,
@@ -161,7 +162,7 @@ void app_main(void)
     }
     p4_runtime_get_stats(&stats);
 
-    if (result == P4_STATUS_OK && p4_runtime_get_state() == P4_LIFECYCLE_IDLE &&
+    if (result == P4_SCRIPT_STATUS_OK && p4_runtime_get_state() == P4_LIFECYCLE_IDLE &&
         proof_context.load_calls == 2U && proof_context.unload_calls == 2U &&
         proof_context.total_ticks >= ((uint64_t)PROOF_MINIMUM_TICKS * UINT64_C(2)) &&
         proof_context.submit_calls != 0U && stats.simulation_ticks >= PROOF_MINIMUM_TICKS &&

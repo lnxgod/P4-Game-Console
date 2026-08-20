@@ -20,6 +20,7 @@ python3 game-platform/scripts/p4cart.py pack game-platform/templates/bounce-lab 
 python3 game-platform/scripts/p4cart.py inspect /tmp/bounce-lab.p4cart
 ```
 
-The host preview and device Lua runtime are follow-on work. The current tool
-proves the source manifest and deterministic cartridge bytes; it does not yet
-make the cart launchable in Console OS.
+The exact-runtime host smoke tool can execute either `main.lua` or the packed
+cart for 180 deterministic ticks. A valid cart copied into `P4/GAMES` is also
+launchable by Console OS; graphical PC preview and on-device acceptance remain
+follow-on work.

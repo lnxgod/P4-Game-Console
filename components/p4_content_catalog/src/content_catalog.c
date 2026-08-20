@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
 
@@ -266,6 +267,95 @@ static bool manifest_markers_valid(
     return true;
 }
 
+static bool manifest_unique_token(
+    const uint8_t *manifest,
+    size_t manifest_bytes,
+    const char *token,
+    size_t *value_offset_out)
+{
+    const size_t token_bytes = strlen(token);
+    size_t found = SIZE_MAX;
+    if (manifest == NULL || token_bytes == 0U ||
+        token_bytes > manifest_bytes || value_offset_out == NULL) {
+        return false;
+    }
+    for (size_t offset = 0U; offset <= manifest_bytes - token_bytes; ++offset) {
+        if (memcmp(&manifest[offset], token, token_bytes) == 0) {
+            if (found != SIZE_MAX) {
+                return false;
+            }
+            found = offset + token_bytes;
+        }
+    }
+    if (found == SIZE_MAX) {
+        return false;
+    }
+    *value_offset_out = found;
+    return true;
+}
+
+static bool manifest_ascii_string(
+    const uint8_t *manifest,
+    size_t manifest_bytes,
+    const char *token,
+    char *output,
+    size_t output_capacity)
+{
+    size_t offset = 0U;
+    if (!manifest_unique_token(
+            manifest, manifest_bytes, token, &offset) ||
+        output == NULL || output_capacity == 0U) {
+        return false;
+    }
+    size_t output_bytes = 0U;
+    while (offset < manifest_bytes && manifest[offset] != (uint8_t)'"') {
+        const uint8_t byte = manifest[offset++];
+        if (byte < 0x21U || byte > 0x7eU || byte == (uint8_t)'\\' ||
+            output_bytes + 1U >= output_capacity) {
+            return false;
+        }
+        output[output_bytes++] = (char)byte;
+    }
+    if (offset >= manifest_bytes || output_bytes == 0U) {
+        return false;
+    }
+    output[output_bytes] = '\0';
+    return true;
+}
+
+static bool manifest_u32(
+    const uint8_t *manifest,
+    size_t manifest_bytes,
+    const char *token,
+    uint32_t *value_out)
+{
+    size_t offset = 0U;
+    uint32_t value = 0U;
+    size_t digits = 0U;
+    if (!manifest_unique_token(
+            manifest, manifest_bytes, token, &offset) || value_out == NULL) {
+        return false;
+    }
+    while (offset < manifest_bytes &&
+           manifest[offset] >= (uint8_t)'0' &&
+           manifest[offset] <= (uint8_t)'9') {
+        const uint32_t digit = (uint32_t)(manifest[offset] - (uint8_t)'0');
+        if (value > (UINT32_MAX - digit) / 10U) {
+            return false;
+        }
+        value = value * 10U + digit;
+        ++offset;
+        ++digits;
+    }
+    if (digits == 0U || offset >= manifest_bytes ||
+        (manifest[offset] != (uint8_t)',' &&
+         manifest[offset] != (uint8_t)'}')) {
+        return false;
+    }
+    *value_out = value;
+    return true;
+}
+
 static bool canonical_entry_path(const uint8_t bytes[64], char output[64])
 {
     size_t length = 0U;
@@ -470,6 +560,132 @@ done:
         status = P4_CONTENT_IO_ERROR;
     }
     item_out->status = status;
+    return status;
+}
+
+p4_content_status_t p4_content_load_cart_source(
+    const char *path,
+    uint8_t *source_out,
+    size_t source_capacity,
+    p4_content_cart_runtime_t *runtime_out)
+{
+    if (path == NULL || source_out == NULL || source_capacity == 0U ||
+        runtime_out == NULL) {
+        return P4_CONTENT_INVALID_ARGUMENT;
+    }
+    memset(runtime_out, 0, sizeof(*runtime_out));
+    p4_content_item_t item;
+    p4_content_status_t status = p4_content_validate_cart_file(path, &item);
+    if (status != P4_CONTENT_OK) {
+        return status;
+    }
+
+    FILE *const file = fopen(path, "rb");
+    if (file == NULL) {
+        return P4_CONTENT_IO_ERROR;
+    }
+    uint8_t header[CART_HEADER_BYTES];
+    uint8_t *manifest = NULL;
+    uint8_t selected_hash[32] = {0};
+    uint32_t selected_offset = 0U;
+    uint32_t selected_length = 0U;
+    bool selected = false;
+    if (!read_exact(file, header, sizeof(header)) ||
+        memcmp(header, "P4CART1\0", 8U) != 0 ||
+        memcmp(&header[36], item.sha256, sizeof(item.sha256)) != 0) {
+        status = P4_CONTENT_IO_ERROR;
+        goto done_loading;
+    }
+    const uint32_t manifest_offset = read_u32(&header[20]);
+    const uint32_t manifest_size = read_u32(&header[24]);
+    const uint16_t entry_count = read_u16(&header[28]);
+    if (manifest_offset != CART_HEADER_BYTES || manifest_size == 0U ||
+        manifest_size > CART_MAX_MANIFEST_BYTES || entry_count == 0U ||
+        entry_count > CART_MAX_ENTRIES) {
+        status = P4_CONTENT_BAD_FORMAT;
+        goto done_loading;
+    }
+    manifest = malloc((size_t)manifest_size);
+    if (manifest == NULL || !seek_file(file, manifest_offset) ||
+        !read_exact(file, manifest, manifest_size)) {
+        status = manifest == NULL
+            ? P4_CONTENT_LIMIT_REACHED : P4_CONTENT_IO_ERROR;
+        goto done_loading;
+    }
+    if (!manifest_ascii_string(
+            manifest, manifest_size, "\"entry\":\"",
+            runtime_out->entry_path, sizeof(runtime_out->entry_path)) ||
+        !manifest_u32(
+            manifest, manifest_size, "\"heap_bytes\":",
+            &runtime_out->heap_bytes) ||
+        !manifest_u32(
+            manifest, manifest_size, "\"save_bytes\":",
+            &runtime_out->save_bytes) ||
+        runtime_out->heap_bytes < 64U * 1024U ||
+        runtime_out->heap_bytes > 512U * 1024U ||
+        (runtime_out->heap_bytes % 4096U) != 0U ||
+        runtime_out->save_bytes > 4U * 1024U) {
+        status = P4_CONTENT_BAD_FORMAT;
+        goto done_loading;
+    }
+
+    const uint32_t table_offset = align4(manifest_offset + manifest_size);
+    for (uint16_t index = 0U; index < entry_count; ++index) {
+        uint8_t entry[CART_ENTRY_BYTES];
+        char entry_path[P4_CONTENT_CART_ENTRY_PATH_BYTES];
+        if (!seek_file(file, table_offset + (uint32_t)index * CART_ENTRY_BYTES) ||
+            !read_exact(file, entry, sizeof(entry))) {
+            status = P4_CONTENT_IO_ERROR;
+            goto done_loading;
+        }
+        if (!canonical_entry_path(entry, entry_path)) {
+            status = P4_CONTENT_BAD_FORMAT;
+            goto done_loading;
+        }
+        if (strcmp(entry_path, runtime_out->entry_path) == 0) {
+            if (selected || entry[64] != 1U) {
+                status = P4_CONTENT_BAD_FORMAT;
+                goto done_loading;
+            }
+            selected_offset = read_u32(&entry[68]);
+            selected_length = read_u32(&entry[72]);
+            memcpy(selected_hash, &entry[76], sizeof(selected_hash));
+            selected = true;
+        }
+    }
+    if (!selected || selected_length == 0U ||
+        selected_length > P4_CONTENT_CART_SOURCE_MAX_BYTES ||
+        selected_length > source_capacity) {
+        status = selected && selected_length > source_capacity
+            ? P4_CONTENT_LIMIT_REACHED : P4_CONTENT_BAD_FORMAT;
+        goto done_loading;
+    }
+    if (!seek_file(file, selected_offset) ||
+        !read_exact(file, source_out, selected_length)) {
+        status = P4_CONTENT_IO_ERROR;
+        goto done_loading;
+    }
+    uint8_t source_hash[32];
+    p4_sha256_t source_hasher;
+    p4_sha256_init(&source_hasher);
+    p4_sha256_update(&source_hasher, source_out, selected_length);
+    p4_sha256_finish(&source_hasher, source_hash);
+    if (memcmp(source_hash, selected_hash, sizeof(source_hash)) != 0) {
+        status = P4_CONTENT_BAD_HASH;
+        goto done_loading;
+    }
+    runtime_out->source_bytes = selected_length;
+    memcpy(runtime_out->cart_sha256, item.sha256, sizeof(item.sha256));
+    status = P4_CONTENT_OK;
+
+done_loading:
+    free(manifest);
+    if (fclose(file) != 0 && status == P4_CONTENT_OK) {
+        status = P4_CONTENT_IO_ERROR;
+    }
+    if (status != P4_CONTENT_OK) {
+        memset(runtime_out, 0, sizeof(*runtime_out));
+    }
     return status;
 }
 

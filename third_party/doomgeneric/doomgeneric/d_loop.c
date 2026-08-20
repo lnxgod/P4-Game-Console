@@ -39,6 +39,7 @@
 #include "net_server.h"
 #include "net_sdl.h"
 #include "net_loop.h"
+#include "p4_doom_net.h"
 
 // The complete set of data for a particular tic.
 
@@ -177,16 +178,19 @@ static boolean BuildNewTic(void)
     memset(&cmd, 0, sizeof(ticcmd_t));
     loop_interface->BuildTiccmd(&cmd, maketic);
 
-#ifdef FEATURE_MULTIPLAYER
+    ticdata[maketic % BACKUPTICS].cmds[localplayer] = cmd;
+    ticdata[maketic % BACKUPTICS].ingame[localplayer] = true;
 
-    if (net_client_connected)
+    if (P4_DoomNetActive())
+    {
+        P4_DoomNetSubmitTic(&cmd, maketic);
+    }
+#ifdef FEATURE_MULTIPLAYER
+    else if (net_client_connected)
     {
         NET_CL_SendTiccmd(&cmd, maketic);
     }
-
 #endif
-    ticdata[maketic % BACKUPTICS].cmds[localplayer] = cmd;
-    ticdata[maketic % BACKUPTICS].ingame[localplayer] = true;
 
     ++maketic;
 
@@ -211,6 +215,8 @@ void NetUpdate (void)
 
     if (singletics)
         return;
+
+    P4_DoomNetPoll();
 
 #ifdef FEATURE_MULTIPLAYER
 
@@ -340,9 +346,28 @@ static void BlockUntilStart(net_gamesettings_t *settings,
 void D_StartNetGame(net_gamesettings_t *settings,
                     netgame_startup_callback_t callback)
 {
-#if ORIGCODE
     int i;
 
+    if (P4_DoomNetActive())
+    {
+        offsetms = 0;
+        recvtic = 0;
+        maketic = 0;
+        if (!P4_DoomNetConfigure(settings))
+        {
+            I_Error("P4 multiplayer configuration failed");
+        }
+        localplayer = settings->consoleplayer;
+        for (i = 0; i < NET_MAXPLAYERS; ++i)
+        {
+            local_playeringame[i] = i < settings->num_players;
+        }
+        ticdup = settings->ticdup;
+        new_sync = settings->new_sync;
+        net_client_connected = true;
+        return;
+    }
+#if ORIGCODE
     offsetms = 0;
     recvtic = 0;
 
@@ -451,7 +476,7 @@ void D_StartNetGame(net_gamesettings_t *settings,
 
 boolean D_InitNetGame(net_connect_data_t *connect_data)
 {
-    boolean result = false;
+    boolean result = P4_DoomNetActive();
 #ifdef FEATURE_MULTIPLAYER
     net_addr_t *addr = NULL;
     int i;
@@ -559,6 +584,7 @@ boolean D_InitNetGame(net_connect_data_t *connect_data)
 //
 void D_QuitNetGame (void)
 {
+    P4_DoomNetQuit();
 #ifdef FEATURE_MULTIPLAYER
     NET_SV_Shutdown();
     NET_CL_Disconnect();
@@ -570,6 +596,11 @@ static int GetLowTic(void)
     int lowtic;
 
     lowtic = maketic;
+
+    if (P4_DoomNetActive() && recvtic < lowtic)
+    {
+        lowtic = recvtic;
+    }
 
 #ifdef FEATURE_MULTIPLAYER
     if (net_client_connected)

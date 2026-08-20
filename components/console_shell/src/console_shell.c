@@ -206,6 +206,7 @@ enum {
     AUDIO_BOOT_PLUS_CONTROL,
     AUDIO_GAME_MINUS_CONTROL,
     AUDIO_GAME_PLUS_CONTROL,
+    MULTIPLAYER_LAUNCH_CONTROL,
     TERMINAL_KEY_CONTROL_BASE,
     TERMINAL_LETTER_KEY_COUNT = 26,
     TERMINAL_SPACE_CONTROL =
@@ -967,6 +968,12 @@ static size_t control_at(const console_shell_t *shell,
             }
             return SIZE_MAX;
         }
+        if (shell->page == CONSOLE_PAGE_MULTIPLAYER &&
+            shell->runtime.multiplayer_lobby_ready &&
+            shell->runtime.doom_wad_ready &&
+            point_in_rect(gui_x, gui_y, 12U, 157U, 296U, 27U)) {
+            return MULTIPLAYER_LAUNCH_CONTROL;
+        }
         if (shell->page == CONSOLE_PAGE_TERMINAL) {
             return terminal_control_at(gui_x, gui_y);
         }
@@ -1435,6 +1442,18 @@ console_shell_action_t console_shell_handle_buttons(
         return no_action();
     }
 
+    if (shell->page == CONSOLE_PAGE_MULTIPLAYER &&
+        (pressed & CONSOLE_BUTTON_ACCEPT) != 0U &&
+        shell->runtime.multiplayer_lobby_ready &&
+        shell->runtime.doom_wad_ready) {
+        const console_shell_action_t action = {
+            .type = CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM,
+            .app_id = shell->active_app_id,
+            .file_source_index = UINT32_MAX,
+        };
+        return action;
+    }
+
     if (shell->page != CONSOLE_PAGE_FILES &&
         shell->page != CONSOLE_PAGE_GAMES) {
         return no_action();
@@ -1713,6 +1732,17 @@ console_shell_action_t console_shell_handle_touch(
                 return no_action();
             }
         }
+        if (shell->page == CONSOLE_PAGE_MULTIPLAYER &&
+            released_control == MULTIPLAYER_LAUNCH_CONTROL &&
+            shell->runtime.multiplayer_lobby_ready &&
+            shell->runtime.doom_wad_ready) {
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM,
+                .app_id = shell->active_app_id,
+                .file_source_index = UINT32_MAX,
+            };
+            return action;
+        }
         if (shell->page == CONSOLE_PAGE_TERMINAL &&
             released_control >= TERMINAL_KEY_CONTROL_BASE &&
             released_control < TERMINAL_KEY_CONTROL_LIMIT) {
@@ -1970,6 +2000,18 @@ void console_shell_set_runtime_info(
         shell->runtime.usb_content_ready != runtime->usb_content_ready ||
         shell->runtime.multiplayer_core_ready !=
             runtime->multiplayer_core_ready ||
+        shell->runtime.multiplayer_transport_ready !=
+            runtime->multiplayer_transport_ready ||
+        shell->runtime.multiplayer_peer_seen !=
+            runtime->multiplayer_peer_seen ||
+        shell->runtime.multiplayer_lobby_ready !=
+            runtime->multiplayer_lobby_ready ||
+        shell->runtime.multiplayer_player_slot !=
+            runtime->multiplayer_player_slot ||
+        shell->runtime.multiplayer_rx_frames !=
+            runtime->multiplayer_rx_frames ||
+        shell->runtime.multiplayer_tx_frames !=
+            runtime->multiplayer_tx_frames ||
         shell->runtime.physical_keyboard_ready !=
             runtime->physical_keyboard_ready ||
         shell->runtime.valid_cart_count != runtime->valid_cart_count ||
@@ -3309,29 +3351,54 @@ static void draw_achievements(const console_shell_t *shell,
 static void draw_multiplayer(const console_shell_t *shell,
                              uint16_t *pixels, size_t stride)
 {
-    draw_text(pixels, stride, 12, 40, "MULTIPLAYER CORE",
+    draw_text(pixels, stride, 12, 40, "MULTIPLAYER",
               COLOR_WHITE, 1U, 16U);
     draw_text(pixels, stride, 12, 58,
-              shell->runtime.multiplayer_core_ready ? "READY" : "OFFLINE",
-              shell->runtime.multiplayer_core_ready ? COLOR_GREEN : COLOR_RED,
-              2U, 7U);
-    draw_text(pixels, stride, 12, 84, "PLAYERS", COLOR_MUTED, 1U, 7U);
-    draw_text(pixels, stride, 112, 84, "1 LOCAL / 4 MAX",
-              COLOR_YELLOW, 1U, 15U);
-    draw_text(pixels, stride, 12, 102, "INPUT MODEL", COLOR_MUTED, 1U, 11U);
-    draw_text(pixels, stride, 112, 102, "TICK + STATE HASH",
-              COLOR_WHITE, 1U, 17U);
-    draw_text(pixels, stride, 12, 120, "DISCONNECT", COLOR_MUTED, 1U, 10U);
-    draw_text(pixels, stride, 112, 120, "NEUTRALIZES PLAYER",
-              COLOR_GREEN, 1U, 18U);
-    draw_text(pixels, stride, 12, 145, "WIRED STREAM CORE READY",
-              COLOR_GREEN, 1U, 23U);
-    draw_text(pixels, stride, 12, 160, "USB2 DEVICE / UART",
-              COLOR_YELLOW, 1U, 18U);
-    draw_text(pixels, stride, 12, 172,
-              "HOST RELAY REQUIRED", COLOR_CYAN, 1U, 19U);
+              shell->runtime.multiplayer_transport_ready
+                  ? "H1 UART READY" : "LINK OFFLINE",
+              shell->runtime.multiplayer_transport_ready
+                  ? COLOR_GREEN : COLOR_RED,
+              2U, 13U);
+    draw_text(pixels, stride, 12, 84, "PEER", COLOR_MUTED, 1U, 4U);
+    draw_text(pixels, stride, 112, 84,
+              shell->runtime.multiplayer_peer_seen
+                  ? "DISCOVERED" : "WAITING FOR RELAY",
+              shell->runtime.multiplayer_peer_seen
+                  ? COLOR_GREEN : COLOR_YELLOW,
+              1U, 17U);
+    draw_text(pixels, stride, 12, 102, "RX FRAMES", COLOR_MUTED, 1U, 9U);
+    draw_u32(pixels, stride, 112, 102,
+             shell->runtime.multiplayer_rx_frames, COLOR_WHITE);
+    draw_text(pixels, stride, 12, 120, "TX FRAMES", COLOR_MUTED, 1U, 9U);
+    draw_u32(pixels, stride, 112, 120,
+             shell->runtime.multiplayer_tx_frames, COLOR_WHITE);
+    draw_text(pixels, stride, 12, 145, "OPEN THIS DOOR ON BOTH",
+              shell->runtime.multiplayer_lobby_ready
+                  ? COLOR_GREEN : COLOR_CYAN, 1U, 22U);
+    if (shell->runtime.multiplayer_lobby_ready &&
+        shell->runtime.doom_wad_ready) {
+        const bool pressed = shell->press_active &&
+            shell->pressed_index == MULTIPLAYER_LAUNCH_CONTROL;
+        bevel_rect(pixels, stride, 12, 157, 296, 27,
+                   COLOR_FACE, pressed);
+        draw_centered_text(pixels, stride, 12, 166, 296,
+                           "A / TAP: DOOM DEATHMATCH",
+                           COLOR_TITLE, 26U);
+    } else {
+        draw_text(pixels, stride, 12, 160,
+                  shell->runtime.doom_wad_ready
+                      ? "RUN H1 HOST RELAY" : "DOOM WAD MISSING",
+                  shell->runtime.doom_wad_ready
+                      ? COLOR_YELLOW : COLOR_RED,
+                  1U, 20U);
+        draw_text(pixels, stride, 12, 174,
+                  "WAITING FOR MATCH", COLOR_MUTED, 1U, 18U);
+    }
     draw_text(pixels, stride, 12, 188,
-              "GAMES USE OS SESSION API", COLOR_MUTED, 1U, 24U);
+              shell->runtime.multiplayer_lobby_ready
+                  ? "LOCKSTEP 35 HZ / 2 PLAYERS"
+                  : "DISCOVERY + EXACT WAD MATCH",
+              COLOR_MUTED, 1U, 28U);
 }
 
 static void draw_saves(const console_shell_t *shell,

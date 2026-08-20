@@ -5,10 +5,14 @@ set(P4_DOOM_TOUCH_AUDIO_MAIN
 set(P4_DOOM_GAMEPAD_AUDIO_MAIN
     "${CMAKE_CURRENT_LIST_DIR}/../../doom_embedded_gamepad_audio/main")
 
-set(P4_CONSOLE_MAIN_SOURCES "console_os_main.c")
+set(P4_CONSOLE_MAIN_SOURCES
+    "console_os_main.c"
+    "doom_p4mp_adapter.c"
+)
 set(P4_CONSOLE_MAIN_INCLUDE_DIRS ".")
 set(P4_CONSOLE_MAIN_REQUIREMENTS
     console_shell
+    doom_multiplayer
     esp_timer
     esp_system
     freertos
@@ -22,6 +26,9 @@ set(P4_CONSOLE_MAIN_REQUIREMENTS
     p4_game_api
     p4_game_save
     p4_multiplayer
+    p4_lua_runtime
+    p4_script_audio
+    p4_script_renderer
     platform_board
     platform_console_settings
     platform_display

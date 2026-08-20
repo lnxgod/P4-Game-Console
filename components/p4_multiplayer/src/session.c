@@ -296,6 +296,22 @@ p4_mp_status_t p4_mp_session_receive(
         return P4_MP_BAD_IDENTITY;
     }
 
+    p4_mp_lobby_join_t join = {0};
+    p4_mp_lobby_accept_t accept = {0};
+    if (packet.type == P4_MP_PACKET_JOIN) {
+        status = p4_mp_lobby_join_decode(
+            packet.payload, packet.payload_length, &join);
+        if (status != P4_MP_OK) {
+            return status;
+        }
+    } else if (packet.type == P4_MP_PACKET_ACCEPT) {
+        status = p4_mp_lobby_accept_decode(
+            packet.payload, packet.payload_length, &accept);
+        if (status != P4_MP_OK) {
+            return status;
+        }
+    }
+
     p4_mp_peer_t *peer = find_peer(session, packet.peer_id);
     if (peer == NULL && session->role == P4_MP_ROLE_HOST &&
         packet.type == P4_MP_PACKET_JOIN) {
@@ -318,7 +334,7 @@ p4_mp_status_t p4_mp_session_receive(
             .type = P4_MP_EVENT_JOIN_REQUEST,
             .peer_id = peer->peer_id,
             .route_id = peer->route_id,
-            .player_slot = UINT8_MAX,
+            .player_slot = join.requested_player_slot,
             .packet = packet,
         };
         return P4_MP_OK;
@@ -358,7 +374,7 @@ p4_mp_status_t p4_mp_session_receive(
             .type = P4_MP_EVENT_JOIN_REQUEST,
             .peer_id = peer->peer_id,
             .route_id = peer->route_id,
-            .player_slot = peer->player_slot,
+            .player_slot = join.requested_player_slot,
             .packet = packet,
         };
         return P4_MP_OK;
@@ -368,6 +384,7 @@ p4_mp_status_t p4_mp_session_receive(
             session->state != P4_MP_SESSION_JOINING) {
             return P4_MP_INVALID_STATE;
         }
+        peer->player_slot = accept.assigned_player_slot;
         peer->connected = true;
         session->state = P4_MP_SESSION_CONNECTED;
     }

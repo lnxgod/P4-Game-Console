@@ -1,4 +1,4 @@
-# LORD 1.0.0 feature-parity audit
+# LORD 1.1.0 feature-parity audit
 
 Audited against the authorized Synchronet source at commit
 `25232df05a8ba27a4dd9fcd38b4012c43660fb50`. “Adapted” means the player-facing
@@ -35,7 +35,7 @@ than Synchronet's terminal, files, and server process.
 | Olodrin's Orphans | Complete/adapted | Adopt, catch, child count, horse trade |
 | The Outhouse | Complete/adapted | Search, behind-trees reward, typed wall message |
 | The Pickle Goddess | Complete/adapted | Good/bad randomized stat change |
-| ANSI/RIP visuals | Complete | Generated 16-color title, framed ANSI UI, twelve clipped code-drawn scenes |
+| ANSI/RIP visuals | Complete | Generated 16-color title, shared pinned CP437 boxes/arrows/blocks/shading, twelve clipped code-drawn scenes |
 | Durable local save | Complete | Schema 3, CRC, validation, launch decode, async queue/poll/commit |
 | BBS sysop administration | Not a cartridge feature | Configuration, inactivity deletion, server maintenance, and raw record editing belong to Console OS/BBS administration |
 | Shared remote realm | OS adapter pending | Game has the offline model/UI; opaque remote identity, transactions, transport, and consent require `realm` |

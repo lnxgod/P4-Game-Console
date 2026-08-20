@@ -1,4 +1,4 @@
-# LORD 1.0.0 OS integration contract
+# LORD 1.1.0 OS integration contract
 
 LORD is a complete standalone cartridge. This document describes optional OS
 services that turn its persistent local realm into a shared BBS realm without
@@ -87,9 +87,11 @@ packages but still exchange only typed data.
 ## Vector scenes
 
 The title and twelve built-in ANSI/RIP-style scenes use clipped RGB565 Game
-API drawing and need no new capability. If `vector-scenes` is implemented for
-shared assets, it must remain a bounded drawing-data format. Never execute
-RIPscrip terminal, file, callback, or download commands.
+API drawing plus the shared pinned CP437 glyph primitive and need no new
+capability. They deliberately do not depend on the shell's 80×30 terminal or
+accept ANSI escape sequences. If `vector-scenes` is implemented for shared
+assets, it must remain a bounded drawing-data format. Never execute RIPscrip
+terminal, file, callback, or download commands.
 
 ## Acceptance needed for optional shared services
 

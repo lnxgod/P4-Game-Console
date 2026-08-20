@@ -8,6 +8,7 @@ set(P4_DOOMGENERIC_DIR
     "${CMAKE_CURRENT_LIST_DIR}/../../../../third_party/doomgeneric/doomgeneric")
 
 set(P4_DOOM_ENGINE_AUDIO_SOURCES
+    "p4_doom_net_stub.c"
     "${P4_DOOMGENERIC_DIR}/dummy.c"
     "${P4_DOOMGENERIC_DIR}/am_map.c"
     "${P4_DOOMGENERIC_DIR}/doomdef.c"
@@ -92,7 +93,7 @@ set(P4_DOOM_ENGINE_AUDIO_SOURCES
 
 idf_component_register(
     SRCS ${P4_DOOM_ENGINE_AUDIO_SOURCES}
-    INCLUDE_DIRS "${P4_DOOMGENERIC_DIR}"
+    INCLUDE_DIRS "${P4_DOOMGENERIC_DIR}" "."
     REQUIRES doom_audio
     WHOLE_ARCHIVE
 )

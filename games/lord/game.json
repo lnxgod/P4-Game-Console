@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.0.0",
+  "version": "1.1.0",
   "package_file": "LORD.P4G",
   "component": "lord",
   "entry_symbol": "p4_lord_game",
@@ -21,6 +21,6 @@
     "save"
   ],
   "license": "LORD-PERMISSION",
-  "assets": "authorized-upstream-text-generated-and-code-rendered-ansi-rip-ui",
+  "assets": "authorized-upstream-text-generated-title-shared-cp437-code-rendered-ansi-rip-ui",
   "enabled": true
 }

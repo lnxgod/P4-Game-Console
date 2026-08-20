@@ -77,6 +77,7 @@ typedef enum {
     BYTE_BUDDY_TOUCH_STYLE_HORNS_BUY,
     BYTE_BUDDY_TOUCH_STYLE_TRAIL_SELECT,
     BYTE_BUDDY_TOUCH_STYLE_TRAIL_BUY,
+    BYTE_BUDDY_TOUCH_STYLE_REMIX,
     BYTE_BUDDY_TOUCH_CLOSE_SHOP,
     BYTE_BUDDY_TOUCH_MOVE_DRAGON,
     BYTE_BUDDY_TOUCH_DONE_PLAYING,
@@ -144,7 +145,24 @@ uint16_t byte_buddy_upgrade_cost(uint8_t current_level);
 uint16_t byte_buddy_style_cost(
     byte_buddy_style_t style, uint8_t unlocked_level);
 
+uint8_t byte_buddy_remix_choice(
+    uint32_t seed, uint8_t previous, uint8_t unlocked_level);
+
+uint32_t byte_buddy_style_recipe_id(
+    uint8_t body, uint8_t eyes, uint8_t horns, uint8_t trail,
+    uint8_t wing_style, uint8_t mutation_hue);
+
 uint8_t byte_buddy_level_for_interactions(uint16_t interactions);
+
+uint16_t byte_buddy_star_fall_speed(uint8_t stage, uint8_t streak);
+
+int32_t byte_buddy_catcher_step_q16(
+    int32_t current_q16, int32_t target_q16,
+    int32_t *velocity_q16, uint32_t elapsed_ms);
+
+int32_t byte_buddy_controller_catcher_target_q16(
+    int32_t current_q16, int32_t target_q16,
+    uint32_t held_buttons, uint32_t elapsed_ms);
 
 byte_buddy_battle_stats_t byte_buddy_battle_stats(
     uint16_t feed_actions,
@@ -156,9 +174,6 @@ byte_buddy_battle_stats_t byte_buddy_battle_stats(
     uint8_t aura_level,
     uint8_t nest_level,
     uint8_t magnet_level);
-
-int16_t byte_buddy_slide_position(
-    int16_t current, int16_t target, int16_t *velocity);
 
 byte_buddy_touch_target_t byte_buddy_touch_target(
     uint16_t x, uint16_t y, bool upgrade_shop,

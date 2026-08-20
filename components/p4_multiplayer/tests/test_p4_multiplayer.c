@@ -33,6 +33,173 @@ static size_t encode_packet(
     return length;
 }
 
+static void fill_hash(uint8_t hash[P4_MP_SHA256_BYTES], uint8_t seed)
+{
+    for (size_t index = 0U; index < P4_MP_SHA256_BYTES; ++index) {
+        hash[index] = (uint8_t)(seed + (uint8_t)index);
+    }
+}
+
+static p4_mp_lobby_offer_t test_offer(void)
+{
+    p4_mp_lobby_offer_t offer = {
+        .mode = P4_MP_GAME_MODE_LOCKSTEP,
+        .game_api_major = 1U,
+        .game_api_minor = 0U,
+        .players_present = 1U,
+        .player_capacity = 2U,
+        .input_delay_tics = 2U,
+        .tick_rate_hz = 35U,
+        .game_protocol = 1U,
+        .session_seed = UINT64_C(0x123456789abcdef0),
+    };
+    strcpy(offer.game_id, "org.p4console.doom");
+    fill_hash(offer.content_sha256, UINT8_C(0x10));
+    fill_hash(offer.compatibility_sha256, UINT8_C(0x80));
+    return offer;
+}
+
+static void encode_test_join(
+    uint8_t payload[P4_MP_JOIN_PAYLOAD_BYTES],
+    uint8_t requested_slot,
+    uint32_t nonce)
+{
+    const p4_mp_lobby_offer_t offer = test_offer();
+    p4_mp_lobby_join_t join = {
+        .requested_player_slot = requested_slot,
+        .join_nonce = nonce,
+    };
+    memcpy(join.compatibility_sha256,
+           offer.compatibility_sha256,
+           P4_MP_SHA256_BYTES);
+    CHECK(p4_mp_lobby_join_encode(&join, payload) == P4_MP_OK);
+}
+
+static void encode_test_accept(
+    uint8_t payload[P4_MP_ACCEPT_PAYLOAD_BYTES],
+    uint8_t assigned_slot)
+{
+    const p4_mp_lobby_accept_t accept = {
+        .assigned_player_slot = assigned_slot,
+        .player_count = 2U,
+        .input_delay_tics = 2U,
+        .start_tic = 0U,
+        .session_seed = UINT64_C(0x123456789abcdef0),
+    };
+    CHECK(p4_mp_lobby_accept_encode(&accept, payload) == P4_MP_OK);
+}
+
+static void test_lobby_codec(void)
+{
+    p4_mp_lobby_offer_t expected = test_offer();
+    uint8_t offer_payload[P4_MP_OFFER_PAYLOAD_BYTES];
+    CHECK(p4_mp_lobby_offer_encode(&expected, offer_payload) == P4_MP_OK);
+    p4_mp_lobby_offer_t decoded;
+    CHECK(p4_mp_lobby_offer_decode(
+              offer_payload, sizeof(offer_payload), &decoded) == P4_MP_OK);
+    CHECK(decoded.mode == expected.mode);
+    CHECK(decoded.game_api_major == expected.game_api_major);
+    CHECK(decoded.game_api_minor == expected.game_api_minor);
+    CHECK(decoded.players_present == expected.players_present);
+    CHECK(decoded.player_capacity == expected.player_capacity);
+    CHECK(decoded.input_delay_tics == expected.input_delay_tics);
+    CHECK(decoded.tick_rate_hz == expected.tick_rate_hz);
+    CHECK(decoded.game_protocol == expected.game_protocol);
+    CHECK(decoded.session_seed == expected.session_seed);
+    CHECK(memcmp(decoded.game_id,
+                 expected.game_id,
+                 P4_MP_GAME_ID_BYTES) == 0);
+    CHECK(memcmp(decoded.content_sha256,
+                 expected.content_sha256,
+                 P4_MP_SHA256_BYTES) == 0);
+    CHECK(memcmp(decoded.compatibility_sha256,
+                 expected.compatibility_sha256,
+                 P4_MP_SHA256_BYTES) == 0);
+    uint8_t compatibility_material[P4_MP_COMPATIBILITY_MATERIAL_BYTES];
+    CHECK(p4_mp_lobby_compatibility_material(
+              &expected, compatibility_material) == P4_MP_OK);
+    CHECK(compatibility_material[0] == P4_MP_LOBBY_SCHEMA);
+    CHECK(compatibility_material[1] == P4_MP_GAME_MODE_LOCKSTEP);
+    CHECK(compatibility_material[4] == 2U);
+    CHECK(compatibility_material[6] == 35U &&
+          compatibility_material[7] == 0U);
+    CHECK(memcmp(compatibility_material + 16,
+                 expected.game_id,
+                 P4_MP_GAME_ID_BYTES) == 0);
+    CHECK(memcmp(compatibility_material + 48,
+                 expected.content_sha256,
+                 P4_MP_SHA256_BYTES) == 0);
+
+    p4_mp_lobby_offer_t compatible = expected;
+    compatible.players_present = 2U;
+    compatible.session_seed += 1U;
+    CHECK(p4_mp_lobby_offers_compatible(&expected, &compatible));
+    compatible.content_sha256[0] ^= UINT8_C(0x80);
+    CHECK(!p4_mp_lobby_offers_compatible(&expected, &compatible));
+
+    uint8_t datagram[P4_MP_MAX_DATAGRAM_BYTES];
+    const size_t offer_datagram_length = encode_packet(
+        P4_MP_PACKET_OFFER, 77U, 1U, 1U,
+        offer_payload, sizeof(offer_payload), datagram);
+    p4_mp_packet_view_t view;
+    CHECK(p4_mp_packet_decode(
+              datagram, offer_datagram_length, &view) == P4_MP_OK);
+    CHECK(view.type == P4_MP_PACKET_OFFER);
+    CHECK(view.payload_length == P4_MP_OFFER_PAYLOAD_BYTES);
+
+    p4_mp_lobby_join_t join = {
+        .requested_player_slot = P4_MP_PLAYER_SLOT_ANY,
+        .join_nonce = UINT32_C(0xaabbccdd),
+    };
+    memcpy(join.compatibility_sha256,
+           expected.compatibility_sha256,
+           P4_MP_SHA256_BYTES);
+    uint8_t join_payload[P4_MP_JOIN_PAYLOAD_BYTES];
+    CHECK(p4_mp_lobby_join_encode(&join, join_payload) == P4_MP_OK);
+    p4_mp_lobby_join_t decoded_join;
+    CHECK(p4_mp_lobby_join_decode(
+              join_payload, sizeof(join_payload), &decoded_join) == P4_MP_OK);
+    CHECK(decoded_join.requested_player_slot == P4_MP_PLAYER_SLOT_ANY);
+    CHECK(decoded_join.join_nonce == join.join_nonce);
+    CHECK(p4_mp_lobby_join_matches_offer(&expected, &decoded_join));
+    decoded_join.compatibility_sha256[0] ^= UINT8_C(0x01);
+    CHECK(!p4_mp_lobby_join_matches_offer(&expected, &decoded_join));
+
+    p4_mp_lobby_accept_t accept = {
+        .assigned_player_slot = 1U,
+        .player_count = 2U,
+        .input_delay_tics = 2U,
+        .start_tic = 0U,
+        .session_seed = expected.session_seed,
+    };
+    uint8_t accept_payload[P4_MP_ACCEPT_PAYLOAD_BYTES];
+    CHECK(p4_mp_lobby_accept_encode(&accept, accept_payload) == P4_MP_OK);
+    p4_mp_lobby_accept_t decoded_accept;
+    CHECK(p4_mp_lobby_accept_decode(
+              accept_payload, sizeof(accept_payload), &decoded_accept) ==
+          P4_MP_OK);
+    CHECK(decoded_accept.assigned_player_slot == 1U);
+    CHECK(decoded_accept.player_count == 2U);
+    CHECK(decoded_accept.input_delay_tics == 2U);
+    CHECK(decoded_accept.start_tic == 0U);
+    CHECK(decoded_accept.session_seed == expected.session_seed);
+
+    offer_payload[7] = 1U;
+    CHECK(p4_mp_lobby_offer_decode(
+              offer_payload, sizeof(offer_payload), &decoded) ==
+          P4_MP_BAD_FLAGS);
+    offer_payload[7] = 0U;
+    join_payload[2] = 1U;
+    CHECK(p4_mp_lobby_join_decode(
+              join_payload, sizeof(join_payload), &decoded_join) ==
+          P4_MP_BAD_FLAGS);
+    join_payload[2] = 0U;
+    accept_payload[0] = 2U;
+    CHECK(p4_mp_lobby_accept_decode(
+              accept_payload, sizeof(accept_payload), &decoded_accept) ==
+          P4_MP_BAD_VERSION);
+}
+
 static void test_packet_codec(void)
 {
     static const uint8_t crc_vector[] = "123456789";
@@ -180,7 +347,8 @@ static void test_host_session(void)
               &host, SESSION_ID, HOST_ID, P4_MP_DEFAULT_TIMEOUT_MS) == P4_MP_OK);
     CHECK(host.state == P4_MP_SESSION_HOSTING);
 
-    uint8_t join_payload[36] = {0};
+    uint8_t join_payload[P4_MP_JOIN_PAYLOAD_BYTES];
+    encode_test_join(join_payload, P4_MP_PLAYER_SLOT_ANY, 1U);
     uint8_t datagram[P4_MP_MAX_DATAGRAM_BYTES];
     size_t length = encode_packet(
         P4_MP_PACKET_JOIN, SESSION_ID, CLIENT_ID, 7U,
@@ -190,6 +358,7 @@ static void test_host_session(void)
               &host, route, 1000U, datagram, length, &event) == P4_MP_OK);
     CHECK(event.type == P4_MP_EVENT_JOIN_REQUEST);
     CHECK(event.peer_id == CLIENT_ID && event.route_id == route);
+    CHECK(event.player_slot == P4_MP_PLAYER_SLOT_ANY);
     CHECK(!event.neutralize_player);
     CHECK(p4_mp_session_peer_count(&host) == 0U);
 
@@ -240,7 +409,8 @@ static void add_host_peer(
     uint8_t slot,
     uint64_t now_ms)
 {
-    uint8_t join_payload[36] = {0};
+    uint8_t join_payload[P4_MP_JOIN_PAYLOAD_BYTES];
+    encode_test_join(join_payload, slot, peer_id);
     uint8_t datagram[P4_MP_MAX_DATAGRAM_BYTES];
     const size_t length = encode_packet(
         P4_MP_PACKET_JOIN, host->session_id, peer_id, 1U,
@@ -261,7 +431,8 @@ static void test_capacity_timeout_and_disconnect(void)
     add_host_peer(&host, 4U, 104U, 3U, 50U);
     CHECK(p4_mp_session_peer_count(&host) == P4_MP_MAX_REMOTE_PEERS);
 
-    uint8_t join_payload[36] = {0};
+    uint8_t join_payload[P4_MP_JOIN_PAYLOAD_BYTES];
+    encode_test_join(join_payload, P4_MP_PLAYER_SLOT_ANY, 5U);
     uint8_t datagram[P4_MP_MAX_DATAGRAM_BYTES];
     const size_t length = encode_packet(
         P4_MP_PACKET_JOIN, 77U, 5U, 1U,
@@ -290,7 +461,8 @@ static void test_client_session(void)
     CHECK(client.state == P4_MP_SESSION_JOINING);
     CHECK(p4_mp_session_peer_count(&client) == 0U);
 
-    uint8_t accept_payload[16] = {0};
+    uint8_t accept_payload[P4_MP_ACCEPT_PAYLOAD_BYTES];
+    encode_test_accept(accept_payload, 1U);
     uint8_t datagram[P4_MP_MAX_DATAGRAM_BYTES];
     size_t length = encode_packet(
         P4_MP_PACKET_ACCEPT, 200U, 1U, 8U,
@@ -299,6 +471,7 @@ static void test_client_session(void)
     CHECK(p4_mp_session_receive(
               &client, 44U, 150U, datagram, length, &event) == P4_MP_OK);
     CHECK(event.type == P4_MP_EVENT_ACCEPTED);
+    CHECK(event.player_slot == 1U);
     CHECK(client.state == P4_MP_SESSION_CONNECTED);
     CHECK(p4_mp_session_peer_count(&client) == 1U);
     CHECK(!p4_mp_session_tick(&client, 3150U, &event));
@@ -343,6 +516,7 @@ static void test_bounded_decode_fuzz(void)
 int main(void)
 {
     test_packet_codec();
+    test_lobby_codec();
     test_wired_stream_boundary();
     test_host_session();
     test_capacity_timeout_and_disconnect();

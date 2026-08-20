@@ -28,6 +28,6 @@ The conversion script downsamples with a box filter, dithers into the classic
 16-color ANSI palette, writes the preview PNG, and emits explicit RGB565 data.
 
 The remaining twelve RIP-style location scenes are code-drawn with clipped
-Game API rectangles, circles, lines, sprites, and ANSI palette colors. They do
-not embed or execute upstream `.ICN`, `.LRD`, RIPscrip, terminal commands, or
-file operations.
+Game API rectangles, circles, lines, sprites, ANSI palette colors, and the
+platform's pinned CP437 block/shade/symbol glyphs. They do not embed or execute
+upstream `.ICN`, `.LRD`, RIPscrip, terminal commands, or file operations.

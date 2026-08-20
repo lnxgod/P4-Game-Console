@@ -6,12 +6,15 @@ read-only. The firmware accepts at most 128 `.p4cart` candidates, lists at most
 scan unrelated large game-data files at boot. A bad cart is counted and
 ignored; it is never executed.
 
-The current P4 Cart milestone is a safe catalog, not an executable cartridge
-runtime. The restored background scanner adds valid carts to Game Manager as
-non-removable `CART` entries and reports rejected containers without treating
-them as native games. They remain non-runnable until the pinned Lua sandbox is
-integrated. Native `.P4G` games continue to use the separate reviewed ELF
-loader.
+The background scanner adds valid carts to the launcher as non-removable
+`CART` entries and reports rejected containers without treating them as native
+games. Launch reopens the selected file, revalidates its complete container and
+source hash, and runs that source through the bounded `p4-lua-5.4-v1` sandbox.
+Native `.P4G` games continue to use the separate reviewed ELF loader.
+
+Script save values currently survive relaunches during the same Console OS
+boot. Durable SD-backed saves across reboot remain pending; the Lua game never
+receives a filesystem path in either case.
 
 ## Copy an open P4 Cart
 
