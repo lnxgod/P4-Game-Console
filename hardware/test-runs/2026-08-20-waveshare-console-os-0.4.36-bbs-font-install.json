@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-20T10:44:36-0700",
+  "result": "pass",
+  "classification": [
+    "build-tested",
+    "hardware-tested"
+  ],
+  "scope": "Guarded app-only install and retained-UART startup acceptance for Console OS 0.4.36 on the bound Waveshare 4.3 in unit; visual BBS font readability remains operator acceptance",
+  "authority": {
+    "source": "operator request in the active Codex task",
+    "request": "lets flash it",
+    "automatic_rollback_authorized": false
+  },
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "pcb_revision": null,
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "psram_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+    "uart": "/dev/cu.wchusbserial5C371865781"
+  },
+  "candidate": {
+    "version": "0.4.36",
+    "source_commit": "56a8628a4d6b40c574240512c073f9527cb3fb26",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "h2_role": "controller-first-runtime-switch",
+    "firmware_vbus_source": false,
+    "application": {
+      "bytes": 1376512,
+      "sha256": "34e1677af08a962cc6d6d8b41b8331bef8c124665f22fb5a0dbaed25b451922c"
+    },
+    "elf": {
+      "bytes": 17128520,
+      "sha256": "92dbeac2c1bcc0d4f9ac6152f3e80820be84cdd5fbd3b57bee3dcdb231eebb08"
+    },
+    "update_package": {
+      "bytes": 1376768,
+      "sha256": "ca27d3372219716f13f8f67d954608f0fbc26df986503b94c78c7b5c2df71de4"
+    },
+    "sdkconfig_sha256": "48580ea1e193d540d46d34314bb36eac6cc6c81d5b387f7059b5a18180cabd79",
+    "dependencies_lock_sha256": "392bb2cc5101cc6019f81dd420cf2c4fbb964bdae2a04e922a12c8e284667248",
+    "build_result": "waveshare-console-os-build-verified",
+    "game_execution_source": "microSD-only",
+    "games_embedded_in_ota": false
+  },
+  "existing_recovery": {
+    "factory_backup_bytes": 33554432,
+    "factory_backup_sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e",
+    "factory_backup_reverified": true,
+    "new_factory_backup_created": false,
+    "predecessor_version": "0.4.35",
+    "predecessor_bytes": 1376240,
+    "predecessor_sha256": "4b8d6e50a21019015fd1d381fee496d7caf181cbcb5f439594b63be2b148e365",
+    "predecessor_verified_in_place": true,
+    "predecessor_artifact_retained": true
+  },
+  "install": {
+    "write_scope": "application partition only",
+    "offset": "0x20000",
+    "bootloader_sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30",
+    "partition_table_sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871",
+    "base_spans_verified_before_write": true,
+    "application_verify_flash": "pass",
+    "readback_bytes": 1380352,
+    "application_readback_sha256": "34e1677af08a962cc6d6d8b41b8331bef8c124665f22fb5a0dbaed25b451922c",
+    "padded_readback_sha256": "b9c3e50bad9494ee8ae9abb19843b917836aab7d670a0f26f28d9a3eb36bfaf6",
+    "erased_tail_verified": true,
+    "application_launch_count": 1,
+    "microSD_mutated": false
+  },
+  "serial_acceptance": {
+    "capture_bytes": 15611,
+    "single_reset_observed": true,
+    "markers": [
+      "App version: 0.4.36",
+      "P4_GAME_STORAGE READY backend=microSD capacity=32010928128",
+      "P4_CONSOLE_OS GAME_CATALOG available=1 packages=13 valid=13 omitted=0",
+      "P4_CONSOLE_OS READY page=home h2_role=usb-host-external-vbus",
+      "P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0"
+    ],
+    "ready_elapsed_ms": 24155,
+    "display_submits": 44,
+    "display_completions": 37,
+    "display_timeouts_recovered": 7,
+    "display_failures": 0,
+    "panic_or_abort_observed": false,
+    "reboot_loop_observed": false
+  },
+  "manual_acceptance_pending": [
+    "Confirm the slightly enlarged bold BBS headings, door names, and controls look clean on the physical panel",
+    "Confirm touch targets remain aligned",
+    "Optionally confirm USB gamepad navigation after attaching the powered H2 fixture"
+  ]
+}
