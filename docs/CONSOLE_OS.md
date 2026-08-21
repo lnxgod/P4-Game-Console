@@ -10,6 +10,15 @@ hit testing, keyboard, and controller navigation share the same two-column,
 three-row door geometry. Native games remain 320x200 RGB565 and are scaled by
 the platform display path.
 
+Console OS 0.4.44 synchronizes multiplayer Doom at two boundaries. A
+session-tokenized launcher handshake lets either player start both consoles
+and holds them briefly before the one-way hardware handoff. A separate Doom
+engine barrier then advertises readiness only after each engine enters network
+configuration and requires the peer's READY plus an acknowledgment of its own
+before tic delivery is enabled. Both barriers are bounded; host tests cover
+their pure state machines, while two-console gameplay remains a separate
+hardware acceptance.
+
 The current source successor keeps game cadence in the OS at a target 30 Hz,
 but passes cartridges measured wall-clock frame time instead of a fabricated
 constant. Deltas are clamped to the Game API bound, the scheduler waits only

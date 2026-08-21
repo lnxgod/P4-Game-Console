@@ -970,6 +970,7 @@ static size_t control_at(const console_shell_t *shell,
         }
         if (shell->page == CONSOLE_PAGE_MULTIPLAYER &&
             shell->runtime.multiplayer_lobby_ready &&
+            !shell->runtime.multiplayer_launch_syncing &&
             shell->runtime.doom_wad_ready &&
             point_in_rect(gui_x, gui_y, 12U, 157U, 296U, 27U)) {
             return MULTIPLAYER_LAUNCH_CONTROL;
@@ -1445,6 +1446,7 @@ console_shell_action_t console_shell_handle_buttons(
     if (shell->page == CONSOLE_PAGE_MULTIPLAYER &&
         (pressed & CONSOLE_BUTTON_ACCEPT) != 0U &&
         shell->runtime.multiplayer_lobby_ready &&
+        !shell->runtime.multiplayer_launch_syncing &&
         shell->runtime.doom_wad_ready) {
         const console_shell_action_t action = {
             .type = CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM,
@@ -1735,6 +1737,7 @@ console_shell_action_t console_shell_handle_touch(
         if (shell->page == CONSOLE_PAGE_MULTIPLAYER &&
             released_control == MULTIPLAYER_LAUNCH_CONTROL &&
             shell->runtime.multiplayer_lobby_ready &&
+            !shell->runtime.multiplayer_launch_syncing &&
             shell->runtime.doom_wad_ready) {
             const console_shell_action_t action = {
                 .type = CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM,
@@ -2006,6 +2009,8 @@ void console_shell_set_runtime_info(
             runtime->multiplayer_peer_seen ||
         shell->runtime.multiplayer_lobby_ready !=
             runtime->multiplayer_lobby_ready ||
+        shell->runtime.multiplayer_launch_syncing !=
+            runtime->multiplayer_launch_syncing ||
         shell->runtime.multiplayer_player_slot !=
             runtime->multiplayer_player_slot ||
         shell->runtime.multiplayer_rx_frames !=
@@ -3372,11 +3377,20 @@ static void draw_multiplayer(const console_shell_t *shell,
     draw_text(pixels, stride, 12, 120, "TX FRAMES", COLOR_MUTED, 1U, 9U);
     draw_u32(pixels, stride, 112, 120,
              shell->runtime.multiplayer_tx_frames, COLOR_WHITE);
-    draw_text(pixels, stride, 12, 145, "OPEN THIS DOOR ON BOTH",
+    draw_text(pixels, stride, 12, 145,
+              shell->runtime.multiplayer_launch_syncing
+                  ? "SYNCING BOTH CONSOLES"
+                  : "OPEN THIS DOOR ON BOTH",
               shell->runtime.multiplayer_lobby_ready
                   ? COLOR_GREEN : COLOR_CYAN, 1U, 22U);
-    if (shell->runtime.multiplayer_lobby_ready &&
-        shell->runtime.doom_wad_ready) {
+    if (shell->runtime.multiplayer_launch_syncing) {
+        bevel_rect(pixels, stride, 12, 157, 296, 27,
+                   COLOR_FACE, false);
+        draw_centered_text(pixels, stride, 12, 166, 296,
+                           "STARTING TOGETHER...",
+                           COLOR_TITLE, 20U);
+    } else if (shell->runtime.multiplayer_lobby_ready &&
+               shell->runtime.doom_wad_ready) {
         const bool pressed = shell->press_active &&
             shell->pressed_index == MULTIPLAYER_LAUNCH_CONTROL;
         bevel_rect(pixels, stride, 12, 157, 296, 27,
@@ -3395,7 +3409,9 @@ static void draw_multiplayer(const console_shell_t *shell,
                   "WAITING FOR MATCH", COLOR_MUTED, 1U, 18U);
     }
     draw_text(pixels, stride, 12, 188,
-              shell->runtime.multiplayer_lobby_ready
+              shell->runtime.multiplayer_launch_syncing
+                  ? "READY HANDSHAKE / 1.5S HOLD"
+                  : shell->runtime.multiplayer_lobby_ready
                   ? "LOCKSTEP 35 HZ / 2 PLAYERS"
                   : "DISCOVERY + EXACT WAD MATCH",
               COLOR_MUTED, 1U, 28U);

@@ -178,6 +178,7 @@ typedef struct {
     bool multiplayer_transport_ready;
     bool multiplayer_peer_seen;
     bool multiplayer_lobby_ready;
+    bool multiplayer_launch_syncing;
     uint8_t multiplayer_player_slot;
     uint32_t multiplayer_rx_frames;
     uint32_t multiplayer_tx_frames;

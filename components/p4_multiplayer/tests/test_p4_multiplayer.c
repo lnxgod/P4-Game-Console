@@ -248,6 +248,78 @@ static void test_packet_codec(void)
           P4_MP_BAD_FLAGS);
 }
 
+static void test_synchronized_start_barrier(void)
+{
+    enum {
+        TOKEN = 0x4d50,
+        HOLD_MS = 1500,
+        TIMEOUT_MS = 15000,
+    };
+    uint8_t payload[P4_MP_START_PAYLOAD_BYTES];
+    CHECK(p4_mp_start_ready_encode(TOKEN, payload) == P4_MP_OK);
+    uint16_t decoded_token = 0U;
+    CHECK(p4_mp_start_ready_decode(
+              payload, sizeof(payload), &decoded_token) == P4_MP_OK);
+    CHECK(decoded_token == TOKEN);
+    payload[0] ^= UINT8_C(0x01);
+    CHECK(p4_mp_start_ready_decode(
+              payload, sizeof(payload), &decoded_token) == P4_MP_BAD_MAGIC);
+    payload[0] ^= UINT8_C(0x01);
+    CHECK(p4_mp_start_ready_decode(
+              payload, sizeof(payload) - 1U, &decoded_token) ==
+          P4_MP_BAD_LENGTH);
+    CHECK(p4_mp_start_ready_encode(0U, payload) == P4_MP_BAD_IDENTITY);
+
+    p4_mp_start_barrier_t early;
+    p4_mp_start_barrier_t late;
+    p4_mp_start_barrier_init(&early);
+    p4_mp_start_barrier_init(&late);
+    CHECK(p4_mp_start_barrier_begin(
+              &early, TOKEN, 1000U, HOLD_MS, TIMEOUT_MS) == P4_MP_OK);
+    CHECK(early.state == P4_MP_START_WAITING);
+
+    /* The late console auto-arms from the early console's READY packet. */
+    CHECK(p4_mp_start_barrier_observe_ready(
+              &late, TOKEN, 1100U, HOLD_MS, TIMEOUT_MS) == P4_MP_OK);
+    CHECK(late.state == P4_MP_START_ARMED);
+    CHECK(late.launch_at_ms == 2600U);
+
+    /* Its reply arms the early console; repeat packets never move deadlines. */
+    CHECK(p4_mp_start_barrier_observe_ready(
+              &early, TOKEN, 1120U, HOLD_MS, TIMEOUT_MS) == P4_MP_OK);
+    CHECK(early.state == P4_MP_START_ARMED);
+    CHECK(early.launch_at_ms == 2620U);
+    CHECK(p4_mp_start_barrier_observe_ready(
+              &early, TOKEN, 1500U, HOLD_MS, TIMEOUT_MS) == P4_MP_OK);
+    CHECK(early.launch_at_ms == 2620U);
+    CHECK(p4_mp_start_barrier_remaining_ms(&early, 2000U) == 620U);
+    CHECK(p4_mp_start_barrier_poll(&late, 2599U) == P4_MP_START_ARMED);
+    CHECK(p4_mp_start_barrier_poll(&late, 2600U) == P4_MP_START_DUE);
+    CHECK(p4_mp_start_barrier_poll(&early, 2619U) == P4_MP_START_ARMED);
+    CHECK(p4_mp_start_barrier_poll(&early, 2620U) == P4_MP_START_DUE);
+    CHECK(p4_mp_start_barrier_observe_ready(
+              &early, TOKEN, 2700U, HOLD_MS, TIMEOUT_MS) == P4_MP_OK);
+    CHECK(early.state == P4_MP_START_DUE);
+
+    p4_mp_start_barrier_t timeout;
+    p4_mp_start_barrier_init(&timeout);
+    CHECK(p4_mp_start_barrier_begin(
+              &timeout, TOKEN, 500U, HOLD_MS, TIMEOUT_MS) == P4_MP_OK);
+    CHECK(p4_mp_start_barrier_poll(&timeout, 15499U) ==
+          P4_MP_START_WAITING);
+    CHECK(p4_mp_start_barrier_poll(&timeout, 15500U) ==
+          P4_MP_START_TIMED_OUT);
+    p4_mp_start_barrier_cancel(&timeout);
+    CHECK(timeout.state == P4_MP_START_IDLE);
+
+    p4_mp_start_barrier_init(&early);
+    CHECK(p4_mp_start_barrier_begin(
+              &early, TOKEN, 0U, HOLD_MS, TIMEOUT_MS) == P4_MP_OK);
+    CHECK(p4_mp_start_barrier_observe_ready(
+              &early, (uint16_t)(TOKEN + 1U), 1U,
+              HOLD_MS, TIMEOUT_MS) == P4_MP_WRONG_SESSION);
+}
+
 static void test_wired_stream_boundary(void)
 {
     p4_mp_wired_transport_info_t info;
@@ -517,6 +589,7 @@ int main(void)
 {
     test_packet_codec();
     test_lobby_codec();
+    test_synchronized_start_barrier();
     test_wired_stream_boundary();
     test_host_session();
     test_capacity_timeout_and_disconnect();

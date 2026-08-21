@@ -5,6 +5,14 @@
 #include <limits.h>
 #include <string.h>
 
+static const uint8_t s_engine_ready[P4_DOOM_MP_ENGINE_CONTROL_BYTES] = {
+    'P', '4', 'D', 'R', 'E', 'A', 'D', 'Y',
+};
+
+static const uint8_t s_engine_ack[P4_DOOM_MP_ENGINE_CONTROL_BYTES] = {
+    'P', '4', 'D', 'R', 'A', 'C', 'K', '!',
+};
+
 static uint8_t player_bit(uint8_t player_slot)
 {
     return (uint8_t)(UINT8_C(1) << player_slot);
@@ -92,6 +100,92 @@ bool p4_doom_mp_launch_config_valid(
         config->player_count <= P4_MP_MAX_PLAYERS &&
         config->local_player_slot < config->player_count &&
         config->input_delay_tics <= 15U && config->session_seed != 0U;
+}
+
+void p4_doom_mp_engine_barrier_init(
+    p4_doom_mp_engine_barrier_t *barrier)
+{
+    if (barrier != NULL) {
+        *barrier = (p4_doom_mp_engine_barrier_t){0};
+    }
+}
+
+void p4_doom_mp_engine_barrier_begin(
+    p4_doom_mp_engine_barrier_t *barrier)
+{
+    if (barrier != NULL) {
+        *barrier = (p4_doom_mp_engine_barrier_t){
+            .local_ready = true,
+        };
+    }
+}
+
+static p4_doom_mp_engine_control_t engine_control_decode(
+    const uint8_t *payload,
+    size_t payload_length)
+{
+    if (payload == NULL ||
+        payload_length != P4_DOOM_MP_ENGINE_CONTROL_BYTES) {
+        return P4_DOOM_MP_ENGINE_CONTROL_NONE;
+    }
+    if (memcmp(payload, s_engine_ready, sizeof(s_engine_ready)) == 0) {
+        return P4_DOOM_MP_ENGINE_CONTROL_READY;
+    }
+    if (memcmp(payload, s_engine_ack, sizeof(s_engine_ack)) == 0) {
+        return P4_DOOM_MP_ENGINE_CONTROL_ACK;
+    }
+    return P4_DOOM_MP_ENGINE_CONTROL_NONE;
+}
+
+bool p4_doom_mp_engine_control_encode(
+    p4_doom_mp_engine_control_t control,
+    uint8_t payload[P4_DOOM_MP_ENGINE_CONTROL_BYTES])
+{
+    if (payload == NULL) {
+        return false;
+    }
+    if (control == P4_DOOM_MP_ENGINE_CONTROL_READY) {
+        memcpy(payload, s_engine_ready, sizeof(s_engine_ready));
+        return true;
+    }
+    if (control == P4_DOOM_MP_ENGINE_CONTROL_ACK) {
+        memcpy(payload, s_engine_ack, sizeof(s_engine_ack));
+        return true;
+    }
+    return false;
+}
+
+p4_doom_mp_engine_control_t p4_doom_mp_engine_barrier_observe_ping(
+    p4_doom_mp_engine_barrier_t *barrier,
+    const uint8_t *payload,
+    size_t payload_length)
+{
+    if (barrier == NULL || !barrier->local_ready ||
+        engine_control_decode(payload, payload_length) !=
+            P4_DOOM_MP_ENGINE_CONTROL_READY) {
+        return P4_DOOM_MP_ENGINE_CONTROL_NONE;
+    }
+    barrier->peer_ready = true;
+    return P4_DOOM_MP_ENGINE_CONTROL_ACK;
+}
+
+void p4_doom_mp_engine_barrier_observe_pong(
+    p4_doom_mp_engine_barrier_t *barrier,
+    const uint8_t *payload,
+    size_t payload_length)
+{
+    if (barrier != NULL && barrier->local_ready &&
+        engine_control_decode(payload, payload_length) ==
+            P4_DOOM_MP_ENGINE_CONTROL_ACK) {
+        barrier->peer_acknowledged = true;
+    }
+}
+
+bool p4_doom_mp_engine_barrier_complete(
+    const p4_doom_mp_engine_barrier_t *barrier)
+{
+    return barrier != NULL && barrier->local_ready &&
+        barrier->peer_ready && barrier->peer_acknowledged;
 }
 
 bool p4_doom_mp_tic_queue_init(

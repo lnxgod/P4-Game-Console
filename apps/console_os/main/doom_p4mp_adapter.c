@@ -11,6 +11,8 @@
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 #include "esp_log.h"
 #include "esp_timer.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #pragma GCC diagnostic pop
 #include "d_loop.h"
 #include "p4/multiplayer_uart.h"
@@ -19,12 +21,16 @@
 enum {
     P4_DOOM_MP_KEEPALIVE_MS = 1000,
     P4_DOOM_MP_REDUNDANT_INPUT_COPIES = 2,
+    P4_DOOM_MP_READY_INTERVAL_MS = 100,
+    P4_DOOM_MP_READY_TIMEOUT_MS = 30000,
+    P4_DOOM_MP_READY_SETTLE_MS = 100,
 };
 
 typedef struct {
     p4_mp_session_t *session;
     p4_doom_mp_launch_config_t config;
     p4_doom_mp_tic_queue_t queue;
+    p4_doom_mp_engine_barrier_t engine_barrier;
     uint8_t datagram[P4_MP_MAX_DATAGRAM_BYTES];
     int64_t next_keepalive_us;
     uint32_t inputs_sent;
@@ -170,8 +176,24 @@ static void frame_received(
         }
         flush_complete_tics();
     } else if (event.type == P4_MP_EVENT_PING) {
-        (void)send_packet(
-            P4_MP_PACKET_PONG, event.packet.sequence,
+        uint8_t response[P4_DOOM_MP_ENGINE_CONTROL_BYTES];
+        const p4_doom_mp_engine_control_t control =
+            p4_doom_mp_engine_barrier_observe_ping(
+                &s_net.engine_barrier,
+                event.packet.payload, event.packet.payload_length);
+        if (control == P4_DOOM_MP_ENGINE_CONTROL_ACK &&
+            p4_doom_mp_engine_control_encode(control, response)) {
+            (void)send_packet(
+                P4_MP_PACKET_PONG, event.packet.sequence,
+                response, sizeof(response));
+        } else {
+            (void)send_packet(
+                P4_MP_PACKET_PONG, event.packet.sequence,
+                event.packet.payload, event.packet.payload_length);
+        }
+    } else if (event.type == P4_MP_EVENT_PONG) {
+        p4_doom_mp_engine_barrier_observe_pong(
+            &s_net.engine_barrier,
             event.packet.payload, event.packet.payload_length);
     } else if (event.type == P4_MP_EVENT_PEER_LEFT ||
                event.type == P4_MP_EVENT_REJECTED) {
@@ -239,7 +261,59 @@ boolean P4_DoomNetConfigure(net_gamesettings_t *settings)
     settings->extratics = 1;
     settings->ticdup = 1;
     memset(settings->player_classes, 0, sizeof(settings->player_classes));
+    p4_doom_mp_engine_barrier_begin(&s_net.engine_barrier);
+    uint8_t ready[P4_DOOM_MP_ENGINE_CONTROL_BYTES];
+    if (!p4_doom_mp_engine_control_encode(
+            P4_DOOM_MP_ENGINE_CONTROL_READY, ready)) {
+        p4_doom_mp_engine_barrier_init(&s_net.engine_barrier);
+        return false;
+    }
+    ESP_LOGI(TAG,
+             "P4_DOOM_MP ENGINE_BARRIER_WAIT local_slot=%u timeout_ms=%u",
+             (unsigned)s_net.config.local_player_slot,
+             (unsigned)P4_DOOM_MP_READY_TIMEOUT_MS);
+    const int64_t started_us = esp_timer_get_time();
+    int64_t next_ready_us = 0;
+    int64_t ready_since_us = 0;
+    while (true) {
+        const int64_t now_us = esp_timer_get_time();
+        if (next_ready_us == 0 || now_us >= next_ready_us) {
+            if (send_packet(
+                    P4_MP_PACKET_PING, s_net.queue.next_tick,
+                    ready, sizeof(ready)) != ESP_OK &&
+                s_net.send_failures != UINT32_MAX) {
+                ++s_net.send_failures;
+            }
+            next_ready_us = now_us +
+                (int64_t)P4_DOOM_MP_READY_INTERVAL_MS * 1000;
+        }
+        P4_DoomNetPoll();
+        if (p4_doom_mp_engine_barrier_complete(&s_net.engine_barrier)) {
+            if (ready_since_us == 0) {
+                ready_since_us = now_us;
+            } else if (now_us - ready_since_us >=
+                       (int64_t)P4_DOOM_MP_READY_SETTLE_MS * 1000) {
+                break;
+            }
+        }
+        if (now_us - started_us >=
+            (int64_t)P4_DOOM_MP_READY_TIMEOUT_MS * 1000) {
+            ESP_LOGE(TAG,
+                     "P4_DOOM_MP ENGINE_BARRIER_TIMEOUT local_slot=%u "
+                     "peer_ready=%u peer_ack=%u",
+                     (unsigned)s_net.config.local_player_slot,
+                     s_net.engine_barrier.peer_ready ? 1U : 0U,
+                     s_net.engine_barrier.peer_acknowledged ? 1U : 0U);
+            p4_doom_mp_engine_barrier_init(&s_net.engine_barrier);
+            return false;
+        }
+        vTaskDelay(pdMS_TO_TICKS(5U));
+    }
     s_net.configured = true;
+    ESP_LOGI(TAG,
+             "P4_DOOM_MP ENGINE_BARRIER_READY local_slot=%u wait_ms=%" PRIi64,
+             (unsigned)s_net.config.local_player_slot,
+             (esp_timer_get_time() - started_us) / 1000);
     ESP_LOGI(TAG,
              "P4_DOOM_MP ENGINE_CONFIG mode=deathmatch tic_hz=%u "
              "local_slot=%u players=%u input_delay=%u",
@@ -340,4 +414,5 @@ void P4_DoomNetQuit(void)
     }
     s_net.prepared = false;
     s_net.configured = false;
+    p4_doom_mp_engine_barrier_init(&s_net.engine_barrier);
 }

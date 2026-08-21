@@ -78,6 +78,58 @@ static void test_launch_config(void)
     CHECK(!p4_doom_mp_launch_config_valid(&multiplayer));
 }
 
+static void test_engine_barrier(void)
+{
+    uint8_t ready[P4_DOOM_MP_ENGINE_CONTROL_BYTES];
+    uint8_t ack[P4_DOOM_MP_ENGINE_CONTROL_BYTES];
+    CHECK(p4_doom_mp_engine_control_encode(
+              P4_DOOM_MP_ENGINE_CONTROL_READY, ready));
+    CHECK(p4_doom_mp_engine_control_encode(
+              P4_DOOM_MP_ENGINE_CONTROL_ACK, ack));
+    CHECK(!p4_doom_mp_engine_control_encode(
+              P4_DOOM_MP_ENGINE_CONTROL_NONE, ready));
+
+    p4_doom_mp_engine_barrier_t barrier;
+    p4_doom_mp_engine_barrier_init(&barrier);
+    CHECK(!p4_doom_mp_engine_barrier_complete(&barrier));
+
+    /* Launcher teardown may receive READY but must never acknowledge it. */
+    CHECK(p4_doom_mp_engine_barrier_observe_ping(
+              &barrier, ready, sizeof(ready)) ==
+          P4_DOOM_MP_ENGINE_CONTROL_NONE);
+    CHECK(!barrier.peer_ready);
+
+    p4_doom_mp_engine_barrier_begin(&barrier);
+    CHECK(barrier.local_ready);
+    CHECK(!barrier.peer_ready && !barrier.peer_acknowledged);
+    p4_doom_mp_engine_barrier_observe_pong(
+        &barrier, ready, sizeof(ready));
+    CHECK(!barrier.peer_acknowledged);
+    CHECK(p4_doom_mp_engine_barrier_observe_ping(
+              &barrier, ready, sizeof(ready)) ==
+          P4_DOOM_MP_ENGINE_CONTROL_ACK);
+    CHECK(barrier.peer_ready);
+    CHECK(!p4_doom_mp_engine_barrier_complete(&barrier));
+    p4_doom_mp_engine_barrier_observe_pong(
+        &barrier, ack, sizeof(ack));
+    CHECK(p4_doom_mp_engine_barrier_complete(&barrier));
+
+    /* A new configure attempt must not inherit a stale completed handshake. */
+    p4_doom_mp_engine_barrier_begin(&barrier);
+    CHECK(barrier.local_ready);
+    CHECK(!barrier.peer_ready && !barrier.peer_acknowledged);
+    CHECK(p4_doom_mp_engine_barrier_observe_ping(
+              &barrier, ready, sizeof(ready) - 1U) ==
+          P4_DOOM_MP_ENGINE_CONTROL_NONE);
+    ready[0] ^= UINT8_C(0x01);
+    CHECK(p4_doom_mp_engine_barrier_observe_ping(
+              &barrier, ready, sizeof(ready)) ==
+          P4_DOOM_MP_ENGINE_CONTROL_NONE);
+    p4_doom_mp_engine_barrier_observe_pong(
+        &barrier, ack, sizeof(ack) - 1U);
+    CHECK(!barrier.peer_acknowledged);
+}
+
 static void test_lockstep_queue(void)
 {
     p4_doom_mp_tic_queue_t queue;
@@ -141,6 +193,7 @@ int main(void)
 {
     test_input_mapping();
     test_launch_config();
+    test_engine_barrier();
     test_lockstep_queue();
     test_tick_wrap();
     if (s_failures != 0) {

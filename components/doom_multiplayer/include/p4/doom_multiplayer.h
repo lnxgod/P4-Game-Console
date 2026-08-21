@@ -4,6 +4,7 @@
 #define P4_DOOM_MULTIPLAYER_H
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #include "p4/multiplayer.h"
@@ -15,7 +16,20 @@ extern "C" {
 enum {
     P4_DOOM_MP_TICK_RATE_HZ = 35,
     P4_DOOM_MP_TIC_RING_SIZE = 128,
+    P4_DOOM_MP_ENGINE_CONTROL_BYTES = 8,
 };
+
+typedef enum {
+    P4_DOOM_MP_ENGINE_CONTROL_NONE = 0,
+    P4_DOOM_MP_ENGINE_CONTROL_READY,
+    P4_DOOM_MP_ENGINE_CONTROL_ACK,
+} p4_doom_mp_engine_control_t;
+
+typedef struct {
+    bool local_ready;
+    bool peer_ready;
+    bool peer_acknowledged;
+} p4_doom_mp_engine_barrier_t;
 
 /** Padding-free subset of Doom's ticcmd_t used by Doom/Heretic-style play. */
 typedef struct {
@@ -63,6 +77,38 @@ bool p4_doom_mp_tic_from_input(
 
 bool p4_doom_mp_launch_config_valid(
     const p4_doom_mp_launch_config_t *config);
+
+/** Clear every engine-start handshake flag. */
+void p4_doom_mp_engine_barrier_init(
+    p4_doom_mp_engine_barrier_t *barrier);
+
+/** Mark the local Doom engine ready and start a fresh two-way handshake. */
+void p4_doom_mp_engine_barrier_begin(
+    p4_doom_mp_engine_barrier_t *barrier);
+
+/** Encode one fixed-size engine READY or ACK control payload. */
+bool p4_doom_mp_engine_control_encode(
+    p4_doom_mp_engine_control_t control,
+    uint8_t payload[P4_DOOM_MP_ENGINE_CONTROL_BYTES]);
+
+/**
+ * Observe a PING payload. ACK is returned only after the local engine called
+ * begin; launcher teardown can therefore never signal engine readiness.
+ */
+p4_doom_mp_engine_control_t p4_doom_mp_engine_barrier_observe_ping(
+    p4_doom_mp_engine_barrier_t *barrier,
+    const uint8_t *payload,
+    size_t payload_length);
+
+/** Observe a PONG payload and remember a valid acknowledgment of local READY. */
+void p4_doom_mp_engine_barrier_observe_pong(
+    p4_doom_mp_engine_barrier_t *barrier,
+    const uint8_t *payload,
+    size_t payload_length);
+
+/** True only after both engines advertised READY and acknowledged the peer. */
+bool p4_doom_mp_engine_barrier_complete(
+    const p4_doom_mp_engine_barrier_t *barrier);
 
 bool p4_doom_mp_tic_queue_init(
     p4_doom_mp_tic_queue_t *queue,

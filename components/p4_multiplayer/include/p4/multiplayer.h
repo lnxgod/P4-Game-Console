@@ -29,6 +29,8 @@ enum {
     P4_MP_OFFER_PAYLOAD_BYTES = 120,
     P4_MP_JOIN_PAYLOAD_BYTES = 40,
     P4_MP_ACCEPT_PAYLOAD_BYTES = 16,
+    P4_MP_START_PAYLOAD_BYTES = 8,
+    P4_MP_START_SCHEMA = 1,
     P4_MP_PLAYER_SLOT_ANY = 0xff,
 };
 
@@ -248,6 +250,64 @@ bool p4_mp_lobby_offers_compatible(
 bool p4_mp_lobby_join_matches_offer(
     const p4_mp_lobby_offer_t *offer,
     const p4_mp_lobby_join_t *join);
+
+/**
+ * Symmetric pre-game launch barrier. A READY control received from either
+ * peer automatically arms the local side, so one player can start a match
+ * without racing a second button press. Both sides then hold in the launcher
+ * for the same interval before handing hardware ownership to the game.
+ */
+typedef enum {
+    P4_MP_START_IDLE = 0,
+    P4_MP_START_WAITING,
+    P4_MP_START_ARMED,
+    P4_MP_START_DUE,
+    P4_MP_START_TIMED_OUT,
+} p4_mp_start_state_t;
+
+typedef struct {
+    p4_mp_start_state_t state;
+    uint16_t token;
+    uint32_t hold_ms;
+    uint32_t timeout_ms;
+    uint64_t started_ms;
+    uint64_t launch_at_ms;
+} p4_mp_start_barrier_t;
+
+void p4_mp_start_barrier_init(p4_mp_start_barrier_t *barrier);
+
+p4_mp_status_t p4_mp_start_barrier_begin(
+    p4_mp_start_barrier_t *barrier,
+    uint16_t token,
+    uint64_t now_ms,
+    uint32_t hold_ms,
+    uint32_t timeout_ms);
+
+p4_mp_status_t p4_mp_start_barrier_observe_ready(
+    p4_mp_start_barrier_t *barrier,
+    uint16_t token,
+    uint64_t now_ms,
+    uint32_t hold_ms,
+    uint32_t timeout_ms);
+
+p4_mp_start_state_t p4_mp_start_barrier_poll(
+    p4_mp_start_barrier_t *barrier,
+    uint64_t now_ms);
+
+uint32_t p4_mp_start_barrier_remaining_ms(
+    const p4_mp_start_barrier_t *barrier,
+    uint64_t now_ms);
+
+void p4_mp_start_barrier_cancel(p4_mp_start_barrier_t *barrier);
+
+p4_mp_status_t p4_mp_start_ready_encode(
+    uint16_t token,
+    uint8_t payload[P4_MP_START_PAYLOAD_BYTES]);
+
+p4_mp_status_t p4_mp_start_ready_decode(
+    const uint8_t *payload,
+    size_t payload_length,
+    uint16_t *token_out);
 
 typedef enum {
     P4_MP_ROLE_NONE = 0,

@@ -5,6 +5,7 @@ if(COMMAND idf_component_register)
         SRCS
             "src/packet.c"
             "src/lobby.c"
+            "src/start.c"
             "src/session.c"
             "src/stream.c"
             "src/uart_endpoint.c"
@@ -25,6 +26,7 @@ else()
     add_library(p4_multiplayer STATIC
         src/packet.c
         src/lobby.c
+        src/start.c
         src/session.c
         src/stream.c
     )

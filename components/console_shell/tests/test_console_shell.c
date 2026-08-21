@@ -480,6 +480,40 @@ static void test_usb_mode_button(void)
     CHECK(action.app_id == 12U);
 }
 
+static void test_multiplayer_start_lockout(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    shell.page = CONSOLE_PAGE_MULTIPLAYER;
+    shell.active_app_id = APP_DOOM;
+    shell.runtime = (console_shell_runtime_info_t){
+        .doom_wad_ready = true,
+        .multiplayer_lobby_ready = true,
+    };
+
+    console_shell_action_t action =
+        press_button(&shell, CONSOLE_BUTTON_ACCEPT);
+    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM);
+    CHECK(action.app_id == APP_DOOM);
+    action = tap(&shell, 160U, 170U);
+    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM);
+
+    shell.runtime.multiplayer_launch_syncing = true;
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(tap(&shell, 160U, 170U).type == CONSOLE_ACTION_NONE);
+
+    uint16_t *const frame = calloc(
+        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
+        sizeof(*frame));
+    CHECK(frame != NULL);
+    if (frame != NULL) {
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        free(frame);
+    }
+}
+
 static void test_desktop_pages(void)
 {
     console_shell_t shell;
@@ -1088,6 +1122,7 @@ int main(void)
     test_window_manager_visual_contract();
     test_color_modes_and_achievements();
     test_usb_mode_button();
+    test_multiplayer_start_lockout();
     test_desktop_pages();
     test_navigation_and_launch();
     test_system_cartridge_folders();
