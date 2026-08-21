@@ -1,23 +1,22 @@
 # Console OS multiplayer foundation
 
-Multiplayer is an OS service, never a socket API exposed to a game. The first
+Multiplayer is an OS service, never a socket API exposed to a game. The
 implemented slice is an allocation-free C packet and session core with strict
 length checks, CRC32 corruption detection, route binding, replay rejection,
 four-player limits, and immediate neutral input on leave, timeout, or transport
 disconnect. A bounded byte-stream decoder now sits beneath it so chunked or
 noisy UART and USB-device traffic cannot hand malformed lengths to the session
-core. It is host-tested and linked to the Console OS status page. A physical
-UART/USB firmware endpoint, playable lobby, and Doom adapter are not yet
-implemented, so the UI describes the core as ready without claiming a live
-link.
+core. Console OS now owns an H1 UART endpoint, deterministic two-peer Doom
+lobby, and lockstep Doom tic adapter. Both exact Waveshare consoles have passed
+an H1 relay round trip; live two-player gameplay remains a separate acceptance.
 
 The repository now includes `scripts/p4-multiplayer-relay.py`, a bounded
 two-port H1 relay that discards boot/debug text and forwards only complete
 P4MP v1 frames with valid lengths, identities, and CRC32. It opens both serial
 ports exclusively with DTR/RTS inactive, so the relay cannot silently reset a
-console. The firmware UART endpoint is the next boundary; until that endpoint
-is present, the relay and core are host-testable infrastructure rather than a
-playable physical link.
+console. The firmware endpoint and relay are present. Each H1 must connect to
+the host running the relay; H1-to-H1 USB-C cabling cannot connect two USB
+devices.
 
 ## Implemented v1 envelope
 
@@ -52,28 +51,25 @@ owns a driver, allocates memory, or invokes game callbacks.
 
 ## Wired topology on the Waveshare 4.3
 
-The safe first topology keeps both consoles as USB devices and puts a real USB
-host between them:
+The working first topology uses the CH343 bridges on H1 and puts a real host
+between them, leaving H2 available for each console's controller fixture:
 
 ```text
-Console A H2 (USB 2.0 device) --+-- laptop / Raspberry Pi relay
-Console B H2 (USB 2.0 device) --+
+Console A H1 (CH343 USB-UART) --+-- Mac/Linux relay
+Console B H1 (CH343 USB-UART) --+
 ```
 
-H2 is sink/device wired and is not authorized to source VBUS. Two consoles
-therefore cannot be joined directly with a cable, and a powered hub by itself
-does not route traffic between two USB devices. A laptop, Raspberry Pi, or
-other USB host can run the relay; a powered hub is useful only when attached to
-that host. A future composite or exclusive multiplayer USB-device mode can
-carry P4MP frames over CDC or a vendor endpoint. USB 2.0 has ample bandwidth
-for input frames and state snapshots; the host-relay and firmware endpoints
-still need implementation and two-console latency testing.
+H2 remains controller-first and is not the inter-console link. H2 is
+sink/device wired and is not authorized to source VBUS, so its controller-host
+mode still requires the qualified externally powered fixture. A future H2
+USB-device relay can be added, but it must remain exclusive with controller
+host and USB Drive modes.
 
-H1 exposes the ESP32-P4 UART through the on-board CH343. It can prototype the
-same P4MP stream through two serial ports and a host relay, but it is shared
-with programming and diagnostics. Direct board-to-board UART needs a separate,
-electrically authorized 3.3 V TX/RX/GND connection and must not be inferred
-from the USB-UART sockets.
+H1 exposes the ESP32-P4 UART through the on-board CH343. It carries the P4MP
+stream through two serial ports and a host relay and is shared with programming,
+diagnostics, and negotiated content upload. Direct board-to-board UART still
+needs a separate, electrically authorized 3.3 V TX/RX/GND connection and must
+not be inferred from the USB-UART sockets.
 
 The byte-stream decoder supports both paths. It scans for `P4MP` magic, waits
 for the complete bounded header, rejects payloads above 1,024 bytes before
@@ -99,12 +95,9 @@ before Console OS can advertise wireless networking as ready.
 
 ## Remaining implementation order
 
-1. Add the Console OS H1 serial endpoint for the implemented two-port
-   Mac/Linux relay, then add an exclusive H2 USB-device multiplayer mode.
-2. Freeze and test Offer/Join/Accept lobby payload codecs, including exact game
-   and content-hash matching.
-3. Add a lobby state machine and UI, then two-console relay/packet-loss tests.
-4. Add one simple native two-player game and a versioned Game API service
-   before adapting Doom's tic networking for deathmatch.
-5. Qualify on two physical consoles and record disconnect, timeout, desync, and
-   malformed-packet evidence.
+1. Complete live two-console Doom gameplay acceptance with identical WADs.
+2. Record disconnect, timeout, desync, and malformed-packet behavior.
+3. Add same-console player slots and a simple native two-player reference game.
+4. Freeze a versioned multiplayer Game API above the OS-owned P4MP transport.
+5. Consider an exclusive H2 USB-device multiplayer mode after controller-first
+   behavior is preserved.

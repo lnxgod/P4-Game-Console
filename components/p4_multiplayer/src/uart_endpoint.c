@@ -31,6 +31,8 @@ typedef struct {
     p4_mp_stream_decoder_t decoder;
     p4_mp_uart_frame_handler_t handler;
     void *handler_context;
+    p4_mp_uart_raw_handler_t raw_handler;
+    void *raw_handler_context;
     p4_mp_uart_status_t status;
     uint8_t receive[P4_MP_UART_READ_BYTES];
     uint8_t datagram[P4_MP_MAX_DATAGRAM_BYTES];
@@ -84,6 +86,7 @@ esp_err_t p4_mp_uart_endpoint_init(
     s_endpoint.handler = handler;
     s_endpoint.handler_context = handler_context;
     s_endpoint.status.ready = true;
+    s_endpoint.status.baudrate = CONFIG_ESP_CONSOLE_UART_BAUDRATE;
     s_endpoint.status.last_error = ESP_OK;
     s_endpoint.initialized = true;
     ESP_LOGI(TAG,
@@ -109,6 +112,19 @@ esp_err_t p4_mp_uart_endpoint_set_handler(
     }
     s_endpoint.handler = handler;
     s_endpoint.handler_context = handler_context;
+    return ESP_OK;
+}
+
+esp_err_t p4_mp_uart_endpoint_set_raw_handler(
+    p4_mp_uart_raw_handler_t handler,
+    void *handler_context)
+{
+    if (!s_endpoint.initialized) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    s_endpoint.raw_handler = handler;
+    s_endpoint.raw_handler_context =
+        handler == NULL ? NULL : handler_context;
     return ESP_OK;
 }
 
@@ -141,6 +157,16 @@ void p4_mp_uart_endpoint_poll(void)
             break;
         }
         add_counter(&s_endpoint.status.rx_bytes, (size_t)count);
+        if (s_endpoint.raw_handler != NULL &&
+            s_endpoint.raw_handler(
+                s_endpoint.raw_handler_context,
+                s_endpoint.receive,
+                (size_t)count)) {
+            /* A raw session owns complete receive blocks until it terminates.
+             * Drop any partial multiplayer frame from before that handoff. */
+            p4_mp_stream_decoder_init(&s_endpoint.decoder);
+            continue;
+        }
         size_t offset = 0U;
         while (offset < (size_t)count) {
             size_t consumed = 0U;
@@ -206,6 +232,72 @@ esp_err_t p4_mp_uart_endpoint_send(
     add_counter(&s_endpoint.status.tx_frames, 1U);
     s_endpoint.status.last_error = ESP_OK;
     return ESP_OK;
+#endif
+}
+
+esp_err_t p4_mp_uart_endpoint_send_raw(
+    const uint8_t *bytes,
+    size_t bytes_length)
+{
+    if (!s_endpoint.initialized) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (bytes == NULL || bytes_length == 0U ||
+        bytes_length > P4_MP_UART_RAW_TX_MAX_BYTES) {
+        return ESP_ERR_INVALID_ARG;
+    }
+#if !CONFIG_ESP_CONSOLE_UART
+    return ESP_ERR_NOT_SUPPORTED;
+#else
+    const int written = uart_write_bytes(
+        (uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM,
+        bytes,
+        bytes_length);
+    if (written < 0 || (size_t)written != bytes_length) {
+        s_endpoint.status.last_error = ESP_FAIL;
+        return ESP_FAIL;
+    }
+    add_counter(&s_endpoint.status.tx_bytes, bytes_length);
+    s_endpoint.status.last_error = ESP_OK;
+    return ESP_OK;
+#endif
+}
+
+esp_err_t p4_mp_uart_endpoint_wait_tx_done(uint32_t timeout_ms)
+{
+    if (!s_endpoint.initialized || timeout_ms == 0U) {
+        return ESP_ERR_INVALID_STATE;
+    }
+#if !CONFIG_ESP_CONSOLE_UART
+    return ESP_ERR_NOT_SUPPORTED;
+#else
+    const esp_err_t result = uart_wait_tx_done(
+        (uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM,
+        pdMS_TO_TICKS(timeout_ms));
+    s_endpoint.status.last_error = result;
+    return result;
+#endif
+}
+
+esp_err_t p4_mp_uart_endpoint_set_baudrate(uint32_t baudrate)
+{
+    if (!s_endpoint.initialized) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (baudrate < 9600U || baudrate > 2000000U) {
+        return ESP_ERR_INVALID_ARG;
+    }
+#if !CONFIG_ESP_CONSOLE_UART
+    return ESP_ERR_NOT_SUPPORTED;
+#else
+    const esp_err_t result = uart_set_baudrate(
+        (uart_port_t)CONFIG_ESP_CONSOLE_UART_NUM,
+        baudrate);
+    if (result == ESP_OK) {
+        s_endpoint.status.baudrate = baudrate;
+    }
+    s_endpoint.status.last_error = result;
+    return result;
 #endif
 }
 

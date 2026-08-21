@@ -1,0 +1,96 @@
+{
+  "schema": 1,
+  "evidence_id": "waveshare-two-unit-console-os-0.4.40-h1-content-20260820",
+  "status": "installed-content-ready-link-pass",
+  "scope": "Application-only install on two previously backed-up Waveshare 4.3 boards, exact Doom shareware upload to unit 2 through H1, and a bounded H1 P4MP relay probe. No bootloader, partition-table, OTA-data, or backup span was written. No microSD format occurred.",
+  "boards": [
+    {
+      "unit_label": "waveshare-4.3-unit1",
+      "port": "/dev/cu.wchusbserial5C371865781",
+      "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+      "flash_bytes": 33554432,
+      "boot_result": "ready",
+      "storage_result": "app-ready",
+      "multiplayer_uart_result": "ready",
+      "content_uploader_result": "ready"
+    },
+    {
+      "unit_label": "waveshare-4.3-unit2",
+      "port": "/dev/cu.wchusbserial5B901593451",
+      "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+      "flash_bytes": 33554432,
+      "boot_result": "ready",
+      "storage_result": "app-ready-after-h1-upload",
+      "multiplayer_uart_result": "ready",
+      "content_uploader_result": "ready"
+    }
+  ],
+  "candidate": {
+    "source_commit": "761e154a6905c7795a5495f5041a22b211621a2b",
+    "source_state": "dirty-working-tree prototype; exact artifact hashes are authoritative",
+    "app_version": "0.4.40",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "application": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+      "offset": "0x20000",
+      "bytes": 1625456,
+      "sha256": "a6edc3af7b09556a653da30af09d09025282e17e78e89a3fb999ca094ddf93dd"
+    },
+    "elf": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.elf",
+      "bytes": 19275312,
+      "sha256": "e86cbafc2f6cffdbda82bfaffda90ed75fafa9af783a00058517417e7e78bf09"
+    }
+  },
+  "install_result": {
+    "identity_guard": "pass-both",
+    "write": "pass-both",
+    "application_digest_verify": "pass-both",
+    "hard_reset": "pass-both"
+  },
+  "boot_evidence": {
+    "unit1_ready_ms": 26465,
+    "unit2_ready_ms": 16195,
+    "unit1_storage": "app-ready",
+    "unit2_storage_before_upload": "app-missing",
+    "unit2_storage_after_upload": "app-ready",
+    "uart_idle_baud": 115200,
+    "transfer_baud": 921600,
+    "panic_or_reboot_seen_on_accepted_candidate": false
+  },
+  "rejected_prototype": {
+    "application_bytes": 1629536,
+    "application_sha256": "0ba9d6c7231a97b9edeca6c5d998b635125db2aaf5a79ef95782039a379e2d2a",
+    "result": "boot-loop-both",
+    "serial_cause": "Could not reserve internal/DMA pool (error 0x101)",
+    "correction": "The 4096-byte content-transfer chunk buffer was moved from internal static data to runtime PSRAM allocation before accepting the candidate."
+  },
+  "content_transfer": {
+    "tool": "scripts/p4-usb-content.py",
+    "target_unit": "waveshare-4.3-unit2",
+    "transport": "H1 CH343 USB-UART",
+    "idle_baud": 115200,
+    "transfer_baud": 921600,
+    "chunk_bytes": 4096,
+    "destination": "/DOOM1.WAD",
+    "bytes": 4196020,
+    "sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+    "input_repository_status": "ignored-local-data",
+    "device_full_file_readback": "pass",
+    "activation_seconds": 135.5,
+    "post_activation_reboot": "pass",
+    "post_activation_storage": "app-ready"
+  },
+  "link_evidence": {
+    "tool": "scripts/p4-multiplayer-relay.py",
+    "topology": "unit1-H1-to-Mac-relay-to-unit2-H1",
+    "duration_seconds": 8,
+    "discover_probe": true,
+    "result": "pass",
+    "left_received": 1,
+    "left_dropped": 0,
+    "right_received": 1,
+    "right_dropped": 0
+  },
+  "not_yet_claimed": "Manual two-player Doom gameplay acceptance"
+}

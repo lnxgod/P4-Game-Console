@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import binascii
+from dataclasses import dataclass
 import glob
 import hashlib
 import struct
@@ -22,6 +23,8 @@ ROOT = Path(__file__).resolve().parents[1]
 IDLE_BAUD = 115_200
 QUAKE_BYTES = 18_689_235
 QUAKE_SHA256 = "35a9c55e5e5a284a159ad2a62e0e8def23d829561fe2f54eb402dbc0a9a946af"
+DOOM_BYTES = 4_196_020
+DOOM_SHA256 = "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
 MANIFEST_MAGIC = b"P4M1"
 READY_MAGIC = b"P4R1"
 HIGH_MAGIC = b"P4H1"
@@ -29,6 +32,7 @@ CHUNK_MAGIC = b"P4C1"
 ACK_MAGIC = b"P4A1"
 DONE_MAGIC = b"P4D1"
 CONTENT_KIND_QUAKE_SHAREWARE = 1
+CONTENT_KIND_DOOM_SHAREWARE = 2
 
 STATUS_NAMES = {
     0: "ok",
@@ -49,31 +53,61 @@ class TransferError(RuntimeError):
     pass
 
 
+@dataclass(frozen=True)
+class ContentSpec:
+    command: str
+    kind: int
+    bytes: int
+    sha256: str
+    default_path: Path
+
+
+CONTENT_SPECS = {
+    "doom": ContentSpec(
+        command="doom",
+        kind=CONTENT_KIND_DOOM_SHAREWARE,
+        bytes=DOOM_BYTES,
+        sha256=DOOM_SHA256,
+        default_path=ROOT / "local-data/doom/doom1.wad",
+    ),
+    "quake": ContentSpec(
+        command="quake",
+        kind=CONTENT_KIND_QUAKE_SHAREWARE,
+        bytes=QUAKE_BYTES,
+        sha256=QUAKE_SHA256,
+        default_path=ROOT / "local-data/quake/id1/pak0.pak",
+    ),
+}
+
+
 def crc32(data: bytes) -> int:
     return binascii.crc32(data) & 0xFFFF_FFFF
 
 
-def validate_quake(path: Path) -> bytes:
+def validate_content(path: Path, spec: ContentSpec) -> bytes:
     if not path.is_file() or path.is_symlink():
         raise TransferError(f"input must be one regular file: {path}")
-    if path.stat().st_size != QUAKE_BYTES:
+    if path.stat().st_size != spec.bytes:
         raise TransferError(
-            f"wrong Quake shareware size: expected {QUAKE_BYTES}, got {path.stat().st_size}"
+            f"wrong {spec.command} shareware size: "
+            f"expected {spec.bytes}, got {path.stat().st_size}"
         )
     digest = hashlib.sha256()
     with path.open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
             digest.update(block)
-    if digest.hexdigest() != QUAKE_SHA256:
-        raise TransferError("input is not the exact Quake v1.06 shareware PAK")
+    if digest.hexdigest() != spec.sha256:
+        raise TransferError(
+            f"input is not the exact supported {spec.command} shareware data"
+        )
     return digest.digest()
 
 
-def make_manifest(size: int, digest: bytes) -> bytes:
+def make_manifest(kind: int, size: int, digest: bytes) -> bytes:
     body = struct.pack(
         "<4sBBHI32s",
         MANIFEST_MAGIC,
-        CONTENT_KIND_QUAKE_SHAREWARE,
+        kind,
         0,
         0,
         size,
@@ -106,7 +140,7 @@ def open_port(path: str) -> serial.Serial:
     connection = serial.Serial()
     connection.port = path
     connection.baudrate = IDLE_BAUD
-    connection.timeout = 0.1
+    connection.timeout = 0.02
     connection.write_timeout = 10
     connection.dtr = False
     connection.rts = False
@@ -130,7 +164,7 @@ def read_frame(
     deadline = time.monotonic() + timeout
     buffered = bytearray()
     while time.monotonic() < deadline:
-        block = connection.read(4096)
+        block = connection.read(max(1, connection.in_waiting))
         if block:
             buffered.extend(block)
             location = buffered.find(marker)
@@ -147,7 +181,9 @@ def status_name(status: int) -> str:
     return STATUS_NAMES.get(status, f"unknown-{status}")
 
 
-def wait_for_quake_ready(connection: serial.Serial, timeout: float = 600.0) -> bool:
+def wait_for_content_ready(
+    connection: serial.Serial, spec: ContentSpec, timeout: float = 600.0
+) -> bool:
     connection.baudrate = IDLE_BAUD
     connection.reset_input_buffer()
     deadline = time.monotonic() + timeout
@@ -156,7 +192,13 @@ def wait_for_quake_ready(connection: serial.Serial, timeout: float = 600.0) -> b
         block = connection.read(4096)
         if block:
             buffered.extend(block)
-            if b"CONTENT_READY" in buffered and b"quake_shareware=1" in buffered:
+            if spec.command == "doom":
+                if (
+                    b"GAME_STORAGE state=app-ready" in buffered
+                    and b"P4_MP_UART_READY" in buffered
+                ):
+                    return True
+            elif b"CONTENT_READY" in buffered and b"quake_shareware=1" in buffered:
                 return True
             if len(buffered) > 64 * 1024:
                 del buffered[:32 * 1024]
@@ -165,23 +207,23 @@ def wait_for_quake_ready(connection: serial.Serial, timeout: float = 600.0) -> b
     return False
 
 
-def install_quake(path: Path, port: str) -> None:
-    print(f"P4_USB validating {path}")
-    digest = validate_quake(path)
-    manifest = make_manifest(QUAKE_BYTES, digest)
+def install_content(spec: ContentSpec, path: Path, port: str) -> None:
+    print(f"P4_H1 validating kind={spec.command} path={path}")
+    digest = validate_content(path, spec)
+    manifest = make_manifest(spec.kind, spec.bytes, digest)
 
     with open_port(port) as connection:
-        print(f"P4_USB connecting port={port} baud={IDLE_BAUD}")
+        print(f"P4_H1 connecting port={port} baud={IDLE_BAUD}")
         time.sleep(0.25)
         write_all(connection, manifest)
-        # An already-installed PAK is re-hashed before the badge reports that
+        # Already-installed content is re-hashed before the badge reports that
         # result. Slow 1-bit cards can need several minutes for this gate.
         ready = read_frame(connection, READY_MAGIC, 11, 600.0)
         status = ready[4]
         transfer_baud = struct.unpack_from("<I", ready, 5)[0]
         chunk_bytes = struct.unpack_from("<H", ready, 9)[0]
         if status == 10:
-            print("P4_USB INSTALLED result=already-present hash=verified")
+            print("P4_H1 INSTALLED result=already-present hash=verified")
             return
         if status != 0:
             raise TransferError(f"badge rejected manifest: {status_name(status)}")
@@ -212,12 +254,12 @@ def install_quake(path: Path, port: str) -> None:
                     )
                 sent += len(payload)
                 sequence += 1
-                percent = sent * 100 // QUAKE_BYTES
+                percent = sent * 100 // spec.bytes
                 if percent >= last_percent + 5 or percent == 100:
                     elapsed = max(time.monotonic() - started, 0.001)
                     rate_kib = sent / elapsed / 1024
                     print(
-                        f"P4_USB progress={percent:3d}% bytes={sent}/{QUAKE_BYTES} "
+                        f"P4_H1 progress={percent:3d}% bytes={sent}/{spec.bytes} "
                         f"rate={rate_kib:.0f}KiB/s"
                     )
                     last_percent = percent
@@ -230,45 +272,47 @@ def install_quake(path: Path, port: str) -> None:
         installed_digest = done[9:41]
         if done_status != 0:
             raise TransferError(f"badge failed activation: {status_name(done_status)}")
-        if installed_bytes != QUAKE_BYTES or installed_digest != digest:
+        if installed_bytes != spec.bytes or installed_digest != digest:
             raise TransferError("badge completion proof does not match the source")
         elapsed = time.monotonic() - started
         print(
-            f"P4_USB ACTIVATED bytes={installed_bytes} sha256={digest.hex()} "
+            f"P4_H1 ACTIVATED bytes={installed_bytes} sha256={digest.hex()} "
             f"seconds={elapsed:.1f}"
         )
-        if not wait_for_quake_ready(connection):
+        if not wait_for_content_ready(connection, spec):
             raise TransferError(
-                "content activated, but the reboot log did not confirm Quake before timeout"
+                "content activated, but the reboot log did not confirm it before timeout"
             )
-        print("P4_USB PASS rebooted=1 quake_shareware=1 launcher_enabled=1")
+        print(f"P4_H1 PASS rebooted=1 {spec.command}_shareware=1")
 
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(
-        description="Copy verified game content to a running P4 Console OS over USB."
+        description=(
+            "Copy verified game content to a running P4 Console OS through "
+            "the H1 USB-UART port."
+        )
     )
     subparsers = result.add_subparsers(dest="kind", required=True)
-    quake = subparsers.add_parser(
-        "quake", help="install the exact Quake v1.06 shareware PAK"
-    )
-    quake.add_argument(
-        "input",
-        nargs="?",
-        type=Path,
-        default=ROOT / "local-data/quake/id1/pak0.pak",
-    )
-    quake.add_argument("--port")
+    for command, spec in CONTENT_SPECS.items():
+        content = subparsers.add_parser(
+            command,
+            help=f"install the exact supported {command} shareware data",
+        )
+        content.add_argument(
+            "input", nargs="?", type=Path, default=spec.default_path
+        )
+        content.add_argument("--port")
     return result
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
-        if args.kind == "quake":
-            install_quake(args.input.resolve(), args.port or detect_port())
+        spec = CONTENT_SPECS[args.kind]
+        install_content(spec, args.input.resolve(), args.port or detect_port())
     except (OSError, serial.SerialException, TransferError) as error:
-        print(f"P4_USB FAILED reason={error}", file=sys.stderr)
+        print(f"P4_H1 FAILED reason={error}", file=sys.stderr)
         return 2
     return 0
 

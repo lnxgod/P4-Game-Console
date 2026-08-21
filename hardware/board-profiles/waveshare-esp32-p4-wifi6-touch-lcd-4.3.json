@@ -57,12 +57,25 @@
     },
     "storage": {
       "authorized": true,
-      "scope": "exact-unit-read-only-console-os-mount plus exclusive H2 USB-device MSC host transfer",
-      "resources": "on-chip LDO channel 4; SDMMC0 at 1 MHz in one-bit mode on GPIO43 CLK, GPIO44 CMD, and GPIO39 D0; native H2 USB device on GPIO24/GPIO25",
+      "scope": "exact-unit Console OS mount plus exclusive H2 USB-device MSC host transfer and hash-gated H1 UART content staging",
+      "resources": "on-chip LDO channel 4; SDMMC0 at 1 MHz in one-bit mode on GPIO43 CLK, GPIO44 CMD, and GPIO39 D0; native H2 USB device on GPIO24/GPIO25; H1 CH343 USB-UART",
       "evidence": "hardware/test-runs/2026-08-16-waveshare-console-os-0.4.3-dtmf-dynamic-sd-install.json",
       "formatting_authorized": false,
       "writes_authorized": true,
-      "write_scope": "host WRITE(10) only while TinyUSB exclusively owns the unmounted microSD; each transfer is synchronously read back before success"
+      "write_scope": "host WRITE(10) while TinyUSB exclusively owns the unmounted microSD, or an OS-owned H1 upload to one fixed non-runnable staging name while the app exclusively owns the mounted FAT volume; no formatting or host-selected device path; size, chunk CRC32, exact content SHA-256, fsync, atomic rename, and final full-file readback are required",
+      "h1_uart_upload": {
+        "authorized": true,
+        "authorization_basis": "explicit operator request on 2026-08-20 for the two already backed-up exact units",
+        "device_identity_sha256": [
+          "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+          "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79"
+        ],
+        "idle_baud": 115200,
+        "transfer_baud": 921600,
+        "formatting_authorized": false,
+        "arbitrary_paths_authorized": false,
+        "hardware_acceptance": false
+      }
     },
     "wifi_scan": {
       "authorized": false,

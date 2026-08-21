@@ -37,6 +37,7 @@
 #include "p4/bbs_ui.h"
 #include "p4/cartridge.h"
 #include "p4/content_catalog.h"
+#include "p4/content_transfer.h"
 #include "p4/desktop.h"
 #include "p4/doom_multiplayer.h"
 #include "p4/draw.h"
@@ -1830,7 +1831,7 @@ static console_shell_runtime_info_t runtime_info(void)
         .doom_wad_ready =
             s_game_storage_status.state == PLATFORM_GAME_STORAGE_APP_READY,
         .content_scan_complete = s_catalog_seen,
-        .usb_content_ready = false,
+        .usb_content_ready = p4_content_transfer_info().ready,
         .multiplayer_core_ready = true,
         .multiplayer_transport_ready = multiplayer.ready,
         .multiplayer_peer_seen = multiplayer_peer_seen,
@@ -1872,6 +1873,36 @@ static const uint8_t s_doom_shareware_sha256[P4_MP_SHA256_BYTES] = {
 };
 
 static uint8_t s_multiplayer_tx_datagram[P4_MP_MAX_DATAGRAM_BYTES];
+
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+static esp_err_t content_uart_send(
+    void *context, const uint8_t *bytes, size_t bytes_length)
+{
+    (void)context;
+    return p4_mp_uart_endpoint_send_raw(bytes, bytes_length);
+}
+
+static esp_err_t content_uart_wait_tx(
+    void *context, uint32_t timeout_ms)
+{
+    (void)context;
+    return p4_mp_uart_endpoint_wait_tx_done(timeout_ms);
+}
+
+static esp_err_t content_uart_set_baud(
+    void *context, uint32_t baudrate)
+{
+    (void)context;
+    return p4_mp_uart_endpoint_set_baudrate(baudrate);
+}
+
+static bool content_uart_consume(
+    void *context, const uint8_t *bytes, size_t bytes_length)
+{
+    (void)context;
+    return p4_content_transfer_consume(bytes, bytes_length);
+}
+#endif
 
 static uint32_t random_nonzero(void)
 {
@@ -2223,7 +2254,13 @@ static void multiplayer_frame_received(
 
 static void poll_multiplayer_link(const console_shell_t *shell)
 {
+    p4_content_transfer_set_available(
+        storage_app_owned() && !p4cart_scan_running());
+    p4_content_transfer_poll();
     p4_mp_uart_endpoint_poll();
+    if (p4_content_transfer_info().busy) {
+        return;
+    }
     if (!s_multiplayer_transport_ready || shell == NULL) {
         return;
     }
@@ -5270,6 +5307,26 @@ void app_main(void)
                      "P4_CONSOLE_OS MULTIPLAYER_LOBBY_DEGRADED error=%s",
                      esp_err_to_name(lobby_result));
         }
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+        const p4_content_transfer_transport_t content_transport = {
+            .send = content_uart_send,
+            .wait_tx = content_uart_wait_tx,
+            .set_baud = content_uart_set_baud,
+            .context = NULL,
+            .idle_baud = CONFIG_ESP_CONSOLE_UART_BAUDRATE,
+        };
+        esp_err_t content_result = p4_content_transfer_init(
+            PLATFORM_GAME_STORAGE_MOUNT_POINT, &content_transport);
+        if (content_result == ESP_OK) {
+            content_result = p4_mp_uart_endpoint_set_raw_handler(
+                content_uart_consume, NULL);
+        }
+        if (content_result != ESP_OK) {
+            ESP_LOGW(TAG,
+                     "P4_CONSOLE_OS H1_CONTENT_DEGRADED error=%s",
+                     esp_err_to_name(content_result));
+        }
+#endif
     } else {
         ESP_LOGW(TAG,
                  "P4_CONSOLE_OS MULTIPLAYER_LINK_DEGRADED "
@@ -5293,6 +5350,13 @@ void app_main(void)
     for (;;) {
         ++s_loop_count;
         poll_multiplayer_link(shell);
+        if (p4_content_transfer_info().busy) {
+            /* H1 provisioning owns UART and the mounted FAT volume until its
+             * verified staging transaction finishes and reboots. */
+            vTaskDelayUntil(&last_wake,
+                            pdMS_TO_TICKS(CONSOLE_FRAME_INTERVAL_MS));
+            continue;
+        }
 #if P4_CONSOLE_USB_INPUT
         confirm_usb_enum_probe_after_stable_runtime();
 #endif

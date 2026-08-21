@@ -26,6 +26,7 @@ set(P4_CONSOLE_MAIN_REQUIREMENTS
     p4_game_api
     p4_game_save
     p4_multiplayer
+    p4_usb_content_transfer
     p4_lua_runtime
     p4_script_audio
     p4_script_renderer

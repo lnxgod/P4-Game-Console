@@ -33,19 +33,28 @@ invalid names, invalid containers, occupied staging files, and an existing
 destination. Use `--replace` only when replacement is intentional. It never
 formats the card or deletes unrelated content.
 
-## Retired Quake compatibility tooling
+## H1 verified content upload
 
-The source tree retains the pinned Quake port and its exact-data validators for
-historical development. They are not linked into current Console OS builds,
-Quake is not shown in the launcher, and the device-side serial receiver is not
-started. The old host command remains for isolated port work only:
+Waveshare Console OS shares H1 between diagnostics, multiplayer, and an
+OS-owned content receiver. Stop the multiplayer relay, leave the console at the
+launcher, and select the exact H1 port when two consoles are attached:
 
 ```sh
+python3 scripts/p4-usb-content.py doom \
+  --port /dev/cu.wchusbserial...
 python3 scripts/p4-usb-content.py quake
 ```
 
-Do not use that command against current Console OS; no compatible receiver is
-linked. The port's separate game data remains ignored and unredistributed.
+The manifest starts at the normal 115200 baud. After exact size and SHA-256
+validation, both sides negotiate 921600 baud for 4096-byte CRC32-protected
+chunks. Firmware writes only the fixed target's reserved temporary name,
+syncs it, verifies the complete received hash, atomically renames it, performs
+a full SD readback hash, and then reboots to restore ordinary H1 multiplayer.
+Interrupted and invalid transfers never create a runnable target. WADs and
+other game data remain ignored local inputs and are never committed.
+
+The retained Quake command supports its pinned historical shareware PAK, but
+Quake remains hidden from the current launcher.
 
 ## Device behavior
 
@@ -54,7 +63,7 @@ linked. The port's separate game data remains ignored and unredistributed.
   restoring the card rebuilds the catalog.
 - Game Manager refresh performs a new bounded background P4 Cart scan without
   blocking the launcher or writing the card.
-- Device-side USB import reports unavailable; it never formats the card or
-  accepts a host-supplied destination path.
+- H1 import never formats the card or accepts a host-supplied destination
+  path; only exact OS-known content identities can select fixed targets.
 - Mounted-card imports use the host tool's validate, stage, sync, read-back,
   and atomic-rename transaction.
