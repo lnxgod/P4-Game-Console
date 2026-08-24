@@ -367,6 +367,86 @@ static void test_dragon_growth_and_traits(void)
     }
     CHECK(recipe_count == 19200U);
 
+    CHECK(byte_buddy_signal_recipe_id(0U, 0U, 0U, 0U, 0U, 0U) == 0U);
+    CHECK(byte_buddy_signal_recipe_id(3U, 3U, 3U, 3U, 7U, 3U) ==
+          8191U);
+    CHECK(byte_buddy_signal_recipe_id(
+              UINT8_MAX, UINT8_MAX, UINT8_MAX, UINT8_MAX,
+              UINT8_MAX, UINT8_MAX) == 0U);
+    static bool signal_recipe_seen[8192];
+    static bool derived_signal_recipe_seen[8192];
+    static const uint16_t rarity_rolls[4] = {256U, 64U, 8U, 0U};
+    uint32_t signal_recipe_count = 0U;
+    uint32_t derived_signal_recipe_count = 0U;
+    for (uint8_t core = 0U; core < 4U; ++core) {
+        for (uint8_t halo = 0U; halo < 4U; ++halo) {
+            for (uint8_t sigil = 0U; sigil < 4U; ++sigil) {
+                for (uint8_t aura = 0U; aura < 4U; ++aura) {
+                    for (uint8_t hue = 0U; hue < 8U; ++hue) {
+                        for (uint8_t rarity = 0U; rarity < 4U; ++rarity) {
+                            const uint16_t signal_recipe =
+                                byte_buddy_signal_recipe_id(
+                                    core, halo, sigil, aura, hue, rarity);
+                            CHECK(signal_recipe < 8192U);
+                            if (signal_recipe < 8192U) {
+                                CHECK(!signal_recipe_seen[signal_recipe]);
+                                signal_recipe_seen[signal_recipe] = true;
+                                ++signal_recipe_count;
+                            }
+                            const uint64_t token = rarity_rolls[rarity] |
+                                (uint64_t)hue << 18U |
+                                (uint64_t)core << 21U |
+                                (uint64_t)halo << 23U |
+                                (uint64_t)aura << 25U |
+                                (uint64_t)sigil << 27U;
+                            const byte_buddy_signal_genome_t derived =
+                                byte_buddy_signal_genome(token);
+                            CHECK(derived.core == core &&
+                                  derived.halo == halo &&
+                                  derived.sigil == sigil &&
+                                  derived.aura == aura &&
+                                  derived.hue == hue &&
+                                  derived.rarity == rarity &&
+                                  derived.recipe_id == signal_recipe);
+                            CHECK(derived.recipe_id < 8192U);
+                            if (derived.recipe_id < 8192U) {
+                                CHECK(!derived_signal_recipe_seen[
+                                    derived.recipe_id]);
+                                derived_signal_recipe_seen[
+                                    derived.recipe_id] = true;
+                                ++derived_signal_recipe_count;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    CHECK(signal_recipe_count == 8192U);
+    CHECK(derived_signal_recipe_count == 8192U);
+    const uint64_t genome_token = UINT64_C(0x00123456789abcde);
+    const byte_buddy_signal_genome_t genome =
+        byte_buddy_signal_genome(genome_token);
+    const byte_buddy_signal_genome_t repeated_genome =
+        byte_buddy_signal_genome(genome_token);
+    CHECK(genome.core == repeated_genome.core &&
+          genome.halo == repeated_genome.halo &&
+          genome.sigil == repeated_genome.sigil &&
+          genome.aura == repeated_genome.aura &&
+          genome.hue == repeated_genome.hue &&
+          genome.rarity == repeated_genome.rarity &&
+          genome.recipe_id == repeated_genome.recipe_id);
+    CHECK(genome.core < 4U && genome.halo < 4U &&
+          genome.sigil < 4U && genome.aura < 4U && genome.hue < 8U &&
+          genome.rarity < 4U);
+    CHECK(genome.recipe_id == byte_buddy_signal_recipe_id(
+              genome.core, genome.halo, genome.sigil,
+              genome.aura, genome.hue, genome.rarity));
+    const byte_buddy_signal_genome_t changed_genome =
+        byte_buddy_signal_genome(genome_token ^ (UINT64_C(1) << 21U));
+    CHECK(changed_genome.core != genome.core);
+    CHECK(changed_genome.recipe_id != genome.recipe_id);
+
     CHECK(byte_buddy_level_for_interactions(0U) == 1U);
     CHECK(byte_buddy_level_for_interactions(7U) == 1U);
     CHECK(byte_buddy_level_for_interactions(8U) == 2U);

@@ -19,6 +19,10 @@ game.
 Version 3.3 fills the remaining text-only item presentation with original care,
 Power, Style, and Remix icons. The Style shop can now deterministically remix
 owned components into a numbered look recipe while preserving player purchases.
+Version 3.4 gives every fantasy Wi-Fi encounter a composed signal-seed graphic.
+Six stable traits select its core, halo, elemental sigil, aura, mutation
+palette, and rarity shine, producing 8,192 numbered designs from sixteen
+reusable art layers.
 
 ## Touch play
 
@@ -96,6 +100,15 @@ The inherited two-family wing trait and eight mutation hues extend that to
 changes a component when that category has alternatives, and shows the stable
 mixed-radix `LOOK` number for the resulting recipe.
 
+Signals use a separate deterministic genome derived only from their opaque
+session token. Four cores, four halos, four elemental sigils, four auras,
+eight mutation palettes, and four rarity ranks make 8,192 bounded signal-seed
+recipes. The same
+composed seed and `GENE` number follow an encounter from the scan list into
+tracking and battle; changing RSSI affects challenge and reward, never identity.
+Fire, Ice, and Acid crests match battle affinity; the mystery-star crest keeps
+its affinity concealed until play reveals it.
+
 ## Growth and inherited traits
 
 Every successful care action, pet, and caught star counts as interaction. The
@@ -128,10 +141,11 @@ Care style determines the mature branch rather than a menu choice:
   early stages and choose a dedicated PixelLab adult family when rare art is
   unlocked.
 
-Animation and UI use 384 authored 64×64 source frames: four-frame ambient clips,
+Animation and UI use 400 authored 64×64 source frames: four-frame ambient clips,
 eight-frame care and power reactions, a dedicated shell-to-baby hatch, four
 signal-genetic flight families, four Star Catcher reward/effect loops, and
-sixteen care/Power/Style/Remix item sprites. The renderer eases palette color between adjacent
+sixteen care/Power/Style/Remix item sprites plus sixteen composable signal
+layers. The renderer eases palette color between adjacent
 poses while switching non-overlapping silhouette pixels together at the
 midpoint. This avoids the ghosted double silhouettes caused by per-pixel edge
 dithering while preserving crisp authored poses.
@@ -176,14 +190,17 @@ while Console OS keeps the compatible stable surface and touch mapping.
 
 ## Generated source art
 
-The twenty-five PNGs in `assets/` are original project inputs generated in
+The twenty-six PNGs in `assets/` are original project inputs generated in
 PixelLab or ImageGen for this game. Six PixelLab gameplay sheets are transparent
 256×256 4-by-4 grids, and the retained 64×64 style anchor keeps later ImageGen
-sheets cohesive. Eighteen 1254×1254 ImageGen grids add two egg families, baby
+sheets cohesive. Nineteen 1254×1254 ImageGen grids add two egg families, baby
 reactions, flight cycles, elemental breath, nine motion expansions, a hatch
-transition, signal-genetic motion, and Star Catcher rewards. Some
+transition, signal-genetic motion, Star Catcher rewards, items, and signal
+genome layers. Some
 ImageGen grids have a baked neutral checkerboard; the deterministic converter
-removes only border-connected neutral pixels and leaves source files untouched.
+removes border-connected neutral pixels and leaves source files untouched. For
+the composable halo/aura sheet, it also removes only enclosed neutral components
+large enough to be background, preserving small white highlights and sigils.
 
 | File | SHA-256 |
 | --- | --- |
@@ -212,6 +229,7 @@ removes only border-connected neutral pixels and leaves source files untouched.
 | `byte_buddy_dragon_signal_genetics_imagegen_v3.png` | `eddef200a2449753a08dedbfc5cf4c69fe75b8f154b141f80a031e8303bc9937` |
 | `byte_buddy_star_catcher_rewards_imagegen_v4.png` | `166f98b052a89f1d30b9a59fbce317f350a1df4a1dc48be30662ec623b5bc67f` |
 | `byte_buddy_items_components_imagegen_v5.png` | `e8fade6f70766057b1915d0d3b0f2143f6fe7c2ce723ee1004cd5243e8732b68` |
+| `byte_buddy_signal_genome_layers_imagegen_v6.png` | `a52c1f331f1afb4cca20d5bc8d350c9f45cbb256fe05aa739cd532d903d8b503` |
 
 The exact prompts are retained here so later sheets can match the same art
 direction.
@@ -403,6 +421,31 @@ Power upgrades, Style categories, and a four-frame Remix prism respectively.
 > shadow, scenery, dragon character, extra objects, merged cells, overlap, or
 > frame bleed. Every cell remains readable at 64×64 pixels.
 
+### ImageGen signal genome layers
+
+`byte_buddy_signal_genome_layers_imagegen_v6.png` was generated and refined
+with the built-in OpenAI ImageGen tool on 2026-08-23 as original project art.
+The v5 item atlas supplied exact pixel-art continuity and the Signal Hunt
+concept supplied subject/color continuity. The accepted 1254×1254 source keeps
+an exact 4-by-4 layout: neutral cores, empty-center halos, small elemental
+sigils, and empty-center auras. Runtime code stacks one frame from each row and
+applies one of eight bounded mutation palettes.
+
+> Use case: precise-object-edit. Asset type: composable 4-by-4 Byte Buddy
+> signal-genome sprite atlas. Preserve the exact grid, sixteen positions,
+> pixel-art style, palette, scale, and layer geometry. In Row 1, use four
+> neutral base silhouettes—luminous jewel orb, faceted crystal seed,
+> triangular signal pod, and comet-heart capsule—with no elemental symbols.
+> Row 2 contains only four empty-center halo overlays: radio-wave arcs,
+> three-node antenna crown, satellite orbit, and angular pulse waveform. Row 3
+> contains only four small centered sigils: mystery star, flame, snow crystal,
+> and acid droplet. Row 4 contains only four empty-center aura overlays: star
+> sparks, prism shards, round motes, and digital pulse fragments. Use crisp
+> hand-crafted 16-bit pixel art, chunky midnight-navy outlines, and the Byte
+> Buddy cyan, violet, coral, gold, emerald palette. One crop-safe layer per
+> cell; no dragons, scenery, floor, shadows, borders, text, logos, watermark,
+> or neighboring-cell overlap.
+
 ## Deterministic atlas conversion
 
 `tools/png_to_dragon_atlas.py` scales each source sheet to 256×256 with
@@ -412,8 +455,8 @@ two 4-bit indices are packed per byte. A frame therefore occupies 2,080 bytes
 instead of 8,192 bytes of raw RGB565.
 
 The first six sheets form a 199,744-byte built-in `BBDART2` fallback inside the
-`.P4G`. All twenty-four gameplay sheets contain 384 master frames in a
-798,784-byte
+`.P4G`. All twenty-five gameplay sheets contain 400 master frames in an
+832,064-byte
 resource payload. The
 Console OS build wraps that payload as `BYTEBUD.P4R`: a bounded, same-ID,
 SHA-256-verified read-only SD sidecar. The executable remains under the existing
@@ -456,7 +499,8 @@ python3 games/byte_buddy/tools/png_to_dragon_atlas.py \
   games/byte_buddy/assets/byte_buddy_dragon_hatch_transitions_imagegen_v3.png \
   games/byte_buddy/assets/byte_buddy_dragon_signal_genetics_imagegen_v3.png \
   games/byte_buddy/assets/byte_buddy_star_catcher_rewards_imagegen_v4.png \
-  games/byte_buddy/assets/byte_buddy_items_components_imagegen_v5.png
+  games/byte_buddy/assets/byte_buddy_items_components_imagegen_v5.png \
+  games/byte_buddy/assets/byte_buddy_signal_genome_layers_imagegen_v6.png
 
 python3 scripts/build-game-resource.py \
   --manifest games/byte_buddy/game.json \
@@ -467,11 +511,11 @@ python3 scripts/build-game-resource.py \
 Current deterministic art identities:
 
 - built-in include: `450156a7e0b1179934f5286b24208906f6350dd1b823affb3aba0a42a122ece2`;
-- full `BBDART2` payload: `2ffea92ef62ef42912fe0c69e36995066a73da278130492ac23cd684bd3f4f69`;
-- wrapped `BYTEBUD.P4R`: 798,912 bytes,
-  `952577cf147580aa92d1932a649c71cc33079a099593f9d6983f5fc118877d9f`.
+- full `BBDART2` payload: `a0b245a4d9583e78b26397865d3b13fea556ef413aca7b8f22567e8e09dbad57`;
+- wrapped `BYTEBUD.P4R`: 832,192 bytes,
+  `ae1d39daa3cf444e628b1248ff3ea7f83b57e1718a1a75ff476e65151f8650ca`.
 
-No v3.3 `.P4G` hash is claimed by this host-only art conversion. Record it
+No v3.4 `.P4G` hash is claimed by this host-only art conversion. Record it
 only after the focused RISC-V cartridge build and verifier pass.
 
 ## Verification

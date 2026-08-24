@@ -77,7 +77,8 @@ enum {
     DRAGON_SIGNAL_GENETICS_SHEET = 21,
     STAR_CATCHER_REWARD_SHEET = 22,
     BYTE_BUDDY_ITEM_COMPONENT_SHEET = 23,
-    DRAGON_EXTENDED_SHEET_COUNT = 24,
+    BYTE_BUDDY_SIGNAL_GENOME_SHEET = 24,
+    DRAGON_EXTENDED_SHEET_COUNT = 25,
     ACHIEVEMENT_FIRST_CARE = UINT32_C(1) << 0U,
     ACHIEVEMENT_CLEAN = UINT32_C(1) << 1U,
     ACHIEVEMENT_PLAY = UINT32_C(1) << 2U,
@@ -638,8 +639,12 @@ byte_buddy_signal_profile_t byte_buddy_signal_profile(
     if (hp > UINT8_MAX) {
         hp = UINT8_MAX;
     }
-    unsigned element_bits = (unsigned)((token >> 10U) & UINT64_C(3));
-    if (element_bits == 3U) {
+    const unsigned sigil_bits =
+        (unsigned)((token >> 27U) & UINT64_C(3));
+    unsigned element_bits = sigil_bits == 0U
+        ? (unsigned)((token >> 10U) & UINT64_C(3))
+        : sigil_bits - 1U;
+    if (element_bits >= 3U) {
         element_bits = 0U;
     }
     return (byte_buddy_signal_profile_t){
@@ -650,6 +655,39 @@ byte_buddy_signal_profile_t byte_buddy_signal_profile(
         .strength = (uint8_t)strength,
         .reward_coins = (uint8_t)reward,
         .battle_hp = (uint8_t)hp,
+    };
+}
+
+uint16_t byte_buddy_signal_recipe_id(
+    uint8_t core, uint8_t halo, uint8_t sigil,
+    uint8_t aura, uint8_t hue, uint8_t rarity)
+{
+    uint16_t recipe = core < 4U ? core : 0U;
+    recipe = (uint16_t)(recipe * 4U + (halo < 4U ? halo : 0U));
+    recipe = (uint16_t)(recipe * 4U + (sigil < 4U ? sigil : 0U));
+    recipe = (uint16_t)(recipe * 4U + (aura < 4U ? aura : 0U));
+    recipe = (uint16_t)(recipe * 8U + (hue < 8U ? hue : 0U));
+    return (uint16_t)(recipe * 4U + (rarity < 4U ? rarity : 0U));
+}
+
+byte_buddy_signal_genome_t byte_buddy_signal_genome(uint64_t token)
+{
+    const byte_buddy_signal_profile_t profile =
+        byte_buddy_signal_profile(token, -100);
+    const uint8_t core = (uint8_t)((token >> 21U) & UINT64_C(3));
+    const uint8_t halo = (uint8_t)((token >> 23U) & UINT64_C(3));
+    const uint8_t aura = (uint8_t)((token >> 25U) & UINT64_C(3));
+    const uint8_t sigil = (uint8_t)((token >> 27U) & UINT64_C(3));
+    const uint8_t rarity = (uint8_t)(profile.rarity - 1U);
+    return (byte_buddy_signal_genome_t){
+        .core = core,
+        .halo = halo,
+        .sigil = sigil,
+        .aura = aura,
+        .hue = profile.hue,
+        .rarity = rarity,
+        .recipe_id = byte_buddy_signal_recipe_id(
+            core, halo, sigil, aura, profile.hue, rarity),
     };
 }
 
@@ -2250,6 +2288,68 @@ static bool draw_art_frame_scaled(p4_game_surface_t *surface,
     return true;
 }
 
+static uint16_t signal_layer_color(uint16_t value, uint8_t hue)
+{
+    const unsigned red = ((unsigned)value >> 11U) & 31U;
+    const unsigned green = ((unsigned)value >> 5U) & 63U;
+    const unsigned blue = (unsigned)value & 31U;
+    const unsigned maximum = red > blue ? red : blue;
+    if ((maximum < 7U && green < 14U) ||
+        (red >= 24U && green >= 38U && blue <= 13U) ||
+        (red >= 27U && green >= 54U && blue >= 27U)) {
+        return lift_sprite_color(value);
+    }
+    const uint16_t target = signal_color_for_hue(hue);
+    const unsigned target_red = ((unsigned)target >> 11U) & 31U;
+    const unsigned target_green = ((unsigned)target >> 5U) & 63U;
+    const unsigned target_blue = (unsigned)target & 31U;
+    const unsigned mixed_red = (red * 5U + target_red * 3U) / 8U;
+    const unsigned mixed_green = (green * 5U + target_green * 3U) / 8U;
+    const unsigned mixed_blue = (blue * 5U + target_blue * 3U) / 8U;
+    return lift_sprite_color((uint16_t)(
+        mixed_red << 11U | mixed_green << 5U | mixed_blue));
+}
+
+static bool draw_signal_layer_scaled(
+    p4_game_surface_t *surface, const byte_buddy_state_t *state,
+    unsigned frame, uint8_t hue, int center_x, int center_y,
+    unsigned size)
+{
+    if (size == 0U || size > DRAGON_FRAME_WIDTH) {
+        return false;
+    }
+    const dragon_frame_view_t view = dragon_frame_view(
+        state, BYTE_BUDDY_SIGNAL_GENOME_SHEET, frame);
+    if (!view.valid) {
+        return false;
+    }
+    const int left = center_x - (int)size / 2;
+    const int top = center_y - (int)size / 2;
+    for (unsigned y = 0U; y < size; ++y) {
+        const int destination_y = top + (int)y;
+        if (destination_y < 0 || destination_y >= surface->height) {
+            continue;
+        }
+        const unsigned source_y = y * DRAGON_FRAME_HEIGHT / size;
+        for (unsigned x = 0U; x < size; ++x) {
+            const int destination_x = left + (int)x;
+            if (destination_x < 0 || destination_x >= surface->width) {
+                continue;
+            }
+            const unsigned source_x = x * DRAGON_FRAME_WIDTH / size;
+            const size_t source_index = (size_t)source_y *
+                DRAGON_FRAME_WIDTH + source_x;
+            uint16_t color = 0U;
+            if (dragon_frame_color(&view, source_index, &color)) {
+                surface->pixels[(size_t)destination_y *
+                    surface->stride_pixels + (size_t)destination_x] =
+                    signal_layer_color(color, hue);
+            }
+        }
+    }
+    return true;
+}
+
 static void draw_item_component_icon(
     p4_game_surface_t *surface, const byte_buddy_state_t *state,
     unsigned frame, int center_x, int center_y, unsigned size)
@@ -3075,6 +3175,38 @@ static void draw_signal_orb(p4_game_surface_t *surface,
                       UINT16_C(0xffff));
 }
 
+static void draw_signal_seed(
+    p4_game_surface_t *surface, const byte_buddy_state_t *state,
+    uint64_t token, int x, int y, unsigned size,
+    uint32_t animation_ms)
+{
+    const byte_buddy_signal_genome_t genome =
+        byte_buddy_signal_genome(token);
+    if (!draw_signal_layer_scaled(
+            surface, state, genome.core, genome.hue, x, y, size)) {
+        draw_signal_orb(surface, x, y, (int)size / 4,
+                        signal_color_for_hue(genome.hue), animation_ms);
+        return;
+    }
+    (void)draw_signal_layer_scaled(
+        surface, state, 4U + genome.halo, genome.hue,
+        x, y, size);
+    (void)draw_signal_layer_scaled(
+        surface, state, 8U + genome.sigil, genome.hue,
+        x, y, size);
+    if (size >= 24U || genome.rarity >= 2U) {
+        const int aura_y = y + (int)((animation_ms / 180U) % 3U) - 1;
+        (void)draw_signal_layer_scaled(
+            surface, state, 12U + genome.aura, genome.hue,
+            x, aura_y, size);
+        if (genome.rarity == 3U && size <= DRAGON_FRAME_WIDTH - 2U) {
+            (void)draw_signal_layer_scaled(
+                surface, state, 12U + genome.aura, genome.hue,
+                x, y, size + 2U);
+        }
+    }
+}
+
 static void draw_signal_meter(p4_game_surface_t *surface,
                               int x, int y, int width,
                               uint8_t strength, uint16_t color)
@@ -3178,8 +3310,10 @@ static void draw_signal_list(p4_game_surface_t *surface,
                               index % 2U == 0U ? UINT16_C(0x1025)
                                                 : UINT16_C(0x181f));
             p4_draw_rect(surface, 4, top, 312, 22, color);
-            draw_signal_orb(surface, 17, top + 11, 5, color,
-                            state->animation_ms + (uint32_t)index * 70U);
+            draw_signal_seed(
+                surface, state, signal->token,
+                17, top + 11, 21U,
+                state->animation_ms + (uint32_t)index * 70U);
             p4_draw_text(surface, 29, top + 7, signal->label,
                          UINT16_C(0xffff), 1U,
                          signal_label_length(signal->label, 17U));
@@ -3206,6 +3340,9 @@ static void draw_signal_list(p4_game_surface_t *surface,
     draw_touch_button(surface, 4, 162, 312, 33, "SCAN CITY", 9U,
                       UINT16_C(0x07ff),
                       state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING);
+    draw_signal_seed(
+        surface, state, UINT64_C(0x5349474e414c),
+        22, 178, 24U, state->animation_ms);
 }
 
 static void draw_signal_tracker(p4_game_surface_t *surface,
@@ -3220,6 +3357,8 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
     } else {
         const byte_buddy_signal_profile_t profile =
             byte_buddy_signal_profile(signal->token, signal->rssi_dbm);
+        const byte_buddy_signal_genome_t genome =
+            byte_buddy_signal_genome(signal->token);
         const uint16_t color = signal_color_for_hue(profile.hue);
         const int rings = 8 + (int)profile.strength / 8;
         for (int ring = 0; ring < 3; ++ring) {
@@ -3228,8 +3367,14 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
             p4_draw_rect(surface, 83 - radius, 82 - radius,
                          radius * 2 + 1, radius * 2 + 1, color);
         }
-        draw_signal_orb(surface, 83, 82, 13, color, state->animation_ms);
+        draw_signal_seed(
+            surface, state, signal->token,
+            83, 82, 54U, state->animation_ms);
         draw_dragon(surface, state, 245, 55);
+        p4_draw_text(surface, 14, 31, "GENE", UINT16_C(0x7bef),
+                     1U, 4U);
+        draw_number(surface, 45, 31, genome.recipe_id,
+                    UINT16_C(0xffff));
         p4_draw_text(surface, 121, 39, signal->label,
                      UINT16_C(0xffff), 1U,
                      signal_label_length(signal->label, 18U));
@@ -3292,7 +3437,9 @@ static void draw_signal_battle(p4_game_surface_t *surface,
         p4_draw_rect(surface, 79 - r, 84 - r, r * 2 + 1, r * 2 + 1,
                      ring == 1 ? UINT16_C(0xf81f) : color);
     }
-    draw_signal_orb(surface, 79, 84, 14, color, state->animation_ms);
+    draw_signal_seed(
+        surface, state, signal->token,
+        79, 84, 60U, state->animation_ms);
     draw_dragon(surface, state, 246, 58);
     p4_draw_text(surface, 13, 31, "STRONG", UINT16_C(0xf81f), 1U, 6U);
     draw_rssi(surface, 58, 31, signal->rssi_dbm, UINT16_C(0xffff));
@@ -3414,6 +3561,9 @@ static bool game_render(p4_game_context_t *context,
         draw_item_component_icon(surface, state, ACTION_REST, 249, 151, 18U);
         draw_touch_button(surface, 4, 168, 142, 28, "SIGNAL HUNT", 11U,
                           UINT16_C(0x07ff), false);
+        draw_signal_seed(
+            surface, state, UINT64_C(0x5349474e414c),
+            17, 182, 22U, state->animation_ms);
         draw_touch_button(surface, 150, 168, 94, 28, "UPGRADES", 8U,
                           element_color(state), false);
         draw_touch_button(surface, 248, 168, 68, 28, "DEV", 3U,

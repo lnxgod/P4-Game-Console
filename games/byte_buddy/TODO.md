@@ -21,6 +21,11 @@ P4 Game API surface.
       Start/Star Catcher/B/Back smoke with the regenerated 24-sheet resource.
 - [x] Integrate the new star, calm crystal, heart comet, and catch-burst art.
 - [x] Regenerate the deterministic `.P4R` payload and update provenance/hashes.
+- [x] Add missing Signal Hunt graphics to Home, scan results, tracking, and battle.
+- [x] Build a deterministic signal genome from reusable core, halo, sigil,
+      aura, palette, and rarity traits for 8,192 stable encounter designs.
+- [x] Generate, inspect, and integrate the 4x4 Signal Genome ImageGen atlas.
+- [x] Regenerate the 25-sheet/400-frame `.P4R` payload and record its hashes.
 - [x] Run focused unit/sanitizer tests and inspect chronological preview frames.
 - [x] Complete a visible SDL keyboard play pass: Start entered Star Catcher,
       Left steered through the spring path, one 18-second round ended naturally

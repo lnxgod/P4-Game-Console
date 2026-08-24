@@ -110,6 +110,16 @@ typedef struct {
 } byte_buddy_signal_profile_t;
 
 typedef struct {
+    uint8_t core;
+    uint8_t halo;
+    uint8_t sigil;
+    uint8_t aura;
+    uint8_t hue;
+    uint8_t rarity;
+    uint16_t recipe_id;
+} byte_buddy_signal_genome_t;
+
+typedef struct {
     uint8_t level;
     uint8_t power;
     uint8_t speed;
@@ -184,5 +194,11 @@ byte_buddy_touch_target_t byte_buddy_signal_touch_target(
 
 byte_buddy_signal_profile_t byte_buddy_signal_profile(
     uint64_t token, int8_t rssi_dbm);
+
+uint16_t byte_buddy_signal_recipe_id(
+    uint8_t core, uint8_t halo, uint8_t sigil,
+    uint8_t aura, uint8_t hue, uint8_t rarity);
+
+byte_buddy_signal_genome_t byte_buddy_signal_genome(uint64_t token);
 
 #endif

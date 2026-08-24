@@ -22,6 +22,8 @@ PALETTE_ENTRIES = 16
 PACKED_FRAME_BYTES = FRAME_WIDTH * FRAME_HEIGHT // 2
 FLYING_SHEET_INDEX = 3
 FLYING_CLEANUP_ROW = 54
+SIGNAL_GENOME_SHEET_INDEX = 24
+LARGE_BACKGROUND_COMPONENT_PIXELS = 64
 
 
 def decode_sheet(path: Path) -> bytes:
@@ -67,7 +69,9 @@ def neutral_background(pixel: bytes) -> bool:
     ) <= 22
 
 
-def clear_baked_checkerboard(frame: bytearray) -> None:
+def clear_baked_checkerboard(
+    frame: bytearray, clear_enclosed_background: bool = False
+) -> None:
     if any(frame[offset + 3] < 128 for offset in range(0, len(frame), 4)):
         return
     queue: collections.deque[tuple[int, int]] = collections.deque()
@@ -99,6 +103,35 @@ def clear_baked_checkerboard(frame: bytearray) -> None:
                     neutral_background(frame[offset : offset + 4])):
                 visited[index] = 1
                 queue.append((next_x, next_y))
+    if not clear_enclosed_background:
+        return
+    for origin_y in range(FRAME_HEIGHT):
+        for origin_x in range(FRAME_WIDTH):
+            origin = origin_y * FRAME_WIDTH + origin_x
+            origin_offset = origin * 4
+            if (visited[origin] or not neutral_background(
+                    frame[origin_offset : origin_offset + 4])):
+                continue
+            component: list[tuple[int, int]] = []
+            visited[origin] = 1
+            queue.append((origin_x, origin_y))
+            while queue:
+                x, y = queue.popleft()
+                component.append((x, y))
+                for next_x, next_y in ((x - 1, y), (x + 1, y),
+                                       (x, y - 1), (x, y + 1)):
+                    if not (0 <= next_x < FRAME_WIDTH and
+                            0 <= next_y < FRAME_HEIGHT):
+                        continue
+                    index = next_y * FRAME_WIDTH + next_x
+                    offset = index * 4
+                    if (not visited[index] and neutral_background(
+                            frame[offset : offset + 4])):
+                        visited[index] = 1
+                        queue.append((next_x, next_y))
+            if len(component) >= LARGE_BACKGROUND_COMPONENT_PIXELS:
+                for x, y in component:
+                    frame[(y * FRAME_WIDTH + x) * 4 + 3] = 0
 
 
 def rgb565(red: int, green: int, blue: int) -> int:
@@ -126,8 +159,10 @@ def nearest(value: int, palette: list[int]) -> int:
     return best_index
 
 
-def encode_frame(frame: bytearray) -> tuple[bytes, bytes]:
-    clear_baked_checkerboard(frame)
+def encode_frame(
+    frame: bytearray, clear_enclosed_background: bool = False
+) -> tuple[bytes, bytes]:
+    clear_baked_checkerboard(frame, clear_enclosed_background)
     colors: list[int | None] = []
     histogram: collections.Counter[int] = collections.Counter()
     for offset in range(0, len(frame), 4):
@@ -165,7 +200,10 @@ def build_bank(sources: list[Path]) -> bytes:
         raw = decode_sheet(source)
         for frame in range(FRAMES_PER_SHEET):
             palette, packed = encode_frame(
-                frame_rgba(raw, frame, sheet_index)
+                frame_rgba(raw, frame, sheet_index),
+                clear_enclosed_background=(
+                    sheet_index == SIGNAL_GENOME_SHEET_INDEX
+                ),
             )
             palettes.extend(palette)
             pixels.extend(packed)
