@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "evidence_id": "waveshare-two-unit-console-os-0.4.68-chex-pwad-handoff-20260823",
-  "status": "installed-both-hash-verified-launchers-stable-chex-launch-pending",
+  "status": "installed-both-hash-verified-launchers-stable-chex-operator-launch-pass",
   "scope": "Application-only installation of controller-first Console OS 0.4.68. The final Doom handoff now accepts a PWAD header only for the exact pinned Chex Quest identity; Doom retains its existing IWAD policy.",
   "boards": [
     {
@@ -67,6 +67,12 @@
       "unit2": "H1 push PASS; follow-up --no-replace already-present hash=verified",
       "console_os_changed": false
     },
-    "chex_physical_launch": "pending operator selection after installation"
+    "chex_physical_launch": {
+      "result": "pass",
+      "reported_at": "2026-08-24",
+      "evidence": "operator reported: Chex works",
+      "scope": "successful physical launch/playability on at least one installed Waveshare 4.3 unit",
+      "limitations": "the operator did not identify which unit and serial ENGINE_START markers were not captured during this manual run"
+    }
   }
 }
