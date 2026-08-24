@@ -19,7 +19,9 @@ enum {
     P4_MP_UART_RELAY_ROUTE_ID = 1,
     /* A board-authorized expansion header can provide the preferred route. */
     P4_MP_UART_DIRECT_ROUTE_ID = 2,
-    P4_MP_UART_RAW_TX_MAX_BYTES = 64,
+    /* One complete file-transfer chunk is emitted in a single UART write so
+     * console logging cannot be interleaved inside its CRC-protected frame. */
+    P4_MP_UART_RAW_TX_MAX_BYTES = 4112,
 };
 
 typedef void (*p4_mp_uart_frame_handler_t)(

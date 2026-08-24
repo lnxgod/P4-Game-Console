@@ -261,6 +261,7 @@ static p4_mp_event_type_t event_type_for_packet(p4_mp_packet_type_t type)
         case P4_MP_PACKET_PING: return P4_MP_EVENT_PING;
         case P4_MP_PACKET_PONG: return P4_MP_EVENT_PONG;
         case P4_MP_PACKET_REJECT: return P4_MP_EVENT_REJECTED;
+        case P4_MP_PACKET_GAME_MESSAGE: return P4_MP_EVENT_GAME_MESSAGE;
         default: return P4_MP_EVENT_NONE;
     }
 }
@@ -362,6 +363,10 @@ p4_mp_status_t p4_mp_session_receive(
         if (status != P4_MP_OK) {
             return status;
         }
+    } else if (packet.type == P4_MP_PACKET_GAME_MESSAGE &&
+               (packet.payload_length == 0U ||
+                packet.payload_length > P4_MP_GAME_MESSAGE_MAX_BYTES)) {
+        return P4_MP_BAD_LENGTH;
     }
     peer->last_sequence = packet.sequence;
     peer->last_seen_ms = now_ms;

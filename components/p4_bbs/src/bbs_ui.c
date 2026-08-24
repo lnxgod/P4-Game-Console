@@ -25,12 +25,11 @@ enum {
     CP437_DOUBLE_TOP_LEFT = 0xc9,
     CP437_DOUBLE_HORIZONTAL = 0xcd,
     BBS_TEXT_LEFT = (P4_ANSI_SURFACE_WIDTH - P4_ANSI_TEXT_WIDTH) / 2,
-    BBS_DOOR_LEFT_COLUMN = 7,
-    BBS_DOOR_RIGHT_COLUMN = 43,
-    BBS_DOOR_TOP_ROW = 9,
-    BBS_DOOR_COLUMN_CELLS = 31,
+    BBS_DOOR_COLUMN = 6,
+    BBS_DOOR_TOP_ROW = 10,
+    BBS_DOOR_COLUMN_CELLS = 68,
     BBS_DOOR_ROW_CELLS = 3,
-    BBS_PAGE_CONTROL_ROW = 26,
+    BBS_PAGE_CONTROL_ROW = 25,
     BBS_PAGE_PREVIOUS_COLUMN = 5,
     BBS_PAGE_NEXT_COLUMN = 65,
     BBS_PAGE_BUTTON_CELLS = 11,
@@ -156,6 +155,7 @@ static bool model_strings_are_terminated(
     const p4_bbs_launcher_model_t *model)
 {
     if (memchr(model->board_name, '\0', sizeof(model->board_name)) == NULL ||
+        memchr(model->node_name, '\0', sizeof(model->node_name)) == NULL ||
         memchr(model->section, '\0', sizeof(model->section)) == NULL ||
         memchr(model->connection, '\0', sizeof(model->connection)) == NULL) {
         return false;
@@ -211,53 +211,55 @@ static bool number_field(p4_ansi_terminal_t *terminal,
 static bool draw_header(p4_ansi_terminal_t *terminal,
                         const p4_bbs_launcher_model_t *model)
 {
-    const uint8_t shade[] = {
-        CP437_SHADE_LIGHT, CP437_SHADE_MEDIUM, CP437_SHADE_DARK,
-        CP437_BLOCK, CP437_SHADE_DARK, CP437_SHADE_MEDIUM,
-        CP437_SHADE_LIGHT,
+    static const char *const wordmark[] = {
+        "  ___   _   __  __ ___    ___ _  _   _   _  _  ___ ___ ___  ___",
+        " / __| /_\\ |  \\/  | __|  / __| || | /_\\ | \\| |/ __| __| _ \\/ __|",
+        "| (_ |/ _ \\| |\\/| | _|  | (__| __ |/ _ \\| .` | (_ | _||   /\\__ \\",
+        " \\___/_/ \\_\\_|  |_|___|  \\___|_||_/_/ \\_\\_|\\_|\\___|___|_|_\\|___/",
     };
     if (!box(terminal, 1U, 2U, 30U, 79U,
-             P4_ANSI_COLOR_BRIGHT_CYAN, true) ||
-        !move_to(terminal, 2U, 5U) ||
-        !style(terminal, P4_ANSI_COLOR_BRIGHT_MAGENTA,
-               P4_ANSI_COLOR_BLACK, true) ||
-        !write_bytes(terminal, shade, sizeof(shade)) ||
-        !field(terminal, 2U, 14U, 52U,
-               model->board_name[0] == '\0'
-                   ? "GAME CHANGERS AI BBS" : model->board_name,
-               P4_ANSI_COLOR_BRIGHT_CYAN,
-               P4_ANSI_COLOR_BLACK, true, true) ||
-        !move_to(terminal, 2U, 69U) ||
-        !style(terminal, P4_ANSI_COLOR_BRIGHT_MAGENTA,
-               P4_ANSI_COLOR_BLACK, true) ||
-        !write_bytes(terminal, shade, sizeof(shade)) ||
-        !field(terminal, 3U, 10U, 62U,
-               "THE OPEN WAREZ EXCHANGE / BUILD + REMIX + TRADE",
+             P4_ANSI_COLOR_BRIGHT_CYAN, true)) {
+        return false;
+    }
+    for (size_t index = 0U;
+         index < sizeof(wordmark) / sizeof(wordmark[0]); ++index) {
+        if (!field(terminal, 2U + (unsigned)index, 4U, 74U,
+                   wordmark[index],
+                   index == 1U || index == 3U
+                       ? P4_ANSI_COLOR_BRIGHT_MAGENTA
+                       : P4_ANSI_COLOR_BRIGHT_CYAN,
+                   P4_ANSI_COLOR_BLACK, true, true)) {
+            return false;
+        }
+    }
+    char identity[76];
+    const int identity_written = snprintf(
+        identity, sizeof(identity), "%s // OPEN SOURCE DOORS + REMIX EXCHANGE",
+        model->board_name[0] == '\0'
+            ? "GAME CHANGERS AI BBS" : model->board_name);
+    char link[76];
+    const int link_written = snprintf(
+        link, sizeof(link), "NODE %-16s | 2400 BAUD | %-10s | %s",
+        model->node_name[0] == '\0' ? "GC-P4-LOCAL" : model->node_name,
+        model->connection[0] == '\0' ? "ONLINE" : model->connection,
+        model->local_board ? "LOCAL" : "REMOTE");
+    if (identity_written <= 0 ||
+        (size_t)identity_written >= sizeof(identity) ||
+        link_written <= 0 || (size_t)link_written >= sizeof(link) ||
+        !field(terminal, 6U, 5U, 72U, identity,
                P4_ANSI_COLOR_YELLOW,
-               P4_ANSI_COLOR_BLACK, false, true) ||
-        !box(terminal, 4U, 5U, 6U, 76U,
-             P4_ANSI_COLOR_CYAN, false) ||
-        !field(terminal, 5U, 7U, 13U, "NODE 01",
-               P4_ANSI_COLOR_WHITE, P4_ANSI_COLOR_BLACK, true, true) ||
-        !field(terminal, 5U, 22U, 15U, "2400 BAUD",
-               P4_ANSI_COLOR_WHITE, P4_ANSI_COLOR_BLACK, true, true) ||
-        !field(terminal, 5U, 39U, 14U,
-               model->connection[0] == '\0'
-                   ? "ONLINE" : model->connection,
-               P4_ANSI_COLOR_BRIGHT_GREEN,
                P4_ANSI_COLOR_BLACK, true, true) ||
-        !field(terminal, 5U, 55U, 19U,
-               model->local_board ? "LOCAL BOARD" : "REMOTE BOARD",
-               P4_ANSI_COLOR_BRIGHT_MAGENTA,
-               P4_ANSI_COLOR_BLACK, true, true)) {
+        !field(terminal, 7U, 5U, 72U, link,
+               P4_ANSI_COLOR_BRIGHT_GREEN,
+               P4_ANSI_COLOR_BLUE, true, true)) {
         return false;
     }
     if (model->can_go_up &&
-        !field(terminal, 7U, 5U, 11U, "[<] BACK",
+        !field(terminal, 8U, 5U, 11U, "[<] BACK",
                P4_ANSI_COLOR_WHITE, P4_ANSI_COLOR_BLUE, true, true)) {
         return false;
     }
-    return field(terminal, 7U, model->can_go_up ? 18U : 25U,
+    return field(terminal, 8U, model->can_go_up ? 18U : 25U,
                  model->can_go_up ? 51U : 31U,
                  model->section[0] == '\0'
                     ? "[ DOOR GAMES ]" : model->section,
@@ -269,34 +271,42 @@ static bool draw_door(p4_ansi_terminal_t *terminal,
                       const p4_bbs_door_t *door,
                       size_t index, bool selected)
 {
-    const unsigned column = (index % 2U) == 0U
-        ? BBS_DOOR_LEFT_COLUMN : BBS_DOOR_RIGHT_COLUMN;
     const unsigned row = BBS_DOOR_TOP_ROW +
-        (unsigned)(index / 2U) * BBS_DOOR_ROW_CELLS;
+        (unsigned)index * BBS_DOOR_ROW_CELLS;
     const uint8_t foreground = selected
-        ? P4_ANSI_COLOR_BLACK
-        : (door->enabled ? P4_ANSI_COLOR_WHITE
+        ? P4_ANSI_COLOR_WHITE
+        : (door->enabled ? P4_ANSI_COLOR_BRIGHT_CYAN
                          : P4_ANSI_COLOR_DARK_GRAY);
     const uint8_t background = selected
-        ? P4_ANSI_COLOR_YELLOW : P4_ANSI_COLOR_BLUE;
-    char label[40];
+        ? P4_ANSI_COLOR_BRIGHT_MAGENTA : P4_ANSI_COLOR_BLUE;
+    char label[80];
     const int written = snprintf(
-        label, sizeof(label), "[%02u] %-16s [TAP]",
+        label, sizeof(label), "%s [%02u] %-24s %s",
+        selected ? ">>" : "::",
         (unsigned)(door->number == 0U ? index + 1U : door->number),
         door->title[0] == '\0' ? (door->menu ? "MORE DOORS" : "UNTITLED")
-                               : door->title);
+                               : door->title,
+        door->enabled ? "[ OPEN ]" : "[OFFLINE]");
     if (written <= 0 || (size_t)written >= sizeof(label) ||
-        !field(terminal, row, column, 31U, label,
+        !field(terminal, row, BBS_DOOR_COLUMN,
+               BBS_DOOR_COLUMN_CELLS, label,
                foreground, background, true, false)) {
         return false;
     }
-    return field(terminal, row + 1U, column + 5U, 26U,
-                 door->enabled ? door->subtitle : "OFFLINE",
-                 selected ? P4_ANSI_COLOR_BLACK
-                          : (door->accent & 0x0fU),
-                 selected ? P4_ANSI_COLOR_YELLOW
-                          : P4_ANSI_COLOR_BLACK,
-                 false, false);
+    char detail[80];
+    const int detail_written = snprintf(
+        detail, sizeof(detail), "     %-32s  %s",
+        door->enabled ? door->subtitle : "DOOR CURRENTLY OFFLINE",
+        door->menu ? "DIRECTORY" : "A/TOUCH TO ENTER");
+    return detail_written > 0 &&
+        (size_t)detail_written < sizeof(detail) &&
+        field(terminal, row + 1U, BBS_DOOR_COLUMN,
+              BBS_DOOR_COLUMN_CELLS, detail,
+              selected ? P4_ANSI_COLOR_WHITE
+                       : (door->enabled
+                            ? (door->accent & 0x0fU)
+                            : P4_ANSI_COLOR_DARK_GRAY),
+              background, false, false);
 }
 
 static bool draw_touch_controls(p4_ansi_terminal_t *terminal,
@@ -310,7 +320,7 @@ static bool draw_touch_controls(p4_ansi_terminal_t *terminal,
         return false;
     }
     if (!field(terminal, BBS_PAGE_CONTROL_ROW, 18U, 44U,
-               "TOUCH A DOOR TO OPEN",
+               "A / TOUCH: OPEN DOOR     B: BACK",
                P4_ANSI_COLOR_YELLOW,
                P4_ANSI_COLOR_BLACK, true, true)) {
         return false;
@@ -320,38 +330,6 @@ static bool draw_touch_controls(p4_ansi_terminal_t *terminal,
               BBS_PAGE_NEXT_COLUMN, BBS_PAGE_BUTTON_CELLS,
               "NEXT [>]", P4_ANSI_COLOR_WHITE,
               P4_ANSI_COLOR_BLUE, true, true);
-}
-
-static bool draw_rocket(p4_ansi_terminal_t *terminal)
-{
-    static const char *const lines[] = {
-        "                  .        +             .",
-        "        +                       .",
-        "                         /\\",
-        "            .           /[]\\          +",
-        "                       /____\\",
-        "                  .      ||       .",
-        "                       ==||==",
-    };
-    for (size_t index = 0U; index < sizeof(lines) / sizeof(lines[0]);
-         ++index) {
-        const uint8_t color = index < 2U
-            ? P4_ANSI_COLOR_BRIGHT_MAGENTA
-            : (index < 5U ? P4_ANSI_COLOR_BRIGHT_CYAN
-                          : P4_ANSI_COLOR_YELLOW);
-        if (!field(terminal, 18U + (unsigned)index, 16U, 49U,
-                   lines[index], color, P4_ANSI_COLOR_BLACK,
-                   index >= 2U, false)) {
-            return false;
-        }
-    }
-    const uint8_t flame[] = {
-        CP437_UPPER_HALF, CP437_BLOCK, CP437_LOWER_HALF,
-    };
-    return move_to(terminal, 24U, 40U) &&
-        style(terminal, P4_ANSI_COLOR_BRIGHT_RED,
-              P4_ANSI_COLOR_BLACK, true) &&
-        write_bytes(terminal, flame, sizeof(flame));
 }
 
 bool p4_bbs_build_launcher(p4_ansi_terminal_t *terminal,
@@ -368,7 +346,7 @@ bool p4_bbs_build_launcher(p4_ansi_terminal_t *terminal,
     p4_ansi_reset(terminal);
     if (!write_literal(terminal, "\x1b[2J\x1b[?25l") ||
         !draw_header(terminal, model) ||
-        !box(terminal, 8U, 4U, 17U, 77U,
+        !box(terminal, 9U, 4U, 24U, 77U,
              P4_ANSI_COLOR_BRIGHT_CYAN, false)) {
         return false;
     }
@@ -378,8 +356,7 @@ bool p4_bbs_build_launcher(p4_ansi_terminal_t *terminal,
             return false;
         }
     }
-    if (!draw_rocket(terminal) ||
-        !draw_touch_controls(terminal, model) ||
+    if (!draw_touch_controls(terminal, model) ||
         !field(terminal, 27U, 5U, 15U, "SELECTED:",
                P4_ANSI_COLOR_WHITE, P4_ANSI_COLOR_BLACK, true, false) ||
         !number_field(terminal, 27U, 21U,
@@ -480,16 +457,25 @@ bool p4_bbs_build_boot_screen(p4_ansi_terminal_t *terminal,
     if (terminal == NULL || model == NULL ||
         model->phase < P4_BBS_BOOT_POST ||
         model->phase > P4_BBS_BOOT_DEGRADED ||
+        memchr(model->node_name, '\0', sizeof(model->node_name)) == NULL ||
         memchr(model->status, '\0', sizeof(model->status)) == NULL ||
         memchr(model->detail, '\0', sizeof(model->detail)) == NULL) {
+        return false;
+    }
+    char boot_title[76];
+    const int boot_title_written = snprintf(
+        boot_title, sizeof(boot_title),
+        "GAMECHANGERSAI.ORG // P4 CONSOLE // NODE %s",
+        model->node_name[0] == '\0' ? "GC-P4-LOCAL" : model->node_name);
+    if (boot_title_written <= 0 ||
+        (size_t)boot_title_written >= sizeof(boot_title)) {
         return false;
     }
     p4_ansi_reset(terminal);
     if (!write_literal(terminal, "\x1b[2J\x1b[?25l") ||
         !box(terminal, 1U, 2U, 30U, 79U,
              P4_ANSI_COLOR_BRIGHT_CYAN, true) ||
-        !field(terminal, 2U, 5U, 72U,
-               "GAMECHANGERSAI.ORG // P4 CONSOLE NODE 01",
+        !field(terminal, 2U, 5U, 72U, boot_title,
                P4_ANSI_COLOR_BRIGHT_MAGENTA,
                P4_ANSI_COLOR_BLACK, true, true)) {
         return false;
@@ -569,7 +555,7 @@ p4_bbs_hit_t p4_bbs_hit_test(const p4_bbs_launcher_model_t *model,
     }
     const unsigned back_left = BBS_TEXT_LEFT +
         (5U - 1U) * P4_ANSI_CELL_WIDTH;
-    const unsigned back_top = (7U - 1U) * P4_ANSI_CELL_HEIGHT;
+    const unsigned back_top = (8U - 1U) * P4_ANSI_CELL_HEIGHT;
     if (model->can_go_up && surface_x >= back_left &&
         surface_x < back_left + 11U * P4_ANSI_CELL_WIDTH &&
         surface_y >= back_top &&
@@ -608,28 +594,19 @@ p4_bbs_hit_t p4_bbs_hit_test(const p4_bbs_launcher_model_t *model,
     const unsigned door_top =
         (BBS_DOOR_TOP_ROW - 1U) * P4_ANSI_CELL_HEIGHT;
     if (surface_y < door_top ||
-        surface_y >= door_top + 3U * BBS_DOOR_ROW_CELLS *
+        surface_y >= door_top + P4_BBS_VISIBLE_DOORS *
+            BBS_DOOR_ROW_CELLS *
             P4_ANSI_CELL_HEIGHT) {
         return none;
     }
-    const unsigned left_x = BBS_TEXT_LEFT +
-        (BBS_DOOR_LEFT_COLUMN - 1U) * P4_ANSI_CELL_WIDTH;
-    const unsigned right_x = BBS_TEXT_LEFT +
-        (BBS_DOOR_RIGHT_COLUMN - 1U) * P4_ANSI_CELL_WIDTH;
-    size_t column = SIZE_MAX;
-    if (surface_x >= left_x && surface_x <
-        left_x + BBS_DOOR_COLUMN_CELLS * P4_ANSI_CELL_WIDTH) {
-        column = 0U;
-    } else if (surface_x >= right_x && surface_x <
-               right_x + BBS_DOOR_COLUMN_CELLS * P4_ANSI_CELL_WIDTH) {
-        column = 1U;
-    }
-    if (column == SIZE_MAX) {
+    const unsigned door_left = BBS_TEXT_LEFT +
+        (BBS_DOOR_COLUMN - 1U) * P4_ANSI_CELL_WIDTH;
+    if (surface_x < door_left || surface_x >=
+        door_left + BBS_DOOR_COLUMN_CELLS * P4_ANSI_CELL_WIDTH) {
         return none;
     }
-    const size_t row = (surface_y - door_top) /
+    const size_t index = (surface_y - door_top) /
         (BBS_DOOR_ROW_CELLS * P4_ANSI_CELL_HEIGHT);
-    const size_t index = row * 2U + column;
     if (index >= model->door_count || !model->doors[index].enabled) {
         return none;
     }

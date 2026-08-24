@@ -1,7 +1,9 @@
 # SPDX-License-Identifier: MIT
 
 idf_component_register(
-    SRCS "src/content_transfer.c"
+    SRCS
+        "src/content_transfer.c"
+        "src/file_transfer.c"
     INCLUDE_DIRS "include"
     REQUIRES
         esp_timer
@@ -11,6 +13,7 @@ idf_component_register(
         log
         mbedtls
         p4_content_catalog
+        p4_game_package
 )
 
 target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)

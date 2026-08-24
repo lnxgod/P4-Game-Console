@@ -6,6 +6,11 @@ if(COMMAND idf_component_register)
     )
 
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)
+    if(DEFINED PROJECT_VER)
+        target_compile_definitions(${COMPONENT_LIB} PRIVATE
+            P4_CONSOLE_OS_VERSION="${PROJECT_VER}"
+        )
+    endif()
     target_compile_options(${COMPONENT_LIB} PRIVATE
         -Wall -Wextra -Wconversion -Wshadow -Werror
     )

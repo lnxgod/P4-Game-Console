@@ -41,7 +41,8 @@ static uint32_t implemented_service_capabilities(void)
         P4_GAME_CAP_AUDIO_STREAM |
         P4_GAME_CAP_STORAGE |
         P4_GAME_CAP_SIGNAL_SCAN |
-        P4_GAME_CAP_SAVE;
+        P4_GAME_CAP_SAVE |
+        P4_GAME_CAP_MULTIPLAYER_SESSION;
 }
 
 static bool save_snapshot_valid(const p4_game_services_t *services)
@@ -113,6 +114,14 @@ static bool services_valid(const p4_game_services_t *services)
         (services->save_context == NULL || services->queue_save == NULL ||
          services->read_save_status == NULL ||
          !save_snapshot_valid(services))) {
+        return false;
+    }
+    if ((services->available_capabilities &
+         P4_GAME_CAP_MULTIPLAYER_SESSION) != 0U &&
+        (services->multiplayer_context == NULL ||
+         services->multiplayer_read_status == NULL ||
+         services->multiplayer_send == NULL ||
+         services->multiplayer_receive == NULL)) {
         return false;
     }
     return true;
@@ -443,6 +452,96 @@ bool p4_game_read_save_status(p4_game_context_t *context,
     }
     *status_out = candidate_status;
     *committed_sequence_out = candidate_sequence;
+    return true;
+}
+
+static bool multiplayer_status_valid(
+    const p4_game_multiplayer_status_t *status)
+{
+    if (status == NULL ||
+        status->state < P4_GAME_MULTIPLAYER_OFFLINE ||
+        status->state > P4_GAME_MULTIPLAYER_ERROR ||
+        status->role < P4_GAME_MULTIPLAYER_ROLE_NONE ||
+        status->role > P4_GAME_MULTIPLAYER_ROLE_CLIENT ||
+        status->player_count > P4_GAME_MULTIPLAYER_MAX_PLAYERS ||
+        status->local_player_slot >= P4_GAME_MULTIPLAYER_MAX_PLAYERS) {
+        return false;
+    }
+    if (status->state == P4_GAME_MULTIPLAYER_OFFLINE) {
+        return status->role == P4_GAME_MULTIPLAYER_ROLE_NONE &&
+            status->player_count == 0U && status->session_seed == 0U;
+    }
+    if (status->role == P4_GAME_MULTIPLAYER_ROLE_NONE ||
+        status->player_count == 0U || status->session_seed == 0U ||
+        status->local_player_slot >= status->player_count) {
+        return false;
+    }
+    return status->state != P4_GAME_MULTIPLAYER_CONNECTED ||
+        status->player_count >= 2U;
+}
+
+bool p4_game_multiplayer_read_status(
+    p4_game_context_t *context,
+    p4_game_multiplayer_status_t *status_out)
+{
+    if (status_out != NULL) {
+        *status_out = (p4_game_multiplayer_status_t){0};
+    }
+    if (context == NULL || context->services == NULL || status_out == NULL ||
+        (context->services->available_capabilities &
+         P4_GAME_CAP_MULTIPLAYER_SESSION) == 0U ||
+        context->services->multiplayer_context == NULL ||
+        context->services->multiplayer_read_status == NULL ||
+        !context->services->multiplayer_read_status(
+            context->services->multiplayer_context, status_out) ||
+        !multiplayer_status_valid(status_out)) {
+        if (status_out != NULL) {
+            *status_out = (p4_game_multiplayer_status_t){0};
+        }
+        return false;
+    }
+    return true;
+}
+
+bool p4_game_multiplayer_send(
+    p4_game_context_t *context,
+    const uint8_t *data,
+    size_t data_bytes)
+{
+    return context != NULL && context->services != NULL && data != NULL &&
+        data_bytes != 0U &&
+        data_bytes <= P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES &&
+        (context->services->available_capabilities &
+         P4_GAME_CAP_MULTIPLAYER_SESSION) != 0U &&
+        context->services->multiplayer_context != NULL &&
+        context->services->multiplayer_send != NULL &&
+        context->services->multiplayer_send(
+            context->services->multiplayer_context, data, data_bytes);
+}
+
+bool p4_game_multiplayer_receive(
+    p4_game_context_t *context,
+    p4_game_multiplayer_message_t *message_out)
+{
+    if (message_out != NULL) {
+        *message_out = (p4_game_multiplayer_message_t){0};
+    }
+    if (context == NULL || context->services == NULL || message_out == NULL ||
+        (context->services->available_capabilities &
+         P4_GAME_CAP_MULTIPLAYER_SESSION) == 0U ||
+        context->services->multiplayer_context == NULL ||
+        context->services->multiplayer_receive == NULL ||
+        !context->services->multiplayer_receive(
+            context->services->multiplayer_context, message_out) ||
+        message_out->sequence == 0U ||
+        message_out->player_slot >= P4_GAME_MULTIPLAYER_MAX_PLAYERS ||
+        message_out->bytes == 0U ||
+        message_out->bytes > P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES) {
+        if (message_out != NULL) {
+            *message_out = (p4_game_multiplayer_message_t){0};
+        }
+        return false;
+    }
     return true;
 }
 

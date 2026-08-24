@@ -12,19 +12,56 @@ Linking doomgeneric makes the distributed Doom firmware a GPL-covered work. Keep
 
 ## Local game data
 
-The current development default is the unmodified Doom v1.9 shareware IWAD at the ignored path `local-data/doom/doom1.wad`. It remains outside Git. Its expected identity is recorded in `third_party/game-data.json`; tests fail closed if a data entry with a required hash does not match. The build-only Console OS target currently embeds that exact local input for its proven legacy handoff and also seeds it into the persistent USB-accessible `game_data` partition. WAD-bearing build artifacts remain local and must never be pushed to GitHub.
+The current development default is the unmodified Doom v1.9 shareware IWAD at the ignored path `local-data/doom/doom1.wad`. It remains outside Git. Its expected identity is recorded in `third_party/game-data.json`; tests fail closed if a data entry with a required hash does not match. Console OS does not embed game data: it validates and launches supported files from the microSD root. WAD-bearing artifacts remain local and must never be pushed to GitHub.
 
 The source distribution for the shareware IWAD was id Software's `doom19s.zip`, historically distributed through the `/idgames/idstuff/doom` archive. The exact archive and local WAD acquisition URLs and both sets of hashes are recorded in `third_party/game-data.json`. This project does not mirror or redistribute either the archive or IWAD. Keep the original shareware package notices with any independently redistributed copy and reassess distribution rights before a public badge release.
 
 [Freedoom 0.13.0](https://github.com/freedoom/freedoom/releases/tag/v0.13.0) remains the fully redistributable public-release/reproducibility option. A user may also pass a legally owned WAD explicitly.
 
-The intended first search order on a FAT32 microSD is:
+The original 1996 Chex Quest freeware release is supported as a second
+Doom-engine title. Keep the exact official `CHEX.WAD` and the matching
+`CHEX.DEH` compatibility patch at `local-data/doom/chex.wad` and
+`local-data/doom/chex.deh`, respectively. Their identities and authoritative
+sources are pinned in `third_party/game-data.json`; neither file belongs in
+Git or firmware. On a badge, both files must be in the microSD root. The
+launcher can become usable before either file is hashed; selecting Chex starts
+the exact size and SHA-256 validation and launches only after both files pass.
+The result is cached only for the same uninterrupted mounted-storage
+generation. Reboot, remount, or host ownership invalidates it.
+
+Install the verified pair through a running badge's H1 programming USB port:
+
+```sh
+python3 scripts/p4-usb-content.py chex --port /dev/cu.wchusbserial...
+```
+
+The multiplayer game picker treats Doom and Chex Quest as separate games,
+includes the selected WAD hash in lobby compatibility, and limits Chex Quest
+to E1M1-E1M5. This prevents a Doom board and a Chex board from starting one
+lockstep session.
+
+`CHEX.WAD` is the pinned release's valid `PWAD`, not an `IWAD`. The storage
+validator and final Doom handoff must both accept `PWAD` only for the exact
+Chex identity; Doom and Freedoom continue to require their expected identity
+and header policy. A generic or merely same-sized PWAD must fail closed.
+
+The broader standalone-port search order on a FAT32 microSD is:
 
 1. `/sdcard/doom1.wad` for the current shareware development case
 2. `/sdcard/freedoom1.wad`
 3. `/sdcard/freedoom2.wad`
 
 If neither exists, report the attempted paths and stop cleanly. Do not add an embedded, SPIFFS, download, or commercial-WAD fallback. Preserve the Freedoom BSD-3-Clause notice when distributing its data.
+
+Console OS currently uses exact, explicit root names instead of this broader
+search: `DOOM1.WAD`, or the `CHEX.WAD` + `CHEX.DEH` pair.
+
+Console OS never hashes these multi-megabyte files on the boot-critical path.
+Display, SD mount, and the native P4G catalog reach the launcher first. A Doom
+or Chex selection displays a verification state while the full known SHA-256
+runs, then either starts the exact title or reports the failed file. Do not
+replace that authority with a persisted size/timestamp/sample receipt because
+the removable card can be modified offline.
 
 ## Platform boundary
 

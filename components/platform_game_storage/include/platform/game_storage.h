@@ -26,6 +26,16 @@ extern "C" {
     PLATFORM_GAME_STORAGE_UPDATE_DIRECTORY_NAME
 #define PLATFORM_GAME_STORAGE_DOOM_WAD_PATH "/game-data/DOOM1.WAD"
 #define PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES UINT64_C(4196020)
+#define PLATFORM_GAME_STORAGE_CHEX_WAD_PATH "/game-data/CHEX.WAD"
+#define PLATFORM_GAME_STORAGE_CHEX_WAD_BYTES UINT64_C(12361532)
+#define PLATFORM_GAME_STORAGE_CHEX_DEH_PATH "/game-data/CHEX.DEH"
+#define PLATFORM_GAME_STORAGE_CHEX_DEH_BYTES UINT64_C(20367)
+
+typedef enum {
+    PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM = 0,
+    PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST,
+    PLATFORM_GAME_STORAGE_DOOM_TITLE_COUNT,
+} platform_game_storage_doom_title_t;
 
 typedef esp_err_t (*platform_game_storage_stream_fn)(
     void *context, const uint8_t *data, size_t size_bytes,
@@ -76,6 +86,13 @@ typedef struct {
     uint32_t repair_sectors_rewritten;
     bool card_ready;
     bool filesystem_ready;
+    bool doom_wad_ready;
+    bool chex_quest_ready;
+    /** Exact Doom/Chex identity validation is running off the boot path. */
+    bool content_validation_running;
+    /** The current mounted-storage generation has finished validation. */
+    bool content_validation_complete;
+    uint8_t content_validation_progress_percent;
     platform_game_storage_repair_outcome_t last_repair_outcome;
     esp_err_t last_check_error;
     esp_err_t last_recovery_error;
@@ -96,6 +113,17 @@ esp_err_t platform_game_storage_init(void);
 
 /** Refresh the cached game-file inventory after an ownership generation. */
 esp_err_t platform_game_storage_refresh(void);
+
+/**
+ * Start exact Doom/Chex validation without blocking the Console OS task.
+ *
+ * On the Waveshare 4.3-inch board this hashes the pinned files in a bounded
+ * low-priority worker only when an engine-game feature requests it (for
+ * example Multiplayer), never merely because the device booted. Repeated
+ * calls are idempotent within the current uninterrupted mounted generation.
+ * Other board backends retain their existing synchronous refresh behavior.
+ */
+esp_err_t platform_game_storage_start_content_validation(void);
 
 /**
  * Run a non-destructive SD/FAT health check while the launcher owns storage.
@@ -223,9 +251,17 @@ esp_err_t platform_game_storage_remove_update_file(const char *name);
 
 /**
  * Revoke USB access, remount for the app, re-hash DOOM1.WAD, and retain an
- * exclusive game lease until restart. No host can remount beneath the game.
+ * exclusive game lease until restart. This compatibility wrapper selects
+ * Doom shareware; new callers should use the title-specific function below.
  */
 esp_err_t platform_game_storage_lock_for_game(void);
+
+/**
+ * Validate and lock one supported Doom-engine title for exclusive launch.
+ * Chex Quest requires both the exact CHEX.WAD and matching CHEX.DEH.
+ */
+esp_err_t platform_game_storage_lock_for_doom_title(
+    platform_game_storage_doom_title_t title);
 
 /** True only after platform_game_storage_lock_for_game succeeds. */
 bool platform_game_storage_game_locked(void);

@@ -10,7 +10,6 @@
 /* ESP-IDF 5.5.3 has sign-conversion warnings in inline RISC-V headers. */
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 #include "esp_event.h"
-#include "esp_hosted.h"
 #include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_random.h"
@@ -21,6 +20,7 @@
 #include "nvs.h"
 #pragma GCC diagnostic pop
 #include "p4/signal_scan.h"
+#include "platform/radio_hosted.h"
 
 enum {
     PLATFORM_SIGNAL_SCAN_RAW_RESULTS = 32,
@@ -169,7 +169,7 @@ static void publish_results(const wifi_ap_record_t *records, uint16_t count,
 
 static esp_err_t initialize_radio(void)
 {
-    esp_err_t result = esp_hosted_init();
+    esp_err_t result = platform_radio_hosted_start();
     if (result != ESP_OK) {
         return result;
     }
@@ -185,17 +185,6 @@ static esp_err_t initialize_radio(void)
     result = esp_wifi_init(&wifi_config);
     if (result != ESP_OK) {
         return result;
-    }
-    esp_hosted_coprocessor_fwver_t coprocessor = {0};
-    result = esp_hosted_get_coprocessor_fwversion(&coprocessor);
-    if (result == ESP_OK) {
-        ESP_LOGI(TAG, "C6 hosted firmware=%lu.%lu.%lu",
-                 (unsigned long)coprocessor.major1,
-                 (unsigned long)coprocessor.minor1,
-                 (unsigned long)coprocessor.patch1);
-    } else {
-        ESP_LOGW(TAG, "C6 firmware identity unavailable: %s",
-                 esp_err_to_name(result));
     }
     result = esp_wifi_set_storage(WIFI_STORAGE_RAM);
     if (result != ESP_OK) {

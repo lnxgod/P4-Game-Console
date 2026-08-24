@@ -60,6 +60,9 @@ static void test_launch_config(void)
 {
     const p4_doom_mp_launch_config_t single_player = {0};
     CHECK(p4_doom_mp_launch_config_valid(&single_player));
+    p4_doom_mp_launch_config_t invalid_single_player = {0};
+    invalid_single_player.setup.game = P4_DOOM_MP_GAME_CHEX_QUEST;
+    CHECK(!p4_doom_mp_launch_config_valid(&invalid_single_player));
     p4_doom_mp_launch_config_t multiplayer = {
         .enabled = true,
         .role = P4_MP_ROLE_CLIENT,
@@ -73,6 +76,7 @@ static void test_launch_config(void)
         .start_tic = 0U,
         .session_seed = 99U,
         .setup = {
+            .game = P4_DOOM_MP_GAME_DOOM,
             .mode = P4_DOOM_MP_MODE_DEATHMATCH,
             .episode = 1U,
             .map = 1U,
@@ -87,9 +91,10 @@ static void test_launch_config(void)
 static void test_setup_codec(void)
 {
     const p4_doom_mp_setup_t expected = {
+        .game = P4_DOOM_MP_GAME_CHEX_QUEST,
         .mode = P4_DOOM_MP_MODE_ALTDEATH,
         .episode = 1U,
-        .map = 7U,
+        .map = 5U,
         .skill = 4U,
         .time_limit_minutes = 15U,
         .no_monsters = true,
@@ -100,6 +105,7 @@ static void test_setup_codec(void)
     CHECK(p4_doom_mp_setup_encode(&expected, bytes));
     p4_doom_mp_setup_t decoded;
     CHECK(p4_doom_mp_setup_decode(bytes, sizeof(bytes), &decoded));
+    CHECK(decoded.game == expected.game);
     CHECK(decoded.mode == expected.mode);
     CHECK(decoded.episode == expected.episode);
     CHECK(decoded.map == expected.map);
@@ -112,10 +118,16 @@ static void test_setup_codec(void)
     bytes[5] |= UINT8_C(0x80);
     CHECK(!p4_doom_mp_setup_decode(bytes, sizeof(bytes), &decoded));
     bytes[5] &= UINT8_C(0x7f);
-    bytes[7] = 1U;
+    bytes[7] = (uint8_t)P4_DOOM_MP_GAME_COUNT;
     CHECK(!p4_doom_mp_setup_decode(bytes, sizeof(bytes), &decoded));
-    bytes[7] = 0U;
+    bytes[7] = (uint8_t)P4_DOOM_MP_GAME_CHEX_QUEST;
     bytes[4] = 6U;
+    CHECK(!p4_doom_mp_setup_decode(bytes, sizeof(bytes), &decoded));
+    bytes[4] = 4U;
+    bytes[3] = P4_DOOM_MP_MAX_CHEX_MAP + 1U;
+    CHECK(!p4_doom_mp_setup_decode(bytes, sizeof(bytes), &decoded));
+    bytes[3] = P4_DOOM_MP_MAX_CHEX_MAP;
+    bytes[2] = 2U;
     CHECK(!p4_doom_mp_setup_decode(bytes, sizeof(bytes), &decoded));
 }
 
@@ -230,6 +242,62 @@ static void test_tick_wrap(void)
     CHECK(p4_doom_mp_tic_queue_ready(&queue));
 }
 
+static void test_reliable_tx_window(void)
+{
+    p4_doom_mp_tx_window_t window;
+    p4_doom_mp_tx_window_init(&window, 100U);
+    const p4_doom_mp_tic_t first = tic(100U, 1);
+    const p4_doom_mp_tic_t second = tic(101U, 2);
+    CHECK(p4_doom_mp_tx_window_track(&window, &first));
+    CHECK(p4_doom_mp_tx_window_track(&window, &first));
+    p4_doom_mp_tic_t conflict = first;
+    conflict.buttons ^= UINT8_C(1);
+    CHECK(!p4_doom_mp_tx_window_track(&window, &conflict));
+    CHECK(p4_doom_mp_tx_window_track(&window, &second));
+    CHECK(p4_doom_mp_tx_window_pending(&window) == 2U);
+
+    p4_doom_mp_tic_t oldest;
+    CHECK(p4_doom_mp_tx_window_oldest(&window, &oldest));
+    CHECK(oldest.tick == 100U);
+    CHECK(!p4_doom_mp_tx_window_acknowledge(&window, 99U));
+    CHECK(!p4_doom_mp_tx_window_acknowledge(&window, 103U));
+    CHECK(p4_doom_mp_tx_window_acknowledge(&window, 101U));
+    CHECK(p4_doom_mp_tx_window_pending(&window) == 1U);
+    CHECK(p4_doom_mp_tx_window_oldest(&window, &oldest));
+    CHECK(oldest.tick == 101U);
+    CHECK(p4_doom_mp_tx_window_acknowledge(&window, 102U));
+    CHECK(p4_doom_mp_tx_window_pending(&window) == 0U);
+    CHECK(!p4_doom_mp_tx_window_oldest(&window, &oldest));
+}
+
+static void test_reliable_tx_window_wrap_and_capacity(void)
+{
+    p4_doom_mp_tx_window_t window;
+    p4_doom_mp_tx_window_init(&window, UINT32_MAX);
+    const p4_doom_mp_tic_t last = tic(UINT32_MAX, 1);
+    const p4_doom_mp_tic_t zero = tic(0U, 2);
+    CHECK(p4_doom_mp_tx_window_track(&window, &last));
+    CHECK(p4_doom_mp_tx_window_track(&window, &zero));
+    CHECK(p4_doom_mp_tx_window_acknowledge(&window, 0U));
+    p4_doom_mp_tic_t oldest;
+    CHECK(p4_doom_mp_tx_window_oldest(&window, &oldest));
+    CHECK(oldest.tick == 0U);
+    CHECK(p4_doom_mp_tx_window_acknowledge(&window, 1U));
+
+    p4_doom_mp_tx_window_init(&window, 0U);
+    for (uint32_t tick_number = 0U;
+         tick_number < P4_DOOM_MP_TX_WINDOW_SIZE; ++tick_number) {
+        const p4_doom_mp_tic_t item = tic(tick_number, (int)tick_number);
+        CHECK(p4_doom_mp_tx_window_track(&window, &item));
+    }
+    const p4_doom_mp_tic_t overflow =
+        tic(P4_DOOM_MP_TX_WINDOW_SIZE, 1);
+    CHECK(!p4_doom_mp_tx_window_track(&window, &overflow));
+    CHECK(p4_doom_mp_tx_window_acknowledge(
+              &window, P4_DOOM_MP_TX_WINDOW_SIZE / 2U));
+    CHECK(p4_doom_mp_tx_window_track(&window, &overflow));
+}
+
 int main(void)
 {
     test_input_mapping();
@@ -238,6 +306,8 @@ int main(void)
     test_engine_barrier();
     test_lockstep_queue();
     test_tick_wrap();
+    test_reliable_tx_window();
+    test_reliable_tx_window_wrap_and_capacity();
     if (s_failures != 0) {
         fprintf(stderr, "%d Doom multiplayer test failure(s)\n", s_failures);
         return EXIT_FAILURE;

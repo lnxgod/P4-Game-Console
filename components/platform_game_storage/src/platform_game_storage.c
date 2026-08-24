@@ -16,6 +16,7 @@
 #include "esp_attr.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
+#include "esp_timer.h"
 #include "sdkconfig.h"
 #ifndef CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 #define CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B 0
@@ -43,6 +44,8 @@
        CONFIG_P4_WAVESHARE_H2_RUNTIME_ROLE_SWITCH)))
 #define P4_GAME_STORAGE_EAGER_USB_STORAGE \
     (P4_GAME_STORAGE_USB_EXPORT && !P4_GAME_STORAGE_RUNTIME_H2_SWITCH)
+#define P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN \
+    CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
 
 #if P4_GAME_STORAGE_SD_BACKEND
 #include "ff.h"
@@ -80,6 +83,7 @@ enum {
     GAME_STORAGE_HASH_BUFFER_BYTES = 8192,
     GAME_STORAGE_SD_TRANSFER_BYTES = 4096,
     GAME_STORAGE_STREAM_BUFFER_BYTES = 16384,
+    GAME_STORAGE_CONTENT_SCAN_STACK_BYTES = 6144,
     GAME_STORAGE_PATH_BYTES =
         sizeof(PLATFORM_GAME_STORAGE_UPDATE_MOUNT_POINT) +
         PLATFORM_GAME_STORAGE_FILE_NAME_MAX_BYTES + 1,
@@ -112,6 +116,20 @@ static const uint8_t s_expected_doom_sha256[32] = {
     0x27, 0xe4, 0x15, 0xe0, 0xb8, 0xf3, 0xe2, 0x9c,
     0x3b, 0xf3, 0x30, 0x75, 0xe8, 0x59, 0x72, 0x18,
     0x16, 0xf6, 0x52, 0xa5, 0x26, 0xca, 0xc7, 0x71,
+};
+
+static const uint8_t s_expected_chex_sha256[32] = {
+    0xd8, 0xeb, 0x52, 0x77, 0x91, 0x88, 0x83, 0xf4,
+    0x90, 0xfb, 0x1a, 0x4b, 0xe3, 0xc9, 0xa8, 0x58,
+    0x8d, 0xf2, 0xdb, 0xae, 0xe6, 0xdc, 0x4b, 0xeb,
+    0x8d, 0xf4, 0x92, 0x91, 0x48, 0xbb, 0xff, 0xb1,
+};
+
+static const uint8_t s_expected_chex_deh_sha256[32] = {
+    0x8c, 0x03, 0x45, 0x08, 0x9f, 0xb2, 0x27, 0xfa,
+    0x7f, 0x71, 0xc2, 0x5a, 0x6c, 0x6e, 0x31, 0xff,
+    0x5b, 0xd4, 0xbe, 0xa0, 0x58, 0x0f, 0x28, 0x6c,
+    0xd7, 0x4e, 0x05, 0x91, 0x8d, 0x72, 0xdd, 0x40,
 };
 
 static game_storage_model_t s_model;
@@ -164,6 +182,16 @@ static esp_err_t s_last_error = ESP_ERR_INVALID_STATE;
 static DRAM_ATTR uint8_t s_hash_buffer[GAME_STORAGE_HASH_BUFFER_BYTES]
     __attribute__((aligned(64)));
 static bool s_maintenance;
+static game_storage_content_t s_doom_content = GAME_STORAGE_CONTENT_UNKNOWN;
+static game_storage_content_t s_chex_content = GAME_STORAGE_CONTENT_UNKNOWN;
+#if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
+static TaskHandle_t s_content_validation_task;
+static bool s_content_validation_running;
+static bool s_content_validation_complete;
+static uint8_t s_content_validation_progress_percent;
+static uint64_t s_content_validation_progress_bytes;
+static uint32_t s_content_validation_generation;
+#endif
 
 #if P4_GAME_STORAGE_USB_EXPORT
 _Static_assert(GAME_STORAGE_HASH_BUFFER_BYTES >= CONFIG_TINYUSB_MSC_BUFSIZE,
@@ -318,9 +346,11 @@ static esp_err_t uninstall_usb_driver_if_running(bool *out_was_running)
 }
 #endif
 
-static bool doom_header_valid(const uint8_t header[12], uint64_t size_bytes)
+static bool doom_header_valid(const uint8_t header[12], uint64_t size_bytes,
+                              bool allow_pwad)
 {
-    if (memcmp(header, "IWAD", 4U) != 0) {
+    if (memcmp(header, "IWAD", 4U) != 0 &&
+        (!allow_pwad || memcmp(header, "PWAD", 4U) != 0)) {
         return false;
     }
     const uint32_t lumps = (uint32_t)header[4] |
@@ -336,21 +366,57 @@ static bool doom_header_valid(const uint8_t header[12], uint64_t size_bytes)
         directory_bytes <= size_bytes - (uint64_t)directory;
 }
 
-static game_storage_content_t inspect_doom_wad(esp_err_t *out_error)
+static void content_validation_note_bytes(size_t count)
+{
+#if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
+    if (!s_content_validation_running || count == 0U) {
+        return;
+    }
+    const uint64_t total = PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES +
+        PLATFORM_GAME_STORAGE_CHEX_WAD_BYTES +
+        PLATFORM_GAME_STORAGE_CHEX_DEH_BYTES;
+    if (s_content_validation_progress_bytes <= total - count) {
+        s_content_validation_progress_bytes += count;
+    } else {
+        s_content_validation_progress_bytes = total;
+    }
+    const uint64_t percent =
+        s_content_validation_progress_bytes * UINT64_C(100) / total;
+    s_content_validation_progress_percent =
+        percent > UINT8_MAX ? UINT8_MAX : (uint8_t)percent;
+    taskYIELD();
+#else
+    (void)count;
+#endif
+}
+
+static game_storage_content_t inspect_exact_file(
+    const char *path,
+    uint64_t expected_bytes,
+    const uint8_t expected_sha256[32],
+    bool require_wad_header,
+    bool allow_pwad,
+    esp_err_t *out_error)
 {
     struct stat metadata;
-    if (stat(PLATFORM_GAME_STORAGE_DOOM_WAD_PATH, &metadata) != 0) {
+    if (path == NULL || expected_sha256 == NULL || out_error == NULL) {
+        if (out_error != NULL) {
+            *out_error = ESP_ERR_INVALID_ARG;
+        }
+        return GAME_STORAGE_CONTENT_INVALID;
+    }
+    if (stat(path, &metadata) != 0) {
         *out_error = errno == ENOENT ? ESP_ERR_NOT_FOUND : ESP_FAIL;
         return errno == ENOENT
             ? GAME_STORAGE_CONTENT_MISSING : GAME_STORAGE_CONTENT_INVALID;
     }
     if (!S_ISREG(metadata.st_mode) || metadata.st_size < 0 ||
-        (uint64_t)metadata.st_size != PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES) {
+        (uint64_t)metadata.st_size != expected_bytes) {
         *out_error = ESP_ERR_INVALID_SIZE;
         return GAME_STORAGE_CONTENT_INVALID;
     }
 
-    FILE *file = fopen(PLATFORM_GAME_STORAGE_DOOM_WAD_PATH, "rb");
+    FILE *file = fopen(path, "rb");
     if (file == NULL) {
         *out_error = ESP_FAIL;
         return GAME_STORAGE_CONTENT_INVALID;
@@ -368,6 +434,7 @@ static game_storage_content_t inspect_doom_wad(esp_err_t *out_error)
         if (count == 0U) {
             break;
         }
+        content_validation_note_bytes(count);
         if (header_bytes < sizeof(header)) {
             size_t copy = sizeof(header) - header_bytes;
             if (copy > count) {
@@ -388,17 +455,102 @@ static game_storage_content_t inspect_doom_wad(esp_err_t *out_error)
     if (fclose(file) != 0) {
         valid = false;
     }
-    valid = valid && total_bytes == PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES &&
-        header_bytes == sizeof(header) &&
-        doom_header_valid(header, total_bytes) &&
-        memcmp(digest, s_expected_doom_sha256, sizeof(digest)) == 0;
+    valid = valid && total_bytes == expected_bytes &&
+        (!require_wad_header ||
+         (header_bytes == sizeof(header) &&
+          doom_header_valid(header, total_bytes, allow_pwad))) &&
+        memcmp(digest, expected_sha256, sizeof(digest)) == 0;
     *out_error = valid ? ESP_OK : ESP_ERR_INVALID_CRC;
     return valid ? GAME_STORAGE_CONTENT_READY
                  : GAME_STORAGE_CONTENT_INVALID;
 }
 
+static game_storage_content_t inspect_doom_wad(esp_err_t *out_error)
+{
+    return inspect_exact_file(
+        PLATFORM_GAME_STORAGE_DOOM_WAD_PATH,
+        PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES,
+        s_expected_doom_sha256, true, false, out_error);
+}
+
+static game_storage_content_t inspect_chex_data(esp_err_t *out_error)
+{
+    esp_err_t wad_error = ESP_OK;
+    const game_storage_content_t wad = inspect_exact_file(
+        PLATFORM_GAME_STORAGE_CHEX_WAD_PATH,
+        PLATFORM_GAME_STORAGE_CHEX_WAD_BYTES,
+        s_expected_chex_sha256, true, true, &wad_error);
+    esp_err_t deh_error = ESP_OK;
+    const game_storage_content_t deh = inspect_exact_file(
+        PLATFORM_GAME_STORAGE_CHEX_DEH_PATH,
+        PLATFORM_GAME_STORAGE_CHEX_DEH_BYTES,
+        s_expected_chex_deh_sha256, false, false, &deh_error);
+    if (wad == GAME_STORAGE_CONTENT_READY &&
+        deh == GAME_STORAGE_CONTENT_READY) {
+        *out_error = ESP_OK;
+        return GAME_STORAGE_CONTENT_READY;
+    }
+    if (wad == GAME_STORAGE_CONTENT_INVALID ||
+        deh == GAME_STORAGE_CONTENT_INVALID) {
+        *out_error = wad == GAME_STORAGE_CONTENT_INVALID
+            ? wad_error : deh_error;
+        return GAME_STORAGE_CONTENT_INVALID;
+    }
+    *out_error = wad != GAME_STORAGE_CONTENT_READY ? wad_error : deh_error;
+    return GAME_STORAGE_CONTENT_MISSING;
+}
+
+static game_storage_content_t inspect_doom_title(
+    platform_game_storage_doom_title_t title,
+    esp_err_t *out_error)
+{
+    switch (title) {
+    case PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM:
+        return inspect_doom_wad(out_error);
+    case PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST:
+        return inspect_chex_data(out_error);
+    case PLATFORM_GAME_STORAGE_DOOM_TITLE_COUNT:
+    default:
+        *out_error = ESP_ERR_INVALID_ARG;
+        return GAME_STORAGE_CONTENT_INVALID;
+    }
+}
+
 static esp_err_t refresh_locked(void)
 {
+#if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
+    if (!game_storage_model_begin_scan(&s_model)) {
+        if (s_model.owner != GAME_STORAGE_OWNER_APP) {
+            return ESP_ERR_INVALID_STATE;
+        }
+        if (s_model.content == GAME_STORAGE_CONTENT_SCANNING) {
+            return ESP_OK;
+        }
+        return s_model.content == GAME_STORAGE_CONTENT_READY
+            ? ESP_OK : s_last_error;
+    }
+    if (s_scans != UINT32_MAX) {
+        ++s_scans;
+    }
+    s_doom_content = GAME_STORAGE_CONTENT_UNKNOWN;
+    s_chex_content = GAME_STORAGE_CONTENT_UNKNOWN;
+    s_content_validation_complete = false;
+    s_content_validation_progress_percent = 0U;
+    s_content_validation_progress_bytes = 0U;
+    s_last_error = ESP_OK;
+    /* General storage readiness is independent of optional Doom-engine data.
+     * Exact WAD validation is explicitly started by a Doom/Chex launch or by
+     * the Multiplayer page, never by ordinary boot. */
+    game_storage_model_finish_scan(&s_model, GAME_STORAGE_CONTENT_READY);
+    ESP_LOGI(TAG,
+             "P4_GAME_STORAGE CONTENT_VALIDATION_DEFERRED generation=%lu "
+             "bytes=%llu trigger=doom-chex-demand full_sha256=required",
+             (unsigned long)s_model.generation,
+             (unsigned long long)(PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES +
+                 PLATFORM_GAME_STORAGE_CHEX_WAD_BYTES +
+                 PLATFORM_GAME_STORAGE_CHEX_DEH_BYTES));
+    return ESP_OK;
+#else
     if (!game_storage_model_begin_scan(&s_model)) {
         if (s_model.owner != GAME_STORAGE_OWNER_APP) {
             return ESP_ERR_INVALID_STATE;
@@ -409,11 +561,28 @@ static esp_err_t refresh_locked(void)
     if (s_scans != UINT32_MAX) {
         ++s_scans;
     }
-    esp_err_t scan_error = ESP_OK;
-    const game_storage_content_t content = inspect_doom_wad(&scan_error);
+    esp_err_t doom_error = ESP_OK;
+    esp_err_t chex_error = ESP_OK;
+    s_doom_content = inspect_doom_wad(&doom_error);
+    s_chex_content = inspect_chex_data(&chex_error);
+    game_storage_content_t content = GAME_STORAGE_CONTENT_MISSING;
+    esp_err_t scan_error = doom_error;
+    if (s_doom_content == GAME_STORAGE_CONTENT_READY ||
+        s_chex_content == GAME_STORAGE_CONTENT_READY) {
+        content = GAME_STORAGE_CONTENT_READY;
+        scan_error = ESP_OK;
+    } else if (s_doom_content == GAME_STORAGE_CONTENT_INVALID ||
+               s_chex_content == GAME_STORAGE_CONTENT_INVALID) {
+        content = GAME_STORAGE_CONTENT_INVALID;
+        scan_error = s_doom_content == GAME_STORAGE_CONTENT_INVALID
+            ? doom_error : chex_error;
+    } else if (scan_error == ESP_OK) {
+        scan_error = chex_error;
+    }
     game_storage_model_finish_scan(&s_model, content);
     s_last_error = scan_error;
     return content == GAME_STORAGE_CONTENT_READY ? ESP_OK : scan_error;
+#endif
 }
 
 static platform_game_storage_state_t public_state_locked(void)
@@ -1038,12 +1207,128 @@ esp_err_t platform_game_storage_refresh(void)
     return result;
 }
 
+#if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
+static void content_validation_worker(void *unused)
+{
+    (void)unused;
+    const int64_t started_us = esp_timer_get_time();
+    const uint32_t generation = s_content_validation_generation;
+    ESP_LOGI(TAG,
+             "P4_GAME_STORAGE CONTENT_VALIDATION_BEGIN generation=%lu "
+             "doom_bytes=%llu chex_bytes=%llu worker=low-priority",
+             (unsigned long)generation,
+             (unsigned long long)PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES,
+             (unsigned long long)(PLATFORM_GAME_STORAGE_CHEX_WAD_BYTES +
+                 PLATFORM_GAME_STORAGE_CHEX_DEH_BYTES));
+
+    esp_err_t doom_error = ESP_OK;
+    esp_err_t chex_error = ESP_OK;
+    const game_storage_content_t doom = inspect_doom_wad(&doom_error);
+    ESP_LOGI(TAG,
+             "P4_GAME_STORAGE CONTENT_VALIDATION_TITLE title=doom "
+             "result=%s progress=%u",
+             esp_err_to_name(doom_error),
+             (unsigned)s_content_validation_progress_percent);
+    const game_storage_content_t chex = inspect_chex_data(&chex_error);
+
+    esp_err_t scan_error = doom_error;
+    if (doom == GAME_STORAGE_CONTENT_READY ||
+        chex == GAME_STORAGE_CONTENT_READY) {
+        scan_error = ESP_OK;
+    } else if (doom == GAME_STORAGE_CONTENT_INVALID ||
+               chex == GAME_STORAGE_CONTENT_INVALID) {
+        scan_error = doom == GAME_STORAGE_CONTENT_INVALID
+            ? doom_error : chex_error;
+    } else if (scan_error == ESP_OK) {
+        scan_error = chex_error;
+    }
+
+    bool applied = false;
+    if (lock_storage()) {
+        applied = s_content_validation_running &&
+            s_model.owner == GAME_STORAGE_OWNER_APP &&
+            s_model.generation == generation &&
+            s_model.content == GAME_STORAGE_CONTENT_READY;
+        if (applied) {
+            s_doom_content = doom;
+            s_chex_content = chex;
+            s_last_error = scan_error;
+            s_content_validation_complete = true;
+            s_content_validation_progress_percent = 100U;
+        }
+        s_content_validation_running = false;
+        s_content_validation_task = NULL;
+        unlock_storage();
+    }
+    const unsigned low_water_bytes =
+        (unsigned)uxTaskGetStackHighWaterMark(NULL);
+    ESP_LOGI(TAG,
+             "P4_GAME_STORAGE CONTENT_VALIDATION_COMPLETE applied=%u "
+             "generation=%lu doom=%s chex=%s result=%s elapsed_ms=%lld "
+             "worker_low_water_bytes=%u",
+             applied ? 1U : 0U, (unsigned long)generation,
+             doom == GAME_STORAGE_CONTENT_READY ? "ready" : "not-ready",
+             chex == GAME_STORAGE_CONTENT_READY ? "ready" : "not-ready",
+             esp_err_to_name(scan_error),
+             (long long)((esp_timer_get_time() - started_us) /
+                 INT64_C(1000)),
+             low_water_bytes);
+    vTaskDelete(NULL);
+}
+#endif
+
+esp_err_t platform_game_storage_start_content_validation(void)
+{
+#if !P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
+    return platform_game_storage_refresh();
+#else
+    if (!s_initialized || !lock_storage()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (s_content_validation_running || s_content_validation_complete) {
+        unlock_storage();
+        return ESP_OK;
+    }
+    if (s_model.owner != GAME_STORAGE_OWNER_APP ||
+        s_model.content != GAME_STORAGE_CONTENT_READY) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+    s_content_validation_running = true;
+    s_content_validation_progress_percent = 0U;
+    s_content_validation_progress_bytes = 0U;
+    s_content_validation_generation = s_model.generation;
+    const BaseType_t created = xTaskCreate(
+        content_validation_worker, "wad_verify",
+        GAME_STORAGE_CONTENT_SCAN_STACK_BYTES, NULL,
+        tskIDLE_PRIORITY + 1U, &s_content_validation_task);
+    if (created != pdPASS) {
+        s_content_validation_running = false;
+        s_content_validation_complete = true;
+        s_content_validation_task = NULL;
+        s_last_error = ESP_ERR_NO_MEM;
+        unlock_storage();
+        ESP_LOGE(TAG,
+                 "P4_GAME_STORAGE CONTENT_VALIDATION_START_FAILED "
+                 "error=%s",
+                 esp_err_to_name(ESP_ERR_NO_MEM));
+        return ESP_ERR_NO_MEM;
+    }
+    unlock_storage();
+    return ESP_OK;
+#endif
+}
+
 esp_err_t platform_game_storage_check_card(void)
 {
     if (!s_initialized || !lock_storage()) {
         return ESP_ERR_INVALID_STATE;
     }
-    if (s_maintenance || s_model.owner != GAME_STORAGE_OWNER_APP ||
+    if (s_maintenance ||
+#if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
+        s_content_validation_running ||
+#endif
+        s_model.owner != GAME_STORAGE_OWNER_APP ||
         s_model.launch_pending) {
         unlock_storage();
         return ESP_ERR_INVALID_STATE;
@@ -1141,6 +1426,9 @@ esp_err_t platform_game_storage_retry_card(void)
         return ESP_ERR_INVALID_STATE;
     }
     if (s_maintenance ||
+#if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
+        s_content_validation_running ||
+#endif
         !game_storage_model_begin_recovery(
             &s_model, GAME_STORAGE_OWNER_APP)) {
         unlock_storage();
@@ -1201,6 +1489,9 @@ esp_err_t platform_game_storage_repair_fat(void)
     const bool recovering_fault =
         s_model.owner == GAME_STORAGE_OWNER_FAULT;
     if (s_maintenance || s_model.launch_pending ||
+#if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
+        s_content_validation_running ||
+#endif
         (s_model.owner != GAME_STORAGE_OWNER_APP && !recovering_fault) ||
         (recovering_fault && !game_storage_model_begin_recovery(
             &s_model, GAME_STORAGE_OWNER_APP))) {
@@ -1348,6 +1639,22 @@ esp_err_t platform_game_storage_get_status(
         s_sd_vfs_mounted;
 #else
         s_model.owner == GAME_STORAGE_OWNER_APP;
+#endif
+    out_status->doom_wad_ready =
+        s_doom_content == GAME_STORAGE_CONTENT_READY;
+    out_status->chex_quest_ready =
+        s_chex_content == GAME_STORAGE_CONTENT_READY;
+#if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
+    out_status->content_validation_running =
+        s_content_validation_running;
+    out_status->content_validation_complete =
+        s_content_validation_complete;
+    out_status->content_validation_progress_percent =
+        s_content_validation_progress_percent;
+#else
+    out_status->content_validation_running = false;
+    out_status->content_validation_complete = true;
+    out_status->content_validation_progress_percent = 100U;
 #endif
     out_status->last_repair_outcome = s_last_repair_outcome;
     out_status->last_check_error = s_last_check_error;
@@ -1893,6 +2200,9 @@ esp_err_t platform_game_storage_set_usb_mode(bool enabled)
         false;
 #endif
     if (s_maintenance || s_model.launch_pending ||
+#if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
+        s_content_validation_running ||
+#endif
         (enabled && owner != GAME_STORAGE_OWNER_APP &&
          owner != GAME_STORAGE_OWNER_USB && !recovery_export) ||
         (!enabled && owner != GAME_STORAGE_OWNER_USB)) {
@@ -2018,9 +2328,25 @@ esp_err_t platform_game_storage_set_usb_mode(bool enabled)
 
 esp_err_t platform_game_storage_lock_for_game(void)
 {
+    return platform_game_storage_lock_for_doom_title(
+        PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM);
+}
+
+esp_err_t platform_game_storage_lock_for_doom_title(
+    platform_game_storage_doom_title_t title)
+{
+    if (title >= PLATFORM_GAME_STORAGE_DOOM_TITLE_COUNT) {
+        return ESP_ERR_INVALID_ARG;
+    }
     if (!s_initialized || !lock_storage()) {
         return ESP_ERR_INVALID_STATE;
     }
+#if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
+    if (s_content_validation_running) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+#endif
     if (!game_storage_model_begin_game_lock(&s_model)) {
         const esp_err_t error = s_last_error == ESP_OK
             ? ESP_ERR_INVALID_STATE : s_last_error;
@@ -2028,11 +2354,16 @@ esp_err_t platform_game_storage_lock_for_game(void)
         return error;
     }
 #if !P4_GAME_STORAGE_USB_EXPORT
-    s_model.content = GAME_STORAGE_CONTENT_UNKNOWN;
-    const esp_err_t result = refresh_locked();
-    const bool ready = result == ESP_OK &&
-        s_model.owner == GAME_STORAGE_OWNER_APP &&
-        s_model.content == GAME_STORAGE_CONTENT_READY;
+    esp_err_t result = ESP_OK;
+    const game_storage_content_t selected =
+        inspect_doom_title(title, &result);
+    if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM) {
+        s_doom_content = selected;
+    } else {
+        s_chex_content = selected;
+    }
+    const bool ready = selected == GAME_STORAGE_CONTENT_READY &&
+        result == ESP_OK && s_model.owner == GAME_STORAGE_OWNER_APP;
     game_storage_model_finish_game_lock(&s_model, ready);
     s_last_error = ready ? ESP_OK : result;
     unlock_storage();
@@ -2057,14 +2388,30 @@ esp_err_t platform_game_storage_lock_for_game(void)
         const bool app_owned = s_model.owner == GAME_STORAGE_OWNER_APP &&
             !s_model.format_required;
         if (app_owned) {
-            s_model.content = GAME_STORAGE_CONTENT_UNKNOWN;
-            result = refresh_locked();
+            game_storage_content_t selected =
+                title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM
+                    ? s_doom_content : s_chex_content;
+            if (selected != GAME_STORAGE_CONTENT_READY) {
+                ESP_LOGI(TAG,
+                         "P4_GAME_STORAGE CONTENT_VALIDATION_ON_DEMAND "
+                         "title=%s full_sha256=required",
+                         title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM
+                             ? "doom" : "chex");
+                selected = inspect_doom_title(title, &result);
+            }
+            if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM) {
+                s_doom_content = selected;
+            } else {
+                s_chex_content = selected;
+            }
+            if (selected != GAME_STORAGE_CONTENT_READY && result == ESP_OK) {
+                result = ESP_ERR_INVALID_STATE;
+            }
         } else {
             result = s_last_error == ESP_OK
                 ? ESP_ERR_INVALID_STATE : s_last_error;
         }
-        const bool ready = app_owned && result == ESP_OK &&
-            s_model.content == GAME_STORAGE_CONTENT_READY;
+        const bool ready = app_owned && result == ESP_OK;
         game_storage_model_finish_game_lock(&s_model, ready);
         unlock_storage();
         if (ready) {

@@ -13,6 +13,19 @@ Only layer 4 belongs to Doom or another game.
 
 Current managed `espressif/usb` supports the P4 HS and FS host controllers. Published CrowPanel Advanced reference schematics route the exposed USB data pair to the dedicated HS PHY. The FS controller uses GPIO26/GPIO27, which may conflict with board functions and is not a fallback unless the exact board profile and fixture authorize those pins. Do not enable either path on the unconfirmed unit from reference data alone.
 
+The Waveshare 4.3 profile is separate: H2 carries the authorized full-speed
+Host/HID runtime path when external, backfeed-safe 5 V is supplied. It does not
+become a powered host merely because firmware selects host mode. Keep H1 CH343
+for programming, serial, and bounded file transfer. H2 can switch to USB-device
+MSC only from the USB Drive app after Host/HID stops and Console OS releases
+the SD filesystem.
+
+Hubs introduce a second untrusted descriptor/lifecycle boundary. Bound hub
+ports, downstream descriptors, control transfers, retries, and teardown. Keep
+the working forced-full-speed policy unless new electrical and protocol
+evidence authorizes another route. One controller behind one recorded powered
+hub does not prove every transaction-translator topology or multi-pad case.
+
 ## Canonical state requirements
 
 - connection and stable device identity;

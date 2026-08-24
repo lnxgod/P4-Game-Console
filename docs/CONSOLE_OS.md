@@ -8,7 +8,13 @@ viewport, presents games and folders as numbered doors, and keeps the existing
 Windows 3.1-style Program Manager as the selectable Appearance fallback. Touch
 hit testing, keyboard, and controller navigation share the same two-column,
 three-row door geometry. Native games remain 320x200 RGB565 and are scaled by
-the platform display path.
+the platform display path. The Multiplayer page now selects among Doom, Chex
+Quest, and installed native cartridges that declare `multiplayer-session`,
+filters rooms
+by exact game identity and content hash, and launches the selected game on both
+consoles after the host-owned start barrier. Doom keeps its dedicated lockstep
+handoff; native cartridges receive only the bounded, transport-neutral Game
+API session callbacks.
 
 Console OS 0.4.44 synchronizes multiplayer Doom at two boundaries. A
 session-tokenized launcher handshake lets either player start both consoles
@@ -321,10 +327,10 @@ loader with these substitutions:
 |---|---|---|---|
 | Display | 1024x600 DSI, 3x viewport | 1280x720 HDMI, 3x viewport | 480x800 ST7701 rotated to 800x480, 768x480 viewport |
 | Persistent content | internal FAT over J16 | removable microSD | removable microSD; app read-only or exclusive H2 MSC host |
-| Input | GT911 touch | USB-A pad + keyboard + mouse | GT911 touch |
+| Input | GT911 touch | USB-A pad + keyboard + mouse | GT911 touch + externally powered H2 pad/keyboard/mouse |
 | Audio | reviewed factory speaker path | ES8311 to 3.5mm jack | ES8311 speaker path behind runtime gate |
 | Doom | exclusive touch handoff | exclusive pad/keyboard/mouse handoff | exclusive touch handoff |
-| Programming / transfer | J1 UART / J16 MSC | native USB-C Serial/JTAG / card reader | H1 CH343 UART / H2 USB-device MSC |
+| Programming / transfer | J1 UART / J16 MSC | native USB-C Serial/JTAG / card reader | H1 CH343 UART + verified file transfer / runtime-switch H2 MSC |
 
 For Olimex, build and verify once with `make console-os-olimex-idf`. The build
 creates `apps/console_os/build-olimex-esp32-p4-pc/sd-card/` with all enabled
@@ -352,8 +358,21 @@ unrelated card data untouched. It requires an external
 USB FAT32 volume named `P4GAMES`; ExFAT is rejected because the pinned firmware
 mount does not support it. Recover a card with `diskutil eraseDisk MS-DOS
 P4GAMES MBRFormat /dev/diskN` only after resolving the exact external disk. H1
-remains programming UART. H2 and the app never own the filesystem concurrently,
-and runtime formatting remains forbidden.
+remains programming UART and also carries bounded, SHA-256-verified transfers
+at a negotiated 921600 baud. `scripts/p4-transfer.py push GAME.P4G --port ...`
+defaults to the native P4G class, validates both ends, stages and reads back the
+write, and invalidates the native catalog so the game appears without reboot.
+H2 and the app never own the filesystem concurrently, and runtime formatting
+remains forbidden.
+
+Boot does not hash Doom or Chex on its critical path. After SD mount and native
+catalog readiness, the launcher becomes interactive while those doors remain
+unverified. Selecting one starts the exact full-file SHA-256 and caches success
+only for that uninterrupted mounted-storage generation. Chex additionally
+requires its exact `.DEH` companion; its pinned WAD has a valid `PWAD` header,
+which is accepted only by the Chex path. Remount, USB Drive ownership, or reboot
+invalidates the in-memory result. A persisted size/timestamp/sample receipt is
+never sufficient for executable game-data readiness.
 
 Olimex launcher controls are: D-pad or arrow/WASD to navigate, gamepad A or
 Z/Space/Enter to accept, gamepad B or X/Escape/Backspace to go back, and R/F5
@@ -390,8 +409,8 @@ boot
        |     -> game receives normalized controls + RGB565 surface
        |     -> optional bounded audio session starts for the game
        |     `-> Back stops the game/audio and returns home
-       `-- Doom selected
-             -> stop USB device, remount FAT, and re-hash DOOM1.WAD
+       `-- Doom or Chex selected
+             -> verify the exact WAD (and Chex DEH) on demand for this mount
              -> retain exclusive game-storage lease until restart
              -> backlight dark
              -> destroy touch borrower
@@ -416,8 +435,8 @@ display, overlays, and exit callbacks in a deterministic order.
 | I2C1 GPIO45/46 | `platform_i2c_shared` | `platform_i2c_shared` | Touch borrower is destroyed before bus owner |
 | GT911 touch | `platform_touch` | `platform_touch` + Doom input | Invalid/malformed frames neutralize input |
 | Speaker audio | none on home; reviewed session for native games | Doom audio adapter/factory backend | Only one foreground owner; close must re-prove amplifier shutdown |
-| Game-data FAT | launcher or laptop, never both | terminal game lease | Clean eject returns ownership; host access is revoked and WAD re-hashed before Doom |
-| Doom WAD | validated logical-root `/DOOM1.WAD` | read-only VFS adapter | Exact ignored shareware identity only; host changes invalidate cache |
+| Game-data FAT | launcher or laptop, never both | terminal game lease | Clean eject returns ownership; host access is revoked and WAD verification is invalidated |
+| Doom/Chex data | validated logical-root `/DOOM1.WAD` or `/CHEX.WAD` + `/CHEX.DEH` | read-only VFS adapter | Exact known identities only; full SHA runs on demand once per uninterrupted mount; Chex alone accepts its pinned PWAD header |
 | File Manager | `console_shell` view plus `platform_game_storage` operations | unavailable | Lists/deletes only while the app owns FAT; host and game ownership reject every operation |
 | Game cartridge | validated microSD package bytes, then relocated PSRAM image | unavailable | Catalog and launch revalidate SHA/ELF; cartridge receives only the host callback table; OTA contains no `.P4G` payload |
 | Game resource | optional same-name `.P4R`, validated and held read-only in PSRAM during launch | unavailable | 8 MiB total bound, exact game-ID binding and payload SHA-256; game receives only the immutable payload view and no filesystem handle |

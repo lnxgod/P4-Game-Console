@@ -25,6 +25,10 @@ QUAKE_BYTES = 18_689_235
 QUAKE_SHA256 = "35a9c55e5e5a284a159ad2a62e0e8def23d829561fe2f54eb402dbc0a9a946af"
 DOOM_BYTES = 4_196_020
 DOOM_SHA256 = "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
+CHEX_WAD_BYTES = 12_361_532
+CHEX_WAD_SHA256 = "d8eb5277918883f490fb1a4be3c9a8588df2dbaee6dc4beb8df4929148bbffb1"
+CHEX_DEH_BYTES = 20_367
+CHEX_DEH_SHA256 = "8c0345089fb227fa7f71c25a6c6e31ff5bd4bea0580f286cd74e05918d72dd40"
 MANIFEST_MAGIC = b"P4M1"
 READY_MAGIC = b"P4R1"
 HIGH_MAGIC = b"P4H1"
@@ -33,6 +37,8 @@ ACK_MAGIC = b"P4A1"
 DONE_MAGIC = b"P4D1"
 CONTENT_KIND_QUAKE_SHAREWARE = 1
 CONTENT_KIND_DOOM_SHAREWARE = 2
+CONTENT_KIND_CHEX_QUEST_WAD = 3
+CONTENT_KIND_CHEX_QUEST_DEH = 4
 
 STATUS_NAMES = {
     0: "ok",
@@ -76,6 +82,20 @@ CONTENT_SPECS = {
         bytes=QUAKE_BYTES,
         sha256=QUAKE_SHA256,
         default_path=ROOT / "local-data/quake/id1/pak0.pak",
+    ),
+    "chex-wad": ContentSpec(
+        command="chex-wad",
+        kind=CONTENT_KIND_CHEX_QUEST_WAD,
+        bytes=CHEX_WAD_BYTES,
+        sha256=CHEX_WAD_SHA256,
+        default_path=ROOT / "local-data/doom/chex.wad",
+    ),
+    "chex-deh": ContentSpec(
+        command="chex-deh",
+        kind=CONTENT_KIND_CHEX_QUEST_DEH,
+        bytes=CHEX_DEH_BYTES,
+        sha256=CHEX_DEH_SHA256,
+        default_path=ROOT / "local-data/doom/chex.deh",
     ),
 }
 
@@ -194,9 +214,15 @@ def wait_for_content_ready(
             buffered.extend(block)
             if spec.command == "doom":
                 if (
-                    b"GAME_STORAGE state=app-ready" in buffered
+                    b"doom=ready" in buffered
                     and b"P4_MP_UART_READY" in buffered
                 ):
+                    return True
+            elif spec.command == "chex-wad":
+                if b"P4_MP_UART_READY" in buffered:
+                    return True
+            elif spec.command == "chex-deh":
+                if b"chex=ready" in buffered and b"P4_MP_UART_READY" in buffered:
                     return True
             elif b"CONTENT_READY" in buffered and b"quake_shareware=1" in buffered:
                 return True
@@ -303,14 +329,36 @@ def parser() -> argparse.ArgumentParser:
             "input", nargs="?", type=Path, default=spec.default_path
         )
         content.add_argument("--port")
+    chex = subparsers.add_parser(
+        "chex",
+        help="install the verified CHEX.WAD and CHEX.DEH pair",
+    )
+    chex.add_argument(
+        "wad", nargs="?", type=Path,
+        default=CONTENT_SPECS["chex-wad"].default_path,
+    )
+    chex.add_argument(
+        "deh", nargs="?", type=Path,
+        default=CONTENT_SPECS["chex-deh"].default_path,
+    )
+    chex.add_argument("--port")
     return result
 
 
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
-        spec = CONTENT_SPECS[args.kind]
-        install_content(spec, args.input.resolve(), args.port or detect_port())
+        port = args.port or detect_port()
+        if args.kind == "chex":
+            install_content(
+                CONTENT_SPECS["chex-wad"], args.wad.resolve(), port
+            )
+            install_content(
+                CONTENT_SPECS["chex-deh"], args.deh.resolve(), port
+            )
+        else:
+            spec = CONTENT_SPECS[args.kind]
+            install_content(spec, args.input.resolve(), port)
     except (OSError, serial.SerialException, TransferError) as error:
         print(f"P4_H1 FAILED reason={error}", file=sys.stderr)
         return 2

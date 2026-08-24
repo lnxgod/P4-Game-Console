@@ -89,6 +89,30 @@ static bool host_read_save_status(
                                committed_sequence_out);
 }
 
+static bool host_multiplayer_read_status(
+    void *opaque, p4_game_multiplayer_status_t *status_out)
+{
+    p4_cartridge_host_v1_t *const host = opaque;
+    return host != NULL && host->multiplayer_read_status != NULL &&
+        host->multiplayer_read_status(host->context, status_out);
+}
+
+static bool host_multiplayer_send(
+    void *opaque, const uint8_t *data, size_t data_bytes)
+{
+    p4_cartridge_host_v1_t *const host = opaque;
+    return host != NULL && host->multiplayer_send != NULL &&
+        host->multiplayer_send(host->context, data, data_bytes);
+}
+
+static bool host_multiplayer_receive(
+    void *opaque, p4_game_multiplayer_message_t *message_out)
+{
+    p4_cartridge_host_v1_t *const host = opaque;
+    return host != NULL && host->multiplayer_receive != NULL &&
+        host->multiplayer_receive(host->context, message_out);
+}
+
 static bool host_field_present(const p4_cartridge_host_v1_t *host,
                                size_t offset, size_t bytes)
 {
@@ -118,7 +142,8 @@ static uint32_t supported_service_capabilities(void)
         P4_GAME_CAP_AUDIO_STREAM |
         P4_GAME_CAP_STORAGE |
         P4_GAME_CAP_SIGNAL_SCAN |
-        P4_GAME_CAP_SAVE;
+        P4_GAME_CAP_SAVE |
+        P4_GAME_CAP_MULTIPLAYER_SESSION;
 }
 
 static bool host_save_snapshot_valid(const p4_cartridge_host_v1_t *host)
@@ -163,6 +188,9 @@ int app_main(int argc, char *argv[])
     const bool has_save = host_field_present(
         host, offsetof(p4_cartridge_host_v1_t, read_save_status),
         sizeof(host->read_save_status));
+    const bool has_multiplayer = host_field_present(
+        host, offsetof(p4_cartridge_host_v1_t, multiplayer_receive),
+        sizeof(host->multiplayer_receive));
     uint32_t available_capabilities = host->available_capabilities &
         supported_service_capabilities();
     if (host->play_tone == NULL) {
@@ -187,6 +215,12 @@ int app_main(int argc, char *argv[])
         host->read_save_status == NULL || !host_save_snapshot_valid(host)) {
         available_capabilities &=
             (uint32_t)~(uint32_t)P4_GAME_CAP_SAVE;
+    }
+    if (!has_multiplayer || host->multiplayer_read_status == NULL ||
+        host->multiplayer_send == NULL ||
+        host->multiplayer_receive == NULL) {
+        available_capabilities &=
+            (uint32_t)~(uint32_t)P4_GAME_CAP_MULTIPLAYER_SESSION;
     }
     if ((game->required_capabilities & ~available_capabilities) != 0U) {
         return P4_CARTRIDGE_EXIT_CAPABILITY_MISSING;
@@ -236,6 +270,18 @@ int app_main(int argc, char *argv[])
         .read_save_status =
             (available_capabilities & P4_GAME_CAP_SAVE) != 0U
             ? host_read_save_status : NULL,
+        .multiplayer_context =
+            (available_capabilities & P4_GAME_CAP_MULTIPLAYER_SESSION) != 0U
+            ? host : NULL,
+        .multiplayer_read_status =
+            (available_capabilities & P4_GAME_CAP_MULTIPLAYER_SESSION) != 0U
+            ? host_multiplayer_read_status : NULL,
+        .multiplayer_send =
+            (available_capabilities & P4_GAME_CAP_MULTIPLAYER_SESSION) != 0U
+            ? host_multiplayer_send : NULL,
+        .multiplayer_receive =
+            (available_capabilities & P4_GAME_CAP_MULTIPLAYER_SESSION) != 0U
+            ? host_multiplayer_receive : NULL,
     };
     p4_game_instance_t instance = {0};
     if (!p4_game_instance_start(

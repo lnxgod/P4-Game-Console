@@ -8,6 +8,7 @@ if(COMMAND idf_component_register)
             "src/start.c"
             "src/session.c"
             "src/stream.c"
+            "src/ble_frame.c"
             "src/uart_endpoint_dual.c"
         INCLUDE_DIRS "include"
         REQUIRES
@@ -29,6 +30,7 @@ else()
         src/start.c
         src/session.c
         src/stream.c
+        src/ble_frame.c
     )
     target_include_directories(p4_multiplayer PUBLIC include)
     target_compile_features(p4_multiplayer PUBLIC c_std_11)

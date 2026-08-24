@@ -48,6 +48,10 @@ static const console_app_descriptor_t s_apps[] = {
      .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
          CONSOLE_CAPABILITY_STORAGE,
      .page = CONSOLE_PAGE_GAMES, .enabled = true},
+    {.id = 8U, .title = "MULTIPLAYER", .subtitle = "LOCAL LINK",
+     .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0xFFE0),
+     .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH,
+     .page = CONSOLE_PAGE_MULTIPLAYER, .enabled = true},
 };
 
 static bool select_page(console_shell_t *shell, const char *name)
@@ -69,6 +73,13 @@ static bool select_page(console_shell_t *shell, const char *name)
     }
     if (strcmp(name, "system-folder") == 0) {
         (void)strcpy(shell->home_folder_path, "SYSTEM");
+        return true;
+    }
+    if (strcmp(name, "multiplayer") == 0) {
+        shell->page = CONSOLE_PAGE_MULTIPLAYER;
+        shell->active_app_id =
+            s_apps[sizeof(s_apps) / sizeof(s_apps[0]) - 1U].id;
+        shell->dirty = true;
         return true;
     }
     for (size_t i = 1U; i < sizeof(s_apps) / sizeof(s_apps[0]); ++i) {
@@ -136,7 +147,8 @@ int main(int argc, char **argv)
     if (argc != 3) {
         fprintf(stderr,
                 "usage: %s home|all|games|arcade|system-folder|"
-                "colors|touch|system|files|manager|audio output.ppm\n",
+                "colors|touch|system|files|manager|audio|multiplayer "
+                "output.ppm\n",
                 argv[0]);
         return EXIT_FAILURE;
     }
@@ -156,9 +168,34 @@ int main(int argc, char **argv)
         .touch_ready = true,
         .audio_handoff_ready = true,
         .boot_volume_step = 3U,
-        .game_volume_step = 8U,
+        .game_volume_step = 3U,
         .audio_settings_persistent = true,
         .doom_wad_ready = true,
+        .multiplayer_core_ready = true,
+        .multiplayer_transport_ready = true,
+        .multiplayer_transport_encrypted = true,
+        .multiplayer_transport_kind = 1U,
+        .multiplayer_peer_seen = false,
+        .multiplayer_lobby_ready = false,
+        .multiplayer_lobby_is_host = false,
+        .multiplayer_lobby_action_enabled = true,
+        .multiplayer_can_start = false,
+        .multiplayer_settings_editable = true,
+        .multiplayer_game_ready = true,
+        .multiplayer_game_is_doom = false,
+        .multiplayer_game_selection = 2U,
+        .multiplayer_game_count = 3U,
+        .multiplayer_game_title = "P4 YAHTZEE",
+        .multiplayer_lobby_phase = CONSOLE_MULTIPLAYER_LOBBY_BROWSING,
+        .multiplayer_lobby_selection = 0U,
+        .multiplayer_lobby_count = 2U,
+        .multiplayer_lobby_session_id = UINT32_C(0x00007A3F),
+        .multiplayer_player_slot = 0U,
+        .multiplayer_game_mode = 1U,
+        .multiplayer_episode = 1U,
+        .multiplayer_map = 1U,
+        .multiplayer_skill = 5U,
+        .multiplayer_no_monsters = true,
     };
     console_shell_set_runtime_info(&shell, &runtime);
     if (shell.page == CONSOLE_PAGE_FILES) {

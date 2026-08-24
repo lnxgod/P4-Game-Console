@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.4.55")
+set(PROJECT_VER "0.4.68")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")
@@ -12,6 +12,9 @@ if(NOT DEFINED P4_WAVESHARE_CONTROLLER_FIRST_BUILD)
 endif()
 if(NOT DEFINED P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
     set(P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD OFF)
+endif()
+if(NOT DEFINED P4_WAVESHARE_BLE_MULTIPLAYER_BUILD)
+    set(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD ON)
 endif()
 if(NOT P4_BOARD_PROFILE STREQUAL "elecrow-crowpanel-advanced-10" AND
    NOT P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" AND
@@ -81,6 +84,17 @@ elseif(P4_BOARD_PROFILE STREQUAL
         "${CMAKE_CURRENT_LIST_DIR}/../doom/components/doom_audio"
         "${CMAKE_CURRENT_LIST_DIR}/../doom_audio_probe/components/doom_engine_audio"
     )
+    if(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR
+       P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
+        list(APPEND EXTRA_COMPONENT_DIRS
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_radio_hosted"
+        )
+    endif()
+    if(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD)
+        list(APPEND EXTRA_COMPONENT_DIRS
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_multiplayer_ble"
+        )
+    endif()
     if(P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
         list(APPEND EXTRA_COMPONENT_DIRS
             "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_signal_scan"
@@ -117,11 +131,14 @@ idf_build_set_property(P4_WAVESHARE_CONTROLLER_FIRST_BUILD
     "${P4_WAVESHARE_CONTROLLER_FIRST_BUILD}")
 idf_build_set_property(P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD
     "${P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD}")
+idf_build_set_property(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD
+    "${P4_WAVESHARE_BLE_MULTIPLAYER_BUILD}")
 project(p4_console_os)
 
 if(P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
-   P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
+   (P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD OR
+    P4_WAVESHARE_BLE_MULTIPLAYER_BUILD))
     if(NOT CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE OR
        NOT CONFIG_ESP_HOSTED_SDIO_GPIO_RESET_SLAVE EQUAL 54 OR
        NOT CONFIG_ESP_HOSTED_SDIO_PIN_CLK EQUAL 18 OR
@@ -131,8 +148,18 @@ if(P4_BOARD_PROFILE STREQUAL
        NOT CONFIG_ESP_HOSTED_SDIO_PIN_D2 EQUAL 16 OR
        NOT CONFIG_ESP_HOSTED_SDIO_PIN_D3 EQUAL 17)
         message(FATAL_ERROR
-            "Waveshare signal scan requires its exact SDIO transport; "
+            "Waveshare radio services require their exact SDIO transport; "
             "refusing an ESP-Hosted fallback that can claim touch/display/audio pins")
+    endif()
+    if(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD AND
+       (NOT CONFIG_BT_ENABLED OR
+        NOT CONFIG_BT_CONTROLLER_DISABLED OR
+        NOT CONFIG_BT_NIMBLE_ENABLED OR
+        NOT CONFIG_ESP_HOSTED_ENABLE_BT_NIMBLE OR
+        NOT CONFIG_ESP_HOSTED_NIMBLE_HCI_VHCI))
+        message(FATAL_ERROR
+            "Waveshare BLE multiplayer requires the committed NimBLE/VHCI "
+            "sdkconfig overlay; rebuild with scripts/build-waveshare-console-os.sh")
     endif()
 endif()
 idf_build_get_property(P4_IDF_PYTHON PYTHON)
@@ -277,13 +304,14 @@ endif()
 # The locked ESP-Hosted 1.4.7 component registers a C constructor that starts
 # SDIO before app_main. Console OS owns storage and launch ordering, so the
 # Waveshare images remove only that constructor translation unit and call
-# esp_hosted_init() from platform_signal_scan after the launcher reaches READY.
+# esp_hosted_init() from the selected radio service after the launcher is live.
 # This keeps the controller-first H2 image from losing Byte Buddy's passive
 # signal capability while preserving explicit OS-owned startup ordering. The
 # managed component contents remain untouched and authoritative.
 if(P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
-   P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
+   (P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD OR
+    P4_WAVESHARE_BLE_MULTIPLAYER_BUILD))
     idf_component_get_property(
         P4_HOSTED_COMPONENT_LIB espressif__esp_hosted COMPONENT_LIB)
     get_target_property(
@@ -307,6 +335,77 @@ if(P4_BOARD_PROFILE STREQUAL
     endif()
     set_property(TARGET ${P4_HOSTED_COMPONENT_LIB} PROPERTY SOURCES
         "${P4_HOSTED_COMPONENT_FILTERED_SOURCES}")
+endif()
+
+# ESP-Hosted 1.4.7 creates its non-ISR worker stacks before the SDIO card's
+# mandatory DMA alignment buffer. A late, opt-in BLE start can therefore drain
+# internal DMA RAM even though 32 MiB of PSRAM is idle. Generate an exact-source
+# overlay that uses ESP-IDF's supported WithCaps API for those worker stacks;
+# the managed component and lockfile remain untouched.
+if(P4_BOARD_PROFILE STREQUAL
+       "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
+   P4_WAVESHARE_BLE_MULTIPLAYER_BUILD)
+    set(P4_HOSTED_OS_WRAPPER_UPSTREAM
+        "${CMAKE_CURRENT_LIST_DIR}/managed_components/espressif__esp_hosted/host/port/src/os_wrapper.c")
+    set(P4_HOSTED_OS_WRAPPER_GENERATOR
+        "${P4_REPOSITORY_ROOT}/scripts/generate-esp-hosted-psram-task-overlay.py")
+    set(P4_HOSTED_OS_WRAPPER_GENERATED
+        "${CMAKE_BINARY_DIR}/generated/esp-hosted-1.4.7/os_wrapper.c")
+    execute_process(
+        COMMAND
+            "${P4_IDF_PYTHON}"
+            "${P4_HOSTED_OS_WRAPPER_GENERATOR}"
+            --input "${P4_HOSTED_OS_WRAPPER_UPSTREAM}"
+            --output "${P4_HOSTED_OS_WRAPPER_GENERATED}"
+        RESULT_VARIABLE P4_HOSTED_OS_WRAPPER_GENERATE_RESULT
+        ERROR_VARIABLE P4_HOSTED_OS_WRAPPER_GENERATE_ERROR
+    )
+    if(NOT P4_HOSTED_OS_WRAPPER_GENERATE_RESULT EQUAL 0)
+        message(FATAL_ERROR
+            "failed to generate ESP-Hosted PSRAM task overlay: "
+            "${P4_HOSTED_OS_WRAPPER_GENERATE_ERROR}")
+    endif()
+    add_custom_command(
+        OUTPUT "${P4_HOSTED_OS_WRAPPER_GENERATED}"
+        COMMAND
+            "${P4_IDF_PYTHON}"
+            "${P4_HOSTED_OS_WRAPPER_GENERATOR}"
+            --input "${P4_HOSTED_OS_WRAPPER_UPSTREAM}"
+            --output "${P4_HOSTED_OS_WRAPPER_GENERATED}"
+        DEPENDS
+            "${P4_HOSTED_OS_WRAPPER_UPSTREAM}"
+            "${P4_HOSTED_OS_WRAPPER_GENERATOR}"
+        VERBATIM
+    )
+    set_source_files_properties(
+        "${P4_HOSTED_OS_WRAPPER_GENERATED}" PROPERTIES GENERATED TRUE)
+    idf_component_get_property(
+        P4_HOSTED_COMPONENT_LIB espressif__esp_hosted COMPONENT_LIB)
+    get_target_property(
+        P4_HOSTED_COMPONENT_SOURCES ${P4_HOSTED_COMPONENT_LIB} SOURCES)
+    set(P4_HOSTED_COMPONENT_FILTERED_SOURCES)
+    set(P4_HOSTED_OS_WRAPPER_SOURCE_MATCHES 0)
+    foreach(P4_HOSTED_COMPONENT_SOURCE IN LISTS P4_HOSTED_COMPONENT_SOURCES)
+        if(P4_HOSTED_COMPONENT_SOURCE STREQUAL
+               P4_HOSTED_OS_WRAPPER_UPSTREAM OR
+           P4_HOSTED_COMPONENT_SOURCE MATCHES
+               "managed_components/espressif__esp_hosted/host/port/src/os_wrapper\\.c$")
+            math(EXPR P4_HOSTED_OS_WRAPPER_SOURCE_MATCHES
+                "${P4_HOSTED_OS_WRAPPER_SOURCE_MATCHES} + 1")
+        else()
+            list(APPEND P4_HOSTED_COMPONENT_FILTERED_SOURCES
+                "${P4_HOSTED_COMPONENT_SOURCE}")
+        endif()
+    endforeach()
+    if(NOT P4_HOSTED_OS_WRAPPER_SOURCE_MATCHES EQUAL 1)
+        message(FATAL_ERROR
+            "expected exactly one locked ESP-Hosted os_wrapper.c source; "
+            "found ${P4_HOSTED_OS_WRAPPER_SOURCE_MATCHES}")
+    endif()
+    set_property(TARGET ${P4_HOSTED_COMPONENT_LIB} PROPERTY SOURCES
+        "${P4_HOSTED_COMPONENT_FILTERED_SOURCES}")
+    target_sources(${P4_HOSTED_COMPONENT_LIB} PRIVATE
+        "${P4_HOSTED_OS_WRAPPER_GENERATED}")
 endif()
 
 # A reviewed full-project install seeds a valid wear-levelled FAT volume.

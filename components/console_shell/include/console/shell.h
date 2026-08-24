@@ -76,11 +76,13 @@ enum {
     CONSOLE_SHELL_MAX_CONTACTS = 5,
     CONSOLE_SHELL_TITLE_MAX_BYTES = 16,
     CONSOLE_SHELL_SUBTITLE_MAX_BYTES = 32,
+    CONSOLE_SHELL_NODE_NAME_BYTES = 17,
     CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES = 16,
     CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES = 32,
     CONSOLE_SHELL_FILE_MAX_ENTRIES = 32,
     CONSOLE_SHELL_FILE_LABEL_MAX_BYTES = 25,
     CONSOLE_SHELL_FILE_PATH_LABEL_MAX_BYTES = 40,
+    CONSOLE_SHELL_TRANSFER_NAME_MAX_BYTES = 40,
     CONSOLE_SHELL_FILE_VISIBLE_ROWS = 5,
 };
 
@@ -106,6 +108,7 @@ typedef enum {
     CONSOLE_PAGE_MULTIPLAYER,
     CONSOLE_PAGE_SAVES,
     CONSOLE_PAGE_USB_DRIVE,
+    CONSOLE_PAGE_FILE_TRANSFER,
     CONSOLE_PAGE_TERMINAL,
     CONSOLE_PAGE_STORAGE,
 } console_page_t;
@@ -171,18 +174,51 @@ typedef enum {
 } console_storage_operation_t;
 
 typedef enum {
-    CONSOLE_MULTIPLAYER_OPTION_MODE = 0,
+    CONSOLE_FILE_TRANSFER_IDLE = 0,
+    CONSOLE_FILE_TRANSFER_RECEIVING,
+    CONSOLE_FILE_TRANSFER_SENDING,
+    CONSOLE_FILE_TRANSFER_COMPLETE,
+    CONSOLE_FILE_TRANSFER_FAILED,
+} console_file_transfer_state_t;
+
+typedef enum {
+    CONSOLE_FILE_TRANSFER_DIRECTION_NONE = 0,
+    CONSOLE_FILE_TRANSFER_UPLOAD,
+    CONSOLE_FILE_TRANSFER_DOWNLOAD,
+} console_file_transfer_direction_t;
+
+typedef enum {
+    CONSOLE_FILE_TRANSFER_CLASS_NONE = 0,
+    CONSOLE_FILE_TRANSFER_CLASS_P4G,
+    CONSOLE_FILE_TRANSFER_CLASS_EXCHANGE,
+} console_file_transfer_class_t;
+
+typedef enum {
+    /** Installed multiplayer-capable game selected before room discovery. */
+    CONSOLE_MULTIPLAYER_OPTION_GAME = 0,
+    CONSOLE_MULTIPLAYER_OPTION_MODE,
     CONSOLE_MULTIPLAYER_OPTION_MAP,
     CONSOLE_MULTIPLAYER_OPTION_SKILL,
     CONSOLE_MULTIPLAYER_OPTION_MONSTERS,
     CONSOLE_MULTIPLAYER_OPTION_FAST,
     CONSOLE_MULTIPLAYER_OPTION_RESPAWN,
     CONSOLE_MULTIPLAYER_OPTION_TIME_LIMIT,
+    CONSOLE_MULTIPLAYER_OPTION_TRANSPORT,
+    /** CREATE NEW followed by compatible discovered room choices. */
+    CONSOLE_MULTIPLAYER_OPTION_LOBBY,
     CONSOLE_MULTIPLAYER_OPTION_COUNT,
 } console_multiplayer_option_t;
 
+typedef enum {
+    CONSOLE_MULTIPLAYER_LOBBY_BROWSING = 0,
+    CONSOLE_MULTIPLAYER_LOBBY_HOSTING,
+    CONSOLE_MULTIPLAYER_LOBBY_JOINING,
+    CONSOLE_MULTIPLAYER_LOBBY_CONNECTED,
+} console_multiplayer_lobby_phase_t;
+
 typedef struct {
     uint32_t uptime_seconds;
+    char node_name[CONSOLE_SHELL_NODE_NAME_BYTES];
     uint32_t internal_free_kib;
     uint32_t psram_free_kib;
     uint32_t game_storage_kib;
@@ -202,12 +238,44 @@ typedef struct {
     bool doom_wad_ready;
     bool content_scan_complete;
     bool usb_content_ready;
+    bool file_transfer_ready;
+    bool file_transfer_busy;
+    console_file_transfer_state_t file_transfer_state;
+    console_file_transfer_direction_t file_transfer_direction;
+    console_file_transfer_class_t file_transfer_class;
+    uint8_t file_transfer_progress_percent;
+    uint8_t file_transfer_last_status;
+    uint32_t file_transfer_bytes;
+    uint32_t file_transfer_total_bytes;
+    uint32_t file_transfer_generation;
+    char file_transfer_name[CONSOLE_SHELL_TRANSFER_NAME_MAX_BYTES];
+    bool content_validation_running;
+    bool content_validation_complete;
+    uint8_t content_validation_progress_percent;
     bool multiplayer_core_ready;
     bool multiplayer_transport_ready;
+    bool multiplayer_transport_starting;
+    bool multiplayer_transport_encrypted;
+    /** 0 = direct/relay UART, 1 = opt-in BLE GATT. */
+    uint8_t multiplayer_transport_kind;
     bool multiplayer_peer_seen;
     bool multiplayer_lobby_ready;
+    bool multiplayer_lobby_is_host;
+    bool multiplayer_lobby_action_enabled;
+    bool multiplayer_can_start;
     bool multiplayer_launch_syncing;
     bool multiplayer_settings_editable;
+    bool multiplayer_game_ready;
+    bool multiplayer_game_is_doom;
+    uint8_t multiplayer_game_selection;
+    uint8_t multiplayer_game_count;
+    char multiplayer_game_title[CONSOLE_SHELL_TITLE_MAX_BYTES];
+    console_multiplayer_lobby_phase_t multiplayer_lobby_phase;
+    /** Zero selects CREATE NEW; 1..count select discovered rooms. */
+    uint8_t multiplayer_lobby_selection;
+    uint8_t multiplayer_lobby_count;
+    int8_t multiplayer_lobby_rssi;
+    uint32_t multiplayer_lobby_session_id;
     uint8_t multiplayer_route_id;
     uint8_t multiplayer_player_slot;
     uint8_t multiplayer_game_mode;
@@ -291,7 +359,8 @@ typedef enum {
     CONSOLE_ACTION_BOOT_VOLUME_SET,
     CONSOLE_ACTION_GAME_VOLUME_SET,
     CONSOLE_ACTION_MULTIPLAYER_CONFIGURE,
-    CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM,
+    CONSOLE_ACTION_MULTIPLAYER_LOBBY_PRIMARY,
+    CONSOLE_ACTION_MULTIPLAYER_LAUNCH_GAME,
     CONSOLE_ACTION_STORAGE_CHECK,
     CONSOLE_ACTION_STORAGE_RETRY,
     CONSOLE_ACTION_STORAGE_REPAIR,

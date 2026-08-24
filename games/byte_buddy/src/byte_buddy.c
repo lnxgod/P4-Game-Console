@@ -873,10 +873,14 @@ int32_t byte_buddy_catcher_step_q16(
     }
     const uint32_t response_ms = elapsed_ms < MINI_GAME_CATCHER_RESPONSE_MS
         ? elapsed_ms : MINI_GAME_CATCHER_RESPONSE_MS;
-    const int64_t velocity_delta = desired - *velocity_q16;
-    *velocity_q16 = (p4_q16_t)(
-        (int64_t)*velocity_q16 +
-        velocity_delta * response_ms / MINI_GAME_CATCHER_RESPONSE_MS);
+    const int32_t velocity_delta = (int32_t)desired - *velocity_q16;
+    const int32_t velocity_whole =
+        velocity_delta / MINI_GAME_CATCHER_RESPONSE_MS;
+    const int32_t velocity_remainder =
+        velocity_delta % MINI_GAME_CATCHER_RESPONSE_MS;
+    *velocity_q16 += velocity_whole * (int32_t)response_ms +
+        velocity_remainder * (int32_t)response_ms /
+            MINI_GAME_CATCHER_RESPONSE_MS;
     const p4_q16_t previous = current_q16;
     current_q16 = p4_q16_step(current_q16, *velocity_q16, elapsed_ms);
     if ((previous <= target && current_q16 >= target) ||

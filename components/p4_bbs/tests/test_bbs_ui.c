@@ -21,6 +21,7 @@ int main(void)
     p4_ansi_terminal_t terminal;
     p4_bbs_launcher_model_t model = {
         .board_name = "GAME CHANGERS AI BBS",
+        .node_name = "GC-P4-B289",
         .section = "[ DOOR GAMES ]",
         .connection = "ONLINE",
         .doors = {
@@ -42,17 +43,17 @@ int main(void)
     CHECK(terminal.discarded_strings == 0U);
     CHECK(!terminal.cursor_visible);
     CHECK(p4_ansi_cell(&terminal, 1U, 0U)->character == 0xc9U);
-    CHECK(p4_ansi_cell(&terminal, 6U, 8U)->character == '[');
-    CHECK(p4_ansi_cell(&terminal, 7U, 8U)->character == '0');
-    const p4_bbs_hit_t first = p4_bbs_hit_test(&model, 80U, 130U);
+    CHECK(p4_ansi_cell(&terminal, 5U, 9U)->character == '>');
+    CHECK(p4_ansi_cell(&terminal, 5U, 10U)->character == ' ');
+    const p4_bbs_hit_t first = p4_bbs_hit_test(&model, 80U, 155U);
     CHECK(first.kind == P4_BBS_HIT_DOOR);
     CHECK(first.door_index == 0U);
-    const p4_bbs_hit_t second_column =
-        p4_bbs_hit_test(&model, 405U, 130U);
-    CHECK(second_column.kind == P4_BBS_HIT_DOOR);
-    CHECK(second_column.door_index == 1U);
+    const p4_bbs_hit_t second_row =
+        p4_bbs_hit_test(&model, 405U, 205U);
+    CHECK(second_row.kind == P4_BBS_HIT_DOOR);
+    CHECK(second_row.door_index == 1U);
     model.can_go_up = true;
-    const p4_bbs_hit_t back = p4_bbs_hit_test(&model, 62U, 98U);
+    const p4_bbs_hit_t back = p4_bbs_hit_test(&model, 62U, 120U);
     CHECK(back.kind == P4_BBS_HIT_BACK);
     model.page = 2U;
     model.page_count = 3U;
@@ -75,6 +76,7 @@ int main(void)
     CHECK(!p4_bbs_build_launcher(&terminal, &model));
     const p4_bbs_boot_model_t boot = {
         .phase = P4_BBS_BOOT_CONNECTED,
+        .node_name = "GC-P4-B289",
         .status = "CONNECT 2400 / CARRIER DETECT",
         .detail = "OPENING GAME CHANGERS AI BBS",
         .progress_step = 5U,

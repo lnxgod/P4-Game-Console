@@ -43,6 +43,9 @@
 #include "platform/audio.h"
 #include "platform/display.h"
 #include "platform/readonly_blob.h"
+#ifdef P4_CONSOLE_OS_EMBEDDED
+#include "platform/game_storage.h"
+#endif
 #include "platform_gamepad_usb/platform_gamepad_usb.h"
 #include "platform_usb_host/platform_usb_host.h"
 #ifndef P4_CONSOLE_OS_EMBEDDED
@@ -338,25 +341,27 @@ static esp_err_t verify_embedded_wad(const uint8_t *data, size_t size_bytes)
 }
 #endif
 
-static esp_err_t verify_readonly_vfs(void)
+static esp_err_t verify_readonly_vfs(
+    const char *wad_path, size_t wad_bytes, bool allow_pwad)
 {
     struct stat metadata;
-    if (stat(EMBEDDED_WAD_PATH, &metadata) != 0
+    if (wad_path == NULL || stat(wad_path, &metadata) != 0
         || !S_ISREG(metadata.st_mode)
-        || metadata.st_size != (off_t)EMBEDDED_WAD_BYTES
+        || metadata.st_size != (off_t)wad_bytes
         || (metadata.st_mode & 0222) != 0) {
         return ESP_ERR_INVALID_RESPONSE;
     }
-    FILE *file = fopen(EMBEDDED_WAD_PATH, "rb");
+    FILE *file = fopen(wad_path, "rb");
     if (file == NULL) {
         return ESP_FAIL;
     }
     uint8_t header[12];
     esp_err_t result = ESP_OK;
     if (fread(header, 1U, sizeof(header), file) != sizeof(header)
-        || memcmp(header, "IWAD", 4U) != 0
+        || (memcmp(header, "IWAD", 4U) != 0
+            && (!allow_pwad || memcmp(header, "PWAD", 4U) != 0))
         || fseek(file, 0L, SEEK_END) != 0
-        || ftell(file) != (long)EMBEDDED_WAD_BYTES) {
+        || ftell(file) != (long)wad_bytes) {
         result = ESP_ERR_INVALID_RESPONSE;
     }
     if (fclose(file) != 0 && result == ESP_OK) {
@@ -703,11 +708,17 @@ void DG_SetWindowTitle(const char *title)
 
 #ifdef P4_CONSOLE_OS_EMBEDDED
 void console_os_launch_doom(
+    platform_game_storage_doom_title_t title,
     const p4_doom_mp_launch_config_t *multiplayer)
 #else
 void app_main(void)
 #endif
 {
+#ifdef P4_CONSOLE_OS_EMBEDDED
+    if (title >= PLATFORM_GAME_STORAGE_DOOM_TITLE_COUNT) {
+        halt_dark("wad-title", ESP_ERR_INVALID_ARG);
+    }
+#endif
 #ifndef P4_CONSOLE_OS_EMBEDDED
     doom_gamepad_audio_runtime_gate_t gate = {0};
     doom_gamepad_audio_runtime_gate_read(&gate);
@@ -757,8 +768,20 @@ void app_main(void)
 
 #ifdef P4_CONSOLE_OS_EMBEDDED
     const uint8_t *const wad_start = &s_console_storage_wad_marker;
-    const size_t wad_size = EMBEDDED_WAD_BYTES;
+    const bool chex =
+        title == PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST;
+    const size_t wad_size = chex
+        ? (size_t)PLATFORM_GAME_STORAGE_CHEX_WAD_BYTES
+        : (size_t)PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES;
+    const char *const wad_file_name = chex ? "chex.wad" : "doom1.wad";
+    const char *const wad_path = chex ? "/doom/chex.wad" : EMBEDDED_WAD_PATH;
+    const char *const wad_identity = chex
+        ? "chex-quest-1.0" : "doom-shareware-1.9";
+    const char *const wad_sha256 = chex
+        ? "d8eb5277918883f490fb1a4be3c9a8588df2dbaee6dc4beb8df4929148bbffb1"
+        : "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771";
 #else
+    const bool chex = false;
     const uint8_t *const wad_start = _binary_doom_shareware_wad_start;
     const uint8_t *const wad_end = _binary_doom_shareware_wad_end;
     const uintptr_t wad_start_address = (uintptr_t)wad_start;
@@ -767,20 +790,24 @@ void app_main(void)
         halt_dark("wad-linker-range", ESP_ERR_INVALID_SIZE);
     }
     const size_t wad_size = (size_t)(wad_end_address - wad_start_address);
+    const char *const wad_file_name = "doom1.wad";
+    const char *const wad_path = EMBEDDED_WAD_PATH;
+    const char *const wad_identity = "doom-shareware-1.9";
+    const char *const wad_sha256 =
+        "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771";
     result = verify_embedded_wad(wad_start, wad_size);
     if (result != ESP_OK) {
         halt_dark("wad-validate", result);
     }
 #endif
     ESP_LOGI(TAG,
-             "P4_DOOM_E4 WAD_VERIFIED identity=doom-shareware-1.9 "
+             "P4_DOOM_E4 WAD_VERIFIED identity=%s "
              "bytes=%u sha256=%s",
-             (unsigned)EMBEDDED_WAD_BYTES,
-             "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771");
+             wad_identity, (unsigned)wad_size, wad_sha256);
 
     const platform_readonly_blob_config_t blob_config = {
         .base_path = "/doom",
-        .file_name = "doom1.wad",
+        .file_name = wad_file_name,
         .data = wad_start,
         .size_bytes = wad_size,
     };
@@ -789,13 +816,13 @@ void app_main(void)
         halt_dark("wad-vfs-register", result);
     }
     s_blob_registered = true;
-    result = verify_readonly_vfs();
+    result = verify_readonly_vfs(wad_path, wad_size, chex);
     if (result != ESP_OK) {
         halt_dark("wad-vfs-readback", result);
     }
     ESP_LOGI(TAG,
              "P4_DOOM_E4 VFS_READY path=%s mode=read-only max_open=%u",
-             EMBEDDED_WAD_PATH,
+             wad_path,
              (unsigned)PLATFORM_READONLY_BLOB_MAX_OPEN_FILES);
 
     result = doom_video_init();
@@ -858,7 +885,7 @@ void app_main(void)
     char *argv[] = {
         "doom",
         "-iwad",
-        EMBEDDED_WAD_PATH,
+        (char *)wad_path,
         "-gfxmode",
         "rgba8888",
     };
@@ -866,7 +893,7 @@ void app_main(void)
     char *argv[] = {
         "doom",
         "-iwad",
-        EMBEDDED_WAD_PATH,
+        (char *)wad_path,
         "-gfxmode",
         "rgba8888",
         "-nomusic",
@@ -880,13 +907,13 @@ void app_main(void)
              "P4_DOOM_E4 ENGINE_START gfxmode=rgba8888 wad=%s "
              "sfx=enabled music=enabled input=canonical-snapshot "
              "audio_bound=1 video_seam=xrgb8888_to_rgb565",
-             EMBEDDED_WAD_PATH);
+             wad_path);
 #else
     ESP_LOGI(TAG,
              "P4_DOOM_E4 ENGINE_START gfxmode=rgba8888 wad=%s "
              "sfx=enabled music=disabled input=canonical-snapshot "
              "audio_bound=1 video_seam=xrgb8888_to_rgb565",
-             EMBEDDED_WAD_PATH);
+             wad_path);
 #endif
     s_engine_invoked = true;
     doomgeneric_Create(argc, argv);

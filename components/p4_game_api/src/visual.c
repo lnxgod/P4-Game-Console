@@ -79,7 +79,7 @@ size_t p4_animation_frame(uint32_t elapsed_ms,
         frame_count > 1024U) {
         return 0U;
     }
-    const uint64_t step = elapsed_ms / frame_duration_ms;
+    const uint32_t step = elapsed_ms / frame_duration_ms;
     if (!ping_pong || frame_count == 1U) {
         return (size_t)(step % frame_count);
     }

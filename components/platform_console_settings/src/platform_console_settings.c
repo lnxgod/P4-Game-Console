@@ -3,8 +3,11 @@
 #include "platform/console_settings.h"
 
 #include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 
 #include "esp_log.h"
+#include "esp_mac.h"
 #include "nvs.h"
 #include "nvs_flash.h"
 
@@ -12,17 +15,52 @@ static const char *const TAG = "p4_settings";
 static const char *const SETTINGS_NAMESPACE = "p4_console";
 static const char *const BOOT_VOLUME_KEY = "boot_volume";
 static const char *const GAME_VOLUME_KEY = "game_volume";
+static const char *const NODE_NAME_KEY = "node_name";
 static const char *const VOLUME_POLICY_KEY = "volume_policy";
 static const char *const USB_ENUM_PROBE_KEY = "usb_enum_probe";
 
 enum {
-    VOLUME_POLICY_VERSION = 1,
+    /* Apply the quieter room-friendly baseline once, then preserve UI edits. */
+    VOLUME_POLICY_VERSION = 2,
 };
 
 bool platform_console_settings_volume_valid(uint8_t volume_step)
 {
     return volume_step >= PLATFORM_CONSOLE_VOLUME_MIN &&
            volume_step <= PLATFORM_CONSOLE_VOLUME_MAX;
+}
+
+bool platform_console_settings_node_name_valid(const char *node_name)
+{
+    if (node_name == NULL) {
+        return false;
+    }
+    const size_t length = strnlen(
+        node_name, PLATFORM_CONSOLE_NODE_NAME_BYTES);
+    if (length < 3U || length >= PLATFORM_CONSOLE_NODE_NAME_BYTES ||
+        node_name[0] == '-' || node_name[length - 1U] == '-') {
+        return false;
+    }
+    for (size_t index = 0U; index < length; ++index) {
+        const char byte = node_name[index];
+        if (!((byte >= 'A' && byte <= 'Z') ||
+              (byte >= '0' && byte <= '9') || byte == '-')) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static void set_default_node_name(platform_console_settings_t *settings)
+{
+    uint8_t mac[6] = {0};
+    if (esp_read_mac(mac, ESP_MAC_BASE) == ESP_OK) {
+        (void)snprintf(
+            settings->node_name, sizeof(settings->node_name),
+            "GC-P4-%02X%02X", mac[4], mac[5]);
+    } else {
+        memcpy(settings->node_name, "GC-P4-LOCAL", 12U);
+    }
 }
 
 static void set_defaults(platform_console_settings_t *settings)
@@ -34,6 +72,7 @@ static void set_defaults(platform_console_settings_t *settings)
         .game_volume_step = PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT,
         .persistent = false,
     };
+    set_default_node_name(settings);
 }
 
 static esp_err_t migrate_volume_policy(nvs_handle_t handle,
@@ -138,12 +177,62 @@ esp_err_t platform_console_settings_init(
         return result;
     }
 
+    char node_name[PLATFORM_CONSOLE_NODE_NAME_BYTES] = {0};
+    size_t node_name_bytes = sizeof(node_name);
+    result = nvs_get_str(
+        handle, NODE_NAME_KEY, node_name, &node_name_bytes);
+    if (result == ESP_OK &&
+        platform_console_settings_node_name_valid(node_name)) {
+        memcpy(settings->node_name, node_name, sizeof(node_name));
+    } else if (result == ESP_ERR_NVS_NOT_FOUND || result == ESP_OK) {
+        result = nvs_set_str(handle, NODE_NAME_KEY, settings->node_name);
+        if (result == ESP_OK) {
+            result = nvs_commit(handle);
+        }
+    }
+    if (result != ESP_OK) {
+        nvs_close(handle);
+        return result;
+    }
+
     nvs_close(handle);
     settings->persistent = true;
     ESP_LOGI(TAG,
-             "P4_SETTINGS boot=%u game=%u source=nvs persistent=1",
-             settings->boot_volume_step, settings->game_volume_step);
+             "P4_SETTINGS boot=%u game=%u node=%s "
+             "source=nvs persistent=1",
+             settings->boot_volume_step, settings->game_volume_step,
+             settings->node_name);
     return ESP_OK;
+}
+
+esp_err_t platform_console_settings_set_node_name(
+    platform_console_settings_t *settings, const char *node_name)
+{
+    if (settings == NULL ||
+        settings->version != PLATFORM_CONSOLE_SETTINGS_VERSION ||
+        settings->size != (uint16_t)sizeof(*settings) ||
+        !platform_console_settings_node_name_valid(node_name)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (!settings->persistent) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    nvs_handle_t handle;
+    esp_err_t result = nvs_open(
+        SETTINGS_NAMESPACE, NVS_READWRITE, &handle);
+    if (result != ESP_OK) {
+        return result;
+    }
+    result = nvs_set_str(handle, NODE_NAME_KEY, node_name);
+    if (result == ESP_OK) {
+        result = nvs_commit(handle);
+    }
+    nvs_close(handle);
+    if (result == ESP_OK) {
+        (void)snprintf(settings->node_name,
+                       sizeof(settings->node_name), "%s", node_name);
+    }
+    return result;
 }
 
 static esp_err_t persist_volume(platform_console_settings_t *settings,

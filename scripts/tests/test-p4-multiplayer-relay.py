@@ -58,8 +58,12 @@ def main() -> None:
     assert relay.discover_frame() == discover
     assert relay.frame_valid(packet(2, bytes(128)))
     assert relay.frame_valid(packet(4, bytes(24)))
+    assert relay.frame_valid(packet(11, b"x"))
+    assert relay.frame_valid(packet(11, bytes(64)))
     assert not relay.frame_valid(packet(2, bytes(120)))
     assert not relay.frame_valid(packet(4, bytes(16)))
+    assert not relay.frame_valid(packet(11, b""))
+    assert not relay.frame_valid(packet(11, bytes(65)))
     print("p4 multiplayer relay tests PASS")
 
 

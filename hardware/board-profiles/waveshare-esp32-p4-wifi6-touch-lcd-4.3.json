@@ -117,6 +117,20 @@
       "source": "official commit-pinned Waveshare schematic plus ESP32-P4 GPIO capability and strapping review",
       "required_acceptance": "retained H1 logs from both units showing direct route lock, lobby/start synchronization, sustained bidirectional Doom input, and clean fallback to H1 relay with the direct cable absent",
       "hardware_acceptance": false
+    },
+    "multiplayer_ble": {
+      "authorized": true,
+      "authorization_basis": "explicit operator request on 2026-08-23 to flash and test BLE gaming on the two already backed-up exact Waveshare units",
+      "device_identity_sha256": [
+        "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+        "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79"
+      ],
+      "scope": "one-peer BLE GATT multiplayer transport selected explicitly from the local Doom lobby; UART remains the default transport",
+      "resources": "ESP32-C6-MINI-1 over four-bit SDIO on P4 GPIO18/19/14/15/16/17 with active-high C6 enable/reset on GPIO54; NimBLE host on ESP32-P4 over ESP-Hosted VHCI",
+      "software_contract": "ESP-IDF 5.5.3, esp_hosted 1.4.7, esp_wifi_remote 0.14.5; bounded framed notifications/writes, one connection, authenticated Secure Connections, lazy radio startup, immediate neutral/disconnected state on loss",
+      "wifi_data_plane_authorized": false,
+      "required_acceptance": "retained H1 logs from both units showing C6/SDIO initialization, central/peripheral role selection, encrypted GATT connection, lobby synchronization, sustained bidirectional Doom input, disconnect neutralization, and clean return to the launcher",
+      "hardware_acceptance": false
     }
   },
   "usb_vbus_assessment": {

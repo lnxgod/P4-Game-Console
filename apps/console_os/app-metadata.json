@@ -39,6 +39,7 @@
       "game-manager",
       "multiplayer",
       "save-manager",
+      "file-transfer",
       "usb-drive",
       "terminal"
     ],
@@ -84,6 +85,7 @@
       "INPUT.P4G",
       "LORD.P4G",
       "MAZE.P4G",
+      "P4_YAHTZEE.P4G",
       "SKYLINE.P4G",
       "SOLITAIR.P4G",
       "INVADERS.P4G"
@@ -127,14 +129,15 @@
   },
   "doom_handoff": {
     "mode": "exclusive-one-way-until-restart",
-    "wad_source": "/DOOM1.WAD on P4 GAMES",
+    "wad_source": "microSD root: exact DOOM1.WAD or CHEX.WAD + CHEX.DEH",
+    "supported_titles": ["Doom shareware 1.9", "Chex Quest freeware 1.0"],
     "wad_embedded_in_app": false,
     "shell_display_touch_and_i2c_released_first": true,
     "audio_initialized_by_shell": false,
     "audio_initialized_by_doom": true,
     "sample_rate_hz": 16000,
     "format": "pcm16-stereo",
-    "volume_step": "9/10",
+    "volume_step": "3/10",
     "music": "WAD MUS procedural 16-voice synth",
     "return_to_home_supported": "confirmed quit performs safe teardown and restarts into Console OS"
   },
@@ -155,6 +158,7 @@
     "full_project_image_seeds_volume": true,
     "ota_update_preserves_volume": true,
     "doom_path": "/DOOM1.WAD",
+    "chex_quest_paths": ["/CHEX.WAD", "/CHEX.DEH"],
     "game_directory": "/GAMES with root-package compatibility",
     "file_manager": {
       "scope": "bounded FAT directory navigation with a visible relative path and confirmed regular-file deletion on writable board profiles",

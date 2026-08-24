@@ -26,6 +26,12 @@ Resolve the exact target before touching USB code:
   ESP32-P4 high-speed root feeds the onboard powered FE1.1s USB-A hub; use that
   path directly for gamepad, boot keyboard, and boot mouse. Its USB-C is only
   native Serial/JTAG and is not a controller or storage connector.
+- `waveshare-esp32-p4-wifi6-touch-lcd-4.3` uses H2 as the runtime-switch USB
+  connector. Controller-first Console OS runs the full-speed Host/HID path
+  through an externally powered, current-limited, backfeed-safe direct cable or
+  hub; firmware does not source VBUS. H1 CH343 remains programming, serial, and
+  content transfer only. The USB Drive app is the explicit role switch from H2
+  Host to H2 device/MSC and must unmount FAT before exposing it.
 - A third target must have its own source-pinned board-port profile and USB
   adapter plan. Never inherit either identity from a connector name.
 
@@ -93,5 +99,11 @@ malformed-report behavior, and named hardware run have passed.
 
 For Console OS integration, the exact firmware builds are
 `make console-os-idf` for Elecrow and `make console-os-olimex-idf` for the
-Olimex Rev.B development board. Do not run both unless shared input code or the
-board-selection boundary changed.
+Olimex Rev.B development board. The proven Waveshare controller-first build is
+`./scripts/build.sh console_os waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host`,
+followed by `python3 scripts/verify-console-os-waveshare.py
+apps/console_os/build-waveshare-usb-host`. A generic SNES-style USB HID pad has
+named direct/hub evidence on that route, including D-pad/button mapping and
+disconnect recovery; do not generalize that result to other descriptors.
+Build only the physically selected target unless shared input or board
+selection code changed.

@@ -111,6 +111,22 @@ read-only while Console OS runs. Use `make install-waveshare-sd-card
 SD_MOUNT=/Volumes/P4GAMES` for the validated complete bundle. The installer
 requires an external FAT32 volume named `P4GAMES` and rejects ExFAT.
 
+For a live Waveshare cartridge update, prefer the H1 CH343 verified-transfer
+path and leave controller-first H2 in Host mode:
+
+```sh
+python3 scripts/p4-transfer.py push /absolute/path/STAR_HOP.P4G \
+  --port /dev/cu.wchusbserial...
+```
+
+`push` defaults to class `p4g`. The host and badge independently validate the
+uppercase safe name, package bound and geometry, API version, embedded payload
+digest, and complete-file SHA-256. Console OS writes through a staging file,
+reads the result back, atomically installs under `/GAMES`, and refreshes the
+native catalog without rebooting. Add `--no-replace` to prove an exact package
+is already present without overwriting it. Use H2 USB Drive mode only when a
+mounted FAT volume or complete bundle workflow is actually needed.
+
 Executable `.P4G` packages are never linked into the OTA application. The
 launcher and loader support storage-backed native entries. The separate
 P4CART launcher executes source games through its Lua sandbox and never sends
@@ -126,6 +142,8 @@ letting an unloadable game reach the SD card.
 - `format`: `p4-native-elf-v1`;
 - `api_version`: `1`;
 - `version`: a bounded semantic version;
+- optional `sources`: 1–16 unique C source basenames from the game's `src/`
+  directory; when omitted, packaging compiles `<component>.c` as before;
 - optional `stack_frame_limit_bytes`: a 128–16384 byte ceiling enforced by
   the real RISC-V cartridge compiler; use it for games whose launch/runtime
   stack budget is part of their acceptance contract;
@@ -206,6 +224,31 @@ initialization failure leave the capability absent. Optional games must render
 an honest offline state and continue without the service. The provider is
 build-tested but remains hardware-unqualified until retained-UART evidence
 confirms the exact unit's C6 firmware and live scans.
+
+The optional `multiplayer-session` capability is the transport-neutral game
+boundary above P4MP. A launched game can read one sanitized session snapshot,
+copy a message of at most 64 bytes to the peer, and poll one copied peer
+message at a time. The snapshot exposes only role, local player slot, player
+count, a session seed, state, and generation. It never exposes a socket,
+route, radio handle, BLE address, UART, account, or peer identity. Console OS
+owns discovery, compatibility matching, encryption policy, framing, replay
+rejection, timeouts, and disconnect neutralization. Games must treat the
+capability as optional and retain a complete same-device mode.
+
+Turn-based games should prefer host authority: clients send bounded intent,
+the host validates it against the current revision, and the host publishes a
+complete bounded snapshot after every accepted action. `p4_game_multiplayer_*`
+calls are non-blocking; a false send is dropped/degraded and a false receive
+means no validated message is currently queued.
+
+Console OS includes an installed native cartridge in the Multiplayer `GAME`
+selector only when its manifest declares `multiplayer-session`. Room discovery
+then matches the exact cartridge ID and payload SHA-256; two cartridges with
+the same display title but different content cannot join each other. After the
+host starts the room, both consoles launch that selected cartridge and its
+first `game_start` can read the already-connected session snapshot. Returning
+to the launcher or losing the route ends and neutralizes the game-facing
+session.
 
 ## OS resource inheritance
 

@@ -16,6 +16,7 @@ from typing import Any
 API_VERSION = 1
 FORMAT = "p4-native-elf-v1"
 COMPONENT_RE = re.compile(r"^[a-z][a-z0-9_]*$")
+SOURCE_RE = re.compile(r"^[a-z][a-z0-9_]*\.c$")
 SYMBOL_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 ID_RE = re.compile(r"^[a-z0-9][a-z0-9.-]{2,47}$")
 ACCENT_RE = re.compile(r"^0x[0-9a-fA-F]{4}$")
@@ -99,6 +100,13 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
     package_file = value.get("package_file")
     if not isinstance(component, str) or not COMPONENT_RE.fullmatch(component):
         fail(path, "component must be a lowercase CMake component identifier")
+    sources = value.get("sources", [f"{component}.c"])
+    if (not isinstance(sources, list) or not sources or len(sources) > 16 or
+            any(not isinstance(source, str) or
+                not SOURCE_RE.fullmatch(source) for source in sources)):
+        fail(path, "sources must be an array of 1..16 safe C source basenames")
+    if len(sources) != len(set(sources)):
+        fail(path, "sources contains a duplicate")
     if not isinstance(symbol, str) or not SYMBOL_RE.fullmatch(symbol):
         fail(path, "entry_symbol must be a C identifier")
     if not isinstance(game_id, str) or not ID_RE.fullmatch(game_id):
@@ -158,6 +166,7 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
     bounded_text(value, path, "license", 64)
     bounded_text(value, path, "assets", 128)
     value["_path"] = path
+    value["_sources"] = sources
     return value
 
 

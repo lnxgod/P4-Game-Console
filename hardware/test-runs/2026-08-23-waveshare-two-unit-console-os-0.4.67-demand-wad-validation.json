@@ -1,0 +1,85 @@
+{
+  "schema": 1,
+  "evidence_id": "waveshare-two-unit-console-os-0.4.67-demand-wad-validation-20260823",
+  "status": "installed-both-hash-verified-launcher-ready-pass-game-launch-pending",
+  "scope": "Application-only installation of controller-first Console OS 0.4.67. Native games and the launcher no longer wait for Doom/Chex WAD hashing. Exact WAD SHA-256 remains mandatory on demand within each uninterrupted mounted-storage generation.",
+  "boards": [
+    {
+      "unit_label": "waveshare-4.3-unit1",
+      "port": "/dev/cu.wchusbserial5C371865781",
+      "mac": "e8:f6:0a:e0:b2:89",
+      "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+    },
+    {
+      "unit_label": "waveshare-4.3-unit2",
+      "port": "/dev/cu.wchusbserial5B901593451",
+      "mac": "e8:f6:0a:e5:38:6f",
+      "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79"
+    }
+  ],
+  "candidate": {
+    "source_base_commit": "7fce5f7a8f7eed8879d29c615d1a06b1665ad3bf",
+    "source_state": "dirty working-tree Console OS candidate; exact application digest is authoritative",
+    "app_version": "0.4.67",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3",
+    "controller_first": true,
+    "application": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+      "offset": "0x20000",
+      "bytes": 1758448,
+      "sha256": "cb5c04b2d264dcbf0735f963693cb22ea1601953b760201018af426340c60167"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-usb-host/P4UPDATE.P4U",
+      "bytes": 1758704,
+      "sha256": "8638f25464df2f1d1748adafbc77bc91f42586943170f16a9a9f1f65d2ce8a22"
+    }
+  },
+  "storage_policy": {
+    "boot_gate": "microSD mount plus native catalog readiness",
+    "doom_chex_authority": "full exact SHA-256 on demand after each mount; no persistent weak receipt",
+    "receipt_scope": "none across reboot or remount",
+    "native_p4g_hot_reload": "successful P4G upload invalidates and reloads the native game catalog"
+  },
+  "installation": {
+    "write_scope": "application partition only at 0x20000; bootloader, partition table, OTA data, NVS, and microSD were not written",
+    "factory_backup_created": false,
+    "initial_parallel_attempt": "both H1 links dropped during transfer, leaving incomplete application writes",
+    "recovery": "each board was immediately reflashed sequentially using the same exact artifact",
+    "unit1_result": "esptool Hash of data verified; hard reset",
+    "unit2_result": "esptool Hash of data verified; hard reset"
+  },
+  "verification": {
+    "console_shell_host_tests": "pass-6-of-6",
+    "bbs_host_tests": "pass-2-of-2",
+    "controller_first_firmware_build": "pass",
+    "waveshare_artifact_gate": "pass",
+    "unit1_short_uart": "page=0 usb_input_ready=1 display_submits=33 display_completions=33 audio=es8311-ready storage=app-ready storage_media=microsd; no filtered panic marker",
+    "unit2_short_uart": "page=0 usb_input_ready=1 display_submits=33 display_completions=33 audio=es8311-ready storage=app-ready storage_media=microsd; no filtered panic marker",
+    "post_install_boot": {
+      "unit1": {
+        "sd_ready_ms": 79,
+        "game_catalog_packages": 14,
+        "game_catalog_valid": 14,
+        "game_catalog_omitted": 0,
+        "launcher_ready_ms": 21216,
+        "steady_state": "page=0 storage=app-ready no-panic"
+      },
+      "unit2": {
+        "sd_ready_ms": 78,
+        "game_catalog_packages": 1,
+        "game_catalog_valid": 1,
+        "game_catalog_omitted": 0,
+        "launcher_ready_ms": 16299,
+        "steady_state": "page=0 storage=app-ready no-panic"
+      }
+    },
+    "yahtzee_delivery": {
+      "file": "P4_YAHTZEE.P4G",
+      "sha256": "c526fb263b8903993473a684c2f0ee78244ec130bb31a459e6394e206c8f37fb",
+      "unit1": "exact verified file present",
+      "unit2": "exact verified file present and sole valid native catalog package"
+    },
+    "manual_visual_and_game_acceptance": "pending operator launch from GAMES/ARCADE"
+  }
+}

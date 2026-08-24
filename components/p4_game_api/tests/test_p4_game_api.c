@@ -45,6 +45,14 @@ typedef struct {
     uint32_t committed_sequence;
 } fixture_save_t;
 
+typedef struct {
+    p4_game_multiplayer_status_t status;
+    p4_game_multiplayer_message_t incoming;
+    uint8_t sent[P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES];
+    size_t sent_bytes;
+    bool has_incoming;
+} fixture_multiplayer_t;
+
 static bool fixture_request_signal(void *context, uint64_t focus_token)
 {
     fixture_signal_t *const signal = context;
@@ -123,6 +131,43 @@ static bool fixture_read_save_status(
     }
     *status_out = save->status;
     *committed_sequence_out = save->committed_sequence;
+    return true;
+}
+
+static bool fixture_multiplayer_status(
+    void *context, p4_game_multiplayer_status_t *status_out)
+{
+    const fixture_multiplayer_t *const multiplayer = context;
+    if (multiplayer == NULL || status_out == NULL) {
+        return false;
+    }
+    *status_out = multiplayer->status;
+    return true;
+}
+
+static bool fixture_multiplayer_send(
+    void *context, const uint8_t *data, size_t data_bytes)
+{
+    fixture_multiplayer_t *const multiplayer = context;
+    if (multiplayer == NULL || data == NULL || data_bytes == 0U ||
+        data_bytes > sizeof(multiplayer->sent)) {
+        return false;
+    }
+    memcpy(multiplayer->sent, data, data_bytes);
+    multiplayer->sent_bytes = data_bytes;
+    return true;
+}
+
+static bool fixture_multiplayer_receive(
+    void *context, p4_game_multiplayer_message_t *message_out)
+{
+    fixture_multiplayer_t *const multiplayer = context;
+    if (multiplayer == NULL || message_out == NULL ||
+        !multiplayer->has_incoming) {
+        return false;
+    }
+    *message_out = multiplayer->incoming;
+    multiplayer->has_incoming = false;
     return true;
 }
 
@@ -604,6 +649,23 @@ static void test_game_runtime(void)
     p4_achievement_catalog_init(&achievements);
     fixture_signal_t signal = {0};
     fixture_save_t save = {0};
+    fixture_multiplayer_t multiplayer = {
+        .status = {
+            .generation = 3U,
+            .session_seed = UINT64_C(0x123456789abcdef0),
+            .state = P4_GAME_MULTIPLAYER_CONNECTED,
+            .role = P4_GAME_MULTIPLAYER_ROLE_HOST,
+            .local_player_slot = 0U,
+            .player_count = 2U,
+        },
+        .incoming = {
+            .sequence = 9U,
+            .player_slot = 1U,
+            .bytes = 3U,
+            .data = {7U, 8U, 9U},
+        },
+        .has_incoming = true,
+    };
     static const uint8_t initial_save[] = {1U, 2U, 3U};
     const p4_game_services_t services = {
         .available_capabilities = P4_GAME_CAP_VIDEO |
@@ -611,7 +673,8 @@ static void test_game_runtime(void)
                                   P4_GAME_CAP_AUDIO_TONE |
                                   P4_GAME_CAP_AUDIO_STREAM |
                                   P4_GAME_CAP_SIGNAL_SCAN |
-                                  P4_GAME_CAP_SAVE,
+                                  P4_GAME_CAP_SAVE |
+                                  P4_GAME_CAP_MULTIPLAYER_SESSION,
         .audio_context = &mixer,
         .game_id = s_fixture_game.id,
         .play_tone = p4_audio_mixer_service_play_tone,
@@ -630,6 +693,10 @@ static void test_game_runtime(void)
         .save_sequence = 4U,
         .queue_save = fixture_queue_save,
         .read_save_status = fixture_read_save_status,
+        .multiplayer_context = &multiplayer,
+        .multiplayer_read_status = fixture_multiplayer_status,
+        .multiplayer_send = fixture_multiplayer_send,
+        .multiplayer_receive = fixture_multiplayer_receive,
     };
     p4_game_services_t invalid_services = services;
     invalid_services.submit_pcm16_stereo = NULL;
@@ -650,6 +717,11 @@ static void test_game_runtime(void)
         &rejected_state, sizeof(rejected_state)));
     invalid_services = services;
     invalid_services.save_data = NULL;
+    CHECK(!p4_game_instance_start(
+        &rejected, &s_fixture_game, &invalid_services,
+        &rejected_state, sizeof(rejected_state)));
+    invalid_services = services;
+    invalid_services.multiplayer_receive = NULL;
     CHECK(!p4_game_instance_start(
         &rejected, &s_fixture_game, &invalid_services,
         &rejected_state, sizeof(rejected_state)));
@@ -721,6 +793,40 @@ static void test_game_runtime(void)
         &instance.context, save_ticket, &save_status, &committed_sequence));
     CHECK(save_status == P4_GAME_SAVE_QUEUED);
     CHECK(committed_sequence == 0U);
+    p4_game_multiplayer_status_t multiplayer_status;
+    CHECK(p4_game_multiplayer_read_status(
+        &instance.context, &multiplayer_status));
+    CHECK(multiplayer_status.state == P4_GAME_MULTIPLAYER_CONNECTED);
+    CHECK(multiplayer_status.role == P4_GAME_MULTIPLAYER_ROLE_HOST);
+    CHECK(multiplayer_status.player_count == 2U);
+    const uint8_t multiplayer_payload[] = {1U, 2U, 3U, 4U};
+    CHECK(p4_game_multiplayer_send(
+        &instance.context, multiplayer_payload,
+        sizeof(multiplayer_payload)));
+    CHECK(multiplayer.sent_bytes == sizeof(multiplayer_payload));
+    CHECK(memcmp(multiplayer.sent, multiplayer_payload,
+                 sizeof(multiplayer_payload)) == 0);
+    p4_game_multiplayer_message_t multiplayer_message;
+    CHECK(p4_game_multiplayer_receive(
+        &instance.context, &multiplayer_message));
+    CHECK(multiplayer_message.sequence == 9U);
+    CHECK(multiplayer_message.player_slot == 1U);
+    CHECK(multiplayer_message.bytes == 3U);
+    CHECK(!p4_game_multiplayer_receive(
+        &instance.context, &multiplayer_message));
+    multiplayer.status.player_count = 1U;
+    CHECK(!p4_game_multiplayer_read_status(
+        &instance.context, &multiplayer_status));
+    multiplayer.status.player_count = 2U;
+    multiplayer.incoming = (p4_game_multiplayer_message_t){
+        .sequence = 0U,
+        .player_slot = 1U,
+        .bytes = 1U,
+        .data = {1U},
+    };
+    multiplayer.has_incoming = true;
+    CHECK(!p4_game_multiplayer_receive(
+        &instance.context, &multiplayer_message));
     save.status = P4_GAME_SAVE_COMMITTED;
     save.committed_sequence = 5U;
     CHECK(p4_game_read_save_status(

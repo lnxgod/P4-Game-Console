@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 
 #include "p4/multiplayer.h"
+#include "p4/multiplayer_ble.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -474,16 +475,36 @@ static void test_host_session(void)
               &host, route + 1U, 1101U, datagram, length, &event) ==
           P4_MP_ROUTE_MISMATCH);
 
+    uint8_t game_message[P4_MP_GAME_MESSAGE_MAX_BYTES];
+    for (size_t index = 0U; index < sizeof(game_message); ++index) {
+        game_message[index] = (uint8_t)(index + 1U);
+    }
+    length = encode_packet(
+        P4_MP_PACKET_GAME_MESSAGE, SESSION_ID, CLIENT_ID, 9U,
+        game_message, sizeof(game_message), datagram);
+    CHECK(p4_mp_session_receive(
+              &host, route, 1150U, datagram, length, &event) == P4_MP_OK);
+    CHECK(event.type == P4_MP_EVENT_GAME_MESSAGE);
+    CHECK(event.player_slot == 1U);
+    CHECK(event.packet.payload_length == sizeof(game_message));
+    CHECK(memcmp(event.packet.payload, game_message,
+                 sizeof(game_message)) == 0);
+    size_t ignored_length = 0U;
+    CHECK(p4_mp_packet_encode(
+              P4_MP_PACKET_GAME_MESSAGE, SESSION_ID, CLIENT_ID, 10U, 0U,
+              NULL, 0U, datagram, sizeof(datagram), &ignored_length) ==
+          P4_MP_BAD_LENGTH);
+
     input_payload[21] = 1U;
     length = encode_packet(
-        P4_MP_PACKET_INPUT, SESSION_ID, CLIENT_ID, 9U,
+        P4_MP_PACKET_INPUT, SESSION_ID, CLIENT_ID, 10U,
         input_payload, sizeof(input_payload), datagram);
     CHECK(p4_mp_session_receive(
               &host, route, 1200U, datagram, length, &event) == P4_MP_BAD_FLAGS);
 
     const uint8_t leave_payload[2] = {0, 0};
     length = encode_packet(
-        P4_MP_PACKET_LEAVE, SESSION_ID, CLIENT_ID, 10U,
+        P4_MP_PACKET_LEAVE, SESSION_ID, CLIENT_ID, 11U,
         leave_payload, sizeof(leave_payload), datagram);
     CHECK(p4_mp_session_receive(
               &host, route, 1300U, datagram, length, &event) == P4_MP_OK);
@@ -607,6 +628,139 @@ static void test_bounded_decode_fuzz(void)
     }
 }
 
+static void test_ble_fragment_roundtrip(void)
+{
+    uint8_t payload[P4_MP_OFFER_PAYLOAD_BYTES];
+    for (size_t index = 0U; index < sizeof(payload); ++index) {
+        payload[index] = (uint8_t)(index * 17U + 3U);
+    }
+    uint8_t datagram[P4_MP_MAX_DATAGRAM_BYTES];
+    const size_t datagram_length = encode_packet(
+        P4_MP_PACKET_OFFER, 77U, 11U, 9U,
+        payload, (uint16_t)sizeof(payload), datagram);
+    static const size_t capacities[] = {20U, 64U, 244U, 512U};
+    for (size_t pass = 0U;
+         pass < sizeof(capacities) / sizeof(capacities[0]); ++pass) {
+        p4_mp_ble_reassembler_t reassembler;
+        p4_mp_ble_reassembler_init(&reassembler);
+        size_t offset = 0U;
+        while (offset < datagram_length) {
+            uint8_t fragment[P4_MP_BLE_MAX_FRAGMENT_BYTES];
+            size_t fragment_length = 0U;
+            size_t next_offset = 0U;
+            CHECK(p4_mp_ble_fragment_encode(
+                      datagram, datagram_length, 5U, offset,
+                      capacities[pass], fragment, sizeof(fragment),
+                      &fragment_length, &next_offset) == P4_MP_OK);
+            CHECK(next_offset > offset);
+            const uint8_t *ready = NULL;
+            size_t ready_length = 0U;
+            const p4_mp_ble_fragment_result_t result =
+                p4_mp_ble_reassembler_consume(
+                    &reassembler, fragment, fragment_length,
+                    &ready, &ready_length);
+            if (next_offset == datagram_length) {
+                CHECK(result == P4_MP_BLE_FRAGMENT_DATAGRAM_READY);
+                CHECK(ready_length == datagram_length);
+                CHECK(memcmp(ready, datagram, datagram_length) == 0);
+            } else {
+                CHECK(result == P4_MP_BLE_FRAGMENT_NEED_MORE);
+            }
+            offset = next_offset;
+        }
+        CHECK(reassembler.completed_frames == 1U);
+        CHECK(reassembler.dropped_frames == 0U);
+    }
+
+    const uint8_t address[6] = {1U, 2U, 3U, 4U, 5U, 6U};
+    CHECK(p4_mp_ble_route_id(address) ==
+          (P4_MP_BLE_ROUTE_PREFIX | UINT64_C(0x060504030201)));
+    CHECK(p4_mp_ble_route_id(NULL) == 0U);
+}
+
+static void test_ble_lobby_beacon(void)
+{
+    uint8_t compatibility[P4_MP_SHA256_BYTES];
+    fill_hash(compatibility, UINT8_C(0x31));
+    const uint16_t token = p4_mp_ble_game_token(compatibility);
+    CHECK(token != 0U);
+    CHECK(p4_mp_ble_game_token(NULL) == 0U);
+
+    const p4_mp_ble_lobby_beacon_t expected = {
+        .session_id = UINT32_C(0x89abcdef),
+        .game_token = token,
+        .players_present = 1U,
+        .player_capacity = 2U,
+    };
+    uint8_t encoded[P4_MP_BLE_LOBBY_BEACON_BYTES];
+    CHECK(p4_mp_ble_lobby_beacon_encode(&expected, encoded) == P4_MP_OK);
+    p4_mp_ble_lobby_beacon_t decoded;
+    CHECK(p4_mp_ble_lobby_beacon_decode(
+              encoded, sizeof(encoded), &decoded) == P4_MP_OK);
+    CHECK(decoded.session_id == expected.session_id);
+    CHECK(decoded.game_token == expected.game_token);
+    CHECK(decoded.players_present == expected.players_present);
+    CHECK(decoded.player_capacity == expected.player_capacity);
+
+    encoded[1] |= UINT8_C(0x80);
+    CHECK(p4_mp_ble_lobby_beacon_decode(
+              encoded, sizeof(encoded), &decoded) == P4_MP_BAD_FLAGS);
+    encoded[1] = P4_MP_BLE_LOBBY_FLAG_OPEN;
+    encoded[9] = 1U;
+    CHECK(p4_mp_ble_lobby_beacon_decode(
+              encoded, sizeof(encoded), &decoded) == P4_MP_BAD_IDENTITY);
+    CHECK(p4_mp_ble_lobby_beacon_decode(
+              encoded, sizeof(encoded) - 1U, &decoded) == P4_MP_BAD_LENGTH);
+}
+
+static void test_ble_fragment_rejects_malformed_input(void)
+{
+    uint8_t payload[P4_MP_OFFER_PAYLOAD_BYTES];
+    memset(payload, 0xa5, sizeof(payload));
+    uint8_t datagram[P4_MP_MAX_DATAGRAM_BYTES];
+    const size_t datagram_length = encode_packet(
+        P4_MP_PACKET_OFFER, 88U, 12U, 3U,
+        payload, (uint16_t)sizeof(payload), datagram);
+    uint8_t first[P4_MP_BLE_MAX_FRAGMENT_BYTES];
+    size_t first_length = 0U;
+    size_t next = 0U;
+    CHECK(p4_mp_ble_fragment_encode(
+              datagram, datagram_length, 7U, 0U, 40U,
+              first, sizeof(first), &first_length, &next) == P4_MP_OK);
+    p4_mp_ble_reassembler_t reassembler;
+    p4_mp_ble_reassembler_init(&reassembler);
+    const uint8_t *ready = NULL;
+    size_t ready_length = 0U;
+    CHECK(p4_mp_ble_reassembler_consume(
+              &reassembler, first, first_length, &ready, &ready_length) ==
+          P4_MP_BLE_FRAGMENT_NEED_MORE);
+
+    uint8_t continuation[P4_MP_BLE_MAX_FRAGMENT_BYTES];
+    size_t continuation_length = 0U;
+    size_t ignored = 0U;
+    CHECK(p4_mp_ble_fragment_encode(
+              datagram, datagram_length, 7U, next, 40U,
+              continuation, sizeof(continuation),
+              &continuation_length, &ignored) == P4_MP_OK);
+    continuation[8] ^= 1U;
+    CHECK(p4_mp_ble_reassembler_consume(
+              &reassembler, continuation, continuation_length,
+              &ready, &ready_length) == P4_MP_BLE_FRAGMENT_DROPPED);
+    CHECK(!reassembler.active);
+
+    first[0] = 'X';
+    CHECK(p4_mp_ble_reassembler_consume(
+              &reassembler, first, first_length, &ready, &ready_length) ==
+          P4_MP_BLE_FRAGMENT_DROPPED);
+    CHECK(reassembler.last_packet_status == P4_MP_BAD_MAGIC);
+    CHECK(p4_mp_ble_reassembler_consume(
+              &reassembler, first, 3U, &ready, &ready_length) ==
+          P4_MP_BLE_FRAGMENT_DROPPED);
+    CHECK(p4_mp_ble_reassembler_consume(
+              NULL, first, first_length, &ready, &ready_length) ==
+          P4_MP_BLE_FRAGMENT_INVALID_ARGUMENT);
+}
+
 int main(void)
 {
     test_packet_codec();
@@ -616,6 +770,9 @@ int main(void)
     test_host_session();
     test_capacity_timeout_and_disconnect();
     test_client_session();
+    test_ble_lobby_beacon();
+    test_ble_fragment_roundtrip();
+    test_ble_fragment_rejects_malformed_input();
     test_bounded_decode_fuzz();
     if (s_failures != 0) {
         fprintf(stderr, "%d P4 multiplayer test failure(s)\n", s_failures);

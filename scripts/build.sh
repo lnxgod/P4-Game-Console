@@ -28,6 +28,10 @@ case "$P4_BOARD" in
         P4_BUILD_DIR="$P4_APP_DIR/build-waveshare-landscape"
         P4_BOARD_DEFAULTS="$P4_PROJECT_ROOT/hardware/boards/waveshare-esp32-p4-wifi6-touch-lcd-4.3/sdkconfig.defaults"
         P4_BOARD_ARGUMENTS="$P4_APP_DIR/sdkconfig.defaults;$P4_BOARD_DEFAULTS"
+        if [ "$P4_APP" = console_os ]; then
+            P4_BLE_DEFAULTS="$P4_APP_DIR/sdkconfig.waveshare-ble.defaults"
+            P4_BOARD_ARGUMENTS="$P4_BOARD_ARGUMENTS;$P4_BLE_DEFAULTS"
+        fi
         ;;
     waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host)
         P4_BOARD_PROFILE=waveshare-esp32-p4-wifi6-touch-lcd-4.3
@@ -36,6 +40,10 @@ case "$P4_BOARD" in
         P4_BOARD_DEFAULTS="$P4_PROJECT_ROOT/hardware/boards/waveshare-esp32-p4-wifi6-touch-lcd-4.3/sdkconfig.defaults"
         P4_HOST_DEFAULTS="$P4_PROJECT_ROOT/hardware/boards/waveshare-esp32-p4-wifi6-touch-lcd-4.3/sdkconfig.usb-host-test.defaults"
         P4_BOARD_ARGUMENTS="$P4_APP_DIR/sdkconfig.defaults;$P4_BOARD_DEFAULTS;$P4_HOST_DEFAULTS"
+        if [ "$P4_APP" = console_os ]; then
+            P4_BLE_DEFAULTS="$P4_APP_DIR/sdkconfig.waveshare-ble.defaults"
+            P4_BOARD_ARGUMENTS="$P4_BOARD_ARGUMENTS;$P4_BLE_DEFAULTS"
+        fi
         ;;
     *)
         printf 'Unsupported board: %s\n' "$P4_BOARD" >&2
@@ -45,6 +53,14 @@ case "$P4_BOARD" in
 esac
 
 p4_idf_action() {
+    P4_IDF_REQUESTED_ACTION=$1
+    if [ "$P4_APP" = console_os ] &&
+       [ "$P4_BOARD_PROFILE" = waveshare-esp32-p4-wifi6-touch-lcd-4.3 ]; then
+        set -- -D P4_BLE_DIAGNOSTIC_AUTOSTART=OFF \
+            "$P4_IDF_REQUESTED_ACTION"
+    else
+        set -- "$P4_IDF_REQUESTED_ACTION"
+    fi
     if [ "$P4_APP" = console_os ] &&
        [ "$P4_WAVESHARE_CONTROLLER_FIRST_BUILD" -eq 1 ]; then
         idf.py -C "$P4_APP_DIR" -B "$P4_BUILD_DIR" \
@@ -52,13 +68,13 @@ p4_idf_action() {
             -D "P4_BOARD_PROFILE=$P4_BOARD_PROFILE" \
             -D P4_WAVESHARE_CONTROLLER_FIRST_BUILD=ON \
             -D "SDKCONFIG=$P4_BUILD_DIR/sdkconfig" \
-            -D "SDKCONFIG_DEFAULTS=$P4_BOARD_ARGUMENTS" "$1"
+            -D "SDKCONFIG_DEFAULTS=$P4_BOARD_ARGUMENTS" "$@"
     else
         idf.py -C "$P4_APP_DIR" -B "$P4_BUILD_DIR" \
             -D IDF_TARGET=esp32p4 \
             -D "P4_BOARD_PROFILE=$P4_BOARD_PROFILE" \
             -D "SDKCONFIG=$P4_BUILD_DIR/sdkconfig" \
-            -D "SDKCONFIG_DEFAULTS=$P4_BOARD_ARGUMENTS" "$1"
+            -D "SDKCONFIG_DEFAULTS=$P4_BOARD_ARGUMENTS" "$@"
     fi
 }
 
@@ -97,6 +113,41 @@ p4_console_sd_prune_generated_conflicts() {
         done
     p4_console_sd_root_is_exact "$P4_SD_ROOT"
 }
+
+# sdkconfig is generated output. Regenerate it from locked defaults whenever
+# any part of the Waveshare C6 BLE/SDIO contract is missing. Checking the
+# complete transport identity prevents an interrupted or manually regenerated
+# build from silently falling back to ESP-Hosted's unsafe SPI pin defaults.
+p4_waveshare_ble_sdkconfig_is_exact() {
+    P4_SDKCONFIG=$1
+    [ -f "$P4_SDKCONFIG" ] || return 1
+    for P4_REQUIRED_CONFIG in \
+        CONFIG_SLAVE_IDF_TARGET_ESP32C6=y \
+        CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE=y \
+        CONFIG_ESP_HOSTED_SDIO_GPIO_RESET_SLAVE=54 \
+        CONFIG_ESP_HOSTED_SDIO_PIN_CLK=18 \
+        CONFIG_ESP_HOSTED_SDIO_PIN_CMD=19 \
+        CONFIG_ESP_HOSTED_SDIO_PIN_D0=14 \
+        CONFIG_ESP_HOSTED_SDIO_PIN_D1=15 \
+        CONFIG_ESP_HOSTED_SDIO_PIN_D2=16 \
+        CONFIG_ESP_HOSTED_SDIO_PIN_D3=17 \
+        CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=32768 \
+        CONFIG_BT_NIMBLE_ENABLED=y \
+        CONFIG_BT_NIMBLE_LOG_LEVEL_WARNING=y \
+        CONFIG_ESP_HOSTED_ENABLE_BT_NIMBLE=y \
+        CONFIG_ESP_HOSTED_NIMBLE_HCI_VHCI=y; do
+        grep -q "^${P4_REQUIRED_CONFIG}$" "$P4_SDKCONFIG" || return 1
+    done
+}
+
+if [ "$P4_APP" = console_os ] &&
+   [ "$P4_BOARD_PROFILE" = waveshare-esp32-p4-wifi6-touch-lcd-4.3 ] &&
+   [ -f "$P4_BUILD_DIR/sdkconfig" ] &&
+   ! p4_waveshare_ble_sdkconfig_is_exact "$P4_BUILD_DIR/sdkconfig"; then
+    printf 'Regenerating stale Waveshare Console OS sdkconfig for BLE.\n'
+    cmake -E remove "$P4_BUILD_DIR/sdkconfig"
+    p4_idf_action reconfigure
+fi
 
 # Finder and interrupted host-copy experiments can leave duplicate top-level
 # entries in this generated tree (for example "GAMES 2"). CMake owns the

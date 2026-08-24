@@ -25,8 +25,10 @@
 
 typedef struct {
     FILE *files[PLATFORM_READONLY_BLOB_MAX_OPEN_FILES];
+    uint64_t file_sizes[PLATFORM_READONLY_BLOB_MAX_OPEN_FILES];
     StaticSemaphore_t lock_storage;
     SemaphoreHandle_t lock;
+    platform_game_storage_doom_title_t title;
     bool registered;
 } game_storage_blob_context_t;
 
@@ -50,15 +52,38 @@ static void give_lock(game_storage_blob_context_t *context)
     (void)xSemaphoreGive(context->lock);
 }
 
-static bool path_matches(const char *path)
+static bool resolve_path(
+    const game_storage_blob_context_t *context,
+    const char *path,
+    const char **physical_path,
+    uint64_t *size_bytes)
 {
-    if (path == NULL) {
+    if (context == NULL || path == NULL || physical_path == NULL ||
+        size_bytes == NULL) {
         return false;
     }
     if (path[0] == '/') {
         ++path;
     }
-    return strcmp(path, "doom1.wad") == 0;
+    if (context->title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM &&
+        strcmp(path, "doom1.wad") == 0) {
+        *physical_path = PLATFORM_GAME_STORAGE_DOOM_WAD_PATH;
+        *size_bytes = PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES;
+        return true;
+    }
+    if (context->title == PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST) {
+        if (strcmp(path, "chex.wad") == 0) {
+            *physical_path = PLATFORM_GAME_STORAGE_CHEX_WAD_PATH;
+            *size_bytes = PLATFORM_GAME_STORAGE_CHEX_WAD_BYTES;
+            return true;
+        }
+        if (strcmp(path, "chex.deh") == 0) {
+            *physical_path = PLATFORM_GAME_STORAGE_CHEX_DEH_PATH;
+            *size_bytes = PLATFORM_GAME_STORAGE_CHEX_DEH_BYTES;
+            return true;
+        }
+    }
+    return false;
 }
 
 static bool valid_fd(const game_storage_blob_context_t *context, int fd)
@@ -68,7 +93,7 @@ static bool valid_fd(const game_storage_blob_context_t *context, int fd)
         context->files[fd] != NULL;
 }
 
-static int fill_stat(struct stat *metadata)
+static int fill_stat(struct stat *metadata, uint64_t size_bytes)
 {
     if (metadata == NULL) {
         errno = EINVAL;
@@ -77,7 +102,7 @@ static int fill_stat(struct stat *metadata)
     memset(metadata, 0, sizeof(*metadata));
     metadata->st_mode = S_IFREG | S_IRUSR | S_IRGRP | S_IROTH;
     metadata->st_nlink = 1;
-    metadata->st_size = (off_t)PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES;
+    metadata->st_size = (off_t)size_bytes;
     return 0;
 }
 
@@ -85,7 +110,10 @@ static int storage_open(void *opaque, const char *path, int flags, int mode)
 {
     (void)mode;
     game_storage_blob_context_t *const context = opaque;
-    if (!path_matches(path)) {
+    const char *physical_path = NULL;
+    uint64_t size_bytes = 0U;
+    if (!resolve_path(
+            context, path, &physical_path, &size_bytes)) {
         errno = ENOENT;
         return -1;
     }
@@ -114,12 +142,13 @@ static int storage_open(void *opaque, const char *path, int flags, int mode)
         give_lock(context);
         return -1;
     }
-    FILE *const file = fopen(PLATFORM_GAME_STORAGE_DOOM_WAD_PATH, "rb");
+    FILE *const file = fopen(physical_path, "rb");
     if (file == NULL) {
         give_lock(context);
         return -1;
     }
     context->files[fd] = file;
+    context->file_sizes[fd] = size_bytes;
     give_lock(context);
     return fd;
 }
@@ -137,6 +166,7 @@ static int storage_close(void *opaque, int fd)
     }
     FILE *const file = context->files[fd];
     context->files[fd] = NULL;
+    context->file_sizes[fd] = 0U;
     const int result = fclose(file);
     give_lock(context);
     return result;
@@ -187,7 +217,7 @@ static ssize_t storage_pread(void *opaque, int fd, void *destination,
         give_lock(context);
         return -1;
     }
-    if ((uint64_t)offset > PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES) {
+    if ((uint64_t)offset > context->file_sizes[fd]) {
         give_lock(context);
         return 0;
     }
@@ -241,8 +271,10 @@ static int storage_fstat(void *opaque, int fd, struct stat *metadata)
     if (!take_lock(context)) {
         return -1;
     }
-    const int result = valid_fd(context, fd) ? fill_stat(metadata) : -1;
-    if (!valid_fd(context, fd)) {
+    const bool valid = valid_fd(context, fd);
+    const int result = valid
+        ? fill_stat(metadata, context->file_sizes[fd]) : -1;
+    if (!valid) {
         errno = EBADF;
     }
     give_lock(context);
@@ -253,14 +285,17 @@ static int storage_fstat(void *opaque, int fd, struct stat *metadata)
 static int storage_stat(void *opaque, const char *path, struct stat *metadata)
 {
     game_storage_blob_context_t *const context = opaque;
-    if (!path_matches(path)) {
+    const char *physical_path = NULL;
+    uint64_t size_bytes = 0U;
+    if (!resolve_path(
+            context, path, &physical_path, &size_bytes)) {
         errno = ENOENT;
         return -1;
     }
     if (!take_lock(context)) {
         return -1;
     }
-    const int result = fill_stat(metadata);
+    const int result = fill_stat(metadata, size_bytes);
     give_lock(context);
     return result;
 }
@@ -285,11 +320,20 @@ static const esp_vfs_fs_ops_t s_operations = {
 esp_err_t platform_readonly_blob_register(
     const platform_readonly_blob_config_t *config)
 {
+    const bool doom_config = config != NULL &&
+        config->file_name != NULL &&
+        strcmp(config->file_name, "doom1.wad") == 0 &&
+        config->size_bytes ==
+            (size_t)PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES;
+    const bool chex_config = config != NULL &&
+        config->file_name != NULL &&
+        strcmp(config->file_name, "chex.wad") == 0 &&
+        config->size_bytes ==
+            (size_t)PLATFORM_GAME_STORAGE_CHEX_WAD_BYTES;
     if (config == NULL || config->base_path == NULL ||
         config->file_name == NULL || config->data == NULL ||
         strcmp(config->base_path, "/doom") != 0 ||
-        strcmp(config->file_name, "doom1.wad") != 0 ||
-        config->size_bytes != (size_t)PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES) {
+        (!doom_config && !chex_config)) {
         return ESP_ERR_INVALID_ARG;
     }
     if (!platform_game_storage_game_locked() || s_context.registered) {
@@ -303,10 +347,15 @@ esp_err_t platform_readonly_blob_register(
     }
     const int flags = ESP_VFS_FLAG_CONTEXT_PTR | ESP_VFS_FLAG_READONLY_FS |
         ESP_VFS_FLAG_STATIC;
+    s_context.title = chex_config
+        ? PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST
+        : PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM;
     const esp_err_t result = esp_vfs_register_fs(
         "/doom", &s_operations, flags, &s_context);
     if (result == ESP_OK) {
         s_context.registered = true;
+    } else {
+        s_context.title = PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM;
     }
     return result;
 }
@@ -326,6 +375,7 @@ esp_err_t platform_readonly_blob_unregister(void)
     const esp_err_t result = esp_vfs_unregister_fs("/doom");
     if (result == ESP_OK) {
         s_context.registered = false;
+        s_context.title = PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM;
     }
     give_lock(&s_context);
     return result;

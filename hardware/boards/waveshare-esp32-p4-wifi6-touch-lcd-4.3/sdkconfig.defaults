@@ -30,8 +30,8 @@ CONFIG_SPIRAM=y
 CONFIG_SPIRAM_MODE_HEX=y
 CONFIG_SPIRAM_SPEED_200M=y
 CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY=y
-# Leave enough internal RAM for startup while retaining a DMA-capable reserve
-# for the Waveshare display, SD storage, and ESP-Hosted Wi-Fi transport.
+# Keep a boot-safe DMA-capable reserve for the Waveshare display, SD card, and
+# ESP-Hosted SDIO. BLE's non-DMA queues are explicitly allocated in PSRAM.
 CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=32768
 
 # The official schematic connects the ESP32-C6-MINI-1 using the same

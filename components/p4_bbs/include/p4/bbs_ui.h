@@ -14,10 +14,11 @@ extern "C" {
 #endif
 
 enum {
-    P4_BBS_VISIBLE_DOORS = 6,
-    P4_BBS_DOOR_TITLE_BYTES = 17,
-    P4_BBS_DOOR_SUBTITLE_BYTES = 21,
+    P4_BBS_VISIBLE_DOORS = 5,
+    P4_BBS_DOOR_TITLE_BYTES = 25,
+    P4_BBS_DOOR_SUBTITLE_BYTES = 33,
     P4_BBS_BOARD_NAME_BYTES = 33,
+    P4_BBS_NODE_NAME_BYTES = 17,
     P4_BBS_STATUS_BYTES = 25,
     P4_BBS_BOOT_STATUS_BYTES = 33,
     P4_BBS_BOOT_DETAIL_BYTES = 49,
@@ -34,6 +35,7 @@ typedef struct {
 
 typedef struct {
     char board_name[P4_BBS_BOARD_NAME_BYTES];
+    char node_name[P4_BBS_NODE_NAME_BYTES];
     char section[P4_BBS_STATUS_BYTES];
     char connection[P4_BBS_STATUS_BYTES];
     p4_bbs_door_t doors[P4_BBS_VISIBLE_DOORS];
@@ -72,6 +74,7 @@ typedef enum {
 
 typedef struct {
     p4_bbs_boot_phase_t phase;
+    char node_name[P4_BBS_NODE_NAME_BYTES];
     char status[P4_BBS_BOOT_STATUS_BYTES];
     char detail[P4_BBS_BOOT_DETAIL_BYTES];
     uint8_t progress_step;

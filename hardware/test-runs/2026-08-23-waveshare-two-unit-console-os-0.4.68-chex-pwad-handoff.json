@@ -1,0 +1,72 @@
+{
+  "schema": 1,
+  "evidence_id": "waveshare-two-unit-console-os-0.4.68-chex-pwad-handoff-20260823",
+  "status": "installed-both-hash-verified-launchers-stable-chex-launch-pending",
+  "scope": "Application-only installation of controller-first Console OS 0.4.68. The final Doom handoff now accepts a PWAD header only for the exact pinned Chex Quest identity; Doom retains its existing IWAD policy.",
+  "boards": [
+    {
+      "unit_label": "waveshare-4.3-unit1",
+      "port": "/dev/cu.wchusbserial5C371865781",
+      "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+    },
+    {
+      "unit_label": "waveshare-4.3-unit2",
+      "port": "/dev/cu.wchusbserial5B901593451",
+      "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79"
+    }
+  ],
+  "candidate": {
+    "source_base_commit": "7fce5f7a8f7eed8879d29c615d1a06b1665ad3bf",
+    "source_state": "dirty working-tree Console OS candidate; exact application digest is authoritative",
+    "app_version": "0.4.68",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3",
+    "controller_first": true,
+    "application": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+      "offset": "0x20000",
+      "bytes": 1758400,
+      "sha256": "5f4b31bd5ff76be47d584391dad8baa1f5504db3ca301746a7b11b43cd842597"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-usb-host/P4UPDATE.P4U",
+      "bytes": 1758656,
+      "sha256": "5bd616fa079669afe691343b26c96b8a9de1ca06f69b6a13c8028f6e6c1eb728"
+    }
+  },
+  "chex_data_contract": {
+    "wad_bytes": 12361532,
+    "wad_sha256": "d8eb5277918883f490fb1a4be3c9a8588df2dbaee6dc4beb8df4929148bbffb1",
+    "wad_header": "PWAD",
+    "deh_bytes": 20367,
+    "deh_sha256": "8c0345089fb227fa7f71c25a6c6e31ff5bd4bea0580f286cd74e05918d72dd40",
+    "authority": "exact full-file SHA-256 on demand once per uninterrupted mounted-storage generation"
+  },
+  "root_cause_and_change": {
+    "root_cause": "The storage validator correctly recognized the pinned Chex PWAD, but both embedded Doom readonly-VFS handoff verifiers still required IWAD and halted before engine startup.",
+    "change": "The touch-audio and gamepad-audio handoffs accept PWAD only when the selected exact content identity is Chex; standalone and non-Chex paths remain IWAD-only."
+  },
+  "installation": {
+    "write_scope": "application partition only at 0x20000; bootloader, partition table, OTA data, NVS, and microSD were not written",
+    "factory_backup_created": false,
+    "method": "sequential H1 writes; no parallel flash",
+    "unit1_result": "esptool Hash of data verified; hard reset",
+    "unit2_result": "esptool Hash of data verified; hard reset"
+  },
+  "verification": {
+    "controller_first_firmware_build": "pass",
+    "waveshare_artifact_gate": "pass",
+    "post_install_serial": {
+      "unit1": "page=0 usb_input_ready=1 audio=es8311-ready storage=app-ready storage_media=microsd; no panic/reboot marker",
+      "unit2": "page=0 usb_input_ready=1 audio=es8311-ready storage=app-ready storage_media=microsd; no panic/reboot marker"
+    },
+    "yahtzee_v1_0_1_delivery": {
+      "file": "P4_YAHTZEE.P4G",
+      "bytes": 38700,
+      "sha256": "022b58f0bd8bfe9d2cbdc6e8a1114096087a0b1d4a1bd1541a571282c05c3524",
+      "unit1": "H1 push PASS; follow-up --no-replace already-present hash=verified",
+      "unit2": "H1 push PASS; follow-up --no-replace already-present hash=verified",
+      "console_os_changed": false
+    },
+    "chex_physical_launch": "pending operator selection after installation"
+  }
+}

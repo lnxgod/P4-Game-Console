@@ -33,8 +33,12 @@ enum {
     RESTART_DELAY_US = 350000,
     CONTENT_KIND_QUAKE_SHAREWARE = 1,
     CONTENT_KIND_DOOM_SHAREWARE = 2,
+    CONTENT_KIND_CHEX_QUEST_WAD = 3,
+    CONTENT_KIND_CHEX_QUEST_DEH = 4,
     CONTENT_FLAG_REPLACE = 1,
     DOOM_SHAREWARE_BYTES = 4196020,
+    CHEX_QUEST_WAD_BYTES = 12361532,
+    CHEX_QUEST_DEH_BYTES = 20367,
 };
 
 typedef enum {
@@ -109,6 +113,10 @@ static const char QUAKE_SHA256_HEX[] =
     "35a9c55e5e5a284a159ad2a62e0e8def23d829561fe2f54eb402dbc0a9a946af";
 static const char DOOM_SHA256_HEX[] =
     "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771";
+static const char CHEX_WAD_SHA256_HEX[] =
+    "d8eb5277918883f490fb1a4be3c9a8588df2dbaee6dc4beb8df4929148bbffb1";
+static const char CHEX_DEH_SHA256_HEX[] =
+    "8c0345089fb227fa7f71c25a6c6e31ff5bd4bea0580f286cd74e05918d72dd40";
 static const char *const QUAKE_DIRECTORIES[] = {
     "/GAMES", "/GAMES/QUAKE", "/GAMES/QUAKE/ID1",
 };
@@ -133,6 +141,28 @@ static const content_spec_t CONTENT_SPECS[] = {
         .directory_suffix = "",
         .target_name = "DOOM1.WAD",
         .temporary_name = "P4D1.TMP",
+        .required_directories = NULL,
+        .required_directory_count = 0U,
+    },
+    {
+        .kind = CONTENT_KIND_CHEX_QUEST_WAD,
+        .bytes = CHEX_QUEST_WAD_BYTES,
+        .sha256_hex = CHEX_WAD_SHA256_HEX,
+        .label = "chex-quest-wad",
+        .directory_suffix = "",
+        .target_name = "CHEX.WAD",
+        .temporary_name = "P4CXW.TMP",
+        .required_directories = NULL,
+        .required_directory_count = 0U,
+    },
+    {
+        .kind = CONTENT_KIND_CHEX_QUEST_DEH,
+        .bytes = CHEX_QUEST_DEH_BYTES,
+        .sha256_hex = CHEX_DEH_SHA256_HEX,
+        .label = "chex-quest-deh",
+        .directory_suffix = "",
+        .target_name = "CHEX.DEH",
+        .temporary_name = "P4CXD.TMP",
         .required_directories = NULL,
         .required_directory_count = 0U,
     },
@@ -768,7 +798,8 @@ esp_err_t p4_content_transfer_init(
     ESP_LOGI(TAG,
              "P4_USB_CONTENT READY transport=h1-ch343-uart idle_baud=%u "
              "transfer_baud=%u chunk=%u "
-             "targets=doom-shareware-v1,quake-shareware-v1",
+             "targets=doom-shareware-v1,quake-shareware-v1,"
+             "chex-quest-wad-v1,chex-quest-deh-v1",
              (unsigned)transport->idle_baud,
              (unsigned)P4_CONTENT_TRANSFER_BAUD,
              (unsigned)P4_CONTENT_TRANSFER_CHUNK_BYTES);

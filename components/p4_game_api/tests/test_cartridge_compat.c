@@ -219,14 +219,18 @@ int main(void)
 {
     const size_t minimum = offsetof(p4_cartridge_host_v1_t, finished) +
         sizeof(((p4_cartridge_host_v1_t *)0)->finished);
+    const size_t save_complete =
+        offsetof(p4_cartridge_host_v1_t, read_save_status) +
+        sizeof(((p4_cartridge_host_v1_t *)0)->read_save_status);
     const size_t complete = sizeof(p4_cartridge_host_v1_t);
-    if (minimum > UINT32_MAX || complete > UINT32_MAX) {
+    if (minimum > UINT32_MAX || save_complete > UINT32_MAX ||
+        complete > UINT32_MAX) {
         return EXIT_FAILURE;
     }
     for (size_t bytes = minimum; bytes <= complete; ++bytes) {
         const int result = run_with_size((uint32_t)bytes);
 #if P4_TEST_SAVE_MODE == 1
-        const int expected = bytes == complete
+        const int expected = bytes >= save_complete
             ? P4_CARTRIDGE_EXIT_OK
             : P4_CARTRIDGE_EXIT_CAPABILITY_MISSING;
 #else

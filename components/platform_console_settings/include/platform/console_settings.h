@@ -13,11 +13,12 @@ extern "C" {
 #endif
 
 enum {
-    PLATFORM_CONSOLE_SETTINGS_VERSION = 1,
+    PLATFORM_CONSOLE_SETTINGS_VERSION = 2,
+    PLATFORM_CONSOLE_NODE_NAME_BYTES = 17,
     PLATFORM_CONSOLE_VOLUME_MIN = 1,
     PLATFORM_CONSOLE_VOLUME_MAX = 10,
-    PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT = 10,
-    PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT = 9,
+    PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT = 3,
+    PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT = 3,
 };
 
 typedef struct {
@@ -25,6 +26,7 @@ typedef struct {
     uint16_t size;
     uint8_t boot_volume_step;
     uint8_t game_volume_step;
+    char node_name[PLATFORM_CONSOLE_NODE_NAME_BYTES];
     bool persistent;
 } platform_console_settings_t;
 
@@ -39,6 +41,10 @@ esp_err_t platform_console_settings_set_boot_volume(
 /** Persist the master level passed to native games and Doom. */
 esp_err_t platform_console_settings_set_game_volume(
     platform_console_settings_t *settings, uint8_t volume_step);
+
+/** Persist a short uppercase development/lobby identity such as GC-P4-B289. */
+esp_err_t platform_console_settings_set_node_name(
+    platform_console_settings_t *settings, const char *node_name);
 
 /**
  * Arm the one-boot USB enumeration recovery probe.
@@ -58,6 +64,7 @@ esp_err_t platform_console_settings_confirm_usb_enum_probe(
     const platform_console_settings_t *settings);
 
 bool platform_console_settings_volume_valid(uint8_t volume_step);
+bool platform_console_settings_node_name_valid(const char *node_name);
 
 #ifdef __cplusplus
 }

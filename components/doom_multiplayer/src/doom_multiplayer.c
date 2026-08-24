@@ -41,6 +41,17 @@ static bool tic_equal(
         left->chat_char == right->chat_char;
 }
 
+static bool tick_after(uint32_t left, uint32_t right)
+{
+    const uint32_t distance = left - right;
+    return distance != 0U && distance < UINT32_C(0x80000000);
+}
+
+static bool tick_before(uint32_t left, uint32_t right)
+{
+    return tick_after(right, left);
+}
+
 void p4_doom_mp_tic_to_input(
     const p4_doom_mp_tic_t *tic,
     p4_mp_input_t *input_out)
@@ -99,7 +110,9 @@ bool p4_doom_mp_launch_config_valid(
             config->remote_peer_id == 0U && config->route_id == 0U &&
             config->local_player_slot == 0U && config->player_count == 0U &&
             config->input_delay_tics == 0U && config->start_tic == 0U &&
-            config->session_seed == 0U && config->setup.mode == 0 &&
+            config->session_seed == 0U &&
+            config->setup.game == P4_DOOM_MP_GAME_DOOM &&
+            config->setup.mode == 0 &&
             config->setup.episode == 0U && config->setup.map == 0U &&
             config->setup.skill == 0U &&
             config->setup.time_limit_minutes == 0U &&
@@ -121,11 +134,17 @@ bool p4_doom_mp_launch_config_valid(
 bool p4_doom_mp_setup_valid(const p4_doom_mp_setup_t *setup)
 {
     return setup != NULL &&
+        (setup->game == P4_DOOM_MP_GAME_DOOM ||
+         setup->game == P4_DOOM_MP_GAME_CHEX_QUEST) &&
         (setup->mode == P4_DOOM_MP_MODE_COOPERATIVE ||
          setup->mode == P4_DOOM_MP_MODE_DEATHMATCH ||
          setup->mode == P4_DOOM_MP_MODE_ALTDEATH) &&
-        setup->episode >= 1U && setup->episode <= P4_DOOM_MP_MAX_EPISODE &&
-        setup->map >= 1U && setup->map <= P4_DOOM_MP_MAX_MAP &&
+        setup->episode >= 1U &&
+        setup->episode <= (setup->game == P4_DOOM_MP_GAME_CHEX_QUEST
+            ? 1U : P4_DOOM_MP_MAX_EPISODE) &&
+        setup->map >= 1U &&
+        setup->map <= (setup->game == P4_DOOM_MP_GAME_CHEX_QUEST
+            ? P4_DOOM_MP_MAX_CHEX_MAP : P4_DOOM_MP_MAX_MAP) &&
         setup->skill >= 1U && setup->skill <= P4_DOOM_MP_MAX_SKILL &&
         setup->time_limit_minutes <= P4_DOOM_MP_MAX_TIME_LIMIT_MINUTES;
 }
@@ -148,6 +167,7 @@ bool p4_doom_mp_setup_encode(
         (setup->fast_monsters ? P4_DOOM_MP_SETUP_FAST_MONSTERS : 0U) |
         (setup->respawn_monsters ? P4_DOOM_MP_SETUP_RESPAWN_MONSTERS : 0U);
     bytes[6] = setup->time_limit_minutes;
+    bytes[7] = (uint8_t)setup->game;
     return true;
 }
 
@@ -162,11 +182,11 @@ bool p4_doom_mp_setup_decode(
     *setup_out = (p4_doom_mp_setup_t){0};
     if (bytes_length != P4_DOOM_MP_SETUP_BYTES ||
         bytes[0] != P4_DOOM_MP_SETUP_SCHEMA ||
-        (bytes[5] & (uint8_t)~P4_DOOM_MP_SETUP_FLAGS_MASK) != 0U ||
-        bytes[7] != 0U) {
+        (bytes[5] & (uint8_t)~P4_DOOM_MP_SETUP_FLAGS_MASK) != 0U) {
         return false;
     }
     const p4_doom_mp_setup_t setup = {
+        .game = (p4_doom_mp_game_t)bytes[7],
         .mode = (p4_doom_mp_mode_t)bytes[1],
         .episode = bytes[2],
         .map = bytes[3],
@@ -371,4 +391,116 @@ bool p4_doom_mp_tic_queue_disconnect(
     memset(queue->tags[player_slot], 0, sizeof(queue->tags[player_slot]));
     memset(queue->tics[player_slot], 0, sizeof(queue->tics[player_slot]));
     return true;
+}
+
+void p4_doom_mp_tx_window_init(
+    p4_doom_mp_tx_window_t *window,
+    uint32_t start_tick)
+{
+    if (window == NULL) {
+        return;
+    }
+    memset(window, 0, sizeof(*window));
+    window->peer_ack = start_tick;
+    window->next_local_tick = start_tick;
+}
+
+bool p4_doom_mp_tx_window_track(
+    p4_doom_mp_tx_window_t *window,
+    const p4_doom_mp_tic_t *tic)
+{
+    if (window == NULL || tic == NULL) {
+        return false;
+    }
+    const size_t index = tic->tick % P4_DOOM_MP_TX_WINDOW_SIZE;
+    if (tic->tick != window->next_local_tick) {
+        return window->valid[index] != 0U &&
+            window->tags[index] == tic->tick &&
+            tic_equal(&window->tics[index], tic);
+    }
+    if (window->pending_count >= P4_DOOM_MP_TX_WINDOW_SIZE ||
+        window->valid[index] != 0U) {
+        return false;
+    }
+    window->tics[index] = *tic;
+    window->tags[index] = tic->tick;
+    window->valid[index] = 1U;
+    ++window->pending_count;
+    ++window->next_local_tick;
+    return true;
+}
+
+bool p4_doom_mp_tx_window_acknowledge(
+    p4_doom_mp_tx_window_t *window,
+    uint32_t peer_ack)
+{
+    if (window == NULL) {
+        return false;
+    }
+    if (peer_ack == window->peer_ack) {
+        return true;
+    }
+    if (!tick_after(peer_ack, window->peer_ack) ||
+        tick_after(peer_ack, window->next_local_tick)) {
+        return false;
+    }
+    for (size_t index = 0U;
+         index < P4_DOOM_MP_TX_WINDOW_SIZE; ++index) {
+        if (window->valid[index] != 0U &&
+            tick_before(window->tags[index], peer_ack)) {
+            window->valid[index] = 0U;
+            window->tags[index] = 0U;
+            window->tics[index] = (p4_doom_mp_tic_t){0};
+            if (window->pending_count != 0U) {
+                --window->pending_count;
+            }
+        }
+    }
+    window->peer_ack = peer_ack;
+    return true;
+}
+
+bool p4_doom_mp_tx_window_oldest(
+    const p4_doom_mp_tx_window_t *window,
+    p4_doom_mp_tic_t *tic_out)
+{
+    if (window == NULL || tic_out == NULL ||
+        window->pending_count == 0U) {
+        return false;
+    }
+    const size_t expected =
+        window->peer_ack % P4_DOOM_MP_TX_WINDOW_SIZE;
+    if (window->valid[expected] != 0U &&
+        window->tags[expected] == window->peer_ack) {
+        *tic_out = window->tics[expected];
+        return true;
+    }
+    bool found = false;
+    uint32_t nearest_distance = UINT32_MAX;
+    size_t nearest = 0U;
+    for (size_t index = 0U;
+         index < P4_DOOM_MP_TX_WINDOW_SIZE; ++index) {
+        if (window->valid[index] == 0U) {
+            continue;
+        }
+        const uint32_t distance =
+            window->tags[index] - window->peer_ack;
+        if (distance < UINT32_C(0x80000000) &&
+            (!found || distance < nearest_distance)) {
+            found = true;
+            nearest_distance = distance;
+            nearest = index;
+        }
+    }
+    if (!found) {
+        return false;
+    }
+    *tic_out = window->tics[nearest];
+    return true;
+}
+
+size_t p4_doom_mp_tx_window_pending(
+    const p4_doom_mp_tx_window_t *window)
+{
+    return window == NULL ? 0U : window->pending_count;
 }

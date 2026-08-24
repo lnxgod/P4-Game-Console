@@ -15,12 +15,15 @@
 #include "freertos/task.h"
 #pragma GCC diagnostic pop
 #include "d_loop.h"
-#include "p4/multiplayer_uart.h"
 #include "p4_doom_net.h"
 
 enum {
-    P4_DOOM_MP_KEEPALIVE_MS = 1000,
-    P4_DOOM_MP_REDUNDANT_INPUT_COPIES = 2,
+    P4_DOOM_MP_KEEPALIVE_MS = 500,
+    P4_DOOM_MP_RETRY_INTERVAL_MS = 75,
+    P4_DOOM_MP_STALLED_RETRY_INTERVAL_MS = 20,
+    P4_DOOM_MP_STALL_THRESHOLD_MS = 250,
+    P4_DOOM_MP_STALL_LOG_INTERVAL_MS = 1000,
+    P4_DOOM_MP_STALL_ABORT_MS = 10000,
     P4_DOOM_MP_READY_INTERVAL_MS = 100,
     P4_DOOM_MP_READY_TIMEOUT_MS = 30000,
     P4_DOOM_MP_READY_SETTLE_MS = 100,
@@ -32,23 +35,35 @@ enum {
 typedef struct {
     p4_mp_session_t *session;
     p4_doom_mp_launch_config_t config;
+    p4_doom_p4mp_transport_t transport;
     p4_doom_mp_tic_queue_t queue;
+    p4_doom_mp_tx_window_t tx_window;
     p4_doom_mp_engine_barrier_t engine_barrier;
     uint8_t datagram[P4_MP_MAX_DATAGRAM_BYTES];
     int64_t next_keepalive_us;
+    int64_t next_retry_us;
+    int64_t last_progress_us;
+    int64_t next_stall_log_us;
     uint32_t inputs_sent;
     uint32_t inputs_received;
     uint32_t complete_tics;
     uint32_t rejected_inputs;
     uint32_t send_failures;
+    uint32_t retransmits;
+    uint32_t ack_updates;
+    uint32_t invalid_acks;
+    uint32_t tx_window_failures;
     uint32_t saved_session_timeout_ms;
     boolean prepared;
     boolean configured;
+    boolean runtime_started;
     boolean peer_failed;
 } p4_doom_p4mp_state_t;
 
 static const char *const TAG = "p4_doom_net";
 static p4_doom_p4mp_state_t s_net;
+
+static void disconnect_remote(uint8_t slot, const char *reason);
 
 static void restore_session_timeout(void)
 {
@@ -100,7 +115,8 @@ static esp_err_t send_packet(
             &datagram_length) != P4_MP_OK) {
         return ESP_ERR_INVALID_STATE;
     }
-    return p4_mp_uart_endpoint_send(s_net.datagram, datagram_length);
+    return s_net.transport.send(
+        s_net.transport.context, s_net.datagram, datagram_length);
 }
 
 static bool send_input_tic(const p4_doom_mp_tic_t *tic)
@@ -112,22 +128,136 @@ static bool send_input_tic(const p4_doom_mp_tic_t *tic)
     uint8_t payload[P4_MP_INPUT_PAYLOAD_BYTES];
     p4_doom_mp_tic_to_input(tic, &input);
     p4_mp_input_encode(&input, payload);
-    bool sent = false;
-    for (unsigned copy = 0U;
-         copy < P4_DOOM_MP_REDUNDANT_INPUT_COPIES; ++copy) {
-        if (send_packet(
-                P4_MP_PACKET_INPUT, s_net.queue.next_tick,
-                payload, sizeof(payload)) == ESP_OK) {
-            sent = true;
-            if (s_net.inputs_sent != UINT32_MAX) {
-                ++s_net.inputs_sent;
-            }
+    if (send_packet(
+            P4_MP_PACKET_INPUT, s_net.queue.next_tick,
+            payload, sizeof(payload)) != ESP_OK) {
+        if (s_net.send_failures != UINT32_MAX) {
+            ++s_net.send_failures;
         }
+        return false;
     }
-    if (!sent && s_net.send_failures != UINT32_MAX) {
+    if (s_net.inputs_sent != UINT32_MAX) {
+        ++s_net.inputs_sent;
+    }
+    return true;
+}
+
+static bool track_local_tic(const p4_doom_mp_tic_t *tic)
+{
+    if (!p4_doom_mp_tx_window_track(&s_net.tx_window, tic)) {
+        if (s_net.tx_window_failures != UINT32_MAX) {
+            ++s_net.tx_window_failures;
+        }
+        ESP_LOGE(TAG,
+                 "P4_DOOM_MP TX_WINDOW_FAILED tick=%" PRIu32
+                 " peer_ack=%" PRIu32 " next_local=%" PRIu32
+                 " pending=%u",
+                 tic == NULL ? 0U : tic->tick,
+                 s_net.tx_window.peer_ack,
+                 s_net.tx_window.next_local_tick,
+                 (unsigned)s_net.tx_window.pending_count);
+        s_net.peer_failed = true;
+        return false;
+    }
+    if (s_net.next_retry_us == 0) {
+        s_net.next_retry_us = esp_timer_get_time() +
+            (int64_t)P4_DOOM_MP_RETRY_INTERVAL_MS * 1000;
+    }
+    return true;
+}
+
+static void observe_peer_ack(uint32_t peer_ack, int64_t now_us)
+{
+    const uint32_t previous = s_net.tx_window.peer_ack;
+    if (!p4_doom_mp_tx_window_acknowledge(
+            &s_net.tx_window, peer_ack)) {
+        if (s_net.invalid_acks != UINT32_MAX) {
+            ++s_net.invalid_acks;
+        }
+        return;
+    }
+    if (s_net.tx_window.peer_ack == previous) {
+        return;
+    }
+    if (s_net.ack_updates != UINT32_MAX) {
+        ++s_net.ack_updates;
+    }
+    if (p4_doom_mp_tx_window_pending(&s_net.tx_window) == 0U) {
+        s_net.next_retry_us = 0;
+    } else {
+        s_net.next_retry_us = now_us +
+            (int64_t)P4_DOOM_MP_RETRY_INTERVAL_MS * 1000;
+    }
+}
+
+static void retry_oldest_unacknowledged(int64_t now_us)
+{
+    const size_t pending =
+        p4_doom_mp_tx_window_pending(&s_net.tx_window);
+    if (pending == 0U) {
+        s_net.next_retry_us = 0;
+        return;
+    }
+    if (s_net.next_retry_us == 0) {
+        s_net.next_retry_us = now_us +
+            (int64_t)P4_DOOM_MP_RETRY_INTERVAL_MS * 1000;
+        return;
+    }
+    if (now_us < s_net.next_retry_us) {
+        return;
+    }
+    const int64_t stalled_us = s_net.runtime_started
+        ? now_us - s_net.last_progress_us : 0;
+    const unsigned interval_ms =
+        stalled_us >= (int64_t)P4_DOOM_MP_STALL_THRESHOLD_MS * 1000
+            ? P4_DOOM_MP_STALLED_RETRY_INTERVAL_MS
+            : P4_DOOM_MP_RETRY_INTERVAL_MS;
+    p4_doom_mp_tic_t retry;
+    if (p4_doom_mp_tx_window_oldest(&s_net.tx_window, &retry) &&
+        send_input_tic(&retry) && s_net.retransmits != UINT32_MAX) {
+        ++s_net.retransmits;
+    }
+    s_net.next_retry_us = now_us + (int64_t)interval_ms * 1000;
+
+    if (s_net.runtime_started &&
+        stalled_us >= (int64_t)P4_DOOM_MP_STALL_THRESHOLD_MS * 1000 &&
+        (s_net.next_stall_log_us == 0 ||
+         now_us >= s_net.next_stall_log_us)) {
+        ESP_LOGW(TAG,
+                 "P4_DOOM_MP LOCKSTEP_RECOVERY stalled_ms=%" PRIi64
+                 " next=%" PRIu32 " peer_ack=%" PRIu32
+                 " pending=%u retries=%" PRIu32
+                 " tx=%" PRIu32 " rx=%" PRIu32
+                 " rejected=%" PRIu32 " send_failures=%" PRIu32,
+                 stalled_us / 1000, s_net.queue.next_tick,
+                 s_net.tx_window.peer_ack, (unsigned)pending,
+                 s_net.retransmits, s_net.inputs_sent,
+                 s_net.inputs_received, s_net.rejected_inputs,
+                 s_net.send_failures);
+        s_net.next_stall_log_us = now_us +
+            (int64_t)P4_DOOM_MP_STALL_LOG_INTERVAL_MS * 1000;
+    }
+}
+
+static void fail_lockstep_if_stalled(int64_t now_us)
+{
+    if (!s_net.runtime_started || s_net.peer_failed ||
+        now_us - s_net.last_progress_us <
+            (int64_t)P4_DOOM_MP_STALL_ABORT_MS * 1000) {
+        return;
+    }
+    p4_mp_peer_t *const peer = remote_peer();
+    const uint8_t remote_slot = peer != NULL
+        ? peer->player_slot
+        : (uint8_t)(s_net.config.local_player_slot == 0U ? 1U : 0U);
+    disconnect_remote(remote_slot, "lockstep-timeout");
+}
+
+static void count_send_failure(void)
+{
+    if (s_net.send_failures != UINT32_MAX) {
         ++s_net.send_failures;
     }
-    return sent;
 }
 
 static void flush_complete_tics(void)
@@ -157,6 +287,8 @@ static void flush_complete_tics(void)
                 (connected_mask & player_bit(slot)) != 0U ? true : false;
         }
         D_ReceiveTic(commands, players);
+        s_net.last_progress_us = esp_timer_get_time();
+        s_net.next_stall_log_us = 0;
         if (s_net.complete_tics != UINT32_MAX) {
             ++s_net.complete_tics;
         }
@@ -175,7 +307,8 @@ static bool bootstrap_initial_tics(void)
     for (uint32_t tick = first_tick; tick < target_tick; ++tick) {
         const p4_doom_mp_tic_t neutral = {.tick = tick};
         if (!p4_doom_mp_tic_queue_submit(
-                &s_net.queue, s_net.config.local_player_slot, &neutral)) {
+                &s_net.queue, s_net.config.local_player_slot, &neutral) ||
+            !track_local_tic(&neutral)) {
             ESP_LOGE(TAG,
                      "P4_DOOM_MP TIC_BOOTSTRAP_QUEUE_FAILED tick=%" PRIu32,
                      tick);
@@ -254,6 +387,10 @@ static void frame_received(
     if (status != P4_MP_OK) {
         return;
     }
+    if (event.type == P4_MP_EVENT_INPUT ||
+        event.type == P4_MP_EVENT_PING) {
+        observe_peer_ack(event.packet.ack, esp_timer_get_time());
+    }
     if (event.type == P4_MP_EVENT_INPUT) {
         p4_mp_input_t input;
         p4_doom_mp_tic_t tic;
@@ -302,14 +439,18 @@ static void frame_received(
 
 esp_err_t p4_doom_p4mp_prepare(
     p4_mp_session_t *session,
-    const p4_doom_mp_launch_config_t *config)
+    const p4_doom_mp_launch_config_t *config,
+    const p4_doom_p4mp_transport_t *transport)
 {
     restore_session_timeout();
     memset(&s_net, 0, sizeof(s_net));
-    if (session == NULL && config == NULL) {
+    if (session == NULL && config == NULL && transport == NULL) {
         return ESP_OK;
     }
-    if (session == NULL || config == NULL ||
+    if (session == NULL || config == NULL || transport == NULL ||
+        transport->set_handler == NULL || transport->poll == NULL ||
+        transport->send == NULL || transport->connected == NULL ||
+        transport->route_name == NULL ||
         !p4_doom_mp_launch_config_valid(config) || !config->enabled ||
         config->start_tic != 0U ||
         session->state != P4_MP_SESSION_CONNECTED ||
@@ -320,15 +461,18 @@ esp_err_t p4_doom_p4mp_prepare(
     }
     s_net.session = session;
     s_net.config = *config;
+    s_net.transport = *transport;
     if (remote_peer() == NULL ||
         !p4_doom_mp_tic_queue_init(
             &s_net.queue, config->player_count, config->start_tic)) {
         memset(&s_net, 0, sizeof(s_net));
         return ESP_ERR_INVALID_STATE;
     }
+    p4_doom_mp_tx_window_init(&s_net.tx_window, config->start_tic);
+    s_net.last_progress_us = esp_timer_get_time();
     s_net.prepared = true;
-    const esp_err_t handler_result = p4_mp_uart_endpoint_set_handler(
-        frame_received, &s_net);
+    const esp_err_t handler_result = s_net.transport.set_handler(
+        s_net.transport.context, frame_received, &s_net);
     if (handler_result != ESP_OK) {
         memset(&s_net, 0, sizeof(s_net));
         return handler_result;
@@ -343,7 +487,9 @@ esp_err_t p4_doom_p4mp_prepare(
              config->role == P4_MP_ROLE_HOST ? "host" : "client",
              (unsigned)config->local_player_slot,
              (unsigned)config->player_count,
-             p4_mp_uart_route_name(config->route_id), config->route_id,
+             s_net.transport.route_name(
+                 s_net.transport.context, config->route_id),
+             config->route_id,
              (unsigned)P4_DOOM_MP_HANDOFF_TIMEOUT_MS);
     return ESP_OK;
 }
@@ -396,7 +542,7 @@ boolean P4_DoomNetConfigure(net_gamesettings_t *settings)
                     P4_MP_PACKET_PING, s_net.queue.next_tick,
                     ready, sizeof(ready)) != ESP_OK &&
                 s_net.send_failures != UINT32_MAX) {
-                ++s_net.send_failures;
+                count_send_failure();
             }
             next_ready_us = now_us +
                 (int64_t)P4_DOOM_MP_READY_INTERVAL_MS * 1000;
@@ -481,7 +627,19 @@ void P4_DoomNetSubmitTic(const ticcmd_t *command, int tic_number)
     };
     if (!p4_doom_mp_tic_queue_submit(
             &s_net.queue, s_net.config.local_player_slot, &tic)) {
+        ESP_LOGE(TAG,
+                 "P4_DOOM_MP LOCAL_QUEUE_FAILED tick=%" PRIu32
+                 " next=%" PRIu32,
+                 tic.tick, s_net.queue.next_tick);
+        s_net.peer_failed = true;
         return;
+    }
+    if (!track_local_tic(&tic)) {
+        return;
+    }
+    if (!s_net.runtime_started) {
+        s_net.runtime_started = true;
+        s_net.last_progress_us = esp_timer_get_time();
     }
     (void)send_input_tic(&tic);
     flush_complete_tics();
@@ -492,7 +650,19 @@ void P4_DoomNetPoll(void)
     if (!s_net.prepared) {
         return;
     }
-    p4_mp_uart_endpoint_poll();
+    s_net.transport.poll(s_net.transport.context);
+    if (!s_net.transport.connected(
+            s_net.transport.context, s_net.config.route_id)) {
+        p4_mp_peer_t *const peer = remote_peer();
+        const uint8_t remote_slot = peer != NULL
+            ? peer->player_slot : (uint8_t)(
+                s_net.config.local_player_slot == 0U ? 1U : 0U);
+        p4_mp_event_t disconnected;
+        (void)p4_mp_session_route_disconnected(
+            s_net.session, s_net.config.route_id, &disconnected);
+        disconnect_remote(remote_slot, "transport-disconnected");
+        return;
+    }
     const int64_t now_us = esp_timer_get_time();
     p4_mp_event_t timeout_event;
     if (s_net.session != NULL &&
@@ -501,6 +671,7 @@ void P4_DoomNetPoll(void)
             &timeout_event)) {
         disconnect_remote(timeout_event.player_slot, "timeout");
     }
+    retry_oldest_unacknowledged(now_us);
     if (s_net.session != NULL && remote_peer() != NULL &&
         (s_net.next_keepalive_us == 0 ||
          now_us >= s_net.next_keepalive_us)) {
@@ -516,6 +687,7 @@ void P4_DoomNetPoll(void)
             (int64_t)P4_DOOM_MP_KEEPALIVE_MS * 1000;
     }
     flush_complete_tics();
+    fail_lockstep_if_stalled(now_us);
 }
 
 boolean P4_DoomNetFailed(void)
@@ -534,10 +706,14 @@ void P4_DoomNetQuit(void)
         ESP_LOGI(TAG,
                  "P4_DOOM_MP STOP complete_tics=%" PRIu32
                  " tx_inputs=%" PRIu32 " rx_inputs=%" PRIu32
-                 " rejected=%" PRIu32 " send_failures=%" PRIu32,
+                 " retries=%" PRIu32 " ack_updates=%" PRIu32
+                 " invalid_acks=%" PRIu32 " rejected=%" PRIu32
+                 " send_failures=%" PRIu32 " tx_window_failures=%" PRIu32,
                  s_net.complete_tics, s_net.inputs_sent,
-                 s_net.inputs_received, s_net.rejected_inputs,
-                 s_net.send_failures);
+                 s_net.inputs_received, s_net.retransmits,
+                 s_net.ack_updates, s_net.invalid_acks,
+                 s_net.rejected_inputs, s_net.send_failures,
+                 s_net.tx_window_failures);
     }
     s_net.prepared = false;
     s_net.configured = false;

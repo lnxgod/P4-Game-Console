@@ -32,6 +32,7 @@ enum {
     P4_MP_ACCEPT_PAYLOAD_BYTES = 24,
     P4_MP_START_PAYLOAD_BYTES = 8,
     P4_MP_START_SCHEMA = 1,
+    P4_MP_GAME_MESSAGE_MAX_BYTES = 64,
     P4_MP_PLAYER_SLOT_ANY = 0xff,
 };
 
@@ -65,6 +66,8 @@ typedef enum {
     P4_MP_PACKET_PONG = 8,
     P4_MP_PACKET_LEAVE = 9,
     P4_MP_PACKET_REJECT = 10,
+    /** Transport-neutral payload copied to a connected native cartridge. */
+    P4_MP_PACKET_GAME_MESSAGE = 11,
 } p4_mp_packet_type_t;
 
 typedef enum {
@@ -361,6 +364,7 @@ typedef enum {
     P4_MP_EVENT_PEER_LEFT,
     P4_MP_EVENT_PEER_TIMED_OUT,
     P4_MP_EVENT_ROUTE_DISCONNECTED,
+    P4_MP_EVENT_GAME_MESSAGE,
 } p4_mp_event_type_t;
 
 typedef struct {

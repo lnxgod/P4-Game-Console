@@ -43,6 +43,12 @@ typedef bool (*p4_cartridge_read_save_status_fn)(
     p4_game_save_ticket_t ticket,
     p4_game_save_status_t *status_out,
     uint32_t *committed_sequence_out);
+typedef bool (*p4_cartridge_multiplayer_read_status_fn)(
+    void *context, p4_game_multiplayer_status_t *status_out);
+typedef bool (*p4_cartridge_multiplayer_send_fn)(
+    void *context, const uint8_t *data, size_t data_bytes);
+typedef bool (*p4_cartridge_multiplayer_receive_fn)(
+    void *context, p4_game_multiplayer_message_t *message_out);
 typedef void (*p4_cartridge_finished_fn)(
     void *context, p4_game_result_t result);
 
@@ -85,6 +91,10 @@ typedef struct {
     /** Optional v1 extension: copied, queued save commits and ticket status. */
     p4_cartridge_queue_save_fn queue_save;
     p4_cartridge_read_save_status_fn read_save_status;
+    /** Optional v1 extension for one OS-owned bounded P4MP session. */
+    p4_cartridge_multiplayer_read_status_fn multiplayer_read_status;
+    p4_cartridge_multiplayer_send_fn multiplayer_send;
+    p4_cartridge_multiplayer_receive_fn multiplayer_receive;
 } p4_cartridge_host_v1_t;
 
 typedef enum {

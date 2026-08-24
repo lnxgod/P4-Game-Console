@@ -23,6 +23,7 @@ local-data/lord-upstream/
 
 # Doom game data is supplied locally and never committed or embedded.
 *.[Ww][Aa][Dd]
+local-data/doom/chex.deh
 
 # Quake game data is supplied locally/on SD and never committed or embedded.
 *.[Pp][Aa][Kk]

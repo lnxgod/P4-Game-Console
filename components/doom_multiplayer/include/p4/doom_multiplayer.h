@@ -16,14 +16,22 @@ extern "C" {
 enum {
     P4_DOOM_MP_TICK_RATE_HZ = 35,
     P4_DOOM_MP_TIC_RING_SIZE = 128,
+    P4_DOOM_MP_TX_WINDOW_SIZE = 32,
     P4_DOOM_MP_ENGINE_CONTROL_BYTES = 8,
-    P4_DOOM_MP_SETUP_SCHEMA = 1,
+    P4_DOOM_MP_SETUP_SCHEMA = 2,
     P4_DOOM_MP_SETUP_BYTES = P4_MP_GAME_SETTINGS_BYTES,
     P4_DOOM_MP_MAX_EPISODE = 4,
     P4_DOOM_MP_MAX_MAP = 9,
+    P4_DOOM_MP_MAX_CHEX_MAP = 5,
     P4_DOOM_MP_MAX_SKILL = 5,
     P4_DOOM_MP_MAX_TIME_LIMIT_MINUTES = 60,
 };
+
+typedef enum {
+    P4_DOOM_MP_GAME_DOOM = 0,
+    P4_DOOM_MP_GAME_CHEX_QUEST,
+    P4_DOOM_MP_GAME_COUNT,
+} p4_doom_mp_game_t;
 
 typedef enum {
     P4_DOOM_MP_MODE_COOPERATIVE = 0,
@@ -32,6 +40,7 @@ typedef enum {
 } p4_doom_mp_mode_t;
 
 typedef struct {
+    p4_doom_mp_game_t game;
     p4_doom_mp_mode_t mode;
     uint8_t episode;
     uint8_t map;
@@ -88,6 +97,20 @@ typedef struct {
     uint8_t player_count;
     uint8_t connected_mask;
 } p4_doom_mp_tic_queue_t;
+
+/**
+ * Bounded local-input history used to recover a lost lockstep packet. The
+ * peer's packet ack is its next required tic, so every older entry can be
+ * discarded and the oldest remaining entry can be retransmitted safely.
+ */
+typedef struct {
+    p4_doom_mp_tic_t tics[P4_DOOM_MP_TX_WINDOW_SIZE];
+    uint32_t tags[P4_DOOM_MP_TX_WINDOW_SIZE];
+    uint8_t valid[P4_DOOM_MP_TX_WINDOW_SIZE];
+    uint32_t peer_ack;
+    uint32_t next_local_tick;
+    uint8_t pending_count;
+} p4_doom_mp_tx_window_t;
 
 /** Map one canonical Doom command into the fixed P4MP Input payload model. */
 void p4_doom_mp_tic_to_input(
@@ -175,6 +198,31 @@ bool p4_doom_mp_tic_queue_pop(
 bool p4_doom_mp_tic_queue_disconnect(
     p4_doom_mp_tic_queue_t *queue,
     uint8_t player_slot);
+
+void p4_doom_mp_tx_window_init(
+    p4_doom_mp_tx_window_t *window,
+    uint32_t start_tick);
+
+/** Track the next sequential local tic, accepting an identical retry. */
+bool p4_doom_mp_tx_window_track(
+    p4_doom_mp_tx_window_t *window,
+    const p4_doom_mp_tic_t *tic);
+
+/**
+ * Apply a monotonic peer next-required-tic acknowledgment. Stale, future, or
+ * ambiguous half-range acknowledgments are rejected without changing state.
+ */
+bool p4_doom_mp_tx_window_acknowledge(
+    p4_doom_mp_tx_window_t *window,
+    uint32_t peer_ack);
+
+/** Return the oldest unacknowledged local tic for a paced retransmission. */
+bool p4_doom_mp_tx_window_oldest(
+    const p4_doom_mp_tx_window_t *window,
+    p4_doom_mp_tic_t *tic_out);
+
+size_t p4_doom_mp_tx_window_pending(
+    const p4_doom_mp_tx_window_t *window);
 
 #ifdef __cplusplus
 }

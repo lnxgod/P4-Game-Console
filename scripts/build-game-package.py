@@ -36,6 +36,7 @@ CAPABILITIES = {
 ID_RE = re.compile(r"[a-z][a-z0-9.-]{2,47}\Z")
 SYMBOL_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")
 COMPONENT_RE = re.compile(r"[a-z][a-z0-9_]*\Z")
+SOURCE_RE = re.compile(r"[a-z][a-z0-9_]*\.c\Z")
 FOLDER_RE = re.compile(
     r"[A-Z0-9][A-Z0-9 -]{0,14}(?:/[A-Z0-9][A-Z0-9 -]{0,14})?\Z"
 )
@@ -115,6 +116,15 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
     package_file = value.get("package_file")
     if not isinstance(component, str) or not COMPONENT_RE.fullmatch(component):
         raise PackageError("component is invalid")
+    sources = value.get("sources", [f"{component}.c"])
+    if (not isinstance(sources, list) or not sources or len(sources) > 16 or
+            any(not isinstance(source, str) or
+                not SOURCE_RE.fullmatch(source) for source in sources)):
+        raise PackageError(
+            "sources must be an array of 1..16 safe C source basenames"
+        )
+    if len(sources) != len(set(sources)):
+        raise PackageError("sources contains a duplicate")
     if not isinstance(symbol, str) or not SYMBOL_RE.fullmatch(symbol):
         raise PackageError("entry_symbol is invalid")
     if not isinstance(game_id, str) or not ID_RE.fullmatch(game_id):
@@ -155,6 +165,7 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
         text_field(value, key, width)
     value["_required_mask"] = required
     value["_optional_mask"] = optional
+    value["_sources"] = sources
     return value
 
 
@@ -167,10 +178,9 @@ def build_elf(
 ) -> bytes:
     component = manifest["component"]
     game_dir = root / "games" / component
-    source = game_dir / "src" / f"{component}.c"
     inputs = [
         root / "game-platform" / "runtime" / "cartridge_main.c",
-        source,
+        *(game_dir / "src" / source for source in manifest["_sources"]),
         root / "components" / "p4_cp437" / "src" / "cp437.c",
         root / "components" / "p4_game_api" / "src" / "audio_pack.c",
         root / "components" / "p4_game_api" / "src" / "draw.c",

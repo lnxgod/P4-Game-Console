@@ -172,6 +172,27 @@ def main() -> None:
         result = run("--games-root", str(games), "--check")
         assert result.returncode == 0, result.stderr
 
+    with tempfile.TemporaryDirectory() as temporary:
+        games = pathlib.Path(temporary) / "games"
+        games.mkdir()
+        multi_source = manifest("multi_source", 251)
+        multi_source["sources"] = ["multi_source.c", "rules.c", "network.c"]
+        write_manifest(games, "multi_source", multi_source)
+        result = run("--games-root", str(games), "--check")
+        assert result.returncode == 0, result.stderr
+
+    invalid_sources = ([], ["../escape.c"], ["game.cpp"], ["game.c", "game.c"])
+    for index, sources in enumerate(invalid_sources):
+        with tempfile.TemporaryDirectory() as temporary:
+            games = pathlib.Path(temporary) / "games"
+            games.mkdir()
+            bad_sources = manifest(f"bad_sources_{index}", 260 + index)
+            bad_sources["sources"] = sources
+            write_manifest(games, f"bad_sources_{index}", bad_sources)
+            result = run("--games-root", str(games), "--check")
+            assert result.returncode != 0, sources
+            assert "sources" in result.stderr
+
     print("game registry tests passed")
 
 

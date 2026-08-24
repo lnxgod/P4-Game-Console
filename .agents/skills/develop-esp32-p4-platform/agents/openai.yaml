@@ -1,4 +1,4 @@
 interface:
-  display_name: "ESP32-P4 10 in Variant Platform"
-  short_description: "Build and verify the ESP32-P4 10 in variant"
-  default_prompt: "Use $develop-esp32-p4-platform to build, flash, or extend firmware for the Elecrow 10 in variant safely."
+  display_name: "ESP32-P4 Console Platform"
+  short_description: "Build and verify supported ESP32-P4 boards"
+  default_prompt: "Use $develop-esp32-p4-platform to build, flash, diagnose, or extend a supported ESP32-P4 console safely."

@@ -20,4 +20,12 @@ For each supported controller, record its product name, VID/PID, USB class/proto
 7. malformed or short reports without crashes or stale partial state;
 8. at least 30 minutes of continuous gameplay.
 
+For Waveshare H2, also record the external-power/backfeed fixture or powered
+hub, root-controller speed policy, downstream speed, hub depth/port, and USB
+role before and after the run. Verify that entering USB Drive mode stops and
+tears down Host/HID before MSC starts, and that leaving it remounts storage
+before controller-host mode resumes. For two-player hub work, test both pads
+simultaneously, unplug each independently while held, and prove the remaining
+pad stays live.
+
 State exactly which tier passed. Do not generalize one controller result to all devices sharing a console brand.

@@ -197,7 +197,12 @@ def verify_p4cart(path: pathlib.Path) -> dict[str, object]:
 
 
 def main() -> None:
-    build = pathlib.Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else DEFAULT_BUILD
+    arguments = sys.argv[1:]
+    firmware_only = "--firmware-only" in arguments
+    arguments = [item for item in arguments if item != "--firmware-only"]
+    require(len(arguments) <= 1,
+            "usage: verify-console-os-waveshare.py [--firmware-only] [build]")
+    build = pathlib.Path(arguments[0]).resolve() if arguments else DEFAULT_BUILD
     require(build.is_dir(), f"missing build directory: {build}")
 
     toolchain = read_json(ROOT / "toolchain.lock.json")
@@ -260,6 +265,21 @@ def main() -> None:
             "USB host power gate changed")
 
     sdkconfig = (build / "config/sdkconfig.h").read_text(encoding="utf-8")
+    ble_multiplayer_image = all(setting in sdkconfig for setting in (
+        "#define CONFIG_BT_ENABLED 1",
+        "#define CONFIG_BT_CONTROLLER_DISABLED 1",
+        "#define CONFIG_BT_NIMBLE_ENABLED 1",
+        "#define CONFIG_ESP_HOSTED_ENABLE_BT_NIMBLE 1",
+        "#define CONFIG_ESP_HOSTED_NIMBLE_HCI_VHCI 1",
+    ))
+    if ble_multiplayer_image:
+        ble_authorization = profile["peripheral_authorizations"][
+            "multiplayer_ble"
+        ]
+        require(ble_authorization.get("authorized") is True and
+                ble_authorization.get("wifi_data_plane_authorized") is False and
+                len(ble_authorization.get("device_identity_sha256", [])) == 2,
+                "BLE multiplayer exact-unit authorization is incomplete")
     usb_host_image = (
         "#define CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE 1" in sdkconfig
     )
@@ -326,9 +346,22 @@ def main() -> None:
     require({"gamepad_core", "platform_usb_host", "platform_gamepad_usb"}
             <= components,
             "role-selectable Waveshare input components are missing")
-    require({"espressif__esp_hosted", "espressif__esp_wifi_remote",
-             "p4_signal_scan", "platform_signal_scan"} <= components,
-            "Waveshare image is missing the passive signal-scan path")
+    signal_scan_image = {
+        "p4_signal_scan", "platform_signal_scan"
+    } <= components
+    require(ble_multiplayer_image != signal_scan_image,
+            "Waveshare image must select exactly one C6 radio consumer")
+    require({"espressif__esp_hosted", "espressif__esp_wifi_remote"}
+            <= components,
+            "Waveshare image is missing the pinned C6 transport")
+    if ble_multiplayer_image:
+        require({"bt", "platform_multiplayer_ble", "platform_radio_hosted"}
+                <= components,
+                "Waveshare image is missing the BLE multiplayer path")
+    else:
+        require({"p4_signal_scan", "platform_signal_scan",
+                 "platform_radio_hosted"} <= components,
+                "Waveshare image is missing the passive signal-scan path")
     if usb_host_image:
         require("p4_tinyusb_dual" in components,
                 "controller-first image is missing the dual-role TinyUSB boundary")
@@ -367,12 +400,24 @@ def main() -> None:
     require(app.is_file() and app.stat().st_size <= 0x7F0000,
             "application is missing or does not fit OTA")
     app_data = app.read_bytes()
-    for marker in (
-        b"P4_CONSOLE_OS SIGNAL_SCAN_START stage=post-ready mode=passive-only",
-        b"C6 passive scanner ready",
-    ):
+    radio_markers = (
+        (b"BLE multiplayer ready role=central mtu=%u route=%llu",
+         b"BLE multiplayer ready role=peripheral mtu=%u")
+        if ble_multiplayer_image else
+        (b"P4_CONSOLE_OS SIGNAL_SCAN_START stage=post-ready mode=passive-only",
+         b"C6 passive scanner ready")
+    )
+    for marker in radio_markers:
         require(marker in app_data,
-                f"passive signal-scan marker is missing: {marker!r}")
+                f"selected radio marker is missing: {marker!r}")
+    cmake = (APP / "CMakeLists.txt").read_text(encoding="utf-8")
+    version_match = re.search(r'set\(PROJECT_VER "([0-9]+\.[0-9]+\.[0-9]+)"\)',
+                              cmake)
+    require(version_match is not None,
+            "firmware semantic version is missing")
+    version_label = f"OS {version_match.group(1)}".encode("ascii")
+    require(version_label in app_data,
+            "visible shell version label is missing from the image")
     for forbidden in (
         b"TT pipe hub=",
         b"through HS hub transaction translator",
@@ -386,8 +431,8 @@ def main() -> None:
             b"USB_HOST_ROOT_PORT_ENABLED stack=tinyusb root_speed=high hub_tt=enabled",
             b"GAMEPAD_USB_READY stack=tinyusb tier=generic-hid hub_tt=enabled",
             b"firmware_vbus_source=0",
-            b"msc_storage=boot-resident",
-            b"MSC_STORAGE_READY allocation=boot-resident",
+            b"msc_storage=on-demand",
+            b"MSC_STORAGE_READY allocation=on-demand",
         ):
             require(marker in app_data,
                     f"TinyUSB controller-first marker is missing: {marker!r}")
@@ -417,8 +462,8 @@ def main() -> None:
 
     if usb_host_image and not tinyusb_hs_host_image:
         for marker in (
-            b"msc_storage=boot-resident",
-            b"MSC_STORAGE_READY allocation=boot-resident",
+            b"msc_storage=on-demand",
+            b"MSC_STORAGE_READY allocation=on-demand",
             b"BOOT_FRAME_RETRY",
             b"backlight_preserved=1",
         ):
@@ -535,6 +580,21 @@ def main() -> None:
                         f"guarded retry marker is missing: {marker!r}")
             require(b"P4_EXT_PORT_ENUM_RETRY Port" not in app_data,
                     "revoked 0.4.20 immediate retry marker returned")
+    if firmware_only:
+        print(json.dumps({
+            "result": "waveshare-console-os-firmware-verified",
+            "build": str(build),
+            "radio": "ble-multiplayer" if ble_multiplayer_image
+                     else "passive-signal-scan",
+            "application": {
+                "bytes": app.stat().st_size,
+                "sha256": sha256(app),
+            },
+            "version": version_match.group(1),
+            "hardware_tested": False,
+        }, sort_keys=True))
+        return
+
     bundle = build / "sd-card"
     require(sorted(item.name for item in bundle.iterdir()) ==
             ["DOOM1.WAD", "GAMES", "P4", "README.TXT", "UPDATE"],
@@ -645,11 +705,11 @@ def main() -> None:
                        "platform_console_settings.c").read_text(encoding="utf-8")
     settings_header = (ROOT / "components/platform_console_settings/include/"
                        "platform/console_settings.h").read_text(encoding="utf-8")
-    require("PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT = 10" in settings_header and
-            "PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT = 9" in settings_header and
+    require("PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT = 3" in settings_header and
+            "PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT = 3" in settings_header and
             'SETTINGS_NAMESPACE = "p4_console"' in settings_source and
             'VOLUME_POLICY_KEY = "volume_policy"' in settings_source and
-            "VOLUME_POLICY_VERSION = 1" in settings_source and
+            "VOLUME_POLICY_VERSION = 2" in settings_source and
             "migrate_volume_policy" in settings_source and
             'USB_ENUM_PROBE_KEY = "usb_enum_probe"' in settings_source and
             "nvs_commit(handle)" in settings_source and
@@ -665,7 +725,7 @@ def main() -> None:
             "CONSOLE_BOOT_DTMF_DASH_MS = 220" in source and
             "digit_tone_ms=%u digit_gap_ms=%u group_gap_ms=%u" in source,
             "Console OS persistent audio panel or paced DTMF profile differs")
-    require("console_os_launch_doom(s_console_settings.game_volume_step)" in source,
+    require("s_console_settings.game_volume_step,\n        title,\n        multiplayer" in source,
             "touch Doom handoff does not receive the OS master volume")
     gamepad_core_source = (ROOT / "components/gamepad_core/src/"
                            "hid_gamepad.c").read_text(encoding="utf-8")
@@ -683,6 +743,10 @@ def main() -> None:
     doom_source = (ROOT / "apps/doom_embedded_touch_audio/main/"
                    "doom_embedded_touch_audio_main.c").read_text(
                        encoding="utf-8")
+    doom_gamepad_source = (
+        ROOT / "apps/doom_embedded_gamepad_audio/main/"
+        "doom_embedded_gamepad_audio_main.c"
+    ).read_text(encoding="utf-8")
     console_main_cmake = (APP / "main/CMakeLists.txt").read_text(
         encoding="utf-8")
     for token in (
@@ -694,10 +758,23 @@ def main() -> None:
     ):
         require(token in doom_source,
                 f"Waveshare Doom shared controller path is missing {token}")
+    for handoff_name, handoff_source in (
+        ("touch-audio", doom_source),
+        ("gamepad-audio", doom_gamepad_source),
+    ):
+        for token in (
+            "bool allow_pwad",
+            'memcmp(header, "PWAD", 4U)',
+            "verify_readonly_vfs(wad_path, wad_size, chex)",
+        ):
+            require(
+                token in handoff_source,
+                f"Chex PWAD policy is missing from {handoff_name}: {token}",
+            )
     require("doom_gamepad_input" in console_main_cmake,
             "Waveshare Console OS does not link Doom's normalized input adapter")
     require("CONSOLE_P4CART_SCAN_STACK_BYTES = 24 * 1024" in source and
-            "worker_low_water_bytes=%u runtime=lua-pending" in source,
+            "worker_low_water_bytes=%u runtime=p4-lua-5.4-v1" in source,
             "legacy cart scan stack regression is not guarded")
     for token in (
         "_binary_bytebud_p4g_start",
@@ -719,11 +796,9 @@ def main() -> None:
         "console_shell_show_home(shell);\n"
         "    const esp_err_t home_result = present_interactive(shell);" in source,
         "cartridge return must tolerate a recoverable Waveshare frame ack miss")
-    cmake = (APP / "CMakeLists.txt").read_text(encoding="utf-8")
-    require('set(PROJECT_VER "0.4.36")' in cmake and
-            "RENAME_TO bytebud_p4g" not in cmake and
+    require("RENAME_TO bytebud_p4g" not in cmake and
             "P4_DEFAULT_GAME_PACKAGE" not in cmake,
-            "firmware version differs or build still embeds a default cartridge")
+            "firmware build still embeds a default cartridge")
     ansi_source = (ROOT / "components/p4_ansi/src/ansi.c").read_text(
         encoding="utf-8")
     for token in (
@@ -734,17 +809,18 @@ def main() -> None:
     ):
         require(token in ansi_source,
                 f"larger bold BBS font policy is missing {token}")
-    signal_scan_source = (ROOT / "components/platform_signal_scan/src/"
-                          "platform_signal_scan.c").read_text(encoding="utf-8")
-    for token in (
-        "ssid_has_visible_name",
-        ".show_hidden = false",
-        "hidden_filtered=%u",
-    ):
-        require(token in signal_scan_source,
-                f"named-only signal scan policy is missing {token}")
-    require(".show_hidden = true" not in signal_scan_source,
-            "Waveshare scanner must not request hidden networks")
+    if signal_scan_image:
+        signal_scan_source = (ROOT / "components/platform_signal_scan/src/"
+                              "platform_signal_scan.c").read_text(encoding="utf-8")
+        for token in (
+            "ssid_has_visible_name",
+            ".show_hidden = false",
+            "hidden_filtered=%u",
+        ):
+            require(token in signal_scan_source,
+                    f"named-only signal scan policy is missing {token}")
+        require(".show_hidden = true" not in signal_scan_source,
+                "Waveshare scanner must not request hidden networks")
     require("console_shell_t shell;" not in source,
             "large shell state must not live on the main task stack")
     require(
@@ -773,7 +849,9 @@ def main() -> None:
         "P4_GAME_STORAGE_RUNTIME_H2_SWITCH",
         "P4_GAME_STORAGE_EAGER_USB_STORAGE",
         "P4_GAME_STORAGE USB_DEVICE_DEFERRED",
-        "MSC_STORAGE_READY allocation=boot-resident",
+        "MSC_STORAGE_READY allocation=on-demand",
+        "runtime_create_usb_storage",
+        "runtime_release_usb_storage",
         "sdmmc_host_deinit_slot(GAME_STORAGE_SD_SLOT)",
         "uninstall_usb_driver_if_running",
     ):
@@ -782,8 +860,8 @@ def main() -> None:
     require("create_lazy_msc_storage" not in storage_source and
             "delete_lazy_msc_storage" not in storage_source and
             "result = sdmmc_host_deinit();" not in storage_source,
-            "runtime USB switching must not allocate MSC late or globally "
-            "deinitialize the C6 SDIO host")
+            "runtime USB switching must use the explicit on-demand helpers "
+            "and never globally deinitialize the C6 SDIO host")
     board_defaults = (ROOT / "hardware/boards/"
                       "waveshare-esp32-p4-wifi6-touch-lcd-4.3/"
                       "sdkconfig.defaults").read_text(encoding="utf-8")

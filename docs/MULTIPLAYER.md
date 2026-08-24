@@ -6,12 +6,20 @@ length checks, CRC32 corruption detection, route binding, replay rejection,
 four-player limits, and immediate neutral input on leave, timeout, or transport
 disconnect. A bounded byte-stream decoder now sits beneath it so chunked or
 noisy UART and USB-device traffic cannot hand malformed lengths to the session
-core. Console OS now owns a direct-first dual-UART endpoint, deterministic
-two-peer Doom lobby, and lockstep Doom tic adapter. A board-authorized direct
-UART can run without a computer; H1 remains the automatic host-relay fallback
-and the diagnostic/content-upload path. Both exact Waveshare consoles have
-passed a sustained H1 relay game run. Direct-link gameplay remains a separate
-hardware acceptance.
+core. Console OS now owns a direct-first dual-UART endpoint, a two-player
+multi-game lobby, the lockstep Doom tic adapter, a bounded native-game message
+bridge, and transport-neutral handoff between wired UART and BLE gaming. The
+lobby enumerates Doom, Chex Quest, and installed cartridges that declare the
+optional `multiplayer-session` capability. It advertises the selected game
+identity and exact content hash, so browsers show only compatible rooms for
+that game. Wired Auto remains the boot/default
+transport. BLE is opt-in from the lobby and lazily starts the Waveshare's
+on-board ESP32-C6 only after selection, so normal boot and wired play do not
+pay the radio startup cost. A board-authorized direct UART can run without a
+computer; H1 remains the automatic host-relay fallback and the
+diagnostic/content-upload path. Both exact Waveshare consoles have passed a
+sustained H1 relay game run. Direct-link and BLE gameplay remain separate
+hardware acceptances.
 
 The repository now includes `scripts/p4-multiplayer-relay.py`, a bounded
 two-port H1 relay that discards boot/debug text and forwards only complete
@@ -41,11 +49,15 @@ All integers are little-endian. A datagram is at most 1,056 bytes:
 | end | 4 | CRC32 over header and payload |
 
 Types are Discover, Offer, Join, Accept, Input, State Hash, Ping, Pong, Leave,
-and Reject. Normalized input is a fixed 24-byte payload. A session has one host
+Reject, and Game Message. Normalized input is a fixed 24-byte payload. A Game
+Message carries 1-64 bytes for a cartridge through the OS-owned capability; it
+does not expose the route or transport. A session has one host
 and at most three remote peers. Routes and peer IDs cannot be silently rebound,
 and packets must have a newer sequence number. The default peer timeout is
 three seconds. CRC32 detects accidental corruption; it is not authentication or
-encryption.
+encryption. The BLE adapter additionally requires a link encrypted with LE
+Secure Connections, but its Just Works pairing does not authenticate the
+physical identity of the other badge.
 
 The transport adapter must copy a complete bounded datagram into this core and
 translate its own connection identity to an opaque 64-bit route ID. It must
@@ -98,29 +110,74 @@ for the complete bounded header, rejects payloads above 1,024 bytes before
 buffering them, validates CRC32, and reports how many source bytes were
 consumed so multiple frames in one USB/UART read are handled without loss.
 
+## BLE gaming on the Waveshare 4.3
+
+The ESP32-P4 has no radio of its own. Console OS runs NimBLE on the P4 and
+carries HCI to the board's ESP32-C6 over the exact authorized SDIO map
+(reset 54, clock 18, command 19, data 14/15/16/17). The dependency versions
+remain pinned to ESP-IDF 5.5.3, ESP-Hosted 1.4.7, and Wi-Fi Remote 0.14.5.
+The build refuses to continue if generated configuration falls back to a
+different Hosted transport or pin map.
+
+BLE gaming is deliberately narrow:
+
+- one encrypted peer, for two-player games;
+- no bonding, account, cloud relay, Wi-Fi transport, or public matchmaking;
+- idle badges scan but do not advertise, so they cannot accidentally pair;
+- `CREATE LOBBY` allocates a fresh P4MP session and advertises one compact,
+  game-specific room beacon; the host does not scan;
+- browsers keep a bounded, expiring strongest-first room list and `JOIN`
+  connects only to the selected host address and advertised session;
+- only the host may start a match; a guest remains at the ready screen until
+  the host sends the synchronized start barrier;
+- independent host/session pairs can coexist in radio range without
+  cross-pairing; each current room still has a two-player capacity;
+- P4MP datagrams are split into bounded ATT fragments, reassembled without
+  dynamic allocation, then length- and CRC-checked before entering the shared
+  session core;
+- a failed join or disconnect immediately neutralizes the multiplayer route
+  and returns the guest to the room browser; a disconnected host reopens its
+  same room until the user leaves the Multiplayer page.
+
+To use it, open Multiplayer on both consoles, choose the same entry under
+`GAME`, and change `LINK` from `WIRED AUTO` to `BLE` if a wireless match is
+wanted. On one console select `CREATE NEW` and press `CREATE LOBBY`. On the
+other, choose the displayed room ID and press `JOIN SELECTED ROOM`. The host
+owns match settings and presses `START MATCH` only after the guest is
+connected. Both consoles cross the same start barrier, then Console OS launches
+the selected game: Doom receives its lockstep adapter, while a native cartridge
+receives the bounded `multiplayer-session` capability. Selecting BLE lazily
+starts the C6 radio stack; it is not started during Console OS boot. H1 content
+upload remains serviced while BLE owns game traffic.
+
+The encrypted BLE link and sustained two-board Doom lockstep have prior
+hardware acceptance. The explicit multi-room lobby introduced in Console OS
+0.4.60 still requires two-board acceptance for room discovery, selected-room
+isolation, host-only start, synchronized Doom launch, and clean recovery after
+either badge powers off.
+
 ## Product modes
 
 1. Same-device multiplayer comes first. Console OS maps up to four local
    controllers/touch sets to stable player slots, with no networking.
-2. Native arcade games use an OS-owned host-authoritative model: clients submit
-   tick-stamped normalized input; the host advances the fixed simulation and
-   sends bounded snapshots/state hashes. This favors smooth recovery over
-   perfect peer lockstep.
-3. P4 Carts may later opt into deterministic lockstep. The lobby requires an
-   exact cart ID, API version, content SHA-256, player count, and session seed.
+2. Native games use the OS-owned `multiplayer-session` boundary. The current
+   two-player contract is host-authoritative: clients submit bounded intent and
+   the host publishes validated state snapshots. This suits turn-based games
+   such as P4 Yahtzee and keeps transport ownership outside the cartridge.
+3. P4 Carts may later opt into deterministic lockstep. The lobby already
+   requires an exact cart ID, API version, content SHA-256, player count, and
+   session seed.
    The OS exchanges delayed input frames and periodic state hashes; a mismatch
    ends the match rather than allowing divergent state.
-The intended first link is local and wired: no account, cloud relay, public
-matchmaking, or arbitrary Internet listener. Radio transports remain optional;
-the ESP32-C6/Wi-Fi 6 dependency must be pinned and independently qualified
-before Console OS can advertise wireless networking as ready.
+The intended links are local wired UART and opt-in BLE: no account, cloud
+relay, public matchmaking, arbitrary Internet listener, or Wi-Fi game mode.
 
 ## Remaining implementation order
 
-1. Confirm the exact J3 pin contract, enable its board profile, and complete
-   direct two-console Doom gameplay acceptance with identical WADs.
-2. Record disconnect, timeout, desync, and malformed-packet behavior.
-3. Add same-console player slots and a simple native two-player reference game.
-4. Freeze a versioned multiplayer Game API above the OS-owned P4MP transport.
-5. Consider an exclusive H2 USB-device multiplayer mode after controller-first
-   behavior is preserved.
+1. Run the BLE two-board acceptance described above with identical WADs.
+2. Complete direct-UART two-console Doom acceptance and record the J3 cable.
+3. Record disconnect, timeout, desync, and malformed-packet behavior for both
+   transports.
+4. Hardware-accept one P4 Yahtzee match launched from the multi-game lobby over
+   the selected two-console transport without weakening the existing Doom
+   evidence boundary.

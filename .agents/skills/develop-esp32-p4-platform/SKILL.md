@@ -1,6 +1,6 @@
 ---
 name: develop-esp32-p4-platform
-description: Build, diagnose, flash, monitor, or extend firmware for this ESP32-P4 platform, including the Elecrow CrowPanel Advanced 10 in variant and Olimex ESP32-P4-PC Rev.B. Use for ESP-IDF apps, board support and pin changes, display, SD, audio, touch or USB bring-up, toolchain setup, recovery, and hardware verification.
+description: Build, diagnose, flash, monitor, or extend firmware for this ESP32-P4 platform, including the Elecrow 10 in variant, Olimex ESP32-P4-PC Rev.B, and Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3. Use for ESP-IDF apps, board support and pin changes, display, SD, audio, touch or USB bring-up, toolchain setup, recovery, and hardware verification.
 ---
 
 # Develop the ESP32-P4 platform
@@ -29,13 +29,24 @@ storage is microSD, not USB MSC. Never flash a newly connected P4-PC until its
 complete 16 MiB factory image and hashed live identity have been recorded and
 the profile's write gate has been deliberately authorized.
 
+For Waveshare, select `waveshare-esp32-p4-wifi6-touch-lcd-4.3` explicitly and
+use `$develop-waveshare-p4-4.3`. The deployed controller-first profile uses
+the synthetic build target
+`waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host`: H1 CH343 is programming,
+monitoring, and verified content transfer, while externally powered H2 is the
+runtime-switch controller-host/USB-Drive connector. Do not infer H2 VBUS source
+capability from its USB-C shape or from host-mode firmware.
+
 Keep the build target and physical target paired exactly:
 
 - `elecrow-crowpanel-advanced-10` / `make console-os-idf` means the Elecrow
   CrowPanel Advanced 10.1-inch device only.
 - `olimex-esp32-p4-pc` / `make console-os-olimex-idf` means the Olimex
   ESP32-P4-PC **Rev.B development board** only.
-- Any third target needs its own ID and source-pinned profile through the board
+- `waveshare-esp32-p4-wifi6-touch-lcd-4.3` /
+  `make console-os-waveshare-idf` means the Waveshare 4.3 landscape device;
+  use the `-usb-host` build-script target for the proven controller-first image.
+- Any other target needs its own ID and source-pinned profile through the board
   port contract. Reusing an adapter never permits reusing a board identity.
 
 For another ESP32-P4 board, use `scripts/board-port.py` and
@@ -108,6 +119,7 @@ after focused tests:
 ```sh
 make console-os-idf          # Elecrow CrowPanel Advanced 10.1-inch
 make console-os-olimex-idf   # Olimex ESP32-P4-PC Rev.B development board
+make console-os-waveshare-idf # Waveshare 4.3 landscape bundle
 ```
 
 Run both only when shared Console OS or board-selection code changed. Do not
@@ -123,6 +135,13 @@ make monitor APP=<app> PORT=/dev/cu.<port>
 ```
 
 Use `make flash` only when the test intentionally changes the bootloader or partition table and that broader write has been reviewed.
+
+Do not repeat a factory backup for an exact device already bound in the backup
+manifest. For the two recorded Waveshare development units, resolve each H1
+port to its stored identity, write the verified app artifact at `0x20000`, and
+flash sequentially. Never run simultaneous CH343 writes: a parallel two-board
+attempt dropped a port and is not an accepted install method. Require esptool's
+post-write hash verification before resetting each unit.
 
 The flash script must verify the application readback before a run can be recorded as a PASS. Never erase the whole flash merely to solve a build or connection problem. Preserve the factory backup and record the exact app, toolchain, board identity hash, result, and observed serial markers after a hardware test. Do not store or print the raw base identity.
 

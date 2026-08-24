@@ -6,9 +6,10 @@ description: Create, port, modify, package, install, or test storage-installed g
 # Develop P4 Console games
 
 Build games against the stable P4 Game API, then install their `.P4G` files
-through the Elecrow `P4 GAMES` USB volume or the Olimex/Waveshare microSD
-bundle. Keep Console OS in charge of hardware, storage, and lifecycle services
-so adding or removing a game never requires an OS reflash.
+through the Elecrow `P4 GAMES` USB volume, an Olimex/Waveshare microSD bundle,
+or the Waveshare H1 verified live-transfer path. Keep Console OS in charge of
+hardware, storage, and lifecycle services so adding or removing a game never
+requires an OS reflash.
 
 Target names are exact: `elecrow-crowpanel-advanced-10` is the Elecrow 10 in
 device, `olimex-esp32-p4-pc` is the Olimex ESP32-P4-PC Rev.B development board,
@@ -72,7 +73,8 @@ that can be exercised without display, audio, USB, or filesystem hardware.
 - Keep `game.json` authoritative. Retain format `p4-native-elf-v1`, API version
   1, a unique game ID and launcher ID, an uppercase root `.P4G` filename, a
   folder of at most two uppercase segments, and accurate version, license,
-  asset, and capability declarations.
+  asset, and capability declarations. Use the optional bounded `sources` list
+  for a multi-file game instead of creating a second package path.
 - Use original or correctly licensed code and assets. Never commit commercial
   Doom WADs, WAD-bearing firmware, generated cartridges containing a WAD, or
   recovery images.
@@ -133,6 +135,23 @@ and return from USB Drive mode so Console OS remounts and rescans. A powered-off
 card-reader copy is also valid. Never let the Mac and Console OS own the
 filesystem at the same time. Open Game Manager to refresh and launch the game.
 Do not flash the OS for a game-only update.
+
+Prefer H1 when the badge is running and only a cartridge needs to move. The
+default transfer class is `p4g`:
+
+```sh
+python3 scripts/p4-transfer.py push /absolute/path/GAME.P4G \
+  --port /dev/cu.wchusbserial...
+python3 scripts/p4-transfer.py push /absolute/path/GAME.P4G \
+  --port /dev/cu.wchusbserial... --no-replace
+```
+
+The host rejects unsafe names, oversize files, malformed package geometry, API
+mismatches, and payload-digest failures before sending. Console OS repeats the
+bounded package validation, SHA-256 verification, atomic staging, and readback
+under `/GAMES`; a successful P4G upload invalidates and reloads the native game
+catalog without rebooting. Use `--class exchange` only for the separate
+File Transfer exchange area, never to bypass native cartridge validation.
 
 For a hardware acceptance, perform one named run that launches the changed
 game, exercises its changed behavior, and returns to the launcher with Back.

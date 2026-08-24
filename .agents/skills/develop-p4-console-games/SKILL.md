@@ -39,6 +39,9 @@ game's `game.json` before editing. Also use:
   icon, title, description, and folder/app count only.
 - Keep reusable services in `components/`; keep game-specific code in
   `games/<slug>/`.
+- A manifest may declare 1–16 unique C basenames in `sources`; omit it for the
+  conventional single `src/<component>.c` game. Keep every source inside that
+  game and inside the same reviewed package/ABI boundary.
 - Use fixed storage and bounded loops. Do not bypass the reviewed ELF package
   validator/loader, add a second loader, or add an unbounded recursive folder
   walk.
@@ -103,8 +106,18 @@ metadata into `p4_game_descriptor_t`; that descriptor is the stable API ABI.
   `P4_GAME_EXIT_TO_LAUNCHER` on Back.
 - Use `p4/input.h` for normalized held/pressed/released controls.
 - Use `p4/draw.h` for clipped RGB565 primitives or bounded licensed sprites.
+- Use `p4/visual.h` for fixed-point motion, atlas animation, easing,
+  deterministic camera shake, and small caller-owned particle arrays. These
+  helpers add polish without giving a game a renderer, allocator, or timer.
 - Use `p4/audio.h` for host-owned sound.
 - Stop all requested sound in the game's `stop` callback.
+
+For optional multiplayer, declare `multiplayer-session` and use only the
+non-blocking `p4_game_multiplayer_*` calls. Console OS owns BLE/UART/USB
+transport, discovery, compatibility, timeouts, and peer identity. A game sees
+only a bounded session snapshot and copied messages up to 64 bytes, and must
+retain a complete same-device/offline mode. Prefer host-authoritative state for
+turn-based games. Never open a radio, UART, USB handle, or socket from a game.
 
 For simple sound, request `audio-tone` and call `p4_game_play_tone()`. For a
 software mixer, request `audio-stream`, declare
@@ -192,4 +205,5 @@ A build is not hardware acceptance and does not authorize a flash.
 
 Update `docs/GAME_SDK.md` only when the reusable contract changes. Record a
 new exact build artifact instead of rewriting an executed or historical
-record.
+record. Use `$develop-p4-games` for package validation and H1/SD installation;
+do not flash Console OS for a cartridge-only update.

@@ -28,6 +28,7 @@ VALID_PAYLOAD_LENGTHS = {
     8: {8},
     9: {2},
     10: {2},
+    11: set(range(1, 65)),
 }
 PACKET_TYPE_NAMES = {
     1: "discover",
@@ -40,6 +41,7 @@ PACKET_TYPE_NAMES = {
     8: "pong",
     9: "leave",
     10: "reject",
+    11: "game-message",
 }
 
 

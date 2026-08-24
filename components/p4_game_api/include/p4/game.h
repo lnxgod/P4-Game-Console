@@ -30,6 +30,8 @@ enum {
     P4_GAME_SAVE_MAX_BYTES = 16 * 1024,
     P4_GAME_SAVE_MAX_SLOTS = 2,
     P4_GAME_SAVE_SLOT_ID_BYTES = 16,
+    P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES = 64,
+    P4_GAME_MULTIPLAYER_MAX_PLAYERS = 4,
 };
 
 typedef enum {
@@ -191,6 +193,45 @@ typedef bool (*p4_game_read_save_status_fn)(
     p4_game_save_status_t *status_out,
     uint32_t *committed_sequence_out);
 
+/** Transport-neutral multiplayer state owned and sanitized by Console OS. */
+typedef enum {
+    P4_GAME_MULTIPLAYER_OFFLINE = 0,
+    P4_GAME_MULTIPLAYER_WAITING,
+    P4_GAME_MULTIPLAYER_CONNECTED,
+    P4_GAME_MULTIPLAYER_PEER_LEFT,
+    P4_GAME_MULTIPLAYER_ERROR,
+} p4_game_multiplayer_state_t;
+
+typedef enum {
+    P4_GAME_MULTIPLAYER_ROLE_NONE = 0,
+    P4_GAME_MULTIPLAYER_ROLE_HOST,
+    P4_GAME_MULTIPLAYER_ROLE_CLIENT,
+} p4_game_multiplayer_role_t;
+
+typedef struct {
+    uint32_t generation;
+    uint64_t session_seed;
+    p4_game_multiplayer_state_t state;
+    p4_game_multiplayer_role_t role;
+    uint8_t local_player_slot;
+    uint8_t player_count;
+} p4_game_multiplayer_status_t;
+
+/** One copied game-protocol message; transport headers never reach a game. */
+typedef struct {
+    uint32_t sequence;
+    uint8_t player_slot;
+    uint8_t bytes;
+    uint8_t data[P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES];
+} p4_game_multiplayer_message_t;
+
+typedef bool (*p4_game_multiplayer_read_status_fn)(
+    void *context, p4_game_multiplayer_status_t *status_out);
+typedef bool (*p4_game_multiplayer_send_fn)(
+    void *context, const uint8_t *data, size_t data_bytes);
+typedef bool (*p4_game_multiplayer_receive_fn)(
+    void *context, p4_game_multiplayer_message_t *message_out);
+
 typedef struct {
     uint32_t available_capabilities;
     void *audio_context;
@@ -219,6 +260,11 @@ typedef struct {
     uint32_t save_sequence;
     p4_game_queue_save_fn queue_save;
     p4_game_read_save_status_fn read_save_status;
+    /** Optional v1 tail: OS-owned P4MP session, never a socket or route. */
+    void *multiplayer_context;
+    p4_game_multiplayer_read_status_fn multiplayer_read_status;
+    p4_game_multiplayer_send_fn multiplayer_send;
+    p4_game_multiplayer_receive_fn multiplayer_receive;
 } p4_game_services_t;
 
 typedef struct {
@@ -339,6 +385,22 @@ bool p4_game_read_save_status(p4_game_context_t *context,
                               p4_game_save_ticket_t ticket,
                               p4_game_save_status_t *status_out,
                               uint32_t *committed_sequence_out);
+
+/** Copy the current OS-owned multiplayer session state without blocking. */
+bool p4_game_multiplayer_read_status(
+    p4_game_context_t *context,
+    p4_game_multiplayer_status_t *status_out);
+
+/** Copy one bounded game-protocol message into the active P4MP session. */
+bool p4_game_multiplayer_send(
+    p4_game_context_t *context,
+    const uint8_t *data,
+    size_t data_bytes);
+
+/** Poll one copied, validated peer message without blocking. */
+bool p4_game_multiplayer_receive(
+    p4_game_context_t *context,
+    p4_game_multiplayer_message_t *message_out);
 
 void p4_game_stop_audio(p4_game_context_t *context);
 

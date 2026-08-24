@@ -59,6 +59,9 @@ static bool payload_length_valid(p4_mp_packet_type_t type, uint16_t length)
         case P4_MP_PACKET_LEAVE:
         case P4_MP_PACKET_REJECT:
             return length == 2U;
+        case P4_MP_PACKET_GAME_MESSAGE:
+            return length != 0U &&
+                length <= P4_MP_GAME_MESSAGE_MAX_BYTES;
         default:
             return false;
     }
@@ -166,7 +169,8 @@ p4_mp_status_t p4_mp_packet_decode(
         return P4_MP_BAD_VERSION;
     }
     const p4_mp_packet_type_t type = (p4_mp_packet_type_t)datagram[5];
-    if (type < P4_MP_PACKET_DISCOVER || type > P4_MP_PACKET_REJECT) {
+    if (type < P4_MP_PACKET_DISCOVER ||
+        type > P4_MP_PACKET_GAME_MESSAGE) {
         return P4_MP_BAD_TYPE;
     }
     const uint16_t flags = read_u16(datagram + 6);

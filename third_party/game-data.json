@@ -40,6 +40,42 @@
       "notice": "Preferred redistributable game data for public reproducibility; supply separately and preserve Freedoom notices."
     },
     {
+      "id": "chex-quest-1.0",
+      "filename": "chex.wad",
+      "local_path": "local-data/doom/chex.wad",
+      "sd_path": "/sdcard/CHEX.WAD",
+      "kind": "IWAD",
+      "version": "1996 freeware release",
+      "size_bytes": 12361532,
+      "md5": "25485721882b050afa96a56e5758dd52",
+      "sha1": "eca9cff1014ce5081804e193588d96c6ddb35432",
+      "sha256": "d8eb5277918883f490fb1a4be3c9a8588df2dbaee6dc4beb8df4929148bbffb1",
+      "source_archive": {
+        "filename": "chex.zip",
+        "url": "https://www.chexquest3.com/downloads/chex.zip",
+        "size_bytes": 3773924,
+        "sha256": "df8e391b0f802f82ac9b71ec4faea4b1cd858097d04eb70aff2d1a39150e0419",
+        "publisher": "Digital Café / General Mills"
+      },
+      "notice": "Officially hosted freeware game data. Keep it as ignored local/SD input; do not commit or embed it in project firmware artifacts. Chex and Chex Quest are General Mills trademarks."
+    },
+    {
+      "id": "chex-quest-dehacked-2008-08-14",
+      "filename": "chex.deh",
+      "local_path": "local-data/doom/chex.deh",
+      "sd_path": "/sdcard/CHEX.DEH",
+      "kind": "DeHackEd compatibility patch",
+      "version": "2008-08-14",
+      "size_bytes": 20367,
+      "md5": "928cc1593cda42b78c8326807d5c80b6",
+      "sha1": "08cb5b52ba35c0ead5ab114aa8270116b7ae69f5",
+      "sha256": "8c0345089fb227fa7f71c25a6c6e31ff5bd4bea0580f286cd74e05918d72dd40",
+      "source": "https://sources.debian.org/src/prboom-plus/2%3A2.5.1.5~svn4462%2Bdfsg1-1/data/lumps/chexdeh.lmp",
+      "author": "Simon Howard",
+      "license": "Unrestricted by author notice",
+      "notice": "Required beside CHEX.WAD for accurate Chex Quest emulation. Kept as ignored local/SD input to preserve the platform's data-separation policy."
+    },
+    {
       "id": "quake-shareware-1.06-pak0",
       "filename": "pak0.pak",
       "local_path": "local-data/quake/id1/pak0.pak",

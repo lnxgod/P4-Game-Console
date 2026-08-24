@@ -109,7 +109,7 @@ int main(void)
         }
         CHECK(shell.bbs_terminal.scroll_count == 0U);
         CHECK(p4_ansi_cell(&shell.bbs_terminal, 1U, 0U)->character == 0xc9U);
-        CHECK(p4_ansi_cell(&shell.bbs_terminal, 6U, 8U)->character == '[');
+        CHECK(p4_ansi_cell(&shell.bbs_terminal, 5U, 9U)->character == '>');
         const uint64_t bbs_hash = frame_hash(pixels, pixel_count);
         shell.color_mode = CONSOLE_COLOR_MODE_ARCADE;
         shell.dirty = true;
@@ -121,7 +121,7 @@ int main(void)
 
     CHECK(console_shell_init(
         &shell, s_apps, sizeof(s_apps) / sizeof(s_apps[0])));
-    console_shell_action_t action = tap_surface(&shell, 405U, 130U);
+    console_shell_action_t action = tap_surface(&shell, 405U, 212U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(strcmp(shell.home_folder_path, "GAMES") == 0);
 
@@ -129,7 +129,7 @@ int main(void)
     shell.home_folder_path[0] = '\0';
     shell.home_all_programs = false;
     shell.selected_home_item = 0U;
-    (void)console_shell_handle_buttons(&shell, CONSOLE_BUTTON_RIGHT);
+    (void)console_shell_handle_buttons(&shell, CONSOLE_BUTTON_DOWN);
     (void)console_shell_handle_buttons(&shell, 0U);
     action = console_shell_handle_buttons(&shell, CONSOLE_BUTTON_ACCEPT);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);

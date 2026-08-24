@@ -47,6 +47,7 @@ int main(int argc, char **argv)
     }
     const p4_bbs_launcher_model_t model = {
         .board_name = "GAME CHANGERS AI BBS",
+        .node_name = "GC-P4-B289",
         .section = "[ DOOR GAMES ]",
         .connection = "ONLINE",
         .doors = {
@@ -65,11 +66,8 @@ int main(int argc, char **argv)
             {.number = 5U, .title = "SOLITAIRE",
              .subtitle = "CARD TABLE", .accent = P4_ANSI_COLOR_BRIGHT_RED,
              .enabled = true},
-            {.number = 6U, .title = "MORE DOORS",
-             .subtitle = "12 GAMES ONLINE", .accent = P4_ANSI_COLOR_BRIGHT_CYAN,
-             .enabled = true, .menu = true},
         },
-        .door_count = 6U,
+        .door_count = 5U,
         .selected_door = 0U,
         .page = 1U,
         .page_count = 2U,
@@ -80,6 +78,7 @@ int main(int argc, char **argv)
     p4_ansi_terminal_t terminal;
     const p4_bbs_boot_model_t boot = {
         .phase = P4_BBS_BOOT_TRAINING,
+        .node_name = "GC-P4-B289",
         .status = "V.22BIS TRAINING / 2400 BAUD",
         .detail = "NEGOTIATING LOCAL BBS SESSION",
         .progress_step = 3U,
