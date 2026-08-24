@@ -105,7 +105,8 @@ endif()
 
 
 def source_text(slug: str, game_id: str, title: str,
-                launcher_id: int, accent: str) -> str:
+                launcher_id: int, accent: str,
+                multiplayer: bool) -> str:
     symbol = f"p4_{slug}_game"
     c_title = json.dumps(title.upper())
     return f"""// SPDX-License-Identifier: MIT
@@ -204,7 +205,7 @@ const p4_game_descriptor_t {symbol} = {{
     .subtitle = \"P4 GAME API V1\",
     .accent_rgb565 = UINT16_C({accent}),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,
+    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE{(" |" + chr(10) + "        P4_GAME_CAP_MULTIPLAYER_SESSION") if multiplayer else ""},
     .state_bytes = sizeof({slug}_state_t),
     .start = game_start,
     .update = game_update,
@@ -214,7 +215,20 @@ const p4_game_descriptor_t {symbol} = {{
 """
 
 
-def readme_text(title: str, folder: str) -> str:
+def readme_text(title: str, folder: str,
+                multiplayer_style: str | None) -> str:
+    multiplayer = ""
+    if multiplayer_style is not None:
+        multiplayer = f"""
+
+This starter declares the `{multiplayer_style}` multiplayer profile in
+`game.json`. Console OS reads that profile to create compatible lobbies. Game
+code uses only `p4_game_multiplayer_read_profile()`,
+`p4_game_multiplayer_read_status()`, `p4_game_multiplayer_send()`, and
+`p4_game_multiplayer_receive()`; it never chooses BLE, UART, or USB directly.
+Keep a complete offline mode and increment `multiplayer.protocol` whenever the
+meaning of your game messages changes.
+"""
     return f"""# {title}
 
 This starter is a native P4 Game API v1 component. Edit the file in `src/`,
@@ -228,6 +242,7 @@ launcher places the game under
 Use only the `p4/` headers for display, controls, drawing, and sound. Keep
 board drivers and raw ESP-IDF peripheral ownership in platform components.
 Press the on-screen Exit control to return to the launcher.
+{multiplayer}
 """
 
 
@@ -257,6 +272,12 @@ def main() -> int:
         help=("optional Game API service; repeat as needed "
               "(default: audio-tone)"),
     )
+    parser.add_argument(
+        "--multiplayer",
+        choices=("turn-based", "realtime", "lockstep"),
+        help=("add a two-player declarative networking profile and the "
+              "multiplayer-session capability"),
+    )
     parser.add_argument("--games-root", type=pathlib.Path,
                         default=ROOT / "games")
     parser.add_argument("--dry-run", action="store_true")
@@ -283,6 +304,9 @@ def main() -> int:
     optional_capabilities = args.optional_capability or ["audio-tone"]
     if len(optional_capabilities) != len(set(optional_capabilities)):
         die("--optional-capability contains a duplicate")
+    if args.multiplayer is not None and \
+            "multiplayer-session" not in optional_capabilities:
+        optional_capabilities.append("multiplayer-session")
     game_id = "org.p4console." + slug.replace("_", "-")
     manifest = {
         "schema": 1,
@@ -304,14 +328,23 @@ def main() -> int:
         "assets": "original-code-rendered-shapes-only",
         "enabled": True,
     }
+    if args.multiplayer is not None:
+        manifest["multiplayer"] = {
+            "schema": 1,
+            "style": args.multiplayer,
+            "min_players": 2,
+            "max_players": 2,
+            "protocol": 1,
+        }
     files = (
         (pathlib.Path("CMakeLists.txt"), cmake_text(slug)),
         (pathlib.Path("game.json"),
          json.dumps(manifest, indent=2) + "\n"),
         (pathlib.Path("src") / f"{slug}.c",
          source_text(slug, game_id, args.title, launcher_id,
-                     args.accent.lower())),
-        (pathlib.Path("README.md"), readme_text(args.title, args.folder)),
+                     args.accent.lower(), args.multiplayer is not None)),
+        (pathlib.Path("README.md"),
+         readme_text(args.title, args.folder, args.multiplayer)),
     )
     result = {
         "result": "p4-game-starter-planned" if args.dry_run
@@ -322,6 +355,7 @@ def main() -> int:
         "launcher_id": launcher_id,
         "folder": args.folder,
         "optional_capabilities": optional_capabilities,
+        "multiplayer": manifest.get("multiplayer"),
         "files": [str(relative) for relative, _ in files],
     }
     if not args.dry_run:

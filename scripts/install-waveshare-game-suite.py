@@ -16,6 +16,11 @@ import subprocess
 import sys
 import tempfile
 
+from p4_multiplayer_manifest import (
+    PROFILE_HEADER_FLAG,
+    decode_multiplayer_profile,
+)
+
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 AUTH = ROOT / (
@@ -96,9 +101,21 @@ def validate_game(path: pathlib.Path) -> None:
         and launcher >= 100
         and required & 1
         and not required & optional
-        and flags == 1,
+        and flags & 1
+        and not flags & ~(1 | PROFILE_HEADER_FLAG),
         "P4G layout differs",
     )
+    if flags & PROFILE_HEADER_FLAG:
+        require((required | optional) & (1 << 9),
+                "P4G multiplayer profile lacks its capability")
+        try:
+            decode_multiplayer_profile(package[240:256])
+        except ValueError as error:
+            raise SystemExit(
+                f"P4G multiplayer profile differs: {error}"
+            ) from error
+    else:
+        require(not any(package[240:256]), "P4G reserved bytes differ")
     require(package[48:80] == hashlib.sha256(package[offset:]).digest(),
             "P4G payload digest differs")
     require("." in c_string(package[80:128], "P4G game id"),

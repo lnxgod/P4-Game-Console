@@ -140,8 +140,7 @@ enum {
     CONSOLE_MULTIPLAYER_START_TIMEOUT_MS = 15000,
     CONSOLE_MULTIPLAYER_PEER_TIMEOUT_MS = 15000,
     CONSOLE_DOOM_MULTIPLAYER_PROTOCOL = 3,
-    CONSOLE_NATIVE_MULTIPLAYER_PROTOCOL = 1,
-    CONSOLE_NATIVE_MULTIPLAYER_TICK_RATE_HZ = 30,
+    CONSOLE_NATIVE_MULTIPLAYER_RUNTIME_PLAYERS = 2,
     CONSOLE_NATIVE_MULTIPLAYER_QUEUE_DEPTH = 8,
     CONSOLE_STORAGE_INIT_STACK_BYTES = 12 * 1024,
     CONSOLE_P4CART_SCAN_STACK_BYTES = 24 * 1024,
@@ -401,6 +400,7 @@ typedef struct {
     p4_game_multiplayer_role_t role;
     uint8_t local_player_slot;
     uint8_t player_count;
+    p4_game_multiplayer_profile_t profile;
     bool active;
 } console_native_multiplayer_t;
 static console_native_multiplayer_t s_native_multiplayer;
@@ -612,6 +612,9 @@ static bool multiplayer_selected_game_is_chex(void);
 static const char *multiplayer_selected_game_title(void);
 static const platform_game_catalog_entry_t *
     multiplayer_selected_native_game(void);
+static bool native_multiplayer_content_identity(
+    const platform_game_catalog_entry_t *game,
+    uint8_t identity[P4_MP_SHA256_BYTES]);
 static esp_err_t configure_multiplayer_local_offer(void);
 static void reset_multiplayer_lobby(const char *reason);
 static bool storage_app_owned(void);
@@ -1587,10 +1590,12 @@ static esp_err_t reload_game_catalog(void)
     } else if (!multiplayer_selected_game_is_doom()) {
         const platform_game_catalog_entry_t *const selected =
             multiplayer_selected_native_game();
+        uint8_t identity[P4_MP_SHA256_BYTES];
         multiplayer_offer_stale = selected == NULL ||
+            !native_multiplayer_content_identity(selected, identity) ||
             strcmp(selected->package.id,
                    s_multiplayer_local_offer.game_id) != 0 ||
-            memcmp(selected->package.payload_sha256,
+            memcmp(identity,
                    s_multiplayer_local_offer.content_sha256,
                    P4_MP_SHA256_BYTES) != 0;
     }
@@ -2314,7 +2319,47 @@ static bool native_game_supports_multiplayer(
     }
     const uint32_t capabilities = game->package.required_capabilities |
         game->package.optional_capabilities;
-    return (capabilities & P4_GAME_CAP_MULTIPLAYER_SESSION) != 0U;
+    return (capabilities & P4_GAME_CAP_MULTIPLAYER_SESSION) != 0U &&
+        p4_game_multiplayer_profile_valid(
+            &game->package.multiplayer_profile) &&
+        game->package.multiplayer_profile.min_players <=
+            CONSOLE_NATIVE_MULTIPLAYER_RUNTIME_PLAYERS;
+}
+
+static p4_mp_game_mode_t native_multiplayer_mode(
+    const p4_game_multiplayer_profile_t *profile)
+{
+    return profile != NULL &&
+        profile->style == P4_GAME_MULTIPLAYER_STYLE_LOCKSTEP
+        ? P4_MP_GAME_MODE_LOCKSTEP
+        : P4_MP_GAME_MODE_HOST_AUTHORITATIVE;
+}
+
+static bool native_multiplayer_content_identity(
+    const platform_game_catalog_entry_t *game,
+    uint8_t identity[P4_MP_SHA256_BYTES])
+{
+    if (!native_game_supports_multiplayer(game) || identity == NULL) {
+        return false;
+    }
+    const p4_game_multiplayer_profile_t *const profile =
+        &game->package.multiplayer_profile;
+    uint8_t material[P4_MP_SHA256_BYTES + 16U] = {0};
+    memcpy(material, game->package.payload_sha256, P4_MP_SHA256_BYTES);
+    memcpy(material + P4_MP_SHA256_BYTES, "P4MP", 4U);
+    material[36] = profile->schema;
+    material[37] = (uint8_t)profile->style;
+    material[38] = profile->min_players;
+    material[39] = profile->max_players;
+    material[40] = (uint8_t)profile->tick_rate_hz;
+    material[41] = (uint8_t)(profile->tick_rate_hz >> 8U);
+    material[42] = profile->input_delay_ticks;
+    material[43] = profile->message_bytes;
+    material[44] = (uint8_t)profile->protocol;
+    material[45] = (uint8_t)(profile->protocol >> 8U);
+    material[46] = (uint8_t)profile->flags;
+    material[47] = (uint8_t)(profile->flags >> 8U);
+    return mbedtls_sha256(material, sizeof(material), identity, 0) == 0;
 }
 
 static size_t multiplayer_game_count(void)
@@ -2884,16 +2929,24 @@ static esp_err_t configure_multiplayer_local_offer(void)
     } else {
         const platform_game_catalog_entry_t *const game =
             multiplayer_selected_native_game();
-        if (game == NULL) {
+        if (!native_game_supports_multiplayer(game)) {
             return ESP_ERR_NOT_FOUND;
         }
-        offer.mode = P4_MP_GAME_MODE_HOST_AUTHORITATIVE;
-        offer.input_delay_tics = 0U;
-        offer.tick_rate_hz = CONSOLE_NATIVE_MULTIPLAYER_TICK_RATE_HZ;
-        offer.game_protocol = CONSOLE_NATIVE_MULTIPLAYER_PROTOCOL;
+        const p4_game_multiplayer_profile_t *const profile =
+            &game->package.multiplayer_profile;
+        offer.mode = native_multiplayer_mode(profile);
+        offer.player_capacity = profile->max_players <
+                CONSOLE_NATIVE_MULTIPLAYER_RUNTIME_PLAYERS
+            ? profile->max_players
+            : CONSOLE_NATIVE_MULTIPLAYER_RUNTIME_PLAYERS;
+        offer.input_delay_tics = profile->input_delay_ticks;
+        offer.tick_rate_hz = profile->tick_rate_hz;
+        offer.game_protocol = profile->protocol;
         strcpy(offer.game_id, game->package.id);
-        memcpy(offer.content_sha256, game->package.payload_sha256,
-               sizeof(offer.content_sha256));
+        if (!native_multiplayer_content_identity(
+                game, offer.content_sha256)) {
+            return ESP_FAIL;
+        }
     }
     uint8_t material[P4_MP_COMPATIBILITY_MATERIAL_BYTES];
     if (p4_mp_lobby_compatibility_material(
@@ -3578,14 +3631,17 @@ static void configure_multiplayer_launch(
     } else {
         const platform_game_catalog_entry_t *const game =
             multiplayer_selected_native_game();
-        if (game == NULL ||
+        uint8_t identity[P4_MP_SHA256_BYTES];
+        if (!native_game_supports_multiplayer(game) ||
+            !native_multiplayer_content_identity(game, identity) ||
             strcmp(game->package.id,
                    s_multiplayer_local_offer.game_id) != 0 ||
-            memcmp(game->package.payload_sha256,
+            memcmp(identity,
                    s_multiplayer_local_offer.content_sha256,
                    P4_MP_SHA256_BYTES) != 0 ||
             s_multiplayer_local_offer.mode !=
-                P4_MP_GAME_MODE_HOST_AUTHORITATIVE) {
+                native_multiplayer_mode(
+                    &game->package.multiplayer_profile)) {
             reset_multiplayer_lobby("invalid-native-launch-config");
             return;
         }
@@ -3663,7 +3719,8 @@ static void native_multiplayer_queue_message(const p4_mp_event_t *event)
     if (!s_native_multiplayer.active || event == NULL ||
         event->type != P4_MP_EVENT_GAME_MESSAGE ||
         event->packet.payload == NULL || event->packet.payload_length == 0U ||
-        event->packet.payload_length > P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES) {
+        event->packet.payload_length >
+            s_native_multiplayer.profile.message_bytes) {
         return;
     }
     if (s_native_multiplayer.queue_count >=
@@ -5666,7 +5723,11 @@ typedef struct {
 
 static bool native_multiplayer_begin(void)
 {
+    const platform_game_catalog_entry_t *const game =
+        platform_game_catalog_find_launcher(
+            &s_game_catalog, s_multiplayer_native_launcher_id);
     if (s_multiplayer_launch_kind != CONSOLE_MP_LAUNCH_NATIVE ||
+        !native_game_supports_multiplayer(game) ||
         s_multiplayer_session.state != P4_MP_SESSION_CONNECTED ||
         s_multiplayer_local_player_slot >= s_multiplayer_player_count ||
         s_multiplayer_player_count < 2U ||
@@ -5689,6 +5750,7 @@ static bool native_multiplayer_begin(void)
             : P4_GAME_MULTIPLAYER_ROLE_CLIENT,
         .local_player_slot = s_multiplayer_local_player_slot,
         .player_count = s_multiplayer_player_count,
+        .profile = game->package.multiplayer_profile,
         .active = true,
     };
     return true;
@@ -5758,7 +5820,7 @@ static bool cartridge_multiplayer_send(
         s_native_multiplayer.active &&
         s_native_multiplayer.state == P4_GAME_MULTIPLAYER_CONNECTED &&
         data != NULL && data_bytes != 0U &&
-        data_bytes <= P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES &&
+        data_bytes <= s_native_multiplayer.profile.message_bytes &&
         send_session_multiplayer_packet(
             P4_MP_PACKET_GAME_MESSAGE, 0U, data,
             (uint16_t)data_bytes) == ESP_OK;
@@ -6155,6 +6217,8 @@ static esp_err_t run_stored_game(
             ? cartridge_multiplayer_send : NULL,
         .multiplayer_receive = multiplayer_ready
             ? cartridge_multiplayer_receive : NULL,
+        .multiplayer_profile = multiplayer_ready
+            ? &game->package.multiplayer_profile : NULL,
     };
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS CARTRIDGE_START app=%s file=%s api=1 "

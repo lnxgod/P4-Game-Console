@@ -94,6 +94,55 @@ def main() -> None:
     with tempfile.TemporaryDirectory() as temporary:
         games = pathlib.Path(temporary) / "games"
         games.mkdir()
+        multiplayer = manifest("multiplayer", 121)
+        multiplayer["optional_capabilities"].append("multiplayer-session")
+        multiplayer["multiplayer"] = {
+            "schema": 1,
+            "style": "turn-based",
+        }
+        write_manifest(games, "multiplayer", multiplayer)
+        result = run("--games-root", str(games), "--check")
+        assert result.returncode == 0, result.stderr
+        report = json.loads(result.stdout)
+        assert report["multiplayer_games"] == [multiplayer["id"]]
+
+    invalid_multiplayer = (
+        {"schema": 2, "style": "turn-based"},
+        {"schema": 1, "style": "cloud"},
+        {"schema": 1, "style": "realtime", "min_players": 3,
+         "max_players": 2},
+        {"schema": 1, "style": "turn-based", "message_bytes": 65},
+        {"schema": 1, "style": "realtime", "input_delay_ticks": 1},
+        {"schema": 1, "style": "lockstep", "surprise": True},
+    )
+    for index, profile in enumerate(invalid_multiplayer):
+        with tempfile.TemporaryDirectory() as temporary:
+            games = pathlib.Path(temporary) / "games"
+            games.mkdir()
+            invalid = manifest(f"bad_mp_{index}", 130 + index)
+            invalid["optional_capabilities"].append("multiplayer-session")
+            invalid["multiplayer"] = profile
+            write_manifest(games, f"bad_mp_{index}", invalid)
+            result = run("--games-root", str(games), "--check")
+            assert result.returncode != 0, profile
+            assert "multiplayer" in result.stderr
+
+    with tempfile.TemporaryDirectory() as temporary:
+        games = pathlib.Path(temporary) / "games"
+        games.mkdir()
+        missing_capability = manifest("missing_mp", 140)
+        missing_capability["multiplayer"] = {
+            "schema": 1,
+            "style": "turn-based",
+        }
+        write_manifest(games, "missing_mp", missing_capability)
+        result = run("--games-root", str(games), "--check")
+        assert result.returncode != 0
+        assert "multiplayer-session" in result.stderr
+
+    with tempfile.TemporaryDirectory() as temporary:
+        games = pathlib.Path(temporary) / "games"
+        games.mkdir()
         with_resource = manifest("dragon", 150)
         with_resource["resource_file"] = "DRAGON.P4R"
         with_resource["resource_payload"] = "assets/dragon.bin"

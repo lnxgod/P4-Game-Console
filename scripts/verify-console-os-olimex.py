@@ -12,6 +12,8 @@ import struct
 import subprocess
 import sys
 
+from p4_multiplayer_manifest import expected_multiplayer_extension
+
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 APP = ROOT / "apps/console_os"
@@ -77,12 +79,20 @@ def verify_game(path: pathlib.Path, manifest: dict) -> dict[str, object]:
             payload == len(package) - 256, f"{path.name} layout differs")
     require(fmt == api == 1 and launcher == manifest["launcher_id"],
             f"{path.name} API or launcher differs")
-    require(required & 1 and not (required & optional) and flags == 1,
+    profile_flag, profile_bytes = expected_multiplayer_extension(
+        manifest,
+        set(manifest["required_capabilities"]) |
+        set(manifest["optional_capabilities"]),
+    )
+    require(required & 1 and not (required & optional) and
+            flags == (1 | profile_flag),
             f"{path.name} capabilities/flags differ")
     require(package[48:80] == hashlib.sha256(package[256:]).digest(),
             f"{path.name} payload digest differs")
     require(c_string(package[80:128], "game id") == manifest["id"],
             f"{path.name} manifest binding differs")
+    require(package[240:256] == profile_bytes,
+            f"{path.name} multiplayer profile differs")
     return {"file": path.name, "bytes": len(package), "sha256": sha256(path)}
 
 

@@ -12,6 +12,8 @@ import re
 import tempfile
 from typing import Any
 
+from p4_multiplayer_manifest import normalize_multiplayer_profile
+
 
 API_VERSION = 1
 FORMAT = "p4-native-elf-v1"
@@ -163,6 +165,12 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
         fail(path, "video must be a required capability")
     if resource_file is not None and "storage" not in required + optional:
         fail(path, "a resource sidecar requires the storage capability")
+    try:
+        value["_multiplayer_profile"] = normalize_multiplayer_profile(
+            value, required + optional
+        )
+    except ValueError as error:
+        fail(path, str(error))
     bounded_text(value, path, "license", 64)
     bounded_text(value, path, "assets", 128)
     value["_path"] = path
@@ -238,6 +246,8 @@ def main() -> int:
         "packages": [item["package_file"] for item in manifests],
         "resources": [item["resource_file"] for item in manifests
                       if item.get("resource_file")],
+        "multiplayer_games": [item["id"] for item in manifests
+                              if item.get("_multiplayer_profile")],
     }, sort_keys=True))
     return 0
 

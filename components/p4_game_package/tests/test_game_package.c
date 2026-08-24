@@ -178,6 +178,49 @@ int main(int argc, char *argv[])
               P4_GAME_CAP_MODULE_HANDOFF | P4_GAME_CAP_VECTOR_SCENES);
     assert(p4_game_package_parse(package, sizeof(package), &info) ==
            P4_GAME_PACKAGE_VALID);
+    assert(!info.multiplayer_profile_declared);
+    assert(info.multiplayer_profile.style ==
+           P4_GAME_MULTIPLAYER_STYLE_REALTIME);
+    assert(info.multiplayer_profile.message_bytes ==
+           P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES);
+    make_synthetic(package);
+    write_u32(package + 40U, P4_GAME_CAP_MULTIPLAYER_SESSION);
+    write_u16(package + 46U,
+              P4_GAME_PACKAGE_FLAG_DEVELOPMENT |
+              P4_GAME_PACKAGE_FLAG_MULTIPLAYER_PROFILE);
+    memcpy(package + 240U, "P4MP", 4U);
+    package[244] = P4_GAME_MULTIPLAYER_PROFILE_SCHEMA;
+    package[245] = P4_GAME_MULTIPLAYER_STYLE_TURN_BASED;
+    package[246] = 2U;
+    package[247] = 2U;
+    write_u16(package + 248U, 10U);
+    package[250] = 0U;
+    package[251] = 48U;
+    write_u16(package + 252U, 7U);
+    assert(p4_game_package_parse(package, sizeof(package), &info) ==
+           P4_GAME_PACKAGE_VALID);
+    assert(info.multiplayer_profile_declared);
+    assert(info.multiplayer_profile.style ==
+           P4_GAME_MULTIPLAYER_STYLE_TURN_BASED);
+    assert(info.multiplayer_profile.message_bytes == 48U);
+    assert(info.multiplayer_profile.protocol == 7U);
+    package[251] = 65U;
+    assert(p4_game_package_parse(package, sizeof(package), &info) ==
+           P4_GAME_PACKAGE_BAD_METADATA);
+    make_synthetic(package);
+    write_u16(package + 46U,
+              P4_GAME_PACKAGE_FLAG_DEVELOPMENT |
+              P4_GAME_PACKAGE_FLAG_MULTIPLAYER_PROFILE);
+    memcpy(package + 240U, "P4MP", 4U);
+    package[244] = P4_GAME_MULTIPLAYER_PROFILE_SCHEMA;
+    package[245] = P4_GAME_MULTIPLAYER_STYLE_REALTIME;
+    package[246] = 2U;
+    package[247] = 2U;
+    write_u16(package + 248U, 30U);
+    package[251] = 64U;
+    write_u16(package + 252U, 1U);
+    assert(p4_game_package_parse(package, sizeof(package), &info) ==
+           P4_GAME_PACKAGE_BAD_METADATA);
     write_u32(package + 40U, UINT32_C(1) << 31U);
     assert(p4_game_package_parse(package, sizeof(package), &info) ==
            P4_GAME_PACKAGE_BAD_METADATA);

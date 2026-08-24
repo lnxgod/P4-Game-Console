@@ -191,6 +191,9 @@ int app_main(int argc, char *argv[])
     const bool has_multiplayer = host_field_present(
         host, offsetof(p4_cartridge_host_v1_t, multiplayer_receive),
         sizeof(host->multiplayer_receive));
+    const bool has_multiplayer_profile = host_field_present(
+        host, offsetof(p4_cartridge_host_v1_t, multiplayer_profile),
+        sizeof(host->multiplayer_profile));
     uint32_t available_capabilities = host->available_capabilities &
         supported_service_capabilities();
     if (host->play_tone == NULL) {
@@ -282,6 +285,11 @@ int app_main(int argc, char *argv[])
         .multiplayer_receive =
             (available_capabilities & P4_GAME_CAP_MULTIPLAYER_SESSION) != 0U
             ? host_multiplayer_receive : NULL,
+        .multiplayer_profile =
+            (available_capabilities & P4_GAME_CAP_MULTIPLAYER_SESSION) != 0U &&
+            has_multiplayer_profile &&
+            p4_game_multiplayer_profile_valid(host->multiplayer_profile)
+            ? host->multiplayer_profile : NULL,
     };
     p4_game_instance_t instance = {0};
     if (!p4_game_instance_start(

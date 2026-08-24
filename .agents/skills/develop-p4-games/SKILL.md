@@ -75,6 +75,10 @@ that can be exercised without display, audio, USB, or filesystem hardware.
   folder of at most two uppercase segments, and accurate version, license,
   asset, and capability declarations. Use the optional bounded `sources` list
   for a multi-file game instead of creating a second package path.
+- For a multiplayer game, require `multiplayer-session` and validate the
+  declarative `multiplayer` profile described in `docs/GAME_SDK.md`. Package
+  the canonical profile into the reviewed `.P4G` header extension; never
+  create a transport-specific sidecar or let a game choose BLE/UART/USB.
 - Use original or correctly licensed code and assets. Never commit commercial
   Doom WADs, WAD-bearing firmware, generated cartridges containing a WAD, or
   recovery images.

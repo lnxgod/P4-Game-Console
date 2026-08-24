@@ -667,6 +667,15 @@ static void test_game_runtime(void)
         .has_incoming = true,
     };
     static const uint8_t initial_save[] = {1U, 2U, 3U};
+    const p4_game_multiplayer_profile_t multiplayer_profile = {
+        .schema = P4_GAME_MULTIPLAYER_PROFILE_SCHEMA,
+        .style = P4_GAME_MULTIPLAYER_STYLE_TURN_BASED,
+        .min_players = 2U,
+        .max_players = 2U,
+        .tick_rate_hz = 10U,
+        .message_bytes = 4U,
+        .protocol = 7U,
+    };
     const p4_game_services_t services = {
         .available_capabilities = P4_GAME_CAP_VIDEO |
                                   P4_GAME_CAP_CONTROLS |
@@ -697,6 +706,7 @@ static void test_game_runtime(void)
         .multiplayer_read_status = fixture_multiplayer_status,
         .multiplayer_send = fixture_multiplayer_send,
         .multiplayer_receive = fixture_multiplayer_receive,
+        .multiplayer_profile = &multiplayer_profile,
     };
     p4_game_services_t invalid_services = services;
     invalid_services.submit_pcm16_stereo = NULL;
@@ -722,6 +732,13 @@ static void test_game_runtime(void)
         &rejected_state, sizeof(rejected_state)));
     invalid_services = services;
     invalid_services.multiplayer_receive = NULL;
+    CHECK(!p4_game_instance_start(
+        &rejected, &s_fixture_game, &invalid_services,
+        &rejected_state, sizeof(rejected_state)));
+    p4_game_multiplayer_profile_t invalid_profile = multiplayer_profile;
+    invalid_profile.message_bytes = 0U;
+    invalid_services = services;
+    invalid_services.multiplayer_profile = &invalid_profile;
     CHECK(!p4_game_instance_start(
         &rejected, &s_fixture_game, &invalid_services,
         &rejected_state, sizeof(rejected_state)));
@@ -799,6 +816,12 @@ static void test_game_runtime(void)
     CHECK(multiplayer_status.state == P4_GAME_MULTIPLAYER_CONNECTED);
     CHECK(multiplayer_status.role == P4_GAME_MULTIPLAYER_ROLE_HOST);
     CHECK(multiplayer_status.player_count == 2U);
+    p4_game_multiplayer_profile_t observed_profile;
+    CHECK(p4_game_multiplayer_read_profile(
+        &instance.context, &observed_profile));
+    CHECK(observed_profile.style == P4_GAME_MULTIPLAYER_STYLE_TURN_BASED);
+    CHECK(observed_profile.message_bytes == 4U);
+    CHECK(observed_profile.protocol == 7U);
     const uint8_t multiplayer_payload[] = {1U, 2U, 3U, 4U};
     CHECK(p4_game_multiplayer_send(
         &instance.context, multiplayer_payload,
@@ -806,6 +829,10 @@ static void test_game_runtime(void)
     CHECK(multiplayer.sent_bytes == sizeof(multiplayer_payload));
     CHECK(memcmp(multiplayer.sent, multiplayer_payload,
                  sizeof(multiplayer_payload)) == 0);
+    const uint8_t oversized_multiplayer_payload[] = {1U, 2U, 3U, 4U, 5U};
+    CHECK(!p4_game_multiplayer_send(
+        &instance.context, oversized_multiplayer_payload,
+        sizeof(oversized_multiplayer_payload)));
     p4_game_multiplayer_message_t multiplayer_message;
     CHECK(p4_game_multiplayer_receive(
         &instance.context, &multiplayer_message));
@@ -823,6 +850,15 @@ static void test_game_runtime(void)
         .player_slot = 1U,
         .bytes = 1U,
         .data = {1U},
+    };
+    multiplayer.has_incoming = true;
+    CHECK(!p4_game_multiplayer_receive(
+        &instance.context, &multiplayer_message));
+    multiplayer.incoming = (p4_game_multiplayer_message_t){
+        .sequence = 10U,
+        .player_slot = 1U,
+        .bytes = 5U,
+        .data = {1U, 2U, 3U, 4U, 5U},
     };
     multiplayer.has_incoming = true;
     CHECK(!p4_game_multiplayer_receive(

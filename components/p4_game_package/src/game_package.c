@@ -54,6 +54,8 @@ enum {
     ELF_MAX_MEMORY_BYTES = 512 * 1024,
 };
 
+#define MULTIPLAYER_PROFILE_MAGIC "P4MP"
+
 static uint16_t read_u16(const uint8_t *data)
 {
     return (uint16_t)((uint16_t)data[0] | (uint16_t)data[1] << 8U);
@@ -86,6 +88,32 @@ static bool all_zero(const uint8_t *data, size_t bytes)
             return false;
         }
     }
+    return true;
+}
+
+static bool multiplayer_profile_decode(
+    const uint8_t data[HEADER_RESERVED_BYTES],
+    p4_game_multiplayer_profile_t *profile_out)
+{
+    if (data == NULL || profile_out == NULL ||
+        memcmp(data, MULTIPLAYER_PROFILE_MAGIC, 4U) != 0) {
+        return false;
+    }
+    const p4_game_multiplayer_profile_t profile = {
+        .schema = data[4],
+        .style = (p4_game_multiplayer_style_t)data[5],
+        .min_players = data[6],
+        .max_players = data[7],
+        .tick_rate_hz = read_u16(data + 8U),
+        .input_delay_ticks = data[10],
+        .message_bytes = data[11],
+        .protocol = read_u16(data + 12U),
+        .flags = read_u16(data + 14U),
+    };
+    if (!p4_game_multiplayer_profile_valid(&profile)) {
+        return false;
+    }
+    *profile_out = profile;
     return true;
 }
 
@@ -403,8 +431,7 @@ p4_game_package_result_t p4_game_package_parse(
         out_info->payload_bytes !=
             out_info->package_bytes - out_info->payload_offset ||
         !range_valid(size_bytes, out_info->payload_offset,
-                     out_info->payload_bytes) ||
-        !all_zero(data + HEADER_RESERVED, HEADER_RESERVED_BYTES)) {
+                     out_info->payload_bytes)) {
         return P4_GAME_PACKAGE_BAD_LAYOUT;
     }
 
@@ -446,8 +473,35 @@ p4_game_package_result_t p4_game_package_parse(
          ~known_capabilities) != 0U ||
         (out_info->required_capabilities &
          out_info->optional_capabilities) != 0U ||
-        (out_info->flags & ~P4_GAME_PACKAGE_FLAG_DEVELOPMENT) != 0U) {
+        (out_info->flags &
+         ~(P4_GAME_PACKAGE_FLAG_DEVELOPMENT |
+           P4_GAME_PACKAGE_FLAG_MULTIPLAYER_PROFILE)) != 0U) {
         return P4_GAME_PACKAGE_BAD_METADATA;
+    }
+    const bool multiplayer_capability =
+        ((out_info->required_capabilities |
+          out_info->optional_capabilities) &
+         P4_GAME_CAP_MULTIPLAYER_SESSION) != 0U;
+    const bool profile_declared =
+        (out_info->flags &
+         P4_GAME_PACKAGE_FLAG_MULTIPLAYER_PROFILE) != 0U;
+    if (profile_declared) {
+        if (!multiplayer_capability || !multiplayer_profile_decode(
+                data + HEADER_RESERVED,
+                &out_info->multiplayer_profile)) {
+            return P4_GAME_PACKAGE_BAD_METADATA;
+        }
+        out_info->multiplayer_profile_declared = true;
+    } else {
+        if (!all_zero(data + HEADER_RESERVED, HEADER_RESERVED_BYTES)) {
+            return P4_GAME_PACKAGE_BAD_LAYOUT;
+        }
+        if (multiplayer_capability &&
+            !p4_game_multiplayer_profile_default(
+                P4_GAME_MULTIPLAYER_STYLE_REALTIME,
+                &out_info->multiplayer_profile)) {
+            return P4_GAME_PACKAGE_BAD_METADATA;
+        }
     }
     return p4_game_package_validate_elf(
         data + out_info->payload_offset, out_info->payload_bytes);

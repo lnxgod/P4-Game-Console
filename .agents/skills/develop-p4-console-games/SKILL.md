@@ -118,6 +118,13 @@ transport, discovery, compatibility, timeouts, and peer identity. A game sees
 only a bounded session snapshot and copied messages up to 64 bytes, and must
 retain a complete same-device/offline mode. Prefer host-authoritative state for
 turn-based games. Never open a radio, UART, USB handle, or socket from a game.
+Also add the validated `game.json` `multiplayer` object. Start with
+`{"schema":1,"style":"turn-based"}` or scaffold with
+`scripts/new-game.py "Title" --multiplayer turn-based`. Use `realtime` for
+host-authoritative action and `lockstep` only for deterministic simulations.
+Set `protocol` when message meaning changes and set `message_bytes` to the
+largest actual packet; do not add transport names or addresses. Read the
+canonical runtime values with `p4_game_multiplayer_read_profile()`.
 
 For simple sound, request `audio-tone` and call `p4_game_play_tone()`. For a
 software mixer, request `audio-stream`, declare

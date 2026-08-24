@@ -208,6 +208,37 @@ typedef enum {
     P4_GAME_MULTIPLAYER_ROLE_CLIENT,
 } p4_game_multiplayer_role_t;
 
+/** Declarative game networking style compiled from game.json by the packager. */
+typedef enum {
+    P4_GAME_MULTIPLAYER_STYLE_NONE = 0,
+    P4_GAME_MULTIPLAYER_STYLE_TURN_BASED = 1,
+    P4_GAME_MULTIPLAYER_STYLE_REALTIME = 2,
+    P4_GAME_MULTIPLAYER_STYLE_LOCKSTEP = 3,
+} p4_game_multiplayer_style_t;
+
+enum {
+    P4_GAME_MULTIPLAYER_PROFILE_SCHEMA = 1,
+    P4_GAME_MULTIPLAYER_MAX_TICK_RATE_HZ = 240,
+    P4_GAME_MULTIPLAYER_MAX_INPUT_DELAY_TICKS = 15,
+};
+
+/**
+ * Immutable, bounded networking contract selected by Console OS at launch.
+ * It describes game semantics only; transport choice and peer identity remain
+ * OS-owned and are intentionally absent.
+ */
+typedef struct {
+    uint8_t schema;
+    p4_game_multiplayer_style_t style;
+    uint8_t min_players;
+    uint8_t max_players;
+    uint16_t tick_rate_hz;
+    uint8_t input_delay_ticks;
+    uint8_t message_bytes;
+    uint16_t protocol;
+    uint16_t flags;
+} p4_game_multiplayer_profile_t;
+
 typedef struct {
     uint32_t generation;
     uint64_t session_seed;
@@ -265,6 +296,8 @@ typedef struct {
     p4_game_multiplayer_read_status_fn multiplayer_read_status;
     p4_game_multiplayer_send_fn multiplayer_send;
     p4_game_multiplayer_receive_fn multiplayer_receive;
+    /** Optional v1 tail: validated declarative profile from game.json. */
+    const p4_game_multiplayer_profile_t *multiplayer_profile;
 } p4_game_services_t;
 
 typedef struct {
@@ -401,6 +434,20 @@ bool p4_game_multiplayer_send(
 bool p4_game_multiplayer_receive(
     p4_game_context_t *context,
     p4_game_multiplayer_message_t *message_out);
+
+/** Validate a profile without consulting transport or mutable session state. */
+bool p4_game_multiplayer_profile_valid(
+    const p4_game_multiplayer_profile_t *profile);
+
+/** Fill the stable defaults used by the short game.json profile form. */
+bool p4_game_multiplayer_profile_default(
+    p4_game_multiplayer_style_t style,
+    p4_game_multiplayer_profile_t *profile_out);
+
+/** Read the immutable profile selected for this launch. */
+bool p4_game_multiplayer_read_profile(
+    p4_game_context_t *context,
+    p4_game_multiplayer_profile_t *profile_out);
 
 void p4_game_stop_audio(p4_game_context_t *context);
 

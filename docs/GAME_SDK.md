@@ -235,6 +235,43 @@ owns discovery, compatibility matching, encryption policy, framing, replay
 rejection, timeouts, and disconnect neutralization. Games must treat the
 capability as optional and retain a complete same-device mode.
 
+Native games may also declare a bounded networking profile directly in
+`game.json`. The short form is intentionally small:
+
+```json
+"optional_capabilities": ["multiplayer-session"],
+"multiplayer": {
+  "schema": 1,
+  "style": "turn-based"
+}
+```
+
+Console OS validates that JSON while packaging, stores its canonical 16-byte
+form in the `.P4G` header, and reads it before opening a lobby. `style` is one
+of `turn-based`, `realtime`, or `lockstep`. Optional fields are
+`min_players`/`max_players` (2..4), `tick_rate_hz` (1..240),
+`input_delay_ticks` (0..15 and lockstep-only), `message_bytes` (1..64), and
+`protocol` (1..65535). Defaults are 2 players, protocol 1, 64-byte messages,
+and respectively 10/30/60 Hz; lockstep defaults to a two-tick input delay.
+Unknown fields and impossible combinations fail the build instead of being
+silently ignored.
+
+The current Console OS transport adapters host two active players; a profile
+whose minimum is greater than two remains valid package metadata but is not
+offered by this OS version. A future four-player adapter can consume the same
+package without changing the game ABI. Never put `ble`, `uart`, `usb`, an
+address, or credentials in this object—the player chooses an available link
+and the OS preserves the same game contract on every transport.
+
+At runtime, `p4_game_multiplayer_read_profile()` copies the immutable profile.
+The API enforces its per-message budget on both send and receive. Console OS
+also binds the canonical profile into lobby compatibility, so two packages
+with the same executable but different protocol/timing settings cannot join.
+Packages made before this field existed retain the legacy two-player,
+realtime, 30 Hz, protocol-1, 64-byte profile. A package with an explicit
+profile requires Console OS 0.4.69 or newer because older package parsers
+correctly reject nonzero reserved extension bytes.
+
 Turn-based games should prefer host authority: clients send bounded intent,
 the host validates it against the current revision, and the host publishes a
 complete bounded snapshot after every accepted action. `p4_game_multiplayer_*`

@@ -6,6 +6,11 @@ Network mode exchanges compact turn requests and host-authoritative scorecard
 snapshots; the cartridge never receives a socket, route, radio, or peer
 identity.
 
+Its `game.json` is also the reference declarative profile: turn-based,
+two-player, protocol 1, with a 48-byte message ceiling sized for the complete
+45-byte host snapshot. Console OS derives lobby compatibility and timing from
+that metadata; Yahtzee source stays independent of BLE and UART.
+
 For two-console play, open Multiplayer on both devices and select `P4 YAHTZEE`
 under `GAME`. Create a room on one console, join its compatible room on the
 other, then start from the host. The lobby launches both cartridges directly

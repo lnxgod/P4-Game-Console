@@ -56,6 +56,20 @@ static bool resource_file_name(const char *package_name,
     return true;
 }
 
+static bool multiplayer_profiles_equal(
+    const p4_game_multiplayer_profile_t *left,
+    const p4_game_multiplayer_profile_t *right)
+{
+    return left != NULL && right != NULL &&
+        left->schema == right->schema && left->style == right->style &&
+        left->min_players == right->min_players &&
+        left->max_players == right->max_players &&
+        left->tick_rate_hz == right->tick_rate_hz &&
+        left->input_delay_ticks == right->input_delay_ticks &&
+        left->message_bytes == right->message_bytes &&
+        left->protocol == right->protocol && left->flags == right->flags;
+}
+
 static bool package_matches_catalog(
     const p4_game_package_info_t *package,
     const platform_game_catalog_entry_t *entry)
@@ -67,6 +81,11 @@ static bool package_matches_catalog(
             entry->package.required_capabilities &&
         package->optional_capabilities ==
             entry->package.optional_capabilities &&
+        package->multiplayer_profile_declared ==
+            entry->package.multiplayer_profile_declared &&
+        multiplayer_profiles_equal(
+            &package->multiplayer_profile,
+            &entry->package.multiplayer_profile) &&
         strcmp(package->id, entry->package.id) == 0 &&
         memcmp(package->payload_sha256, entry->package.payload_sha256,
                sizeof(package->payload_sha256)) == 0;

@@ -7,6 +7,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include "p4/game.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -27,6 +29,7 @@ enum {
 #define P4_GAME_PACKAGE_FORMAT_VERSION UINT32_C(1)
 #define P4_GAME_PACKAGE_API_VERSION UINT32_C(1)
 #define P4_GAME_PACKAGE_FLAG_DEVELOPMENT UINT16_C(0x0001)
+#define P4_GAME_PACKAGE_FLAG_MULTIPLAYER_PROFILE UINT16_C(0x0002)
 
 typedef struct {
     uint32_t package_bytes;
@@ -37,6 +40,8 @@ typedef struct {
     uint32_t optional_capabilities;
     uint16_t accent_rgb565;
     uint16_t flags;
+    bool multiplayer_profile_declared;
+    p4_game_multiplayer_profile_t multiplayer_profile;
     uint8_t payload_sha256[P4_GAME_PACKAGE_SHA256_BYTES];
     char id[P4_GAME_PACKAGE_ID_BYTES];
     char title[P4_GAME_PACKAGE_TITLE_BYTES];

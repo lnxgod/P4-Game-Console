@@ -21,6 +21,24 @@ diagnostic/content-upload path. Both exact Waveshare consoles have passed a
 sustained H1 relay game run. Direct-link and BLE gameplay remain separate
 hardware acceptances.
 
+## Declarative native-game profiles
+
+Native `.P4G` games describe their networking behavior in the same
+`game.json` that already declares title, capabilities, and package identity.
+The smallest profile is `{"schema":1,"style":"turn-based"}`. Console OS
+normalizes it into player limits, simulation rate, lockstep delay, protocol,
+and message budget; packages do not select a physical transport. The profile
+is validated at build time, encoded in bounded package metadata, exposed to
+the game through `p4_game_multiplayer_read_profile()`, and included in lobby
+compatibility. See `docs/GAME_SDK.md` for the complete field bounds.
+
+This keeps the extension point data-driven: a new game appears in the
+Multiplayer selector and receives the existing sanitized session API without
+adding a game-specific BLE service, UART parser, socket, or launcher table.
+The current OS can run two players. Profiles can already describe up to four,
+so later multi-peer transports can expand capacity without changing Game API
+v1 or the package manifest shape.
+
 The repository now includes `scripts/p4-multiplayer-relay.py`, a bounded
 two-port H1 relay that discards boot/debug text and forwards only complete
 P4MP v1 frames with valid lengths, identities, and CRC32. It opens both serial
@@ -160,11 +178,12 @@ either badge powers off.
 
 1. Same-device multiplayer comes first. Console OS maps up to four local
    controllers/touch sets to stable player slots, with no networking.
-2. Native games use the OS-owned `multiplayer-session` boundary. The current
-   two-player contract is host-authoritative: clients submit bounded intent and
-   the host publishes validated state snapshots. This suits turn-based games
-   such as P4 Yahtzee and keeps transport ownership outside the cartridge.
-3. P4 Carts may later opt into deterministic lockstep. The lobby already
+2. Native games use the OS-owned `multiplayer-session` boundary plus the
+   declarative `game.json` profile. Turn-based/realtime games normally use
+   host authority; lockstep games exchange their bounded deterministic game
+   messages. P4 Yahtzee is the turn-based reference.
+3. P4 Carts may later consume the same profile vocabulary for deterministic
+   lockstep. The lobby already
    requires an exact cart ID, API version, content SHA-256, player count, and
    session seed.
    The OS exchanges delayed input frames and periodic state hashes; a mismatch

@@ -14,6 +14,12 @@ import subprocess
 import tempfile
 from typing import Any
 
+from p4_multiplayer_manifest import (
+    PROFILE_HEADER_FLAG,
+    encode_multiplayer_profile,
+    normalize_multiplayer_profile,
+)
+
 
 MAGIC = b"P4GAME1\0"
 HEADER_BYTES = 256
@@ -158,6 +164,14 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
     optional = capability_mask(value, "optional_capabilities")
     if not required & CAPABILITIES["video"] or required & optional:
         raise PackageError("video is required and capability sets must not overlap")
+    try:
+        multiplayer = normalize_multiplayer_profile(
+            value,
+            set(value.get("required_capabilities", [])) |
+            set(value.get("optional_capabilities", [])),
+        )
+    except ValueError as error:
+        raise PackageError(str(error)) from error
     for key, width in (
         ("id", 48), ("title", 16), ("subtitle", 32), ("folder", 32),
         ("version", 16), ("license", 16),
@@ -165,6 +179,7 @@ def load_manifest(path: pathlib.Path) -> dict[str, Any]:
         text_field(value, key, width)
     value["_required_mask"] = required
     value["_optional_mask"] = optional
+    value["_multiplayer_profile"] = multiplayer
     value["_sources"] = sources
     return value
 
@@ -263,7 +278,12 @@ def build_header(manifest: dict[str, Any], payload: bytes) -> bytes:
         manifest["_required_mask"],
         manifest["_optional_mask"],
     )
-    struct.pack_into("<HH", header, 44, int(manifest["accent_rgb565"], 16), 1)
+    flags = 1
+    if manifest["_multiplayer_profile"] is not None:
+        flags |= PROFILE_HEADER_FLAG
+    struct.pack_into(
+        "<HH", header, 44, int(manifest["accent_rgb565"], 16), flags
+    )
     header[48:80] = hashlib.sha256(payload).digest()
     for offset, key, width in (
         (80, "id", 48),
@@ -274,6 +294,10 @@ def build_header(manifest: dict[str, Any], payload: bytes) -> bytes:
         (224, "license", 16),
     ):
         header[offset : offset + width] = text_field(manifest, key, width)
+    if manifest["_multiplayer_profile"] is not None:
+        header[240:256] = encode_multiplayer_profile(
+            manifest["_multiplayer_profile"]
+        )
     return bytes(header)
 
 
@@ -309,6 +333,7 @@ def main() -> int:
                 "payload_bytes": len(payload),
                 "payload_sha256": hashlib.sha256(payload).hexdigest(),
                 "package_sha256": hashlib.sha256(package).hexdigest(),
+                "multiplayer": manifest["_multiplayer_profile"],
             },
             sort_keys=True,
         )

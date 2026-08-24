@@ -124,6 +124,13 @@ static bool services_valid(const p4_game_services_t *services)
          services->multiplayer_receive == NULL)) {
         return false;
     }
+    if (services->multiplayer_profile != NULL &&
+        (((services->available_capabilities &
+           P4_GAME_CAP_MULTIPLAYER_SESSION) == 0U) ||
+         !p4_game_multiplayer_profile_valid(
+             services->multiplayer_profile))) {
+        return false;
+    }
     return true;
 }
 
@@ -480,6 +487,84 @@ static bool multiplayer_status_valid(
         status->player_count >= 2U;
 }
 
+bool p4_game_multiplayer_profile_valid(
+    const p4_game_multiplayer_profile_t *profile)
+{
+    return profile != NULL &&
+        profile->schema == P4_GAME_MULTIPLAYER_PROFILE_SCHEMA &&
+        profile->style >= P4_GAME_MULTIPLAYER_STYLE_TURN_BASED &&
+        profile->style <= P4_GAME_MULTIPLAYER_STYLE_LOCKSTEP &&
+        profile->min_players >= 2U &&
+        profile->min_players <= profile->max_players &&
+        profile->max_players <= P4_GAME_MULTIPLAYER_MAX_PLAYERS &&
+        profile->tick_rate_hz > 0U &&
+        profile->tick_rate_hz <= P4_GAME_MULTIPLAYER_MAX_TICK_RATE_HZ &&
+        profile->input_delay_ticks <=
+            P4_GAME_MULTIPLAYER_MAX_INPUT_DELAY_TICKS &&
+        (profile->style == P4_GAME_MULTIPLAYER_STYLE_LOCKSTEP ||
+         profile->input_delay_ticks == 0U) &&
+        profile->message_bytes > 0U &&
+        profile->message_bytes <= P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES &&
+        profile->protocol != 0U && profile->flags == 0U;
+}
+
+bool p4_game_multiplayer_profile_default(
+    p4_game_multiplayer_style_t style,
+    p4_game_multiplayer_profile_t *profile_out)
+{
+    if (profile_out == NULL ||
+        style < P4_GAME_MULTIPLAYER_STYLE_TURN_BASED ||
+        style > P4_GAME_MULTIPLAYER_STYLE_LOCKSTEP) {
+        return false;
+    }
+    *profile_out = (p4_game_multiplayer_profile_t){
+        .schema = P4_GAME_MULTIPLAYER_PROFILE_SCHEMA,
+        .style = style,
+        .min_players = 2U,
+        .max_players = 2U,
+        .tick_rate_hz = style == P4_GAME_MULTIPLAYER_STYLE_TURN_BASED
+            ? 10U : (style == P4_GAME_MULTIPLAYER_STYLE_REALTIME
+                ? 30U : 60U),
+        .input_delay_ticks =
+            style == P4_GAME_MULTIPLAYER_STYLE_LOCKSTEP ? 2U : 0U,
+        .message_bytes = P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES,
+        .protocol = 1U,
+    };
+    return true;
+}
+
+bool p4_game_multiplayer_read_profile(
+    p4_game_context_t *context,
+    p4_game_multiplayer_profile_t *profile_out)
+{
+    if (profile_out != NULL) {
+        *profile_out = (p4_game_multiplayer_profile_t){0};
+    }
+    if (context == NULL || context->services == NULL ||
+        profile_out == NULL ||
+        (context->services->available_capabilities &
+         P4_GAME_CAP_MULTIPLAYER_SESSION) == 0U) {
+        return false;
+    }
+    if (p4_game_multiplayer_profile_valid(
+            context->services->multiplayer_profile)) {
+        *profile_out = *context->services->multiplayer_profile;
+        return true;
+    }
+    return p4_game_multiplayer_profile_default(
+        P4_GAME_MULTIPLAYER_STYLE_REALTIME, profile_out);
+}
+
+static size_t multiplayer_message_limit(const p4_game_context_t *context)
+{
+    if (context != NULL && context->services != NULL &&
+        p4_game_multiplayer_profile_valid(
+            context->services->multiplayer_profile)) {
+        return context->services->multiplayer_profile->message_bytes;
+    }
+    return P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES;
+}
+
 bool p4_game_multiplayer_read_status(
     p4_game_context_t *context,
     p4_game_multiplayer_status_t *status_out)
@@ -510,7 +595,7 @@ bool p4_game_multiplayer_send(
 {
     return context != NULL && context->services != NULL && data != NULL &&
         data_bytes != 0U &&
-        data_bytes <= P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES &&
+        data_bytes <= multiplayer_message_limit(context) &&
         (context->services->available_capabilities &
          P4_GAME_CAP_MULTIPLAYER_SESSION) != 0U &&
         context->services->multiplayer_context != NULL &&
@@ -536,7 +621,7 @@ bool p4_game_multiplayer_receive(
         message_out->sequence == 0U ||
         message_out->player_slot >= P4_GAME_MULTIPLAYER_MAX_PLAYERS ||
         message_out->bytes == 0U ||
-        message_out->bytes > P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES) {
+        message_out->bytes > multiplayer_message_limit(context)) {
         if (message_out != NULL) {
             *message_out = (p4_game_multiplayer_message_t){0};
         }

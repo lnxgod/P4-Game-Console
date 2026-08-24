@@ -61,6 +61,8 @@ Use $develop-p4-games to package that native game and stage it for the Waveshare
 
 The same contracts are usable without Codex. Start a native game with
 `python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE --dry-run`, or
+start a multiplayer-aware native game with
+`python3 scripts/new-game.py "Dice Link" --multiplayer turn-based`, or
 start a script game from `game-platform/templates/` and use
 `game-platform/scripts/p4cart.py`. Games must stay behind the documented APIs;
 they never own display, touch, audio, USB, SD, UART, or raw GPIO drivers.

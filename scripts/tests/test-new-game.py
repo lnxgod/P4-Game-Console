@@ -74,6 +74,41 @@ def main() -> None:
         assert folder_dry_run.returncode == 0, folder_dry_run.stderr
         assert json.loads(folder_dry_run.stdout)["folder"] == "GAMES/PUZZLE"
 
+        multiplayer_dry_run = run(
+            CREATOR, "Dice Link", "--multiplayer", "turn-based",
+            "--games-root", str(games), "--dry-run")
+        assert multiplayer_dry_run.returncode == 0, multiplayer_dry_run.stderr
+        multiplayer_report = json.loads(multiplayer_dry_run.stdout)
+        assert multiplayer_report["multiplayer"]["style"] == "turn-based"
+        assert "multiplayer-session" in multiplayer_report[
+            "optional_capabilities"]
+
+        multiplayer_created = run(
+            CREATOR, "Net Dash", "--multiplayer", "realtime",
+            "--games-root", str(games))
+        assert multiplayer_created.returncode == 0, multiplayer_created.stderr
+        multiplayer_manifest = json.loads(
+            (games / "net_dash/game.json").read_text())
+        assert multiplayer_manifest["multiplayer"] == {
+            "schema": 1,
+            "style": "realtime",
+            "min_players": 2,
+            "max_players": 2,
+            "protocol": 1,
+        }
+        multiplayer_compile = subprocess.run(
+            ["cc", "-std=c11", "-Wall", "-Wextra", "-Wpedantic",
+             "-Wconversion", "-Wshadow", "-Werror",
+             "-I", str(ROOT / "components/p4_game_api/include"),
+             "-c", str(games / "net_dash/src/net_dash.c"),
+             "-o", str(pathlib.Path(temporary) / "net_dash.o")],
+            cwd=ROOT, check=False, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        assert multiplayer_compile.returncode == 0, multiplayer_compile.stderr
+        multiplayer_check = run(
+            GENERATOR, "--games-root", str(games), "--check")
+        assert multiplayer_check.returncode == 0, multiplayer_check.stderr
+
         invalid_folder = run(
             CREATOR, "Bad Folder", "--folder", "GAMES/TOO/DEEP",
             "--games-root", str(games), "--dry-run")

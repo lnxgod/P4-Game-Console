@@ -16,6 +16,8 @@ import subprocess
 import sys
 import tempfile
 
+from p4_multiplayer_manifest import expected_multiplayer_extension
+
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_BUNDLE = ROOT / "apps/console_os/build-olimex-esp32-p4-pc/sd-card"
@@ -103,6 +105,11 @@ def validate_game(path: pathlib.Path, manifest: dict[str, object]) -> None:
         raise SystemExit(f"invalid game package: {path.name}")
     fields = struct.unpack_from("<9IHH", package, 8)
     header, total, offset, payload, fmt, api, launcher, required, optional, _, flags = fields
+    profile_flag, profile_bytes = expected_multiplayer_extension(
+        manifest,
+        set(manifest["required_capabilities"]) |
+        set(manifest["optional_capabilities"]),
+    )
     if not (
         header == offset == 256
         and total == len(package)
@@ -111,7 +118,8 @@ def validate_game(path: pathlib.Path, manifest: dict[str, object]) -> None:
         and launcher == manifest["launcher_id"]
         and required & 1
         and not required & optional
-        and flags == 1
+        and flags == (1 | profile_flag)
+        and package[240:256] == profile_bytes
         and package[48:80] == hashlib.sha256(package[offset:]).digest()
         and c_string(package[80:128], f"{path.name} game id") == manifest["id"]
     ):

@@ -25,6 +25,14 @@
     "audio-tone",
     "multiplayer-session"
   ],
+  "multiplayer": {
+    "schema": 1,
+    "style": "turn-based",
+    "min_players": 2,
+    "max_players": 2,
+    "message_bytes": 48,
+    "protocol": 1
+  },
   "license": "MIT",
   "assets": "original-imagegen-dice-atlas-v1-plus-code-rendered-ui",
   "enabled": true

@@ -95,6 +95,8 @@ typedef struct {
     p4_cartridge_multiplayer_read_status_fn multiplayer_read_status;
     p4_cartridge_multiplayer_send_fn multiplayer_send;
     p4_cartridge_multiplayer_receive_fn multiplayer_receive;
+    /** Optional v1 extension: immutable validated game.json profile. */
+    const p4_game_multiplayer_profile_t *multiplayer_profile;
 } p4_cartridge_host_v1_t;
 
 typedef enum {
