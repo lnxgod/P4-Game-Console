@@ -44,6 +44,15 @@ typedef enum {
     PLATFORM_GAME_STORAGE_FAULT,
 } platform_game_storage_state_t;
 
+typedef enum {
+    PLATFORM_GAME_STORAGE_REPAIR_NOT_RUN = 0,
+    PLATFORM_GAME_STORAGE_REPAIR_CLEAN,
+    PLATFORM_GAME_STORAGE_REPAIR_REPAIRED,
+    PLATFORM_GAME_STORAGE_REPAIR_NEEDS_HOST,
+    PLATFORM_GAME_STORAGE_REPAIR_UNSUPPORTED,
+    PLATFORM_GAME_STORAGE_REPAIR_FAILED,
+} platform_game_storage_repair_outcome_t;
+
 typedef struct {
     platform_game_storage_state_t state;
     bool usb_attached;
@@ -58,6 +67,19 @@ typedef struct {
     uint32_t scans;
     uint32_t usb_verified_writes;
     uint32_t usb_write_failures;
+    uint64_t free_bytes;
+    uint32_t real_frequency_khz;
+    uint32_t root_entries;
+    uint32_t checks;
+    uint32_t recovery_attempts;
+    uint32_t repair_attempts;
+    uint32_t repair_sectors_rewritten;
+    bool card_ready;
+    bool filesystem_ready;
+    platform_game_storage_repair_outcome_t last_repair_outcome;
+    esp_err_t last_check_error;
+    esp_err_t last_recovery_error;
+    esp_err_t last_repair_error;
     esp_err_t last_error;
 } platform_game_storage_status_t;
 
@@ -74,6 +96,34 @@ esp_err_t platform_game_storage_init(void);
 
 /** Refresh the cached game-file inventory after an ownership generation. */
 esp_err_t platform_game_storage_refresh(void);
+
+/**
+ * Run a non-destructive SD/FAT health check while the launcher owns storage.
+ *
+ * The check issues a card-status command, reads FAT capacity/free-space
+ * metadata, walks the bounded root directory, and revalidates game content.
+ * It never formats, repairs, creates, removes, or rewrites a file.
+ */
+esp_err_t platform_game_storage_check_card(void);
+
+/**
+ * Retry an offline SD card by releasing the failed slot and remounting it.
+ *
+ * This is a non-destructive electrical/bus recovery operation. It is accepted
+ * only from the fail-closed state and never formats or mutates the FAT volume.
+ */
+esp_err_t platform_game_storage_retry_card(void);
+
+/**
+ * Run the explicitly confirmed, on-device conservative FAT32 repair pass.
+ *
+ * Storage is unmounted before raw media writes. The implementation restores
+ * only an unambiguous boot-sector copy, a structurally invalid FAT mirror
+ * from its valid peer, and FAT32 FSInfo hints, with sector readback after
+ * every write. It never formats and refuses ambiguous allocation histories,
+ * directory cross-links, or lost-chain decisions.
+ */
+esp_err_t platform_game_storage_repair_fat(void);
 
 /** Copy a coherent status snapshot. */
 esp_err_t platform_game_storage_get_status(

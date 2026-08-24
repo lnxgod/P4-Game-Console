@@ -2,13 +2,16 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.4.44")
+set(PROJECT_VER "0.4.55")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")
 endif()
 if(NOT DEFINED P4_WAVESHARE_CONTROLLER_FIRST_BUILD)
     set(P4_WAVESHARE_CONTROLLER_FIRST_BUILD OFF)
+endif()
+if(NOT DEFINED P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
+    set(P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD OFF)
 endif()
 if(NOT P4_BOARD_PROFILE STREQUAL "elecrow-crowpanel-advanced-10" AND
    NOT P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" AND
@@ -78,10 +81,12 @@ elseif(P4_BOARD_PROFILE STREQUAL
         "${CMAKE_CURRENT_LIST_DIR}/../doom/components/doom_audio"
         "${CMAKE_CURRENT_LIST_DIR}/../doom_audio_probe/components/doom_engine_audio"
     )
-    list(APPEND EXTRA_COMPONENT_DIRS
-        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_signal_scan"
-        "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_signal_scan"
-    )
+    if(P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
+        list(APPEND EXTRA_COMPONENT_DIRS
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_signal_scan"
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_signal_scan"
+        )
+    endif()
 else()
     list(APPEND EXTRA_COMPONENT_DIRS
         "${CMAKE_CURRENT_LIST_DIR}/../../components/board_deps_elecrow"
@@ -110,7 +115,26 @@ idf_build_set_property(MINIMAL_BUILD ON)
 idf_build_set_property(P4_BOARD_PROFILE "${P4_BOARD_PROFILE}")
 idf_build_set_property(P4_WAVESHARE_CONTROLLER_FIRST_BUILD
     "${P4_WAVESHARE_CONTROLLER_FIRST_BUILD}")
+idf_build_set_property(P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD
+    "${P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD}")
 project(p4_console_os)
+
+if(P4_BOARD_PROFILE STREQUAL
+       "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
+   P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
+    if(NOT CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE OR
+       NOT CONFIG_ESP_HOSTED_SDIO_GPIO_RESET_SLAVE EQUAL 54 OR
+       NOT CONFIG_ESP_HOSTED_SDIO_PIN_CLK EQUAL 18 OR
+       NOT CONFIG_ESP_HOSTED_SDIO_PIN_CMD EQUAL 19 OR
+       NOT CONFIG_ESP_HOSTED_SDIO_PIN_D0 EQUAL 14 OR
+       NOT CONFIG_ESP_HOSTED_SDIO_PIN_D1 EQUAL 15 OR
+       NOT CONFIG_ESP_HOSTED_SDIO_PIN_D2 EQUAL 16 OR
+       NOT CONFIG_ESP_HOSTED_SDIO_PIN_D3 EQUAL 17)
+        message(FATAL_ERROR
+            "Waveshare signal scan requires its exact SDIO transport; "
+            "refusing an ESP-Hosted fallback that can claim touch/display/audio pins")
+    endif()
+endif()
 idf_build_get_property(P4_IDF_PYTHON PYTHON)
 get_filename_component(P4_REPOSITORY_ROOT
     "${CMAKE_CURRENT_LIST_DIR}/../.." ABSOLUTE)
@@ -258,7 +282,8 @@ endif()
 # signal capability while preserving explicit OS-owned startup ordering. The
 # managed component contents remain untouched and authoritative.
 if(P4_BOARD_PROFILE STREQUAL
-       "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
+       "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
+   P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
     idf_component_get_property(
         P4_HOSTED_COMPONENT_LIB espressif__esp_hosted COMPONENT_LIB)
     get_target_property(

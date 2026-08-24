@@ -19,6 +19,7 @@ enum {
     OFFER_GAME_ID_OFFSET = 24,
     OFFER_CONTENT_HASH_OFFSET = 56,
     OFFER_COMPATIBILITY_HASH_OFFSET = 88,
+    OFFER_GAME_SETTINGS_OFFSET = 120,
     JOIN_REQUESTED_SLOT_OFFSET = 1,
     JOIN_FLAGS_OFFSET = 2,
     JOIN_COMPATIBILITY_HASH_OFFSET = 4,
@@ -28,6 +29,7 @@ enum {
     ACCEPT_INPUT_DELAY_OFFSET = 3,
     ACCEPT_START_TIC_OFFSET = 4,
     ACCEPT_SEED_OFFSET = 8,
+    ACCEPT_GAME_SETTINGS_OFFSET = 16,
     P4_MP_MAX_INPUT_DELAY_TICS = 15,
     P4_MP_MAX_TICK_RATE_HZ = 240,
 };
@@ -244,6 +246,9 @@ p4_mp_status_t p4_mp_lobby_offer_encode(
     memcpy(payload + OFFER_COMPATIBILITY_HASH_OFFSET,
            offer->compatibility_sha256,
            P4_MP_SHA256_BYTES);
+    memcpy(payload + OFFER_GAME_SETTINGS_OFFSET,
+           offer->game_settings,
+           P4_MP_GAME_SETTINGS_BYTES);
     return P4_MP_OK;
 }
 
@@ -286,6 +291,9 @@ p4_mp_status_t p4_mp_lobby_offer_decode(
     memcpy(offer_out->compatibility_sha256,
            payload + OFFER_COMPATIBILITY_HASH_OFFSET,
            P4_MP_SHA256_BYTES);
+    memcpy(offer_out->game_settings,
+           payload + OFFER_GAME_SETTINGS_OFFSET,
+           P4_MP_GAME_SETTINGS_BYTES);
     return offer_valid(offer_out);
 }
 
@@ -354,6 +362,9 @@ p4_mp_status_t p4_mp_lobby_accept_encode(
     payload[ACCEPT_INPUT_DELAY_OFFSET] = accept->input_delay_tics;
     write_u32(payload + ACCEPT_START_TIC_OFFSET, accept->start_tic);
     write_u64(payload + ACCEPT_SEED_OFFSET, accept->session_seed);
+    memcpy(payload + ACCEPT_GAME_SETTINGS_OFFSET,
+           accept->game_settings,
+           P4_MP_GAME_SETTINGS_BYTES);
     return P4_MP_OK;
 }
 
@@ -379,6 +390,9 @@ p4_mp_status_t p4_mp_lobby_accept_decode(
         .start_tic = read_u32(payload + ACCEPT_START_TIC_OFFSET),
         .session_seed = read_u64(payload + ACCEPT_SEED_OFFSET),
     };
+    memcpy(accept_out->game_settings,
+           payload + ACCEPT_GAME_SETTINGS_OFFSET,
+           P4_MP_GAME_SETTINGS_BYTES);
     return accept_valid(accept_out);
 }
 

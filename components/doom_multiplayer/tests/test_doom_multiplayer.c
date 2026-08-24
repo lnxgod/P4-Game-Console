@@ -72,10 +72,51 @@ static void test_launch_config(void)
         .input_delay_tics = 2U,
         .start_tic = 0U,
         .session_seed = 99U,
+        .setup = {
+            .mode = P4_DOOM_MP_MODE_DEATHMATCH,
+            .episode = 1U,
+            .map = 1U,
+            .skill = 3U,
+        },
     };
     CHECK(p4_doom_mp_launch_config_valid(&multiplayer));
     multiplayer.remote_peer_id = multiplayer.self_peer_id;
     CHECK(!p4_doom_mp_launch_config_valid(&multiplayer));
+}
+
+static void test_setup_codec(void)
+{
+    const p4_doom_mp_setup_t expected = {
+        .mode = P4_DOOM_MP_MODE_ALTDEATH,
+        .episode = 1U,
+        .map = 7U,
+        .skill = 4U,
+        .time_limit_minutes = 15U,
+        .no_monsters = true,
+        .fast_monsters = true,
+        .respawn_monsters = true,
+    };
+    uint8_t bytes[P4_DOOM_MP_SETUP_BYTES];
+    CHECK(p4_doom_mp_setup_encode(&expected, bytes));
+    p4_doom_mp_setup_t decoded;
+    CHECK(p4_doom_mp_setup_decode(bytes, sizeof(bytes), &decoded));
+    CHECK(decoded.mode == expected.mode);
+    CHECK(decoded.episode == expected.episode);
+    CHECK(decoded.map == expected.map);
+    CHECK(decoded.skill == expected.skill);
+    CHECK(decoded.time_limit_minutes == expected.time_limit_minutes);
+    CHECK(decoded.no_monsters == expected.no_monsters);
+    CHECK(decoded.fast_monsters == expected.fast_monsters);
+    CHECK(decoded.respawn_monsters == expected.respawn_monsters);
+
+    bytes[5] |= UINT8_C(0x80);
+    CHECK(!p4_doom_mp_setup_decode(bytes, sizeof(bytes), &decoded));
+    bytes[5] &= UINT8_C(0x7f);
+    bytes[7] = 1U;
+    CHECK(!p4_doom_mp_setup_decode(bytes, sizeof(bytes), &decoded));
+    bytes[7] = 0U;
+    bytes[4] = 6U;
+    CHECK(!p4_doom_mp_setup_decode(bytes, sizeof(bytes), &decoded));
 }
 
 static void test_engine_barrier(void)
@@ -193,6 +234,7 @@ int main(void)
 {
     test_input_mapping();
     test_launch_config();
+    test_setup_codec();
     test_engine_barrier();
     test_lockstep_queue();
     test_tick_wrap();

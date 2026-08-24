@@ -1,0 +1,45 @@
+menu "P4 multiplayer wired transport"
+
+config P4_MP_DIRECT_UART
+    bool "Enable a board-authorized direct UART route"
+    default n
+    help
+        Add a dedicated 3.3 V UART route for direct console-to-console play.
+        This remains disabled until the exact board profile supplies reviewed
+        controller and pin values. The console UART remains the H1 relay.
+
+config P4_MP_DIRECT_UART_NUM
+    int "Direct multiplayer UART controller"
+    range -1 4
+    default -1
+    depends on P4_MP_DIRECT_UART
+
+config P4_MP_DIRECT_UART_TX_GPIO
+    int "Direct multiplayer TX GPIO"
+    range -1 54
+    default -1
+    depends on P4_MP_DIRECT_UART
+
+config P4_MP_DIRECT_UART_RX_GPIO
+    int "Direct multiplayer RX GPIO"
+    range -1 54
+    default -1
+    depends on P4_MP_DIRECT_UART
+
+config P4_MP_DIRECT_UART_BAUDRATE
+    int "Direct multiplayer baud rate"
+    range 9600 2000000
+    default 115200
+    depends on P4_MP_DIRECT_UART
+
+config P4_MP_DIRECT_FALLBACK_DISCOVERIES
+    int "Direct-only discoveries before enabling H1 relay"
+    range 1 10
+    default 3
+    depends on P4_MP_DIRECT_UART
+    help
+        A valid direct frame always wins. After this many unanswered direct
+        discovery packets, discovery is mirrored to H1 so the host relay can
+        be used without rebuilding firmware.
+
+endmenu

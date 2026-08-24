@@ -24,6 +24,9 @@ enum {
     P4_DOOM_MP_READY_INTERVAL_MS = 100,
     P4_DOOM_MP_READY_TIMEOUT_MS = 30000,
     P4_DOOM_MP_READY_SETTLE_MS = 100,
+    P4_DOOM_MP_HANDOFF_TIMEOUT_MS = 60000,
+    P4_DOOM_MP_BOOTSTRAP_INTERVAL_MS = 100,
+    P4_DOOM_MP_BOOTSTRAP_TIMEOUT_MS = 5000,
 };
 
 typedef struct {
@@ -38,12 +41,22 @@ typedef struct {
     uint32_t complete_tics;
     uint32_t rejected_inputs;
     uint32_t send_failures;
+    uint32_t saved_session_timeout_ms;
     boolean prepared;
     boolean configured;
+    boolean peer_failed;
 } p4_doom_p4mp_state_t;
 
 static const char *const TAG = "p4_doom_net";
 static p4_doom_p4mp_state_t s_net;
+
+static void restore_session_timeout(void)
+{
+    if (s_net.session != NULL && s_net.saved_session_timeout_ms != 0U) {
+        s_net.session->timeout_ms = s_net.saved_session_timeout_ms;
+        s_net.saved_session_timeout_ms = 0U;
+    }
+}
 
 static uint64_t now_ms(void)
 {
@@ -90,6 +103,33 @@ static esp_err_t send_packet(
     return p4_mp_uart_endpoint_send(s_net.datagram, datagram_length);
 }
 
+static bool send_input_tic(const p4_doom_mp_tic_t *tic)
+{
+    if (tic == NULL) {
+        return false;
+    }
+    p4_mp_input_t input;
+    uint8_t payload[P4_MP_INPUT_PAYLOAD_BYTES];
+    p4_doom_mp_tic_to_input(tic, &input);
+    p4_mp_input_encode(&input, payload);
+    bool sent = false;
+    for (unsigned copy = 0U;
+         copy < P4_DOOM_MP_REDUNDANT_INPUT_COPIES; ++copy) {
+        if (send_packet(
+                P4_MP_PACKET_INPUT, s_net.queue.next_tick,
+                payload, sizeof(payload)) == ESP_OK) {
+            sent = true;
+            if (s_net.inputs_sent != UINT32_MAX) {
+                ++s_net.inputs_sent;
+            }
+        }
+    }
+    if (!sent && s_net.send_failures != UINT32_MAX) {
+        ++s_net.send_failures;
+    }
+    return sent;
+}
+
 static void flush_complete_tics(void)
 {
     if (!s_net.configured) {
@@ -123,19 +163,78 @@ static void flush_complete_tics(void)
     }
 }
 
+static bool bootstrap_initial_tics(void)
+{
+    const uint32_t bootstrap_count =
+        s_net.config.input_delay_tics == 0U
+            ? UINT32_C(1)
+            : (uint32_t)s_net.config.input_delay_tics;
+    const uint32_t first_tick = s_net.config.start_tic;
+    const uint32_t target_tick = first_tick + bootstrap_count;
+
+    for (uint32_t tick = first_tick; tick < target_tick; ++tick) {
+        const p4_doom_mp_tic_t neutral = {.tick = tick};
+        if (!p4_doom_mp_tic_queue_submit(
+                &s_net.queue, s_net.config.local_player_slot, &neutral)) {
+            ESP_LOGE(TAG,
+                     "P4_DOOM_MP TIC_BOOTSTRAP_QUEUE_FAILED tick=%" PRIu32,
+                     tick);
+            return false;
+        }
+    }
+
+    ESP_LOGI(TAG,
+             "P4_DOOM_MP TIC_BOOTSTRAP_WAIT first=%" PRIu32
+             " count=%" PRIu32 " timeout_ms=%u",
+             first_tick, bootstrap_count,
+             (unsigned)P4_DOOM_MP_BOOTSTRAP_TIMEOUT_MS);
+    const int64_t started_us = esp_timer_get_time();
+    int64_t next_send_us = 0;
+    while (s_net.queue.next_tick < target_tick) {
+        const int64_t now_us = esp_timer_get_time();
+        if (next_send_us == 0 || now_us >= next_send_us) {
+            for (uint32_t tick = first_tick; tick < target_tick; ++tick) {
+                const p4_doom_mp_tic_t neutral = {.tick = tick};
+                (void)send_input_tic(&neutral);
+            }
+            next_send_us = now_us +
+                (int64_t)P4_DOOM_MP_BOOTSTRAP_INTERVAL_MS * 1000;
+        }
+        P4_DoomNetPoll();
+        if (s_net.peer_failed || remote_peer() == NULL) {
+            ESP_LOGE(TAG,
+                     "P4_DOOM_MP TIC_BOOTSTRAP_ABORT reason=peer-lost");
+            return false;
+        }
+        if (now_us - started_us >=
+            (int64_t)P4_DOOM_MP_BOOTSTRAP_TIMEOUT_MS * 1000) {
+            ESP_LOGE(TAG,
+                     "P4_DOOM_MP TIC_BOOTSTRAP_TIMEOUT next=%" PRIu32
+                     " target=%" PRIu32 " rx_inputs=%" PRIu32,
+                     s_net.queue.next_tick, target_tick,
+                     s_net.inputs_received);
+            return false;
+        }
+        vTaskDelay(pdMS_TO_TICKS(2U));
+    }
+    ESP_LOGI(TAG,
+             "P4_DOOM_MP TIC_BOOTSTRAP_READY next=%" PRIu32
+             " complete=%" PRIu32,
+             s_net.queue.next_tick, s_net.complete_tics);
+    return true;
+}
+
 static void disconnect_remote(uint8_t slot, const char *reason)
 {
     if (slot >= s_net.config.player_count ||
         slot == s_net.config.local_player_slot) {
         return;
     }
-    if (p4_doom_mp_tic_queue_disconnect(&s_net.queue, slot)) {
-        ESP_LOGW(TAG,
-                 "P4_DOOM_MP PEER_DISCONNECTED slot=%u reason=%s "
-                 "fallback=continue-local",
-                 (unsigned)slot, reason);
-        flush_complete_tics();
-    }
+    s_net.peer_failed = true;
+    ESP_LOGE(TAG,
+             "P4_DOOM_MP PEER_DISCONNECTED slot=%u reason=%s "
+             "action=abort-match",
+             (unsigned)slot, reason);
 }
 
 static void frame_received(
@@ -205,6 +304,7 @@ esp_err_t p4_doom_p4mp_prepare(
     p4_mp_session_t *session,
     const p4_doom_mp_launch_config_t *config)
 {
+    restore_session_timeout();
     memset(&s_net, 0, sizeof(s_net));
     if (session == NULL && config == NULL) {
         return ESP_OK;
@@ -233,13 +333,18 @@ esp_err_t p4_doom_p4mp_prepare(
         memset(&s_net, 0, sizeof(s_net));
         return handler_result;
     }
+    s_net.saved_session_timeout_ms = session->timeout_ms;
+    session->timeout_ms = P4_DOOM_MP_HANDOFF_TIMEOUT_MS;
     ESP_LOGI(TAG,
              "P4_DOOM_MP PREPARED session=%" PRIu32 " role=%s "
-             "local_slot=%u players=%u transport=h1-uart-relay",
+             "local_slot=%u players=%u transport=%s route=%" PRIu64 " "
+             "handoff_timeout_ms=%u",
              config->session_id,
              config->role == P4_MP_ROLE_HOST ? "host" : "client",
              (unsigned)config->local_player_slot,
-             (unsigned)config->player_count);
+             (unsigned)config->player_count,
+             p4_mp_uart_route_name(config->route_id), config->route_id,
+             (unsigned)P4_DOOM_MP_HANDOFF_TIMEOUT_MS);
     return ESP_OK;
 }
 
@@ -255,8 +360,16 @@ boolean P4_DoomNetConfigure(net_gamesettings_t *settings)
     }
     settings->consoleplayer = s_net.config.local_player_slot;
     settings->num_players = s_net.config.player_count;
-    settings->deathmatch = 1;
+    settings->deathmatch = (int)s_net.config.setup.mode;
+    settings->episode = (int)s_net.config.setup.episode;
+    settings->map = (int)s_net.config.setup.map;
+    settings->skill = (int)s_net.config.setup.skill - 1;
     settings->loadgame = -1;
+    settings->nomonsters = s_net.config.setup.no_monsters ? 1 : 0;
+    settings->fast_monsters = s_net.config.setup.fast_monsters ? 1 : 0;
+    settings->respawn_monsters =
+        s_net.config.setup.respawn_monsters ? 1 : 0;
+    settings->timelimit = (int)s_net.config.setup.time_limit_minutes;
     settings->new_sync = 1;
     settings->extratics = 1;
     settings->ticdup = 1;
@@ -266,6 +379,7 @@ boolean P4_DoomNetConfigure(net_gamesettings_t *settings)
     if (!p4_doom_mp_engine_control_encode(
             P4_DOOM_MP_ENGINE_CONTROL_READY, ready)) {
         p4_doom_mp_engine_barrier_init(&s_net.engine_barrier);
+        restore_session_timeout();
         return false;
     }
     ESP_LOGI(TAG,
@@ -288,6 +402,15 @@ boolean P4_DoomNetConfigure(net_gamesettings_t *settings)
                 (int64_t)P4_DOOM_MP_READY_INTERVAL_MS * 1000;
         }
         P4_DoomNetPoll();
+        if (s_net.peer_failed || remote_peer() == NULL) {
+            ESP_LOGE(TAG,
+                     "P4_DOOM_MP ENGINE_BARRIER_ABORT local_slot=%u "
+                     "reason=peer-lost",
+                     (unsigned)s_net.config.local_player_slot);
+            p4_doom_mp_engine_barrier_init(&s_net.engine_barrier);
+            restore_session_timeout();
+            return false;
+        }
         if (p4_doom_mp_engine_barrier_complete(&s_net.engine_barrier)) {
             if (ready_since_us == 0) {
                 ready_since_us = now_us;
@@ -305,6 +428,7 @@ boolean P4_DoomNetConfigure(net_gamesettings_t *settings)
                      s_net.engine_barrier.peer_ready ? 1U : 0U,
                      s_net.engine_barrier.peer_acknowledged ? 1U : 0U);
             p4_doom_mp_engine_barrier_init(&s_net.engine_barrier);
+            restore_session_timeout();
             return false;
         }
         vTaskDelay(pdMS_TO_TICKS(5U));
@@ -314,9 +438,25 @@ boolean P4_DoomNetConfigure(net_gamesettings_t *settings)
              "P4_DOOM_MP ENGINE_BARRIER_READY local_slot=%u wait_ms=%" PRIi64,
              (unsigned)s_net.config.local_player_slot,
              (esp_timer_get_time() - started_us) / 1000);
+    if (!bootstrap_initial_tics()) {
+        s_net.configured = false;
+        p4_doom_mp_engine_barrier_init(&s_net.engine_barrier);
+        restore_session_timeout();
+        return false;
+    }
+    restore_session_timeout();
     ESP_LOGI(TAG,
-             "P4_DOOM_MP ENGINE_CONFIG mode=deathmatch tic_hz=%u "
+             "P4_DOOM_MP ENGINE_CONFIG mode=%u episode=%u map=%u skill=%u "
+             "monsters=%u fast=%u respawn=%u limit=%u tic_hz=%u "
              "local_slot=%u players=%u input_delay=%u",
+             (unsigned)s_net.config.setup.mode,
+             (unsigned)s_net.config.setup.episode,
+             (unsigned)s_net.config.setup.map,
+             (unsigned)s_net.config.setup.skill,
+             s_net.config.setup.no_monsters ? 0U : 1U,
+             s_net.config.setup.fast_monsters ? 1U : 0U,
+             s_net.config.setup.respawn_monsters ? 1U : 0U,
+             (unsigned)s_net.config.setup.time_limit_minutes,
              (unsigned)P4_DOOM_MP_TICK_RATE_HZ,
              (unsigned)s_net.config.local_player_slot,
              (unsigned)s_net.config.player_count,
@@ -343,25 +483,7 @@ void P4_DoomNetSubmitTic(const ticcmd_t *command, int tic_number)
             &s_net.queue, s_net.config.local_player_slot, &tic)) {
         return;
     }
-    p4_mp_input_t input;
-    uint8_t payload[P4_MP_INPUT_PAYLOAD_BYTES];
-    p4_doom_mp_tic_to_input(&tic, &input);
-    p4_mp_input_encode(&input, payload);
-    bool sent = false;
-    for (unsigned copy = 0U;
-         copy < P4_DOOM_MP_REDUNDANT_INPUT_COPIES; ++copy) {
-        if (send_packet(
-                P4_MP_PACKET_INPUT, s_net.queue.next_tick,
-                payload, sizeof(payload)) == ESP_OK) {
-            sent = true;
-            if (s_net.inputs_sent != UINT32_MAX) {
-                ++s_net.inputs_sent;
-            }
-        }
-    }
-    if (!sent && s_net.send_failures != UINT32_MAX) {
-        ++s_net.send_failures;
-    }
+    (void)send_input_tic(&tic);
     flush_complete_tics();
 }
 
@@ -396,6 +518,11 @@ void P4_DoomNetPoll(void)
     flush_complete_tics();
 }
 
+boolean P4_DoomNetFailed(void)
+{
+    return s_net.prepared && s_net.peer_failed;
+}
+
 void P4_DoomNetQuit(void)
 {
     if (s_net.prepared && s_net.session != NULL &&
@@ -414,5 +541,6 @@ void P4_DoomNetQuit(void)
     }
     s_net.prepared = false;
     s_net.configured = false;
+    restore_session_timeout();
     p4_doom_mp_engine_barrier_init(&s_net.engine_barrier);
 }

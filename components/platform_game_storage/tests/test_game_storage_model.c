@@ -87,12 +87,37 @@ static void test_launch_mount_failure_cannot_be_promoted(void)
     assert(!model.launch_pending);
 }
 
+static void test_fault_recovery_is_explicit_and_fail_closed(void)
+{
+    game_storage_model_t model;
+    game_storage_model_init(&model);
+    game_storage_model_fault(&model);
+    assert(!game_storage_model_begin_recovery(
+        &model, GAME_STORAGE_OWNER_NONE));
+    assert(game_storage_model_begin_recovery(
+        &model, GAME_STORAGE_OWNER_APP));
+    assert(model.owner == GAME_STORAGE_OWNER_TRANSITION);
+    assert(model.transition_target == GAME_STORAGE_OWNER_APP);
+    game_storage_model_finish_recovery(
+        &model, GAME_STORAGE_OWNER_APP, false);
+    assert(model.owner == GAME_STORAGE_OWNER_FAULT);
+    assert(model.mount_failures == 1U);
+
+    assert(game_storage_model_begin_recovery(
+        &model, GAME_STORAGE_OWNER_USB));
+    game_storage_model_finish_recovery(
+        &model, GAME_STORAGE_OWNER_USB, true);
+    assert(model.owner == GAME_STORAGE_OWNER_USB);
+    assert(model.ownership_transfers == 1U);
+}
+
 int main(void)
 {
     test_host_handoff_invalidates_cache();
     test_game_lock_is_terminal_and_exclusive();
     test_mount_and_format_fail_closed();
     test_launch_mount_failure_cannot_be_promoted();
+    test_fault_recovery_is_explicit_and_fail_closed();
     puts("platform game storage model tests passed");
     return 0;
 }

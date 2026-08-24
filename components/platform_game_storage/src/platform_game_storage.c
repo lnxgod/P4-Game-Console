@@ -2,6 +2,7 @@
 
 #include "platform/game_storage.h"
 
+#include <dirent.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <limits.h>
@@ -14,6 +15,7 @@
 
 #include "esp_attr.h"
 #include "esp_heap_caps.h"
+#include "esp_log.h"
 #include "sdkconfig.h"
 #ifndef CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 #define CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B 0
@@ -43,13 +45,15 @@
     (P4_GAME_STORAGE_USB_EXPORT && !P4_GAME_STORAGE_RUNTIME_H2_SWITCH)
 
 #if P4_GAME_STORAGE_SD_BACKEND
+#include "ff.h"
+#include "diskio_sdmmc.h"
 #include "driver/gpio.h"
 #include "driver/sdmmc_host.h"
-#include "esp_log.h"
 #include "esp_vfs_fat.h"
 #include "freertos/task.h"
 #include "sd_pwr_ctrl_by_on_chip_ldo.h"
 #include "sdmmc_cmd.h"
+#include "fat_repair.h"
 #endif
 #if !P4_GAME_STORAGE_SD_BACKEND
 #include "esp_partition.h"
@@ -101,9 +105,7 @@ enum {
 #endif
 };
 
-#if P4_GAME_STORAGE_SD_BACKEND
-static const char *TAG = "game_storage_sd";
-#endif
+static const char *TAG = "game_storage";
 
 static const uint8_t s_expected_doom_sha256[32] = {
     0x1d, 0x7d, 0x43, 0xbe, 0x50, 0x1e, 0x67, 0xd9,
@@ -147,6 +149,17 @@ static uint32_t s_scans;
 static uint32_t s_file_mutations;
 static uint32_t s_usb_verified_writes;
 static uint32_t s_usb_write_failures;
+static uint64_t s_free_bytes;
+static uint32_t s_root_entries;
+static uint32_t s_checks;
+static uint32_t s_recovery_attempts;
+static uint32_t s_repair_attempts;
+static uint32_t s_repair_sectors_rewritten;
+static platform_game_storage_repair_outcome_t s_last_repair_outcome =
+    PLATFORM_GAME_STORAGE_REPAIR_NOT_RUN;
+static esp_err_t s_last_check_error = ESP_ERR_INVALID_STATE;
+static esp_err_t s_last_recovery_error = ESP_ERR_INVALID_STATE;
+static esp_err_t s_last_repair_error = ESP_ERR_INVALID_STATE;
 static esp_err_t s_last_error = ESP_ERR_INVALID_STATE;
 static DRAM_ATTR uint8_t s_hash_buffer[GAME_STORAGE_HASH_BUFFER_BYTES]
     __attribute__((aligned(64)));
@@ -444,7 +457,7 @@ static platform_game_storage_state_t public_state_locked(void)
 static esp_err_t fail_initialization(esp_err_t error)
 {
     if (lock_storage()) {
-        game_storage_model_fault(&s_model);
+        game_storage_model_mount_failed(&s_model, false);
         s_last_error = error;
         unlock_storage();
     }
@@ -452,6 +465,34 @@ static esp_err_t fail_initialization(esp_err_t error)
 }
 
 #if P4_GAME_STORAGE_SD_BACKEND
+static esp_err_t read_fat_free_space_without_fsinfo_write(
+    uint64_t *out_free_bytes)
+{
+    if (out_free_bytes == NULL || s_card == NULL) {
+        return out_free_bytes == NULL
+            ? ESP_ERR_INVALID_ARG : ESP_ERR_INVALID_STATE;
+    }
+    *out_free_bytes = 0U;
+    const BYTE drive = ff_diskio_get_pdrv_card(s_card);
+    if (drive >= FF_VOLUMES || drive > 9U) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    TCHAR path[3] = {(TCHAR)('0' + drive), ':', '\0'};
+    FATFS *filesystem = NULL;
+    DWORD free_clusters = 0U;
+    const FRESULT fat_result =
+        f_getfree(path, &free_clusters, &filesystem);
+    if (fat_result != FR_OK || filesystem == NULL) {
+        return ESP_FAIL;
+    }
+    *out_free_bytes = (uint64_t)free_clusters *
+        (uint64_t)filesystem->csize * s_sector_size_bytes;
+    /* f_getfree marks a freshly counted FAT32 FSInfo cache dirty. This
+     * diagnostic is explicitly read-only, so discard only that hint update. */
+    filesystem->fsi_flag &= (BYTE)~UINT8_C(1);
+    return ESP_OK;
+}
+
 static void sd_power_set(bool enabled)
 {
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
@@ -997,6 +1038,262 @@ esp_err_t platform_game_storage_refresh(void)
     return result;
 }
 
+esp_err_t platform_game_storage_check_card(void)
+{
+    if (!s_initialized || !lock_storage()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (s_maintenance || s_model.owner != GAME_STORAGE_OWNER_APP ||
+        s_model.launch_pending) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+    s_maintenance = true;
+    s_model.content = GAME_STORAGE_CONTENT_UNKNOWN;
+    if (!game_storage_model_begin_scan(&s_model)) {
+        s_maintenance = false;
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+    unlock_storage();
+
+    esp_err_t result = ESP_OK;
+#if P4_GAME_STORAGE_SD_BACKEND
+    if (s_card == NULL || !s_sd_vfs_mounted) {
+        result = ESP_ERR_INVALID_STATE;
+    } else {
+        result = sdmmc_get_status(s_card);
+    }
+#endif
+    uint64_t free_bytes = 0U;
+    if (result == ESP_OK) {
+        result = read_fat_free_space_without_fsinfo_write(&free_bytes);
+    }
+    uint32_t root_entries = 0U;
+    if (result == ESP_OK) {
+        DIR *const root = opendir(PLATFORM_GAME_STORAGE_MOUNT_POINT);
+        if (root == NULL) {
+            result = ESP_FAIL;
+        } else {
+            errno = 0;
+            for (struct dirent *entry = readdir(root);
+                 entry != NULL; entry = readdir(root)) {
+                if ((strcmp(entry->d_name, ".") == 0) ||
+                    (strcmp(entry->d_name, "..") == 0)) {
+                    continue;
+                }
+                if (root_entries != UINT32_MAX) {
+                    ++root_entries;
+                }
+            }
+            if (errno != 0 || closedir(root) != 0) {
+                result = ESP_FAIL;
+            }
+        }
+    }
+    esp_err_t content_error = result;
+    game_storage_content_t content = GAME_STORAGE_CONTENT_INVALID;
+    if (result == ESP_OK) {
+        content = inspect_doom_wad(&content_error);
+    }
+    esp_err_t release_result = ESP_OK;
+#if P4_GAME_STORAGE_SD_BACKEND
+    if (result != ESP_OK) {
+        release_result = release_sd_resources();
+    }
+#endif
+
+    if (lock_storage()) {
+        if (s_checks != UINT32_MAX) {
+            ++s_checks;
+        }
+        s_root_entries = root_entries;
+        s_free_bytes = result == ESP_OK ? free_bytes : 0U;
+        s_last_check_error = result;
+        s_maintenance = false;
+        if (result == ESP_OK) {
+            if (s_scans != UINT32_MAX) {
+                ++s_scans;
+            }
+            game_storage_model_finish_scan(&s_model, content);
+            s_last_error = content_error;
+        } else {
+            game_storage_model_fault(&s_model);
+            s_last_error = result != ESP_OK ? result : release_result;
+        }
+        unlock_storage();
+    }
+    ESP_LOGI(TAG,
+             "P4_GAME_STORAGE CHECK result=%s entries=%" PRIu32
+             " free_bytes=%" PRIu64 " content=%s writes=0",
+             esp_err_to_name(result), root_entries, s_free_bytes,
+             esp_err_to_name(content_error));
+    return result;
+}
+
+esp_err_t platform_game_storage_retry_card(void)
+{
+#if !P4_GAME_STORAGE_SD_BACKEND || \
+    (P4_GAME_STORAGE_USB_EXPORT && !P4_GAME_STORAGE_RUNTIME_H2_SWITCH)
+    return ESP_ERR_NOT_SUPPORTED;
+#else
+    if (!s_initialized || !lock_storage()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (s_maintenance ||
+        !game_storage_model_begin_recovery(
+            &s_model, GAME_STORAGE_OWNER_APP)) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (s_recovery_attempts != UINT32_MAX) {
+        ++s_recovery_attempts;
+    }
+    s_maintenance = true;
+    unlock_storage();
+
+    esp_err_t result = release_sd_resources();
+    if (result == ESP_OK) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+#if P4_GAME_STORAGE_RUNTIME_H2_SWITCH
+        result = runtime_mount_app_storage();
+#else
+        result = mount_sd_with_fallback(true);
+        if (result == ESP_OK && s_card != NULL &&
+            s_card->csd.sector_size > 0 && s_card->csd.capacity > 0U) {
+            s_sector_size_bytes = (uint32_t)s_card->csd.sector_size;
+            s_capacity_bytes = (uint64_t)s_card->csd.capacity *
+                s_sector_size_bytes;
+        }
+#endif
+    }
+    if (result == ESP_OK && (s_card == NULL || !s_sd_vfs_mounted)) {
+        result = ESP_FAIL;
+    }
+    if (lock_storage()) {
+        s_maintenance = false;
+        s_last_recovery_error = result;
+        game_storage_model_finish_recovery(
+            &s_model, GAME_STORAGE_OWNER_APP, result == ESP_OK);
+        if (result == ESP_OK) {
+            (void)refresh_locked();
+        } else {
+            s_last_error = result;
+        }
+        unlock_storage();
+    }
+    ESP_LOGI(TAG,
+             "P4_GAME_STORAGE RETRY result=%s attempt=%" PRIu32
+             " destructive=0 format=0",
+             esp_err_to_name(result), s_recovery_attempts);
+    return result;
+#endif
+}
+
+esp_err_t platform_game_storage_repair_fat(void)
+{
+#if !P4_GAME_STORAGE_RUNTIME_H2_SWITCH
+    return ESP_ERR_NOT_SUPPORTED;
+#else
+    if (!s_initialized || !lock_storage()) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    const bool recovering_fault =
+        s_model.owner == GAME_STORAGE_OWNER_FAULT;
+    if (s_maintenance || s_model.launch_pending ||
+        (s_model.owner != GAME_STORAGE_OWNER_APP && !recovering_fault) ||
+        (recovering_fault && !game_storage_model_begin_recovery(
+            &s_model, GAME_STORAGE_OWNER_APP))) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (s_repair_attempts != UINT32_MAX) {
+        ++s_repair_attempts;
+    }
+    s_maintenance = true;
+    unlock_storage();
+
+    p4_fat_repair_report_t report;
+    memset(&report, 0, sizeof(report));
+    esp_err_t result = release_sd_resources();
+    if (result == ESP_OK) {
+        vTaskDelay(pdMS_TO_TICKS(100));
+        result = mount_sd_with_fallback(false);
+    }
+    if (result == ESP_OK && s_card != NULL) {
+        result = p4_fat_repair_run(s_card, &report);
+    } else if (result == ESP_OK) {
+        result = ESP_FAIL;
+    }
+    const esp_err_t repair_result = result;
+    const esp_err_t raw_release = release_sd_resources();
+    if (result == ESP_OK && raw_release != ESP_OK) {
+        result = raw_release;
+    }
+    vTaskDelay(pdMS_TO_TICKS(100));
+    const esp_err_t remount_result = runtime_mount_app_storage();
+    if (result == ESP_OK && remount_result != ESP_OK) {
+        result = remount_result;
+    }
+
+    if (lock_storage()) {
+        s_maintenance = false;
+        s_last_repair_error = result;
+        s_repair_sectors_rewritten = report.sectors_rewritten;
+        switch (report.outcome) {
+        case P4_FAT_REPAIR_CLEAN:
+            s_last_repair_outcome = PLATFORM_GAME_STORAGE_REPAIR_CLEAN;
+            break;
+        case P4_FAT_REPAIR_REPAIRED:
+            s_last_repair_outcome = PLATFORM_GAME_STORAGE_REPAIR_REPAIRED;
+            break;
+        case P4_FAT_REPAIR_NEEDS_HOST:
+            s_last_repair_outcome =
+                PLATFORM_GAME_STORAGE_REPAIR_NEEDS_HOST;
+            break;
+        case P4_FAT_REPAIR_UNSUPPORTED:
+            s_last_repair_outcome =
+                PLATFORM_GAME_STORAGE_REPAIR_UNSUPPORTED;
+            break;
+        case P4_FAT_REPAIR_FAILED:
+        case P4_FAT_REPAIR_NOT_RUN:
+        default:
+            s_last_repair_outcome = PLATFORM_GAME_STORAGE_REPAIR_FAILED;
+            break;
+        }
+        if (remount_result == ESP_OK) {
+            if (recovering_fault) {
+                game_storage_model_finish_recovery(
+                    &s_model, GAME_STORAGE_OWNER_APP, true);
+            } else {
+                s_model.content = GAME_STORAGE_CONTENT_UNKNOWN;
+            }
+            (void)refresh_locked();
+            if (repair_result != ESP_OK) {
+                s_last_repair_error = repair_result;
+            }
+        } else {
+            if (recovering_fault) {
+                game_storage_model_finish_recovery(
+                    &s_model, GAME_STORAGE_OWNER_APP, false);
+            } else {
+                game_storage_model_fault(&s_model);
+            }
+            s_last_error = remount_result;
+        }
+        unlock_storage();
+    }
+    ESP_LOGI(TAG,
+             "P4_GAME_STORAGE FAT_REPAIR result=%s remount=%s "
+             "outcome=%u sectors_rewritten=%" PRIu32
+             " fat_mismatch=%" PRIu32 " format=0",
+             esp_err_to_name(repair_result),
+             esp_err_to_name(remount_result), (unsigned)report.outcome,
+             report.sectors_rewritten, report.fat_mismatch_sectors);
+    return result;
+#endif
+}
+
 esp_err_t platform_game_storage_get_status(
     platform_game_storage_status_t *out_status)
 {
@@ -1028,6 +1325,34 @@ esp_err_t platform_game_storage_get_status(
     out_status->scans = s_scans;
     out_status->usb_verified_writes = s_usb_verified_writes;
     out_status->usb_write_failures = s_usb_write_failures;
+    out_status->free_bytes = s_free_bytes;
+    out_status->real_frequency_khz =
+#if P4_GAME_STORAGE_SD_BACKEND
+        s_card != NULL ? (uint32_t)s_card->real_freq_khz : 0U;
+#else
+        0U;
+#endif
+    out_status->root_entries = s_root_entries;
+    out_status->checks = s_checks;
+    out_status->recovery_attempts = s_recovery_attempts;
+    out_status->repair_attempts = s_repair_attempts;
+    out_status->repair_sectors_rewritten = s_repair_sectors_rewritten;
+    out_status->card_ready =
+#if P4_GAME_STORAGE_SD_BACKEND
+        s_card != NULL;
+#else
+        true;
+#endif
+    out_status->filesystem_ready =
+#if P4_GAME_STORAGE_SD_BACKEND
+        s_sd_vfs_mounted;
+#else
+        s_model.owner == GAME_STORAGE_OWNER_APP;
+#endif
+    out_status->last_repair_outcome = s_last_repair_outcome;
+    out_status->last_check_error = s_last_check_error;
+    out_status->last_recovery_error = s_last_recovery_error;
+    out_status->last_repair_error = s_last_repair_error;
     out_status->last_error = s_last_error;
     unlock_storage();
     return ESP_OK;
@@ -1561,9 +1886,15 @@ esp_err_t platform_game_storage_set_usb_mode(bool enabled)
         unlock_storage();
         return ESP_OK;
     }
+    const bool recovery_export = enabled &&
+#if P4_GAME_STORAGE_RUNTIME_H2_SWITCH
+        owner == GAME_STORAGE_OWNER_FAULT;
+#else
+        false;
+#endif
     if (s_maintenance || s_model.launch_pending ||
         (enabled && owner != GAME_STORAGE_OWNER_APP &&
-         owner != GAME_STORAGE_OWNER_USB) ||
+         owner != GAME_STORAGE_OWNER_USB && !recovery_export) ||
         (!enabled && owner != GAME_STORAGE_OWNER_USB)) {
         unlock_storage();
         return ESP_ERR_INVALID_STATE;
@@ -1583,7 +1914,16 @@ esp_err_t platform_game_storage_set_usb_mode(bool enabled)
         s_usb_host_ejected = false;
     }
 #if P4_GAME_STORAGE_RUNTIME_H2_SWITCH
-    game_storage_model_mount_start(&s_model, owner);
+    if (recovery_export) {
+        if (!game_storage_model_begin_recovery(
+                &s_model, GAME_STORAGE_OWNER_USB)) {
+            s_maintenance = false;
+            unlock_storage();
+            return ESP_ERR_INVALID_STATE;
+        }
+    } else {
+        game_storage_model_mount_start(&s_model, owner);
+    }
 #endif
     unlock_storage();
 
@@ -1614,9 +1954,14 @@ esp_err_t platform_game_storage_set_usb_mode(bool enabled)
     if (lock_storage()) {
         s_maintenance = false;
         if (result == ESP_OK) {
-            game_storage_model_mount_complete(
-                &s_model, enabled
-                    ? GAME_STORAGE_OWNER_USB : GAME_STORAGE_OWNER_APP);
+            if (recovery_export) {
+                game_storage_model_finish_recovery(
+                    &s_model, GAME_STORAGE_OWNER_USB, true);
+            } else {
+                game_storage_model_mount_complete(
+                    &s_model, enabled
+                        ? GAME_STORAGE_OWNER_USB : GAME_STORAGE_OWNER_APP);
+            }
             s_last_error = ESP_OK;
             if (!enabled) {
                 scan_result = refresh_locked();
@@ -1627,7 +1972,12 @@ esp_err_t platform_game_storage_set_usb_mode(bool enabled)
             scan_result = refresh_locked();
             s_last_error = result;
         } else {
-            game_storage_model_fault(&s_model);
+            if (recovery_export) {
+                game_storage_model_finish_recovery(
+                    &s_model, GAME_STORAGE_OWNER_USB, false);
+            } else {
+                game_storage_model_fault(&s_model);
+            }
             s_last_error = result;
         }
         unlock_storage();

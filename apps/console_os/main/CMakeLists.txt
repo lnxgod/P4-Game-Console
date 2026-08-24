@@ -41,6 +41,9 @@ set(P4_CONSOLE_MAIN_REQUIREMENTS
 )
 
 idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
+idf_build_get_property(P4_WAVESHARE_SIGNAL_SCAN_BUILD
+    P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
+set(P4_CONSOLE_SIGNAL_SCAN_ENABLED 0)
 if(P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
     list(APPEND P4_CONSOLE_MAIN_SOURCES
         "${P4_DOOM_GAMEPAD_AUDIO_MAIN}/doom_embedded_gamepad_audio_main.c"
@@ -84,11 +87,14 @@ else()
             platform_gamepad_usb
             platform_usb_host
         )
-        # The top-level build removes ESP-Hosted's constructor so both H2 role
-        # images can start the passive scanner explicitly after launcher READY.
-        list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
-            platform_signal_scan
-        )
+        if(P4_WAVESHARE_SIGNAL_SCAN_BUILD)
+            # This remains opt-in until its exact SDIO transport passes the
+            # top-level overlap gate and live-radio acceptance.
+            list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
+                platform_signal_scan
+            )
+            set(P4_CONSOLE_SIGNAL_SCAN_ENABLED 1)
+        endif()
     else()
         set(P4_TOUCH_BOARD_DEPS board_deps_elecrow)
     endif()
@@ -130,6 +136,7 @@ target_include_directories(${COMPONENT_LIB} PRIVATE
 
 target_compile_definitions(${COMPONENT_LIB} PRIVATE
     P4_CONSOLE_OS_EMBEDDED=1
+    P4_CONSOLE_SIGNAL_SCAN=${P4_CONSOLE_SIGNAL_SCAN_ENABLED}
 )
 target_compile_features(${COMPONENT_LIB} PRIVATE c_std_11)
 target_compile_options(${COMPONENT_LIB} PRIVATE

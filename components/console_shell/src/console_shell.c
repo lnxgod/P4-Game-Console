@@ -70,12 +70,29 @@ enum {
     SYSTEM_USB_TOP = 174,
     SYSTEM_USB_WIDTH = 304,
     SYSTEM_USB_HEIGHT = 20,
+    STORAGE_BUTTON_TOP = 174,
+    STORAGE_BUTTON_HEIGHT = 20,
+    STORAGE_CHECK_LEFT = 8,
+    STORAGE_CHECK_WIDTH = 92,
+    STORAGE_RETRY_LEFT = 104,
+    STORAGE_RETRY_WIDTH = 92,
+    STORAGE_REPAIR_LEFT = 200,
+    STORAGE_REPAIR_WIDTH = 112,
     AUDIO_MINUS_LEFT = 174,
     AUDIO_PLUS_LEFT = 274,
     AUDIO_BUTTON_WIDTH = 38,
     AUDIO_BUTTON_HEIGHT = 24,
     AUDIO_BOOT_TOP = 61,
     AUDIO_GAME_TOP = 112,
+    MULTIPLAYER_OPTION_LEFT = 8,
+    MULTIPLAYER_OPTION_TOP = 57,
+    MULTIPLAYER_OPTION_WIDTH = 304,
+    MULTIPLAYER_OPTION_HEIGHT = 13,
+    MULTIPLAYER_OPTION_PITCH = 15,
+    MULTIPLAYER_LAUNCH_LEFT = 8,
+    MULTIPLAYER_LAUNCH_TOP = 166,
+    MULTIPLAYER_LAUNCH_WIDTH = 304,
+    MULTIPLAYER_LAUNCH_HEIGHT = 21,
 };
 
 typedef struct {
@@ -202,11 +219,20 @@ enum {
     FILE_CANCEL_CONTROL,
     FILE_CONFIRM_CONTROL,
     SYSTEM_USB_CONTROL,
+    STORAGE_CHECK_CONTROL,
+    STORAGE_RETRY_CONTROL,
+    STORAGE_REPAIR_CONTROL,
     AUDIO_BOOT_MINUS_CONTROL,
     AUDIO_BOOT_PLUS_CONTROL,
     AUDIO_GAME_MINUS_CONTROL,
     AUDIO_GAME_PLUS_CONTROL,
-    MULTIPLAYER_LAUNCH_CONTROL,
+    MULTIPLAYER_OPTION_MINUS_CONTROL_BASE,
+    MULTIPLAYER_OPTION_PLUS_CONTROL_BASE =
+        MULTIPLAYER_OPTION_MINUS_CONTROL_BASE +
+            CONSOLE_MULTIPLAYER_OPTION_COUNT,
+    MULTIPLAYER_LAUNCH_CONTROL =
+        MULTIPLAYER_OPTION_PLUS_CONTROL_BASE +
+            CONSOLE_MULTIPLAYER_OPTION_COUNT,
     TERMINAL_KEY_CONTROL_BASE,
     TERMINAL_LETTER_KEY_COUNT = 26,
     TERMINAL_SPACE_CONTROL =
@@ -219,6 +245,7 @@ enum {
 static const char s_terminal_keys[] = "QWERTYUIOPASDFGHJKLZXCVBNM";
 
 static console_shell_action_t no_action(void);
+static console_shell_action_t page_changed(uint32_t app_id);
 
 static bool use_bbs_launcher(const console_shell_t *shell)
 {
@@ -270,8 +297,13 @@ static bool folder_path_is_valid(const char *path)
 {
     const size_t length = bounded_length(
         path, CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES);
-    if (length == 0U || length >= CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES) {
+    if (length >= CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES) {
         return false;
+    }
+    /* The empty path is the launcher root, so apps can be first-class doors
+     * without inventing a synthetic folder name. */
+    if (length == 0U) {
+        return true;
     }
 
     size_t segment_length = 0U;
@@ -302,7 +334,7 @@ static bool folder_path_is_valid(const char *path)
 static bool valid_page(console_page_t page)
 {
     return page >= CONSOLE_PAGE_EXTERNAL &&
-        page <= CONSOLE_PAGE_TERMINAL;
+        page <= CONSOLE_PAGE_STORAGE;
 }
 
 static bool registry_is_valid(const console_app_descriptor_t *apps,
@@ -353,6 +385,7 @@ bool console_shell_init(console_shell_t *shell,
     shell->pressed_index = SIZE_MAX;
     shell->page = CONSOLE_PAGE_HOME;
     shell->color_mode = CONSOLE_COLOR_MODE_GAMECHANGERS;
+    shell->multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_COUNT;
     p4_achievement_catalog_init(&shell->achievements);
     p4_file_list_init(&shell->desktop_files);
     p4_save_catalog_init(&shell->saves, false);
@@ -867,7 +900,8 @@ static bool system_usb_button_enabled(const console_shell_t *shell)
     return shell->runtime.game_storage_state == CONSOLE_STORAGE_READY ||
         shell->runtime.game_storage_state == CONSOLE_STORAGE_MISSING ||
         shell->runtime.game_storage_state == CONSOLE_STORAGE_INVALID ||
-        shell->runtime.game_storage_state == CONSOLE_STORAGE_FORMAT_REQUIRED;
+        shell->runtime.game_storage_state == CONSOLE_STORAGE_FORMAT_REQUIRED ||
+        shell->runtime.game_storage_state == CONSOLE_STORAGE_FAULT;
 }
 
 static console_shell_action_t system_usb_action(
@@ -881,6 +915,85 @@ static console_shell_action_t system_usb_action(
         .file_source_index = UINT32_MAX,
     };
     return action;
+}
+
+static bool storage_check_enabled(const console_shell_t *shell)
+{
+    return shell->runtime.game_storage_operation ==
+            CONSOLE_STORAGE_OPERATION_NONE &&
+        shell->runtime.sd_card_storage &&
+        (shell->runtime.game_storage_state == CONSOLE_STORAGE_READY ||
+         shell->runtime.game_storage_state == CONSOLE_STORAGE_MISSING ||
+         shell->runtime.game_storage_state == CONSOLE_STORAGE_INVALID);
+}
+
+static bool storage_retry_enabled(const console_shell_t *shell)
+{
+    return shell->runtime.game_storage_operation ==
+            CONSOLE_STORAGE_OPERATION_NONE &&
+        shell->runtime.sd_card_storage &&
+        shell->runtime.game_storage_state == CONSOLE_STORAGE_FAULT;
+}
+
+static bool storage_repair_enabled(const console_shell_t *shell)
+{
+    return shell->runtime.game_storage_operation ==
+            CONSOLE_STORAGE_OPERATION_NONE &&
+        shell->runtime.game_storage_repair_supported &&
+        (shell->runtime.game_storage_state == CONSOLE_STORAGE_READY ||
+         shell->runtime.game_storage_state == CONSOLE_STORAGE_MISSING ||
+         shell->runtime.game_storage_state == CONSOLE_STORAGE_INVALID ||
+         shell->runtime.game_storage_state == CONSOLE_STORAGE_FAULT);
+}
+
+static bool storage_action_enabled(const console_shell_t *shell,
+                                   size_t action)
+{
+    switch (action) {
+    case 0U: return storage_check_enabled(shell);
+    case 1U: return storage_retry_enabled(shell);
+    case 2U: return storage_repair_enabled(shell);
+    default: return false;
+    }
+}
+
+static console_shell_action_t storage_action(console_shell_t *shell,
+                                             size_t requested)
+{
+    if (!storage_action_enabled(shell, requested)) {
+        return no_action();
+    }
+    shell->storage_selected_action = requested;
+    shell->dirty = true;
+    if (requested == 2U && !shell->storage_repair_confirm) {
+        shell->storage_repair_confirm = true;
+        return page_changed(shell->active_app_id);
+    }
+    shell->storage_repair_confirm = false;
+    const console_shell_action_t action = {
+        .type = requested == 0U
+            ? CONSOLE_ACTION_STORAGE_CHECK
+            : requested == 1U
+                ? CONSOLE_ACTION_STORAGE_RETRY
+                : CONSOLE_ACTION_STORAGE_REPAIR,
+        .app_id = shell->active_app_id,
+        .file_source_index = UINT32_MAX,
+    };
+    return action;
+}
+
+static void reset_storage_controls(console_shell_t *shell)
+{
+    shell->storage_repair_confirm = false;
+    shell->storage_selected_action = 0U;
+    while (shell->storage_selected_action < 3U &&
+           !storage_action_enabled(
+               shell, shell->storage_selected_action)) {
+        ++shell->storage_selected_action;
+    }
+    if (shell->storage_selected_action >= 3U) {
+        shell->storage_selected_action = 0U;
+    }
 }
 
 static uint8_t bounded_volume(uint8_t volume)
@@ -916,6 +1029,28 @@ static console_shell_action_t audio_volume_action(
     return action;
 }
 
+static console_shell_action_t multiplayer_config_action(
+    console_shell_t *shell,
+    console_multiplayer_option_t option,
+    int delta)
+{
+    if (shell == NULL || option >= CONSOLE_MULTIPLAYER_OPTION_COUNT ||
+        !shell->runtime.multiplayer_settings_editable ||
+        shell->runtime.multiplayer_launch_syncing || delta == 0) {
+        return no_action();
+    }
+    shell->multiplayer_selected_row = (size_t)option;
+    shell->dirty = true;
+    const console_shell_action_t action = {
+        .type = CONSOLE_ACTION_MULTIPLAYER_CONFIGURE,
+        .app_id = shell->active_app_id,
+        .file_source_index = UINT32_MAX,
+        .multiplayer_option = option,
+        .multiplayer_delta = delta < 0 ? INT8_C(-1) : INT8_C(1),
+    };
+    return action;
+}
+
 static size_t control_at(const console_shell_t *shell,
                          uint16_t gui_x,
                          uint16_t gui_y)
@@ -945,6 +1080,27 @@ static size_t control_at(const console_shell_t *shell,
                           SYSTEM_USB_WIDTH, SYSTEM_USB_HEIGHT)) {
             return SYSTEM_USB_CONTROL;
         }
+        if (shell->page == CONSOLE_PAGE_STORAGE) {
+            if (storage_check_enabled(shell) &&
+                point_in_rect(gui_x, gui_y, STORAGE_CHECK_LEFT,
+                              STORAGE_BUTTON_TOP, STORAGE_CHECK_WIDTH,
+                              STORAGE_BUTTON_HEIGHT)) {
+                return STORAGE_CHECK_CONTROL;
+            }
+            if (storage_retry_enabled(shell) &&
+                point_in_rect(gui_x, gui_y, STORAGE_RETRY_LEFT,
+                              STORAGE_BUTTON_TOP, STORAGE_RETRY_WIDTH,
+                              STORAGE_BUTTON_HEIGHT)) {
+                return STORAGE_RETRY_CONTROL;
+            }
+            if (storage_repair_enabled(shell) &&
+                point_in_rect(gui_x, gui_y, STORAGE_REPAIR_LEFT,
+                              STORAGE_BUTTON_TOP, STORAGE_REPAIR_WIDTH,
+                              STORAGE_BUTTON_HEIGHT)) {
+                return STORAGE_REPAIR_CONTROL;
+            }
+            return SIZE_MAX;
+        }
         if (shell->page == CONSOLE_PAGE_AUDIO) {
             if (point_in_rect(gui_x, gui_y, AUDIO_MINUS_LEFT,
                               AUDIO_BOOT_TOP, AUDIO_BUTTON_WIDTH,
@@ -969,11 +1125,32 @@ static size_t control_at(const console_shell_t *shell,
             return SIZE_MAX;
         }
         if (shell->page == CONSOLE_PAGE_MULTIPLAYER &&
-            shell->runtime.multiplayer_lobby_ready &&
-            !shell->runtime.multiplayer_launch_syncing &&
-            shell->runtime.doom_wad_ready &&
-            point_in_rect(gui_x, gui_y, 12U, 157U, 296U, 27U)) {
-            return MULTIPLAYER_LAUNCH_CONTROL;
+            !shell->runtime.multiplayer_launch_syncing) {
+            if (shell->runtime.multiplayer_settings_editable) {
+                for (size_t option = 0U;
+                     option < CONSOLE_MULTIPLAYER_OPTION_COUNT; ++option) {
+                    if (!point_in_rect(
+                            gui_x, gui_y, MULTIPLAYER_OPTION_LEFT,
+                            MULTIPLAYER_OPTION_TOP +
+                                (unsigned)option * MULTIPLAYER_OPTION_PITCH,
+                            MULTIPLAYER_OPTION_WIDTH,
+                            MULTIPLAYER_OPTION_HEIGHT)) {
+                        continue;
+                    }
+                    return gui_x < CONSOLE_SHELL_LAYOUT_WIDTH / 2U
+                        ? MULTIPLAYER_OPTION_MINUS_CONTROL_BASE + option
+                        : MULTIPLAYER_OPTION_PLUS_CONTROL_BASE + option;
+                }
+            }
+            if (shell->runtime.multiplayer_lobby_ready &&
+                shell->runtime.doom_wad_ready &&
+                point_in_rect(
+                    gui_x, gui_y, MULTIPLAYER_LAUNCH_LEFT,
+                    MULTIPLAYER_LAUNCH_TOP, MULTIPLAYER_LAUNCH_WIDTH,
+                    MULTIPLAYER_LAUNCH_HEIGHT)) {
+                return MULTIPLAYER_LAUNCH_CONTROL;
+            }
+            return SIZE_MAX;
         }
         if (shell->page == CONSOLE_PAGE_TERMINAL) {
             return terminal_control_at(gui_x, gui_y);
@@ -1239,6 +1416,13 @@ static console_shell_action_t activate_home_selection(console_shell_t *shell)
     }
     shell->page = app->page;
     shell->active_app_id = app->id;
+    if (app->page == CONSOLE_PAGE_MULTIPLAYER) {
+        shell->multiplayer_selected_row =
+            CONSOLE_MULTIPLAYER_OPTION_COUNT;
+    }
+    if (app->page == CONSOLE_PAGE_STORAGE) {
+        reset_storage_controls(shell);
+    }
     if (app->page == CONSOLE_PAGE_FILES ||
         app->page == CONSOLE_PAGE_GAMES) {
         shell->file_delete_confirm = false;
@@ -1367,6 +1551,12 @@ console_shell_action_t console_shell_handle_buttons(
             };
             return action;
         }
+        if (shell->page == CONSOLE_PAGE_STORAGE &&
+            shell->storage_repair_confirm) {
+            shell->storage_repair_confirm = false;
+            shell->dirty = true;
+            return page_changed(shell->active_app_id);
+        }
         console_shell_show_home(shell);
         return page_changed(0U);
     }
@@ -1421,6 +1611,43 @@ console_shell_action_t console_shell_handle_buttons(
         return system_usb_action(shell);
     }
 
+    if (shell->page == CONSOLE_PAGE_STORAGE) {
+        if ((pressed & CONSOLE_BUTTON_REFRESH) != 0U) {
+            shell->storage_repair_confirm = false;
+            return storage_action(shell, 0U);
+        }
+        if ((pressed & CONSOLE_BUTTON_LEFT) != 0U) {
+            for (size_t step = 0U; step < 3U; ++step) {
+                shell->storage_selected_action =
+                    (shell->storage_selected_action + 2U) % 3U;
+                if (storage_action_enabled(
+                        shell, shell->storage_selected_action)) {
+                    break;
+                }
+            }
+            shell->storage_repair_confirm = false;
+            shell->dirty = true;
+            return page_changed(shell->active_app_id);
+        }
+        if ((pressed & CONSOLE_BUTTON_RIGHT) != 0U) {
+            for (size_t step = 0U; step < 3U; ++step) {
+                shell->storage_selected_action =
+                    (shell->storage_selected_action + 1U) % 3U;
+                if (storage_action_enabled(
+                        shell, shell->storage_selected_action)) {
+                    break;
+                }
+            }
+            shell->storage_repair_confirm = false;
+            shell->dirty = true;
+            return page_changed(shell->active_app_id);
+        }
+        if ((pressed & CONSOLE_BUTTON_ACCEPT) != 0U) {
+            return storage_action(shell, shell->storage_selected_action);
+        }
+        return no_action();
+    }
+
     if (shell->page == CONSOLE_PAGE_AUDIO) {
         if ((pressed & CONSOLE_BUTTON_UP) != 0U) {
             shell->audio_selected_row = 0U;
@@ -1443,17 +1670,48 @@ console_shell_action_t console_shell_handle_buttons(
         return no_action();
     }
 
-    if (shell->page == CONSOLE_PAGE_MULTIPLAYER &&
-        (pressed & CONSOLE_BUTTON_ACCEPT) != 0U &&
-        shell->runtime.multiplayer_lobby_ready &&
-        !shell->runtime.multiplayer_launch_syncing &&
-        shell->runtime.doom_wad_ready) {
-        const console_shell_action_t action = {
-            .type = CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM,
-            .app_id = shell->active_app_id,
-            .file_source_index = UINT32_MAX,
-        };
-        return action;
+    if (shell->page == CONSOLE_PAGE_MULTIPLAYER) {
+        const size_t row_count =
+            (size_t)CONSOLE_MULTIPLAYER_OPTION_COUNT + 1U;
+        if ((pressed & CONSOLE_BUTTON_UP) != 0U) {
+            shell->multiplayer_selected_row =
+                (shell->multiplayer_selected_row + row_count - 1U) %
+                    row_count;
+            shell->dirty = true;
+            return page_changed(shell->active_app_id);
+        }
+        if ((pressed & CONSOLE_BUTTON_DOWN) != 0U) {
+            shell->multiplayer_selected_row =
+                (shell->multiplayer_selected_row + 1U) % row_count;
+            shell->dirty = true;
+            return page_changed(shell->active_app_id);
+        }
+        if (shell->multiplayer_selected_row <
+                CONSOLE_MULTIPLAYER_OPTION_COUNT &&
+            (pressed & (CONSOLE_BUTTON_LEFT | CONSOLE_BUTTON_RIGHT |
+                        CONSOLE_BUTTON_ACCEPT)) != 0U) {
+            const int delta =
+                (pressed & CONSOLE_BUTTON_LEFT) != 0U ? -1 : 1;
+            return multiplayer_config_action(
+                shell,
+                (console_multiplayer_option_t)
+                    shell->multiplayer_selected_row,
+                delta);
+        }
+        if (shell->multiplayer_selected_row ==
+                CONSOLE_MULTIPLAYER_OPTION_COUNT &&
+            (pressed & CONSOLE_BUTTON_ACCEPT) != 0U &&
+            shell->runtime.multiplayer_lobby_ready &&
+            !shell->runtime.multiplayer_launch_syncing &&
+            shell->runtime.doom_wad_ready) {
+            const console_shell_action_t action = {
+                .type = CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM,
+                .app_id = shell->active_app_id,
+                .file_source_index = UINT32_MAX,
+            };
+            return action;
+        }
+        return no_action();
     }
 
     if (shell->page != CONSOLE_PAGE_FILES &&
@@ -1684,6 +1942,12 @@ console_shell_action_t console_shell_handle_touch(
                 };
                 return action;
             }
+            if (shell->page == CONSOLE_PAGE_STORAGE &&
+                shell->storage_repair_confirm) {
+                shell->storage_repair_confirm = false;
+                shell->dirty = true;
+                return page_changed(shell->active_app_id);
+            }
             console_shell_show_home(shell);
             return page_changed(0U);
         }
@@ -1716,6 +1980,20 @@ console_shell_action_t console_shell_handle_touch(
             system_usb_button_enabled(shell)) {
             return system_usb_action(shell);
         }
+        if (shell->page == CONSOLE_PAGE_STORAGE) {
+            switch (released_control) {
+            case STORAGE_CHECK_CONTROL:
+                shell->storage_repair_confirm = false;
+                return storage_action(shell, 0U);
+            case STORAGE_RETRY_CONTROL:
+                shell->storage_repair_confirm = false;
+                return storage_action(shell, 1U);
+            case STORAGE_REPAIR_CONTROL:
+                return storage_action(shell, 2U);
+            default:
+                return no_action();
+            }
+        }
         if (shell->page == CONSOLE_PAGE_AUDIO) {
             switch (released_control) {
             case AUDIO_BOOT_MINUS_CONTROL:
@@ -1734,17 +2012,40 @@ console_shell_action_t console_shell_handle_touch(
                 return no_action();
             }
         }
-        if (shell->page == CONSOLE_PAGE_MULTIPLAYER &&
-            released_control == MULTIPLAYER_LAUNCH_CONTROL &&
-            shell->runtime.multiplayer_lobby_ready &&
-            !shell->runtime.multiplayer_launch_syncing &&
-            shell->runtime.doom_wad_ready) {
-            const console_shell_action_t action = {
-                .type = CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM,
-                .app_id = shell->active_app_id,
-                .file_source_index = UINT32_MAX,
-            };
-            return action;
+        if (shell->page == CONSOLE_PAGE_MULTIPLAYER) {
+            if (released_control >=
+                    MULTIPLAYER_OPTION_MINUS_CONTROL_BASE &&
+                released_control <
+                    MULTIPLAYER_OPTION_PLUS_CONTROL_BASE) {
+                return multiplayer_config_action(
+                    shell,
+                    (console_multiplayer_option_t)(released_control -
+                        MULTIPLAYER_OPTION_MINUS_CONTROL_BASE),
+                    -1);
+            }
+            if (released_control >=
+                    MULTIPLAYER_OPTION_PLUS_CONTROL_BASE &&
+                released_control < MULTIPLAYER_LAUNCH_CONTROL) {
+                return multiplayer_config_action(
+                    shell,
+                    (console_multiplayer_option_t)(released_control -
+                        MULTIPLAYER_OPTION_PLUS_CONTROL_BASE),
+                    1);
+            }
+            if (released_control == MULTIPLAYER_LAUNCH_CONTROL &&
+                shell->runtime.multiplayer_lobby_ready &&
+                !shell->runtime.multiplayer_launch_syncing &&
+                shell->runtime.doom_wad_ready) {
+                shell->multiplayer_selected_row =
+                    CONSOLE_MULTIPLAYER_OPTION_COUNT;
+                const console_shell_action_t action = {
+                    .type = CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM,
+                    .app_id = shell->active_app_id,
+                    .file_source_index = UINT32_MAX,
+                };
+                return action;
+            }
+            return no_action();
         }
         if (shell->page == CONSOLE_PAGE_TERMINAL &&
             released_control >= TERMINAL_KEY_CONTROL_BASE &&
@@ -1899,6 +2200,13 @@ console_shell_action_t console_shell_handle_touch(
         }
         shell->page = app->page;
         shell->active_app_id = app->id;
+        if (app->page == CONSOLE_PAGE_MULTIPLAYER) {
+            shell->multiplayer_selected_row =
+                CONSOLE_MULTIPLAYER_OPTION_COUNT;
+        }
+        if (app->page == CONSOLE_PAGE_STORAGE) {
+            reset_storage_controls(shell);
+        }
         if (app->page == CONSOLE_PAGE_FILES ||
             app->page == CONSOLE_PAGE_GAMES) {
             shell->file_delete_confirm = false;
@@ -2011,8 +2319,26 @@ void console_shell_set_runtime_info(
             runtime->multiplayer_lobby_ready ||
         shell->runtime.multiplayer_launch_syncing !=
             runtime->multiplayer_launch_syncing ||
+        shell->runtime.multiplayer_settings_editable !=
+            runtime->multiplayer_settings_editable ||
+        shell->runtime.multiplayer_route_id !=
+            runtime->multiplayer_route_id ||
         shell->runtime.multiplayer_player_slot !=
             runtime->multiplayer_player_slot ||
+        shell->runtime.multiplayer_game_mode !=
+            runtime->multiplayer_game_mode ||
+        shell->runtime.multiplayer_episode !=
+            runtime->multiplayer_episode ||
+        shell->runtime.multiplayer_map != runtime->multiplayer_map ||
+        shell->runtime.multiplayer_skill != runtime->multiplayer_skill ||
+        shell->runtime.multiplayer_time_limit_minutes !=
+            runtime->multiplayer_time_limit_minutes ||
+        shell->runtime.multiplayer_no_monsters !=
+            runtime->multiplayer_no_monsters ||
+        shell->runtime.multiplayer_fast_monsters !=
+            runtime->multiplayer_fast_monsters ||
+        shell->runtime.multiplayer_respawn_monsters !=
+            runtime->multiplayer_respawn_monsters ||
         shell->runtime.multiplayer_rx_frames !=
             runtime->multiplayer_rx_frames ||
         shell->runtime.multiplayer_tx_frames !=
@@ -2024,7 +2350,39 @@ void console_shell_set_runtime_info(
         shell->runtime.boot_volume_step != runtime->boot_volume_step ||
         shell->runtime.game_volume_step != runtime->game_volume_step ||
         shell->runtime.audio_settings_persistent !=
-            runtime->audio_settings_persistent;
+            runtime->audio_settings_persistent ||
+        shell->runtime.game_storage_free_kib !=
+            runtime->game_storage_free_kib ||
+        shell->runtime.game_storage_sector_bytes !=
+            runtime->game_storage_sector_bytes ||
+        shell->runtime.game_storage_frequency_khz !=
+            runtime->game_storage_frequency_khz ||
+        shell->runtime.game_storage_root_entries !=
+            runtime->game_storage_root_entries ||
+        shell->runtime.game_storage_mount_failures !=
+            runtime->game_storage_mount_failures ||
+        shell->runtime.game_storage_scans !=
+            runtime->game_storage_scans ||
+        shell->runtime.game_storage_checks !=
+            runtime->game_storage_checks ||
+        shell->runtime.game_storage_recovery_attempts !=
+            runtime->game_storage_recovery_attempts ||
+        shell->runtime.game_storage_repair_attempts !=
+            runtime->game_storage_repair_attempts ||
+        shell->runtime.game_storage_repair_sectors !=
+            runtime->game_storage_repair_sectors ||
+        shell->runtime.game_storage_card_ready !=
+            runtime->game_storage_card_ready ||
+        shell->runtime.game_storage_filesystem_ready !=
+            runtime->game_storage_filesystem_ready ||
+        shell->runtime.game_storage_repair_supported !=
+            runtime->game_storage_repair_supported ||
+        shell->runtime.game_storage_last_check_ok !=
+            runtime->game_storage_last_check_ok ||
+        shell->runtime.game_storage_repair_outcome !=
+            runtime->game_storage_repair_outcome ||
+        shell->runtime.game_storage_operation !=
+            runtime->game_storage_operation;
 
     if (!changed) {
         return;
@@ -2043,7 +2401,12 @@ void console_shell_set_runtime_info(
             runtime->usb_input_host_active ||
         shell->runtime.doom_wad_ready != runtime->doom_wad_ready;
     shell->runtime = *runtime;
+    if (shell->page == CONSOLE_PAGE_STORAGE &&
+        !storage_action_enabled(shell, shell->storage_selected_action)) {
+        reset_storage_controls(shell);
+    }
     if (shell->page == CONSOLE_PAGE_SYSTEM ||
+        shell->page == CONSOLE_PAGE_STORAGE ||
         shell->page == CONSOLE_PAGE_USB_DRIVE ||
         shell->page == CONSOLE_PAGE_FILES ||
         shell->page == CONSOLE_PAGE_GAMES ||
@@ -2239,6 +2602,7 @@ void console_shell_show_home(console_shell_t *shell)
     shell->scroll_candidate = false;
     shell->scroll_gesture = false;
     shell->file_delete_confirm = false;
+    shell->storage_repair_confirm = false;
     shell->pressed_index = SIZE_MAX;
     shell->dirty = true;
 }
@@ -2980,6 +3344,161 @@ static void draw_system(const console_shell_t *shell,
     }
 }
 
+static void draw_storage_button(const console_shell_t *shell,
+                                uint16_t *pixels, size_t stride,
+                                int left, int width, size_t control,
+                                size_t action, const char *label,
+                                bool enabled)
+{
+    const bool pressed = enabled && shell->press_active &&
+        shell->pressed_index == control;
+    bevel_rect(pixels, stride, left, STORAGE_BUTTON_TOP, width,
+               STORAGE_BUTTON_HEIGHT, COLOR_FACE, pressed);
+    if (enabled && shell->storage_selected_action == action) {
+        outline_rect(pixels, stride, left + 2, STORAGE_BUTTON_TOP + 2,
+                     width - 4, STORAGE_BUTTON_HEIGHT - 4, COLOR_YELLOW);
+    }
+    draw_centered_text(pixels, stride, left, STORAGE_BUTTON_TOP + 7,
+                       width, label,
+                       enabled ? COLOR_BLACK : COLOR_SHADOW, 16U);
+}
+
+static void draw_storage(const console_shell_t *shell,
+                         uint16_t *pixels, size_t stride)
+{
+    const char *card = shell->runtime.game_storage_card_ready
+        ? "ONLINE" : "OFFLINE";
+    const uint16_t card_color = shell->runtime.game_storage_card_ready
+        ? COLOR_GREEN : COLOR_RED;
+    draw_text(pixels, stride, 12, 37, "CARD LINK", COLOR_MUTED, 1U, 9U);
+    draw_text(pixels, stride, 132, 37, card, card_color, 1U, 8U);
+
+    const char *filesystem = "NOT MOUNTED";
+    uint16_t filesystem_color = COLOR_RED;
+    if (shell->runtime.usb_drive_active) {
+        filesystem = "OWNED BY USB";
+        filesystem_color = COLOR_CYAN;
+    } else if (shell->runtime.game_storage_filesystem_ready) {
+        filesystem = "FAT READABLE";
+        filesystem_color = COLOR_GREEN;
+    }
+    draw_text(pixels, stride, 12, 52, "FILESYSTEM", COLOR_MUTED, 1U, 10U);
+    draw_text(pixels, stride, 132, 52, filesystem,
+              filesystem_color, 1U, 12U);
+
+    draw_text(pixels, stride, 12, 67, "CAPACITY KIB", COLOR_MUTED, 1U, 12U);
+    draw_u32(pixels, stride, 132, 67,
+             shell->runtime.game_storage_kib, COLOR_WHITE);
+    draw_text(pixels, stride, 12, 82, "FREE KIB", COLOR_MUTED, 1U, 8U);
+    draw_u32(pixels, stride, 132, 82,
+             shell->runtime.game_storage_free_kib, COLOR_WHITE);
+    draw_text(pixels, stride, 12, 97, "SD BUS KHZ", COLOR_MUTED, 1U, 10U);
+    draw_u32(pixels, stride, 132, 97,
+             shell->runtime.game_storage_frequency_khz, COLOR_WHITE);
+    draw_text(pixels, stride, 12, 112, "SECTOR BYTES", COLOR_MUTED, 1U, 12U);
+    draw_u32(pixels, stride, 132, 112,
+             shell->runtime.game_storage_sector_bytes, COLOR_WHITE);
+    draw_text(pixels, stride, 12, 127, "ROOT ENTRIES", COLOR_MUTED, 1U, 12U);
+    draw_u32(pixels, stride, 132, 127,
+             shell->runtime.game_storage_root_entries, COLOR_WHITE);
+
+    if (shell->runtime.game_storage_operation !=
+        CONSOLE_STORAGE_OPERATION_NONE) {
+        const char *operation = "CHECKING CARD";
+        if (shell->runtime.game_storage_operation ==
+            CONSOLE_STORAGE_OPERATION_RETRY) {
+            operation = "RETRYING CARD";
+        } else if (shell->runtime.game_storage_operation ==
+                   CONSOLE_STORAGE_OPERATION_REPAIR) {
+            operation = "REPAIRING FAT";
+        }
+        draw_text(pixels, stride, 12, 142, operation,
+                  COLOR_YELLOW, 1U, 24U);
+        draw_text(pixels, stride, 12, 157,
+                  shell->runtime.game_storage_operation ==
+                          CONSOLE_STORAGE_OPERATION_REPAIR
+                      ? "KEEP POWER ON - DO NOT REMOVE SD"
+                      : "READ-ONLY DIAGNOSTIC RUNNING",
+                  shell->runtime.game_storage_operation ==
+                          CONSOLE_STORAGE_OPERATION_REPAIR
+                      ? COLOR_RED : COLOR_CYAN,
+                  1U, 31U);
+    } else if (shell->storage_repair_confirm) {
+        draw_text(pixels, stride, 12, 142,
+                  "REPAIR WRITES FAT METADATA", COLOR_RED, 1U, 26U);
+        draw_text(pixels, stride, 12, 157,
+                  "KEEP POWER ON - PRESS AGAIN", COLOR_YELLOW, 1U, 27U);
+    } else {
+        const char *check = "NOT RUN";
+        uint16_t check_color = COLOR_MUTED;
+        if (shell->runtime.game_storage_checks != 0U) {
+            check = shell->runtime.game_storage_last_check_ok
+                ? "PASS" : "FAIL";
+            check_color = shell->runtime.game_storage_last_check_ok
+                ? COLOR_GREEN : COLOR_RED;
+        }
+        draw_text(pixels, stride, 12, 142, "LAST CHECK",
+                  COLOR_MUTED, 1U, 10U);
+        draw_text(pixels, stride, 132, 142, check,
+                  check_color, 1U, 7U);
+        draw_text(pixels, stride, 194, 142, "RUNS",
+                  COLOR_MUTED, 1U, 4U);
+        draw_u32(pixels, stride, 232, 142,
+                 shell->runtime.game_storage_checks, COLOR_WHITE);
+
+        const char *repair = "NOT RUN";
+        uint16_t repair_color = COLOR_MUTED;
+        switch (shell->runtime.game_storage_repair_outcome) {
+        case CONSOLE_STORAGE_REPAIR_CLEAN:
+            repair = "CLEAN";
+            repair_color = COLOR_GREEN;
+            break;
+        case CONSOLE_STORAGE_REPAIR_REPAIRED:
+            repair = "REPAIRED";
+            repair_color = COLOR_GREEN;
+            break;
+        case CONSOLE_STORAGE_REPAIR_NEEDS_HOST:
+            repair = "NEEDS FULL FSCK";
+            repair_color = COLOR_YELLOW;
+            break;
+        case CONSOLE_STORAGE_REPAIR_UNSUPPORTED:
+            repair = "UNSUPPORTED";
+            repair_color = COLOR_YELLOW;
+            break;
+        case CONSOLE_STORAGE_REPAIR_FAILED:
+            repair = "FAILED";
+            repair_color = COLOR_RED;
+            break;
+        case CONSOLE_STORAGE_REPAIR_NOT_RUN:
+        default:
+            break;
+        }
+        draw_text(pixels, stride, 12, 157, "LAST REPAIR",
+                  COLOR_MUTED, 1U, 11U);
+        draw_text(pixels, stride, 132, 157, repair,
+                  repair_color, 1U, 16U);
+        draw_text(pixels, stride, 248, 157, "WROTE",
+                  COLOR_MUTED, 1U, 5U);
+        draw_u32(pixels, stride, 282, 157,
+                 shell->runtime.game_storage_repair_sectors, COLOR_WHITE);
+    }
+
+    draw_storage_button(shell, pixels, stride,
+                        STORAGE_CHECK_LEFT, STORAGE_CHECK_WIDTH,
+                        STORAGE_CHECK_CONTROL, 0U, "CHECK CARD",
+                        storage_check_enabled(shell));
+    draw_storage_button(shell, pixels, stride,
+                        STORAGE_RETRY_LEFT, STORAGE_RETRY_WIDTH,
+                        STORAGE_RETRY_CONTROL, 1U, "RETRY CARD",
+                        storage_retry_enabled(shell));
+    draw_storage_button(shell, pixels, stride,
+                        STORAGE_REPAIR_LEFT, STORAGE_REPAIR_WIDTH,
+                        STORAGE_REPAIR_CONTROL, 2U,
+                        shell->storage_repair_confirm
+                            ? "CONFIRM REPAIR" : "REPAIR FAT",
+                        storage_repair_enabled(shell));
+}
+
 static void draw_usb_drive(const console_shell_t *shell,
                            uint16_t *pixels, size_t stride)
 {
@@ -3353,68 +3872,143 @@ static void draw_achievements(const console_shell_t *shell,
               "PERSISTENCE ARRIVES WITH SAVES", COLOR_MUTED, 1U, 32U);
 }
 
+static const char *multiplayer_mode_name(uint8_t mode)
+{
+    switch (mode) {
+    case 0U: return "COOPERATIVE";
+    case 1U: return "DEATHMATCH";
+    case 2U: return "ALTDEATH";
+    default: return "INVALID";
+    }
+}
+
+static const char *multiplayer_skill_name(uint8_t skill)
+{
+    static const char *const names[] = {
+        "INVALID", "1 BABY", "2 EASY", "3 NORMAL", "4 ULTRA", "5 NIGHTMARE",
+    };
+    return skill < sizeof(names) / sizeof(names[0])
+        ? names[skill] : names[0];
+}
+
+static void draw_multiplayer_option(
+    const console_shell_t *shell,
+    uint16_t *pixels,
+    size_t stride,
+    console_multiplayer_option_t option,
+    const char *label,
+    const char *value)
+{
+    const int top = MULTIPLAYER_OPTION_TOP +
+        (int)option * MULTIPLAYER_OPTION_PITCH;
+    const bool selected = shell->multiplayer_selected_row == (size_t)option;
+    const bool pressed = shell->press_active &&
+        (shell->pressed_index ==
+             MULTIPLAYER_OPTION_MINUS_CONTROL_BASE + (size_t)option ||
+         shell->pressed_index ==
+             MULTIPLAYER_OPTION_PLUS_CONTROL_BASE + (size_t)option);
+    fill_rect(pixels, stride, MULTIPLAYER_OPTION_LEFT, top,
+              MULTIPLAYER_OPTION_WIDTH, MULTIPLAYER_OPTION_HEIGHT,
+              pressed ? COLOR_PANEL_PRESSED : COLOR_PANEL);
+    outline_rect(pixels, stride, MULTIPLAYER_OPTION_LEFT, top,
+                 MULTIPLAYER_OPTION_WIDTH, MULTIPLAYER_OPTION_HEIGHT,
+                 selected ? COLOR_YELLOW : COLOR_GROUP);
+    draw_text(pixels, stride, 12, top + 3, label,
+              selected ? COLOR_WHITE : COLOR_MUTED, 1U, 12U);
+    if (shell->runtime.multiplayer_settings_editable) {
+        draw_text(pixels, stride, 103, top + 3, "<", COLOR_CYAN, 1U, 1U);
+        draw_text(pixels, stride, 300, top + 3, ">", COLOR_CYAN, 1U, 1U);
+    }
+    draw_text(pixels, stride, 116, top + 3, value,
+              shell->runtime.multiplayer_settings_editable
+                  ? COLOR_GREEN : COLOR_MUTED,
+              1U, 29U);
+}
+
 static void draw_multiplayer(const console_shell_t *shell,
                              uint16_t *pixels, size_t stride)
 {
-    draw_text(pixels, stride, 12, 40, "MULTIPLAYER",
-              COLOR_WHITE, 1U, 16U);
-    draw_text(pixels, stride, 12, 58,
-              shell->runtime.multiplayer_transport_ready
-                  ? "H1 UART READY" : "LINK OFFLINE",
+    char status[52];
+    const char *const link = shell->runtime.multiplayer_route_id == 2U
+        ? "WIRE"
+        : shell->runtime.multiplayer_route_id == 1U ? "RELAY" : "AUTO";
+    (void)snprintf(
+        status, sizeof(status), "%s %s  PEER %s  RX %lu TX %lu",
+        link,
+        shell->runtime.multiplayer_transport_ready ? "READY" : "OFF",
+        shell->runtime.multiplayer_peer_seen ? "LINK" : "WAIT",
+        (unsigned long)shell->runtime.multiplayer_rx_frames,
+        (unsigned long)shell->runtime.multiplayer_tx_frames);
+    draw_text(pixels, stride, 8, 36, "DOOM MATCH SETUP",
+              COLOR_WHITE, 1U, 20U);
+    draw_text(pixels, stride, 8, 47, status,
               shell->runtime.multiplayer_transport_ready
                   ? COLOR_GREEN : COLOR_RED,
-              2U, 13U);
-    draw_text(pixels, stride, 12, 84, "PEER", COLOR_MUTED, 1U, 4U);
-    draw_text(pixels, stride, 112, 84,
-              shell->runtime.multiplayer_peer_seen
-                  ? "DISCOVERED" : "WAITING FOR RELAY",
-              shell->runtime.multiplayer_peer_seen
-                  ? COLOR_GREEN : COLOR_YELLOW,
-              1U, 17U);
-    draw_text(pixels, stride, 12, 102, "RX FRAMES", COLOR_MUTED, 1U, 9U);
-    draw_u32(pixels, stride, 112, 102,
-             shell->runtime.multiplayer_rx_frames, COLOR_WHITE);
-    draw_text(pixels, stride, 12, 120, "TX FRAMES", COLOR_MUTED, 1U, 9U);
-    draw_u32(pixels, stride, 112, 120,
-             shell->runtime.multiplayer_tx_frames, COLOR_WHITE);
-    draw_text(pixels, stride, 12, 145,
-              shell->runtime.multiplayer_launch_syncing
-                  ? "SYNCING BOTH CONSOLES"
-                  : "OPEN THIS DOOR ON BOTH",
-              shell->runtime.multiplayer_lobby_ready
-                  ? COLOR_GREEN : COLOR_CYAN, 1U, 22U);
-    if (shell->runtime.multiplayer_launch_syncing) {
-        bevel_rect(pixels, stride, 12, 157, 296, 27,
-                   COLOR_FACE, false);
-        draw_centered_text(pixels, stride, 12, 166, 296,
-                           "STARTING TOGETHER...",
-                           COLOR_TITLE, 20U);
-    } else if (shell->runtime.multiplayer_lobby_ready &&
-               shell->runtime.doom_wad_ready) {
-        const bool pressed = shell->press_active &&
-            shell->pressed_index == MULTIPLAYER_LAUNCH_CONTROL;
-        bevel_rect(pixels, stride, 12, 157, 296, 27,
-                   COLOR_FACE, pressed);
-        draw_centered_text(pixels, stride, 12, 166, 296,
-                           "A / TAP: DOOM DEATHMATCH",
-                           COLOR_TITLE, 26U);
+              1U, 51U);
+
+    char map[12];
+    char limit[12];
+    (void)snprintf(map, sizeof(map), "E%uM%u",
+                   (unsigned)shell->runtime.multiplayer_episode,
+                   (unsigned)shell->runtime.multiplayer_map);
+    if (shell->runtime.multiplayer_time_limit_minutes == 0U) {
+        strcpy(limit, "OFF");
     } else {
-        draw_text(pixels, stride, 12, 160,
-                  shell->runtime.doom_wad_ready
-                      ? "RUN H1 HOST RELAY" : "DOOM WAD MISSING",
-                  shell->runtime.doom_wad_ready
-                      ? COLOR_YELLOW : COLOR_RED,
-                  1U, 20U);
-        draw_text(pixels, stride, 12, 174,
-                  "WAITING FOR MATCH", COLOR_MUTED, 1U, 18U);
+        (void)snprintf(
+            limit, sizeof(limit), "%u MIN",
+            (unsigned)shell->runtime.multiplayer_time_limit_minutes);
     }
-    draw_text(pixels, stride, 12, 188,
-              shell->runtime.multiplayer_launch_syncing
-                  ? "READY HANDSHAKE / 1.5S HOLD"
-                  : shell->runtime.multiplayer_lobby_ready
-                  ? "LOCKSTEP 35 HZ / 2 PLAYERS"
-                  : "DISCOVERY + EXACT WAD MATCH",
-              COLOR_MUTED, 1U, 28U);
+    draw_multiplayer_option(
+        shell, pixels, stride, CONSOLE_MULTIPLAYER_OPTION_MODE,
+        "MODE", multiplayer_mode_name(shell->runtime.multiplayer_game_mode));
+    draw_multiplayer_option(
+        shell, pixels, stride, CONSOLE_MULTIPLAYER_OPTION_MAP, "MAP", map);
+    draw_multiplayer_option(
+        shell, pixels, stride, CONSOLE_MULTIPLAYER_OPTION_SKILL,
+        "SKILL", multiplayer_skill_name(shell->runtime.multiplayer_skill));
+    draw_multiplayer_option(
+        shell, pixels, stride, CONSOLE_MULTIPLAYER_OPTION_MONSTERS,
+        "MONSTERS", shell->runtime.multiplayer_no_monsters ? "OFF" : "ON");
+    draw_multiplayer_option(
+        shell, pixels, stride, CONSOLE_MULTIPLAYER_OPTION_FAST,
+        "FAST", shell->runtime.multiplayer_fast_monsters ? "ON" : "OFF");
+    draw_multiplayer_option(
+        shell, pixels, stride, CONSOLE_MULTIPLAYER_OPTION_RESPAWN,
+        "RESPAWN", shell->runtime.multiplayer_respawn_monsters ? "ON" : "OFF");
+    draw_multiplayer_option(
+        shell, pixels, stride, CONSOLE_MULTIPLAYER_OPTION_TIME_LIMIT,
+        "LIMIT", limit);
+
+    const bool launch_selected = shell->multiplayer_selected_row ==
+        CONSOLE_MULTIPLAYER_OPTION_COUNT;
+    const bool launch_pressed = shell->press_active &&
+        shell->pressed_index == MULTIPLAYER_LAUNCH_CONTROL;
+    bevel_rect(pixels, stride, MULTIPLAYER_LAUNCH_LEFT,
+               MULTIPLAYER_LAUNCH_TOP, MULTIPLAYER_LAUNCH_WIDTH,
+               MULTIPLAYER_LAUNCH_HEIGHT, COLOR_FACE, launch_pressed);
+    if (launch_selected) {
+        outline_rect(pixels, stride, MULTIPLAYER_LAUNCH_LEFT,
+                     MULTIPLAYER_LAUNCH_TOP, MULTIPLAYER_LAUNCH_WIDTH,
+                     MULTIPLAYER_LAUNCH_HEIGHT, COLOR_YELLOW);
+    }
+    const char *launch = !shell->runtime.doom_wad_ready
+        ? "DOOM DATA NOT READY"
+        : shell->runtime.multiplayer_launch_syncing
+            ? "STARTING TOGETHER..."
+            : shell->runtime.multiplayer_lobby_ready
+                ? "A / TAP: START MATCH"
+                : "WAITING FOR PEER + RELAY";
+    draw_centered_text(pixels, stride, MULTIPLAYER_LAUNCH_LEFT,
+                       MULTIPLAYER_LAUNCH_TOP + 7,
+                       MULTIPLAYER_LAUNCH_WIDTH, launch,
+                       shell->runtime.multiplayer_lobby_ready
+                           ? COLOR_TITLE : COLOR_DARK,
+                       28U);
+    draw_text(pixels, stride, 8, 190,
+              shell->runtime.multiplayer_settings_editable
+                  ? "HOST SETTINGS WIN / LEFT-RIGHT OR TAP"
+                  : "CLIENT LOCKED TO HOST SETTINGS",
+              COLOR_MUTED, 1U, 43U);
 }
 
 static void draw_saves(const console_shell_t *shell,
@@ -3573,6 +4167,9 @@ bool console_shell_render_rgb565(console_shell_t *shell,
             break;
         case CONSOLE_PAGE_TERMINAL:
             draw_terminal(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_STORAGE:
+            draw_storage(shell, pixels, stride_pixels);
             break;
         case CONSOLE_PAGE_EXTERNAL:
             draw_text(pixels, stride_pixels, 12, 60,

@@ -17,9 +17,11 @@ extern "C" {
  * OS supplies the strong P4MP implementation at link time.
  */
 boolean P4_DoomNetActive(void);
+/* Returns only after both peers have delivered identical startup tics. */
 boolean P4_DoomNetConfigure(net_gamesettings_t *settings);
 void P4_DoomNetSubmitTic(const ticcmd_t *command, int tic);
 void P4_DoomNetPoll(void);
+boolean P4_DoomNetFailed(void);
 void P4_DoomNetQuit(void);
 
 #ifdef __cplusplus

@@ -11,6 +11,7 @@ if(COMMAND idf_component_register)
            "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
         set(PLATFORM_GAME_STORAGE_BACKEND_SOURCES
             src/platform_game_storage.c
+            src/fat_repair.c
         )
         set(PLATFORM_GAME_STORAGE_BACKEND_REQUIREMENTS
             esp_driver_gpio

@@ -1,5 +1,22 @@
 # Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 port
 
+## Console OS 0.4.52 SD Card utility
+
+The `SYSTEM/SD CARD` app exposes storage checks without baking game content
+into firmware. `CHECK CARD` issues an SD status command, reads FAT free-space
+metadata, walks the root, and revalidates game data without writing. `RETRY
+CARD` releases a faulted SDMMC0 session and performs the existing bounded
+frequency fallback without formatting.
+
+`REPAIR FAT` is an explicitly confirmed, on-device FAT32 repair pass. The card
+is unmounted first and the UI warns the operator to keep power connected. It
+can restore an unambiguous primary/backup boot-sector copy, replace one
+structurally invalid FAT mirror from its structurally valid peer, and rebuild
+FSInfo hints. Every changed 512-byte sector is read back immediately. It
+refuses FAT12/FAT16/exFAT, formatting, directory deletion, lost-chain or
+cross-link guesses, and two structurally plausible but divergent FAT copies.
+Those cases remain visible as `NEEDS FULL FSCK` instead of risking game data.
+
 This is a separate board target from the Elecrow 10 in variant. The existing
 Elecrow firmware is not safe to copy as a pin map: the Waveshare board has a
 480x800 portrait-default MIPI-DSI panel, a different touch path, an ES8311 /
@@ -162,7 +179,33 @@ an 80x30 CP437 BBS home and ANSI connection boot sequence. This does not alter
 the 320x200 game surface. H1 is reserved as the first BBS/server serial link so
 H2 can remain controller-first; see `docs/BBS.md`.
 
+## Direct multiplayer UART candidate
+
+The official schematic exposes otherwise-unused ESP32-P4 GPIO28 at J3 pin 16,
+GPIO29 at J3 pin 18, and ground at J3 pin 24. Console OS 0.4.55 adds a bounded
+dual-UART transport that can use UART1 on those pins for direct 3.3 V
+board-to-board multiplayer while retaining H1/CH343 as an automatic relay
+fallback and upload/debug path. No supply rail is part of the direct cable.
+
+The software route is fail-closed: generic builds leave direct UART disabled
+and require a board profile to provide all controller/pin values. The exact
+Waveshare profile is enabled following the operator's explicit confirmation of
+the J3-16/J3-18/J3-24 crossover contract. Direct input
+is decoded with the same bounded P4MP framing and CRC checks as H1. Direct is
+polled first, H1 fallback is held off for three discovery frames, and the first
+valid discovery/offer permanently binds the match route until timeout/reset.
+Hardware acceptance still requires retained H1 logs from both consoles for a
+direct match and a separate cable-absent H1 relay fallback run.
+
 ## Passive Wi-Fi scan candidate
+
+The stable Console OS image does not link or start this candidate. A retained
+0.4.49 boot exposed a stale generated configuration selecting ESP-Hosted's
+fallback SPI transport on GPIO7/2/6/10/26/4/5 instead of the board's SDIO
+transport. That fallback overlaps GT911 SDA plus display/audio resources and
+made the launcher appear to lose touch after boot. Signal scan is now an
+explicit build opt-in, and configuration fails unless the generated transport
+is SDIO on reset/CLK/CMD/D0-D3 GPIO54/18/19/14/15/16/17 exactly.
 
 `components/p4_signal_scan` converts each driver observation into a sanitized
 display label and a per-boot keyed token before game code can see it. The

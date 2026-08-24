@@ -26,6 +26,11 @@ __attribute__((weak)) void P4_DoomNetPoll(void)
 {
 }
 
+__attribute__((weak)) boolean P4_DoomNetFailed(void)
+{
+    return false;
+}
+
 __attribute__((weak)) void P4_DoomNetQuit(void)
 {
 }

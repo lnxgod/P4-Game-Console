@@ -37,7 +37,8 @@
     "storage": "official BSP selects ESP32-P4 on-chip LDO channel 4 for socket power, then SD D0/D1/D2/D3 GPIO39/40/41/42, CMD GPIO44, and CLK GPIO43",
     "wifi_transport": "ESP32-C6-MINI-1 over four-bit SDIO: P4 CLK GPIO18, CMD GPIO19, D0/D1/D2/D3 GPIO14/15/16/17, and C6 enable/reset from P4 GPIO54; P4 GPIO6 also connects to C6 GPIO2",
     "usb_uart": "H1 Type-C through CH343P USB-UART; USB0_5V/VBUS is the programming/power connector path",
-    "usb_otg": "H2 Type-C routes USBD_N/USBD_P to ESP32-P4 GPIO24/GPIO25 and exposes VBUS on the connector"
+    "usb_otg": "H2 Type-C routes USBD_N/USBD_P to ESP32-P4 GPIO24/GPIO25 and exposes VBUS on the connector",
+    "interface_header": "J3 pin 16 is ESP32-P4 GPIO28, J3 pin 18 is ESP32-P4 GPIO29, and J3 pin 24 is GND; the exact schematic does not show another board load on GPIO28/GPIO29"
   },
   "peripheral_authorizations": {
     "display": {
@@ -62,7 +63,21 @@
       "evidence": "hardware/test-runs/2026-08-16-waveshare-console-os-0.4.3-dtmf-dynamic-sd-install.json",
       "formatting_authorized": false,
       "writes_authorized": true,
-      "write_scope": "host WRITE(10) while TinyUSB exclusively owns the unmounted microSD, or an OS-owned H1 upload to one fixed non-runnable staging name while the app exclusively owns the mounted FAT volume; no formatting or host-selected device path; size, chunk CRC32, exact content SHA-256, fsync, atomic rename, and final full-file readback are required",
+      "write_scope": "host WRITE(10) while TinyUSB exclusively owns the unmounted microSD; an OS-owned H1 upload to one fixed non-runnable staging name while the app exclusively owns the mounted FAT volume; or an explicitly confirmed on-device conservative FAT32 metadata repair while the card is unmounted. No formatting or host-selected device path. Content staging requires size, chunk CRC32, exact content SHA-256, fsync, atomic rename, and final full-file readback. FAT repair requires unambiguous source metadata and per-sector write readback.",
+      "device_fat_repair": {
+        "authorized": true,
+        "authorization_basis": "explicit operator request on 2026-08-23 for on-device FAT repair",
+        "device_identity_sha256": [
+          "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+          "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79"
+        ],
+        "filesystem_scope": "FAT32 with 512-byte sectors only",
+        "repair_scope": "restore one valid primary/backup boot-sector copy; restore one structurally invalid FAT mirror from its structurally valid peer; rebuild FAT32 FSInfo free-space hints",
+        "refused_scope": "formatting, directory mutation, deleting entries, guessing between two structurally plausible divergent FATs, lost-chain recovery, cross-link repair, FAT12, FAT16, exFAT, GPT-only discovery, and arbitrary raw writes",
+        "safety_controls": "two-step local UI confirmation, exclusive unmounted media ownership, keep-power-on warning before work, structural bounds checks, and immediate full-sector readback after every write",
+        "formatting_authorized": false,
+        "hardware_acceptance": false
+      },
       "h1_uart_upload": {
         "authorized": true,
         "authorization_basis": "explicit operator request on 2026-08-20 for the two already backed-up exact units",
@@ -92,6 +107,16 @@
       "blocker": "CC1/CC2 are 5.1 kOhm pulldowns; VBUS presence is not proof of a protected host-source path",
       "experimental_runtime_evidence": "hardware/test-runs/2026-08-17-waveshare-h2-powered-hub-controller-host.json",
       "experimental_result": "P4 HS host enumerated the powered external hub without firmware VBUS sourcing; its low-speed downstream controller was rejected because the pinned USB stack lacks the required high-speed-hub transaction-translator path"
+    },
+    "multiplayer_uart": {
+      "authorized": true,
+      "authorization_basis": "explicit operator confirmation on 2026-08-23 of the exact J3-16/J3-18/J3-24 crossover contract for both already identified Waveshare units",
+      "scope": "direct 3.3 V UART1 multiplayer on GPIO28/GPIO29 exposed at J3, with H1 UART0 relay fallback retained",
+      "resources": "UART1; TX GPIO28/J3-16; RX GPIO29/J3-18; common ground J3-24; 115200 baud 8-N-1",
+      "electrical_contract": "cross TX to peer RX in both directions and connect ground only; never connect 3V3 or 5V between consoles; 100-220 ohm series resistance per TX is recommended for first acceptance",
+      "source": "official commit-pinned Waveshare schematic plus ESP32-P4 GPIO capability and strapping review",
+      "required_acceptance": "retained H1 logs from both units showing direct route lock, lobby/start synchronization, sustained bidirectional Doom input, and clean fallback to H1 relay with the direct cable absent",
+      "hardware_acceptance": false
     }
   },
   "usb_vbus_assessment": {

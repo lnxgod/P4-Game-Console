@@ -8,7 +8,7 @@ if(COMMAND idf_component_register)
             "src/start.c"
             "src/session.c"
             "src/stream.c"
-            "src/uart_endpoint.c"
+            "src/uart_endpoint_dual.c"
         INCLUDE_DIRS "include"
         REQUIRES
             esp_driver_uart

@@ -132,6 +132,10 @@ static bool s_blob_registered;
 static bool s_cleanup_active;
 static bool s_cleanup_complete;
 
+#ifdef P4_CONSOLE_OS_EMBEDDED
+static bool s_console_os_launch_active;
+#endif
+
 _Static_assert(sizeof(pixel_t) == sizeof(uint32_t),
                "E5 requires the engine's default 32-bit pixels");
 _Static_assert(DOOM_AUDIO_OUTPUT_RATE_HZ == PLATFORM_AUDIO_SAMPLE_RATE_HZ,
@@ -589,10 +593,45 @@ static void halt_dark(const char *stage, esp_err_t error)
     composite_cleanup();
     ESP_LOGE(TAG, "P4_DOOM_E6 HALT stage=%s error=%s",
              stage, esp_err_to_name(error));
+#ifdef P4_CONSOLE_OS_EMBEDDED
+    if (s_console_os_launch_active && s_cleanup_complete) {
+        ESP_LOGE(TAG,
+                 "P4_DOOM_E6 RECOVERY action=restart-to-console "
+                 "stage=%s delay_ms=500",
+                 stage);
+        vTaskDelay(pdMS_TO_TICKS(500U));
+        esp_restart();
+    }
+#endif
     for (;;) {
         vTaskDelay(pdMS_TO_TICKS(1000U));
         composite_cleanup();
     }
+}
+
+static esp_err_t submit_startup_frame(void)
+{
+    if (s_overlay_buffer == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    for (size_t y = 0U; y < DOOM_TOUCH_FRAME_HEIGHT; ++y) {
+        for (size_t x = 0U; x < DOOM_TOUCH_FRAME_WIDTH; ++x) {
+            const bool border = x < 4U || x >= DOOM_TOUCH_FRAME_WIDTH - 4U ||
+                y < 4U || y >= DOOM_TOUCH_FRAME_HEIGHT - 4U;
+            const bool scanline = (y % 16U) == 0U;
+            const bool center_bar = y >= 94U && y < 106U &&
+                x >= 48U && x < DOOM_TOUCH_FRAME_WIDTH - 48U;
+            s_overlay_buffer[y * DOOM_TOUCH_FRAME_WIDTH + x] = border
+                ? UINT32_C(0x0000ffff)
+                : center_bar
+                    ? UINT32_C(0x000080ff)
+                    : scanline
+                        ? UINT32_C(0x00001838)
+                        : UINT32_C(0x00000818);
+        }
+    }
+    return doom_video_submit_xrgb8888(
+        s_overlay_buffer, DOOM_VIDEO_WIDTH, DOOM_FIRST_FRAME_TIMEOUT_MS);
 }
 
 static void engine_exit_composite(void)
@@ -1030,6 +1069,7 @@ void app_main(void)
 #ifdef P4_CONSOLE_OS_EMBEDDED
     const bool multiplayer_enabled =
         multiplayer != NULL && multiplayer->enabled;
+    s_console_os_launch_active = true;
     s_backend_volume_step =
         master_volume_step >= DOOM_BACKEND_VOLUME_MIN_STEP &&
         master_volume_step <= DOOM_BACKEND_VOLUME_MAX_STEP
@@ -1188,9 +1228,9 @@ void app_main(void)
     if (s_overlay_buffer == NULL) {
         halt_dark("overlay-buffer", ESP_ERR_NO_MEM);
     }
-    result = doom_video_submit_black(DOOM_FIRST_FRAME_TIMEOUT_MS);
+    result = submit_startup_frame();
     if (result != ESP_OK) {
-        halt_dark("first-black-frame", result);
+        halt_dark("startup-frame", result);
     }
 
     const bool sound_enabled = try_audio_enable();

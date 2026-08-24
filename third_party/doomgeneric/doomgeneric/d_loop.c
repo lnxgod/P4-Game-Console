@@ -217,6 +217,10 @@ void NetUpdate (void)
         return;
 
     P4_DoomNetPoll();
+    if (P4_DoomNetFailed())
+    {
+        I_Error("P4 multiplayer peer disconnected");
+    }
 
 #ifdef FEATURE_MULTIPLAYER
 
@@ -288,7 +292,7 @@ void D_ReceiveTic(ticcmd_t *ticcmds, boolean *players_mask)
 
     for (i = 0; i < NET_MAXPLAYERS; ++i)
     {
-        if (!drone && i == localplayer)
+        if (!P4_DoomNetActive() && !drone && i == localplayer)
         {
             // This is us.  Don't overwrite it.
         }
@@ -357,6 +361,10 @@ void D_StartNetGame(net_gamesettings_t *settings,
         {
             I_Error("P4 multiplayer configuration failed");
         }
+        // P4 networking returns only after both peers have exchanged the
+        // same neutral startup tics. Continue command generation at the next
+        // tic so boot-time skew cannot strand either engine at tic zero.
+        maketic = recvtic;
         localplayer = settings->consoleplayer;
         for (i = 0; i < NET_MAXPLAYERS; ++i)
         {

@@ -384,7 +384,11 @@ p4_mp_status_t p4_mp_session_receive(
             session->state != P4_MP_SESSION_JOINING) {
             return P4_MP_INVALID_STATE;
         }
-        peer->player_slot = accept.assigned_player_slot;
+        /*
+         * The ACCEPT payload assigns the local client slot. This peer is the
+         * remote host, whose slot was fixed to zero by client_start(). Do not
+         * overwrite the host slot with the client's assignment.
+         */
         peer->connected = true;
         session->state = P4_MP_SESSION_CONNECTED;
     }

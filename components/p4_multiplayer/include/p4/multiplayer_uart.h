@@ -14,8 +14,11 @@ extern "C" {
 #endif
 
 enum {
-    /* The first H1 relay is point-to-point: one wire route, one remote peer. */
+    P4_MP_UART_ROUTE_NONE = 0,
+    /* H1 remains a point-to-point host-relay fallback and upload channel. */
     P4_MP_UART_RELAY_ROUTE_ID = 1,
+    /* A board-authorized expansion header can provide the preferred route. */
+    P4_MP_UART_DIRECT_ROUTE_ID = 2,
     P4_MP_UART_RAW_TX_MAX_BYTES = 64,
 };
 
@@ -38,7 +41,11 @@ typedef bool (*p4_mp_uart_raw_handler_t)(
 
 typedef struct {
     bool ready;
+    bool relay_ready;
+    bool direct_ready;
+    uint64_t active_route_id;
     uint32_t baudrate;
+    uint32_t direct_baudrate;
     uint32_t rx_bytes;
     uint32_t tx_bytes;
     uint32_t rx_frames;
@@ -48,7 +55,7 @@ typedef struct {
     esp_err_t last_error;
 } p4_mp_uart_status_t;
 
-/** Claim the configured console UART receiver without changing its baud. */
+/** Initialize every configured UART route; success means at least one works. */
 esp_err_t p4_mp_uart_endpoint_init(
     p4_mp_uart_frame_handler_t handler,
     void *handler_context);
@@ -69,7 +76,10 @@ esp_err_t p4_mp_uart_endpoint_set_raw_handler(
  */
 void p4_mp_uart_endpoint_poll(void);
 
-/** Write exactly one already-valid P4MP datagram to the H1 host relay. */
+/**
+ * Write one valid datagram on the locked route. Before lock, probe direct UART
+ * first and add H1 relay fallback only after a bounded discovery grace period.
+ */
 esp_err_t p4_mp_uart_endpoint_send(
     const uint8_t *datagram,
     size_t datagram_length);
@@ -84,6 +94,15 @@ esp_err_t p4_mp_uart_endpoint_wait_tx_done(uint32_t timeout_ms);
 
 /** Change H1 baud for a negotiated session; reboot restores sdkconfig baud. */
 esp_err_t p4_mp_uart_endpoint_set_baudrate(uint32_t baudrate);
+
+/** Release route binding and restart direct-first discovery. */
+void p4_mp_uart_endpoint_reset_route(void);
+
+/** Return the locked route, or P4_MP_UART_ROUTE_NONE while discovering. */
+uint64_t p4_mp_uart_endpoint_active_route(void);
+
+/** Stable diagnostic label for a route ID. */
+const char *p4_mp_uart_route_name(uint64_t route_id);
 
 /** Return an atomic-enough single-task status snapshot. */
 p4_mp_uart_status_t p4_mp_uart_endpoint_status(void);

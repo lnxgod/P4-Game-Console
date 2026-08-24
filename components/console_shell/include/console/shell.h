@@ -107,6 +107,7 @@ typedef enum {
     CONSOLE_PAGE_SAVES,
     CONSOLE_PAGE_USB_DRIVE,
     CONSOLE_PAGE_TERMINAL,
+    CONSOLE_PAGE_STORAGE,
 } console_page_t;
 
 /** Shell-only palettes; games retain full control of their own colors. */
@@ -153,6 +154,33 @@ typedef enum {
     CONSOLE_BOARD_HOST_PREVIEW,
 } console_shell_board_kind_t;
 
+typedef enum {
+    CONSOLE_STORAGE_REPAIR_NOT_RUN = 0,
+    CONSOLE_STORAGE_REPAIR_CLEAN,
+    CONSOLE_STORAGE_REPAIR_REPAIRED,
+    CONSOLE_STORAGE_REPAIR_NEEDS_HOST,
+    CONSOLE_STORAGE_REPAIR_UNSUPPORTED,
+    CONSOLE_STORAGE_REPAIR_FAILED,
+} console_storage_repair_outcome_t;
+
+typedef enum {
+    CONSOLE_STORAGE_OPERATION_NONE = 0,
+    CONSOLE_STORAGE_OPERATION_CHECK,
+    CONSOLE_STORAGE_OPERATION_RETRY,
+    CONSOLE_STORAGE_OPERATION_REPAIR,
+} console_storage_operation_t;
+
+typedef enum {
+    CONSOLE_MULTIPLAYER_OPTION_MODE = 0,
+    CONSOLE_MULTIPLAYER_OPTION_MAP,
+    CONSOLE_MULTIPLAYER_OPTION_SKILL,
+    CONSOLE_MULTIPLAYER_OPTION_MONSTERS,
+    CONSOLE_MULTIPLAYER_OPTION_FAST,
+    CONSOLE_MULTIPLAYER_OPTION_RESPAWN,
+    CONSOLE_MULTIPLAYER_OPTION_TIME_LIMIT,
+    CONSOLE_MULTIPLAYER_OPTION_COUNT,
+} console_multiplayer_option_t;
+
 typedef struct {
     uint32_t uptime_seconds;
     uint32_t internal_free_kib;
@@ -179,7 +207,17 @@ typedef struct {
     bool multiplayer_peer_seen;
     bool multiplayer_lobby_ready;
     bool multiplayer_launch_syncing;
+    bool multiplayer_settings_editable;
+    uint8_t multiplayer_route_id;
     uint8_t multiplayer_player_slot;
+    uint8_t multiplayer_game_mode;
+    uint8_t multiplayer_episode;
+    uint8_t multiplayer_map;
+    uint8_t multiplayer_skill;
+    uint8_t multiplayer_time_limit_minutes;
+    bool multiplayer_no_monsters;
+    bool multiplayer_fast_monsters;
+    bool multiplayer_respawn_monsters;
     uint32_t multiplayer_rx_frames;
     uint32_t multiplayer_tx_frames;
     bool physical_keyboard_ready;
@@ -188,6 +226,22 @@ typedef struct {
     uint8_t boot_volume_step;
     uint8_t game_volume_step;
     bool audio_settings_persistent;
+    uint32_t game_storage_free_kib;
+    uint32_t game_storage_sector_bytes;
+    uint32_t game_storage_frequency_khz;
+    uint32_t game_storage_root_entries;
+    uint32_t game_storage_mount_failures;
+    uint32_t game_storage_scans;
+    uint32_t game_storage_checks;
+    uint32_t game_storage_recovery_attempts;
+    uint32_t game_storage_repair_attempts;
+    uint32_t game_storage_repair_sectors;
+    bool game_storage_card_ready;
+    bool game_storage_filesystem_ready;
+    bool game_storage_repair_supported;
+    bool game_storage_last_check_ok;
+    console_storage_repair_outcome_t game_storage_repair_outcome;
+    console_storage_operation_t game_storage_operation;
 } console_shell_runtime_info_t;
 
 typedef struct {
@@ -236,7 +290,11 @@ typedef enum {
     CONSOLE_ACTION_USB_MODE_DISABLE,
     CONSOLE_ACTION_BOOT_VOLUME_SET,
     CONSOLE_ACTION_GAME_VOLUME_SET,
+    CONSOLE_ACTION_MULTIPLAYER_CONFIGURE,
     CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM,
+    CONSOLE_ACTION_STORAGE_CHECK,
+    CONSOLE_ACTION_STORAGE_RETRY,
+    CONSOLE_ACTION_STORAGE_REPAIR,
 } console_action_type_t;
 
 typedef enum {
@@ -257,6 +315,8 @@ typedef struct {
     uint32_t file_source_index;
     console_color_mode_t color_mode;
     uint8_t volume_step;
+    console_multiplayer_option_t multiplayer_option;
+    int8_t multiplayer_delta;
 } console_shell_action_t;
 
 typedef struct {
@@ -281,6 +341,8 @@ typedef struct {
     size_t file_selected_index;
     size_t file_first_visible;
     size_t audio_selected_row;
+    size_t multiplayer_selected_row;
+    size_t storage_selected_action;
     console_shell_file_notice_t file_notice;
     uint16_t press_start_gui_x;
     uint16_t press_start_gui_y;
@@ -291,6 +353,7 @@ typedef struct {
     bool scroll_gesture;
     bool home_all_programs;
     bool file_delete_confirm;
+    bool storage_repair_confirm;
     bool dirty;
     uint32_t previous_buttons;
     uint16_t pointer_x;

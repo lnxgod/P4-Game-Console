@@ -56,6 +56,9 @@ static p4_mp_lobby_offer_t test_offer(void)
     strcpy(offer.game_id, "org.p4console.doom");
     fill_hash(offer.content_sha256, UINT8_C(0x10));
     fill_hash(offer.compatibility_sha256, UINT8_C(0x80));
+    for (size_t index = 0U; index < P4_MP_GAME_SETTINGS_BYTES; ++index) {
+        offer.game_settings[index] = (uint8_t)(index + 1U);
+    }
     return offer;
 }
 
@@ -115,6 +118,9 @@ static void test_lobby_codec(void)
     CHECK(memcmp(decoded.compatibility_sha256,
                  expected.compatibility_sha256,
                  P4_MP_SHA256_BYTES) == 0);
+    CHECK(memcmp(decoded.game_settings,
+                 expected.game_settings,
+                 P4_MP_GAME_SETTINGS_BYTES) == 0);
     uint8_t compatibility_material[P4_MP_COMPATIBILITY_MATERIAL_BYTES];
     CHECK(p4_mp_lobby_compatibility_material(
               &expected, compatibility_material) == P4_MP_OK);
@@ -134,6 +140,9 @@ static void test_lobby_codec(void)
     compatible.players_present = 2U;
     compatible.session_seed += 1U;
     CHECK(p4_mp_lobby_offers_compatible(&expected, &compatible));
+    compatible.game_settings[0] ^= UINT8_C(0x7f);
+    CHECK(p4_mp_lobby_offers_compatible(&expected, &compatible));
+    compatible.game_settings[0] ^= UINT8_C(0x7f);
     compatible.content_sha256[0] ^= UINT8_C(0x80);
     CHECK(!p4_mp_lobby_offers_compatible(&expected, &compatible));
 
@@ -172,6 +181,9 @@ static void test_lobby_codec(void)
         .start_tic = 0U,
         .session_seed = expected.session_seed,
     };
+    memcpy(accept.game_settings,
+           expected.game_settings,
+           P4_MP_GAME_SETTINGS_BYTES);
     uint8_t accept_payload[P4_MP_ACCEPT_PAYLOAD_BYTES];
     CHECK(p4_mp_lobby_accept_encode(&accept, accept_payload) == P4_MP_OK);
     p4_mp_lobby_accept_t decoded_accept;
@@ -183,6 +195,9 @@ static void test_lobby_codec(void)
     CHECK(decoded_accept.input_delay_tics == 2U);
     CHECK(decoded_accept.start_tic == 0U);
     CHECK(decoded_accept.session_seed == expected.session_seed);
+    CHECK(memcmp(decoded_accept.game_settings,
+                 expected.game_settings,
+                 P4_MP_GAME_SETTINGS_BYTES) == 0);
 
     offer_payload[7] = 1U;
     CHECK(p4_mp_lobby_offer_decode(
@@ -194,7 +209,7 @@ static void test_lobby_codec(void)
               join_payload, sizeof(join_payload), &decoded_join) ==
           P4_MP_BAD_FLAGS);
     join_payload[2] = 0U;
-    accept_payload[0] = 2U;
+    accept_payload[0] = (uint8_t)(P4_MP_LOBBY_SCHEMA + 1U);
     CHECK(p4_mp_lobby_accept_decode(
               accept_payload, sizeof(accept_payload), &decoded_accept) ==
           P4_MP_BAD_VERSION);
@@ -323,6 +338,10 @@ static void test_synchronized_start_barrier(void)
 static void test_wired_stream_boundary(void)
 {
     p4_mp_wired_transport_info_t info;
+    CHECK(p4_mp_wired_transport_info(
+              P4_MP_WIRED_TRANSPORT_UART_DIRECT, &info));
+    CHECK(!info.requires_host_relay && !info.console_sources_vbus);
+    CHECK(!info.console_is_usb_device);
     CHECK(p4_mp_wired_transport_info(
               P4_MP_WIRED_TRANSPORT_UART_RELAY, &info));
     CHECK(info.requires_host_relay && !info.console_sources_vbus);
@@ -532,6 +551,8 @@ static void test_client_session(void)
               &client, 200U, 9U, 1U, 44U, 100U, 3000U) == P4_MP_OK);
     CHECK(client.state == P4_MP_SESSION_JOINING);
     CHECK(p4_mp_session_peer_count(&client) == 0U);
+    CHECK(client.peers[0].peer_id == 1U);
+    CHECK(client.peers[0].player_slot == 0U);
 
     uint8_t accept_payload[P4_MP_ACCEPT_PAYLOAD_BYTES];
     encode_test_accept(accept_payload, 1U);
@@ -543,13 +564,14 @@ static void test_client_session(void)
     CHECK(p4_mp_session_receive(
               &client, 44U, 150U, datagram, length, &event) == P4_MP_OK);
     CHECK(event.type == P4_MP_EVENT_ACCEPTED);
-    CHECK(event.player_slot == 1U);
+    CHECK(event.player_slot == 0U);
     CHECK(client.state == P4_MP_SESSION_CONNECTED);
     CHECK(p4_mp_session_peer_count(&client) == 1U);
+    CHECK(client.peers[0].player_slot == 0U);
     CHECK(!p4_mp_session_tick(&client, 3150U, &event));
     CHECK(p4_mp_session_tick(&client, 3151U, &event));
     CHECK(event.type == P4_MP_EVENT_PEER_TIMED_OUT);
-    CHECK(event.neutralize_player);
+    CHECK(event.neutralize_player && event.player_slot == 0U);
     CHECK(client.state == P4_MP_SESSION_CLOSED);
 
     CHECK(p4_mp_session_client_start(

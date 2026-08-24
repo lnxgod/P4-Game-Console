@@ -27,6 +27,15 @@ bool p4_mp_wired_transport_info(
     }
     *info_out = (p4_mp_wired_transport_info_t){0};
     switch (kind) {
+        case P4_MP_WIRED_TRANSPORT_UART_DIRECT:
+            *info_out = (p4_mp_wired_transport_info_t){
+                .kind = kind,
+                .name = "uart-direct",
+                .requires_host_relay = false,
+                .console_is_usb_device = false,
+                .console_sources_vbus = false,
+            };
+            return true;
         case P4_MP_WIRED_TRANSPORT_UART_RELAY:
             *info_out = (p4_mp_wired_transport_info_t){
                 .kind = kind,

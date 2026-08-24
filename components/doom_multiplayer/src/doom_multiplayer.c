@@ -13,6 +13,16 @@ static const uint8_t s_engine_ack[P4_DOOM_MP_ENGINE_CONTROL_BYTES] = {
     'P', '4', 'D', 'R', 'A', 'C', 'K', '!',
 };
 
+enum {
+    P4_DOOM_MP_SETUP_NO_MONSTERS = UINT8_C(1) << 0U,
+    P4_DOOM_MP_SETUP_FAST_MONSTERS = UINT8_C(1) << 1U,
+    P4_DOOM_MP_SETUP_RESPAWN_MONSTERS = UINT8_C(1) << 2U,
+    P4_DOOM_MP_SETUP_FLAGS_MASK =
+        P4_DOOM_MP_SETUP_NO_MONSTERS |
+        P4_DOOM_MP_SETUP_FAST_MONSTERS |
+        P4_DOOM_MP_SETUP_RESPAWN_MONSTERS,
+};
+
 static uint8_t player_bit(uint8_t player_slot)
 {
     return (uint8_t)(UINT8_C(1) << player_slot);
@@ -89,7 +99,12 @@ bool p4_doom_mp_launch_config_valid(
             config->remote_peer_id == 0U && config->route_id == 0U &&
             config->local_player_slot == 0U && config->player_count == 0U &&
             config->input_delay_tics == 0U && config->start_tic == 0U &&
-            config->session_seed == 0U;
+            config->session_seed == 0U && config->setup.mode == 0 &&
+            config->setup.episode == 0U && config->setup.map == 0U &&
+            config->setup.skill == 0U &&
+            config->setup.time_limit_minutes == 0U &&
+            !config->setup.no_monsters && !config->setup.fast_monsters &&
+            !config->setup.respawn_monsters;
     }
     return (config->role == P4_MP_ROLE_HOST ||
             config->role == P4_MP_ROLE_CLIENT) &&
@@ -99,7 +114,76 @@ bool p4_doom_mp_launch_config_valid(
         config->route_id != 0U && config->player_count >= 2U &&
         config->player_count <= P4_MP_MAX_PLAYERS &&
         config->local_player_slot < config->player_count &&
-        config->input_delay_tics <= 15U && config->session_seed != 0U;
+        config->input_delay_tics <= 15U && config->session_seed != 0U &&
+        p4_doom_mp_setup_valid(&config->setup);
+}
+
+bool p4_doom_mp_setup_valid(const p4_doom_mp_setup_t *setup)
+{
+    return setup != NULL &&
+        (setup->mode == P4_DOOM_MP_MODE_COOPERATIVE ||
+         setup->mode == P4_DOOM_MP_MODE_DEATHMATCH ||
+         setup->mode == P4_DOOM_MP_MODE_ALTDEATH) &&
+        setup->episode >= 1U && setup->episode <= P4_DOOM_MP_MAX_EPISODE &&
+        setup->map >= 1U && setup->map <= P4_DOOM_MP_MAX_MAP &&
+        setup->skill >= 1U && setup->skill <= P4_DOOM_MP_MAX_SKILL &&
+        setup->time_limit_minutes <= P4_DOOM_MP_MAX_TIME_LIMIT_MINUTES;
+}
+
+bool p4_doom_mp_setup_encode(
+    const p4_doom_mp_setup_t *setup,
+    uint8_t bytes[P4_DOOM_MP_SETUP_BYTES])
+{
+    if (bytes == NULL || !p4_doom_mp_setup_valid(setup)) {
+        return false;
+    }
+    memset(bytes, 0, P4_DOOM_MP_SETUP_BYTES);
+    bytes[0] = P4_DOOM_MP_SETUP_SCHEMA;
+    bytes[1] = (uint8_t)setup->mode;
+    bytes[2] = setup->episode;
+    bytes[3] = setup->map;
+    bytes[4] = setup->skill;
+    bytes[5] =
+        (setup->no_monsters ? P4_DOOM_MP_SETUP_NO_MONSTERS : 0U) |
+        (setup->fast_monsters ? P4_DOOM_MP_SETUP_FAST_MONSTERS : 0U) |
+        (setup->respawn_monsters ? P4_DOOM_MP_SETUP_RESPAWN_MONSTERS : 0U);
+    bytes[6] = setup->time_limit_minutes;
+    return true;
+}
+
+bool p4_doom_mp_setup_decode(
+    const uint8_t *bytes,
+    size_t bytes_length,
+    p4_doom_mp_setup_t *setup_out)
+{
+    if (bytes == NULL || setup_out == NULL) {
+        return false;
+    }
+    *setup_out = (p4_doom_mp_setup_t){0};
+    if (bytes_length != P4_DOOM_MP_SETUP_BYTES ||
+        bytes[0] != P4_DOOM_MP_SETUP_SCHEMA ||
+        (bytes[5] & (uint8_t)~P4_DOOM_MP_SETUP_FLAGS_MASK) != 0U ||
+        bytes[7] != 0U) {
+        return false;
+    }
+    const p4_doom_mp_setup_t setup = {
+        .mode = (p4_doom_mp_mode_t)bytes[1],
+        .episode = bytes[2],
+        .map = bytes[3],
+        .skill = bytes[4],
+        .time_limit_minutes = bytes[6],
+        .no_monsters =
+            (bytes[5] & P4_DOOM_MP_SETUP_NO_MONSTERS) != 0U,
+        .fast_monsters =
+            (bytes[5] & P4_DOOM_MP_SETUP_FAST_MONSTERS) != 0U,
+        .respawn_monsters =
+            (bytes[5] & P4_DOOM_MP_SETUP_RESPAWN_MONSTERS) != 0U,
+    };
+    if (!p4_doom_mp_setup_valid(&setup)) {
+        return false;
+    }
+    *setup_out = setup;
+    return true;
 }
 
 void p4_doom_mp_engine_barrier_init(

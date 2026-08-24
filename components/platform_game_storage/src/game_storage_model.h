@@ -41,6 +41,11 @@ void game_storage_model_mount_complete(game_storage_model_t *model,
                                        game_storage_owner_t new_owner);
 void game_storage_model_mount_failed(game_storage_model_t *model,
                                      bool format_required);
+bool game_storage_model_begin_recovery(game_storage_model_t *model,
+                                       game_storage_owner_t target_owner);
+void game_storage_model_finish_recovery(game_storage_model_t *model,
+                                        game_storage_owner_t target_owner,
+                                        bool success);
 bool game_storage_model_begin_scan(game_storage_model_t *model);
 void game_storage_model_finish_scan(game_storage_model_t *model,
                                     game_storage_content_t content);

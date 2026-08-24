@@ -69,6 +69,37 @@ void game_storage_model_mount_failed(game_storage_model_t *model,
     model->content = GAME_STORAGE_CONTENT_UNKNOWN;
 }
 
+bool game_storage_model_begin_recovery(game_storage_model_t *model,
+                                       game_storage_owner_t target_owner)
+{
+    if (model == NULL || model->owner != GAME_STORAGE_OWNER_FAULT ||
+        model->launch_pending ||
+        (target_owner != GAME_STORAGE_OWNER_APP &&
+         target_owner != GAME_STORAGE_OWNER_USB)) {
+        return false;
+    }
+    model->owner = GAME_STORAGE_OWNER_TRANSITION;
+    model->transition_target = target_owner;
+    model->content = GAME_STORAGE_CONTENT_UNKNOWN;
+    model->format_required = false;
+    return true;
+}
+
+void game_storage_model_finish_recovery(game_storage_model_t *model,
+                                        game_storage_owner_t target_owner,
+                                        bool success)
+{
+    if (model == NULL || model->owner != GAME_STORAGE_OWNER_TRANSITION ||
+        model->transition_target != target_owner) {
+        return;
+    }
+    if (success) {
+        game_storage_model_mount_complete(model, target_owner);
+    } else {
+        game_storage_model_mount_failed(model, false);
+    }
+}
+
 bool game_storage_model_begin_scan(game_storage_model_t *model)
 {
     if (model == NULL || model->owner != GAME_STORAGE_OWNER_APP ||

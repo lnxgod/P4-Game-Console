@@ -22,13 +22,14 @@ enum {
     P4_MP_MAX_REMOTE_PEERS = P4_MP_MAX_PLAYERS - 1,
     P4_MP_DEFAULT_TIMEOUT_MS = 3000,
     P4_MP_INPUT_PAYLOAD_BYTES = 24,
-    P4_MP_LOBBY_SCHEMA = 1,
+    P4_MP_LOBBY_SCHEMA = 2,
     P4_MP_GAME_ID_BYTES = 32,
     P4_MP_SHA256_BYTES = 32,
+    P4_MP_GAME_SETTINGS_BYTES = 8,
     P4_MP_COMPATIBILITY_MATERIAL_BYTES = 80,
-    P4_MP_OFFER_PAYLOAD_BYTES = 120,
+    P4_MP_OFFER_PAYLOAD_BYTES = 128,
     P4_MP_JOIN_PAYLOAD_BYTES = 40,
-    P4_MP_ACCEPT_PAYLOAD_BYTES = 16,
+    P4_MP_ACCEPT_PAYLOAD_BYTES = 24,
     P4_MP_START_PAYLOAD_BYTES = 8,
     P4_MP_START_SCHEMA = 1,
     P4_MP_PLAYER_SLOT_ANY = 0xff,
@@ -36,6 +37,7 @@ enum {
 
 typedef enum {
     P4_MP_WIRED_TRANSPORT_NONE = 0,
+    P4_MP_WIRED_TRANSPORT_UART_DIRECT,
     P4_MP_WIRED_TRANSPORT_UART_RELAY,
     P4_MP_WIRED_TRANSPORT_USB2_DEVICE_RELAY,
 } p4_mp_wired_transport_kind_t;
@@ -180,7 +182,8 @@ typedef enum {
  * Fixed lobby identity advertised by a host. compatibility_sha256 is supplied
  * by the OS and covers the exact game ID, Game API version, package/content
  * hash, game protocol, simulation rate, input delay, capacity, and mode. It
- * deliberately excludes mutable player count and the per-session seed.
+ * deliberately excludes mutable player count, the per-session seed, and the
+ * host-authored game setup.
  */
 typedef struct {
     p4_mp_game_mode_t mode;
@@ -195,6 +198,8 @@ typedef struct {
     char game_id[P4_MP_GAME_ID_BYTES];
     uint8_t content_sha256[P4_MP_SHA256_BYTES];
     uint8_t compatibility_sha256[P4_MP_SHA256_BYTES];
+    /** Host-authored, game-specific setup; ignored by compatibility matching. */
+    uint8_t game_settings[P4_MP_GAME_SETTINGS_BYTES];
 } p4_mp_lobby_offer_t;
 
 typedef struct {
@@ -209,6 +214,8 @@ typedef struct {
     uint8_t input_delay_tics;
     uint32_t start_tic;
     uint64_t session_seed;
+    /** Exact host setup accepted for this session. */
+    uint8_t game_settings[P4_MP_GAME_SETTINGS_BYTES];
 } p4_mp_lobby_accept_t;
 
 /** Build the canonical fixed bytes the OS hashes into compatibility_sha256. */

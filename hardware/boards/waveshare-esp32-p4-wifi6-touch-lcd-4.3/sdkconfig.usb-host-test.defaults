@@ -20,4 +20,4 @@ CONFIG_TINYUSB_DEBUG_LEVEL=0
 # RAM that the shared 64 KiB reserve cannot be constructed before app_main.
 # Keep ESP-IDF's supported 32 KiB default for this composite image; the pool
 # remains dedicated to DMA/internal-only requests and FreeRTOS stacks.
-CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=32768
+CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL=16384

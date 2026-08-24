@@ -221,6 +221,9 @@ static void test_registry_validation(void)
     invalid[1] = s_apps[1];
     invalid[1].folder_path = NULL;
     CHECK(!console_shell_init(&shell, invalid, 2U));
+    invalid[1] = s_apps[1];
+    invalid[1].folder_path = "";
+    CHECK(console_shell_init(&shell, invalid, 2U));
     invalid[1].folder_path = "/GAMES";
     CHECK(!console_shell_init(&shell, invalid, 2U));
     invalid[1].folder_path = "GAMES//ARCADE";
@@ -480,6 +483,45 @@ static void test_usb_mode_button(void)
     CHECK(action.app_id == 12U);
 }
 
+static void test_storage_diagnostics_and_repair_confirmation(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    shell.page = CONSOLE_PAGE_STORAGE;
+    shell.active_app_id = APP_SYSTEM;
+    shell.runtime = (console_shell_runtime_info_t){
+        .game_storage_state = CONSOLE_STORAGE_READY,
+        .sd_card_storage = true,
+        .game_storage_repair_supported = true,
+        .game_storage_card_ready = true,
+        .game_storage_filesystem_ready = true,
+    };
+
+    console_shell_action_t action = tap(&shell, 50U, 182U);
+    CHECK(action.type == CONSOLE_ACTION_STORAGE_CHECK);
+    CHECK(tap(&shell, 150U, 182U).type == CONSOLE_ACTION_NONE);
+
+    action = tap(&shell, 255U, 182U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.storage_repair_confirm);
+    action = tap(&shell, 255U, 182U);
+    CHECK(action.type == CONSOLE_ACTION_STORAGE_REPAIR);
+    CHECK(!shell.storage_repair_confirm);
+
+    shell.runtime.game_storage_state = CONSOLE_STORAGE_FAULT;
+    action = tap(&shell, 150U, 182U);
+    CHECK(action.type == CONSOLE_ACTION_STORAGE_RETRY);
+    CHECK(tap(&shell, 50U, 182U).type == CONSOLE_ACTION_NONE);
+
+    action = tap(&shell, 255U, 182U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.storage_repair_confirm);
+    action = press_button(&shell, CONSOLE_BUTTON_BACK);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.page == CONSOLE_PAGE_STORAGE);
+    CHECK(!shell.storage_repair_confirm);
+}
+
 static void test_multiplayer_start_lockout(void)
 {
     console_shell_t shell;
@@ -487,8 +529,14 @@ static void test_multiplayer_start_lockout(void)
     shell.page = CONSOLE_PAGE_MULTIPLAYER;
     shell.active_app_id = APP_DOOM;
     shell.runtime = (console_shell_runtime_info_t){
+        .game_storage_state = CONSOLE_STORAGE_READY,
         .doom_wad_ready = true,
         .multiplayer_lobby_ready = true,
+        .multiplayer_settings_editable = true,
+        .multiplayer_game_mode = 1U,
+        .multiplayer_episode = 1U,
+        .multiplayer_map = 1U,
+        .multiplayer_skill = 3U,
     };
 
     console_shell_action_t action =
@@ -498,7 +546,33 @@ static void test_multiplayer_start_lockout(void)
     action = tap(&shell, 160U, 170U);
     CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_LAUNCH_DOOM);
 
+    action = press_button(&shell, CONSOLE_BUTTON_UP);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.multiplayer_selected_row ==
+          CONSOLE_MULTIPLAYER_OPTION_TIME_LIMIT);
+    action = press_button(&shell, CONSOLE_BUTTON_LEFT);
+    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_CONFIGURE);
+    CHECK(action.multiplayer_option ==
+          CONSOLE_MULTIPLAYER_OPTION_TIME_LIMIT);
+    CHECK(action.multiplayer_delta == -1);
+    action = tap(&shell, 280U, 77U);
+    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_CONFIGURE);
+    CHECK(action.multiplayer_option == CONSOLE_MULTIPLAYER_OPTION_MAP);
+    CHECK(action.multiplayer_delta == 1);
+
+    shell.runtime.multiplayer_settings_editable = false;
+    CHECK(tap(&shell, 280U, 77U).type == CONSOLE_ACTION_NONE);
+    shell.runtime.multiplayer_settings_editable = true;
+    shell.multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_COUNT;
+
     shell.runtime.multiplayer_launch_syncing = true;
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(tap(&shell, 160U, 170U).type == CONSOLE_ACTION_NONE);
+
+    shell.runtime.multiplayer_launch_syncing = false;
+    shell.runtime.doom_wad_ready = false;
+    shell.runtime.game_storage_state = CONSOLE_STORAGE_FAULT;
     CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
           CONSOLE_ACTION_NONE);
     CHECK(tap(&shell, 160U, 170U).type == CONSOLE_ACTION_NONE);
@@ -1122,6 +1196,7 @@ int main(void)
     test_window_manager_visual_contract();
     test_color_modes_and_achievements();
     test_usb_mode_button();
+    test_storage_diagnostics_and_repair_confirmation();
     test_multiplayer_start_lockout();
     test_desktop_pages();
     test_navigation_and_launch();

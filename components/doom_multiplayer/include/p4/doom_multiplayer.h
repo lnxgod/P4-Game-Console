@@ -17,7 +17,30 @@ enum {
     P4_DOOM_MP_TICK_RATE_HZ = 35,
     P4_DOOM_MP_TIC_RING_SIZE = 128,
     P4_DOOM_MP_ENGINE_CONTROL_BYTES = 8,
+    P4_DOOM_MP_SETUP_SCHEMA = 1,
+    P4_DOOM_MP_SETUP_BYTES = P4_MP_GAME_SETTINGS_BYTES,
+    P4_DOOM_MP_MAX_EPISODE = 4,
+    P4_DOOM_MP_MAX_MAP = 9,
+    P4_DOOM_MP_MAX_SKILL = 5,
+    P4_DOOM_MP_MAX_TIME_LIMIT_MINUTES = 60,
 };
+
+typedef enum {
+    P4_DOOM_MP_MODE_COOPERATIVE = 0,
+    P4_DOOM_MP_MODE_DEATHMATCH,
+    P4_DOOM_MP_MODE_ALTDEATH,
+} p4_doom_mp_mode_t;
+
+typedef struct {
+    p4_doom_mp_mode_t mode;
+    uint8_t episode;
+    uint8_t map;
+    uint8_t skill;
+    uint8_t time_limit_minutes;
+    bool no_monsters;
+    bool fast_monsters;
+    bool respawn_monsters;
+} p4_doom_mp_setup_t;
 
 typedef enum {
     P4_DOOM_MP_ENGINE_CONTROL_NONE = 0,
@@ -54,6 +77,7 @@ typedef struct {
     uint8_t input_delay_tics;
     uint32_t start_tic;
     uint64_t session_seed;
+    p4_doom_mp_setup_t setup;
 } p4_doom_mp_launch_config_t;
 
 typedef struct {
@@ -77,6 +101,20 @@ bool p4_doom_mp_tic_from_input(
 
 bool p4_doom_mp_launch_config_valid(
     const p4_doom_mp_launch_config_t *config);
+
+/** Validate one bounded Doom/DeathManager-style lobby setup. */
+bool p4_doom_mp_setup_valid(const p4_doom_mp_setup_t *setup);
+
+/** Encode a setup into the generic host-authored lobby settings field. */
+bool p4_doom_mp_setup_encode(
+    const p4_doom_mp_setup_t *setup,
+    uint8_t bytes[P4_DOOM_MP_SETUP_BYTES]);
+
+/** Decode and reject unknown schemas, flags, or out-of-range values. */
+bool p4_doom_mp_setup_decode(
+    const uint8_t *bytes,
+    size_t bytes_length,
+    p4_doom_mp_setup_t *setup_out);
 
 /** Clear every engine-start handshake flag. */
 void p4_doom_mp_engine_barrier_init(

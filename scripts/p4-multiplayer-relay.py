@@ -19,15 +19,27 @@ MAX_PAYLOAD_BYTES = 1024
 MAX_DATAGRAM_BYTES = HEADER_BYTES + MAX_PAYLOAD_BYTES + TRAILER_BYTES
 VALID_PAYLOAD_LENGTHS = {
     1: {0},
-    2: {120},
+    2: {128},
     3: {40},
-    4: {16},
+    4: {24},
     5: {24},
     6: {12},
     7: {8},
     8: {8},
     9: {2},
     10: {2},
+}
+PACKET_TYPE_NAMES = {
+    1: "discover",
+    2: "offer",
+    3: "join",
+    4: "accept",
+    5: "input",
+    6: "hash",
+    7: "ping",
+    8: "pong",
+    9: "leave",
+    10: "reject",
 }
 
 
@@ -137,6 +149,8 @@ class Link:
     name: str
     serial: object
     decoder: FrameDecoder = dataclasses.field(default_factory=FrameDecoder)
+    log_buffer: bytearray = dataclasses.field(default_factory=bytearray)
+    packet_counts: dict[int, int] = dataclasses.field(default_factory=dict)
     frames_received: int = 0
     frames_forwarded: int = 0
 
@@ -170,12 +184,42 @@ def read_available(link: Link) -> bytes:
     return link.serial.read(waiting if waiting > 0 else 1)
 
 
-def forward(source: Link, destination: Link) -> None:
+def packet_counts_text(link: Link) -> str:
+    return ",".join(
+        f"{PACKET_TYPE_NAMES[packet_type]}:{count}"
+        for packet_type, count in sorted(link.packet_counts.items())
+    ) or "none"
+
+
+def trace_serial_logs(link: Link, data: bytes) -> None:
+    """Print bounded ESP_LOG lines without forwarding diagnostic noise."""
+    link.log_buffer.extend(data)
+    while b"\n" in link.log_buffer:
+        raw, _, remainder = link.log_buffer.partition(b"\n")
+        link.log_buffer = bytearray(remainder)
+        raw = raw.rstrip(b"\r")
+        if len(raw) <= 512 and raw.startswith((b"I (", b"W (", b"E (")):
+            print(
+                f"P4MP {link.name}_log "
+                f"{raw.decode('utf-8', errors='replace')}",
+                file=sys.stderr,
+            )
+    if len(link.log_buffer) > 1024:
+        del link.log_buffer[:-256]
+
+
+def forward(source: Link, destination: Link, *, trace_logs: bool = False) -> None:
     data = read_available(source)
     if not data:
         return
+    if trace_logs:
+        trace_serial_logs(source, data)
     for frame in source.decoder.feed(data):
         source.frames_received += 1
+        packet_type = frame[5]
+        source.packet_counts[packet_type] = (
+            source.packet_counts.get(packet_type, 0) + 1
+        )
         written = destination.serial.write(frame)
         if written != len(frame):
             raise RuntimeError(
@@ -192,6 +236,7 @@ def run(
     *,
     probe: bool = False,
     duration: float = 0.0,
+    trace_logs: bool = False,
 ) -> int:
     if left_path == right_path:
         raise ValueError("left and right serial ports must differ")
@@ -220,16 +265,20 @@ def run(
     next_status = time.monotonic() + 5.0
     try:
         while True:
-            forward(left, right)
-            forward(right, left)
+            forward(left, right, trace_logs=trace_logs)
+            forward(right, left, trace_logs=trace_logs)
             now = time.monotonic()
             if now >= next_status:
                 print(
                     "P4MP relay "
                     f"left_rx={left.frames_received} "
                     f"left_drop={left.decoder.dropped_frames} "
+                    f"left_noise={left.decoder.discarded_bytes} "
+                    f"left_types={packet_counts_text(left)} "
                     f"right_rx={right.frames_received} "
-                    f"right_drop={right.decoder.dropped_frames}",
+                    f"right_drop={right.decoder.dropped_frames} "
+                    f"right_noise={right.decoder.discarded_bytes} "
+                    f"right_types={packet_counts_text(right)}",
                     file=sys.stderr,
                 )
                 next_status = now + 5.0
@@ -242,8 +291,10 @@ def run(
                     f"status={'pass' if passed else 'fail'} "
                     f"left_rx={left.frames_received} "
                     f"left_drop={left.decoder.dropped_frames} "
+                    f"left_types={packet_counts_text(left)} "
                     f"right_rx={right.frames_received} "
-                    f"right_drop={right.decoder.dropped_frames}",
+                    f"right_drop={right.decoder.dropped_frames} "
+                    f"right_types={packet_counts_text(right)}",
                     file=sys.stderr,
                 )
                 return 0 if passed else 1
@@ -274,6 +325,11 @@ def main() -> int:
         ),
     )
     parser.add_argument(
+        "--trace-logs",
+        action="store_true",
+        help="print bounded ESP_LOG lines while still relaying valid frames",
+    )
+    parser.add_argument(
         "--duration",
         type=float,
         default=0.0,
@@ -292,6 +348,7 @@ def main() -> int:
         args.baud,
         probe=args.probe,
         duration=args.duration,
+        trace_logs=args.trace_logs,
     )
 
 
