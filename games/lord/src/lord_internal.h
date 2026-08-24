@@ -19,7 +19,7 @@ enum {
     LORD_LOG_COUNT_MAX = 12,
     LORD_FOREST_FIGHTS_PER_DAY = 15,
     LORD_PVP_FIGHTS_PER_DAY = 3,
-    LORD_ROMANCE_ACTIONS_PER_DAY = 3,
+    LORD_FRIENDSHIP_ACTIONS_PER_DAY = 3,
     LORD_IGM_COUNT = 7,
     LORD_RIP_SCENE_COUNT = 12,
     LORD_MAX_LEVEL = 12,
@@ -27,13 +27,16 @@ enum {
     LORD_SKILL_MASTERY_MAX = 40,
     LORD_SAVE_FORMAT_VERSION = 3,
     LORD_SAVE_MAX_BYTES = 4096,
+    LORD_SYNC_FORMAT_VERSION = 1,
+    LORD_SYNC_ACTOR_ID_BYTES = 16,
+    LORD_SYNC_MAX_BYTES = LORD_SAVE_MAX_BYTES + 52,
     LORD_KEYBOARD_COUNT = 44,
 };
 
 typedef enum {
     LORD_SCREEN_TITLE = 0,
     LORD_SCREEN_NAME,
-    LORD_SCREEN_SEX,
+    LORD_SCREEN_HERO_STYLE,
     LORD_SCREEN_CLASS,
     LORD_SCREEN_TOWN,
     LORD_SCREEN_FOREST,
@@ -48,14 +51,14 @@ typedef enum {
     LORD_SCREEN_CONVERSE,
     LORD_SCREEN_SETH,
     LORD_SCREEN_VIOLET,
-    LORD_SCREEN_BLACKJACK,
+    LORD_SCREEN_DRAGON_DICE,
     LORD_SCREEN_PLAYERS,
     LORD_SCREEN_PLAYER_DETAIL,
     LORD_SCREEN_MAILBOX,
     LORD_SCREEN_MAIL_VIEW,
     LORD_SCREEN_MAIL_COMPOSE,
-    LORD_SCREEN_ROMANCE,
-    LORD_SCREEN_ROMANCE_ACTION,
+    LORD_SCREEN_FRIENDSHIP,
+    LORD_SCREEN_FRIENDSHIP_ACTION,
     LORD_SCREEN_IGM,
     LORD_SCREEN_IGM_DETAIL,
     LORD_SCREEN_NEWS,
@@ -78,9 +81,9 @@ typedef enum {
 } lord_class_t;
 
 typedef enum {
-    LORD_SEX_MALE = 0,
-    LORD_SEX_FEMALE,
-} lord_sex_t;
+    LORD_HERO_STYLE_HERO = 0,
+    LORD_HERO_STYLE_HEROINE,
+} lord_hero_style_t;
 
 typedef enum {
     LORD_BATTLE_NONE = 0,
@@ -96,11 +99,11 @@ typedef enum {
     LORD_MAIL_TRAINER,
     LORD_MAIL_REPLY,
     LORD_MAIL_PVP_VICTORY,
-    LORD_MAIL_ROMANCE,
-    LORD_MAIL_PROPOSAL,
+    LORD_MAIL_TEAM_INVITE,
+    LORD_MAIL_TEAM_PLEDGE,
     LORD_MAIL_CUSTOM,
     LORD_MAIL_ATTACK,
-    LORD_MAIL_BABY,
+    LORD_MAIL_MENTOR,
     LORD_MAIL_ANNOUNCEMENT,
 } lord_mail_kind_t;
 
@@ -149,7 +152,7 @@ typedef struct {
 
 typedef struct {
     char name[LORD_NAME_BYTES];
-    lord_sex_t sex;
+    lord_hero_style_t hero_style;
     lord_class_t hero_class;
     uint8_t level;
     uint8_t weapon;
@@ -170,8 +173,8 @@ typedef struct {
     uint16_t pvp_losses;
     uint16_t charm;
     uint16_t gems;
-    uint16_t children;
-    uint16_t laid;
+    uint16_t young_heroes_helped;
+    uint16_t friendship_badges;
     bool horse;
     bool fairy;
     bool fairy_lore;
@@ -195,13 +198,13 @@ typedef struct {
 typedef struct {
     char name[LORD_REALM_NAME_BYTES];
     char saying[LORD_SAYING_BYTES];
-    lord_sex_t sex;
+    lord_hero_style_t hero_style;
     lord_class_t hero_class;
     uint8_t level;
     bool alive;
     bool at_inn;
-    bool married;
-    uint8_t affection;
+    bool teamed;
+    uint8_t trust;
     int32_t hit_points;
     int32_t max_hit_points;
     int32_t strength;
@@ -241,21 +244,19 @@ typedef struct {
     uint32_t host_save_sequence;
     uint32_t save_ticket;
     uint32_t save_queued_generation;
-    int8_t spouse_index;
-    int8_t npc_spouse;
+    int8_t partner_index;
+    int8_t npc_friend;
     uint8_t selected_player;
     uint8_t selected_mail;
     uint8_t selected_igm;
     uint8_t pvp_fights;
-    uint8_t romance_actions;
+    uint8_t friendship_actions;
     uint8_t igm_used_mask;
     uint8_t rip_scene;
     uint8_t mail_count;
     uint8_t log_count;
-    uint8_t blackjack_player;
-    uint8_t blackjack_dealer;
-    uint16_t blackjack_wager;
-    bool blackjack_active;
+    uint8_t dice_player;
+    uint8_t dice_host;
     bool save_dirty;
     bool save_available;
     bool save_error;
@@ -272,6 +273,13 @@ typedef struct {
     char battle_line[LORD_TEXT_BYTES];
 } lord_state_t;
 
+typedef struct {
+    uint8_t actor_id[LORD_SYNC_ACTOR_ID_BYTES];
+    uint64_t operation_nonce;
+    uint32_t realm_revision;
+    uint32_t save_sequence;
+} lord_sync_metadata_t;
+
 void lord_initialize(lord_state_t *state, uint32_t seed);
 size_t lord_menu_count(const lord_state_t *state);
 void lord_move_selection(lord_state_t *state, int direction);
@@ -279,7 +287,7 @@ lord_event_t lord_activate(lord_state_t *state);
 lord_event_t lord_cancel(lord_state_t *state);
 
 const char *lord_class_name(lord_class_t hero_class);
-const char *lord_sex_name(lord_sex_t sex);
+const char *lord_hero_style_name(lord_hero_style_t hero_style);
 const lord_item_t *lord_weapon(size_t index);
 const lord_item_t *lord_armor(size_t index);
 const lord_trainer_t *lord_current_trainer(const lord_state_t *state);
@@ -296,5 +304,15 @@ size_t lord_save_encode(const lord_state_t *state, uint8_t *bytes,
                         size_t capacity);
 bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
                       size_t length);
+size_t lord_sync_encode(const lord_state_t *state,
+                        const uint8_t actor_id[LORD_SYNC_ACTOR_ID_BYTES],
+                        uint64_t operation_nonce,
+                        uint8_t *bytes, size_t capacity);
+bool lord_sync_decode(lord_state_t *state,
+                      lord_sync_metadata_t *metadata,
+                      const uint8_t expected_actor_id[
+                          LORD_SYNC_ACTOR_ID_BYTES],
+                      uint32_t minimum_realm_revision,
+                      const uint8_t *bytes, size_t length);
 
 #endif

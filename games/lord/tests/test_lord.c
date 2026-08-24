@@ -30,7 +30,7 @@ static void enter_town(lord_state_t *state, lord_class_t hero_class)
     (void)strcpy(state->editor_text, "Test Hero");
     state->selection = 42U;
     CHECK(lord_activate(state) == LORD_EVENT_CONFIRM);
-    CHECK(state->screen == LORD_SCREEN_SEX);
+    CHECK(state->screen == LORD_SCREEN_HERO_STYLE);
     state->selection = 1U;
     CHECK(lord_activate(state) == LORD_EVENT_CONFIRM);
     CHECK(state->screen == LORD_SCREEN_CLASS);
@@ -46,7 +46,7 @@ static void test_character_creation_and_core_menu(void)
     lord_state_t state;
     enter_town(&state, LORD_CLASS_MYSTICAL);
     CHECK(strcmp(state.player.name, "Test Hero") == 0);
-    CHECK(state.player.sex == LORD_SEX_FEMALE);
+    CHECK(state.player.hero_style == LORD_HERO_STYLE_HEROINE);
     CHECK(state.player.hero_class == LORD_CLASS_MYSTICAL);
     CHECK(state.player.level == 1U);
     CHECK(state.player.hit_points == 20);
@@ -150,7 +150,7 @@ static void test_forest_training_skills_and_dragon(void)
     CHECK(state.player.dragon_kills == 1U);
 }
 
-static void test_mail_pvp_romance_and_family(void)
+static void test_mail_pvp_friendship_and_mentoring(void)
 {
     lord_state_t state;
     enter_town(&state, LORD_CLASS_DEATH_KNIGHT);
@@ -179,31 +179,22 @@ static void test_mail_pvp_romance_and_family(void)
     CHECK(state.player.pvp_wins == 1U);
 
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    state.screen = LORD_SCREEN_ROMANCE_ACTION;
+    state.screen = LORD_SCREEN_FRIENDSHIP_ACTION;
     state.selected_player = 1U;
-    state.realm[1].affection = 70U;
+    state.realm[1].trust = 70U;
     state.selection = 2U;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.spouse_index == 1);
-    CHECK(state.realm[1].married);
+    CHECK(state.partner_index == 1);
+    CHECK(state.realm[1].teamed);
     CHECK(state.player.max_hit_points >= 25);
 
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    state.screen = LORD_SCREEN_ROMANCE_ACTION;
+    state.screen = LORD_SCREEN_FRIENDSHIP_ACTION;
     state.selected_player = 1U;
-    state.romance_actions = 1U;
+    state.friendship_actions = 1U;
     state.selection = 3U;
-    for (unsigned attempt = 0U;
-         attempt < 12U && state.player.children == 0U; ++attempt) {
-        state.screen = LORD_SCREEN_ROMANCE_ACTION;
-        state.romance_actions = 1U;
-        state.selection = 3U;
-        (void)lord_activate(&state);
-        if (state.screen == LORD_SCREEN_MESSAGE) {
-            (void)lord_activate(&state);
-        }
-    }
-    CHECK(state.player.children > 0U);
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.player.young_heroes_helped == 1U);
 }
 
 static void test_full_inn_and_igms(void)
@@ -225,18 +216,20 @@ static void test_full_inn_and_igms(void)
     state.screen = LORD_SCREEN_SETH;
     state.selection = 4U;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.npc_spouse == 0);
+    CHECK(state.npc_friend == 0);
 
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    state.screen = LORD_SCREEN_BLACKJACK;
+    state.screen = LORD_SCREEN_DRAGON_DICE;
     state.selection = 0U;
+    const uint32_t chomp_before = state.player.gold;
+    const uint16_t badges_before = state.player.friendship_badges;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.blackjack_wager == 100U);
-    if (state.blackjack_active) {
-        state.selection = 2U;
-        CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-        CHECK(!state.blackjack_active);
-    }
+    CHECK(state.player.gold == chomp_before - 5U ||
+          state.player.gold == chomp_before ||
+          state.player.gold == chomp_before + 5U);
+    CHECK(state.player.friendship_badges == badges_before + 1U);
+    CHECK(state.player.high_spirits);
+    CHECK(lord_menu_count(&state) == 2U);
 
     state.screen = LORD_SCREEN_INN;
     state.selection = 8U;
@@ -274,15 +267,15 @@ static void test_save_round_trip(void)
     state.player.gold = 12345U;
     state.player.bank = 67890U;
     state.player.gems = 9U;
-    state.player.children = 3U;
+    state.player.young_heroes_helped = 3U;
     state.player.horse = true;
     state.player.fairy = true;
     state.player.amulet = true;
     state.player.skill[LORD_CLASS_MYSTICAL] = 17U;
     state.player.skill_uses[LORD_CLASS_MYSTICAL] = 4U;
-    state.realm[1].affection = 55U;
-    state.spouse_index = 1;
-    state.realm[1].married = true;
+    state.realm[1].trust = 55U;
+    state.partner_index = 1;
+    state.realm[1].teamed = true;
     (void)strcpy(state.conversation, "THE DRAGON IS AWAKE");
     (void)strcpy(state.announcement, "MEET IN THE FOREST");
     state.save_sequence = 42U;
@@ -305,11 +298,11 @@ static void test_save_round_trip(void)
     CHECK(restored.player.gold == 12345U);
     CHECK(restored.player.bank == 67890U);
     CHECK(restored.player.gems == 9U);
-    CHECK(restored.player.children == 3U);
+    CHECK(restored.player.young_heroes_helped == 3U);
     CHECK(restored.player.horse && restored.player.fairy);
     CHECK(restored.player.amulet);
     CHECK(restored.player.skill[LORD_CLASS_MYSTICAL] == 17U);
-    CHECK(restored.spouse_index == 1);
+    CHECK(restored.partner_index == 1);
     CHECK(strcmp(restored.conversation, "THE DRAGON IS AWAKE") == 0);
     CHECK(restored.save_sequence == 42U);
     CHECK(!restored.save_dirty);
@@ -319,6 +312,50 @@ static void test_save_round_trip(void)
     encoded[encoded_length - 1U] ^= UINT8_C(0x80);
     CHECK(!lord_save_decode(&restored, encoded, encoded_length - 1U));
     CHECK(lord_save_encode(&state, encoded, 16U) == 0U);
+}
+
+static void test_backend_sync_envelope(void)
+{
+    lord_state_t state;
+    enter_town(&state, LORD_CLASS_MYSTICAL);
+    state.realm_revision = 27U;
+    state.save_sequence = 44U;
+    state.player.gold = 1234U;
+    state.realm[2].trust = 73U;
+    const uint8_t actor_id[LORD_SYNC_ACTOR_ID_BYTES] = {
+        0x10U, 0x32U, 0x54U, 0x76U, 0x98U, 0xbaU, 0xdcU, 0xfeU,
+        0x01U, 0x23U, 0x45U, 0x67U, 0x89U, 0xabU, 0xcdU, 0xefU,
+    };
+    uint8_t record[LORD_SYNC_MAX_BYTES];
+    const size_t record_bytes = lord_sync_encode(
+        &state, actor_id, UINT64_C(0x1122334455667788),
+        record, sizeof(record));
+    CHECK(record_bytes > LORD_SAVE_MAX_BYTES / 2U);
+    CHECK(record_bytes <= sizeof(record));
+
+    lord_state_t restored;
+    lord_sync_metadata_t metadata;
+    CHECK(lord_sync_decode(&restored, &metadata, actor_id, 27U,
+                           record, record_bytes));
+    CHECK(metadata.realm_revision == 27U);
+    CHECK(metadata.save_sequence == 44U);
+    CHECK(metadata.operation_nonce == UINT64_C(0x1122334455667788));
+    CHECK(restored.player.gold == 1234U);
+    CHECK(restored.realm[2].trust == 73U);
+
+    CHECK(!lord_sync_decode(&restored, &metadata, actor_id, 28U,
+                            record, record_bytes));
+    uint8_t wrong_actor[LORD_SYNC_ACTOR_ID_BYTES];
+    (void)memcpy(wrong_actor, actor_id, sizeof(wrong_actor));
+    wrong_actor[0] ^= UINT8_C(0xff);
+    CHECK(!lord_sync_decode(&restored, &metadata, wrong_actor, 0U,
+                            record, record_bytes));
+    record[record_bytes - 1U] ^= UINT8_C(0x40);
+    CHECK(!lord_sync_decode(&restored, &metadata, actor_id, 0U,
+                            record, record_bytes));
+    record[record_bytes - 1U] ^= UINT8_C(0x40);
+    CHECK(lord_sync_encode(&state, actor_id, 0U,
+                           record, sizeof(record)) == 0U);
 }
 
 typedef struct {
@@ -451,7 +488,7 @@ static void test_runtime_save_render_and_exit(void)
             .height = P4_GAME_SURFACE_HEIGHT,
         };
         (void)strcpy(state.player.name, "Test Hero");
-        state.player.sex = LORD_SEX_FEMALE;
+        state.player.hero_style = LORD_HERO_STYLE_HEROINE;
         state.player.hero_class = LORD_CLASS_MYSTICAL;
         state.player.level = 3U;
         state.player.hit_points = 54;
@@ -465,9 +502,15 @@ static void test_runtime_save_render_and_exit(void)
         state.player.day = 4U;
         state.player.charm = 22U;
         state.player.gems = 3U;
-        state.player.children = 1U;
+        state.player.young_heroes_helped = 1U;
         state.player.skill[LORD_CLASS_MYSTICAL] = 12U;
         state.player.skill_uses[LORD_CLASS_MYSTICAL] = 3U;
+        state.selected_player = 1U;
+        state.realm[1].trust = 70U;
+        state.dice_player = 9U;
+        state.dice_host = 6U;
+        (void)strcpy(state.battle_line,
+                     "You win 10 ChompCoin! The table cheers.");
         (void)strcpy(state.conversation, "THE DRAGON IS RESTLESS TONIGHT");
         (void)strcpy(state.editor_text, "MEET ME AT THE INN");
         for (int screen = LORD_SCREEN_TITLE;
@@ -576,9 +619,10 @@ int main(void)
     test_character_creation_and_core_menu();
     test_shops_bank_and_transfer();
     test_forest_training_skills_and_dragon();
-    test_mail_pvp_romance_and_family();
+    test_mail_pvp_friendship_and_mentoring();
     test_full_inn_and_igms();
     test_save_round_trip();
+    test_backend_sync_envelope();
     test_runtime_save_render_and_exit();
     test_standard_touch_lifecycle();
     if (s_failures != 0) {

@@ -12,6 +12,7 @@
 /* The P4 cartridge packager compiles this canonical translation unit. */
 #include "lord_logic_impl.h"
 #include "lord_save_impl.h"
+#include "lord_sync_impl.h"
 #include "generated/lord_title_art.h"
 
 enum {
@@ -34,7 +35,12 @@ enum {
     ANSI_PANEL = 0x0842,
     ANSI_PANEL_ALT = 0x108a,
     ANSI_CONTROL = 0x4a75,
+    CP437_SMILE = 0x02,
     CP437_HEART = 0x03,
+    CP437_DIAMOND = 0x04,
+    CP437_BULLET = 0x07,
+    CP437_MUSIC = 0x0e,
+    CP437_STAR = 0x0f,
     CP437_ARROW_RIGHT = 0x10,
     CP437_SHADE_LIGHT = 0xb0,
     CP437_SHADE_MEDIUM = 0xb1,
@@ -60,9 +66,9 @@ static const char *const s_class_menu[] = {
     "Thieving Skills",
 };
 
-static const char *const s_sex_menu[] = {
-    "Male warrior",
-    "Female warrior",
+static const char *const s_hero_style_menu[] = {
+    "Hero",
+    "Heroine",
 };
 
 static const char *const s_town_menu[] = {
@@ -73,7 +79,7 @@ static const char *const s_town_menu[] = {
     "Turgon's Warrior Training",
     "The First Bank",
     "The Red Dragon Inn",
-    "Slaughter Other Warriors",
+    "Challenge Other Warriors",
     "The Post Office",
     "Other Places (IGMs)",
     "The Daily News",
@@ -92,7 +98,7 @@ static const char *const s_forest_menu[] = {
 };
 
 static const char *const s_healer_menu[] = {
-    "Heal one hit point (5 gold)",
+    "Heal one hit point (5 ChompCoin)",
     "Heal all wounds",
     "Return to town",
 };
@@ -103,9 +109,9 @@ static const char *const s_training_menu[] = {
 };
 
 static const char *const s_bank_menu[] = {
-    "Deposit all carried gold",
+    "Deposit all carried ChompCoin",
     "Withdraw entire account",
-    "Transfer 100 gold",
+    "Transfer 100 ChompCoin",
     "Return to town",
 };
 
@@ -116,19 +122,19 @@ static const char *const s_inn_menu[] = {
     "Spend time with Seth Able",
     "Spend time with Violet",
     "Listen to the bard's song",
-    "Play blackjack",
-    "Attack a sleeping warrior",
+    "Play Dragon Dice",
+    "Invite a warrior to spar",
     "Make an announcement",
     "Check your room",
     "Return to town",
 };
 
 static const char *const s_bartender_menu[] = {
-    "Buy dark ale (10 gold)",
+    "Buy berry fizz (10 ChompCoin)",
     "Ask about Violet",
     "Ask about Seth Able",
     "Ask about the Red Dragon",
-    "Drinking contest",
+    "Try the friendship riddle",
     "Return to the inn",
 };
 
@@ -138,20 +144,18 @@ static const char *const s_converse_menu[] = {
     "Return to the inn",
 };
 
-static const char *const s_npc_romance_menu[] = {
+static const char *const s_npc_friendship_menu[] = {
     "Talk",
-    "Flirt",
-    "Kiss",
-    "Give a gem",
-    "Propose or divorce",
+    "Tell a joke",
+    "Play Dragon Dice",
+    "Share a gem",
+    "Best-friend pact / part ways",
     "Return to the inn",
 };
 
-static const char *const s_blackjack_menu[] = {
-    "Deal a hand (100 gold)",
-    "Hit",
-    "Stand",
-    "Leave the table",
+static const char *const s_dragon_dice_menu[] = {
+    "Wager 5 ChompCoin",
+    "Return to the inn",
 };
 
 static const char *const s_battle_menu[] = {
@@ -166,25 +170,25 @@ static const char *const s_battle_menu[] = {
 static const char *const s_player_detail_menu[] = {
     "Challenge to a duel",
     "Write a sealed letter",
-    "Court this warrior",
+    "Build friendship",
     "Edit local saying",
     "Return to player list",
 };
 
-static const char *const s_romance_action_menu[] = {
-    "Offer a compliment",
-    "Give a gift (100 gold)",
-    "Propose marriage / divorce",
-    "Try to have a child",
+static const char *const s_friendship_action_menu[] = {
+    "Offer encouragement",
+    "Share supplies (100 ChompCoin)",
+    "Form team / part as friends",
+    "Mentor a young hero together",
     "Return to player record",
 };
 
 static const char *const s_igm_actions[LORD_IGM_COUNT][4] = {
-    {"Wager 100 gold", "Wager 1000 gold", "Read the rules", "Return"},
-    {"Raid Barak's house", "Ask Barak for sugar", "Skill lesson", "Return"},
-    {"Answer trivia", "Sleep at a cabin", "Accept invitation", "Return"},
-    {"Rob a grave", "Read an epitaph", "Pay your respects", "Return"},
-    {"Adopt an orphan", "Catch a runaway", "Trade children for horse", "Return"},
+    {"Wager 5 ChompCoin", "Wager 20 ChompCoin", "Read the rules", "Return"},
+    {"Visit Barak's house", "Ask Barak for sugar", "Skill lesson", "Return"},
+    {"Answer trivia", "Sleep at a cabin", "Join team challenge", "Return"},
+    {"Search old graveyard", "Read an epitaph", "Pay your respects", "Return"},
+    {"Sponsor youth supplies", "Find lost youngster", "Claim helper's horse", "Return"},
     {"Search the outhouse", "Look behind the trees", "Write on the wall", "Return"},
     {"Eat a pickle", "Read the warning", "Pray to the goddess", "Return"},
 };
@@ -353,6 +357,105 @@ static void draw_header(p4_game_surface_t *surface, const char *title)
     draw_text(surface, title_x, 8, title, ANSI_YELLOW);
 }
 
+static void draw_inn_ansi_strip(p4_game_surface_t *surface)
+{
+    draw_ansi_box(surface, 8, 24, 304, 24,
+                  ANSI_YELLOW, ANSI_PANEL_ALT, true);
+    draw_cp437(surface, 18, 32, CP437_MUSIC,
+               ANSI_BRIGHT_MAGENTA, ANSI_PANEL_ALT);
+    draw_cp437(surface, 290, 32, CP437_MUSIC,
+               ANSI_BRIGHT_MAGENTA, ANSI_PANEL_ALT);
+    draw_text(surface, 39, 33, "SONGS  STORIES  DICE  FRIENDS",
+              ANSI_BRIGHT_CYAN);
+}
+
+static void draw_friend_ansi_strip(p4_game_surface_t *surface,
+                                   bool violet)
+{
+    draw_ansi_box(surface, 8, 24, 304, 32,
+                  violet ? ANSI_BRIGHT_MAGENTA : ANSI_BRIGHT_GREEN,
+                  ANSI_PANEL_ALT, true);
+    draw_cp437(surface, 24, 32, CP437_SMILE,
+               violet ? ANSI_BRIGHT_MAGENTA : ANSI_BRIGHT_GREEN,
+               ANSI_PANEL_ALT);
+    draw_cp437(surface, 48, 32,
+               violet ? CP437_DIAMOND : CP437_MUSIC,
+               ANSI_YELLOW, ANSI_PANEL_ALT);
+    draw_text(surface, 72, 33,
+              violet ? "VIOLET: KINDNESS MAKES HEROES" :
+                       "SETH: EVERY FRIEND NEEDS A SONG",
+              ANSI_WHITE);
+    draw_cp437(surface, 288, 32, CP437_SMILE,
+               ANSI_BRIGHT_CYAN, ANSI_PANEL_ALT);
+}
+
+static void draw_friendship_ansi_strip(p4_game_surface_t *surface,
+                                       const char *name)
+{
+    draw_ansi_box(surface, 8, 24, 304, 24,
+                  ANSI_BRIGHT_MAGENTA, ANSI_PANEL_ALT, true);
+    draw_cp437(surface, 24, 32, CP437_SMILE,
+               ANSI_BRIGHT_CYAN, ANSI_PANEL_ALT);
+    draw_cp437(surface, 56, 32, CP437_DIAMOND,
+               ANSI_YELLOW, ANSI_PANEL_ALT);
+    draw_cp437(surface, 88, 32, CP437_SMILE,
+               ANSI_BRIGHT_GREEN, ANSI_PANEL_ALT);
+    draw_text(surface, 120, 33, name, ANSI_WHITE);
+}
+
+static void draw_dice_total(p4_game_surface_t *surface,
+                            int x, int y, const char *label,
+                            uint8_t value, uint16_t color)
+{
+    draw_ansi_box(surface, x, y, 64, 48, color, ANSI_PANEL_ALT, true);
+    draw_text(surface, x + 16, y + 8, label, color);
+    char number[12];
+    line_clear(number, sizeof(number));
+    line_append_u32(number, sizeof(number), value);
+    draw_cp437(surface, x + 8, y + 28, CP437_BULLET,
+               ANSI_YELLOW, ANSI_PANEL_ALT);
+    draw_text(surface, x + 28, y + 27, number, ANSI_WHITE);
+    draw_cp437(surface, x + 48, y + 28, CP437_BULLET,
+               ANSI_YELLOW, ANSI_PANEL_ALT);
+}
+
+static void draw_recovery_ansi(p4_game_surface_t *surface)
+{
+    draw_ansi_box(surface, 64, 32, 192, 72,
+                  ANSI_BRIGHT_BLUE, ANSI_PANEL_ALT, true);
+    draw_cp437(surface, 88, 48, CP437_STAR,
+               ANSI_YELLOW, ANSI_PANEL_ALT);
+    draw_cp437(surface, 224, 48, CP437_STAR,
+               ANSI_YELLOW, ANSI_PANEL_ALT);
+    draw_text(surface, 112, 47, "RESTING AT THE INN", ANSI_WHITE);
+    for (int x = 88; x <= 224; x += 16) {
+        draw_cp437(surface, x, 72,
+                   x % 32 == 0 ? CP437_SHADE_MEDIUM : CP437_SHADE_LIGHT,
+                   ANSI_BRIGHT_CYAN, ANSI_PANEL_ALT);
+    }
+}
+
+static void draw_victory_ansi(p4_game_surface_t *surface)
+{
+    draw_ansi_box(surface, 32, 28, 256, 88,
+                  ANSI_YELLOW, ANSI_PANEL_ALT, true);
+    for (int x = 48; x < 272; x += 24) {
+        draw_cp437(surface, x, 36, CP437_STAR,
+                   x % 48 == 0 ? ANSI_BRIGHT_MAGENTA : ANSI_BRIGHT_CYAN,
+                   ANSI_PANEL_ALT);
+    }
+    draw_cp437(surface, 64, 60, CP437_SMILE,
+               ANSI_BRIGHT_GREEN, ANSI_PANEL_ALT);
+    draw_cp437(surface, 248, 60, CP437_SMILE,
+               ANSI_BRIGHT_GREEN, ANSI_PANEL_ALT);
+    draw_text(surface, 88, 59, "THE REALM CHEERS!", ANSI_YELLOW);
+    for (int x = 56; x < 264; x += 8) {
+        draw_cp437(surface, x, 88,
+                   x % 24 == 0 ? CP437_BLOCK : CP437_SHADE_MEDIUM,
+                   ANSI_BRIGHT_RED, ANSI_PANEL_ALT);
+    }
+}
+
 static void draw_controls(p4_game_surface_t *surface,
                           const lord_state_t *state)
 {
@@ -416,7 +519,7 @@ static void draw_compact_menu(p4_game_surface_t *surface,
 
 static void draw_realm_menu(p4_game_surface_t *surface,
                             const lord_state_t *state,
-                            bool show_affection,
+                            bool show_trust,
                             const char *return_label)
 {
     const size_t count = LORD_REALM_PLAYER_COUNT + 1U;
@@ -436,9 +539,9 @@ static void draw_realm_menu(p4_game_surface_t *surface,
             line_append(line, sizeof(line), player->name);
             line_append(line, sizeof(line), "  LV ");
             line_append_u32(line, sizeof(line), player->level);
-            if (show_affection) {
-                line_append(line, sizeof(line), "  HEART ");
-                line_append_u32(line, sizeof(line), player->affection);
+            if (show_trust) {
+                line_append(line, sizeof(line), "  TRUST ");
+                line_append_u32(line, sizeof(line), player->trust);
             } else {
                 line_append(line, sizeof(line),
                             player->alive ? "  READY" : "  DEFEATED");
@@ -484,9 +587,9 @@ static void draw_player_detail(p4_game_surface_t *surface,
     line_append_i32(line, sizeof(line), player->defense);
     draw_text(surface, 10, 42, line, ANSI_BRIGHT_CYAN);
     line_clear(line, sizeof(line));
-    line_append(line, sizeof(line), "Affection ");
-    line_append_u32(line, sizeof(line), player->affection);
-    line_append(line, sizeof(line), player->married ? "  MARRIED" : "");
+    line_append(line, sizeof(line), "Trust ");
+    line_append_u32(line, sizeof(line), player->trust);
+    line_append(line, sizeof(line), player->teamed ? "  TEAMED" : "");
     draw_cp437(surface, 10, 53, CP437_HEART,
                ANSI_BRIGHT_RED, ANSI_BLACK);
     draw_text(surface, 24, 55, line, ANSI_YELLOW);
@@ -564,7 +667,7 @@ static void draw_player_status(p4_game_surface_t *surface,
     line_append_i32(line, sizeof(line), state->player.hit_points);
     line_append(line, sizeof(line), "/");
     line_append_i32(line, sizeof(line), state->player.max_hit_points);
-    line_append(line, sizeof(line), "  GOLD ");
+    line_append(line, sizeof(line), "  CHOMP ");
     line_append_u32(line, sizeof(line), state->player.gold);
     draw_text(surface, 8, y, line, ANSI_BRIGHT_CYAN);
 }
@@ -616,7 +719,7 @@ static void draw_town(p4_game_surface_t *surface,
     line_append_i32(line, sizeof(line), state->player.max_hit_points);
     draw_text(surface, 218, 79, line, ANSI_BRIGHT_GREEN);
     line_clear(line, sizeof(line));
-    line_append(line, sizeof(line), "GOLD ");
+    line_append(line, sizeof(line), "CHOMP ");
     line_append_u32(line, sizeof(line), state->player.gold);
     draw_text(surface, 218, 90, line, ANSI_YELLOW);
     line_clear(line, sizeof(line));
@@ -678,7 +781,7 @@ static void draw_shop(p4_game_surface_t *surface,
     }
     char funds[52];
     line_clear(funds, sizeof(funds));
-    line_append(funds, sizeof(funds), "Carried gold: ");
+    line_append(funds, sizeof(funds), "Carried ChompCoin: ");
     line_append_u32(funds, sizeof(funds), state->player.gold);
     draw_text(surface, 8, 122, funds, ANSI_BRIGHT_CYAN);
 }
@@ -692,7 +795,7 @@ static void draw_stats(p4_game_surface_t *surface,
     line_clear(line, sizeof(line));
     line_append(line, sizeof(line), state->player.name);
     line_append(line, sizeof(line), "  ");
-    line_append(line, sizeof(line), lord_sex_name(state->player.sex));
+    line_append(line, sizeof(line), lord_hero_style_name(state->player.hero_style));
     line_append(line, sizeof(line), "  ");
     line_append(line, sizeof(line), lord_class_name(state->player.hero_class));
     draw_text(surface, 12, 31, line, ANSI_BRIGHT_MAGENTA);
@@ -715,9 +818,9 @@ static void draw_stats(p4_game_surface_t *surface,
     line_append_i32(line, sizeof(line), state->player.defense);
     draw_text(surface, 12, 57, line, ANSI_BRIGHT_CYAN);
     line_clear(line, sizeof(line));
-    line_append(line, sizeof(line), "GOLD ");
+    line_append(line, sizeof(line), "CHOMP ");
     line_append_u32(line, sizeof(line), state->player.gold);
-    line_append(line, sizeof(line), "  BANK ");
+    line_append(line, sizeof(line), "  VAULT ");
     line_append_u32(line, sizeof(line), state->player.bank);
     draw_text(surface, 12, 70, line, ANSI_YELLOW);
     line_clear(line, sizeof(line));
@@ -737,10 +840,10 @@ static void draw_stats(p4_game_surface_t *surface,
     line_clear(line, sizeof(line));
     line_append(line, sizeof(line), "FIGHTS ");
     line_append_u32(line, sizeof(line), state->player.forest_fights);
-    line_append(line, sizeof(line), "  KIDS ");
-    line_append_u32(line, sizeof(line), state->player.children);
-    line_append(line, sizeof(line), "  LAID ");
-    line_append_u32(line, sizeof(line), state->player.laid);
+    line_append(line, sizeof(line), "  YOUTH ");
+    line_append_u32(line, sizeof(line), state->player.young_heroes_helped);
+    line_append(line, sizeof(line), "  TEAM ");
+    line_append_u32(line, sizeof(line), state->player.friendship_badges);
     draw_text(surface, 12, 109, line, ANSI_BRIGHT_CYAN);
     line_clear(line, sizeof(line));
     line_append(line, sizeof(line), state->player.horse ? "HORSE " : "");
@@ -855,7 +958,7 @@ static void draw_rip_inn(p4_game_surface_t *surface)
     }
     draw_ansi_box(surface, 128, 48, 152, 24,
                   ANSI_YELLOW, ANSI_RED, true);
-    draw_text(surface, 146, 57, "TALES  ALE  REST", ANSI_WHITE);
+    draw_text(surface, 142, 57, "TALES  DICE  REST", ANSI_WHITE);
     for (int x = 128; x < 280; x += P4_DRAW_CP437_CELL_WIDTH) {
         draw_cp437(surface, x, 104, CP437_SHADE_LIGHT,
                    ANSI_BRIGHT_RED, ANSI_RED);
@@ -1040,20 +1143,15 @@ static void draw_skills(p4_game_surface_t *surface,
               ANSI_LIGHT_GRAY);
 }
 
-static void draw_blackjack(p4_game_surface_t *surface,
+static void draw_dragon_dice(p4_game_surface_t *surface,
                            const lord_state_t *state)
 {
-    char line[52];
-    line_clear(line, sizeof(line));
-    line_append(line, sizeof(line), "YOU ");
-    line_append_u32(line, sizeof(line), state->blackjack_player);
-    line_append(line, sizeof(line), "  DEALER ");
-    line_append_u32(line, sizeof(line), state->blackjack_dealer);
-    line_append(line, sizeof(line), "  GOLD ");
-    line_append_u32(line, sizeof(line), state->player.gold);
-    draw_text(surface, 10, 29, line, ANSI_YELLOW);
-    draw_text(surface, 10, 42, state->battle_line, ANSI_BRIGHT_CYAN);
-    draw_menu(surface, state, s_blackjack_menu, 4U, 62);
+    draw_dice_total(surface, 80, 28, "YOU", state->dice_player,
+                    ANSI_BRIGHT_GREEN);
+    draw_dice_total(surface, 176, 28, "HOST", state->dice_host,
+                    ANSI_BRIGHT_MAGENTA);
+    draw_text(surface, 24, 79, state->battle_line, ANSI_BRIGHT_CYAN);
+    draw_menu(surface, state, s_dragon_dice_menu, 2U, 86);
 }
 
 static void draw_igm_menu(p4_game_surface_t *surface,
@@ -1085,11 +1183,11 @@ static void render_screen(p4_game_surface_t *surface,
         draw_text(surface, 76, 88,
                   "PRESS A TO ENTER A NAME", ANSI_YELLOW);
         break;
-    case LORD_SCREEN_SEX:
-        draw_header(surface, "CHOOSE YOUR WARRIOR");
+    case LORD_SCREEN_HERO_STYLE:
+        draw_header(surface, "CHOOSE YOUR HERO STYLE");
         draw_text(surface, 10, 29, state->player.name,
                   ANSI_BRIGHT_MAGENTA);
-        draw_menu(surface, state, s_sex_menu, 2U, 50);
+        draw_menu(surface, state, s_hero_style_menu, 2U, 50);
         break;
     case LORD_SCREEN_CLASS:
         draw_header(surface, "CHOOSE YOUR SKILL");
@@ -1149,29 +1247,27 @@ static void render_screen(p4_game_surface_t *surface,
         draw_header(surface, "THE FIRST BANK OF LORD");
         char line[52];
         line_clear(line, sizeof(line));
-        line_append(line, sizeof(line), "Carried: ");
+        line_append(line, sizeof(line), "ChompCoin: ");
         line_append_u32(line, sizeof(line), state->player.gold);
-        line_append(line, sizeof(line), "   Account: ");
+        line_append(line, sizeof(line), "   Vault: ");
         line_append_u32(line, sizeof(line), state->player.bank);
         draw_text(surface, 10, 29, line, ANSI_YELLOW);
         draw_menu(surface, state, s_bank_menu, 4U, 52);
         break;
     }
     case LORD_SCREEN_BANK_TRANSFER:
-        draw_header(surface, "TRANSFER 100 GOLD");
+        draw_header(surface, "TRANSFER 100 CHOMPCOIN");
         draw_realm_menu(surface, state, false, "Return to bank");
         break;
     case LORD_SCREEN_INN:
         draw_header(surface, "THE RED DRAGON INN");
-        draw_text(surface, 10, 29,
-                  "Firelight, rumors, and a safe bed.", ANSI_BROWN);
-        draw_menu(surface, state, s_inn_menu, 11U, 43);
+        draw_inn_ansi_strip(surface);
+        draw_compact_menu(surface, state, s_inn_menu, 11U, 52);
         break;
     case LORD_SCREEN_BARTENDER:
         draw_header(surface, "TALK WITH THE BARTENDER");
-        draw_text(surface, 10, 29,
-                  "Ale, gossip, and a dangerous contest.", ANSI_BROWN);
-        draw_menu(surface, state, s_bartender_menu, 6U, 48);
+        draw_inn_ansi_strip(surface);
+        draw_compact_menu(surface, state, s_bartender_menu, 6U, 58);
         break;
     case LORD_SCREEN_CONVERSE:
         draw_header(surface, "TAVERN CONVERSATION");
@@ -1183,21 +1279,17 @@ static void render_screen(p4_game_surface_t *surface,
         break;
     case LORD_SCREEN_SETH:
         draw_header(surface, "SETH ABLE THE BARD");
-        draw_text(surface, 10, 29,
-                  "A grin, a lute, and a dangerous heart.",
-                  ANSI_BRIGHT_MAGENTA);
-        draw_menu(surface, state, s_npc_romance_menu, 6U, 48);
+        draw_friend_ansi_strip(surface, false);
+        draw_compact_menu(surface, state, s_npc_friendship_menu, 6U, 60);
         break;
     case LORD_SCREEN_VIOLET:
         draw_header(surface, "VIOLET OF THE INN");
-        draw_text(surface, 10, 29,
-                  "Violet watches the room with bright eyes.",
-                  ANSI_BRIGHT_MAGENTA);
-        draw_menu(surface, state, s_npc_romance_menu, 6U, 48);
+        draw_friend_ansi_strip(surface, true);
+        draw_compact_menu(surface, state, s_npc_friendship_menu, 6U, 60);
         break;
-    case LORD_SCREEN_BLACKJACK:
-        draw_header(surface, "RED DRAGON BLACKJACK");
-        draw_blackjack(surface, state);
+    case LORD_SCREEN_DRAGON_DICE:
+        draw_header(surface, "FRIENDLY DRAGON DICE");
+        draw_dragon_dice(surface, state);
         break;
     case LORD_SCREEN_PLAYERS: {
         draw_header(surface, "LOCAL REALM: WARRIORS");
@@ -1235,22 +1327,22 @@ static void render_screen(p4_game_surface_t *surface,
                   ANSI_BRIGHT_CYAN);
         draw_realm_menu(surface, state, false, "Return to mailbox");
         break;
-    case LORD_SCREEN_ROMANCE: {
-        draw_header(surface, "LOCAL REALM: ROMANCE");
+    case LORD_SCREEN_FRIENDSHIP: {
+        draw_header(surface, "LOCAL REALM: FRIENDSHIP");
         draw_realm_menu(surface, state, true, "Return to town");
         char line[52];
         line_clear(line, sizeof(line));
-        line_append(line, sizeof(line), "Courtship actions remaining: ");
-        line_append_u32(line, sizeof(line), state->romance_actions);
+        line_append(line, sizeof(line), "Friendship actions remaining: ");
+        line_append_u32(line, sizeof(line), state->friendship_actions);
         draw_text(surface, 10, 120, line, ANSI_BRIGHT_MAGENTA);
         break;
     }
-    case LORD_SCREEN_ROMANCE_ACTION: {
-        draw_header(surface, "COURTSHIP");
+    case LORD_SCREEN_FRIENDSHIP_ACTION: {
+        draw_header(surface, "BUILD FRIENDSHIP");
         const char *name = state->selected_player < LORD_REALM_PLAYER_COUNT ?
             state->realm[state->selected_player].name : "Unknown";
-        draw_text(surface, 10, 29, name, ANSI_BRIGHT_MAGENTA);
-        draw_menu(surface, state, s_romance_action_menu, 5U, 48);
+        draw_friendship_ansi_strip(surface, name);
+        draw_compact_menu(surface, state, s_friendship_action_menu, 5U, 58);
         break;
     }
     case LORD_SCREEN_IGM: {
@@ -1314,21 +1406,15 @@ static void render_screen(p4_game_surface_t *surface,
         draw_text(surface, 90, 111, "PRESS A TO CONTINUE", ANSI_YELLOW);
         break;
     case LORD_SCREEN_DEAD:
-        draw_header(surface, "A DARKNESS FALLS");
-        draw_text(surface, 84, 48, "YOU HAVE BEEN SLAIN", ANSI_BRIGHT_RED);
-        draw_text(surface, 46, 69,
-                  "The innkeeper drags you home.", ANSI_LIGHT_GRAY);
-        draw_text(surface, 61, 102,
+        draw_header(surface, "REST AND RECOVER");
+        draw_recovery_ansi(surface);
+        draw_text(surface, 80, 108, "YOU WERE KNOCKED OUT", ANSI_BRIGHT_RED);
+        draw_text(surface, 61, 120,
                   "PRESS A TO FACE THE MORNING", ANSI_YELLOW);
         break;
     case LORD_SCREEN_DRAGON_VICTORY:
-        draw_header(surface, "THE RED DRAGON FALLS");
-        draw_text(surface, 52, 42,
-                  "YOUR NAME BECOMES LEGEND!", ANSI_YELLOW);
-        draw_text(surface, 38, 64,
-                  "The realm is free of crimson fire.", ANSI_WHITE);
-        draw_text(surface, 43, 86,
-                  "A stronger new adventure awaits.", ANSI_BRIGHT_GREEN);
+        draw_header(surface, "THE RED DRAGON YIELDS");
+        draw_victory_ansi(surface);
         draw_text(surface, 72, 111,
                   "PRESS A TO PLAY AGAIN", ANSI_BRIGHT_CYAN);
         break;

@@ -62,7 +62,7 @@ static const lord_trainer_t s_trainers[LORD_MAX_LEVEL - 1] = {
 typedef struct {
     const char *name;
     const char *saying;
-    lord_sex_t sex;
+    lord_hero_style_t hero_style;
     lord_class_t hero_class;
     uint8_t level;
     int32_t hit_points;
@@ -74,21 +74,21 @@ typedef struct {
 
 static const lord_realm_template_t
     s_realm_templates[LORD_REALM_PLAYER_COUNT] = {
-        {"Sir Galahad", "Honor before gold.", LORD_SEX_MALE,
+        {"Sir Galahad", "Honor before ChompCoin.", LORD_HERO_STYLE_HERO,
          LORD_CLASS_DEATH_KNIGHT, 1U, 24, 11, 2, 320U, 25U},
-        {"Moonwitch", "The stars remember.", LORD_SEX_FEMALE,
+        {"Moonwitch", "The stars remember.", LORD_HERO_STYLE_HEROINE,
          LORD_CLASS_MYSTICAL, 2U, 38, 19, 5, 850U, 130U},
-        {"Shadow Jack", "Your purse looks heavy.", LORD_SEX_MALE,
+        {"Shadow Jack", "Your ChompCoin pouch looks heavy.", LORD_HERO_STYLE_HERO,
          LORD_CLASS_THIEF, 3U, 58, 30, 8, 1800U, 475U},
-        {"Lady Celes", "No dragon frightens me.", LORD_SEX_FEMALE,
+        {"Lady Celes", "No dragon frightens me.", LORD_HERO_STYLE_HEROINE,
          LORD_CLASS_MYSTICAL, 4U, 92, 46, 13, 4200U, 1200U},
-        {"Iron Rose", "Steel blooms in battle.", LORD_SEX_FEMALE,
+        {"Iron Rose", "Steel blooms in battle.", LORD_HERO_STYLE_HEROINE,
          LORD_CLASS_DEATH_KNIGHT, 5U, 145, 72, 22, 9000U, 3900U},
-        {"Nightblade", "You never saw me.", LORD_SEX_MALE,
+        {"Nightblade", "You never saw me.", LORD_HERO_STYLE_HERO,
          LORD_CLASS_THIEF, 6U, 230, 108, 34, 18000U, 9800U},
-        {"Aria Dawn", "Magic favors the bold.", LORD_SEX_FEMALE,
+        {"Aria Dawn", "Magic favors the bold.", LORD_HERO_STYLE_HEROINE,
          LORD_CLASS_MYSTICAL, 7U, 360, 165, 52, 43000U, 27000U},
-        {"Dread Rowan", "Meet me in the arena.", LORD_SEX_MALE,
+        {"Dread Rowan", "Meet me in the arena.", LORD_HERO_STYLE_HERO,
          LORD_CLASS_DEATH_KNIGHT, 8U, 590, 255, 79, 92000U, 71000U},
     };
 
@@ -100,7 +100,7 @@ static const char *const s_rip_scene_names[LORD_RIP_SCENE_COUNT] = {
 
 static const char *const s_igm_names[LORD_IGM_COUNT] = {
     "Aragorn's Math", "Barak's House", "The Grab Bag",
-    "The Graveyard", "Olodrin's Orphans", "The Outhouse",
+    "The Graveyard", "Olodrin's Youth Guild", "The Outhouse",
     "The Pickle Goddess",
 };
 
@@ -279,23 +279,23 @@ static void add_mail(lord_state_t *state, uint8_t sender,
 
 static void initialize_realm(lord_state_t *state)
 {
-    state->spouse_index = -1;
-    state->npc_spouse = -1;
+    state->partner_index = -1;
+    state->npc_friend = -1;
     state->pvp_fights = LORD_PVP_FIGHTS_PER_DAY;
-    state->romance_actions = LORD_ROMANCE_ACTIONS_PER_DAY;
+    state->friendship_actions = LORD_FRIENDSHIP_ACTIONS_PER_DAY;
     for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
         const lord_realm_template_t *const source =
             &s_realm_templates[index];
         lord_realm_player_t *const target = &state->realm[index];
         text_copy(target->name, sizeof(target->name), source->name);
         text_copy(target->saying, sizeof(target->saying), source->saying);
-        target->sex = source->sex;
+        target->hero_style = source->hero_style;
         target->hero_class = source->hero_class;
         target->level = source->level;
         target->alive = true;
         target->at_inn = index % 3U == 0U;
-        target->married = false;
-        target->affection = 0U;
+        target->teamed = false;
+        target->trust = 0U;
         target->hit_points = source->hit_points;
         target->max_hit_points = source->hit_points;
         target->strength = source->strength;
@@ -322,18 +322,18 @@ static uint8_t daily_skill_uses(uint8_t mastery)
     return uses > 9U ? 9U : uses;
 }
 
-static void maybe_have_baby(lord_state_t *state)
+static void maybe_help_young_hero(lord_state_t *state)
 {
-    if ((state->spouse_index < 0 && state->npc_spouse < 0) ||
+    if ((state->partner_index < 0 && state->npc_friend < 0) ||
         random_below(state, 5U) != 0U) {
         return;
     }
-    state->player.children = add_u16_saturating(
-        state->player.children, 1U);
+    state->player.young_heroes_helped = add_u16_saturating(
+        state->player.young_heroes_helped, 1U);
     add_mail(state, LORD_MAIL_SENDER_SETH, LORD_MAIL_SENDER_HERO,
-             LORD_MAIL_BABY, false,
-             "A child has joined your household. Congratulations!");
-    add_named_log(state, "", " welcomed a child into the realm.");
+             LORD_MAIL_MENTOR, false,
+             "Your adventure team helped a young hero train!");
+    add_named_log(state, "", " helped a young hero train.");
 }
 
 static void reset_new_day(lord_state_t *state)
@@ -349,13 +349,12 @@ static void reset_new_day(lord_state_t *state)
             daily_skill_uses(state->player.skill[index]);
     }
     state->pvp_fights = LORD_PVP_FIGHTS_PER_DAY;
-    state->romance_actions = LORD_ROMANCE_ACTIONS_PER_DAY;
+    state->friendship_actions = LORD_FRIENDSHIP_ACTIONS_PER_DAY;
     state->igm_used_mask = 0U;
     state->player.seen_dragon = false;
-    state->blackjack_active = false;
     state->player.bank = add_u32_saturating(
         state->player.bank, state->player.bank / 10U);
-    if (state->spouse_index >= 0 || state->npc_spouse >= 0) {
+    if (state->partner_index >= 0 || state->npc_friend >= 0) {
         state->player.bank = add_u32_saturating(
             state->player.bank, state->player.bank / 20U);
     }
@@ -368,7 +367,7 @@ static void reset_new_day(lord_state_t *state)
         state->realm[index].at_inn =
             ((index + (size_t)state->player.day) % 3U) == 0U;
     }
-    maybe_have_baby(state);
+    maybe_help_young_hero(state);
     add_log(state, "A new day dawned over the realm.");
     mark_dirty(state);
 }
@@ -378,13 +377,13 @@ static void initialize_player(lord_state_t *state,
 {
     char name[LORD_NAME_BYTES];
     text_copy(name, sizeof(name), state->player.name);
-    const lord_sex_t sex = state->player.sex;
+    const lord_hero_style_t hero_style = state->player.hero_style;
     const uint8_t former_kills = state->player.dragon_kills;
     const uint16_t former_day = state->player.day;
     const uint16_t former_pvp_wins = state->player.pvp_wins;
     const uint16_t former_pvp_losses = state->player.pvp_losses;
     state->player = (lord_player_t){
-        .sex = sex,
+        .hero_style = hero_style,
         .hero_class = hero_class,
         .level = 1U,
         .hit_points = 20 + (int32_t)former_kills * 5,
@@ -467,7 +466,7 @@ static void begin_dragon_battle(lord_state_t *state)
 {
     text_copy(state->enemy.name, sizeof(state->enemy.name), "The Red Dragon");
     text_copy(state->enemy.weapon, sizeof(state->enemy.weapon), "Dragon Fire");
-    state->enemy.death_text = "The Red Dragon crashes to the earth!";
+    state->enemy.death_text = "The Red Dragon yields and leaves the realm!";
     state->enemy.hit_points = 15000;
     state->enemy.max_hit_points = 15000;
     state->enemy.strength = 2000;
@@ -498,14 +497,14 @@ static void begin_pvp_battle(lord_state_t *state, bool in_inn)
     }
     if (!opponent->alive || (in_inn && !opponent->at_inn)) {
         set_message(state, in_inn ? LORD_SCREEN_INN : LORD_SCREEN_PLAYER_DETAIL,
-                    in_inn ? "No sleeping warrior is in that room." :
+                    in_inn ? "No resting warrior accepts the challenge." :
                              "That warrior is already defeated.", "");
         return;
     }
     --state->pvp_fights;
     text_copy(state->enemy.name, sizeof(state->enemy.name), opponent->name);
     text_copy(state->enemy.weapon, sizeof(state->enemy.weapon), "Arena weapon");
-    state->enemy.death_text = "The defeated warrior falls.";
+    state->enemy.death_text = "The defeated warrior offers a respectful bow.";
     state->enemy.hit_points = opponent->hit_points;
     state->enemy.max_hit_points = opponent->max_hit_points;
     state->enemy.strength = opponent->strength;
@@ -514,7 +513,7 @@ static void begin_pvp_battle(lord_state_t *state, bool in_inn)
     state->enemy.experience = opponent->experience;
     state->battle_kind = in_inn ? LORD_BATTLE_INN : LORD_BATTLE_PVP;
     text_copy(state->battle_line, sizeof(state->battle_line),
-              in_inn ? "The innkeeper takes 100 gold and looks away." :
+              in_inn ? "The innkeeper opens the friendly sparring ring." :
                        "The town gathers around the duel.");
     mark_dirty(state);
     set_screen(state, LORD_SCREEN_BATTLE);
@@ -574,7 +573,7 @@ static lord_event_t finish_battle(lord_state_t *state)
         line[0] = '\0';
         text_append(line, sizeof(line), "Victory: ");
         text_append_u32(line, sizeof(line), state->enemy.gold);
-        text_append(line, sizeof(line), " gold, ");
+        text_append(line, sizeof(line), " ChompCoin, ");
         text_append_u32(line, sizeof(line), state->enemy.experience);
         text_append(line, sizeof(line), " experience.");
         set_message(state, LORD_SCREEN_FOREST, line,
@@ -623,7 +622,7 @@ static lord_event_t finish_battle(lord_state_t *state)
         state->battle_kind = LORD_BATTLE_NONE;
         set_message(state, LORD_SCREEN_PLAYERS,
                     "You win the player fight!",
-                    "Half the opponent's carried gold is yours.");
+                    "Half their carried ChompCoin is yours.");
         return LORD_EVENT_WIN;
     }
     state->battle_kind = LORD_BATTLE_NONE;
@@ -660,7 +659,7 @@ static lord_event_t battle_round(lord_state_t *state, int32_t multiplier,
             }
         }
         state->battle_kind = LORD_BATTLE_NONE;
-        add_named_log(state, "", " was slain in battle.");
+        add_named_log(state, "", " was knocked out in battle.");
         set_screen(state, LORD_SCREEN_DEAD);
         return LORD_EVENT_LOSE;
     }
@@ -763,7 +762,7 @@ static lord_event_t finish_editor(lord_state_t *state)
         }
         text_copy(state->player.name, sizeof(state->player.name),
                   state->editor_text);
-        set_screen(state, LORD_SCREEN_SEX);
+        set_screen(state, LORD_SCREEN_HERO_STYLE);
         return LORD_EVENT_CONFIRM;
     }
     if (length == 0U) {
@@ -873,7 +872,7 @@ static void run_forest_event(lord_state_t *state)
         state->player.gold = add_u32_saturating(state->player.gold, reward);
         text_append(line, sizeof(line), "A lost sack holds ");
         text_append_u32(line, sizeof(line), reward);
-        text_append(line, sizeof(line), " gold.");
+        text_append(line, sizeof(line), " ChompCoin.");
         set_message(state, LORD_SCREEN_FOREST, line, "Fortune smiles.");
         break;
     }
@@ -991,14 +990,14 @@ static void run_forest_event(lord_state_t *state)
             state->player.gold, (uint32_t)state->player.level * 2000U);
         set_message(state, LORD_SCREEN_FOREST,
                     "You rescue a lost princess from danger.",
-                    "Royal gold and two charm are awarded.");
+                    "Royal ChompCoin and two charm are awarded.");
         break;
     case 12U: {
         const uint32_t found = (uint32_t)state->player.level * 750U;
         state->player.gold = add_u32_saturating(state->player.gold, found);
         text_append(line, sizeof(line), "You recover ");
         text_append_u32(line, sizeof(line), found);
-        text_append(line, sizeof(line), " lost forest gold.");
+        text_append(line, sizeof(line), " lost forest ChompCoin.");
         set_message(state, LORD_SCREEN_FOREST, line, "");
         break;
     }
@@ -1010,11 +1009,11 @@ static void run_forest_event(lord_state_t *state)
             state->player.hit_points = 0;
             state->player.gold = 0U;
             state->player.gems = 0U;
-            add_named_log(state, "", " was killed by a forest troll.");
+            add_named_log(state, "", " was knocked out by a forest troll.");
             set_screen(state, LORD_SCREEN_DEAD);
         } else {
             set_message(state, LORD_SCREEN_FOREST,
-                        "A troll lunges for your coin purse!",
+                        "A troll lunges for your ChompCoin pouch!",
                         damage == 0 ? "Your thieving reflexes foil him." :
                                       "You drive him off, wounded.");
         }
@@ -1023,21 +1022,21 @@ static void run_forest_event(lord_state_t *state)
     default:
         if (random_below(state, 2U) == 0U) {
             state->player.gold = add_u32_saturating(
-                state->player.gold, (uint32_t)state->player.level * 500U);
+                state->player.gold, 10U);
             set_message(state, LORD_SCREEN_FOREST,
                         "DarkCloak Tavern appears in the gloom.",
-                        "A lucky wager wins forest gold.");
+                        "A lucky riddle wins 10 ChompCoin.");
         } else {
             set_message(state, LORD_SCREEN_FOREST,
                         "You warm yourself at DarkCloak Tavern.",
-                        "The old man's gamble favors the house.");
+                        "The old man's riddle leaves you puzzled.");
         }
         break;
     }
     mark_dirty(state);
 }
 
-static lord_event_t perform_romance_action(lord_state_t *state)
+static lord_event_t perform_friendship_action(lord_state_t *state)
 {
     if (state->selected_player >= LORD_REALM_PLAYER_COUNT) {
         set_screen(state, LORD_SCREEN_PLAYERS);
@@ -1048,99 +1047,95 @@ static lord_event_t perform_romance_action(lord_state_t *state)
         set_screen(state, LORD_SCREEN_PLAYER_DETAIL);
         return LORD_EVENT_CONFIRM;
     }
-    if (state->romance_actions == 0U) {
-        set_message(state, LORD_SCREEN_ROMANCE_ACTION,
-                    "No courtship actions remain today.",
+    if (state->friendship_actions == 0U) {
+        set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                    "No friendship actions remain today.",
                     "Sleep at the inn and try tomorrow.");
         return LORD_EVENT_CONFIRM;
     }
     if (state->selection == 3U) {
-        if (state->spouse_index != (int8_t)state->selected_player) {
-            set_message(state, LORD_SCREEN_ROMANCE_ACTION,
-                        "Children require a committed household.", "");
+        if (state->partner_index != (int8_t)state->selected_player) {
+            set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                        "Choose this warrior as your teammate first.", "");
             return LORD_EVENT_CONFIRM;
         }
-        --state->romance_actions;
-        if (random_below(state, 3U) == 0U) {
-            state->player.children = add_u16_saturating(
-                state->player.children, 1U);
-            add_mail(state, state->selected_player, LORD_MAIL_SENDER_HERO,
-                     LORD_MAIL_BABY, false,
-                     "Our family has grown by one child!");
-            set_message(state, LORD_SCREEN_ROMANCE_ACTION,
-                        "A child joins your household!",
-                        "The realm celebrates with you.");
-        } else {
-            set_message(state, LORD_SCREEN_ROMANCE_ACTION,
-                        "You spend a quiet evening together.",
-                        "Perhaps the family will grow another day.");
-        }
+        --state->friendship_actions;
+        state->player.young_heroes_helped = add_u16_saturating(
+            state->player.young_heroes_helped, 1U);
+        add_mail(state, state->selected_player, LORD_MAIL_SENDER_HERO,
+                 LORD_MAIL_MENTOR, false,
+                 "Our team helped a young hero begin training!");
+        set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                    "You mentor a young hero together!",
+                    "Teamwork brightens the realm.");
+        add_named_log(state, "", " mentored a young hero.");
         mark_dirty(state);
         return LORD_EVENT_CONFIRM;
     }
     if (state->selection == 2U) {
-        --state->romance_actions;
-        if (state->spouse_index == (int8_t)state->selected_player) {
-            person->married = false;
-            state->spouse_index = -1;
-            set_message(state, LORD_SCREEN_ROMANCE_ACTION,
-                        "The marriage is ended.",
-                        "The daily spouse bonus is gone.");
-            add_named_log(state, "", " was divorced.");
+        --state->friendship_actions;
+        if (state->partner_index == (int8_t)state->selected_player) {
+            person->teamed = false;
+            state->partner_index = -1;
+            set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                        "Your adventure team parts as friends.",
+                        "The daily teamwork bonus is gone.");
+            add_named_log(state, "", " ended an adventure team.");
             mark_dirty(state);
             return LORD_EVENT_CONFIRM;
         }
-        if (state->spouse_index >= 0 || state->npc_spouse >= 0) {
-            set_message(state, LORD_SCREEN_ROMANCE_ACTION,
-                        "You have already made a marriage vow.", "");
+        if (state->partner_index >= 0 || state->npc_friend >= 0) {
+            set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                        "You already have an adventure partner.", "");
             return LORD_EVENT_CONFIRM;
         }
-        if (person->affection < 60U || person->married) {
+        if (person->trust < 60U || person->teamed) {
             add_mail(state, state->selected_player, LORD_MAIL_SENDER_HERO,
-                     LORD_MAIL_ROMANCE, false,
-                     "My heart is not ready. Kindness may change that.");
-            set_message(state, LORD_SCREEN_ROMANCE_ACTION,
-                        "Your proposal is gently refused.",
-                        "Build more affection first.");
+                     LORD_MAIL_TEAM_INVITE, false,
+                     "Let us build more trust before forming a team.");
+            set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                        "The team invitation is kindly declined.",
+                        "Build more trust first.");
             return LORD_EVENT_CONFIRM;
         }
-        state->spouse_index = (int8_t)state->selected_player;
-        person->married = true;
+        state->partner_index = (int8_t)state->selected_player;
+        person->teamed = true;
         state->player.max_hit_points += 5;
         state->player.hit_points += 5;
         add_mail(state, state->selected_player, LORD_MAIL_SENDER_HERO,
-                 LORD_MAIL_PROPOSAL, false,
-                 "Our names are joined in the realm.");
-        add_named_log(state, "", " married another warrior.");
-        set_message(state, LORD_SCREEN_ROMANCE_ACTION,
-                    "Wedding bells ring across the realm!",
-                    "Marriage grants 5 HP and an inn bonus.");
+                 LORD_MAIL_TEAM_PLEDGE, false,
+                 "Our adventure team is official. Let us help the realm!");
+        add_named_log(state, "", " formed an adventure team.");
+        set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                    "Your adventure team is official!",
+                    "Teamwork grants 5 HP and an inn bonus.");
+        mark_dirty(state);
         return LORD_EVENT_CONFIRM;
     }
     uint8_t gain = 15U;
     if (state->selection == 1U) {
         if (state->player.gold < 100U) {
-            set_message(state, LORD_SCREEN_ROMANCE_ACTION,
-                        "A proper gift costs 100 gold.", "");
+            set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                        "Shared supplies cost 100 ChompCoin.", "");
             return LORD_EVENT_CONFIRM;
         }
         state->player.gold -= 100U;
         gain = 30U;
     }
-    --state->romance_actions;
-    const uint16_t affection = (uint16_t)person->affection + gain;
-    person->affection = affection > 100U ? 100U : (uint8_t)affection;
+    --state->friendship_actions;
+    const uint16_t trust = (uint16_t)person->trust + gain;
+    person->trust = trust > 100U ? 100U : (uint8_t)trust;
     state->player.charm = add_u16_saturating(state->player.charm, 1U);
     mark_dirty(state);
-    set_message(state, LORD_SCREEN_ROMANCE_ACTION,
+    set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
                 state->selection == 0U ?
-                    "Your compliment earns a warm smile." :
-                    "The gift is accepted with delight.",
-                "Affection and charm have grown.");
+                    "Your encouragement earns a bright smile." :
+                    "The shared supplies are gratefully accepted.",
+                "Trust and charm have grown.");
     return LORD_EVENT_CONFIRM;
 }
 
-static lord_event_t npc_romance(lord_state_t *state, int8_t npc)
+static lord_event_t npc_friendship(lord_state_t *state, int8_t npc)
 {
     const lord_screen_t screen = npc == 0 ? LORD_SCREEN_SETH :
                                                 LORD_SCREEN_VIOLET;
@@ -1149,34 +1144,32 @@ static lord_event_t npc_romance(lord_state_t *state, int8_t npc)
         set_screen(state, LORD_SCREEN_INN);
         return LORD_EVENT_CONFIRM;
     }
-    if (state->romance_actions == 0U) {
-        set_message(state, screen, "No flirting remains today.",
+    if (state->friendship_actions == 0U) {
+        set_message(state, screen, "No friendship activities remain today.",
                     "Try again after sleeping.");
         return LORD_EVENT_CONFIRM;
     }
-    --state->romance_actions;
+    --state->friendship_actions;
     if (state->selection == 0U) {
         set_message(state, screen,
                     npc == 0 ? "Seth shares a new verse with you." :
-                               "Violet tells you about the bar.",
-                    "The conversation is warm.");
+                               "Violet shares news from the inn.",
+                    "A good chat builds friendship.");
     } else if (state->selection == 1U) {
         state->player.charm = add_u16_saturating(state->player.charm, 1U);
-        set_message(state, screen, "Your flirt earns a delighted smile.",
+        set_message(state, screen, "Your joke earns a delighted laugh!",
                     "Charm rises by one.");
     } else if (state->selection == 2U) {
-        if (state->player.charm >= 20U) {
-            state->player.laid = add_u16_saturating(state->player.laid, 1U);
-            state->player.high_spirits = true;
-            add_named_log(state, "", npc == 0 ?
-                          " spent the evening with Seth." :
-                          " spent the evening with Violet.");
-            set_message(state, screen, "A kiss becomes a private evening.",
-                        "You leave in high spirits.");
-        } else {
-            set_message(state, screen, "Your kiss is politely refused.",
-                        "More charm may help.");
-        }
+        const uint8_t hero_roll = (uint8_t)(random_below(state, 6U) + 1U);
+        const uint8_t friend_roll = (uint8_t)(random_below(state, 6U) + 1U);
+        state->player.friendship_badges = add_u16_saturating(
+            state->player.friendship_badges, 1U);
+        state->player.high_spirits = true;
+        set_message(state, screen,
+                    hero_roll >= friend_roll ?
+                        "You win a cheerful round of Dragon Dice!" :
+                        "Your friend wins the Dragon Dice round!",
+                    "Either way, friendship wins.");
     } else if (state->selection == 3U) {
         if (state->player.gems == 0U) {
             set_message(state, screen, "A sparkling gift needs one gem.", "");
@@ -1186,116 +1179,74 @@ static lord_event_t npc_romance(lord_state_t *state, int8_t npc)
             set_message(state, screen, "The gem is accepted with delight.",
                         "Charm rises by three.");
         }
-    } else if (state->npc_spouse == npc) {
-        state->npc_spouse = -1;
-        set_message(state, screen, "Your marriage is dissolved.", "");
-        add_named_log(state, "", " was divorced.");
-    } else if (state->spouse_index >= 0 || state->npc_spouse >= 0) {
-        set_message(state, screen, "You have already made another vow.", "");
+    } else if (state->npc_friend == npc) {
+        state->npc_friend = -1;
+        set_message(state, screen, "You part as best friends.",
+                    "Your adventures can still cross again.");
+        add_named_log(state, "", " ended a best-friend pact.");
+    } else if (state->partner_index >= 0 || state->npc_friend >= 0) {
+        set_message(state, screen, "You already have a best-friend pact.", "");
     } else if (state->player.charm < 30U) {
-        set_message(state, screen, "The proposal is refused for now.",
-                    "Reach 30 charm and ask again.");
+        set_message(state, screen, "The best-friend pact can wait.",
+                    "Reach 30 charm and keep being kind.");
     } else {
-        state->npc_spouse = npc;
+        state->npc_friend = npc;
         state->player.max_hit_points += 5;
         state->player.hit_points += 5;
         char log_line[LORD_LOG_TEXT_BYTES];
         log_line[0] = '\0';
         text_append(log_line, sizeof(log_line), state->player.name);
-        text_append(log_line, sizeof(log_line), " married ");
+        text_append(log_line, sizeof(log_line), " became best friends with ");
         text_append(log_line, sizeof(log_line), name);
         text_append(log_line, sizeof(log_line), "!");
         add_log(state, log_line);
-        set_message(state, screen, "Wedding bells shake the inn!",
-                    "Marriage grants 5 maximum HP.");
+        set_message(state, screen, "A best-friend cheer fills the inn!",
+                    "Friendship grants 5 maximum HP.");
     }
     mark_dirty(state);
     return LORD_EVENT_CONFIRM;
 }
 
-static uint8_t deal_card(lord_state_t *state)
+static uint8_t roll_dragon_die(lord_state_t *state)
 {
-    return (uint8_t)(random_below(state, 10U) + 2U);
+    return (uint8_t)(random_below(state, 6U) + 1U);
 }
 
-static void settle_blackjack(lord_state_t *state, bool player_wins,
-                             bool push)
+static lord_event_t dragon_dice_action(lord_state_t *state)
 {
-    if (push) {
-        state->player.gold = add_u32_saturating(
-            state->player.gold, state->blackjack_wager);
-        text_copy(state->battle_line, sizeof(state->battle_line),
-                  "Push. Your wager is returned.");
-    } else if (player_wins) {
-        const uint32_t payout = (uint32_t)state->blackjack_wager * 2U;
-        state->player.gold = add_u32_saturating(state->player.gold, payout);
-        text_copy(state->battle_line, sizeof(state->battle_line),
-                  "You beat the dealer and collect double.");
-    } else {
-        text_copy(state->battle_line, sizeof(state->battle_line),
-                  "The dealer takes your wager.");
-    }
-    state->blackjack_active = false;
-    mark_dirty(state);
-}
-
-static lord_event_t blackjack_action(lord_state_t *state)
-{
-    if (state->selection == 3U) {
-        state->blackjack_active = false;
+    if (state->selection == 1U) {
         set_screen(state, LORD_SCREEN_INN);
         return LORD_EVENT_CONFIRM;
     }
-    if (state->selection == 0U) {
-        if (state->blackjack_active) {
-            set_message(state, LORD_SCREEN_BLACKJACK,
-                        "Finish the current hand first.", "");
-            return LORD_EVENT_CONFIRM;
-        }
-        if (state->player.gold < 100U) {
-            set_message(state, LORD_SCREEN_BLACKJACK,
-                        "A blackjack hand costs 100 gold.", "");
-            return LORD_EVENT_CONFIRM;
-        }
-        state->player.gold -= 100U;
-        state->blackjack_wager = 100U;
-        state->blackjack_player = (uint8_t)(deal_card(state) + deal_card(state));
-        state->blackjack_dealer = (uint8_t)(deal_card(state) + deal_card(state));
-        state->blackjack_active = true;
+    if (state->player.gold < 5U) {
+        set_message(state, LORD_SCREEN_DRAGON_DICE,
+                    "A round costs 5 ChompCoin.",
+                    "Win more in Aragorn's math challenges.");
+        return LORD_EVENT_CONFIRM;
+    }
+    state->player.gold -= 5U;
+    state->dice_player = (uint8_t)(roll_dragon_die(state) +
+                                   roll_dragon_die(state));
+    state->dice_host = (uint8_t)(roll_dragon_die(state) +
+                                 roll_dragon_die(state));
+    if (state->dice_player > state->dice_host) {
+        state->player.gold = add_u32_saturating(
+            state->player.gold, 10U);
+        state->player.charm = add_u16_saturating(state->player.charm, 1U);
         text_copy(state->battle_line, sizeof(state->battle_line),
-                  "Cards dealt. Hit or stand.");
-        if (state->blackjack_player >= 21U) {
-            settle_blackjack(state, state->blackjack_player == 21U,
-                             state->blackjack_dealer == 21U);
-        }
-        mark_dirty(state);
-        return LORD_EVENT_CONFIRM;
-    }
-    if (!state->blackjack_active) {
-        set_message(state, LORD_SCREEN_BLACKJACK,
-                    "Deal a new hand first.", "");
-        return LORD_EVENT_CONFIRM;
-    }
-    if (state->selection == 1U) {
-        state->blackjack_player = (uint8_t)(
-            state->blackjack_player + deal_card(state));
-        if (state->blackjack_player > 21U) {
-            settle_blackjack(state, false, false);
-        } else {
-            text_copy(state->battle_line, sizeof(state->battle_line),
-                      "Another card lands before you.");
-        }
+                  "You win 10 ChompCoin! The table cheers.");
+    } else if (state->dice_player == state->dice_host) {
+        state->player.gold = add_u32_saturating(
+            state->player.gold, 5U);
+        text_copy(state->battle_line, sizeof(state->battle_line),
+                  "A tie! Your 5 ChompCoin returns.");
     } else {
-        while (state->blackjack_dealer < 17U) {
-            state->blackjack_dealer = (uint8_t)(
-                state->blackjack_dealer + deal_card(state));
-        }
-        const bool dealer_bust = state->blackjack_dealer > 21U;
-        settle_blackjack(state,
-                         dealer_bust || state->blackjack_player >
-                             state->blackjack_dealer,
-                         state->blackjack_player == state->blackjack_dealer);
+        text_copy(state->battle_line, sizeof(state->battle_line),
+                  "The host wins 5 ChompCoin and shares a trick.");
     }
+    state->player.high_spirits = true;
+    state->player.friendship_badges = add_u16_saturating(
+        state->player.friendship_badges, 1U);
     mark_dirty(state);
     return LORD_EVENT_CONFIRM;
 }
@@ -1333,13 +1284,13 @@ static lord_event_t run_igm_action(lord_state_t *state)
         if (state->selection == 2U) {
             set_message(state, LORD_SCREEN_IGM_DETAIL,
                         "Aragorn gives twenty arithmetic questions.",
-                        "This port resolves the bounded wager at once.");
+                        "Win ChompCoin by solving the bounded challenge.");
             return LORD_EVENT_CONFIRM;
         }
-        const uint32_t wager = state->selection == 0U ? 100U : 1000U;
+        const uint32_t wager = state->selection == 0U ? 5U : 20U;
         if (state->player.gold < wager) {
             set_message(state, LORD_SCREEN_IGM_DETAIL,
-                        "Aragorn refuses an unfunded wager.", "");
+                        "You need more ChompCoin for that challenge.", "");
             return LORD_EVENT_CONFIRM;
         }
         state->player.gold -= wager;
@@ -1348,11 +1299,11 @@ static lord_event_t run_igm_action(lord_state_t *state)
                 state->player.gold, wager * 2U);
             set_message(state, LORD_SCREEN_IGM_DETAIL,
                         "Your arithmetic defeats Aragorn!",
-                        "The wager is doubled.");
+                        "Your ChompCoin wager is doubled.");
         } else {
             set_message(state, LORD_SCREEN_IGM_DETAIL,
                         "Aragorn catches an arithmetic error.",
-                        "Your wager joins his gold piles.");
+                        "He collects the ChompCoin wager.");
         }
     } else if (module == 1U) {
         if (state->selection == 0U) {
@@ -1368,7 +1319,7 @@ static lord_event_t run_igm_action(lord_state_t *state)
                     state->player.gold, haul);
                 set_message(state, LORD_SCREEN_IGM_DETAIL,
                             "You sneak through Barak's house.",
-                            "A sack of gold makes it outside.");
+                            "A sack of ChompCoin makes it outside.");
             }
         } else if (state->selection == 1U) {
             state->player.gems = add_u16_saturating(state->player.gems, 1U);
@@ -1398,7 +1349,7 @@ static lord_event_t run_igm_action(lord_state_t *state)
                     state->player.gold, reward);
                 set_message(state, LORD_SCREEN_IGM_DETAIL,
                             "The Grab Bag host likes your answer.",
-                            "A purse of gold is awarded.");
+                            "A pouch of ChompCoin is awarded.");
             }
         } else if (state->selection == 1U) {
             state->player.forest_fights = add_u16_saturating(
@@ -1408,12 +1359,13 @@ static lord_event_t run_igm_action(lord_state_t *state)
                         "A cabin offers a perfect night's rest.",
                         "Full health and two forest fights.");
         } else {
-            ++state->player.laid;
+            state->player.friendship_badges = add_u16_saturating(
+                state->player.friendship_badges, 1U);
             state->player.experience = add_u32_saturating(
                 state->player.experience, 1000U);
             set_message(state, LORD_SCREEN_IGM_DETAIL,
-                        "A private invitation arrives.",
-                        "You gain 1000 experience.");
+                        "You join a cheerful team challenge.",
+                        "Friendship and 1000 XP are your prize.");
         }
     } else if (module == 3U) {
         if (state->selection == 0U) {
@@ -1431,7 +1383,7 @@ static lord_event_t run_igm_action(lord_state_t *state)
                     state->player.gems, 2U);
                 set_message(state, LORD_SCREEN_IGM_DETAIL,
                             "An old grave conceals treasure.",
-                            "Gold and two gems fill your hands.");
+                            "ChompCoin and two gems fill your hands.");
             }
         } else if (state->selection == 1U) {
             set_message(state, LORD_SCREEN_IGM_DETAIL,
@@ -1450,44 +1402,40 @@ static lord_event_t run_igm_action(lord_state_t *state)
         if (state->selection == 0U) {
             if (state->player.gold < price) {
                 set_message(state, LORD_SCREEN_IGM_DETAIL,
-                            "Adoption costs level squared times 1000.", "");
+                            "The youth guild needs a larger donation.", "");
                 return LORD_EVENT_CONFIRM;
             }
             state->player.gold -= price;
-            state->player.children = add_u16_saturating(
-                state->player.children, 1U);
+            state->player.young_heroes_helped = add_u16_saturating(
+                state->player.young_heroes_helped, 1U);
             set_message(state, LORD_SCREEN_IGM_DETAIL,
-                        "You adopt an orphan into your household.",
-                        "Your family grows by one.");
+                        "You sponsor a young hero's first supplies.",
+                        "The youth guild gives you a helper badge.");
         } else if (state->selection == 1U) {
             if (random_below(state, 2U) == 0U) {
-                state->player.children = add_u16_saturating(
-                    state->player.children, 1U);
+                state->player.young_heroes_helped = add_u16_saturating(
+                    state->player.young_heroes_helped, 1U);
                 set_message(state, LORD_SCREEN_IGM_DETAIL,
-                            "You catch a runaway orphan safely.",
-                            "Your household grows.");
+                            "You guide a lost youngster safely home.",
+                            "The youth guild adds a helper badge.");
             } else {
-                const uint32_t loss = state->player.gold / 10U;
-                state->player.gold -= loss;
                 set_message(state, LORD_SCREEN_IGM_DETAIL,
-                            "The nimble orphan escapes.",
-                            "Ten percent of your gold vanishes too.");
+                            "The youngster found home by another path.",
+                            "You wave and promise to help next time.");
             }
         } else {
             const uint16_t needed = (uint16_t)(
                 (uint16_t)state->player.level * state->player.level);
-            if (state->player.horse || state->player.children < needed) {
+            if (state->player.horse || state->player.young_heroes_helped < needed) {
                 set_message(state, LORD_SCREEN_IGM_DETAIL,
-                            "The horse trade cannot be completed.",
-                            "You need level squared children and no horse.");
+                            "The stable reward is not ready yet.",
+                            "Help level-squared young heroes first.");
                 return LORD_EVENT_CONFIRM;
             }
-            state->player.children = (uint16_t)(
-                state->player.children - needed);
             state->player.horse = true;
             set_message(state, LORD_SCREEN_IGM_DETAIL,
-                        "Olodrin trades the children for a horse.",
-                        "Your new mount extends every day.");
+                        "Olodrin awards you a helper's horse!",
+                        "Your kindness now extends every day.");
         }
     } else if (module == 5U) {
         if (state->selection == 2U) {
@@ -1513,7 +1461,7 @@ static lord_event_t run_igm_action(lord_state_t *state)
                 (uint32_t)state->player.level * 3500U);
             set_message(state, LORD_SCREEN_IGM_DETAIL,
                         "A lost pouch waits behind the trees.",
-                        "Its gold is now yours.");
+                        "Its ChompCoin is now yours.");
         }
     } else {
         if (state->selection != 0U) {
@@ -1584,7 +1532,7 @@ void lord_initialize(lord_state_t *state, uint32_t seed)
     memset(state, 0, sizeof(*state));
     state->rng_state = seed == 0U ? UINT32_C(0x4c4f5244) : seed;
     text_copy(state->player.name, sizeof(state->player.name), "Warrior");
-    state->player.sex = LORD_SEX_MALE;
+    state->player.hero_style = LORD_HERO_STYLE_HERO;
     initialize_realm(state);
     state->save_dirty = false;
     state->save_sequence = 0U;
@@ -1596,7 +1544,7 @@ size_t lord_menu_count(const lord_state_t *state)
     switch (state->screen) {
     case LORD_SCREEN_NAME:
         return 1U;
-    case LORD_SCREEN_SEX:
+    case LORD_SCREEN_HERO_STYLE:
         return 2U;
     case LORD_SCREEN_CLASS:
         return 3U;
@@ -1616,7 +1564,7 @@ size_t lord_menu_count(const lord_state_t *state)
     case LORD_SCREEN_BANK_TRANSFER:
     case LORD_SCREEN_PLAYERS:
     case LORD_SCREEN_MAIL_COMPOSE:
-    case LORD_SCREEN_ROMANCE:
+    case LORD_SCREEN_FRIENDSHIP:
         return LORD_REALM_PLAYER_COUNT + 1U;
     case LORD_SCREEN_INN:
         return 11U;
@@ -1627,13 +1575,13 @@ size_t lord_menu_count(const lord_state_t *state)
     case LORD_SCREEN_SETH:
     case LORD_SCREEN_VIOLET:
         return 6U;
-    case LORD_SCREEN_BLACKJACK:
-        return 4U;
+    case LORD_SCREEN_DRAGON_DICE:
+        return 2U;
     case LORD_SCREEN_PLAYER_DETAIL:
         return 5U;
     case LORD_SCREEN_MAILBOX:
         return (size_t)state->mail_count + 2U;
-    case LORD_SCREEN_ROMANCE_ACTION:
+    case LORD_SCREEN_FRIENDSHIP_ACTION:
         return 5U;
     case LORD_SCREEN_IGM:
         return LORD_IGM_COUNT + 1U;
@@ -1694,9 +1642,9 @@ lord_event_t lord_activate(lord_state_t *state)
     case LORD_SCREEN_NAME:
         begin_editor(state, LORD_EDITOR_NAME, LORD_SCREEN_NAME, "");
         return LORD_EVENT_CONFIRM;
-    case LORD_SCREEN_SEX:
-        state->player.sex = state->selection == 0U ?
-            LORD_SEX_MALE : LORD_SEX_FEMALE;
+    case LORD_SCREEN_HERO_STYLE:
+        state->player.hero_style = state->selection == 0U ?
+            LORD_HERO_STYLE_HERO : LORD_HERO_STYLE_HEROINE;
         set_screen(state, LORD_SCREEN_CLASS);
         return LORD_EVENT_CONFIRM;
     case LORD_SCREEN_CLASS:
@@ -1735,17 +1683,23 @@ lord_event_t lord_activate(lord_state_t *state)
         } else if (state->selection == 3U) {
             set_screen(state, LORD_SCREEN_TOWN);
         } else if (state->selection == 4U && state->player.horse) {
+            if (state->player.gold < 5U) {
+                set_message(state, LORD_SCREEN_FOREST,
+                            "DarkCloak games cost 5 ChompCoin.",
+                            "Aragorn's math challenge awards more.");
+                return LORD_EVENT_CONFIRM;
+            }
+            state->player.gold -= 5U;
             if (random_below(state, 2U) == 0U) {
                 state->player.gold = add_u32_saturating(
-                    state->player.gold,
-                    (uint32_t)state->player.level * 500U);
+                    state->player.gold, 10U);
                 set_message(state, LORD_SCREEN_FOREST,
                             "DarkCloak Tavern welcomes your horse.",
-                            "A lucky game pays forest gold.");
+                            "A lucky game wins 10 ChompCoin.");
             } else {
                 set_message(state, LORD_SCREEN_FOREST,
                             "The DarkCloak fire warms you.",
-                            "The house wins tonight's wager.");
+                            "The house wins 5 ChompCoin.");
             }
             mark_dirty(state);
         } else if (state->player.forest_fights == 0U) {
@@ -1791,7 +1745,7 @@ lord_event_t lord_activate(lord_state_t *state)
                         "You are already at full health.", "");
         } else if (state->player.gold < cost) {
             set_message(state, LORD_SCREEN_HEALER,
-                        "Healing costs 5 gold per point.",
+                        "Healing costs 5 ChompCoin per point.",
                         "You do not have enough.");
         } else {
             state->player.gold -= cost;
@@ -1829,7 +1783,7 @@ lord_event_t lord_activate(lord_state_t *state)
             state->player.gold = 0U;
             mark_dirty(state);
             set_message(state, LORD_SCREEN_BANK,
-                        "All carried gold is deposited.", "");
+                        "All carried ChompCoin is deposited.", "");
         } else if (state->selection == 1U) {
             state->player.gold = add_u32_saturating(
                 state->player.gold, state->player.bank);
@@ -1848,7 +1802,7 @@ lord_event_t lord_activate(lord_state_t *state)
             set_screen(state, LORD_SCREEN_BANK);
         } else if (state->player.bank < 100U) {
             set_message(state, LORD_SCREEN_BANK_TRANSFER,
-                        "Transfers require 100 banked gold.", "");
+                        "Transfers require 100 vaulted ChompCoin.", "");
         } else {
             state->player.bank -= 100U;
             state->realm[state->selection].gold = add_u32_saturating(
@@ -1856,9 +1810,9 @@ lord_event_t lord_activate(lord_state_t *state)
             state->selected_player = state->selection;
             add_mail(state, state->selected_player, LORD_MAIL_SENDER_HERO,
                      LORD_MAIL_CUSTOM, false,
-                     "Thank you for the 100 gold bank transfer.");
+                     "Thank you for the 100 ChompCoin transfer.");
             set_message(state, LORD_SCREEN_BANK,
-                        "The bank transfers 100 gold.",
+                        "The bank transfers 100 ChompCoin.",
                         "The recipient sends thanks.");
         }
         return LORD_EVENT_CONFIRM;
@@ -1879,7 +1833,7 @@ lord_event_t lord_activate(lord_state_t *state)
                         "Seth sings of warriors and crimson fire.",
                         "The whole tavern joins the final chorus.");
             break;
-        case 6U: set_screen(state, LORD_SCREEN_BLACKJACK); break;
+        case 6U: set_screen(state, LORD_SCREEN_DRAGON_DICE); break;
         case 7U: {
             size_t found = LORD_REALM_PLAYER_COUNT;
             for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
@@ -1891,8 +1845,8 @@ lord_event_t lord_activate(lord_state_t *state)
             if (found == LORD_REALM_PLAYER_COUNT || state->player.gold < 100U) {
                 set_message(state, LORD_SCREEN_INN,
                             found == LORD_REALM_PLAYER_COUNT ?
-                                "No vulnerable sleeper is at the inn." :
-                                "The bartender demands a 100 gold bribe.", "");
+                            "No resting warrior wants to spar." :
+                            "The friendly sparring ring costs 100 ChompCoin.", "");
             } else {
                 state->player.gold -= 100U;
                 state->selected_player = (uint8_t)found;
@@ -1918,7 +1872,7 @@ lord_event_t lord_activate(lord_state_t *state)
         if (state->selection == 0U) {
             if (state->player.gold < 10U) {
                 set_message(state, LORD_SCREEN_BARTENDER,
-                            "A tankard costs 10 gold.", "");
+                            "A berry fizz costs 10 ChompCoin.", "");
             } else {
                 state->player.gold -= 10U;
                 state->player.hit_points += 2;
@@ -1927,17 +1881,17 @@ lord_event_t lord_activate(lord_state_t *state)
                 }
                 mark_dirty(state);
                 set_message(state, LORD_SCREEN_BARTENDER,
-                            "The bartender pours a dark ale.",
+                            "The bartender pours a berry fizz.",
                             "Two hit points return.");
             }
         } else if (state->selection == 1U) {
             set_message(state, LORD_SCREEN_BARTENDER,
-                        "Violet heals warriors and guards her heart.",
-                        "Charm and patience impress her.");
+                        "Violet welcomes warriors who help others.",
+                        "Kindness and teamwork impress her.");
         } else if (state->selection == 2U) {
             set_message(state, LORD_SCREEN_BARTENDER,
                         "Seth Able knows every song in the realm.",
-                        "He notices charm, wit, and gems.");
+                        "He enjoys jokes, dice, songs, and gems.");
         } else if (state->selection == 3U) {
             set_message(state, LORD_SCREEN_BARTENDER,
                         "The Red Dragon waits beyond level twelve.",
@@ -1947,14 +1901,12 @@ lord_event_t lord_activate(lord_state_t *state)
                 state->player.charm = add_u16_saturating(
                     state->player.charm, 1U);
                 set_message(state, LORD_SCREEN_BARTENDER,
-                            "You outdrink the bartender!",
+                            "You solve the bartender's riddle!",
                             "The cheering crowd adds one charm.");
             } else {
-                state->player.hit_points = state->player.hit_points > 2 ?
-                    state->player.hit_points - 2 : 1;
                 set_message(state, LORD_SCREEN_BARTENDER,
-                            "The bartender wins the drinking contest.",
-                            "Your head costs two hit points.");
+                            "The bartender's riddle stumps you.",
+                            "Everyone laughs and shares the answer.");
             }
             mark_dirty(state);
         } else {
@@ -1976,19 +1928,19 @@ lord_event_t lord_activate(lord_state_t *state)
         }
         return LORD_EVENT_CONFIRM;
     case LORD_SCREEN_SETH:
-        return npc_romance(state, 0);
+        return npc_friendship(state, 0);
     case LORD_SCREEN_VIOLET:
-        return npc_romance(state, 1);
-    case LORD_SCREEN_BLACKJACK:
-        return blackjack_action(state);
+        return npc_friendship(state, 1);
+    case LORD_SCREEN_DRAGON_DICE:
+        return dragon_dice_action(state);
     case LORD_SCREEN_PLAYERS:
-    case LORD_SCREEN_ROMANCE:
+    case LORD_SCREEN_FRIENDSHIP:
         if (state->selection >= LORD_REALM_PLAYER_COUNT) {
             set_screen(state, LORD_SCREEN_TOWN);
         } else {
             state->selected_player = state->selection;
-            set_screen(state, state->screen == LORD_SCREEN_ROMANCE ?
-                       LORD_SCREEN_ROMANCE_ACTION : LORD_SCREEN_PLAYER_DETAIL);
+            set_screen(state, state->screen == LORD_SCREEN_FRIENDSHIP ?
+                       LORD_SCREEN_FRIENDSHIP_ACTION : LORD_SCREEN_PLAYER_DETAIL);
         }
         return LORD_EVENT_CONFIRM;
     case LORD_SCREEN_PLAYER_DETAIL:
@@ -1998,7 +1950,7 @@ lord_event_t lord_activate(lord_state_t *state)
             begin_editor(state, LORD_EDITOR_MAIL,
                          LORD_SCREEN_PLAYER_DETAIL, "");
         } else if (state->selection == 2U) {
-            set_screen(state, LORD_SCREEN_ROMANCE_ACTION);
+            set_screen(state, LORD_SCREEN_FRIENDSHIP_ACTION);
         } else if (state->selection == 3U) {
             begin_editor(state, LORD_EDITOR_SAYING,
                          LORD_SCREEN_PLAYER_DETAIL,
@@ -2030,8 +1982,8 @@ lord_event_t lord_activate(lord_state_t *state)
             begin_editor(state, LORD_EDITOR_MAIL, LORD_SCREEN_MAILBOX, "");
         }
         return LORD_EVENT_CONFIRM;
-    case LORD_SCREEN_ROMANCE_ACTION:
-        return perform_romance_action(state);
+    case LORD_SCREEN_FRIENDSHIP_ACTION:
+        return perform_friendship_action(state);
     case LORD_SCREEN_IGM:
         if (state->selection >= LORD_IGM_COUNT) {
             set_screen(state, LORD_SCREEN_TOWN);
@@ -2125,11 +2077,11 @@ lord_event_t lord_cancel(lord_state_t *state)
 {
     switch (state->screen) {
     case LORD_SCREEN_NAME:
-    case LORD_SCREEN_SEX:
+    case LORD_SCREEN_HERO_STYLE:
         set_screen(state, LORD_SCREEN_TITLE);
         return LORD_EVENT_CONFIRM;
     case LORD_SCREEN_CLASS:
-        set_screen(state, LORD_SCREEN_SEX);
+        set_screen(state, LORD_SCREEN_HERO_STYLE);
         return LORD_EVENT_CONFIRM;
     case LORD_SCREEN_FOREST:
     case LORD_SCREEN_WEAPON_SHOP:
@@ -2140,7 +2092,7 @@ lord_event_t lord_cancel(lord_state_t *state)
     case LORD_SCREEN_INN:
     case LORD_SCREEN_PLAYERS:
     case LORD_SCREEN_MAILBOX:
-    case LORD_SCREEN_ROMANCE:
+    case LORD_SCREEN_FRIENDSHIP:
     case LORD_SCREEN_IGM:
     case LORD_SCREEN_NEWS:
     case LORD_SCREEN_RANKINGS:
@@ -2155,7 +2107,7 @@ lord_event_t lord_cancel(lord_state_t *state)
     case LORD_SCREEN_CONVERSE:
     case LORD_SCREEN_SETH:
     case LORD_SCREEN_VIOLET:
-    case LORD_SCREEN_BLACKJACK:
+    case LORD_SCREEN_DRAGON_DICE:
         set_screen(state, LORD_SCREEN_INN);
         return LORD_EVENT_CONFIRM;
     case LORD_SCREEN_PLAYER_DETAIL:
@@ -2165,7 +2117,7 @@ lord_event_t lord_cancel(lord_state_t *state)
     case LORD_SCREEN_MAIL_COMPOSE:
         set_screen(state, LORD_SCREEN_MAILBOX);
         return LORD_EVENT_CONFIRM;
-    case LORD_SCREEN_ROMANCE_ACTION:
+    case LORD_SCREEN_FRIENDSHIP_ACTION:
         set_screen(state, LORD_SCREEN_PLAYER_DETAIL);
         return LORD_EVENT_CONFIRM;
     case LORD_SCREEN_IGM_DETAIL:
@@ -2196,9 +2148,9 @@ const char *lord_class_name(lord_class_t hero_class)
     return "Unknown";
 }
 
-const char *lord_sex_name(lord_sex_t sex)
+const char *lord_hero_style_name(lord_hero_style_t hero_style)
 {
-    return sex == LORD_SEX_FEMALE ? "Female" : "Male";
+    return hero_style == LORD_HERO_STYLE_HEROINE ? "Heroine" : "Hero";
 }
 
 const lord_item_t *lord_weapon(size_t index)
@@ -2255,11 +2207,11 @@ const char *lord_mail_subject(const lord_state_t *state, size_t index)
     case LORD_MAIL_TRAINER: return "Training Advice";
     case LORD_MAIL_REPLY: return "Re: Your Letter";
     case LORD_MAIL_PVP_VICTORY: return "A Worthy Fight";
-    case LORD_MAIL_ROMANCE: return "About Your Proposal";
-    case LORD_MAIL_PROPOSAL: return "Our Wedding";
+    case LORD_MAIL_TEAM_INVITE: return "About Your Team Invite";
+    case LORD_MAIL_TEAM_PLEDGE: return "Adventure Team Formed";
     case LORD_MAIL_CUSTOM: return mail->outgoing ? "Sent Letter" : "Letter";
-    case LORD_MAIL_ATTACK: return "Inn Attack";
-    case LORD_MAIL_BABY: return "Family News";
+    case LORD_MAIL_ATTACK: return "Inn Sparring Match";
+    case LORD_MAIL_MENTOR: return "Young Hero News";
     case LORD_MAIL_ANNOUNCEMENT: return "Town Announcement";
     }
     return "Message";

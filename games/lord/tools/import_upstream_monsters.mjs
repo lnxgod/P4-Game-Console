@@ -45,6 +45,46 @@ if (!Array.isArray(monsters) || monsters.length !== 131) {
   throw new Error(`expected 131 monsters, found ${monsters.length}`);
 }
 
+// Preserve the authorized stats while adapting a few legacy descriptions for
+// the kid-friendly Console OS edition. Keys are immutable upstream names so a
+// source change cannot silently redirect an adaptation to another monster.
+const KID_SAFE_MONSTERS = new Map([
+  ["Rude Boy", { name: "Rude Rascal" }],
+  ["Old Man", { name: "Wandering Elder" }],
+  ["Wild Boar", { death: "The boar yields and runs into the brush." }],
+  ["Ugly Old Hag", { name: "Forest Hag" }],
+  ["Small Bear", { death: "The bear yields and lumbers safely away." }],
+  ["Evil Wretch", { name: "Cranky Wanderer" }],
+  ["Evil Wood Nymph", {
+    weapon: "Puzzling Enchantment",
+    death: "The nymph drops her spell and flees into the trees.",
+  }],
+  ["Huge Bald Man", {
+    name: "Towering Traveler",
+    death: "He yields and stomps away from the trail.",
+  }],
+  ["Muscled Midget", { name: "Muscled Sprinter", weapon: "Quick Jab" }],
+  ["Lazy Bum", { name: "Sleepy Traveler" }],
+  ["Red Neck", { name: "Country Trickster" }],
+  ["Misfit The Ugly", { name: "Mischief Maker" }],
+  ["Bald Medusa", { name: "Stone-Eyed Medusa" }],
+  ["Gold Man", {
+    death: "The Gold Man yields and drops a few ChompCoin.",
+  }],
+  ["Silent Death", { death: "The creature dissolves into harmless mist." }],
+  ["Angry Liontaur", { death: "The liontaur bows and leaves the path." }],
+  ["Werewolf", { death: "The werewolf howls and flees into the moonlight." }],
+  ["Baby Dragon", { death: "The young dragon surrenders and flies home." }],
+  ["Goblin Pygmy", { name: "Tiny Goblin" }],
+  ["Apeman", { name: "Forest Ape" }],
+  ["Sweet Looking Little Girl", { name: "Disguised Trickster" }],
+  ["Apparently Weak Old Woman", { name: "Hooded Illusionist" }],
+  ["The Screaming Eunich", {
+    name: "The Screaming Herald",
+    death: "The herald finally runs out of breath and yields.",
+  }],
+]);
+
 function cString(value) {
   return `"${String(value)
     .replaceAll("\\", "\\\\")
@@ -66,8 +106,12 @@ const lines = [
   "static const lord_monster_t s_monsters[LORD_MONSTER_COUNT] = {",
 ];
 for (const monster of monsters) {
+  const adaptation = KID_SAFE_MONSTERS.get(monster.name) ?? {};
+  const adapted = { ...monster, ...adaptation };
+  adapted.death = adaptation.death ??
+    `${adapted.name} yields and leaves the trail.`;
   for (const field of ["name", "weapon", "death"]) {
-    if (typeof monster[field] !== "string") {
+    if (typeof adapted[field] !== "string") {
       throw new Error(`monster ${field} is not text`);
     }
   }
@@ -77,8 +121,8 @@ for (const monster of monsters) {
     }
   }
   lines.push(
-    `    {${cString(monster.name)}, ${cString(monster.weapon)}, ` +
-      `${cString(monster.death)}, ${monster.str}, ${monster.hp}, ` +
+    `    {${cString(adapted.name)}, ${cString(adapted.weapon)}, ` +
+      `${cString(adapted.death)}, ${monster.str}, ${monster.hp}, ` +
       `${monster.gold}U, ${monster.exp}U},`,
   );
 }

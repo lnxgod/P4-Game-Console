@@ -139,7 +139,7 @@ static void save_write_player(lord_save_writer_t *writer,
                               const lord_player_t *player)
 {
     save_write_chars(writer, player->name, sizeof(player->name));
-    save_write_u8(writer, (uint8_t)player->sex);
+    save_write_u8(writer, (uint8_t)player->hero_style);
     save_write_u8(writer, (uint8_t)player->hero_class);
     save_write_u8(writer, player->level);
     save_write_u8(writer, player->weapon);
@@ -162,8 +162,8 @@ static void save_write_player(lord_save_writer_t *writer,
     save_write_u16(writer, player->pvp_losses);
     save_write_u16(writer, player->charm);
     save_write_u16(writer, player->gems);
-    save_write_u16(writer, player->children);
-    save_write_u16(writer, player->laid);
+    save_write_u16(writer, player->young_heroes_helped);
+    save_write_u16(writer, player->friendship_badges);
     save_write_bool(writer, player->horse);
     save_write_bool(writer, player->fairy);
     save_write_bool(writer, player->fairy_lore);
@@ -176,7 +176,7 @@ static void save_read_player(lord_save_reader_t *reader,
                              lord_player_t *player)
 {
     save_read_chars(reader, player->name, sizeof(player->name));
-    player->sex = (lord_sex_t)save_read_u8(reader);
+    player->hero_style = (lord_hero_style_t)save_read_u8(reader);
     player->hero_class = (lord_class_t)save_read_u8(reader);
     player->level = save_read_u8(reader);
     player->weapon = save_read_u8(reader);
@@ -199,8 +199,8 @@ static void save_read_player(lord_save_reader_t *reader,
     player->pvp_losses = save_read_u16(reader);
     player->charm = save_read_u16(reader);
     player->gems = save_read_u16(reader);
-    player->children = save_read_u16(reader);
-    player->laid = save_read_u16(reader);
+    player->young_heroes_helped = save_read_u16(reader);
+    player->friendship_badges = save_read_u16(reader);
     player->horse = save_read_bool(reader);
     player->fairy = save_read_bool(reader);
     player->fairy_lore = save_read_bool(reader);
@@ -232,12 +232,12 @@ size_t lord_save_encode(const lord_state_t *state, uint8_t *bytes,
 
     save_write_u32(&writer, state->rng_state);
     save_write_u32(&writer, state->realm_revision);
-    save_write_u8(&writer, state->spouse_index < 0 ? 0U :
-                  (uint8_t)((uint8_t)state->spouse_index + 1U));
-    save_write_u8(&writer, state->npc_spouse < 0 ? 0U :
-                  (uint8_t)((uint8_t)state->npc_spouse + 1U));
+    save_write_u8(&writer, state->partner_index < 0 ? 0U :
+                  (uint8_t)((uint8_t)state->partner_index + 1U));
+    save_write_u8(&writer, state->npc_friend < 0 ? 0U :
+                  (uint8_t)((uint8_t)state->npc_friend + 1U));
     save_write_u8(&writer, state->pvp_fights);
-    save_write_u8(&writer, state->romance_actions);
+    save_write_u8(&writer, state->friendship_actions);
     save_write_u8(&writer, state->igm_used_mask);
     save_write_u8(&writer, state->rip_scene);
     save_write_u8(&writer, state->mail_count);
@@ -252,13 +252,13 @@ size_t lord_save_encode(const lord_state_t *state, uint8_t *bytes,
         const lord_realm_player_t *const player = &state->realm[index];
         save_write_chars(&writer, player->name, sizeof(player->name));
         save_write_chars(&writer, player->saying, sizeof(player->saying));
-        save_write_u8(&writer, (uint8_t)player->sex);
+        save_write_u8(&writer, (uint8_t)player->hero_style);
         save_write_u8(&writer, (uint8_t)player->hero_class);
         save_write_u8(&writer, player->level);
         save_write_bool(&writer, player->alive);
         save_write_bool(&writer, player->at_inn);
-        save_write_bool(&writer, player->married);
-        save_write_u8(&writer, player->affection);
+        save_write_bool(&writer, player->teamed);
+        save_write_u8(&writer, player->trust);
         save_write_i32(&writer, player->hit_points);
         save_write_i32(&writer, player->max_hit_points);
         save_write_i32(&writer, player->strength);
@@ -304,7 +304,7 @@ static bool save_player_valid(lord_player_t *player)
 {
     if (!save_text_valid(player->name, sizeof(player->name), false) ||
         text_length(player->name, sizeof(player->name)) < 3U ||
-        player->sex > LORD_SEX_FEMALE ||
+        player->hero_style > LORD_HERO_STYLE_HEROINE ||
         player->hero_class > LORD_CLASS_THIEF || player->level < 1U ||
         player->level > LORD_MAX_LEVEL || player->weapon >= LORD_WEAPON_COUNT ||
         player->armor >= LORD_ARMOR_COUNT || player->max_hit_points <= 0 ||
@@ -327,9 +327,9 @@ static bool save_realm_valid(lord_state_t *state)
         lord_realm_player_t *const player = &state->realm[index];
         if (!save_text_valid(player->name, sizeof(player->name), false) ||
             !save_text_valid(player->saying, sizeof(player->saying), true) ||
-            player->sex > LORD_SEX_FEMALE ||
+            player->hero_style > LORD_HERO_STYLE_HEROINE ||
             player->hero_class > LORD_CLASS_THIEF || player->level < 1U ||
-            player->level > LORD_MAX_LEVEL || player->affection > 100U ||
+            player->level > LORD_MAX_LEVEL || player->trust > 100U ||
             player->max_hit_points <= 0 || player->hit_points < 0 ||
             player->hit_points > player->max_hit_points ||
             player->strength <= 0 || player->defense < 0) {
@@ -371,14 +371,14 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
     };
     loaded.rng_state = save_read_u32(&reader);
     loaded.realm_revision = save_read_u32(&reader);
-    const uint8_t spouse_code = save_read_u8(&reader);
-    const uint8_t npc_spouse_code = save_read_u8(&reader);
-    loaded.spouse_index = spouse_code == 0U ? -1 :
-        (int8_t)(spouse_code - 1U);
-    loaded.npc_spouse = npc_spouse_code == 0U ? -1 :
-        (int8_t)(npc_spouse_code - 1U);
+    const uint8_t partner_code = save_read_u8(&reader);
+    const uint8_t npc_friend_code = save_read_u8(&reader);
+    loaded.partner_index = partner_code == 0U ? -1 :
+        (int8_t)(partner_code - 1U);
+    loaded.npc_friend = npc_friend_code == 0U ? -1 :
+        (int8_t)(npc_friend_code - 1U);
     loaded.pvp_fights = save_read_u8(&reader);
-    loaded.romance_actions = save_read_u8(&reader);
+    loaded.friendship_actions = save_read_u8(&reader);
     loaded.igm_used_mask = save_read_u8(&reader);
     loaded.rip_scene = save_read_u8(&reader);
     loaded.mail_count = save_read_u8(&reader);
@@ -393,13 +393,13 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
         lord_realm_player_t *const player = &loaded.realm[index];
         save_read_chars(&reader, player->name, sizeof(player->name));
         save_read_chars(&reader, player->saying, sizeof(player->saying));
-        player->sex = (lord_sex_t)save_read_u8(&reader);
+        player->hero_style = (lord_hero_style_t)save_read_u8(&reader);
         player->hero_class = (lord_class_t)save_read_u8(&reader);
         player->level = save_read_u8(&reader);
         player->alive = save_read_bool(&reader);
         player->at_inn = save_read_bool(&reader);
-        player->married = save_read_bool(&reader);
-        player->affection = save_read_u8(&reader);
+        player->teamed = save_read_bool(&reader);
+        player->trust = save_read_u8(&reader);
         player->hit_points = save_read_i32(&reader);
         player->max_hit_points = save_read_i32(&reader);
         player->strength = save_read_i32(&reader);
@@ -424,9 +424,9 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
                         sizeof(loaded.log[index].text));
     }
     if (!reader.valid || reader.offset != length || loaded.rng_state == 0U ||
-        loaded.realm_revision == 0U || spouse_code > LORD_REALM_PLAYER_COUNT ||
-        npc_spouse_code > 2U || loaded.pvp_fights > LORD_PVP_FIGHTS_PER_DAY ||
-        loaded.romance_actions > LORD_ROMANCE_ACTIONS_PER_DAY ||
+        loaded.realm_revision == 0U || partner_code > LORD_REALM_PLAYER_COUNT ||
+        npc_friend_code > 2U || loaded.pvp_fights > LORD_PVP_FIGHTS_PER_DAY ||
+        loaded.friendship_actions > LORD_FRIENDSHIP_ACTIONS_PER_DAY ||
         (loaded.igm_used_mask & (uint8_t)~((1U << LORD_IGM_COUNT) - 1U)) != 0U ||
         loaded.rip_scene >= LORD_RIP_SCENE_COUNT ||
         loaded.mail_count > LORD_MAIL_COUNT_MAX ||
@@ -436,8 +436,8 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
         !save_player_valid(&loaded.player) || !save_realm_valid(&loaded)) {
         return false;
     }
-    if (loaded.spouse_index >= 0 &&
-        !loaded.realm[(size_t)loaded.spouse_index].married) {
+    if (loaded.partner_index >= 0 &&
+        !loaded.realm[(size_t)loaded.partner_index].teamed) {
         return false;
     }
     for (size_t index = 0U; index < LORD_MAIL_COUNT_MAX; ++index) {

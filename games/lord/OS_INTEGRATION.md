@@ -1,4 +1,4 @@
-# LORD 1.1.0 OS integration contract
+# LORD 1.2.0 OS integration contract
 
 LORD is a complete standalone cartridge. This document describes optional OS
 services that turn its persistent local realm into a shared BBS realm without
@@ -19,8 +19,9 @@ closed while gameplay continues locally.
 
 The game-defined `LDSV` payload is explicit little endian and CRC protected.
 It persists the complete player, all three skill trees, daily counters, eight
-local warriors, twelve mail slots with text, twelve news records, marriages,
-children, conversation, announcement, IGM usage, and realm revision. It never
+local warriors, twelve mail slots with text, twelve news records, adventure
+teams, trust, youth mentoring, conversation, announcement, IGM usage, and realm
+revision. It never
 serializes pointers, raw enums, structure padding, or `lord_state_t` itself.
 
 The host-level save container remains the OS's responsibility: namespacing,
@@ -44,7 +45,7 @@ The offline snapshot consists of:
 lord_realm_player_t realm[8]
 lord_mail_t         mail[12]
 lord_log_entry_t    log[12]
-realm_revision, spouse_index, npc_spouse
+realm_revision, partner_index, npc_friend
 ```
 
 Map the existing flows to asynchronous, revisioned operations:
@@ -55,16 +56,41 @@ Map the existing flows to asynchronous, revisioned operations:
 | Player challenge / inn attack | lease immutable opponent snapshot |
 | PvP finish | idempotent outcome commit |
 | Inbox / sent mail | list, read, mark-read, send by opaque ID |
-| Courtship / proposal / divorce | consent-based relationship transaction |
+| Friendship / team invitation / parting | consent-based team transaction |
 | Bank transfer | idempotent bounded transfer |
 | Daily News / conversation | bounded sanitized feed |
 | Sleep / daily reset | trusted realm-day transition |
 
 Opaque remote IDs, revisions, leases, and tickets belong in a future adapter
 tail. Never treat local array indexes as remote identity. A conflict may not
-award gold, kill an opponent, deliver duplicate mail, or create a marriage.
-Remote relationship changes require both players' consent. Offline state must
-never overwrite a newer server revision.
+award ChompCoin, defeat an opponent, deliver duplicate mail, or form an
+adventure team. Remote team changes require both players' consent. Offline
+state must never overwrite a newer server revision.
+
+## Backend sync record implemented now
+
+`src/lord_sync_impl.h` defines the bounded `LRSY` version-1 record that a
+future `realm` callback will copy to Console OS. It contains a 52-byte explicit
+little-endian header followed by the complete CRC-protected schema-3 save:
+
+```text
+magic="LRSY", format=1, total bytes, record CRC
+realm revision, save sequence, one-use 64-bit operation nonce
+16-byte opaque actor ID, save length, LDSV save payload
+```
+
+The maximum record is 4,148 bytes. Encoding rejects zero actor IDs, zero
+nonces, invalid realm revisions, undersized output, and invalid save payloads.
+Decoding verifies every length, the record CRC, expected actor ID, minimum
+revision, embedded save CRC, and matching save/realm revisions before success.
+It contains no username, email, password, device address, route, token, or
+server URL. Unit tests cover round trip, stale revision, wrong actor, corrupt
+payload, and zero-nonce rejection.
+
+This codec is intentionally transport-free. The current Game API still lacks
+the asynchronous `realm` callbacks needed to submit it, so version 1.2 remains
+offline/save playable and never pretends a local warrior is a server player.
+The complete server and adapter plan is in [BACKEND_SYNC.md](BACKEND_SYNC.md).
 
 Asynchronous classic LORD PvP uses `realm`; `multiplayer-session` is reserved
 for an optional future live duel/tournament mode.
@@ -98,7 +124,7 @@ terminal, file, callback, or download commands.
 - Save: launch an empty slot, mutate state, observe a copied schema-3 commit,
   relaunch with the committed snapshot, recover after interrupted replacement,
   and prove conflict/read-only/unavailable behavior.
-- Realm: cover stale revisions, duplicate outcomes, declines, consent,
+- Realm: cover stale revisions, duplicate outcomes, declines, team consent,
   disconnect, offline edits, reconnect, and sanitized hostile text.
 - IGM handoff: cover wrong schema/game, expired/replayed nonce, excessive
   deltas, cancellation, missing module, and save-before-exit recovery.

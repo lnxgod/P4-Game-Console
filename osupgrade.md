@@ -4,15 +4,16 @@
 
 Upgrade Console OS and the native P4 Game API so the `games/lord` cartridge
 can support durable characters, mail, shared player records, asynchronous PvP,
-romance state, real daily rollover, external IGMs, and optional RIP-style
+friendship/team state, real daily rollover, external IGMs, and optional RIP-style
 scenes. The same upgrade also finishes the controller-first wired USB platform
 for the Waveshare 4.3-inch console without giving a cartridge raw filesystem,
 network, USB, clock, or display ownership.
 
-This is an implementation handoff. LORD 1.1.0 now has the complete standalone
+This is an implementation handoff. LORD 1.2.0 now has the complete standalone
 game, a persistent local realm, typed controller mail/text, seven built-in
-source-pinned IGMs, twelve ANSI/RIP-style scenes, and a wired version-3 save
-client. OS services are still required for remote/shared state and for durable
+source-pinned IGMs, expanded kid-friendly ANSI art, one ChompCoin economy, a
+wired version-3 save client, and a tested version-1 `LRSY` sync record. OS
+services are still required for remote/shared state and for durable
 saves on board profiles that deliberately withhold writable storage. Do not
 work around an unavailable service by opening files or sockets from
 `games/lord`.
@@ -63,11 +64,14 @@ work around an unavailable service by opening files or sockets from
   Control Panel persistence. Build, full app readback, retained-UART READY,
   microSD catalog, and controller enumeration passed; manual A/B and Doom
   gameplay acceptance remain pending.
-- LORD 1.1.0 owns an explicit little-endian schema-3 save codec capped at 4
+- LORD 1.2.0 owns an explicit little-endian schema-3 save codec capped at 4
   KiB, consumes launch snapshots, queues/polls copied `AUTO` commits, and has
   eight local warriors, twelve typed mail slots, daily news, full tavern/PvP/
-  romance/family state, seven built-in IGMs, and twelve clipped ANSI/RIP-style
-  scenes.
+  friendship/team/youth-mentoring state, seven built-in IGMs, twelve clipped
+  ANSI/RIP-style scenes, and new CP437 inn/friend/dice/recovery/victory art.
+- LORD 1.2.0 also owns a bounded `LRSY` envelope with opaque actor ID,
+  one-use nonce, realm/save revisions, CRC, and the complete `LDSV` payload.
+  It is transport-free until the realm callbacks below exist.
 
 ### Missing
 
@@ -121,7 +125,7 @@ validator:
 |---:|---|---|
 | 6 | `save` | Namespaced durable save snapshot and queued commit |
 | 7 | `text-input` | OS-owned bounded text-entry modal |
-| 8 | `realm` | Directory, mailbox, relationship, and asynchronous PvP service |
+| 8 | `realm` | Directory, mailbox, friendship/team, and asynchronous PvP service |
 | 9 | `multiplayer-session` | Live OS-owned lobby and player-slot input service |
 | 10 | `module-handoff` | Typed exit-to-IGM and return-result service |
 | 11 | `vector-scenes` | Optional bounded vector/RIP-style scene renderer |
@@ -230,11 +234,12 @@ LORD schema 3 is implemented as explicit little endian under game magic
 `LDSV`, with total length, mutation generation, and payload CRC32. Its bounded
 4 KiB staging area persists the full player and three skill trees, eight local
 warriors, twelve typed mail records, twelve news records, daily counters,
-relationships/family, conversation, announcement, and realm revision. It does
-not persist C pointers, raw enum storage, padding, or the raw state structure.
+friendship/team/youth-mentoring state, conversation, announcement, and realm
+revision. It does not persist C pointers, raw enum storage, padding, or the raw
+state structure.
 
 The decoder validates magic, schema, length, CRC, strings, counts, stat ranges,
-relationships, and every bounded record before applying any data. A failed
+team invariants, and every bounded record before applying any data. A failed
 snapshot keeps the new-character path; backup selection remains OS owned.
 
 ## 2. OS-owned text entry
@@ -262,6 +267,26 @@ LORD multiplayer is primarily asynchronous shared-record gameplay, distinct
 from real-time controller multiplayer. Add `components/p4_realm` and expose
 typed snapshots/actions rather than files, sockets, or P4MP packets.
 
+### LORD sync-record boundary
+
+Append an optional non-blocking `realm` tail after the frozen Game API v1
+fields. The minimum snapshot operations are:
+
+```text
+read_head() -> status, actor_id[16], realm_revision, copied snapshot
+queue_commit(expected_revision, nonce, copied LRSY record) -> ticket
+read_commit(ticket) -> queued | committed(new_revision) | conflict | error
+```
+
+The host must copy cartridge buffers before returning, cap LORD records at
+4,148 bytes, and expose no token, URL, file, or socket. Validate the `LRSY`
+version-1 outer CRC and its schema-3 `LDSV` payload, bind the opaque actor ID
+to the signed-in OS account, require a nonzero one-use nonce, and reject stale
+or skipped realm revisions. A conflict must never field-merge snapshots or
+duplicate ChompCoin. Journal uploads in Console OS and keep normal local saves
+working while disconnected. The full game/server flow and acceptance matrix
+are in `games/lord/BACKEND_SYNC.md`.
+
 ### Bounded snapshots
 
 Initial limits:
@@ -276,7 +301,7 @@ Initial limits:
 - one outstanding request of each class per foreground game.
 
 Directory entries may expose only gameplay fields approved by the realm:
-display name, level, class, alive/busy status, relationship availability, and
+display name, level, class, alive/busy status, team availability, and
 public ranking. Do not expose account IDs, addresses, routes, or credentials.
 
 ### Mail
@@ -310,21 +335,21 @@ PvP needs a transaction/lease, not direct opponent-record writes:
 The first local implementation may trust installed native code, but the
 protocol must still prevent accidental double rewards and stale-record loss.
 
-### Romance and consent
+### Adventure teams and consent
 
-Store courtship/marriage as a realm-owned relationship transaction. Required
+Store best-friend/adventure-team state as a realm-owned transaction. Required
 operations are invite, accept, decline, withdraw, and status. Both players
-must opt in; a cartridge must not silently marry two remote records. Preserve
+must opt in; a cartridge must not silently team two remote records. Preserve
 block/privacy settings and do not reveal a declined player beyond the normal
-result. Relationship bonuses are calculated by LORD from a confirmed bounded
-status, never by editing the other player’s save.
+result. Teamwork bonuses are calculated by LORD from a confirmed bounded
+status, never by editing the other player's save.
 
 ### Daily rollover
 
 Expose a trusted realm day ID and next-rollover status. The OS/realm applies
 daily limits exactly once per character/revision. Do not use a cartridge’s
 elapsed time, manual inn visits, or an untrusted RTC as the authority for
-remote PvP, flirting, mail, or IGM limits.
+remote PvP, friendship actions, mail, or IGM limits.
 
 When offline, LORD may use its existing local day loop but must label it
 `LOCAL REALM`. Synchronize through revisioned actions when the service returns;
@@ -521,24 +546,28 @@ merely because the hub enumerated.
 
 ## 10. LORD integration after the OS services land
 
-LORD 1.1.0 has the complete standalone implementation. Completed game-side
+LORD 1.2.0 has the complete standalone implementation. Completed game-side
 work includes:
 
 - character creation and a controller/touch ANSI text editor;
 - all 131 monsters, the fifteen forest-event families, all three skill trees,
-  town progression, the full tavern, blackjack, Red Dragon, and rebirth;
-- eight persistent local warrior records, typed inbox/sent mail, bank
-  transfers, PvP and sleeping-player attacks;
-- courtship, Seth/Violet, marriage/divorce, children, and daily bonuses;
+  town progression, the full tavern, Dragon Dice, Red Dragon, and rebirth;
+- eight persistent local warrior records, typed inbox/sent mail, ChompCoin
+  transfers, PvP, and friendly inn sparring;
+- Seth/Violet best-friend paths, player trust, adventure teams, youth
+  mentoring, and daily teamwork bonuses;
 - seven bounded adaptations of the pinned Synchronet add-ons;
-- twelve ANSI/RIP-style scenes and a generated/dithered title;
+- twelve ANSI/RIP-style scenes, a generated/dithered title, and added CP437
+  inn, friendship, Dragon Dice, recovery, and victory compositions;
 - deterministic schema-3 save encoding, CRC/range/corruption/round-trip tests,
   launch decode, copied queue, ticket polling, optimistic host sequence, and
-  commit-aware dirty-state clearing.
+  commit-aware dirty-state clearing; and
+- a tested 4,148-byte maximum `LRSY` sync record with opaque actor ID,
+  one-use nonce, realm/save revisions, nested save CRC, and record CRC.
 
 The OS integration pass should replace optional backends, not rebuild these
 screens or rules. Save wiring is already complete in the cartridge. Map local
-directory/mail/PvP/relationship operations onto opaque realm tickets while
+directory/mail/PvP/friendship/team operations onto opaque realm tickets while
 retaining the arrays as the offline snapshot. The OS text modal may accelerate
 physical/touch keyboard entry, but the in-game picker remains the fallback.
 Replace inn-authoritative remote social resets with the trusted realm day and
@@ -581,7 +610,7 @@ transport, clock, USB, or display-driver ownership.
 - duplicate mail/action idempotency;
 - stale record conflict;
 - PvP lease expiry/replay/double-reward rejection;
-- relationship consent, decline, block, and conflict paths;
+- adventure-team consent, decline, block, and conflict paths;
 - offline outbox replay after reconnect;
 - daily rollover exactly once.
 
@@ -616,7 +645,8 @@ transport, clock, USB, or display-driver ownership.
 - save round-trip and corrupt-save fallback;
 - local/offline and realm-backed mail flows;
 - PvP win, loss, conflict, and daily limit;
-- romance consent and persistence;
+- friendship and adventure-team consent and persistence;
+- ChompCoin non-duplication across retry, conflict, and simultaneous devices;
 - each built-in IGM and invalid external result;
 - vector command/scene bounds;
 - renderer guards, Start/B/Back, touch mapping, and tone fallback;
@@ -631,7 +661,7 @@ transport, clock, USB, or display-driver ownership.
 2. Add durable save component, host-table tail, capability bit, package
    validation, SDL in-memory backend, and Save Manager integration.
 3. Add OS text-entry modal and host-runner implementation.
-4. Add local `p4_realm` backend with directory/mail/PvP/relationship tests;
+4. Add local `p4_realm` backend with directory/mail/PvP/friendship/team tests;
    expose it through the Game API.
 5. Wire the existing LORD save codec and local realm UI to OS services; keep
    network status offline when no realm is available.
@@ -641,7 +671,9 @@ transport, clock, USB, or display-driver ownership.
 8. Finish H1 framed relay integration and qualify controller-first H2 host,
    HID gamepad/keyboard/mouse, and explicit USB Drive role switching without
    exposing USB ownership to games.
-9. Add built-in LORD IGMs, typed external handoff, and bounded vector scenes.
+9. Add typed external IGM handoff and a bounded shared vector-scene service
+   only if other cartridges need them; LORD's built-in IGMs and scenes already
+   work without these optional services.
 10. Run focused host/sanitizer tests, `make game-sdk-host`, BBS/console-shell
    tests, one matching Console OS build, and only then the guarded hardware
    workflow if explicitly requested.
@@ -652,7 +684,8 @@ transport, clock, USB, or display-driver ownership.
 - LORD can load, queue, exit, relaunch, and recover a durable character.
 - Save writes survive simulated interruption without losing both current and
   prior valid objects.
-- Mail, PvP, and romance use realm revisions and idempotent actions.
+- Mail, PvP, friendship, adventure teams, and ChompCoin transfers use realm
+  revisions and idempotent actions.
 - Live multiplayer exposes only lobbies, slots, sanitized input, seed, and
   status—never a transport handle.
 - External IGMs exchange one typed, bounded, single-use result.

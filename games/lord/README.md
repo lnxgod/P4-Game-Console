@@ -5,49 +5,66 @@ Dragon*. It installs under `GAMES/ADVENTURE`, renders at 320×200 in a
 16-color ANSI/RIP-inspired style, and uses only the stable P4 Game API for
 video, controls, tone audio, shared CP437 drawing, and optional durable saves.
 
-Version 1.1.0 includes:
+Version 1.2.0 includes:
 
-- named male or female characters and Death Knight, Mystical, and Thieving
+- named hero or heroine characters and Death Knight, Mystical, and Thieving
   professions;
 - independent mastery and daily-use counters for all three skill trees;
 - the town, 16 weapons, 16 armour choices, healer, eleven training masters,
-  bank deposits/withdrawals/transfers, rankings, daily news, and stats;
+  ChompCoin bank deposits/withdrawals/transfers, rankings, daily news, and
+  stats;
 - all 131 monster records from the authorized pinned Synchronet source,
-  spanning all twelve levels;
-- the 15 forest-event families: the old man, hag, gold sack, Merry Men, gem,
+  spanning all twelve levels, with stats intact and graphic victory blurbs
+  replaced by kid-safe yielding/fleeing outcomes;
+- the 15 forest-event families: the old man, hag, ChompCoin cache, Merry Men, gem,
   flower garden/Hammer Stone, skill teachers, charm sticks, horse trader,
-  fairies, Olivia, princess rescue, lost gold, troll, and DarkCloak Tavern;
+  fairies, Olivia, princess rescue, lost ChompCoin, troll, and DarkCloak
+  Tavern;
 - combat, running, death/recovery, daily limits, level progression, and the
   level-12 Red Dragon victory/rebirth loop;
-- the full Red Dragon Inn play set: sleep, bartender drinks and gossip,
-  public conversation, Seth, Violet, bard songs, blackjack, sleeping-player
-  attacks, announcements, and room status;
-- an eight-warrior persistent local realm with public sayings, bank transfer,
-  PvP, mail, courtship, marriage/divorce, children, and daily revival;
+- the full kid-friendly Red Dragon Inn play set: sleep, berry fizz, gossip,
+  public conversation, Seth and Violet best-friend paths, bard songs, Dragon
+  Dice, friendly sparring, announcements, and room status;
+- an eight-warrior persistent local realm with public sayings, ChompCoin
+  transfer, PvP, mail, trust, adventure teams, youth mentoring, and daily
+  revival;
 - a twelve-message inbox/sent-mail store and an in-cartridge ANSI keyboard for
   character names, letters, announcements, sayings, and conversations;
-- charm, gems, children, encounters, horse, fairy, fairy lore, amulet, and
-  high-spirits state;
+- charm, gems, young heroes helped, friendship badges, encounters, horse,
+  fairy, fairy lore, amulet, and high-spirits state;
 - seven bounded ports of the Synchronet LORD add-ons: Aragorn's Math, Barak's
-  House, The Grab Bag, The Graveyard, Olodrin's Orphans, The Outhouse, and The
+  House, The Grab Bag, The Graveyard, Olodrin's Youth Guild, The Outhouse, and
   Pickle Goddess;
+- one fictional currency—ChompCoin—for loot, shops, healing, equipment,
+  banking, transfers, and all wagers; existing schema-3 balances migrate
+  without conversion;
 - the same pinned 8×16 CP437 font as the Console OS BBS, compacted safely for
-  real DOS box, arrow, heart, block, and shade glyphs at 320×200;
-- a generated/dithered dragon-and-castle title plus twelve code-drawn
-  ANSI/RIP-style scenes with CP437 texture and framing;
+  real DOS box, arrow, diamond, smile, music, block, and shade glyphs at
+  320×200;
+- a generated/dithered dragon-and-castle title, twelve code-drawn RIP-style
+  scenes, and additional kid-friendly CP437 compositions for the inn, Seth,
+  Violet, Dragon Dice, recovery, and victory;
 - an explicit, deterministic, CRC-protected version-3 save codec. The game
   consumes the immutable launch snapshot, queues copied `AUTO` commits, polls
-  completion, and uses optimistic host sequences.
+  completion, and uses optimistic host sequences;
+- a bounded `LRSY` backend-sync record carrying an opaque actor ID, one-use
+  nonce, realm revision, save sequence, CRC, and the complete save payload.
+  The cartridge defines and tests the record but never owns accounts, TLS,
+  sockets, retries, or server transport.
 
 The cartridge is fully playable offline. On a Console OS profile that offers
 `save`, progress survives exit and relaunch. On profiles that deliberately
 withhold writable storage, it remains playable for the current session and
-labels the realm local. Shared remote BBS accounts, real remote opponents,
-remote consent transactions, trusted server-day rollover, and arbitrary
-third-party IGM packages still require the optional OS adapters documented in
-[OS_INTEGRATION.md](OS_INTEGRATION.md) and
+labels the realm local. Shared remote BBS accounts, synchronized opponents,
+trusted server-day rollover, and arbitrary third-party IGM packages still
+require the optional OS adapters documented in
+[BACKEND_SYNC.md](BACKEND_SYNC.md), [OS_INTEGRATION.md](OS_INTEGRATION.md), and
 [osupgrade.md](../../osupgrade.md); the complete standalone game does not
 depend on them.
+
+Implementation note: the schema-3 C fields named `gold` and `bank` remain only
+to preserve existing save bytes. They now mean carried and vaulted ChompCoin;
+there is no second gold currency and no balance conversion.
 
 ## Controls
 
