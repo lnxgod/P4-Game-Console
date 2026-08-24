@@ -6,16 +6,22 @@ description: Create, port, modify, package, install, or test storage-installed g
 # Develop P4 Console games
 
 Build games against the stable P4 Game API, then install their `.P4G` files
-through the Elecrow `P4 GAMES` USB volume or the offline Olimex microSD card.
-Keep Console OS in charge of hardware, storage, and lifecycle services so
-adding or removing a game never requires an OS reflash.
+through the Elecrow `P4 GAMES` USB volume or the Olimex/Waveshare microSD
+bundle. Keep Console OS in charge of hardware, storage, and lifecycle services
+so adding or removing a game never requires an OS reflash.
 
 Target names are exact: `elecrow-crowpanel-advanced-10` is the Elecrow 10 in
-device, while `olimex-esp32-p4-pc` is the Olimex ESP32-P4-PC Rev.B development
-board. A package remains board-independent, but its Console OS build and copy
-workflow must match the physical target. Any new target must first appear in
+device, `olimex-esp32-p4-pc` is the Olimex ESP32-P4-PC Rev.B development board,
+and `waveshare-esp32-p4-wifi6-touch-lcd-4.3` is the Waveshare 4.3 in console.
+A package remains board-independent, but its Console OS build and copy workflow
+must match the physical target. Any new target must first appear in
 `hardware/boards/console-os-port-contract.json`; never infer a board from its
 display connector or reuse another board's identity.
+
+Use `$develop-p4-console-games` for gameplay/source authoring and
+`$test-p4-games-locally` for the SDL3 edit-play loop. Use this skill for the
+native package, catalog, storage, installation, and removal boundary. Use
+`$develop-p4-script-games` instead for readable Lua `.P4CART` games.
 
 ## Load the game contract
 
@@ -27,8 +33,8 @@ Read these files before changing a game:
 4. The closest example under `games/`, normally `maze_chase` or
    `space_invaders`
 
-Read `$develop-esp32-p4-platform`, `$use-elecrow-p4-display`,
-`$use-elecrow-p4-audio`, or `$add-usb-gamepad-support` only when the request
+Read `$develop-esp32-p4-platform`, `$develop-waveshare-p4-4.3`, a matching
+board display/audio skill, or `$add-usb-gamepad-support` only when the request
 changes or diagnoses that platform boundary. Ordinary drawing, normalized
 button handling, and tone playback through existing `p4/` APIs do not require
 board bring-up or peripheral diagnostics.
@@ -93,7 +99,8 @@ Choose the smallest proof that covers the modified boundary:
   maintained game: run `make game-sdk-host`.
 - A distributable cartridge or Console OS integration change: after focused
   host checks pass, run exactly one matching build: `make console-os-idf` for
-  Elecrow or `make console-os-olimex-idf` for Olimex Rev.B.
+  Elecrow, `make console-os-olimex-idf` for Olimex Rev.B, or
+  `make console-os-waveshare-idf` for Waveshare 4.3.
 
 Do not run repo-wide `make check` by default. Reserve it for an explicit user
 request, a pinned toolchain or dependency change, or a genuinely cross-cutting
@@ -106,18 +113,26 @@ report unrelated failures without expanding the task.
 The board-specific Console OS builds write each enabled cartridge to:
 
 ```text
-apps/console_os/build/game-storage-seed/<PACKAGE>.P4G
-apps/console_os/build-olimex-esp32-p4-pc/sd-card/<PACKAGE>.P4G
+apps/console_os/build/game-storage-seed/GAMES/<PACKAGE>.P4G
+apps/console_os/build-olimex-esp32-p4-pc/sd-card/GAMES/<PACKAGE>.P4G
+apps/console_os/build-waveshare-landscape/sd-card/GAMES/<PACKAGE>.P4G
 ```
 
 To install or update on Elecrow, connect the laptop to J16, copy the `.P4G`
-file to the root of `P4 GAMES`, verify the destination byte count or hash, and
-eject cleanly. On Olimex, power the board off, move the microSD card to a laptop
-reader, copy the cartridge to its root, verify it, eject, reinstall, and power
-on. The Olimex USB-C programming port is not storage and live card removal is
-unsupported. Open Game Manager to refresh and launch it. Do not flash the OS
-for a game-only update and never let the host and firmware mount the writable
-filesystem at the same time.
+file into `GAMES/` on `P4 GAMES`, verify the destination byte count or hash,
+and eject cleanly. On Olimex, power the board off, move the microSD card to a
+laptop reader, copy the cartridge into `GAMES/`, verify it, eject, reinstall,
+and power on. The Olimex USB-C programming port is not storage and live card
+removal is unsupported.
+
+On Waveshare, keep controller-host mode as the default. Open the on-device USB
+Drive app to stop Host/HID, unmount the card, and hand H2 to TinyUSB MSC. After
+the FAT32 `P4GAMES` volume appears, run
+`make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES`, eject it cleanly,
+and return from USB Drive mode so Console OS remounts and rescans. A powered-off
+card-reader copy is also valid. Never let the Mac and Console OS own the
+filesystem at the same time. Open Game Manager to refresh and launch the game.
+Do not flash the OS for a game-only update.
 
 For a hardware acceptance, perform one named run that launches the changed
 game, exercises its changed behavior, and returns to the launcher with Back.

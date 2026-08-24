@@ -14,7 +14,7 @@ Read `AGENTS.md`, `docs/GAME_SDK.md`, the target `games/<slug>/game.json`, and
 the target source before testing. Also use `$develop-p4-console-games` when
 changing game code or its manifest.
 
-Require an enabled `p4-native-static-v1` manifest with API version 1, a valid
+Require an enabled `p4-native-elf-v1` manifest with API version 1, a valid
 entry symbol, and C sources under `games/<slug>/src/`. Let the runner reject an
 unknown, disabled, or incompatible game instead of bypassing its checks.
 

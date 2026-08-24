@@ -1,4 +1,4 @@
 interface:
-  display_name: "P4 Console Game Development"
-  short_description: "Create, package, and test P4 console games"
-  default_prompt: "Use $develop-p4-games to create or update a storage-installed game for P4 Console OS."
+  display_name: "P4 Native Package Management"
+  short_description: "Package and install native P4G games"
+  default_prompt: "Use $develop-p4-games to package or update a storage-installed native game for P4 Console OS."

@@ -1,6 +1,6 @@
 ---
 name: develop-p4-console-games
-description: Create, scaffold, categorize, modify, or integrate native P4 Console OS games and their manifests. Use for new Game API games, launcher game folders/types, game drawing, controls, tone or PCM sound, registry integration, return-to-launcher behavior, or kid-friendly game templates on this ESP32-P4 console.
+description: Create, scaffold, categorize, modify, or integrate native C P4 Console OS games and their manifests. Use for new Game API games, launcher game folders/types, game drawing, controls, tone or PCM sound, registry integration, return-to-launcher behavior, or kid-friendly game templates on this ESP32-P4 console.
 ---
 
 # Develop P4 Console Games
@@ -25,11 +25,13 @@ game's `game.json` before editing. Also use:
 
 ## Preserve the native model
 
-- Keep format `p4-native-static-v1` and API version 1 unless a separately
+- Keep format `p4-native-elf-v1` and API version 1 unless a separately
   reviewed ABI migration is requested.
-- Treat games as RISC-V code statically linked into the Console OS ELF/BIN.
-  They are not separate EXEs or UF2 files and adding one requires rebuilding
-  Console OS.
+- Treat games as bounded RISC-V ELF cartridges packaged into `.P4G` files and
+  installed on persistent game storage. They are not host EXEs or UF2 files;
+  adding or removing one does not require an OS reflash while API v1 remains
+  compatible. The SDL3 runner compiles the same game sources directly for
+  local play, but it does not change the device package format.
 - Let Console OS own display, touch, audio hardware, timing, and lifecycle.
   Games use only stable `p4/` APIs and never own raw ESP-IDF peripherals.
 - Keep capability flags as internal runtime metadata. Do not expose
@@ -37,8 +39,9 @@ game's `game.json` before editing. Also use:
   icon, title, description, and folder/app count only.
 - Keep reusable services in `components/`; keep game-specific code in
   `games/<slug>/`.
-- Use fixed storage and bounded loops. Do not add a dynamic loader,
-  heap-backed launcher filesystem, or recursive folder walk.
+- Use fixed storage and bounded loops. Do not bypass the reviewed ELF package
+  validator/loader, add a second loader, or add an unbounded recursive folder
+  walk.
 
 ## Choose a game type
 
@@ -181,9 +184,11 @@ game entry. For a new type, add launcher tests that open Root -> Games -> Type,
 launch the game, return to the same type folder, and navigate Up to Root.
 Preserve All Programs scrolling and gesture-suppression coverage.
 
-When the request includes a firmware candidate, run `make console-os-idf` and
-the Console OS verifier through `$test-console-os-builds`. A build is not
-hardware acceptance and does not authorize a flash.
+When the request includes a firmware candidate, run only the matching target:
+`make console-os-idf`, `make console-os-olimex-idf`, or
+`make console-os-waveshare-idf`. Use `$test-console-os-builds` for the exact
+Elecrow tablet route and `$develop-waveshare-p4-4.3` for the Waveshare route.
+A build is not hardware acceptance and does not authorize a flash.
 
 Update `docs/GAME_SDK.md` only when the reusable contract changes. Record a
 new exact build artifact instead of rewriting an executed or historical

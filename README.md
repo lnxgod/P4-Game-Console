@@ -2,12 +2,14 @@
 
 This repository is the experimental firmware platform for a future ESP32-P4 badge. Doom is the first end-to-end acceptance game; USB controllers, display, storage, audio, and lifecycle services are reusable platform components rather than Doom-specific code.
 
-Console OS now has a versioned native C game API for RGB565 drawing, normalized
-touch controls, bounded tone audio, and return-to-launcher lifecycle. Games are
-bounded `.P4G` RISC-V cartridges loaded from the persistent `P4 GAMES` volume;
-they are not UF2 files and do not require an OS reflash. Maze Chase and Space
-Invaders are clean-room samples. See
-[the P4 Game SDK](docs/GAME_SDK.md).
+Console OS has versioned game APIs for drawing, normalized input, bounded
+audio, saves, multiplayer-facing player slots, and return-to-launcher
+lifecycle. Native C games are bounded `.P4G` RISC-V cartridges loaded from
+persistent storage. Open script games are readable Lua `.P4CART` files. Neither
+format is UF2, and installing either one does not require an OS reflash. Maze
+Chase, Space Invaders, Bounce Lab, and QR Dodge are clean-room samples. See
+[the native P4 Game SDK](docs/GAME_SDK.md) and
+[the open script-game platform](game-platform/README.md).
 
 On the Elecrow target, the Program Manager shell exposes that FAT volume to a
 laptop through J16 USB device mode. On the Olimex ESP32-P4-PC target, games and
@@ -17,8 +19,63 @@ removes cartridges and installs verified `UPDATE/P4UPDATE.P4U` images into the
 inactive OTA slot; File Manager handles other root files. Each backend has one
 filesystem owner at a time.
 
+## Make games with the Console API
+
+The repository keeps three game tiers separate so a tiny remix does not lose
+features and a full engine does not weaken the kid-facing sandbox:
+
+| Tier | Best for | Runtime and delivery |
+|---|---|---|
+| Open script cart | Small, readable, AI-remixable games | Lua source in `.P4CART`, 768x480 logical canvas, SD copy, and one- or multi-part QR payloads |
+| Native cartridge | Faster or more advanced original games | C against P4 Game API v1, packaged as storage-installed `.P4G`, with a stable 320x200 RGB565 game surface |
+| OS-integrated engine | Separately reviewed legacy ports such as Doom | Engine integration in Console OS plus legally supplied data; requires an OS build and is not a tradeable kid cartridge |
+
+QR cost estimation, splitting, validation, and exact reassembly are
+implemented. QR bitmap rendering and the on-device scan/import UI are still
+pending, so do not describe QR installation as hardware-ready yet.
+
+Repository-local Codex skills live under `.agents/skills/`. Open this
+repository at its root and name the relevant skill directly in the request:
+
+- Use `$develop-p4-script-games` for Lua source carts, compact `p4.arcade`
+  helpers, packaging, remixing, and QR-size work.
+- Use `$develop-p4-console-games` to design or change a native C game, its
+  manifest, drawing, controls, sound, and launcher category.
+- Add `$test-p4-games-locally` to play the native game's real sources in the
+  SDL3 runner before making firmware.
+- Use `$develop-p4-games` for `.P4G` packaging, resource sidecars, catalog
+  integration, SD/USB copy, install, update, or removal.
+- Add `$add-usb-gamepad-support` only when controller descriptors, mappings,
+  hot-plug, or game input adapters change.
+- Use `$develop-waveshare-p4-4.3` for a Waveshare firmware build, flash,
+  storage, display, touch, audio, USB-role, or exact-hardware test. Use
+  `$develop-esp32-p4-platform` for shared platform or toolchain work.
+
+For example:
+
+```text
+Use $develop-p4-script-games to make a one-screen original game and report its QR count.
+Use $develop-p4-console-games and $test-p4-games-locally to build and play a native platformer.
+Use $develop-p4-games to package that native game and stage it for the Waveshare SD card.
+```
+
+The same contracts are usable without Codex. Start a native game with
+`python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE --dry-run`, or
+start a script game from `game-platform/templates/` and use
+`game-platform/scripts/p4cart.py`. Games must stay behind the documented APIs;
+they never own display, touch, audio, USB, SD, UART, or raw GPIO drivers.
+
 ## Board profiles
 
+- `waveshare-esp32-p4-wifi6-touch-lcd-4.3` is the active 4.3 in console target.
+  Its 480x800 ST7701 scanout is rotated into an 800x480 landscape console with
+  a native 768x480 OS viewport and stable 320x200 native-game surface. Games
+  and resources live under `GAMES/` on microSD. Build with
+  `make console-os-waveshare-idf`; use the on-device USB Drive app plus
+  `make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES` for a validated
+  card update. H2 remains controller-first and must not be assumed to provide
+  safe VBUS; follow the powered, backfeed-safe fixture rules in the board
+  skill and port guide.
 - `elecrow-crowpanel-advanced-10` remains the default target and the only one
   already seen on exact hardware. Its display/framebuffer and selected runtime
   paths have hardware evidence; the complete new Console OS feature set still
