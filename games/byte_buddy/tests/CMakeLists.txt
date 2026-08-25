@@ -17,6 +17,8 @@ add_test(NAME byte_buddy_tests COMMAND byte_buddy_tests)
 
 add_executable(byte_buddy_touch_previews ../tools/render_touch_previews.c)
 target_link_libraries(byte_buddy_touch_previews PRIVATE byte_buddy p4_game_api)
+target_include_directories(byte_buddy_touch_previews PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../src")
 target_compile_features(byte_buddy_touch_previews PRIVATE c_std_11)
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_compile_options(byte_buddy_touch_previews PRIVATE

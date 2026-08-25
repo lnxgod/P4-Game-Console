@@ -88,6 +88,8 @@ typedef enum {
     BYTE_BUDDY_TOUCH_SIGNAL_ROW_2,
     BYTE_BUDDY_TOUCH_SIGNAL_ROW_3,
     BYTE_BUDDY_TOUCH_SIGNAL_ROW_4,
+    BYTE_BUDDY_TOUCH_SIGNAL_PREVIOUS,
+    BYTE_BUDDY_TOUCH_SIGNAL_NEXT,
     BYTE_BUDDY_TOUCH_SIGNAL_TRACK,
     BYTE_BUDDY_TOUCH_SIGNAL_BATTLE,
     BYTE_BUDDY_TOUCH_SIGNAL_STRIKE,
@@ -99,6 +101,26 @@ typedef enum {
     BYTE_BUDDY_SIGNAL_TRACKER,
     BYTE_BUDDY_SIGNAL_BATTLE,
 } byte_buddy_signal_view_t;
+
+enum {
+    BYTE_BUDDY_SIGNAL_PAGE_ROWS = 5,
+};
+
+typedef enum {
+    BYTE_BUDDY_BATTLE_PULSE_RUSH = 0,
+    BYTE_BUDDY_BATTLE_RESONANCE_WEAVE,
+} byte_buddy_signal_battle_pattern_t;
+
+typedef struct {
+    uint16_t x;
+    uint16_t y;
+} byte_buddy_signal_weave_node_t;
+
+typedef struct {
+    uint8_t required_locks;
+    uint8_t touch_radius;
+    uint16_t hold_ms;
+} byte_buddy_signal_weave_rules_t;
 
 typedef struct {
     byte_buddy_element_t element;
@@ -236,6 +258,31 @@ byte_buddy_touch_target_t byte_buddy_touch_target(
 
 byte_buddy_touch_target_t byte_buddy_signal_touch_target(
     uint16_t x, uint16_t y, byte_buddy_signal_view_t view);
+
+uint8_t byte_buddy_signal_page_count(uint8_t result_count);
+
+uint8_t byte_buddy_signal_clamp_page(
+    uint8_t page, uint8_t result_count);
+
+uint8_t byte_buddy_signal_page_index(
+    uint8_t page, uint8_t row, uint8_t result_count);
+
+byte_buddy_signal_battle_pattern_t byte_buddy_signal_battle_pattern(
+    byte_buddy_signal_genome_t genome);
+
+uint8_t byte_buddy_signal_weave_node_index(
+    byte_buddy_signal_genome_t genome, uint8_t step);
+
+byte_buddy_signal_weave_node_t byte_buddy_signal_weave_node(
+    byte_buddy_signal_genome_t genome, uint8_t step);
+
+byte_buddy_signal_weave_rules_t byte_buddy_signal_weave_rules(
+    byte_buddy_signal_genome_t genome,
+    uint8_t strength, uint8_t magnet_level);
+
+uint32_t byte_buddy_signal_weave_charge(
+    uint32_t charge_units, uint32_t elapsed_ms,
+    bool inside_target, uint32_t threshold_units);
 
 byte_buddy_signal_profile_t byte_buddy_signal_profile(
     uint64_t token, int8_t rssi_dbm);

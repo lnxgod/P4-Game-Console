@@ -41,7 +41,7 @@ static bool fake_request_signal_scan(void *context, uint64_t focus_token)
     scan->snapshot = (p4_game_signal_snapshot_t){
         .generation = scan->requests,
         .status = P4_GAME_SIGNAL_READY,
-        .count = 2U,
+        .count = 8U,
         .results = {
             {
                 .token = UINT64_C(0x00123456789abcde),
@@ -59,8 +59,65 @@ static bool fake_request_signal_scan(void *context, uint64_t focus_token)
                 .flags = P4_GAME_SIGNAL_HIDDEN |
                          P4_GAME_SIGNAL_SIMULATED,
             },
+            {
+                .token = UINT64_C(0x1020304050607080),
+                .label = "EMBER ARCADE",
+                .rssi_dbm = -61,
+                .channel = 1U,
+                .flags = P4_GAME_SIGNAL_SIMULATED,
+            },
+            {
+                .token = UINT64_C(0x8877665544332211),
+                .label = "MOON WORKSHOP",
+                .rssi_dbm = -63,
+                .channel = 36U,
+                .flags = P4_GAME_SIGNAL_PROTECTED |
+                         P4_GAME_SIGNAL_SIMULATED,
+            },
+            {
+                .token = UINT64_C(0x7a6b5c4d3e2f1098),
+                .label = "PIXEL ROOST",
+                .rssi_dbm = -66,
+                .channel = 44U,
+                .flags = P4_GAME_SIGNAL_SIMULATED,
+            },
+            {
+                .token = UINT64_C(0x13579bdf2468ace0),
+                .label = "COMET CAFE",
+                .rssi_dbm = -58,
+                .channel = 6U,
+                .flags = P4_GAME_SIGNAL_PROTECTED |
+                         P4_GAME_SIGNAL_SIMULATED,
+            },
+            {
+                .token = UINT64_C(0x0fedcba987654321),
+                .label = "AURORA LAB",
+                .rssi_dbm = -60,
+                .channel = 11U,
+                .flags = P4_GAME_SIGNAL_SIMULATED,
+            },
+            {
+                .token = UINT64_C(0x55aa33cc77ee0011),
+                .label = "DRAGON DEN",
+                .rssi_dbm = -52,
+                .channel = 149U,
+                .flags = P4_GAME_SIGNAL_PROTECTED |
+                         P4_GAME_SIGNAL_SIMULATED,
+            },
         },
     };
+    if (focus_token != 0U) {
+        for (size_t index = 0U; index < scan->snapshot.count; ++index) {
+            if (scan->snapshot.results[index].token == focus_token) {
+                const p4_game_signal_t focused =
+                    scan->snapshot.results[index];
+                scan->snapshot.results[index] = scan->snapshot.results[0];
+                scan->snapshot.results[0] = focused;
+                scan->snapshot.results[0].rssi_dbm = -45;
+                break;
+            }
+        }
+    }
     return true;
 }
 
@@ -115,6 +172,18 @@ static p4_game_result_t touch(p4_game_instance_t *instance,
     return p4_game_instance_update(instance, &input, 16U);
 }
 
+static p4_game_result_t hold_touch(
+    p4_game_instance_t *instance,
+    uint16_t x, uint16_t y, uint32_t elapsed_ms)
+{
+    const p4_game_input_t input = {
+        .touch_valid = true,
+        .touch_count = 1U,
+        .touches = {{.x = x, .y = y}},
+    };
+    return p4_game_instance_update(instance, &input, elapsed_ms);
+}
+
 static void release_touch(p4_game_instance_t *instance)
 {
     const p4_game_input_t input = {.touch_valid = true};
@@ -158,9 +227,13 @@ static void test_care_achievements_and_exit(void)
     CHECK(achievements.entries[0].game_id[0] != '\0');
     CHECK(achievements.entries[0].id[0] != '\0');
 
-    tap(&instance, 180U, 145U);
-    tap(&instance, 180U, 145U);
-    tap(&instance, 180U, 145U);
+    for (unsigned clean = 0U; clean < 3U; ++clean) {
+        for (unsigned wait = 0U; wait < 7U; ++wait) {
+            CHECK(buttons(&instance, 0U, 0U, 100U) ==
+                  P4_GAME_CONTINUE);
+        }
+        tap(&instance, 180U, 145U);
+    }
     CHECK(achievements.count == 2U);
 
     CHECK(touch(&instance, 20U, 12U) == P4_GAME_EXIT_TO_LAUNCHER);
@@ -199,9 +272,8 @@ static void test_render_bounds(void)
     CHECK(start_game(&instance, state, &mixer, &achievements));
     CHECK(p4_game_instance_render(&instance, &surface));
     tap(&instance, 260U, 180U);
-    tap(&instance, 260U, 180U);
-    tap(&instance, 260U, 180U);
-    tap(&instance, 260U, 180U);
+    CHECK(p4_game_instance_render(&instance, &surface));
+    tap(&instance, 160U, 180U);
     tap(&instance, 150U, 180U);
     tap(&instance, 50U, 60U);
     tap(&instance, 220U, 60U);
@@ -555,6 +627,361 @@ static void test_signal_hunt_battle_and_reward(void)
     free(state);
 }
 
+static bool achievement_present(
+    const p4_achievement_catalog_t *achievements, const char *id)
+{
+    if (achievements == NULL || id == NULL) {
+        return false;
+    }
+    for (size_t index = 0U; index < achievements->count; ++index) {
+        if (strcmp(achievements->entries[index].id, id) == 0) {
+            return true;
+        }
+    }
+    return false;
+}
+
+static void test_care_growth_cadence(void)
+{
+    void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state == NULL) {
+        return;
+    }
+    p4_game_instance_t instance;
+    p4_audio_mixer_t mixer;
+    p4_achievement_catalog_t achievements;
+    CHECK(start_game(&instance, state, &mixer, &achievements));
+    tap(&instance, 260U, 180U);
+    const p4_game_input_t close_genome_while_touching = {
+        .pressed = P4_BUTTON_B,
+        .touch_valid = true,
+        .touch_count = 1U,
+        .touches = {{.x = 20U, .y = 145U}},
+    };
+    CHECK(p4_game_instance_update(
+              &instance, &close_genome_while_touching, 16U) ==
+          P4_GAME_CONTINUE);
+    const p4_game_input_t held_after_close = {
+        .touch_valid = true,
+        .touch_count = 1U,
+        .touches = {{.x = 20U, .y = 145U}},
+    };
+    CHECK(p4_game_instance_update(
+              &instance, &held_after_close, 16U) == P4_GAME_CONTINUE);
+    CHECK(achievements.count == 0U);
+    release_touch(&instance);
+    for (unsigned rapid = 0U; rapid < 104U; ++rapid) {
+        tap(&instance, 160U, 80U);
+    }
+    CHECK(!achievement_present(&achievements, "dragon-raised"));
+
+    for (unsigned paced = 0U; paced < 104U; ++paced) {
+        for (unsigned wait = 0U; wait < 7U; ++wait) {
+            CHECK(buttons(&instance, 0U, 0U, 100U) ==
+                  P4_GAME_CONTINUE);
+        }
+        tap(&instance, 160U, 80U);
+    }
+    CHECK(achievement_present(&achievements, "dragon-raised"));
+    p4_game_instance_stop(&instance);
+    free(state);
+}
+
+static void test_signal_paging(void)
+{
+    CHECK(byte_buddy_signal_touch_target(
+              63U, 180U, BYTE_BUDDY_SIGNAL_LIST) ==
+          BYTE_BUDDY_TOUCH_SIGNAL_PREVIOUS);
+    CHECK(byte_buddy_signal_touch_target(
+              64U, 180U, BYTE_BUDDY_SIGNAL_LIST) ==
+          BYTE_BUDDY_TOUCH_SIGNAL_SCAN);
+    CHECK(byte_buddy_signal_touch_target(
+              255U, 180U, BYTE_BUDDY_SIGNAL_LIST) ==
+          BYTE_BUDDY_TOUCH_SIGNAL_SCAN);
+    CHECK(byte_buddy_signal_touch_target(
+              256U, 180U, BYTE_BUDDY_SIGNAL_LIST) ==
+          BYTE_BUDDY_TOUCH_SIGNAL_NEXT);
+    CHECK(byte_buddy_signal_touch_target(
+              80U, 32U, BYTE_BUDDY_SIGNAL_LIST) ==
+          BYTE_BUDDY_TOUCH_SIGNAL_ROW_0);
+    CHECK(byte_buddy_signal_touch_target(
+              80U, 156U, BYTE_BUDDY_SIGNAL_LIST) ==
+          BYTE_BUDDY_TOUCH_SIGNAL_ROW_4);
+    CHECK(byte_buddy_signal_touch_target(
+              80U, 157U, BYTE_BUDDY_SIGNAL_LIST) ==
+          BYTE_BUDDY_TOUCH_NONE);
+
+    for (uint8_t count = 0U; count <= P4_GAME_SIGNAL_MAX_RESULTS;
+         ++count) {
+        const uint8_t pages = byte_buddy_signal_page_count(count);
+        CHECK(pages == (count <= BYTE_BUDDY_SIGNAL_PAGE_ROWS ? 1U : 2U));
+        CHECK(byte_buddy_signal_clamp_page(UINT8_MAX, count) ==
+              (uint8_t)(pages - 1U));
+        uint8_t seen[P4_GAME_SIGNAL_MAX_RESULTS] = {0};
+        for (uint8_t page = 0U; page < pages; ++page) {
+            for (uint8_t row = 0U; row < BYTE_BUDDY_SIGNAL_PAGE_ROWS;
+                 ++row) {
+                const uint8_t index = byte_buddy_signal_page_index(
+                    page, row, count);
+                if (index != UINT8_MAX) {
+                    CHECK(index < count);
+                    if (index < P4_GAME_SIGNAL_MAX_RESULTS) {
+                        ++seen[index];
+                    }
+                }
+            }
+        }
+        for (uint8_t index = 0U; index < count; ++index) {
+            CHECK(seen[index] == 1U);
+        }
+        CHECK(byte_buddy_signal_page_index(pages, 0U, count) ==
+              UINT8_MAX);
+        CHECK(byte_buddy_signal_page_index(
+                  0U, BYTE_BUDDY_SIGNAL_PAGE_ROWS, count) == UINT8_MAX);
+    }
+    CHECK(byte_buddy_signal_page_count(UINT8_MAX) == 2U);
+    CHECK(byte_buddy_signal_page_index(1U, 2U, UINT8_MAX) == 7U);
+    CHECK(byte_buddy_signal_page_index(1U, 3U, UINT8_MAX) == UINT8_MAX);
+}
+
+static void test_signal_paging_integration(void)
+{
+    void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state == NULL) {
+        return;
+    }
+    p4_game_instance_t instance;
+    p4_audio_mixer_t mixer;
+    p4_achievement_catalog_t achievements;
+    CHECK(start_game(&instance, state, &mixer, &achievements));
+    tap(&instance, 70U, 180U);
+    CHECK(s_signal_scan.requests == 1U);
+    tap(&instance, 280U, 180U);
+    tap(&instance, 80U, 119U);
+    CHECK(s_signal_scan.requests == 1U);
+    tap(&instance, 80U, 94U);
+    CHECK(s_signal_scan.requests == 2U);
+    CHECK(s_signal_scan.focus_token == UINT64_C(0x55aa33cc77ee0011));
+
+    tap(&instance, 20U, 12U);
+    tap(&instance, 280U, 180U);
+    const uint64_t expected_after_clamp =
+        s_signal_scan.snapshot.results[0].token;
+    s_signal_scan.snapshot.count = 3U;
+    ++s_signal_scan.snapshot.generation;
+    release_touch(&instance);
+    tap(&instance, 80U, 42U);
+    CHECK(s_signal_scan.requests == 3U);
+    CHECK(s_signal_scan.focus_token == expected_after_clamp);
+
+    p4_game_instance_stop(&instance);
+    free(state);
+}
+
+static void test_signal_battle_patterns(void)
+{
+    unsigned pattern_counts[4][2] = {{0}};
+    for (uint8_t core = 0U; core < 4U; ++core) {
+        for (uint8_t halo = 0U; halo < 4U; ++halo) {
+            for (uint8_t sigil = 0U; sigil < 4U; ++sigil) {
+                for (uint8_t aura = 0U; aura < 4U; ++aura) {
+                    for (uint8_t hue = 0U; hue < 8U; ++hue) {
+                        for (uint8_t rarity = 0U; rarity < 4U;
+                             ++rarity) {
+                            const byte_buddy_signal_genome_t genome = {
+                                .core = core,
+                                .halo = halo,
+                                .sigil = sigil,
+                                .aura = aura,
+                                .hue = hue,
+                                .rarity = rarity,
+                            };
+                            const byte_buddy_signal_battle_pattern_t pattern =
+                                byte_buddy_signal_battle_pattern(genome);
+                            CHECK(pattern <=
+                                  BYTE_BUDDY_BATTLE_RESONANCE_WEAVE);
+                            ++pattern_counts[rarity][pattern];
+                            bool seen[6] = {false};
+                            for (uint8_t step = 0U; step < 6U; ++step) {
+                                const uint8_t node =
+                                    byte_buddy_signal_weave_node_index(
+                                        genome, step);
+                                CHECK(node < 6U);
+                                if (node < 6U) {
+                                    CHECK(!seen[node]);
+                                    seen[node] = true;
+                                }
+                                const byte_buddy_signal_weave_node_t point =
+                                    byte_buddy_signal_weave_node(
+                                        genome, step);
+                                CHECK(point.x < P4_GAME_SURFACE_WIDTH);
+                                CHECK(point.y < 162U);
+                            }
+                            CHECK(byte_buddy_signal_weave_node_index(
+                                      genome, 6U) ==
+                                  byte_buddy_signal_weave_node_index(
+                                      genome, 0U));
+                        }
+                    }
+                }
+            }
+        }
+    }
+    for (uint8_t rarity = 0U; rarity < 4U; ++rarity) {
+        CHECK(pattern_counts[rarity][BYTE_BUDDY_BATTLE_PULSE_RUSH] ==
+              1024U);
+        CHECK(pattern_counts[rarity][
+                  BYTE_BUDDY_BATTLE_RESONANCE_WEAVE] == 1024U);
+    }
+
+    const byte_buddy_signal_weave_rules_t easiest =
+        byte_buddy_signal_weave_rules(
+            (byte_buddy_signal_genome_t){.rarity = 0U}, 0U, 0U);
+    CHECK(easiest.required_locks == 4U);
+    CHECK(easiest.hold_ms == 600U);
+    CHECK(easiest.touch_radius == 17U);
+    const byte_buddy_signal_weave_rules_t hardest =
+        byte_buddy_signal_weave_rules(
+            (byte_buddy_signal_genome_t){.rarity = 3U}, 100U, 3U);
+    CHECK(hardest.required_locks == 7U);
+    CHECK(hardest.hold_ms == 920U);
+    CHECK(hardest.touch_radius == 23U);
+    const byte_buddy_signal_weave_rules_t bounded =
+        byte_buddy_signal_weave_rules(
+            (byte_buddy_signal_genome_t){.rarity = UINT8_MAX},
+            UINT8_MAX, UINT8_MAX);
+    CHECK(bounded.required_locks == 7U);
+    CHECK(bounded.hold_ms == 920U);
+    CHECK(bounded.touch_radius == 23U);
+
+    uint32_t chunked = 0U;
+    for (unsigned frame = 0U; frame < 10U; ++frame) {
+        chunked = byte_buddy_signal_weave_charge(
+            chunked, 16U, true, 1000U);
+    }
+    const uint32_t single = byte_buddy_signal_weave_charge(
+        0U, 160U, true, 1000U);
+    CHECK(chunked == single && single == 320U);
+    CHECK(byte_buddy_signal_weave_charge(
+              single, 100U, false, 1000U) == 220U);
+    CHECK(byte_buddy_signal_weave_charge(
+              50U, 100U, false, 1000U) == 0U);
+    CHECK(byte_buddy_signal_weave_charge(
+              900U, 100U, true, 1000U) == 1000U);
+    CHECK(byte_buddy_signal_weave_charge(
+              900U, 100U, true, 0U) == 0U);
+}
+
+static void test_resonance_weave_battle(void)
+{
+    const uint64_t weave_token = UINT64_C(0x1020304050607080);
+    const byte_buddy_signal_genome_t genome =
+        byte_buddy_signal_genome(weave_token);
+    CHECK(byte_buddy_signal_battle_pattern(genome) ==
+          BYTE_BUDDY_BATTLE_RESONANCE_WEAVE);
+    const byte_buddy_signal_profile_t profile =
+        byte_buddy_signal_profile(weave_token, -45);
+    const byte_buddy_signal_weave_rules_t rules =
+        byte_buddy_signal_weave_rules(genome, profile.strength, 0U);
+
+    void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    uint16_t *const pixels = calloc(
+        P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT,
+        sizeof(*pixels));
+    CHECK(state != NULL && pixels != NULL);
+    if (state == NULL || pixels == NULL) {
+        free(pixels);
+        free(state);
+        return;
+    }
+    p4_game_instance_t instance;
+    p4_audio_mixer_t mixer;
+    p4_achievement_catalog_t achievements;
+    CHECK(start_game(&instance, state, &mixer, &achievements));
+    tap(&instance, 70U, 180U);
+    tap(&instance, 80U, 94U);
+    CHECK(s_signal_scan.focus_token == weave_token);
+    tap(&instance, 250U, 180U);
+    const byte_buddy_signal_weave_node_t first =
+        byte_buddy_signal_weave_node(genome, 0U);
+    tap(&instance, first.x, first.y);
+    CHECK(achievements.count == 0U);
+
+    for (uint8_t step = 0U; step < rules.required_locks; ++step) {
+        const byte_buddy_signal_weave_node_t node =
+            byte_buddy_signal_weave_node(genome, step);
+        const unsigned frames = (unsigned)(rules.hold_ms + 49U) / 50U + 1U;
+        for (unsigned frame = 0U; frame < frames; ++frame) {
+            CHECK(hold_touch(&instance, node.x, node.y, 50U) ==
+                  P4_GAME_CONTINUE);
+        }
+        if (step == 0U) {
+            p4_game_surface_t surface = {
+                .pixels = pixels,
+                .stride_pixels = P4_GAME_SURFACE_WIDTH,
+                .width = P4_GAME_SURFACE_WIDTH,
+                .height = P4_GAME_SURFACE_HEIGHT,
+            };
+            CHECK(p4_game_instance_render(&instance, &surface));
+        }
+        for (unsigned settle = 0U; settle < 4U; ++settle) {
+            CHECK(buttons(&instance, 0U, 0U, 100U) ==
+                  P4_GAME_CONTINUE);
+        }
+    }
+    CHECK(achievements.count == 1U);
+    CHECK(strcmp(achievements.entries[0].id, "first-signal") == 0);
+
+    p4_game_instance_stop(&instance);
+    free(pixels);
+    free(state);
+}
+
+static void test_resonance_timeout_and_guard(void)
+{
+    void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state == NULL) {
+        return;
+    }
+    p4_game_instance_t instance;
+    p4_audio_mixer_t mixer;
+    p4_achievement_catalog_t achievements;
+    CHECK(start_game(&instance, state, &mixer, &achievements));
+    tap(&instance, 70U, 180U);
+    tap(&instance, 80U, 94U);
+    tap(&instance, 250U, 180U);
+    for (unsigned frame = 0U; frame < 159U; ++frame) {
+        CHECK(buttons(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
+    }
+    CHECK(hold_touch(&instance, 250U, 180U, 100U) == P4_GAME_CONTINUE);
+    release_touch(&instance);
+    CHECK(achievements.count == 0U);
+    const uint32_t requests_after_timeout = s_signal_scan.requests;
+    tap(&instance, 70U, 180U);
+    CHECK(s_signal_scan.requests == requests_after_timeout + 1U);
+
+    tap(&instance, 250U, 180U);
+    tap(&instance, 250U, 180U);
+    const uint32_t requests_before_guard_window = s_signal_scan.requests;
+    for (unsigned frame = 0U; frame < 162U; ++frame) {
+        CHECK(buttons(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
+    }
+    tap(&instance, 70U, 180U);
+    CHECK(s_signal_scan.requests == requests_before_guard_window);
+    for (unsigned frame = 0U; frame < 8U; ++frame) {
+        CHECK(buttons(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
+    }
+    tap(&instance, 70U, 180U);
+    CHECK(s_signal_scan.requests == requests_before_guard_window + 1U);
+    CHECK(achievements.count == 0U);
+
+    p4_game_instance_stop(&instance);
+    free(state);
+}
+
 static uint8_t lineage_test_channel(unsigned index)
 {
     static const uint8_t channels[4] = {1U, 6U, 11U, 36U};
@@ -802,10 +1229,16 @@ static void test_invalid_extended_art_fails_closed(void)
 int main(void)
 {
     test_care_achievements_and_exit();
+    test_care_growth_cadence();
     test_render_bounds();
     test_dragon_growth_and_traits();
     test_controller_star_catcher();
     test_signal_lineage_genetics();
+    test_signal_paging();
+    test_signal_paging_integration();
+    test_signal_battle_patterns();
+    test_resonance_weave_battle();
+    test_resonance_timeout_and_guard();
     test_signal_hunt_battle_and_reward();
     test_invalid_extended_art_fails_closed();
     if (s_failures != 0) {

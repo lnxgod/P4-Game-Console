@@ -37,6 +37,16 @@ P4 Game API surface.
       adds variety without rushing the normal care curve.
 - [x] Render and inspect one-signal Spark and five-signal Aurora animation clips
       in the deterministic 156-frame preview sequence.
+- [x] Page all eight bounded Signal Hunt results without losing selection when
+      focused scans reorder the chosen opaque token.
+- [x] Add deterministic Resonance Weave battles whose route, length, art layers,
+      and timing come from the signal genome instead of another tap race.
+- [x] Replace the production stage-skip button with a Genome panel that explains
+      inherited traits and exact link/DNA requirements for the next rank.
+- [x] Rate-limit growth credit with a short deterministic care cadence so rapid
+      repeated taps cannot mature the dragon instantly.
+- [x] Render and inspect both signal pages, Resonance Weave, and eight-signal
+      Ascended/Genome states in the deterministic 177-frame preview sequence.
 - [x] Complete a visible SDL keyboard play pass: Start entered Star Catcher,
       Left steered through the spring path, one 18-second round ended naturally
       with two catches, B returned from a second round, and Back exited cleanly.
@@ -52,12 +62,12 @@ P4 Game API surface.
 - [ ] Add explicit non-development stage preview access before a release candidate.
 - [ ] Decide whether session progress should opt into the reviewed save service on boards
       that expose it; Byte Buddy must remain usable without writable storage.
-- [ ] Add a second Signal Battle pattern so encounters are not only rapid tapping.
+- [x] Add a second Signal Battle pattern so encounters are not only rapid tapping.
 - [ ] Reconcile the public session-token contract with the device-key behavior
       before considering durable lineages or writable save integration.
 - [ ] Clear stale results in platform SCANNING/ERROR snapshots and distinguish
       a transient busy scan request from true radio unavailability.
-- [ ] Add Signal Hunt paging so all eight bounded OS results are selectable.
+- [x] Add Signal Hunt paging so all eight bounded OS results are selectable.
 - [ ] Perform named tablet acceptance for touch feel, panel motion, speaker feedback,
       launcher return, and exact `.P4G`/`.P4R` hashes before calling the work hardware-tested.
 

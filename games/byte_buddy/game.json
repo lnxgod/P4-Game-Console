@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "3.5.0",
+  "version": "3.6.0",
   "stack_frame_limit_bytes": 1024,
   "package_file": "BYTEBUD.P4G",
   "resource_file": "BYTEBUD.P4R",
@@ -26,6 +26,6 @@
     "signal-scan"
   ],
   "license": "MIT",
-  "assets": "400-frame dragon/signal art, 8192 signal seeds, five lineage ranks, combinatorial looks, tweened motion, SD P4R",
+  "assets": "400-frame art, 8192 genomes, two battle modes, five lineage ranks, combinatorial looks, tweened motion, SD P4R",
   "enabled": true
 }

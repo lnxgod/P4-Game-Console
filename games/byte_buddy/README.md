@@ -31,6 +31,15 @@ traits. Five deliberately paced ranks progressively unlock inherited markings,
 auroras, mature silhouettes, and dual-hue Mythic effects without adding another
 atlas or exposing raw network identity.
 
+Version 3.6 makes that system visible and more varied in play. Signal Hunt now
+pages through all eight bounded OS results, and half of the 8,192 genomes choose
+a new Resonance Weave battle: hold and glide through a stable rune route whose
+length, target art, timing, and order come from the encounter genome. The new
+Genome screen names inherited family, halo, sigil, aura, band diversity, and
+special traits while showing exact Link/DNA requirements for the next rank.
+The former stage-skip control is gone, and a short care-credit cadence prevents
+rapid repeated taps from bypassing the intended growth curve.
+
 ## Touch play
 
 - Tap **Feed**, **Play**, **Clean**, or **Rest** to provide care.
@@ -46,13 +55,14 @@ atlas or exposing raw network identity.
   Power buys Wings, Aura, Nest, and Magnet levels. Style buys and equips Body,
   Eyes, Horns, and Trail choices independently; the right side of each style
   card buys the next color and the left side cycles owned colors.
-- **Dev Stage** is the temporary preview cheat. Each tap advances one visual
-  stage; once mature, it cycles the elemental preview.
+- **Genome** opens the lineage breakdown and next-rank requirements. It uses
+  only aggregate fantasy traits; no raw MAC address or password is available.
 - Tap **Exit** or use the platform **Back** action to return safely to Console OS.
 
 ### Signal Hunt
 
-Tap **Signal Hunt** to request a bounded city scan. The list contains only an
+Tap **Signal Hunt** to request a bounded city scan. Use **Prev/Next** to inspect
+all eight bounded results. The list contains only an
 OS-sanitized display name, an opaque session token, and a simple strength and
 reward preview. Select an uneaten signal, walk around, and tap **Pulse Scan**.
 Repeated focused scans provide a deliberately approximate `COLD`, `GETTING
@@ -62,8 +72,12 @@ hotter/colder activity rather than real direction or distance.
 At -65 dBm or stronger, **Battle** unlocks. Signal strength maps from -100..-30
 dBm into a clamped 0..100 encounter strength. Stronger signals have more
 health and are harder to defeat before time expires, but pay more coins.
-**Pulse Strike** deals damage from dragon level and Aura upgrades; **Aura
-Guard** spends a limited charge to buy more time. Winning turns the encounter
+Each opaque token deterministically chooses one of two battle styles. **Pulse
+Rush** uses Pulse Strike damage from dragon level and Aura upgrades. **Resonance
+Weave** asks the player to hold and glide through four to seven large runes;
+genome rarity controls route length, signal strength controls hold time, and
+the Magnet upgrade increases the forgiving target radius. **Aura Guard** spends
+a limited charge to buy more time in either style. Winning turns the encounter
 into a signal seed that the dragon eats automatically.
 
 Every signal seed is accepted once per session. Its opaque token determines
@@ -74,6 +88,12 @@ different order yields the same dominant traits. Rarity-weighted votes choose
 the inherited Arc, Prism, Thorn, or Comet family and its overlays. The resulting
 palette applies only when the player has not bought a body color, preserving
 coin customization choices.
+
+The display label is never used as genetic input, and Byte Buddy never receives
+a raw MAC address. The platform may derive its session token internally, but
+the game sees only that opaque, resettable identifier. This keeps deterministic
+encounters and duplicate protection without turning network identity into save
+data or exposing it in the UI.
 
 Lineage rank requires both quantity and variety. Diversity is the number of
 different core, halo, sigil, aura, hue, and rarity alleles collected; repeated
@@ -550,7 +570,7 @@ Current deterministic art identities:
 - wrapped `BYTEBUD.P4R`: 832,192 bytes,
   `ae1d39daa3cf444e628b1248ff3ea7f83b57e1718a1a75ff476e65151f8650ca`.
 
-No v3.5 `.P4G` hash is claimed by this host-only art conversion. Record it
+No v3.6 `.P4G` hash is claimed by this host-only art conversion. Record it
 only after the focused RISC-V cartridge build and verifier pass.
 
 ## Verification
@@ -570,17 +590,22 @@ make play-game GAME=byte_buddy
 `byte_buddy_touch_previews` accepts the generated art payload and renders
 deterministic closed egg, cracking egg, Power shop, Style shop, customized baby, flying,
 elemental, mini-game, signal-list, focused tracker, and battle frames for
-visual QA. Its two-argument animation mode also renders 156 chronological
-gameplay frames covering every expanded stage clip, the multi-step hatch, and
-one-signal `signal-lineage-spark` plus five-signal
-`signal-lineage-aurora` clips. The tests cover touch hit areas,
+visual QA. Its two-argument animation mode also renders 177 chronological
+gameplay frames covering every expanded stage clip, the multi-step hatch, both
+signal-list pages, dormant/Ascended Genome panels, and one-signal
+`signal-lineage-spark`, five-signal `signal-lineage-aurora`, and eight-signal
+`signal-lineage-ascended` clips, along with a Resonance Weave battle frame. The
+sequence now contains 177 frames. The tests
+cover touch hit areas,
 care achievements, shop spending paths, preview progression, drag and
 controller Star Catcher play, trait selection, customization costs,
 all 19,200 collision-free look recipe IDs, deterministic owned-choice Remix,
-levels/battle stats, signal profile scaling, focused scans, battle rewards,
+levels/battle stats, paced care credit, signal profile scaling, exhaustive
+eight-result paging, focused scan reordering, both battle modes, all 8,192
+genome pattern assignments and rune routes, battle rewards,
 all five lineage boundaries, order-independent aggregation, low-diversity
-stalling, capped lineage stats, privacy-service validation, and guarded
-rendering.
+stalling, capped lineage stats, bounded signal-provider integration, and
+guarded rendering.
 
 Care, coins, upgrades, and growth are session-only until the platform exposes a
 reviewed writable save service. The game owns no display, touch, audio, or
