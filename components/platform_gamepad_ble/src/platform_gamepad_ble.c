@@ -10,6 +10,7 @@
 /* ESP-IDF 5.5.3 has sign-conversion warnings in inline RISC-V headers. */
 #pragma GCC diagnostic ignored "-Wconversion"
 #pragma GCC diagnostic ignored "-Wsign-conversion"
+#include "esp_attr.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -120,15 +121,14 @@ static const char *const NVS_NAMESPACE = "p4_ble_pad";
 static const char *const NVS_PEER_KEY = "peer";
 static portMUX_TYPE s_lock = portMUX_INITIALIZER_UNLOCKED;
 static portMUX_TYPE s_model_lock = portMUX_INITIALIZER_UNLOCKED;
-static ble_hid_runtime_t s_ble = {
-    .status = {
-        .state = PLATFORM_GAMEPAD_BLE_OFF,
-        .supported = true,
-        .att_mtu = BLE_ATT_MTU_DFLT,
-    },
-    .conn_handle = BLE_HS_CONN_HANDLE_NONE,
-    .last_report_characteristic = -1,
-};
+/*
+ * Descriptor/layout storage is several KiB and is not consumed by DMA.
+ * Keep the complete BLE-HID runtime in external RAM so adding controller
+ * profiles cannot starve the board's fixed 32 KiB internal DMA reserve before
+ * app_main. The runtime is initialized explicitly by prepare() after PSRAM is
+ * available and before this provider is registered with the shared broker.
+ */
+static EXT_RAM_BSS_ATTR ble_hid_runtime_t s_ble;
 
 static int gap_event(struct ble_gap_event *event, void *argument);
 static void host_sync(void *context);
@@ -1289,6 +1289,11 @@ esp_err_t platform_gamepad_ble_prepare(void)
     portENTER_CRITICAL(&s_lock);
     const bool initialized = s_ble.initialized;
     if (!initialized) {
+        s_ble.status.state = PLATFORM_GAMEPAD_BLE_OFF;
+        s_ble.status.supported = true;
+        s_ble.status.att_mtu = BLE_ATT_MTU_DFLT;
+        s_ble.conn_handle = BLE_HS_CONN_HANDLE_NONE;
+        s_ble.last_report_characteristic = -1;
         s_ble.initialized = true;
     }
     portEXIT_CRITICAL(&s_lock);

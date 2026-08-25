@@ -463,6 +463,14 @@ def main() -> None:
         ):
             require(token in console_source,
                     f"controller setup source is missing {token}")
+        gamepad_ble_source = (
+            ROOT / "components/platform_gamepad_ble/src/platform_gamepad_ble.c"
+        ).read_text(encoding="utf-8")
+        require(
+            "static EXT_RAM_BSS_ATTR ble_hid_runtime_t s_ble;" in
+            gamepad_ble_source,
+            "BLE HID runtime must remain outside the internal DMA reserve",
+        )
     cmake = (APP / "CMakeLists.txt").read_text(encoding="utf-8")
     version_match = re.search(r'set\(PROJECT_VER "([0-9]+\.[0-9]+\.[0-9]+)"\)',
                               cmake)
