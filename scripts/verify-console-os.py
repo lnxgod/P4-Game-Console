@@ -325,7 +325,8 @@ def main() -> None:
     components = set(project.get("build_components", []))
     required_components = {
         "console_shell", "p4_game_api", "p4_game_package",
-        "p4_content_catalog", "p4_multiplayer", "p4_os_update_package",
+        "p4_content_catalog", "p4_multiplayer",
+        "p4_multiplayer_registry", "p4_os_update_package",
         "platform_game_catalog",
         "platform_game_loader", "platform_game_storage",
         "platform_os_update", "platform_display", "platform_touch",

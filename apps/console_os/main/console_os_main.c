@@ -47,6 +47,7 @@
 #include "p4/input.h"
 #include "p4/lua_runtime.h"
 #include "p4/multiplayer.h"
+#include "p4/multiplayer_registry.h"
 #include "p4/multiplayer_uart.h"
 #include "p4/platform.h"
 #include "p4/runtime_core.h"
@@ -271,6 +272,7 @@ static char s_file_directory[
 static console_shell_file_listing_t s_manager_listing;
 static platform_game_catalog_t s_game_catalog;
 static platform_game_catalog_t s_catalog_staging;
+static p4_mp_game_registry_t s_multiplayer_game_registry;
 static p4_content_catalog_t s_p4cart_catalog;
 static p4_content_catalog_t s_p4cart_scan_staging;
 static p4_content_status_t s_p4cart_scan_result;
@@ -607,6 +609,7 @@ static p4_doom_mp_setup_t multiplayer_display_setup(void);
 static bool multiplayer_local_content_ready(void);
 static bool multiplayer_start_prerequisites_ready(void);
 static size_t multiplayer_game_count(void);
+static void rebuild_multiplayer_game_registry(void);
 static bool multiplayer_selected_game_is_doom(void);
 static bool multiplayer_selected_game_is_chex(void);
 static const char *multiplayer_selected_game_title(void);
@@ -1581,6 +1584,7 @@ static esp_err_t reload_game_catalog(void)
     } else {
         memset(&s_game_catalog, 0, sizeof(s_game_catalog));
     }
+    rebuild_multiplayer_game_registry();
     s_os_update_info = s_update_staging;
     const size_t game_count = multiplayer_game_count();
     bool multiplayer_offer_stale =
@@ -2313,17 +2317,50 @@ static bool multiplayer_settings_editable(void)
 static bool native_game_supports_multiplayer(
     const platform_game_catalog_entry_t *game)
 {
-    if (game == NULL || !game->valid || game->package.id[0] == '\0' ||
-        strlen(game->package.id) >= P4_MP_GAME_ID_BYTES) {
-        return false;
+    return game != NULL && game->valid &&
+        p4_mp_game_package_is_registerable(
+            &game->package,
+            CONSOLE_NATIVE_MULTIPLAYER_RUNTIME_PLAYERS);
+}
+
+static void rebuild_multiplayer_game_registry(void)
+{
+    p4_mp_game_registry_init(&s_multiplayer_game_registry);
+    for (size_t index = 0U; index < s_game_catalog.entry_count; ++index) {
+        const platform_game_catalog_entry_t *const game =
+            &s_game_catalog.entries[index];
+        if (!game->valid) {
+            continue;
+        }
+        const p4_mp_registration_result_t result =
+            p4_mp_game_registry_register_package(
+                &s_multiplayer_game_registry,
+                &game->package,
+                CONSOLE_NATIVE_MULTIPLAYER_RUNTIME_PLAYERS);
+        if (result == P4_MP_REGISTRATION_ACCEPTED) {
+            ESP_LOGI(TAG,
+                     "P4_CONSOLE_OS MULTIPLAYER_GAME_REGISTERED "
+                     "id=%s title=%s launcher=%lu style=%u protocol=%u "
+                     "source=validated-p4g-manifest",
+                     game->package.id,
+                     game->package.title,
+                     (unsigned long)game->package.launcher_id,
+                     (unsigned)game->package.multiplayer_profile.style,
+                     (unsigned)game->package.multiplayer_profile.protocol);
+        } else if (result != P4_MP_REGISTRATION_NOT_MULTIPLAYER) {
+            ESP_LOGW(TAG,
+                     "P4_CONSOLE_OS MULTIPLAYER_GAME_REJECTED "
+                     "id=%s launcher=%lu reason=%s",
+                     game->package.id,
+                     (unsigned long)game->package.launcher_id,
+                     p4_mp_registration_result_name(result));
+        }
     }
-    const uint32_t capabilities = game->package.required_capabilities |
-        game->package.optional_capabilities;
-    return (capabilities & P4_GAME_CAP_MULTIPLAYER_SESSION) != 0U &&
-        p4_game_multiplayer_profile_valid(
-            &game->package.multiplayer_profile) &&
-        game->package.multiplayer_profile.min_players <=
-            CONSOLE_NATIVE_MULTIPLAYER_RUNTIME_PLAYERS;
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS MULTIPLAYER_REGISTRY_READY games=%u "
+             "runtime_players=%u owner=console-os",
+             (unsigned)s_multiplayer_game_registry.game_count,
+             (unsigned)CONSOLE_NATIVE_MULTIPLAYER_RUNTIME_PLAYERS);
 }
 
 static p4_mp_game_mode_t native_multiplayer_mode(
@@ -2364,31 +2401,19 @@ static bool native_multiplayer_content_identity(
 
 static size_t multiplayer_game_count(void)
 {
-    size_t count = P4_DOOM_MP_GAME_COUNT;
-    for (size_t index = 0U; index < s_game_catalog.entry_count; ++index) {
-        if (native_game_supports_multiplayer(
-                &s_game_catalog.entries[index])) {
-            ++count;
-        }
-    }
-    return count;
+    return P4_DOOM_MP_GAME_COUNT +
+        s_multiplayer_game_registry.game_count;
 }
 
 static const platform_game_catalog_entry_t *multiplayer_native_game_at(
     size_t native_index)
 {
-    for (size_t index = 0U; index < s_game_catalog.entry_count; ++index) {
-        const platform_game_catalog_entry_t *const game =
-            &s_game_catalog.entries[index];
-        if (!native_game_supports_multiplayer(game)) {
-            continue;
-        }
-        if (native_index == 0U) {
-            return game;
-        }
-        --native_index;
-    }
-    return NULL;
+    const p4_mp_registered_game_t *const registration =
+        p4_mp_game_registry_at(
+            &s_multiplayer_game_registry, native_index);
+    return registration == NULL ? NULL :
+        platform_game_catalog_find_launcher(
+            &s_game_catalog, registration->launcher_id);
 }
 
 static const platform_game_catalog_entry_t *

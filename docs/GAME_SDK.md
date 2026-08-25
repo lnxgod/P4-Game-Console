@@ -287,6 +287,15 @@ first `game_start` can read the already-connected session snapshot. Returning
 to the launcher or losing the route ends and neutralizes the game-facing
 session.
 
+Registration is owned entirely by Console OS. During installation or the next
+game-catalog scan, the OS copies the validated package ID, launcher ID, payload
+digest, title, and multiplayer profile into its bounded in-memory registry.
+There is no game-side registration call, first-run prompt, or central table to
+edit. A kid-created cartridge only needs the declarative manifest above; by
+its first launch it is already available in the Multiplayer selector. Invalid,
+duplicate, over-capacity, or unsupported-player registrations are rejected
+before cartridge code runs.
+
 ## OS resource inheritance
 
 Games inherit a stable logical console rather than a board definition:

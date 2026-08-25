@@ -35,6 +35,12 @@ compatibility. See `docs/GAME_SDK.md` for the complete field bounds.
 This keeps the extension point data-driven: a new game appears in the
 Multiplayer selector and receives the existing sanitized session API without
 adding a game-specific BLE service, UART parser, socket, or launcher table.
+Console OS performs this registration itself when it scans an installed P4G;
+cartridge code has no registration API and cannot mutate the registry. The OS
+accepts only validated package metadata, rejects duplicate identities and
+profiles the current transport cannot host, and rebuilds the bounded registry
+after catalog changes. Thus a newly installed kid-created game is registered
+before its first launch simply by declaring the profile in `game.json`.
 The current OS can run two players. Profiles can already describe up to four,
 so later multi-peer transports can expand capacity without changing Game API
 v1 or the package manifest shape.

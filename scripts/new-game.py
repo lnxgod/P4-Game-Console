@@ -222,8 +222,10 @@ def readme_text(title: str, folder: str,
         multiplayer = f"""
 
 This starter declares the `{multiplayer_style}` multiplayer profile in
-`game.json`. Console OS reads that profile to create compatible lobbies. Game
-code uses only `p4_game_multiplayer_read_profile()`,
+`game.json`. After installation, Console OS validates the P4G and automatically
+registers it in the Multiplayer selector before its first launch. There is no
+game-side registration call and no central OS table to edit. Game code uses
+only `p4_game_multiplayer_read_profile()`,
 `p4_game_multiplayer_read_status()`, `p4_game_multiplayer_send()`, and
 `p4_game_multiplayer_receive()`; it never chooses BLE, UART, or USB directly.
 Keep a complete offline mode and increment `multiplayer.protocol` whenever the

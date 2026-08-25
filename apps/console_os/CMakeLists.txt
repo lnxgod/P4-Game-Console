@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.4.69")
+set(PROJECT_VER "0.4.70")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")
@@ -43,6 +43,7 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_package"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_multiplayer"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_multiplayer"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_multiplayer_registry"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_usb_content_transfer"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_os_update_package"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_script_audio"

@@ -157,6 +157,7 @@ def main() -> None:
         "console_shell", "platform_board", "platform_display",
         "platform_game_storage", "platform_gamepad_usb", "platform_usb_host",
         "platform_game_loader", "platform_os_update", "gamepad_core",
+        "p4_multiplayer_registry",
         "platform_audio", "platform_readonly_blob", "doom_audio",
         "doom_engine_audio", "doom_gamepad_input", "doom_video",
     ):

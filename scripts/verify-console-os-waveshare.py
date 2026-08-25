@@ -345,6 +345,7 @@ def main() -> None:
     required_components = {
         "board_deps_waveshare", "console_shell", "p4_desktop",
         "p4_content_catalog", "p4_game_api", "p4_multiplayer",
+        "p4_multiplayer_registry",
         "platform_board", "platform_display", "platform_touch",
         "platform_console_settings",
         "platform_game_catalog", "platform_game_loader",

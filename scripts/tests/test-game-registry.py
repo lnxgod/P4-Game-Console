@@ -50,6 +50,12 @@ def run(*arguments: str) -> subprocess.CompletedProcess[str]:
 
 
 def main() -> None:
+    installed = run("--games-root", str(ROOT / "games"), "--check")
+    assert installed.returncode == 0, installed.stderr
+    installed_report = json.loads(installed.stdout)
+    assert "org.p4console.p4-yahtzee" in \
+        installed_report["multiplayer_games"]
+
     with tempfile.TemporaryDirectory() as temporary:
         games = pathlib.Path(temporary) / "games"
         games.mkdir()
