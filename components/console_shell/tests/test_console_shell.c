@@ -522,6 +522,61 @@ static void test_storage_diagnostics_and_repair_confirmation(void)
     CHECK(!shell.storage_repair_confirm);
 }
 
+static void test_controller_setup_actions(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    shell.page = CONSOLE_PAGE_CONTROLLERS;
+    shell.active_app_id = APP_SYSTEM;
+    shell.runtime = (console_shell_runtime_info_t){
+        .controller_ready = true,
+        .controller_transport = CONSOLE_CONTROLLER_TRANSPORT_BLE_HID,
+        .ble_controller_supported = true,
+        .ble_controller_enabled = true,
+        .ble_controller_host_ready = true,
+        .ble_controller_bonded = true,
+        .ble_controller_connected = true,
+        .ble_controller_encrypted = true,
+        .ble_controller_multiplayer_ready = true,
+        .controller_mapping_persistent = true,
+        .controller_mapping = {0U, 1U, 2U, 3U, 7U, 6U},
+        .ble_controller_name = "XBOX WIRELESS",
+    };
+
+    CHECK(tap(&shell, 31U, 182U).type ==
+          CONSOLE_ACTION_CONTROLLER_BLE_DISABLE);
+    CHECK(tap(&shell, 131U, 182U).type ==
+          CONSOLE_ACTION_CONTROLLER_DISCONNECT);
+    CHECK(tap(&shell, 181U, 182U).type ==
+          CONSOLE_ACTION_CONTROLLER_MAPPING_START);
+    shell.runtime.controller_mapping_active = true;
+    CHECK(tap(&shell, 181U, 182U).type ==
+          CONSOLE_ACTION_CONTROLLER_MAPPING_CANCEL);
+    shell.runtime.controller_mapping_active = false;
+    CHECK(tap(&shell, 231U, 182U).type ==
+          CONSOLE_ACTION_CONTROLLER_MAPPING_RESET);
+    CHECK(tap(&shell, 285U, 182U).type ==
+          CONSOLE_ACTION_CONTROLLER_FORGET);
+
+    shell.runtime.ble_controller_connected = false;
+    CHECK(tap(&shell, 81U, 182U).type ==
+          CONSOLE_ACTION_CONTROLLER_PAIR);
+    shell.runtime.ble_controller_enabled = false;
+    CHECK(tap(&shell, 31U, 182U).type ==
+          CONSOLE_ACTION_CONTROLLER_BLE_ENABLE);
+    CHECK(tap(&shell, 81U, 182U).type == CONSOLE_ACTION_NONE);
+
+    uint16_t *const frame = calloc(
+        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
+        sizeof(*frame));
+    CHECK(frame != NULL);
+    if (frame != NULL) {
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        free(frame);
+    }
+}
+
 static void test_multiplayer_start_lockout(void)
 {
     console_shell_t shell;
@@ -1267,6 +1322,7 @@ int main(void)
     test_color_modes_and_achievements();
     test_usb_mode_button();
     test_storage_diagnostics_and_repair_confirmation();
+    test_controller_setup_actions();
     test_multiplayer_start_lockout();
     test_desktop_pages();
     test_navigation_and_launch();

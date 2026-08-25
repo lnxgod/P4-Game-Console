@@ -64,14 +64,16 @@ Console OS arms a persistent one-boot marker first; if a candidate fails before
 stable runtime, the next boot suppresses recovery and starts in safe Host/HID
 mode rather than repeating a boot loop.
 
-The Waveshare **Controllers** app adds console-owned BLE HID/HOGP pairing,
-disconnect, and forget controls beside the wired H2 status. One persistent,
-encrypted Bluetooth pad can coexist with one BLE multiplayer peer. Wired USB
-has active-input priority, while Doom and cartridges consume the same
-transport-neutral snapshot. Modern Bluetooth-capable Xbox Wireless
-Controllers are the priority acceptance target; Xbox Wireless Adapter,
-Xbox 360 wireless, and wired XInput/GIP are outside this generic BLE HID path.
-See `docs/CONTROLLERS.md` before making a model-specific support claim.
+The main-screen Waveshare **Controllers** app adds console-owned BLE HID/HOGP
+pairing, a controller-only BLE mode toggle, disconnect/forget controls, and a
+persistent six-button mapping wizard. Wired USB has active-input priority,
+while Doom and every cartridge tier consume the same mapped,
+transport-neutral snapshot. Pair the controller before opening a lobby; one
+persistent encrypted pad can then coexist with one BLE Doom multiplayer peer.
+Modern Bluetooth-capable Xbox Wireless Controllers are the priority
+acceptance target; Xbox Wireless Adapter, Xbox 360 wireless, and wired
+XInput/GIP are outside this generic BLE HID path. See `docs/CONTROLLERS.md`
+before making a model-specific support claim.
 
 The current Doom integration accepts `DOOM1.WAD` at the drive root, with the
 exact shareware identity recorded in `third_party/game-data.json`. Copying or

@@ -4,6 +4,7 @@
 #define PLATFORM_GAMEPAD_H
 
 #include "esp_err.h"
+#include "gamepad/mapping.h"
 #include "gamepad/snapshot.h"
 
 #ifdef __cplusplus
@@ -29,6 +30,15 @@ void platform_gamepad_unregister_provider(
 /** Copy the active canonical controller snapshot without exposing transport. */
 esp_err_t platform_gamepad_get_snapshot(
     platform_gamepad_snapshot_t *snapshot);
+
+/** Copy the selected transport snapshot before user button remapping. */
+esp_err_t platform_gamepad_get_raw_snapshot(
+    platform_gamepad_snapshot_t *snapshot);
+
+/** Replace or inspect the console-wide button mapping atomically. */
+esp_err_t platform_gamepad_set_mapping(
+    const gamepad_button_mapping_t *mapping);
+esp_err_t platform_gamepad_get_mapping(gamepad_button_mapping_t *mapping);
 
 #ifdef __cplusplus
 }

@@ -121,6 +121,16 @@ typedef enum {
     CONSOLE_CONTROLLER_TRANSPORT_BLE_HID,
 } console_controller_transport_t;
 
+typedef enum {
+    CONSOLE_CONTROLLER_MAPPING_A = 0,
+    CONSOLE_CONTROLLER_MAPPING_B,
+    CONSOLE_CONTROLLER_MAPPING_X,
+    CONSOLE_CONTROLLER_MAPPING_Y,
+    CONSOLE_CONTROLLER_MAPPING_START,
+    CONSOLE_CONTROLLER_MAPPING_BACK,
+    CONSOLE_CONTROLLER_MAPPING_COUNT,
+} console_controller_mapping_slot_t;
+
 /** Shell-only palettes; games retain full control of their own colors. */
 typedef enum {
     CONSOLE_COLOR_MODE_GAMECHANGERS = 0,
@@ -236,6 +246,7 @@ typedef struct {
     bool controller_ready;
     console_controller_transport_t controller_transport;
     bool ble_controller_supported;
+    bool ble_controller_enabled;
     bool ble_controller_host_ready;
     bool ble_controller_bonded;
     bool ble_controller_connected;
@@ -246,6 +257,12 @@ typedef struct {
     uint32_t ble_controller_reports_dropped;
     int ble_controller_last_error;
     char ble_controller_name[CONSOLE_SHELL_CONTROLLER_NAME_BYTES];
+    bool ble_controller_multiplayer_ready;
+    bool controller_mapping_active;
+    bool controller_mapping_persistent;
+    uint8_t controller_mapping_target;
+    uint8_t controller_mapping[CONSOLE_CONTROLLER_MAPPING_COUNT];
+    int controller_mapping_last_error;
     bool keyboard_ready;
     bool mouse_ready;
     bool sd_card_storage;
@@ -384,9 +401,14 @@ typedef enum {
     CONSOLE_ACTION_STORAGE_CHECK,
     CONSOLE_ACTION_STORAGE_RETRY,
     CONSOLE_ACTION_STORAGE_REPAIR,
+    CONSOLE_ACTION_CONTROLLER_BLE_ENABLE,
+    CONSOLE_ACTION_CONTROLLER_BLE_DISABLE,
     CONSOLE_ACTION_CONTROLLER_PAIR,
     CONSOLE_ACTION_CONTROLLER_DISCONNECT,
     CONSOLE_ACTION_CONTROLLER_FORGET,
+    CONSOLE_ACTION_CONTROLLER_MAPPING_START,
+    CONSOLE_ACTION_CONTROLLER_MAPPING_CANCEL,
+    CONSOLE_ACTION_CONTROLLER_MAPPING_RESET,
 } console_action_type_t;
 
 typedef enum {

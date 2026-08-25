@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.4.71")
+set(PROJECT_VER "0.4.72")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")
@@ -41,6 +41,7 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/components/platform_readonly_blob"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_content_catalog"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_desktop"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/gamepad_core"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_save"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_package"
@@ -61,7 +62,6 @@ if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
         "${CMAKE_CURRENT_LIST_DIR}/../../components/olimex/platform_audio"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_gamepad_input"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_video"
-        "${CMAKE_CURRENT_LIST_DIR}/../../components/gamepad_core"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_platform"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad_usb"
@@ -77,7 +77,6 @@ elseif(P4_BOARD_PROFILE STREQUAL
         "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_gamepad_input"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_touch_input"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_video"
-        "${CMAKE_CURRENT_LIST_DIR}/../../components/gamepad_core"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_tinyusb_dual"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_audio_es8311"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_audio_factory"

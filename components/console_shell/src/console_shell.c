@@ -86,12 +86,18 @@ enum {
     STORAGE_REPAIR_WIDTH = 112,
     CONTROLLER_BUTTON_TOP = 174,
     CONTROLLER_BUTTON_HEIGHT = 20,
-    CONTROLLER_PAIR_LEFT = 8,
-    CONTROLLER_PAIR_WIDTH = 100,
-    CONTROLLER_DISCONNECT_LEFT = 112,
-    CONTROLLER_DISCONNECT_WIDTH = 100,
-    CONTROLLER_FORGET_LEFT = 216,
-    CONTROLLER_FORGET_WIDTH = 96,
+    CONTROLLER_BLE_LEFT = 8,
+    CONTROLLER_BLE_WIDTH = 47,
+    CONTROLLER_PAIR_LEFT = 58,
+    CONTROLLER_PAIR_WIDTH = 47,
+    CONTROLLER_DISCONNECT_LEFT = 108,
+    CONTROLLER_DISCONNECT_WIDTH = 47,
+    CONTROLLER_MAP_LEFT = 158,
+    CONTROLLER_MAP_WIDTH = 47,
+    CONTROLLER_RESET_LEFT = 208,
+    CONTROLLER_RESET_WIDTH = 47,
+    CONTROLLER_FORGET_LEFT = 258,
+    CONTROLLER_FORGET_WIDTH = 54,
     AUDIO_MINUS_LEFT = 174,
     AUDIO_PLUS_LEFT = 274,
     AUDIO_BUTTON_WIDTH = 38,
@@ -246,8 +252,11 @@ enum {
     STORAGE_CHECK_CONTROL,
     STORAGE_RETRY_CONTROL,
     STORAGE_REPAIR_CONTROL,
+    CONTROLLER_BLE_CONTROL,
     CONTROLLER_PAIR_CONTROL,
     CONTROLLER_DISCONNECT_CONTROL,
+    CONTROLLER_MAP_CONTROL,
+    CONTROLLER_RESET_CONTROL,
     CONTROLLER_FORGET_CONTROL,
     AUDIO_BOOT_MINUS_CONTROL,
     AUDIO_BOOT_PLUS_CONTROL,
@@ -1177,17 +1186,29 @@ static void reset_storage_controls(console_shell_t *shell)
 static bool controller_action_enabled(const console_shell_t *shell,
                                       size_t action)
 {
-    if (shell == NULL || !shell->runtime.ble_controller_supported) {
+    if (shell == NULL) {
         return false;
     }
     switch (action) {
     case 0U:
-        return !shell->runtime.ble_controller_connected &&
+        return shell->runtime.ble_controller_supported &&
             !shell->runtime.ble_controller_busy;
     case 1U:
-        return shell->runtime.ble_controller_connected;
+        return shell->runtime.ble_controller_supported &&
+            shell->runtime.ble_controller_enabled &&
+            !shell->runtime.ble_controller_connected &&
+            !shell->runtime.ble_controller_busy;
     case 2U:
-        return shell->runtime.ble_controller_bonded &&
+        return shell->runtime.ble_controller_supported &&
+            shell->runtime.ble_controller_connected;
+    case 3U:
+        return shell->runtime.controller_mapping_active ||
+            shell->runtime.controller_ready;
+    case 4U:
+        return !shell->runtime.controller_mapping_active;
+    case 5U:
+        return shell->runtime.ble_controller_supported &&
+            shell->runtime.ble_controller_bonded &&
             !shell->runtime.ble_controller_busy;
     default:
         return false;
@@ -1204,10 +1225,20 @@ static console_shell_action_t controller_action(console_shell_t *shell,
     shell->dirty = true;
     const console_shell_action_t action = {
         .type = requested == 0U
-            ? CONSOLE_ACTION_CONTROLLER_PAIR
+            ? shell->runtime.ble_controller_enabled
+                ? CONSOLE_ACTION_CONTROLLER_BLE_DISABLE
+                : CONSOLE_ACTION_CONTROLLER_BLE_ENABLE
             : requested == 1U
-                ? CONSOLE_ACTION_CONTROLLER_DISCONNECT
-                : CONSOLE_ACTION_CONTROLLER_FORGET,
+                ? CONSOLE_ACTION_CONTROLLER_PAIR
+                : requested == 2U
+                    ? CONSOLE_ACTION_CONTROLLER_DISCONNECT
+                    : requested == 3U
+                        ? shell->runtime.controller_mapping_active
+                            ? CONSOLE_ACTION_CONTROLLER_MAPPING_CANCEL
+                            : CONSOLE_ACTION_CONTROLLER_MAPPING_START
+                        : requested == 4U
+                            ? CONSOLE_ACTION_CONTROLLER_MAPPING_RESET
+                            : CONSOLE_ACTION_CONTROLLER_FORGET,
         .app_id = shell->active_app_id,
         .file_source_index = UINT32_MAX,
     };
@@ -1217,12 +1248,12 @@ static console_shell_action_t controller_action(console_shell_t *shell,
 static void reset_controller_controls(console_shell_t *shell)
 {
     shell->controller_selected_action = 0U;
-    while (shell->controller_selected_action < 3U &&
+    while (shell->controller_selected_action < 6U &&
            !controller_action_enabled(
                shell, shell->controller_selected_action)) {
         ++shell->controller_selected_action;
     }
-    if (shell->controller_selected_action >= 3U) {
+    if (shell->controller_selected_action >= 6U) {
         shell->controller_selected_action = 0U;
     }
 }
@@ -1362,19 +1393,37 @@ static size_t control_at(const console_shell_t *shell,
         }
         if (shell->page == CONSOLE_PAGE_CONTROLLERS) {
             if (controller_action_enabled(shell, 0U) &&
+                point_in_rect(gui_x, gui_y, CONTROLLER_BLE_LEFT,
+                              CONTROLLER_BUTTON_TOP, CONTROLLER_BLE_WIDTH,
+                              CONTROLLER_BUTTON_HEIGHT)) {
+                return CONTROLLER_BLE_CONTROL;
+            }
+            if (controller_action_enabled(shell, 1U) &&
                 point_in_rect(gui_x, gui_y, CONTROLLER_PAIR_LEFT,
                               CONTROLLER_BUTTON_TOP, CONTROLLER_PAIR_WIDTH,
                               CONTROLLER_BUTTON_HEIGHT)) {
                 return CONTROLLER_PAIR_CONTROL;
             }
-            if (controller_action_enabled(shell, 1U) &&
+            if (controller_action_enabled(shell, 2U) &&
                 point_in_rect(gui_x, gui_y, CONTROLLER_DISCONNECT_LEFT,
                               CONTROLLER_BUTTON_TOP,
                               CONTROLLER_DISCONNECT_WIDTH,
                               CONTROLLER_BUTTON_HEIGHT)) {
                 return CONTROLLER_DISCONNECT_CONTROL;
             }
-            if (controller_action_enabled(shell, 2U) &&
+            if (controller_action_enabled(shell, 3U) &&
+                point_in_rect(gui_x, gui_y, CONTROLLER_MAP_LEFT,
+                              CONTROLLER_BUTTON_TOP, CONTROLLER_MAP_WIDTH,
+                              CONTROLLER_BUTTON_HEIGHT)) {
+                return CONTROLLER_MAP_CONTROL;
+            }
+            if (controller_action_enabled(shell, 4U) &&
+                point_in_rect(gui_x, gui_y, CONTROLLER_RESET_LEFT,
+                              CONTROLLER_BUTTON_TOP, CONTROLLER_RESET_WIDTH,
+                              CONTROLLER_BUTTON_HEIGHT)) {
+                return CONTROLLER_RESET_CONTROL;
+            }
+            if (controller_action_enabled(shell, 5U) &&
                 point_in_rect(gui_x, gui_y, CONTROLLER_FORGET_LEFT,
                               CONTROLLER_BUTTON_TOP,
                               CONTROLLER_FORGET_WIDTH,
@@ -1962,12 +2011,13 @@ console_shell_action_t console_shell_handle_buttons(
 
     if (shell->page == CONSOLE_PAGE_CONTROLLERS) {
         if ((pressed & CONSOLE_BUTTON_REFRESH) != 0U) {
-            return controller_action(shell, 0U);
+            return controller_action(
+                shell, shell->runtime.ble_controller_enabled ? 1U : 0U);
         }
         if ((pressed & CONSOLE_BUTTON_LEFT) != 0U) {
-            for (size_t step = 0U; step < 3U; ++step) {
+            for (size_t step = 0U; step < 6U; ++step) {
                 shell->controller_selected_action =
-                    (shell->controller_selected_action + 2U) % 3U;
+                    (shell->controller_selected_action + 5U) % 6U;
                 if (controller_action_enabled(
                         shell, shell->controller_selected_action)) {
                     break;
@@ -1977,9 +2027,9 @@ console_shell_action_t console_shell_handle_buttons(
             return page_changed(shell->active_app_id);
         }
         if ((pressed & CONSOLE_BUTTON_RIGHT) != 0U) {
-            for (size_t step = 0U; step < 3U; ++step) {
+            for (size_t step = 0U; step < 6U; ++step) {
                 shell->controller_selected_action =
-                    (shell->controller_selected_action + 1U) % 3U;
+                    (shell->controller_selected_action + 1U) % 6U;
                 if (controller_action_enabled(
                         shell, shell->controller_selected_action)) {
                     break;
@@ -2341,12 +2391,18 @@ console_shell_action_t console_shell_handle_touch(
         }
         if (shell->page == CONSOLE_PAGE_CONTROLLERS) {
             switch (released_control) {
-            case CONTROLLER_PAIR_CONTROL:
+            case CONTROLLER_BLE_CONTROL:
                 return controller_action(shell, 0U);
-            case CONTROLLER_DISCONNECT_CONTROL:
+            case CONTROLLER_PAIR_CONTROL:
                 return controller_action(shell, 1U);
-            case CONTROLLER_FORGET_CONTROL:
+            case CONTROLLER_DISCONNECT_CONTROL:
                 return controller_action(shell, 2U);
+            case CONTROLLER_MAP_CONTROL:
+                return controller_action(shell, 3U);
+            case CONTROLLER_RESET_CONTROL:
+                return controller_action(shell, 4U);
+            case CONTROLLER_FORGET_CONTROL:
+                return controller_action(shell, 5U);
             default:
                 return no_action();
             }
@@ -2651,6 +2707,8 @@ void console_shell_set_runtime_info(
             runtime->controller_transport ||
         shell->runtime.ble_controller_supported !=
             runtime->ble_controller_supported ||
+        shell->runtime.ble_controller_enabled !=
+            runtime->ble_controller_enabled ||
         shell->runtime.ble_controller_host_ready !=
             runtime->ble_controller_host_ready ||
         shell->runtime.ble_controller_bonded !=
@@ -2672,6 +2730,19 @@ void console_shell_set_runtime_info(
         memcmp(shell->runtime.ble_controller_name,
                runtime->ble_controller_name,
                sizeof(runtime->ble_controller_name)) != 0 ||
+        shell->runtime.ble_controller_multiplayer_ready !=
+            runtime->ble_controller_multiplayer_ready ||
+        shell->runtime.controller_mapping_active !=
+            runtime->controller_mapping_active ||
+        shell->runtime.controller_mapping_persistent !=
+            runtime->controller_mapping_persistent ||
+        shell->runtime.controller_mapping_target !=
+            runtime->controller_mapping_target ||
+        memcmp(shell->runtime.controller_mapping,
+               runtime->controller_mapping,
+               sizeof(runtime->controller_mapping)) != 0 ||
+        shell->runtime.controller_mapping_last_error !=
+            runtime->controller_mapping_last_error ||
         shell->runtime.keyboard_ready != runtime->keyboard_ready ||
         shell->runtime.mouse_ready != runtime->mouse_ready ||
         shell->runtime.sd_card_storage != runtime->sd_card_storage ||
@@ -3981,6 +4052,26 @@ static void draw_controller_button(const console_shell_t *shell,
                        enabled ? COLOR_BLACK : COLOR_SHADOW, 16U);
 }
 
+static const char *controller_source_name(uint8_t source)
+{
+    static const char *const names[] = {
+        "SOUTH", "EAST", "WEST", "NORTH", "LB", "RB", "BACK",
+        "START", "GUIDE", "L3", "R3", "MISC", "P1", "P2",
+        "P3", "P4", "TOUCH",
+    };
+    return source < sizeof(names) / sizeof(names[0])
+        ? names[source] : "BUTTON";
+}
+
+static const char *controller_mapping_target_name(uint8_t target)
+{
+    static const char *const names[CONSOLE_CONTROLLER_MAPPING_COUNT] = {
+        "A", "B", "X", "Y", "START", "BACK",
+    };
+    return target < CONSOLE_CONTROLLER_MAPPING_COUNT
+        ? names[target] : "DONE";
+}
+
 static void draw_controllers(const console_shell_t *shell,
                              uint16_t *pixels, size_t stride)
 {
@@ -4002,30 +4093,24 @@ static void draw_controllers(const console_shell_t *shell,
     draw_text(pixels, stride, 132, 37, active,
               active_color, 1U, 20U);
 
-    draw_text(pixels, stride, 12, 52, "USB HOST", COLOR_MUTED, 1U, 8U);
+    draw_text(pixels, stride, 12, 52, "BLE PAD MODE",
+              COLOR_MUTED, 1U, 12U);
     draw_text(pixels, stride, 132, 52,
-              shell->runtime.usb_input_host_active ? "RUNNING" : "OFFLINE",
-              shell->runtime.usb_input_host_active
-                  ? COLOR_GREEN : COLOR_MUTED,
-              1U, 8U);
+              shell->runtime.ble_controller_enabled
+                  ? "ENABLED" : "DISABLED",
+              shell->runtime.ble_controller_enabled
+                  ? COLOR_GREEN : COLOR_YELLOW,
+              1U, 10U);
 
-    draw_text(pixels, stride, 12, 67, "BLE RADIO", COLOR_MUTED, 1U, 9U);
-    const char *radio = "UNSUPPORTED";
-    uint16_t radio_color = COLOR_MUTED;
-    if (shell->runtime.ble_controller_host_ready) {
-        radio = "READY";
-        radio_color = COLOR_GREEN;
-    } else if (shell->runtime.ble_controller_supported) {
-        radio = "STANDBY";
-        radio_color = COLOR_CYAN;
-    }
-    draw_text(pixels, stride, 132, 67, radio, radio_color, 1U, 11U);
-
-    draw_text(pixels, stride, 12, 82, "BLE PAD", COLOR_MUTED, 1U, 7U);
+    draw_text(pixels, stride, 12, 67, "BLE PAD",
+              COLOR_MUTED, 1U, 7U);
     const char *link = "NOT PAIRED";
     uint16_t link_color = COLOR_YELLOW;
     if (!shell->runtime.ble_controller_supported) {
         link = "UNAVAILABLE";
+        link_color = COLOR_MUTED;
+    } else if (!shell->runtime.ble_controller_enabled) {
+        link = "MODE OFF - MULTIPLAYER OK";
         link_color = COLOR_MUTED;
     } else if (shell->runtime.ble_controller_busy) {
         link = "PAIRING / CONNECTING";
@@ -4037,64 +4122,126 @@ static void draw_controllers(const console_shell_t *shell,
         link = "SAVED - DISCONNECTED";
         link_color = COLOR_YELLOW;
     }
-    draw_text(pixels, stride, 132, 82, link, link_color, 1U, 24U);
+    draw_text(pixels, stride, 132, 67, link, link_color, 1U, 29U);
 
-    draw_text(pixels, stride, 12, 97, "NAME", COLOR_MUTED, 1U, 4U);
-    draw_text(pixels, stride, 132, 97,
+    draw_text(pixels, stride, 12, 82, "NAME", COLOR_MUTED, 1U, 4U);
+    draw_text(pixels, stride, 132, 82,
               shell->runtime.ble_controller_name[0] != '\0'
                   ? shell->runtime.ble_controller_name : "NO SAVED PAD",
               COLOR_WHITE, 1U, 29U);
 
-    draw_text(pixels, stride, 12, 112, "SECURITY", COLOR_MUTED, 1U, 8U);
-    draw_text(pixels, stride, 132, 112,
-              shell->runtime.ble_controller_encrypted
+    draw_text(pixels, stride, 12, 97, "SECURITY", COLOR_MUTED, 1U, 8U);
+    draw_text(pixels, stride, 132, 97,
+              shell->runtime.ble_controller_encrypted &&
+                      shell->runtime.ble_controller_connected
                   ? "BONDED + ENCRYPTED"
                   : shell->runtime.ble_controller_bonded
                       ? "BONDED" : "PAIRING REQUIRED",
-              shell->runtime.ble_controller_encrypted
+              shell->runtime.ble_controller_encrypted &&
+                      shell->runtime.ble_controller_connected
                   ? COLOR_GREEN : COLOR_YELLOW,
               1U, 20U);
 
-    char signal[20];
-    const int signal_written = snprintf(
-        signal, sizeof(signal), "%d DBM",
-        (int)shell->runtime.ble_controller_rssi);
-    draw_text(pixels, stride, 12, 127, "SIGNAL", COLOR_MUTED, 1U, 6U);
-    draw_text(pixels, stride, 132, 127,
-              shell->runtime.ble_controller_connected && signal_written > 0
-                  ? signal : "--",
-              shell->runtime.ble_controller_connected
-                  ? COLOR_WHITE : COLOR_MUTED,
-              1U, 19U);
+    draw_text(pixels, stride, 12, 112, "MULTIPLAYER",
+              COLOR_MUTED, 1U, 11U);
+    const char *multiplayer = "PAIR PAD BEFORE LOBBY";
+    uint16_t multiplayer_color = COLOR_YELLOW;
+    if (!shell->runtime.ble_controller_enabled) {
+        multiplayer = "PAD OFF - BLE LOBBIES OK";
+        multiplayer_color = COLOR_CYAN;
+    } else if (shell->runtime.ble_controller_multiplayer_ready) {
+        multiplayer = "PAD + 1 PEER READY";
+        multiplayer_color = COLOR_GREEN;
+    }
+    draw_text(pixels, stride, 132, 112, multiplayer,
+              multiplayer_color, 1U, 29U);
 
-    draw_text(pixels, stride, 12, 142, "REPORTS RX",
-              COLOR_MUTED, 1U, 10U);
-    draw_u32(pixels, stride, 132, 142,
-             shell->runtime.ble_controller_reports_received, COLOR_WHITE);
-    draw_text(pixels, stride, 12, 157, "DROPPED / ERR",
-              COLOR_MUTED, 1U, 13U);
-    char diagnostics[24];
-    const int diagnostics_written = snprintf(
-        diagnostics, sizeof(diagnostics), "%lu / %d",
-        (unsigned long)shell->runtime.ble_controller_reports_dropped,
-        shell->runtime.ble_controller_last_error);
-    draw_text(pixels, stride, 132, 157,
-              diagnostics_written > 0 ? diagnostics : "--",
-              shell->runtime.ble_controller_reports_dropped == 0U &&
-                      shell->runtime.ble_controller_last_error == 0
-                  ? COLOR_GREEN : COLOR_YELLOW,
-              1U, 23U);
+    if (shell->runtime.controller_mapping_active) {
+        draw_text(pixels, stride, 12, 127, "MAPPING",
+                  COLOR_MUTED, 1U, 7U);
+        char prompt[30];
+        const int written = snprintf(
+            prompt, sizeof(prompt), "PRESS ONE BUTTON FOR %s",
+            controller_mapping_target_name(
+                shell->runtime.controller_mapping_target));
+        draw_text(pixels, stride, 132, 127,
+                  written > 0 ? prompt : "PRESS ONE BUTTON",
+                  COLOR_CYAN, 1U, 29U);
+        draw_text(pixels, stride, 12, 142, "RULE",
+                  COLOR_MUTED, 1U, 4U);
+        draw_text(pixels, stride, 132, 142,
+                  "RELEASE BETWEEN STEPS", COLOR_WHITE, 1U, 29U);
+        draw_text(pixels, stride, 12, 157, "STATUS",
+                  COLOR_MUTED, 1U, 6U);
+        draw_text(pixels, stride, 132, 157,
+                  shell->runtime.controller_mapping_last_error == 0
+                      ? "WAITING FOR INPUT" : "TRY A DIFFERENT BUTTON",
+                  shell->runtime.controller_mapping_last_error == 0
+                      ? COLOR_GREEN : COLOR_YELLOW,
+                  1U, 29U);
+    } else {
+        draw_text(pixels, stride, 12, 127, "A / B",
+                  COLOR_MUTED, 1U, 5U);
+        char ab[30];
+        const int ab_written = snprintf(
+            ab, sizeof(ab), "%s / %s",
+            controller_source_name(shell->runtime.controller_mapping[
+                CONSOLE_CONTROLLER_MAPPING_A]),
+            controller_source_name(shell->runtime.controller_mapping[
+                CONSOLE_CONTROLLER_MAPPING_B]));
+        draw_text(pixels, stride, 132, 127,
+                  ab_written > 0 ? ab : "--", COLOR_WHITE, 1U, 29U);
+        draw_text(pixels, stride, 12, 142, "X / Y",
+                  COLOR_MUTED, 1U, 5U);
+        char xy[30];
+        const int xy_written = snprintf(
+            xy, sizeof(xy), "%s / %s",
+            controller_source_name(shell->runtime.controller_mapping[
+                CONSOLE_CONTROLLER_MAPPING_X]),
+            controller_source_name(shell->runtime.controller_mapping[
+                CONSOLE_CONTROLLER_MAPPING_Y]));
+        draw_text(pixels, stride, 132, 142,
+                  xy_written > 0 ? xy : "--", COLOR_WHITE, 1U, 29U);
+        draw_text(pixels, stride, 12, 157, "START / BACK",
+                  COLOR_MUTED, 1U, 12U);
+        char system[30];
+        const int system_written = snprintf(
+            system, sizeof(system), "%s / %s%s",
+            controller_source_name(shell->runtime.controller_mapping[
+                CONSOLE_CONTROLLER_MAPPING_START]),
+            controller_source_name(shell->runtime.controller_mapping[
+                CONSOLE_CONTROLLER_MAPPING_BACK]),
+            shell->runtime.controller_mapping_persistent ? "" : " *");
+        draw_text(pixels, stride, 132, 157,
+                  system_written > 0 ? system : "--",
+                  shell->runtime.controller_mapping_last_error == 0
+                      ? COLOR_WHITE : COLOR_YELLOW,
+                  1U, 29U);
+    }
 
     draw_controller_button(shell, pixels, stride,
+                           CONTROLLER_BLE_LEFT, CONTROLLER_BLE_WIDTH,
+                           CONTROLLER_BLE_CONTROL, 0U,
+                           shell->runtime.ble_controller_enabled
+                               ? "BLE OFF" : "BLE ON");
+    draw_controller_button(shell, pixels, stride,
                            CONTROLLER_PAIR_LEFT, CONTROLLER_PAIR_WIDTH,
-                           CONTROLLER_PAIR_CONTROL, 0U, "PAIR / CONNECT");
+                           CONTROLLER_PAIR_CONTROL, 1U, "PAIR");
     draw_controller_button(shell, pixels, stride,
                            CONTROLLER_DISCONNECT_LEFT,
                            CONTROLLER_DISCONNECT_WIDTH,
-                           CONTROLLER_DISCONNECT_CONTROL, 1U, "DISCONNECT");
+                           CONTROLLER_DISCONNECT_CONTROL, 2U, "DISC");
+    draw_controller_button(shell, pixels, stride,
+                           CONTROLLER_MAP_LEFT, CONTROLLER_MAP_WIDTH,
+                           CONTROLLER_MAP_CONTROL, 3U,
+                           shell->runtime.controller_mapping_active
+                               ? "CANCEL" : "MAP");
+    draw_controller_button(shell, pixels, stride,
+                           CONTROLLER_RESET_LEFT, CONTROLLER_RESET_WIDTH,
+                           CONTROLLER_RESET_CONTROL, 4U, "RESET");
     draw_controller_button(shell, pixels, stride,
                            CONTROLLER_FORGET_LEFT, CONTROLLER_FORGET_WIDTH,
-                           CONTROLLER_FORGET_CONTROL, 2U, "FORGET PAD");
+                           CONTROLLER_FORGET_CONTROL, 5U, "FORGET");
 }
 
 static void draw_usb_drive(const console_shell_t *shell,

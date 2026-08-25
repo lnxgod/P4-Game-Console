@@ -1,5 +1,6 @@
 #include "gamepad/gamepad.h"
 #include "gamepad/hid_gamepad.h"
+#include "gamepad/mapping.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -982,6 +983,56 @@ static void test_deterministic_hostile_mutations(void)
     }
 }
 
+static void test_console_button_mapping(void)
+{
+    gamepad_button_mapping_t mapping;
+    gamepad_button_mapping_default(&mapping);
+    EXPECT_TRUE(gamepad_button_mapping_valid(&mapping));
+
+    gamepad_state_t state;
+    gamepad_state_init(&state);
+    EXPECT_EQ(GAMEPAD_OK, gamepad_state_connect(&state, 1U));
+    state.buttons = GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_SOUTH) |
+                    GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_NORTH) |
+                    GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_GUIDE);
+    EXPECT_EQ(GAMEPAD_OK,
+              gamepad_state_apply_button_mapping(&state, &mapping));
+    EXPECT_EQ(GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_SOUTH) |
+                  GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_NORTH) |
+                  GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_GUIDE),
+              state.buttons);
+
+    mapping.source[GAMEPAD_MAPPING_A] = GAMEPAD_BUTTON_EAST;
+    mapping.source[GAMEPAD_MAPPING_B] = GAMEPAD_BUTTON_SOUTH;
+    EXPECT_TRUE(gamepad_button_mapping_valid(&mapping));
+    state.buttons = GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_SOUTH) |
+                    GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_GUIDE);
+    EXPECT_EQ(GAMEPAD_OK,
+              gamepad_state_apply_button_mapping(&state, &mapping));
+    EXPECT_EQ(GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_EAST) |
+                  GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_GUIDE),
+              state.buttons);
+
+    gamepad_button_mapping_default(&mapping);
+    mapping.source[GAMEPAD_MAPPING_A] = GAMEPAD_BUTTON_LEFT_SHOULDER;
+    EXPECT_TRUE(gamepad_button_mapping_valid(&mapping));
+    state.buttons = GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_LEFT_SHOULDER) |
+                    GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_GUIDE);
+    EXPECT_EQ(GAMEPAD_OK,
+              gamepad_state_apply_button_mapping(&state, &mapping));
+    EXPECT_EQ(GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_SOUTH) |
+                  GAMEPAD_BUTTON_MASK(GAMEPAD_BUTTON_GUIDE),
+              state.buttons);
+
+    mapping.source[GAMEPAD_MAPPING_A] = GAMEPAD_BUTTON_SOUTH;
+    mapping.source[GAMEPAD_MAPPING_B] = GAMEPAD_BUTTON_SOUTH;
+    EXPECT_TRUE(!gamepad_button_mapping_valid(&mapping));
+    const gamepad_state_t before = state;
+    EXPECT_EQ(GAMEPAD_ERR_INVALID_ARGUMENT,
+              gamepad_state_apply_button_mapping(&state, &mapping));
+    EXPECT_TRUE(memcmp(&state, &before, sizeof(state)) == 0);
+}
+
 int main(void)
 {
     test_simple_mapping_hat_and_disconnect();
@@ -1000,6 +1051,7 @@ int main(void)
     test_local_usage_page_is_captured();
     test_malformed_and_bounded_inputs();
     test_deterministic_hostile_mutations();
+    test_console_button_mapping();
 
     if (g_failures != 0U) {
         fprintf(stderr, "%u gamepad_core test assertion(s) failed\n", g_failures);

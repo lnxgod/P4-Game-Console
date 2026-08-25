@@ -16,6 +16,8 @@ static const char *const SETTINGS_NAMESPACE = "p4_console";
 static const char *const BOOT_VOLUME_KEY = "boot_volume";
 static const char *const GAME_VOLUME_KEY = "game_volume";
 static const char *const NODE_NAME_KEY = "node_name";
+static const char *const BLE_CONTROLLER_ENABLED_KEY = "ble_pad_mode";
+static const char *const CONTROLLER_MAPPING_KEY = "pad_map";
 static const char *const VOLUME_POLICY_KEY = "volume_policy";
 static const char *const USB_ENUM_PROBE_KEY = "usb_enum_probe";
 
@@ -23,6 +25,8 @@ enum {
     /* Apply the quieter room-friendly baseline once, then preserve UI edits. */
     VOLUME_POLICY_VERSION = 2,
 };
+
+static bool settings_ready(const platform_console_settings_t *settings);
 
 bool platform_console_settings_volume_valid(uint8_t volume_step)
 {
@@ -71,7 +75,9 @@ static void set_defaults(platform_console_settings_t *settings)
         .boot_volume_step = PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT,
         .game_volume_step = PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT,
         .persistent = false,
+        .ble_controller_enabled = true,
     };
+    gamepad_button_mapping_default(&settings->controller_mapping);
     set_default_node_name(settings);
 }
 
@@ -148,17 +154,6 @@ esp_err_t platform_console_settings_init(
                  esp_err_to_name(result));
         return result;
     }
-    if (migrated) {
-        nvs_close(handle);
-        settings->persistent = true;
-        ESP_LOGI(TAG,
-                 "P4_SETTINGS boot=%u game=%u source=volume-policy-%u "
-                 "persistent=1",
-                 settings->boot_volume_step, settings->game_volume_step,
-                 (unsigned)VOLUME_POLICY_VERSION);
-        return ESP_OK;
-    }
-
     uint8_t value = 0U;
     result = nvs_get_u8(handle, BOOT_VOLUME_KEY, &value);
     if (result == ESP_OK && platform_console_settings_volume_valid(value)) {
@@ -195,13 +190,55 @@ esp_err_t platform_console_settings_init(
         return result;
     }
 
+    bool controller_settings_dirty = false;
+    value = 0U;
+    result = nvs_get_u8(handle, BLE_CONTROLLER_ENABLED_KEY, &value);
+    if (result == ESP_OK && value <= 1U) {
+        settings->ble_controller_enabled = value != 0U;
+    } else if (result == ESP_ERR_NVS_NOT_FOUND || result == ESP_OK) {
+        result = nvs_set_u8(
+            handle, BLE_CONTROLLER_ENABLED_KEY,
+            settings->ble_controller_enabled ? 1U : 0U);
+        controller_settings_dirty = result == ESP_OK;
+    }
+    if (result != ESP_OK) {
+        nvs_close(handle);
+        return result;
+    }
+
+    gamepad_button_mapping_t mapping;
+    memset(&mapping, 0, sizeof(mapping));
+    size_t mapping_bytes = sizeof(mapping);
+    result = nvs_get_blob(
+        handle, CONTROLLER_MAPPING_KEY, &mapping, &mapping_bytes);
+    if (result == ESP_OK && mapping_bytes == sizeof(mapping) &&
+        gamepad_button_mapping_valid(&mapping)) {
+        settings->controller_mapping = mapping;
+    } else if (result == ESP_ERR_NVS_NOT_FOUND ||
+               result == ESP_ERR_NVS_INVALID_LENGTH || result == ESP_OK) {
+        result = nvs_set_blob(
+            handle, CONTROLLER_MAPPING_KEY, &settings->controller_mapping,
+            sizeof(settings->controller_mapping));
+        controller_settings_dirty =
+            controller_settings_dirty || result == ESP_OK;
+    }
+    if (result == ESP_OK && controller_settings_dirty) {
+        result = nvs_commit(handle);
+    }
+    if (result != ESP_OK) {
+        nvs_close(handle);
+        return result;
+    }
+
     nvs_close(handle);
     settings->persistent = true;
     ESP_LOGI(TAG,
-             "P4_SETTINGS boot=%u game=%u node=%s "
-             "source=nvs persistent=1",
+             "P4_SETTINGS boot=%u game=%u node=%s ble_pad=%u "
+             "source=%s persistent=1",
              settings->boot_volume_step, settings->game_volume_step,
-             settings->node_name);
+             settings->node_name,
+             settings->ble_controller_enabled ? 1U : 0U,
+             migrated ? "volume-policy+nvs" : "nvs");
     return ESP_OK;
 }
 
@@ -231,6 +268,56 @@ esp_err_t platform_console_settings_set_node_name(
     if (result == ESP_OK) {
         (void)snprintf(settings->node_name,
                        sizeof(settings->node_name), "%s", node_name);
+    }
+    return result;
+}
+
+esp_err_t platform_console_settings_set_ble_controller_enabled(
+    platform_console_settings_t *settings, bool enabled)
+{
+    if (!settings_ready(settings)) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    nvs_handle_t handle;
+    esp_err_t result = nvs_open(
+        SETTINGS_NAMESPACE, NVS_READWRITE, &handle);
+    if (result != ESP_OK) {
+        return result;
+    }
+    result = nvs_set_u8(
+        handle, BLE_CONTROLLER_ENABLED_KEY, enabled ? 1U : 0U);
+    if (result == ESP_OK) {
+        result = nvs_commit(handle);
+    }
+    nvs_close(handle);
+    if (result == ESP_OK) {
+        settings->ble_controller_enabled = enabled;
+    }
+    return result;
+}
+
+esp_err_t platform_console_settings_set_controller_mapping(
+    platform_console_settings_t *settings,
+    const gamepad_button_mapping_t *mapping)
+{
+    if (!settings_ready(settings) ||
+        !gamepad_button_mapping_valid(mapping)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    nvs_handle_t handle;
+    esp_err_t result = nvs_open(
+        SETTINGS_NAMESPACE, NVS_READWRITE, &handle);
+    if (result != ESP_OK) {
+        return result;
+    }
+    result = nvs_set_blob(
+        handle, CONTROLLER_MAPPING_KEY, mapping, sizeof(*mapping));
+    if (result == ESP_OK) {
+        result = nvs_commit(handle);
+    }
+    nvs_close(handle);
+    if (result == ESP_OK) {
+        settings->controller_mapping = *mapping;
     }
     return result;
 }

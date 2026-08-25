@@ -17,7 +17,9 @@ The broker gives a connected wired USB controller deterministic priority. If
 USB disconnects, an already-connected Bluetooth controller becomes active on
 the next complete snapshot. Every transport publishes the same buttons,
 D-pad, sticks, triggers, sequence, timestamp, capabilities, and descriptor
-SHA-256. Disconnect and fatal decode paths publish neutral input immediately.
+SHA-256. A persistent console-wide mapping is then applied before Doom,
+native cartridges, or script games see the snapshot. Disconnect and fatal
+decode paths publish neutral input immediately.
 
 ## Bluetooth support
 
@@ -45,23 +47,34 @@ report-map SHA-256, never by a broad `Xbox` name match.
 
 ## Pair and manage a controller
 
-1. Open **System > Controllers** and select **Pair / Connect**.
-2. Put the controller into Bluetooth pairing mode. For an Xbox controller,
+1. Open **Controllers** on the main screen and leave **BLE Pad Mode** enabled.
+2. Select **Pair** before creating or joining a multiplayer lobby.
+3. Put the controller into Bluetooth pairing mode. For an Xbox controller,
    turn it on and hold its Pair button until the Xbox light flashes rapidly.
-3. Keep the panel open until it reports `CONNECTED` and
+4. Keep the panel open until it reports `CONNECTED` and
    `BONDED + ENCRYPTED`.
-4. Use **Disconnect** to retain the bond or **Forget Pad** to remove only that
+5. Use **Disconnect** to retain the bond or **Forget** to remove only that
    controller's saved identity and keys.
 
-A saved controller reconnects after the launcher is usable; it does not block
-the boot screen or SD mount. The panel displays active transport, radio state,
-saved name, RSSI, received reports, dropped reports, and the last setup error.
+A saved controller reconnects after the launcher is usable when BLE Pad Mode
+is enabled; it does not block the boot screen or SD mount. Turning BLE Pad
+Mode off disconnects and suppresses only the controller client. It does not
+disable BLE multiplayer or erase the controller bond.
+
+Select **Map** to bind one physical button each to A, B, X, Y, Start, and Back.
+Release between steps. The wizard rejects multi-button presses and duplicate
+sources, suppresses navigation while capturing, and commits the complete map
+atomically. **Reset** restores the canonical face-button layout. The mapping
+is transport-neutral, so the same saved layout applies to wired USB, BLE HID,
+Doom, and all Game API tiers.
 
 The same NimBLE host serves controllers and Console OS multiplayer. The
 committed configuration allows one BLE controller plus one BLE multiplayer
 peer. Pairing temporarily pauses lobby discovery and restores it after the
 controller operation completes. Pairing is rejected during an active lobby or
-match, while an established controller link can coexist with one match.
+match, while an established encrypted controller link remains connected when
+the player opens Multiplayer, creates or joins a lobby, and launches Doom.
+The Controllers panel reports `PAD + 1 PEER READY` when this state is ready.
 
 Current limits are one BLE controller, no rumble/LED/battery UI, and no local
 two-player assignment from two Bluetooth pads. These are explicit future
@@ -74,8 +87,9 @@ Run the bounded parser/broker tests and exact Waveshare build:
 ```sh
 make gamepad-host
 make console-shell-host
-./scripts/build-waveshare-console-os.sh
-python3 scripts/verify-console-os-waveshare.py
+./scripts/build.sh console_os waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host
+python3 scripts/verify-console-os-waveshare.py \
+  --firmware-only apps/console_os/build-waveshare-usb-host
 ```
 
 The BLE host follows Espressif's [NimBLE central lifecycle](https://github.com/espressif/esp-idf/blob/master/examples/bluetooth/nimble/blecent/README.md)

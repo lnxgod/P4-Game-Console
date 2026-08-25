@@ -77,9 +77,11 @@ they never own display, touch, audio, USB, SD, UART, or raw GPIO drivers.
   `make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES` for a validated
   card update. H2 remains controller-first and must not be assumed to provide
   safe VBUS; follow the powered, backfeed-safe fixture rules in the board
-  skill and port guide. Its Controllers app manages encrypted BLE HID pads,
-  including the modern Bluetooth-capable Xbox controller target, through the
-  same normalized input API used by wired pads. See
+  skill and port guide. Its main-screen Controllers app manages encrypted BLE
+  HID pads, persistent A/B/X/Y/Start/Back mappings, and a controller-only BLE
+  mode toggle through the same normalized input API used by wired pads. One
+  paired pad can remain connected while one BLE Doom multiplayer peer joins.
+  Modern Bluetooth-capable Xbox controllers are the priority target. See
   [Console controllers](docs/CONTROLLERS.md) for exact scope and limits.
 - `elecrow-crowpanel-advanced-10` remains the default target and the only one
   already seen on exact hardware. Its display/framebuffer and selected runtime

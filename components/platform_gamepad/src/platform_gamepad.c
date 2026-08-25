@@ -23,6 +23,19 @@ typedef struct {
 static portMUX_TYPE s_provider_lock = portMUX_INITIALIZER_UNLOCKED;
 static platform_gamepad_provider_entry_t
     s_providers[PLATFORM_GAMEPAD_PROVIDER_COUNT];
+static gamepad_button_mapping_t s_mapping = {
+    .version = GAMEPAD_BUTTON_MAPPING_VERSION,
+    .size = (uint16_t)sizeof(gamepad_button_mapping_t),
+    .source = {
+        GAMEPAD_BUTTON_SOUTH,
+        GAMEPAD_BUTTON_EAST,
+        GAMEPAD_BUTTON_WEST,
+        GAMEPAD_BUTTON_NORTH,
+        GAMEPAD_BUTTON_START,
+        GAMEPAD_BUTTON_BACK,
+    },
+    .reserved = {0U, 0U},
+};
 
 static size_t provider_index(platform_gamepad_transport_t transport)
 {
@@ -82,8 +95,8 @@ void platform_gamepad_unregister_provider(
     portEXIT_CRITICAL(&s_provider_lock);
 }
 
-esp_err_t platform_gamepad_get_snapshot(
-    platform_gamepad_snapshot_t *snapshot)
+static esp_err_t copy_active_snapshot(
+    platform_gamepad_snapshot_t *snapshot, bool apply_mapping)
 {
     if (snapshot == NULL) {
         return ESP_ERR_INVALID_ARG;
@@ -92,8 +105,10 @@ esp_err_t platform_gamepad_get_snapshot(
 
     platform_gamepad_provider_entry_t providers[
         PLATFORM_GAMEPAD_PROVIDER_COUNT];
+    gamepad_button_mapping_t mapping;
     portENTER_CRITICAL(&s_provider_lock);
     memcpy(providers, s_providers, sizeof(providers));
+    mapping = s_mapping;
     portEXIT_CRITICAL(&s_provider_lock);
 
     bool neutral_available = false;
@@ -116,6 +131,11 @@ esp_err_t platform_gamepad_get_snapshot(
             continue;
         }
         if (candidate.state.connected != 0U) {
+            if (apply_mapping &&
+                gamepad_state_apply_button_mapping(
+                    &candidate.state, &mapping) != GAMEPAD_OK) {
+                return ESP_ERR_INVALID_RESPONSE;
+            }
             *snapshot = candidate;
             return ESP_OK;
         }
@@ -129,4 +149,39 @@ esp_err_t platform_gamepad_get_snapshot(
         return ESP_OK;
     }
     return last_error;
+}
+
+esp_err_t platform_gamepad_get_snapshot(
+    platform_gamepad_snapshot_t *snapshot)
+{
+    return copy_active_snapshot(snapshot, true);
+}
+
+esp_err_t platform_gamepad_get_raw_snapshot(
+    platform_gamepad_snapshot_t *snapshot)
+{
+    return copy_active_snapshot(snapshot, false);
+}
+
+esp_err_t platform_gamepad_set_mapping(
+    const gamepad_button_mapping_t *mapping)
+{
+    if (!gamepad_button_mapping_valid(mapping)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    portENTER_CRITICAL(&s_provider_lock);
+    s_mapping = *mapping;
+    portEXIT_CRITICAL(&s_provider_lock);
+    return ESP_OK;
+}
+
+esp_err_t platform_gamepad_get_mapping(gamepad_button_mapping_t *mapping)
+{
+    if (mapping == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    portENTER_CRITICAL(&s_provider_lock);
+    *mapping = s_mapping;
+    portEXIT_CRITICAL(&s_provider_lock);
+    return ESP_OK;
 }

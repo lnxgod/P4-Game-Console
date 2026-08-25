@@ -435,9 +435,34 @@ def main() -> None:
             b"BLE_HOST_READY clients=%u bonding=persistent",
             b"BLE_GAMEPAD_READY name=%s reports=%u mtu=%u",
             b"BLE_GAMEPAD_SETUP_FAIL stage=%s rc=%d",
+            b"P4_CONSOLE_OS BLE_LINK_BUDGET controller_links=1 "
+            b"multiplayer_peer_links=1 host=shared "
+            b"order=pair-controller-before-lobby",
+            b"P4_CONSOLE_OS CONTROLLER_MAPPING_COMPLETE "
+            b"result=%s persistent=%u",
+            b"PAIR + MAP GAMEPADS",
+            b"BLE PAD MODE",
         ):
             require(marker in app_data,
                     f"BLE controller marker is missing: {marker!r}")
+        console_source = (APP / "main/console_os_main.c").read_text(
+            encoding="utf-8"
+        )
+        require(re.search(
+            r"(?s)\.id = CONSOLE_APP_CONTROLLERS,.*?"
+            r"\.folder_path = \"\",.*?"
+            r"\.page = CONSOLE_PAGE_CONTROLLERS",
+            console_source,
+        ) is not None,
+                "Controllers app is not exposed on the main launcher")
+        for token in (
+            "platform_gamepad_get_raw_snapshot",
+            "platform_console_settings_set_controller_mapping",
+            "CONSOLE_ACTION_CONTROLLER_BLE_DISABLE",
+            "CONSOLE_ACTION_CONTROLLER_MAPPING_START",
+        ):
+            require(token in console_source,
+                    f"controller setup source is missing {token}")
     cmake = (APP / "CMakeLists.txt").read_text(encoding="utf-8")
     version_match = re.search(r'set\(PROJECT_VER "([0-9]+\.[0-9]+\.[0-9]+)"\)',
                               cmake)

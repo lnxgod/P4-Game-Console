@@ -247,6 +247,14 @@ static platform_gamepad_transport_t s_gamepad_transport =
     PLATFORM_GAMEPAD_TRANSPORT_NONE;
 static uint32_t s_gamepad_polls;
 static uint32_t s_gamepad_poll_failures;
+static gamepad_button_mapping_t s_controller_mapping_current;
+static gamepad_button_mapping_t s_controller_mapping_pending;
+static bool s_controller_mapping_active;
+static bool s_controller_mapping_wait_neutral;
+static bool s_controller_mapping_input_suppressed;
+static bool s_controller_mapping_persistent;
+static uint8_t s_controller_mapping_target;
+static int s_controller_mapping_last_error;
 #endif
 #if P4_CONSOLE_USB_INPUT
 static bool s_gamepad_ready;
@@ -870,8 +878,8 @@ static const console_app_descriptor_t s_builtin_apps[] = {
     {
         .id = CONSOLE_APP_CONTROLLERS,
         .title = "CONTROLLERS",
-        .subtitle = "USB + BLUETOOTH",
-        .folder_path = "SYSTEM",
+        .subtitle = "PAIR + MAP GAMEPADS",
+        .folder_path = "",
         .accent_rgb565 = UINT16_C(0x5FFF),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
                         CONSOLE_CAPABILITY_TOUCH,
@@ -898,6 +906,25 @@ static const console_app_descriptor_t s_builtin_apps[] = {
 
 _Static_assert(CONSOLE_NATIVE_AUDIO_FRAMES_PER_TICK == 256,
                "16 ms must produce exactly 256 16 kHz frames");
+
+#if P4_CONSOLE_GAMEPAD_INPUT
+_Static_assert((int)CONSOLE_CONTROLLER_MAPPING_COUNT ==
+                   (int)GAMEPAD_MAPPING_COUNT,
+               "shell and gamepad mapping counts must match");
+_Static_assert((int)CONSOLE_CONTROLLER_MAPPING_A ==
+                   (int)GAMEPAD_MAPPING_A &&
+                   (int)CONSOLE_CONTROLLER_MAPPING_B ==
+                   (int)GAMEPAD_MAPPING_B &&
+                   (int)CONSOLE_CONTROLLER_MAPPING_X ==
+                   (int)GAMEPAD_MAPPING_X &&
+                   (int)CONSOLE_CONTROLLER_MAPPING_Y ==
+                   (int)GAMEPAD_MAPPING_Y &&
+                   (int)CONSOLE_CONTROLLER_MAPPING_START ==
+                   (int)GAMEPAD_MAPPING_START &&
+                   (int)CONSOLE_CONTROLLER_MAPPING_BACK ==
+                   (int)GAMEPAD_MAPPING_BACK,
+               "shell and gamepad mapping slot order must match");
+#endif
 
 _Static_assert((int)CONSOLE_SHELL_LAYOUT_WIDTH ==
                    (int)PLATFORM_DISPLAY_GAME_WIDTH,
@@ -2315,6 +2342,68 @@ static void handle_storage_action(
              (unsigned long)s_game_storage_status.repair_sectors_rewritten);
 }
 
+#if P4_CONSOLE_GAMEPAD_INPUT
+static esp_err_t apply_and_persist_controller_mapping(
+    const gamepad_button_mapping_t *mapping)
+{
+    esp_err_t result = platform_gamepad_set_mapping(mapping);
+    if (result != ESP_OK) {
+        s_controller_mapping_last_error = result;
+        s_controller_mapping_persistent = false;
+        return result;
+    }
+    s_controller_mapping_current = *mapping;
+    s_controller_mapping_pending = *mapping;
+    result = platform_console_settings_set_controller_mapping(
+        &s_console_settings, mapping);
+    s_controller_mapping_persistent = result == ESP_OK;
+    s_controller_mapping_last_error = result;
+    return result;
+}
+
+static esp_err_t start_controller_mapping(void)
+{
+    platform_gamepad_snapshot_t raw;
+    memset(&raw, 0, sizeof(raw));
+    const esp_err_t result = platform_gamepad_get_raw_snapshot(&raw);
+    if (result != ESP_OK ||
+        raw.version != PLATFORM_GAMEPAD_SNAPSHOT_VERSION ||
+        raw.size != sizeof(raw) ||
+        raw.state.version != GAMEPAD_STATE_VERSION ||
+        raw.state.size != sizeof(raw.state) ||
+        raw.state.connected == 0U) {
+        s_controller_mapping_last_error = result == ESP_OK
+            ? ESP_ERR_INVALID_STATE : result;
+        return s_controller_mapping_last_error;
+    }
+    s_controller_mapping_pending = s_controller_mapping_current;
+    s_controller_mapping_active = true;
+    s_controller_mapping_wait_neutral = true;
+    s_controller_mapping_input_suppressed = true;
+    s_controller_mapping_target = 0U;
+    s_controller_mapping_last_error = ESP_OK;
+    return ESP_OK;
+}
+
+static void cancel_controller_mapping(void)
+{
+    s_controller_mapping_active = false;
+    s_controller_mapping_wait_neutral = false;
+    s_controller_mapping_input_suppressed = true;
+    s_controller_mapping_target = 0U;
+    s_controller_mapping_pending = s_controller_mapping_current;
+    s_controller_mapping_last_error = ESP_OK;
+}
+
+static esp_err_t reset_controller_mapping(void)
+{
+    gamepad_button_mapping_t defaults;
+    gamepad_button_mapping_default(&defaults);
+    cancel_controller_mapping();
+    return apply_and_persist_controller_mapping(&defaults);
+}
+#endif
+
 #if P4_CONSOLE_BLE_GAMEPAD
 static bool ble_gamepad_status_busy(
     const platform_gamepad_ble_status_t *status)
@@ -2322,6 +2411,26 @@ static bool ble_gamepad_status_busy(
     return status != NULL &&
         status->state >= PLATFORM_GAMEPAD_BLE_STARTING_HOST &&
         status->state <= PLATFORM_GAMEPAD_BLE_SUBSCRIBING;
+}
+
+static esp_err_t start_ble_gamepad_connection(void)
+{
+    if (!s_console_settings.ble_controller_enabled ||
+        s_multiplayer_lobby_state != CONSOLE_MP_LOBBY_BROWSING) {
+        return ESP_ERR_INVALID_STATE;
+    }
+#if P4_CONSOLE_BLE_MULTIPLAYER
+    if (s_multiplayer_transport == CONSOLE_MP_TRANSPORT_BLE) {
+        const esp_err_t pause_result =
+            platform_multiplayer_ble_set_lobby_mode(
+                PLATFORM_MULTIPLAYER_BLE_LOBBY_IDLE, 0U, 0U);
+        if (pause_result != ESP_OK) {
+            return pause_result;
+        }
+        s_ble_gamepad_suspended_lobby_browser = true;
+    }
+#endif
+    return platform_gamepad_ble_connect_or_pair();
 }
 
 static void handle_controller_action(
@@ -2333,27 +2442,38 @@ static void handle_controller_action(
     }
     esp_err_t result = ESP_ERR_INVALID_ARG;
     const char *operation = "invalid";
-    if (action->type == CONSOLE_ACTION_CONTROLLER_PAIR) {
-        operation = "pair-or-connect";
-        if (s_multiplayer_lobby_state != CONSOLE_MP_LOBBY_BROWSING) {
-            result = ESP_ERR_INVALID_STATE;
-        } else {
-#if P4_CONSOLE_BLE_MULTIPLAYER
-            if (s_multiplayer_transport == CONSOLE_MP_TRANSPORT_BLE) {
-                result = platform_multiplayer_ble_set_lobby_mode(
-                    PLATFORM_MULTIPLAYER_BLE_LOBBY_IDLE, 0U, 0U);
-                if (result == ESP_OK) {
-                    s_ble_gamepad_suspended_lobby_browser = true;
-                }
-            } else
-#endif
-            {
-                result = ESP_OK;
-            }
-            if (result == ESP_OK) {
-                result = platform_gamepad_ble_connect_or_pair();
+    if (action->type == CONSOLE_ACTION_CONTROLLER_BLE_ENABLE) {
+        operation = "ble-pad-enable";
+        result = platform_console_settings_set_ble_controller_enabled(
+            &s_console_settings, true);
+        if (result == ESP_OK) {
+            const platform_gamepad_ble_status_t status =
+                platform_gamepad_ble_status();
+            if (status.bonded &&
+                s_multiplayer_lobby_state == CONSOLE_MP_LOBBY_BROWSING) {
+                const esp_err_t reconnect_result =
+                    start_ble_gamepad_connection();
+                ESP_LOGI(TAG,
+                         "P4_CONSOLE_OS BLE_CONTROLLER_RECONNECT "
+                         "trigger=mode-enable result=%s",
+                         esp_err_to_name(reconnect_result));
             }
         }
+    } else if (action->type == CONSOLE_ACTION_CONTROLLER_BLE_DISABLE) {
+        operation = "ble-pad-disable";
+        result = platform_console_settings_set_ble_controller_enabled(
+            &s_console_settings, false);
+        if (result == ESP_OK) {
+            platform_gamepad_ble_disconnect();
+#if P4_CONSOLE_GAMEPAD_INPUT
+            if (s_controller_mapping_active) {
+                cancel_controller_mapping();
+            }
+#endif
+        }
+    } else if (action->type == CONSOLE_ACTION_CONTROLLER_PAIR) {
+        operation = "pair-or-connect";
+        result = start_ble_gamepad_connection();
     } else if (action->type ==
                CONSOLE_ACTION_CONTROLLER_DISCONNECT) {
         operation = "disconnect";
@@ -2362,6 +2482,19 @@ static void handle_controller_action(
     } else if (action->type == CONSOLE_ACTION_CONTROLLER_FORGET) {
         operation = "forget";
         result = platform_gamepad_ble_forget();
+    } else if (action->type ==
+               CONSOLE_ACTION_CONTROLLER_MAPPING_START) {
+        operation = "mapping-start";
+        result = start_controller_mapping();
+    } else if (action->type ==
+               CONSOLE_ACTION_CONTROLLER_MAPPING_CANCEL) {
+        operation = "mapping-cancel";
+        cancel_controller_mapping();
+        result = ESP_OK;
+    } else if (action->type ==
+               CONSOLE_ACTION_CONTROLLER_MAPPING_RESET) {
+        operation = "mapping-reset";
+        result = reset_controller_mapping();
     }
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS BLE_CONTROLLER_ACTION name=%s result=%s",
@@ -2803,6 +2936,8 @@ static console_shell_runtime_info_t runtime_info(void)
 #endif
 #if P4_CONSOLE_BLE_GAMEPAD
         .ble_controller_supported = ble_controller.supported,
+        .ble_controller_enabled =
+            s_console_settings.ble_controller_enabled,
         .ble_controller_host_ready = ble_controller.host_ready,
         .ble_controller_bonded = ble_controller.bonded,
         .ble_controller_connected = ble_controller.connected,
@@ -2813,8 +2948,20 @@ static console_shell_runtime_info_t runtime_info(void)
             ble_controller.reports_received,
         .ble_controller_reports_dropped = ble_controller.reports_dropped,
         .ble_controller_last_error = ble_controller.last_error,
+        .ble_controller_multiplayer_ready =
+            s_console_settings.ble_controller_enabled &&
+            ble_controller.host_ready && ble_controller.connected &&
+            ble_controller.encrypted,
 #else
         .ble_controller_supported = false,
+#endif
+#if P4_CONSOLE_GAMEPAD_INPUT
+        .controller_mapping_active = s_controller_mapping_active,
+        .controller_mapping_persistent =
+            s_controller_mapping_persistent,
+        .controller_mapping_target = s_controller_mapping_target,
+        .controller_mapping_last_error =
+            s_controller_mapping_last_error,
 #endif
 #if P4_CONSOLE_USB_INPUT
         .keyboard_ready = s_keyboard_connected,
@@ -2955,6 +3102,13 @@ static console_shell_runtime_info_t runtime_info(void)
     (void)snprintf(
         info.ble_controller_name, sizeof(info.ble_controller_name), "%s",
         ble_controller.name);
+#endif
+#if P4_CONSOLE_GAMEPAD_INPUT
+    memcpy(info.controller_mapping,
+           s_controller_mapping_active
+               ? s_controller_mapping_pending.source
+               : s_controller_mapping_current.source,
+           sizeof(info.controller_mapping));
 #endif
     (void)snprintf(
         info.file_transfer_name, sizeof(info.file_transfer_name), "%s",
@@ -4398,6 +4552,96 @@ static bool read_gamepad_snapshot(platform_gamepad_snapshot_t *snapshot)
     return s_gamepad_connected;
 }
 
+static bool single_controller_button(uint64_t buttons, uint8_t *source)
+{
+    if (source == NULL || buttons == 0U ||
+        (buttons & (buttons - UINT64_C(1))) != 0U) {
+        return false;
+    }
+    for (size_t index = 0U; index < GAMEPAD_BUTTON_COUNT; ++index) {
+        if ((buttons & GAMEPAD_BUTTON_MASK(index)) != 0U) {
+            *source = (uint8_t)index;
+            return true;
+        }
+    }
+    return false;
+}
+
+static void poll_controller_mapping_capture(void)
+{
+    if (!s_controller_mapping_active &&
+        !s_controller_mapping_input_suppressed) {
+        return;
+    }
+
+    platform_gamepad_snapshot_t raw;
+    memset(&raw, 0, sizeof(raw));
+    const esp_err_t snapshot_result =
+        platform_gamepad_get_raw_snapshot(&raw);
+    const bool connected = snapshot_result == ESP_OK &&
+        raw.version == PLATFORM_GAMEPAD_SNAPSHOT_VERSION &&
+        raw.size == sizeof(raw) &&
+        raw.state.version == GAMEPAD_STATE_VERSION &&
+        raw.state.size == sizeof(raw.state) &&
+        raw.state.connected != 0U;
+    if (!connected) {
+        if (s_controller_mapping_active) {
+            s_controller_mapping_last_error = snapshot_result == ESP_OK
+                ? ESP_ERR_INVALID_STATE : snapshot_result;
+        } else {
+            s_controller_mapping_input_suppressed = false;
+        }
+        return;
+    }
+
+    if (raw.state.buttons == 0U) {
+        s_controller_mapping_input_suppressed = false;
+        if (s_controller_mapping_active) {
+            s_controller_mapping_wait_neutral = false;
+            s_controller_mapping_last_error = ESP_OK;
+        }
+        return;
+    }
+
+    s_controller_mapping_input_suppressed = true;
+    if (!s_controller_mapping_active ||
+        s_controller_mapping_wait_neutral) {
+        return;
+    }
+
+    uint8_t source = 0U;
+    if (!single_controller_button(raw.state.buttons, &source)) {
+        s_controller_mapping_last_error = ESP_ERR_INVALID_ARG;
+        s_controller_mapping_wait_neutral = true;
+        return;
+    }
+    for (size_t slot = 0U; slot < s_controller_mapping_target; ++slot) {
+        if (s_controller_mapping_pending.source[slot] == source) {
+            s_controller_mapping_last_error = ESP_ERR_INVALID_STATE;
+            s_controller_mapping_wait_neutral = true;
+            return;
+        }
+    }
+
+    s_controller_mapping_pending.source[s_controller_mapping_target] =
+        source;
+    ++s_controller_mapping_target;
+    s_controller_mapping_wait_neutral = true;
+    s_controller_mapping_last_error = ESP_OK;
+    if (s_controller_mapping_target < GAMEPAD_MAPPING_COUNT) {
+        return;
+    }
+
+    s_controller_mapping_active = false;
+    const esp_err_t result = apply_and_persist_controller_mapping(
+        &s_controller_mapping_pending);
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS CONTROLLER_MAPPING_COMPLETE "
+             "result=%s persistent=%u",
+             esp_err_to_name(result),
+             s_controller_mapping_persistent ? 1U : 0U);
+}
+
 static uint32_t gamepad_shell_buttons(const gamepad_state_t *state)
 {
     const uint32_t game = gamepad_p4_buttons(state);
@@ -4954,8 +5198,13 @@ static console_shell_action_t poll_input(console_shell_t *shell)
 {
 #if P4_CONSOLE_GAMEPAD_INPUT
     platform_gamepad_snapshot_t gamepad;
-    const uint32_t controller_buttons = read_gamepad_snapshot(&gamepad)
+    uint32_t controller_buttons = read_gamepad_snapshot(&gamepad)
         ? gamepad_shell_buttons(&gamepad.state) : 0U;
+    poll_controller_mapping_capture();
+    if (s_controller_mapping_active ||
+        s_controller_mapping_input_suppressed) {
+        controller_buttons = 0U;
+    }
 #endif
 #if P4_CONSOLE_USB_INPUT
     bool usb_pointer_owned = false;
@@ -7462,6 +7711,29 @@ void app_main(void)
                  "P4_CONSOLE_OS SETTINGS_DEGRADED defaults=1 error=%s",
                  esp_err_to_name(settings_result));
     }
+#if P4_CONSOLE_GAMEPAD_INPUT
+    gamepad_button_mapping_default(&s_controller_mapping_current);
+    s_controller_mapping_pending = s_controller_mapping_current;
+    const esp_err_t mapping_result = platform_gamepad_set_mapping(
+        &s_console_settings.controller_mapping);
+    if (mapping_result == ESP_OK) {
+        s_controller_mapping_current =
+            s_console_settings.controller_mapping;
+        s_controller_mapping_pending = s_controller_mapping_current;
+        s_controller_mapping_persistent =
+            s_console_settings.persistent;
+        s_controller_mapping_last_error = ESP_OK;
+    } else {
+        (void)platform_gamepad_set_mapping(
+            &s_controller_mapping_current);
+        s_controller_mapping_persistent = false;
+        s_controller_mapping_last_error = mapping_result;
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS CONTROLLER_MAPPING_DEGRADED "
+                 "fallback=default error=%s",
+                 esp_err_to_name(mapping_result));
+    }
+#endif
 #if P4_CONSOLE_BLE_MULTIPLAYER
     const esp_err_t ble_multiplayer_prepare =
         platform_multiplayer_ble_prepare();
@@ -7480,6 +7752,12 @@ void app_main(void)
                  "error=%s",
                  esp_err_to_name(ble_gamepad_prepare));
     }
+#endif
+#if P4_CONSOLE_BLE_GAMEPAD && P4_CONSOLE_BLE_MULTIPLAYER
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS BLE_LINK_BUDGET "
+             "controller_links=1 multiplayer_peer_links=1 "
+             "host=shared order=pair-controller-before-lobby");
 #endif
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
     (void)create_shared_control_bus_or_continue();
@@ -7583,9 +7861,9 @@ void app_main(void)
 #if P4_CONSOLE_BLE_GAMEPAD
     const platform_gamepad_ble_status_t saved_pad =
         platform_gamepad_ble_status();
-    if (saved_pad.bonded) {
+    if (s_console_settings.ble_controller_enabled && saved_pad.bonded) {
         const esp_err_t reconnect_result =
-            platform_gamepad_ble_connect_or_pair();
+            start_ble_gamepad_connection();
         ESP_LOGI(TAG,
                  "P4_CONSOLE_OS BLE_GAMEPAD_RECONNECT queued=%u result=%s",
                  reconnect_result == ESP_OK ? 1U : 0U,
@@ -7760,9 +8038,14 @@ void app_main(void)
                    action.type == CONSOLE_ACTION_STORAGE_REPAIR) {
             handle_storage_action(shell, &action);
 #if P4_CONSOLE_BLE_GAMEPAD
-        } else if (action.type == CONSOLE_ACTION_CONTROLLER_PAIR ||
+        } else if (action.type == CONSOLE_ACTION_CONTROLLER_BLE_ENABLE ||
+                   action.type == CONSOLE_ACTION_CONTROLLER_BLE_DISABLE ||
+                   action.type == CONSOLE_ACTION_CONTROLLER_PAIR ||
                    action.type == CONSOLE_ACTION_CONTROLLER_DISCONNECT ||
-                   action.type == CONSOLE_ACTION_CONTROLLER_FORGET) {
+                   action.type == CONSOLE_ACTION_CONTROLLER_FORGET ||
+                   action.type == CONSOLE_ACTION_CONTROLLER_MAPPING_START ||
+                   action.type == CONSOLE_ACTION_CONTROLLER_MAPPING_CANCEL ||
+                   action.type == CONSOLE_ACTION_CONTROLLER_MAPPING_RESET) {
             handle_controller_action(shell, &action);
 #endif
         } else if (action.type == CONSOLE_ACTION_USB_MODE_ENABLE ||

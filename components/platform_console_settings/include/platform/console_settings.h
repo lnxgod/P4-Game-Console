@@ -7,13 +7,14 @@
 #include <stdint.h>
 
 #include "esp_err.h"
+#include "gamepad/mapping.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 enum {
-    PLATFORM_CONSOLE_SETTINGS_VERSION = 2,
+    PLATFORM_CONSOLE_SETTINGS_VERSION = 3,
     PLATFORM_CONSOLE_NODE_NAME_BYTES = 17,
     PLATFORM_CONSOLE_VOLUME_MIN = 1,
     PLATFORM_CONSOLE_VOLUME_MAX = 10,
@@ -28,6 +29,8 @@ typedef struct {
     uint8_t game_volume_step;
     char node_name[PLATFORM_CONSOLE_NODE_NAME_BYTES];
     bool persistent;
+    bool ble_controller_enabled;
+    gamepad_button_mapping_t controller_mapping;
 } platform_console_settings_t;
 
 /** Load bounded settings. Safe defaults are returned if NVS is unavailable. */
@@ -45,6 +48,15 @@ esp_err_t platform_console_settings_set_game_volume(
 /** Persist a short uppercase development/lobby identity such as GC-P4-B289. */
 esp_err_t platform_console_settings_set_node_name(
     platform_console_settings_t *settings, const char *node_name);
+
+/** Persist whether the BLE gamepad client may reconnect or pair. */
+esp_err_t platform_console_settings_set_ble_controller_enabled(
+    platform_console_settings_t *settings, bool enabled);
+
+/** Persist the console-wide A/B/X/Y/Start/Back physical button mapping. */
+esp_err_t platform_console_settings_set_controller_mapping(
+    platform_console_settings_t *settings,
+    const gamepad_button_mapping_t *mapping);
 
 /**
  * Arm the one-boot USB enumeration recovery probe.
