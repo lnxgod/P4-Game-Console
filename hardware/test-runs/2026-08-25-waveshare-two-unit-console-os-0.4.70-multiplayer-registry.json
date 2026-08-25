@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "evidence_id": "waveshare-two-unit-console-os-0.4.70-multiplayer-registry-20260825",
+  "status": "installed-both-exact-readback-pass-yahtzee-auto-registration-pass",
+  "timestamp_utc": "2026-08-25T17:52:35Z",
+  "scope": "Sequential application-only installation of controller-first Console OS 0.4.70 on both recorded Waveshare 4.3 consoles, verifying that Console OS automatically registers multiplayer-capable validated P4G manifests and exposes P4 Yahtzee without game-authored registration code.",
+  "source": {
+    "commit": "a598930fa22f42c55d4bf68e9372869c302e646b",
+    "branch": "main",
+    "origin_main_exact_match_before_install": true,
+    "commit_subject": "feat: let Console OS register multiplayer games"
+  },
+  "candidate": {
+    "app_version": "0.4.70",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "controller_first": true,
+    "application": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+      "offset": "0x20000",
+      "bytes": 1760240,
+      "sha256": "1792859f508497cc6a74fe2a666ff7a4c9292737d4861208b09efeb09adac7c4"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-usb-host/P4UPDATE.P4U",
+      "bytes": 1760496,
+      "sha256": "040e5ac470cb4c96bf2010c21e3883263552a033ffa98bcbcd7f9bf300ddcb69"
+    },
+    "build": "pass",
+    "waveshare_artifact_gate": "pass"
+  },
+  "installation": {
+    "method": "sequential guarded H1 writes; no parallel flash",
+    "write_scope": "application partition only at 0x20000; bootloader, partition table, OTA data, NVS, and microSD were not written",
+    "mutation_span_bytes": 1761280,
+    "predecessor_span_sha256": "e9fe3750f2e0155fe98282d8485919a9a7be4fd2e9582225c881f57a53375508",
+    "successor_span_sha256": "07aa088bd4489d98d1c35b5ca520890e01ba54a7b6d666523b696fbf59603ac3",
+    "successor_contract": "first 1760240 bytes exactly match the application image and the remaining 1040 bytes are erased 0xff",
+    "factory_backup_created": false,
+    "factory_backup_reason": "both exact recorded units already had full 32 MiB factory backups whose hashes were recomputed and matched hardware/backups/manifest.json before this install",
+    "unit1_factory_backup": {
+      "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+      "bytes": 33554432,
+      "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+    },
+    "unit2_factory_backup": {
+      "path": "hardware/backups/waveshare-4.3-unit2-factory-20260820.bin",
+      "bytes": 33554432,
+      "sha256": "240a730a882e6437f31729c78ae69db35b132b1aa78f820fec9d88b3397b39e6"
+    }
+  },
+  "boards": [
+    {
+      "unit_label": "waveshare-4.3-unit1",
+      "port": "/dev/cu.wchusbserial5C371865781",
+      "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+      "chip": "ESP32-P4 revision v1.3",
+      "flash_bytes": 33554432,
+      "security": "secure boot disabled; flash encryption disabled",
+      "write": "pass; esptool Hash of data verified",
+      "readback": "pass; exact application bytes plus 1040-byte erased padding",
+      "verify_flash": "pass; digest matched",
+      "runtime": {
+        "game_catalog": "available=1 packages=14 valid=14 omitted=0",
+        "multiplayer_registration": "id=org.p4console.p4-yahtzee title=P4 YAHTZEE launcher=113 style=2 protocol=1 source=validated-p4g-manifest",
+        "multiplayer_registry": "games=1 runtime_players=2 owner=console-os",
+        "ready": "page=home display=mipi-dsi storage=microsd-read-only h2_role=usb-host-external-vbus",
+        "stable_stats": "page=0 usb_input_ready=1 audio=es8311-ready storage=app-ready display_failures=0",
+        "panic_or_boot_loop": false
+      }
+    },
+    {
+      "unit_label": "waveshare-4.3-unit2",
+      "port": "/dev/cu.wchusbserial5B901593451",
+      "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+      "chip": "ESP32-P4 revision v1.3",
+      "flash_bytes": 33554432,
+      "security": "secure boot disabled; flash encryption disabled",
+      "write": "pass; esptool Hash of data verified",
+      "readback": "pass; exact application bytes plus 1040-byte erased padding",
+      "verify_flash": "pass; digest matched",
+      "runtime": {
+        "game_catalog": "available=1 packages=2 valid=2 omitted=0",
+        "multiplayer_registration": "id=org.p4console.p4-yahtzee title=P4 YAHTZEE launcher=113 style=2 protocol=1 source=validated-p4g-manifest",
+        "multiplayer_registry": "games=1 runtime_players=2 owner=console-os",
+        "ready": "page=home display=mipi-dsi storage=microsd-read-only h2_role=usb-host-external-vbus",
+        "stable_stats": "page=0 usb_input_ready=1 audio=es8311-ready storage=app-ready display_failures=0",
+        "panic_or_boot_loop": false
+      }
+    }
+  ],
+  "verification": {
+    "automatic_registration_owner": "Console OS",
+    "game_contract": "declarative validated P4G manifest; no first-run registration prompt or game-owned registry mutation",
+    "yahtzee_present_and_registered_on_unit1": true,
+    "yahtzee_present_and_registered_on_unit2": true,
+    "multiplayer_transports": "direct UART ready with H1 relay fallback ready on both units",
+    "transient_startup_display_note": "Each unit logged an acknowledged MIPI submit timeout during startup and recovered to READY with display_failures=0; no panic or reboot loop followed.",
+    "manual_two-console_room_join_and_full_gameplay": "pending operator acceptance"
+  }
+}
