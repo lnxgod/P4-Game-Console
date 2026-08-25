@@ -40,6 +40,19 @@ special traits while showing exact Link/DNA requirements for the next rank.
 The former stage-skip control is gone, and a short care-credit cadence prevents
 rapid repeated taps from bypassing the intended growth curve.
 
+Version 3.7 adds a contextual habitat layer without exposing any additional
+network identity. Each 8,192-part genome now combines with one of twenty
+coarse channel/protection contexts for 163,840 bounded signal forms. Those
+contexts add code-drawn orbit nodes, shield brackets, and provider-supplied
+phantom wisps over the existing layer atlas. Cumulative variety can now unlock
+Wideband, Prismatic, and Chimera adaptations plus the post-Mythic Nova,
+Galaxy, and Eternal milestones at 16, 24, and 32 distinct finds. Signal Hunt
+and Genome now report Band, Hue, and Mix progress toward those traits. A
+48-link bounded history leaves recovery room after the normal 32-link Eternal
+milestone and guarantees the final form at the cap. Signal Hunt also preserves
+valid results when the scanner is temporarily busy and is playable end to end
+with normalized controller input.
+
 ## Touch play
 
 - Tap **Feed**, **Play**, **Clean**, or **Rest** to provide care.
@@ -51,7 +64,12 @@ rapid repeated taps from bypassing the intended growth curve.
 - With a controller or keyboard, press **Start** to open Star Catcher, hold
   **Left/Right** to steer with the same spring motion, and press **B** to return
   to care. Touch and controller steering share the same bounded speed model.
-- Tap **Upgrades**, then use the touch-only **Power** and **Style** tabs.
+- On Home, controller **Left/Right** selects a care action, **A** uses it,
+  **Up** opens Signal Hunt, **Down** opens Upgrades, and **B** opens Genome.
+  In the shops, **Left/Right** switches tabs, **Up/Down** selects a component,
+  **A** buys Power or cycles an owned Style, **Start** buys the selected Style,
+  and **B** returns Home. Remix remains available by touch.
+- Tap **Upgrades**, then use the **Power** and **Style** tabs.
   Power buys Wings, Aura, Nest, and Magnet levels. Style buys and equips Body,
   Eyes, Horns, and Trail choices independently; the right side of each style
   card buys the next color and the left side cycles owned colors.
@@ -64,10 +82,17 @@ rapid repeated taps from bypassing the intended growth curve.
 Tap **Signal Hunt** to request a bounded city scan. Use **Prev/Next** to inspect
 all eight bounded results. The list contains only an
 OS-sanitized display name, an opaque session token, and a simple strength and
-reward preview. Select an uneaten signal, walk around, and tap **Pulse Scan**.
+reward preview. Select an uneaten signal, walk around, and tap **Rescan Now**.
 Repeated focused scans provide a deliberately approximate `COLD`, `GETTING
 WARM`, `BATTLE READY`, or `VERY HOT` cue. RSSI is noisy, so this is a playful
 hotter/colder activity rather than real direction or distance.
+
+With a controller, **Up/Down** chooses a visible result, **Left/Right** pages,
+**A** tracks or starts a battle, **Start** rescans or spends Aura Guard, and
+**B** retreats one screen. In Pulse Rush, **A** strikes. In Resonance Weave,
+the generated cursor begins on the first rune; move it with the D-pad and hold
+**A** while gliding through the route. Physical touch takes priority whenever
+both inputs are present.
 
 At -65 dBm or stronger, **Battle** unlocks. Signal strength maps from -100..-30
 dBm into a clamped 0..100 encounter strength. Stronger signals have more
@@ -79,6 +104,14 @@ genome rarity controls route length, signal strength controls hold time, and
 the Magnet upgrade increases the forgiving target radius. **Aura Guard** spends
 a limited charge to buy more time in either style. Winning turns the encounter
 into a signal seed that the dragon eats automatically.
+
+A seed's base genome still comes only from the opaque token. Its visible
+habitat accents come from the coarse channel family and the already-sanitized
+protected/hidden flags. Four channel families plus an unknown-family fallback,
+crossed with protected and provider-supplied hidden state, make twenty habitat
+contexts. The combined `FORM` number is bounded to 0..163,839. A channel change
+may therefore change the habitat accents while preserving the encounter's base
+genome; RSSI never changes either design layer.
 
 Every signal seed is accepted once per session. Its opaque token determines
 rarity, Fire/Ice/Acid affinity, mutation hue, and a core/halo/sigil/aura genome;
@@ -106,11 +139,24 @@ look-alike seeds can still feed the dragon but cannot rush every rank.
 | Aurora | 5 | 15 | dominant halo/aura and glow frame |
 | Ascended | 8 | 19 | dominant mature signal-dragon family |
 | Mythic | 12 | 22 | second hue, doubled aura, and crown |
+| Nova | 16 | 24 | paired crown satellites and denser orbits |
+| Galaxy | 24 | 26 | third aura combination and wider constellation |
+| Eternal | 32 | 27 | completed six-satellite signal crown |
+
+The normal Eternal route needs 32 distinct links and 27 DNA. The session keeps
+up to 48 distinct opaque tokens, so a dragon that is still missing one common
+allele at link 32 can continue exploring. Reaching the bounded 48-link cap
+guarantees Eternal even after an unusually repetitive run; it does not add a
+faster battle-stat tier beyond the normal milestone.
 
 Four coarse channel families add bounded speed and particle variety without
 becoming identity. Three protected encounters add a shield trait and up to
 three Guard points; a provider-supplied hidden encounter adds a phantom wisp
-and one Magic point. These are fantasy traits, not claims about network safety.
+and one Magic point. Collecting all four channel families unlocks Wideband
+orbit nodes, six hues unlock a Prismatic halo, and fourteen distinct
+core/halo/sigil/aura alleles unlock a second Chimera sigil. These adaptations
+combine instead of replacing one another. They are fantasy traits, not claims
+about network safety.
 Power gains at most four points from gene diversity, Speed at most four from
 channel variety, and rank adds at most five Magic. Signal growth now tapers to
 one interaction for ordinary later seeds, so exploring a dense area does not
@@ -124,8 +170,14 @@ asks for a password, sends packets, or interferes with Wi-Fi. The SDL host uses
 fictional deterministic encounters. The Waveshare Console OS build now carries
 a locked, passive ESP32-C6 scan provider and exposes it only after background
 initialization succeeds; otherwise the same honest offline screen remains.
-The complete firmware and cartridge build passes, but live C6 scan behavior is
-not called hardware-qualified until it has retained-UART acceptance evidence.
+That provider deliberately publishes named results only, preserving the prior
+user-approved policy against `HIDDEN SIGNAL` rows. The generic Game API and SDL
+simulator still support the hidden flag for other providers and deterministic
+fantasy coverage.
+The focused v3.7 RISC-V cartridge build and package verifier pass. This game
+revision has not been rebuilt, flashed, or accepted as a complete Waveshare
+firmware image; live C6 behavior remains qualified only by its separately
+recorded provider evidence.
 
 The four aspect upgrades have three levels. The next levels cost 2, 5, and 8
 coins:
@@ -155,9 +207,11 @@ mixed-radix `LOOK` number for the resulting recipe.
 Signals use a separate deterministic genome derived only from their opaque
 session token. Four cores, four halos, four elemental sigils, four auras,
 eight mutation palettes, and four rarity ranks make 8,192 bounded signal-seed
-recipes. The same
-composed seed and `GENE` number follow an encounter from the scan list into
-tracking and battle; changing RSSI affects challenge and reward, never identity.
+genomes. Twenty coarse habitat contexts extend those genomes to 163,840
+bounded `FORM` designs. The same base genome follows an encounter from the scan
+list into tracking and battle; channel family plus protected/hidden state
+selects its context, while changing RSSI affects challenge and reward but never
+either recipe.
 Fire, Ice, and Acid crests match battle affinity; the mystery-star crest keeps
 its affinity concealed until play reveals it. Byte Buddy never receives a raw
 SSID or MAC/BSSID: the OS supplies only a sanitized display label and an opaque,
@@ -568,10 +622,16 @@ Current deterministic art identities:
 - built-in include: `450156a7e0b1179934f5286b24208906f6350dd1b823affb3aba0a42a122ece2`;
 - full `BBDART2` payload: `a0b245a4d9583e78b26397865d3b13fea556ef413aca7b8f22567e8e09dbad57`;
 - wrapped `BYTEBUD.P4R`: 832,192 bytes,
-  `ae1d39daa3cf444e628b1248ff3ea7f83b57e1718a1a75ff476e65151f8650ca`.
+  `ae1d39daa3cf444e628b1248ff3ea7f83b57e1718a1a75ff476e65151f8650ca`;
+- v3.7 `BYTEBUD.P4G`: 380,412 bytes, payload SHA-256
+  `08acbc8d928bfcfe3df9f3a99bb401a55e9d8b5912c4cbd64a7abf27f5c1b739`,
+  package SHA-256
+  `bbb15796291d51dceb33081ecb074b4d14743ebc7b0fa92c115165bb0af1b29c`.
 
-No v3.6 `.P4G` hash is claimed by this host-only art conversion. Record it
-only after the focused RISC-V cartridge build and verifier pass.
+Two independent focused RISC-V builds produced byte-identical cartridges, and
+the repository package verifier accepted the final header, manifest fields,
+capability masks, ELF payload, and digest. This is artifact verification, not a
+full firmware build or on-device acceptance result.
 
 ## Verification
 
@@ -592,21 +652,26 @@ deterministic closed egg, cracking egg, Power shop, Style shop, customized baby,
 elemental, mini-game, signal-list, focused tracker, and battle frames for
 visual QA. Its two-argument animation mode also renders 177 chronological
 gameplay frames covering every expanded stage clip, the multi-step hatch, both
-signal-list pages, dormant/Ascended Genome panels, and one-signal
-`signal-lineage-spark`, five-signal `signal-lineage-aurora`, and eight-signal
-`signal-lineage-ascended` clips, along with a Resonance Weave battle frame. The
-sequence now contains 177 frames. The tests
+controller-active signal-list pages, dormant/Eternal Genome panels, a signal
+reward card, and one-signal Spark, five-signal Aurora, eight-signal Ascended,
+12-signal Mythic, 16-signal Nova, 24-signal Galaxy, and 32-signal Eternal clips.
+The Resonance Weave frame also shows its controller cursor and hint. The
+sequence remains exactly 177 frames. The tests
 cover touch hit areas,
 care achievements, shop spending paths, preview progression, drag and
 controller Star Catcher play, trait selection, customization costs,
 all 19,200 collision-free look recipe IDs, deterministic owned-choice Remix,
 levels/battle stats, paced care credit, signal profile scaling, exhaustive
-eight-result paging, focused scan reordering, both battle modes, all 8,192
-genome pattern assignments and rune routes, battle rewards,
-all five lineage boundaries, order-independent aggregation, low-diversity
-stalling, capped lineage stats, bounded signal-provider integration, and
-guarded rendering.
+eight-result paging, focused scan reordering, transient scanner-busy retention,
+both battle modes, all 8,192 genome pattern assignments and rune routes, all
+twenty habitat contexts and every one of the 163,840 collision-free form IDs,
+controller Signal Hunt and touch-to-controller Resonance play, battle rewards,
+all five base lineage boundaries plus both sides of the Nova/Galaxy/Eternal
+thresholds, order-independent aggregation, independent on/off boundaries for
+all five combinable adaptations, the 48-link recovery/fail-safe path,
+low-diversity stalling, capped lineage stats, bounded signal-provider
+integration, and guarded rendering.
 
-Care, coins, upgrades, and growth are session-only until the platform exposes a
-reviewed writable save service. The game owns no display, touch, audio, or
-storage hardware directly.
+Care, coins, upgrades, growth, and lineage are session-only until the platform
+exposes a reviewed writable save service. The game owns no display, touch,
+audio, radio, or storage hardware directly.

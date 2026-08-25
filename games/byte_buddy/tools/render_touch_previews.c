@@ -14,7 +14,10 @@ extern const p4_game_descriptor_t p4_byte_buddy_game;
 typedef struct {
     p4_game_signal_snapshot_t snapshot;
     uint32_t requests;
+    uint8_t batch;
 } preview_signal_scan_t;
+
+static uint64_t preview_signal_token(unsigned batch, unsigned index);
 
 static bool preview_request_signal(void *context, uint64_t focus_token)
 {
@@ -56,6 +59,8 @@ static bool preview_request_signal(void *context, uint64_t focus_token)
         },
     };
     for (size_t index = 0U; index < scan->snapshot.count; ++index) {
+        scan->snapshot.results[index].token =
+            preview_signal_token(scan->batch, (unsigned)index);
         scan->snapshot.results[index].flags |= P4_GAME_SIGNAL_SIMULATED;
         if (focus_token != 0U &&
             scan->snapshot.results[index].token == focus_token) {
@@ -167,6 +172,16 @@ static bool tap(p4_game_instance_t *instance, uint16_t x, uint16_t y)
     return update(instance, &down) && update(instance, &up);
 }
 
+static bool press_button(p4_game_instance_t *instance, uint32_t button)
+{
+    const p4_game_input_t down = {
+        .held = button,
+        .pressed = button,
+    };
+    const p4_game_input_t up = {.released = button};
+    return update(instance, &down) && update(instance, &up);
+}
+
 static bool care_credit(p4_game_instance_t *instance)
 {
     if (!tap(instance, 160U, 80U)) {
@@ -230,19 +245,28 @@ static bool render_clip(p4_game_instance_t *instance,
     return true;
 }
 
-static uint64_t preview_signal_token(unsigned index)
+static uint64_t preview_signal_token(unsigned batch, unsigned index)
 {
-    static const uint64_t tokens[8] = {
-        UINT64_C(0x00123456789abcde),
-        UINT64_C(0x3ff0000000045678),
-        UINT64_C(0x0aa0000000789abc),
-        UINT64_C(0x0880000000abcdef),
-        UINT64_C(0x0440000002fedcba),
-        UINT64_C(0x13579bdf2468ace0),
-        UINT64_C(0x0fedcba987654321),
-        UINT64_C(0x55aa33cc77ee0011),
+    static const uint16_t rarity_roll[4] = {
+        UINT16_C(0x0200), UINT16_C(0x0080),
+        UINT16_C(0x0010), UINT16_C(0x0001),
     };
-    return index < 8U ? tokens[index] : 0U;
+    if (batch >= 4U || index >= 8U) {
+        return 0U;
+    }
+    const unsigned ordinal = batch * 8U + index;
+    const unsigned core = ordinal & 3U;
+    const unsigned halo = (ordinal + 1U) & 3U;
+    const unsigned sigil = (ordinal + 2U) & 3U;
+    const unsigned aura = (ordinal + 3U) & 3U;
+    const unsigned hue = ordinal & 7U;
+    return ((uint64_t)(ordinal + 1U) << 32U) |
+        ((uint64_t)core << 21U) |
+        ((uint64_t)halo << 23U) |
+        ((uint64_t)aura << 25U) |
+        ((uint64_t)sigil << 27U) |
+        ((uint64_t)hue << 18U) |
+        rarity_roll[ordinal & 3U];
 }
 
 static bool complete_resonance_weave(
@@ -280,25 +304,25 @@ static bool complete_resonance_weave(
 }
 
 static bool enter_signal_battle_index(
-    p4_game_instance_t *instance, unsigned index)
+    p4_game_instance_t *instance, unsigned batch, unsigned index)
 {
-    const uint64_t token = preview_signal_token(index);
+    const uint64_t token = preview_signal_token(batch, index);
     if (token == 0U || !tap(instance, 100U, 180U) ||
         !tap(instance, 30U, 180U) ||
         (index >= 5U && !tap(instance, 280U, 180U)) ||
         !tap(instance, 70U,
              (uint16_t)(42U + (index % 5U) * 25U)) ||
         !tap(instance, 70U, 180U) ||
-        !tap(instance, 250U, 180U)) {
+        !press_button(instance, P4_BUTTON_A)) {
         return false;
     }
     return true;
 }
 
 static bool finish_signal_battle_index(
-    p4_game_instance_t *instance, unsigned index)
+    p4_game_instance_t *instance, unsigned batch, unsigned index)
 {
-    const uint64_t token = preview_signal_token(index);
+    const uint64_t token = preview_signal_token(batch, index);
     if (token == 0U) {
         return false;
     }
@@ -317,14 +341,31 @@ static bool finish_signal_battle_index(
 }
 
 static bool defeat_signal_index(
-    p4_game_instance_t *instance, unsigned index)
+    p4_game_instance_t *instance, unsigned batch, unsigned index)
 {
-    return enter_signal_battle_index(instance, index) &&
-        finish_signal_battle_index(instance, index);
+    return enter_signal_battle_index(instance, batch, index) &&
+        finish_signal_battle_index(instance, batch, index);
+}
+
+static bool defeat_signal_range(
+    p4_game_instance_t *instance, preview_signal_scan_t *scan,
+    unsigned batch, unsigned first, unsigned limit)
+{
+    if (scan == NULL || batch >= 4U || first > limit || limit > 8U) {
+        return false;
+    }
+    scan->batch = (uint8_t)batch;
+    for (unsigned index = first; index < limit; ++index) {
+        if (!defeat_signal_index(instance, batch, index)) {
+            return false;
+        }
+    }
+    return true;
 }
 
 static bool render_animation_sequence(p4_game_instance_t *instance,
                                       p4_game_surface_t *surface,
+                                      preview_signal_scan_t *scan,
                                       const char *prefix)
 {
     bool success = render_clip(
@@ -359,35 +400,50 @@ static bool render_animation_sequence(p4_game_instance_t *instance,
         tap(instance, 280U, 180U) && render_clip(
         instance, surface, prefix, "genome-dormant", 1U, 1U) &&
         tap(instance, 160U, 180U) &&
-        tap(instance, 70U, 180U) && animate(instance, 2U) && render_clip(
+        tap(instance, 70U, 180U) && animate(instance, 2U) &&
+        press_button(instance, P4_BUTTON_LEFT) && render_clip(
         instance, surface, prefix, "signal-list-page-1", 1U, 1U) &&
-        tap(instance, 280U, 180U) && render_clip(
+        press_button(instance, P4_BUTTON_RIGHT) && render_clip(
         instance, surface, prefix, "signal-list-page-2", 1U, 1U) &&
         tap(instance, 30U, 180U) &&
         tap(instance, 70U, 42U) && tap(instance, 70U, 180U) &&
-        tap(instance, 250U, 180U);
+        press_button(instance, P4_BUTTON_A);
     for (unsigned strike = 0U; success && strike < 32U; ++strike) {
         success = tap(instance, 60U, 180U);
     }
-    success = success && tap(instance, 20U, 12U) && render_clip(
-        instance, surface, prefix, "signal-lineage-spark", 16U, 5U) &&
+    success = success && render_clip(
+        instance, surface, prefix, "signal-reward", 1U, 1U) &&
+        tap(instance, 20U, 12U) && render_clip(
+        instance, surface, prefix, "signal-lineage-spark", 15U, 5U) &&
         tap(instance, 70U, 180U) &&
-        enter_signal_battle_index(instance, 1U) && render_clip(
+        enter_signal_battle_index(instance, 0U, 1U) && render_clip(
         instance, surface, prefix, "resonance-weave", 1U, 1U) &&
-        finish_signal_battle_index(instance, 1U);
+        finish_signal_battle_index(instance, 0U, 1U);
     for (unsigned index = 2U; success && index < 5U; ++index) {
-        success = defeat_signal_index(instance, index);
+        success = defeat_signal_index(instance, 0U, index);
     }
     success = success && tap(instance, 20U, 12U) && render_clip(
         instance, surface, prefix, "signal-lineage-aurora", 16U, 5U) &&
         tap(instance, 70U, 180U) && animate(instance, 2U);
     for (unsigned index = 5U; success && index < 8U; ++index) {
-        success = defeat_signal_index(instance, index);
+        success = defeat_signal_index(instance, 0U, index);
     }
     success = success && tap(instance, 20U, 12U) && render_clip(
-        instance, surface, prefix, "signal-lineage-ascended", 16U, 5U) &&
+        instance, surface, prefix, "signal-lineage-ascended", 4U, 5U) &&
+        defeat_signal_range(instance, scan, 1U, 0U, 4U) &&
+        tap(instance, 20U, 12U) && render_clip(
+        instance, surface, prefix, "signal-lineage-mythic", 3U, 5U) &&
+        defeat_signal_range(instance, scan, 1U, 4U, 8U) &&
+        tap(instance, 20U, 12U) && render_clip(
+        instance, surface, prefix, "signal-lineage-nova", 3U, 5U) &&
+        defeat_signal_range(instance, scan, 2U, 0U, 8U) &&
+        tap(instance, 20U, 12U) && render_clip(
+        instance, surface, prefix, "signal-lineage-galaxy", 3U, 5U) &&
+        defeat_signal_range(instance, scan, 3U, 0U, 8U) &&
+        tap(instance, 20U, 12U) && render_clip(
+        instance, surface, prefix, "signal-lineage-eternal", 3U, 5U) &&
         tap(instance, 280U, 180U) && render_clip(
-        instance, surface, prefix, "genome-ascended", 1U, 1U);
+        instance, surface, prefix, "genome-eternal", 1U, 1U);
     return success;
 }
 
@@ -437,7 +493,8 @@ int main(int argc, char **argv)
         &instance, &p4_byte_buddy_game, &services, state,
         p4_byte_buddy_game.state_bytes);
     if (success && argc == 3) {
-        success = render_animation_sequence(&instance, &surface, argv[2]);
+        success = render_animation_sequence(
+            &instance, &surface, &signal_scan, argv[2]);
         p4_game_instance_stop(&instance);
         free(art);
         free(state);

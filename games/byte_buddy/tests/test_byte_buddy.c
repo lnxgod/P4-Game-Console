@@ -18,6 +18,8 @@ typedef struct {
     p4_game_signal_snapshot_t snapshot;
     uint32_t requests;
     uint64_t focus_token;
+    bool reject_requests;
+    bool reject_reads;
 } fake_signal_scan_t;
 
 static fake_signal_scan_t s_signal_scan;
@@ -38,6 +40,9 @@ static bool fake_request_signal_scan(void *context, uint64_t focus_token)
     }
     ++scan->requests;
     scan->focus_token = focus_token;
+    if (scan->reject_requests) {
+        return false;
+    }
     scan->snapshot = (p4_game_signal_snapshot_t){
         .generation = scan->requests,
         .status = P4_GAME_SIGNAL_READY,
@@ -125,7 +130,7 @@ static bool fake_read_signal_scan(void *context,
                                   p4_game_signal_snapshot_t *snapshot)
 {
     const fake_signal_scan_t *const scan = context;
-    if (scan == NULL || snapshot == NULL) {
+    if (scan == NULL || snapshot == NULL || scan->reject_reads) {
         return false;
     }
     *snapshot = scan->snapshot;
@@ -390,6 +395,29 @@ static void test_dragon_growth_and_traits(void)
               target_q16, target_q16, P4_BUTTON_RIGHT, 100U) ==
           target_q16);
 
+    int32_t cursor_chunked = start_q16;
+    for (unsigned frame = 0U; frame < 10U; ++frame) {
+        cursor_chunked = byte_buddy_controller_cursor_axis_q16(
+            cursor_chunked, false, true, 10U, 96, 224);
+    }
+    const int32_t cursor_single = byte_buddy_controller_cursor_axis_q16(
+        start_q16, false, true, 100U, 96, 224);
+    CHECK(cursor_chunked == cursor_single);
+    CHECK(byte_buddy_controller_cursor_axis_q16(
+              start_q16, true, true, 100U, 96, 224) == start_q16);
+    CHECK(byte_buddy_controller_cursor_axis_q16(
+              INT32_C(96) * INT32_C(65536), true, false,
+              100U, 96, 224) == INT32_C(96) * INT32_C(65536));
+    CHECK(byte_buddy_controller_cursor_axis_q16(
+              INT32_C(224) * INT32_C(65536), false, true,
+              100U, 96, 224) == INT32_C(224) * INT32_C(65536));
+    CHECK(byte_buddy_controller_cursor_axis_q16(
+              INT32_C(100) * INT32_C(65536), true, false,
+              100U, 96, 224) == INT32_C(96) * INT32_C(65536));
+    CHECK(byte_buddy_controller_cursor_axis_q16(
+              INT32_C(220) * INT32_C(65536), false, true,
+              100U, 96, 224) == INT32_C(224) * INT32_C(65536));
+
     CHECK(byte_buddy_upgrade_cost(0U) == 2U);
     CHECK(byte_buddy_upgrade_cost(1U) == 5U);
     CHECK(byte_buddy_upgrade_cost(2U) == 8U);
@@ -518,6 +546,56 @@ static void test_dragon_growth_and_traits(void)
         byte_buddy_signal_genome(genome_token ^ (UINT64_C(1) << 21U));
     CHECK(changed_genome.core != genome.core);
     CHECK(changed_genome.recipe_id != genome.recipe_id);
+
+    static const uint8_t habitat_channels[5] = {1U, 6U, 11U, 36U, 0U};
+    bool habitat_seen[20] = {false};
+    for (uint8_t environment = 0U; environment < 4U; ++environment) {
+        const uint8_t flags = (uint8_t)(
+            ((environment & 1U) != 0U ? P4_GAME_SIGNAL_PROTECTED : 0U) |
+            ((environment & 2U) != 0U ? P4_GAME_SIGNAL_HIDDEN : 0U));
+        for (uint8_t family = 0U; family < 5U; ++family) {
+            const uint8_t habitat = byte_buddy_signal_habitat_id(
+                habitat_channels[family], flags);
+            CHECK(habitat < 20U);
+            if (habitat < 20U) {
+                CHECK(!habitat_seen[habitat]);
+                habitat_seen[habitat] = true;
+            }
+            CHECK(byte_buddy_signal_habitat_id(
+                      habitat_channels[family],
+                      (uint8_t)(flags | P4_GAME_SIGNAL_SIMULATED)) ==
+                  habitat);
+        }
+    }
+    CHECK(byte_buddy_signal_form_id(0U, 1U, 0U) == 0U);
+    CHECK(byte_buddy_signal_form_id(
+              8191U, 0U,
+              P4_GAME_SIGNAL_PROTECTED | P4_GAME_SIGNAL_HIDDEN) ==
+          163839U);
+    CHECK(byte_buddy_signal_form_id(UINT16_MAX, 1U, 0U) == 0U);
+
+    static bool form_seen[163840];
+    uint32_t form_count = 0U;
+    for (uint16_t recipe = 0U; recipe < 8192U; ++recipe) {
+        for (uint8_t environment = 0U; environment < 4U; ++environment) {
+            const uint8_t flags = (uint8_t)(
+                ((environment & 1U) != 0U
+                    ? P4_GAME_SIGNAL_PROTECTED : 0U) |
+                ((environment & 2U) != 0U
+                    ? P4_GAME_SIGNAL_HIDDEN : 0U));
+            for (uint8_t family = 0U; family < 5U; ++family) {
+                const uint32_t form = byte_buddy_signal_form_id(
+                    recipe, habitat_channels[family], flags);
+                CHECK(form < 163840U);
+                if (form < 163840U) {
+                    CHECK(!form_seen[form]);
+                    form_seen[form] = true;
+                    ++form_count;
+                }
+            }
+        }
+    }
+    CHECK(form_count == 163840U);
 
     CHECK(byte_buddy_level_for_interactions(0U) == 1U);
     CHECK(byte_buddy_level_for_interactions(7U) == 1U);
@@ -775,6 +853,87 @@ static void test_signal_paging_integration(void)
     tap(&instance, 80U, 42U);
     CHECK(s_signal_scan.requests == 3U);
     CHECK(s_signal_scan.focus_token == expected_after_clamp);
+
+    p4_game_instance_stop(&instance);
+    free(state);
+}
+
+static void test_signal_busy_preserves_results(void)
+{
+    void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state == NULL) {
+        return;
+    }
+    p4_game_instance_t instance;
+    p4_audio_mixer_t mixer;
+    p4_achievement_catalog_t achievements;
+    CHECK(start_game(&instance, state, &mixer, &achievements));
+    tap(&instance, 70U, 180U);
+    CHECK(s_signal_scan.requests == 1U);
+
+    s_signal_scan.reject_requests = true;
+    tap(&instance, 100U, 180U);
+    CHECK(s_signal_scan.requests == 2U);
+    tap(&instance, 80U, 67U);
+    CHECK(s_signal_scan.requests == 2U);
+    tap(&instance, 80U, 180U);
+    CHECK(s_signal_scan.requests == 2U);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(s_signal_scan.requests == 2U);
+    for (unsigned frame = 0U; frame < 11U; ++frame) {
+        CHECK(buttons(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
+    }
+    CHECK(s_signal_scan.requests == 2U);
+
+    CHECK(buttons(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
+    CHECK(s_signal_scan.requests == 3U);
+    CHECK(buttons(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
+    CHECK(s_signal_scan.requests == 3U);
+    for (unsigned frame = 0U; frame < 10U; ++frame) {
+        CHECK(buttons(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
+    }
+    CHECK(s_signal_scan.requests == 3U);
+    s_signal_scan.reject_requests = false;
+    for (unsigned frame = 0U; frame < 4U; ++frame) {
+        CHECK(buttons(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
+    }
+    CHECK(s_signal_scan.requests == 3U);
+    CHECK(buttons(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
+    CHECK(s_signal_scan.requests == 4U);
+    CHECK(s_signal_scan.focus_token == UINT64_C(0x3ff0000000045678));
+
+    p4_game_instance_stop(&instance);
+    free(state);
+}
+
+static void test_initial_signal_busy_backoff(void)
+{
+    void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state == NULL) {
+        return;
+    }
+    p4_game_instance_t instance;
+    p4_audio_mixer_t mixer;
+    p4_achievement_catalog_t achievements;
+    CHECK(start_game(&instance, state, &mixer, &achievements));
+    s_signal_scan.reject_requests = true;
+
+    tap(&instance, 70U, 180U);
+    CHECK(s_signal_scan.requests == 1U);
+    tap(&instance, 100U, 180U);
+    CHECK(s_signal_scan.requests == 1U);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(s_signal_scan.requests == 1U);
+    for (unsigned frame = 0U; frame < 12U; ++frame) {
+        CHECK(buttons(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
+    }
+    CHECK(s_signal_scan.requests == 1U);
+    tap(&instance, 100U, 180U);
+    CHECK(s_signal_scan.requests == 2U);
 
     p4_game_instance_stop(&instance);
     free(state);
@@ -1098,16 +1257,137 @@ static void test_signal_lineage_genetics(void)
     const byte_buddy_signal_lineage_t reverse_lineage =
         byte_buddy_signal_lineage(reverse_entropy, 12U, &reverse);
     CHECK(forward_lineage.tier == BYTE_BUDDY_LINEAGE_MYTHIC);
+    CHECK(forward_lineage.part_diversity == 16U);
+    CHECK(forward_lineage.hue_diversity == 8U);
     CHECK(forward_lineage.diversity == 28U);
     CHECK(forward_lineage.channel_families == 4U);
     CHECK(forward_lineage.shielded);
     CHECK(forward_lineage.phantom);
+    CHECK((forward_lineage.adaptations &
+           BYTE_BUDDY_ADAPTATION_SHIELD) != 0U);
+    CHECK((forward_lineage.adaptations &
+           BYTE_BUDDY_ADAPTATION_PHANTOM) != 0U);
+    CHECK((forward_lineage.adaptations &
+           BYTE_BUDDY_ADAPTATION_WIDEBAND) != 0U);
+    CHECK((forward_lineage.adaptations &
+           BYTE_BUDDY_ADAPTATION_PRISMATIC) != 0U);
+    CHECK((forward_lineage.adaptations &
+           BYTE_BUDDY_ADAPTATION_CHIMERA) != 0U);
+    CHECK(forward_lineage.resonance == BYTE_BUDDY_RESONANCE_NONE);
     CHECK(forward_lineage.family == reverse_lineage.family);
     CHECK(forward_lineage.halo == reverse_lineage.halo);
     CHECK(forward_lineage.marking == reverse_lineage.marking);
     CHECK(forward_lineage.aura == reverse_lineage.aura);
     CHECK(forward_lineage.primary_hue == reverse_lineage.primary_hue);
     CHECK(forward_lineage.secondary_hue != forward_lineage.primary_hue);
+
+    const byte_buddy_signal_lineage_t nova =
+        byte_buddy_signal_lineage(forward_entropy, 16U, &forward);
+    const byte_buddy_signal_lineage_t galaxy =
+        byte_buddy_signal_lineage(forward_entropy, 24U, &forward);
+    const byte_buddy_signal_lineage_t eternal =
+        byte_buddy_signal_lineage(forward_entropy, 32U, &forward);
+    CHECK(nova.resonance == BYTE_BUDDY_RESONANCE_NOVA);
+    CHECK(galaxy.resonance == BYTE_BUDDY_RESONANCE_GALAXY);
+    CHECK(eternal.resonance == BYTE_BUDDY_RESONANCE_ETERNAL);
+    CHECK(byte_buddy_signal_lineage(
+              forward_entropy, 15U, &forward).resonance ==
+          BYTE_BUDDY_RESONANCE_NONE);
+    CHECK(byte_buddy_signal_lineage(
+              forward_entropy, 23U, &forward).resonance ==
+          BYTE_BUDDY_RESONANCE_NOVA);
+    CHECK(byte_buddy_signal_lineage(
+              forward_entropy, 31U, &forward).resonance ==
+          BYTE_BUDDY_RESONANCE_GALAXY);
+
+    byte_buddy_lineage_genes_t boundary = {
+        .part_mask = UINT16_C(0xffff),
+        .hue_mask = UINT8_C(0x0f),
+        .rarity_mask = UINT8_C(0x07),
+    };
+    CHECK(byte_buddy_signal_lineage(
+              0U, 16U, &boundary).diversity == 23U);
+    CHECK(byte_buddy_signal_lineage(
+              0U, 16U, &boundary).resonance ==
+          BYTE_BUDDY_RESONANCE_NONE);
+    boundary.hue_mask = UINT8_C(0x1f);
+    CHECK(byte_buddy_signal_lineage(
+              0U, 16U, &boundary).resonance ==
+          BYTE_BUDDY_RESONANCE_NOVA);
+    boundary.hue_mask = UINT8_C(0x3f);
+    CHECK(byte_buddy_signal_lineage(
+              0U, 24U, &boundary).diversity == 25U);
+    CHECK(byte_buddy_signal_lineage(
+              0U, 24U, &boundary).resonance ==
+          BYTE_BUDDY_RESONANCE_NOVA);
+    boundary.hue_mask = UINT8_C(0x7f);
+    CHECK(byte_buddy_signal_lineage(
+              0U, 24U, &boundary).resonance ==
+          BYTE_BUDDY_RESONANCE_GALAXY);
+    CHECK(byte_buddy_signal_lineage(
+              0U, 32U, &boundary).resonance ==
+          BYTE_BUDDY_RESONANCE_GALAXY);
+    boundary.hue_mask = UINT8_C(0xff);
+    CHECK(byte_buddy_signal_lineage(
+              0U, 32U, &boundary).resonance ==
+          BYTE_BUDDY_RESONANCE_ETERNAL);
+    boundary.hue_mask = UINT8_C(0x7f);
+    byte_buddy_lineage_add(
+        &boundary,
+        (byte_buddy_signal_genome_t){
+            .core = 0U, .halo = 0U, .sigil = 0U, .aura = 0U,
+            .hue = 7U, .rarity = 0U,
+        },
+        1U, 0U);
+    CHECK(byte_buddy_signal_lineage(
+              0U, 33U, &boundary).diversity == 27U);
+    CHECK(byte_buddy_signal_lineage(
+              0U, 33U, &boundary).resonance ==
+          BYTE_BUDDY_RESONANCE_ETERNAL);
+    CHECK(BYTE_BUDDY_SIGNAL_MAX_CONSUMED == 48U);
+    CHECK(byte_buddy_signal_collection_has_room(32U));
+    CHECK(byte_buddy_signal_collection_has_room(47U));
+    CHECK(!byte_buddy_signal_collection_has_room(48U));
+
+    byte_buddy_lineage_genes_t adaptation = {.protected_count = 2U};
+    CHECK(byte_buddy_signal_lineage(
+              0U, 1U, &adaptation).adaptations == 0U);
+    adaptation.protected_count = 3U;
+    const byte_buddy_signal_lineage_t shield_lineage =
+        byte_buddy_signal_lineage(0U, 1U, &adaptation);
+    CHECK(shield_lineage.adaptations == BYTE_BUDDY_ADAPTATION_SHIELD);
+    CHECK(shield_lineage.shielded);
+    adaptation = (byte_buddy_lineage_genes_t){0};
+    CHECK(byte_buddy_signal_lineage(
+              0U, 1U, &adaptation).adaptations == 0U);
+    adaptation.hidden_count = 1U;
+    const byte_buddy_signal_lineage_t phantom_lineage =
+        byte_buddy_signal_lineage(0U, 1U, &adaptation);
+    CHECK(phantom_lineage.adaptations == BYTE_BUDDY_ADAPTATION_PHANTOM);
+    CHECK(phantom_lineage.phantom);
+    adaptation = (byte_buddy_lineage_genes_t){.channel_mask = 0x07U};
+    CHECK(byte_buddy_signal_lineage(
+              0U, 1U, &adaptation).adaptations == 0U);
+    adaptation.channel_mask = UINT8_C(0x0f);
+    CHECK(byte_buddy_signal_lineage(
+              0U, 1U, &adaptation).adaptations ==
+          BYTE_BUDDY_ADAPTATION_WIDEBAND);
+    adaptation = (byte_buddy_lineage_genes_t){.hue_mask = 0x1fU};
+    CHECK(byte_buddy_signal_lineage(
+              0U, 1U, &adaptation).adaptations == 0U);
+    adaptation.hue_mask = UINT8_C(0x3f);
+    CHECK(byte_buddy_signal_lineage(
+              0U, 1U, &adaptation).adaptations ==
+          BYTE_BUDDY_ADAPTATION_PRISMATIC);
+    adaptation = (byte_buddy_lineage_genes_t){
+        .part_mask = UINT16_C(0x1fff),
+    };
+    CHECK(byte_buddy_signal_lineage(
+              0U, 1U, &adaptation).adaptations == 0U);
+    adaptation.part_mask = UINT16_C(0x3fff);
+    CHECK(byte_buddy_signal_lineage(
+              0U, 1U, &adaptation).adaptations ==
+          BYTE_BUDDY_ADAPTATION_CHIMERA);
 
     byte_buddy_lineage_genes_t repeated = {0};
     const byte_buddy_signal_genome_t repeated_genome =
@@ -1120,6 +1400,12 @@ static void test_signal_lineage_genetics(void)
         byte_buddy_signal_lineage(UINT64_C(0x1234), 12U, &repeated);
     CHECK(low_diversity.diversity == 6U);
     CHECK(low_diversity.tier == BYTE_BUDDY_LINEAGE_SPARK);
+    CHECK(byte_buddy_signal_lineage(
+              UINT64_C(0x1234), 32U, &repeated).resonance ==
+          BYTE_BUDDY_RESONANCE_NONE);
+    CHECK(byte_buddy_signal_lineage(
+              UINT64_C(0x1234), 48U, &repeated).resonance ==
+          BYTE_BUDDY_RESONANCE_ETERNAL);
 
     byte_buddy_lineage_genes_t weighted = {0};
     byte_buddy_signal_genome_t light = lineage_test_genome(1U);
@@ -1204,6 +1490,123 @@ static void test_controller_star_catcher(void)
     free(state);
 }
 
+static void move_weave_cursor_axis(
+    p4_game_instance_t *instance, int *position, int target,
+    uint32_t negative_button, uint32_t positive_button)
+{
+    while (*position != target) {
+        const int distance = target - *position;
+        const uint32_t direction = distance < 0
+            ? negative_button : positive_button;
+        CHECK(buttons(instance, direction, 0U, 16U) == P4_GAME_CONTINUE);
+        const int step = distance < 0 ? -2 : 2;
+        if ((step < 0 && *position + step < target) ||
+            (step > 0 && *position + step > target)) {
+            *position = target;
+        } else {
+            *position += step;
+        }
+        if ((*position - target == 1) || (*position - target == -1)) {
+            break;
+        }
+    }
+}
+
+static void test_controller_signal_hunt(void)
+{
+    const uint64_t weave_token = UINT64_C(0x1020304050607080);
+    const byte_buddy_signal_genome_t genome =
+        byte_buddy_signal_genome(weave_token);
+    CHECK(byte_buddy_signal_battle_pattern(genome) ==
+          BYTE_BUDDY_BATTLE_RESONANCE_WEAVE);
+    const byte_buddy_signal_profile_t profile =
+        byte_buddy_signal_profile(weave_token, -45);
+    const byte_buddy_signal_weave_rules_t rules =
+        byte_buddy_signal_weave_rules(genome, profile.strength, 0U);
+
+    void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state == NULL) {
+        return;
+    }
+    p4_game_instance_t instance;
+    p4_audio_mixer_t mixer;
+    p4_achievement_catalog_t achievements;
+    CHECK(start_game(&instance, state, &mixer, &achievements));
+
+    CHECK(buttons(&instance, 0U, P4_BUTTON_LEFT, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_A, 16U) == P4_GAME_CONTINUE);
+    CHECK(achievement_present(&achievements, "first-care"));
+    CHECK(buttons(&instance, 0U, P4_BUTTON_B, 16U) == P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_B, 16U) == P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_DOWN, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_RIGHT, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_A, 16U) == P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_LEFT, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_A, 16U) == P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_B, 16U) == P4_GAME_CONTINUE);
+
+    CHECK(buttons(&instance, 0U, P4_BUTTON_UP, 16U) == P4_GAME_CONTINUE);
+    CHECK(s_signal_scan.requests == 1U);
+    CHECK(buttons(&instance, 0U, 0U, 16U) == P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_RIGHT, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_LEFT, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(s_signal_scan.requests == 2U);
+    CHECK(buttons(&instance, 0U, 0U, 16U) == P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_DOWN, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_DOWN, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_A, 16U) == P4_GAME_CONTINUE);
+    CHECK(buttons(&instance, 0U, 0U, 16U) == P4_GAME_CONTINUE);
+    CHECK(s_signal_scan.focus_token == weave_token);
+    CHECK(buttons(&instance, 0U, 0U, 16U) == P4_GAME_CONTINUE);
+    tap(&instance, 250U, 180U);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
+          P4_GAME_CONTINUE);
+
+    byte_buddy_signal_weave_node_t cursor =
+        byte_buddy_signal_weave_node(genome, 0U);
+    int cursor_x = cursor.x;
+    int cursor_y = cursor.y;
+    for (uint8_t step = 0U; step < rules.required_locks; ++step) {
+        const byte_buddy_signal_weave_node_t node =
+            byte_buddy_signal_weave_node(genome, step);
+        move_weave_cursor_axis(
+            &instance, &cursor_x, node.x,
+            P4_BUTTON_LEFT, P4_BUTTON_RIGHT);
+        move_weave_cursor_axis(
+            &instance, &cursor_y, node.y,
+            P4_BUTTON_UP, P4_BUTTON_DOWN);
+        const unsigned hold_frames =
+            (unsigned)(rules.hold_ms + 49U) / 50U + 1U;
+        for (unsigned frame = 0U; frame < hold_frames; ++frame) {
+            CHECK(buttons(&instance, P4_BUTTON_A, 0U, 50U) ==
+                  P4_GAME_CONTINUE);
+        }
+        for (unsigned settle = 0U; settle < 4U; ++settle) {
+            CHECK(buttons(&instance, 0U, 0U, 100U) ==
+                  P4_GAME_CONTINUE);
+        }
+    }
+    CHECK(achievement_present(&achievements, "first-signal"));
+    CHECK(buttons(&instance, 0U, P4_BUTTON_BACK, 16U) ==
+          P4_GAME_EXIT_TO_LAUNCHER);
+
+    p4_game_instance_stop(&instance);
+    free(state);
+}
+
 static void test_invalid_extended_art_fails_closed(void)
 {
     uint8_t malformed_art[64] = {0};
@@ -1233,9 +1636,12 @@ int main(void)
     test_render_bounds();
     test_dragon_growth_and_traits();
     test_controller_star_catcher();
+    test_controller_signal_hunt();
     test_signal_lineage_genetics();
     test_signal_paging();
     test_signal_paging_integration();
+    test_signal_busy_preserves_results();
+    test_initial_signal_busy_backoff();
     test_signal_battle_patterns();
     test_resonance_weave_battle();
     test_resonance_timeout_and_guard();

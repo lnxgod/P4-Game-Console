@@ -44,13 +44,19 @@ enum {
     GROW_ELEMENTAL_INTERACTIONS = 104,
     CARE_CREDIT_COOLDOWN_MS = 650,
     REACTION_DURATION_MS = 1400,
-    SIGNAL_MAX_CONSUMED = 32,
     SIGNAL_HUNT_UNLOCK_RSSI = -65,
     SIGNAL_BATTLE_DURATION_MS = 12000,
     SIGNAL_WEAVE_DURATION_MS = 16000,
     SIGNAL_WEAVE_SETTLE_MS = 300,
     SIGNAL_HIT_DURATION_MS = 260,
     SIGNAL_TRACK_REFRESH_MS = 1600,
+    SIGNAL_REQUEST_BUSY_MS = 1200,
+    SIGNAL_CONTROLLER_CURSOR_SPEED = 125,
+    SIGNAL_CONTROLLER_CURSOR_MIN_X = 96,
+    SIGNAL_CONTROLLER_CURSOR_MAX_X = 224,
+    SIGNAL_CONTROLLER_CURSOR_MIN_Y = 28,
+    SIGNAL_CONTROLLER_CURSOR_MAX_Y = 132,
+    SIGNAL_HABITAT_VARIANTS = 20,
     DRAGON_FRAME_WIDTH = 64,
     DRAGON_FRAME_HEIGHT = 64,
     DRAGON_FRAMES_PER_SHEET = 16,
@@ -89,6 +95,7 @@ enum {
     ACHIEVEMENT_FIRST_SIGNAL = UINT32_C(1) << 4U,
     ACHIEVEMENT_SIGNAL_CHORUS = UINT32_C(1) << 5U,
     ACHIEVEMENT_MYTHIC_LINEAGE = UINT32_C(1) << 6U,
+    ACHIEVEMENT_ETERNAL_LINEAGE = UINT32_C(1) << 7U,
 };
 
 typedef enum {
@@ -143,6 +150,8 @@ typedef struct {
     uint8_t signal_battle_pattern;
     uint8_t signal_weave_step;
     uint8_t signal_guard_charges;
+    uint8_t signal_focus_row;
+    uint8_t menu_selection;
     uint16_t signal_weave_settle_ms;
     uint8_t upgrades[BYTE_BUDDY_UPGRADE_COUNT];
     uint8_t style_unlocked[BYTE_BUDDY_STYLE_COUNT];
@@ -165,9 +174,12 @@ typedef struct {
     uint32_t signal_hit_ms;
     uint32_t signal_reward_ms;
     uint32_t signal_track_refresh_ms;
+    uint32_t signal_request_busy_ms;
     p4_q16_t catcher_x_q16;
     p4_q16_t catcher_target_x_q16;
     p4_q16_t catcher_velocity_q16;
+    p4_q16_t signal_cursor_x_q16;
+    p4_q16_t signal_cursor_y_q16;
     int16_t star_x;
     p4_q16_t star_y_q16;
     int16_t star_effect_x;
@@ -180,6 +192,7 @@ typedef struct {
     bool style_shop;
     bool lineage_panel;
     bool signal_hunt;
+    bool controller_active;
     bool touch_was_down;
     const uint8_t *art_data;
     size_t art_bytes;
@@ -187,7 +200,7 @@ typedef struct {
     uint32_t achievement_mask;
     uint64_t signal_selected_token;
     uint64_t signal_entropy;
-    uint64_t signal_consumed[SIGNAL_MAX_CONSUMED];
+    uint64_t signal_consumed[BYTE_BUDDY_SIGNAL_MAX_CONSUMED];
     byte_buddy_lineage_genes_t signal_genes;
     p4_game_signal_snapshot_t signal_snapshot;
     p4_game_audio_effect_player_t audio;
@@ -246,6 +259,25 @@ static const uint8_t s_lineage_link_requirements[
 static const uint8_t s_lineage_diversity_requirements[
     BYTE_BUDDY_LINEAGE_TIER_COUNT] = {
     0U, 0U, 11U, 15U, 19U, 22U,
+};
+
+static const char *const s_resonance_names[BYTE_BUDDY_RESONANCE_COUNT] = {
+    "NONE", "NOVA", "GALAXY", "ETERNAL",
+};
+
+static const uint8_t s_resonance_name_lengths[
+    BYTE_BUDDY_RESONANCE_COUNT] = {
+    4U, 4U, 6U, 7U,
+};
+
+static const uint8_t s_resonance_link_requirements[
+    BYTE_BUDDY_RESONANCE_COUNT] = {
+    0U, 16U, 24U, 32U,
+};
+
+static const uint8_t s_resonance_diversity_requirements[
+    BYTE_BUDDY_RESONANCE_COUNT] = {
+    0U, 24U, 26U, 27U,
 };
 
 static const uint8_t s_morph_name_lengths[BYTE_BUDDY_MORPH_COUNT] = {
@@ -906,6 +938,25 @@ uint8_t byte_buddy_signal_channel_family(uint8_t channel)
     return 3U;
 }
 
+uint8_t byte_buddy_signal_habitat_id(uint8_t channel, uint8_t flags)
+{
+    const uint8_t family = byte_buddy_signal_channel_family(channel);
+    const uint8_t bounded_family = family == UINT8_MAX ? 4U : family;
+    const uint8_t environment = (uint8_t)(
+        ((flags & P4_GAME_SIGNAL_PROTECTED) != 0U ? 1U : 0U) |
+        ((flags & P4_GAME_SIGNAL_HIDDEN) != 0U ? 2U : 0U));
+    return (uint8_t)(bounded_family + environment * 5U);
+}
+
+uint32_t byte_buddy_signal_form_id(
+    uint16_t genome_recipe_id, uint8_t channel, uint8_t flags)
+{
+    const uint16_t bounded_recipe = genome_recipe_id < 8192U
+        ? genome_recipe_id : 0U;
+    return (uint32_t)bounded_recipe * SIGNAL_HABITAT_VARIANTS +
+        byte_buddy_signal_habitat_id(channel, flags);
+}
+
 static uint64_t avalanche_lineage_value(uint64_t value)
 {
     value ^= value >> 30U;
@@ -991,6 +1042,28 @@ static uint8_t lineage_popcount(uint32_t value)
     return count;
 }
 
+static uint8_t lineage_u64_remainder(uint64_t value, uint8_t divisor)
+{
+    if (divisor == 0U) {
+        return 0U;
+    }
+    const uint32_t words[2] = {
+        (uint32_t)(value >> 32U),
+        (uint32_t)value,
+    };
+    uint8_t remainder = 0U;
+    for (uint8_t word = 0U; word < 2U; ++word) {
+        for (uint8_t byte = 0U; byte < 4U; ++byte) {
+            const uint8_t shift = (uint8_t)((3U - byte) * 8U);
+            const uint16_t dividend = (uint16_t)(
+                ((uint16_t)remainder << 8U) |
+                (uint16_t)((words[word] >> shift) & UINT32_C(0xff)));
+            remainder = (uint8_t)(dividend % divisor);
+        }
+    }
+    return remainder;
+}
+
 static uint8_t lineage_vote_winner(
     const uint8_t *votes, uint8_t count, uint64_t tie_break)
 {
@@ -1009,8 +1082,7 @@ static uint8_t lineage_vote_winner(
             ++tied;
         }
     }
-    uint8_t choice = tied == 0U
-        ? 0U : (uint8_t)(tie_break % tied);
+    uint8_t choice = lineage_u64_remainder(tie_break, tied);
     for (uint8_t index = 0U; index < count; ++index) {
         if (votes[index] == maximum) {
             if (choice == 0U) {
@@ -1029,10 +1101,12 @@ byte_buddy_signal_lineage_t byte_buddy_signal_lineage(
     if (genes == NULL) {
         return (byte_buddy_signal_lineage_t){0};
     }
+    const uint8_t part_diversity = lineage_popcount(genes->part_mask);
+    const uint8_t hue_diversity = lineage_popcount(genes->hue_mask);
+    const uint8_t rarity_diversity = lineage_popcount(
+        (uint32_t)(genes->rarity_mask & UINT8_C(0x0f)));
     const uint8_t diversity = (uint8_t)(
-        lineage_popcount(genes->part_mask) +
-        lineage_popcount(genes->hue_mask) +
-        lineage_popcount((uint32_t)(genes->rarity_mask & UINT8_C(0x0f))));
+        part_diversity + hue_diversity + rarity_diversity);
     const uint8_t families = lineage_popcount(
         (uint32_t)(genes->channel_mask & UINT8_C(0x0f)));
     uint8_t tier = unique_count == 0U
@@ -1049,12 +1123,41 @@ byte_buddy_signal_lineage_t byte_buddy_signal_lineage(
     if (unique_count >= 12U && diversity >= 22U) {
         tier = BYTE_BUDDY_LINEAGE_MYTHIC;
     }
+    uint8_t resonance = BYTE_BUDDY_RESONANCE_NONE;
+    if (unique_count >= 16U && diversity >= 24U) {
+        resonance = BYTE_BUDDY_RESONANCE_NOVA;
+    }
+    if (unique_count >= 24U && diversity >= 26U) {
+        resonance = BYTE_BUDDY_RESONANCE_GALAXY;
+    }
+    if ((unique_count >= 32U && diversity >= 27U) ||
+        unique_count >= BYTE_BUDDY_SIGNAL_MAX_CONSUMED) {
+        resonance = BYTE_BUDDY_RESONANCE_ETERNAL;
+    }
+    uint8_t adaptations = 0U;
+    if (genes->protected_count >= 3U) {
+        adaptations |= BYTE_BUDDY_ADAPTATION_SHIELD;
+    }
+    if (genes->hidden_count != 0U) {
+        adaptations |= BYTE_BUDDY_ADAPTATION_PHANTOM;
+    }
+    if (families == 4U) {
+        adaptations |= BYTE_BUDDY_ADAPTATION_WIDEBAND;
+    }
+    if (hue_diversity >= 6U) {
+        adaptations |= BYTE_BUDDY_ADAPTATION_PRISMATIC;
+    }
+    if (part_diversity >= 14U) {
+        adaptations |= BYTE_BUDDY_ADAPTATION_CHIMERA;
+    }
     const uint8_t primary_hue = lineage_vote_winner(
         genes->hue_votes, 8U, entropy >> 17U);
     const uint8_t hue_step = (uint8_t)(
-        UINT64_C(1) + (entropy >> 45U) % UINT64_C(7));
+        1U + lineage_u64_remainder(entropy >> 45U, 7U));
     return (byte_buddy_signal_lineage_t){
         .tier = tier,
+        .resonance = resonance,
+        .adaptations = adaptations,
         .family = lineage_vote_winner(
             genes->core_votes, 4U, entropy),
         .halo = lineage_vote_winner(
@@ -1065,10 +1168,12 @@ byte_buddy_signal_lineage_t byte_buddy_signal_lineage(
             genes->aura_votes, 4U, entropy >> 23U),
         .primary_hue = primary_hue,
         .secondary_hue = (uint8_t)((primary_hue + hue_step) & 7U),
+        .part_diversity = part_diversity,
+        .hue_diversity = hue_diversity,
         .diversity = diversity,
         .channel_families = families,
-        .shielded = genes->protected_count >= 3U,
-        .phantom = genes->hidden_count != 0U,
+        .shielded = (adaptations & BYTE_BUDDY_ADAPTATION_SHIELD) != 0U,
+        .phantom = (adaptations & BYTE_BUDDY_ADAPTATION_PHANTOM) != 0U,
     };
 }
 
@@ -1084,6 +1189,11 @@ uint8_t byte_buddy_signal_growth_reward(
         return 2U;
     }
     return 1U;
+}
+
+bool byte_buddy_signal_collection_has_room(uint8_t unique_count)
+{
+    return unique_count < BYTE_BUDDY_SIGNAL_MAX_CONSUMED;
 }
 
 static uint8_t increase(uint8_t value, uint8_t amount)
@@ -1127,6 +1237,24 @@ static byte_buddy_signal_lineage_t current_lineage(
     return byte_buddy_signal_lineage(
         state->signal_entropy, state->signal_consumed_count,
         &state->signal_genes);
+}
+
+static const char *lineage_badge_name(
+    byte_buddy_signal_lineage_t lineage, size_t *length)
+{
+    if (lineage.resonance > BYTE_BUDDY_RESONANCE_NONE &&
+        lineage.resonance < BYTE_BUDDY_RESONANCE_COUNT) {
+        if (length != NULL) {
+            *length = s_resonance_name_lengths[lineage.resonance];
+        }
+        return s_resonance_names[lineage.resonance];
+    }
+    const uint8_t tier = lineage.tier < BYTE_BUDDY_LINEAGE_TIER_COUNT
+        ? lineage.tier : BYTE_BUDDY_LINEAGE_DORMANT;
+    if (length != NULL) {
+        *length = s_lineage_name_lengths[tier];
+    }
+    return s_lineage_names[tier];
 }
 
 static void update_dragon_traits(byte_buddy_state_t *state)
@@ -1331,6 +1459,30 @@ int32_t byte_buddy_controller_catcher_target_q16(
     return target;
 }
 
+int32_t byte_buddy_controller_cursor_axis_q16(
+    int32_t current_q16, bool negative, bool positive,
+    uint32_t elapsed_ms, int16_t minimum, int16_t maximum)
+{
+    if (minimum > maximum) {
+        return current_q16;
+    }
+    const p4_q16_t minimum_q16 = p4_q16_from_int(minimum);
+    const p4_q16_t maximum_q16 = p4_q16_from_int(maximum);
+    p4_q16_t next = current_q16;
+    if (negative != positive) {
+        const p4_q16_t velocity = p4_q16_from_int(
+            negative ? -SIGNAL_CONTROLLER_CURSOR_SPEED
+                     : SIGNAL_CONTROLLER_CURSOR_SPEED);
+        next = p4_q16_step(next, velocity, elapsed_ms);
+    }
+    if (next < minimum_q16) {
+        next = minimum_q16;
+    } else if (next > maximum_q16) {
+        next = maximum_q16;
+    }
+    return next;
+}
+
 static void update_catcher_position(byte_buddy_state_t *state,
                                     uint32_t elapsed_ms)
 {
@@ -1459,21 +1611,78 @@ static bool signal_is_simulated(const p4_game_signal_t *signal)
         (signal->flags & P4_GAME_SIGNAL_SIMULATED) != 0U;
 }
 
+static uint8_t signal_rows_on_page(const byte_buddy_state_t *state)
+{
+    const uint8_t page = byte_buddy_signal_clamp_page(
+        state->signal_page, state->signal_snapshot.count);
+    const uint8_t first = (uint8_t)(
+        page * BYTE_BUDDY_SIGNAL_PAGE_ROWS);
+    const uint8_t remaining = state->signal_snapshot.count > first
+        ? (uint8_t)(state->signal_snapshot.count - first) : 0U;
+    return remaining < BYTE_BUDDY_SIGNAL_PAGE_ROWS
+        ? remaining : BYTE_BUDDY_SIGNAL_PAGE_ROWS;
+}
+
+static void clamp_signal_focus(byte_buddy_state_t *state)
+{
+    state->signal_page = byte_buddy_signal_clamp_page(
+        state->signal_page, state->signal_snapshot.count);
+    const uint8_t rows = signal_rows_on_page(state);
+    if (rows == 0U) {
+        state->signal_focus_row = 0U;
+    } else if (state->signal_focus_row >= rows) {
+        state->signal_focus_row = (uint8_t)(rows - 1U);
+    }
+}
+
+static bool select_signal_result(byte_buddy_state_t *state, uint8_t index)
+{
+    if (index >= state->signal_snapshot.count ||
+        signal_consumed(
+            state, state->signal_snapshot.results[index].token)) {
+        return false;
+    }
+    state->signal_selected_index = index;
+    state->signal_selected_token =
+        state->signal_snapshot.results[index].token;
+    state->signal_previous_rssi =
+        state->signal_snapshot.results[index].rssi_dbm;
+    state->signal_trend_db = 0;
+    state->signal_samples = 1U;
+    state->signal_track_refresh_ms = SIGNAL_TRACK_REFRESH_MS;
+    state->signal_view = BYTE_BUDDY_SIGNAL_TRACKER;
+    return true;
+}
+
 static bool request_signal_scan(p4_game_context_t *context,
                                 byte_buddy_state_t *state,
                                 uint64_t focus_token)
 {
-    if (!p4_game_request_signal_scan(context, focus_token)) {
+    const bool service_available = context != NULL &&
+        context->services != NULL &&
+        (context->services->available_capabilities &
+         P4_GAME_CAP_SIGNAL_SCAN) != 0U;
+    if (!service_available) {
         state->signal_snapshot = (p4_game_signal_snapshot_t){
             .status = P4_GAME_SIGNAL_UNAVAILABLE,
         };
+        state->signal_request_busy_ms = 0U;
         return false;
     }
+    if (state->signal_request_busy_ms != 0U) {
+        return false;
+    }
+    if (focus_token != 0U) {
+        state->signal_track_refresh_ms = 0U;
+    }
+    if (!p4_game_request_signal_scan(context, focus_token)) {
+        state->signal_request_busy_ms = SIGNAL_REQUEST_BUSY_MS;
+        return false;
+    }
+    state->signal_request_busy_ms = 0U;
     state->signal_snapshot.status = P4_GAME_SIGNAL_SCANNING;
     if (focus_token == 0U) {
         state->signal_snapshot.count = 0U;
-    } else {
-        state->signal_track_refresh_ms = 0U;
     }
     return true;
 }
@@ -1494,9 +1703,9 @@ static void poll_signal_scan(p4_game_context_t *context,
         ? state->signal_previous_rssi : previous->rssi_dbm;
     state->signal_snapshot = snapshot;
     state->signal_generation = snapshot.generation;
+    state->signal_request_busy_ms = 0U;
     if (snapshot.status == P4_GAME_SIGNAL_READY) {
-        state->signal_page = byte_buddy_signal_clamp_page(
-            state->signal_page, snapshot.count);
+        clamp_signal_focus(state);
     }
     for (size_t index = 0U; index < snapshot.count; ++index) {
         if (snapshot.results[index].token == state->signal_selected_token) {
@@ -1525,11 +1734,14 @@ static void return_to_signal_list(byte_buddy_state_t *state)
             state->signal_selected_index = (uint8_t)index;
             state->signal_page = (uint8_t)(
                 index / BYTE_BUDDY_SIGNAL_PAGE_ROWS);
+            state->signal_focus_row = (uint8_t)(
+                index % BYTE_BUDDY_SIGNAL_PAGE_ROWS);
             return;
         }
     }
     state->signal_page = byte_buddy_signal_clamp_page(
         state->signal_page, state->signal_snapshot.count);
+    clamp_signal_focus(state);
 }
 
 static void update_signal_tracking(p4_game_context_t *context,
@@ -1544,6 +1756,7 @@ static void update_signal_tracking(p4_game_context_t *context,
             ? UINT32_MAX
             : state->signal_track_refresh_ms + elapsed_ms;
     if (state->signal_snapshot.status != P4_GAME_SIGNAL_SCANNING &&
+        state->signal_request_busy_ms == 0U &&
         state->signal_track_refresh_ms >= SIGNAL_TRACK_REFRESH_MS) {
         (void)request_signal_scan(
             context, state, state->signal_selected_token);
@@ -1556,6 +1769,7 @@ static void open_signal_hunt(p4_game_context_t *context,
     state->signal_hunt = true;
     state->signal_view = BYTE_BUDDY_SIGNAL_LIST;
     state->signal_page = 0U;
+    state->signal_focus_row = 0U;
     state->signal_selected_token = 0U;
     (void)request_signal_scan(context, state, 0U);
 }
@@ -1566,7 +1780,8 @@ static void start_signal_battle(p4_game_context_t *context,
     const p4_game_signal_t *const signal = selected_signal(state);
     if (signal == NULL || signal->rssi_dbm < SIGNAL_HUNT_UNLOCK_RSSI ||
         signal_consumed(state, signal->token) ||
-        state->signal_consumed_count >= SIGNAL_MAX_CONSUMED) {
+        !byte_buddy_signal_collection_has_room(
+            state->signal_consumed_count)) {
         play_tone(context, 196U, 100U);
         return;
     }
@@ -1582,6 +1797,13 @@ static void start_signal_battle(p4_game_context_t *context,
     state->signal_battle_max_hp = profile.battle_hp;
     state->signal_battle_pattern = (uint8_t)
         byte_buddy_signal_battle_pattern(genome);
+    if (state->signal_battle_pattern ==
+            BYTE_BUDDY_BATTLE_RESONANCE_WEAVE) {
+        const byte_buddy_signal_weave_node_t first =
+            byte_buddy_signal_weave_node(genome, 0U);
+        state->signal_cursor_x_q16 = p4_q16_from_int(first.x);
+        state->signal_cursor_y_q16 = p4_q16_from_int(first.y);
+    }
     state->signal_weave_step = 0U;
     state->signal_weave_settle_ms = 0U;
     state->signal_weave_charge_units = 0U;
@@ -1599,7 +1821,8 @@ static void consume_signal(p4_game_context_t *context,
                            const p4_game_signal_t *signal)
 {
     if (signal == NULL || signal_consumed(state, signal->token) ||
-        state->signal_consumed_count >= SIGNAL_MAX_CONSUMED) {
+        !byte_buddy_signal_collection_has_room(
+            state->signal_consumed_count)) {
         return;
     }
     const byte_buddy_signal_profile_t profile =
@@ -1648,6 +1871,11 @@ static void consume_signal(p4_game_context_t *context,
                "mythic-lineage", "MYTHIC LINEAGE",
                "COMBINE TWELVE DIVERSE SIGNAL GENOMES");
     }
+    if (lineage.resonance >= BYTE_BUDDY_RESONANCE_ETERNAL) {
+        unlock(context, state, ACHIEVEMENT_ETERNAL_LINEAGE,
+               "eternal-lineage", "ETERNAL LINEAGE",
+               "COMBINE THIRTY-TWO DIVERSE SIGNAL LINKS");
+    }
     play_tone(context, 1047U, 160U);
     (void)p4_game_audio_effect_play(
         context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
@@ -1681,6 +1909,25 @@ static void strike_signal(p4_game_context_t *context,
     }
 }
 
+static void guard_signal(p4_game_context_t *context,
+                         byte_buddy_state_t *state)
+{
+    if (state->signal_view != BYTE_BUDDY_SIGNAL_BATTLE ||
+        state->signal_guard_charges == 0U) {
+        return;
+    }
+    --state->signal_guard_charges;
+    const byte_buddy_signal_lineage_t lineage = current_lineage(state);
+    const byte_buddy_lineage_battle_traits_t battle_traits =
+        byte_buddy_lineage_battle_traits(lineage);
+    const uint32_t guard_bonus = 900U + battle_traits.guard_time_ms;
+    state->signal_battle_bonus_ms =
+        state->signal_battle_bonus_ms > UINT32_MAX - guard_bonus
+            ? UINT32_MAX
+            : state->signal_battle_bonus_ms + guard_bonus;
+    play_tone(context, 523U, 70U);
+}
+
 static p4_game_result_t activate_signal_touch(
     p4_game_context_t *context, byte_buddy_state_t *state,
     const p4_game_point_t *touch)
@@ -1708,6 +1955,7 @@ static p4_game_result_t activate_signal_touch(
         } else if (target == BYTE_BUDDY_TOUCH_SIGNAL_PREVIOUS) {
             if (state->signal_page != 0U) {
                 --state->signal_page;
+                clamp_signal_focus(state);
                 play_tone(context, 440U, 35U);
             }
         } else if (target == BYTE_BUDDY_TOUCH_SIGNAL_NEXT) {
@@ -1715,6 +1963,7 @@ static p4_game_result_t activate_signal_touch(
                 state->signal_snapshot.count);
             if ((uint8_t)(state->signal_page + 1U) < pages) {
                 ++state->signal_page;
+                clamp_signal_focus(state);
                 play_tone(context, 554U, 35U);
             }
         } else if (target >= BYTE_BUDDY_TOUCH_SIGNAL_ROW_0 &&
@@ -1723,19 +1972,8 @@ static p4_game_result_t activate_signal_touch(
                 target - BYTE_BUDDY_TOUCH_SIGNAL_ROW_0);
             const uint8_t index = byte_buddy_signal_page_index(
                 state->signal_page, row, state->signal_snapshot.count);
-            if (index != UINT8_MAX &&
-                !signal_consumed(
-                    state, state->signal_snapshot.results[index].token)) {
-                state->signal_selected_index = index;
-                state->signal_selected_token =
-                    state->signal_snapshot.results[index].token;
-                state->signal_previous_rssi =
-                    state->signal_snapshot.results[index].rssi_dbm;
-                state->signal_trend_db = 0;
-                state->signal_samples = 1U;
-                state->signal_track_refresh_ms =
-                    SIGNAL_TRACK_REFRESH_MS;
-                state->signal_view = BYTE_BUDDY_SIGNAL_TRACKER;
+            if (index != UINT8_MAX && select_signal_result(state, index)) {
+                state->signal_focus_row = row;
             }
         }
         return P4_GAME_CONTINUE;
@@ -1752,20 +1990,118 @@ static p4_game_result_t activate_signal_touch(
     if (target == BYTE_BUDDY_TOUCH_SIGNAL_STRIKE &&
         state->signal_battle_pattern == BYTE_BUDDY_BATTLE_PULSE_RUSH) {
         strike_signal(context, state);
-    } else if (target == BYTE_BUDDY_TOUCH_SIGNAL_GUARD &&
-               state->signal_guard_charges != 0U) {
-        --state->signal_guard_charges;
-        const byte_buddy_signal_lineage_t lineage = current_lineage(state);
-        const byte_buddy_lineage_battle_traits_t battle_traits =
-            byte_buddy_lineage_battle_traits(lineage);
-        const uint32_t guard_bonus = 900U + battle_traits.guard_time_ms;
-        state->signal_battle_bonus_ms =
-            state->signal_battle_bonus_ms > UINT32_MAX - guard_bonus
-                ? UINT32_MAX
-                : state->signal_battle_bonus_ms + guard_bonus;
-        play_tone(context, 523U, 70U);
+    } else if (target == BYTE_BUDDY_TOUCH_SIGNAL_GUARD) {
+        guard_signal(context, state);
     }
     return P4_GAME_CONTINUE;
+}
+
+static void update_signal_controller_cursor(
+    byte_buddy_state_t *state, const p4_game_input_t *input,
+    uint32_t elapsed_ms)
+{
+    if (!state->controller_active ||
+        state->signal_view != BYTE_BUDDY_SIGNAL_BATTLE ||
+        state->signal_battle_pattern !=
+            BYTE_BUDDY_BATTLE_RESONANCE_WEAVE) {
+        return;
+    }
+    state->signal_cursor_x_q16 = byte_buddy_controller_cursor_axis_q16(
+        state->signal_cursor_x_q16,
+        (input->held & P4_BUTTON_LEFT) != 0U,
+        (input->held & P4_BUTTON_RIGHT) != 0U,
+        elapsed_ms, SIGNAL_CONTROLLER_CURSOR_MIN_X,
+        SIGNAL_CONTROLLER_CURSOR_MAX_X);
+    state->signal_cursor_y_q16 = byte_buddy_controller_cursor_axis_q16(
+        state->signal_cursor_y_q16,
+        (input->held & P4_BUTTON_UP) != 0U,
+        (input->held & P4_BUTTON_DOWN) != 0U,
+        elapsed_ms, SIGNAL_CONTROLLER_CURSOR_MIN_Y,
+        SIGNAL_CONTROLLER_CURSOR_MAX_Y);
+}
+
+static void activate_signal_controller(
+    p4_game_context_t *context, byte_buddy_state_t *state,
+    const p4_game_input_t *input)
+{
+    const uint32_t pressed = input->pressed;
+    const byte_buddy_signal_view_t view =
+        (byte_buddy_signal_view_t)state->signal_view;
+    if ((pressed & P4_BUTTON_B) != 0U) {
+        if (view == BYTE_BUDDY_SIGNAL_LIST) {
+            state->signal_hunt = false;
+            state->signal_selected_token = 0U;
+        } else if (view == BYTE_BUDDY_SIGNAL_TRACKER) {
+            return_to_signal_list(state);
+        } else {
+            state->signal_view = BYTE_BUDDY_SIGNAL_TRACKER;
+            state->signal_battle_hp = 0U;
+            state->signal_weave_charge_units = 0U;
+        }
+        return;
+    }
+    if (view == BYTE_BUDDY_SIGNAL_LIST) {
+        if ((pressed & P4_BUTTON_START) != 0U) {
+            (void)request_signal_scan(context, state, 0U);
+            return;
+        }
+        const bool previous = (pressed & P4_BUTTON_LEFT) != 0U;
+        const bool next = (pressed & P4_BUTTON_RIGHT) != 0U;
+        if (previous != next) {
+            const uint8_t pages = byte_buddy_signal_page_count(
+                state->signal_snapshot.count);
+            if (previous && state->signal_page != 0U) {
+                --state->signal_page;
+                play_tone(context, 440U, 35U);
+            } else if (next &&
+                       (uint8_t)(state->signal_page + 1U) < pages) {
+                ++state->signal_page;
+                play_tone(context, 554U, 35U);
+            }
+            clamp_signal_focus(state);
+            return;
+        }
+        const bool up = (pressed & P4_BUTTON_UP) != 0U;
+        const bool down = (pressed & P4_BUTTON_DOWN) != 0U;
+        const uint8_t rows = signal_rows_on_page(state);
+        if (rows != 0U && up != down) {
+            if (up) {
+                state->signal_focus_row = state->signal_focus_row == 0U
+                    ? (uint8_t)(rows - 1U)
+                    : (uint8_t)(state->signal_focus_row - 1U);
+            } else {
+                state->signal_focus_row = (uint8_t)(
+                    (state->signal_focus_row + 1U) % rows);
+            }
+            play_tone(context, 494U, 30U);
+            return;
+        }
+        if ((pressed & P4_BUTTON_A) != 0U) {
+            const uint8_t index = byte_buddy_signal_page_index(
+                state->signal_page, state->signal_focus_row,
+                state->signal_snapshot.count);
+            if (index != UINT8_MAX) {
+                (void)select_signal_result(state, index);
+            }
+        }
+        return;
+    }
+    if (view == BYTE_BUDDY_SIGNAL_TRACKER) {
+        if ((pressed & P4_BUTTON_START) != 0U) {
+            (void)request_signal_scan(
+                context, state, state->signal_selected_token);
+        } else if ((pressed & P4_BUTTON_A) != 0U) {
+            start_signal_battle(context, state);
+        }
+        return;
+    }
+    if ((pressed & P4_BUTTON_START) != 0U) {
+        guard_signal(context, state);
+    } else if ((pressed & P4_BUTTON_A) != 0U &&
+               state->signal_battle_pattern ==
+                   BYTE_BUDDY_BATTLE_PULSE_RUSH) {
+        strike_signal(context, state);
+    }
 }
 
 static uint32_t signal_battle_duration_ms(
@@ -2164,6 +2500,7 @@ static p4_game_result_t activate_touch(
     case BYTE_BUDDY_TOUCH_SHOP:
         state->upgrade_shop = true;
         state->style_shop = false;
+        state->menu_selection = 0U;
         break;
     case BYTE_BUDDY_TOUCH_SIGNAL_SCAN:
         open_signal_hunt(context, state);
@@ -2232,15 +2569,15 @@ static p4_game_result_t game_update(
         elapsed_ms > P4_GAME_MAX_FRAME_DELTA_MS
             ? P4_GAME_MAX_FRAME_DELTA_MS : elapsed_ms;
     (void)p4_game_audio_effect_service(context, &state->audio);
+    if ((input->pressed & P4_BUTTON_BACK) != 0U) {
+        return P4_GAME_EXIT_TO_LAUNCHER;
+    }
     if (state->lineage_panel &&
-        (input->pressed & (P4_BUTTON_BACK | P4_BUTTON_B)) != 0U) {
+        (input->pressed & P4_BUTTON_B) != 0U) {
         state->lineage_panel = false;
         state->touch_was_down =
             input->touch_valid && input->touch_count > 0U;
         return P4_GAME_CONTINUE;
-    }
-    if ((input->pressed & P4_BUTTON_BACK) != 0U) {
-        return P4_GAME_EXIT_TO_LAUNCHER;
     }
     state->animation_ms += bounded_elapsed_ms;
     update_reaction(state, bounded_elapsed_ms);
@@ -2249,11 +2586,19 @@ static p4_game_result_t game_update(
             ? state->care_credit_cooldown_ms - bounded_elapsed_ms : 0U;
     state->signal_reward_ms = state->signal_reward_ms > bounded_elapsed_ms
         ? state->signal_reward_ms - bounded_elapsed_ms : 0U;
+    state->signal_request_busy_ms =
+        state->signal_request_busy_ms > bounded_elapsed_ms
+            ? state->signal_request_busy_ms - bounded_elapsed_ms : 0U;
     apply_decay(state, bounded_elapsed_ms);
     const bool touch_now = input->touch_valid && input->touch_count > 0U;
     const bool touch_pressed = touch_now && !state->touch_was_down;
     const p4_game_point_t *const touch = touch_now
         ? &input->touches[0] : NULL;
+    if (touch_now) {
+        state->controller_active = false;
+    } else if ((input->held | input->pressed) != 0U) {
+        state->controller_active = true;
+    }
     if (state->lineage_panel) {
         if (touch_pressed && touch != NULL &&
             ((touch->x < 58U && touch->y < 25U) || touch->y >= 168U)) {
@@ -2263,11 +2608,30 @@ static p4_game_result_t game_update(
         return P4_GAME_CONTINUE;
     }
     const uint8_t signal_view_before_update = state->signal_view;
+    p4_game_point_t controller_touch = {0};
+    const p4_game_point_t *battle_touch = touch;
     if (state->signal_hunt) {
         poll_signal_scan(context, state);
         update_signal_tracking(context, state, bounded_elapsed_ms);
+        if (!touch_now) {
+            update_signal_controller_cursor(
+                state, input, bounded_elapsed_ms);
+            if (state->controller_active &&
+                state->signal_view == BYTE_BUDDY_SIGNAL_BATTLE &&
+                state->signal_battle_pattern ==
+                    BYTE_BUDDY_BATTLE_RESONANCE_WEAVE &&
+                (input->held & P4_BUTTON_A) != 0U) {
+                controller_touch = (p4_game_point_t){
+                    .x = (uint16_t)p4_q16_to_int_round(
+                        state->signal_cursor_x_q16),
+                    .y = (uint16_t)p4_q16_to_int_round(
+                        state->signal_cursor_y_q16),
+                };
+                battle_touch = &controller_touch;
+            }
+        }
         update_signal_battle(
-            context, state, touch, bounded_elapsed_ms);
+            context, state, battle_touch, bounded_elapsed_ms);
     }
     const bool signal_view_changed_during_update =
         state->signal_hunt &&
@@ -2298,14 +2662,70 @@ static p4_game_result_t game_update(
             state->touch_was_down = touch_now;
             return result;
         }
+        if (!signal_view_changed_during_update && !touch_now &&
+            input->pressed != 0U) {
+            activate_signal_controller(context, state, input);
+        }
         state->touch_was_down = touch_now;
         return P4_GAME_CONTINUE;
     }
-    if (!state->upgrade_shop &&
-        (input->pressed & P4_BUTTON_START) != 0U) {
-        state->selected_action = ACTION_PLAY;
-        care_for_buddy(context, state);
-        state->touch_was_down = touch_now;
+    if (!touch_now && input->pressed != 0U) {
+        if (state->upgrade_shop) {
+            if ((input->pressed & P4_BUTTON_B) != 0U) {
+                state->upgrade_shop = false;
+                state->style_shop = false;
+            } else if ((input->pressed & P4_BUTTON_LEFT) != 0U) {
+                state->style_shop = false;
+            } else if ((input->pressed & P4_BUTTON_RIGHT) != 0U) {
+                state->style_shop = true;
+            } else if ((input->pressed & P4_BUTTON_UP) != 0U) {
+                state->menu_selection = state->menu_selection == 0U
+                    ? BYTE_BUDDY_STYLE_COUNT - 1U
+                    : (uint8_t)(state->menu_selection - 1U);
+            } else if ((input->pressed & P4_BUTTON_DOWN) != 0U) {
+                state->menu_selection = (uint8_t)(
+                    (state->menu_selection + 1U) %
+                    BYTE_BUDDY_STYLE_COUNT);
+            } else if ((input->pressed & P4_BUTTON_A) != 0U) {
+                if (state->style_shop) {
+                    cycle_style(context, state,
+                                (byte_buddy_style_t)state->menu_selection);
+                } else {
+                    try_upgrade(
+                        context, state,
+                        (byte_buddy_upgrade_t)state->menu_selection);
+                }
+            } else if (state->style_shop &&
+                       (input->pressed & P4_BUTTON_START) != 0U) {
+                try_style_unlock(
+                    context, state,
+                    (byte_buddy_style_t)state->menu_selection);
+            }
+            state->touch_was_down = false;
+            return P4_GAME_CONTINUE;
+        }
+        if ((input->pressed & P4_BUTTON_START) != 0U) {
+            state->selected_action = ACTION_PLAY;
+            care_for_buddy(context, state);
+        } else if ((input->pressed & P4_BUTTON_UP) != 0U) {
+            open_signal_hunt(context, state);
+        } else if ((input->pressed & P4_BUTTON_DOWN) != 0U) {
+            state->upgrade_shop = true;
+            state->style_shop = false;
+            state->menu_selection = 0U;
+        } else if ((input->pressed & P4_BUTTON_B) != 0U) {
+            state->lineage_panel = true;
+        } else if ((input->pressed & P4_BUTTON_LEFT) != 0U) {
+            state->selected_action = state->selected_action == 0U
+                ? ACTION_COUNT - 1U
+                : (uint8_t)(state->selected_action - 1U);
+        } else if ((input->pressed & P4_BUTTON_RIGHT) != 0U) {
+            state->selected_action = (uint8_t)(
+                (state->selected_action + 1U) % ACTION_COUNT);
+        } else if ((input->pressed & P4_BUTTON_A) != 0U) {
+            care_for_buddy(context, state);
+        }
+        state->touch_was_down = false;
         return P4_GAME_CONTINUE;
     }
     if (touch_pressed && touch != NULL) {
@@ -3206,11 +3626,24 @@ static void draw_lineage_back_layers(p4_game_surface_t *surface,
     (void)draw_signal_layer_scaled(
         surface, state, 4U + lineage.halo, lineage.primary_hue,
         center_x, center_y - drift, DRAGON_FRAME_WIDTH - 6U);
+    if ((lineage.adaptations &
+         BYTE_BUDDY_ADAPTATION_PRISMATIC) != 0U) {
+        (void)draw_signal_layer_scaled(
+            surface, state, 4U + ((lineage.halo + 2U) & 3U),
+            lineage.secondary_hue, center_x, center_y + drift,
+            DRAGON_FRAME_WIDTH - 12U);
+    }
     if (lineage.tier >= BYTE_BUDDY_LINEAGE_MYTHIC) {
         (void)draw_signal_layer_scaled(
             surface, state, 12U + ((lineage.aura + 1U) & 3U),
             lineage.secondary_hue, center_x, center_y - drift,
             DRAGON_FRAME_WIDTH - 2U);
+    }
+    if (lineage.resonance >= BYTE_BUDDY_RESONANCE_GALAXY) {
+        (void)draw_signal_layer_scaled(
+            surface, state, 12U + ((lineage.aura + 2U) & 3U),
+            (uint8_t)((lineage.secondary_hue + lineage.resonance) & 7U),
+            center_x, center_y + drift, DRAGON_FRAME_WIDTH + 4U);
     }
 }
 
@@ -3236,9 +3669,10 @@ static void draw_signal_mutation(p4_game_surface_t *surface,
                         top + 41, 1,
                         UINT16_C(0xffff));
     p4_draw_fill_circle(surface, left + 24 + orbit, top - 3, 1, color);
-    unsigned spark_count = 1U + lineage.tier + lineage.channel_families;
-    if (spark_count > 8U) {
-        spark_count = 8U;
+    unsigned spark_count = 1U + lineage.tier + lineage.channel_families +
+        lineage.resonance;
+    if (spark_count > 11U) {
+        spark_count = 11U;
     }
     for (unsigned spark = 0U; spark < spark_count; ++spark) {
         const unsigned shift = (spark * 7U) & 63U;
@@ -3249,10 +3683,16 @@ static void draw_signal_mutation(p4_game_surface_t *surface,
         const int sparkle_x = left + anchors[anchor][0] +
             (int)(spark & 1U) * 2 - 1;
         const int sparkle_y = top + anchors[anchor][1] - lift / 3;
+        const uint16_t sparkle_color =
+            (lineage.adaptations &
+             BYTE_BUDDY_ADAPTATION_PRISMATIC) != 0U
+                ? signal_color_for_hue((uint8_t)(
+                    (lineage.primary_hue + spark) & 7U))
+                : (spark & 1U) == 0U ? color : secondary;
         p4_draw_fill_circle(surface, sparkle_x, sparkle_y,
                             lineage.tier >= BYTE_BUDDY_LINEAGE_MYTHIC &&
                                 spark >= 6U ? 2 : 1,
-                            (spark & 1U) == 0U ? color : secondary);
+                            sparkle_color);
     }
     if (lineage.tier >= BYTE_BUDDY_LINEAGE_CREST &&
         state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT) {
@@ -3261,6 +3701,15 @@ static void draw_signal_mutation(p4_game_surface_t *surface,
             lineage.secondary_hue,
             left + DRAGON_FRAME_WIDTH / 2,
             top + DRAGON_FRAME_HEIGHT / 2 + 2, 42U);
+        if ((lineage.adaptations &
+             BYTE_BUDDY_ADAPTATION_CHIMERA) != 0U) {
+            (void)draw_signal_layer_scaled(
+                surface, state,
+                8U + ((lineage.marking + lineage.family + 1U) & 3U),
+                lineage.primary_hue,
+                left + DRAGON_FRAME_WIDTH / 2,
+                top + DRAGON_FRAME_HEIGHT / 2 + 1, 34U);
+        }
     }
     if (lineage.tier >= BYTE_BUDDY_LINEAGE_AURORA ||
         state->upgrades[BYTE_BUDDY_UPGRADE_AURA] != 0U) {
@@ -3285,6 +3734,20 @@ static void draw_signal_mutation(p4_game_surface_t *surface,
                             top + 5 + orbit / 3, 1,
                             UINT16_C(0xffff));
     }
+    if ((lineage.adaptations & BYTE_BUDDY_ADAPTATION_WIDEBAND) != 0U) {
+        static const int8_t band_nodes[4][2] = {
+            {5, 8}, {59, 7}, {62, 55}, {3, 54},
+        };
+        for (unsigned band = 0U; band < 4U; ++band) {
+            const unsigned rotated =
+                (band + (state->animation_ms / 260U)) & 3U;
+            p4_draw_fill_circle(
+                surface, left + band_nodes[rotated][0],
+                top + band_nodes[rotated][1], 2,
+                signal_color_for_hue((uint8_t)(
+                    (lineage.primary_hue + band * 2U) & 7U)));
+        }
+    }
     if (lineage.tier >= BYTE_BUDDY_LINEAGE_MYTHIC) {
         const int crown_x = left + DRAGON_FRAME_WIDTH / 2;
         p4_draw_fill_rect(surface, crown_x - 7, top - 7, 15, 2,
@@ -3294,6 +3757,19 @@ static void draw_signal_mutation(p4_game_surface_t *surface,
                           UINT16_C(0xffff));
         p4_draw_fill_rect(surface, crown_x + 4, top - 11, 3, 5,
                           color);
+        for (uint8_t rank = 0U; rank < lineage.resonance; ++rank) {
+            const int offset = 11 + (int)rank * 4;
+            p4_draw_fill_circle(surface, crown_x - offset,
+                                top - 8 - (int)(rank & 1U), 1,
+                                signal_color_for_hue((uint8_t)(
+                                    (lineage.primary_hue + rank * 2U) &
+                                    7U)));
+            p4_draw_fill_circle(surface, crown_x + offset,
+                                top - 8 - (int)(rank & 1U), 1,
+                                signal_color_for_hue((uint8_t)(
+                                    (lineage.secondary_hue + rank * 2U) &
+                                    7U)));
+        }
     }
 }
 
@@ -3590,7 +4066,10 @@ static void draw_upgrade_card(p4_game_surface_t *surface,
     const uint16_t accent = affordable
         ? element_color(state) : UINT16_C(0x7bef);
     p4_draw_fill_rect(surface, x, y, 148, 54, UINT16_C(0x1025));
-    p4_draw_rect(surface, x, y, 148, 54, accent);
+    p4_draw_rect(surface, x, y, 148, 54,
+                 state->controller_active &&
+                         state->menu_selection == (uint8_t)upgrade
+                     ? UINT16_C(0xffff) : accent);
     draw_item_component_icon(
         surface, state, 4U + (unsigned)upgrade, x + 18, y + 14, 20U);
     p4_draw_text(surface, x + 33, y + 7, label, UINT16_C(0xffff),
@@ -3659,7 +4138,10 @@ static void draw_style_card(p4_game_surface_t *surface,
     size_t name_length = 0U;
     const char *const name = style_name(style, selected, &name_length);
     p4_draw_fill_rect(surface, x, y, 148, 55, UINT16_C(0x1025));
-    p4_draw_rect(surface, x, y, 148, 55, element_color(state));
+    p4_draw_rect(surface, x, y, 148, 55,
+                 state->controller_active &&
+                         state->menu_selection == (uint8_t)style
+                     ? UINT16_C(0xffff) : element_color(state));
     p4_draw_text(surface, x + 7, y + 6, label, UINT16_C(0x7bef),
                  1U, label_length);
     draw_item_component_icon(
@@ -3668,8 +4150,10 @@ static void draw_style_card(p4_game_surface_t *surface,
         p4_draw_text(surface, x + 7, y + 20, name, UINT16_C(0xffff),
                      1U, name_length);
     }
-    p4_draw_text(surface, x + 7, y + 39, "TAP SELECT",
-                 UINT16_C(0x9cf3), 1U, 10U);
+    p4_draw_text(surface, x + 7, y + 39,
+                 state->controller_active ? "A SELECT" : "TAP SELECT",
+                 UINT16_C(0x9cf3), 1U,
+                 state->controller_active ? 8U : 10U);
     p4_draw_fill_rect(surface, x + 110, y + 1, 37, 53,
                       cost != UINT16_MAX && state->coins >= cost
                           ? UINT16_C(0x39e7) : UINT16_C(0x2104));
@@ -3727,8 +4211,12 @@ static void draw_style_shop(p4_game_surface_t *surface,
                     6, 105, "HORNS", 5U);
     draw_style_card(surface, state, BYTE_BUDDY_STYLE_TRAIL,
                     166, 105, "TRAIL", 5U);
-    draw_touch_button(surface, 6, 164, 148, 30, "REMIX", 5U,
-                      UINT16_C(0xf81f), false);
+    draw_touch_button(
+        surface, 6, 164, 148, 30,
+        state->controller_active ? "START BUY" : "REMIX",
+        state->controller_active ? sizeof("START BUY") - 1U
+                                 : sizeof("REMIX") - 1U,
+        UINT16_C(0xf81f), false);
     draw_item_component_icon(
         surface, state, 12U + (unsigned)(state->animation_ms / 140U) % 4U,
         20, 179, 20U);
@@ -3868,9 +4356,54 @@ static void draw_signal_orb(p4_game_surface_t *surface,
                       UINT16_C(0xffff));
 }
 
+static void draw_signal_habitat_accents(
+    p4_game_surface_t *surface, uint8_t channel, uint8_t flags,
+    int x, int y, unsigned size, uint8_t hue, uint32_t animation_ms)
+{
+    static const int8_t directions[4][2] = {
+        {0, -8}, {8, 0}, {0, 8}, {-8, 0},
+    };
+    const uint8_t family = byte_buddy_signal_channel_family(channel);
+    const unsigned nodes = family == UINT8_MAX ? 0U : (unsigned)family + 1U;
+    const unsigned rotation = (animation_ms / 260U) & 3U;
+    const int radius = (int)size / 2 + 3;
+    for (unsigned node = 0U; node < nodes; ++node) {
+        const unsigned direction = (node + rotation) & 3U;
+        const int node_x = x + directions[direction][0] * radius / 8;
+        const int node_y = y + directions[direction][1] * radius / 8;
+        p4_draw_fill_circle(
+            surface, node_x, node_y, size >= 40U ? 2 : 1,
+            signal_color_for_hue((uint8_t)((hue + node * 2U) & 7U)));
+    }
+    if ((flags & P4_GAME_SIGNAL_PROTECTED) != 0U) {
+        const int extent = (int)size / 2 + 1;
+        const int corner = size >= 32U ? 5 : 3;
+        const uint16_t shield = UINT16_C(0xffff);
+        p4_draw_fill_rect(surface, x - extent, y - extent,
+                          corner, 1, shield);
+        p4_draw_fill_rect(surface, x - extent, y - extent,
+                          1, corner, shield);
+        p4_draw_fill_rect(surface, x + extent - corner + 1,
+                          y + extent, corner, 1, shield);
+        p4_draw_fill_rect(surface, x + extent,
+                          y + extent - corner + 1, 1, corner, shield);
+    }
+    if ((flags & P4_GAME_SIGNAL_HIDDEN) != 0U) {
+        const int drift = (int)((animation_ms / 150U) % 4U);
+        const uint16_t ghost = signal_color_for_hue(
+            (uint8_t)((hue + 4U) & 7U));
+        p4_draw_fill_circle(surface, x - (int)size / 3,
+                            y + (int)size / 3 - drift, 2, ghost);
+        p4_draw_fill_circle(surface, x + (int)size / 3,
+                            y - (int)size / 3 + drift, 1,
+                            UINT16_C(0xffff));
+    }
+}
+
 static void draw_signal_seed(
     p4_game_surface_t *surface, const byte_buddy_state_t *state,
-    uint64_t token, int x, int y, unsigned size,
+    uint64_t token, uint8_t channel, uint8_t flags,
+    int x, int y, unsigned size,
     uint32_t animation_ms)
 {
     const byte_buddy_signal_genome_t genome =
@@ -3879,25 +4412,29 @@ static void draw_signal_seed(
             surface, state, genome.core, genome.hue, x, y, size)) {
         draw_signal_orb(surface, x, y, (int)size / 4,
                         signal_color_for_hue(genome.hue), animation_ms);
-        return;
-    }
-    (void)draw_signal_layer_scaled(
-        surface, state, 4U + genome.halo, genome.hue,
-        x, y, size);
-    (void)draw_signal_layer_scaled(
-        surface, state, 8U + genome.sigil, genome.hue,
-        x, y, size);
-    if (size >= 24U || genome.rarity >= 2U) {
-        const int aura_y = y + (int)((animation_ms / 180U) % 3U) - 1;
+    } else {
         (void)draw_signal_layer_scaled(
-            surface, state, 12U + genome.aura, genome.hue,
-            x, aura_y, size);
-        if (genome.rarity == 3U && size <= DRAGON_FRAME_WIDTH - 2U) {
+            surface, state, 4U + genome.halo, genome.hue,
+            x, y, size);
+        (void)draw_signal_layer_scaled(
+            surface, state, 8U + genome.sigil, genome.hue,
+            x, y, size);
+        if (size >= 24U || genome.rarity >= 2U) {
+            const int aura_y =
+                y + (int)((animation_ms / 180U) % 3U) - 1;
             (void)draw_signal_layer_scaled(
                 surface, state, 12U + genome.aura, genome.hue,
-                x, y, size + 2U);
+                x, aura_y, size);
+            if (genome.rarity == 3U &&
+                size <= DRAGON_FRAME_WIDTH - 2U) {
+                (void)draw_signal_layer_scaled(
+                    surface, state, 12U + genome.aura, genome.hue,
+                    x, y, size + 2U);
+            }
         }
     }
+    draw_signal_habitat_accents(
+        surface, channel, flags, x, y, size, genome.hue, animation_ms);
 }
 
 static void draw_signal_meter(p4_game_surface_t *surface,
@@ -3983,10 +4520,20 @@ static void draw_signal_list(p4_game_surface_t *surface,
 {
     draw_signal_header(surface, state, "SIGNAL HUNT", 11U);
     p4_draw_fill_rect(surface, 0, 25, 320, 175, UINT16_C(0x080f));
-    if (state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING ||
-        state->signal_snapshot.status == P4_GAME_SIGNAL_IDLE) {
+    if (state->signal_request_busy_ms != 0U &&
+        state->signal_snapshot.status != P4_GAME_SIGNAL_READY) {
+        p4_draw_text(surface, 78, 79, "SCANNER BUSY - TRY AGAIN",
+                     UINT16_C(0xffe0), 1U, 24U);
+        p4_draw_text(surface, 72, 97, "PRESS SCAN AFTER COOLDOWN",
+                     UINT16_C(0x9cf3), 1U,
+                     sizeof("PRESS SCAN AFTER COOLDOWN") - 1U);
+    } else if (state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING) {
         p4_draw_text(surface, 108, 88, "SCANNING CITY",
                      UINT16_C(0x07ff), 1U, 13U);
+    } else if (state->signal_snapshot.status == P4_GAME_SIGNAL_IDLE) {
+        p4_draw_text(surface, 86, 88, "PRESS SCAN TO RETRY",
+                     UINT16_C(0x07ff), 1U,
+                     sizeof("PRESS SCAN TO RETRY") - 1U);
     } else if (state->signal_snapshot.status != P4_GAME_SIGNAL_READY) {
         p4_draw_text(surface, 91, 76, "SIGNAL RADIO OFFLINE",
                      UINT16_C(0xf81f), 1U, 20U);
@@ -4013,8 +4560,14 @@ static void draw_signal_list(p4_game_surface_t *surface,
                               row % 2U == 0U ? UINT16_C(0x1025)
                                               : UINT16_C(0x181f));
             p4_draw_rect(surface, 4, top, 312, 22, color);
+            if (state->controller_active &&
+                row == state->signal_focus_row) {
+                p4_draw_rect(surface, 5, top + 1, 310, 20,
+                             UINT16_C(0xffff));
+            }
             draw_signal_seed(
                 surface, state, signal->token,
+                signal->channel, signal->flags,
                 17, top + 11, 21U,
                 state->animation_ms + (uint32_t)index * 70U);
             p4_draw_text(surface, 29, top + 7, signal->label,
@@ -4027,8 +4580,8 @@ static void draw_signal_list(p4_game_surface_t *surface,
             if (signal_consumed(state, signal->token)) {
                 p4_draw_text(surface, 270, top + 7, "EATEN",
                              UINT16_C(0x7bef), 1U, 5U);
-            } else if (state->signal_consumed_count >=
-                       SIGNAL_MAX_CONSUMED) {
+            } else if (!byte_buddy_signal_collection_has_room(
+                           state->signal_consumed_count)) {
                 p4_draw_text(surface, 270, top + 7, "FULL",
                              UINT16_C(0xf81f), 1U, 4U);
             } else {
@@ -4043,23 +4596,48 @@ static void draw_signal_list(p4_game_surface_t *surface,
             p4_draw_text(surface, 241, 27, "SIM DATA",
                          UINT16_C(0xf81f), 1U, 8U);
         }
+        if (state->controller_active) {
+            p4_draw_text(surface, 60, 27, "DPAD+A SELECT  START SCAN",
+                         UINT16_C(0x9cf3), 1U, 25U);
+        }
     }
     if (state->signal_reward_ms != 0U) {
         const byte_buddy_signal_lineage_t lineage = current_lineage(state);
-        p4_draw_fill_rect(surface, 72, 65, 176, 56, UINT16_C(0x000b));
-        p4_draw_rect(surface, 72, 65, 176, 56, signal_color(state));
+        size_t badge_length = 0U;
+        const char *const badge = lineage_badge_name(
+            lineage, &badge_length);
+        p4_draw_fill_rect(surface, 72, 65, 176, 66, UINT16_C(0x000b));
+        p4_draw_rect(surface, 72, 65, 176, 66, signal_color(state));
         p4_draw_text(surface, 104, 74, "LINEAGE UPDATED",
                      UINT16_C(0xffff), 1U, 15U);
-        p4_draw_text(surface, 108, 91,
-                     s_lineage_names[lineage.tier],
-                     signal_color(state), 1U,
-                     s_lineage_name_lengths[lineage.tier]);
+        p4_draw_text(surface, 108, 91, badge,
+                     signal_color(state), 1U, badge_length);
         p4_draw_text(surface, 183, 91, "DNA", UINT16_C(0x7bef),
                      1U, 3U);
         draw_number(surface, 207, 91,
                     lineage.diversity, UINT16_C(0xffff));
-        p4_draw_text(surface, 105, 106, "NEW SIGNAL INHERITED",
-                     UINT16_C(0x9cf3), 1U, 20U);
+        p4_draw_text(surface, 88, 106, "BAND", UINT16_C(0x7bef),
+                     1U, 4U);
+        draw_number(surface, 122, 106, lineage.channel_families,
+                    UINT16_C(0xffff));
+        p4_draw_text(surface, 132, 106, "/4", UINT16_C(0x7bef),
+                     1U, 2U);
+        p4_draw_text(surface, 165, 106, "HUE", UINT16_C(0x7bef),
+                     1U, 3U);
+        draw_number(surface, 191, 106,
+                    lineage.hue_diversity < 6U
+                        ? lineage.hue_diversity : 6U,
+                    UINT16_C(0xffff));
+        p4_draw_text(surface, 201, 106, "/6", UINT16_C(0x7bef),
+                     1U, 2U);
+        p4_draw_text(surface, 120, 117, "MIX", UINT16_C(0x7bef),
+                     1U, 3U);
+        draw_number(surface, 147, 117,
+                    lineage.part_diversity < 14U
+                        ? lineage.part_diversity : 14U,
+                    UINT16_C(0xffff));
+        p4_draw_text(surface, 163, 117, "/14", UINT16_C(0x7bef),
+                     1U, 3U);
     }
     const uint8_t pages = byte_buddy_signal_page_count(
         state->signal_snapshot.count);
@@ -4069,10 +4647,13 @@ static void draw_signal_list(p4_game_surface_t *surface,
                       page == 0U ? UINT16_C(0x4208) : UINT16_C(0x07ff),
                       false);
     draw_touch_button(surface, 64, 162, 192, 33,
-                      pages == 1U ? "SCAN CITY" :
+                      state->signal_request_busy_ms != 0U
+                          ? "SCANNER BUSY" : pages == 1U ? "SCAN CITY" :
                           page == 0U ? "SCAN 1/2" : "SCAN 2/2",
-                      pages == 1U ? 9U : 8U,
-                      UINT16_C(0x07ff),
+                      state->signal_request_busy_ms != 0U
+                          ? 12U : pages == 1U ? 9U : 8U,
+                      state->signal_request_busy_ms != 0U
+                          ? UINT16_C(0xffe0) : UINT16_C(0x07ff),
                       state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING);
     draw_touch_button(surface, 258, 162, 58, 33, "NEXT", 4U,
                       page + 1U >= pages
@@ -4104,11 +4685,13 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
         }
         draw_signal_seed(
             surface, state, signal->token,
+            signal->channel, signal->flags,
             83, 82, 54U, state->animation_ms);
         draw_dragon(surface, state, 245, 55);
-        p4_draw_text(surface, 14, 31, "GENE", UINT16_C(0x7bef),
+        p4_draw_text(surface, 14, 31, "FORM", UINT16_C(0x7bef),
                      1U, 4U);
-        draw_number(surface, 45, 31, genome.recipe_id,
+        draw_number(surface, 45, 31, byte_buddy_signal_form_id(
+                        genome.recipe_id, signal->channel, signal->flags),
                     UINT16_C(0xffff));
         p4_draw_text(surface, 121, 39, signal->label,
                      UINT16_C(0xffff), 1U,
@@ -4140,15 +4723,26 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
                          state->signal_trend_db >= 3 ? 6U :
                          state->signal_trend_db <= -3 ? 7U : 6U);
         draw_signal_meter(surface, 25, 126, 270, profile.strength, color);
-        p4_draw_text(surface, 90, 138, "AUTO REFRESH - WALK AROUND",
-                     UINT16_C(0xbdf7), 1U, 26U);
+        p4_draw_text(surface, state->controller_active ? 66 : 90, 138,
+                     state->controller_active
+                         ? "A BATTLE  START SCAN  B BACK"
+                         : "AUTO REFRESH - WALK AROUND",
+                     UINT16_C(0xbdf7), 1U,
+                     state->controller_active
+                         ? sizeof("A BATTLE  START SCAN  B BACK") - 1U
+                         : sizeof("AUTO REFRESH - WALK AROUND") - 1U);
     }
-    draw_touch_button(surface, 4, 162, 188, 33, "RESCAN NOW", 10U,
-                      UINT16_C(0x07ff),
+    draw_touch_button(surface, 4, 162, 188, 33,
+                      state->signal_request_busy_ms != 0U
+                          ? "SCANNER BUSY" : "RESCAN NOW",
+                      state->signal_request_busy_ms != 0U ? 12U : 10U,
+                      state->signal_request_busy_ms != 0U
+                          ? UINT16_C(0xffe0) : UINT16_C(0x07ff),
                       state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING);
     const bool full = signal != NULL &&
         !signal_consumed(state, signal->token) &&
-        state->signal_consumed_count >= SIGNAL_MAX_CONSUMED;
+        !byte_buddy_signal_collection_has_room(
+            state->signal_consumed_count);
     const bool ready = signal != NULL && !full &&
         signal->rssi_dbm >= SIGNAL_HUNT_UNLOCK_RSSI;
     draw_touch_button(surface, 198, 162, 118, 33,
@@ -4193,6 +4787,7 @@ static void draw_signal_weave_arena(
     const uint16_t color = signal_color_for_hue(profile.hue);
     draw_signal_seed(
         surface, state, signal->token,
+        signal->channel, signal->flags,
         57, 82, 44U, state->animation_ms);
     draw_dragon(surface, state, 266, 58);
 
@@ -4243,6 +4838,18 @@ static void draw_signal_weave_arena(
                      state->signal_weave_settle_ms != 0U
                          ? UINT16_C(0xffff) : color);
     }
+    if (state->controller_active) {
+        const int cursor_x = p4_q16_to_int_round(
+            state->signal_cursor_x_q16);
+        const int cursor_y = p4_q16_to_int_round(
+            state->signal_cursor_y_q16);
+        p4_draw_rect(surface, cursor_x - 5, cursor_y - 5,
+                     11, 11, UINT16_C(0xffff));
+        p4_draw_fill_rect(surface, cursor_x - 8, cursor_y,
+                          17, 1, color);
+        p4_draw_fill_rect(surface, cursor_x, cursor_y - 8,
+                          1, 17, color);
+    }
 }
 
 static void draw_signal_battle(p4_game_surface_t *surface,
@@ -4280,6 +4887,7 @@ static void draw_signal_battle(p4_game_surface_t *surface,
         }
         draw_signal_seed(
             surface, state, signal->token,
+            signal->channel, signal->flags,
             79, 84, 60U, state->animation_ms);
         draw_dragon(surface, state, 246, 58);
     }
@@ -4306,10 +4914,17 @@ static void draw_signal_battle(p4_game_surface_t *surface,
     p4_draw_fill_rect(surface, 245, 135,
                       (int)(remaining * 60U / limit), 6,
                       UINT16_C(0xffe0));
-    p4_draw_text(surface, weave ? 91 : 82, 149,
-                 weave ? "PRESS, HOLD, THEN GLIDE" :
-                         "TAP FAST - GUARD BUYS TIME",
-                 UINT16_C(0xbdf7), 1U, weave ? 23U : 26U);
+    const char *const battle_hint = state->controller_active
+        ? (weave ? "HOLD A + DPAD TO GLIDE" :
+                   "A STRIKE - START GUARD")
+        : (weave ? "PRESS, HOLD, THEN GLIDE" :
+                   "TAP FAST - GUARD BUYS TIME");
+    const size_t battle_hint_length = state->controller_active
+        ? (weave ? 22U : 22U) : (weave ? 23U : 26U);
+    p4_draw_text(surface,
+                 state->controller_active ? 84 : weave ? 91 : 82, 149,
+                 battle_hint,
+                 UINT16_C(0xbdf7), 1U, battle_hint_length);
     if (weave) {
         const uint32_t threshold_units = (uint32_t)rules.hold_ms * 2U;
         p4_draw_fill_rect(surface, 4, 162, 188, 33, UINT16_C(0x1025));
@@ -4371,11 +4986,22 @@ static void draw_lineage_panel(p4_game_surface_t *surface,
     p4_draw_text(surface, 12, 44, s_lineage_names[lineage.tier],
                  signal_color(state), 1U,
                  s_lineage_name_lengths[lineage.tier]);
-    draw_dragon(surface, state, 68, 55);
+    if (lineage.resonance > BYTE_BUDDY_RESONANCE_NONE &&
+        lineage.resonance < BYTE_BUDDY_RESONANCE_COUNT) {
+        p4_draw_text(surface, 12, 57,
+                     s_resonance_names[lineage.resonance],
+                     signal_color_for_hue(lineage.secondary_hue), 1U,
+                     s_resonance_name_lengths[lineage.resonance]);
+    }
+    draw_dragon(surface, state, 68, 96);
+    const uint8_t lineage_flags = (uint8_t)(
+        (lineage.shielded ? P4_GAME_SIGNAL_PROTECTED : 0U) |
+        (lineage.phantom ? P4_GAME_SIGNAL_HIDDEN : 0U));
     draw_signal_seed(
         surface, state,
         state->signal_entropy == 0U
             ? UINT64_C(0x5349474e414c) : state->signal_entropy,
+        0U, lineage_flags,
         118, 119, 28U, state->animation_ms);
 
     if (lineage.tier == BYTE_BUDDY_LINEAGE_DORMANT) {
@@ -4393,67 +5019,115 @@ static void draw_lineage_panel(p4_game_surface_t *surface,
         p4_draw_text(surface, 207, 32,
                      s_lineage_family_names[lineage.family & 3U],
                      UINT16_C(0xffff), 1U, 6U);
-        p4_draw_text(surface, 146, 50, "HALO", UINT16_C(0x7bef),
+        p4_draw_text(surface, 146, 47, "HALO", UINT16_C(0x7bef),
                      1U, 4U);
-        p4_draw_text(surface, 207, 50,
+        p4_draw_text(surface, 207, 47,
                      s_lineage_halo_names[lineage.halo & 3U],
                      signal_color_for_hue(lineage.primary_hue), 1U, 5U);
-        p4_draw_text(surface, 146, 68, "SIGIL", UINT16_C(0x7bef),
+        p4_draw_text(surface, 146, 62, "SIGIL", UINT16_C(0x7bef),
                      1U, 5U);
-        p4_draw_text(surface, 207, 68,
+        p4_draw_text(surface, 207, 62,
                      s_lineage_mark_names[lineage.marking & 3U],
                      UINT16_C(0xffff), 1U, 5U);
-        p4_draw_text(surface, 146, 86, "AURA", UINT16_C(0x7bef),
+        p4_draw_text(surface, 146, 77, "AURA", UINT16_C(0x7bef),
                      1U, 4U);
-        p4_draw_text(surface, 207, 86,
+        p4_draw_text(surface, 207, 77,
                      s_lineage_aura_names[lineage.aura & 3U],
                      signal_color_for_hue(lineage.secondary_hue), 1U, 5U);
-        p4_draw_text(surface, 146, 104, "HUE", UINT16_C(0x7bef),
+        p4_draw_text(surface, 146, 92, "HUE", UINT16_C(0x7bef),
                      1U, 3U);
-        draw_number(surface, 207, 104, lineage.primary_hue,
+        draw_number(surface, 207, 92, lineage.primary_hue,
                     signal_color_for_hue(lineage.primary_hue));
         if (lineage.tier >= BYTE_BUDDY_LINEAGE_MYTHIC) {
-            p4_draw_text(surface, 221, 104, "+", UINT16_C(0x7bef),
+            p4_draw_text(surface, 221, 92, "+", UINT16_C(0x7bef),
                          1U, 1U);
-            draw_number(surface, 231, 104, lineage.secondary_hue,
+            draw_number(surface, 231, 92, lineage.secondary_hue,
                         signal_color_for_hue(lineage.secondary_hue));
         }
-        p4_draw_text(surface, 146, 122, "BANDS", UINT16_C(0x7bef),
-                     1U, 5U);
-        draw_number(surface, 188, 122, lineage.channel_families,
+        p4_draw_text(surface, 146, 107, "BAND", UINT16_C(0x7bef),
+                     1U, 4U);
+        draw_number(surface, 180, 107, lineage.channel_families,
                     UINT16_C(0xffff));
+        p4_draw_text(surface, 190, 107, "/4", UINT16_C(0x7bef),
+                     1U, 2U);
+        p4_draw_text(surface, 222, 107, "HUE", UINT16_C(0x7bef),
+                     1U, 3U);
+        draw_number(surface, 248, 107,
+                    lineage.hue_diversity < 6U
+                        ? lineage.hue_diversity : 6U,
+                    UINT16_C(0xffff));
+        p4_draw_text(surface, 258, 107, "/6", UINT16_C(0x7bef),
+                     1U, 2U);
+        p4_draw_text(surface, 146, 117, "MIX", UINT16_C(0x7bef),
+                     1U, 3U);
+        draw_number(surface, 174, 117,
+                    lineage.part_diversity < 14U
+                        ? lineage.part_diversity : 14U,
+                    UINT16_C(0xffff));
+        p4_draw_text(surface, 190, 117, "/14", UINT16_C(0x7bef),
+                     1U, 3U);
         if (lineage.shielded) {
-            p4_draw_text(surface, 215, 122, "SHIELD",
-                         UINT16_C(0x07ff), 1U, 6U);
+            p4_draw_text(surface, 146, 126, "WARD",
+                         UINT16_C(0x07ff), 1U, 4U);
         }
         if (lineage.phantom) {
-            p4_draw_text(surface, 267, 122, "GHOST",
+            p4_draw_text(surface, 180, 126, "GHOST",
                          UINT16_C(0xf81f), 1U, 5U);
+        }
+        if ((lineage.adaptations &
+             BYTE_BUDDY_ADAPTATION_WIDEBAND) != 0U) {
+            p4_draw_text(surface, 222, 126, "WIDE",
+                         UINT16_C(0xffe0), 1U, 4U);
+        }
+        if ((lineage.adaptations &
+             BYTE_BUDDY_ADAPTATION_PRISMATIC) != 0U) {
+            p4_draw_text(surface, 146, 133, "PRISM",
+                         signal_color_for_hue(lineage.secondary_hue),
+                         1U, 5U);
+        }
+        if ((lineage.adaptations &
+             BYTE_BUDDY_ADAPTATION_CHIMERA) != 0U) {
+            p4_draw_text(surface, 188, 133, "CHIMERA",
+                         signal_color_for_hue(lineage.primary_hue),
+                         1U, 7U);
         }
     }
 
     p4_draw_rect(surface, 4, 140, 312, 24, UINT16_C(0x4208));
-    if (lineage.tier >= BYTE_BUDDY_LINEAGE_MYTHIC) {
-        p4_draw_text(surface, 75, 149, "MYTHIC GENOME COMPLETE",
-                     UINT16_C(0xffe0), 1U, 22U);
+    if (lineage.resonance >= BYTE_BUDDY_RESONANCE_ETERNAL) {
+        p4_draw_text(surface, 72, 149, "ETERNAL GENOME COMPLETE",
+                     UINT16_C(0xffe0), 1U, 23U);
     } else {
-        const uint8_t next_tier = (uint8_t)(lineage.tier + 1U);
+        const bool next_is_resonance =
+            lineage.tier >= BYTE_BUDDY_LINEAGE_MYTHIC;
+        const uint8_t next_rank = next_is_resonance
+            ? (uint8_t)(lineage.resonance + 1U)
+            : (uint8_t)(lineage.tier + 1U);
+        const char *const next_name = next_is_resonance
+            ? s_resonance_names[next_rank] : s_lineage_names[next_rank];
+        const uint8_t next_name_length = next_is_resonance
+            ? s_resonance_name_lengths[next_rank]
+            : s_lineage_name_lengths[next_rank];
+        const uint8_t next_links = next_is_resonance
+            ? s_resonance_link_requirements[next_rank]
+            : s_lineage_link_requirements[next_rank];
+        const uint8_t next_diversity = next_is_resonance
+            ? s_resonance_diversity_requirements[next_rank]
+            : s_lineage_diversity_requirements[next_rank];
         p4_draw_text(surface, 12, 145, "NEXT", UINT16_C(0x7bef),
                      1U, 4U);
-        p4_draw_text(surface, 46, 145, s_lineage_names[next_tier],
-                     signal_color(state), 1U,
-                     s_lineage_name_lengths[next_tier]);
+        p4_draw_text(surface, 46, 145, next_name,
+                     signal_color(state), 1U, next_name_length);
         p4_draw_text(surface, 112, 145, "LINK", UINT16_C(0x7bef),
                      1U, 4U);
         draw_number(surface, 146, 145, state->signal_consumed_count,
                     UINT16_C(0xffff));
         p4_draw_text(surface, 160, 145, "/", UINT16_C(0x7bef), 1U, 1U);
-        draw_number(surface, 170, 145,
-                    s_lineage_link_requirements[next_tier],
+        draw_number(surface, 170, 145, next_links,
                     UINT16_C(0xffff));
         p4_draw_text(surface, 201, 145, "DNA", UINT16_C(0x7bef),
                      1U, 3U);
-        if (s_lineage_diversity_requirements[next_tier] == 0U) {
+        if (next_diversity == 0U) {
             p4_draw_text(surface, 225, 145, "OPEN",
                          UINT16_C(0xffff), 1U, 4U);
         } else {
@@ -4461,12 +5135,26 @@ static void draw_lineage_panel(p4_game_surface_t *surface,
                         UINT16_C(0xffff));
             p4_draw_text(surface, 239, 145, "/", UINT16_C(0x7bef),
                          1U, 1U);
-            draw_number(surface, 249, 145,
-                        s_lineage_diversity_requirements[next_tier],
+            draw_number(surface, 249, 145, next_diversity,
                         UINT16_C(0xffff));
         }
-        p4_draw_text(surface, 12, 155, "NEW SIGNAL VARIETY UNLOCKS TRAITS",
-                     UINT16_C(0x9cf3), 1U, 31U);
+        const bool eternal_fallback = next_is_resonance &&
+            next_rank == BYTE_BUDDY_RESONANCE_ETERNAL &&
+            state->signal_consumed_count >= next_links &&
+            lineage.diversity < next_diversity;
+        p4_draw_text(
+            surface, 12, 155,
+            eternal_fallback
+                ? "48 LINKS GUARANTEES ETERNAL"
+                : next_is_resonance
+                    ? "DEEP VARIETY ADDS ORBITS"
+                    : "NEW SIGNAL VARIETY UNLOCKS TRAITS",
+            UINT16_C(0x9cf3), 1U,
+            eternal_fallback
+                ? sizeof("48 LINKS GUARANTEES ETERNAL") - 1U
+                : next_is_resonance
+                    ? sizeof("DEEP VARIETY ADDS ORBITS") - 1U
+                    : sizeof("NEW SIGNAL VARIETY UNLOCKS TRAITS") - 1U);
     }
     draw_touch_button(surface, 4, 168, 312, 28,
                       "BACK TO BUDDY", 13U,
@@ -4534,24 +5222,33 @@ static bool game_render(p4_game_context_t *context,
             p4_draw_text(surface, 128, 126, "TAP TO PET",
                          UINT16_C(0x9cf3), 1U, 10U);
         } else {
-            const size_t length = s_lineage_name_lengths[lineage.tier];
+            size_t length = 0U;
+            const char *const badge = lineage_badge_name(
+                lineage, &length);
             const int label_x = 160 - (int)(length * 7U) / 2;
-            p4_draw_text(surface, label_x, 126,
-                         s_lineage_names[lineage.tier],
+            p4_draw_text(surface, label_x, 126, badge,
                          signal_color(state), 1U, length);
         }
         draw_touch_button(surface, 4, 138, 74, 27, s_actions[ACTION_FEED],
                           4U, UINT16_C(0xfd20),
-                          state->reaction == REACTION_FEED);
+                          state->reaction == REACTION_FEED ||
+                              (state->controller_active &&
+                               state->selected_action == ACTION_FEED));
         draw_touch_button(surface, 82, 138, 74, 27, s_actions[ACTION_PLAY],
                           4U, UINT16_C(0xffe0),
-                          state->reaction == REACTION_PLAY);
+                          state->reaction == REACTION_PLAY ||
+                              (state->controller_active &&
+                               state->selected_action == ACTION_PLAY));
         draw_touch_button(surface, 160, 138, 74, 27,
                           s_actions[ACTION_CLEAN], 5U, UINT16_C(0x07ff),
-                          state->reaction == REACTION_CLEAN);
+                          state->reaction == REACTION_CLEAN ||
+                              (state->controller_active &&
+                               state->selected_action == ACTION_CLEAN));
         draw_touch_button(surface, 238, 138, 78, 27,
                           s_actions[ACTION_REST], 4U, UINT16_C(0xf81f),
-                          state->reaction == REACTION_REST);
+                          state->reaction == REACTION_REST ||
+                              (state->controller_active &&
+                               state->selected_action == ACTION_REST));
         draw_item_component_icon(surface, state, ACTION_FEED, 15, 151, 18U);
         draw_item_component_icon(surface, state, ACTION_PLAY, 93, 151, 18U);
         draw_item_component_icon(surface, state, ACTION_CLEAN, 171, 151, 18U);
@@ -4560,6 +5257,7 @@ static bool game_render(p4_game_context_t *context,
                           UINT16_C(0x07ff), false);
         draw_signal_seed(
             surface, state, UINT64_C(0x5349474e414c),
+            0U, 0U,
             17, 182, 22U, state->animation_ms);
         draw_touch_button(surface, 150, 168, 94, 28, "UPGRADES", 8U,
                           element_color(state), false);

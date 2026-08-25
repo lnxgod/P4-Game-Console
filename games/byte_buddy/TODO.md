@@ -47,6 +47,24 @@ P4 Game API surface.
       repeated taps cannot mature the dragon instantly.
 - [x] Render and inspect both signal pages, Resonance Weave, and eight-signal
       Ascended/Genome states in the deterministic 177-frame preview sequence.
+- [x] Combine each 8,192-part opaque-token genome with twenty bounded habitat
+      contexts so coarse channel family and protected/hidden flags add orbit,
+      shield, and wisp graphics without exposing more identity.
+- [x] Add combinable Wideband, Prismatic, and Chimera dragon adaptations plus
+      Nova/Galaxy/Eternal variety milestones at 16/24/32 distinct signals.
+- [x] Show Band/Hue/Mix adaptation progress, keep a bounded 48-link recovery
+      history, and guarantee Eternal at the cap without accelerating its normal
+      32-link route.
+- [x] Preserve valid scan results across transient request rejection, show an
+      honest bounded scanner-busy/retry state, and gate touch, controller, and
+      automatic requests during backoff.
+- [x] Add controller Home care, Power/Style selection, Signal Hunt paging,
+      tracking, Pulse Rush, Guard, and D-pad Resonance Weave play.
+- [x] Render and inspect controller focus/cursor UI plus Ascended, Mythic, Nova,
+      Galaxy, Eternal, reward, and final Genome states while retaining the
+      deterministic 177-frame visual-QA budget.
+- [x] Build the v3.7 RISC-V cartridge twice, verify byte identity and package
+      structure, and record the exact `.P4G` payload/package hashes.
 - [x] Complete a visible SDL keyboard play pass: Start entered Star Catcher,
       Left steered through the spring path, one 18-second round ended naturally
       with two catches, B returned from a second round, and Back exited cleanly.
@@ -65,8 +83,10 @@ P4 Game API surface.
 - [x] Add a second Signal Battle pattern so encounters are not only rapid tapping.
 - [ ] Reconcile the public session-token contract with the device-key behavior
       before considering durable lineages or writable save integration.
-- [ ] Clear stale results in platform SCANNING/ERROR snapshots and distinguish
-      a transient busy scan request from true radio unavailability.
+- [x] Distinguish a transient busy scan request from true radio unavailability
+      inside Byte Buddy without discarding a selectable valid snapshot.
+- [ ] Clear stale results in the platform provider's ERROR snapshot before the
+      Game API validator reads it; keep the approved Waveshare scan named-only.
 - [x] Add Signal Hunt paging so all eight bounded OS results are selectable.
 - [ ] Perform named tablet acceptance for touch feel, panel motion, speaker feedback,
       launcher return, and exact `.P4G`/`.P4R` hashes before calling the work hardware-tested.

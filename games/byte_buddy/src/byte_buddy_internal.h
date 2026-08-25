@@ -151,6 +151,23 @@ typedef enum {
     BYTE_BUDDY_LINEAGE_TIER_COUNT,
 } byte_buddy_lineage_tier_t;
 
+typedef enum {
+    BYTE_BUDDY_RESONANCE_NONE = 0,
+    BYTE_BUDDY_RESONANCE_NOVA,
+    BYTE_BUDDY_RESONANCE_GALAXY,
+    BYTE_BUDDY_RESONANCE_ETERNAL,
+    BYTE_BUDDY_RESONANCE_COUNT,
+} byte_buddy_resonance_t;
+
+enum {
+    BYTE_BUDDY_SIGNAL_MAX_CONSUMED = 48,
+    BYTE_BUDDY_ADAPTATION_SHIELD = UINT8_C(1) << 0U,
+    BYTE_BUDDY_ADAPTATION_PHANTOM = UINT8_C(1) << 1U,
+    BYTE_BUDDY_ADAPTATION_WIDEBAND = UINT8_C(1) << 2U,
+    BYTE_BUDDY_ADAPTATION_PRISMATIC = UINT8_C(1) << 3U,
+    BYTE_BUDDY_ADAPTATION_CHIMERA = UINT8_C(1) << 4U,
+};
+
 typedef struct {
     uint16_t part_mask;
     uint8_t hue_mask;
@@ -167,12 +184,16 @@ typedef struct {
 
 typedef struct {
     uint8_t tier;
+    uint8_t resonance;
+    uint8_t adaptations;
     uint8_t family;
     uint8_t halo;
     uint8_t marking;
     uint8_t aura;
     uint8_t primary_hue;
     uint8_t secondary_hue;
+    uint8_t part_diversity;
+    uint8_t hue_diversity;
     uint8_t diversity;
     uint8_t channel_families;
     bool shielded;
@@ -295,6 +316,15 @@ byte_buddy_signal_genome_t byte_buddy_signal_genome(uint64_t token);
 
 uint8_t byte_buddy_signal_channel_family(uint8_t channel);
 
+uint8_t byte_buddy_signal_habitat_id(uint8_t channel, uint8_t flags);
+
+uint32_t byte_buddy_signal_form_id(
+    uint16_t genome_recipe_id, uint8_t channel, uint8_t flags);
+
+int32_t byte_buddy_controller_cursor_axis_q16(
+    int32_t current_q16, bool negative, bool positive,
+    uint32_t elapsed_ms, int16_t minimum, int16_t maximum);
+
 uint64_t byte_buddy_signal_lineage_contribution(
     uint64_t token, uint8_t channel, uint8_t flags);
 
@@ -317,5 +347,7 @@ byte_buddy_lineage_battle_traits_t byte_buddy_lineage_battle_traits(
 
 uint8_t byte_buddy_signal_growth_reward(
     uint8_t rarity, uint8_t unique_count);
+
+bool byte_buddy_signal_collection_has_room(uint8_t unique_count);
 
 #endif
