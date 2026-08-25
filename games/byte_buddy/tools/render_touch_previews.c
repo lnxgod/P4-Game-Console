@@ -28,7 +28,7 @@ static bool preview_request_signal(void *context, uint64_t focus_token)
         .results = {
             {.token = UINT64_C(0x00123456789abcde),
              .label = "SKY GARDEN",
-             .rssi_dbm = focus_token == 0U ? -84 : -43,
+             .rssi_dbm = -84,
              .channel = 1U, .flags = P4_GAME_SIGNAL_PROTECTED},
             {.token = UINT64_C(0x3ff0000000045678),
              .label = "LIBRARY MESH", .rssi_dbm = -72,
@@ -39,13 +39,17 @@ static bool preview_request_signal(void *context, uint64_t focus_token)
             {.token = UINT64_C(0x0880000000abcdef),
              .label = "STAR PORT", .rssi_dbm = -76,
              .channel = 36U, .flags = P4_GAME_SIGNAL_PROTECTED},
-            {.token = UINT64_C(0x0440000000fedcba),
+            {.token = UINT64_C(0x0440000002fedcba),
              .label = "HIDDEN SIGNAL", .rssi_dbm = -61,
              .channel = 44U, .flags = P4_GAME_SIGNAL_HIDDEN},
         },
     };
     for (size_t index = 0U; index < scan->snapshot.count; ++index) {
         scan->snapshot.results[index].flags |= P4_GAME_SIGNAL_SIMULATED;
+        if (focus_token != 0U &&
+            scan->snapshot.results[index].token == focus_token) {
+            scan->snapshot.results[index].rssi_dbm = -43;
+        }
     }
     return true;
 }
@@ -179,6 +183,22 @@ static bool render_clip(p4_game_instance_t *instance,
     return true;
 }
 
+static bool defeat_signal_row(p4_game_instance_t *instance, unsigned row)
+{
+    if (row >= 5U || !tap(
+            instance, 70U, (uint16_t)(42U + row * 25U)) ||
+        !tap(instance, 70U, 180U) ||
+        !tap(instance, 250U, 180U)) {
+        return false;
+    }
+    for (unsigned strike = 0U; strike < 16U; ++strike) {
+        if (!tap(instance, 60U, 180U)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool render_animation_sequence(p4_game_instance_t *instance,
                                       p4_game_surface_t *surface,
                                       const char *prefix)
@@ -219,7 +239,13 @@ static bool render_animation_sequence(p4_game_instance_t *instance,
         success = tap(instance, 60U, 180U);
     }
     success = success && tap(instance, 20U, 12U) && render_clip(
-        instance, surface, prefix, "signal-genetics", 16U, 5U);
+        instance, surface, prefix, "signal-lineage-spark", 16U, 5U) &&
+        tap(instance, 70U, 180U);
+    for (unsigned row = 1U; success && row < 5U; ++row) {
+        success = defeat_signal_row(instance, row);
+    }
+    success = success && tap(instance, 20U, 12U) && render_clip(
+        instance, surface, prefix, "signal-lineage-aurora", 16U, 5U);
     return success;
 }
 

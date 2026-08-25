@@ -24,6 +24,13 @@ Six stable traits select its core, halo, elemental sigil, aura, mutation
 palette, and rarity shine, producing 8,192 numbered designs from sixteen
 reusable art layers.
 
+Version 3.5 turns those encounter genes into a cumulative dragon lineage.
+Distinct opaque signal tokens now contribute rarity-weighted core, halo,
+sigil, aura, and hue votes plus channel-family, protected, and hidden encounter
+traits. Five deliberately paced ranks progressively unlock inherited markings,
+auroras, mature silhouettes, and dual-hue Mythic effects without adding another
+atlas or exposing raw network identity.
+
 ## Touch play
 
 - Tap **Feed**, **Play**, **Clean**, or **Rest** to provide care.
@@ -60,12 +67,37 @@ Guard** spends a limited charge to buy more time. Winning turns the encounter
 into a signal seed that the dragon eats automatically.
 
 Every signal seed is accepted once per session. Its opaque token determines
-rarity, Fire/Ice/Acid affinity, one of eight mutation hues, one of four mature
-signal-genetic silhouettes, and particle style;
-RSSI contributes battle health and payout. Rarity contributes extra growth
-interactions, so signal exploration can hatch and evolve a dragon faster.
-Cumulative token entropy changes the equipped nurture palette only when the
-player has not bought a body color, preserving coin customization choices.
+rarity, Fire/Ice/Acid affinity, mutation hue, and a core/halo/sigil/aura genome;
+RSSI contributes battle health and payout, never identity. The game folds each
+distinct token into an order-independent lineage, so finding the same set in a
+different order yields the same dominant traits. Rarity-weighted votes choose
+the inherited Arc, Prism, Thorn, or Comet family and its overlays. The resulting
+palette applies only when the player has not bought a body color, preserving
+coin customization choices.
+
+Lineage rank requires both quantity and variety. Diversity is the number of
+different core, halo, sigil, aura, hue, and rarity alleles collected; repeated
+look-alike seeds can still feed the dragon but cannot rush every rank.
+
+| Lineage | Minimum distinct seeds | Minimum gene diversity | Inherited look |
+| --- | ---: | ---: | --- |
+| Spark | 1 | — | mutation palette and orbit sparks |
+| Crest | 3 | 11 | dominant sigil marking |
+| Aurora | 5 | 15 | dominant halo/aura and glow frame |
+| Ascended | 8 | 19 | dominant mature signal-dragon family |
+| Mythic | 12 | 22 | second hue, doubled aura, and crown |
+
+Four coarse channel families add bounded speed and particle variety without
+becoming identity. Three protected encounters add a shield trait and up to
+three Guard points; a provider-supplied hidden encounter adds a phantom wisp
+and one Magic point. These are fantasy traits, not claims about network safety.
+Power gains at most four points from gene diversity, Speed at most four from
+channel variety, and rank adds at most five Magic. Signal growth now tapers to
+one interaction for ordinary later seeds, so exploring a dense area does not
+skip the care game. The bonuses are small but functional in Signal Battle:
+every two lineage ranks add one Pulse Strike damage, channel variety grants up
+to 0.4 seconds of starting time, the shield trait adds one Aura Guard charge,
+and rank/phantom magic lengthens each guard by at most 0.42 seconds.
 
 Signal battles are visual fiction. Byte Buddy never connects to a network,
 asks for a password, sends packets, or interferes with Wi-Fi. The SDL host uses
@@ -107,7 +139,10 @@ recipes. The same
 composed seed and `GENE` number follow an encounter from the scan list into
 tracking and battle; changing RSSI affects challenge and reward, never identity.
 Fire, Ice, and Acid crests match battle affinity; the mystery-star crest keeps
-its affinity concealed until play reveals it.
+its affinity concealed until play reveals it. Byte Buddy never receives a raw
+SSID or MAC/BSSID: the OS supplies only a sanitized display label and an opaque,
+session-scoped token that already represents the encounter identity. Labels are
+shown transiently and are never used as lineage input.
 
 ## Growth and inherited traits
 
@@ -515,7 +550,7 @@ Current deterministic art identities:
 - wrapped `BYTEBUD.P4R`: 832,192 bytes,
   `ae1d39daa3cf444e628b1248ff3ea7f83b57e1718a1a75ff476e65151f8650ca`.
 
-No v3.4 `.P4G` hash is claimed by this host-only art conversion. Record it
+No v3.5 `.P4G` hash is claimed by this host-only art conversion. Record it
 only after the focused RISC-V cartridge build and verifier pass.
 
 ## Verification
@@ -535,14 +570,17 @@ make play-game GAME=byte_buddy
 `byte_buddy_touch_previews` accepts the generated art payload and renders
 deterministic closed egg, cracking egg, Power shop, Style shop, customized baby, flying,
 elemental, mini-game, signal-list, focused tracker, and battle frames for
-visual QA. Its two-argument animation mode also renders 140 chronological
+visual QA. Its two-argument animation mode also renders 156 chronological
 gameplay frames covering every expanded stage clip, the multi-step hatch, and
-signal-fed genetics. The tests cover touch hit areas,
+one-signal `signal-lineage-spark` plus five-signal
+`signal-lineage-aurora` clips. The tests cover touch hit areas,
 care achievements, shop spending paths, preview progression, drag and
 controller Star Catcher play, trait selection, customization costs,
 all 19,200 collision-free look recipe IDs, deterministic owned-choice Remix,
 levels/battle stats, signal profile scaling, focused scans, battle rewards,
-privacy-service validation, and guarded rendering.
+all five lineage boundaries, order-independent aggregation, low-diversity
+stalling, capped lineage stats, privacy-service validation, and guarded
+rendering.
 
 Care, coins, upgrades, and growth are session-only until the platform exposes a
 reviewed writable save service. The game owns no display, touch, audio, or

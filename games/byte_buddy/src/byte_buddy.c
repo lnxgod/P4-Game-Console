@@ -84,6 +84,8 @@ enum {
     ACHIEVEMENT_PLAY = UINT32_C(1) << 2U,
     ACHIEVEMENT_GROW = UINT32_C(1) << 3U,
     ACHIEVEMENT_FIRST_SIGNAL = UINT32_C(1) << 4U,
+    ACHIEVEMENT_SIGNAL_CHORUS = UINT32_C(1) << 5U,
+    ACHIEVEMENT_MYTHIC_LINEAGE = UINT32_C(1) << 6U,
 };
 
 typedef enum {
@@ -152,6 +154,7 @@ typedef struct {
     uint32_t signal_battle_elapsed_ms;
     uint32_t signal_battle_bonus_ms;
     uint32_t signal_hit_ms;
+    uint32_t signal_reward_ms;
     uint32_t signal_track_refresh_ms;
     p4_q16_t catcher_x_q16;
     p4_q16_t catcher_target_x_q16;
@@ -175,6 +178,7 @@ typedef struct {
     uint64_t signal_selected_token;
     uint64_t signal_entropy;
     uint64_t signal_consumed[SIGNAL_MAX_CONSUMED];
+    byte_buddy_lineage_genes_t signal_genes;
     p4_game_signal_snapshot_t signal_snapshot;
     p4_game_audio_effect_player_t audio;
 } byte_buddy_state_t;
@@ -197,6 +201,15 @@ static const char *const s_wing_names[BYTE_BUDDY_WING_STYLE_COUNT] = {
 
 static const char *const s_morph_names[BYTE_BUDDY_MORPH_COUNT] = {
     "NEBULA", "SUNGOLD", "JADE", "GLACIER",
+};
+
+static const char *const s_lineage_names[BYTE_BUDDY_LINEAGE_TIER_COUNT] = {
+    "DORMANT", "SPARK", "CREST", "AURORA", "ASCENDED", "MYTHIC",
+};
+
+static const uint8_t s_lineage_name_lengths[
+    BYTE_BUDDY_LINEAGE_TIER_COUNT] = {
+    7U, 5U, 5U, 6U, 8U, 6U,
 };
 
 static const uint8_t s_morph_name_lengths[BYTE_BUDDY_MORPH_COUNT] = {
@@ -513,6 +526,42 @@ byte_buddy_battle_stats_t byte_buddy_battle_stats(
     };
 }
 
+byte_buddy_battle_stats_t byte_buddy_lineage_battle_stats(
+    byte_buddy_battle_stats_t base,
+    byte_buddy_signal_lineage_t lineage,
+    const byte_buddy_lineage_genes_t *genes)
+{
+    const uint8_t protected_bonus = genes == NULL
+        ? 0U : genes->protected_count > 3U
+            ? 3U : genes->protected_count;
+    const uint8_t phantom_bonus = genes != NULL &&
+        genes->hidden_count != 0U ? 1U : 0U;
+    base.power = battle_stat((uint32_t)base.power +
+                             lineage.diversity / 6U);
+    base.speed = battle_stat((uint32_t)base.speed +
+                             lineage.channel_families);
+    base.guard = battle_stat((uint32_t)base.guard + protected_bonus);
+    base.magic = battle_stat((uint32_t)base.magic + lineage.tier +
+                             phantom_bonus);
+    return base;
+}
+
+byte_buddy_lineage_battle_traits_t byte_buddy_lineage_battle_traits(
+    byte_buddy_signal_lineage_t lineage)
+{
+    const uint8_t tier = lineage.tier < BYTE_BUDDY_LINEAGE_TIER_COUNT
+        ? lineage.tier : BYTE_BUDDY_LINEAGE_MYTHIC;
+    const uint8_t families = lineage.channel_families < 4U
+        ? lineage.channel_families : 4U;
+    return (byte_buddy_lineage_battle_traits_t){
+        .strike_damage = (uint8_t)(tier / 2U),
+        .guard_charges = lineage.shielded ? 1U : 0U,
+        .start_time_ms = (uint16_t)((uint16_t)families * 100U),
+        .guard_time_ms = (uint16_t)(
+            (uint16_t)tier * 60U + (lineage.phantom ? 120U : 0U)),
+    };
+}
+
 byte_buddy_touch_target_t byte_buddy_touch_target(
     uint16_t x, uint16_t y, bool upgrade_shop,
     bool style_shop, bool mini_game)
@@ -691,6 +740,203 @@ byte_buddy_signal_genome_t byte_buddy_signal_genome(uint64_t token)
     };
 }
 
+uint8_t byte_buddy_signal_channel_family(uint8_t channel)
+{
+    if (channel == 0U) {
+        return UINT8_MAX;
+    }
+    if (channel <= 5U) {
+        return 0U;
+    }
+    if (channel <= 10U) {
+        return 1U;
+    }
+    if (channel <= 14U) {
+        return 2U;
+    }
+    return 3U;
+}
+
+static uint64_t avalanche_lineage_value(uint64_t value)
+{
+    value ^= value >> 30U;
+    value *= UINT64_C(0xbf58476d1ce4e5b9);
+    value ^= value >> 27U;
+    value *= UINT64_C(0x94d049bb133111eb);
+    return value ^ (value >> 31U);
+}
+
+uint64_t byte_buddy_signal_lineage_contribution(
+    uint64_t token, uint8_t channel, uint8_t flags)
+{
+    const uint8_t family = byte_buddy_signal_channel_family(channel);
+    uint64_t context = family == UINT8_MAX
+        ? UINT64_C(0) : (uint64_t)family + UINT64_C(1);
+    if ((flags & P4_GAME_SIGNAL_PROTECTED) != 0U) {
+        context |= UINT64_C(1) << 8U;
+    }
+    if ((flags & P4_GAME_SIGNAL_HIDDEN) != 0U) {
+        context |= UINT64_C(1) << 9U;
+    }
+    const uint64_t mixed = avalanche_lineage_value(
+        token ^ UINT64_C(0x9e3779b97f4a7c15) ^
+        context * UINT64_C(0xd6e8feb86659fd93));
+    return mixed == 0U ? UINT64_C(0xa0761d6478bd642f) : mixed;
+}
+
+static void add_bounded_vote(uint8_t *vote, uint8_t amount)
+{
+    if (vote == NULL) {
+        return;
+    }
+    *vote = *vote > UINT8_MAX - amount
+        ? UINT8_MAX : (uint8_t)(*vote + amount);
+}
+
+void byte_buddy_lineage_add(
+    byte_buddy_lineage_genes_t *genes,
+    byte_buddy_signal_genome_t genome,
+    uint8_t channel, uint8_t flags)
+{
+    if (genes == NULL || genome.core >= 4U || genome.halo >= 4U ||
+        genome.sigil >= 4U || genome.aura >= 4U || genome.hue >= 8U ||
+        genome.rarity >= 4U) {
+        return;
+    }
+    genes->part_mask |= (uint16_t)(UINT16_C(1) << genome.core);
+    genes->part_mask |= (uint16_t)(
+        UINT16_C(1) << (4U + genome.halo));
+    genes->part_mask |= (uint16_t)(
+        UINT16_C(1) << (8U + genome.sigil));
+    genes->part_mask |= (uint16_t)(
+        UINT16_C(1) << (12U + genome.aura));
+    genes->hue_mask |= (uint8_t)(UINT8_C(1) << genome.hue);
+    genes->rarity_mask |= (uint8_t)(UINT8_C(1) << genome.rarity);
+    const uint8_t family = byte_buddy_signal_channel_family(channel);
+    if (family != UINT8_MAX) {
+        genes->channel_mask |= (uint8_t)(UINT8_C(1) << family);
+    }
+    if ((flags & P4_GAME_SIGNAL_PROTECTED) != 0U &&
+        genes->protected_count != UINT8_MAX) {
+        ++genes->protected_count;
+    }
+    if ((flags & P4_GAME_SIGNAL_HIDDEN) != 0U &&
+        genes->hidden_count != UINT8_MAX) {
+        ++genes->hidden_count;
+    }
+    const uint8_t weight = (uint8_t)(genome.rarity + 1U);
+    add_bounded_vote(&genes->core_votes[genome.core], weight);
+    add_bounded_vote(&genes->halo_votes[genome.halo], weight);
+    add_bounded_vote(&genes->sigil_votes[genome.sigil], weight);
+    add_bounded_vote(&genes->aura_votes[genome.aura], weight);
+    add_bounded_vote(&genes->hue_votes[genome.hue], weight);
+}
+
+static uint8_t lineage_popcount(uint32_t value)
+{
+    uint8_t count = 0U;
+    while (value != 0U) {
+        count = (uint8_t)(count + (uint8_t)(value & UINT32_C(1)));
+        value >>= 1U;
+    }
+    return count;
+}
+
+static uint8_t lineage_vote_winner(
+    const uint8_t *votes, uint8_t count, uint64_t tie_break)
+{
+    if (votes == NULL || count == 0U) {
+        return 0U;
+    }
+    uint8_t maximum = 0U;
+    for (uint8_t index = 0U; index < count; ++index) {
+        if (votes[index] > maximum) {
+            maximum = votes[index];
+        }
+    }
+    uint8_t tied = 0U;
+    for (uint8_t index = 0U; index < count; ++index) {
+        if (votes[index] == maximum) {
+            ++tied;
+        }
+    }
+    uint8_t choice = tied == 0U
+        ? 0U : (uint8_t)(tie_break % tied);
+    for (uint8_t index = 0U; index < count; ++index) {
+        if (votes[index] == maximum) {
+            if (choice == 0U) {
+                return index;
+            }
+            --choice;
+        }
+    }
+    return 0U;
+}
+
+byte_buddy_signal_lineage_t byte_buddy_signal_lineage(
+    uint64_t entropy, uint8_t unique_count,
+    const byte_buddy_lineage_genes_t *genes)
+{
+    if (genes == NULL) {
+        return (byte_buddy_signal_lineage_t){0};
+    }
+    const uint8_t diversity = (uint8_t)(
+        lineage_popcount(genes->part_mask) +
+        lineage_popcount(genes->hue_mask) +
+        lineage_popcount((uint32_t)(genes->rarity_mask & UINT8_C(0x0f))));
+    const uint8_t families = lineage_popcount(
+        (uint32_t)(genes->channel_mask & UINT8_C(0x0f)));
+    uint8_t tier = unique_count == 0U
+        ? BYTE_BUDDY_LINEAGE_DORMANT : BYTE_BUDDY_LINEAGE_SPARK;
+    if (unique_count >= 3U && diversity >= 11U) {
+        tier = BYTE_BUDDY_LINEAGE_CREST;
+    }
+    if (unique_count >= 5U && diversity >= 15U) {
+        tier = BYTE_BUDDY_LINEAGE_AURORA;
+    }
+    if (unique_count >= 8U && diversity >= 19U) {
+        tier = BYTE_BUDDY_LINEAGE_ASCENDED;
+    }
+    if (unique_count >= 12U && diversity >= 22U) {
+        tier = BYTE_BUDDY_LINEAGE_MYTHIC;
+    }
+    const uint8_t primary_hue = lineage_vote_winner(
+        genes->hue_votes, 8U, entropy >> 17U);
+    const uint8_t hue_step = (uint8_t)(
+        UINT64_C(1) + (entropy >> 45U) % UINT64_C(7));
+    return (byte_buddy_signal_lineage_t){
+        .tier = tier,
+        .family = lineage_vote_winner(
+            genes->core_votes, 4U, entropy),
+        .halo = lineage_vote_winner(
+            genes->halo_votes, 4U, entropy >> 7U),
+        .marking = lineage_vote_winner(
+            genes->sigil_votes, 4U, entropy >> 13U),
+        .aura = lineage_vote_winner(
+            genes->aura_votes, 4U, entropy >> 23U),
+        .primary_hue = primary_hue,
+        .secondary_hue = (uint8_t)((primary_hue + hue_step) & 7U),
+        .diversity = diversity,
+        .channel_families = families,
+        .shielded = genes->protected_count >= 3U,
+        .phantom = genes->hidden_count != 0U,
+    };
+}
+
+uint8_t byte_buddy_signal_growth_reward(
+    uint8_t rarity, uint8_t unique_count)
+{
+    const uint8_t bounded_rarity = rarity < 1U
+        ? 1U : rarity > 4U ? 4U : rarity;
+    if (unique_count <= 4U) {
+        return (uint8_t)(1U + bounded_rarity / 2U);
+    }
+    if (unique_count <= 12U && bounded_rarity == 4U) {
+        return 2U;
+    }
+    return 1U;
+}
+
 static uint8_t increase(uint8_t value, uint8_t amount)
 {
     return value > STAT_MAX - amount ? STAT_MAX : (uint8_t)(value + amount);
@@ -724,6 +970,14 @@ static void trigger_reaction(byte_buddy_state_t *state,
 {
     state->reaction = (uint8_t)reaction;
     state->reaction_ms = REACTION_DURATION_MS;
+}
+
+static byte_buddy_signal_lineage_t current_lineage(
+    const byte_buddy_state_t *state)
+{
+    return byte_buddy_signal_lineage(
+        state->signal_entropy, state->signal_consumed_count,
+        &state->signal_genes);
 }
 
 static void update_dragon_traits(byte_buddy_state_t *state)
@@ -1150,30 +1404,26 @@ static void start_signal_battle(p4_game_context_t *context,
 {
     const p4_game_signal_t *const signal = selected_signal(state);
     if (signal == NULL || signal->rssi_dbm < SIGNAL_HUNT_UNLOCK_RSSI ||
-        signal_consumed(state, signal->token)) {
+        signal_consumed(state, signal->token) ||
+        state->signal_consumed_count >= SIGNAL_MAX_CONSUMED) {
         play_tone(context, 196U, 100U);
         return;
     }
     const byte_buddy_signal_profile_t profile =
         byte_buddy_signal_profile(signal->token, signal->rssi_dbm);
+    const byte_buddy_signal_lineage_t lineage = current_lineage(state);
+    const byte_buddy_lineage_battle_traits_t battle_traits =
+        byte_buddy_lineage_battle_traits(lineage);
     state->signal_view = BYTE_BUDDY_SIGNAL_BATTLE;
     state->signal_battle_hp = profile.battle_hp;
     state->signal_battle_max_hp = profile.battle_hp;
     state->signal_battle_elapsed_ms = 0U;
-    state->signal_battle_bonus_ms = 0U;
+    state->signal_battle_bonus_ms = battle_traits.start_time_ms;
     state->signal_guard_charges = (uint8_t)(
-        2U + state->upgrades[BYTE_BUDDY_UPGRADE_NEST]);
+        2U + state->upgrades[BYTE_BUDDY_UPGRADE_NEST] +
+        battle_traits.guard_charges);
     state->signal_hit_ms = 0U;
     play_tone(context, 330U, 90U);
-}
-
-static uint64_t mix_signal_entropy(uint64_t entropy, uint64_t token)
-{
-    uint64_t value = entropy ^ token ^ UINT64_C(0x9e3779b97f4a7c15);
-    value ^= value << 13U;
-    value ^= value >> 7U;
-    value ^= value << 17U;
-    return value ^ (token << 23U) ^ (token >> 19U);
 }
 
 static void consume_signal(p4_game_context_t *context,
@@ -1186,6 +1436,8 @@ static void consume_signal(p4_game_context_t *context,
     }
     const byte_buddy_signal_profile_t profile =
         byte_buddy_signal_profile(signal->token, signal->rssi_dbm);
+    const byte_buddy_signal_genome_t genome =
+        byte_buddy_signal_genome(signal->token);
     state->signal_consumed[state->signal_consumed_count++] = signal->token;
     if (state->signal_feeds != UINT8_MAX) {
         ++state->signal_feeds;
@@ -1198,22 +1450,36 @@ static void consume_signal(p4_game_context_t *context,
         state->signal_element_votes[element_index] = (uint8_t)(
             state->signal_element_votes[element_index] + profile.rarity);
     }
-    state->signal_entropy = mix_signal_entropy(
-        state->signal_entropy, signal->token);
-    state->signal_hue = (uint8_t)((
-        state->signal_entropy >> 13U) & UINT64_C(7));
+    byte_buddy_lineage_add(
+        &state->signal_genes, genome, signal->channel, signal->flags);
+    state->signal_entropy ^= byte_buddy_signal_lineage_contribution(
+        signal->token, signal->channel, signal->flags);
+    const byte_buddy_signal_lineage_t lineage = current_lineage(state);
+    state->signal_hue = lineage.primary_hue;
     state->coins = state->coins > UINT16_MAX - profile.reward_coins
         ? UINT16_MAX : (uint16_t)(state->coins + profile.reward_coins);
-    const uint16_t growth = (uint16_t)(profile.rarity + 1U);
+    const uint16_t growth = byte_buddy_signal_growth_reward(
+        profile.rarity, state->signal_consumed_count);
     state->care_actions = state->care_actions > UINT16_MAX - growth
         ? UINT16_MAX : (uint16_t)(state->care_actions + growth);
     state->hunger = increase(state->hunger, 15U);
     state->joy = increase(state->joy, 12U);
     update_dragon_traits(state);
     trigger_reaction(state, REACTION_SIGNAL);
+    state->signal_reward_ms = REACTION_DURATION_MS;
     advance_growth(context, state);
     unlock(context, state, ACHIEVEMENT_FIRST_SIGNAL, "first-signal",
            "SIGNAL TAMER", "DEFEAT AND EAT A SIGNAL SEED");
+    if (lineage.tier >= BYTE_BUDDY_LINEAGE_AURORA) {
+        unlock(context, state, ACHIEVEMENT_SIGNAL_CHORUS,
+               "signal-chorus", "SIGNAL CHORUS",
+               "BUILD AN AURORA LINEAGE FROM FIVE SIGNALS");
+    }
+    if (lineage.tier >= BYTE_BUDDY_LINEAGE_MYTHIC) {
+        unlock(context, state, ACHIEVEMENT_MYTHIC_LINEAGE,
+               "mythic-lineage", "MYTHIC LINEAGE",
+               "COMBINE TWELVE DIVERSE SIGNAL GENOMES");
+    }
     play_tone(context, 1047U, 160U);
     (void)p4_game_audio_effect_play(
         context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
@@ -1228,8 +1494,12 @@ static void strike_signal(p4_game_context_t *context,
     }
     const uint8_t level = byte_buddy_level_for_interactions(
         state->care_actions);
+    const byte_buddy_signal_lineage_t lineage = current_lineage(state);
+    const byte_buddy_lineage_battle_traits_t battle_traits =
+        byte_buddy_lineage_battle_traits(lineage);
     const unsigned damage = 2U +
-        state->upgrades[BYTE_BUDDY_UPGRADE_AURA] + level / 8U;
+        state->upgrades[BYTE_BUDDY_UPGRADE_AURA] + level / 8U +
+        battle_traits.strike_damage;
     state->signal_battle_hp = damage >= state->signal_battle_hp
         ? 0U : (uint8_t)(state->signal_battle_hp - damage);
     state->signal_hit_ms = SIGNAL_HIT_DURATION_MS;
@@ -1298,7 +1568,14 @@ static p4_game_result_t activate_signal_touch(
     } else if (target == BYTE_BUDDY_TOUCH_SIGNAL_GUARD &&
                state->signal_guard_charges != 0U) {
         --state->signal_guard_charges;
-        state->signal_battle_bonus_ms += 900U;
+        const byte_buddy_signal_lineage_t lineage = current_lineage(state);
+        const byte_buddy_lineage_battle_traits_t battle_traits =
+            byte_buddy_lineage_battle_traits(lineage);
+        const uint32_t guard_bonus = 900U + battle_traits.guard_time_ms;
+        state->signal_battle_bonus_ms =
+            state->signal_battle_bonus_ms > UINT32_MAX - guard_bonus
+                ? UINT32_MAX
+                : state->signal_battle_bonus_ms + guard_bonus;
         play_tone(context, 523U, 70U);
     }
     return P4_GAME_CONTINUE;
@@ -1657,6 +1934,8 @@ static p4_game_result_t game_update(
     }
     state->animation_ms += bounded_elapsed_ms;
     update_reaction(state, bounded_elapsed_ms);
+    state->signal_reward_ms = state->signal_reward_ms > bounded_elapsed_ms
+        ? state->signal_reward_ms - bounded_elapsed_ms : 0U;
     apply_decay(state, bounded_elapsed_ms);
     if (state->signal_hunt) {
         poll_signal_scan(context, state);
@@ -1811,7 +2090,7 @@ static unsigned safe_morph(const byte_buddy_state_t *state)
 static byte_buddy_battle_stats_t current_battle_stats(
     const byte_buddy_state_t *state)
 {
-    return byte_buddy_battle_stats(
+    const byte_buddy_battle_stats_t base = byte_buddy_battle_stats(
         state->action_counts[ACTION_FEED],
         state->action_counts[ACTION_PLAY],
         state->action_counts[ACTION_CLEAN],
@@ -1821,6 +2100,8 @@ static byte_buddy_battle_stats_t current_battle_stats(
         state->upgrades[BYTE_BUDDY_UPGRADE_AURA],
         state->upgrades[BYTE_BUDDY_UPGRADE_NEST],
         state->upgrades[BYTE_BUDDY_UPGRADE_MAGNET]);
+    return byte_buddy_lineage_battle_stats(
+        base, current_lineage(state), &state->signal_genes);
 }
 
 static bool rare_morph_unlocked(const byte_buddy_state_t *state)
@@ -1897,6 +2178,7 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
     const unsigned phase4 = (unsigned)(
         (animation_ms / frame_interval_ms) % 4U);
     const unsigned stage = safe_stage(state);
+    const byte_buddy_signal_lineage_t lineage = current_lineage(state);
     if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
         stage == BYTE_BUDDY_STAGE_BABY &&
         reaction == REACTION_GROW) {
@@ -2002,11 +2284,9 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
     if (stage == BYTE_BUDDY_STAGE_ELEMENTAL &&
         rare_morph_unlocked(state)) {
         if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
-            state->signal_feeds != 0U) {
-            const unsigned variant = (unsigned)(
-                (state->signal_entropy ^ state->signal_hue) & UINT64_C(3));
+            lineage.tier >= BYTE_BUDDY_LINEAGE_ASCENDED) {
             *out_sheet = DRAGON_SIGNAL_GENETICS_SHEET;
-            *out_frame = phase4 * 4U + variant;
+            *out_frame = phase4 * 4U + lineage.family;
             return;
         }
         *out_sheet = DRAGON_RARE_SHEET;
@@ -2015,11 +2295,9 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
     }
     if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
         stage == BYTE_BUDDY_STAGE_ELEMENTAL) {
-        if (state->signal_feeds != 0U) {
-            const unsigned variant = (unsigned)(
-                (state->signal_entropy ^ state->signal_hue) & UINT64_C(3));
+        if (lineage.tier >= BYTE_BUDDY_LINEAGE_ASCENDED) {
             *out_sheet = DRAGON_SIGNAL_GENETICS_SHEET;
-            *out_frame = phase4 * 4U + variant;
+            *out_frame = phase4 * 4U + lineage.family;
             return;
         }
         *out_sheet = DRAGON_ELEMENT_MASTERY_SHEET;
@@ -2583,6 +2861,32 @@ static void draw_custom_trail(p4_game_surface_t *surface,
     }
 }
 
+static void draw_lineage_back_layers(p4_game_surface_t *surface,
+                                     const byte_buddy_state_t *state,
+                                     int left, int top)
+{
+    const byte_buddy_signal_lineage_t lineage = current_lineage(state);
+    if (lineage.tier < BYTE_BUDDY_LINEAGE_AURORA ||
+        state->art_sheets < DRAGON_EXTENDED_SHEET_COUNT) {
+        return;
+    }
+    const int center_x = left + DRAGON_FRAME_WIDTH / 2;
+    const int center_y = top + DRAGON_FRAME_HEIGHT / 2;
+    const int drift = (int)((state->animation_ms / 180U) % 3U) - 1;
+    (void)draw_signal_layer_scaled(
+        surface, state, 12U + lineage.aura, lineage.primary_hue,
+        center_x, center_y + drift, DRAGON_FRAME_WIDTH);
+    (void)draw_signal_layer_scaled(
+        surface, state, 4U + lineage.halo, lineage.primary_hue,
+        center_x, center_y - drift, DRAGON_FRAME_WIDTH - 6U);
+    if (lineage.tier >= BYTE_BUDDY_LINEAGE_MYTHIC) {
+        (void)draw_signal_layer_scaled(
+            surface, state, 12U + ((lineage.aura + 1U) & 3U),
+            lineage.secondary_hue, center_x, center_y - drift,
+            DRAGON_FRAME_WIDTH - 2U);
+    }
+}
+
 static void draw_signal_mutation(p4_game_surface_t *surface,
                                  const byte_buddy_state_t *state,
                                  int left, int top)
@@ -2591,19 +2895,24 @@ static void draw_signal_mutation(p4_game_surface_t *surface,
         {-3, 12}, {10, -3}, {31, -4}, {53, 0},
         {66, 17}, {67, 46}, {46, 65}, {7, 60},
     };
-    if (state->signal_feeds == 0U) {
+    const byte_buddy_signal_lineage_t lineage = current_lineage(state);
+    if (lineage.tier == BYTE_BUDDY_LINEAGE_DORMANT) {
         return;
     }
     const int phase = (int)((state->animation_ms / 90U) % 16U);
     const int orbit = phase < 8 ? phase : 15 - phase;
-    const uint16_t color = signal_color(state);
+    const uint16_t color = signal_color_for_hue(lineage.primary_hue);
+    const uint16_t secondary = signal_color_for_hue(
+        lineage.secondary_hue);
     p4_draw_fill_circle(surface, left - 3 + orbit, top + 9, 1, color);
     p4_draw_fill_circle(surface, left + DRAGON_FRAME_WIDTH + 2 - orbit,
                         top + 41, 1,
                         UINT16_C(0xffff));
     p4_draw_fill_circle(surface, left + 24 + orbit, top - 3, 1, color);
-    const unsigned spark_count = state->signal_feeds >= 5U
-        ? 6U : (unsigned)state->signal_feeds + 1U;
+    unsigned spark_count = 1U + lineage.tier + lineage.channel_families;
+    if (spark_count > 8U) {
+        spark_count = 8U;
+    }
     for (unsigned spark = 0U; spark < spark_count; ++spark) {
         const unsigned shift = (spark * 7U) & 63U;
         const unsigned anchor = (unsigned)(
@@ -2614,15 +2923,50 @@ static void draw_signal_mutation(p4_game_surface_t *surface,
             (int)(spark & 1U) * 2 - 1;
         const int sparkle_y = top + anchors[anchor][1] - lift / 3;
         p4_draw_fill_circle(surface, sparkle_x, sparkle_y,
-                            spark >= 4U ? 2 : 1,
-                            (spark & 1U) == 0U
-                                ? color : UINT16_C(0xffff));
+                            lineage.tier >= BYTE_BUDDY_LINEAGE_MYTHIC &&
+                                spark >= 6U ? 2 : 1,
+                            (spark & 1U) == 0U ? color : secondary);
     }
-    if (state->signal_feeds >= 3U ||
+    if (lineage.tier >= BYTE_BUDDY_LINEAGE_CREST &&
+        state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT) {
+        (void)draw_signal_layer_scaled(
+            surface, state, 8U + lineage.marking,
+            lineage.secondary_hue,
+            left + DRAGON_FRAME_WIDTH / 2,
+            top + DRAGON_FRAME_HEIGHT / 2 + 2, 42U);
+    }
+    if (lineage.tier >= BYTE_BUDDY_LINEAGE_AURORA ||
         state->upgrades[BYTE_BUDDY_UPGRADE_AURA] != 0U) {
-        p4_draw_rect(surface, left - 4, top - 4,
-                     DRAGON_FRAME_WIDTH + 8, DRAGON_FRAME_HEIGHT + 8,
-                     color);
+        const int pulse = (int)((state->animation_ms / 240U) & 1U);
+        p4_draw_rect(surface, left - 3 - pulse, top - 3 - pulse,
+                     DRAGON_FRAME_WIDTH + 6 + pulse * 2,
+                     DRAGON_FRAME_HEIGHT + 6 + pulse * 2, color);
+    }
+    if (lineage.shielded) {
+        p4_draw_fill_rect(surface, left - 5, top + 9, 8, 2,
+                          UINT16_C(0xffff));
+        p4_draw_fill_rect(surface, left - 5, top + 9, 2, 8, color);
+        p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH - 2,
+                          top + 47, 8, 2, UINT16_C(0xffff));
+        p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH + 4,
+                          top + 41, 2, 8, color);
+    }
+    if (lineage.phantom) {
+        p4_draw_fill_circle(surface, left + 58 - orbit / 2,
+                            top + 7 + orbit / 3, 2, secondary);
+        p4_draw_fill_circle(surface, left + 61 - orbit / 2,
+                            top + 5 + orbit / 3, 1,
+                            UINT16_C(0xffff));
+    }
+    if (lineage.tier >= BYTE_BUDDY_LINEAGE_MYTHIC) {
+        const int crown_x = left + DRAGON_FRAME_WIDTH / 2;
+        p4_draw_fill_rect(surface, crown_x - 7, top - 7, 15, 2,
+                          secondary);
+        p4_draw_fill_rect(surface, crown_x - 6, top - 11, 3, 5, color);
+        p4_draw_fill_rect(surface, crown_x - 1, top - 13, 3, 7,
+                          UINT16_C(0xffff));
+        p4_draw_fill_rect(surface, crown_x + 4, top - 11, 3, 5,
+                          color);
     }
 }
 
@@ -2735,9 +3079,10 @@ static void draw_dragon(p4_game_surface_t *surface,
                           UINT16_C(0xfd20));
     }
     draw_element_particles(surface, state, left, top);
-    draw_signal_mutation(surface, state, left, top);
+    draw_lineage_back_layers(surface, state, left, top);
     draw_custom_trail(surface, state, left, top);
     draw_dragon_sprite(surface, state, left, top);
+    draw_signal_mutation(surface, state, left, top);
     if (safe_stage(state) >= BYTE_BUDDY_STAGE_WINGED) {
         if (safe_wing_style(state) == BYTE_BUDDY_WINGS_SHINY) {
             p4_draw_fill_rect(surface, left + 2, top + 13, 6, 1,
@@ -2797,6 +3142,7 @@ static void draw_growth_panel(p4_game_surface_t *surface,
                               const byte_buddy_state_t *state)
 {
     const unsigned stage = safe_stage(state);
+    const byte_buddy_signal_lineage_t lineage = current_lineage(state);
     p4_draw_text(surface, 204, 34, "STAGE", UINT16_C(0x7bef), 1U, 5U);
     p4_draw_text(surface, 204, 44, s_stage_names[stage],
                  UINT16_C(0xffff), 1U, 9U);
@@ -2810,6 +3156,22 @@ static void draw_growth_panel(p4_game_surface_t *surface,
                      UINT16_C(0xffff), 1U, 6U);
     }
     if (stage == BYTE_BUDDY_STAGE_ELEMENTAL &&
+        lineage.tier != BYTE_BUDDY_LINEAGE_DORMANT) {
+        p4_draw_text(surface, 204, 108, "LINEAGE", UINT16_C(0x7bef),
+                     1U, 7U);
+        p4_draw_text(surface, 204, 118,
+                     s_lineage_names[lineage.tier],
+                     signal_color(state), 1U,
+                     s_lineage_name_lengths[lineage.tier]);
+        p4_draw_text(surface, 204, 128, "LINK", UINT16_C(0x7bef),
+                     1U, 4U);
+        draw_number(surface, 238, 128,
+                    state->signal_consumed_count, UINT16_C(0xffff));
+        p4_draw_text(surface, 260, 128, "DNA", UINT16_C(0x7bef),
+                     1U, 3U);
+        draw_number(surface, 284, 128,
+                    lineage.diversity, UINT16_C(0xffff));
+    } else if (stage == BYTE_BUDDY_STAGE_ELEMENTAL &&
         rare_morph_unlocked(state)) {
         p4_draw_text(surface, 204, 108, "RARE MORPH", UINT16_C(0xffe0),
                      1U, 10U);
@@ -3279,6 +3641,9 @@ static void draw_signal_header(p4_game_surface_t *surface,
                       UINT16_C(0x07ff), false);
     p4_draw_text(surface, 66, 8, title, UINT16_C(0x07ff), 1U,
                  title_length);
+    p4_draw_text(surface, 160, 8, "LINK", UINT16_C(0x7bef), 1U, 4U);
+    draw_number(surface, 190, 8, state->signal_consumed_count,
+                signal_color(state));
     const byte_buddy_battle_stats_t stats = current_battle_stats(state);
     p4_draw_text(surface, 215, 8, "LV", UINT16_C(0x7bef), 1U, 2U);
     draw_number(surface, 232, 8, stats.level, UINT16_C(0xffff));
@@ -3328,6 +3693,10 @@ static void draw_signal_list(p4_game_surface_t *surface,
             if (signal_consumed(state, signal->token)) {
                 p4_draw_text(surface, 270, top + 7, "EATEN",
                              UINT16_C(0x7bef), 1U, 5U);
+            } else if (state->signal_consumed_count >=
+                       SIGNAL_MAX_CONSUMED) {
+                p4_draw_text(surface, 270, top + 7, "FULL",
+                             UINT16_C(0xf81f), 1U, 4U);
             } else {
                 p4_draw_text(surface, 270, top + 7, "+",
                              UINT16_C(0xffe0), 1U, 1U);
@@ -3340,6 +3709,23 @@ static void draw_signal_list(p4_game_surface_t *surface,
             p4_draw_text(surface, 241, 27, "SIM DATA",
                          UINT16_C(0xf81f), 1U, 8U);
         }
+    }
+    if (state->signal_reward_ms != 0U) {
+        const byte_buddy_signal_lineage_t lineage = current_lineage(state);
+        p4_draw_fill_rect(surface, 72, 65, 176, 56, UINT16_C(0x000b));
+        p4_draw_rect(surface, 72, 65, 176, 56, signal_color(state));
+        p4_draw_text(surface, 104, 74, "LINEAGE UPDATED",
+                     UINT16_C(0xffff), 1U, 15U);
+        p4_draw_text(surface, 108, 91,
+                     s_lineage_names[lineage.tier],
+                     signal_color(state), 1U,
+                     s_lineage_name_lengths[lineage.tier]);
+        p4_draw_text(surface, 183, 91, "DNA", UINT16_C(0x7bef),
+                     1U, 3U);
+        draw_number(surface, 207, 91,
+                    lineage.diversity, UINT16_C(0xffff));
+        p4_draw_text(surface, 105, 106, "NEW SIGNAL INHERITED",
+                     UINT16_C(0x9cf3), 1U, 20U);
     }
     draw_touch_button(surface, 4, 162, 312, 33, "SCAN CITY", 9U,
                       UINT16_C(0x07ff),
@@ -3415,11 +3801,15 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
     draw_touch_button(surface, 4, 162, 188, 33, "RESCAN NOW", 10U,
                       UINT16_C(0x07ff),
                       state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING);
-    const bool ready = signal != NULL &&
+    const bool full = signal != NULL &&
+        !signal_consumed(state, signal->token) &&
+        state->signal_consumed_count >= SIGNAL_MAX_CONSUMED;
+    const bool ready = signal != NULL && !full &&
         signal->rssi_dbm >= SIGNAL_HUNT_UNLOCK_RSSI;
     draw_touch_button(surface, 198, 162, 118, 33,
-                      ready ? "BATTLE" : "TOO FAR",
-                      ready ? 6U : 7U, UINT16_C(0xfd20), false);
+                      full ? "LINEAGE FULL" : ready ? "BATTLE" : "TOO FAR",
+                      full ? 12U : ready ? 6U : 7U,
+                      UINT16_C(0xfd20), false);
 }
 
 static void draw_signal_battle(p4_game_surface_t *surface,
@@ -3545,8 +3935,17 @@ static bool game_render(p4_game_context_t *context,
         p4_game_feedback_draw_audio_effect(
             surface, &state->audio, 160, 96);
         draw_dragon(surface, state, 160, 58);
-        p4_draw_text(surface, 128, 126, "TAP TO PET",
-                     UINT16_C(0x9cf3), 1U, 10U);
+        const byte_buddy_signal_lineage_t lineage = current_lineage(state);
+        if (lineage.tier == BYTE_BUDDY_LINEAGE_DORMANT) {
+            p4_draw_text(surface, 128, 126, "TAP TO PET",
+                         UINT16_C(0x9cf3), 1U, 10U);
+        } else {
+            const size_t length = s_lineage_name_lengths[lineage.tier];
+            const int label_x = 160 - (int)(length * 7U) / 2;
+            p4_draw_text(surface, label_x, 126,
+                         s_lineage_names[lineage.tier],
+                         signal_color(state), 1U, length);
+        }
         draw_touch_button(surface, 4, 138, 74, 27, s_actions[ACTION_FEED],
                           4U, UINT16_C(0xfd20),
                           state->reaction == REACTION_FEED);

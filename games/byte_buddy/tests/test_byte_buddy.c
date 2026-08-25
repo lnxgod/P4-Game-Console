@@ -555,6 +555,200 @@ static void test_signal_hunt_battle_and_reward(void)
     free(state);
 }
 
+static uint8_t lineage_test_channel(unsigned index)
+{
+    static const uint8_t channels[4] = {1U, 6U, 11U, 36U};
+    return channels[index & 3U];
+}
+
+static byte_buddy_signal_genome_t lineage_test_genome(unsigned index)
+{
+    static const uint8_t halo_order[4] = {0U, 2U, 3U, 1U};
+    static const uint8_t sigil_order[4] = {0U, 3U, 1U, 2U};
+    static const uint8_t aura_order[4] = {0U, 2U, 1U, 3U};
+    const uint8_t family = (uint8_t)(index & 3U);
+    return (byte_buddy_signal_genome_t){
+        .core = family,
+        .halo = halo_order[family],
+        .sigil = sigil_order[family],
+        .aura = aura_order[family],
+        .hue = (uint8_t)(index & 7U),
+        .rarity = (uint8_t)(index & 3U),
+    };
+}
+
+static void test_signal_lineage_genetics(void)
+{
+    CHECK(byte_buddy_signal_channel_family(0U) == UINT8_MAX);
+    CHECK(byte_buddy_signal_channel_family(1U) == 0U);
+    CHECK(byte_buddy_signal_channel_family(5U) == 0U);
+    CHECK(byte_buddy_signal_channel_family(6U) == 1U);
+    CHECK(byte_buddy_signal_channel_family(10U) == 1U);
+    CHECK(byte_buddy_signal_channel_family(11U) == 2U);
+    CHECK(byte_buddy_signal_channel_family(14U) == 2U);
+    CHECK(byte_buddy_signal_channel_family(36U) == 3U);
+    CHECK(byte_buddy_signal_channel_family(196U) == 3U);
+
+    const uint64_t token_a = UINT64_C(0x1020304050607080);
+    const uint64_t token_b = UINT64_C(0x8877665544332211);
+    const uint8_t protected_flag = P4_GAME_SIGNAL_PROTECTED;
+    const uint64_t contribution_a =
+        byte_buddy_signal_lineage_contribution(
+            token_a, 1U, protected_flag);
+    const uint64_t contribution_b =
+        byte_buddy_signal_lineage_contribution(token_b, 36U, 0U);
+    CHECK(contribution_a != 0U && contribution_b != 0U);
+    CHECK((contribution_a ^ contribution_b) ==
+          (contribution_b ^ contribution_a));
+    CHECK(contribution_a == byte_buddy_signal_lineage_contribution(
+              token_a, 1U,
+              protected_flag | P4_GAME_SIGNAL_SIMULATED));
+    CHECK(contribution_a != byte_buddy_signal_lineage_contribution(
+              token_a, 6U, protected_flag));
+    CHECK(contribution_a != byte_buddy_signal_lineage_contribution(
+              token_a, 1U, 0U));
+
+    byte_buddy_lineage_genes_t forward = {0};
+    byte_buddy_lineage_genes_t reverse = {0};
+    uint64_t forward_entropy = 0U;
+    uint64_t reverse_entropy = 0U;
+    for (unsigned index = 0U; index < 12U; ++index) {
+        const uint8_t flags = (uint8_t)(
+            P4_GAME_SIGNAL_SIMULATED |
+            (index < 3U ? P4_GAME_SIGNAL_PROTECTED : 0U) |
+            (index == 4U ? P4_GAME_SIGNAL_HIDDEN : 0U));
+        const uint64_t token = UINT64_C(0x4000000000000000) + index;
+        byte_buddy_lineage_add(
+            &forward, lineage_test_genome(index),
+            lineage_test_channel(index), flags);
+        forward_entropy ^= byte_buddy_signal_lineage_contribution(
+            token, lineage_test_channel(index), flags);
+
+        const unsigned reverse_index = 11U - index;
+        const uint8_t reverse_flags = (uint8_t)(
+            P4_GAME_SIGNAL_SIMULATED |
+            (reverse_index < 3U ? P4_GAME_SIGNAL_PROTECTED : 0U) |
+            (reverse_index == 4U ? P4_GAME_SIGNAL_HIDDEN : 0U));
+        const uint64_t reverse_token =
+            UINT64_C(0x4000000000000000) + reverse_index;
+        byte_buddy_lineage_add(
+            &reverse, lineage_test_genome(reverse_index),
+            lineage_test_channel(reverse_index), reverse_flags);
+        reverse_entropy ^= byte_buddy_signal_lineage_contribution(
+            reverse_token, lineage_test_channel(reverse_index),
+            reverse_flags);
+
+        const byte_buddy_signal_lineage_t lineage =
+            byte_buddy_signal_lineage(
+                forward_entropy, (uint8_t)(index + 1U), &forward);
+        const uint8_t expected_tier = index + 1U >= 12U
+            ? BYTE_BUDDY_LINEAGE_MYTHIC : index + 1U >= 8U
+                ? BYTE_BUDDY_LINEAGE_ASCENDED : index + 1U >= 5U
+                    ? BYTE_BUDDY_LINEAGE_AURORA : index + 1U >= 3U
+                        ? BYTE_BUDDY_LINEAGE_CREST
+                        : BYTE_BUDDY_LINEAGE_SPARK;
+        CHECK(lineage.tier == expected_tier);
+    }
+    CHECK(forward_entropy == reverse_entropy);
+    CHECK(forward.part_mask == reverse.part_mask);
+    CHECK(forward.hue_mask == reverse.hue_mask);
+    CHECK(forward.rarity_mask == reverse.rarity_mask);
+    CHECK(forward.channel_mask == reverse.channel_mask);
+    CHECK(forward.protected_count == reverse.protected_count);
+    CHECK(forward.hidden_count == reverse.hidden_count);
+    CHECK(memcmp(forward.core_votes, reverse.core_votes,
+                 sizeof(forward.core_votes)) == 0);
+    CHECK(memcmp(forward.halo_votes, reverse.halo_votes,
+                 sizeof(forward.halo_votes)) == 0);
+    CHECK(memcmp(forward.sigil_votes, reverse.sigil_votes,
+                 sizeof(forward.sigil_votes)) == 0);
+    CHECK(memcmp(forward.aura_votes, reverse.aura_votes,
+                 sizeof(forward.aura_votes)) == 0);
+    CHECK(memcmp(forward.hue_votes, reverse.hue_votes,
+                 sizeof(forward.hue_votes)) == 0);
+    const byte_buddy_signal_lineage_t forward_lineage =
+        byte_buddy_signal_lineage(forward_entropy, 12U, &forward);
+    const byte_buddy_signal_lineage_t reverse_lineage =
+        byte_buddy_signal_lineage(reverse_entropy, 12U, &reverse);
+    CHECK(forward_lineage.tier == BYTE_BUDDY_LINEAGE_MYTHIC);
+    CHECK(forward_lineage.diversity == 28U);
+    CHECK(forward_lineage.channel_families == 4U);
+    CHECK(forward_lineage.shielded);
+    CHECK(forward_lineage.phantom);
+    CHECK(forward_lineage.family == reverse_lineage.family);
+    CHECK(forward_lineage.halo == reverse_lineage.halo);
+    CHECK(forward_lineage.marking == reverse_lineage.marking);
+    CHECK(forward_lineage.aura == reverse_lineage.aura);
+    CHECK(forward_lineage.primary_hue == reverse_lineage.primary_hue);
+    CHECK(forward_lineage.secondary_hue != forward_lineage.primary_hue);
+
+    byte_buddy_lineage_genes_t repeated = {0};
+    const byte_buddy_signal_genome_t repeated_genome =
+        lineage_test_genome(0U);
+    for (unsigned index = 0U; index < 12U; ++index) {
+        byte_buddy_lineage_add(
+            &repeated, repeated_genome, 1U, 0U);
+    }
+    const byte_buddy_signal_lineage_t low_diversity =
+        byte_buddy_signal_lineage(UINT64_C(0x1234), 12U, &repeated);
+    CHECK(low_diversity.diversity == 6U);
+    CHECK(low_diversity.tier == BYTE_BUDDY_LINEAGE_SPARK);
+
+    byte_buddy_lineage_genes_t weighted = {0};
+    byte_buddy_signal_genome_t light = lineage_test_genome(1U);
+    byte_buddy_signal_genome_t rare = lineage_test_genome(2U);
+    light.rarity = 0U;
+    rare.rarity = 3U;
+    byte_buddy_lineage_add(&weighted, light, 6U, 0U);
+    byte_buddy_lineage_add(&weighted, rare, 11U, 0U);
+    const byte_buddy_signal_lineage_t weighted_lineage =
+        byte_buddy_signal_lineage(0U, 2U, &weighted);
+    CHECK(weighted_lineage.family == rare.core);
+
+    const byte_buddy_battle_stats_t boosted =
+        byte_buddy_lineage_battle_stats(
+            (byte_buddy_battle_stats_t){
+                .level = 10U, .power = 10U, .speed = 10U,
+                .guard = 10U, .magic = 10U,
+            }, forward_lineage, &forward);
+    CHECK(boosted.level == 10U);
+    CHECK(boosted.power == 14U);
+    CHECK(boosted.speed == 14U);
+    CHECK(boosted.guard == 13U);
+    CHECK(boosted.magic == 16U);
+    const byte_buddy_battle_stats_t capped =
+        byte_buddy_lineage_battle_stats(
+            (byte_buddy_battle_stats_t){
+                .level = 99U, .power = 98U, .speed = 98U,
+                .guard = 98U, .magic = 98U,
+            }, forward_lineage, &forward);
+    CHECK(capped.level == 99U);
+    CHECK(capped.power == 99U);
+    CHECK(capped.speed == 99U);
+    CHECK(capped.guard == 99U);
+    CHECK(capped.magic == 99U);
+
+    const byte_buddy_lineage_battle_traits_t battle_traits =
+        byte_buddy_lineage_battle_traits(forward_lineage);
+    CHECK(battle_traits.strike_damage == 2U);
+    CHECK(battle_traits.guard_charges == 1U);
+    CHECK(battle_traits.start_time_ms == 400U);
+    CHECK(battle_traits.guard_time_ms == 420U);
+    const byte_buddy_lineage_battle_traits_t dormant_traits =
+        byte_buddy_lineage_battle_traits(
+            (byte_buddy_signal_lineage_t){0});
+    CHECK(dormant_traits.strike_damage == 0U);
+    CHECK(dormant_traits.guard_charges == 0U);
+    CHECK(dormant_traits.start_time_ms == 0U);
+    CHECK(dormant_traits.guard_time_ms == 0U);
+
+    CHECK(byte_buddy_signal_growth_reward(1U, 1U) == 1U);
+    CHECK(byte_buddy_signal_growth_reward(4U, 4U) == 3U);
+    CHECK(byte_buddy_signal_growth_reward(4U, 5U) == 2U);
+    CHECK(byte_buddy_signal_growth_reward(3U, 5U) == 1U);
+    CHECK(byte_buddy_signal_growth_reward(4U, 13U) == 1U);
+}
+
 static void test_controller_star_catcher(void)
 {
     void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
@@ -611,6 +805,7 @@ int main(void)
     test_render_bounds();
     test_dragon_growth_and_traits();
     test_controller_star_catcher();
+    test_signal_lineage_genetics();
     test_signal_hunt_battle_and_reward();
     test_invalid_extended_art_fails_closed();
     if (s_failures != 0) {

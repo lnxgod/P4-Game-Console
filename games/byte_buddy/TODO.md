@@ -27,6 +27,16 @@ P4 Game API surface.
 - [x] Generate, inspect, and integrate the 4x4 Signal Genome ImageGen atlas.
 - [x] Regenerate the 25-sheet/400-frame `.P4R` payload and record its hashes.
 - [x] Run focused unit/sanitizer tests and inspect chronological preview frames.
+- [x] Replace the one-win mature mutation with five cumulative lineage ranks
+      gated by both unique signal count and inherited genome diversity.
+- [x] Make lineage aggregation order-independent and retain rarity-weighted
+      core, halo, sigil, aura, hue, channel-family, protected, and hidden traits.
+- [x] Reuse the existing signal-genome layers for progressive Crest, Aurora,
+      shield, phantom, dual-hue, and Mythic dragon effects.
+- [x] Cap lineage battle bonuses and taper signal-fed growth so exploration
+      adds variety without rushing the normal care curve.
+- [x] Render and inspect one-signal Spark and five-signal Aurora animation clips
+      in the deterministic 156-frame preview sequence.
 - [x] Complete a visible SDL keyboard play pass: Start entered Star Catcher,
       Left steered through the spring path, one 18-second round ended naturally
       with two catches, B returned from a second round, and Back exited cleanly.
@@ -43,6 +53,11 @@ P4 Game API surface.
 - [ ] Decide whether session progress should opt into the reviewed save service on boards
       that expose it; Byte Buddy must remain usable without writable storage.
 - [ ] Add a second Signal Battle pattern so encounters are not only rapid tapping.
+- [ ] Reconcile the public session-token contract with the device-key behavior
+      before considering durable lineages or writable save integration.
+- [ ] Clear stale results in platform SCANNING/ERROR snapshots and distinguish
+      a transient busy scan request from true radio unavailability.
+- [ ] Add Signal Hunt paging so all eight bounded OS results are selectable.
 - [ ] Perform named tablet acceptance for touch feel, panel motion, speaker feedback,
       launcher return, and exact `.P4G`/`.P4R` hashes before calling the work hardware-tested.
 

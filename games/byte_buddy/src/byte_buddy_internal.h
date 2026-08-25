@@ -119,6 +119,44 @@ typedef struct {
     uint16_t recipe_id;
 } byte_buddy_signal_genome_t;
 
+typedef enum {
+    BYTE_BUDDY_LINEAGE_DORMANT = 0,
+    BYTE_BUDDY_LINEAGE_SPARK,
+    BYTE_BUDDY_LINEAGE_CREST,
+    BYTE_BUDDY_LINEAGE_AURORA,
+    BYTE_BUDDY_LINEAGE_ASCENDED,
+    BYTE_BUDDY_LINEAGE_MYTHIC,
+    BYTE_BUDDY_LINEAGE_TIER_COUNT,
+} byte_buddy_lineage_tier_t;
+
+typedef struct {
+    uint16_t part_mask;
+    uint8_t hue_mask;
+    uint8_t rarity_mask;
+    uint8_t channel_mask;
+    uint8_t protected_count;
+    uint8_t hidden_count;
+    uint8_t core_votes[4];
+    uint8_t halo_votes[4];
+    uint8_t sigil_votes[4];
+    uint8_t aura_votes[4];
+    uint8_t hue_votes[8];
+} byte_buddy_lineage_genes_t;
+
+typedef struct {
+    uint8_t tier;
+    uint8_t family;
+    uint8_t halo;
+    uint8_t marking;
+    uint8_t aura;
+    uint8_t primary_hue;
+    uint8_t secondary_hue;
+    uint8_t diversity;
+    uint8_t channel_families;
+    bool shielded;
+    bool phantom;
+} byte_buddy_signal_lineage_t;
+
 typedef struct {
     uint8_t level;
     uint8_t power;
@@ -126,6 +164,13 @@ typedef struct {
     uint8_t guard;
     uint8_t magic;
 } byte_buddy_battle_stats_t;
+
+typedef struct {
+    uint8_t strike_damage;
+    uint8_t guard_charges;
+    uint16_t start_time_ms;
+    uint16_t guard_time_ms;
+} byte_buddy_lineage_battle_traits_t;
 
 byte_buddy_stage_t byte_buddy_stage_for_interactions(uint16_t interactions);
 
@@ -200,5 +245,30 @@ uint16_t byte_buddy_signal_recipe_id(
     uint8_t aura, uint8_t hue, uint8_t rarity);
 
 byte_buddy_signal_genome_t byte_buddy_signal_genome(uint64_t token);
+
+uint8_t byte_buddy_signal_channel_family(uint8_t channel);
+
+uint64_t byte_buddy_signal_lineage_contribution(
+    uint64_t token, uint8_t channel, uint8_t flags);
+
+void byte_buddy_lineage_add(
+    byte_buddy_lineage_genes_t *genes,
+    byte_buddy_signal_genome_t genome,
+    uint8_t channel, uint8_t flags);
+
+byte_buddy_signal_lineage_t byte_buddy_signal_lineage(
+    uint64_t entropy, uint8_t unique_count,
+    const byte_buddy_lineage_genes_t *genes);
+
+byte_buddy_battle_stats_t byte_buddy_lineage_battle_stats(
+    byte_buddy_battle_stats_t base,
+    byte_buddy_signal_lineage_t lineage,
+    const byte_buddy_lineage_genes_t *genes);
+
+byte_buddy_lineage_battle_traits_t byte_buddy_lineage_battle_traits(
+    byte_buddy_signal_lineage_t lineage);
+
+uint8_t byte_buddy_signal_growth_reward(
+    uint8_t rarity, uint8_t unique_count);
 
 #endif
