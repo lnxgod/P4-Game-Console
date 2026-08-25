@@ -76,6 +76,9 @@ typedef struct {
     int last_ble_error;
 } platform_multiplayer_ble_status_t;
 
+/** Register the local P4 game service without starting radio or NimBLE. */
+esp_err_t platform_multiplayer_ble_prepare(void);
+
 /**
  * Lazily start the P4-to-C6 Hosted link and encrypted NimBLE game service.
  * No radio work occurs during Console OS boot; the lobby calls this only when

@@ -6,8 +6,9 @@
  * closed; repository metadata and the central verifier deny every flash/run
  * route. The branch preserves E1's exact WAD/display/video path, routes every
  * audio call through the counted app-local adapter. The standalone successor
- * keeps USB absent; the Waveshare Console OS integration consumes the shared
- * platform gamepad snapshot without taking ownership of the USB host.
+ * keeps controller transports absent; the Waveshare Console OS integration
+ * consumes the shared platform gamepad snapshot without taking ownership of
+ * USB Host or BLE HID.
  */
 
 #include <inttypes.h>
@@ -37,10 +38,10 @@
 #if defined(P4_CONSOLE_OS_EMBEDDED) && \
     defined(CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3) && \
     CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
-#define P4_DOOM_SHARED_USB_GAMEPAD 1
+#define P4_DOOM_SHARED_GAMEPAD 1
 #include "doom_gamepad/input.h"
 #else
-#define P4_DOOM_SHARED_USB_GAMEPAD 0
+#define P4_DOOM_SHARED_GAMEPAD 0
 #endif
 #pragma GCC diagnostic push
 /* ESP-IDF 5.5.3 has two sign-conversion warnings in inline RISC-V headers. */
@@ -63,8 +64,8 @@
 #ifdef P4_CONSOLE_OS_EMBEDDED
 #include "platform/game_storage.h"
 #endif
-#if P4_DOOM_SHARED_USB_GAMEPAD
-#include "platform_gamepad_usb/platform_gamepad_usb.h"
+#if P4_DOOM_SHARED_GAMEPAD
+#include "platform/gamepad.h"
 #endif
 
 #define DOOM_SUBMIT_TIMEOUT_MS UINT32_C(100)
@@ -113,7 +114,7 @@ static uint32_t s_touch_polls;
 static uint32_t s_touch_poll_failures;
 static uint32_t s_touch_retries;
 
-#if P4_DOOM_SHARED_USB_GAMEPAD
+#if P4_DOOM_SHARED_GAMEPAD
 static doom_gamepad_input_t s_gamepad_input;
 static bool s_gamepad_connection_known;
 static uint8_t s_gamepad_connected;
@@ -383,7 +384,7 @@ static void service_touch(void)
     (void)doom_touch_input_update(&s_touch_input, &touch_frame);
 }
 
-#if P4_DOOM_SHARED_USB_GAMEPAD
+#if P4_DOOM_SHARED_GAMEPAD
 static bool doom_gamepad_action_key(uint8_t action, unsigned char *key)
 {
     if (key == NULL) {
@@ -469,7 +470,7 @@ static void service_gamepad(void)
 
     platform_gamepad_snapshot_t snapshot;
     memset(&snapshot, 0, sizeof(snapshot));
-    const esp_err_t result = platform_gamepad_usb_get_snapshot(&snapshot);
+    const esp_err_t result = platform_gamepad_get_snapshot(&snapshot);
     const bool valid = result == ESP_OK && gamepad_snapshot_valid(&snapshot);
     gamepad_state_t neutral;
     gamepad_state_init(&neutral);
@@ -1031,7 +1032,7 @@ int DG_GetKey(int *pressed, unsigned char *key)
     }
     *pressed = 0;
     *key = 0U;
-#if P4_DOOM_SHARED_USB_GAMEPAD
+#if P4_DOOM_SHARED_GAMEPAD
     service_gamepad();
     doom_gamepad_event_t gamepad_event;
     while (doom_gamepad_input_next(&s_gamepad_input, &gamepad_event)) {
@@ -1094,7 +1095,7 @@ void app_main(void)
                  "P4_DOOM_E6 START board=%s input=gt911-multitouch "
                  "sound=es8311-i2s1-speaker-sfx-mus amp_gpio=53 "
                  "codec_i2c_addr=0x18 music=wad-mus-procedural-16voice "
-                 "usb=shared-platform-gamepad multiplayer=%s "
+                 "controller=shared-platform-gamepad multiplayer=%s "
                  "runtime=exact-unit-waveshare-audio",
                  platform_board_name(),
 #ifdef P4_CONSOLE_OS_EMBEDDED
@@ -1133,7 +1134,7 @@ void app_main(void)
                  ? "touch-only" : "touch-and-audio");
 
     doom_touch_input_init(&s_touch_input);
-#if P4_DOOM_SHARED_USB_GAMEPAD
+#if P4_DOOM_SHARED_GAMEPAD
     doom_gamepad_input_init(&s_gamepad_input);
 #endif
     s_audio_gate_enabled =
@@ -1272,12 +1273,12 @@ void app_main(void)
         "doom", "-iwad", (char *)wad_path,
         "-gfxmode", "rgba8888", "-nosound", "-nomusic",
     };
-#if P4_DOOM_SHARED_USB_GAMEPAD
+#if P4_DOOM_SHARED_GAMEPAD
     ESP_LOGI(TAG,
              "P4_DOOM_E6 ENGINE_START wad=%s touch=%s overlay=visible "
              "sfx_request=%s music_request=%s "
              "music_synth=procedural-16voice "
-             "usb=shared-platform-gamepad",
+             "controller=shared-platform-gamepad",
              wad_path, s_touch_ready ? "ready" : "degraded",
              sound_enabled ? "enabled" : "fallback-silent",
              sound_enabled ? "enabled" : "fallback-silent");

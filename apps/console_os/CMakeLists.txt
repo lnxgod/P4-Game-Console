@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.4.70")
+set(PROJECT_VER "0.4.71")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")
@@ -15,6 +15,9 @@ if(NOT DEFINED P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
 endif()
 if(NOT DEFINED P4_WAVESHARE_BLE_MULTIPLAYER_BUILD)
     set(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD ON)
+endif()
+if(NOT DEFINED P4_WAVESHARE_BLE_GAMEPAD_BUILD)
+    set(P4_WAVESHARE_BLE_GAMEPAD_BUILD ON)
 endif()
 if(NOT P4_BOARD_PROFILE STREQUAL "elecrow-crowpanel-advanced-10" AND
    NOT P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" AND
@@ -60,6 +63,7 @@ if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
         "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_video"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/gamepad_core"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_platform"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad_usb"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_usb_host"
         "${CMAKE_CURRENT_LIST_DIR}/../doom/components/doom_audio"
@@ -77,6 +81,7 @@ elseif(P4_BOARD_PROFILE STREQUAL
         "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_tinyusb_dual"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_audio_es8311"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_audio_factory"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad_usb"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_i2c_shared"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_touch"
@@ -86,9 +91,16 @@ elseif(P4_BOARD_PROFILE STREQUAL
         "${CMAKE_CURRENT_LIST_DIR}/../doom_audio_probe/components/doom_engine_audio"
     )
     if(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR
+       P4_WAVESHARE_BLE_GAMEPAD_BUILD OR
        P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
         list(APPEND EXTRA_COMPONENT_DIRS
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_ble_host"
             "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_radio_hosted"
+        )
+    endif()
+    if(P4_WAVESHARE_BLE_GAMEPAD_BUILD)
+        list(APPEND EXTRA_COMPONENT_DIRS
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad_ble"
         )
     endif()
     if(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD)
@@ -134,12 +146,15 @@ idf_build_set_property(P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD
     "${P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD}")
 idf_build_set_property(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD
     "${P4_WAVESHARE_BLE_MULTIPLAYER_BUILD}")
+idf_build_set_property(P4_WAVESHARE_BLE_GAMEPAD_BUILD
+    "${P4_WAVESHARE_BLE_GAMEPAD_BUILD}")
 project(p4_console_os)
 
 if(P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
    (P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD OR
-    P4_WAVESHARE_BLE_MULTIPLAYER_BUILD))
+    P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR
+    P4_WAVESHARE_BLE_GAMEPAD_BUILD))
     if(NOT CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE OR
        NOT CONFIG_ESP_HOSTED_SDIO_GPIO_RESET_SLAVE EQUAL 54 OR
        NOT CONFIG_ESP_HOSTED_SDIO_PIN_CLK EQUAL 18 OR
@@ -152,15 +167,26 @@ if(P4_BOARD_PROFILE STREQUAL
             "Waveshare radio services require their exact SDIO transport; "
             "refusing an ESP-Hosted fallback that can claim touch/display/audio pins")
     endif()
-    if(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD AND
+    if((P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR
+        P4_WAVESHARE_BLE_GAMEPAD_BUILD) AND
        (NOT CONFIG_BT_ENABLED OR
         NOT CONFIG_BT_CONTROLLER_DISABLED OR
         NOT CONFIG_BT_NIMBLE_ENABLED OR
         NOT CONFIG_ESP_HOSTED_ENABLE_BT_NIMBLE OR
         NOT CONFIG_ESP_HOSTED_NIMBLE_HCI_VHCI))
         message(FATAL_ERROR
-            "Waveshare BLE multiplayer requires the committed NimBLE/VHCI "
+            "Waveshare BLE services require the committed NimBLE/VHCI "
             "sdkconfig overlay; rebuild with scripts/build-waveshare-console-os.sh")
+    endif()
+    if(P4_WAVESHARE_BLE_GAMEPAD_BUILD AND
+       (CONFIG_BT_NIMBLE_MAX_CONNECTIONS LESS 2 OR
+        CONFIG_BT_NIMBLE_MAX_BONDS LESS 4 OR
+        CONFIG_BT_NIMBLE_MAX_CCCDS LESS 16 OR
+        NOT CONFIG_BT_NIMBLE_NVS_PERSIST))
+        message(FATAL_ERROR
+            "BLE controller support requires two links, persistent bonds, "
+            "and the committed bounded CCCD table; regenerate sdkconfig "
+            "with scripts/build-waveshare-console-os.sh")
     endif()
 endif()
 idf_build_get_property(P4_IDF_PYTHON PYTHON)
@@ -312,7 +338,8 @@ endif()
 if(P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
    (P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD OR
-    P4_WAVESHARE_BLE_MULTIPLAYER_BUILD))
+    P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR
+    P4_WAVESHARE_BLE_GAMEPAD_BUILD))
     idf_component_get_property(
         P4_HOSTED_COMPONENT_LIB espressif__esp_hosted COMPONENT_LIB)
     get_target_property(
@@ -345,7 +372,8 @@ endif()
 # the managed component and lockfile remain untouched.
 if(P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
-   P4_WAVESHARE_BLE_MULTIPLAYER_BUILD)
+   (P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR
+    P4_WAVESHARE_BLE_GAMEPAD_BUILD))
     set(P4_HOSTED_OS_WRAPPER_UPSTREAM
         "${CMAKE_CURRENT_LIST_DIR}/managed_components/espressif__esp_hosted/host/port/src/os_wrapper.c")
     set(P4_HOSTED_OS_WRAPPER_GENERATOR

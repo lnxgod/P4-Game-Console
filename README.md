@@ -1,6 +1,6 @@
 # DEF CON ESP32-P4 game platform
 
-This repository is the experimental firmware platform for a future ESP32-P4 badge. Doom is the first end-to-end acceptance game; USB controllers, display, storage, audio, and lifecycle services are reusable platform components rather than Doom-specific code.
+This repository is the experimental firmware platform for a future ESP32-P4 badge. Doom is the first end-to-end acceptance game; USB/Bluetooth controllers, display, storage, audio, and lifecycle services are reusable platform components rather than Doom-specific code.
 
 Console OS has versioned game APIs for drawing, normalized input, bounded
 audio, saves, multiplayer-facing player slots, and return-to-launcher
@@ -45,8 +45,8 @@ repository at its root and name the relevant skill directly in the request:
   SDL3 runner before making firmware.
 - Use `$develop-p4-games` for `.P4G` packaging, resource sidecars, catalog
   integration, SD/USB copy, install, update, or removal.
-- Add `$add-usb-gamepad-support` only when controller descriptors, mappings,
-  hot-plug, or game input adapters change.
+- Add `$add-usb-gamepad-support` when USB or Bluetooth controller transports,
+  HID descriptors, mappings, pairing, hot-plug, or game input adapters change.
 - Use `$develop-waveshare-p4-4.3` for a Waveshare firmware build, flash,
   storage, display, touch, audio, USB-role, or exact-hardware test. Use
   `$develop-esp32-p4-platform` for shared platform or toolchain work.
@@ -77,7 +77,10 @@ they never own display, touch, audio, USB, SD, UART, or raw GPIO drivers.
   `make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES` for a validated
   card update. H2 remains controller-first and must not be assumed to provide
   safe VBUS; follow the powered, backfeed-safe fixture rules in the board
-  skill and port guide.
+  skill and port guide. Its Controllers app manages encrypted BLE HID pads,
+  including the modern Bluetooth-capable Xbox controller target, through the
+  same normalized input API used by wired pads. See
+  [Console controllers](docs/CONTROLLERS.md) for exact scope and limits.
 - `elecrow-crowpanel-advanced-10` remains the default target and the only one
   already seen on exact hardware. Its display/framebuffer and selected runtime
   paths have hardware evidence; the complete new Console OS feature set still

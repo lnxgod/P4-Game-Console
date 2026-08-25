@@ -26,7 +26,6 @@ if(COMMAND idf_component_register)
     endif()
     idf_component_register(
         SRCS
-            src/model.c
             src/input_model.c
             ${PLATFORM_GAMEPAD_USB_TRANSPORT}
             ${PLATFORM_GAMEPAD_USB_GUARDS}
@@ -37,6 +36,7 @@ if(COMMAND idf_component_register)
             gamepad_core
             log
             mbedtls
+            platform_gamepad
             platform_usb_host
             ${PLATFORM_GAMEPAD_USB_DRIVER_REQUIREMENTS}
     )
@@ -61,10 +61,10 @@ else()
     project(platform_gamepad_usb VERSION 0.1.0 LANGUAGES C)
 
     add_library(platform_gamepad_model STATIC
-        src/model.c
         src/input_model.c
         src/usb_host_open_guard.c
         ../gamepad_core/src/gamepad.c
+        ../gamepad_core/src/snapshot.c
     )
     target_include_directories(platform_gamepad_model PUBLIC
         include

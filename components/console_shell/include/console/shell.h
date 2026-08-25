@@ -77,6 +77,7 @@ enum {
     CONSOLE_SHELL_TITLE_MAX_BYTES = 16,
     CONSOLE_SHELL_SUBTITLE_MAX_BYTES = 32,
     CONSOLE_SHELL_NODE_NAME_BYTES = 17,
+    CONSOLE_SHELL_CONTROLLER_NAME_BYTES = 32,
     CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES = 16,
     CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES = 32,
     CONSOLE_SHELL_FILE_MAX_ENTRIES = 32,
@@ -111,7 +112,14 @@ typedef enum {
     CONSOLE_PAGE_FILE_TRANSFER,
     CONSOLE_PAGE_TERMINAL,
     CONSOLE_PAGE_STORAGE,
+    CONSOLE_PAGE_CONTROLLERS,
 } console_page_t;
+
+typedef enum {
+    CONSOLE_CONTROLLER_TRANSPORT_NONE = 0,
+    CONSOLE_CONTROLLER_TRANSPORT_USB_HID,
+    CONSOLE_CONTROLLER_TRANSPORT_BLE_HID,
+} console_controller_transport_t;
 
 /** Shell-only palettes; games retain full control of their own colors. */
 typedef enum {
@@ -226,6 +234,18 @@ typedef struct {
     console_shell_board_kind_t board_kind;
     bool touch_ready;
     bool controller_ready;
+    console_controller_transport_t controller_transport;
+    bool ble_controller_supported;
+    bool ble_controller_host_ready;
+    bool ble_controller_bonded;
+    bool ble_controller_connected;
+    bool ble_controller_encrypted;
+    bool ble_controller_busy;
+    int8_t ble_controller_rssi;
+    uint32_t ble_controller_reports_received;
+    uint32_t ble_controller_reports_dropped;
+    int ble_controller_last_error;
+    char ble_controller_name[CONSOLE_SHELL_CONTROLLER_NAME_BYTES];
     bool keyboard_ready;
     bool mouse_ready;
     bool sd_card_storage;
@@ -364,6 +384,9 @@ typedef enum {
     CONSOLE_ACTION_STORAGE_CHECK,
     CONSOLE_ACTION_STORAGE_RETRY,
     CONSOLE_ACTION_STORAGE_REPAIR,
+    CONSOLE_ACTION_CONTROLLER_PAIR,
+    CONSOLE_ACTION_CONTROLLER_DISCONNECT,
+    CONSOLE_ACTION_CONTROLLER_FORGET,
 } console_action_type_t;
 
 typedef enum {
@@ -412,6 +435,7 @@ typedef struct {
     size_t audio_selected_row;
     size_t multiplayer_selected_row;
     size_t storage_selected_action;
+    size_t controller_selected_action;
     console_shell_file_notice_t file_notice;
     uint16_t press_start_gui_x;
     uint16_t press_start_gui_y;

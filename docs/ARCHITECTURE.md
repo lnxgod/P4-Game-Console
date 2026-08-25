@@ -6,6 +6,7 @@ The platform separates hardware ownership from games so every acceptance game ex
 selected board profile
   Elecrow: DSI panel | touch | speaker | flash FAT | USB device MSC
   Olimex:  HDMI      | no touch | ES8311 | microSD  | USB-A host hub
+  Waveshare: DSI     | touch | ES8311 | microSD | H2 USB + C6 BLE
                               |
                    reusable platform services
        video | audio | storage | keyboard/mouse/gamepad input
@@ -25,9 +26,17 @@ selected board profile
 - Class drivers hold generation-bound exclusive leases. Teardown is two-stage: host quiesce blocks new leases and disables the P4 root port (the external fixture still owns physical VBUS); existing class owners drain disconnect callbacks, uninstall, and release; final host stop then frees devices and the daemon. Uncertain cleanup enters a terminal fault state and retains resources instead of freeing synchronization objects beneath a live task.
 - The gamepad USB adapter copies at most 1026 callback bytes into one of eight static slots and hands descriptor/report work to a manager task. Queue exhaustion, oversize data, transfer faults, malformed reports, and disconnect all neutralize the active session.
 - The HID parser is pure C with no ESP-IDF dependency so hostile descriptors can be tested and fuzzed on a desktop.
-- The gamepad service publishes complete lock-protected snapshots containing session, VID/PID, interface, report-descriptor SHA-256, capabilities, sequence/timestamp, buttons, D-pad, sticks, and triggers. A stale report or disconnect from a prior session cannot mutate a reconnected controller.
+- `platform_gamepad` brokers complete USB and BLE transport snapshots. A
+  connected wired pad has deterministic priority; a connected BLE pad is the
+  fallback. Games cannot see or select the transport.
+- The gamepad services publish complete lock-protected snapshots containing session, transport identity, VID/PID when available, interface, report-descriptor SHA-256, capabilities, sequence/timestamp, buttons, D-pad, sticks, and triggers. A stale report or disconnect from a prior session cannot mutate a reconnected controller.
 - Disconnect neutralization occurs in the HID callback before close finalization. The transport explicitly completes `usb_host_hid` 1.2.0's two-phase local-close handshake, copies descriptor storage before use, and invalidates it only after confirmed close.
-- Doom consumes one controller snapshot per game tic and remains ignorant of USB addresses and handles.
+- `platform_ble_host` is the one NimBLE/ESP-Hosted owner on Waveshare. BLE HID
+  and BLE multiplayer register before the host starts, then share the pinned
+  P4-to-C6 SDIO transport. The HID central requires persistent bonding,
+  encryption, bounded GATT discovery and report maps, and saved-peer identity
+  verification. Pairing yields lobby scanning and restores it afterward.
+- Doom consumes one controller snapshot per game tic and remains ignorant of USB/BLE addresses and handles.
 - On Elecrow, Console OS uses the P4 high-speed peripheral in USB **device**
   mode to expose a wear-levelled FAT `game_data` partition. Its device-storage
   and controller-host stacks remain separate firmware configurations.
@@ -60,9 +69,12 @@ selected board profile
 
 ## Input compatibility tiers
 
-1. Standards-compliant generic USB HID/DirectInput pads through descriptor parsing.
+1. Standards-compliant generic USB HID pads and BLE HID-over-GATT pads through the shared descriptor parser.
 2. Profiled HID devices such as DualShock/DualSense and Switch Pro.
-3. Vendor-class protocols such as Xbox XInput/GIP.
+3. Vendor-class protocols such as wired Xbox XInput/GIP or the Xbox Wireless Adapter.
 4. Optional output features such as LEDs and rumble.
 
-The first milestone promises tier 1 input only. Higher tiers require explicit profiles, fixtures, and hardware evidence.
+Modern Bluetooth-capable Xbox Wireless Controllers are a priority tier-1 BLE
+acceptance target only when they expose HOGP. Older/non-Bluetooth Xbox pads and
+proprietary Xbox transports remain tier 3. Every named model still requires a
+descriptor capture and hardware acceptance; see `docs/CONTROLLERS.md`.

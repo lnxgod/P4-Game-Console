@@ -21,6 +21,7 @@
 #include "freertos/task.h"
 #include "gamepad/hid_gamepad.h"
 #include "mbedtls/sha256.h"
+#include "platform/gamepad.h"
 #include "platform_gamepad_usb/input_model.h"
 #include "platform_usb_host/platform_usb_host.h"
 #include "usb/hid_host.h"
@@ -1189,7 +1190,9 @@ esp_err_t platform_gamepad_usb_start(void)
              "interfaces_max=%u report_max=%u",
              (unsigned)INPUT_MAX_INTERFACES,
              (unsigned)INPUT_CALLBACK_REPORT_BYTES);
-    return ESP_OK;
+    return platform_gamepad_register_provider(
+        PLATFORM_GAMEPAD_TRANSPORT_USB_HID,
+        platform_gamepad_usb_get_snapshot);
 }
 
 esp_err_t platform_gamepad_usb_stop(TickType_t timeout_ticks)
@@ -1230,6 +1233,9 @@ esp_err_t platform_gamepad_usb_stop(TickType_t timeout_ticks)
     taskENTER_CRITICAL(&s_service_lock);
     s_service.state = INPUT_SERVICE_STOPPED;
     taskEXIT_CRITICAL(&s_service_lock);
+    platform_gamepad_unregister_provider(
+        PLATFORM_GAMEPAD_TRANSPORT_USB_HID,
+        platform_gamepad_usb_get_snapshot);
     return ESP_OK;
 }
 

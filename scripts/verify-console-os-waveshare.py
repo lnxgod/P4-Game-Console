@@ -289,6 +289,14 @@ def main() -> None:
                 ble_authorization.get("wifi_data_plane_authorized") is False and
                 len(ble_authorization.get("device_identity_sha256", [])) == 2,
                 "BLE multiplayer exact-unit authorization is incomplete")
+        for setting in (
+            "#define CONFIG_BT_NIMBLE_MAX_CONNECTIONS 2",
+            "#define CONFIG_BT_NIMBLE_MAX_BONDS 4",
+            "#define CONFIG_BT_NIMBLE_MAX_CCCDS 16",
+            "#define CONFIG_BT_NIMBLE_NVS_PERSIST 1",
+        ):
+            require(setting in sdkconfig,
+                    f"BLE controller image is missing {setting}")
     usb_host_image = (
         "#define CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE 1" in sdkconfig
     )
@@ -353,7 +361,8 @@ def main() -> None:
         "espressif__esp_tinyusb", "espressif__tinyusb",
     }
     require(required_components <= components, "required component missing")
-    require({"gamepad_core", "platform_usb_host", "platform_gamepad_usb"}
+    require({"gamepad_core", "platform_gamepad", "platform_usb_host",
+             "platform_gamepad_usb"}
             <= components,
             "role-selectable Waveshare input components are missing")
     signal_scan_image = {
@@ -365,9 +374,10 @@ def main() -> None:
             <= components,
             "Waveshare image is missing the pinned C6 transport")
     if ble_multiplayer_image:
-        require({"bt", "platform_multiplayer_ble", "platform_radio_hosted"}
+        require({"bt", "platform_ble_host", "platform_gamepad_ble",
+                 "platform_multiplayer_ble", "platform_radio_hosted"}
                 <= components,
-                "Waveshare image is missing the BLE multiplayer path")
+                "Waveshare image is missing shared BLE gamepad/multiplayer")
     else:
         require({"p4_signal_scan", "platform_signal_scan",
                  "platform_radio_hosted"} <= components,
@@ -420,6 +430,14 @@ def main() -> None:
     for marker in radio_markers:
         require(marker in app_data,
                 f"selected radio marker is missing: {marker!r}")
+    if ble_multiplayer_image:
+        for marker in (
+            b"BLE_HOST_READY clients=%u bonding=persistent",
+            b"BLE_GAMEPAD_READY name=%s reports=%u mtu=%u",
+            b"BLE_GAMEPAD_SETUP_FAIL stage=%s rc=%d",
+        ):
+            require(marker in app_data,
+                    f"BLE controller marker is missing: {marker!r}")
     cmake = (APP / "CMakeLists.txt").read_text(encoding="utf-8")
     version_match = re.search(r'set\(PROJECT_VER "([0-9]+\.[0-9]+\.[0-9]+)"\)',
                               cmake)
@@ -648,6 +666,10 @@ def main() -> None:
         "wait_for_game_storage_with_boot_animation",
         "P4CART_SCAN_BEGIN", "P4CART_READY",
         "CONSOLE_APP_USB_DRIVE", "CONSOLE_PAGE_USB_DRIVE",
+        "CONSOLE_APP_CONTROLLERS", "CONSOLE_PAGE_CONTROLLERS",
+        "CONSOLE_ACTION_CONTROLLER_PAIR",
+        "platform_gamepad_ble_connect_or_pair",
+        "P4_CONSOLE_OS BLE_CONTROLLER_ACTION name=%s result=%s",
         "stop_usb_input_for_role_switch",
         "P4_CONSOLE_OS USB_ROLE_STOPPED",
         "p4_usb_ext_port_enum_retry_allowed",
@@ -760,11 +782,11 @@ def main() -> None:
     console_main_cmake = (APP / "main/CMakeLists.txt").read_text(
         encoding="utf-8")
     for token in (
-        "P4_DOOM_SHARED_USB_GAMEPAD",
-        "platform_gamepad_usb_get_snapshot",
+        "P4_DOOM_SHARED_GAMEPAD",
+        "platform_gamepad_get_snapshot",
         "doom_gamepad_input_update",
         "service_gamepad();",
-        "usb=shared-platform-gamepad",
+        "controller=shared-platform-gamepad",
     ):
         require(token in doom_source,
                 f"Waveshare Doom shared controller path is missing {token}")

@@ -1,6 +1,7 @@
 set(GAMEPAD_CORE_SOURCES
     src/gamepad.c
     src/hid_gamepad.c
+    src/snapshot.c
 )
 
 if(COMMAND idf_component_register)

@@ -46,8 +46,11 @@ idf_build_get_property(P4_WAVESHARE_SIGNAL_SCAN_BUILD
     P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
 idf_build_get_property(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD
     P4_WAVESHARE_BLE_MULTIPLAYER_BUILD)
+idf_build_get_property(P4_WAVESHARE_BLE_GAMEPAD_BUILD
+    P4_WAVESHARE_BLE_GAMEPAD_BUILD)
 set(P4_CONSOLE_SIGNAL_SCAN_ENABLED 0)
 set(P4_CONSOLE_BLE_MULTIPLAYER_ENABLED 0)
+set(P4_CONSOLE_BLE_GAMEPAD_ENABLED 0)
 set(P4_CONSOLE_BLE_DIAGNOSTIC_AUTOSTART_ENABLED 0)
 if(P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
     list(APPEND P4_CONSOLE_MAIN_SOURCES
@@ -65,6 +68,7 @@ if(P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
         gamepad_core
         p4_game_platform
         platform_audio
+        platform_gamepad
         platform_gamepad_usb
         platform_readonly_blob
         platform_usb_host
@@ -89,6 +93,7 @@ else()
         list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
             doom_gamepad_input
             gamepad_core
+            platform_gamepad
             platform_gamepad_usb
             platform_usb_host
         )
@@ -108,6 +113,12 @@ else()
             if(P4_BLE_DIAGNOSTIC_AUTOSTART)
                 set(P4_CONSOLE_BLE_DIAGNOSTIC_AUTOSTART_ENABLED 1)
             endif()
+        endif()
+        if(P4_WAVESHARE_BLE_GAMEPAD_BUILD)
+            list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
+                platform_gamepad_ble
+            )
+            set(P4_CONSOLE_BLE_GAMEPAD_ENABLED 1)
         endif()
     else()
         set(P4_TOUCH_BOARD_DEPS board_deps_elecrow)
@@ -152,6 +163,7 @@ target_compile_definitions(${COMPONENT_LIB} PRIVATE
     P4_CONSOLE_OS_EMBEDDED=1
     P4_CONSOLE_SIGNAL_SCAN=${P4_CONSOLE_SIGNAL_SCAN_ENABLED}
     P4_CONSOLE_BLE_MULTIPLAYER=${P4_CONSOLE_BLE_MULTIPLAYER_ENABLED}
+    P4_CONSOLE_BLE_GAMEPAD=${P4_CONSOLE_BLE_GAMEPAD_ENABLED}
     P4_BLE_DIAGNOSTIC_AUTOSTART=${P4_CONSOLE_BLE_DIAGNOSTIC_AUTOSTART_ENABLED}
 )
 target_compile_features(${COMPONENT_LIB} PRIVATE c_std_11)

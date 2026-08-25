@@ -12,6 +12,7 @@
 #include "esp_timer.h"
 #include "gamepad/hid_gamepad.h"
 #include "mbedtls/sha256.h"
+#include "platform/gamepad.h"
 #include "platform_gamepad_usb/input_model.h"
 #include "platform_usb_host/platform_usb_host.h"
 #include "tusb.h"
@@ -429,7 +430,9 @@ esp_err_t platform_gamepad_usb_start(void)
              "GAMEPAD_USB_READY stack=tinyusb tier=generic-hid "
              "hub_tt=enabled report_max=%u",
              (unsigned)GAMEPAD_HID_MAX_REPORT_BYTES);
-    return ESP_OK;
+    return platform_gamepad_register_provider(
+        PLATFORM_GAMEPAD_TRANSPORT_USB_HID,
+        platform_gamepad_usb_get_snapshot);
 }
 
 esp_err_t platform_gamepad_usb_stop(TickType_t timeout_ticks)
@@ -459,6 +462,9 @@ esp_err_t platform_gamepad_usb_stop(TickType_t timeout_ticks)
     const esp_err_t result =
         platform_usb_host_class_release(&s_service.host_lease);
     if (result == ESP_OK) {
+        platform_gamepad_unregister_provider(
+            PLATFORM_GAMEPAD_TRANSPORT_USB_HID,
+            platform_gamepad_usb_get_snapshot);
         ESP_LOGI(TAG, "GAMEPAD_USB_STOPPED stack=tinyusb input=neutral");
     }
     return result;

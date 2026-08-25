@@ -84,6 +84,14 @@ enum {
     STORAGE_RETRY_WIDTH = 92,
     STORAGE_REPAIR_LEFT = 200,
     STORAGE_REPAIR_WIDTH = 112,
+    CONTROLLER_BUTTON_TOP = 174,
+    CONTROLLER_BUTTON_HEIGHT = 20,
+    CONTROLLER_PAIR_LEFT = 8,
+    CONTROLLER_PAIR_WIDTH = 100,
+    CONTROLLER_DISCONNECT_LEFT = 112,
+    CONTROLLER_DISCONNECT_WIDTH = 100,
+    CONTROLLER_FORGET_LEFT = 216,
+    CONTROLLER_FORGET_WIDTH = 96,
     AUDIO_MINUS_LEFT = 174,
     AUDIO_PLUS_LEFT = 274,
     AUDIO_BUTTON_WIDTH = 38,
@@ -238,6 +246,9 @@ enum {
     STORAGE_CHECK_CONTROL,
     STORAGE_RETRY_CONTROL,
     STORAGE_REPAIR_CONTROL,
+    CONTROLLER_PAIR_CONTROL,
+    CONTROLLER_DISCONNECT_CONTROL,
+    CONTROLLER_FORGET_CONTROL,
     AUDIO_BOOT_MINUS_CONTROL,
     AUDIO_BOOT_PLUS_CONTROL,
     AUDIO_GAME_MINUS_CONTROL,
@@ -357,7 +368,7 @@ static bool folder_path_is_valid(const char *path)
 static bool valid_page(console_page_t page)
 {
     return page >= CONSOLE_PAGE_EXTERNAL &&
-        page <= CONSOLE_PAGE_STORAGE;
+        page <= CONSOLE_PAGE_CONTROLLERS;
 }
 
 static bool registry_is_valid(const console_app_descriptor_t *apps,
@@ -1163,6 +1174,59 @@ static void reset_storage_controls(console_shell_t *shell)
     }
 }
 
+static bool controller_action_enabled(const console_shell_t *shell,
+                                      size_t action)
+{
+    if (shell == NULL || !shell->runtime.ble_controller_supported) {
+        return false;
+    }
+    switch (action) {
+    case 0U:
+        return !shell->runtime.ble_controller_connected &&
+            !shell->runtime.ble_controller_busy;
+    case 1U:
+        return shell->runtime.ble_controller_connected;
+    case 2U:
+        return shell->runtime.ble_controller_bonded &&
+            !shell->runtime.ble_controller_busy;
+    default:
+        return false;
+    }
+}
+
+static console_shell_action_t controller_action(console_shell_t *shell,
+                                                 size_t requested)
+{
+    if (!controller_action_enabled(shell, requested)) {
+        return no_action();
+    }
+    shell->controller_selected_action = requested;
+    shell->dirty = true;
+    const console_shell_action_t action = {
+        .type = requested == 0U
+            ? CONSOLE_ACTION_CONTROLLER_PAIR
+            : requested == 1U
+                ? CONSOLE_ACTION_CONTROLLER_DISCONNECT
+                : CONSOLE_ACTION_CONTROLLER_FORGET,
+        .app_id = shell->active_app_id,
+        .file_source_index = UINT32_MAX,
+    };
+    return action;
+}
+
+static void reset_controller_controls(console_shell_t *shell)
+{
+    shell->controller_selected_action = 0U;
+    while (shell->controller_selected_action < 3U &&
+           !controller_action_enabled(
+               shell, shell->controller_selected_action)) {
+        ++shell->controller_selected_action;
+    }
+    if (shell->controller_selected_action >= 3U) {
+        shell->controller_selected_action = 0U;
+    }
+}
+
 static uint8_t bounded_volume(uint8_t volume)
 {
     if (volume < 1U) {
@@ -1293,6 +1357,29 @@ static size_t control_at(const console_shell_t *shell,
                               STORAGE_BUTTON_TOP, STORAGE_REPAIR_WIDTH,
                               STORAGE_BUTTON_HEIGHT)) {
                 return STORAGE_REPAIR_CONTROL;
+            }
+            return SIZE_MAX;
+        }
+        if (shell->page == CONSOLE_PAGE_CONTROLLERS) {
+            if (controller_action_enabled(shell, 0U) &&
+                point_in_rect(gui_x, gui_y, CONTROLLER_PAIR_LEFT,
+                              CONTROLLER_BUTTON_TOP, CONTROLLER_PAIR_WIDTH,
+                              CONTROLLER_BUTTON_HEIGHT)) {
+                return CONTROLLER_PAIR_CONTROL;
+            }
+            if (controller_action_enabled(shell, 1U) &&
+                point_in_rect(gui_x, gui_y, CONTROLLER_DISCONNECT_LEFT,
+                              CONTROLLER_BUTTON_TOP,
+                              CONTROLLER_DISCONNECT_WIDTH,
+                              CONTROLLER_BUTTON_HEIGHT)) {
+                return CONTROLLER_DISCONNECT_CONTROL;
+            }
+            if (controller_action_enabled(shell, 2U) &&
+                point_in_rect(gui_x, gui_y, CONTROLLER_FORGET_LEFT,
+                              CONTROLLER_BUTTON_TOP,
+                              CONTROLLER_FORGET_WIDTH,
+                              CONTROLLER_BUTTON_HEIGHT)) {
+                return CONTROLLER_FORGET_CONTROL;
             }
             return SIZE_MAX;
         }
@@ -1645,6 +1732,9 @@ static console_shell_action_t activate_home_selection(console_shell_t *shell)
     if (app->page == CONSOLE_PAGE_STORAGE) {
         reset_storage_controls(shell);
     }
+    if (app->page == CONSOLE_PAGE_CONTROLLERS) {
+        reset_controller_controls(shell);
+    }
     if (app->page == CONSOLE_PAGE_FILES ||
         app->page == CONSOLE_PAGE_GAMES) {
         shell->file_delete_confirm = false;
@@ -1866,6 +1956,41 @@ console_shell_action_t console_shell_handle_buttons(
         }
         if ((pressed & CONSOLE_BUTTON_ACCEPT) != 0U) {
             return storage_action(shell, shell->storage_selected_action);
+        }
+        return no_action();
+    }
+
+    if (shell->page == CONSOLE_PAGE_CONTROLLERS) {
+        if ((pressed & CONSOLE_BUTTON_REFRESH) != 0U) {
+            return controller_action(shell, 0U);
+        }
+        if ((pressed & CONSOLE_BUTTON_LEFT) != 0U) {
+            for (size_t step = 0U; step < 3U; ++step) {
+                shell->controller_selected_action =
+                    (shell->controller_selected_action + 2U) % 3U;
+                if (controller_action_enabled(
+                        shell, shell->controller_selected_action)) {
+                    break;
+                }
+            }
+            shell->dirty = true;
+            return page_changed(shell->active_app_id);
+        }
+        if ((pressed & CONSOLE_BUTTON_RIGHT) != 0U) {
+            for (size_t step = 0U; step < 3U; ++step) {
+                shell->controller_selected_action =
+                    (shell->controller_selected_action + 1U) % 3U;
+                if (controller_action_enabled(
+                        shell, shell->controller_selected_action)) {
+                    break;
+                }
+            }
+            shell->dirty = true;
+            return page_changed(shell->active_app_id);
+        }
+        if ((pressed & CONSOLE_BUTTON_ACCEPT) != 0U) {
+            return controller_action(
+                shell, shell->controller_selected_action);
         }
         return no_action();
     }
@@ -2214,6 +2339,18 @@ console_shell_action_t console_shell_handle_touch(
                 return no_action();
             }
         }
+        if (shell->page == CONSOLE_PAGE_CONTROLLERS) {
+            switch (released_control) {
+            case CONTROLLER_PAIR_CONTROL:
+                return controller_action(shell, 0U);
+            case CONTROLLER_DISCONNECT_CONTROL:
+                return controller_action(shell, 1U);
+            case CONTROLLER_FORGET_CONTROL:
+                return controller_action(shell, 2U);
+            default:
+                return no_action();
+            }
+        }
         if (shell->page == CONSOLE_PAGE_AUDIO) {
             switch (released_control) {
             case AUDIO_BOOT_MINUS_CONTROL:
@@ -2420,6 +2557,9 @@ console_shell_action_t console_shell_handle_touch(
         if (app->page == CONSOLE_PAGE_STORAGE) {
             reset_storage_controls(shell);
         }
+        if (app->page == CONSOLE_PAGE_CONTROLLERS) {
+            reset_controller_controls(shell);
+        }
         if (app->page == CONSOLE_PAGE_FILES ||
             app->page == CONSOLE_PAGE_GAMES) {
             shell->file_delete_confirm = false;
@@ -2507,6 +2647,31 @@ void console_shell_set_runtime_info(
         shell->runtime.board_kind != runtime->board_kind ||
         shell->runtime.touch_ready != runtime->touch_ready ||
         shell->runtime.controller_ready != runtime->controller_ready ||
+        shell->runtime.controller_transport !=
+            runtime->controller_transport ||
+        shell->runtime.ble_controller_supported !=
+            runtime->ble_controller_supported ||
+        shell->runtime.ble_controller_host_ready !=
+            runtime->ble_controller_host_ready ||
+        shell->runtime.ble_controller_bonded !=
+            runtime->ble_controller_bonded ||
+        shell->runtime.ble_controller_connected !=
+            runtime->ble_controller_connected ||
+        shell->runtime.ble_controller_encrypted !=
+            runtime->ble_controller_encrypted ||
+        shell->runtime.ble_controller_busy !=
+            runtime->ble_controller_busy ||
+        shell->runtime.ble_controller_rssi !=
+            runtime->ble_controller_rssi ||
+        shell->runtime.ble_controller_reports_received !=
+            runtime->ble_controller_reports_received ||
+        shell->runtime.ble_controller_reports_dropped !=
+            runtime->ble_controller_reports_dropped ||
+        shell->runtime.ble_controller_last_error !=
+            runtime->ble_controller_last_error ||
+        memcmp(shell->runtime.ble_controller_name,
+               runtime->ble_controller_name,
+               sizeof(runtime->ble_controller_name)) != 0 ||
         shell->runtime.keyboard_ready != runtime->keyboard_ready ||
         shell->runtime.mouse_ready != runtime->mouse_ready ||
         shell->runtime.sd_card_storage != runtime->sd_card_storage ||
@@ -2696,8 +2861,14 @@ void console_shell_set_runtime_info(
         !storage_action_enabled(shell, shell->storage_selected_action)) {
         reset_storage_controls(shell);
     }
+    if (shell->page == CONSOLE_PAGE_CONTROLLERS &&
+        !controller_action_enabled(
+            shell, shell->controller_selected_action)) {
+        reset_controller_controls(shell);
+    }
     if (shell->page == CONSOLE_PAGE_SYSTEM ||
         shell->page == CONSOLE_PAGE_STORAGE ||
+        shell->page == CONSOLE_PAGE_CONTROLLERS ||
         shell->page == CONSOLE_PAGE_USB_DRIVE ||
         shell->page == CONSOLE_PAGE_FILE_TRANSFER ||
         shell->page == CONSOLE_PAGE_FILES ||
@@ -3791,6 +3962,141 @@ static void draw_storage(const console_shell_t *shell,
                         storage_repair_enabled(shell));
 }
 
+static void draw_controller_button(const console_shell_t *shell,
+                                   uint16_t *pixels, size_t stride,
+                                   int left, int width, size_t control,
+                                   size_t action, const char *label)
+{
+    const bool enabled = controller_action_enabled(shell, action);
+    const bool pressed = enabled && shell->press_active &&
+        shell->pressed_index == control;
+    bevel_rect(pixels, stride, left, CONTROLLER_BUTTON_TOP, width,
+               CONTROLLER_BUTTON_HEIGHT, COLOR_FACE, pressed);
+    if (enabled && shell->controller_selected_action == action) {
+        outline_rect(pixels, stride, left + 2, CONTROLLER_BUTTON_TOP + 2,
+                     width - 4, CONTROLLER_BUTTON_HEIGHT - 4, COLOR_YELLOW);
+    }
+    draw_centered_text(pixels, stride, left, CONTROLLER_BUTTON_TOP + 7,
+                       width, label,
+                       enabled ? COLOR_BLACK : COLOR_SHADOW, 16U);
+}
+
+static void draw_controllers(const console_shell_t *shell,
+                             uint16_t *pixels, size_t stride)
+{
+    const char *active = "NONE";
+    uint16_t active_color = COLOR_YELLOW;
+    if (shell->runtime.controller_ready &&
+        shell->runtime.controller_transport ==
+            CONSOLE_CONTROLLER_TRANSPORT_USB_HID) {
+        active = "USB HID (PRIORITY)";
+        active_color = COLOR_GREEN;
+    } else if (shell->runtime.controller_ready &&
+               shell->runtime.controller_transport ==
+                   CONSOLE_CONTROLLER_TRANSPORT_BLE_HID) {
+        active = "BLUETOOTH HID";
+        active_color = COLOR_GREEN;
+    }
+    draw_text(pixels, stride, 12, 37, "ACTIVE INPUT",
+              COLOR_MUTED, 1U, 12U);
+    draw_text(pixels, stride, 132, 37, active,
+              active_color, 1U, 20U);
+
+    draw_text(pixels, stride, 12, 52, "USB HOST", COLOR_MUTED, 1U, 8U);
+    draw_text(pixels, stride, 132, 52,
+              shell->runtime.usb_input_host_active ? "RUNNING" : "OFFLINE",
+              shell->runtime.usb_input_host_active
+                  ? COLOR_GREEN : COLOR_MUTED,
+              1U, 8U);
+
+    draw_text(pixels, stride, 12, 67, "BLE RADIO", COLOR_MUTED, 1U, 9U);
+    const char *radio = "UNSUPPORTED";
+    uint16_t radio_color = COLOR_MUTED;
+    if (shell->runtime.ble_controller_host_ready) {
+        radio = "READY";
+        radio_color = COLOR_GREEN;
+    } else if (shell->runtime.ble_controller_supported) {
+        radio = "STANDBY";
+        radio_color = COLOR_CYAN;
+    }
+    draw_text(pixels, stride, 132, 67, radio, radio_color, 1U, 11U);
+
+    draw_text(pixels, stride, 12, 82, "BLE PAD", COLOR_MUTED, 1U, 7U);
+    const char *link = "NOT PAIRED";
+    uint16_t link_color = COLOR_YELLOW;
+    if (!shell->runtime.ble_controller_supported) {
+        link = "UNAVAILABLE";
+        link_color = COLOR_MUTED;
+    } else if (shell->runtime.ble_controller_busy) {
+        link = "PAIRING / CONNECTING";
+        link_color = COLOR_CYAN;
+    } else if (shell->runtime.ble_controller_connected) {
+        link = "CONNECTED";
+        link_color = COLOR_GREEN;
+    } else if (shell->runtime.ble_controller_bonded) {
+        link = "SAVED - DISCONNECTED";
+        link_color = COLOR_YELLOW;
+    }
+    draw_text(pixels, stride, 132, 82, link, link_color, 1U, 24U);
+
+    draw_text(pixels, stride, 12, 97, "NAME", COLOR_MUTED, 1U, 4U);
+    draw_text(pixels, stride, 132, 97,
+              shell->runtime.ble_controller_name[0] != '\0'
+                  ? shell->runtime.ble_controller_name : "NO SAVED PAD",
+              COLOR_WHITE, 1U, 29U);
+
+    draw_text(pixels, stride, 12, 112, "SECURITY", COLOR_MUTED, 1U, 8U);
+    draw_text(pixels, stride, 132, 112,
+              shell->runtime.ble_controller_encrypted
+                  ? "BONDED + ENCRYPTED"
+                  : shell->runtime.ble_controller_bonded
+                      ? "BONDED" : "PAIRING REQUIRED",
+              shell->runtime.ble_controller_encrypted
+                  ? COLOR_GREEN : COLOR_YELLOW,
+              1U, 20U);
+
+    char signal[20];
+    const int signal_written = snprintf(
+        signal, sizeof(signal), "%d DBM",
+        (int)shell->runtime.ble_controller_rssi);
+    draw_text(pixels, stride, 12, 127, "SIGNAL", COLOR_MUTED, 1U, 6U);
+    draw_text(pixels, stride, 132, 127,
+              shell->runtime.ble_controller_connected && signal_written > 0
+                  ? signal : "--",
+              shell->runtime.ble_controller_connected
+                  ? COLOR_WHITE : COLOR_MUTED,
+              1U, 19U);
+
+    draw_text(pixels, stride, 12, 142, "REPORTS RX",
+              COLOR_MUTED, 1U, 10U);
+    draw_u32(pixels, stride, 132, 142,
+             shell->runtime.ble_controller_reports_received, COLOR_WHITE);
+    draw_text(pixels, stride, 12, 157, "DROPPED / ERR",
+              COLOR_MUTED, 1U, 13U);
+    char diagnostics[24];
+    const int diagnostics_written = snprintf(
+        diagnostics, sizeof(diagnostics), "%lu / %d",
+        (unsigned long)shell->runtime.ble_controller_reports_dropped,
+        shell->runtime.ble_controller_last_error);
+    draw_text(pixels, stride, 132, 157,
+              diagnostics_written > 0 ? diagnostics : "--",
+              shell->runtime.ble_controller_reports_dropped == 0U &&
+                      shell->runtime.ble_controller_last_error == 0
+                  ? COLOR_GREEN : COLOR_YELLOW,
+              1U, 23U);
+
+    draw_controller_button(shell, pixels, stride,
+                           CONTROLLER_PAIR_LEFT, CONTROLLER_PAIR_WIDTH,
+                           CONTROLLER_PAIR_CONTROL, 0U, "PAIR / CONNECT");
+    draw_controller_button(shell, pixels, stride,
+                           CONTROLLER_DISCONNECT_LEFT,
+                           CONTROLLER_DISCONNECT_WIDTH,
+                           CONTROLLER_DISCONNECT_CONTROL, 1U, "DISCONNECT");
+    draw_controller_button(shell, pixels, stride,
+                           CONTROLLER_FORGET_LEFT, CONTROLLER_FORGET_WIDTH,
+                           CONTROLLER_FORGET_CONTROL, 2U, "FORGET PAD");
+}
+
 static void draw_usb_drive(const console_shell_t *shell,
                            uint16_t *pixels, size_t stride)
 {
@@ -4742,6 +5048,9 @@ bool console_shell_render_rgb565(console_shell_t *shell,
             break;
         case CONSOLE_PAGE_STORAGE:
             draw_storage(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_CONTROLLERS:
+            draw_controllers(shell, pixels, stride_pixels);
             break;
         case CONSOLE_PAGE_EXTERNAL:
             draw_text(pixels, stride_pixels, 12, 60,

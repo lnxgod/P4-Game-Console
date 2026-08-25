@@ -9,7 +9,10 @@
 
 ## Hardware test
 
-For each supported controller, record its product name, VID/PID, USB class/protocol, captured report descriptor hash, fixture revision, board revision, and firmware Git state. Then verify:
+For each supported controller, record its product name/model, transport,
+VID/PID when available, USB class/protocol or BLE services, captured report
+descriptor/map hash, fixture revision when wired, board revision, controller
+firmware, and firmware Git state. Then verify:
 
 1. cold-plug and hot-plug enumeration;
 2. every advertised button and direction;
@@ -19,6 +22,13 @@ For each supported controller, record its product name, VID/PID, USB class/proto
 6. repeated reconnects without leaks, duplicate callbacks, or stuck input;
 7. malformed or short reports without crashes or stale partial state;
 8. at least 30 minutes of continuous gameplay.
+
+For BLE, additionally verify explicit pairing, encrypted/bonded state, reboot
+reconnect without blocking launcher readiness, privacy-address reconnect,
+disconnect versus forget behavior, rejection of a same-name wrong identity,
+and coexistence with one active BLE multiplayer peer. Record RSSI and dropped
+report counters. Do not generalize a passing Xbox Wireless Controller model to
+Xbox 360, Xbox Wireless Adapter, wired XInput/GIP, or a different firmware.
 
 For Waveshare H2, also record the external-power/backfeed fixture or powered
 hub, root-controller speed policy, downstream speed, hub depth/port, and USB

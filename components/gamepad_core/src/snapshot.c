@@ -1,11 +1,11 @@
-#include "platform_gamepad_usb/model.h"
+#include "gamepad/snapshot.h"
 
 #include <stdbool.h>
 #include <string.h>
 
-#define PLATFORM_GAMEPAD_KNOWN_CAPABILITIES                                      \
-    ((uint32_t)(GAMEPAD_CAP_BUTTONS | GAMEPAD_CAP_DPAD |                          \
-                GAMEPAD_CAP_LEFT_STICK | GAMEPAD_CAP_RIGHT_STICK |                \
+#define PLATFORM_GAMEPAD_KNOWN_CAPABILITIES                              \
+    ((uint32_t)(GAMEPAD_CAP_BUTTONS | GAMEPAD_CAP_DPAD |                 \
+                GAMEPAD_CAP_LEFT_STICK | GAMEPAD_CAP_RIGHT_STICK |       \
                 GAMEPAD_CAP_LEFT_TRIGGER | GAMEPAD_CAP_RIGHT_TRIGGER))
 
 static bool model_valid(const platform_gamepad_model_t *model)
@@ -21,12 +21,13 @@ static bool model_valid(const platform_gamepad_model_t *model)
 static bool identity_valid(const platform_gamepad_identity_t *identity)
 {
     if (identity == NULL ||
-        identity->transport != PLATFORM_GAMEPAD_TRANSPORT_USB_HID) {
+        (identity->transport != PLATFORM_GAMEPAD_TRANSPORT_USB_HID &&
+         identity->transport != PLATFORM_GAMEPAD_TRANSPORT_BLE_HID)) {
         return false;
     }
 
-    uint8_t hash_or = 0;
-    for (size_t index = 0;
+    uint8_t hash_or = 0U;
+    for (size_t index = 0U;
          index < PLATFORM_GAMEPAD_DESCRIPTOR_SHA256_BYTES; ++index) {
         hash_or |= identity->descriptor_sha256[index];
     }

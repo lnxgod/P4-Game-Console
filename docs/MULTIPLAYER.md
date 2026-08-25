@@ -146,7 +146,9 @@ different Hosted transport or pin map.
 BLE gaming is deliberately narrow:
 
 - one encrypted peer, for two-player games;
-- no bonding, account, cloud relay, Wi-Fi transport, or public matchmaking;
+- multiplayer peers are not bonded; controller bonds are a separate Console
+  OS service. There is no account, cloud relay, Wi-Fi transport, or public
+  matchmaking;
 - idle badges scan but do not advertise, so they cannot accidentally pair;
 - `CREATE LOBBY` allocates a fresh P4MP session and advertises one compact,
   game-specific room beacon; the host does not scan;
@@ -171,8 +173,11 @@ owns match settings and presses `START MATCH` only after the guest is
 connected. Both consoles cross the same start barrier, then Console OS launches
 the selected game: Doom receives its lockstep adapter, while a native cartridge
 receives the bounded `multiplayer-session` capability. Selecting BLE lazily
-starts the C6 radio stack; it is not started during Console OS boot. H1 content
-upload remains serviced while BLE owns game traffic.
+starts the C6 radio stack unless a saved BLE controller already started it
+after the launcher became usable. H1 content upload remains serviced while BLE
+owns game traffic. Pairing a controller temporarily pauses room browsing; an
+established controller link and one multiplayer peer fit the committed
+two-link budget.
 
 The encrypted BLE link and sustained two-board Doom lockstep have prior
 hardware acceptance. The explicit multi-room lobby introduced in Console OS

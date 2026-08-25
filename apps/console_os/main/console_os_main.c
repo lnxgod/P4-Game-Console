@@ -67,6 +67,9 @@
 #ifndef P4_CONSOLE_BLE_MULTIPLAYER
 #define P4_CONSOLE_BLE_MULTIPLAYER 0
 #endif
+#ifndef P4_CONSOLE_BLE_GAMEPAD
+#define P4_CONSOLE_BLE_GAMEPAD 0
+#endif
 #if P4_CONSOLE_SIGNAL_SCAN
 #include "platform/signal_scan.h"
 #endif
@@ -81,11 +84,22 @@
 #else
 #define P4_CONSOLE_USB_INPUT 0
 #endif
+#if P4_CONSOLE_USB_INPUT || P4_CONSOLE_BLE_GAMEPAD
+#define P4_CONSOLE_GAMEPAD_INPUT 1
+#else
+#define P4_CONSOLE_GAMEPAD_INPUT 0
+#endif
 
 #define CONSOLE_P4CART_APP_ID_BASE UINT32_C(0xf4c00000)
 
-#if P4_CONSOLE_USB_INPUT
+#if P4_CONSOLE_GAMEPAD_INPUT
 #include "gamepad/gamepad.h"
+#include "platform/gamepad.h"
+#endif
+#if P4_CONSOLE_BLE_GAMEPAD
+#include "platform/gamepad_ble.h"
+#endif
+#if P4_CONSOLE_USB_INPUT
 #include "platform_gamepad_usb/platform_gamepad_usb.h"
 #include "platform_usb_host/platform_usb_host.h"
 #endif
@@ -111,12 +125,15 @@ enum {
     CONSOLE_APP_STORAGE = 13,
     CONSOLE_APP_CHEX_QUEST = 14,
     CONSOLE_APP_FILE_TRANSFER = 15,
-    CONSOLE_BUILTIN_APP_ID_MAX = CONSOLE_APP_FILE_TRANSFER,
+    CONSOLE_APP_CONTROLLERS = 16,
+    CONSOLE_BUILTIN_APP_ID_MAX = CONSOLE_APP_CONTROLLERS,
     CONSOLE_FRAME_INTERVAL_MS = 16,
     CONSOLE_SUBMIT_TIMEOUT_MS = 250,
     CONSOLE_BACKLIGHT_PERCENT = 25,
-#if P4_CONSOLE_USB_INPUT
+#if P4_CONSOLE_GAMEPAD_INPUT
     CONSOLE_GAMEPAD_STICK_THRESHOLD = 12000,
+#endif
+#if P4_CONSOLE_USB_INPUT
     CONSOLE_USB_ENUM_GUARD_CONFIRM_LOOPS = 600,
 #endif
     CONSOLE_CLEANUP_ATTEMPTS = 3,
@@ -224,16 +241,20 @@ static platform_touch_t *s_touch;
 #endif
 static uint16_t *s_pixels;
 static bool s_display_initialized;
+#if P4_CONSOLE_GAMEPAD_INPUT
+static bool s_gamepad_connected;
+static platform_gamepad_transport_t s_gamepad_transport =
+    PLATFORM_GAMEPAD_TRANSPORT_NONE;
+static uint32_t s_gamepad_polls;
+static uint32_t s_gamepad_poll_failures;
+#endif
 #if P4_CONSOLE_USB_INPUT
 static bool s_gamepad_ready;
-static bool s_gamepad_connected;
 static bool s_keyboard_connected;
 static bool s_mouse_connected;
 static bool s_mouse_pointer_active;
 static uint32_t s_terminal_keyboard_session;
 static uint8_t s_previous_terminal_keys[PLATFORM_USB_KEYBOARD_BOOT_KEY_COUNT];
-static uint32_t s_gamepad_polls;
-static uint32_t s_gamepad_poll_failures;
 static uint32_t s_aux_input_poll_failures;
 static uint16_t s_mouse_x = CONSOLE_SHELL_LAYOUT_WIDTH / 2U;
 static uint16_t s_mouse_y = CONSOLE_SHELL_LAYOUT_HEIGHT / 2U;
@@ -313,6 +334,9 @@ typedef enum {
     CONSOLE_MP_LOBBY_CONNECTED,
 } console_mp_lobby_state_t;
 static console_mp_lobby_state_t s_multiplayer_lobby_state;
+#if P4_CONSOLE_BLE_GAMEPAD && P4_CONSOLE_BLE_MULTIPLAYER
+static bool s_ble_gamepad_suspended_lobby_browser;
+#endif
 static p4_mp_lobby_offer_t s_multiplayer_local_offer;
 static p4_mp_lobby_offer_t s_multiplayer_remote_offer;
 typedef enum {
@@ -618,6 +642,7 @@ static const platform_game_catalog_entry_t *
 static bool native_multiplayer_content_identity(
     const platform_game_catalog_entry_t *game,
     uint8_t identity[P4_MP_SHA256_BYTES]);
+static uint16_t multiplayer_game_token(void);
 static esp_err_t configure_multiplayer_local_offer(void);
 static void reset_multiplayer_lobby(const char *reason);
 static bool storage_app_owned(void);
@@ -838,6 +863,19 @@ static const console_app_descriptor_t s_builtin_apps[] = {
                         CONSOLE_CAPABILITY_TOUCH |
                         CONSOLE_CAPABILITY_STORAGE,
         .page = CONSOLE_PAGE_USB_DRIVE,
+        .enabled = true,
+    },
+#endif
+#if P4_CONSOLE_BLE_GAMEPAD
+    {
+        .id = CONSOLE_APP_CONTROLLERS,
+        .title = "CONTROLLERS",
+        .subtitle = "USB + BLUETOOTH",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0x5FFF),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                        CONSOLE_CAPABILITY_TOUCH,
+        .page = CONSOLE_PAGE_CONTROLLERS,
         .enabled = true,
     },
 #endif
@@ -2277,6 +2315,88 @@ static void handle_storage_action(
              (unsigned long)s_game_storage_status.repair_sectors_rewritten);
 }
 
+#if P4_CONSOLE_BLE_GAMEPAD
+static bool ble_gamepad_status_busy(
+    const platform_gamepad_ble_status_t *status)
+{
+    return status != NULL &&
+        status->state >= PLATFORM_GAMEPAD_BLE_STARTING_HOST &&
+        status->state <= PLATFORM_GAMEPAD_BLE_SUBSCRIBING;
+}
+
+static void handle_controller_action(
+    console_shell_t *shell,
+    const console_shell_action_t *action)
+{
+    if (shell == NULL || action == NULL) {
+        return;
+    }
+    esp_err_t result = ESP_ERR_INVALID_ARG;
+    const char *operation = "invalid";
+    if (action->type == CONSOLE_ACTION_CONTROLLER_PAIR) {
+        operation = "pair-or-connect";
+        if (s_multiplayer_lobby_state != CONSOLE_MP_LOBBY_BROWSING) {
+            result = ESP_ERR_INVALID_STATE;
+        } else {
+#if P4_CONSOLE_BLE_MULTIPLAYER
+            if (s_multiplayer_transport == CONSOLE_MP_TRANSPORT_BLE) {
+                result = platform_multiplayer_ble_set_lobby_mode(
+                    PLATFORM_MULTIPLAYER_BLE_LOBBY_IDLE, 0U, 0U);
+                if (result == ESP_OK) {
+                    s_ble_gamepad_suspended_lobby_browser = true;
+                }
+            } else
+#endif
+            {
+                result = ESP_OK;
+            }
+            if (result == ESP_OK) {
+                result = platform_gamepad_ble_connect_or_pair();
+            }
+        }
+    } else if (action->type ==
+               CONSOLE_ACTION_CONTROLLER_DISCONNECT) {
+        operation = "disconnect";
+        platform_gamepad_ble_disconnect();
+        result = ESP_OK;
+    } else if (action->type == CONSOLE_ACTION_CONTROLLER_FORGET) {
+        operation = "forget";
+        result = platform_gamepad_ble_forget();
+    }
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS BLE_CONTROLLER_ACTION name=%s result=%s",
+             operation, esp_err_to_name(result));
+    const console_shell_runtime_info_t current_runtime = runtime_info();
+    console_shell_set_runtime_info(shell, &current_runtime);
+}
+
+#if P4_CONSOLE_BLE_MULTIPLAYER
+static void poll_ble_gamepad_lobby_restore(void)
+{
+    if (!s_ble_gamepad_suspended_lobby_browser) {
+        return;
+    }
+    const platform_gamepad_ble_status_t status =
+        platform_gamepad_ble_status();
+    if (ble_gamepad_status_busy(&status)) {
+        return;
+    }
+    s_ble_gamepad_suspended_lobby_browser = false;
+    if (s_multiplayer_transport != CONSOLE_MP_TRANSPORT_BLE ||
+        s_multiplayer_lobby_state != CONSOLE_MP_LOBBY_BROWSING) {
+        return;
+    }
+    const esp_err_t result = platform_multiplayer_ble_set_lobby_mode(
+        PLATFORM_MULTIPLAYER_BLE_LOBBY_BROWSER,
+        0U, multiplayer_game_token());
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS BLE_CONTROLLER_RADIO_RELEASE "
+             "lobby_browser_restore=%s",
+             esp_err_to_name(result));
+}
+#endif
+#endif
+
 static void handle_audio_volume_action(
     console_shell_t *shell,
     const console_shell_action_t *action)
@@ -2612,6 +2732,13 @@ static console_shell_runtime_info_t runtime_info(void)
     const bool multiplayer_can_start = multiplayer_is_host &&
         multiplayer_start_prerequisites_ready();
     const size_t selectable_game_count = multiplayer_game_count();
+#if P4_CONSOLE_BLE_GAMEPAD
+    const platform_gamepad_ble_status_t ble_controller =
+        platform_gamepad_ble_status();
+    const bool ble_controller_busy =
+        ble_controller.state >= PLATFORM_GAMEPAD_BLE_STARTING_HOST &&
+        ble_controller.state <= PLATFORM_GAMEPAD_BLE_SUBSCRIBING;
+#endif
     console_shell_runtime_info_t info = {
         .uptime_seconds = uptime_seconds(),
         .internal_free_kib = free_kib(MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT),
@@ -2666,12 +2793,33 @@ static console_shell_runtime_info_t runtime_info(void)
 #endif
         .touch_ready = s_touch_ready,
 #endif
-#if P4_CONSOLE_USB_INPUT
+#if P4_CONSOLE_GAMEPAD_INPUT
         .controller_ready = s_gamepad_connected,
+        .controller_transport =
+            (console_controller_transport_t)s_gamepad_transport,
+#else
+        .controller_ready = false,
+        .controller_transport = CONSOLE_CONTROLLER_TRANSPORT_NONE,
+#endif
+#if P4_CONSOLE_BLE_GAMEPAD
+        .ble_controller_supported = ble_controller.supported,
+        .ble_controller_host_ready = ble_controller.host_ready,
+        .ble_controller_bonded = ble_controller.bonded,
+        .ble_controller_connected = ble_controller.connected,
+        .ble_controller_encrypted = ble_controller.encrypted,
+        .ble_controller_busy = ble_controller_busy,
+        .ble_controller_rssi = ble_controller.rssi,
+        .ble_controller_reports_received =
+            ble_controller.reports_received,
+        .ble_controller_reports_dropped = ble_controller.reports_dropped,
+        .ble_controller_last_error = ble_controller.last_error,
+#else
+        .ble_controller_supported = false,
+#endif
+#if P4_CONSOLE_USB_INPUT
         .keyboard_ready = s_keyboard_connected,
         .mouse_ready = s_mouse_connected,
 #else
-        .controller_ready = false,
         .keyboard_ready = false,
         .mouse_ready = false,
 #endif
@@ -2803,6 +2951,11 @@ static console_shell_runtime_info_t runtime_info(void)
     (void)snprintf(
         info.node_name, sizeof(info.node_name), "%s",
         s_console_settings.node_name);
+#if P4_CONSOLE_BLE_GAMEPAD
+    (void)snprintf(
+        info.ble_controller_name, sizeof(info.ble_controller_name), "%s",
+        ble_controller.name);
+#endif
     (void)snprintf(
         info.file_transfer_name, sizeof(info.file_transfer_name), "%s",
         file_transfer.file_name);
@@ -4161,7 +4314,7 @@ static void poll_multiplayer_link(const console_shell_t *shell)
         : 0;
 }
 
-#if P4_CONSOLE_USB_INPUT
+#if P4_CONSOLE_GAMEPAD_INPUT
 static bool gamepad_button_pressed(const gamepad_state_t *state,
                                    gamepad_button_t button)
 {
@@ -4210,14 +4363,10 @@ static bool read_gamepad_snapshot(platform_gamepad_snapshot_t *snapshot)
         return false;
     }
     memset(snapshot, 0, sizeof(*snapshot));
-    if (!s_gamepad_ready) {
-        s_gamepad_connected = false;
-        return false;
-    }
     if (s_gamepad_polls != UINT32_MAX) {
         ++s_gamepad_polls;
     }
-    const esp_err_t result = platform_gamepad_usb_get_snapshot(snapshot);
+    const esp_err_t result = platform_gamepad_get_snapshot(snapshot);
     const bool valid = result == ESP_OK &&
         snapshot->version == PLATFORM_GAMEPAD_SNAPSHOT_VERSION &&
         snapshot->size == sizeof(*snapshot) &&
@@ -4225,11 +4374,15 @@ static bool read_gamepad_snapshot(platform_gamepad_snapshot_t *snapshot)
         snapshot->state.size == sizeof(snapshot->state);
     if (!valid) {
         s_gamepad_connected = false;
-        if (s_gamepad_poll_failures != UINT32_MAX) {
+        s_gamepad_transport = PLATFORM_GAMEPAD_TRANSPORT_NONE;
+        const bool report_failure =
+            result != ESP_ERR_INVALID_STATE &&
+            result != ESP_ERR_INVALID_RESPONSE;
+        if (report_failure && s_gamepad_poll_failures != UINT32_MAX) {
             ++s_gamepad_poll_failures;
         }
-        if (s_gamepad_poll_failures == 1U ||
-            s_gamepad_poll_failures % 120U == 0U) {
+        if (report_failure && (s_gamepad_poll_failures == 1U ||
+            s_gamepad_poll_failures % 120U == 0U)) {
             ESP_LOGW(TAG,
                      "P4_CONSOLE_OS GAMEPAD_POLL_FAIL count=%lu error=%s",
                      (unsigned long)s_gamepad_poll_failures,
@@ -4239,6 +4392,9 @@ static bool read_gamepad_snapshot(platform_gamepad_snapshot_t *snapshot)
         return false;
     }
     s_gamepad_connected = snapshot->state.connected != 0U;
+    s_gamepad_transport = s_gamepad_connected
+        ? (platform_gamepad_transport_t)snapshot->identity.transport
+        : PLATFORM_GAMEPAD_TRANSPORT_NONE;
     return s_gamepad_connected;
 }
 
@@ -4269,6 +4425,10 @@ static uint32_t gamepad_shell_buttons(const gamepad_state_t *state)
     }
     return shell;
 }
+
+#endif
+
+#if P4_CONSOLE_USB_INPUT
 
 static bool read_aux_input_snapshot(platform_usb_input_snapshot_t *snapshot)
 {
@@ -4467,7 +4627,6 @@ static uint16_t move_pointer_axis(uint16_t current, int32_t delta,
 static void neutralize_usb_input_state(void)
 {
     s_gamepad_ready = false;
-    s_gamepad_connected = false;
     s_keyboard_connected = false;
     s_mouse_connected = false;
     s_mouse_pointer_active = false;
@@ -4626,14 +4785,12 @@ static void create_usb_input_or_continue(void)
 }
 
 static console_shell_action_t poll_usb_input(
-    console_shell_t *shell, bool *pointer_owned)
+    console_shell_t *shell, bool *pointer_owned, uint32_t controller_buttons)
 {
     if (pointer_owned != NULL) {
         *pointer_owned = false;
     }
-    platform_gamepad_snapshot_t gamepad;
-    uint32_t buttons = read_gamepad_snapshot(&gamepad)
-        ? gamepad_shell_buttons(&gamepad.state) : 0U;
+    uint32_t buttons = controller_buttons;
     platform_usb_input_snapshot_t input;
     const bool input_valid = read_aux_input_snapshot(&input);
     if (input_valid) {
@@ -4795,16 +4952,27 @@ static console_shell_action_t poll_touch_input(console_shell_t *shell)
 
 static console_shell_action_t poll_input(console_shell_t *shell)
 {
+#if P4_CONSOLE_GAMEPAD_INPUT
+    platform_gamepad_snapshot_t gamepad;
+    const uint32_t controller_buttons = read_gamepad_snapshot(&gamepad)
+        ? gamepad_shell_buttons(&gamepad.state) : 0U;
+#endif
 #if P4_CONSOLE_USB_INPUT
     bool usb_pointer_owned = false;
     const console_shell_action_t usb_action =
-        poll_usb_input(shell, &usb_pointer_owned);
+        poll_usb_input(shell, &usb_pointer_owned, controller_buttons);
     if (usb_action.type != CONSOLE_ACTION_NONE) {
         return usb_action;
     }
     if (usb_pointer_owned) {
         const console_shell_action_t no_action = {0};
         return no_action;
+    }
+#elif P4_CONSOLE_GAMEPAD_INPUT
+    const console_shell_action_t controller_action =
+        console_shell_handle_buttons(shell, controller_buttons);
+    if (controller_action.type != CONSOLE_ACTION_NONE) {
+        return controller_action;
     }
 #endif
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
@@ -6053,10 +6221,14 @@ static bool cartridge_poll_frame(void *opaque,
     if (*out_elapsed_ms > context->max_frame_ms) {
         context->max_frame_ms = *out_elapsed_ms;
     }
-#if P4_CONSOLE_USB_INPUT
+#if P4_CONSOLE_GAMEPAD_INPUT
     platform_gamepad_snapshot_t gamepad;
     uint32_t digital_buttons = read_gamepad_snapshot(&gamepad)
         ? gamepad_p4_buttons(&gamepad.state) : 0U;
+#else
+    uint32_t digital_buttons = 0U;
+#endif
+#if P4_CONSOLE_USB_INPUT
     platform_usb_input_snapshot_t input;
     if (read_aux_input_snapshot(&input)) {
         digital_buttons |= keyboard_p4_buttons(&input.keyboard);
@@ -6069,8 +6241,6 @@ static bool cartridge_poll_frame(void *opaque,
             }
         }
     }
-#else
-    const uint32_t digital_buttons = 0U;
 #endif
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
     platform_touch_frame_t frame;
@@ -6110,6 +6280,17 @@ static bool cartridge_poll_frame(void *opaque,
                  s_gamepad_connected ? 1U : 0U,
                  s_keyboard_connected ? 1U : 0U,
                  s_mouse_connected ? 1U : 0U,
+                 (unsigned long)s_gamepad_polls,
+                 (unsigned long)s_gamepad_poll_failures,
+                 context->audio_running ? 1U : 0U,
+                 (unsigned long)context->audio.frames_written);
+#elif P4_CONSOLE_GAMEPAD_INPUT
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS CARTRIDGE_STATS app=%s frames=%lu "
+                 "gamepad=%u input_polls=%lu gamepad_failures=%lu "
+                 "audio_running=%u audio_frames=%lu",
+                 context->game_id, (unsigned long)context->frames,
+                 s_gamepad_connected ? 1U : 0U,
                  (unsigned long)s_gamepad_polls,
                  (unsigned long)s_gamepad_poll_failures,
                  context->audio_running ? 1U : 0U,
@@ -6547,7 +6728,7 @@ static void script_set_button(
     }
 }
 
-#if P4_CONSOLE_USB_INPUT
+#if P4_CONSOLE_GAMEPAD_INPUT
 static void script_apply_gamepad(
     const gamepad_state_t *state,
     p4_script_raw_input_t *input,
@@ -6607,6 +6788,10 @@ static void script_apply_gamepad(
         *exit_requested = true;
     }
 }
+
+#endif
+
+#if P4_CONSOLE_USB_INPUT
 
 static void script_apply_keyboard(
     const platform_usb_keyboard_state_t *keyboard,
@@ -6712,23 +6897,25 @@ static bool script_poll_input(
         raw[player].source_epoch = 1U;
     }
     raw[0].sampled_at_us = (uint64_t)esp_timer_get_time();
-    bool usb_controls = false;
-#if P4_CONSOLE_USB_INPUT
+    bool physical_controls = false;
+#if P4_CONSOLE_GAMEPAD_INPUT
     platform_gamepad_snapshot_t gamepad;
     if (read_gamepad_snapshot(&gamepad)) {
         script_apply_gamepad(&gamepad.state, &raw[0], exit_requested);
-        usb_controls = true;
+        physical_controls = true;
     }
+#endif
+#if P4_CONSOLE_USB_INPUT
     platform_usb_input_snapshot_t auxiliary;
     if (read_aux_input_snapshot(&auxiliary)) {
         if (auxiliary.keyboard.connected != 0U) {
             script_apply_keyboard(
                 &auxiliary.keyboard, &raw[0], exit_requested);
-            usb_controls = true;
+            physical_controls = true;
         }
         if (auxiliary.mouse.connected != 0U) {
             raw[0].connected = 1U;
-            usb_controls = true;
+            physical_controls = true;
             s_mouse_x = move_pointer_axis(
                 s_mouse_x, auxiliary.mouse.delta_x,
                 CONSOLE_SHELL_LAYOUT_WIDTH);
@@ -6779,7 +6966,7 @@ static bool script_poll_input(
             point->x = x;
             point->y = y;
             point->pressed = 1U;
-            if (!usb_controls) {
+            if (!physical_controls) {
                 script_apply_virtual_touch_controls(&raw[0], x, y);
             }
         }
@@ -7228,9 +7415,9 @@ void app_main(void)
              board->slug, "usb-hid-pad+kbd+mouse", "microsd",
 #elif CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
       CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE
-             board->slug, "gt911-touch+usb-hid-gamepad", "microsd",
+             board->slug, "gt911-touch+usb-hid+ble-hid", "microsd",
 #elif CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
-             board->slug, "gt911-touch", "microsd",
+             board->slug, "gt911-touch+ble-hid", "microsd",
 #else
              board->slug, "gt911-touch", "internal-fat",
 #endif
@@ -7275,6 +7462,25 @@ void app_main(void)
                  "P4_CONSOLE_OS SETTINGS_DEGRADED defaults=1 error=%s",
                  esp_err_to_name(settings_result));
     }
+#if P4_CONSOLE_BLE_MULTIPLAYER
+    const esp_err_t ble_multiplayer_prepare =
+        platform_multiplayer_ble_prepare();
+    if (ble_multiplayer_prepare != ESP_OK) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS BLE_PREPARE_DEGRADED client=multiplayer "
+                 "error=%s",
+                 esp_err_to_name(ble_multiplayer_prepare));
+    }
+#endif
+#if P4_CONSOLE_BLE_GAMEPAD
+    const esp_err_t ble_gamepad_prepare = platform_gamepad_ble_prepare();
+    if (ble_gamepad_prepare != ESP_OK) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS BLE_PREPARE_DEGRADED client=gamepad "
+                 "error=%s",
+                 esp_err_to_name(ble_gamepad_prepare));
+    }
+#endif
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
     (void)create_shared_control_bus_or_continue();
 #endif
@@ -7374,6 +7580,18 @@ void app_main(void)
                  "P4_CONSOLE_OS MULTIPLAYER_LOBBY_DEGRADED error=%s",
                  esp_err_to_name(lobby_result));
     }
+#if P4_CONSOLE_BLE_GAMEPAD
+    const platform_gamepad_ble_status_t saved_pad =
+        platform_gamepad_ble_status();
+    if (saved_pad.bonded) {
+        const esp_err_t reconnect_result =
+            platform_gamepad_ble_connect_or_pair();
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS BLE_GAMEPAD_RECONNECT queued=%u result=%s",
+                 reconnect_result == ESP_OK ? 1U : 0U,
+                 esp_err_to_name(reconnect_result));
+    }
+#endif
 #if P4_CONSOLE_BLE_MULTIPLAYER && P4_BLE_DIAGNOSTIC_AUTOSTART
     ESP_LOGW(TAG,
              "P4_CONSOLE_OS BLE_DIAGNOSTIC_AUTOSTART stage=queued");
@@ -7426,6 +7644,9 @@ void app_main(void)
     TickType_t last_wake = xTaskGetTickCount();
     for (;;) {
         ++s_loop_count;
+#if P4_CONSOLE_BLE_GAMEPAD && P4_CONSOLE_BLE_MULTIPLAYER
+        poll_ble_gamepad_lobby_restore();
+#endif
         poll_multiplayer_link(shell);
         if (p4_content_transfer_info().busy ||
             p4_file_transfer_info().busy) {
@@ -7538,6 +7759,12 @@ void app_main(void)
                    action.type == CONSOLE_ACTION_STORAGE_RETRY ||
                    action.type == CONSOLE_ACTION_STORAGE_REPAIR) {
             handle_storage_action(shell, &action);
+#if P4_CONSOLE_BLE_GAMEPAD
+        } else if (action.type == CONSOLE_ACTION_CONTROLLER_PAIR ||
+                   action.type == CONSOLE_ACTION_CONTROLLER_DISCONNECT ||
+                   action.type == CONSOLE_ACTION_CONTROLLER_FORGET) {
+            handle_controller_action(shell, &action);
+#endif
         } else if (action.type == CONSOLE_ACTION_USB_MODE_ENABLE ||
                    action.type == CONSOLE_ACTION_USB_MODE_DISABLE) {
             handle_usb_mode_action(shell, &action);

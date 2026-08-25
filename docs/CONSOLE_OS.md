@@ -16,6 +16,15 @@ consoles after the host-owned start barrier. Doom keeps its dedicated lockstep
 handoff; native cartridges receive only the bounded, transport-neutral Game
 API session callbacks.
 
+Console OS 0.4.71 adds a transport-neutral controller broker and a Waveshare
+Controllers panel. The OS can pair, reconnect, disconnect, or forget one
+encrypted BLE HID/HOGP pad while retaining wired USB priority. BLE controller
+and multiplayer clients share one NimBLE/ESP-Hosted owner and a two-link
+budget; games and Doom continue to read only canonical snapshots. Modern
+Bluetooth-capable Xbox Wireless Controllers are the priority named target,
+but model-specific hardware acceptance remains pending. See
+`docs/CONTROLLERS.md`.
+
 Console OS 0.4.44 synchronizes multiplayer Doom at two boundaries. A
 session-tokenized launcher handshake lets either player start both consoles
 and holds them briefly before the one-way hardware handoff. A separate Doom
@@ -327,7 +336,7 @@ loader with these substitutions:
 |---|---|---|---|
 | Display | 1024x600 DSI, 3x viewport | 1280x720 HDMI, 3x viewport | 480x800 ST7701 rotated to 800x480, 768x480 viewport |
 | Persistent content | internal FAT over J16 | removable microSD | removable microSD; app read-only or exclusive H2 MSC host |
-| Input | GT911 touch | USB-A pad + keyboard + mouse | GT911 touch + externally powered H2 pad/keyboard/mouse |
+| Input | GT911 touch | USB-A pad + keyboard + mouse | GT911 touch + externally powered H2 USB HID + one bonded BLE HID pad |
 | Audio | reviewed factory speaker path | ES8311 to 3.5mm jack | ES8311 speaker path behind runtime gate |
 | Doom | exclusive touch handoff | exclusive pad/keyboard/mouse handoff | exclusive touch handoff |
 | Programming / transfer | J1 UART / J16 MSC | native USB-C Serial/JTAG / card reader | H1 CH343 UART + verified file transfer / runtime-switch H2 MSC |
@@ -402,6 +411,7 @@ boot
        |     |-- Game Manager -> P4G status/remove, P4CART launch, OS update
        |     |-- Save Manager -> bounded OS-owned slot catalog
        |     |-- Multiplayer -> local session core / transport status
+       |     |-- Controllers -> USB/BLE status + pair/disconnect/forget
        |     `-- Terminal -> local commands / touch or physical keyboard
        |-- storage cartridge selected
        |     -> reload, re-hash, validate, and relocate into PSRAM
@@ -441,6 +451,7 @@ display, overlays, and exit callbacks in a deterministic order.
 | Game cartridge | validated microSD package bytes, then relocated PSRAM image | unavailable | Catalog and launch revalidate SHA/ELF; cartridge receives only the host callback table; OTA contains no `.P4G` payload |
 | Game resource | optional same-name `.P4R`, validated and held read-only in PSRAM during launch | unavailable | 8 MiB total bound, exact game-ID binding and payload SHA-256; game receives only the immutable payload view and no filesystem handle |
 | Signal scanner | Waveshare-only `platform_signal_scan`; one foreground cartridge receives sanitized snapshots | dormant/unavailable | Passive background scans publish at most eight session-tokenized results; games receive no radio handle, BSSID, credentials, or socket |
+| Controller input | `platform_gamepad` selects a complete USB or BLE HID snapshot | same canonical snapshot | Wired USB priority; encrypted identity-bound BLE fallback; disconnect immediately neutralizes input; games receive no host, GATT, bond, or address handle |
 | OS update | inactive OTA slot | unavailable | USB stops during streaming; boot slot changes only after final image verification |
 
 The launcher surface is standard RGB565 at 320x200. The proven display service

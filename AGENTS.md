@@ -6,7 +6,8 @@ Use the repository skills in `.agents/skills` whenever their descriptions match:
 - `develop-esp32-p4-platform` for toolchain, build, flash, monitor, recovery, or board bring-up work.
 - `use-elecrow-p4-audio` for the 10 in variant factory I2S1/GPIO30 speaker path, Doom sound effects, audio diagnostics, or acoustic acceptance.
 - `use-elecrow-p4-display` for the 10 in variant panel, framebuffer, backlight, or game-video path.
-- `add-usb-gamepad-support` for USB HID controllers or game input integration.
+- `add-usb-gamepad-support` for USB/Bluetooth HID controllers, pairing,
+  canonical controller input, or game input integration.
 - `test-console-os-builds` for fresh-session Console OS/Game API build tests,
   guarded successor installs, recovery, and honest manual game acceptance.
 - `develop-p4-console-games` for creating or changing native games, choosing
@@ -22,7 +23,7 @@ Keep these rules true for every change:
 3. Never write to a new board before preserving its complete factory flash and recording its size, SHA-256, and hashed live-device binding in a manifest.
 4. Never recommend a passive OTG adapter for this Elecrow panel. Treat its USB-C port as sink-wired unless the exact PCB proves otherwise; controller tests need a powered, current-limited, backfeed-safe host shim.
 5. Put reusable services in `components/`; games consume stable platform APIs and never own USB host handles, display drivers, or raw peripheral callbacks.
-6. Treat USB descriptors and reports as untrusted input. Bound all lengths/counts and neutralize controller state immediately on disconnect.
+6. Treat USB and BLE HID descriptors/reports as untrusted input. Bound all lengths/counts, require encrypted identity-bound BLE pairing, and neutralize controller state immediately on disconnect.
 7. Keep copyrighted commercial Doom WADs out of the repository. Use Freedoom or a user-supplied legally owned WAD outside Git.
 8. A build is not hardware verification. Record the serial evidence and exact hardware used for every on-device acceptance result.
 

@@ -20,27 +20,18 @@
 #include "host/ble_gatt.h"
 #include "host/ble_hs.h"
 #include "host/ble_hs_adv.h"
-#include "host/ble_hs_id.h"
 #include "host/ble_hs_mbuf.h"
 #include "host/ble_uuid.h"
-#include "host/util/util.h"
-#include "nimble/nimble_port.h"
-#include "nimble/nimble_port_freertos.h"
 #include "os/os_mbuf.h"
-#include "services/gap/ble_svc_gap.h"
-#include "services/gatt/ble_svc_gatt.h"
 #pragma GCC diagnostic pop
 
 #include "p4/multiplayer_ble.h"
-#include "platform/radio_hosted.h"
+#include "platform/ble_host.h"
 
 enum {
     P4_BLE_RX_QUEUE_DEPTH = 32,
     P4_BLE_TX_QUEUE_DEPTH = 16,
     P4_BLE_TX_DRAIN_BUDGET = 2,
-    P4_BLE_START_TASK_STACK_BYTES = 8192,
-    P4_BLE_START_TASK_PRIORITY = 5,
-    P4_BLE_GAME_CORE = 1,
     P4_BLE_CONNECT_TIMEOUT_MS = 10000,
     P4_BLE_LOBBY_STALE_MS = 4000,
     P4_BLE_ADV_INTERVAL_MIN = 160, /* 100 ms. */
@@ -69,9 +60,7 @@ typedef struct {
     void *handler_context;
     QueueHandle_t rx_queue;
     QueueHandle_t tx_queue;
-    bool start_in_progress;
     uint8_t own_addr_type;
-    uint8_t own_address[6];
     uint8_t peer_address[6];
     uint8_t selected_host_address[6];
     uint8_t selected_host_address_type;
@@ -83,8 +72,6 @@ typedef struct {
     uint16_t peer_service_start;
     uint16_t peer_service_end;
     uint16_t next_frame_id;
-    bool nimble_initialized;
-    bool synced;
     p4_ble_lobby_entry_t lobbies[PLATFORM_MULTIPLAYER_BLE_MAX_LOBBIES];
     p4_mp_ble_reassembler_t reassembler;
 } p4_ble_state_t;
@@ -107,8 +94,6 @@ static const ble_uuid128_t P4_BLE_SERVICE_UUID = BLE_UUID128_INIT(
 static const ble_uuid128_t P4_BLE_CHARACTERISTIC_UUID = BLE_UUID128_INIT(
     0x02, 0x00, 0x50, 0x4d, 0x34, 0x50, 0x9e, 0x9c,
     0x0d, 0x4a, 0x44, 0x6f, 0x20, 0x9f, 0x0d, 0x7b);
-static const uint8_t P4_BLE_DEVICE_NAME[] = "P4 GAME";
-
 _Static_assert(
     3U + 2U + 16U + P4_MP_BLE_LOBBY_BEACON_BYTES == 31U,
     "flags plus P4 room service data must fit one legacy advertisement");
@@ -119,6 +104,8 @@ static int gatt_access(
     uint16_t attr_handle,
     struct ble_gatt_access_ctxt *context,
     void *argument);
+static void host_reset(int reason, void *context);
+static void host_sync(void *context);
 static esp_err_t send_datagram_now(
     const uint8_t *datagram,
     size_t datagram_length);
@@ -143,6 +130,12 @@ static const struct ble_gatt_svc_def P4_BLE_SERVICES[] = {
         .characteristics = P4_BLE_CHARACTERISTICS,
     },
     {0},
+};
+
+static const platform_ble_host_client_t P4_BLE_HOST_CLIENT = {
+    .services = P4_BLE_SERVICES,
+    .on_sync = host_sync,
+    .on_reset = host_reset,
 };
 
 static void set_state(platform_multiplayer_ble_state_t state, int error)
@@ -893,98 +886,33 @@ static int gap_event(struct ble_gap_event *event, void *argument)
     return 0;
 }
 
-static void host_reset(int reason)
+static void host_reset(int reason, void *context)
 {
+    (void)context;
     ESP_LOGE(TAG, "NimBLE host reset reason=%d", reason);
     clear_connection_state();
     set_state(PLATFORM_MULTIPLAYER_BLE_ERROR, reason);
 }
 
-static void host_sync(void)
+static void host_sync(void *context)
 {
-    int result = ble_hs_util_ensure_addr(0);
-    if (result == 0) {
-        result = ble_hs_id_infer_auto(0, &s_ble.own_addr_type);
-    }
-    if (result == 0) {
-        const uint8_t identity_type =
-            s_ble.own_addr_type == BLE_OWN_ADDR_RANDOM
-                ? BLE_ADDR_RANDOM : BLE_ADDR_PUBLIC;
-        result = ble_hs_id_copy_addr(
-            identity_type, s_ble.own_address, NULL);
-    }
-    if (result != 0) {
-        host_reset(result);
+    (void)context;
+    const esp_err_t result =
+        platform_ble_host_own_addr_type(&s_ble.own_addr_type);
+    if (result != ESP_OK) {
+        host_reset((int)result, NULL);
         return;
     }
     portENTER_CRITICAL(&s_lock);
-    s_ble.synced = true;
     s_ble.status.host_ready = true;
     portEXIT_CRITICAL(&s_lock);
     ESP_LOGI(TAG, "NimBLE host synchronized; game radio is opt-in");
     start_discovery();
 }
 
-static void host_task(void *argument)
+esp_err_t platform_multiplayer_ble_prepare(void)
 {
-    (void)argument;
-    nimble_port_run();
-    nimble_port_freertos_deinit();
-}
-
-static void start_task(void *argument)
-{
-    (void)argument;
-    ESP_LOGI(TAG,
-             "BLE startup memory dma_free=%u dma_largest=%u",
-             (unsigned)heap_caps_get_free_size(MALLOC_CAP_DMA),
-             (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_DMA));
-    set_state(PLATFORM_MULTIPLAYER_BLE_STARTING_RADIO, 0);
-    const esp_err_t radio = platform_radio_hosted_start();
-    if (radio != ESP_OK) {
-        set_state(PLATFORM_MULTIPLAYER_BLE_ERROR, (int)radio);
-        portENTER_CRITICAL(&s_lock);
-        s_ble.start_in_progress = false;
-        portEXIT_CRITICAL(&s_lock);
-        vTaskDelete(NULL);
-        return;
-    }
-    set_state(PLATFORM_MULTIPLAYER_BLE_STARTING_HOST, 0);
-    esp_err_t result = nimble_port_init();
-    if (result == ESP_OK) {
-        ble_hs_cfg.reset_cb = host_reset;
-        ble_hs_cfg.sync_cb = host_sync;
-        ble_hs_cfg.sm_io_cap = BLE_HS_IO_NO_INPUT_OUTPUT;
-        ble_hs_cfg.sm_bonding = 0U;
-        ble_hs_cfg.sm_mitm = 0U;
-        ble_hs_cfg.sm_sc = 1U;
-        ble_svc_gap_init();
-        ble_svc_gatt_init();
-        int ble_result = ble_gatts_count_cfg(P4_BLE_SERVICES);
-        if (ble_result == 0) {
-            ble_result = ble_gatts_add_svcs(P4_BLE_SERVICES);
-        }
-        if (ble_result == 0) {
-            ble_result = ble_svc_gap_device_name_set(
-                (const char *)P4_BLE_DEVICE_NAME);
-        }
-        if (ble_result != 0) {
-            result = ESP_FAIL;
-            set_state(PLATFORM_MULTIPLAYER_BLE_ERROR, ble_result);
-        }
-    }
-    if (result == ESP_OK) {
-        portENTER_CRITICAL(&s_lock);
-        s_ble.nimble_initialized = true;
-        portEXIT_CRITICAL(&s_lock);
-        nimble_port_freertos_init(host_task);
-    } else {
-        set_state(PLATFORM_MULTIPLAYER_BLE_ERROR, (int)result);
-    }
-    portENTER_CRITICAL(&s_lock);
-    s_ble.start_in_progress = false;
-    portEXIT_CRITICAL(&s_lock);
-    vTaskDelete(NULL);
+    return platform_ble_host_register_client(&P4_BLE_HOST_CLIENT);
 }
 
 esp_err_t platform_multiplayer_ble_enable(
@@ -993,6 +921,10 @@ esp_err_t platform_multiplayer_ble_enable(
 {
     if (handler == NULL) {
         return ESP_ERR_INVALID_ARG;
+    }
+    const esp_err_t prepare_result = platform_multiplayer_ble_prepare();
+    if (prepare_result != ESP_OK) {
+        return prepare_result;
     }
     if (s_ble.rx_queue == NULL) {
         /* Complete game datagrams are not DMA data and this queue is never
@@ -1017,36 +949,20 @@ esp_err_t platform_multiplayer_ble_enable(
     s_ble.handler = handler;
     s_ble.handler_context = handler_context;
     s_ble.status.enabled = true;
-    const bool initialized = s_ble.nimble_initialized;
-    const bool synced = s_ble.synced;
-    const bool task_running = s_ble.start_in_progress;
-    if (!initialized && !task_running) {
-        s_ble.start_in_progress = true;
-    }
+    const bool ready = s_ble.status.host_ready;
     portEXIT_CRITICAL(&s_lock);
-    if (initialized && synced) {
+    if (ready) {
         start_discovery();
         return ESP_OK;
     }
-    if (initialized) {
-        /* The NimBLE host task is running and will call host_sync(). */
-        return ESP_OK;
+    set_state(PLATFORM_MULTIPLAYER_BLE_STARTING_RADIO, 0);
+    const esp_err_t start_result = platform_ble_host_start();
+    if (start_result != ESP_OK) {
+        set_state(PLATFORM_MULTIPLAYER_BLE_ERROR, (int)start_result);
+    } else {
+        set_state(PLATFORM_MULTIPLAYER_BLE_STARTING_HOST, 0);
     }
-    if (task_running) {
-        return ESP_OK;
-    }
-    if (xTaskCreatePinnedToCore(
-            start_task, "p4_ble_start",
-            P4_BLE_START_TASK_STACK_BYTES, NULL,
-            P4_BLE_START_TASK_PRIORITY, NULL,
-            P4_BLE_GAME_CORE) != pdPASS) {
-        portENTER_CRITICAL(&s_lock);
-        s_ble.start_in_progress = false;
-        portEXIT_CRITICAL(&s_lock);
-        set_state(PLATFORM_MULTIPLAYER_BLE_ERROR, ESP_ERR_NO_MEM);
-        return ESP_ERR_NO_MEM;
-    }
-    return ESP_OK;
+    return start_result;
 }
 
 esp_err_t platform_multiplayer_ble_set_lobby_mode(

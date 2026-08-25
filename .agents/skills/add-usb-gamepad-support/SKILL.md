@@ -1,16 +1,19 @@
 ---
 name: add-usb-gamepad-support
-description: Add, change, diagnose, or test USB controller input for any game on this ESP32-P4 platform. Use for USB Host, HID report descriptors, gamepads, keyboards used as game input, controller hotplug, mappings, deadzones, Doom controls, or new game input adapters.
+description: Add, change, diagnose, or test console-level USB or Bluetooth controller input on this ESP32-P4 platform. Use for USB Host, BLE HID/HOGP pairing, HID report descriptors, gamepads, controller hotplug, mappings, deadzones, Doom controls, or shared game input adapters.
 ---
 
-# Add USB gamepad support
+# Add console gamepad support
 
-Implement controller support once in the platform and expose normalized state to every game. Do not put USB Host calls, descriptor parsing, VID/PID quirks, or pin configuration inside a game.
+Implement controller support once in the platform and expose normalized state
+to every game. Do not put USB Host calls, NimBLE/GATT calls, pairing state,
+descriptor parsing, device quirks, or pin configuration inside a game.
 
 If a game only maps the existing normalized P4 buttons to game actions, use
 `$develop-p4-games` and that game's focused host tests. Use this skill when the
 canonical input contract, parser, profile, lifecycle, transport, or physical
-controller support changes.
+controller support changes. Read `references/architecture.md` for either
+transport, and `references/acceptance.md` before a named hardware claim.
 
 ## Pass the hardware gate first
 
@@ -39,21 +42,33 @@ Elecrow's published CrowPanel Advanced reference circuit wires the USB-C connect
 
 Firmware cannot fix missing USB VBUS source circuitry. A build may still be tested without claiming physical USB success.
 
+Bluetooth input is currently a Waveshare 4.3 feature. The P4 has no radio;
+`platform_ble_host` runs NimBLE on the P4 and carries HCI over the exact
+board-authorized ESP32-C6 SDIO transport. Do not add a second NimBLE owner,
+change Hosted pins, or start the radio from a game. The shared host must retain
+both BLE HID and multiplayer registrations before it starts.
+
 ## Preserve the platform boundary
 
 Use this dependency direction:
 
 ```text
-USB Host lifecycle
-  -> HID transport
+USB Host or BLE HOGP lifecycle
+  -> bounded transport adapter
   -> bounded HID descriptor parser + known-device profiles
-  -> canonical gamepad state
+  -> complete transport snapshot
+  -> platform_gamepad broker (wired USB priority, BLE fallback)
   -> per-game action adapter
 ```
 
-Reuse `components/gamepad_core`. Extend its stable public state only when a control cannot be represented there. Keep Doom key translation in the project-owned `components/doom_gamepad_input` adapter, while connect, decode, normalization, hotplug, and device quirks remain platform code. The adapter consumes only a complete canonical snapshot, queues releases before presses, and neutralizes invalid or disconnected input.
+Reuse `components/gamepad_core` and `components/platform_gamepad`. Extend the
+stable public state only when a control cannot be represented there. Keep Doom
+key translation in the project-owned `components/doom_gamepad_input` adapter,
+while connect, pairing, decode, normalization, hotplug, and device quirks
+remain platform code. The adapter consumes only a complete canonical snapshot,
+queues releases before presses, and neutralizes invalid or disconnected input.
 
-## Implement the host lifecycle
+## Implement the USB lifecycle
 
 - Use the versions pinned in `toolchain.lock.json`; never float managed components.
 - Use Espressif's native USB Host stack and managed HID host component.
@@ -64,13 +79,36 @@ Reuse `components/gamepad_core`. Extend its stable public state only when a cont
 - On disconnect, atomically publish a neutral state, synthesize releases, close exactly once, and invalidate device-owned descriptor data.
 - Shut down class drivers and host tasks in a defined order.
 
-Do not treat Xbox/XInput or other vendor-class devices as generic HID. Add a separate transport/profile tier when required.
+Do not treat wired Xbox/XInput/GIP, Xbox Wireless Adapter, or another
+vendor-class device as generic USB HID. Add a separate transport/profile tier
+when required.
+
+## Implement the BLE HID lifecycle
+
+- Use `platform_ble_host`; never call `nimble_port_init()` from a controller
+  component after the shared host exists.
+- Act as a central for the standard HID service `0x1812`. Bound candidates,
+  services, characteristics, descriptor bytes, reports, subscriptions, and
+  timeouts before parsing any peer data.
+- Pair only after an explicit Controllers-panel action. Require encryption and
+  persistent bonding, and accept input only after the encrypted peer identity
+  matches the saved bond. A device name may help rediscover a privacy-rotated
+  advertisement but is never authorization.
+- Neutralize before terminating or forgetting a link. Forget only the selected
+  controller bond; never erase multiplayer or unrelated BLE state.
+- Yield BLE lobby discovery while pairing and restore it after the bounded
+  operation. Preserve the committed capacity for one BLE pad plus one
+  multiplayer peer.
+- Treat modern Bluetooth-capable Xbox Wireless Controllers as the priority
+  HOGP acceptance target, not as proof that older Xbox or proprietary GIP
+  transports work. Add a quirk only from an exact report-map capture and hash.
 
 ## Parse untrusted descriptors defensively
 
 Support report IDs, usage ranges, array and variable items, signed non-byte-aligned values, nested collections, and global PUSH/POP. Maintain separate bit offsets per report ID and report kind. Reject truncation, overflow, impossible ranges, excessive nesting, oversized descriptors, and unsupported layouts without corrupting the last good state.
 
-Never retain pointers whose lifetime ends when a USB device closes. Apply explicit caps to descriptors, fields, collections, and reports.
+Never retain pointers whose lifetime ends when a USB or BLE device closes.
+Apply explicit caps to descriptors, fields, collections, and reports.
 
 ## Normalize before games see input
 
@@ -78,9 +116,9 @@ Publish a complete snapshot containing connection status, identity, sequence/tim
 
 Assign support tiers honestly:
 
-1. Standards-compliant wired USB HID gamepad.
+1. Standards-compliant wired USB HID or BLE HID/HOGP gamepad.
 2. Explicit PlayStation or Switch HID profiles.
-3. Xbox/XInput/GIP or another vendor-class transport.
+3. Xbox XInput/GIP, Xbox Wireless Adapter, or another vendor-class transport.
 4. Output reports such as rumble and LEDs.
 
 ## Verify proportionally
@@ -99,7 +137,10 @@ malformed-report behavior, and named hardware run have passed.
 
 For Console OS integration, the exact firmware builds are
 `make console-os-idf` for Elecrow and `make console-os-olimex-idf` for the
-Olimex Rev.B development board. The proven Waveshare controller-first build is
+Olimex Rev.B development board. The standard BLE-controller Waveshare build is
+`./scripts/build-waveshare-console-os.sh`, followed by
+`python3 scripts/verify-console-os-waveshare.py`. The proven wired
+controller-first build is
 `./scripts/build.sh console_os waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host`,
 followed by `python3 scripts/verify-console-os-waveshare.py
 apps/console_os/build-waveshare-usb-host`. A generic SNES-style USB HID pad has
