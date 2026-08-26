@@ -1,5 +1,21 @@
 # Remaining Console OS upgrades for full shared LORD services
 
+## 2026-08-25 flash-candidate readiness
+
+Console OS 0.4.73 plus LORD 1.3.0 is prepared from exact main commit
+`fb5814215cacb38f7b608e3b9c8ba01d0d3b2e0a` for the two backed-up Waveshare
+4.3 units. The isolated controller-first build, Waveshare release verifier,
+LORD sanitizer/interactive host pass, realm-hub tests, shared Game API tests,
+gamepad tests, and Console shell tests passed. Exact firmware and cartridge
+artifacts are sealed mode 0400 under ignored `hardware/local-state`; no device
+access or write was performed during preparation.
+
+The static, firmware, content-readback, receive-only retained-UART, and manual
+realm test routes are documented in `docs/LORD_REALM_FLASH_TEST.md`. The exact
+unit authorization is
+`hardware/evidence/waveshare-two-unit-console-os-0.4.73-lord-realm-20260825-exact-unit-authorization.json`.
+This is a hardware-test candidate, not a hardware-qualified result.
+
 ## 2026-08-25 implementation status
 
 LORD 1.3.0 now has a backward-compatible local Mac realm path. It declares

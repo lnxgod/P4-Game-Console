@@ -1,0 +1,177 @@
+{
+  "schema": 1,
+  "authorization_id": "waveshare-two-unit-console-os-0.4.73-lord-realm-20260825",
+  "active": true,
+  "prepared_timestamp_utc": "2026-08-26T02:30:00Z",
+  "status": "prepared-not-executed",
+  "scope": "Sequential guarded application-only installation of exact Console OS 0.4.73 on the two recorded Waveshare 4.3 consoles, followed after retained-UART boot acceptance by exact LORD 1.3.0 cartridge delivery over the OS-owned H1 content protocol.",
+  "authority": {
+    "basis": "The operator requested that the LORD realm port be brought to flash-and-test readiness.",
+    "preparation_authorized": true,
+    "device_write_performed_by_preparation": false,
+    "execution_requires_explicit_install_route": true,
+    "parallel_device_writes_authorized": false
+  },
+  "source": {
+    "branch": "main",
+    "commit": "fb5814215cacb38f7b608e3b9c8ba01d0d3b2e0a",
+    "commit_subject": "fix(lord): reveal Dragon Dice results",
+    "build_workspace": "isolated detached worktree",
+    "unrelated_worktree_changes_included": false
+  },
+  "board_profile": {
+    "id": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "chip": "esp32p4",
+    "flash_bytes": 33554432,
+    "h1_role": "programming, retained UART, content transfer, and realm relay",
+    "h2_role": "controller-first USB host with externally supplied, current-limited, backfeed-safe VBUS",
+    "ble_policy": "lazy; optional fallback transport"
+  },
+  "boards": [
+    {
+      "unit_label": "unit1",
+      "recorded_port": "/dev/cu.wchusbserial5C371865781",
+      "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+      "factory_backup": {
+        "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+        "bytes": 33554432,
+        "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e"
+      }
+    },
+    {
+      "unit_label": "unit2",
+      "recorded_port": "/dev/cu.wchusbserial5B901593451",
+      "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+      "factory_backup": {
+        "path": "hardware/backups/waveshare-4.3-unit2-factory-20260820.bin",
+        "bytes": 33554432,
+        "sha256": "240a730a882e6437f31729c78ae69db35b132b1aa78f820fec9d88b3397b39e6"
+      }
+    }
+  ],
+  "installed_layout": {
+    "bootloader": {
+      "path": "hardware/local-state/waveshare-console-os-0.4.73-lord-realm-fb58142/bootloader.bin",
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "path": "hardware/local-state/waveshare-console-os-0.4.73-lord-realm-fb58142/partition-table.bin",
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    }
+  },
+  "predecessor": {
+    "app_version": "0.4.70",
+    "application_offset": "0x20000",
+    "application_bytes": 1760240,
+    "application_sha256": "1792859f508497cc6a74fe2a666ff7a4c9292737d4861208b09efeb09adac7c4",
+    "installed_span_bytes": 1761280,
+    "installed_span_sha256": "07aa088bd4489d98d1c35b5ca520890e01ba54a7b6d666523b696fbf59603ac3",
+    "preserve_span_bytes": 1794048,
+    "preserve_contract": "The first 1761280 bytes must match the recorded 0.4.70 span and every byte through the 1794048-byte successor mutation boundary must be 0xff before the write. The complete 1794048-byte preimage is preserved locally before mutation."
+  },
+  "candidate": {
+    "app_version": "0.4.73",
+    "source_commit": "fb5814215cacb38f7b608e3b9c8ba01d0d3b2e0a",
+    "artifacts": [
+      {
+        "role": "application",
+        "path": "hardware/local-state/waveshare-console-os-0.4.73-lord-realm-fb58142/p4_console_os.bin",
+        "offset": "0x20000",
+        "bytes": 1791024,
+        "padded_mutation_bytes": 1794048,
+        "sha256": "c30ed4d987bda6021712dd132d441c0848ef2b0a24799ef3a6921e2814628206"
+      },
+      {
+        "role": "application-elf-evidence",
+        "path": "hardware/local-state/waveshare-console-os-0.4.73-lord-realm-fb58142/p4_console_os.elf",
+        "offset": null,
+        "bytes": 21396084,
+        "sha256": "2d47ec253ce027e5b4e04a1637ba2bf0e649e681911db9adb1e56e855ad57e38"
+      },
+      {
+        "role": "update-package-evidence",
+        "path": "hardware/local-state/waveshare-console-os-0.4.73-lord-realm-fb58142/P4UPDATE.P4U",
+        "offset": null,
+        "bytes": 1791280,
+        "sha256": "6e4e9b4c7b3014a9381801938f52e7d3ab7beefbf051cba42a9c155364f234d2"
+      },
+      {
+        "role": "ota-data-evidence",
+        "path": "hardware/local-state/waveshare-console-os-0.4.73-lord-realm-fb58142/ota_data_initial.bin",
+        "offset": "0x10000",
+        "bytes": 8192,
+        "sha256": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f"
+      },
+      {
+        "role": "sdkconfig-evidence",
+        "path": "hardware/local-state/waveshare-console-os-0.4.73-lord-realm-fb58142/sdkconfig",
+        "offset": null,
+        "bytes": 95926,
+        "sha256": "1520c48b59841a81c1134fedb0469d74803e2ede0bf011bf54c66a3f7eaa9cc2"
+      },
+      {
+        "role": "dependency-lock-evidence",
+        "path": "hardware/local-state/waveshare-console-os-0.4.73-lord-realm-fb58142/dependencies-waveshare.lock",
+        "offset": null,
+        "bytes": 6296,
+        "sha256": "c92a685c30ab82ec1e4c208a6f90907bc45d4086d1f7ce83e7b3354de60fab1c"
+      },
+      {
+        "role": "lord-cartridge",
+        "path": "hardware/local-state/waveshare-console-os-0.4.73-lord-realm-fb58142/LORD.P4G",
+        "offset": null,
+        "bytes": 168260,
+        "sha256": "f8bd0f55c2dc29a3364eeb223ed6043d277d53c28683dc28d88d2450c8c278e5"
+      }
+    ]
+  },
+  "mutation_guard": {
+    "method": "sequential H1 application-only write",
+    "application_offset": "0x20000",
+    "application_padded_mutation_bytes": 1794048,
+    "bootloader_write_authorized": false,
+    "partition_table_write_authorized": false,
+    "ota_data_write_authorized": false,
+    "nvs_write_authorized": false,
+    "microsd_write_authorized_by_firmware_route": false,
+    "automatic_rollback_authorized": false,
+    "preimage_required_before_write": true,
+    "exact_application_verify_flash_required": true,
+    "padded_readback_required": true
+  },
+  "content_delivery": {
+    "remote_name": "LORD.P4G",
+    "transport": "Console OS H1 verified content protocol",
+    "push_after_runtime_boot_acceptance": true,
+    "pull_readback_and_sha256_required": true,
+    "replace_existing_lord_1_2_0": true
+  },
+  "verification": {
+    "locked_toolchain": "ESP-IDF 5.5.3 at 2c211b284f16e22c93f53d14f09b9e3968307d5a",
+    "make_verify": "pass",
+    "make_gamepad_host": "pass",
+    "make_game_sdk_host": "pass",
+    "make_console_shell_host": "pass; 6/6",
+    "lord_sanitizer_host": "pass; 2/2 before and after Dragon Dice layout correction",
+    "lord_focused_tests": "pass; 1/1",
+    "realm_hub_tests": "pass; 9/9",
+    "waveshare_release_verifier": "pass; hardware_tested=false",
+    "interactive_host_play": "title, ANSI name editor, hero and class setup, town, inn, tavern, bartender, Dragon Dice, result text, tones, back navigation, and host exit exercised",
+    "make_check_note": "The current suites passed until the intentionally sealed historical Doom E5 gate asserted its recorded flash_app_authorized=false state. That historical evidence was not changed."
+  },
+  "runtime_acceptance_required": {
+    "version": "0.4.73",
+    "ready_line": "page=home display=mipi-dsi storage=microsd-read-only h2_role=usb-host-external-vbus",
+    "catalog_contains_lord_after_delivery": true,
+    "no_panic_or_boot_loop": true,
+    "display_and_touch": "manual",
+    "controller_on_backfeed_safe_h2_fixture": "manual",
+    "audio": "manual",
+    "two_profile_usb_realm_sync": "manual"
+  },
+  "known_scope_limit": "LORD 1.3.0 synchronizes each actor's complete snapshot, ChompCoin, directory/profile presence, revisions, and hourly realm day. Cross-actor mail delivery, atomic transfers, authoritative asynchronous PvP, two-party friendship/team consent, and shared tavern/news remain future typed server-owned operations and must not be claimed as accepted by this route."
+}
