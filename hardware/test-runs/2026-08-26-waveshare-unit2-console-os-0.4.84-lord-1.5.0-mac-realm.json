@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "evidence_id": "waveshare-unit2-console-os-0.4.84-lord-1.5.0-mac-realm-20260826",
+  "status": "console-os-hardware-startup-pass-lord-exact-delivery-pass-mac-realm-join-pending",
+  "timestamp_utc": "2026-08-26T20:39:49Z",
+  "scope": "Application-only Console OS 0.4.84 install and LORD 1.5.0 cartridge delivery on recorded Waveshare 4.3 unit2. The firmware successor adds UUID-only discovery for the Mac-hosted encrypted BLE P4MP peripheral. The cartridge adds bounded paging across a shared 100-account backend realm. Bootloader, partition table, OTA data, NVS, and unrelated microSD files were not written.",
+  "source": {
+    "installed_commit": "af784d870a657ff171980bb93329d2d9a5ab0153",
+    "branch": "main",
+    "console_os_version": "0.4.84",
+    "lord_version": "1.5.0",
+    "toolchain": "ESP-IDF 5.5.3 commit 2c211b236707889e8400c4dc5644dd5c4ee071e0"
+  },
+  "board": {
+    "unit_label": "waveshare-4.3-unit2-386F",
+    "profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "port": "/dev/cu.wchusbserial5B901593451",
+    "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+    "chip": "ESP32-P4 revision v1.3",
+    "flash_bytes": 33554432,
+    "factory_backup": {
+      "path": "hardware/backups/waveshare-4.3-unit2-factory-20260820.bin",
+      "bytes": 33554432,
+      "sha256": "240a730a882e6437f31729c78ae69db35b132b1aa78f820fec9d88b3397b39e6"
+    }
+  },
+  "authorization": {
+    "path": "hardware/evidence/waveshare-unit2-console-os-0.4.84-lord-realm-20260826-exact-unit-authorization.json",
+    "sha256": "a50c06df5d772c850531ec6e1e840815d52eea43fcfe15192af6bf77376cf208",
+    "installer": "scripts/install-waveshare-unit2-console-os-0.4.84-lord-realm.sh",
+    "installer_sha256": "2324dc18f089606b928cb71d3496203822507d0c3762e5d0e57af60823d7898e",
+    "write_scope": "one application write at 0x20000",
+    "automatic_rollback": "authorized for the sealed complete predecessor span; not needed"
+  },
+  "console_os": {
+    "application": {
+      "path": "hardware/local-state/waveshare-unit2-console-os-0.4.84-lord-realm-af784d8/p4_console_os.bin",
+      "bytes": 1820544,
+      "sha256": "8d542f4b5badfe83ff1955c318853a031bcc5a6dd48e0f25124550313599371b"
+    },
+    "update_package": {
+      "bytes": 1820800,
+      "sha256": "6d4b8d8068c901180f4252adec83651935c6d30f2ca8e67610c50b4eddc47f56"
+    },
+    "build_profile": "controller-first H2 runtime switch with lazy BLE multiplayer",
+    "waveshare_build_verifier": "pass; game execution source microSD-only",
+    "predecessor": {
+      "version": "0.4.83",
+      "bytes": 1820384,
+      "sha256": "42f8ef7c60ff28361a69a66718c8cd2acb1dee42bf95896c29e440a51a0e163d"
+    },
+    "preserved_preimage": {
+      "bytes": 1822720,
+      "sha256": "ce4600a20d00682e90822fcc4582bd203fcaafd68a69d54c9f94499388b3d3af"
+    },
+    "successor_readback": {
+      "bytes": 1822720,
+      "sha256": "3fc81dd395cddb82349896bae6800577f54d63622e17725b5552aa00bf0065cb",
+      "application_digest": "pass",
+      "erased_sector_tail": "pass"
+    },
+    "unchanged_layout": {
+      "bootloader": "pass; sha256 4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30",
+      "partition_table": "pass; sha256 606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    }
+  },
+  "retained_uart": {
+    "capture_script": "scripts/capture-waveshare-console-os-0.4.84.py",
+    "capture_script_sha256": "8ed3a641727fdb64d3f8f676590667aaf4efb4d8de0ab367d5d0c9d56e92235a",
+    "launch_method": "one RTS reset on the same exclusive H1 UART descriptor",
+    "raw_bytes": 16981,
+    "raw_sha256": "d8c3a3394b61ec64cac4d49a434a23088c50392dd781f98602c8ef935f9a7df2",
+    "result": "pass",
+    "required_markers": "App version 0.4.84, exact Waveshare board ID, Console OS START, game catalog, multiplayer registry, controller-first H2 role, and launcher READY",
+    "health_samples": "two consecutive valid samples; USB input ready, ES8311 ready, storage app-owned, zero display failures, and zero rejected P4CART entries",
+    "rejected_runtime_markers": "none",
+    "initial_no_reset_attempt": "timed out with zero bytes because the requested physical reset was not performed; no runtime failure was observed",
+    "parser_correction": "the first automatic capture proved a healthy boot but the parser expected obsolete Project version and synthetic profile wording; exact locked ESP-IDF App version and runtime board markers were substituted and the fresh capture passed"
+  },
+  "lord_cartridge": {
+    "path": "hardware/local-state/waveshare-unit2-console-os-0.4.84-lord-realm-af784d8/LORD.P4G",
+    "bytes": 174940,
+    "sha256": "ccf4f068701d7b033e81ba4ead843207efd2cea2771fe3581f168aed6b63d91c",
+    "payload_bytes": 174684,
+    "payload_sha256": "e6e05e6640795232d1399c176cad4756765d0c09902ec13d3e1fd4563e0b44d4",
+    "delivery": "atomic H1 P4G upload with device package validation",
+    "readback": "pass; 174940 bytes, exact package SHA-256, byte-for-byte cmp",
+    "first_upload_attempt": "all chunks acknowledged but final activation proof timed out; a verified pull proved the prior LORD 1.4.0 remained exact",
+    "retry": "pass in 4.2 seconds; final P4D2 size and digest matched",
+    "transfer_client_change": "final device fsync/double-validation wait raised from 180 to 600 seconds; chunk ACK, CRC32, size, package, SHA-256, pull, and cmp gates unchanged"
+  },
+  "realm_backend": {
+    "topology": "Mac is authoritative P4MP host; every console chooses Join; each link is a two-slot transport tunnel into one shared SQLite realm",
+    "capacity": 100,
+    "capacity_semantics": "100 persistent player accounts; existing accounts can reconnect at capacity; the console uses bounded eight-entry directory pages",
+    "shared_state": "profiles, realm clock/settings, ChompCoin, mail, news, trust/friendship, team consent, mentoring, and PvP leases/outcomes",
+    "transport": "H1 host process started successfully and is waiting for Unit 2 Discover",
+    "database": "local-data/realm/lord.sqlite3; zero profiles before first hardware join",
+    "unit2_join": "pending on-screen Multiplayer > Join > LORD > Wired/H1 > Join action",
+    "ble_join": "pending exact-device encrypted GATT acceptance",
+    "simultaneous_scale": "realm account capacity is hardware-independent; one Mac CoreBluetooth process currently accepts one BLE console while repeatable H1 profiles can run concurrently"
+  },
+  "software_verification": {
+    "realm_hub": "pass; 13/13 including exact 100-account cap and paged directory relationship state",
+    "lord_sanitizer": "pass; 1/1",
+    "p4_multiplayer_c": "pass; 1/1",
+    "p4_relay": "pass",
+    "console_shell_host": "pass; 6/6",
+    "local_lord_play": "previously passed exact 1.4 gameplay; 1.5 changes are bounded directory paging and backend-host transport state",
+    "diff_check": "pass"
+  },
+  "ledger": {
+    "path": "hardware/local-state/waveshare-unit2-console-os-0.4.84-install-af784d8/ledger.json",
+    "bytes": 907,
+    "sha256": "06d4b2811b7ddbb9a4e733771263a6f9710c7ca727bf00a9155d0e1663a2e0e2",
+    "state": "installed-startup-pass-lord-1.5.0-readback-pass",
+    "restore_required": false
+  },
+  "manual_acceptance_pending": [
+    "Confirm the 0.4.84 launcher and LORD 1.5.0 title render correctly on the physical panel.",
+    "On Unit 2 choose Multiplayer > Join > LORD > Wired/H1 > Join and capture CLIENT_ACCEPTED plus REALM_ONLINE on the Mac.",
+    "Create or load one hero and confirm the backend profile count becomes one and the realm directory page is visible.",
+    "Connect a second console and confirm shared mail, news, ChompCoin, friendship/team state, mentoring, PvP lease resolution, and hourly rollover without duplicate events.",
+    "Repeat the Join path over encrypted BLE and capture GATT encryption, P4MP identity validation, disconnect neutralization, and clean return to the launcher."
+  ]
+}

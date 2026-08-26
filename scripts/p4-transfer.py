@@ -357,7 +357,8 @@ def push(args: argparse.Namespace) -> None:
                 if percent >= last_percent + 10 or percent == 100:
                     print(f"P4_H1 progress={percent:3d}% bytes={sent}/{size}")
                     last_percent = percent
-        done = reader.frame(DONE_MAGIC, 41, 180.0)
+        print("P4_H1 activation=waiting device=fsync+double-validation")
+        done = reader.frame(DONE_MAGIC, 41, 600.0)
         verify_done(done, size, digest)
         print(
             f"P4_H1 PASS direction=push name={name} bytes={size} "
