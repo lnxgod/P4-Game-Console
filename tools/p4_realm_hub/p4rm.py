@@ -37,6 +37,7 @@ ACTION_RESULT = 17
 EVENT_BEGIN = 18
 EVENT_BODY = 19
 EVENT_ACK = 20
+DIRECTORY_PAGE = 21
 
 ACTION_MAIL = 1
 ACTION_TRANSFER = 2
@@ -79,7 +80,7 @@ def encode_message(
     chunk_index: int = 0,
     chunk_count: int = 0,
 ) -> bytes:
-    if not 1 <= kind <= EVENT_ACK:
+    if not 1 <= kind <= DIRECTORY_PAGE:
         raise ValueError("invalid P4RM message kind")
     if not 1 <= transaction_id <= 0xFFFFFFFF:
         raise ValueError("P4RM transaction ID must be nonzero")
@@ -108,7 +109,7 @@ def decode_message(data: bytes) -> Message:
     )
     if magic != MAGIC or version != VERSION or header_bytes != HEADER_BYTES:
         raise ValueError("invalid P4RM identity")
-    if flags != 0 or not 1 <= kind <= EVENT_ACK:
+    if flags != 0 or not 1 <= kind <= DIRECTORY_PAGE:
         raise ValueError("invalid P4RM kind or flags")
     if transaction_id == 0 or count > MAX_CHUNKS:
         raise ValueError("invalid P4RM transaction")

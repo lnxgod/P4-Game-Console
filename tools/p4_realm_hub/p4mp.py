@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import struct
 import zlib
 
@@ -71,6 +72,70 @@ class Offer:
     content_sha256: bytes
     compatibility_sha256: bytes
     game_settings: bytes
+
+
+def _hash_valid(value: bytes) -> bool:
+    return len(value) == 32 and any(value)
+
+
+def _offer_valid(offer: Offer) -> bool:
+    try:
+        game_id = offer.game_id.encode("ascii")
+    except UnicodeEncodeError:
+        return False
+    return (
+        offer.mode in (1, 2)
+        and offer.game_api_major > 0
+        and 2 <= offer.player_capacity <= 4
+        and 1 <= offer.players_present <= offer.player_capacity
+        and 0 <= offer.input_delay_ticks <= 15
+        and 1 <= offer.tick_rate_hz <= 240
+        and 1 <= offer.game_protocol <= 0xFFFF
+        and offer.session_seed != 0
+        and 0 < len(game_id) < 32
+        and all(
+            chr(value).islower()
+            or chr(value).isdigit()
+            or chr(value) in ".-_"
+            for value in game_id
+        )
+        and _hash_valid(offer.content_sha256)
+        and _hash_valid(offer.compatibility_sha256)
+        and len(offer.game_settings) == 8
+    )
+
+
+def compatibility_sha256(
+    *,
+    mode: int,
+    game_api_major: int,
+    game_api_minor: int,
+    player_capacity: int,
+    input_delay_ticks: int,
+    tick_rate_hz: int,
+    game_protocol: int,
+    game_id: str,
+    content_sha256: bytes,
+) -> bytes:
+    """Reproduce p4_mp_lobby_compatibility_material plus SHA-256."""
+    game_id_bytes = game_id.encode("ascii")
+    if not 0 < len(game_id_bytes) < 32 or not _hash_valid(content_sha256):
+        raise ValueError("invalid P4MP compatibility identity")
+    material = bytearray(80)
+    material[0:6] = bytes(
+        (
+            2,
+            mode,
+            game_api_major,
+            game_api_minor,
+            player_capacity,
+            input_delay_ticks,
+        )
+    )
+    struct.pack_into("<HH", material, 6, tick_rate_hz, game_protocol)
+    material[16 : 16 + len(game_id_bytes)] = game_id_bytes
+    material[48:80] = content_sha256
+    return hashlib.sha256(material).digest()
 
 
 def _payload_length_valid(packet_type: int, length: int) -> bool:
@@ -224,7 +289,7 @@ def decode_offer(payload: bytes) -> Offer:
         game_id = game_id_bytes[:terminator].decode("ascii")
     except UnicodeDecodeError as error:
         raise ValueError("non-ASCII P4MP game ID") from error
-    return Offer(
+    offer = Offer(
         mode=payload[1],
         game_api_major=payload[2],
         game_api_minor=payload[3],
@@ -239,6 +304,34 @@ def decode_offer(payload: bytes) -> Offer:
         compatibility_sha256=payload[88:120],
         game_settings=payload[120:128],
     )
+    if not _offer_valid(offer):
+        raise ValueError("invalid P4MP offer identity")
+    return offer
+
+
+def encode_offer(offer: Offer) -> bytes:
+    if not _offer_valid(offer):
+        raise ValueError("invalid P4MP offer identity")
+    game_id = offer.game_id.encode("ascii")
+    payload = bytearray(OFFER_BYTES)
+    payload[0:7] = bytes(
+        (
+            2,
+            offer.mode,
+            offer.game_api_major,
+            offer.game_api_minor,
+            offer.players_present,
+            offer.player_capacity,
+            offer.input_delay_ticks,
+        )
+    )
+    struct.pack_into("<HH", payload, 8, offer.tick_rate_hz, offer.game_protocol)
+    struct.pack_into("<Q", payload, 16, offer.session_seed)
+    payload[24 : 24 + len(game_id)] = game_id
+    payload[56:88] = offer.content_sha256
+    payload[88:120] = offer.compatibility_sha256
+    payload[120:128] = offer.game_settings
+    return bytes(payload)
 
 
 def encode_join(compatibility_sha256: bytes, join_nonce: int) -> bytes:
@@ -248,6 +341,46 @@ def encode_join(compatibility_sha256: bytes, join_nonce: int) -> bytes:
         struct.pack("<BBH", 2, 0xFF, 0)
         + compatibility_sha256
         + struct.pack("<I", join_nonce)
+    )
+
+
+def decode_join(payload: bytes) -> tuple[int, bytes, int]:
+    if (
+        len(payload) != JOIN_BYTES
+        or payload[0] != 2
+        or payload[2:4] != b"\0\0"
+        or payload[1] not in (1, 2, 3, 0xFF)
+        or not _hash_valid(payload[4:36])
+    ):
+        raise ValueError("invalid P4MP join")
+    nonce = struct.unpack_from("<I", payload, 36)[0]
+    if nonce == 0:
+        raise ValueError("invalid P4MP join nonce")
+    return payload[1], payload[4:36], nonce
+
+
+def encode_accept(
+    assigned_player_slot: int,
+    player_count: int,
+    input_delay_ticks: int,
+    start_tick: int,
+    session_seed: int,
+    game_settings: bytes,
+) -> bytes:
+    if (
+        assigned_player_slot == 0
+        or assigned_player_slot >= player_count
+        or not 2 <= player_count <= 4
+        or not 0 <= input_delay_ticks <= 15
+        or not 0 <= start_tick <= 0xFFFFFFFF
+        or not 1 <= session_seed <= 0xFFFFFFFFFFFFFFFF
+        or len(game_settings) != 8
+    ):
+        raise ValueError("invalid P4MP accept")
+    return (
+        bytes((2, assigned_player_slot, player_count, input_delay_ticks))
+        + struct.pack("<IQ", start_tick, session_seed)
+        + game_settings
     )
 
 
@@ -262,3 +395,28 @@ def decode_accept(payload: bytes) -> tuple[int, int, int, int, int, bytes]:
         struct.unpack_from("<Q", payload, 8)[0],
         payload[16:24],
     )
+
+
+def start_token(session_id: int, session_seed: int) -> int:
+    mixed = (
+        session_id
+        ^ (session_seed & 0xFFFFFFFF)
+        ^ ((session_seed >> 32) & 0xFFFFFFFF)
+    ) & 0xFFFFFFFF
+    mixed ^= mixed >> 16
+    return (mixed & 0xFFFF) or 1
+
+
+def encode_start_ready(token: int) -> bytes:
+    if not 1 <= token <= 0xFFFF:
+        raise ValueError("invalid P4MP start token")
+    return b"P4ST\x01\x01" + struct.pack("<H", token)
+
+
+def decode_start_ready(payload: bytes) -> int:
+    if len(payload) != 8 or payload[:6] != b"P4ST\x01\x01":
+        raise ValueError("invalid P4MP start-ready payload")
+    token = struct.unpack_from("<H", payload, 6)[0]
+    if token == 0:
+        raise ValueError("invalid P4MP start token")
+    return token

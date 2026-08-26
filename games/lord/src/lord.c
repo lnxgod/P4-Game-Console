@@ -9,6 +9,10 @@
 #include "p4/game.h"
 #include "p4/input.h"
 
+static bool lord_realm_net_directory_paging_available(void);
+static uint16_t lord_realm_net_directory_offset(void);
+static uint16_t lord_realm_net_directory_total(void);
+
 /* The P4 cartridge packager compiles this canonical translation unit. */
 #include "lord_logic_impl.h"
 #include "lord_save_impl.h"
@@ -523,7 +527,8 @@ static void draw_realm_menu(p4_game_surface_t *surface,
                             bool show_trust,
                             const char *return_label)
 {
-    const size_t count = LORD_REALM_PLAYER_COUNT + 1U;
+    const bool paged = lord_realm_net_directory_paging_available();
+    const size_t count = LORD_REALM_PLAYER_COUNT + (paged ? 3U : 1U);
     const size_t scroll = state->menu_scroll;
     const size_t end = scroll + 7U < count ? scroll + 7U : count;
     draw_ansi_box(surface, 8, 32, 304, 96,
@@ -533,7 +538,11 @@ static void draw_realm_menu(p4_game_surface_t *surface,
         const bool selected = index == state->selection;
         char line[52];
         line_clear(line, sizeof(line));
-        if (index == LORD_REALM_PLAYER_COUNT) {
+        if (paged && index == LORD_REALM_PLAYER_COUNT) {
+            line_append(line, sizeof(line), "Previous realm page");
+        } else if (paged && index == LORD_REALM_PLAYER_COUNT + 1U) {
+            line_append(line, sizeof(line), "Next realm page");
+        } else if (index >= LORD_REALM_PLAYER_COUNT) {
             line_append(line, sizeof(line), return_label);
         } else {
             const lord_realm_player_t *const player = &state->realm[index];
@@ -557,6 +566,25 @@ static void draw_realm_menu(p4_game_surface_t *surface,
         draw_text(surface, 24, y, line,
                   selected ? ANSI_WHITE : ANSI_LIGHT_GRAY);
         ++row;
+    }
+    if (paged) {
+        char page[52];
+        line_clear(page, sizeof(page));
+        line_append(page, sizeof(page), "Realm roster ");
+        line_append_u32(page, sizeof(page),
+                        lord_realm_net_directory_total() == 0U ? 0U :
+                        (uint32_t)lord_realm_net_directory_offset() + 1U);
+        line_append(page, sizeof(page), "-");
+        uint32_t last = (uint32_t)lord_realm_net_directory_offset() +
+            LORD_REALM_PLAYER_COUNT;
+        const uint32_t total = lord_realm_net_directory_total();
+        if (last > total) {
+            last = total;
+        }
+        line_append_u32(page, sizeof(page), last);
+        line_append(page, sizeof(page), " of ");
+        line_append_u32(page, sizeof(page), total);
+        draw_text(surface, 174, 119, page, ANSI_BRIGHT_CYAN);
     }
 }
 

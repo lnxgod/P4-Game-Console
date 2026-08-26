@@ -499,16 +499,39 @@ static bool decode_lobby_advertisement(
         return false;
     }
     const size_t expected = 16U + P4_MP_BLE_LOBBY_BEACON_BYTES;
-    if (fields.svc_data_uuid128 == NULL ||
-        fields.svc_data_uuid128_len != expected ||
+    if (fields.svc_data_uuid128 != NULL &&
+        fields.svc_data_uuid128_len == expected &&
         memcmp(fields.svc_data_uuid128,
-               P4_BLE_SERVICE_UUID.value, 16U) != 0) {
+               P4_BLE_SERVICE_UUID.value, 16U) == 0) {
+        return p4_mp_ble_lobby_beacon_decode(
+                   fields.svc_data_uuid128 + 16U,
+                   P4_MP_BLE_LOBBY_BEACON_BYTES,
+                   beacon_out) == P4_MP_OK;
+    }
+    bool p4_service = false;
+    for (size_t index = 0U; index < fields.num_uuids128; ++index) {
+        if (ble_uuid_cmp(&fields.uuids128[index].u,
+                        &P4_BLE_SERVICE_UUID.u) == 0) {
+            p4_service = true;
+            break;
+        }
+    }
+    if (!p4_service) {
         return false;
     }
-    return p4_mp_ble_lobby_beacon_decode(
-               fields.svc_data_uuid128 + 16U,
-               P4_MP_BLE_LOBBY_BEACON_BYTES,
-               beacon_out) == P4_MP_OK;
+    portENTER_CRITICAL(&s_lock);
+    const uint16_t game_token = s_ble.status.lobby_game_token;
+    portEXIT_CRITICAL(&s_lock);
+    if (game_token == 0U) {
+        return false;
+    }
+    *beacon_out = (p4_mp_ble_lobby_beacon_t){
+        .session_id = P4_MP_BLE_UUID_ONLY_SESSION_ID,
+        .game_token = game_token,
+        .players_present = 1U,
+        .player_capacity = 2U,
+    };
+    return true;
 }
 
 static void observe_lobby(const struct ble_gap_disc_desc *discovery)

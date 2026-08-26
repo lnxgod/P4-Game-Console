@@ -418,6 +418,7 @@ enum {
     TEST_P4RM_EVENT_BEGIN = 18,
     TEST_P4RM_EVENT_BODY = 19,
     TEST_P4RM_EVENT_ACK = 20,
+    TEST_P4RM_DIRECTORY_PAGE = 21,
     TEST_P4RM_BEGIN_INDEX = UINT16_MAX,
 };
 
@@ -699,7 +700,7 @@ static void test_p4mp_mac_realm_hourly_sync(void)
     directory_summary[39] = 0x05U;
     test_store_u16(directory_summary, 40U, 7U);
     test_store_u16(directory_summary, 42U, 2U);
-    uint8_t directory_stats[40] = {0};
+    uint8_t directory_stats[44] = {0};
     memcpy(directory_stats, directory_summary, LORD_SYNC_ACTOR_ID_BYTES);
     test_store_u32(directory_stats, 16U, 35U);
     test_store_u32(directory_stats, 20U, 40U);
@@ -707,6 +708,14 @@ static void test_p4mp_mac_realm_hourly_sync(void)
     test_store_u32(directory_stats, 28U, 6U);
     test_store_u32(directory_stats, 32U, 1500U);
     test_store_u32(directory_stats, 36U, 250U);
+    directory_stats[40] = 55U;
+    directory_stats[41] = 1U;
+    uint8_t directory_page[4] = {0};
+    test_store_u16(directory_page, 0U, 0U);
+    test_store_u16(directory_page, 2U, 17U);
+    realm_mock_queue(&realm, TEST_P4RM_DIRECTORY_PAGE,
+                     UINT32_C(0x5000), 0U, 0U,
+                     directory_page, sizeof(directory_page));
     realm_mock_queue(&realm, TEST_P4RM_DIRECTORY_SUMMARY,
                      UINT32_C(0x5001), 0U, 1U,
                      directory_summary, sizeof(directory_summary));
@@ -719,6 +728,8 @@ static void test_p4mp_mac_realm_hourly_sync(void)
     CHECK(state.realm[0].level == 4U);
     CHECK(state.realm[0].hit_points == 35);
     CHECK(state.realm[0].pvp_wins == 7U);
+    CHECK(state.realm[0].trust == 55U);
+    CHECK(state.realm[0].teamed);
     CHECK(strstr(state.realm[0].saying, "ONLINE") != NULL);
 
     const uint16_t old_day = state.player.day;
@@ -740,6 +751,14 @@ static void test_p4mp_mac_realm_hourly_sync(void)
     const p4_game_input_t activate = {
         .held = P4_BUTTON_A, .pressed = P4_BUTTON_A,
     };
+    state.screen = LORD_SCREEN_PLAYERS;
+    state.selection = LORD_REALM_PLAYER_COUNT + 1U;
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing[5] == TEST_P4RM_DIRECTORY_PAGE);
+    CHECK(test_load_u16(realm.outgoing, TEST_P4RM_HEADER_BYTES) == 8U);
+    (void)realm_mock_take_kind(&realm);
+
     state.screen = LORD_SCREEN_BANK_TRANSFER;
     state.selection = 0U;
     const uint32_t bank_before = state.player.bank;

@@ -1,9 +1,9 @@
-"""Optional macOS BLE central transport for a Console OS hosted room."""
+"""macOS CoreBluetooth peripheral transport for a backend-hosted room."""
 
 from __future__ import annotations
 
-import asyncio
 import struct
+from collections import deque
 
 from tools.p4_realm_hub import p4mp
 from tools.p4_realm_hub.hub import RealmHubSession
@@ -12,6 +12,7 @@ from tools.p4_realm_hub.store import RealmStore
 
 SERVICE_UUID = "7b0d9f20-6f44-4a0d-9c9e-50344d500001"
 CHARACTERISTIC_UUID = "7b0d9f20-6f44-4a0d-9c9e-50344d500002"
+UUID_ONLY_SESSION_ID = 0x4C4F5244
 FRAGMENT_MAGIC = b"P4B"
 FRAGMENT_VERSION = 1
 FRAGMENT_HEADER_BYTES = 12
@@ -110,109 +111,218 @@ class BleRealmLink:
         self,
         profile: str,
         store: RealmStore,
-        *,
-        room_session_id: int | None = None,
+        offer: p4mp.Offer,
     ) -> None:
         self.profile = profile
         self.store = store
-        self.room_session_id = room_session_id
-        self.outgoing: asyncio.Queue[bytes] = asyncio.Queue()
-        self.session = RealmHubSession(profile, store, self.outgoing.put_nowait)
+        self.offer = offer
+        self.session = RealmHubSession(
+            profile,
+            store,
+            self._queue_datagram,
+            offer,
+            session_id=UUID_ONLY_SESSION_ID,
+            log_event=lambda message: print(
+                f"P4_REALM_HUB {message} transport=ble", flush=True
+            ),
+        )
         self.reassembler = BleReassembler()
         self.next_frame_id = 1
+        self.pending_fragments: deque[bytes] = deque()
+        self.manager = None
+        self.characteristic = None
+        self.central = None
+        self.delegate = None
+        self.ready = False
 
-    async def run(self) -> None:
+    def run(self, stop_event) -> None:
         try:
-            from bleak import BleakClient, BleakScanner
+            import CoreBluetooth
+            import CoreFoundation
+            import Foundation
         except ImportError as error:
-            raise RuntimeError("bleak is required for BLE realm sync") from error
+            raise RuntimeError("PyObjC CoreBluetooth is required for BLE hosting") from error
 
-        while True:
-            try:
-                await self._run_once(BleakClient, BleakScanner)
-            except Exception as error:
-                self._transport_disconnected()
+        link = self
+
+        class PeripheralDelegate(Foundation.NSObject):
+            def peripheralManagerDidUpdateState_(delegate_self, manager):
+                link._state_updated(CoreBluetooth, Foundation, manager)
+
+            def peripheralManager_didAddService_error_(
+                delegate_self, manager, _service, error
+            ):
+                if error is not None:
+                    link._report_error("add-service", error)
+                    return
+                manager.startAdvertising_(
+                    {
+                        CoreBluetooth.CBAdvertisementDataServiceUUIDsKey: [
+                            CoreBluetooth.CBUUID.UUIDWithString_(SERVICE_UUID)
+                        ]
+                    }
+                )
+
+            def peripheralManagerDidStartAdvertising_error_(
+                delegate_self, _manager, error
+            ):
+                if error is not None:
+                    link._report_error("advertise", error)
+                    return
                 print(
-                    f"P4_REALM_HUB RETRY transport=ble profile={self.profile} "
-                    f"error={error}",
+                    f"P4_REALM_HUB HOSTING transport=ble profile={link.profile} "
+                    f"session={UUID_ONLY_SESSION_ID:08x}",
                     flush=True,
                 )
-                await asyncio.sleep(1.0)
 
-    async def _run_once(self, BleakClient, BleakScanner) -> None:
+            def peripheralManager_central_didSubscribeToCharacteristic_(
+                delegate_self, _manager, central, characteristic
+            ):
+                link._subscribed(central, characteristic)
 
-        def room_filter(device, advertisement) -> bool:
-            data = next(
-                (
-                    value
-                    for uuid, value in advertisement.service_data.items()
-                    if str(uuid).lower() == SERVICE_UUID
-                ),
-                None,
-            )
-            if data is None or len(data) != 10:
-                return False
-            version, flags, session_id, game_token, present, capacity = (
-                struct.unpack("<BBIHBB", data)
-            )
-            return (
-                version == 1
-                and flags == 1
-                and session_id != 0
-                and game_token != 0
-                and present == 1
-                and capacity == 2
-                and (
-                    self.room_session_id is None
-                    or session_id == self.room_session_id
+            def peripheralManager_central_didUnsubscribeFromCharacteristic_(
+                delegate_self, _manager, central, _characteristic
+            ):
+                link._unsubscribed(central)
+
+            def peripheralManager_didReceiveWriteRequests_(
+                delegate_self, manager, requests
+            ):
+                link._receive_requests(CoreBluetooth, manager, requests)
+
+            def peripheralManagerIsReadyToUpdateSubscribers_(
+                delegate_self, _manager
+            ):
+                link._drain(Foundation)
+
+        self.delegate = PeripheralDelegate.alloc().init()
+        self.manager = CoreBluetooth.CBPeripheralManager.alloc().initWithDelegate_queue_options_(
+            self.delegate, None, None
+        )
+        try:
+            while not stop_event.is_set():
+                CoreFoundation.CFRunLoopRunInMode(
+                    CoreFoundation.kCFRunLoopDefaultMode, 0.05, False
                 )
-            )
+                self.session.tick()
+                self._drain(Foundation)
+        finally:
+            self.manager.stopAdvertising()
+            self.manager.removeAllServices()
+            self._transport_disconnected()
 
-        print(f"P4_REALM_HUB SCANNING transport=ble profile={self.profile}", flush=True)
-        device = await BleakScanner.find_device_by_filter(room_filter, timeout=30.0)
-        if device is None:
-            raise RuntimeError("no matching P4MP BLE room found")
-        async with BleakClient(device) as client:
-            characteristic = client.services.get_characteristic(CHARACTERISTIC_UUID)
-            if characteristic is None:
-                raise RuntimeError("P4MP BLE characteristic is missing")
+    def _state_updated(self, CoreBluetooth, Foundation, manager) -> None:
+        if manager.state() != CoreBluetooth.CBManagerStatePoweredOn:
+            self.ready = False
+            return
+        service_uuid = CoreBluetooth.CBUUID.UUIDWithString_(SERVICE_UUID)
+        characteristic_uuid = CoreBluetooth.CBUUID.UUIDWithString_(
+            CHARACTERISTIC_UUID
+        )
+        properties = (
+            CoreBluetooth.CBCharacteristicPropertyWrite
+            | CoreBluetooth.CBCharacteristicPropertyWriteWithoutResponse
+            | CoreBluetooth.CBCharacteristicPropertyNotify
+        )
+        permissions = (
+            CoreBluetooth.CBAttributePermissionsWriteable
+            | CoreBluetooth.CBAttributePermissionsWriteEncryptionRequired
+        )
+        self.characteristic = (
+            CoreBluetooth.CBMutableCharacteristic.alloc()
+            .initWithType_properties_value_permissions_(
+                characteristic_uuid, properties, None, permissions
+            )
+        )
+        service = CoreBluetooth.CBMutableService.alloc().initWithType_primary_(
+            service_uuid, True
+        )
+        service.setCharacteristics_([self.characteristic])
+        manager.removeAllServices()
+        manager.addService_(service)
+        self.ready = True
+
+    def _report_error(self, stage: str, error) -> None:
+        print(
+            f"P4_REALM_HUB ERROR transport=ble profile={self.profile} "
+            f"stage={stage} error={error}",
+            flush=True,
+        )
+
+    def _same_central(self, first, second) -> bool:
+        return (
+            first is not None
+            and second is not None
+            and first.identifier() == second.identifier()
+        )
+
+    def _subscribed(self, central, characteristic) -> None:
+        if characteristic != self.characteristic:
+            return
+        if self.central is not None and not self._same_central(self.central, central):
+            return
+        self.central = central
+        self._drain()
+
+    def _unsubscribed(self, central) -> None:
+        if self._same_central(self.central, central):
+            self.central = None
+            self._transport_disconnected()
+
+    def _receive_requests(self, CoreBluetooth, manager, requests) -> None:
+        for request in requests:
+            result = CoreBluetooth.CBATTErrorWriteNotPermitted
+            if (
+                request.characteristic() == self.characteristic
+                and (
+                    self.central is None
+                    or self._same_central(self.central, request.central())
+                )
+            ):
+                try:
+                    datagram = self.reassembler.consume(bytes(request.value()))
+                    if datagram is not None:
+                        self.session.receive(datagram)
+                    result = CoreBluetooth.CBATTErrorSuccess
+                except (TypeError, ValueError):
+                    result = CoreBluetooth.CBATTErrorInvalidAttributeValueLength
+            manager.respondToRequest_withResult_(request, result)
+
+    def _queue_datagram(self, datagram: bytes) -> None:
+        capacity = 20
+        if self.central is not None:
             capacity = max(
                 FRAGMENT_HEADER_BYTES + 1,
-                min(characteristic.max_write_without_response_size, 244),
+                min(int(self.central.maximumUpdateValueLength()), 244),
             )
+        frame_id = self.next_frame_id
+        self.next_frame_id = self.next_frame_id % 0xFFFF + 1
+        self.pending_fragments.extend(
+            fragment_datagram(datagram, frame_id, capacity)
+        )
+        self._drain()
 
-            def notification(_characteristic, value: bytearray) -> None:
-                datagram = self.reassembler.consume(bytes(value))
-                if datagram is not None:
-                    self.session.receive(datagram)
-
-            await client.start_notify(characteristic, notification)
-            discover = p4mp.encode_packet(p4mp.DISCOVER, 0, 0, 1)
-            await self._write_datagram(client, characteristic, discover, capacity)
-            print(
-                f"P4_REALM_HUB READY transport=ble profile={self.profile} "
-                f"device={device.name or 'P4 console'}",
-                flush=True,
+    def _drain(self, Foundation=None) -> None:
+        if (
+            self.manager is None
+            or self.characteristic is None
+            or self.central is None
+        ):
+            return
+        if Foundation is None:
+            import Foundation
+        while self.pending_fragments:
+            fragment = self.pending_fragments[0]
+            value = Foundation.NSData.dataWithBytes_length_(
+                fragment, len(fragment)
             )
-            while client.is_connected:
-                try:
-                    datagram = await asyncio.wait_for(self.outgoing.get(), timeout=0.05)
-                except TimeoutError:
-                    self.session.tick()
-                    continue
-                await self._write_datagram(client, characteristic, datagram, capacity)
-        self._transport_disconnected()
+            if not self.manager.updateValue_forCharacteristic_onSubscribedCentrals_(
+                value, self.characteristic, [self.central]
+            ):
+                return
+            self.pending_fragments.popleft()
 
     def _transport_disconnected(self) -> None:
         self.session.transport_disconnected()
         self.reassembler.reset()
-        while not self.outgoing.empty():
-            self.outgoing.get_nowait()
-
-    async def _write_datagram(
-        self, client, characteristic, datagram: bytes, capacity: int
-    ) -> None:
-        frame_id = self.next_frame_id
-        self.next_frame_id = self.next_frame_id % 0xFFFF + 1
-        for fragment in fragment_datagram(datagram, frame_id, capacity):
-            await client.write_gatt_char(characteristic, fragment, response=True)
+        self.pending_fragments.clear()

@@ -1,164 +1,150 @@
-# LORD Mac realm hub
+# LORD Mac BBS realm server
 
-LORD 1.4.0 can use a Mac as a local BBS-style realm hub without adding a new
-Game API ABI or changing P4MP v1. The console hosts the normal two-player LORD
-room. The Mac joins the second slot and carries the bounded `P4RM` realm
-protocol inside existing 1–64 byte P4MP Game Message packets.
+LORD 1.5.0 uses the Mac as the authoritative BBS-style realm server. Every
+console chooses **Join**. A console never hosts the shared world.
 
 ```text
-LORD cartridge -> Game API multiplayer-session -> Console OS P4MP v1
-                                                       |
-                                             H1 USB or encrypted BLE
-                                                       |
-                                      scripts/p4-realm-hub.py
-                                                       |
-                                local-data/realm/lord.sqlite3
+P4 console 1 -- H1 USB -------+
+P4 console 2 -- encrypted BLE +--> Mac P4MP host --> one SQLite LORD realm
+P4 console N -- H1 USB -------+          |
+                                           +-- up to 100 player accounts
 ```
 
-This implementation is host-tested. The H1 and BLE paths still need retained
-on-device evidence before either may be called hardware-qualified.
+Each physical link is an independent two-slot P4MP session: the backend owns
+slot 0 and one console joins slot 1. These point-to-point sessions are only
+transport tunnels. They all share the same SQLite realm, so P4MP's current
+two-player Console OS runtime is not the LORD player limit.
 
-## What works
+The realm accepts 100 stable player profiles. LORD displays an eight-player
+page at a time and provides Previous/Next realm-page rows for the complete
+99-other-player roster. The backend owns player snapshots, presence, mail,
+friendship, teams, mentoring, PvP leases/results, tavern/news feeds, carried
+and vaulted ChompCoin, and the hourly realm-day clock. Offline players receive
+numbered durable events when they next join.
 
-- A stable operator-assigned Mac profile maps to one opaque 16-byte actor ID.
-- The complete CRC-protected `LRSY`/`LDSV` character snapshot uploads and
-  downloads in 48-byte stop-and-wait chunks.
-- SQLite commits use compare-and-swap revisions and one-use idempotency
-  nonces. A stale device gets `SYNC CONFLICT`; it cannot silently overwrite a
-  newer head.
-- Other connected characters appear in LORD's warrior directory with bounded
-  name, class, level, health, combat stats, experience, ChompCoin, PvP record,
-  inn status, and online presence.
-- The Mac supplies one trusted realm day per hour. A character that missed one
-  or many hours receives exactly one refresh on reconnect, with no catch-up
-  loop and no bank interest. Offline inn sleep keeps the classic local rules.
-- The same database can serve several H1 consoles at once. One optional BLE
-  console can run in the same hub process.
-- Letters, 100-ChompCoin bank transfers, encouragement/shared supplies,
-  adventure-team invitations and reciprocal acceptance, mentoring, leased
-  asynchronous PvP outcomes, tavern conversation, and town announcements are
-  committed as nonce-idempotent hub actions. Their target events remain in
-  SQLite until the target cartridge applies and acknowledges the numbered
-  event.
-- Transfers publish both carried and vaulted ChompCoin privately to the hub.
-  The hub validates the source vault, commits its debit and the recipient
-  credit together, then queues one durable event to each console. Vault
-  balances are never exposed in the player directory.
-- If no multiplayer session is supplied, LORD remains the complete offline
-  game and continues using ordinary local saves when available.
+## Requirements
 
-The complete snapshot includes the character's local mail, news, PvP,
-friendship, team, built-in IGM, and ChompCoin state, so those fields follow the
-same actor between consoles. Version 1.4.0 adds the local-hub cross-actor layer
-listed above. It is still a trusted LAN/USB deployment: it has no public
-signup, password, TLS listener, moderation console, or hostile-client economy
-validation beyond the bounded installed cartridge protocol. It must not be
-described as a public Internet BBS.
+- The Mac and every console must use the exact same `LORD.P4G`. The server
+  derives the content and compatibility hashes from the supplied cartridge
+  and rejects a mismatched Join.
+- H1 USB needs Python 3 and `pyserial`.
+- BLE needs PyObjC CoreBluetooth; installing `bleak` on macOS installs that
+  framework binding.
+- BLE backend hosting requires Console OS 0.4.84 or later. CoreBluetooth can
+  advertise a service UUID but not P4 room service data, so 0.4.84 recognizes
+  the reserved UUID-only Mac room. The encrypted GATT connection must still
+  pass the normal exact P4MP Offer/Join compatibility check.
+- Use one stable `PROFILE` label for each player. A profile label is the local
+  account binding and maps deterministically to one opaque 16-byte actor ID.
 
-## Mac setup
-
-H1 USB requires Python 3 and `pyserial`. BLE additionally requires `bleak`:
+Install dependencies once:
 
 ```sh
-python3 -m pip install pyserial
-python3 -m pip install bleak
+python3 -m pip install pyserial bleak
 ```
 
-The database defaults to `local-data/realm/lord.sqlite3`, which is ignored by
-Git. Stop the hub before copying the database for a backup so the SQLite WAL is
-fully closed.
+The default database is ignored at
+`local-data/realm/lord.sqlite3`. Stop the server before copying it for backup
+so SQLite can close its WAL cleanly.
 
-Use one stable profile label per character, and do not connect the same label
-from two consoles at once. If that happens, compare-and-swap protection keeps
-the newer head and the stale console shows `SYNC CONFLICT` rather than merging
-or duplicating state.
+## H1 USB server
 
-### H1 USB
-
-1. Connect each console's H1 CH343 port to the Mac. H2 remains available for
-   the controller-first powered host fixture.
-2. On the console open **Multiplayer**, choose **HOST**, select **LORD**, leave
-   **LINK** at **WIRED AUTO**, and press **OPEN ROOM**.
-3. Find the exact H1 port on the Mac, normally `/dev/cu.wchusbserial...`.
-4. Start the hub with a permanent profile label for that player:
+Connect every console's H1 CH343 port to the Mac. H2 remains available for the
+qualified controller fixture. Start one server process and repeat `--usb` for
+each attached console:
 
 ```sh
 python3 scripts/p4-realm-hub.py \
-  --usb "alice=/dev/cu.wchusbserial110"
-```
-
-Several H1 consoles can share the Mac process:
-
-```sh
-python3 scripts/p4-realm-hub.py \
+  --cartridge /absolute/path/to/LORD.P4G \
   --usb "alice=/dev/cu.wchusbserial110" \
   --usb "bob=/dev/cu.wchusbserial120"
 ```
 
-When the console shows the guest connected, the console host presses **START
-MATCH**. The Mac answers the existing synchronized start barrier, Console OS
-launches LORD, and the town status changes from `SYNCING` to `MAC REALM`.
+On each console:
 
-Do not run the content uploader, firmware monitor, or two-console relay on the
-same H1 port while the realm hub owns it. The hub opens H1 exclusively and
-keeps DTR and RTS inactive so attaching it does not intentionally reset the
-console.
+1. Open **Multiplayer** and choose **Join**.
+2. Choose **Wired Auto**.
+3. Select the advertised LORD server row and confirm **Join Selected**.
+4. Wait while the backend accepts slot 1 and automatically sends the existing
+   synchronized-start barrier.
 
-### BLE
+There is no backend Start button and no console Host step. Console OS launches
+LORD after the barrier; LORD changes from `SYNCING` to `MAC REALM` after its
+welcome and snapshot exchange.
 
-1. In **Multiplayer**, select **LORD**, change **LINK** to **BLE**, then create
-   a lobby.
-2. Run the hub using the displayed room/session ID. Decimal and `0x` hex values
-   are accepted:
+Do not run a firmware monitor, content uploader, or two-console relay on an H1
+port while the server owns it. The server opens H1 exclusively and keeps DTR
+and RTS inactive so attaching it does not intentionally reset the console.
+
+## BLE server
+
+Run one BLE profile in the same process as any H1 workers:
 
 ```sh
 python3 scripts/p4-realm-hub.py \
-  --ble-profile alice \
-  --ble-room 0x1234abcd
+  --cartridge /absolute/path/to/LORD.P4G \
+  --usb "alice=/dev/cu.wchusbserial110" \
+  --ble-profile bob
 ```
 
-3. When the Mac has joined, press **START MATCH** on the console.
+On Console OS 0.4.84 or later choose **Multiplayer → Join → BLE**, wait for
+the LORD server row, and join it. The console is the BLE central; the Mac is
+the encrypted GATT peripheral and P4MP host. The Mac supports one BLE console
+through this process, while repeated H1 workers can serve more consoles.
 
-The BLE adapter validates the complete P4MP room beacon, connects only to a
-console-hosted two-player room, uses the existing P4B fragment format, and
-requires the Console OS protected GATT path. BLE LE Secure Connections protects
-the link, but the existing Just Works pairing does not authenticate which
-physical console is present. This local hub therefore relies on the operator
-to choose the intended room and profile.
+The BLE characteristic requires encrypted writes. Pairing is still local
+Just Works and does not prove which physical console is present, so the
+operator must keep profile-to-device assignments trustworthy.
 
-## Realm protocol
+## Realm and scaling rules
 
-`P4RM` v2 has a 16-byte little-endian header and at most 48 payload bytes. Its
-profile number in the LORD multiplayer manifest is `0x4c53`. It uses only
-P4MP packet type 11, Game Message; old P4MP decoders, the relay, BLE framing,
-CRC, replay checks, route binding, and timeouts remain unchanged.
+- `MAX_REALM_PLAYERS` is 100. Existing profiles can reconnect after the realm
+  reaches capacity; creation of profile 101 fails closed.
+- One shared `RealmStore` uses a process lock, separate bounded SQLite
+  connections, WAL mode, foreign keys, and immediate transactions for
+  cross-player mutations.
+- The roster is ordered stably by name and opaque actor ID, eight records per page.
+  A page includes opaque actor ID, display profile, PvP stats, combat stats,
+  ChompCoin, directional trust, and team state.
+- Presence is a 90-second UI hint. It is not authentication.
+- The trusted realm day advances every hour. Reconnect grants at most one
+  missed refresh and never loops catch-up interest.
+- Full snapshots use compare-and-swap revisions. Repeating the same
+  actor/nonce/body is idempotent; stale or changed reuse fails closed.
+- Events remain pending until the target cartridge applies and acknowledges
+  their monotonically increasing event ID.
 
-The message set is: hello/welcome, download begin/chunk, upload begin/chunk,
-acknowledgement, commit result, clock, error, profile/profile stats, directory
-summary/stats, action begin/body/result, and event begin/body/acknowledgement.
-Full records are capped at 4,148 bytes and 87 chunks. Snapshots, action bodies,
-and event bodies use bounded stop-and-wait delivery with one-second retry,
-which stays below Console OS's eight-message receive queue. Reusing an action
-nonce with the same request returns the stored result; changing the request
-under that nonce fails closed. The cartridge persists the last applied event
-ID in save schema 4 and acknowledges old retries without applying them again.
+The service is a trusted local BBS deployment, not an Internet-facing game
+server. It has no password signup, TLS listener, remote administration,
+moderation, public rate limiting, or hostile-client combat attestation.
+
+## Protocol
+
+P4MP remains version 1. LORD uses protocol `0x4c53` and bounded 1–64 byte Game
+Messages. `P4RM` v2 provides hello/welcome, complete snapshot transfer,
+profile publication, paged roster records, hourly clock, typed actions, and
+durable events. Records are capped at 4,148 bytes and use explicit lengths,
+little-endian fields, CRCs, stop-and-wait acknowledgement, and one-second
+retry.
+
+The UUID-only BLE discovery sentinel is `0x4c4f5244`. It is used only to make
+the CoreBluetooth peripheral selectable before GATT connects. The subsequent
+Offer carries the exact game ID, API, multiplayer profile, content SHA-256,
+compatibility SHA-256, and nonzero session seed; a mismatch cannot launch.
 
 ## Verification
 
-Run the focused host checks from the repository root:
-
 ```sh
 PYTHONPATH=. python3 -m unittest tools.p4_realm_hub.tests.test_protocol -v
-
 cmake -S games/lord -B build-host/lord -G Ninja
 cmake --build build-host/lord
 ctest --test-dir build-host/lord --output-on-failure
-
-make game-registry-check
-make game-sdk-host
-make console-os-waveshare-idf
+make p4-multiplayer-host
+./scripts/build-waveshare-console-os.sh
+python3 scripts/verify-console-os-waveshare.py \
+  apps/console_os/build-waveshare-landscape
 ```
 
-A successful build proves source integration only. Hardware acceptance must
-name the exact console, firmware artifact SHA-256, connection route, retained
-serial evidence, and the observed upload/relaunch/rollover/conflict behavior.
+A successful build is not hardware acceptance. Release evidence must name the
+exact console, firmware/P4G hashes, route, retained serial output, and observed
+Join, automatic start, realm online, reconnect, rollover, and conflict results.

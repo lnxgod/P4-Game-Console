@@ -26,6 +26,10 @@ enum {
 };
 
 #define P4_MP_BLE_ROUTE_PREFIX UINT64_C(0x424c000000000000)
+/* CoreBluetooth peripheral advertising exposes service UUIDs but cannot emit
+ * P4 service data.  This reserved session lets a console connect, then verify
+ * the exact game identity from the normal encrypted P4MP Offer. */
+#define P4_MP_BLE_UUID_ONLY_SESSION_ID UINT32_C(0x4c4f5244)
 
 typedef enum {
     P4_MP_BLE_FRAGMENT_NEED_MORE = 0,

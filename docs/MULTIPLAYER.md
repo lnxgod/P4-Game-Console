@@ -184,6 +184,16 @@ BLE gaming is deliberately narrow:
   and returns the guest to the room browser; a disconnected host reopens its
   same room until the user leaves the Multiplayer page.
 
+Console OS 0.4.84 adds a backend-host compatibility case for macOS
+CoreBluetooth. Apple's peripheral API can advertise the P4 service UUID but
+not the ten-byte room service-data beacon. A Join browser therefore maps an
+otherwise valid UUID-only P4 peripheral to reserved session `0x4c4f5244` and
+the currently selected local game token. This only permits the encrypted GATT
+connection attempt: the backend must then send a normal Offer whose exact game
+ID, API, content identity, multiplayer profile, and compatibility SHA-256
+match the installed cartridge before the console sends Join or launches it.
+Ordinary P4 consoles continue using the full room beacon.
+
 To use it, open Multiplayer on both consoles. On the first console choose
 `HOST`, choose the game and settings, select the desired `LINK`, then press
 `OPEN ROOM`. On the second choose `JOIN`, select the same link, wait for the
@@ -208,6 +218,21 @@ acceptance on Console OS 0.4.83. The operator also reported visibly smoother
 gameplay, but that is qualitative rather than a measured FPS claim. Concurrent
 rooms advertising different games, room isolation under radio contention, and
 clean recovery after either badge powers off remain separate acceptance work.
+
+## Mac-hosted BBS realms
+
+Turn-based BBS doors do not use a P4MP lobby as their world-size limit. The
+LORD backend opens one logical two-slot session per console: the Mac owns slot
+0, a console joins slot 1, and the Mac automatically initiates synchronized
+start. Repeated H1 workers plus one BLE peripheral all share one authoritative
+SQLite realm. LORD currently caps that realm at 100 stable player profiles and
+pages the other 99 records eight at a time. Mail, friendship, team state,
+ChompCoin transfer, PvP, feeds, snapshots, presence, and the hourly realm day
+are server-owned cross-session data.
+
+This is still a local transport deployment, not a cloud socket API. The game
+continues to receive only the bounded `multiplayer-session` capability. See
+`docs/LORD_REALM_HUB.md` for the operator topology and trust boundary.
 
 ## Product modes
 

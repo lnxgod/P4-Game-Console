@@ -1,4 +1,4 @@
-# LORD 1.4.0 feature-parity audit
+# LORD 1.5.0 feature-parity audit
 
 Audited against the authorized Synchronet source at commit
 `25232df05a8ba27a4dd9fcd38b4012c43660fb50`. “Adapted” means the player-facing
@@ -23,7 +23,7 @@ than Synchronet's terminal, files, and server process.
 | Bartender | Complete/adapted | Berry fizz, Seth/Violet/dragon gossip, friendship riddle |
 | Seth and Violet | Complete/adapted | Talk, jokes, Dragon Dice, gem sharing, best-friend pact/parting |
 | Player friendship/mentoring | Complete | Offline loop plus hub-delivered encouragement/supplies, reciprocal team consent/parting, teamwork bonus, and shared mentoring events |
-| Player directory/rankings | Complete | Eight persistent offline warriors or eight bounded opaque hub profiles, records, presence, sayings, rankings |
+| Player directory/rankings | Complete | Eight persistent offline warriors or Previous/Next pages across 100 bounded hub profiles with records, presence, trust, team state, sayings, and rankings |
 | PvP/challenges | Complete | Offline fights plus hub-leased, once-resolved asynchronous outcomes, ChompCoin/XP, records and mail |
 | Mail | Complete | Inbox, sent mail, typed body, replies/read state offline, and durable exactly-once hub delivery |
 | Public conversation/news | Complete | Typed tavern line, announcement, persistent local log, and bounded hub feed fan-out |

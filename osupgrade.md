@@ -1,43 +1,52 @@
 # Remaining Console OS upgrades for full shared LORD services
 
-## 2026-08-26 node-mode implementation status
+## 2026-08-26 backend-hosted BBS realm status
 
-LORD 1.4.0 now implements the local multiplayer action layer without a Game
-API ABI change. It uses the existing optional `multiplayer-session` callbacks,
-Console OS Host/Join flow, 64-byte P4MP Game Messages, H1 USB route, and
-encrypted BLE route. Its manifest protocol is `0x4c53`, and the Mac hub and
-cartridge require bounded `P4RM` v2.
+LORD 1.5.0 now treats the Mac as the P4MP host. Every P4 console selects
+**Join**; no console hosts the realm and no operator presses Start. The backend
+accepts the console into slot 1, automatically initiates the existing
+synchronized-start barrier, and keeps the point-to-point session alive as a
+bounded `P4RM` v2 tunnel.
 
-The local Mac hub now owns SQLite action idempotency, durable target outboxes,
-private carried/vaulted ChompCoin balances, directional trust, reciprocal team
-consent, current-day PvP leases, and tavern/news feeds. The cartridge submits
-letters, two-sided 100-ChompCoin transfers, friendship supplies/encouragement,
-team/mentor actions, PvP begin/resolve, tavern text, and announcements. It
-persists opaque actor mappings and the last applied event ID in save schema 4,
-while accepting and migrating schema 3. The host suites cover two-node mail,
-event acknowledgement, transfer debit/credit, team consent, PvP resolution,
-feed fan-out, retry, and changed-request nonce rejection.
+Each console has its own two-slot P4MP session, but all sessions share one
+thread-safe SQLite realm. This separates transport capacity from realm
+capacity: the backend admits exactly 100 stable player profiles, while the
+cartridge pages the other 99 profiles eight at a time. Page records include
+the authoritative opaque actor ID, profile/combat stats, ChompCoin, presence,
+directional trust, and team state.
 
-Therefore no additional Console OS capability, P4MP packet type, raw USB/BLE
-handle, socket, or writable cartridge storage is required to test local
-node-mode multiplayer. The remaining release work is:
+The Mac server works over repeated H1 USB workers and one encrypted BLE
+peripheral. Console OS 0.4.84 adds the only required platform change: a narrow
+UUID-only BLE room fallback for macOS CoreBluetooth, whose peripheral API
+cannot advertise P4 service data. The fallback uses reserved session
+`0x4c4f5244`; after connection, the ordinary P4MP Offer/Join exchange still
+requires the exact installed LORD content and compatibility hashes. H1 uses
+the existing discovery path and works with 0.4.83.
 
-- build and verify a fresh `LORD.P4G` from the current tree, then install that
-  cartridge through the existing bounded H1 content-transfer path. Games run
-  from microSD, so this update does not require a Console OS firmware flash;
-- keep the existing guarded Waveshare firmware workflow only for a future OS
-  binary change. The older 0.4.73/LORD 1.3.0 authorization must never be
-  reused for different firmware bytes;
-- run retained H1 and encrypted-BLE two-console acceptance against one Mac hub,
-  including reboot/retry and hourly rollover evidence;
+No new Game API ABI, capability bit, raw USB/BLE handle, socket, or P4MP packet
+type is needed. The game still sees only `multiplayer-session`. The local Mac
+hub owns SQLite action idempotency, durable event outboxes, full snapshots,
+private carried/vaulted ChompCoin balances, friendship/team consent, PvP
+leases, tavern/news feeds, and the hourly realm clock.
+
+Remaining release work:
+
+- install and hardware-accept the exact Console OS 0.4.84 application on each
+  backed-up Waveshare unit before claiming backend-hosted BLE qualification;
+- install the exact LORD 1.5.0 P4G on test units and record retained H1 and
+  encrypted-BLE Join, automatic start, `MAC REALM`, reconnect, paging,
+  cross-player action, rollover, and conflict evidence;
+- retain the eight-record on-screen page even though the SQLite realm holds
+  100 accounts; do not increase the saved C array to 100;
 - finish durable Console OS save policy on board profiles that still withhold
   `save`; and
-- add an authenticated OS-owned `realm` service only for public Internet
-  accounts, TLS, moderation, quotas, hostile-client validation, or federation.
+- add an authenticated OS-owned `realm` service only if the deployment becomes
+  public Internet service requiring accounts, TLS, moderation, quotas,
+  hostile-client validation, or federation.
 
-The older sections below are retained as design history. Wherever they say
-the P4RM typed action layer is missing, this status section and
-`games/lord/BACKEND_SYNC.md` supersede them.
+The older sections below are retained as design history. Wherever they say a
+console hosts the Mac peer or the P4RM action layer is missing, this section,
+`docs/LORD_REALM_HUB.md`, and `games/lord/BACKEND_SYNC.md` supersede them.
 
 ## Historical: 2026-08-25 flash-candidate readiness
 

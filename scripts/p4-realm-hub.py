@@ -4,8 +4,8 @@
 from __future__ import annotations
 
 import argparse
-import asyncio
 import signal
+import secrets
 import sys
 import threading
 from pathlib import Path
@@ -15,6 +15,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from tools.p4_realm_hub.ble_link import BleRealmLink
+from tools.p4_realm_hub.cartridge import lord_offer_from_p4g
 from tools.p4_realm_hub.serial_link import SerialRealmLink
 from tools.p4_realm_hub.store import RealmStore
 
@@ -28,7 +29,15 @@ def profile_port(value: str) -> tuple[str, str]:
 
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(
-        description="Join a Console OS LORD P4MP room and host its realm on this Mac"
+        description="Host LORD P4MP rooms and their shared realm on this Mac"
+    )
+    result.add_argument(
+        "--cartridge",
+        default=str(
+            ROOT
+            / "apps/console_os/build-waveshare-usb-host/sd-card/GAMES/LORD.P4G"
+        ),
+        help="exact LORD.P4G installed on every joining console",
     )
     result.add_argument(
         "--database",
@@ -45,7 +54,6 @@ def parser() -> argparse.ArgumentParser:
     )
     result.add_argument("--baud", type=int, default=115200)
     result.add_argument("--ble-profile", help="serve one BLE console profile")
-    result.add_argument("--ble-room", type=lambda value: int(value, 0))
     return result
 
 
@@ -53,9 +61,12 @@ def main() -> int:
     arguments = parser().parse_args()
     if not arguments.usb and not arguments.ble_profile:
         parser().error("provide at least one --usb or --ble-profile")
+    offer = lord_offer_from_p4g(
+        arguments.cartridge, session_seed=secrets.randbits(64) or 1
+    )
     store = RealmStore(arguments.database)
     links = [
-        SerialRealmLink(profile, port, store, baudrate=arguments.baud)
+        SerialRealmLink(profile, port, store, offer, baudrate=arguments.baud)
         for profile, port in arguments.usb
     ]
     threads = [threading.Thread(target=link.run, daemon=True) for link in links]
@@ -72,13 +83,7 @@ def main() -> int:
         thread.start()
     try:
         if arguments.ble_profile:
-            asyncio.run(
-                BleRealmLink(
-                    arguments.ble_profile,
-                    store,
-                    room_session_id=arguments.ble_room,
-                ).run()
-            )
+            BleRealmLink(arguments.ble_profile, store, offer).run(stop)
         else:
             while not stop.wait(0.25):
                 if any(not thread.is_alive() for thread in threads):

@@ -1579,7 +1579,8 @@ size_t lord_menu_count(const lord_state_t *state)
     case LORD_SCREEN_PLAYERS:
     case LORD_SCREEN_MAIL_COMPOSE:
     case LORD_SCREEN_FRIENDSHIP:
-        return LORD_REALM_PLAYER_COUNT + 1U;
+        return LORD_REALM_PLAYER_COUNT +
+            (lord_realm_net_directory_paging_available() ? 3U : 1U);
     case LORD_SCREEN_INN:
         return 11U;
     case LORD_SCREEN_BARTENDER:

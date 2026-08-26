@@ -37,6 +37,7 @@ typedef enum {
     LORD_P4RM_EVENT_BEGIN = 18,
     LORD_P4RM_EVENT_BODY = 19,
     LORD_P4RM_EVENT_ACK = 20,
+    LORD_P4RM_DIRECTORY_PAGE = 21,
 } lord_p4rm_kind_t;
 
 typedef enum {
@@ -115,6 +116,8 @@ typedef struct {
     uint64_t realm_day_id;
     uint64_t operation_nonce;
     uint32_t seconds_remaining;
+    uint16_t directory_offset;
+    uint16_t directory_total;
     uint8_t directory_actor_ids[LORD_REALM_PLAYER_COUNT]
         [LORD_SYNC_ACTOR_ID_BYTES];
     uint8_t previous_directory_actor_ids[LORD_REALM_PLAYER_COUNT]
@@ -166,7 +169,7 @@ static uint32_t p4rm_next_transaction(void)
 static bool p4rm_kind_valid(uint8_t kind)
 {
     return kind >= (uint8_t)LORD_P4RM_HELLO &&
-        kind <= (uint8_t)LORD_P4RM_EVENT_ACK;
+        kind <= (uint8_t)LORD_P4RM_DIRECTORY_PAGE;
 }
 
 static size_t p4rm_encode(
@@ -609,6 +612,36 @@ static void p4rm_handle_clock(
     }
 }
 
+static void p4rm_handle_directory_page(
+    const lord_p4rm_message_t *message)
+{
+    if (message->payload_bytes != 4U) {
+        return;
+    }
+    const uint16_t offset = sync_load_u16(message->payload, 0U);
+    const uint16_t total = sync_load_u16(message->payload, 2U);
+    if (total > 99U || offset >= 100U || offset % 8U != 0U ||
+        (total == 0U && offset != 0U) ||
+        (total != 0U && offset >= total)) {
+        return;
+    }
+    s_lord_realm_net.directory_offset = offset;
+    s_lord_realm_net.directory_total = total;
+}
+
+static void p4rm_clear_directory_slot(
+    lord_state_t *state, size_t index)
+{
+    memset(s_lord_realm_net.directory_actor_ids[index], 0,
+           LORD_SYNC_ACTOR_ID_BYTES);
+    memset(state->realm_actor_ids[index], 0, LORD_SYNC_ACTOR_ID_BYTES);
+    memset(&state->realm[index], 0, sizeof(state->realm[index]));
+    text_copy(state->realm[index].name,
+              sizeof(state->realm[index].name), "Empty record");
+    state->realm[index].max_hit_points = 1;
+    state->realm[index].strength = 1;
+}
+
 static void p4rm_handle_directory_summary(
     lord_state_t *state,
     const lord_p4rm_message_t *message)
@@ -618,9 +651,9 @@ static void p4rm_handle_directory_summary(
         return;
     }
     if (message->chunk_count == 0U && message->payload_bytes == 0U) {
-        memset(s_lord_realm_net.directory_actor_ids, 0,
-               sizeof(s_lord_realm_net.directory_actor_ids));
-        memset(state->realm_actor_ids, 0, sizeof(state->realm_actor_ids));
+        for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
+            p4rm_clear_directory_slot(state, index);
+        }
         if (p4rm_actor_valid(state->partner_actor_id)) {
             state->partner_index = -1;
         }
@@ -702,9 +735,7 @@ static void p4rm_handle_directory_summary(
            LORD_SYNC_ACTOR_ID_BYTES);
     for (size_t index = message->chunk_count;
          index < LORD_REALM_PLAYER_COUNT; ++index) {
-        memset(s_lord_realm_net.directory_actor_ids[index], 0,
-               LORD_SYNC_ACTOR_ID_BYTES);
-        memset(state->realm_actor_ids[index], 0, LORD_SYNC_ACTOR_ID_BYTES);
+        p4rm_clear_directory_slot(state, index);
     }
     if (slot + 1U == message->chunk_count &&
         p4rm_actor_valid(state->partner_actor_id)) {
@@ -724,12 +755,14 @@ static void p4rm_handle_directory_stats(
     lord_state_t *state,
     const lord_p4rm_message_t *message)
 {
-    if (message->payload_bytes != 40U ||
+    if (message->payload_bytes != 44U ||
         message->chunk_count == 0U ||
         message->chunk_count > LORD_REALM_PLAYER_COUNT ||
         message->chunk_index >= message->chunk_count ||
         memcmp(s_lord_realm_net.directory_actor_ids[message->chunk_index],
-               message->payload, LORD_SYNC_ACTOR_ID_BYTES) != 0) {
+               message->payload, LORD_SYNC_ACTOR_ID_BYTES) != 0 ||
+        message->payload[42] != 0U || message->payload[43] != 0U ||
+        message->payload[40] > 100U || message->payload[41] > 1U) {
         return;
     }
     const int32_t hit_points = (int32_t)sync_load_u32(message->payload, 16U);
@@ -749,6 +782,8 @@ static void p4rm_handle_directory_stats(
     player->defense = defense;
     player->experience = sync_load_u32(message->payload, 32U);
     player->gold = sync_load_u32(message->payload, 36U);
+    player->trust = message->payload[40];
+    player->teamed = message->payload[41] != 0U;
 }
 
 static bool p4rm_send_profile(
@@ -1267,6 +1302,9 @@ static void p4rm_receive_messages(
         case LORD_P4RM_DIRECTORY_STATS:
             p4rm_handle_directory_stats(state, &message);
             break;
+        case LORD_P4RM_DIRECTORY_PAGE:
+            p4rm_handle_directory_page(&message);
+            break;
         case LORD_P4RM_ACTION_RESULT:
             p4rm_handle_action_result(state, &message);
             break;
@@ -1367,6 +1405,36 @@ static bool lord_realm_net_activate(
 {
     if (!p4rm_online_actions_ready()) {
         return false;
+    }
+    const bool directory_screen =
+        state->screen == LORD_SCREEN_BANK_TRANSFER ||
+        state->screen == LORD_SCREEN_PLAYERS ||
+        state->screen == LORD_SCREEN_MAIL_COMPOSE ||
+        state->screen == LORD_SCREEN_FRIENDSHIP;
+    if (directory_screen &&
+        (state->selection == LORD_REALM_PLAYER_COUNT ||
+         state->selection == LORD_REALM_PLAYER_COUNT + 1U)) {
+        uint16_t offset = s_lord_realm_net.directory_offset;
+        if (state->selection == LORD_REALM_PLAYER_COUNT) {
+            offset = offset >= LORD_REALM_PLAYER_COUNT
+                ? (uint16_t)(offset - LORD_REALM_PLAYER_COUNT) : 0U;
+        } else if ((uint32_t)offset + LORD_REALM_PLAYER_COUNT <
+                   s_lord_realm_net.directory_total) {
+            offset = (uint16_t)(offset + LORD_REALM_PLAYER_COUNT);
+        }
+        uint8_t payload[2];
+        payload[0] = (uint8_t)offset;
+        payload[1] = (uint8_t)(offset >> 8U);
+        if (offset != s_lord_realm_net.directory_offset) {
+            (void)p4rm_send(
+                context, LORD_P4RM_DIRECTORY_PAGE,
+                p4rm_next_transaction(), 0U, 0U,
+                payload, sizeof(payload));
+        }
+        state->selection = 0U;
+        state->menu_scroll = 0U;
+        *event = LORD_EVENT_CONFIRM;
+        return true;
     }
     if (s_lord_realm_net.action_state != LORD_REALM_ACTION_IDLE) {
         set_message(state, state->screen,
@@ -1482,6 +1550,21 @@ static bool lord_realm_net_activate(
     }
     *event = LORD_EVENT_CONFIRM;
     return true;
+}
+
+static bool lord_realm_net_directory_paging_available(void)
+{
+    return p4rm_online_actions_ready();
+}
+
+static uint16_t lord_realm_net_directory_offset(void)
+{
+    return s_lord_realm_net.directory_offset;
+}
+
+static uint16_t lord_realm_net_directory_total(void)
+{
+    return s_lord_realm_net.directory_total;
 }
 
 static void lord_realm_net_after_activate(

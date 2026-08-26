@@ -1,4 +1,4 @@
-# LORD 1.4.0 OS integration contract
+# LORD 1.5.0 OS integration contract
 
 LORD is a complete standalone cartridge. This document describes optional OS
 services that turn its persistent local realm into a shared BBS realm without
@@ -45,11 +45,12 @@ LORD declares a two-player turn-based `multiplayer-session` profile with
 protocol `0x4c53`. Console OS already owns lobby selection, P4MP framing,
 H1/BLE routing, replay checks, route binding, timeout, and disconnect. The
 cartridge receives only the existing 64-byte Game Message service plus the
-immutable session seed and status.
+immutable session seed and status. The backend hosts each logical session,
+the console joins slot 1, and the backend initiates synchronized start.
 
 `src/lord_realm_net_impl.h` layers bounded `P4RM` v2 messages on that service.
 It synchronizes full `LRSY` snapshots with the Mac hub, publishes the local
-profile, consumes an eight-entry remote directory, and applies one trusted
+profile, consumes eight-entry pages of a 100-player roster, and applies one trusted
 hourly refresh. It also submits bounded actions and applies/acknowledges durable
 events for mail, transfers, friendship, teams, mentoring, PvP, tavern, and
 news. It remains inactive when the capability or connected room is
@@ -76,7 +77,7 @@ events:
 
 | Existing game flow | Optional realm operation |
 |---|---|
-| Other Warriors / rankings | paged directory snapshot |
+| Other Warriors / rankings | Previous/Next pages across 100 realm accounts |
 | Player challenge / inn attack | lease immutable opponent snapshot |
 | PvP finish | idempotent outcome commit |
 | Inbox / sent mail | list, read, mark-read, send by opaque ID |

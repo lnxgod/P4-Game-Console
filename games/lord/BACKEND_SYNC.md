@@ -1,6 +1,6 @@
 # LORD backend synchronization
 
-LORD 1.4.0 has a working local Mac-hub synchronization path and remains a
+LORD 1.5.0 has a working local Mac-hosted BBS realm and remains a
 complete offline cartridge. The cartridge never opens a socket, file, serial
 port, or BLE connection. Console OS owns the physical route and supplies the
 existing bounded `multiplayer-session` service.
@@ -9,8 +9,10 @@ existing bounded `multiplayer-session` service.
 
 No Game API or P4MP version upgrade was needed. `game.json` declares a
 two-player turn-based profile with protocol `0x4c53`.
-The console hosts the room and the Mac hub joins slot 1. LORD and the hub then
-exchange `P4RM` v2 records through ordinary P4MP Game Message packets.
+The Mac hosts one logical room per console, every console joins slot 1, and
+the backend automatically starts the synchronized launch. All logical rooms
+share one SQLite realm with a 100-profile cap. LORD and the backend exchange
+`P4RM` v2 records through ordinary P4MP Game Message packets.
 
 `src/lord_sync_impl.h` owns the deterministic `LRSY` version-1 record. It wraps
 the complete existing `LDSV` save with:
@@ -37,7 +39,9 @@ The Mac implementation lives in `tools/p4_realm_hub/` and is launched by
   balance, friendship/team state, PvP leases, shared feeds, and a trusted
   realm clock;
 - stop-and-wait transfer with retry; and
-- one database shared by several H1 workers and one optional BLE worker.
+- one database shared by several H1 workers and one optional BLE worker;
+- an exact 100-profile realm cap with reconnect allowed at capacity; and
+- eight-record Previous/Next roster pages covering the other 99 actors.
 
 See [the operator guide](../../docs/LORD_REALM_HUB.md) for setup, commands,
 security boundaries, and verification.
@@ -57,7 +61,7 @@ refresh restores daily actions but deliberately pays no bank interest. The new
 state must commit under the current day before it becomes the server head.
 
 Disconnect leaves the ordinary local save path intact. A later stale upload
-returns `SYNC CONFLICT` and does not overwrite the hub. Version 1.4.0 does not
+returns `SYNC CONFLICT` and does not overwrite the hub. Version 1.5.0 does not
 offer an in-game conflict chooser; the safe recovery is to exit and relaunch
 from the current server head or use a different hub profile for the divergent
 character.
@@ -67,9 +71,11 @@ character.
 The game publishes printable ASCII name, hero style/class, level, alive and
 inn flags, health, strength, defense, experience, carried ChompCoin, and PvP
 record. The hub binds these values to the session actor, validates all ranges,
-and returns at most eight other profiles. Directory entries use opaque actor
-IDs internally; the cartridge never treats a profile label or transport
-address as identity.
+and returns one requested page of at most eight other profiles from the
+bounded 100-player roster. Directory entries use opaque actor IDs internally;
+the cartridge never treats a profile label or transport address as identity.
+Page statistics carry server-owned directional trust and team state so
+switching pages does not discard relationships.
 
 Presence means a validated profile was seen within 90 seconds. It is a game UI
 hint, not proof of account identity. The current local hub has no public signup,

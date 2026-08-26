@@ -7,10 +7,29 @@ import zlib
 from pathlib import Path
 
 from tools.p4_realm_hub import p4mp, p4rm
-from tools.p4_realm_hub.store import RealmStore
+from tools.p4_realm_hub.store import MAX_REALM_PLAYERS, RealmFullError, RealmStore
 from tools.p4_realm_hub.hub import LORD_GAME_ID, LORD_P4RM_PROTOCOL, RealmHubSession
 from tools.p4_realm_hub.store import RealmProfile
 from tools.p4_realm_hub.ble_link import BleReassembler, fragment_datagram
+
+
+def test_offer(seed: int = 0xABCDEF) -> p4mp.Offer:
+    content = bytes(range(1, 33))
+    compatibility = p4mp.compatibility_sha256(
+        mode=1,
+        game_api_major=1,
+        game_api_minor=0,
+        player_capacity=2,
+        input_delay_ticks=0,
+        tick_rate_hz=30,
+        game_protocol=LORD_P4RM_PROTOCOL,
+        game_id=LORD_GAME_ID,
+        content_sha256=content,
+    )
+    return p4mp.Offer(
+        1, 1, 0, 1, 2, 0, 30, LORD_P4RM_PROTOCOL, seed,
+        LORD_GAME_ID, content, compatibility, bytes(8),
+    )
 
 
 class P4MPTests(unittest.TestCase):
@@ -29,21 +48,23 @@ class P4MPTests(unittest.TestCase):
             p4mp.encode_packet(12, 1, 2, 3, b"x")
 
     def test_offer_and_join_match_firmware_layout(self) -> None:
-        payload = bytearray(128)
-        payload[0:7] = bytes([2, 1, 1, 0, 1, 2, 0])
-        struct.pack_into("<HH", payload, 8, 30, LORD_P4RM_PROTOCOL)
-        struct.pack_into("<Q", payload, 16, 77)
-        game_id = LORD_GAME_ID.encode("ascii")
-        payload[24 : 24 + len(game_id)] = game_id
-        payload[56:88] = bytes(range(32))
-        payload[88:120] = bytes(range(32, 64))
-        offer = p4mp.decode_offer(bytes(payload))
+        expected = test_offer(77)
+        offer = p4mp.decode_offer(p4mp.encode_offer(expected))
+        self.assertEqual(offer, expected)
         self.assertEqual(offer.game_id, LORD_GAME_ID)
         self.assertEqual(offer.session_seed, 77)
         join = p4mp.encode_join(offer.compatibility_sha256, 123)
         self.assertEqual(join[0:4], b"\x02\xff\x00\x00")
         self.assertEqual(join[4:36], offer.compatibility_sha256)
         self.assertEqual(struct.unpack_from("<I", join, 36)[0], 123)
+        self.assertEqual(p4mp.decode_join(join),
+                         (0xFF, offer.compatibility_sha256, 123))
+        accept = p4mp.encode_accept(1, 2, 0, 0, 77, bytes(8))
+        self.assertEqual(p4mp.decode_accept(accept),
+                         (1, 2, 0, 0, 77, bytes(8)))
+        token = p4mp.start_token(10, 77)
+        self.assertEqual(p4mp.decode_start_ready(
+            p4mp.encode_start_ready(token)), token)
 
 
 class P4RMTests(unittest.TestCase):
@@ -175,6 +196,25 @@ class StoreTests(unittest.TestCase):
             profiles = store.list_profiles(exclude_actor_id=other)
             self.assertEqual(profiles[0].name, "Test Hero")
 
+    def test_realm_accepts_exactly_one_hundred_player_accounts(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            actors = {
+                store.actor_for_profile(f"console-{index:03d}")
+                for index in range(MAX_REALM_PLAYERS)
+            }
+            self.assertEqual(len(actors), MAX_REALM_PLAYERS)
+            self.assertEqual(
+                store.actor_for_profile("console-000"),
+                next(
+                    actor
+                    for actor in actors
+                    if actor == store.actor_for_profile("console-000")
+                ),
+            )
+            with self.assertRaises(RealmFullError):
+                store.actor_for_profile("console-100")
+
     def test_cross_actor_actions_are_idempotent_and_durable(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = RealmStore(Path(directory) / "realm.sqlite3")
@@ -230,6 +270,11 @@ class StoreTests(unittest.TestCase):
                 second, 31, p4rm.ACTION_TEAM, 0, 0, first, b""
             )
             self.assertEqual((formed.status, formed.code), (p4rm.ACTION_OK, 1))
+            second_from_first = store.list_profiles(
+                exclude_actor_id=first, limit=8, offset=0
+            )[0]
+            self.assertGreaterEqual(second_from_first.trust, 60)
+            self.assertTrue(second_from_first.teamed)
             self.assertEqual(self.drain_events(store, first)[0].code, 1)
             self.drain_events(store, second)
 
@@ -298,10 +343,11 @@ class HubSessionTests(unittest.TestCase):
             self.assertEqual(store.commit(actor, 0, 123, day, record), ("ok", 1))
             sent: list[bytes] = []
             hub = RealmHubSession(
-                "console-one", store, sent.append, now=lambda: clock[0]
+                "console-one", store, sent.append, test_offer(),
+                now=lambda: clock[0]
             )
             hub.session_id = 10
-            hub.host_peer_id = 20
+            hub.remote_peer_id = 20
             hub.connected = True
             hub._begin_game_sync(55)
             self.assertEqual(
@@ -319,7 +365,7 @@ class HubSessionTests(unittest.TestCase):
             sent.clear()
             hub.transport_disconnected()
             hub.session_id = 10
-            hub.host_peer_id = 20
+            hub.remote_peer_id = 20
             hub.connected = True
             malformed = p4mp.encode_packet(
                 p4mp.GAME_MESSAGE, 10, 20, 1, b"not-a-p4rm-frame"
@@ -332,27 +378,34 @@ class HubSessionTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as directory:
             store = RealmStore(Path(directory) / "realm.sqlite3")
             sent: list[bytes] = []
-            hub = RealmHubSession("console-one", store, sent.append)
-            offer_payload = bytearray(128)
-            offer_payload[0:7] = bytes([2, 1, 1, 0, 1, 2, 0])
-            struct.pack_into("<HH", offer_payload, 8, 30, LORD_P4RM_PROTOCOL)
-            struct.pack_into("<Q", offer_payload, 16, 0xABCDEF)
-            game_id = LORD_GAME_ID.encode("ascii")
-            offer_payload[24 : 24 + len(game_id)] = game_id
-            offer_payload[56:88] = bytes(range(1, 33))
-            offer_payload[88:120] = bytes(range(33, 65))
-            hub.receive(
-                p4mp.encode_packet(p4mp.OFFER, 10, 20, 1, bytes(offer_payload))
+            hub = RealmHubSession(
+                "console-one", store, sent.append, test_offer()
             )
-            self.assertEqual(p4mp.decode_packet(sent.pop(0)).packet_type, p4mp.DISCOVER)
-            self.assertEqual(p4mp.decode_packet(sent.pop(0)).packet_type, p4mp.JOIN)
-            accept = bytearray(24)
-            accept[:4] = bytes([2, 1, 2, 0])
-            struct.pack_into("<IQ", accept, 4, 0, 0xABCDEF)
-            hub.receive(p4mp.encode_packet(p4mp.ACCEPT, 10, 20, 2, bytes(accept)))
+            session_id = hub.session_id
+            host_peer_id = hub.peer_id
+            console_peer_id = host_peer_id ^ 0xFFFFFFFF
+            hub.receive(p4mp.encode_packet(p4mp.DISCOVER, 0, 0, 1))
+            advertised = p4mp.decode_packet(sent.pop(0))
+            self.assertEqual(advertised.packet_type, p4mp.OFFER)
+            self.assertEqual(p4mp.decode_offer(advertised.payload), hub.offer)
+            join = p4mp.encode_join(hub.offer.compatibility_sha256, 123)
+            hub.receive(p4mp.encode_packet(
+                p4mp.JOIN, session_id, console_peer_id, 2, join
+            ))
             self.assertTrue(hub.connected)
+            accepted = p4mp.decode_packet(sent.pop(0))
+            self.assertEqual(accepted.packet_type, p4mp.ACCEPT)
+            self.assertEqual(p4mp.decode_accept(accepted.payload)[:2], (1, 2))
+            ready = p4mp.decode_packet(sent.pop(0))
+            self.assertEqual(ready.packet_type, p4mp.PING)
+            self.assertEqual(
+                p4mp.decode_start_ready(ready.payload),
+                p4mp.start_token(session_id, hub.offer.session_seed),
+            )
             hello = p4rm.encode_message(p4rm.HELLO, 77)
-            hub.receive(p4mp.encode_packet(p4mp.GAME_MESSAGE, 10, 20, 3, hello))
+            hub.receive(p4mp.encode_packet(
+                p4mp.GAME_MESSAGE, session_id, console_peer_id, 3, hello
+            ))
             welcome = p4rm.decode_message(p4mp.decode_packet(sent.pop(0)).payload)
             self.assertEqual(welcome.kind, p4rm.WELCOME)
             day, _ = store.realm_clock()
@@ -366,7 +419,9 @@ class HubSessionTests(unittest.TestCase):
                 p4rm.BEGIN_INDEX,
                 len(chunks),
             )
-            hub.receive(p4mp.encode_packet(p4mp.GAME_MESSAGE, 10, 20, 4, begin))
+            hub.receive(p4mp.encode_packet(
+                p4mp.GAME_MESSAGE, session_id, console_peer_id, 4, begin
+            ))
             self.assertEqual(
                 p4rm.decode_message(p4mp.decode_packet(sent.pop(0)).payload).kind,
                 p4rm.ACK,
@@ -378,7 +433,7 @@ class HubSessionTests(unittest.TestCase):
                 )
                 hub.receive(
                     p4mp.encode_packet(
-                        p4mp.GAME_MESSAGE, 10, 20, sequence, wire
+                        p4mp.GAME_MESSAGE, session_id, console_peer_id, sequence, wire
                     )
                 )
                 sequence += 1
@@ -396,7 +451,7 @@ class HubSessionTests(unittest.TestCase):
             wire = p4rm.encode_message(p4rm.PROFILE, 90, bytes(profile))
             hub.receive(
                 p4mp.encode_packet(
-                    p4mp.GAME_MESSAGE, 10, 20, sequence, wire
+                    p4mp.GAME_MESSAGE, session_id, console_peer_id, sequence, wire
                 )
             )
             sequence += 1
@@ -405,7 +460,7 @@ class HubSessionTests(unittest.TestCase):
             )
             hub.receive(
                 p4mp.encode_packet(
-                    p4mp.GAME_MESSAGE, 10, 20, sequence, wire
+                    p4mp.GAME_MESSAGE, session_id, console_peer_id, sequence, wire
                 )
             )
             other = store.actor_for_profile("console-two")
@@ -427,14 +482,16 @@ class HubSessionTests(unittest.TestCase):
             first_sent: list[bytes] = []
             second_sent: list[bytes] = []
             first = RealmHubSession(
-                "console-one", store, first_sent.append, now=lambda: clock[0]
+                "console-one", store, first_sent.append, test_offer(),
+                now=lambda: clock[0]
             )
             second = RealmHubSession(
-                "console-two", store, second_sent.append, now=lambda: clock[0]
+                "console-two", store, second_sent.append, test_offer(),
+                now=lambda: clock[0]
             )
             for session in (first, second):
                 session.session_id = 10
-                session.host_peer_id = 20
+                session.remote_peer_id = 20
                 session.connected = True
                 session.game_online = True
                 session.next_directory_at = clock[0] + 60

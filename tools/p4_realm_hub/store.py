@@ -13,6 +13,13 @@ from pathlib import Path
 from tools.p4_realm_hub import p4rm
 
 
+MAX_REALM_PLAYERS = 100
+
+
+class RealmFullError(RuntimeError):
+    pass
+
+
 @dataclasses.dataclass(frozen=True)
 class RealmHead:
     actor_id: bytes
@@ -39,6 +46,8 @@ class RealmProfile:
     pvp_losses: int
     online: bool
     bank: int = 0
+    trust: int = 0
+    teamed: bool = False
 
 
 @dataclasses.dataclass(frozen=True)
@@ -213,6 +222,13 @@ class RealmStore:
             ).fetchone()
             if row is not None:
                 return bytes(row[0])
+            actor_count = int(
+                database.execute("SELECT COUNT(*) FROM actors").fetchone()[0]
+            )
+            if actor_count >= MAX_REALM_PLAYERS:
+                raise RealmFullError(
+                    f"LORD realm is full ({MAX_REALM_PLAYERS} players)"
+                )
             salt = 0
             while True:
                 material = f"p4-realm:{normalized}:{salt}".encode("utf-8")
@@ -395,9 +411,13 @@ class RealmStore:
             )
 
     def list_profiles(
-        self, *, exclude_actor_id: bytes, limit: int = 8
+        self, *, exclude_actor_id: bytes, limit: int = 8, offset: int = 0
     ) -> list[RealmProfile]:
-        if len(exclude_actor_id) != 16 or not 1 <= limit <= 8:
+        if (
+            len(exclude_actor_id) != 16
+            or not 1 <= limit <= 8
+            or not 0 <= offset < MAX_REALM_PLAYERS
+        ):
             raise ValueError("invalid directory query")
         now = int(time.time())
         with self._lock, self._connect() as database:
@@ -406,13 +426,33 @@ class RealmStore:
                 SELECT actor_id, name, hero_style, hero_class, level, flags,
                        hit_points, max_hit_points, strength, defense,
                        experience, chompcoin, pvp_wins, pvp_losses, last_seen,
-                       bank
+                       bank,
+                       COALESCE((
+                           SELECT trust FROM friendships
+                           WHERE source_actor_id = ?
+                             AND target_actor_id = profiles.actor_id
+                       ), 0),
+                       EXISTS(
+                           SELECT 1 FROM teams
+                           WHERE active = 1 AND (
+                               (actor_low = ? AND actor_high = profiles.actor_id)
+                               OR
+                               (actor_high = ? AND actor_low = profiles.actor_id)
+                           )
+                       )
                 FROM profiles
                 WHERE actor_id != ?
-                ORDER BY last_seen DESC, name COLLATE NOCASE ASC
-                LIMIT ?
+                ORDER BY name COLLATE NOCASE ASC, actor_id ASC
+                LIMIT ? OFFSET ?
                 """,
-                (exclude_actor_id, limit),
+                (
+                    exclude_actor_id,
+                    exclude_actor_id,
+                    exclude_actor_id,
+                    exclude_actor_id,
+                    limit,
+                    offset,
+                ),
             ).fetchall()
         return [
             RealmProfile(
@@ -432,9 +472,22 @@ class RealmStore:
                 pvp_losses=int(row[13]),
                 online=now - int(row[14]) <= 90,
                 bank=int(row[15]),
+                trust=int(row[16]),
+                teamed=bool(row[17]),
             )
             for row in rows
         ]
+
+    def profile_count(self, *, exclude_actor_id: bytes) -> int:
+        if len(exclude_actor_id) != 16:
+            raise ValueError("actor ID must be 16 bytes")
+        with self._lock, self._connect() as database:
+            return int(
+                database.execute(
+                    "SELECT COUNT(*) FROM profiles WHERE actor_id != ?",
+                    (exclude_actor_id,),
+                ).fetchone()[0]
+            )
 
     @staticmethod
     def _action_request_hash(

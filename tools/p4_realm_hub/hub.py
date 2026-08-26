@@ -1,4 +1,4 @@
-"""P4MP client and LORD realm state machine used by Mac transports."""
+"""Backend-hosted P4MP lobby and LORD realm state machine."""
 
 from __future__ import annotations
 
@@ -117,21 +117,28 @@ class RealmHubSession:
         profile: str,
         store: RealmStore,
         send_datagram: Callable[[bytes], None],
+        offer: p4mp.Offer,
         *,
+        session_id: int | None = None,
         now: Callable[[], float] = time.time,
+        log_event: Callable[[str], None] = lambda _message: None,
     ) -> None:
         self.profile = profile
         self.store = store
         self.send_datagram = send_datagram
         self.now = now
+        self.log_event = log_event
         self.actor_id = store.actor_for_profile(profile)
         self.peer_id = _nonzero_u32()
         self.next_sequence = _nonzero_u32()
+        self.offer = offer
         self.last_remote_sequence = 0
-        self.session_id = 0
-        self.host_peer_id = 0
+        if session_id is not None and not 1 <= session_id <= 0xFFFFFFFF:
+            raise ValueError("invalid fixed P4MP session ID")
+        self.fixed_session_id = session_id
+        self.session_id = session_id or _nonzero_u32()
+        self.remote_peer_id = 0
         self.connected = False
-        self.joining = False
         self.game_online = False
         self.download: Download | None = None
         self.upload: Upload | None = None
@@ -141,9 +148,12 @@ class RealmHubSession:
         self.next_clock_at = 0.0
         self.next_directory_at = 0.0
         self.directory_pending: list[tuple[int, int, int, bytes]] = []
+        self.directory_offset = 0
         self.pending_profile: tuple[int, RealmProfile] | None = None
         self.last_rx_at = self.now()
         self.last_tx_at = 0.0
+        self.next_start_ready_at = 0.0
+        self.start_ready_until = 0.0
 
     def _send_packet(
         self, packet_type: int, payload: bytes, acknowledgement: int = 0
@@ -180,44 +190,31 @@ class RealmHubSession:
     def receive(self, datagram: bytes) -> None:
         packet = p4mp.decode_packet(datagram)
         self.last_rx_at = self.now()
-        if packet.packet_type == p4mp.OFFER:
-            try:
-                self._receive_offer(packet)
-            except (ValueError, struct.error):
-                return
+        if packet.packet_type == p4mp.DISCOVER:
+            self._send_packet(p4mp.OFFER, p4mp.encode_offer(self.offer))
             return
         if (
-            not self.session_id
-            or packet.session_id != self.session_id
-            or packet.peer_id != self.host_peer_id
+            packet.session_id != self.session_id
+            or packet.peer_id == self.peer_id
         ):
+            return
+        if packet.packet_type == p4mp.JOIN:
+            self._receive_join(packet)
+            return
+        if not self.connected or packet.peer_id != self.remote_peer_id:
             return
         if self.last_remote_sequence and not _sequence_newer(
             packet.sequence, self.last_remote_sequence
         ):
             return
         self.last_remote_sequence = packet.sequence
-        if packet.packet_type == p4mp.ACCEPT:
-            try:
-                assigned, players, _delay, _start, seed, _settings = (
-                    p4mp.decode_accept(packet.payload)
-                )
-            except (ValueError, struct.error):
-                return
-            if assigned == 0 or players != 2 or seed == 0:
-                return
-            self.connected = True
-            self.joining = False
-            return
         if packet.packet_type == p4mp.PING:
             self._send_packet(p4mp.PONG, packet.payload, packet.sequence)
             return
         if packet.packet_type == p4mp.PONG:
             return
         if packet.packet_type == p4mp.LEAVE:
-            self.connected = False
-            self.joining = False
-            self.game_online = False
+            self._reset_lobby()
             return
         if packet.packet_type == p4mp.GAME_MESSAGE and self.connected:
             try:
@@ -231,51 +228,74 @@ class RealmHubSession:
                 )
 
     def transport_disconnected(self) -> None:
-        self.session_id = 0
-        self.host_peer_id = 0
+        self._reset_lobby()
+
+    def _reset_lobby(self) -> None:
+        self.session_id = self.fixed_session_id or _nonzero_u32()
+        self.offer = dataclasses.replace(
+            self.offer,
+            session_seed=(secrets.randbits(64) or 1),
+            players_present=1,
+        )
+        self.remote_peer_id = 0
         self.last_remote_sequence = 0
         self.connected = False
-        self.joining = False
         self.game_online = False
         self.download = None
         self.upload = None
         self.action_upload = None
         self.outgoing_event = None
         self.directory_pending = []
+        self.directory_offset = 0
         self.pending_profile = None
+        self.next_start_ready_at = 0.0
+        self.start_ready_until = 0.0
 
-    def _receive_offer(self, packet: p4mp.Packet) -> None:
-        offer = p4mp.decode_offer(packet.payload)
+    def _receive_join(self, packet: p4mp.Packet) -> None:
+        try:
+            requested_slot, compatibility, _nonce = p4mp.decode_join(packet.payload)
+        except (ValueError, struct.error):
+            return
         if (
-            offer.game_id != LORD_GAME_ID
-            or offer.game_protocol != LORD_P4RM_PROTOCOL
-            or offer.players_present != 1
-            or offer.player_capacity != 2
+            compatibility != self.offer.compatibility_sha256
+            or requested_slot not in (1, 0xFF)
+            or (self.remote_peer_id not in (0, packet.peer_id))
         ):
             return
-        if (self.connected or self.joining) and packet.session_id == self.session_id:
+        if self.last_remote_sequence and not _sequence_newer(
+            packet.sequence, self.last_remote_sequence
+        ):
             return
-        self.session_id = packet.session_id
-        self.host_peer_id = packet.peer_id
-        self.last_remote_sequence = 0
-        self.connected = False
-        self.joining = True
+        self.remote_peer_id = packet.peer_id
+        self.last_remote_sequence = packet.sequence
+        self.connected = True
         self.game_online = False
         self.download = None
         self.upload = None
         self.action_upload = None
         self.outgoing_event = None
-        nonce = self.peer_id ^ self.host_peer_id ^ self.session_id
-        if nonce == 0:
-            nonce = 1
-        discover = p4mp.encode_packet(
-            p4mp.DISCOVER, 0, 0, self.next_sequence
+        accept = p4mp.encode_accept(
+            1,
+            2,
+            self.offer.input_delay_ticks,
+            0,
+            self.offer.session_seed,
+            self.offer.game_settings,
         )
-        self.next_sequence = self.next_sequence + 1 & 0xFFFFFFFF
-        if self.next_sequence == 0:
-            self.next_sequence = 1
-        self.send_datagram(discover)
-        self._send_packet(p4mp.JOIN, p4mp.encode_join(offer.compatibility_sha256, nonce))
+        self._send_packet(p4mp.ACCEPT, accept, packet.sequence)
+        self.log_event(
+            f"CLIENT_ACCEPTED session={self.session_id:08x} "
+            f"peer={self.remote_peer_id:08x} slot=1"
+        )
+        now = self.now()
+        self.next_start_ready_at = now
+        self.start_ready_until = now + 3.0
+        self._send_start_ready()
+
+    def _send_start_ready(self) -> None:
+        token = p4mp.start_token(self.session_id, self.offer.session_seed)
+        self._send_packet(p4mp.PING, p4mp.encode_start_ready(token))
+        self.next_start_ready_at = self.now() + 0.1
 
     def _receive_realm(self, message: p4rm.Message) -> None:
         if message.kind == p4rm.HELLO:
@@ -296,6 +316,8 @@ class RealmHubSession:
             self._receive_action_body(message)
         elif message.kind == p4rm.EVENT_ACK:
             self._receive_event_ack(message)
+        elif message.kind == p4rm.DIRECTORY_PAGE:
+            self._receive_directory_page(message)
 
     def _begin_game_sync(self, transaction_id: int) -> None:
         try:
@@ -317,6 +339,10 @@ class RealmHubSession:
             ),
         )
         self.game_online = True
+        self.log_event(
+            f"REALM_ONLINE profile={self.profile} actor={self.actor_id.hex()} "
+            f"revision={head.revision} day={day_id}"
+        )
         self.last_clock_day = day_id
         self.next_clock_at = self.now() + 30.0
         self.next_directory_at = self.now()
@@ -669,9 +695,25 @@ class RealmHubSession:
         self.next_directory_at = self.now()
 
     def _queue_directory(self) -> None:
-        profiles = self.store.list_profiles(exclude_actor_id=self.actor_id)
+        total = self.store.profile_count(exclude_actor_id=self.actor_id)
+        if total == 0:
+            self.directory_offset = 0
+        elif self.directory_offset >= total:
+            self.directory_offset = (total - 1) // 8 * 8
+        profiles = self.store.list_profiles(
+            exclude_actor_id=self.actor_id,
+            offset=self.directory_offset,
+        )
         pending: list[tuple[int, int, int, bytes]] = []
         count = len(profiles)
+        pending.append(
+            (
+                p4rm.DIRECTORY_PAGE,
+                0,
+                0,
+                struct.pack("<HH", self.directory_offset, total),
+            )
+        )
         if count == 0:
             pending.append((p4rm.DIRECTORY_SUMMARY, 0, 0, b""))
         for index, profile in enumerate(profiles):
@@ -685,17 +727,31 @@ class RealmHubSession:
             summary[39] = profile.flags | (0x04 if profile.online else 0)
             struct.pack_into("<HH", summary, 40, profile.pvp_wins, profile.pvp_losses)
             stats = profile.actor_id + struct.pack(
-                "<iiiiII",
+                "<iiiiIIBB2x",
                 profile.hit_points,
                 profile.max_hit_points,
                 profile.strength,
                 profile.defense,
                 profile.experience,
                 profile.chompcoin,
+                profile.trust,
+                int(profile.teamed),
             )
             pending.append((p4rm.DIRECTORY_SUMMARY, index, count, bytes(summary)))
             pending.append((p4rm.DIRECTORY_STATS, index, count, stats))
         self.directory_pending = pending
+
+    def _receive_directory_page(self, message: p4rm.Message) -> None:
+        if len(message.payload) != 2:
+            return
+        offset = struct.unpack("<H", message.payload)[0]
+        if offset >= 100 or offset % 8 != 0:
+            return
+        self.directory_offset = offset
+        try:
+            self._queue_directory()
+        except (ValueError, OSError, RuntimeError, sqlite3.Error):
+            self._send_realm(p4rm.ERROR, message.transaction_id, struct.pack("<H", 3))
 
     def _send_commit_result(self, transaction_id: int, status: int, revision: int) -> None:
         day_id, remaining = self.store.realm_clock(self.now())
@@ -704,6 +760,16 @@ class RealmHubSession:
 
     def tick(self) -> None:
         now = self.now()
+        if self.connected and now - self.last_rx_at >= 15.0:
+            self._reset_lobby()
+            return
+        if (
+            self.connected
+            and now < self.start_ready_until
+            and now >= self.next_start_ready_at
+        ):
+            self._send_start_ready()
+            return
         if self.connected and now - self.last_tx_at >= 1.0:
             stamp = int(now * 1000) & 0xFFFFFFFFFFFFFFFF
             self._send_packet(p4mp.PING, struct.pack("<Q", stamp))

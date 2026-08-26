@@ -5,7 +5,7 @@ Dragon*. It installs under `GAMES/ADVENTURE`, renders at 320×200 in a
 16-color ANSI/RIP-inspired style, and uses only the stable P4 Game API for
 video, controls, tone audio, shared CP437 drawing, and optional durable saves.
 
-Version 1.4.0 includes:
+Version 1.5.0 includes:
 
 - named hero or heroine characters and Death Knight, Mystical, and Thieving
   professions;
@@ -55,8 +55,10 @@ Version 1.4.0 includes:
   transport;
 - an optional Mac-hosted realm path over the existing Console OS
   `multiplayer-session` service. It synchronizes full character snapshots,
-  compare-and-swap revisions, bounded presence and warrior stats including
-  ChompCoin, and a trusted hourly realm-day refresh over either H1 USB or BLE;
+  compare-and-swap revisions, up to 100 player profiles with eight-entry
+  Previous/Next roster pages, bounded presence and warrior stats including
+  ChompCoin, and a trusted hourly realm-day refresh over either H1 USB or BLE.
+  The Mac hosts each logical session and every console joins it;
 - durable, nonce-idempotent cross-player actions for letters, two-sided
   ChompCoin transfers, encouragement and supplies, consent-based adventure
   teams, shared mentoring, leased asynchronous PvP outcomes, tavern

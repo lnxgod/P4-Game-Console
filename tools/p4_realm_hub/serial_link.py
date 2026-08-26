@@ -6,7 +6,7 @@ import threading
 import time
 
 from tools.p4_realm_hub.hub import RealmHubSession
-from tools.p4_realm_hub.p4mp import StreamDecoder
+from tools.p4_realm_hub.p4mp import Offer, StreamDecoder
 from tools.p4_realm_hub.store import RealmStore
 
 
@@ -16,6 +16,7 @@ class SerialRealmLink:
         profile: str,
         port: str,
         store: RealmStore,
+        offer: Offer,
         *,
         baudrate: int = 115200,
     ) -> None:
@@ -30,7 +31,15 @@ class SerialRealmLink:
         self.decoder = StreamDecoder()
         self.stop_event = threading.Event()
         self.device = None
-        self.session = RealmHubSession(profile, store, self.send)
+        self.session = RealmHubSession(
+            profile,
+            store,
+            self.send,
+            offer,
+            log_event=lambda message: print(
+                f"P4_REALM_HUB {message} transport=h1", flush=True
+            ),
+        )
 
     def open(self) -> None:
         device = self._serial_module.Serial(
@@ -62,7 +71,7 @@ class SerialRealmLink:
             try:
                 self.open()
                 print(
-                    f"P4_REALM_HUB READY transport=h1 profile={self.profile} "
+                    f"P4_REALM_HUB HOSTING transport=h1 profile={self.profile} "
                     f"port={self.port} baud={self.baudrate}",
                     flush=True,
                 )
