@@ -13,6 +13,7 @@
 #include "lord_logic_impl.h"
 #include "lord_save_impl.h"
 #include "lord_sync_impl.h"
+#include "lord_realm_net_impl.h"
 #include "generated/lord_title_art.h"
 
 enum {
@@ -696,8 +697,10 @@ static void draw_town(p4_game_surface_t *surface,
 
     draw_ansi_box(surface, 208, 32, 104, 96,
                   ANSI_BRIGHT_RED, ANSI_PANEL_ALT, true);
+    const char *const realm_label = lord_realm_net_label();
     draw_text(surface, 218, 41,
-              state->save_available ? "SAVED REALM" : "LOCAL REALM",
+              realm_label != NULL ? realm_label :
+                  state->save_available ? "SAVED REALM" : "LOCAL REALM",
               ANSI_YELLOW);
     for (int x = 216; x < 304; x += P4_DRAW_CP437_CELL_WIDTH) {
         draw_cp437(surface, x, 50, CP437_HORIZONTAL,
@@ -729,9 +732,22 @@ static void draw_town(p4_game_surface_t *surface,
     line_append(line, sizeof(line), " NEW");
     draw_text(surface, 218, 101, line, ANSI_BRIGHT_MAGENTA);
     line_clear(line, sizeof(line));
-    line_append(line, sizeof(line), "PVP LEFT ");
-    line_append_u32(line, sizeof(line), state->pvp_fights);
-    draw_text(surface, 218, 112, line, ANSI_BRIGHT_RED);
+    if (realm_label != NULL && s_lord_realm_net.seconds_remaining != 0U) {
+        line_append(line, sizeof(line), "BELL ");
+        line_append_u32(line, sizeof(line),
+                        s_lord_realm_net.seconds_remaining / 60U);
+        line_append(line, sizeof(line), ":");
+        const uint32_t seconds = s_lord_realm_net.seconds_remaining % 60U;
+        if (seconds < 10U) {
+            line_append(line, sizeof(line), "0");
+        }
+        line_append_u32(line, sizeof(line), seconds);
+        draw_text(surface, 218, 112, line, ANSI_BRIGHT_GREEN);
+    } else {
+        line_append(line, sizeof(line), "PVP LEFT ");
+        line_append_u32(line, sizeof(line), state->pvp_fights);
+        draw_text(surface, 218, 112, line, ANSI_BRIGHT_RED);
+    }
 }
 
 static void draw_title(p4_game_surface_t *surface)
@@ -1478,6 +1494,7 @@ static bool game_start(p4_game_context_t *context)
             state->save_available = true;
         }
     }
+    lord_realm_net_start(context);
     (void)p4_game_play_tone(context, 392U, 90U, 3U,
                             P4_WAVE_TRIANGLE);
     return true;
@@ -1538,12 +1555,15 @@ static p4_game_result_t game_update(p4_game_context_t *context,
                                     const p4_game_input_t *input,
                                     uint32_t elapsed_ms)
 {
-    (void)elapsed_ms;
     lord_state_t *const state = context->state;
+    lord_realm_net_poll(context, state, elapsed_ms);
     state->held_buttons = input->held;
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
         service_save(context, state);
         return P4_GAME_EXIT_TO_LAUNCHER;
+    }
+    if (lord_realm_net_blocks_gameplay()) {
+        return P4_GAME_CONTINUE;
     }
     if (state->screen == LORD_SCREEN_TEXT_EDITOR) {
         if ((input->pressed & P4_BUTTON_LEFT) != 0U) {
@@ -1603,7 +1623,8 @@ const p4_game_descriptor_t p4_lord_game = {
     .subtitle = "LEGEND OF THE RED DRAGON",
     .accent_rgb565 = ANSI_BRIGHT_RED,
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_SAVE,
+    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_SAVE |
+        P4_GAME_CAP_MULTIPLAYER_SESSION,
     .state_bytes = sizeof(lord_state_t),
     .start = game_start,
     .update = game_update,

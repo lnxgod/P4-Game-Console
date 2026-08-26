@@ -1,4 +1,4 @@
-# LORD 1.2.0 OS integration contract
+# LORD 1.3.0 OS integration contract
 
 LORD is a complete standalone cartridge. This document describes optional OS
 services that turn its persistent local realm into a shared BBS realm without
@@ -8,7 +8,7 @@ ownership.
 ## Services used now
 
 - Required: `video`, `controls`
-- Optional: `audio-tone`, `save`
+- Optional: `audio-tone`, `save`, `multiplayer-session`
 
 The save adapter is implemented in `src/lord.c`. At launch it validates
 `save_schema_version == 3`, the nonzero host sequence, and the copied launch
@@ -37,9 +37,27 @@ requirement. Copy at most 47 printable characters into `editor_text`, reject
 controls or malformed UTF-8, and preserve the in-cartridge picker when the
 modal is unavailable or cancelled.
 
-## Realm adapter
+## Mac-hub realm service used now
 
-The offline snapshot consists of:
+LORD declares a two-player turn-based `multiplayer-session` profile with
+protocol `0x4c52`. Console OS already owns lobby selection, P4MP framing,
+H1/BLE routing, replay checks, route binding, timeout, and disconnect. The
+cartridge receives only the existing 64-byte Game Message service plus the
+immutable session seed and status.
+
+`src/lord_realm_net_impl.h` layers bounded `P4RM` v1 messages on that service.
+It synchronizes full `LRSY` snapshots with the Mac hub, publishes the local
+profile, consumes an eight-entry remote directory, and applies one trusted
+hourly refresh. It remains inactive when the capability or connected room is
+absent. No new Game API fields, raw P4MP packets, routes, USB/BLE handles, or
+clock callbacks are exposed to LORD.
+
+The exact deployment and current limitations are in
+[the Mac hub guide](../../docs/LORD_REALM_HUB.md).
+
+## Future typed realm adapter
+
+The offline/full-head snapshot consists of:
 
 ```text
 lord_realm_player_t realm[8]
@@ -48,7 +66,9 @@ lord_log_entry_t    log[12]
 realm_revision, partner_index, npc_friend
 ```
 
-Map the existing flows to asynchronous, revisioned operations:
+The Mac compatibility path synchronizes this complete snapshot for one actor.
+A future `realm` service must map cross-actor flows to asynchronous,
+revisioned operations:
 
 | Existing game flow | Optional realm operation |
 |---|---|
@@ -69,8 +89,9 @@ state must never overwrite a newer server revision.
 
 ## Backend sync record implemented now
 
-`src/lord_sync_impl.h` defines the bounded `LRSY` version-1 record that a
-future `realm` callback will copy to Console OS. It contains a 52-byte explicit
+`src/lord_sync_impl.h` defines the bounded `LRSY` version-1 record copied over
+the current P4RM compatibility path and reusable by a future `realm` callback.
+It contains a 52-byte explicit
 little-endian header followed by the complete CRC-protected schema-3 save:
 
 ```text
@@ -87,13 +108,16 @@ It contains no username, email, password, device address, route, token, or
 server URL. Unit tests cover round trip, stale revision, wrong actor, corrupt
 payload, and zero-nonce rejection.
 
-This codec is intentionally transport-free. The current Game API still lacks
-the asynchronous `realm` callbacks needed to submit it, so version 1.2 remains
-offline/save playable and never pretends a local warrior is a server player.
-The complete server and adapter plan is in [BACKEND_SYNC.md](BACKEND_SYNC.md).
+The codec itself remains transport-free. Version 1.3 submits it through a
+reviewed P4RM state machine over `multiplayer-session` when the local Mac hub
+occupies the peer slot. The complete record, server, conflict, and future
+typed-action rules are in [BACKEND_SYNC.md](BACKEND_SYNC.md).
 
-Asynchronous classic LORD PvP uses `realm`; `multiplayer-session` is reserved
-for an optional future live duel/tournament mode.
+The P4RM use is deliberately a local backward-compatible deployment. A future
+authenticated/public backend and server-authoritative classic mail, transfer,
+PvP, friendship, and team operations still belong behind `realm` callbacks.
+Optional live human duels or tournaments may continue to use a separate
+`multiplayer-session` profile/mode later.
 
 ## External IGM handoff
 
@@ -124,8 +148,11 @@ terminal, file, callback, or download commands.
 - Save: launch an empty slot, mutate state, observe a copied schema-3 commit,
   relaunch with the committed snapshot, recover after interrupted replacement,
   and prove conflict/read-only/unavailable behavior.
-- Realm: cover stale revisions, duplicate outcomes, declines, team consent,
-  disconnect, offline edits, reconnect, and sanitized hostile text.
+- P4RM Mac realm: cover upload/download retry, stale revisions, duplicate
+  nonce, disconnect, offline edits, reconnect, directory bounds, hostile
+  frames, and hourly rollover exactly once.
+- Future typed realm: cover duplicate outcomes, mail delivery, ChompCoin
+  non-duplication, declines, team consent, and sanitized hostile text.
 - IGM handoff: cover wrong schema/game, expired/replayed nonce, excessive
   deltas, cancellation, missing module, and save-before-exit recovery.
 

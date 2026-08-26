@@ -1,102 +1,122 @@
-# LORD backend synchronization plan
+# LORD backend synchronization
 
-LORD 1.2.0 is ready for a future Console OS-owned backend adapter while
-remaining a complete offline cartridge. The cartridge never opens a socket,
-stores credentials, chooses a route, or trusts wall-clock time. Console OS
-will own authentication, TLS, retries, queueing, timeouts, and account UI; the
-server will own authoritative revision and realm-day decisions.
+LORD 1.3.0 has a working local Mac-hub synchronization path and remains a
+complete offline cartridge. The cartridge never opens a socket, file, serial
+port, or BLE connection. Console OS owns the physical route and supplies the
+existing bounded `multiplayer-session` service.
 
-## Implemented game-side boundary
+## Implemented compatibility path
 
-`src/lord_sync_impl.h` implements the deterministic `LRSY` version-1 record.
-It wraps the complete existing `LDSV` save with:
+No Game API or P4MP version upgrade was needed for the first realm slice.
+`game.json` declares a two-player turn-based profile with protocol `0x4c52`.
+The console hosts the room and the Mac hub joins slot 1. LORD and the hub then
+exchange `P4RM` v1 records through ordinary P4MP Game Message packets.
 
-- a 16-byte opaque actor ID supplied by Console OS;
+`src/lord_sync_impl.h` owns the deterministic `LRSY` version-1 record. It wraps
+the complete existing `LDSV` save with:
+
+- a 16-byte opaque actor ID assigned by the hub profile;
 - a nonzero one-use 64-bit operation nonce;
-- the expected realm revision and local save sequence;
-- explicit little-endian lengths and a CRC over metadata plus payload; and
+- the game-local realm and save revisions;
+- explicit little-endian lengths and CRCs; and
 - a maximum total size of 4,148 bytes.
 
-No PII or transport data enters the record. The record codec does not make the
-current cartridge online: Game API v1 has the `realm` capability bit but no
-reviewed callbacks through which the cartridge can submit or receive records.
+`src/lord_realm_net_impl.h` owns only the game-side state machine. It performs
+hello/welcome, complete snapshot download, optimistic upload, conflict/error
+status, profile publication, directory updates, and trusted hourly rollover.
+It never sees the route, database, device address, account credential, or
+server path.
 
-## Console OS adapter required
+The Mac implementation lives in `tools/p4_realm_hub/` and is launched by
+`scripts/p4-realm-hub.py`. It provides:
 
-Add one optional, non-blocking `realm` service tail after the currently frozen
-Game API v1 fields. Its minimum operations should be:
+- strict P4MP v1 and P4RM v1 framing;
+- the existing noisy-stream H1 and P4B BLE adapters;
+- SQLite actor heads, CRC validation, compare-and-swap commits, nonce
+  idempotency, event audit rows, profile presence, and a trusted realm clock;
+- stop-and-wait transfer with retry; and
+- one database shared by several H1 workers and one optional BLE worker.
+
+See [the operator guide](../../docs/LORD_REALM_HUB.md) for setup, commands,
+security boundaries, and verification.
+
+## Snapshot and clock rules
+
+The server head revision is independent from the game-local `realm_revision`.
+A full head is replaced only when the submitted expected server revision
+matches. It is never field-merged: merging can duplicate ChompCoin, mail, PvP
+rewards, team state, or daily limits. Repeating the same actor/nonce/body is
+idempotent; reusing the nonce with a different body is invalid.
+
+The hub computes `floor(unix_time / 3600) + 1`. When the stored head's last
+realm day is older, LORD applies exactly one hourly refresh after a validated
+download. Missing several hours never grants several refreshes. The online
+refresh restores daily actions but deliberately pays no bank interest. The new
+state must commit under the current day before it becomes the server head.
+
+Disconnect leaves the ordinary local save path intact. A later stale upload
+returns `SYNC CONFLICT` and does not overwrite the hub. Version 1.3.0 does not
+offer an in-game conflict chooser; the safe recovery is to exit and relaunch
+from the current server head or use a different hub profile for the divergent
+character.
+
+## Shared-directory boundary
+
+The game publishes printable ASCII name, hero style/class, level, alive and
+inn flags, health, strength, defense, experience, carried ChompCoin, and PvP
+record. The hub binds these values to the session actor, validates all ranges,
+and returns at most eight other profiles. Directory entries use opaque actor
+IDs internally; the cartridge never treats a profile label or transport
+address as identity.
+
+Presence means a validated profile was seen within 90 seconds. It is a game UI
+hint, not proof of account identity. The current local hub has no public signup,
+password, TLS, Internet listener, or remote administration surface.
+
+## Typed cross-player actions still required
+
+Full snapshot sync makes one actor portable, but it cannot safely mutate a
+second actor. These classic BBS interactions need a separate server-owned,
+idempotent action layer:
+
+- mail: enqueue once to a target actor, list/read/acknowledge separately;
+- ChompCoin transfer: atomically debit and credit two current heads;
+- asynchronous PvP: lease an immutable opponent revision and commit a bounded
+  outcome exactly once;
+- friendship/adventure team: invite and accept as two-party consent events;
+- tavern/news: append bounded sanitized text to a paged shared feed.
+
+Until that layer exists, LORD's existing mail replies, transfers, PvP results,
+friendship actions, teams, conversation, and news operate inside the current
+actor's saved local realm copy. They are playable and synchronized with that
+actor's full snapshot, but they are not delivered to or authoritative for the
+other hub profile. Built-in IGMs are part of the snapshot; arbitrary external
+IGM packages still need typed OS handoff.
+
+## Future Internet/backend adapter
+
+A future authenticated service should retain the same `LRSY` record and action
+semantics behind an OS-owned `realm` capability:
 
 ```text
-read_head() -> status, actor_id[16], realm_revision, copied snapshot
+read_head() -> status, actor_id[16], server_revision, copied snapshot
 queue_commit(expected_revision, nonce, copied LRSY record) -> ticket
 read_commit(ticket) -> queued | committed(new_revision) | conflict | error
+queue_action(kind, target_actor, expected revisions, nonce, copied payload)
+read_action(ticket) -> queued | committed(result) | conflict | error
 ```
 
-The host must copy every cartridge buffer before returning, cap records at
-4,148 bytes, expose no account/session token to the game, and make callbacks
-absent when signed-in sync is unavailable. A false callback result must never
-block or disable offline play. Only after these callbacks exist should
-`game.json` request optional `realm` and the descriptor add
-`P4_GAME_CAP_REALM`.
-
-Launch and commit flow:
-
-1. Console OS signs in outside the cartridge and obtains an opaque actor ID.
-2. It fetches the server head before launch and validates game ID, schema,
-   actor, sizes, CRCs, and monotonic revision.
-3. It supplies the accepted snapshot through the normal immutable save launch
-   view; LORD never receives a file or token.
-4. LORD plays offline-first and continues queueing ordinary local `AUTO`
-   saves.
-5. At a safe boundary, LORD creates one `LRSY` record using the OS-supplied
-   actor ID and nonce, then queues it with the expected server revision.
-6. Console OS journals the copied record locally, uploads asynchronously, and
-   reports a ticket result. A disconnect leaves the journal retryable.
-7. LORD accepts only a committed higher revision. A conflict never overwrites
-   the remote head; the adapter fetches the new head and offers an explicit
-   keep-local/keep-server choice outside active combat.
-
-## Suggested backend API
-
-The transport can evolve without changing the cartridge record:
-
-```text
-POST /v1/sessions                 -> authenticated OS session
-GET  /v1/games/lord/head          -> actor ID, revision, LRSY record
-PUT  /v1/games/lord/head          -> If-Match revision + idempotency nonce
-POST /v1/games/lord/actions       -> later mail, transfer, duel, team intents
-GET  /v1/games/lord/directory     -> later bounded sanitized player page
-```
-
-The server must bind actor ID to the authenticated account, reject reused
-nonces with a different body, retain a bounded idempotency window, rate-limit
-every operation, validate both CRC layers, reject revision skips, sanitize all
-display text, and store an append-only audit event before publishing a new
-head. TLS and bearer/session credentials terminate in Console OS, never in the
-cartridge.
-
-## Merge and multiplayer rules
-
-Full snapshots use optimistic single-writer replacement. They are not merged
-field-by-field: that could duplicate ChompCoin, mail, PvP rewards, team state,
-or daily resets. Later shared-realm actions are separate idempotent intents:
-
-- ChompCoin transfer: debit and credit atomically under one nonce;
-- mail: deliver once, then acknowledge read state separately;
-- asynchronous duel: lease an immutable opponent revision, validate the
-  outcome server-side, and commit rewards once;
-- adventure team: invitation and acceptance are two-party consent events;
-- realm day: server-authoritative rollover, never device-clock driven.
-
-`multiplayer-session` remains for optional live local duels and tournaments;
-it is not the account/save synchronization transport.
+The OS must terminate authentication/TLS, journal copied requests, expose no
+token or URL to the cartridge, enforce quotas and timeouts, sanitize display
+text, and make all callbacks optional. The Mac P4MP peer is a backward-
+compatible local deployment, not a replacement for those trust boundaries.
 
 ## Acceptance gate
 
-Before claiming backend synchronization works, automated and two-device tests
-must cover clean first upload, relaunch download, offline play and reconnect,
-power loss during queue/upload, duplicate nonce, stale revision, simultaneous
-devices, hostile text, malformed/oversized records, auth expiry, server
-timeout, local journal recovery, ChompCoin non-duplication, mail exactly-once
-delivery, team consent, and trusted realm-day rollover. Until then the honest
-status is: record codec complete; OS adapter and server pending.
+Automated and two-device tests must cover clean first upload, relaunch
+download, offline play/reconnect, retry, power loss, duplicate nonce, changed
+body under a nonce, stale revision, simultaneous devices, malformed and
+oversized frames, hostile text, SQLite recovery, hourly rollover exactly once,
+and disconnect. The typed-action phase additionally needs ChompCoin
+non-duplication, mail exactly-once delivery, PvP lease replay/expiry, and team
+consent tests. A build is not H1 or BLE hardware acceptance.

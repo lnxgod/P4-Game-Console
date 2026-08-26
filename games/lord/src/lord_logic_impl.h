@@ -336,7 +336,7 @@ static void maybe_help_young_hero(lord_state_t *state)
     add_named_log(state, "", " helped a young hero train.");
 }
 
-static void reset_new_day(lord_state_t *state)
+static void reset_new_day_common(lord_state_t *state, bool classic_interest)
 {
     state->player.hit_points = state->player.max_hit_points;
     state->player.forest_fights = LORD_FOREST_FIGHTS_PER_DAY;
@@ -352,9 +352,12 @@ static void reset_new_day(lord_state_t *state)
     state->friendship_actions = LORD_FRIENDSHIP_ACTIONS_PER_DAY;
     state->igm_used_mask = 0U;
     state->player.seen_dragon = false;
-    state->player.bank = add_u32_saturating(
-        state->player.bank, state->player.bank / 10U);
-    if (state->partner_index >= 0 || state->npc_friend >= 0) {
+    if (classic_interest) {
+        state->player.bank = add_u32_saturating(
+            state->player.bank, state->player.bank / 10U);
+    }
+    if (classic_interest &&
+        (state->partner_index >= 0 || state->npc_friend >= 0)) {
         state->player.bank = add_u32_saturating(
             state->player.bank, state->player.bank / 20U);
     }
@@ -370,6 +373,17 @@ static void reset_new_day(lord_state_t *state)
     maybe_help_young_hero(state);
     add_log(state, "A new day dawned over the realm.");
     mark_dirty(state);
+}
+
+static void reset_new_day(lord_state_t *state)
+{
+    reset_new_day_common(state, true);
+}
+
+/** Server-authoritative hourly rollover deliberately pays no bank interest. */
+static void reset_hourly_realm_day(lord_state_t *state)
+{
+    reset_new_day_common(state, false);
 }
 
 static void initialize_player(lord_state_t *state,

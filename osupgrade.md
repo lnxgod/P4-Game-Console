@@ -1,4 +1,22 @@
-# Console OS upgrade plan for full LORD and wired-platform support
+# Remaining Console OS upgrades for full shared LORD services
+
+## 2026-08-25 implementation status
+
+LORD 1.3.0 now has a backward-compatible local Mac realm path. It declares
+the existing optional `multiplayer-session` capability and exchanges bounded
+`P4RM` v1 Game Messages with `scripts/p4-realm-hub.py` through the already
+implemented P4MP H1 or BLE route. The Mac persists CRC-checked full character
+heads in SQLite with compare-and-swap revisions and nonce idempotency, shares
+bounded directory/presence/profile data including ChompCoin, and supplies the
+trusted hourly realm day. This needed no new Game API ABI, capability bit,
+P4MP packet type, USB ownership, or cartridge network access.
+
+This document now describes the upgrades that remain after that compatibility
+slice. In particular, full cross-player mail, atomic ChompCoin transfer,
+leased PvP outcome, team consent, shared feeds, authenticated Internet service,
+and external IGM handoff still need typed OS/server operations. The exact
+implemented scope and operator commands are authoritative in
+`docs/LORD_REALM_HUB.md` and `games/lord/BACKEND_SYNC.md`.
 
 ## Purpose
 
@@ -9,7 +27,7 @@ scenes. The same upgrade also finishes the controller-first wired USB platform
 for the Waveshare 4.3-inch console without giving a cartridge raw filesystem,
 network, USB, clock, or display ownership.
 
-This is an implementation handoff. LORD 1.2.0 now has the complete standalone
+This is an implementation handoff. LORD 1.3.0 now has the complete standalone
 game, a persistent local realm, typed controller mail/text, seven built-in
 source-pinned IGMs, expanded kid-friendly ANSI art, one ChompCoin economy, a
 wired version-3 save client, and a tested version-1 `LRSY` sync record. OS
@@ -64,14 +82,15 @@ work around an unavailable service by opening files or sockets from
   Control Panel persistence. Build, full app readback, retained-UART READY,
   microSD catalog, and controller enumeration passed; manual A/B and Doom
   gameplay acceptance remain pending.
-- LORD 1.2.0 owns an explicit little-endian schema-3 save codec capped at 4
+- LORD 1.3.0 owns an explicit little-endian schema-3 save codec capped at 4
   KiB, consumes launch snapshots, queues/polls copied `AUTO` commits, and has
   eight local warriors, twelve typed mail slots, daily news, full tavern/PvP/
   friendship/team/youth-mentoring state, seven built-in IGMs, twelve clipped
   ANSI/RIP-style scenes, and new CP437 inn/friend/dice/recovery/victory art.
-- LORD 1.2.0 also owns a bounded `LRSY` envelope with opaque actor ID,
+- LORD 1.3.0 also owns a bounded `LRSY` envelope with opaque actor ID,
   one-use nonce, realm/save revisions, CRC, and the complete `LDSV` payload.
-  It is transport-free until the realm callbacks below exist.
+  Its codec remains transport-free; the P4RM state machine now carries it over
+  the existing `multiplayer-session` service to the local Mac hub.
 
 ### Missing
 
@@ -84,22 +103,26 @@ work around an unavailable service by opening files or sockets from
 - The Waveshare profile does not authorize firmware-side FAT writes, so it
   correctly withholds `save` and remains session-only until storage ownership
   and board policy are deliberately expanded.
-- `p4_multiplayer` is not exposed to cartridges and has no live firmware
-  transport/lobby.
-- The BBS transport has no frozen message, realm, or lobby protocol.
+- `p4_multiplayer` is exposed to validated cartridges through the bounded
+  `multiplayer-session` capability and has live H1/BLE firmware lobbies.
+- P4RM v1 now freezes the local LORD snapshot/profile/directory/clock protocol
+  inside P4MP Game Message. The typed cross-player action protocol is not yet
+  frozen.
 - Games receive one normalized input snapshot, not stable player slots.
 - Games have no OS-owned text-entry request, but LORD has a complete
   controller/touch character picker for names, mail, announcements, sayings,
   and conversation. An OS modal is an optional keyboard acceleration path.
-- Games have no trusted date/day value.
+- Games have no generic trusted date/day API. LORD receives a hub-owned hourly
+  day through P4RM when the Mac realm is connected.
 - There is no typed IGM handoff or sandboxed module runtime.
 - RIP graphics are not a Game API format. Raw RIPscrip must not be fed into
   the ANSI parser or allowed to execute terminal/file commands.
 - No wired HID controller, keyboard, or mouse has completed retained-UART
   hardware acceptance on the Waveshare 4.3-inch board through the powered
   H2 fixture/hub.
-- H1 serial framing and P4MP exist as bounded building blocks, but there is no
-  live two-console wired relay/lobby endpoint yet.
+- H1 serial framing, live P4MP lobby routing, the two-console relay, and the
+  one-console Mac realm peer exist. The new realm path still needs retained
+  on-device acceptance.
 
 ## Compatibility decision
 
@@ -264,8 +287,10 @@ touch keyboard, and controller character picker must produce the same result.
 ## 3. Realm service for classic BBS features
 
 LORD multiplayer is primarily asynchronous shared-record gameplay, distinct
-from real-time controller multiplayer. Add `components/p4_realm` and expose
-typed snapshots/actions rather than files, sockets, or P4MP packets.
+from real-time controller multiplayer. The local Mac compatibility path now
+handles full-head snapshots through existing Game Messages. Add
+`components/p4_realm` for authenticated/public deployments and typed
+cross-player actions rather than exposing files, sockets, or P4MP packets.
 
 ### LORD sync-record boundary
 
@@ -357,9 +382,9 @@ never overwrite a newer server record with an offline snapshot.
 
 ## 4. Live multiplayer-session service
 
-Expose the existing `components/p4_multiplayer` core through an OS adapter.
-Games still must not receive P4MP datagrams, routes, serial ports, sockets, or
-transport identities.
+The existing `components/p4_multiplayer` core is now exposed through the
+bounded OS adapter and declarative native-game profile. Games still do not
+receive P4MP datagrams, routes, serial ports, sockets, or transport identities.
 
 The Game API should offer:
 
@@ -382,8 +407,10 @@ the already-planned H1 relay endpoint or H2 USB-device relay. Never connect two
 sink/device ports directly and never claim the current packet core is a live
 transport.
 
-Asynchronous LORD PvP should use `realm`, not this real-time service. A future
-live duel/tournament may use `multiplayer-session`.
+LORD 1.3.0 temporarily uses Game Message as the transport-neutral carrier for
+its local Mac peer. Server-authoritative asynchronous PvP should move to typed
+`realm` actions. A future live duel/tournament may use a distinct
+`multiplayer-session` mode.
 
 ## 5. IGM handoff
 
@@ -546,7 +573,7 @@ merely because the hub enumerated.
 
 ## 10. LORD integration after the OS services land
 
-LORD 1.2.0 has the complete standalone implementation. Completed game-side
+LORD 1.3.0 has the complete standalone implementation. Completed game-side
 work includes:
 
 - character creation and a controller/touch ANSI text editor;
@@ -564,6 +591,8 @@ work includes:
   commit-aware dirty-state clearing; and
 - a tested 4,148-byte maximum `LRSY` sync record with opaque actor ID,
   one-use nonce, realm/save revisions, nested save CRC, and record CRC.
+- a host-tested P4RM client for full-head sync, hub directory/presence,
+  ChompCoin profiles, conflict state, retry, and trusted hourly rollover.
 
 The OS integration pass should replace optional backends, not rebuild these
 screens or rules. Save wiring is already complete in the cartridge. Map local
@@ -661,13 +690,14 @@ transport, clock, USB, or display-driver ownership.
 2. Add durable save component, host-table tail, capability bit, package
    validation, SDL in-memory backend, and Save Manager integration.
 3. Add OS text-entry modal and host-runner implementation.
-4. Add local `p4_realm` backend with directory/mail/PvP/friendship/team tests;
-   expose it through the Game API.
-5. Wire the existing LORD save codec and local realm UI to OS services; keep
-   network status offline when no realm is available.
-6. Add revisioned BBS realm transport and trusted daily rollover.
-7. Expose same-console player slots, then the existing P4MP core as the
-   multiplayer-session adapter and lobby.
+4. Hardware-qualify the implemented LORD P4RM Mac hub over H1 and BLE,
+   including relaunch, retry, conflict, and hourly rollover evidence.
+5. Add typed local realm actions for mail, atomic ChompCoin transfers, PvP
+   leases/outcomes, friendship/team consent, and shared feeds with tests.
+6. Expose those typed actions through an optional `realm` Game API tail for
+   authenticated/public backends while retaining the Mac compatibility path.
+7. Add same-console stable player slots and any later live LORD duel mode
+   without changing the P4RM snapshot contract.
 8. Finish H1 framed relay integration and qualify controller-first H2 host,
    HID gamepad/keyboard/mouse, and explicit USB Drive role switching without
    exposing USB ownership to games.

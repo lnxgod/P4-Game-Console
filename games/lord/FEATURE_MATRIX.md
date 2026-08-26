@@ -1,4 +1,4 @@
-# LORD 1.2.0 feature-parity audit
+# LORD 1.3.0 feature-parity audit
 
 Audited against the authorized Synchronet source at commit
 `25232df05a8ba27a4dd9fcd38b4012c43660fb50`. “Adapted” means the player-facing

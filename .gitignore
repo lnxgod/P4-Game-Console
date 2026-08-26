@@ -20,6 +20,7 @@ __pycache__/
 # Local source/reference archives used only by provenance verifiers.
 *.zip
 local-data/lord-upstream/
+local-data/realm/
 
 # Doom game data is supplied locally and never committed or embedded.
 *.[Ww][Aa][Dd]

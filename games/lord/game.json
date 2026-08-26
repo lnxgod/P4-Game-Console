@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.2.0",
+  "version": "1.3.0",
   "package_file": "LORD.P4G",
   "component": "lord",
   "entry_symbol": "p4_lord_game",
@@ -18,8 +18,18 @@
   ],
   "optional_capabilities": [
     "audio-tone",
-    "save"
+    "save",
+    "multiplayer-session"
   ],
+  "multiplayer": {
+    "schema": 1,
+    "style": "turn-based",
+    "min_players": 2,
+    "max_players": 2,
+    "tick_rate_hz": 30,
+    "message_bytes": 64,
+    "protocol": 19538
+  },
   "license": "LORD-PERMISSION",
   "assets": "authorized-upstream-text-generated-title-and-friendship-concept-shared-cp437-ansi-scenes",
   "enabled": true

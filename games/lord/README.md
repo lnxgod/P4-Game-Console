@@ -5,7 +5,7 @@ Dragon*. It installs under `GAMES/ADVENTURE`, renders at 320×200 in a
 16-color ANSI/RIP-inspired style, and uses only the stable P4 Game API for
 video, controls, tone audio, shared CP437 drawing, and optional durable saves.
 
-Version 1.2.0 includes:
+Version 1.3.0 includes:
 
 - named hero or heroine characters and Death Knight, Mystical, and Thieving
   professions;
@@ -49,18 +49,26 @@ Version 1.2.0 includes:
   completion, and uses optimistic host sequences;
 - a bounded `LRSY` backend-sync record carrying an opaque actor ID, one-use
   nonce, realm revision, save sequence, CRC, and the complete save payload.
-  The cartridge defines and tests the record but never owns accounts, TLS,
-  sockets, retries, or server transport.
+  The cartridge never owns accounts, TLS, sockets, USB, BLE, or server
+  transport;
+- an optional Mac-hosted realm path over the existing Console OS
+  `multiplayer-session` service. It synchronizes full character snapshots,
+  compare-and-swap revisions, bounded presence and warrior stats including
+  ChompCoin, and a trusted hourly realm-day refresh over either H1 USB or BLE.
 
 The cartridge is fully playable offline. On a Console OS profile that offers
 `save`, progress survives exit and relaunch. On profiles that deliberately
 withhold writable storage, it remains playable for the current session and
-labels the realm local. Shared remote BBS accounts, synchronized opponents,
-trusted server-day rollover, and arbitrary third-party IGM packages still
-require the optional OS adapters documented in
+labels the realm local. With a LORD P4MP room and the Mac realm hub it labels
+the realm `MAC REALM`, synchronizes that actor, lists other hub profiles, and
+uses the hub's hourly rollover. Server-authoritative cross-player mail,
+transfers, PvP outcomes, friendship/team consent, public Internet accounts,
+and arbitrary third-party IGM packages still require the typed action and OS
+adapters documented in
 [BACKEND_SYNC.md](BACKEND_SYNC.md), [OS_INTEGRATION.md](OS_INTEGRATION.md), and
-[osupgrade.md](../../osupgrade.md); the complete standalone game does not
-depend on them.
+[osupgrade.md](../../osupgrade.md). Mac setup and the exact implemented scope
+are in [LORD_REALM_HUB.md](../../docs/LORD_REALM_HUB.md); the complete
+standalone game does not depend on the hub.
 
 Implementation note: the schema-3 C fields named `gold` and `bank` remain only
 to preserve existing save bytes. They now mean carried and vaulted ChompCoin;
