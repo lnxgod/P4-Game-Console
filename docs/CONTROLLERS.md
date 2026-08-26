@@ -61,6 +61,12 @@ is enabled; it does not block the boot screen or SD mount. Turning BLE Pad
 Mode off disconnects and suppresses only the controller client. It does not
 disable BLE multiplayer or erase the controller bond.
 
+An unexpected link loss first publishes neutral input, then the OS makes at
+most three saved-identity reconnect attempts with 500, 1000, and 2000 ms
+backoff. Reconnect waits while a multiplayer scan or advertisement owns the
+shared radio. Disconnect, Forget, and disabling BLE Pad Mode cancel this
+policy immediately.
+
 Select **Map** to bind one physical button each to A, B, X, Y, Start, and Back.
 Release between steps. The wizard rejects multi-button presses and duplicate
 sources, suppresses navigation while capturing, and commits the complete map
@@ -80,6 +86,25 @@ Current limits are one BLE controller, no rumble/LED/battery UI, and no local
 two-player assignment from two Bluetooth pads. These are explicit future
 extensions; they do not change the canonical game input API.
 
+## Doom and Chex Quest layout
+
+Dual-stick controllers use a modern movement layout without taking the retro
+path away from simple pads:
+
+- left stick: forward/back and strafe;
+- right stick: turn;
+- D-pad: classic Doom forward/back and turn;
+- right trigger or A/South: fire;
+- B/East: use/open;
+- X/West or left-stick click: run;
+- shoulder buttons: strafe left/right;
+- Y/North and right-stick click: next/previous weapon;
+- Guide: map; Start: pause; Back: menu back.
+
+The adapter emits transitions into Doom's existing key-input path. It does not
+change the canonical gamepad snapshot or prevent a game from choosing its own
+mapping.
+
 ## Verification
 
 Run the bounded parser/broker tests and exact Waveshare build:
@@ -97,4 +122,6 @@ while keeping ESP-IDF and ESP-Hosted pinned by this repository. A build proves
 compilation and image contracts only. Named hardware acceptance must record
 the controller model, firmware Git state, report-map hash, every control,
 held-input disconnect neutralization, reconnects, malformed reports, and a
-sustained gameplay run.
+sustained gameplay run. For Doom and Chex Quest, that run must begin before
+the title's on-demand exact hash and continue through its same-pass PSRAM
+capture, engine initialization, and first playable frames.

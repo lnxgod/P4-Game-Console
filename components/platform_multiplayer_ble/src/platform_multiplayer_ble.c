@@ -30,10 +30,13 @@
 
 enum {
     P4_BLE_RX_QUEUE_DEPTH = 32,
-    P4_BLE_TX_QUEUE_DEPTH = 16,
-    P4_BLE_TX_DRAIN_BUDGET = 2,
+    P4_BLE_TX_QUEUE_DEPTH = 32,
+    P4_BLE_TX_DRAIN_BUDGET = 8,
     P4_BLE_CONNECT_TIMEOUT_MS = 10000,
     P4_BLE_LOBBY_STALE_MS = 4000,
+    P4_BLE_HOST_COLLISION_SCAN_MS = 600,
+    P4_BLE_HOST_COLLISION_ADV_BASE_MS = 900,
+    P4_BLE_HOST_COLLISION_ADV_JITTER_MS = 900,
     P4_BLE_ADV_INTERVAL_MIN = 160, /* 100 ms. */
     P4_BLE_ADV_INTERVAL_MAX = 240, /* 150 ms. */
     P4_BLE_FAST_INTERVAL_MIN = 6,  /* 7.5 ms. */
@@ -74,6 +77,9 @@ typedef struct {
     uint16_t next_frame_id;
     p4_ble_lobby_entry_t lobbies[PLATFORM_MULTIPLAYER_BLE_MAX_LOBBIES];
     p4_mp_ble_reassembler_t reassembler;
+    uint64_t host_collision_deadline_ms;
+    uint32_t host_collision_round;
+    bool host_collision_scanning;
 } p4_ble_state_t;
 
 static const char *const TAG = "p4_ble_game";
@@ -170,6 +176,15 @@ static platform_multiplayer_ble_lobby_mode_t lobby_mode(void)
     return mode;
 }
 
+static uint64_t host_collision_advertise_ms(
+    uint32_t session_id, uint32_t round)
+{
+    uint32_t mixed = session_id ^ (round * UINT32_C(2654435761));
+    mixed ^= mixed >> 16U;
+    return P4_BLE_HOST_COLLISION_ADV_BASE_MS +
+        mixed % P4_BLE_HOST_COLLISION_ADV_JITTER_MS;
+}
+
 static void refresh_lobby_count_locked(void)
 {
     uint8_t count = 0U;
@@ -246,6 +261,9 @@ static void clear_connection_state(void)
     s_ble.peer_cccd_handle = 0U;
     s_ble.peer_service_start = 0U;
     s_ble.peer_service_end = 0U;
+    s_ble.host_collision_deadline_ms = 0U;
+    s_ble.host_collision_round = 0U;
+    s_ble.host_collision_scanning = false;
     memset(s_ble.peer_address, 0, sizeof(s_ble.peer_address));
     portEXIT_CRITICAL(&s_lock);
     p4_mp_ble_reassembler_init(&s_ble.reassembler);
@@ -398,6 +416,27 @@ static int start_scanning(void)
     return result == BLE_HS_EALREADY ? 0 : result;
 }
 
+static int start_host_collision_scan(void)
+{
+    portENTER_CRITICAL(&s_lock);
+    const bool allowed = s_ble.status.enabled &&
+        s_ble.status.lobby_mode == PLATFORM_MULTIPLAYER_BLE_LOBBY_HOST &&
+        s_ble.host_collision_scanning && !s_ble.status.connected;
+    portEXIT_CRITICAL(&s_lock);
+    if (!allowed || ble_gap_disc_active()) {
+        return 0;
+    }
+    struct ble_gap_disc_params parameters = {0};
+    parameters.itvl = 48U;
+    parameters.window = 24U;
+    parameters.passive = 1U;
+    parameters.filter_duplicates = 0U;
+    const int result = ble_gap_disc(
+        s_ble.own_addr_type, BLE_HS_FOREVER,
+        &parameters, gap_event, NULL);
+    return result == BLE_HS_EALREADY ? 0 : result;
+}
+
 static void start_discovery(void)
 {
     if (!is_enabled()) {
@@ -405,6 +444,8 @@ static void start_discovery(void)
     }
     portENTER_CRITICAL(&s_lock);
     const bool connected = s_ble.status.connected;
+    const bool host_collision_scanning =
+        s_ble.host_collision_scanning;
     portEXIT_CRITICAL(&s_lock);
     if (connected) {
         return;
@@ -412,8 +453,19 @@ static void start_discovery(void)
     const platform_multiplayer_ble_lobby_mode_t mode = lobby_mode();
     int result = 0;
     if (mode == PLATFORM_MULTIPLAYER_BLE_LOBBY_HOST) {
-        (void)ble_gap_disc_cancel();
-        result = start_advertising();
+        if (host_collision_scanning) {
+            if (ble_gap_adv_active()) {
+                (void)ble_gap_adv_stop();
+                return;
+            }
+            result = start_host_collision_scan();
+        } else {
+            if (ble_gap_disc_active()) {
+                (void)ble_gap_disc_cancel();
+                return;
+            }
+            result = start_advertising();
+        }
     } else if (mode == PLATFORM_MULTIPLAYER_BLE_LOBBY_BROWSER) {
         (void)ble_gap_adv_stop();
         result = start_scanning();
@@ -463,12 +515,21 @@ static void observe_lobby(const struct ble_gap_disc_desc *discovery)
 {
     p4_mp_ble_lobby_beacon_t beacon;
     if (!is_enabled() ||
-        lobby_mode() != PLATFORM_MULTIPLAYER_BLE_LOBBY_BROWSER ||
         !decode_lobby_advertisement(discovery, &beacon)) {
         return;
     }
     portENTER_CRITICAL(&s_lock);
-    if (beacon.game_token != s_ble.status.lobby_game_token) {
+    const bool browser = s_ble.status.lobby_mode ==
+        PLATFORM_MULTIPLAYER_BLE_LOBBY_BROWSER;
+    const bool host_collision_scan = s_ble.status.lobby_mode ==
+            PLATFORM_MULTIPLAYER_BLE_LOBBY_HOST &&
+        s_ble.host_collision_scanning;
+    const bool game_matches =
+        s_ble.status.lobby_game_token == 0U ||
+        beacon.game_token == s_ble.status.lobby_game_token;
+    if ((!browser && !host_collision_scan) || !game_matches ||
+        (host_collision_scan &&
+         beacon.session_id == s_ble.status.lobby_session_id)) {
         portEXIT_CRITICAL(&s_lock);
         return;
     }
@@ -535,6 +596,7 @@ static void resume_lobby_after_connection_loss(void)
         s_ble.status.lobby_mode =
             PLATFORM_MULTIPLAYER_BLE_LOBBY_BROWSER;
         s_ble.status.lobby_session_id = 0U;
+        s_ble.status.lobby_game_token = 0U;
         s_ble.selected_host_valid = false;
         memset(s_ble.selected_host_address, 0,
                sizeof(s_ble.selected_host_address));
@@ -767,6 +829,8 @@ static void connected(uint16_t conn_handle)
     s_ble.status.subscribed = false;
     s_ble.status.route_id = p4_mp_ble_route_id(peer);
     s_ble.status.att_mtu = ble_att_mtu(conn_handle);
+    s_ble.host_collision_deadline_ms = 0U;
+    s_ble.host_collision_scanning = false;
     portEXIT_CRITICAL(&s_lock);
     set_state(PLATFORM_MULTIPLAYER_BLE_SECURING, 0);
 
@@ -970,10 +1034,11 @@ esp_err_t platform_multiplayer_ble_set_lobby_mode(
     uint32_t session_id,
     uint16_t game_token)
 {
+    const uint64_t now_ms = monotonic_ms();
     if ((mode == PLATFORM_MULTIPLAYER_BLE_LOBBY_IDLE &&
          (session_id != 0U || game_token != 0U)) ||
         (mode == PLATFORM_MULTIPLAYER_BLE_LOBBY_BROWSER &&
-         (session_id != 0U || game_token == 0U)) ||
+         session_id != 0U) ||
         (mode == PLATFORM_MULTIPLAYER_BLE_LOBBY_HOST &&
          (session_id == 0U || game_token == 0U)) ||
         mode == PLATFORM_MULTIPLAYER_BLE_LOBBY_CLIENT ||
@@ -991,6 +1056,12 @@ esp_err_t platform_multiplayer_ble_set_lobby_mode(
     s_ble.status.lobby_mode = mode;
     s_ble.status.lobby_session_id = session_id;
     s_ble.status.lobby_game_token = game_token;
+    s_ble.host_collision_round = 0U;
+    s_ble.host_collision_scanning = false;
+    s_ble.host_collision_deadline_ms =
+        mode == PLATFORM_MULTIPLAYER_BLE_LOBBY_HOST
+            ? now_ms + host_collision_advertise_ms(session_id, 0U)
+            : 0U;
     s_ble.selected_host_valid = false;
     memset(s_ble.selected_host_address, 0,
            sizeof(s_ble.selected_host_address));
@@ -1143,6 +1214,9 @@ void platform_multiplayer_ble_disable(void)
     s_ble.status.lobby_mode = PLATFORM_MULTIPLAYER_BLE_LOBBY_IDLE;
     s_ble.status.lobby_session_id = 0U;
     s_ble.status.lobby_game_token = 0U;
+    s_ble.host_collision_deadline_ms = 0U;
+    s_ble.host_collision_round = 0U;
+    s_ble.host_collision_scanning = false;
     clear_lobbies_locked();
     s_ble.selected_host_valid = false;
     const bool host_ready = s_ble.status.host_ready;
@@ -1162,9 +1236,59 @@ void platform_multiplayer_ble_disable(void)
 void platform_multiplayer_ble_poll(void)
 {
     const uint64_t now_ms = monotonic_ms();
+    bool collision_phase_changed = false;
+    bool host_collision_active = false;
+    bool host_collision_scanning = false;
+    uint32_t host_collision_round = 0U;
     portENTER_CRITICAL(&s_lock);
+    if (s_ble.status.enabled && s_ble.status.host_ready &&
+        s_ble.status.lobby_mode == PLATFORM_MULTIPLAYER_BLE_LOBBY_HOST &&
+        !s_ble.status.connected) {
+        host_collision_active = true;
+        if (s_ble.host_collision_deadline_ms == 0U) {
+            s_ble.host_collision_deadline_ms = now_ms +
+                host_collision_advertise_ms(
+                    s_ble.status.lobby_session_id,
+                    s_ble.host_collision_round);
+        } else if (now_ms >= s_ble.host_collision_deadline_ms) {
+            if (s_ble.host_collision_scanning) {
+                s_ble.host_collision_scanning = false;
+                ++s_ble.host_collision_round;
+                s_ble.host_collision_deadline_ms = now_ms +
+                    host_collision_advertise_ms(
+                        s_ble.status.lobby_session_id,
+                        s_ble.host_collision_round);
+            } else {
+                s_ble.host_collision_scanning = true;
+                s_ble.host_collision_deadline_ms = now_ms +
+                    P4_BLE_HOST_COLLISION_SCAN_MS;
+            }
+            collision_phase_changed = true;
+        }
+        host_collision_scanning = s_ble.host_collision_scanning;
+        host_collision_round = s_ble.host_collision_round;
+    }
     prune_lobbies_locked(now_ms);
     portEXIT_CRITICAL(&s_lock);
+
+    if (collision_phase_changed) {
+        ESP_LOGI(TAG,
+                 "P4_BLE_HOST_COLLISION_PHASE phase=%s round=%lu",
+                 host_collision_scanning ? "scan" : "advertise",
+                 (unsigned long)host_collision_round);
+    }
+    /*
+     * GAP stop completion callbacks are not guaranteed for an explicit stop.
+     * Keep driving the requested procedure until the controller reports the
+     * matching active state, so a transition cannot strand a host idle.
+     */
+    if (host_collision_active &&
+        (collision_phase_changed ||
+         (host_collision_scanning
+              ? (!ble_gap_disc_active() || ble_gap_adv_active())
+              : (!ble_gap_adv_active() || ble_gap_disc_active())))) {
+        start_discovery();
+    }
     if (s_ble.rx_queue == NULL) {
         return;
     }

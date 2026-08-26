@@ -104,6 +104,11 @@ enum {
     AUDIO_BUTTON_HEIGHT = 24,
     AUDIO_BOOT_TOP = 61,
     AUDIO_GAME_TOP = 112,
+    MULTIPLAYER_ROLE_TOP = 68,
+    MULTIPLAYER_ROLE_WIDTH = 146,
+    MULTIPLAYER_ROLE_HEIGHT = 82,
+    MULTIPLAYER_ROLE_HOST_LEFT = 8,
+    MULTIPLAYER_ROLE_JOIN_LEFT = 166,
     MULTIPLAYER_OPTION_LEFT = 8,
     MULTIPLAYER_OPTION_WIDTH = 304,
     MULTIPLAYER_OPTION_HEIGHT = 13,
@@ -123,6 +128,8 @@ enum {
     MULTIPLAYER_LAUNCH_TOP = 175,
     MULTIPLAYER_LAUNCH_WIDTH = 304,
     MULTIPLAYER_LAUNCH_HEIGHT = 21,
+    MULTIPLAYER_JOIN_ROOMS_TOP = 84,
+    MULTIPLAYER_JOIN_ROOM_HEIGHT = 20,
 };
 
 typedef struct {
@@ -262,6 +269,12 @@ enum {
     AUDIO_BOOT_PLUS_CONTROL,
     AUDIO_GAME_MINUS_CONTROL,
     AUDIO_GAME_PLUS_CONTROL,
+    MULTIPLAYER_ROLE_HOST_CONTROL,
+    MULTIPLAYER_ROLE_JOIN_CONTROL,
+    MULTIPLAYER_JOIN_ROOM_CONTROL_BASE,
+    MULTIPLAYER_JOIN_ROOM_CONTROL_LIMIT =
+        MULTIPLAYER_JOIN_ROOM_CONTROL_BASE +
+            CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX,
     MULTIPLAYER_OPTION_MINUS_CONTROL_BASE,
     MULTIPLAYER_OPTION_PLUS_CONTROL_BASE =
         MULTIPLAYER_OPTION_MINUS_CONTROL_BASE +
@@ -429,6 +442,8 @@ bool console_shell_init(console_shell_t *shell,
     shell->page = CONSOLE_PAGE_HOME;
     shell->color_mode = CONSOLE_COLOR_MODE_GAMECHANGERS;
     shell->multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_COUNT;
+    shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_ROLE;
+    shell->multiplayer_role_selection = 0U;
     p4_achievement_catalog_init(&shell->achievements);
     p4_file_list_init(&shell->desktop_files);
     p4_save_catalog_init(&shell->saves, false);
@@ -490,7 +505,8 @@ typedef struct {
 
 static bool multiplayer_uses_inline_lobby_panel(const console_shell_t *shell)
 {
-    return shell != NULL;
+    return shell != NULL &&
+        shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_JOIN;
 }
 
 static multiplayer_option_layout_t multiplayer_option_layout(
@@ -509,10 +525,9 @@ static multiplayer_option_layout_t multiplayer_option_layout(
         layout.top = MULTIPLAYER_TRANSPORT_TOP;
         break;
     case CONSOLE_MULTIPLAYER_OPTION_LOBBY:
-        if (inline_lobby_panel) {
-            layout.width = 0U;
-            layout.height = 0U;
-        }
+        (void)inline_lobby_panel;
+        layout.width = 0U;
+        layout.height = 0U;
         break;
     case CONSOLE_MULTIPLAYER_OPTION_MODE:
         layout.top = MULTIPLAYER_MODE_TOP;
@@ -585,9 +600,21 @@ static const size_t s_multiplayer_native_navigation_rows[] = {
     CONSOLE_MULTIPLAYER_OPTION_COUNT,
 };
 
+static const size_t s_multiplayer_join_navigation_rows[] = {
+    CONSOLE_MULTIPLAYER_OPTION_TRANSPORT,
+    CONSOLE_MULTIPLAYER_OPTION_LOBBY,
+    CONSOLE_MULTIPLAYER_OPTION_COUNT,
+};
+
 static const size_t *multiplayer_navigation_rows(
     const console_shell_t *shell, size_t *count)
 {
+    if (shell != NULL &&
+        shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_JOIN) {
+        *count = sizeof(s_multiplayer_join_navigation_rows) /
+            sizeof(s_multiplayer_join_navigation_rows[0]);
+        return s_multiplayer_join_navigation_rows;
+    }
     if (shell != NULL && !shell->runtime.multiplayer_game_is_doom) {
         *count = sizeof(s_multiplayer_native_navigation_rows) /
             sizeof(s_multiplayer_native_navigation_rows[0]);
@@ -1301,11 +1328,7 @@ static console_shell_action_t multiplayer_config_action(
         shell->runtime.multiplayer_launch_syncing || delta == 0) {
         return no_action();
     }
-    shell->multiplayer_selected_row =
-        option == CONSOLE_MULTIPLAYER_OPTION_LOBBY &&
-        multiplayer_uses_inline_lobby_panel(shell)
-            ? (size_t)CONSOLE_MULTIPLAYER_OPTION_COUNT
-            : (size_t)option;
+    shell->multiplayer_selected_row = (size_t)option;
     shell->dirty = true;
     const console_shell_action_t action = {
         .type = CONSOLE_ACTION_MULTIPLAYER_CONFIGURE,
@@ -1317,6 +1340,60 @@ static console_shell_action_t multiplayer_config_action(
     return action;
 }
 
+static console_shell_action_t multiplayer_lobby_select_action(
+    console_shell_t *shell, uint8_t selection)
+{
+    if (shell == NULL || selection == 0U ||
+        selection > shell->runtime.multiplayer_lobby_count ||
+        selection > CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX ||
+        !shell->runtime.multiplayer_settings_editable ||
+        shell->runtime.multiplayer_launch_syncing) {
+        return no_action();
+    }
+    shell->multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_LOBBY;
+    shell->dirty = true;
+    return (console_shell_action_t){
+        .type = CONSOLE_ACTION_MULTIPLAYER_LOBBY_SELECT,
+        .app_id = shell->active_app_id,
+        .file_source_index = UINT32_MAX,
+        .multiplayer_lobby_selection = selection,
+    };
+}
+
+static console_shell_action_t enter_multiplayer_view(
+    console_shell_t *shell, console_multiplayer_view_t view)
+{
+    if (shell == NULL || view == CONSOLE_MULTIPLAYER_VIEW_ROLE ||
+        view > CONSOLE_MULTIPLAYER_VIEW_JOIN) {
+        return no_action();
+    }
+    shell->multiplayer_view = view;
+    shell->multiplayer_role_selection =
+        view == CONSOLE_MULTIPLAYER_VIEW_JOIN ? 1U : 0U;
+    shell->multiplayer_selected_row =
+        view == CONSOLE_MULTIPLAYER_VIEW_JOIN
+            ? (size_t)CONSOLE_MULTIPLAYER_OPTION_LOBBY
+            : (size_t)CONSOLE_MULTIPLAYER_OPTION_GAME;
+    shell->dirty = true;
+    return page_changed(shell->active_app_id);
+}
+
+static console_shell_action_t leave_multiplayer_view(console_shell_t *shell)
+{
+    if (shell == NULL ||
+        shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_ROLE) {
+        return no_action();
+    }
+    shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_ROLE;
+    shell->multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_COUNT;
+    shell->dirty = true;
+    return (console_shell_action_t){
+        .type = CONSOLE_ACTION_MULTIPLAYER_LOBBY_RESET,
+        .app_id = shell->active_app_id,
+        .file_source_index = UINT32_MAX,
+    };
+}
+
 static console_shell_action_t multiplayer_primary_action(
     const console_shell_t *shell)
 {
@@ -1324,18 +1401,32 @@ static console_shell_action_t multiplayer_primary_action(
         !shell->runtime.multiplayer_game_ready) {
         return no_action();
     }
-    if (shell->runtime.multiplayer_can_start) {
+    if (shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_HOST &&
+        shell->runtime.multiplayer_can_start) {
         return (console_shell_action_t){
             .type = CONSOLE_ACTION_MULTIPLAYER_LAUNCH_GAME,
             .app_id = shell->active_app_id,
             .file_source_index = UINT32_MAX,
         };
     }
-    if (!shell->runtime.multiplayer_lobby_action_enabled) {
+    if (!shell->runtime.multiplayer_lobby_action_enabled ||
+        shell->runtime.multiplayer_lobby_phase !=
+            CONSOLE_MULTIPLAYER_LOBBY_BROWSING) {
+        return no_action();
+    }
+    if (shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_HOST) {
+        return (console_shell_action_t){
+            .type = CONSOLE_ACTION_MULTIPLAYER_CREATE_LOBBY,
+            .app_id = shell->active_app_id,
+            .file_source_index = UINT32_MAX,
+        };
+    }
+    if (shell->multiplayer_view != CONSOLE_MULTIPLAYER_VIEW_JOIN ||
+        shell->runtime.multiplayer_lobby_selection == 0U) {
         return no_action();
     }
     return (console_shell_action_t){
-        .type = CONSOLE_ACTION_MULTIPLAYER_LOBBY_PRIMARY,
+        .type = CONSOLE_ACTION_MULTIPLAYER_JOIN_LOBBY,
         .app_id = shell->active_app_id,
         .file_source_index = UINT32_MAX,
     };
@@ -1457,11 +1548,32 @@ static size_t control_at(const console_shell_t *shell,
         }
         if (shell->page == CONSOLE_PAGE_MULTIPLAYER &&
             !shell->runtime.multiplayer_launch_syncing) {
+            if (shell->multiplayer_view ==
+                    CONSOLE_MULTIPLAYER_VIEW_ROLE) {
+                if (point_in_rect(
+                        gui_x, gui_y, MULTIPLAYER_ROLE_HOST_LEFT,
+                        MULTIPLAYER_ROLE_TOP, MULTIPLAYER_ROLE_WIDTH,
+                        MULTIPLAYER_ROLE_HEIGHT)) {
+                    return MULTIPLAYER_ROLE_HOST_CONTROL;
+                }
+                if (point_in_rect(
+                        gui_x, gui_y, MULTIPLAYER_ROLE_JOIN_LEFT,
+                        MULTIPLAYER_ROLE_TOP, MULTIPLAYER_ROLE_WIDTH,
+                        MULTIPLAYER_ROLE_HEIGHT)) {
+                    return MULTIPLAYER_ROLE_JOIN_CONTROL;
+                }
+                return SIZE_MAX;
+            }
             const bool inline_lobby_panel =
                 multiplayer_uses_inline_lobby_panel(shell);
             if (shell->runtime.multiplayer_settings_editable) {
                 for (size_t option = 0U;
                      option < CONSOLE_MULTIPLAYER_OPTION_COUNT; ++option) {
+                    if (shell->multiplayer_view ==
+                            CONSOLE_MULTIPLAYER_VIEW_JOIN &&
+                        option != CONSOLE_MULTIPLAYER_OPTION_TRANSPORT) {
+                        continue;
+                    }
                     if (!shell->runtime.multiplayer_game_is_doom &&
                         option != CONSOLE_MULTIPLAYER_OPTION_GAME &&
                         option != CONSOLE_MULTIPLAYER_OPTION_TRANSPORT &&
@@ -1482,28 +1594,43 @@ static size_t control_at(const console_shell_t *shell,
                         : MULTIPLAYER_OPTION_PLUS_CONTROL_BASE + option;
                 }
             }
+            if (shell->multiplayer_view ==
+                    CONSOLE_MULTIPLAYER_VIEW_JOIN) {
+                const size_t count =
+                    shell->runtime.multiplayer_lobby_count <
+                            CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX
+                        ? shell->runtime.multiplayer_lobby_count
+                        : CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX;
+                for (size_t index = 0U; index < count; ++index) {
+                    if (point_in_rect(
+                            gui_x, gui_y, MULTIPLAYER_OPTION_LEFT,
+                            MULTIPLAYER_JOIN_ROOMS_TOP +
+                                (unsigned)index *
+                                    MULTIPLAYER_JOIN_ROOM_HEIGHT,
+                            MULTIPLAYER_OPTION_WIDTH,
+                            MULTIPLAYER_JOIN_ROOM_HEIGHT - 1U)) {
+                        return MULTIPLAYER_JOIN_ROOM_CONTROL_BASE + index;
+                    }
+                }
+            }
             const multiplayer_option_layout_t launch_layout =
                 multiplayer_launch_layout(inline_lobby_panel);
             if (point_in_rect(
                     gui_x, gui_y, launch_layout.left, launch_layout.top,
                     launch_layout.width, launch_layout.height)) {
-                if (inline_lobby_panel &&
-                    shell->runtime.multiplayer_lobby_phase ==
-                        CONSOLE_MULTIPLAYER_LOBBY_BROWSING &&
-                    shell->runtime.multiplayer_settings_editable) {
-                    const unsigned edge_width = launch_layout.width / 4U;
-                    if (gui_x < launch_layout.left + edge_width) {
-                        return MULTIPLAYER_OPTION_MINUS_CONTROL_BASE +
-                            CONSOLE_MULTIPLAYER_OPTION_LOBBY;
-                    }
-                    if (gui_x >= launch_layout.left +
-                            launch_layout.width - edge_width) {
-                        return MULTIPLAYER_OPTION_PLUS_CONTROL_BASE +
-                            CONSOLE_MULTIPLAYER_OPTION_LOBBY;
-                    }
-                }
-                if ((shell->runtime.multiplayer_lobby_action_enabled ||
-                     shell->runtime.multiplayer_can_start) &&
+                const bool primary_enabled =
+                    shell->multiplayer_view ==
+                            CONSOLE_MULTIPLAYER_VIEW_HOST
+                        ? (shell->runtime.multiplayer_can_start ||
+                           (shell->runtime.multiplayer_lobby_phase ==
+                                CONSOLE_MULTIPLAYER_LOBBY_BROWSING &&
+                            shell->runtime
+                                .multiplayer_lobby_action_enabled))
+                        : (shell->runtime.multiplayer_lobby_phase ==
+                                CONSOLE_MULTIPLAYER_LOBBY_BROWSING &&
+                           shell->runtime.multiplayer_lobby_action_enabled &&
+                           shell->runtime.multiplayer_lobby_selection > 0U);
+                if (primary_enabled &&
                     shell->runtime.multiplayer_game_ready) {
                     return MULTIPLAYER_LAUNCH_CONTROL;
                 }
@@ -1775,6 +1902,8 @@ static console_shell_action_t activate_home_selection(console_shell_t *shell)
     shell->page = app->page;
     shell->active_app_id = app->id;
     if (app->page == CONSOLE_PAGE_MULTIPLAYER) {
+        shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_ROLE;
+        shell->multiplayer_role_selection = 0U;
         shell->multiplayer_selected_row =
             CONSOLE_MULTIPLAYER_OPTION_COUNT;
     }
@@ -1895,6 +2024,10 @@ console_shell_action_t console_shell_handle_buttons(
                 return page_changed(0U);
             }
             return no_action();
+        }
+        if (shell->page == CONSOLE_PAGE_MULTIPLAYER &&
+            shell->multiplayer_view != CONSOLE_MULTIPLAYER_VIEW_ROLE) {
+            return leave_multiplayer_view(shell);
         }
         if ((shell->page == CONSOLE_PAGE_FILES ||
              shell->page == CONSOLE_PAGE_GAMES) &&
@@ -2068,6 +2201,27 @@ console_shell_action_t console_shell_handle_buttons(
     }
 
     if (shell->page == CONSOLE_PAGE_MULTIPLAYER) {
+        if (shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_ROLE) {
+            if ((pressed & (CONSOLE_BUTTON_LEFT | CONSOLE_BUTTON_UP)) !=
+                0U) {
+                shell->multiplayer_role_selection = 0U;
+                shell->dirty = true;
+                return page_changed(shell->active_app_id);
+            }
+            if ((pressed & (CONSOLE_BUTTON_RIGHT | CONSOLE_BUTTON_DOWN)) !=
+                0U) {
+                shell->multiplayer_role_selection = 1U;
+                shell->dirty = true;
+                return page_changed(shell->active_app_id);
+            }
+            if ((pressed & CONSOLE_BUTTON_ACCEPT) != 0U) {
+                return enter_multiplayer_view(
+                    shell, shell->multiplayer_role_selection == 0U
+                        ? CONSOLE_MULTIPLAYER_VIEW_HOST
+                        : CONSOLE_MULTIPLAYER_VIEW_JOIN);
+            }
+            return no_action();
+        }
         if ((pressed & CONSOLE_BUTTON_UP) != 0U) {
             move_multiplayer_selection(shell, -1);
             shell->dirty = true;
@@ -2077,6 +2231,19 @@ console_shell_action_t console_shell_handle_buttons(
             move_multiplayer_selection(shell, 1);
             shell->dirty = true;
             return page_changed(shell->active_app_id);
+        }
+        if (shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_JOIN &&
+            shell->multiplayer_selected_row ==
+                CONSOLE_MULTIPLAYER_OPTION_LOBBY) {
+            if ((pressed & (CONSOLE_BUTTON_LEFT |
+                            CONSOLE_BUTTON_RIGHT)) != 0U) {
+                return multiplayer_config_action(
+                    shell, CONSOLE_MULTIPLAYER_OPTION_LOBBY,
+                    (pressed & CONSOLE_BUTTON_LEFT) != 0U ? -1 : 1);
+            }
+            if ((pressed & CONSOLE_BUTTON_ACCEPT) != 0U) {
+                return multiplayer_primary_action(shell);
+            }
         }
         if (shell->multiplayer_selected_row <
                 CONSOLE_MULTIPLAYER_OPTION_COUNT &&
@@ -2089,17 +2256,6 @@ console_shell_action_t console_shell_handle_buttons(
                 (console_multiplayer_option_t)
                     shell->multiplayer_selected_row,
                 delta);
-        }
-        if (shell->multiplayer_selected_row ==
-                CONSOLE_MULTIPLAYER_OPTION_COUNT &&
-            multiplayer_uses_inline_lobby_panel(shell) &&
-            shell->runtime.multiplayer_lobby_phase ==
-                CONSOLE_MULTIPLAYER_LOBBY_BROWSING &&
-            (pressed & (CONSOLE_BUTTON_LEFT |
-                        CONSOLE_BUTTON_RIGHT)) != 0U) {
-            return multiplayer_config_action(
-                shell, CONSOLE_MULTIPLAYER_OPTION_LOBBY,
-                (pressed & CONSOLE_BUTTON_LEFT) != 0U ? -1 : 1);
         }
         if (shell->multiplayer_selected_row ==
                 CONSOLE_MULTIPLAYER_OPTION_COUNT &&
@@ -2328,6 +2484,11 @@ console_shell_action_t console_shell_handle_touch(
         shell->pressed_index = SIZE_MAX;
         shell->dirty = true;
         if (released_control == BACK_CONTROL) {
+            if (shell->page == CONSOLE_PAGE_MULTIPLAYER &&
+                shell->multiplayer_view !=
+                    CONSOLE_MULTIPLAYER_VIEW_ROLE) {
+                return leave_multiplayer_view(shell);
+            }
             if (shell->page == CONSOLE_PAGE_FILES &&
                 shell->files.can_go_up) {
                 const console_shell_action_t action = {
@@ -2426,6 +2587,23 @@ console_shell_action_t console_shell_handle_touch(
             }
         }
         if (shell->page == CONSOLE_PAGE_MULTIPLAYER) {
+            if (released_control == MULTIPLAYER_ROLE_HOST_CONTROL) {
+                return enter_multiplayer_view(
+                    shell, CONSOLE_MULTIPLAYER_VIEW_HOST);
+            }
+            if (released_control == MULTIPLAYER_ROLE_JOIN_CONTROL) {
+                return enter_multiplayer_view(
+                    shell, CONSOLE_MULTIPLAYER_VIEW_JOIN);
+            }
+            if (released_control >=
+                    MULTIPLAYER_JOIN_ROOM_CONTROL_BASE &&
+                released_control <
+                    MULTIPLAYER_JOIN_ROOM_CONTROL_LIMIT) {
+                return multiplayer_lobby_select_action(
+                    shell,
+                    (uint8_t)(released_control -
+                        MULTIPLAYER_JOIN_ROOM_CONTROL_BASE + 1U));
+            }
             if (released_control >=
                     MULTIPLAYER_OPTION_MINUS_CONTROL_BASE &&
                 released_control <
@@ -2607,6 +2785,8 @@ console_shell_action_t console_shell_handle_touch(
         shell->page = app->page;
         shell->active_app_id = app->id;
         if (app->page == CONSOLE_PAGE_MULTIPLAYER) {
+            shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_ROLE;
+            shell->multiplayer_role_selection = 0U;
             shell->multiplayer_selected_row =
                 CONSOLE_MULTIPLAYER_OPTION_COUNT;
         }
@@ -2805,6 +2985,8 @@ void console_shell_set_runtime_info(
             runtime->multiplayer_lobby_ready ||
         shell->runtime.multiplayer_lobby_is_host !=
             runtime->multiplayer_lobby_is_host ||
+        shell->runtime.multiplayer_lobby_scanning !=
+            runtime->multiplayer_lobby_scanning ||
         shell->runtime.multiplayer_lobby_action_enabled !=
             runtime->multiplayer_lobby_action_enabled ||
         shell->runtime.multiplayer_can_start !=
@@ -2834,6 +3016,9 @@ void console_shell_set_runtime_info(
             runtime->multiplayer_lobby_rssi ||
         shell->runtime.multiplayer_lobby_session_id !=
             runtime->multiplayer_lobby_session_id ||
+        memcmp(shell->runtime.multiplayer_lobbies,
+               runtime->multiplayer_lobbies,
+               sizeof(runtime->multiplayer_lobbies)) != 0 ||
         shell->runtime.multiplayer_route_id !=
             runtime->multiplayer_route_id ||
         shell->runtime.multiplayer_player_slot !=
@@ -2914,8 +3099,9 @@ void console_shell_set_runtime_info(
             runtime->usb_input_host_active ||
         shell->runtime.doom_wad_ready != runtime->doom_wad_ready;
     shell->runtime = *runtime;
-    if (shell->multiplayer_selected_row ==
-        CONSOLE_MULTIPLAYER_OPTION_LOBBY) {
+    if (shell->multiplayer_view != CONSOLE_MULTIPLAYER_VIEW_JOIN &&
+        shell->multiplayer_selected_row ==
+            CONSOLE_MULTIPLAYER_OPTION_LOBBY) {
         shell->multiplayer_selected_row =
             CONSOLE_MULTIPLAYER_OPTION_COUNT;
     } else if (!shell->runtime.multiplayer_game_is_doom &&
@@ -2923,6 +3109,10 @@ void console_shell_set_runtime_info(
                    CONSOLE_MULTIPLAYER_OPTION_TRANSPORT &&
                shell->multiplayer_selected_row !=
                    CONSOLE_MULTIPLAYER_OPTION_GAME &&
+               !(shell->multiplayer_view ==
+                     CONSOLE_MULTIPLAYER_VIEW_JOIN &&
+                 shell->multiplayer_selected_row ==
+                     CONSOLE_MULTIPLAYER_OPTION_LOBBY) &&
                shell->multiplayer_selected_row !=
                    CONSOLE_MULTIPLAYER_OPTION_COUNT) {
         shell->multiplayer_selected_row =
@@ -3653,7 +3843,12 @@ static void draw_detail_header(console_shell_t *shell,
                  BACK_WIDTH, BACK_HEIGHT, COLOR_CYAN);
     draw_text(pixels, stride, BACK_LEFT + 6, BACK_TOP + 6,
               shell->page == CONSOLE_PAGE_FILES && shell->files.can_go_up
-                  ? "< UP" : "< HOME",
+                  ? "< UP"
+                  : shell->page == CONSOLE_PAGE_MULTIPLAYER &&
+                            shell->multiplayer_view !=
+                                CONSOLE_MULTIPLAYER_VIEW_ROLE
+                      ? "< ROLES"
+                      : "< HOME",
               COLOR_WHITE, 1U, 6U);
     const console_app_descriptor_t *const app = active_app(shell);
     draw_text(pixels, stride, 68, 11,
@@ -4826,9 +5021,208 @@ static void draw_multiplayer_option(
               1U, 30U);
 }
 
+static void draw_multiplayer_role(const console_shell_t *shell,
+                                  uint16_t *pixels, size_t stride)
+{
+    const bool ble = shell->runtime.multiplayer_transport_kind == 1U;
+    draw_text(pixels, stride, 8, 37, "MULTIPLAYER",
+              COLOR_WHITE, 2U, 11U);
+    draw_centered_text(pixels, stride, 8, 55, 304,
+                       "CHOOSE A ROLE", COLOR_CYAN, 13U);
+
+    const bool host_selected = shell->multiplayer_role_selection == 0U;
+    const bool join_selected = !host_selected;
+    const bool host_pressed = shell->press_active &&
+        shell->pressed_index == MULTIPLAYER_ROLE_HOST_CONTROL;
+    const bool join_pressed = shell->press_active &&
+        shell->pressed_index == MULTIPLAYER_ROLE_JOIN_CONTROL;
+    bevel_rect(pixels, stride, MULTIPLAYER_ROLE_HOST_LEFT,
+               MULTIPLAYER_ROLE_TOP, MULTIPLAYER_ROLE_WIDTH,
+               MULTIPLAYER_ROLE_HEIGHT, COLOR_PANEL, host_pressed);
+    bevel_rect(pixels, stride, MULTIPLAYER_ROLE_JOIN_LEFT,
+               MULTIPLAYER_ROLE_TOP, MULTIPLAYER_ROLE_WIDTH,
+               MULTIPLAYER_ROLE_HEIGHT, COLOR_PANEL, join_pressed);
+    if (host_selected) {
+        outline_rect(pixels, stride, MULTIPLAYER_ROLE_HOST_LEFT,
+                     MULTIPLAYER_ROLE_TOP, MULTIPLAYER_ROLE_WIDTH,
+                     MULTIPLAYER_ROLE_HEIGHT, COLOR_YELLOW);
+    }
+    if (join_selected) {
+        outline_rect(pixels, stride, MULTIPLAYER_ROLE_JOIN_LEFT,
+                     MULTIPLAYER_ROLE_TOP, MULTIPLAYER_ROLE_WIDTH,
+                     MULTIPLAYER_ROLE_HEIGHT, COLOR_YELLOW);
+    }
+    draw_text(pixels, stride, MULTIPLAYER_ROLE_HOST_LEFT + 49,
+              MULTIPLAYER_ROLE_TOP + 15, "HOST",
+              host_selected ? COLOR_YELLOW : COLOR_WHITE, 2U, 4U);
+    draw_centered_text(
+        pixels, stride, MULTIPLAYER_ROLE_HOST_LEFT + 4,
+        MULTIPLAYER_ROLE_TOP + 49, MULTIPLAYER_ROLE_WIDTH - 8,
+        "SET UP + OPEN ROOM",
+        host_selected ? COLOR_WHITE : COLOR_MUTED, 18U);
+    draw_text(pixels, stride, MULTIPLAYER_ROLE_JOIN_LEFT + 49,
+              MULTIPLAYER_ROLE_TOP + 15, "JOIN",
+              join_selected ? COLOR_YELLOW : COLOR_WHITE, 2U, 4U);
+    draw_centered_text(
+        pixels, stride, MULTIPLAYER_ROLE_JOIN_LEFT + 4,
+        MULTIPLAYER_ROLE_TOP + 49, MULTIPLAYER_ROLE_WIDTH - 8,
+        "FIND OPEN GAMES",
+        join_selected ? COLOR_WHITE : COLOR_MUTED, 15U);
+
+    char link[20];
+    (void)snprintf(link, sizeof(link), "CURRENT LINK: %s",
+                   ble ? "BLE" : "WIRED");
+    draw_centered_text(pixels, stride, 8, 169, 304, link,
+                       ble ? COLOR_GREEN : COLOR_WHITE, 19U);
+    draw_centered_text(pixels, stride, 8, 184, 304,
+                       "A / TAP TO CONTINUE", COLOR_MUTED, 21U);
+}
+
+static void draw_multiplayer_join(const console_shell_t *shell,
+                                  uint16_t *pixels, size_t stride)
+{
+    const bool ble = shell->runtime.multiplayer_transport_kind == 1U;
+    draw_text(pixels, stride, 8, 37, "JOIN GAME",
+              COLOR_WHITE, 2U, 9U);
+    draw_text(pixels, stride, 241, 39,
+              shell->runtime.multiplayer_transport_ready
+                  ? "READY" : "START",
+              shell->runtime.multiplayer_transport_ready
+                  ? COLOR_GREEN : COLOR_YELLOW,
+              1U, 7U);
+
+    draw_multiplayer_option(
+        shell, pixels, stride, CONSOLE_MULTIPLAYER_OPTION_TRANSPORT,
+        "LINK", ble ? "BLE" : "WIRED AUTO");
+    draw_text(pixels, stride, 12, 75, "GAME", COLOR_CYAN, 1U, 4U);
+    draw_text(pixels, stride, 116, 75, "ROOM ID", COLOR_CYAN, 1U, 7U);
+    draw_text(pixels, stride, 226, 75, "PLAY", COLOR_CYAN, 1U, 4U);
+    draw_text(pixels, stride, 275, 75, "SIG", COLOR_CYAN, 1U, 3U);
+    fill_rect(pixels, stride, 8, 82, 304, 1, COLOR_GROUP);
+
+    const size_t count = shell->runtime.multiplayer_lobby_count <
+            CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX
+        ? shell->runtime.multiplayer_lobby_count
+        : CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX;
+    if (count == 0U) {
+        draw_centered_text(
+            pixels, stride, 8, 119, 304,
+            shell->runtime.multiplayer_lobby_scanning
+                ? "SEARCHING FOR OPEN GAMES..." : "NO OPEN GAMES",
+            shell->runtime.multiplayer_lobby_scanning
+                ? COLOR_YELLOW : COLOR_MUTED,
+            27U);
+    }
+    for (size_t index = 0U; index < count; ++index) {
+        const int top = MULTIPLAYER_JOIN_ROOMS_TOP +
+            (int)index * MULTIPLAYER_JOIN_ROOM_HEIGHT;
+        const bool active =
+            shell->runtime.multiplayer_lobby_selection == index + 1U;
+        const bool focused = shell->multiplayer_selected_row ==
+            CONSOLE_MULTIPLAYER_OPTION_LOBBY && active;
+        const bool pressed = shell->press_active &&
+            shell->pressed_index ==
+                MULTIPLAYER_JOIN_ROOM_CONTROL_BASE + index;
+        fill_rect(pixels, stride, MULTIPLAYER_OPTION_LEFT, top,
+                  MULTIPLAYER_OPTION_WIDTH,
+                  MULTIPLAYER_JOIN_ROOM_HEIGHT - 1,
+                  pressed ? COLOR_PANEL_PRESSED : COLOR_PANEL);
+        outline_rect(pixels, stride, MULTIPLAYER_OPTION_LEFT, top,
+                     MULTIPLAYER_OPTION_WIDTH,
+                     MULTIPLAYER_JOIN_ROOM_HEIGHT - 1,
+                     focused ? COLOR_WHITE
+                             : active ? COLOR_YELLOW : COLOR_GROUP);
+        const console_multiplayer_lobby_display_t *const lobby =
+            &shell->runtime.multiplayer_lobbies[index];
+        draw_text(pixels, stride, 14, top + 6,
+                  lobby->game_title[0] == '\0'
+                      ? "UNKNOWN" : lobby->game_title,
+                  !lobby->game_available
+                      ? COLOR_RED : active ? COLOR_YELLOW : COLOR_WHITE,
+                  1U, 16U);
+        char room[12];
+        (void)snprintf(
+            room, sizeof(room), "#%08lX",
+            (unsigned long)lobby->session_id);
+        draw_text(pixels, stride, 116, top + 6, room,
+                  active ? COLOR_YELLOW : COLOR_WHITE, 1U, 9U);
+        char players[8];
+        (void)snprintf(
+            players, sizeof(players), "%u/%u",
+            (unsigned)lobby->players_present,
+            (unsigned)lobby->player_capacity);
+        draw_text(pixels, stride, 232, top + 6, players,
+                  active ? COLOR_YELLOW : COLOR_WHITE, 1U, 3U);
+        unsigned signal = 0U;
+        if (lobby->rssi == 0 || lobby->rssi >= -55) {
+            signal = 4U;
+        } else if (lobby->rssi >= -67) {
+            signal = 3U;
+        } else if (lobby->rssi >= -78) {
+            signal = 2U;
+        } else {
+            signal = 1U;
+        }
+        char signal_text[4];
+        (void)snprintf(signal_text, sizeof(signal_text), "%u/4", signal);
+        draw_text(pixels, stride, 274, top + 6, signal_text,
+                  signal >= 2U ? COLOR_GREEN : COLOR_RED, 1U, 3U);
+    }
+
+    const bool launch_selected = shell->multiplayer_selected_row ==
+        CONSOLE_MULTIPLAYER_OPTION_COUNT;
+    const bool launch_enabled = shell->runtime.multiplayer_game_ready &&
+        !shell->runtime.multiplayer_launch_syncing &&
+        shell->runtime.multiplayer_lobby_phase ==
+            CONSOLE_MULTIPLAYER_LOBBY_BROWSING &&
+        shell->runtime.multiplayer_lobby_action_enabled &&
+        shell->runtime.multiplayer_lobby_selection > 0U;
+    const bool launch_pressed = shell->press_active &&
+        shell->pressed_index == MULTIPLAYER_LAUNCH_CONTROL;
+    bevel_rect(pixels, stride, MULTIPLAYER_LAUNCH_LEFT,
+               MULTIPLAYER_LAUNCH_TOP, MULTIPLAYER_LAUNCH_WIDTH,
+               MULTIPLAYER_LAUNCH_HEIGHT,
+               launch_enabled ? COLOR_YELLOW : COLOR_FACE,
+               launch_pressed);
+    if (launch_selected) {
+        outline_rect(pixels, stride, MULTIPLAYER_LAUNCH_LEFT,
+                     MULTIPLAYER_LAUNCH_TOP, MULTIPLAYER_LAUNCH_WIDTH,
+                     MULTIPLAYER_LAUNCH_HEIGHT,
+                     launch_enabled ? COLOR_WHITE : COLOR_YELLOW);
+    }
+    const char *label = "SELECT A ROOM";
+    if (shell->runtime.multiplayer_lobby_phase ==
+        CONSOLE_MULTIPLAYER_LOBBY_JOINING) {
+        label = "CONNECTING TO ROOM...";
+    } else if (shell->runtime.multiplayer_lobby_phase ==
+               CONSOLE_MULTIPLAYER_LOBBY_CONNECTED) {
+        label = "JOINED - WAITING FOR HOST";
+    } else if (shell->runtime.multiplayer_lobby_scanning) {
+        label = "SEARCHING FOR OPEN ROOMS...";
+    } else if (shell->runtime.multiplayer_lobby_selection > 0U) {
+        const size_t selected =
+            shell->runtime.multiplayer_lobby_selection - 1U;
+        label = selected < count &&
+                !shell->runtime.multiplayer_lobbies[selected].game_available
+            ? "GAME NOT INSTALLED" : "JOIN SELECTED";
+    }
+    draw_centered_text(pixels, stride, MULTIPLAYER_LAUNCH_LEFT,
+                       MULTIPLAYER_LAUNCH_TOP + 7,
+                       MULTIPLAYER_LAUNCH_WIDTH, label,
+                       launch_enabled ? COLOR_BLACK : COLOR_DARK, 31U);
+}
+
 static void draw_multiplayer(const console_shell_t *shell,
                              uint16_t *pixels, size_t stride)
 {
+    if (shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_ROLE) {
+        draw_multiplayer_role(shell, pixels, stride);
+        return;
+    }
+    if (shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_JOIN) {
+        draw_multiplayer_join(shell, pixels, stride);
+        return;
+    }
     const bool ble = shell->runtime.multiplayer_transport_kind == 1U;
     const char *const link = ble
         ? "BLE"
@@ -4841,8 +5235,8 @@ static void draw_multiplayer(const console_shell_t *shell,
     char link_status[16];
     (void)snprintf(link_status, sizeof(link_status), "%s %s",
                    link, link_state);
-    draw_text(pixels, stride, 8, 35, "MULTIPLAYER",
-              COLOR_WHITE, 2U, 11U);
+    draw_text(pixels, stride, 8, 35, "HOST GAME",
+              COLOR_WHITE, 2U, 9U);
     draw_text(pixels, stride, 218, 36, link_status,
               shell->runtime.multiplayer_transport_ready
                   ? COLOR_GREEN : COLOR_RED,
@@ -4938,22 +5332,14 @@ static void draw_multiplayer(const console_shell_t *shell,
 
     const bool launch_selected = shell->multiplayer_selected_row ==
         CONSOLE_MULTIPLAYER_OPTION_COUNT;
-    const bool inline_lobby_browsing =
-        shell->runtime.multiplayer_lobby_phase ==
-            CONSOLE_MULTIPLAYER_LOBBY_BROWSING;
     const bool launch_pressed = shell->press_active &&
-        (shell->pressed_index == MULTIPLAYER_LAUNCH_CONTROL ||
-         (inline_lobby_browsing &&
-          (shell->pressed_index ==
-               MULTIPLAYER_OPTION_MINUS_CONTROL_BASE +
-                   CONSOLE_MULTIPLAYER_OPTION_LOBBY ||
-           shell->pressed_index ==
-               MULTIPLAYER_OPTION_PLUS_CONTROL_BASE +
-                   CONSOLE_MULTIPLAYER_OPTION_LOBBY)));
+        shell->pressed_index == MULTIPLAYER_LAUNCH_CONTROL;
     const bool launch_enabled = shell->runtime.multiplayer_game_ready &&
         !shell->runtime.multiplayer_launch_syncing &&
         (shell->runtime.multiplayer_can_start ||
-         shell->runtime.multiplayer_lobby_action_enabled);
+         (shell->runtime.multiplayer_lobby_phase ==
+              CONSOLE_MULTIPLAYER_LOBBY_BROWSING &&
+          shell->runtime.multiplayer_lobby_action_enabled));
     const multiplayer_option_layout_t launch_layout =
         multiplayer_launch_layout(true);
     bevel_rect(pixels, stride, (int)launch_layout.left,
@@ -4984,22 +5370,12 @@ static void draw_multiplayer(const console_shell_t *shell,
                CONSOLE_MULTIPLAYER_LOBBY_HOSTING) {
         strcpy(launch, "ROOM OPEN - WAITING FOR PLAYER");
     } else if (shell->runtime.multiplayer_lobby_phase ==
-               CONSOLE_MULTIPLAYER_LOBBY_JOINING) {
-        strcpy(launch, "CONNECTING TO ROOM...");
-    } else if (shell->runtime.multiplayer_lobby_phase ==
                CONSOLE_MULTIPLAYER_LOBBY_CONNECTED) {
-        strcpy(launch, "JOINED - WAITING FOR HOST");
-    } else if (shell->runtime.multiplayer_lobby_selection == 0U) {
-        (void)snprintf(
-            launch, sizeof(launch), "CREATE LOBBY  < > %u ROOM%s",
-            (unsigned)shell->runtime.multiplayer_lobby_count,
-            shell->runtime.multiplayer_lobby_count == 1U ? "" : "S");
+        strcpy(launch, "PLAYER JOINED - PREPARING...");
+    } else if (shell->runtime.multiplayer_lobby_scanning) {
+        strcpy(launch, "PREPARING BLE HOST...");
     } else {
-        (void)snprintf(
-            launch, sizeof(launch), "JOIN %08lX  < %u/%u >",
-            (unsigned long)shell->runtime.multiplayer_lobby_session_id,
-            (unsigned)shell->runtime.multiplayer_lobby_selection,
-            (unsigned)shell->runtime.multiplayer_lobby_count);
+        strcpy(launch, "OPEN ROOM - A / TAP");
     }
     draw_centered_text(pixels, stride, (int)launch_layout.left,
                        (int)launch_layout.top +

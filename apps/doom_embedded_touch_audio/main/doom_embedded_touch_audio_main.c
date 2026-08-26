@@ -761,7 +761,10 @@ static void log_runtime_stats(void)
     ESP_LOGI(TAG,
              "P4_DOOM_E6 STATS frames=%" PRIu32 " submits=%" PRIu32
              " completions=%" PRIu32 " video_timeouts=%" PRIu32
-             " video_failures=%" PRIu32 " touch_polls=%" PRIu32
+             " video_failures=%" PRIu32
+             " video_accelerated=%" PRIu32
+             " video_accelerator_failures=%" PRIu32
+             " touch_polls=%" PRIu32
              " touch_failures=%" PRIu32 " touch_retries=%" PRIu32
              " composite_gate=%u touch_gate=%u audio_gate=%u"
              " audio_mutating_calls=%" PRIu32
@@ -809,7 +812,9 @@ static void log_runtime_stats(void)
              " music_peak=%" PRIu32,
              s_frame_count, video_stats.submits_started,
              video_stats.submits_completed, video_stats.submit_timeouts,
-             video_stats.submit_failures, s_touch_polls,
+             video_stats.submit_failures,
+             video_stats.accelerated_submits,
+             video_stats.accelerator_failures, s_touch_polls,
              s_touch_poll_failures, s_touch_retries,
              (unsigned)s_runtime_gate.composite_authorized,
              (unsigned)s_runtime_gate.touch_authorized,
@@ -974,6 +979,7 @@ void DG_Init(void)
 
 void DG_DrawFrame(void)
 {
+    P4_DoomNetPoll();
     if (s_frame_error != ESP_OK) {
         return;
     }
@@ -997,6 +1003,7 @@ void DG_DrawFrame(void)
     }
     s_frame_error = doom_video_submit_xrgb8888(
         s_overlay_buffer, DOOM_VIDEO_WIDTH, DOOM_SUBMIT_TIMEOUT_MS);
+    P4_DoomNetPoll();
     if (s_frame_error != ESP_OK) {
         return;
     }

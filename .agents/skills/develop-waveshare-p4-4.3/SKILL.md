@@ -27,6 +27,11 @@ Elecrow pin map under a Waveshare build flag.
   Console OS renders its shell at the fixed 768x480 logical resolution; native
   games retain the portable 320x200 RGB565 Game API surface. Do not rotate or
   shrink these contracts in game code.
+- Keep game scaling, rotation, panel framebuffer selection, and any PPA use in
+  `platform_display`. The reviewed fast path alternates two DSI-owned buffers
+  and uses blocking PPA SRM for the 320x200 surface; preserve a bounded CPU
+  fallback. Prove speed from timestamped runtime frame counters and PPA
+  success/failure counters, not from a build or visual impression.
 - Keep the active Elecrow `hardware/board-profile.json` unchanged until the
   Waveshare target has independent evidence.
 
@@ -66,9 +71,11 @@ write atomically, read it back, and refresh the native catalog. Use
 
 Boot readiness gates only on display, SD mount, and native catalog readiness.
 Doom and Chex files remain untrusted SD inputs: perform their exact full-file
-SHA-256 on demand once per uninterrupted mounted-storage generation, then
-enable or launch the matching door. Never persist a size, timestamp, sample,
-or prior-boot receipt as authority for WAD readiness.
+SHA-256 on demand. Never start either scan merely because the generic
+Multiplayer page opened. At terminal launch, validate only the selected title
+while the same bounded pass captures its immutable PSRAM snapshot. Never
+persist a size, timestamp, sample, or prior-boot receipt as authority for WAD
+readiness.
 
 ## USB gate
 
@@ -83,10 +90,20 @@ and immediate neutral state on disconnect. H1 is never the controller path.
 
 Keep wired controller mode as the default. BLE radio startup is lazy and may
 occur only after the user selects BLE multiplayer; preserve the known-good
-wired Doom path when changing radio or lobby code.
+wired Doom path when changing radio or lobby code. In the BLE lobby, preserve
+the explicit Host/Join role screen. Host owns game/settings/create; Join uses a
+bounded wildcard scan, lists each room's resolved local game identity, and
+requires an explicit room selection before connecting. Join must never create
+a room or expose a separate game filter. While unconnected, hosts use bounded
+alternating
+advertise/scan phases. If two displays each say `ROOM OPEN` and `1/2`, the
+higher session ID must automatically yield and join the lower session ID;
+never weaken session or content-identity checks to force convergence.
 
 ## Definition of done
 
 Call only the behavior named in a dated record hardware-tested. A new feature,
 controller, hub topology, board unit, or electrical arrangement needs its own
-acceptance evidence. Build success alone is only `build-tested`.
+acceptance evidence. A performance claim needs a sustained measured interval,
+zero hard display failures, and multiplayer transport drop/stall counters from
+the same run. Build success alone is only `build-tested`.

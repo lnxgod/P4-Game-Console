@@ -37,18 +37,29 @@ static uint32_t desired_actions(const gamepad_state_t *state)
                     state->left_y <= -DOOM_GAMEPAD_STICK_THRESHOLD;
     const bool down = (state->dpad & GAMEPAD_DPAD_DOWN) != 0U ||
                       state->left_y >= DOOM_GAMEPAD_STICK_THRESHOLD;
-    const bool left = (state->dpad & GAMEPAD_DPAD_LEFT) != 0U ||
-                      state->left_x <= -DOOM_GAMEPAD_STICK_THRESHOLD;
-    const bool right = (state->dpad & GAMEPAD_DPAD_RIGHT) != 0U ||
-                       state->left_x >= DOOM_GAMEPAD_STICK_THRESHOLD;
+    /* Preserve retro D-pad turning while giving dual-stick pads modern Doom
+     * movement: left stick strafes and right stick turns. */
+    const bool turn_left = (state->dpad & GAMEPAD_DPAD_LEFT) != 0U ||
+        state->right_x <= -DOOM_GAMEPAD_STICK_THRESHOLD;
+    const bool turn_right = (state->dpad & GAMEPAD_DPAD_RIGHT) != 0U ||
+        state->right_x >= DOOM_GAMEPAD_STICK_THRESHOLD;
+    const bool stick_strafe_left =
+        state->left_x <= -DOOM_GAMEPAD_STICK_THRESHOLD;
+    const bool stick_strafe_right =
+        state->left_x >= DOOM_GAMEPAD_STICK_THRESHOLD;
 
     if (up != down) {
         actions |= action_bit(up ? DOOM_GAMEPAD_ACTION_UP
                                  : DOOM_GAMEPAD_ACTION_DOWN);
     }
-    if (left != right) {
-        actions |= action_bit(left ? DOOM_GAMEPAD_ACTION_LEFT
-                                   : DOOM_GAMEPAD_ACTION_RIGHT);
+    if (turn_left != turn_right) {
+        actions |= action_bit(turn_left ? DOOM_GAMEPAD_ACTION_LEFT
+                                        : DOOM_GAMEPAD_ACTION_RIGHT);
+    }
+    if (stick_strafe_left != stick_strafe_right) {
+        actions |= action_bit(stick_strafe_left
+            ? DOOM_GAMEPAD_ACTION_STRAFE_LEFT
+            : DOOM_GAMEPAD_ACTION_STRAFE_RIGHT);
     }
     if (button_pressed(state, GAMEPAD_BUTTON_SOUTH) ||
         state->right_trigger >= DOOM_GAMEPAD_TRIGGER_THRESHOLD) {

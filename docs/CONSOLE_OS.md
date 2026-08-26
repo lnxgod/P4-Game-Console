@@ -8,7 +8,9 @@ viewport, presents games and folders as numbered doors, and keeps the existing
 Windows 3.1-style Program Manager as the selectable Appearance fallback. Touch
 hit testing, keyboard, and controller navigation share the same two-column,
 three-row door geometry. Native games remain 320x200 RGB565 and are scaled by
-the platform display path. The Multiplayer page now selects among Doom, Chex
+the platform display path. The Waveshare adapter uses the P4 hardware scaler
+and alternating DSI framebuffers for that surface while leaving the Game API
+unchanged. The Multiplayer page now selects among Doom, Chex
 Quest, and installed native cartridges that declare `multiplayer-session`,
 filters rooms
 by exact game identity and content hash, and launches the selected game on both
@@ -381,7 +383,10 @@ only for that uninterrupted mounted-storage generation. Chex additionally
 requires its exact `.DEH` companion; its pinned WAD has a valid `PWAD` header,
 which is accepted only by the Chex path. Remount, USB Drive ownership, or reboot
 invalidates the in-memory result. A persisted size/timestamp/sample receipt is
-never sufficient for executable game-data readiness.
+never sufficient for executable game-data readiness. Opening Multiplayer does
+not start a broad Doom-plus-Chex scan. The lobby is immediately usable; only
+terminal launch exact-hashes and captures the selected Doom-family title, and
+native multiplayer cartridges do not touch WAD data.
 
 Olimex launcher controls are: D-pad or arrow/WASD to navigate, gamepad A or
 Z/Space/Enter to accept, gamepad B or X/Escape/Backspace to go back, and R/F5
@@ -420,7 +425,8 @@ boot
        |     -> optional bounded audio session starts for the game
        |     `-> Back stops the game/audio and returns home
        `-- Doom or Chex selected
-             -> verify the exact WAD (and Chex DEH) on demand for this mount
+             -> verify the exact WAD (and Chex DEH) on demand while the same
+                bounded pass captures an immutable PSRAM snapshot
              -> retain exclusive game-storage lease until restart
              -> backlight dark
              -> destroy touch borrower
@@ -446,7 +452,7 @@ display, overlays, and exit callbacks in a deterministic order.
 | GT911 touch | `platform_touch` | `platform_touch` + Doom input | Invalid/malformed frames neutralize input |
 | Speaker audio | none on home; reviewed session for native games | Doom audio adapter/factory backend | Only one foreground owner; close must re-prove amplifier shutdown |
 | Game-data FAT | launcher or laptop, never both | terminal game lease | Clean eject returns ownership; host access is revoked and WAD verification is invalidated |
-| Doom/Chex data | validated logical-root `/DOOM1.WAD` or `/CHEX.WAD` + `/CHEX.DEH` | read-only VFS adapter | Exact known identities only; full SHA runs on demand once per uninterrupted mount; Chex alone accepts its pinned PWAD header |
+| Doom/Chex data | validated logical-root `/DOOM1.WAD` or `/CHEX.WAD` + `/CHEX.DEH` | read-only PSRAM-snapshot VFS | Exact known identities only; the on-demand full SHA pass also captures the title into PSRAM, so engine random reads cannot exhaust internal DMA memory, repeatedly seek FAT, or perform any post-handoff SD I/O; Chex alone accepts its pinned PWAD header |
 | File Manager | `console_shell` view plus `platform_game_storage` operations | unavailable | Lists/deletes only while the app owns FAT; host and game ownership reject every operation |
 | Game cartridge | validated microSD package bytes, then relocated PSRAM image | unavailable | Catalog and launch revalidate SHA/ELF; cartridge receives only the host callback table; OTA contains no `.P4G` payload |
 | Game resource | optional same-name `.P4R`, validated and held read-only in PSRAM during launch | unavailable | 8 MiB total bound, exact game-ID binding and payload SHA-256; game receives only the immutable payload view and no filesystem handle |

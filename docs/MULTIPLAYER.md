@@ -11,8 +11,15 @@ multi-game lobby, the lockstep Doom tic adapter, a bounded native-game message
 bridge, and transport-neutral handoff between wired UART and BLE gaming. The
 lobby enumerates Doom, Chex Quest, and installed cartridges that declare the
 optional `multiplayer-session` capability. It advertises the selected game
-identity and exact content hash, so browsers show only compatible rooms for
-that game. Wired Auto remains the boot/default
+identity and exact content hash. The first Multiplayer screen is an explicit
+`HOST` or `JOIN` choice: Host selects a game and its settings, while Join scans
+all P4 room beacons and lists each locally resolvable game without a separate
+game filter. Selecting a row binds the local exact game identity before any
+connection attempt. Entering the generic lobby never scans Doom or Chex data. A
+Doom-family match exact-hashes only the selected title during terminal launch,
+while the same bounded pass captures the immutable PSRAM snapshot used by the
+engine. Native multiplayer cartridges use their already-validated catalog
+identity and never trigger a WAD scan. Wired Auto remains the boot/default
 transport. BLE is opt-in from the lobby and lazily starts the Waveshare's
 on-board ESP32-C6 only after selection, so normal boot and wired play do not
 pay the radio startup cost. A board-authorized direct UART can run without a
@@ -150,8 +157,15 @@ BLE gaming is deliberately narrow:
   OS service. There is no account, cloud relay, Wi-Fi transport, or public
   matchmaking;
 - idle badges scan but do not advertise, so they cannot accidentally pair;
+- the Join browser gets a 1.8-second scan settle window and accepts a wildcard
+  game token only for discovery. Every result retains its advertised game
+  token; an explicit row selection must resolve to a locally installed exact
+  identity before `JOIN SELECTED` is enabled;
 - `CREATE LOBBY` allocates a fresh P4MP session and advertises one compact,
-  game-specific room beacon; the host does not scan;
+  game-specific room beacon. While no guest is connected, hosts alternate
+  advertising with short collision scans. If two compatible rooms were
+  created independently, the lower session ID remains host and the higher
+  session ID automatically yields and joins it;
 - browsers keep a bounded, expiring strongest-first room list and `JOIN`
   connects only to the selected host address and advertised session;
 - only the host may start a match; a guest remains at the ready screen until
@@ -165,18 +179,22 @@ BLE gaming is deliberately narrow:
   and returns the guest to the room browser; a disconnected host reopens its
   same room until the user leaves the Multiplayer page.
 
-To use it, open Multiplayer on both consoles, choose the same entry under
-`GAME`, and change `LINK` from `WIRED AUTO` to `BLE` if a wireless match is
-wanted. On one console select `CREATE NEW` and press `CREATE LOBBY`. On the
-other, choose the displayed room ID and press `JOIN SELECTED ROOM`. The host
-owns match settings and presses `START MATCH` only after the guest is
-connected. Both consoles cross the same start barrier, then Console OS launches
-the selected game: Doom receives its lockstep adapter, while a native cartridge
-receives the bounded `multiplayer-session` capability. Selecting BLE lazily
-starts the C6 radio stack unless a saved BLE controller already started it
-after the launcher became usable. H1 content upload remains serviced while BLE
-owns game traffic. Pairing a controller temporarily pauses room browsing; an
-established controller link and one multiplayer peer fit the committed
+To use it, open Multiplayer on both consoles. On the first console choose
+`HOST`, choose the game and settings, select the desired `LINK`, then press
+`OPEN ROOM`. On the second choose `JOIN`, select the same link, wait for the
+cross-game room list, select the row showing the intended game and room ID,
+then press `JOIN SELECTED`. Join has no game picker and cannot create a room.
+The host owns match settings and presses `START MATCH` only after the
+guest is connected. If both consoles briefly say `ROOM OPEN` and `1/2`, they
+are separate hosts; the collision resolver must converge them automatically
+without discarding content identity or session validation. Both consoles cross
+the same start barrier, then Console OS
+launches the selected game: Doom receives its lockstep adapter, while a native
+cartridge receives the bounded `multiplayer-session` capability. Selecting BLE
+lazily starts the C6 radio stack unless a saved BLE controller already started
+it after the launcher became usable. H1 content upload remains serviced while
+BLE owns game traffic. Pairing a controller temporarily pauses room browsing;
+an established controller link and one multiplayer peer fit the committed
 two-link budget.
 
 The encrypted BLE link and sustained two-board Doom lockstep have prior

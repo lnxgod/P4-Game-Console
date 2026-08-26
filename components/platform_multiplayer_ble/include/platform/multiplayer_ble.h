@@ -89,17 +89,24 @@ esp_err_t platform_multiplayer_ble_enable(
     void *handler_context);
 
 /**
- * Choose the pre-connection role. Browsers scan without advertising, hosts
- * advertise one open room without scanning, and idle mode does neither.
- * session_id is required only for host mode; game_token is required for host
- * and browser mode so unrelated games or incompatible builds are filtered.
+ * Choose the pre-connection role. Browsers scan without advertising. Hosts
+ * advertise one open room and periodically perform a bounded collision scan
+ * so two independently created rooms can deterministically converge. Idle
+ * mode does neither.
+ * session_id is required only for host mode. game_token is required for host
+ * mode. A browser may pass zero to discover every advertised P4 game and use
+ * each returned lobby's game_token to resolve a locally installed title, or
+ * pass a nonzero token to filter discovery to one compatible game.
  */
 esp_err_t platform_multiplayer_ble_set_lobby_mode(
     platform_multiplayer_ble_lobby_mode_t mode,
     uint32_t session_id,
     uint16_t game_token);
 
-/** Snapshot the bounded, strongest-first compatible host list. */
+/**
+ * Snapshot the bounded, strongest-first compatible host list. Browser scans
+ * populate it normally; a host collision scan may also populate it briefly.
+ */
 size_t platform_multiplayer_ble_list_lobbies(
     platform_multiplayer_ble_lobby_t *lobbies,
     size_t lobby_capacity);

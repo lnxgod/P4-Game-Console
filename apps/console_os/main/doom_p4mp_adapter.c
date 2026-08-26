@@ -30,6 +30,7 @@ enum {
     P4_DOOM_MP_HANDOFF_TIMEOUT_MS = 60000,
     P4_DOOM_MP_BOOTSTRAP_INTERVAL_MS = 100,
     P4_DOOM_MP_BOOTSTRAP_TIMEOUT_MS = 5000,
+    P4_DOOM_MP_STATS_INTERVAL_TICS = P4_DOOM_MP_TICK_RATE_HZ * 10,
 };
 
 typedef struct {
@@ -53,6 +54,7 @@ typedef struct {
     uint32_t ack_updates;
     uint32_t invalid_acks;
     uint32_t tx_window_failures;
+    uint32_t next_stats_tic;
     uint32_t saved_session_timeout_ms;
     boolean prepared;
     boolean configured;
@@ -292,6 +294,29 @@ static void flush_complete_tics(void)
         if (s_net.complete_tics != UINT32_MAX) {
             ++s_net.complete_tics;
         }
+        if (s_net.next_stats_tic != 0U &&
+            s_net.complete_tics >= s_net.next_stats_tic) {
+            ESP_LOGI(TAG,
+                     "P4_DOOM_MP STATS complete_tics=%" PRIu32
+                     " next_tic=%" PRIu32 " peer_ack=%" PRIu32
+                     " pending=%u tx=%" PRIu32 " rx=%" PRIu32
+                     " retries=%" PRIu32 " rejected=%" PRIu32
+                     " send_failures=%" PRIu32
+                     " tx_window_failures=%" PRIu32,
+                     s_net.complete_tics, s_net.queue.next_tick,
+                     s_net.tx_window.peer_ack,
+                     (unsigned)p4_doom_mp_tx_window_pending(
+                         &s_net.tx_window),
+                     s_net.inputs_sent, s_net.inputs_received,
+                     s_net.retransmits, s_net.rejected_inputs,
+                     s_net.send_failures, s_net.tx_window_failures);
+            if (UINT32_MAX - s_net.next_stats_tic <
+                P4_DOOM_MP_STATS_INTERVAL_TICS) {
+                s_net.next_stats_tic = UINT32_MAX;
+            } else {
+                s_net.next_stats_tic += P4_DOOM_MP_STATS_INTERVAL_TICS;
+            }
+        }
     }
 }
 
@@ -470,6 +495,7 @@ esp_err_t p4_doom_p4mp_prepare(
     }
     p4_doom_mp_tx_window_init(&s_net.tx_window, config->start_tic);
     s_net.last_progress_us = esp_timer_get_time();
+    s_net.next_stats_tic = P4_DOOM_MP_STATS_INTERVAL_TICS;
     s_net.prepared = true;
     const esp_err_t handler_result = s_net.transport.set_handler(
         s_net.transport.context, frame_received, &s_net);

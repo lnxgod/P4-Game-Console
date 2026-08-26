@@ -73,7 +73,14 @@ The doomgeneric adapter supplies only engine-facing operations:
 - use standard file operations routed to the mounted storage service;
 - submit mixed PCM through the platform audio service.
 
-The display service owns RGB565 conversion, aspect policy, PPA scaling, scanout buffers, and backlight. Start with an integer-safe 4:3 game viewport centered in 1024×600; make stretch/full-screen a later option. The gamepad adapter samples one canonical snapshot per Doom tic and must never see USB handles or raw HID bytes.
+The display service owns RGB565 conversion, aspect policy, PPA scaling,
+scanout buffers, and backlight. On Waveshare 4.3 it keeps Doom's portable
+320×200 surface, scales and rotates it with the ESP32-P4 PPA into a centered
+475×760 native block, and alternates the two DSI-owned framebuffers so the
+scaled frame is not copied a second time. CPU layout remains a bounded
+fallback. The target is a measured, sustained 30 FPS; build success alone is
+not frame-rate evidence. The gamepad adapter samples one canonical snapshot
+per Doom tic and must never see USB handles or raw HID bytes.
 
 ## Bring-up stages
 

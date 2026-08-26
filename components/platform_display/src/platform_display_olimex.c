@@ -478,6 +478,8 @@ esp_err_t platform_display_get_stats(platform_display_stats_t *out_stats)
         __atomic_load_n(&s_stats.submit_failures, __ATOMIC_RELAXED);
     out_stats->refresh_completions =
         __atomic_load_n(&s_stats.refresh_completions, __ATOMIC_RELAXED);
+    out_stats->accelerated_submits = 0U;
+    out_stats->accelerator_failures = 0U;
     out_stats->underrun_count_available = false;
     return ESP_OK;
 }

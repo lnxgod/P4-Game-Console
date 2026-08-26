@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "evidence_id": "waveshare-two-unit-console-os-0.4.83-multiplayer-role-ui-20260825",
+  "status": "installed-both-exact-verify-pass-boot-stable-manual-match-pending",
+  "timestamp_utc": "2026-08-26T05:23:36Z",
+  "scope": "Application-only install of Console OS 0.4.83 on both recorded Waveshare 4.3 consoles. This candidate adds an explicit Host/Join role screen, Host-owned game setup, a cross-game BLE lobby browser with explicit selection, and code-drawn lobby rows derived from the revised ImageGen concept.",
+  "source": {
+    "base_commit": "d8eb9c5dd0210ab2671d03b4642e78614aaba50a",
+    "branch": "main",
+    "working_tree": "intentional Console OS successor changes not yet committed at installation time"
+  },
+  "candidate": {
+    "app_version": "0.4.83",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "application": {
+      "path": "apps/console_os/build-waveshare-usb-host/p4_console_os.bin",
+      "offset": "0x20000",
+      "bytes": 1820384,
+      "sha256": "42f8ef7c60ff28361a69a66718c8cd2acb1dee42bf95896c29e440a51a0e163d"
+    },
+    "update_package": {
+      "path": "apps/console_os/build-waveshare-usb-host/P4UPDATE.P4U",
+      "bytes": 1820640,
+      "sha256": "09dd11d6d28b7f68a399cbfeaece1dade84eb7148d36033e39423738924bec58"
+    },
+    "console_shell_host_tests": "pass; 6/6",
+    "waveshare_artifact_gate": "pass",
+    "diff_check": "pass"
+  },
+  "installation": {
+    "method": "sequential H1 application-only writes at 921600 baud",
+    "write_scope": "application partition only at 0x20000; bootloader, partition table, OTA data, NVS, and microSD were not written",
+    "factory_backup_created": false,
+    "factory_backup_reason": "operator explicitly requested no repeated backup; both recorded development units already have repository-bound factory backups"
+  },
+  "boards": [
+    {
+      "unit_label": "waveshare-4.3-unit1-B289",
+      "port": "/dev/cu.wchusbserial5C371865781",
+      "mac": "e8:f6:0a:e0:b2:89",
+      "chip": "ESP32-P4 revision v1.3",
+      "write": "pass; esptool compressed write hash verified",
+      "verify_flash": "pass; digest matched",
+      "runtime": "stable launcher page=0, USB input ready, audio es8311-ready, storage app-ready, display_failures=0, no panic or reboot loop"
+    },
+    {
+      "unit_label": "waveshare-4.3-unit2-386F",
+      "port": "/dev/cu.wchusbserial5B901593451",
+      "mac": "e8:f6:0a:e5:38:6f",
+      "chip": "ESP32-P4 revision v1.3",
+      "write": "pass; esptool compressed write hash verified",
+      "verify_flash": "pass; digest matched",
+      "runtime": "launcher ready at 15.841 seconds, game catalog packages=2 valid=2, P4 Yahtzee multiplayer registration present, USB input ready, BLE host ready, display_failures=0, no panic or reboot loop"
+    }
+  ],
+  "ui_verification": {
+    "native_render_preview": "pass for role, host, and join views; no overlap or clipped primary labels",
+    "role_contract": "first screen contains Host and Join; Host owns game/settings/open-room; Join has no game picker and lists game, room ID, players, and signal",
+    "cross_game_discovery": "build-tested only; BLE browser wildcard retains each bounded beacon game token and requires local exact-game resolution before join",
+    "manual_two_console_host_join_launch": "pending operator acceptance"
+  }
+}

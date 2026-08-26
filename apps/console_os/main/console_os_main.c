@@ -152,6 +152,7 @@ enum {
     CONSOLE_BOOT_LOGO_WIDTH = 112,
     CONSOLE_BOOT_LOGO_HEIGHT = 112,
     CONSOLE_MULTIPLAYER_DISCOVERY_INTERVAL_MS = 1000,
+    CONSOLE_MULTIPLAYER_BLE_BROWSER_SETTLE_MS = 1800,
     CONSOLE_MULTIPLAYER_KEEPALIVE_INTERVAL_MS = 1000,
     CONSOLE_MULTIPLAYER_START_READY_INTERVAL_MS = 100,
     CONSOLE_MULTIPLAYER_START_HOLD_MS = 1500,
@@ -379,7 +380,12 @@ typedef struct {
     uint64_t route_id;
     uint32_t session_id;
     uint32_t host_peer_id;
+    uint16_t game_token;
     int8_t rssi;
+    uint8_t players_present;
+    uint8_t player_capacity;
+    size_t game_selection;
+    bool game_available;
 } console_mp_lobby_candidate_t;
 enum {
     CONSOLE_MP_MAX_LOBBY_CANDIDATES = 4,
@@ -392,6 +398,9 @@ static size_t s_multiplayer_lobby_selection;
 /** Keep the user's choice stable when RSSI sorting reorders nearby rooms. */
 static uint64_t s_multiplayer_lobby_selected_id;
 static uint32_t s_multiplayer_lobby_selected_session_id;
+static int64_t s_multiplayer_lobby_browser_ready_us;
+static bool s_multiplayer_lobby_create_explicit;
+static uint32_t s_multiplayer_host_collision_seen_session;
 static uint32_t s_multiplayer_target_session_id;
 static uint64_t s_multiplayer_target_lobby_id;
 static int64_t s_multiplayer_next_control_us;
@@ -600,6 +609,28 @@ static void doom_transport_poll(void *context)
 {
     (void)context;
     multiplayer_transport_poll();
+#if P4_CONSOLE_BLE_MULTIPLAYER
+    static int64_t next_stats_us;
+    if (s_multiplayer_transport == CONSOLE_MP_TRANSPORT_BLE) {
+        const int64_t now_us = esp_timer_get_time();
+        if (next_stats_us == 0 || now_us >= next_stats_us) {
+            const platform_multiplayer_ble_status_t status =
+                platform_multiplayer_ble_status();
+            ESP_LOGI(TAG,
+                     "P4_CONSOLE_OS DOOM_BLE_TRANSPORT ready=%u "
+                     "encrypted=%u mtu=%u tx=%lu rx=%lu drops=%lu "
+                     "last_error=%d",
+                     status.ready ? 1U : 0U,
+                     status.encrypted ? 1U : 0U,
+                     (unsigned)status.att_mtu,
+                     (unsigned long)status.tx_frames,
+                     (unsigned long)status.rx_frames,
+                     (unsigned long)status.dropped_frames,
+                     status.last_ble_error);
+            next_stats_us = now_us + INT64_C(10000000);
+        }
+    }
+#endif
 }
 
 static esp_err_t doom_transport_send(
@@ -638,6 +669,7 @@ static esp_err_t present_interactive(console_shell_t *shell);
 static console_shell_runtime_info_t runtime_info(void);
 static bool multiplayer_settings_editable(void);
 static p4_doom_mp_setup_t multiplayer_display_setup(void);
+static bool multiplayer_content_ready_for(size_t selection);
 static bool multiplayer_local_content_ready(void);
 static bool multiplayer_start_prerequisites_ready(void);
 static size_t multiplayer_game_count(void);
@@ -2521,7 +2553,7 @@ static void poll_ble_gamepad_lobby_restore(void)
     }
     const esp_err_t result = platform_multiplayer_ble_set_lobby_mode(
         PLATFORM_MULTIPLAYER_BLE_LOBBY_BROWSER,
-        0U, multiplayer_game_token());
+        0U, 0U);
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS BLE_CONTROLLER_RADIO_RELEASE "
              "lobby_browser_restore=%s",
@@ -2669,12 +2701,17 @@ static const platform_game_catalog_entry_t *multiplayer_native_game_at(
             &s_game_catalog, registration->launcher_id);
 }
 
+static const platform_game_catalog_entry_t *multiplayer_native_game_for(
+    size_t selection)
+{
+    return selection < P4_DOOM_MP_GAME_COUNT ? NULL :
+        multiplayer_native_game_at(selection - P4_DOOM_MP_GAME_COUNT);
+}
+
 static const platform_game_catalog_entry_t *
 multiplayer_selected_native_game(void)
 {
-    return s_multiplayer_game_selection < P4_DOOM_MP_GAME_COUNT ? NULL :
-        multiplayer_native_game_at(
-            s_multiplayer_game_selection - P4_DOOM_MP_GAME_COUNT);
+    return multiplayer_native_game_for(s_multiplayer_game_selection);
 }
 
 static bool multiplayer_selected_game_is_doom(void)
@@ -2689,18 +2726,22 @@ static bool multiplayer_selected_game_is_chex(void)
         (size_t)P4_DOOM_MP_GAME_CHEX_QUEST;
 }
 
-static const char *multiplayer_selected_game_title(void)
+static const char *multiplayer_game_title_at(size_t selection)
 {
-    if (s_multiplayer_game_selection ==
-        (size_t)P4_DOOM_MP_GAME_DOOM) {
+    if (selection == (size_t)P4_DOOM_MP_GAME_DOOM) {
         return "DOOM";
     }
-    if (multiplayer_selected_game_is_chex()) {
+    if (selection == (size_t)P4_DOOM_MP_GAME_CHEX_QUEST) {
         return "CHEX QUEST";
     }
     const platform_game_catalog_entry_t *const game =
-        multiplayer_selected_native_game();
-    return game == NULL ? "NO GAME" : game->package.title;
+        multiplayer_native_game_for(selection);
+    return game == NULL ? "NOT INSTALLED" : game->package.title;
+}
+
+static const char *multiplayer_selected_game_title(void)
+{
+    return multiplayer_game_title_at(s_multiplayer_game_selection);
 }
 
 static p4_doom_mp_setup_t multiplayer_display_setup(void)
@@ -2726,6 +2767,33 @@ static uint16_t multiplayer_game_token(void)
         s_multiplayer_local_offer.compatibility_sha256);
 }
 
+static bool multiplayer_game_selection_for_token(
+    uint16_t token, size_t *selection_out)
+{
+    if (token == 0U || selection_out == NULL) {
+        return false;
+    }
+    const size_t saved_selection = s_multiplayer_game_selection;
+    const p4_mp_lobby_offer_t saved_offer = s_multiplayer_local_offer;
+    const p4_doom_mp_setup_t saved_setup = s_multiplayer_local_setup;
+    bool found = false;
+    const size_t game_count = multiplayer_game_count();
+    for (size_t selection = 0U; selection < game_count; ++selection) {
+        s_multiplayer_game_selection = selection;
+        s_multiplayer_local_setup = saved_setup;
+        if (configure_multiplayer_local_offer() == ESP_OK &&
+            multiplayer_game_token() == token) {
+            *selection_out = selection;
+            found = true;
+            break;
+        }
+    }
+    s_multiplayer_game_selection = saved_selection;
+    s_multiplayer_local_offer = saved_offer;
+    s_multiplayer_local_setup = saved_setup;
+    return found;
+}
+
 static void refresh_multiplayer_lobby_candidates(void)
 {
     s_multiplayer_lobby_candidate_count = 0U;
@@ -2745,11 +2813,20 @@ static void refresh_multiplayer_lobby_candidates(void)
         for (size_t index = 0U;
              index < count &&
              index < CONSOLE_MP_MAX_LOBBY_CANDIDATES; ++index) {
+            size_t game_selection = 0U;
+            const bool game_available =
+                multiplayer_game_selection_for_token(
+                    discovered[index].game_token, &game_selection);
             s_multiplayer_lobby_candidates[index] =
                 (console_mp_lobby_candidate_t){
                     .lobby_id = discovered[index].lobby_id,
                     .session_id = discovered[index].session_id,
+                    .game_token = discovered[index].game_token,
                     .rssi = discovered[index].rssi,
+                    .players_present = discovered[index].players_present,
+                    .player_capacity = discovered[index].player_capacity,
+                    .game_selection = game_selection,
+                    .game_available = game_available,
                 };
             ++s_multiplayer_lobby_candidate_count;
         }
@@ -2763,37 +2840,46 @@ static void refresh_multiplayer_lobby_candidates(void)
             now_us >= s_multiplayer_remote_offer_seen_us &&
             now_us - s_multiplayer_remote_offer_seen_us <=
                 (int64_t)CONSOLE_MULTIPLAYER_PEER_TIMEOUT_MS * 1000) {
+            const uint16_t game_token = p4_mp_ble_game_token(
+                s_multiplayer_remote_offer.compatibility_sha256);
+            size_t game_selection = 0U;
+            const bool game_available =
+                multiplayer_game_selection_for_token(
+                    game_token, &game_selection);
             s_multiplayer_lobby_candidates[0] =
                 (console_mp_lobby_candidate_t){
                     .lobby_id = s_multiplayer_remote_route_id,
                     .route_id = s_multiplayer_remote_route_id,
                     .session_id = s_multiplayer_remote_session_id,
                     .host_peer_id = s_multiplayer_remote_peer_id,
+                    .game_token = game_token,
                     .rssi = 0,
+                    .players_present =
+                        s_multiplayer_remote_offer.players_present,
+                    .player_capacity =
+                        s_multiplayer_remote_offer.player_capacity,
+                    .game_selection = game_selection,
+                    .game_available = game_available,
                 };
             s_multiplayer_lobby_candidate_count = 1U;
         }
     }
-    if (s_multiplayer_lobby_selected_id == 0U ||
-        s_multiplayer_lobby_selected_session_id == 0U) {
-        s_multiplayer_lobby_selection = 0U;
-        s_multiplayer_lobby_selected_id = 0U;
-        s_multiplayer_lobby_selected_session_id = 0U;
-        return;
-    }
-    for (size_t index = 0U;
-         index < s_multiplayer_lobby_candidate_count; ++index) {
-        if (s_multiplayer_lobby_candidates[index].lobby_id ==
-                s_multiplayer_lobby_selected_id &&
-            s_multiplayer_lobby_candidates[index].session_id ==
-                s_multiplayer_lobby_selected_session_id) {
-            s_multiplayer_lobby_selection = index + 1U;
-            return;
+    if (s_multiplayer_lobby_selected_id != 0U &&
+        s_multiplayer_lobby_selected_session_id != 0U) {
+        for (size_t index = 0U;
+             index < s_multiplayer_lobby_candidate_count; ++index) {
+            if (s_multiplayer_lobby_candidates[index].lobby_id ==
+                    s_multiplayer_lobby_selected_id &&
+                s_multiplayer_lobby_candidates[index].session_id ==
+                    s_multiplayer_lobby_selected_session_id) {
+                s_multiplayer_lobby_selection = index + 1U;
+                return;
+            }
         }
     }
-    s_multiplayer_lobby_selection = 0U;
     s_multiplayer_lobby_selected_id = 0U;
     s_multiplayer_lobby_selected_session_id = 0U;
+    s_multiplayer_lobby_selection = 0U;
 }
 
 static const console_mp_lobby_candidate_t *selected_multiplayer_lobby(void)
@@ -2858,10 +2944,23 @@ static console_shell_runtime_info_t runtime_info(void)
     }
     const bool lobby_choice_valid = s_multiplayer_lobby_selection == 0U ||
         selected_lobby != NULL;
+    const bool selected_game_ready = selected_lobby == NULL
+        ? multiplayer_local_content_ready()
+        : selected_lobby->game_available &&
+            multiplayer_content_ready_for(selected_lobby->game_selection);
+    const bool lobby_browser_settling =
+        s_multiplayer_transport == CONSOLE_MP_TRANSPORT_BLE &&
+        s_multiplayer_lobby_state == CONSOLE_MP_LOBBY_BROWSING &&
+        selected_lobby == NULL &&
+        !s_multiplayer_lobby_create_explicit &&
+        (s_multiplayer_lobby_browser_ready_us == 0 ||
+         now_us - s_multiplayer_lobby_browser_ready_us <
+            (int64_t)CONSOLE_MULTIPLAYER_BLE_BROWSER_SETTLE_MS * 1000);
     const bool lobby_action_enabled =
         s_multiplayer_lobby_state == CONSOLE_MP_LOBBY_BROWSING &&
-        multiplayer_local_content_ready() && lobby_choice_valid &&
-        (multiplayer.available || multiplayer.starting);
+        selected_game_ready && lobby_choice_valid &&
+        (multiplayer.available || multiplayer.starting) &&
+        !lobby_browser_settling;
     const bool multiplayer_can_start = multiplayer_is_host &&
         multiplayer_start_prerequisites_ready();
     const size_t selectable_game_count = multiplayer_game_count();
@@ -3031,13 +3130,14 @@ static console_shell_runtime_info_t runtime_info(void)
             s_multiplayer_lobby_state == CONSOLE_MP_LOBBY_CONNECTED &&
             s_multiplayer_launch_kind != CONSOLE_MP_LAUNCH_NONE,
         .multiplayer_lobby_is_host = multiplayer_is_host,
+        .multiplayer_lobby_scanning = lobby_browser_settling,
         .multiplayer_lobby_action_enabled = lobby_action_enabled,
         .multiplayer_can_start = multiplayer_can_start,
         .multiplayer_launch_syncing =
             s_multiplayer_start_barrier.state == P4_MP_START_WAITING ||
             s_multiplayer_start_barrier.state == P4_MP_START_ARMED,
         .multiplayer_settings_editable = multiplayer_settings_editable(),
-        .multiplayer_game_ready = multiplayer_local_content_ready(),
+        .multiplayer_game_ready = selected_game_ready,
         .multiplayer_game_is_doom =
             multiplayer_selected_game_is_doom(),
         .multiplayer_game_selection =
@@ -3113,6 +3213,29 @@ static console_shell_runtime_info_t runtime_info(void)
     (void)snprintf(
         info.file_transfer_name, sizeof(info.file_transfer_name), "%s",
         file_transfer.file_name);
+    const size_t lobby_display_count =
+        s_multiplayer_lobby_candidate_count <
+                CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX
+            ? s_multiplayer_lobby_candidate_count
+            : CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX;
+    for (size_t index = 0U; index < lobby_display_count; ++index) {
+        const console_mp_lobby_candidate_t *const candidate =
+            &s_multiplayer_lobby_candidates[index];
+        info.multiplayer_lobbies[index] =
+            (console_multiplayer_lobby_display_t){
+                .session_id = candidate->session_id,
+                .rssi = candidate->rssi,
+                .players_present = candidate->players_present,
+                .player_capacity = candidate->player_capacity,
+                .game_available = candidate->game_available,
+            };
+        (void)snprintf(
+            info.multiplayer_lobbies[index].game_title,
+            sizeof(info.multiplayer_lobbies[index].game_title), "%s",
+            candidate->game_available
+                ? multiplayer_game_title_at(candidate->game_selection)
+                : "NOT INSTALLED");
+    }
     return info;
 }
 
@@ -3205,19 +3328,26 @@ static uint16_t multiplayer_start_token(void)
     return token;
 }
 
-static bool multiplayer_local_content_ready(void)
+static bool multiplayer_content_ready_for(size_t selection)
 {
     if (s_game_storage_status.state != PLATFORM_GAME_STORAGE_APP_READY) {
         return false;
     }
-    if (multiplayer_selected_game_is_chex()) {
-        return s_game_storage_status.chex_quest_ready;
+    if (selection < P4_DOOM_MP_GAME_COUNT) {
+        /*
+         * Opening or joining a lobby must not hash every Doom-family asset.
+         * The selected title is exact-hashed and captured in one pass by
+         * lock_for_doom_title() at terminal launch.  A separately requested
+         * background validation still owns storage until it finishes.
+        */
+        return !s_game_storage_status.content_validation_running;
     }
-    if (s_multiplayer_game_selection ==
-        (size_t)P4_DOOM_MP_GAME_DOOM) {
-        return s_game_storage_status.doom_wad_ready;
-    }
-    return multiplayer_selected_native_game() != NULL;
+    return multiplayer_native_game_for(selection) != NULL;
+}
+
+static bool multiplayer_local_content_ready(void)
+{
+    return multiplayer_content_ready_for(s_multiplayer_game_selection);
 }
 
 static bool multiplayer_start_prerequisites_ready(void)
@@ -3310,6 +3440,9 @@ static esp_err_t initialize_multiplayer_lobby(void)
     s_multiplayer_lobby_selected_id = 0U;
     s_multiplayer_lobby_selected_session_id = 0U;
     s_multiplayer_lobby_candidate_count = 0U;
+    s_multiplayer_lobby_browser_ready_us = 0;
+    s_multiplayer_lobby_create_explicit = false;
+    s_multiplayer_host_collision_seen_session = 0U;
     return ESP_OK;
 }
 
@@ -3339,6 +3472,9 @@ static void reset_multiplayer_lobby(const char *reason)
     s_multiplayer_lobby_selected_id = 0U;
     s_multiplayer_lobby_selected_session_id = 0U;
     s_multiplayer_lobby_candidate_count = 0U;
+    s_multiplayer_lobby_browser_ready_us = 0;
+    s_multiplayer_lobby_create_explicit = false;
+    s_multiplayer_host_collision_seen_session = 0U;
     memset(s_multiplayer_lobby_candidates, 0,
            sizeof(s_multiplayer_lobby_candidates));
     s_multiplayer_next_control_us = 0;
@@ -3350,7 +3486,7 @@ static void reset_multiplayer_lobby(const char *reason)
     if (s_multiplayer_transport == CONSOLE_MP_TRANSPORT_BLE) {
         const esp_err_t browser = platform_multiplayer_ble_set_lobby_mode(
             PLATFORM_MULTIPLAYER_BLE_LOBBY_BROWSER,
-            0U, multiplayer_game_token());
+            0U, 0U);
         if (browser != ESP_OK) {
             ESP_LOGW(TAG,
                      "P4_CONSOLE_OS BLE_LOBBY_BROWSER_DEGRADED error=%s",
@@ -3386,7 +3522,7 @@ static esp_err_t select_multiplayer_transport(
         }
         const esp_err_t browser = platform_multiplayer_ble_set_lobby_mode(
             PLATFORM_MULTIPLAYER_BLE_LOBBY_BROWSER,
-            0U, multiplayer_game_token());
+            0U, 0U);
         if (browser != ESP_OK) {
             platform_multiplayer_ble_disable();
             s_multiplayer_transport = CONSOLE_MP_TRANSPORT_WIRED;
@@ -3420,6 +3556,61 @@ static uint8_t multiplayer_cycle_range(
         return value <= minimum ? maximum : (uint8_t)(value - 1U);
     }
     return value >= maximum ? minimum : (uint8_t)(value + 1U);
+}
+
+static bool set_multiplayer_lobby_selection(
+    console_shell_t *shell, size_t selection, bool explicit_host)
+{
+    refresh_multiplayer_lobby_candidates();
+    if (selection > s_multiplayer_lobby_candidate_count) {
+        return false;
+    }
+    s_multiplayer_lobby_selection = selection;
+    if (selection == 0U) {
+        s_multiplayer_lobby_selected_id = 0U;
+        s_multiplayer_lobby_selected_session_id = 0U;
+        s_multiplayer_lobby_create_explicit = explicit_host;
+    } else {
+        const console_mp_lobby_candidate_t *const choice =
+            &s_multiplayer_lobby_candidates[selection - 1U];
+        s_multiplayer_lobby_selected_id = choice->lobby_id;
+        s_multiplayer_lobby_selected_session_id = choice->session_id;
+        s_multiplayer_lobby_create_explicit = false;
+        if (choice->game_available &&
+            choice->game_selection != s_multiplayer_game_selection) {
+            const size_t previous_selection =
+                s_multiplayer_game_selection;
+            const p4_mp_lobby_offer_t previous_offer =
+                s_multiplayer_local_offer;
+            const p4_doom_mp_setup_t previous_setup =
+                s_multiplayer_local_setup;
+            s_multiplayer_game_selection = choice->game_selection;
+            if (configure_multiplayer_local_offer() != ESP_OK) {
+                s_multiplayer_game_selection = previous_selection;
+                s_multiplayer_local_offer = previous_offer;
+                s_multiplayer_local_setup = previous_setup;
+                return false;
+            }
+        }
+    }
+    const console_mp_lobby_candidate_t *const selected =
+        selected_multiplayer_lobby();
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS MULTIPLAYER_LOBBY_SELECTION "
+             "choice=%s session=%08" PRIx32 " game=%s found=%u",
+             selected == NULL ? "host" : "join",
+             selected == NULL ? 0U : selected->session_id,
+             selected == NULL
+                ? multiplayer_selected_game_title()
+                : selected->game_available
+                    ? multiplayer_game_title_at(selected->game_selection)
+                    : "not-installed",
+             (unsigned)s_multiplayer_lobby_candidate_count);
+    if (shell != NULL) {
+        const console_shell_runtime_info_t current_runtime = runtime_info();
+        console_shell_set_runtime_info(shell, &current_runtime);
+    }
+    return true;
 }
 
 static void handle_multiplayer_config_action(
@@ -3485,34 +3676,31 @@ static void handle_multiplayer_config_action(
     if (action->multiplayer_option ==
         CONSOLE_MULTIPLAYER_OPTION_LOBBY) {
         refresh_multiplayer_lobby_candidates();
-        const size_t choices = s_multiplayer_lobby_candidate_count + 1U;
-        if (delta < 0) {
-            s_multiplayer_lobby_selection =
-                (s_multiplayer_lobby_selection + choices - 1U) % choices;
+        size_t requested_selection = s_multiplayer_lobby_selection;
+        if (shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_JOIN) {
+            const size_t choices = s_multiplayer_lobby_candidate_count;
+            if (choices == 0U) {
+                return;
+            }
+            if (requested_selection == 0U ||
+                requested_selection > choices) {
+                requested_selection = 1U;
+            } else if (delta < 0) {
+                requested_selection = requested_selection <= 1U
+                    ? choices : requested_selection - 1U;
+            } else {
+                requested_selection = requested_selection >= choices
+                    ? 1U : requested_selection + 1U;
+            }
         } else {
-            s_multiplayer_lobby_selection =
-                (s_multiplayer_lobby_selection + 1U) % choices;
+            const size_t choices = s_multiplayer_lobby_candidate_count + 1U;
+            requested_selection = delta < 0
+                ? (requested_selection + choices - 1U) % choices
+                : (requested_selection + 1U) % choices;
         }
-        if (s_multiplayer_lobby_selection == 0U) {
-            s_multiplayer_lobby_selected_id = 0U;
-            s_multiplayer_lobby_selected_session_id = 0U;
-        } else {
-            const console_mp_lobby_candidate_t *const choice =
-                &s_multiplayer_lobby_candidates[
-                    s_multiplayer_lobby_selection - 1U];
-            s_multiplayer_lobby_selected_id = choice->lobby_id;
-            s_multiplayer_lobby_selected_session_id = choice->session_id;
-        }
-        const console_mp_lobby_candidate_t *const selected =
-            selected_multiplayer_lobby();
-        ESP_LOGI(TAG,
-                 "P4_CONSOLE_OS MULTIPLAYER_LOBBY_SELECTION "
-                 "choice=%s session=%08" PRIx32 " found=%u",
-                 selected == NULL ? "create" : "join",
-                 selected == NULL ? 0U : selected->session_id,
-                 (unsigned)s_multiplayer_lobby_candidate_count);
-        const console_shell_runtime_info_t current_runtime = runtime_info();
-        console_shell_set_runtime_info(shell, &current_runtime);
+        (void)set_multiplayer_lobby_selection(
+            shell, requested_selection,
+            shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_HOST);
         return;
     }
     if (action->multiplayer_option ==
@@ -3869,10 +4057,40 @@ static esp_err_t join_selected_multiplayer_lobby(void)
     refresh_multiplayer_lobby_candidates();
     const console_mp_lobby_candidate_t *const selected =
         selected_multiplayer_lobby();
-    if (selected == NULL || selected->session_id == 0U) {
+    if (selected == NULL || selected->session_id == 0U ||
+        !selected->game_available) {
         return ESP_ERR_NOT_FOUND;
     }
     const console_mp_lobby_candidate_t target = *selected;
+    const size_t previous_selection = s_multiplayer_game_selection;
+    const p4_mp_lobby_offer_t previous_offer = s_multiplayer_local_offer;
+    const p4_doom_mp_setup_t previous_setup = s_multiplayer_local_setup;
+    s_multiplayer_game_selection = target.game_selection;
+    if (configure_multiplayer_local_offer() != ESP_OK ||
+        !multiplayer_local_content_ready()) {
+        s_multiplayer_game_selection = previous_selection;
+        s_multiplayer_local_offer = previous_offer;
+        s_multiplayer_local_setup = previous_setup;
+        return ESP_ERR_NOT_FOUND;
+    }
+#if P4_CONSOLE_BLE_MULTIPLAYER
+    if (s_multiplayer_transport != CONSOLE_MP_TRANSPORT_BLE &&
+        !p4_mp_lobby_offers_compatible(
+            &s_multiplayer_local_offer, &s_multiplayer_remote_offer)) {
+        s_multiplayer_game_selection = previous_selection;
+        s_multiplayer_local_offer = previous_offer;
+        s_multiplayer_local_setup = previous_setup;
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+#else
+    if (!p4_mp_lobby_offers_compatible(
+            &s_multiplayer_local_offer, &s_multiplayer_remote_offer)) {
+        s_multiplayer_game_selection = previous_selection;
+        s_multiplayer_local_offer = previous_offer;
+        s_multiplayer_local_setup = previous_setup;
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+#endif
     s_multiplayer_target_session_id = target.session_id;
     s_multiplayer_target_lobby_id = target.lobby_id;
     s_multiplayer_lobby_state = CONSOLE_MP_LOBBY_JOINING;
@@ -3904,15 +4122,71 @@ static esp_err_t join_selected_multiplayer_lobby(void)
     return result;
 }
 
-static esp_err_t handle_multiplayer_lobby_primary(void)
+#if P4_CONSOLE_BLE_MULTIPLAYER
+static void resolve_ble_host_collision(void)
 {
-    if (s_multiplayer_lobby_state != CONSOLE_MP_LOBBY_BROWSING) {
-        return ESP_ERR_INVALID_STATE;
+    if (s_multiplayer_transport != CONSOLE_MP_TRANSPORT_BLE ||
+        s_multiplayer_lobby_state != CONSOLE_MP_LOBBY_HOSTING) {
+        return;
     }
-    return s_multiplayer_lobby_selection == 0U
-        ? create_multiplayer_lobby()
-        : join_selected_multiplayer_lobby();
+    platform_multiplayer_ble_lobby_t lobbies[
+        PLATFORM_MULTIPLAYER_BLE_MAX_LOBBIES];
+    const size_t count = platform_multiplayer_ble_list_lobbies(
+        lobbies, sizeof(lobbies) / sizeof(lobbies[0]));
+    const platform_multiplayer_ble_lobby_t *target = NULL;
+    for (size_t index = 0U; index < count; ++index) {
+        if (lobbies[index].session_id == 0U ||
+            lobbies[index].session_id == s_multiplayer_local_session_id) {
+            continue;
+        }
+        if (target == NULL ||
+            lobbies[index].session_id < target->session_id) {
+            target = &lobbies[index];
+        }
+    }
+    if (target == NULL) {
+        return;
+    }
+    if (s_multiplayer_local_session_id < target->session_id) {
+        if (s_multiplayer_host_collision_seen_session !=
+                target->session_id) {
+            s_multiplayer_host_collision_seen_session = target->session_id;
+            ESP_LOGW(TAG,
+                     "P4_CONSOLE_OS BLE_HOST_COLLISION action=keep-host "
+                     "local=%08" PRIx32 " remote=%08" PRIx32,
+                     s_multiplayer_local_session_id,
+                     target->session_id);
+        }
+        return;
+    }
+    const uint64_t target_lobby_id = target->lobby_id;
+    const uint32_t target_session_id = target->session_id;
+    ESP_LOGW(TAG,
+             "P4_CONSOLE_OS BLE_HOST_COLLISION action=yield-and-join "
+             "local=%08" PRIx32 " remote=%08" PRIx32,
+             s_multiplayer_local_session_id, target_session_id);
+    reset_multiplayer_lobby("ble-host-collision-yield");
+    refresh_multiplayer_lobby_candidates();
+    for (size_t index = 0U;
+         index < s_multiplayer_lobby_candidate_count; ++index) {
+        const console_mp_lobby_candidate_t *const candidate =
+            &s_multiplayer_lobby_candidates[index];
+        if (candidate->lobby_id == target_lobby_id &&
+            candidate->session_id == target_session_id) {
+            s_multiplayer_lobby_selection = index + 1U;
+            s_multiplayer_lobby_selected_id = target_lobby_id;
+            s_multiplayer_lobby_selected_session_id = target_session_id;
+            s_multiplayer_lobby_create_explicit = false;
+            break;
+        }
+    }
+    const esp_err_t result = join_selected_multiplayer_lobby();
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS BLE_HOST_COLLISION_JOIN "
+             "session=%08" PRIx32 " result=%s",
+             target_session_id, esp_err_to_name(result));
 }
+#endif
 
 static void configure_multiplayer_launch(
     p4_mp_role_t role,
@@ -4114,9 +4388,6 @@ static void multiplayer_frame_received(
         p4_mp_lobby_offer_t remote;
         if (p4_mp_lobby_offer_decode(
                 packet.payload, packet.payload_length, &remote) != P4_MP_OK ||
-            !multiplayer_local_content_ready() ||
-            !p4_mp_lobby_offers_compatible(
-                &s_multiplayer_local_offer, &remote) ||
             packet.peer_id == s_multiplayer_local_peer_id ||
             s_multiplayer_lobby_state == CONSOLE_MP_LOBBY_CONNECTED) {
             return;
@@ -4150,7 +4421,10 @@ static void multiplayer_frame_received(
             return;
         }
         if (s_multiplayer_lobby_state != CONSOLE_MP_LOBBY_JOINING ||
-            packet.session_id != s_multiplayer_target_session_id) {
+            packet.session_id != s_multiplayer_target_session_id ||
+            !multiplayer_local_content_ready() ||
+            !p4_mp_lobby_offers_compatible(
+                &s_multiplayer_local_offer, &remote)) {
             return;
         }
         s_multiplayer_remote_offer = remote;
@@ -4337,12 +4611,27 @@ static void poll_multiplayer_link(const console_shell_t *shell)
 #if P4_CONSOLE_BLE_MULTIPLAYER
     if (s_multiplayer_transport == CONSOLE_MP_TRANSPORT_BLE) {
         platform_multiplayer_ble_poll();
+        resolve_ble_host_collision();
     }
 #endif
     refresh_multiplayer_lobby_candidates();
     const console_mp_transport_status_t transport =
         multiplayer_transport_status();
     s_multiplayer_transport_ready = transport.ready;
+    const int64_t lobby_now_us = esp_timer_get_time();
+    if (s_multiplayer_transport == CONSOLE_MP_TRANSPORT_BLE &&
+        s_multiplayer_lobby_state == CONSOLE_MP_LOBBY_BROWSING &&
+        transport.available) {
+        if (s_multiplayer_lobby_browser_ready_us == 0) {
+            s_multiplayer_lobby_browser_ready_us = lobby_now_us;
+            ESP_LOGI(TAG,
+                     "P4_CONSOLE_OS MULTIPLAYER_LOBBY_SCAN_READY "
+                     "settle_ms=%u",
+                     (unsigned)CONSOLE_MULTIPLAYER_BLE_BROWSER_SETTLE_MS);
+        }
+    } else {
+        s_multiplayer_lobby_browser_ready_us = 0;
+    }
 #if P4_CONSOLE_BLE_MULTIPLAYER
     if (s_multiplayer_transport == CONSOLE_MP_TRANSPORT_BLE &&
         s_multiplayer_lobby_state == CONSOLE_MP_LOBBY_JOINING) {
@@ -8058,22 +8347,33 @@ void app_main(void)
                    CONSOLE_ACTION_MULTIPLAYER_CONFIGURE) {
             handle_multiplayer_config_action(shell, &action);
         } else if (action.type ==
-                   CONSOLE_ACTION_MULTIPLAYER_LOBBY_PRIMARY) {
-            const esp_err_t lobby_action =
-                handle_multiplayer_lobby_primary();
+                   CONSOLE_ACTION_MULTIPLAYER_LOBBY_SELECT) {
+            (void)set_multiplayer_lobby_selection(
+                shell, action.multiplayer_lobby_selection, false);
+        } else if (action.type ==
+                       CONSOLE_ACTION_MULTIPLAYER_CREATE_LOBBY ||
+                   action.type ==
+                       CONSOLE_ACTION_MULTIPLAYER_JOIN_LOBBY) {
+            const bool create = action.type ==
+                CONSOLE_ACTION_MULTIPLAYER_CREATE_LOBBY;
+            const esp_err_t lobby_action = create
+                ? create_multiplayer_lobby()
+                : join_selected_multiplayer_lobby();
             ESP_LOGI(TAG,
                      "P4_CONSOLE_OS MULTIPLAYER_LOBBY_ACTION "
-                     "result=%s",
+                     "role=%s result=%s",
+                     create ? "host" : "join",
                      esp_err_to_name(lobby_action));
+        } else if (action.type ==
+                   CONSOLE_ACTION_MULTIPLAYER_LOBBY_RESET) {
+            reset_multiplayer_lobby("role-menu");
         } else if (action.type == CONSOLE_ACTION_PAGE_CHANGED &&
                    action.app_id == CONSOLE_APP_MULTIPLAYER &&
                    page_before_input != CONSOLE_PAGE_MULTIPLAYER) {
-            const esp_err_t validation_result =
-                platform_game_storage_start_content_validation();
             ESP_LOGI(TAG,
-                     "P4_CONSOLE_OS WAD_VALIDATION_REQUEST "
-                     "trigger=multiplayer result=%s boot_scan=0",
-                     esp_err_to_name(validation_result));
+                     "P4_CONSOLE_OS MULTIPLAYER_READY "
+                     "wad_validation=deferred-until-selected-title-launch "
+                     "native_validation=catalog-authoritative");
         } else if (action.type == CONSOLE_ACTION_PAGE_CHANGED &&
             action.app_id == CONSOLE_APP_FILES) {
             if (page_before_input != CONSOLE_PAGE_FILES) {

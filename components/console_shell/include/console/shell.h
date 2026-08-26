@@ -234,6 +234,25 @@ typedef enum {
     CONSOLE_MULTIPLAYER_LOBBY_CONNECTED,
 } console_multiplayer_lobby_phase_t;
 
+typedef enum {
+    CONSOLE_MULTIPLAYER_VIEW_ROLE = 0,
+    CONSOLE_MULTIPLAYER_VIEW_HOST,
+    CONSOLE_MULTIPLAYER_VIEW_JOIN,
+} console_multiplayer_view_t;
+
+enum {
+    CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX = 4,
+};
+
+typedef struct {
+    uint32_t session_id;
+    int8_t rssi;
+    uint8_t players_present;
+    uint8_t player_capacity;
+    bool game_available;
+    char game_title[CONSOLE_SHELL_TITLE_MAX_BYTES];
+} console_multiplayer_lobby_display_t;
+
 typedef struct {
     uint32_t uptime_seconds;
     char node_name[CONSOLE_SHELL_NODE_NAME_BYTES];
@@ -298,6 +317,7 @@ typedef struct {
     bool multiplayer_peer_seen;
     bool multiplayer_lobby_ready;
     bool multiplayer_lobby_is_host;
+    bool multiplayer_lobby_scanning;
     bool multiplayer_lobby_action_enabled;
     bool multiplayer_can_start;
     bool multiplayer_launch_syncing;
@@ -313,6 +333,8 @@ typedef struct {
     uint8_t multiplayer_lobby_count;
     int8_t multiplayer_lobby_rssi;
     uint32_t multiplayer_lobby_session_id;
+    console_multiplayer_lobby_display_t
+        multiplayer_lobbies[CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX];
     uint8_t multiplayer_route_id;
     uint8_t multiplayer_player_slot;
     uint8_t multiplayer_game_mode;
@@ -396,7 +418,10 @@ typedef enum {
     CONSOLE_ACTION_BOOT_VOLUME_SET,
     CONSOLE_ACTION_GAME_VOLUME_SET,
     CONSOLE_ACTION_MULTIPLAYER_CONFIGURE,
-    CONSOLE_ACTION_MULTIPLAYER_LOBBY_PRIMARY,
+    CONSOLE_ACTION_MULTIPLAYER_CREATE_LOBBY,
+    CONSOLE_ACTION_MULTIPLAYER_JOIN_LOBBY,
+    CONSOLE_ACTION_MULTIPLAYER_LOBBY_RESET,
+    CONSOLE_ACTION_MULTIPLAYER_LOBBY_SELECT,
     CONSOLE_ACTION_MULTIPLAYER_LAUNCH_GAME,
     CONSOLE_ACTION_STORAGE_CHECK,
     CONSOLE_ACTION_STORAGE_RETRY,
@@ -431,6 +456,7 @@ typedef struct {
     uint8_t volume_step;
     console_multiplayer_option_t multiplayer_option;
     int8_t multiplayer_delta;
+    uint8_t multiplayer_lobby_selection;
 } console_shell_action_t;
 
 typedef struct {
@@ -456,6 +482,8 @@ typedef struct {
     size_t file_first_visible;
     size_t audio_selected_row;
     size_t multiplayer_selected_row;
+    console_multiplayer_view_t multiplayer_view;
+    uint8_t multiplayer_role_selection;
     size_t storage_selected_action;
     size_t controller_selected_action;
     console_shell_file_notice_t file_notice;

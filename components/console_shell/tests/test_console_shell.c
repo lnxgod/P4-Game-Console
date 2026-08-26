@@ -602,8 +602,13 @@ static void test_multiplayer_start_lockout(void)
         .multiplayer_no_monsters = true,
     };
 
+    CHECK(shell.multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_ROLE);
     console_shell_action_t action =
         press_button(&shell, CONSOLE_BUTTON_ACCEPT);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_HOST);
+    shell.multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_COUNT;
+    action = press_button(&shell, CONSOLE_BUTTON_ACCEPT);
     CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_LAUNCH_GAME);
     CHECK(action.app_id == APP_DOOM);
     action = tap(&shell, 160U, 185U);
@@ -656,39 +661,67 @@ static void test_multiplayer_start_lockout(void)
     shell.runtime.multiplayer_lobby_action_enabled = true;
     shell.runtime.multiplayer_lobby_phase =
         CONSOLE_MULTIPLAYER_LOBBY_BROWSING;
+    shell.runtime.multiplayer_lobby_scanning = true;
+    shell.runtime.multiplayer_lobby_action_enabled = false;
     CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
-          CONSOLE_ACTION_MULTIPLAYER_LOBBY_PRIMARY);
+          CONSOLE_ACTION_NONE);
+    shell.runtime.multiplayer_lobby_scanning = false;
+    shell.runtime.multiplayer_lobby_action_enabled = true;
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
+          CONSOLE_ACTION_MULTIPLAYER_CREATE_LOBBY);
     CHECK(tap(&shell, 160U, 185U).type ==
-          CONSOLE_ACTION_MULTIPLAYER_LOBBY_PRIMARY);
+          CONSOLE_ACTION_MULTIPLAYER_CREATE_LOBBY);
 
+    action = press_button(&shell, CONSOLE_BUTTON_BACK);
+    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_LOBBY_RESET);
+    CHECK(shell.multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_ROLE);
     shell.runtime.multiplayer_transport_kind = 1U;
     shell.runtime.multiplayer_lobby_count = 2U;
-    shell.runtime.multiplayer_lobby_selection = 0U;
-    shell.multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_COUNT;
+    shell.runtime.multiplayer_lobby_selection = 1U;
+    shell.runtime.multiplayer_lobbies[0] =
+        (console_multiplayer_lobby_display_t){
+            .session_id = UINT32_C(0x39c572c8),
+            .rssi = -42,
+            .players_present = 1U,
+            .player_capacity = 2U,
+            .game_available = true,
+            .game_title = "DOOM",
+        };
+    shell.runtime.multiplayer_lobbies[1] =
+        (console_multiplayer_lobby_display_t){
+            .session_id = UINT32_C(0x8a104f21),
+            .rssi = -61,
+            .players_present = 1U,
+            .player_capacity = 2U,
+            .game_available = true,
+            .game_title = "CHEX QUEST",
+        };
+    action = press_button(&shell, CONSOLE_BUTTON_RIGHT);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.multiplayer_role_selection == 1U);
+    action = press_button(&shell, CONSOLE_BUTTON_ACCEPT);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_JOIN);
+    CHECK(shell.multiplayer_selected_row ==
+          CONSOLE_MULTIPLAYER_OPTION_LOBBY);
     action = press_button(&shell, CONSOLE_BUTTON_RIGHT);
     CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_CONFIGURE);
     CHECK(action.multiplayer_option == CONSOLE_MULTIPLAYER_OPTION_LOBBY);
     CHECK(action.multiplayer_delta == 1);
-    CHECK(shell.multiplayer_selected_row ==
-          CONSOLE_MULTIPLAYER_OPTION_COUNT);
-    action = tap(&shell, 300U, 181U);
-    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_CONFIGURE);
-    CHECK(action.multiplayer_option == CONSOLE_MULTIPLAYER_OPTION_LOBBY);
-    CHECK(action.multiplayer_delta == 1);
-    action = tap(&shell, 160U, 181U);
-    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_LOBBY_PRIMARY);
+    action = tap(&shell, 160U, 90U);
+    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_LOBBY_SELECT);
+    CHECK(action.multiplayer_lobby_selection == 1U);
+    shell.runtime.multiplayer_lobby_selection = 1U;
+    action = tap(&shell, 160U, 185U);
+    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_JOIN_LOBBY);
     action = tap(&shell, 280U, 79U);
-    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_CONFIGURE);
-    CHECK(action.multiplayer_option == CONSOLE_MULTIPLAYER_OPTION_GAME);
+    CHECK(action.type == CONSOLE_ACTION_NONE);
 
     shell.runtime.multiplayer_game_is_doom = false;
     shell.runtime.multiplayer_game_selection = 2U;
     memcpy(shell.runtime.multiplayer_game_title, "P4 YAHTZEE",
            sizeof("P4 YAHTZEE"));
-    shell.multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_GAME;
-    action = press_button(&shell, CONSOLE_BUTTON_RIGHT);
-    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_CONFIGURE);
-    CHECK(action.multiplayer_option == CONSOLE_MULTIPLAYER_OPTION_GAME);
+    shell.multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_LOBBY;
     action = press_button(&shell, CONSOLE_BUTTON_DOWN);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(shell.multiplayer_selected_row ==
@@ -707,6 +740,13 @@ static void test_multiplayer_start_lockout(void)
         sizeof(*frame));
     CHECK(frame != NULL);
     if (frame != NULL) {
+        shell.multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_ROLE;
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        shell.multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_HOST;
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        shell.multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_JOIN;
         CHECK(console_shell_render_rgb565(
             &shell, frame, CONSOLE_SHELL_WIDTH));
         free(frame);

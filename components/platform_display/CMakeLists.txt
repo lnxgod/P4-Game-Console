@@ -12,6 +12,7 @@ if(COMMAND idf_component_register)
         set(PLATFORM_DISPLAY_DRIVER_REQUIREMENTS
             esp_driver_gpio
             esp_driver_ledc
+            esp_driver_ppa
             espressif__esp_lcd_st7701
         )
     else()

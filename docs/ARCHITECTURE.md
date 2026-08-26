@@ -59,6 +59,14 @@ selected board profile
   owner alive for gamepad, keyboard, and mouse, while the microSD lease blocks
   manager mutation. Both paths prevent storage ownership from changing beneath
   an open game file.
+- On Waveshare, the exact WAD validation pass copies each bounded verified
+  chunk into an immutable PSRAM snapshot and yields periodically so
+  ESP-Hosted/NimBLE can service a bonded pad. Doom's read-only VFS then serves
+  random lump reads from that snapshot with zero post-handoff SD I/O; it never
+  asks SDMMC to DMA into an arbitrary engine allocation. Generic Multiplayer
+  navigation never starts this pass; terminal launch validates only the
+  selected Doom-family title. Native multiplayer uses catalog identity and
+  never scans WAD data.
 - The Olimex ES8311 backend borrows the display-created I2C1 controller, owns
   I2S1 only while an audio client is open, bounds writes to 128 stereo frames,
   and holds GPIO53 inactive during create, stop, failure, and teardown. Games

@@ -5,6 +5,7 @@ idf_component_register(
     INCLUDE_DIRS "../../../../components/platform_readonly_blob/include"
     REQUIRES
         freertos
+        log
         platform_game_storage
         vfs
 )

@@ -81,6 +81,14 @@ they never own display, touch, audio, USB, SD, UART, or raw GPIO drivers.
   HID pads, persistent A/B/X/Y/Start/Back mappings, and a controller-only BLE
   mode toggle through the same normalized input API used by wired pads. One
   paired pad can remain connected while one BLE Doom multiplayer peer joins.
+  Opening Multiplayer performs no WAD scan. Doom/Chex terminal launch keeps
+  BLE serviced while one exact pass over only the selected title also captures
+  an immutable PSRAM snapshot; engine random reads then perform zero SD I/O.
+  Native multiplayer cartridges never inspect WAD data. Transient pad loss is
+  neutralized before a bounded three-attempt saved-peer reconnect.
+  Multiplayer opens with an explicit Host/Join choice: Host selects a game and
+  its settings, while Join presents a cross-game room list and binds the exact
+  installed game automatically from the selected room beacon.
   Modern Bluetooth-capable Xbox controllers are the priority target. See
   [Console controllers](docs/CONTROLLERS.md) for exact scope and limits.
 - `elecrow-crowpanel-advanced-10` remains the default target and the only one

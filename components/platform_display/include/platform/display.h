@@ -48,6 +48,8 @@ typedef struct {
     uint32_t submit_timeouts;
     uint32_t submit_failures;
     uint32_t refresh_completions;
+    uint32_t accelerated_submits;
+    uint32_t accelerator_failures;
     bool underrun_count_available;
 } platform_display_stats_t;
 

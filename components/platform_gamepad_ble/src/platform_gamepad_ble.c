@@ -48,6 +48,9 @@ enum {
     BLE_HID_CONN_INTERVAL_MIN = 6,
     BLE_HID_CONN_INTERVAL_MAX = 12,
     BLE_HID_SUPERVISION_TIMEOUT = 500,
+    BLE_HID_RECONNECT_MAX_ATTEMPTS = 3,
+    BLE_HID_RECONNECT_BASE_DELAY_MS = 500,
+    BLE_HID_RECONNECT_RADIO_BUSY_MS = 250,
     BLE_HID_APPEARANCE_JOYSTICK = 0x03C3,
     BLE_HID_APPEARANCE_GAMEPAD = 0x03C4,
     BLE_HID_PAIR_RECORD_MAGIC = 0x50344750,
@@ -108,10 +111,13 @@ typedef struct {
     uint8_t descriptor_index;
     uint8_t reference_index;
     uint8_t subscribe_index;
+    uint8_t reconnect_attempts;
     int8_t last_report_characteristic;
+    uint64_t reconnect_due_us;
     bool initialized;
     bool connect_pending;
     bool forget_pending;
+    bool maintain_connection;
     bool selected_valid;
     bool saved_valid;
 } ble_hid_runtime_t;
@@ -134,6 +140,8 @@ static int gap_event(struct ble_gap_event *event, void *argument);
 static void host_sync(void *context);
 static void host_reset(int reason, void *context);
 static void start_scan(void);
+static void schedule_reconnect(int reason);
+static void service_reconnect(void);
 static void start_report_descriptor_discovery(void);
 static void start_report_reference_reads(void);
 static void start_subscriptions(void);
@@ -165,6 +173,79 @@ static void set_state(platform_gamepad_ble_state_t state, int error)
     s_ble.status.last_error = error;
     s_ble.status.ready = state == PLATFORM_GAMEPAD_BLE_READY;
     portEXIT_CRITICAL(&s_lock);
+}
+
+static void schedule_reconnect(int reason)
+{
+    const uint64_t now_us = monotonic_us();
+    bool scheduled = false;
+    uint8_t next_attempt = 0U;
+    uint32_t delay_ms = 0U;
+    portENTER_CRITICAL(&s_lock);
+    if (s_ble.maintain_connection && s_ble.saved_valid &&
+        !s_ble.forget_pending && s_ble.reconnect_due_us == 0U &&
+        s_ble.reconnect_attempts < BLE_HID_RECONNECT_MAX_ATTEMPTS) {
+        next_attempt = (uint8_t)(s_ble.reconnect_attempts + 1U);
+        delay_ms = (uint32_t)BLE_HID_RECONNECT_BASE_DELAY_MS <<
+            s_ble.reconnect_attempts;
+        s_ble.reconnect_due_us = now_us + (uint64_t)delay_ms * UINT64_C(1000);
+        scheduled = true;
+    }
+    portEXIT_CRITICAL(&s_lock);
+    if (scheduled) {
+        ESP_LOGI(TAG,
+                 "BLE_GAMEPAD_RECONNECT state=scheduled attempt=%u/%u "
+                 "delay_ms=%u reason=%d",
+                 (unsigned)next_attempt,
+                 (unsigned)BLE_HID_RECONNECT_MAX_ATTEMPTS,
+                 (unsigned)delay_ms, reason);
+    }
+}
+
+static void service_reconnect(void)
+{
+    const uint64_t now_us = monotonic_us();
+    portENTER_CRITICAL(&s_lock);
+    const bool due = s_ble.maintain_connection && s_ble.saved_valid &&
+        !s_ble.forget_pending && !s_ble.status.connected &&
+        !s_ble.connect_pending && s_ble.reconnect_due_us != 0U &&
+        now_us >= s_ble.reconnect_due_us &&
+        s_ble.reconnect_attempts < BLE_HID_RECONNECT_MAX_ATTEMPTS;
+    const bool host_ready = s_ble.status.host_ready;
+    portEXIT_CRITICAL(&s_lock);
+    if (!due) {
+        return;
+    }
+    if (!host_ready || ble_gap_disc_active() || ble_gap_adv_active()) {
+        portENTER_CRITICAL(&s_lock);
+        if (s_ble.reconnect_due_us != 0U) {
+            s_ble.reconnect_due_us = now_us +
+                (uint64_t)BLE_HID_RECONNECT_RADIO_BUSY_MS * UINT64_C(1000);
+        }
+        portEXIT_CRITICAL(&s_lock);
+        return;
+    }
+
+    uint8_t attempt = 0U;
+    portENTER_CRITICAL(&s_lock);
+    if (s_ble.maintain_connection && s_ble.saved_valid &&
+        !s_ble.forget_pending && !s_ble.status.connected &&
+        !s_ble.connect_pending && s_ble.reconnect_due_us != 0U &&
+        now_us >= s_ble.reconnect_due_us &&
+        s_ble.reconnect_attempts < BLE_HID_RECONNECT_MAX_ATTEMPTS) {
+        ++s_ble.reconnect_attempts;
+        attempt = s_ble.reconnect_attempts;
+        s_ble.reconnect_due_us = 0U;
+        s_ble.connect_pending = true;
+    }
+    portEXIT_CRITICAL(&s_lock);
+    if (attempt == 0U) {
+        return;
+    }
+    ESP_LOGI(TAG, "BLE_GAMEPAD_RECONNECT state=attempt attempt=%u/%u",
+             (unsigned)attempt,
+             (unsigned)BLE_HID_RECONNECT_MAX_ATTEMPTS);
+    start_scan();
 }
 
 static void count_drop(int error)
@@ -366,6 +447,12 @@ static void fail_connection(uint16_t conn_handle, int error, const char *stage)
     set_state(PLATFORM_GAMEPAD_BLE_ERROR, error);
     if (conn_handle != BLE_HS_CONN_HANDLE_NONE) {
         (void)ble_gap_terminate(conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+    } else {
+        portENTER_CRITICAL(&s_lock);
+        s_ble.connect_pending = false;
+        s_ble.selected_valid = false;
+        portEXIT_CRITICAL(&s_lock);
+        schedule_reconnect(error);
     }
 }
 
@@ -962,6 +1049,8 @@ static void publish_ready(void)
     s_ble.status.connected = true;
     s_ble.status.encrypted = true;
     s_ble.status.bonded = description.sec_state.bonded != 0U;
+    s_ble.reconnect_attempts = 0U;
+    s_ble.reconnect_due_us = 0U;
     portEXIT_CRITICAL(&s_lock);
     if (description.sec_state.bonded != 0U) {
         const esp_err_t saved = save_pair_record(
@@ -1199,6 +1288,7 @@ static int gap_event(struct ble_gap_event *event, void *argument)
                           ? PLATFORM_GAMEPAD_BLE_STANDBY
                           : PLATFORM_GAMEPAD_BLE_OFF,
                       event->disc_complete.reason);
+            schedule_reconnect(event->disc_complete.reason);
         }
         break;
     case BLE_GAP_EVENT_CONNECT:
@@ -1210,6 +1300,7 @@ static int gap_event(struct ble_gap_event *event, void *argument)
                           ? PLATFORM_GAMEPAD_BLE_STANDBY
                           : PLATFORM_GAMEPAD_BLE_ERROR,
                       event->connect.status);
+            schedule_reconnect(event->connect.status);
         }
         break;
     case BLE_GAP_EVENT_DISCONNECT:
@@ -1221,6 +1312,7 @@ static int gap_event(struct ble_gap_event *event, void *argument)
                           ? PLATFORM_GAMEPAD_BLE_STANDBY
                           : PLATFORM_GAMEPAD_BLE_OFF,
                       event->disconnect.reason);
+            schedule_reconnect(event->disconnect.reason);
         }
         break;
     case BLE_GAP_EVENT_ENC_CHANGE:
@@ -1282,6 +1374,7 @@ static void host_reset(int reason, void *context)
     s_ble.status.host_ready = false;
     portEXIT_CRITICAL(&s_lock);
     set_state(PLATFORM_GAMEPAD_BLE_ERROR, reason);
+    schedule_reconnect(reason);
 }
 
 esp_err_t platform_gamepad_ble_prepare(void)
@@ -1328,6 +1421,9 @@ esp_err_t platform_gamepad_ble_connect_or_pair(void)
         return ESP_ERR_INVALID_STATE;
     }
     s_ble.connect_pending = true;
+    s_ble.maintain_connection = true;
+    s_ble.reconnect_attempts = 0U;
+    s_ble.reconnect_due_us = 0U;
     const bool host_ready = s_ble.status.host_ready;
     portEXIT_CRITICAL(&s_lock);
     if (host_ready) {
@@ -1352,6 +1448,9 @@ void platform_gamepad_ble_cancel(void)
     const bool scanning =
         s_ble.status.state == PLATFORM_GAMEPAD_BLE_SCANNING;
     s_ble.connect_pending = false;
+    s_ble.maintain_connection = false;
+    s_ble.reconnect_attempts = 0U;
+    s_ble.reconnect_due_us = 0U;
     portEXIT_CRITICAL(&s_lock);
     if (scanning) {
         (void)ble_gap_disc_cancel();
@@ -1412,6 +1511,7 @@ esp_err_t platform_gamepad_ble_get_snapshot(
     if (snapshot == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
+    service_reconnect();
     portENTER_CRITICAL(&s_model_lock);
     const gamepad_status_t result =
         platform_gamepad_model_copy(&s_ble.model, snapshot);

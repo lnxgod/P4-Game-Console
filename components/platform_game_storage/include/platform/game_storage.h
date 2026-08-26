@@ -37,6 +37,18 @@ typedef enum {
     PLATFORM_GAME_STORAGE_DOOM_TITLE_COUNT,
 } platform_game_storage_doom_title_t;
 
+/**
+ * Immutable, exact-hash-verified Doom-engine data retained for a terminal
+ * game lease. The storage service owns these buffers; callers must not free
+ * or modify them. They remain valid until restart.
+ */
+typedef struct {
+    const uint8_t *wad_data;
+    size_t wad_size_bytes;
+    const uint8_t *deh_data;
+    size_t deh_size_bytes;
+} platform_game_storage_doom_snapshot_t;
+
 typedef esp_err_t (*platform_game_storage_stream_fn)(
     void *context, const uint8_t *data, size_t size_bytes,
     uint64_t file_offset);
@@ -262,6 +274,17 @@ esp_err_t platform_game_storage_lock_for_game(void);
  */
 esp_err_t platform_game_storage_lock_for_doom_title(
     platform_game_storage_doom_title_t title);
+
+/**
+ * Borrow the verified in-memory data for the current terminal game lease.
+ *
+ * The snapshot is created during the same bounded SD pass that computes the
+ * exact pinned SHA-256. This call performs no storage I/O. It succeeds only
+ * for the title passed to a successful lock_for_doom_title() call.
+ */
+esp_err_t platform_game_storage_get_locked_doom_snapshot(
+    platform_game_storage_doom_title_t title,
+    platform_game_storage_doom_snapshot_t *out_snapshot);
 
 /** True only after platform_game_storage_lock_for_game succeeds. */
 bool platform_game_storage_game_locked(void);

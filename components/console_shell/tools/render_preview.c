@@ -75,10 +75,23 @@ static bool select_page(console_shell_t *shell, const char *name)
         (void)strcpy(shell->home_folder_path, "SYSTEM");
         return true;
     }
-    if (strcmp(name, "multiplayer") == 0) {
+    if (strcmp(name, "multiplayer") == 0 ||
+        strcmp(name, "multiplayer-host") == 0 ||
+        strcmp(name, "multiplayer-join") == 0) {
         shell->page = CONSOLE_PAGE_MULTIPLAYER;
         shell->active_app_id =
             s_apps[sizeof(s_apps) / sizeof(s_apps[0]) - 1U].id;
+        shell->multiplayer_view = strcmp(name, "multiplayer-host") == 0
+            ? CONSOLE_MULTIPLAYER_VIEW_HOST
+            : strcmp(name, "multiplayer-join") == 0
+                ? CONSOLE_MULTIPLAYER_VIEW_JOIN
+                : CONSOLE_MULTIPLAYER_VIEW_ROLE;
+        shell->multiplayer_selected_row =
+            shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_JOIN
+                ? CONSOLE_MULTIPLAYER_OPTION_LOBBY
+                : shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_HOST
+                    ? CONSOLE_MULTIPLAYER_OPTION_GAME
+                    : CONSOLE_MULTIPLAYER_OPTION_COUNT;
         shell->dirty = true;
         return true;
     }
@@ -147,7 +160,8 @@ int main(int argc, char **argv)
     if (argc != 3) {
         fprintf(stderr,
                 "usage: %s home|all|games|arcade|system-folder|"
-                "colors|touch|system|files|manager|audio|multiplayer "
+                "colors|touch|system|files|manager|audio|multiplayer|"
+                "multiplayer-host|multiplayer-join "
                 "output.ppm\n",
                 argv[0]);
         return EXIT_FAILURE;
@@ -182,14 +196,40 @@ int main(int argc, char **argv)
         .multiplayer_can_start = false,
         .multiplayer_settings_editable = true,
         .multiplayer_game_ready = true,
-        .multiplayer_game_is_doom = false,
-        .multiplayer_game_selection = 2U,
+        .multiplayer_game_is_doom = true,
+        .multiplayer_game_selection = 0U,
         .multiplayer_game_count = 3U,
-        .multiplayer_game_title = "P4 YAHTZEE",
+        .multiplayer_game_title = "DOOM",
         .multiplayer_lobby_phase = CONSOLE_MULTIPLAYER_LOBBY_BROWSING,
-        .multiplayer_lobby_selection = 0U,
-        .multiplayer_lobby_count = 2U,
+        .multiplayer_lobby_selection = 1U,
+        .multiplayer_lobby_count = 3U,
         .multiplayer_lobby_session_id = UINT32_C(0x00007A3F),
+        .multiplayer_lobbies = {
+            {
+                .session_id = UINT32_C(0x39c572c8),
+                .rssi = -42,
+                .players_present = 1U,
+                .player_capacity = 2U,
+                .game_available = true,
+                .game_title = "DOOM",
+            },
+            {
+                .session_id = UINT32_C(0xe40d1a67),
+                .rssi = -61,
+                .players_present = 1U,
+                .player_capacity = 2U,
+                .game_available = true,
+                .game_title = "CHEX QUEST",
+            },
+            {
+                .session_id = UINT32_C(0x104fe291),
+                .rssi = -73,
+                .players_present = 1U,
+                .player_capacity = 2U,
+                .game_available = true,
+                .game_title = "P4 YAHTZEE",
+            },
+        },
         .multiplayer_player_slot = 0U,
         .multiplayer_game_mode = 1U,
         .multiplayer_episode = 1U,

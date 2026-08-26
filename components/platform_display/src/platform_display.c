@@ -12,6 +12,7 @@
 #include "driver/gpio.h"
 #include "driver/ledc.h"
 #if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+#include "driver/ppa.h"
 #include "esp_lcd_st7701.h"
 #include "waveshare_st7701_init.h"
 #else
@@ -69,6 +70,13 @@ static const char *TAG = "platform_display";
     ((size_t)PLATFORM_DISPLAY_NATIVE_WIDTH * \
      (size_t)PLATFORM_DISPLAY_NATIVE_HEIGHT)
 #define DISPLAY_FRAME_BYTES (DISPLAY_FRAME_PIXELS * sizeof(uint16_t))
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+#define DISPLAY_GAME_PPA_SCALE 2.375f
+#define DISPLAY_GAME_PPA_OFFSET_X 2U
+#define DISPLAY_GAME_PPA_OFFSET_Y 20U
+#define DISPLAY_GAME_PPA_WIDTH 475U
+#define DISPLAY_GAME_PPA_HEIGHT 760U
+#endif
 
 static esp_ldo_channel_handle_t s_dphy_ldo;
 static esp_ldo_channel_handle_t s_panel_ldo;
@@ -79,6 +87,12 @@ static bool s_backlight_ready;
 static bool s_initialized;
 static bool s_pattern_active;
 static uint16_t *s_submit_frame;
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+static ppa_client_handle_t s_game_scaler;
+static uint16_t *s_panel_frames[2];
+static uint8_t s_active_panel_frame;
+static bool s_accelerator_failure_logged;
+#endif
 static StaticSemaphore_t s_api_lock_storage;
 static StaticSemaphore_t s_refresh_signal_storage;
 static SemaphoreHandle_t s_api_lock;
@@ -215,6 +229,15 @@ static void release_owned_resources(void)
         (void)ledc_stop(LEDC_LOW_SPEED_MODE, LEDC_CHANNEL_0, 0);
         s_backlight_ready = false;
     }
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+    if (s_game_scaler != NULL) {
+        (void)ppa_unregister_client(s_game_scaler);
+        s_game_scaler = NULL;
+    }
+    memset(s_panel_frames, 0, sizeof(s_panel_frames));
+    s_active_panel_frame = 0U;
+    s_accelerator_failure_logged = false;
+#endif
     if (s_submit_frame != NULL) {
         heap_caps_free(s_submit_frame);
         s_submit_frame = NULL;
@@ -393,7 +416,11 @@ esp_err_t platform_display_init(void)
         .dpi_clk_src = MIPI_DSI_DPI_CLK_SRC_DEFAULT,
         .dpi_clock_freq_mhz = DISPLAY_DPI_CLOCK_MHZ,
         .pixel_format = LCD_COLOR_PIXEL_FORMAT_RGB565,
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+        .num_fbs = 2,
+#else
         .num_fbs = 1,
+#endif
         .video_timing = {
             .h_size = PLATFORM_DISPLAY_NATIVE_WIDTH,
             .v_size = PLATFORM_DISPLAY_NATIVE_HEIGHT,
@@ -459,6 +486,37 @@ esp_err_t platform_display_init(void)
         (void)xSemaphoreGive(s_api_lock);
         return err;
     }
+
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+    err = esp_lcd_dpi_panel_get_frame_buffer(
+        s_panel, 2U, (void **)&s_panel_frames[0],
+        (void **)&s_panel_frames[1]);
+    if (err != ESP_OK || s_panel_frames[0] == NULL ||
+        s_panel_frames[1] == NULL) {
+        ESP_LOGE(TAG,
+                 "P4_DISPLAY M2 FAIL stage=panel-framebuffers error=%s",
+                 esp_err_to_name(err));
+        release_owned_resources();
+        (void)xSemaphoreGive(s_api_lock);
+        return err == ESP_OK ? ESP_ERR_INVALID_STATE : err;
+    }
+    const ppa_client_config_t scaler_config = {
+        .oper_type = PPA_OPERATION_SRM,
+        .max_pending_trans_num = 1U,
+    };
+    err = ppa_register_client(&scaler_config, &s_game_scaler);
+    if (err != ESP_OK) {
+        s_game_scaler = NULL;
+        ESP_LOGW(TAG,
+                 "P4_DISPLAY GAME_ACCELERATOR ready=0 fallback=cpu error=%s",
+                 esp_err_to_name(err));
+    } else {
+        ESP_LOGI(TAG,
+                 "P4_DISPLAY GAME_ACCELERATOR ready=1 engine=ppa-srm "
+                 "source=320x200 target=475x760 rotation_ccw=90 "
+                 "double_buffer=1");
+    }
+#endif
 
     const esp_lcd_dpi_panel_event_callbacks_t callbacks = {
         .on_refresh_done = on_refresh_done,
@@ -553,6 +611,81 @@ esp_err_t platform_display_show_pattern(platform_display_pattern_t pattern)
 typedef bool (*display_layout_fn_t)(
     const uint16_t *, size_t, uint16_t *, size_t, size_t);
 
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+static void clear_accelerated_game_margins(uint16_t *destination)
+{
+    const size_t row_pixels = PLATFORM_DISPLAY_NATIVE_WIDTH;
+    memset(destination, 0,
+           DISPLAY_GAME_PPA_OFFSET_Y * row_pixels * sizeof(*destination));
+    memset(destination +
+               (DISPLAY_GAME_PPA_OFFSET_Y + DISPLAY_GAME_PPA_HEIGHT) *
+                   row_pixels,
+           0,
+           (PLATFORM_DISPLAY_NATIVE_HEIGHT - DISPLAY_GAME_PPA_OFFSET_Y -
+            DISPLAY_GAME_PPA_HEIGHT) * row_pixels * sizeof(*destination));
+    for (size_t y = DISPLAY_GAME_PPA_OFFSET_Y;
+         y < DISPLAY_GAME_PPA_OFFSET_Y + DISPLAY_GAME_PPA_HEIGHT; ++y) {
+        uint16_t *const row = destination + y * row_pixels;
+        memset(row, 0, DISPLAY_GAME_PPA_OFFSET_X * sizeof(*row));
+        memset(row + DISPLAY_GAME_PPA_OFFSET_X + DISPLAY_GAME_PPA_WIDTH, 0,
+               (PLATFORM_DISPLAY_NATIVE_WIDTH - DISPLAY_GAME_PPA_OFFSET_X -
+                DISPLAY_GAME_PPA_WIDTH) * sizeof(*row));
+    }
+}
+
+static bool accelerate_game_frame(const uint16_t *source,
+                                  size_t source_stride_pixels,
+                                  uint16_t *destination)
+{
+    if (s_game_scaler == NULL || source_stride_pixels !=
+            PLATFORM_DISPLAY_GAME_WIDTH || destination == NULL) {
+        return false;
+    }
+    const ppa_srm_oper_config_t operation = {
+        .in = {
+            .buffer = source,
+            .pic_w = PLATFORM_DISPLAY_GAME_WIDTH,
+            .pic_h = PLATFORM_DISPLAY_GAME_HEIGHT,
+            .block_w = PLATFORM_DISPLAY_GAME_WIDTH,
+            .block_h = PLATFORM_DISPLAY_GAME_HEIGHT,
+            .block_offset_x = 0U,
+            .block_offset_y = 0U,
+            .srm_cm = PPA_SRM_COLOR_MODE_RGB565,
+        },
+        .out = {
+            .buffer = destination,
+            .buffer_size = (uint32_t)DISPLAY_FRAME_BYTES,
+            .pic_w = PLATFORM_DISPLAY_NATIVE_WIDTH,
+            .pic_h = PLATFORM_DISPLAY_NATIVE_HEIGHT,
+            .block_offset_x = DISPLAY_GAME_PPA_OFFSET_X,
+            .block_offset_y = DISPLAY_GAME_PPA_OFFSET_Y,
+            .srm_cm = PPA_SRM_COLOR_MODE_RGB565,
+        },
+        .rotation_angle = PPA_SRM_ROTATION_ANGLE_90,
+        .scale_x = DISPLAY_GAME_PPA_SCALE,
+        .scale_y = DISPLAY_GAME_PPA_SCALE,
+        .mode = PPA_TRANS_MODE_BLOCKING,
+    };
+    const esp_err_t result =
+        ppa_do_scale_rotate_mirror(s_game_scaler, &operation);
+    if (result == ESP_OK) {
+        clear_accelerated_game_margins(destination);
+        __atomic_fetch_add(
+            &s_stats.accelerated_submits, 1U, __ATOMIC_RELAXED);
+        return true;
+    }
+    __atomic_fetch_add(
+        &s_stats.accelerator_failures, 1U, __ATOMIC_RELAXED);
+    if (!s_accelerator_failure_logged) {
+        s_accelerator_failure_logged = true;
+        ESP_LOGW(TAG,
+                 "P4_DISPLAY GAME_ACCELERATOR_FAIL error=%s fallback=cpu",
+                 esp_err_to_name(result));
+    }
+    return false;
+}
+#endif
+
 static esp_err_t submit_rgb565(
     const uint16_t *source,
     size_t source_stride_pixels,
@@ -584,6 +717,26 @@ static esp_err_t submit_rgb565(
         goto fail;
     }
 
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+    const bool game_layout =
+        layout == platform_display_layout_rgb565_320x200;
+    const uint8_t target_index =
+        (uint8_t)(s_active_panel_frame == 0U ? 1U : 0U);
+    uint16_t *const output_frame = s_panel_frames[target_index];
+    if (output_frame == NULL) {
+        err = ESP_ERR_INVALID_STATE;
+        goto fail_dark;
+    }
+    const bool accelerated = game_layout && accelerate_game_frame(
+        source, source_stride_pixels, output_frame);
+    if (!accelerated && !layout(
+            source, source_stride_pixels, output_frame,
+            PLATFORM_DISPLAY_NATIVE_WIDTH,
+            PLATFORM_DISPLAY_NATIVE_HEIGHT)) {
+        err = ESP_ERR_INVALID_ARG;
+        goto fail;
+    }
+#else
     if (s_submit_frame == NULL) {
         s_submit_frame = heap_caps_malloc(
             DISPLAY_FRAME_BYTES, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -599,6 +752,8 @@ static esp_err_t submit_rgb565(
         err = ESP_ERR_INVALID_ARG;
         goto fail;
     }
+    uint16_t *const output_frame = s_submit_frame;
+#endif
 
     if (s_pattern_active) {
         err = esp_lcd_dpi_panel_set_pattern(
@@ -613,10 +768,13 @@ static esp_err_t submit_rgb565(
     err = esp_lcd_panel_draw_bitmap(s_panel, 0, 0,
                                     PLATFORM_DISPLAY_NATIVE_WIDTH,
                                     PLATFORM_DISPLAY_NATIVE_HEIGHT,
-                                    s_submit_frame);
+                                    output_frame);
     if (err != ESP_OK) {
         goto fail_dark;
     }
+#if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
+    s_active_panel_frame = target_index;
+#endif
     const uint32_t refresh_baseline =
         __atomic_load_n(&s_stats.refresh_completions, __ATOMIC_ACQUIRE);
     /*
@@ -687,6 +845,10 @@ esp_err_t platform_display_get_stats(platform_display_stats_t *out_stats)
         __atomic_load_n(&s_stats.submit_failures, __ATOMIC_RELAXED);
     out_stats->refresh_completions =
         __atomic_load_n(&s_stats.refresh_completions, __ATOMIC_RELAXED);
+    out_stats->accelerated_submits =
+        __atomic_load_n(&s_stats.accelerated_submits, __ATOMIC_RELAXED);
+    out_stats->accelerator_failures =
+        __atomic_load_n(&s_stats.accelerator_failures, __ATOMIC_RELAXED);
     out_stats->underrun_count_available = false;
     return ESP_OK;
 }

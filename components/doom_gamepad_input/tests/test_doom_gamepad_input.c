@@ -136,6 +136,30 @@ static void test_extended_control_mapping(void)
     EXPECT_TRUE((seen & (UINT32_C(1) << DOOM_GAMEPAD_ACTION_PAUSE)) != 0U);
 }
 
+static void test_modern_dual_stick_mapping(void)
+{
+    doom_gamepad_input_t input;
+    doom_gamepad_input_init(&input);
+    gamepad_state_t state = connected_state();
+    state.left_x = -DOOM_GAMEPAD_STICK_THRESHOLD;
+    state.right_x = DOOM_GAMEPAD_STICK_THRESHOLD;
+    EXPECT_EQ(GAMEPAD_OK, doom_gamepad_input_update(&input, &state));
+
+    doom_gamepad_event_t events[4];
+    const unsigned count = drain(&input, events, 4U);
+    EXPECT_EQ(2, count);
+    uint32_t seen = 0U;
+    for (unsigned index = 0U; index < count; ++index) {
+        seen |= UINT32_C(1) << events[index].action;
+    }
+    EXPECT_TRUE((seen &
+        (UINT32_C(1) << DOOM_GAMEPAD_ACTION_STRAFE_LEFT)) != 0U);
+    EXPECT_TRUE((seen &
+        (UINT32_C(1) << DOOM_GAMEPAD_ACTION_RIGHT)) != 0U);
+    EXPECT_TRUE((seen &
+        (UINT32_C(1) << DOOM_GAMEPAD_ACTION_LEFT)) == 0U);
+}
+
 static void test_queue_contract_and_invalid_neutralization(void)
 {
     doom_gamepad_input_t input;
@@ -175,6 +199,7 @@ int main(void)
     test_mapping_and_disconnect_release();
     test_thresholds_and_conflicts();
     test_extended_control_mapping();
+    test_modern_dual_stick_mapping();
     test_queue_contract_and_invalid_neutralization();
     if (failures != 0) {
         fprintf(stderr, "%d Doom gamepad input test(s) failed\n", failures);
