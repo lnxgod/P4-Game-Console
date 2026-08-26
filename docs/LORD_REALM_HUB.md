@@ -68,8 +68,8 @@ or duplicating state.
 
 1. Connect each console's H1 CH343 port to the Mac. H2 remains available for
    the controller-first powered host fixture.
-2. On the console open **Multiplayer**, select **LORD**, leave **LINK** at
-   **WIRED AUTO**, choose **CREATE NEW**, and press **CREATE LOBBY**.
+2. On the console open **Multiplayer**, choose **HOST**, select **LORD**, leave
+   **LINK** at **WIRED AUTO**, and press **OPEN ROOM**.
 3. Find the exact H1 port on the Mac, normally `/dev/cu.wchusbserial...`.
 4. Start the hub with a permanent profile label for that player:
 

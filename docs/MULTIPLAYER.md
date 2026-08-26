@@ -25,8 +25,12 @@ on-board ESP32-C6 only after selection, so normal boot and wired play do not
 pay the radio startup cost. A board-authorized direct UART can run without a
 computer; H1 remains the automatic host-relay fallback and the
 diagnostic/content-upload path. Both exact Waveshare consoles have passed a
-sustained H1 relay game run. Direct-link and BLE gameplay remain separate
-hardware acceptances.
+sustained H1 relay game run. Console OS 0.4.83 also passed the explicit BLE
+Host/Join path on those two units: the guest discovered and selected the Doom
+room, both consoles crossed synchronized launch, and live gameplay ran. Direct
+J3 UART remains a separate hardware acceptance. The exact 0.4.83 artifact and
+operator result are recorded in
+`hardware/test-runs/2026-08-25-waveshare-two-unit-console-os-0.4.83-multiplayer-role-ui.json`.
 
 ## Declarative native-game profiles
 
@@ -39,9 +43,10 @@ is validated at build time, encoded in bounded package metadata, exposed to
 the game through `p4_game_multiplayer_read_profile()`, and included in lobby
 compatibility. See `docs/GAME_SDK.md` for the complete field bounds.
 
-This keeps the extension point data-driven: a new game appears in the
-Multiplayer selector and receives the existing sanitized session API without
-adding a game-specific BLE service, UART parser, socket, or launcher table.
+This keeps the extension point data-driven: a new game appears in the Host
+game list, can be resolved from an advertised Join row, and receives the
+existing sanitized session API without adding a game-specific BLE service,
+UART parser, socket, lobby screen, or launcher table.
 Console OS performs this registration itself when it scans an installed P4G;
 cartridge code has no registration API and cannot mutate the registry. The OS
 accepts only validated package metadata, rejects duplicate identities and
@@ -161,7 +166,7 @@ BLE gaming is deliberately narrow:
   game token only for discovery. Every result retains its advertised game
   token; an explicit row selection must resolve to a locally installed exact
   identity before `JOIN SELECTED` is enabled;
-- `CREATE LOBBY` allocates a fresh P4MP session and advertises one compact,
+- `OPEN ROOM` allocates a fresh P4MP session and advertises one compact,
   game-specific room beacon. While no guest is connected, hosts alternate
   advertising with short collision scans. If two compatible rooms were
   created independently, the lower session ID remains host and the higher
@@ -197,11 +202,12 @@ BLE owns game traffic. Pairing a controller temporarily pauses room browsing;
 an established controller link and one multiplayer peer fit the committed
 two-link budget.
 
-The encrypted BLE link and sustained two-board Doom lockstep have prior
-hardware acceptance. The explicit multi-room lobby introduced in Console OS
-0.4.60 still requires two-board acceptance for room discovery, selected-room
-isolation, host-only start, synchronized Doom launch, and clean recovery after
-either badge powers off.
+The encrypted BLE link, explicit Host/Join room discovery, selected Doom room,
+host start, synchronized launch, and live two-board gameplay have hardware
+acceptance on Console OS 0.4.83. The operator also reported visibly smoother
+gameplay, but that is qualitative rather than a measured FPS claim. Concurrent
+rooms advertising different games, room isolation under radio contention, and
+clean recovery after either badge powers off remain separate acceptance work.
 
 ## Product modes
 
@@ -222,7 +228,8 @@ relay, public matchmaking, arbitrary Internet listener, or Wi-Fi game mode.
 
 ## Remaining implementation order
 
-1. Run the BLE two-board acceptance described above with identical WADs.
+1. Test simultaneous BLE rooms advertising different games and prove selected
+   room isolation under radio contention.
 2. Complete direct-UART two-console Doom acceptance and record the J3 cable.
 3. Record disconnect, timeout, desync, and malformed-packet behavior for both
    transports.

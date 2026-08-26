@@ -224,8 +224,8 @@ enum {
 
 /**
  * Immutable, bounded networking contract selected by Console OS at launch.
- * It describes game semantics only; transport choice and peer identity remain
- * OS-owned and are intentionally absent.
+ * It describes game semantics only. Host/Join UI, room discovery, transport
+ * choice, and peer identity remain OS-owned and are intentionally absent.
  */
 typedef struct {
     uint8_t schema;
@@ -419,7 +419,11 @@ bool p4_game_read_save_status(p4_game_context_t *context,
                               p4_game_save_status_t *status_out,
                               uint32_t *committed_sequence_out);
 
-/** Copy the current OS-owned multiplayer session state without blocking. */
+/**
+ * Copy the current OS-owned multiplayer session state without blocking.
+ * Console OS completes Host/Join selection and the start barrier before a
+ * network-launched cartridge starts; games do not create or join rooms.
+ */
 bool p4_game_multiplayer_read_status(
     p4_game_context_t *context,
     p4_game_multiplayer_status_t *status_out);

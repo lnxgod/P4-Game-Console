@@ -278,23 +278,44 @@ complete bounded snapshot after every accepted action. `p4_game_multiplayer_*`
 calls are non-blocking; a false send is dropped/degraded and a false receive
 means no validated message is currently queued.
 
-Console OS includes an installed native cartridge in the Multiplayer `GAME`
-selector only when its manifest declares `multiplayer-session`. Room discovery
-then matches the exact cartridge ID and payload SHA-256; two cartridges with
-the same display title but different content cannot join each other. After the
-host starts the room, both consoles launch that selected cartridge and its
-first `game_start` can read the already-connected session snapshot. Returning
-to the launcher or losing the route ends and neutralizes the game-facing
-session.
+The game loop needs no lobby code. Poll the already-sanitized session and keep
+the offline path available:
+
+```c
+p4_game_multiplayer_status_t net = {0};
+if (p4_game_multiplayer_read_status(context, &net) &&
+    net.state == P4_GAME_MULTIPLAYER_CONNECTED) {
+    if (net.role == P4_GAME_MULTIPLAYER_ROLE_HOST) {
+        /* Validate peer intents and publish authoritative snapshots. */
+    } else {
+        /* Send local intent and apply snapshots received from the host. */
+    }
+}
+```
+
+Console OS includes an installed native cartridge in the Host game list only
+when its manifest declares `multiplayer-session`. The first Multiplayer screen
+is `HOST` or `JOIN`. Host chooses the game, settings, and link before opening a
+room. Join has no separate game picker: its bounded browser lists advertised
+rooms across games, and selecting a row resolves the exact local cartridge ID
+and payload SHA-256 before connection. Two cartridges with the same display
+title but different content cannot join each other. Games never scan, create,
+advertise, select, or join rooms themselves.
+
+After the host starts the room, both consoles cross the OS-owned start barrier
+and launch the selected cartridge. Its first `game_start` can read the
+already-connected session snapshot. Returning to the launcher or losing the
+route ends and neutralizes the game-facing session.
 
 Registration is owned entirely by Console OS. During installation or the next
 game-catalog scan, the OS copies the validated package ID, launcher ID, payload
 digest, title, and multiplayer profile into its bounded in-memory registry.
 There is no game-side registration call, first-run prompt, or central table to
 edit. A kid-created cartridge only needs the declarative manifest above; by
-its first launch it is already available in the Multiplayer selector. Invalid,
-duplicate, over-capacity, or unsupported-player registrations are rejected
-before cartridge code runs.
+its first launch it is already available in the Host game list and can appear
+in a Join room row when another console advertises it. Invalid, duplicate,
+over-capacity, or unsupported-player registrations are rejected before
+cartridge code runs.
 
 ## OS resource inheritance
 

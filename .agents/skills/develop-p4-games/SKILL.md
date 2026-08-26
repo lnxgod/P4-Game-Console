@@ -79,6 +79,10 @@ that can be exercised without display, audio, USB, or filesystem hardware.
   declarative `multiplayer` profile described in `docs/GAME_SDK.md`. Package
   the canonical profile into the reviewed `.P4G` header extension; never
   create a transport-specific sidecar or let a game choose BLE/UART/USB.
+  Console OS owns the full Host/Join flow: Host selects the game and settings,
+  while Join resolves an advertised room to the exact installed cartridge.
+  Cartridge code starts with an already-sanitized session and must not draw a
+  second lobby, scan peers, or ask the player to choose Host/Join again.
 - Use original or correctly licensed code and assets. Never commit commercial
   Doom WADs, WAD-bearing firmware, generated cartridges containing a WAD, or
   recovery images.
@@ -160,7 +164,10 @@ File Transfer exchange area, never to bypass native cartridge validation.
 For a hardware acceptance, perform one named run that launches the changed
 game, exercises its changed behavior, and returns to the launcher with Back.
 Record the exact cartridge hash and device used. A host test or successful
-package build is not hardware verification.
+package build is not hardware verification. When multiplayer behavior changed,
+exercise both OS roles, exact-game room resolution, connected launch, bounded
+message exchange, and the game's offline/peer-loss fallback without claiming
+an unmeasured frame rate.
 
 ## Definition of done
 

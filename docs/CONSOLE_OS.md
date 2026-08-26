@@ -10,13 +10,14 @@ hit testing, keyboard, and controller navigation share the same two-column,
 three-row door geometry. Native games remain 320x200 RGB565 and are scaled by
 the platform display path. The Waveshare adapter uses the P4 hardware scaler
 and alternating DSI framebuffers for that surface while leaving the Game API
-unchanged. The Multiplayer page now selects among Doom, Chex
-Quest, and installed native cartridges that declare `multiplayer-session`,
-filters rooms
-by exact game identity and content hash, and launches the selected game on both
-consoles after the host-owned start barrier. Doom keeps its dedicated lockstep
-handoff; native cartridges receive only the bounded, transport-neutral Game
-API session callbacks.
+unchanged. Multiplayer now opens with an explicit Host/Join choice. Host
+selects Doom, Chex Quest, or an installed native cartridge declaring
+`multiplayer-session`, plus settings and link. Join instead browses bounded
+cross-game room rows and resolves the selected room against the exact local
+game identity and content hash. Both consoles launch the resolved game only
+after the host-owned start barrier. Doom keeps its dedicated lockstep handoff;
+native cartridges receive only the bounded, transport-neutral Game API session
+callbacks.
 
 Console OS 0.4.71 adds a transport-neutral controller broker and a Waveshare
 Controllers panel. The OS can pair, reconnect, disconnect, or forget one

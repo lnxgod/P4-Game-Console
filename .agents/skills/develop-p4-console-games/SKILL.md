@@ -126,6 +126,13 @@ Set `protocol` when message meaning changes and set `message_bytes` to the
 largest actual packet; do not add transport names or addresses. Read the
 canonical runtime values with `p4_game_multiplayer_read_profile()`.
 
+Do not recreate Console OS multiplayer UI inside a game. The shell first asks
+`HOST` or `JOIN`; Host owns game/settings/link selection and Join binds a
+selected cross-game room beacon to the exact installed cartridge. Both launch
+only after the shared start barrier, so `game_start` should read the connected
+session and enter play directly. Keep a complete same-device/offline path for
+ordinary launcher starts and peer loss.
+
 For simple sound, request `audio-tone` and call `p4_game_play_tone()`. For a
 software mixer, request `audio-stream`, declare
 `P4_GAME_CAP_AUDIO_STREAM`, and submit 1–256 frames of signed 16 kHz PCM16

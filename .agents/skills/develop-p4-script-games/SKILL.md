@@ -123,9 +123,12 @@ cart-only update.
 Script saves currently survive relaunch during the same Console OS boot;
 durable save persistence across reboot remains pending. The API describes up
 to four players, but the first integrated device adapter currently populates
-only player one. QR bitmap rendering, camera scanning, and device import UI
-remain pending. State these limits in the game README when its design depends
-on them.
+only player one. Networked Host/Join sessions are currently exposed only to
+native `.P4G` games through `multiplayer-session`; `.P4CART` games remain local
+and must not claim BLE/UART room support. Use `$develop-p4-console-games` when
+a requested networked game needs that service. QR bitmap rendering, camera
+scanning, and device import UI remain pending. State these limits in the game
+README when its design depends on them.
 
 A script-game change is complete when its source and license remain readable,
 the manifest validates, deterministic pack/inspect and runtime smoke pass, any
