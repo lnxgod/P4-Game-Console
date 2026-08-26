@@ -11,11 +11,11 @@ import zlib
 from collections.abc import Callable
 
 from tools.p4_realm_hub import p4mp, p4rm
-from tools.p4_realm_hub.store import RealmProfile, RealmStore
+from tools.p4_realm_hub.store import RealmEvent, RealmProfile, RealmStore
 
 
 LORD_GAME_ID = "org.p4console.lord"
-LORD_P4RM_PROTOCOL = 0x4C52
+LORD_P4RM_PROTOCOL = 0x4C53
 LORD_SYNC_HEADER_BYTES = 52
 LORD_SAVE_HEADER_BYTES = 16
 
@@ -60,7 +60,7 @@ def validate_lord_sync(record: bytes, actor_id: bytes, nonce: int) -> bool:
     )
     nested_realm_revision = struct.unpack_from("<I", save, 20)[0]
     return (
-        save_version == 3
+        save_version in (3, 4)
         and save_length == len(save)
         and save_crc == zlib.crc32(save[LORD_SAVE_HEADER_BYTES:]) & 0xFFFFFFFF
         and nested_sequence == save_sequence
@@ -89,6 +89,26 @@ class Upload:
     chunks: list[bytes] = dataclasses.field(default_factory=list)
 
 
+@dataclasses.dataclass
+class ActionUpload:
+    transaction_id: int
+    kind: int
+    code: int
+    value: int
+    target_actor_id: bytes
+    nonce: int
+    body_bytes: int
+    body_crc32: int
+
+
+@dataclasses.dataclass
+class OutgoingEvent:
+    transaction_id: int
+    event: RealmEvent
+    body_sent: bool = False
+    last_sent_at: float = 0.0
+
+
 class RealmHubSession:
     """One console-to-Mac P4MP session, independent of BLE or H1 framing."""
 
@@ -115,6 +135,8 @@ class RealmHubSession:
         self.game_online = False
         self.download: Download | None = None
         self.upload: Upload | None = None
+        self.action_upload: ActionUpload | None = None
+        self.outgoing_event: OutgoingEvent | None = None
         self.last_clock_day = 0
         self.next_clock_at = 0.0
         self.next_directory_at = 0.0
@@ -217,6 +239,8 @@ class RealmHubSession:
         self.game_online = False
         self.download = None
         self.upload = None
+        self.action_upload = None
+        self.outgoing_event = None
         self.directory_pending = []
         self.pending_profile = None
 
@@ -239,6 +263,8 @@ class RealmHubSession:
         self.game_online = False
         self.download = None
         self.upload = None
+        self.action_upload = None
+        self.outgoing_event = None
         nonce = self.peer_id ^ self.host_peer_id ^ self.session_id
         if nonce == 0:
             nonce = 1
@@ -264,6 +290,12 @@ class RealmHubSession:
             self._receive_profile(message)
         elif message.kind == p4rm.PROFILE_STATS:
             self._receive_profile_stats(message)
+        elif message.kind == p4rm.ACTION_BEGIN:
+            self._begin_action(message)
+        elif message.kind == p4rm.ACTION_BODY:
+            self._receive_action_body(message)
+        elif message.kind == p4rm.EVENT_ACK:
+            self._receive_event_ack(message)
 
     def _begin_game_sync(self, transaction_id: int) -> None:
         try:
@@ -321,7 +353,21 @@ class RealmHubSession:
         download.last_sent_at = self.now()
 
     def _receive_ack(self, message: p4rm.Message) -> None:
-        if len(message.payload) != 1 or self.download is None:
+        if len(message.payload) != 1:
+            return
+        outgoing = self.outgoing_event
+        if (
+            outgoing is not None
+            and message.transaction_id == outgoing.transaction_id
+            and message.payload[0] == p4rm.EVENT_BEGIN
+            and message.chunk_index == p4rm.BEGIN_INDEX
+            and not outgoing.body_sent
+            and outgoing.event.body
+        ):
+            outgoing.body_sent = True
+            self._send_event_part()
+            return
+        if self.download is None:
             return
         download = self.download
         if message.transaction_id != download.transaction_id:
@@ -341,6 +387,145 @@ class RealmHubSession:
         else:
             return
         self._send_download_part()
+
+    def _begin_action(self, message: p4rm.Message) -> None:
+        kind, code, value, target, nonce, body_bytes, body_crc = (
+            p4rm.decode_action_begin(message.payload)
+        )
+        expected_chunks = 1 if body_bytes else 0
+        if (
+            message.chunk_index != p4rm.BEGIN_INDEX
+            or message.chunk_count != expected_chunks
+        ):
+            self._send_realm(
+                p4rm.ACTION_RESULT,
+                message.transaction_id,
+                p4rm.encode_action_result(
+                    p4rm.ACTION_INVALID, kind, 0, 0, 0
+                ),
+            )
+            return
+        self.action_upload = ActionUpload(
+            message.transaction_id,
+            kind,
+            code,
+            value,
+            target,
+            nonce,
+            body_bytes,
+            body_crc,
+        )
+        self._send_realm(
+            p4rm.ACK,
+            message.transaction_id,
+            bytes([p4rm.ACTION_BEGIN]),
+            p4rm.BEGIN_INDEX,
+            expected_chunks,
+        )
+        if body_bytes == 0:
+            self._finish_action(b"")
+
+    def _receive_action_body(self, message: p4rm.Message) -> None:
+        action = self.action_upload
+        if (
+            action is None
+            or message.transaction_id != action.transaction_id
+            or action.body_bytes == 0
+            or message.chunk_index != 0
+            or message.chunk_count != 1
+            or len(message.payload) != action.body_bytes
+            or zlib.crc32(message.payload) & 0xFFFFFFFF != action.body_crc32
+        ):
+            return
+        self._send_realm(
+            p4rm.ACK,
+            message.transaction_id,
+            bytes([p4rm.ACTION_BODY]),
+            0,
+            1,
+        )
+        self._finish_action(message.payload)
+
+    def _finish_action(self, body: bytes) -> None:
+        action = self.action_upload
+        if action is None:
+            return
+        try:
+            result = self.store.perform_action(
+                self.actor_id,
+                action.nonce,
+                action.kind,
+                action.code,
+                action.value,
+                action.target_actor_id,
+                body,
+            )
+        except (OSError, RuntimeError, sqlite3.Error, ValueError):
+            self._send_realm(
+                p4rm.ERROR, action.transaction_id, struct.pack("<H", 3)
+            )
+            self.action_upload = None
+            return
+        self._send_realm(
+            p4rm.ACTION_RESULT,
+            action.transaction_id,
+            p4rm.encode_action_result(
+                result.status,
+                action.kind,
+                result.code,
+                result.value,
+                result.related_id,
+            ),
+        )
+        self.action_upload = None
+        self.next_directory_at = self.now()
+
+    def _send_event_part(self) -> None:
+        outgoing = self.outgoing_event
+        if outgoing is None:
+            return
+        event = outgoing.event
+        if outgoing.body_sent:
+            self._send_realm(
+                p4rm.EVENT_BODY,
+                outgoing.transaction_id,
+                event.body,
+                0,
+                1,
+            )
+        else:
+            self._send_realm(
+                p4rm.EVENT_BEGIN,
+                outgoing.transaction_id,
+                p4rm.encode_event_begin(
+                    event.event_id,
+                    event.kind,
+                    event.code,
+                    event.value,
+                    event.source_actor_id,
+                    event.source_name[:15],
+                    event.body,
+                ),
+                p4rm.BEGIN_INDEX,
+                1 if event.body else 0,
+            )
+        outgoing.last_sent_at = self.now()
+
+    def _receive_event_ack(self, message: p4rm.Message) -> None:
+        outgoing = self.outgoing_event
+        if outgoing is None or len(message.payload) != 8:
+            return
+        event_id = struct.unpack("<Q", message.payload)[0]
+        if (
+            message.transaction_id != outgoing.transaction_id
+            or event_id != outgoing.event.event_id
+        ):
+            return
+        try:
+            self.store.acknowledge_event(self.actor_id, event_id)
+        except (OSError, RuntimeError, sqlite3.Error, ValueError):
+            return
+        self.outgoing_event = None
 
     def _begin_upload(self, message: p4rm.Message) -> None:
         expected, total, crc32, nonce, day_id = p4rm.decode_upload_begin(
@@ -465,14 +650,15 @@ class RealmHubSession:
         self.pending_profile = (message.transaction_id, profile)
 
     def _receive_profile_stats(self, message: p4rm.Message) -> None:
-        if self.pending_profile is None or len(message.payload) != 4:
+        if self.pending_profile is None or len(message.payload) != 8:
             return
         transaction_id, profile = self.pending_profile
         if message.transaction_id != transaction_id:
             return
         complete = dataclasses.replace(
             profile,
-            chompcoin=struct.unpack("<I", message.payload)[0],
+            chompcoin=struct.unpack_from("<I", message.payload, 0)[0],
+            bank=struct.unpack_from("<I", message.payload, 4)[0],
         )
         try:
             self.store.update_profile(complete)
@@ -526,7 +712,23 @@ class RealmHubSession:
         if self.download is not None and now - self.download.last_sent_at >= 1.0:
             self._send_download_part()
             return
-        if self.download is None and now >= self.next_directory_at:
+        if self.download is not None:
+            return
+        if self.outgoing_event is not None:
+            if now - self.outgoing_event.last_sent_at >= 1.0:
+                self._send_event_part()
+            return
+        try:
+            event = self.store.next_event(self.actor_id)
+        except (OSError, RuntimeError, sqlite3.Error):
+            self._send_realm(p4rm.ERROR, _nonzero_u32(), struct.pack("<H", 3))
+            self.game_online = False
+            return
+        if event is not None:
+            self.outgoing_event = OutgoingEvent(_nonzero_u32(), event)
+            self._send_event_part()
+            return
+        if now >= self.next_directory_at:
             try:
                 self.store.touch_profile(self.actor_id)
                 self._queue_directory()

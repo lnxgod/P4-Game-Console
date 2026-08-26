@@ -1,16 +1,16 @@
 # LORD backend synchronization
 
-LORD 1.3.0 has a working local Mac-hub synchronization path and remains a
+LORD 1.4.0 has a working local Mac-hub synchronization path and remains a
 complete offline cartridge. The cartridge never opens a socket, file, serial
 port, or BLE connection. Console OS owns the physical route and supplies the
 existing bounded `multiplayer-session` service.
 
 ## Implemented compatibility path
 
-No Game API or P4MP version upgrade was needed for the first realm slice.
-`game.json` declares a two-player turn-based profile with protocol `0x4c52`.
+No Game API or P4MP version upgrade was needed. `game.json` declares a
+two-player turn-based profile with protocol `0x4c53`.
 The console hosts the room and the Mac hub joins slot 1. LORD and the hub then
-exchange `P4RM` v1 records through ordinary P4MP Game Message packets.
+exchange `P4RM` v2 records through ordinary P4MP Game Message packets.
 
 `src/lord_sync_impl.h` owns the deterministic `LRSY` version-1 record. It wraps
 the complete existing `LDSV` save with:
@@ -30,10 +30,12 @@ server path.
 The Mac implementation lives in `tools/p4_realm_hub/` and is launched by
 `scripts/p4-realm-hub.py`. It provides:
 
-- strict P4MP v1 and P4RM v1 framing;
+- strict P4MP v1 and P4RM v2 framing;
 - the existing noisy-stream H1 and P4B BLE adapters;
 - SQLite actor heads, CRC validation, compare-and-swap commits, nonce
-  idempotency, event audit rows, profile presence, and a trusted realm clock;
+  idempotency, durable cross-actor events, profile presence, private vault
+  balance, friendship/team state, PvP leases, shared feeds, and a trusted
+  realm clock;
 - stop-and-wait transfer with retry; and
 - one database shared by several H1 workers and one optional BLE worker.
 
@@ -55,7 +57,7 @@ refresh restores daily actions but deliberately pays no bank interest. The new
 state must commit under the current day before it becomes the server head.
 
 Disconnect leaves the ordinary local save path intact. A later stale upload
-returns `SYNC CONFLICT` and does not overwrite the hub. Version 1.3.0 does not
+returns `SYNC CONFLICT` and does not overwrite the hub. Version 1.4.0 does not
 offer an in-game conflict chooser; the safe recovery is to exit and relaunch
 from the current server head or use a different hub profile for the divergent
 character.
@@ -73,25 +75,40 @@ Presence means a validated profile was seen within 90 seconds. It is a game UI
 hint, not proof of account identity. The current local hub has no public signup,
 password, TLS, Internet listener, or remote administration surface.
 
-## Typed cross-player actions still required
+## Typed cross-player actions implemented
 
-Full snapshot sync makes one actor portable, but it cannot safely mutate a
-second actor. These classic BBS interactions need a separate server-owned,
-idempotent action layer:
+P4RM v2 separates actor snapshots from cross-actor mutations. An action uses a
+nonzero per-actor nonce, bounded target actor ID, kind/code/value, optional
+48-byte body, and body CRC. SQLite records the request hash and result in the
+same transaction as its state change. A retry with the same request returns
+the stored result; changing a request under a used nonce is invalid.
 
-- mail: enqueue once to a target actor, list/read/acknowledge separately;
-- ChompCoin transfer: atomically debit and credit two current heads;
-- asynchronous PvP: lease an immutable opponent revision and commit a bounded
-  outcome exactly once;
-- friendship/adventure team: invite and accept as two-party consent events;
-- tavern/news: append bounded sanitized text to a paged shared feed.
+The implemented actions are:
 
-Until that layer exists, LORD's existing mail replies, transfers, PvP results,
-friendship actions, teams, conversation, and news operate inside the current
-actor's saved local realm copy. They are playable and synchronized with that
-actor's full snapshot, but they are not delivered to or authoritative for the
-other hub profile. Built-in IGMs are part of the snapshot; arbitrary external
-IGM packages still need typed OS handoff.
+- mail: one durable target event containing the bounded printable body;
+- ChompCoin transfer: validate 100 vaulted ChompCoin, atomically update the
+  hub's private source-vault and target-carried balances, and queue one debit
+  event and one credit event;
+- friendship: directional trust from encouragement or shared supplies;
+- adventure team: invite first, form only after the other actor reciprocates,
+  and notify both sides of formation or friendly parting;
+- mentoring: notify the confirmed teammate and update each character once;
+- asynchronous PvP: acquire one current-day lease, resolve it once, calculate
+  the target's carried-ChompCoin prize at the hub, and queue the target outcome;
+- tavern/news: store bounded printable feed rows and fan out durable events to
+  the registered profiles.
+
+Events carry a monotonically increasing 64-bit ID and remain unacknowledged in
+SQLite until the target cartridge applies them. LORD save schema 4 persists
+the last applied event ID plus opaque directory/team actor IDs; schema-3 saves
+migrate with zeroed event state. A repeated old event is acknowledged without
+reapplying its mail, ChompCoin, PvP record, trust, team, or feed effect.
+
+This is authoritative for the trusted local Mac deployment, not a hostile
+Internet economy. The hub has no account authentication, TLS listener,
+moderation, rate-limit policy, or server-side combat transcript validation.
+Built-in IGMs remain part of the actor snapshot; arbitrary external IGM
+packages still need typed OS handoff.
 
 ## Future Internet/backend adapter
 
@@ -117,6 +134,9 @@ Automated and two-device tests must cover clean first upload, relaunch
 download, offline play/reconnect, retry, power loss, duplicate nonce, changed
 body under a nonce, stale revision, simultaneous devices, malformed and
 oversized frames, hostile text, SQLite recovery, hourly rollover exactly once,
-and disconnect. The typed-action phase additionally needs ChompCoin
-non-duplication, mail exactly-once delivery, PvP lease replay/expiry, and team
-consent tests. A build is not H1 or BLE hardware acceptance.
+and disconnect. The host suite now covers action codecs, changed-body nonce
+rejection, two-node mail delivery/acknowledgement, two-sided ChompCoin
+transfer, team consent, PvP lease resolution, and tavern fan-out. Power-loss
+fault injection, PvP lease expiry, hostile-client fuzzing, and exact H1/BLE
+device evidence remain hardware/release gates. A build is not H1 or BLE
+hardware acceptance.

@@ -25,7 +25,8 @@ enum {
     LORD_MAX_LEVEL = 12,
     LORD_SKILL_COUNT = 3,
     LORD_SKILL_MASTERY_MAX = 40,
-    LORD_SAVE_FORMAT_VERSION = 3,
+    LORD_SAVE_FORMAT_VERSION = 4,
+    LORD_SAVE_MINIMUM_VERSION = 3,
     LORD_SAVE_MAX_BYTES = 4096,
     LORD_SYNC_FORMAT_VERSION = 1,
     LORD_SYNC_ACTOR_ID_BYTES = 16,
@@ -263,6 +264,10 @@ typedef struct {
     lord_player_t player;
     lord_enemy_t enemy;
     lord_realm_player_t realm[LORD_REALM_PLAYER_COUNT];
+    uint8_t realm_actor_ids[LORD_REALM_PLAYER_COUNT]
+        [LORD_SYNC_ACTOR_ID_BYTES];
+    uint8_t partner_actor_id[LORD_SYNC_ACTOR_ID_BYTES];
+    uint64_t last_realm_event_id;
     lord_mail_t mail[LORD_MAIL_COUNT_MAX];
     lord_log_entry_t log[LORD_LOG_COUNT_MAX];
     char editor_text[LORD_MAIL_BODY_BYTES];

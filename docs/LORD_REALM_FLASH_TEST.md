@@ -1,5 +1,10 @@
 # LORD 1.3.0 realm flash and hardware test
 
+> Historical candidate only. LORD 1.4.0 changes the cartridge multiplayer
+> protocol to P4RM v2/`0x4c53` and requires a new current-main Console OS
+> package, hashes, and exact-unit authorization. Do not use the 0.4.73/LORD
+> 1.3.0 artifacts or authorization to test 1.4.0.
+
 ## Candidate
 
 The prepared candidate is Console OS 0.4.73 plus LORD 1.3.0 from source

@@ -276,6 +276,11 @@ static void test_save_round_trip(void)
     state.realm[1].trust = 55U;
     state.partner_index = 1;
     state.realm[1].teamed = true;
+    for (size_t index = 0U; index < LORD_SYNC_ACTOR_ID_BYTES; ++index) {
+        state.realm_actor_ids[1][index] = (uint8_t)(index + 1U);
+        state.partner_actor_id[index] = (uint8_t)(index + 1U);
+    }
+    state.last_realm_event_id = UINT64_C(123456789);
     (void)strcpy(state.conversation, "THE DRAGON IS AWAKE");
     (void)strcpy(state.announcement, "MEET IN THE FOREST");
     state.save_sequence = 42U;
@@ -303,9 +308,38 @@ static void test_save_round_trip(void)
     CHECK(restored.player.amulet);
     CHECK(restored.player.skill[LORD_CLASS_MYSTICAL] == 17U);
     CHECK(restored.partner_index == 1);
+    CHECK(memcmp(restored.realm_actor_ids[1], state.realm_actor_ids[1],
+                 LORD_SYNC_ACTOR_ID_BYTES) == 0);
+    CHECK(memcmp(restored.partner_actor_id, state.partner_actor_id,
+                 LORD_SYNC_ACTOR_ID_BYTES) == 0);
+    CHECK(restored.last_realm_event_id == UINT64_C(123456789));
     CHECK(strcmp(restored.conversation, "THE DRAGON IS AWAKE") == 0);
     CHECK(restored.save_sequence == 42U);
     CHECK(!restored.save_dirty);
+
+    enum { LORD_V4_SAVE_EXTENSION_BYTES = 4 + 8 * 16 + 16 + 8 };
+    const size_t v3_length = encoded_length - LORD_V4_SAVE_EXTENSION_BYTES;
+    encoded[4] = (uint8_t)LORD_SAVE_MINIMUM_VERSION;
+    encoded[5] = 0U;
+    encoded[6] = (uint8_t)v3_length;
+    encoded[7] = (uint8_t)(v3_length >> 8U);
+    uint32_t v3_crc = UINT32_MAX;
+    for (size_t index = 16U; index < v3_length; ++index) {
+        v3_crc ^= encoded[index];
+        for (uint8_t bit = 0U; bit < 8U; ++bit) {
+            const uint32_t mask = UINT32_C(0) - (v3_crc & UINT32_C(1));
+            v3_crc = (v3_crc >> 1U) ^ (UINT32_C(0xedb88320) & mask);
+        }
+    }
+    v3_crc = ~v3_crc;
+    encoded[8] = (uint8_t)v3_crc;
+    encoded[9] = (uint8_t)(v3_crc >> 8U);
+    encoded[10] = (uint8_t)(v3_crc >> 16U);
+    encoded[11] = (uint8_t)(v3_crc >> 24U);
+    CHECK(lord_save_decode(&restored, encoded, v3_length));
+    CHECK(restored.last_realm_event_id == 0U);
+    CHECK(restored.partner_actor_id[0] == 0U);
+    memcpy(encoded, duplicate, encoded_length);
 
     encoded[encoded_length - 1U] ^= UINT8_C(0x80);
     CHECK(!lord_save_decode(&restored, encoded, encoded_length));
@@ -378,6 +412,12 @@ enum {
     TEST_P4RM_DIRECTORY_SUMMARY = 12,
     TEST_P4RM_DIRECTORY_STATS = 13,
     TEST_P4RM_PROFILE_STATS = 14,
+    TEST_P4RM_ACTION_BEGIN = 15,
+    TEST_P4RM_ACTION_BODY = 16,
+    TEST_P4RM_ACTION_RESULT = 17,
+    TEST_P4RM_EVENT_BEGIN = 18,
+    TEST_P4RM_EVENT_BODY = 19,
+    TEST_P4RM_EVENT_ACK = 20,
     TEST_P4RM_BEGIN_INDEX = UINT16_MAX,
 };
 
@@ -490,7 +530,7 @@ static void realm_mock_queue(
         .bytes = (uint8_t)(TEST_P4RM_HEADER_BYTES + payload_bytes),
     };
     memcpy(message->data, "P4RM", 4U);
-    message->data[4] = 1U;
+    message->data[4] = 2U;
     message->data[5] = kind;
     message->data[6] = 0U;
     message->data[7] = TEST_P4RM_HEADER_BYTES;
@@ -567,7 +607,7 @@ static void test_p4mp_mac_realm_hourly_sync(void)
         .max_players = 2U,
         .tick_rate_hz = 30U,
         .message_bytes = P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES,
-        .protocol = UINT16_C(0x4c52),
+        .protocol = UINT16_C(0x4c53),
     };
     const p4_game_services_t services = {
         .available_capabilities = P4_GAME_CAP_VIDEO |
@@ -695,6 +735,236 @@ static void test_p4mp_mac_realm_hourly_sync(void)
     CHECK(state.player.bank == old_bank);
     CHECK(state.player.forest_fights == LORD_FOREST_FIGHTS_PER_DAY);
     CHECK(realm.outgoing[5] == TEST_P4RM_UPLOAD_BEGIN);
+    (void)realm_mock_take_kind(&realm);
+
+    const p4_game_input_t activate = {
+        .held = P4_BUTTON_A, .pressed = P4_BUTTON_A,
+    };
+    state.screen = LORD_SCREEN_BANK_TRANSFER;
+    state.selection = 0U;
+    const uint32_t bank_before = state.player.bank;
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing[5] == TEST_P4RM_ACTION_BEGIN);
+    const uint32_t action_transaction = test_load_u32(realm.outgoing, 8U);
+    CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES] == 2U);
+    CHECK(test_load_u16(realm.outgoing, TEST_P4RM_HEADER_BYTES + 2U) == 100U);
+    CHECK(memcmp(realm.outgoing + TEST_P4RM_HEADER_BYTES + 4U,
+                 directory_summary, LORD_SYNC_ACTOR_ID_BYTES) == 0);
+    (void)realm_mock_take_kind(&realm);
+    const uint8_t action_ack = TEST_P4RM_ACTION_BEGIN;
+    realm_mock_queue(&realm, TEST_P4RM_ACK, action_transaction,
+                     TEST_P4RM_BEGIN_INDEX, 0U, &action_ack, 1U);
+    uint8_t action_result[16] = {0};
+    action_result[1] = 2U;
+    test_store_u32(action_result, 4U, 100U);
+    realm_mock_queue(&realm, TEST_P4RM_ACTION_RESULT, action_transaction,
+                     0U, 0U, action_result, sizeof(action_result));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.player.bank == bank_before);
+    CHECK(realm.outgoing_bytes == 0U);
+
+    uint8_t debit_event[48] = {0};
+    test_store_u64(debit_event, 0U, UINT64_C(40));
+    debit_event[8] = 2U;
+    debit_event[9] = 1U;
+    test_store_u32(debit_event, 12U, 100U);
+    memcpy(debit_event + 16U, directory_summary,
+           LORD_SYNC_ACTOR_ID_BYTES);
+    memcpy(debit_event + 32U, "Other Hero", 10U);
+    realm_mock_queue(&realm, TEST_P4RM_EVENT_BEGIN, UINT32_C(0x6500),
+                     TEST_P4RM_BEGIN_INDEX, 0U,
+                     debit_event, sizeof(debit_event));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.player.bank == bank_before - 100U);
+    CHECK(state.last_realm_event_id == UINT64_C(40));
+    CHECK(realm.outgoing[5] == TEST_P4RM_EVENT_ACK);
+    (void)realm_mock_take_kind(&realm);
+
+    const uint32_t gold_before_event = state.player.gold;
+    uint8_t transfer_event[48] = {0};
+    test_store_u64(transfer_event, 0U, UINT64_C(41));
+    transfer_event[8] = 2U;
+    test_store_u32(transfer_event, 12U, 100U);
+    memcpy(transfer_event + 16U, directory_summary,
+           LORD_SYNC_ACTOR_ID_BYTES);
+    memcpy(transfer_event + 32U, "Other Hero", 10U);
+    realm_mock_queue(&realm, TEST_P4RM_EVENT_BEGIN, UINT32_C(0x6600),
+                     TEST_P4RM_BEGIN_INDEX, 0U,
+                     transfer_event, sizeof(transfer_event));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.player.gold == gold_before_event + 100U);
+    CHECK(state.last_realm_event_id == UINT64_C(41));
+    CHECK(realm.outgoing[5] == TEST_P4RM_EVENT_ACK);
+    (void)realm_mock_take_kind(&realm);
+
+    state.screen = LORD_SCREEN_TEXT_EDITOR;
+    state.editor_target = LORD_EDITOR_MAIL;
+    state.editor_return_screen = LORD_SCREEN_MAILBOX;
+    state.selected_player = 0U;
+    state.selection = 42U;
+    (void)strcpy(state.editor_text, "MEET AT THE INN");
+    const uint8_t mail_count_before = state.mail_count;
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing[5] == TEST_P4RM_ACTION_BEGIN);
+    const uint32_t mail_transaction = test_load_u32(realm.outgoing, 8U);
+    CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES] == 1U);
+    CHECK(test_load_u16(realm.outgoing, 14U) == 1U);
+    (void)realm_mock_take_kind(&realm);
+    const uint8_t mail_begin_ack = TEST_P4RM_ACTION_BEGIN;
+    realm_mock_queue(&realm, TEST_P4RM_ACK, mail_transaction,
+                     TEST_P4RM_BEGIN_INDEX, 1U, &mail_begin_ack, 1U);
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing[5] == TEST_P4RM_ACTION_BODY);
+    CHECK(memcmp(realm.outgoing + TEST_P4RM_HEADER_BYTES,
+                 "MEET AT THE INN", 15U) == 0);
+    (void)realm_mock_take_kind(&realm);
+    const uint8_t mail_body_ack = TEST_P4RM_ACTION_BODY;
+    realm_mock_queue(&realm, TEST_P4RM_ACK, mail_transaction,
+                     0U, 1U, &mail_body_ack, 1U);
+    uint8_t mail_result[16] = {0};
+    mail_result[1] = 1U;
+    realm_mock_queue(&realm, TEST_P4RM_ACTION_RESULT, mail_transaction,
+                     0U, 0U, mail_result, sizeof(mail_result));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.mail_count == (uint8_t)(mail_count_before + 1U));
+    CHECK(state.mail[state.mail_count - 1U].outgoing);
+
+    static const uint8_t incoming_mail[] = "WELCOME FRIEND";
+    uint8_t mail_event[48] = {0};
+    test_store_u64(mail_event, 0U, UINT64_C(42));
+    mail_event[8] = 1U;
+    mail_event[10] = (uint8_t)(sizeof(incoming_mail) - 1U);
+    memcpy(mail_event + 16U, directory_summary,
+           LORD_SYNC_ACTOR_ID_BYTES);
+    memcpy(mail_event + 32U, "Other Hero", 10U);
+    realm_mock_queue(&realm, TEST_P4RM_EVENT_BEGIN, UINT32_C(0x6700),
+                     TEST_P4RM_BEGIN_INDEX, 1U,
+                     mail_event, sizeof(mail_event));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing[5] == TEST_P4RM_ACK);
+    (void)realm_mock_take_kind(&realm);
+    realm_mock_queue(&realm, TEST_P4RM_EVENT_BODY, UINT32_C(0x6700),
+                     0U, 1U, incoming_mail, sizeof(incoming_mail) - 1U);
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.last_realm_event_id == UINT64_C(42));
+    CHECK(strcmp(state.mail[state.mail_count - 1U].body,
+                 "WELCOME FRIEND") == 0);
+    CHECK(realm.outgoing[5] == TEST_P4RM_EVENT_ACK);
+    (void)realm_mock_take_kind(&realm);
+
+    const uint8_t mail_count_after_event = state.mail_count;
+    realm_mock_queue(&realm, TEST_P4RM_EVENT_BODY, UINT32_C(0x6700),
+                     0U, 1U, incoming_mail, sizeof(incoming_mail) - 1U);
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.last_realm_event_id == UINT64_C(42));
+    CHECK(state.mail_count == mail_count_after_event);
+    CHECK(realm.outgoing[5] == TEST_P4RM_EVENT_ACK);
+    (void)realm_mock_take_kind(&realm);
+
+    const uint8_t friendship_before = state.friendship_actions;
+    const uint32_t supplies_before = state.player.gold;
+    const uint16_t charm_before = state.player.charm;
+    const uint8_t trust_before = state.realm[0].trust;
+    uint8_t friend_event[48] = {0};
+    test_store_u64(friend_event, 0U, UINT64_C(43));
+    friend_event[8] = 3U;
+    friend_event[9] = UINT8_C(0x81);
+    test_store_u32(friend_event, 12U, 30U);
+    memcpy(friend_event + 16U, directory_summary,
+           LORD_SYNC_ACTOR_ID_BYTES);
+    memcpy(friend_event + 32U, "Other Hero", 10U);
+    realm_mock_queue(&realm, TEST_P4RM_EVENT_BEGIN, UINT32_C(0x6800),
+                     TEST_P4RM_BEGIN_INDEX, 0U,
+                     friend_event, sizeof(friend_event));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.friendship_actions == (uint8_t)(friendship_before - 1U));
+    CHECK(state.player.gold == supplies_before - 100U);
+    CHECK(state.player.charm == (uint16_t)(charm_before + 1U));
+    CHECK(state.realm[0].trust == (uint8_t)(trust_before + 30U));
+    CHECK(state.last_realm_event_id == UINT64_C(43));
+    CHECK(realm.outgoing[5] == TEST_P4RM_EVENT_ACK);
+    (void)realm_mock_take_kind(&realm);
+
+    realm_mock_queue(&realm, TEST_P4RM_EVENT_BEGIN, UINT32_C(0x6801),
+                     TEST_P4RM_BEGIN_INDEX, 0U,
+                     friend_event, sizeof(friend_event));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.friendship_actions == (uint8_t)(friendship_before - 1U));
+    CHECK(state.player.gold == supplies_before - 100U);
+    CHECK(state.player.charm == (uint16_t)(charm_before + 1U));
+    CHECK(state.realm[0].trust == (uint8_t)(trust_before + 30U));
+    CHECK(realm.outgoing[5] == TEST_P4RM_EVENT_ACK);
+    (void)realm_mock_take_kind(&realm);
+
+    state.screen = LORD_SCREEN_PLAYER_DETAIL;
+    state.selection = 0U;
+    state.selected_player = 0U;
+    state.player.strength = 500;
+    state.player.gold = 700U;
+    state.realm[0].gold = 251U;
+    state.realm[0].hit_points = 1;
+    state.realm[0].max_hit_points = 1;
+    state.realm[0].defense = 0;
+    state.realm[0].alive = true;
+    const uint32_t pvp_gold_before = state.player.gold;
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing[5] == TEST_P4RM_ACTION_BEGIN);
+    const uint32_t pvp_begin_transaction =
+        test_load_u32(realm.outgoing, 8U);
+    CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES] == 6U);
+    (void)realm_mock_take_kind(&realm);
+    realm_mock_queue(&realm, TEST_P4RM_ACK, pvp_begin_transaction,
+                     TEST_P4RM_BEGIN_INDEX, 0U, &action_ack, 1U);
+    uint8_t pvp_begin_result[16] = {0};
+    pvp_begin_result[1] = 6U;
+    test_store_u64(pvp_begin_result, 8U, UINT64_C(7001));
+    realm_mock_queue(&realm, TEST_P4RM_ACTION_RESULT,
+                     pvp_begin_transaction, 0U, 0U,
+                     pvp_begin_result, sizeof(pvp_begin_result));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.screen == LORD_SCREEN_BATTLE);
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.player.gold == pvp_gold_before);
+    CHECK(realm.outgoing[5] == TEST_P4RM_ACTION_BEGIN);
+    const uint32_t pvp_resolve_transaction =
+        test_load_u32(realm.outgoing, 8U);
+    CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES] == 7U);
+    (void)realm_mock_take_kind(&realm);
+    realm_mock_queue(&realm, TEST_P4RM_ACK, pvp_resolve_transaction,
+                     TEST_P4RM_BEGIN_INDEX, 1U, &action_ack, 1U);
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing[5] == TEST_P4RM_ACTION_BODY);
+    (void)realm_mock_take_kind(&realm);
+    realm_mock_queue(&realm, TEST_P4RM_ACK, pvp_resolve_transaction,
+                     0U, 1U, &mail_body_ack, 1U);
+    uint8_t pvp_resolve_result[16] = {0};
+    pvp_resolve_result[1] = 7U;
+    pvp_resolve_result[2] = 1U;
+    test_store_u32(pvp_resolve_result, 4U, 37U);
+    test_store_u64(pvp_resolve_result, 8U, UINT64_C(7001));
+    realm_mock_queue(&realm, TEST_P4RM_ACTION_RESULT,
+                     pvp_resolve_transaction, 0U, 0U,
+                     pvp_resolve_result, sizeof(pvp_resolve_result));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.player.gold == pvp_gold_before + 37U);
+
     p4_game_instance_stop(&instance);
 }
 

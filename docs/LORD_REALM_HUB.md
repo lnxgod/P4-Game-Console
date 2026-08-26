@@ -1,6 +1,6 @@
 # LORD Mac realm hub
 
-LORD 1.3.0 can use a Mac as a local BBS-style realm hub without adding a new
+LORD 1.4.0 can use a Mac as a local BBS-style realm hub without adding a new
 Game API ABI or changing P4MP v1. The console hosts the normal two-player LORD
 room. The Mac joins the second slot and carries the bounded `P4RM` realm
 protocol inside existing 1–64 byte P4MP Game Message packets.
@@ -34,17 +34,26 @@ on-device evidence before either may be called hardware-qualified.
   loop and no bank interest. Offline inn sleep keeps the classic local rules.
 - The same database can serve several H1 consoles at once. One optional BLE
   console can run in the same hub process.
+- Letters, 100-ChompCoin bank transfers, encouragement/shared supplies,
+  adventure-team invitations and reciprocal acceptance, mentoring, leased
+  asynchronous PvP outcomes, tavern conversation, and town announcements are
+  committed as nonce-idempotent hub actions. Their target events remain in
+  SQLite until the target cartridge applies and acknowledges the numbered
+  event.
+- Transfers publish both carried and vaulted ChompCoin privately to the hub.
+  The hub validates the source vault, commits its debit and the recipient
+  credit together, then queues one durable event to each console. Vault
+  balances are never exposed in the player directory.
 - If no multiplayer session is supplied, LORD remains the complete offline
   game and continues using ordinary local saves when available.
 
 The complete snapshot includes the character's local mail, news, PvP,
 friendship, team, built-in IGM, and ChompCoin state, so those fields follow the
-same actor between consoles. Version 1.3.0 does **not** yet make those actions
-authoritative across two different actors: remote mail delivery, atomic
-ChompCoin transfers, opponent PvP outcomes, two-party team consent, and a
-shared tavern/news feed remain the next typed-action layer. The current game
-must not be described as a public Internet BBS or a complete multi-user
-transaction server.
+same actor between consoles. Version 1.4.0 adds the local-hub cross-actor layer
+listed above. It is still a trusted LAN/USB deployment: it has no public
+signup, password, TLS listener, moderation console, or hostile-client economy
+validation beyond the bounded installed cartridge protocol. It must not be
+described as a public Internet BBS.
 
 ## Mac setup
 
@@ -119,16 +128,20 @@ to choose the intended room and profile.
 
 ## Realm protocol
 
-`P4RM` v1 has a 16-byte little-endian header and at most 48 payload bytes. Its
-profile number in the LORD multiplayer manifest is `0x4c52`. It uses only
+`P4RM` v2 has a 16-byte little-endian header and at most 48 payload bytes. Its
+profile number in the LORD multiplayer manifest is `0x4c53`. It uses only
 P4MP packet type 11, Game Message; old P4MP decoders, the relay, BLE framing,
 CRC, replay checks, route binding, and timeouts remain unchanged.
 
 The message set is: hello/welcome, download begin/chunk, upload begin/chunk,
-acknowledgement, commit result, clock, error, profile/profile stats, and
-directory summary/stats. Full records are capped at 4,148 bytes and 87 chunks.
-Snapshot downloads and uploads are stop-and-wait with one-second retry, which
-stays below Console OS's bounded eight-message receive queue.
+acknowledgement, commit result, clock, error, profile/profile stats, directory
+summary/stats, action begin/body/result, and event begin/body/acknowledgement.
+Full records are capped at 4,148 bytes and 87 chunks. Snapshots, action bodies,
+and event bodies use bounded stop-and-wait delivery with one-second retry,
+which stays below Console OS's eight-message receive queue. Reusing an action
+nonce with the same request returns the stored result; changing the request
+under that nonce fails closed. The cartridge persists the last applied event
+ID in save schema 4 and acknowledges old retries without applying them again.
 
 ## Verification
 

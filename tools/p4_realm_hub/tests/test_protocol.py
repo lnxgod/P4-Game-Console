@@ -89,8 +89,54 @@ class P4RMTests(unittest.TestCase):
         self.assertIsNone(reassembler.consume(fragments[0]))
         self.assertIsNone(reassembler.consume(fragments[-1]))
 
+    def test_action_and_event_codecs(self) -> None:
+        actor = bytes(range(1, 17))
+        body = b"MEET ME AT THE INN"
+        action = p4rm.encode_action_begin(
+            p4rm.ACTION_MAIL, 0, 0, actor, 77, body
+        )
+        self.assertEqual(
+            p4rm.decode_action_begin(action)[:6],
+            (p4rm.ACTION_MAIL, 0, 0, actor, 77, len(body)),
+        )
+        result = p4rm.encode_action_result(
+            p4rm.ACTION_OK, p4rm.ACTION_TRANSFER, 0, 100, 9
+        )
+        self.assertEqual(
+            p4rm.decode_action_result(result),
+            (p4rm.ACTION_OK, p4rm.ACTION_TRANSFER, 0, 100, 9),
+        )
+        event = p4rm.encode_event_begin(
+            10, p4rm.ACTION_MAIL, 0, 0, actor, "Test Hero", body
+        )
+        self.assertEqual(
+            p4rm.decode_event_begin(event),
+            (10, p4rm.ACTION_MAIL, 0, 0, actor, "Test Hero", len(body)),
+        )
+
 
 class StoreTests(unittest.TestCase):
+    @staticmethod
+    def add_profile(
+        store: RealmStore, profile: str, name: str, coin: int, bank: int = 500
+    ) -> bytes:
+        actor = store.actor_for_profile(profile)
+        store.update_profile(
+            RealmProfile(
+                actor, name, 0, 1, 3, 1, 20, 30, 12, 4,
+                500, coin, 2, 1, True, bank,
+            )
+        )
+        return actor
+
+    @staticmethod
+    def drain_events(store: RealmStore, actor: bytes) -> list:
+        events = []
+        while (event := store.next_event(actor)) is not None:
+            events.append(event)
+            store.acknowledge_event(actor, event.event_id)
+        return events
+
     def test_cas_idempotency_and_hourly_day(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = RealmStore(Path(directory) / "realm.sqlite3", epoch_seconds=0)
@@ -128,6 +174,101 @@ class StoreTests(unittest.TestCase):
             other = store.actor_for_profile("console-two")
             profiles = store.list_profiles(exclude_actor_id=other)
             self.assertEqual(profiles[0].name, "Test Hero")
+
+    def test_cross_actor_actions_are_idempotent_and_durable(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            first = self.add_profile(store, "console-one", "First Hero", 200)
+            second = self.add_profile(store, "console-two", "Second Hero", 1000)
+
+            mail = store.perform_action(
+                first, 1, p4rm.ACTION_MAIL, 0, 0, second, b"HELLO FRIEND"
+            )
+            duplicate = store.perform_action(
+                first, 1, p4rm.ACTION_MAIL, 0, 0, second, b"HELLO FRIEND"
+            )
+            self.assertEqual(mail, duplicate)
+            events = self.drain_events(store, second)
+            self.assertEqual(len(events), 1)
+            self.assertEqual(events[0].body, b"HELLO FRIEND")
+            self.assertEqual(
+                store.perform_action(
+                    first, 1, p4rm.ACTION_MAIL, 0, 0, second, b"CHANGED"
+                ).status,
+                p4rm.ACTION_INVALID,
+            )
+
+            transfer = store.perform_action(
+                first, 2, p4rm.ACTION_TRANSFER, 0, 100, second, b""
+            )
+            self.assertEqual((transfer.status, transfer.value), (p4rm.ACTION_OK, 100))
+            debit = self.drain_events(store, first)
+            self.assertEqual((debit[0].code, debit[0].value), (1, 100))
+            self.assertEqual(self.drain_events(store, second)[0].value, 100)
+            first_profile = store.list_profiles(exclude_actor_id=second)[0]
+            self.assertEqual(first_profile.bank, 400)
+
+            nonce = 10
+            for source, target in ((first, second), (second, first)):
+                for _ in range(4):
+                    self.assertEqual(
+                        store.perform_action(
+                            source, nonce, p4rm.ACTION_FRIEND, 0, 0, target, b""
+                        ).status,
+                        p4rm.ACTION_OK,
+                    )
+                    nonce += 1
+            self.drain_events(store, first)
+            self.drain_events(store, second)
+            invite = store.perform_action(
+                first, 30, p4rm.ACTION_TEAM, 0, 0, second, b""
+            )
+            self.assertEqual((invite.status, invite.code), (p4rm.ACTION_OK, 0))
+            self.drain_events(store, second)
+            self.drain_events(store, first)
+            formed = store.perform_action(
+                second, 31, p4rm.ACTION_TEAM, 0, 0, first, b""
+            )
+            self.assertEqual((formed.status, formed.code), (p4rm.ACTION_OK, 1))
+            self.assertEqual(self.drain_events(store, first)[0].code, 1)
+            self.drain_events(store, second)
+
+            mentor = store.perform_action(
+                first, 32, p4rm.ACTION_MENTOR, 0, 0, second, b""
+            )
+            self.assertEqual(mentor.status, p4rm.ACTION_OK)
+            self.drain_events(store, first)
+            self.drain_events(store, second)
+            third = self.add_profile(store, "console-three", "Third Hero", 300)
+            denied_mentor = store.perform_action(
+                first, 33, p4rm.ACTION_MENTOR, 0, 0, third, b""
+            )
+            self.assertEqual(denied_mentor.status, p4rm.ACTION_DENIED)
+
+            lease = store.perform_action(
+                first, 40, p4rm.ACTION_PVP_BEGIN, 0, 0, second, b""
+            )
+            self.assertEqual(lease.status, p4rm.ACTION_OK)
+            resolution = store.perform_action(
+                first,
+                41,
+                p4rm.ACTION_PVP_RESOLVE,
+                1,
+                0,
+                second,
+                lease.related_id.to_bytes(8, "little") + b"\x01",
+            )
+            self.assertEqual((resolution.status, resolution.value), (p4rm.ACTION_OK, 550))
+            duel_event = self.drain_events(store, second)[0]
+            self.assertEqual((duel_event.code, duel_event.value), (1, 550))
+
+            post = store.perform_action(
+                first, 50, p4rm.ACTION_TAVERN, 0, 0, b"\0" * 16,
+                b"DRAGON AT MIDNIGHT",
+            )
+            self.assertEqual(post.status, p4rm.ACTION_OK)
+            self.assertEqual(self.drain_events(store, second)[0].body,
+                             b"DRAGON AT MIDNIGHT")
 
 
 def lord_record(actor_id: bytes, nonce: int) -> bytes:
@@ -260,7 +401,7 @@ class HubSessionTests(unittest.TestCase):
             )
             sequence += 1
             wire = p4rm.encode_message(
-                p4rm.PROFILE_STATS, 90, struct.pack("<I", 1234)
+                p4rm.PROFILE_STATS, 90, struct.pack("<II", 1234, 4321)
             )
             hub.receive(
                 p4mp.encode_packet(
@@ -271,6 +412,88 @@ class HubSessionTests(unittest.TestCase):
             saved_profile = store.list_profiles(exclude_actor_id=other)[0]
             self.assertEqual(saved_profile.name, "Test Hero")
             self.assertEqual(saved_profile.chompcoin, 1234)
+            self.assertEqual(saved_profile.bank, 4321)
+
+    def test_two_node_mail_delivery_acknowledges_durable_event(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            clock = [1000.0]
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            first_actor = StoreTests.add_profile(
+                store, "console-one", "First Hero", 200
+            )
+            second_actor = StoreTests.add_profile(
+                store, "console-two", "Second Hero", 300
+            )
+            first_sent: list[bytes] = []
+            second_sent: list[bytes] = []
+            first = RealmHubSession(
+                "console-one", store, first_sent.append, now=lambda: clock[0]
+            )
+            second = RealmHubSession(
+                "console-two", store, second_sent.append, now=lambda: clock[0]
+            )
+            for session in (first, second):
+                session.session_id = 10
+                session.host_peer_id = 20
+                session.connected = True
+                session.game_online = True
+                session.next_directory_at = clock[0] + 60
+                session.next_clock_at = clock[0] + 60
+
+            body = b"MEET ME AT THE INN"
+            begin = p4rm.Message(
+                p4rm.ACTION_BEGIN,
+                70,
+                p4rm.BEGIN_INDEX,
+                1,
+                p4rm.encode_action_begin(
+                    p4rm.ACTION_MAIL, 0, 0, second_actor, 700, body
+                ),
+            )
+            first._receive_realm(begin)
+            first._receive_realm(
+                p4rm.Message(p4rm.ACTION_BODY, 70, 0, 1, body)
+            )
+            first_kinds = [
+                p4rm.decode_message(p4mp.decode_packet(frame).payload).kind
+                for frame in first_sent
+            ]
+            self.assertEqual(
+                first_kinds,
+                [p4rm.ACK, p4rm.ACK, p4rm.ACTION_RESULT],
+            )
+
+            second.tick()
+            event_begin = p4rm.decode_message(
+                p4mp.decode_packet(second_sent.pop()).payload
+            )
+            self.assertEqual(event_begin.kind, p4rm.EVENT_BEGIN)
+            event_id = p4rm.decode_event_begin(event_begin.payload)[0]
+            second._receive_realm(
+                p4rm.Message(
+                    p4rm.ACK,
+                    event_begin.transaction_id,
+                    p4rm.BEGIN_INDEX,
+                    1,
+                    bytes([p4rm.EVENT_BEGIN]),
+                )
+            )
+            event_body = p4rm.decode_message(
+                p4mp.decode_packet(second_sent.pop()).payload
+            )
+            self.assertEqual((event_body.kind, event_body.payload),
+                             (p4rm.EVENT_BODY, body))
+            second._receive_realm(
+                p4rm.Message(
+                    p4rm.EVENT_ACK,
+                    event_begin.transaction_id,
+                    0,
+                    0,
+                    struct.pack("<Q", event_id),
+                )
+            )
+            self.assertIsNone(store.next_event(second_actor))
+            self.assertNotEqual(first_actor, second_actor)
 
 
 if __name__ == "__main__":

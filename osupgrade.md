@@ -1,6 +1,45 @@
 # Remaining Console OS upgrades for full shared LORD services
 
-## 2026-08-25 flash-candidate readiness
+## 2026-08-26 node-mode implementation status
+
+LORD 1.4.0 now implements the local multiplayer action layer without a Game
+API ABI change. It uses the existing optional `multiplayer-session` callbacks,
+Console OS Host/Join flow, 64-byte P4MP Game Messages, H1 USB route, and
+encrypted BLE route. Its manifest protocol is `0x4c53`, and the Mac hub and
+cartridge require bounded `P4RM` v2.
+
+The local Mac hub now owns SQLite action idempotency, durable target outboxes,
+private carried/vaulted ChompCoin balances, directional trust, reciprocal team
+consent, current-day PvP leases, and tavern/news feeds. The cartridge submits
+letters, two-sided 100-ChompCoin transfers, friendship supplies/encouragement,
+team/mentor actions, PvP begin/resolve, tavern text, and announcements. It
+persists opaque actor mappings and the last applied event ID in save schema 4,
+while accepting and migrating schema 3. The host suites cover two-node mail,
+event acknowledgement, transfer debit/credit, team consent, PvP resolution,
+feed fan-out, retry, and changed-request nonce rejection.
+
+Therefore no additional Console OS capability, P4MP packet type, raw USB/BLE
+handle, socket, or writable cartridge storage is required to test local
+node-mode multiplayer. The remaining release work is:
+
+- build and verify a fresh `LORD.P4G` from the current tree, then install that
+  cartridge through the existing bounded H1 content-transfer path. Games run
+  from microSD, so this update does not require a Console OS firmware flash;
+- keep the existing guarded Waveshare firmware workflow only for a future OS
+  binary change. The older 0.4.73/LORD 1.3.0 authorization must never be
+  reused for different firmware bytes;
+- run retained H1 and encrypted-BLE two-console acceptance against one Mac hub,
+  including reboot/retry and hourly rollover evidence;
+- finish durable Console OS save policy on board profiles that still withhold
+  `save`; and
+- add an authenticated OS-owned `realm` service only for public Internet
+  accounts, TLS, moderation, quotas, hostile-client validation, or federation.
+
+The older sections below are retained as design history. Wherever they say
+the P4RM typed action layer is missing, this status section and
+`games/lord/BACKEND_SYNC.md` supersede them.
+
+## Historical: 2026-08-25 flash-candidate readiness
 
 Console OS 0.4.73 plus LORD 1.3.0 is prepared from exact main commit
 `fb5814215cacb38f7b608e3b9c8ba01d0d3b2e0a` for the two backed-up Waveshare
@@ -16,7 +55,7 @@ unit authorization is
 `hardware/evidence/waveshare-two-unit-console-os-0.4.73-lord-realm-20260825-exact-unit-authorization.json`.
 This is a hardware-test candidate, not a hardware-qualified result.
 
-## 2026-08-25 implementation status
+## Historical: 2026-08-25 implementation status
 
 LORD 1.3.0 now has a backward-compatible local Mac realm path. It declares
 the existing optional `multiplayer-session` capability and exchanges bounded

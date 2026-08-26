@@ -4,7 +4,7 @@
 #define P4_LORD_REALM_NET_IMPL_H
 
 enum {
-    LORD_P4RM_VERSION = 1,
+    LORD_P4RM_VERSION = 2,
     LORD_P4RM_HEADER_BYTES = 16,
     LORD_P4RM_PAYLOAD_BYTES =
         P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES - LORD_P4RM_HEADER_BYTES,
@@ -12,7 +12,7 @@ enum {
         (LORD_SYNC_MAX_BYTES + LORD_P4RM_PAYLOAD_BYTES - 1) /
             LORD_P4RM_PAYLOAD_BYTES,
     LORD_P4RM_BEGIN_INDEX = UINT16_MAX,
-    LORD_P4RM_PROTOCOL = 0x4c52,
+    LORD_P4RM_PROTOCOL = 0x4c53,
     LORD_P4RM_RETRY_MS = 1000,
 };
 
@@ -31,7 +31,33 @@ typedef enum {
     LORD_P4RM_DIRECTORY_SUMMARY = 12,
     LORD_P4RM_DIRECTORY_STATS = 13,
     LORD_P4RM_PROFILE_STATS = 14,
+    LORD_P4RM_ACTION_BEGIN = 15,
+    LORD_P4RM_ACTION_BODY = 16,
+    LORD_P4RM_ACTION_RESULT = 17,
+    LORD_P4RM_EVENT_BEGIN = 18,
+    LORD_P4RM_EVENT_BODY = 19,
+    LORD_P4RM_EVENT_ACK = 20,
 } lord_p4rm_kind_t;
+
+typedef enum {
+    LORD_REALM_ACTION_NONE = 0,
+    LORD_REALM_ACTION_MAIL = 1,
+    LORD_REALM_ACTION_TRANSFER = 2,
+    LORD_REALM_ACTION_FRIEND = 3,
+    LORD_REALM_ACTION_TEAM = 4,
+    LORD_REALM_ACTION_MENTOR = 5,
+    LORD_REALM_ACTION_PVP_BEGIN = 6,
+    LORD_REALM_ACTION_PVP_RESOLVE = 7,
+    LORD_REALM_ACTION_TAVERN = 8,
+    LORD_REALM_ACTION_NEWS = 9,
+} lord_realm_action_kind_t;
+
+typedef enum {
+    LORD_REALM_ACTION_IDLE = 0,
+    LORD_REALM_ACTION_WAIT_BEGIN_ACK,
+    LORD_REALM_ACTION_WAIT_BODY_ACK,
+    LORD_REALM_ACTION_WAIT_RESULT,
+} lord_realm_action_state_t;
 
 typedef enum {
     LORD_REALM_NET_OFFLINE = 0,
@@ -80,6 +106,7 @@ typedef struct {
     uint32_t profile_pending_save_sequence;
     uint32_t profile_transaction;
     uint32_t profile_chompcoin;
+    uint32_t profile_bank;
     uint32_t retry_elapsed_ms;
     uint32_t clock_elapsed_ms;
     uint16_t chunk_index;
@@ -90,6 +117,32 @@ typedef struct {
     uint32_t seconds_remaining;
     uint8_t directory_actor_ids[LORD_REALM_PLAYER_COUNT]
         [LORD_SYNC_ACTOR_ID_BYTES];
+    uint8_t previous_directory_actor_ids[LORD_REALM_PLAYER_COUNT]
+        [LORD_SYNC_ACTOR_ID_BYTES];
+    uint8_t previous_directory_trust[LORD_REALM_PLAYER_COUNT];
+    bool previous_directory_teamed[LORD_REALM_PLAYER_COUNT];
+    lord_realm_action_state_t action_state;
+    lord_realm_action_kind_t action_kind;
+    uint8_t action_code;
+    uint8_t action_player;
+    uint16_t action_value;
+    uint8_t action_target[LORD_SYNC_ACTOR_ID_BYTES];
+    uint8_t action_body[LORD_P4RM_PAYLOAD_BYTES];
+    size_t action_body_bytes;
+    uint32_t action_body_crc;
+    uint32_t action_transaction;
+    uint32_t action_retry_elapsed_ms;
+    uint64_t action_nonce;
+    uint64_t pvp_lease_id;
+    uint32_t event_transaction;
+    uint64_t event_id;
+    lord_realm_action_kind_t event_kind;
+    uint8_t event_code;
+    uint8_t event_source[LORD_SYNC_ACTOR_ID_BYTES];
+    char event_source_name[16];
+    uint32_t event_value;
+    size_t event_body_bytes;
+    bool event_waiting_body;
     bool connected;
     bool rollover_pending;
     bool profile_stats_pending;
@@ -113,7 +166,7 @@ static uint32_t p4rm_next_transaction(void)
 static bool p4rm_kind_valid(uint8_t kind)
 {
     return kind >= (uint8_t)LORD_P4RM_HELLO &&
-        kind <= (uint8_t)LORD_P4RM_PROFILE_STATS;
+        kind <= (uint8_t)LORD_P4RM_EVENT_ACK;
 }
 
 static size_t p4rm_encode(
@@ -418,12 +471,66 @@ static void p4rm_begin_upload(
     }
 }
 
+static bool p4rm_send_action_begin(p4_game_context_t *context)
+{
+    uint8_t payload[36] = {0};
+    payload[0] = (uint8_t)s_lord_realm_net.action_kind;
+    payload[1] = s_lord_realm_net.action_code;
+    save_store_u16(payload, 2U, s_lord_realm_net.action_value);
+    memcpy(payload + 4U, s_lord_realm_net.action_target,
+           LORD_SYNC_ACTOR_ID_BYTES);
+    sync_store_u64(payload, 20U, s_lord_realm_net.action_nonce);
+    save_store_u16(payload, 28U,
+                   (uint16_t)s_lord_realm_net.action_body_bytes);
+    save_store_u32(payload, 32U, s_lord_realm_net.action_body_crc);
+    return p4rm_send(
+        context, LORD_P4RM_ACTION_BEGIN,
+        s_lord_realm_net.action_transaction, LORD_P4RM_BEGIN_INDEX,
+        s_lord_realm_net.action_body_bytes == 0U ? 0U : 1U,
+        payload, sizeof(payload));
+}
+
+static bool p4rm_send_action_body(p4_game_context_t *context)
+{
+    return s_lord_realm_net.action_body_bytes != 0U && p4rm_send(
+        context, LORD_P4RM_ACTION_BODY,
+        s_lord_realm_net.action_transaction, 0U, 1U,
+        s_lord_realm_net.action_body,
+        s_lord_realm_net.action_body_bytes);
+}
+
 static void p4rm_handle_ack(
     p4_game_context_t *context,
     const lord_p4rm_message_t *message)
 {
+    if (message->payload_bytes != 1U) {
+        return;
+    }
+    if (message->transaction_id == s_lord_realm_net.action_transaction) {
+        if (s_lord_realm_net.action_state ==
+                LORD_REALM_ACTION_WAIT_BEGIN_ACK &&
+            message->chunk_index == LORD_P4RM_BEGIN_INDEX &&
+            message->chunk_count ==
+                (s_lord_realm_net.action_body_bytes == 0U ? 0U : 1U) &&
+            message->payload[0] == (uint8_t)LORD_P4RM_ACTION_BEGIN) {
+            s_lord_realm_net.action_retry_elapsed_ms = 0U;
+            if (s_lord_realm_net.action_body_bytes == 0U) {
+                s_lord_realm_net.action_state = LORD_REALM_ACTION_WAIT_RESULT;
+            } else if (p4rm_send_action_body(context)) {
+                s_lord_realm_net.action_state =
+                    LORD_REALM_ACTION_WAIT_BODY_ACK;
+            }
+        } else if (s_lord_realm_net.action_state ==
+                       LORD_REALM_ACTION_WAIT_BODY_ACK &&
+                   message->chunk_index == 0U &&
+                   message->chunk_count == 1U &&
+                   message->payload[0] == (uint8_t)LORD_P4RM_ACTION_BODY) {
+            s_lord_realm_net.action_retry_elapsed_ms = 0U;
+            s_lord_realm_net.action_state = LORD_REALM_ACTION_WAIT_RESULT;
+        }
+        return;
+    }
     if (message->transaction_id != s_lord_realm_net.transaction_id ||
-        message->payload_bytes != 1U ||
         message->chunk_count != s_lord_realm_net.chunk_count) {
         return;
     }
@@ -513,6 +620,10 @@ static void p4rm_handle_directory_summary(
     if (message->chunk_count == 0U && message->payload_bytes == 0U) {
         memset(s_lord_realm_net.directory_actor_ids, 0,
                sizeof(s_lord_realm_net.directory_actor_ids));
+        memset(state->realm_actor_ids, 0, sizeof(state->realm_actor_ids));
+        if (p4rm_actor_valid(state->partner_actor_id)) {
+            state->partner_index = -1;
+        }
         return;
     }
     if (message->payload_bytes != 44U ||
@@ -548,6 +659,28 @@ static void p4rm_handle_directory_summary(
         level > LORD_MAX_LEVEL || (flags & (uint8_t)~0x07U) != 0U) {
         return;
     }
+    if (slot == 0U) {
+        memcpy(s_lord_realm_net.previous_directory_actor_ids,
+               state->realm_actor_ids,
+               sizeof(s_lord_realm_net.previous_directory_actor_ids));
+        for (size_t old = 0U; old < LORD_REALM_PLAYER_COUNT; ++old) {
+            s_lord_realm_net.previous_directory_trust[old] =
+                state->realm[old].trust;
+            s_lord_realm_net.previous_directory_teamed[old] =
+                state->realm[old].teamed;
+        }
+    }
+    uint8_t trust = 0U;
+    bool teamed = false;
+    for (size_t old = 0U; old < LORD_REALM_PLAYER_COUNT; ++old) {
+        if (memcmp(s_lord_realm_net.previous_directory_actor_ids[old],
+                   message->payload,
+                   LORD_SYNC_ACTOR_ID_BYTES) == 0) {
+            trust = s_lord_realm_net.previous_directory_trust[old];
+            teamed = s_lord_realm_net.previous_directory_teamed[old];
+            break;
+        }
+    }
     lord_realm_player_t *const player = &state->realm[slot];
     memset(player->name, 0, sizeof(player->name));
     memcpy(player->name, name, name_bytes);
@@ -558,15 +691,32 @@ static void p4rm_handle_directory_summary(
     player->at_inn = (flags & 0x02U) != 0U;
     player->pvp_wins = sync_load_u16(message->payload, 40U);
     player->pvp_losses = sync_load_u16(message->payload, 42U);
+    player->trust = trust;
+    player->teamed = teamed;
     text_copy(player->saying, sizeof(player->saying),
               (flags & 0x04U) != 0U ?
                   "ONLINE THROUGH THE MAC HUB" : "OFFLINE FROM THE MAC HUB");
     memcpy(s_lord_realm_net.directory_actor_ids[slot], message->payload,
            LORD_SYNC_ACTOR_ID_BYTES);
+    memcpy(state->realm_actor_ids[slot], message->payload,
+           LORD_SYNC_ACTOR_ID_BYTES);
     for (size_t index = message->chunk_count;
          index < LORD_REALM_PLAYER_COUNT; ++index) {
         memset(s_lord_realm_net.directory_actor_ids[index], 0,
                LORD_SYNC_ACTOR_ID_BYTES);
+        memset(state->realm_actor_ids[index], 0, LORD_SYNC_ACTOR_ID_BYTES);
+    }
+    if (slot + 1U == message->chunk_count &&
+        p4rm_actor_valid(state->partner_actor_id)) {
+        state->partner_index = -1;
+        for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
+            if (memcmp(state->realm_actor_ids[index], state->partner_actor_id,
+                       LORD_SYNC_ACTOR_ID_BYTES) == 0) {
+                state->partner_index = (int8_t)index;
+                state->realm[index].teamed = true;
+                break;
+            }
+        }
     }
 }
 
@@ -641,14 +791,16 @@ static bool p4rm_send_profile(
     s_lord_realm_net.profile_transaction = transaction;
     s_lord_realm_net.profile_pending_save_sequence = state->save_sequence;
     s_lord_realm_net.profile_chompcoin = state->player.gold;
+    s_lord_realm_net.profile_bank = state->player.bank;
     s_lord_realm_net.profile_stats_pending = true;
     return true;
 }
 
 static bool p4rm_send_profile_stats(p4_game_context_t *context)
 {
-    uint8_t payload[4];
+    uint8_t payload[8];
     save_store_u32(payload, 0U, s_lord_realm_net.profile_chompcoin);
+    save_store_u32(payload, 4U, s_lord_realm_net.profile_bank);
     if (!p4rm_send(
             context, LORD_P4RM_PROFILE_STATS,
             s_lord_realm_net.profile_transaction,
@@ -659,6 +811,421 @@ static bool p4rm_send_profile_stats(p4_game_context_t *context)
         s_lord_realm_net.profile_pending_save_sequence;
     s_lord_realm_net.profile_stats_pending = false;
     return true;
+}
+
+static int p4rm_actor_slot(
+    const lord_state_t *state,
+    const uint8_t actor_id[LORD_SYNC_ACTOR_ID_BYTES])
+{
+    for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
+        if (memcmp(state->realm_actor_ids[index], actor_id,
+                   LORD_SYNC_ACTOR_ID_BYTES) == 0) {
+            return (int)index;
+        }
+    }
+    return -1;
+}
+
+static bool p4rm_send_event_ack(
+    p4_game_context_t *context,
+    uint32_t transaction,
+    uint64_t event_id)
+{
+    uint8_t payload[8];
+    sync_store_u64(payload, 0U, event_id);
+    return p4rm_send(
+        context, LORD_P4RM_EVENT_ACK, transaction, 0U, 0U,
+        payload, sizeof(payload));
+}
+
+static void p4rm_apply_event(
+    p4_game_context_t *context,
+    lord_state_t *state,
+    const uint8_t *body,
+    size_t body_bytes)
+{
+    if (s_lord_realm_net.event_id <= state->last_realm_event_id ||
+        body_bytes != s_lord_realm_net.event_body_bytes) {
+        (void)p4rm_send_event_ack(
+            context, s_lord_realm_net.event_transaction,
+            s_lord_realm_net.event_id);
+        s_lord_realm_net.event_waiting_body = false;
+        return;
+    }
+    char text[LORD_MAIL_BODY_BYTES];
+    memset(text, 0, sizeof(text));
+    if (body_bytes != 0U) {
+        const size_t copy_bytes = body_bytes < sizeof(text) - 1U ?
+            body_bytes : sizeof(text) - 1U;
+        memcpy(text, body, copy_bytes);
+    }
+    const int source_slot = p4rm_actor_slot(state,
+                                             s_lord_realm_net.event_source);
+    const uint8_t sender = source_slot >= 0 ? (uint8_t)source_slot :
+        (uint8_t)LORD_MAIL_SENDER_TURGON;
+    switch (s_lord_realm_net.event_kind) {
+    case LORD_REALM_ACTION_MAIL:
+        add_mail(state, sender, LORD_MAIL_SENDER_HERO,
+                 LORD_MAIL_CUSTOM, false, text);
+        break;
+    case LORD_REALM_ACTION_TRANSFER: {
+        char line[LORD_MAIL_BODY_BYTES];
+        if (s_lord_realm_net.event_code == 1U) {
+            const uint32_t debit = s_lord_realm_net.event_value >
+                    state->player.bank ? state->player.bank :
+                s_lord_realm_net.event_value;
+            state->player.bank -= debit;
+            text_copy(line, sizeof(line), "Sent ");
+            text_append_u32(line, sizeof(line), debit);
+            text_append(line, sizeof(line), " ChompCoin through the hub.");
+            add_mail(state, LORD_MAIL_SENDER_HERO, sender,
+                     LORD_MAIL_CUSTOM, true, line);
+        } else {
+            state->player.gold = add_u32_saturating(
+                state->player.gold, s_lord_realm_net.event_value);
+            text_copy(line, sizeof(line), "A friend sent you ");
+            text_append_u32(line, sizeof(line),
+                            s_lord_realm_net.event_value);
+            text_append(line, sizeof(line), " ChompCoin.");
+            add_mail(state, sender, LORD_MAIL_SENDER_HERO,
+                     LORD_MAIL_CUSTOM, false, line);
+        }
+        break;
+    }
+    case LORD_REALM_ACTION_FRIEND:
+        {
+        const bool initiated =
+            (s_lord_realm_net.event_code & UINT8_C(0x80)) != 0U;
+        const uint8_t friend_code =
+            s_lord_realm_net.event_code & UINT8_C(0x7f);
+        if (source_slot >= 0) {
+            lord_realm_player_t *const player =
+                &state->realm[(size_t)source_slot];
+            const uint32_t trust = (uint32_t)player->trust +
+                s_lord_realm_net.event_value;
+            player->trust = trust > 100U ? 100U : (uint8_t)trust;
+        }
+        if (initiated) {
+            if (state->friendship_actions != 0U) {
+                --state->friendship_actions;
+            }
+            if (friend_code == 1U) {
+                state->player.gold -= state->player.gold >= 100U ?
+                    100U : state->player.gold;
+            }
+            state->player.charm = add_u16_saturating(
+                state->player.charm, 1U);
+            add_mail(state, LORD_MAIL_SENDER_HERO, sender,
+                     LORD_MAIL_REPLY, true,
+                     friend_code == 0U ?
+                        "Sent encouragement through the realm." :
+                        "Shared adventure supplies through the realm.");
+        } else {
+            add_mail(state, sender, LORD_MAIL_SENDER_HERO,
+                     LORD_MAIL_REPLY, false,
+                     friend_code == 0U ?
+                        "A friend sent you encouragement." :
+                        "A friend shared adventure supplies.");
+        }
+        break;
+        }
+    case LORD_REALM_ACTION_TEAM:
+        {
+        const bool initiated =
+            (s_lord_realm_net.event_code & UINT8_C(0x80)) != 0U;
+        const uint8_t team_code =
+            s_lord_realm_net.event_code & UINT8_C(0x7f);
+        if (initiated && state->friendship_actions != 0U) {
+            --state->friendship_actions;
+        }
+        if (team_code == 0U) {
+            add_mail(state,
+                     initiated ? LORD_MAIL_SENDER_HERO : sender,
+                     initiated ? sender : LORD_MAIL_SENDER_HERO,
+                     LORD_MAIL_TEAM_INVITE, !initiated,
+                     initiated ?
+                        "Your adventure-team invitation was delivered." :
+                        "A friend invited you to form an adventure team.");
+        } else if (team_code == 1U && source_slot >= 0) {
+            const bool newly_teamed = state->partner_index < 0;
+            state->partner_index = (int8_t)source_slot;
+            state->realm[(size_t)source_slot].teamed = true;
+            memcpy(state->partner_actor_id, s_lord_realm_net.event_source,
+                   LORD_SYNC_ACTOR_ID_BYTES);
+            if (newly_teamed) {
+                state->player.max_hit_points += 5;
+                state->player.hit_points += 5;
+            }
+            add_mail(state, sender, LORD_MAIL_SENDER_HERO,
+                     LORD_MAIL_TEAM_PLEDGE, false,
+                     "Your shared adventure team is now official!");
+        } else if (team_code == 2U) {
+            if (source_slot >= 0) {
+                state->realm[(size_t)source_slot].teamed = false;
+            }
+            state->partner_index = -1;
+            memset(state->partner_actor_id, 0,
+                   sizeof(state->partner_actor_id));
+            add_mail(state, sender, LORD_MAIL_SENDER_HERO,
+                     LORD_MAIL_TEAM_PLEDGE, false,
+                     "Your adventure team parted as friends.");
+        }
+        break;
+        }
+    case LORD_REALM_ACTION_MENTOR:
+        if (s_lord_realm_net.event_code == 1U &&
+            state->friendship_actions != 0U) {
+            --state->friendship_actions;
+        }
+        state->player.young_heroes_helped = add_u16_saturating(
+            state->player.young_heroes_helped, 1U);
+        add_mail(state,
+                 s_lord_realm_net.event_code == 1U ?
+                    LORD_MAIL_SENDER_HERO : sender,
+                 s_lord_realm_net.event_code == 1U ?
+                    sender : LORD_MAIL_SENDER_HERO,
+                 LORD_MAIL_MENTOR,
+                 s_lord_realm_net.event_code == 1U,
+                 s_lord_realm_net.event_code == 1U ?
+                    "You mentored a young hero with your teammate." :
+                    "Your teammate helped mentor a young hero.");
+        break;
+    case LORD_REALM_ACTION_PVP_RESOLVE:
+        if (s_lord_realm_net.event_code == 1U) {
+            const uint32_t lost = s_lord_realm_net.event_value >
+                    state->player.gold ? state->player.gold :
+                s_lord_realm_net.event_value;
+            state->player.gold -= lost;
+            state->player.hit_points = 0;
+            if (state->player.pvp_losses != UINT16_MAX) {
+                ++state->player.pvp_losses;
+            }
+            add_mail(state, sender, LORD_MAIL_SENDER_HERO,
+                     LORD_MAIL_ATTACK, false,
+                     "You were knocked out in a realm duel.");
+        } else {
+            if (state->player.pvp_wins != UINT16_MAX) {
+                ++state->player.pvp_wins;
+            }
+            add_mail(state, sender, LORD_MAIL_SENDER_HERO,
+                     LORD_MAIL_PVP_VICTORY, false,
+                     "You won a realm duel while away.");
+        }
+        break;
+    case LORD_REALM_ACTION_TAVERN:
+        text_copy(state->conversation, sizeof(state->conversation), text);
+        add_mail(state, sender, LORD_MAIL_SENDER_HERO,
+                 LORD_MAIL_ANNOUNCEMENT, false, text);
+        break;
+    case LORD_REALM_ACTION_NEWS:
+        text_copy(state->announcement, sizeof(state->announcement), text);
+        add_mail(state, sender, LORD_MAIL_SENDER_HERO,
+                 LORD_MAIL_ANNOUNCEMENT, false, text);
+        break;
+    case LORD_REALM_ACTION_PVP_BEGIN:
+    case LORD_REALM_ACTION_NONE:
+        break;
+    }
+    state->last_realm_event_id = s_lord_realm_net.event_id;
+    mark_dirty(state);
+    (void)p4rm_send_event_ack(
+        context, s_lord_realm_net.event_transaction,
+        s_lord_realm_net.event_id);
+    s_lord_realm_net.event_waiting_body = false;
+}
+
+static void p4rm_handle_event_begin(
+    p4_game_context_t *context,
+    lord_state_t *state,
+    const lord_p4rm_message_t *message)
+{
+    if (message->payload_bytes != 48U ||
+        message->chunk_index != LORD_P4RM_BEGIN_INDEX) {
+        return;
+    }
+    const uint64_t event_id = sync_load_u64(message->payload, 0U);
+    const uint8_t kind = message->payload[8];
+    const uint8_t code = message->payload[9];
+    const size_t body_bytes = message->payload[10];
+    if (event_id == 0U ||
+        kind < (uint8_t)LORD_REALM_ACTION_MAIL ||
+        kind > (uint8_t)LORD_REALM_ACTION_NEWS ||
+        message->payload[11] != 0U ||
+        body_bytes > LORD_P4RM_PAYLOAD_BYTES ||
+        message->chunk_count != (body_bytes == 0U ? 0U : 1U) ||
+        !p4rm_actor_valid(message->payload + 16U)) {
+        return;
+    }
+    bool terminated = false;
+    for (size_t index = 0U; index < 16U; ++index) {
+        const uint8_t value = message->payload[32U + index];
+        if (value == 0U) {
+            terminated = true;
+        } else if (terminated || value < 0x20U || value > 0x7eU) {
+            return;
+        }
+    }
+    if (!terminated) {
+        return;
+    }
+    if (event_id <= state->last_realm_event_id) {
+        (void)p4rm_send_event_ack(context, message->transaction_id, event_id);
+        return;
+    }
+    if (s_lord_realm_net.event_waiting_body &&
+        s_lord_realm_net.event_id != event_id) {
+        return;
+    }
+    s_lord_realm_net.event_transaction = message->transaction_id;
+    s_lord_realm_net.event_id = event_id;
+    s_lord_realm_net.event_kind = (lord_realm_action_kind_t)kind;
+    s_lord_realm_net.event_code = code;
+    s_lord_realm_net.event_value = sync_load_u32(message->payload, 12U);
+    s_lord_realm_net.event_body_bytes = body_bytes;
+    memcpy(s_lord_realm_net.event_source, message->payload + 16U,
+           LORD_SYNC_ACTOR_ID_BYTES);
+    memcpy(s_lord_realm_net.event_source_name, message->payload + 32U, 16U);
+    if (body_bytes == 0U) {
+        p4rm_apply_event(context, state, NULL, 0U);
+    } else {
+        s_lord_realm_net.event_waiting_body = true;
+        (void)p4rm_send_ack(context, message);
+    }
+}
+
+static void p4rm_handle_event_body(
+    p4_game_context_t *context,
+    lord_state_t *state,
+    const lord_p4rm_message_t *message)
+{
+    if (!s_lord_realm_net.event_waiting_body) {
+        if (message->transaction_id == s_lord_realm_net.event_transaction &&
+            s_lord_realm_net.event_id != 0U &&
+            s_lord_realm_net.event_id <= state->last_realm_event_id &&
+            message->chunk_index == 0U && message->chunk_count == 1U &&
+            message->payload_bytes == s_lord_realm_net.event_body_bytes) {
+            (void)p4rm_send_event_ack(
+                context, message->transaction_id,
+                s_lord_realm_net.event_id);
+        }
+        return;
+    }
+    if (message->transaction_id != s_lord_realm_net.event_transaction ||
+        message->chunk_index != 0U || message->chunk_count != 1U ||
+        message->payload_bytes != s_lord_realm_net.event_body_bytes) {
+        return;
+    }
+    p4rm_apply_event(context, state, message->payload, message->payload_bytes);
+}
+
+static void p4rm_finish_action_result(
+    lord_state_t *state,
+    uint8_t status,
+    uint8_t result_code,
+    uint32_t result_value,
+    uint64_t related_id)
+{
+    const lord_realm_action_kind_t kind = s_lord_realm_net.action_kind;
+    const uint8_t player_index = s_lord_realm_net.action_player;
+    const uint8_t request_code = s_lord_realm_net.action_code;
+    if (status != 0U) {
+        set_message(state, state->screen,
+                    status == 4U ? "That realm player is busy." :
+                    status == 3U ? "The realm declined that request." :
+                    "The realm could not complete that request.",
+                    "No local resources were spent.");
+        s_lord_realm_net.action_state = LORD_REALM_ACTION_IDLE;
+        return;
+    }
+    switch (kind) {
+    case LORD_REALM_ACTION_MAIL:
+        add_mail(state, LORD_MAIL_SENDER_HERO, player_index,
+                 LORD_MAIL_CUSTOM, true,
+                 (const char *)s_lord_realm_net.action_body);
+        set_message(state, LORD_SCREEN_MAILBOX,
+                    "Your sealed letter was delivered.",
+                    "It will appear on your friend's console.");
+        break;
+    case LORD_REALM_ACTION_TRANSFER:
+        set_message(state, LORD_SCREEN_BANK,
+                    "The realm bank accepted the transfer.",
+                    "Both ChompCoin events are now queued.");
+        break;
+    case LORD_REALM_ACTION_FRIEND: {
+        set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                    request_code == 0U ?
+                        "The hub accepted your encouragement." :
+                        "The hub accepted your supplies.",
+                    "Your durable realm event is queued.");
+        break;
+    }
+    case LORD_REALM_ACTION_TEAM:
+        set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                    result_code == 0U ? "Your team invitation was delivered." :
+                    result_code == 1U ? "Your adventure team is official!" :
+                    "Your team parted as friends.",
+                    result_code == 0U ?
+                        "Your friend can accept from their console." : "");
+        break;
+    case LORD_REALM_ACTION_MENTOR:
+        set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                    "The hub accepted your mentoring plan.",
+                    "Both durable realm events are queued.");
+        break;
+    case LORD_REALM_ACTION_PVP_BEGIN:
+        s_lord_realm_net.pvp_lease_id = related_id;
+        if (request_code != 0U) {
+            state->player.gold -= state->player.gold >= 100U ?
+                100U : state->player.gold;
+        }
+        begin_pvp_battle(state, request_code != 0U);
+        break;
+    case LORD_REALM_ACTION_PVP_RESOLVE:
+        s_lord_realm_net.pvp_lease_id = 0U;
+        if (request_code == 1U) {
+            state->player.gold = add_u32_saturating(
+                state->player.gold, result_value);
+            mark_dirty(state);
+        }
+        break;
+    case LORD_REALM_ACTION_TAVERN:
+        text_copy(state->conversation, sizeof(state->conversation),
+                  (const char *)s_lord_realm_net.action_body);
+        add_named_log(state, "", " spoke in the shared tavern.");
+        set_message(state, LORD_SCREEN_CONVERSE,
+                    "Your words reached the shared tavern.",
+                    state->conversation);
+        break;
+    case LORD_REALM_ACTION_NEWS:
+        text_copy(state->announcement, sizeof(state->announcement),
+                  (const char *)s_lord_realm_net.action_body);
+        add_mail(state, LORD_MAIL_SENDER_HERO, LORD_MAIL_SENDER_HERO,
+                 LORD_MAIL_ANNOUNCEMENT, true, state->announcement);
+        set_message(state, LORD_SCREEN_INN,
+                    "The hub posted your announcement.",
+                    state->announcement);
+        break;
+    case LORD_REALM_ACTION_NONE:
+        break;
+    }
+    s_lord_realm_net.action_state = LORD_REALM_ACTION_IDLE;
+}
+
+static void p4rm_handle_action_result(
+    lord_state_t *state,
+    const lord_p4rm_message_t *message)
+{
+    if (s_lord_realm_net.action_state == LORD_REALM_ACTION_IDLE ||
+        message->transaction_id != s_lord_realm_net.action_transaction ||
+        message->payload_bytes != 16U || message->payload[3] != 0U ||
+        message->payload[1] != (uint8_t)s_lord_realm_net.action_kind ||
+        message->payload[0] > 4U) {
+        return;
+    }
+    p4rm_finish_action_result(
+        state, message->payload[0], message->payload[2],
+        sync_load_u32(message->payload, 4U),
+        sync_load_u64(message->payload, 8U));
 }
 
 static void p4rm_receive_messages(
@@ -700,6 +1267,15 @@ static void p4rm_receive_messages(
         case LORD_P4RM_DIRECTORY_STATS:
             p4rm_handle_directory_stats(state, &message);
             break;
+        case LORD_P4RM_ACTION_RESULT:
+            p4rm_handle_action_result(state, &message);
+            break;
+        case LORD_P4RM_EVENT_BEGIN:
+            p4rm_handle_event_begin(context, state, &message);
+            break;
+        case LORD_P4RM_EVENT_BODY:
+            p4rm_handle_event_body(context, state, &message);
+            break;
         case LORD_P4RM_ERROR:
             s_lord_realm_net.state = LORD_REALM_NET_ERROR;
             break;
@@ -708,9 +1284,231 @@ static void p4rm_receive_messages(
         case LORD_P4RM_UPLOAD_CHUNK:
         case LORD_P4RM_PROFILE:
         case LORD_P4RM_PROFILE_STATS:
+        case LORD_P4RM_ACTION_BEGIN:
+        case LORD_P4RM_ACTION_BODY:
+        case LORD_P4RM_EVENT_ACK:
             break;
         }
     }
+}
+
+static bool p4rm_online_actions_ready(void)
+{
+    return s_lord_realm_net.connected &&
+        (s_lord_realm_net.state == LORD_REALM_NET_READY ||
+         s_lord_realm_net.state == LORD_REALM_NET_UPLOAD_BEGIN ||
+         s_lord_realm_net.state == LORD_REALM_NET_UPLOAD_CHUNK ||
+         s_lord_realm_net.state == LORD_REALM_NET_UPLOAD_COMMIT);
+}
+
+static bool p4rm_queue_action(
+    p4_game_context_t *context,
+    const lord_state_t *state,
+    lord_realm_action_kind_t kind,
+    uint8_t code,
+    uint16_t value,
+    uint8_t player_index,
+    const uint8_t *body,
+    size_t body_bytes)
+{
+    if (!p4rm_online_actions_ready() ||
+        s_lord_realm_net.action_state != LORD_REALM_ACTION_IDLE ||
+        kind < LORD_REALM_ACTION_MAIL || kind > LORD_REALM_ACTION_NEWS ||
+        body_bytes > LORD_P4RM_PAYLOAD_BYTES ||
+        (body == NULL && body_bytes != 0U)) {
+        return false;
+    }
+    if (kind != LORD_REALM_ACTION_TAVERN &&
+        kind != LORD_REALM_ACTION_NEWS &&
+        (player_index >= LORD_REALM_PLAYER_COUNT ||
+         !p4rm_actor_valid(state->realm_actor_ids[player_index]))) {
+        return false;
+    }
+    const uint32_t transaction = p4rm_next_transaction();
+    uint64_t nonce = s_lord_realm_net.session_seed ^
+        ((uint64_t)transaction << 17U) ^
+        ((uint64_t)state->save_sequence << 1U) ^ (uint64_t)kind;
+    nonce &= UINT64_C(0x7fffffffffffffff);
+    if (nonce == 0U) {
+        nonce = 1U;
+    }
+    s_lord_realm_net.action_kind = kind;
+    s_lord_realm_net.action_code = code;
+    s_lord_realm_net.action_value = value;
+    s_lord_realm_net.action_player = player_index;
+    s_lord_realm_net.action_transaction = transaction;
+    s_lord_realm_net.action_nonce = nonce;
+    s_lord_realm_net.action_body_bytes = body_bytes;
+    memset(s_lord_realm_net.action_body, 0,
+           sizeof(s_lord_realm_net.action_body));
+    if (body_bytes != 0U) {
+        memcpy(s_lord_realm_net.action_body, body, body_bytes);
+    }
+    s_lord_realm_net.action_body_crc = body_bytes == 0U ? 0U :
+        save_crc32(s_lord_realm_net.action_body, body_bytes);
+    memset(s_lord_realm_net.action_target, 0,
+           sizeof(s_lord_realm_net.action_target));
+    if (kind != LORD_REALM_ACTION_TAVERN &&
+        kind != LORD_REALM_ACTION_NEWS) {
+        memcpy(s_lord_realm_net.action_target,
+               state->realm_actor_ids[player_index],
+               LORD_SYNC_ACTOR_ID_BYTES);
+    }
+    s_lord_realm_net.action_state = LORD_REALM_ACTION_WAIT_BEGIN_ACK;
+    s_lord_realm_net.action_retry_elapsed_ms = 0U;
+    (void)p4rm_send_action_begin(context);
+    return true;
+}
+
+static bool lord_realm_net_activate(
+    p4_game_context_t *context,
+    lord_state_t *state,
+    lord_event_t *event)
+{
+    if (!p4rm_online_actions_ready()) {
+        return false;
+    }
+    if (s_lord_realm_net.action_state != LORD_REALM_ACTION_IDLE) {
+        set_message(state, state->screen,
+                    "A realm request is still in flight.",
+                    "Please wait for the Mac hub.");
+        *event = LORD_EVENT_CONFIRM;
+        return true;
+    }
+    uint8_t player = state->selected_player;
+    lord_realm_action_kind_t kind = LORD_REALM_ACTION_NONE;
+    uint8_t code = 0U;
+    uint16_t value = 0U;
+    const uint8_t *body = NULL;
+    size_t body_bytes = 0U;
+    if (state->screen == LORD_SCREEN_BANK_TRANSFER &&
+        state->selection < LORD_REALM_PLAYER_COUNT) {
+        player = state->selection;
+        if (state->player.bank < 100U) {
+            set_message(state, LORD_SCREEN_BANK_TRANSFER,
+                        "Transfers require 100 vaulted ChompCoin.", "");
+            *event = LORD_EVENT_CONFIRM;
+            return true;
+        }
+        kind = LORD_REALM_ACTION_TRANSFER;
+        value = 100U;
+    } else if (state->screen == LORD_SCREEN_TEXT_EDITOR &&
+               state->selection == sizeof(s_keyboard_chars) - 1U) {
+        body_bytes = text_length(state->editor_text,
+                                 sizeof(state->editor_text));
+        if (body_bytes == 0U) {
+            return false;
+        }
+        body = (const uint8_t *)state->editor_text;
+        if (state->editor_target == LORD_EDITOR_MAIL) {
+            kind = LORD_REALM_ACTION_MAIL;
+        } else if (state->editor_target == LORD_EDITOR_CONVERSATION) {
+            kind = LORD_REALM_ACTION_TAVERN;
+            player = 0U;
+        } else if (state->editor_target == LORD_EDITOR_ANNOUNCEMENT) {
+            kind = LORD_REALM_ACTION_NEWS;
+            player = 0U;
+        } else {
+            return false;
+        }
+    } else if (state->screen == LORD_SCREEN_FRIENDSHIP_ACTION &&
+               state->selection < 4U) {
+        if (state->friendship_actions == 0U) {
+            set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                        "No friendship actions remain today.",
+                        "Try again after the realm hour changes.");
+            *event = LORD_EVENT_CONFIRM;
+            return true;
+        }
+        player = state->selected_player;
+        if (state->selection == 0U || state->selection == 1U) {
+            if (state->selection == 1U && state->player.gold < 100U) {
+                set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                            "Shared supplies cost 100 ChompCoin.", "");
+                *event = LORD_EVENT_CONFIRM;
+                return true;
+            }
+            kind = LORD_REALM_ACTION_FRIEND;
+            code = state->selection;
+        } else if (state->selection == 2U) {
+            kind = LORD_REALM_ACTION_TEAM;
+        } else {
+            if (state->partner_index != (int8_t)player) {
+                set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
+                            "Form a shared team before mentoring.", "");
+                *event = LORD_EVENT_CONFIRM;
+                return true;
+            }
+            kind = LORD_REALM_ACTION_MENTOR;
+        }
+    } else if (state->screen == LORD_SCREEN_PLAYER_DETAIL &&
+               state->selection == 0U) {
+        if (state->pvp_fights == 0U) {
+            set_message(state, LORD_SCREEN_PLAYER_DETAIL,
+                        "No player fights remain this realm day.", "");
+            *event = LORD_EVENT_CONFIRM;
+            return true;
+        }
+        kind = LORD_REALM_ACTION_PVP_BEGIN;
+    } else if (state->screen == LORD_SCREEN_INN && state->selection == 7U) {
+        size_t found = LORD_REALM_PLAYER_COUNT;
+        for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
+            if (p4rm_actor_valid(state->realm_actor_ids[index]) &&
+                state->realm[index].alive && state->realm[index].at_inn) {
+                found = index;
+                break;
+            }
+        }
+        if (found == LORD_REALM_PLAYER_COUNT || state->player.gold < 100U) {
+            set_message(state, LORD_SCREEN_INN,
+                        found == LORD_REALM_PLAYER_COUNT ?
+                            "No online warrior is resting at the inn." :
+                            "The sparring ring costs 100 ChompCoin.", "");
+            *event = LORD_EVENT_CONFIRM;
+            return true;
+        }
+        player = (uint8_t)found;
+        state->selected_player = player;
+        kind = LORD_REALM_ACTION_PVP_BEGIN;
+        code = 1U;
+    } else {
+        return false;
+    }
+    if (!p4rm_queue_action(context, state, kind, code, value,
+                           player, body, body_bytes)) {
+        set_message(state, state->screen,
+                    "That player is not connected to the realm.",
+                    "Refresh the player list and try again.");
+    }
+    *event = LORD_EVENT_CONFIRM;
+    return true;
+}
+
+static void lord_realm_net_after_activate(
+    p4_game_context_t *context,
+    lord_state_t *state,
+    lord_battle_kind_t prior_battle_kind,
+    lord_event_t event)
+{
+    if ((prior_battle_kind != LORD_BATTLE_PVP &&
+         prior_battle_kind != LORD_BATTLE_INN) ||
+        (event != LORD_EVENT_WIN && event != LORD_EVENT_LOSE) ||
+        s_lord_realm_net.pvp_lease_id == 0U ||
+        s_lord_realm_net.action_state != LORD_REALM_ACTION_IDLE) {
+        return;
+    }
+    uint8_t body[9];
+    if (event == LORD_EVENT_WIN) {
+        const uint32_t local_prize = state->enemy.gold / 2U;
+        state->player.gold -= state->player.gold >= local_prize ?
+            local_prize : state->player.gold;
+        mark_dirty(state);
+    }
+    sync_store_u64(body, 0U, s_lord_realm_net.pvp_lease_id);
+    body[8] = event == LORD_EVENT_WIN ? 1U : 0U;
+    (void)p4rm_queue_action(
+        context, state, LORD_REALM_ACTION_PVP_RESOLVE, body[8], 0U,
+        state->selected_player, body, sizeof(body));
 }
 
 static void lord_realm_net_start(p4_game_context_t *context)
@@ -744,10 +1542,36 @@ static void lord_realm_net_poll(
     if (!p4_game_multiplayer_read_status(context, &status) ||
         status.state != P4_GAME_MULTIPLAYER_CONNECTED) {
         s_lord_realm_net.state = LORD_REALM_NET_OFFLINE;
+        s_lord_realm_net.action_state = LORD_REALM_ACTION_IDLE;
+        s_lord_realm_net.event_waiting_body = false;
+        s_lord_realm_net.pvp_lease_id = 0U;
         s_lord_realm_net.connected = false;
         return;
     }
     p4rm_receive_messages(context, state);
+    if (s_lord_realm_net.action_state != LORD_REALM_ACTION_IDLE) {
+        if (UINT32_MAX - s_lord_realm_net.action_retry_elapsed_ms <
+                elapsed_ms) {
+            s_lord_realm_net.action_retry_elapsed_ms = UINT32_MAX;
+        } else {
+            s_lord_realm_net.action_retry_elapsed_ms += elapsed_ms;
+        }
+        if (s_lord_realm_net.action_retry_elapsed_ms >=
+                LORD_P4RM_RETRY_MS) {
+            if (s_lord_realm_net.action_state ==
+                    LORD_REALM_ACTION_WAIT_BODY_ACK) {
+                (void)p4rm_send_action_body(context);
+            } else {
+                if (s_lord_realm_net.action_state ==
+                        LORD_REALM_ACTION_WAIT_RESULT) {
+                    s_lord_realm_net.action_state =
+                        LORD_REALM_ACTION_WAIT_BEGIN_ACK;
+                }
+                (void)p4rm_send_action_begin(context);
+            }
+            s_lord_realm_net.action_retry_elapsed_ms = 0U;
+        }
+    }
     if (s_lord_realm_net.seconds_remaining != 0U) {
         if (UINT32_MAX - s_lord_realm_net.clock_elapsed_ms < elapsed_ms) {
             s_lord_realm_net.clock_elapsed_ms = UINT32_MAX;

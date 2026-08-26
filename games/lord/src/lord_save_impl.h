@@ -43,6 +43,12 @@ static void save_write_u32(lord_save_writer_t *writer, uint32_t value)
     save_write_u8(writer, (uint8_t)(value >> 24U));
 }
 
+static void save_write_u64(lord_save_writer_t *writer, uint64_t value)
+{
+    save_write_u32(writer, (uint32_t)(value & UINT64_C(0xffffffff)));
+    save_write_u32(writer, (uint32_t)(value >> 32U));
+}
+
 static void save_write_i32(lord_save_writer_t *writer, int32_t value)
 {
     save_write_u32(writer, (uint32_t)value);
@@ -84,6 +90,13 @@ static uint32_t save_read_u32(lord_save_reader_t *reader)
     const uint32_t byte_2 = save_read_u8(reader);
     const uint32_t byte_3 = save_read_u8(reader);
     return byte_0 | (byte_1 << 8U) | (byte_2 << 16U) | (byte_3 << 24U);
+}
+
+static uint64_t save_read_u64(lord_save_reader_t *reader)
+{
+    const uint64_t low = save_read_u32(reader);
+    const uint64_t high = save_read_u32(reader);
+    return low | (high << 32U);
 }
 
 static int32_t save_read_i32(lord_save_reader_t *reader)
@@ -282,6 +295,16 @@ size_t lord_save_encode(const lord_state_t *state, uint8_t *bytes,
         save_write_chars(&writer, state->log[index].text,
                          sizeof(state->log[index].text));
     }
+    save_write_chars(&writer, "MPV4", 4U);
+    for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
+        for (size_t byte = 0U; byte < LORD_SYNC_ACTOR_ID_BYTES; ++byte) {
+            save_write_u8(&writer, state->realm_actor_ids[index][byte]);
+        }
+    }
+    for (size_t byte = 0U; byte < LORD_SYNC_ACTOR_ID_BYTES; ++byte) {
+        save_write_u8(&writer, state->partner_actor_id[byte]);
+    }
+    save_write_u64(&writer, state->last_realm_event_id);
     if (!writer.valid || writer.offset > UINT16_MAX) {
         return 0U;
     }
@@ -355,7 +378,9 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
     const uint16_t stored_length = save_read_u16(&header);
     const uint32_t stored_crc = save_read_u32(&header);
     const uint32_t save_sequence = save_read_u32(&header);
-    if (!header.valid || version != LORD_SAVE_FORMAT_VERSION ||
+    if (!header.valid ||
+        (version != LORD_SAVE_MINIMUM_VERSION &&
+         version != LORD_SAVE_FORMAT_VERSION) ||
         stored_length != length ||
         stored_crc != save_crc32(bytes + LORD_SAVE_HEADER_BYTES,
                                  length - LORD_SAVE_HEADER_BYTES)) {
@@ -422,6 +447,22 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
         loaded.log[index].day = save_read_u16(&reader);
         save_read_chars(&reader, loaded.log[index].text,
                         sizeof(loaded.log[index].text));
+    }
+    if (version == LORD_SAVE_FORMAT_VERSION) {
+        char marker[4];
+        save_read_chars(&reader, marker, sizeof(marker));
+        if (memcmp(marker, "MPV4", sizeof(marker)) != 0) {
+            reader.valid = false;
+        }
+        for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
+            for (size_t byte = 0U; byte < LORD_SYNC_ACTOR_ID_BYTES; ++byte) {
+                loaded.realm_actor_ids[index][byte] = save_read_u8(&reader);
+            }
+        }
+        for (size_t byte = 0U; byte < LORD_SYNC_ACTOR_ID_BYTES; ++byte) {
+            loaded.partner_actor_id[byte] = save_read_u8(&reader);
+        }
+        loaded.last_realm_event_id = save_read_u64(&reader);
     }
     if (!reader.valid || reader.offset != length || loaded.rng_state == 0U ||
         loaded.realm_revision == 0U || partner_code > LORD_REALM_PLAYER_COUNT ||

@@ -1481,8 +1481,10 @@ static bool game_start(p4_game_context_t *context)
     state->save_available = context->services != NULL &&
         (context->services->available_capabilities & P4_GAME_CAP_SAVE) != 0U;
     if (state->save_available && context->services->save_bytes != 0U) {
-        if (context->services->save_schema_version !=
-                LORD_SAVE_FORMAT_VERSION ||
+        if ((context->services->save_schema_version !=
+                 LORD_SAVE_MINIMUM_VERSION &&
+             context->services->save_schema_version !=
+                 LORD_SAVE_FORMAT_VERSION) ||
             context->services->save_sequence == 0U ||
             !lord_save_decode(state, context->services->save_data,
                               context->services->save_bytes)) {
@@ -1588,7 +1590,12 @@ static p4_game_result_t game_update(p4_game_context_t *context,
     }
     lord_event_t event = LORD_EVENT_NONE;
     if ((input->pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
-        event = lord_activate(state);
+        const lord_battle_kind_t prior_battle_kind = state->battle_kind;
+        if (!lord_realm_net_activate(context, state, &event)) {
+            event = lord_activate(state);
+        }
+        lord_realm_net_after_activate(
+            context, state, prior_battle_kind, event);
     } else if ((input->pressed & P4_BUTTON_B) != 0U) {
         event = lord_cancel(state);
     }
