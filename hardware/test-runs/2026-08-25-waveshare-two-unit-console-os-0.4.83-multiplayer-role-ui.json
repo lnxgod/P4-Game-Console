@@ -1,13 +1,15 @@
 {
   "schema": 1,
   "evidence_id": "waveshare-two-unit-console-os-0.4.83-multiplayer-role-ui-20260825",
-  "status": "installed-both-exact-verify-pass-boot-stable-manual-match-pending",
+  "status": "hardware-tested-two-unit-host-join-launch-gameplay-pass",
   "timestamp_utc": "2026-08-26T05:23:36Z",
+  "operator_acceptance_timestamp_utc": "2026-08-26T17:00:23Z",
   "scope": "Application-only install of Console OS 0.4.83 on both recorded Waveshare 4.3 consoles. This candidate adds an explicit Host/Join role screen, Host-owned game setup, a cross-game BLE lobby browser with explicit selection, and code-drawn lobby rows derived from the revised ImageGen concept.",
   "source": {
     "base_commit": "d8eb9c5dd0210ab2671d03b4642e78614aaba50a",
+    "installed_change_commit": "0de1788abeb9641b4c374d330a34ec2ac14f188f",
     "branch": "main",
-    "working_tree": "intentional Console OS successor changes not yet committed at installation time"
+    "working_tree": "Console OS successor was installed from the pre-commit working tree and subsequently committed without source changes as 0de1788"
   },
   "candidate": {
     "app_version": "0.4.83",
@@ -56,7 +58,10 @@
   "ui_verification": {
     "native_render_preview": "pass for role, host, and join views; no overlap or clipped primary labels",
     "role_contract": "first screen contains Host and Join; Host owns game/settings/open-room; Join has no game picker and lists game, room ID, players, and signal",
-    "cross_game_discovery": "build-tested only; BLE browser wildcard retains each bounded beacon game token and requires local exact-game resolution before join",
-    "manual_two_console_host_join_launch": "pending operator acceptance"
+    "cross_game_discovery": "hardware-tested for discovery and explicit join of the prescribed Doom room; simultaneous rooms advertising different games remain untested",
+    "manual_two_console_host_join_launch": "pass; operator confirmed the two consoles connected through the new Host/Join flow and both entered live gameplay",
+    "gameplay_stability": "pass by operator observation for the completed live session; no immediate black-screen, boot-loop, desynchronization, or input-triggered crash was reported",
+    "gameplay_smoothness": "operator reported that gameplay felt much smoother and that apparent FPS was substantially higher",
+    "performance_measurement": "not captured; the smoothness report is qualitative and is not a sustained measured FPS, transport-drop, or stall-counter claim"
   }
 }
