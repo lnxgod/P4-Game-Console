@@ -1166,8 +1166,8 @@ static void draw_dragon_dice(p4_game_surface_t *surface,
                     ANSI_BRIGHT_GREEN);
     draw_dice_total(surface, 176, 28, "HOST", state->dice_host,
                     ANSI_BRIGHT_MAGENTA);
-    draw_text(surface, 24, 79, state->battle_line, ANSI_BRIGHT_CYAN);
-    draw_menu(surface, state, s_dragon_dice_menu, 2U, 86);
+    draw_text(surface, 24, 80, state->battle_line, ANSI_BRIGHT_CYAN);
+    draw_menu(surface, state, s_dragon_dice_menu, 2U, 98);
 }
 
 static void draw_igm_menu(p4_game_surface_t *surface,
