@@ -136,7 +136,10 @@ class WireReader:
                 return frame
             if location < 0 and len(self.buffer) > 64 * 1024:
                 del self.buffer[: -len(marker)]
-            self._fill(deadline)
+            try:
+                self._fill(deadline)
+            except TransferError:
+                break
         diagnostic = bytes(self.buffer[-8192:]).decode("ascii", "replace")
         stage_lines = [
             line.strip()
