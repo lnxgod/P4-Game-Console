@@ -11,7 +11,7 @@ import runpy
 
 os.environ["P4_CAPTURE_VERSION"] = "0.4.85"
 os.environ["P4_CAPTURE_APPLICATION_SHA256"] = (
-    "71db139c36ce043b900e71e40ff5ca2ea431811da2ab60a0cef30d4ff0e5dfda"
+    "efb827cb202f3d35e8b456b05039a2a4e7a2f928eec69e7de78faffade503cf5"
 )
 runpy.run_path(
     str(pathlib.Path(__file__).with_name(

@@ -16,8 +16,8 @@ done
 
 case "$P4_MODE" in
     check) [ -z "$P4_PORT" ] || { printf 'check does not accept --port.\n' >&2; exit 2; } ;;
-    install|recover|verify) ;;
-    *) printf 'Use: %s check [--unit unit1|unit2] | install [--unit unit1|unit2] --port PORT | recover [--unit unit1|unit2] --port PORT | verify [--unit unit1|unit2] --port PORT\n' "$0" >&2; exit 2 ;;
+    install|recover|revert|verify) ;;
+    *) printf 'Use: %s check [--unit unit1|unit2] | install [--unit unit1|unit2] --port PORT | recover [--unit unit1|unit2] --port PORT | revert [--unit unit1|unit2] --port PORT | verify [--unit unit1|unit2] --port PORT\n' "$0" >&2; exit 2 ;;
 esac
 [ "$P4_UNIT" = unit1 ] || [ "$P4_UNIT" = unit2 ] || {
     printf 'Use --unit unit1 or --unit unit2.\n' >&2
@@ -231,6 +231,7 @@ PY
 }
 
 p4_restore_preimage() {
+    P4_RESTORE_STATE=${1:-restored-predecessor-after-failed-successor}
     [ -f "$P4_LEDGER" ] && [ -f "$P4_PREIMAGE" ] || return 1
     P4_EXPECTED_PREIMAGE=$(p4_ledger_field preimage_sha256)
     [ "$(p4_sha256_file "$P4_PREIMAGE")" = "$P4_EXPECTED_PREIMAGE" ] || {
@@ -247,7 +248,7 @@ p4_restore_preimage() {
     }
     p4_verify_live_file 0x20000 "$P4_PREIMAGE" restored-preimage || return 1
     p4_update_ledger_restore_result "$P4_EXPECTED_PREIMAGE" \
-        restored-predecessor-after-failed-successor
+        "$P4_RESTORE_STATE"
     printf 'Exact predecessor restore PASS; device remains in loader.\n' >&2
 }
 
@@ -309,7 +310,7 @@ if [ "$P4_MODE" = verify ]; then
     exit 0
 fi
 
-if [ "$P4_MODE" = recover ]; then
+if [ "$P4_MODE" = recover ] || [ "$P4_MODE" = revert ]; then
     [ -f "$P4_LEDGER" ] || {
         printf 'No %s recovery ledger exists.\n' "$P4_CANDIDATE_VERSION" >&2
         exit 1
@@ -323,11 +324,26 @@ if [ "$P4_MODE" = recover ]; then
         printf 'Recovery ledger unit binding differs.\n' >&2
         exit 1
     }
-    [ "$(p4_ledger_field restore_required)" = true ] || {
-        printf 'Recovery is not required by the durable ledger.\n' >&2
-        exit 1
-    }
-    p4_restore_preimage
+    if [ "$P4_MODE" = recover ]; then
+        [ "$(p4_ledger_field restore_required)" = true ] || {
+            printf 'Recovery is not required by the durable ledger.\n' >&2
+            exit 1
+        }
+        p4_restore_preimage
+    else
+        [ "$(p4_ledger_field restore_required)" = false ] || {
+            printf 'Use recover while the durable ledger requires restoration.\n' >&2
+            exit 1
+        }
+        [ "$(p4_ledger_field state)" = \
+            installed-readback-pass-awaiting-retained-uart ] || {
+            printf 'Refusing explicit revert from an unexpected ledger state.\n' >&2
+            exit 1
+        }
+        P4_APPLICATION=$(p4_relative_file candidate.application)
+        p4_verify_live_file 0x20000 "$P4_APPLICATION" rejected-successor
+        p4_restore_preimage restored-predecessor-after-rejected-successor
+    fi
     p4_release_lock
     trap - EXIT HUP INT TERM
     exit 0

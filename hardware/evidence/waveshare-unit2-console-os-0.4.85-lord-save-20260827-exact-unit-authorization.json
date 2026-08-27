@@ -6,7 +6,7 @@
   "authorization_basis": "Operator requested persistent offline LORD saves, later Mac-hub synchronization, and both exact devices updated for testing.",
   "scope": "One application-partition-only successor install on the already backed-up Waveshare 4.3 unit2, permanently labeled green / node 386F, followed by one OS-owned atomic H1 replacement of /GAMES/LORD.P4G with the sealed LORD 1.6.0 package. Bootloader, partition table, OTA data, NVS, unrelated microSD files, and all other flash ranges are read-only. Runtime saves are separately restricted by the board profile to the journaled /SAVES namespace.",
   "source": {
-    "commit": "76266e0d1d9d7782773c3ec7693b3c415408d32d",
+    "commit": "aa4209dd54b81f188638492ff42e76c51637912a",
     "branch": "main",
     "toolchain_lock": "ESP-IDF 5.5.3 at 2c211b236707889e8400c4dc5644dd5c4ee071e0"
   },
@@ -29,13 +29,13 @@
   },
   "installed_layout": {
     "bootloader": {
-      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-76266e0/bootloader.bin",
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-aa4209d/bootloader.bin",
       "offset": "0x2000",
       "bytes": 23056,
       "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
     },
     "partition_table": {
-      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-76266e0/partition-table.bin",
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-aa4209d/partition-table.bin",
       "offset": "0x8000",
       "bytes": 3072,
       "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
@@ -51,35 +51,35 @@
   },
   "candidate": {
     "version": "0.4.85",
-    "release_directory": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-76266e0",
+    "release_directory": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-aa4209d",
     "application": {
-      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-76266e0/p4_console_os.bin",
-      "bytes": 1796976,
-      "sha256": "71db139c36ce043b900e71e40ff5ca2ea431811da2ab60a0cef30d4ff0e5dfda",
-      "padded_mutation_bytes": 1798144
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-aa4209d/p4_console_os.bin",
+      "bytes": 1820528,
+      "sha256": "efb827cb202f3d35e8b456b05039a2a4e7a2f928eec69e7de78faffade503cf5",
+      "padded_mutation_bytes": 1822720
     },
     "elf": {
-      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-76266e0/p4_console_os.elf",
-      "bytes": 21491944,
-      "sha256": "ad686f1fad0701661959d7602223662963bfc259cebc82752448cf1cf7f1ad46"
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-aa4209d/p4_console_os.elf",
+      "bytes": 21706492,
+      "sha256": "4bcd53bbfe387f6a378b316e85c81476506253e987b3f14c8389c938e75724ba"
     },
     "update_package": {
-      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-76266e0/P4UPDATE.P4U",
-      "bytes": 1797232,
-      "sha256": "b7153fb4c555487730e6850532f8a11f85b76a15da69f6950c8d3f98c2dc53db"
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-aa4209d/P4UPDATE.P4U",
+      "bytes": 1820784,
+      "sha256": "3248ccb17ef26ffa8f807b6f68f9177a8e91219a540442a1503dd121162166e9"
     },
     "sdkconfig": {
-      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-76266e0/sdkconfig",
-      "bytes": 95562,
-      "sha256": "cd60cfddc2018df08470bcf2634c92a24464723815b092d59a80ab0696d90219"
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-aa4209d/sdkconfig",
+      "bytes": 95926,
+      "sha256": "1520c48b59841a81c1134fedb0469d74803e2ede0bf011bf54c66a3f7eaa9cc2"
     },
     "dependencies_lock": {
-      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-76266e0/dependencies.lock",
-      "bytes": 6296,
-      "sha256": "c92a685c30ab82ec1e4c208a6f90907bc45d4086d1f7ce83e7b3354de60fab1c"
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-aa4209d/dependencies.lock",
+      "bytes": 3230,
+      "sha256": "02d604c6abda80f1d264f7b2a57fde151a35fdd5437bbeb52819f8cdb7e76606"
     },
     "lord_cartridge": {
-      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-76266e0/LORD.P4G",
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-aa4209d/LORD.P4G",
       "version": "1.6.0",
       "bytes": 175572,
       "sha256": "7c6ec15013d6944568dd1599ccbbba2f621ee3fe0e8b02d9ee0fd0a9d6aad3bd"

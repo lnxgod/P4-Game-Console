@@ -19,12 +19,12 @@ P4_SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$P4_SCRIPT_DIR/lib/project-env.sh"
 
 P4_TRANSFER="$P4_PROJECT_ROOT/scripts/p4-transfer.py"
-P4_RELEASE="$P4_PROJECT_ROOT/hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-76266e0"
+P4_RELEASE="$P4_PROJECT_ROOT/hardware/local-state/waveshare-two-unit-console-os-0.4.85-lord-save-aa4209d"
 P4_LORD="$P4_RELEASE/LORD.P4G"
 P4_LORD_BYTES=175572
 P4_LORD_HASH=7c6ec15013d6944568dd1599ccbbba2f621ee3fe0e8b02d9ee0fd0a9d6aad3bd
-P4_APPLICATION_HASH=71db139c36ce043b900e71e40ff5ca2ea431811da2ab60a0cef30d4ff0e5dfda
-P4_SOURCE_COMMIT=76266e0d1d9d7782773c3ec7693b3c415408d32d
+P4_APPLICATION_HASH=efb827cb202f3d35e8b456b05039a2a4e7a2f928eec69e7de78faffade503cf5
+P4_SOURCE_COMMIT=aa4209dd54b81f188638492ff42e76c51637912a
 
 p4_check_common() {
     [ -f "$P4_TRANSFER" ] || {
@@ -59,12 +59,12 @@ p4_select_unit() {
         unit1)
             P4_RECORDED_PORT=/dev/cu.wchusbserial5C371865781
             P4_AUTH="$P4_PROJECT_ROOT/hardware/evidence/waveshare-unit1-console-os-0.4.85-lord-save-20260827-exact-unit-authorization.json"
-            P4_AUTH_HASH=839b863940924ff37c26536265e3a2819c2248d53d2d14de3df69ce620617cb5
+            P4_AUTH_HASH=3931721a2ecd420831f68cf2a9bf8c3c370f22d4ce09c8ddbd0f69a2a73df27b
             ;;
         unit2)
             P4_RECORDED_PORT=/dev/cu.wchusbserial5B901593451
             P4_AUTH="$P4_PROJECT_ROOT/hardware/evidence/waveshare-unit2-console-os-0.4.85-lord-save-20260827-exact-unit-authorization.json"
-            P4_AUTH_HASH=b2c129fee7914415813687644240b967b0920fe54c70c872ac9f7a0ec5f9a1b6
+            P4_AUTH_HASH=55fae61c49b2a9efcc7650ab00e2205af8da63aa5100cc0baeb892f9ef41c28a
             ;;
         *) printf 'Use --unit unit1 or --unit unit2.\n' >&2; exit 2 ;;
     esac
@@ -95,7 +95,7 @@ p4_require_port "$P4_PORT"
     exit 1
 }
 
-P4_STARTUP="$P4_PROJECT_ROOT/hardware/local-state/waveshare-$P4_UNIT-console-os-0.4.85-startup-76266e0"
+P4_STARTUP="$P4_PROJECT_ROOT/hardware/local-state/waveshare-$P4_UNIT-console-os-0.4.85-startup-aa4209d"
 P4_RAW="$P4_STARTUP/startup.raw"
 P4_SUMMARY="$P4_STARTUP/startup.json"
 python3 - "$P4_RAW" "$P4_SUMMARY" "$P4_PORT" "$P4_APPLICATION_HASH" <<'PY'
@@ -124,7 +124,7 @@ for key, value in expected.items():
 PY
 
 P4_LOCK="$P4_PROJECT_ROOT/hardware/local-state/.lord-1.6.0-save-$P4_UNIT-delivery-lock"
-P4_DELIVERY="$P4_PROJECT_ROOT/hardware/local-state/lord-1.6.0-save-delivery-$P4_UNIT-76266e0"
+P4_DELIVERY="$P4_PROJECT_ROOT/hardware/local-state/lord-1.6.0-save-delivery-$P4_UNIT-aa4209d"
 P4_READBACK="$P4_DELIVERY/LORD.P4G"
 [ ! -e "$P4_LOCK" ] || {
     printf 'Refusing LORD delivery: another delivery route is active.\n' >&2
