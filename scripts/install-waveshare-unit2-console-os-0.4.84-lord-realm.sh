@@ -29,17 +29,17 @@ P4_SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 . "$P4_SCRIPT_DIR/lib/project-env.sh"
 
 if [ "$P4_UNIT" = unit1 ]; then
-    P4_AUTH="$P4_PROJECT_ROOT/hardware/evidence/waveshare-unit1-console-os-0.4.84-lord-realm-20260827-exact-unit-authorization.json"
-    P4_AUTH_EXPECTED=4e1b27796abd6abf1b644c52449f3dce25193e409fa4188fa95c6211908120d6
+    P4_AUTH=${P4_INSTALL_AUTH_UNIT1:-"$P4_PROJECT_ROOT/hardware/evidence/waveshare-unit1-console-os-0.4.84-lord-realm-20260827-exact-unit-authorization.json"}
+    P4_AUTH_EXPECTED=${P4_INSTALL_AUTH_UNIT1_SHA256:-4e1b27796abd6abf1b644c52449f3dce25193e409fa4188fa95c6211908120d6}
 else
-    P4_AUTH="$P4_PROJECT_ROOT/hardware/evidence/waveshare-unit2-console-os-0.4.84-lord-realm-20260826-exact-unit-authorization.json"
-    P4_AUTH_EXPECTED=a50c06df5d772c850531ec6e1e840815d52eea43fcfe15192af6bf77376cf208
+    P4_AUTH=${P4_INSTALL_AUTH_UNIT2:-"$P4_PROJECT_ROOT/hardware/evidence/waveshare-unit2-console-os-0.4.84-lord-realm-20260826-exact-unit-authorization.json"}
+    P4_AUTH_EXPECTED=${P4_INSTALL_AUTH_UNIT2_SHA256:-a50c06df5d772c850531ec6e1e840815d52eea43fcfe15192af6bf77376cf208}
 fi
-P4_RELEASE="$P4_PROJECT_ROOT/hardware/local-state/waveshare-$P4_UNIT-console-os-0.4.84-lord-realm-af784d8"
-P4_RECOVERY="$P4_PROJECT_ROOT/hardware/local-state/waveshare-$P4_UNIT-console-os-0.4.84-install-af784d8"
-P4_LOCK_DIR="$P4_PROJECT_ROOT/hardware/local-state/.waveshare-$P4_UNIT-console-os-0.4.84-install-lock"
-P4_PREIMAGE="$P4_RECOVERY/preimage-0.4.83-span.bin"
-P4_READBACK="$P4_RECOVERY/readback-0.4.84-span.bin"
+P4_RELEASE=${P4_INSTALL_RELEASE:-"$P4_PROJECT_ROOT/hardware/local-state/waveshare-$P4_UNIT-console-os-0.4.84-lord-realm-af784d8"}
+P4_RECOVERY=${P4_INSTALL_RECOVERY:-"$P4_PROJECT_ROOT/hardware/local-state/waveshare-$P4_UNIT-console-os-0.4.84-install-af784d8"}
+P4_LOCK_DIR=${P4_INSTALL_LOCK_DIR:-"$P4_PROJECT_ROOT/hardware/local-state/.waveshare-$P4_UNIT-console-os-0.4.84-install-lock"}
+P4_PREIMAGE=${P4_INSTALL_PREIMAGE:-"$P4_RECOVERY/preimage-0.4.83-span.bin"}
+P4_READBACK=${P4_INSTALL_READBACK:-"$P4_RECOVERY/readback-0.4.84-span.bin"}
 P4_LEDGER="$P4_RECOVERY/ledger.json"
 P4_MUTATION_STARTED=0
 P4_LOCK_HELD=0
@@ -57,6 +57,9 @@ print(str(value).lower() if isinstance(value, bool) else value)
 p4_ledger_field() {
     p4_json_field "$P4_LEDGER" "$1"
 }
+
+P4_CANDIDATE_VERSION=$(p4_json_field "$P4_AUTH" candidate.version)
+P4_PREDECESSOR_VERSION=$(p4_json_field "$P4_AUTH" predecessor.version)
 
 p4_relative_file() {
     printf '%s/%s\n' "$P4_PROJECT_ROOT" "$(p4_json_field "$P4_AUTH" "$1.path")"
@@ -234,7 +237,8 @@ p4_restore_preimage() {
         printf 'Recovery preimage digest differs; refusing restore.\n' >&2
         return 1
     }
-    printf 'Restoring the sealed 0.4.83 application span...\n' >&2
+    printf 'Restoring the sealed %s application span...\n' \
+        "$P4_PREDECESSOR_VERSION" >&2
     P4_RESTORE=$(esptool.py --chip esp32p4 --port "$P4_PORT" --baud 460800 \
         --before no_reset --after no_reset write_flash --flash_mode dio \
         --flash_size 32MB --flash_freq 80m 0x20000 "$P4_PREIMAGE" 2>&1) || {
@@ -275,7 +279,8 @@ if [ "$P4_MODE" = check ]; then
         printf 'Recovery directory already exists; inspect its ledger before another install.\n' >&2
         exit 1
     }
-    printf 'Console OS 0.4.84 %s exact-artifact checks PASS; no UART opened and no write occurred.\n' "$P4_UNIT"
+    printf 'Console OS %s %s exact-artifact checks PASS; no UART opened and no write occurred.\n' \
+        "$P4_CANDIDATE_VERSION" "$P4_UNIT"
     exit 0
 fi
 
@@ -283,7 +288,8 @@ fi
     printf 'Note: serial path changed; exact hashed identity remains authoritative.\n'
 }
 [ ! -e "$P4_LOCK_DIR" ] || {
-    printf 'Refusing to continue: another 0.4.84 route is active.\n' >&2
+    printf 'Refusing to continue: another %s route is active.\n' \
+        "$P4_CANDIDATE_VERSION" >&2
     exit 1
 }
 mkdir -m 700 "$P4_LOCK_DIR"
@@ -296,7 +302,8 @@ p4_device_preflight
 if [ "$P4_MODE" = verify ]; then
     P4_APPLICATION=$(p4_relative_file candidate.application)
     p4_verify_live_file 0x20000 "$P4_APPLICATION" application
-    printf 'Console OS 0.4.84 %s installed-successor verification PASS; no write occurred.\n' "$P4_UNIT"
+    printf 'Console OS %s %s installed-successor verification PASS; no write occurred.\n' \
+        "$P4_CANDIDATE_VERSION" "$P4_UNIT"
     p4_release_lock
     trap - EXIT HUP INT TERM
     exit 0
@@ -304,7 +311,7 @@ fi
 
 if [ "$P4_MODE" = recover ]; then
     [ -f "$P4_LEDGER" ] || {
-        printf 'No 0.4.84 recovery ledger exists.\n' >&2
+        printf 'No %s recovery ledger exists.\n' "$P4_CANDIDATE_VERSION" >&2
         exit 1
     }
     [ "$(p4_ledger_field authorization_sha256)" = "$P4_AUTH_EXPECTED" ] || {
@@ -345,7 +352,8 @@ P4_PREDECESSOR_HASH=$(head -c "$P4_PREDECESSOR_BYTES" "$P4_PREIMAGE" | \
     shasum -a 256 | awk '{print $1}')
 [ "$P4_PREDECESSOR_HASH" = \
     "$(p4_json_field "$P4_AUTH" predecessor.application_sha256)" ] || {
-    printf 'Refusing to install: live predecessor is not Console OS 0.4.83.\n' >&2
+    printf 'Refusing to install: live predecessor is not Console OS %s.\n' \
+        "$P4_PREDECESSOR_VERSION" >&2
     exit 1
 }
 P4_OLD_TAIL_NON_FF=$(tail -c +$((P4_PREDECESSOR_BYTES + 1)) "$P4_PREIMAGE" | \
@@ -453,7 +461,8 @@ os.replace(temporary, path)
 PY
 P4_MUTATION_STARTED=0
 
-printf 'Console OS 0.4.84 %s app-only install/readback PASS.\n' "$P4_UNIT"
+printf 'Console OS %s %s app-only install/readback PASS.\n' \
+    "$P4_CANDIDATE_VERSION" "$P4_UNIT"
 printf 'Device remains in loader for retained-UART launch. LORD.P4G was not yet changed.\n'
 printf 'preimage_sha256=%s padded_readback_sha256=%s\n' \
     "$P4_PREIMAGE_HASH" "$P4_PADDED_HASH"

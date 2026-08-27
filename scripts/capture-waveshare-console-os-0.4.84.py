@@ -1,24 +1,32 @@
 #!/usr/bin/env python3
 
-"""Capture and gate exact Waveshare Console OS 0.4.84 retained UART."""
+"""Capture and gate one exact Waveshare Console OS retained UART build."""
 
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
+import os
 import pathlib
+import re
 import sys
 import time
 from datetime import datetime, timezone
 
 
 MAX_BYTES = 1024 * 1024
-APPLICATION_SHA256 = (
-    "8d542f4b5badfe83ff1955c318853a031bcc5a6dd48e0f25124550313599371b"
+CAPTURE_VERSION = os.environ.get("P4_CAPTURE_VERSION", "0.4.84")
+APPLICATION_SHA256 = os.environ.get(
+    "P4_CAPTURE_APPLICATION_SHA256",
+    "8d542f4b5badfe83ff1955c318853a031bcc5a6dd48e0f25124550313599371b",
 )
+if re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+", CAPTURE_VERSION) is None:
+    raise RuntimeError("invalid configured Console OS version")
+if re.fullmatch(r"[0-9a-f]{64}", APPLICATION_SHA256) is None:
+    raise RuntimeError("invalid configured application SHA-256")
 REQUIRED = {
-    "version": b"App version:      0.4.84",
+    "version": f"App version:      {CAPTURE_VERSION}".encode("ascii"),
     "board": (
         b"P4_CONSOLE_OS BOARD_ID vendor=Waveshare "
         b"product=ESP32-P4-WIFI6-Touch-LCD-4.3"
@@ -80,7 +88,7 @@ def analyze(payload: bytes) -> dict[str, object]:
     return {
         "schema": 1,
         "result": "pass" if passed else "fail",
-        "classification": "waveshare-console-os-0.4.84-retained-uart",
+        "classification": f"waveshare-console-os-{CAPTURE_VERSION}-retained-uart",
         "application_sha256": APPLICATION_SHA256,
         "required_markers": required,
         "rejected_markers": rejected,
@@ -173,7 +181,7 @@ def _write_new(path: pathlib.Path, data: bytes) -> None:
 def main() -> int:
     parser = argparse.ArgumentParser(
         description=(
-            "receive-only Waveshare Console OS 0.4.84 startup capture; "
+            f"receive-only Waveshare Console OS {CAPTURE_VERSION} startup capture; "
             "the operator performs the physical reset"
         )
     )
