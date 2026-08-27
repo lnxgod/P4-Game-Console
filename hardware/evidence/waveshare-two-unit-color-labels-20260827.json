@@ -1,18 +1,20 @@
 {
   "schema": 1,
   "recorded_at_utc": "2026-08-27T19:18:44Z",
+  "corrected_at_utc": "2026-08-27T19:43:06Z",
   "source": "operator assignment",
+  "correction": "Operator clarified that node B289 is pink; the initial colors were reversed.",
   "labels": [
     {
       "unit": "unit2",
-      "color": "pink",
+      "color": "green",
       "node_suffix": "386F",
       "recorded_port": "/dev/cu.wchusbserial5B901593451",
       "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79"
     },
     {
       "unit": "unit1",
-      "color": "green",
+      "color": "pink",
       "node_suffix": "B289",
       "operator_short_node": "289",
       "recorded_port": "/dev/cu.wchusbserial5C371865781",

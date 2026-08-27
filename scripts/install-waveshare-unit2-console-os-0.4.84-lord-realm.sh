@@ -30,7 +30,7 @@ P4_SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 if [ "$P4_UNIT" = unit1 ]; then
     P4_AUTH="$P4_PROJECT_ROOT/hardware/evidence/waveshare-unit1-console-os-0.4.84-lord-realm-20260827-exact-unit-authorization.json"
-    P4_AUTH_EXPECTED=5ffbc66c4e3de258e2b08e2d2579dfe31607c75cab7b2a54aa4be4b608cbdb18
+    P4_AUTH_EXPECTED=4e1b27796abd6abf1b644c52449f3dce25193e409fa4188fa95c6211908120d6
 else
     P4_AUTH="$P4_PROJECT_ROOT/hardware/evidence/waveshare-unit2-console-os-0.4.84-lord-realm-20260826-exact-unit-authorization.json"
     P4_AUTH_EXPECTED=a50c06df5d772c850531ec6e1e840815d52eea43fcfe15192af6bf77376cf208

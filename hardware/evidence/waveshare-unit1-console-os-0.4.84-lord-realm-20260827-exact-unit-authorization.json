@@ -3,15 +3,17 @@
   "active": true,
   "authorization_id": "waveshare-unit1-console-os-0.4.84-lord-realm-20260827",
   "authorized_at_utc": "2026-08-27T19:18:44Z",
-  "scope": "One application-partition-only successor install on the already backed-up Waveshare 4.3 unit1, permanently labeled green / node B289. This installs Console OS 0.4.84 for Mac-hosted P4MP BLE discovery and preserves the controller-first H2 profile. Bootloader, partition table, OTA data, NVS, microSD, and all other flash ranges are read-only.",
+  "scope": "One application-partition-only successor install on the already backed-up Waveshare 4.3 unit1, permanently labeled pink / node B289. This installs Console OS 0.4.84 for Mac-hosted P4MP BLE discovery and preserves the controller-first H2 profile. Bootloader, partition table, OTA data, NVS, microSD, and all other flash ranges are read-only.",
+  "label_corrected_at_utc": "2026-08-27T19:43:06Z",
+  "label_correction": "Operator clarified after installation that node B289 is pink, not green; the exact device identity and authorized write scope are unchanged.",
   "source": {
     "commit": "af784d870a657ff171980bb93329d2d9a5ab0153",
     "branch": "main",
     "toolchain_lock": "ESP-IDF 5.5.3 at 2c211b236707889e8400c4dc5644dd5c4ee071e0"
   },
   "board": {
-    "unit_label": "unit1-green-B289",
-    "color_label": "green",
+    "unit_label": "unit1-pink-B289",
+    "color_label": "pink",
     "node_suffix": "B289",
     "profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
     "recorded_port": "/dev/cu.wchusbserial5C371865781",

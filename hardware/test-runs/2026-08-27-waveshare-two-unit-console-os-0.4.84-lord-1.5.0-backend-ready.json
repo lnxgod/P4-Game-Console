@@ -11,8 +11,9 @@
     "lord_version": "1.5.0"
   },
   "labels": {
-    "pink": "unit2 / node 386F / /dev/cu.wchusbserial5B901593451",
-    "green": "unit1 / node B289 (operator short node 289) / /dev/cu.wchusbserial5C371865781",
+    "pink": "unit1 / node B289 (operator short node 289) / /dev/cu.wchusbserial5C371865781",
+    "green": "unit2 / node 386F / /dev/cu.wchusbserial5B901593451",
+    "correction": "Operator clarified after the initial record that B289 is pink; the initial colors were reversed.",
     "record": "hardware/evidence/waveshare-two-unit-color-labels-20260827.json"
   },
   "artifacts": {
@@ -21,11 +22,13 @@
     "lord_bytes": 174940,
     "lord_sha256": "ccf4f068701d7b033e81ba4ead843207efd2cea2771fe3581f168aed6b63d91c"
   },
-  "green": {
+  "pink": {
     "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
     "factory_backup_sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e",
     "authorization": "hardware/evidence/waveshare-unit1-console-os-0.4.84-lord-realm-20260827-exact-unit-authorization.json",
-    "authorization_sha256": "5ffbc66c4e3de258e2b08e2d2579dfe31607c75cab7b2a54aa4be4b608cbdb18",
+    "authorization_sha256": "4e1b27796abd6abf1b644c52449f3dce25193e409fa4188fa95c6211908120d6",
+    "installation_authorization_sha256": "5ffbc66c4e3de258e2b08e2d2579dfe31607c75cab7b2a54aa4be4b608cbdb18",
+    "authorization_change": "descriptive color correction only; exact identity, artifacts, and write scope unchanged",
     "install_scope": "application partition only at 0x20000; bootloader and partition table verified unchanged",
     "predecessor_preserved_sha256": "ce4600a20d00682e90822fcc4582bd203fcaafd68a69d54c9f94499388b3d3af",
     "successor_padded_readback_sha256": "3fc81dd395cddb82349896bae6800577f54d63622e17725b5552aa00bf0065cb",
@@ -34,7 +37,7 @@
     "lord_delivery": "first activation response timed out and exact pull proved the prior 163296-byte cartridge remained intact; retry passed in 3.9 seconds",
     "lord_readback": "pass; exact SHA-256 and byte-for-byte cmp"
   },
-  "pink": {
+  "green": {
     "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
     "factory_backup_sha256": "240a730a882e6437f31729c78ae69db35b132b1aa78f820fec9d88b3397b39e6",
     "firmware_verification": "pass; exact live identity, flash geometry, bootloader, partition table, and 0.4.84 application; no write occurred",
@@ -47,8 +50,8 @@
     "database": "local-data/realm/lord.sqlite3",
     "capacity": 100,
     "h1_profiles": {
-      "pink": "/dev/cu.wchusbserial5B901593451",
-      "green": "/dev/cu.wchusbserial5C371865781"
+      "pink": "/dev/cu.wchusbserial5C371865781",
+      "green": "/dev/cu.wchusbserial5B901593451"
     },
     "startup": "pass; HOSTING emitted for green and pink",
     "manual_join": "pending"
