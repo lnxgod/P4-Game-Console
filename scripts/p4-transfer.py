@@ -130,7 +130,19 @@ class WireReader:
             if location < 0 and len(self.buffer) > 64 * 1024:
                 del self.buffer[: -len(marker)]
             self._fill(deadline)
-        raise TransferError(f"badge did not return {marker.decode()} in time")
+        diagnostic = bytes(self.buffer[-8192:]).decode("ascii", "replace")
+        stage_lines = [
+            line.strip()
+            for line in diagnostic.splitlines()
+            if "P4_FILE_TRANSFER ACTIVATE" in line
+        ]
+        detail = (
+            f"; last device stage: {stage_lines[-1]}"
+            if stage_lines else ""
+        )
+        raise TransferError(
+            f"badge did not return {marker.decode()} in time{detail}"
+        )
 
     def exact(self, size: int, timeout: float) -> bytes:
         deadline = time.monotonic() + timeout

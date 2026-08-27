@@ -608,13 +608,24 @@ static p4_file_transfer_status_t write_all(
 
 static p4_file_transfer_status_t activate_upload(uint8_t digest[32])
 {
-    if (s_transfer.descriptor < 0 ||
-        fsync(s_transfer.descriptor) != 0 ||
-        close(s_transfer.descriptor) != 0) {
+    const int64_t started_us = esp_timer_get_time();
+    ESP_LOGI(TAG,
+             "P4_FILE_TRANSFER ACTIVATE stage=fsync-begin name=%s bytes=%lu",
+             s_transfer.file_name,
+             (unsigned long)s_transfer.expected_bytes);
+    if (s_transfer.descriptor < 0 || fsync(s_transfer.descriptor) != 0) {
+        s_transfer.descriptor = -1;
+        return P4_FILE_TRANSFER_STATUS_IO;
+    }
+    ESP_LOGI(TAG, "P4_FILE_TRANSFER ACTIVATE stage=fsync-pass elapsed_ms=%lld",
+             (long long)((esp_timer_get_time() - started_us) / 1000));
+    if (close(s_transfer.descriptor) != 0) {
         s_transfer.descriptor = -1;
         return P4_FILE_TRANSFER_STATUS_IO;
     }
     s_transfer.descriptor = -1;
+    ESP_LOGI(TAG, "P4_FILE_TRANSFER ACTIVATE stage=close-pass elapsed_ms=%lld",
+             (long long)((esp_timer_get_time() - started_us) / 1000));
     if (mbedtls_sha256_finish(&s_transfer.sha256, digest) != 0) {
         free_sha256();
         return P4_FILE_TRANSFER_STATUS_HASH;
@@ -624,12 +635,16 @@ static p4_file_transfer_status_t activate_upload(uint8_t digest[32])
     if (memcmp(digest, s_transfer.expected_digest, 32U) != 0) {
         return P4_FILE_TRANSFER_STATUS_HASH;
     }
+    ESP_LOGI(TAG, "P4_FILE_TRANSFER ACTIVATE stage=stream-hash-pass");
     p4_file_transfer_status_t status = validate_path(
         s_transfer.temp_path, s_transfer.expected_bytes,
         s_transfer.expected_digest, NULL, NULL);
     if (status != P4_FILE_TRANSFER_STATUS_OK) {
         return status;
     }
+    ESP_LOGI(TAG,
+             "P4_FILE_TRANSFER ACTIVATE stage=staged-package-pass elapsed_ms=%lld",
+             (long long)((esp_timer_get_time() - started_us) / 1000));
     bool target_exists = false;
     status = regular_file_exists(s_transfer.target_path, &target_exists);
     if (status != P4_FILE_TRANSFER_STATUS_OK) {
@@ -643,6 +658,7 @@ static p4_file_transfer_status_t activate_upload(uint8_t digest[32])
                    s_transfer.backup_path) != 0) {
             return P4_FILE_TRANSFER_STATUS_IO;
         }
+        ESP_LOGI(TAG, "P4_FILE_TRANSFER ACTIVATE stage=backup-pass");
     }
     if (rename(s_transfer.temp_path, s_transfer.target_path) != 0) {
         if (target_exists) {
@@ -650,6 +666,7 @@ static p4_file_transfer_status_t activate_upload(uint8_t digest[32])
         }
         return P4_FILE_TRANSFER_STATUS_IO;
     }
+    ESP_LOGI(TAG, "P4_FILE_TRANSFER ACTIVATE stage=rename-pass");
     status = validate_path(
         s_transfer.target_path, s_transfer.expected_bytes,
         s_transfer.expected_digest, NULL, NULL);
@@ -660,9 +677,15 @@ static p4_file_transfer_status_t activate_upload(uint8_t digest[32])
         }
         return status;
     }
+    ESP_LOGI(TAG,
+             "P4_FILE_TRANSFER ACTIVATE stage=target-package-pass elapsed_ms=%lld",
+             (long long)((esp_timer_get_time() - started_us) / 1000));
     if (target_exists && unlink(s_transfer.backup_path) != 0) {
         return P4_FILE_TRANSFER_STATUS_IO;
     }
+    ESP_LOGI(TAG,
+             "P4_FILE_TRANSFER ACTIVATE stage=complete elapsed_ms=%lld",
+             (long long)((esp_timer_get_time() - started_us) / 1000));
     return P4_FILE_TRANSFER_STATUS_OK;
 }
 
