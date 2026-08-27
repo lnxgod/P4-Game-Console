@@ -1,0 +1,101 @@
+{
+  "schema": 1,
+  "active": true,
+  "authorization_id": "waveshare-unit1-console-os-0.4.84-lord-realm-20260827",
+  "authorized_at_utc": "2026-08-27T19:18:44Z",
+  "scope": "One application-partition-only successor install on the already backed-up Waveshare 4.3 unit1, permanently labeled green / node B289. This installs Console OS 0.4.84 for Mac-hosted P4MP BLE discovery and preserves the controller-first H2 profile. Bootloader, partition table, OTA data, NVS, microSD, and all other flash ranges are read-only.",
+  "source": {
+    "commit": "af784d870a657ff171980bb93329d2d9a5ab0153",
+    "branch": "main",
+    "toolchain_lock": "ESP-IDF 5.5.3 at 2c211b236707889e8400c4dc5644dd5c4ee071e0"
+  },
+  "board": {
+    "unit_label": "unit1-green-B289",
+    "color_label": "green",
+    "node_suffix": "B289",
+    "profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "recorded_port": "/dev/cu.wchusbserial5C371865781",
+    "chip": "ESP32-P4",
+    "revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e",
+    "manifest": "hardware/backups/manifest.json"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "path": "hardware/local-state/waveshare-unit1-console-os-0.4.84-lord-realm-af784d8/bootloader.bin",
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "path": "hardware/local-state/waveshare-unit1-console-os-0.4.84-lord-realm-af784d8/partition-table.bin",
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "application_offset": "0x20000"
+  },
+  "predecessor": {
+    "version": "0.4.83",
+    "application_bytes": 1820384,
+    "application_sha256": "42f8ef7c60ff28361a69a66718c8cd2acb1dee42bf95896c29e440a51a0e163d",
+    "preserve_span_bytes": 1822720,
+    "evidence": "hardware/test-runs/2026-08-25-waveshare-two-unit-console-os-0.4.83-multiplayer-role-ui.json"
+  },
+  "candidate": {
+    "version": "0.4.84",
+    "release_directory": "hardware/local-state/waveshare-unit1-console-os-0.4.84-lord-realm-af784d8",
+    "application": {
+      "path": "hardware/local-state/waveshare-unit1-console-os-0.4.84-lord-realm-af784d8/p4_console_os.bin",
+      "bytes": 1820544,
+      "sha256": "8d542f4b5badfe83ff1955c318853a031bcc5a6dd48e0f25124550313599371b",
+      "padded_mutation_bytes": 1822720
+    },
+    "elf": {
+      "path": "hardware/local-state/waveshare-unit1-console-os-0.4.84-lord-realm-af784d8/p4_console_os.elf",
+      "bytes": 21706500,
+      "sha256": "6bc3ab2b7c46f12eed24bfb07fd94174e5dfc3ab49e79611ef436872bc84a587"
+    },
+    "update_package": {
+      "path": "hardware/local-state/waveshare-unit1-console-os-0.4.84-lord-realm-af784d8/P4UPDATE.P4U",
+      "bytes": 1820800,
+      "sha256": "6d4b8d8068c901180f4252adec83651935c6d30f2ca8e67610c50b4eddc47f56"
+    },
+    "sdkconfig": {
+      "path": "hardware/local-state/waveshare-unit1-console-os-0.4.84-lord-realm-af784d8/sdkconfig",
+      "bytes": 95926,
+      "sha256": "1520c48b59841a81c1134fedb0469d74803e2ede0bf011bf54c66a3f7eaa9cc2"
+    },
+    "dependencies_lock": {
+      "path": "hardware/local-state/waveshare-unit1-console-os-0.4.84-lord-realm-af784d8/dependencies.lock",
+      "bytes": 3230,
+      "sha256": "02d604c6abda80f1d264f7b2a57fde151a35fdd5437bbeb52819f8cdb7e76606"
+    },
+    "lord_cartridge": {
+      "path": "hardware/local-state/waveshare-unit1-console-os-0.4.84-lord-realm-af784d8/LORD.P4G",
+      "version": "1.5.0",
+      "bytes": 174940,
+      "sha256": "ccf4f068701d7b033e81ba4ead843207efd2cea2771fe3581f168aed6b63d91c"
+    }
+  },
+  "safety": {
+    "write_scope": "one app-partition write at 0x20000",
+    "live_identity_required": true,
+    "factory_backup_required": true,
+    "unchanged_bootloader_required": true,
+    "unchanged_partition_table_required": true,
+    "live_predecessor_required": true,
+    "complete_successor_span_preimage_required": true,
+    "complete_successor_span_readback_required": true,
+    "automatic_rollback_authorized": true,
+    "generic_idf_flash_authorized": false,
+    "full_project_flash_authorized": false,
+    "erase_authorized": false
+  }
+}

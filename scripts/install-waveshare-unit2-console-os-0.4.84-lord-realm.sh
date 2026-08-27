@@ -5,28 +5,39 @@ set -eu
 P4_MODE=${1:-}
 [ "$#" -gt 0 ] && shift
 P4_PORT=
+P4_UNIT=unit2
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --port) P4_PORT=${2:-}; shift 2 ;;
+        --unit) P4_UNIT=${2:-}; shift 2 ;;
         *) printf 'Unknown argument: %s\n' "$1" >&2; exit 2 ;;
     esac
 done
 
 case "$P4_MODE" in
     check) [ -z "$P4_PORT" ] || { printf 'check does not accept --port.\n' >&2; exit 2; } ;;
-    install|recover) ;;
-    *) printf 'Use: %s check | install --port PORT | recover --port PORT\n' "$0" >&2; exit 2 ;;
+    install|recover|verify) ;;
+    *) printf 'Use: %s check [--unit unit1|unit2] | install [--unit unit1|unit2] --port PORT | recover [--unit unit1|unit2] --port PORT | verify [--unit unit1|unit2] --port PORT\n' "$0" >&2; exit 2 ;;
 esac
+[ "$P4_UNIT" = unit1 ] || [ "$P4_UNIT" = unit2 ] || {
+    printf 'Use --unit unit1 or --unit unit2.\n' >&2
+    exit 2
+}
 
 P4_SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 # shellcheck disable=SC1091
 . "$P4_SCRIPT_DIR/lib/project-env.sh"
 
-P4_AUTH="$P4_PROJECT_ROOT/hardware/evidence/waveshare-unit2-console-os-0.4.84-lord-realm-20260826-exact-unit-authorization.json"
-P4_AUTH_EXPECTED=a50c06df5d772c850531ec6e1e840815d52eea43fcfe15192af6bf77376cf208
-P4_RELEASE="$P4_PROJECT_ROOT/hardware/local-state/waveshare-unit2-console-os-0.4.84-lord-realm-af784d8"
-P4_RECOVERY="$P4_PROJECT_ROOT/hardware/local-state/waveshare-unit2-console-os-0.4.84-install-af784d8"
-P4_LOCK_DIR="$P4_PROJECT_ROOT/hardware/local-state/.waveshare-unit2-console-os-0.4.84-install-lock"
+if [ "$P4_UNIT" = unit1 ]; then
+    P4_AUTH="$P4_PROJECT_ROOT/hardware/evidence/waveshare-unit1-console-os-0.4.84-lord-realm-20260827-exact-unit-authorization.json"
+    P4_AUTH_EXPECTED=5ffbc66c4e3de258e2b08e2d2579dfe31607c75cab7b2a54aa4be4b608cbdb18
+else
+    P4_AUTH="$P4_PROJECT_ROOT/hardware/evidence/waveshare-unit2-console-os-0.4.84-lord-realm-20260826-exact-unit-authorization.json"
+    P4_AUTH_EXPECTED=a50c06df5d772c850531ec6e1e840815d52eea43fcfe15192af6bf77376cf208
+fi
+P4_RELEASE="$P4_PROJECT_ROOT/hardware/local-state/waveshare-$P4_UNIT-console-os-0.4.84-lord-realm-af784d8"
+P4_RECOVERY="$P4_PROJECT_ROOT/hardware/local-state/waveshare-$P4_UNIT-console-os-0.4.84-install-af784d8"
+P4_LOCK_DIR="$P4_PROJECT_ROOT/hardware/local-state/.waveshare-$P4_UNIT-console-os-0.4.84-install-lock"
 P4_PREIMAGE="$P4_RECOVERY/preimage-0.4.83-span.bin"
 P4_READBACK="$P4_RECOVERY/readback-0.4.84-span.bin"
 P4_LEDGER="$P4_RECOVERY/ledger.json"
@@ -179,7 +190,7 @@ p4_device_preflight() {
     }
     [ "$(p4_read_device_identity_hash "$P4_PORT" no_reset no_reset)" = \
         "$(p4_json_field "$P4_AUTH" board.device_identity_sha256)" ] || {
-        printf 'Refusing to install: live unit is not recorded unit2.\n' >&2
+        printf 'Refusing to install: live unit is not recorded %s.\n' "$P4_UNIT" >&2
         exit 1
     }
     P4_SECURITY=$(esptool.py --chip esp32p4 --port "$P4_PORT" \
@@ -264,7 +275,7 @@ if [ "$P4_MODE" = check ]; then
         printf 'Recovery directory already exists; inspect its ledger before another install.\n' >&2
         exit 1
     }
-    printf 'Console OS 0.4.84 unit2 exact-artifact checks PASS; no UART opened and no write occurred.\n'
+    printf 'Console OS 0.4.84 %s exact-artifact checks PASS; no UART opened and no write occurred.\n' "$P4_UNIT"
     exit 0
 fi
 
@@ -281,6 +292,15 @@ trap p4_on_exit EXIT
 trap 'exit 130' HUP INT TERM
 
 p4_device_preflight
+
+if [ "$P4_MODE" = verify ]; then
+    P4_APPLICATION=$(p4_relative_file candidate.application)
+    p4_verify_live_file 0x20000 "$P4_APPLICATION" application
+    printf 'Console OS 0.4.84 %s installed-successor verification PASS; no write occurred.\n' "$P4_UNIT"
+    p4_release_lock
+    trap - EXIT HUP INT TERM
+    exit 0
+fi
 
 if [ "$P4_MODE" = recover ]; then
     [ -f "$P4_LEDGER" ] || {
@@ -433,7 +453,7 @@ os.replace(temporary, path)
 PY
 P4_MUTATION_STARTED=0
 
-printf 'Console OS 0.4.84 unit2 app-only install/readback PASS.\n'
+printf 'Console OS 0.4.84 %s app-only install/readback PASS.\n' "$P4_UNIT"
 printf 'Device remains in loader for retained-UART launch. LORD.P4G was not yet changed.\n'
 printf 'preimage_sha256=%s padded_readback_sha256=%s\n' \
     "$P4_PREIMAGE_HASH" "$P4_PADDED_HASH"
