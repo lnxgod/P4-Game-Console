@@ -146,10 +146,11 @@ class WireReader:
             for line in diagnostic.splitlines()
             if "P4_FILE_TRANSFER ACTIVATE" in line
         ]
-        detail = (
-            f"; last device stage: {stage_lines[-1]}"
-            if stage_lines else ""
-        )
+        if stage_lines:
+            detail = f"; last device stage: {stage_lines[-1]}"
+        else:
+            tail = bytes(self.buffer[-256:]).hex()
+            detail = f"; buffered_bytes={len(self.buffer)} tail_hex={tail or 'empty'}"
         raise TransferError(
             f"badge did not return {marker.decode()} in time{detail}"
         )
