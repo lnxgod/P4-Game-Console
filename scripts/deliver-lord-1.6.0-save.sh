@@ -5,14 +5,20 @@ set -eu
 P4_PORT=
 P4_UNIT=
 P4_CHECK_ONLY=0
+P4_ATTEMPT=initial
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --port) P4_PORT=${2:-}; shift 2 ;;
         --unit) P4_UNIT=${2:-}; shift 2 ;;
+        --attempt) P4_ATTEMPT=${2:-}; shift 2 ;;
         --check-only) P4_CHECK_ONLY=1; shift ;;
         *) printf 'Unknown argument: %s\n' "$1" >&2; exit 2 ;;
     esac
 done
+case "$P4_ATTEMPT" in
+    initial|retry1|retry2) ;;
+    *) printf 'Use --attempt initial, retry1, or retry2.\n' >&2; exit 2 ;;
+esac
 
 P4_SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 # shellcheck disable=SC1091
@@ -76,8 +82,9 @@ p4_select_unit() {
 
 p4_check_common
 if [ "$P4_CHECK_ONLY" = 1 ]; then
-    [ -z "$P4_PORT" ] && [ -z "$P4_UNIT" ] || {
-        printf -- '--check-only does not accept --unit or --port.\n' >&2
+    [ -z "$P4_PORT" ] && [ -z "$P4_UNIT" ] && \
+        [ "$P4_ATTEMPT" = initial ] || {
+        printf -- '--check-only does not accept --unit, --port, or --attempt.\n' >&2
         exit 2
     }
     P4_UNIT=unit1
@@ -125,6 +132,7 @@ PY
 
 P4_LOCK="$P4_PROJECT_ROOT/hardware/local-state/.lord-1.6.0-save-$P4_UNIT-delivery-lock"
 P4_DELIVERY="$P4_PROJECT_ROOT/hardware/local-state/lord-1.6.0-save-delivery-$P4_UNIT-aa4209d"
+[ "$P4_ATTEMPT" = initial ] || P4_DELIVERY="$P4_DELIVERY-$P4_ATTEMPT"
 P4_READBACK="$P4_DELIVERY/LORD.P4G"
 [ ! -e "$P4_LOCK" ] || {
     printf 'Refusing LORD delivery: another delivery route is active.\n' >&2
@@ -138,9 +146,9 @@ mkdir -m 700 "$P4_LOCK"
 trap 'rmdir "$P4_LOCK" 2>/dev/null || true' EXIT HUP INT TERM
 mkdir -m 700 "$P4_DELIVERY"
 
-python3 "$P4_TRANSFER" push "$P4_LORD" --port "$P4_PORT" \
+python3 -u "$P4_TRANSFER" push "$P4_LORD" --port "$P4_PORT" \
     --class p4g --remote-name LORD.P4G
-python3 "$P4_TRANSFER" pull LORD.P4G "$P4_READBACK" --port "$P4_PORT" \
+python3 -u "$P4_TRANSFER" pull LORD.P4G "$P4_READBACK" --port "$P4_PORT" \
     --class p4g --replace
 chmod 0400 "$P4_READBACK"
 
