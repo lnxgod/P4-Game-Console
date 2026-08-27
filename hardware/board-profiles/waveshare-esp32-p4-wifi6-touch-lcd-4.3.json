@@ -58,12 +58,26 @@
     },
     "storage": {
       "authorized": true,
-      "scope": "exact-unit Console OS mount plus exclusive H2 USB-device MSC host transfer and hash-gated H1 UART content staging",
+      "scope": "exact-unit Console OS mount with an OS-owned journaled game-save namespace, plus exclusive H2 USB-device MSC host transfer and hash-gated H1 UART content staging",
       "resources": "on-chip LDO channel 4; SDMMC0 at 1 MHz in one-bit mode on GPIO43 CLK, GPIO44 CMD, and GPIO39 D0; native H2 USB device on GPIO24/GPIO25; H1 CH343 USB-UART",
       "evidence": "hardware/test-runs/2026-08-16-waveshare-console-os-0.4.3-dtmf-dynamic-sd-install.json",
       "formatting_authorized": false,
       "writes_authorized": true,
-      "write_scope": "host WRITE(10) while TinyUSB exclusively owns the unmounted microSD; an OS-owned H1 upload to one fixed non-runnable staging name while the app exclusively owns the mounted FAT volume; or an explicitly confirmed on-device conservative FAT32 metadata repair while the card is unmounted. No formatting or host-selected device path. Content staging requires size, chunk CRC32, exact content SHA-256, fsync, atomic rename, and final full-file readback. FAT repair requires unambiguous source metadata and per-sector write readback.",
+      "write_scope": "host WRITE(10) while TinyUSB exclusively owns the unmounted microSD; an OS-owned H1 upload to one fixed non-runnable staging name while the app exclusively owns the mounted FAT volume; OS-owned bounded game-save objects below /SAVES while the app exclusively owns the mounted FAT volume; or an explicitly confirmed on-device conservative FAT32 metadata repair while the card is unmounted. No formatting, cartridge-selected path, or host-selected raw device path. Content staging requires size, chunk CRC32, exact content SHA-256, fsync, atomic rename, and final full-file readback. Game saves require fixed validated IDs, a copied non-blocking request, optimistic sequence, SHA-256 validation, stage/journal/backup recovery, and synchronized metadata. FAT repair requires unambiguous source metadata and per-sector write readback.",
+      "game_save_store": {
+        "authorized": true,
+        "authorization_basis": "explicit operator request on 2026-08-27 for persistent offline LORD progress and later Mac-hub synchronization",
+        "device_identity_sha256": [
+          "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+          "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79"
+        ],
+        "filesystem_scope": "/SAVES/<validated-game-id>/<validated-slot-id>.P4SAVE plus only its .STAGE, .BAK, and .JOURNAL siblings",
+        "limits": "at most two 16 KiB copied payload slots per foreground cartridge; LORD uses one AUTO slot below 4 KiB",
+        "safety_controls": "app-owned mounted FAT only; no cartridge path or FAT handle; explicit object format and IDs; optimistic host sequence; payload SHA-256; stage fsync and full-object validation; one bounded backup; atomic rename; recoverable one-operation journal; queued worker outside game callbacks; unavailable while H2 host owns or transitions storage",
+        "formatting_authorized": false,
+        "arbitrary_paths_authorized": false,
+        "hardware_acceptance": false
+      },
       "device_fat_repair": {
         "authorized": true,
         "authorization_basis": "explicit operator request on 2026-08-23 for on-device FAT repair",

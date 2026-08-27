@@ -251,10 +251,17 @@ software candidate only. Each changed binary still needs a fresh exact-unit
 authorization, guarded install, retained-UART boot capture, and manual game
 launch/return acceptance before it inherits any hardware claim.
 
-The board profile authorizes the exact-unit app-owned read-only mount plus an
-exclusive H2 TinyUSB MSC device transfer mode. The firmware unmounts VFS before
+The board profile authorizes the exact-unit app-owned mount, including only
+the OS-owned journaled `/SAVES` namespace, plus an exclusive H2 TinyUSB MSC
+device transfer mode. Console OS 0.4.85 exposes `save` while the app owns FAT;
+cartridges receive copied callbacks rather than paths or filesystem handles.
+Each save uses validated IDs and sequence, SHA-256, a synchronized staging
+file, one backup, atomic replacement, and a recoverable journal. This source
+candidate is not hardware acceptance until exact-unit retained-UART and
+power-cycle relaunch evidence is recorded. The firmware unmounts VFS before
 the Mac receives the LUN after the user starts the USB Drive app,
 synchronously reads back every host write, and permits USB Mode off only after
-Finder ejects the volume or H2 disconnects. Formatting, USB host/VBUS-source
+Finder ejects the volume or H2 disconnects. Formatting, arbitrary cartridge
+paths, USB host/VBUS-source
 behavior, concurrent app/host ownership, and unrelated peripherals remain
 outside that grant.

@@ -206,9 +206,15 @@ static void set_message(lord_state_t *state, lord_screen_t return_screen,
     set_screen(state, LORD_SCREEN_MESSAGE);
 }
 
-static void mark_dirty(lord_state_t *state)
+static void mark_local_save_dirty(lord_state_t *state)
 {
     state->save_dirty = true;
+    ++state->save_local_generation;
+}
+
+static void mark_dirty(lord_state_t *state)
+{
+    mark_local_save_dirty(state);
     if (state->save_sequence != UINT32_MAX) {
         ++state->save_sequence;
     }

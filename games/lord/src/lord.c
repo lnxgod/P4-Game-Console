@@ -1509,10 +1509,10 @@ static bool game_start(p4_game_context_t *context)
     state->save_available = context->services != NULL &&
         (context->services->available_capabilities & P4_GAME_CAP_SAVE) != 0U;
     if (state->save_available && context->services->save_bytes != 0U) {
-        if ((context->services->save_schema_version !=
-                 LORD_SAVE_MINIMUM_VERSION &&
-             context->services->save_schema_version !=
-                 LORD_SAVE_FORMAT_VERSION) ||
+        if (context->services->save_schema_version <
+                LORD_SAVE_MINIMUM_VERSION ||
+            context->services->save_schema_version >
+                LORD_SAVE_FORMAT_VERSION ||
             context->services->save_sequence == 0U ||
             !lord_save_decode(state, context->services->save_data,
                               context->services->save_bytes)) {
@@ -1549,7 +1549,8 @@ static void service_save(p4_game_context_t *context, lord_state_t *state)
         state->save_ticket = P4_GAME_SAVE_INVALID_TICKET;
         if (status == P4_GAME_SAVE_COMMITTED && committed_sequence != 0U) {
             state->host_save_sequence = committed_sequence;
-            if (state->save_sequence == state->save_queued_generation) {
+            if (state->save_local_generation ==
+                    state->save_queued_generation) {
                 state->save_dirty = false;
             }
         } else {
@@ -1577,7 +1578,7 @@ static void service_save(p4_game_context_t *context, lord_state_t *state)
                            state->host_save_sequence, payload,
                            payload_bytes, &ticket)) {
         state->save_ticket = ticket;
-        state->save_queued_generation = state->save_sequence;
+        state->save_queued_generation = state->save_local_generation;
     }
 }
 

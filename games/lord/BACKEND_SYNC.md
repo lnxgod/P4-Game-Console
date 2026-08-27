@@ -1,6 +1,6 @@
 # LORD backend synchronization
 
-LORD 1.5.0 has a working local Mac-hosted BBS realm and remains a
+LORD 1.6.0 has a working local Mac-hosted BBS realm and remains a
 complete offline cartridge. The cartridge never opens a socket, file, serial
 port, or BLE connection. Console OS owns the physical route and supplies the
 existing bounded `multiplayer-session` service.
@@ -12,7 +12,7 @@ two-player turn-based profile with protocol `0x4c53`.
 The Mac hosts one logical room per console, every console joins slot 1, and
 the backend automatically starts the synchronized launch. All logical rooms
 share one SQLite realm with a 100-profile cap. LORD and the backend exchange
-`P4RM` v2 records through ordinary P4MP Game Message packets.
+`P4RM` v3 records through ordinary P4MP Game Message packets.
 
 `src/lord_sync_impl.h` owns the deterministic `LRSY` version-1 record. It wraps
 the complete existing `LDSV` save with:
@@ -32,7 +32,7 @@ server path.
 The Mac implementation lives in `tools/p4_realm_hub/` and is launched by
 `scripts/p4-realm-hub.py`. It provides:
 
-- strict P4MP v1 and P4RM v2 framing;
+- strict P4MP v1 and P4RM v3 framing;
 - the existing noisy-stream H1 and P4B BLE adapters;
 - SQLite actor heads, CRC validation, compare-and-swap commits, nonce
   idempotency, durable cross-actor events, profile presence, private vault
@@ -60,11 +60,21 @@ download. Missing several hours never grants several refreshes. The online
 refresh restores daily actions but deliberately pays no bank interest. The new
 state must commit under the current day before it becomes the server head.
 
-Disconnect leaves the ordinary local save path intact. A later stale upload
-returns `SYNC CONFLICT` and does not overwrite the hub. Version 1.5.0 does not
-offer an in-game conflict chooser; the safe recovery is to exit and relaunch
-from the current server head or use a different hub profile for the divergent
-character.
+LORD schema 5 stores the last accepted hub actor ID, server revision, and game
+save generation inside the OS-owned local save. P4RM v3 includes that base and
+the current generation in `HELLO`. If the local character changed offline and
+the stored base still equals the hub head, the hub accepts the local copy and
+the ordinary compare-and-swap upload advances it once. A clean stale local
+copy downloads the current head.
+
+If a dirty local copy and the server head both advanced, or the persisted actor
+does not match the selected hub profile, the welcome returns `SYNC CONFLICT`.
+Neither copy is overwritten and no ChompCoin, mail, PvP reward, team state, or
+daily action is field-merged. Version 1.6.0 does not offer an in-game conflict
+chooser; preserve the local save, then relaunch under the intended stable
+profile or resolve the two snapshots with an administrative tool. Normal
+offline-first play therefore assumes one active console save per stable
+profile between successful synchronizations.
 
 ## Shared-directory boundary
 
@@ -83,7 +93,7 @@ password, TLS, Internet listener, or remote administration surface.
 
 ## Typed cross-player actions implemented
 
-P4RM v2 separates actor snapshots from cross-actor mutations. An action uses a
+P4RM v3 separates actor snapshots from cross-actor mutations. An action uses a
 nonzero per-actor nonce, bounded target actor ID, kind/code/value, optional
 48-byte body, and body CRC. SQLite records the request hash and result in the
 same transaction as its state change. A retry with the same request returns
@@ -105,9 +115,9 @@ The implemented actions are:
   the registered profiles.
 
 Events carry a monotonically increasing 64-bit ID and remain unacknowledged in
-SQLite until the target cartridge applies them. LORD save schema 4 persists
-the last applied event ID plus opaque directory/team actor IDs; schema-3 saves
-migrate with zeroed event state. A repeated old event is acknowledged without
+SQLite until the target cartridge applies them. LORD save schema 5 persists
+the last applied event ID, opaque directory/team actor IDs, and the safe sync
+base; schema-3 and schema-4 saves migrate with zeroed sync-base state. A repeated old event is acknowledged without
 reapplying its mail, ChompCoin, PvP record, trust, team, or feed effect.
 
 This is authoritative for the trusted local Mac deployment, not a hostile
@@ -140,7 +150,8 @@ Automated and two-device tests must cover clean first upload, relaunch
 download, offline play/reconnect, retry, power loss, duplicate nonce, changed
 body under a nonce, stale revision, simultaneous devices, malformed and
 oversized frames, hostile text, SQLite recovery, hourly rollover exactly once,
-and disconnect. The host suite now covers action codecs, changed-body nonce
+and disconnect. The host suite now covers clean/matching offline acceptance,
+stale-dirty conflict without overwrite, clean-stale download, action codecs, changed-body nonce
 rejection, two-node mail delivery/acknowledgement, two-sided ChompCoin
 transfer, team consent, PvP lease resolution, and tavern fan-out. Power-loss
 fault injection, PvP lease expiry, hostile-client fuzzing, and exact H1/BLE

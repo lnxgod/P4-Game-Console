@@ -1,6 +1,45 @@
 # Remaining Console OS upgrades for full shared LORD services
 
-## 2026-08-26 backend-hosted BBS realm status
+## 2026-08-27 persistent offline save and reconciliation candidate
+
+Console OS 0.4.85 and LORD 1.6.0 close the session-only gap on the authorized
+Waveshare units without changing Game API v1. The existing `save` optional
+tail was already sufficient; the required OS change is to advertise its
+implemented writable service while the application exclusively owns the FAT
+volume. General cartridge storage remains read-only.
+
+The OS-owned store is restricted to
+`/SAVES/<validated-game-id>/<validated-slot>.P4SAVE` and its fixed staging,
+backup, and journal siblings. It copies requests before returning, bounds them
+to the existing two 16 KiB slots, validates IDs and SHA-256, uses optimistic
+host sequences, fsyncs and validates the staged object, preserves one backup,
+atomically replaces the current object, and recovers the one-operation journal.
+It advertises no save capability while USB owns or is transitioning the card.
+LORD uses only one `AUTO` payload below 4 KiB.
+
+LORD save schema 5 adds the last accepted Mac actor ID, server revision, and
+committed game generation. P4RM v3 carries that base at reconnect:
+
+- if the local character changed offline and its base still equals the server
+  head, the server accepts a normal compare-and-swap upload;
+- if the local copy is clean but stale, the server downloads its head; and
+- if both copies advanced or actor binding differs, synchronization stops at
+  `SYNC CONFLICT` and overwrites neither side.
+
+This deliberately does not field-merge ChompCoin, mail, PvP, team, or daily
+state. Normal offline-first play assumes one active console copy per stable
+profile between successful syncs. The host sanitizer tests and Mac backend
+tests cover save migration, relaunch state, matching-base upload, stale-dirty
+conflict, and clean-stale download. Exact-unit flash, retained-UART save logs,
+power-cycle relaunch, H1/BLE reconnect, and interruption recovery still must be
+recorded before hardware qualification.
+
+Platform work still remaining for a public service is account authentication,
+TLS, moderation, quotas, hostile-client validation, federation, and an
+administrative conflict resolver. None is required for the trusted local Mac
+BBS deployment.
+
+## Historical: 2026-08-26 backend-hosted BBS realm status
 
 LORD 1.5.0 now treats the Mac as the P4MP host. Every P4 console selects
 **Join**; no console hosts the realm and no operator presses Start. The backend

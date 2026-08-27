@@ -295,7 +295,7 @@ size_t lord_save_encode(const lord_state_t *state, uint8_t *bytes,
         save_write_chars(&writer, state->log[index].text,
                          sizeof(state->log[index].text));
     }
-    save_write_chars(&writer, "MPV4", 4U);
+    save_write_chars(&writer, "MPV5", 4U);
     for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
         for (size_t byte = 0U; byte < LORD_SYNC_ACTOR_ID_BYTES; ++byte) {
             save_write_u8(&writer, state->realm_actor_ids[index][byte]);
@@ -305,6 +305,11 @@ size_t lord_save_encode(const lord_state_t *state, uint8_t *bytes,
         save_write_u8(&writer, state->partner_actor_id[byte]);
     }
     save_write_u64(&writer, state->last_realm_event_id);
+    for (size_t byte = 0U; byte < LORD_SYNC_ACTOR_ID_BYTES; ++byte) {
+        save_write_u8(&writer, state->sync_actor_id[byte]);
+    }
+    save_write_u32(&writer, state->sync_server_revision);
+    save_write_u32(&writer, state->sync_committed_save_sequence);
     if (!writer.valid || writer.offset > UINT16_MAX) {
         return 0U;
     }
@@ -378,9 +383,8 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
     const uint16_t stored_length = save_read_u16(&header);
     const uint32_t stored_crc = save_read_u32(&header);
     const uint32_t save_sequence = save_read_u32(&header);
-    if (!header.valid ||
-        (version != LORD_SAVE_MINIMUM_VERSION &&
-         version != LORD_SAVE_FORMAT_VERSION) ||
+    if (!header.valid || version < LORD_SAVE_MINIMUM_VERSION ||
+        version > LORD_SAVE_FORMAT_VERSION ||
         stored_length != length ||
         stored_crc != save_crc32(bytes + LORD_SAVE_HEADER_BYTES,
                                  length - LORD_SAVE_HEADER_BYTES)) {
@@ -448,10 +452,11 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
         save_read_chars(&reader, loaded.log[index].text,
                         sizeof(loaded.log[index].text));
     }
-    if (version == LORD_SAVE_FORMAT_VERSION) {
+    if (version >= 4U) {
         char marker[4];
         save_read_chars(&reader, marker, sizeof(marker));
-        if (memcmp(marker, "MPV4", sizeof(marker)) != 0) {
+        const char *const expected_marker = version == 4U ? "MPV4" : "MPV5";
+        if (memcmp(marker, expected_marker, sizeof(marker)) != 0) {
             reader.valid = false;
         }
         for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
@@ -463,6 +468,18 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
             loaded.partner_actor_id[byte] = save_read_u8(&reader);
         }
         loaded.last_realm_event_id = save_read_u64(&reader);
+        if (version >= 5U) {
+            for (size_t byte = 0U; byte < LORD_SYNC_ACTOR_ID_BYTES; ++byte) {
+                loaded.sync_actor_id[byte] = save_read_u8(&reader);
+            }
+            loaded.sync_server_revision = save_read_u32(&reader);
+            loaded.sync_committed_save_sequence = save_read_u32(&reader);
+        }
+    }
+    uint8_t sync_actor_combined = 0U;
+    for (size_t byte = 0U; byte < LORD_SYNC_ACTOR_ID_BYTES; ++byte) {
+        sync_actor_combined = (uint8_t)(
+            sync_actor_combined | loaded.sync_actor_id[byte]);
     }
     if (!reader.valid || reader.offset != length || loaded.rng_state == 0U ||
         loaded.realm_revision == 0U || partner_code > LORD_REALM_PLAYER_COUNT ||
@@ -474,7 +491,12 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
         loaded.log_count > LORD_LOG_COUNT_MAX ||
         !save_text_valid(loaded.conversation, sizeof(loaded.conversation), true) ||
         !save_text_valid(loaded.announcement, sizeof(loaded.announcement), true) ||
-        !save_player_valid(&loaded.player) || !save_realm_valid(&loaded)) {
+        !save_player_valid(&loaded.player) || !save_realm_valid(&loaded) ||
+        ((loaded.sync_server_revision == 0U) !=
+         (sync_actor_combined == 0U)) ||
+        ((loaded.sync_server_revision == 0U) !=
+         (loaded.sync_committed_save_sequence == 0U)) ||
+        loaded.sync_committed_save_sequence > loaded.save_sequence) {
         return false;
     }
     if (loaded.partner_index >= 0 &&

@@ -6276,13 +6276,10 @@ static p4_game_save_storage_mode_t cartridge_save_storage_mode(void)
         return P4_GAME_SAVE_STORAGE_UNAVAILABLE;
     }
     if (status.state == PLATFORM_GAME_STORAGE_APP_READY) {
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
-        /* The exact Waveshare profile currently authorizes app reads and
-         * exclusive host writes, not firmware-side FAT mutation. */
-        return P4_GAME_SAVE_STORAGE_READ_ONLY;
-#else
+        /* Game saves use the OS-owned, journaled /SAVES subtree only. The
+         * store stages, fsyncs, validates, backs up, atomically renames, and
+         * recovers each bounded slot while the app exclusively owns FAT. */
         return P4_GAME_SAVE_STORAGE_WRITABLE;
-#endif
     }
     if (status.state == PLATFORM_GAME_STORAGE_USB_HOST ||
         status.state == PLATFORM_GAME_STORAGE_TRANSITION) {

@@ -4,7 +4,7 @@
 #define P4_LORD_REALM_NET_IMPL_H
 
 enum {
-    LORD_P4RM_VERSION = 2,
+    LORD_P4RM_VERSION = 3,
     LORD_P4RM_HEADER_BYTES = 16,
     LORD_P4RM_PAYLOAD_BYTES =
         P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES - LORD_P4RM_HEADER_BYTES,
@@ -77,6 +77,11 @@ typedef enum {
 enum {
     LORD_P4RM_WELCOME_HAS_SNAPSHOT = 1U << 0U,
     LORD_P4RM_WELCOME_ROLLOVER_PENDING = 1U << 1U,
+    LORD_P4RM_WELCOME_ACCEPT_LOCAL = 1U << 2U,
+    LORD_P4RM_WELCOME_LOCAL_CONFLICT = 1U << 3U,
+    LORD_P4RM_HELLO_HAS_LOCAL = 1U << 0U,
+    LORD_P4RM_HELLO_HAS_SYNC_BASE = 1U << 1U,
+    LORD_P4RM_HELLO_LOCAL_DIRTY = 1U << 2U,
     LORD_P4RM_COMMIT_OK = 0,
     LORD_P4RM_COMMIT_CONFLICT = 1,
 };
@@ -261,12 +266,33 @@ static bool p4rm_send_ack(
         message->chunk_index, message->chunk_count, &kind, 1U);
 }
 
-static void p4rm_send_hello(p4_game_context_t *context)
+static void p4rm_send_hello(p4_game_context_t *context,
+                            const lord_state_t *state)
 {
+    uint8_t payload[32] = {0};
+    uint8_t actor_combined = 0U;
+    for (size_t byte = 0U; byte < LORD_SYNC_ACTOR_ID_BYTES; ++byte) {
+        payload[byte] = state->sync_actor_id[byte];
+        actor_combined = (uint8_t)(
+            actor_combined | state->sync_actor_id[byte]);
+    }
+    save_store_u32(payload, 16U, state->sync_server_revision);
+    save_store_u32(payload, 20U, state->sync_committed_save_sequence);
+    save_store_u32(payload, 24U, state->save_sequence);
+    if (state->player.day != 0U) {
+        payload[28] |= LORD_P4RM_HELLO_HAS_LOCAL;
+    }
+    if (state->sync_server_revision != 0U && actor_combined != 0U) {
+        payload[28] |= LORD_P4RM_HELLO_HAS_SYNC_BASE;
+    }
+    if (state->player.day != 0U &&
+        state->save_sequence != state->sync_committed_save_sequence) {
+        payload[28] |= LORD_P4RM_HELLO_LOCAL_DIRTY;
+    }
     const uint32_t transaction = p4rm_next_transaction();
     if (p4rm_send(
             context, LORD_P4RM_HELLO, transaction, 0U, 0U,
-            NULL, 0U)) {
+            payload, sizeof(payload))) {
         s_lord_realm_net.transaction_id = transaction;
         s_lord_realm_net.state = LORD_REALM_NET_WAIT_WELCOME;
         s_lord_realm_net.retry_elapsed_ms = 0U;
@@ -282,7 +308,8 @@ static bool p4rm_actor_valid(const uint8_t actor[LORD_SYNC_ACTOR_ID_BYTES])
     return combined != 0U;
 }
 
-static void p4rm_handle_welcome(const lord_p4rm_message_t *message)
+static void p4rm_handle_welcome(lord_state_t *state,
+                                const lord_p4rm_message_t *message)
 {
     if (s_lord_realm_net.state != LORD_REALM_NET_WAIT_WELCOME ||
         message->transaction_id != s_lord_realm_net.transaction_id ||
@@ -294,7 +321,14 @@ static void p4rm_handle_welcome(const lord_p4rm_message_t *message)
     }
     const uint8_t flags = message->payload[32];
     if ((flags & (uint8_t)~(LORD_P4RM_WELCOME_HAS_SNAPSHOT |
-                            LORD_P4RM_WELCOME_ROLLOVER_PENDING)) != 0U) {
+                            LORD_P4RM_WELCOME_ROLLOVER_PENDING |
+                            LORD_P4RM_WELCOME_ACCEPT_LOCAL |
+                            LORD_P4RM_WELCOME_LOCAL_CONFLICT)) != 0U ||
+        ((flags & LORD_P4RM_WELCOME_HAS_SNAPSHOT) != 0U &&
+         (flags & (LORD_P4RM_WELCOME_ACCEPT_LOCAL |
+                   LORD_P4RM_WELCOME_LOCAL_CONFLICT)) != 0U) ||
+        ((flags & LORD_P4RM_WELCOME_ACCEPT_LOCAL) != 0U &&
+         (flags & LORD_P4RM_WELCOME_LOCAL_CONFLICT) != 0U)) {
         s_lord_realm_net.state = LORD_REALM_NET_ERROR;
         return;
     }
@@ -315,9 +349,41 @@ static void p4rm_handle_welcome(const lord_p4rm_message_t *message)
     }
     s_lord_realm_net.rollover_pending =
         (flags & LORD_P4RM_WELCOME_ROLLOVER_PENDING) != 0U;
-    s_lord_realm_net.state =
-        (flags & LORD_P4RM_WELCOME_HAS_SNAPSHOT) != 0U
-            ? LORD_REALM_NET_WAIT_DOWNLOAD : LORD_REALM_NET_READY;
+    if (((flags & (LORD_P4RM_WELCOME_HAS_SNAPSHOT |
+                   LORD_P4RM_WELCOME_ACCEPT_LOCAL |
+                   LORD_P4RM_WELCOME_LOCAL_CONFLICT)) != 0U &&
+         s_lord_realm_net.server_revision == 0U) ||
+        ((flags & LORD_P4RM_WELCOME_ACCEPT_LOCAL) != 0U &&
+         (!p4rm_actor_valid(state->sync_actor_id) ||
+          memcmp(state->sync_actor_id, s_lord_realm_net.actor_id,
+                 LORD_SYNC_ACTOR_ID_BYTES) != 0 ||
+          state->sync_server_revision !=
+              s_lord_realm_net.server_revision))) {
+        s_lord_realm_net.state = LORD_REALM_NET_ERROR;
+        return;
+    }
+    if ((flags & LORD_P4RM_WELCOME_LOCAL_CONFLICT) != 0U) {
+        s_lord_realm_net.state = LORD_REALM_NET_CONFLICT;
+    } else if ((flags & LORD_P4RM_WELCOME_HAS_SNAPSHOT) != 0U) {
+        s_lord_realm_net.state = LORD_REALM_NET_WAIT_DOWNLOAD;
+    } else {
+        if ((flags & LORD_P4RM_WELCOME_ACCEPT_LOCAL) != 0U) {
+            memcpy(state->sync_actor_id, s_lord_realm_net.actor_id,
+                   LORD_SYNC_ACTOR_ID_BYTES);
+            state->sync_server_revision =
+                s_lord_realm_net.server_revision;
+            s_lord_realm_net.committed_save_sequence =
+                state->sync_committed_save_sequence;
+            if (s_lord_realm_net.rollover_pending &&
+                state->player.day != 0U) {
+                reset_hourly_realm_day(state);
+                s_lord_realm_net.rollover_pending = false;
+            }
+        } else {
+            s_lord_realm_net.committed_save_sequence = 0U;
+        }
+        s_lord_realm_net.state = LORD_REALM_NET_READY;
+    }
 }
 
 static void p4rm_handle_download_begin(
@@ -372,6 +438,11 @@ static void p4rm_finish_download(lord_state_t *state)
     s_lord_realm_net.server_revision =
         s_lord_realm_net.download_revision;
     s_lord_realm_net.committed_save_sequence = state->save_sequence;
+    memcpy(state->sync_actor_id, s_lord_realm_net.actor_id,
+           LORD_SYNC_ACTOR_ID_BYTES);
+    state->sync_server_revision = s_lord_realm_net.server_revision;
+    state->sync_committed_save_sequence = state->save_sequence;
+    mark_local_save_dirty(state);
     if (s_lord_realm_net.rollover_pending && state->player.day != 0U) {
         reset_hourly_realm_day(state);
         s_lord_realm_net.rollover_pending = false;
@@ -560,7 +631,8 @@ static void p4rm_handle_ack(
     }
 }
 
-static void p4rm_handle_commit_result(const lord_p4rm_message_t *message)
+static void p4rm_handle_commit_result(lord_state_t *state,
+                                      const lord_p4rm_message_t *message)
 {
     if (s_lord_realm_net.state != LORD_REALM_NET_UPLOAD_COMMIT ||
         message->transaction_id != s_lord_realm_net.transaction_id ||
@@ -579,6 +651,12 @@ static void p4rm_handle_commit_result(const lord_p4rm_message_t *message)
         s_lord_realm_net.clock_elapsed_ms = 0U;
         s_lord_realm_net.committed_save_sequence =
             s_lord_realm_net.queued_save_sequence;
+        memcpy(state->sync_actor_id, s_lord_realm_net.actor_id,
+               LORD_SYNC_ACTOR_ID_BYTES);
+        state->sync_server_revision = revision;
+        state->sync_committed_save_sequence =
+            s_lord_realm_net.queued_save_sequence;
+        mark_local_save_dirty(state);
         s_lord_realm_net.state = LORD_REALM_NET_READY;
     } else if (status == LORD_P4RM_COMMIT_CONFLICT) {
         s_lord_realm_net.state = LORD_REALM_NET_CONFLICT;
@@ -1279,7 +1357,7 @@ static void p4rm_receive_messages(
         }
         switch (message.kind) {
         case LORD_P4RM_WELCOME:
-            p4rm_handle_welcome(&message);
+            p4rm_handle_welcome(state, &message);
             break;
         case LORD_P4RM_DOWNLOAD_BEGIN:
             p4rm_handle_download_begin(context, &message);
@@ -1291,7 +1369,7 @@ static void p4rm_receive_messages(
             p4rm_handle_ack(context, &message);
             break;
         case LORD_P4RM_COMMIT_RESULT:
-            p4rm_handle_commit_result(&message);
+            p4rm_handle_commit_result(state, &message);
             break;
         case LORD_P4RM_CLOCK:
             p4rm_handle_clock(state, &message);
@@ -1668,7 +1746,7 @@ static void lord_realm_net_poll(
         }
     }
     if (s_lord_realm_net.state == LORD_REALM_NET_SEND_HELLO) {
-        p4rm_send_hello(context);
+        p4rm_send_hello(context, state);
         return;
     }
     if (UINT32_MAX - s_lord_realm_net.retry_elapsed_ms < elapsed_ms) {

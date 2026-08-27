@@ -60,7 +60,7 @@ def validate_lord_sync(record: bytes, actor_id: bytes, nonce: int) -> bool:
     )
     nested_realm_revision = struct.unpack_from("<I", save, 20)[0]
     return (
-        save_version in (3, 4)
+        save_version in (3, 4, 5)
         and save_length == len(save)
         and save_crc == zlib.crc32(save[LORD_SAVE_HEADER_BYTES:]) & 0xFFFFFFFF
         and nested_sequence == save_sequence
@@ -299,7 +299,11 @@ class RealmHubSession:
 
     def _receive_realm(self, message: p4rm.Message) -> None:
         if message.kind == p4rm.HELLO:
-            self._begin_game_sync(message.transaction_id)
+            self._begin_game_sync(message)
+        elif not self.game_online:
+            self._send_realm(
+                p4rm.ERROR, message.transaction_id, struct.pack("<H", 1)
+            )
         elif message.kind == p4rm.ACK:
             self._receive_ack(message)
         elif message.kind == p4rm.UPLOAD_BEGIN:
@@ -319,34 +323,87 @@ class RealmHubSession:
         elif message.kind == p4rm.DIRECTORY_PAGE:
             self._receive_directory_page(message)
 
-    def _begin_game_sync(self, transaction_id: int) -> None:
+    def _begin_game_sync(self, message: p4rm.Message) -> None:
+        try:
+            local_actor, base_revision, committed, _current, hello_flags = (
+                p4rm.decode_hello(message.payload)
+            )
+        except ValueError:
+            self._send_realm(
+                p4rm.ERROR, message.transaction_id, struct.pack("<H", 1)
+            )
+            return
         try:
             head = self.store.read_head(self.actor_id)
         except (OSError, RuntimeError, sqlite3.Error):
-            self._send_realm(p4rm.ERROR, transaction_id, struct.pack("<H", 2))
+            self._send_realm(
+                p4rm.ERROR, message.transaction_id, struct.pack("<H", 2)
+            )
             return
         day_id, remaining = self.store.realm_clock(self.now())
         flags = 0
+        send_snapshot = head.snapshot is not None
         if head.snapshot is not None:
-            flags |= p4rm.WELCOME_HAS_SNAPSHOT
-            if head.last_day_id < day_id:
+            if len(head.snapshot) < LORD_SYNC_HEADER_BYTES:
+                self._send_realm(
+                    p4rm.ERROR, message.transaction_id, struct.pack("<H", 2)
+                )
+                return
+            head_nonce = struct.unpack_from("<Q", head.snapshot, 24)[0]
+            if not validate_lord_sync(
+                head.snapshot, self.actor_id, head_nonce
+            ):
+                self._send_realm(
+                    p4rm.ERROR, message.transaction_id, struct.pack("<H", 2)
+                )
+                return
+            head_save_sequence = struct.unpack_from("<I", head.snapshot, 20)[0]
+            has_local = bool(hello_flags & p4rm.HELLO_HAS_LOCAL)
+            has_base = bool(hello_flags & p4rm.HELLO_HAS_SYNC_BASE)
+            local_dirty = bool(hello_flags & p4rm.HELLO_LOCAL_DIRTY)
+            base_matches = (
+                has_base
+                and local_actor == self.actor_id
+                and base_revision == head.revision
+                and committed == head_save_sequence
+            )
+            if has_local and base_matches:
+                flags |= p4rm.WELCOME_ACCEPT_LOCAL
+                send_snapshot = False
+            elif local_dirty:
+                flags |= p4rm.WELCOME_LOCAL_CONFLICT
+                send_snapshot = False
+            else:
+                flags |= p4rm.WELCOME_HAS_SNAPSHOT
+            if (flags & p4rm.WELCOME_LOCAL_CONFLICT) == 0 and (
+                head.last_day_id < day_id
+            ):
                 flags |= p4rm.WELCOME_ROLLOVER_PENDING
         self._send_realm(
             p4rm.WELCOME,
-            transaction_id,
+            message.transaction_id,
             p4rm.encode_welcome(
                 self.actor_id, head.revision, day_id, remaining, flags
             ),
         )
-        self.game_online = True
+        self.game_online = (flags & p4rm.WELCOME_LOCAL_CONFLICT) == 0
+        if flags & p4rm.WELCOME_LOCAL_CONFLICT:
+            sync_mode = "conflict"
+        elif flags & p4rm.WELCOME_ACCEPT_LOCAL:
+            sync_mode = "local"
+        elif send_snapshot:
+            sync_mode = "download"
+        else:
+            sync_mode = "new"
         self.log_event(
             f"REALM_ONLINE profile={self.profile} actor={self.actor_id.hex()} "
-            f"revision={head.revision} day={day_id}"
+            f"revision={head.revision} day={day_id} "
+            f"sync={sync_mode}"
         )
         self.last_clock_day = day_id
         self.next_clock_at = self.now() + 30.0
         self.next_directory_at = self.now()
-        if head.snapshot is not None:
+        if send_snapshot and head.snapshot is not None:
             transaction = _nonzero_u32()
             chunks = p4rm.record_chunks(head.snapshot)
             self.download = Download(
@@ -754,6 +811,8 @@ class RealmHubSession:
             self._send_realm(p4rm.ERROR, message.transaction_id, struct.pack("<H", 3))
 
     def _send_commit_result(self, transaction_id: int, status: int, revision: int) -> None:
+        if status != p4rm.COMMIT_OK:
+            self.game_online = False
         day_id, remaining = self.store.realm_clock(self.now())
         payload = struct.pack("<BIQI", status, revision, day_id, remaining)
         self._send_realm(p4rm.COMMIT_RESULT, transaction_id, payload)

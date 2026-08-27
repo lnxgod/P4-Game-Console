@@ -260,6 +260,32 @@ static void test_full_inn_and_igms(void)
     CHECK(state.player.forest_fights >= LORD_FOREST_FIGHTS_PER_DAY);
 }
 
+static uint32_t test_save_crc32(const uint8_t *bytes, size_t length)
+{
+    uint32_t crc = UINT32_MAX;
+    for (size_t index = 0U; index < length; ++index) {
+        crc ^= bytes[index];
+        for (uint8_t bit = 0U; bit < 8U; ++bit) {
+            const uint32_t mask = UINT32_C(0) - (crc & UINT32_C(1));
+            crc = (crc >> 1U) ^ (UINT32_C(0xedb88320) & mask);
+        }
+    }
+    return ~crc;
+}
+
+static void test_save_header(uint8_t *bytes, size_t length, uint16_t version)
+{
+    bytes[4] = (uint8_t)version;
+    bytes[5] = (uint8_t)(version >> 8U);
+    bytes[6] = (uint8_t)length;
+    bytes[7] = (uint8_t)(length >> 8U);
+    const uint32_t crc = test_save_crc32(bytes + 16U, length - 16U);
+    bytes[8] = (uint8_t)crc;
+    bytes[9] = (uint8_t)(crc >> 8U);
+    bytes[10] = (uint8_t)(crc >> 16U);
+    bytes[11] = (uint8_t)(crc >> 24U);
+}
+
 static void test_save_round_trip(void)
 {
     lord_state_t state;
@@ -279,8 +305,11 @@ static void test_save_round_trip(void)
     for (size_t index = 0U; index < LORD_SYNC_ACTOR_ID_BYTES; ++index) {
         state.realm_actor_ids[1][index] = (uint8_t)(index + 1U);
         state.partner_actor_id[index] = (uint8_t)(index + 1U);
+        state.sync_actor_id[index] = (uint8_t)(0xa0U + index);
     }
     state.last_realm_event_id = UINT64_C(123456789);
+    state.sync_server_revision = 17U;
+    state.sync_committed_save_sequence = 40U;
     (void)strcpy(state.conversation, "THE DRAGON IS AWAKE");
     (void)strcpy(state.announcement, "MEET IN THE FOREST");
     state.save_sequence = 42U;
@@ -313,29 +342,33 @@ static void test_save_round_trip(void)
     CHECK(memcmp(restored.partner_actor_id, state.partner_actor_id,
                  LORD_SYNC_ACTOR_ID_BYTES) == 0);
     CHECK(restored.last_realm_event_id == UINT64_C(123456789));
+    CHECK(memcmp(restored.sync_actor_id, state.sync_actor_id,
+                 LORD_SYNC_ACTOR_ID_BYTES) == 0);
+    CHECK(restored.sync_server_revision == 17U);
+    CHECK(restored.sync_committed_save_sequence == 40U);
     CHECK(strcmp(restored.conversation, "THE DRAGON IS AWAKE") == 0);
     CHECK(restored.save_sequence == 42U);
     CHECK(!restored.save_dirty);
 
-    enum { LORD_V4_SAVE_EXTENSION_BYTES = 4 + 8 * 16 + 16 + 8 };
-    const size_t v3_length = encoded_length - LORD_V4_SAVE_EXTENSION_BYTES;
-    encoded[4] = (uint8_t)LORD_SAVE_MINIMUM_VERSION;
-    encoded[5] = 0U;
-    encoded[6] = (uint8_t)v3_length;
-    encoded[7] = (uint8_t)(v3_length >> 8U);
-    uint32_t v3_crc = UINT32_MAX;
-    for (size_t index = 16U; index < v3_length; ++index) {
-        v3_crc ^= encoded[index];
-        for (uint8_t bit = 0U; bit < 8U; ++bit) {
-            const uint32_t mask = UINT32_C(0) - (v3_crc & UINT32_C(1));
-            v3_crc = (v3_crc >> 1U) ^ (UINT32_C(0xedb88320) & mask);
-        }
-    }
-    v3_crc = ~v3_crc;
-    encoded[8] = (uint8_t)v3_crc;
-    encoded[9] = (uint8_t)(v3_crc >> 8U);
-    encoded[10] = (uint8_t)(v3_crc >> 16U);
-    encoded[11] = (uint8_t)(v3_crc >> 24U);
+    enum {
+        LORD_V4_SAVE_EXTENSION_BYTES = 4 + 8 * 16 + 16 + 8,
+        LORD_V5_SAVE_EXTENSION_BYTES = 16 + 4 + 4,
+    };
+    const size_t v4_length = encoded_length - LORD_V5_SAVE_EXTENSION_BYTES;
+    const size_t v4_marker = v4_length - LORD_V4_SAVE_EXTENSION_BYTES;
+    encoded[v4_marker + 3U] = '4';
+    test_save_header(encoded, v4_length, 4U);
+    CHECK(lord_save_decode(&restored, encoded, v4_length));
+    CHECK(restored.last_realm_event_id == UINT64_C(123456789));
+    CHECK(restored.partner_actor_id[0] == 1U);
+    CHECK(restored.sync_actor_id[0] == 0U);
+    CHECK(restored.sync_server_revision == 0U);
+    CHECK(restored.sync_committed_save_sequence == 0U);
+
+    memcpy(encoded, duplicate, encoded_length);
+    const size_t v3_length = encoded_length - LORD_V4_SAVE_EXTENSION_BYTES -
+        LORD_V5_SAVE_EXTENSION_BYTES;
+    test_save_header(encoded, v3_length, LORD_SAVE_MINIMUM_VERSION);
     CHECK(lord_save_decode(&restored, encoded, v3_length));
     CHECK(restored.last_realm_event_id == 0U);
     CHECK(restored.partner_actor_id[0] == 0U);
@@ -344,6 +377,10 @@ static void test_save_round_trip(void)
     encoded[encoded_length - 1U] ^= UINT8_C(0x80);
     CHECK(!lord_save_decode(&restored, encoded, encoded_length));
     encoded[encoded_length - 1U] ^= UINT8_C(0x80);
+    memset(encoded + encoded_length - 4U, 0, 4U);
+    test_save_header(encoded, encoded_length, LORD_SAVE_FORMAT_VERSION);
+    CHECK(!lord_save_decode(&restored, encoded, encoded_length));
+    memcpy(encoded, duplicate, encoded_length);
     CHECK(!lord_save_decode(&restored, encoded, encoded_length - 1U));
     CHECK(lord_save_encode(&state, encoded, 16U) == 0U);
 }
@@ -398,6 +435,7 @@ typedef struct {
     uint32_t expected_sequence;
     uint32_t sequence;
     p4_game_save_ticket_t ticket;
+    bool defer_commit;
 } save_mock_t;
 
 enum {
@@ -420,6 +458,11 @@ enum {
     TEST_P4RM_EVENT_ACK = 20,
     TEST_P4RM_DIRECTORY_PAGE = 21,
     TEST_P4RM_BEGIN_INDEX = UINT16_MAX,
+    TEST_P4RM_WELCOME_ACCEPT_LOCAL = 1U << 2U,
+    TEST_P4RM_WELCOME_LOCAL_CONFLICT = 1U << 3U,
+    TEST_P4RM_HELLO_HAS_LOCAL = 1U << 0U,
+    TEST_P4RM_HELLO_HAS_SYNC_BASE = 1U << 1U,
+    TEST_P4RM_HELLO_LOCAL_DIRTY = 1U << 2U,
 };
 
 typedef struct {
@@ -531,7 +574,7 @@ static void realm_mock_queue(
         .bytes = (uint8_t)(TEST_P4RM_HEADER_BYTES + payload_bytes),
     };
     memcpy(message->data, "P4RM", 4U);
-    message->data[4] = 2U;
+    message->data[4] = 3U;
     message->data[5] = kind;
     message->data[6] = 0U;
     message->data[7] = TEST_P4RM_HEADER_BYTES;
@@ -569,6 +612,7 @@ static bool mock_queue_save(void *context, const char *slot_id,
     memcpy(mock->payload, data, data_bytes);
     mock->bytes = data_bytes;
     mock->expected_sequence = expected_sequence;
+    mock->sequence = 0U;
     mock->ticket = 7U;
     *ticket_out = mock->ticket;
     return true;
@@ -581,6 +625,11 @@ static bool mock_read_save(void *context, p4_game_save_ticket_t ticket,
     save_mock_t *const mock = context;
     if (ticket != mock->ticket) {
         return false;
+    }
+    if (mock->defer_commit) {
+        *status_out = P4_GAME_SAVE_QUEUED;
+        *sequence_out = 0U;
+        return true;
     }
     if (mock->sequence == 0U) {
         mock->sequence = mock->expected_sequence + 1U;
@@ -625,6 +674,12 @@ static void test_p4mp_mac_realm_hourly_sync(void)
     const p4_game_input_t idle = {0};
     CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
           P4_GAME_CONTINUE);
+    CHECK(realm.outgoing_bytes == TEST_P4RM_HEADER_BYTES + 32U);
+    CHECK(realm.outgoing[4] == 3U);
+    CHECK(test_load_u32(realm.outgoing, TEST_P4RM_HEADER_BYTES + 16U) == 0U);
+    CHECK(test_load_u32(realm.outgoing, TEST_P4RM_HEADER_BYTES + 20U) == 0U);
+    CHECK(test_load_u32(realm.outgoing, TEST_P4RM_HEADER_BYTES + 24U) == 0U);
+    CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES + 28U] == 0U);
     CHECK(realm_mock_take_kind(&realm) == 1U);
 
     const uint32_t hello_transaction =
@@ -681,6 +736,10 @@ static void test_p4mp_mac_realm_hourly_sync(void)
                      0U, 0U, committed, sizeof(committed));
     CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
           P4_GAME_CONTINUE);
+    CHECK(memcmp(state.sync_actor_id, actor_id,
+                 LORD_SYNC_ACTOR_ID_BYTES) == 0);
+    CHECK(state.sync_server_revision == 1U);
+    CHECK(state.sync_committed_save_sequence == state.save_sequence);
     CHECK(realm_mock_take_kind(&realm) == TEST_P4RM_PROFILE);
     CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
           P4_GAME_CONTINUE);
@@ -1026,6 +1085,110 @@ static void capture_frame_if_requested(const p4_game_surface_t *surface,
     CHECK(fclose(file) == 0);
 }
 
+static void test_offline_save_reconnect_reconciliation(void)
+{
+    lord_state_t offline;
+    enter_town(&offline, LORD_CLASS_THIEF);
+    offline.player.bank = 4321U;
+    offline.save_sequence = 42U;
+    offline.sync_server_revision = 9U;
+    offline.sync_committed_save_sequence = 40U;
+    for (size_t index = 0U; index < LORD_SYNC_ACTOR_ID_BYTES; ++index) {
+        offline.sync_actor_id[index] = (uint8_t)(index + 1U);
+    }
+    uint8_t saved[LORD_SAVE_MAX_BYTES];
+    const size_t saved_bytes = lord_save_encode(
+        &offline, saved, sizeof(saved));
+    CHECK(saved_bytes > 0U);
+
+    static const p4_game_multiplayer_profile_t profile = {
+        .schema = P4_GAME_MULTIPLAYER_PROFILE_SCHEMA,
+        .style = P4_GAME_MULTIPLAYER_STYLE_TURN_BASED,
+        .min_players = 2U,
+        .max_players = 2U,
+        .tick_rate_hz = 30U,
+        .message_bytes = P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES,
+        .protocol = UINT16_C(0x4c53),
+    };
+    save_mock_t save = {0};
+    realm_mock_t realm = {0};
+    p4_game_services_t services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO |
+            P4_GAME_CAP_CONTROLS | P4_GAME_CAP_SAVE |
+            P4_GAME_CAP_MULTIPLAYER_SESSION,
+        .save_context = &save,
+        .save_data = saved,
+        .save_bytes = saved_bytes,
+        .save_schema_version = LORD_SAVE_FORMAT_VERSION,
+        .save_sequence = 42U,
+        .queue_save = mock_queue_save,
+        .read_save_status = mock_read_save,
+        .multiplayer_context = &realm,
+        .multiplayer_read_status = realm_mock_status,
+        .multiplayer_send = realm_mock_send,
+        .multiplayer_receive = realm_mock_receive,
+        .multiplayer_profile = &profile,
+    };
+    p4_game_instance_t instance;
+    lord_state_t state;
+    const p4_game_input_t idle = {0};
+    CHECK(start_game(&instance, &state, &services));
+    CHECK(state.player.bank == 4321U);
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing_bytes == TEST_P4RM_HEADER_BYTES + 32U);
+    CHECK(memcmp(realm.outgoing + TEST_P4RM_HEADER_BYTES,
+                 offline.sync_actor_id, LORD_SYNC_ACTOR_ID_BYTES) == 0);
+    CHECK(test_load_u32(realm.outgoing,
+                        TEST_P4RM_HEADER_BYTES + 16U) == 9U);
+    CHECK(test_load_u32(realm.outgoing,
+                        TEST_P4RM_HEADER_BYTES + 20U) == 40U);
+    CHECK(test_load_u32(realm.outgoing,
+                        TEST_P4RM_HEADER_BYTES + 24U) == 42U);
+    CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES + 28U] ==
+          (TEST_P4RM_HELLO_HAS_LOCAL |
+           TEST_P4RM_HELLO_HAS_SYNC_BASE |
+           TEST_P4RM_HELLO_LOCAL_DIRTY));
+    const uint32_t transaction = test_load_u32(realm.outgoing, 8U);
+    (void)realm_mock_take_kind(&realm);
+
+    uint8_t welcome[36] = {0};
+    memcpy(welcome, offline.sync_actor_id, LORD_SYNC_ACTOR_ID_BYTES);
+    test_store_u32(welcome, 16U, 9U);
+    test_store_u64(welcome, 20U, UINT64_C(100));
+    test_store_u32(welcome, 28U, 1800U);
+    welcome[32] = TEST_P4RM_WELCOME_ACCEPT_LOCAL | (1U << 1U);
+    const uint16_t day_before_sync = state.player.day;
+    realm_mock_queue(&realm, TEST_P4RM_WELCOME, transaction,
+                     0U, 0U, welcome, sizeof(welcome));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing[5] == TEST_P4RM_UPLOAD_BEGIN);
+    CHECK(test_load_u32(realm.outgoing, TEST_P4RM_HEADER_BYTES) == 9U);
+    CHECK(state.player.bank == 4321U);
+    CHECK(state.player.day == day_before_sync + 1U);
+    p4_game_instance_stop(&instance);
+
+    realm = (realm_mock_t){0};
+    services.multiplayer_context = &realm;
+    CHECK(start_game(&instance, &state, &services));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    const uint32_t conflict_transaction =
+        test_load_u32(realm.outgoing, 8U);
+    (void)realm_mock_take_kind(&realm);
+    welcome[32] = TEST_P4RM_WELCOME_LOCAL_CONFLICT;
+    test_store_u32(welcome, 16U, 10U);
+    realm_mock_queue(&realm, TEST_P4RM_WELCOME, conflict_transaction,
+                     0U, 0U, welcome, sizeof(welcome));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing_bytes == 0U);
+    CHECK(state.player.bank == 4321U);
+    CHECK(state.sync_server_revision == 9U);
+    p4_game_instance_stop(&instance);
+}
+
 static void test_runtime_save_render_and_exit(void)
 {
     save_mock_t save = {0};
@@ -1130,11 +1293,50 @@ static void test_runtime_save_render_and_exit(void)
     (void)p4_game_instance_update(&instance, &idle, 16U);
     CHECK(!state.save_dirty);
 
+    save.defer_commit = true;
+    state.save_dirty = true;
+    ++state.save_local_generation;
+    ++state.save_sequence;
+    (void)p4_game_instance_update(&instance, &idle, 16U);
+    CHECK(state.save_ticket != P4_GAME_SAVE_INVALID_TICKET);
+    for (size_t index = 0U; index < LORD_SYNC_ACTOR_ID_BYTES; ++index) {
+        state.sync_actor_id[index] = (uint8_t)(0xb0U + index);
+    }
+    state.sync_server_revision = 8U;
+    state.sync_committed_save_sequence = state.save_sequence;
+    state.save_dirty = true;
+    ++state.save_local_generation;
+    (void)p4_game_instance_update(&instance, &idle, 16U);
+    CHECK(state.save_dirty);
+    save.defer_commit = false;
+    (void)p4_game_instance_update(&instance, &idle, 16U);
+    CHECK(state.save_dirty);
+    CHECK(state.save_ticket != P4_GAME_SAVE_INVALID_TICKET);
+    lord_state_t persisted_sync;
+    CHECK(lord_save_decode(&persisted_sync, save.payload, save.bytes));
+    CHECK(persisted_sync.sync_server_revision == 8U);
+    (void)p4_game_instance_update(&instance, &idle, 16U);
+    CHECK(!state.save_dirty);
+
     const p4_game_input_t back = {
         .held = P4_BUTTON_BACK, .pressed = P4_BUTTON_BACK,
     };
     CHECK(p4_game_instance_update(&instance, &back, 16U) ==
           P4_GAME_EXIT_TO_LAUNCHER);
+    p4_game_instance_stop(&instance);
+
+    p4_game_services_t relaunch_services = services;
+    relaunch_services.save_data = save.payload;
+    relaunch_services.save_bytes = save.bytes;
+    relaunch_services.save_schema_version = LORD_SAVE_FORMAT_VERSION;
+    relaunch_services.save_sequence = save.sequence;
+    lord_state_t relaunched;
+    CHECK(start_game(&instance, &relaunched, &relaunch_services));
+    CHECK(strcmp(relaunched.player.name, "Saved Hero") == 0);
+    CHECK(relaunched.sync_server_revision == 8U);
+    CHECK(memcmp(relaunched.sync_actor_id, state.sync_actor_id,
+                 LORD_SYNC_ACTOR_ID_BYTES) == 0);
+    CHECK(!relaunched.save_dirty);
     p4_game_instance_stop(&instance);
 }
 
@@ -1201,6 +1403,7 @@ int main(void)
     test_save_round_trip();
     test_backend_sync_envelope();
     test_p4mp_mac_realm_hourly_sync();
+    test_offline_save_reconnect_reconciliation();
     test_runtime_save_render_and_exit();
     test_standard_touch_lifecycle();
     if (s_failures != 0) {

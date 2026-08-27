@@ -1,4 +1,4 @@
-# LORD 1.5.0 OS integration contract
+# LORD 1.6.0 OS integration contract
 
 LORD is a complete standalone cartridge. This document describes optional OS
 services that turn its persistent local realm into a shared BBS realm without
@@ -11,19 +11,19 @@ ownership.
 - Optional: `audio-tone`, `save`, `multiplayer-session`
 
 The save adapter is implemented in `src/lord.c`. At launch it accepts save
-schema 3 or 4, validates the nonzero host sequence and copied launch snapshot,
-and migrates schema 3 in memory. At safe update boundaries it encodes schema 4
+schema 3, 4, or 5, validates the nonzero host sequence and copied launch
+snapshot, and migrates older schemas in memory. At safe update boundaries it encodes schema 5
 into a bounded
 4 KiB staging buffer, queues slot `AUTO`, polls the returned ticket, and clears
 `save_dirty` only after `COMMITTED`. Conflicts and unavailable storage fail
 closed while gameplay continues locally.
 
 The game-defined `LDSV` payload is explicit little endian and CRC protected.
-Schema 4 persists the complete player, all three skill trees, daily counters, eight
+Schema 5 persists the complete player, all three skill trees, daily counters, eight
 local warriors, twelve mail slots with text, twelve news records, adventure
 teams, trust, youth mentoring, conversation, announcement, IGM usage, and realm
-revision, plus opaque directory/team actor IDs and the last applied hub event
-ID. It never
+revision, plus opaque directory/team actor IDs, the last applied hub event ID,
+and the last accepted hub actor/server revision/committed game generation. It never
 serializes pointers, raw enums, structure padding, or `lord_state_t` itself.
 
 The host-level save container remains the OS's responsibility: namespacing,
@@ -48,13 +48,16 @@ cartridge receives only the existing 64-byte Game Message service plus the
 immutable session seed and status. The backend hosts each logical session,
 the console joins slot 1, and the backend initiates synchronized start.
 
-`src/lord_realm_net_impl.h` layers bounded `P4RM` v2 messages on that service.
+`src/lord_realm_net_impl.h` layers bounded `P4RM` v3 messages on that service.
 It synchronizes full `LRSY` snapshots with the Mac hub, publishes the local
 profile, consumes eight-entry pages of a 100-player roster, and applies one trusted
 hourly refresh. It also submits bounded actions and applies/acknowledges durable
 events for mail, transfers, friendship, teams, mentoring, PvP, tavern, and
 news. It remains inactive when the capability or connected room is
-absent. No new Game API fields, raw P4MP packets, routes, USB/BLE handles, or
+absent. Its hello carries only the persisted actor/revision/generation base.
+The hub accepts an offline upload only while that base still equals the server
+head; a divergent dirty copy becomes `SYNC CONFLICT` without replacing either
+side. No new Game API fields, raw P4MP packets, routes, USB/BLE handles, or
 clock callbacks are exposed to LORD.
 
 The exact deployment and current limitations are in
@@ -86,7 +89,7 @@ events:
 | Daily News / conversation | bounded sanitized feed |
 | Sleep / daily reset | trusted realm-day transition |
 
-Opaque remote IDs and leases remain inside validated P4RM messages and schema-4
+Opaque remote IDs and leases remain inside validated P4RM messages and schema-5
 state; local array indexes are never used as hub identity. A conflict may not
 award ChompCoin, defeat an opponent, deliver duplicate mail, or form an
 adventure team. Remote team changes require both players' consent. Offline
@@ -102,8 +105,8 @@ public-service boundaries.
 `src/lord_sync_impl.h` defines the bounded `LRSY` version-1 record copied over
 the current P4RM compatibility path and reusable by a future `realm` callback.
 It contains a 52-byte explicit
-little-endian header followed by the complete CRC-protected schema-3 or
-schema-4 save:
+little-endian header followed by the complete CRC-protected schema-3, schema-4,
+or schema-5 save:
 
 ```text
 magic="LRSY", format=1, total bytes, record CRC
@@ -119,7 +122,7 @@ It contains no username, email, password, device address, route, token, or
 server URL. Unit tests cover round trip, stale revision, wrong actor, corrupt
 payload, and zero-nonce rejection.
 
-The codec itself remains transport-free. Version 1.4 submits it through a
+The codec itself remains transport-free. Version 1.6 submits it through a
 reviewed P4RM state machine over `multiplayer-session` when the local Mac hub
 occupies the peer slot. The complete record, server, conflict, and future
 typed-action rules are in [BACKEND_SYNC.md](BACKEND_SYNC.md).
@@ -156,7 +159,7 @@ terminal, file, callback, or download commands.
 
 ## Acceptance needed for optional shared services
 
-- Save: launch an empty slot, migrate schema 3, observe a copied schema-4 commit,
+- Save: launch an empty slot, migrate schemas 3 and 4, observe a copied schema-5 commit,
   relaunch with the committed snapshot, recover after interrupted replacement,
   and prove conflict/read-only/unavailable behavior.
 - P4RM Mac realm: cover upload/download retry, stale revisions, duplicate

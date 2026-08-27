@@ -177,8 +177,10 @@ path remains visible, OPEN enters the selected directory, and BACK walks to
 the parent before returning to Program Manager. Row selection no longer
 rescans the card. Dot segments, absolute paths, repeated separators, control
 characters, and overlong paths remain rejected at the storage boundary. The
-Waveshare app-owned mount stays read-only; its File Manager browses while the
-USB Drive app remains the supported way to edit card contents.
+Waveshare File Manager stays read-only; it browses while the USB Drive app
+remains the supported way to edit general card contents. Console OS 0.4.85
+separately permits only the OS-owned, journaled `/SAVES` namespace while the
+app exclusively owns the mount. Games still receive no path or FAT handle.
 
 The 0.4.14 controller-first correction combines the supported Host/HID and
 TinyUSB MSC roles in one image without concurrent ownership. Console OS boots
@@ -338,7 +340,7 @@ loader with these substitutions:
 | Service | Elecrow 10 in | Olimex Rev.B | Waveshare 4.3 |
 |---|---|---|---|
 | Display | 1024x600 DSI, 3x viewport | 1280x720 HDMI, 3x viewport | 480x800 ST7701 rotated to 800x480, 768x480 viewport |
-| Persistent content | internal FAT over J16 | removable microSD | removable microSD; app read-only or exclusive H2 MSC host |
+| Persistent content | internal FAT over J16 | removable microSD | removable microSD; read-only general app content, OS-owned journaled saves, or exclusive H2 MSC host |
 | Input | GT911 touch | USB-A pad + keyboard + mouse | GT911 touch + externally powered H2 USB HID + one bonded BLE HID pad |
 | Audio | reviewed factory speaker path | ES8311 to 3.5mm jack | ES8311 speaker path behind runtime gate |
 | Doom | exclusive touch handoff | exclusive pad/keyboard/mouse handoff | exclusive touch handoff |

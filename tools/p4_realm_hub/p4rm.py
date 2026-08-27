@@ -1,4 +1,4 @@
-"""P4RM v2, a LORD realm protocol carried in P4MP Game Message."""
+"""P4RM v3, a LORD realm protocol carried in P4MP Game Message."""
 
 from __future__ import annotations
 
@@ -9,7 +9,7 @@ import zlib
 
 
 MAGIC = b"P4RM"
-VERSION = 2
+VERSION = 3
 HEADER_BYTES = 16
 MAX_MESSAGE_BYTES = 64
 MAX_PAYLOAD_BYTES = MAX_MESSAGE_BYTES - HEADER_BYTES
@@ -57,6 +57,12 @@ ACTION_BUSY = 4
 
 WELCOME_HAS_SNAPSHOT = 1 << 0
 WELCOME_ROLLOVER_PENDING = 1 << 1
+WELCOME_ACCEPT_LOCAL = 1 << 2
+WELCOME_LOCAL_CONFLICT = 1 << 3
+
+HELLO_HAS_LOCAL = 1 << 0
+HELLO_HAS_SYNC_BASE = 1 << 1
+HELLO_LOCAL_DIRTY = 1 << 2
 
 COMMIT_OK = 0
 COMMIT_CONFLICT = 1
@@ -125,6 +131,48 @@ def record_chunks(record: bytes) -> list[bytes]:
     ]
 
 
+def encode_hello(
+    actor_id: bytes,
+    base_revision: int,
+    committed_save_sequence: int,
+    current_save_sequence: int,
+    flags: int,
+) -> bytes:
+    if len(actor_id) != 16:
+        raise ValueError("invalid hello actor ID")
+    if flags & ~(HELLO_HAS_LOCAL | HELLO_HAS_SYNC_BASE | HELLO_LOCAL_DIRTY):
+        raise ValueError("invalid hello flags")
+    has_local = bool(flags & HELLO_HAS_LOCAL)
+    has_base = bool(flags & HELLO_HAS_SYNC_BASE)
+    dirty = bool(flags & HELLO_LOCAL_DIRTY)
+    if has_local != (current_save_sequence != 0):
+        raise ValueError("hello local sequence differs")
+    if committed_save_sequence > current_save_sequence:
+        raise ValueError("hello committed sequence is newer than local")
+    if dirty != (has_local and current_save_sequence != committed_save_sequence):
+        raise ValueError("hello dirty flag differs from local generation")
+    if has_base:
+        if actor_id == b"\0" * 16 or base_revision == 0:
+            raise ValueError("hello sync base is incomplete")
+    elif actor_id != b"\0" * 16 or base_revision != 0 or committed_save_sequence != 0:
+        raise ValueError("hello has undeclared sync base")
+    return actor_id + struct.pack(
+        "<IIIB3x",
+        base_revision,
+        committed_save_sequence,
+        current_save_sequence,
+        flags,
+    )
+
+
+def decode_hello(payload: bytes) -> tuple[bytes, int, int, int, int]:
+    if len(payload) != 32 or payload[29:] != b"\0" * 3:
+        raise ValueError("invalid P4RM hello")
+    base, committed, current, flags = struct.unpack_from("<IIIB", payload, 16)
+    encode_hello(payload[:16], base, committed, current, flags)
+    return payload[:16], base, committed, current, flags
+
+
 def encode_welcome(
     actor_id: bytes,
     head_revision: int,
@@ -134,8 +182,19 @@ def encode_welcome(
 ) -> bytes:
     if len(actor_id) != 16 or actor_id == b"\0" * 16:
         raise ValueError("invalid actor ID")
-    if flags & ~(WELCOME_HAS_SNAPSHOT | WELCOME_ROLLOVER_PENDING):
+    if flags & ~(
+        WELCOME_HAS_SNAPSHOT
+        | WELCOME_ROLLOVER_PENDING
+        | WELCOME_ACCEPT_LOCAL
+        | WELCOME_LOCAL_CONFLICT
+    ):
         raise ValueError("invalid welcome flags")
+    if flags & WELCOME_HAS_SNAPSHOT and flags & (
+        WELCOME_ACCEPT_LOCAL | WELCOME_LOCAL_CONFLICT
+    ):
+        raise ValueError("snapshot welcome has incompatible local result")
+    if flags & WELCOME_ACCEPT_LOCAL and flags & WELCOME_LOCAL_CONFLICT:
+        raise ValueError("welcome cannot accept and conflict")
     return actor_id + struct.pack(
         "<IQIB3x",
         head_revision,
@@ -149,8 +208,14 @@ def decode_welcome(payload: bytes) -> tuple[bytes, int, int, int, int]:
     if len(payload) != 36 or payload[:16] == b"\0" * 16 or payload[33:] != b"\0" * 3:
         raise ValueError("invalid P4RM welcome")
     revision, day_id, remaining, flags = struct.unpack_from("<IQIB", payload, 16)
-    if flags & ~(WELCOME_HAS_SNAPSHOT | WELCOME_ROLLOVER_PENDING):
+    if flags & ~(
+        WELCOME_HAS_SNAPSHOT
+        | WELCOME_ROLLOVER_PENDING
+        | WELCOME_ACCEPT_LOCAL
+        | WELCOME_LOCAL_CONFLICT
+    ):
         raise ValueError("invalid P4RM welcome flags")
+    encode_welcome(payload[:16], revision, day_id, remaining, flags)
     return payload[:16], revision, day_id, remaining, flags
 
 

@@ -198,8 +198,11 @@ separate optional `save` service: games receive one immutable launch snapshot
 and may queue a copied, non-blocking commit without receiving a path or FAT
 handle. The API, host backend, and power-loss-safe save component exist, but
 Console OS exposes the capability only on a board profile that authorizes
-firmware-side writes. The current Waveshare 4.3 profile remains read-only, so
-games must still work in session-only mode there.
+firmware-side writes. Console OS 0.4.85 authorizes the OS-owned `/SAVES`
+namespace for the two bound Waveshare 4.3 test units. It stages and validates
+each bounded object, preserves one backup, journals replacement, and withholds
+`save` while storage is host-owned or transitioning. Games must still work in
+session-only mode on profiles that do not authorize this namespace.
 
 The `storage` capability currently means a validated read-only `.P4R` payload,
 not general storage. Check the capability bit before reading `resource_data`,

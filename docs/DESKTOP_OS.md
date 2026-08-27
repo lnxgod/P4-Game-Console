@@ -19,15 +19,16 @@ the UI has no bitmap-theme dependency.
   `CLEAR`, and `SSH` commands.
 - Solitaire is an original native game under `GAMES/PUZZLE`.
 
-The File and Save managers are read-only in the current Waveshare build. That
-is intentional: the exact hardware authorization covers the no-format,
-read-only SD path, and no device-side USB content receiver is linked. Disabled
-controls are shown as `USB LOCKED` or `READ ONLY` rather than silently
-attempting a write.
+The File Manager and Save Manager management controls remain read-only in the
+current Waveshare build. Console OS 0.4.85 nevertheless lets the foreground
+game queue OS-owned writes to its authorized `/SAVES` namespace. The game gets
+no path or filesystem handle, and the worker withholds writes whenever USB
+owns or is transitioning the card. General content editing still uses USB
+Drive; unsupported management controls stay visibly disabled.
 
 ## Storage namespace and transaction contract
 
-The planned writable namespace is fixed and non-recursive at each management
+The writable save namespace is fixed and non-recursive at each management
 boundary:
 
 ```text

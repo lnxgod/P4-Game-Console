@@ -1,6 +1,6 @@
 # LORD Mac BBS realm server
 
-LORD 1.5.0 uses the Mac as the authoritative BBS-style realm server. Every
+LORD 1.6.0 uses the Mac as the authoritative BBS-style realm server. Every
 console chooses **Join**. A console never hosts the shared world.
 
 ```text
@@ -34,6 +34,9 @@ numbered durable events when they next join.
   advertise a service UUID but not P4 room service data, so 0.4.84 recognizes
   the reserved UUID-only Mac room. The encrypted GATT connection must still
   pass the normal exact P4MP Offer/Join compatibility check.
+- Persistent offline LORD progress on the authorized Waveshare profile
+  requires Console OS 0.4.85 or later. Older firmware can join the realm but
+  advertises session-only save storage.
 - Use one stable `PROFILE` label for each player. A profile label is the local
   account binding and maps deterministically to one opaque 16-byte actor ID.
 
@@ -111,6 +114,10 @@ operator must keep profile-to-device assignments trustworthy.
   missed refresh and never loops catch-up interest.
 - Full snapshots use compare-and-swap revisions. Repeating the same
   actor/nonce/body is idempotent; stale or changed reuse fails closed.
+- A schema-5 local save remembers the last accepted actor and server revision.
+  Offline edits upload only if that base still matches the server head. If both
+  copies advanced, LORD shows `SYNC CONFLICT` and preserves both rather than
+  choosing or field-merging them.
 - Events remain pending until the target cartridge applies and acknowledges
   their monotonically increasing event ID.
 
@@ -121,7 +128,8 @@ moderation, public rate limiting, or hostile-client combat attestation.
 ## Protocol
 
 P4MP remains version 1. LORD uses protocol `0x4c53` and bounded 1–64 byte Game
-Messages. `P4RM` v2 provides hello/welcome, complete snapshot transfer,
+Messages. `P4RM` v3 provides persisted-base hello/welcome reconciliation,
+complete snapshot transfer,
 profile publication, paged roster records, hourly clock, typed actions, and
 durable events. Records are capped at 4,148 bytes and use explicit lengths,
 little-endian fields, CRCs, stop-and-wait acknowledgement, and one-second

@@ -268,6 +268,17 @@ def main() -> None:
             storage.get("writes_authorized") is True and
             "exclusive H2 USB-device MSC" in storage.get("scope", ""),
             "microSD contract must retain exact-unit exclusive H2 MSC writes")
+    game_save = storage.get("game_save_store", {})
+    require(game_save.get("authorized") is True and
+            game_save.get("formatting_authorized") is False and
+            game_save.get("arbitrary_paths_authorized") is False and
+            game_save.get("hardware_acceptance") is False and
+            game_save.get("device_identity_sha256") == [
+                "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+                "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+            ] and
+            game_save.get("filesystem_scope", "").startswith("/SAVES/"),
+            "exact-unit journaled game-save authorization differs")
     require(profile["usb_vbus_assessment"].get("device_mode_authorized") is True,
             "H2 sink/device authorization is missing")
     require(profile["usb_vbus_assessment"]["controller_host_power_ready"] is False,
@@ -670,6 +681,15 @@ def main() -> None:
     require(logo.stat().st_size == LOGO_BYTES and sha256(logo) == LOGO_SHA256,
             "Game Changers AI logo differs")
     source = (APP / "main/console_os_main.c").read_text(encoding="utf-8")
+    save_mode = source.split(
+        "static p4_game_save_storage_mode_t cartridge_save_storage_mode(void)",
+        1,
+    )[1].split("static void cartridge_save_worker", 1)[0]
+    require("P4_GAME_SAVE_STORAGE_WRITABLE" in save_mode and
+            "CONFIG_P4_BOARD_WAVESHARE" not in save_mode and
+            "P4_GAME_SAVE_STORAGE_READ_ONLY" not in save_mode and
+            "P4_GAME_SAVE_STORAGE_HOST_OWNED" in save_mode,
+            "Waveshare save capability must be writable only under app FAT ownership")
     for token in (
         "present_boot_screen", "play_boot_chime",
         "CONSOLE_ACTION_COLOR_MODE_CHANGED", "cartridge_unlock_achievement",

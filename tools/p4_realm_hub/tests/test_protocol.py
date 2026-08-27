@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-import tempfile
+import sqlite3
 import struct
+import tempfile
 import unittest
 import zlib
 from pathlib import Path
@@ -68,6 +69,29 @@ class P4MPTests(unittest.TestCase):
 
 
 class P4RMTests(unittest.TestCase):
+    def test_offline_hello_round_trip_and_validation(self) -> None:
+        actor = bytes(range(1, 17))
+        flags = (
+            p4rm.HELLO_HAS_LOCAL
+            | p4rm.HELLO_HAS_SYNC_BASE
+            | p4rm.HELLO_LOCAL_DIRTY
+        )
+        hello = p4rm.encode_hello(actor, 9, 40, 42, flags)
+        self.assertEqual(
+            p4rm.decode_hello(hello),
+            (actor, 9, 40, 42, flags),
+        )
+        with self.assertRaises(ValueError):
+            p4rm.encode_hello(bytes(16), 0, 0, 1, p4rm.HELLO_LOCAL_DIRTY)
+        with self.assertRaises(ValueError):
+            p4rm.encode_hello(
+                actor,
+                9,
+                40,
+                42,
+                p4rm.HELLO_HAS_LOCAL | p4rm.HELLO_HAS_SYNC_BASE,
+            )
+
     def test_chunking_preserves_max_record(self) -> None:
         record = bytes(index & 0xFF for index in range(p4rm.MAX_RECORD_BYTES))
         chunks = p4rm.record_chunks(record)
@@ -349,7 +373,15 @@ class HubSessionTests(unittest.TestCase):
             hub.session_id = 10
             hub.remote_peer_id = 20
             hub.connected = True
-            hub._begin_game_sync(55)
+            hub._begin_game_sync(
+                p4rm.Message(
+                    p4rm.HELLO,
+                    55,
+                    0,
+                    0,
+                    p4rm.encode_hello(bytes(16), 0, 0, 0, 0),
+                )
+            )
             self.assertEqual(
                 p4rm.decode_message(p4mp.decode_packet(sent[0]).payload).kind,
                 p4rm.WELCOME,
@@ -373,6 +405,90 @@ class HubSessionTests(unittest.TestCase):
             hub.receive(malformed)
             error = p4rm.decode_message(p4mp.decode_packet(sent[-1]).payload)
             self.assertEqual(error.kind, p4rm.ERROR)
+
+    def test_offline_reconnect_accepts_or_conflicts_without_overwrite(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            actor = store.actor_for_profile("console-one")
+            day, _ = store.realm_clock()
+            record = lord_record(actor, 123)
+            self.assertEqual(
+                store.commit(actor, 0, 123, day, record),
+                ("ok", 1),
+            )
+            with sqlite3.connect(store.path) as database:
+                database.execute(
+                    "UPDATE heads SET last_day_id = ? WHERE actor_id = ?",
+                    (day - 1, actor),
+                )
+            sent: list[bytes] = []
+            hub = RealmHubSession(
+                "console-one", store, sent.append, test_offer()
+            )
+            hub.session_id = 10
+            hub.remote_peer_id = 20
+            hub.connected = True
+
+            dirty_flags = (
+                p4rm.HELLO_HAS_LOCAL
+                | p4rm.HELLO_HAS_SYNC_BASE
+                | p4rm.HELLO_LOCAL_DIRTY
+            )
+            hub._begin_game_sync(
+                p4rm.Message(
+                    p4rm.HELLO,
+                    60,
+                    0,
+                    0,
+                    p4rm.encode_hello(actor, 1, 2, 3, dirty_flags),
+                )
+            )
+            welcome = p4rm.decode_message(
+                p4mp.decode_packet(sent.pop(0)).payload
+            )
+            self.assertEqual(
+                p4rm.decode_welcome(welcome.payload)[4],
+                p4rm.WELCOME_ACCEPT_LOCAL | p4rm.WELCOME_ROLLOVER_PENDING,
+            )
+            self.assertEqual(sent, [])
+
+            hub._begin_game_sync(
+                p4rm.Message(
+                    p4rm.HELLO,
+                    61,
+                    0,
+                    0,
+                    p4rm.encode_hello(actor, 2, 2, 3, dirty_flags),
+                )
+            )
+            welcome = p4rm.decode_message(
+                p4mp.decode_packet(sent.pop(0)).payload
+            )
+            self.assertEqual(
+                p4rm.decode_welcome(welcome.payload)[4],
+                p4rm.WELCOME_LOCAL_CONFLICT,
+            )
+            self.assertFalse(hub.game_online)
+            self.assertEqual(sent, [])
+
+            clean_flags = p4rm.HELLO_HAS_LOCAL | p4rm.HELLO_HAS_SYNC_BASE
+            hub._begin_game_sync(
+                p4rm.Message(
+                    p4rm.HELLO,
+                    62,
+                    0,
+                    0,
+                    p4rm.encode_hello(actor, 2, 3, 3, clean_flags),
+                )
+            )
+            welcome = p4rm.decode_message(
+                p4mp.decode_packet(sent.pop(0)).payload
+            )
+            self.assertEqual(
+                p4rm.decode_welcome(welcome.payload)[4],
+                p4rm.WELCOME_HAS_SNAPSHOT | p4rm.WELCOME_ROLLOVER_PENDING,
+            )
+            self.assertGreaterEqual(len(sent), 1)
 
     def test_join_upload_commit_and_profile(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -402,7 +518,11 @@ class HubSessionTests(unittest.TestCase):
                 p4mp.decode_start_ready(ready.payload),
                 p4mp.start_token(session_id, hub.offer.session_seed),
             )
-            hello = p4rm.encode_message(p4rm.HELLO, 77)
+            hello = p4rm.encode_message(
+                p4rm.HELLO,
+                77,
+                p4rm.encode_hello(bytes(16), 0, 0, 0, 0),
+            )
             hub.receive(p4mp.encode_packet(
                 p4mp.GAME_MESSAGE, session_id, console_peer_id, 3, hello
             ))

@@ -5,7 +5,7 @@ Dragon*. It installs under `GAMES/ADVENTURE`, renders at 320×200 in a
 16-color ANSI/RIP-inspired style, and uses only the stable P4 Game API for
 video, controls, tone audio, shared CP437 drawing, and optional durable saves.
 
-Version 1.5.0 includes:
+Version 1.6.0 includes:
 
 - named hero or heroine characters and Death Knight, Mystical, and Thieving
   professions;
@@ -44,11 +44,12 @@ Version 1.5.0 includes:
 - a generated/dithered dragon-and-castle title, twelve code-drawn RIP-style
   scenes, and additional kid-friendly CP437 compositions for the inn, Seth,
   Violet, Dragon Dice, recovery, and victory;
-- an explicit, deterministic, CRC-protected version-4 save codec with a
-  validated version-3 migration path. Version 4 persists opaque directory
-  identities and the last applied realm event so reconnects cannot replay a
-  reward. The game consumes the immutable launch snapshot, queues copied
-  `AUTO` commits, polls completion, and uses optimistic host sequences;
+- an explicit, deterministic, CRC-protected version-5 save codec with
+  validated version-3 and version-4 migration paths. Version 5 persists
+  opaque directory identities, the last applied realm event, and the last
+  accepted Mac actor/revision/save generation. The game consumes the immutable
+  launch snapshot, queues copied `AUTO` commits, polls completion, and uses
+  optimistic host sequences;
 - a bounded `LRSY` backend-sync record carrying an opaque actor ID, one-use
   nonce, realm revision, save sequence, CRC, and the complete save payload.
   The cartridge never owns accounts, TLS, sockets, USB, BLE, or server
@@ -58,17 +59,19 @@ Version 1.5.0 includes:
   compare-and-swap revisions, up to 100 player profiles with eight-entry
   Previous/Next roster pages, bounded presence and warrior stats including
   ChompCoin, and a trusted hourly realm-day refresh over either H1 USB or BLE.
-  The Mac hosts each logical session and every console joins it;
+  The Mac hosts each logical session and every console joins it. P4RM v3 can
+  upload offline progress when the locally persisted server base still
+  matches, and preserves both copies behind `SYNC CONFLICT` when they diverge;
 - durable, nonce-idempotent cross-player actions for letters, two-sided
   ChompCoin transfers, encouragement and supplies, consent-based adventure
   teams, shared mentoring, leased asynchronous PvP outcomes, tavern
   conversation, and town announcements. The hub retains numbered events until
   the target cartridge applies and acknowledges them.
 
-The cartridge is fully playable offline. On a Console OS profile that offers
-`save`, progress survives exit and relaunch. On profiles that deliberately
-withhold writable storage, it remains playable for the current session and
-labels the realm local. With a LORD P4MP room and the Mac realm hub it labels
+The cartridge is fully playable offline. Console OS 0.4.85 enables its
+OS-owned journaled save service for the authorized Waveshare profile, so LORD
+progress survives exit and relaunch there; other profiles may still withhold
+`save` and fall back to the current session. With a LORD P4MP room and the Mac realm hub it labels
 the realm `MAC REALM`, synchronizes that actor, lists other hub profiles, uses
 the hub's hourly rollover, and delivers classic cross-player actions to the
 other profile. Public Internet accounts and arbitrary third-party IGM
