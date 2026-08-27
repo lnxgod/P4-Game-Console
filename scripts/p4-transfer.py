@@ -63,6 +63,13 @@ class TransferError(RuntimeError):
     pass
 
 
+def bounded_done_timeout(value: str) -> float:
+    timeout = float(value)
+    if not 30.0 <= timeout <= 600.0:
+        raise argparse.ArgumentTypeError("must be between 30 and 600 seconds")
+    return timeout
+
+
 def crc32(data: bytes) -> int:
     return binascii.crc32(data) & 0xFFFF_FFFF
 
@@ -370,7 +377,7 @@ def push(args: argparse.Namespace) -> None:
                     print(f"P4_H1 progress={percent:3d}% bytes={sent}/{size}")
                     last_percent = percent
         print("P4_H1 activation=waiting device=fsync+double-validation")
-        done = reader.frame(DONE_MAGIC, 41, 600.0)
+        done = reader.frame(DONE_MAGIC, 41, args.done_timeout)
         verify_done(done, size, digest)
         print(
             f"P4_H1 PASS direction=push name={name} bytes={size} "
@@ -461,6 +468,12 @@ def parser() -> argparse.ArgumentParser:
     )
     push_parser.add_argument("--remote-name")
     push_parser.add_argument("--no-replace", action="store_true")
+    push_parser.add_argument(
+        "--done-timeout",
+        type=bounded_done_timeout,
+        default=600.0,
+        help="seconds to wait for durable device activation (default: 600)",
+    )
 
     pull_parser = subparsers.add_parser("pull", help="download a P4G or exchange file")
     pull_parser.add_argument("remote_name")
