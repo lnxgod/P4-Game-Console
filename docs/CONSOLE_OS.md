@@ -45,6 +45,52 @@ followed by rapid catch-up updates. The allocation-free `p4/visual.h` helpers
 then let cartridges add fixed-point motion, atlas animation, shake, and
 particles without taking over display or timing.
 
+The current native-cartridge save successor keeps Game API v1 unchanged while
+moving OS-owned commits from unkeyed `P4SAVE1` objects to authenticated
+`P4SAVE2` objects. Console OS loads or creates one random 32-byte device key in
+the exact plaintext-NVS scope `p4_save_seal`: a 32-byte `master_v1` key plus a
+fixed 1,176-byte `legacy_v1` P4LMRK2 registry holding at most 32 full game/slot
+identities and per-slot state flags. Each anchored slot also has one 88-byte
+`h<14hex>` P4HWAT1 record containing the full slot identity, highest installed
+sequence, and exact P4SAVE2 object SHA-256. The OS HMAC-binds the game ID, slot,
+schema, sequence, and payload before the existing journaled SD install. A key,
+registry, anchor, or pairing error withholds save callbacks; it never falls
+back to an unsealed commit. Valid `P4SAVE1` files migrate once at sequence plus
+one, then the OS durably closes that exact game/slot window. A valid older
+P4LMRK1 registry migrates once to P4LMRK2. Existing authenticated P4SAVE2 files
+without an expected anchor are accepted as an explicit baseline once and
+anchored before their payload is returned. Later P4SAVE1 injection, an older
+authenticated backup, or a different authenticated object at the same sequence
+is rejected. Host tests cover those cases plus HMAC tampering, wrong-device
+keys, partial NVS loss, durable reload, and every journal transition.
+
+If an already anchored slot loses all four SD artifacts, Console OS preserves
+the NVS sequence as an empty recovery floor instead of reopening sequence zero.
+The game receives save capability with zero payload bytes and sequence N; its
+first reconstructed or Mac-restored snapshot commits as N+1. For compatibility,
+only this state translates a legacy game's first expected sequence 0 to N. A
+migrated P4LMRK1 entry with no authenticated baseline fails closed because the
+old registry did not retain a recoverable sequence. The floor applies only when
+current, backup, stage, and journal are all absent; any stale, malformed, or
+tampered leftover is rejected and is never exposed as a launch snapshot.
+
+The deterministic official LORD payload SHA-256 is compiled into Console OS.
+A cartridge claiming `org.p4console.lord` but not matching that payload lineage
+is denied launch, multiplayer registration, and save access, so an unsigned
+same-ID replacement cannot ask the OS to seal counterfeit LORD state. Updating
+official LORD therefore requires a paired Console OS/cartridge build.
+
+This is casual SD-edit and SD-rollback resistance, not hardware-backed
+anti-cheat: secure boot, flash encryption, and encrypted NVS remain off. A
+rollback or extraction of the complete plaintext NVS namespace, or modified
+firmware, can still defeat the software anchor. Hub synchronization must
+continue to enforce server revisions/CAS.
+The Phase-A key is not exportable or rotatable. An NVS erase/replacement makes
+old local sealed saves unreadable; the platform refuses to regenerate over a
+malformed existing key, and recovery then requires an accepted server copy or
+a backup containing the old save and the complete original save-seal NVS
+namespace, including its registry and per-slot freshness records.
+
 Console OS 0.4.36 is the BBS readability successor. Printable ASCII carrying
 the ANSI bold attribute gains one right-hand pixel inside the existing 9x16
 cell. This slightly enlarges headings, door names, and controls while retaining

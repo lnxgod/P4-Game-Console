@@ -93,6 +93,30 @@ bool p4_game_save_memory_seed(p4_game_save_memory_t *memory,
     return true;
 }
 
+bool p4_game_save_memory_seed_floor(p4_game_save_memory_t *memory,
+                                    const char *slot_id,
+                                    uint32_t sequence)
+{
+    if (memory == NULL || !memory->initialized ||
+        !p4_game_save_slot_id_valid(slot_id) || sequence == 0U) {
+        return false;
+    }
+    p4_game_save_memory_slot_t *const slot =
+        find_slot(memory, slot_id, true);
+    if (slot == NULL || slot->status == P4_GAME_SAVE_QUEUED) {
+        return false;
+    }
+    memset(slot->data, 0, P4_GAME_SAVE_MAX_BYTES);
+    slot->data_bytes = 0U;
+    slot->schema_version = 0U;
+    slot->sequence = sequence;
+    slot->request_valid = false;
+    slot->ticket = P4_GAME_SAVE_INVALID_TICKET;
+    slot->status = P4_GAME_SAVE_READY;
+    slot->reported_sequence = sequence;
+    return true;
+}
+
 bool p4_game_save_memory_copy_snapshot(
     const p4_game_save_memory_t *memory,
     const char *slot_id,
@@ -118,7 +142,12 @@ bool p4_game_save_memory_copy_snapshot(
     }
     const p4_game_save_memory_slot_t *const slot =
         find_const_slot(memory, slot_id);
-    if (slot == NULL || slot->data_bytes == 0U) {
+    if (slot == NULL) {
+        return true;
+    }
+    *schema_version_out = slot->schema_version;
+    *sequence_out = slot->sequence;
+    if (slot->data_bytes == 0U) {
         return true;
     }
     if (output == NULL || output_capacity < slot->data_bytes) {
@@ -126,8 +155,6 @@ bool p4_game_save_memory_copy_snapshot(
     }
     memcpy(output, slot->data, slot->data_bytes);
     *output_bytes = slot->data_bytes;
-    *schema_version_out = slot->schema_version;
-    *sequence_out = slot->sequence;
     return true;
 }
 

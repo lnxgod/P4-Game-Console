@@ -190,6 +190,25 @@ static uint16_t add_u16_saturating(uint16_t left, uint16_t right)
         (uint16_t)(left + right);
 }
 
+static bool realm_character_bound(const lord_state_t *state)
+{
+    uint8_t actor_combined = 0U;
+    for (size_t index = 0U; index < LORD_SYNC_ACTOR_ID_BYTES; ++index) {
+        actor_combined = (uint8_t)(
+            actor_combined | state->sync_actor_id[index]);
+    }
+    return actor_combined != 0U;
+}
+
+static void remove_friendship_hp_bonus(lord_state_t *state)
+{
+    state->player.max_hit_points = state->player.max_hit_points > 5 ?
+        state->player.max_hit_points - 5 : 1;
+    if (state->player.hit_points > state->player.max_hit_points) {
+        state->player.hit_points = state->player.max_hit_points;
+    }
+}
+
 static void set_screen(lord_state_t *state, lord_screen_t screen)
 {
     state->screen = screen;
@@ -646,9 +665,12 @@ static lord_event_t finish_battle(lord_state_t *state)
         return LORD_EVENT_WIN;
     }
     state->battle_kind = LORD_BATTLE_NONE;
-    ++state->player.dragon_kills;
+    if (state->player.dragon_kills != UINT8_MAX) {
+        ++state->player.dragon_kills;
+    }
     add_named_log(state, "", " slew the Red Dragon!");
-    mark_dirty(state);
+    const lord_class_t hero_class = state->player.hero_class;
+    initialize_player(state, hero_class);
     set_screen(state, LORD_SCREEN_DRAGON_VICTORY);
     return LORD_EVENT_WIN;
 }
@@ -1095,8 +1117,11 @@ static lord_event_t perform_friendship_action(lord_state_t *state)
     if (state->selection == 2U) {
         --state->friendship_actions;
         if (state->partner_index == (int8_t)state->selected_player) {
+            remove_friendship_hp_bonus(state);
             person->teamed = false;
             state->partner_index = -1;
+            memset(state->partner_actor_id, 0,
+                   sizeof(state->partner_actor_id));
             set_message(state, LORD_SCREEN_FRIENDSHIP_ACTION,
                         "Your adventure team parts as friends.",
                         "The daily teamwork bonus is gone.");
@@ -1200,9 +1225,10 @@ static lord_event_t npc_friendship(lord_state_t *state, int8_t npc)
                         "Charm rises by three.");
         }
     } else if (state->npc_friend == npc) {
+        remove_friendship_hp_bonus(state);
         state->npc_friend = -1;
         set_message(state, screen, "You part as best friends.",
-                    "Your adventures can still cross again.");
+                    "The 5 HP bonus rests until a new pact.");
         add_named_log(state, "", " ended a best-friend pact.");
     } else if (state->partner_index >= 0 || state->npc_friend >= 0) {
         set_message(state, screen, "You already have a best-friend pact.", "");
@@ -1265,8 +1291,6 @@ static lord_event_t dragon_dice_action(lord_state_t *state)
                   "The host wins 5 ChompCoin and shares a trick.");
     }
     state->player.high_spirits = true;
-    state->player.friendship_badges = add_u16_saturating(
-        state->player.friendship_badges, 1U);
     mark_dirty(state);
     return LORD_EVENT_CONFIRM;
 }
@@ -1840,10 +1864,16 @@ lord_event_t lord_activate(lord_state_t *state)
     case LORD_SCREEN_INN:
         switch (state->selection) {
         case 0U:
-            reset_new_day(state);
-            set_message(state, LORD_SCREEN_TOWN,
-                        "A new day dawns over the realm.",
-                        "Your strength has returned.");
+            if (realm_character_bound(state)) {
+                set_message(state, LORD_SCREEN_INN,
+                            "Your Mac realm grants each new day.",
+                            "The next realm hour will refresh adventures.");
+            } else {
+                reset_new_day(state);
+                set_message(state, LORD_SCREEN_TOWN,
+                            "A new day dawns over the realm.",
+                            "Your strength has returned.");
+            }
             break;
         case 1U: set_screen(state, LORD_SCREEN_BARTENDER); break;
         case 2U: set_screen(state, LORD_SCREEN_CONVERSE); break;
@@ -1918,18 +1948,25 @@ lord_event_t lord_activate(lord_state_t *state)
                         "The Red Dragon waits beyond level twelve.",
                         "Face it only once each day.");
         } else if (state->selection == 4U) {
-            if (random_below(state, 2U) == 0U) {
+            if (state->friendship_actions == 0U) {
+                set_message(state, LORD_SCREEN_BARTENDER,
+                            "No friendship games remain today.",
+                            "The next new day brings more riddles.");
+            } else if (random_below(state, 2U) == 0U) {
+                --state->friendship_actions;
                 state->player.charm = add_u16_saturating(
                     state->player.charm, 1U);
                 set_message(state, LORD_SCREEN_BARTENDER,
                             "You solve the bartender's riddle!",
                             "The cheering crowd adds one charm.");
+                mark_dirty(state);
             } else {
+                --state->friendship_actions;
                 set_message(state, LORD_SCREEN_BARTENDER,
                             "The bartender's riddle stumps you.",
                             "Everyone laughs and shares the answer.");
+                mark_dirty(state);
             }
-            mark_dirty(state);
         } else {
             set_screen(state, LORD_SCREEN_INN);
         }
@@ -2080,14 +2117,11 @@ lord_event_t lord_activate(lord_state_t *state)
                     "You awaken at the inn, penniless.",
                     "Sleep before returning to the forest.");
         return LORD_EVENT_CONFIRM;
-    case LORD_SCREEN_DRAGON_VICTORY: {
-        const lord_class_t hero_class = state->player.hero_class;
-        initialize_player(state, hero_class);
+    case LORD_SCREEN_DRAGON_VICTORY:
         set_message(state, LORD_SCREEN_TOWN,
                     "A new legend begins.",
                     "Your dragon deed grants lasting power.");
         return LORD_EVENT_CONFIRM;
-    }
     case LORD_SCREEN_TEXT_EDITOR:
         return activate_editor(state);
     }

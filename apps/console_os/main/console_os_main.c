@@ -61,6 +61,8 @@
 #include "platform/game_loader.h"
 #include "platform/game_storage.h"
 #include "platform/os_update.h"
+#include "platform/save_seal.h"
+#include "p4_protected_game_lineage.h"
 #ifndef P4_CONSOLE_SIGNAL_SCAN
 #define P4_CONSOLE_SIGNAL_SCAN 0
 #endif
@@ -91,6 +93,36 @@
 #endif
 
 #define CONSOLE_P4CART_APP_ID_BASE UINT32_C(0xf4c00000)
+
+typedef enum {
+    P4_PROTECTED_GAME_UNPROTECTED = 0,
+    P4_PROTECTED_GAME_TRUSTED,
+    P4_PROTECTED_GAME_REJECTED,
+} p4_protected_game_result_t;
+
+static p4_protected_game_result_t protected_game_lineage_check(
+    const p4_game_package_info_t *package)
+{
+    if (package == NULL) {
+        return P4_PROTECTED_GAME_REJECTED;
+    }
+    bool protected_id = false;
+    for (size_t index = 0U;
+         index < (size_t)P4_PROTECTED_GAME_LINEAGE_COUNT; ++index) {
+        const p4_protected_game_lineage_t *const lineage =
+            &s_protected_game_lineages[index];
+        if (strcmp(package->id, lineage->game_id) != 0) {
+            continue;
+        }
+        protected_id = true;
+        if (memcmp(package->payload_sha256, lineage->payload_sha256,
+                   sizeof(package->payload_sha256)) == 0) {
+            return P4_PROTECTED_GAME_TRUSTED;
+        }
+    }
+    return protected_id
+        ? P4_PROTECTED_GAME_REJECTED : P4_PROTECTED_GAME_UNPROTECTED;
+}
 
 #if P4_CONSOLE_GAMEPAD_INPUT
 #include "gamepad/gamepad.h"
@@ -2615,6 +2647,14 @@ static void rebuild_multiplayer_game_registry(void)
         const platform_game_catalog_entry_t *const game =
             &s_game_catalog.entries[index];
         if (!game->valid) {
+            continue;
+        }
+        if (protected_game_lineage_check(&game->package) ==
+            P4_PROTECTED_GAME_REJECTED) {
+            ESP_LOGE(TAG,
+                     "P4_CONSOLE_OS PROTECTED_GAME_REJECTED id=%s "
+                     "operation=multiplayer-register reason=payload-lineage",
+                     game->package.id);
             continue;
         }
         const p4_mp_registration_result_t result =
@@ -6288,6 +6328,111 @@ static p4_game_save_storage_mode_t cartridge_save_storage_mode(void)
     return P4_GAME_SAVE_STORAGE_UNAVAILABLE;
 }
 
+static bool cartridge_save_legacy_query(
+    void *context, const char *game_id, const char *slot_id,
+    bool *allowed_out)
+{
+    (void)context;
+    if (allowed_out == NULL) {
+        return false;
+    }
+    *allowed_out = false;
+    bool closed = false;
+    const esp_err_t result = platform_save_seal_legacy_is_closed(
+        game_id, slot_id, &closed);
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG,
+                 "P4_CONSOLE_OS SAVE_LEGACY_MARKER app=%s slot=%s "
+                 "operation=query result=%s capability=withheld",
+                 game_id, slot_id, esp_err_to_name(result));
+        return false;
+    }
+    *allowed_out = !closed;
+    return true;
+}
+
+static bool cartridge_save_legacy_close(
+    void *context, const char *game_id, const char *slot_id)
+{
+    (void)context;
+    const esp_err_t result = platform_save_seal_close_legacy(
+        game_id, slot_id);
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG,
+                 "P4_CONSOLE_OS SAVE_LEGACY_MARKER app=%s slot=%s "
+                 "operation=close result=%s capability=withheld",
+                 game_id, slot_id, esp_err_to_name(result));
+        return false;
+    }
+    return true;
+}
+
+static bool cartridge_save_object_query(
+    void *context, const char *game_id, const char *slot_id,
+    uint32_t sequence,
+    const uint8_t object_sha256[P4_GAME_SAVE_SHA256_BYTES],
+    bool *allowed_out)
+{
+    (void)context;
+    if (allowed_out == NULL) {
+        return false;
+    }
+    *allowed_out = false;
+    const esp_err_t result = platform_save_seal_object_is_allowed(
+        game_id, slot_id, sequence, object_sha256, allowed_out);
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG,
+                 "P4_CONSOLE_OS SAVE_FRESHNESS app=%s slot=%s "
+                 "operation=query sequence=%lu result=%s "
+                 "capability=withheld",
+                 game_id, slot_id, (unsigned long)sequence,
+                 esp_err_to_name(result));
+        return false;
+    }
+    return true;
+}
+
+static bool cartridge_save_object_advance(
+    void *context, const char *game_id, const char *slot_id,
+    uint32_t sequence,
+    const uint8_t object_sha256[P4_GAME_SAVE_SHA256_BYTES])
+{
+    (void)context;
+    const esp_err_t result = platform_save_seal_advance_object(
+        game_id, slot_id, sequence, object_sha256);
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG,
+                 "P4_CONSOLE_OS SAVE_FRESHNESS app=%s slot=%s "
+                 "operation=advance sequence=%lu result=%s "
+                 "capability=withheld",
+                 game_id, slot_id, (unsigned long)sequence,
+                 esp_err_to_name(result));
+        return false;
+    }
+    return true;
+}
+
+static bool cartridge_save_object_sequence(
+    void *context, const char *game_id, const char *slot_id,
+    uint32_t *sequence_out)
+{
+    (void)context;
+    if (sequence_out == NULL) {
+        return false;
+    }
+    *sequence_out = 0U;
+    const esp_err_t result = platform_save_seal_object_sequence(
+        game_id, slot_id, sequence_out);
+    if (result != ESP_OK) {
+        ESP_LOGE(TAG,
+                 "P4_CONSOLE_OS SAVE_FRESHNESS app=%s slot=%s "
+                 "operation=sequence result=%s capability=withheld",
+                 game_id, slot_id, esp_err_to_name(result));
+        return false;
+    }
+    return true;
+}
+
 static void cartridge_save_worker(void *opaque)
 {
     cartridge_save_runtime_t *const runtime = opaque;
@@ -6325,17 +6470,44 @@ static void cartridge_save_release_allocations(
     if (runtime == NULL) {
         return;
     }
+    p4_game_save_service_clear(&runtime->service);
     heap_caps_free(runtime->launch_snapshot);
     heap_caps_free(runtime->object_workspace);
     heap_caps_free(runtime->queue_workspace);
     heap_caps_free(runtime);
 }
 
-static cartridge_save_runtime_t *cartridge_save_open(const char *game_id)
+static cartridge_save_runtime_t *cartridge_save_open(
+    const p4_game_package_info_t *package)
 {
+    if (package == NULL || protected_game_lineage_check(package) ==
+            P4_PROTECTED_GAME_REJECTED) {
+        if (package != NULL) {
+            ESP_LOGE(TAG,
+                     "P4_CONSOLE_OS PROTECTED_GAME_REJECTED id=%s "
+                     "operation=save-open reason=payload-lineage",
+                     package->id);
+        }
+        return NULL;
+    }
+    const char *const game_id = package->id;
+    p4_game_save_protection_t protection = {0};
+    _Static_assert((unsigned)PLATFORM_SAVE_SEAL_KEY_BYTES ==
+                       (unsigned)P4_GAME_SAVE_KEY_BYTES,
+                   "save seal key sizes must match");
+    const esp_err_t seal_result = platform_save_seal_load_key(
+        protection.key);
+    if (seal_result != ESP_OK) {
+        ESP_LOGE(TAG,
+                 "P4_CONSOLE_OS SAVE_SEAL_UNAVAILABLE app=%s nvs=%s "
+                 "capability=withheld",
+                 game_id, esp_err_to_name(seal_result));
+        return NULL;
+    }
     cartridge_save_runtime_t *const runtime = heap_caps_calloc(
         1U, sizeof(*runtime), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
     if (runtime == NULL) {
+        p4_game_save_protection_clear(&protection);
         return NULL;
     }
     runtime->queue_workspace = heap_caps_malloc(
@@ -6350,17 +6522,28 @@ static cartridge_save_runtime_t *cartridge_save_open(const char *game_id)
     runtime->lock = xSemaphoreCreateMutexStatic(&runtime->lock_storage);
     runtime->stopped = xSemaphoreCreateBinaryStatic(
         &runtime->stopped_storage);
-    if (runtime->queue_workspace == NULL ||
-        runtime->object_workspace == NULL ||
-        runtime->launch_snapshot == NULL || runtime->lock == NULL ||
-        runtime->stopped == NULL ||
-        !p4_game_save_service_init(
+    const p4_game_save_legacy_policy_t legacy_policy = {
+        .query = cartridge_save_legacy_query,
+        .close = cartridge_save_legacy_close,
+        .object_query = cartridge_save_object_query,
+        .object_advance = cartridge_save_object_advance,
+        .object_sequence = cartridge_save_object_sequence,
+        .context = NULL,
+    };
+    const bool initialized = runtime->queue_workspace != NULL &&
+        runtime->object_workspace != NULL &&
+        runtime->launch_snapshot != NULL && runtime->lock != NULL &&
+        runtime->stopped != NULL &&
+        p4_game_save_service_init(
             &runtime->service, PLATFORM_GAME_STORAGE_MOUNT_POINT,
-            cartridge_save_storage_mode(), game_id, "AUTO",
+            cartridge_save_storage_mode(), &protection, &legacy_policy,
+            game_id, "AUTO",
             runtime->queue_workspace,
             P4_GAME_SAVE_MEMORY_WORKSPACE_BYTES,
             runtime->object_workspace, P4_GAME_SAVE_MAX_FILE_BYTES,
-            runtime->launch_snapshot, P4_GAME_SAVE_MAX_BYTES)) {
+            runtime->launch_snapshot, P4_GAME_SAVE_MAX_BYTES);
+    p4_game_save_protection_clear(&protection);
+    if (!initialized) {
         cartridge_save_release_allocations(runtime);
         return NULL;
     }
@@ -6372,6 +6555,12 @@ static cartridge_save_runtime_t *cartridge_save_open(const char *game_id)
                      runtime->service.startup_result));
         return runtime;
     }
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS SAVE_SEAL_READY app=%s format=P4SAVE2 "
+             "legacy_migrated=%u sequence=%lu",
+             game_id,
+             runtime->service.launch_migrated_legacy ? 1U : 0U,
+             (unsigned long)runtime->service.launch_sequence);
     const BaseType_t created = xTaskCreateWithCaps(
         cartridge_save_worker, "game_save",
         CONSOLE_GAME_SAVE_STACK_BYTES, runtime, tskIDLE_PRIORITY + 1U,
@@ -6865,6 +7054,14 @@ static esp_err_t run_stored_game(
         s_pixels == NULL || !s_display_initialized) {
         return ESP_ERR_INVALID_ARG;
     }
+    if (protected_game_lineage_check(&game->package) ==
+        P4_PROTECTED_GAME_REJECTED) {
+        ESP_LOGE(TAG,
+                 "P4_CONSOLE_OS PROTECTED_GAME_REJECTED id=%s "
+                 "operation=launch reason=payload-lineage",
+                 game->package.id);
+        return ESP_ERR_INVALID_STATE;
+    }
     const bool multiplayer_ready = s_native_multiplayer.active &&
         s_multiplayer_native_launcher_id == game->package.launcher_id &&
         strcmp(s_multiplayer_local_offer.game_id, game->package.id) == 0;
@@ -6881,7 +7078,7 @@ static esp_err_t run_stored_game(
     const uint32_t capabilities = game->package.required_capabilities |
         game->package.optional_capabilities;
     if ((capabilities & P4_GAME_CAP_SAVE) != 0U) {
-        context.save = cartridge_save_open(game->package.id);
+        context.save = cartridge_save_open(&game->package);
     }
     if ((capabilities &
          (P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM)) != 0U) {

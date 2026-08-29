@@ -94,18 +94,44 @@ static bool mode_valid(p4_game_save_storage_mode_t mode)
         mode <= P4_GAME_SAVE_STORAGE_HOST_OWNED;
 }
 
+static bool legacy_policy_valid(
+    const p4_game_save_legacy_policy_t *legacy_policy)
+{
+    return legacy_policy != NULL && legacy_policy->query != NULL &&
+        legacy_policy->close != NULL &&
+        legacy_policy->object_query != NULL &&
+        legacy_policy->object_advance != NULL &&
+        legacy_policy->object_sequence != NULL;
+}
+
 bool p4_game_save_store_init(p4_game_save_store_t *store,
                              const char *root_path,
-                             p4_game_save_storage_mode_t mode)
+                             p4_game_save_storage_mode_t mode,
+                             const p4_game_save_protection_t *protection,
+                             const p4_game_save_legacy_policy_t *legacy_policy)
 {
-    if (store == NULL || !root_path_valid(root_path) || !mode_valid(mode)) {
+    if (store == NULL || !root_path_valid(root_path) || !mode_valid(mode) ||
+        !p4_game_save_protection_valid(protection) ||
+        !legacy_policy_valid(legacy_policy)) {
         return false;
     }
     memset(store, 0, sizeof(*store));
     memcpy(store->root_path, root_path, strlen(root_path) + 1U);
+    memcpy(&store->protection, protection, sizeof(store->protection));
+    memcpy(&store->legacy_policy, legacy_policy,
+           sizeof(store->legacy_policy));
     store->mode = mode;
     store->initialized = true;
     return true;
+}
+
+void p4_game_save_store_clear(p4_game_save_store_t *store)
+{
+    if (store == NULL) {
+        return;
+    }
+    p4_game_save_protection_clear(&store->protection);
+    store->initialized = false;
 }
 
 void p4_game_save_store_set_mode(p4_game_save_store_t *store,
@@ -252,6 +278,7 @@ static bool remove_if_present(const char *path)
 }
 
 static object_file_t read_object(
+    const p4_game_save_store_t *store,
     const char *path,
     const char *game_id,
     const char *slot_id,
@@ -268,11 +295,82 @@ static object_file_t read_object(
         object.result = P4_GAME_SAVE_STORE_IO_ERROR;
         return object;
     }
-    object.result = p4_game_save_parse(
-        workspace, object.bytes, game_id, slot_id, &object.info) ==
-            P4_GAME_SAVE_VALID
-        ? P4_GAME_SAVE_STORE_OK : P4_GAME_SAVE_STORE_CORRUPT;
+    const p4_game_save_result_t parsed = p4_game_save_parse_authenticated(
+        &store->protection, workspace, object.bytes, game_id, slot_id,
+        &object.info);
+    if (parsed != P4_GAME_SAVE_VALID) {
+        object.result = P4_GAME_SAVE_STORE_CORRUPT;
+        return object;
+    }
+    if (!object.info.authenticated) {
+        bool legacy_allowed = false;
+        if (!store->legacy_policy.query(
+                store->legacy_policy.context, game_id, slot_id,
+                &legacy_allowed)) {
+            object.result = P4_GAME_SAVE_STORE_IO_ERROR;
+            return object;
+        }
+        if (!legacy_allowed) {
+            object.result = P4_GAME_SAVE_STORE_CORRUPT;
+            return object;
+        }
+    } else {
+        bool object_allowed = false;
+        if (!store->legacy_policy.object_query(
+                store->legacy_policy.context, game_id, slot_id,
+                object.info.sequence, object.info.object_sha256,
+                &object_allowed)) {
+            object.result = P4_GAME_SAVE_STORE_IO_ERROR;
+            return object;
+        }
+        if (!object_allowed) {
+            object.result = P4_GAME_SAVE_STORE_CORRUPT;
+            return object;
+        }
+    }
+    object.result = P4_GAME_SAVE_STORE_OK;
     return object;
+}
+
+static p4_game_save_store_result_t close_legacy_window(
+    p4_game_save_store_t *store,
+    const char *game_id,
+    const char *slot_id)
+{
+    return store->legacy_policy.close(
+               store->legacy_policy.context, game_id, slot_id)
+        ? P4_GAME_SAVE_STORE_OK : P4_GAME_SAVE_STORE_IO_ERROR;
+}
+
+static p4_game_save_store_result_t advance_object_anchor(
+    p4_game_save_store_t *store,
+    const char *game_id,
+    const char *slot_id,
+    const p4_game_save_info_t *info)
+{
+    if (info == NULL || !info->authenticated) {
+        return P4_GAME_SAVE_STORE_BAD_ARGUMENT;
+    }
+    return store->legacy_policy.object_advance(
+               store->legacy_policy.context, game_id, slot_id,
+               info->sequence, info->object_sha256)
+        ? P4_GAME_SAVE_STORE_OK : P4_GAME_SAVE_STORE_IO_ERROR;
+}
+
+static p4_game_save_store_result_t object_sequence_floor(
+    const p4_game_save_store_t *store,
+    const char *game_id,
+    const char *slot_id,
+    uint32_t *sequence_out)
+{
+    if (sequence_out == NULL) {
+        return P4_GAME_SAVE_STORE_BAD_ARGUMENT;
+    }
+    *sequence_out = 0U;
+    return store->legacy_policy.object_sequence(
+               store->legacy_policy.context, game_id, slot_id,
+               sequence_out)
+        ? P4_GAME_SAVE_STORE_OK : P4_GAME_SAVE_STORE_IO_ERROR;
 }
 
 static void write_u32(uint8_t *data, uint32_t value)
@@ -404,12 +502,14 @@ static bool object_matches(const object_file_t *object,
                            uint32_t sequence)
 {
     return object->result == P4_GAME_SAVE_STORE_OK &&
+        object->info.authenticated &&
         object->info.sequence == sequence &&
         memcmp(object->info.object_sha256, journal->object_sha256,
                sizeof(object->info.object_sha256)) == 0;
 }
 
 static p4_game_save_store_result_t fallback_recovery(
+    p4_game_save_store_t *store,
     const save_paths_t *paths,
     const char *game_id,
     const char *slot_id,
@@ -417,8 +517,14 @@ static p4_game_save_store_result_t fallback_recovery(
     size_t workspace_bytes)
 {
     object_file_t current = read_object(
-        paths->current, game_id, slot_id, workspace, workspace_bytes);
+        store, paths->current, game_id, slot_id, workspace,
+        workspace_bytes);
     if (current.result == P4_GAME_SAVE_STORE_OK) {
+        if (current.info.authenticated &&
+            advance_object_anchor(store, game_id, slot_id, &current.info) !=
+                P4_GAME_SAVE_STORE_OK) {
+            return P4_GAME_SAVE_STORE_IO_ERROR;
+        }
         if (!remove_if_present(paths->stage) ||
             !remove_if_present(paths->journal)) {
             return P4_GAME_SAVE_STORE_IO_ERROR;
@@ -426,15 +532,21 @@ static p4_game_save_store_result_t fallback_recovery(
         return P4_GAME_SAVE_STORE_OK;
     }
     object_file_t backup = read_object(
-        paths->backup, game_id, slot_id, workspace, workspace_bytes);
+        store, paths->backup, game_id, slot_id, workspace,
+        workspace_bytes);
     if (backup.result == P4_GAME_SAVE_STORE_OK) {
         if (!remove_if_present(paths->current) ||
             rename(paths->backup, paths->current) != 0) {
             return P4_GAME_SAVE_STORE_IO_ERROR;
         }
         current = read_object(
-            paths->current, game_id, slot_id, workspace, workspace_bytes);
+            store, paths->current, game_id, slot_id, workspace,
+            workspace_bytes);
         if (current.result != P4_GAME_SAVE_STORE_OK ||
+            (current.info.authenticated &&
+             advance_object_anchor(
+                 store, game_id, slot_id, &current.info) !=
+                 P4_GAME_SAVE_STORE_OK) ||
             !remove_if_present(paths->stage) ||
             !remove_if_present(paths->journal)) {
             return current.result == P4_GAME_SAVE_STORE_OK
@@ -444,6 +556,13 @@ static p4_game_save_store_result_t fallback_recovery(
     }
     if (current.result == P4_GAME_SAVE_STORE_NOT_FOUND &&
         backup.result == P4_GAME_SAVE_STORE_NOT_FOUND) {
+        /* The empty-at-anchor-floor recovery state is deliberately exact:
+         * all four SD artifacts must be absent. A stray stage or journal may
+         * be an interrupted/tampered branch and must never be treated as a
+         * clean card replacement. */
+        if (file_exists(paths->stage) || file_exists(paths->journal)) {
+            return P4_GAME_SAVE_STORE_CORRUPT;
+        }
         return P4_GAME_SAVE_STORE_NOT_FOUND;
     }
     return P4_GAME_SAVE_STORE_CORRUPT;
@@ -459,17 +578,19 @@ static p4_game_save_store_result_t resume_journal(
     size_t workspace_bytes)
 {
     object_file_t current = read_object(
-        paths->current, game_id, slot_id, workspace, workspace_bytes);
+        store, paths->current, game_id, slot_id, workspace,
+        workspace_bytes);
     if (object_matches(&current, journal, journal->target_sequence)) {
         goto installed;
     }
     object_file_t stage = read_object(
-        paths->stage, game_id, slot_id, workspace, workspace_bytes);
+        store, paths->stage, game_id, slot_id, workspace, workspace_bytes);
     object_file_t backup = read_object(
-        paths->backup, game_id, slot_id, workspace, workspace_bytes);
+        store, paths->backup, game_id, slot_id, workspace,
+        workspace_bytes);
     if (!object_matches(&stage, journal, journal->target_sequence)) {
         return fallback_recovery(
-            paths, game_id, slot_id, workspace, workspace_bytes);
+            store, paths, game_id, slot_id, workspace, workspace_bytes);
     }
     const bool current_expected = journal->expected_sequence != 0U &&
         current.result == P4_GAME_SAVE_STORE_OK &&
@@ -477,11 +598,22 @@ static p4_game_save_store_result_t resume_journal(
     const bool backup_expected = journal->expected_sequence != 0U &&
         backup.result == P4_GAME_SAVE_STORE_OK &&
         backup.info.sequence == journal->expected_sequence;
-    const bool no_predecessor = journal->expected_sequence == 0U &&
-        current.result == P4_GAME_SAVE_STORE_NOT_FOUND;
+    bool no_predecessor = false;
+    if (!current_expected && !backup_expected &&
+        current.result == P4_GAME_SAVE_STORE_NOT_FOUND &&
+        backup.result == P4_GAME_SAVE_STORE_NOT_FOUND) {
+        uint32_t sequence_floor = 0U;
+        const p4_game_save_store_result_t floor_result =
+            object_sequence_floor(
+                store, game_id, slot_id, &sequence_floor);
+        if (floor_result != P4_GAME_SAVE_STORE_OK) {
+            return floor_result;
+        }
+        no_predecessor = journal->expected_sequence == sequence_floor;
+    }
     if (!current_expected && !backup_expected && !no_predecessor) {
         return fallback_recovery(
-            paths, game_id, slot_id, workspace, workspace_bytes);
+            store, paths, game_id, slot_id, workspace, workspace_bytes);
     }
     if (current_expected) {
         if (!remove_if_present(paths->backup) ||
@@ -522,10 +654,19 @@ installed:
         return P4_GAME_SAVE_STORE_INTERRUPTED;
     }
     current = read_object(
-        paths->current, game_id, slot_id, workspace, workspace_bytes);
+        store, paths->current, game_id, slot_id, workspace,
+        workspace_bytes);
     if (!object_matches(&current, journal, journal->target_sequence)) {
         return fallback_recovery(
-            paths, game_id, slot_id, workspace, workspace_bytes);
+            store, paths, game_id, slot_id, workspace, workspace_bytes);
+    }
+    /* The sealed current object is now durably installed and verified. Bind
+     * its exact sequence and object digest in NVS before deleting recovery
+     * metadata. This closes both the P4SAVE1 downgrade window and replay of a
+     * different same-sequence offline branch. */
+    if (advance_object_anchor(store, game_id, slot_id, &current.info) !=
+        P4_GAME_SAVE_STORE_OK) {
+        return P4_GAME_SAVE_STORE_IO_ERROR;
     }
     if (!transition_allowed(
             store, P4_GAME_SAVE_TRANSITION_CURRENT_VERIFIED)) {
@@ -578,13 +719,13 @@ p4_game_save_store_result_t p4_game_save_store_recover(
     }
     if (!file_exists(paths.journal)) {
         return fallback_recovery(
-            &paths, game_id, slot_id, object_workspace,
+            store, &paths, game_id, slot_id, object_workspace,
             object_workspace_bytes);
     }
     journal_t journal;
     if (!read_journal(paths.journal, game_id, slot_id, &journal)) {
         return fallback_recovery(
-            &paths, game_id, slot_id, object_workspace,
+            store, &paths, game_id, slot_id, object_workspace,
             object_workspace_bytes);
     }
     return resume_journal(
@@ -602,7 +743,8 @@ p4_game_save_store_result_t p4_game_save_store_load(
     size_t payload_capacity,
     size_t *payload_bytes_out,
     uint32_t *schema_version_out,
-    uint32_t *sequence_out)
+    uint32_t *sequence_out,
+    bool *authenticated_out)
 {
     if (payload_bytes_out != NULL) {
         *payload_bytes_out = 0U;
@@ -613,11 +755,14 @@ p4_game_save_store_result_t p4_game_save_store_load(
     if (sequence_out != NULL) {
         *sequence_out = 0U;
     }
+    if (authenticated_out != NULL) {
+        *authenticated_out = false;
+    }
     const p4_game_save_store_result_t mode = mode_for_read(store);
     if (mode != P4_GAME_SAVE_STORE_OK || object_workspace == NULL ||
         object_workspace_bytes < P4_GAME_SAVE_MAX_FILE_BYTES ||
         payload_bytes_out == NULL || schema_version_out == NULL ||
-        sequence_out == NULL) {
+        sequence_out == NULL || authenticated_out == NULL) {
         return mode == P4_GAME_SAVE_STORE_OK
             ? P4_GAME_SAVE_STORE_BAD_ARGUMENT : mode;
     }
@@ -636,10 +781,33 @@ p4_game_save_store_result_t p4_game_save_store_load(
         }
     }
     const object_file_t current = read_object(
-        paths.current, game_id, slot_id, object_workspace,
+        store, paths.current, game_id, slot_id, object_workspace,
         object_workspace_bytes);
     if (current.result != P4_GAME_SAVE_STORE_OK) {
+        if (current.result == P4_GAME_SAVE_STORE_NOT_FOUND &&
+            store->mode == P4_GAME_SAVE_STORAGE_WRITABLE) {
+            const p4_game_save_store_result_t closed =
+                close_legacy_window(store, game_id, slot_id);
+            if (closed != P4_GAME_SAVE_STORE_OK) {
+                return closed;
+            }
+            const p4_game_save_store_result_t floor_result =
+                object_sequence_floor(
+                    store, game_id, slot_id, sequence_out);
+            if (floor_result != P4_GAME_SAVE_STORE_OK) {
+                return floor_result;
+            }
+        }
         return current.result;
+    }
+    if (current.info.authenticated &&
+        store->mode == P4_GAME_SAVE_STORAGE_WRITABLE) {
+        const p4_game_save_store_result_t closed =
+            advance_object_anchor(
+                store, game_id, slot_id, &current.info);
+        if (closed != P4_GAME_SAVE_STORE_OK) {
+            return closed;
+        }
     }
     if (payload_output == NULL || payload_capacity < current.info.payload_bytes) {
         return P4_GAME_SAVE_STORE_BAD_ARGUMENT;
@@ -650,6 +818,7 @@ p4_game_save_store_result_t p4_game_save_store_load(
     *payload_bytes_out = current.info.payload_bytes;
     *schema_version_out = current.info.schema_version;
     *sequence_out = current.info.sequence;
+    *authenticated_out = current.info.authenticated;
     return P4_GAME_SAVE_STORE_OK;
 }
 
@@ -695,10 +864,19 @@ p4_game_save_store_result_t p4_game_save_store_commit(
         return recovered;
     }
     const object_file_t current = read_object(
-        paths.current, game_id, slot_id, object_workspace,
+        store, paths.current, game_id, slot_id, object_workspace,
         object_workspace_bytes);
-    const uint32_t current_sequence =
-        current.result == P4_GAME_SAVE_STORE_OK ? current.info.sequence : 0U;
+    uint32_t current_sequence = 0U;
+    if (current.result == P4_GAME_SAVE_STORE_OK) {
+        current_sequence = current.info.sequence;
+    } else if (current.result == P4_GAME_SAVE_STORE_NOT_FOUND) {
+        const p4_game_save_store_result_t floor_result =
+            object_sequence_floor(
+                store, game_id, slot_id, &current_sequence);
+        if (floor_result != P4_GAME_SAVE_STORE_OK) {
+            return floor_result;
+        }
+    }
     if ((current.result != P4_GAME_SAVE_STORE_OK &&
          current.result != P4_GAME_SAVE_STORE_NOT_FOUND) ||
         current_sequence != expected_sequence || expected_sequence == UINT32_MAX) {
@@ -708,15 +886,15 @@ p4_game_save_store_result_t p4_game_save_store_commit(
     }
     const uint32_t target_sequence = expected_sequence + 1U;
     size_t object_bytes = 0U;
-    if (p4_game_save_encode(
-            game_id, slot_id, schema_version, target_sequence, payload,
-            payload_bytes, object_workspace, object_workspace_bytes,
-            &object_bytes) != P4_GAME_SAVE_VALID ||
+    if (p4_game_save_encode_authenticated(
+            &store->protection, game_id, slot_id, schema_version,
+            target_sequence, payload, payload_bytes, object_workspace,
+            object_workspace_bytes, &object_bytes) != P4_GAME_SAVE_VALID ||
         !write_synced(paths.stage, object_workspace, object_bytes)) {
         return P4_GAME_SAVE_STORE_IO_ERROR;
     }
     object_file_t stage = read_object(
-        paths.stage, game_id, slot_id, object_workspace,
+        store, paths.stage, game_id, slot_id, object_workspace,
         object_workspace_bytes);
     if (stage.result != P4_GAME_SAVE_STORE_OK ||
         stage.info.sequence != target_sequence) {
@@ -745,6 +923,13 @@ p4_game_save_store_result_t p4_game_save_store_commit(
         store, &paths, &journal, game_id, slot_id, object_workspace,
         object_workspace_bytes);
     if (result == P4_GAME_SAVE_STORE_OK) {
+        /* A legacy predecessor is grandfathered once, then removed so the
+         * normal backup path cannot silently downgrade a sealed slot. */
+        if (current.result == P4_GAME_SAVE_STORE_OK &&
+            !current.info.authenticated &&
+            !remove_if_present(paths.backup)) {
+            return P4_GAME_SAVE_STORE_IO_ERROR;
+        }
         *committed_sequence_out = target_sequence;
     }
     return result;

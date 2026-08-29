@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+import hashlib
 import secrets
 import sqlite3
 import struct
@@ -11,13 +12,12 @@ import zlib
 from collections.abc import Callable
 
 from tools.p4_realm_hub import p4mp, p4rm
-from tools.p4_realm_hub.store import RealmEvent, RealmProfile, RealmStore
+from tools.p4_realm_hub.lord_snapshot import decode_lord_sync
+from tools.p4_realm_hub.store import RealmEvent, RealmStore
 
 
 LORD_GAME_ID = "org.p4console.lord"
 LORD_P4RM_PROTOCOL = 0x4C53
-LORD_SYNC_HEADER_BYTES = 52
-LORD_SAVE_HEADER_BYTES = 16
 
 
 def _nonzero_u32() -> int:
@@ -29,43 +29,24 @@ def _sequence_newer(value: int, prior: int) -> bool:
     return difference != 0 and difference < 0x80000000
 
 
-def validate_lord_sync(record: bytes, actor_id: bytes, nonce: int) -> bool:
-    """Validate both LRSY and nested LDSV envelopes without trusting structs."""
-    if not LORD_SYNC_HEADER_BYTES <= len(record) <= p4rm.MAX_RECORD_BYTES:
+def validate_lord_sync(
+    record: bytes,
+    actor_id: bytes,
+    nonce: int,
+    *,
+    allow_adoption_bridge: bool = False,
+) -> bool:
+    """Validate the complete fixed LRSY/LDSV C layout and protected fields."""
+    try:
+        decode_lord_sync(
+            record,
+            expected_actor_id=actor_id,
+            expected_nonce=nonce,
+            allow_adoption_bridge=allow_adoption_bridge,
+        )
+    except ValueError:
         return False
-    if record[:4] != b"LRSY":
-        return False
-    version, header_bytes = struct.unpack_from("<HH", record, 4)
-    total, stored_crc, realm_revision, save_sequence = struct.unpack_from(
-        "<IIII", record, 8
-    )
-    operation_nonce = struct.unpack_from("<Q", record, 24)[0]
-    save_bytes = struct.unpack_from("<I", record, 48)[0]
-    if (
-        version != 1
-        or header_bytes != LORD_SYNC_HEADER_BYTES
-        or total != len(record)
-        or realm_revision == 0
-        or operation_nonce != nonce
-        or record[32:48] != actor_id
-        or save_bytes != len(record) - LORD_SYNC_HEADER_BYTES
-        or stored_crc != zlib.crc32(record[16:]) & 0xFFFFFFFF
-    ):
-        return False
-    save = record[LORD_SYNC_HEADER_BYTES:]
-    if len(save) < LORD_SAVE_HEADER_BYTES or save[:4] != b"LDSV":
-        return False
-    save_version, save_length, save_crc, nested_sequence = struct.unpack_from(
-        "<HHII", save, 4
-    )
-    nested_realm_revision = struct.unpack_from("<I", save, 20)[0]
-    return (
-        save_version in (3, 4, 5)
-        and save_length == len(save)
-        and save_crc == zlib.crc32(save[LORD_SAVE_HEADER_BYTES:]) & 0xFFFFFFFF
-        and nested_sequence == save_sequence
-        and nested_realm_revision == realm_revision
-    )
+    return True
 
 
 @dataclasses.dataclass
@@ -86,6 +67,7 @@ class Upload:
     nonce: int
     realm_day_id: int
     chunk_count: int
+    adoption_grant_id: int | None = None
     chunks: list[bytes] = dataclasses.field(default_factory=list)
 
 
@@ -140,16 +122,20 @@ class RealmHubSession:
         self.remote_peer_id = 0
         self.connected = False
         self.game_online = False
+        self.awaiting_local_commit = False
         self.download: Download | None = None
         self.upload: Upload | None = None
         self.action_upload: ActionUpload | None = None
         self.outgoing_event: OutgoingEvent | None = None
+        self.received_event_cursor = 0
+        self.awaiting_event_commit = 0
         self.last_clock_day = 0
         self.next_clock_at = 0.0
         self.next_directory_at = 0.0
         self.directory_pending: list[tuple[int, int, int, bytes]] = []
         self.directory_offset = 0
-        self.pending_profile: tuple[int, RealmProfile] | None = None
+        self.adoption_grant_id: int | None = None
+        self.adoption_retry: tuple[int, int, bytes] | None = None
         self.last_rx_at = self.now()
         self.last_tx_at = 0.0
         self.next_start_ready_at = 0.0
@@ -241,13 +227,17 @@ class RealmHubSession:
         self.last_remote_sequence = 0
         self.connected = False
         self.game_online = False
+        self.awaiting_local_commit = False
         self.download = None
         self.upload = None
         self.action_upload = None
         self.outgoing_event = None
+        self.received_event_cursor = 0
+        self.awaiting_event_commit = 0
         self.directory_pending = []
         self.directory_offset = 0
-        self.pending_profile = None
+        self.adoption_grant_id = None
+        self.adoption_retry = None
         self.next_start_ready_at = 0.0
         self.start_ready_until = 0.0
 
@@ -270,10 +260,15 @@ class RealmHubSession:
         self.last_remote_sequence = packet.sequence
         self.connected = True
         self.game_online = False
+        self.awaiting_local_commit = False
         self.download = None
         self.upload = None
         self.action_upload = None
         self.outgoing_event = None
+        self.received_event_cursor = 0
+        self.awaiting_event_commit = 0
+        self.adoption_grant_id = None
+        self.adoption_retry = None
         accept = p4mp.encode_accept(
             1,
             2,
@@ -304,6 +299,15 @@ class RealmHubSession:
             self._send_realm(
                 p4rm.ERROR, message.transaction_id, struct.pack("<H", 1)
             )
+        elif self.awaiting_local_commit:
+            if message.kind == p4rm.ACK:
+                self._receive_ack(message)
+            elif message.kind == p4rm.UPLOAD_BEGIN:
+                self._begin_upload(message)
+            elif message.kind == p4rm.UPLOAD_CHUNK:
+                self._receive_upload_chunk(message)
+            elif message.kind == p4rm.ACTION_BEGIN:
+                self._begin_action(message)
         elif message.kind == p4rm.ACK:
             self._receive_ack(message)
         elif message.kind == p4rm.UPLOAD_BEGIN:
@@ -324,8 +328,9 @@ class RealmHubSession:
             self._receive_directory_page(message)
 
     def _begin_game_sync(self, message: p4rm.Message) -> None:
+        self.awaiting_local_commit = False
         try:
-            local_actor, base_revision, committed, _current, hello_flags = (
+            local_actor, base_revision, committed, current, hello_flags = (
                 p4rm.decode_hello(message.payload)
             )
         except ValueError:
@@ -342,53 +347,142 @@ class RealmHubSession:
             return
         day_id, remaining = self.store.realm_clock(self.now())
         flags = 0
-        send_snapshot = head.snapshot is not None
+        send_snapshot = False
+        head_player_day = 0
+        self.adoption_grant_id = None
+        self.adoption_retry = None
+        self.received_event_cursor = 0
+        self.awaiting_event_commit = 0
+        self.outgoing_event = None
+        has_local = bool(hello_flags & p4rm.HELLO_HAS_LOCAL)
+        has_base = bool(hello_flags & p4rm.HELLO_HAS_SYNC_BASE)
+        local_dirty = bool(hello_flags & p4rm.HELLO_LOCAL_DIRTY)
+        local_actor_mismatch = (
+            has_local
+            and local_actor != bytes(16)
+            and local_actor != self.actor_id
+        )
         if head.snapshot is not None:
-            if len(head.snapshot) < LORD_SYNC_HEADER_BYTES:
-                self._send_realm(
-                    p4rm.ERROR, message.transaction_id, struct.pack("<H", 2)
-                )
-                return
             head_nonce = struct.unpack_from("<Q", head.snapshot, 24)[0]
-            if not validate_lord_sync(
-                head.snapshot, self.actor_id, head_nonce
-            ):
+            try:
+                head_record = decode_lord_sync(
+                    head.snapshot,
+                    expected_actor_id=self.actor_id,
+                    expected_nonce=head_nonce,
+                    allow_adoption_bridge=True,
+                )
+            except ValueError:
                 self._send_realm(
                     p4rm.ERROR, message.transaction_id, struct.pack("<H", 2)
                 )
                 return
-            head_save_sequence = struct.unpack_from("<I", head.snapshot, 20)[0]
-            has_local = bool(hello_flags & p4rm.HELLO_HAS_LOCAL)
-            has_base = bool(hello_flags & p4rm.HELLO_HAS_SYNC_BASE)
-            local_dirty = bool(hello_flags & p4rm.HELLO_LOCAL_DIRTY)
+            head_player_day = head_record.player.day
+            head_save_sequence = head_record.save_sequence
             base_matches = (
                 has_base
                 and local_actor == self.actor_id
                 and base_revision == head.revision
                 and committed == head_save_sequence
             )
-            if has_local and base_matches:
-                flags |= p4rm.WELCOME_ACCEPT_LOCAL
-                send_snapshot = False
-            elif local_dirty:
+            lost_commit_common = (
+                has_local
+                and local_dirty
+                and local_actor == self.actor_id
+                and current != 0xFFFFFFFF
+                and current == head_save_sequence
+                and head_record.save_version >= 5
+                and head_record.sync_actor_id == self.actor_id
+            )
+            lost_commit_with_base = (
+                lost_commit_common
+                and has_base
+                and head.revision > 0
+                and base_revision + 1 == head.revision
+                and head_record.sync_server_revision == base_revision
+                and head_record.sync_committed_save_sequence == committed
+            )
+            lost_empty_adoption_ack = (
+                lost_commit_common
+                and not has_base
+                and base_revision == 0
+                and committed == 0
+                and head.revision == 1
+                and head_record.sync_server_revision == 0
+                and head_record.sync_committed_save_sequence == 0
+            )
+            lost_commit_ack = lost_commit_with_base or lost_empty_adoption_ack
+            if local_actor_mismatch:
                 flags |= p4rm.WELCOME_LOCAL_CONFLICT
-                send_snapshot = False
+            elif lost_commit_ack:
+                flags |= p4rm.WELCOME_HAS_SNAPSHOT
+                send_snapshot = True
+            elif has_local and base_matches:
+                flags |= p4rm.WELCOME_ACCEPT_LOCAL
+            elif local_dirty:
+                try:
+                    self.adoption_grant_id = self.store.pending_local_adoption(
+                        self.actor_id
+                    )
+                except (OSError, RuntimeError, sqlite3.Error):
+                    self._send_realm(
+                        p4rm.ERROR,
+                        message.transaction_id,
+                        struct.pack("<H", 2),
+                    )
+                    return
+                if self.adoption_grant_id is None:
+                    flags |= p4rm.WELCOME_LOCAL_CONFLICT
+                else:
+                    flags |= p4rm.WELCOME_ADOPT_LOCAL
             else:
                 flags |= p4rm.WELCOME_HAS_SNAPSHOT
-            if (flags & p4rm.WELCOME_LOCAL_CONFLICT) == 0 and (
-                head.last_day_id < day_id
+                send_snapshot = True
+            if (
+                flags
+                & (p4rm.WELCOME_LOCAL_CONFLICT | p4rm.WELCOME_ADOPT_LOCAL)
+                == 0
+                and head.last_day_id < day_id
             ):
                 flags |= p4rm.WELCOME_ROLLOVER_PENDING
+        elif has_local:
+            if local_actor_mismatch:
+                flags |= p4rm.WELCOME_LOCAL_CONFLICT
+            else:
+                try:
+                    self.adoption_grant_id = self.store.pending_local_adoption(
+                        self.actor_id
+                    )
+                except (OSError, RuntimeError, sqlite3.Error):
+                    self._send_realm(
+                        p4rm.ERROR,
+                        message.transaction_id,
+                        struct.pack("<H", 2),
+                    )
+                    return
+                if self.adoption_grant_id is None:
+                    flags |= p4rm.WELCOME_LOCAL_CONFLICT
+                else:
+                    flags |= p4rm.WELCOME_ADOPT_LOCAL
         self._send_realm(
             p4rm.WELCOME,
             message.transaction_id,
             p4rm.encode_welcome(
-                self.actor_id, head.revision, day_id, remaining, flags
+                self.actor_id,
+                head.revision,
+                day_id,
+                remaining,
+                flags,
+                head_player_day,
             ),
         )
         self.game_online = (flags & p4rm.WELCOME_LOCAL_CONFLICT) == 0
+        self.awaiting_local_commit = local_dirty and bool(
+            flags & (p4rm.WELCOME_ACCEPT_LOCAL | p4rm.WELCOME_ADOPT_LOCAL)
+        )
         if flags & p4rm.WELCOME_LOCAL_CONFLICT:
             sync_mode = "conflict"
+        elif flags & p4rm.WELCOME_ADOPT_LOCAL:
+            sync_mode = "adopt"
         elif flags & p4rm.WELCOME_ACCEPT_LOCAL:
             sync_mode = "local"
         elif send_snapshot:
@@ -475,6 +569,15 @@ class RealmHubSession:
         kind, code, value, target, nonce, body_bytes, body_crc = (
             p4rm.decode_action_begin(message.payload)
         )
+        if self.awaiting_local_commit:
+            self._send_realm(
+                p4rm.ACTION_RESULT,
+                message.transaction_id,
+                p4rm.encode_action_result(
+                    p4rm.ACTION_BUSY, kind, 0, 0, 0
+                ),
+            )
+            return
         expected_chunks = 1 if body_bytes else 0
         if (
             message.chunk_index != p4rm.BEGIN_INDEX
@@ -605,9 +708,22 @@ class RealmHubSession:
         ):
             return
         try:
-            self.store.acknowledge_event(self.actor_id, event_id)
+            received = self.store.acknowledge_event(self.actor_id, event_id)
+            head = self.store.read_head(self.actor_id)
+            committed_event_cursor = 0
+            if head.snapshot is not None:
+                committed_event_cursor = decode_lord_sync(
+                    head.snapshot,
+                    expected_actor_id=self.actor_id,
+                ).last_realm_event_id
         except (OSError, RuntimeError, sqlite3.Error, ValueError):
             return
+        if not received:
+            return
+        self.received_event_cursor = max(self.received_event_cursor, event_id)
+        self.awaiting_event_commit = (
+            0 if committed_event_cursor >= event_id else event_id
+        )
         self.outgoing_event = None
 
     def _begin_upload(self, message: p4rm.Message) -> None:
@@ -629,6 +745,7 @@ class RealmHubSession:
             nonce,
             day_id,
             expected_chunks,
+            self.adoption_grant_id,
         )
         self._send_realm(
             p4rm.ACK,
@@ -662,10 +779,23 @@ class RealmHubSession:
         if len(upload.chunks) != upload.chunk_count:
             return
         record = b"".join(upload.chunks)
+        commit_adoption_grant = upload.adoption_grant_id
+        if commit_adoption_grant is None and self.adoption_retry is not None:
+            retry_grant, retry_nonce, retry_sha256 = self.adoption_retry
+            if (
+                upload.nonce == retry_nonce
+                and hashlib.sha256(record).digest() == retry_sha256
+            ):
+                commit_adoption_grant = retry_grant
         if (
             len(record) != upload.total_bytes
             or zlib.crc32(record) & 0xFFFFFFFF != upload.crc32
-            or not validate_lord_sync(record, self.actor_id, upload.nonce)
+            or not validate_lord_sync(
+                record,
+                self.actor_id,
+                upload.nonce,
+                allow_adoption_bridge=commit_adoption_grant is not None,
+            )
         ):
             self._send_commit_result(message.transaction_id, p4rm.COMMIT_INVALID, 0)
             self.upload = None
@@ -677,6 +807,8 @@ class RealmHubSession:
                 upload.nonce,
                 upload.realm_day_id,
                 record,
+                adoption_grant_id=commit_adoption_grant,
+                now=self.now(),
             )
         except (OSError, RuntimeError, sqlite3.Error):
             self._send_commit_result(
@@ -688,68 +820,50 @@ class RealmHubSession:
             "ok": p4rm.COMMIT_OK,
             "conflict": p4rm.COMMIT_CONFLICT,
             "invalid": p4rm.COMMIT_INVALID,
+            "stale-day": p4rm.COMMIT_STALE_DAY,
         }[status]
         self._send_commit_result(message.transaction_id, result, revision)
+        if status == "ok":
+            self.awaiting_local_commit = False
+            if self.awaiting_event_commit != 0:
+                committed = decode_lord_sync(
+                    record,
+                    expected_actor_id=self.actor_id,
+                    expected_nonce=upload.nonce,
+                    allow_adoption_bridge=commit_adoption_grant is not None,
+                )
+                if (
+                    committed.last_realm_event_id
+                    >= self.awaiting_event_commit
+                ):
+                    self.awaiting_event_commit = 0
+            if upload.adoption_grant_id is not None:
+                self.adoption_retry = (
+                    upload.adoption_grant_id,
+                    upload.nonce,
+                    hashlib.sha256(record).digest(),
+                )
+                self.adoption_grant_id = None
+            elif commit_adoption_grant is None:
+                self.adoption_retry = None
         self.upload = None
 
     def _receive_profile(self, message: p4rm.Message) -> None:
-        if len(message.payload) != 48:
-            return
-        name_bytes = message.payload[:20]
-        terminator = name_bytes.find(b"\0")
-        if terminator < 3 or any(name_bytes[terminator:]):
+        # Legacy clients still emit this advertisement.  Keep only the
+        # ephemeral at-inn bit; protected state is projected from commits.
+        if len(message.payload) != 48 or message.payload[23] & ~0x03:
             return
         try:
-            name = name_bytes[:terminator].decode("ascii")
-        except UnicodeDecodeError:
+            self.store.update_presence(
+                self.actor_id, at_inn=bool(message.payload[23] & 0x02)
+            )
+        except (ValueError, OSError, RuntimeError, sqlite3.Error):
             return
-        style, hero_class, level, flags = message.payload[20:24]
-        hit_points, max_hit_points, strength, defense = struct.unpack_from(
-            "<iiii", message.payload, 24
-        )
-        wins, losses = struct.unpack_from("<HH", message.payload, 40)
-        experience = struct.unpack_from("<I", message.payload, 44)[0]
-        profile = RealmProfile(
-            self.actor_id,
-            name,
-            style,
-            hero_class,
-            level,
-            flags,
-            hit_points,
-            max_hit_points,
-            strength,
-            defense,
-            experience,
-            0,
-            wins,
-            losses,
-            True,
-        )
-        try:
-            self.store.validate_profile(profile)
-        except (ValueError, sqlite3.Error):
-            return
-        self.pending_profile = (message.transaction_id, profile)
+        self.next_directory_at = self.now()
 
     def _receive_profile_stats(self, message: p4rm.Message) -> None:
-        if self.pending_profile is None or len(message.payload) != 8:
-            return
-        transaction_id, profile = self.pending_profile
-        if message.transaction_id != transaction_id:
-            return
-        complete = dataclasses.replace(
-            profile,
-            chompcoin=struct.unpack_from("<I", message.payload, 0)[0],
-            bank=struct.unpack_from("<I", message.payload, 4)[0],
-        )
-        try:
-            self.store.update_profile(complete)
-        except (ValueError, sqlite3.Error):
-            return
-        finally:
-            self.pending_profile = None
-        self.next_directory_at = self.now()
+        # Economy/progression packets are deliberately ignored; see PROFILE.
+        return
 
     def _queue_directory(self) -> None:
         total = self.store.profile_count(exclude_actor_id=self.actor_id)
@@ -811,7 +925,7 @@ class RealmHubSession:
             self._send_realm(p4rm.ERROR, message.transaction_id, struct.pack("<H", 3))
 
     def _send_commit_result(self, transaction_id: int, status: int, revision: int) -> None:
-        if status != p4rm.COMMIT_OK:
+        if status not in (p4rm.COMMIT_OK, p4rm.COMMIT_STALE_DAY):
             self.game_online = False
         day_id, remaining = self.store.realm_clock(self.now())
         payload = struct.pack("<BIQI", status, revision, day_id, remaining)
@@ -839,12 +953,20 @@ class RealmHubSession:
             return
         if self.download is not None:
             return
+        if (
+            self.awaiting_local_commit
+            or self.awaiting_event_commit != 0
+            or self.upload is not None
+        ):
+            return
         if self.outgoing_event is not None:
             if now - self.outgoing_event.last_sent_at >= 1.0:
                 self._send_event_part()
             return
         try:
-            event = self.store.next_event(self.actor_id)
+            event = self.store.next_event(
+                self.actor_id, after_event_id=self.received_event_cursor
+            )
         except (OSError, RuntimeError, sqlite3.Error):
             self._send_realm(p4rm.ERROR, _nonzero_u32(), struct.pack("<H", 3))
             self.game_online = False

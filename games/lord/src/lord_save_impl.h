@@ -349,6 +349,46 @@ static bool save_player_valid(lord_player_t *player)
     return true;
 }
 
+static bool save_bytes_zero(const uint8_t *bytes, size_t length)
+{
+    for (size_t index = 0U; index < length; ++index) {
+        if (bytes[index] != 0U) {
+            return false;
+        }
+    }
+    return true;
+}
+
+/* Normalize only the exact inert slot emitted by the pre-fix directory
+ * clearer.  Broadly accepting level zero would turn corruption into state. */
+static bool save_migrate_legacy_empty_realm_slot(
+    lord_state_t *state, size_t index)
+{
+    static const char empty_name[] = "Empty record";
+    lord_realm_player_t *const player = &state->realm[index];
+    if (state->partner_index == (int8_t)index ||
+        memcmp(player->name, empty_name, sizeof(empty_name)) != 0 ||
+        !save_bytes_zero(
+            (const uint8_t *)player->name + sizeof(empty_name),
+            sizeof(player->name) - sizeof(empty_name)) ||
+        !save_bytes_zero((const uint8_t *)player->saying,
+                         sizeof(player->saying)) ||
+        (unsigned)player->hero_style != 0U ||
+        (unsigned)player->hero_class != 0U || player->level != 0U ||
+        player->alive || player->at_inn || player->teamed ||
+        player->trust != 0U || player->hit_points != 0 ||
+        player->max_hit_points != 1 || player->strength != 1 ||
+        player->defense != 0 || player->gold != 0U ||
+        player->experience != 0U || player->pvp_wins != 0U ||
+        player->pvp_losses != 0U ||
+        !save_bytes_zero(state->realm_actor_ids[index],
+                         LORD_SYNC_ACTOR_ID_BYTES)) {
+        return false;
+    }
+    player->level = 1U;
+    return true;
+}
+
 static bool save_realm_valid(lord_state_t *state)
 {
     for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
@@ -481,6 +521,15 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
         sync_actor_combined = (uint8_t)(
             sync_actor_combined | loaded.sync_actor_id[byte]);
     }
+    bool migrated_empty_slot = false;
+    for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
+        if (loaded.realm[index].level == 0U) {
+            if (!save_migrate_legacy_empty_realm_slot(&loaded, index)) {
+                return false;
+            }
+            migrated_empty_slot = true;
+        }
+    }
     if (!reader.valid || reader.offset != length || loaded.rng_state == 0U ||
         loaded.realm_revision == 0U || partner_code > LORD_REALM_PLAYER_COUNT ||
         npc_friend_code > 2U || loaded.pvp_fights > LORD_PVP_FIGHTS_PER_DAY ||
@@ -492,10 +541,10 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
         !save_text_valid(loaded.conversation, sizeof(loaded.conversation), true) ||
         !save_text_valid(loaded.announcement, sizeof(loaded.announcement), true) ||
         !save_player_valid(&loaded.player) || !save_realm_valid(&loaded) ||
-        ((loaded.sync_server_revision == 0U) !=
-         (sync_actor_combined == 0U)) ||
-        ((loaded.sync_server_revision == 0U) !=
-         (loaded.sync_committed_save_sequence == 0U)) ||
+        (loaded.sync_server_revision != 0U &&
+         sync_actor_combined == 0U) ||
+        (loaded.sync_server_revision == 0U &&
+         loaded.sync_committed_save_sequence != 0U) ||
         loaded.sync_committed_save_sequence > loaded.save_sequence) {
         return false;
     }
@@ -525,7 +574,14 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
     loaded.selection = 0U;
     loaded.menu_scroll = 0U;
     loaded.held_buttons = 0U;
-    loaded.save_dirty = false;
+    loaded.save_dirty = migrated_empty_slot;
+    if (migrated_empty_slot) {
+        if (loaded.save_sequence == UINT32_MAX) {
+            return false;
+        }
+        ++loaded.save_sequence;
+        loaded.save_local_generation = 1U;
+    }
     loaded.message_line_1[0] = '\0';
     loaded.message_line_2[0] = '\0';
     loaded.battle_line[0] = '\0';

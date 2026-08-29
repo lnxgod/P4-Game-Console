@@ -279,6 +279,67 @@ def main() -> None:
             ] and
             game_save.get("filesystem_scope", "").startswith("/SAVES/"),
             "exact-unit journaled game-save authorization differs")
+    save_seal = game_save.get("internal_nvs_scope", {})
+    require(save_seal.get("authorized") is True and
+            save_seal.get("device_identity_sha256") ==
+            game_save.get("device_identity_sha256") and
+            save_seal.get("partition") == "nvs" and
+            save_seal.get("namespace") == "p4_save_seal" and
+            set(save_seal.get("keys", {})) ==
+            {"master_v1", "legacy_v1", "h<14hex>"} and
+            "32-byte" in save_seal.get("keys", {}).get("master_v1", "") and
+            "1176-byte" in
+            save_seal.get("keys", {}).get("legacy_v1", "") and
+            "at most 32" in
+            save_seal.get("keys", {}).get("legacy_v1", "") and
+            "88-byte" in
+            save_seal.get("keys", {}).get("h<14hex>", "") and
+            "object SHA-256" in
+            save_seal.get("keys", {}).get("h<14hex>", "") and
+            save_seal.get("legacy_marker_domain", "").startswith(
+                "P4SAVE2-LEGACY-CLOSED") and
+            save_seal.get("namespace_erase_authorized") is False and
+            save_seal.get("partition_erase_or_format_authorized") is False and
+            save_seal.get("efuse_write_authorized") is False and
+            save_seal.get(
+                "secure_boot_or_flash_encryption_change_authorized") is False,
+            "exact-unit bounded save-seal NVS authorization differs")
+    seal_source = (ROOT / "components/platform_save_seal/src/"
+                   "platform_save_seal.c").read_text(encoding="utf-8")
+    for token in (
+        'SAVE_SEAL_NAMESPACE[] = "p4_save_seal"',
+        'SAVE_SEAL_KEY[] = "master_v1"',
+        'LEGACY_REGISTRY_KEY[] = "legacy_v1"',
+        '"P4SAVE2-LEGACY-CLOSED"',
+        "LEGACY_MARKER_MAX_ENTRIES = 32",
+        "LEGACY_REGISTRY_FORMAT_VERSION = 2",
+        "ANCHOR_FORMAT_VERSION = 1",
+        "LEGACY_ENTRY_ANCHOR_EXPECTED",
+        "LEGACY_ENTRY_BASELINE_REQUIRED",
+        "platform_save_seal_legacy_is_closed",
+        "platform_save_seal_close_legacy",
+        "platform_save_seal_object_is_allowed",
+        "platform_save_seal_object_sequence",
+        "platform_save_seal_advance_object",
+        "esp_fill_random", "nvs_get_blob", "nvs_set_blob", "nvs_commit",
+    ):
+        require(token in seal_source,
+                f"save-seal implementation is missing {token!r}")
+    for forbidden in (
+        "nvs_flash_erase", "nvs_erase_all", "nvs_erase_key", "esp_efuse",
+    ):
+        require(forbidden not in seal_source,
+                f"save-seal implementation exceeds authorization: {forbidden}")
+    save_store_source = (ROOT / "components/p4_game_save/src/"
+                         "store.c").read_text(encoding="utf-8")
+    for token in (
+        "legacy_policy.query", "legacy_policy.close",
+        "legacy_policy.object_query", "legacy_policy.object_advance",
+        "legacy_policy.object_sequence",
+        "!object.info.authenticated", "close_legacy_window",
+    ):
+        require(token in save_store_source,
+                f"save store downgrade gate is missing {token!r}")
     require(profile["usb_vbus_assessment"].get("device_mode_authorized") is True,
             "H2 sink/device authorization is missing")
     require(profile["usb_vbus_assessment"]["controller_host_power_ready"] is False,
@@ -690,6 +751,18 @@ def main() -> None:
             "P4_GAME_SAVE_STORAGE_READ_ONLY" not in save_mode and
             "P4_GAME_SAVE_STORAGE_HOST_OWNED" in save_mode,
             "Waveshare save capability must be writable only under app FAT ownership")
+    for token in (
+        "platform_save_seal_load_key", "SAVE_SEAL_UNAVAILABLE",
+        "platform_save_seal_legacy_is_closed",
+        "platform_save_seal_close_legacy", "SAVE_LEGACY_MARKER",
+        "platform_save_seal_object_is_allowed",
+        "platform_save_seal_object_sequence",
+        "platform_save_seal_advance_object", "SAVE_FRESHNESS",
+        "protected_game_lineage_check", "PROTECTED_GAME_REJECTED",
+        "p4_game_save_protection_clear", "SAVE_SEAL_READY",
+    ):
+        require(token in source,
+                f"Console OS save seal integration is missing {token!r}")
     for token in (
         "present_boot_screen", "play_boot_chime",
         "CONSOLE_ACTION_COLOR_MODE_CHANGED", "cartridge_unlock_achievement",

@@ -59,6 +59,7 @@ WELCOME_HAS_SNAPSHOT = 1 << 0
 WELCOME_ROLLOVER_PENDING = 1 << 1
 WELCOME_ACCEPT_LOCAL = 1 << 2
 WELCOME_LOCAL_CONFLICT = 1 << 3
+WELCOME_ADOPT_LOCAL = 1 << 4
 
 HELLO_HAS_LOCAL = 1 << 0
 HELLO_HAS_SYNC_BASE = 1 << 1
@@ -68,6 +69,7 @@ COMMIT_OK = 0
 COMMIT_CONFLICT = 1
 COMMIT_INVALID = 2
 COMMIT_STORAGE_ERROR = 3
+COMMIT_STALE_DAY = 4
 
 
 @dataclasses.dataclass(frozen=True)
@@ -154,8 +156,10 @@ def encode_hello(
     if has_base:
         if actor_id == b"\0" * 16 or base_revision == 0:
             raise ValueError("hello sync base is incomplete")
-    elif actor_id != b"\0" * 16 or base_revision != 0 or committed_save_sequence != 0:
+    elif base_revision != 0 or committed_save_sequence != 0:
         raise ValueError("hello has undeclared sync base")
+    elif actor_id != b"\0" * 16 and not (has_local and dirty):
+        raise ValueError("hello has an actor without a local adoption bridge")
     return actor_id + struct.pack(
         "<IIIB3x",
         base_revision,
@@ -179,6 +183,7 @@ def encode_welcome(
     realm_day_id: int,
     seconds_remaining: int,
     flags: int,
+    head_player_day: int = 0,
 ) -> bytes:
     if len(actor_id) != 16 or actor_id == b"\0" * 16:
         raise ValueError("invalid actor ID")
@@ -187,6 +192,7 @@ def encode_welcome(
         | WELCOME_ROLLOVER_PENDING
         | WELCOME_ACCEPT_LOCAL
         | WELCOME_LOCAL_CONFLICT
+        | WELCOME_ADOPT_LOCAL
     ):
         raise ValueError("invalid welcome flags")
     if flags & WELCOME_HAS_SNAPSHOT and flags & (
@@ -195,28 +201,42 @@ def encode_welcome(
         raise ValueError("snapshot welcome has incompatible local result")
     if flags & WELCOME_ACCEPT_LOCAL and flags & WELCOME_LOCAL_CONFLICT:
         raise ValueError("welcome cannot accept and conflict")
+    if flags & WELCOME_ADOPT_LOCAL and flags & (
+        WELCOME_HAS_SNAPSHOT | WELCOME_ACCEPT_LOCAL | WELCOME_LOCAL_CONFLICT
+    ):
+        raise ValueError("adoption welcome has incompatible local result")
+    if not 0 <= head_player_day <= 0xFFFF:
+        raise ValueError("invalid welcome head player day")
+    if flags & WELCOME_ROLLOVER_PENDING and head_player_day == 0:
+        raise ValueError("rollover welcome has no head player day")
     return actor_id + struct.pack(
-        "<IQIB3x",
+        "<IQIBHx",
         head_revision,
         realm_day_id,
         seconds_remaining,
         flags,
+        head_player_day,
     )
 
 
-def decode_welcome(payload: bytes) -> tuple[bytes, int, int, int, int]:
-    if len(payload) != 36 or payload[:16] == b"\0" * 16 or payload[33:] != b"\0" * 3:
+def decode_welcome(payload: bytes) -> tuple[bytes, int, int, int, int, int]:
+    if len(payload) != 36 or payload[:16] == b"\0" * 16 or payload[35] != 0:
         raise ValueError("invalid P4RM welcome")
-    revision, day_id, remaining, flags = struct.unpack_from("<IQIB", payload, 16)
+    revision, day_id, remaining, flags, head_player_day = struct.unpack_from(
+        "<IQIBH", payload, 16
+    )
     if flags & ~(
         WELCOME_HAS_SNAPSHOT
         | WELCOME_ROLLOVER_PENDING
         | WELCOME_ACCEPT_LOCAL
         | WELCOME_LOCAL_CONFLICT
+        | WELCOME_ADOPT_LOCAL
     ):
         raise ValueError("invalid P4RM welcome flags")
-    encode_welcome(payload[:16], revision, day_id, remaining, flags)
-    return payload[:16], revision, day_id, remaining, flags
+    encode_welcome(
+        payload[:16], revision, day_id, remaining, flags, head_player_day
+    )
+    return payload[:16], revision, day_id, remaining, flags, head_player_day
 
 
 def encode_download_begin(record: bytes, head_revision: int) -> bytes:

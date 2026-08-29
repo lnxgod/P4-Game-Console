@@ -26,6 +26,8 @@ typedef struct {
     uint32_t launch_schema_version;
     uint32_t launch_sequence;
     p4_game_save_store_result_t startup_result;
+    bool launch_migrated_legacy;
+    bool launch_missing_at_floor;
     bool capability_available;
     bool initialized;
 } p4_game_save_service_t;
@@ -41,6 +43,8 @@ bool p4_game_save_service_init(
     p4_game_save_service_t *service,
     const char *root_path,
     p4_game_save_storage_mode_t mode,
+    const p4_game_save_protection_t *protection,
+    const p4_game_save_legacy_policy_t *legacy_policy,
     const char *game_id,
     const char *launch_slot_id,
     uint8_t *queue_workspace,
@@ -49,6 +53,9 @@ bool p4_game_save_service_init(
     size_t object_workspace_bytes,
     uint8_t *launch_snapshot,
     size_t launch_snapshot_capacity);
+
+/** Clear the copied in-memory seal key after the worker has stopped. */
+void p4_game_save_service_clear(p4_game_save_service_t *service);
 
 void p4_game_save_service_set_storage_mode(
     p4_game_save_service_t *service,

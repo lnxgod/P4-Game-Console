@@ -1508,6 +1508,12 @@ static bool game_start(p4_game_context_t *context)
     lord_initialize(state, UINT32_C(0x4c4f5244));
     state->save_available = context->services != NULL &&
         (context->services->available_capabilities & P4_GAME_CAP_SAVE) != 0U;
+    if (state->save_available) {
+        /* A missing/replaced SD can have no payload while Console OS retains
+         * a nonzero anti-rollback sequence floor in NVS. Continue from that
+         * host sequence so the first reconstructed save commits at N+1. */
+        state->host_save_sequence = context->services->save_sequence;
+    }
     if (state->save_available && context->services->save_bytes != 0U) {
         if (context->services->save_schema_version <
                 LORD_SAVE_MINIMUM_VERSION ||
@@ -1593,7 +1599,8 @@ static p4_game_result_t game_update(p4_game_context_t *context,
         service_save(context, state);
         return P4_GAME_EXIT_TO_LAUNCHER;
     }
-    if (lord_realm_net_blocks_gameplay()) {
+    if (lord_realm_net_blocks_gameplay(state)) {
+        service_save(context, state);
         return P4_GAME_CONTINUE;
     }
     if (state->screen == LORD_SCREEN_TEXT_EDITOR) {
@@ -1620,11 +1627,13 @@ static p4_game_result_t game_update(p4_game_context_t *context,
     lord_event_t event = LORD_EVENT_NONE;
     if ((input->pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
         const lord_battle_kind_t prior_battle_kind = state->battle_kind;
+        lord_realm_pvp_before_t pvp_before;
+        p4rm_capture_pvp_before(state, &pvp_before);
         if (!lord_realm_net_activate(context, state, &event)) {
             event = lord_activate(state);
         }
         lord_realm_net_after_activate(
-            context, state, prior_battle_kind, event);
+            context, state, prior_battle_kind, event, &pvp_before);
     } else if ((input->pressed & P4_BUTTON_B) != 0U) {
         event = lord_cancel(state);
     }

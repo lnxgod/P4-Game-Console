@@ -73,7 +73,29 @@
         ],
         "filesystem_scope": "/SAVES/<validated-game-id>/<validated-slot-id>.P4SAVE plus only its .STAGE, .BAK, and .JOURNAL siblings",
         "limits": "at most two 16 KiB copied payload slots per foreground cartridge; LORD uses one AUTO slot below 4 KiB",
-        "safety_controls": "app-owned mounted FAT only; no cartridge path or FAT handle; explicit object format and IDs; optimistic host sequence; payload SHA-256; stage fsync and full-object validation; one bounded backup; atomic rename; recoverable one-operation journal; queued worker outside game callbacks; unavailable while H2 host owns or transitions storage",
+        "safety_controls": "app-owned mounted FAT only; no cartridge path or FAT handle; P4SAVE2 HMAC-SHA256 over the validated game ID, slot ID, schema, sequence, payload digest, and payload; one device-local 256-bit key in the exact bounded NVS scope below; constant-time tag comparison; optimistic host sequence; exact per-slot NVS freshness anchor over sequence and object SHA-256; stage fsync and full-object validation; one bounded backup; atomic rename; recoverable one-operation journal; queued worker outside game callbacks; unavailable while H2 host owns or transitions storage; legacy P4SAVE1 accepted only while the exact game/slot NVS downgrade marker remains open, then permanently rejected after resealing",
+        "internal_nvs_scope": {
+          "authorized": true,
+          "authorization_basis": "same exact-unit persistent offline save request; Phase-A casual SD-edit resistance only",
+          "device_identity_sha256": [
+            "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+            "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79"
+          ],
+          "partition": "nvs",
+          "namespace": "p4_save_seal",
+          "keys": {
+            "master_v1": "one 32-byte device-local HMAC key blob",
+            "legacy_v1": "one fixed 1176-byte P4LMRK2 registry with at most 32 full SHA-256 game/slot identities plus downgrade-closed, freshness-anchor-expected, and migrated-baseline-required flags; a valid 1048-byte P4LMRK1 record migrates once",
+            "h<14hex>": "one 88-byte P4HWAT1 freshness record per anchored registry entry, keyed by a 56-bit digest prefix and containing the full 256-bit slot identity, highest accepted sequence, and exact object SHA-256"
+          },
+          "legacy_marker_domain": "P4SAVE2-LEGACY-CLOSED followed by NUL-delimited validated game and slot IDs",
+          "legacy_marker_lifecycle": "query before accepting any P4SAVE1; append after successful P4SAVE2 installation, authenticated P4SAVE2 verification, or verified empty slot; bind an authenticated slot to its highest sequence and exact object SHA-256 in the same NVS commit that marks the anchor expected; a migrated P4LMRK1 identity requires its existing authenticated object before establishing the first anchor; if anchored SD files are all absent, expose an empty save at the retained sequence floor so only N+1 can be installed; never erase or reopen; malformed/full/read/write/pairing failure withholds saving",
+          "storage_protection": "plaintext NVS; device-local random key and monotonic per-slot software freshness anchor; blocks casual SD-file rollback but makes no claim against NVS rollback, firmware readout, or firmware modification",
+          "namespace_erase_authorized": false,
+          "partition_erase_or_format_authorized": false,
+          "efuse_write_authorized": false,
+          "secure_boot_or_flash_encryption_change_authorized": false
+        },
         "formatting_authorized": false,
         "arbitrary_paths_authorized": false,
         "hardware_acceptance": false

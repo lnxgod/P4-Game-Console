@@ -38,6 +38,7 @@ set(P4_CONSOLE_MAIN_REQUIREMENTS
     platform_game_loader
     platform_game_storage
     platform_os_update
+    platform_save_seal
     vfs
 )
 

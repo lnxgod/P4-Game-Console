@@ -5,7 +5,7 @@ Dragon*. It installs under `GAMES/ADVENTURE`, renders at 320×200 in a
 16-color ANSI/RIP-inspired style, and uses only the stable P4 Game API for
 video, controls, tone audio, shared CP437 drawing, and optional durable saves.
 
-Version 1.6.0 includes:
+Version 1.6.1 includes:
 
 - named hero or heroine characters and Death Knight, Mystical, and Thieving
   professions;
@@ -25,6 +25,9 @@ Version 1.6.0 includes:
 - the full kid-friendly Red Dragon Inn play set: sleep, berry fizz, gossip,
   public conversation, Seth and Violet best-friend paths, bard songs, Dragon
   Dice, friendly sparring, announcements, and room status;
+- bounded social rewards: the bartender's riddle consumes one friendship
+  action, table Dragon Dice keeps its ChompCoin wager without minting badges,
+  and ending any active team or best-friend pact removes its one 5-HP bonus;
 - an eight-warrior persistent local realm with public sayings, ChompCoin
   transfer, PvP, mail, trust, adventure teams, youth mentoring, and daily
   revival;
@@ -62,19 +65,34 @@ Version 1.6.0 includes:
   The Mac hosts each logical session and every console joins it. P4RM v3 can
   upload offline progress when the locally persisted server base still
   matches, and preserves both copies behind `SYNC CONFLICT` when they diverge;
+- a P4RM v3-compatible, parent-authorized `ADOPT_LOCAL` welcome path. It binds
+  a Mac actor/revision—including revision zero before its first head—as the
+  compare-and-swap base, keeps the local committed generation at zero until
+  upload succeeds, and remains mutually exclusive with snapshot, ordinary
+  accept, and conflict welcomes;
 - durable, nonce-idempotent cross-player actions for letters, two-sided
   ChompCoin transfers, encouragement and supplies, consent-based adventure
   teams, shared mentoring, leased asynchronous PvP outcomes, tavern
   conversation, and town announcements. The hub retains numbered events until
-  the target cartridge applies and acknowledges them.
+  an accepted target snapshot proves application by advancing its durable event
+  cursor. A wire acknowledgement records receipt only and never discards the
+  event by itself. A dirty offline branch uploads first; LORD shows `SYNCING`
+  and briefly pauses input while that immutable upload or a split event body is
+  applied. The hub sends only one durable event before waiting for its cursor
+  commit, so reconnect and power-loss replay remain exactly once.
 
-The cartridge is fully playable offline. Console OS 0.4.85 enables its
-OS-owned journaled save service for the authorized Waveshare profile, so LORD
-progress survives exit and relaunch there; other profiles may still withhold
-`save` and fall back to the current session. With a LORD P4MP room and the Mac realm hub it labels
+The cartridge is fully playable offline. Console OS 0.4.85 first enabled its
+OS-owned journaled save service for the authorized Waveshare profile. The
+0.4.88 successor adds device-local authentication and a monotonic freshness
+anchor, so ordinary SD edits, cross-device copies, and SD-only rollback fail
+closed. LORD progress survives exit and relaunch there; other profiles may
+still withhold `save` and fall back to the current session. With a LORD P4MP room and the Mac realm hub it labels
 the realm `MAC REALM`, synchronizes that actor, lists other hub profiles, uses
 the hub's hourly rollover, and delivers classic cross-player actions to the
-other profile. Public Internet accounts and arbitrary third-party IGM
+other profile. A realm-bound character cannot trigger the classic local sleep
+reset, even while disconnected; the next trusted Mac realm hour grants its new
+day. Local-only characters retain classic inn sleep. Public Internet accounts
+and arbitrary third-party IGM
 packages still require the OS adapters documented in
 [BACKEND_SYNC.md](BACKEND_SYNC.md), [OS_INTEGRATION.md](OS_INTEGRATION.md), and
 [osupgrade.md](../../osupgrade.md). Mac setup and the exact implemented scope

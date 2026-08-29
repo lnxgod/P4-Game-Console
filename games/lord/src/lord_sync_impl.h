@@ -115,8 +115,14 @@ bool lord_sync_decode(lord_state_t *state,
         save_bytes > LORD_SAVE_MAX_BYTES ||
         !lord_save_decode(state, bytes + LORD_SYNC_HEADER_BYTES,
                           save_bytes) ||
-        state->realm_revision != realm_revision ||
-        state->save_sequence != save_sequence) {
+        state->realm_revision != realm_revision) {
+        return false;
+    }
+    const bool migrated_legacy_empty_slots = state->save_dirty &&
+        state->save_local_generation == 1U && save_sequence != UINT32_MAX &&
+        state->save_sequence == save_sequence + 1U;
+    if (state->save_sequence != save_sequence &&
+        !migrated_legacy_empty_slots) {
         return false;
     }
     memcpy(metadata->actor_id, actor_id, LORD_SYNC_ACTOR_ID_BYTES);

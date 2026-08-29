@@ -1,4 +1,4 @@
-# LORD 1.6.0 OS integration contract
+# LORD 1.6.1 OS integration contract
 
 LORD is a complete standalone cartridge. This document describes optional OS
 services that turn its persistent local realm into a shared BBS realm without
@@ -51,14 +51,26 @@ the console joins slot 1, and the backend initiates synchronized start.
 `src/lord_realm_net_impl.h` layers bounded `P4RM` v3 messages on that service.
 It synchronizes full `LRSY` snapshots with the Mac hub, publishes the local
 profile, consumes eight-entry pages of a 100-player roster, and applies one trusted
-hourly refresh. It also submits bounded actions and applies/acknowledges durable
-events for mail, transfers, friendship, teams, mentoring, PvP, tavern, and
-news. It remains inactive when the capability or connected room is
+hourly refresh. It also submits bounded actions and applies durable events for
+mail, transfers, friendship, teams, mentoring, PvP, tavern, and news. The wire
+acknowledgement records receipt; only a later accepted snapshot advancing the
+persisted event cursor commits delivery. It remains inactive when the capability or connected room is
 absent. Its hello carries only the persisted actor/revision/generation base.
 The hub accepts an offline upload only while that base still equals the server
 head; a divergent dirty copy becomes `SYNC CONFLICT` without replacing either
 side. No new Game API fields, raw P4MP packets, routes, USB/BLE handles, or
 clock callbacks are exposed to LORD.
+
+P4RM v3 welcome bit 4 is the optional, explicitly parent-authorized
+`ADOPT_LOCAL` recovery hook. It keeps the existing 36-byte welcome, is mutually
+exclusive with snapshot/accept/conflict, and uses the returned actor/revision
+as the upload compare-and-swap base while the local committed generation stays
+zero. The actor-bound pre-commit save may carry revision zero; snapshot and
+ordinary accept still require a nonzero head, while revision-zero conflict is
+shown as `SYNC CONFLICT`. This adds no Game API field or save-schema version.
+Realm-bound characters also cannot invoke the local inn reset: connected and
+disconnected play both wait for the Mac realm's trusted hourly rollover, while
+local-only characters retain classic sleep.
 
 The exact deployment and current limitations are in
 [the Mac hub guide](../../docs/LORD_REALM_HUB.md).
@@ -81,13 +93,13 @@ events:
 | Existing game flow | Optional realm operation |
 |---|---|
 | Other Warriors / rankings | Previous/Next pages across 100 realm accounts |
-| Player challenge / inn attack | lease immutable opponent snapshot |
+| Player challenge / inn attack | lease the selected cached directory opponent; an immutable battle snapshot is a future public-realm upgrade |
 | PvP finish | idempotent outcome commit |
 | Inbox / sent mail | list, read, mark-read, send by opaque ID |
 | Friendship / team invitation / parting | consent-based team transaction |
 | Bank transfer | idempotent bounded transfer |
 | Daily News / conversation | bounded sanitized feed |
-| Sleep / daily reset | trusted realm-day transition |
+| Sleep / daily reset | trusted realm-day transition; local sleep is disabled after actor binding |
 
 Opaque remote IDs and leases remain inside validated P4RM messages and schema-5
 state; local array indexes are never used as hub identity. A conflict may not
@@ -122,7 +134,7 @@ It contains no username, email, password, device address, route, token, or
 server URL. Unit tests cover round trip, stale revision, wrong actor, corrupt
 payload, and zero-nonce rejection.
 
-The codec itself remains transport-free. Version 1.6 submits it through a
+The codec itself remains transport-free. Version 1.6.1 submits it through a
 reviewed P4RM state machine over `multiplayer-session` when the local Mac hub
 occupies the peer slot. The complete record, server, conflict, and future
 typed-action rules are in [BACKEND_SYNC.md](BACKEND_SYNC.md).

@@ -1,7 +1,9 @@
 # LORD backend synchronization
 
-LORD 1.6.0 has a working local Mac-hosted BBS realm and remains a
-complete offline cartridge. The cartridge never opens a socket, file, serial
+LORD 1.6.1 has a working local Mac-hosted BBS realm. Unbound standalone
+characters remain complete offline games; realm-bound characters keep all
+solo play offline but reconnect for shared-player mutations. The cartridge
+never opens a socket, file, serial
 port, or BLE connection. Console OS owns the physical route and supplies the
 existing bounded `multiplayer-session` service.
 
@@ -34,6 +36,8 @@ The Mac implementation lives in `tools/p4_realm_hub/` and is launched by
 
 - strict P4MP v1 and P4RM v3 framing;
 - the existing noisy-stream H1 and P4B BLE adapters;
+- full schema-3/4/5 `LDSV` parsing, exact embedded-base checks, cumulative
+  per-realm-day transition anchors, and conservative stat/economy validation;
 - SQLite actor heads, CRC validation, compare-and-swap commits, nonce
   idempotency, durable cross-actor events, profile presence, private vault
   balance, friendship/team state, PvP leases, shared feeds, and a trusted
@@ -43,6 +47,16 @@ The Mac implementation lives in `tools/p4_realm_hub/` and is launched by
 - an exact 100-profile realm cap with reconnect allowed at capacity; and
 - eight-record Previous/Next roster pages covering the other 99 actors.
 
+On startup, the hub rebuilds protected profiles from fully decoded accepted
+heads plus admitted, unapplied economy reservations. Client-authored legacy
+profile rows, orphan actors, and stale presence cannot publish stats or
+balances. Legacy shared artifacts are migrated only during an explicit
+operator-approved `--migrate-legacy-artifacts` startup after backup. Raw rows
+are preserved with permanent admission/quarantine state; a schema-4/5 event
+cursor can prove consumption, while an old wire acknowledgement proves receipt
+only. Ambiguous pending legacy PvP, v3 heads with events, malformed heads, and
+inconsistent ledgers fail closed. The operator procedure is in the hub guide.
+
 See [the operator guide](../../docs/LORD_REALM_HUB.md) for setup, commands,
 security boundaries, and verification.
 
@@ -50,15 +64,53 @@ security boundaries, and verification.
 
 The server head revision is independent from the game-local `realm_revision`.
 A full head is replaced only when the submitted expected server revision
-matches. It is never field-merged: merging can duplicate ChompCoin, mail, PvP
-rewards, team state, or daily limits. Repeating the same actor/nonce/body is
-idempotent; reusing the nonce with a different body is invalid.
+matches and the embedded actor, server revision, and committed generation are
+the exact prior accepted lease. It is never field-merged: merging can duplicate
+ChompCoin, mail, PvP rewards, team state, or daily limits. Repeating the same
+actor/nonce/exact SHA-256-bound body is idempotent; reusing the nonce with a
+different body is invalid even if its CRC32 were to collide. Legacy operations
+without a stored SHA-256 can be backfilled only when their revision and exact
+snapshot still equal the current head.
 
 The hub computes `floor(unix_time / 3600) + 1`. When the stored head's last
 realm day is older, LORD applies exactly one hourly refresh after a validated
 download. Missing several hours never grants several refreshes. The online
 refresh restores daily actions but deliberately pays no bank interest. The new
 state must commit under the current day before it becomes the server head.
+WELCOME keeps its 36-byte P4RM-v3 size and uses bytes 33–34 for the validated
+head snapshot's `player.day` (byte 35 remains zero). That durable before-state
+lets a cartridge reboot after saving the refresh but before committing it: a
+local day equal to the head day is refreshed once, while head day plus one is
+recognized as already refreshed. Any other relationship fails closed, as does
+the saturated `UINT16_MAX` day where those states cannot be distinguished.
+Firmware that expected all three old reserved bytes to be zero must be updated
+with this hub. The exact cartridge compatibility hash keeps consoles on the
+same LORD cartridge, but it does not attest the Python hub implementation, so
+operators must deploy the cartridge and hub from the same release.
+
+An upload retains its original realm day along with its exact nonce and record.
+If the hour changes before acceptance, the hub returns retryable
+`COMMIT_STALE_DAY` (status 4) without taking the realm offline; LORD discards
+that old transaction, reconciles the head once, and creates a new current-day
+record. If acceptance wins the race but COMMIT_RESULT observes the next hour,
+the accepted upload becomes the new anchor and LORD immediately applies one
+new pending refresh. A repeated accepted nonce remains idempotently successful
+across the boundary.
+Once a character has a nonzero actor, including the authorized revision-zero
+adoption transition, the cartridge blocks the inn's classic local sleep reset
+while connected or offline. The Mac realm alone grants that character's next
+day/hour. An unbound local-only character retains classic sleep and its local
+bank-interest rule.
+
+Realm-bound characters may still play forest battles, training, IGMs, NPC
+friendship, Dragon Dice, shops, healing, and their own bank while disconnected.
+Cached roster and mail remain readable. Transfers, player duels and inn
+sparring, mail compose/send, friendship/team/mentor/saying mutations, and
+shared tavern/news posts stop at a friendly `Connect to the Mac realm` message
+until online actions are ready. An unbound standalone character retains the
+classic local realm simulation. If a leased duel loses its connection, the
+next activation aborts it without a reward; its spent fight/entry and received
+HP damage may remain.
 
 LORD schema 5 stores the last accepted hub actor ID, server revision, and game
 save generation inside the OS-owned local save. P4RM v3 includes that base and
@@ -70,19 +122,45 @@ copy downloads the current head.
 If a dirty local copy and the server head both advanced, or the persisted actor
 does not match the selected hub profile, the welcome returns `SYNC CONFLICT`.
 Neither copy is overwritten and no ChompCoin, mail, PvP reward, team state, or
-daily action is field-merged. Version 1.6.0 does not offer an in-game conflict
+daily action is field-merged. Version 1.6.1 does not offer an in-game conflict
 chooser; preserve the local save, then relaunch under the intended stable
-profile or resolve the two snapshots with an administrative tool. Normal
+profile or have a parent explicitly start the hub once with
+`--adopt-local PROFILE`. Normal
 offline-first play therefore assumes one active console save per stable
 profile between successful synchronizations.
 
+If the persisted base still matches and the local branch is merely dirty, the
+hub gives that branch ordering priority. It withholds directory projections,
+action results, and new durable events until the exact frozen upload commits.
+LORD reports `SYNCING`, keeps polling the network and servicing the OS save
+queue, and pauses gameplay until `COMMIT_OK`. It also pauses input between a
+bounded event's begin and body packets. A newer event is left unacknowledged
+and replayable whenever a local generation still needs to commit.
+
+For an explicit parent-authorized recovery, P4RM v3 reserves welcome flag bit
+4 as `ADOPT_LOCAL`. Its welcome remains 36 bytes. The flag is
+mutually exclusive with snapshot, ordinary local acceptance, and conflict.
+It binds the welcome actor and server revision as the upload's expected
+compare-and-swap base, including revision zero when that actor has no head yet,
+while leaving the local committed generation at zero; the current local save
+therefore uploads normally. Schema 5 permits this bounded actor-bound,
+revision-zero pre-commit state, and the ordinary commit result records the
+accepted generation. `LOCAL_CONFLICT` may also report revision zero so the
+cartridge shows `SYNC CONFLICT`; snapshot and ordinary local acceptance still
+require a nonzero head. The hub must never send `ADOPT_LOCAL` without that
+external approval. The hub archives the replaced head, binds the grant to the
+exact local record, updates the accepted head/profile/day anchor, and consumes
+the one-time grant in one SQLite transaction. A lost commit reply may retry the
+same nonce and record; it does not create a second adoption.
+
 ## Shared-directory boundary
 
-The game publishes printable ASCII name, hero style/class, level, alive and
-inn flags, health, strength, defense, experience, carried ChompCoin, and PvP
-record. The hub binds these values to the session actor, validates all ranges,
-and returns one requested page of at most eight other profiles from the
-bounded 100-player roster. Directory entries use opaque actor IDs internally;
+Legacy profile packets may update only ephemeral presence and the at-inn UI
+hint. Printable name, hero style/class, level, alive state, health, strength,
+defense, experience, carried ChompCoin, and PvP record are projected from the
+last snapshot the hub accepted; a cartridge cannot publish authoritative stats
+through the directory side channel. The hub returns one requested page of at
+most eight other profiles from the bounded 100-player roster. Directory entries use opaque actor IDs internally;
 the cartridge never treats a profile label or transport address as identity.
 Page statistics carry server-owned directional trust and team state so
 switching pages does not discard relationships.
@@ -110,15 +188,42 @@ The implemented actions are:
   and notify both sides of formation or friendly parting;
 - mentoring: notify the confirmed teammate and update each character once;
 - asynchronous PvP: acquire one current-day lease, resolve it once, calculate
-  the target's carried-ChompCoin prize at the hub, and queue the target outcome;
+  the target's carried-ChompCoin prize at the hub, and queue durable outcomes
+  for both source and target. The cartridge removes provisional local prize,
+  XP, PvP counters, cached-target changes, mail, and logs before saving. A
+  source win event grants exactly one win plus its prize (including a
+  zero-prize win); a source loss event grants exactly one loss/knockout;
 - tavern/news: store bounded printable feed rows and fan out durable events to
   the registered profiles.
 
-Events carry a monotonically increasing 64-bit ID and remain unacknowledged in
-SQLite until the target cartridge applies them. LORD save schema 5 persists
+Events carry a monotonically increasing 64-bit ID. A wire acknowledgement is
+only a receipt: an event remains replayable until an accepted target snapshot
+advances its persisted event cursor, which marks the event committed in the
+same transaction. LORD save schema 5 persists
 the last applied event ID, opaque directory/team actor IDs, and the safe sync
 base; schema-3 and schema-4 saves migrate with zeroed sync-base state. A repeated old event is acknowledged without
 reapplying its mail, ChompCoin, PvP record, trust, team, or feed effect.
+The hub serializes delivery: it does not begin event N+1 until an accepted
+snapshot proves event N through that cursor. If the cursor commit races ahead
+of a lost or duplicated wire acknowledgement, the late acknowledgement reads
+the authoritative head and does not re-arm the already-satisfied barrier.
+
+An economy debit is acknowledged only after the stock cartridge can subtract
+the complete amount from the account named by the event: a transfer debit uses
+the vault, while shared-supplies and PvP-victim debits use carried ChompCoin.
+If that account is short, LORD does not advance the event cursor or send an
+acknowledgement. It leaves the realm session so local solo play and banking
+remain available, then replays the still-pending debit after the player restores
+the amount and reconnects. The hub also checks the resulting account movement
+when it accepts the next head. These checks close ordinary unplug/retry paths;
+they do not prove honest behavior from modified firmware or a modified client.
+
+An unresolved admitted PvP knockout is included in the hub's effective-alive
+projection before the target's cursor snapshot arrives. Profiles and new PvP
+leases therefore cannot treat the target as alive during the receipt-to-save
+window or after a hub restart. The pending projection clears when an accepted
+head reflects the knockout; later revival still follows the normal realm-day
+transition rules.
 
 This is authoritative for the trusted local Mac deployment, not a hostile
 Internet economy. The hub has no account authentication, TLS listener,
@@ -153,7 +258,17 @@ oversized frames, hostile text, SQLite recovery, hourly rollover exactly once,
 and disconnect. The host suite now covers clean/matching offline acceptance,
 stale-dirty conflict without overwrite, clean-stale download, action codecs, changed-body nonce
 rejection, two-node mail delivery/acknowledgement, two-sided ChompCoin
-transfer, team consent, PvP lease resolution, and tavern fan-out. Power-loss
-fault injection, PvP lease expiry, hostile-client fuzzing, and exact H1/BLE
-device evidence remain hardware/release gates. A build is not H1 or BLE
-hardware acceptance.
+transfer, team consent, PvP lease resolution/drop/zero-prize/loss replay,
+realm-bound offline shared-action blocking with solo-play preservation,
+tavern fan-out, retryable
+boundary-stale upload, accepted-commit boundary crossing, and reboot after a
+locally saved rollover without a second refresh. A separate two-client E2E
+uses independent P4MP/P4RM client state against one temporary SQLite realm and
+proves both offline uploads, mail serialization into the reopened LDSV, an
+exactly-once 100-ChompCoin debit, dirty-branch/event ordering, and replay after
+simulated power loss. Its expected terminal heads are Pink revision 3 and Green
+revision 4 with all three events and both economy rows committed. Device-level
+mid-write fault injection, PvP lease expiry, hostile-client fuzzing, and exact
+H1/BLE evidence remain hardware/release gates. The SDL runner exercises the
+real C cartridge separately but currently has no multiplayer-session callback,
+so a host pass is not H1 or BLE hardware acceptance.

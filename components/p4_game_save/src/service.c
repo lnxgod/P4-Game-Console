@@ -8,6 +8,8 @@ bool p4_game_save_service_init(
     p4_game_save_service_t *service,
     const char *root_path,
     p4_game_save_storage_mode_t mode,
+    const p4_game_save_protection_t *protection,
+    const p4_game_save_legacy_policy_t *legacy_policy,
     const char *game_id,
     const char *launch_slot_id,
     uint8_t *queue_workspace,
@@ -17,7 +19,9 @@ bool p4_game_save_service_init(
     uint8_t *launch_snapshot,
     size_t launch_snapshot_capacity)
 {
-    if (service == NULL || !p4_game_save_game_id_valid(game_id) ||
+    if (service == NULL || !p4_game_save_protection_valid(protection) ||
+        legacy_policy == NULL ||
+        !p4_game_save_game_id_valid(game_id) ||
         !p4_game_save_slot_id_valid(launch_slot_id) ||
         object_workspace == NULL ||
         object_workspace_bytes < P4_GAME_SAVE_MAX_FILE_BYTES ||
@@ -26,10 +30,14 @@ bool p4_game_save_service_init(
         return false;
     }
     memset(service, 0, sizeof(*service));
-    if (!p4_game_save_store_init(&service->store, root_path, mode) ||
-        !p4_game_save_memory_init(
+    if (!p4_game_save_store_init(
+            &service->store, root_path, mode, protection, legacy_policy)) {
+        return false;
+    }
+    if (!p4_game_save_memory_init(
             &service->queue, game_id, queue_workspace,
             queue_workspace_bytes)) {
+        p4_game_save_store_clear(&service->store);
         return false;
     }
     memcpy(service->launch_slot_id, launch_slot_id,
@@ -45,24 +53,70 @@ bool p4_game_save_service_init(
             : P4_GAME_SAVE_STORE_UNAVAILABLE;
         return true;
     }
+    bool authenticated = false;
     service->startup_result = p4_game_save_store_load(
         &service->store, game_id, launch_slot_id, object_workspace,
         object_workspace_bytes, launch_snapshot, launch_snapshot_capacity,
         &service->launch_snapshot_bytes, &service->launch_schema_version,
-        &service->launch_sequence);
+        &service->launch_sequence, &authenticated);
     if (service->startup_result == P4_GAME_SAVE_STORE_NOT_FOUND) {
         service->startup_result = P4_GAME_SAVE_STORE_OK;
-    } else if (service->startup_result == P4_GAME_SAVE_STORE_OK &&
-               !p4_game_save_memory_seed(
-                   &service->queue, launch_slot_id,
-                   service->launch_schema_version,
-                   service->launch_sequence,
-                   launch_snapshot, service->launch_snapshot_bytes)) {
-        service->startup_result = P4_GAME_SAVE_STORE_CORRUPT;
+        if (service->launch_sequence != 0U) {
+            if (!p4_game_save_memory_seed_floor(
+                    &service->queue, launch_slot_id,
+                    service->launch_sequence)) {
+                service->startup_result = P4_GAME_SAVE_STORE_CORRUPT;
+            } else {
+                service->launch_missing_at_floor = true;
+            }
+        }
+    } else if (service->startup_result == P4_GAME_SAVE_STORE_OK) {
+        if (!authenticated) {
+            uint32_t migrated_sequence = 0U;
+            service->startup_result = p4_game_save_store_commit(
+                &service->store, game_id, launch_slot_id,
+                service->launch_schema_version, service->launch_sequence,
+                launch_snapshot, service->launch_snapshot_bytes,
+                object_workspace, object_workspace_bytes,
+                &migrated_sequence);
+            if (service->startup_result == P4_GAME_SAVE_STORE_OK) {
+                service->launch_migrated_legacy = true;
+                service->startup_result = p4_game_save_store_load(
+                    &service->store, game_id, launch_slot_id,
+                    object_workspace, object_workspace_bytes,
+                    launch_snapshot, launch_snapshot_capacity,
+                    &service->launch_snapshot_bytes,
+                    &service->launch_schema_version,
+                    &service->launch_sequence, &authenticated);
+                if (service->startup_result == P4_GAME_SAVE_STORE_OK &&
+                    (!authenticated ||
+                     service->launch_sequence != migrated_sequence)) {
+                    service->startup_result = P4_GAME_SAVE_STORE_CORRUPT;
+                }
+            }
+        }
+        if (service->startup_result == P4_GAME_SAVE_STORE_OK &&
+            !p4_game_save_memory_seed(
+                &service->queue, launch_slot_id,
+                service->launch_schema_version,
+                service->launch_sequence,
+                launch_snapshot, service->launch_snapshot_bytes)) {
+            service->startup_result = P4_GAME_SAVE_STORE_CORRUPT;
+        }
     }
     service->capability_available =
         service->startup_result == P4_GAME_SAVE_STORE_OK;
     return true;
+}
+
+void p4_game_save_service_clear(p4_game_save_service_t *service)
+{
+    if (service == NULL) {
+        return;
+    }
+    p4_game_save_store_clear(&service->store);
+    service->capability_available = false;
+    service->initialized = false;
 }
 
 void p4_game_save_service_set_storage_mode(
@@ -98,10 +152,19 @@ bool p4_game_save_service_queue(
     if (ticket_out != NULL) {
         *ticket_out = P4_GAME_SAVE_INVALID_TICKET;
     }
+    uint32_t effective_expected_sequence = expected_sequence;
+    if (service != NULL && service->launch_missing_at_floor &&
+        expected_sequence == 0U && slot_id != NULL &&
+        strcmp(slot_id, service->launch_slot_id) == 0) {
+        /* Compatibility for games that historically used expected=0 whenever
+         * save_bytes was empty. The in-memory slot still carries the real NVS
+         * floor, so this translation is limited to this one recovery state. */
+        effective_expected_sequence = service->launch_sequence;
+    }
     return p4_game_save_service_available(service) &&
         p4_game_save_memory_queue(
-            &service->queue, slot_id, schema_version, expected_sequence,
-            data, data_bytes, ticket_out);
+            &service->queue, slot_id, schema_version,
+            effective_expected_sequence, data, data_bytes, ticket_out);
 }
 
 bool p4_game_save_service_read_status(
@@ -165,7 +228,20 @@ size_t p4_game_save_service_process(p4_game_save_service_t *service,
                 pending.schema_version, pending.expected_sequence,
                 pending.data, pending.data_bytes, service->object_workspace,
                 service->object_workspace_bytes, &committed_sequence);
+        if (result == P4_GAME_SAVE_STORE_IO_ERROR ||
+            result == P4_GAME_SAVE_STORE_CORRUPT ||
+            result == P4_GAME_SAVE_STORE_BAD_ARGUMENT ||
+            result == P4_GAME_SAVE_STORE_INTERRUPTED) {
+            service->capability_available = false;
+        }
         const p4_game_save_status_t status = status_for_store_result(result);
+        if (status == P4_GAME_SAVE_COMMITTED &&
+            service->launch_missing_at_floor &&
+            strcmp(pending.slot_id, service->launch_slot_id) == 0) {
+            service->launch_missing_at_floor = false;
+            service->launch_sequence = committed_sequence;
+            service->launch_schema_version = pending.schema_version;
+        }
         const uint32_t reported_sequence =
             status == P4_GAME_SAVE_COMMITTED
             ? committed_sequence : pending.current_sequence;

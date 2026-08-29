@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.4.86")
+set(PROJECT_VER "0.4.88")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")
@@ -38,6 +38,7 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_game_loader"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_game_storage"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_os_update"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_save_seal"
     "${CMAKE_CURRENT_LIST_DIR}/components/platform_readonly_blob"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_content_catalog"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_desktop"
@@ -611,6 +612,41 @@ endif()
 message(STATUS "${P4_GAME_MANIFEST_REPORT}")
 include("${P4_GENERATED_GAMES_CMAKE}")
 add_custom_target(p4_game_packages ALL DEPENDS ${P4_SEEDED_GAME_PACKAGES})
+
+# Saves for protected realm games are available only to the exact deterministic
+# cartridge payload built with this Console OS successor.  The generated
+# allowlist closes the same-ID replacement/signing-oracle path without trusting
+# mutable manifest version text.  A legitimate LORD update therefore ships as
+# a paired OS + P4G successor and automatically produces its new allowed digest.
+set(P4_PROTECTED_LINEAGE_GENERATOR
+    "${P4_REPOSITORY_ROOT}/scripts/generate-protected-game-lineage.py")
+set(P4_PROTECTED_LORD_PACKAGE
+    "${P4_GAME_STORAGE_SEED_DIR}/GAMES/LORD.P4G")
+set(P4_PROTECTED_LINEAGE_DIR
+    "${CMAKE_BINARY_DIR}/generated/protected-games")
+set(P4_PROTECTED_LINEAGE_HEADER
+    "${P4_PROTECTED_LINEAGE_DIR}/p4_protected_game_lineage.h")
+add_custom_command(
+    OUTPUT "${P4_PROTECTED_LINEAGE_HEADER}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory
+        "${P4_PROTECTED_LINEAGE_DIR}"
+    COMMAND
+        "${P4_IDF_PYTHON}"
+        "${P4_PROTECTED_LINEAGE_GENERATOR}"
+        --package "${P4_PROTECTED_LORD_PACKAGE}"
+        --expected-id "org.p4console.lord"
+        --output "${P4_PROTECTED_LINEAGE_HEADER}"
+    DEPENDS
+        "${P4_PROTECTED_LORD_PACKAGE}"
+        "${P4_PROTECTED_LINEAGE_GENERATOR}"
+    VERBATIM
+)
+add_custom_target(p4_protected_game_lineage
+    DEPENDS "${P4_PROTECTED_LINEAGE_HEADER}")
+idf_component_get_property(P4_CONSOLE_MAIN_LIB main COMPONENT_LIB)
+add_dependencies(${P4_CONSOLE_MAIN_LIB} p4_protected_game_lineage)
+target_include_directories(${P4_CONSOLE_MAIN_LIB} PRIVATE
+    "${P4_PROTECTED_LINEAGE_DIR}")
 
 if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" OR
    P4_BOARD_PROFILE STREQUAL

@@ -1,5 +1,97 @@
 # Remaining Console OS upgrades for full shared LORD services
 
+## 2026-08-29 offline-first fair-play successor
+
+Console OS 0.4.88, LORD 1.6.1, and the Mac realm-hub successor implement the
+first practical family-play security tier without changing Game API v1, P4MP
+v1, P4RM v3, or LRSY v1.
+
+Console OS now stores every new native-game save as `P4SAVE2`, authenticated
+with HMAC-SHA256 under a random device-local key in the exact bounded plaintext
+NVS namespace `p4_save_seal`. A fixed per-game/slot NVS registry permits one
+legacy `P4SAVE1` migration, then permanently rejects later legacy current-file
+or backup reinjection. Each authenticated slot also records the highest
+installed sequence and exact P4SAVE2 object SHA-256, rejecting older backups
+and alternate same-sequence branches while still allowing a newer journaled
+commit to recover. Existing unanchored P4SAVE2 files are accepted once as a
+baseline and then anchored. Key, registry, anchor, or verification failure
+withholds the save capability; cartridges never receive the key. Console OS
+also admits the protected LORD ID only when its exact deterministic payload
+SHA-256 matches the official build, closing the unsigned same-ID signing
+oracle. This prevents ordinary microSD payload editing, cross-device save
+copying, and SD-only rollback. It deliberately does not claim protection
+against modified firmware, plaintext-NVS extraction, or rollback of the
+complete NVS namespace together with matching SD files.
+
+If an anchored slot loses every SD save artifact, the OS retains sequence N as
+an empty recovery floor and accepts only a reconstructed or Mac-restored N+1
+snapshot. It does not reset the slot to sequence one or reopen an old backup.
+Any stale or tampered current, backup, stage, or journal prevents this empty
+recovery path and fails closed.
+
+Realm-linked LORD characters remain playable offline with the actions left in
+their current realm hour, but Inn sleep cannot mint a new realm day. The Mac
+hourly clock grants the next refresh. Reconnect uses the persisted actor,
+server revision, and committed save generation as a single-use offline branch
+lease. The hub parses the complete fixed LDSV layout, requires the inner lease
+to match the actual head, derives public stats/economy from accepted snapshots,
+and applies progression bounds cumulatively from a durable realm-day anchor so
+repeated uploads cannot multiply the allowance. Compare-and-swap selects only
+one branch; a stale dirty branch remains `SYNC CONFLICT` with neither copy
+overwritten.
+
+For a matching dirty branch, the hub now enforces offline-first ordering: the
+exact local snapshot commits before directory changes, action results, or
+queued events can mutate cartridge state. LORD shows `SYNCING` and pauses input
+while that snapshot or a split event body is in flight, while continuing to
+service durable local saves. Durable events are delivered one at a time until
+an accepted cursor snapshot proves each application; late duplicate ACKs and
+reconnects cannot skip or double-apply them. Pending PvP knockouts also suppress
+the target's effective alive state before the target snapshot catches up.
+
+An explicit `--adopt-local PROFILE` operator grant is the only path that may
+replace a conflicting head. The same SQLite transaction archives the old head,
+installs the fully validated local snapshot, derives its profile/day anchor,
+and consumes the one-time grant. Exact upload retries are idempotent, including
+a lost commit response and the revision-zero first-enrollment bridge.
+
+The repeatable friendship/Inn exploits are closed: team and NPC pact HP bonuses
+are removed on parting, bartender riddles consume a daily friendship action,
+Dragon Dice no longer mints unlimited friendship badges, and realm-bound local
+sleep is blocked online and offline. ChompCoin wagering remains part of the
+game.
+
+Software status: focused sanitizer-backed save and seal tests pass for the
+0.4.88 source successor. The independent two-console protocol E2E also passes:
+both clients enroll, play offline, reconnect, exchange durable mail and a
+100-ChompCoin transfer, survive simulated post-receipt power loss, and reopen
+canonical heads with all three events and both economy rows committed. The SDL
+runner separately exercises the real LORD C cartridge but does not yet expose
+multiplayer-session callbacks. The final locked Waveshare build and release
+verifier now pass. Exact candidates are Console OS application
+`5b878c104a42ea72481b73f7c955bb5e518b5b60493b685d60425754c7ed36ad`
+(1,808,480 bytes), `P4UPDATE.P4U`
+`f23cc267c1fdcd9e413fa8cdb179c1f3e028bad0b99734292e9ac8a51d4cd04b`
+(1,808,736 bytes), and `LORD.P4G`
+`2884c531638f5256ca1c3f1594b054b6fcf69eedbb131af3c5cf20735504baac`
+(178,468 bytes; payload SHA-256
+`9645c6f9bed0712b549eb298f90fde4f909a73c21ee6b2f8bef34796fccad5c0`).
+The guarded exact-device install and retained hardware acceptance remain; no
+0.4.88 image has been flashed to Pink or Green.
+
+`make game-sdk-host`, the focused realm/security suites, the locked build, and
+the Waveshare verifier pass. The broader historical `make check` still stops at
+the unchanged Doom E5 test that expects `flash_app_authorized=true` while its
+sealed metadata intentionally records `false`; prior hardware evidence records
+the same baseline. This candidate does not weaken or reopen that unrelated
+one-shot flash authorization.
+
+For a hostile public service, the next upgrade is schema-6 semantic receipts,
+server-issued day permits, deterministic reducer replay, authenticated device
+provisioning, secure boot, and flash encryption. Do not burn eFuses or change
+the boot security policy on Pink or Green without a separate exact-device
+recovery plan and explicit authorization. See `docs/LORD_OFFLINE_SECURITY.md`.
+
 ## 2026-08-27 persistent offline save and reconciliation candidate
 
 Console OS 0.4.85 and LORD 1.6.0 close the session-only gap on the authorized

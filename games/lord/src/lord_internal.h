@@ -294,6 +294,7 @@ size_t lord_menu_count(const lord_state_t *state);
 void lord_move_selection(lord_state_t *state, int direction);
 lord_event_t lord_activate(lord_state_t *state);
 lord_event_t lord_cancel(lord_state_t *state);
+const char *lord_realm_net_label(void);
 
 const char *lord_class_name(lord_class_t hero_class);
 const char *lord_hero_style_name(lord_hero_style_t hero_style);

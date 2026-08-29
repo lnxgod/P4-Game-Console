@@ -204,6 +204,61 @@ each bounded object, preserves one backup, journals replacement, and withholds
 `save` while storage is host-owned or transitioning. Games must still work in
 session-only mode on profiles that do not authorize this namespace.
 
+Console OS 0.4.88 seals every new device commit as `P4SAVE2` with
+HMAC-SHA256. The OS owns one random 256-bit device-local key in the dedicated
+plaintext NVS namespace `p4_save_seal` (`master_v1`); the same namespace has
+one fixed 1,176-byte P4LMRK2 `legacy_v1` registry for at most 32 full SHA-256
+game/slot identities. Each anchored slot adds one 88-byte P4HWAT1
+`h<14hex>` record that stores the full identity, highest installed sequence,
+and exact P4SAVE2 object SHA-256. Cartridges never receive these records or any
+new API. The authenticated bytes bind the validated game ID,
+slot ID, schema version, optimistic sequence, payload SHA-256, and payload, and
+the verifier compares the HMAC tag in constant time. If NVS key loading or
+creation fails, Console OS fails closed and omits the existing Game API v1
+`save` capability for that launch. Before accepting a legacy object, the store
+queries the exact game/slot marker. A still-open valid `P4SAVE1` object is
+committed back as `P4SAVE2` at the next sequence; only after that sealed commit
+succeeds does the OS append and read back its permanent marker and remove the
+legacy backup. An already authenticated object or verified empty slot also
+closes its legacy window. A valid P4LMRK1 registry migrates once to P4LMRK2.
+An existing authenticated P4SAVE2 slot with no expected anchor is accepted once
+as an explicit baseline, then anchored before its payload is returned. After
+that, recovery rejects `P4SAVE1`, any authenticated object below the anchored
+sequence, and a different object digest at the same sequence. A newer
+journaled stage remains eligible so an interrupted commit can finish; after
+its verified install it becomes the new anchor. Registry/anchor corruption,
+missing paired records, capacity exhaustion, or read/write failure withholds
+saving. The first legacy migration still grandfathers its old unkeyed bytes.
+
+If every SD artifact for an already anchored slot is absent, the service
+exposes an empty launch snapshot at the retained NVS sequence floor N. A game
+should use `services->save_sequence` even when `save_bytes` is zero; its first
+reconstructed or server-restored snapshot then commits as N+1. For older games
+that assumed empty bytes meant expected sequence zero, the service translates
+only that first recovery request to N. This does not admit any lower or
+same-sequence alternate object. A migrated P4LMRK1 identity without its first
+authenticated baseline fails closed instead of silently restarting. The empty
+floor is available only when current, backup, stage, and journal are all
+absent; stale or tampered leftovers fail closed and are never loaded.
+
+This Phase-A seal blocks casual microSD editing, including edits with
+recomputed public SHA-256 fields. It is not a hardware trust boundary: secure
+boot, flash encryption, encrypted NVS, and eFuse key storage remain disabled,
+so physical flash access or modified firmware can recover or misuse the key.
+The per-slot NVS anchor blocks ordinary rollback using only SD current, backup,
+stage, or journal files. It is still a software anchor in plaintext NVS, not a
+hardware monotonic counter. Rolling back the complete NVS namespace together
+with the SD state, extracting the key, or running modified firmware remains
+outside this tier. Synced saves must retain server-side compare-and-swap and
+semantic progression checks.
+The key has no Phase-A rotation/export path. Erasing or replacing the NVS
+partition creates a new device identity for saves and makes existing local
+`P4SAVE2` objects unreadable; recovery must come from a previously accepted
+server copy or backup that is restored together with the complete original
+`p4_save_seal` namespace, including the registry and every per-slot freshness
+record. An existing
+malformed key or registry is never silently erased or regenerated.
+
 The `storage` capability currently means a validated read-only `.P4R` payload,
 not general storage. Check the capability bit before reading `resource_data`,
 then validate the game's inner payload format and version. Games still cannot

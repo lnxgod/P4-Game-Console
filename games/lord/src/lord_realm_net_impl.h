@@ -79,11 +79,13 @@ enum {
     LORD_P4RM_WELCOME_ROLLOVER_PENDING = 1U << 1U,
     LORD_P4RM_WELCOME_ACCEPT_LOCAL = 1U << 2U,
     LORD_P4RM_WELCOME_LOCAL_CONFLICT = 1U << 3U,
+    LORD_P4RM_WELCOME_ADOPT_LOCAL = 1U << 4U,
     LORD_P4RM_HELLO_HAS_LOCAL = 1U << 0U,
     LORD_P4RM_HELLO_HAS_SYNC_BASE = 1U << 1U,
     LORD_P4RM_HELLO_LOCAL_DIRTY = 1U << 2U,
     LORD_P4RM_COMMIT_OK = 0,
     LORD_P4RM_COMMIT_CONFLICT = 1,
+    LORD_P4RM_COMMIT_STALE_DAY = 4,
 };
 
 typedef struct {
@@ -119,8 +121,12 @@ typedef struct {
     uint16_t chunk_count;
     uint64_t session_seed;
     uint64_t realm_day_id;
+    uint64_t head_realm_day_id;
+    uint64_t queued_realm_day_id;
     uint64_t operation_nonce;
     uint32_t seconds_remaining;
+    uint16_t head_player_day;
+    uint16_t queued_player_day;
     uint16_t directory_offset;
     uint16_t directory_total;
     uint8_t directory_actor_ids[LORD_REALM_PLAYER_COUNT]
@@ -157,6 +163,19 @@ typedef struct {
 } lord_realm_net_runtime_t;
 
 static lord_realm_net_runtime_t s_lord_realm_net;
+
+static bool p4rm_upload_in_progress(void)
+{
+    return s_lord_realm_net.state == LORD_REALM_NET_UPLOAD_BEGIN ||
+        s_lord_realm_net.state == LORD_REALM_NET_UPLOAD_CHUNK ||
+        s_lord_realm_net.state == LORD_REALM_NET_UPLOAD_COMMIT;
+}
+
+static bool p4rm_local_commit_pending(const lord_state_t *state)
+{
+    return state->player.day != 0U &&
+        state->save_sequence != s_lord_realm_net.committed_save_sequence;
+}
 
 static uint32_t p4rm_next_transaction(void)
 {
@@ -308,6 +327,37 @@ static bool p4rm_actor_valid(const uint8_t actor[LORD_SYNC_ACTOR_ID_BYTES])
     return combined != 0U;
 }
 
+/*
+ * Reconcile the one hourly refresh represented by the hub head.  The head's
+ * player-day is carried in WELCOME so a reboot after the local save, but
+ * before the matching realm commit, can recognize that the refresh already
+ * happened.  UINT16_MAX is deliberately rejected: the saturated day field
+ * cannot distinguish the before and after states well enough for exactly-once
+ * recovery.
+ */
+static bool p4rm_reconcile_rollover(lord_state_t *state)
+{
+    if (!s_lord_realm_net.rollover_pending) {
+        return true;
+    }
+    if (state->player.day == 0U ||
+        s_lord_realm_net.head_player_day == 0U ||
+        s_lord_realm_net.head_player_day == UINT16_MAX) {
+        return false;
+    }
+    if (state->player.day == s_lord_realm_net.head_player_day) {
+        reset_hourly_realm_day(state);
+        s_lord_realm_net.rollover_pending = false;
+        return true;
+    }
+    if (state->player.day ==
+            (uint16_t)(s_lord_realm_net.head_player_day + 1U)) {
+        s_lord_realm_net.rollover_pending = false;
+        return true;
+    }
+    return false;
+}
+
 static void p4rm_handle_welcome(lord_state_t *state,
                                 const lord_p4rm_message_t *message)
 {
@@ -315,7 +365,6 @@ static void p4rm_handle_welcome(lord_state_t *state,
         message->transaction_id != s_lord_realm_net.transaction_id ||
         message->payload_bytes != 36U ||
         !p4rm_actor_valid(message->payload) ||
-        message->payload[33] != 0U || message->payload[34] != 0U ||
         message->payload[35] != 0U) {
         return;
     }
@@ -323,12 +372,17 @@ static void p4rm_handle_welcome(lord_state_t *state,
     if ((flags & (uint8_t)~(LORD_P4RM_WELCOME_HAS_SNAPSHOT |
                             LORD_P4RM_WELCOME_ROLLOVER_PENDING |
                             LORD_P4RM_WELCOME_ACCEPT_LOCAL |
-                            LORD_P4RM_WELCOME_LOCAL_CONFLICT)) != 0U ||
+                            LORD_P4RM_WELCOME_LOCAL_CONFLICT |
+                            LORD_P4RM_WELCOME_ADOPT_LOCAL)) != 0U ||
         ((flags & LORD_P4RM_WELCOME_HAS_SNAPSHOT) != 0U &&
          (flags & (LORD_P4RM_WELCOME_ACCEPT_LOCAL |
-                   LORD_P4RM_WELCOME_LOCAL_CONFLICT)) != 0U) ||
+                   LORD_P4RM_WELCOME_LOCAL_CONFLICT |
+                   LORD_P4RM_WELCOME_ADOPT_LOCAL)) != 0U) ||
         ((flags & LORD_P4RM_WELCOME_ACCEPT_LOCAL) != 0U &&
-         (flags & LORD_P4RM_WELCOME_LOCAL_CONFLICT) != 0U)) {
+         (flags & (LORD_P4RM_WELCOME_LOCAL_CONFLICT |
+                   LORD_P4RM_WELCOME_ADOPT_LOCAL)) != 0U) ||
+        ((flags & LORD_P4RM_WELCOME_LOCAL_CONFLICT) != 0U &&
+         (flags & LORD_P4RM_WELCOME_ADOPT_LOCAL) != 0U)) {
         s_lord_realm_net.state = LORD_REALM_NET_ERROR;
         return;
     }
@@ -340,6 +394,8 @@ static void p4rm_handle_welcome(lord_state_t *state,
         message->payload, 20U);
     s_lord_realm_net.seconds_remaining = sync_load_u32(
         message->payload, 28U);
+    s_lord_realm_net.head_player_day = sync_load_u16(
+        message->payload, 33U);
     s_lord_realm_net.clock_elapsed_ms = 0U;
     if (s_lord_realm_net.realm_day_id == 0U ||
         s_lord_realm_net.seconds_remaining == 0U ||
@@ -349,16 +405,24 @@ static void p4rm_handle_welcome(lord_state_t *state,
     }
     s_lord_realm_net.rollover_pending =
         (flags & LORD_P4RM_WELCOME_ROLLOVER_PENDING) != 0U;
+    s_lord_realm_net.head_realm_day_id =
+        s_lord_realm_net.server_revision == 0U ? 0U :
+        (s_lord_realm_net.rollover_pending ?
+            s_lord_realm_net.realm_day_id - 1U :
+            s_lord_realm_net.realm_day_id);
     if (((flags & (LORD_P4RM_WELCOME_HAS_SNAPSHOT |
-                   LORD_P4RM_WELCOME_ACCEPT_LOCAL |
-                   LORD_P4RM_WELCOME_LOCAL_CONFLICT)) != 0U &&
+                   LORD_P4RM_WELCOME_ACCEPT_LOCAL)) != 0U &&
          s_lord_realm_net.server_revision == 0U) ||
+        (s_lord_realm_net.rollover_pending &&
+         s_lord_realm_net.head_player_day == 0U) ||
         ((flags & LORD_P4RM_WELCOME_ACCEPT_LOCAL) != 0U &&
          (!p4rm_actor_valid(state->sync_actor_id) ||
           memcmp(state->sync_actor_id, s_lord_realm_net.actor_id,
                  LORD_SYNC_ACTOR_ID_BYTES) != 0 ||
           state->sync_server_revision !=
-              s_lord_realm_net.server_revision))) {
+              s_lord_realm_net.server_revision)) ||
+        ((flags & LORD_P4RM_WELCOME_ADOPT_LOCAL) != 0U &&
+         state->player.day == 0U)) {
         s_lord_realm_net.state = LORD_REALM_NET_ERROR;
         return;
     }
@@ -367,17 +431,26 @@ static void p4rm_handle_welcome(lord_state_t *state,
     } else if ((flags & LORD_P4RM_WELCOME_HAS_SNAPSHOT) != 0U) {
         s_lord_realm_net.state = LORD_REALM_NET_WAIT_DOWNLOAD;
     } else {
-        if ((flags & LORD_P4RM_WELCOME_ACCEPT_LOCAL) != 0U) {
+        if ((flags & (LORD_P4RM_WELCOME_ACCEPT_LOCAL |
+                      LORD_P4RM_WELCOME_ADOPT_LOCAL)) != 0U) {
             memcpy(state->sync_actor_id, s_lord_realm_net.actor_id,
                    LORD_SYNC_ACTOR_ID_BYTES);
             state->sync_server_revision =
                 s_lord_realm_net.server_revision;
-            s_lord_realm_net.committed_save_sequence =
-                state->sync_committed_save_sequence;
-            if (s_lord_realm_net.rollover_pending &&
-                state->player.day != 0U) {
-                reset_hourly_realm_day(state);
-                s_lord_realm_net.rollover_pending = false;
+            if ((flags & LORD_P4RM_WELCOME_ADOPT_LOCAL) != 0U) {
+                state->sync_committed_save_sequence = 0U;
+                s_lord_realm_net.committed_save_sequence = 0U;
+                mark_local_save_dirty(state);
+            } else {
+                s_lord_realm_net.committed_save_sequence =
+                    state->sync_committed_save_sequence;
+            }
+            if (s_lord_realm_net.head_player_day == 0U) {
+                s_lord_realm_net.head_player_day = state->player.day;
+            }
+            if (!p4rm_reconcile_rollover(state)) {
+                s_lord_realm_net.state = LORD_REALM_NET_ERROR;
+                return;
             }
         } else {
             s_lord_realm_net.committed_save_sequence = 0U;
@@ -437,15 +510,23 @@ static void p4rm_finish_download(lord_state_t *state)
     }
     s_lord_realm_net.server_revision =
         s_lord_realm_net.download_revision;
-    s_lord_realm_net.committed_save_sequence = state->save_sequence;
+    s_lord_realm_net.committed_save_sequence = metadata.save_sequence;
     memcpy(state->sync_actor_id, s_lord_realm_net.actor_id,
            LORD_SYNC_ACTOR_ID_BYTES);
     state->sync_server_revision = s_lord_realm_net.server_revision;
-    state->sync_committed_save_sequence = state->save_sequence;
+    state->sync_committed_save_sequence = metadata.save_sequence;
     mark_local_save_dirty(state);
-    if (s_lord_realm_net.rollover_pending && state->player.day != 0U) {
-        reset_hourly_realm_day(state);
-        s_lord_realm_net.rollover_pending = false;
+    if (s_lord_realm_net.head_player_day != 0U &&
+        state->player.day != s_lord_realm_net.head_player_day) {
+        s_lord_realm_net.state = LORD_REALM_NET_ERROR;
+        return;
+    }
+    if (s_lord_realm_net.head_player_day == 0U) {
+        s_lord_realm_net.head_player_day = state->player.day;
+    }
+    if (!p4rm_reconcile_rollover(state)) {
+        s_lord_realm_net.state = LORD_REALM_NET_ERROR;
+        return;
     }
     s_lord_realm_net.state = LORD_REALM_NET_READY;
 }
@@ -488,7 +569,7 @@ static bool p4rm_send_upload_begin(p4_game_context_t *context)
                    save_crc32(s_lord_realm_net.record,
                               s_lord_realm_net.record_bytes));
     sync_store_u64(payload, 12U, s_lord_realm_net.operation_nonce);
-    sync_store_u64(payload, 20U, s_lord_realm_net.realm_day_id);
+    sync_store_u64(payload, 20U, s_lord_realm_net.queued_realm_day_id);
     return p4rm_send(
         context, LORD_P4RM_UPLOAD_BEGIN,
         s_lord_realm_net.transaction_id, LORD_P4RM_BEGIN_INDEX,
@@ -539,6 +620,9 @@ static void p4rm_begin_upload(
             LORD_P4RM_PAYLOAD_BYTES);
     s_lord_realm_net.chunk_index = 0U;
     s_lord_realm_net.queued_save_sequence = state->save_sequence;
+    s_lord_realm_net.queued_player_day = state->player.day;
+    s_lord_realm_net.queued_realm_day_id =
+        s_lord_realm_net.realm_day_id;
     if (p4rm_send_upload_begin(context)) {
         s_lord_realm_net.state = LORD_REALM_NET_UPLOAD_BEGIN;
         s_lord_realm_net.retry_elapsed_ms = 0U;
@@ -634,7 +718,9 @@ static void p4rm_handle_ack(
 static void p4rm_handle_commit_result(lord_state_t *state,
                                       const lord_p4rm_message_t *message)
 {
-    if (s_lord_realm_net.state != LORD_REALM_NET_UPLOAD_COMMIT ||
+    if ((s_lord_realm_net.state != LORD_REALM_NET_UPLOAD_BEGIN &&
+         s_lord_realm_net.state != LORD_REALM_NET_UPLOAD_CHUNK &&
+         s_lord_realm_net.state != LORD_REALM_NET_UPLOAD_COMMIT) ||
         message->transaction_id != s_lord_realm_net.transaction_id ||
         message->payload_bytes != 17U) {
         return;
@@ -644,9 +730,14 @@ static void p4rm_handle_commit_result(lord_state_t *state,
     const uint64_t day_id = sync_load_u64(message->payload, 5U);
     const uint32_t remaining = sync_load_u32(message->payload, 13U);
     if (status == LORD_P4RM_COMMIT_OK && revision != 0U && day_id != 0U &&
+        day_id >= s_lord_realm_net.queued_realm_day_id &&
         remaining != 0U && remaining <= 3600U) {
         s_lord_realm_net.server_revision = revision;
         s_lord_realm_net.realm_day_id = day_id;
+        s_lord_realm_net.head_realm_day_id =
+            s_lord_realm_net.queued_realm_day_id;
+        s_lord_realm_net.head_player_day =
+            s_lord_realm_net.queued_player_day;
         s_lord_realm_net.seconds_remaining = remaining;
         s_lord_realm_net.clock_elapsed_ms = 0U;
         s_lord_realm_net.committed_save_sequence =
@@ -658,6 +749,27 @@ static void p4rm_handle_commit_result(lord_state_t *state,
             s_lord_realm_net.queued_save_sequence;
         mark_local_save_dirty(state);
         s_lord_realm_net.state = LORD_REALM_NET_READY;
+        s_lord_realm_net.rollover_pending =
+            day_id > s_lord_realm_net.head_realm_day_id;
+        if (!p4rm_reconcile_rollover(state)) {
+            s_lord_realm_net.state = LORD_REALM_NET_ERROR;
+        }
+    } else if (status == LORD_P4RM_COMMIT_STALE_DAY &&
+               revision == s_lord_realm_net.server_revision &&
+               day_id > s_lord_realm_net.queued_realm_day_id &&
+               remaining != 0U && remaining <= 3600U) {
+        /* The head did not change; discard this old-day upload and retry. */
+        s_lord_realm_net.realm_day_id = day_id;
+        s_lord_realm_net.seconds_remaining = remaining;
+        s_lord_realm_net.clock_elapsed_ms = 0U;
+        s_lord_realm_net.retry_elapsed_ms = 0U;
+        s_lord_realm_net.state = LORD_REALM_NET_READY;
+        s_lord_realm_net.rollover_pending =
+            s_lord_realm_net.head_player_day != 0U &&
+            day_id > s_lord_realm_net.head_realm_day_id;
+        if (!p4rm_reconcile_rollover(state)) {
+            s_lord_realm_net.state = LORD_REALM_NET_ERROR;
+        }
     } else if (status == LORD_P4RM_COMMIT_CONFLICT) {
         s_lord_realm_net.state = LORD_REALM_NET_CONFLICT;
     } else {
@@ -677,16 +789,28 @@ static void p4rm_handle_clock(
     const uint32_t remaining = sync_load_u32(message->payload, 8U);
     const uint8_t pending = message->payload[12];
     if (day_id == 0U || remaining == 0U || remaining > 3600U ||
-        pending > 1U) {
+        pending > 1U || day_id < s_lord_realm_net.realm_day_id) {
         return;
     }
-    const bool newer_day = day_id > s_lord_realm_net.realm_day_id;
     s_lord_realm_net.realm_day_id = day_id;
     s_lord_realm_net.seconds_remaining = remaining;
     s_lord_realm_net.clock_elapsed_ms = 0U;
-    if (pending != 0U && newer_day && state->player.day != 0U &&
-        s_lord_realm_net.state == LORD_REALM_NET_READY) {
-        reset_hourly_realm_day(state);
+    const bool upload_in_progress = p4rm_upload_in_progress();
+    const bool head_needs_rollover = pending != 0U &&
+        day_id > s_lord_realm_net.head_realm_day_id;
+    if (head_needs_rollover) {
+        s_lord_realm_net.rollover_pending = true;
+    }
+    /* An old-day upload must retain its exact record and nonce until the hub
+     * answers.  Its COMMIT_RESULT disambiguates a lost accepted reply (OK)
+     * from a genuinely uncommitted boundary race (STALE_DAY). */
+    if (upload_in_progress &&
+        day_id > s_lord_realm_net.queued_realm_day_id) {
+        return;
+    }
+    if (s_lord_realm_net.state == LORD_REALM_NET_READY &&
+        !p4rm_reconcile_rollover(state)) {
+        s_lord_realm_net.state = LORD_REALM_NET_ERROR;
     }
 }
 
@@ -716,6 +840,7 @@ static void p4rm_clear_directory_slot(
     memset(&state->realm[index], 0, sizeof(state->realm[index]));
     text_copy(state->realm[index].name,
               sizeof(state->realm[index].name), "Empty record");
+    state->realm[index].level = 1U;
     state->realm[index].max_hit_points = 1;
     state->realm[index].strength = 1;
 }
@@ -951,17 +1076,60 @@ static bool p4rm_send_event_ack(
         payload, sizeof(payload));
 }
 
+static bool p4rm_event_debit_available(lord_state_t *state)
+{
+    bool sufficient = true;
+    bool banked = false;
+    if (s_lord_realm_net.event_kind == LORD_REALM_ACTION_TRANSFER &&
+        s_lord_realm_net.event_code == 1U) {
+        sufficient = state->player.bank >= s_lord_realm_net.event_value;
+        banked = true;
+    } else if (s_lord_realm_net.event_kind == LORD_REALM_ACTION_FRIEND &&
+               (s_lord_realm_net.event_code & UINT8_C(0x80)) != 0U &&
+               (s_lord_realm_net.event_code & UINT8_C(0x7f)) == 1U) {
+        sufficient = state->player.gold >= 100U;
+    } else if (
+        s_lord_realm_net.event_kind == LORD_REALM_ACTION_PVP_RESOLVE &&
+        s_lord_realm_net.event_code == 1U) {
+        sufficient = state->player.gold >= s_lord_realm_net.event_value;
+    }
+    if (sufficient) {
+        return true;
+    }
+
+    const lord_screen_t return_screen =
+        state->screen == LORD_SCREEN_MESSAGE ? state->return_screen :
+                                               state->screen;
+    set_message(
+        state, return_screen,
+        "A realm ChompCoin payment is waiting.",
+        banked ?
+            "Restore the banked amount, then reconnect." :
+            "Restore the carried amount, then reconnect.");
+    /* Stop this realm session so retries cannot reopen the modal every
+     * second.  The event stays server-pending because its cursor and ACK are
+     * untouched; local solo play and banking remain available immediately. */
+    s_lord_realm_net.state = LORD_REALM_NET_OFFLINE;
+    s_lord_realm_net.action_state = LORD_REALM_ACTION_IDLE;
+    s_lord_realm_net.connected = false;
+    return false;
+}
+
 static void p4rm_apply_event(
     p4_game_context_t *context,
     lord_state_t *state,
     const uint8_t *body,
     size_t body_bytes)
 {
-    if (s_lord_realm_net.event_id <= state->last_realm_event_id ||
-        body_bytes != s_lord_realm_net.event_body_bytes) {
+    if (s_lord_realm_net.event_id <= state->last_realm_event_id) {
         (void)p4rm_send_event_ack(
             context, s_lord_realm_net.event_transaction,
             s_lord_realm_net.event_id);
+        s_lord_realm_net.event_waiting_body = false;
+        return;
+    }
+    if (body_bytes != s_lord_realm_net.event_body_bytes ||
+        !p4rm_event_debit_available(state)) {
         s_lord_realm_net.event_waiting_body = false;
         return;
     }
@@ -984,9 +1152,7 @@ static void p4rm_apply_event(
     case LORD_REALM_ACTION_TRANSFER: {
         char line[LORD_MAIL_BODY_BYTES];
         if (s_lord_realm_net.event_code == 1U) {
-            const uint32_t debit = s_lord_realm_net.event_value >
-                    state->player.bank ? state->player.bank :
-                s_lord_realm_net.event_value;
+            const uint32_t debit = s_lord_realm_net.event_value;
             state->player.bank -= debit;
             text_copy(line, sizeof(line), "Sent ");
             text_append_u32(line, sizeof(line), debit);
@@ -1023,8 +1189,7 @@ static void p4rm_apply_event(
                 --state->friendship_actions;
             }
             if (friend_code == 1U) {
-                state->player.gold -= state->player.gold >= 100U ?
-                    100U : state->player.gold;
+                state->player.gold -= 100U;
             }
             state->player.charm = add_u16_saturating(
                 state->player.charm, 1U);
@@ -1060,12 +1225,27 @@ static void p4rm_apply_event(
                         "Your adventure-team invitation was delivered." :
                         "A friend invited you to form an adventure team.");
         } else if (team_code == 1U && source_slot >= 0) {
-            const bool newly_teamed = state->partner_index < 0;
+            const bool same_partner =
+                state->partner_index == (int8_t)source_slot ||
+                (p4rm_actor_valid(state->partner_actor_id) &&
+                 memcmp(state->partner_actor_id,
+                        s_lord_realm_net.event_source,
+                        LORD_SYNC_ACTOR_ID_BYTES) == 0);
+            if (!same_partner &&
+                (state->partner_index >= 0 || state->npc_friend >= 0)) {
+                if (state->partner_index >= 0 &&
+                    state->partner_index < LORD_REALM_PLAYER_COUNT) {
+                    state->realm[(size_t)state->partner_index].teamed = false;
+                }
+                remove_friendship_hp_bonus(state);
+                state->partner_index = -1;
+                state->npc_friend = -1;
+            }
             state->partner_index = (int8_t)source_slot;
             state->realm[(size_t)source_slot].teamed = true;
             memcpy(state->partner_actor_id, s_lord_realm_net.event_source,
                    LORD_SYNC_ACTOR_ID_BYTES);
-            if (newly_teamed) {
+            if (!same_partner) {
                 state->player.max_hit_points += 5;
                 state->player.hit_points += 5;
             }
@@ -1073,12 +1253,26 @@ static void p4rm_apply_event(
                      LORD_MAIL_TEAM_PLEDGE, false,
                      "Your shared adventure team is now official!");
         } else if (team_code == 2U) {
+            const bool active_partner =
+                (source_slot >= 0 &&
+                 state->partner_index == (int8_t)source_slot) ||
+                (p4rm_actor_valid(state->partner_actor_id) &&
+                 memcmp(state->partner_actor_id,
+                        s_lord_realm_net.event_source,
+                        LORD_SYNC_ACTOR_ID_BYTES) == 0);
             if (source_slot >= 0) {
                 state->realm[(size_t)source_slot].teamed = false;
             }
-            state->partner_index = -1;
-            memset(state->partner_actor_id, 0,
-                   sizeof(state->partner_actor_id));
+            if (active_partner) {
+                if (state->partner_index >= 0 &&
+                    state->partner_index < LORD_REALM_PLAYER_COUNT) {
+                    state->realm[(size_t)state->partner_index].teamed = false;
+                }
+                remove_friendship_hp_bonus(state);
+                state->partner_index = -1;
+                memset(state->partner_actor_id, 0,
+                       sizeof(state->partner_actor_id));
+            }
             add_mail(state, sender, LORD_MAIL_SENDER_HERO,
                      LORD_MAIL_TEAM_PLEDGE, false,
                      "Your adventure team parted as friends.");
@@ -1105,9 +1299,7 @@ static void p4rm_apply_event(
         break;
     case LORD_REALM_ACTION_PVP_RESOLVE:
         if (s_lord_realm_net.event_code == 1U) {
-            const uint32_t lost = s_lord_realm_net.event_value >
-                    state->player.gold ? state->player.gold :
-                s_lord_realm_net.event_value;
+            const uint32_t lost = s_lord_realm_net.event_value;
             state->player.gold -= lost;
             state->player.hit_points = 0;
             if (state->player.pvp_losses != UINT16_MAX) {
@@ -1116,6 +1308,15 @@ static void p4rm_apply_event(
             add_mail(state, sender, LORD_MAIL_SENDER_HERO,
                      LORD_MAIL_ATTACK, false,
                      "You were knocked out in a realm duel.");
+        } else if (s_lord_realm_net.event_code == 2U) {
+            state->player.gold = add_u32_saturating(
+                state->player.gold, s_lord_realm_net.event_value);
+            if (state->player.pvp_wins != UINT16_MAX) {
+                ++state->player.pvp_wins;
+            }
+            add_mail(state, LORD_MAIL_SENDER_HERO, sender,
+                     LORD_MAIL_PVP_VICTORY, true,
+                     "The realm hub delivered your duel prize.");
         } else {
             if (state->player.pvp_wins != UINT16_MAX) {
                 ++state->player.pvp_wins;
@@ -1241,6 +1442,7 @@ static void p4rm_finish_action_result(
     const lord_realm_action_kind_t kind = s_lord_realm_net.action_kind;
     const uint8_t player_index = s_lord_realm_net.action_player;
     const uint8_t request_code = s_lord_realm_net.action_code;
+    (void)result_value;
     if (status != 0U) {
         set_message(state, state->screen,
                     status == 4U ? "That realm player is busy." :
@@ -1295,11 +1497,9 @@ static void p4rm_finish_action_result(
         break;
     case LORD_REALM_ACTION_PVP_RESOLVE:
         s_lord_realm_net.pvp_lease_id = 0U;
-        if (request_code == 1U) {
-            state->player.gold = add_u32_saturating(
-                state->player.gold, result_value);
-            mark_dirty(state);
-        }
+        /* PvP wins, losses, and prizes are event-only.  ACTION_RESULT may be
+         * lost after the hub commits, while the durable event is replayed
+         * until its containing snapshot is committed. */
         break;
     case LORD_REALM_ACTION_TAVERN:
         text_copy(state->conversation, sizeof(state->conversation),
@@ -1355,6 +1555,14 @@ static void p4rm_receive_messages(
                 game_message.data, game_message.bytes, &message)) {
             continue;
         }
+        /* UPLOAD_BEGIN freezes an exact encoded snapshot.  Server messages
+         * that mutate serialized LORD state must wait for COMMIT_RESULT;
+         * the hub retries durable events, directory projections, and
+         * idempotent actions after the snapshot is accepted. */
+        const bool upload_in_progress = p4rm_upload_in_progress();
+        const bool serialized_state_frozen = upload_in_progress ||
+            s_lord_realm_net.event_waiting_body ||
+            p4rm_local_commit_pending(state);
         switch (message.kind) {
         case LORD_P4RM_WELCOME:
             p4rm_handle_welcome(state, &message);
@@ -1375,22 +1583,45 @@ static void p4rm_receive_messages(
             p4rm_handle_clock(state, &message);
             break;
         case LORD_P4RM_DIRECTORY_SUMMARY:
-            p4rm_handle_directory_summary(state, &message);
+            if (!serialized_state_frozen) {
+                p4rm_handle_directory_summary(state, &message);
+            }
             break;
         case LORD_P4RM_DIRECTORY_STATS:
-            p4rm_handle_directory_stats(state, &message);
+            if (!serialized_state_frozen) {
+                p4rm_handle_directory_stats(state, &message);
+            }
             break;
         case LORD_P4RM_DIRECTORY_PAGE:
-            p4rm_handle_directory_page(&message);
+            if (!serialized_state_frozen) {
+                p4rm_handle_directory_page(&message);
+            }
             break;
         case LORD_P4RM_ACTION_RESULT:
-            p4rm_handle_action_result(state, &message);
+            if (!serialized_state_frozen) {
+                p4rm_handle_action_result(state, &message);
+            }
             break;
         case LORD_P4RM_EVENT_BEGIN:
-            p4rm_handle_event_begin(context, state, &message);
+            /* A replay of an event already reflected in local state is safe
+             * to ACK while that reflection awaits upload.  A newer event is
+             * deferred so it cannot be combined with an uncommitted branch. */
+            if (!serialized_state_frozen ||
+                (!upload_in_progress &&
+                 !s_lord_realm_net.event_waiting_body &&
+                 message.payload_bytes == 48U &&
+                 message.chunk_index == LORD_P4RM_BEGIN_INDEX &&
+                 sync_load_u64(message.payload, 0U) != 0U &&
+                 sync_load_u64(message.payload, 0U) <=
+                    state->last_realm_event_id)) {
+                p4rm_handle_event_begin(context, state, &message);
+            }
             break;
         case LORD_P4RM_EVENT_BODY:
-            p4rm_handle_event_body(context, state, &message);
+            if (!upload_in_progress &&
+                !p4rm_local_commit_pending(state)) {
+                p4rm_handle_event_body(context, state, &message);
+            }
             break;
         case LORD_P4RM_ERROR:
             s_lord_realm_net.state = LORD_REALM_NET_ERROR;
@@ -1415,6 +1646,170 @@ static bool p4rm_online_actions_ready(void)
          s_lord_realm_net.state == LORD_REALM_NET_UPLOAD_BEGIN ||
          s_lord_realm_net.state == LORD_REALM_NET_UPLOAD_CHUNK ||
          s_lord_realm_net.state == LORD_REALM_NET_UPLOAD_COMMIT);
+}
+
+typedef struct {
+    bool active;
+    bool opponent_valid;
+    bool save_dirty;
+    uint8_t mail_count;
+    uint8_t log_count;
+    uint32_t gold;
+    uint32_t experience;
+    uint32_t realm_revision;
+    uint32_t save_sequence;
+    uint32_t save_local_generation;
+    uint16_t pvp_wins;
+    uint16_t pvp_losses;
+    lord_realm_player_t opponent;
+    lord_mail_t first_mail;
+    lord_log_entry_t first_log;
+} lord_realm_pvp_before_t;
+
+static void p4rm_capture_pvp_before(
+    const lord_state_t *state,
+    lord_realm_pvp_before_t *before)
+{
+    memset(before, 0, sizeof(*before));
+    if (s_lord_realm_net.pvp_lease_id == 0U ||
+        (state->battle_kind != LORD_BATTLE_PVP &&
+         state->battle_kind != LORD_BATTLE_INN)) {
+        return;
+    }
+    before->active = true;
+    before->save_dirty = state->save_dirty;
+    before->mail_count = state->mail_count;
+    before->log_count = state->log_count;
+    before->gold = state->player.gold;
+    before->experience = state->player.experience;
+    before->realm_revision = state->realm_revision;
+    before->save_sequence = state->save_sequence;
+    before->save_local_generation = state->save_local_generation;
+    before->pvp_wins = state->player.pvp_wins;
+    before->pvp_losses = state->player.pvp_losses;
+    if (state->mail_count == LORD_MAIL_COUNT_MAX) {
+        before->first_mail = state->mail[0];
+    }
+    if (state->log_count == LORD_LOG_COUNT_MAX) {
+        before->first_log = state->log[0];
+    }
+    if (state->selected_player < LORD_REALM_PLAYER_COUNT) {
+        before->opponent_valid = true;
+        before->opponent = state->realm[state->selected_player];
+    }
+}
+
+/* Native cartridges intentionally import only the bounded Game API runtime.
+ * Use explicit volatile byte copies for these two tiny overlapping restores
+ * so an optimizing cross-compiler cannot introduce an unsupported memmove
+ * import. */
+static void p4rm_move_bytes_backward(
+    void *destination,
+    const void *source,
+    size_t byte_count)
+{
+    volatile uint8_t *const output = (volatile uint8_t *)destination;
+    const volatile uint8_t *const input =
+        (const volatile uint8_t *)source;
+    while (byte_count > 0U) {
+        --byte_count;
+        output[byte_count] = input[byte_count];
+    }
+}
+
+static void p4rm_restore_one_appended_mail(
+    lord_state_t *state,
+    const lord_realm_pvp_before_t *before)
+{
+    if (before->mail_count < LORD_MAIL_COUNT_MAX) {
+        state->mail_count = before->mail_count;
+        return;
+    }
+    p4rm_move_bytes_backward(
+        &state->mail[1], &state->mail[0],
+        (LORD_MAIL_COUNT_MAX - 1U) * sizeof(state->mail[0]));
+    state->mail[0] = before->first_mail;
+    state->mail_count = LORD_MAIL_COUNT_MAX;
+}
+
+static void p4rm_restore_one_appended_log(
+    lord_state_t *state,
+    const lord_realm_pvp_before_t *before)
+{
+    if (before->log_count < LORD_LOG_COUNT_MAX) {
+        state->log_count = before->log_count;
+        return;
+    }
+    p4rm_move_bytes_backward(
+        &state->log[1], &state->log[0],
+        (LORD_LOG_COUNT_MAX - 1U) * sizeof(state->log[0]));
+    state->log[0] = before->first_log;
+    state->log_count = LORD_LOG_COUNT_MAX;
+}
+
+static bool p4rm_bound_offline_shared_activation(
+    lord_state_t *state,
+    lord_event_t *event)
+{
+    if (!realm_character_bound(state)) {
+        return false;
+    }
+    if (s_lord_realm_net.pvp_lease_id != 0U) {
+        const lord_screen_t return_screen =
+            state->battle_kind == LORD_BATTLE_INN ? LORD_SCREEN_INN :
+            state->screen == LORD_SCREEN_DEAD ? LORD_SCREEN_DEAD :
+            LORD_SCREEN_PLAYERS;
+        s_lord_realm_net.pvp_lease_id = 0U;
+        s_lord_realm_net.action_state = LORD_REALM_ACTION_IDLE;
+        state->battle_kind = LORD_BATTLE_NONE;
+        set_message(state, return_screen,
+                    "Connect to the Mac realm.",
+                    "The shared duel ended without a reward.");
+        *event = LORD_EVENT_CONFIRM;
+        return true;
+    }
+
+    bool shared_action = false;
+    lord_screen_t return_screen = state->screen;
+    switch (state->screen) {
+    case LORD_SCREEN_BANK_TRANSFER:
+    case LORD_SCREEN_MAIL_COMPOSE:
+        shared_action = state->selection < LORD_REALM_PLAYER_COUNT;
+        break;
+    case LORD_SCREEN_PLAYER_DETAIL:
+        shared_action = state->selection < 4U;
+        break;
+    case LORD_SCREEN_FRIENDSHIP_ACTION:
+        shared_action = state->selection < 4U;
+        break;
+    case LORD_SCREEN_INN:
+        shared_action = state->selection == 7U || state->selection == 8U;
+        break;
+    case LORD_SCREEN_CONVERSE:
+        shared_action = state->selection == 1U;
+        break;
+    case LORD_SCREEN_TEXT_EDITOR:
+        if (state->selection == sizeof(s_keyboard_chars) - 1U &&
+            (state->editor_target == LORD_EDITOR_MAIL ||
+             state->editor_target == LORD_EDITOR_CONVERSATION ||
+             state->editor_target == LORD_EDITOR_ANNOUNCEMENT ||
+             (state->editor_target == LORD_EDITOR_SAYING &&
+              state->selected_player < LORD_REALM_PLAYER_COUNT))) {
+            shared_action = true;
+            return_screen = state->editor_return_screen;
+        }
+        break;
+    default:
+        break;
+    }
+    if (!shared_action) {
+        return false;
+    }
+    set_message(state, return_screen,
+                "Connect to the Mac realm.",
+                "Shared player actions need the realm hub.");
+    *event = LORD_EVENT_CONFIRM;
+    return true;
 }
 
 static bool p4rm_queue_action(
@@ -1482,7 +1877,7 @@ static bool lord_realm_net_activate(
     lord_event_t *event)
 {
     if (!p4rm_online_actions_ready()) {
-        return false;
+        return p4rm_bound_offline_shared_activation(state, event);
     }
     const bool directory_screen =
         state->screen == LORD_SCREEN_BANK_TRANSFER ||
@@ -1649,27 +2044,59 @@ static void lord_realm_net_after_activate(
     p4_game_context_t *context,
     lord_state_t *state,
     lord_battle_kind_t prior_battle_kind,
-    lord_event_t event)
+    lord_event_t event,
+    const lord_realm_pvp_before_t *before)
 {
     if ((prior_battle_kind != LORD_BATTLE_PVP &&
          prior_battle_kind != LORD_BATTLE_INN) ||
         (event != LORD_EVENT_WIN && event != LORD_EVENT_LOSE) ||
         s_lord_realm_net.pvp_lease_id == 0U ||
-        s_lord_realm_net.action_state != LORD_REALM_ACTION_IDLE) {
+        s_lord_realm_net.action_state != LORD_REALM_ACTION_IDLE ||
+        before == NULL || !before->active) {
         return;
     }
-    uint8_t body[9];
-    if (event == LORD_EVENT_WIN) {
-        const uint32_t local_prize = state->enemy.gold / 2U;
-        state->player.gold -= state->player.gold >= local_prize ?
-            local_prize : state->player.gold;
-        mark_dirty(state);
+
+    /* Classic local PvP settles immediately.  A realm lease instead uses
+     * durable source/target events, so remove every provisional cached
+     * opponent mutation, stat/reward, mail, and log before service_save(). */
+    state->player.gold = before->gold;
+    state->player.experience = before->experience;
+    state->player.pvp_wins = before->pvp_wins;
+    state->player.pvp_losses = before->pvp_losses;
+    if (before->opponent_valid &&
+        state->selected_player < LORD_REALM_PLAYER_COUNT) {
+        state->realm[state->selected_player] = before->opponent;
     }
+    if (event == LORD_EVENT_WIN) {
+        p4rm_restore_one_appended_mail(state, before);
+    }
+    p4rm_restore_one_appended_log(state, before);
+    state->realm_revision = before->realm_revision;
+    if (event == LORD_EVENT_WIN) {
+        state->save_sequence = before->save_sequence;
+        state->save_local_generation = before->save_local_generation;
+        state->save_dirty = before->save_dirty;
+    } else {
+        state->save_sequence = before->save_sequence == UINT32_MAX ?
+            UINT32_MAX : before->save_sequence + 1U;
+        state->save_local_generation =
+            before->save_local_generation + 1U;
+        state->save_dirty = true;
+    }
+
+    uint8_t body[9];
     sync_store_u64(body, 0U, s_lord_realm_net.pvp_lease_id);
     body[8] = event == LORD_EVENT_WIN ? 1U : 0U;
-    (void)p4rm_queue_action(
-        context, state, LORD_REALM_ACTION_PVP_RESOLVE, body[8], 0U,
-        state->selected_player, body, sizeof(body));
+    if (!p4rm_queue_action(
+            context, state, LORD_REALM_ACTION_PVP_RESOLVE, body[8], 0U,
+            state->selected_player, body, sizeof(body))) {
+        s_lord_realm_net.pvp_lease_id = 0U;
+        set_message(state,
+                    prior_battle_kind == LORD_BATTLE_INN ?
+                        LORD_SCREEN_INN : LORD_SCREEN_PLAYERS,
+                    "Connect to the Mac realm.",
+                    "The shared duel ended without a reward.");
+    }
 }
 
 static void lord_realm_net_start(p4_game_context_t *context)
@@ -1705,7 +2132,6 @@ static void lord_realm_net_poll(
         s_lord_realm_net.state = LORD_REALM_NET_OFFLINE;
         s_lord_realm_net.action_state = LORD_REALM_ACTION_IDLE;
         s_lord_realm_net.event_waiting_body = false;
-        s_lord_realm_net.pvp_lease_id = 0U;
         s_lord_realm_net.connected = false;
         return;
     }
@@ -1763,6 +2189,12 @@ static void lord_realm_net_poll(
         } else if (s_lord_realm_net.state == LORD_REALM_NET_UPLOAD_CHUNK &&
                    p4rm_send_upload_chunk(context)) {
             s_lord_realm_net.retry_elapsed_ms = 0U;
+        } else if (s_lord_realm_net.state == LORD_REALM_NET_UPLOAD_COMMIT) {
+            s_lord_realm_net.chunk_index = 0U;
+            if (p4rm_send_upload_begin(context)) {
+                s_lord_realm_net.state = LORD_REALM_NET_UPLOAD_BEGIN;
+                s_lord_realm_net.retry_elapsed_ms = 0U;
+            }
         }
     }
     if (s_lord_realm_net.state == LORD_REALM_NET_READY &&
@@ -1780,23 +2212,27 @@ static void lord_realm_net_poll(
     }
 }
 
-static bool lord_realm_net_blocks_gameplay(void)
+static bool lord_realm_net_blocks_gameplay(const lord_state_t *state)
 {
     return s_lord_realm_net.connected &&
-        s_lord_realm_net.state != LORD_REALM_NET_READY &&
-        s_lord_realm_net.state != LORD_REALM_NET_UPLOAD_BEGIN &&
-        s_lord_realm_net.state != LORD_REALM_NET_UPLOAD_CHUNK &&
-        s_lord_realm_net.state != LORD_REALM_NET_UPLOAD_COMMIT;
+        (s_lord_realm_net.state != LORD_REALM_NET_READY ||
+         s_lord_realm_net.event_waiting_body ||
+         p4rm_local_commit_pending(state));
 }
 
-static const char *lord_realm_net_label(void)
+const char *lord_realm_net_label(void)
 {
+    if (s_lord_realm_net.connected &&
+        s_lord_realm_net.event_waiting_body) {
+        return "SYNCING";
+    }
     switch (s_lord_realm_net.state) {
     case LORD_REALM_NET_READY:
+        return "MAC REALM";
     case LORD_REALM_NET_UPLOAD_BEGIN:
     case LORD_REALM_NET_UPLOAD_CHUNK:
     case LORD_REALM_NET_UPLOAD_COMMIT:
-        return "MAC REALM";
+        return "SYNCING";
     case LORD_REALM_NET_CONFLICT:
         return "SYNC CONFLICT";
     case LORD_REALM_NET_ERROR:

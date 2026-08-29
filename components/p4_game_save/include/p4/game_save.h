@@ -14,11 +14,17 @@ extern "C" {
 #endif
 
 #define P4_GAME_SAVE_MAGIC "P4SAVE1\0"
+#define P4_GAME_SAVE_AUTH_MAGIC "P4SAVE2\0"
 
 enum {
+    /* p4_game_save_encode()/parse() remain the legacy migration codec. */
     P4_GAME_SAVE_FORMAT_VERSION = 1,
+    P4_GAME_SAVE_AUTH_FORMAT_VERSION = 2,
     P4_GAME_SAVE_HEADER_BYTES = 256,
     P4_GAME_SAVE_SHA256_BYTES = 32,
+    P4_GAME_SAVE_KEY_BYTES = 32,
+    P4_GAME_SAVE_KEY_ID_BYTES = 16,
+    P4_GAME_SAVE_AUTH_TAG_BYTES = 32,
     P4_GAME_SAVE_MAX_FILE_BYTES =
         P4_GAME_SAVE_HEADER_BYTES + P4_GAME_SAVE_MAX_BYTES,
     P4_GAME_SAVE_MEMORY_WORKSPACE_BYTES =
@@ -34,7 +40,13 @@ typedef enum {
     P4_GAME_SAVE_BAD_LAYOUT,
     P4_GAME_SAVE_BAD_ID,
     P4_GAME_SAVE_BAD_DIGEST,
+    P4_GAME_SAVE_BAD_AUTH,
 } p4_game_save_result_t;
+
+/** Device-local key material supplied only by the OS save service. */
+typedef struct {
+    uint8_t key[P4_GAME_SAVE_KEY_BYTES];
+} p4_game_save_protection_t;
 
 typedef struct {
     char game_id[P4_GAME_ID_MAX_BYTES];
@@ -43,12 +55,20 @@ typedef struct {
     uint32_t sequence;
     uint32_t payload_offset;
     uint32_t payload_bytes;
+    uint32_t format_version;
+    bool authenticated;
     uint8_t payload_sha256[P4_GAME_SAVE_SHA256_BYTES];
     uint8_t object_sha256[P4_GAME_SAVE_SHA256_BYTES];
+    uint8_t key_id[P4_GAME_SAVE_KEY_ID_BYTES];
+    uint8_t auth_tag[P4_GAME_SAVE_AUTH_TAG_BYTES];
 } p4_game_save_info_t;
 
 bool p4_game_save_game_id_valid(const char *game_id);
 bool p4_game_save_slot_id_valid(const char *slot_id);
+bool p4_game_save_protection_valid(
+    const p4_game_save_protection_t *protection);
+void p4_game_save_protection_clear(
+    p4_game_save_protection_t *protection);
 
 p4_game_save_result_t p4_game_save_encode(
     const char *game_id,
@@ -62,6 +82,31 @@ p4_game_save_result_t p4_game_save_encode(
     size_t *output_bytes);
 
 p4_game_save_result_t p4_game_save_parse(
+    const uint8_t *data,
+    size_t data_bytes,
+    const char *expected_game_id,
+    const char *expected_slot_id,
+    p4_game_save_info_t *out_info);
+
+/** Encode an authenticated P4SAVE2 object. New platform commits use this. */
+p4_game_save_result_t p4_game_save_encode_authenticated(
+    const p4_game_save_protection_t *protection,
+    const char *game_id,
+    const char *slot_id,
+    uint32_t schema_version,
+    uint32_t sequence,
+    const uint8_t *payload,
+    size_t payload_bytes,
+    uint8_t *output,
+    size_t output_capacity,
+    size_t *output_bytes);
+
+/**
+ * Parse P4SAVE2 with authentication, or P4SAVE1 for one-way migration.
+ * A successful P4SAVE1 result has out_info->authenticated == false.
+ */
+p4_game_save_result_t p4_game_save_parse_authenticated(
+    const p4_game_save_protection_t *protection,
     const uint8_t *data,
     size_t data_bytes,
     const char *expected_game_id,
@@ -125,6 +170,11 @@ bool p4_game_save_memory_seed(p4_game_save_memory_t *memory,
                               uint32_t sequence,
                               const uint8_t *data,
                               size_t data_bytes);
+
+/** Seed an empty slot at a nonzero durable anti-rollback sequence floor. */
+bool p4_game_save_memory_seed_floor(p4_game_save_memory_t *memory,
+                                    const char *slot_id,
+                                    uint32_t sequence);
 
 /** Missing slots return true with zero bytes/schema/sequence. */
 bool p4_game_save_memory_copy_snapshot(

@@ -24,7 +24,54 @@ def profile_port(value: str) -> tuple[str, str]:
     profile, separator, port = value.partition("=")
     if not separator or not profile.strip() or not port.strip():
         raise argparse.ArgumentTypeError("USB link must be PROFILE=/dev/cu.PORT")
-    return profile.strip(), port.strip()
+    return profile_name(profile), port.strip()
+
+
+def profile_name(value: str) -> str:
+    normalized = value.strip()
+    if not normalized or len(normalized.encode("utf-8")) > 64:
+        raise argparse.ArgumentTypeError("profile must contain 1..64 UTF-8 bytes")
+    return normalized
+
+
+def validate_bindings(
+    usb: list[tuple[str, str]],
+    ble_profile: str | None,
+    adoption_profiles: list[str],
+) -> list[str]:
+    profiles = [profile for profile, _port in usb]
+    if ble_profile is not None:
+        profiles.append(ble_profile)
+    duplicate_profiles = sorted(
+        profile for profile in set(profiles) if profiles.count(profile) > 1
+    )
+    if duplicate_profiles:
+        raise ValueError(
+            "each PROFILE may be bound once: " + ", ".join(duplicate_profiles)
+        )
+    ports = [port for _profile, port in usb]
+    duplicate_ports = sorted(port for port in set(ports) if ports.count(port) > 1)
+    if duplicate_ports:
+        raise ValueError(
+            "each USB port may be bound once: " + ", ".join(duplicate_ports)
+        )
+    duplicate_adoptions = sorted(
+        profile
+        for profile in set(adoption_profiles)
+        if adoption_profiles.count(profile) > 1
+    )
+    if duplicate_adoptions:
+        raise ValueError(
+            "each --adopt-local PROFILE may appear once: "
+            + ", ".join(duplicate_adoptions)
+        )
+    unknown = sorted(set(adoption_profiles) - set(profiles))
+    if unknown:
+        raise ValueError(
+            "--adopt-local must name exactly one configured link: "
+            + ", ".join(unknown)
+        )
+    return profiles
 
 
 def parser() -> argparse.ArgumentParser:
@@ -35,7 +82,7 @@ def parser() -> argparse.ArgumentParser:
         "--cartridge",
         default=str(
             ROOT
-            / "apps/console_os/build-waveshare-usb-host/sd-card/GAMES/LORD.P4G"
+            / "apps/console_os/build-waveshare-landscape/sd-card/GAMES/LORD.P4G"
         ),
         help="exact LORD.P4G installed on every joining console",
     )
@@ -53,18 +100,57 @@ def parser() -> argparse.ArgumentParser:
         help="serve one H1 CH343 serial console; may be repeated",
     )
     result.add_argument("--baud", type=int, default=115200)
-    result.add_argument("--ble-profile", help="serve one BLE console profile")
+    result.add_argument(
+        "--ble-profile",
+        type=profile_name,
+        help="serve one BLE console profile",
+    )
+    result.add_argument(
+        "--adopt-local",
+        action="append",
+        default=[],
+        type=profile_name,
+        metavar="PROFILE",
+        help="authorize this configured profile's one-time local-save adoption",
+    )
+    result.add_argument(
+        "--migrate-legacy-artifacts",
+        action="store_true",
+        help=(
+            "after taking a database backup, explicitly classify and repair "
+            "legacy multiplayer artifacts; ordinary restarts fail closed"
+        ),
+    )
     return result
 
 
 def main() -> int:
-    arguments = parser().parse_args()
+    argument_parser = parser()
+    arguments = argument_parser.parse_args()
     if not arguments.usb and not arguments.ble_profile:
-        parser().error("provide at least one --usb or --ble-profile")
+        argument_parser.error("provide at least one --usb or --ble-profile")
+    try:
+        profiles = validate_bindings(
+            arguments.usb,
+            arguments.ble_profile,
+            arguments.adopt_local,
+        )
+    except ValueError as error:
+        argument_parser.error(str(error))
     offer = lord_offer_from_p4g(
         arguments.cartridge, session_seed=secrets.randbits(64) or 1
     )
-    store = RealmStore(arguments.database)
+    store = RealmStore(
+        arguments.database,
+        migrate_legacy_artifacts=arguments.migrate_legacy_artifacts,
+    )
+    for profile in profiles:
+        store.actor_for_profile(profile)
+    for profile in arguments.adopt_local:
+        try:
+            store.authorize_local_adoption(profile)
+        except ValueError as error:
+            argument_parser.error(str(error))
     links = [
         SerialRealmLink(profile, port, store, offer, baudrate=arguments.baud)
         for profile, port in arguments.usb
