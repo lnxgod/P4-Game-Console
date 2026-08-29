@@ -264,8 +264,7 @@ compatibility SHA-256, and nonzero session seed; a mismatch cannot launch.
 
 ```sh
 PYTHONPATH=. python3 -m unittest tools.p4_realm_hub.tests.test_protocol -v
-PYTHONPATH=. python3 -m unittest \
-  tools.p4_realm_hub.tests.test_two_client_e2e -v
+make lord-realm-e2e-host
 cmake -S games/lord -B build-host/lord -G Ninja
 cmake --build build-host/lord
 ctest --test-dir build-host/lord --output-on-failure
@@ -283,6 +282,18 @@ progress on both clients, reconnect upload, directory discovery, mail, a
 and reopened authoritative heads. The current expected summary is
 `events=3/3 economy=2/2 heads=pink:r3,green:r4`; Pink ends with exactly one
 500-to-400 vault debit and Green's reopened LDSV contains `MEET AT THE INN`.
+
+The four-client campaign test runs four independent encoded consoles through
+four hourly realm days. Every player attacks twice and is targeted twice
+across eight duels, with 16 offline-progress uploads, 12 rollover/revival
+uploads, eight denied attacks against already knocked-out players, one
+receipt replay across a complete hub restart, and one authoritative head
+download after locally losing a committed sync. It reopens SQLite and verifies
+all 16 outcome events and 14 economy rows are committed exactly once, all
+eight leases are resolved on the intended day, final head revisions and event
+cursors match, wins equal losses, and the original 3,200 carried ChompCoin is
+conserved.
+
 The SDL cartridge runner separately executes the real LORD C code under
 sanitizers, but its in-memory host does not implement multiplayer-session
 callbacks. Neither host proof is a substitute for the recorded Pink/Green H1

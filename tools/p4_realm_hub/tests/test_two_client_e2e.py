@@ -152,6 +152,12 @@ class LocalPersistentState:
     chompcoin: int
     bank: int
     experience: int
+    hit_points: int
+    max_hit_points: int
+    player_day: int
+    pvp_fights: int
+    pvp_wins: int
+    pvp_losses: int
     mailbox: tuple[tuple[int, bytes], ...]
     realm_day_id: int
 
@@ -179,6 +185,12 @@ class ProtocolConsole:
         self.chompcoin = 500
         self.bank = 500
         self.experience = 500
+        self.hit_points = 20
+        self.max_hit_points = 30
+        self.player_day = 1
+        self.pvp_fights = 3
+        self.pvp_wins = 2
+        self.pvp_losses = 1
         self.mailbox: list[tuple[int, bytes]] = []
         self.duplicate_events = 0
         self.realm_day_id = 0
@@ -314,6 +326,24 @@ class ProtocolConsole:
         has_local = self.save_sequence != 0
         has_base = self.server_revision != 0
         dirty = has_local and self.save_sequence != self.committed_save_sequence
+        dirty_generation = None
+        if dirty:
+            dirty_generation = (
+                self.actor_id,
+                self.server_revision,
+                self.save_sequence,
+                self.last_realm_event_id,
+                self.chompcoin,
+                self.bank,
+                self.experience,
+                self.hit_points,
+                self.max_hit_points,
+                self.player_day,
+                self.pvp_fights,
+                self.pvp_wins,
+                self.pvp_losses,
+                tuple(self.mailbox),
+            )
         flags = 0
         if has_local:
             flags |= p4rm.HELLO_HAS_LOCAL
@@ -334,7 +364,7 @@ class ProtocolConsole:
             ),
         )
         welcome = self._take_realm(p4rm.WELCOME, transaction)
-        actor, revision, day_id, _remaining, welcome_flags, _head_day = (
+        actor, revision, day_id, _remaining, welcome_flags, head_day = (
             p4rm.decode_welcome(welcome.payload)
         )
         if self.actor_id not in (bytes(16), actor):
@@ -343,11 +373,104 @@ class ProtocolConsole:
         self.realm_day_id = day_id
         if welcome_flags & p4rm.WELCOME_LOCAL_CONFLICT:
             raise AssertionError("unexpected local-save conflict")
-        if dirty and not welcome_flags & p4rm.WELCOME_ACCEPT_LOCAL:
+        if dirty and not welcome_flags & (
+            p4rm.WELCOME_ACCEPT_LOCAL | p4rm.WELCOME_HAS_SNAPSHOT
+        ):
             raise AssertionError("hub did not accept the offline branch")
-        if revision != self.server_revision:
+        if welcome_flags & p4rm.WELCOME_HAS_SNAPSHOT:
+            self._download_head(revision)
+            if dirty_generation is not None:
+                downloaded_generation = (
+                    self.actor_id,
+                    revision - 1,
+                    self.save_sequence,
+                    self.last_realm_event_id,
+                    self.chompcoin,
+                    self.bank,
+                    self.experience,
+                    self.hit_points,
+                    self.max_hit_points,
+                    self.player_day,
+                    self.pvp_fights,
+                    self.pvp_wins,
+                    self.pvp_losses,
+                    tuple(self.mailbox),
+                )
+                if revision == 0 or downloaded_generation != dirty_generation:
+                    raise AssertionError(
+                        "authoritative head is not the dirty generation"
+                    )
+        elif revision != self.server_revision:
             raise AssertionError("unexpected server head revision")
+        if welcome_flags & p4rm.WELCOME_ROLLOVER_PENDING:
+            self._apply_hourly_rollover(head_day)
         return welcome_flags
+
+    def _download_head(self, revision: int) -> None:
+        begin = self._take_realm(p4rm.DOWNLOAD_BEGIN)
+        total_bytes, expected_crc, begin_revision = p4rm.decode_download_begin(
+            begin.payload
+        )
+        if begin_revision != revision or begin.chunk_index != p4rm.BEGIN_INDEX:
+            raise AssertionError("invalid download-begin metadata")
+        if begin.chunk_count == 0:
+            raise AssertionError("empty authoritative download")
+        self._send_realm(
+            p4rm.ACK,
+            begin.transaction_id,
+            bytes((p4rm.DOWNLOAD_BEGIN,)),
+            chunk_index=p4rm.BEGIN_INDEX,
+            chunk_count=begin.chunk_count,
+        )
+        chunks: list[bytes] = []
+        for index in range(begin.chunk_count):
+            chunk = self._take_realm(p4rm.DOWNLOAD_CHUNK, begin.transaction_id)
+            if (
+                chunk.chunk_index != index
+                or chunk.chunk_count != begin.chunk_count
+            ):
+                raise AssertionError("authoritative download chunks changed")
+            chunks.append(chunk.payload)
+            self._send_realm(
+                p4rm.ACK,
+                begin.transaction_id,
+                bytes((p4rm.DOWNLOAD_CHUNK,)),
+                chunk_index=index,
+                chunk_count=begin.chunk_count,
+            )
+        record = b"".join(chunks)
+        if len(record) != total_bytes:
+            raise AssertionError("authoritative download length changed")
+        if zlib.crc32(record) & 0xFFFFFFFF != expected_crc:
+            raise AssertionError("authoritative download CRC changed")
+        decoded = decode_lord_sync(record, expected_actor_id=self.actor_id)
+        self.server_revision = revision
+        self.committed_save_sequence = decoded.save_sequence
+        self.save_sequence = decoded.save_sequence
+        self.last_realm_event_id = decoded.last_realm_event_id
+        self.chompcoin = decoded.player.chompcoin
+        self.bank = decoded.player.bank
+        self.experience = decoded.player.experience
+        self.hit_points = decoded.player.hit_points
+        self.max_hit_points = decoded.player.max_hit_points
+        self.player_day = decoded.player.day
+        self.pvp_fights = decoded.pvp_fights
+        self.pvp_wins = decoded.player.pvp_wins
+        self.pvp_losses = decoded.player.pvp_losses
+        bodies = decode_mail_bodies(record)
+        if tuple(body for _event_id, body in self.mailbox) != bodies:
+            self.mailbox = [(0, body) for body in bodies]
+
+    def _apply_hourly_rollover(self, head_player_day: int) -> None:
+        if head_player_day == 0 or head_player_day == 0xFFFF:
+            raise AssertionError("invalid authoritative rollover day")
+        if self.player_day == head_player_day:
+            self.player_day += 1
+            self.hit_points = self.max_hit_points
+            self.pvp_fights = 3
+            self.save_sequence += 1
+        elif self.player_day != head_player_day + 1:
+            raise AssertionError("local LORD day cannot reconcile with hub")
 
     def create_local_character(self) -> None:
         if self.actor_id == bytes(16) or self.save_sequence != 0:
@@ -371,6 +494,12 @@ class ProtocolConsole:
             chompcoin=self.chompcoin,
             bank=self.bank,
             experience=self.experience,
+            hit_points=self.hit_points,
+            max_hit_points=self.max_hit_points,
+            player_day=self.player_day,
+            pvp_fights=self.pvp_fights,
+            pvp_wins=self.pvp_wins,
+            pvp_losses=self.pvp_losses,
             mailbox=tuple(self.mailbox),
             realm_day_id=self.realm_day_id,
         )
@@ -384,6 +513,12 @@ class ProtocolConsole:
         self.chompcoin = state.chompcoin
         self.bank = state.bank
         self.experience = state.experience
+        self.hit_points = state.hit_points
+        self.max_hit_points = state.max_hit_points
+        self.player_day = state.player_day
+        self.pvp_fights = state.pvp_fights
+        self.pvp_wins = state.pvp_wins
+        self.pvp_losses = state.pvp_losses
         self.mailbox = list(state.mailbox)
         self.realm_day_id = state.realm_day_id
 
@@ -405,6 +540,12 @@ class ProtocolConsole:
                 chompcoin=self.chompcoin,
                 bank=self.bank,
                 experience=self.experience,
+                hit_points=self.hit_points,
+                max_hit_points=self.max_hit_points,
+                player_day=self.player_day,
+                pvp_fights_remaining=self.pvp_fights,
+                pvp_wins=self.pvp_wins,
+                pvp_losses=self.pvp_losses,
                 last_realm_event_id=self.last_realm_event_id,
                 sync_actor_id=self.actor_id if bound else bytes(16),
                 sync_server_revision=self.server_revision if bound else 0,
@@ -463,23 +604,38 @@ class ProtocolConsole:
         self.committed_save_sequence = self.save_sequence
         return record
 
-    def request_directory_actor(self, expected_name: str) -> bytes:
+    def request_directory(self) -> dict[str, bytes]:
         if self.hub is None:
             raise AssertionError("console has no hub session")
-        for _attempt in range(24):
+        expected_total: int | None = None
+        actors: dict[str, bytes] = {}
+        for _attempt in range(32):
             self.hub.tick()
             for message in self._drain_realm():
-                if (
-                    message.kind != p4rm.DIRECTORY_SUMMARY
-                    or not message.payload
-                ):
+                if message.kind == p4rm.DIRECTORY_PAGE:
+                    if len(message.payload) != 4:
+                        raise AssertionError("directory page is malformed")
+                    offset, total = struct.unpack("<HH", message.payload)
+                    expected_total = min(8, max(0, total - offset))
+                    continue
+                if message.kind != p4rm.DIRECTORY_SUMMARY or not message.payload:
                     continue
                 raw_name = message.payload[16:36]
                 terminator = raw_name.find(b"\0")
                 if terminator < 0:
                     raise AssertionError("directory name is unterminated")
-                if raw_name[:terminator].decode("ascii") == expected_name:
-                    return message.payload[:16]
+                name = raw_name[:terminator].decode("ascii")
+                if name in actors or message.payload[:16] == bytes(16):
+                    raise AssertionError("directory identity is invalid")
+                actors[name] = message.payload[:16]
+            if expected_total is not None and len(actors) == expected_total:
+                return actors
+        raise AssertionError("directory page did not complete")
+
+    def request_directory_actor(self, expected_name: str) -> bytes:
+        actors = self.request_directory()
+        if expected_name in actors:
+            return actors[expected_name]
         raise AssertionError(f"directory never listed {expected_name}")
 
     def action(
@@ -564,6 +720,17 @@ class ProtocolConsole:
                     self.bank -= value
                 elif kind == p4rm.ACTION_TRANSFER and code == 0:
                     self.chompcoin += value
+                elif kind == p4rm.ACTION_PVP_RESOLVE and code == 1:
+                    if self.chompcoin < value:
+                        raise AssertionError("PvP debit exceeds carried ChompCoin")
+                    self.chompcoin -= value
+                    self.hit_points = 0
+                    self.pvp_losses += 1
+                elif kind == p4rm.ACTION_PVP_RESOLVE and code == 2:
+                    self.chompcoin += value
+                    self.pvp_wins += 1
+                elif kind == p4rm.ACTION_PVP_RESOLVE and code == 0:
+                    self.pvp_wins += 1
                 else:
                     raise AssertionError(
                         f"unexpected event kind/code {kind}/{code}"
