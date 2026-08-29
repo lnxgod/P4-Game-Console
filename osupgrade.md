@@ -70,12 +70,14 @@ runner separately exercises the real LORD C cartridge but does not yet expose
 multiplayer-session callbacks. The final locked Waveshare build and release
 verifier now pass. Exact candidates are Console OS application
 `5b878c104a42ea72481b73f7c955bb5e518b5b60493b685d60425754c7ed36ad`
-(1,808,480 bytes), `P4UPDATE.P4U`
-`f23cc267c1fdcd9e413fa8cdb179c1f3e028bad0b99734292e9ac8a51d4cd04b`
-(1,808,736 bytes), and `LORD.P4G`
+(1,808,480 bytes) and `LORD.P4G`
 `2884c531638f5256ca1c3f1594b054b6fcf69eedbb131af3c5cf20735504baac`
 (178,468 bytes; payload SHA-256
 `9645c6f9bed0712b549eb298f90fde4f909a73c21ee6b2f8bef34796fccad5c0`).
+`P4UPDATE.P4U` contains the same application plus a header that embeds the
+source commit, so it is regenerated after the final release commit and its
+exact hash belongs in the exact-device install ledger rather than hard-coded
+into the source tree that determines that commit.
 The guarded exact-device install and retained hardware acceptance remain; no
 0.4.88 image has been flashed to Pink or Green.
 
