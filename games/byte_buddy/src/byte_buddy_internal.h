@@ -111,6 +111,72 @@ typedef enum {
     BYTE_BUDDY_BATTLE_RESONANCE_WEAVE,
 } byte_buddy_signal_battle_pattern_t;
 
+typedef enum {
+    BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST = 0,
+    BYTE_BUDDY_SIGNAL_ATTACK_PRISM_LANCE,
+    BYTE_BUDDY_SIGNAL_ATTACK_THORN_SNARE,
+    BYTE_BUDDY_SIGNAL_ATTACK_COMET_CRASH,
+    BYTE_BUDDY_SIGNAL_ATTACK_COUNT,
+} byte_buddy_signal_attack_t;
+
+typedef enum {
+    BYTE_BUDDY_SIGNAL_PASSIVE_WARD = 0,
+    BYTE_BUDDY_SIGNAL_PASSIVE_ECHO,
+    BYTE_BUDDY_SIGNAL_PASSIVE_SIPHON,
+    BYTE_BUDDY_SIGNAL_PASSIVE_OVERCLOCK,
+    BYTE_BUDDY_SIGNAL_PASSIVE_COUNT,
+} byte_buddy_signal_passive_t;
+
+typedef enum {
+    BYTE_BUDDY_SIGNAL_ARENA_STEADY = 0,
+    BYTE_BUDDY_SIGNAL_ARENA_HEAVY,
+    BYTE_BUDDY_SIGNAL_ARENA_QUICK,
+    BYTE_BUDDY_SIGNAL_ARENA_ECHO,
+    BYTE_BUDDY_SIGNAL_ARENA_SHIFT,
+    BYTE_BUDDY_SIGNAL_ARENA_COUNT,
+} byte_buddy_signal_arena_t;
+
+typedef enum {
+    BYTE_BUDDY_ABILITY_NOVA_PARRY = 0,
+    BYTE_BUDDY_ABILITY_FLARE_COUNTER,
+    BYTE_BUDDY_ABILITY_GLACIER_WARD,
+    BYTE_BUDDY_ABILITY_JAM_FIELD,
+    BYTE_BUDDY_ABILITY_COUNT,
+} byte_buddy_dragon_ability_t;
+
+typedef enum {
+    BYTE_BUDDY_COMBAT_ACTIVE = 0,
+    BYTE_BUDDY_COMBAT_VICTORY,
+    BYTE_BUDDY_COMBAT_DEFEAT_HP,
+    BYTE_BUDDY_COMBAT_DEFEAT_TIMEOUT,
+    BYTE_BUDDY_COMBAT_RETREATED,
+} byte_buddy_combat_outcome_t;
+
+typedef struct {
+    uint8_t attack;
+    uint8_t passive;
+    uint8_t weakness;
+    uint8_t arena;
+    uint8_t threat;
+    uint8_t max_hp;
+    uint8_t damage;
+    uint8_t starting_ward;
+    uint16_t attack_period_ms;
+    uint16_t telegraph_ms;
+    uint32_t form_id;
+    bool hidden;
+    bool protected_signal;
+} byte_buddy_signal_encounter_t;
+
+typedef struct {
+    uint8_t player_damage;
+    uint8_t counter_damage;
+    uint8_t enemy_heal;
+    uint8_t ward_damage;
+    uint16_t delay_ms;
+    uint16_t status_ms;
+} byte_buddy_signal_defense_t;
+
 typedef struct {
     uint16_t x;
     uint16_t y;
@@ -290,6 +356,26 @@ uint8_t byte_buddy_signal_page_index(
 
 byte_buddy_signal_battle_pattern_t byte_buddy_signal_battle_pattern(
     byte_buddy_signal_genome_t genome);
+
+byte_buddy_signal_encounter_t byte_buddy_signal_encounter(
+    uint64_t token, int8_t rssi_dbm, uint8_t channel, uint8_t flags);
+
+byte_buddy_dragon_ability_t byte_buddy_dragon_ability(
+    byte_buddy_element_t element);
+
+byte_buddy_signal_attack_t byte_buddy_signal_attack_for(
+    byte_buddy_signal_encounter_t encounter, uint8_t attack_index);
+
+byte_buddy_signal_defense_t byte_buddy_signal_defense(
+    byte_buddy_signal_encounter_t encounter,
+    byte_buddy_dragon_ability_t ability,
+    bool guarded, uint8_t attack_index);
+
+uint8_t byte_buddy_signal_player_hp(
+    byte_buddy_battle_stats_t stats, uint8_t nest_level,
+    byte_buddy_signal_lineage_t lineage);
+
+uint16_t byte_buddy_signal_strike_cooldown_ms(uint8_t speed);
 
 uint8_t byte_buddy_signal_weave_node_index(
     byte_buddy_signal_genome_t genome, uint8_t step);

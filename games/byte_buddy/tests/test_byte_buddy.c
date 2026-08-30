@@ -20,6 +20,11 @@ static int s_failures;
 static uint8_t *s_test_art;
 static size_t s_test_art_bytes;
 
+enum {
+    TEST_SIGNAL_WEAVE_SETTLE_MS = 300,
+    TEST_SIGNAL_ATTACK_TRAVEL_MS = 220,
+};
+
 typedef struct {
     p4_game_signal_snapshot_t snapshot;
     uint32_t requests;
@@ -220,7 +225,7 @@ static void test_required_art_contract(void)
 {
     enum {
         TEST_ART_HEADER_BYTES = 64,
-        TEST_ART_REQUIRED_SHEETS = 28,
+        TEST_ART_REQUIRED_SHEETS = 29,
     };
     CHECK((p4_byte_buddy_game.required_capabilities &
            P4_GAME_CAP_STORAGE) != 0U);
@@ -282,6 +287,30 @@ static p4_game_result_t buttons(p4_game_instance_t *instance,
         .pressed = pressed,
     };
     return p4_game_instance_update(instance, &input, elapsed_ms);
+}
+
+static void advance_idle_ms(p4_game_instance_t *instance,
+                            uint32_t elapsed_ms)
+{
+    while (elapsed_ms != 0U) {
+        const uint32_t step_ms = elapsed_ms > P4_GAME_MAX_FRAME_DELTA_MS
+            ? P4_GAME_MAX_FRAME_DELTA_MS : elapsed_ms;
+        CHECK(buttons(instance, 0U, 0U, step_ms) == P4_GAME_CONTINUE);
+        elapsed_ms -= step_ms;
+    }
+}
+
+static uint16_t latest_tone_frequency(const p4_audio_mixer_t *mixer)
+{
+    uint32_t newest_serial = 0U;
+    uint16_t frequency_hz = 0U;
+    for (size_t voice = 0U; voice < P4_GAME_AUDIO_MAX_VOICES; ++voice) {
+        if (mixer->voices[voice].serial >= newest_serial) {
+            newest_serial = mixer->voices[voice].serial;
+            frequency_hz = mixer->voices[voice].frequency_hz;
+        }
+    }
+    return frequency_hz;
 }
 
 static void test_care_achievements_and_exit(void)
@@ -766,10 +795,42 @@ static void test_signal_hunt_battle_and_reward(void)
     CHECK(s_signal_scan.focus_token == UINT64_C(0x00123456789abcde));
     release_touch(&instance);
     tap(&instance, 250U, 180U);
-    for (unsigned strike = 0U; strike < 32U && achievements.count == 0U;
-         ++strike) {
+    /* The encounter must retain its sanitized launch snapshot. */
+    ++s_signal_scan.snapshot.generation;
+    s_signal_scan.snapshot.count = 0U;
+    advance_idle_ms(&instance, 500U);
+
+    tap(&instance, 60U, 180U);
+    const uint32_t tones_after_first_strike = mixer.tones_started;
+    for (unsigned blocked_by_cooldown = 0U;
+         blocked_by_cooldown < 6U; ++blocked_by_cooldown) {
         tap(&instance, 60U, 180U);
     }
+    CHECK(mixer.tones_started == tones_after_first_strike);
+    CHECK(achievements.count == 0U);
+    bool victory_started = false;
+    unsigned successful_strikes = 1U;
+    while (!victory_started && successful_strikes < 16U) {
+        advance_idle_ms(&instance, 400U);
+        const uint32_t tones_before_strike = mixer.tones_started;
+        CHECK(touch(&instance, 60U, 180U) == P4_GAME_CONTINUE);
+        const uint32_t strike_tones =
+            mixer.tones_started - tones_before_strike;
+        CHECK(strike_tones >= 1U);
+        ++successful_strikes;
+        victory_started = latest_tone_frequency(&mixer) == 988U;
+        if (!victory_started) {
+            release_touch(&instance);
+        }
+        CHECK(achievements.count == 0U);
+    }
+    CHECK(victory_started);
+    CHECK(successful_strikes == 9U);
+    CHECK(achievements.count == 0U);
+    /* The 16 ms strike frame plus 883 ms is still before 900 ms. */
+    advance_idle_ms(&instance, 883U);
+    CHECK(achievements.count == 0U);
+    advance_idle_ms(&instance, 1U);
     CHECK(achievements.count == 1U);
     CHECK(strcmp(achievements.entries[0].id, "first-signal") == 0);
     p4_game_instance_stop(&instance);
@@ -1010,6 +1071,292 @@ static void test_initial_signal_busy_backoff(void)
     free(state);
 }
 
+static uint64_t encounter_test_token(uint16_t recipe)
+{
+    static const uint16_t rarity_rolls[4] = {256U, 64U, 8U, 0U};
+    unsigned remaining = recipe;
+    const uint8_t rarity = (uint8_t)(remaining % 4U);
+    remaining /= 4U;
+    const uint8_t hue = (uint8_t)(remaining % 8U);
+    remaining /= 8U;
+    const uint8_t aura = (uint8_t)(remaining % 4U);
+    remaining /= 4U;
+    const uint8_t sigil = (uint8_t)(remaining % 4U);
+    remaining /= 4U;
+    const uint8_t halo = (uint8_t)(remaining % 4U);
+    remaining /= 4U;
+    const uint8_t core = (uint8_t)(remaining % 4U);
+    return (uint64_t)rarity_rolls[rarity] |
+        (uint64_t)hue << 18U |
+        (uint64_t)core << 21U |
+        (uint64_t)halo << 23U |
+        (uint64_t)aura << 25U |
+        (uint64_t)sigil << 27U;
+}
+
+static bool signal_encounters_equal(
+    byte_buddy_signal_encounter_t left,
+    byte_buddy_signal_encounter_t right)
+{
+    return left.attack == right.attack &&
+        left.passive == right.passive &&
+        left.weakness == right.weakness &&
+        left.arena == right.arena &&
+        left.threat == right.threat &&
+        left.max_hp == right.max_hp &&
+        left.damage == right.damage &&
+        left.starting_ward == right.starting_ward &&
+        left.attack_period_ms == right.attack_period_ms &&
+        left.telegraph_ms == right.telegraph_ms &&
+        left.form_id == right.form_id &&
+        left.hidden == right.hidden &&
+        left.protected_signal == right.protected_signal;
+}
+
+static void test_signal_encounter_derivation(void)
+{
+    static const uint8_t channels[5] = {0U, 1U, 6U, 11U, 36U};
+    static const uint8_t arenas[5] = {
+        BYTE_BUDDY_SIGNAL_ARENA_STEADY,
+        BYTE_BUDDY_SIGNAL_ARENA_HEAVY,
+        BYTE_BUDDY_SIGNAL_ARENA_QUICK,
+        BYTE_BUDDY_SIGNAL_ARENA_ECHO,
+        BYTE_BUDDY_SIGNAL_ARENA_SHIFT,
+    };
+    uint32_t derivation_count = 0U;
+    for (uint16_t recipe = 0U; recipe < 8192U; ++recipe) {
+        const uint64_t token = encounter_test_token(recipe);
+        const byte_buddy_signal_genome_t genome =
+            byte_buddy_signal_genome(token);
+        CHECK(genome.recipe_id == recipe);
+        for (size_t channel_index = 0U;
+             channel_index < sizeof(channels) / sizeof(channels[0]);
+             ++channel_index) {
+            for (uint8_t environment = 0U; environment < 4U;
+                 ++environment) {
+                const uint8_t flags = (uint8_t)(
+                    ((environment & 1U) != 0U
+                        ? P4_GAME_SIGNAL_PROTECTED : 0U) |
+                    ((environment & 2U) != 0U
+                        ? P4_GAME_SIGNAL_HIDDEN : 0U));
+                const byte_buddy_signal_encounter_t encounter =
+                    byte_buddy_signal_encounter(
+                        token, -61, channels[channel_index], flags);
+                const byte_buddy_signal_encounter_t repeated =
+                    byte_buddy_signal_encounter(
+                        token, -61, channels[channel_index], flags);
+                const byte_buddy_signal_encounter_t simulated =
+                    byte_buddy_signal_encounter(
+                        token, -61, channels[channel_index],
+                        (uint8_t)(flags | P4_GAME_SIGNAL_SIMULATED));
+                CHECK(signal_encounters_equal(encounter, repeated));
+                CHECK(signal_encounters_equal(encounter, simulated));
+                CHECK(encounter.attack == genome.core);
+                CHECK(encounter.passive == genome.aura);
+                CHECK(byte_buddy_signal_attack_for(encounter, 0U) ==
+                      (byte_buddy_signal_attack_t)encounter.attack);
+                const byte_buddy_signal_attack_t alternate_attack =
+                    byte_buddy_signal_attack_for(encounter, 1U);
+                CHECK(alternate_attack < BYTE_BUDDY_SIGNAL_ATTACK_COUNT);
+                CHECK((encounter.arena == BYTE_BUDDY_SIGNAL_ARENA_SHIFT) ==
+                      (alternate_attack !=
+                       (byte_buddy_signal_attack_t)encounter.attack));
+                CHECK(encounter.weakness == (genome.sigil < 3U
+                    ? (uint8_t)(BYTE_BUDDY_ELEMENT_FIRE + genome.sigil)
+                    : BYTE_BUDDY_ELEMENT_MYSTERY));
+                CHECK(encounter.arena == arenas[channel_index]);
+                CHECK(encounter.threat >= 1U && encounter.threat <= 5U);
+                CHECK(encounter.max_hp >= 9U && encounter.max_hp <= 60U);
+                CHECK(encounter.damage >= 8U && encounter.damage <= 18U);
+                CHECK(encounter.starting_ward <= 3U);
+                CHECK(encounter.attack_period_ms >= 1900U &&
+                      encounter.attack_period_ms <= 3400U);
+                CHECK(encounter.telegraph_ms >= 650U &&
+                      encounter.telegraph_ms <= 1200U);
+                CHECK(encounter.form_id == byte_buddy_signal_form_id(
+                          recipe, channels[channel_index], flags));
+                CHECK(encounter.hidden ==
+                      ((flags & P4_GAME_SIGNAL_HIDDEN) != 0U));
+                CHECK(encounter.protected_signal ==
+                      ((flags & P4_GAME_SIGNAL_PROTECTED) != 0U));
+                ++derivation_count;
+            }
+        }
+
+        const byte_buddy_signal_encounter_t weak =
+            byte_buddy_signal_encounter(token, -100, 6U, 0U);
+        const byte_buddy_signal_encounter_t medium =
+            byte_buddy_signal_encounter(token, -65, 6U, 0U);
+        const byte_buddy_signal_encounter_t strong =
+            byte_buddy_signal_encounter(token, -30, 6U, 0U);
+        CHECK(weak.max_hp <= medium.max_hp &&
+              medium.max_hp <= strong.max_hp);
+        CHECK(weak.damage <= medium.damage &&
+              medium.damage <= strong.damage);
+        CHECK(weak.threat <= medium.threat &&
+              medium.threat <= strong.threat);
+        CHECK(weak.attack_period_ms >= medium.attack_period_ms &&
+              medium.attack_period_ms >= strong.attack_period_ms);
+        CHECK(weak.telegraph_ms >= medium.telegraph_ms &&
+              medium.telegraph_ms >= strong.telegraph_ms);
+        CHECK(weak.form_id == medium.form_id &&
+              medium.form_id == strong.form_id);
+    }
+    CHECK(derivation_count == UINT32_C(163840));
+}
+
+static void test_signal_combat_math(void)
+{
+    CHECK(byte_buddy_dragon_ability(BYTE_BUDDY_ELEMENT_MYSTERY) ==
+          BYTE_BUDDY_ABILITY_NOVA_PARRY);
+    CHECK(byte_buddy_dragon_ability(BYTE_BUDDY_ELEMENT_FIRE) ==
+          BYTE_BUDDY_ABILITY_FLARE_COUNTER);
+    CHECK(byte_buddy_dragon_ability(BYTE_BUDDY_ELEMENT_ICE) ==
+          BYTE_BUDDY_ABILITY_GLACIER_WARD);
+    CHECK(byte_buddy_dragon_ability(BYTE_BUDDY_ELEMENT_ACID) ==
+          BYTE_BUDDY_ABILITY_JAM_FIELD);
+    CHECK(byte_buddy_dragon_ability(BYTE_BUDDY_ELEMENT_COUNT) ==
+          BYTE_BUDDY_ABILITY_NOVA_PARRY);
+
+    const byte_buddy_signal_encounter_t steady_arc = {
+        .attack = BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST,
+        .arena = BYTE_BUDDY_SIGNAL_ARENA_STEADY,
+    };
+    CHECK(byte_buddy_signal_attack_for(steady_arc, 0U) ==
+          BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST);
+    CHECK(byte_buddy_signal_attack_for(steady_arc, 1U) ==
+          BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST);
+    byte_buddy_signal_encounter_t shifting = steady_arc;
+    shifting.arena = BYTE_BUDDY_SIGNAL_ARENA_SHIFT;
+    CHECK(byte_buddy_signal_attack_for(shifting, 0U) ==
+          BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST);
+    CHECK(byte_buddy_signal_attack_for(shifting, 1U) ==
+          BYTE_BUDDY_SIGNAL_ATTACK_PRISM_LANCE);
+    shifting.form_id = 32U;
+    CHECK(byte_buddy_signal_attack_for(shifting, 1U) ==
+          BYTE_BUDDY_SIGNAL_ATTACK_THORN_SNARE);
+    shifting.form_id = 64U;
+    CHECK(byte_buddy_signal_attack_for(shifting, 1U) ==
+          BYTE_BUDDY_SIGNAL_ATTACK_COMET_CRASH);
+    shifting.attack = UINT8_MAX;
+    CHECK(byte_buddy_signal_attack_for(shifting, 0U) ==
+          BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST);
+
+    const byte_buddy_signal_encounter_t siphoning_thorns = {
+        .attack = BYTE_BUDDY_SIGNAL_ATTACK_THORN_SNARE,
+        .passive = BYTE_BUDDY_SIGNAL_PASSIVE_SIPHON,
+        .arena = BYTE_BUDDY_SIGNAL_ARENA_STEADY,
+        .threat = 5U,
+        .damage = 12U,
+    };
+    const byte_buddy_signal_defense_t open_hit =
+        byte_buddy_signal_defense(
+            siphoning_thorns, BYTE_BUDDY_ABILITY_NOVA_PARRY,
+            false, 0U);
+    CHECK(open_hit.player_damage == 12U);
+    CHECK(open_hit.counter_damage == 0U);
+    CHECK(open_hit.enemy_heal == 2U);
+    CHECK(open_hit.ward_damage == 0U);
+    CHECK(open_hit.delay_ms == 0U);
+    CHECK(open_hit.status_ms == 1000U);
+
+    const byte_buddy_signal_encounter_t echoing_comet = {
+        .attack = BYTE_BUDDY_SIGNAL_ATTACK_COMET_CRASH,
+        .passive = BYTE_BUDDY_SIGNAL_PASSIVE_ECHO,
+        .arena = BYTE_BUDDY_SIGNAL_ARENA_ECHO,
+        .threat = 5U,
+        .damage = 18U,
+    };
+    CHECK(byte_buddy_signal_defense(
+              echoing_comet, BYTE_BUDDY_ABILITY_NOVA_PARRY,
+              false, 2U).player_damage == 24U);
+    CHECK(byte_buddy_signal_defense(
+              echoing_comet, BYTE_BUDDY_ABILITY_NOVA_PARRY,
+              false, 1U).player_damage == 18U);
+
+    const byte_buddy_signal_defense_t nova =
+        byte_buddy_signal_defense(
+            siphoning_thorns, BYTE_BUDDY_ABILITY_NOVA_PARRY,
+            true, 0U);
+    CHECK(nova.player_damage == 0U && nova.counter_damage == 3U);
+    CHECK(nova.enemy_heal == 0U && nova.ward_damage == 1U);
+    CHECK(nova.delay_ms == 340U && nova.status_ms == 0U);
+    const byte_buddy_signal_defense_t flare =
+        byte_buddy_signal_defense(
+            siphoning_thorns, BYTE_BUDDY_ABILITY_FLARE_COUNTER,
+            true, 0U);
+    CHECK(flare.player_damage == 4U && flare.counter_damage == 4U);
+    CHECK(flare.enemy_heal == 0U && flare.ward_damage == 0U);
+    CHECK(flare.delay_ms == 280U && flare.status_ms == 0U);
+    const byte_buddy_signal_defense_t glacier =
+        byte_buddy_signal_defense(
+            siphoning_thorns, BYTE_BUDDY_ABILITY_GLACIER_WARD,
+            true, 0U);
+    CHECK(glacier.player_damage == 0U && glacier.counter_damage == 1U);
+    CHECK(glacier.enemy_heal == 0U && glacier.ward_damage == 0U);
+    CHECK(glacier.delay_ms == 420U && glacier.status_ms == 0U);
+    const byte_buddy_signal_defense_t jam =
+        byte_buddy_signal_defense(
+            siphoning_thorns, BYTE_BUDDY_ABILITY_JAM_FIELD,
+            true, 0U);
+    CHECK(jam.player_damage == 8U && jam.counter_damage == 1U);
+    CHECK(jam.enemy_heal == 0U && jam.ward_damage == 1U);
+    CHECK(jam.delay_ms == 620U && jam.status_ms == 0U);
+
+    byte_buddy_signal_encounter_t prism = siphoning_thorns;
+    prism.attack = BYTE_BUDDY_SIGNAL_ATTACK_PRISM_LANCE;
+    CHECK(byte_buddy_signal_defense(
+              prism, BYTE_BUDDY_ABILITY_NOVA_PARRY,
+              true, 0U).player_damage == 1U);
+    CHECK(byte_buddy_signal_defense(
+              prism, BYTE_BUDDY_ABILITY_GLACIER_WARD,
+              true, 0U).player_damage == 1U);
+
+    const byte_buddy_battle_stats_t base_stats = {0};
+    CHECK(byte_buddy_signal_player_hp(
+              base_stats, 0U,
+              (byte_buddy_signal_lineage_t){0}) == 48U);
+    const byte_buddy_battle_stats_t trained_stats = {
+        .level = 10U,
+        .guard = 20U,
+    };
+    CHECK(byte_buddy_signal_player_hp(
+              trained_stats, 2U,
+              (byte_buddy_signal_lineage_t){
+                  .tier = BYTE_BUDDY_LINEAGE_CREST,
+              }) == 75U);
+    CHECK(byte_buddy_signal_player_hp(
+              (byte_buddy_battle_stats_t){
+                  .level = 99U,
+                  .guard = 99U,
+              }, UINT8_MAX,
+              (byte_buddy_signal_lineage_t){
+                  .tier = UINT8_MAX,
+              }) == 99U);
+    uint8_t previous_hp = byte_buddy_signal_player_hp(
+        base_stats, 0U, (byte_buddy_signal_lineage_t){0});
+    for (uint8_t nest = 1U; nest < 4U; ++nest) {
+        const uint8_t hp = byte_buddy_signal_player_hp(
+            base_stats, nest, (byte_buddy_signal_lineage_t){0});
+        CHECK(hp > previous_hp);
+        previous_hp = hp;
+    }
+
+    CHECK(byte_buddy_signal_strike_cooldown_ms(0U) == 360U);
+    CHECK(byte_buddy_signal_strike_cooldown_ms(45U) == 270U);
+    CHECK(byte_buddy_signal_strike_cooldown_ms(90U) == 180U);
+    CHECK(byte_buddy_signal_strike_cooldown_ms(UINT8_MAX) == 180U);
+    uint16_t previous_cooldown =
+        byte_buddy_signal_strike_cooldown_ms(0U);
+    for (uint8_t speed = 1U; speed <= 90U; ++speed) {
+        const uint16_t cooldown =
+            byte_buddy_signal_strike_cooldown_ms(speed);
+        CHECK(cooldown <= previous_cooldown);
+        CHECK(previous_cooldown - cooldown == 2U);
+        previous_cooldown = cooldown;
+    }
+}
+
 static void test_signal_battle_patterns(void)
 {
     unsigned pattern_counts[4][2] = {{0}};
@@ -1134,6 +1481,7 @@ static void test_resonance_weave_battle(void)
     tap(&instance, 80U, 94U);
     CHECK(s_signal_scan.focus_token == weave_token);
     tap(&instance, 250U, 180U);
+    advance_idle_ms(&instance, 500U);
     const byte_buddy_signal_weave_node_t first =
         byte_buddy_signal_weave_node(genome, 0U);
     tap(&instance, first.x, first.y);
@@ -1142,10 +1490,22 @@ static void test_resonance_weave_battle(void)
     for (uint8_t step = 0U; step < rules.required_locks; ++step) {
         const byte_buddy_signal_weave_node_t node =
             byte_buddy_signal_weave_node(genome, step);
-        const unsigned frames = (unsigned)(rules.hold_ms + 49U) / 50U + 1U;
-        for (unsigned frame = 0U; frame < frames; ++frame) {
-            CHECK(hold_touch(&instance, node.x, node.y, 50U) ==
-                  P4_GAME_CONTINUE);
+        if ((uint8_t)(step + 1U) == rules.required_locks) {
+            unsigned exact_ms = 0U;
+            while (latest_tone_frequency(&mixer) != 988U &&
+                   exact_ms < (unsigned)rules.hold_ms * 3U) {
+                CHECK(hold_touch(&instance, node.x, node.y, 1U) ==
+                      P4_GAME_CONTINUE);
+                ++exact_ms;
+            }
+            CHECK(latest_tone_frequency(&mixer) == 988U);
+        } else {
+            const unsigned frames =
+                (unsigned)(rules.hold_ms + 49U) / 50U;
+            for (unsigned frame = 0U; frame < frames; ++frame) {
+                CHECK(hold_touch(&instance, node.x, node.y, 50U) ==
+                      P4_GAME_CONTINUE);
+            }
         }
         if (step == 0U) {
             p4_game_surface_t surface = {
@@ -1156,11 +1516,14 @@ static void test_resonance_weave_battle(void)
             };
             CHECK(p4_game_instance_render(&instance, &surface));
         }
-        for (unsigned settle = 0U; settle < 4U; ++settle) {
-            CHECK(buttons(&instance, 0U, 0U, 100U) ==
-                  P4_GAME_CONTINUE);
+        if ((uint8_t)(step + 1U) < rules.required_locks) {
+            advance_idle_ms(&instance, 400U);
         }
     }
+    CHECK(achievements.count == 0U);
+    advance_idle_ms(&instance, 899U);
+    CHECK(achievements.count == 0U);
+    advance_idle_ms(&instance, 1U);
     CHECK(achievements.count == 1U);
     CHECK(strcmp(achievements.entries[0].id, "first-signal") == 0);
 
@@ -1169,7 +1532,158 @@ static void test_resonance_weave_battle(void)
     free(state);
 }
 
-static void test_resonance_timeout_and_guard(void)
+static void observe_comet_timing_tone(
+    const p4_audio_mixer_t *mixer, uint32_t tones_before,
+    unsigned *impact_count, bool *third_windup_seen)
+{
+    if (mixer->tones_started == tones_before) {
+        return;
+    }
+    const uint16_t frequency = latest_tone_frequency(mixer);
+    if (frequency == 385U) {
+        ++*impact_count;
+    } else if (frequency == 441U && *impact_count >= 2U) {
+        *third_windup_seen = true;
+    }
+}
+
+static bool prepare_weave_event_order_case(
+    p4_game_instance_t *instance, void *state,
+    p4_audio_mixer_t *mixer,
+    p4_achievement_catalog_t *achievements,
+    byte_buddy_signal_genome_t genome,
+    byte_buddy_signal_weave_rules_t rules)
+{
+    if (!start_game(instance, state, mixer, achievements)) {
+        return false;
+    }
+    tap(instance, 70U, 180U);
+    tap(instance, 80U, 94U);
+    if (s_signal_scan.focus_token != UINT64_C(0x1020304050607080)) {
+        return false;
+    }
+    tap(instance, 250U, 180U);
+
+    unsigned impact_count = 0U;
+    bool third_windup_seen = false;
+    for (unsigned intro_ms = 0U; intro_ms < 500U; ++intro_ms) {
+        const uint32_t tones_before = mixer->tones_started;
+        CHECK(buttons(instance, 0U, 0U, 1U) == P4_GAME_CONTINUE);
+        observe_comet_timing_tone(
+            mixer, tones_before, &impact_count, &third_windup_seen);
+    }
+
+    for (uint8_t step = 0U; step < 4U; ++step) {
+        const byte_buddy_signal_weave_node_t node =
+            byte_buddy_signal_weave_node(genome, step);
+        for (uint32_t held_ms = 0U; held_ms < rules.hold_ms; ++held_ms) {
+            const uint32_t tones_before = mixer->tones_started;
+            CHECK(hold_touch(instance, node.x, node.y, 1U) ==
+                  P4_GAME_CONTINUE);
+            observe_comet_timing_tone(
+                mixer, tones_before, &impact_count, &third_windup_seen);
+        }
+        for (unsigned settle_ms = 0U;
+             settle_ms < TEST_SIGNAL_WEAVE_SETTLE_MS; ++settle_ms) {
+            const uint32_t tones_before = mixer->tones_started;
+            CHECK(buttons(instance, 0U, 0U, 1U) == P4_GAME_CONTINUE);
+            observe_comet_timing_tone(
+                mixer, tones_before, &impact_count, &third_windup_seen);
+        }
+    }
+
+    for (unsigned wait_ms = 0U;
+         !third_windup_seen && wait_ms < 10000U; ++wait_ms) {
+        const uint32_t tones_before = mixer->tones_started;
+        CHECK(buttons(instance, 0U, 0U, 1U) == P4_GAME_CONTINUE);
+        observe_comet_timing_tone(
+            mixer, tones_before, &impact_count, &third_windup_seen);
+    }
+    return impact_count == 2U && third_windup_seen;
+}
+
+static void hold_weave_exact_ms(
+    p4_game_instance_t *instance,
+    byte_buddy_signal_weave_node_t node, uint32_t elapsed_ms)
+{
+    while (elapsed_ms != 0U) {
+        const uint32_t step_ms = elapsed_ms > P4_GAME_MAX_FRAME_DELTA_MS
+            ? P4_GAME_MAX_FRAME_DELTA_MS : elapsed_ms;
+        CHECK(hold_touch(instance, node.x, node.y, step_ms) ==
+              P4_GAME_CONTINUE);
+        elapsed_ms -= step_ms;
+    }
+}
+
+static void test_signal_weave_event_order(void)
+{
+    const uint64_t token = UINT64_C(0x1020304050607080);
+    const byte_buddy_signal_genome_t genome =
+        byte_buddy_signal_genome(token);
+    const byte_buddy_signal_profile_t profile =
+        byte_buddy_signal_profile(token, -45);
+    const byte_buddy_signal_weave_rules_t rules =
+        byte_buddy_signal_weave_rules(genome, profile.strength, 0U);
+    const byte_buddy_signal_encounter_t encounter =
+        byte_buddy_signal_encounter(
+            token, -45, 1U, P4_GAME_SIGNAL_SIMULATED);
+    CHECK(rules.required_locks == 5U);
+    CHECK(rules.hold_ms == 796U);
+    CHECK(encounter.attack == BYTE_BUDDY_SIGNAL_ATTACK_COMET_CRASH);
+    CHECK(encounter.telegraph_ms == 916U);
+
+    for (unsigned exact_tie = 0U; exact_tie < 2U; ++exact_tie) {
+        void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+        CHECK(state != NULL);
+        if (state == NULL) {
+            continue;
+        }
+        p4_game_instance_t instance;
+        p4_audio_mixer_t mixer;
+        p4_achievement_catalog_t achievements;
+        const bool ready = prepare_weave_event_order_case(
+            &instance, state, &mixer, &achievements, genome, rules);
+        CHECK(ready);
+        if (ready) {
+            const byte_buddy_signal_weave_node_t final_node =
+                byte_buddy_signal_weave_node(genome, 4U);
+            const uint32_t impact_offset_ms =
+                (uint32_t)encounter.telegraph_ms +
+                TEST_SIGNAL_ATTACK_TRAVEL_MS;
+            const uint32_t capture_before_impact_ms = exact_tie != 0U
+                ? 90U : 10U;
+            const uint32_t idle_before_charge_ms =
+                impact_offset_ms - rules.hold_ms +
+                capture_before_impact_ms - 90U;
+            advance_idle_ms(&instance, idle_before_charge_ms);
+            hold_weave_exact_ms(
+                &instance, final_node,
+                (uint32_t)rules.hold_ms - capture_before_impact_ms);
+            CHECK(hold_touch(
+                      &instance, final_node.x, final_node.y, 100U) ==
+                  P4_GAME_CONTINUE);
+
+            if (exact_tie == 0U) {
+                /* Capture at +10 ms must beat the lethal impact at +90 ms. */
+                CHECK(latest_tone_frequency(&mixer) == 988U);
+                CHECK(!achievement_present(&achievements, "first-signal"));
+                advance_idle_ms(&instance, 809U);
+                CHECK(!achievement_present(&achievements, "first-signal"));
+                advance_idle_ms(&instance, 1U);
+                CHECK(achievement_present(&achievements, "first-signal"));
+            } else {
+                /* At the same timestamp, the impact resolves first. */
+                CHECK(latest_tone_frequency(&mixer) == 196U);
+                advance_idle_ms(&instance, 1000U);
+                CHECK(!achievement_present(&achievements, "first-signal"));
+            }
+        }
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+}
+
+static void test_signal_loss_and_retreat(void)
 {
     void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
     CHECK(state != NULL);
@@ -1181,32 +1695,84 @@ static void test_resonance_timeout_and_guard(void)
     p4_achievement_catalog_t achievements;
     CHECK(start_game(&instance, state, &mixer, &achievements));
     tap(&instance, 70U, 180U);
-    tap(&instance, 80U, 94U);
+    tap(&instance, 80U, 42U);
     tap(&instance, 250U, 180U);
-    for (unsigned frame = 0U; frame < 159U; ++frame) {
-        CHECK(buttons(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
-    }
-    CHECK(hold_touch(&instance, 250U, 180U, 100U) == P4_GAME_CONTINUE);
-    release_touch(&instance);
-    CHECK(achievements.count == 0U);
-    const uint32_t requests_after_timeout = s_signal_scan.requests;
-    tap(&instance, 70U, 180U);
-    CHECK(s_signal_scan.requests == requests_after_timeout + 1U);
+    advance_idle_ms(&instance, 14000U);
+    CHECK(!achievement_present(&achievements, "first-signal"));
 
     tap(&instance, 250U, 180U);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_B, 16U) ==
+          P4_GAME_CONTINUE);
+    advance_idle_ms(&instance, 519U);
+    CHECK(!achievement_present(&achievements, "first-signal"));
+    advance_idle_ms(&instance, 1U);
+    CHECK(!achievement_present(&achievements, "first-signal"));
+
+    p4_game_instance_stop(&instance);
+    free(state);
+}
+
+static void test_signal_guard_exact_expiry_boundary(void)
+{
+    const uint64_t token = UINT64_C(0x00123456789abcde);
+    const byte_buddy_signal_encounter_t encounter =
+        byte_buddy_signal_encounter(
+            token, -45, 6U,
+            P4_GAME_SIGNAL_PROTECTED | P4_GAME_SIGNAL_SIMULATED);
+    CHECK(encounter.attack == BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST);
+
+    void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state == NULL) {
+        return;
+    }
+    p4_game_instance_t instance;
+    p4_audio_mixer_t mixer;
+    p4_achievement_catalog_t achievements;
+    CHECK(start_game(&instance, state, &mixer, &achievements));
+    tap(&instance, 70U, 180U);
+    tap(&instance, 80U, 42U);
     tap(&instance, 250U, 180U);
-    const uint32_t requests_before_guard_window = s_signal_scan.requests;
-    for (unsigned frame = 0U; frame < 162U; ++frame) {
-        CHECK(buttons(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
+
+    advance_idle_ms(&instance, 434U);
+    const uint32_t tones_before_windup = mixer.tones_started;
+    unsigned open_ms = 0U;
+    while (mixer.tones_started == tones_before_windup &&
+           open_ms < 1400U) {
+        advance_idle_ms(&instance, 1U);
+        ++open_ms;
     }
-    tap(&instance, 70U, 180U);
-    CHECK(s_signal_scan.requests == requests_before_guard_window);
-    for (unsigned frame = 0U; frame < 8U; ++frame) {
-        CHECK(buttons(&instance, 0U, 0U, 100U) == P4_GAME_CONTINUE);
+    CHECK(open_ms > 0U && open_ms < 1400U);
+    CHECK(mixer.tones_started > tones_before_windup);
+
+    advance_idle_ms(&instance, encounter.telegraph_ms);
+    advance_idle_ms(&instance, 184U);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
+          P4_GAME_CONTINUE);
+    advance_idle_ms(&instance, 100U);
+
+    bool victory_started = false;
+    unsigned successful_strikes = 0U;
+    while (!victory_started && successful_strikes < 16U) {
+        const uint32_t tones_before_strike = mixer.tones_started;
+        CHECK(touch(&instance, 60U, 180U) == P4_GAME_CONTINUE);
+        CHECK(mixer.tones_started > tones_before_strike);
+        ++successful_strikes;
+        victory_started = latest_tone_frequency(&mixer) == 988U;
+        if (!victory_started) {
+            release_touch(&instance);
+            advance_idle_ms(&instance, 400U);
+        }
+        CHECK(!achievement_present(&achievements, "first-signal"));
     }
-    tap(&instance, 70U, 180U);
-    CHECK(s_signal_scan.requests == requests_before_guard_window + 1U);
-    CHECK(achievements.count == 0U);
+    CHECK(victory_started);
+    CHECK(successful_strikes == 7U);
+    CHECK(!achievement_present(&achievements, "first-signal"));
+    /* The 16 ms guarded strike frame counts toward the 900 ms result. */
+    advance_idle_ms(&instance, 883U);
+    CHECK(!achievement_present(&achievements, "first-signal"));
+    advance_idle_ms(&instance, 1U);
+    CHECK(achievement_present(&achievements, "first-signal"));
 
     p4_game_instance_stop(&instance);
     free(state);
@@ -1569,7 +2135,8 @@ static void move_weave_cursor_axis(
         const int distance = target - *position;
         const uint32_t direction = distance < 0
             ? negative_button : positive_button;
-        CHECK(buttons(instance, direction, 0U, 16U) == P4_GAME_CONTINUE);
+        CHECK(buttons(instance, direction, P4_BUTTON_START, 16U) ==
+              P4_GAME_CONTINUE);
         const int step = distance < 0 ? -2 : 2;
         if ((step < 0 && *position + step < target) ||
             (step > 0 && *position + step > target)) {
@@ -1643,8 +2210,7 @@ static void test_controller_signal_hunt(void)
     CHECK(s_signal_scan.focus_token == weave_token);
     CHECK(buttons(&instance, 0U, 0U, 16U) == P4_GAME_CONTINUE);
     tap(&instance, 250U, 180U);
-    CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
-          P4_GAME_CONTINUE);
+    advance_idle_ms(&instance, 500U);
 
     byte_buddy_signal_weave_node_t cursor =
         byte_buddy_signal_weave_node(genome, 0U);
@@ -1659,17 +2225,37 @@ static void test_controller_signal_hunt(void)
         move_weave_cursor_axis(
             &instance, &cursor_y, node.y,
             P4_BUTTON_UP, P4_BUTTON_DOWN);
-        const unsigned hold_frames =
-            (unsigned)(rules.hold_ms + 49U) / 50U + 1U;
-        for (unsigned frame = 0U; frame < hold_frames; ++frame) {
-            CHECK(buttons(&instance, P4_BUTTON_A, 0U, 50U) ==
-                  P4_GAME_CONTINUE);
+        if ((uint8_t)(step + 1U) == rules.required_locks) {
+            unsigned exact_ms = 0U;
+            while (latest_tone_frequency(&mixer) != 988U &&
+                   exact_ms < (unsigned)rules.hold_ms * 3U) {
+                CHECK(buttons(&instance, P4_BUTTON_A,
+                              P4_BUTTON_START, 1U) ==
+                      P4_GAME_CONTINUE);
+                ++exact_ms;
+            }
+            CHECK(latest_tone_frequency(&mixer) == 988U);
+        } else {
+            const unsigned hold_frames =
+                (unsigned)(rules.hold_ms + 49U) / 50U;
+            for (unsigned frame = 0U; frame < hold_frames; ++frame) {
+                CHECK(buttons(&instance, P4_BUTTON_A,
+                              P4_BUTTON_START, 50U) ==
+                      P4_GAME_CONTINUE);
+            }
         }
-        for (unsigned settle = 0U; settle < 4U; ++settle) {
-            CHECK(buttons(&instance, 0U, 0U, 100U) ==
-                  P4_GAME_CONTINUE);
+        if ((uint8_t)(step + 1U) < rules.required_locks) {
+            for (unsigned settle = 0U; settle < 4U; ++settle) {
+                CHECK(buttons(&instance, 0U,
+                              P4_BUTTON_START, 100U) ==
+                      P4_GAME_CONTINUE);
+            }
         }
     }
+    CHECK(!achievement_present(&achievements, "first-signal"));
+    advance_idle_ms(&instance, 899U);
+    CHECK(!achievement_present(&achievements, "first-signal"));
+    advance_idle_ms(&instance, 1U);
     CHECK(achievement_present(&achievements, "first-signal"));
     CHECK(buttons(&instance, 0U, P4_BUTTON_BACK, 16U) ==
           P4_GAME_EXIT_TO_LAUNCHER);
@@ -1770,9 +2356,13 @@ int main(void)
     test_signal_paging_integration();
     test_signal_busy_preserves_results();
     test_initial_signal_busy_backoff();
+    test_signal_encounter_derivation();
+    test_signal_combat_math();
     test_signal_battle_patterns();
     test_resonance_weave_battle();
-    test_resonance_timeout_and_guard();
+    test_signal_weave_event_order();
+    test_signal_loss_and_retreat();
+    test_signal_guard_exact_expiry_boundary();
     test_signal_hunt_battle_and_reward();
     test_missing_extended_art_fails_closed();
     test_malformed_extended_art_fails_closed();

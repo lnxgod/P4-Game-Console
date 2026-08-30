@@ -29,6 +29,7 @@ SIGNAL_GENOME_SHEET_INDEX = 24
 SIGNAL_CITY_PROPS_SHEET_INDEX = 25
 REACTION_FX_SHEET_INDEX = 26
 SIGNAL_LINEAGE_BADGES_SHEET_INDEX = 27
+SIGNAL_ATTACK_CYCLES_SHEET_INDEX = 28
 LARGE_BACKGROUND_COMPONENT_PIXELS = 64
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 ENCLOSED_BACKGROUND_SHEET_INDEXES = frozenset({
@@ -43,6 +44,8 @@ EXPECTED_APPENDED_SHEETS = {
         "byte_buddy_reaction_fx_imagegen_v8.png",
     SIGNAL_LINEAGE_BADGES_SHEET_INDEX:
         "byte_buddy_signal_lineage_badges_imagegen_v9.png",
+    SIGNAL_ATTACK_CYCLES_SHEET_INDEX:
+        "byte_buddy_signal_attack_cycles_imagegen_v10.png",
 }
 
 

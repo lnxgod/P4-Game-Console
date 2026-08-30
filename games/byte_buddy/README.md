@@ -63,6 +63,18 @@ aura, habitat, and rarity layers. The validated 28-sheet art sidecar is now a
 launch requirement: missing, truncated, wrong-version, or incomplete art fails
 closed instead of showing a low-fidelity placeholder.
 
+Version 3.9 turns Signal Battle into a two-sided encounter. Arc Burst, Prism
+Lance, Thorn Snare, and Comet Crash each have a chronological authored charge,
+travel, strike, and impact row. The opaque token combines one of those attacks
+with Ward, Echo, Siphon, or Overclock; an elemental weakness; a coarse channel
+arena; hue and rarity; and optional protected/hidden traits. The dragon now has
+battle HP, Pulse Strike has a speed-bounded cooldown, enemy attacks have a
+readable 0.65–1.2 second tell, and both battle styles can end in HP or timeout
+defeat. Guard activates an element-specific response instead of merely adding
+time. Victory and defeat each finish their animation before changing screens,
+and only victory can award coins, growth, lineage DNA, or achievements. The
+required sidecar now contains 29 sheets and 464 frames.
+
 ## Touch play
 
 - Tap **Feed**, **Play**, **Clean**, or **Rest** to provide care.
@@ -106,14 +118,34 @@ both inputs are present.
 
 At -65 dBm or stronger, **Battle** unlocks. Signal strength maps from -100..-30
 dBm into a clamped 0..100 encounter strength. Stronger signals have more
-health and are harder to defeat before time expires, but pay more coins.
-Each opaque token deterministically chooses one of two battle styles. **Pulse
-Rush** uses Pulse Strike damage from dragon level and Aura upgrades. **Resonance
-Weave** asks the player to hold and glide through four to seven large runes;
-genome rarity controls route length, signal strength controls hold time, and
-the Magnet upgrade increases the forgiving target radius. **Aura Guard** spends
-a limited charge to buy more time in either style. Winning turns the encounter
-into a signal seed that the dragon eats automatically.
+health, hit harder, and are harder to defeat before time expires, but pay more
+coins. Each opaque token deterministically chooses Pulse Rush or Resonance
+Weave plus an attack, passive, weakness, and visual genome. RSSI can change
+strength and payout, but never changes those identity-derived traits.
+
+**Pulse Rush** uses Pulse Strike damage from Power, Aura upgrades, lineage, and
+matching the displayed weakness. A 0.18–0.36 second Speed-derived cooldown
+prevents tap spam from skipping the animation or encounter. **Resonance Weave**
+asks the player to hold and glide through four to seven large runes; genome
+rarity controls route length, signal strength controls hold time, and Magnet
+increases the forgiving target radius. Thorn Snare temporarily slows both
+Pulse recovery and Weave charge.
+
+Every enemy attack enters a bright windup before its travel and impact frames.
+**Aura Guard** spends a limited charge during that tell or its short travel
+grace and invokes the current dragon element: Mystery uses Nova Parry, Fire
+uses Flare Counter, Ice uses Glacier Ward, and Acid uses Jam Field. Prism Lance
+always deals one point of chip damage through a perfect full block; Comet Crash
+spikes every third volley. Ward absorbs offense, Echo strengthens every third
+attack, Siphon heals after an unguarded hit, and Overclock shortens the attack
+cycle. Coarse channel families add Steady, Heavy, Quick, Echo, or Shift arena
+timing without pretending to reveal a physical bearing.
+
+Winning plays a completion crest and then turns the encounter into a signal
+seed that the dragon eats automatically. Dragon HP reaching zero, time running
+out, or retreating plays a separate result and returns to the tracker with the
+signal intact. Defeat never awards a seed, coins, growth, DNA, or the victory
+achievement, so a rematch is meaningful rather than an automatic collection.
 
 A seed's base genome still comes only from the opaque token. Its visible
 habitat accents come from the coarse channel family and the already-sanitized
@@ -173,7 +205,7 @@ one interaction for ordinary later seeds, so exploring a dense area does not
 skip the care game. The bonuses are small but functional in Signal Battle:
 every two lineage ranks add one Pulse Strike damage, channel variety grants up
 to 0.4 seconds of starting time, the shield trait adds one Aura Guard charge,
-and rank/phantom magic lengthens each guard by at most 0.42 seconds.
+and lineage Guard contributes to the dragon's bounded battle HP.
 
 Signal battles are visual fiction. Byte Buddy never connects to a network,
 asks for a password, sends packets, or interferes with Wi-Fi. The SDL host uses
@@ -260,13 +292,14 @@ Care style determines the mature branch rather than a menu choice:
   early stages and choose a dedicated PixelLab adult family when rare art is
   unlocked.
 
-Animation and UI use 448 authored 64×64 source frames: four-frame ambient clips,
+Animation and UI use 464 authored 64×64 source frames: four-frame ambient clips,
 eight-frame care and power reactions, a dedicated shell-to-baby hatch, four
 signal-genetic flight families, four Star Catcher reward/effect loops, and
 sixteen care/Power/Style/Remix item sprites plus sixteen composable signal
-layers. Forty-eight additional frames provide Signal City props and scanner
+layers. Sixty-four additional frames provide Signal City props and scanner
 states, four reaction-effect families, eight lineage ranks, five adaptation
-crests, and three genome-progress badges. The renderer eases palette color between adjacent
+crests, three genome-progress badges, and four four-frame signal attacks. The
+renderer eases palette color between adjacent
 poses while switching non-overlapping silhouette pixels together at the
 midpoint. This avoids the ghosted double silhouettes caused by per-pixel edge
 dithering while preserving crisp authored poses.
@@ -312,13 +345,13 @@ while Console OS keeps the compatible stable surface and touch mapping.
 
 ## Generated source art
 
-The twenty-nine PNGs in `assets/` are original project inputs generated in
+The thirty PNGs in `assets/` are original project inputs generated in
 PixelLab or ImageGen for this game. Six PixelLab gameplay sheets are transparent
 256×256 4-by-4 grids, and the retained 64×64 style anchor keeps later ImageGen
-sheets cohesive. Twenty-two 1254×1254 ImageGen grids add two egg families, baby
+sheets cohesive. Twenty-three 1254×1254 ImageGen grids add two egg families, baby
 reactions, flight cycles, elemental breath, nine motion expansions, a hatch
 transition, signal-genetic motion, Star Catcher rewards, items, signal genome
-layers, city props, reaction effects, and lineage regalia. Some
+layers, city props, reaction effects, lineage regalia, and signal attacks. Some
 ImageGen grids have a baked neutral checkerboard; the deterministic converter
 removes border-connected neutral pixels and leaves source files untouched. For
 the composable halo/aura sheet, it also removes only enclosed neutral components
@@ -355,6 +388,7 @@ large enough to be background, preserving small white highlights and sigils.
 | `byte_buddy_signal_city_props_imagegen_v7.png` | `67d97a21d7675c3c738832b84698e94806eaf3f391a281818a7982b394b789f3` |
 | `byte_buddy_reaction_fx_imagegen_v8.png` | `b1cbd3061e1e4a19a570d37e4b9cb4abaf9a88d971dc2032292b32e280e3bf65` |
 | `byte_buddy_signal_lineage_badges_imagegen_v9.png` | `7ef6e4e6b7f6153edb4c05f8515ca8ad4233d328329b22b76a90a2cc8050ebb8` |
+| `byte_buddy_signal_attack_cycles_imagegen_v10.png` | `e660d48ec4d3a721c14fd1dd6dab29dbf32b0ac6a1bca41bd1eb5eb3b185e191` |
 
 The exact prompts are retained here so later sheets can match the same art
 direction.
@@ -612,6 +646,50 @@ or frame bleed.
 > outline, neutral transparent-ready background, and generous crop-safe
 > padding.
 
+### ImageGen signal attack cycles
+
+`byte_buddy_signal_attack_cycles_imagegen_v10.png` was generated with the
+built-in OpenAI ImageGen tool on 2026-08-29 as original Byte Buddy art. The
+accepted 1254×1254 RGBA master has real transparency and an exact four-by-four
+chronological layout. Columns are always charge, travel, strike, and impact;
+rows are the encounter families below.
+
+| Row | Attack | Four-frame progression |
+| ---: | --- | --- |
+| 0 | Arc Burst | cyan electrical charge, forked bolt, arcing discharge, electric impact ring |
+| 1 | Prism Lance | violet crystal glint, faceted charge, rainbow lance, shard impact |
+| 2 | Thorn Snare | green signal seed, curling tendrils, thorn-and-acid snare, toxic burst |
+| 3 | Comet Crash | gold warning star, descending comet, bright impact, star-spark crater ring |
+
+> Use case: stylized-concept. Asset type: original pixel-art combat animation
+> atlas for the Byte Buddy ESP32-P4 game. Primary request: create one exact
+> 4-column by 4-row sprite atlas containing four chronological signal-enemy
+> attack animations. Every row is one attack and every column is the next frame
+> in time. Scene/backdrop: fully transparent background; no scenery.
+> Style/medium: polished saturated 16-bit arcade pixel art with hard square
+> pixel edges, dark navy outlines, bright cyan, magenta, violet, gold, electric
+> green, and white highlights; cute magical cyber-fantasy matching a friendly
+> signal-dragon game. Composition/framing: sixteen equal square cells in a
+> precise 4x4 grid; every effect centered on the same baseline and contained
+> within about 70 percent of its cell with generous transparent padding; no
+> element crosses a cell boundary. Row 1, left to right: ARC BURST — tiny cyan
+> electrical charge, growing forked bolt, bright arcing discharge, compact
+> electric impact ring. Row 2, left to right: PRISM LANCE — small violet
+> crystal glint, charged faceted crystal, narrow rainbow energy lance,
+> crystalline shard impact. Row 3, left to right: THORN SNARE — small green
+> signal seed, curling neon tendrils expanding, complete thorn-and-acid snare
+> ring, compact toxic burst with droplets. Row 4, left to right: COMET CRASH —
+> small gold warning star, descending magenta-blue comet, brilliant centered
+> comet impact, fading star-spark crater ring. Constraints: exactly 4 columns
+> and exactly 4 rows; chronological animation continuity within each row;
+> transparent background; crop-safe isolated frames; consistent scale and
+> optical center; limited palette; no characters; no buildings; no UI panels;
+> no text; no letters; no numbers; no cell borders; no grid lines; no
+> checkerboard baked into the image; no watermark; original design only.
+> Avoid: painterly blur, antialiasing, photorealism, gradients that destroy
+> pixel edges, oversized effects touching cell edges, duplicated frames,
+> decorative objects unrelated to the named attack.
+
 ## Deterministic atlas conversion
 
 `tools/png_to_dragon_atlas.py` scales each source sheet to 256×256 with
@@ -620,10 +698,10 @@ gets a deterministic 15-color RGB565 palette plus transparent index zero, and
 two 4-bit indices are packed per byte. A frame therefore occupies 2,080 bytes
 instead of 8,192 bytes of raw RGB565.
 
-All twenty-eight gameplay sheets contain 448 master frames in a 931,904-byte
+All twenty-nine gameplay sheets contain 464 master frames in a 965,184-byte
 resource payload. Console OS wraps that payload as `BYTEBUD.P4R`: a bounded,
-same-ID, SHA-256-verified read-only SD sidecar. Byte Buddy 3.8 requires storage
-resource format v1 and validates the full 28-sheet bank before initializing.
+same-ID, SHA-256-verified read-only SD sidecar. Byte Buddy 3.9 requires storage
+resource format v1 and validates the full 29-sheet bank before initializing.
 Missing, null, truncated, wrong-version, or incomplete art fails closed; there
 is no low-fidelity launch path or placeholder renderer. The executable remains
 under the existing 512 KiB safety limit, while the art bank remains below the
@@ -674,7 +752,8 @@ python3 games/byte_buddy/tools/png_to_dragon_atlas.py \
   games/byte_buddy/assets/byte_buddy_signal_genome_layers_imagegen_v6.png \
   games/byte_buddy/assets/byte_buddy_signal_city_props_imagegen_v7.png \
   games/byte_buddy/assets/byte_buddy_reaction_fx_imagegen_v8.png \
-  games/byte_buddy/assets/byte_buddy_signal_lineage_badges_imagegen_v9.png
+  games/byte_buddy/assets/byte_buddy_signal_lineage_badges_imagegen_v9.png \
+  games/byte_buddy/assets/byte_buddy_signal_attack_cycles_imagegen_v10.png
 
 python3 scripts/build-game-resource.py \
   --manifest games/byte_buddy/game.json \
@@ -686,19 +765,45 @@ Current deterministic art identities:
 
 - unlinked six-sheet regression include:
   `450156a7e0b1179934f5286b24208906f6350dd1b823affb3aba0a42a122ece2`;
-- full 28-sheet `BBDART2` payload: 931,904 bytes,
-  `4e6b5ef1aefa57ea308f9accd58a5cea1972be94417c388e277ff5732aee3ad9`;
-- wrapped `BYTEBUD.P4R`: 932,032 bytes,
+- full 29-sheet `BBDART2` payload: 965,184 bytes,
+  `d08928839e500bcfb55d65619982bbe71dffb25ad6f0ef5afccbd86a30062699`;
+- wrapped `BYTEBUD.P4R`: 965,312 bytes,
+  `034c3253e60507b94818a7bc4a6fc76c7847ee6640c03934fa6543b841bcd65e`;
+- v3.9 `BYTEBUD.P4G`: 186,400 bytes with a 186,144-byte ELF payload,
+  payload SHA-256
+  `e87ac000ec4e01b2970160e2acd2185678148daf1a9fe8361f5310d91c790865`
+  and package SHA-256
+  `d799f064ab33d2f50d1a676cd67e51c1b56c7014e1eefd78da91e42313038a49`;
+- previous v3.8 `BYTEBUD.P4R` rollback baseline: 932,032 bytes,
   `1cd1e48f89e0ca5d2d147e6f66a791277a346ba4c7d52dd71468b2f856379828`;
-- v3.8 `BYTEBUD.P4G`: 180,380 bytes, payload SHA-256
+- previous v3.8 `BYTEBUD.P4G` baseline: 180,380 bytes, payload SHA-256
   `b2d94d4ee688d7d88d99b47a0d44561dc4daece58785c5949d115ec425e5b6b4`,
   package SHA-256
   `fb3200544b132430b5fec24ba1d7463daf05b9af9bf3ebf3efbd80c0596d56b9`.
 
-Two independent focused RISC-V builds produced byte-identical cartridges, and
-the repository package verifier accepted the final header, manifest fields,
-capability masks, ELF payload, and digest. This is artifact verification, not a
-full firmware build or on-device acceptance result.
+Two independent atlas conversions produced byte-identical v3.9 include and
+resource outputs. Two independent focused RISC-V builds with
+`riscv32-esp-elf-gcc (crosstool-NG esp-14.2.0_20251107) 14.2.0` produced the
+byte-identical v3.9 cartridge recorded above. The package verifier accepted its
+header, manifest fields, capability masks, ELF payload, and digest. This is
+artifact verification, not on-device acceptance.
+
+### v3.9 deployment candidate
+
+Deploy v3.9 as a paired `BYTEBUD.P4G` and `BYTEBUD.P4R` game-only update after
+focused host, named SDL play, package, and target-matched Console OS integration
+checks pass. The first canary is the recorded pink Waveshare 4.3 unit 1,
+identity SHA-256
+`c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d`;
+promote the same verified pair to green unit 2 only after canary acceptance.
+Because the sidecar changed, use the H2 USB Drive workflow or a powered-off
+microSD reader and replace both files as one versioned pair; the H1
+live-transfer path installs `.P4G` files only and must not leave a v3.9
+executable beside the v3.8 resource. Verify both hashes, eject cleanly, remount,
+and exercise every attack family and dragon counter plus Pulse Rush, Resonance
+Weave, retreat/rematch, one win, and one genuine defeat with no loss reward.
+Preserve the exact v3.8 pair above for atomic rollback. No host build is
+hardware acceptance, and no hardware install is authorized by this plan.
 
 ## Verification
 
@@ -724,7 +829,10 @@ reward card, and one-signal Spark, five-signal Aurora, eight-signal Ascended,
 12-signal Mythic, 16-signal Nova, 24-signal Galaxy, and 32-signal Eternal clips.
 Dedicated Pulse Rush and Resonance Weave frames show their authored effects,
 controller cursor, and hints. The sequence remains exactly 178 frames. The tests
-cover touch hit areas,
+also run a dedicated 905-frame Signal Battle chronology covering every attack
+family, all four passive combinations, telegraphs, travel, impact, guard,
+player damage, HP defeat, rematch, retreat, Pulse victory, Resonance victory,
+and delayed rewards. They cover touch hit areas,
 care achievements, shop spending paths, preview progression, drag and
 controller Star Catcher play, trait selection, customization costs,
 all 19,200 collision-free look recipe IDs, deterministic owned-choice Remix,
@@ -733,15 +841,18 @@ eight-result paging, focused scan reordering, transient scanner-busy retention,
 both battle modes, all 8,192 genome pattern assignments and rune routes, all
 twenty habitat contexts and every one of the 163,840 collision-free form IDs,
 controller Signal Hunt and touch-to-controller Resonance play, battle rewards,
+all 163,840 attack/channel/flag encounter derivations, dragon defenses and
+cooldown bounds, capture-before-impact and exact-tie ordering, loss reward
+gating, immutable in-battle signal snapshots,
 all five base lineage boundaries plus both sides of the Nova/Galaxy/Eternal
 thresholds, order-independent aggregation, independent on/off boundaries for
 all five combinable adaptations, the 48-link recovery/fail-safe path,
 low-diversity stalling, capped lineage stats, bounded signal-provider
 integration, guarded rendering, the required storage/resource-v1 contract,
 and rejection of missing, null, malformed, truncated, wrong-version, or
-incomplete full art. CTest renders the eleven primary 320×200 screens and the
-complete 178-frame route with the committed resource as deterministic preview
-smokes.
+incomplete full art. CTest renders the eleven primary 320×200 screens, the
+complete 178-frame route, and hashes the exact 905-frame battle route with the
+committed resource as deterministic preview smokes.
 
 Care, coins, upgrades, growth, and lineage are session-only until the platform
 exposes a reviewed writable save service. The game owns no display, touch,

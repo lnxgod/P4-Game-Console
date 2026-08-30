@@ -77,6 +77,34 @@ P4 Game API surface.
       authored Pulse Rush and Resonance Weave battle captures.
 - [x] Build the v3.8 RISC-V cartridge and full art sidecar twice with the pinned
       toolchain, verify byte identity, and record exact payload/package hashes.
+- [x] Generate and inspect an original crop-safe 4x4 signal-attack atlas with
+      chronological Arc Burst, Prism Lance, Thorn Snare, and Comet Crash rows.
+- [x] Append the attack atlas at stable sheet index 28 and regenerate the
+      deterministic 29-sheet/464-frame `.P4R` payload twice byte-identically.
+- [x] Combine attack, passive, weakness, channel arena, rarity, hue, and
+      protected/hidden traits into bounded deterministic encounter genomes;
+      keep labels and raw MAC/BSSID data out of every derivation helper.
+- [x] Give the dragon battle HP and each signal telegraphed enemy turns,
+      cooldown-safe offense, shields/status effects, element-specific counters,
+      and explicit victory, HP-defeat, timeout, and retreat outcomes.
+- [x] Delay collection and every coin/growth/DNA reward until the authored
+      victory phase completes; losses leave the signal intact for a rematch.
+- [x] Animate intro, windup, travel, impact, guard, recoil, eased HP bars,
+      victory, and defeat; correct hatch order, reclaim unused flight cycles,
+      smooth scanner pulses, and ease Star Catcher reward spawns.
+- [x] Prove frame-chunk-independent battle ordering: rune capture before a
+      lethal impact wins, an exact tie loses, and every animation/status timer
+      consumes only the time after its event.
+- [x] Render and inspect the legacy 178-frame route plus the exact 905-frame
+      Signal Battle chronology under ASan/UBSan; run the SDL host smoke and
+      save-contract tests.
+- [x] Build the v3.9 RISC-V cartridge and `.P4R` twice with the pinned compiler,
+      verify byte identity and package structure, and record all final hashes.
+- [x] Document a paired-file canary/rollback plan for pink Waveshare unit 1,
+      followed by green unit 2 only after named human acceptance.
+- [ ] Complete a named SDL play pass covering all four enemy attacks, all four
+      dragon counters, Pulse Rush, Resonance Weave, one victory, one genuine
+      defeat, retreat/rematch, touch/controller parity, and launcher return.
 - [x] Build the v3.7 RISC-V cartridge twice, verify byte identity and package
       structure, and record the exact `.P4G` payload/package hashes.
 - [x] Complete a visible SDL keyboard play pass: Start entered Star Catcher,
@@ -105,6 +133,9 @@ P4 Game API surface.
 - [x] Add Signal Hunt paging so all eight bounded OS results are selectable.
 - [ ] Perform named tablet acceptance for touch feel, panel motion, speaker feedback,
       launcher return, and exact `.P4G`/`.P4R` hashes before calling the work hardware-tested.
+- [ ] After v3.9 host, SDL, package, and Waveshare integration checks pass,
+      preserve the v3.8 rollback pair and canary-install the matched v3.9
+      `.P4G`/`.P4R` pair through H2 USB Drive or a powered-off microSD reader.
 
 ## Balance targets
 

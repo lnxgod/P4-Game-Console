@@ -63,3 +63,14 @@ add_test(
         "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-animation"
 )
 set_tests_properties(byte_buddy_animation_preview_smoke PROPERTIES TIMEOUT 30)
+
+add_test(
+    NAME byte_buddy_signal_motion_preview_smoke
+    COMMAND byte_buddy_touch_previews
+        "${BYTE_BUDDY_TEST_ART_PATH}"
+        --signal-motion
+        -
+        905
+)
+set_tests_properties(byte_buddy_signal_motion_preview_smoke PROPERTIES
+    TIMEOUT 30)
