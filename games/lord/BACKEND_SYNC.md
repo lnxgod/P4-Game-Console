@@ -267,8 +267,14 @@ uses independent P4MP/P4RM client state against one temporary SQLite realm and
 proves both offline uploads, mail serialization into the reopened LDSV, an
 exactly-once 100-ChompCoin debit, dirty-branch/event ordering, and replay after
 simulated power loss. Its expected terminal heads are Pink revision 3 and Green
-revision 4 with all three events and both economy rows committed. Device-level
-mid-write fault injection, PvP lease expiry, hostile-client fuzzing, and exact
-H1/BLE evidence remain hardware/release gates. The SDL runner exercises the
-real C cartridge separately but currently has no multiplayer-session callback,
-so a host pass is not H1 or BLE hardware acceptance.
+revision 4 with all three events and both economy rows committed. A separate
+ten-client chaos campaign now covers 12 hourly days, all 45 player pairings,
+60 duels, 120 committed events, 91 applied economy rows, paged roster discovery,
+store/session restarts, lost replies, nonce replay, corrupt uploads, conflicts,
+receipt-before-save power loss, local rollback, and forged PvP cursor state. It
+checks exact per-actor revision histories and conserves all 8,000 ChompCoin.
+Device-level mid-write fault injection, PvP lease expiry, hostile-client
+fuzzing, server-verifiable combat outcomes, rate-limit policy, and exact H1/BLE
+evidence remain hardware/release gates. The SDL runner exercises the real C
+cartridge separately but currently has no multiplayer-session callback, so a
+host pass is not H1 or BLE hardware acceptance.

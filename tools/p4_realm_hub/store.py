@@ -1103,6 +1103,124 @@ class RealmStore:
                 database.rollback()
                 return "invalid", current_revision
 
+            if prior_record is not None and adoption_grant_id is None:
+                # PvP wins and losses are lifetime counters.  Offline play can
+                # legitimately add to them, but neither counter may move
+                # backwards and every newly consumed realm result must be
+                # represented.  Cursor validation alone is insufficient: a
+                # forged client could otherwise skip a zero-ChompCoin loss and
+                # immediately appear alive again.
+                if (
+                    candidate.player.pvp_wins
+                    < prior_record.player.pvp_wins
+                    or candidate.player.pvp_losses
+                    < prior_record.player.pvp_losses
+                ):
+                    database.rollback()
+                    return "invalid", current_revision
+
+                if candidate.last_realm_event_id > prior_event_cursor:
+                    cursor_event = database.execute(
+                        "SELECT 1 FROM realm_events WHERE event_id = ? "
+                        "AND target_actor_id = ? AND admitted = 1",
+                        (candidate.last_realm_event_id, actor_id),
+                    ).fetchone()
+                    if cursor_event is None:
+                        database.rollback()
+                        return "invalid", current_revision
+
+                pvp_outcomes = database.execute(
+                    "SELECT source_actor_id, code, created_at "
+                    "FROM realm_events WHERE target_actor_id = ? "
+                    "AND admitted = 1 AND kind = ? AND event_id > ? "
+                    "AND event_id <= ? ORDER BY event_id ASC",
+                    (
+                        actor_id,
+                        p4rm.ACTION_PVP_RESOLVE,
+                        prior_event_cursor,
+                        candidate.last_realm_event_id,
+                    ),
+                ).fetchall()
+                pvp_results: list[tuple[str, int]] = []
+                for event_source, raw_code, resolved_at in pvp_outcomes:
+                    code = int(raw_code)
+                    source_actor_id = bytes(event_source)
+                    forward = database.execute(
+                        "SELECT outcome, realm_day_id FROM pvp_leases "
+                        "WHERE admitted = 1 "
+                        "AND status = 1 AND outcome IS NOT NULL "
+                        "AND source_actor_id = ? "
+                        "AND target_actor_id = ? AND resolved_at = ?",
+                        (source_actor_id, actor_id, int(resolved_at)),
+                    ).fetchall()
+                    reverse = database.execute(
+                        "SELECT outcome, realm_day_id FROM pvp_leases "
+                        "WHERE admitted = 1 "
+                        "AND status = 1 AND outcome IS NOT NULL "
+                        "AND source_actor_id = ? "
+                        "AND target_actor_id = ? AND resolved_at = ?",
+                        (actor_id, source_actor_id, int(resolved_at)),
+                    ).fetchall()
+                    matches = [
+                        ("forward", int(match[0]), int(match[1]))
+                        for match in forward
+                    ] + [
+                        ("reverse", int(match[0]), int(match[1]))
+                        for match in reverse
+                    ]
+                    if len(matches) != 1:
+                        database.rollback()
+                        return "invalid", current_revision
+                    role, outcome, lease_day_id = matches[0]
+                    semantic = {
+                        ("forward", 0, 0): "win",
+                        ("forward", 1, 1): "loss",
+                        ("reverse", 0, 1): "loss",
+                        ("reverse", 1, 2): "win",
+                        # A cursor-proven pre-code-2 source win remains safe
+                        # to consume once; restart reconciliation rejects it
+                        # while pending and records it once already consumed.
+                        ("reverse", 1, 1): "win",
+                    }.get((role, outcome, code))
+                    if semantic is None:
+                        database.rollback()
+                        return "invalid", current_revision
+                    pvp_results.append((semantic, lease_day_id))
+                wins_required = min(
+                    0xFFFF,
+                    prior_record.player.pvp_wins
+                    + sum(
+                        semantic == "win"
+                        for semantic, _lease_day in pvp_results
+                    ),
+                )
+                losses_required = min(
+                    0xFFFF,
+                    prior_record.player.pvp_losses
+                    + sum(
+                        semantic == "loss"
+                        for semantic, _lease_day in pvp_results
+                    ),
+                )
+                knockout_required = any(
+                    semantic == "loss"
+                    and not (
+                        int(row[1]) < realm_day_id
+                        and lease_day_id <= int(row[1])
+                    )
+                    for semantic, lease_day_id in pvp_results
+                )
+                if (
+                    candidate.player.pvp_wins < wins_required
+                    or candidate.player.pvp_losses < losses_required
+                    or (
+                        knockout_required
+                        and candidate.player.hit_points != 0
+                    )
+                ):
+                    database.rollback()
+                    return "invalid", current_revision
+
             anchor_to_write: tuple[int, int, bytes] | None = None
             if adoption_grant_id is not None or prior_snapshot is None:
                 anchor_to_write = (realm_day_id, realm_day_id, snapshot)

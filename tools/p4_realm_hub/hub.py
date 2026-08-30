@@ -123,6 +123,8 @@ class RealmHubSession:
         self.connected = False
         self.game_online = False
         self.awaiting_local_commit = False
+        self.awaiting_local_save_sequence: int | None = None
+        self.awaiting_local_rollover_allowed = False
         self.download: Download | None = None
         self.upload: Upload | None = None
         self.action_upload: ActionUpload | None = None
@@ -228,6 +230,8 @@ class RealmHubSession:
         self.connected = False
         self.game_online = False
         self.awaiting_local_commit = False
+        self.awaiting_local_save_sequence = None
+        self.awaiting_local_rollover_allowed = False
         self.download = None
         self.upload = None
         self.action_upload = None
@@ -261,6 +265,8 @@ class RealmHubSession:
         self.connected = True
         self.game_online = False
         self.awaiting_local_commit = False
+        self.awaiting_local_save_sequence = None
+        self.awaiting_local_rollover_allowed = False
         self.download = None
         self.upload = None
         self.action_upload = None
@@ -329,6 +335,8 @@ class RealmHubSession:
 
     def _begin_game_sync(self, message: p4rm.Message) -> None:
         self.awaiting_local_commit = False
+        self.awaiting_local_save_sequence = None
+        self.awaiting_local_rollover_allowed = False
         try:
             local_actor, base_revision, committed, current, hello_flags = (
                 p4rm.decode_hello(message.payload)
@@ -479,6 +487,11 @@ class RealmHubSession:
         self.awaiting_local_commit = local_dirty and bool(
             flags & (p4rm.WELCOME_ACCEPT_LOCAL | p4rm.WELCOME_ADOPT_LOCAL)
         )
+        if self.awaiting_local_commit:
+            self.awaiting_local_save_sequence = current
+            self.awaiting_local_rollover_allowed = bool(
+                flags & p4rm.WELCOME_ROLLOVER_PENDING
+            )
         if flags & p4rm.WELCOME_LOCAL_CONFLICT:
             sync_mode = "conflict"
         elif flags & p4rm.WELCOME_ADOPT_LOCAL:
@@ -810,6 +823,11 @@ class RealmHubSession:
                 adoption_grant_id=commit_adoption_grant,
                 now=self.now(),
             )
+            current_head_revision = (
+                self.store.read_head(self.actor_id).revision
+                if status == "ok"
+                else revision
+            )
         except (OSError, RuntimeError, sqlite3.Error):
             self._send_commit_result(
                 message.transaction_id, p4rm.COMMIT_STORAGE_ERROR, 0
@@ -823,8 +841,48 @@ class RealmHubSession:
             "stale-day": p4rm.COMMIT_STALE_DAY,
         }[status]
         self._send_commit_result(message.transaction_id, result, revision)
-        if status == "ok":
+        if status == "stale-day" and self.awaiting_local_commit:
+            # The stock client applies exactly one trusted hourly refresh
+            # before regenerating this dirty branch for the returned day.
+            self.awaiting_local_rollover_allowed = True
+        commit_matches_hello = True
+        if self.awaiting_local_commit:
+            try:
+                committed_generation = decode_lord_sync(
+                    record,
+                    expected_actor_id=self.actor_id,
+                    expected_nonce=upload.nonce,
+                    allow_adoption_bridge=commit_adoption_grant is not None,
+                ).save_sequence
+            except ValueError:
+                commit_matches_hello = False
+            else:
+                rollover_generation = (
+                    None
+                    if self.awaiting_local_save_sequence is None
+                    or self.awaiting_local_save_sequence == 0xFFFFFFFF
+                    else self.awaiting_local_save_sequence + 1
+                )
+                commit_matches_hello = committed_generation == (
+                    self.awaiting_local_save_sequence
+                ) or (
+                    self.awaiting_local_rollover_allowed
+                    and committed_generation == rollover_generation
+                )
+        # Store-level idempotency deliberately returns an operation's original
+        # revision.  It can release a dirty-first barrier only if it is still
+        # the authoritative head *and* it is the local generation accepted by
+        # this session's HELLO (optionally plus its one authorized rollover).
+        # Replaying an old or already-current record cannot smuggle a different
+        # dirty branch past synchronization.
+        if (
+            status == "ok"
+            and revision == current_head_revision
+            and commit_matches_hello
+        ):
             self.awaiting_local_commit = False
+            self.awaiting_local_save_sequence = None
+            self.awaiting_local_rollover_allowed = False
             if self.awaiting_event_commit != 0:
                 committed = decode_lord_sync(
                     record,

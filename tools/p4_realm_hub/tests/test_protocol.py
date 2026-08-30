@@ -1165,6 +1165,288 @@ class StoreTests(unittest.TestCase):
                     p4rm.ACTION_OK,
                 )
 
+    def test_pvp_event_cursor_requires_the_protected_outcome(self) -> None:
+        cases = (
+            ("source-loss", 0, "source", 1, 800, {},
+             {"hit_points": 0, "pvp_losses": 2}),
+            ("defender-win", 0, "target", 0, 800, {},
+             {"pvp_wins": 3}),
+            ("source-win", 1, "source", 2, 1_200, {},
+             {"pvp_wins": 3}),
+            ("target-loss", 1, "target", 1, 400, {},
+             {"hit_points": 0, "pvp_losses": 2}),
+        )
+        for (
+            label,
+            outcome,
+            recipient_role,
+            expected_code,
+            reflected_coin,
+            malicious_fields,
+            honest_fields,
+        ) in cases:
+            with self.subTest(case=label), tempfile.TemporaryDirectory() as directory:
+                store = RealmStore(Path(directory) / "realm.sqlite3")
+                source = self.add_profile(
+                    store, "source", "Source Hero", 800
+                )
+                target = self.add_profile(
+                    store, "target", "Target Hero", 800
+                )
+                recipient = source if recipient_role == "source" else target
+                recipient_name = (
+                    "Source Hero" if recipient_role == "source" else "Target Hero"
+                )
+                day, _ = store.realm_clock()
+                lease = store.perform_action(
+                    source,
+                    201,
+                    p4rm.ACTION_PVP_BEGIN,
+                    0,
+                    0,
+                    target,
+                    b"",
+                )
+                self.assertEqual(lease.status, p4rm.ACTION_OK)
+                resolution = store.perform_action(
+                    source,
+                    202,
+                    p4rm.ACTION_PVP_RESOLVE,
+                    outcome,
+                    0,
+                    target,
+                    lease.related_id.to_bytes(8, "little")
+                    + bytes((outcome,)),
+                )
+                self.assertEqual(resolution.status, p4rm.ACTION_OK)
+                event = store.next_event(recipient)
+                self.assertIsNotNone(event)
+                self.assertEqual(
+                    (event.kind, event.code),
+                    (p4rm.ACTION_PVP_RESOLVE, expected_code),
+                )
+
+                forged = lord_record(
+                    recipient,
+                    203,
+                    save_sequence=3,
+                    name=recipient_name,
+                    chompcoin=reflected_coin,
+                    last_realm_event_id=event.event_id,
+                    sync_actor_id=recipient,
+                    sync_server_revision=1,
+                    sync_committed_save_sequence=2,
+                    **malicious_fields,
+                )
+                self.assertEqual(
+                    store.commit(recipient, 1, 203, day, forged),
+                    ("invalid", 1),
+                )
+
+                honest = lord_record(
+                    recipient,
+                    204,
+                    save_sequence=3,
+                    name=recipient_name,
+                    chompcoin=reflected_coin,
+                    last_realm_event_id=event.event_id,
+                    sync_actor_id=recipient,
+                    sync_server_revision=1,
+                    sync_committed_save_sequence=2,
+                    **honest_fields,
+                )
+                self.assertEqual(
+                    store.commit(recipient, 1, 204, day, honest),
+                    ("ok", 2),
+                )
+
+    def test_lifetime_pvp_counters_cannot_move_backwards(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            actor = self.add_profile(store, "player", "Player Hero", 800)
+            day, _ = store.realm_clock()
+            for nonce, fields in (
+                (301, {"pvp_wins": 1}),
+                (302, {"pvp_losses": 0}),
+            ):
+                with self.subTest(fields=fields):
+                    candidate = lord_record(
+                        actor,
+                        nonce,
+                        save_sequence=3,
+                        name="Player Hero",
+                        sync_actor_id=actor,
+                        sync_server_revision=1,
+                        sync_committed_save_sequence=2,
+                        **fields,
+                    )
+                    self.assertEqual(
+                        store.commit(actor, 1, nonce, day, candidate),
+                        ("invalid", 1),
+                    )
+
+    def test_pvp_loss_can_be_consumed_during_hourly_revival(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            source = self.add_profile(
+                store, "source", "Source Hero", 800
+            )
+            target = self.add_profile(
+                store, "target", "Target Hero", 800
+            )
+            lease = store.perform_action(
+                source,
+                401,
+                p4rm.ACTION_PVP_BEGIN,
+                0,
+                0,
+                target,
+                b"",
+            )
+            self.assertEqual(lease.status, p4rm.ACTION_OK)
+            self.assertEqual(
+                store.perform_action(
+                    source,
+                    402,
+                    p4rm.ACTION_PVP_RESOLVE,
+                    0,
+                    0,
+                    target,
+                    lease.related_id.to_bytes(8, "little") + b"\0",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+            loss = store.next_event(source)
+            self.assertEqual((loss.kind, loss.code), (p4rm.ACTION_PVP_RESOLVE, 1))
+
+            store.epoch_seconds -= 3_600
+            next_day, _ = store.realm_clock()
+            revived = lord_record(
+                source,
+                403,
+                save_sequence=3,
+                name="Source Hero",
+                chompcoin=800,
+                hit_points=30,
+                player_day=2,
+                pvp_losses=2,
+                last_realm_event_id=loss.event_id,
+                sync_actor_id=source,
+                sync_server_revision=1,
+                sync_committed_save_sequence=2,
+            )
+            self.assertEqual(
+                store.commit(source, 1, 403, next_day, revived),
+                ("ok", 2),
+            )
+
+        # A duel created after the clock advances is a current-day knockout,
+        # even when the loser's old head still needs its hourly rollover.
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            source = self.add_profile(
+                store, "new-source", "New Source", 800
+            )
+            target = self.add_profile(
+                store, "new-target", "New Target", 800
+            )
+            store.epoch_seconds -= 3_600
+            next_day, _ = store.realm_clock()
+            lease = store.perform_action(
+                source,
+                404,
+                p4rm.ACTION_PVP_BEGIN,
+                0,
+                0,
+                target,
+                b"",
+            )
+            self.assertEqual(lease.status, p4rm.ACTION_OK)
+            self.assertEqual(
+                store.perform_action(
+                    source,
+                    405,
+                    p4rm.ACTION_PVP_RESOLVE,
+                    0,
+                    0,
+                    target,
+                    lease.related_id.to_bytes(8, "little") + b"\0",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+            current_day_loss = store.next_event(source)
+            forged_revival = lord_record(
+                source,
+                406,
+                save_sequence=3,
+                name="New Source",
+                chompcoin=800,
+                hit_points=30,
+                player_day=2,
+                pvp_losses=2,
+                last_realm_event_id=current_day_loss.event_id,
+                sync_actor_id=source,
+                sync_server_revision=1,
+                sync_committed_save_sequence=2,
+            )
+            self.assertEqual(
+                store.commit(source, 1, 406, next_day, forged_revival),
+                ("invalid", 1),
+            )
+            honest_loss = lord_record(
+                source,
+                407,
+                save_sequence=3,
+                name="New Source",
+                chompcoin=800,
+                hit_points=0,
+                player_day=2,
+                pvp_losses=2,
+                last_realm_event_id=current_day_loss.event_id,
+                sync_actor_id=source,
+                sync_server_revision=1,
+                sync_committed_save_sequence=2,
+            )
+            self.assertEqual(
+                store.commit(source, 1, 407, next_day, honest_loss),
+                ("ok", 2),
+            )
+
+            # LORD's stock dead-screen confirmation can restore HP while
+            # removing the rest of today's solo fights.  The pending KO is
+            # durable and immediate, not a server-enforced day-long latch.
+            recovered = lord_record(
+                source,
+                408,
+                save_sequence=4,
+                name="New Source",
+                chompcoin=800,
+                hit_points=30,
+                player_day=2,
+                pvp_losses=2,
+                forest_fights=0,
+                last_realm_event_id=current_day_loss.event_id,
+                sync_actor_id=source,
+                sync_server_revision=2,
+                sync_committed_save_sequence=3,
+            )
+            self.assertEqual(
+                store.commit(source, 2, 408, next_day, recovered),
+                ("ok", 3),
+            )
+            self.assertEqual(
+                store.perform_action(
+                    source,
+                    409,
+                    p4rm.ACTION_PVP_BEGIN,
+                    0,
+                    0,
+                    target,
+                    b"",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+
     def test_pending_legacy_source_pvp_codes_fail_closed(self) -> None:
         cases = ((0, 0, "wire-incompatible"), (1, 1, "wire-incompatible"))
         for outcome, legacy_code, error_text in cases:
@@ -2928,25 +3210,27 @@ class HubSessionTests(unittest.TestCase):
             hub.remote_peer_id = 20
             hub.connected = True
             hub.game_online = True
+            hub.awaiting_local_commit = True
+            hub.awaiting_local_save_sequence = 3
 
             nonce = 81
-            rolled = lord_record(
+            dirty = lord_record(
                 actor,
                 nonce,
                 save_sequence=3,
-                player_day=2,
+                chompcoin=600,
                 sync_actor_id=actor,
                 sync_server_revision=1,
                 sync_committed_save_sequence=2,
             )
-            chunks = p4rm.record_chunks(rolled)
+            chunks = p4rm.record_chunks(dirty)
             hub._begin_upload(
                 p4rm.Message(
                     p4rm.UPLOAD_BEGIN,
                     900,
                     p4rm.BEGIN_INDEX,
                     len(chunks),
-                    p4rm.encode_upload_begin(1, rolled, nonce, 1),
+                    p4rm.encode_upload_begin(1, dirty, nonce, 1),
                 )
             )
             begin_ack = p4rm.decode_message(
@@ -2977,7 +3261,148 @@ class HubSessionTests(unittest.TestCase):
             self.assertEqual(struct.unpack_from("<I", result.payload, 1)[0], 1)
             self.assertEqual(struct.unpack_from("<Q", result.payload, 5)[0], 2)
             self.assertTrue(hub.game_online)
+            self.assertTrue(hub.awaiting_local_commit)
+            self.assertTrue(hub.awaiting_local_rollover_allowed)
             self.assertEqual(store.read_head(actor).snapshot, base)
+
+            rolled = lord_record(
+                actor,
+                82,
+                save_sequence=4,
+                chompcoin=600,
+                player_day=2,
+                sync_actor_id=actor,
+                sync_server_revision=1,
+                sync_committed_save_sequence=2,
+            )
+            chunks = p4rm.record_chunks(rolled)
+            hub._begin_upload(
+                p4rm.Message(
+                    p4rm.UPLOAD_BEGIN,
+                    901,
+                    p4rm.BEGIN_INDEX,
+                    len(chunks),
+                    p4rm.encode_upload_begin(1, rolled, 82, 2),
+                )
+            )
+            self.assertEqual(
+                p4rm.decode_message(
+                    p4mp.decode_packet(sent.pop(0)).payload
+                ).kind,
+                p4rm.ACK,
+            )
+            for index, chunk in enumerate(chunks):
+                hub._receive_upload_chunk(
+                    p4rm.Message(
+                        p4rm.UPLOAD_CHUNK,
+                        901,
+                        index,
+                        len(chunks),
+                        chunk,
+                    )
+                )
+                self.assertEqual(
+                    p4rm.decode_message(
+                        p4mp.decode_packet(sent.pop(0)).payload
+                    ).kind,
+                    p4rm.ACK,
+                )
+            result = p4rm.decode_message(
+                p4mp.decode_packet(sent.pop(0)).payload
+            )
+            self.assertEqual(result.payload[0], p4rm.COMMIT_OK)
+            self.assertFalse(hub.awaiting_local_commit)
+            self.assertFalse(hub.awaiting_local_rollover_allowed)
+            self.assertEqual(store.read_head(actor).snapshot, rolled)
+
+    def test_dirty_welcome_rollover_releases_expected_generation(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            clock = [0.0]
+            store = RealmStore(
+                Path(directory) / "realm.sqlite3", epoch_seconds=0
+            )
+            actor = store.actor_for_profile("console-one")
+            base = lord_record(actor, 90)
+            self.assertEqual(
+                store.commit(actor, 0, 90, 1, base, now=clock[0]),
+                ("ok", 1),
+            )
+            clock[0] = 3_600.0
+            sent: list[bytes] = []
+            hub = RealmHubSession(
+                "console-one",
+                store,
+                sent.append,
+                test_offer(),
+                now=lambda: clock[0],
+            )
+            hub.session_id = 10
+            hub.remote_peer_id = 20
+            hub.connected = True
+            dirty_flags = (
+                p4rm.HELLO_HAS_LOCAL
+                | p4rm.HELLO_HAS_SYNC_BASE
+                | p4rm.HELLO_LOCAL_DIRTY
+            )
+            hub._begin_game_sync(
+                p4rm.Message(
+                    p4rm.HELLO,
+                    91,
+                    0,
+                    0,
+                    p4rm.encode_hello(actor, 1, 2, 3, dirty_flags),
+                )
+            )
+            welcome = p4rm.decode_message(
+                p4mp.decode_packet(sent.pop(0)).payload
+            )
+            self.assertEqual(
+                p4rm.decode_welcome(welcome.payload)[4],
+                p4rm.WELCOME_ACCEPT_LOCAL
+                | p4rm.WELCOME_ROLLOVER_PENDING,
+            )
+            self.assertTrue(hub.awaiting_local_commit)
+            self.assertTrue(hub.awaiting_local_rollover_allowed)
+
+            rolled = lord_record(
+                actor,
+                92,
+                save_sequence=4,
+                chompcoin=600,
+                player_day=2,
+                sync_actor_id=actor,
+                sync_server_revision=1,
+                sync_committed_save_sequence=2,
+            )
+            chunks = p4rm.record_chunks(rolled)
+            hub._begin_upload(
+                p4rm.Message(
+                    p4rm.UPLOAD_BEGIN,
+                    92,
+                    p4rm.BEGIN_INDEX,
+                    len(chunks),
+                    p4rm.encode_upload_begin(1, rolled, 92, 2),
+                )
+            )
+            sent.pop(0)
+            for index, chunk in enumerate(chunks):
+                hub._receive_upload_chunk(
+                    p4rm.Message(
+                        p4rm.UPLOAD_CHUNK,
+                        92,
+                        index,
+                        len(chunks),
+                        chunk,
+                    )
+                )
+                sent.pop(0)
+            result = p4rm.decode_message(
+                p4mp.decode_packet(sent.pop(0)).payload
+            )
+            self.assertEqual(result.payload[0], p4rm.COMMIT_OK)
+            self.assertFalse(hub.awaiting_local_commit)
+            self.assertFalse(hub.awaiting_local_rollover_allowed)
+            self.assertEqual(store.read_head(actor).snapshot, rolled)
 
     def test_lost_normal_commit_result_safely_downloads_exact_head(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -3407,7 +3832,9 @@ class HubSessionTests(unittest.TestCase):
             store = RealmStore(Path(directory) / "realm.sqlite3")
             actor = store.actor_for_profile("pink")
             day, _ = store.realm_clock()
-            head = lord_record(actor, 200)
+            head = lord_record(
+                actor, 200, pvp_wins=10, pvp_losses=8
+            )
             self.assertEqual(store.commit(actor, 0, 200, day, head), ("ok", 1))
             sent: list[bytes] = []
             hub = RealmHubSession("pink", store, sent.append, test_offer())
@@ -3455,6 +3882,8 @@ class HubSessionTests(unittest.TestCase):
                 save_sequence=10,
                 name="Pink Hero",
                 chompcoin=5_000,
+                pvp_wins=0,
+                pvp_losses=0,
                 sync_actor_id=actor,
                 sync_server_revision=1,
                 sync_committed_save_sequence=0,
@@ -3903,6 +4332,117 @@ class HubSessionTests(unittest.TestCase):
             hub.tick()
             self.assertEqual(realm_messages()[-1].kind, p4rm.EVENT_BEGIN)
             self.assertGreater(hub.outgoing_event.event.event_id, debit_id)
+
+    def test_idempotent_upload_replay_cannot_release_dirty_barrier(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            actor = store.actor_for_profile("console-one")
+            day, _ = store.realm_clock()
+            original = lord_record(actor, 600, name="First Hero")
+            self.assertEqual(
+                store.commit(actor, 0, 600, day, original), ("ok", 1)
+            )
+            current = lord_record(
+                actor,
+                601,
+                save_sequence=3,
+                name="First Hero",
+                chompcoin=600,
+                sync_actor_id=actor,
+                sync_server_revision=1,
+                sync_committed_save_sequence=2,
+            )
+            self.assertEqual(
+                store.commit(actor, 1, 601, day, current), ("ok", 2)
+            )
+
+            sent: list[bytes] = []
+            hub = RealmHubSession(
+                "console-one", store, sent.append, test_offer()
+            )
+            hub.session_id = 10
+            hub.remote_peer_id = 20
+            hub.connected = True
+            dirty_flags = (
+                p4rm.HELLO_HAS_LOCAL
+                | p4rm.HELLO_HAS_SYNC_BASE
+                | p4rm.HELLO_LOCAL_DIRTY
+            )
+            hub._begin_game_sync(
+                p4rm.Message(
+                    p4rm.HELLO,
+                    602,
+                    0,
+                    0,
+                    p4rm.encode_hello(actor, 2, 3, 4, dirty_flags),
+                )
+            )
+            welcome = p4rm.decode_message(
+                p4mp.decode_packet(sent.pop()).payload
+            )
+            self.assertEqual(
+                p4rm.decode_welcome(welcome.payload)[4],
+                p4rm.WELCOME_ACCEPT_LOCAL,
+            )
+            self.assertTrue(hub.awaiting_local_commit)
+            self.assertEqual(hub.awaiting_local_save_sequence, 4)
+
+            def upload(
+                record: bytes, expected: int, nonce: int, transaction: int
+            ) -> tuple[int, int]:
+                sent.clear()
+                chunks = p4rm.record_chunks(record)
+                hub._begin_upload(
+                    p4rm.Message(
+                        p4rm.UPLOAD_BEGIN,
+                        transaction,
+                        p4rm.BEGIN_INDEX,
+                        len(chunks),
+                        p4rm.encode_upload_begin(
+                            expected, record, nonce, day
+                        ),
+                    )
+                )
+                for index, chunk in enumerate(chunks):
+                    hub._receive_upload_chunk(
+                        p4rm.Message(
+                            p4rm.UPLOAD_CHUNK,
+                            transaction,
+                            index,
+                            len(chunks),
+                            chunk,
+                        )
+                    )
+                result = p4rm.decode_message(
+                    p4mp.decode_packet(sent[-1]).payload
+                )
+                return result.payload[0], struct.unpack_from(
+                    "<I", result.payload, 1
+                )[0]
+
+            # The store returns the original successful result for exact
+            # operation replays.  Neither an ancient operation nor the
+            # already-current head represents the generation accepted above.
+            self.assertEqual(upload(original, 0, 600, 603), (p4rm.COMMIT_OK, 1))
+            self.assertTrue(hub.awaiting_local_commit)
+            self.assertEqual(upload(current, 1, 601, 604), (p4rm.COMMIT_OK, 2))
+            self.assertTrue(hub.awaiting_local_commit)
+            self.assertEqual(store.read_head(actor).revision, 2)
+
+            dirty = lord_record(
+                actor,
+                605,
+                save_sequence=4,
+                name="First Hero",
+                chompcoin=650,
+                sync_actor_id=actor,
+                sync_server_revision=2,
+                sync_committed_save_sequence=3,
+            )
+            self.assertEqual(upload(dirty, 2, 605, 605), (p4rm.COMMIT_OK, 3))
+            self.assertFalse(hub.awaiting_local_commit)
+            self.assertIsNone(hub.awaiting_local_save_sequence)
+            self.assertEqual(store.read_head(actor).snapshot, dirty)
 
     def test_two_node_mail_delivery_acknowledges_durable_event(self) -> None:
         with tempfile.TemporaryDirectory() as directory:

@@ -200,6 +200,11 @@ retry is idempotent.
   input until the bounded body is applied. This prevents offline progress from
   being accidentally combined with a debit or other cross-player mutation in
   one unreviewed upload.
+- The dirty-first barrier is pinned to the local save generation advertised by
+  HELLO. An exact replay of an older successful operation still receives its
+  idempotent original result, but cannot unlock a newer dirty branch. The only
+  accepted generation step is the single trusted hourly rollover advertised by
+  WELCOME or authorized by a retryable `COMMIT_STALE_DAY` response.
 - A wire event acknowledgement records receipt but is not terminal. Events
   remain replayable until the target cartridge applies them and an accepted
   snapshot commits the monotonically increasing event cursor atomically. The
@@ -214,9 +219,17 @@ retry is idempotent.
   independently rejects an inconsistent debit, but cannot attest a modified
   client or firmware.
 - An admitted but not yet cursor-committed PvP knockout immediately projects
-  the target as not alive and prevents another challenge. That projection
-  survives a hub restart and clears only when an accepted target snapshot
-  reflects the result or a later legitimate revival becomes authoritative.
+  the target as not alive and prevents another challenge. That pending
+  projection survives a hub restart and clears only when an accepted target
+  snapshot reflects the result. This is not a day-long server KO latch: after
+  consuming the zero-HP loss, the stock dead-screen recovery may later commit
+  restored HP in the same realm day, at which point the authoritative profile
+  is alive again.
+- Advancing the durable event cursor over a PvP result also has semantic
+  checks: lifetime wins/losses cannot move backwards, every crossed result must
+  contribute its win or loss, and a same-day loss must commit zero HP. An
+  old-day loss may arrive in the same snapshot as its one hourly revival; a
+  current-day knockout cannot use that exception.
 
 Realm-bound characters retain solo offline forest/training/IGM/NPC play,
 shops, healing, Dragon Dice, local banking, and cached roster/mail viewing.
@@ -234,7 +247,11 @@ server. Console OS 0.4.88 stops ordinary SD edits, and the hub rejects obvious
 or cumulatively repeated state inflation, but neither is proof of play from a
 modified cartridge or firmware. The service has no password signup, TLS
 listener, remote administration, moderation, public rate limiting, secure-boot
-attestation, or server-side combat transcript replay.
+attestation, or server-side combat transcript replay. In particular, the duel
+outcome submitted for a valid three-per-day PvP lease is still client-claimed;
+the chaos proof validates settlement and recovery, not a hostile client's
+combat honesty. Unmetered mail/feed flooding is likewise outside this trusted
+LAN deployment's current isolation guarantees.
 
 ## Protocol
 
@@ -293,6 +310,18 @@ all 16 outcome events and 14 economy rows are committed exactly once, all
 eight leases are resolved on the intended day, final head revisions and event
 cursors match, wins equal losses, and the original 3,200 carried ChompCoin is
 conserved.
+
+The ten-client chaos test runs a deterministic 12-hour campaign with all 45
+unordered player pairings in its first nine days and reversed rematches for
+three more. It proves two-page 8+1 roster discovery, 60 resolved duels, 120
+durable PvP events, 91 economy rows, exact per-actor revision histories, and
+8,000 conserved ChompCoin. Recoverable faults include a lost commit result,
+current and ancient nonce replays, a pinned dirty-branch action attempt, a
+corrupt upload chunk, a stale revision conflict, full store/session restarts
+with pending knockouts, receipt-before-save power loss, authoritative download
+after local rollback, and a forged cursor-only knockout reflection. The final
+SQLite quick check, foreign keys, heads, profiles, anchors, leases, events, and
+ledger are compared with an independently generated oracle.
 
 The SDL cartridge runner separately executes the real LORD C code under
 sanitizers, but its in-memory host does not implement multiplayer-session

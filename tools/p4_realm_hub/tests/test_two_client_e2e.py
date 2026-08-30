@@ -162,6 +162,26 @@ class LocalPersistentState:
     realm_day_id: int
 
 
+@dataclasses.dataclass(frozen=True)
+class UploadAttemptResult:
+    """Wire result from one emulated local-save upload attempt.
+
+    ``result_received`` is false when the harness deliberately discards the
+    COMMIT_RESULT after the hub has processed the final chunk.  The remaining
+    fields still expose what the harness removed from the wire so a test can
+    prove the hub-side outcome without pretending the emulated console learned
+    it.
+    """
+
+    status: int
+    revision: int
+    realm_day_id: int
+    seconds_remaining: int
+    nonce: int
+    record: bytes
+    result_received: bool
+
+
 class ProtocolConsole:
     """One independent, persistent console-side P4MP/P4RM state machine."""
 
@@ -556,18 +576,41 @@ class ProtocolConsole:
             self.mailbox,
         )
 
-    def upload_local(self) -> bytes:
-        nonce = self._nonce()
-        record = self._snapshot(nonce)
+    def upload_local_result(
+        self,
+        *,
+        expected_revision: int | None = None,
+        nonce: int | None = None,
+        corrupt_chunk_index: int | None = None,
+        lose_result: bool = False,
+    ) -> UploadAttemptResult:
+        """Attempt one upload while exposing conflict and failure results.
+
+        The normal ``upload_local`` wrapper below retains the original strict
+        success-only behavior.  Tests that exercise recovery can override the
+        optimistic server revision, flip one byte in exactly one transmitted
+        chunk, reuse a nonce for an idempotent retry, or discard a successful
+        result to model transport loss after the durable commit.
+        """
+        operation_nonce = self._nonce() if nonce is None else nonce
+        if not 1 <= operation_nonce <= 0xFFFFFFFFFFFFFFFF:
+            raise ValueError("upload nonce must be a nonzero uint64")
+        record = self._snapshot(operation_nonce)
         transaction = self._transaction()
         chunks = p4rm.record_chunks(record)
+        if corrupt_chunk_index is not None and not (
+            0 <= corrupt_chunk_index < len(chunks)
+        ):
+            raise ValueError("corrupt upload chunk index is out of range")
         self._send_realm(
             p4rm.UPLOAD_BEGIN,
             transaction,
             p4rm.encode_upload_begin(
-                self.server_revision,
+                self.server_revision
+                if expected_revision is None
+                else expected_revision,
                 record,
-                nonce,
+                operation_nonce,
                 self.realm_day_id,
             ),
             chunk_index=p4rm.BEGIN_INDEX,
@@ -580,10 +623,15 @@ class ProtocolConsole:
         ):
             raise AssertionError("invalid upload-begin acknowledgement")
         for index, chunk in enumerate(chunks):
+            transmitted = chunk
+            if index == corrupt_chunk_index:
+                damaged = bytearray(chunk)
+                damaged[0] ^= 0x01
+                transmitted = bytes(damaged)
             self._send_realm(
                 p4rm.UPLOAD_CHUNK,
                 transaction,
-                chunk,
+                transmitted,
                 chunk_index=index,
                 chunk_count=len(chunks),
             )
@@ -597,40 +645,241 @@ class ProtocolConsole:
         status, revision, day_id, _remaining = struct.unpack(
             "<BIQI", result.payload
         )
-        if status != p4rm.COMMIT_OK:
-            raise AssertionError(f"realm upload failed with status {status}")
-        self.server_revision = revision
-        self.realm_day_id = day_id
-        self.committed_save_sequence = self.save_sequence
-        return record
+        if status not in (
+            p4rm.COMMIT_OK,
+            p4rm.COMMIT_CONFLICT,
+            p4rm.COMMIT_INVALID,
+            p4rm.COMMIT_STORAGE_ERROR,
+            p4rm.COMMIT_STALE_DAY,
+        ):
+            raise AssertionError(f"unknown realm upload status {status}")
+        if day_id == 0 or not 1 <= _remaining <= 3_600:
+            raise AssertionError("invalid realm upload clock result")
+        result_received = not lose_result
+        if status == p4rm.COMMIT_OK and result_received:
+            self.server_revision = revision
+            self.realm_day_id = day_id
+            self.committed_save_sequence = self.save_sequence
+        return UploadAttemptResult(
+            status,
+            revision,
+            day_id,
+            _remaining,
+            operation_nonce,
+            record,
+            result_received,
+        )
 
-    def request_directory(self) -> dict[str, bytes]:
+    def upload_local(self) -> bytes:
+        result = self.upload_local_result()
+        if not result.result_received:
+            raise AssertionError("realm upload result was lost")
+        if result.status != p4rm.COMMIT_OK:
+            raise AssertionError(
+                f"realm upload failed with status {result.status}"
+            )
+        return result.record
+
+    def _take_directory_messages(self) -> list[p4rm.Message]:
+        """Remove only directory packets, preserving events and clock traffic."""
+        directory_kinds = {
+            p4rm.DIRECTORY_PAGE,
+            p4rm.DIRECTORY_SUMMARY,
+            p4rm.DIRECTORY_STATS,
+        }
+        result: list[p4rm.Message] = []
+        remaining: list[p4mp.Packet] = []
+        for packet in self.inbox:
+            if packet.packet_type != p4mp.GAME_MESSAGE:
+                remaining.append(packet)
+                continue
+            message = p4rm.decode_message(packet.payload)
+            if message.kind in directory_kinds:
+                result.append(message)
+            else:
+                remaining.append(packet)
+        self.inbox = remaining
+        return result
+
+    @staticmethod
+    def _decode_directory_summary(message: p4rm.Message) -> tuple[str, bytes]:
+        if len(message.payload) != 44:
+            raise AssertionError("directory summary is malformed")
+        actor_id = message.payload[:16]
+        raw_name = message.payload[16:36]
+        terminator = raw_name.find(b"\0")
+        if terminator < 0 or any(raw_name[terminator:]):
+            raise AssertionError("directory name is unterminated or unpadded")
+        try:
+            name = raw_name[:terminator].decode("ascii")
+        except UnicodeDecodeError as error:
+            raise AssertionError("directory name is not ASCII") from error
+        hero_style, hero_class, level, flags = message.payload[36:40]
+        if (
+            actor_id == bytes(16)
+            or not 3 <= len(raw_name[:terminator]) < 20
+            or hero_style not in (0, 1)
+            or hero_class not in (0, 1, 2)
+            or not 1 <= level <= 12
+            or flags & ~0x07
+        ):
+            raise AssertionError("directory summary fields are invalid")
+        # The final four bytes are two bounded uint16 counters.  Unpacking is
+        # intentional validation even though identity lookup needs only name.
+        struct.unpack_from("<HH", message.payload, 40)
+        return name, actor_id
+
+    @staticmethod
+    def _decode_directory_stats(message: p4rm.Message) -> bytes:
+        if len(message.payload) != 44 or message.payload[-2:] != b"\0\0":
+            raise AssertionError("directory stats are malformed")
+        (
+            actor_id,
+            hit_points,
+            max_hit_points,
+            strength,
+            defense,
+            _experience,
+            _chompcoin,
+            trust,
+            teamed,
+        ) = struct.unpack("<16siiiiIIBB2x", message.payload)
+        if (
+            actor_id == bytes(16)
+            or max_hit_points <= 0
+            or not 0 <= hit_points <= max_hit_points
+            or strength <= 0
+            or defense < 0
+            or trust > 100
+            or teamed > 1
+        ):
+            raise AssertionError("directory stats fields are invalid")
+        return actor_id
+
+    def _request_directory_page(
+        self, offset: int
+    ) -> tuple[int, list[tuple[str, bytes]]]:
         if self.hub is None:
             raise AssertionError("console has no hub session")
-        expected_total: int | None = None
-        actors: dict[str, bytes] = {}
-        for _attempt in range(32):
+        if not 0 <= offset < 100 or offset % 8 != 0:
+            raise ValueError("directory offset must be a page below 100")
+
+        # Remove already-sent automatic directory traffic.  Sending an
+        # explicit page request replaces any still-queued page in the hub.
+        self._take_directory_messages()
+        self._send_realm(
+            p4rm.DIRECTORY_PAGE,
+            self._transaction(),
+            struct.pack("<H", offset),
+        )
+        total: int | None = None
+        expected_count: int | None = None
+        summaries: dict[int, tuple[str, bytes]] = {}
+        stats: dict[int, bytes] = {}
+        empty_summary_seen = False
+        for _attempt in range(64):
             self.hub.tick()
-            for message in self._drain_realm():
+            for message in self._take_directory_messages():
                 if message.kind == p4rm.DIRECTORY_PAGE:
-                    if len(message.payload) != 4:
+                    if (
+                        total is not None
+                        or len(message.payload) != 4
+                        or message.chunk_index != 0
+                        or message.chunk_count != 0
+                    ):
                         raise AssertionError("directory page is malformed")
-                    offset, total = struct.unpack("<HH", message.payload)
-                    expected_total = min(8, max(0, total - offset))
+                    page_offset, total = struct.unpack("<HH", message.payload)
+                    if page_offset != offset or total > 100:
+                        raise AssertionError("directory page metadata changed")
+                    expected_count = min(8, max(0, total - offset))
                     continue
-                if message.kind != p4rm.DIRECTORY_SUMMARY or not message.payload:
+                if total is None or expected_count is None:
+                    raise AssertionError("directory entry preceded its page")
+                if message.kind == p4rm.DIRECTORY_SUMMARY:
+                    if not message.payload:
+                        if (
+                            expected_count != 0
+                            or empty_summary_seen
+                            or message.chunk_index != 0
+                            or message.chunk_count != 0
+                        ):
+                            raise AssertionError(
+                                "unexpected empty directory summary"
+                            )
+                        empty_summary_seen = True
+                        continue
+                    if (
+                        message.chunk_count != expected_count
+                        or not 0 <= message.chunk_index < expected_count
+                        or message.chunk_index in summaries
+                    ):
+                        raise AssertionError("directory summary index is invalid")
+                    summaries[message.chunk_index] = (
+                        self._decode_directory_summary(message)
+                    )
                     continue
-                raw_name = message.payload[16:36]
-                terminator = raw_name.find(b"\0")
-                if terminator < 0:
-                    raise AssertionError("directory name is unterminated")
-                name = raw_name[:terminator].decode("ascii")
-                if name in actors or message.payload[:16] == bytes(16):
-                    raise AssertionError("directory identity is invalid")
-                actors[name] = message.payload[:16]
-            if expected_total is not None and len(actors) == expected_total:
-                return actors
+                if message.kind == p4rm.DIRECTORY_STATS:
+                    if (
+                        message.chunk_count != expected_count
+                        or not 0 <= message.chunk_index < expected_count
+                        or message.chunk_index in stats
+                    ):
+                        raise AssertionError("directory stats index is invalid")
+                    stats[message.chunk_index] = self._decode_directory_stats(
+                        message
+                    )
+            if expected_count == 0 and empty_summary_seen:
+                return total, []
+            if (
+                expected_count is not None
+                and len(summaries) == expected_count
+                and len(stats) == expected_count
+            ):
+                entries: list[tuple[str, bytes]] = []
+                for index in range(expected_count):
+                    name, actor_id = summaries[index]
+                    if stats[index] != actor_id:
+                        raise AssertionError(
+                            "directory summary/stats identity changed"
+                        )
+                    entries.append((name, actor_id))
+                if len({name for name, _actor in entries}) != len(entries):
+                    raise AssertionError("directory page repeats a name")
+                if len({_actor for _name, _actor in entries}) != len(entries):
+                    raise AssertionError("directory page repeats an actor")
+                return total, entries
         raise AssertionError("directory page did not complete")
+
+    def request_directory(self) -> dict[str, bytes]:
+        actors: dict[str, bytes] = {}
+        actor_ids: set[bytes] = set()
+        ordered_entries: list[tuple[str, bytes]] = []
+        expected_total: int | None = None
+        offset = 0
+        while True:
+            total, entries = self._request_directory_page(offset)
+            if expected_total is None:
+                expected_total = total
+            elif total != expected_total:
+                raise AssertionError("directory total changed between pages")
+            for name, actor_id in entries:
+                if name in actors or actor_id in actor_ids:
+                    raise AssertionError("directory repeats an identity")
+                actors[name] = actor_id
+                actor_ids.add(actor_id)
+                ordered_entries.append((name, actor_id))
+            if offset + len(entries) >= total:
+                break
+            if len(entries) != 8:
+                raise AssertionError("non-final directory page is short")
+            offset += 8
+        if len(actors) != expected_total:
+            raise AssertionError("directory did not return every profile")
+        if ordered_entries != sorted(
+            ordered_entries, key=lambda entry: (entry[0].lower(), entry[1])
+        ):
+            raise AssertionError("directory profiles are not stably sorted")
+        return actors
 
     def request_directory_actor(self, expected_name: str) -> bytes:
         actors = self.request_directory()
@@ -645,14 +894,18 @@ class ProtocolConsole:
         value: int,
         target_actor_id: bytes,
         body: bytes = b"",
+        *,
+        nonce: int | None = None,
     ) -> tuple[int, int, int, int, int]:
         transaction = self._transaction()
-        nonce = self._nonce()
+        operation_nonce = self._nonce() if nonce is None else nonce
+        if not 1 <= operation_nonce <= 0xFFFFFFFFFFFFFFFF:
+            raise ValueError("action nonce must be a nonzero uint64")
         self._send_realm(
             p4rm.ACTION_BEGIN,
             transaction,
             p4rm.encode_action_begin(
-                kind, code, value, target_actor_id, nonce, body
+                kind, code, value, target_actor_id, operation_nonce, body
             ),
             chunk_index=p4rm.BEGIN_INDEX,
             chunk_count=1 if body else 0,
