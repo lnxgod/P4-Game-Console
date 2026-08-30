@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-08-30T10:28:53-0700",
+  "result": "installed-readback-pass-h1-content-pair-pass-clean-boot-pass-hardware-gameplay-pending",
+  "scope": "Install the enhanced Byte Buddy 4.0.0 game and required generative art resource on the pink Waveshare 4.3 unit through the operator-selected H1 transfer route",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "unit_label": "unit1-pink-B289",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+    "h1_port": "/dev/cu.wchusbserial5C371865781"
+  },
+  "source": {
+    "branch": "codex/byte-buddy-h1-p4r",
+    "byte_buddy_animation_commit": "7b8179a",
+    "h1_p4r_commit": "d49a037560dd53818089b16c982cfbfea5f4956b",
+    "authorization_commit": "c64f397",
+    "installer_safety_fix_commit": "5cfbe18",
+    "toolchain": "ESP-IDF 5.5.3 at 2c211b236707889e8400c4dc5644dd5c4ee071e0"
+  },
+  "firmware": {
+    "version": "0.4.89",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "application_offset": "0x20000",
+    "application_bytes": 1832640,
+    "application_sha256": "2f9183918d7089f4375b73083bbeed81172d695eedb8eb424a23b140022ce862",
+    "padded_readback_bytes": 1835008,
+    "padded_readback_sha256": "950d0fc1086f4b6ebac89cf59b9b7911ce604b17bc0aa78c8dbc518b75ae1066",
+    "elf_sha256": "2838d9aca6e5bab3eacff3861ac74b05d3a0a054c760be3b047d0f6b806264c4"
+  },
+  "install": {
+    "authorization": "hardware/evidence/waveshare-unit1-console-os-0.4.89-byte-buddy-h1-20260830-exact-unit-authorization.json",
+    "policy": "application partition only; bootloader, partition table, OTA data, NVS, unrelated microSD files, and H2 storage preserved",
+    "predecessor_version": "0.4.85",
+    "predecessor_application_sha256": "efb827cb202f3d35e8b456b05039a2a4e7a2f928eec69e7de78faffade503cf5",
+    "preserved_preimage_sha256": "8dd4e6a2f0db9b2119fa40d05a201c608fb9348f653016d631f9a7f6c2677a93",
+    "write_attempts": 1,
+    "write_time_hash": "pass",
+    "complete_padded_readback": "pass",
+    "automatic_rollback_required": false,
+    "preflight_note": "The first preflight stopped before mutation because the successor preserve span extended beyond the predecessor's actual padded boundary. The installer was corrected to validate predecessor padding independently while retaining the complete successor-span preimage; the authorized retry then made one app-only write."
+  },
+  "h1_transfer": {
+    "protocol": 2,
+    "transport": "h1-ch343-uart",
+    "destination": "/GAMES",
+    "predecessor_backup": {
+      "game_bytes": 363732,
+      "game_sha256": "996698fbc6fc70d69e8cfe126e07f05fcdbdd4c4ab9bf886b68a49d470f180b7",
+      "resource_bytes": 732352,
+      "resource_sha256": "9a2d1b88ec84d659a15c1f9d4a3af4ba0f29e7a7b512ff2c1fc9ff442f3dc0ca"
+    },
+    "install_order": [
+      "BYTEBUD.P4R",
+      "BYTEBUD.P4G"
+    ],
+    "resource": {
+      "file": "BYTEBUD.P4R",
+      "bytes": 965312,
+      "source_sha256": "5d3b604daa3bf97f2c99268b4f2eedb3a4270f18558415fa7aee8e0a9a40dcd4",
+      "device_validation": "pass",
+      "exact_h1_pull_readback": "pass",
+      "readback_sha256": "5d3b604daa3bf97f2c99268b4f2eedb3a4270f18558415fa7aee8e0a9a40dcd4"
+    },
+    "game": {
+      "file": "BYTEBUD.P4G",
+      "version": "4.0.0",
+      "bytes": 188672,
+      "source_sha256": "220fdaea0d51cd2a089f55493b621d019d156f243d86061c30f8975996d14480",
+      "device_validation": "pass",
+      "exact_h1_pull_readback": "pass",
+      "readback_sha256": "220fdaea0d51cd2a089f55493b621d019d156f243d86061c30f8975996d14480"
+    },
+    "atomicity": "Each file replacement is individually staged, fsynced, double-validated, and atomically renamed. The resource-first order keeps the old game runnable until the new game activates; the retained predecessor pair permits recovery if the two-file sequence is interrupted."
+  },
+  "clean_boot": {
+    "capture_result": "pass",
+    "capture_raw_sha256": "f9a930c50022f53839b0abe1371f5b2ddf51d3ba984439c4330d297d2715ab93",
+    "required_markers": "version, board, start, catalog, multiplayer registry, ready, and H2 role all present",
+    "rejected_markers": 0,
+    "catalog_packages": 14,
+    "catalog_valid": 14,
+    "catalog_omitted": 0,
+    "h1_marker": "P4_FILE_TRANSFER READY protocol=2 p4g_max=524288 p4r_max=8388608 exchange_max=8388608",
+    "stats_observed": 2,
+    "last_two_stats_valid": true,
+    "display_failures": 0,
+    "gamepad_failures": 0,
+    "storage": "app-ready"
+  },
+  "limitations": [
+    "The operator has not yet launched and played Byte Buddy 4.0.0 on the physical unit, so controls, animation feel, live passive scan encounters, battle balance, audio, and return-to-launcher remain hands-on acceptance items.",
+    "Exact package/resource readback plus a clean 14/14 catalog boot proves deployment integrity; it does not substitute for visual gameplay acceptance.",
+    "The deployment used H1 only. H2 remained in controller-host role and was not used as a content drive."
+  ]
+}
