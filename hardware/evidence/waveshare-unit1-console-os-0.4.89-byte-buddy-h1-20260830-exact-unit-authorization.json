@@ -46,6 +46,7 @@
     "version": "0.4.85",
     "application_bytes": 1820528,
     "application_sha256": "efb827cb202f3d35e8b456b05039a2a4e7a2f928eec69e7de78faffade503cf5",
+    "application_padded_bytes": 1822720,
     "preserve_span_bytes": 1835008,
     "evidence": "hardware/evidence/waveshare-unit1-console-os-0.4.85-lord-save-20260827-exact-unit-authorization.json"
   },
@@ -100,6 +101,7 @@
     "live_predecessor_required": true,
     "complete_successor_span_preimage_required": true,
     "complete_successor_span_readback_required": true,
+    "failed_preflight_recovery_retained": "hardware/local-state/waveshare-unit1-console-os-0.4.89-byte-buddy-h1-install-d49a037/preimage-0.4.85-span.bin",
     "automatic_rollback_authorized": true,
     "generic_idf_flash_authorized": false,
     "full_project_flash_authorized": false,

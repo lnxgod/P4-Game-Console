@@ -382,10 +382,19 @@ P4_PREDECESSOR_HASH=$(head -c "$P4_PREDECESSOR_BYTES" "$P4_PREIMAGE" | \
         "$P4_PREDECESSOR_VERSION" >&2
     exit 1
 }
-P4_OLD_TAIL_NON_FF=$(tail -c +$((P4_PREDECESSOR_BYTES + 1)) "$P4_PREIMAGE" | \
+P4_PREDECESSOR_PADDED_BYTES=$(p4_json_field \
+    "$P4_AUTH" predecessor.application_padded_bytes 2>/dev/null || \
+    printf '%s\n' "$P4_PREIMAGE_BYTES")
+[ "$P4_PREDECESSOR_PADDED_BYTES" -ge "$P4_PREDECESSOR_BYTES" ] && \
+    [ "$P4_PREDECESSOR_PADDED_BYTES" -le "$P4_PREIMAGE_BYTES" ] || {
+    printf 'Refusing to install: predecessor padding bound is invalid.\n' >&2
+    exit 1
+}
+P4_OLD_TAIL_NON_FF=$(head -c "$P4_PREDECESSOR_PADDED_BYTES" "$P4_PREIMAGE" | \
+    tail -c +$((P4_PREDECESSOR_BYTES + 1)) | \
     LC_ALL=C tr -d '\377' | wc -c | tr -d ' ')
 [ "$P4_OLD_TAIL_NON_FF" = 0 ] || {
-    printf 'Refusing to install: predecessor sector padding is not erased.\n' >&2
+    printf 'Refusing to install: predecessor application padding is not erased.\n' >&2
     exit 1
 }
 P4_PREIMAGE_HASH=$(p4_sha256_file "$P4_PREIMAGE")
