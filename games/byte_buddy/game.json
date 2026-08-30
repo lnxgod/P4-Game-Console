@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "3.7.0",
+  "version": "3.8.0",
   "stack_frame_limit_bytes": 1024,
   "package_file": "BYTEBUD.P4G",
   "resource_file": "BYTEBUD.P4R",
@@ -17,15 +17,15 @@
   "accent_rgb565": "0xf81f",
   "required_capabilities": [
     "video",
-    "controls"
+    "controls",
+    "storage"
   ],
   "optional_capabilities": [
     "audio-tone",
     "audio-stream",
-    "storage",
     "signal-scan"
   ],
   "license": "MIT",
-  "assets": "400-frame art, 163840 signal forms, two battle modes, habitat adaptations, controller play, tweened motion, SD P4R",
+  "assets": "448-frame original art, required P4R, signal city, scanner, battle, reaction, and lineage sprites",
   "enabled": true
 }

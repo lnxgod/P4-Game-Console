@@ -63,6 +63,20 @@ P4 Game API surface.
 - [x] Render and inspect controller focus/cursor UI plus Ascended, Mythic, Nova,
       Galaxy, Eternal, reward, and final Genome states while retaining the
       deterministic 177-frame visual-QA budget.
+- [x] Generate and inspect original 4x4 Signal City, reaction-effect, and
+      lineage-regalia atlases with crop-safe scanner, tracker, battle, nest,
+      status, and adaptation graphics.
+- [x] Replace generic radio squares, empty rune sockets, care particles,
+      shop bleed-through, and late-lineage clutter with authored sprites and
+      scale-aware composable genome layers.
+- [x] Require the validated 28-sheet/448-frame `.P4R` art bank at launch so
+      missing or malformed art fails closed instead of showing placeholders.
+- [x] Add deterministic full-resource startup-failure coverage and an
+      11-screen CTest preview smoke for the no-placeholder graphics contract.
+- [x] Extend the chronological visual-QA sequence to 178 frames with dedicated
+      authored Pulse Rush and Resonance Weave battle captures.
+- [x] Build the v3.8 RISC-V cartridge and full art sidecar twice with the pinned
+      toolchain, verify byte identity, and record exact payload/package hashes.
 - [x] Build the v3.7 RISC-V cartridge twice, verify byte identity and package
       structure, and record the exact `.P4G` payload/package hashes.
 - [x] Complete a visible SDL keyboard play pass: Start entered Star Catcher,
@@ -79,7 +93,8 @@ P4 Game API surface.
 - [ ] Add a short first-session tutorial that disappears after the first successful catch.
 - [ ] Add explicit non-development stage preview access before a release candidate.
 - [ ] Decide whether session progress should opt into the reviewed save service on boards
-      that expose it; Byte Buddy must remain usable without writable storage.
+      that expose it; Byte Buddy's required art sidecar remains read-only and does not
+      authorize writable progress storage.
 - [x] Add a second Signal Battle pattern so encounters are not only rapid tapping.
 - [ ] Reconcile the public session-token contract with the device-key behavior
       before considering durable lineages or writable save integration.

@@ -407,7 +407,8 @@ static bool render_animation_sequence(p4_game_instance_t *instance,
         instance, surface, prefix, "signal-list-page-2", 1U, 1U) &&
         tap(instance, 30U, 180U) &&
         tap(instance, 70U, 42U) && tap(instance, 70U, 180U) &&
-        press_button(instance, P4_BUTTON_A);
+        press_button(instance, P4_BUTTON_A) && render_clip(
+            instance, surface, prefix, "pulse-rush", 1U, 1U);
     for (unsigned strike = 0U; success && strike < 32U; ++strike) {
         success = tap(instance, 60U, 180U);
     }

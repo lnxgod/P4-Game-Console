@@ -13,8 +13,11 @@ from pathlib import Path
 MAGIC = b"BBDART2\0"
 VERSION = 2
 HEADER_BYTES = 64
+GRID_COLUMNS = 4
+GRID_ROWS = 4
 RUNTIME_SHEET_WIDTH = 256
 RUNTIME_SHEET_HEIGHT = 256
+MAXIMUM_SOURCE_SHEET_DIMENSION = 8192
 FRAME_WIDTH = 64
 FRAME_HEIGHT = 64
 FRAMES_PER_SHEET = 16
@@ -23,7 +26,88 @@ PACKED_FRAME_BYTES = FRAME_WIDTH * FRAME_HEIGHT // 2
 FLYING_SHEET_INDEX = 3
 FLYING_CLEANUP_ROW = 54
 SIGNAL_GENOME_SHEET_INDEX = 24
+SIGNAL_CITY_PROPS_SHEET_INDEX = 25
+REACTION_FX_SHEET_INDEX = 26
+SIGNAL_LINEAGE_BADGES_SHEET_INDEX = 27
 LARGE_BACKGROUND_COMPONENT_PIXELS = 64
+PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
+ENCLOSED_BACKGROUND_SHEET_INDEXES = frozenset({
+    SIGNAL_GENOME_SHEET_INDEX,
+    SIGNAL_CITY_PROPS_SHEET_INDEX,
+    SIGNAL_LINEAGE_BADGES_SHEET_INDEX,
+})
+EXPECTED_APPENDED_SHEETS = {
+    SIGNAL_CITY_PROPS_SHEET_INDEX:
+        "byte_buddy_signal_city_props_imagegen_v7.png",
+    REACTION_FX_SHEET_INDEX:
+        "byte_buddy_reaction_fx_imagegen_v8.png",
+    SIGNAL_LINEAGE_BADGES_SHEET_INDEX:
+        "byte_buddy_signal_lineage_badges_imagegen_v9.png",
+}
+
+
+def source_png_dimensions(path: Path) -> tuple[int, int]:
+    try:
+        with path.open("rb") as source:
+            header = source.read(24)
+    except OSError as error:
+        raise RuntimeError(f"{path}: cannot read source PNG: {error}") from error
+    if (len(header) != 24 or header[:8] != PNG_SIGNATURE or
+            header[8:12] != struct.pack(">I", 13) or
+            header[12:16] != b"IHDR"):
+        raise RuntimeError(f"{path}: source is not a bounded PNG with IHDR")
+    return struct.unpack(">II", header[16:24])
+
+
+def validate_sources(sources: list[Path]) -> None:
+    if (RUNTIME_SHEET_WIDTH != GRID_COLUMNS * FRAME_WIDTH or
+            RUNTIME_SHEET_HEIGHT != GRID_ROWS * FRAME_HEIGHT):
+        raise AssertionError("runtime sheet geometry does not form a 4x4 grid")
+    seen_paths: set[Path] = set()
+    expected_indexes = {
+        name: index for index, name in EXPECTED_APPENDED_SHEETS.items()
+    }
+    required_sheets = max(EXPECTED_APPENDED_SHEETS) + 1
+    if len(sources) < required_sheets:
+        raise RuntimeError(
+            f"full Byte Buddy art bank requires at least "
+            f"{required_sheets} sheets, got {len(sources)}"
+        )
+    for index, source in enumerate(sources):
+        resolved = source.resolve()
+        if resolved in seen_paths:
+            raise RuntimeError(f"{source}: duplicate atlas source")
+        seen_paths.add(resolved)
+        width, height = source_png_dimensions(source)
+        if width != height:
+            raise RuntimeError(
+                f"{source}: source grid must be square, got {width}x{height}"
+            )
+        if width < RUNTIME_SHEET_WIDTH:
+            raise RuntimeError(
+                f"{source}: source grid must be at least "
+                f"{RUNTIME_SHEET_WIDTH}x{RUNTIME_SHEET_HEIGHT}, got "
+                f"{width}x{height}"
+            )
+        if width > MAXIMUM_SOURCE_SHEET_DIMENSION:
+            raise RuntimeError(
+                f"{source}: source grid exceeds the "
+                f"{MAXIMUM_SOURCE_SHEET_DIMENSION}px bound"
+            )
+        # Existing ImageGen masters are 1254px squares, so validate the
+        # square grid but let nearest-neighbor scaling map it to exact 64px
+        # runtime cells instead of requiring source dimensions divisible by 4.
+        expected_index = expected_indexes.get(source.name)
+        if expected_index is not None and index != expected_index:
+            raise RuntimeError(
+                f"{source}: append-only sheet belongs at index "
+                f"{expected_index}, got {index}"
+            )
+        expected_name = EXPECTED_APPENDED_SHEETS.get(index)
+        if expected_name is not None and source.name != expected_name:
+            raise RuntimeError(
+                f"{source}: sheet index {index} must be {expected_name}"
+            )
 
 
 def decode_sheet(path: Path) -> bytes:
@@ -202,7 +286,7 @@ def build_bank(sources: list[Path]) -> bytes:
             palette, packed = encode_frame(
                 frame_rgba(raw, frame, sheet_index),
                 clear_enclosed_background=(
-                    sheet_index == SIGNAL_GENOME_SHEET_INDEX
+                    sheet_index in ENCLOSED_BACKGROUND_SHEET_INDEXES
                 ),
             )
             palettes.extend(palette)
@@ -256,6 +340,7 @@ def main() -> int:
     args = parser.parse_args()
     if not (1 <= args.builtin_count <= len(args.sources)):
         parser.error("builtin count must select at least one source sheet")
+    validate_sources(args.sources)
     built_in = build_bank(args.sources[: args.builtin_count])
     resource = build_bank(args.sources)
     write_include(args.include_output, built_in)

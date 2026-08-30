@@ -10,9 +10,15 @@
 
 #include "byte_buddy_internal.h"
 
+#ifndef BYTE_BUDDY_TEST_ART_PATH
+#error "BYTE_BUDDY_TEST_ART_PATH must name the committed Byte Buddy art bank"
+#endif
+
 extern const p4_game_descriptor_t p4_byte_buddy_game;
 
 static int s_failures;
+static uint8_t *s_test_art;
+static size_t s_test_art_bytes;
 
 typedef struct {
     p4_game_signal_snapshot_t snapshot;
@@ -31,6 +37,46 @@ static fake_signal_scan_t s_signal_scan;
             ++s_failures; \
         } \
     } while (0)
+
+static uint32_t test_read_u32(const uint8_t *data)
+{
+    return (uint32_t)data[0] | (uint32_t)data[1] << 8U |
+        (uint32_t)data[2] << 16U | (uint32_t)data[3] << 24U;
+}
+
+static bool load_test_art(void)
+{
+    enum {
+        TEST_ART_MAX_BYTES = 8 * 1024 * 1024,
+    };
+    FILE *const file = fopen(BYTE_BUDDY_TEST_ART_PATH, "rb");
+    if (file == NULL || fseek(file, 0L, SEEK_END) != 0) {
+        if (file != NULL) {
+            (void)fclose(file);
+        }
+        return false;
+    }
+    const long file_bytes = ftell(file);
+    if (file_bytes <= 0L || file_bytes > (long)TEST_ART_MAX_BYTES ||
+        fseek(file, 0L, SEEK_SET) != 0) {
+        (void)fclose(file);
+        return false;
+    }
+    uint8_t *const data = malloc((size_t)file_bytes);
+    if (data == NULL) {
+        (void)fclose(file);
+        return false;
+    }
+    const bool read_ok = fread(data, (size_t)file_bytes, 1U, file) == 1U;
+    const bool close_ok = fclose(file) == 0;
+    if (!read_ok || !close_ok) {
+        free(data);
+        return false;
+    }
+    s_test_art = data;
+    s_test_art_bytes = (size_t)file_bytes;
+    return true;
+}
 
 static bool fake_request_signal_scan(void *context, uint64_t focus_token)
 {
@@ -149,6 +195,7 @@ static bool start_game(p4_game_instance_t *instance, void *state,
         .available_capabilities = P4_GAME_CAP_VIDEO |
                                   P4_GAME_CAP_CONTROLS |
                                   P4_GAME_CAP_AUDIO_TONE |
+                                  P4_GAME_CAP_STORAGE |
                                   P4_GAME_CAP_SIGNAL_SCAN,
         .audio_context = mixer,
         .game_id = p4_byte_buddy_game.id,
@@ -156,6 +203,9 @@ static bool start_game(p4_game_instance_t *instance, void *state,
         .stop_audio = p4_audio_mixer_service_stop,
         .achievement_context = achievements,
         .unlock_achievement = p4_achievement_catalog_service_unlock,
+        .resource_data = s_test_art,
+        .resource_bytes = s_test_art_bytes,
+        .resource_format_version = 1U,
         .signal_scan_context = &s_signal_scan,
         .request_signal_scan = fake_request_signal_scan,
         .read_signal_scan = fake_read_signal_scan,
@@ -164,6 +214,27 @@ static bool start_game(p4_game_instance_t *instance, void *state,
     return p4_game_instance_start(
         instance, &p4_byte_buddy_game, &services,
         state, p4_byte_buddy_game.state_bytes);
+}
+
+static void test_required_art_contract(void)
+{
+    enum {
+        TEST_ART_HEADER_BYTES = 64,
+        TEST_ART_REQUIRED_SHEETS = 28,
+    };
+    CHECK((p4_byte_buddy_game.required_capabilities &
+           P4_GAME_CAP_STORAGE) != 0U);
+    CHECK((p4_byte_buddy_game.optional_capabilities &
+           P4_GAME_CAP_STORAGE) == 0U);
+    CHECK(s_test_art != NULL);
+    CHECK(s_test_art_bytes >= TEST_ART_HEADER_BYTES);
+    if (s_test_art == NULL || s_test_art_bytes < TEST_ART_HEADER_BYTES) {
+        return;
+    }
+    CHECK(memcmp(s_test_art, "BBDART2\0", 8U) == 0);
+    CHECK(test_read_u32(s_test_art + 8U) == 2U);
+    CHECK(test_read_u32(s_test_art + 12U) >= TEST_ART_REQUIRED_SHEETS);
+    CHECK((size_t)test_read_u32(s_test_art + 44U) == s_test_art_bytes);
 }
 
 static p4_game_result_t touch(p4_game_instance_t *instance,
@@ -1607,7 +1678,34 @@ static void test_controller_signal_hunt(void)
     free(state);
 }
 
-static void test_invalid_extended_art_fails_closed(void)
+static void test_missing_extended_art_fails_closed(void)
+{
+    void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state == NULL) {
+        return;
+    }
+    const p4_game_services_t no_storage = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+    };
+    p4_game_instance_t instance = {0};
+    CHECK(!p4_game_instance_start(
+        &instance, &p4_byte_buddy_game, &no_storage, state,
+        p4_byte_buddy_game.state_bytes));
+
+    const p4_game_services_t missing_resource = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
+                                  P4_GAME_CAP_STORAGE,
+        .resource_format_version = 1U,
+    };
+    instance = (p4_game_instance_t){0};
+    CHECK(!p4_game_instance_start(
+        &instance, &p4_byte_buddy_game, &missing_resource, state,
+        p4_byte_buddy_game.state_bytes));
+    free(state);
+}
+
+static void test_malformed_extended_art_fails_closed(void)
 {
     uint8_t malformed_art[64] = {0};
     void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
@@ -1626,11 +1724,41 @@ static void test_invalid_extended_art_fails_closed(void)
     CHECK(!p4_game_instance_start(
         &instance, &p4_byte_buddy_game, &services, state,
         p4_byte_buddy_game.state_bytes));
+
+    const p4_game_services_t truncated_resource = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
+                                  P4_GAME_CAP_STORAGE,
+        .resource_data = s_test_art,
+        .resource_bytes = s_test_art_bytes - 1U,
+        .resource_format_version = 1U,
+    };
+    instance = (p4_game_instance_t){0};
+    CHECK(!p4_game_instance_start(
+        &instance, &p4_byte_buddy_game, &truncated_resource, state,
+        p4_byte_buddy_game.state_bytes));
+
+    const p4_game_services_t wrong_resource_version = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
+                                  P4_GAME_CAP_STORAGE,
+        .resource_data = s_test_art,
+        .resource_bytes = s_test_art_bytes,
+        .resource_format_version = 2U,
+    };
+    instance = (p4_game_instance_t){0};
+    CHECK(!p4_game_instance_start(
+        &instance, &p4_byte_buddy_game, &wrong_resource_version, state,
+        p4_byte_buddy_game.state_bytes));
     free(state);
 }
 
 int main(void)
 {
+    if (!load_test_art()) {
+        fprintf(stderr, "Byte Buddy test art load failed: %s\n",
+                BYTE_BUDDY_TEST_ART_PATH);
+        return EXIT_FAILURE;
+    }
+    test_required_art_contract();
     test_care_achievements_and_exit();
     test_care_growth_cadence();
     test_render_bounds();
@@ -1646,7 +1774,11 @@ int main(void)
     test_resonance_weave_battle();
     test_resonance_timeout_and_guard();
     test_signal_hunt_battle_and_reward();
-    test_invalid_extended_art_fails_closed();
+    test_missing_extended_art_fails_closed();
+    test_malformed_extended_art_fails_closed();
+    free(s_test_art);
+    s_test_art = NULL;
+    s_test_art_bytes = 0U;
     if (s_failures != 0) {
         fprintf(stderr, "%d Byte Buddy test failure(s)\n", s_failures);
         return EXIT_FAILURE;

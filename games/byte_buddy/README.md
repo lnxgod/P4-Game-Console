@@ -53,6 +53,16 @@ milestone and guarantees the final form at the cap. Signal Hunt also preserves
 valid results when the scanner is temporarily busy and is playable end to end
 with normalized controller input.
 
+Version 3.8 completes the visual language with three original sprite atlases.
+Authored Signal City props now supply the rooftop nest, towers, scanner,
+tracking compass, shield, phantom, pulse, guard, and resonance runes; care and
+growth reactions use four-frame effect loops; and every lineage rank and
+adaptation has a reusable regalia badge. Small signal rows compose only the
+high-contrast core and sigil, while larger tracker and battle views add halo,
+aura, habitat, and rarity layers. The validated 28-sheet art sidecar is now a
+launch requirement: missing, truncated, wrong-version, or incomplete art fails
+closed instead of showing a low-fidelity placeholder.
+
 ## Touch play
 
 - Tap **Feed**, **Play**, **Clean**, or **Rest** to provide care.
@@ -134,14 +144,14 @@ look-alike seeds can still feed the dragon but cannot rush every rank.
 
 | Lineage | Minimum distinct seeds | Minimum gene diversity | Inherited look |
 | --- | ---: | ---: | --- |
-| Spark | 1 | — | mutation palette and orbit sparks |
-| Crest | 3 | 11 | dominant sigil marking |
-| Aurora | 5 | 15 | dominant halo/aura and glow frame |
-| Ascended | 8 | 19 | dominant mature signal-dragon family |
-| Mythic | 12 | 22 | second hue, doubled aura, and crown |
-| Nova | 16 | 24 | paired crown satellites and denser orbits |
-| Galaxy | 24 | 26 | third aura combination and wider constellation |
-| Eternal | 32 | 27 | completed six-satellite signal crown |
+| Spark | 1 | — | mutation palette, sigil, and Spark badge |
+| Crest | 3 | 11 | dominant sigil marking and Crest regalia |
+| Aurora | 5 | 15 | dominant halo/aura and Aurora regalia |
+| Ascended | 8 | 19 | dominant mature signal-dragon family and crest |
+| Mythic | 12 | 22 | second hue and Mythic regalia |
+| Nova | 16 | 24 | Nova regalia with bounded constellation motes |
+| Galaxy | 24 | 26 | Galaxy regalia and prismatic halo option |
+| Eternal | 32 | 27 | authored Eternal genome crest |
 
 The normal Eternal route needs 32 distinct links and 27 DNA. The session keeps
 up to 48 distinct opaque tokens, so a dragon that is still missing one common
@@ -174,10 +184,10 @@ That provider deliberately publishes named results only, preserving the prior
 user-approved policy against `HIDDEN SIGNAL` rows. The generic Game API and SDL
 simulator still support the hidden flag for other providers and deterministic
 fantasy coverage.
-The focused v3.7 RISC-V cartridge build and package verifier pass. This game
-revision has not been rebuilt, flashed, or accepted as a complete Waveshare
-firmware image; live C6 behavior remains qualified only by its separately
-recorded provider evidence.
+The focused v3.8 host sanitizer, deterministic preview, registry, SDL host,
+RISC-V cartridge, and sidecar checks pass. This game revision has not been
+flashed or accepted as a complete Waveshare firmware image; live C6 behavior
+remains qualified only by its separately recorded provider evidence.
 
 The four aspect upgrades have three levels. The next levels cost 2, 5, and 8
 coins:
@@ -250,11 +260,13 @@ Care style determines the mature branch rather than a menu choice:
   early stages and choose a dedicated PixelLab adult family when rare art is
   unlocked.
 
-Animation and UI use 400 authored 64×64 source frames: four-frame ambient clips,
+Animation and UI use 448 authored 64×64 source frames: four-frame ambient clips,
 eight-frame care and power reactions, a dedicated shell-to-baby hatch, four
 signal-genetic flight families, four Star Catcher reward/effect loops, and
 sixteen care/Power/Style/Remix item sprites plus sixteen composable signal
-layers. The renderer eases palette color between adjacent
+layers. Forty-eight additional frames provide Signal City props and scanner
+states, four reaction-effect families, eight lineage ranks, five adaptation
+crests, and three genome-progress badges. The renderer eases palette color between adjacent
 poses while switching non-overlapping silhouette pixels together at the
 midpoint. This avoids the ghosted double silhouettes caused by per-pixel edge
 dithering while preserving crisp authored poses.
@@ -264,9 +276,10 @@ shadow, and upgrade-sensitive particles provide secondary motion. Baby idle
 changes with joy and energy; winged and flying clips retain Spiked/Shiny
 genetics; mature clips retain Mystery/Fire/Ice/Acid branches. All timing is
 bounded and deterministic.
-Signal City adds layered skyline motion, antenna ripples, orbiting mutation
-motes, expanding encounter rings, hit pulses, and timed battle meters without
-duplicating the dragon frames.
+Signal City combines a layered procedural skyline with authored antennae,
+rooftop plants, nest, scanner, tracking, shield, phantom, pulse, guard, and
+resonance art. Reusable genome layers, restrained mutation motes, four-frame
+impacts, and timed battle meters add motion without duplicating dragon frames.
 
 ## Signal City concept art
 
@@ -299,13 +312,13 @@ while Console OS keeps the compatible stable surface and touch mapping.
 
 ## Generated source art
 
-The twenty-six PNGs in `assets/` are original project inputs generated in
+The twenty-nine PNGs in `assets/` are original project inputs generated in
 PixelLab or ImageGen for this game. Six PixelLab gameplay sheets are transparent
 256×256 4-by-4 grids, and the retained 64×64 style anchor keeps later ImageGen
-sheets cohesive. Nineteen 1254×1254 ImageGen grids add two egg families, baby
+sheets cohesive. Twenty-two 1254×1254 ImageGen grids add two egg families, baby
 reactions, flight cycles, elemental breath, nine motion expansions, a hatch
-transition, signal-genetic motion, Star Catcher rewards, items, and signal
-genome layers. Some
+transition, signal-genetic motion, Star Catcher rewards, items, signal genome
+layers, city props, reaction effects, and lineage regalia. Some
 ImageGen grids have a baked neutral checkerboard; the deterministic converter
 removes border-connected neutral pixels and leaves source files untouched. For
 the composable halo/aura sheet, it also removes only enclosed neutral components
@@ -339,6 +352,9 @@ large enough to be background, preserving small white highlights and sigils.
 | `byte_buddy_star_catcher_rewards_imagegen_v4.png` | `166f98b052a89f1d30b9a59fbce317f350a1df4a1dc48be30662ec623b5bc67f` |
 | `byte_buddy_items_components_imagegen_v5.png` | `e8fade6f70766057b1915d0d3b0f2143f6fe7c2ce723ee1004cd5243e8732b68` |
 | `byte_buddy_signal_genome_layers_imagegen_v6.png` | `a52c1f331f1afb4cca20d5bc8d350c9f45cbb256fe05aa739cd532d903d8b503` |
+| `byte_buddy_signal_city_props_imagegen_v7.png` | `67d97a21d7675c3c738832b84698e94806eaf3f391a281818a7982b394b789f3` |
+| `byte_buddy_reaction_fx_imagegen_v8.png` | `b1cbd3061e1e4a19a570d37e4b9cb4abaf9a88d971dc2032292b32e280e3bf65` |
+| `byte_buddy_signal_lineage_badges_imagegen_v9.png` | `7ef6e4e6b7f6153edb4c05f8515ca8ad4233d328329b22b76a90a2cc8050ebb8` |
 
 The exact prompts are retained here so later sheets can match the same art
 direction.
@@ -555,6 +571,47 @@ applies one of eight bounded mutation palettes.
 > cell; no dragons, scenery, floor, shadows, borders, text, logos, watermark,
 > or neighboring-cell overlap.
 
+### ImageGen finished Signal City graphics
+
+The three `imagegen_v7` through `imagegen_v9` sheets were generated with the
+built-in OpenAI ImageGen tool on 2026-08-29 as original Byte Buddy art. Their
+prompts carry forward the established midnight-indigo outline, cyan, violet,
+coral, gold, emerald, and white jewel palette. Each accepted master is an exact
+4-by-4 crop-safe atlas with one complete centered subject per cell and no text,
+labels, logos, watermark, floor, cast shadow, scenery, merged cells, overlap,
+or frame bleed.
+
+`byte_buddy_signal_city_props_imagegen_v7.png`:
+
+> Create sixteen original hand-crafted 16-bit pixel-art Signal City props in
+> four columns by four rows. Row 1: cyan radio tower with contained waves,
+> indigo-gold signal spire, warm lantern with rooftop plants, violet relay.
+> Row 2: golden woven dragon nest platform, luminous planter, rail console,
+> distant indigo city cluster. Row 3: scanner dish, tracking compass, protected
+> antenna under a shield dome, friendly phantom signal wisp. Row 4: cyan pulse
+> strike ring, gold aura-guard shield, violet resonance rune, prismatic
+> lineage-complete crest. Hard pixel edges, chunky midnight-navy outline,
+> readable at 64×64, neutral transparent-ready background, one object per cell.
+
+`byte_buddy_reaction_fx_imagegen_v8.png`:
+
+> Create sixteen original transparent Byte Buddy reaction-effect sprites in a
+> four-by-four atlas. Row 1 is a four-frame coral heart/affection sparkle loop;
+> row 2 is a four-frame cyan soap-bubble clean loop; row 3 is a four-frame
+> violet crescent, star, and dream-breath rest loop; row 4 is a four-frame
+> gold-cyan growth and signal-victory burst. Effects only, no dragon or item,
+> compact animation progression, consistent scale and generous alpha padding.
+
+`byte_buddy_signal_lineage_badges_imagegen_v9.png`:
+
+> Create sixteen original Byte Buddy lineage and adaptation badges in a
+> four-by-four pixel-art atlas. Row 1: Spark, Crest, Aurora, Ascended. Row 2:
+> Mythic, Nova, Galaxy, Eternal. Row 3: Shield, Phantom, Wideband, Prismatic.
+> Row 4: Chimera, Band, Hue, Mix. Make every badge a distinct readable jewel
+> crest with no letters or numbers, hard pixel edges, chunky midnight-navy
+> outline, neutral transparent-ready background, and generous crop-safe
+> padding.
+
 ## Deterministic atlas conversion
 
 `tools/png_to_dragon_atlas.py` scales each source sheet to 256×256 with
@@ -563,20 +620,25 @@ gets a deterministic 15-color RGB565 palette plus transparent index zero, and
 two 4-bit indices are packed per byte. A frame therefore occupies 2,080 bytes
 instead of 8,192 bytes of raw RGB565.
 
-The first six sheets form a 199,744-byte built-in `BBDART2` fallback inside the
-`.P4G`. All twenty-five gameplay sheets contain 400 master frames in an
-832,064-byte
-resource payload. The
-Console OS build wraps that payload as `BYTEBUD.P4R`: a bounded, same-ID,
-SHA-256-verified read-only SD sidecar. The executable remains under the existing
-512 KiB safety limit, while optional artwork can grow independently up to the
-platform's 8 MiB `.P4R` bound. If the sidecar is missing, Byte Buddy uses the
-six-sheet fallback; a present but malformed or mismatched sidecar fails closed.
+All twenty-eight gameplay sheets contain 448 master frames in a 931,904-byte
+resource payload. Console OS wraps that payload as `BYTEBUD.P4R`: a bounded,
+same-ID, SHA-256-verified read-only SD sidecar. Byte Buddy 3.8 requires storage
+resource format v1 and validates the full 28-sheet bank before initializing.
+Missing, null, truncated, wrong-version, or incomplete art fails closed; there
+is no low-fidelity launch path or placeholder renderer. The executable remains
+under the existing 512 KiB safety limit, while the art bank remains below the
+platform's 8 MiB `.P4R` bound.
+
+The converter still emits the historical six-sheet, 199,744-byte include as a
+determinism regression artifact. Byte Buddy no longer includes or links that
+file into `.P4G`; production always pairs the cartridge with the full sidecar.
 
 The converter also clears rows 54–63 in each runtime flying cell. PixelLab put
 faint label-like marks in that unused transparent margin; the original PNG is
 preserved for provenance, while the runtime cleanup is explicit and
-reproducible.
+reproducible. Border-connected neutral pixels are removed from baked
+checkerboards, with bounded enclosed-background cleanup on the composable
+genome, Signal City, and lineage-badge sheets.
 
 Regenerate the include from the repository root:
 
@@ -609,7 +671,10 @@ python3 games/byte_buddy/tools/png_to_dragon_atlas.py \
   games/byte_buddy/assets/byte_buddy_dragon_signal_genetics_imagegen_v3.png \
   games/byte_buddy/assets/byte_buddy_star_catcher_rewards_imagegen_v4.png \
   games/byte_buddy/assets/byte_buddy_items_components_imagegen_v5.png \
-  games/byte_buddy/assets/byte_buddy_signal_genome_layers_imagegen_v6.png
+  games/byte_buddy/assets/byte_buddy_signal_genome_layers_imagegen_v6.png \
+  games/byte_buddy/assets/byte_buddy_signal_city_props_imagegen_v7.png \
+  games/byte_buddy/assets/byte_buddy_reaction_fx_imagegen_v8.png \
+  games/byte_buddy/assets/byte_buddy_signal_lineage_badges_imagegen_v9.png
 
 python3 scripts/build-game-resource.py \
   --manifest games/byte_buddy/game.json \
@@ -619,14 +684,16 @@ python3 scripts/build-game-resource.py \
 
 Current deterministic art identities:
 
-- built-in include: `450156a7e0b1179934f5286b24208906f6350dd1b823affb3aba0a42a122ece2`;
-- full `BBDART2` payload: `a0b245a4d9583e78b26397865d3b13fea556ef413aca7b8f22567e8e09dbad57`;
-- wrapped `BYTEBUD.P4R`: 832,192 bytes,
-  `ae1d39daa3cf444e628b1248ff3ea7f83b57e1718a1a75ff476e65151f8650ca`;
-- v3.7 `BYTEBUD.P4G`: 380,412 bytes, payload SHA-256
-  `08acbc8d928bfcfe3df9f3a99bb401a55e9d8b5912c4cbd64a7abf27f5c1b739`,
+- unlinked six-sheet regression include:
+  `450156a7e0b1179934f5286b24208906f6350dd1b823affb3aba0a42a122ece2`;
+- full 28-sheet `BBDART2` payload: 931,904 bytes,
+  `4e6b5ef1aefa57ea308f9accd58a5cea1972be94417c388e277ff5732aee3ad9`;
+- wrapped `BYTEBUD.P4R`: 932,032 bytes,
+  `1cd1e48f89e0ca5d2d147e6f66a791277a346ba4c7d52dd71468b2f856379828`;
+- v3.8 `BYTEBUD.P4G`: 180,380 bytes, payload SHA-256
+  `b2d94d4ee688d7d88d99b47a0d44561dc4daece58785c5949d115ec425e5b6b4`,
   package SHA-256
-  `bbb15796291d51dceb33081ecb074b4d14743ebc7b0fa92c115165bb0af1b29c`.
+  `fb3200544b132430b5fec24ba1d7463daf05b9af9bf3ebf3efbd80c0596d56b9`.
 
 Two independent focused RISC-V builds produced byte-identical cartridges, and
 the repository package verifier accepted the final header, manifest fields,
@@ -650,13 +717,13 @@ make play-game GAME=byte_buddy
 `byte_buddy_touch_previews` accepts the generated art payload and renders
 deterministic closed egg, cracking egg, Power shop, Style shop, customized baby, flying,
 elemental, mini-game, signal-list, focused tracker, and battle frames for
-visual QA. Its two-argument animation mode also renders 177 chronological
+visual QA. Its two-argument animation mode also renders 178 chronological
 gameplay frames covering every expanded stage clip, the multi-step hatch, both
 controller-active signal-list pages, dormant/Eternal Genome panels, a signal
 reward card, and one-signal Spark, five-signal Aurora, eight-signal Ascended,
 12-signal Mythic, 16-signal Nova, 24-signal Galaxy, and 32-signal Eternal clips.
-The Resonance Weave frame also shows its controller cursor and hint. The
-sequence remains exactly 177 frames. The tests
+Dedicated Pulse Rush and Resonance Weave frames show their authored effects,
+controller cursor, and hints. The sequence remains exactly 178 frames. The tests
 cover touch hit areas,
 care achievements, shop spending paths, preview progression, drag and
 controller Star Catcher play, trait selection, customization costs,
@@ -670,7 +737,11 @@ all five base lineage boundaries plus both sides of the Nova/Galaxy/Eternal
 thresholds, order-independent aggregation, independent on/off boundaries for
 all five combinable adaptations, the 48-link recovery/fail-safe path,
 low-diversity stalling, capped lineage stats, bounded signal-provider
-integration, and guarded rendering.
+integration, guarded rendering, the required storage/resource-v1 contract,
+and rejection of missing, null, malformed, truncated, wrong-version, or
+incomplete full art. CTest renders the eleven primary 320×200 screens and the
+complete 178-frame route with the committed resource as deterministic preview
+smokes.
 
 Care, coins, upgrades, growth, and lineage are session-only until the platform
 exposes a reviewed writable save service. The game owns no display, touch,
