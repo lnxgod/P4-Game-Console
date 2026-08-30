@@ -75,6 +75,16 @@ time. Victory and defeat each finish their animation before changing screens,
 and only victory can award coins, growth, lineage DNA, or achievements. The
 required sidecar now contains 29 sheets and 464 frames.
 
+Version 4 makes that same bounded 29-sheet/464-frame budget cover the complete
+play loop. Seven legacy slots are reclaimed for authored signal counters,
+battle outcomes, enemy passives, scan states, evolution ceremonies, dragon
+needs, and activity feedback. The superseded PixelLab egg-through-elemental
+sheets remain preserved as provenance and style references, while the runtime
+uses the more expressive ambient, care, aerobatic, mastery, transition, and
+signal-genetic sheets already derived from them. The atlas converter now
+requires the exact filename at every index and rejects missing, reordered,
+duplicate, or extra sources.
+
 ## Touch play
 
 - Tap **Feed**, **Play**, **Clean**, or **Rest** to provide care.
@@ -292,16 +302,14 @@ Care style determines the mature branch rather than a menu choice:
   early stages and choose a dedicated PixelLab adult family when rare art is
   unlocked.
 
-Animation and UI use 464 authored 64×64 source frames: four-frame ambient clips,
-eight-frame care and power reactions, a dedicated shell-to-baby hatch, four
-signal-genetic flight families, four Star Catcher reward/effect loops, and
-sixteen care/Power/Style/Remix item sprites plus sixteen composable signal
-layers. Sixty-four additional frames provide Signal City props and scanner
-states, four reaction-effect families, eight lineage ranks, five adaptation
-crests, three genome-progress badges, and four four-frame signal attacks. The
-renderer eases palette color between adjacent
-poses while switching non-overlapping silhouette pixels together at the
-midpoint. This avoids the ghosted double silhouettes caused by per-pixel edge
+Animation and UI use 464 authored 64×64 source frames. Seven full sheets cover
+signal counters, outcomes, passives, scan states, evolution, needs, and
+activity feedback; the remaining sheets cover ambient/care motion, hatch and
+signal-genetic transitions, Star Catcher rewards, items, composable signal
+layers, Signal City props, reactions, lineage regalia, and signal attacks. The
+renderer selects one complete crop-safe authored pose at each bounded cadence
+and applies customization to that whole pose. It never blends non-overlapping
+silhouettes, avoiding the ghosted double images caused by per-pixel edge
 dithering while preserving crisp authored poses.
 A 32-step eased hover/bounce curve, smooth drag following,
 spring-and-inertia catcher motion, speed trails, star trails, a responsive
@@ -345,13 +353,19 @@ while Console OS keeps the compatible stable surface and touch mapping.
 
 ## Generated source art
 
-The thirty PNGs in `assets/` are original project inputs generated in
-PixelLab or ImageGen for this game. Six PixelLab gameplay sheets are transparent
-256×256 4-by-4 grids, and the retained 64×64 style anchor keeps later ImageGen
-sheets cohesive. Twenty-three 1254×1254 ImageGen grids add two egg families, baby
-reactions, flight cycles, elemental breath, nine motion expansions, a hatch
-transition, signal-genetic motion, Star Catcher rewards, items, signal genome
-layers, city props, reaction effects, lineage regalia, and signal attacks. Some
+The thirty-seven intentional PNGs at the top level of `assets/` are original
+project inputs generated in PixelLab or ImageGen for this game. Six PixelLab
+gameplay sheets are transparent 256×256 4-by-4 grids, and the retained 64×64
+style anchor keeps later ImageGen sheets cohesive. Thirty 1254×1254 ImageGen
+grids add two egg
+families, baby reactions, flight cycles, elemental breath, nine motion
+expansions, hatch and signal-genetic transitions, Star Catcher rewards, items,
+signal genome layers, city props, reaction effects, lineage regalia, attacks,
+counters, outcomes, passives, scan states, evolution, needs, and activity
+feedback. Only the exact 29-sheet map below enters the runtime. The five
+superseded PixelLab stage sheets, the PixelLab style anchor, and the two early
+ImageGen egg-family sheets remain provenance/style inputs and are deliberately
+excluded from the v4 bank. Some
 ImageGen grids have a baked neutral checkerboard; the deterministic converter
 removes border-connected neutral pixels and leaves source files untouched. For
 the composable halo/aura sheet, it also removes only enclosed neutral components
@@ -389,6 +403,51 @@ large enough to be background, preserving small white highlights and sigils.
 | `byte_buddy_reaction_fx_imagegen_v8.png` | `b1cbd3061e1e4a19a570d37e4b9cb4abaf9a88d971dc2032292b32e280e3bf65` |
 | `byte_buddy_signal_lineage_badges_imagegen_v9.png` | `7ef6e4e6b7f6153edb4c05f8515ca8ad4233d328329b22b76a90a2cc8050ebb8` |
 | `byte_buddy_signal_attack_cycles_imagegen_v10.png` | `e660d48ec4d3a721c14fd1dd6dab29dbf32b0ac6a1bca41bd1eb5eb3b185e191` |
+| `byte_buddy_signal_counter_fx_imagegen_v11.png` | `f209ef282a3abcd177343cef3705273d9116d12899bcea79dca57ae561dec7b1` |
+| `byte_buddy_signal_outcome_fx_imagegen_v12.png` | `3adf996dde1954d807fbab2985723d03bfba0120850da4a15430e178fdb06aee` |
+| `byte_buddy_signal_passive_fx_imagegen_v13.png` | `a64c7336836fc1d2920ee018d92379ce37d83ac5d6ab4a7f584306b48d211f57` |
+| `byte_buddy_signal_scan_fx_imagegen_v14.png` | `98007f62ab1a72076ac7db289437836394adad90caf58496ff88696ada4fe8de` |
+| `byte_buddy_evolution_fx_imagegen_v15.png` | `151b649273e7cb634b938f651a9c81b09ae59084c0f13d04c4ee5379b8f46724` |
+| `byte_buddy_need_fx_imagegen_v16.png` | `800f633eb0192d35020483f013e6cbcf26deb006ddaa3735607d49917afd8500` |
+| `byte_buddy_activity_fx_imagegen_v17.png` | `2e66c3f31c26528dcac2adf23f38349638dcc5f7f125459538e1e078cc280fdb` |
+
+### Exact v4 runtime sheet map
+
+The converter accepts exactly these 29 sources in this order. Each index owns
+16 consecutive 64×64 runtime frames, so index `n` maps to frames
+`n * 16` through `n * 16 + 15`.
+
+| Index | Frames | Exact source |
+| ---: | ---: | --- |
+| 0 | 0–15 | `byte_buddy_signal_counter_fx_imagegen_v11.png` |
+| 1 | 16–31 | `byte_buddy_signal_outcome_fx_imagegen_v12.png` |
+| 2 | 32–47 | `byte_buddy_signal_passive_fx_imagegen_v13.png` |
+| 3 | 48–63 | `byte_buddy_signal_scan_fx_imagegen_v14.png` |
+| 4 | 64–79 | `byte_buddy_evolution_fx_imagegen_v15.png` |
+| 5 | 80–95 | `byte_buddy_dragon_rare_variants_pixellab_v1.png` |
+| 6 | 96–111 | `byte_buddy_need_fx_imagegen_v16.png` |
+| 7 | 112–127 | `byte_buddy_activity_fx_imagegen_v17.png` |
+| 8 | 128–143 | `byte_buddy_dragon_baby_reactions_imagegen_v1.png` |
+| 9 | 144–159 | `byte_buddy_dragon_flight_cycles_imagegen_v1.png` |
+| 10 | 160–175 | `byte_buddy_dragon_elemental_breath_imagegen_v1.png` |
+| 11 | 176–191 | `byte_buddy_dragon_egg_morph_ambient_imagegen_v2.png` |
+| 12 | 192–207 | `byte_buddy_dragon_egg_element_ambient_imagegen_v2.png` |
+| 13 | 208–223 | `byte_buddy_dragon_baby_idle_cycles_imagegen_v2.png` |
+| 14 | 224–239 | `byte_buddy_dragon_baby_care_cycles_imagegen_v2.png` |
+| 15 | 240–255 | `byte_buddy_dragon_winged_idle_cycles_imagegen_v2.png` |
+| 16 | 256–271 | `byte_buddy_dragon_winged_care_cycles_imagegen_v2.png` |
+| 17 | 272–287 | `byte_buddy_dragon_flight_aerobatics_imagegen_v2.png` |
+| 18 | 288–303 | `byte_buddy_dragon_elemental_mastery_imagegen_v2.png` |
+| 19 | 304–319 | `byte_buddy_dragon_elemental_impacts_imagegen_v2.png` |
+| 20 | 320–335 | `byte_buddy_dragon_hatch_transitions_imagegen_v3.png` |
+| 21 | 336–351 | `byte_buddy_dragon_signal_genetics_imagegen_v3.png` |
+| 22 | 352–367 | `byte_buddy_star_catcher_rewards_imagegen_v4.png` |
+| 23 | 368–383 | `byte_buddy_items_components_imagegen_v5.png` |
+| 24 | 384–399 | `byte_buddy_signal_genome_layers_imagegen_v6.png` |
+| 25 | 400–415 | `byte_buddy_signal_city_props_imagegen_v7.png` |
+| 26 | 416–431 | `byte_buddy_reaction_fx_imagegen_v8.png` |
+| 27 | 432–447 | `byte_buddy_signal_lineage_badges_imagegen_v9.png` |
+| 28 | 448–463 | `byte_buddy_signal_attack_cycles_imagegen_v10.png` |
 
 The exact prompts are retained here so later sheets can match the same art
 direction.
@@ -690,6 +749,88 @@ rows are the encounter families below.
 > pixel edges, oversized effects touching cell edges, duplicated frames,
 > decorative objects unrelated to the named attack.
 
+### ImageGen full-graphics v4 sheets
+
+The seven `imagegen_v11` through `imagegen_v17` sheets were generated with the
+built-in OpenAI ImageGen tool on 2026-08-29 as original Byte Buddy project art.
+The accepted masters are 1254×1254 RGBA images and were visually inspected for
+the requested exact 4-by-4 layout, chronological rows, crop safety, and real
+transparent padding. The authoritative final generation specifications are
+retained below. Each sheet-specific prompt included this exact shared art and
+layout constraint:
+
+> Original hand-crafted 16-bit pixel art with hard square pixel edges, a chunky
+> 2-pixel midnight-navy outline, and the established cyan, violet, coral, gold,
+> emerald, ice-blue, and white jewel palette. Create exactly four columns by
+> four rows with one crop-safe centered subject in every cell and generous real
+> transparent padding. No checkerboard, grid, cell border, text, letters,
+> numbers, logo, watermark, floor, cast shadow, scenery, dragon, character,
+> merged cells, overlap, or frame bleed.
+
+`byte_buddy_signal_counter_fx_imagegen_v11.png`:
+
+> Create a Byte Buddy signal-counter animation atlas. Across every row, columns
+> are chronological: tell/charge, guard/field, counter/disruption, recovery.
+> Row 1 is Nova Parry: warning star, prismatic disc, reflected energy, fading
+> orbit. Row 2 is Flare Counter: ember tell, flame shield sweep, hot counter
+> burst, fading sparks. Row 3 is Glacier Counter: ice glyph, crystalline shield,
+> cracking counter wave, settling snow. Row 4 is Jam Counter: static warning,
+> interference field, disrupted signal burst, fading digital bits.
+
+`byte_buddy_signal_outcome_fx_imagegen_v12.png`:
+
+> Create a Byte Buddy signal-battle outcome animation atlas. Across every row,
+> columns are chronological: onset, expansion, resolution, settle. Row 1 is a
+> friendly taming victory with a contained prismatic bond burst. Row 2 is HP
+> defeat with a cracked energy crest collapsing safely. Row 3 is timeout with a
+> clocklike signal ring expiring and dimming. Row 4 is retreat with a protective
+> portal or directional energy sweep closing behind it.
+
+`byte_buddy_signal_passive_fx_imagegen_v13.png`:
+
+> Create a Byte Buddy signal-enemy passive animation atlas. Across every row,
+> columns are chronological: activation, active state, triggered effect, fade.
+> Row 1 is Ward, a compact shield field. Row 2 is Echo, a duplicated pulse and
+> returning ripple. Row 3 is Siphon, an emerald-violet energy drain and recovery
+> mote. Row 4 is Overclock, a gold-magenta acceleration ring with controlled
+> sparks.
+
+`byte_buddy_signal_scan_fx_imagegen_v14.png`:
+
+> Create a Byte Buddy Signal Hunt scanner-state animation atlas with four
+> chronological frames in every row. Row 1 is active scan: scanner seed, growing
+> radar sweep, bright detection pulse, settling return. Row 2 is busy/retry:
+> queued pulse, blocked interference, retry orbit, ready glint. Row 3 is
+> offline/error: broken signal glyph, dim crossed wave, contained error pulse,
+> safe idle. Row 4 is empty or moved-away: fading contact, broken trail,
+> dispersing motes, empty locator ring.
+
+`byte_buddy_evolution_fx_imagegen_v15.png`:
+
+> Create a Byte Buddy evolution-transition effect atlas. Across every row,
+> columns are chronological: onset, energy wrap, reveal, settle. Row 1 is Baby
+> to Winged with a small wing-shaped aura. Row 2 is Winged to Flying with an
+> uplifting flight spiral. Row 3 is Flying to Elemental with a four-color
+> elemental crown. Row 4 is signal-genome absorption with a digital seed,
+> helixlike wrap, prismatic integration burst, and stable lineage orbit.
+
+`byte_buddy_need_fx_imagegen_v16.png`:
+
+> Create a Byte Buddy dragon-needs animation atlas. Every row is a seamless
+> four-frame readable loop. Row 1 is hunger using a warm food-orb and gentle
+> tummy cue. Row 2 is low joy using a dim toy-star that perks back up. Row 3 is
+> dirty using dust motes and a contained smudge cloud. Row 4 is sleepy using a
+> crescent, small dream puffs, and settling stars. Effects and symbolic need
+> objects only.
+
+`byte_buddy_activity_fx_imagegen_v17.png`:
+
+> Create a Byte Buddy activity and shop-feedback atlas. Row 1 is a chronological
+> Star Catcher ready/go sequence. Row 2 is a four-frame miss reaction that
+> appears, falls, disperses, and settles. Row 3 is a four-frame end-of-round
+> summary reward burst. Row 4 contains four distinct shop states from left to
+> right: unlock onset, unlocked, equipped, unavailable.
+
 ## Deterministic atlas conversion
 
 `tools/png_to_dragon_atlas.py` scales each source sheet to 256×256 with
@@ -700,23 +841,23 @@ instead of 8,192 bytes of raw RGB565.
 
 All twenty-nine gameplay sheets contain 464 master frames in a 965,184-byte
 resource payload. Console OS wraps that payload as `BYTEBUD.P4R`: a bounded,
-same-ID, SHA-256-verified read-only SD sidecar. Byte Buddy 3.9 requires storage
-resource format v1 and validates the full 29-sheet bank before initializing.
-Missing, null, truncated, wrong-version, or incomplete art fails closed; there
-is no low-fidelity launch path or placeholder renderer. The executable remains
-under the existing 512 KiB safety limit, while the art bank remains below the
+same-ID, SHA-256-verified read-only SD sidecar. Byte Buddy 4.0 requires storage
+resource format v1 and the exact ordered 29-sheet bank before initializing.
+The converter rejects a missing, reordered, renamed, duplicate, or extra source
+before it writes either output. Runtime validation separately fails closed on
+missing, null, truncated, wrong-version, or incomplete art; there is no
+low-fidelity launch path or placeholder renderer. The executable remains under
+the existing 512 KiB safety limit, while the art bank remains below the
 platform's 8 MiB `.P4R` bound.
 
-The converter still emits the historical six-sheet, 199,744-byte include as a
-determinism regression artifact. Byte Buddy no longer includes or links that
-file into `.P4G`; production always pairs the cartridge with the full sidecar.
+The converter also emits the first six v4 sheets as a 199,744-byte include used
+only as an unlinked determinism regression artifact. Byte Buddy does not include
+or link that file into `.P4G`; production always pairs the cartridge with the
+full sidecar.
 
-The converter also clears rows 54–63 in each runtime flying cell. PixelLab put
-faint label-like marks in that unused transparent margin; the original PNG is
-preserved for provenance, while the runtime cleanup is explicit and
-reproducible. Border-connected neutral pixels are removed from baked
-checkerboards, with bounded enclosed-background cleanup on the composable
-genome, Signal City, and lineage-badge sheets.
+Border-connected neutral pixels are removed from baked checkerboards, with
+bounded enclosed-background cleanup on the composable genome, Signal City, and
+lineage-badge sheets. Source PNGs remain unchanged.
 
 Regenerate the include from the repository root:
 
@@ -725,14 +866,14 @@ python3 games/byte_buddy/tools/png_to_dragon_atlas.py \
   --builtin-count 6 \
   --include-output games/byte_buddy/src/generated/byte_buddy_dragon_atlas.inc \
   --resource-output games/byte_buddy/assets/generated/byte_buddy_dragon_art.bin \
-  games/byte_buddy/assets/byte_buddy_dragon_eggs_pixellab_v1.png \
-  games/byte_buddy/assets/byte_buddy_dragon_baby_pixellab_v1.png \
-  games/byte_buddy/assets/byte_buddy_dragon_winged_pixellab_v1.png \
-  games/byte_buddy/assets/byte_buddy_dragon_flying_pixellab_v1.png \
-  games/byte_buddy/assets/byte_buddy_dragon_elemental_pixellab_v1.png \
+  games/byte_buddy/assets/byte_buddy_signal_counter_fx_imagegen_v11.png \
+  games/byte_buddy/assets/byte_buddy_signal_outcome_fx_imagegen_v12.png \
+  games/byte_buddy/assets/byte_buddy_signal_passive_fx_imagegen_v13.png \
+  games/byte_buddy/assets/byte_buddy_signal_scan_fx_imagegen_v14.png \
+  games/byte_buddy/assets/byte_buddy_evolution_fx_imagegen_v15.png \
   games/byte_buddy/assets/byte_buddy_dragon_rare_variants_pixellab_v1.png \
-  games/byte_buddy/assets/byte_buddy_dragon_egg_morphs_imagegen_v1.png \
-  games/byte_buddy/assets/byte_buddy_dragon_egg_elements_imagegen_v1.png \
+  games/byte_buddy/assets/byte_buddy_need_fx_imagegen_v16.png \
+  games/byte_buddy/assets/byte_buddy_activity_fx_imagegen_v17.png \
   games/byte_buddy/assets/byte_buddy_dragon_baby_reactions_imagegen_v1.png \
   games/byte_buddy/assets/byte_buddy_dragon_flight_cycles_imagegen_v1.png \
   games/byte_buddy/assets/byte_buddy_dragon_elemental_breath_imagegen_v1.png \
@@ -761,48 +902,51 @@ python3 scripts/build-game-resource.py \
   --output /tmp/BYTEBUD.P4R
 ```
 
-Current deterministic art identities:
+Verified v4.0.0 release identities:
 
-- unlinked six-sheet regression include:
-  `450156a7e0b1179934f5286b24208906f6350dd1b823affb3aba0a42a122ece2`;
-- full 29-sheet `BBDART2` payload: 965,184 bytes,
-  `d08928839e500bcfb55d65619982bbe71dffb25ad6f0ef5afccbd86a30062699`;
-- wrapped `BYTEBUD.P4R`: 965,312 bytes,
-  `034c3253e60507b94818a7bc4a6fc76c7847ee6640c03934fa6543b841bcd65e`;
-- v3.9 `BYTEBUD.P4G`: 186,400 bytes with a 186,144-byte ELF payload,
+- v4 unlinked six-sheet regression include:
+  `87586dab97edfd44b19a05851a7479ab2f6c5576a61edcd3dc0d8c6779dfa91d`;
+- v4 full 29-sheet `BBDART2` payload: 965,184 bytes,
+  `a1c59644d9503284b80ce0cef4d358647c5f9e9cc084d406e323d404dfd1cb92`;
+- v4 wrapped `BYTEBUD.P4R`: 965,312 bytes,
+  `5d3b604daa3bf97f2c99268b4f2eedb3a4270f18558415fa7aee8e0a9a40dcd4`;
+- v4 `BYTEBUD.P4G`: 188,672 bytes with a 188,416-byte ELF payload,
   payload SHA-256
-  `e87ac000ec4e01b2970160e2acd2185678148daf1a9fe8361f5310d91c790865`
+  `7a6d6ff8b0a3987875936258242113ff41a4a9ea437c9da07529f81e3e14c7d3`
   and package SHA-256
-  `d799f064ab33d2f50d1a676cd67e51c1b56c7014e1eefd78da91e42313038a49`;
-- previous v3.8 `BYTEBUD.P4R` rollback baseline: 932,032 bytes,
-  `1cd1e48f89e0ca5d2d147e6f66a791277a346ba4c7d52dd71468b2f856379828`;
-- previous v3.8 `BYTEBUD.P4G` baseline: 180,380 bytes, payload SHA-256
-  `b2d94d4ee688d7d88d99b47a0d44561dc4daece58785c5949d115ec425e5b6b4`,
-  package SHA-256
-  `fb3200544b132430b5fec24ba1d7463daf05b9af9bf3ebf3efbd80c0596d56b9`.
+  `220fdaea0d51cd2a089f55493b621d019d156f243d86061c30f8975996d14480`;
+- v3.9 rollback `BYTEBUD.P4R`: 965,312 bytes,
+  `034c3253e60507b94818a7bc4a6fc76c7847ee6640c03934fa6543b841bcd65e`;
+- v3.9 rollback `BYTEBUD.P4G`: 186,400 bytes, package SHA-256
+  `d799f064ab33d2f50d1a676cd67e51c1b56c7014e1eefd78da91e42313038a49`.
 
-Two independent atlas conversions produced byte-identical v3.9 include and
+Two independent atlas conversions produced byte-identical v4 include and
 resource outputs. Two independent focused RISC-V builds with
 `riscv32-esp-elf-gcc (crosstool-NG esp-14.2.0_20251107) 14.2.0` produced the
-byte-identical v3.9 cartridge recorded above. The package verifier accepted its
+byte-identical v4 cartridge recorded above. The package verifier accepted its
 header, manifest fields, capability masks, ELF payload, and digest. This is
 artifact verification, not on-device acceptance.
 
-### v3.9 deployment candidate
+### v4 deployment candidate
 
-Deploy v3.9 as a paired `BYTEBUD.P4G` and `BYTEBUD.P4R` game-only update after
-focused host, named SDL play, package, and target-matched Console OS integration
-checks pass. The first canary is the recorded pink Waveshare 4.3 unit 1,
+The controller-first Waveshare Console OS build passed its no-flash verifier
+with the exact v4 pair above. Its application image is 1,832,000 bytes with
+SHA-256
+`3224ef8f35dd1ce73eedc5e8c8861b633cd74eb9b4823afca80103321f71b3ac`,
+leaving 78 percent of the 8,323,072-byte application slot free. Deploy v4 as a
+paired `BYTEBUD.P4G` and `BYTEBUD.P4R` game-only update only after named SDL
+play and physical-tablet acceptance. The first canary is the recorded pink
+Waveshare 4.3 unit 1,
 identity SHA-256
 `c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d`;
 promote the same verified pair to green unit 2 only after canary acceptance.
 Because the sidecar changed, use the H2 USB Drive workflow or a powered-off
 microSD reader and replace both files as one versioned pair; the H1
-live-transfer path installs `.P4G` files only and must not leave a v3.9
-executable beside the v3.8 resource. Verify both hashes, eject cleanly, remount,
+live-transfer path installs `.P4G` files only and must not leave a v4
+executable beside the v3.9 resource. Verify both hashes, eject cleanly, remount,
 and exercise every attack family and dragon counter plus Pulse Rush, Resonance
 Weave, retreat/rematch, one win, and one genuine defeat with no loss reward.
-Preserve the exact v3.8 pair above for atomic rollback. No host build is
+Preserve the exact v3.9 pair above for atomic rollback. No host build is
 hardware acceptance, and no hardware install is authorized by this plan.
 
 ## Verification
@@ -832,7 +976,19 @@ controller cursor, and hints. The sequence remains exactly 178 frames. The tests
 also run a dedicated 905-frame Signal Battle chronology covering every attack
 family, all four passive combinations, telegraphs, travel, impact, guard,
 player damage, HP defeat, rematch, retreat, Pulse victory, Resonance victory,
-and delayed rewards. They cover touch hit areas,
+and delayed rewards. A third exact 112-frame suite covers every reclaimed v4
+cell and locks semantic ROI digests for counters, outcomes, passives, scanner
+states, needs, signal-earned evolution, all four visible Star-ready phases,
+Star miss/summary, Power growth, neutral scene wipes, per-run summaries, and
+shop onset/unlocked/equipped/unavailable mappings. Every one of those 112
+authored frames has one fail-closed semantic digest; missing, duplicated,
+renamed, or column-swapped expectations fail the route. Additional non-emitted
+checks defeat 27 unique signals without returning Home, then require distinct
+Winged and Flying ceremonies in order. They also require a Play-triggered
+milestone to finish visibly on Home before a fresh wipe and full Ready sequence,
+require both B and touch Done to work during the opening wipe, and consume an
+input edge that lands on the final evolution-completion frame. The suites
+cover touch hit areas,
 care achievements, shop spending paths, preview progression, drag and
 controller Star Catcher play, trait selection, customization costs,
 all 19,200 collision-free look recipe IDs, deterministic owned-choice Remix,
@@ -851,8 +1007,11 @@ low-diversity stalling, capped lineage stats, bounded signal-provider
 integration, guarded rendering, the required storage/resource-v1 contract,
 and rejection of missing, null, malformed, truncated, wrong-version, or
 incomplete full art. CTest renders the eleven primary 320×200 screens, the
-complete 178-frame route, and hashes the exact 905-frame battle route with the
-committed resource as deterministic preview smokes.
+complete 178-frame route, and hashes the exact 905-frame battle and 112-frame
+authored routes with the committed resource as deterministic preview smokes.
+The final focused CTest run passed 5/5, the SDL host smoke/save run passed 2/2,
+and the matched Waveshare build verifier passed. Named human SDL play and
+physical-tablet acceptance remain pending.
 
 Care, coins, upgrades, growth, and lineage are session-only until the platform
 exposes a reviewed writable save service. The game owns no display, touch,

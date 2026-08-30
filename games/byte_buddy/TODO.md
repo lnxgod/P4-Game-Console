@@ -4,6 +4,41 @@ This is the working list for the Dragon game's fluidity, pacing, progression,
 and new art. Keep gameplay changes deterministic and bounded on the 320x200
 P4 Game API surface.
 
+## Full graphics v4 pass
+
+- [x] Audit every reachable care, activity, shop, growth, scan, tracker,
+      battle, reward, loss, lineage, and transition state for missing authored
+      graphics and incomplete animation chronology, including the seven legacy
+      slots that can be reclaimed without increasing the bounded frame budget.
+- [x] Generate and visually inspect seven original crop-safe 4x4 atlases for
+      signal counters, outcomes, passives, scan states, evolution, needs, and
+      Star Catcher/activity feedback.
+- [x] Integrate every v11-v17 row into its reachable runtime state and remove
+      the corresponding procedural or static visual stand-ins.
+- [x] Give each newly authored action a complete chronological animation with
+      deterministic start, anticipation, action, impact, recovery, and exit
+      timing where those phases apply.
+- [x] Extend deterministic previews and unit tests to cover every new row,
+      every battle counter/passive/outcome, all scan phases, each need, all
+      activity outcomes, and every evolution milestone. Pin exactly one
+      fail-closed semantic digest for all 112 authored coverage frames.
+- [x] Queue Winged, Flying, and Elemental milestones independently so multiple
+      signal-earned stages play in order after returning Home; verify a
+      27-signal uninterrupted route does not collapse the ceremonies.
+- [x] Keep Play-triggered growth visible on Home, then start a fresh wipe and
+      full Ready sequence; accept B and touch Done even during the opening wipe,
+      and consume input on the exact final evolution-completion frame.
+- [x] Verify the converter and runtime both require the exact ordered
+      29-sheet/464-frame v4 bank and reject legacy, reordered, extra,
+      truncated, or malformed sources.
+- [x] Run ASan/UBSan, focused host tests, the automated SDL smoke route, visual
+      inspection, two byte-identical atlas conversions, and package checks.
+- [x] Build and verify a matched v4 `.P4G`/`.P4R` deployment candidate with
+      the pinned RISC-V toolchain and target-matched Waveshare integration.
+- [ ] Complete named human SDL acceptance and named tablet acceptance before
+      describing v4 as play-tested or hardware-tested; do not install or flash
+      hardware without separate explicit authorization.
+
 ## Tonight's pass
 
 - [x] Record clean baseline sanitizer results for the focused game and SDL host.
@@ -133,9 +168,9 @@ P4 Game API surface.
 - [x] Add Signal Hunt paging so all eight bounded OS results are selectable.
 - [ ] Perform named tablet acceptance for touch feel, panel motion, speaker feedback,
       launcher return, and exact `.P4G`/`.P4R` hashes before calling the work hardware-tested.
-- [ ] After v3.9 host, SDL, package, and Waveshare integration checks pass,
-      preserve the v3.8 rollback pair and canary-install the matched v3.9
-      `.P4G`/`.P4R` pair through H2 USB Drive or a powered-off microSD reader.
+- [ ] After named human SDL and tablet acceptance, preserve the v3.9 rollback
+      pair and canary-install the matched v4 `.P4G`/`.P4R` pair through H2 USB
+      Drive or a powered-off microSD reader with separate authorization.
 
 ## Balance targets
 

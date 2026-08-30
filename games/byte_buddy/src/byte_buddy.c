@@ -23,6 +23,11 @@ enum {
     STAT_MAX = 100,
     DECAY_INTERVAL_MS = 5000,
     MINI_GAME_DURATION_MS = 18000,
+    SCENE_TRANSITION_MS = 240,
+    MINI_GAME_INTRO_MS = 1200,
+    MINI_GAME_READY_VISIBLE_MS =
+        MINI_GAME_INTRO_MS - SCENE_TRANSITION_MS,
+    MINI_GAME_SUMMARY_MS = 900,
     MINI_GAME_CATCH_Y = 126,
     MINI_GAME_STAR_START_Y = 38,
     MINI_GAME_EFFECT_DURATION_MS = 480,
@@ -57,6 +62,8 @@ enum {
     SIGNAL_DEFEAT_MS = 760,
     SIGNAL_RETREAT_MS = 520,
     SIGNAL_GUARD_FX_MS = 360,
+    EVOLUTION_FX_MS = 1200,
+    SHOP_FEEDBACK_MS = 650,
     SIGNAL_TRACK_REFRESH_MS = 1600,
     SIGNAL_REQUEST_BUSY_MS = 1200,
     SIGNAL_CONTROLLER_CURSOR_SPEED = 125,
@@ -75,9 +82,14 @@ enum {
     DRAGON_ART_PALETTE_OFFSET_FIELD = 36,
     DRAGON_ART_PIXEL_OFFSET_FIELD = 40,
     DRAGON_ART_TOTAL_BYTES_FIELD = 44,
+    BYTE_BUDDY_SIGNAL_COUNTER_FX_SHEET = 0,
+    BYTE_BUDDY_SIGNAL_OUTCOME_FX_SHEET = 1,
+    BYTE_BUDDY_SIGNAL_PASSIVE_FX_SHEET = 2,
+    BYTE_BUDDY_SIGNAL_SCAN_FX_SHEET = 3,
+    BYTE_BUDDY_EVOLUTION_FX_SHEET = 4,
     DRAGON_RARE_SHEET = 5,
-    DRAGON_MORPH_EGG_SHEET = 6,
-    DRAGON_ELEMENT_EGG_SHEET = 7,
+    BYTE_BUDDY_NEED_FX_SHEET = 6,
+    BYTE_BUDDY_ACTIVITY_FX_SHEET = 7,
     DRAGON_BABY_REACTION_SHEET = 8,
     DRAGON_FLIGHT_CYCLE_SHEET = 9,
     DRAGON_ELEMENT_BREATH_SHEET = 10,
@@ -136,6 +148,20 @@ typedef enum {
 } star_kind_t;
 
 typedef enum {
+    STAR_EFFECT_NONE = 0,
+    STAR_EFFECT_CAUGHT,
+    STAR_EFFECT_MISSED,
+} star_effect_kind_t;
+
+typedef enum {
+    SHOP_FEEDBACK_ONSET = 0,
+    SHOP_FEEDBACK_UNLOCKED,
+    SHOP_FEEDBACK_EQUIPPED,
+    SHOP_FEEDBACK_UNAVAILABLE,
+    SHOP_FEEDBACK_POWER_GROWTH,
+} shop_feedback_kind_t;
+
+typedef enum {
     SIGNAL_PHASE_INTRO = 0,
     SIGNAL_PHASE_OPEN,
     SIGNAL_PHASE_WINDUP,
@@ -160,6 +186,7 @@ typedef struct {
     uint8_t play_streak;
     uint8_t play_best_streak;
     uint8_t star_kind;
+    uint8_t star_effect_kind;
     uint8_t star_spawn_count;
     uint8_t signal_view;
     uint8_t signal_page;
@@ -181,6 +208,15 @@ typedef struct {
     uint8_t signal_guard_charges;
     uint8_t signal_focus_row;
     uint8_t menu_selection;
+    uint8_t shop_feedback_kind;
+    uint8_t evolution_pending_mask;
+    uint8_t evolution_active_stage;
+    uint8_t play_start_pending;
+    uint16_t mini_intro_ms;
+    uint16_t mini_summary_ms;
+    uint16_t evolution_fx_ms;
+    uint16_t shop_feedback_ms;
+    uint16_t scene_transition_ms;
     uint16_t signal_weave_settle_ms;
     uint16_t star_spawn_ms;
     uint16_t signal_phase_ms;
@@ -362,25 +398,6 @@ static const uint8_t s_morph_name_lengths[BYTE_BUDDY_MORPH_COUNT] = {
     6U, 7U, 4U, 7U,
 };
 
-static const uint8_t s_egg_frames[BYTE_BUDDY_ELEMENT_COUNT][4] = {
-    {1U, 5U, 9U, 13U},
-    {0U, 8U, 12U, 9U},
-    {7U, 11U, 15U, 4U},
-    {2U, 6U, 10U, 14U},
-};
-
-static const uint8_t s_elemental_idle_frames[3][2][2] = {
-    {{1U, 3U}, {0U, 2U}},
-    {{5U, 7U}, {4U, 6U}},
-    {{9U, 11U}, {8U, 10U}},
-};
-
-static const uint8_t s_elemental_reaction_frames[3][2] = {
-    {12U, 2U},
-    {13U, 6U},
-    {14U, 15U},
-};
-
 static const uint16_t s_growth_thresholds[BYTE_BUDDY_STAGE_COUNT] = {
     0U,
     GROW_BABY_INTERACTIONS,
@@ -433,7 +450,7 @@ static uint32_t read_u32(const uint8_t *data)
 }
 
 static bool art_bank_valid(const uint8_t *data, size_t bytes,
-                           unsigned minimum_sheets,
+                           unsigned required_sheets,
                            uint16_t *out_sheets)
 {
     if (data == NULL || out_sheets == NULL ||
@@ -450,7 +467,7 @@ static bool art_bank_valid(const uint8_t *data, size_t bytes,
         data + DRAGON_ART_PIXEL_OFFSET_FIELD);
     const uint32_t total_bytes = read_u32(
         data + DRAGON_ART_TOTAL_BYTES_FIELD);
-    if (sheets < minimum_sheets || sheets > UINT16_MAX ||
+    if (sheets != required_sheets || sheets > UINT16_MAX ||
         read_u32(data + 16U) != DRAGON_FRAME_WIDTH ||
         read_u32(data + 20U) != DRAGON_FRAME_HEIGHT ||
         read_u32(data + 24U) != DRAGON_FRAMES_PER_SHEET ||
@@ -1229,6 +1246,73 @@ byte_buddy_signal_defense_t byte_buddy_signal_defense(
     return result;
 }
 
+static uint8_t bounded_fx_frame(uint8_t row, uint8_t phase)
+{
+    const uint8_t bounded_row = row < 4U ? row : 0U;
+    const uint8_t bounded_phase = phase < 4U ? phase : 3U;
+    return (uint8_t)(bounded_row * 4U + bounded_phase);
+}
+
+uint8_t byte_buddy_counter_fx_frame(
+    byte_buddy_dragon_ability_t ability, uint8_t phase)
+{
+    return bounded_fx_frame(
+        ability < BYTE_BUDDY_ABILITY_COUNT ? (uint8_t)ability : 0U,
+        phase);
+}
+
+uint8_t byte_buddy_outcome_fx_frame(
+    byte_buddy_combat_outcome_t outcome, uint8_t phase)
+{
+    const uint8_t row = outcome >= BYTE_BUDDY_COMBAT_VICTORY &&
+            outcome <= BYTE_BUDDY_COMBAT_RETREATED
+        ? (uint8_t)(outcome - BYTE_BUDDY_COMBAT_VICTORY) : 0U;
+    return bounded_fx_frame(row, phase);
+}
+
+uint8_t byte_buddy_passive_fx_frame(
+    byte_buddy_signal_passive_t passive, uint8_t phase)
+{
+    return bounded_fx_frame(
+        passive < BYTE_BUDDY_SIGNAL_PASSIVE_COUNT
+            ? (uint8_t)passive : 0U,
+        phase);
+}
+
+uint8_t byte_buddy_scan_fx_frame(
+    byte_buddy_scan_fx_t state, uint8_t phase)
+{
+    return bounded_fx_frame(
+        state < BYTE_BUDDY_SCAN_FX_COUNT ? (uint8_t)state : 0U,
+        phase);
+}
+
+uint8_t byte_buddy_evolution_fx_frame(
+    byte_buddy_evolution_fx_t evolution, uint8_t phase)
+{
+    return bounded_fx_frame(
+        evolution < BYTE_BUDDY_EVOLUTION_FX_COUNT
+            ? (uint8_t)evolution : 0U,
+        phase);
+}
+
+uint8_t byte_buddy_need_fx_frame(
+    byte_buddy_need_fx_t need, uint8_t phase)
+{
+    return bounded_fx_frame(
+        need < BYTE_BUDDY_NEED_FX_COUNT ? (uint8_t)need : 0U,
+        phase);
+}
+
+uint8_t byte_buddy_activity_fx_frame(
+    byte_buddy_activity_fx_t activity, uint8_t phase)
+{
+    return bounded_fx_frame(
+        activity < BYTE_BUDDY_ACTIVITY_FX_COUNT
+            ? (uint8_t)activity : 0U,
+        phase);
+}
+
 uint8_t byte_buddy_signal_player_hp(
     byte_buddy_battle_stats_t stats, uint8_t nest_level,
     byte_buddy_signal_lineage_t lineage)
@@ -1523,6 +1607,60 @@ static void trigger_reaction(byte_buddy_state_t *state,
     state->reaction_ms = REACTION_DURATION_MS;
 }
 
+static void begin_scene_transition(byte_buddy_state_t *state)
+{
+    state->scene_transition_ms = SCENE_TRANSITION_MS;
+}
+
+static uint8_t evolution_stage_bit(unsigned stage)
+{
+    if (stage < BYTE_BUDDY_STAGE_WINGED ||
+        stage > BYTE_BUDDY_STAGE_ELEMENTAL) {
+        return 0U;
+    }
+    return (uint8_t)(1U << (stage - BYTE_BUDDY_STAGE_WINGED));
+}
+
+static void queue_evolution_milestones(
+    byte_buddy_state_t *state, unsigned previous_stage,
+    unsigned next_stage)
+{
+    for (unsigned stage = BYTE_BUDDY_STAGE_WINGED;
+         stage <= BYTE_BUDDY_STAGE_ELEMENTAL; ++stage) {
+        if (previous_stage < stage && next_stage >= stage) {
+            state->evolution_pending_mask |= evolution_stage_bit(stage);
+        }
+    }
+}
+
+static bool begin_next_evolution(byte_buddy_state_t *state,
+                                 uint16_t lead_in_ms)
+{
+    for (unsigned stage = BYTE_BUDDY_STAGE_WINGED;
+         stage <= BYTE_BUDDY_STAGE_ELEMENTAL; ++stage) {
+        const uint8_t bit = evolution_stage_bit(stage);
+        if ((state->evolution_pending_mask & bit) == 0U) {
+            continue;
+        }
+        state->evolution_pending_mask &= (uint8_t)~bit;
+        state->evolution_active_stage = (uint8_t)stage;
+        const uint32_t duration =
+            (uint32_t)EVOLUTION_FX_MS + lead_in_ms;
+        state->evolution_fx_ms = duration > UINT16_MAX
+            ? UINT16_MAX : (uint16_t)duration;
+        return true;
+    }
+    state->evolution_active_stage = BYTE_BUDDY_STAGE_COUNT;
+    return false;
+}
+
+static void begin_home_evolution_sequence(byte_buddy_state_t *state)
+{
+    if (state->evolution_fx_ms == 0U) {
+        (void)begin_next_evolution(state, SCENE_TRANSITION_MS);
+    }
+}
+
 static byte_buddy_signal_lineage_t current_lineage(
     const byte_buddy_state_t *state)
 {
@@ -1583,8 +1721,15 @@ static void advance_growth(p4_game_context_t *context,
     if ((unsigned)natural_stage <= state->stage) {
         return;
     }
+    const unsigned previous_stage = state->stage;
+    queue_evolution_milestones(
+        state, previous_stage, (unsigned)natural_stage);
     state->stage = (uint8_t)natural_stage;
     trigger_reaction(state, REACTION_GROW);
+    if (!state->signal_hunt && !state->mini_game &&
+        state->evolution_fx_ms == 0U) {
+        (void)begin_next_evolution(state, 0U);
+    }
     play_tone(context, state->stage == BYTE_BUDDY_STAGE_ELEMENTAL
         ? 1047U : 880U, 180U);
     (void)p4_game_audio_effect_play(
@@ -1786,10 +1931,16 @@ static void update_catcher_position(byte_buddy_state_t *state,
 
 static void start_play(byte_buddy_state_t *state)
 {
+    state->play_start_pending = 0U;
     state->mini_game = true;
+    begin_scene_transition(state);
     state->mini_elapsed_ms = 0U;
+    state->mini_intro_ms = MINI_GAME_INTRO_MS;
+    state->mini_summary_ms = 0U;
+    state->play_catches = 0U;
     state->play_streak = 0U;
     state->star_effect_ms = 0U;
+    state->star_effect_kind = STAR_EFFECT_NONE;
     state->catcher_x_q16 = p4_q16_from_int(160);
     state->catcher_target_x_q16 = p4_q16_from_int(160);
     state->catcher_velocity_q16 = 0;
@@ -1814,8 +1965,13 @@ static void care_for_buddy(p4_game_context_t *context,
     case ACTION_PLAY:
         if (state->energy >= 10U) {
             state->energy = decrease(state->energy, 8U);
-            start_play(state);
             record_action(context, state, ACTION_PLAY, REACTION_PLAY);
+            if (state->evolution_fx_ms != 0U ||
+                state->evolution_pending_mask != 0U) {
+                state->play_start_pending = 1U;
+            } else {
+                start_play(state);
+            }
             play_tone(context, 659U, 100U);
             (void)p4_game_audio_effect_play(
                 context, &state->audio, P4_GAME_AUDIO_EFFECT_ACTION);
@@ -1869,11 +2025,25 @@ static void update_reaction(byte_buddy_state_t *state, uint32_t elapsed_ms)
     state->reaction = REACTION_IDLE;
 }
 
-static void finish_play(byte_buddy_state_t *state)
+static void complete_play(byte_buddy_state_t *state)
 {
     state->mini_game = false;
+    begin_scene_transition(state);
+    state->mini_intro_ms = 0U;
+    state->mini_summary_ms = 0U;
+    state->star_effect_kind = STAR_EFFECT_NONE;
     state->joy = increase(state->joy, 8U);
     state->energy = decrease(state->energy, 3U);
+    begin_home_evolution_sequence(state);
+}
+
+static void finish_play(byte_buddy_state_t *state)
+{
+    if (!state->mini_game || state->mini_summary_ms != 0U) {
+        return;
+    }
+    state->mini_intro_ms = 0U;
+    state->mini_summary_ms = MINI_GAME_SUMMARY_MS;
 }
 
 static bool signal_consumed(const byte_buddy_state_t *state, uint64_t token)
@@ -1956,6 +2126,7 @@ static bool select_signal_result(byte_buddy_state_t *state, uint8_t index)
     state->signal_samples = 1U;
     state->signal_track_refresh_ms = SIGNAL_TRACK_REFRESH_MS;
     state->signal_view = BYTE_BUDDY_SIGNAL_TRACKER;
+    begin_scene_transition(state);
     return true;
 }
 
@@ -2033,6 +2204,7 @@ static void poll_signal_scan(p4_game_context_t *context,
 static void return_to_signal_list(byte_buddy_state_t *state)
 {
     state->signal_view = BYTE_BUDDY_SIGNAL_LIST;
+    begin_scene_transition(state);
     for (size_t index = 0U; index < state->signal_snapshot.count; ++index) {
         if (state->signal_snapshot.results[index].token ==
             state->signal_selected_token) {
@@ -2074,6 +2246,7 @@ static void open_signal_hunt(p4_game_context_t *context,
                              byte_buddy_state_t *state)
 {
     state->signal_hunt = true;
+    begin_scene_transition(state);
     state->signal_view = BYTE_BUDDY_SIGNAL_LIST;
     state->signal_page = 0U;
     state->signal_focus_row = 0U;
@@ -2158,6 +2331,7 @@ static void start_signal_battle(p4_game_context_t *context,
     const byte_buddy_lineage_battle_traits_t battle_traits =
         byte_buddy_lineage_battle_traits(lineage);
     state->signal_view = BYTE_BUDDY_SIGNAL_BATTLE;
+    begin_scene_transition(state);
     state->signal_battle_signal = *signal;
     state->signal_battle_locked = true;
     state->signal_battle_hp = encounter.max_hp;
@@ -2340,7 +2514,7 @@ static void guard_signal(p4_game_context_t *context,
             ? SIGNAL_ATTACK_TRAVEL_MS : 0U) + 80U;
     state->signal_guard_window_ms = (uint16_t)(
         window > UINT16_MAX ? UINT16_MAX : window);
-    state->signal_guard_fx_ms = SIGNAL_GUARD_FX_MS;
+    state->signal_guard_fx_ms = 0U;
     state->signal_guard_armed = true;
     play_tone(context, 523U, 70U);
 }
@@ -2357,6 +2531,8 @@ static p4_game_result_t activate_signal_touch(
         if (view == BYTE_BUDDY_SIGNAL_LIST) {
             state->signal_hunt = false;
             state->signal_selected_token = 0U;
+            begin_scene_transition(state);
+            begin_home_evolution_sequence(state);
         } else {
             if (view == BYTE_BUDDY_SIGNAL_BATTLE) {
                 begin_signal_result(
@@ -2449,6 +2625,8 @@ static void activate_signal_controller(
         if (view == BYTE_BUDDY_SIGNAL_LIST) {
             state->signal_hunt = false;
             state->signal_selected_token = 0U;
+            begin_scene_transition(state);
+            begin_home_evolution_sequence(state);
         } else if (view == BYTE_BUDDY_SIGNAL_TRACKER) {
             return_to_signal_list(state);
         } else {
@@ -2709,6 +2887,9 @@ static void resolve_signal_attack(p4_game_context_t *context,
             state->signal_attack_index);
     state->signal_guard_window_ms = 0U;
     state->signal_guard_armed = false;
+    if (guarded) {
+        state->signal_guard_fx_ms = SIGNAL_GUARD_FX_MS;
+    }
     state->signal_recovery_bonus_ms = defense.delay_ms;
     if (defense.status_ms > state->signal_snare_ms) {
         state->signal_snare_ms = defense.status_ms;
@@ -2810,6 +2991,7 @@ static void advance_signal_phase(p4_game_context_t *context,
     }
     case SIGNAL_PHASE_DEFEAT:
         state->signal_view = BYTE_BUDDY_SIGNAL_TRACKER;
+        begin_scene_transition(state);
         state->signal_weave_charge_units = 0U;
         break;
     default:
@@ -2830,6 +3012,7 @@ static void update_signal_battle(p4_game_context_t *context,
     const p4_game_signal_t *const signal = selected_signal(state);
     if (signal == NULL) {
         state->signal_view = BYTE_BUDDY_SIGNAL_TRACKER;
+        begin_scene_transition(state);
         return;
     }
     const byte_buddy_signal_profile_t profile =
@@ -2946,6 +3129,20 @@ static void update_play(p4_game_context_t *context, byte_buddy_state_t *state,
                         const p4_game_point_t *touch, bool touch_pressed,
                         uint32_t held_buttons, uint32_t elapsed_ms)
 {
+    if (state->mini_summary_ms != 0U) {
+        if (state->mini_summary_ms > elapsed_ms) {
+            state->mini_summary_ms = (uint16_t)(
+                state->mini_summary_ms - elapsed_ms);
+        } else {
+            complete_play(state);
+        }
+        return;
+    }
+    if (state->mini_intro_ms != 0U) {
+        state->mini_intro_ms = tick_signal_timer(
+            state->mini_intro_ms, elapsed_ms);
+        return;
+    }
     if (touch != NULL) {
         const byte_buddy_touch_target_t target = byte_buddy_touch_target(
             touch->x, touch->y, false, false, true);
@@ -2990,6 +3187,7 @@ static void update_play(p4_game_context_t *context, byte_buddy_state_t *state,
         state->star_effect_y = star_y;
         state->star_effect_ms = MINI_GAME_EFFECT_DURATION_MS;
         if (distance <= catch_radius) {
+            state->star_effect_kind = STAR_EFFECT_CAUGHT;
             const uint16_t reward = state->star_kind == STAR_KIND_HEART
                 ? 2U : 1U;
             state->coins = state->coins > UINT16_MAX - reward
@@ -3017,6 +3215,7 @@ static void update_play(p4_game_context_t *context, byte_buddy_state_t *state,
             (void)p4_game_audio_effect_play(
                 context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
         } else {
+            state->star_effect_kind = STAR_EFFECT_MISSED;
             state->play_streak = 0U;
             play_tone(context, 220U, 45U);
             (void)p4_game_audio_effect_play(
@@ -3043,6 +3242,8 @@ static void try_upgrade(p4_game_context_t *context,
     const uint8_t level = state->upgrades[upgrade];
     const uint16_t cost = byte_buddy_upgrade_cost(level);
     if (cost == UINT16_MAX || state->coins < cost) {
+        state->shop_feedback_kind = SHOP_FEEDBACK_UNAVAILABLE;
+        state->shop_feedback_ms = SHOP_FEEDBACK_MS;
         play_tone(context, 196U, 100U);
         (void)p4_game_audio_effect_play(
             context, &state->audio, P4_GAME_AUDIO_EFFECT_FAIL);
@@ -3050,6 +3251,8 @@ static void try_upgrade(p4_game_context_t *context,
     }
     state->coins = (uint16_t)(state->coins - cost);
     state->upgrades[upgrade] = (uint8_t)(level + 1U);
+    state->shop_feedback_kind = SHOP_FEEDBACK_POWER_GROWTH;
+    state->shop_feedback_ms = SHOP_FEEDBACK_MS;
     trigger_reaction(state, REACTION_GROW);
     play_tone(context, 1047U, 120U);
     (void)p4_game_audio_effect_play(
@@ -3066,6 +3269,8 @@ static void cycle_style(p4_game_context_t *context,
     const uint8_t choices = (uint8_t)(state->style_unlocked[style] + 1U);
     state->style_selected[style] = (uint8_t)(
         (state->style_selected[style] + 1U) % choices);
+    state->shop_feedback_kind = SHOP_FEEDBACK_EQUIPPED;
+    state->shop_feedback_ms = SHOP_FEEDBACK_MS;
     trigger_reaction(state, REACTION_GROW);
     play_tone(context, 784U, 60U);
 }
@@ -3080,6 +3285,8 @@ static void try_style_unlock(p4_game_context_t *context,
     const uint8_t unlocked = state->style_unlocked[style];
     const uint16_t cost = byte_buddy_style_cost(style, unlocked);
     if (cost == UINT16_MAX || state->coins < cost) {
+        state->shop_feedback_kind = SHOP_FEEDBACK_UNAVAILABLE;
+        state->shop_feedback_ms = SHOP_FEEDBACK_MS;
         play_tone(context, 196U, 100U);
         (void)p4_game_audio_effect_play(
             context, &state->audio, P4_GAME_AUDIO_EFFECT_FAIL);
@@ -3088,6 +3295,8 @@ static void try_style_unlock(p4_game_context_t *context,
     state->coins = (uint16_t)(state->coins - cost);
     state->style_unlocked[style] = (uint8_t)(unlocked + 1U);
     state->style_selected[style] = (uint8_t)(unlocked + 1U);
+    state->shop_feedback_kind = SHOP_FEEDBACK_UNLOCKED;
+    state->shop_feedback_ms = SHOP_FEEDBACK_MS;
     trigger_reaction(state, REACTION_GROW);
     play_tone(context, 1047U, 100U);
     (void)p4_game_audio_effect_play(
@@ -3112,6 +3321,8 @@ static void remix_owned_styles(p4_game_context_t *context,
         state->style_selected[style] = byte_buddy_remix_choice(
             seed, state->style_selected[style], unlocked);
     }
+    state->shop_feedback_kind = SHOP_FEEDBACK_EQUIPPED;
+    state->shop_feedback_ms = SHOP_FEEDBACK_MS;
     trigger_reaction(state, REACTION_GROW);
     play_tone(context, 1175U, 110U);
     (void)p4_game_audio_effect_play(
@@ -3131,10 +3342,16 @@ static p4_game_result_t activate_touch(
     if (state->upgrade_shop) {
         switch (target) {
         case BYTE_BUDDY_TOUCH_SHOP_POWER:
-            state->style_shop = false;
+            if (state->style_shop) {
+                state->style_shop = false;
+                begin_scene_transition(state);
+            }
             break;
         case BYTE_BUDDY_TOUCH_SHOP_STYLE:
-            state->style_shop = true;
+            if (!state->style_shop) {
+                state->style_shop = true;
+                begin_scene_transition(state);
+            }
             break;
         case BYTE_BUDDY_TOUCH_UPGRADE_WINGS:
             try_upgrade(context, state, BYTE_BUDDY_UPGRADE_WINGS);
@@ -3178,6 +3395,7 @@ static p4_game_result_t activate_touch(
         case BYTE_BUDDY_TOUCH_CLOSE_SHOP:
             state->upgrade_shop = false;
             state->style_shop = false;
+            begin_scene_transition(state);
             break;
         default:
             break;
@@ -3204,12 +3422,15 @@ static p4_game_result_t activate_touch(
         state->upgrade_shop = true;
         state->style_shop = false;
         state->menu_selection = 0U;
+        begin_scene_transition(state);
+        state->shop_feedback_ms = 0U;
         break;
     case BYTE_BUDDY_TOUCH_SIGNAL_SCAN:
         open_signal_hunt(context, state);
         break;
     case BYTE_BUDDY_TOUCH_PREVIEW:
         state->lineage_panel = true;
+        begin_scene_transition(state);
         break;
     default:
         break;
@@ -3241,6 +3462,7 @@ static bool game_start(p4_game_context_t *context)
         .hygiene = 75U,
         .energy = 70U,
         .coins = 4U,
+        .evolution_active_stage = BYTE_BUDDY_STAGE_COUNT,
         .catcher_x_q16 = INT32_C(160) * P4_Q16_ONE,
         .catcher_target_x_q16 = INT32_C(160) * P4_Q16_ONE,
         .art_data = context->services->resource_data,
@@ -3267,9 +3489,10 @@ static p4_game_result_t game_update(
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
         return P4_GAME_EXIT_TO_LAUNCHER;
     }
-    if (state->lineage_panel &&
+    if (state->lineage_panel && state->scene_transition_ms == 0U &&
         (input->pressed & P4_BUTTON_B) != 0U) {
         state->lineage_panel = false;
+        begin_scene_transition(state);
         state->touch_was_down =
             input->touch_valid && input->touch_count > 0U;
         return P4_GAME_CONTINUE;
@@ -3284,20 +3507,72 @@ static p4_game_result_t game_update(
     state->signal_request_busy_ms =
         state->signal_request_busy_ms > bounded_elapsed_ms
             ? state->signal_request_busy_ms - bounded_elapsed_ms : 0U;
+    const bool evolution_was_active = state->evolution_fx_ms != 0U;
+    state->evolution_fx_ms = tick_signal_timer(
+        state->evolution_fx_ms, bounded_elapsed_ms);
+    state->shop_feedback_ms = tick_signal_timer(
+        state->shop_feedback_ms, bounded_elapsed_ms);
+    state->scene_transition_ms = tick_signal_timer(
+        state->scene_transition_ms, bounded_elapsed_ms);
     apply_decay(state, bounded_elapsed_ms);
     const bool touch_now = input->touch_valid && input->touch_count > 0U;
-    const bool touch_pressed = touch_now && !state->touch_was_down;
-    const p4_game_point_t *const touch = touch_now
-        ? &input->touches[0] : NULL;
-    if (touch_now) {
+    if (evolution_was_active && state->evolution_fx_ms == 0U) {
+        state->evolution_active_stage = BYTE_BUDDY_STAGE_COUNT;
+        const bool evolution_sequence_started =
+            begin_next_evolution(state, 0U);
+        if (!evolution_sequence_started &&
+            state->play_start_pending != 0U) {
+            start_play(state);
+        }
+        /* Never leak the completion-frame edge into the newly revealed scene. */
+        state->touch_was_down = touch_now;
+        return P4_GAME_CONTINUE;
+    }
+    const bool scene_input_locked = state->scene_transition_ms != 0U;
+    const bool raw_touch_pressed =
+        touch_now && !state->touch_was_down;
+    if (scene_input_locked && state->mini_game) {
+        bool finish_requested =
+            (input->pressed & P4_BUTTON_B) != 0U;
+        if (!finish_requested && raw_touch_pressed &&
+            byte_buddy_touch_target(
+                input->touches[0].x, input->touches[0].y,
+                false, false, true) ==
+                BYTE_BUDDY_TOUCH_DONE_PLAYING) {
+            finish_requested = true;
+        }
+        if (finish_requested) {
+            finish_play(state);
+            state->touch_was_down = touch_now;
+            return P4_GAME_CONTINUE;
+        }
+    }
+    p4_game_input_t scene_input;
+    if (scene_input_locked) {
+        scene_input = *input;
+        scene_input.held = 0U;
+        scene_input.pressed = 0U;
+        scene_input.released = 0U;
+        input = &scene_input;
+    }
+    const bool touch_pressed = !scene_input_locked &&
+        touch_now && !state->touch_was_down;
+    const p4_game_point_t *const touch =
+        !scene_input_locked && touch_now ? &input->touches[0] : NULL;
+    if (!scene_input_locked && touch_now) {
         state->controller_active = false;
     } else if ((input->held | input->pressed) != 0U) {
         state->controller_active = true;
+    }
+    if (state->evolution_fx_ms != 0U) {
+        state->touch_was_down = touch_now;
+        return P4_GAME_CONTINUE;
     }
     if (state->lineage_panel) {
         if (touch_pressed && touch != NULL &&
             ((touch->x < 58U && touch->y < 25U) || touch->y >= 168U)) {
             state->lineage_panel = false;
+            begin_scene_transition(state);
         }
         state->touch_was_down = touch_now;
         return P4_GAME_CONTINUE;
@@ -3347,12 +3622,26 @@ static p4_game_result_t game_update(
             state->touch_was_down = touch_now;
             return P4_GAME_CONTINUE;
         }
-        if (touch_pressed && touch != NULL &&
-            byte_buddy_touch_target(
-                touch->x, touch->y, false, false, true) ==
-                BYTE_BUDDY_TOUCH_EXIT) {
+        if (touch_pressed && touch != NULL) {
+            const byte_buddy_touch_target_t mini_target =
+                byte_buddy_touch_target(
+                    touch->x, touch->y, false, false, true);
+            if (mini_target == BYTE_BUDDY_TOUCH_EXIT) {
+                state->touch_was_down = touch_now;
+                return P4_GAME_EXIT_TO_LAUNCHER;
+            }
+            if (mini_target == BYTE_BUDDY_TOUCH_DONE_PLAYING) {
+                finish_play(state);
+                state->touch_was_down = touch_now;
+                return P4_GAME_CONTINUE;
+            }
+        }
+        if (state->mini_intro_ms != 0U ||
+            state->mini_summary_ms != 0U) {
+            update_play(context, state, NULL, false, 0U,
+                        bounded_elapsed_ms);
             state->touch_was_down = touch_now;
-            return P4_GAME_EXIT_TO_LAUNCHER;
+            return P4_GAME_CONTINUE;
         }
         update_play(context, state, touch, touch_pressed,
                     input->held, bounded_elapsed_ms);
@@ -3381,10 +3670,17 @@ static p4_game_result_t game_update(
             if ((input->pressed & P4_BUTTON_B) != 0U) {
                 state->upgrade_shop = false;
                 state->style_shop = false;
+                begin_scene_transition(state);
             } else if ((input->pressed & P4_BUTTON_LEFT) != 0U) {
-                state->style_shop = false;
+                if (state->style_shop) {
+                    state->style_shop = false;
+                    begin_scene_transition(state);
+                }
             } else if ((input->pressed & P4_BUTTON_RIGHT) != 0U) {
-                state->style_shop = true;
+                if (!state->style_shop) {
+                    state->style_shop = true;
+                    begin_scene_transition(state);
+                }
             } else if ((input->pressed & P4_BUTTON_UP) != 0U) {
                 state->menu_selection = state->menu_selection == 0U
                     ? BYTE_BUDDY_STYLE_COUNT - 1U
@@ -3420,8 +3716,11 @@ static p4_game_result_t game_update(
             state->upgrade_shop = true;
             state->style_shop = false;
             state->menu_selection = 0U;
+            begin_scene_transition(state);
+            state->shop_feedback_ms = 0U;
         } else if ((input->pressed & P4_BUTTON_B) != 0U) {
             state->lineage_panel = true;
+            begin_scene_transition(state);
         } else if ((input->pressed & P4_BUTTON_LEFT) != 0U) {
             state->selected_action = state->selected_action == 0U
                 ? ACTION_COUNT - 1U
@@ -3591,10 +3890,16 @@ static unsigned reaction_row(const byte_buddy_state_t *state)
     return 1U;
 }
 
-static unsigned elemental_row(const byte_buddy_state_t *state)
+static unsigned elemental_action_row(const byte_buddy_state_t *state)
 {
     const unsigned element = safe_element(state);
     return element == BYTE_BUDDY_ELEMENT_MYSTERY ? 3U : element - 1U;
+}
+
+static unsigned elemental_mastery_row(const byte_buddy_state_t *state)
+{
+    /* Mastery is authored Mystery, Fire, Ice, Acid. */
+    return safe_element(state);
 }
 
 static unsigned hatch_variant(const byte_buddy_state_t *state)
@@ -3633,22 +3938,34 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
         (animation_ms / frame_interval_ms) % 4U);
     const unsigned stage = safe_stage(state);
     const byte_buddy_signal_lineage_t lineage = current_lineage(state);
-    if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
-        stage == BYTE_BUDDY_STAGE_BABY &&
+    if (stage == BYTE_BUDDY_STAGE_BABY &&
         reaction == REACTION_GROW) {
         *out_sheet = DRAGON_HATCH_TRANSITION_SHEET;
         *out_frame = 3U * 4U + hatch_variant(state);
         return;
     }
-    if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
-        stage == BYTE_BUDDY_STAGE_EGG) {
+    if (stage == BYTE_BUDDY_STAGE_EGG) {
         const bool spiked = safe_wing_style(state) ==
             BYTE_BUDDY_WINGS_SPIKED;
-        const unsigned variant = spiked ? safe_element(state) :
-            safe_morph(state);
         if (state->care_actions < 5U) {
-            *out_sheet = spiked ? DRAGON_ELEMENT_EGG_AMBIENT_SHEET :
-                DRAGON_MORPH_EGG_AMBIENT_SHEET;
+            unsigned variant = safe_morph(state);
+            if (state->care_actions == 0U) {
+                /* The untouched egg begins as the authored Mystery loop. */
+                *out_sheet = DRAGON_ELEMENT_EGG_AMBIENT_SHEET;
+                variant = BYTE_BUDDY_ELEMENT_MYSTERY;
+            } else if (spiked &&
+                       safe_element(state) == BYTE_BUDDY_ELEMENT_ACID &&
+                       ((animation_ms /
+                         (frame_interval_ms * 4U)) & 1U) != 0U) {
+                /* Switch only at loop boundaries: acid can reveal Jade DNA. */
+                *out_sheet = DRAGON_MORPH_EGG_AMBIENT_SHEET;
+                variant = BYTE_BUDDY_MORPH_JADE;
+            } else if (spiked) {
+                *out_sheet = DRAGON_ELEMENT_EGG_AMBIENT_SHEET;
+                variant = safe_element(state);
+            } else {
+                *out_sheet = DRAGON_MORPH_EGG_AMBIENT_SHEET;
+            }
             *out_frame = phase4 * 4U + variant;
             return;
         }
@@ -3658,8 +3975,7 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
             hatch_variant(state);
         return;
     }
-    if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
-        stage == BYTE_BUDDY_STAGE_BABY) {
+    if (stage == BYTE_BUDDY_STAGE_BABY) {
         if (reaction != REACTION_IDLE) {
             const unsigned frame = reaction_frame_count(reaction_ms, 8U);
             *out_sheet = frame < 4U ? DRAGON_BABY_REACTION_SHEET :
@@ -3677,22 +3993,16 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
         *out_frame = row * 4U + phase4;
         return;
     }
-    if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
-        stage == BYTE_BUDDY_STAGE_WINGED) {
+    if (stage == BYTE_BUDDY_STAGE_WINGED) {
         const unsigned style = safe_wing_style(state) ==
             BYTE_BUDDY_WINGS_SHINY ? 1U : 0U;
         if (reaction != REACTION_IDLE) {
             const unsigned frame = reaction_frame_count(reaction_ms, 8U);
-            if (frame < 4U) {
-                *out_sheet = BYTE_BUDDY_STAGE_WINGED;
-                *out_frame = (style == 0U ? 0U : 8U) + 4U + frame;
-            } else {
-                const bool quiet = reaction == REACTION_CLEAN ||
-                    reaction == REACTION_REST;
-                *out_sheet = DRAGON_WINGED_CARE_SHEET;
-                *out_frame = (style + (quiet ? 2U : 0U)) * 4U +
-                    frame % 4U;
-            }
+            const bool quiet = reaction == REACTION_CLEAN ||
+                reaction == REACTION_REST;
+            *out_sheet = DRAGON_WINGED_CARE_SHEET;
+            *out_frame = (style + (quiet ? 2U : 0U)) * 4U +
+                frame % 4U;
             return;
         }
         const unsigned active_clip = (unsigned)(
@@ -3701,8 +4011,7 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
         *out_frame = (style + active_clip * 2U) * 4U + phase4;
         return;
     }
-    if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
-        stage == BYTE_BUDDY_STAGE_FLYING) {
+    if (stage == BYTE_BUDDY_STAGE_FLYING) {
         const unsigned style = safe_wing_style(state) ==
             BYTE_BUDDY_WINGS_SHINY ? 1U : 0U;
         if (reaction != REACTION_IDLE) {
@@ -3720,19 +4029,17 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
         *out_frame = row * 4U + phase4;
         return;
     }
-    if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
-        stage == BYTE_BUDDY_STAGE_ELEMENTAL &&
+    if (stage == BYTE_BUDDY_STAGE_ELEMENTAL &&
         reaction != REACTION_IDLE) {
         const unsigned frame = reaction_frame_count(reaction_ms, 8U);
         *out_sheet = frame < 4U ? DRAGON_ELEMENT_BREATH_SHEET :
             DRAGON_ELEMENT_IMPACT_SHEET;
-        *out_frame = elemental_row(state) * 4U + frame % 4U;
+        *out_frame = elemental_action_row(state) * 4U + frame % 4U;
         return;
     }
     if (stage == BYTE_BUDDY_STAGE_ELEMENTAL &&
         rare_morph_unlocked(state)) {
-        if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
-            lineage.tier >= BYTE_BUDDY_LINEAGE_ASCENDED) {
+        if (lineage.tier >= BYTE_BUDDY_LINEAGE_ASCENDED) {
             *out_sheet = DRAGON_SIGNAL_GENETICS_SHEET;
             *out_frame = phase4 * 4U + lineage.family;
             return;
@@ -3741,64 +4048,20 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
         *out_frame = safe_morph(state) + 4U * s_frame_sequence[phase];
         return;
     }
-    if (state->art_sheets >= DRAGON_EXTENDED_SHEET_COUNT &&
-        stage == BYTE_BUDDY_STAGE_ELEMENTAL) {
+    if (stage == BYTE_BUDDY_STAGE_ELEMENTAL) {
         if (lineage.tier >= BYTE_BUDDY_LINEAGE_ASCENDED) {
             *out_sheet = DRAGON_SIGNAL_GENETICS_SHEET;
             *out_frame = phase4 * 4U + lineage.family;
             return;
         }
         *out_sheet = DRAGON_ELEMENT_MASTERY_SHEET;
-        *out_frame = elemental_row(state) * 4U + phase4;
+        *out_frame = elemental_mastery_row(state) * 4U + phase4;
         return;
     }
-    if (stage == BYTE_BUDDY_STAGE_EGG) {
-        const unsigned egg_phase = (unsigned)(
-            (animation_ms / frame_interval_ms) % 8U);
-        *out_sheet = BYTE_BUDDY_STAGE_EGG;
-        *out_frame = s_egg_frames[safe_element(state)]
-            [s_frame_sequence[egg_phase]];
-        return;
-    }
-    if (stage == BYTE_BUDDY_STAGE_BABY) {
-        unsigned row = 0U;
-        if (reaction == REACTION_REST) {
-            row = 2U;
-        } else if (reaction == REACTION_PET ||
-                   reaction == REACTION_PLAY ||
-                   reaction == REACTION_GROW) {
-            row = 3U;
-        } else if (reaction != REACTION_IDLE) {
-            row = 1U;
-        }
-        *out_sheet = BYTE_BUDDY_STAGE_BABY;
-        *out_frame = row * 4U + s_frame_sequence[phase];
-        return;
-    }
-    if (stage == BYTE_BUDDY_STAGE_WINGED ||
-        stage == BYTE_BUDDY_STAGE_FLYING) {
-        const unsigned family = safe_wing_style(state) ==
-            BYTE_BUDDY_WINGS_SPIKED ? 0U : 8U;
-        const unsigned reaction_offset = reaction == REACTION_IDLE
-            ? 0U : 4U;
-        *out_sheet = stage;
-        *out_frame = family + (phase + reaction_offset) % 8U;
-        return;
-    }
-    unsigned element = safe_element(state);
-    if (element == BYTE_BUDDY_ELEMENT_MYSTERY) {
-        element = 1U + (unsigned)((animation_ms / 1200U) % 3U);
-    }
-    const unsigned element_index = element - 1U;
-    if (reaction != REACTION_IDLE) {
-        *out_sheet = BYTE_BUDDY_STAGE_ELEMENTAL;
-        *out_frame = s_elemental_reaction_frames[element_index]
-            [s_frame_sequence[phase] % 2U];
-        return;
-    }
-    *out_sheet = BYTE_BUDDY_STAGE_ELEMENTAL;
-    *out_frame = s_elemental_idle_frames[element_index]
-        [safe_wing_style(state)][s_frame_sequence[phase] % 2U];
+
+    /* All five stages above have authored v4 routes; stay valid if corrupt. */
+    *out_sheet = DRAGON_BABY_IDLE_SHEET;
+    *out_frame = phase4;
 }
 
 static uint16_t rgb888_to_rgb565(unsigned red, unsigned green, unsigned blue)
@@ -4018,6 +4281,47 @@ static bool draw_art_frame_scaled(p4_game_surface_t *surface,
     return true;
 }
 
+static bool draw_customized_frame_scaled(
+    p4_game_surface_t *surface, const byte_buddy_state_t *state,
+    unsigned sheet, unsigned frame,
+    int center_x, int center_y, unsigned size)
+{
+    if (size == 0U || size > DRAGON_FRAME_WIDTH * 2U) {
+        return false;
+    }
+    const dragon_frame_view_t view = dragon_frame_view(state, sheet, frame);
+    if (!view.valid) {
+        return false;
+    }
+    const int left = center_x - (int)size / 2;
+    const int top = center_y - (int)size / 2;
+    for (unsigned y = 0U; y < size; ++y) {
+        const int destination_y = top + (int)y;
+        if (destination_y < 0 || destination_y >= surface->height) {
+            continue;
+        }
+        const unsigned source_y = y * DRAGON_FRAME_HEIGHT / size;
+        for (unsigned x = 0U; x < size; ++x) {
+            const int destination_x = left + (int)x;
+            if (destination_x < 0 || destination_x >= surface->width) {
+                continue;
+            }
+            const unsigned source_x = x * DRAGON_FRAME_WIDTH / size;
+            const size_t source_index = (size_t)source_y *
+                DRAGON_FRAME_WIDTH + source_x;
+            uint16_t color = 0U;
+            if (dragon_frame_color(&view, source_index, &color)) {
+                color = lift_sprite_color(color);
+                color = customize_color(
+                    state, color, (int)source_x, (int)source_y);
+                surface->pixels[(size_t)destination_y *
+                    surface->stride_pixels + (size_t)destination_x] = color;
+            }
+        }
+    }
+    return true;
+}
+
 static uint16_t signal_layer_color(uint16_t value, uint8_t hue)
 {
     const unsigned red = ((unsigned)value >> 11U) & 31U;
@@ -4126,6 +4430,100 @@ static void draw_signal_attack_frame(
     }
 }
 
+static uint8_t fx_loop_phase(uint32_t animation_ms, uint32_t interval_ms)
+{
+    return interval_ms == 0U ? 0U :
+        (uint8_t)((animation_ms / interval_ms) % 4U);
+}
+
+static uint8_t fx_timeline_phase(uint32_t remaining_ms,
+                                 uint32_t total_ms)
+{
+    if (total_ms == 0U || remaining_ms >= total_ms) {
+        return 0U;
+    }
+    const uint32_t phase =
+        (total_ms - remaining_ms) * 4U / total_ms;
+    return (uint8_t)(phase > 3U ? 3U : phase);
+}
+
+static void draw_counter_fx_frame(
+    p4_game_surface_t *surface, const byte_buddy_state_t *state,
+    byte_buddy_dragon_ability_t ability, uint8_t phase,
+    int center_x, int center_y, unsigned size)
+{
+    (void)draw_art_frame_scaled(
+        surface, state, BYTE_BUDDY_SIGNAL_COUNTER_FX_SHEET,
+        byte_buddy_counter_fx_frame(ability, phase),
+        center_x, center_y, size);
+}
+
+static void draw_outcome_fx_frame(
+    p4_game_surface_t *surface, const byte_buddy_state_t *state,
+    byte_buddy_combat_outcome_t outcome, uint8_t phase,
+    int center_x, int center_y, unsigned size)
+{
+    (void)draw_art_frame_scaled(
+        surface, state, BYTE_BUDDY_SIGNAL_OUTCOME_FX_SHEET,
+        byte_buddy_outcome_fx_frame(outcome, phase),
+        center_x, center_y, size);
+}
+
+static void draw_passive_fx_frame(
+    p4_game_surface_t *surface, const byte_buddy_state_t *state,
+    byte_buddy_signal_passive_t passive, uint8_t phase,
+    int center_x, int center_y, unsigned size)
+{
+    (void)draw_art_frame_scaled(
+        surface, state, BYTE_BUDDY_SIGNAL_PASSIVE_FX_SHEET,
+        byte_buddy_passive_fx_frame(passive, phase),
+        center_x, center_y, size);
+}
+
+static void draw_scan_fx_frame(
+    p4_game_surface_t *surface, const byte_buddy_state_t *state,
+    byte_buddy_scan_fx_t scan, uint8_t phase,
+    int center_x, int center_y, unsigned size)
+{
+    (void)draw_art_frame_scaled(
+        surface, state, BYTE_BUDDY_SIGNAL_SCAN_FX_SHEET,
+        byte_buddy_scan_fx_frame(scan, phase),
+        center_x, center_y, size);
+}
+
+static void draw_evolution_fx_frame(
+    p4_game_surface_t *surface, const byte_buddy_state_t *state,
+    byte_buddy_evolution_fx_t evolution, uint8_t phase,
+    int center_x, int center_y, unsigned size)
+{
+    (void)draw_art_frame_scaled(
+        surface, state, BYTE_BUDDY_EVOLUTION_FX_SHEET,
+        byte_buddy_evolution_fx_frame(evolution, phase),
+        center_x, center_y, size);
+}
+
+static void draw_need_fx_frame(
+    p4_game_surface_t *surface, const byte_buddy_state_t *state,
+    byte_buddy_need_fx_t need, uint8_t phase,
+    int center_x, int center_y, unsigned size)
+{
+    (void)draw_art_frame_scaled(
+        surface, state, BYTE_BUDDY_NEED_FX_SHEET,
+        byte_buddy_need_fx_frame(need, phase),
+        center_x, center_y, size);
+}
+
+static void draw_activity_fx_frame(
+    p4_game_surface_t *surface, const byte_buddy_state_t *state,
+    byte_buddy_activity_fx_t activity, uint8_t phase,
+    int center_x, int center_y, unsigned size)
+{
+    (void)draw_art_frame_scaled(
+        surface, state, BYTE_BUDDY_ACTIVITY_FX_SHEET,
+        byte_buddy_activity_fx_frame(activity, phase),
+        center_x, center_y, size);
+}
+
 static unsigned smooth_signal_pulse(uint32_t animation_ms,
                                     unsigned base, unsigned range,
                                     uint32_t period_ms)
@@ -4169,109 +4567,20 @@ static void draw_lineage_badge(
     }
 }
 
-static uint16_t tween_rgb565(uint16_t first, uint16_t second,
-                             unsigned blend)
-{
-    const unsigned inverse = 256U - blend;
-    const unsigned red = ((((unsigned)first >> 11U) & 31U) * inverse +
-                          (((unsigned)second >> 11U) & 31U) * blend) >> 8U;
-    const unsigned green = ((((unsigned)first >> 5U) & 63U) * inverse +
-                            (((unsigned)second >> 5U) & 63U) * blend) >> 8U;
-    const unsigned blue = (((unsigned)first & 31U) * inverse +
-                           ((unsigned)second & 31U) * blend) >> 8U;
-    return (uint16_t)((red << 11U) | (green << 5U) | blue);
-}
-
 static void draw_dragon_sprite(p4_game_surface_t *surface,
                                const byte_buddy_state_t *state,
                                int left, int top)
 {
-    const uint32_t frame_interval_ms = dragon_frame_interval_ms(state);
-    const uint32_t remainder =
-        state->animation_ms % frame_interval_ms;
-    const uint32_t first_animation_ms = state->animation_ms - remainder;
-    const uint8_t first_reaction = state->reaction;
-    uint32_t first_reaction_ms = state->reaction_ms;
-    if (first_reaction_ms != 0U) {
-        const uint32_t rewound = first_reaction_ms + remainder;
-        first_reaction_ms = rewound > REACTION_DURATION_MS
-            ? REACTION_DURATION_MS : rewound;
-    }
-    const uint32_t second_animation_ms =
-        first_animation_ms + frame_interval_ms;
-    uint8_t second_reaction = first_reaction;
-    uint32_t second_reaction_ms = first_reaction_ms;
-    if (second_reaction_ms > frame_interval_ms) {
-        second_reaction_ms -= frame_interval_ms;
-    } else if (second_reaction_ms != 0U) {
-        second_reaction_ms = 0U;
-        second_reaction = REACTION_IDLE;
-    }
-    unsigned first_sheet = 0U;
-    unsigned first_frame = 0U;
-    unsigned second_sheet = 0U;
-    unsigned second_frame = 0U;
-    dragon_sheet_frame(state, first_animation_ms, first_reaction,
-                       first_reaction_ms, &first_sheet, &first_frame);
-    dragon_sheet_frame(state, second_animation_ms, second_reaction,
-                       second_reaction_ms, &second_sheet, &second_frame);
-    const dragon_frame_view_t first = dragon_frame_view(
-        state, first_sheet, first_frame);
-    const dragon_frame_view_t second = dragon_frame_view(
-        state, second_sheet, second_frame);
-    if (!first.valid || !second.valid) {
-        return;
-    }
-    const uint16_t progress = (uint16_t)(
-        remainder * UINT16_MAX / frame_interval_ms);
-    const unsigned blend = (unsigned)(
-        p4_ease_smoothstep_u16(progress) >> 8U);
-    for (int source_y = 0; source_y < DRAGON_FRAME_HEIGHT; ++source_y) {
-        const int destination_y = top + source_y;
-        if (destination_y < 0 || destination_y >= surface->height) {
-            continue;
-        }
-        for (int source_x = 0; source_x < DRAGON_FRAME_WIDTH; ++source_x) {
-            const int destination_x = left + source_x;
-            if (destination_x < 0 || destination_x >= surface->width) {
-                continue;
-            }
-            const size_t source_index = (size_t)source_y *
-                DRAGON_FRAME_WIDTH + (size_t)source_x;
-            uint16_t first_color = 0U;
-            uint16_t second_color = 0U;
-            const bool first_visible = dragon_frame_color(
-                &first, source_index, &first_color);
-            const bool second_visible = dragon_frame_color(
-                &second, source_index, &second_color);
-            if (!first_visible && !second_visible) {
-                continue;
-            }
-            if (first_visible) {
-                first_color = lift_sprite_color(first_color);
-                first_color = customize_color(
-                    state, first_color, source_x, source_y);
-            }
-            if (second_visible) {
-                second_color = lift_sprite_color(second_color);
-                second_color = customize_color(
-                    state, second_color, source_x, source_y);
-            }
-            uint16_t value = 0U;
-            if (first_visible && second_visible) {
-                value = tween_rgb565(first_color, second_color, blend);
-            } else {
-                const bool use_second = blend >= 128U;
-                if ((use_second && !second_visible) ||
-                    (!use_second && !first_visible)) {
-                    continue;
-                }
-                value = use_second ? second_color : first_color;
-            }
-            surface->pixels[(size_t)destination_y *
-                surface->stride_pixels + (size_t)destination_x] = value;
-        }
-    }
+    unsigned sheet = 0U;
+    unsigned frame = 0U;
+    dragon_sheet_frame(
+        state, state->animation_ms, state->reaction,
+        state->reaction_ms, &sheet, &frame);
+    (void)draw_customized_frame_scaled(
+        surface, state, sheet, frame,
+        left + DRAGON_FRAME_WIDTH / 2,
+        top + DRAGON_FRAME_HEIGHT / 2,
+        DRAGON_FRAME_WIDTH);
 }
 
 static void draw_element_particles(p4_game_surface_t *surface,
@@ -4577,6 +4886,18 @@ static void draw_dragon(p4_game_surface_t *surface,
     draw_lineage_back_layers(surface, state, left, top);
     draw_custom_trail(surface, state, left, top);
     draw_dragon_sprite(surface, state, left, top);
+    if (state->evolution_fx_ms != 0U &&
+        state->evolution_active_stage >= BYTE_BUDDY_STAGE_WINGED &&
+        state->evolution_active_stage <= BYTE_BUDDY_STAGE_ELEMENTAL) {
+        const byte_buddy_evolution_fx_t evolution =
+            (byte_buddy_evolution_fx_t)(
+                state->evolution_active_stage -
+                BYTE_BUDDY_STAGE_WINGED);
+        draw_evolution_fx_frame(
+            surface, state, evolution,
+            fx_timeline_phase(state->evolution_fx_ms, EVOLUTION_FX_MS),
+            center_x, top + DRAGON_FRAME_HEIGHT / 2, 76U);
+    }
     draw_signal_mutation(surface, state, left, top);
     if (safe_stage(state) >= BYTE_BUDDY_STAGE_WINGED) {
         if (safe_wing_style(state) == BYTE_BUDDY_WINGS_SHINY) {
@@ -4626,11 +4947,33 @@ static void draw_dragon(p4_game_surface_t *surface,
         p4_draw_fill_rect(surface, center_x - 3, top + 25, 4, 2,
                           UINT16_C(0xffff));
     }
-    if (health(state) < 35U) {
-        p4_draw_text(surface, left + DRAGON_FRAME_WIDTH - 6,
-                     top + DRAGON_FRAME_HEIGHT - 13, "!",
-                     UINT16_C(0xf800), 2U, 1U);
+}
+
+static void draw_lowest_need(p4_game_surface_t *surface,
+                             const byte_buddy_state_t *state,
+                             int center_x, int center_y)
+{
+    uint8_t lowest = state->hunger;
+    byte_buddy_need_fx_t need = BYTE_BUDDY_NEED_FX_HUNGER;
+    if (state->joy < lowest) {
+        lowest = state->joy;
+        need = BYTE_BUDDY_NEED_FX_JOY;
     }
+    if (state->hygiene < lowest) {
+        lowest = state->hygiene;
+        need = BYTE_BUDDY_NEED_FX_HYGIENE;
+    }
+    if (state->energy < lowest) {
+        lowest = state->energy;
+        need = BYTE_BUDDY_NEED_FX_ENERGY;
+    }
+    if (lowest >= 55U || state->reaction_ms != 0U) {
+        return;
+    }
+    draw_need_fx_frame(
+        surface, state, need,
+        fx_loop_phase(state->animation_ms, 190U),
+        center_x, center_y, 34U);
 }
 
 static void draw_growth_panel(p4_game_surface_t *surface,
@@ -4842,6 +5185,37 @@ static void draw_shop_backdrop(p4_game_surface_t *surface,
     draw_signal_city_icon(surface, state, 3U, 298, 145, 42U);
 }
 
+static void draw_shop_dragon_preview(p4_game_surface_t *surface,
+                                     const byte_buddy_state_t *state)
+{
+    unsigned sheet = 0U;
+    unsigned frame = 0U;
+    dragon_sheet_frame(
+        state, state->animation_ms, REACTION_IDLE,
+        0U, &sheet, &frame);
+    (void)draw_customized_frame_scaled(
+        surface, state, sheet, frame, 56, 13, 24U);
+    if (state->shop_feedback_ms != 0U) {
+        uint8_t feedback = state->shop_feedback_kind;
+        if (feedback == SHOP_FEEDBACK_POWER_GROWTH) {
+            draw_reaction_fx_frame(
+                surface, state,
+                12U + fx_timeline_phase(
+                    state->shop_feedback_ms, SHOP_FEEDBACK_MS),
+                56, 13, 32U);
+            return;
+        }
+        if (feedback == SHOP_FEEDBACK_UNLOCKED &&
+            state->shop_feedback_ms > SHOP_FEEDBACK_MS / 2U) {
+            feedback = SHOP_FEEDBACK_ONSET;
+        }
+        draw_activity_fx_frame(
+            surface, state, BYTE_BUDDY_ACTIVITY_FX_SHOP,
+            feedback,
+            56, 13, 32U);
+    }
+}
+
 static void draw_style_card(p4_game_surface_t *surface,
                             const byte_buddy_state_t *state,
                             byte_buddy_style_t style,
@@ -4903,6 +5277,7 @@ static void draw_upgrade_shop(p4_game_surface_t *surface,
                       element_color(state), false);
     draw_battle_stats(surface, state);
     p4_game_feedback_draw_audio_effect(surface, &state->audio, 160, 92);
+    draw_shop_dragon_preview(surface, state);
 }
 
 static void draw_style_shop(p4_game_surface_t *surface,
@@ -4940,6 +5315,7 @@ static void draw_style_shop(p4_game_surface_t *surface,
         20, 179, 20U);
     draw_touch_button(surface, 166, 164, 148, 30, "BACK", 4U,
                       element_color(state), false);
+    draw_shop_dragon_preview(surface, state);
 }
 
 static const char *star_pace_name(uint16_t speed, size_t *length)
@@ -4997,13 +5373,19 @@ static void draw_play_game(p4_game_surface_t *surface,
         (unsigned)state->star_kind * 4U + reward_frame,
         state->star_x, star_y, star_size);
     if (state->star_effect_ms != 0U) {
-        const unsigned effect_frame = (unsigned)(
-            (MINI_GAME_EFFECT_DURATION_MS - state->star_effect_ms) * 4U /
-            MINI_GAME_EFFECT_DURATION_MS);
-        (void)draw_art_frame_scaled(
-            surface, state, STAR_CATCHER_REWARD_SHEET,
-            12U + (effect_frame > 3U ? 3U : effect_frame),
-            state->star_effect_x, state->star_effect_y, 30U);
+        const uint8_t effect_phase = fx_timeline_phase(
+            state->star_effect_ms, MINI_GAME_EFFECT_DURATION_MS);
+        if (state->star_effect_kind == STAR_EFFECT_MISSED) {
+            draw_activity_fx_frame(
+                surface, state, BYTE_BUDDY_ACTIVITY_FX_STAR_MISS,
+                effect_phase,
+                state->star_effect_x, state->star_effect_y, 34U);
+        } else {
+            (void)draw_art_frame_scaled(
+                surface, state, STAR_CATCHER_REWARD_SHEET,
+                12U + effect_phase,
+                state->star_effect_x, state->star_effect_y, 30U);
+        }
     }
     const int catcher_velocity = p4_q16_to_int_round(
         state->catcher_velocity_q16);
@@ -5041,6 +5423,35 @@ static void draw_play_game(p4_game_surface_t *surface,
     p4_draw_fill_rect(surface, 106, 185,
                       (int)(remaining * 203U / MINI_GAME_DURATION_MS), 4,
                       element_color(state));
+    if (state->mini_intro_ms != 0U) {
+        const uint8_t phase = fx_timeline_phase(
+            state->mini_intro_ms, MINI_GAME_READY_VISIBLE_MS);
+        p4_draw_fill_rect(surface, 92, 48, 136, 76, UINT16_C(0x000b));
+        p4_draw_rect(surface, 92, 48, 136, 76, UINT16_C(0xffe0));
+        draw_activity_fx_frame(
+            surface, state, BYTE_BUDDY_ACTIVITY_FX_STAR_READY,
+            phase, 160, 80, 62U);
+        p4_draw_text(surface, 127, 109, "GET READY",
+                     UINT16_C(0xffff), 1U, 9U);
+    } else if (state->mini_summary_ms != 0U) {
+        const uint8_t phase = fx_timeline_phase(
+            state->mini_summary_ms, MINI_GAME_SUMMARY_MS);
+        p4_draw_fill_rect(surface, 82, 44, 156, 86, UINT16_C(0x000b));
+        p4_draw_rect(surface, 82, 44, 156, 86, UINT16_C(0xffe0));
+        draw_activity_fx_frame(
+            surface, state, BYTE_BUDDY_ACTIVITY_FX_STAR_SUMMARY,
+            phase, 121, 81, 58U);
+        p4_draw_text(surface, 153, 58, "STAR RUN",
+                     UINT16_C(0xffff), 1U, 8U);
+        p4_draw_text(surface, 153, 76, "CAUGHT",
+                     UINT16_C(0x7bef), 1U, 6U);
+        draw_number(surface, 201, 76, state->play_catches,
+                    UINT16_C(0xffe0));
+        p4_draw_text(surface, 153, 94, "BEST",
+                     UINT16_C(0x7bef), 1U, 4U);
+        draw_number(surface, 190, 94, state->play_best_streak,
+                    UINT16_C(0xffff));
+    }
 }
 
 static size_t signal_label_length(const char *label, size_t maximum)
@@ -5226,31 +5637,49 @@ static void draw_signal_list(p4_game_surface_t *surface,
     p4_draw_fill_rect(surface, 0, 25, 320, 175, UINT16_C(0x080f));
     if (state->signal_request_busy_ms != 0U &&
         state->signal_snapshot.status != P4_GAME_SIGNAL_READY) {
-        draw_signal_city_icon(surface, state, 6U, 160, 63, 50U);
+        draw_scan_fx_frame(
+            surface, state, BYTE_BUDDY_SCAN_FX_BUSY,
+            fx_loop_phase(state->animation_ms, 180U),
+            160, 65, 58U);
         p4_draw_text(surface, 78, 96, "SCANNER BUSY - TRY AGAIN",
                      UINT16_C(0xffe0), 1U, 24U);
         p4_draw_text(surface, 72, 112, "PRESS SCAN AFTER COOLDOWN",
                      UINT16_C(0x9cf3), 1U,
                      sizeof("PRESS SCAN AFTER COOLDOWN") - 1U);
     } else if (state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING) {
-        draw_signal_city_icon(surface, state, 8U, 160, 68, 52U);
-        draw_signal_city_icon(
-            surface, state, 12U, 160, 68,
-            smooth_signal_pulse(state->animation_ms, 54U, 6U, 960U));
+        draw_scan_fx_frame(
+            surface, state, BYTE_BUDDY_SCAN_FX_SCANNING,
+            fx_loop_phase(state->animation_ms, 180U),
+            160, 68, 62U);
         p4_draw_text(surface, 108, 109, "SCANNING CITY",
                      UINT16_C(0x07ff), 1U, 13U);
     } else if (state->signal_snapshot.status == P4_GAME_SIGNAL_IDLE) {
-        draw_signal_city_icon(surface, state, 9U, 160, 68, 52U);
+        draw_scan_fx_frame(
+            surface, state, BYTE_BUDDY_SCAN_FX_EMPTY,
+            fx_loop_phase(state->animation_ms, 190U),
+            160, 68, 58U);
         p4_draw_text(surface, 86, 108, "PRESS SCAN TO RETRY",
                      UINT16_C(0x07ff), 1U,
                      sizeof("PRESS SCAN TO RETRY") - 1U);
     } else if (state->signal_snapshot.status != P4_GAME_SIGNAL_READY) {
         draw_signal_city_icon(surface, state, 10U, 160, 63, 50U);
+        draw_scan_fx_frame(
+            surface, state, BYTE_BUDDY_SCAN_FX_OFFLINE,
+            fx_loop_phase(state->animation_ms, 190U),
+            160, 63, 58U);
         p4_draw_text(surface, 91, 101, "SIGNAL RADIO OFFLINE",
                      UINT16_C(0xf81f), 1U, 20U);
         p4_draw_text(surface, 74, 117, "NO NETWORK DATA IS EXPOSED",
                      UINT16_C(0x7bef), 1U, 26U);
     } else {
+        if (state->signal_snapshot.count == 0U) {
+            draw_scan_fx_frame(
+                surface, state, BYTE_BUDDY_SCAN_FX_EMPTY,
+                fx_loop_phase(state->animation_ms, 190U),
+                160, 68, 58U);
+            p4_draw_text(surface, 101, 108, "NO SIGNALS FOUND",
+                         UINT16_C(0x7bef), 1U, 16U);
+        }
         const uint8_t page = byte_buddy_signal_clamp_page(
             state->signal_page, state->signal_snapshot.count);
         const uint8_t first = (uint8_t)(
@@ -5319,6 +5748,11 @@ static void draw_signal_list(p4_game_surface_t *surface,
             lineage, &badge_length);
         p4_draw_fill_rect(surface, 72, 65, 176, 66, UINT16_C(0x000b));
         p4_draw_rect(surface, 72, 65, 176, 66, signal_color(state));
+        draw_evolution_fx_frame(
+            surface, state, BYTE_BUDDY_EVOLUTION_FX_GENOME,
+            fx_timeline_phase(
+                state->signal_reward_ms, REACTION_DURATION_MS),
+            94, 100, 46U);
         p4_draw_text(surface, 104, 74, "LINEAGE UPDATED",
                      UINT16_C(0xffff), 1U, 15U);
         draw_lineage_badge(
@@ -5382,6 +5816,10 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
     const p4_game_signal_t *const signal = selected_signal(state);
     if (signal == NULL) {
         draw_signal_city_icon(surface, state, 11U, 160, 70, 52U);
+        draw_scan_fx_frame(
+            surface, state, BYTE_BUDDY_SCAN_FX_EMPTY,
+            fx_loop_phase(state->animation_ms, 190U),
+            160, 70, 60U);
         p4_draw_text(surface, 98, 109, "SIGNAL MOVED AWAY",
                      UINT16_C(0xf81f), 1U, 17U);
     } else {
@@ -5390,10 +5828,17 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
         const byte_buddy_signal_genome_t genome =
             byte_buddy_signal_genome(signal->token);
         const uint16_t color = signal_color_for_hue(profile.hue);
-        draw_signal_city_icon(surface, state, 9U, 83, 82, 70U);
-        draw_signal_city_icon(
-            surface, state, 12U, 83, 82,
-            smooth_signal_pulse(state->animation_ms, 62U, 6U, 960U));
+        if (state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING) {
+            draw_scan_fx_frame(
+                surface, state, BYTE_BUDDY_SCAN_FX_SCANNING,
+                fx_loop_phase(state->animation_ms, 180U),
+                83, 82, 70U);
+        } else {
+            draw_signal_city_icon(surface, state, 9U, 83, 82, 70U);
+            draw_signal_city_icon(
+                surface, state, 12U, 83, 82,
+                smooth_signal_pulse(state->animation_ms, 62U, 6U, 960U));
+        }
         draw_signal_seed(
             surface, state, signal->token,
             signal->channel, signal->flags,
@@ -5641,6 +6086,15 @@ static void draw_signal_battle(p4_game_surface_t *surface,
     const byte_buddy_signal_attack_t current_attack =
         byte_buddy_signal_attack_for(
             encounter, state->signal_attack_index);
+    const byte_buddy_dragon_ability_t ability =
+        byte_buddy_dragon_ability(
+            state->element < BYTE_BUDDY_ELEMENT_COUNT
+                ? (byte_buddy_element_t)state->element
+                : BYTE_BUDDY_ELEMENT_MYSTERY);
+    const byte_buddy_signal_passive_t passive =
+        encounter.passive < BYTE_BUDDY_SIGNAL_PASSIVE_COUNT
+            ? (byte_buddy_signal_passive_t)encounter.passive
+            : BYTE_BUDDY_SIGNAL_PASSIVE_WARD;
     const byte_buddy_signal_weave_rules_t rules =
         byte_buddy_signal_weave_rules(
             genome, profile.strength,
@@ -5662,6 +6116,10 @@ static void draw_signal_battle(p4_game_surface_t *surface,
     const int signal_x = (weave ? 57 : 79) + signal_recoil;
     const int dragon_x = (weave ? 266 : 246) + shake_x;
     if (weave) {
+        draw_passive_fx_frame(
+            surface, state, passive,
+            fx_loop_phase(state->animation_ms, 190U),
+            signal_x, 82, 62U);
         draw_signal_weave_arena(
             surface, state, signal, profile, genome, rules,
             signal_recoil, shake_x, shake_y);
@@ -5669,6 +6127,10 @@ static void draw_signal_battle(p4_game_surface_t *surface,
         draw_signal_city_icon(
             surface, state, 12U, signal_x, 84,
             smooth_signal_pulse(state->animation_ms, 62U, 7U, 840U));
+        draw_passive_fx_frame(
+            surface, state, passive,
+            fx_loop_phase(state->animation_ms, 190U),
+            signal_x, 84, 62U);
         if (state->signal_hit_ms != 0U) {
             const unsigned hit_frame = 12U + (unsigned)(
                 (SIGNAL_HIT_DURATION_MS - state->signal_hit_ms) * 4U /
@@ -5695,12 +6157,29 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                 (int32_t)UINT16_MAX);
         draw_signal_city_icon(surface, state, 12U, strike_x, 84, 30U);
     }
-    if (state->signal_guard_fx_ms != 0U || state->signal_guard_armed) {
+    if (state->signal_guard_armed) {
+        uint8_t counter_phase = 1U;
+        if (state->signal_battle_phase == SIGNAL_PHASE_WINDUP) {
+            counter_phase = signal_phase_progress(state) <
+                    UINT16_MAX / 2U
+                ? 0U : 1U;
+        } else if (state->signal_battle_phase == SIGNAL_PHASE_TRAVEL) {
+            counter_phase = 2U;
+        }
         draw_signal_city_icon(
-            surface, state, 13U, dragon_x, 86 + shake_y,
+            surface, state, 13U, dragon_x, 86 + shake_y, 58U);
+        draw_counter_fx_frame(
+            surface, state, ability, counter_phase,
+            dragon_x, 86 + shake_y, 70U);
+    } else if (state->signal_guard_fx_ms != 0U) {
+        draw_signal_city_icon(
+            surface, state, 13U, dragon_x, 86 + shake_y, 58U);
+        draw_counter_fx_frame(
+            surface, state, ability, 3U,
+            dragon_x, 86 + shake_y,
             smooth_signal_pulse(
                 SIGNAL_GUARD_FX_MS - state->signal_guard_fx_ms,
-                62U, 10U, SIGNAL_GUARD_FX_MS * 2U));
+                64U, 8U, SIGNAL_GUARD_FX_MS * 2U));
     }
 
     p4_draw_text(surface, 8, 29,
@@ -5762,11 +6241,6 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                       UINT16_C(0xffe0));
     if (state->signal_battle_phase == SIGNAL_PHASE_WINDUP &&
         state->signal_battle_outcome == BYTE_BUDDY_COMBAT_ACTIVE) {
-        const byte_buddy_dragon_ability_t ability =
-            byte_buddy_dragon_ability(
-                state->element < BYTE_BUDDY_ELEMENT_COUNT
-                    ? (byte_buddy_element_t)state->element
-                    : BYTE_BUDDY_ELEMENT_MYSTERY);
         p4_draw_text(surface, 62, 145, "GUARD NOW:",
                      UINT16_C(0xffe0), 1U, 10U);
         p4_draw_text(surface, 129, 145,
@@ -5820,7 +6294,9 @@ static void draw_signal_battle(p4_game_surface_t *surface,
     draw_touch_button(surface, 198, 162, 118, 33, "AURA GUARD", 10U,
                       UINT16_C(0xffe0),
                       state->signal_guard_armed);
-    draw_signal_city_icon(surface, state, 13U, 211, 178, 22U);
+    draw_signal_city_icon(surface, state, 13U, 211, 178, 20U);
+    draw_counter_fx_frame(
+        surface, state, ability, 0U, 211, 178, 22U);
     draw_number(surface, 300, 166, state->signal_guard_charges,
                 UINT16_C(0x0000));
 
@@ -5829,11 +6305,14 @@ static void draw_signal_battle(p4_game_surface_t *surface,
         p4_draw_rect(surface, 50, 48, 220, 69, color);
         p4_draw_text(surface, 104, 57, "ENCOUNTER GENOME",
                      UINT16_C(0xffff), 1U, 16U);
-        draw_signal_attack_frame(
-            surface, state,
-            current_attack,
-            (unsigned)(state->animation_ms / 130U) % 2U,
+        draw_passive_fx_frame(
+            surface, state, passive,
+            fx_loop_phase(state->animation_ms, 150U),
             78, 87, 48U);
+        draw_signal_attack_frame(
+            surface, state, current_attack,
+            (unsigned)(state->animation_ms / 130U) % 2U,
+            245, 87, 38U);
         p4_draw_text(surface, 110, 77,
                      s_signal_attack_names[current_attack], color, 1U,
                      s_signal_attack_name_lengths[current_attack]);
@@ -5847,24 +6326,23 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                      s_signal_arena_name_lengths[encounter.arena]);
     } else if (state->signal_battle_outcome !=
                BYTE_BUDDY_COMBAT_ACTIVE) {
-        const bool victory = state->signal_battle_outcome ==
-            BYTE_BUDDY_COMBAT_VICTORY;
+        const byte_buddy_combat_outcome_t outcome =
+            (byte_buddy_combat_outcome_t)state->signal_battle_outcome;
+        const bool victory = outcome == BYTE_BUDDY_COMBAT_VICTORY;
         p4_draw_fill_rect(surface, 44, 48, 232, 74, UINT16_C(0x000b));
         p4_draw_rect(surface, 44, 48, 232, 74,
                      victory ? UINT16_C(0xffe0) : UINT16_C(0xf81f));
         if (victory) {
-            const unsigned victory_frame = 12U + (unsigned)(
-                (SIGNAL_VICTORY_MS - state->signal_phase_ms) * 4U /
-                SIGNAL_VICTORY_MS);
             draw_signal_city_icon(
                 surface, state, 15U, 78, 84,
                 smooth_signal_pulse(
                     SIGNAL_VICTORY_MS - state->signal_phase_ms,
                     52U, 10U, SIGNAL_VICTORY_MS * 2U));
-            draw_reaction_fx_frame(
-                surface, state,
-                victory_frame > 15U ? 15U : victory_frame,
-                78, 84, 56U);
+            draw_outcome_fx_frame(
+                surface, state, outcome,
+                fx_timeline_phase(
+                    state->signal_phase_ms, SIGNAL_VICTORY_MS),
+                78, 84, 58U);
             p4_draw_text(surface, 116, 63, "SIGNAL TAMED",
                          UINT16_C(0xffe0), 1U, 12U);
             p4_draw_text(surface, 98, 87, "DNA + REWARD SECURED",
@@ -5873,16 +6351,14 @@ static void draw_signal_battle(p4_game_surface_t *surface,
             const uint16_t defeat_duration =
                 state->signal_battle_outcome == BYTE_BUDDY_COMBAT_RETREATED
                     ? SIGNAL_RETREAT_MS : SIGNAL_DEFEAT_MS;
-            const unsigned defeat_frame = 8U + (unsigned)(
-                (defeat_duration - state->signal_phase_ms) * 4U /
-                defeat_duration);
-            draw_reaction_fx_frame(
-                surface, state,
-                defeat_frame > 11U ? 11U : defeat_frame,
-                78, 84, 50U);
-            const bool timeout = state->signal_battle_outcome ==
+            draw_outcome_fx_frame(
+                surface, state, outcome,
+                fx_timeline_phase(
+                    state->signal_phase_ms, defeat_duration),
+                78, 84, 54U);
+            const bool timeout = outcome ==
                 BYTE_BUDDY_COMBAT_DEFEAT_TIMEOUT;
-            const bool retreated = state->signal_battle_outcome ==
+            const bool retreated = outcome ==
                 BYTE_BUDDY_COMBAT_RETREATED;
             const char *const title = retreated ? "RETREATING" :
                 timeout ? "LINK TIMED OUT" : "DRAGON DOWN";
@@ -6120,6 +6596,47 @@ static void draw_lineage_panel(p4_game_surface_t *surface,
                       UINT16_C(0x07ff), false);
 }
 
+static void draw_scene_transition(p4_game_surface_t *surface,
+                                  const byte_buddy_state_t *state)
+{
+    if (state->scene_transition_ms == 0U) {
+        return;
+    }
+    const uint16_t progress = (uint16_t)(
+        (uint32_t)(SCENE_TRANSITION_MS - state->scene_transition_ms) *
+        UINT16_MAX / SCENE_TRANSITION_MS);
+    const uint16_t eased = p4_ease_smoothstep_u16(progress);
+    const int cover = (int)(
+        (uint32_t)(UINT16_MAX - eased) *
+        (P4_GAME_SURFACE_WIDTH / 2U) / UINT16_MAX);
+    if (cover > 0) {
+        p4_draw_fill_rect(surface, 0, 0, cover,
+                          P4_GAME_SURFACE_HEIGHT, UINT16_C(0x000b));
+        p4_draw_fill_rect(surface, P4_GAME_SURFACE_WIDTH - cover, 0,
+                          cover, P4_GAME_SURFACE_HEIGHT,
+                          UINT16_C(0x000b));
+        p4_draw_fill_rect(surface, cover - 1, 0, 2,
+                          P4_GAME_SURFACE_HEIGHT, signal_color(state));
+        p4_draw_fill_rect(surface,
+                          P4_GAME_SURFACE_WIDTH - cover - 1, 0, 2,
+                          P4_GAME_SURFACE_HEIGHT, signal_color(state));
+    }
+    const int marker = 6 + (int)((uint32_t)eased * 8U / UINT16_MAX);
+    const int center_x = P4_GAME_SURFACE_WIDTH / 2;
+    const int center_y = P4_GAME_SURFACE_HEIGHT / 2;
+    const uint16_t accent = signal_color(state);
+    p4_draw_rect(surface, center_x - marker, center_y - marker,
+                 marker * 2 + 1, marker * 2 + 1, accent);
+    p4_draw_fill_rect(surface, center_x - 1, center_y - marker - 4,
+                      3, 3, UINT16_C(0xffff));
+    p4_draw_fill_rect(surface, center_x - 1, center_y + marker + 2,
+                      3, 3, UINT16_C(0xffff));
+    p4_draw_fill_rect(surface, center_x - marker - 4, center_y - 1,
+                      3, 3, UINT16_C(0xffff));
+    p4_draw_fill_rect(surface, center_x + marker + 2, center_y - 1,
+                      3, 3, UINT16_C(0xffff));
+}
+
 static bool game_render(p4_game_context_t *context,
                         p4_game_surface_t *surface)
 {
@@ -6130,10 +6647,12 @@ static bool game_render(p4_game_context_t *context,
     p4_draw_clear(surface, UINT16_C(0x000b));
     if (state->signal_hunt) {
         draw_signal_hunt(surface, state);
+        draw_scene_transition(surface, state);
         return true;
     }
     if (state->lineage_panel) {
         draw_lineage_panel(surface, state);
+        draw_scene_transition(surface, state);
         return true;
     }
     draw_signal_city(surface, state);
@@ -6147,6 +6666,7 @@ static bool game_render(p4_game_context_t *context,
         } else {
             draw_upgrade_shop(surface, state);
         }
+        draw_scene_transition(surface, state);
         return true;
     }
     if (state->mini_game) {
@@ -6174,6 +6694,7 @@ static bool game_render(p4_game_context_t *context,
         p4_game_feedback_draw_audio_effect(
             surface, &state->audio, 160, 96);
         draw_dragon(surface, state, 160, 58);
+        draw_lowest_need(surface, state, 126, 102);
         const byte_buddy_signal_lineage_t lineage = current_lineage(state);
         p4_draw_fill_rect(surface, 8, 109, 106, 24, UINT16_C(0x000b));
         p4_draw_rect(surface, 8, 109, 106, 24, signal_color(state));
@@ -6226,6 +6747,7 @@ static bool game_render(p4_game_context_t *context,
         draw_touch_button(surface, 248, 168, 68, 28, "GENOME", 6U,
                           signal_color(state), false);
     }
+    draw_scene_transition(surface, state);
     return true;
 }
 

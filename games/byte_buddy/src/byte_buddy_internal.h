@@ -152,6 +152,38 @@ typedef enum {
     BYTE_BUDDY_COMBAT_RETREATED,
 } byte_buddy_combat_outcome_t;
 
+typedef enum {
+    BYTE_BUDDY_SCAN_FX_SCANNING = 0,
+    BYTE_BUDDY_SCAN_FX_BUSY,
+    BYTE_BUDDY_SCAN_FX_OFFLINE,
+    BYTE_BUDDY_SCAN_FX_EMPTY,
+    BYTE_BUDDY_SCAN_FX_COUNT,
+} byte_buddy_scan_fx_t;
+
+typedef enum {
+    BYTE_BUDDY_EVOLUTION_FX_BABY_TO_WINGED = 0,
+    BYTE_BUDDY_EVOLUTION_FX_WINGED_TO_FLYING,
+    BYTE_BUDDY_EVOLUTION_FX_FLYING_TO_ELEMENTAL,
+    BYTE_BUDDY_EVOLUTION_FX_GENOME,
+    BYTE_BUDDY_EVOLUTION_FX_COUNT,
+} byte_buddy_evolution_fx_t;
+
+typedef enum {
+    BYTE_BUDDY_NEED_FX_HUNGER = 0,
+    BYTE_BUDDY_NEED_FX_JOY,
+    BYTE_BUDDY_NEED_FX_HYGIENE,
+    BYTE_BUDDY_NEED_FX_ENERGY,
+    BYTE_BUDDY_NEED_FX_COUNT,
+} byte_buddy_need_fx_t;
+
+typedef enum {
+    BYTE_BUDDY_ACTIVITY_FX_STAR_READY = 0,
+    BYTE_BUDDY_ACTIVITY_FX_STAR_MISS,
+    BYTE_BUDDY_ACTIVITY_FX_STAR_SUMMARY,
+    BYTE_BUDDY_ACTIVITY_FX_SHOP,
+    BYTE_BUDDY_ACTIVITY_FX_COUNT,
+} byte_buddy_activity_fx_t;
+
 typedef struct {
     uint8_t attack;
     uint8_t passive;
@@ -370,6 +402,21 @@ byte_buddy_signal_defense_t byte_buddy_signal_defense(
     byte_buddy_signal_encounter_t encounter,
     byte_buddy_dragon_ability_t ability,
     bool guarded, uint8_t attack_index);
+
+uint8_t byte_buddy_counter_fx_frame(
+    byte_buddy_dragon_ability_t ability, uint8_t phase);
+uint8_t byte_buddy_outcome_fx_frame(
+    byte_buddy_combat_outcome_t outcome, uint8_t phase);
+uint8_t byte_buddy_passive_fx_frame(
+    byte_buddy_signal_passive_t passive, uint8_t phase);
+uint8_t byte_buddy_scan_fx_frame(
+    byte_buddy_scan_fx_t state, uint8_t phase);
+uint8_t byte_buddy_evolution_fx_frame(
+    byte_buddy_evolution_fx_t evolution, uint8_t phase);
+uint8_t byte_buddy_need_fx_frame(
+    byte_buddy_need_fx_t need, uint8_t phase);
+uint8_t byte_buddy_activity_fx_frame(
+    byte_buddy_activity_fx_t activity, uint8_t phase);
 
 uint8_t byte_buddy_signal_player_hp(
     byte_buddy_battle_stats_t stats, uint8_t nest_level,

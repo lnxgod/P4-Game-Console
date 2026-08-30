@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "3.9.0",
+  "version": "4.0.0",
   "stack_frame_limit_bytes": 1024,
   "package_file": "BYTEBUD.P4G",
   "resource_file": "BYTEBUD.P4R",
@@ -26,6 +26,6 @@
     "signal-scan"
   ],
   "license": "MIT",
-  "assets": "464-frame original art, required P4R, signal city, scanner, battle, attack, reaction, and lineage sprites",
+  "assets": "464-frame original art, required P4R, full-state signal, care, activity, evolution, battle, reaction, and lineage sprites",
   "enabled": true
 }

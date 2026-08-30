@@ -23,13 +23,9 @@ FRAME_HEIGHT = 64
 FRAMES_PER_SHEET = 16
 PALETTE_ENTRIES = 16
 PACKED_FRAME_BYTES = FRAME_WIDTH * FRAME_HEIGHT // 2
-FLYING_SHEET_INDEX = 3
-FLYING_CLEANUP_ROW = 54
 SIGNAL_GENOME_SHEET_INDEX = 24
 SIGNAL_CITY_PROPS_SHEET_INDEX = 25
-REACTION_FX_SHEET_INDEX = 26
 SIGNAL_LINEAGE_BADGES_SHEET_INDEX = 27
-SIGNAL_ATTACK_CYCLES_SHEET_INDEX = 28
 LARGE_BACKGROUND_COMPONENT_PIXELS = 64
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 ENCLOSED_BACKGROUND_SHEET_INDEXES = frozenset({
@@ -37,16 +33,37 @@ ENCLOSED_BACKGROUND_SHEET_INDEXES = frozenset({
     SIGNAL_CITY_PROPS_SHEET_INDEX,
     SIGNAL_LINEAGE_BADGES_SHEET_INDEX,
 })
-EXPECTED_APPENDED_SHEETS = {
-    SIGNAL_CITY_PROPS_SHEET_INDEX:
-        "byte_buddy_signal_city_props_imagegen_v7.png",
-    REACTION_FX_SHEET_INDEX:
-        "byte_buddy_reaction_fx_imagegen_v8.png",
-    SIGNAL_LINEAGE_BADGES_SHEET_INDEX:
-        "byte_buddy_signal_lineage_badges_imagegen_v9.png",
-    SIGNAL_ATTACK_CYCLES_SHEET_INDEX:
-        "byte_buddy_signal_attack_cycles_imagegen_v10.png",
-}
+EXPECTED_SHEETS = (
+    "byte_buddy_signal_counter_fx_imagegen_v11.png",
+    "byte_buddy_signal_outcome_fx_imagegen_v12.png",
+    "byte_buddy_signal_passive_fx_imagegen_v13.png",
+    "byte_buddy_signal_scan_fx_imagegen_v14.png",
+    "byte_buddy_evolution_fx_imagegen_v15.png",
+    "byte_buddy_dragon_rare_variants_pixellab_v1.png",
+    "byte_buddy_need_fx_imagegen_v16.png",
+    "byte_buddy_activity_fx_imagegen_v17.png",
+    "byte_buddy_dragon_baby_reactions_imagegen_v1.png",
+    "byte_buddy_dragon_flight_cycles_imagegen_v1.png",
+    "byte_buddy_dragon_elemental_breath_imagegen_v1.png",
+    "byte_buddy_dragon_egg_morph_ambient_imagegen_v2.png",
+    "byte_buddy_dragon_egg_element_ambient_imagegen_v2.png",
+    "byte_buddy_dragon_baby_idle_cycles_imagegen_v2.png",
+    "byte_buddy_dragon_baby_care_cycles_imagegen_v2.png",
+    "byte_buddy_dragon_winged_idle_cycles_imagegen_v2.png",
+    "byte_buddy_dragon_winged_care_cycles_imagegen_v2.png",
+    "byte_buddy_dragon_flight_aerobatics_imagegen_v2.png",
+    "byte_buddy_dragon_elemental_mastery_imagegen_v2.png",
+    "byte_buddy_dragon_elemental_impacts_imagegen_v2.png",
+    "byte_buddy_dragon_hatch_transitions_imagegen_v3.png",
+    "byte_buddy_dragon_signal_genetics_imagegen_v3.png",
+    "byte_buddy_star_catcher_rewards_imagegen_v4.png",
+    "byte_buddy_items_components_imagegen_v5.png",
+    "byte_buddy_signal_genome_layers_imagegen_v6.png",
+    "byte_buddy_signal_city_props_imagegen_v7.png",
+    "byte_buddy_reaction_fx_imagegen_v8.png",
+    "byte_buddy_signal_lineage_badges_imagegen_v9.png",
+    "byte_buddy_signal_attack_cycles_imagegen_v10.png",
+)
 
 
 def source_png_dimensions(path: Path) -> tuple[int, int]:
@@ -67,13 +84,10 @@ def validate_sources(sources: list[Path]) -> None:
             RUNTIME_SHEET_HEIGHT != GRID_ROWS * FRAME_HEIGHT):
         raise AssertionError("runtime sheet geometry does not form a 4x4 grid")
     seen_paths: set[Path] = set()
-    expected_indexes = {
-        name: index for index, name in EXPECTED_APPENDED_SHEETS.items()
-    }
-    required_sheets = max(EXPECTED_APPENDED_SHEETS) + 1
-    if len(sources) < required_sheets:
+    required_sheets = len(EXPECTED_SHEETS)
+    if len(sources) != required_sheets:
         raise RuntimeError(
-            f"full Byte Buddy art bank requires at least "
+            f"full Byte Buddy art bank requires exactly "
             f"{required_sheets} sheets, got {len(sources)}"
         )
     for index, source in enumerate(sources):
@@ -100,14 +114,8 @@ def validate_sources(sources: list[Path]) -> None:
         # Existing ImageGen masters are 1254px squares, so validate the
         # square grid but let nearest-neighbor scaling map it to exact 64px
         # runtime cells instead of requiring source dimensions divisible by 4.
-        expected_index = expected_indexes.get(source.name)
-        if expected_index is not None and index != expected_index:
-            raise RuntimeError(
-                f"{source}: append-only sheet belongs at index "
-                f"{expected_index}, got {index}"
-            )
-        expected_name = EXPECTED_APPENDED_SHEETS.get(index)
-        if expected_name is not None and source.name != expected_name:
+        expected_name = EXPECTED_SHEETS[index]
+        if source.name != expected_name:
             raise RuntimeError(
                 f"{source}: sheet index {index} must be {expected_name}"
             )
@@ -132,7 +140,7 @@ def decode_sheet(path: Path) -> bytes:
     return raw
 
 
-def frame_rgba(raw: bytes, frame: int, sheet_index: int) -> bytearray:
+def frame_rgba(raw: bytes, frame: int) -> bytearray:
     left = frame % 4 * FRAME_WIDTH
     top = frame // 4 * FRAME_HEIGHT
     output = bytearray(FRAME_WIDTH * FRAME_HEIGHT * 4)
@@ -142,10 +150,6 @@ def frame_rgba(raw: bytes, frame: int, sheet_index: int) -> bytearray:
         output[destination : destination + FRAME_WIDTH * 4] = raw[
             source : source + FRAME_WIDTH * 4
         ]
-    if sheet_index == FLYING_SHEET_INDEX:
-        for y in range(FLYING_CLEANUP_ROW, FRAME_HEIGHT):
-            for x in range(FRAME_WIDTH):
-                output[(y * FRAME_WIDTH + x) * 4 + 3] = 0
     return output
 
 
@@ -287,7 +291,7 @@ def build_bank(sources: list[Path]) -> bytes:
         raw = decode_sheet(source)
         for frame in range(FRAMES_PER_SHEET):
             palette, packed = encode_frame(
-                frame_rgba(raw, frame, sheet_index),
+                frame_rgba(raw, frame),
                 clear_enclosed_background=(
                     sheet_index in ENCLOSED_BACKGROUND_SHEET_INDEXES
                 ),

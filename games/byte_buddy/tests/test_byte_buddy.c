@@ -23,6 +23,7 @@ static size_t s_test_art_bytes;
 enum {
     TEST_SIGNAL_WEAVE_SETTLE_MS = 300,
     TEST_SIGNAL_ATTACK_TRAVEL_MS = 220,
+    TEST_SCENE_TRANSITION_MS = 240,
 };
 
 typedef struct {
@@ -47,6 +48,21 @@ static uint32_t test_read_u32(const uint8_t *data)
 {
     return (uint32_t)data[0] | (uint32_t)data[1] << 8U |
         (uint32_t)data[2] << 16U | (uint32_t)data[3] << 24U;
+}
+
+static uint16_t test_read_u16(const uint8_t *data)
+{
+    return (uint16_t)((uint16_t)data[0] | (uint16_t)data[1] << 8U);
+}
+
+static uint64_t test_hash_bytes(
+    uint64_t hash, const uint8_t *data, size_t bytes)
+{
+    for (size_t index = 0U; index < bytes; ++index) {
+        hash ^= data[index];
+        hash *= UINT64_C(1099511628211);
+    }
+    return hash;
 }
 
 static bool load_test_art(void)
@@ -226,6 +242,21 @@ static void test_required_art_contract(void)
     enum {
         TEST_ART_HEADER_BYTES = 64,
         TEST_ART_REQUIRED_SHEETS = 29,
+        TEST_ART_FRAMES_PER_SHEET = 16,
+        TEST_ART_REQUIRED_FRAMES =
+            TEST_ART_REQUIRED_SHEETS * TEST_ART_FRAMES_PER_SHEET,
+        TEST_ART_PALETTE_ENTRIES = 16,
+        TEST_ART_PALETTE_BYTES = TEST_ART_PALETTE_ENTRIES * 2,
+        TEST_ART_PACKED_FRAME_BYTES = 64 * 64 / 2,
+        TEST_ART_EXPECTED_BYTES = TEST_ART_HEADER_BYTES +
+            TEST_ART_REQUIRED_FRAMES *
+                (TEST_ART_PALETTE_BYTES + TEST_ART_PACKED_FRAME_BYTES),
+        TEST_ART_MIN_VISIBLE_PIXELS = 64,
+        TEST_ART_MIN_TRANSPARENT_PIXELS = 64,
+        TEST_ART_MIN_VISIBLE_COLORS = 4,
+    };
+    static const uint8_t authored_animation_sheets[] = {
+        0U, 1U, 2U, 3U, 4U, 6U, 7U,
     };
     CHECK((p4_byte_buddy_game.required_capabilities &
            P4_GAME_CAP_STORAGE) != 0U);
@@ -238,8 +269,177 @@ static void test_required_art_contract(void)
     }
     CHECK(memcmp(s_test_art, "BBDART2\0", 8U) == 0);
     CHECK(test_read_u32(s_test_art + 8U) == 2U);
-    CHECK(test_read_u32(s_test_art + 12U) >= TEST_ART_REQUIRED_SHEETS);
-    CHECK((size_t)test_read_u32(s_test_art + 44U) == s_test_art_bytes);
+    CHECK(test_read_u32(s_test_art + 12U) == TEST_ART_REQUIRED_SHEETS);
+    CHECK(test_read_u32(s_test_art + 16U) == 64U);
+    CHECK(test_read_u32(s_test_art + 20U) == 64U);
+    CHECK(test_read_u32(s_test_art + 24U) ==
+          TEST_ART_FRAMES_PER_SHEET);
+    CHECK(test_read_u32(s_test_art + 28U) == TEST_ART_PALETTE_ENTRIES);
+    CHECK(test_read_u32(s_test_art + 32U) == TEST_ART_REQUIRED_FRAMES);
+    CHECK(test_read_u32(s_test_art + 36U) == TEST_ART_HEADER_BYTES);
+    CHECK(test_read_u32(s_test_art + 40U) ==
+          TEST_ART_HEADER_BYTES +
+              TEST_ART_REQUIRED_FRAMES * TEST_ART_PALETTE_BYTES);
+    CHECK(test_read_u32(s_test_art + 44U) == TEST_ART_EXPECTED_BYTES);
+    CHECK(s_test_art_bytes == TEST_ART_EXPECTED_BYTES);
+    for (size_t reserved = 48U; reserved < TEST_ART_HEADER_BYTES;
+         ++reserved) {
+        CHECK(s_test_art[reserved] == 0U);
+    }
+    if (s_test_art_bytes != TEST_ART_EXPECTED_BYTES) {
+        return;
+    }
+
+    const size_t palette_offset = TEST_ART_HEADER_BYTES;
+    const size_t pixel_offset = palette_offset +
+        TEST_ART_REQUIRED_FRAMES * TEST_ART_PALETTE_BYTES;
+    uint64_t frame_hashes[TEST_ART_REQUIRED_FRAMES];
+    for (size_t frame = 0U; frame < TEST_ART_REQUIRED_FRAMES; ++frame) {
+        const uint8_t *const palette = s_test_art + palette_offset +
+            frame * TEST_ART_PALETTE_BYTES;
+        const uint8_t *const packed = s_test_art + pixel_offset +
+            frame * TEST_ART_PACKED_FRAME_BYTES;
+        bool used_indices[TEST_ART_PALETTE_ENTRIES] = {false};
+        unsigned visible_pixels = 0U;
+        unsigned transparent_pixels = 0U;
+        for (size_t byte = 0U; byte < TEST_ART_PACKED_FRAME_BYTES;
+             ++byte) {
+            const uint8_t high = (uint8_t)(packed[byte] >> 4U);
+            const uint8_t low = (uint8_t)(packed[byte] & UINT8_C(0x0f));
+            used_indices[high] = true;
+            used_indices[low] = true;
+            visible_pixels += high != 0U ? 1U : 0U;
+            visible_pixels += low != 0U ? 1U : 0U;
+            transparent_pixels += high == 0U ? 1U : 0U;
+            transparent_pixels += low == 0U ? 1U : 0U;
+        }
+        CHECK(test_read_u16(palette) == 0U);
+        CHECK(visible_pixels >= TEST_ART_MIN_VISIBLE_PIXELS);
+        CHECK(transparent_pixels >= TEST_ART_MIN_TRANSPARENT_PIXELS);
+
+        uint16_t visible_colors[TEST_ART_PALETTE_ENTRIES] = {0};
+        unsigned visible_color_count = 0U;
+        for (size_t entry = 1U; entry < TEST_ART_PALETTE_ENTRIES;
+             ++entry) {
+            if (!used_indices[entry]) {
+                continue;
+            }
+            const uint16_t color = test_read_u16(palette + entry * 2U);
+            bool seen = false;
+            for (unsigned prior = 0U; prior < visible_color_count;
+                 ++prior) {
+                if (visible_colors[prior] == color) {
+                    seen = true;
+                    break;
+                }
+            }
+            if (!seen) {
+                visible_colors[visible_color_count] = color;
+                ++visible_color_count;
+            }
+        }
+        CHECK(visible_color_count >= TEST_ART_MIN_VISIBLE_COLORS);
+        frame_hashes[frame] = test_hash_bytes(
+            test_hash_bytes(
+                UINT64_C(1469598103934665603),
+                palette, TEST_ART_PALETTE_BYTES),
+            packed, TEST_ART_PACKED_FRAME_BYTES);
+    }
+
+    for (size_t sheet_index = 0U;
+         sheet_index < sizeof(authored_animation_sheets);
+         ++sheet_index) {
+        const size_t first =
+            (size_t)authored_animation_sheets[sheet_index] *
+            TEST_ART_FRAMES_PER_SHEET;
+        for (size_t frame = 0U; frame < TEST_ART_FRAMES_PER_SHEET;
+             ++frame) {
+            for (size_t prior = 0U; prior < frame; ++prior) {
+                CHECK(frame_hashes[first + frame] !=
+                      frame_hashes[first + prior]);
+            }
+        }
+    }
+}
+
+static void test_authored_fx_frame_reachability(void)
+{
+    bool counter_seen[16] = {false};
+    bool outcome_seen[16] = {false};
+    bool passive_seen[16] = {false};
+    bool scan_seen[16] = {false};
+    bool evolution_seen[16] = {false};
+    bool need_seen[16] = {false};
+    bool activity_seen[16] = {false};
+    for (uint8_t row = 0U; row < 4U; ++row) {
+        for (uint8_t phase = 0U; phase < 4U; ++phase) {
+            const uint8_t expected = (uint8_t)(row * 4U + phase);
+            const uint8_t counter = byte_buddy_counter_fx_frame(
+                (byte_buddy_dragon_ability_t)row, phase);
+            const uint8_t outcome = byte_buddy_outcome_fx_frame(
+                (byte_buddy_combat_outcome_t)(
+                    BYTE_BUDDY_COMBAT_VICTORY + row), phase);
+            const uint8_t passive = byte_buddy_passive_fx_frame(
+                (byte_buddy_signal_passive_t)row, phase);
+            const uint8_t scan = byte_buddy_scan_fx_frame(
+                (byte_buddy_scan_fx_t)row, phase);
+            const uint8_t evolution = byte_buddy_evolution_fx_frame(
+                (byte_buddy_evolution_fx_t)row, phase);
+            const uint8_t need = byte_buddy_need_fx_frame(
+                (byte_buddy_need_fx_t)row, phase);
+            const uint8_t activity = byte_buddy_activity_fx_frame(
+                (byte_buddy_activity_fx_t)row, phase);
+            CHECK(counter == expected);
+            CHECK(outcome == expected);
+            CHECK(passive == expected);
+            CHECK(scan == expected);
+            CHECK(evolution == expected);
+            CHECK(need == expected);
+            CHECK(activity == expected);
+            if (counter < 16U) {
+                counter_seen[counter] = true;
+            }
+            if (outcome < 16U) {
+                outcome_seen[outcome] = true;
+            }
+            if (passive < 16U) {
+                passive_seen[passive] = true;
+            }
+            if (scan < 16U) {
+                scan_seen[scan] = true;
+            }
+            if (evolution < 16U) {
+                evolution_seen[evolution] = true;
+            }
+            if (need < 16U) {
+                need_seen[need] = true;
+            }
+            if (activity < 16U) {
+                activity_seen[activity] = true;
+            }
+        }
+    }
+    for (size_t frame = 0U; frame < 16U; ++frame) {
+        CHECK(counter_seen[frame]);
+        CHECK(outcome_seen[frame]);
+        CHECK(passive_seen[frame]);
+        CHECK(scan_seen[frame]);
+        CHECK(evolution_seen[frame]);
+        CHECK(need_seen[frame]);
+        CHECK(activity_seen[frame]);
+    }
+    CHECK(byte_buddy_counter_fx_frame(BYTE_BUDDY_ABILITY_COUNT, 4U) ==
+          3U);
+    CHECK(byte_buddy_outcome_fx_frame(BYTE_BUDDY_COMBAT_ACTIVE, 4U) ==
+          3U);
+    CHECK(byte_buddy_passive_fx_frame(BYTE_BUDDY_SIGNAL_PASSIVE_COUNT, 4U) ==
+          3U);
+    CHECK(byte_buddy_scan_fx_frame(BYTE_BUDDY_SCAN_FX_COUNT, 4U) == 3U);
+    CHECK(byte_buddy_evolution_fx_frame(
+              BYTE_BUDDY_EVOLUTION_FX_COUNT, 4U) == 3U);
+    CHECK(byte_buddy_need_fx_frame(BYTE_BUDDY_NEED_FX_COUNT, 4U) == 3U);
+    CHECK(byte_buddy_activity_fx_frame(
+              BYTE_BUDDY_ACTIVITY_FX_COUNT, 4U) == 3U);
 }
 
 static p4_game_result_t touch(p4_game_instance_t *instance,
@@ -298,6 +498,25 @@ static void advance_idle_ms(p4_game_instance_t *instance,
         CHECK(buttons(instance, 0U, 0U, step_ms) == P4_GAME_CONTINUE);
         elapsed_ms -= step_ms;
     }
+}
+
+static void settle_scene_transition(p4_game_instance_t *instance)
+{
+    advance_idle_ms(instance, TEST_SCENE_TRANSITION_MS);
+}
+
+static void tap_scene_change(
+    p4_game_instance_t *instance, uint16_t x, uint16_t y)
+{
+    tap(instance, x, y);
+    settle_scene_transition(instance);
+}
+
+static void buttons_scene_change(
+    p4_game_instance_t *instance, uint32_t held, uint32_t pressed)
+{
+    CHECK(buttons(instance, held, pressed, 16U) == P4_GAME_CONTINUE);
+    settle_scene_transition(instance);
 }
 
 static uint16_t latest_tone_frequency(const p4_audio_mixer_t *mixer)
@@ -784,10 +1003,10 @@ static void test_signal_hunt_battle_and_reward(void)
     CHECK(start_game(&instance, state, &mixer, &achievements));
     CHECK((p4_byte_buddy_game.optional_capabilities &
            P4_GAME_CAP_SIGNAL_SCAN) != 0U);
-    tap(&instance, 70U, 180U);
+    tap_scene_change(&instance, 70U, 180U);
     CHECK(s_signal_scan.requests == 1U);
     release_touch(&instance);
-    tap(&instance, 70U, 42U);
+    tap_scene_change(&instance, 70U, 42U);
     CHECK(s_signal_scan.requests == 2U);
     CHECK(s_signal_scan.focus_token == UINT64_C(0x00123456789abcde));
     tap(&instance, 70U, 180U);
@@ -862,7 +1081,7 @@ static void test_care_growth_cadence(void)
     p4_audio_mixer_t mixer;
     p4_achievement_catalog_t achievements;
     CHECK(start_game(&instance, state, &mixer, &achievements));
-    tap(&instance, 260U, 180U);
+    tap_scene_change(&instance, 260U, 180U);
     const p4_game_input_t close_genome_while_touching = {
         .pressed = P4_BUTTON_B,
         .touch_valid = true,
@@ -881,6 +1100,7 @@ static void test_care_growth_cadence(void)
               &instance, &held_after_close, 16U) == P4_GAME_CONTINUE);
     CHECK(achievements.count == 0U);
     release_touch(&instance);
+    settle_scene_transition(&instance);
     for (unsigned rapid = 0U; rapid < 104U; ++rapid) {
         tap(&instance, 160U, 80U);
     }
@@ -966,16 +1186,16 @@ static void test_signal_paging_integration(void)
     p4_audio_mixer_t mixer;
     p4_achievement_catalog_t achievements;
     CHECK(start_game(&instance, state, &mixer, &achievements));
-    tap(&instance, 70U, 180U);
+    tap_scene_change(&instance, 70U, 180U);
     CHECK(s_signal_scan.requests == 1U);
     tap(&instance, 280U, 180U);
     tap(&instance, 80U, 119U);
     CHECK(s_signal_scan.requests == 1U);
-    tap(&instance, 80U, 94U);
+    tap_scene_change(&instance, 80U, 94U);
     CHECK(s_signal_scan.requests == 2U);
     CHECK(s_signal_scan.focus_token == UINT64_C(0x55aa33cc77ee0011));
 
-    tap(&instance, 20U, 12U);
+    tap_scene_change(&instance, 20U, 12U);
     tap(&instance, 280U, 180U);
     const uint64_t expected_after_clamp =
         s_signal_scan.snapshot.results[0].token;
@@ -1001,7 +1221,7 @@ static void test_signal_busy_preserves_results(void)
     p4_audio_mixer_t mixer;
     p4_achievement_catalog_t achievements;
     CHECK(start_game(&instance, state, &mixer, &achievements));
-    tap(&instance, 70U, 180U);
+    tap_scene_change(&instance, 70U, 180U);
     CHECK(s_signal_scan.requests == 1U);
 
     s_signal_scan.reject_requests = true;
@@ -1053,7 +1273,7 @@ static void test_initial_signal_busy_backoff(void)
     CHECK(start_game(&instance, state, &mixer, &achievements));
     s_signal_scan.reject_requests = true;
 
-    tap(&instance, 70U, 180U);
+    tap_scene_change(&instance, 70U, 180U);
     CHECK(s_signal_scan.requests == 1U);
     tap(&instance, 100U, 180U);
     CHECK(s_signal_scan.requests == 1U);
@@ -1477,8 +1697,8 @@ static void test_resonance_weave_battle(void)
     p4_audio_mixer_t mixer;
     p4_achievement_catalog_t achievements;
     CHECK(start_game(&instance, state, &mixer, &achievements));
-    tap(&instance, 70U, 180U);
-    tap(&instance, 80U, 94U);
+    tap_scene_change(&instance, 70U, 180U);
+    tap_scene_change(&instance, 80U, 94U);
     CHECK(s_signal_scan.focus_token == weave_token);
     tap(&instance, 250U, 180U);
     advance_idle_ms(&instance, 500U);
@@ -1557,8 +1777,8 @@ static bool prepare_weave_event_order_case(
     if (!start_game(instance, state, mixer, achievements)) {
         return false;
     }
-    tap(instance, 70U, 180U);
-    tap(instance, 80U, 94U);
+    tap_scene_change(instance, 70U, 180U);
+    tap_scene_change(instance, 80U, 94U);
     if (s_signal_scan.focus_token != UINT64_C(0x1020304050607080)) {
         return false;
     }
@@ -1694,13 +1914,14 @@ static void test_signal_loss_and_retreat(void)
     p4_audio_mixer_t mixer;
     p4_achievement_catalog_t achievements;
     CHECK(start_game(&instance, state, &mixer, &achievements));
-    tap(&instance, 70U, 180U);
-    tap(&instance, 80U, 42U);
+    tap_scene_change(&instance, 70U, 180U);
+    tap_scene_change(&instance, 80U, 42U);
     tap(&instance, 250U, 180U);
     advance_idle_ms(&instance, 14000U);
     CHECK(!achievement_present(&achievements, "first-signal"));
 
     tap(&instance, 250U, 180U);
+    settle_scene_transition(&instance);
     CHECK(buttons(&instance, 0U, P4_BUTTON_B, 16U) ==
           P4_GAME_CONTINUE);
     advance_idle_ms(&instance, 519U);
@@ -1730,8 +1951,8 @@ static void test_signal_guard_exact_expiry_boundary(void)
     p4_audio_mixer_t mixer;
     p4_achievement_catalog_t achievements;
     CHECK(start_game(&instance, state, &mixer, &achievements));
-    tap(&instance, 70U, 180U);
-    tap(&instance, 80U, 42U);
+    tap_scene_change(&instance, 70U, 180U);
+    tap_scene_change(&instance, 80U, 42U);
     tap(&instance, 250U, 180U);
 
     advance_idle_ms(&instance, 434U);
@@ -2176,21 +2397,18 @@ static void test_controller_signal_hunt(void)
           P4_GAME_CONTINUE);
     CHECK(buttons(&instance, 0U, P4_BUTTON_A, 16U) == P4_GAME_CONTINUE);
     CHECK(achievement_present(&achievements, "first-care"));
-    CHECK(buttons(&instance, 0U, P4_BUTTON_B, 16U) == P4_GAME_CONTINUE);
-    CHECK(buttons(&instance, 0U, P4_BUTTON_B, 16U) == P4_GAME_CONTINUE);
-    CHECK(buttons(&instance, 0U, P4_BUTTON_DOWN, 16U) ==
-          P4_GAME_CONTINUE);
-    CHECK(buttons(&instance, 0U, P4_BUTTON_RIGHT, 16U) ==
-          P4_GAME_CONTINUE);
+    buttons_scene_change(&instance, 0U, P4_BUTTON_B);
+    buttons_scene_change(&instance, 0U, P4_BUTTON_B);
+    buttons_scene_change(&instance, 0U, P4_BUTTON_DOWN);
+    buttons_scene_change(&instance, 0U, P4_BUTTON_RIGHT);
     CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
           P4_GAME_CONTINUE);
     CHECK(buttons(&instance, 0U, P4_BUTTON_A, 16U) == P4_GAME_CONTINUE);
-    CHECK(buttons(&instance, 0U, P4_BUTTON_LEFT, 16U) ==
-          P4_GAME_CONTINUE);
+    buttons_scene_change(&instance, 0U, P4_BUTTON_LEFT);
     CHECK(buttons(&instance, 0U, P4_BUTTON_A, 16U) == P4_GAME_CONTINUE);
-    CHECK(buttons(&instance, 0U, P4_BUTTON_B, 16U) == P4_GAME_CONTINUE);
+    buttons_scene_change(&instance, 0U, P4_BUTTON_B);
 
-    CHECK(buttons(&instance, 0U, P4_BUTTON_UP, 16U) == P4_GAME_CONTINUE);
+    buttons_scene_change(&instance, 0U, P4_BUTTON_UP);
     CHECK(s_signal_scan.requests == 1U);
     CHECK(buttons(&instance, 0U, 0U, 16U) == P4_GAME_CONTINUE);
     CHECK(buttons(&instance, 0U, P4_BUTTON_RIGHT, 16U) ==
@@ -2205,7 +2423,7 @@ static void test_controller_signal_hunt(void)
           P4_GAME_CONTINUE);
     CHECK(buttons(&instance, 0U, P4_BUTTON_DOWN, 16U) ==
           P4_GAME_CONTINUE);
-    CHECK(buttons(&instance, 0U, P4_BUTTON_A, 16U) == P4_GAME_CONTINUE);
+    buttons_scene_change(&instance, 0U, P4_BUTTON_A);
     CHECK(buttons(&instance, 0U, 0U, 16U) == P4_GAME_CONTINUE);
     CHECK(s_signal_scan.focus_token == weave_token);
     CHECK(buttons(&instance, 0U, 0U, 16U) == P4_GAME_CONTINUE);
@@ -2345,6 +2563,7 @@ int main(void)
         return EXIT_FAILURE;
     }
     test_required_art_contract();
+    test_authored_fx_frame_reachability();
     test_care_achievements_and_exit();
     test_care_growth_cadence();
     test_render_bounds();
