@@ -929,10 +929,11 @@ artifact verification, not on-device acceptance.
 
 ### v4 deployment candidate
 
-The controller-first Waveshare Console OS build passed its no-flash verifier
-with the exact v4 pair above. Its application image is 1,832,000 bytes with
+The controller-first Waveshare Console OS 0.4.89 build passed its no-flash
+verifier with H1 P4R support and the exact v4 pair above. Its application image
+is 1,832,640 bytes with
 SHA-256
-`3224ef8f35dd1ce73eedc5e8c8861b633cd74eb9b4823afca80103321f71b3ac`,
+`2f9183918d7089f4375b73083bbeed81172d695eedb8eb424a23b140022ce862`,
 leaving 78 percent of the 8,323,072-byte application slot free. Deploy v4 as a
 paired `BYTEBUD.P4G` and `BYTEBUD.P4R` game-only update only after named SDL
 play and physical-tablet acceptance. The first canary is the recorded pink
@@ -940,14 +941,13 @@ Waveshare 4.3 unit 1,
 identity SHA-256
 `c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d`;
 promote the same verified pair to green unit 2 only after canary acceptance.
-Because the sidecar changed, use the H2 USB Drive workflow or a powered-off
-microSD reader and replace both files as one versioned pair; the H1
-live-transfer path installs `.P4G` files only and must not leave a v4
-executable beside the v3.9 resource. Verify both hashes, eject cleanly, remount,
-and exercise every attack family and dragon counter plus Pulse Rush, Resonance
-Weave, retreat/rematch, one win, and one genuine defeat with no loss reward.
-Preserve the exact v3.9 pair above for atomic rollback. No host build is
-hardware acceptance, and no hardware install is authorized by this plan.
+Because the sidecar changed, remain on File Transfer and use H1 to install
+`BYTEBUD.P4R` first and `BYTEBUD.P4G` second, then pull both back and verify
+their exact hashes before launching. Each replacement is atomic, but an
+interruption between them can leave an old-executable/new-resource pair; keep
+the exact v3.9 pair above for recovery. Then exercise every attack family and
+dragon counter plus Pulse Rush, Resonance Weave, retreat/rematch, one win, and
+one genuine defeat with no loss reward. No host build is hardware acceptance.
 
 ## Verification
 

@@ -1056,6 +1056,40 @@ def main() -> None:
     require("validate_elf_imports(output, compiler)" in package_builder and
             "ALLOWED_UNDEFINED_SYMBOLS" in package_builder,
             "P4G builder no longer rejects unsupported runtime imports")
+    transfer_header = (ROOT / "components/p4_usb_content_transfer/include/p4/"
+                       "file_transfer.h").read_text(encoding="utf-8")
+    transfer_source = (ROOT / "components/p4_usb_content_transfer/src/"
+                       "file_transfer.c").read_text(encoding="utf-8")
+    transfer_tool = (ROOT / "scripts/p4-transfer.py").read_text(
+        encoding="utf-8")
+    shell_source = (ROOT / "components/console_shell/src/"
+                    "console_shell.c").read_text(encoding="utf-8")
+    require("P4_FILE_TRANSFER_PROTOCOL_VERSION = 2" in transfer_header and
+            "P4_FILE_TRANSFER_CLASS_P4G = 1" in transfer_header and
+            "P4_FILE_TRANSFER_CLASS_EXCHANGE = 2" in transfer_header and
+            "P4_FILE_TRANSFER_CLASS_P4R = 3" in transfer_header,
+            "H1 transfer wire class IDs changed or omit P4R")
+    for token in (
+        "p4r_name_valid",
+        "P4_GAME_RESOURCE_MAX_BYTES",
+        "p4_game_resource_parse",
+        "P4_FILE_TRANSFER_CLASS_P4R",
+        "game_content ? \"/GAMES\" : \"/TRANSFER\"",
+        "p4r_max=%u",
+    ):
+        require(token in transfer_source,
+                f"H1 P4R device validation is missing {token}")
+    for token in (
+        "CLASS_P4R = 3",
+        "validate_p4r_host",
+        'choices=("p4g", "p4r", "exchange")',
+    ):
+        require(token in transfer_tool,
+                f"H1 P4R host validation is missing {token}")
+    require("CONSOLE_FILE_TRANSFER_CLASS_P4R" in shell_source and
+            "P4G/P4R -> /GAMES" in shell_source and
+            "P4R_TRANSFER_ACTIVATED" in source,
+            "Console OS does not surface successful H1 P4R activation")
 
     manifests = [
         read_json(path) for path in sorted((ROOT / "games").glob("*/game.json"))

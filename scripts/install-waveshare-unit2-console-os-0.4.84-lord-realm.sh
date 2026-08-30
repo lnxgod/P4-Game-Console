@@ -40,6 +40,11 @@ P4_RECOVERY=${P4_INSTALL_RECOVERY:-"$P4_PROJECT_ROOT/hardware/local-state/wavesh
 P4_LOCK_DIR=${P4_INSTALL_LOCK_DIR:-"$P4_PROJECT_ROOT/hardware/local-state/.waveshare-$P4_UNIT-console-os-0.4.84-install-lock"}
 P4_PREIMAGE=${P4_INSTALL_PREIMAGE:-"$P4_RECOVERY/preimage-0.4.83-span.bin"}
 P4_READBACK=${P4_INSTALL_READBACK:-"$P4_RECOVERY/readback-0.4.84-span.bin"}
+P4_CONTENT_ARTIFACT_KEY=${P4_INSTALL_CONTENT_ARTIFACT_KEY:-candidate.lord_cartridge}
+P4_CONTENT_ARTIFACT_LABEL=${P4_INSTALL_CONTENT_ARTIFACT_LABEL:-lord-cartridge}
+P4_CONTENT_ARTIFACT_KEY_2=${P4_INSTALL_CONTENT_ARTIFACT_KEY_2:-}
+P4_CONTENT_ARTIFACT_LABEL_2=${P4_INSTALL_CONTENT_ARTIFACT_LABEL_2:-content-artifact-2}
+P4_CONTENT_PENDING_MESSAGE=${P4_INSTALL_CONTENT_PENDING_MESSAGE:-"Device remains in loader for retained-UART launch. LORD.P4G was not yet changed."}
 P4_LEDGER="$P4_RECOVERY/ledger.json"
 P4_MUTATION_STARTED=0
 P4_LOCK_HELD=0
@@ -135,7 +140,12 @@ p4_validate_local_authorization() {
     p4_check_sealed_artifact candidate.update_package update-package
     p4_check_sealed_artifact candidate.sdkconfig sdkconfig
     p4_check_sealed_artifact candidate.dependencies_lock dependency-lock
-    p4_check_sealed_artifact candidate.lord_cartridge lord-cartridge
+    p4_check_sealed_artifact "$P4_CONTENT_ARTIFACT_KEY" \
+        "$P4_CONTENT_ARTIFACT_LABEL"
+    if [ -n "$P4_CONTENT_ARTIFACT_KEY_2" ]; then
+        p4_check_sealed_artifact "$P4_CONTENT_ARTIFACT_KEY_2" \
+            "$P4_CONTENT_ARTIFACT_LABEL_2"
+    fi
 
     python3 - "$P4_PROJECT_ROOT/hardware/backups/manifest.json" "$P4_AUTH" <<'PY'
 import json
@@ -479,7 +489,7 @@ P4_MUTATION_STARTED=0
 
 printf 'Console OS %s %s app-only install/readback PASS.\n' \
     "$P4_CANDIDATE_VERSION" "$P4_UNIT"
-printf 'Device remains in loader for retained-UART launch. LORD.P4G was not yet changed.\n'
+printf '%s\n' "$P4_CONTENT_PENDING_MESSAGE"
 printf 'preimage_sha256=%s padded_readback_sha256=%s\n' \
     "$P4_PREIMAGE_HASH" "$P4_PADDED_HASH"
 p4_release_lock

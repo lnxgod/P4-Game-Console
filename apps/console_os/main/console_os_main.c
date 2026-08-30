@@ -4644,6 +4644,13 @@ static void poll_multiplayer_link(const console_shell_t *shell)
                      "generation=%lu action=native-catalog-rescan",
                      file_after.file_name,
                      (unsigned long)file_after.generation);
+        } else if (file_after.direction == P4_FILE_TRANSFER_UPLOAD &&
+                   file_after.file_class == P4_FILE_TRANSFER_CLASS_P4R) {
+            ESP_LOGI(TAG,
+                     "P4_CONSOLE_OS P4R_TRANSFER_ACTIVATED name=%s "
+                     "generation=%lu action=next-launch-resource-refresh",
+                     file_after.file_name,
+                     (unsigned long)file_after.generation);
         }
     }
     /* H1 remains live for content uploads even while BLE owns game traffic. */

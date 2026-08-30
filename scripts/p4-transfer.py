@@ -20,6 +20,7 @@ IDLE_BAUD = 115_200
 TRANSFER_BAUD = 921_600
 CHUNK_BYTES = 4096
 P4G_MAX_BYTES = 512 * 1024
+P4R_MAX_BYTES = 8 * 1024 * 1024
 EXCHANGE_MAX_BYTES = 8 * 1024 * 1024
 NAME_BYTES = 40
 
@@ -34,6 +35,7 @@ DIRECTION_UPLOAD = 1
 DIRECTION_DOWNLOAD = 2
 CLASS_P4G = 1
 CLASS_EXCHANGE = 2
+CLASS_P4R = 3
 FLAG_REPLACE = 1
 
 STATUS_OK = 0
@@ -177,6 +179,19 @@ def p4g_name_valid(name: str) -> bool:
     )
 
 
+def p4r_name_valid(name: str) -> bool:
+    if not name.endswith(".P4R") or not 5 <= len(name) <= 36:
+        return False
+    base = name[:-4]
+    return (
+        bool(base)
+        and len(base) <= 32
+        and base[0].isalnum()
+        and base.isascii()
+        and all(byte.isupper() or byte.isdigit() or byte in "_-" for byte in base)
+    )
+
+
 def exchange_name_valid(name: str) -> bool:
     return (
         0 < len(name) < NAME_BYTES
@@ -189,11 +204,41 @@ def exchange_name_valid(name: str) -> bool:
 
 
 def checked_remote_name(name: str, file_class: int) -> str:
-    valid = p4g_name_valid(name) if file_class == CLASS_P4G else exchange_name_valid(name)
+    if file_class == CLASS_P4G:
+        valid = p4g_name_valid(name)
+        kind = "uppercase NAME.P4G"
+    elif file_class == CLASS_P4R:
+        valid = p4r_name_valid(name)
+        kind = "uppercase NAME.P4R"
+    else:
+        valid = exchange_name_valid(name)
+        kind = "safe basename"
     if not valid:
-        kind = "uppercase NAME.P4G" if file_class == CLASS_P4G else "safe basename"
         raise TransferError(f"invalid remote filename {name!r}; expected {kind}")
     return name
+
+
+def class_id(name: str) -> int:
+    return {"p4g": CLASS_P4G, "p4r": CLASS_P4R, "exchange": CLASS_EXCHANGE}[name]
+
+
+def infer_class(name: str) -> str:
+    suffix = Path(name).suffix.lower()
+    if suffix == ".p4g":
+        return "p4g"
+    if suffix == ".p4r":
+        return "p4r"
+    raise TransferError(
+        "cannot infer transfer class; use .P4G/.P4R or pass --class exchange"
+    )
+
+
+def maximum_bytes(file_class: int) -> int:
+    if file_class == CLASS_P4G:
+        return P4G_MAX_BYTES
+    if file_class == CLASS_P4R:
+        return P4R_MAX_BYTES
+    return EXCHANGE_MAX_BYTES
 
 
 def validate_p4g_host(data: bytes) -> None:
@@ -218,16 +263,61 @@ def validate_p4g_host(data: bytes) -> None:
         raise TransferError("P4G embedded payload digest is invalid")
 
 
+def validate_p4r_host(data: bytes) -> None:
+    if not 128 < len(data) <= P4R_MAX_BYTES or data[:8] != b"P4RES01\0":
+        raise TransferError("input is not a bounded P4RES01 resource pack")
+    (
+        header_bytes,
+        package_bytes,
+        payload_offset,
+        payload_bytes,
+        format_version,
+        flags,
+    ) = struct.unpack_from("<IIIIII", data, 8)
+    if (
+        header_bytes != 128
+        or package_bytes != len(data)
+        or payload_offset != 128
+        or payload_bytes != len(data) - 128
+        or format_version != 1
+        or flags != 0
+        or any(data[112:128])
+    ):
+        raise TransferError("P4R header/layout/version is invalid")
+    game_id_field = data[64:112]
+    terminator = game_id_field.find(b"\0")
+    if terminator < 3 or any(game_id_field[terminator + 1 :]):
+        raise TransferError("P4R game id is invalid")
+    game_id = game_id_field[:terminator]
+    if not (
+        b"a" <= game_id[:1] <= b"z"
+        and all(
+            ord("a") <= byte <= ord("z")
+            or ord("0") <= byte <= ord("9")
+            or byte in (ord("."), ord("-"))
+            for byte in game_id
+        )
+    ):
+        raise TransferError("P4R game id is invalid")
+    expected_payload = data[32:64]
+    actual_payload = hashlib.sha256(data[payload_offset:]).digest()
+    if actual_payload != expected_payload:
+        raise TransferError("P4R embedded payload digest is invalid")
+
+
 def validate_upload(path: Path, file_class: int) -> tuple[int, bytes]:
     if not path.is_file() or path.is_symlink():
         raise TransferError(f"input must be one regular file: {path}")
     size = path.stat().st_size
-    maximum = P4G_MAX_BYTES if file_class == CLASS_P4G else EXCHANGE_MAX_BYTES
+    maximum = maximum_bytes(file_class)
     if not 0 < size <= maximum:
         raise TransferError(f"input size {size} exceeds the {maximum}-byte bound")
-    data = path.read_bytes() if file_class == CLASS_P4G else None
+    data = path.read_bytes() if file_class in (CLASS_P4G, CLASS_P4R) else None
     if data is not None:
-        validate_p4g_host(data)
+        if file_class == CLASS_P4G:
+            validate_p4g_host(data)
+        else:
+            validate_p4r_host(data)
         digest = hashlib.sha256(data).digest()
     else:
         sha256 = hashlib.sha256()
@@ -304,6 +394,10 @@ def negotiate(
         if status == STATUS_ALREADY_PRESENT:
             return status, size, digest, chunk_bytes
         if status != STATUS_OK:
+            if status == 9 and file_class == CLASS_P4R:
+                raise TransferError(
+                    "badge does not support P4R over H1; install a transfer-protocol-2 Console OS"
+                )
             raise TransferError(f"badge rejected request: {status_name(status)}")
         if accepted_direction != direction or accepted_class != file_class:
             raise TransferError("badge response does not match the requested operation")
@@ -329,8 +423,13 @@ def verify_done(done: bytes, expected_size: int, expected_digest: bytes) -> None
 
 def push(args: argparse.Namespace) -> None:
     source = args.input.resolve()
-    file_class = CLASS_P4G if args.file_class == "p4g" else CLASS_EXCHANGE
-    default_name = source.name.upper() if file_class == CLASS_P4G else source.name
+    selected_class = args.file_class or infer_class(source.name)
+    file_class = class_id(selected_class)
+    default_name = (
+        source.name.upper()
+        if file_class in (CLASS_P4G, CLASS_P4R)
+        else source.name
+    )
     name = checked_remote_name(args.remote_name or default_name, file_class)
     size, digest = validate_upload(source, file_class)
     request = make_request(
@@ -390,7 +489,8 @@ def push(args: argparse.Namespace) -> None:
 
 
 def pull(args: argparse.Namespace) -> None:
-    file_class = CLASS_P4G if args.file_class == "p4g" else CLASS_EXCHANGE
+    selected_class = args.file_class or infer_class(args.remote_name)
+    file_class = class_id(selected_class)
     name = checked_remote_name(args.remote_name, file_class)
     output = args.output.resolve()
     if output.exists() and not args.replace:
@@ -408,9 +508,7 @@ def pull(args: argparse.Namespace) -> None:
             status, size, digest, chunk_bytes = negotiate(
                 connection, reader, request, DIRECTION_DOWNLOAD, file_class
             )
-            if status != STATUS_OK or not 0 < size <= (
-                P4G_MAX_BYTES if file_class == CLASS_P4G else EXCHANGE_MAX_BYTES
-            ):
+            if status != STATUS_OK or not 0 < size <= maximum_bytes(file_class):
                 raise TransferError("badge returned invalid download metadata")
             received = 0
             expected_sequence = 0
@@ -446,8 +544,12 @@ def pull(args: argparse.Namespace) -> None:
             verify_done(done, size, digest)
             if actual_digest != digest:
                 raise TransferError("download SHA-256 differs from badge proof")
-            if file_class == CLASS_P4G:
-                validate_p4g_host(temporary.read_bytes())
+            if file_class in (CLASS_P4G, CLASS_P4R):
+                data = temporary.read_bytes()
+                if file_class == CLASS_P4G:
+                    validate_p4g_host(data)
+                else:
+                    validate_p4r_host(data)
             temporary.replace(output)
             completed = True
             print(
@@ -464,11 +566,13 @@ def parser() -> argparse.ArgumentParser:
         description="Push or pull verified files through the P4 Console OS H1 port."
     )
     subparsers = result.add_subparsers(dest="command", required=True)
-    push_parser = subparsers.add_parser("push", help="upload a P4G or exchange file")
+    push_parser = subparsers.add_parser(
+        "push", help="upload a P4G, P4R, or exchange file"
+    )
     push_parser.add_argument("input", type=Path)
     push_parser.add_argument("--port")
     push_parser.add_argument(
-        "--class", dest="file_class", choices=("p4g", "exchange"), default="p4g"
+        "--class", dest="file_class", choices=("p4g", "p4r", "exchange")
     )
     push_parser.add_argument("--remote-name")
     push_parser.add_argument("--no-replace", action="store_true")
@@ -479,12 +583,14 @@ def parser() -> argparse.ArgumentParser:
         help="seconds to wait for durable device activation (default: 600)",
     )
 
-    pull_parser = subparsers.add_parser("pull", help="download a P4G or exchange file")
+    pull_parser = subparsers.add_parser(
+        "pull", help="download a P4G, P4R, or exchange file"
+    )
     pull_parser.add_argument("remote_name")
     pull_parser.add_argument("output", type=Path)
     pull_parser.add_argument("--port")
     pull_parser.add_argument(
-        "--class", dest="file_class", choices=("p4g", "exchange"), default="p4g"
+        "--class", dest="file_class", choices=("p4g", "p4r", "exchange")
     )
     pull_parser.add_argument("--replace", action="store_true")
     return result
@@ -492,8 +598,6 @@ def parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
-    if args.command == "push" and args.file_class is None:
-        args.file_class = "p4g" if args.input.suffix.lower() == ".p4g" else "exchange"
     try:
         push(args) if args.command == "push" else pull(args)
         return 0

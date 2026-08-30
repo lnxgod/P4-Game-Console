@@ -61,13 +61,17 @@ unit still requires the complete first-write backup from `AGENTS.md`.
 Native cartridges can be installed live without changing firmware:
 
 ```sh
+python3 scripts/p4-transfer.py push /absolute/path/GAME.P4R \
+  --port /dev/cu.wchusbserial...
 python3 scripts/p4-transfer.py push /absolute/path/GAME.P4G \
   --port /dev/cu.wchusbserial...
 ```
 
-The host and badge validate the bounded P4G structure and SHA-256, stage the
-write atomically, read it back, and refresh the native catalog. Use
-`--no-replace` when checking whether an exact package is already present.
+The host and badge validate bounded P4G and P4R structures and SHA-256, stage
+each write atomically, and read it back; P4G refreshes the native catalog.
+When both files change, remain on File Transfer and send P4R first, then P4G.
+The two writes are not a crash-atomic pair. Use `--no-replace` when checking
+whether an exact package is already present.
 
 Boot readiness gates only on display, SD mount, and native catalog readiness.
 Doom and Chex files remain untrusted SD inputs: perform their exact full-file

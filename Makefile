@@ -167,6 +167,7 @@ p4-content-host:
 	cmake --build build-host/p4_content_catalog
 	ctest --test-dir build-host/p4_content_catalog --output-on-failure
 	python3 scripts/tests/test-p4-content.py
+	python3 scripts/tests/test-p4-transfer.py
 
 p4-multiplayer-host:
 	cmake -S components/p4_multiplayer -B build-host/p4_multiplayer -G Ninja

@@ -4585,8 +4585,11 @@ static void draw_file_transfer(const console_shell_t *shell,
                 CONSOLE_FILE_TRANSFER_CLASS_P4G
             ? "P4G"
             : shell->runtime.file_transfer_class ==
-                    CONSOLE_FILE_TRANSFER_CLASS_EXCHANGE
-                ? "EXCHANGE" : "NONE";
+                    CONSOLE_FILE_TRANSFER_CLASS_P4R
+                ? "P4R"
+                : shell->runtime.file_transfer_class ==
+                        CONSOLE_FILE_TRANSFER_CLASS_EXCHANGE
+                    ? "EXCHANGE" : "NONE";
     char detail[48];
     (void)snprintf(
         detail, sizeof(detail), "%s %s  %lu/%lu BYTES",
@@ -4611,7 +4614,7 @@ static void draw_file_transfer(const console_shell_t *shell,
               "MAC TOOL: scripts/p4-transfer.py",
               COLOR_CYAN, 1U, 37U);
     draw_text(pixels, stride, 14, 166,
-              "P4G -> /GAMES   FILES -> /TRANSFER",
+              "P4G/P4R -> /GAMES   FILES -> /TRANSFER",
               COLOR_WHITE, 1U, 42U);
     draw_text(pixels, stride, 14, 179,
               "H1 LINK; GAME MULTIPLAYER IS ISOLATED",

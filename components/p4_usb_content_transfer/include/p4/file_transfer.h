@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 enum {
-    P4_FILE_TRANSFER_PROTOCOL_VERSION = 1,
+    P4_FILE_TRANSFER_PROTOCOL_VERSION = 2,
     P4_FILE_TRANSFER_NAME_BYTES = 40,
     P4_FILE_TRANSFER_CHUNK_BYTES = 4096,
     P4_FILE_TRANSFER_EXCHANGE_MAX_BYTES = 8 * 1024 * 1024,
@@ -53,6 +53,8 @@ typedef enum {
     P4_FILE_TRANSFER_CLASS_P4G = 1,
     /** Opaque hash-checked exchange file under /TRANSFER. */
     P4_FILE_TRANSFER_CLASS_EXCHANGE = 2,
+    /** Validated P4RES01 resource sidecar under /GAMES. */
+    P4_FILE_TRANSFER_CLASS_P4R = 3,
 } p4_file_transfer_class_t;
 
 typedef enum {

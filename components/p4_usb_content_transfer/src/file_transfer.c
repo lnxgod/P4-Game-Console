@@ -24,6 +24,7 @@
 #include "mbedtls/sha256.h"
 #include "p4/content_catalog.h"
 #include "p4/game_package.h"
+#include "p4/game_resource.h"
 
 enum {
     REQUEST_BYTES = 88,
@@ -309,6 +310,30 @@ static bool p4g_name_valid(const char *name)
     return true;
 }
 
+static bool p4r_name_valid(const char *name)
+{
+    const size_t length = strlen(name);
+    if (length < 5U || length > 36U ||
+        strcmp(name + length - 4U, ".P4R") != 0) {
+        return false;
+    }
+    const size_t base_length = length - 4U;
+    if (base_length > 32U ||
+        !((name[0] >= 'A' && name[0] <= 'Z') ||
+          (name[0] >= '0' && name[0] <= '9'))) {
+        return false;
+    }
+    for (size_t index = 0U; index < base_length; ++index) {
+        const char byte = name[index];
+        if (!((byte >= 'A' && byte <= 'Z') ||
+              (byte >= '0' && byte <= '9') ||
+              byte == '_' || byte == '-')) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static bool exchange_name_valid(const char *name)
 {
     const size_t length = strlen(name);
@@ -333,9 +358,10 @@ static bool exchange_name_valid(const char *name)
 
 static p4_file_transfer_status_t prepare_paths(void)
 {
-    const char *const suffix =
-        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4G
-            ? "/GAMES" : "/TRANSFER";
+    const bool game_content =
+        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4G ||
+        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4R;
+    const char *const suffix = game_content ? "/GAMES" : "/TRANSFER";
     char directory[P4_CONTENT_PATH_BYTES];
     if (!append_path(directory, sizeof(directory),
                      s_transfer.storage_root, suffix)) {
@@ -551,15 +577,75 @@ static p4_file_transfer_status_t validate_p4g(
     return status;
 }
 
+static p4_file_transfer_status_t validate_p4r(
+    const char *path, uint32_t size)
+{
+    uint8_t *package = heap_caps_malloc(
+        size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    if (package == NULL) {
+        package = heap_caps_malloc(size, MALLOC_CAP_8BIT);
+    }
+    if (package == NULL) {
+        return P4_FILE_TRANSFER_STATUS_IO;
+    }
+    const int descriptor = open(path, O_RDONLY);
+    if (descriptor < 0) {
+        heap_caps_free(package);
+        return P4_FILE_TRANSFER_STATUS_IO;
+    }
+    size_t offset = 0U;
+    while (offset < size) {
+        const ssize_t count = read(
+            descriptor, package + offset, (size_t)size - offset);
+        if (count < 0 && errno == EINTR) {
+            continue;
+        }
+        if (count <= 0) {
+            break;
+        }
+        offset += (size_t)count;
+        (void)esp_task_wdt_reset();
+    }
+    const bool close_ok = close(descriptor) == 0;
+    p4_game_resource_info_t info;
+    p4_file_transfer_status_t status =
+        offset == size && close_ok &&
+        p4_game_resource_parse(package, size, &info) ==
+            P4_GAME_RESOURCE_VALID
+            ? P4_FILE_TRANSFER_STATUS_OK
+            : P4_FILE_TRANSFER_STATUS_BAD_PACKAGE;
+    uint8_t payload_digest[32];
+    if (status == P4_FILE_TRANSFER_STATUS_OK) {
+        status = digest_memory(
+            package + info.payload_offset,
+            info.payload_bytes, payload_digest);
+        if (status == P4_FILE_TRANSFER_STATUS_OK &&
+            memcmp(payload_digest, info.payload_sha256,
+                   sizeof(payload_digest)) != 0) {
+            status = P4_FILE_TRANSFER_STATUS_BAD_PACKAGE;
+        }
+    }
+    heap_caps_free(package);
+    return status;
+}
+
+static uint32_t class_maximum_bytes(p4_file_transfer_class_t file_class)
+{
+    if (file_class == P4_FILE_TRANSFER_CLASS_P4G) {
+        return P4_GAME_PACKAGE_MAX_BYTES;
+    }
+    if (file_class == P4_FILE_TRANSFER_CLASS_P4R) {
+        return P4_GAME_RESOURCE_MAX_BYTES;
+    }
+    return P4_FILE_TRANSFER_EXCHANGE_MAX_BYTES;
+}
+
 static p4_file_transfer_status_t validate_path(
     const char *path, uint32_t required_size,
     const uint8_t required_digest[32],
     uint32_t *size_out, uint8_t digest_out[32])
 {
-    const uint32_t maximum =
-        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4G
-            ? P4_GAME_PACKAGE_MAX_BYTES
-            : P4_FILE_TRANSFER_EXCHANGE_MAX_BYTES;
+    const uint32_t maximum = class_maximum_bytes(s_transfer.file_class);
     uint32_t actual_size = 0U;
     uint8_t actual_digest[32];
     p4_file_transfer_status_t status = hash_file(
@@ -576,6 +662,10 @@ static p4_file_transfer_status_t validate_path(
     if (status == P4_FILE_TRANSFER_STATUS_OK &&
         s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4G) {
         status = validate_p4g(path, actual_size);
+    }
+    if (status == P4_FILE_TRANSFER_STATUS_OK &&
+        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4R) {
+        status = validate_p4r(path, actual_size);
     }
     if (status == P4_FILE_TRANSFER_STATUS_OK) {
         if (size_out != NULL) {
@@ -852,12 +942,15 @@ static void accept_request(void)
         return;
     }
     if (s_transfer.file_class != P4_FILE_TRANSFER_CLASS_P4G &&
-        s_transfer.file_class != P4_FILE_TRANSFER_CLASS_EXCHANGE) {
+        s_transfer.file_class != P4_FILE_TRANSFER_CLASS_EXCHANGE &&
+        s_transfer.file_class != P4_FILE_TRANSFER_CLASS_P4R) {
         reject_request(P4_FILE_TRANSFER_STATUS_UNSUPPORTED);
         return;
     }
     if ((s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4G &&
          !p4g_name_valid(s_transfer.file_name)) ||
+        (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4R &&
+         !p4r_name_valid(s_transfer.file_name)) ||
         (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_EXCHANGE &&
          !exchange_name_valid(s_transfer.file_name))) {
         reject_request(P4_FILE_TRANSFER_STATUS_BAD_NAME);
@@ -869,9 +962,7 @@ static void accept_request(void)
     }
     if (s_transfer.direction == P4_FILE_TRANSFER_UPLOAD) {
         const uint32_t maximum =
-            s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4G
-                ? P4_GAME_PACKAGE_MAX_BYTES
-                : P4_FILE_TRANSFER_EXCHANGE_MAX_BYTES;
+            class_maximum_bytes(s_transfer.file_class);
         if ((flags & (uint16_t)~P4_FILE_TRANSFER_FLAG_REPLACE) != 0U ||
             size == 0U || size > maximum) {
             reject_request(size > maximum
@@ -1139,12 +1230,13 @@ esp_err_t p4_file_transfer_init(
     ESP_LOGI(TAG,
              "P4_FILE_TRANSFER READY protocol=%u transport=h1-ch343-uart "
              "idle_baud=%u transfer_baud=%u chunk=%u "
-             "p4g_max=%u exchange_max=%u",
+             "p4g_max=%u p4r_max=%u exchange_max=%u",
              (unsigned)P4_FILE_TRANSFER_PROTOCOL_VERSION,
              (unsigned)transport->idle_baud,
              (unsigned)P4_CONTENT_TRANSFER_BAUD,
              (unsigned)P4_FILE_TRANSFER_CHUNK_BYTES,
              (unsigned)P4_GAME_PACKAGE_MAX_BYTES,
+             (unsigned)P4_GAME_RESOURCE_MAX_BYTES,
              (unsigned)P4_FILE_TRANSFER_EXCHANGE_MAX_BYTES);
     return ESP_OK;
 }

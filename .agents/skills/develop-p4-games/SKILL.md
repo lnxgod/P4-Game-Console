@@ -144,10 +144,12 @@ card-reader copy is also valid. Never let the Mac and Console OS own the
 filesystem at the same time. Open Game Manager to refresh and launch the game.
 Do not flash the OS for a game-only update.
 
-Prefer H1 when the badge is running and only a cartridge needs to move. The
-default transfer class is `p4g`:
+Prefer H1 when the badge is running and a cartridge or its resource sidecar
+needs to move. The transfer class is inferred from `.P4G` or `.P4R`:
 
 ```sh
+python3 scripts/p4-transfer.py push /absolute/path/GAME.P4R \
+  --port /dev/cu.wchusbserial...
 python3 scripts/p4-transfer.py push /absolute/path/GAME.P4G \
   --port /dev/cu.wchusbserial...
 python3 scripts/p4-transfer.py push /absolute/path/GAME.P4G \
@@ -158,8 +160,10 @@ The host rejects unsafe names, oversize files, malformed package geometry, API
 mismatches, and payload-digest failures before sending. Console OS repeats the
 bounded package validation, SHA-256 verification, atomic staging, and readback
 under `/GAMES`; a successful P4G upload invalidates and reloads the native game
-catalog without rebooting. Use `--class exchange` only for the separate
-File Transfer exchange area, never to bypass native cartridge validation.
+catalog without rebooting. When both files change, remain on File Transfer and
+send P4R first, then P4G. The two individually atomic writes are not a
+crash-atomic pair. Use `--class exchange` only for the separate File Transfer
+exchange area, never to bypass native package validation.
 
 For a hardware acceptance, perform one named run that launches the changed
 game, exercises its changed behavior, and returns to the launcher with Back.

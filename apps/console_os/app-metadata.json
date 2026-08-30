@@ -195,7 +195,7 @@
       "medium": "removable microSD",
       "filesystem": "FAT32 (MBR), volume name P4GAMES; ExFAT unsupported",
       "runtime_access": "read-only while app-owned; exclusive host read/write while exported",
-      "laptop_transfer": "System-page USB Mode button controls exclusive USB device MSC on native H2; H1 remains programming UART",
+      "laptop_transfer": "File Transfer uses H1 UART for validated P4G/P4R and isolated exchange files; System-page USB Mode controls exclusive USB device MSC on native H2",
       "usb_block_addressing": "64-bit byte ranges for the full 32 GB card; bounded DMA-safe 4 KiB SD transactions with synchronous readback",
       "internal_game_data_partition": false,
       "ota_slot_bytes": 8323072,

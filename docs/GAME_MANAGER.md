@@ -33,6 +33,12 @@ The catalog is rebuilt only after the app regains ownership. Removal is a
 confirmed Game Manager action; it removes a declared resource sidecar before
 its executable so an old resource cannot be inherited by a later package.
 
+On Waveshare, the H1 File Transfer app can update the same files without USB
+Drive mode. Remain on File Transfer, send a changed P4R first and its P4G
+second with `scripts/p4-transfer.py`; the P4G transaction refreshes the native
+catalog. Each replacement is atomic, but the two-file sequence is not one
+crash-atomic transaction.
+
 ## Atomic OS updates
 
 The original 7 MiB factory-app range is split into two OTA slots while the

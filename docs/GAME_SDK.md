@@ -119,13 +119,28 @@ python3 scripts/p4-transfer.py push /absolute/path/STAR_HOP.P4G \
   --port /dev/cu.wchusbserial...
 ```
 
-`push` defaults to class `p4g`. The host and badge independently validate the
-uppercase safe name, package bound and geometry, API version, embedded payload
-digest, and complete-file SHA-256. Console OS writes through a staging file,
-reads the result back, atomically installs under `/GAMES`, and refreshes the
-native catalog without rebooting. Add `--no-replace` to prove an exact package
-is already present without overwriting it. Use H2 USB Drive mode only when a
-mounted FAT volume or complete bundle workflow is actually needed.
+The tool infers `p4g` or `p4r` from the suffix; opaque files require an explicit
+`--class exchange`. The host and badge independently validate
+uppercase safe names, package bounds and geometry, embedded payload digests,
+and complete-file SHA-256. Console OS writes through a staging file, reads the
+result back, and atomically installs each `.P4G` or `.P4R` under `/GAMES`.
+For a game with a resource sidecar, stay on the File Transfer screen and send
+the resource first, then the executable:
+
+```sh
+python3 scripts/p4-transfer.py push /absolute/path/STAR_HOP.P4R \
+  --port /dev/cu.wchusbserial...
+python3 scripts/p4-transfer.py push /absolute/path/STAR_HOP.P4G \
+  --port /dev/cu.wchusbserial...
+```
+
+Keep the badge on File Transfer until both commands and readbacks pass. The
+second transaction refreshes the native catalog without rebooting. Each file
+replacement is atomic, but interruption between the two can leave the old
+executable with the new resource; retain the prior pair for recovery. Add
+`--no-replace` to prove an exact package is already present without
+overwriting it. Use H2 USB Drive mode only when a mounted FAT volume or
+complete bundle workflow is actually needed.
 
 Executable `.P4G` packages are never linked into the OTA application. The
 launcher and loader support storage-backed native entries. The separate

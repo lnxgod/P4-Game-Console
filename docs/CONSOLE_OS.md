@@ -419,11 +419,15 @@ USB FAT32 volume named `P4GAMES`; ExFAT is rejected because the pinned firmware
 mount does not support it. Recover a card with `diskutil eraseDisk MS-DOS
 P4GAMES MBRFormat /dev/diskN` only after resolving the exact external disk. H1
 remains programming UART and also carries bounded, SHA-256-verified transfers
-at a negotiated 921600 baud. `scripts/p4-transfer.py push GAME.P4G --port ...`
-defaults to the native P4G class, validates both ends, stages and reads back the
-write, and invalidates the native catalog so the game appears without reboot.
-H2 and the app never own the filesystem concurrently, and runtime formatting
-remains forbidden.
+at a negotiated 921600 baud. `scripts/p4-transfer.py` infers validated P4G and
+P4R classes from their suffixes, installs both under `/GAMES`, and requires
+`--class exchange` for opaque files under `/TRANSFER`. It validates both ends,
+stages and reads back each write, and invalidates the native catalog after a
+P4G so the game appears without reboot. Send a declared P4R first and its
+matching P4G second while remaining on the File Transfer screen. Each replace
+is atomic; the pair is interruption-sensitive, so retain the prior pair for
+recovery. H2 and the app never own the filesystem concurrently, and runtime
+formatting remains forbidden.
 
 Boot does not hash Doom or Chex on its critical path. After SD mount and native
 catalog readiness, the launcher becomes interactive while those doors remain
