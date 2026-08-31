@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.6.1",
+  "version": "1.8.0",
   "package_file": "LORD.P4G",
   "component": "lord",
   "entry_symbol": "p4_lord_game",

@@ -41,6 +41,17 @@ LORD_MAIL_SENDER_HERO = 10
 LORD_MAIL_CUSTOM = 6
 
 
+@dataclasses.dataclass(frozen=True)
+class DirectoryEntry:
+    name: str
+    actor_id: bytes
+    dragon_kills: int
+    level: int
+    experience: int
+    pvp_wins: int
+    pvp_losses: int
+
+
 def encode_mailbox(record: bytes, mailbox: list[tuple[int, bytes]]) -> bytes:
     """Patch the fixed LDSV mail area and repair both nested CRCs."""
     if len(mailbox) > LDSV_MAIL_RECORD_COUNT:
@@ -686,6 +697,7 @@ class ProtocolConsole:
             p4rm.DIRECTORY_PAGE,
             p4rm.DIRECTORY_SUMMARY,
             p4rm.DIRECTORY_STATS,
+            p4rm.DIRECTORY_DEEDS,
         }
         result: list[p4rm.Message] = []
         remaining: list[p4mp.Packet] = []
@@ -702,7 +714,9 @@ class ProtocolConsole:
         return result
 
     @staticmethod
-    def _decode_directory_summary(message: p4rm.Message) -> tuple[str, bytes]:
+    def _decode_directory_summary(
+        message: p4rm.Message,
+    ) -> tuple[str, bytes, int, int, int]:
         if len(message.payload) != 44:
             raise AssertionError("directory summary is malformed")
         actor_id = message.payload[:16]
@@ -726,11 +740,11 @@ class ProtocolConsole:
             raise AssertionError("directory summary fields are invalid")
         # The final four bytes are two bounded uint16 counters.  Unpacking is
         # intentional validation even though identity lookup needs only name.
-        struct.unpack_from("<HH", message.payload, 40)
-        return name, actor_id
+        pvp_wins, pvp_losses = struct.unpack_from("<HH", message.payload, 40)
+        return name, actor_id, level, pvp_wins, pvp_losses
 
     @staticmethod
-    def _decode_directory_stats(message: p4rm.Message) -> bytes:
+    def _decode_directory_stats(message: p4rm.Message) -> tuple[bytes, int]:
         if len(message.payload) != 44 or message.payload[-2:] != b"\0\0":
             raise AssertionError("directory stats are malformed")
         (
@@ -739,7 +753,7 @@ class ProtocolConsole:
             max_hit_points,
             strength,
             defense,
-            _experience,
+            experience,
             _chompcoin,
             trust,
             teamed,
@@ -754,11 +768,20 @@ class ProtocolConsole:
             or teamed > 1
         ):
             raise AssertionError("directory stats fields are invalid")
-        return actor_id
+        return actor_id, experience
+
+    @staticmethod
+    def _decode_directory_deeds(message: p4rm.Message) -> tuple[bytes, int]:
+        if len(message.payload) != 18 or message.payload[17] != 0:
+            raise AssertionError("directory deeds are malformed")
+        actor_id = message.payload[:16]
+        if actor_id == bytes(16):
+            raise AssertionError("directory deeds have no actor")
+        return actor_id, message.payload[16]
 
     def _request_directory_page(
         self, offset: int
-    ) -> tuple[int, list[tuple[str, bytes]]]:
+    ) -> tuple[int, list[DirectoryEntry]]:
         if self.hub is None:
             raise AssertionError("console has no hub session")
         if not 0 <= offset < 100 or offset % 8 != 0:
@@ -774,8 +797,9 @@ class ProtocolConsole:
         )
         total: int | None = None
         expected_count: int | None = None
-        summaries: dict[int, tuple[str, bytes]] = {}
-        stats: dict[int, bytes] = {}
+        summaries: dict[int, tuple[str, bytes, int, int, int]] = {}
+        stats: dict[int, tuple[bytes, int]] = {}
+        deeds: dict[int, tuple[bytes, int]] = {}
         empty_summary_seen = False
         for _attempt in range(64):
             self.hub.tick()
@@ -828,24 +852,48 @@ class ProtocolConsole:
                     stats[message.chunk_index] = self._decode_directory_stats(
                         message
                     )
+                    continue
+                if message.kind == p4rm.DIRECTORY_DEEDS:
+                    if (
+                        message.chunk_count != expected_count
+                        or not 0 <= message.chunk_index < expected_count
+                        or message.chunk_index in deeds
+                    ):
+                        raise AssertionError("directory deeds index is invalid")
+                    deeds[message.chunk_index] = self._decode_directory_deeds(
+                        message
+                    )
             if expected_count == 0 and empty_summary_seen:
                 return total, []
             if (
                 expected_count is not None
                 and len(summaries) == expected_count
                 and len(stats) == expected_count
+                and len(deeds) == expected_count
             ):
-                entries: list[tuple[str, bytes]] = []
+                entries: list[DirectoryEntry] = []
                 for index in range(expected_count):
-                    name, actor_id = summaries[index]
-                    if stats[index] != actor_id:
+                    name, actor_id, level, pvp_wins, pvp_losses = summaries[index]
+                    stats_actor, experience = stats[index]
+                    deeds_actor, dragon_kills = deeds[index]
+                    if stats_actor != actor_id or deeds_actor != actor_id:
                         raise AssertionError(
-                            "directory summary/stats identity changed"
+                            "directory summary/stats/deeds identity changed"
                         )
-                    entries.append((name, actor_id))
-                if len({name for name, _actor in entries}) != len(entries):
+                    entries.append(
+                        DirectoryEntry(
+                            name,
+                            actor_id,
+                            dragon_kills,
+                            level,
+                            experience,
+                            pvp_wins,
+                            pvp_losses,
+                        )
+                    )
+                if len({entry.name for entry in entries}) != len(entries):
                     raise AssertionError("directory page repeats a name")
-                if len({_actor for _name, _actor in entries}) != len(entries):
+                if len({entry.actor_id for entry in entries}) != len(entries):
                     raise AssertionError("directory page repeats an actor")
                 return total, entries
         raise AssertionError("directory page did not complete")
@@ -853,7 +901,7 @@ class ProtocolConsole:
     def request_directory(self) -> dict[str, bytes]:
         actors: dict[str, bytes] = {}
         actor_ids: set[bytes] = set()
-        ordered_entries: list[tuple[str, bytes]] = []
+        ordered_entries: list[DirectoryEntry] = []
         expected_total: int | None = None
         offset = 0
         while True:
@@ -862,12 +910,12 @@ class ProtocolConsole:
                 expected_total = total
             elif total != expected_total:
                 raise AssertionError("directory total changed between pages")
-            for name, actor_id in entries:
-                if name in actors or actor_id in actor_ids:
+            for entry in entries:
+                if entry.name in actors or entry.actor_id in actor_ids:
                     raise AssertionError("directory repeats an identity")
-                actors[name] = actor_id
-                actor_ids.add(actor_id)
-                ordered_entries.append((name, actor_id))
+                actors[entry.name] = entry.actor_id
+                actor_ids.add(entry.actor_id)
+                ordered_entries.append(entry)
             if offset + len(entries) >= total:
                 break
             if len(entries) != 8:
@@ -876,9 +924,18 @@ class ProtocolConsole:
         if len(actors) != expected_total:
             raise AssertionError("directory did not return every profile")
         if ordered_entries != sorted(
-            ordered_entries, key=lambda entry: (entry[0].lower(), entry[1])
+            ordered_entries,
+            key=lambda entry: (
+                -entry.dragon_kills,
+                -entry.level,
+                -entry.experience,
+                -entry.pvp_wins,
+                entry.pvp_losses,
+                entry.name.lower(),
+                entry.actor_id,
+            ),
         ):
-            raise AssertionError("directory profiles are not stably sorted")
+            raise AssertionError("directory prestige ranking is not stable")
         return actors
 
     def request_directory_actor(self, expected_name: str) -> bytes:

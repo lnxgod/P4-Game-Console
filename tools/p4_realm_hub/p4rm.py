@@ -16,6 +16,7 @@ MAX_PAYLOAD_BYTES = MAX_MESSAGE_BYTES - HEADER_BYTES
 MAX_RECORD_BYTES = 4148
 MAX_CHUNKS = math.ceil(MAX_RECORD_BYTES / MAX_PAYLOAD_BYTES)
 BEGIN_INDEX = 0xFFFF
+MAX_ACTION_NONCE = 0x7FFFFFFFFFFFFFFF
 
 HELLO = 1
 WELCOME = 2
@@ -38,6 +39,11 @@ EVENT_BEGIN = 18
 EVENT_BODY = 19
 EVENT_ACK = 20
 DIRECTORY_PAGE = 21
+DIRECTORY_DEEDS = 22
+GUILD_STATUS = 23
+DIRECTORY_GUILD = 24
+GUILD_PAGE = 25
+GUILD_SUMMARY = 26
 
 ACTION_MAIL = 1
 ACTION_TRANSFER = 2
@@ -48,6 +54,33 @@ ACTION_PVP_BEGIN = 6
 ACTION_PVP_RESOLVE = 7
 ACTION_TAVERN = 8
 ACTION_NEWS = 9
+ACTION_GUILD = 10
+
+GUILD_CREATE = 0
+GUILD_JOIN = 1
+GUILD_LEAVE = 2
+GUILD_RALLY = 3
+GUILD_CLASH = 4
+GUILD_CHEER = 5
+
+GUILD_NAME_COUNT = 16
+GUILD_NAME_NONE = 0
+GUILD_MAX_MEMBERS = 8
+GUILD_QUEST_GOAL = 12
+
+GUILD_ROLE_NONE = 0
+GUILD_ROLE_LEADER = 1
+GUILD_ROLE_MEMBER = 2
+
+GUILD_OUTCOME_NONE = 0
+GUILD_OUTCOME_WIN = 1
+GUILD_OUTCOME_LOSS = 2
+GUILD_OUTCOME_DRAW = 3
+
+GUILD_DAILY_RALLIED = 1 << 0
+GUILD_DAILY_OUTGOING = 1 << 1
+GUILD_DAILY_CHEERED = 1 << 2
+GUILD_DAILY_ELIGIBLE = 1 << 3
 
 ACTION_OK = 0
 ACTION_INVALID = 1
@@ -88,7 +121,7 @@ def encode_message(
     chunk_index: int = 0,
     chunk_count: int = 0,
 ) -> bytes:
-    if not 1 <= kind <= DIRECTORY_PAGE:
+    if not 1 <= kind <= GUILD_SUMMARY:
         raise ValueError("invalid P4RM message kind")
     if not 1 <= transaction_id <= 0xFFFFFFFF:
         raise ValueError("P4RM transaction ID must be nonzero")
@@ -117,7 +150,7 @@ def decode_message(data: bytes) -> Message:
     )
     if magic != MAGIC or version != VERSION or header_bytes != HEADER_BYTES:
         raise ValueError("invalid P4RM identity")
-    if flags != 0 or not 1 <= kind <= DIRECTORY_PAGE:
+    if flags != 0 or not 1 <= kind <= GUILD_SUMMARY:
         raise ValueError("invalid P4RM kind or flags")
     if transaction_id == 0 or count > MAX_CHUNKS:
         raise ValueError("invalid P4RM transaction")
@@ -307,11 +340,11 @@ def encode_action_begin(
     body: bytes,
 ) -> bytes:
     if (
-        not ACTION_MAIL <= kind <= ACTION_NEWS
+        not ACTION_MAIL <= kind <= ACTION_GUILD
         or not 0 <= code <= 0xFF
         or not 0 <= value <= 0xFFFF
         or len(target_actor_id) != 16
-        or nonce == 0
+        or not 1 <= nonce <= MAX_ACTION_NONCE
         or len(body) > MAX_PAYLOAD_BYTES
     ):
         raise ValueError("invalid realm action")
@@ -335,8 +368,8 @@ def decode_action_begin(payload: bytes) -> tuple[int, int, int, bytes, int, int,
         "<BBH16sQHHI", payload
     )
     if (
-        not ACTION_MAIL <= kind <= ACTION_NEWS
-        or nonce == 0
+        not ACTION_MAIL <= kind <= ACTION_GUILD
+        or not 1 <= nonce <= MAX_ACTION_NONCE
         or body_bytes > MAX_PAYLOAD_BYTES
         or reserved != 0
         or (body_bytes == 0) != (body_crc == 0)
@@ -350,7 +383,7 @@ def encode_action_result(
 ) -> bytes:
     if (
         not ACTION_OK <= status <= ACTION_BUSY
-        or not ACTION_MAIL <= kind <= ACTION_NEWS
+        or not ACTION_MAIL <= kind <= ACTION_GUILD
         or not 0 <= code <= 0xFF
         or not 0 <= value <= 0xFFFFFFFF
         or not 0 <= related_id <= 0x7FFFFFFFFFFFFFFF
@@ -365,7 +398,7 @@ def decode_action_result(payload: bytes) -> tuple[int, int, int, int, int]:
     status, kind, code, reserved, value, related_id = struct.unpack("<BBBBIQ", payload)
     if (
         not ACTION_OK <= status <= ACTION_BUSY
-        or not ACTION_MAIL <= kind <= ACTION_NEWS
+        or not ACTION_MAIL <= kind <= ACTION_GUILD
         or reserved != 0
     ):
         raise ValueError("invalid action result values")
@@ -384,7 +417,7 @@ def encode_event_begin(
     encoded_name = source_name.encode("ascii", errors="strict")
     if (
         not 1 <= event_id <= 0x7FFFFFFFFFFFFFFF
-        or not ACTION_MAIL <= kind <= ACTION_NEWS
+        or not ACTION_MAIL <= kind <= ACTION_GUILD
         or not 0 <= code <= 0xFF
         or not 0 <= value <= 0xFFFFFFFF
         or len(source_actor_id) != 16
@@ -418,7 +451,7 @@ def decode_event_begin(
     terminator = name_bytes.find(b"\0")
     if (
         event_id == 0
-        or not ACTION_MAIL <= kind <= ACTION_NEWS
+        or not ACTION_MAIL <= kind <= ACTION_GUILD
         or body_bytes > MAX_PAYLOAD_BYTES
         or reserved != 0
         or source == b"\0" * 16
@@ -431,3 +464,199 @@ def decode_event_begin(
     except UnicodeDecodeError as error:
         raise ValueError("invalid event source name") from error
     return event_id, kind, code, value, source, name, body_bytes
+
+
+def encode_guild_status(
+    actor_id: bytes,
+    guild_id: int,
+    name_code: int,
+    members: int,
+    role: int,
+    prestige: int,
+    season_points: int,
+    banner_stars: int,
+    quest_progress: int,
+    quest_goal: int,
+    wins: int,
+    losses: int,
+    draws: int,
+    last_outcome: int,
+    last_opponent_code: int,
+    daily_flags: int,
+) -> bytes:
+    values = (
+        guild_id,
+        prestige,
+        season_points,
+        banner_stars,
+        quest_progress,
+        quest_goal,
+        wins,
+        losses,
+        draws,
+    )
+    if (
+        len(actor_id) != 16
+        or actor_id == b"\0" * 16
+        or any(not 0 <= item <= 0xFFFFFFFF for item in values[:3])
+        or any(not 0 <= item <= 0xFFFF for item in values[3:])
+        or not 0 <= members <= GUILD_MAX_MEMBERS
+        or role not in (GUILD_ROLE_NONE, GUILD_ROLE_LEADER, GUILD_ROLE_MEMBER)
+        or last_outcome not in (
+            GUILD_OUTCOME_NONE,
+            GUILD_OUTCOME_WIN,
+            GUILD_OUTCOME_LOSS,
+            GUILD_OUTCOME_DRAW,
+        )
+        or daily_flags & ~0x0F
+    ):
+        raise ValueError("invalid guild status")
+    if guild_id == 0:
+        if (
+            name_code != GUILD_NAME_NONE
+            or members != 0
+            or role != GUILD_ROLE_NONE
+            or prestige != 0
+            or season_points != 0
+            or banner_stars != 0
+            or quest_progress != 0
+            or quest_goal not in (0, GUILD_QUEST_GOAL)
+            or wins != 0
+            or losses != 0
+            or draws != 0
+            or last_outcome != GUILD_OUTCOME_NONE
+            or last_opponent_code != GUILD_NAME_NONE
+            or daily_flags != 0
+        ):
+            raise ValueError("invalid empty guild status")
+    elif not 1 <= name_code <= GUILD_NAME_COUNT or members == 0 or role == 0:
+        raise ValueError("invalid active guild status")
+    if last_opponent_code != GUILD_NAME_NONE and not (
+        1 <= last_opponent_code <= GUILD_NAME_COUNT
+    ):
+        raise ValueError("invalid guild opponent")
+    return struct.pack(
+        "<16sIHBBIIHHHHHHBHB",
+        actor_id,
+        guild_id,
+        name_code,
+        members,
+        role,
+        prestige,
+        season_points,
+        banner_stars,
+        quest_progress,
+        quest_goal,
+        wins,
+        losses,
+        draws,
+        last_outcome,
+        last_opponent_code,
+        daily_flags,
+    )
+
+
+def decode_guild_status(payload: bytes) -> tuple[int | bytes, ...]:
+    if len(payload) != 48:
+        raise ValueError("invalid guild status length")
+    values = struct.unpack("<16sIHBBIIHHHHHHBHB", payload)
+    encode_guild_status(*values)
+    return values
+
+
+def encode_directory_guild(
+    actor_id: bytes, guild_id: int, name_code: int
+) -> bytes:
+    if len(actor_id) != 16 or actor_id == b"\0" * 16:
+        raise ValueError("invalid directory guild actor")
+    if guild_id == 0:
+        if name_code != GUILD_NAME_NONE:
+            raise ValueError("invalid empty directory guild")
+    elif not 0 <= guild_id <= 0xFFFFFFFF or not 1 <= name_code <= GUILD_NAME_COUNT:
+        raise ValueError("invalid directory guild")
+    return struct.pack("<16sIHH", actor_id, guild_id, name_code, 0)
+
+
+def decode_directory_guild(payload: bytes) -> tuple[bytes, int, int]:
+    if len(payload) != 24:
+        raise ValueError("invalid directory guild length")
+    actor_id, guild_id, name_code, reserved = struct.unpack("<16sIHH", payload)
+    if reserved != 0:
+        raise ValueError("invalid directory guild reserved field")
+    encode_directory_guild(actor_id, guild_id, name_code)
+    return actor_id, guild_id, name_code
+
+
+def encode_guild_page_request(offset: int) -> bytes:
+    if not 0 <= offset <= 0xFFFF:
+        raise ValueError("invalid guild page offset")
+    return struct.pack("<H", offset)
+
+
+def decode_guild_page_request(payload: bytes) -> int:
+    if len(payload) != 2:
+        raise ValueError("invalid guild page request")
+    return struct.unpack("<H", payload)[0]
+
+
+def encode_guild_page(offset: int, total: int) -> bytes:
+    if not 0 <= offset <= total <= 0xFFFF:
+        raise ValueError("invalid guild page")
+    return struct.pack("<HH", offset, total)
+
+
+def decode_guild_page(payload: bytes) -> tuple[int, int]:
+    if len(payload) != 4:
+        raise ValueError("invalid guild page length")
+    offset, total = struct.unpack("<HH", payload)
+    if offset > total:
+        raise ValueError("invalid guild page values")
+    return offset, total
+
+
+def encode_guild_summary(
+    guild_id: int,
+    name_code: int,
+    members: int,
+    banner_stars: int,
+    prestige: int,
+    season_points: int,
+    wins: int,
+    losses: int,
+    draws: int,
+) -> bytes:
+    if (
+        not 1 <= guild_id <= 0xFFFFFFFF
+        or not 1 <= name_code <= GUILD_NAME_COUNT
+        or not 1 <= members <= GUILD_MAX_MEMBERS
+        or not 0 <= banner_stars <= 0xFF
+        or not 0 <= prestige <= 0xFFFFFFFF
+        or not 0 <= season_points <= 0xFFFFFFFF
+        or any(not 0 <= item <= 0xFFFF for item in (wins, losses, draws))
+    ):
+        raise ValueError("invalid guild summary")
+    return struct.pack(
+        "<IHBBIIHHHH",
+        guild_id,
+        name_code,
+        members,
+        banner_stars,
+        prestige,
+        season_points,
+        wins,
+        losses,
+        draws,
+        0,
+    )
+
+
+def decode_guild_summary(
+    payload: bytes,
+) -> tuple[int, int, int, int, int, int, int, int, int]:
+    if len(payload) != 24:
+        raise ValueError("invalid guild summary length")
+    values = struct.unpack("<IHBBIIHHHH", payload)
+    if values[-1] != 0:
+        raise ValueError("invalid guild summary reserved field")
+    encode_guild_summary(*values[:-1])
+    return values[:-1]

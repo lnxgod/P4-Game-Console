@@ -23,6 +23,12 @@ from tools.p4_realm_hub.lord_snapshot import (
 MAX_REALM_PLAYERS = 100
 MAX_PVP_FIGHTS_PER_REALM_DAY = 3
 MAX_FRIENDSHIP_ACTIONS_PER_REALM_DAY = 3
+GUILD_SEASON_DAYS = 24
+GUILD_REJOIN_COOLDOWN_DAYS = 1
+GUILD_CLASH_PAIR_COOLDOWN_DAYS = 3
+GUILD_CLASH_PARTICIPATION_POINTS = 12
+GUILD_CLASH_ROUTE_BONUS = 4
+GUILD_CLASH_ROLL_SPAN = 7
 
 
 class RealmFullError(RuntimeError):
@@ -53,10 +59,46 @@ class RealmProfile:
     chompcoin: int
     pvp_wins: int
     pvp_losses: int
+    dragon_kills: int
     online: bool
     bank: int = 0
     trust: int = 0
     teamed: bool = False
+    guild_id: int = 0
+    guild_name_code: int = p4rm.GUILD_NAME_NONE
+
+
+@dataclasses.dataclass(frozen=True)
+class GuildStatus:
+    actor_id: bytes
+    guild_id: int = 0
+    name_code: int = p4rm.GUILD_NAME_NONE
+    members: int = 0
+    role: int = p4rm.GUILD_ROLE_NONE
+    prestige: int = 0
+    season_points: int = 0
+    banner_stars: int = 0
+    quest_progress: int = 0
+    quest_goal: int = p4rm.GUILD_QUEST_GOAL
+    wins: int = 0
+    losses: int = 0
+    draws: int = 0
+    last_outcome: int = p4rm.GUILD_OUTCOME_NONE
+    last_opponent_code: int = p4rm.GUILD_NAME_NONE
+    daily_flags: int = 0
+
+
+@dataclasses.dataclass(frozen=True)
+class GuildSummary:
+    guild_id: int
+    name_code: int
+    members: int
+    banner_stars: int
+    prestige: int
+    season_points: int
+    wins: int
+    losses: int
+    draws: int
 
 
 @dataclasses.dataclass(frozen=True)
@@ -150,6 +192,7 @@ class RealmStore:
                     chompcoin INTEGER NOT NULL,
                     pvp_wins INTEGER NOT NULL,
                     pvp_losses INTEGER NOT NULL,
+                    dragon_kills INTEGER NOT NULL DEFAULT 0,
                     bank INTEGER NOT NULL DEFAULT 0,
                     last_seen INTEGER NOT NULL
                 );
@@ -273,6 +316,94 @@ class RealmStore:
                     friendship_actions INTEGER NOT NULL DEFAULT 0,
                     PRIMARY KEY(actor_id, realm_day_id)
                 );
+                CREATE TABLE IF NOT EXISTS guilds (
+                    guild_id INTEGER PRIMARY KEY AUTOINCREMENT
+                        CHECK(guild_id BETWEEN 1 AND 4294967295),
+                    name_code INTEGER NOT NULL UNIQUE
+                        CHECK(name_code BETWEEN 1 AND 16),
+                    leader_actor_id BLOB NOT NULL REFERENCES actors(actor_id)
+                        CHECK(length(leader_actor_id) = 16),
+                    created_day INTEGER NOT NULL,
+                    prestige INTEGER NOT NULL DEFAULT 0
+                        CHECK(prestige BETWEEN 0 AND 4294967295),
+                    season_id INTEGER NOT NULL,
+                    season_points INTEGER NOT NULL DEFAULT 0
+                        CHECK(season_points BETWEEN 0 AND 4294967295),
+                    banner_stars INTEGER NOT NULL DEFAULT 0
+                        CHECK(banner_stars BETWEEN 0 AND 65535),
+                    quest_day INTEGER NOT NULL,
+                    quest_progress INTEGER NOT NULL DEFAULT 0
+                        CHECK(quest_progress BETWEEN 0 AND 12),
+                    quest_complete INTEGER NOT NULL DEFAULT 0
+                        CHECK(quest_complete IN (0, 1)),
+                    wins INTEGER NOT NULL DEFAULT 0
+                        CHECK(wins BETWEEN 0 AND 65535),
+                    losses INTEGER NOT NULL DEFAULT 0
+                        CHECK(losses BETWEEN 0 AND 65535),
+                    draws INTEGER NOT NULL DEFAULT 0
+                        CHECK(draws BETWEEN 0 AND 65535),
+                    last_outcome INTEGER NOT NULL DEFAULT 0
+                        CHECK(last_outcome BETWEEN 0 AND 3),
+                    last_opponent_code INTEGER NOT NULL DEFAULT 0
+                        CHECK(last_opponent_code BETWEEN 0 AND 16)
+                );
+                CREATE TABLE IF NOT EXISTS guild_members (
+                    actor_id BLOB PRIMARY KEY REFERENCES actors(actor_id)
+                        CHECK(length(actor_id) = 16),
+                    guild_id INTEGER NOT NULL REFERENCES guilds(guild_id)
+                        ON DELETE CASCADE,
+                    joined_day INTEGER NOT NULL,
+                    role INTEGER NOT NULL CHECK(role IN (1, 2))
+                );
+                CREATE INDEX IF NOT EXISTS guild_members_by_guild
+                    ON guild_members(guild_id, joined_day, actor_id);
+                CREATE TABLE IF NOT EXISTS guild_rejoin_cooldowns (
+                    actor_id BLOB PRIMARY KEY REFERENCES actors(actor_id)
+                        CHECK(length(actor_id) = 16),
+                    left_day INTEGER NOT NULL
+                );
+                CREATE TABLE IF NOT EXISTS guild_rallies (
+                    actor_id BLOB NOT NULL REFERENCES actors(actor_id)
+                        CHECK(length(actor_id) = 16),
+                    realm_day_id INTEGER NOT NULL,
+                    guild_id INTEGER NOT NULL REFERENCES guilds(guild_id)
+                        ON DELETE CASCADE,
+                    route INTEGER NOT NULL CHECK(route BETWEEN 0 AND 2),
+                    points INTEGER NOT NULL CHECK(points BETWEEN 2 AND 5),
+                    PRIMARY KEY(actor_id, realm_day_id)
+                );
+                CREATE INDEX IF NOT EXISTS guild_rallies_by_guild_day
+                    ON guild_rallies(guild_id, realm_day_id, route);
+                CREATE TABLE IF NOT EXISTS guild_clashes (
+                    clash_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    realm_day_id INTEGER NOT NULL,
+                    source_guild_id INTEGER NOT NULL,
+                    target_guild_id INTEGER NOT NULL,
+                    pair_low INTEGER NOT NULL,
+                    pair_high INTEGER NOT NULL,
+                    source_score INTEGER NOT NULL,
+                    target_score INTEGER NOT NULL,
+                    outcome INTEGER NOT NULL CHECK(outcome BETWEEN 1 AND 3),
+                    created_at INTEGER NOT NULL,
+                    CHECK(source_guild_id != target_guild_id),
+                    CHECK(pair_low < pair_high)
+                );
+                CREATE UNIQUE INDEX IF NOT EXISTS guild_clashes_outgoing_day
+                    ON guild_clashes(source_guild_id, realm_day_id);
+                CREATE UNIQUE INDEX IF NOT EXISTS guild_clashes_incoming_day
+                    ON guild_clashes(target_guild_id, realm_day_id);
+                CREATE INDEX IF NOT EXISTS guild_clashes_pair_day
+                    ON guild_clashes(pair_low, pair_high, realm_day_id DESC);
+                CREATE TABLE IF NOT EXISTS guild_cheers (
+                    source_guild_id INTEGER NOT NULL,
+                    realm_day_id INTEGER NOT NULL,
+                    target_guild_id INTEGER NOT NULL,
+                    actor_id BLOB NOT NULL REFERENCES actors(actor_id)
+                        CHECK(length(actor_id) = 16),
+                    created_at INTEGER NOT NULL,
+                    PRIMARY KEY(source_guild_id, realm_day_id),
+                    CHECK(source_guild_id != target_guild_id)
+                );
                 """
             )
             # The base CREATE script is idempotent.  Keep every additive
@@ -285,6 +416,11 @@ class RealmStore:
             if "bank" not in profile_columns:
                 database.execute(
                     "ALTER TABLE profiles ADD COLUMN bank INTEGER NOT NULL DEFAULT 0"
+                )
+            if "dragon_kills" not in profile_columns:
+                database.execute(
+                    "ALTER TABLE profiles ADD COLUMN dragon_kills "
+                    "INTEGER NOT NULL DEFAULT 0"
                 )
             operation_columns = {
                 str(row[1])
@@ -1104,20 +1240,11 @@ class RealmStore:
                 return "invalid", current_revision
 
             if prior_record is not None and adoption_grant_id is None:
-                # PvP wins and losses are lifetime counters.  Offline play can
-                # legitimately add to them, but neither counter may move
-                # backwards and every newly consumed realm result must be
-                # represented.  Cursor validation alone is insufficient: a
-                # forged client could otherwise skip a zero-ChompCoin loss and
-                # immediately appear alive again.
-                if (
-                    candidate.player.pvp_wins
-                    < prior_record.player.pvp_wins
-                    or candidate.player.pvp_losses
-                    < prior_record.player.pvp_losses
-                ):
-                    database.rollback()
-                    return "invalid", current_revision
+                # Once an actor has a realm head, PvP prestige is server-owned.
+                # A stock cached duel mutates XP/ChompCoin and one of these
+                # counters in the same snapshot; requiring the exact
+                # cursor-proven counters rejects that whole unreceipted bundle
+                # atomically while still allowing ordinary offline solo gains.
 
                 if candidate.last_realm_event_id > prior_event_cursor:
                     cursor_event = database.execute(
@@ -1211,8 +1338,8 @@ class RealmStore:
                     for semantic, lease_day_id in pvp_results
                 )
                 if (
-                    candidate.player.pvp_wins < wins_required
-                    or candidate.player.pvp_losses < losses_required
+                    candidate.player.pvp_wins != wins_required
+                    or candidate.player.pvp_losses != losses_required
                     or (
                         knockout_required
                         and candidate.player.hit_points != 0
@@ -1357,6 +1484,7 @@ class RealmStore:
                     chompcoin=projected_chompcoin,
                     pvp_wins=projected.pvp_wins,
                     pvp_losses=projected.pvp_losses,
+                    dragon_kills=projected.dragon_kills,
                     online=True,
                     bank=projected_bank,
                 ),
@@ -1390,11 +1518,13 @@ class RealmStore:
             or not 0 <= profile.hit_points <= profile.max_hit_points
             or profile.strength <= 0
             or profile.defense < 0
+            or profile.dragon_kills > 0xFF
             or min(
                 profile.experience,
                 profile.chompcoin,
                 profile.pvp_wins,
                 profile.pvp_losses,
+                profile.dragon_kills,
                 profile.bank,
             )
             < 0
@@ -1457,8 +1587,8 @@ class RealmStore:
             INSERT INTO profiles(
                 actor_id, name, hero_style, hero_class, level, flags,
                 hit_points, max_hit_points, strength, defense, experience,
-                chompcoin, pvp_wins, pvp_losses, bank, last_seen
-            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                chompcoin, pvp_wins, pvp_losses, dragon_kills, bank, last_seen
+            ) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ON CONFLICT(actor_id) DO UPDATE SET
                 name=excluded.name,
                 hero_style=excluded.hero_style,
@@ -1473,6 +1603,7 @@ class RealmStore:
                 chompcoin=excluded.chompcoin,
                 pvp_wins=excluded.pvp_wins,
                 pvp_losses=excluded.pvp_losses,
+                dragon_kills=excluded.dragon_kills,
                 bank=excluded.bank,
                 last_seen=excluded.last_seen
             """,
@@ -1491,6 +1622,7 @@ class RealmStore:
                 profile.chompcoin,
                 profile.pvp_wins,
                 profile.pvp_losses,
+                profile.dragon_kills,
                 profile.bank,
                 now,
             ),
@@ -1558,6 +1690,7 @@ class RealmStore:
                     chompcoin=chompcoin,
                     pvp_wins=projected.pvp_wins,
                     pvp_losses=projected.pvp_losses,
+                    dragon_kills=projected.dragon_kills,
                     online=False,
                     bank=bank,
                 ),
@@ -1608,6 +1741,7 @@ class RealmStore:
                        p.flags, p.hit_points, p.max_hit_points, p.strength,
                        p.defense, p.experience, p.chompcoin, p.pvp_wins,
                        p.pvp_losses, p.last_seen, p.bank,
+                       p.dragon_kills,
                        COALESCE((
                            SELECT trust FROM friendships
                            WHERE source_actor_id = ?
@@ -1621,12 +1755,19 @@ class RealmStore:
                                OR
                                (actor_high = ? AND actor_low = p.actor_id)
                            )
-                       )
+                       ),
+                       COALESCE(gm.guild_id, 0),
+                       COALESCE(g.name_code, 0)
                 FROM profiles AS p
                 JOIN heads AS h ON h.actor_id = p.actor_id
                                AND h.snapshot IS NOT NULL
+                LEFT JOIN guild_members AS gm ON gm.actor_id = p.actor_id
+                LEFT JOIN guilds AS g ON g.guild_id = gm.guild_id
                 WHERE p.actor_id != ?
-                ORDER BY p.name COLLATE NOCASE ASC, p.actor_id ASC
+                ORDER BY p.dragon_kills DESC, p.level DESC,
+                         p.experience DESC, p.pvp_wins DESC,
+                         p.pvp_losses ASC, p.name COLLATE NOCASE ASC,
+                         p.actor_id ASC
                 LIMIT ? OFFSET ?
                 """,
                 (
@@ -1656,8 +1797,11 @@ class RealmStore:
                 pvp_losses=int(row[13]),
                 online=now - int(row[14]) <= 90,
                 bank=int(row[15]),
-                trust=int(row[16]),
-                teamed=bool(row[17]),
+                dragon_kills=int(row[16]),
+                trust=int(row[17]),
+                teamed=bool(row[18]),
+                guild_id=int(row[19]),
+                guild_name_code=int(row[20]),
             )
             for row in rows
         ]
@@ -1724,6 +1868,551 @@ class RealmStore:
     def _pair(first: bytes, second: bytes) -> tuple[bytes, bytes]:
         return (first, second) if first < second else (second, first)
 
+    @staticmethod
+    def _guild_season_id(realm_day_id: int) -> int:
+        return (realm_day_id - 1) // GUILD_SEASON_DAYS
+
+    @classmethod
+    def _roll_guild_calendar(
+        cls, database: sqlite3.Connection, realm_day_id: int
+    ) -> None:
+        season_id = cls._guild_season_id(realm_day_id)
+        database.execute(
+            "UPDATE guilds SET season_id = ?, season_points = 0 "
+            "WHERE season_id < ?",
+            (season_id, season_id),
+        )
+        database.execute(
+            "UPDATE guilds SET quest_day = ?, quest_complete = 0 "
+            "WHERE quest_day < ?",
+            (realm_day_id, realm_day_id),
+        )
+
+    @staticmethod
+    def _guild_membership(
+        database: sqlite3.Connection, actor_id: bytes
+    ) -> tuple[int, int, int, int] | None:
+        row = database.execute(
+            "SELECT gm.guild_id, gm.joined_day, gm.role, g.name_code "
+            "FROM guild_members AS gm JOIN guilds AS g "
+            "ON g.guild_id = gm.guild_id WHERE gm.actor_id = ?",
+            (actor_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        return int(row[0]), int(row[1]), int(row[2]), int(row[3])
+
+    @staticmethod
+    def _add_guild_points(
+        database: sqlite3.Connection, guild_id: int, points: int
+    ) -> None:
+        database.execute(
+            "UPDATE guilds SET prestige = MIN(4294967295, prestige + ?), "
+            "season_points = MIN(4294967295, season_points + ?) "
+            "WHERE guild_id = ?",
+            (points, points, guild_id),
+        )
+
+    @staticmethod
+    def _guild_roster_metrics(
+        database: sqlite3.Connection, guild_id: int, realm_day_id: int
+    ) -> tuple[int, int, int | None, int]:
+        """Return average power, normalized participation, route, roster size.
+
+        Power is derived only from the hub's last accepted profile: four per
+        level, ten per dragon deed, plus at most fifty recorded PvP wins.
+        Same-day participation contributes 0..12 regardless of club size.
+        A tied route ballot has no majority and therefore no RPS bonus.
+        """
+        rows = database.execute(
+            "SELECT p.level, p.dragon_kills, p.pvp_wins, r.route "
+            "FROM guild_members AS gm JOIN profiles AS p "
+            "ON p.actor_id = gm.actor_id JOIN heads AS h "
+            "ON h.actor_id = p.actor_id AND h.snapshot IS NOT NULL "
+            "LEFT JOIN guild_rallies AS r ON r.actor_id = gm.actor_id "
+            "AND r.realm_day_id = ? AND r.guild_id = gm.guild_id "
+            "WHERE gm.guild_id = ? AND gm.joined_day < ? "
+            "ORDER BY gm.actor_id",
+            (realm_day_id, guild_id, realm_day_id),
+        ).fetchall()
+        if not rows:
+            return 0, 0, None, 0
+        powers = [
+            int(row[0]) * 4
+            + int(row[1]) * 10
+            + min(50, int(row[2]))
+            for row in rows
+        ]
+        rallied = [int(row[3]) for row in rows if row[3] is not None]
+        participation = (
+            GUILD_CLASH_PARTICIPATION_POINTS * len(rallied) + len(rows) // 2
+        ) // len(rows)
+        counts = [rallied.count(route) for route in range(3)]
+        maximum = max(counts, default=0)
+        route = (
+            counts.index(maximum)
+            if maximum > 0 and counts.count(maximum) == 1
+            else None
+        )
+        return sum(powers) // len(powers), participation, route, len(rows)
+
+    @staticmethod
+    def _guild_clash_rolls(
+        realm_day_id: int,
+        source_guild_id: int,
+        target_guild_id: int,
+    ) -> tuple[int, int]:
+        low = min(source_guild_id, target_guild_id)
+        high = max(source_guild_id, target_guild_id)
+        digest = hashlib.sha256(
+            b"p4-lord-clash-v1"
+            + realm_day_id.to_bytes(8, "little")
+            + low.to_bytes(4, "little")
+            + high.to_bytes(4, "little")
+        ).digest()
+        low_roll = digest[0] % GUILD_CLASH_ROLL_SPAN - 3
+        high_roll = digest[1] % GUILD_CLASH_ROLL_SPAN - 3
+        if source_guild_id == low:
+            return low_roll, high_roll
+        return high_roll, low_roll
+
+    def guild_status(self, actor_id: bytes) -> GuildStatus:
+        if len(actor_id) != 16 or actor_id == b"\0" * 16:
+            raise ValueError("actor ID must be nonzero and 16 bytes")
+        with self._lock, self._connect() as database:
+            database.execute("BEGIN IMMEDIATE")
+            realm_day_id, _ = self.realm_clock()
+            if self._profile_name(database, actor_id) is None:
+                database.rollback()
+                raise ValueError("guild status requires an accepted actor")
+            self._roll_guild_calendar(database, realm_day_id)
+            membership = self._guild_membership(database, actor_id)
+            if membership is None:
+                database.commit()
+                return GuildStatus(actor_id=actor_id)
+            guild_id, joined_day, role, name_code = membership
+            row = database.execute(
+                "SELECT prestige, season_points, banner_stars, quest_progress, "
+                "wins, losses, draws, last_outcome, last_opponent_code, "
+                "(SELECT COUNT(*) FROM guild_members WHERE guild_id = g.guild_id) "
+                "FROM guilds AS g WHERE guild_id = ?",
+                (guild_id,),
+            ).fetchone()
+            if row is None:
+                database.rollback()
+                raise RuntimeError("guild membership references no club")
+            daily_flags = 0
+            if database.execute(
+                "SELECT 1 FROM guild_rallies WHERE actor_id = ? "
+                "AND realm_day_id = ?",
+                (actor_id, realm_day_id),
+            ).fetchone() is not None:
+                daily_flags |= p4rm.GUILD_DAILY_RALLIED
+            if database.execute(
+                "SELECT 1 FROM guild_clashes WHERE source_guild_id = ? "
+                "AND realm_day_id = ?",
+                (guild_id, realm_day_id),
+            ).fetchone() is not None:
+                daily_flags |= p4rm.GUILD_DAILY_OUTGOING
+            if database.execute(
+                "SELECT 1 FROM guild_cheers WHERE source_guild_id = ? "
+                "AND realm_day_id = ?",
+                (guild_id, realm_day_id),
+            ).fetchone() is not None:
+                daily_flags |= p4rm.GUILD_DAILY_CHEERED
+            if joined_day < realm_day_id:
+                daily_flags |= p4rm.GUILD_DAILY_ELIGIBLE
+            database.commit()
+        return GuildStatus(
+            actor_id=actor_id,
+            guild_id=guild_id,
+            name_code=name_code,
+            members=min(p4rm.GUILD_MAX_MEMBERS, int(row[9])),
+            role=role,
+            prestige=min(0xFFFFFFFF, int(row[0])),
+            season_points=min(0xFFFFFFFF, int(row[1])),
+            banner_stars=min(0xFFFF, int(row[2])),
+            quest_progress=min(p4rm.GUILD_QUEST_GOAL, int(row[3])),
+            wins=min(0xFFFF, int(row[4])),
+            losses=min(0xFFFF, int(row[5])),
+            draws=min(0xFFFF, int(row[6])),
+            last_outcome=int(row[7]),
+            last_opponent_code=int(row[8]),
+            daily_flags=daily_flags,
+        )
+
+    def list_guilds(self, *, limit: int = 8, offset: int = 0) -> list[GuildSummary]:
+        if not 1 <= limit <= 8 or not 0 <= offset <= p4rm.GUILD_NAME_COUNT:
+            raise ValueError("invalid guild directory query")
+        with self._lock, self._connect() as database:
+            database.execute("BEGIN IMMEDIATE")
+            realm_day_id, _ = self.realm_clock()
+            self._roll_guild_calendar(database, realm_day_id)
+            rows = database.execute(
+                "SELECT g.guild_id, g.name_code, COUNT(gm.actor_id), "
+                "g.banner_stars, g.prestige, g.season_points, g.wins, "
+                "g.losses, g.draws FROM guilds AS g JOIN guild_members AS gm "
+                "ON gm.guild_id = g.guild_id GROUP BY g.guild_id "
+                "ORDER BY g.season_points DESC, g.prestige DESC, "
+                "g.banner_stars DESC, g.name_code ASC LIMIT ? OFFSET ?",
+                (limit, offset),
+            ).fetchall()
+            database.commit()
+        return [
+            GuildSummary(
+                guild_id=int(row[0]),
+                name_code=int(row[1]),
+                members=min(p4rm.GUILD_MAX_MEMBERS, int(row[2])),
+                banner_stars=min(0xFF, int(row[3])),
+                prestige=min(0xFFFFFFFF, int(row[4])),
+                season_points=min(0xFFFFFFFF, int(row[5])),
+                wins=min(0xFFFF, int(row[6])),
+                losses=min(0xFFFF, int(row[7])),
+                draws=min(0xFFFF, int(row[8])),
+            )
+            for row in rows
+        ]
+
+    def guild_count(self) -> int:
+        with self._lock, self._connect() as database:
+            return int(database.execute("SELECT COUNT(*) FROM guilds").fetchone()[0])
+
+    def _perform_guild_action(
+        self,
+        database: sqlite3.Connection,
+        source_actor_id: bytes,
+        code: int,
+        value: int,
+        target_actor_id: bytes,
+        body: bytes,
+        now: int,
+    ) -> RealmActionResult:
+        if code not in (
+            p4rm.GUILD_CREATE,
+            p4rm.GUILD_JOIN,
+            p4rm.GUILD_LEAVE,
+            p4rm.GUILD_RALLY,
+            p4rm.GUILD_CLASH,
+            p4rm.GUILD_CHEER,
+        ) or body:
+            return RealmActionResult(p4rm.ACTION_INVALID)
+        realm_day_id, _ = self.realm_clock()
+        self._roll_guild_calendar(database, realm_day_id)
+        source = self._guild_membership(database, source_actor_id)
+        target = self._guild_membership(database, target_actor_id)
+        targetless = code in (
+            p4rm.GUILD_CREATE,
+            p4rm.GUILD_LEAVE,
+            p4rm.GUILD_RALLY,
+        )
+        if targetless and target_actor_id != b"\0" * 16:
+            return RealmActionResult(p4rm.ACTION_INVALID)
+        if not targetless and target_actor_id == b"\0" * 16:
+            return RealmActionResult(p4rm.ACTION_NOT_FOUND)
+
+        if code == p4rm.GUILD_CREATE:
+            if not 1 <= value <= p4rm.GUILD_NAME_COUNT:
+                return RealmActionResult(p4rm.ACTION_INVALID)
+            cooldown = database.execute(
+                "SELECT left_day FROM guild_rejoin_cooldowns WHERE actor_id = ?",
+                (source_actor_id,),
+            ).fetchone()
+            if source is not None:
+                return RealmActionResult(p4rm.ACTION_DENIED)
+            if cooldown is not None and realm_day_id <= int(cooldown[0]):
+                return RealmActionResult(p4rm.ACTION_DENIED)
+            if database.execute(
+                "SELECT 1 FROM guilds WHERE name_code = ?", (value,)
+            ).fetchone() is not None:
+                return RealmActionResult(p4rm.ACTION_DENIED)
+            cursor = database.execute(
+                "INSERT INTO guilds(name_code, leader_actor_id, created_day, "
+                "season_id, quest_day) VALUES(?, ?, ?, ?, ?)",
+                (
+                    value,
+                    source_actor_id,
+                    realm_day_id,
+                    self._guild_season_id(realm_day_id),
+                    realm_day_id,
+                ),
+            )
+            guild_id = int(cursor.lastrowid)
+            database.execute(
+                "INSERT INTO guild_members(actor_id, guild_id, joined_day, role) "
+                "VALUES(?, ?, ?, ?)",
+                (source_actor_id, guild_id, realm_day_id, p4rm.GUILD_ROLE_LEADER),
+            )
+            return RealmActionResult(
+                p4rm.ACTION_OK, code=code, value=value, related_id=guild_id
+            )
+
+        if code == p4rm.GUILD_JOIN:
+            if value != 0:
+                return RealmActionResult(p4rm.ACTION_INVALID)
+            if source is not None:
+                return RealmActionResult(p4rm.ACTION_DENIED)
+            if target is None:
+                return RealmActionResult(p4rm.ACTION_NOT_FOUND)
+            cooldown = database.execute(
+                "SELECT left_day FROM guild_rejoin_cooldowns WHERE actor_id = ?",
+                (source_actor_id,),
+            ).fetchone()
+            if cooldown is not None and realm_day_id <= int(cooldown[0]):
+                return RealmActionResult(p4rm.ACTION_DENIED)
+            members = int(
+                database.execute(
+                    "SELECT COUNT(*) FROM guild_members WHERE guild_id = ?",
+                    (target[0],),
+                ).fetchone()[0]
+            )
+            if members >= p4rm.GUILD_MAX_MEMBERS:
+                return RealmActionResult(p4rm.ACTION_BUSY)
+            database.execute(
+                "INSERT INTO guild_members(actor_id, guild_id, joined_day, role) "
+                "VALUES(?, ?, ?, ?)",
+                (source_actor_id, target[0], realm_day_id, p4rm.GUILD_ROLE_MEMBER),
+            )
+            return RealmActionResult(
+                p4rm.ACTION_OK, code=code, value=target[3], related_id=target[0]
+            )
+
+        if code == p4rm.GUILD_LEAVE:
+            if value != 0:
+                return RealmActionResult(p4rm.ACTION_INVALID)
+            if source is None:
+                return RealmActionResult(p4rm.ACTION_NOT_FOUND)
+            guild_id, _, role, _ = source
+            database.execute(
+                "DELETE FROM guild_members WHERE actor_id = ?", (source_actor_id,)
+            )
+            database.execute(
+                "INSERT INTO guild_rejoin_cooldowns(actor_id, left_day) "
+                "VALUES(?, ?) ON CONFLICT(actor_id) DO UPDATE SET "
+                "left_day = excluded.left_day",
+                (source_actor_id, realm_day_id),
+            )
+            successor = database.execute(
+                "SELECT actor_id FROM guild_members WHERE guild_id = ? "
+                "ORDER BY joined_day ASC, actor_id ASC LIMIT 1",
+                (guild_id,),
+            ).fetchone()
+            if successor is None:
+                database.execute("DELETE FROM guilds WHERE guild_id = ?", (guild_id,))
+            elif role == p4rm.GUILD_ROLE_LEADER:
+                successor_id = bytes(successor[0])
+                database.execute(
+                    "UPDATE guild_members SET role = ? WHERE actor_id = ?",
+                    (p4rm.GUILD_ROLE_LEADER, successor_id),
+                )
+                database.execute(
+                    "UPDATE guilds SET leader_actor_id = ? WHERE guild_id = ?",
+                    (successor_id, guild_id),
+                )
+            return RealmActionResult(
+                p4rm.ACTION_OK, code=code, related_id=guild_id
+            )
+
+        if source is None:
+            return RealmActionResult(p4rm.ACTION_NOT_FOUND)
+        guild_id, joined_day, _, _ = source
+        if joined_day >= realm_day_id:
+            return RealmActionResult(p4rm.ACTION_DENIED)
+
+        if code == p4rm.GUILD_RALLY:
+            if not 0 <= value <= 2:
+                return RealmActionResult(p4rm.ACTION_INVALID)
+            if database.execute(
+                "SELECT 1 FROM guild_rallies WHERE actor_id = ? "
+                "AND realm_day_id = ?",
+                (source_actor_id, realm_day_id),
+            ).fetchone() is not None:
+                return RealmActionResult(p4rm.ACTION_DENIED)
+            profile = database.execute(
+                "SELECT hero_class, level, dragon_kills FROM profiles "
+                "WHERE actor_id = ?",
+                (source_actor_id,),
+            ).fetchone()
+            if profile is None:
+                return RealmActionResult(p4rm.ACTION_NOT_FOUND)
+            points = (
+                2
+                + int(int(profile[0]) == value)
+                + int(int(profile[1]) >= 6)
+                + int(int(profile[2]) > 0)
+            )
+            database.execute(
+                "INSERT INTO guild_rallies(actor_id, realm_day_id, guild_id, "
+                "route, points) VALUES(?, ?, ?, ?, ?)",
+                (source_actor_id, realm_day_id, guild_id, value, points),
+            )
+            quest = database.execute(
+                "SELECT quest_progress, quest_complete FROM guilds "
+                "WHERE guild_id = ?",
+                (guild_id,),
+            ).fetchone()
+            previous = int(quest[0])
+            complete = int(quest[1]) != 0
+            accumulated = previous + points
+            bonus = (
+                10
+                if not complete and accumulated >= p4rm.GUILD_QUEST_GOAL
+                else 0
+            )
+            if bonus:
+                progress = min(
+                    p4rm.GUILD_QUEST_GOAL - 1,
+                    accumulated - p4rm.GUILD_QUEST_GOAL,
+                )
+            elif complete:
+                progress = min(p4rm.GUILD_QUEST_GOAL - 1, accumulated)
+            else:
+                progress = accumulated
+            database.execute(
+                "UPDATE guilds SET quest_progress = ?, quest_complete = ?, "
+                "banner_stars = MIN(65535, banner_stars + ?) WHERE guild_id = ?",
+                (progress, int(complete or bonus != 0), int(bonus != 0), guild_id),
+            )
+            award = points + bonus
+            self._add_guild_points(database, guild_id, award)
+            return RealmActionResult(
+                p4rm.ACTION_OK, code=code, value=award, related_id=guild_id
+            )
+
+        if target is None:
+            return RealmActionResult(p4rm.ACTION_NOT_FOUND)
+        target_guild_id, _, _, target_name_code = target
+        if target_guild_id == guild_id:
+            return RealmActionResult(p4rm.ACTION_DENIED)
+
+        if code == p4rm.GUILD_CHEER:
+            if value != 0:
+                return RealmActionResult(p4rm.ACTION_INVALID)
+            if database.execute(
+                "SELECT 1 FROM guild_cheers WHERE source_guild_id = ? "
+                "AND realm_day_id = ?",
+                (guild_id, realm_day_id),
+            ).fetchone() is not None:
+                return RealmActionResult(p4rm.ACTION_DENIED)
+            database.execute(
+                "INSERT INTO guild_cheers(source_guild_id, realm_day_id, "
+                "target_guild_id, actor_id, created_at) VALUES(?, ?, ?, ?, ?)",
+                (guild_id, realm_day_id, target_guild_id, source_actor_id, now),
+            )
+            self._add_guild_points(database, guild_id, 1)
+            self._add_guild_points(database, target_guild_id, 2)
+            return RealmActionResult(
+                p4rm.ACTION_OK, code=code, value=3, related_id=target_guild_id
+            )
+
+        if code != p4rm.GUILD_CLASH or value != 0:
+            return RealmActionResult(p4rm.ACTION_INVALID)
+        if database.execute(
+            "SELECT 1 FROM guild_clashes WHERE source_guild_id = ? "
+            "AND realm_day_id = ?",
+            (guild_id, realm_day_id),
+        ).fetchone() is not None:
+            return RealmActionResult(p4rm.ACTION_DENIED)
+        if database.execute(
+            "SELECT 1 FROM guild_clashes WHERE target_guild_id = ? "
+            "AND realm_day_id = ?",
+            (target_guild_id, realm_day_id),
+        ).fetchone() is not None:
+            return RealmActionResult(p4rm.ACTION_DENIED)
+        pair_low = min(guild_id, target_guild_id)
+        pair_high = max(guild_id, target_guild_id)
+        previous = database.execute(
+            "SELECT realm_day_id FROM guild_clashes WHERE pair_low = ? "
+            "AND pair_high = ? ORDER BY realm_day_id DESC LIMIT 1",
+            (pair_low, pair_high),
+        ).fetchone()
+        if previous is not None and realm_day_id - int(previous[0]) < (
+            GUILD_CLASH_PAIR_COOLDOWN_DAYS
+        ):
+            return RealmActionResult(p4rm.ACTION_DENIED)
+        source_power, source_participation, source_route, source_roster = (
+            self._guild_roster_metrics(database, guild_id, realm_day_id)
+        )
+        target_power, target_participation, target_route, target_roster = (
+            self._guild_roster_metrics(database, target_guild_id, realm_day_id)
+        )
+        if source_roster == 0 or target_roster == 0:
+            return RealmActionResult(p4rm.ACTION_DENIED)
+        source_route_bonus = 0
+        target_route_bonus = 0
+        if source_route is not None and target_route is not None:
+            if (source_route - target_route) % 3 == 1:
+                source_route_bonus = GUILD_CLASH_ROUTE_BONUS
+            elif (target_route - source_route) % 3 == 1:
+                target_route_bonus = GUILD_CLASH_ROUTE_BONUS
+        source_roll, target_roll = self._guild_clash_rolls(
+            realm_day_id, guild_id, target_guild_id
+        )
+        source_score = max(
+            0,
+            source_power
+            + source_participation
+            + source_route_bonus
+            + source_roll,
+        )
+        target_score = max(
+            0,
+            target_power
+            + target_participation
+            + target_route_bonus
+            + target_roll,
+        )
+        if source_score > target_score:
+            outcome = p4rm.GUILD_OUTCOME_WIN
+            source_award, target_award = 6, 3
+            source_column, target_column = "wins", "losses"
+            target_outcome = p4rm.GUILD_OUTCOME_LOSS
+        elif source_score < target_score:
+            outcome = p4rm.GUILD_OUTCOME_LOSS
+            source_award, target_award = 3, 6
+            source_column, target_column = "losses", "wins"
+            target_outcome = p4rm.GUILD_OUTCOME_WIN
+        else:
+            outcome = p4rm.GUILD_OUTCOME_DRAW
+            source_award = target_award = 4
+            source_column = target_column = "draws"
+            target_outcome = p4rm.GUILD_OUTCOME_DRAW
+        cursor = database.execute(
+            "INSERT INTO guild_clashes(realm_day_id, source_guild_id, "
+            "target_guild_id, pair_low, pair_high, source_score, target_score, "
+            "outcome, created_at) VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                realm_day_id,
+                guild_id,
+                target_guild_id,
+                pair_low,
+                pair_high,
+                source_score,
+                target_score,
+                outcome,
+                now,
+            ),
+        )
+        self._add_guild_points(database, guild_id, source_award)
+        self._add_guild_points(database, target_guild_id, target_award)
+        database.execute(
+            f"UPDATE guilds SET {source_column} = MIN(65535, "
+            f"{source_column} + 1), last_outcome = ?, "
+            "last_opponent_code = ? WHERE guild_id = ?",
+            (outcome, target_name_code, guild_id),
+        )
+        database.execute(
+            f"UPDATE guilds SET {target_column} = MIN(65535, "
+            f"{target_column} + 1), last_outcome = ?, "
+            "last_opponent_code = ? WHERE guild_id = ?",
+            (target_outcome, source[3], target_guild_id),
+        )
+        return RealmActionResult(
+            p4rm.ACTION_OK,
+            code=code,
+            value=outcome,
+            related_id=int(cursor.lastrowid),
+        )
+
     def perform_action(
         self,
         source_actor_id: bytes,
@@ -1737,8 +2426,8 @@ class RealmStore:
         if (
             len(source_actor_id) != 16
             or len(target_actor_id) != 16
-            or nonce == 0
-            or not p4rm.ACTION_MAIL <= kind <= p4rm.ACTION_NEWS
+            or not 1 <= nonce <= p4rm.MAX_ACTION_NONCE
+            or not p4rm.ACTION_MAIL <= kind <= p4rm.ACTION_GUILD
             or not 0 <= code <= 0xFF
             or not 0 <= value <= 0xFFFF
             or len(body) > p4rm.MAX_PAYLOAD_BYTES
@@ -1777,7 +2466,11 @@ class RealmStore:
             source_name = self._profile_name(database, source_actor_id)
             target_name = self._profile_name(database, target_actor_id)
             result = RealmActionResult(p4rm.ACTION_INVALID)
-            target_required = kind not in (p4rm.ACTION_TAVERN, p4rm.ACTION_NEWS)
+            target_required = (
+                code in (p4rm.GUILD_JOIN, p4rm.GUILD_CLASH, p4rm.GUILD_CHEER)
+                if kind == p4rm.ACTION_GUILD
+                else kind not in (p4rm.ACTION_TAVERN, p4rm.ACTION_NEWS)
+            )
             friendship_action = kind in (
                 p4rm.ACTION_FRIEND,
                 p4rm.ACTION_TEAM,
@@ -2089,11 +2782,20 @@ class RealmStore:
                 target_alive = self._effective_alive(
                     database, target_actor_id
                 )
+                source_guild = self._guild_membership(database, source_actor_id)
+                target_guild = self._guild_membership(database, target_actor_id)
+                same_guild = (
+                    source_guild is not None
+                    and target_guild is not None
+                    and source_guild[0] == target_guild[0]
+                )
                 if code not in (0, 1) or value != 0 or body or busy is not None:
                     result = RealmActionResult(
                         p4rm.ACTION_BUSY if busy is not None else p4rm.ACTION_INVALID
                     )
                 elif fights_used >= MAX_PVP_FIGHTS_PER_REALM_DAY:
+                    result = RealmActionResult(p4rm.ACTION_DENIED)
+                elif same_guild:
                     result = RealmActionResult(p4rm.ACTION_DENIED)
                 elif (
                     not source_alive
@@ -2118,10 +2820,22 @@ class RealmStore:
                     lease_id = int.from_bytes(body[:8], "little")
                     outcome = body[8]
                     lease = database.execute(
-                        "SELECT source_actor_id, target_actor_id, status FROM "
+                        "SELECT source_actor_id, target_actor_id, status, "
+                        "created_at FROM "
                         "pvp_leases WHERE lease_id = ? AND admitted = 1",
                         (lease_id,),
                     ).fetchone()
+                    source_guild = self._guild_membership(
+                        database, source_actor_id
+                    )
+                    target_guild = self._guild_membership(
+                        database, target_actor_id
+                    )
+                    current_same_guild = (
+                        source_guild is not None
+                        and target_guild is not None
+                        and source_guild[0] == target_guild[0]
+                    )
                     if (
                         outcome not in (0, 1)
                         or outcome != code
@@ -2131,6 +2845,29 @@ class RealmStore:
                     ):
                         result = RealmActionResult(p4rm.ACTION_NOT_FOUND)
                     elif int(lease[2]) != 0:
+                        result = RealmActionResult(p4rm.ACTION_DENIED)
+                    elif int(lease[3]) < now - 600:
+                        # Enforce expiry at settlement as well as at the next
+                        # lease admission.  This transaction atomically closes
+                        # the stale lease before any reward can be calculated.
+                        database.execute(
+                            "UPDATE pvp_leases SET status = 1, outcome = NULL, "
+                            "resolved_at = ? WHERE lease_id = ? "
+                            "AND admitted = 1 AND status = 0",
+                            (now, lease_id),
+                        )
+                        result = RealmActionResult(p4rm.ACTION_DENIED)
+                    elif current_same_guild:
+                        # Membership is authoritative at settlement time too.
+                        # Cancel the open lease so a new nonce cannot revive it
+                        # after the club relationship changes again.  A canceled
+                        # lease produces no events, economy rows, or player stats.
+                        database.execute(
+                            "UPDATE pvp_leases SET status = 1, outcome = NULL, "
+                            "resolved_at = ? WHERE lease_id = ? "
+                            "AND admitted = 1 AND status = 0",
+                            (now, lease_id),
+                        )
                         result = RealmActionResult(p4rm.ACTION_DENIED)
                     else:
                         prize = 0
@@ -2252,6 +2989,16 @@ class RealmStore:
                             kind, 0, 0, body, now,
                         )
                     result = RealmActionResult(p4rm.ACTION_OK)
+            elif kind == p4rm.ACTION_GUILD:
+                result = self._perform_guild_action(
+                    database,
+                    source_actor_id,
+                    code,
+                    value,
+                    target_actor_id,
+                    body,
+                    now,
+                )
 
             if friendship_action and result.status == p4rm.ACTION_OK:
                 database.execute(

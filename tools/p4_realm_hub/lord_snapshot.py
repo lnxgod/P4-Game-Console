@@ -30,7 +30,7 @@ MAX_COMBAT_STAT = 100_000
 MAX_FOREST_FIGHTS = 255
 MAX_SKILL_USES = 255
 MAX_WEALTH_GAIN_FLAT = 25_000_000
-MAX_EXPERIENCE_GAIN = 25_000_000
+MAX_EXPERIENCE_GAIN = 2_500_000
 MAX_HIT_POINT_GAIN = 5_000
 MAX_STRENGTH_GAIN = 5_000
 MAX_DEFENSE_GAIN = 5_000
@@ -40,6 +40,20 @@ MAX_FOREST_FIGHT_GAIN = 64
 MAX_SKILL_MASTERY_GAIN = 40
 MAX_SKILL_USE_GAIN = 64
 MAX_SMALL_COUNTER_GAIN = 500
+MAX_LEVEL_GAIN = 3
+TRAINER_EXPERIENCE = (
+    50,
+    200,
+    650,
+    1_800,
+    6_000,
+    16_000,
+    34_000,
+    110_000,
+    300_000,
+    625_000,
+    1_250_000,
+)
 
 
 @dataclasses.dataclass(frozen=True)
@@ -88,6 +102,8 @@ class LordSnapshot:
     pvp_fights: int
     friendship_actions: int
     igm_used_mask: int
+    partner_code: int
+    npc_friend_code: int
     player: LordPlayer
     sync_actor_id: bytes
     sync_server_revision: int
@@ -111,6 +127,7 @@ class ProfileProjection:
     bank: int
     pvp_wins: int
     pvp_losses: int
+    dragon_kills: int
 
 
 class _Reader:
@@ -427,7 +444,9 @@ def decode_lord_sync(
         or npc_friend_code > 2
         or pvp_fights > 3
         or friendship_actions > 3
-        or igm_used_mask & ~0x7F
+        # Seven IGM locks plus bit 7 for the once-daily Dragon Dice
+        # friendship reward. The LDSV5 byte layout stays unchanged.
+        or igm_used_mask & ~0xFF
         or rip_scene >= 12
         or mail_count > LORD_MAIL_COUNT
         or log_count > LORD_LOG_COUNT
@@ -476,6 +495,8 @@ def decode_lord_sync(
         pvp_fights=pvp_fights,
         friendship_actions=friendship_actions,
         igm_used_mask=igm_used_mask,
+        partner_code=partner_code,
+        npc_friend_code=npc_friend_code,
         player=player,
         sync_actor_id=sync_actor_id,
         sync_server_revision=sync_server_revision,
@@ -489,27 +510,38 @@ def _bounded_gain(current: int, prior: int, limit: int, label: str) -> None:
         raise ValueError(f"implausible LORD {label} gain")
 
 
-def _is_post_dragon_victory_reset(old: LordPlayer, new: LordPlayer) -> bool:
-    """Recognize the game's exact second half of a dragon-victory reset.
+def _is_exact_dragon_victory_reset(
+    prior: LordSnapshot, current: LordSnapshot
+) -> bool:
+    """Recognize only the game's canonical dragon-victory reset.
 
-    LORD marks the dragon kill dirty on the victory screen, so that transient
-    level-12 state can reach the hub.  Confirming the screen then calls
-    initialize_player() without incrementing the kill count a second time.
-    Keep this exception deliberately exact so it cannot disguise an arbitrary
-    same-day level rollback.
+    Current cartridges increment the deed and reset in one activation.  The
+    same-count form remains accepted for an older two-phase victory snapshot.
+    A direct deed may follow a level-12 offline head without an intermediate
+    ``seen_dragon`` upload; the legacy same-count form still requires that
+    marker. Every rebirth field remains exact so an ordinary rollback or
+    fabricated lower-level deed is rejected.
     """
+    old = prior.player
+    new = current.player
     expected_skill = tuple(5 if index == new.hero_class else 0 for index in range(3))
     expected_uses = tuple(3 if index == new.hero_class else 0 for index in range(3))
+    friendship_bonus = 5 if current.partner_code or current.npc_friend_code else 0
     return (
         old.level == 12
-        and old.seen_dragon
-        and old.dragon_kills > 0
-        and new.dragon_kills == old.dragon_kills
+        and (
+            new.dragon_kills == old.dragon_kills + 1
+            or (
+                old.seen_dragon
+                and old.dragon_kills > 0
+                and new.dragon_kills == old.dragon_kills
+            )
+        )
         and new.level == 1
         and new.weapon == 0
         and new.armor == 0
-        and new.hit_points == 20 + new.dragon_kills * 5
-        and new.max_hit_points == 20 + new.dragon_kills * 5
+        and new.hit_points == 20 + new.dragon_kills * 5 + friendship_bonus
+        and new.max_hit_points == 20 + new.dragon_kills * 5 + friendship_bonus
         and new.strength == 10 + new.dragon_kills * 2
         and new.defense == 1 + new.dragon_kills
         and new.chompcoin == 500
@@ -528,7 +560,7 @@ def _is_post_dragon_victory_reset(old: LordPlayer, new: LordPlayer) -> bool:
         and not new.horse
         and not new.fairy
         and not new.fairy_lore
-        and not new.amulet
+        and new.amulet
         and not new.high_spirits
         and not new.seen_dragon
     )
@@ -559,10 +591,14 @@ def validate_lord_transition(
         raise ValueError("LORD local day advanced too far")
     if new.day != old.day and not realm_day_advanced:
         raise ValueError("LORD local day advanced before the realm clock")
-    post_dragon_reset = _is_post_dragon_victory_reset(old, new)
+    exact_dragon_reset = _is_exact_dragon_victory_reset(prior, current)
     if new.dragon_kills < old.dragon_kills or new.dragon_kills - old.dragon_kills > 1:
         raise ValueError("LORD dragon count changed too far")
-    dragon_reset = new.dragon_kills == old.dragon_kills + 1
+    dragon_count_advanced = new.dragon_kills == old.dragon_kills + 1
+    if dragon_count_advanced and not exact_dragon_reset:
+        raise ValueError("LORD dragon deed advanced without an exact victory reset")
+    dragon_reset = exact_dragon_reset and dragon_count_advanced
+    post_dragon_reset = exact_dragon_reset and not dragon_count_advanced
     daily_counter_reset = (
         current.pvp_fights > prior.pvp_fights
         or current.friendship_actions > prior.friendship_actions
@@ -580,6 +616,11 @@ def validate_lord_transition(
         raise ValueError("LORD daily counters reset without a new realm day")
     if not dragon_reset and not post_dragon_reset and new.level < old.level:
         raise ValueError("LORD level moved backwards without a dragon reset")
+    if not dragon_reset and not post_dragon_reset and new.level > old.level:
+        if new.level - old.level > MAX_LEVEL_GAIN:
+            raise ValueError("LORD level advanced too far")
+        if new.experience < TRAINER_EXPERIENCE[new.level - 2]:
+            raise ValueError("LORD level advanced without enough experience")
 
     old_wealth = old.chompcoin + old.bank
     new_wealth = new.chompcoin + new.bank
@@ -618,13 +659,19 @@ def validate_lord_transition(
         ("charm", old.charm, new.charm),
         ("gems", old.gems, new.gems),
         ("young heroes", old.young_heroes_helped, new.young_heroes_helped),
-        ("friendship badges", old.friendship_badges, new.friendship_badges),
     ):
         _bounded_gain(after, before, MAX_SMALL_COUNTER_GAIN, label)
+    _bounded_gain(
+        new.friendship_badges,
+        old.friendship_badges,
+        4,
+        "friendship badges",
+    )
 
 
 def profile_projection(snapshot: LordSnapshot) -> ProfileProjection:
     player = snapshot.player
+    friendship_guard = min((player.friendship_badges // 5) * 2, 8)
     return ProfileProjection(
         name=player.name,
         hero_style=player.hero_style,
@@ -634,10 +681,11 @@ def profile_projection(snapshot: LordSnapshot) -> ProfileProjection:
         hit_points=player.hit_points,
         max_hit_points=player.max_hit_points,
         strength=player.strength,
-        defense=player.defense,
+        defense=min(MAX_COMBAT_STAT, player.defense + friendship_guard),
         experience=player.experience,
         chompcoin=player.chompcoin,
         bank=player.bank,
         pvp_wins=player.pvp_wins,
         pvp_losses=player.pvp_losses,
+        dragon_kills=player.dragon_kills,
     )

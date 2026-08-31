@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "lord_internal.h"
+#include "generated/lord_monsters.h"
 #include "p4/game.h"
 #include "p4/input.h"
 
@@ -54,11 +55,73 @@ static void test_character_creation_and_core_menu(void)
     CHECK(state.player.charm == 10U);
     CHECK(state.player.skill[LORD_CLASS_MYSTICAL] == 5U);
     CHECK(state.player.skill_uses[LORD_CLASS_MYSTICAL] == 3U);
-    CHECK(lord_menu_count(&state) == 15U);
+    CHECK(lord_menu_count(&state) == 16U);
     lord_move_selection(&state, -1);
-    CHECK(state.selection == 14U);
+    CHECK(state.selection == 15U);
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.screen == LORD_SCREEN_GUILD);
+    CHECK(lord_cancel(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.screen == LORD_SCREEN_TOWN);
+    state.selection = 14U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.screen == LORD_SCREEN_SKILLS);
+    CHECK(lord_cancel(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.screen == LORD_SCREEN_TOWN);
+    state.selection = 15U;
     lord_move_selection(&state, 1);
     CHECK(state.selection == 0U);
+
+    for (uint16_t code = 1U; code <= LORD_GUILD_NAME_COUNT; ++code) {
+        CHECK(strcmp(lord_guild_name(code), "No Club") != 0);
+        for (uint16_t other = (uint16_t)(code + 1U);
+             other <= LORD_GUILD_NAME_COUNT; ++other) {
+            CHECK(strcmp(lord_guild_name(code), lord_guild_name(other)) != 0);
+        }
+    }
+    CHECK(strcmp(lord_guild_name(0U), "No Club") == 0);
+    CHECK(strcmp(lord_guild_name(17U), "No Club") == 0);
+
+    state.guild_status.supported = true;
+    state.guild_status.guild_id = 0U;
+    state.screen = LORD_SCREEN_GUILD;
+    CHECK(lord_menu_count(&state) == 5U);
+    state.selection = 1U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.screen == LORD_SCREEN_GUILD_TARGET);
+    CHECK(state.guild_target == LORD_GUILD_TARGET_JOIN);
+    CHECK(lord_cancel(&state) == LORD_EVENT_CONFIRM);
+    state.selection = 2U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.screen == LORD_SCREEN_GUILD_CREATE);
+    CHECK(lord_menu_count(&state) == LORD_GUILD_NAME_COUNT + 1U);
+    state.selection = LORD_GUILD_NAME_COUNT;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.screen == LORD_SCREEN_GUILD);
+    state.selection = 3U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.screen == LORD_SCREEN_MESSAGE);
+    CHECK(strstr(state.message_line_1, "Charge") != NULL);
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+
+    state.guild_status.guild_id = 1U;
+    state.guild_status.name_code = 1U;
+    CHECK(lord_menu_count(&state) == 8U);
+    state.selection = 3U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.screen == LORD_SCREEN_GUILD_TARGET);
+    CHECK(state.guild_target == LORD_GUILD_TARGET_CLASH);
+    CHECK(lord_cancel(&state) == LORD_EVENT_CONFIRM);
+    state.selection = 4U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.guild_target == LORD_GUILD_TARGET_CHEER);
+    CHECK(lord_cancel(&state) == LORD_EVENT_CONFIRM);
+    state.selection = 5U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.screen == LORD_SCREEN_GUILD_STANDINGS);
+    CHECK(lord_cancel(&state) == LORD_EVENT_CONFIRM);
+    state.selection = 7U;
+    CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    CHECK(state.screen == LORD_SCREEN_TOWN);
 
     state.screen = LORD_SCREEN_TEXT_EDITOR;
     state.selection = 0U;
@@ -122,17 +185,20 @@ static void test_forest_training_skills_and_dragon(void)
     state.player.strength = 100000;
     CHECK(lord_activate(&state) == LORD_EVENT_WIN);
     CHECK(state.player.level == 2U);
+    CHECK(state.player.skill[LORD_CLASS_THIEF] == 7U);
+    CHECK(state.player.skill_uses[LORD_CLASS_THIEF] == 4U);
 
     state.screen = LORD_SCREEN_BATTLE;
     state.battle_kind = LORD_BATTLE_FOREST;
     state.player.strength = 10;
+    state.player.hero_class = LORD_CLASS_DEATH_KNIGHT;
     state.player.skill[LORD_CLASS_DEATH_KNIGHT] = 5U;
     state.player.skill_uses[LORD_CLASS_DEATH_KNIGHT] = 1U;
     state.enemy = (lord_enemy_t){
         .hit_points = 1000, .max_hit_points = 1000,
         .strength = 1, .death_text = "done",
     };
-    state.selection = 1U;
+    state.selection = 2U;
     CHECK(lord_activate(&state) == LORD_EVENT_HIT);
     CHECK(state.player.skill_uses[LORD_CLASS_DEATH_KNIGHT] == 0U);
 
@@ -157,6 +223,7 @@ static void test_forest_training_skills_and_dragon(void)
     CHECK(state.player.strength == 12);
     CHECK(state.player.defense == 2);
     CHECK(state.player.gold == 500U);
+    CHECK(state.player.amulet);
     CHECK(!state.player.seen_dragon);
     CHECK(state.save_sequence > sequence_before_victory);
 
@@ -188,6 +255,346 @@ static void test_forest_training_skills_and_dragon(void)
     CHECK(state.save_sequence == sequence_after_victory);
 }
 
+static void prepare_tactical_battle(lord_state_t *state,
+                                    lord_class_t hero_class,
+                                    lord_enemy_intent_t intent)
+{
+    enter_town(state, hero_class);
+    state->screen = LORD_SCREEN_BATTLE;
+    state->battle_kind = LORD_BATTLE_FOREST;
+    state->enemy_intent = intent;
+    state->selection = 0U;
+    state->rng_state = UINT32_C(0x13579bdf);
+    state->player.hit_points = 1000;
+    state->player.max_hit_points = 1000;
+    state->player.strength = 100;
+    state->player.defense = 0;
+    state->player.gold = 100U;
+    state->enemy = (lord_enemy_t){
+        .name = "Training target",
+        .weapon = "Practice blade",
+        .death_text = "The target yields.",
+        .hit_points = 10000,
+        .max_hit_points = 10000,
+        .strength = 100,
+        .defense = 0,
+        .gold = 800U,
+        .experience = 10U,
+    };
+}
+
+static void test_tactical_combat_counters_and_classes(void)
+{
+    lord_state_t intent_a;
+    lord_state_t intent_b;
+    enter_town(&intent_a, LORD_CLASS_DEATH_KNIGHT);
+    enter_town(&intent_b, LORD_CLASS_DEATH_KNIGHT);
+    intent_a.screen = LORD_SCREEN_FOREST;
+    intent_b.screen = LORD_SCREEN_FOREST;
+    intent_a.selection = 0U;
+    intent_b.selection = 0U;
+    intent_a.rng_state = 1U;
+    intent_b.rng_state = 1U;
+    CHECK(lord_activate(&intent_a) == LORD_EVENT_CONFIRM);
+    CHECK(lord_activate(&intent_b) == LORD_EVENT_CONFIRM);
+    CHECK(intent_a.screen == LORD_SCREEN_BATTLE);
+    CHECK(intent_b.screen == LORD_SCREEN_BATTLE);
+    CHECK(intent_a.enemy_intent == intent_b.enemy_intent);
+    CHECK(intent_a.enemy_intent <= LORD_ENEMY_INTENT_QUICK);
+
+    lord_state_t guarded_power;
+    prepare_tactical_battle(&guarded_power, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_POWER);
+    CHECK(lord_menu_count(&guarded_power) == 6U);
+    guarded_power.selection = 1U;
+    CHECK(lord_activate(&guarded_power) == LORD_EVENT_HIT);
+    const int32_t guarded_power_damage =
+        1000 - guarded_power.player.hit_points;
+    CHECK(guarded_power_damage > 0);
+
+    lord_state_t guarded_quick;
+    prepare_tactical_battle(&guarded_quick, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_QUICK);
+    guarded_quick.selection = 1U;
+    CHECK(lord_activate(&guarded_quick) == LORD_EVENT_HIT);
+    const int32_t guarded_quick_damage =
+        1000 - guarded_quick.player.hit_points;
+    CHECK(guarded_quick_damage >= guarded_power_damage);
+
+    lord_state_t open_power;
+    prepare_tactical_battle(&open_power, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_POWER);
+    open_power.selection = 0U;
+    CHECK(lord_activate(&open_power) == LORD_EVENT_HIT);
+    const int32_t open_power_damage = 1000 - open_power.player.hit_points;
+    CHECK(guarded_power_damage * 2 < open_power_damage);
+
+    lord_state_t strike_into_guard;
+    prepare_tactical_battle(&strike_into_guard, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_GUARD);
+    strike_into_guard.selection = 0U;
+    CHECK(lord_activate(&strike_into_guard) == LORD_EVENT_HIT);
+    const int32_t guarded_strike =
+        10000 - strike_into_guard.enemy.hit_points;
+
+    lord_state_t feint_into_guard;
+    prepare_tactical_battle(&feint_into_guard, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_GUARD);
+    feint_into_guard.selection = 3U;
+    CHECK(lord_activate(&feint_into_guard) == LORD_EVENT_HIT);
+    const int32_t guard_break = 10000 - feint_into_guard.enemy.hit_points;
+    CHECK(guarded_strike > 0);
+    CHECK(guard_break > guarded_strike * 4);
+
+    lord_state_t reliable_strike;
+    prepare_tactical_battle(&reliable_strike, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_STRIKE);
+    reliable_strike.selection = 0U;
+    CHECK(lord_activate(&reliable_strike) == LORD_EVENT_HIT);
+    const int32_t strike_damage = 10000 - reliable_strike.enemy.hit_points;
+
+    lord_state_t weak_feint;
+    prepare_tactical_battle(&weak_feint, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_STRIKE);
+    weak_feint.selection = 3U;
+    CHECK(lord_activate(&weak_feint) == LORD_EVENT_HIT);
+    const int32_t weak_feint_damage = 10000 - weak_feint.enemy.hit_points;
+    CHECK(strike_damage > weak_feint_damage);
+
+    lord_state_t quick_feint;
+    prepare_tactical_battle(&quick_feint, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_QUICK);
+    quick_feint.selection = 3U;
+    CHECK(lord_activate(&quick_feint) == LORD_EVENT_HIT);
+    const int32_t quick_feint_damage = 10000 - quick_feint.enemy.hit_points;
+    CHECK(weak_feint_damage > quick_feint_damage);
+
+    lord_state_t death_knight;
+    prepare_tactical_battle(&death_knight, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_STRIKE);
+    const uint8_t death_knight_uses =
+        death_knight.player.skill_uses[LORD_CLASS_DEATH_KNIGHT];
+    death_knight.selection = 2U;
+    CHECK(lord_activate(&death_knight) == LORD_EVENT_HIT);
+    CHECK(death_knight.player.skill_uses[LORD_CLASS_DEATH_KNIGHT] ==
+          (uint8_t)(death_knight_uses - 1U));
+    CHECK(1000 - death_knight.player.hit_points >
+          1000 - reliable_strike.player.hit_points);
+    const int32_t open_technique_damage =
+        10000 - death_knight.enemy.hit_points;
+
+    lord_state_t guarded_technique;
+    prepare_tactical_battle(&guarded_technique, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_GUARD);
+    guarded_technique.selection = 2U;
+    CHECK(lord_activate(&guarded_technique) == LORD_EVENT_HIT);
+    const int32_t guarded_technique_damage =
+        10000 - guarded_technique.enemy.hit_points;
+    CHECK(open_technique_damage > guarded_technique_damage * 2);
+
+    lord_state_t mystic;
+    prepare_tactical_battle(&mystic, LORD_CLASS_MYSTICAL,
+                            LORD_ENEMY_INTENT_GUARD);
+    mystic.player.hit_points = 500;
+    const uint8_t mystic_uses =
+        mystic.player.skill_uses[LORD_CLASS_MYSTICAL];
+    mystic.selection = 2U;
+    CHECK(lord_activate(&mystic) == LORD_EVENT_HIT);
+    CHECK(mystic.player.hit_points > 500);
+    CHECK(mystic.enemy.hit_points < 10000);
+    CHECK(mystic.player.skill_uses[LORD_CLASS_MYSTICAL] ==
+          (uint8_t)(mystic_uses - 1U));
+
+    lord_state_t thief;
+    prepare_tactical_battle(&thief, LORD_CLASS_THIEF,
+                            LORD_ENEMY_INTENT_POWER);
+    const uint8_t thief_uses = thief.player.skill_uses[LORD_CLASS_THIEF];
+    thief.selection = 2U;
+    CHECK(lord_activate(&thief) == LORD_EVENT_HIT);
+    CHECK(thief.player.hit_points == 1000);
+    CHECK(thief.player.gold == 100U);
+    CHECK(thief.enemy.gold == 901U);
+    CHECK(thief.enemy.hit_points < 10000);
+    CHECK(thief.player.skill_uses[LORD_CLASS_THIEF] ==
+          (uint8_t)(thief_uses - 1U));
+
+    const uint32_t shadow_purse = thief.enemy.gold;
+    thief.player.skill_uses[LORD_CLASS_THIEF] = 1U;
+    thief.selection = 2U;
+    CHECK(lord_activate(&thief) == LORD_EVENT_HIT);
+    CHECK(thief.player.gold == 100U);
+    CHECK(thief.enemy.gold == shadow_purse);
+    thief.player.strength = LORD_COMBAT_STAT_MAX;
+    thief.selection = 0U;
+    CHECK(lord_activate(&thief) == LORD_EVENT_WIN);
+    CHECK(thief.player.gold == 100U + shadow_purse);
+
+    lord_state_t pvp_thief;
+    prepare_tactical_battle(&pvp_thief, LORD_CLASS_THIEF,
+                            LORD_ENEMY_INTENT_POWER);
+    pvp_thief.battle_kind = LORD_BATTLE_PVP;
+    pvp_thief.selected_player = 0U;
+    pvp_thief.selection = 2U;
+    CHECK(lord_activate(&pvp_thief) == LORD_EVENT_HIT);
+    CHECK(pvp_thief.player.gold == 100U);
+    CHECK(pvp_thief.enemy.gold == 800U);
+}
+
+static void test_lethal_failed_escape_is_persistable(void)
+{
+    lord_state_t base;
+    prepare_tactical_battle(&base, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_POWER);
+    base.player.hit_points = 1;
+    base.player.high_spirits = true;
+    base.player.gold = 1234U;
+    base.player.experience = 1000U;
+    base.player.forest_fights = 7U;
+    base.enemy.strength = LORD_COMBAT_STAT_MAX;
+    base.selection = 4U;
+
+    bool found_failed_escape = false;
+    for (uint32_t seed = 1U; seed < 256U && !found_failed_escape; ++seed) {
+        lord_state_t attempt = base;
+        attempt.rng_state = seed;
+        attempt.save_dirty = false;
+        const lord_event_t event = lord_activate(&attempt);
+        if (event != LORD_EVENT_LOSE) {
+            continue;
+        }
+        found_failed_escape = true;
+        CHECK(attempt.screen == LORD_SCREEN_DEAD);
+        CHECK(attempt.battle_kind == LORD_BATTLE_NONE);
+        CHECK(attempt.player.hit_points == attempt.player.max_hit_points);
+        CHECK(attempt.player.gold == 0U);
+        CHECK(attempt.player.experience == 900U);
+        CHECK(attempt.player.forest_fights == 0U);
+        CHECK(!attempt.player.high_spirits);
+        CHECK(attempt.save_dirty);
+
+        uint8_t encoded[LORD_SAVE_MAX_BYTES];
+        const size_t encoded_length = lord_save_encode(
+            &attempt, encoded, sizeof(encoded));
+        CHECK(encoded_length > 0U);
+        lord_state_t restored;
+        CHECK(lord_save_decode(&restored, encoded, encoded_length));
+        CHECK(restored.player.hit_points == restored.player.max_hit_points);
+        CHECK(restored.player.gold == 0U);
+        CHECK(restored.player.experience == 900U);
+        CHECK(restored.player.forest_fights == 0U);
+        CHECK(restored.screen == LORD_SCREEN_TOWN);
+        CHECK(restored.battle_kind == LORD_BATTLE_NONE);
+    }
+    CHECK(found_failed_escape);
+}
+
+static void test_progression_pacing_and_dormant_rewards(void)
+{
+    static const uint32_t expected_thresholds[LORD_MAX_LEVEL - 1U] = {
+        50U, 200U, 650U, 1800U, 6000U, 16000U,
+        34000U, 110000U, 300000U, 625000U, 1250000U,
+    };
+    /* Exact XP sums for each pinned eleven-monster tier. */
+    static const uint32_t tier_experience[LORD_MAX_LEVEL - 1U] = {
+        45U, 121U, 259U, 498U, 1821U, 4854U,
+        8168U, 36681U, 88943U, 149140U, 304408U,
+    };
+    lord_state_t curve;
+    enter_town(&curve, LORD_CLASS_MYSTICAL);
+    uint32_t prior_threshold = 0U;
+    uint32_t estimated_wins = 0U;
+    for (uint8_t level = 1U; level < LORD_MAX_LEVEL; ++level) {
+        curve.player.level = level;
+        const lord_trainer_t *const trainer = lord_current_trainer(&curve);
+        CHECK(trainer != NULL);
+        if (trainer == NULL) {
+            continue;
+        }
+        const uint32_t threshold = expected_thresholds[level - 1U];
+        CHECK(trainer->experience_needed == threshold);
+        const uint32_t needed = threshold - prior_threshold;
+        const uint32_t numerator = needed * 11U;
+        estimated_wins += (numerator + tier_experience[level - 1U] - 1U) /
+            tier_experience[level - 1U];
+        prior_threshold = threshold;
+    }
+    const uint32_t estimated_days = (estimated_wins + 11U) / 12U;
+    CHECK(estimated_wins == 241U);
+    CHECK(estimated_days >= 18U && estimated_days <= 25U);
+    CHECK(lord_weapon(15U)->price == 8000000U);
+    CHECK(lord_armor(15U)->price == 8000000U);
+
+    lord_state_t plain;
+    lord_state_t spirited;
+    prepare_tactical_battle(&plain, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_STRIKE);
+    prepare_tactical_battle(&spirited, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_STRIKE);
+    spirited.player.high_spirits = true;
+    CHECK(lord_activate(&plain) == LORD_EVENT_HIT);
+    CHECK(lord_activate(&spirited) == LORD_EVENT_HIT);
+    CHECK(10000 - spirited.enemy.hit_points >
+          10000 - plain.enemy.hit_points);
+
+    lord_state_t no_badges;
+    lord_state_t badge_guard;
+    prepare_tactical_battle(&no_badges, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_STRIKE);
+    prepare_tactical_battle(&badge_guard, LORD_CLASS_DEATH_KNIGHT,
+                            LORD_ENEMY_INTENT_STRIKE);
+    badge_guard.player.friendship_badges = 20U;
+    CHECK(lord_activate(&no_badges) == LORD_EVENT_HIT);
+    CHECK(lord_activate(&badge_guard) == LORD_EVENT_HIT);
+    CHECK((1000 - no_badges.player.hit_points) -
+          (1000 - badge_guard.player.hit_points) == 8);
+
+    lord_state_t lore;
+    prepare_tactical_battle(&lore, LORD_CLASS_MYSTICAL,
+                            LORD_ENEMY_INTENT_STRIKE);
+    lore.player.fairy_lore = true;
+    lore.selection = 4U;
+    CHECK(lord_activate(&lore) == LORD_EVENT_CONFIRM);
+    CHECK(lore.battle_kind == LORD_BATTLE_NONE);
+    CHECK(lore.screen == LORD_SCREEN_MESSAGE);
+
+    lord_state_t rebirth;
+    enter_town(&rebirth, LORD_CLASS_DEATH_KNIGHT);
+    rebirth.partner_index = 1;
+    rebirth.realm[1].teamed = true;
+    rebirth.player.max_hit_points += 5;
+    rebirth.player.hit_points += 5;
+    rebirth.screen = LORD_SCREEN_BATTLE;
+    rebirth.battle_kind = LORD_BATTLE_DRAGON;
+    rebirth.enemy = (lord_enemy_t){
+        .name = "Red Dragon",
+        .weapon = "Dragon Fire",
+        .death_text = "The dragon yields.",
+        .hit_points = 1,
+        .max_hit_points = 1,
+        .strength = 1,
+        .defense = 0,
+    };
+    rebirth.player.strength = 100000;
+    rebirth.selection = 0U;
+    CHECK(lord_activate(&rebirth) == LORD_EVENT_WIN);
+    CHECK(rebirth.player.dragon_kills == 1U);
+    CHECK(rebirth.player.max_hit_points == 30);
+    CHECK(rebirth.player.hit_points == 30);
+    CHECK(rebirth.partner_index == 1);
+    CHECK(rebirth.player.amulet);
+
+    lord_state_t dragon;
+    enter_town(&dragon, LORD_CLASS_MYSTICAL);
+    dragon.player.level = LORD_MAX_LEVEL;
+    dragon.player.forest_fights = 1U;
+    dragon.screen = LORD_SCREEN_FOREST;
+    dragon.selection = 1U;
+    CHECK(lord_activate(&dragon) == LORD_EVENT_CONFIRM);
+    CHECK(dragon.enemy.max_hit_points == 10000);
+    CHECK(dragon.enemy.strength == 1500);
+    CHECK(dragon.enemy.defense == 200);
+}
+
 static void test_mail_pvp_friendship_and_mentoring(void)
 {
     lord_state_t state;
@@ -212,9 +619,11 @@ static void test_mail_pvp_friendship_and_mentoring(void)
     state.selection = 0U;
     state.player.strength = 100000;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
+    state.save_dirty = false;
     CHECK(lord_activate(&state) == LORD_EVENT_WIN);
     CHECK(!state.realm[0].alive);
     CHECK(state.player.pvp_wins == 1U);
+    CHECK(state.save_dirty);
 
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
     state.screen = LORD_SCREEN_FRIENDSHIP_ACTION;
@@ -244,8 +653,23 @@ static void test_realm_bound_inn_sleep(void)
     local.screen = LORD_SCREEN_INN;
     local.selection = 0U;
     CHECK(lord_activate(&local) == LORD_EVENT_CONFIRM);
+    CHECK(local.screen == LORD_SCREEN_MESSAGE);
+    CHECK(strstr(local.message_line_1, "Finish today's") != NULL);
+    CHECK(local.player.day == local_day);
+    CHECK(local.player.bank == 100U);
+
+    local.player.forest_fights = 0U;
+    local.player.high_spirits = true;
+    local.screen = LORD_SCREEN_INN;
+    local.selection = 0U;
+    CHECK(lord_activate(&local) == LORD_EVENT_CONFIRM);
     CHECK(local.player.day == (uint16_t)(local_day + 1U));
-    CHECK(local.player.bank == 110U);
+    CHECK(local.player.bank == 100U);
+    CHECK(!local.player.high_spirits);
+    local.screen = LORD_SCREEN_INN;
+    local.selection = 0U;
+    CHECK(lord_activate(&local) == LORD_EVENT_CONFIRM);
+    CHECK(local.player.day == (uint16_t)(local_day + 1U));
 
     lord_state_t bound;
     enter_town(&bound, LORD_CLASS_THIEF);
@@ -346,6 +770,62 @@ static void test_bartender_riddle_budget(void)
     CHECK(strstr(state.message_line_1, "No friendship games") != NULL);
 }
 
+static void test_forest_action_cost_and_real_rankings(void)
+{
+    lord_state_t base;
+    enter_town(&base, LORD_CLASS_THIEF);
+    bool found_old_man = false;
+    for (uint32_t seed = 1U; seed < 10000U && !found_old_man; ++seed) {
+        lord_state_t attempt = base;
+        attempt.screen = LORD_SCREEN_FOREST;
+        attempt.selection = 0U;
+        attempt.player.forest_fights = 7U;
+        attempt.rng_state = seed;
+        CHECK(lord_activate(&attempt) == LORD_EVENT_CONFIRM);
+        if (attempt.screen == LORD_SCREEN_MESSAGE &&
+            strstr(attempt.message_line_1, "Old man rewards") != NULL) {
+            found_old_man = true;
+            CHECK(attempt.player.forest_fights == 6U);
+        }
+    }
+    CHECK(found_old_man);
+
+    lord_state_t rankings;
+    enter_town(&rankings, LORD_CLASS_MYSTICAL);
+    CHECK(lord_ranked_slot(&rankings, 0U) == 7);
+    CHECK(lord_ranked_slot(&rankings, LORD_RANKING_COUNT) == -2);
+    rankings.player.level = LORD_MAX_LEVEL;
+    rankings.player.experience = 1250000U;
+    CHECK(lord_ranked_slot(&rankings, 0U) == -1);
+    uint8_t previous_level = UINT8_MAX;
+    for (size_t rank = 0U; rank < LORD_RANKING_COUNT; ++rank) {
+        const int8_t slot = lord_ranked_slot(&rankings, rank);
+        const uint8_t level = slot < 0 ? rankings.player.level :
+            rankings.realm[(size_t)slot].level;
+        CHECK(level <= previous_level);
+        previous_level = level;
+    }
+
+    /* Main-quest deeds outrank raw level: winning the Dragon and rebirthing
+     * must never make a hero fall behind a level-12 camper. */
+    rankings.realm[0].dragon_kills = 1U;
+    rankings.realm[0].level = 1U;
+    CHECK(lord_ranked_slot(&rankings, 0U) == 0);
+    rankings.player.dragon_kills = 2U;
+    rankings.player.level = 1U;
+    rankings.player.experience = 0U;
+    CHECK(lord_ranked_slot(&rankings, 0U) == -1);
+
+    /* Realm directory pages may contain fewer than eight entries. Empty
+     * actor-ID slots are not fake ranked players. */
+    rankings.sync_actor_id[0] = 1U;
+    rankings.realm_actor_ids[3][0] = 2U;
+    rankings.realm[3].level = 7U;
+    CHECK(lord_ranked_slot(&rankings, 0U) == -1);
+    CHECK(lord_ranked_slot(&rankings, 1U) == 3);
+    CHECK(lord_ranked_slot(&rankings, 2U) == -2);
+}
+
 static void test_full_inn_and_igms(void)
 {
     lord_state_t state;
@@ -373,12 +853,12 @@ static void test_full_inn_and_igms(void)
     const uint32_t chomp_before = state.player.gold;
     const uint16_t badges_before = state.player.friendship_badges;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
-    CHECK(state.player.gold == chomp_before - 5U ||
-          state.player.gold == chomp_before ||
-          state.player.gold == chomp_before + 5U);
+    CHECK(state.player.gold == chomp_before - 5U);
+    CHECK(state.dice_active);
+    CHECK(state.dice_rolls == 2U);
+    CHECK(state.dice_player >= 2U && state.dice_player <= 12U);
     CHECK(state.player.friendship_badges == badges_before);
-    CHECK(state.player.high_spirits);
-    CHECK(lord_menu_count(&state) == 2U);
+    CHECK(lord_menu_count(&state) == 3U);
 
     state.screen = LORD_SCREEN_INN;
     state.selection = 8U;
@@ -403,10 +883,236 @@ static void test_full_inn_and_igms(void)
     CHECK(state.igm_used_mask == UINT8_C(0x7f));
 
     state.screen = LORD_SCREEN_INN;
+    state.player.forest_fights = 0U;
     state.selection = 0U;
     CHECK(lord_activate(&state) == LORD_EVENT_CONFIRM);
     CHECK(state.igm_used_mask == 0U);
     CHECK(state.player.forest_fights >= LORD_FOREST_FIGHTS_PER_DAY);
+}
+
+static uint16_t expected_quiz_answer(const lord_state_t *state)
+{
+    if (state->quiz_operator == 0U) {
+        return (uint16_t)(state->quiz_left + state->quiz_right);
+    }
+    if (state->quiz_operator == 1U) {
+        return (uint16_t)(state->quiz_left - state->quiz_right);
+    }
+    return (uint16_t)(state->quiz_left * state->quiz_right);
+}
+
+static void test_player_driven_tavern_games(void)
+{
+    lord_state_t quiz;
+    enter_town(&quiz, LORD_CLASS_MYSTICAL);
+    quiz.player.gold = 100U;
+    quiz.screen = LORD_SCREEN_IGM_DETAIL;
+    quiz.selected_igm = 0U;
+    quiz.selection = 0U;
+    CHECK(lord_activate(&quiz) == LORD_EVENT_CONFIRM);
+    CHECK(quiz.screen == LORD_SCREEN_ARAGORN_QUIZ);
+    CHECK(quiz.player.gold == 95U);
+    CHECK(quiz.quiz_wager == 5U);
+    CHECK((quiz.igm_used_mask & 1U) != 0U);
+    CHECK(lord_menu_count(&quiz) == 4U);
+    CHECK(quiz.quiz_correct < 4U);
+    CHECK(quiz.quiz_answers[quiz.quiz_correct] ==
+          expected_quiz_answer(&quiz));
+    for (size_t left = 0U; left < 4U; ++left) {
+        for (size_t right = left + 1U; right < 4U; ++right) {
+            CHECK(quiz.quiz_answers[left] != quiz.quiz_answers[right]);
+        }
+    }
+    quiz.selection = quiz.quiz_correct;
+    CHECK(lord_activate(&quiz) == LORD_EVENT_CONFIRM);
+    CHECK(quiz.screen == LORD_SCREEN_MESSAGE);
+    CHECK(quiz.player.gold == 105U);
+    CHECK(quiz.player.high_spirits);
+
+    lord_state_t wrong;
+    enter_town(&wrong, LORD_CLASS_THIEF);
+    wrong.player.gold = 100U;
+    wrong.screen = LORD_SCREEN_IGM_DETAIL;
+    wrong.selected_igm = 0U;
+    wrong.selection = 1U;
+    CHECK(lord_activate(&wrong) == LORD_EVENT_CONFIRM);
+    CHECK(wrong.player.gold == 80U);
+    wrong.selection = (uint8_t)((wrong.quiz_correct + 1U) % 4U);
+    CHECK(lord_activate(&wrong) == LORD_EVENT_CONFIRM);
+    CHECK(wrong.player.gold == 80U);
+    CHECK(!wrong.player.high_spirits);
+
+    lord_state_t poor;
+    enter_town(&poor, LORD_CLASS_DEATH_KNIGHT);
+    poor.player.gold = 4U;
+    poor.screen = LORD_SCREEN_IGM_DETAIL;
+    poor.selected_igm = 0U;
+    poor.selection = 0U;
+    const uint32_t poor_rng = poor.rng_state;
+    const uint32_t poor_sequence = poor.save_sequence;
+    CHECK(lord_activate(&poor) == LORD_EVENT_CONFIRM);
+    CHECK(poor.player.gold == 4U);
+    CHECK(poor.rng_state == poor_rng);
+    CHECK(poor.igm_used_mask == 0U);
+    CHECK(poor.save_sequence == poor_sequence);
+
+    lord_state_t interrupted;
+    enter_town(&interrupted, LORD_CLASS_MYSTICAL);
+    interrupted.player.gold = 100U;
+    interrupted.screen = LORD_SCREEN_IGM_DETAIL;
+    interrupted.selected_igm = 0U;
+    interrupted.selection = 0U;
+    CHECK(lord_activate(&interrupted) == LORD_EVENT_CONFIRM);
+    uint8_t save[LORD_SAVE_MAX_BYTES];
+    const size_t save_bytes = lord_save_encode(
+        &interrupted, save, sizeof(save));
+    CHECK(save_bytes > 0U);
+    lord_state_t restored;
+    CHECK(lord_save_decode(&restored, save, save_bytes));
+    CHECK(restored.screen == LORD_SCREEN_TOWN);
+    CHECK(restored.player.gold == 95U);
+    CHECK((restored.igm_used_mask & 1U) != 0U);
+    CHECK(restored.quiz_wager == 0U);
+    CHECK(lord_cancel(&interrupted) == LORD_EVENT_CONFIRM);
+    CHECK(interrupted.screen == LORD_SCREEN_IGM);
+    CHECK(interrupted.player.gold == 95U);
+
+    lord_state_t dice;
+    enter_town(&dice, LORD_CLASS_DEATH_KNIGHT);
+    dice.player.gold = 100U;
+    dice.screen = LORD_SCREEN_INN;
+    dice.selection = 6U;
+    CHECK(lord_activate(&dice) == LORD_EVENT_CONFIRM);
+    CHECK(dice.screen == LORD_SCREEN_DRAGON_DICE);
+    CHECK(lord_menu_count(&dice) == 3U);
+    dice.selection = 0U;
+    CHECK(lord_activate(&dice) == LORD_EVENT_CONFIRM);
+    CHECK(dice.player.gold == 95U);
+    CHECK(dice.dice_active);
+    CHECK(dice.dice_rolls == 2U);
+    const uint16_t dice_badges = dice.player.friendship_badges;
+    dice.dice_player = 2U;
+    dice.rng_state = 1U;
+    dice.selection = 0U;
+    CHECK(lord_activate(&dice) == LORD_EVENT_CONFIRM);
+    CHECK(dice.player.gold == 95U);
+    CHECK(dice.dice_player == 6U);
+    CHECK(dice.dice_active);
+    dice.dice_player = 17U;
+    dice.selection = 1U;
+    CHECK(lord_activate(&dice) == LORD_EVENT_CONFIRM);
+    CHECK(!dice.dice_active);
+    CHECK(dice.player.gold == 95U || dice.player.gold == 100U ||
+          dice.player.gold == 103U);
+    CHECK(dice.player.friendship_badges == dice_badges);
+
+    lord_state_t bust;
+    enter_town(&bust, LORD_CLASS_THIEF);
+    bust.player.gold = 95U;
+    bust.screen = LORD_SCREEN_DRAGON_DICE;
+    bust.dice_active = true;
+    bust.dice_player = 18U;
+    bust.dice_rolls = 3U;
+    bust.rng_state = 1U;
+    bust.selection = 0U;
+    CHECK(lord_activate(&bust) == LORD_EVENT_CONFIRM);
+    CHECK(!bust.dice_active);
+    CHECK(bust.player.gold == 95U);
+    CHECK(strstr(bust.battle_line, "Bust") != NULL);
+
+    lord_state_t forfeit;
+    enter_town(&forfeit, LORD_CLASS_THIEF);
+    forfeit.player.gold = 100U;
+    forfeit.screen = LORD_SCREEN_INN;
+    forfeit.selection = 6U;
+    CHECK(lord_activate(&forfeit) == LORD_EVENT_CONFIRM);
+    forfeit.selection = 0U;
+    CHECK(lord_activate(&forfeit) == LORD_EVENT_CONFIRM);
+    CHECK(lord_cancel(&forfeit) == LORD_EVENT_CONFIRM);
+    CHECK(forfeit.screen == LORD_SCREEN_INN);
+    CHECK(forfeit.player.gold == 95U);
+    CHECK(!forfeit.dice_active);
+}
+
+static uint32_t find_dragon_dice_win_seed(const lord_state_t *state)
+{
+    for (uint32_t seed = 1U; seed < 4096U; ++seed) {
+        lord_state_t probe = *state;
+        probe.screen = LORD_SCREEN_DRAGON_DICE;
+        probe.selection = 1U;
+        probe.dice_active = true;
+        probe.dice_player = 18U;
+        probe.dice_host = 0U;
+        probe.dice_rolls = 2U;
+        probe.rng_state = seed;
+        const uint32_t gold_before = probe.player.gold;
+        if (lord_activate(&probe) == LORD_EVENT_CONFIRM &&
+            probe.player.gold == gold_before + 8U) {
+            return seed;
+        }
+    }
+    CHECK(false);
+    return 1U;
+}
+
+static void force_dragon_dice_win(lord_state_t *state, uint32_t seed)
+{
+    state->screen = LORD_SCREEN_DRAGON_DICE;
+    state->selection = 1U;
+    state->dice_active = true;
+    state->dice_player = 18U;
+    state->dice_host = 0U;
+    state->dice_rolls = 2U;
+    state->rng_state = seed;
+    CHECK(lord_activate(state) == LORD_EVENT_CONFIRM);
+    CHECK(!state->dice_active);
+}
+
+static void test_dragon_dice_daily_friendship_cap(void)
+{
+    lord_state_t state;
+    enter_town(&state, LORD_CLASS_DEATH_KNIGHT);
+    state.player.gold = 95U; /* A five-coin stake has already been paid. */
+    const uint16_t charm_before = state.player.charm;
+    const uint32_t winning_seed = find_dragon_dice_win_seed(&state);
+
+    force_dragon_dice_win(&state, winning_seed);
+    CHECK(state.player.gold == 103U);
+    CHECK(state.player.charm == (uint16_t)(charm_before + 1U));
+    CHECK(state.player.high_spirits);
+    CHECK((state.igm_used_mask & LORD_DAILY_DICE_FRIENDSHIP_MASK) != 0U);
+    CHECK(strstr(state.battle_line, "today's friendship cheer") != NULL);
+
+    /* The once-per-day marker must survive a cartridge save/relaunch. */
+    uint8_t save[LORD_SAVE_MAX_BYTES];
+    const size_t save_bytes = lord_save_encode(&state, save, sizeof(save));
+    CHECK(save_bytes > 0U);
+    lord_state_t restored;
+    CHECK(lord_save_decode(&restored, save, save_bytes));
+    CHECK((restored.igm_used_mask & LORD_DAILY_DICE_FRIENDSHIP_MASK) != 0U);
+    CHECK(restored.player.charm == (uint16_t)(charm_before + 1U));
+
+    const uint32_t second_gold_before = restored.player.gold;
+    force_dragon_dice_win(&restored, winning_seed);
+    CHECK(restored.player.gold == second_gold_before + 8U);
+    CHECK(restored.player.charm == (uint16_t)(charm_before + 1U));
+    CHECK(strstr(restored.battle_line, "already earned") != NULL);
+
+    const uint16_t day_before = restored.player.day;
+    restored.screen = LORD_SCREEN_INN;
+    restored.selection = 0U;
+    restored.player.forest_fights = 0U;
+    CHECK(lord_activate(&restored) == LORD_EVENT_CONFIRM);
+    CHECK(restored.player.day == (uint16_t)(day_before + 1U));
+    CHECK((restored.igm_used_mask & LORD_DAILY_DICE_FRIENDSHIP_MASK) == 0U);
+    CHECK(!restored.player.high_spirits);
+
+    const uint32_t third_gold_before = restored.player.gold;
+    force_dragon_dice_win(&restored, winning_seed);
+    CHECK(restored.player.gold == third_gold_before + 8U);
+    CHECK(restored.player.charm == (uint16_t)(charm_before + 2U));
+    CHECK(restored.player.high_spirits);
+    CHECK((restored.igm_used_mask & LORD_DAILY_DICE_FRIENDSHIP_MASK) != 0U);
 }
 
 static uint32_t test_save_crc32(const uint8_t *bytes, size_t length)
@@ -536,6 +1242,59 @@ static void test_save_round_trip(void)
     CHECK(lord_save_encode(&state, encoded, 16U) == 0U);
 }
 
+static void test_save_migrations_and_combat_bounds(void)
+{
+    enum {
+        LORD_V4_SAVE_EXTENSION_BYTES = 4 + 8 * 16 + 16 + 8,
+        LORD_V5_SAVE_EXTENSION_BYTES = 16 + 4 + 4,
+    };
+    lord_state_t legacy;
+    enter_town(&legacy, LORD_CLASS_MYSTICAL);
+    legacy.player.dragon_kills = 1U;
+    legacy.player.amulet = false;
+    legacy.save_sequence = 77U;
+
+    uint8_t original[LORD_SAVE_MAX_BYTES];
+    uint8_t candidate[LORD_SAVE_MAX_BYTES];
+    const size_t original_length = lord_save_encode(
+        &legacy, original, sizeof(original));
+    CHECK(original_length > 0U);
+
+    lord_state_t restored;
+    memcpy(candidate, original, original_length);
+    CHECK(lord_save_decode(&restored, candidate, original_length));
+    CHECK(restored.player.amulet);
+    CHECK(restored.save_dirty);
+    CHECK(restored.save_sequence == 78U);
+
+    const size_t v4_length = original_length - LORD_V5_SAVE_EXTENSION_BYTES;
+    const size_t v4_marker = v4_length - LORD_V4_SAVE_EXTENSION_BYTES;
+    memcpy(candidate, original, original_length);
+    candidate[v4_marker + 3U] = '4';
+    test_save_header(candidate, v4_length, 4U);
+    CHECK(lord_save_decode(&restored, candidate, v4_length));
+    CHECK(restored.player.amulet);
+    CHECK(restored.save_dirty);
+    CHECK(restored.save_sequence == 78U);
+
+    const size_t v3_length = original_length -
+        LORD_V4_SAVE_EXTENSION_BYTES - LORD_V5_SAVE_EXTENSION_BYTES;
+    memcpy(candidate, original, original_length);
+    test_save_header(candidate, v3_length, LORD_SAVE_MINIMUM_VERSION);
+    CHECK(lord_save_decode(&restored, candidate, v3_length));
+    CHECK(restored.player.amulet);
+    CHECK(restored.save_dirty);
+    CHECK(restored.save_sequence == 78U);
+
+    legacy.player.dragon_kills = 0U;
+    legacy.player.amulet = false;
+    legacy.player.strength = LORD_COMBAT_STAT_MAX + 1;
+    const size_t oversized_length = lord_save_encode(
+        &legacy, candidate, sizeof(candidate));
+    CHECK(oversized_length > 0U);
+    CHECK(!lord_save_decode(&restored, candidate, oversized_length));
+}
+
 static void make_legacy_empty_realm_slots(lord_state_t *state)
 {
     state->partner_index = -1;
@@ -662,6 +1421,9 @@ typedef struct {
     uint32_t sequence;
     p4_game_save_ticket_t ticket;
     bool defer_commit;
+    bool reject_queue;
+    bool reject_status;
+    p4_game_save_status_t forced_status;
 } save_mock_t;
 
 enum {
@@ -684,6 +1446,11 @@ enum {
     TEST_P4RM_EVENT_BODY = 19,
     TEST_P4RM_EVENT_ACK = 20,
     TEST_P4RM_DIRECTORY_PAGE = 21,
+    TEST_P4RM_DIRECTORY_DEEDS = 22,
+    TEST_P4RM_GUILD_STATUS = 23,
+    TEST_P4RM_DIRECTORY_GUILD = 24,
+    TEST_P4RM_GUILD_PAGE = 25,
+    TEST_P4RM_GUILD_SUMMARY = 26,
     TEST_P4RM_BEGIN_INDEX = UINT16_MAX,
     TEST_P4RM_WELCOME_HAS_SNAPSHOT = 1U << 0U,
     TEST_P4RM_WELCOME_ACCEPT_LOCAL = 1U << 2U,
@@ -842,7 +1609,7 @@ static bool mock_queue_save(void *context, const char *slot_id,
                             p4_game_save_ticket_t *ticket_out)
 {
     save_mock_t *const mock = context;
-    if (strcmp(slot_id, "AUTO") != 0 ||
+    if (mock->reject_queue || strcmp(slot_id, "AUTO") != 0 ||
         schema_version != LORD_SAVE_FORMAT_VERSION ||
         data_bytes > sizeof(mock->payload)) {
         return false;
@@ -863,6 +1630,14 @@ static bool mock_read_save(void *context, p4_game_save_ticket_t ticket,
     save_mock_t *const mock = context;
     if (ticket != mock->ticket) {
         return false;
+    }
+    if (mock->reject_status) {
+        return false;
+    }
+    if (mock->forced_status != P4_GAME_SAVE_NONE) {
+        *status_out = mock->forced_status;
+        *sequence_out = 0U;
+        return true;
     }
     if (mock->defer_commit) {
         *status_out = P4_GAME_SAVE_QUEUED;
@@ -920,6 +1695,386 @@ static void realm_mock_connect_bound(
           P4_GAME_CONTINUE);
     CHECK(realm->outgoing[5] == TEST_P4RM_PROFILE_STATS);
     (void)realm_mock_take_kind(realm);
+}
+
+static void realm_mock_finish_action(
+    realm_mock_t *realm,
+    p4_game_instance_t *instance,
+    uint32_t transaction,
+    uint8_t status,
+    uint8_t result_code,
+    uint32_t result_value)
+{
+    const p4_game_input_t idle = {0};
+    const uint8_t begin_ack = TEST_P4RM_ACTION_BEGIN;
+    realm_mock_queue(realm, TEST_P4RM_ACK, transaction,
+                     TEST_P4RM_BEGIN_INDEX, 0U, &begin_ack, 1U);
+    CHECK(p4_game_instance_update(instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm->outgoing_bytes == 0U);
+
+    uint8_t result[16] = {0};
+    result[0] = status;
+    result[1] = 10U;
+    result[2] = result_code;
+    test_store_u32(result, 4U, result_value);
+    if (status == 0U) {
+        test_store_u64(result, 8U, 1U);
+    }
+    realm_mock_queue(realm, TEST_P4RM_ACTION_RESULT, transaction,
+                     0U, 0U, result, sizeof(result));
+    CHECK(p4_game_instance_update(instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+}
+
+static void test_adventure_club_client_protocol(void)
+{
+    static const p4_game_multiplayer_profile_t profile = {
+        .schema = P4_GAME_MULTIPLAYER_PROFILE_SCHEMA,
+        .style = P4_GAME_MULTIPLAYER_STYLE_TURN_BASED,
+        .min_players = 2U,
+        .max_players = 2U,
+        .tick_rate_hz = 30U,
+        .message_bytes = P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES,
+        .protocol = UINT16_C(0x4c53),
+    };
+    const p4_game_input_t idle = {0};
+    const p4_game_input_t activate = {
+        .held = P4_BUTTON_A, .pressed = P4_BUTTON_A,
+    };
+    realm_mock_t realm = {0};
+    save_mock_t save = {0};
+    lord_state_t seed;
+    enter_town(&seed, LORD_CLASS_THIEF);
+    const uint8_t actor_id[LORD_SYNC_ACTOR_ID_BYTES] = {
+        0x31U, 2U, 3U, 4U, 5U, 6U, 7U, 8U,
+        9U, 10U, 11U, 12U, 13U, 14U, 15U, 16U,
+    };
+    const uint8_t rival_id[LORD_SYNC_ACTOR_ID_BYTES] = {
+        0x81U, 0x82U, 0x83U, 0x84U, 0x85U, 0x86U, 0x87U, 0x88U,
+        0x89U, 0x8aU, 0x8bU, 0x8cU, 0x8dU, 0x8eU, 0x8fU, 0x90U,
+    };
+    memcpy(seed.sync_actor_id, actor_id, sizeof(actor_id));
+    seed.sync_server_revision = 1U;
+    seed.sync_committed_save_sequence = seed.save_sequence;
+    save.bytes = lord_save_encode(&seed, save.payload, sizeof(save.payload));
+    CHECK(save.bytes != 0U);
+    save.sequence = 1U;
+
+    p4_game_services_t services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO |
+            P4_GAME_CAP_CONTROLS | P4_GAME_CAP_SAVE |
+            P4_GAME_CAP_MULTIPLAYER_SESSION,
+        .save_context = &save,
+        .save_data = save.payload,
+        .save_bytes = save.bytes,
+        .save_schema_version = LORD_SAVE_FORMAT_VERSION,
+        .save_sequence = save.sequence,
+        .queue_save = mock_queue_save,
+        .read_save_status = mock_read_save,
+        .multiplayer_context = &realm,
+        .multiplayer_read_status = realm_mock_status,
+        .multiplayer_send = realm_mock_send,
+        .multiplayer_receive = realm_mock_receive,
+        .multiplayer_profile = &profile,
+    };
+    p4_game_instance_t instance;
+    lord_state_t state;
+    CHECK(start_game(&instance, &state, &services));
+    realm_mock_connect_bound(&realm, &instance, &state);
+    const lord_player_t personal_before = state.player;
+    const uint32_t save_sequence_before = state.save_sequence;
+
+    /* A new cartridge connected to an old hub can browse the hall, but it
+     * must never emit ACTION_GUILD until an actor-bound STATUS proves support. */
+    state.screen = LORD_SCREEN_GUILD_CREATE;
+    state.selection = 0U;
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing_bytes == 0U);
+    CHECK(state.screen == LORD_SCREEN_MESSAGE);
+    CHECK(strstr(state.message_line_2, "upgrade") != NULL);
+
+    uint8_t guild_status[48] = {0};
+    memcpy(guild_status, actor_id, sizeof(actor_id));
+    test_store_u16(guild_status, 36U, LORD_GUILD_QUEST_GOAL);
+    guild_status[47] = 0x08U;
+
+    /* Wrong actor, malformed singleton metadata, and a nine-member payload
+     * are ignored without destroying or enabling status. */
+    guild_status[0] ^= UINT8_C(0x01);
+    realm_mock_queue(&realm, TEST_P4RM_GUILD_STATUS, UINT32_C(0x8000),
+                     0U, 0U, guild_status, sizeof(guild_status));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(!state.guild_status.supported);
+    guild_status[0] ^= UINT8_C(0x01);
+    realm_mock_queue(&realm, TEST_P4RM_GUILD_STATUS, UINT32_C(0x8001),
+                     0U, 1U, guild_status, sizeof(guild_status));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(!state.guild_status.supported);
+    test_store_u32(guild_status, 16U, 77U);
+    test_store_u16(guild_status, 20U, 1U);
+    guild_status[22] = 9U;
+    guild_status[23] = 2U;
+    realm_mock_queue(&realm, TEST_P4RM_GUILD_STATUS, UINT32_C(0x8002),
+                     0U, 0U, guild_status, sizeof(guild_status));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(!state.guild_status.supported);
+
+    memset(guild_status + 16U, 0, sizeof(guild_status) - 16U);
+    test_store_u16(guild_status, 36U, LORD_GUILD_QUEST_GOAL);
+    guild_status[47] = 0x08U;
+    realm_mock_queue(&realm, TEST_P4RM_GUILD_STATUS, UINT32_C(0x8003),
+                     0U, 0U, guild_status, sizeof(guild_status));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(!state.guild_status.supported);
+    guild_status[47] = 0U;
+    realm_mock_queue(&realm, TEST_P4RM_GUILD_STATUS, UINT32_C(0x8004),
+                     0U, 0U, guild_status, sizeof(guild_status));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.guild_status.supported);
+    CHECK(state.guild_status.guild_id == 0U);
+
+    /* CREATE carries only the fixed 1..16 name code and a zero target/body. */
+    state.screen = LORD_SCREEN_GUILD_CREATE;
+    state.selection = LORD_GUILD_NAME_COUNT - 1U;
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing[5] == TEST_P4RM_ACTION_BEGIN);
+    CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES] == 10U);
+    CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES + 1U] == 0U);
+    CHECK(test_load_u16(realm.outgoing,
+                        TEST_P4RM_HEADER_BYTES + 2U) == 16U);
+    for (size_t index = 0U; index < LORD_SYNC_ACTOR_ID_BYTES; ++index) {
+        CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES + 4U + index] == 0U);
+    }
+    CHECK(test_load_u16(realm.outgoing,
+                        TEST_P4RM_HEADER_BYTES + 28U) == 0U);
+    CHECK(test_load_u32(realm.outgoing,
+                        TEST_P4RM_HEADER_BYTES + 32U) == 0U);
+    uint32_t transaction = test_load_u32(realm.outgoing, 8U);
+    (void)realm_mock_take_kind(&realm);
+    realm_mock_finish_action(&realm, &instance, transaction, 0U, 0U, 16U);
+    CHECK(strstr(state.message_line_1, "founded") != NULL);
+
+    /* A valid maximum-sized member status is transient and render-safe. */
+    memset(guild_status + 16U, 0, sizeof(guild_status) - 16U);
+    test_store_u32(guild_status, 16U, 77U);
+    test_store_u16(guild_status, 20U, LORD_GUILD_NAME_COUNT);
+    guild_status[22] = 8U;
+    guild_status[23] = 1U;
+    test_store_u32(guild_status, 24U, UINT32_MAX);
+    test_store_u32(guild_status, 28U, UINT32_MAX);
+    test_store_u16(guild_status, 32U, UINT16_MAX);
+    test_store_u16(guild_status, 34U, LORD_GUILD_QUEST_GOAL);
+    test_store_u16(guild_status, 36U, LORD_GUILD_QUEST_GOAL);
+    test_store_u16(guild_status, 38U, UINT16_MAX);
+    test_store_u16(guild_status, 40U, UINT16_MAX);
+    test_store_u16(guild_status, 42U, UINT16_MAX);
+    guild_status[44] = 1U;
+    test_store_u16(guild_status, 45U, 15U);
+    guild_status[47] = 0x08U;
+    realm_mock_queue(&realm, TEST_P4RM_GUILD_STATUS, UINT32_C(0x8005),
+                     0U, 0U, guild_status, sizeof(guild_status));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.guild_status.supported);
+    CHECK(state.guild_status.member_count == 8U);
+    CHECK(state.guild_status.name_code == LORD_GUILD_NAME_COUNT);
+
+    uint8_t directory_summary[44] = {0};
+    memcpy(directory_summary, rival_id, sizeof(rival_id));
+    memcpy(directory_summary + 16U, "Club Rival", 11U);
+    directory_summary[36] = (uint8_t)LORD_HERO_STYLE_HERO;
+    directory_summary[37] = (uint8_t)LORD_CLASS_MYSTICAL;
+    directory_summary[38] = 5U;
+    directory_summary[39] = 0x05U;
+    uint8_t directory_guild[24] = {0};
+    memcpy(directory_guild, rival_id, sizeof(rival_id));
+    test_store_u32(directory_guild, 16U, 88U);
+    test_store_u16(directory_guild, 20U, 15U);
+    test_store_u16(directory_guild, 22U, 1U);
+    realm_mock_queue(&realm, TEST_P4RM_DIRECTORY_SUMMARY,
+                     UINT32_C(0x8010), 0U, 1U,
+                     directory_summary, sizeof(directory_summary));
+    realm_mock_queue(&realm, TEST_P4RM_DIRECTORY_GUILD,
+                     UINT32_C(0x8011), 0U, 1U,
+                     directory_guild, sizeof(directory_guild));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.realm[0].guild_id == 0U);
+    test_store_u16(directory_guild, 22U, 0U);
+    realm_mock_queue(&realm, TEST_P4RM_DIRECTORY_GUILD,
+                     UINT32_C(0x8012), 0U, 1U,
+                     directory_guild, sizeof(directory_guild));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.realm[0].guild_id == 88U);
+    CHECK(state.realm[0].guild_name_code == 15U);
+
+    /* Opening standings emits the independent two-byte club page request. */
+    state.screen = LORD_SCREEN_GUILD;
+    state.selection = 5U;
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.screen == LORD_SCREEN_GUILD_STANDINGS);
+    CHECK(!state.guild_page_received);
+    CHECK(realm.outgoing[5] == TEST_P4RM_GUILD_PAGE);
+    CHECK(realm.outgoing_bytes == TEST_P4RM_HEADER_BYTES + 2U);
+    CHECK(test_load_u16(realm.outgoing, TEST_P4RM_HEADER_BYTES) == 0U);
+    (void)realm_mock_take_kind(&realm);
+
+    uint8_t guild_page[4] = {0};
+    test_store_u16(guild_page, 2U, 1U);
+    realm_mock_queue(&realm, TEST_P4RM_GUILD_PAGE, UINT32_C(0x8020),
+                     0U, 1U, guild_page, sizeof(guild_page));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.guild_page_total == 0U);
+    CHECK(!state.guild_page_received);
+    memset(guild_page, 0, sizeof(guild_page));
+    realm_mock_queue(&realm, TEST_P4RM_GUILD_PAGE, UINT32_C(0x8025),
+                     0U, 0U, guild_page, sizeof(guild_page));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.guild_page_received);
+    CHECK(state.guild_page_total == 0U);
+    for (size_t index = 0U; index < LORD_GUILD_SUMMARY_COUNT; ++index) {
+        CHECK(!state.guild_summaries[index].valid);
+    }
+    test_store_u16(guild_page, 2U, 1U);
+    realm_mock_queue(&realm, TEST_P4RM_GUILD_PAGE, UINT32_C(0x8021),
+                     0U, 0U, guild_page, sizeof(guild_page));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.guild_page_received);
+    CHECK(state.guild_page_total == 1U);
+
+    uint8_t guild_summary[24] = {0};
+    test_store_u32(guild_summary, 0U, 77U);
+    test_store_u16(guild_summary, 4U, LORD_GUILD_NAME_COUNT);
+    guild_summary[6] = 9U;
+    guild_summary[7] = UINT8_MAX;
+    test_store_u32(guild_summary, 8U, UINT32_MAX);
+    test_store_u32(guild_summary, 12U, UINT32_MAX);
+    test_store_u16(guild_summary, 16U, UINT16_MAX);
+    test_store_u16(guild_summary, 18U, UINT16_MAX);
+    test_store_u16(guild_summary, 20U, UINT16_MAX);
+    realm_mock_queue(&realm, TEST_P4RM_GUILD_SUMMARY,
+                     UINT32_C(0x8022), 0U, 1U,
+                     guild_summary, sizeof(guild_summary));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(!state.guild_summaries[0].valid);
+    guild_summary[6] = 8U;
+    test_store_u16(guild_summary, 22U, 1U);
+    realm_mock_queue(&realm, TEST_P4RM_GUILD_SUMMARY,
+                     UINT32_C(0x8023), 0U, 1U,
+                     guild_summary, sizeof(guild_summary));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(!state.guild_summaries[0].valid);
+    test_store_u16(guild_summary, 22U, 0U);
+    realm_mock_queue(&realm, TEST_P4RM_GUILD_SUMMARY,
+                     UINT32_C(0x8024), 0U, 1U,
+                     guild_summary, sizeof(guild_summary));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.guild_summaries[0].valid);
+    CHECK(state.guild_summaries[0].member_count == 8U);
+    CHECK(state.guild_summaries[0].prestige == UINT32_MAX);
+
+    /* RALLY is targetless. Its shared points never touch the hero save. */
+    state.screen = LORD_SCREEN_GUILD;
+    state.selection = 0U;
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing[5] == TEST_P4RM_ACTION_BEGIN);
+    CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES] == 10U);
+    CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES + 1U] == 3U);
+    CHECK(test_load_u16(realm.outgoing,
+                        TEST_P4RM_HEADER_BYTES + 2U) == 0U);
+    for (size_t index = 0U; index < LORD_SYNC_ACTOR_ID_BYTES; ++index) {
+        CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES + 4U + index] == 0U);
+    }
+    transaction = test_load_u32(realm.outgoing, 8U);
+    (void)realm_mock_take_kind(&realm);
+    realm_mock_finish_action(&realm, &instance, transaction, 0U, 3U, 15U);
+    CHECK(strstr(state.message_line_1, "15") != NULL);
+    CHECK(memcmp(&state.player, &personal_before,
+                 sizeof(state.player)) == 0);
+    CHECK(state.save_sequence == save_sequence_before);
+
+    /* A hub-side daily denial returns code/value/id zero and clears the
+     * request with club-specific feedback, still without local spending. */
+    state.screen = LORD_SCREEN_GUILD;
+    state.selection = 1U;
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    transaction = test_load_u32(realm.outgoing, 8U);
+    CHECK(realm_mock_take_kind(&realm) == TEST_P4RM_ACTION_BEGIN);
+    realm_mock_finish_action(&realm, &instance, transaction, 3U, 0U, 0U);
+    CHECK(strstr(state.message_line_1, "declined") != NULL);
+    CHECK(memcmp(&state.player, &personal_before,
+                 sizeof(state.player)) == 0);
+
+    /* CLASH targets the selected member actor and maps result 1 to a win. */
+    state.screen = LORD_SCREEN_GUILD_TARGET;
+    state.guild_target = LORD_GUILD_TARGET_CLASH;
+    state.selection = 0U;
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing[5] == TEST_P4RM_ACTION_BEGIN);
+    CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES] == 10U);
+    CHECK(realm.outgoing[TEST_P4RM_HEADER_BYTES + 1U] == 4U);
+    CHECK(test_load_u16(realm.outgoing,
+                        TEST_P4RM_HEADER_BYTES + 2U) == 0U);
+    CHECK(memcmp(realm.outgoing + TEST_P4RM_HEADER_BYTES + 4U,
+                 rival_id, sizeof(rival_id)) == 0);
+    transaction = test_load_u32(realm.outgoing, 8U);
+    (void)realm_mock_take_kind(&realm);
+    realm_mock_finish_action(&realm, &instance, transaction, 0U, 4U, 1U);
+    CHECK(strstr(state.message_line_1, "won") != NULL);
+    CHECK(memcmp(&state.player, &personal_before,
+                 sizeof(state.player)) == 0);
+    CHECK(state.save_sequence == save_sequence_before);
+
+    /* Club projections do not enter LDSV5. Decode resumes with no transient
+     * membership, directory annotation, or club page state. */
+    uint8_t encoded[LORD_SAVE_MAX_BYTES];
+    const size_t encoded_bytes = lord_save_encode(
+        &state, encoded, sizeof(encoded));
+    lord_state_t restored;
+    CHECK(encoded_bytes == save.bytes);
+    CHECK(lord_save_decode(&restored, encoded, encoded_bytes));
+    CHECK(!restored.guild_status.supported);
+    CHECK(restored.guild_status.guild_id == 0U);
+    CHECK(restored.realm[0].guild_id == 0U);
+    CHECK(restored.guild_page_total == 0U);
+    CHECK(!restored.guild_page_received);
+    CHECK(memcmp(&restored.player, &state.player,
+                 sizeof(state.player)) == 0);
+
+    realm.disconnected = true;
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(!state.guild_status.supported);
+    CHECK(!state.guild_page_received);
+    state.screen = LORD_SCREEN_GUILD_CREATE;
+    state.selection = 0U;
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(realm.outgoing_bytes == 0U);
+    CHECK(state.screen == LORD_SCREEN_MESSAGE);
+    CHECK(strstr(state.message_line_1, "Connect") != NULL);
+    CHECK(memcmp(&state.player, &personal_before,
+                 sizeof(state.player)) == 0);
+    p4_game_instance_stop(&instance);
 }
 
 static void test_pending_realm_debits_fail_offline_and_retry_once(void)
@@ -1367,6 +2522,9 @@ static void test_p4mp_mac_realm_hourly_sync(void)
     test_store_u32(directory_stats, 36U, 250U);
     directory_stats[40] = 55U;
     directory_stats[41] = 1U;
+    uint8_t directory_deeds[18] = {0};
+    memcpy(directory_deeds, directory_summary, LORD_SYNC_ACTOR_ID_BYTES);
+    directory_deeds[16] = 3U;
     uint8_t directory_page[4] = {0};
     test_store_u16(directory_page, 0U, 0U);
     test_store_u16(directory_page, 2U, 17U);
@@ -1379,17 +2537,40 @@ static void test_p4mp_mac_realm_hourly_sync(void)
     realm_mock_queue(&realm, TEST_P4RM_DIRECTORY_STATS,
                      UINT32_C(0x5002), 0U, 1U,
                      directory_stats, sizeof(directory_stats));
+    realm_mock_queue(&realm, TEST_P4RM_DIRECTORY_DEEDS,
+                     UINT32_C(0x5003), 0U, 1U,
+                     directory_deeds, sizeof(directory_deeds));
     CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
           P4_GAME_CONTINUE);
     CHECK(strcmp(state.realm[0].name, "Other Hero") == 0);
     CHECK(state.realm[0].level == 4U);
     CHECK(state.realm[0].hit_points == 35);
     CHECK(state.realm[0].pvp_wins == 7U);
+    CHECK(state.realm[0].dragon_kills == 3U);
     CHECK(state.realm[0].trust == 55U);
     CHECK(state.realm[0].teamed);
     CHECK(strstr(state.realm[0].saying, "ONLINE") != NULL);
     CHECK(strcmp(state.realm[1].name, "Empty record") == 0);
     CHECK(state.realm[1].level == 1U);
+
+    /* The additive deeds sidecar is identity-bound and reserves its final
+     * byte. Malformed packets cannot borrow another profile's prestige. */
+    directory_deeds[16] = 9U;
+    directory_deeds[17] = 1U;
+    realm_mock_queue(&realm, TEST_P4RM_DIRECTORY_DEEDS,
+                     UINT32_C(0x5004), 0U, 1U,
+                     directory_deeds, sizeof(directory_deeds));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.realm[0].dragon_kills == 3U);
+    directory_deeds[17] = 0U;
+    directory_deeds[0] ^= UINT8_C(0x01);
+    realm_mock_queue(&realm, TEST_P4RM_DIRECTORY_DEEDS,
+                     UINT32_C(0x5005), 0U, 1U,
+                     directory_deeds, sizeof(directory_deeds));
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.realm[0].dragon_kills == 3U);
     uint8_t directory_saved[LORD_SAVE_MAX_BYTES];
     const size_t directory_saved_bytes = lord_save_encode(
         &state, directory_saved, sizeof(directory_saved));
@@ -2270,6 +3451,259 @@ static void capture_frame_if_requested(const p4_game_surface_t *surface,
     CHECK(fclose(file) == 0);
 }
 
+static void capture_monster_frame_if_requested(
+    const p4_game_surface_t *surface, size_t monster_index,
+    unsigned animation_frame)
+{
+    const char *const directory = getenv("LORD_MONSTER_CAPTURE_DIR");
+    if (directory == NULL || directory[0] == '\0') {
+        return;
+    }
+    char path[512];
+    const int path_length = snprintf(path, sizeof(path),
+                                     "%s/monster-%03zu-f%u.ppm", directory,
+                                     monster_index, animation_frame);
+    CHECK(path_length > 0 && (size_t)path_length < sizeof(path));
+    if (path_length <= 0 || (size_t)path_length >= sizeof(path)) {
+        return;
+    }
+    FILE *const file = fopen(path, "wb");
+    CHECK(file != NULL);
+    if (file == NULL) {
+        return;
+    }
+    (void)fprintf(file, "P6\n%u %u\n255\n", surface->width,
+                  surface->height);
+    for (uint16_t y = 0U; y < surface->height; ++y) {
+        for (uint16_t x = 0U; x < surface->width; ++x) {
+            const uint16_t pixel = surface->pixels[
+                (size_t)y * surface->stride_pixels + x];
+            const uint8_t rgb[3] = {
+                (uint8_t)((((uint32_t)(pixel >> 11U) & 31U) * 255U + 15U) /
+                          31U),
+                (uint8_t)((((uint32_t)(pixel >> 5U) & 63U) * 255U + 31U) /
+                          63U),
+                (uint8_t)(((uint32_t)(pixel & 31U) * 255U + 15U) / 31U),
+            };
+            CHECK(fwrite(rgb, sizeof(rgb), 1U, file) == 1U);
+        }
+    }
+    CHECK(fclose(file) == 0);
+}
+
+typedef struct {
+    size_t monster_index;
+    const char *monster_name;
+    const char *profile_name;
+    uint16_t expected_color;
+    uint16_t unoverridden_color;
+} lord_named_palette_expectation_t;
+
+/* These are the source table's deliberately named semantic colors. Keep the
+ * exact row name beside its index so an upstream table reorder fails loudly
+ * instead of silently testing a different encounter. */
+static const lord_named_palette_expectation_t
+    s_named_palette_expectations[] = {
+    {3U, "Large Green Rat", "green", UINT16_C(0x57ea),
+     UINT16_C(0xa540)},
+    {11U, "Green Python", "green", UINT16_C(0x57ea),
+     UINT16_C(0xa540)},
+    {24U, "Purple Monchichi", "purple", UINT16_C(0xfabf),
+     UINT16_C(0xa540)},
+    {28U, "Black Owl", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0x57ff)},
+    {35U, "Dark Elf", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0x57ff)},
+    {38U, "Huge Black Bear", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0xa540)},
+    {52U, "Black Alligator", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0x57ea)},
+    {54U, "Black Sorcerer", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0xfabf)},
+    {56U, "Black Soul", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0xc618)},
+    {57U, "Gold Man", "gold-yellow", UINT16_C(0xffe0),
+     UINT16_C(0xa540)},
+    {82U, "Fire Ork", "fire-red", UINT16_C(0xfaaa),
+     UINT16_C(0x57ea)},
+    {88U, "Pink Elephant", "pink-magenta", UINT16_C(0xfabf),
+     UINT16_C(0xa540)},
+    {95U, "Hemo-Glob", "hemo-red", UINT16_C(0xfaaa),
+     UINT16_C(0x0540)},
+    {107U, "Adult Gold Dragon", "gold-yellow", UINT16_C(0xffe0),
+     UINT16_C(0xfaaa)},
+    {108U, "Black Sorcerer", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0xfabf)},
+    {114U, "White Bear Of Lore", "white", UINT16_C(0xffff),
+     UINT16_C(0xa540)},
+    {117U, "ShadowStormWarrior", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0xc618)},
+    {123U, "Black Warlock", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0xfabf)},
+    {125U, "The Mighty Shadow", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0xc618)},
+    {126U, "Black Unicorn", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0xa540)},
+    {127U, "Mutated Black Widow", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0x7bef)},
+    {128U, "Humongous Black Wyre", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0xfaaa)},
+    {129U, "The Wizard Of Darkness", "dark-gray", UINT16_C(0x7bef),
+     UINT16_C(0xfabf)},
+};
+
+static const lord_named_palette_expectation_t *
+named_palette_expectation(size_t monster_index)
+{
+    for (size_t index = 0U;
+         index < sizeof(s_named_palette_expectations) /
+             sizeof(s_named_palette_expectations[0]); ++index) {
+        if (s_named_palette_expectations[index].monster_index ==
+            monster_index) {
+            return &s_named_palette_expectations[index];
+        }
+    }
+    return NULL;
+}
+
+static FILE *open_monster_manifest_if_requested(void)
+{
+    const char *const directory = getenv("LORD_MONSTER_CAPTURE_DIR");
+    if (directory == NULL || directory[0] == '\0') {
+        return NULL;
+    }
+    char path[512];
+    const int path_length = snprintf(path, sizeof(path),
+                                     "%s/monster-manifest.tsv", directory);
+    CHECK(path_length > 0 && (size_t)path_length < sizeof(path));
+    if (path_length <= 0 || (size_t)path_length >= sizeof(path)) {
+        return NULL;
+    }
+    FILE *const file = fopen(path, "wb");
+    CHECK(file != NULL);
+    if (file == NULL) {
+        return NULL;
+    }
+    CHECK(fprintf(file,
+                  "capture_index\tkind\texact_name\tweapon_or_detail\t"
+                  "palette_profile\tframe_0\tframe_1\n") > 0);
+    return file;
+}
+
+static void append_monster_manifest_row(
+    FILE *file, size_t capture_index, const char *kind,
+    const char *exact_name, const char *weapon_or_detail,
+    const char *palette_profile)
+{
+    if (file == NULL) {
+        return;
+    }
+    CHECK(fprintf(file, "%zu\t%s\t%s\t%s\t%s\t"
+                  "monster-%03zu-f0.ppm\tmonster-%03zu-f1.ppm\n",
+                  capture_index, kind, exact_name, weapon_or_detail,
+                  palette_profile, capture_index, capture_index) > 0);
+}
+
+static uint32_t surface_region_hash(const p4_game_surface_t *surface,
+                                    size_t x, size_t y,
+                                    size_t width, size_t height)
+{
+    uint32_t hash = UINT32_C(2166136261);
+    for (size_t row = y; row < y + height; ++row) {
+        for (size_t column = x; column < x + width; ++column) {
+            hash ^= surface->pixels[row * surface->stride_pixels + column];
+            hash *= UINT32_C(16777619);
+        }
+    }
+    return hash;
+}
+
+static size_t surface_region_non_color_count(
+    const p4_game_surface_t *surface,
+    size_t x, size_t y, size_t width, size_t height,
+    uint16_t color)
+{
+    size_t count = 0U;
+    for (size_t row = y; row < y + height; ++row) {
+        for (size_t column = x; column < x + width; ++column) {
+            if (surface->pixels[
+                    row * surface->stride_pixels + column] != color) {
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+static size_t surface_region_color_count(
+    const p4_game_surface_t *surface,
+    size_t x, size_t y, size_t width, size_t height,
+    uint16_t color)
+{
+    size_t count = 0U;
+    for (size_t row = y; row < y + height; ++row) {
+        for (size_t column = x; column < x + width; ++column) {
+            if (surface->pixels[
+                    row * surface->stride_pixels + column] == color) {
+                ++count;
+            }
+        }
+    }
+    return count;
+}
+
+static size_t surface_region_dense_color_cell_count(
+    const p4_game_surface_t *surface,
+    size_t x, size_t y, size_t width, size_t height,
+    uint16_t color)
+{
+    enum {
+        LORD_TEST_ART_CELL_WIDTH = 8,
+        LORD_TEST_ART_CELL_HEIGHT = 16,
+        LORD_TEST_DENSE_GLYPH_PIXELS = 40,
+    };
+    CHECK(width % LORD_TEST_ART_CELL_WIDTH == 0U);
+    CHECK(height % LORD_TEST_ART_CELL_HEIGHT == 0U);
+    size_t dense_cells = 0U;
+    for (size_t cell_y = 0U; cell_y < height;
+         cell_y += LORD_TEST_ART_CELL_HEIGHT) {
+        for (size_t cell_x = 0U; cell_x < width;
+             cell_x += LORD_TEST_ART_CELL_WIDTH) {
+            const size_t pixels = surface_region_color_count(
+                surface, x + cell_x, y + cell_y,
+                LORD_TEST_ART_CELL_WIDTH, LORD_TEST_ART_CELL_HEIGHT,
+                color);
+            if (pixels >= LORD_TEST_DENSE_GLYPH_PIXELS) {
+                ++dense_cells;
+            }
+        }
+    }
+    return dense_cells;
+}
+
+static void check_named_monster_palette(
+    const p4_game_surface_t *surface, size_t monster_index,
+    const char *monster_name)
+{
+    const lord_named_palette_expectation_t *const expectation =
+        named_palette_expectation(monster_index);
+    if (expectation == NULL) {
+        return;
+    }
+    CHECK(strcmp(monster_name, expectation->monster_name) == 0);
+    const size_t expected_count = surface_region_color_count(
+        surface, 16U, 32U, 80U, 80U, expectation->expected_color);
+    CHECK(expected_count >= 64U);
+    CHECK(surface_region_dense_color_cell_count(
+        surface, 16U, 32U, 80U, 80U,
+        expectation->expected_color) > 0U);
+    if (expectation->unoverridden_color != expectation->expected_color) {
+        CHECK(surface_region_dense_color_cell_count(
+            surface, 16U, 32U, 80U, 80U,
+            expectation->unoverridden_color) == 0U);
+    }
+}
+
 static void test_offline_save_reconnect_reconciliation(void)
 {
     lord_state_t offline;
@@ -2705,12 +4139,59 @@ static void test_runtime_save_render_and_exit(void)
         state.realm[1].trust = 70U;
         state.dice_player = 9U;
         state.dice_host = 6U;
+        state.quiz_wager = 20U;
+        state.quiz_operator = 2U;
+        state.quiz_left = 7U;
+        state.quiz_right = 8U;
+        state.quiz_correct = 2U;
+        state.quiz_answers[0] = 54U;
+        state.quiz_answers[1] = 55U;
+        state.quiz_answers[2] = 56U;
+        state.quiz_answers[3] = 58U;
+        state.realm[1].guild_id = UINT32_MAX;
+        state.realm[1].guild_name_code = LORD_GUILD_NAME_COUNT;
+        (void)strcpy(state.realm[0].name, "Longest Player Name 123");
+        state.realm[0].level = 12U;
+        state.realm[0].guild_id = UINT32_MAX;
+        state.realm[0].guild_name_code = LORD_GUILD_NAME_COUNT;
+        state.guild_status = (lord_guild_status_t){
+            .supported = true,
+            .guild_id = UINT32_MAX,
+            .name_code = LORD_GUILD_NAME_COUNT,
+            .member_count = 8U,
+            .role = 1U,
+            .prestige = UINT32_MAX,
+            .season_points = UINT32_MAX,
+            .banner_stars = UINT16_MAX,
+            .quest_progress = LORD_GUILD_QUEST_GOAL,
+            .quest_goal = LORD_GUILD_QUEST_GOAL,
+            .wins = UINT16_MAX,
+            .losses = UINT16_MAX,
+            .draws = UINT16_MAX,
+            .last_outcome = 1U,
+            .last_opponent_name_code = LORD_GUILD_NAME_COUNT - 1U,
+            .daily_flags = 0x0fU,
+        };
+        state.guild_summaries[0] = (lord_guild_summary_t){
+            .valid = true,
+            .guild_id = UINT32_MAX,
+            .name_code = LORD_GUILD_NAME_COUNT,
+            .member_count = 8U,
+            .banner_stars = UINT8_MAX,
+            .prestige = UINT32_MAX,
+            .season_points = UINT32_MAX,
+            .wins = UINT16_MAX,
+            .losses = UINT16_MAX,
+            .draws = UINT16_MAX,
+        };
+        state.guild_page_total = LORD_GUILD_NAME_COUNT;
+        state.guild_target = LORD_GUILD_TARGET_CHEER;
         (void)strcpy(state.battle_line,
                      "You win 10 ChompCoin! The table cheers.");
         (void)strcpy(state.conversation, "THE DRAGON IS RESTLESS TONIGHT");
         (void)strcpy(state.editor_text, "MEET ME AT THE INN");
         for (int screen = LORD_SCREEN_TITLE;
-             screen <= LORD_SCREEN_TEXT_EDITOR; ++screen) {
+             screen <= LORD_SCREEN_GUILD_STANDINGS; ++screen) {
             state.screen = (lord_screen_t)screen;
             state.selection = 0U;
             state.menu_scroll = 0U;
@@ -2718,6 +4199,276 @@ static void test_runtime_save_render_and_exit(void)
             CHECK(p4_game_instance_render(&instance, &surface));
             capture_frame_if_requested(&surface, state.screen);
         }
+
+        /* Every imported forest monster must render a substantial animated
+         * portrait. 5600 ms is phase one for every supported cadence:
+         * floor(5600 / {160,192,224,256,288,320,352}) is always odd. */
+        enum { LORD_TEST_CREATURE_PHASE_ONE_MS = 5600 };
+        uint32_t monster_art_hashes[LORD_MONSTER_COUNT];
+        FILE *const monster_manifest =
+            open_monster_manifest_if_requested();
+        for (size_t monster_index = 0U;
+             monster_index < LORD_MONSTER_COUNT; ++monster_index) {
+            const lord_monster_t *const monster = &s_monsters[monster_index];
+            const lord_named_palette_expectation_t *const palette =
+                named_palette_expectation(monster_index);
+            append_monster_manifest_row(
+                monster_manifest, monster_index, "monster", monster->name,
+                monster->weapon,
+                palette != NULL ? palette->profile_name : "default");
+            state.screen = LORD_SCREEN_BATTLE;
+            state.battle_kind = LORD_BATTLE_FOREST;
+            state.enemy_intent = LORD_ENEMY_INTENT_STRIKE;
+            state.selection = 0U;
+            (void)strcpy(state.enemy.name, monster->name);
+            (void)strcpy(state.enemy.weapon, monster->weapon);
+            state.enemy.death_text = monster->death;
+            state.enemy.hit_points = monster->hit_points;
+            state.enemy.max_hit_points = monster->hit_points;
+            state.enemy.strength = monster->strength;
+            state.enemy.defense = 0;
+            state.enemy.gold = monster->gold;
+            state.enemy.experience = monster->experience;
+            (void)strcpy(state.battle_line, "The creature blocks the path.");
+
+            state.creature_animation_ms = 0U;
+            const lord_state_t render_before = state;
+            CHECK(p4_game_instance_render(&instance, &surface));
+            if (monster_index == 0U) {
+                CHECK(memcmp(&state, &render_before, sizeof(state)) == 0);
+                const uint32_t first_render_hash = surface_region_hash(
+                    &surface, 16U, 32U, 80U, 80U);
+                CHECK(p4_game_instance_render(&instance, &surface));
+                CHECK(surface_region_hash(
+                    &surface, 16U, 32U, 80U, 80U) == first_render_hash);
+                CHECK(memcmp(&state, &render_before, sizeof(state)) == 0);
+            }
+            CHECK(surface_region_non_color_count(
+                &surface, 16U, 32U, 80U, 80U,
+                UINT16_C(0x108a)) >= 128U);
+            check_named_monster_palette(
+                &surface, monster_index, monster->name);
+            monster_art_hashes[monster_index] = surface_region_hash(
+                &surface, 16U, 32U, 80U, 80U);
+            capture_monster_frame_if_requested(
+                &surface, monster_index, 0U);
+
+            state.creature_animation_ms =
+                LORD_TEST_CREATURE_PHASE_ONE_MS;
+            CHECK(p4_game_instance_render(&instance, &surface));
+            CHECK(surface_region_non_color_count(
+                &surface, 16U, 32U, 80U, 80U,
+                UINT16_C(0x108a)) >= 128U);
+            check_named_monster_palette(
+                &surface, monster_index, monster->name);
+            CHECK(surface_region_hash(
+                &surface, 16U, 32U, 80U, 80U) !=
+                monster_art_hashes[monster_index]);
+            capture_monster_frame_if_requested(
+                &surface, monster_index, 1U);
+        }
+        size_t unique_monster_art = 0U;
+        for (size_t monster_index = 0U;
+             monster_index < LORD_MONSTER_COUNT; ++monster_index) {
+            bool seen = false;
+            for (size_t earlier = 0U; earlier < monster_index; ++earlier) {
+                if (monster_art_hashes[earlier] ==
+                    monster_art_hashes[monster_index]) {
+                    seen = true;
+                    break;
+                }
+            }
+            if (!seen) {
+                ++unique_monster_art;
+            }
+        }
+        CHECK(unique_monster_art >= 48U);
+
+        /* Every message recognizer branch must animate too; ordinary realm
+         * messages remain a stable text panel when only the clock changes. */
+        static const char *const narrative_creatures[][2] = {
+            {"A troll lunges for your ChompCoin pouch!",
+             "You dodge behind an ancient oak."},
+            {"A grave guardian catches you.",
+             "Its lantern burns with cold fire."},
+            {"A furious forest fairy circles overhead.",
+             "Tiny wings sparkle in the moonlight."},
+            {"Your horse greets the forest herd.",
+             "The trail fills with friendly hoofbeats."},
+            {"The hag sees your empty gem pouch.",
+             "Her crooked staff glows green."},
+            {"The Red Dragon waits beyond the trees.",
+             "A warm red glow fills the horizon."},
+            {"A strange creature blocks the old road.",
+             "It watches from beneath a hood."},
+        };
+        for (size_t encounter = 0U;
+             encounter < sizeof(narrative_creatures) /
+                 sizeof(narrative_creatures[0]); ++encounter) {
+            append_monster_manifest_row(
+                monster_manifest, LORD_MONSTER_COUNT + encounter,
+                "narrative", narrative_creatures[encounter][0],
+                narrative_creatures[encounter][1], "default");
+            state.screen = LORD_SCREEN_MESSAGE;
+            (void)strcpy(state.message_line_1,
+                         narrative_creatures[encounter][0]);
+            (void)strcpy(state.message_line_2,
+                         narrative_creatures[encounter][1]);
+            state.creature_animation_ms = 0U;
+            CHECK(p4_game_instance_render(&instance, &surface));
+            CHECK(surface_region_non_color_count(
+                &surface, 116U, 32U, 80U, 80U,
+                UINT16_C(0x108a)) >= 128U);
+            const uint32_t narrative_frame_zero = surface_region_hash(
+                &surface, 116U, 32U, 80U, 80U);
+            capture_monster_frame_if_requested(
+                &surface, LORD_MONSTER_COUNT + encounter, 0U);
+            state.creature_animation_ms =
+                LORD_TEST_CREATURE_PHASE_ONE_MS;
+            CHECK(p4_game_instance_render(&instance, &surface));
+            CHECK(surface_region_non_color_count(
+                &surface, 116U, 32U, 80U, 80U,
+                UINT16_C(0x108a)) >= 128U);
+            CHECK(surface_region_hash(
+                &surface, 116U, 32U, 80U, 80U) !=
+                narrative_frame_zero);
+            capture_monster_frame_if_requested(
+                &surface, LORD_MONSTER_COUNT + encounter, 1U);
+        }
+        if (monster_manifest != NULL) {
+            CHECK(fclose(monster_manifest) == 0);
+        }
+
+        state.screen = LORD_SCREEN_MESSAGE;
+        (void)strcpy(state.message_line_1, "The realm record is ready.");
+        (void)strcpy(state.message_line_2, "Nothing unusual happens here.");
+        state.creature_animation_ms = 0U;
+        CHECK(p4_game_instance_render(&instance, &surface));
+        const uint32_t ordinary_message_frame = surface_region_hash(
+            &surface, 0U, 0U, P4_GAME_SURFACE_WIDTH,
+            P4_GAME_SURFACE_HEIGHT);
+        state.creature_animation_ms = LORD_TEST_CREATURE_PHASE_ONE_MS;
+        CHECK(p4_game_instance_render(&instance, &surface));
+        CHECK(surface_region_hash(
+            &surface, 0U, 0U, P4_GAME_SURFACE_WIDTH,
+            P4_GAME_SURFACE_HEIGHT) == ordinary_message_frame);
+
+        /* The animation clock is global presentation time, wraps at one
+         * minute without overflow, and advances before early-return gates. */
+        const p4_game_input_t animation_idle = {0};
+        state.screen = LORD_SCREEN_TOWN;
+        state.save_error = false;
+        state.creature_animation_ms = 0U;
+        CHECK(p4_game_instance_update(
+            &instance, &animation_idle, 17U) == P4_GAME_CONTINUE);
+        CHECK(state.creature_animation_ms == 17U);
+        state.creature_animation_ms = 59950U;
+        CHECK(p4_game_instance_update(
+            &instance, &animation_idle, 100U) == P4_GAME_CONTINUE);
+        CHECK(state.creature_animation_ms == 50U);
+        state.creature_animation_ms = UINT32_MAX;
+        const uint32_t reduced_max = UINT32_MAX % UINT32_C(60000);
+        const uint32_t until_wrap = UINT32_C(60000) - reduced_max;
+        const uint32_t expected_after_max = reduced_max >= until_wrap ?
+            reduced_max - until_wrap : reduced_max + reduced_max;
+        CHECK(p4_lord_game.update(
+            &instance.context, &animation_idle, UINT32_MAX) ==
+            P4_GAME_CONTINUE);
+        CHECK(state.creature_animation_ms == expected_after_max);
+        state.save_error = true;
+        state.creature_animation_ms = 10U;
+        CHECK(p4_game_instance_update(
+            &instance, &animation_idle, 16U) == P4_GAME_CONTINUE);
+        CHECK(state.creature_animation_ms == 26U);
+        state.save_error = false;
+
+        /* Presentation time is absent from LDSV5 and realm sync byte-for-byte
+         * and therefore cannot dirty or fork a player's durable progress. */
+        CHECK(LORD_SAVE_FORMAT_VERSION == 5);
+        CHECK(LORD_SYNC_FORMAT_VERSION == 1);
+        uint8_t animation_encoded_before[LORD_SYNC_MAX_BYTES];
+        uint8_t animation_encoded_after[LORD_SYNC_MAX_BYTES];
+        state.creature_animation_ms = 0U;
+        const size_t animation_save_before = lord_save_encode(
+            &state, animation_encoded_before,
+            sizeof(animation_encoded_before));
+        state.creature_animation_ms = LORD_TEST_CREATURE_PHASE_ONE_MS;
+        const size_t animation_save_after = lord_save_encode(
+            &state, animation_encoded_after,
+            sizeof(animation_encoded_after));
+        CHECK(animation_save_before > 0U);
+        CHECK(animation_save_before == animation_save_after);
+        CHECK(memcmp(animation_encoded_before, animation_encoded_after,
+                     animation_save_before) == 0);
+        lord_state_t animation_restored;
+        CHECK(lord_save_decode(&animation_restored,
+                               animation_encoded_after,
+                               animation_save_after));
+        CHECK(animation_restored.creature_animation_ms == 0U);
+
+        uint8_t animation_actor[LORD_SYNC_ACTOR_ID_BYTES];
+        for (size_t index = 0U; index < sizeof(animation_actor); ++index) {
+            animation_actor[index] = (uint8_t)(0x40U + index);
+        }
+        state.creature_animation_ms = 0U;
+        const size_t animation_sync_before = lord_sync_encode(
+            &state, animation_actor, UINT64_C(0x1122334455667788),
+            animation_encoded_before, sizeof(animation_encoded_before));
+        state.creature_animation_ms = LORD_TEST_CREATURE_PHASE_ONE_MS;
+        const size_t animation_sync_after = lord_sync_encode(
+            &state, animation_actor, UINT64_C(0x1122334455667788),
+            animation_encoded_after, sizeof(animation_encoded_after));
+        CHECK(animation_sync_before > 0U);
+        CHECK(animation_sync_before == animation_sync_after);
+        CHECK(memcmp(animation_encoded_before, animation_encoded_after,
+                     animation_sync_before) == 0);
+
+        state.screen = LORD_SCREEN_TOWN;
+        state.save_error = false;
+        CHECK(p4_game_instance_render(&instance, &surface));
+        const uint32_t ordinary_town_hash = surface_region_hash(
+            &surface, 40U, 40U, 240U, 72U);
+        state.save_error = true;
+        CHECK(p4_game_instance_render(&instance, &surface));
+        const uint32_t save_error_overlay_hash = surface_region_hash(
+            &surface, 40U, 40U, 240U, 72U);
+        CHECK(save_error_overlay_hash != ordinary_town_hash);
+        const p4_game_input_t blocked_activate = {
+            .held = P4_BUTTON_A, .pressed = P4_BUTTON_A,
+        };
+        CHECK(p4_game_instance_update(&instance, &blocked_activate, 16U) ==
+              P4_GAME_CONTINUE);
+        CHECK(state.screen == LORD_SCREEN_TOWN);
+        state.save_error = false;
+        /* The member Hall owns a touch-safe three-row viewport. It must keep
+         * every one of its eight actions visible regardless of the generic
+         * seven-row menu_scroll state maintained by the shared navigator. */
+        state.screen = LORD_SCREEN_GUILD;
+        for (size_t selection = 0U; selection < 8U; ++selection) {
+            state.selection = (uint8_t)selection;
+            state.menu_scroll = (uint8_t)(7U - selection);
+            CHECK(p4_game_instance_render(&instance, &surface));
+            size_t first = selection > 1U ? selection - 1U : 0U;
+            if (first + 3U > 8U) {
+                first = 5U;
+            }
+            const size_t selected_y = 96U + (selection - first) * 8U;
+            CHECK(surface.pixels[selected_y * STRIDE + 302U] ==
+                  UINT16_C(0xa800));
+        }
+        memset(state.guild_summaries, 0, sizeof(state.guild_summaries));
+        state.screen = LORD_SCREEN_GUILD_STANDINGS;
+        state.guild_page_offset = 0U;
+        state.guild_page_total = 0U;
+        state.guild_page_received = false;
+        CHECK(p4_game_instance_render(&instance, &surface));
+        const uint32_t pending_standings_hash = surface_region_hash(
+            &surface, 16U, 34U, 200U, 7U);
+        state.guild_page_received = true;
+        CHECK(p4_game_instance_render(&instance, &surface));
+        const uint32_t empty_standings_hash = surface_region_hash(
+            &surface, 16U, 34U, 200U, 7U);
+        CHECK(empty_standings_hash != pending_standings_hash);
         for (size_t index = 0U; index < GUARD; ++index) {
             CHECK(allocation[index] == UINT16_C(0x5aa5));
             CHECK(allocation[GUARD + WORDS + index] == UINT16_C(0x5aa5));
@@ -2792,8 +4543,234 @@ static void test_runtime_save_render_and_exit(void)
     CHECK(relaunched.sync_server_revision == 8U);
     CHECK(memcmp(relaunched.sync_actor_id, state.sync_actor_id,
                  LORD_SYNC_ACTOR_ID_BYTES) == 0);
+    CHECK(!relaunched.guild_page_received);
     CHECK(!relaunched.save_dirty);
     p4_game_instance_stop(&instance);
+}
+
+static void test_paid_minigame_save_barriers(void)
+{
+    save_mock_t save = {
+        .defer_commit = true,
+    };
+    const p4_game_services_t services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
+            P4_GAME_CAP_SAVE,
+        .save_context = &save,
+        .queue_save = mock_queue_save,
+        .read_save_status = mock_read_save,
+    };
+    const p4_game_input_t idle = {0};
+    const p4_game_input_t activate = {
+        .held = P4_BUTTON_A, .pressed = P4_BUTTON_A,
+    };
+    const p4_game_input_t back = {
+        .held = P4_BUTTON_BACK, .pressed = P4_BUTTON_BACK,
+    };
+    p4_game_instance_t instance;
+    lord_state_t state;
+    CHECK(start_game(&instance, &state, &services));
+
+    /* Build a normal hero, then restore the runtime-owned save fields that
+     * lord_initialize intentionally clears.  A deferred host commit must hide
+     * every random die value and prevent Back from turning a paid roll into a
+     * free preview. */
+    enter_town(&state, LORD_CLASS_THIEF);
+    state.save_available = true;
+    state.save_dirty = false;
+    state.save_error = false;
+    state.save_ticket = P4_GAME_SAVE_INVALID_TICKET;
+    state.save_local_generation = 0U;
+    state.save_queued_generation = 0U;
+    state.host_save_sequence = 0U;
+    state.player.gold = 100U;
+    state.screen = LORD_SCREEN_DRAGON_DICE;
+    state.selection = 0U;
+
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.player.gold == 95U);
+    CHECK(state.minigame_save_barrier);
+    CHECK(state.minigame_pending == LORD_MINIGAME_PENDING_DICE);
+    CHECK(!state.dice_active);
+    CHECK(state.dice_player == 0U);
+    CHECK(state.dice_host == 0U);
+    CHECK(state.dice_rolls == 0U);
+    CHECK(state.save_ticket != P4_GAME_SAVE_INVALID_TICKET);
+    CHECK(save.bytes > 0U);
+
+    lord_state_t persisted;
+    CHECK(lord_save_decode(&persisted, save.payload, save.bytes));
+    CHECK(persisted.player.gold == 95U);
+    CHECK(persisted.screen == LORD_SCREEN_TOWN);
+
+    CHECK(p4_game_instance_update(&instance, &back, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.screen == LORD_SCREEN_DRAGON_DICE);
+    CHECK(state.minigame_save_barrier);
+    CHECK(!state.dice_active);
+    CHECK(state.dice_player == 0U);
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.minigame_save_barrier);
+    CHECK(!state.dice_active);
+
+    save.defer_commit = false;
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(!state.minigame_save_barrier);
+    CHECK(state.minigame_pending == LORD_MINIGAME_PENDING_NONE);
+    CHECK(state.dice_active);
+    CHECK(state.dice_rolls == 2U);
+    CHECK(state.dice_player >= 2U && state.dice_player <= 12U);
+    CHECK(state.dice_host == 0U);
+    CHECK(state.save_dirty);
+
+    /* Commit the newly generated round before reusing the same save host for
+     * Aragorn's challenge. */
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(!state.save_dirty);
+    CHECK(state.save_ticket == P4_GAME_SAVE_INVALID_TICKET);
+
+    save.defer_commit = true;
+    state.player.gold = 100U;
+    state.igm_used_mask = 0U;
+    state.screen = LORD_SCREEN_IGM_DETAIL;
+    state.selected_igm = 0U;
+    state.selection = 0U;
+    state.quiz_wager = 0U;
+    state.quiz_left = 0U;
+    state.quiz_right = 0U;
+    state.quiz_correct = 0U;
+    memset(state.quiz_answers, 0, sizeof(state.quiz_answers));
+
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.screen == LORD_SCREEN_ARAGORN_QUIZ);
+    CHECK(state.player.gold == 95U);
+    CHECK((state.igm_used_mask & 1U) != 0U);
+    CHECK(state.quiz_wager == 5U);
+    CHECK(state.minigame_save_barrier);
+    CHECK(state.minigame_pending == LORD_MINIGAME_PENDING_QUIZ);
+    CHECK(state.quiz_left == 0U);
+    CHECK(state.quiz_right == 0U);
+    for (size_t index = 0U; index < 4U; ++index) {
+        CHECK(state.quiz_answers[index] == 0U);
+    }
+    CHECK(state.save_ticket != P4_GAME_SAVE_INVALID_TICKET);
+    CHECK(lord_save_decode(&persisted, save.payload, save.bytes));
+    CHECK(persisted.player.gold == 95U);
+    CHECK((persisted.igm_used_mask & 1U) != 0U);
+
+    CHECK(p4_game_instance_update(&instance, &back, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.screen == LORD_SCREEN_ARAGORN_QUIZ);
+    CHECK(state.minigame_save_barrier);
+    CHECK(state.quiz_left == 0U);
+    CHECK(state.quiz_right == 0U);
+
+    save.defer_commit = false;
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(!state.minigame_save_barrier);
+    CHECK(state.minigame_pending == LORD_MINIGAME_PENDING_NONE);
+    CHECK(state.quiz_correct < 4U);
+    CHECK(state.quiz_answers[state.quiz_correct] ==
+          expected_quiz_answer(&state));
+    for (size_t left = 0U; left < 4U; ++left) {
+        for (size_t right = left + 1U; right < 4U; ++right) {
+            CHECK(state.quiz_answers[left] != state.quiz_answers[right]);
+        }
+    }
+    CHECK(state.save_dirty);
+    p4_game_instance_stop(&instance);
+
+    /* If durable storage rejects the initial debit, cancel without exposing
+     * a puzzle, restore the stake, and reopen Aragorn's once-daily visit. */
+    save = (save_mock_t){
+        .reject_queue = true,
+    };
+    CHECK(start_game(&instance, &state, &services));
+    enter_town(&state, LORD_CLASS_MYSTICAL);
+    state.save_available = true;
+    state.save_dirty = false;
+    state.save_error = false;
+    state.save_ticket = P4_GAME_SAVE_INVALID_TICKET;
+    state.save_local_generation = 0U;
+    state.save_queued_generation = 0U;
+    state.host_save_sequence = 0U;
+    state.player.gold = 100U;
+    state.igm_used_mask = LORD_DAILY_DICE_FRIENDSHIP_MASK;
+    state.screen = LORD_SCREEN_IGM_DETAIL;
+    state.selected_igm = 0U;
+    state.selection = 0U;
+
+    CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.player.gold == 95U);
+    CHECK(state.minigame_save_barrier);
+    CHECK(state.minigame_pending == LORD_MINIGAME_PENDING_QUIZ);
+    CHECK(!state.save_available);
+    CHECK(state.save_error);
+    CHECK(state.quiz_left == 0U);
+    CHECK(state.quiz_right == 0U);
+
+    CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(!state.minigame_save_barrier);
+    CHECK(state.minigame_pending == LORD_MINIGAME_PENDING_NONE);
+    CHECK(state.player.gold == 100U);
+    CHECK(state.quiz_wager == 0U);
+    CHECK((state.igm_used_mask & 1U) == 0U);
+    CHECK((state.igm_used_mask & LORD_DAILY_DICE_FRIENDSHIP_MASK) != 0U);
+    CHECK(state.quiz_left == 0U);
+    CHECK(state.quiz_right == 0U);
+    CHECK(state.screen == LORD_SCREEN_MESSAGE);
+    CHECK(state.return_screen == LORD_SCREEN_IGM);
+    CHECK(strstr(state.message_line_1, "canceled and refunded") != NULL);
+    p4_game_instance_stop(&instance);
+
+    /* A broken status adapter and an explicit terminal ERROR are both safe
+     * cancellations. Neither may hang input or disclose a die roll. */
+    for (size_t failure = 0U; failure < 2U; ++failure) {
+        save = (save_mock_t){0};
+        save.reject_status = failure == 0U;
+        save.forced_status = failure == 1U ? P4_GAME_SAVE_ERROR :
+                                             P4_GAME_SAVE_NONE;
+        CHECK(start_game(&instance, &state, &services));
+        enter_town(&state, LORD_CLASS_THIEF);
+        state.save_available = true;
+        state.save_dirty = false;
+        state.save_error = false;
+        state.save_ticket = P4_GAME_SAVE_INVALID_TICKET;
+        state.save_local_generation = 0U;
+        state.save_queued_generation = 0U;
+        state.host_save_sequence = 0U;
+        state.player.gold = 100U;
+        state.screen = LORD_SCREEN_DRAGON_DICE;
+        state.selection = 0U;
+
+        CHECK(p4_game_instance_update(&instance, &activate, 16U) ==
+              P4_GAME_CONTINUE);
+        CHECK(state.player.gold == 95U);
+        CHECK(state.minigame_save_barrier);
+        CHECK(!state.dice_active);
+        CHECK(state.dice_player == 0U);
+        CHECK(p4_game_instance_update(&instance, &idle, 16U) ==
+              P4_GAME_CONTINUE);
+        CHECK(!state.minigame_save_barrier);
+        CHECK(!state.save_available);
+        CHECK(state.save_error);
+        CHECK(state.player.gold == 100U);
+        CHECK(!state.dice_active);
+        CHECK(state.dice_player == 0U);
+        CHECK(state.screen == LORD_SCREEN_MESSAGE);
+        CHECK(state.return_screen == LORD_SCREEN_INN);
+        p4_game_instance_stop(&instance);
+    }
 }
 
 static p4_physical_touch_t physical_touch_for(uint16_t logical_x,
@@ -2809,7 +4786,7 @@ static p4_physical_touch_t physical_touch_for(uint16_t logical_x,
     };
 }
 
-static void test_standard_touch_lifecycle(void)
+static void test_ansi_touch_lifecycle(void)
 {
     static const p4_game_services_t services = {
         .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
@@ -2821,21 +4798,87 @@ static void test_standard_touch_lifecycle(void)
     CHECK(start_game(&instance, &state, &services));
     p4_game_input_mapper_init(&mapper);
 
+    /* The removed A/B/D-pad artwork must not leave invisible active zones. */
     p4_physical_touch_t touch = physical_touch_for(286U, 158U);
     p4_game_input_mapper_update(&mapper, true, &touch, 1U, 0U, &input);
     CHECK((input.pressed & P4_BUTTON_A) != 0U);
     CHECK(p4_game_instance_update(&instance, &input, 16U) ==
           P4_GAME_CONTINUE);
+    CHECK(state.screen == LORD_SCREEN_TITLE);
+    p4_game_input_mapper_update(&mapper, true, NULL, 0U, 0U, &input);
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
+
+    /* The text command footer replaces the joystick and buttons. */
+    touch = physical_touch_for(280U, 188U);
+    p4_game_input_mapper_update(&mapper, true, &touch, 1U, 0U, &input);
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
     CHECK(state.screen == LORD_SCREEN_NAME);
     p4_game_input_mapper_update(&mapper, true, NULL, 0U, 0U, &input);
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
 
-    touch = physical_touch_for(240U, 176U);
+    touch = physical_touch_for(280U, 188U);
     p4_game_input_mapper_update(&mapper, true, &touch, 1U, 0U, &input);
-    CHECK((input.pressed & P4_BUTTON_B) != 0U);
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.screen == LORD_SCREEN_TEXT_EDITOR);
+    p4_game_input_mapper_update(&mapper, true, NULL, 0U, 0U, &input);
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
+
+    /* Drawn keyboard keys activate directly and holding never repeats. */
+    touch = physical_touch_for(30U, 60U);
+    p4_game_input_mapper_update(&mapper, true, &touch, 1U, 0U, &input);
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(strcmp(state.editor_text, "A") == 0);
+    p4_game_input_mapper_update(&mapper, true, &touch, 1U, 0U, &input);
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(strcmp(state.editor_text, "A") == 0);
+    p4_game_input_mapper_update(&mapper, true, NULL, 0U, 0U, &input);
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
+
+    touch = physical_touch_for(80U, 120U);
+    p4_game_input_mapper_update(&mapper, true, &touch, 1U, 0U, &input);
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.editor_text[0] == '\0');
+    p4_game_input_mapper_update(&mapper, true, NULL, 0U, 0U, &input);
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
+
+    /* Direct battle-cell taps choose the visible command, not a ghost pad. */
+    state.screen = LORD_SCREEN_BATTLE;
+    state.battle_kind = LORD_BATTLE_FOREST;
+    state.player.hit_points = 20;
+    state.player.max_hit_points = 20;
+    state.enemy.hit_points = 20;
+    state.enemy.max_hit_points = 20;
+    state.enemy.strength = 1;
+    state.selection = 0U;
+    touch = physical_touch_for(200U, 163U);
+    p4_game_input_mapper_update(&mapper, true, &touch, 1U, 0U, &input);
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(state.screen == LORD_SCREEN_STATS);
+    CHECK(state.return_screen == LORD_SCREEN_BATTLE);
+    p4_game_input_mapper_update(&mapper, true, NULL, 0U, 0U, &input);
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
+
+    state.screen = LORD_SCREEN_NAME;
+    touch = physical_touch_for(200U, 188U);
+    p4_game_input_mapper_update(&mapper, true, &touch, 1U, 0U, &input);
     CHECK(p4_game_instance_update(&instance, &input, 16U) ==
           P4_GAME_CONTINUE);
     CHECK(state.screen == LORD_SCREEN_TITLE);
     p4_game_input_mapper_update(&mapper, true, NULL, 0U, 0U, &input);
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
 
     touch = physical_touch_for(26U, 12U);
     p4_game_input_mapper_update(&mapper, true, &touch, 1U, 0U, &input);
@@ -2854,21 +4897,30 @@ int main(void)
     test_character_creation_and_core_menu();
     test_shops_bank_and_transfer();
     test_forest_training_skills_and_dragon();
+    test_tactical_combat_counters_and_classes();
+    test_lethal_failed_escape_is_persistable();
+    test_progression_pacing_and_dormant_rewards();
     test_mail_pvp_friendship_and_mentoring();
     test_realm_bound_inn_sleep();
     test_friendship_hp_bonus_reversible();
     test_bartender_riddle_budget();
+    test_forest_action_cost_and_real_rankings();
     test_full_inn_and_igms();
+    test_player_driven_tavern_games();
+    test_dragon_dice_daily_friendship_cap();
     test_save_round_trip();
+    test_save_migrations_and_combat_bounds();
     test_legacy_empty_realm_slot_migration();
     test_backend_sync_envelope();
+    test_adventure_club_client_protocol();
     test_pending_realm_debits_fail_offline_and_retry_once();
     test_p4mp_mac_realm_hourly_sync();
     test_p4rm_commit_result_retry();
     test_offline_save_reconnect_reconciliation();
     test_authorized_local_adoption();
     test_runtime_save_render_and_exit();
-    test_standard_touch_lifecycle();
+    test_paid_minigame_save_barriers();
+    test_ansi_touch_lifecycle();
     if (s_failures != 0) {
         fprintf(stderr, "%d LORD test failure(s)\n", s_failures);
         return EXIT_FAILURE;

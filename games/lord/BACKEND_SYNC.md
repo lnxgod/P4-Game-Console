@@ -1,6 +1,6 @@
 # LORD backend synchronization
 
-LORD 1.6.1 has a working local Mac-hosted BBS realm. Unbound standalone
+LORD 1.8.0 has a working local Mac-hosted BBS realm. Unbound standalone
 characters remain complete offline games; realm-bound characters keep all
 solo play offline but reconnect for shared-player mutations. The cartridge
 never opens a socket, file, serial
@@ -37,7 +37,9 @@ The Mac implementation lives in `tools/p4_realm_hub/` and is launched by
 - strict P4MP v1 and P4RM v3 framing;
 - the existing noisy-stream H1 and P4B BLE adapters;
 - full schema-3/4/5 `LDSV` parsing, exact embedded-base checks, cumulative
-  per-realm-day transition anchors, and conservative stat/economy validation;
+  per-realm-day transition anchors, trainer-threshold/maximum-three-level
+  validation, a 2,500,000 XP-gain ceiling, and conservative named
+  stat/economy/counter caps;
 - SQLite actor heads, CRC validation, compare-and-swap commits, nonce
   idempotency, durable cross-actor events, profile presence, private vault
   balance, friendship/team state, PvP leases, shared feeds, and a trusted
@@ -75,8 +77,10 @@ snapshot still equal the current head.
 The hub computes `floor(unix_time / 3600) + 1`. When the stored head's last
 realm day is older, LORD applies exactly one hourly refresh after a validated
 download. Missing several hours never grants several refreshes. The online
-refresh restores daily actions but deliberately pays no bank interest. The new
-state must commit under the current day before it becomes the server head.
+refresh restores daily actions but deliberately pays no bank interest. Local
+standalone Inn sleep calls the same no-interest reset; neither path passively
+mints ChompCoin. The new state must commit under the current day before it
+becomes the server head.
 WELCOME keeps its 36-byte P4RM-v3 size and uses bytes 33–34 for the validated
 head snapshot's `player.day` (byte 35 remains zero). That durable before-state
 lets a cartridge reboot after saving the refresh but before committing it: a
@@ -99,18 +103,25 @@ across the boundary.
 Once a character has a nonzero actor, including the authorized revision-zero
 adoption transition, the cartridge blocks the inn's classic local sleep reset
 while connected or offline. The Mac realm alone grants that character's next
-day/hour. An unbound local-only character retains classic sleep and its local
-bank-interest rule.
+day/hour. An unbound local-only character retains classic sleep, also without
+bank interest.
 
 Realm-bound characters may still play forest battles, training, IGMs, NPC
 friendship, Dragon Dice, shops, healing, and their own bank while disconnected.
 Cached roster and mail remain readable. Transfers, player duels and inn
 sparring, mail compose/send, friendship/team/mentor/saying mutations, and
 shared tavern/news posts stop at a friendly `Connect to the Mac realm` message
-until online actions are ready. An unbound standalone character retains the
-classic local realm simulation. If a leased duel loses its connection, the
-next activation aborts it without a reward; its spent fight/entry and received
-HP damage may remain.
+until online actions are ready. Adventure Club membership is intentionally not
+copied into LDSV5: after a cold offline launch the Club Hall asks for the Mac
+hub, while every ordinary solo screen and local save remains usable. An unbound
+standalone character retains the classic local realm simulation. If a leased
+duel loses its connection, the next activation aborts it without a reward; its
+spent fight/entry and received HP damage may remain. After a character has a
+realm head, the hub also requires
+its PvP win/loss counters to equal the prior counters plus cursor-proven durable
+duel events. A cached local duel therefore cannot upload its bundled XP,
+ChompCoin, or prestige, while same-counter offline forest/town progression
+continues to synchronize normally.
 
 LORD schema 5 stores the last accepted hub actor ID, server revision, and game
 save generation inside the OS-owned local save. P4RM v3 includes that base and
@@ -122,7 +133,7 @@ copy downloads the current head.
 If a dirty local copy and the server head both advanced, or the persisted actor
 does not match the selected hub profile, the welcome returns `SYNC CONFLICT`.
 Neither copy is overwritten and no ChompCoin, mail, PvP reward, team state, or
-daily action is field-merged. Version 1.6.1 does not offer an in-game conflict
+daily action is field-merged. Version 1.8.0 does not offer an in-game conflict
 chooser; preserve the local save, then relaunch under the intended stable
 profile or have a parent explicitly start the hub once with
 `--adopt-local PROFILE`. Normal
@@ -163,7 +174,10 @@ through the directory side channel. The hub returns one requested page of at
 most eight other profiles from the bounded 100-player roster. Directory entries use opaque actor IDs internally;
 the cartridge never treats a profile label or transport address as identity.
 Page statistics carry server-owned directional trust and team state so
-switching pages does not discard relationships.
+switching pages does not discard relationships. Projected defense includes the
+implemented friendship guard—two points for every five badges, capped at
+eight—and LORD sorts the visible ranking set by descending level, experience,
+then PvP wins with a stable tie break.
 
 Presence means a validated profile was seen within 90 seconds. It is a game UI
 hint, not proof of account identity. The current local hub has no public signup,
@@ -187,12 +201,22 @@ The implemented actions are:
 - adventure team: invite first, form only after the other actor reciprocates,
   and notify both sides of formation or friendly parting;
 - mentoring: notify the confirmed teammate and update each character once;
+- Adventure Clubs: create one of sixteen curated clubs, join through a current
+  member, leave with deterministic leader succession, choose one daily
+  class-flavored rally route, challenge another club to a server-scored Banner
+  Clash, or send a bounded daily cheer. Clubs have at most eight members; new
+  members wait until the next realm day to contribute. The hub owns membership,
+  daily limits, quest progress, Banner Stars, lifetime prestige and W/L/D, and
+  24-day season points. Club actions award no player ChompCoin, XP, dragon
+  deeds, PvP counters, or combat stats;
 - asynchronous PvP: acquire one current-day lease, resolve it once, calculate
   the target's carried-ChompCoin prize at the hub, and queue durable outcomes
   for both source and target. The cartridge removes provisional local prize,
   XP, PvP counters, cached-target changes, mail, and logs before saving. A
   source win event grants exactly one win plus its prize (including a
-  zero-prize win); a source loss event grants exactly one loss/knockout;
+  zero-prize win); a source loss event grants exactly one loss/knockout. Shared
+  realm duels deliberately award no XP; ChompCoin and prestige are both
+  server-authoritative;
 - tavern/news: store bounded printable feed rows and fan out durable events to
   the registered profiles.
 
@@ -259,7 +283,8 @@ and disconnect. The host suite now covers clean/matching offline acceptance,
 stale-dirty conflict without overwrite, clean-stale download, action codecs, changed-body nonce
 rejection, two-node mail delivery/acknowledgement, two-sided ChompCoin
 transfer, team consent, PvP lease resolution/drop/zero-prize/loss replay,
-realm-bound offline shared-action blocking with solo-play preservation,
+realm-bound offline shared-action blocking, atomic cached-duel reward rejection,
+and same-counter solo-play preservation,
 tavern fan-out, retryable
 boundary-stale upload, accepted-commit boundary crossing, and reboot after a
 locally saved rollover without a second refresh. A separate two-client E2E
@@ -273,6 +298,11 @@ ten-client chaos campaign now covers 12 hourly days, all 45 player pairings,
 store/session restarts, lost replies, nonce replay, corrupt uploads, conflicts,
 receipt-before-save power loss, local rollback, and forged PvP cursor state. It
 checks exact per-actor revision histories and conserves all 8,000 ChompCoin.
+The 30-day Adventure Club campaign adds fourteen actors in unequal clubs plus
+a solo quest, exact deterministic clash scoring, quest carry, cooldown and
+season rollover, nonce/restart faults, same-club PvP denial, and proof that
+club operations leave every personal head and economy field byte-for-byte
+unchanged.
 Device-level mid-write fault injection, PvP lease expiry, hostile-client
 fuzzing, server-verifiable combat outcomes, rate-limit policy, and exact H1/BLE
 evidence remain hardware/release gates. The SDL runner exercises the real C

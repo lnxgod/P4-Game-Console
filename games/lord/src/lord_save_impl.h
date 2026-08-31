@@ -336,9 +336,12 @@ static bool save_player_valid(lord_player_t *player)
         player->hero_class > LORD_CLASS_THIEF || player->level < 1U ||
         player->level > LORD_MAX_LEVEL || player->weapon >= LORD_WEAPON_COUNT ||
         player->armor >= LORD_ARMOR_COUNT || player->max_hit_points <= 0 ||
+        player->max_hit_points > LORD_COMBAT_STAT_MAX ||
         player->hit_points < 0 ||
         player->hit_points > player->max_hit_points ||
-        player->strength <= 0 || player->defense < 0 || player->day == 0U) {
+        player->strength <= 0 || player->strength > LORD_COMBAT_STAT_MAX ||
+        player->defense < 0 || player->defense > LORD_COMBAT_STAT_MAX ||
+        player->day == 0U) {
         return false;
     }
     for (size_t index = 0U; index < LORD_SKILL_COUNT; ++index) {
@@ -400,7 +403,9 @@ static bool save_realm_valid(lord_state_t *state)
             player->level > LORD_MAX_LEVEL || player->trust > 100U ||
             player->max_hit_points <= 0 || player->hit_points < 0 ||
             player->hit_points > player->max_hit_points ||
-            player->strength <= 0 || player->defense < 0) {
+            player->max_hit_points > LORD_COMBAT_STAT_MAX ||
+            player->strength <= 0 || player->strength > LORD_COMBAT_STAT_MAX ||
+            player->defense < 0 || player->defense > LORD_COMBAT_STAT_MAX) {
             return false;
         }
     }
@@ -521,20 +526,22 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
         sync_actor_combined = (uint8_t)(
             sync_actor_combined | loaded.sync_actor_id[byte]);
     }
-    bool migrated_empty_slot = false;
+    bool migrated_save = false;
     for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
         if (loaded.realm[index].level == 0U) {
             if (!save_migrate_legacy_empty_realm_slot(&loaded, index)) {
                 return false;
             }
-            migrated_empty_slot = true;
+            migrated_save = true;
         }
     }
     if (!reader.valid || reader.offset != length || loaded.rng_state == 0U ||
         loaded.realm_revision == 0U || partner_code > LORD_REALM_PLAYER_COUNT ||
         npc_friend_code > 2U || loaded.pvp_fights > LORD_PVP_FIGHTS_PER_DAY ||
         loaded.friendship_actions > LORD_FRIENDSHIP_ACTIONS_PER_DAY ||
-        (loaded.igm_used_mask & (uint8_t)~((1U << LORD_IGM_COUNT) - 1U)) != 0U ||
+        (loaded.igm_used_mask &
+         (uint8_t)~(((1U << LORD_IGM_COUNT) - 1U) |
+                    LORD_DAILY_DICE_FRIENDSHIP_MASK)) != 0U ||
         loaded.rip_scene >= LORD_RIP_SCENE_COUNT ||
         loaded.mail_count > LORD_MAIL_COUNT_MAX ||
         loaded.log_count > LORD_LOG_COUNT_MAX ||
@@ -551,6 +558,10 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
     if (loaded.partner_index >= 0 &&
         !loaded.realm[(size_t)loaded.partner_index].teamed) {
         return false;
+    }
+    if (loaded.player.dragon_kills > 0U && !loaded.player.amulet) {
+        loaded.player.amulet = true;
+        migrated_save = true;
     }
     for (size_t index = 0U; index < LORD_MAIL_COUNT_MAX; ++index) {
         lord_mail_t *const mail = &loaded.mail[index];
@@ -574,8 +585,8 @@ bool lord_save_decode(lord_state_t *state, const uint8_t *bytes,
     loaded.selection = 0U;
     loaded.menu_scroll = 0U;
     loaded.held_buttons = 0U;
-    loaded.save_dirty = migrated_empty_slot;
-    if (migrated_empty_slot) {
+    loaded.save_dirty = migrated_save;
+    if (migrated_save) {
         if (loaded.save_sequence == UINT32_MAX) {
             return false;
         }

@@ -136,6 +136,10 @@ class RealmHubSession:
         self.next_directory_at = 0.0
         self.directory_pending: list[tuple[int, int, int, bytes]] = []
         self.directory_offset = 0
+        self.guild_directory_pending: list[tuple[int, int, int, bytes]] = []
+        self.guild_directory_offset = 0
+        self.guild_status_pending = False
+        self.guild_status_sent = False
         self.adoption_grant_id: int | None = None
         self.adoption_retry: tuple[int, int, bytes] | None = None
         self.last_rx_at = self.now()
@@ -240,6 +244,10 @@ class RealmHubSession:
         self.awaiting_event_commit = 0
         self.directory_pending = []
         self.directory_offset = 0
+        self.guild_directory_pending = []
+        self.guild_directory_offset = 0
+        self.guild_status_pending = False
+        self.guild_status_sent = False
         self.adoption_grant_id = None
         self.adoption_retry = None
         self.next_start_ready_at = 0.0
@@ -273,6 +281,10 @@ class RealmHubSession:
         self.outgoing_event = None
         self.received_event_cursor = 0
         self.awaiting_event_commit = 0
+        self.guild_directory_pending = []
+        self.guild_directory_offset = 0
+        self.guild_status_pending = False
+        self.guild_status_sent = False
         self.adoption_grant_id = None
         self.adoption_retry = None
         accept = p4mp.encode_accept(
@@ -332,6 +344,8 @@ class RealmHubSession:
             self._receive_event_ack(message)
         elif message.kind == p4rm.DIRECTORY_PAGE:
             self._receive_directory_page(message)
+        elif message.kind == p4rm.GUILD_PAGE:
+            self._receive_guild_page(message)
 
     def _begin_game_sync(self, message: p4rm.Message) -> None:
         self.awaiting_local_commit = False
@@ -510,6 +524,8 @@ class RealmHubSession:
         self.last_clock_day = day_id
         self.next_clock_at = self.now() + 30.0
         self.next_directory_at = self.now()
+        self.guild_status_pending = self.game_online
+        self.guild_status_sent = False
         if send_snapshot and head.snapshot is not None:
             transaction = _nonzero_u32()
             chunks = p4rm.record_chunks(head.snapshot)
@@ -590,6 +606,16 @@ class RealmHubSession:
                     p4rm.ACTION_BUSY, kind, 0, 0, 0
                 ),
             )
+            return
+        if kind == p4rm.ACTION_GUILD and not self.guild_status_sent:
+            self._send_realm(
+                p4rm.ACTION_RESULT,
+                message.transaction_id,
+                p4rm.encode_action_result(
+                    p4rm.ACTION_BUSY, kind, 0, 0, 0
+                ),
+            )
+            self.guild_status_pending = True
             return
         expected_chunks = 1 if body_bytes else 0
         if (
@@ -678,6 +704,8 @@ class RealmHubSession:
         )
         self.action_upload = None
         self.next_directory_at = self.now()
+        if action.kind == p4rm.ACTION_GUILD:
+            self.guild_status_pending = True
 
     def _send_event_part(self) -> None:
         outgoing = self.outgoing_event
@@ -905,6 +933,8 @@ class RealmHubSession:
             elif commit_adoption_grant is None:
                 self.adoption_retry = None
         self.upload = None
+        if status == "ok":
+            self.guild_status_pending = True
 
     def _receive_profile(self, message: p4rm.Message) -> None:
         # Legacy clients still emit this advertisement.  Keep only the
@@ -966,8 +996,14 @@ class RealmHubSession:
                 profile.trust,
                 int(profile.teamed),
             )
+            deeds = profile.actor_id + bytes((profile.dragon_kills, 0))
+            guild = p4rm.encode_directory_guild(
+                profile.actor_id, profile.guild_id, profile.guild_name_code
+            )
             pending.append((p4rm.DIRECTORY_SUMMARY, index, count, bytes(summary)))
             pending.append((p4rm.DIRECTORY_STATS, index, count, stats))
+            pending.append((p4rm.DIRECTORY_DEEDS, index, count, deeds))
+            pending.append((p4rm.DIRECTORY_GUILD, index, count, guild))
         self.directory_pending = pending
 
     def _receive_directory_page(self, message: p4rm.Message) -> None:
@@ -979,6 +1015,91 @@ class RealmHubSession:
         self.directory_offset = offset
         try:
             self._queue_directory()
+        except (ValueError, OSError, RuntimeError, sqlite3.Error):
+            self._send_realm(p4rm.ERROR, message.transaction_id, struct.pack("<H", 3))
+
+    def _send_guild_status(self) -> bool:
+        try:
+            status = self.store.guild_status(self.actor_id)
+        except ValueError:
+            # A brand-new actor has no accepted profile until its first save.
+            # Keep the capability gate closed and retry after that commit.
+            return False
+        self._send_realm(
+            p4rm.GUILD_STATUS,
+            _nonzero_u32(),
+            p4rm.encode_guild_status(
+                status.actor_id,
+                status.guild_id,
+                status.name_code,
+                status.members,
+                status.role,
+                status.prestige,
+                status.season_points,
+                status.banner_stars,
+                status.quest_progress,
+                status.quest_goal,
+                status.wins,
+                status.losses,
+                status.draws,
+                status.last_outcome,
+                status.last_opponent_code,
+                status.daily_flags,
+            ),
+        )
+        self.guild_status_pending = False
+        self.guild_status_sent = True
+        return True
+
+    def _queue_guild_directory(self) -> None:
+        total = self.store.guild_count()
+        if total == 0:
+            self.guild_directory_offset = 0
+        elif self.guild_directory_offset >= total:
+            self.guild_directory_offset = (total - 1) // 8 * 8
+        guilds = self.store.list_guilds(offset=self.guild_directory_offset)
+        count = len(guilds)
+        pending: list[tuple[int, int, int, bytes]] = [
+            (
+                p4rm.GUILD_PAGE,
+                0,
+                0,
+                p4rm.encode_guild_page(self.guild_directory_offset, total),
+            )
+        ]
+        for index, guild in enumerate(guilds):
+            pending.append(
+                (
+                    p4rm.GUILD_SUMMARY,
+                    index,
+                    count,
+                    p4rm.encode_guild_summary(
+                        guild.guild_id,
+                        guild.name_code,
+                        guild.members,
+                        guild.banner_stars,
+                        guild.prestige,
+                        guild.season_points,
+                        guild.wins,
+                        guild.losses,
+                        guild.draws,
+                    ),
+                )
+            )
+        self.guild_directory_pending = pending
+
+    def _receive_guild_page(self, message: p4rm.Message) -> None:
+        if message.chunk_index != 0 or message.chunk_count != 0:
+            return
+        try:
+            offset = p4rm.decode_guild_page_request(message.payload)
+        except ValueError:
+            return
+        if offset >= p4rm.GUILD_NAME_COUNT or offset % 8 != 0:
+            return
+        self.guild_directory_offset = offset
+        try:
+            self._queue_guild_directory()
         except (ValueError, OSError, RuntimeError, sqlite3.Error):
             self._send_realm(p4rm.ERROR, message.transaction_id, struct.pack("<H", 3))
 
@@ -1033,10 +1154,20 @@ class RealmHubSession:
             self.outgoing_event = OutgoingEvent(_nonzero_u32(), event)
             self._send_event_part()
             return
+        if self.guild_status_pending:
+            try:
+                if self._send_guild_status():
+                    return
+            except (OSError, RuntimeError, sqlite3.Error):
+                self._send_realm(p4rm.ERROR, _nonzero_u32(), struct.pack("<H", 3))
+                self.game_online = False
+                return
         if now >= self.next_directory_at:
             try:
                 self.store.touch_profile(self.actor_id)
                 self._queue_directory()
+                self._queue_guild_directory()
+                self.guild_status_pending = True
             except (OSError, RuntimeError, sqlite3.Error):
                 self._send_realm(p4rm.ERROR, _nonzero_u32(), struct.pack("<H", 3))
                 self.game_online = False
@@ -1044,6 +1175,10 @@ class RealmHubSession:
             self.next_directory_at = now + 5.0
         if self.directory_pending:
             kind, index, count, payload = self.directory_pending.pop(0)
+            self._send_realm(kind, _nonzero_u32(), payload, index, count)
+            return
+        if self.guild_directory_pending:
+            kind, index, count, payload = self.guild_directory_pending.pop(0)
             self._send_realm(kind, _nonzero_u32(), payload, index, count)
             return
         if now < self.next_clock_at:

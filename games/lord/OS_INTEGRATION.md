@@ -1,9 +1,14 @@
-# LORD 1.6.1 OS integration contract
+# LORD 1.8.0 OS integration contract
 
 LORD is a complete standalone cartridge. This document describes optional OS
 services that turn its persistent local realm into a shared BBS realm without
 giving the game filesystem, network, clock, USB, display, or raw-input
 ownership.
+
+Release boundary: Console OS 0.4.88 / LORD 1.6.1 is the historical accepted
+host/build security baseline and was not installed on Pink or Green. The
+Console OS 0.4.90 / LORD 1.8.0 source is an unsealed, unflashed successor
+candidate and has no exact-device acceptance.
 
 ## Services used now
 
@@ -25,6 +30,22 @@ teams, trust, youth mentoring, conversation, announcement, IGM usage, and realm
 revision, plus opaque directory/team actor IDs, the last applied hub event ID,
 and the last accepted hub actor/server revision/committed game generation. It never
 serializes pointers, raw enums, structure padding, or `lord_state_t` itself.
+
+Enemy intent and the current Strike/Guard/Technique/Feint exchange are
+transient because a decoded save resumes safely in town. Dragon Dice totals and
+Aragorn quiz operands, choices, and answers are transient for the same reason.
+When `save` is available, starting either paid game debits the stake, and
+Aragorn also sets its daily IGM-use bit, before an async save barrier blocks all
+input and withholds every random total, operand, choice, and answer until the
+host reports `COMMITTED`. A queue or terminal status failure cancels and
+refunds the still-hidden round; an interruption after commit resumes safely in
+town with the committed debit instead of granting a free preview. These
+mechanics do not change save schema 5. When `save` is absent, the games remain
+session-playable but make no durable anti-preview claim.
+
+Dragon Dice stakes 5 ChompCoin and returns 8 on a win, a deliberately
+negative-expected-value diversion. Only the first win in a daily cycle grants
+one charm and high spirits; that reward lock is a persisted daily bit.
 
 The host-level save container remains the OS's responsibility: namespacing,
 SHA-256, optimistic sequence, atomic replacement, backup, journal recovery,
@@ -52,7 +73,8 @@ the console joins slot 1, and the backend initiates synchronized start.
 It synchronizes full `LRSY` snapshots with the Mac hub, publishes the local
 profile, consumes eight-entry pages of a 100-player roster, and applies one trusted
 hourly refresh. It also submits bounded actions and applies durable events for
-mail, transfers, friendship, teams, mentoring, PvP, tavern, and news. The wire
+mail, transfers, friendship, teams, mentoring, PvP, tavern, news, and
+hub-authoritative Adventure Clubs. The wire
 acknowledgement records receipt; only a later accepted snapshot advancing the
 persisted event cursor commits delivery. It remains inactive when the capability or connected room is
 absent. Its hello carries only the persisted actor/revision/generation base.
@@ -60,6 +82,29 @@ The hub accepts an offline upload only while that base still equals the server
 head; a divergent dirty copy becomes `SYNC CONFLICT` without replacing either
 side. No new Game API fields, raw P4MP packets, routes, USB/BLE handles, or
 clock callbacks are exposed to LORD.
+
+The hub projects `dragon_kills` only from accepted snapshots and orders all
+accepted profiles before pagination by dragon deeds, level, experience, PvP
+wins, PvP losses, and stable identity tie breaks. P4RM v3 kind 22
+`DIRECTORY_DEEDS` adds an 18-byte actor/deed sidecar; the existing summary and
+stats packets are unchanged, so
+older cartridges can ignore the extension. The Hall itself ranks only the
+local hero plus the current up-to-eight-entry directory page. It is not a
+single in-cartridge view of every profile in the realm.
+
+The hub validates LORD 1.8.0 progression against the accepted head and a durable
+realm-day anchor. A normal branch may gain at most three levels and must meet
+the destination trainer's XP threshold; cumulative experience gain is capped
+at 2,500,000 per anchored realm day, with separate economy, combat-stat,
+skill, badge, and small-counter caps. These are conservative save-editor
+checks, not proof of every client-side fight.
+
+A direct matching-base offline Red Dragon deed is accepted only when the
+authoritative hub head was already level 12. If that head is below level 12,
+the player must sync once after reaching level 12 and before finishing the
+Dragon. Once a level-12 head is accepted, the whole encounter may happen
+offline and no separate pre-fight `seen_dragon` upload is required; the deed
+must still advance exactly once and every rebirth field must be canonical.
 
 P4RM v3 welcome bit 4 is the optional, explicitly parent-authorized
 `ADOPT_LOCAL` recovery hook. It keeps the existing 36-byte welcome, is mutually
@@ -70,7 +115,8 @@ ordinary accept still require a nonzero head, while revision-zero conflict is
 shown as `SYNC CONFLICT`. This adds no Game API field or save-schema version.
 Realm-bound characters also cannot invoke the local inn reset: connected and
 disconnected play both wait for the Mac realm's trusted hourly rollover, while
-local-only characters retain classic sleep.
+local-only characters retain classic sleep. Both paths use the same
+no-bank-interest reset.
 
 The exact deployment and current limitations are in
 [the Mac hub guide](../../docs/LORD_REALM_HUB.md).
@@ -92,11 +138,12 @@ events:
 
 | Existing game flow | Optional realm operation |
 |---|---|
-| Other Warriors / rankings | Previous/Next pages across 100 realm accounts |
+| Other Warriors / rankings | Hub pages across 100 accounts are ordered by dragon deeds, level, XP, PvP wins, PvP losses, and stable ties; kind 22 supplies deeds. The Hall shows the local hero plus only the current up-to-eight-entry page |
 | Player challenge / inn attack | lease the selected cached directory opponent; an immutable battle snapshot is a future public-realm upgrade |
 | PvP finish | idempotent outcome commit |
 | Inbox / sent mail | list, read, mark-read, send by opaque ID |
 | Friendship / team invitation / parting | consent-based team transaction |
+| Adventure Club Hall | create/join/leave, one daily rally, friendly Banner Clash, cheer, member annotations, and paged club standings; all membership and scores remain hub-owned |
 | Bank transfer | idempotent bounded transfer |
 | Daily News / conversation | bounded sanitized feed |
 | Sleep / daily reset | trusted realm-day transition; local sleep is disabled after actor binding |
@@ -134,7 +181,7 @@ It contains no username, email, password, device address, route, token, or
 server URL. Unit tests cover round trip, stale revision, wrong actor, corrupt
 payload, and zero-nonce rejection.
 
-The codec itself remains transport-free. Version 1.6.1 submits it through a
+The codec itself remains transport-free. Version 1.8.0 submits it through a
 reviewed P4RM state machine over `multiplayer-session` when the local Mac hub
 occupies the peer slot. The complete record, server, conflict, and future
 typed-action rules are in [BACKEND_SYNC.md](BACKEND_SYNC.md).
@@ -173,7 +220,10 @@ terminal, file, callback, or download commands.
 
 - Save: launch an empty slot, migrate schemas 3 and 4, observe a copied schema-5 commit,
   relaunch with the committed snapshot, recover after interrupted replacement,
-  and prove conflict/read-only/unavailable behavior.
+  prove a paid quiz/dice outcome and input remain locked through `QUEUED`, prove
+  queue/terminal-status failure refunds without revealing, prove interruption
+  after `COMMITTED` resumes in town without refund or replay, and prove
+  conflict/read-only/unavailable behavior.
 - P4RM Mac realm: cover upload/download retry, stale revisions, duplicate
   nonce, disconnect, offline edits, reconnect, directory bounds, hostile
   frames, and hourly rollover exactly once.

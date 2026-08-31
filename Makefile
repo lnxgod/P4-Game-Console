@@ -183,7 +183,8 @@ lord-realm-e2e-host:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=. python3 -m unittest \
 		tools.p4_realm_hub.tests.test_two_client_e2e \
 		tools.p4_realm_hub.tests.test_four_player_campaign \
-		tools.p4_realm_hub.tests.test_ten_player_chaos
+		tools.p4_realm_hub.tests.test_ten_player_chaos \
+		tools.p4_realm_hub.tests.test_guild_campaign
 
 doom-multiplayer-host:
 	cmake -S components/doom_multiplayer -B build-host/doom_multiplayer -G Ninja

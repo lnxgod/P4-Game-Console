@@ -76,6 +76,80 @@ class P4MPTests(unittest.TestCase):
 
 
 class P4RMTests(unittest.TestCase):
+    def test_directory_sidecars_are_bounded_v3_extensions(self) -> None:
+        actor = bytes(range(1, 17))
+        payload = actor + bytes((7, 0))
+        message = p4rm.decode_message(
+            p4rm.encode_message(
+                p4rm.DIRECTORY_DEEDS,
+                6,
+                payload,
+                chunk_index=2,
+                chunk_count=3,
+            )
+        )
+        self.assertEqual(
+            (message.kind, message.chunk_index, message.chunk_count),
+            (p4rm.DIRECTORY_DEEDS, 2, 3),
+        )
+        self.assertEqual(message.payload, payload)
+        with self.assertRaises(ValueError):
+            p4rm.encode_message(p4rm.GUILD_SUMMARY + 1, 7)
+
+        status = p4rm.encode_guild_status(
+            actor,
+            21,
+            16,
+            8,
+            p4rm.GUILD_ROLE_LEADER,
+            1000,
+            44,
+            3,
+            11,
+            12,
+            7,
+            6,
+            5,
+            p4rm.GUILD_OUTCOME_WIN,
+            1,
+            p4rm.GUILD_DAILY_RALLIED | p4rm.GUILD_DAILY_ELIGIBLE,
+        )
+        self.assertEqual(len(status), 48)
+        self.assertEqual(p4rm.decode_guild_status(status)[1:5], (21, 16, 8, 1))
+        directory = p4rm.encode_directory_guild(actor, 21, 16)
+        self.assertEqual(len(directory), 24)
+        self.assertEqual(
+            p4rm.decode_directory_guild(directory), (actor, 21, 16)
+        )
+        self.assertEqual(
+            p4rm.decode_directory_guild(
+                p4rm.encode_directory_guild(actor, 0, 0)
+            ),
+            (actor, 0, 0),
+        )
+        self.assertEqual(
+            p4rm.decode_guild_page(p4rm.encode_guild_page(8, 16)), (8, 16)
+        )
+        self.assertEqual(
+            p4rm.decode_guild_page_request(p4rm.encode_guild_page_request(8)), 8
+        )
+        summary = p4rm.encode_guild_summary(21, 16, 8, 255, 1000, 44, 7, 6, 5)
+        self.assertEqual(len(summary), 24)
+        self.assertEqual(
+            p4rm.decode_guild_summary(summary),
+            (21, 16, 8, 255, 1000, 44, 7, 6, 5),
+        )
+        empty = p4rm.encode_guild_status(
+            actor, 0, 0, 0, 0, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0
+        )
+        self.assertEqual(p4rm.decode_guild_status(empty)[1], 0)
+        with self.assertRaises(ValueError):
+            p4rm.encode_guild_summary(22, 0, 1, 0, 0, 0, 0, 0, 0)
+        with self.assertRaises(ValueError):
+            p4rm.encode_guild_status(
+                actor, 21, 1, 1, 1, 0, 0, 0, 0, 12, 0, 0, 0, 0, 0, 0x10
+            )
+
     def test_offline_hello_round_trip_and_validation(self) -> None:
         actor = bytes(range(1, 17))
         flags = (
@@ -175,6 +249,39 @@ class P4RMTests(unittest.TestCase):
             p4rm.decode_action_begin(action)[:6],
             (p4rm.ACTION_MAIL, 0, 0, actor, 77, len(body)),
         )
+        largest = p4rm.encode_action_begin(
+            p4rm.ACTION_MAIL,
+            0,
+            0,
+            actor,
+            p4rm.MAX_ACTION_NONCE,
+            b"",
+        )
+        self.assertEqual(
+            p4rm.decode_action_begin(largest)[4], p4rm.MAX_ACTION_NONCE
+        )
+        with self.assertRaises(ValueError):
+            p4rm.encode_action_begin(
+                p4rm.ACTION_MAIL,
+                0,
+                0,
+                actor,
+                p4rm.MAX_ACTION_NONCE + 1,
+                b"",
+            )
+        unsigned_max = struct.pack(
+            "<BBH16sQHHI",
+            p4rm.ACTION_MAIL,
+            0,
+            0,
+            actor,
+            0xFFFFFFFFFFFFFFFF,
+            0,
+            0,
+            0,
+        )
+        with self.assertRaises(ValueError):
+            p4rm.decode_action_begin(unsigned_max)
         result = p4rm.encode_action_result(
             p4rm.ACTION_OK, p4rm.ACTION_TRANSFER, 0, 100, 9
         )
@@ -1260,7 +1367,7 @@ class StoreTests(unittest.TestCase):
                     ("ok", 2),
                 )
 
-    def test_lifetime_pvp_counters_cannot_move_backwards(self) -> None:
+    def test_pvp_counters_cannot_change_without_a_durable_receipt(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             store = RealmStore(Path(directory) / "realm.sqlite3")
             actor = self.add_profile(store, "player", "Player Hero", 800)
@@ -1268,6 +1375,8 @@ class StoreTests(unittest.TestCase):
             for nonce, fields in (
                 (301, {"pvp_wins": 1}),
                 (302, {"pvp_losses": 0}),
+                (305, {"pvp_wins": 3}),
+                (306, {"pvp_losses": 2}),
             ):
                 with self.subTest(fields=fields):
                     candidate = lord_record(
@@ -1284,6 +1393,64 @@ class StoreTests(unittest.TestCase):
                         store.commit(actor, 1, nonce, day, candidate),
                         ("invalid", 1),
                     )
+
+    def test_cached_duel_bundle_requires_a_durable_realm_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            actor = self.add_profile(store, "player", "Player Hero", 800)
+            day, _ = store.realm_clock()
+            binding = {
+                "save_sequence": 3,
+                "name": "Player Hero",
+                "sync_actor_id": actor,
+                "sync_server_revision": 1,
+                "sync_committed_save_sequence": 2,
+            }
+
+            # This is the stock local cached-duel shape: prize, classic local
+            # XP, and one win arrive in one save without a realm event cursor.
+            cached_duel = lord_record(
+                actor,
+                303,
+                chompcoin=1_200,
+                experience=5_000,
+                pvp_wins=3,
+                **binding,
+            )
+            self.assertEqual(
+                store.commit(actor, 1, 303, day, cached_duel),
+                ("invalid", 1),
+            )
+            self.assertEqual(store.read_head(actor).revision, 1)
+            profile = store.list_profiles(
+                exclude_actor_id=store.actor_for_profile("viewer")
+            )[0]
+            self.assertEqual(
+                (profile.chompcoin, profile.experience, profile.pvp_wins),
+                (800, 500, 2),
+            )
+
+            # The exact same offline solo economy/progression remains valid
+            # when it does not claim an unreceipted shared-player result.
+            solo_progress = lord_record(
+                actor,
+                304,
+                chompcoin=1_200,
+                experience=5_000,
+                pvp_wins=2,
+                **binding,
+            )
+            self.assertEqual(
+                store.commit(actor, 1, 304, day, solo_progress),
+                ("ok", 2),
+            )
+            profile = store.list_profiles(
+                exclude_actor_id=store.actor_for_profile("viewer")
+            )[0]
+            self.assertEqual(
+                (profile.chompcoin, profile.experience, profile.pvp_wins),
+                (1_200, 5_000, 2),
+            )
 
     def test_pvp_loss_can_be_consumed_during_hourly_revival(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -1790,7 +1957,7 @@ class StoreTests(unittest.TestCase):
                 forest_fights=14,
                 skill_uses=(0, 4, 0),
                 player_day=2,
-                pvp_wins=3,
+                pvp_wins=2,
                 **binding,
             )
             self.assertEqual(
@@ -1829,6 +1996,7 @@ class StoreTests(unittest.TestCase):
                 "bank": 0,
                 "experience": 0,
                 "dragon_kills": 1,
+                "amulet": True,
                 "sync_actor_id": actor,
                 "sync_server_revision": 1,
                 "sync_committed_save_sequence": 2,
@@ -1840,6 +2008,355 @@ class StoreTests(unittest.TestCase):
             canonical_reset = lord_record(actor, 32, **binding)
             self.assertEqual(
                 store.commit(actor, 1, 32, day, canonical_reset), ("ok", 2)
+            )
+
+    def test_dragon_deed_requires_exact_level_twelve_rebirth(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            day, _ = store.realm_clock()
+
+            forged_actor = store.actor_for_profile("forged-dragon")
+            forged_base = lord_record(forged_actor, 33)
+            self.assertEqual(
+                store.commit(forged_actor, 0, 33, day, forged_base),
+                ("ok", 1),
+            )
+            forged = lord_record(
+                forged_actor,
+                34,
+                save_sequence=3,
+                dragon_kills=1,
+                sync_actor_id=forged_actor,
+                sync_server_revision=1,
+                sync_committed_save_sequence=2,
+            )
+            self.assertEqual(
+                store.commit(forged_actor, 1, 34, day, forged),
+                ("invalid", 1),
+            )
+
+            actor = store.actor_for_profile("direct-dragon")
+            dragon_fight = lord_record(
+                actor, 35, level=12, seen_dragon=True
+            )
+            self.assertEqual(
+                store.commit(actor, 0, 35, day, dragon_fight), ("ok", 1)
+            )
+            canonical = lord_record(
+                actor,
+                36,
+                save_sequence=3,
+                level=1,
+                hit_points=25,
+                max_hit_points=25,
+                strength=12,
+                defense=2,
+                bank=0,
+                experience=0,
+                dragon_kills=1,
+                amulet=True,
+                sync_actor_id=actor,
+                sync_server_revision=1,
+                sync_committed_save_sequence=2,
+            )
+            self.assertEqual(
+                store.commit(actor, 1, 36, day, canonical), ("ok", 2)
+            )
+            repeated = lord_record(
+                actor,
+                37,
+                save_sequence=4,
+                level=1,
+                hit_points=30,
+                max_hit_points=30,
+                strength=14,
+                defense=3,
+                bank=0,
+                experience=0,
+                dragon_kills=2,
+                amulet=True,
+                sync_actor_id=actor,
+                sync_server_revision=2,
+                sync_committed_save_sequence=3,
+            )
+            self.assertEqual(
+                store.commit(actor, 2, 37, day, repeated), ("invalid", 2)
+            )
+
+            offline_actor = store.actor_for_profile("offline-dragon")
+            offline_level_twelve = lord_record(
+                offline_actor, 38, level=12, seen_dragon=False
+            )
+            self.assertEqual(
+                store.commit(
+                    offline_actor, 0, 38, day, offline_level_twelve
+                ),
+                ("ok", 1),
+            )
+            offline_rebirth_with_friend = lord_record(
+                offline_actor,
+                39,
+                save_sequence=3,
+                npc_friend_code=1,
+                level=1,
+                hit_points=30,
+                max_hit_points=30,
+                strength=12,
+                defense=2,
+                bank=0,
+                experience=0,
+                dragon_kills=1,
+                amulet=True,
+                sync_actor_id=offline_actor,
+                sync_server_revision=1,
+                sync_committed_save_sequence=2,
+            )
+            self.assertEqual(
+                store.commit(
+                    offline_actor, 1, 39, day, offline_rebirth_with_friend
+                ),
+                ("ok", 2),
+            )
+
+    def test_friendship_guard_and_rebirth_bonus_are_projected(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            guarded_actor = store.actor_for_profile("badge-guard")
+            day, _ = store.realm_clock()
+            guarded = lord_record(
+                guarded_actor,
+                40,
+                defense=4,
+                friendship_badges=20,
+            )
+            self.assertEqual(
+                store.commit(guarded_actor, 0, 40, day, guarded), ("ok", 1)
+            )
+            other = store.actor_for_profile("ranking-viewer")
+            projected = store.list_profiles(exclude_actor_id=other)
+            badge_profile = next(
+                profile for profile in projected if profile.actor_id == guarded_actor
+            )
+            self.assertEqual(badge_profile.defense, 12)
+
+            friend_actor = store.actor_for_profile("dragon-friends")
+            victory = lord_record(
+                friend_actor,
+                41,
+                level=12,
+                dragon_kills=1,
+                seen_dragon=True,
+                amulet=True,
+                partner_code=1,
+                teamed_index=0,
+            )
+            self.assertEqual(
+                store.commit(friend_actor, 0, 41, day, victory), ("ok", 1)
+            )
+            reset = lord_record(
+                friend_actor,
+                42,
+                save_sequence=3,
+                level=1,
+                hit_points=30,
+                max_hit_points=30,
+                strength=12,
+                defense=2,
+                bank=0,
+                experience=0,
+                dragon_kills=1,
+                amulet=True,
+                partner_code=1,
+                teamed_index=0,
+                sync_actor_id=friend_actor,
+                sync_server_revision=1,
+                sync_committed_save_sequence=2,
+            )
+            self.assertEqual(
+                store.commit(friend_actor, 1, 42, day, reset), ("ok", 2)
+            )
+
+    def test_realm_directory_is_ranked_by_authoritative_dragon_deeds(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "prestige.sqlite3"
+            store = RealmStore(path)
+            day, _ = store.realm_clock()
+            viewer = store.actor_for_profile("prestige-viewer")
+            cases = (
+                ("level-champion", "Level Champion", 12, 1_250_000, 8, 1, 0),
+                ("two-deeds", "Two Deeds", 1, 0, 0, 0, 2),
+                ("one-deed-xp", "One Deed XP", 8, 300_000, 2, 0, 1),
+                ("one-deed-pvp", "One Deed PvP", 8, 110_000, 20, 0, 1),
+            )
+            actors: dict[str, bytes] = {}
+            for index, (
+                profile,
+                name,
+                level,
+                experience,
+                wins,
+                losses,
+                deeds,
+            ) in enumerate(cases, start=70):
+                actor = store.actor_for_profile(profile)
+                actors[name] = actor
+                record = lord_record(
+                    actor,
+                    index,
+                    name=name,
+                    level=level,
+                    hit_points=20 + deeds * 5,
+                    max_hit_points=20 + deeds * 5,
+                    strength=10 + deeds * 2,
+                    defense=1 + deeds,
+                    experience=experience,
+                    pvp_wins=wins,
+                    pvp_losses=losses,
+                    dragon_kills=deeds,
+                    amulet=deeds != 0,
+                )
+                self.assertEqual(
+                    store.commit(actor, 0, index, day, record), ("ok", 1)
+                )
+
+            ranked = store.list_profiles(exclude_actor_id=viewer)
+            self.assertEqual(
+                [profile.name for profile in ranked],
+                ["Two Deeds", "One Deed XP", "One Deed PvP", "Level Champion"],
+            )
+            self.assertEqual(
+                [profile.dragon_kills for profile in ranked], [2, 1, 1, 0]
+            )
+
+            # Startup rebuilds the directory projection from accepted heads,
+            # so a stale or hand-edited cache cannot forge prestige.
+            with sqlite3.connect(path) as database:
+                database.execute(
+                    "UPDATE profiles SET dragon_kills = 255 WHERE actor_id = ?",
+                    (actors["Level Champion"],),
+                )
+            reopened = RealmStore(path)
+            rebuilt = reopened.list_profiles(exclude_actor_id=viewer)
+            self.assertEqual(
+                [profile.name for profile in rebuilt],
+                [profile.name for profile in ranked],
+            )
+            self.assertEqual(
+                [profile.dragon_kills for profile in rebuilt], [2, 1, 1, 0]
+            )
+
+            sent: list[bytes] = []
+            hub = RealmHubSession(
+                "prestige-viewer", reopened, sent.append, test_offer()
+            )
+            hub._queue_directory()
+            self.assertEqual(hub.directory_pending[0][0], p4rm.DIRECTORY_PAGE)
+            sidecars = [
+                packet
+                for packet in hub.directory_pending
+                if packet[0] == p4rm.DIRECTORY_DEEDS
+            ]
+            self.assertEqual(len(sidecars), 4)
+            self.assertEqual(
+                [packet[3][16] for packet in sidecars], [2, 1, 1, 0]
+            )
+            self.assertTrue(
+                all(
+                    len(packet[3]) == 18
+                    and packet[3][17] == 0
+                    and packet[1] < packet[2] == 4
+                    for packet in sidecars
+                )
+            )
+
+    def test_gameplay_progression_bounds_match_lord_1_7(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            day, _ = store.realm_clock()
+
+            actor = store.actor_for_profile("level-bounds")
+            base = lord_record(actor, 50)
+            self.assertEqual(store.commit(actor, 0, 50, day, base), ("ok", 1))
+            binding = {
+                "save_sequence": 3,
+                "sync_actor_id": actor,
+                "sync_server_revision": 1,
+                "sync_committed_save_sequence": 2,
+            }
+            too_soon = lord_record(
+                actor, 51, level=4, experience=649, **binding
+            )
+            self.assertEqual(
+                store.commit(actor, 1, 51, day, too_soon), ("invalid", 1)
+            )
+            legal = lord_record(actor, 52, level=4, experience=650, **binding)
+            self.assertEqual(
+                store.commit(actor, 1, 52, day, legal), ("ok", 2)
+            )
+
+            xp_actor = store.actor_for_profile("xp-bounds")
+            xp_base = lord_record(xp_actor, 53)
+            self.assertEqual(
+                store.commit(xp_actor, 0, 53, day, xp_base), ("ok", 1)
+            )
+            honest_high_roll = lord_record(
+                xp_actor,
+                54,
+                save_sequence=3,
+                experience=2_031_494,
+                sync_actor_id=xp_actor,
+                sync_server_revision=1,
+                sync_committed_save_sequence=2,
+            )
+            self.assertEqual(
+                store.commit(xp_actor, 1, 54, day, honest_high_roll),
+                ("ok", 2),
+            )
+
+            excessive_actor = store.actor_for_profile("excessive-xp")
+            excessive_base = lord_record(excessive_actor, 55)
+            self.assertEqual(
+                store.commit(excessive_actor, 0, 55, day, excessive_base),
+                ("ok", 1),
+            )
+            excessive_xp = lord_record(
+                excessive_actor,
+                56,
+                save_sequence=3,
+                experience=2_500_501,
+                sync_actor_id=excessive_actor,
+                sync_server_revision=1,
+                sync_committed_save_sequence=2,
+            )
+            self.assertEqual(
+                store.commit(excessive_actor, 1, 56, day, excessive_xp),
+                ("invalid", 1),
+            )
+
+            badge_actor = store.actor_for_profile("badge-bounds")
+            badge_base = lord_record(badge_actor, 57)
+            self.assertEqual(
+                store.commit(badge_actor, 0, 57, day, badge_base), ("ok", 1)
+            )
+            badge_binding = {
+                "save_sequence": 3,
+                "sync_actor_id": badge_actor,
+                "sync_server_revision": 1,
+                "sync_committed_save_sequence": 2,
+            }
+            too_many_badges = lord_record(
+                badge_actor, 58, friendship_badges=5, **badge_binding
+            )
+            self.assertEqual(
+                store.commit(badge_actor, 1, 58, day, too_many_badges),
+                ("invalid", 1),
+            )
+            legal_badges = lord_record(
+                badge_actor, 59, friendship_badges=4, **badge_binding
+            )
+            self.assertEqual(
+                store.commit(badge_actor, 1, 59, day, legal_badges),
+                ("ok", 2),
             )
 
     def test_realm_accepts_exactly_one_hundred_player_accounts(self) -> None:
@@ -1982,16 +2499,6 @@ class StoreTests(unittest.TestCase):
             day, _ = store.realm_clock()
             cases = (
                 (
-                    "dragon",
-                    {"dragon_kills": 1},
-                    {"dragon_kills": 2},
-                ),
-                (
-                    "pvp",
-                    {"pvp_wins": 5},
-                    {"pvp_wins": 8},
-                ),
-                (
                     "strength",
                     {"strength": 5_012},
                     {"strength": 10_012},
@@ -2002,11 +2509,9 @@ class StoreTests(unittest.TestCase):
                     {"chompcoin": 50_000_500},
                 ),
             )
-            actors: dict[str, bytes] = {}
             for index, (label, first_gain, second_gain) in enumerate(cases):
                 with self.subTest(label=label):
                     actor = store.actor_for_profile(f"console-{label}")
-                    actors[label] = actor
                     first_nonce = 1_000 + index * 10
                     base = lord_record(actor, first_nonce)
                     self.assertEqual(
@@ -2039,41 +2544,6 @@ class StoreTests(unittest.TestCase):
                         store.commit(actor, 2, first_nonce + 2, day, second),
                         ("invalid", 2),
                     )
-
-            store.epoch_seconds -= 3600
-            next_day, _ = store.realm_clock()
-            self.assertEqual(next_day, day + 1)
-            dragon_actor = actors["dragon"]
-            next_day_dragon = lord_record(
-                dragon_actor,
-                2_000,
-                save_sequence=4,
-                dragon_kills=2,
-                player_day=2,
-                sync_actor_id=dragon_actor,
-                sync_server_revision=2,
-                sync_committed_save_sequence=3,
-            )
-            self.assertEqual(
-                store.commit(
-                    dragon_actor,
-                    2,
-                    2_000,
-                    day,
-                    next_day_dragon,
-                ),
-                ("stale-day", 2),
-            )
-            self.assertEqual(
-                store.commit(
-                    dragon_actor,
-                    2,
-                    2_000,
-                    next_day,
-                    next_day_dragon,
-                ),
-                ("ok", 3),
-            )
 
     def test_daily_counters_cannot_reset_twice_in_one_realm_day(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
@@ -2796,6 +3266,583 @@ class StoreTests(unittest.TestCase):
                 p4rm.ACTION_DENIED,
             )
 
+    def test_guild_migration_cap_succession_and_rejoin_cooldown(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "realm.sqlite3"
+            legacy = RealmStore(path)
+            preserved = self.add_profile(
+                legacy, "guild-leader", "Guild Leader", 500
+            )
+            # Model the immediately preceding schema without club tables.
+            with sqlite3.connect(path) as database:
+                for table in (
+                    "guild_cheers",
+                    "guild_clashes",
+                    "guild_rallies",
+                    "guild_rejoin_cooldowns",
+                    "guild_members",
+                    "guilds",
+                ):
+                    database.execute(f"DROP TABLE {table}")
+            store = RealmStore(path)
+            self.assertEqual(
+                store.list_profiles(exclude_actor_id=bytes(reversed(preserved)))[0].name,
+                "Guild Leader",
+            )
+            with sqlite3.connect(path) as database:
+                tables = {
+                    row[0]
+                    for row in database.execute(
+                        "SELECT name FROM sqlite_master WHERE type = 'table'"
+                    )
+                }
+            self.assertTrue(
+                {
+                    "guilds",
+                    "guild_members",
+                    "guild_rejoin_cooldowns",
+                    "guild_rallies",
+                    "guild_clashes",
+                    "guild_cheers",
+                }.issubset(tables)
+            )
+
+            realm_day = [1]
+            store.realm_clock = lambda now=None: (realm_day[0], 3600)
+            created = store.perform_action(
+                preserved,
+                100,
+                p4rm.ACTION_GUILD,
+                p4rm.GUILD_CREATE,
+                1,
+                bytes(16),
+                b"",
+            )
+            self.assertEqual(created.status, p4rm.ACTION_OK)
+            self.assertEqual(store.guild_status(preserved).role, 1)
+            self.assertFalse(
+                store.guild_status(preserved).daily_flags
+                & p4rm.GUILD_DAILY_ELIGIBLE
+            )
+
+            joiners = [
+                self.add_profile(store, f"joiner-{index}", f"Joiner {index}", 500)
+                for index in range(8)
+            ]
+            for index, actor in enumerate(joiners[:7]):
+                joined = store.perform_action(
+                    actor,
+                    200 + index,
+                    p4rm.ACTION_GUILD,
+                    p4rm.GUILD_JOIN,
+                    0,
+                    preserved,
+                    b"",
+                )
+                self.assertEqual(joined.status, p4rm.ACTION_OK)
+            self.assertEqual(store.guild_status(preserved).members, 8)
+            self.assertEqual(
+                store.perform_action(
+                    joiners[7],
+                    299,
+                    p4rm.ACTION_GUILD,
+                    p4rm.GUILD_JOIN,
+                    0,
+                    preserved,
+                    b"",
+                ).status,
+                p4rm.ACTION_BUSY,
+            )
+            self.assertEqual(
+                store.perform_action(
+                    joiners[7],
+                    300,
+                    p4rm.ACTION_GUILD,
+                    p4rm.GUILD_CREATE,
+                    1,
+                    bytes(16),
+                    b"",
+                ).status,
+                p4rm.ACTION_DENIED,
+            )
+
+            left = store.perform_action(
+                preserved,
+                301,
+                p4rm.ACTION_GUILD,
+                p4rm.GUILD_LEAVE,
+                0,
+                bytes(16),
+                b"",
+            )
+            self.assertEqual(left.status, p4rm.ACTION_OK)
+            successor = min(joiners[:7])
+            self.assertEqual(store.guild_status(successor).role, 1)
+            self.assertEqual(
+                store.perform_action(
+                    preserved,
+                    302,
+                    p4rm.ACTION_GUILD,
+                    p4rm.GUILD_JOIN,
+                    0,
+                    successor,
+                    b"",
+                ).status,
+                p4rm.ACTION_DENIED,
+            )
+            realm_day[0] = 2
+            self.assertEqual(
+                store.perform_action(
+                    preserved,
+                    303,
+                    p4rm.ACTION_GUILD,
+                    p4rm.GUILD_JOIN,
+                    0,
+                    successor,
+                    b"",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+
+            solo = self.add_profile(store, "solo", "Solo", 500)
+            replacement = self.add_profile(store, "replacement", "Replacement", 500)
+            self.assertEqual(
+                store.perform_action(
+                    solo, 400, p4rm.ACTION_GUILD, p4rm.GUILD_CREATE,
+                    2, bytes(16), b"",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+            self.assertEqual(
+                store.perform_action(
+                    solo, 401, p4rm.ACTION_GUILD, p4rm.GUILD_LEAVE,
+                    0, bytes(16), b"",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+            self.assertEqual(
+                store.perform_action(
+                    replacement, 402, p4rm.ACTION_GUILD, p4rm.GUILD_CREATE,
+                    2, bytes(16), b"",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+
+    def test_guild_quest_carries_and_idempotency_survives_season_rollover(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            realm_day = [1]
+            store.realm_clock = lambda now=None: (realm_day[0], 3600)
+            leader = self.add_profile(store, "quest-leader", "Quest Leader", 500)
+            member = self.add_profile(store, "quest-member", "Quest Member", 500)
+            self.assertEqual(
+                store.perform_action(
+                    leader, 10, p4rm.ACTION_GUILD, p4rm.GUILD_CREATE,
+                    3, bytes(16), b"",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+            self.assertEqual(
+                store.perform_action(
+                    member, 11, p4rm.ACTION_GUILD, p4rm.GUILD_JOIN,
+                    0, leader, b"",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+            for day, nonce in ((2, 20), (3, 21), (4, 22)):
+                realm_day[0] = day
+                result = store.perform_action(
+                    leader, nonce, p4rm.ACTION_GUILD, p4rm.GUILD_RALLY,
+                    1, bytes(16), b"",
+                )
+                self.assertEqual((result.status, result.value), (p4rm.ACTION_OK, 3))
+            self.assertEqual(store.guild_status(leader).quest_progress, 9)
+
+            realm_day[0] = 5
+            completion = store.perform_action(
+                leader, 23, p4rm.ACTION_GUILD, p4rm.GUILD_RALLY,
+                1, bytes(16), b"",
+            )
+            self.assertEqual(completion.value, 13)
+            after_completion = store.guild_status(leader)
+            self.assertEqual(
+                (after_completion.banner_stars, after_completion.quest_progress),
+                (1, 0),
+            )
+            banked = store.perform_action(
+                member, 24, p4rm.ACTION_GUILD, p4rm.GUILD_RALLY,
+                1, bytes(16), b"",
+            )
+            self.assertEqual(banked.value, 3)
+            self.assertEqual(
+                (store.guild_status(leader).banner_stars,
+                 store.guild_status(leader).quest_progress),
+                (1, 3),
+            )
+
+            # The original operation is returned without re-evaluating the
+            # current day or resetting the new season.
+            realm_day[0] = 25
+            replay = store.perform_action(
+                leader, 20, p4rm.ACTION_GUILD, p4rm.GUILD_RALLY,
+                1, bytes(16), b"",
+            )
+            self.assertEqual(replay.value, 3)
+            with sqlite3.connect(store.path) as database:
+                self.assertEqual(
+                    database.execute(
+                        "SELECT COUNT(*) FROM guild_rallies "
+                        "WHERE actor_id = ? AND realm_day_id = 25",
+                        (leader,),
+                    ).fetchone()[0],
+                    0,
+                )
+            status = store.guild_status(leader)
+            self.assertGreater(status.prestige, 0)
+            self.assertEqual(status.season_points, 0)
+            self.assertEqual(status.quest_progress, 3)
+
+    def test_guild_clashes_are_directional_cooldown_safe_and_no_economy(
+        self,
+    ) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            realm_day = [1]
+            store.realm_clock = lambda now=None: (realm_day[0], 3600)
+            a = self.add_profile(store, "club-a", "Club A", 700)
+            a_member = self.add_profile(store, "club-a-member", "A Member", 600)
+            b = self.add_profile(store, "club-b", "Club B", 800)
+            b_new = self.add_profile(store, "club-b-new", "B New", 900)
+            c = self.add_profile(store, "club-c", "Club C", 1000)
+            for actor, nonce, name_code in ((a, 1, 4), (b, 2, 5), (c, 3, 6)):
+                self.assertEqual(
+                    store.perform_action(
+                        actor, nonce, p4rm.ACTION_GUILD, p4rm.GUILD_CREATE,
+                        name_code, bytes(16), b"",
+                    ).status,
+                    p4rm.ACTION_OK,
+                )
+            self.assertEqual(
+                store.perform_action(
+                    a_member, 4, p4rm.ACTION_GUILD, p4rm.GUILD_JOIN,
+                    0, a, b"",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+            before = None
+            with sqlite3.connect(store.path) as database:
+                before = database.execute(
+                    "SELECT actor_id, hit_points, max_hit_points, strength, "
+                    "defense, experience, chompcoin, bank, pvp_wins, "
+                    "pvp_losses, dragon_kills FROM profiles ORDER BY actor_id"
+                ).fetchall()
+
+            realm_day[0] = 2
+            # This new member is only a pointer to Club B. Its older accepted
+            # roster makes the club a valid clash target today.
+            self.assertEqual(
+                store.perform_action(
+                    b_new, 5, p4rm.ACTION_GUILD, p4rm.GUILD_JOIN,
+                    0, b, b"",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+            for actor, nonce, route in ((a, 10, 0), (b, 11, 1), (c, 12, 2)):
+                self.assertEqual(
+                    store.perform_action(
+                        actor, nonce, p4rm.ACTION_GUILD, p4rm.GUILD_RALLY,
+                        route, bytes(16), b"",
+                    ).status,
+                    p4rm.ACTION_OK,
+                )
+            first = store.perform_action(
+                a, 20, p4rm.ACTION_GUILD, p4rm.GUILD_CLASH, 0, b_new, b""
+            )
+            self.assertEqual(first.status, p4rm.ACTION_OK)
+            self.assertEqual(
+                store.perform_action(
+                    a, 21, p4rm.ACTION_GUILD, p4rm.GUILD_CLASH, 0, c, b""
+                ).status,
+                p4rm.ACTION_DENIED,
+            )
+            self.assertEqual(
+                store.perform_action(
+                    c, 22, p4rm.ACTION_GUILD, p4rm.GUILD_CLASH, 0, b, b""
+                ).status,
+                p4rm.ACTION_DENIED,
+            )
+            # One outgoing plus one incoming for the same club is allowed.
+            self.assertEqual(
+                store.perform_action(
+                    c, 23, p4rm.ACTION_GUILD, p4rm.GUILD_CLASH, 0, a, b""
+                ).status,
+                p4rm.ACTION_OK,
+            )
+            self.assertEqual(
+                store.perform_action(
+                    a, 24, p4rm.ACTION_PVP_BEGIN, 0, 0, a_member, b""
+                ).status,
+                p4rm.ACTION_DENIED,
+            )
+            self.assertEqual(
+                store.perform_action(
+                    b, 25, p4rm.ACTION_GUILD, p4rm.GUILD_CHEER, 0, c, b""
+                ).status,
+                p4rm.ACTION_OK,
+            )
+
+            for day, nonce, expected in (
+                (3, 30, p4rm.ACTION_DENIED),
+                (4, 31, p4rm.ACTION_DENIED),
+                (5, 32, p4rm.ACTION_OK),
+            ):
+                realm_day[0] = day
+                self.assertEqual(
+                    store.perform_action(
+                        b, nonce, p4rm.ACTION_GUILD, p4rm.GUILD_CLASH,
+                        0, a, b"",
+                    ).status,
+                    expected,
+                )
+            with sqlite3.connect(store.path) as database:
+                after = database.execute(
+                    "SELECT actor_id, hit_points, max_hit_points, strength, "
+                    "defense, experience, chompcoin, bank, pvp_wins, "
+                    "pvp_losses, dragon_kills FROM profiles ORDER BY actor_id"
+                ).fetchall()
+                self.assertEqual(
+                    database.execute(
+                        "SELECT COUNT(*) FROM realm_economy_events"
+                    ).fetchone()[0],
+                    0,
+                )
+                clash = database.execute(
+                    "SELECT source_score, target_score FROM guild_clashes "
+                    "WHERE clash_id = ?",
+                    (first.related_id,),
+                ).fetchone()
+            self.assertEqual(after, before)
+            self.assertTrue(all(int(score) >= 0 for score in clash))
+
+    def test_pvp_lease_is_canceled_if_actors_become_clubmates(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            source = self.add_profile(store, "lease-source", "Lease Source", 500)
+            target = self.add_profile(store, "lease-target", "Lease Target", 500)
+            with self.assertRaises(ValueError):
+                store.perform_action(
+                    source,
+                    p4rm.MAX_ACTION_NONCE + 1,
+                    p4rm.ACTION_MAIL,
+                    0,
+                    0,
+                    target,
+                    b"NO SQLITE OVERFLOW",
+                )
+            opened = store.perform_action(
+                source, 10, p4rm.ACTION_PVP_BEGIN, 0, 0, target, b""
+            )
+            self.assertEqual(opened.status, p4rm.ACTION_OK)
+            self.assertEqual(
+                store.perform_action(
+                    source, 11, p4rm.ACTION_GUILD, p4rm.GUILD_CREATE,
+                    7, bytes(16), b"",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+            self.assertEqual(
+                store.perform_action(
+                    target, 12, p4rm.ACTION_GUILD, p4rm.GUILD_JOIN,
+                    0, source, b"",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+            with sqlite3.connect(store.path) as database:
+                before = database.execute(
+                    "SELECT actor_id, flags, chompcoin, bank, pvp_wins, "
+                    "pvp_losses FROM profiles ORDER BY actor_id"
+                ).fetchall()
+            body = opened.related_id.to_bytes(8, "little") + b"\x01"
+            blocked = store.perform_action(
+                source, 13, p4rm.ACTION_PVP_RESOLVE, 1, 0, target, body
+            )
+            self.assertEqual(blocked.status, p4rm.ACTION_DENIED)
+            self.assertEqual(
+                store.perform_action(
+                    source, 13, p4rm.ACTION_PVP_RESOLVE, 1, 0, target, body
+                ),
+                blocked,
+            )
+            self.assertEqual(
+                store.perform_action(
+                    target, 14, p4rm.ACTION_GUILD, p4rm.GUILD_LEAVE,
+                    0, bytes(16), b"",
+                ).status,
+                p4rm.ACTION_OK,
+            )
+            self.assertEqual(
+                store.perform_action(
+                    source, 15, p4rm.ACTION_PVP_RESOLVE, 1, 0, target, body
+                ).status,
+                p4rm.ACTION_DENIED,
+            )
+            expired_open = store.perform_action(
+                source, 16, p4rm.ACTION_PVP_BEGIN, 0, 0, target, b""
+            )
+            self.assertEqual(expired_open.status, p4rm.ACTION_OK)
+            with sqlite3.connect(store.path) as database:
+                database.execute(
+                    "UPDATE pvp_leases SET created_at = created_at - 601 "
+                    "WHERE lease_id = ?",
+                    (expired_open.related_id,),
+                )
+            expired_body = (
+                expired_open.related_id.to_bytes(8, "little") + b"\x01"
+            )
+            self.assertEqual(
+                store.perform_action(
+                    source,
+                    17,
+                    p4rm.ACTION_PVP_RESOLVE,
+                    1,
+                    0,
+                    target,
+                    expired_body,
+                ).status,
+                p4rm.ACTION_DENIED,
+            )
+            with sqlite3.connect(store.path) as database:
+                lease = database.execute(
+                    "SELECT status, outcome, resolved_at FROM pvp_leases "
+                    "WHERE lease_id = ?",
+                    (opened.related_id,),
+                ).fetchone()
+                expired_lease = database.execute(
+                    "SELECT status, outcome, resolved_at FROM pvp_leases "
+                    "WHERE lease_id = ?",
+                    (expired_open.related_id,),
+                ).fetchone()
+                after = database.execute(
+                    "SELECT actor_id, flags, chompcoin, bank, pvp_wins, "
+                    "pvp_losses FROM profiles ORDER BY actor_id"
+                ).fetchall()
+                self.assertEqual(
+                    database.execute("SELECT COUNT(*) FROM realm_events").fetchone()[0],
+                    0,
+                )
+                self.assertEqual(
+                    database.execute(
+                        "SELECT COUNT(*) FROM realm_economy_events"
+                    ).fetchone()[0],
+                    0,
+                )
+            self.assertEqual((int(lease[0]), lease[1] is None), (1, True))
+            self.assertIsNotNone(lease[2])
+            self.assertEqual(
+                (int(expired_lease[0]), expired_lease[1] is None), (1, True)
+            )
+            self.assertIsNotNone(expired_lease[2])
+            self.assertEqual(after, before)
+
+    def test_stale_guild_reader_cannot_roll_calendar_backward(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            realm_day = [1]
+            store.realm_clock = lambda now=None: (realm_day[0], 3600)
+
+            actors = []
+            for index in range(4):
+                actor = store.actor_for_profile(f"calendar-{index}")
+                record = lord_record(
+                    actor,
+                    index + 1,
+                    name=f"Calendar {index}",
+                    hero_class=1,
+                    level=6,
+                    dragon_kills=1,
+                )
+                self.assertEqual(
+                    store.commit(actor, 0, index + 1, 1, record), ("ok", 1)
+                )
+                actors.append(actor)
+            created = store.perform_action(
+                actors[0], 100, p4rm.ACTION_GUILD, p4rm.GUILD_CREATE,
+                8, bytes(16), b"",
+            )
+            self.assertEqual(created.status, p4rm.ACTION_OK)
+            for index, actor in enumerate(actors[1:], start=1):
+                self.assertEqual(
+                    store.perform_action(
+                        actor, 100 + index, p4rm.ACTION_GUILD,
+                        p4rm.GUILD_JOIN, 0, actors[0], b"",
+                    ).status,
+                    p4rm.ACTION_OK,
+                )
+
+            # This is a valid end-of-day-24 state: eleven quest points are
+            # banked and the next rally can complete the first day-25 banner.
+            with sqlite3.connect(store.path) as database:
+                database.execute(
+                    "UPDATE guilds SET prestige = 7, season_id = 0, "
+                    "season_points = 7, quest_day = 24, quest_progress = 11, "
+                    "quest_complete = 0 WHERE guild_id = ?",
+                    (created.related_id,),
+                )
+
+            realm_day[0] = 25
+            awards = []
+            for index in range(3):
+                awards.append(
+                    store.perform_action(
+                        actors[index],
+                        200 + index,
+                        p4rm.ACTION_GUILD,
+                        p4rm.GUILD_RALLY,
+                        1,
+                        bytes(16),
+                        b"",
+                    ).value
+                )
+            self.assertEqual(awards, [15, 5, 5])
+            current = store.guild_status(actors[0])
+            self.assertEqual(
+                (current.banner_stars, current.quest_progress,
+                 current.season_points),
+                (1, 11, 25),
+            )
+
+            # A reader that sampled day 24 before blocking on the write lock
+            # must not reset season two or reopen the day-25 banner quest.
+            realm_day[0] = 24
+            stale = store.guild_status(actors[0])
+            self.assertEqual(
+                (stale.banner_stars, stale.quest_progress, stale.season_points),
+                (1, 11, 25),
+            )
+            with sqlite3.connect(store.path) as database:
+                persisted = database.execute(
+                    "SELECT season_id, season_points, quest_day, "
+                    "quest_progress, quest_complete FROM guilds "
+                    "WHERE guild_id = ?",
+                    (created.related_id,),
+                ).fetchone()
+            self.assertEqual(tuple(map(int, persisted)), (1, 25, 25, 11, 1))
+
+            realm_day[0] = 25
+            final = store.perform_action(
+                actors[3], 203, p4rm.ACTION_GUILD, p4rm.GUILD_RALLY,
+                1, bytes(16), b"",
+            )
+            self.assertEqual(final.value, 5)
+            status = store.guild_status(actors[0])
+            self.assertEqual(
+                (status.banner_stars, status.quest_progress,
+                 status.season_points),
+                (1, 11, 30),
+            )
+
 
 def _fixed_text(value: str, size: int) -> bytes:
     encoded = value.encode("ascii")
@@ -2812,6 +3859,7 @@ def lord_record(
     save_sequence: int = 2,
     realm_revision: int = 1,
     partner_code: int = 0,
+    npc_friend_code: int = 0,
     pvp_fights_remaining: int = 3,
     friendship_actions_remaining: int = 3,
     igm_used_mask: int = 0,
@@ -2837,6 +3885,11 @@ def lord_record(
     gems: int = 0,
     young_heroes_helped: int = 0,
     friendship_badges: int = 0,
+    horse: bool = False,
+    fairy: bool = False,
+    fairy_lore: bool = False,
+    amulet: bool = False,
+    high_spirits: bool = False,
     seen_dragon: bool = False,
     sync_actor_id: bytes = bytes(16),
     sync_server_revision: int = 0,
@@ -2868,7 +3921,7 @@ def lord_record(
         struct.pack(
             "<8B",
             partner_code,
-            0,
+            npc_friend_code,
             pvp_fights_remaining,
             friendship_actions_remaining,
             igm_used_mask,
@@ -2908,11 +3961,11 @@ def lord_record(
             gems,
             young_heroes_helped,
             friendship_badges,
-            0,
-            0,
-            0,
-            0,
-            0,
+            int(horse),
+            int(fairy),
+            int(fairy_lore),
+            int(amulet),
+            int(high_spirits),
             int(seen_dragon),
         )
     )
@@ -2998,6 +4051,100 @@ def lord_record(
 
 
 class HubSessionTests(unittest.TestCase):
+    def test_unsigned_action_nonce_fails_closed_without_killing_session(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            actor = StoreTests.add_profile(
+                store, "nonce-wire", "Nonce Wire", 500
+            )
+            sent: list[bytes] = []
+            hub = RealmHubSession(
+                "nonce-wire", store, sent.append, test_offer(), session_id=77
+            )
+            hub.remote_peer_id = 99
+            hub.connected = True
+            hub.game_online = True
+            unsigned_action = struct.pack(
+                "<BBH16sQHHI",
+                p4rm.ACTION_MAIL,
+                0,
+                0,
+                actor,
+                0xFFFFFFFFFFFFFFFF,
+                0,
+                0,
+                0,
+            )
+            datagram = p4mp.encode_packet(
+                p4mp.GAME_MESSAGE,
+                77,
+                99,
+                1,
+                p4rm.encode_message(
+                    p4rm.ACTION_BEGIN,
+                    900,
+                    unsigned_action,
+                    p4rm.BEGIN_INDEX,
+                    0,
+                ),
+            )
+            hub.receive(datagram)
+            error_packet = p4mp.decode_packet(sent[-1])
+            error = p4rm.decode_message(error_packet.payload)
+            self.assertEqual(error.kind, p4rm.ERROR)
+            self.assertTrue(hub.connected)
+            self.assertTrue(hub.game_online)
+            self.assertIsNone(hub.action_upload)
+            with sqlite3.connect(store.path) as database:
+                self.assertEqual(
+                    database.execute(
+                        "SELECT COUNT(*) FROM action_operations"
+                    ).fetchone()[0],
+                    0,
+                )
+
+            sent.clear()
+            heartbeat = struct.pack("<Q", 1234)
+            hub.receive(
+                p4mp.encode_packet(p4mp.PING, 77, 99, 2, heartbeat)
+            )
+            pong = p4mp.decode_packet(sent[-1])
+            self.assertEqual((pong.packet_type, pong.payload), (p4mp.PONG, heartbeat))
+
+    def test_guild_status_and_page_requests_are_singletons(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            store = RealmStore(Path(directory) / "realm.sqlite3")
+            actor = StoreTests.add_profile(
+                store, "guild-wire", "Guild Wire", 500
+            )
+            sent: list[bytes] = []
+            hub = RealmHubSession(
+                "guild-wire", store, sent.append, test_offer(), session_id=77
+            )
+            self.assertEqual(hub.actor_id, actor)
+            self.assertTrue(hub._send_guild_status())
+            packet = p4mp.decode_packet(sent[-1])
+            message = p4rm.decode_message(packet.payload)
+            self.assertEqual(
+                (message.kind, message.chunk_index, message.chunk_count),
+                (p4rm.GUILD_STATUS, 0, 0),
+            )
+            self.assertEqual(p4rm.decode_guild_status(message.payload)[0], actor)
+
+            malformed = p4rm.Message(
+                p4rm.GUILD_PAGE, 80, 1, 1, p4rm.encode_guild_page_request(0)
+            )
+            hub._receive_guild_page(malformed)
+            self.assertEqual(hub.guild_directory_pending, [])
+            valid = p4rm.Message(
+                p4rm.GUILD_PAGE, 81, 0, 0, p4rm.encode_guild_page_request(0)
+            )
+            hub._receive_guild_page(valid)
+            self.assertEqual(len(hub.guild_directory_pending), 1)
+            kind, index, count, payload = hub.guild_directory_pending[0]
+            self.assertEqual((kind, index, count), (p4rm.GUILD_PAGE, 0, 0))
+            self.assertEqual(p4rm.decode_guild_page(payload), (0, 0))
+
     def test_download_retries_and_malformed_message_fails_closed(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             clock = [1000.0]
@@ -4220,6 +5367,7 @@ class HubSessionTests(unittest.TestCase):
                         p4rm.DIRECTORY_PAGE,
                         p4rm.DIRECTORY_SUMMARY,
                         p4rm.DIRECTORY_STATS,
+                        p4rm.DIRECTORY_DEEDS,
                         p4rm.CLOCK,
                     )
                     for message in realm_messages()

@@ -1,6 +1,6 @@
 # LORD Mac BBS realm server
 
-LORD 1.6.1 uses the Mac as the authoritative BBS-style realm server. Every
+LORD 1.8.0 uses the Mac as the authoritative BBS-style realm server. Every
 console chooses **Join**. A console never hosts the shared world.
 
 ```text
@@ -19,8 +19,9 @@ The realm accepts 100 stable player profiles. LORD displays an eight-player
 page at a time and provides Previous/Next realm-page rows for the complete
 99-other-player roster. The backend owns player snapshots, presence, mail,
 friendship, teams, mentoring, PvP leases/results, tavern/news feeds, carried
-and vaulted ChompCoin, and the hourly realm-day clock. Offline players receive
-numbered durable events when they next join.
+and vaulted ChompCoin, Adventure Clubs, and the hourly realm-day clock. Offline players receive
+numbered durable events when they next join. Neither the server rollover nor
+standalone local sleep pays bank interest.
 
 ## Requirements
 
@@ -167,10 +168,31 @@ retry is idempotent.
   stops startup instead of publishing guessed state.
 - The roster is ordered stably by name and opaque actor ID, eight records per page.
   A page includes opaque actor ID, display profile, PvP stats, combat stats,
-  ChompCoin, directional trust, and team state.
+  ChompCoin, directional trust, and team state. The hub orders the
+  authoritative directory by dragon deeds, level, XP, PvP wins, fewer PvP
+  losses, then stable identity ties. LORD re-sorts the local hero plus the
+  current up-to-eight-entry page by those same gameplay fields.
+- Adventure Clubs are a separate server-owned social layer: at most eight
+  members, one of sixteen unique curated names, one-day join eligibility and
+  rejoin delays, deterministic leader succession, one rally per eligible
+  member/day, and paged club standings. A 12-point cooperative quest earns a
+  Banner Star and bonus club points. Season points reset every 24 realm days;
+  lifetime prestige, stars, and W/L/D do not.
+- Friendly Banner Clashes are calculated by the hub from accepted member heads,
+  normalized same-day participation, rally-route tactics, and a deterministic
+  server roll. Each club has at most one outgoing and one incoming clash per
+  realm day and each pair has a three-day cooldown. Cheers are bounded daily.
+  None of these operations changes personal ChompCoin, XP, deeds, PvP counters,
+  or combat stats, and ordinary PvP between members of the same club is denied.
+  The exact score is the floor average of each eligible member's
+  `4*level + 10*dragon_deeds + min(PvP_wins, 50)`, plus rounded participation
+  from 0--12, a +4 majority-route advantage, and a deterministic -3--3 SHA-256
+  roll. Ward beats Charge, Sneak beats Ward, and Charge beats Sneak. A win,
+  loss, or draw gives the two clubs 6/3, 3/6, or 4/4 points respectively.
 - Presence is a 90-second UI hint. It is not authentication.
 - The trusted realm day advances every hour. Reconnect grants at most one
-  missed refresh and never loops catch-up interest. WELCOME carries the
+  missed refresh and never pays or loops catch-up interest. Standalone Inn
+  sleep uses the same no-interest reset. WELCOME carries the
   validated head's local player-day, so a reboot after the cartridge saved a
   rollover but before its realm commit recognizes that rollover instead of
   granting it again.
@@ -188,6 +210,13 @@ retry is idempotent.
   limits are also checked cumulatively against a durable per-player realm-day
   anchor, so splitting a forged increase across repeated uploads does not
   multiply the hourly allowance.
+- LORD 1.8.0 progression validation permits at most three gained levels from the
+  anchored base and requires the XP threshold for the destination trainer.
+  Cumulative XP gain is capped at 2,500,000 per realm day. Wealth may rise by
+  at most 25,000,000 plus 20% of anchored wealth; max HP, strength, and defense
+  may each rise by 5,000; and separate bounds cover PvP records, forest fights,
+  skills, badges, charm, gems, and mentoring. These deliberately wide
+  anti-editor bounds do not prove that a modified cartridge played each fight.
 - A schema-5 local save remembers the last accepted actor and server revision.
   Offline edits upload only if that base still matches the server head. If both
   copies advanced, LORD shows `SYNC CONFLICT` and preserves both rather than
@@ -226,21 +255,28 @@ retry is idempotent.
   restored HP in the same realm day, at which point the authoritative profile
   is alive again.
 - Advancing the durable event cursor over a PvP result also has semantic
-  checks: lifetime wins/losses cannot move backwards, every crossed result must
-  contribute its win or loss, and a same-day loss must commit zero HP. An
+  checks: lifetime wins/losses must equal the prior counters plus every crossed
+  result, so unreceipted movement in either direction is rejected, and a
+  same-day loss must commit zero HP. An
   old-day loss may arrive in the same snapshot as its one hourly revival; a
   current-day knockout cannot use that exception.
 
 Realm-bound characters retain solo offline forest/training/IGM/NPC play,
-shops, healing, Dragon Dice, local banking, and cached roster/mail viewing.
+shops, healing, tactical intent battles, real Aragorn Math, target-18
+Roll/Hold/Leave Dragon Dice, local banking, and cached roster/mail viewing.
 While the Mac action path is unavailable, transfers, player duels/inn
 sparring, mail sending, friendship/team/mentor/saying mutations, and shared
 tavern/news posts show `Connect to the Mac realm` without changing shared
-state. Unbound standalone characters retain the classic local realm. A cable
+state. Adventure Club state is queried from the hub rather than serialized in
+LDSV5, so a cold offline Club Hall asks the player to reconnect; solo progress
+and local saves continue normally. Unbound standalone characters retain the
+classic local realm. A cable
 drop during a leased duel aborts that duel on the next activation without a
 reward; the spent fight/entry and HP damage received may remain. Winning and
-losing counters plus any prize are granted only by durable source events, so a
-lost action-result packet cannot mint or erase the settlement.
+losing counters plus any prize are granted only by durable source events;
+shared realm duels award no XP. A lost action-result packet therefore cannot
+mint or erase the settlement, and a cached-duel XP/ChompCoin/prestige bundle is
+rejected without blocking same-counter solo offline progression.
 
 The service is a trusted local BBS deployment, not an Internet-facing game
 server. Console OS 0.4.88 stops ordinary SD edits, and the hub rejects obvious
@@ -258,8 +294,12 @@ LAN deployment's current isolation guarantees.
 P4MP remains version 1. LORD uses protocol `0x4c53` and bounded 1–64 byte Game
 Messages. `P4RM` v3 provides persisted-base hello/welcome reconciliation,
 complete snapshot transfer,
-profile publication, paged roster records, hourly clock, typed actions, and
-durable events. Records are capped at 4,148 bytes and use explicit lengths,
+profile publication, paged roster and club records, hourly clock, typed
+actions, and durable events. Additive kinds 23--26 carry actor-bound club
+status, player club annotations, club-page metadata, and fixed-size standings
+summaries; action kind 10 carries create/join/leave/rally/clash/cheer requests.
+A new cartridge enables those actions only after a valid club-status packet,
+so it remains safe with an older hub. Records are capped at 4,148 bytes and use explicit lengths,
 little-endian fields, CRCs, stop-and-wait acknowledgement, and one-second
 retry.
 
@@ -322,6 +362,14 @@ with pending knockouts, receipt-before-save power loss, authoritative download
 after local rollback, and a forged cursor-only knockout reflection. The final
 SQLite quick check, foreign keys, heads, profiles, anchors, leases, events, and
 ledger are compared with an independently generated oracle.
+
+The Adventure Club campaign drives fourteen accepted actors through thirty
+realm days in unequal three-, four-, and five-member clubs plus a temporary
+solo club. It proves name reuse, capacity, delayed eligibility, quest carry and
+wrap, deterministic leader succession, route and size normalization, daily and
+pair clash limits, cheers, nonce replay across restart, day-25 season rollover,
+same-club PvP denial, malformed requests, and byte-for-byte isolation of every
+personal head, ChompCoin, XP, combat stat, deed, and PvP counter.
 
 The SDL cartridge runner separately executes the real LORD C code under
 sanitizers, but its in-memory host does not implement multiplayer-session

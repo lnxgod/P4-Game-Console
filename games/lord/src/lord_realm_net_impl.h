@@ -38,6 +38,11 @@ typedef enum {
     LORD_P4RM_EVENT_BODY = 19,
     LORD_P4RM_EVENT_ACK = 20,
     LORD_P4RM_DIRECTORY_PAGE = 21,
+    LORD_P4RM_DIRECTORY_DEEDS = 22,
+    LORD_P4RM_GUILD_STATUS = 23,
+    LORD_P4RM_DIRECTORY_GUILD = 24,
+    LORD_P4RM_GUILD_PAGE = 25,
+    LORD_P4RM_GUILD_SUMMARY = 26,
 } lord_p4rm_kind_t;
 
 typedef enum {
@@ -51,7 +56,17 @@ typedef enum {
     LORD_REALM_ACTION_PVP_RESOLVE = 7,
     LORD_REALM_ACTION_TAVERN = 8,
     LORD_REALM_ACTION_NEWS = 9,
+    LORD_REALM_ACTION_GUILD = 10,
 } lord_realm_action_kind_t;
+
+enum {
+    LORD_GUILD_ACTION_CREATE = 0,
+    LORD_GUILD_ACTION_JOIN = 1,
+    LORD_GUILD_ACTION_LEAVE = 2,
+    LORD_GUILD_ACTION_RALLY = 3,
+    LORD_GUILD_ACTION_CLASH = 4,
+    LORD_GUILD_ACTION_CHEER = 5,
+};
 
 typedef enum {
     LORD_REALM_ACTION_IDLE = 0,
@@ -193,7 +208,7 @@ static uint32_t p4rm_next_transaction(void)
 static bool p4rm_kind_valid(uint8_t kind)
 {
     return kind >= (uint8_t)LORD_P4RM_HELLO &&
-        kind <= (uint8_t)LORD_P4RM_DIRECTORY_PAGE;
+        kind <= (uint8_t)LORD_P4RM_GUILD_SUMMARY;
 }
 
 static size_t p4rm_encode(
@@ -927,6 +942,11 @@ static void p4rm_handle_directory_summary(
     player->at_inn = (flags & 0x02U) != 0U;
     player->pvp_wins = sync_load_u16(message->payload, 40U);
     player->pvp_losses = sync_load_u16(message->payload, 42U);
+    /* A newly streamed page may replace this slot before its deed sidecar
+     * arrives.  Never show the prior occupant's prestige in that window. */
+    player->dragon_kills = 0U;
+    player->guild_id = 0U;
+    player->guild_name_code = 0U;
     player->trust = trust;
     player->teamed = teamed;
     text_copy(player->saying, sizeof(player->saying),
@@ -989,6 +1009,192 @@ static void p4rm_handle_directory_stats(
     player->teamed = message->payload[41] != 0U;
 }
 
+static void p4rm_handle_directory_deeds(
+    lord_state_t *state,
+    const lord_p4rm_message_t *message)
+{
+    if (message->payload_bytes != 18U ||
+        message->chunk_count == 0U ||
+        message->chunk_count > LORD_REALM_PLAYER_COUNT ||
+        message->chunk_index >= message->chunk_count ||
+        memcmp(s_lord_realm_net.directory_actor_ids[message->chunk_index],
+               message->payload, LORD_SYNC_ACTOR_ID_BYTES) != 0 ||
+        message->payload[17] != 0U) {
+        return;
+    }
+    state->realm[message->chunk_index].dragon_kills = message->payload[16];
+}
+
+static void p4rm_handle_guild_status(
+    lord_state_t *state,
+    const lord_p4rm_message_t *message)
+{
+    if (message->payload_bytes != 48U || message->chunk_index != 0U ||
+        message->chunk_count != 0U ||
+        !p4rm_actor_valid(state->sync_actor_id) ||
+        memcmp(message->payload, state->sync_actor_id,
+               LORD_SYNC_ACTOR_ID_BYTES) != 0) {
+        return;
+    }
+    const uint32_t guild_id = sync_load_u32(message->payload, 16U);
+    const uint16_t name_code = sync_load_u16(message->payload, 20U);
+    const uint8_t member_count = message->payload[22];
+    const uint8_t role = message->payload[23];
+    const uint32_t prestige = sync_load_u32(message->payload, 24U);
+    const uint32_t season_points = sync_load_u32(message->payload, 28U);
+    const uint16_t banner_stars = sync_load_u16(message->payload, 32U);
+    const uint16_t quest_progress = sync_load_u16(message->payload, 34U);
+    const uint16_t quest_goal = sync_load_u16(message->payload, 36U);
+    const uint16_t wins = sync_load_u16(message->payload, 38U);
+    const uint16_t losses = sync_load_u16(message->payload, 40U);
+    const uint16_t draws = sync_load_u16(message->payload, 42U);
+    const uint8_t last_outcome = message->payload[44];
+    const uint16_t opponent = sync_load_u16(message->payload, 45U);
+    const uint8_t daily_flags = message->payload[47];
+    const bool no_membership = guild_id == 0U;
+
+    if ((daily_flags & (uint8_t)~0x0fU) != 0U ||
+        last_outcome > 3U) {
+        return;
+    }
+    if (no_membership) {
+        if (name_code != 0U || member_count != 0U || role != 0U ||
+            prestige != 0U || season_points != 0U || banner_stars != 0U ||
+            quest_progress != 0U || (quest_goal != 0U &&
+             quest_goal != LORD_GUILD_QUEST_GOAL) || wins != 0U ||
+            losses != 0U || draws != 0U || last_outcome != 0U ||
+            opponent != 0U || daily_flags != 0U) {
+            return;
+        }
+    } else if (name_code == 0U || name_code > LORD_GUILD_NAME_COUNT ||
+               member_count == 0U || member_count > 8U || role == 0U ||
+               role > 2U || quest_goal != LORD_GUILD_QUEST_GOAL ||
+               quest_progress > quest_goal ||
+               (last_outcome == 0U && opponent != 0U) ||
+               (last_outcome != 0U &&
+                (opponent == 0U || opponent > LORD_GUILD_NAME_COUNT))) {
+        return;
+    }
+
+    state->guild_status = (lord_guild_status_t){
+        .supported = true,
+        .guild_id = guild_id,
+        .name_code = name_code,
+        .member_count = member_count,
+        .role = role,
+        .prestige = prestige,
+        .season_points = season_points,
+        .banner_stars = banner_stars,
+        .quest_progress = quest_progress,
+        .quest_goal = quest_goal,
+        .wins = wins,
+        .losses = losses,
+        .draws = draws,
+        .last_outcome = last_outcome,
+        .last_opponent_name_code = opponent,
+        .daily_flags = daily_flags,
+    };
+}
+
+static void p4rm_handle_directory_guild(
+    lord_state_t *state,
+    const lord_p4rm_message_t *message)
+{
+    if (message->payload_bytes != 24U || message->chunk_count == 0U ||
+        message->chunk_count > LORD_REALM_PLAYER_COUNT ||
+        message->chunk_index >= message->chunk_count ||
+        memcmp(s_lord_realm_net.directory_actor_ids[message->chunk_index],
+               message->payload, LORD_SYNC_ACTOR_ID_BYTES) != 0 ||
+        sync_load_u16(message->payload, 22U) != 0U) {
+        return;
+    }
+    const uint32_t guild_id = sync_load_u32(message->payload, 16U);
+    const uint16_t name_code = sync_load_u16(message->payload, 20U);
+    if ((guild_id == 0U) != (name_code == 0U) ||
+        name_code > LORD_GUILD_NAME_COUNT) {
+        return;
+    }
+    lord_realm_player_t *const player =
+        &state->realm[message->chunk_index];
+    player->guild_id = guild_id;
+    player->guild_name_code = name_code;
+}
+
+static void p4rm_clear_guild_summaries(lord_state_t *state)
+{
+    memset(state->guild_summaries, 0, sizeof(state->guild_summaries));
+}
+
+static void p4rm_handle_guild_page(
+    lord_state_t *state,
+    const lord_p4rm_message_t *message)
+{
+    if (message->payload_bytes != 4U || message->chunk_index != 0U ||
+        message->chunk_count != 0U) {
+        return;
+    }
+    const uint16_t offset = sync_load_u16(message->payload, 0U);
+    const uint16_t total = sync_load_u16(message->payload, 2U);
+    if (total > LORD_GUILD_NAME_COUNT ||
+        offset % LORD_GUILD_SUMMARY_COUNT != 0U ||
+        (total == 0U && offset != 0U) ||
+        (total != 0U && offset >= total)) {
+        return;
+    }
+    state->guild_page_offset = offset;
+    state->guild_page_total = total;
+    state->guild_page_received = true;
+    p4rm_clear_guild_summaries(state);
+}
+
+static void p4rm_handle_guild_summary(
+    lord_state_t *state,
+    const lord_p4rm_message_t *message)
+{
+    if (message->chunk_count > LORD_GUILD_SUMMARY_COUNT ||
+        message->chunk_index >= LORD_GUILD_SUMMARY_COUNT) {
+        return;
+    }
+    if (message->chunk_count == 0U && message->payload_bytes == 0U &&
+        message->chunk_index == 0U) {
+        p4rm_clear_guild_summaries(state);
+        return;
+    }
+    if (message->payload_bytes != 24U ||
+        message->chunk_index >= message->chunk_count ||
+        sync_load_u16(message->payload, 22U) != 0U) {
+        return;
+    }
+    const uint32_t guild_id = sync_load_u32(message->payload, 0U);
+    const uint16_t name_code = sync_load_u16(message->payload, 4U);
+    const uint8_t members = message->payload[6];
+    if (guild_id == 0U || name_code == 0U ||
+        name_code > LORD_GUILD_NAME_COUNT || members == 0U ||
+        members > 8U) {
+        return;
+    }
+    lord_guild_summary_t *const summary =
+        &state->guild_summaries[message->chunk_index];
+    *summary = (lord_guild_summary_t){
+        .valid = true,
+        .guild_id = guild_id,
+        .name_code = name_code,
+        .member_count = members,
+        .banner_stars = message->payload[7],
+        .prestige = sync_load_u32(message->payload, 8U),
+        .season_points = sync_load_u32(message->payload, 12U),
+        .wins = sync_load_u16(message->payload, 16U),
+        .losses = sync_load_u16(message->payload, 18U),
+        .draws = sync_load_u16(message->payload, 20U),
+    };
+    if (message->chunk_index + 1U == message->chunk_count) {
+        for (size_t index = message->chunk_count;
+             index < LORD_GUILD_SUMMARY_COUNT; ++index) {
+            state->guild_summaries[index] = (lord_guild_summary_t){0};
+        }
+    }
+}
+
 static bool p4rm_send_profile(
     p4_game_context_t *context,
     const lord_state_t *state)
@@ -1016,7 +1222,10 @@ static bool p4rm_send_profile(
     save_store_u32(payload, 24U, (uint32_t)state->player.hit_points);
     save_store_u32(payload, 28U, (uint32_t)state->player.max_hit_points);
     save_store_u32(payload, 32U, (uint32_t)state->player.strength);
-    save_store_u32(payload, 36U, (uint32_t)state->player.defense);
+    const int32_t guard = friendship_guard_bonus(state);
+    const int32_t effective_defense = state->player.defense > INT32_MAX - guard ?
+        INT32_MAX : state->player.defense + guard;
+    save_store_u32(payload, 36U, (uint32_t)effective_defense);
     save_store_u16(payload, 40U, state->player.pvp_wins);
     save_store_u16(payload, 42U, state->player.pvp_losses);
     save_store_u32(payload, 44U, state->player.experience);
@@ -1336,6 +1545,10 @@ static void p4rm_apply_event(
         add_mail(state, sender, LORD_MAIL_SENDER_HERO,
                  LORD_MAIL_ANNOUNCEMENT, false, text);
         break;
+    case LORD_REALM_ACTION_GUILD:
+        /* Club changes arrive through actor-bound transient STATUS packets,
+         * never through the LDSV5 event/economy stream. */
+        break;
     case LORD_REALM_ACTION_PVP_BEGIN:
     case LORD_REALM_ACTION_NONE:
         break;
@@ -1442,13 +1655,22 @@ static void p4rm_finish_action_result(
     const lord_realm_action_kind_t kind = s_lord_realm_net.action_kind;
     const uint8_t player_index = s_lord_realm_net.action_player;
     const uint8_t request_code = s_lord_realm_net.action_code;
-    (void)result_value;
     if (status != 0U) {
-        set_message(state, state->screen,
-                    status == 4U ? "That realm player is busy." :
-                    status == 3U ? "The realm declined that request." :
-                    "The realm could not complete that request.",
-                    "No local resources were spent.");
+        if (kind == LORD_REALM_ACTION_GUILD) {
+            set_message(state, state->screen,
+                        status == 4U ?
+                            "That club action is on cooldown." :
+                        status == 3U ?
+                            "The club request was declined." :
+                            "The club request could not be completed.",
+                        "It may be used today, full, or no longer eligible.");
+        } else {
+            set_message(state, state->screen,
+                        status == 4U ? "That realm player is busy." :
+                        status == 3U ? "The realm declined that request." :
+                        "The realm could not complete that request.",
+                        "No local resources were spent.");
+        }
         s_lord_realm_net.action_state = LORD_REALM_ACTION_IDLE;
         return;
     }
@@ -1518,6 +1740,40 @@ static void p4rm_finish_action_result(
                     "The hub posted your announcement.",
                     state->announcement);
         break;
+    case LORD_REALM_ACTION_GUILD:
+        if (request_code == LORD_GUILD_ACTION_RALLY) {
+            char line[LORD_TEXT_BYTES];
+            text_copy(line, sizeof(line), "Your rally added ");
+            text_append_u32(line, sizeof(line), result_value);
+            text_append(line, sizeof(line), " shared club points.");
+            set_message(state, LORD_SCREEN_GUILD, line,
+                        result_value >= 10U ?
+                            "Quest completion bonus included!" :
+                            "The Mac hub owns the shared total.");
+        } else if (request_code == LORD_GUILD_ACTION_CLASH) {
+            set_message(state, LORD_SCREEN_GUILD,
+                        result_value == 1U ?
+                            "Your club won the friendly clash!" :
+                        result_value == 2U ?
+                            "The rival club won this friendly clash." :
+                        result_value == 3U ?
+                            "The friendly club clash ended in a draw." :
+                            "The friendly club clash is complete.",
+                        "Only shared club standings changed.");
+        } else if (request_code == LORD_GUILD_ACTION_CHEER) {
+            set_message(state, LORD_SCREEN_GUILD,
+                        "Your cheer gave 2 points to the other club.",
+                        "Your own club gained 1 kindness point.");
+        } else {
+            set_message(state, LORD_SCREEN_GUILD,
+                        request_code == LORD_GUILD_ACTION_CREATE ?
+                            "Your Adventure Club was founded." :
+                        request_code == LORD_GUILD_ACTION_JOIN ?
+                            "You joined the Adventure Club." :
+                            "You left the Adventure Club.",
+                        "The Mac hub owns the shared result.");
+        }
+        break;
     case LORD_REALM_ACTION_NONE:
         break;
     }
@@ -1534,6 +1790,29 @@ static void p4rm_handle_action_result(
         message->payload[1] != (uint8_t)s_lord_realm_net.action_kind ||
         message->payload[0] > 4U) {
         return;
+    }
+    if (s_lord_realm_net.action_kind == LORD_REALM_ACTION_GUILD) {
+        const uint8_t code = s_lord_realm_net.action_code;
+        const uint8_t status = message->payload[0];
+        const uint32_t value = sync_load_u32(message->payload, 4U);
+        const uint64_t related = sync_load_u64(message->payload, 8U);
+        const bool rally_value = (value >= 2U && value <= 5U) ||
+            (value >= 12U && value <= 15U);
+        if ((status != 0U &&
+             (message->payload[2] != 0U || value != 0U || related != 0U)) ||
+            (status == 0U &&
+             (message->payload[2] != code || related == 0U ||
+             ((code == LORD_GUILD_ACTION_CREATE &&
+               (value == 0U || value > LORD_GUILD_NAME_COUNT)) ||
+              (code == LORD_GUILD_ACTION_JOIN &&
+               (value == 0U || value > LORD_GUILD_NAME_COUNT)) ||
+              (code == LORD_GUILD_ACTION_LEAVE && value != 0U) ||
+              (code == LORD_GUILD_ACTION_RALLY && !rally_value) ||
+              (code == LORD_GUILD_ACTION_CLASH &&
+               (value == 0U || value > 3U)) ||
+              (code == LORD_GUILD_ACTION_CHEER && value != 3U))))) {
+            return;
+        }
     }
     p4rm_finish_action_result(
         state, message->payload[0], message->payload[2],
@@ -1591,6 +1870,25 @@ static void p4rm_receive_messages(
             if (!serialized_state_frozen) {
                 p4rm_handle_directory_stats(state, &message);
             }
+            break;
+        case LORD_P4RM_DIRECTORY_DEEDS:
+            if (!serialized_state_frozen) {
+                p4rm_handle_directory_deeds(state, &message);
+            }
+            break;
+        case LORD_P4RM_GUILD_STATUS:
+            /* Actor-bound club state is transient and can safely refresh
+             * while an unrelated LDSV5 snapshot is being committed. */
+            p4rm_handle_guild_status(state, &message);
+            break;
+        case LORD_P4RM_DIRECTORY_GUILD:
+            p4rm_handle_directory_guild(state, &message);
+            break;
+        case LORD_P4RM_GUILD_PAGE:
+            p4rm_handle_guild_page(state, &message);
+            break;
+        case LORD_P4RM_GUILD_SUMMARY:
+            p4rm_handle_guild_summary(state, &message);
             break;
         case LORD_P4RM_DIRECTORY_PAGE:
             if (!serialized_state_frozen) {
@@ -1751,7 +2049,29 @@ static bool p4rm_bound_offline_shared_activation(
     lord_state_t *state,
     lord_event_t *event)
 {
-    if (!realm_character_bound(state)) {
+    bool guild_action = false;
+    switch (state->screen) {
+    case LORD_SCREEN_GUILD: {
+        const bool member = state->guild_status.supported &&
+            state->guild_status.guild_id != 0U;
+        guild_action = member ?
+            (state->selection < 3U || state->selection == 5U ||
+             state->selection == 6U) : state->selection == 0U;
+        break;
+    }
+    case LORD_SCREEN_GUILD_CREATE:
+        guild_action = state->selection < LORD_GUILD_NAME_COUNT;
+        break;
+    case LORD_SCREEN_GUILD_TARGET:
+        guild_action = state->selection < LORD_REALM_PLAYER_COUNT;
+        break;
+    case LORD_SCREEN_GUILD_STANDINGS:
+        guild_action = state->selection < 2U;
+        break;
+    default:
+        break;
+    }
+    if (!realm_character_bound(state) && !guild_action) {
         return false;
     }
     if (s_lord_realm_net.pvp_lease_id != 0U) {
@@ -1769,7 +2089,7 @@ static bool p4rm_bound_offline_shared_activation(
         return true;
     }
 
-    bool shared_action = false;
+    bool shared_action = guild_action;
     lord_screen_t return_screen = state->screen;
     switch (state->screen) {
     case LORD_SCREEN_BANK_TRANSFER:
@@ -1799,6 +2119,11 @@ static bool p4rm_bound_offline_shared_activation(
             return_screen = state->editor_return_screen;
         }
         break;
+    case LORD_SCREEN_GUILD:
+    case LORD_SCREEN_GUILD_CREATE:
+    case LORD_SCREEN_GUILD_TARGET:
+    case LORD_SCREEN_GUILD_STANDINGS:
+        break;
     default:
         break;
     }
@@ -1807,8 +2132,25 @@ static bool p4rm_bound_offline_shared_activation(
     }
     set_message(state, return_screen,
                 "Connect to the Mac realm.",
-                "Shared player actions need the realm hub.");
+                guild_action ?
+                    "Adventure Clubs live on the shared Mac hub." :
+                    "Shared player actions need the realm hub.");
     *event = LORD_EVENT_CONFIRM;
+    return true;
+}
+
+static bool p4rm_action_needs_target(
+    lord_realm_action_kind_t kind, uint8_t code)
+{
+    if (kind == LORD_REALM_ACTION_TAVERN ||
+        kind == LORD_REALM_ACTION_NEWS) {
+        return false;
+    }
+    if (kind == LORD_REALM_ACTION_GUILD) {
+        return code == LORD_GUILD_ACTION_JOIN ||
+            code == LORD_GUILD_ACTION_CLASH ||
+            code == LORD_GUILD_ACTION_CHEER;
+    }
     return true;
 }
 
@@ -1824,13 +2166,23 @@ static bool p4rm_queue_action(
 {
     if (!p4rm_online_actions_ready() ||
         s_lord_realm_net.action_state != LORD_REALM_ACTION_IDLE ||
-        kind < LORD_REALM_ACTION_MAIL || kind > LORD_REALM_ACTION_NEWS ||
+        kind < LORD_REALM_ACTION_MAIL || kind > LORD_REALM_ACTION_GUILD ||
         body_bytes > LORD_P4RM_PAYLOAD_BYTES ||
         (body == NULL && body_bytes != 0U)) {
         return false;
     }
-    if (kind != LORD_REALM_ACTION_TAVERN &&
-        kind != LORD_REALM_ACTION_NEWS &&
+    if (kind == LORD_REALM_ACTION_GUILD &&
+        (!state->guild_status.supported || body_bytes != 0U ||
+         code > LORD_GUILD_ACTION_CHEER ||
+         (code == LORD_GUILD_ACTION_CREATE &&
+          (value == 0U || value > LORD_GUILD_NAME_COUNT)) ||
+         (code == LORD_GUILD_ACTION_RALLY && value > 2U) ||
+         ((code != LORD_GUILD_ACTION_CREATE &&
+           code != LORD_GUILD_ACTION_RALLY) && value != 0U))) {
+        return false;
+    }
+    const bool needs_target = p4rm_action_needs_target(kind, code);
+    if (needs_target &&
         (player_index >= LORD_REALM_PLAYER_COUNT ||
          !p4rm_actor_valid(state->realm_actor_ids[player_index]))) {
         return false;
@@ -1859,8 +2211,7 @@ static bool p4rm_queue_action(
         save_crc32(s_lord_realm_net.action_body, body_bytes);
     memset(s_lord_realm_net.action_target, 0,
            sizeof(s_lord_realm_net.action_target));
-    if (kind != LORD_REALM_ACTION_TAVERN &&
-        kind != LORD_REALM_ACTION_NEWS) {
+    if (needs_target) {
         memcpy(s_lord_realm_net.action_target,
                state->realm_actor_ids[player_index],
                LORD_SYNC_ACTOR_ID_BYTES);
@@ -1869,6 +2220,31 @@ static bool p4rm_queue_action(
     s_lord_realm_net.action_retry_elapsed_ms = 0U;
     (void)p4rm_send_action_begin(context);
     return true;
+}
+
+static bool p4rm_send_guild_page(
+    p4_game_context_t *context,
+    const lord_state_t *state,
+    uint16_t offset)
+{
+    if (!state->guild_status.supported ||
+        offset >= LORD_GUILD_NAME_COUNT ||
+        offset % LORD_GUILD_SUMMARY_COUNT != 0U) {
+        return false;
+    }
+    uint8_t payload[2];
+    save_store_u16(payload, 0U, offset);
+    return p4rm_send(context, LORD_P4RM_GUILD_PAGE,
+                     p4rm_next_transaction(), 0U, 0U,
+                     payload, sizeof(payload));
+}
+
+static void p4rm_guild_upgrade_message(
+    lord_state_t *state, lord_screen_t return_screen)
+{
+    set_message(state, return_screen,
+                "Adventure Clubs are not available yet.",
+                "The Mac hub needs the Adventure Club upgrade.");
 }
 
 static bool lord_realm_net_activate(
@@ -1883,7 +2259,8 @@ static bool lord_realm_net_activate(
         state->screen == LORD_SCREEN_BANK_TRANSFER ||
         state->screen == LORD_SCREEN_PLAYERS ||
         state->screen == LORD_SCREEN_MAIL_COMPOSE ||
-        state->screen == LORD_SCREEN_FRIENDSHIP;
+        state->screen == LORD_SCREEN_FRIENDSHIP ||
+        state->screen == LORD_SCREEN_GUILD_TARGET;
     if (directory_screen &&
         (state->selection == LORD_REALM_PLAYER_COUNT ||
          state->selection == LORD_REALM_PLAYER_COUNT + 1U)) {
@@ -1909,6 +2286,53 @@ static bool lord_realm_net_activate(
         *event = LORD_EVENT_CONFIRM;
         return true;
     }
+    const bool guild_member = state->guild_status.supported &&
+        state->guild_status.guild_id != 0U;
+    const bool open_standings = state->screen == LORD_SCREEN_GUILD &&
+        ((!guild_member && state->selection == 0U) ||
+         (guild_member && state->selection == 5U));
+    if (open_standings) {
+        if (!state->guild_status.supported) {
+            p4rm_guild_upgrade_message(state, LORD_SCREEN_GUILD);
+        } else if (p4rm_send_guild_page(context, state, 0U)) {
+            state->guild_page_offset = 0U;
+            state->guild_page_total = 0U;
+            state->guild_page_received = false;
+            p4rm_clear_guild_summaries(state);
+            set_screen(state, LORD_SCREEN_GUILD_STANDINGS);
+        } else {
+            set_message(state, LORD_SCREEN_GUILD,
+                        "The club standings request could not be sent.",
+                        "Try the Mac hub again in a moment.");
+        }
+        *event = LORD_EVENT_CONFIRM;
+        return true;
+    }
+    if (state->screen == LORD_SCREEN_GUILD_STANDINGS &&
+        state->selection < 2U) {
+        if (!state->guild_status.supported) {
+            p4rm_guild_upgrade_message(state, LORD_SCREEN_GUILD);
+        } else {
+            uint16_t offset = state->guild_page_offset;
+            if (state->selection == 0U) {
+                offset = offset >= LORD_GUILD_SUMMARY_COUNT ?
+                    (uint16_t)(offset - LORD_GUILD_SUMMARY_COUNT) : 0U;
+            } else if ((uint32_t)offset + LORD_GUILD_SUMMARY_COUNT <
+                       state->guild_page_total) {
+                offset = (uint16_t)(offset + LORD_GUILD_SUMMARY_COUNT);
+            }
+            if (offset != state->guild_page_offset) {
+                if (p4rm_send_guild_page(context, state, offset)) {
+                    state->guild_page_received = false;
+                    p4rm_clear_guild_summaries(state);
+                }
+            }
+            state->selection = 0U;
+            state->menu_scroll = 0U;
+        }
+        *event = LORD_EVENT_CONFIRM;
+        return true;
+    }
     if (s_lord_realm_net.action_state != LORD_REALM_ACTION_IDLE) {
         set_message(state, state->screen,
                     "A realm request is still in flight.",
@@ -1922,7 +2346,66 @@ static bool lord_realm_net_activate(
     uint16_t value = 0U;
     const uint8_t *body = NULL;
     size_t body_bytes = 0U;
-    if (state->screen == LORD_SCREEN_BANK_TRANSFER &&
+    if ((state->screen == LORD_SCREEN_GUILD_CREATE &&
+         state->selection < LORD_GUILD_NAME_COUNT) ||
+        (state->screen == LORD_SCREEN_GUILD && guild_member &&
+         (state->selection < 3U || state->selection == 6U)) ||
+        (state->screen == LORD_SCREEN_GUILD_TARGET &&
+         state->selection < LORD_REALM_PLAYER_COUNT)) {
+        if (!state->guild_status.supported) {
+            p4rm_guild_upgrade_message(state, state->screen);
+            *event = LORD_EVENT_CONFIRM;
+            return true;
+        }
+        kind = LORD_REALM_ACTION_GUILD;
+        if (state->screen == LORD_SCREEN_GUILD_CREATE) {
+            if (state->guild_status.guild_id != 0U) {
+                set_message(state, LORD_SCREEN_GUILD,
+                            "You already belong to an Adventure Club.",
+                            "Leave it before founding another one.");
+                *event = LORD_EVENT_CONFIRM;
+                return true;
+            }
+            code = LORD_GUILD_ACTION_CREATE;
+            value = (uint16_t)state->selection + 1U;
+            player = 0U;
+        } else if (state->screen == LORD_SCREEN_GUILD) {
+            code = state->selection == 6U ? LORD_GUILD_ACTION_LEAVE :
+                LORD_GUILD_ACTION_RALLY;
+            value = code == LORD_GUILD_ACTION_RALLY ? state->selection : 0U;
+            player = 0U;
+        } else {
+            player = state->selection;
+            state->selected_player = player;
+            code = (uint8_t)state->guild_target;
+            if ((code != LORD_GUILD_ACTION_JOIN &&
+                 code != LORD_GUILD_ACTION_CLASH &&
+                 code != LORD_GUILD_ACTION_CHEER) ||
+                state->realm[player].guild_id == 0U ||
+                state->realm[player].guild_name_code == 0U) {
+                set_message(state, LORD_SCREEN_GUILD_TARGET,
+                            "That player's club record is not ready.",
+                            "Refresh the realm page and try again.");
+                *event = LORD_EVENT_CONFIRM;
+                return true;
+            }
+            if (code == LORD_GUILD_ACTION_JOIN && guild_member) {
+                set_message(state, LORD_SCREEN_GUILD,
+                            "You already belong to an Adventure Club.", "");
+                *event = LORD_EVENT_CONFIRM;
+                return true;
+            }
+            if ((code == LORD_GUILD_ACTION_CLASH ||
+                 code == LORD_GUILD_ACTION_CHEER) &&
+                (!guild_member || state->realm[player].guild_id ==
+                    state->guild_status.guild_id)) {
+                set_message(state, LORD_SCREEN_GUILD_TARGET,
+                            "Choose a member of another Adventure Club.", "");
+                *event = LORD_EVENT_CONFIRM;
+                return true;
+            }
+        }
+    } else if (state->screen == LORD_SCREEN_BANK_TRANSFER &&
         state->selection < LORD_REALM_PLAYER_COUNT) {
         player = state->selection;
         if (state->player.bank < 100U) {
@@ -2015,11 +2498,42 @@ static bool lord_realm_net_activate(
     } else {
         return false;
     }
+    if (kind == LORD_REALM_ACTION_GUILD &&
+        (code == LORD_GUILD_ACTION_RALLY ||
+         code == LORD_GUILD_ACTION_CLASH ||
+         code == LORD_GUILD_ACTION_CHEER)) {
+        const uint8_t used_mask = code == LORD_GUILD_ACTION_RALLY ? 0x01U :
+            code == LORD_GUILD_ACTION_CLASH ? 0x02U : 0x04U;
+        if ((state->guild_status.daily_flags & 0x08U) == 0U) {
+            set_message(state, state->screen,
+                        "Club moves unlock on your next realm day.",
+                        "New members can still browse and cheer later.");
+            *event = LORD_EVENT_CONFIRM;
+            return true;
+        }
+        if ((state->guild_status.daily_flags & used_mask) != 0U) {
+            set_message(state, state->screen,
+                        code == LORD_GUILD_ACTION_RALLY ?
+                            "You already rallied today." :
+                        code == LORD_GUILD_ACTION_CLASH ?
+                            "Your club already started a clash today." :
+                            "Your club already sent a cheer today.",
+                        "The next Mac realm day refreshes club moves.");
+            *event = LORD_EVENT_CONFIRM;
+            return true;
+        }
+    }
     if (!p4rm_queue_action(context, state, kind, code, value,
                            player, body, body_bytes)) {
-        set_message(state, state->screen,
-                    "That player is not connected to the realm.",
-                    "Refresh the player list and try again.");
+        if (kind == LORD_REALM_ACTION_GUILD) {
+            set_message(state, state->screen,
+                        "The club request could not be sent.",
+                        "Refresh the Mac hub status and try again.");
+        } else {
+            set_message(state, state->screen,
+                        "That player is not connected to the realm.",
+                        "Refresh the player list and try again.");
+        }
     }
     *event = LORD_EVENT_CONFIRM;
     return true;
@@ -2133,6 +2647,16 @@ static void lord_realm_net_poll(
         s_lord_realm_net.action_state = LORD_REALM_ACTION_IDLE;
         s_lord_realm_net.event_waiting_body = false;
         s_lord_realm_net.connected = false;
+        state->guild_status = (lord_guild_status_t){0};
+        state->guild_target = LORD_GUILD_TARGET_NONE;
+        state->guild_page_offset = 0U;
+        state->guild_page_total = 0U;
+        state->guild_page_received = false;
+        p4rm_clear_guild_summaries(state);
+        for (size_t index = 0U; index < LORD_REALM_PLAYER_COUNT; ++index) {
+            state->realm[index].guild_id = 0U;
+            state->realm[index].guild_name_code = 0U;
+        }
         return;
     }
     p4rm_receive_messages(context, state);

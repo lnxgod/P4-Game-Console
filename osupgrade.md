@@ -1,6 +1,184 @@
 # Remaining Console OS upgrades for full shared LORD services
 
+## 2026-08-30 LORD 1.8.0 / Console OS 0.4.91 Adventure Club candidate
+
+The source tree now declares Console OS 0.4.91 and LORD 1.8.0. This is an
+unsealed, unflashed successor candidate, not an install or hardware-acceptance
+claim. It keeps Game API v1, P4MP v1, P4RM v3, LRSY v1, and LDSV save schema 5.
+No new cartridge storage or raw USB/BLE API is required: the existing
+`multiplayer-session` tunnel carries additive P4RM kinds 23--26 and action kind
+10, while ordinary solo progress continues to use the existing authenticated
+local save.
+
+The 1.8.0 scope adds server-authoritative Adventure Clubs without weakening the
+offline-first security boundary:
+
+- up to eight members per club and sixteen unique curated name codes, avoiding
+  unmoderated player-authored club names;
+- deterministic leader succession, one-day join/rejoin eligibility, one daily
+  class-route rally per member, carried 12-point cooperative quests, at most
+  one Banner Star bonus per club/day, and 24-realm-day seasons;
+- paged standings, bounded +1/+2 club cheers, and friendly Banner Clashes with
+  one outgoing and one incoming slot per club/day plus a three-day pair
+  cooldown;
+- server-scored clashes derived from accepted heads, normalized participation,
+  majority route tactics, and a deterministic SHA-256 roll; and
+- a separate club ledger that never awards or mutates personal ChompCoin, XP,
+  HP, combat stats, dragon deeds, PvP counters, save generations, or snapshots.
+  Ordinary direct PvP between current clubmates is denied.
+
+The release security pass also bounds action nonces to SQLite's signed 64-bit
+range, cancels expired PvP leases and leases whose actors became clubmates
+before settlement, and makes season/quest rollover monotonic under concurrent
+USB/BLE sessions. These rejected paths produce no player reward, event, or
+economy mutation.
+
+LDSV5 deliberately does not serialize club membership. A character remains
+fully playable and locally persistent offline, but a cold offline Club Hall
+asks for the Mac hub before displaying or changing shared club state. This
+keeps club authority in one SQLite realm and avoids a new mergeable field in
+offline character branches. New cartridges send no club mutation until an
+actor-bound `GUILD_STATUS` proves the hub supports the extension; older hubs
+therefore fail closed with an upgrade message.
+
+The backend suite currently passes 67 tests, including the existing two-,
+four-, and ten-client campaigns and a new fourteen-actor, thirty-day Adventure
+Club campaign with unequal club sizes, solo quest carry, cooldowns, replay,
+restart, season rollover, malformed requests, same-club PvP denial, and
+byte-for-byte personal-state isolation. The focused ASan/UBSan C suite, final
+SDL smoke/save tests, all-screen render capture, registry validation, and two
+byte-identical pinned-toolchain cartridge builds pass. On 2026-08-30 the full
+`make game-sdk-host` gate passed, followed by the integrated controller-first
+0.4.91 Waveshare build and its fail-closed release verifier. The earlier Byte
+Buddy stop was a stale pre-commit host executable;
+rebuilding current commit `7b8179a` passed all five Byte Buddy tests, including
+all 112 fail-closed authored-motion semantic digests, without changing a
+renderer, art asset, or golden value. Promotion still requires committing the
+dirty LORD successor, regenerating the commit-bound update package from that
+final source identity, and guarded Pink/Green hardware acceptance.
+
+### 0.4.91 candidate identity ledger
+
+| Identity or evidence | 0.4.91 / LORD 1.8.0 status |
+|---|---|
+| Final source commit | **TBD** -- no commit or push of the dirty LORD successor has been authorized; the verified host candidate was built with HEAD `7b8179a9dc1daad22178e2531d31df75de6a56c3` plus the listed uncommitted LORD/platform changes |
+| Console OS application SHA-256 and byte count | Integrated controller-first host candidate `5a474252b859477fbc875216934e804e3868a69405d83556a05390cbdfcc5ce2`, 1,835,360 bytes; fail-closed Waveshare verifier passed from `build-waveshare-usb-host`; not hardware-tested |
+| `LORD.P4G` SHA-256 and byte count | `bf0d6729a319d017e5ebe16e15f414a4651f278fa3feaa727e3093fe4bb4a0c3`, 192,172 bytes; two pinned builds were byte-identical |
+| LORD deterministic payload SHA-256 | `d72caabf0e38a1dc85200bf1766084019cdc4970f42f38a6842f4fcd9c73bcaa`, 191,916 bytes |
+| P4MP content / compatibility SHA-256 | content `f39b6959362e57362d000438842f7d7a74f6e7661d27b2ef6cc920975e67799e`; compatibility `b53cac97249389913e9da145eab9e438197b5ddb025c7169a47ffdbae2afe551` |
+| `P4UPDATE.P4U` SHA-256 and byte count | Integrated dirty-tree host candidate `6ffc9040a54697acdb2a0990eae3c99301a8548b03e4521689aa41bd5f207b25`, 1,835,616 bytes, containing the application above with version `0.4.91`, target `esp32p4`, and header build `7b8179a9dc1d`; regenerate after the final release commit because the header cannot identify uncommitted LORD/platform changes |
+| Pink exact-device install ledger | **TBD** -- not flashed or hardware-tested |
+| Green exact-device install ledger | **TBD** -- not flashed or hardware-tested |
+
+For this integrated candidate, use only
+`apps/console_os/build-waveshare-usb-host`. The older
+`build-waveshare-landscape` directory still contains a 0.4.90 image and now
+correctly fails the 0.4.91 visible-version verifier; it is stale and must not be
+offered to either device.
+
+## 2026-08-29 LORD 1.7.0 / Console OS 0.4.89 superseded host candidate
+
+The source tree now declares Console OS 0.4.89 and LORD 1.7.0. This is a
+successor-candidate handoff, not a sealed build, install, or hardware acceptance
+claim. The candidate keeps Game API v1, P4MP v1, P4RM v3, LRSY v1, and LDSV
+save schema 5. Combat intent and the in-progress dice/quiz round are transient,
+so no serialized save field is added. With durable storage, paid Dice and
+Aragorn outcomes remain hidden and all input is blocked until the debit save is
+`COMMITTED`; queue or terminal status failure cancels and refunds without
+revealing. Session-only profiles remain playable but have no durable
+anti-preview guarantee. Existing valid 1.6.1 LDSV5 saves and
+LRSY1 realm heads are intended to remain readable, but that compatibility must
+be demonstrated by the focused codec and hub tests before promotion.
+
+The 1.7.0 promotion scope is the engagement and fair-play successor to the
+0.4.88/1.6.1 security baseline:
+
+- compress the trainer, equipment, and Red Dragon curves so a normal-stat
+  character has a credible first-dragon path in roughly 18--25 played days,
+  while preserving level gates and rebirth;
+- replace one-button battle repetition with visible enemy intent and meaningful
+  Strike, Guard, class Technique, Feint, and Run choices, including bounded
+  rewards and penalties for the chosen matchup;
+- make the amulet, fairy lore, high spirits, friendship badges, class mastery,
+  and best-friend/team state contribute bounded gameplay benefits rather than
+  acting only as collection flags;
+- make Dragon Dice a player-controlled push-or-hold game, make Aragorn's math
+  challenge an actual four-choice puzzle, keep Dice at a negative expected
+  value by returning 8 after a 5-ChompCoin winning stake, limit its charm/high
+  spirits reward to the first daily win with a persisted bit, and show a real
+  deed-first sorted ranking that includes the local character;
+- charge forest adventures consistently, remove percentage-based local bank
+  interest, and permit an unbound local-only Inn sleep only after that
+  character has used the current day's forest adventures. A realm-bound
+  character still receives its next day only from the Mac's hourly realm clock;
+  and
+- keep hub acceptance aligned with the new progression thresholds and derived
+  bonuses, including bounded daily XP, receipt-proven shared PvP counters,
+  per-day friendship gains, and semantic rejection of impossible
+  level/stat/economy transitions.
+
+The local Mac realm now has an authoritative prestige directory. The hub
+projects dragon deeds from accepted heads, orders all profiles by deeds, level,
+XP, PvP wins, PvP losses, and stable identity ties, and sends deeds in the
+bounded 18-byte P4RM v3 kind-22 `DIRECTORY_DEEDS` sidecar. Existing summary and
+stats packets are unchanged, so older cartridges ignore the extension. The
+current Hall is intentionally smaller than a public realm-wide leaderboard: it
+re-sorts only the local hero plus the current up-to-eight-profile directory
+page. A hostile Internet-wide service still needs the authenticated accounts,
+TLS, moderation, quotas, and typed `realm` adapter described below.
+
+One stronger-proof improvement remains outside the cartridge-only 1.7.0
+change: a final snapshot can show only a plausible offline Red Dragon deed,
+not prove every combat round. The hub accepts a matching-base direct deed only
+when its authoritative head was already level 12. If the head is below level
+12, the player must sync once after reaching level 12 before finishing the
+Dragon. After the level-12 head is accepted, the whole encounter may happen
+offline without an intermediate `seen_dragon` upload, but the deed must advance
+exactly once and every rebirth field must be canonical. A future append-only
+deed journal or server-verifiable encounter receipt could provide stronger
+proof without breaking fully offline level-12 play.
+
+The constants in the reviewed 1.7.0 source and its deterministic focused tests
+are authoritative. Do not copy progression constants from this handoff into a
+second table that can drift. Promotion requires the deterministic estimate to
+stay inside the 18--25 normal-day target and requires old-save decode, fresh
+save round-trip, LRSY round-trip, clean-stale download, matching-base upload,
+stale-dirty conflict, and hub semantic rejection coverage to pass together.
+
+### 0.4.89 candidate identity ledger
+
+No 0.4.89 firmware or update-package identity is recorded yet. The table does
+record a twice-reproduced host LORD cartridge candidate, but it is not sealed,
+committed, installed, or hardware-accepted. In particular, none of the 0.4.88
+hashes in the next section may be copied into this ledger or used to authorize
+the successor.
+
+| Identity or evidence | 0.4.89 / LORD 1.7.0 status |
+|---|---|
+| Final source commit | **TBD** -- record after the candidate changes and tests are committed |
+| Console OS application SHA-256 and byte count | **TBD** -- regenerate with the locked Waveshare build |
+| `LORD.P4G` SHA-256 and byte count | Twice-reproduced host candidate: **183,336 bytes**, SHA-256 `c924f8902b973a6d0599fc321b337cf06491ecaddd5ba4e95b6433176e2c058e`; regenerate after the source is frozen and committed before treating this as a release identity |
+| LORD deterministic payload SHA-256 | Twice-reproduced host candidate: **183,080 bytes**, SHA-256 `243d4694c146657ff2e7d90246f6985ea368fae221e59a58914feab1dafc72d7`; this is not a signed release or hardware acceptance claim |
+| P4MP content / compatibility SHA-256 | Host-derived content `01f85ff1e4ea0695d37649399ce9dc4a516be0eef8ef928dea66ffc4a3228d75`; compatibility `3d4b6f80177c26f1c17e1200fa59672cd7c27b721bc2a81a0cb929d3cad03da6` |
+| `P4UPDATE.P4U` SHA-256 and byte count | **TBD** -- regenerate after the final release commit so its embedded commit is exact |
+| Pink exact-device install ledger | **TBD** -- no install or hardware claim may be inferred from a host test or build |
+| Green exact-device install ledger | **TBD** -- no install or hardware claim may be inferred from a host test or build |
+
+Before either device is offered the successor, run the focused sanitizer-backed
+LORD/save/realm suites, the two-client protocol E2E, `make game-sdk-host`, the
+locked 0.4.89 Waveshare build, and its release verifier. Then record the actual
+artifact sizes and SHA-256 values above from those regenerated outputs. A later
+guarded install must bind those exact artifacts to the already backed-up Pink
+and Green devices and retain UART/manual gameplay evidence. Do not flash, reuse
+an earlier authorization, or claim hardware acceptance merely because these
+source and host gates pass.
+
 ## 2026-08-29 offline-first fair-play successor
+
+Historical-evidence boundary: this complete section records the Console OS
+0.4.88 / LORD 1.6.1 baseline. Its artifact hashes, byte counts, test results,
+and unflashed-device statements are retained as historical provenance only;
+they are not Console OS 0.4.89 / LORD 1.7.0 identities or authorization.
 
 Console OS 0.4.88, LORD 1.6.1, and the Mac realm-hub successor implement the
 first practical family-play security tier without changing Game API v1, P4MP
@@ -628,7 +806,7 @@ OS-owned typed handoff:
 
 Prefer the planned `p4-lua-5.4-v1` sandbox for third-party IGMs. If native IGMs
 are allowed, treat them as fully trusted packages but still isolate data with
-the typed handoff. Result IDs are single-use and expire. Cap gold/stat/item
+the typed handoff. Result IDs are single-use and expire. Cap ChompCoin/stat/item
 deltas so a malformed module cannot overflow LORD state.
 
 ## 6. RIP-style scene support

@@ -77,6 +77,11 @@ const KID_SAFE_MONSTERS = new Map([
   ["Baby Dragon", { death: "The young dragon surrenders and flies home." }],
   ["Goblin Pygmy", { name: "Tiny Goblin" }],
   ["Apeman", { name: "Forest Ape" }],
+  ["Gorma The Leper", {
+    name: "Gorma The Wanderer",
+    weapon: "Dusty Sneezes",
+    death: "Gorma apologizes and leaves the trail.",
+  }],
   ["Sweet Looking Little Girl", { name: "Disguised Trickster" }],
   ["Apparently Weak Old Woman", { name: "Hooded Illusionist" }],
   ["The Screaming Eunich", {

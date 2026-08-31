@@ -119,7 +119,7 @@ static const lord_monster_t s_monsters[LORD_MONSTER_COUNT] = {
     {"Adult Gold Dragon", "Dragon Fire", "Adult Gold Dragon yields and leaves the trail.", 565, 3222, 56444U, 15364U},
     {"Black Sorcerer", "Spell Of Lightning", "Black Sorcerer yields and leaves the trail.", 86, 25, 2838U, 187U},
     {"Kill Joy", "Terrible Stench", "Kill Joy yields and leaves the trail.", 988, 3222, 168844U, 25766U},
-    {"Gorma The Leper", "Contagous Desease", "Gorma The Leper yields and leaves the trail.", 1132, 2766, 168774U, 26333U},
+    {"Gorma The Wanderer", "Dusty Sneezes", "Gorma apologizes and leaves the trail.", 1132, 2766, 168774U, 26333U},
     {"Shogun Warrior", "Japenese Nortaki", "Shogun Warrior yields and leaves the trail.", 1143, 3878, 165433U, 26555U},
     {"Hooded Illusionist", "*GODS HAMMER*", "Hooded Illusionist yields and leaves the trail.", 1543, 1878, 173522U, 37762U},
     {"Ables Creature", "Bear Hug", "Ables Creature yields and leaves the trail.", 985, 2455, 176775U, 28222U},

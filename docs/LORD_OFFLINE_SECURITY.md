@@ -15,8 +15,8 @@ chain, storage, game package, and device key are also trusted.
 
 ## First secure tier
 
-The first tier keeps P4MP v1, P4RM v3, LRSY v1, and Game API v1. It combines
-independent client, server, and Console OS controls.
+The LORD 1.8.0 first tier keeps P4MP v1, P4RM v3, LRSY v1, and Game API v1. It
+combines independent client, server, and Console OS controls.
 
 ### 1. One authoritative revision lease
 
@@ -39,12 +39,31 @@ Once a character has joined a Mac realm, Inn sleep cannot manufacture another
 realm day locally. The character remains playable offline for the actions left
 in its current realm day. The Mac grants the next refresh when its hourly realm
 clock advances. A character that has never joined a realm retains the classic
-local-only sleep loop.
+local-only sleep loop. Both the server-authoritative refresh and local sleep
+use the same reset and pay no bank interest.
 
 Mail delivery, player transfers, teams, mentoring, shared tavern/news, and PvP
 settlement remain typed server operations. Client profile packets are presence
 hints only. Public stats, carried ChompCoin, and vaulted ChompCoin are projected
-from the last accepted LORD head.
+from the last accepted LORD head. Public defense includes the implemented
+friendship-badge guard: two points per five badges, capped at eight.
+
+Adventure Clubs use a separate server-owned ledger. The cartridge can request
+create, join, leave, one daily rally, one bounded cheer, or a friendly Banner
+Clash, but it cannot submit a score or victory. The hub derives contribution
+and clash strength from accepted character heads and recorded same-day
+participation, then awards only club prestige, Banner Stars, season points, and
+W/L/D. It never writes personal ChompCoin, XP, dragon deeds, PvP counters, or
+combat stats. Same-club direct PvP is denied, preventing clubmates from farming
+the ordinary duel settlement path.
+
+Realm PvP pays only the hub-calculated carried-ChompCoin prize and one durable
+win/loss prestige result; it pays no XP. Once an actor has an accepted realm
+head, an uploaded PvP counter must equal the prior counter plus exactly the
+cursor-consumed duel events. Because the stock cached-duel path bundles its
+local XP, ChompCoin, and counter mutation in one snapshot, an unreceipted duel
+rejects atomically. The same XP/ChompCoin change with unchanged PvP counters
+remains eligible as ordinary offline solo progression.
 
 Stock clients apply a queued economy debit only when its complete designated
 balance is present. Transfer debits use the vault; shared-supplies and PvP-loss
@@ -80,15 +99,22 @@ at minimum:
 
 - a second local day inside the same server hour;
 - changed character identity or class;
-- impossible level or dragon-kill transitions;
-- extreme or cumulatively repeated ChompCoin, experience, combat-stat, dragon,
-  PvP, or counter jumps;
+- a level gain greater than three, a gained level without the destination
+  trainer's XP threshold, or an invalid dragon-victory reset;
+- cumulative same-realm-day experience gain above 2,500,000;
+- cumulative wealth gain above 25,000,000 plus 20% of anchored wealth;
+- cumulative max-HP, strength, or defense gain above 5,000 each;
+- cumulative gains above three PvP wins, 100 PvP losses, 64 forest fights, 40
+  skill-mastery points, 64 skill uses, four friendship badges, or 500 each for
+  charm, gems, and young heroes helped;
 - a direct upload whose inner sync base is absent, stale, or forged; and
 - a truncated record that only has valid outer CRCs.
 
 These bounds are defense in depth, not proof of every fight. They must be high
 enough for legitimate play and low enough to stop a save editor from changing a
-small value to billions.
+small value to billions. Absolute record ceilings also reject ChompCoin or XP
+above 1,000,000,000, combat stats above 100,000, forest fights above 255, and
+skill uses above 255.
 
 ### 4. Device-local authenticated saves
 
@@ -197,14 +223,22 @@ authorization.
 
 Automated tests must prove valid offline progress, malformed and recomputed-hash
 tampering rejection, post-migration P4SAVE1 reinjection rejection, huge and
-cumulatively repeated stat/ChompCoin rejection, same-hour day rejection,
-profile-packet laundering rejection, exact inner-base validation,
+cumulatively repeated stat/ChompCoin rejection, the maximum-three-level plus
+trainer-threshold rule, the 2,500,000 cumulative XP ceiling, same-hour day
+rejection, profile-packet laundering rejection, exact inner-base validation,
 compare-and-swap races, dropped-commit retry, duplicate nonce idempotency,
 sealed-save wrong-key/card rejection, and one-time adoption with archive
 preservation. They must also prove exact pending transfer/supplies/PvP debits,
 underfunded no-ack replay after reconnect, zero-value PvP settlement, startup
-profile reconstruction, committed-versus-pending legacy economy reconciliation,
-permanent orphan quarantine, and fail-closed ambiguous legacy PvP.
+profile reconstruction, atomic rejection of bundled unreceipted PvP
+XP/ChompCoin/prestige with same-counter solo progression still accepted,
+committed-versus-pending legacy economy reconciliation, permanent orphan
+quarantine, and fail-closed ambiguous legacy PvP.
+They must also cover club-name uniqueness and reuse, membership capacity,
+one-day eligibility and rejoin delays, leader succession, daily rally/cheer/
+clash limits, pair cooldowns, season rollover, nonce replay, hub restart, and
+the invariant that every club operation leaves all personal economy and combat
+fields unchanged.
 The multiplayer E2E must additionally use two independent client identities
 and local states to prove dirty-offline-first ordering, one-event cursor
 serialization, lost-receipt replay, mail bytes in a reopened authoritative LDSV,

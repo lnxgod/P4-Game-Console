@@ -15,17 +15,26 @@ enum {
     LORD_MAIL_BODY_BYTES = 48,
     LORD_LOG_TEXT_BYTES = 52,
     LORD_REALM_PLAYER_COUNT = 8,
+    LORD_GUILD_NAME_COUNT = 16,
+    LORD_GUILD_SUMMARY_COUNT = 8,
+    LORD_GUILD_QUEST_GOAL = 12,
+    LORD_RANKING_COUNT = LORD_REALM_PLAYER_COUNT + 1,
     LORD_MAIL_COUNT_MAX = 12,
     LORD_LOG_COUNT_MAX = 12,
     LORD_FOREST_FIGHTS_PER_DAY = 15,
     LORD_PVP_FIGHTS_PER_DAY = 3,
     LORD_FRIENDSHIP_ACTIONS_PER_DAY = 3,
+    LORD_COMBAT_STAT_MAX = 100000,
     LORD_IGM_COUNT = 7,
     LORD_RIP_SCENE_COUNT = 12,
     LORD_MAX_LEVEL = 12,
     LORD_SKILL_COUNT = 3,
     LORD_SKILL_MASTERY_MAX = 40,
     LORD_SAVE_FORMAT_VERSION = 5,
+    /* Bit 7 shares the persisted daily-mask byte with the seven IGM locks.
+     * It records that today's one friendship reward from Dragon Dice was
+     * already earned, without changing the LDSV5 save layout. */
+    LORD_DAILY_DICE_FRIENDSHIP_MASK = UINT8_C(0x80),
     LORD_SAVE_MINIMUM_VERSION = 3,
     LORD_SAVE_MAX_BYTES = 4096,
     LORD_SYNC_FORMAT_VERSION = 1,
@@ -73,7 +82,19 @@ typedef enum {
     LORD_SCREEN_RIP_GALLERY,
     LORD_SCREEN_RIP_SCENE,
     LORD_SCREEN_TEXT_EDITOR,
+    LORD_SCREEN_ARAGORN_QUIZ,
+    LORD_SCREEN_GUILD,
+    LORD_SCREEN_GUILD_CREATE,
+    LORD_SCREEN_GUILD_TARGET,
+    LORD_SCREEN_GUILD_STANDINGS,
 } lord_screen_t;
+
+typedef enum {
+    LORD_GUILD_TARGET_NONE = 0,
+    LORD_GUILD_TARGET_JOIN = 1,
+    LORD_GUILD_TARGET_CLASH = 4,
+    LORD_GUILD_TARGET_CHEER = 5,
+} lord_guild_target_t;
 
 typedef enum {
     LORD_CLASS_DEATH_KNIGHT = 0,
@@ -94,6 +115,19 @@ typedef enum {
     LORD_BATTLE_PVP,
     LORD_BATTLE_INN,
 } lord_battle_kind_t;
+
+typedef enum {
+    LORD_ENEMY_INTENT_STRIKE = 0,
+    LORD_ENEMY_INTENT_POWER,
+    LORD_ENEMY_INTENT_GUARD,
+    LORD_ENEMY_INTENT_QUICK,
+} lord_enemy_intent_t;
+
+typedef enum {
+    LORD_MINIGAME_PENDING_NONE = 0,
+    LORD_MINIGAME_PENDING_DICE,
+    LORD_MINIGAME_PENDING_QUIZ,
+} lord_minigame_pending_t;
 
 typedef enum {
     LORD_MAIL_WELCOME = 0,
@@ -214,7 +248,45 @@ typedef struct {
     uint32_t experience;
     uint16_t pvp_wins;
     uint16_t pvp_losses;
+    /* Server-owned prestige sidecar. Older hubs simply leave this at zero. */
+    uint8_t dragon_kills;
+    /* Hub-owned Adventure Club directory sidecar. It is never serialized in
+     * LDSV5 and is refreshed from actor-bound P4RM projections. */
+    uint32_t guild_id;
+    uint16_t guild_name_code;
 } lord_realm_player_t;
+
+typedef struct {
+    bool supported;
+    uint32_t guild_id;
+    uint16_t name_code;
+    uint8_t member_count;
+    uint8_t role;
+    uint32_t prestige;
+    uint32_t season_points;
+    uint16_t banner_stars;
+    uint16_t quest_progress;
+    uint16_t quest_goal;
+    uint16_t wins;
+    uint16_t losses;
+    uint16_t draws;
+    uint8_t last_outcome;
+    uint16_t last_opponent_name_code;
+    uint8_t daily_flags;
+} lord_guild_status_t;
+
+typedef struct {
+    bool valid;
+    uint32_t guild_id;
+    uint16_t name_code;
+    uint8_t member_count;
+    uint8_t banner_stars;
+    uint32_t prestige;
+    uint32_t season_points;
+    uint16_t wins;
+    uint16_t losses;
+    uint16_t draws;
+} lord_guild_summary_t;
 
 typedef struct {
     uint8_t sender;
@@ -235,6 +307,9 @@ typedef struct {
     lord_screen_t return_screen;
     lord_screen_t editor_return_screen;
     lord_battle_kind_t battle_kind;
+    /* Battle intent is deliberately transient. Saves always resume in town,
+     * so adding it does not change the cartridge save schema. */
+    lord_enemy_intent_t enemy_intent;
     lord_editor_target_t editor_target;
     uint8_t selection;
     uint8_t menu_scroll;
@@ -259,12 +334,41 @@ typedef struct {
     uint8_t log_count;
     uint8_t dice_player;
     uint8_t dice_host;
+    uint8_t dice_rolls;
+    uint8_t quiz_correct;
+    uint8_t quiz_operator;
+    uint8_t quiz_wager;
+    uint16_t quiz_left;
+    uint16_t quiz_right;
+    uint16_t quiz_answers[4];
+    /* Dice and quiz rounds are deliberately transient. Their wager and daily
+     * lock are committed before play, while decoded saves safely resume in
+     * town rather than restoring a half-finished minigame. */
+    bool dice_active;
+    lord_minigame_pending_t minigame_pending;
+    bool minigame_save_barrier;
+    /* A thief can claim at most one forest purse bonus per encounter. */
+    bool thief_bonus_claimed;
+    /* Direct ANSI command-bar taps are edge-triggered. This is transient UI
+     * state and is deliberately excluded from LDSV5 and realm sync data. */
+    bool touch_was_down;
+    /* Creature animation is presentation-only elapsed time. It is never written
+     * to LDSV5 or realm sync payloads and restarts from zero on every load. */
+    uint32_t creature_animation_ms;
     bool save_dirty;
     bool save_available;
     bool save_error;
     lord_player_t player;
     lord_enemy_t enemy;
     lord_realm_player_t realm[LORD_REALM_PLAYER_COUNT];
+    /* Adventure Clubs are hub-authoritative transient projections. Keeping
+     * them outside the save codec preserves LDSV5 byte-for-byte. */
+    lord_guild_status_t guild_status;
+    lord_guild_summary_t guild_summaries[LORD_GUILD_SUMMARY_COUNT];
+    lord_guild_target_t guild_target;
+    uint16_t guild_page_offset;
+    uint16_t guild_page_total;
+    bool guild_page_received;
     uint8_t realm_actor_ids[LORD_REALM_PLAYER_COUNT]
         [LORD_SYNC_ACTOR_ID_BYTES];
     uint8_t partner_actor_id[LORD_SYNC_ACTOR_ID_BYTES];
@@ -308,7 +412,9 @@ const char *lord_mail_body_2(const lord_state_t *state, size_t index);
 size_t lord_mail_unread_count(const lord_state_t *state);
 const char *lord_rip_scene_name(size_t index);
 const char *lord_igm_name(size_t index);
+const char *lord_guild_name(uint16_t name_code);
 const char *lord_keyboard_label(size_t index);
+int8_t lord_ranked_slot(const lord_state_t *state, size_t rank);
 
 size_t lord_save_encode(const lord_state_t *state, uint8_t *bytes,
                         size_t capacity);
