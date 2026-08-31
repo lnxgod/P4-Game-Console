@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "format": "p4-native-elf-v1",
+  "api_version": 1,
+  "version": "1.1.0",
+  "package_file": "COLOR_CLASH.P4G",
+  "component": "color_clash",
+  "sources": [
+    "color_clash.c",
+    "color_clash_logic.c",
+    "color_clash_network.c"
+  ],
+  "entry_symbol": "p4_color_clash_game",
+  "launcher_id": 114,
+  "id": "org.p4console.color-clash",
+  "title": "COLOR CLASH",
+  "subtitle": "2-4 PLAYER CARD CLASH",
+  "folder": "GAMES/ARCADE",
+  "accent_rgb565": "0x5fea",
+  "required_capabilities": [
+    "video",
+    "controls"
+  ],
+  "optional_capabilities": [
+    "audio-tone",
+    "multiplayer-session"
+  ],
+  "license": "MIT",
+  "assets": "original-imagegen-card-frames-v3-plus-authorized-gamechangersai-org-logo-and-code-ui",
+  "enabled": true,
+  "multiplayer": {
+    "schema": 1,
+    "style": "turn-based",
+    "min_players": 2,
+    "max_players": 4,
+    "message_bytes": 64,
+    "protocol": 2
+  }
+}

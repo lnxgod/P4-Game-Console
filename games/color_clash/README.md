@@ -1,0 +1,101 @@
+# Color Clash
+
+Color Clash is an original shedding-card game for two to four players, with a
+classic balanced deck and original branding. Match the discard by color or
+symbol, or play a Wild. Skip, Reverse, Draw Two, Wild Draw Four, and the unique
+Gamechanger card change the round. The first player to empty their hand wins.
+
+Each multiplayer participant uses a separate P4 console. Console OS owns the
+Host/Join room and selected transport, then launches the cartridge with an
+already-sanitized P4MP session. The host validates compact player intents and
+broadcasts revisioned, target-tagged messages no larger than 64 bytes. Public
+round state uses a compact 22-byte snapshot; private hands use ordered chunks
+of at most 54 cards, supporting the full deck without unbounded packets. Each
+client applies only messages addressed to its player slot, so its screen shows
+its own hand and public opponent card counts. The current Console OS transports
+host two active players; the manifest and protocol are bounded for four-player
+transports when that OS support arrives.
+
+There is deliberately no pass-and-play mode. A normal launcher start provides
+offline practice against one to three deterministic bots, preserving a useful
+fallback without exposing alternating human hands on one screen.
+
+## Rules
+
+- The 109-card deck uses purple, gold, red, and Tiffany blue. Each color has
+  one 0, two each of 1-9, and two each of Skip, Reverse, and Draw Two. The deck
+  also has four Choose Color Wilds, four Wild Draw Fours, and one Gamechanger.
+- Match the active color or the top card's symbol. Choose Color Wild is always
+  legal.
+- Draw Two makes the next player draw two and lose their turn.
+- Wild Draw Four lets its player choose red, gold, Tiffany blue, or purple;
+  the next player draws four and loses their turn. It is legal only when the
+  player has no colored card matching the current active color.
+- Reverse changes direction; in a two-player match it acts like Skip.
+- If the drawn card is playable, it becomes selected and the player may play
+  it or pass. An unplayable drawn card ends the turn. Actions cannot stack.
+- The color chooser labels all four choices: RED, GOLD, TIFF, and PURP.
+- Playing Gamechanger opens a player chooser. Every hand rotates by the same
+  offset so the player who used it receives the chosen player's former hand.
+  If that received hand has one or two cards, only the Gamechanger player draws
+  up to exactly three. Gamechanger cannot be played as a final card.
+
+## Controls
+
+- **Left/Right** selects a card; **A** plays it.
+- **B** or **Start** draws one card. If that card is playable, **A** plays it
+  and **B/Start** passes.
+- In the Wild chooser, **Left/Right** selects a color and **A** confirms it.
+- **Back** returns from practice to its menu; in network play it exits to the
+  launcher and ends the session.
+- Touch selects cards, plays an already-selected card, operates Draw and color
+  buttons, and uses the persistent upper-left Exit control.
+
+The runtime combines original RGB565 drawing primitives, shared font glyphs,
+and the reviewed ImageGen frame atlas; it has no copied commercial card art,
+radio driver, socket, or raw hardware access.
+
+## Card art and logo provenance
+
+`assets/color_clash_card_frames_imagegen_v3.png` is the selected OpenAI
+ImageGen source atlas. It was generated as a strict 3x2 sheet: red, gold, and
+Tiffany-blue frames on row one; purple, Wild, and Gamechanger frames on row
+two. The selected source is 1024x1536 RGB with SHA-256
+`237823be2c22c401a56fe49254ced442ad32788c95b605b63247c2a82ade7ab5`.
+The v3 edit preserved five cells and replaced every green ornament in the
+bottom-center Wild frame with royal purple, leaving an exact red, gold,
+Tiffany-blue, and purple palette. The prompt required blank centers, crop-safe
+silhouettes, hard 16-bit pixel edges, no text, symbols, logos, watermarks, or
+cell bleed. The earlier v2 source remains beside it as provenance.
+
+The Gamechanger card composites the existing authorized official Game
+Changers AI mark from
+`apps/console_os/main/assets/gamechangers_ai_logo.rgb565`. That 112x112 RGB565
+asset was retrieved from
+`https://www.gamechangersai.org/assets/gamechangers-128.png` at the console
+owner's request; its repository-pinned SHA-256 is
+`48ee7b2a15a744547884ec6ea7f462277ab60e5dde4d0805bf39db9c0b2bd892`.
+ImageGen never redraws the logo.
+
+Regenerate the runtime atlas and its QA preview with Pillow:
+
+```sh
+python3 games/color_clash/tools/png_to_card_frames.py \
+  games/color_clash/assets/color_clash_card_frames_imagegen_v3.png \
+  apps/console_os/main/assets/gamechangers_ai_logo.rgb565 \
+  games/color_clash/src/generated/color_clash_card_frames.inc \
+  games/color_clash/assets/color_clash_card_frames_runtime_preview_v3.png
+```
+
+## Host verification
+
+```sh
+cmake -S games/color_clash -B build-host/color_clash -G Ninja
+cmake --build build-host/color_clash
+ctest --test-dir build-host/color_clash --output-on-failure
+
+cmake -S tools/p4-game-host -B build-host/play-color_clash -G Ninja \
+  -DP4_GAME=color_clash
+cmake --build build-host/play-color_clash
+ctest --test-dir build-host/play-color_clash --output-on-failure
+```
