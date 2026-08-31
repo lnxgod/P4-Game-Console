@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "format": "p4-native-elf-v1",
+  "api_version": 1,
+  "version": "1.0.0",
+  "package_file": "CHECKERS.P4G",
+  "component": "checkers",
+  "sources": [
+    "checkers.c",
+    "checkers_logic.c",
+    "checkers_network.c"
+  ],
+  "entry_symbol": "p4_checkers_game",
+  "launcher_id": 116,
+  "id": "org.p4console.checkers",
+  "title": "CHECKERS",
+  "subtitle": "LOCAL + LINK PLAY",
+  "folder": "GAMES/PUZZLE",
+  "accent_rgb565": "0x5fea",
+  "required_capabilities": [
+    "video",
+    "controls"
+  ],
+  "optional_capabilities": [
+    "audio-tone",
+    "multiplayer-session"
+  ],
+  "license": "MIT",
+  "assets": "original-code-rendered-shapes-only",
+  "enabled": true,
+  "multiplayer": {
+    "schema": 1,
+    "style": "turn-based",
+    "min_players": 2,
+    "max_players": 2,
+    "message_bytes": 38,
+    "protocol": 1
+  }
+}
