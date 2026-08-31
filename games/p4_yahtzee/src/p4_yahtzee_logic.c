@@ -110,14 +110,17 @@ void p4_yahtzee_reset_match(p4_yahtzee_state_t *state, uint32_t seed)
         return;
     }
     const p4_yahtzee_mode_t mode = state->mode;
+    const uint8_t player_count =
+        state->player_count >= P4_YAHTZEE_MIN_PLAYERS &&
+        state->player_count <= P4_YAHTZEE_PLAYERS
+            ? state->player_count : P4_YAHTZEE_MIN_PLAYERS;
     const uint8_t local_slot = state->local_player_slot;
     const p4_game_multiplayer_role_t role = state->network_role;
     const uint64_t network_seed = state->network_seed;
     const uint32_t network_revision = state->network_revision;
-    const uint32_t last_network_sequence[P4_YAHTZEE_PLAYERS] = {
-        state->last_network_sequence[0],
-        state->last_network_sequence[1],
-    };
+    uint32_t last_network_sequence[P4_YAHTZEE_PLAYERS];
+    memcpy(last_network_sequence, state->last_network_sequence,
+           sizeof(last_network_sequence));
     const bool network_started = state->network_started;
     memset(state, 0, sizeof(*state));
     for (size_t player = 0U; player < P4_YAHTZEE_PLAYERS; ++player) {
@@ -131,6 +134,7 @@ void p4_yahtzee_reset_match(p4_yahtzee_state_t *state, uint32_t seed)
         state->animation_dice[index] = state->dice[index];
     }
     state->mode = mode;
+    state->player_count = player_count;
     state->local_player_slot = local_slot;
     state->network_role = role;
     state->network_seed = network_seed;
@@ -146,6 +150,9 @@ void p4_yahtzee_reset_match(p4_yahtzee_state_t *state, uint32_t seed)
 bool p4_yahtzee_roll(p4_yahtzee_state_t *state)
 {
     if (state == NULL || state->phase != P4_YAHTZEE_TURN ||
+        state->player_count < P4_YAHTZEE_MIN_PLAYERS ||
+        state->player_count > P4_YAHTZEE_PLAYERS ||
+        state->current_player >= state->player_count ||
         state->roll_count >= P4_YAHTZEE_ROLLS_PER_TURN ||
         state->roll_animation_ms != 0U) {
         return false;
@@ -167,6 +174,9 @@ bool p4_yahtzee_score_turn(
 {
     if (state == NULL || category < P4_YAHTZEE_ONES ||
         category > P4_YAHTZEE_CHANCE || state->phase != P4_YAHTZEE_TURN ||
+        state->player_count < P4_YAHTZEE_MIN_PLAYERS ||
+        state->player_count > P4_YAHTZEE_PLAYERS ||
+        state->current_player >= state->player_count ||
         state->roll_count == 0U || state->roll_animation_ms != 0U ||
         state->scores[state->current_player][category] >= 0) {
         return false;
@@ -178,11 +188,16 @@ bool p4_yahtzee_score_turn(
     state->roll_count = 0U;
     state->selected_die = 0U;
     state->focus = P4_YAHTZEE_FOCUS_DICE;
-    if (state->turns_scored[0] >= P4_YAHTZEE_CATEGORIES &&
-        state->turns_scored[1] >= P4_YAHTZEE_CATEGORIES) {
+    bool match_complete = true;
+    for (uint8_t player = 0U; player < state->player_count; ++player) {
+        match_complete = match_complete &&
+            state->turns_scored[player] >= P4_YAHTZEE_CATEGORIES;
+    }
+    if (match_complete) {
         state->phase = P4_YAHTZEE_GAME_OVER;
     } else {
-        state->current_player ^= 1U;
+        state->current_player = (uint8_t)(
+            (state->current_player + 1U) % state->player_count);
         state->phase = state->mode == P4_YAHTZEE_LOCAL
             ? P4_YAHTZEE_PASS : P4_YAHTZEE_TURN;
     }

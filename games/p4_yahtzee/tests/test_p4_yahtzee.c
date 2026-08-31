@@ -48,6 +48,8 @@ typedef struct {
 
 struct test_link {
     test_endpoint_t endpoints[P4_YAHTZEE_PLAYERS];
+    uint8_t player_count;
+    size_t last_send_bytes;
 };
 
 static bool link_status(
@@ -61,7 +63,7 @@ static bool link_status(
         .role = endpoint->slot == 0U ? P4_GAME_MULTIPLAYER_ROLE_HOST
                                     : P4_GAME_MULTIPLAYER_ROLE_CLIENT,
         .local_player_slot = endpoint->slot,
-        .player_count = P4_YAHTZEE_PLAYERS,
+        .player_count = endpoint->link->player_count,
     };
     return true;
 }
@@ -69,24 +71,36 @@ static bool link_status(
 static bool link_send(void *context, const uint8_t *data, size_t data_bytes)
 {
     test_endpoint_t *const source = context;
-    test_endpoint_t *const destination =
-        &source->link->endpoints[source->slot ^ 1U];
     if (data == NULL || data_bytes == 0U ||
         data_bytes > P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES ||
-        destination->queue_count >= LINK_QUEUE) {
+        source->slot >= source->link->player_count) {
         return false;
     }
-    const size_t tail = (destination->queue_head +
-                         destination->queue_count) % LINK_QUEUE;
-    p4_game_multiplayer_message_t *const message =
-        &destination->queue[tail];
-    *message = (p4_game_multiplayer_message_t){
-        .sequence = ++source->next_sequence,
-        .player_slot = source->slot,
-        .bytes = (uint8_t)data_bytes,
-    };
-    memcpy(message->data, data, data_bytes);
-    ++destination->queue_count;
+    for (uint8_t slot = 0U; slot < source->link->player_count; ++slot) {
+        if (slot != source->slot &&
+            source->link->endpoints[slot].queue_count >= LINK_QUEUE) {
+            return false;
+        }
+    }
+    const uint32_t sequence = ++source->next_sequence;
+    source->link->last_send_bytes = data_bytes;
+    for (uint8_t slot = 0U; slot < source->link->player_count; ++slot) {
+        if (slot == source->slot) {
+            continue;
+        }
+        test_endpoint_t *const destination = &source->link->endpoints[slot];
+        const size_t tail = (destination->queue_head +
+                             destination->queue_count) % LINK_QUEUE;
+        p4_game_multiplayer_message_t *const message =
+            &destination->queue[tail];
+        *message = (p4_game_multiplayer_message_t){
+            .sequence = sequence,
+            .player_slot = source->slot,
+            .bytes = (uint8_t)data_bytes,
+        };
+        memcpy(message->data, data, data_bytes);
+        ++destination->queue_count;
+    }
     return true;
 }
 
@@ -103,9 +117,10 @@ static bool link_receive(
     return true;
 }
 
-static void init_link(test_link_t *link)
+static void init_link(test_link_t *link, uint8_t player_count)
 {
     memset(link, 0, sizeof(*link));
+    link->player_count = player_count;
     for (uint8_t slot = 0U; slot < P4_YAHTZEE_PLAYERS; ++slot) {
         link->endpoints[slot].link = link;
         link->endpoints[slot].slot = slot;
@@ -173,16 +188,17 @@ static uint16_t score_marker_pixel(
 }
 
 static void check_fresh_match(
-    const p4_yahtzee_state_t *state, p4_yahtzee_mode_t mode)
+    const p4_yahtzee_state_t *state, p4_yahtzee_mode_t mode,
+    uint8_t player_count)
 {
     CHECK(state->phase == P4_YAHTZEE_TURN);
     CHECK(state->mode == mode);
+    CHECK(state->player_count == player_count);
     CHECK(state->current_player == 0U);
     CHECK(state->roll_count == 0U);
     CHECK(state->held_mask == 0U);
-    CHECK(state->turns_scored[0] == 0U);
-    CHECK(state->turns_scored[1] == 0U);
     for (size_t player = 0U; player < P4_YAHTZEE_PLAYERS; ++player) {
+        CHECK(state->turns_scored[player] == 0U);
         for (size_t category = 0U; category < P4_YAHTZEE_CATEGORIES;
              ++category) {
             CHECK(state->scores[player][category] == -1);
@@ -294,6 +310,67 @@ static void test_local_lifecycle_and_framebuffer(void)
     p4_game_instance_stop(&instance);
 }
 
+static void test_local_four_player_rotation(void)
+{
+    const p4_game_services_t services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+    };
+    p4_game_instance_t instance = {0};
+    p4_yahtzee_state_t state;
+    CHECK(p4_game_instance_start(&instance, &p4_p4_yahtzee_game, &services,
+                                 &state, sizeof(state)));
+    CHECK(state.player_count == 2U);
+    CHECK(update_button(&instance, P4_BUTTON_RIGHT));
+    CHECK(state.player_count == 3U);
+    CHECK(update_button(&instance, P4_BUTTON_RIGHT));
+    CHECK(state.player_count == 4U);
+    CHECK(update_button(&instance, P4_BUTTON_A));
+    CHECK(state.phase == P4_YAHTZEE_TURN);
+
+    for (uint8_t player = 0U; player < 4U; ++player) {
+        CHECK(state.current_player == player);
+        CHECK(update_button(&instance, P4_BUTTON_START));
+        settle_roll(&instance);
+        CHECK(update_button(&instance, P4_BUTTON_B));
+        CHECK(update_button(&instance, P4_BUTTON_A));
+        CHECK(state.turns_scored[player] == 1U);
+        CHECK(state.phase == P4_YAHTZEE_PASS);
+        CHECK(state.current_player == (uint8_t)((player + 1U) % 4U));
+        CHECK(update_button(&instance, P4_BUTTON_A));
+        CHECK(state.phase == P4_YAHTZEE_TURN);
+    }
+
+    for (uint8_t player = 0U; player < 4U; ++player) {
+        state.turns_scored[player] = P4_YAHTZEE_CATEGORIES;
+    }
+    state.turns_scored[3] = P4_YAHTZEE_CATEGORIES - 1U;
+    state.current_player = 3U;
+    state.phase = P4_YAHTZEE_TURN;
+    state.roll_count = 1U;
+    state.roll_animation_ms = 0U;
+    state.scores[3][P4_YAHTZEE_CHANCE] = -1;
+    CHECK(p4_yahtzee_score_turn(&state, P4_YAHTZEE_CHANCE));
+    CHECK(state.phase == P4_YAHTZEE_GAME_OVER);
+
+    uint16_t *const pixels = calloc(
+        (size_t)P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT,
+        sizeof(*pixels));
+    CHECK(pixels != NULL);
+    if (pixels != NULL) {
+        p4_game_surface_t surface = {
+            .pixels = pixels,
+            .stride_pixels = P4_GAME_SURFACE_WIDTH,
+            .width = P4_GAME_SURFACE_WIDTH,
+            .height = P4_GAME_SURFACE_HEIGHT,
+        };
+        CHECK(p4_game_instance_render(&instance, &surface));
+        free(pixels);
+    }
+    CHECK(update_button(&instance, P4_BUTTON_A));
+    check_fresh_match(&state, P4_YAHTZEE_LOCAL, 4U);
+    p4_game_instance_stop(&instance);
+}
+
 static void test_scorecard_selection_highlights(void)
 {
     const p4_game_services_t services = {
@@ -372,7 +449,7 @@ static void test_play_again_preserves_local_mode(void)
     state.scores[0][P4_YAHTZEE_ONES] = 3;
     state.scores[1][P4_YAHTZEE_CHANCE] = 22;
     CHECK(update_button(&instance, P4_BUTTON_A));
-    check_fresh_match(&state, P4_YAHTZEE_LOCAL);
+    check_fresh_match(&state, P4_YAHTZEE_LOCAL, 2U);
 
     state.phase = P4_YAHTZEE_GAME_OVER;
     state.current_player = 1U;
@@ -380,7 +457,7 @@ static void test_play_again_preserves_local_mode(void)
     state.turns_scored[1] = P4_YAHTZEE_CATEGORIES;
     state.scores[0][P4_YAHTZEE_TWOS] = 6;
     tap(&instance, 160U, 100U);
-    check_fresh_match(&state, P4_YAHTZEE_LOCAL);
+    check_fresh_match(&state, P4_YAHTZEE_LOCAL, 2U);
 
     p4_game_instance_stop(&instance);
 }
@@ -388,7 +465,7 @@ static void test_play_again_preserves_local_mode(void)
 static void test_network_host_authority(void)
 {
     test_link_t link;
-    init_link(&link);
+    init_link(&link, 2U);
     p4_game_services_t host_services = network_services(&link.endpoints[0]);
     p4_game_services_t client_services = network_services(&link.endpoints[1]);
     p4_game_instance_t host = {0};
@@ -449,20 +526,84 @@ static void test_network_host_authority(void)
     CHECK(update_button(&client, P4_BUTTON_A));
     CHECK(client_state.phase == P4_YAHTZEE_GAME_OVER);
     CHECK(update_empty(&host, 16U));
-    check_fresh_match(&host_state, P4_YAHTZEE_NETWORK);
+    check_fresh_match(&host_state, P4_YAHTZEE_NETWORK, 2U);
     CHECK(host_state.network_started);
     CHECK(host_state.local_player_slot == 0U);
     CHECK(host_state.network_role == P4_GAME_MULTIPLAYER_ROLE_HOST);
     CHECK(host_state.network_revision == revision_before_replay + 1U);
 
     CHECK(update_empty(&client, 16U));
-    check_fresh_match(&client_state, P4_YAHTZEE_NETWORK);
+    check_fresh_match(&client_state, P4_YAHTZEE_NETWORK, 2U);
     CHECK(client_state.network_started);
     CHECK(client_state.local_player_slot == 1U);
     CHECK(client_state.network_role == P4_GAME_MULTIPLAYER_ROLE_CLIENT);
     CHECK(client_state.network_revision == host_state.network_revision);
     p4_game_instance_stop(&client);
     p4_game_instance_stop(&host);
+}
+
+static void test_four_player_network_snapshot(void)
+{
+    test_link_t link;
+    init_link(&link, 4U);
+    p4_game_services_t services[P4_YAHTZEE_PLAYERS];
+    p4_game_instance_t instances[P4_YAHTZEE_PLAYERS] = {{0}};
+    p4_yahtzee_state_t states[P4_YAHTZEE_PLAYERS];
+
+    for (uint8_t player = 0U; player < 4U; ++player) {
+        services[player] = network_services(&link.endpoints[player]);
+        CHECK(p4_game_instance_start(
+            &instances[player], &p4_p4_yahtzee_game, &services[player],
+            &states[player], sizeof(states[player])));
+        CHECK(states[player].player_count == 4U);
+    }
+    CHECK(update_empty(&instances[0], 16U));
+    for (uint8_t player = 1U; player < 4U; ++player) {
+        CHECK(update_empty(&instances[player], 16U));
+        CHECK(states[player].network_started);
+        CHECK(states[player].network_revision == states[0].network_revision);
+    }
+
+    for (uint8_t player = 0U; player < 4U; ++player) {
+        states[0].turns_scored[player] = (uint8_t)(player + 1U);
+        for (uint8_t category = 0U; category < P4_YAHTZEE_CATEGORIES;
+             ++category) {
+            states[0].scores[player][category] = (int16_t)(
+                ((unsigned)player * 11U + (unsigned)category * 3U) % 51U);
+        }
+    }
+    CHECK(update_button(&instances[0], P4_BUTTON_START));
+    CHECK(link.last_send_bytes == 61U);
+    for (uint8_t player = 1U; player < 4U; ++player) {
+        CHECK(update_empty(&instances[player], 16U));
+        CHECK(states[player].player_count == 4U);
+        CHECK(memcmp(states[player].scores, states[0].scores,
+                     sizeof(states[0].scores)) == 0);
+        CHECK(memcmp(states[player].turns_scored, states[0].turns_scored,
+                     sizeof(states[0].turns_scored)) == 0);
+    }
+
+    for (uint8_t player = 0U; player < 4U; ++player) {
+        states[player].current_player = 3U;
+        states[player].roll_count = 0U;
+        states[player].held_mask = 0U;
+        states[player].roll_animation_ms = 0U;
+        states[player].animation_step_ms = 0U;
+        states[player].phase = P4_YAHTZEE_TURN;
+    }
+    CHECK(update_button(&instances[3], P4_BUTTON_START));
+    CHECK(states[3].roll_count == 0U);
+    CHECK(update_empty(&instances[0], 16U));
+    for (uint8_t player = 1U; player < 4U; ++player) {
+        CHECK(update_empty(&instances[player], 16U));
+        CHECK(states[player].current_player == 3U);
+        CHECK(states[player].roll_count == 1U);
+        CHECK(states[player].network_revision == states[0].network_revision);
+    }
+
+    for (uint8_t player = 0U; player < 4U; ++player) {
+        p4_game_instance_stop(&instances[player]);
+    }
 }
 
 static void test_touch_regions(void)
@@ -474,8 +615,13 @@ static void test_touch_regions(void)
     p4_yahtzee_state_t state;
     CHECK(p4_game_instance_start(&instance, &p4_p4_yahtzee_game, &services,
                                  &state, sizeof(state)));
-    tap(&instance, 160U, 117U); /* Local 2 Players. */
+    tap(&instance, 245U, 117U); /* Local player-count increase. */
+    CHECK(state.player_count == 3U);
+    tap(&instance, 245U, 117U);
+    CHECK(state.player_count == 4U);
+    tap(&instance, 160U, 117U); /* Start local four-player match. */
     CHECK(state.phase == P4_YAHTZEE_TURN);
+    CHECK(state.player_count == 4U);
     tap(&instance, 270U, 191U); /* Roll. */
     CHECK(state.roll_count == 1U);
     settle_roll(&instance);
@@ -500,9 +646,11 @@ int main(void)
     CHECK(p4_p4_yahtzee_game.launcher_id == 113U);
     test_scoring_rules();
     test_local_lifecycle_and_framebuffer();
+    test_local_four_player_rotation();
     test_scorecard_selection_highlights();
     test_play_again_preserves_local_mode();
     test_network_host_authority();
+    test_four_player_network_snapshot();
     test_touch_regions();
     if (s_failures != 0) {
         fprintf(stderr, "%d P4 Yahtzee test failure(s)\n", s_failures);

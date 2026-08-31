@@ -8,9 +8,19 @@
 
 enum {
     NET_KIND_SNAPSHOT = 16,
-    NET_SNAPSHOT_BYTES = 45,
+    NET_SCORE_VALUE_BITS = 6,
+    NET_SCORE_COUNT = P4_YAHTZEE_PLAYERS * P4_YAHTZEE_CATEGORIES,
+    NET_SCORE_BYTES =
+        (NET_SCORE_COUNT * NET_SCORE_VALUE_BITS + 7) / 8,
+    NET_SCORES_OFFSET = 17,
+    NET_TURNS_OFFSET = NET_SCORES_OFFSET + NET_SCORE_BYTES,
+    NET_ANIMATION_OFFSET = NET_TURNS_OFFSET + P4_YAHTZEE_PLAYERS,
+    NET_SNAPSHOT_BYTES = NET_ANIMATION_OFFSET + 1,
     NET_REQUEST_BYTES = 7,
 };
+
+_Static_assert(NET_SNAPSHOT_BYTES <= P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES,
+               "Yahtzee snapshot exceeds the Game API message ceiling");
 
 static void write_u32(uint8_t *bytes, uint32_t value)
 {
@@ -28,6 +38,32 @@ static uint32_t read_u32(const uint8_t *bytes)
         (uint32_t)bytes[3] << 24U;
 }
 
+static void write_score6(uint8_t bytes[NET_SNAPSHOT_BYTES],
+                         size_t index, uint8_t value)
+{
+    const size_t bit = index * NET_SCORE_VALUE_BITS;
+    const size_t offset = NET_SCORES_OFFSET + bit / 8U;
+    const unsigned shift = (unsigned)(bit % 8U);
+    const uint16_t shifted = (uint16_t)((uint16_t)value << shift);
+    bytes[offset] |= (uint8_t)shifted;
+    if (offset + 1U < NET_TURNS_OFFSET) {
+        bytes[offset + 1U] |= (uint8_t)(shifted >> 8U);
+    }
+}
+
+static uint8_t read_score6(const uint8_t bytes[NET_SNAPSHOT_BYTES],
+                           size_t index)
+{
+    const size_t bit = index * NET_SCORE_VALUE_BITS;
+    const size_t offset = NET_SCORES_OFFSET + bit / 8U;
+    const unsigned shift = (unsigned)(bit % 8U);
+    uint16_t packed = bytes[offset];
+    if (offset + 1U < NET_TURNS_OFFSET) {
+        packed |= (uint16_t)bytes[offset + 1U] << 8U;
+    }
+    return (uint8_t)((packed >> shift) & UINT16_C(0x003f));
+}
+
 bool p4_yahtzee_network_available(const p4_game_context_t *context)
 {
     return context != NULL && context->services != NULL &&
@@ -38,13 +74,17 @@ bool p4_yahtzee_network_available(const p4_game_context_t *context)
 bool p4_yahtzee_local_turn(const p4_yahtzee_state_t *state)
 {
     return state != NULL && (state->mode == P4_YAHTZEE_LOCAL ||
-        state->current_player == state->local_player_slot);
+        (state->local_player_slot < state->player_count &&
+         state->current_player == state->local_player_slot));
 }
 
 static bool encode_snapshot(const p4_yahtzee_state_t *state,
                             uint8_t bytes[NET_SNAPSHOT_BYTES])
 {
-    if (state == NULL || bytes == NULL) {
+    if (state == NULL || bytes == NULL ||
+        state->player_count < P4_YAHTZEE_MIN_PLAYERS ||
+        state->player_count > P4_YAHTZEE_PLAYERS ||
+        state->current_player >= state->player_count) {
         return false;
     }
     memset(bytes, 0, NET_SNAPSHOT_BYTES);
@@ -59,17 +99,30 @@ static bool encode_snapshot(const p4_yahtzee_state_t *state,
     for (size_t index = 0U; index < P4_YAHTZEE_DICE; ++index) {
         bytes[11U + index] = state->dice[index];
     }
-    size_t offset = 16U;
+    bytes[16] = state->player_count;
+    size_t score_index = 0U;
     for (size_t player = 0U; player < P4_YAHTZEE_PLAYERS; ++player) {
         for (size_t category = 0U; category < P4_YAHTZEE_CATEGORIES;
              ++category) {
-            const int score = state->scores[player][category];
-            bytes[offset++] = score < 0 ? UINT8_C(0xff) : (uint8_t)score;
+            const int score = player < state->player_count
+                ? state->scores[player][category] : -1;
+            if (score < -1 || score > 50) {
+                return false;
+            }
+            write_score6(bytes, score_index++,
+                         score < 0 ? UINT8_C(0x3f) : (uint8_t)score);
         }
     }
-    bytes[offset++] = state->turns_scored[0];
-    bytes[offset++] = state->turns_scored[1];
-    bytes[offset] = state->roll_animation_ms != 0U ? 1U : 0U;
+    for (size_t player = 0U; player < P4_YAHTZEE_PLAYERS; ++player) {
+        if (player < state->player_count &&
+            state->turns_scored[player] > P4_YAHTZEE_CATEGORIES) {
+            return false;
+        }
+        bytes[NET_TURNS_OFFSET + player] = player < state->player_count
+            ? state->turns_scored[player] : 0U;
+    }
+    bytes[NET_ANIMATION_OFFSET] =
+        state->roll_animation_ms != 0U ? 1U : 0U;
     return true;
 }
 
@@ -90,13 +143,18 @@ static bool apply_snapshot(p4_yahtzee_state_t *state,
         return false;
     }
     const uint32_t revision = read_u32(bytes + 2U);
+    const uint8_t player_count = bytes[16];
     if (revision == 0U || revision < state->network_revision ||
-        bytes[6] >= P4_YAHTZEE_PLAYERS ||
+        player_count < P4_YAHTZEE_MIN_PLAYERS ||
+        player_count > P4_YAHTZEE_PLAYERS ||
+        (state->network_started && state->player_count != player_count) ||
+        bytes[6] >= player_count ||
         bytes[7] > P4_YAHTZEE_ROLLS_PER_TURN ||
         (bytes[8] & UINT8_C(0xe0)) != 0U ||
         bytes[9] < (uint8_t)P4_YAHTZEE_TURN ||
         bytes[9] > (uint8_t)P4_YAHTZEE_GAME_OVER ||
-        bytes[10] >= P4_YAHTZEE_CATEGORIES) {
+        bytes[10] >= P4_YAHTZEE_CATEGORIES ||
+        bytes[NET_ANIMATION_OFFSET] > 1U) {
         return false;
     }
     for (size_t index = 0U; index < P4_YAHTZEE_DICE; ++index) {
@@ -104,15 +162,25 @@ static bool apply_snapshot(p4_yahtzee_state_t *state,
             return false;
         }
     }
-    size_t offset = 16U;
-    for (size_t index = 0U; index <
-         P4_YAHTZEE_PLAYERS * P4_YAHTZEE_CATEGORIES; ++index) {
-        if (bytes[offset + index] != UINT8_C(0xff) &&
-            bytes[offset + index] > 50U) {
+    size_t score_index = 0U;
+    for (size_t player = 0U; player < P4_YAHTZEE_PLAYERS; ++player) {
+        for (size_t category = 0U; category < P4_YAHTZEE_CATEGORIES;
+             ++category) {
+            const uint8_t score = read_score6(bytes, score_index++);
+            if ((player < player_count && score != UINT8_C(0x3f) &&
+                 score > 50U) ||
+                (player >= player_count && score != UINT8_C(0x3f))) {
+                return false;
+            }
+        }
+        const uint8_t turns = bytes[NET_TURNS_OFFSET + player];
+        if ((player < player_count && turns > P4_YAHTZEE_CATEGORIES) ||
+            (player >= player_count && turns != 0U)) {
             return false;
         }
     }
     state->network_revision = revision;
+    state->player_count = player_count;
     state->current_player = bytes[6];
     state->roll_count = bytes[7];
     state->held_mask = bytes[8];
@@ -122,18 +190,19 @@ static bool apply_snapshot(p4_yahtzee_state_t *state,
         state->dice[index] = bytes[11U + index];
         state->animation_dice[index] = bytes[11U + index];
     }
-    offset = 16U;
+    score_index = 0U;
     for (size_t player = 0U; player < P4_YAHTZEE_PLAYERS; ++player) {
         for (size_t category = 0U; category < P4_YAHTZEE_CATEGORIES;
              ++category) {
-            const uint8_t value = bytes[offset++];
-            state->scores[player][category] = value == UINT8_C(0xff)
+            const uint8_t value = read_score6(bytes, score_index++);
+            state->scores[player][category] = value == UINT8_C(0x3f)
                 ? -1 : (int16_t)value;
         }
+        state->turns_scored[player] = bytes[NET_TURNS_OFFSET + player];
     }
-    state->turns_scored[0] = bytes[offset++];
-    state->turns_scored[1] = bytes[offset++];
-    if (bytes[offset] != 0U) {
+    state->roll_animation_ms = 0U;
+    state->animation_step_ms = 0U;
+    if (bytes[NET_ANIMATION_OFFSET] != 0U) {
         state->roll_animation_ms = 330U;
         state->animation_step_ms = 55U;
     }
@@ -246,6 +315,17 @@ void p4_yahtzee_poll_network(
     if (status.state != P4_GAME_MULTIPLAYER_CONNECTED) {
         return;
     }
+    if (status.player_count < P4_YAHTZEE_MIN_PLAYERS ||
+        status.player_count > P4_YAHTZEE_PLAYERS ||
+        status.local_player_slot >= status.player_count ||
+        (status.role != P4_GAME_MULTIPLAYER_ROLE_HOST &&
+         status.role != P4_GAME_MULTIPLAYER_ROLE_CLIENT) ||
+        (state->network_started &&
+         state->player_count != status.player_count)) {
+        state->network_error = true;
+        return;
+    }
+    state->player_count = status.player_count;
     state->local_player_slot = status.local_player_slot;
     state->network_role = status.role;
     state->network_seed = status.session_seed;
@@ -254,6 +334,7 @@ void p4_yahtzee_poll_network(
         p4_yahtzee_reset_match(state, (uint32_t)status.session_seed ^
                                (uint32_t)(status.session_seed >> 32U));
         state->mode = P4_YAHTZEE_NETWORK;
+        state->player_count = status.player_count;
         state->local_player_slot = status.local_player_slot;
         state->network_role = status.role;
         state->network_seed = status.session_seed;
@@ -275,7 +356,8 @@ void p4_yahtzee_poll_network(
         }
         if (message.bytes != NET_REQUEST_BYTES ||
             message.data[0] != P4_YAHTZEE_NETWORK_PROTOCOL ||
-            read_u32(message.data + 2U) != state->network_revision) {
+            read_u32(message.data + 2U) != state->network_revision ||
+            message.player_slot >= state->player_count) {
             continue;
         }
         const uint8_t kind = message.data[1];

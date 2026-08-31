@@ -59,6 +59,8 @@ int main(int argc, char **argv)
     if (!p4_game_instance_start(
             &instance, &p4_p4_yahtzee_game, &services,
             state, sizeof(*state)) ||
+        !update(&instance, P4_BUTTON_RIGHT, 16U) ||
+        !update(&instance, P4_BUTTON_RIGHT, 16U) ||
         !update(&instance, P4_BUTTON_A, 16U) ||
         !update(&instance, P4_BUTTON_START, 16U)) {
         free(state);
@@ -79,6 +81,8 @@ int main(int argc, char **argv)
     state->scores[0][P4_YAHTZEE_TWOS] = 6;
     state->scores[0][P4_YAHTZEE_THREES] = 9;
     state->scores[1][P4_YAHTZEE_CHANCE] = 22;
+    state->scores[2][P4_YAHTZEE_FULL_HOUSE] = 25;
+    state->scores[3][P4_YAHTZEE_CHANCE] = 18;
     if (!p4_game_instance_render(&instance, &surface)) {
         p4_game_instance_stop(&instance);
         free(state);

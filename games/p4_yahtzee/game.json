@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.0.2",
+  "version": "1.1.0",
   "package_file": "P4_YAHTZEE.P4G",
   "component": "p4_yahtzee",
   "sources": [
@@ -14,7 +14,7 @@
   "launcher_id": 113,
   "id": "org.p4console.p4-yahtzee",
   "title": "P4 YAHTZEE",
-  "subtitle": "TWO-PLAYER DICE",
+  "subtitle": "2-4 PLAYER DICE",
   "folder": "GAMES/ARCADE",
   "accent_rgb565": "0x5fea",
   "required_capabilities": [
@@ -29,9 +29,9 @@
     "schema": 1,
     "style": "turn-based",
     "min_players": 2,
-    "max_players": 2,
-    "message_bytes": 48,
-    "protocol": 2
+    "max_players": 4,
+    "message_bytes": 61,
+    "protocol": 3
   },
   "license": "MIT",
   "assets": "original-imagegen-dice-atlas-v1-plus-code-rendered-ui",

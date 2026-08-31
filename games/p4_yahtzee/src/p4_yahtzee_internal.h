@@ -9,11 +9,12 @@
 #include "p4/game.h"
 
 enum {
-    P4_YAHTZEE_PLAYERS = 2,
+    P4_YAHTZEE_MIN_PLAYERS = 2,
+    P4_YAHTZEE_PLAYERS = 4,
     P4_YAHTZEE_DICE = 5,
     P4_YAHTZEE_CATEGORIES = 13,
     P4_YAHTZEE_ROLLS_PER_TURN = 3,
-    P4_YAHTZEE_NETWORK_PROTOCOL = 2,
+    P4_YAHTZEE_NETWORK_PROTOCOL = 3,
     P4_YAHTZEE_NET_ROLL = 1,
     P4_YAHTZEE_NET_HOLD = 2,
     P4_YAHTZEE_NET_SCORE = 3,
@@ -64,6 +65,7 @@ typedef struct {
     uint8_t selected_die;
     uint8_t selected_category;
     uint8_t menu_selection;
+    uint8_t player_count;
     uint8_t turns_scored[P4_YAHTZEE_PLAYERS];
     uint8_t local_player_slot;
     p4_yahtzee_phase_t phase;

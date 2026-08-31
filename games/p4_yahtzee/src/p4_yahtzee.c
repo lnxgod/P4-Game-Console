@@ -78,14 +78,45 @@ static bool point_in(uint16_t px, uint16_t py,
         (int)py >= y && (int)py < y + height;
 }
 
+static void adjust_player_count(p4_yahtzee_state_t *state, bool increase)
+{
+    if (state->player_count < P4_YAHTZEE_MIN_PLAYERS ||
+        state->player_count > P4_YAHTZEE_PLAYERS) {
+        state->player_count = P4_YAHTZEE_MIN_PLAYERS;
+    }
+    if (increase) {
+        state->player_count = state->player_count >= P4_YAHTZEE_PLAYERS
+            ? P4_YAHTZEE_MIN_PLAYERS
+            : (uint8_t)(state->player_count + 1U);
+    } else {
+        state->player_count = state->player_count <= P4_YAHTZEE_MIN_PLAYERS
+            ? P4_YAHTZEE_PLAYERS
+            : (uint8_t)(state->player_count - 1U);
+    }
+}
+
+static uint8_t display_player_count(const p4_yahtzee_state_t *state)
+{
+    return state != NULL &&
+        state->player_count >= P4_YAHTZEE_MIN_PLAYERS &&
+        state->player_count <= P4_YAHTZEE_PLAYERS
+            ? state->player_count : P4_YAHTZEE_MIN_PLAYERS;
+}
+
 static void handle_touch(p4_game_context_t *context,
                          p4_yahtzee_state_t *state,
                          uint16_t x, uint16_t y)
 {
     if (state->phase == P4_YAHTZEE_MENU) {
         if (point_in(x, y, 61, 105, 198, 25)) {
-            state->mode = P4_YAHTZEE_LOCAL;
-            p4_yahtzee_reset_match(state, state->rng);
+            if (x < 91U) {
+                adjust_player_count(state, false);
+            } else if (x >= 229U) {
+                adjust_player_count(state, true);
+            } else {
+                state->mode = P4_YAHTZEE_LOCAL;
+                p4_yahtzee_reset_match(state, state->rng);
+            }
         } else if (point_in(x, y, 61, 136, 198, 25)) {
             state->menu_selection = 1U;
             if (p4_yahtzee_network_available(context)) {
@@ -151,6 +182,7 @@ static bool game_start(p4_game_context_t *context)
     *state = (p4_yahtzee_state_t){
         .phase = P4_YAHTZEE_MENU,
         .mode = P4_YAHTZEE_LOCAL,
+        .player_count = P4_YAHTZEE_MIN_PLAYERS,
         .rng = UINT32_C(0x5034595a),
     };
     p4_game_multiplayer_status_t multiplayer;
@@ -161,6 +193,13 @@ static bool game_start(p4_game_context_t *context)
         state->local_player_slot = multiplayer.local_player_slot;
         state->network_role = multiplayer.role;
         state->network_seed = multiplayer.session_seed;
+        if (multiplayer.player_count >= P4_YAHTZEE_MIN_PLAYERS &&
+            multiplayer.player_count <= P4_YAHTZEE_PLAYERS &&
+            multiplayer.local_player_slot < multiplayer.player_count) {
+            state->player_count = multiplayer.player_count;
+        } else {
+            state->network_error = true;
+        }
     }
     (void)p4_game_play_tone(context, 523U, 70U, 3U, P4_WAVE_TRIANGLE);
     return true;
@@ -205,6 +244,14 @@ static p4_game_result_t game_update(
     if (state->phase == P4_YAHTZEE_MENU) {
         if ((input->pressed & (P4_BUTTON_UP | P4_BUTTON_DOWN)) != 0U) {
             state->menu_selection ^= 1U;
+        }
+        if (state->menu_selection == 0U &&
+            (input->pressed & P4_BUTTON_LEFT) != 0U) {
+            adjust_player_count(state, false);
+        }
+        if (state->menu_selection == 0U &&
+            (input->pressed & P4_BUTTON_RIGHT) != 0U) {
+            adjust_player_count(state, true);
         }
         if ((input->pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
             if (state->menu_selection == 0U) {
@@ -301,36 +348,32 @@ static void draw_die(p4_game_surface_t *surface, int x, int y, uint8_t value,
 
 static void draw_player_panel(p4_game_surface_t *surface,
                               const p4_yahtzee_state_t *state,
-                              uint8_t player, int x)
+                              uint8_t player, int x, int width)
 {
     const bool active = state->current_player == player &&
         state->phase != P4_YAHTZEE_MENU;
-    p4_draw_fill_rect(surface, x, 2, 156, 25,
+    p4_draw_fill_rect(surface, x, 2, width, 25,
                       active ? COLOR_PANEL_ALT : COLOR_PANEL);
-    p4_draw_rect(surface, x, 2, 156, 25,
+    p4_draw_rect(surface, x, 2, width, 25,
                  active ? COLOR_ACCENT : COLOR_LINE);
-    char line[20] = "PLAYER ";
-    size_t length = 7U;
-    line[length++] = (char)('1' + player);
-    line[length++] = ' ';
-    line[length++] = ' ';
-    line[length] = '\0';
-    (void)append_unsigned(line, sizeof(line), length,
+    char line[12] = "P1 ";
+    line[1] = (char)('1' + player);
+    (void)append_unsigned(line, sizeof(line), 3U,
                           (unsigned)p4_yahtzee_total(state, player));
-    const int text_x = x + (player == 0U ? EXIT_W + 4 : 6);
-    p4_draw_text(surface, text_x, 5, line,
-                 active ? COLOR_TEXT : COLOR_MUTED, 1U, 18U);
-    char upper[20] = "UPPER ";
-    length = append_unsigned(upper, sizeof(upper), 6U,
-        (unsigned)p4_yahtzee_upper_total(state, player));
-    if (p4_yahtzee_upper_total(state, player) >= 63 &&
+    p4_draw_text(surface, x + 4, 5, line,
+                 active ? COLOR_TEXT : COLOR_MUTED, 1U, 9U);
+    char upper[12] = "U";
+    const int upper_total = p4_yahtzee_upper_total(state, player);
+    size_t length = append_unsigned(upper, sizeof(upper), 1U,
+                                    (unsigned)upper_total);
+    if (upper_total >= 63 &&
         length + 3U < sizeof(upper)) {
         upper[length++] = '+';
         upper[length++] = '3';
         upper[length++] = '5';
         upper[length] = '\0';
     }
-    p4_draw_text(surface, text_x, 16, upper, COLOR_MUTED, 1U, 18U);
+    p4_draw_text(surface, x + 4, 16, upper, COLOR_MUTED, 1U, 9U);
 }
 
 static void draw_exit_button(p4_game_surface_t *surface)
@@ -412,7 +455,7 @@ static void draw_menu(p4_game_context_t *context,
                       const p4_yahtzee_state_t *state)
 {
     p4_draw_text(surface, 80, 9, "P4 YAHTZEE", COLOR_TEXT, 2U, 10U);
-    p4_draw_text(surface, 92, 31, "TWO PLAYER DICE", COLOR_MUTED, 1U, 18U);
+    p4_draw_text(surface, 92, 31, "2-4 PLAYER DICE", COLOR_MUTED, 1U, 18U);
     for (uint8_t die = 0U; die < P4_YAHTZEE_DICE; ++die) {
         draw_die(surface, 15 + (int)die * 61, 48,
                  (uint8_t)(die + 1U), false, false);
@@ -421,14 +464,21 @@ static void draw_menu(p4_game_context_t *context,
     p4_draw_fill_rect(surface, 61, 105, 198, 25, COLOR_PANEL);
     p4_draw_rect(surface, 61, 105, 198, 25,
                  state->menu_selection == 0U ? COLOR_ACCENT : COLOR_LINE);
-    p4_draw_text(surface, 105, 114, "LOCAL 2 PLAYERS", COLOR_TEXT, 1U, 16U);
+    char local_line[17] = "LOCAL 2 PLAYERS";
+    local_line[6] = (char)('0' + display_player_count(state));
+    p4_draw_text(surface, 105, 114, local_line, COLOR_TEXT, 1U, 16U);
+    p4_draw_text(surface, 70, 114, "<", COLOR_GOLD, 1U, 1U);
+    p4_draw_text(surface, 244, 114, ">", COLOR_GOLD, 1U, 1U);
     p4_draw_fill_rect(surface, 61, 136, 198, 25, COLOR_PANEL);
     p4_draw_rect(surface, 61, 136, 198, 25,
                  state->menu_selection == 1U ? COLOR_ACCENT : COLOR_LINE);
-    p4_draw_text(surface, 101, 145, "NETWORK 2 PLAYERS",
+    p4_draw_text(surface, 101, 145, "NETWORK 2-4 PLAYERS",
                  network ? COLOR_TEXT : COLOR_MUTED, 1U, 18U);
     p4_draw_text(surface, 65, 172,
-        network ? "A SELECTS  BACK EXITS" : "NETWORK: OPEN FROM P4MP LOBBY",
+        network ? (state->menu_selection == 0U
+            ? "LEFT/RIGHT PLAYERS  A SELECTS"
+            : "A OPENS P4MP  BACK EXITS") :
+            "NETWORK: OPEN FROM P4MP LOBBY",
         network ? COLOR_MUTED : COLOR_DANGER, 1U, 31U);
 }
 
@@ -447,17 +497,35 @@ static void draw_pass(p4_game_surface_t *surface,
 static void draw_game_over(p4_game_surface_t *surface,
                            const p4_yahtzee_state_t *state)
 {
-    const int p1 = p4_yahtzee_total(state, 0U);
-    const int p2 = p4_yahtzee_total(state, 1U);
+    const uint8_t player_count = display_player_count(state);
     p4_draw_text(surface, 88, 22, "FINAL SCORES", COLOR_GOLD, 1U, 16U);
-    char first[24] = "PLAYER 1  ";
-    char second[24] = "PLAYER 2  ";
-    (void)append_unsigned(first, sizeof(first), 10U, (unsigned)p1);
-    (void)append_unsigned(second, sizeof(second), 10U, (unsigned)p2);
-    p4_draw_text(surface, 72, 56, first, COLOR_TEXT, 2U, 20U);
-    p4_draw_text(surface, 72, 83, second, COLOR_TEXT, 2U, 20U);
-    const char *winner = p1 == p2 ? "DRAW GAME" :
-        p1 > p2 ? "PLAYER 1 WINS" : "PLAYER 2 WINS";
+    int best_score = -1;
+    uint8_t best_player = 0U;
+    uint8_t leader_count = 0U;
+    for (uint8_t player = 0U; player < player_count; ++player) {
+        const int score = p4_yahtzee_total(state, player);
+        char line[12] = "P1 ";
+        line[1] = (char)('1' + player);
+        (void)append_unsigned(line, sizeof(line), 3U, (unsigned)score);
+        p4_draw_text(surface, 33 + (int)(player % 2U) * 155,
+                     55 + (int)(player / 2U) * 30,
+                     line, COLOR_TEXT, 2U, 9U);
+        if (score > best_score) {
+            best_score = score;
+            best_player = player;
+            leader_count = 1U;
+        } else if (score == best_score) {
+            ++leader_count;
+        }
+    }
+    char winner[24] = "PLAYER 1 WINS";
+    if (leader_count == 1U) {
+        winner[7] = (char)('1' + best_player);
+    } else {
+        memcpy(winner, "TIE AT ", 7U);
+        (void)append_unsigned(winner, sizeof(winner), 7U,
+                              (unsigned)best_score);
+    }
     p4_draw_text(surface, 80, 125, winner, COLOR_ACCENT, 1U, 20U);
     p4_draw_text(surface, 57, 166, "A: PLAY AGAIN  BACK: MENU",
                  COLOR_MUTED, 1U, 28U);
@@ -492,8 +560,16 @@ static bool game_render(p4_game_context_t *context,
         draw_exit_button(surface);
         return true;
     }
-    draw_player_panel(surface, state, 0U, 2);
-    draw_player_panel(surface, state, 1U, 162);
+    const uint8_t player_count = display_player_count(state);
+    const int tracker_x = EXIT_X + EXIT_W + 4;
+    const int tracker_width = P4_GAME_SURFACE_WIDTH - tracker_x - 2;
+    const int panel_width = tracker_width / player_count;
+    for (uint8_t player = 0U; player < player_count; ++player) {
+        const int x = tracker_x + (int)player * panel_width;
+        const int width = player + 1U == player_count
+            ? P4_GAME_SURFACE_WIDTH - 2 - x : panel_width;
+        draw_player_panel(surface, state, player, x, width);
+    }
     for (uint8_t die = 0U; die < P4_YAHTZEE_DICE; ++die) {
         const bool held = (state->held_mask & (UINT8_C(1) << die)) != 0U;
         const bool selected = state->focus == P4_YAHTZEE_FOCUS_DICE &&
@@ -561,7 +637,7 @@ const p4_game_descriptor_t p4_p4_yahtzee_game = {
     .launcher_id = UINT32_C(113),
     .id = "org.p4console.p4-yahtzee",
     .title = "P4 YAHTZEE",
-    .subtitle = "TWO-PLAYER DICE",
+    .subtitle = "2-4 PLAYER DICE",
     .accent_rgb565 = UINT16_C(COLOR_ACCENT),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
