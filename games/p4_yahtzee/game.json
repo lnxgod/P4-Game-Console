@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "package_file": "P4_YAHTZEE.P4G",
   "component": "p4_yahtzee",
   "sources": [
@@ -31,7 +31,7 @@
     "min_players": 2,
     "max_players": 2,
     "message_bytes": 48,
-    "protocol": 1
+    "protocol": 2
   },
   "license": "MIT",
   "assets": "original-imagegen-dice-atlas-v1-plus-code-rendered-ui",

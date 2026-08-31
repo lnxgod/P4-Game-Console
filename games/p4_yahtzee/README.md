@@ -7,7 +7,7 @@ snapshots; the cartridge never receives a socket, route, radio, or peer
 identity.
 
 Its `game.json` is also the reference declarative profile: turn-based,
-two-player, protocol 1, with a 48-byte message ceiling sized for the complete
+two-player, protocol 2, with a 48-byte message ceiling sized for the complete
 45-byte host snapshot. Console OS derives lobby compatibility and timing from
 that metadata; Yahtzee source stays independent of BLE and UART.
 
@@ -27,6 +27,9 @@ the fallback when the cartridge is launched normally.
 - Touch the persistent upper-left **EXIT** button to return directly to the
   launcher from any game screen.
 - **Back** returns to the mode menu, then to the launcher.
+- At the final-score screen, **A/Start** begins another match in the same local
+  or network session. Either network player may request the host-authoritative
+  rematch; **Back** is the explicit way to return to the mode menu.
 
 Each roll requests a short four-voice square/triangle cluster from the
 host-owned tone mixer, producing an original dice-clatter effect without a
@@ -35,8 +38,11 @@ PCM asset or direct speaker access.
 The top strip keeps both players' totals and upper-section progress visible.
 The bottom scorecard splits the six upper categories and seven lower
 categories into readable columns with live scoring previews.
-Committed rows switch to a darker locked treatment with a gold edge and
-explicit `SET` marker, so used categories cannot be confused with previews.
+After a roll settles, every unused category with a positive projected score
+switches to a bright pink `PICK` treatment. Legal zero-point choices remain
+neutral, and the focused category gains a cyan border in either case. Committed
+rows retain a darker locked treatment with a gold edge and explicit `SET`
+marker, so scoring, zero-point, and used categories remain distinct.
 
 ## Original generated art
 

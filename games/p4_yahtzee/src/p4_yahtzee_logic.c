@@ -113,6 +113,12 @@ void p4_yahtzee_reset_match(p4_yahtzee_state_t *state, uint32_t seed)
     const uint8_t local_slot = state->local_player_slot;
     const p4_game_multiplayer_role_t role = state->network_role;
     const uint64_t network_seed = state->network_seed;
+    const uint32_t network_revision = state->network_revision;
+    const uint32_t last_network_sequence[P4_YAHTZEE_PLAYERS] = {
+        state->last_network_sequence[0],
+        state->last_network_sequence[1],
+    };
+    const bool network_started = state->network_started;
     memset(state, 0, sizeof(*state));
     for (size_t player = 0U; player < P4_YAHTZEE_PLAYERS; ++player) {
         for (size_t category = 0U; category < P4_YAHTZEE_CATEGORIES;
@@ -128,6 +134,10 @@ void p4_yahtzee_reset_match(p4_yahtzee_state_t *state, uint32_t seed)
     state->local_player_slot = local_slot;
     state->network_role = role;
     state->network_seed = network_seed;
+    state->network_revision = network_revision;
+    memcpy(state->last_network_sequence, last_network_sequence,
+           sizeof(last_network_sequence));
+    state->network_started = network_started;
     state->phase = P4_YAHTZEE_TURN;
     state->focus = P4_YAHTZEE_FOCUS_DICE;
     state->rng = seed == 0U ? UINT32_C(0x59414854) : seed;

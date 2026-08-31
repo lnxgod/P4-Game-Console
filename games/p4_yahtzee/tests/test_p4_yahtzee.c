@@ -16,6 +16,13 @@ enum {
     FRAME_WORDS = STRIDE * P4_GAME_SURFACE_HEIGHT,
     TOTAL_WORDS = GUARD_WORDS + FRAME_WORDS + GUARD_WORDS,
     LINK_QUEUE = 32,
+    SCORE_Y = 88,
+    SCORE_ROW_H = 12,
+    SCORE_COL_W = 158,
+    COLOR_PANEL = 0x10c7,
+    COLOR_OPTION_PINK = 0xfb56,
+    COLOR_ACCENT = 0x5fea,
+    COLOR_GOLD = 0xfe60,
 };
 
 static int s_failures;
@@ -154,6 +161,35 @@ static void settle_roll(p4_game_instance_t *instance)
     }
 }
 
+static uint16_t score_marker_pixel(
+    const p4_game_surface_t *surface, uint8_t category)
+{
+    const uint8_t row = category < P4_YAHTZEE_THREE_KIND
+        ? category : (uint8_t)(category - P4_YAHTZEE_THREE_KIND);
+    const size_t x = category < P4_YAHTZEE_THREE_KIND
+        ? 2U : (size_t)SCORE_COL_W + 2U;
+    const size_t y = (size_t)SCORE_Y + (size_t)row * SCORE_ROW_H + 6U;
+    return surface->pixels[y * surface->stride_pixels + x];
+}
+
+static void check_fresh_match(
+    const p4_yahtzee_state_t *state, p4_yahtzee_mode_t mode)
+{
+    CHECK(state->phase == P4_YAHTZEE_TURN);
+    CHECK(state->mode == mode);
+    CHECK(state->current_player == 0U);
+    CHECK(state->roll_count == 0U);
+    CHECK(state->held_mask == 0U);
+    CHECK(state->turns_scored[0] == 0U);
+    CHECK(state->turns_scored[1] == 0U);
+    for (size_t player = 0U; player < P4_YAHTZEE_PLAYERS; ++player) {
+        for (size_t category = 0U; category < P4_YAHTZEE_CATEGORIES;
+             ++category) {
+            CHECK(state->scores[player][category] == -1);
+        }
+    }
+}
+
 static void test_scoring_rules(void)
 {
     static const uint8_t five_kind[5] = {6U, 6U, 6U, 6U, 6U};
@@ -258,6 +294,97 @@ static void test_local_lifecycle_and_framebuffer(void)
     p4_game_instance_stop(&instance);
 }
 
+static void test_scorecard_selection_highlights(void)
+{
+    const p4_game_services_t services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+    };
+    p4_game_instance_t instance = {0};
+    p4_yahtzee_state_t state;
+    CHECK(p4_game_instance_start(&instance, &p4_p4_yahtzee_game, &services,
+                                 &state, sizeof(state)));
+    CHECK(update_button(&instance, P4_BUTTON_A));
+
+    uint16_t *const pixels = calloc(
+        (size_t)P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT,
+        sizeof(*pixels));
+    CHECK(pixels != NULL);
+    if (pixels != NULL) {
+        p4_game_surface_t surface = {
+            .pixels = pixels,
+            .stride_pixels = P4_GAME_SURFACE_WIDTH,
+            .width = P4_GAME_SURFACE_WIDTH,
+            .height = P4_GAME_SURFACE_HEIGHT,
+        };
+        CHECK(p4_game_instance_render(&instance, &surface));
+        for (uint8_t category = 0U; category < P4_YAHTZEE_CATEGORIES;
+             ++category) {
+            CHECK(score_marker_pixel(&surface, category) == COLOR_PANEL);
+        }
+
+        CHECK(update_button(&instance, P4_BUTTON_START));
+        settle_roll(&instance);
+        const uint8_t preview_dice[P4_YAHTZEE_DICE] = {
+            2U, 2U, 3U, 4U, 6U,
+        };
+        memcpy(state.dice, preview_dice, sizeof(preview_dice));
+        memcpy(state.animation_dice, preview_dice, sizeof(preview_dice));
+        CHECK(p4_game_instance_render(&instance, &surface));
+        for (uint8_t category = 0U; category < P4_YAHTZEE_CATEGORIES;
+             ++category) {
+            const int preview = p4_yahtzee_score_dice(
+                preview_dice, (p4_yahtzee_category_t)category);
+            CHECK(score_marker_pixel(&surface, category) ==
+                  (preview > 0 ? COLOR_OPTION_PINK : COLOR_PANEL));
+        }
+
+        CHECK(update_button(&instance, P4_BUTTON_B));
+        CHECK(p4_game_instance_render(&instance, &surface));
+        CHECK(score_marker_pixel(&surface, P4_YAHTZEE_ONES) == COLOR_ACCENT);
+        CHECK(score_marker_pixel(&surface, P4_YAHTZEE_TWOS) ==
+              COLOR_OPTION_PINK);
+
+        state.scores[0][P4_YAHTZEE_THREES] = 0;
+        CHECK(p4_game_instance_render(&instance, &surface));
+        CHECK(score_marker_pixel(&surface, P4_YAHTZEE_THREES) == COLOR_GOLD);
+        CHECK(score_marker_pixel(&surface, P4_YAHTZEE_FOURS) ==
+              COLOR_OPTION_PINK);
+        free(pixels);
+    }
+    p4_game_instance_stop(&instance);
+}
+
+static void test_play_again_preserves_local_mode(void)
+{
+    const p4_game_services_t services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+    };
+    p4_game_instance_t instance = {0};
+    p4_yahtzee_state_t state;
+    CHECK(p4_game_instance_start(&instance, &p4_p4_yahtzee_game, &services,
+                                 &state, sizeof(state)));
+    CHECK(update_button(&instance, P4_BUTTON_A));
+
+    state.phase = P4_YAHTZEE_GAME_OVER;
+    state.current_player = 1U;
+    state.turns_scored[0] = P4_YAHTZEE_CATEGORIES;
+    state.turns_scored[1] = P4_YAHTZEE_CATEGORIES;
+    state.scores[0][P4_YAHTZEE_ONES] = 3;
+    state.scores[1][P4_YAHTZEE_CHANCE] = 22;
+    CHECK(update_button(&instance, P4_BUTTON_A));
+    check_fresh_match(&state, P4_YAHTZEE_LOCAL);
+
+    state.phase = P4_YAHTZEE_GAME_OVER;
+    state.current_player = 1U;
+    state.turns_scored[0] = P4_YAHTZEE_CATEGORIES;
+    state.turns_scored[1] = P4_YAHTZEE_CATEGORIES;
+    state.scores[0][P4_YAHTZEE_TWOS] = 6;
+    tap(&instance, 160U, 100U);
+    check_fresh_match(&state, P4_YAHTZEE_LOCAL);
+
+    p4_game_instance_stop(&instance);
+}
+
 static void test_network_host_authority(void)
 {
     test_link_t link;
@@ -305,6 +432,35 @@ static void test_network_host_authority(void)
     CHECK(host_state.network_revision == client_state.network_revision);
     CHECK(memcmp(host_state.dice, client_state.dice,
                  sizeof(host_state.dice)) == 0);
+
+    host_state.phase = P4_YAHTZEE_GAME_OVER;
+    client_state.phase = P4_YAHTZEE_GAME_OVER;
+    host_state.current_player = 0U;
+    client_state.current_player = 0U;
+    host_state.turns_scored[0] = P4_YAHTZEE_CATEGORIES;
+    host_state.turns_scored[1] = P4_YAHTZEE_CATEGORIES;
+    client_state.turns_scored[0] = P4_YAHTZEE_CATEGORIES;
+    client_state.turns_scored[1] = P4_YAHTZEE_CATEGORIES;
+    host_state.scores[1][P4_YAHTZEE_CHANCE] = 23;
+    client_state.scores[1][P4_YAHTZEE_CHANCE] = 23;
+    const uint32_t revision_before_replay = host_state.network_revision;
+
+    /* Slot 1 may request a rematch even though slot 0 ended with the turn. */
+    CHECK(update_button(&client, P4_BUTTON_A));
+    CHECK(client_state.phase == P4_YAHTZEE_GAME_OVER);
+    CHECK(update_empty(&host, 16U));
+    check_fresh_match(&host_state, P4_YAHTZEE_NETWORK);
+    CHECK(host_state.network_started);
+    CHECK(host_state.local_player_slot == 0U);
+    CHECK(host_state.network_role == P4_GAME_MULTIPLAYER_ROLE_HOST);
+    CHECK(host_state.network_revision == revision_before_replay + 1U);
+
+    CHECK(update_empty(&client, 16U));
+    check_fresh_match(&client_state, P4_YAHTZEE_NETWORK);
+    CHECK(client_state.network_started);
+    CHECK(client_state.local_player_slot == 1U);
+    CHECK(client_state.network_role == P4_GAME_MULTIPLAYER_ROLE_CLIENT);
+    CHECK(client_state.network_revision == host_state.network_revision);
     p4_game_instance_stop(&client);
     p4_game_instance_stop(&host);
 }
@@ -344,6 +500,8 @@ int main(void)
     CHECK(p4_p4_yahtzee_game.launcher_id == 113U);
     test_scoring_rules();
     test_local_lifecycle_and_framebuffer();
+    test_scorecard_selection_highlights();
+    test_play_again_preserves_local_mode();
     test_network_host_authority();
     test_touch_regions();
     if (s_failures != 0) {

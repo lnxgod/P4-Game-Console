@@ -166,6 +166,9 @@ static void play_action_tone(p4_game_context_t *context, uint8_t kind,
             context, held ? 660U : 440U, 45U, 3U, P4_WAVE_SQUARE);
     } else if (kind == P4_YAHTZEE_NET_SCORE) {
         (void)p4_game_play_tone(context, 784U, 80U, 4U, P4_WAVE_TRIANGLE);
+    } else if (kind == P4_YAHTZEE_NET_RESTART) {
+        (void)p4_game_play_tone(context, 523U, 65U, 3U, P4_WAVE_TRIANGLE);
+        (void)p4_game_play_tone(context, 659U, 90U, 3U, P4_WAVE_TRIANGLE);
     }
 }
 
@@ -187,6 +190,12 @@ static bool apply_host_action(p4_game_context_t *context,
                argument < P4_YAHTZEE_CATEGORIES) {
         changed = p4_yahtzee_score_turn(
             state, (p4_yahtzee_category_t)argument);
+    } else if (kind == P4_YAHTZEE_NET_RESTART &&
+               state->phase == P4_YAHTZEE_GAME_OVER) {
+        const uint32_t replay_seed = state->rng ^ state->network_revision ^
+            UINT32_C(0x504c4159);
+        p4_yahtzee_reset_match(state, replay_seed);
+        changed = true;
     }
     if (!changed) {
         return false;
@@ -206,7 +215,10 @@ bool p4_yahtzee_perform_action(
     uint8_t kind,
     uint8_t argument)
 {
-    if (!p4_yahtzee_local_turn(state)) {
+    if (state == NULL ||
+        (kind == P4_YAHTZEE_NET_RESTART
+            ? state->phase != P4_YAHTZEE_GAME_OVER
+            : !p4_yahtzee_local_turn(state))) {
         return false;
     }
     if (state->mode == P4_YAHTZEE_NETWORK &&
@@ -263,11 +275,15 @@ void p4_yahtzee_poll_network(
         }
         if (message.bytes != NET_REQUEST_BYTES ||
             message.data[0] != P4_YAHTZEE_NETWORK_PROTOCOL ||
-            read_u32(message.data + 2U) != state->network_revision ||
+            read_u32(message.data + 2U) != state->network_revision) {
+            continue;
+        }
+        const uint8_t kind = message.data[1];
+        if (kind != P4_YAHTZEE_NET_RESTART &&
             message.player_slot != state->current_player) {
             continue;
         }
         (void)apply_host_action(
-            context, state, message.data[1], message.data[6]);
+            context, state, kind, message.data[6]);
     }
 }

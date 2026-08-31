@@ -17,11 +17,13 @@ enum {
     COLOR_BG = 0x0844,
     COLOR_PANEL = 0x10c7,
     COLOR_PANEL_ALT = 0x1949,
+    COLOR_OPTION_PANEL = 0x48a8,
     COLOR_USED = 0x2109,
     COLOR_LINE = 0x3a4d,
     COLOR_TEXT = 0xffff,
     COLOR_MUTED = 0xad55,
     COLOR_ACCENT = 0x5fea,
+    COLOR_OPTION_PINK = 0xfb56,
     COLOR_GOLD = 0xfe60,
     COLOR_DANGER = 0xf986,
     DICE_Y = 30,
@@ -98,8 +100,8 @@ static void handle_touch(p4_game_context_t *context,
         return;
     }
     if (state->phase == P4_YAHTZEE_GAME_OVER) {
-        state->phase = P4_YAHTZEE_MENU;
-        state->menu_selection = 0U;
+        (void)p4_yahtzee_perform_action(
+            context, state, P4_YAHTZEE_NET_RESTART, 0U);
         return;
     }
     if (state->phase != P4_YAHTZEE_TURN ||
@@ -223,8 +225,8 @@ static p4_game_result_t game_update(
     }
     if (state->phase == P4_YAHTZEE_GAME_OVER) {
         if ((input->pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
-            state->phase = P4_YAHTZEE_MENU;
-            state->menu_selection = 0U;
+            (void)p4_yahtzee_perform_action(
+                context, state, P4_YAHTZEE_NET_RESTART, 0U);
         }
         return P4_GAME_CONTINUE;
     }
@@ -348,20 +350,35 @@ static void draw_score_row(p4_game_surface_t *surface,
         state->selected_category == category &&
         state->phase == P4_YAHTZEE_TURN;
     const int stored = state->scores[state->current_player][category];
+    const bool selectable = stored < 0 &&
+        state->phase == P4_YAHTZEE_TURN &&
+        p4_yahtzee_local_turn(state) && state->roll_count != 0U &&
+        state->roll_animation_ms == 0U;
     const int preview = state->roll_count == 0U ? 0 :
         p4_yahtzee_score_dice(state->dice,
                               (p4_yahtzee_category_t)category);
+    const bool scoring_option = selectable && preview > 0;
     p4_draw_fill_rect(surface, x + 1, y + 1, SCORE_COL_W - 3,
                       SCORE_ROW_H - 1,
                       stored >= 0 ? COLOR_USED :
-                      selected ? COLOR_PANEL_ALT : COLOR_PANEL);
+                      selected && selectable ? COLOR_PANEL_ALT :
+                      scoring_option ? COLOR_OPTION_PANEL : COLOR_PANEL);
     if (stored >= 0) {
         p4_draw_fill_rect(surface, x + 1, y + 1, 4,
                           SCORE_ROW_H - 1, COLOR_GOLD);
+    } else if (scoring_option) {
+        p4_draw_fill_rect(surface, x + 1, y + 1, 4,
+                          SCORE_ROW_H - 1, COLOR_OPTION_PINK);
+    }
+    if (selected) {
+        p4_draw_rect(surface, x + 1, y + 1, SCORE_COL_W - 3,
+                     SCORE_ROW_H - 1,
+                     selectable ? COLOR_ACCENT : COLOR_LINE);
     }
     p4_draw_text(surface, x + 5, y + 3, s_category_names[category],
                  stored >= 0 ? COLOR_MUTED :
-                 selected ? COLOR_ACCENT : COLOR_TEXT, 1U, 12U);
+                 selected && selectable ? COLOR_ACCENT :
+                 scoring_option ? COLOR_OPTION_PINK : COLOR_TEXT, 1U, 12U);
     char value[5];
     score_text(value, stored >= 0 ? stored : preview);
     p4_draw_text(surface, x + 130, y + 3, value,
@@ -370,6 +387,11 @@ static void draw_score_row(p4_game_surface_t *surface,
                  1U, 4U);
     if (stored >= 0) {
         p4_draw_text(surface, x + 106, y + 3, "SET", COLOR_GOLD, 1U, 3U);
+    } else if (selectable) {
+        p4_draw_text(surface, x + 102, y + 3, "PICK",
+                     selected ? COLOR_ACCENT :
+                     scoring_option ? COLOR_OPTION_PINK : COLOR_MUTED,
+                     1U, 4U);
     }
 }
 
@@ -510,9 +532,11 @@ static bool game_render(p4_game_context_t *context,
     p4_draw_fill_rect(surface, 2, 185, 224, 13, COLOR_PANEL);
     p4_draw_text(surface, 6, 188,
         !p4_yahtzee_local_turn(state) ? "WAITING FOR OTHER PLAYER" :
+        state->roll_animation_ms != 0U ? "ROLLING DICE..." :
+        state->roll_count == 0U ? "START ROLLS THE DICE" :
         state->focus == P4_YAHTZEE_FOCUS_DICE
-            ? "A HOLD  B SCORES  START ROLL" :
-              "A SCORE  B DICE  START ROLL",
+            ? "PINK ROWS SCORE  B SCORES" :
+              "A PICKS ROW  B DICE",
         !p4_yahtzee_local_turn(state) ? COLOR_GOLD : COLOR_MUTED, 1U, 28U);
     p4_draw_fill_rect(surface, 230, 185, 86, 13,
                       state->roll_count < P4_YAHTZEE_ROLLS_PER_TURN
