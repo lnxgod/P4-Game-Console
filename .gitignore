@@ -16,6 +16,13 @@ __pycache__/
 *.pyc
 /tmp/
 /result.json
+/.codex-worktrees/
+/.playwright-mcp/
+/agent-*.png
+/grokcoder-*.png
+
+# Finder/iCloud conflict copies are stale local duplicates, never source.
+* 2.*
 
 # Local source/reference archives used only by provenance verifiers.
 *.zip
