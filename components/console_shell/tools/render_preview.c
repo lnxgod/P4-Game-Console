@@ -77,21 +77,29 @@ static bool select_page(console_shell_t *shell, const char *name)
     }
     if (strcmp(name, "multiplayer") == 0 ||
         strcmp(name, "multiplayer-host") == 0 ||
+        strcmp(name, "multiplayer-settings") == 0 ||
         strcmp(name, "multiplayer-join") == 0) {
         shell->page = CONSOLE_PAGE_MULTIPLAYER;
         shell->active_app_id =
             s_apps[sizeof(s_apps) / sizeof(s_apps[0]) - 1U].id;
-        shell->multiplayer_view = strcmp(name, "multiplayer-host") == 0
-            ? CONSOLE_MULTIPLAYER_VIEW_HOST
-            : strcmp(name, "multiplayer-join") == 0
-                ? CONSOLE_MULTIPLAYER_VIEW_JOIN
-                : CONSOLE_MULTIPLAYER_VIEW_ROLE;
-        shell->multiplayer_selected_row =
-            shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_JOIN
-                ? CONSOLE_MULTIPLAYER_OPTION_LOBBY
-                : shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_HOST
-                    ? CONSOLE_MULTIPLAYER_OPTION_GAME
-                    : CONSOLE_MULTIPLAYER_OPTION_COUNT;
+        if (strcmp(name, "multiplayer-host") == 0) {
+            shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_HOST;
+            shell->multiplayer_selected_row =
+                CONSOLE_MULTIPLAYER_OPTION_COUNT;
+        } else if (strcmp(name, "multiplayer-settings") == 0) {
+            shell->multiplayer_view =
+                CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS;
+            shell->multiplayer_selected_row =
+                CONSOLE_MULTIPLAYER_OPTION_MODE;
+        } else if (strcmp(name, "multiplayer-join") == 0) {
+            shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_JOIN;
+            shell->multiplayer_selected_row =
+                CONSOLE_MULTIPLAYER_OPTION_LOBBY;
+        } else {
+            shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_ROLE;
+            shell->multiplayer_selected_row =
+                CONSOLE_MULTIPLAYER_OPTION_COUNT;
+        }
         shell->dirty = true;
         return true;
     }
@@ -161,7 +169,7 @@ int main(int argc, char **argv)
         fprintf(stderr,
                 "usage: %s home|all|games|arcade|system-folder|"
                 "colors|touch|system|files|manager|audio|multiplayer|"
-                "multiplayer-host|multiplayer-join "
+                "multiplayer-host|multiplayer-settings|multiplayer-join "
                 "output.ppm\n",
                 argv[0]);
         return EXIT_FAILURE;

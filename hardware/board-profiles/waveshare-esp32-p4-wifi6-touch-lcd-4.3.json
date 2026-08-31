@@ -59,8 +59,8 @@
     "storage": {
       "authorized": true,
       "scope": "exact-unit Console OS mount with an OS-owned journaled game-save namespace, plus exclusive H2 USB-device MSC host transfer and hash-gated H1 UART content staging",
-      "resources": "on-chip LDO channel 4; SDMMC0 at 1 MHz in one-bit mode on GPIO43 CLK, GPIO44 CMD, and GPIO39 D0; native H2 USB device on GPIO24/GPIO25; H1 CH343 USB-UART",
-      "evidence": "hardware/test-runs/2026-08-16-waveshare-console-os-0.4.3-dtmf-dynamic-sd-install.json",
+      "resources": "on-chip LDO channel 4; SDMMC0 in one-bit mode on GPIO43 CLK, GPIO44 CMD, and GPIO39 D0, with exact-unit 10 MHz first attempt and bounded 5/1/0.4 MHz fallback; native H2 USB device on GPIO24/GPIO25; H1 CH343 USB-UART",
+      "evidence": "hardware/test-runs/2026-08-17-waveshare-console-os-0.4.10-correct-org-brand-install.json and hardware/test-runs/2026-08-20-waveshare-unit2-console-os-0.4.37.json",
       "formatting_authorized": false,
       "writes_authorized": true,
       "write_scope": "host WRITE(10) while TinyUSB exclusively owns the unmounted microSD; an OS-owned H1 upload to one fixed non-runnable staging name while the app exclusively owns the mounted FAT volume; OS-owned bounded game-save objects below /SAVES while the app exclusively owns the mounted FAT volume; or an explicitly confirmed on-device conservative FAT32 metadata repair while the card is unmounted. No formatting, cartridge-selected path, or host-selected raw device path. Content staging requires size, chunk CRC32, exact content SHA-256, fsync, atomic rename, and final full-file readback. Game saves require fixed validated IDs, a copied non-blocking request, optimistic sequence, SHA-256 validation, stage/journal/backup recovery, and synchronized metadata. FAT repair requires unambiguous source metadata and per-sector write readback.",

@@ -81,7 +81,6 @@
 enum {
     GAME_STORAGE_MAX_FILES = 8,
     GAME_STORAGE_HASH_BUFFER_BYTES = 8192,
-    GAME_STORAGE_HASH_PACING_BYTES = 65536,
     GAME_STORAGE_SD_TRANSFER_BYTES = 4096,
     GAME_STORAGE_STREAM_BUFFER_BYTES = 16384,
     GAME_STORAGE_CONTENT_SCAN_STACK_BYTES = 6144,
@@ -480,9 +479,6 @@ static game_storage_content_t inspect_exact_file(
     mbedtls_sha256_context sha;
     mbedtls_sha256_init(&sha);
     int crypto = mbedtls_sha256_starts(&sha, 0);
-#if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
-    size_t bytes_since_delay = 0U;
-#endif
     while (crypto == 0) {
         const size_t count = fread(
             s_hash_buffer, 1U, sizeof(s_hash_buffer), file);
@@ -499,13 +495,6 @@ static game_storage_content_t inspect_exact_file(
                    s_hash_buffer, count);
         }
         content_validation_note_bytes(count);
-#if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
-        bytes_since_delay += count;
-        if (bytes_since_delay >= GAME_STORAGE_HASH_PACING_BYTES) {
-            bytes_since_delay = 0U;
-            vTaskDelay(1);
-        }
-#endif
         if (header_bytes < sizeof(header)) {
             size_t copy = sizeof(header) - header_bytes;
             if (copy > count) {

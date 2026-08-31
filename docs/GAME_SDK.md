@@ -177,7 +177,7 @@ Include only headers under `components/p4_game_api/include/p4/`:
 - `p4/achievements.h`: the bounded OS-owned session catalog.
 
 `update` receives measured, bounded elapsed time plus complete `held`,
-`pressed`, and `released` snapshots. Console OS targets 30 Hz, reports the
+`pressed`, and `released` snapshots. Console OS targets 60 Hz, reports the
 actual wall-clock delta clamped to `1..P4_GAME_MAX_FRAME_DELTA_MS`, and does
 not issue catch-up bursts after a slow frame. Return
 `P4_GAME_EXIT_TO_LAUNCHER` when Back is pressed.

@@ -2,6 +2,26 @@
 
 ## Status
 
+Console OS 0.4.92 gives multiplayer setup a bounded three-stop Host page:
+game, Match Settings, and one large create/start action. Detailed Doom and
+native-game controls remain available on the separate Match Settings page;
+Back returns to Host without destroying the lobby. Opening Multiplayer lazily
+prefers BLE while retaining wired UART as the explicit fallback. BLE is still
+not started during boot, and a failed BLE start leaves the wired path active.
+
+Console OS 0.4.91 hardens the base runtime without changing the 768x480 shell
+or 320x200 cartridge contracts. Native games and the launcher now use the
+shared fractional 60 Hz scheduler instead of truncating 16 ms to one 100 Hz
+FreeRTOS tick. Native audio emits the exact repeating 266/267-frame sequence
+required for 16 kHz playback, and deadline telemetry reports genuine misses
+rather than counting display-paced frames as overruns. Storage and diagnostic
+snapshots refresh at 5 Hz while controls and multiplayer service remain at
+60 Hz. Exact P4G validation starts after SD mount in a low-priority PSRAM task
+and overlaps the boot sound, but the launcher still waits for the validated
+catalog. OTA acceptance is withheld until optional services survive a
+10-second health window; fatal software paths show a red recovery frame rather
+than deliberately blanking a working panel.
+
 The current Waveshare successor changes the home surface, not the Game API.
 Console OS renders an 80x30 CP437/ANSI BBS natively in the centered 768x480
 viewport, presents games and folders as numbered doors, and keeps the existing
@@ -37,7 +57,7 @@ before tic delivery is enabled. Both barriers are bounded; host tests cover
 their pure state machines, while two-console gameplay remains a separate
 hardware acceptance.
 
-The current source successor keeps game cadence in the OS at a target 30 Hz,
+The current source successor keeps game cadence in the OS at a target 60 Hz,
 but passes cartridges measured wall-clock frame time instead of a fabricated
 constant. Deltas are clamped to the Game API bound, the scheduler waits only
 for the remainder of the current frame, and late frames are logged rather than

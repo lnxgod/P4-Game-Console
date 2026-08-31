@@ -238,6 +238,8 @@ typedef enum {
     CONSOLE_MULTIPLAYER_VIEW_ROLE = 0,
     CONSOLE_MULTIPLAYER_VIEW_HOST,
     CONSOLE_MULTIPLAYER_VIEW_JOIN,
+    /** Detailed host-only match controls reached from the simple Host page. */
+    CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS,
 } console_multiplayer_view_t;
 
 enum {

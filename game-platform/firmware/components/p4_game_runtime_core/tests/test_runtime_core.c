@@ -33,6 +33,27 @@ static void test_fractional_scheduler(void)
     }
     CHECK(total == 1000U);
     CHECK(scheduler.phase == 0U);
+
+    total = 0U;
+    CHECK(p4_tick_scheduler_init(&scheduler, 100U, 60U) == P4_SCRIPT_STATUS_OK);
+    for (index = 0U; index < 60U; ++index) {
+        CHECK(p4_tick_scheduler_next(&scheduler, &interval) == P4_SCRIPT_STATUS_OK);
+        CHECK(interval == 1U || interval == 2U);
+        total += interval;
+    }
+    CHECK(total == 100U);
+    CHECK(scheduler.phase == 0U);
+
+    total = 0U;
+    CHECK(p4_tick_scheduler_init(&scheduler, 16000U, 60U) == P4_SCRIPT_STATUS_OK);
+    for (index = 0U; index < 60U; ++index) {
+        CHECK(p4_tick_scheduler_next(&scheduler, &interval) == P4_SCRIPT_STATUS_OK);
+        CHECK(interval == 266U || interval == 267U);
+        total += interval;
+    }
+    CHECK(total == 16000U);
+    CHECK(scheduler.phase == 0U);
+
     CHECK(p4_tick_scheduler_init(&scheduler, 50U, 60U) == P4_SCRIPT_STATUS_INVALID_ARGUMENT);
 }
 

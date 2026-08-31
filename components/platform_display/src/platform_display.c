@@ -91,6 +91,7 @@ static uint16_t *s_submit_frame;
 static ppa_client_handle_t s_game_scaler;
 static uint16_t *s_panel_frames[2];
 static uint8_t s_active_panel_frame;
+static bool s_game_margins_clean[2];
 static bool s_accelerator_failure_logged;
 #endif
 static StaticSemaphore_t s_api_lock_storage;
@@ -235,6 +236,7 @@ static void release_owned_resources(void)
         s_game_scaler = NULL;
     }
     memset(s_panel_frames, 0, sizeof(s_panel_frames));
+    memset(s_game_margins_clean, 0, sizeof(s_game_margins_clean));
     s_active_panel_frame = 0U;
     s_accelerator_failure_logged = false;
 #endif
@@ -635,10 +637,12 @@ static void clear_accelerated_game_margins(uint16_t *destination)
 
 static bool accelerate_game_frame(const uint16_t *source,
                                   size_t source_stride_pixels,
-                                  uint16_t *destination)
+                                  uint16_t *destination,
+                                  uint8_t destination_index)
 {
     if (s_game_scaler == NULL || source_stride_pixels !=
-            PLATFORM_DISPLAY_GAME_WIDTH || destination == NULL) {
+            PLATFORM_DISPLAY_GAME_WIDTH || destination == NULL ||
+        destination_index >= 2U) {
         return false;
     }
     const ppa_srm_oper_config_t operation = {
@@ -669,7 +673,14 @@ static bool accelerate_game_frame(const uint16_t *source,
     const esp_err_t result =
         ppa_do_scale_rotate_mirror(s_game_scaler, &operation);
     if (result == ESP_OK) {
-        clear_accelerated_game_margins(destination);
+        /* PPA writes only the scaled game viewport. A content/shell frame
+         * dirties the surrounding pixels, but once each DSI-owned buffer has
+         * been cleared its margins remain black across subsequent game
+         * submits. Avoid rewriting 46 KiB on every frame. */
+        if (!s_game_margins_clean[destination_index]) {
+            clear_accelerated_game_margins(destination);
+            s_game_margins_clean[destination_index] = true;
+        }
         __atomic_fetch_add(
             &s_stats.accelerated_submits, 1U, __ATOMIC_RELAXED);
         return true;
@@ -728,13 +739,19 @@ static esp_err_t submit_rgb565(
         goto fail_dark;
     }
     const bool accelerated = game_layout && accelerate_game_frame(
-        source, source_stride_pixels, output_frame);
+        source, source_stride_pixels, output_frame, target_index);
     if (!accelerated && !layout(
             source, source_stride_pixels, output_frame,
             PLATFORM_DISPLAY_NATIVE_WIDTH,
             PLATFORM_DISPLAY_NATIVE_HEIGHT)) {
         err = ESP_ERR_INVALID_ARG;
         goto fail;
+    }
+    if (!game_layout) {
+        s_game_margins_clean[target_index] = false;
+    } else if (!accelerated) {
+        /* The CPU game layout writes the complete frame, including margins. */
+        s_game_margins_clean[target_index] = true;
     }
 #else
     if (s_submit_frame == NULL) {

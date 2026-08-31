@@ -24,14 +24,28 @@ hard-disk seek clicks, dials `614-276-3639` with deliberately paced
 dual-frequency DTMF pairs, then plays a condensed V.25/V.22bis 2400-baud handshake at boot master
 step 10/10. Display and the
 branded frame still come first, followed by the minimum codec control bus,
-background storage worker, boot audio, and input. The branded
+background storage worker, exact P4G catalog worker, boot audio, and input. The branded
 loading screen remains visible with a state-driven SD animation until the
 microSD mount reaches a ready or degraded terminal state; serial evidence reports
-the measured dial and SD initialization durations. Program Manager's first frame
-then includes the discovered P4G catalog. A slow or missing card therefore shows
+the measured dial and SD initialization durations. Catalog validation overlaps
+the sound sequence on a low-priority PSRAM task, and Program Manager's first frame
+still includes the exact validated P4G catalog. A slow or missing card therefore shows
 explicit loading instead of a black panel. The Colors app switches the shell
 among Gold, Arcade, Ocean, and Sunset palettes for the current session. There is
 no CRT filter.
+
+The shell and native Game API runtime use a fractional 60 Hz scheduler on the
+100 Hz FreeRTOS clock. Native audio follows the matching 266/267-frame cadence
+at 16 kHz. High-churn storage and diagnostic counters are sampled at 5 Hz so a
+controller or multiplayer page cannot force continuous full-screen redraws.
+
+Console OS 0.4.92 simplifies multiplayer setup without removing controls.
+After Host or Join is chosen, the Host page has only three focus stops: game,
+Match Settings, and the large create/start action. The existing mode, map,
+skill, monster, respawn, time-limit, game, and wired-link controls live on the
+separate Match Settings page. Opening Multiplayer lazily prefers BLE for the
+game link; a failed or unavailable BLE start leaves wired UART selectable and
+does not affect boot or the controller-first H2 USB role.
 
 ## Laptop game storage
 

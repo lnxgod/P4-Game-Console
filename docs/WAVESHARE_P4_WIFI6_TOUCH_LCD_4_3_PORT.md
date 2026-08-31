@@ -52,11 +52,13 @@ the first firmware target:
   CLK/CMD/D0/D1/D2/D3 GPIO18/19/14/15/16/17, with the C6 enable/reset line on
   P4 GPIO54. This matches Espressif's P4 Function-EV hosted-radio preset.
 
-The exact connected unit now passes the Console OS app-owned microSD mount at
-1 MHz in one-bit mode after enabling LDO channel 4. Omitting that power-control
-handle produces an SD `send_op_cond` timeout before card identification; it is
-not a filesystem-format error. The final acceptance record is
-`hardware/test-runs/2026-08-16-waveshare-console-os-quake-sd-install.json`.
+Both recorded development units pass the Console OS app-owned microSD mount at
+10 MHz in one-bit mode after enabling LDO channel 4. Firmware retains bounded
+5/1/0.4 MHz fallback for card and signal-margin differences. Omitting that
+power-control handle produces an SD `send_op_cond` timeout before card
+identification; it is not a filesystem-format error. The exact-unit records are
+`hardware/test-runs/2026-08-17-waveshare-console-os-0.4.10-correct-org-brand-install.json`
+and `hardware/test-runs/2026-08-20-waveshare-unit2-console-os-0.4.37.json`.
 
 These values come from Waveshare's published BSP source, not from the Elecrow
 profile. Source review alone is not local hardware acceptance. The storage
@@ -178,6 +180,11 @@ The current unflashed UI candidate renders Console OS natively at 768x480 with
 an 80x30 CP437 BBS home and ANSI connection boot sequence. This does not alter
 the 320x200 game surface. H1 is reserved as the first BBS/server serial link so
 H2 can remain controller-first; see `docs/BBS.md`.
+
+The Multiplayer app starts no BLE work at boot. Opening it lazily prefers BLE
+for room discovery and gameplay, while the Match Settings page keeps wired
+UART available as a deliberate fallback. This policy does not change H2's
+controller-first USB Host role or the separate, explicit USB Drive app.
 
 ## Direct multiplayer UART candidate
 

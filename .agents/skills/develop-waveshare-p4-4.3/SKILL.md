@@ -88,11 +88,13 @@ does not make H2 source VBUS. The recorded controller-first route uses external
 power/backfeed protection, the full-speed host policy, bounded hub/HID parsing,
 and immediate neutral state on disconnect. H1 is never the controller path.
 
-Keep wired controller mode as the default. BLE radio startup is lazy and may
-occur only after the user selects BLE multiplayer; preserve the known-good
-wired Doom path when changing radio or lobby code. In the BLE lobby, preserve
-the explicit Host/Join role screen. Host owns game/settings/create; Join uses a
-bounded wildcard scan, lists each room's resolved local game identity, and
+Keep the H2 USB Host/HID controller role as the device default. Do not start
+multiplayer BLE during boot. Opening the Multiplayer app lazily prefers BLE for
+the game link; preserve wired UART as an explicit fallback and preserve the
+known-good wired Doom path when changing radio or lobby code. In the BLE lobby,
+preserve the explicit Host/Join role screen. Host owns game/settings/create;
+Join uses a bounded wildcard scan, lists each room's resolved local game
+identity, and
 requires an explicit room selection before connecting. Join must never create
 a room or expose a separate game filter. While unconnected, hosts use bounded
 alternating

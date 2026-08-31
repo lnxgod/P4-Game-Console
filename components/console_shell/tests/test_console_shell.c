@@ -607,7 +607,8 @@ static void test_multiplayer_start_lockout(void)
         press_button(&shell, CONSOLE_BUTTON_ACCEPT);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(shell.multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_HOST);
-    shell.multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_COUNT;
+    CHECK(shell.multiplayer_selected_row ==
+          CONSOLE_MULTIPLAYER_OPTION_COUNT);
     action = press_button(&shell, CONSOLE_BUTTON_ACCEPT);
     CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_LAUNCH_GAME);
     CHECK(action.app_id == APP_DOOM);
@@ -617,20 +618,39 @@ static void test_multiplayer_start_lockout(void)
     action = press_button(&shell, CONSOLE_BUTTON_DOWN);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(shell.multiplayer_selected_row ==
-          CONSOLE_MULTIPLAYER_OPTION_TRANSPORT);
+          CONSOLE_MULTIPLAYER_OPTION_GAME);
     action = press_button(&shell, CONSOLE_BUTTON_LEFT);
     CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_CONFIGURE);
     CHECK(action.multiplayer_option ==
-          CONSOLE_MULTIPLAYER_OPTION_TRANSPORT);
+          CONSOLE_MULTIPLAYER_OPTION_GAME);
     CHECK(action.multiplayer_delta == -1);
     action = press_button(&shell, CONSOLE_BUTTON_DOWN);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.multiplayer_selected_row >
+          CONSOLE_MULTIPLAYER_OPTION_COUNT);
+    const size_t settings_row = shell.multiplayer_selected_row;
+    console_shell_runtime_info_t refreshed_runtime = shell.runtime;
+    refreshed_runtime.multiplayer_game_is_doom = false;
+    console_shell_set_runtime_info(&shell, &refreshed_runtime);
+    CHECK(shell.multiplayer_selected_row == settings_row);
+    refreshed_runtime.multiplayer_game_is_doom = true;
+    console_shell_set_runtime_info(&shell, &refreshed_runtime);
+    action = press_button(&shell, CONSOLE_BUTTON_ACCEPT);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.multiplayer_view ==
+          CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS);
     CHECK(shell.multiplayer_selected_row ==
-          CONSOLE_MULTIPLAYER_OPTION_GAME);
-    action = press_button(&shell, CONSOLE_BUTTON_LEFT);
-    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_CONFIGURE);
-    CHECK(action.multiplayer_option ==
-          CONSOLE_MULTIPLAYER_OPTION_GAME);
+          CONSOLE_MULTIPLAYER_OPTION_MODE);
+
+    action = press_button(&shell, CONSOLE_BUTTON_BACK);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_HOST);
+    CHECK(shell.multiplayer_selected_row ==
+          CONSOLE_MULTIPLAYER_OPTION_COUNT);
+    action = tap(&shell, 160U, 160U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.multiplayer_view ==
+          CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS);
     action = tap(&shell, 280U, 115U);
     CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_CONFIGURE);
     CHECK(action.multiplayer_option == CONSOLE_MULTIPLAYER_OPTION_MAP);
@@ -648,7 +668,19 @@ static void test_multiplayer_start_lockout(void)
     shell.runtime.multiplayer_settings_editable = false;
     CHECK(tap(&shell, 280U, 115U).type == CONSOLE_ACTION_NONE);
     shell.runtime.multiplayer_settings_editable = true;
-    shell.multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_COUNT;
+
+    action = tap(&shell, 20U, 15U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_HOST);
+    action = tap(&shell, 160U, 160U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.multiplayer_view ==
+          CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS);
+    action = tap(&shell, 160U, 185U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_HOST);
+    CHECK(shell.multiplayer_selected_row ==
+          CONSOLE_MULTIPLAYER_OPTION_COUNT);
 
     shell.runtime.multiplayer_launch_syncing = true;
     CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
@@ -744,6 +776,10 @@ static void test_multiplayer_start_lockout(void)
         CHECK(console_shell_render_rgb565(
             &shell, frame, CONSOLE_SHELL_WIDTH));
         shell.multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_HOST;
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        shell.multiplayer_view =
+            CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS;
         CHECK(console_shell_render_rgb565(
             &shell, frame, CONSOLE_SHELL_WIDTH));
         shell.multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_JOIN;

@@ -444,10 +444,11 @@ static void test_audio_mixer(void)
         .waveform = P4_WAVE_TRIANGLE,
     };
     CHECK(p4_audio_mixer_play_tone(&mixer, &tone));
-    int16_t pcm[256U * 2U];
-    CHECK(p4_audio_mixer_render(&mixer, pcm, 256U));
+    int16_t pcm[P4_GAME_AUDIO_MAX_RENDER_FRAMES * 2U];
+    CHECK(p4_audio_mixer_render(&mixer, pcm, 267U));
     bool nonzero = false;
-    for (size_t frame = 0U; frame < 256U; ++frame) {
+    for (size_t frame = 0U;
+         frame < P4_GAME_AUDIO_MAX_RENDER_FRAMES; ++frame) {
         CHECK(pcm[frame * 2U] == pcm[frame * 2U + 1U]);
         nonzero = nonzero || pcm[frame * 2U] != 0;
     }
@@ -455,9 +456,9 @@ static void test_audio_mixer(void)
     p4_audio_mixer_stats_t stats;
     p4_audio_mixer_get_stats(&mixer, &stats);
     CHECK(stats.tones_started == 1U);
-    CHECK(stats.frames_rendered == 256U);
+    CHECK(stats.frames_rendered == 267U);
     CHECK(stats.active_voices == 0U);
-    CHECK(!p4_audio_mixer_render(&mixer, pcm, 257U));
+    CHECK(!p4_audio_mixer_render(&mixer, pcm, 268U));
     p4_tone_t invalid = tone;
     invalid.frequency_hz = 0U;
     CHECK(!p4_audio_mixer_play_tone(&mixer, &invalid));

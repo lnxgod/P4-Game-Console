@@ -600,8 +600,13 @@ def main() -> None:
         "start_game_storage_initialization()",
         "wait_for_game_storage_with_boot_animation()",
         "result = present(shell);",
-        "platform_os_update_mark_running_valid(",
+        "confirm_ota_after_stable_runtime()",
     ], "first-frame OTA confirmation")
+    require(
+        "platform_os_update_mark_running_valid(" in shell_main and
+        "CONSOLE_RUNTIME_HEALTH_CONFIRM_MS = 10000" in shell_main and
+        "reason=post-service-health-gate" in shell_main,
+        "OTA rollback is cancelled before the post-service health gate")
     update_source = (
         ROOT / "components/platform_os_update/src/platform_os_update.c"
     ).read_text(encoding="utf-8")
