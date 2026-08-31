@@ -150,6 +150,38 @@ static void test_bold_ascii_uses_larger_glyph(void)
     free(frame);
 }
 
+static void test_row_composite_is_offset_and_clipped(void)
+{
+    p4_ansi_terminal_t terminal;
+    p4_ansi_init(&terminal);
+    terminal.cursor_visible = false;
+    write_text(&terminal, "\x1b[97;44mA");
+    const size_t words =
+        (size_t)P4_ANSI_SURFACE_WIDTH * P4_ANSI_SURFACE_HEIGHT;
+    uint16_t *const frame = malloc(words * sizeof(*frame));
+    CHECK(frame != NULL);
+    if (frame == NULL) {
+        return;
+    }
+    for (size_t index = 0U; index < words; ++index) {
+        frame[index] = UINT16_C(0x1234);
+    }
+    CHECK(!p4_ansi_render_rows_rgb565(
+        &terminal, frame, P4_ANSI_SURFACE_WIDTH,
+        P4_ANSI_SURFACE_WIDTH, P4_ANSI_SURFACE_HEIGHT,
+        P4_ANSI_ROWS, 1U, 0, 0U, P4_ANSI_SURFACE_HEIGHT));
+    CHECK(p4_ansi_render_rows_rgb565(
+        &terminal, frame, P4_ANSI_SURFACE_WIDTH,
+        P4_ANSI_SURFACE_WIDTH, P4_ANSI_SURFACE_HEIGHT,
+        0U, 1U, 8, 8U, P4_ANSI_CELL_HEIGHT));
+    const size_t left =
+        (P4_ANSI_SURFACE_WIDTH - P4_ANSI_TEXT_WIDTH) / 2U;
+    CHECK(frame[left] == UINT16_C(0x1234));
+    CHECK(frame[8U * P4_ANSI_SURFACE_WIDTH + left] != UINT16_C(0x1234));
+    CHECK(frame[24U * P4_ANSI_SURFACE_WIDTH + left] == UINT16_C(0x1234));
+    free(frame);
+}
+
 int main(void)
 {
     test_text_and_sgr();
@@ -157,6 +189,7 @@ int main(void)
     test_scroll_and_untrusted_sequences();
     test_cp437_render_bounds();
     test_bold_ascii_uses_larger_glyph();
+    test_row_composite_is_offset_and_clipped();
     if (s_failures != 0) {
         fprintf(stderr, "%d p4 ANSI test failure(s)\n", s_failures);
         return EXIT_FAILURE;

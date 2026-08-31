@@ -138,13 +138,44 @@ int main(void)
     CHECK(console_shell_init(
         &shell, s_paged_apps,
         sizeof(s_paged_apps) / sizeof(s_paged_apps[0])));
+    uint16_t *const transition_pixels = calloc(
+        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
+        sizeof(*transition_pixels));
+    CHECK(transition_pixels != NULL);
+    uint64_t first_page_hash = 0U;
+    if (transition_pixels != NULL) {
+        CHECK(console_shell_render_rgb565(
+            &shell, transition_pixels, CONSOLE_SHELL_WIDTH));
+        first_page_hash = frame_hash(
+            transition_pixels,
+            (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT);
+    }
     CHECK(shell.home_scroll_row == 0U);
     action = tap_surface(&shell, 620U, 408U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(shell.home_scroll_row == 1U);
+    CHECK(console_shell_advance(&shell, 32U));
+    if (transition_pixels != NULL) {
+        CHECK(console_shell_render_rgb565(
+            &shell, transition_pixels, CONSOLE_SHELL_WIDTH));
+        const uint64_t transition_hash = frame_hash(
+            transition_pixels,
+            (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT);
+        CHECK(transition_hash != first_page_hash);
+        for (unsigned frame = 0U; frame < 20U; ++frame) {
+            (void)console_shell_advance(&shell, 16U);
+        }
+        CHECK(console_shell_render_rgb565(
+            &shell, transition_pixels, CONSOLE_SHELL_WIDTH));
+        CHECK(frame_hash(
+            transition_pixels,
+            (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT) !=
+            transition_hash);
+    }
     action = tap_surface(&shell, 80U, 408U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(shell.home_scroll_row == 0U);
+    free(transition_pixels);
 
     if (s_failures != 0) {
         fprintf(stderr, "%d BBS shell test failure(s)\n", s_failures);

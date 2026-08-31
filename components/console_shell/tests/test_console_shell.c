@@ -278,6 +278,52 @@ static void test_launcher_scrolling(void)
     CHECK(shell.home_scroll_row == 0U);
 }
 
+static void test_smooth_scroll_timing_and_interruption(void)
+{
+    console_app_descriptor_t apps[10];
+    for (size_t i = 0U; i < 10U; ++i) {
+        apps[i] = s_apps[i % TEST_APP_COUNT];
+        apps[i].id = (uint32_t)(300U + i);
+    }
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, apps, 10U));
+    CHECK(tap(&shell, 20U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_all_programs);
+
+    CHECK(tap(&shell, 304U, 165U).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_scroll_row == 1U);
+    CHECK(shell.home_scroll_visual_q16 == 0);
+    CHECK(console_shell_advance(&shell, 16U));
+    const int32_t first_step = shell.home_scroll_visual_q16;
+    CHECK(first_step > 0);
+    CHECK(first_step < (1 << 16));
+    CHECK(console_shell_advance(&shell, 16U));
+    CHECK(shell.home_scroll_visual_q16 > first_step);
+
+    const int32_t interrupted_at = shell.home_scroll_visual_q16;
+    CHECK(tap(&shell, 304U, 50U).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_scroll_row == 0U);
+    CHECK(console_shell_advance(&shell, 16U));
+    CHECK(shell.home_scroll_visual_q16 < interrupted_at);
+    for (unsigned frame = 0U; frame < 20U; ++frame) {
+        (void)console_shell_advance(&shell, 16U);
+    }
+    CHECK(shell.home_scroll_visual_q16 == 0);
+    CHECK(!console_shell_advance(&shell, 16U));
+
+    CHECK(tap(&shell, 304U, 165U).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(console_shell_advance(&shell, 10000U));
+    CHECK(shell.home_scroll_visual_q16 > 0);
+    CHECK(shell.home_scroll_visual_q16 < (1 << 16));
+    for (unsigned frame = 0U; frame < 20U; ++frame) {
+        (void)console_shell_advance(&shell, 16U);
+    }
+    CHECK(shell.home_scroll_visual_q16 == (1 << 16));
+}
+
 static void test_render_bounds_and_stride(void)
 {
     enum {
@@ -1405,6 +1451,7 @@ int main(void)
     test_system_cartridge_folders();
     test_controller_navigation();
     test_launcher_scrolling();
+    test_smooth_scroll_timing_and_interruption();
     test_fail_closed_gestures();
     test_touch_page_and_runtime();
     test_file_manager();

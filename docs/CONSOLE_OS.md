@@ -2,6 +2,16 @@
 
 ## Status
 
+Console OS 0.4.95 makes launcher scrolling time-based instead of row-jumped.
+Touch drags update a bounded 16.16 row position, release applies a one-row
+maximum fling and nearest-row snap, and controller or page-button movement uses
+a short cubic ease that can be interrupted and retargeted. The native 768x480
+BBS composites clipped outgoing and incoming ANSI door rows into the existing
+framebuffer, so it does not allocate a second screen. The Windows fallback uses
+the same state machine and a clipped primitive viewport. Long service stalls
+are capped to 50 ms of animation progress, while input and animation remain on
+the existing fractional 60 Hz UI loop.
+
 Console OS 0.4.94 confines the background P4G worker to removable-SD scanning.
 OTA partition inspection now runs afterward on app_main's internal stack because
 the ESP flash path can disable the PSRAM cache. The catalog worker retains its
@@ -535,9 +545,11 @@ display, overlays, and exit callbacks in a deterministic order.
 | Controller input | `platform_gamepad` selects a complete USB or BLE HID snapshot | same canonical snapshot | Wired USB priority; encrypted identity-bound BLE fallback; disconnect immediately neutralizes input; games receive no host, GATT, bond, or address handle |
 | OS update | inactive OTA slot | unavailable | USB stops during streaming; boot slot changes only after final image verification |
 
-The launcher surface is standard RGB565 at 320x200. The proven display service
-scales it 3x into a 960x600 viewport with 32-pixel black margins on the
-1024x600 panel. Touch coordinates outside that viewport cannot activate UI.
+The Elecrow and Olimex launcher surface is standard RGB565 at 320x200. The
+Elecrow display service scales it 3x into a 960x600 viewport with 32-pixel black
+margins on the 1024x600 panel. Waveshare renders the ANSI home page natively in
+its fixed centered 768x480 shell viewport. Touch coordinates outside each
+board's declared viewport cannot activate UI.
 
 ## App registry
 
@@ -550,10 +562,12 @@ segments, each at most 15 bytes. The shell itself owns no heap, filesystem, or
 recursion; storage and loading remain reusable platform services.
 
 The shell accepts at most five contacts and shows a three-column, two-row
-viewport. Bounded up/down controls and vertical one-finger swipes scroll whole
-rows without wrapping; a recognized swipe suppresses tile launch. The
-Program Manager chrome, program/folder icons, scrollbar, and status bar are
-RGB565 primitives and require no bitmap asset.
+Windows viewport or five-door BBS viewport. Bounded up/down controls ease
+between rows without wrapping. A vertical one-finger drag tracks a fractional
+row, suppresses tile launch once recognized, then performs a bounded fling and
+nearest-row snap. Call `console_shell_advance()` once per UI tick; large elapsed
+times are internally capped. Program Manager chrome, program/folder icons,
+scrollbar, and status bar are RGB565 primitives and require no bitmap asset.
 
 To add another built-in app:
 

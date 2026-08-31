@@ -38,6 +38,11 @@ The shell and native Game API runtime use a fractional 60 Hz scheduler on the
 100 Hz FreeRTOS clock. Native audio follows the matching 266/267-frame cadence
 at 16 kHz. High-churn storage and diagnostic counters are sampled at 5 Hz so a
 controller or multiplayer page cannot force continuous full-screen redraws.
+Console OS 0.4.95 advances launcher motion on that UI scheduler: touch tracks
+fractional rows, release snaps with a bounded fling, and buttons/controllers
+use an interruptible cubic ease. The Waveshare BBS slides only its clipped ANSI
+door viewport into the existing 768x480 framebuffer, avoiding a second frame
+allocation.
 
 Console OS 0.4.94 keeps flash/OTA inspection on the main task's internal stack
 while the 32 KiB PSRAM worker scans only removable-SD game data. This prevents
@@ -123,8 +128,8 @@ first launcher catalog; root `.P4G` files are read only for compatibility with
 older cards.
 No `.P4G` cartridge is linked into the OTA application. The complete runtime
 launcher catalog comes from validated microSD files. Its lightweight desktop
-view shows three columns by two rows, scrolls with vertical
-arrows or a one-finger swipe, and supports up to 32 apps. It derives at most
+view shows three columns by two rows, scrolls smoothly with vertical arrows,
+controller input, or a one-finger drag, and supports up to 32 apps. It derives at most
 two folder levels from validated package metadata. The skin is drawn with
 RGB565 primitives and adds no launcher bitmap asset. Create a native starter
 without editing the launcher:

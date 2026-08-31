@@ -106,6 +106,25 @@ bool p4_ansi_render_rgb565(const p4_ansi_terminal_t *terminal,
                            size_t width,
                            size_t height);
 
+/**
+ * Composite selected terminal rows into an existing RGB565 frame.
+ *
+ * Rows retain their normal horizontal position and are translated vertically
+ * by `y_offset_pixels`. Writes are clipped to the bounded destination band;
+ * pixels outside that band are left untouched. This is intended for small
+ * text-mode UI transitions without allocating a second full framebuffer.
+ */
+bool p4_ansi_render_rows_rgb565(const p4_ansi_terminal_t *terminal,
+                                uint16_t *pixels,
+                                size_t stride_pixels,
+                                size_t width,
+                                size_t height,
+                                size_t first_row,
+                                size_t row_count,
+                                int32_t y_offset_pixels,
+                                size_t clip_top,
+                                size_t clip_height);
+
 /** Read-only bounded cell access for UI hit mapping and tests. */
 const p4_ansi_cell_t *p4_ansi_cell(const p4_ansi_terminal_t *terminal,
                                    size_t column,

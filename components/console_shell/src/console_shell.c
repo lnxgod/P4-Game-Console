@@ -50,8 +50,15 @@ enum {
     SCROLL_BUTTON_HEIGHT = 15,
     SCROLL_TRACK_TOP = 58,
     SCROLL_TRACK_HEIGHT = 100,
-    SCROLL_DRAG_THRESHOLD = 18,
-    SCROLL_DRAG_ROW_STEP = 32,
+    SCROLL_DRAG_THRESHOLD = 5,
+    SCROLL_TOUCH_ROW_PIXELS = 40,
+    SCROLL_POSITION_ONE = 1 << 16,
+    SCROLL_ANIMATION_BASE_MS = 100,
+    SCROLL_ANIMATION_PER_ROW_MS = 28,
+    SCROLL_ANIMATION_MAX_MS = 220,
+    SCROLL_ADVANCE_MAX_MS = 50,
+    SCROLL_FLING_PROJECTION_MS = 80,
+    SCROLL_FLING_MAX_Q16 = SCROLL_POSITION_ONE,
     FILE_LIST_LEFT = 8,
     FILE_LIST_TOP = 48,
     FILE_LIST_WIDTH = 304,
@@ -144,6 +151,18 @@ enum {
     MULTIPLAYER_JOIN_ROOM_HEIGHT = 20,
 };
 
+#if CONSOLE_SHELL_NATIVE_BBS
+enum {
+    BBS_DOOR_FIRST_ANSI_ROW = 9,
+    BBS_DOOR_ANSI_ROW_COUNT = 14,
+    BBS_DOOR_VIEW_TOP =
+        BBS_DOOR_FIRST_ANSI_ROW * P4_ANSI_CELL_HEIGHT,
+    BBS_DOOR_VIEW_HEIGHT =
+        BBS_DOOR_ANSI_ROW_COUNT * P4_ANSI_CELL_HEIGHT,
+    BBS_DOOR_PITCH_PIXELS = 3 * P4_ANSI_CELL_HEIGHT,
+};
+#endif
+
 typedef struct {
     uint16_t black;
     uint16_t panel;
@@ -220,6 +239,10 @@ static const char *const s_color_mode_names[CONSOLE_COLOR_MODE_COUNT] = {
 
 static const console_palette_t *s_palette =
     &s_color_palettes[CONSOLE_COLOR_MODE_GAMECHANGERS];
+static int s_clip_left;
+static int s_clip_top;
+static int s_clip_right = CONSOLE_SHELL_LAYOUT_WIDTH;
+static int s_clip_bottom = CONSOLE_SHELL_LAYOUT_HEIGHT;
 
 #define COLOR_BLACK (s_palette->black)
 #define COLOR_PANEL (s_palette->panel)
@@ -871,9 +894,15 @@ static size_t home_max_scroll_row(const console_shell_t *shell)
     return rows > visible_rows ? rows - visible_rows : 0U;
 }
 
+static size_t home_first_visible_index_at_row(
+    const console_shell_t *shell, size_t scroll_row)
+{
+    return scroll_row * home_column_count(shell);
+}
+
 static size_t home_first_visible_index(const console_shell_t *shell)
 {
-    return shell->home_scroll_row * home_column_count(shell);
+    return home_first_visible_index_at_row(shell, shell->home_scroll_row);
 }
 
 #if CONSOLE_SHELL_NATIVE_BBS
@@ -890,8 +919,9 @@ static void bbs_copy_text(char *destination, size_t capacity,
     destination[length] = '\0';
 }
 
-static void build_bbs_launcher_model(
+static void build_bbs_launcher_model_at_row(
     const console_shell_t *shell,
+    size_t scroll_row,
     p4_bbs_launcher_model_t *model)
 {
     static const uint8_t accents[P4_BBS_VISIBLE_DOORS] = {
@@ -922,13 +952,18 @@ static void build_bbs_launcher_model(
     model->local_board = true;
     model->can_go_up = shell->home_all_programs ||
         shell->home_folder_path[0] != '\0';
-    model->page = (uint16_t)(shell->home_scroll_row + 1U);
+    const size_t maximum = home_max_scroll_row(shell);
+    if (scroll_row > maximum) {
+        scroll_row = maximum;
+    }
+    model->page = (uint16_t)(scroll_row + 1U);
     model->page_count = (uint16_t)(home_max_scroll_row(shell) + 1U);
     model->uploads = shell->runtime.valid_cart_count;
 
     home_item_t items[HOME_ITEM_CAPACITY];
     const size_t item_count = build_home_items(shell, items);
-    const size_t first = home_first_visible_index(shell);
+    const size_t first = home_first_visible_index_at_row(
+        shell, scroll_row);
     const size_t last = first + P4_BBS_VISIBLE_DOORS < item_count
         ? first + P4_BBS_VISIBLE_DOORS : item_count;
     model->door_count = last > first ? last - first : 0U;
@@ -966,6 +1001,14 @@ static void build_bbs_launcher_model(
     }
     model->selected_door = selected >= first && selected < last
         ? selected - first : 0U;
+}
+
+static void build_bbs_launcher_model(
+    const console_shell_t *shell,
+    p4_bbs_launcher_model_t *model)
+{
+    build_bbs_launcher_model_at_row(
+        shell, shell->home_scroll_row, model);
 }
 #endif
 
@@ -1059,17 +1102,144 @@ static void select_first_visible_item(console_shell_t *shell)
     }
 }
 
-static bool set_home_scroll_row(console_shell_t *shell, size_t row)
+static int32_t home_scroll_row_q16(size_t row)
+{
+    return (int32_t)(row * (size_t)SCROLL_POSITION_ONE);
+}
+
+static int32_t clamp_home_scroll_q16(
+    const console_shell_t *shell, int32_t position_q16)
+{
+    const int32_t maximum_q16 =
+        home_scroll_row_q16(home_max_scroll_row(shell));
+    if (position_q16 < 0) {
+        return 0;
+    }
+    return position_q16 > maximum_q16 ? maximum_q16 : position_q16;
+}
+
+static bool home_scroll_is_animating(const console_shell_t *shell)
+{
+    return shell->home_scroll_duration_ms > 0U &&
+        shell->home_scroll_elapsed_ms < shell->home_scroll_duration_ms;
+}
+
+static void sync_home_scroll_visual(console_shell_t *shell)
+{
+    const int32_t target = home_scroll_row_q16(shell->home_scroll_row);
+    shell->home_scroll_visual_q16 = target;
+    shell->home_scroll_from_q16 = target;
+    shell->home_scroll_elapsed_ms = 0U;
+    shell->home_scroll_duration_ms = 0U;
+    shell->home_drag_velocity_q16_per_ms = 0;
+}
+
+static uint16_t home_scroll_duration(
+    int32_t from_q16, int32_t target_q16)
+{
+    int64_t distance = (int64_t)target_q16 - from_q16;
+    if (distance < 0) {
+        distance = -distance;
+    }
+    const uint32_t rows = (uint32_t)(
+        (distance + SCROLL_POSITION_ONE - 1) / SCROLL_POSITION_ONE);
+    uint32_t duration = SCROLL_ANIMATION_BASE_MS +
+        rows * SCROLL_ANIMATION_PER_ROW_MS;
+    if (duration > SCROLL_ANIMATION_MAX_MS) {
+        duration = SCROLL_ANIMATION_MAX_MS;
+    }
+    return (uint16_t)duration;
+}
+
+static bool set_home_scroll_row_internal(
+    console_shell_t *shell, size_t row, bool select_first)
 {
     const size_t maximum = home_max_scroll_row(shell);
     const size_t bounded = row > maximum ? maximum : row;
-    if (bounded == shell->home_scroll_row) {
+    const bool logical_changed = bounded != shell->home_scroll_row;
+    const int32_t target_q16 = home_scroll_row_q16(bounded);
+    if (!logical_changed &&
+        shell->home_scroll_visual_q16 == target_q16 &&
+        !home_scroll_is_animating(shell)) {
         return false;
     }
     shell->home_scroll_row = bounded;
-    select_first_visible_item(shell);
+    shell->home_scroll_visual_q16 = clamp_home_scroll_q16(
+        shell, shell->home_scroll_visual_q16);
+    if (shell->home_scroll_visual_q16 == target_q16) {
+        sync_home_scroll_visual(shell);
+    } else {
+        shell->home_scroll_from_q16 = shell->home_scroll_visual_q16;
+        shell->home_scroll_elapsed_ms = 0U;
+        shell->home_scroll_duration_ms = home_scroll_duration(
+            shell->home_scroll_from_q16, target_q16);
+    }
+    if (select_first) {
+        select_first_visible_item(shell);
+    }
     shell->dirty = true;
-    return true;
+    return logical_changed;
+}
+
+static bool set_home_scroll_row(console_shell_t *shell, size_t row)
+{
+    return set_home_scroll_row_internal(shell, row, true);
+}
+
+bool console_shell_advance(console_shell_t *shell, uint32_t elapsed_ms)
+{
+    if (shell == NULL) {
+        return false;
+    }
+    shell->animation_clock_ms += elapsed_ms;
+    if (!home_scroll_is_animating(shell)) {
+        return false;
+    }
+    if (shell->page != CONSOLE_PAGE_HOME) {
+        sync_home_scroll_visual(shell);
+        return false;
+    }
+
+    uint32_t bounded_ms = elapsed_ms;
+    if (bounded_ms > SCROLL_ADVANCE_MAX_MS) {
+        bounded_ms = SCROLL_ADVANCE_MAX_MS;
+    }
+    uint32_t next_elapsed =
+        (uint32_t)shell->home_scroll_elapsed_ms + bounded_ms;
+    if (next_elapsed >= shell->home_scroll_duration_ms) {
+        next_elapsed = shell->home_scroll_duration_ms;
+    }
+    shell->home_scroll_elapsed_ms = (uint16_t)next_elapsed;
+
+    const uint32_t linear_q16 = (uint32_t)(
+        (uint64_t)next_elapsed * SCROLL_POSITION_ONE /
+        shell->home_scroll_duration_ms);
+    const uint32_t remaining_q16 =
+        (uint32_t)SCROLL_POSITION_ONE - linear_q16;
+    const uint32_t remaining_squared_q16 = (uint32_t)(
+        (uint64_t)remaining_q16 * remaining_q16 >> 16U);
+    const uint32_t remaining_cubed_q16 = (uint32_t)(
+        (uint64_t)remaining_squared_q16 * remaining_q16 >> 16U);
+    const uint32_t eased_q16 =
+        (uint32_t)SCROLL_POSITION_ONE - remaining_cubed_q16;
+    const int32_t target_q16 =
+        home_scroll_row_q16(shell->home_scroll_row);
+    const int64_t interpolated =
+        shell->home_scroll_from_q16 +
+        ((int64_t)target_q16 - shell->home_scroll_from_q16) *
+            (int64_t)eased_q16 / SCROLL_POSITION_ONE;
+    const int32_t next_visual_q16 = clamp_home_scroll_q16(
+        shell, (int32_t)interpolated);
+    const bool changed =
+        next_visual_q16 != shell->home_scroll_visual_q16;
+    shell->home_scroll_visual_q16 = next_visual_q16;
+    if (next_elapsed >= shell->home_scroll_duration_ms) {
+        sync_home_scroll_visual(shell);
+    }
+    if (changed) {
+        shell->dirty = true;
+    }
+    return changed;
 }
 
 static bool color_mode_is_valid(console_color_mode_t mode)
@@ -1901,6 +2071,7 @@ static void remember_contacts(console_shell_t *shell,
 static void reset_home_grid(console_shell_t *shell)
 {
     shell->home_scroll_row = 0U;
+    sync_home_scroll_visual(shell);
     shell->selected_home_item = 0U;
     select_first_visible_item(shell);
     shell->dirty = true;
@@ -2053,10 +2224,10 @@ static void select_home_direction(console_shell_t *shell, int row_delta,
     }
     const size_t target_row = target / columns;
     if (target_row < shell->home_scroll_row) {
-        shell->home_scroll_row = target_row;
+        (void)set_home_scroll_row_internal(shell, target_row, false);
     } else if (target_row >= shell->home_scroll_row + visible_rows) {
-        shell->home_scroll_row = target_row -
-            (visible_rows - 1U);
+        (void)set_home_scroll_row_internal(
+            shell, target_row - (visible_rows - 1U), false);
     }
     shell->dirty = true;
 }
@@ -2181,7 +2352,8 @@ console_shell_action_t console_shell_handle_buttons(
         shell->color_mode = requested;
         const size_t maximum_scroll = home_max_scroll_row(shell);
         if (shell->home_scroll_row > maximum_scroll) {
-            shell->home_scroll_row = maximum_scroll;
+            (void)set_home_scroll_row_internal(
+                shell, maximum_scroll, false);
         }
         shell->dirty = true;
         const console_shell_action_t action = {
@@ -2489,6 +2661,29 @@ bool console_shell_handle_text_key(console_shell_t *shell, char key)
     return changed;
 }
 
+static int home_drag_row_pixels(const console_shell_t *shell)
+{
+#if CONSOLE_SHELL_NATIVE_BBS
+    if (use_bbs_launcher(shell)) {
+        return BBS_DOOR_PITCH_PIXELS * CONSOLE_SHELL_LAYOUT_HEIGHT /
+            CONSOLE_SHELL_HEIGHT;
+    }
+#else
+    (void)shell;
+#endif
+    return SCROLL_TOUCH_ROW_PIXELS;
+}
+
+static void settle_interrupted_home_drag(console_shell_t *shell)
+{
+    if (shell->home_scroll_visual_q16 !=
+            home_scroll_row_q16(shell->home_scroll_row)) {
+        (void)set_home_scroll_row_internal(
+            shell, shell->home_scroll_row, false);
+    }
+    shell->home_drag_velocity_q16_per_ms = 0;
+}
+
 static bool update_home_drag(console_shell_t *shell,
                              uint16_t gui_x,
                              uint16_t gui_y)
@@ -2501,37 +2696,55 @@ static bool update_home_drag(console_shell_t *shell,
     const int horizontal = (int)shell->press_start_gui_x - (int)gui_x;
     const int vertical_magnitude = vertical < 0 ? -vertical : vertical;
     const int horizontal_magnitude = horizontal < 0 ? -horizontal : horizontal;
-    if (vertical_magnitude < SCROLL_DRAG_THRESHOLD ||
-        vertical_magnitude < horizontal_magnitude) {
+    if (!shell->scroll_gesture &&
+        (vertical_magnitude < SCROLL_DRAG_THRESHOLD ||
+         vertical_magnitude < horizontal_magnitude)) {
         return false;
     }
 
-    int row_delta = 0;
-    if (vertical > 0) {
-        row_delta = 1 +
-            (vertical - SCROLL_DRAG_THRESHOLD) / SCROLL_DRAG_ROW_STEP;
-    } else {
-        row_delta = -1 +
-            (vertical + SCROLL_DRAG_THRESHOLD) / SCROLL_DRAG_ROW_STEP;
+    int effective_vertical = vertical;
+    if (effective_vertical > 0) {
+        effective_vertical -= SCROLL_DRAG_THRESHOLD;
+    } else if (effective_vertical < 0) {
+        effective_vertical += SCROLL_DRAG_THRESHOLD;
     }
-    size_t requested = shell->press_start_scroll_row;
-    if (row_delta > 0) {
-        const size_t increase = (size_t)row_delta;
-        const size_t maximum = home_max_scroll_row(shell);
-        requested = increase > maximum - requested
-            ? maximum : requested + increase;
-    } else {
-        const size_t decrease = (size_t)(-row_delta);
-        requested = decrease > requested ? 0U : requested - decrease;
+    const int row_pixels = home_drag_row_pixels(shell);
+    const int64_t drag_q16 =
+        (int64_t)effective_vertical * SCROLL_POSITION_ONE / row_pixels;
+    const int32_t previous_q16 = shell->home_scroll_visual_q16;
+    const int64_t requested_q16 =
+        (int64_t)shell->press_start_scroll_q16 + drag_q16;
+    int32_t bounded_q16 = 0;
+    if (requested_q16 > INT32_MAX) {
+        bounded_q16 = INT32_MAX;
+    } else if (requested_q16 > 0) {
+        bounded_q16 = (int32_t)requested_q16;
     }
+    bounded_q16 = clamp_home_scroll_q16(shell, bounded_q16);
+
+    const uint32_t sample_ms = shell->animation_clock_ms;
+    const uint32_t delta_ms = sample_ms - shell->home_drag_sample_ms;
+    if (delta_ms > 0U && delta_ms <= 100U &&
+        bounded_q16 != previous_q16) {
+        const int32_t sample_velocity = (int32_t)(
+            ((int64_t)bounded_q16 - previous_q16) / delta_ms);
+        shell->home_drag_velocity_q16_per_ms = (int32_t)(
+            ((int64_t)shell->home_drag_velocity_q16_per_ms * 2 +
+             sample_velocity) / 3);
+    }
+    shell->home_drag_sample_ms = sample_ms;
+    shell->home_scroll_visual_q16 = bounded_q16;
+    shell->home_scroll_from_q16 = bounded_q16;
+    shell->home_scroll_elapsed_ms = 0U;
+    shell->home_scroll_duration_ms = 0U;
+
     const bool was_pressed = shell->press_active;
     shell->scroll_gesture = true;
     shell->press_active = false;
     shell->pressed_index = SIZE_MAX;
-    if (was_pressed) {
+    if (was_pressed || bounded_q16 != previous_q16) {
         shell->dirty = true;
     }
-    (void)set_home_scroll_row(shell, requested);
     return true;
 }
 
@@ -2557,6 +2770,7 @@ console_shell_action_t console_shell_handle_touch(
         shell->scroll_candidate = false;
         shell->scroll_gesture = false;
         shell->pressed_index = SIZE_MAX;
+        settle_interrupted_home_drag(shell);
         return no_action();
     }
 
@@ -2567,12 +2781,33 @@ console_shell_action_t console_shell_handle_touch(
         shell->contact_down = false;
         shell->scroll_candidate = false;
         if (shell->scroll_gesture) {
+            int64_t projection =
+                (int64_t)shell->home_drag_velocity_q16_per_ms *
+                SCROLL_FLING_PROJECTION_MS;
+            if (projection > SCROLL_FLING_MAX_Q16) {
+                projection = SCROLL_FLING_MAX_Q16;
+            } else if (projection < -SCROLL_FLING_MAX_Q16) {
+                projection = -SCROLL_FLING_MAX_Q16;
+            }
+            int64_t projected_q16 =
+                (int64_t)shell->home_scroll_visual_q16 + projection;
+            if (projected_q16 < 0) {
+                projected_q16 = 0;
+            }
+            const int32_t bounded_q16 = clamp_home_scroll_q16(
+                shell,
+                projected_q16 > INT32_MAX
+                    ? INT32_MAX : (int32_t)projected_q16);
+            const size_t target_row = (size_t)(
+                (bounded_q16 + SCROLL_POSITION_ONE / 2) /
+                SCROLL_POSITION_ONE);
             const bool changed =
-                shell->home_scroll_row != shell->press_start_scroll_row;
+                target_row != shell->press_start_scroll_row;
             shell->scroll_gesture = false;
             shell->press_active = false;
             shell->pressed_index = SIZE_MAX;
-            shell->dirty = true;
+            shell->home_drag_velocity_q16_per_ms = 0;
+            (void)set_home_scroll_row(shell, target_row);
             if (changed) {
                 const console_shell_action_t action = {
                     .type = CONSOLE_ACTION_PAGE_CHANGED,
@@ -2627,7 +2862,8 @@ console_shell_action_t console_shell_handle_touch(
             shell->color_mode = requested;
             const size_t maximum_scroll = home_max_scroll_row(shell);
             if (shell->home_scroll_row > maximum_scroll) {
-                shell->home_scroll_row = maximum_scroll;
+                (void)set_home_scroll_row_internal(
+                    shell, maximum_scroll, false);
             }
             shell->dirty = true;
             const console_shell_action_t action = {
@@ -2930,6 +3166,7 @@ console_shell_action_t console_shell_handle_touch(
         shell->scroll_candidate = false;
         shell->scroll_gesture = false;
         shell->pressed_index = SIZE_MAX;
+        settle_interrupted_home_drag(shell);
         return no_action();
     }
 
@@ -2945,6 +3182,7 @@ console_shell_action_t console_shell_handle_touch(
         shell->scroll_candidate = false;
         shell->scroll_gesture = false;
         shell->pressed_index = SIZE_MAX;
+        settle_interrupted_home_drag(shell);
         return no_action();
     }
 
@@ -2954,13 +3192,17 @@ console_shell_action_t console_shell_handle_touch(
         shell->press_start_gui_x = gui_x;
         shell->press_start_gui_y = gui_y;
         shell->press_start_scroll_row = shell->home_scroll_row;
+        shell->press_start_scroll_q16 =
+            shell->home_scroll_visual_q16;
+        shell->home_drag_sample_ms = shell->animation_clock_ms;
+        shell->home_drag_velocity_q16_per_ms = 0;
         shell->scroll_candidate = shell->page == CONSOLE_PAGE_HOME &&
             home_max_scroll_row(shell) > 0U &&
             point_in_rect(gui_x, gui_y, TILE_LEFT, TILE_TOP,
                           GRID_WIDTH, GRID_HEIGHT);
         shell->scroll_gesture = false;
         shell->pressed_index = control;
-        shell->press_active = control != SIZE_MAX;
+        shell->press_active = shell->pressed_index != SIZE_MAX;
         if (shell->press_active) {
             shell->dirty = true;
         }
@@ -3445,6 +3687,7 @@ void console_shell_show_home(console_shell_t *shell)
     shell->press_active = false;
     shell->scroll_candidate = false;
     shell->scroll_gesture = false;
+    sync_home_scroll_visual(shell);
     shell->file_delete_confirm = false;
     shell->storage_repair_confirm = false;
     shell->pressed_index = SIZE_MAX;
@@ -3470,6 +3713,32 @@ static int layout_to_output_x(int x)
 static int layout_to_output_y(int y)
 {
     return y * CONSOLE_SHELL_HEIGHT / CONSOLE_SHELL_LAYOUT_HEIGHT;
+}
+
+static void set_layout_clip(int left, int top, int width, int height)
+{
+    s_clip_left = left < 0 ? 0 : left;
+    s_clip_top = top < 0 ? 0 : top;
+    s_clip_right = left + width;
+    s_clip_bottom = top + height;
+    if (s_clip_right > CONSOLE_SHELL_LAYOUT_WIDTH) {
+        s_clip_right = CONSOLE_SHELL_LAYOUT_WIDTH;
+    }
+    if (s_clip_bottom > CONSOLE_SHELL_LAYOUT_HEIGHT) {
+        s_clip_bottom = CONSOLE_SHELL_LAYOUT_HEIGHT;
+    }
+    if (s_clip_right < s_clip_left) {
+        s_clip_right = s_clip_left;
+    }
+    if (s_clip_bottom < s_clip_top) {
+        s_clip_bottom = s_clip_top;
+    }
+}
+
+static void reset_layout_clip(void)
+{
+    set_layout_clip(
+        0, 0, CONSOLE_SHELL_LAYOUT_WIDTH, CONSOLE_SHELL_LAYOUT_HEIGHT);
 }
 
 static void fill_output_rect(uint16_t *pixels, size_t stride,
@@ -3498,8 +3767,8 @@ static void fill_output_rect(uint16_t *pixels, size_t stride,
 static void put_pixel(uint16_t *pixels, size_t stride,
                       int x, int y, uint16_t color)
 {
-    if (x >= 0 && x < CONSOLE_SHELL_LAYOUT_WIDTH &&
-        y >= 0 && y < CONSOLE_SHELL_LAYOUT_HEIGHT) {
+    if (x >= s_clip_left && x < s_clip_right &&
+        y >= s_clip_top && y < s_clip_bottom) {
         fill_output_rect(
             pixels, stride,
             layout_to_output_x(x), layout_to_output_y(y),
@@ -3540,6 +3809,18 @@ static void fill_rect(uint16_t *pixels, size_t stride,
     int top = y < 0 ? 0 : y;
     int right = x + width;
     int bottom = y + height;
+    if (left < s_clip_left) {
+        left = s_clip_left;
+    }
+    if (top < s_clip_top) {
+        top = s_clip_top;
+    }
+    if (right > s_clip_right) {
+        right = s_clip_right;
+    }
+    if (bottom > s_clip_bottom) {
+        bottom = s_clip_bottom;
+    }
     if (right > CONSOLE_SHELL_LAYOUT_WIDTH) {
         right = CONSOLE_SHELL_LAYOUT_WIDTH;
     }
@@ -3818,8 +4099,12 @@ static void draw_scrollbar(console_shell_t *shell,
         }
     }
     const int travel = inner_height - thumb_height;
-    const int thumb_top = maximum == 0U ? inner_top :
-        inner_top + (int)((size_t)travel * shell->home_scroll_row / maximum);
+    const int32_t visual_q16 = clamp_home_scroll_q16(
+        shell, shell->home_scroll_visual_q16);
+    const int32_t maximum_q16 = home_scroll_row_q16(maximum);
+    const int thumb_top = maximum_q16 == 0 ? inner_top :
+        inner_top + (int)(
+            (int64_t)travel * visual_q16 / maximum_q16);
     bevel_rect(pixels, stride, SCROLL_LEFT + 2, thumb_top,
                SCROLL_WIDTH - 4, thumb_height, COLOR_FACE, false);
 }
@@ -3865,50 +4150,71 @@ static void draw_home(console_shell_t *shell, uint16_t *pixels, size_t stride)
 
     home_item_t items[HOME_ITEM_CAPACITY];
     const size_t item_count = build_home_items(shell, items);
-    const size_t first = home_first_visible_index(shell);
-    const size_t last = first + CONSOLE_SHELL_APPS_PER_VIEW < item_count
-        ? first + CONSOLE_SHELL_APPS_PER_VIEW : item_count;
-    for (size_t index = first; index < last; ++index) {
-        const home_item_t *const item = &items[index];
-        const console_app_descriptor_t *const app =
-            item->kind == HOME_ITEM_APP && item->app_index < shell->app_count
-                ? &shell->apps[item->app_index] : NULL;
-        const size_t view_index = index - first;
-        const int column =
-            (int)(view_index % CONSOLE_SHELL_APP_COLUMNS);
-        const int row =
-            (int)(view_index / CONSOLE_SHELL_APP_COLUMNS);
-        const int left = TILE_LEFT + column * (TILE_WIDTH + TILE_COLUMN_GAP);
-        const int top = TILE_TOP + row * (TILE_HEIGHT + TILE_ROW_GAP);
-        const bool pressed = shell->press_active &&
-            shell->pressed_index == HOME_ITEM_CONTROL_BASE + index;
-        fill_rect(pixels, stride, left, top, TILE_WIDTH, TILE_HEIGHT,
-                  pressed ? COLOR_TITLE : COLOR_GROUP);
-        if (shell->selected_home_item == index || pressed) {
-            outline_rect(pixels, stride, left, top, TILE_WIDTH, TILE_HEIGHT,
-                         pressed ? COLOR_WHITE : COLOR_TITLE);
-        }
-        if (app != NULL) {
-            draw_program_icon(pixels, stride, left, top, app);
-        } else {
-            draw_folder_icon(pixels, stride, left, top,
-                             item->accent_rgb565, item->enabled);
-        }
-        const uint16_t label_color = pressed ? COLOR_WHITE :
-            (item->enabled ? COLOR_BLACK : COLOR_SHADOW);
-        draw_centered_text(pixels, stride, left, top + 30, TILE_WIDTH,
-                           app != NULL ? app->title : item->title,
-                           label_color, 15U);
-        if (app != NULL) {
-            draw_centered_text(pixels, stride, left, top + 40, TILE_WIDTH,
-                               app->enabled ? app->subtitle : "OFFLINE",
-                               pressed ? COLOR_WHITE : COLOR_DARK, 13U);
-        } else {
-            draw_program_count(pixels, stride, left, top + 41, TILE_WIDTH,
-                               item->program_count,
-                               pressed ? COLOR_WHITE : COLOR_DARK);
+    const int row_pitch = TILE_HEIGHT + TILE_ROW_GAP;
+    const int32_t visual_q16 = clamp_home_scroll_q16(
+        shell, shell->home_scroll_visual_q16);
+    const size_t first_row = (size_t)(
+        visual_q16 / SCROLL_POSITION_ONE);
+    const size_t row_count = home_row_count(shell);
+    size_t last_row = first_row + CONSOLE_SHELL_VISIBLE_APP_ROWS + 1U;
+    if (last_row > row_count) {
+        last_row = row_count;
+    }
+    set_layout_clip(TILE_LEFT, TILE_TOP, GRID_WIDTH, GRID_HEIGHT);
+    for (size_t item_row = first_row;
+         item_row < last_row; ++item_row) {
+        const int top = TILE_TOP + (int)(
+            ((int64_t)home_scroll_row_q16(item_row) - visual_q16) *
+                row_pitch / SCROLL_POSITION_ONE);
+        for (size_t item_column = 0U;
+             item_column < CONSOLE_SHELL_APP_COLUMNS; ++item_column) {
+            const size_t index =
+                item_row * CONSOLE_SHELL_APP_COLUMNS + item_column;
+            if (index >= item_count) {
+                break;
+            }
+            const home_item_t *const item = &items[index];
+            const console_app_descriptor_t *const app =
+                item->kind == HOME_ITEM_APP &&
+                        item->app_index < shell->app_count
+                    ? &shell->apps[item->app_index] : NULL;
+            const int left = TILE_LEFT + (int)item_column *
+                (TILE_WIDTH + TILE_COLUMN_GAP);
+            const bool pressed = shell->press_active &&
+                shell->pressed_index == HOME_ITEM_CONTROL_BASE + index;
+            fill_rect(pixels, stride, left, top, TILE_WIDTH, TILE_HEIGHT,
+                      pressed ? COLOR_TITLE : COLOR_GROUP);
+            if (shell->selected_home_item == index || pressed) {
+                outline_rect(
+                    pixels, stride, left, top, TILE_WIDTH, TILE_HEIGHT,
+                    pressed ? COLOR_WHITE : COLOR_TITLE);
+            }
+            if (app != NULL) {
+                draw_program_icon(pixels, stride, left, top, app);
+            } else {
+                draw_folder_icon(pixels, stride, left, top,
+                                 item->accent_rgb565, item->enabled);
+            }
+            const uint16_t label_color = pressed ? COLOR_WHITE :
+                (item->enabled ? COLOR_BLACK : COLOR_SHADOW);
+            draw_centered_text(
+                pixels, stride, left, top + 30, TILE_WIDTH,
+                app != NULL ? app->title : item->title,
+                label_color, 15U);
+            if (app != NULL) {
+                draw_centered_text(
+                    pixels, stride, left, top + 40, TILE_WIDTH,
+                    app->enabled ? app->subtitle : "OFFLINE",
+                    pressed ? COLOR_WHITE : COLOR_DARK, 13U);
+            } else {
+                draw_program_count(
+                    pixels, stride, left, top + 41, TILE_WIDTH,
+                    item->program_count,
+                    pressed ? COLOR_WHITE : COLOR_DARK);
+            }
         }
     }
+    reset_layout_clip();
     draw_scrollbar(shell, pixels, stride);
     bevel_rect(pixels, stride, 8, 178, 305, 15, COLOR_FACE, true);
     draw_u32(pixels, stride, 13, 182, (uint32_t)item_count,
@@ -3931,12 +4237,51 @@ static bool draw_bbs_home(console_shell_t *shell,
                           uint16_t *pixels,
                           size_t stride)
 {
-    p4_bbs_launcher_model_t model;
-    build_bbs_launcher_model(shell, &model);
-    return p4_bbs_build_launcher(&shell->bbs_terminal, &model) &&
-        p4_ansi_render_rgb565(
+    p4_bbs_launcher_model_t target_model;
+    build_bbs_launcher_model(shell, &target_model);
+    if (!p4_bbs_build_launcher(&shell->bbs_terminal, &target_model) ||
+        !p4_ansi_render_rgb565(
             &shell->bbs_terminal, pixels, stride,
-            CONSOLE_SHELL_WIDTH, CONSOLE_SHELL_HEIGHT);
+            CONSOLE_SHELL_WIDTH, CONSOLE_SHELL_HEIGHT)) {
+        return false;
+    }
+
+    const int32_t visual_q16 = clamp_home_scroll_q16(
+        shell, shell->home_scroll_visual_q16);
+    const size_t base_row = (size_t)(
+        visual_q16 / SCROLL_POSITION_ONE);
+    const int32_t fraction_q16 = visual_q16 -
+        home_scroll_row_q16(base_row);
+    if (fraction_q16 == 0 || base_row >= home_max_scroll_row(shell)) {
+        return true;
+    }
+
+    const int32_t offset_pixels = (int32_t)(
+        ((int64_t)fraction_q16 * BBS_DOOR_PITCH_PIXELS +
+         SCROLL_POSITION_ONE / 2) / SCROLL_POSITION_ONE);
+    p4_bbs_launcher_model_t moving_model;
+    build_bbs_launcher_model_at_row(shell, base_row, &moving_model);
+    if (!p4_bbs_build_launcher(&shell->bbs_terminal, &moving_model) ||
+        !p4_ansi_render_rows_rgb565(
+            &shell->bbs_terminal, pixels, stride,
+            CONSOLE_SHELL_WIDTH, CONSOLE_SHELL_HEIGHT,
+            BBS_DOOR_FIRST_ANSI_ROW, BBS_DOOR_ANSI_ROW_COUNT,
+            -offset_pixels, BBS_DOOR_VIEW_TOP, BBS_DOOR_VIEW_HEIGHT)) {
+        return false;
+    }
+    build_bbs_launcher_model_at_row(shell, base_row + 1U, &moving_model);
+    if (!p4_bbs_build_launcher(&shell->bbs_terminal, &moving_model) ||
+        !p4_ansi_render_rows_rgb565(
+            &shell->bbs_terminal, pixels, stride,
+            CONSOLE_SHELL_WIDTH, CONSOLE_SHELL_HEIGHT,
+            BBS_DOOR_FIRST_ANSI_ROW, BBS_DOOR_ANSI_ROW_COUNT,
+            BBS_DOOR_PITCH_PIXELS - offset_pixels,
+            BBS_DOOR_VIEW_TOP, BBS_DOOR_VIEW_HEIGHT)) {
+        return false;
+    }
+
+    /* Leave diagnostics and hit-test inspection on the logical destination. */
+    return p4_bbs_build_launcher(&shell->bbs_terminal, &target_model);
 }
 #endif
 
@@ -5797,6 +6142,7 @@ bool console_shell_render_rgb565(console_shell_t *shell,
         return false;
     }
     s_palette = &s_color_palettes[console_shell_color_mode(shell)];
+    reset_layout_clip();
     fill_rect(pixels, stride_pixels, 0, 0,
               CONSOLE_SHELL_LAYOUT_WIDTH,
               CONSOLE_SHELL_LAYOUT_HEIGHT, COLOR_BLACK);

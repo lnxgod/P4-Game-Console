@@ -5159,6 +5159,24 @@ static uint32_t gamepad_shell_buttons(const gamepad_state_t *state)
 
 #endif
 
+static void confirm_ota_after_stable_runtime(void)
+{
+    if (s_ota_validation_attempted || s_runtime_services_ready_us <= 0 ||
+        esp_timer_get_time() - s_runtime_services_ready_us <
+            (int64_t)CONSOLE_RUNTIME_HEALTH_CONFIRM_MS * INT64_C(1000)) {
+        return;
+    }
+    s_ota_validation_attempted = true;
+    bool ota_was_pending = false;
+    const esp_err_t ota_valid = platform_os_update_mark_running_valid(
+        &ota_was_pending);
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS OTA_BOOT_VALID result=%s was_pending=%u "
+             "stable_ms=%u services=initialized",
+             esp_err_to_name(ota_valid), ota_was_pending ? 1U : 0U,
+             (unsigned)CONSOLE_RUNTIME_HEALTH_CONFIRM_MS);
+}
+
 #if P4_CONSOLE_USB_INPUT
 
 static bool read_aux_input_snapshot(platform_usb_input_snapshot_t *snapshot)
@@ -5428,24 +5446,6 @@ static void confirm_usb_enum_probe_after_stable_runtime(void)
              (unsigned)CONSOLE_USB_ENUM_GUARD_CONFIRM_MS,
              (unsigned long)s_loop_count, esp_err_to_name(result));
 #endif
-}
-
-static void confirm_ota_after_stable_runtime(void)
-{
-    if (s_ota_validation_attempted || s_runtime_services_ready_us <= 0 ||
-        esp_timer_get_time() - s_runtime_services_ready_us <
-            (int64_t)CONSOLE_RUNTIME_HEALTH_CONFIRM_MS * INT64_C(1000)) {
-        return;
-    }
-    s_ota_validation_attempted = true;
-    bool ota_was_pending = false;
-    const esp_err_t ota_valid = platform_os_update_mark_running_valid(
-        &ota_was_pending);
-    ESP_LOGI(TAG,
-             "P4_CONSOLE_OS OTA_BOOT_VALID result=%s was_pending=%u "
-             "stable_ms=%u services=initialized",
-             esp_err_to_name(ota_valid), ota_was_pending ? 1U : 0U,
-             (unsigned)CONSOLE_RUNTIME_HEALTH_CONFIRM_MS);
 }
 
 static esp_err_t start_usb_input(void)
@@ -8722,6 +8722,7 @@ void app_main(void)
     int64_t next_runtime_info_us = s_runtime_services_ready_us;
     int64_t next_stats_us = s_runtime_services_ready_us +
         (int64_t)CONSOLE_STATS_INTERVAL_MS * INT64_C(1000);
+    int64_t shell_animation_last_us = s_runtime_services_ready_us;
     for (;;) {
         ++s_loop_count;
 #if P4_CONSOLE_BLE_GAMEPAD && P4_CONSOLE_BLE_MULTIPLAYER
@@ -8826,6 +8827,17 @@ void app_main(void)
             (void)reload_file_listing(
                 shell, CONSOLE_FILE_NOTICE_NONE);
         }
+        const int64_t shell_animation_now_us = esp_timer_get_time();
+        uint32_t shell_elapsed_ms = 0U;
+        if (shell_animation_now_us > shell_animation_last_us) {
+            const uint64_t elapsed_us = (uint64_t)(
+                shell_animation_now_us - shell_animation_last_us);
+            shell_elapsed_ms = elapsed_us / UINT64_C(1000) > UINT32_MAX
+                ? UINT32_MAX
+                : (uint32_t)(elapsed_us / UINT64_C(1000));
+        }
+        shell_animation_last_us = shell_animation_now_us;
+        (void)console_shell_advance(shell, shell_elapsed_ms);
         const console_page_t page_before_input = shell->page;
         const console_shell_action_t action = poll_input(shell);
         const int64_t runtime_now_us = esp_timer_get_time();

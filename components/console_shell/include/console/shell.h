@@ -467,8 +467,13 @@ typedef struct {
     size_t selected_index;
     size_t selected_home_item;
     size_t home_scroll_row;
+    /** Animated launcher position in signed 16.16 row units. */
+    int32_t home_scroll_visual_q16;
+    int32_t home_scroll_from_q16;
+    int32_t home_drag_velocity_q16_per_ms;
     size_t pressed_index;
     size_t press_start_scroll_row;
+    int32_t press_start_scroll_q16;
     console_page_t page;
     uint32_t active_app_id;
     console_color_mode_t color_mode;
@@ -491,6 +496,10 @@ typedef struct {
     console_shell_file_notice_t file_notice;
     uint16_t press_start_gui_x;
     uint16_t press_start_gui_y;
+    uint32_t animation_clock_ms;
+    uint32_t home_drag_sample_ms;
+    uint16_t home_scroll_elapsed_ms;
+    uint16_t home_scroll_duration_ms;
     char home_folder_path[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
     bool contact_down;
     bool press_active;
@@ -521,7 +530,8 @@ bool console_shell_init(console_shell_t *shell,
  *
  * Invalid frames, more than one contact, and out-of-viewport coordinates
  * cancel the pending press. On the home view, a bounded one-finger vertical
- * drag scrolls whole app rows and suppresses launch. Otherwise, movement
+ * drag tracks a bounded fractional app-row position, suppresses launch, and
+ * settles to the nearest row with a short bounded fling. Otherwise, movement
  * between controls cancels the pending press. A launch or page change is
  * emitted only after a valid release.
  */
@@ -539,6 +549,15 @@ console_shell_action_t console_shell_handle_touch(
  */
 console_shell_action_t console_shell_handle_buttons(
     console_shell_t *shell, uint32_t held_buttons);
+
+/**
+ * Advance bounded shell animations by elapsed wall time.
+ *
+ * Call once per UI loop before rendering. Large stalls are clamped so a slow
+ * peripheral service cannot make the launcher jump. Returns true when the
+ * visible state changed and a frame was marked dirty.
+ */
+bool console_shell_advance(console_shell_t *shell, uint32_t elapsed_ms);
 
 /** Show, move, or hide the bounded desktop pointer. */
 void console_shell_set_pointer(console_shell_t *shell,
