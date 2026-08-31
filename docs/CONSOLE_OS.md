@@ -2,6 +2,15 @@
 
 ## Status
 
+Console OS 0.4.97 accelerates the Waveshare 4.3 launcher without changing its
+fixed 768x480 OS surface. The panel adapter uses the ESP32-P4 PPA for exact
+1:1 rotation into a centered 480x768 native viewport instead of running a
+division-heavy CPU conversion for every animation frame. The bounded CPU
+fallback remains available. The shell also avoids a redundant home-screen
+clear and uses row copies for solid fills. Periodic serial statistics report
+`display_accelerated` and `display_accel_failures`; a build alone is not a
+smooth-scroll acceptance.
+
 Console OS 0.4.96 makes the Windows 3.1 Program Manager the fresh-boot default
 and keeps the BBS door launcher as an optional Appearance choice. The root
 `SYSTEM/...` namespace is displayed as **Control Panel**, so it remains visible

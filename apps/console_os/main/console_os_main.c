@@ -5781,7 +5781,9 @@ static void log_runtime_stats(const console_shell_t *shell)
              "input_polls=%lu gamepad_failures=%lu aux_failures=%lu "
              "display_submits=%lu "
              "display_completions=%lu display_timeouts=%lu "
-             "display_failures=%lu audio=es8311-ready storage=%s "
+             "display_failures=%lu display_accelerated=%lu "
+             "display_accel_failures=%lu "
+             "audio=es8311-ready storage=%s "
              "storage_generation=%lu storage_media=microsd "
              "p4cart_scan=%u p4cart_valid=%u p4cart_rejected=%u",
              (unsigned long)s_loop_count,
@@ -5798,6 +5800,8 @@ static void log_runtime_stats(const console_shell_t *shell)
              (unsigned long)display.submits_completed,
              (unsigned long)display.submit_timeouts,
              (unsigned long)display.submit_failures,
+             (unsigned long)display.accelerated_submits,
+             (unsigned long)display.accelerator_failures,
              platform_game_storage_state_name(s_game_storage_status.state),
              (unsigned long)s_game_storage_status.generation,
              (unsigned)p4cart_scan_state(),
@@ -5809,6 +5813,7 @@ static void log_runtime_stats(const console_shell_t *shell)
              "touch_ready=%u touch_polls=%lu touch_failures=%lu "
              "display_submits=%lu display_completions=%lu "
              "display_timeouts=%lu display_failures=%lu "
+             "display_accelerated=%lu display_accel_failures=%lu "
              "amp_energized=0 doom_handoffs=%lu storage=%s "
              "storage_generation=%lu usb_attached=%u "
              "p4cart_scan=%u p4cart_valid=%u p4cart_rejected=%u",
@@ -5822,6 +5827,8 @@ static void log_runtime_stats(const console_shell_t *shell)
              (unsigned long)display.submits_completed,
              (unsigned long)display.submit_timeouts,
              (unsigned long)display.submit_failures,
+             (unsigned long)display.accelerated_submits,
+             (unsigned long)display.accelerator_failures,
              (unsigned long)s_doom_handoff_count,
              platform_game_storage_state_name(s_game_storage_status.state),
              (unsigned long)s_game_storage_status.generation,

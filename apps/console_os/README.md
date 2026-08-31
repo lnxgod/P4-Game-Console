@@ -48,6 +48,12 @@ use an interruptible cubic ease. When selected, the Waveshare BBS slides only
 its clipped ANSI door viewport into the existing 768x480 framebuffer, avoiding
 a second frame allocation.
 
+Console OS 0.4.97 keeps that 768x480 launcher contract but rotates it at exact
+1:1 scale with the ESP32-P4 PPA into the centered 480x768 panel viewport. Solid
+UI fills reuse a completed row and the home page no longer clears the complete
+frame twice. Runtime `STATS` expose accelerated submits and failures so panel
+performance is visible over H1 instead of inferred from a host preview.
+
 Console OS 0.4.94 keeps flash/OTA inspection on the main task's internal stack
 while the 32 KiB PSRAM worker scans only removable-SD game data. This prevents
 cache-disabled OTA reads from invalidating the worker's external stack during

@@ -1,5 +1,16 @@
 # Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 port
 
+## Console OS 0.4.97 launcher PPA path
+
+The shell remains 768x480. On this portrait-native panel that surface can be
+rotated at exact 1:1 scale into 480x768, centered with 16 native pixels above
+and below. Console OS now sends that conversion through the blocking PPA SRM
+client already owned by `platform_display`; a bounded CPU layout remains the
+fallback. This removes the per-pixel divisions that made animated launcher
+scrolling lag on the physical panel. Runtime acceptance must show increasing
+`display_accelerated`, zero `display_accel_failures`, zero hard display
+failures, and operator-confirmed responsive touch scrolling.
+
 ## Console OS 0.4.52 SD Card utility
 
 The `SYSTEM/SD CARD` app exposes storage checks without baking game content

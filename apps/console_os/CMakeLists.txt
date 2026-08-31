@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.4.96")
+set(PROJECT_VER "0.4.97")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")

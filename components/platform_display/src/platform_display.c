@@ -76,6 +76,11 @@ static const char *TAG = "platform_display";
 #define DISPLAY_GAME_PPA_OFFSET_Y 20U
 #define DISPLAY_GAME_PPA_WIDTH 475U
 #define DISPLAY_GAME_PPA_HEIGHT 760U
+#define DISPLAY_CONTENT_PPA_SCALE 1.0f
+#define DISPLAY_CONTENT_PPA_OFFSET_X 0U
+#define DISPLAY_CONTENT_PPA_OFFSET_Y 16U
+#define DISPLAY_CONTENT_PPA_WIDTH 480U
+#define DISPLAY_CONTENT_PPA_HEIGHT 768U
 #endif
 
 static esp_ldo_channel_handle_t s_dphy_ldo;
@@ -88,10 +93,16 @@ static bool s_initialized;
 static bool s_pattern_active;
 static uint16_t *s_submit_frame;
 #if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
-static ppa_client_handle_t s_game_scaler;
+typedef enum {
+    DISPLAY_MARGIN_PROFILE_DIRTY = 0,
+    DISPLAY_MARGIN_PROFILE_GAME,
+    DISPLAY_MARGIN_PROFILE_CONTENT,
+} display_margin_profile_t;
+
+static ppa_client_handle_t s_scaler;
 static uint16_t *s_panel_frames[2];
 static uint8_t s_active_panel_frame;
-static bool s_game_margins_clean[2];
+static display_margin_profile_t s_margin_profiles[2];
 static bool s_accelerator_failure_logged;
 #endif
 static StaticSemaphore_t s_api_lock_storage;
@@ -231,12 +242,12 @@ static void release_owned_resources(void)
         s_backlight_ready = false;
     }
 #if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
-    if (s_game_scaler != NULL) {
-        (void)ppa_unregister_client(s_game_scaler);
-        s_game_scaler = NULL;
+    if (s_scaler != NULL) {
+        (void)ppa_unregister_client(s_scaler);
+        s_scaler = NULL;
     }
     memset(s_panel_frames, 0, sizeof(s_panel_frames));
-    memset(s_game_margins_clean, 0, sizeof(s_game_margins_clean));
+    memset(s_margin_profiles, 0, sizeof(s_margin_profiles));
     s_active_panel_frame = 0U;
     s_accelerator_failure_logged = false;
 #endif
@@ -506,9 +517,9 @@ esp_err_t platform_display_init(void)
         .oper_type = PPA_OPERATION_SRM,
         .max_pending_trans_num = 1U,
     };
-    err = ppa_register_client(&scaler_config, &s_game_scaler);
+    err = ppa_register_client(&scaler_config, &s_scaler);
     if (err != ESP_OK) {
-        s_game_scaler = NULL;
+        s_scaler = NULL;
         ESP_LOGW(TAG,
                  "P4_DISPLAY GAME_ACCELERATOR ready=0 fallback=cpu error=%s",
                  esp_err_to_name(err));
@@ -517,6 +528,10 @@ esp_err_t platform_display_init(void)
                  "P4_DISPLAY GAME_ACCELERATOR ready=1 engine=ppa-srm "
                  "source=320x200 target=475x760 rotation_ccw=90 "
                  "double_buffer=1");
+        ESP_LOGI(TAG,
+                 "P4_DISPLAY CONTENT_ACCELERATOR ready=1 engine=ppa-srm "
+                 "source=768x480 target=480x768 scale=1:1 "
+                 "rotation_ccw=90 double_buffer=1");
     }
 #endif
 
@@ -614,44 +629,62 @@ typedef bool (*display_layout_fn_t)(
     const uint16_t *, size_t, uint16_t *, size_t, size_t);
 
 #if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
-static void clear_accelerated_game_margins(uint16_t *destination)
+static void clear_accelerated_margins(uint16_t *destination,
+                                      size_t offset_x,
+                                      size_t offset_y,
+                                      size_t width,
+                                      size_t height)
 {
     const size_t row_pixels = PLATFORM_DISPLAY_NATIVE_WIDTH;
     memset(destination, 0,
-           DISPLAY_GAME_PPA_OFFSET_Y * row_pixels * sizeof(*destination));
+           offset_y * row_pixels * sizeof(*destination));
     memset(destination +
-               (DISPLAY_GAME_PPA_OFFSET_Y + DISPLAY_GAME_PPA_HEIGHT) *
-                   row_pixels,
+               (offset_y + height) * row_pixels,
            0,
-           (PLATFORM_DISPLAY_NATIVE_HEIGHT - DISPLAY_GAME_PPA_OFFSET_Y -
-            DISPLAY_GAME_PPA_HEIGHT) * row_pixels * sizeof(*destination));
-    for (size_t y = DISPLAY_GAME_PPA_OFFSET_Y;
-         y < DISPLAY_GAME_PPA_OFFSET_Y + DISPLAY_GAME_PPA_HEIGHT; ++y) {
+           (PLATFORM_DISPLAY_NATIVE_HEIGHT - offset_y - height) *
+               row_pixels * sizeof(*destination));
+    for (size_t y = offset_y; y < offset_y + height; ++y) {
         uint16_t *const row = destination + y * row_pixels;
-        memset(row, 0, DISPLAY_GAME_PPA_OFFSET_X * sizeof(*row));
-        memset(row + DISPLAY_GAME_PPA_OFFSET_X + DISPLAY_GAME_PPA_WIDTH, 0,
-               (PLATFORM_DISPLAY_NATIVE_WIDTH - DISPLAY_GAME_PPA_OFFSET_X -
-                DISPLAY_GAME_PPA_WIDTH) * sizeof(*row));
+        memset(row, 0, offset_x * sizeof(*row));
+        memset(row + offset_x + width, 0,
+               (PLATFORM_DISPLAY_NATIVE_WIDTH - offset_x - width) *
+                   sizeof(*row));
     }
 }
 
-static bool accelerate_game_frame(const uint16_t *source,
-                                  size_t source_stride_pixels,
-                                  uint16_t *destination,
-                                  uint8_t destination_index)
+static bool accelerate_frame(const uint16_t *source,
+                             size_t source_stride_pixels,
+                             uint16_t *destination,
+                             uint8_t destination_index,
+                             bool content_layout)
 {
-    if (s_game_scaler == NULL || source_stride_pixels !=
-            PLATFORM_DISPLAY_GAME_WIDTH || destination == NULL ||
-        destination_index >= 2U) {
+    const uint32_t source_width = content_layout
+        ? PLATFORM_DISPLAY_CONTENT_WIDTH : PLATFORM_DISPLAY_GAME_WIDTH;
+    const uint32_t source_height = content_layout
+        ? PLATFORM_DISPLAY_CONTENT_HEIGHT : PLATFORM_DISPLAY_GAME_HEIGHT;
+    const uint32_t output_offset_x = content_layout
+        ? DISPLAY_CONTENT_PPA_OFFSET_X : DISPLAY_GAME_PPA_OFFSET_X;
+    const uint32_t output_offset_y = content_layout
+        ? DISPLAY_CONTENT_PPA_OFFSET_Y : DISPLAY_GAME_PPA_OFFSET_Y;
+    const uint32_t output_width = content_layout
+        ? DISPLAY_CONTENT_PPA_WIDTH : DISPLAY_GAME_PPA_WIDTH;
+    const uint32_t output_height = content_layout
+        ? DISPLAY_CONTENT_PPA_HEIGHT : DISPLAY_GAME_PPA_HEIGHT;
+    const float scale = content_layout
+        ? DISPLAY_CONTENT_PPA_SCALE : DISPLAY_GAME_PPA_SCALE;
+    const display_margin_profile_t margin_profile = content_layout
+        ? DISPLAY_MARGIN_PROFILE_CONTENT : DISPLAY_MARGIN_PROFILE_GAME;
+    if (s_scaler == NULL || source_stride_pixels != source_width ||
+        destination == NULL || destination_index >= 2U) {
         return false;
     }
     const ppa_srm_oper_config_t operation = {
         .in = {
             .buffer = source,
-            .pic_w = PLATFORM_DISPLAY_GAME_WIDTH,
-            .pic_h = PLATFORM_DISPLAY_GAME_HEIGHT,
-            .block_w = PLATFORM_DISPLAY_GAME_WIDTH,
-            .block_h = PLATFORM_DISPLAY_GAME_HEIGHT,
+            .pic_w = source_width,
+            .pic_h = source_height,
+            .block_w = source_width,
+            .block_h = source_height,
             .block_offset_x = 0U,
             .block_offset_y = 0U,
             .srm_cm = PPA_SRM_COLOR_MODE_RGB565,
@@ -661,25 +694,26 @@ static bool accelerate_game_frame(const uint16_t *source,
             .buffer_size = (uint32_t)DISPLAY_FRAME_BYTES,
             .pic_w = PLATFORM_DISPLAY_NATIVE_WIDTH,
             .pic_h = PLATFORM_DISPLAY_NATIVE_HEIGHT,
-            .block_offset_x = DISPLAY_GAME_PPA_OFFSET_X,
-            .block_offset_y = DISPLAY_GAME_PPA_OFFSET_Y,
+            .block_offset_x = output_offset_x,
+            .block_offset_y = output_offset_y,
             .srm_cm = PPA_SRM_COLOR_MODE_RGB565,
         },
         .rotation_angle = PPA_SRM_ROTATION_ANGLE_90,
-        .scale_x = DISPLAY_GAME_PPA_SCALE,
-        .scale_y = DISPLAY_GAME_PPA_SCALE,
+        .scale_x = scale,
+        .scale_y = scale,
         .mode = PPA_TRANS_MODE_BLOCKING,
     };
     const esp_err_t result =
-        ppa_do_scale_rotate_mirror(s_game_scaler, &operation);
+        ppa_do_scale_rotate_mirror(s_scaler, &operation);
     if (result == ESP_OK) {
-        /* PPA writes only the scaled game viewport. A content/shell frame
-         * dirties the surrounding pixels, but once each DSI-owned buffer has
-         * been cleared its margins remain black across subsequent game
-         * submits. Avoid rewriting 46 KiB on every frame. */
-        if (!s_game_margins_clean[destination_index]) {
-            clear_accelerated_game_margins(destination);
-            s_game_margins_clean[destination_index] = true;
+        /* PPA writes only its rotated viewport. Clear the surrounding pixels
+         * once whenever a DSI-owned buffer changes between the game and
+         * native 768x480 content geometries. */
+        if (s_margin_profiles[destination_index] != margin_profile) {
+            clear_accelerated_margins(
+                destination, output_offset_x, output_offset_y,
+                output_width, output_height);
+            s_margin_profiles[destination_index] = margin_profile;
         }
         __atomic_fetch_add(
             &s_stats.accelerated_submits, 1U, __ATOMIC_RELAXED);
@@ -731,6 +765,8 @@ static esp_err_t submit_rgb565(
 #if CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3
     const bool game_layout =
         layout == platform_display_layout_rgb565_320x200;
+    const bool content_layout =
+        layout == platform_display_layout_rgb565_768x480;
     const uint8_t target_index =
         (uint8_t)(s_active_panel_frame == 0U ? 1U : 0U);
     uint16_t *const output_frame = s_panel_frames[target_index];
@@ -738,8 +774,9 @@ static esp_err_t submit_rgb565(
         err = ESP_ERR_INVALID_STATE;
         goto fail_dark;
     }
-    const bool accelerated = game_layout && accelerate_game_frame(
-        source, source_stride_pixels, output_frame, target_index);
+    const bool accelerated = (game_layout || content_layout) &&
+        accelerate_frame(source, source_stride_pixels, output_frame,
+                         target_index, content_layout);
     if (!accelerated && !layout(
             source, source_stride_pixels, output_frame,
             PLATFORM_DISPLAY_NATIVE_WIDTH,
@@ -747,11 +784,11 @@ static esp_err_t submit_rgb565(
         err = ESP_ERR_INVALID_ARG;
         goto fail;
     }
-    if (!game_layout) {
-        s_game_margins_clean[target_index] = false;
-    } else if (!accelerated) {
-        /* The CPU game layout writes the complete frame, including margins. */
-        s_game_margins_clean[target_index] = true;
+    if (!accelerated) {
+        /* Both CPU layouts write the complete frame. Their exact output uses
+         * the centered 768x480 logical viewport. */
+        s_margin_profiles[target_index] =
+            DISPLAY_MARGIN_PROFILE_CONTENT;
     }
 #else
     if (s_submit_frame == NULL) {

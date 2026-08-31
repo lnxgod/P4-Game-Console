@@ -3765,10 +3765,19 @@ static void fill_output_rect(uint16_t *pixels, size_t stride,
     if (bottom > CONSOLE_SHELL_HEIGHT) {
         bottom = CONSOLE_SHELL_HEIGHT;
     }
-    for (int row = top; row < bottom; ++row) {
-        for (int column = left; column < right; ++column) {
-            pixels[(size_t)row * stride + (size_t)column] = color;
-        }
+    if (left >= right || top >= bottom) {
+        return;
+    }
+    uint16_t *const first_row =
+        pixels + (size_t)top * stride + (size_t)left;
+    const size_t width = (size_t)(right - left);
+    for (size_t column = 0U; column < width; ++column) {
+        first_row[column] = color;
+    }
+    const size_t row_bytes = width * sizeof(*first_row);
+    for (int row = top + 1; row < bottom; ++row) {
+        memcpy(pixels + (size_t)row * stride + (size_t)left,
+               first_row, row_bytes);
     }
 }
 
@@ -6151,9 +6160,6 @@ bool console_shell_render_rgb565(console_shell_t *shell,
     }
     s_palette = &s_color_palettes[console_shell_color_mode(shell)];
     reset_layout_clip();
-    fill_rect(pixels, stride_pixels, 0, 0,
-              CONSOLE_SHELL_LAYOUT_WIDTH,
-              CONSOLE_SHELL_LAYOUT_HEIGHT, COLOR_BLACK);
     if (shell->page == CONSOLE_PAGE_HOME) {
 #if CONSOLE_SHELL_NATIVE_BBS
         if (use_bbs_launcher(shell) &&
@@ -6166,6 +6172,9 @@ bool console_shell_render_rgb565(console_shell_t *shell,
         draw_home(shell, pixels, stride_pixels);
 #endif
     } else {
+        fill_rect(pixels, stride_pixels, 0, 0,
+                  CONSOLE_SHELL_LAYOUT_WIDTH,
+                  CONSOLE_SHELL_LAYOUT_HEIGHT, COLOR_BLACK);
         draw_detail_header(shell, pixels, stride_pixels);
         switch (shell->page) {
         case CONSOLE_PAGE_COLORS:

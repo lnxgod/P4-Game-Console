@@ -81,10 +81,13 @@
       "BREAKOUT.P4G",
       "BYTEBUD.P4G",
       "CALC.P4G",
+      "CHECKERS.P4G",
+      "COLOR_CLASH.P4G",
       "FROGHOP.P4G",
       "INPUT.P4G",
       "LORD.P4G",
       "MAZE.P4G",
+      "P4_AIR_HOCKEY.P4G",
       "P4_YAHTZEE.P4G",
       "SKYLINE.P4G",
       "SOLITAIR.P4G",
@@ -220,5 +223,5 @@
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "On the two recorded Waveshare 4.3 units with H1 UART retained, install the exact verified Console OS 0.4.96 artifact and confirm Windows is the default, Control Panel is visible on the first launcher row, smooth touch/controller scrolling remains responsive, BBS remains selectable, and a live SD catalog refresh preserves the chosen session theme."
+  "next_hardware_step": "On the two recorded Waveshare 4.3 units with H1 UART retained, install the exact verified Console OS 0.4.97 artifact and measure sustained launcher frame cadence with zero hard display failures, while confirming Windows remains the default, Control Panel stays visible, touch/controller scrolling remains responsive, and BBS remains selectable."
 }
