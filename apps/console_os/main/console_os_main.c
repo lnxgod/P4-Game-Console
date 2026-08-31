@@ -352,7 +352,6 @@ static game_catalog_scan_state_t s_game_catalog_scan_state;
 static TaskHandle_t s_game_catalog_scan_task;
 static portMUX_TYPE s_game_catalog_scan_lock = portMUX_INITIALIZER_UNLOCKED;
 static esp_err_t s_game_catalog_scan_result = ESP_ERR_INVALID_STATE;
-static esp_err_t s_game_catalog_update_result = ESP_ERR_INVALID_STATE;
 static unsigned s_game_catalog_scan_low_water_bytes;
 static int64_t s_game_catalog_scan_started_us;
 static p4_mp_game_registry_t s_multiplayer_game_registry;
@@ -1823,16 +1822,13 @@ static void game_catalog_scan_worker(void *unused)
     } while (init_state == CONSOLE_STORAGE_INIT_RUNNING);
 
     esp_err_t storage_result = init_result;
-    esp_err_t update_result = init_result;
     if (init_state == CONSOLE_STORAGE_INIT_READY) {
         storage_result = platform_game_catalog_scan(&s_catalog_staging);
-        update_result = platform_os_update_inspect(&s_update_staging);
     }
     const unsigned low_water_bytes =
         (unsigned)uxTaskGetStackHighWaterMark(NULL);
     portENTER_CRITICAL(&s_game_catalog_scan_lock);
     s_game_catalog_scan_result = storage_result;
-    s_game_catalog_update_result = update_result;
     s_game_catalog_scan_low_water_bytes = low_water_bytes;
     s_game_catalog_scan_state = GAME_CATALOG_SCAN_DONE;
     portEXIT_CRITICAL(&s_game_catalog_scan_lock);
@@ -1864,7 +1860,8 @@ static esp_err_t start_game_catalog_scan(void)
     }
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS GAME_CATALOG_SCAN_BEGIN mode=background "
-             "boot_audio=parallel stack_bytes=%u",
+             "boot_audio=parallel stack_bytes=%u "
+             "ota_inspect=foreground-internal",
              (unsigned)CONSOLE_GAME_CATALOG_STACK_BYTES);
     return ESP_OK;
 }
@@ -1881,7 +1878,6 @@ static bool finish_game_catalog_scan(void)
         return false;
     }
     storage_result = s_game_catalog_scan_result;
-    update_result = s_game_catalog_update_result;
     low_water_bytes = s_game_catalog_scan_low_water_bytes;
     completed_task = s_game_catalog_scan_task;
     s_game_catalog_scan_task = NULL;
@@ -1891,6 +1887,11 @@ static bool finish_game_catalog_scan(void)
     if (completed_task != NULL) {
         vTaskDeleteWithCaps(completed_task);
     }
+    /* esp_ota_get_running_partition() can disable the flash/PSRAM cache.
+     * Keep OTA inspection on app_main's internal stack; the PSRAM-backed
+     * worker is intentionally limited to removable-SD catalog work. */
+    memset(&s_update_staging, 0, sizeof(s_update_staging));
+    update_result = platform_os_update_inspect(&s_update_staging);
     (void)publish_game_catalog_scan(
         storage_result, update_result, "background", low_water_bytes);
     ESP_LOGI(TAG,

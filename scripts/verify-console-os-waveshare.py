@@ -935,6 +935,18 @@ def main() -> None:
             "GAME_CATALOG_SCAN_BEGIN mode=background" in source and
             "worker_low_water_bytes=%u" in source,
             "native game catalog worker stack regression is not guarded")
+    catalog_worker = source[
+        source.index("static void game_catalog_scan_worker(void *unused)"):
+        source.index("static esp_err_t start_game_catalog_scan(void)")
+    ]
+    catalog_finish = source[
+        source.index("static bool finish_game_catalog_scan(void)"):
+        source.index("static void wait_for_game_catalog_with_boot_animation(void)")
+    ]
+    require("platform_os_update_inspect" not in catalog_worker and
+            "platform_os_update_inspect(&s_update_staging)" in catalog_finish and
+            "ota_inspect=foreground-internal" in source,
+            "PSRAM catalog worker performs cache-disabling OTA inspection")
     require("CONSOLE_P4CART_SCAN_STACK_BYTES = 24 * 1024" in source and
             "worker_low_water_bytes=%u runtime=p4-lua-5.4-v1" in source,
             "legacy cart scan stack regression is not guarded")

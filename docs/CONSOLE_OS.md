@@ -2,9 +2,11 @@
 
 ## Status
 
-Console OS 0.4.93 raises the background P4G catalog worker to a guarded 32 KiB
-PSRAM stack after hardware exposed a 16 KiB startup overflow. This preserves
-parallel SD catalog validation without allowing a large card to boot-loop the OS.
+Console OS 0.4.94 confines the background P4G worker to removable-SD scanning.
+OTA partition inspection now runs afterward on app_main's internal stack because
+the ESP flash path can disable the PSRAM cache. The catalog worker retains its
+guarded 32 KiB PSRAM stack, preserving parallel validation without cache-unsafe
+flash calls or a large-card boot loop.
 
 Console OS 0.4.92 gives multiplayer setup a bounded three-stop Host page:
 game, Match Settings, and one large create/start action. Detailed Doom and
