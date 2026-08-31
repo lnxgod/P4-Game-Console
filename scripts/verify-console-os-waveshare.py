@@ -931,6 +931,10 @@ def main() -> None:
             )
     require("doom_gamepad_input" in console_main_cmake,
             "Waveshare Console OS does not link Doom's normalized input adapter")
+    require("CONSOLE_GAME_CATALOG_STACK_BYTES = 32 * 1024" in source and
+            "GAME_CATALOG_SCAN_BEGIN mode=background" in source and
+            "worker_low_water_bytes=%u" in source,
+            "native game catalog worker stack regression is not guarded")
     require("CONSOLE_P4CART_SCAN_STACK_BYTES = 24 * 1024" in source and
             "worker_low_water_bytes=%u runtime=p4-lua-5.4-v1" in source,
             "legacy cart scan stack regression is not guarded")

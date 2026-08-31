@@ -39,7 +39,9 @@ The shell and native Game API runtime use a fractional 60 Hz scheduler on the
 at 16 kHz. High-churn storage and diagnostic counters are sampled at 5 Hz so a
 controller or multiplayer page cannot force continuous full-screen redraws.
 
-Console OS 0.4.92 simplifies multiplayer setup without removing controls.
+Console OS 0.4.93 gives the background P4G catalog worker a measured-safe
+32 KiB PSRAM stack so large SD catalogs cannot reboot the launcher during
+startup. Console OS 0.4.92 simplified multiplayer setup without removing controls.
 After Host or Join is chosen, the Host page has only three focus stops: game,
 Match Settings, and the large create/start action. The existing mode, map,
 skill, monster, respawn, time-limit, game, and wired-link controls live on the

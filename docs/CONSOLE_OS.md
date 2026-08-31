@@ -2,6 +2,10 @@
 
 ## Status
 
+Console OS 0.4.93 raises the background P4G catalog worker to a guarded 32 KiB
+PSRAM stack after hardware exposed a 16 KiB startup overflow. This preserves
+parallel SD catalog validation without allowing a large card to boot-loop the OS.
+
 Console OS 0.4.92 gives multiplayer setup a bounded three-stop Host page:
 game, Match Settings, and one large create/start action. Detailed Doom and
 native-game controls remain available on the separate Match Settings page;
