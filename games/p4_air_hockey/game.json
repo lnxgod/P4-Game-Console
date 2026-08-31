@@ -1,0 +1,40 @@
+{
+  "schema": 1,
+  "format": "p4-native-elf-v1",
+  "api_version": 1,
+  "version": "1.0.5",
+  "package_file": "P4_AIR_HOCKEY.P4G",
+  "component": "p4_air_hockey",
+  "sources": [
+    "p4_air_hockey.c",
+    "p4_air_hockey_logic.c",
+    "p4_air_hockey_network.c"
+  ],
+  "entry_symbol": "p4_p4_air_hockey_game",
+  "launcher_id": 115,
+  "id": "org.p4console.p4-air-hockey",
+  "title": "P4 AIR HOCKEY",
+  "subtitle": "TWO-CONSOLE TOUCH DUEL",
+  "folder": "GAMES/ARCADE",
+  "accent_rgb565": "0x5fea",
+  "required_capabilities": [
+    "video",
+    "controls"
+  ],
+  "optional_capabilities": [
+    "audio-tone",
+    "multiplayer-session"
+  ],
+  "license": "MIT",
+  "assets": "original-imagegen-rink-v6-and-object-sprites-v1",
+  "enabled": true,
+  "multiplayer": {
+    "schema": 1,
+    "style": "realtime",
+    "min_players": 2,
+    "max_players": 2,
+    "tick_rate_hz": 30,
+    "message_bytes": 32,
+    "protocol": 4
+  }
+}
