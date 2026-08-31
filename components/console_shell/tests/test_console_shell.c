@@ -397,13 +397,13 @@ static void test_window_manager_visual_contract(void)
 {
 #if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
     CONSOLE_SHELL_TARGET_HEIGHT == 480U
-    const uint64_t desktop_hash = UINT64_C(0xe7cdcfc1289c9ee2);
-    const uint64_t elecrow_system_hash = UINT64_C(0x369ef07fbdd629b9);
-    const uint64_t olimex_system_hash = UINT64_C(0x4fb45571a91cd3bf);
+    const uint64_t desktop_hash = UINT64_C(0x155472def3e4ea55);
+    const uint64_t elecrow_system_hash = UINT64_C(0x0789d647ad2a0a01);
+    const uint64_t olimex_system_hash = UINT64_C(0xc6c3730bc38ab857);
 #else
-    const uint64_t desktop_hash = UINT64_C(0x58a00d0a613faf10);
-    const uint64_t elecrow_system_hash = UINT64_C(0x53524c0bf4408d3d);
-    const uint64_t olimex_system_hash = UINT64_C(0x7ebade9b2ebd4438);
+    const uint64_t desktop_hash = UINT64_C(0x05e38d72f3b45343);
+    const uint64_t elecrow_system_hash = UINT64_C(0x23cd965c66dd2b3b);
+    const uint64_t olimex_system_hash = UINT64_C(0x478271be1fc12dac);
 #endif
     uint16_t *const frame = calloc(
         (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
@@ -451,13 +451,15 @@ static void test_color_modes_and_achievements(void)
 {
     console_shell_t shell;
     CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    CHECK(console_shell_color_mode(&shell) == CONSOLE_COLOR_MODE_ARCADE);
     shell.page = CONSOLE_PAGE_COLORS;
     shell.active_app_id = APP_COLORS;
     const console_shell_action_t color =
-        press_button(&shell, CONSOLE_BUTTON_RIGHT);
+        press_button(&shell, CONSOLE_BUTTON_LEFT);
     CHECK(color.type == CONSOLE_ACTION_COLOR_MODE_CHANGED);
-    CHECK(color.color_mode == CONSOLE_COLOR_MODE_ARCADE);
-    CHECK(console_shell_color_mode(&shell) == CONSOLE_COLOR_MODE_ARCADE);
+    CHECK(color.color_mode == CONSOLE_COLOR_MODE_GAMECHANGERS);
+    CHECK(console_shell_color_mode(&shell) ==
+          CONSOLE_COLOR_MODE_GAMECHANGERS);
 
     p4_achievement_catalog_t achievements;
     p4_achievement_catalog_init(&achievements);
@@ -897,7 +899,7 @@ static void test_navigation_and_launch(void)
     console_shell_t shell;
     CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
 
-    /* Root is a bounded synthetic view: All Programs, Games, System. */
+    /* Root labels the stable SYSTEM namespace as Control Panel. */
     console_shell_action_t action = tap(&shell, 120U, 50U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(strcmp(shell.home_folder_path, "GAMES") == 0);
@@ -919,7 +921,7 @@ static void test_navigation_and_launch(void)
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(shell.home_folder_path[0] == '\0');
 
-    /* A built-in page returns to the System folder, not the root. */
+    /* A built-in page returns to Control Panel's SYSTEM path. */
     action = tap(&shell, 220U, 50U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(strcmp(shell.home_folder_path, "SYSTEM") == 0);
@@ -1337,7 +1339,7 @@ static void test_controller_game_manager(void)
     console_shell_t shell;
     CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
 
-    /* Root -> System -> Game Manager using only normalized buttons. */
+    /* Root -> Control Panel -> Game Manager using normalized buttons. */
     CHECK(press_button(&shell, CONSOLE_BUTTON_RIGHT).type ==
           CONSOLE_ACTION_NONE);
     CHECK(press_button(&shell, CONSOLE_BUTTON_RIGHT).type ==

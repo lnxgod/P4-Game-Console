@@ -38,9 +38,10 @@ directory-sync, connected, and degraded phases. The final handoff reports
 top to bottom like a remote BBS drawing its first ANSI screen. Catalog refresh
 uses connection language instead of a generic loading message.
 
-Console Shell uses the BBS model only for the native Waveshare home page.
-Selecting Appearance > Windows 3.1 returns to the existing window manager.
-All detail pages remain reachable in either mode.
+Console Shell keeps the Windows 3.1 Program Manager as the readable default.
+Selecting Appearance > BBS enables the native Waveshare terminal home page;
+selecting Windows 3.1 returns to the window manager. All detail pages remain
+reachable in either mode.
 
 ## Local and remote boards
 

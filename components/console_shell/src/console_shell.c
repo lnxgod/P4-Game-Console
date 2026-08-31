@@ -238,7 +238,7 @@ static const char *const s_color_mode_names[CONSOLE_COLOR_MODE_COUNT] = {
 };
 
 static const console_palette_t *s_palette =
-    &s_color_palettes[CONSOLE_COLOR_MODE_GAMECHANGERS];
+    &s_color_palettes[CONSOLE_COLOR_MODE_ARCADE];
 static int s_clip_left;
 static int s_clip_top;
 static int s_clip_right = CONSOLE_SHELL_LAYOUT_WIDTH;
@@ -271,6 +271,7 @@ typedef struct {
     home_item_kind_t kind;
     size_t app_index;
     char title[CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES];
+    char path_segment[CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES];
     uint16_t accent_rgb565;
     uint32_t capabilities;
     size_t program_count;
@@ -476,7 +477,7 @@ bool console_shell_init(console_shell_t *shell,
     shell->app_count = app_count;
     shell->pressed_index = SIZE_MAX;
     shell->page = CONSOLE_PAGE_HOME;
-    shell->color_mode = CONSOLE_COLOR_MODE_GAMECHANGERS;
+    shell->color_mode = CONSOLE_COLOR_MODE_ARCADE;
     shell->multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_COUNT;
     shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_ROLE;
     shell->multiplayer_role_selection = 0U;
@@ -739,10 +740,10 @@ static bool immediate_child_segment(
     return true;
 }
 
-static bool item_title_equal(const home_item_t *item, const char *title)
+static bool item_segment_equal(const home_item_t *item, const char *segment)
 {
     return item->kind == HOME_ITEM_FOLDER &&
-           strncmp(item->title, title,
+           strncmp(item->path_segment, segment,
                    CONSOLE_SHELL_FOLDER_SEGMENT_MAX_BYTES) == 0;
 }
 
@@ -779,9 +780,16 @@ static void populate_folder_item(
     memset(item, 0, sizeof(*item));
     item->kind = HOME_ITEM_FOLDER;
     item->app_index = SIZE_MAX;
+    const size_t segment_length = bounded_length(
+        segment, sizeof(item->path_segment) - 1U);
+    memcpy(item->path_segment, segment, segment_length);
+    item->path_segment[segment_length] = '\0';
+    const char *const display_title =
+        parent[0] == '\0' && strcmp(segment, "SYSTEM") == 0
+            ? "CONTROL PANEL" : segment;
     const size_t title_length = bounded_length(
-        segment, sizeof(item->title) - 1U);
-    memcpy(item->title, segment, title_length);
+        display_title, sizeof(item->title) - 1U);
+    memcpy(item->title, display_title, title_length);
     item->title[title_length] = '\0';
     char path[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
     if (!compose_child_path(parent, segment, path)) {
@@ -846,7 +854,7 @@ static size_t build_home_items(
         }
         bool duplicate = false;
         for (size_t j = 0U; j < count; ++j) {
-            if (item_title_equal(&items[j], segment)) {
+            if (item_segment_equal(&items[j], segment)) {
                 duplicate = true;
                 break;
             }
@@ -2147,7 +2155,7 @@ static console_shell_action_t activate_home_selection(console_shell_t *shell)
         return page_changed(0U);
     }
     if (items[item_index].kind == HOME_ITEM_FOLDER) {
-        open_home_folder(shell, items[item_index].title);
+        open_home_folder(shell, items[item_index].path_segment);
         return page_changed(0U);
     }
     if (items[item_index].app_index >= shell->app_count) {
@@ -3116,7 +3124,7 @@ console_shell_action_t console_shell_handle_touch(
             return page_changed(0U);
         }
         if (items[item_index].kind == HOME_ITEM_FOLDER) {
-            open_home_folder(shell, items[item_index].title);
+            open_home_folder(shell, items[item_index].path_segment);
             return page_changed(0U);
         }
         if (items[item_index].app_index >= shell->app_count) {
@@ -3697,7 +3705,7 @@ void console_shell_show_home(console_shell_t *shell)
 console_color_mode_t console_shell_color_mode(const console_shell_t *shell)
 {
     return shell != NULL && color_mode_is_valid(shell->color_mode)
-        ? shell->color_mode : CONSOLE_COLOR_MODE_GAMECHANGERS;
+        ? shell->color_mode : CONSOLE_COLOR_MODE_ARCADE;
 }
 
 bool console_shell_is_dirty(const console_shell_t *shell)
@@ -4369,7 +4377,7 @@ static void draw_colors(const console_shell_t *shell,
     draw_centered_text(
         pixels, stride, 0, 177, CONSOLE_SHELL_LAYOUT_WIDTH,
 #if CONSOLE_SHELL_NATIVE_BBS
-        "BBS DEFAULT / WINDOWS FALLBACK",
+        "WINDOWS DEFAULT / BBS OPTIONAL",
 #else
         "SESSION ONLY - NO CRT FILTER",
 #endif

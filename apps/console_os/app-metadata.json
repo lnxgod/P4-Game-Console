@@ -2,7 +2,7 @@
   "schema": 1,
   "app": "console_os",
   "stage": "sd-only-game-catalog-p4cart-ota-launcher-candidate",
-  "purpose": "FreeRTOS-native 90s BBS door launcher with a selectable Windows 3.1 fallback, branded connection boot sequence, achievements, SD-only executable P4G apps, controller-first wired USB input, an explicit USB Drive role switch, validated P4CART catalog compatibility, atomic dual-slot launcher updates, and an exclusive Doom handoff.",
+  "purpose": "FreeRTOS-native Windows 3.1-style launcher with an optional 90s BBS door theme, branded connection boot sequence, achievements, SD-only executable P4G apps, controller-first wired USB input, an explicit USB Drive role switch, validated P4CART catalog compatibility, atomic dual-slot launcher updates, and an exclusive Doom handoff.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
   "flash_authorized": false,
@@ -26,7 +26,7 @@
   "shell": {
     "model": "fixed-builtins-plus-storage-cartridge-catalog",
     "scheduler": "FreeRTOS via ESP-IDF",
-    "surface": "Native 768x480 CP437/ANSI BBS home on Waveshare 4.3 with slightly enlarged bold ASCII strokes; stable 320x200 logical coordinates for Windows detail panels and all Game API surfaces",
+    "surface": "Native 768x480 Windows 3.1-style home on Waveshare 4.3 with an optional CP437/ANSI BBS theme; stable 320x200 logical coordinates for detail panels and all Game API surfaces",
     "font_rendering": "Pinned 8x16 CP437 in 9x16 cells; bold printable ASCII gains one right-hand pixel while cell geometry and line art remain unchanged",
     "input": "bounded board service: GT911 touch or OS-owned USB gamepad, keyboard, and mouse",
     "built_in_apps": [
@@ -119,7 +119,7 @@
   },
   "themes": {
     "persistence": "session-only",
-    "modes": ["bbs-default", "windows-3.1", "ocean-windows", "sunset-windows"],
+    "modes": ["windows-3.1-default", "bbs-optional", "ocean-windows", "sunset-windows"],
     "crt_filter": false
   },
   "achievements": {
@@ -220,5 +220,5 @@
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "Create a fresh exact-artifact authorization before any Console OS 0.4.36 install. On the bound Waveshare 4.3 with H1 UART retained, visually confirm the larger bold BBS headings, door names, and controls remain aligned and tappable; then repeat controller navigation, Byte Buddy launch/return, and named-signal smoke checks. Do not reuse the 0.4.35 authorization."
+  "next_hardware_step": "On the two recorded Waveshare 4.3 units with H1 UART retained, install the exact verified Console OS 0.4.96 artifact and confirm Windows is the default, Control Panel is visible on the first launcher row, smooth touch/controller scrolling remains responsive, BBS remains selectable, and a live SD catalog refresh preserves the chosen session theme."
 }

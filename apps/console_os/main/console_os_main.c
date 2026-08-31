@@ -181,8 +181,8 @@ enum {
     CONSOLE_BOOT_ANIMATION_STEPS = 5,
     CONSOLE_STORAGE_LOADING_FRAME_MS = 160,
     CONSOLE_BBS_CONNECT_HOLD_MS = 260,
-    CONSOLE_BBS_HOME_REVEAL_STEPS = 6,
-    CONSOLE_BBS_HOME_REVEAL_DELAY_MS = 45,
+    CONSOLE_HOME_REVEAL_STEPS = 6,
+    CONSOLE_HOME_REVEAL_DELAY_MS = 45,
     CONSOLE_BOOT_SUBMIT_ATTEMPTS = 3,
     CONSOLE_BOOT_SUBMIT_RETRY_MS = 20,
     CONSOLE_BOOT_LOGO_WIDTH = 112,
@@ -2233,6 +2233,8 @@ static void rebuild_shell_registry(console_shell_t *shell)
 {
     const console_page_t previous_page = shell->page;
     const uint32_t previous_app = shell->active_app_id;
+    const console_color_mode_t previous_color_mode =
+        console_shell_color_mode(shell);
     const bool previous_all_programs = shell->home_all_programs;
     const p4_terminal_t previous_terminal = shell->terminal;
     char previous_folder[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
@@ -2245,6 +2247,7 @@ static void rebuild_shell_registry(console_shell_t *shell)
     memcpy(shell->home_folder_path, previous_folder,
            sizeof(shell->home_folder_path));
     shell->home_all_programs = previous_all_programs;
+    shell->color_mode = previous_color_mode;
     shell->terminal = previous_terminal;
     console_shell_set_achievement_catalog(shell, &s_achievements);
     (void)console_shell_set_save_catalog(shell, &s_saves);
@@ -6009,7 +6012,7 @@ static esp_err_t present_boot_screen(unsigned animation_step,
 }
 
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
-static esp_err_t present_bbs_home_reveal(console_shell_t *shell)
+static esp_err_t present_home_reveal(console_shell_t *shell)
 {
     if (shell == NULL || s_pixels == NULL ||
         !console_shell_render_rgb565(
@@ -6024,7 +6027,7 @@ static esp_err_t present_bbs_home_reveal(console_shell_t *shell)
         MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
     if (reveal_pixels == NULL) {
         ESP_LOGW(TAG,
-                 "P4_CONSOLE_OS BBS_REVEAL status=skipped reason=no-memory");
+                 "P4_CONSOLE_OS HOME_REVEAL status=skipped reason=no-memory");
         return platform_display_submit_content_rgb565(
             s_pixels, CONSOLE_SHELL_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
     }
@@ -6032,10 +6035,10 @@ static esp_err_t present_bbs_home_reveal(console_shell_t *shell)
     esp_err_t result = ESP_OK;
     size_t previous_rows = 0U;
     for (unsigned step = 1U;
-         step <= CONSOLE_BBS_HOME_REVEAL_STEPS; ++step) {
+         step <= CONSOLE_HOME_REVEAL_STEPS; ++step) {
         const size_t visible_rows =
             (size_t)CONSOLE_SHELL_HEIGHT * step /
-            CONSOLE_BBS_HOME_REVEAL_STEPS;
+            CONSOLE_HOME_REVEAL_STEPS;
         const size_t added_rows = visible_rows - previous_rows;
         memcpy(reveal_pixels + previous_rows * CONSOLE_SHELL_WIDTH,
                s_pixels + previous_rows * CONSOLE_SHELL_WIDTH,
@@ -6049,7 +6052,7 @@ static esp_err_t present_bbs_home_reveal(console_shell_t *shell)
                 break;
             }
             ESP_LOGW(TAG,
-                     "P4_CONSOLE_OS BBS_REVEAL_RETRY step=%u attempt=%u",
+                     "P4_CONSOLE_OS HOME_REVEAL_RETRY step=%u attempt=%u",
                      step, attempt + 1U);
             vTaskDelay(pdMS_TO_TICKS(CONSOLE_BOOT_SUBMIT_RETRY_MS));
         }
@@ -6057,16 +6060,16 @@ static esp_err_t present_bbs_home_reveal(console_shell_t *shell)
             break;
         }
         previous_rows = visible_rows;
-        if (step < CONSOLE_BBS_HOME_REVEAL_STEPS) {
-            vTaskDelay(pdMS_TO_TICKS(CONSOLE_BBS_HOME_REVEAL_DELAY_MS));
+        if (step < CONSOLE_HOME_REVEAL_STEPS) {
+            vTaskDelay(pdMS_TO_TICKS(CONSOLE_HOME_REVEAL_DELAY_MS));
         }
     }
     heap_caps_free(reveal_pixels);
     ESP_LOGI(TAG,
-             "P4_CONSOLE_OS BBS_REVEAL status=%s rows=%u steps=%u",
+             "P4_CONSOLE_OS HOME_REVEAL status=%s rows=%u steps=%u",
              result == ESP_OK ? "complete" : "failed",
              (unsigned)previous_rows,
-             (unsigned)CONSOLE_BBS_HOME_REVEAL_STEPS);
+             (unsigned)CONSOLE_HOME_REVEAL_STEPS);
     return result;
 }
 #endif
@@ -8594,7 +8597,7 @@ void app_main(void)
     const console_shell_runtime_info_t initial_runtime = runtime_info();
     console_shell_set_runtime_info(shell, &initial_runtime);
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
-    result = present_bbs_home_reveal(shell);
+    result = present_home_reveal(shell);
 #else
     result = present(shell);
 #endif

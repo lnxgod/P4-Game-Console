@@ -13,7 +13,7 @@ organizes built-ins plus the current storage catalog as:
 - Games
   - Action: Doom (exclusive foreground handoff)
   - Arcade: installed reentrant Game API cartridges
-- System: Colors, Touch, System status, Audio status, Achievements, File
+- Control Panel: Appearance, Touch, System status, Audio, Achievements, File
   Manager, Game Manager, Multiplayer, Controllers, Save Manager, and Terminal
   - Tools: Calculator
   - Tests: Input Test and AV Test
@@ -30,19 +30,23 @@ microSD mount reaches a ready or degraded terminal state; serial evidence report
 the measured dial and SD initialization durations. Catalog validation overlaps
 the sound sequence on a low-priority PSRAM task, and Program Manager's first frame
 still includes the exact validated P4G catalog. A slow or missing card therefore shows
-explicit loading instead of a black panel. The Colors app switches the shell
-among Gold, Arcade, Ocean, and Sunset palettes for the current session. There is
-no CRT filter.
+explicit loading instead of a black panel. The Windows 3.1 Program Manager is
+the default launcher. Appearance can switch the current session to the optional
+BBS door view or the Windows, Ocean, and Sunset palettes. There is no CRT
+filter.
 
 The shell and native Game API runtime use a fractional 60 Hz scheduler on the
 100 Hz FreeRTOS clock. Native audio follows the matching 266/267-frame cadence
 at 16 kHz. High-churn storage and diagnostic counters are sampled at 5 Hz so a
 controller or multiplayer page cannot force continuous full-screen redraws.
-Console OS 0.4.95 advances launcher motion on that UI scheduler: touch tracks
+Console OS 0.4.96 defaults to the readable Windows 3.1 launcher, displays the
+compatible `SYSTEM/...` namespace as **Control Panel** on the root screen, and
+preserves a session theme across live catalog refreshes. Console OS 0.4.95
+advances launcher motion on that UI scheduler: touch tracks
 fractional rows, release snaps with a bounded fling, and buttons/controllers
-use an interruptible cubic ease. The Waveshare BBS slides only its clipped ANSI
-door viewport into the existing 768x480 framebuffer, avoiding a second frame
-allocation.
+use an interruptible cubic ease. When selected, the Waveshare BBS slides only
+its clipped ANSI door viewport into the existing 768x480 framebuffer, avoiding
+a second frame allocation.
 
 Console OS 0.4.94 keeps flash/OTA inspection on the main task's internal stack
 while the 32 KiB PSRAM worker scans only removable-SD game data. This prevents
@@ -67,7 +71,7 @@ it and triggers fresh size/header/SHA-256 validation.
 Waveshare 4.3 and Olimex use removable microSD instead. Olimex still requires a
 powered-off laptop card reader. On Waveshare, H1 remains the CH343 programming
 and serial port; connect the native H2 USB-C device port to a Mac, open
-**System**, and press **Turn On USB Mode** to expose the microSD card as
+**Control Panel**, open **System**, and press **Turn On USB Mode** to expose the microSD card as
 **P4 Game Storage**. Console OS unmounts the card before host ownership and
 verifies each host write synchronously. Eject the volume in Finder (or
 disconnect H2), then press **Turn Off USB Mode** to remount and rescan it. The

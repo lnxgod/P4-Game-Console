@@ -28,7 +28,7 @@ target_compile_definitions(console_shell_waveshare_tests PRIVATE
     # The panel is 800x480; its centered Console OS viewport is 768x480.
     CONSOLE_SHELL_TARGET_WIDTH=800U
     CONSOLE_SHELL_TARGET_HEIGHT=480U
-    # Keep the legacy interaction suite on the selectable Windows fallback.
+    # Keep the interaction suite on the default Windows renderer.
     CONSOLE_SHELL_FORCE_WINDOWS=1
 )
 target_compile_features(console_shell_waveshare_tests PRIVATE c_std_11)

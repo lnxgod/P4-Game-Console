@@ -2,12 +2,18 @@
 
 ## Status
 
+Console OS 0.4.96 makes the Windows 3.1 Program Manager the fresh-boot default
+and keeps the BBS door launcher as an optional Appearance choice. The root
+`SYSTEM/...` namespace is displayed as **Control Panel**, so it remains visible
+on the first launcher row without changing existing cartridge paths. Live SD
+catalog refreshes preserve the current session theme instead of resetting it.
+
 Console OS 0.4.95 makes launcher scrolling time-based instead of row-jumped.
 Touch drags update a bounded 16.16 row position, release applies a one-row
 maximum fling and nearest-row snap, and controller or page-button movement uses
 a short cubic ease that can be interrupted and retargeted. The native 768x480
 BBS composites clipped outgoing and incoming ANSI door rows into the existing
-framebuffer, so it does not allocate a second screen. The Windows fallback uses
+framebuffer, so it does not allocate a second screen. The Windows renderer uses
 the same state machine and a clipped primitive viewport. Long service stalls
 are capped to 50 ms of animation progress, while input and animation remain on
 the existing fractional 60 Hz UI loop.
@@ -39,9 +45,9 @@ catalog. OTA acceptance is withheld until optional services survive a
 than deliberately blanking a working panel.
 
 The current Waveshare successor changes the home surface, not the Game API.
-Console OS renders an 80x30 CP437/ANSI BBS natively in the centered 768x480
-viewport, presents games and folders as numbered doors, and keeps the existing
-Windows 3.1-style Program Manager as the selectable Appearance fallback. Touch
+Console OS renders the Windows 3.1-style Program Manager natively in the
+centered 768x480 viewport by default. Appearance can select the 80x30
+CP437/ANSI BBS, which presents games and folders as numbered doors. Touch
 hit testing, keyboard, and controller navigation share the same two-column,
 three-row door geometry. Native games remain 320x200 RGB565 and are scaled by
 the platform display path. The Waveshare adapter uses the P4 hardware scaler
@@ -444,7 +450,8 @@ formats this card and does not support live removal. The USB-C connector is
 not a mass-storage endpoint.
 
 For Waveshare, run `make console-os-waveshare-idf`, connect the native H2
-USB-C device port to the laptop, open System, and press **Turn On USB Mode**.
+USB-C device port to the laptop, open **Control Panel**, select **System**, and
+press **Turn On USB Mode**.
 After the card volume mounts, run
 `make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES`. Eject it in Finder,
 then press **Turn Off USB Mode** to remount and rescan. The same guarded
@@ -494,7 +501,7 @@ boot
        |-- Games
        |     |-- Action -> Doom
        |     `-- installed microSD P4G games grouped by manifest folder
-       |-- System -> diagnostics / Colors / Audio / Achievements
+       |-- Control Panel (SYSTEM path) -> diagnostics / Appearance / Audio / Achievements
        |     |-- Tools -> Calculator
        |     |-- Tests -> Input Test / AV Test
        |     |-- File Manager -> bounded root list / confirmed delete
@@ -583,8 +590,9 @@ optional same-name `.P4R` resource sidecar. Copy the declared files into
 `docs/GAME_SDK.md`.
 
 The standard SD bundle also includes Calculator under `SYSTEM/TOOLS` plus
-Input Test and AV Test under `SYSTEM/TESTS`. They use the same P4G boundary as
-games and are removable without changing the launcher firmware.
+Input Test and AV Test under `SYSTEM/TESTS`; the launcher displays their root
+namespace as **Control Panel**. They use the same P4G boundary as games and are
+removable without changing the launcher firmware.
 
 ## Sound behavior
 

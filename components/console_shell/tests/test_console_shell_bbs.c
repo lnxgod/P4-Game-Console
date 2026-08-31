@@ -83,12 +83,40 @@ static uint64_t frame_hash(const uint16_t *pixels, size_t count)
     return hash;
 }
 
+static bool terminal_contains(const p4_ansi_terminal_t *terminal,
+                              const char *text)
+{
+    const size_t length = strlen(text);
+    for (size_t row = 0U; row < P4_ANSI_ROWS; ++row) {
+        for (size_t column = 0U;
+             column + length <= P4_ANSI_COLUMNS; ++column) {
+            size_t matched = 0U;
+            while (matched < length &&
+                   p4_ansi_cell(terminal, column + matched, row)->character ==
+                       (uint8_t)text[matched]) {
+                ++matched;
+            }
+            if (matched == length) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static void select_bbs(console_shell_t *shell)
+{
+    shell->color_mode = CONSOLE_COLOR_MODE_GAMECHANGERS;
+    shell->dirty = true;
+}
+
 int main(void)
 {
     CHECK(CONSOLE_SHELL_NATIVE_BBS == 1);
     console_shell_t shell;
     CHECK(console_shell_init(
         &shell, s_apps, sizeof(s_apps) / sizeof(s_apps[0])));
+    CHECK(console_shell_color_mode(&shell) == CONSOLE_COLOR_MODE_ARCADE);
     const console_shell_runtime_info_t runtime = {
         .board_kind = CONSOLE_BOARD_WAVESHARE_4_3,
         .content_scan_complete = true,
@@ -103,6 +131,10 @@ int main(void)
     if (pixels != NULL) {
         CHECK(console_shell_render_rgb565(
             &shell, pixels, CONSOLE_SHELL_WIDTH));
+        const uint64_t windows_hash = frame_hash(pixels, pixel_count);
+        select_bbs(&shell);
+        CHECK(console_shell_render_rgb565(
+            &shell, pixels, CONSOLE_SHELL_WIDTH));
         if (shell.bbs_terminal.scroll_count != 0U) {
             fprintf(stderr, "unexpected BBS scrolls: %u\n",
                     (unsigned)shell.bbs_terminal.scroll_count);
@@ -110,17 +142,15 @@ int main(void)
         CHECK(shell.bbs_terminal.scroll_count == 0U);
         CHECK(p4_ansi_cell(&shell.bbs_terminal, 1U, 0U)->character == 0xc9U);
         CHECK(p4_ansi_cell(&shell.bbs_terminal, 5U, 9U)->character == '>');
+        CHECK(terminal_contains(&shell.bbs_terminal, "CONTROL PANEL"));
         const uint64_t bbs_hash = frame_hash(pixels, pixel_count);
-        shell.color_mode = CONSOLE_COLOR_MODE_ARCADE;
-        shell.dirty = true;
-        CHECK(console_shell_render_rgb565(
-            &shell, pixels, CONSOLE_SHELL_WIDTH));
-        CHECK(frame_hash(pixels, pixel_count) != bbs_hash);
+        CHECK(windows_hash != bbs_hash);
         free(pixels);
     }
 
     CHECK(console_shell_init(
         &shell, s_apps, sizeof(s_apps) / sizeof(s_apps[0])));
+    select_bbs(&shell);
     console_shell_action_t action = tap_surface(&shell, 405U, 212U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(strcmp(shell.home_folder_path, "GAMES") == 0);
@@ -138,6 +168,7 @@ int main(void)
     CHECK(console_shell_init(
         &shell, s_paged_apps,
         sizeof(s_paged_apps) / sizeof(s_paged_apps[0])));
+    select_bbs(&shell);
     uint16_t *const transition_pixels = calloc(
         (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
         sizeof(*transition_pixels));
