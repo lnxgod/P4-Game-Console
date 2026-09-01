@@ -4,6 +4,28 @@ This is the working list for the Dragon game's fluidity, pacing, progression,
 and new art. Keep gameplay changes deterministic and bounded on the 320x200
 P4 Game API surface.
 
+## Graphics polish v4.1 candidate
+
+- [x] Make Ward, Echo, Siphon, and Overclock animation event-driven so authored
+      trigger/fade frames correspond to real battle mechanics.
+- [x] Align dragon clip changes to complete loops, keep calm reactions out of
+      attack poses, and remove wrap/reset pops from particles, trails, city
+      stars, habitat orbits, and Star Catcher streaks.
+- [x] Compose core, halo, sigil, aura, hue, rarity, habitat, and shield/phantom
+      details into every compact signal icon instead of dropping layers at
+      list scale.
+- [x] Make the Genome art use the lineage traits shown in its text, including
+      rarity and band diversity, with a truthful dormant state.
+- [x] Capture actual passive procs, add pairwise visual-distinction checks for
+      every genome dimension and all twenty habitats, and inspect the complete
+      112-frame authored route.
+- [x] Pass the focused ASan/UBSan game suite (5/5), SDL host smoke/save suite
+      (2/2), and visual review without adding placeholder art or another atlas.
+- [x] Build and verify the deterministic v4.1 `.P4G` candidate and run the
+      manifest/registry gate.
+- [ ] Complete named human SDL and physical-tablet acceptance before deploying
+      or describing v4.1 as play-tested or hardware-tested.
+
 ## Full graphics v4 pass
 
 - [x] Audit every reachable care, activity, shop, growth, scan, tracker,
