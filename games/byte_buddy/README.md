@@ -85,6 +85,18 @@ signal-genetic sheets already derived from them. The atlas converter now
 requires the exact filename at every index and rejects missing, reordered,
 duplicate, or extra sources.
 
+Version 4.1 makes the completed art bank feel continuous and makes every signal
+creature readable at every in-game scale. Dragon idle clips now change only at
+complete loop boundaries, calm reactions stay calm, procedural particles and
+orbits use eased or wrapped motion, and scene-transition art exits without a
+size pop. Ward, Echo, Siphon, and Overclock keep a quiet active pose and play
+their authored trigger/fade frames only when the matching battle mechanic
+actually fires. The compact 21-pixel signal rows now preserve core, halo,
+sigil, aura, hue, rarity, habitat, and shield/phantom accents, while Genome
+draws the aggregate lineage it names rather than treating entropy as a signal
+token. This pass reuses the same required 29-sheet/464-frame `BYTEBUD.P4R`; it
+does not add placeholder art or increase the resource budget.
+
 ## Touch play
 
 - Tap **Feed**, **Play**, **Clean**, or **Rest** to provide care.
@@ -841,7 +853,7 @@ instead of 8,192 bytes of raw RGB565.
 
 All twenty-nine gameplay sheets contain 464 master frames in a 965,184-byte
 resource payload. Console OS wraps that payload as `BYTEBUD.P4R`: a bounded,
-same-ID, SHA-256-verified read-only SD sidecar. Byte Buddy 4.0 requires storage
+same-ID, SHA-256-verified read-only SD sidecar. Byte Buddy 4.x requires storage
 resource format v1 and the exact ordered 29-sheet bank before initializing.
 The converter rejects a missing, reordered, renamed, duplicate, or extra source
 before it writes either output. Runtime validation separately fails closed on
@@ -927,6 +939,24 @@ byte-identical v4 cartridge recorded above. The package verifier accepted its
 header, manifest fields, capability masks, ELF payload, and digest. This is
 artifact verification, not on-device acceptance.
 
+### v4.1 host candidate
+
+Two independent focused builds with the same pinned compiler produced an
+identical 189,932-byte `BYTEBUD.P4G` with a 189,676-byte ELF payload. The
+payload SHA-256 is
+`85a50b699e1d8fc9926b5a43f79b9ef9f6e782c62e629ad8485cb701076ec137`
+and the package SHA-256 is
+`5b01567d4f094f79de039a299156ed6a5d80d75e216f9065e2b03953708ff142`.
+The independent package verifier accepted the v4.1 header, manifest fields,
+capability masks, embedded version, ELF payload, and digest. The manifest and
+registry gate also passed. Because v4.1 changes no source atlas or resource
+payload, its required `BYTEBUD.P4R` remains byte-identical to v4: 965,312 bytes
+with SHA-256
+`5d3b604daa3bf97f2c99268b4f2eedb3a4270f18558415fa7aee8e0a9a40dcd4`.
+The verified pair is under `build-host/byte-buddy-4.1.0/`. This is a host-built
+artifact candidate only; it has not received a matching firmware build, named
+human play acceptance, tablet acceptance, or deployment.
+
 ### v4 deployment candidate
 
 The controller-first Waveshare Console OS build passed its no-flash verifier
@@ -976,14 +1006,20 @@ controller cursor, and hints. The sequence remains exactly 178 frames. The tests
 also run a dedicated 905-frame Signal Battle chronology covering every attack
 family, all four passive combinations, telegraphs, travel, impact, guard,
 player damage, HP defeat, rematch, retreat, Pulse victory, Resonance victory,
-and delayed rewards. A third exact 112-frame suite covers every reclaimed v4
+and delayed rewards. Its passive coverage captures genuine Ward absorption,
+Echo amplification, Siphon healing, and Overclock windup events instead of an
+ambient animation loop. A third exact 112-frame suite covers every reclaimed v4
 cell and locks semantic ROI digests for counters, outcomes, passives, scanner
 states, needs, signal-earned evolution, all four visible Star-ready phases,
 Star miss/summary, Power growth, neutral scene wipes, per-run summaries, and
 shop onset/unlocked/equipped/unavailable mappings. Every one of those 112
 authored frames has one fail-closed semantic digest; missing, duplicated,
-renamed, or column-swapped expectations fail the route. Additional non-emitted
-checks defeat 27 unique signals without returning Home, then require distinct
+renamed, or column-swapped expectations fail the route. A review-only
+`--review-authored-motion` mode emits the same frames and their hashes without
+weakening the normal fail-closed CTest path. Additional non-emitted checks
+require pairwise-distinct 21-pixel list-icon regions when core, halo, sigil,
+aura, hue, rarity, or any of the twenty habitat contexts changes. They also
+defeat 27 unique signals without returning Home, then require distinct
 Winged and Flying ceremonies in order. They also require a Play-triggered
 milestone to finish visibly on Home before a fresh wipe and full Ready sequence,
 require both B and touch Done to work during the opening wipe, and consume an
@@ -1009,8 +1045,10 @@ and rejection of missing, null, malformed, truncated, wrong-version, or
 incomplete full art. CTest renders the eleven primary 320×200 screens, the
 complete 178-frame route, and hashes the exact 905-frame battle and 112-frame
 authored routes with the committed resource as deterministic preview smokes.
-The final focused CTest run passed 5/5, the SDL host smoke/save run passed 2/2,
-and the matched Waveshare build verifier passed. Named human SDL play and
+The v4.1 focused CTest run passed 5/5 and the SDL host smoke/save run passed
+2/2. Its deterministic cartridge/resource pair and independent package checks
+also passed. The matched Waveshare build verifier result above belongs to the
+v4.0 deployment candidate; v4.1 named human SDL play, target integration, and
 physical-tablet acceptance remain pending.
 
 Care, coins, upgrades, growth, and lineage are session-only until the platform

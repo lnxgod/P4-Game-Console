@@ -18,6 +18,9 @@ typedef struct {
     uint8_t batch;
     int8_t focused_rssi_dbm;
     uint8_t mode;
+    uint64_t first_token_override;
+    uint8_t first_channel_override;
+    uint8_t first_flags_override;
 } preview_signal_scan_t;
 
 typedef enum {
@@ -35,6 +38,7 @@ typedef struct {
     uint64_t attack_hashes[BYTE_BUDDY_SIGNAL_ATTACK_COUNT];
     bool attack_hash_valid[BYTE_BUDDY_SIGNAL_ATTACK_COUNT];
     bool require_semantic_digests;
+    bool print_semantic_digests;
 } preview_motion_writer_t;
 
 typedef struct {
@@ -53,6 +57,7 @@ enum {
     PREVIEW_SIGNAL_DEFEAT_MS = 760,
     PREVIEW_SIGNAL_RETREAT_REMAINING_MS = 504,
     PREVIEW_SIGNAL_STRIKE_WAIT_MS = 400,
+    PREVIEW_SIGNAL_PASSIVE_FX_MS = 520,
     PREVIEW_SIGNAL_HP_DEFEAT_CUTOFF_MS = 11000,
     PREVIEW_SIGNAL_MOTION_MAX_FRAMES = 1200,
     PREVIEW_LEGACY_FOCUS_RSSI_DBM = -65,
@@ -63,6 +68,9 @@ enum {
 static unsigned s_clip_frame_count;
 
 static uint64_t preview_signal_token(unsigned batch, unsigned index);
+static uint64_t controlled_signal_token(
+    uint8_t core, uint8_t halo, uint8_t sigil,
+    uint8_t aura, uint8_t hue, uint8_t rarity);
 
 static bool preview_request_signal(void *context, uint64_t focus_token)
 {
@@ -148,6 +156,17 @@ static bool preview_request_signal(void *context, uint64_t focus_token)
             --scan->snapshot.count;
             break;
         }
+    }
+    if (scan->first_token_override != 0U &&
+        scan->snapshot.count != 0U) {
+        scan->snapshot.results[0].token = scan->first_token_override;
+        scan->snapshot.results[0].channel = scan->first_channel_override;
+        scan->snapshot.results[0].flags = (uint8_t)(
+            scan->first_flags_override | P4_GAME_SIGNAL_SIMULATED);
+        scan->snapshot.results[0].rssi_dbm = -43;
+        (void)snprintf(scan->snapshot.results[0].label,
+                       sizeof(scan->snapshot.results[0].label),
+                       "GENOME TEST");
     }
     return true;
 }
@@ -434,21 +453,21 @@ static bool semantic_digest_matches(
     const char *label, unsigned local_frame, uint64_t actual_hash)
 {
     static const preview_semantic_digest_t expected[] = {
-        {"counter-nova", 0U, UINT64_C(0x312cdc7584a07a30)},
+        {"counter-nova", 0U, UINT64_C(0x34119839d50dc51c)},
         {"counter-nova", 1U, UINT64_C(0x6a805625fd0a137e)},
-        {"counter-nova", 2U, UINT64_C(0x829b210914c9334d)},
+        {"counter-nova", 2U, UINT64_C(0xfe540154df00c219)},
         {"counter-nova", 3U, UINT64_C(0x65a8d3c22df47444)},
-        {"counter-flare", 0U, UINT64_C(0x54fb8ff9ccc3fa80)},
-        {"counter-flare", 1U, UINT64_C(0x25afa1c67c508646)},
-        {"counter-flare", 2U, UINT64_C(0x932483a41694ed44)},
+        {"counter-flare", 0U, UINT64_C(0xdb9630093a6b849c)},
+        {"counter-flare", 1U, UINT64_C(0xc556f874fa95eeb6)},
+        {"counter-flare", 2U, UINT64_C(0x553ba03db719037c)},
         {"counter-flare", 3U, UINT64_C(0x984cf3a3852c583e)},
-        {"counter-glacier", 0U, UINT64_C(0x387b4b74204918c9)},
-        {"counter-glacier", 1U, UINT64_C(0x3e82b2ed4c7191b7)},
-        {"counter-glacier", 2U, UINT64_C(0xf73a912f5408ecb7)},
+        {"counter-glacier", 0U, UINT64_C(0x13e668e8866fb559)},
+        {"counter-glacier", 1U, UINT64_C(0x08818ec513504e36)},
+        {"counter-glacier", 2U, UINT64_C(0xdc29c9dc9fa4293b)},
         {"counter-glacier", 3U, UINT64_C(0xfa6f719e22edc981)},
-        {"counter-jam", 0U, UINT64_C(0x3186199ea91150ae)},
-        {"counter-jam", 1U, UINT64_C(0xf603064603500fb2)},
-        {"counter-jam", 2U, UINT64_C(0xb19dc3e54b791804)},
+        {"counter-jam", 0U, UINT64_C(0xae077dd64bb4790e)},
+        {"counter-jam", 1U, UINT64_C(0xaaac3081c4b0082c)},
+        {"counter-jam", 2U, UINT64_C(0x5a43b34cfa4f5f9c)},
         {"counter-jam", 3U, UINT64_C(0x4566a4d65fcccc9b)},
         {"outcome-victory", 0U, UINT64_C(0xa6c1d7cbd4ca8e60)},
         {"outcome-victory", 1U, UINT64_C(0xf7377c04272206a7)},
@@ -470,22 +489,22 @@ static bool semantic_digest_matches(
         {"evolution-genome", 1U, UINT64_C(0x1226d12be371d112)},
         {"evolution-genome", 2U, UINT64_C(0x62c2aaf8f143d792)},
         {"evolution-genome", 3U, UINT64_C(0xcbbe6ec1e0d2be8c)},
-        {"passive-ward", 0U, UINT64_C(0x0fbe85311f4cfb8f)},
-        {"passive-ward", 1U, UINT64_C(0x9041ab5d35df5857)},
-        {"passive-ward", 2U, UINT64_C(0xbd461bcc2c295ff4)},
-        {"passive-ward", 3U, UINT64_C(0xd056a8c81f18ffee)},
-        {"passive-echo", 0U, UINT64_C(0x977f1b47db472c27)},
-        {"passive-echo", 1U, UINT64_C(0x5dbcb7a51aeeabe5)},
-        {"passive-echo", 2U, UINT64_C(0xe08180530092d5b2)},
-        {"passive-echo", 3U, UINT64_C(0x4485951c878be4c6)},
-        {"passive-siphon", 0U, UINT64_C(0xa024295847cf3888)},
-        {"passive-siphon", 1U, UINT64_C(0x7f05a94d69e6a219)},
-        {"passive-siphon", 2U, UINT64_C(0x505a043a4051dd14)},
-        {"passive-siphon", 3U, UINT64_C(0x0068b6b08307d1d2)},
-        {"passive-overclock", 0U, UINT64_C(0xfe7644eeaa23f93d)},
-        {"passive-overclock", 1U, UINT64_C(0x58f5d01999a01997)},
-        {"passive-overclock", 2U, UINT64_C(0x92d2acf11bded96b)},
-        {"passive-overclock", 3U, UINT64_C(0x3999cd2100266f84)},
+        {"passive-ward", 0U, UINT64_C(0x9041ab5d35df5857)},
+        {"passive-ward", 1U, UINT64_C(0xa8dc5848c465feee)},
+        {"passive-ward", 2U, UINT64_C(0x8f6216f111b34e0a)},
+        {"passive-ward", 3U, UINT64_C(0xeb6f5ef587e78d2e)},
+        {"passive-echo", 0U, UINT64_C(0x5dbcb7a51aeeabe5)},
+        {"passive-echo", 1U, UINT64_C(0x56685e34c3201d7e)},
+        {"passive-echo", 2U, UINT64_C(0x85d2af44e8190185)},
+        {"passive-echo", 3U, UINT64_C(0xc83b2bd48b2e45af)},
+        {"passive-siphon", 0U, UINT64_C(0x7f05a94d69e6a219)},
+        {"passive-siphon", 1U, UINT64_C(0xc1beda95f53e97b1)},
+        {"passive-siphon", 2U, UINT64_C(0x9af0717d075c8dbe)},
+        {"passive-siphon", 3U, UINT64_C(0xd980530e820d6439)},
+        {"passive-overclock", 0U, UINT64_C(0x58f5d01999a01997)},
+        {"passive-overclock", 1U, UINT64_C(0x653ffb72b09fb22d)},
+        {"passive-overclock", 2U, UINT64_C(0xdf79da19af9cd506)},
+        {"passive-overclock", 3U, UINT64_C(0x901e10f461af0fe1)},
         {"scan-scanning", 0U, UINT64_C(0xa21a7776719ac2ed)},
         {"scan-scanning", 1U, UINT64_C(0xd42262011122ce8b)},
         {"scan-scanning", 2U, UINT64_C(0x0a2c742d00160f78)},
@@ -502,38 +521,38 @@ static bool semantic_digest_matches(
         {"scan-empty", 1U, UINT64_C(0x2c5c462d83e39bd9)},
         {"scan-empty", 2U, UINT64_C(0xf80ce870e27ad1ca)},
         {"scan-empty", 3U, UINT64_C(0xf7dded9dc212567a)},
-        {"need-joy", 0U, UINT64_C(0xa0e05110828804e1)},
-        {"need-joy", 1U, UINT64_C(0x8752764196a71f28)},
-        {"need-joy", 2U, UINT64_C(0xa2295ff11b2093fa)},
-        {"need-joy", 3U, UINT64_C(0x3938ffa5ff640d79)},
-        {"need-energy", 0U, UINT64_C(0xf17fc145842d6b81)},
-        {"need-energy", 1U, UINT64_C(0x233b426569f864ad)},
-        {"need-energy", 2U, UINT64_C(0x37934af6a153b3f1)},
-        {"need-energy", 3U, UINT64_C(0x2f71117e05ef0141)},
+        {"need-joy", 0U, UINT64_C(0x60cd8c0e3dce8ea1)},
+        {"need-joy", 1U, UINT64_C(0xcdcdae061f755d68)},
+        {"need-joy", 2U, UINT64_C(0xd2d02544c0a1e77a)},
+        {"need-joy", 3U, UINT64_C(0xd2736b3398f7dcb9)},
+        {"need-energy", 0U, UINT64_C(0xd44237784080f9c1)},
+        {"need-energy", 1U, UINT64_C(0x3039fdb980c53db5)},
+        {"need-energy", 2U, UINT64_C(0x7f011ff984bda7b1)},
+        {"need-energy", 3U, UINT64_C(0xc12ae1f837ca4201)},
         {"need-hunger", 0U, UINT64_C(0xcbef06682b9020b2)},
-        {"need-hunger", 1U, UINT64_C(0xafefb81645e98159)},
-        {"need-hunger", 2U, UINT64_C(0x85c126ff1c8fbc96)},
-        {"need-hunger", 3U, UINT64_C(0xb049e507b97a48c3)},
-        {"need-hygiene", 0U, UINT64_C(0xcc7013062d8314b2)},
-        {"need-hygiene", 1U, UINT64_C(0x0615ff26a1a69e4b)},
-        {"need-hygiene", 2U, UINT64_C(0x644e46c235bc7d45)},
-        {"need-hygiene", 3U, UINT64_C(0x019ee1960926f647)},
+        {"need-hunger", 1U, UINT64_C(0x1fa243d8389ba187)},
+        {"need-hunger", 2U, UINT64_C(0x922b8cbb685db9e2)},
+        {"need-hunger", 3U, UINT64_C(0x81487d291e108061)},
+        {"need-hygiene", 0U, UINT64_C(0xc60e410cd1806982)},
+        {"need-hygiene", 1U, UINT64_C(0x722420c152b260c3)},
+        {"need-hygiene", 2U, UINT64_C(0x22903e3e53d82265)},
+        {"need-hygiene", 3U, UINT64_C(0x739c9692396be047)},
         {"evolution-winged-signal", 0U,
-         UINT64_C(0x0e4319ec249f6407)},
+         UINT64_C(0xb3d2158d458e1e86)},
         {"evolution-winged-signal", 1U,
-         UINT64_C(0x19793ac107c224f4)},
+         UINT64_C(0x1c4535cbbb2845fd)},
         {"evolution-winged-signal", 2U,
-         UINT64_C(0x6c01b3fa62585ba4)},
+         UINT64_C(0x22ff49bc94021872)},
         {"evolution-winged-signal", 3U,
-         UINT64_C(0xccaa697afad8da96)},
-        {"evolution-flying", 0U, UINT64_C(0xfbee4998b66a4310)},
-        {"evolution-flying", 1U, UINT64_C(0x0740c665353d8d4c)},
-        {"evolution-flying", 2U, UINT64_C(0x25920d6b4ab43634)},
-        {"evolution-flying", 3U, UINT64_C(0x5a9b2381d668ea52)},
-        {"evolution-elemental", 0U, UINT64_C(0xc395a22fc0e0f2ef)},
-        {"evolution-elemental", 1U, UINT64_C(0x7895eb2220c00ebc)},
-        {"evolution-elemental", 2U, UINT64_C(0x6d0258a58bdddd7e)},
-        {"evolution-elemental", 3U, UINT64_C(0xc5985dabd78f4e61)},
+         UINT64_C(0xb2f588db4dcba8fb)},
+        {"evolution-flying", 0U, UINT64_C(0x7e40b2937074b9a9)},
+        {"evolution-flying", 1U, UINT64_C(0x94584ae198792da5)},
+        {"evolution-flying", 2U, UINT64_C(0x1ce657ca9d77dfdd)},
+        {"evolution-flying", 3U, UINT64_C(0x7e699f0fd8453a43)},
+        {"evolution-elemental", 0U, UINT64_C(0xab766a4a5ea9c114)},
+        {"evolution-elemental", 1U, UINT64_C(0x1d9d8a5f86c9f70f)},
+        {"evolution-elemental", 2U, UINT64_C(0x9a9164d477f8ce1e)},
+        {"evolution-elemental", 3U, UINT64_C(0x563a22eadbe03701)},
         {"activity-star-intro", 0U, UINT64_C(0xa1ffd5865272be4a)},
         {"activity-star-intro", 1U, UINT64_C(0x26d9c3f6c255bf3c)},
         {"activity-star-intro", 2U, UINT64_C(0x2088678244447cf7)},
@@ -607,6 +626,10 @@ static bool render_motion_frame_roi(
     }
     const uint64_t hash = surface_region_hash(
         surface, roi.left, roi.top, roi.right, roi.bottom);
+    if (writer->print_semantic_digests) {
+        fprintf(stdout, "        {\"%s\", %uU, UINT64_C(0x%016llx)},\n",
+                label, local_frame, (unsigned long long)hash);
+    }
     if (writer->require_semantic_digests &&
         !semantic_digest_matches(label, local_frame, hash)) {
         return false;
@@ -833,6 +856,22 @@ static uint16_t surface_pixel(
         return 0U;
     }
     return surface->pixels[(size_t)y * surface->stride_pixels + x];
+}
+
+static unsigned count_surface_color(
+    const p4_game_surface_t *surface,
+    uint16_t left, uint16_t top, uint16_t right, uint16_t bottom,
+    uint16_t color)
+{
+    unsigned count = 0U;
+    for (uint16_t y = top; y < bottom; ++y) {
+        for (uint16_t x = left; x < right; ++x) {
+            if (surface_pixel(surface, x, y) == color) {
+                ++count;
+            }
+        }
+    }
+    return count;
 }
 
 static bool render_battle_result(
@@ -1347,25 +1386,254 @@ static bool render_passive_coverage(
     const preview_roi_t roi = {53U, 62U, 103U, 112U};
     for (unsigned passive = 0U;
          passive < BYTE_BUDDY_SIGNAL_PASSIVE_COUNT; ++passive) {
+        const bool custom_siphon =
+            passive == BYTE_BUDDY_SIGNAL_PASSIVE_SIPHON;
         unsigned signal_index = 0U;
-        while (signal_index < 4U &&
+        while (!custom_siphon && signal_index < 4U &&
                preview_signal_encounter(0U, signal_index).passive != passive) {
             ++signal_index;
         }
         if (signal_index == 4U ||
             !restart_preview_game(
-                instance, state, services, scan, PREVIEW_SCAN_READY) ||
-            !enter_signal_battle_index(instance, 0U, signal_index) ||
-            !settle_scene_transition(instance) ||
-            !render_sampled_phase(
-                writer, instance, surface, labels[passive],
-                PREVIEW_SIGNAL_INTRO_MS + 1U, 4U, roi, 4U,
-                &row_hashes[passive])) {
+                instance, state, services, scan, PREVIEW_SCAN_READY)) {
             return false;
         }
+        uint64_t token = preview_signal_token(0U, signal_index);
+        if (custom_siphon) {
+            token = controlled_signal_token(0U, 0U, 0U, 2U, 0U, 0U);
+            scan->first_token_override = token;
+            scan->first_channel_override = 1U;
+            scan->first_flags_override = 0U;
+        }
+        if (!enter_signal_battle_index(instance, 0U, signal_index) ||
+            !settle_scene_transition(instance)) {
+            return false;
+        }
+        const byte_buddy_signal_encounter_t encounter = custom_siphon
+            ? byte_buddy_signal_encounter(
+                token, -43, 1U, P4_GAME_SIGNAL_SIMULATED)
+            : preview_signal_encounter(0U, signal_index);
+        const uint32_t intro_after_transition =
+            PREVIEW_SIGNAL_INTRO_MS - PREVIEW_BUTTON_RELEASE_MS -
+            PREVIEW_SCENE_TRANSITION_MS;
+        const uint32_t active_intro_ms = 120U;
+        uint64_t phases[4] = {0};
+        if (!render_motion_frame_roi(
+                writer, instance, surface, labels[passive], 0U, roi,
+                &phases[0]) ||
+            !advance_ms(
+                instance, intro_after_transition - active_intro_ms) ||
+            !render_motion_frame_roi(
+                writer, instance, surface, labels[passive], 1U, roi,
+                &phases[1]) ||
+            !advance_ms(instance, active_intro_ms)) {
+            return false;
+        }
+        bool triggered = false;
+        switch ((byte_buddy_signal_passive_t)passive) {
+        case BYTE_BUDDY_SIGNAL_PASSIVE_WARD:
+            triggered = advance_ms(
+                    instance, preview_signal_open_ms(encounter)) &&
+                press_button(instance, P4_BUTTON_START) &&
+                advance_ms(instance,
+                           (uint32_t)encounter.telegraph_ms +
+                               PREVIEW_SIGNAL_TRAVEL_MS);
+            break;
+        case BYTE_BUDDY_SIGNAL_PASSIVE_ECHO:
+            triggered = advance_ms(
+                instance,
+                (uint32_t)encounter.attack_period_ms * 2U +
+                    preview_signal_open_ms(encounter));
+            break;
+        case BYTE_BUDDY_SIGNAL_PASSIVE_SIPHON:
+        {
+            const uint32_t open_ms = preview_signal_open_ms(encounter);
+            const uint32_t settle_ms = open_ms / 2U;
+            triggered = tap(instance, 60U, 180U) &&
+                advance_ms(instance, settle_ms) &&
+                p4_game_instance_render(instance, surface);
+            const unsigned damaged_hp_pixels = triggered
+                ? count_surface_color(
+                    surface, 145U, 127U, 226U, 133U,
+                    UINT16_C(0xf81f))
+                : 0U;
+            triggered = triggered &&
+                advance_ms(
+                    instance, open_ms - settle_ms +
+                        (uint32_t)encounter.telegraph_ms +
+                        PREVIEW_SIGNAL_TRAVEL_MS) &&
+                p4_game_instance_render(instance, surface);
+            const unsigned healed_hp_pixels = triggered
+                ? count_surface_color(
+                    surface, 145U, 127U, 226U, 133U,
+                    UINT16_C(0xf81f))
+                : 0U;
+            if (healed_hp_pixels <= damaged_hp_pixels) {
+                fprintf(stderr,
+                        "Siphon passive did not restore visible enemy HP "
+                        "(%u -> %u pixels)\n",
+                        damaged_hp_pixels, healed_hp_pixels);
+                triggered = false;
+            }
+            break;
+        }
+        case BYTE_BUDDY_SIGNAL_PASSIVE_OVERCLOCK:
+            triggered = advance_ms(
+                instance, preview_signal_open_ms(encounter));
+            break;
+        default:
+            break;
+        }
+        if (!triggered ||
+            !render_motion_frame_roi(
+                writer, instance, surface, labels[passive], 2U, roi,
+                &phases[2]) ||
+            !advance_ms(instance, PREVIEW_SIGNAL_PASSIVE_FX_MS * 2U / 3U) ||
+            !render_motion_frame_roi(
+                writer, instance, surface, labels[passive], 3U, roi,
+                &phases[3]) ||
+            !hashes_are_pairwise_distinct(
+                phases, 4U, labels[passive])) {
+            return false;
+        }
+        row_hashes[passive] = phases[2];
     }
     return hashes_are_pairwise_distinct(
         row_hashes, BYTE_BUDDY_SIGNAL_PASSIVE_COUNT, "passive rows");
+}
+
+static uint64_t controlled_signal_token(
+    uint8_t core, uint8_t halo, uint8_t sigil,
+    uint8_t aura, uint8_t hue, uint8_t rarity)
+{
+    static const uint16_t rarity_rolls[4] = {
+        UINT16_C(0x0200), UINT16_C(0x0080),
+        UINT16_C(0x0010), UINT16_C(0x0001),
+    };
+    const uint8_t bounded_rarity = rarity < 4U ? rarity : 0U;
+    return UINT64_C(0x5a00000000000000) |
+        ((uint64_t)(core & 3U) << 21U) |
+        ((uint64_t)(halo & 3U) << 23U) |
+        ((uint64_t)(aura & 3U) << 25U) |
+        ((uint64_t)(sigil & 3U) << 27U) |
+        ((uint64_t)(hue & 7U) << 18U) |
+        rarity_rolls[bounded_rarity];
+}
+
+static bool render_list_seed_hash(
+    p4_game_instance_t *instance, p4_game_surface_t *surface,
+    preview_signal_scan_t *scan, void *state,
+    const p4_game_services_t *services, uint64_t token,
+    uint8_t channel, uint8_t flags, uint64_t *hash)
+{
+    const preview_roi_t roi = {6U, 32U, 29U, 54U};
+    if (!restart_preview_game(
+            instance, state, services, scan, PREVIEW_SCAN_READY)) {
+        return false;
+    }
+    scan->first_token_override = token;
+    scan->first_channel_override = channel;
+    scan->first_flags_override = flags;
+    return tap(instance, 100U, 180U) &&
+        settle_scene_transition(instance) &&
+        capture_region_hash(instance, surface, roi, hash);
+}
+
+static bool verify_signal_seed_visual_distinction(
+    p4_game_instance_t *instance, p4_game_surface_t *surface,
+    preview_signal_scan_t *scan, void *state,
+    const p4_game_services_t *services)
+{
+    uint64_t hashes[20] = {0};
+    for (uint8_t core = 0U; core < 4U; ++core) {
+        if (!render_list_seed_hash(
+                instance, surface, scan, state, services,
+                controlled_signal_token(core, 0U, 0U, 0U, 0U, 0U),
+                1U, 0U, &hashes[core])) {
+            return false;
+        }
+    }
+    if (!hashes_are_pairwise_distinct(hashes, 4U, "list seed cores")) {
+        return false;
+    }
+    for (uint8_t halo = 0U; halo < 4U; ++halo) {
+        if (!render_list_seed_hash(
+                instance, surface, scan, state, services,
+                controlled_signal_token(0U, halo, 0U, 0U, 0U, 0U),
+                1U, 0U, &hashes[halo])) {
+            return false;
+        }
+    }
+    if (!hashes_are_pairwise_distinct(hashes, 4U, "list seed halos")) {
+        return false;
+    }
+    for (uint8_t sigil = 0U; sigil < 4U; ++sigil) {
+        if (!render_list_seed_hash(
+                instance, surface, scan, state, services,
+                controlled_signal_token(0U, 0U, sigil, 0U, 0U, 0U),
+                1U, 0U, &hashes[sigil])) {
+            return false;
+        }
+    }
+    if (!hashes_are_pairwise_distinct(hashes, 4U, "list seed sigils")) {
+        return false;
+    }
+    for (uint8_t aura = 0U; aura < 4U; ++aura) {
+        if (!render_list_seed_hash(
+                instance, surface, scan, state, services,
+                controlled_signal_token(0U, 0U, 0U, aura, 0U, 0U),
+                1U, 0U, &hashes[aura])) {
+            return false;
+        }
+    }
+    if (!hashes_are_pairwise_distinct(hashes, 4U, "list seed auras")) {
+        return false;
+    }
+    for (uint8_t hue = 0U; hue < 8U; ++hue) {
+        if (!render_list_seed_hash(
+                instance, surface, scan, state, services,
+                controlled_signal_token(0U, 0U, 0U, 0U, hue, 0U),
+                1U, 0U, &hashes[hue])) {
+            return false;
+        }
+    }
+    if (!hashes_are_pairwise_distinct(hashes, 8U, "list seed hues")) {
+        return false;
+    }
+    for (uint8_t rarity = 0U; rarity < 4U; ++rarity) {
+        if (!render_list_seed_hash(
+                instance, surface, scan, state, services,
+                controlled_signal_token(0U, 0U, 0U, 0U, 0U, rarity),
+                1U, 0U, &hashes[rarity])) {
+            return false;
+        }
+    }
+    if (!hashes_are_pairwise_distinct(hashes, 4U, "list seed rarities")) {
+        return false;
+    }
+    static const uint8_t channels[5] = {1U, 6U, 11U, 36U, 0U};
+    static const uint8_t flag_sets[4] = {
+        0U,
+        P4_GAME_SIGNAL_PROTECTED,
+        P4_GAME_SIGNAL_HIDDEN,
+        P4_GAME_SIGNAL_PROTECTED | P4_GAME_SIGNAL_HIDDEN,
+    };
+    unsigned context = 0U;
+    const uint64_t token = controlled_signal_token(
+        0U, 0U, 0U, 0U, 0U, 0U);
+    for (size_t flags = 0U; flags < 4U; ++flags) {
+        for (size_t channel = 0U; channel < 5U; ++channel) {
+            if (!render_list_seed_hash(
+                    instance, surface, scan, state, services, token,
+                    channels[channel], flag_sets[flags],
+                    &hashes[context])) {
+                return false;
+            }
+            ++context;
+        }
+    }
+    return hashes_are_pairwise_distinct(
+        hashes, 20U, "list seed habitats");
 }
 
 static bool begin_pulse_victory(
@@ -1690,7 +1958,7 @@ static bool verify_play_evolution_chronology(
         fprintf(stderr, "Play-triggered evolution chronology failed\n");
         return false;
     }
-    if (transition_hash != UINT64_C(0x9480518cf1decbe4) ||
+    if (transition_hash != UINT64_C(0x62d603ce9eeeaff0) ||
         intro_hash != UINT64_C(0xa1ffd5865272be4a)) {
         fprintf(stderr,
                 "Play did not wait for evolution and restart the full "
@@ -1880,21 +2148,32 @@ static bool render_activity_coverage(
         UINT64_C(0x09296ddad594a85b),
         UINT64_C(0xe7e237d7006a503f),
     };
-    if (star_wipe_hash != UINT64_C(0x47d3a1410a6ba068) ||
-        shop_wipe_hash != UINT64_C(0xcd8907d5ac710875) ||
+    if (star_wipe_hash != UINT64_C(0x5973c3d3c2824247) ||
+        shop_wipe_hash != UINT64_C(0xb2d36aee20f8cee7) ||
         summary_one_hash != UINT64_C(0xe99f14f7257c8383) ||
         summary_zero_b_hash != UINT64_C(0xe39a2dbad8773bd5) ||
         summary_zero_done_hash != UINT64_C(0xe39a2dbad8773bd5)) {
         fprintf(stderr,
-                "neutral wipe or per-run Star summary digest changed\n");
-        return false;
+                "neutral wipe or per-run Star summary digest changed "
+                "(%016llx, %016llx, %016llx, %016llx, %016llx)\n",
+                (unsigned long long)star_wipe_hash,
+                (unsigned long long)shop_wipe_hash,
+                (unsigned long long)summary_one_hash,
+                (unsigned long long)summary_zero_b_hash,
+                (unsigned long long)summary_zero_done_hash);
+        if (!writer->print_semantic_digests) {
+            return false;
+        }
     }
     for (size_t phase = 0U; phase < 4U; ++phase) {
         if (power_hashes[phase] != expected_power_hashes[phase]) {
             fprintf(stderr,
-                    "Power growth phase %zu semantic digest changed\n",
-                    phase);
-            return false;
+                    "Power growth phase %zu semantic digest changed "
+                    "(%016llx)\n",
+                    phase, (unsigned long long)power_hashes[phase]);
+            if (!writer->print_semantic_digests) {
+                return false;
+            }
         }
     }
     return hashes_are_pairwise_distinct(shop_hashes, 4U, "shop feedback");
@@ -1904,11 +2183,12 @@ static bool render_authored_coverage_sequence(
     p4_game_instance_t *instance, p4_game_surface_t *surface,
     preview_signal_scan_t *scan, void *state,
     const p4_game_services_t *services, const char *prefix,
-    unsigned expected_frames)
+    unsigned expected_frames, bool review)
 {
     preview_motion_writer_t writer = {
         .prefix = prefix,
-        .require_semantic_digests = true,
+        .require_semantic_digests = !review,
+        .print_semantic_digests = review,
     };
     const bool success =
         render_counter_coverage(
@@ -1917,6 +2197,8 @@ static bool render_authored_coverage_sequence(
             &writer, instance, surface, scan, state, services) &&
         render_passive_coverage(
             &writer, instance, surface, scan, state, services) &&
+        verify_signal_seed_visual_distinction(
+            instance, surface, scan, state, services) &&
         render_scan_coverage(
             &writer, instance, surface, scan, state, services) &&
         render_need_coverage(
@@ -2062,7 +2344,8 @@ static bool render_animation_sequence(p4_game_instance_t *instance,
         instance, surface, prefix, "elemental-care", 8U, 10U) &&
         animate(instance, 10U) && render_clip(
         instance, surface, prefix, "elemental-idle", 8U, 9U) &&
-        tap(instance, 280U, 180U) && render_clip(
+        tap(instance, 280U, 180U) && settle_scene_transition(instance) &&
+        render_clip(
         instance, surface, prefix, "genome-dormant", 1U, 1U) &&
         settle_scene_transition(instance) &&
         tap(instance, 160U, 180U) &&
@@ -2119,7 +2402,8 @@ static bool render_animation_sequence(p4_game_instance_t *instance,
         render_clip(
         instance, surface, prefix, "signal-lineage-eternal", 3U, 5U) &&
         settle_scene_transition(instance) &&
-        tap(instance, 280U, 180U) && render_clip(
+        tap(instance, 280U, 180U) && settle_scene_transition(instance) &&
+        render_clip(
         instance, surface, prefix, "genome-eternal", 1U, 1U);
     return success;
 }
@@ -2130,13 +2414,16 @@ int main(int argc, char **argv)
         strcmp(argv[2], "--signal-motion") == 0;
     const bool authored_motion = argc == 5 &&
         strcmp(argv[2], "--authored-motion") == 0;
+    const bool authored_review = argc == 5 &&
+        strcmp(argv[2], "--review-authored-motion") == 0;
     const bool exact_animation = argc == 5 &&
         strcmp(argv[2], "--animation") == 0;
     unsigned expected_motion_frames = 0U;
     char trailing = '\0';
     if ((argc != 13 && argc != 3 && !signal_motion && !authored_motion &&
-         !exact_animation) ||
-        ((signal_motion || authored_motion || exact_animation) &&
+         !authored_review && !exact_animation) ||
+        ((signal_motion || authored_motion || authored_review ||
+          exact_animation) &&
          sscanf(argv[4], "%u%c", &expected_motion_frames, &trailing) != 1)) {
         fprintf(stderr, "usage: %s ART.bin EGG.ppm HATCH.ppm POWER.ppm "
                         "STYLE.ppm CUSTOM.ppm FLYING.ppm ELEMENTAL.ppm "
@@ -2148,7 +2435,10 @@ int main(int argc, char **argv)
                         "EXPECTED_FRAMES\n"
                         "   or: %s ART.bin --authored-motion PREFIX "
                         "EXPECTED_FRAMES\n"
+                        "   or: %s ART.bin --review-authored-motion PREFIX "
+                        "EXPECTED_FRAMES\n"
                         "       use PREFIX - to render/hash without files\n",
+                argv[0],
                 argv[0],
                 argv[0],
                 argv[0],
@@ -2200,10 +2490,10 @@ int main(int argc, char **argv)
         free(pixels);
         return success ? EXIT_SUCCESS : EXIT_FAILURE;
     }
-    if (success && authored_motion) {
+    if (success && (authored_motion || authored_review)) {
         success = render_authored_coverage_sequence(
             &instance, &surface, &signal_scan, state, &services,
-            argv[3], expected_motion_frames);
+            argv[3], expected_motion_frames, authored_review);
         p4_game_instance_stop(&instance);
         free(art);
         free(state);

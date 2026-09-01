@@ -292,6 +292,7 @@ typedef struct {
     uint8_t secondary_hue;
     uint8_t part_diversity;
     uint8_t hue_diversity;
+    uint8_t rarity_diversity;
     uint8_t diversity;
     uint8_t channel_families;
     bool shielded;

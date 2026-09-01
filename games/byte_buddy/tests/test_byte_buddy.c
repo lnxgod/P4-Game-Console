@@ -2117,6 +2117,7 @@ static void test_signal_lineage_genetics(void)
     CHECK(forward_lineage.tier == BYTE_BUDDY_LINEAGE_MYTHIC);
     CHECK(forward_lineage.part_diversity == 16U);
     CHECK(forward_lineage.hue_diversity == 8U);
+    CHECK(forward_lineage.rarity_diversity == 4U);
     CHECK(forward_lineage.diversity == 28U);
     CHECK(forward_lineage.channel_families == 4U);
     CHECK(forward_lineage.shielded);
@@ -2256,6 +2257,7 @@ static void test_signal_lineage_genetics(void)
     }
     const byte_buddy_signal_lineage_t low_diversity =
         byte_buddy_signal_lineage(UINT64_C(0x1234), 12U, &repeated);
+    CHECK(low_diversity.rarity_diversity == 1U);
     CHECK(low_diversity.diversity == 6U);
     CHECK(low_diversity.tier == BYTE_BUDDY_LINEAGE_SPARK);
     CHECK(byte_buddy_signal_lineage(
