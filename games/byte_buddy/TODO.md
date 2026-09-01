@@ -4,7 +4,32 @@ This is the working list for the Dragon game's fluidity, pacing, progression,
 and new art. Keep gameplay changes deterministic and bounded on the 320x200
 P4 Game API surface.
 
-## Graphics polish v4.1 candidate
+## v4.2 integration
+
+- [x] Add and integrate the original v18 environment/chrome atlas for Signal
+      City skyline, moon, towers, rooftop nest, scene gates, and arena overlays;
+      require the exact 30-sheet/480-frame bank with no placeholder path.
+- [x] Record the 998,464-byte raw art-bank SHA-256
+      `d52392ffd7794618ae0e8b6f657d60fa07703629a81eb94619bd69bc84d1b0db`
+      and v18 source SHA-256
+      `3e78e93b0f36e68f23004b72a6c91650a152949c8f67c5556756a1bf7566ab79`.
+- [x] Give each signal a bounded attack deck, make Comet spike on every third
+      Comet occurrence, reverse Shift decks on alternate cycles, and keep Pulse
+      Strike within its 260–360 ms animation-safe cooldown.
+- [x] Gate Aura Guard to the real displayed time-to-impact window and keep the
+      authored tell, travel, impact, counter, and resolution order coherent.
+- [x] Bound Star Catcher's once-per-run wallet reward to zero or 2–6 coins and
+      split Signal Battle rewards into non-spendable session-only Sparks.
+- [x] Integrate the optional version-1 general-profile save for needs, wallet,
+      care growth/counts, upgrades, Style, and general achievements while
+      excluding all signal identity, history, lineage, growth, achievements,
+      and Sparks.
+- [ ] Build and independently verify the matched v4.2 `.P4G`/`.P4R` pair; record
+      exact package sizes and hashes before transfer.
+- [ ] Complete named human SDL acceptance, then use the H1 File Transfer app for
+      the paired canary install and retained-log physical-tablet acceptance.
+
+## Historical graphics-polish v4.1 candidate
 
 - [x] Make Ward, Echo, Siphon, and Overclock animation event-driven so authored
       trigger/fade frames correspond to real battle mechanics.
@@ -26,7 +51,7 @@ P4 Game API surface.
 - [ ] Complete named human SDL and physical-tablet acceptance before deploying
       or describing v4.1 as play-tested or hardware-tested.
 
-## Full graphics v4 pass
+## Historical full-graphics v4 pass
 
 - [x] Audit every reachable care, activity, shop, growth, scan, tracker,
       battle, reward, loss, lineage, and transition state for missing authored
@@ -137,7 +162,7 @@ P4 Game API surface.
 - [x] Generate and inspect an original crop-safe 4x4 signal-attack atlas with
       chronological Arc Burst, Prism Lance, Thorn Snare, and Comet Crash rows.
 - [x] Append the attack atlas at stable sheet index 28 and regenerate the
-      deterministic 29-sheet/464-frame `.P4R` payload twice byte-identically.
+      historical v3.9 29-sheet/464-frame `.P4R` payload twice byte-identically.
 - [x] Combine attack, passive, weakness, channel arena, rarity, hue, and
       protected/hidden traits into bounded deterministic encounter genomes;
       keep labels and raw MAC/BSSID data out of every derivation helper.
@@ -152,9 +177,9 @@ P4 Game API surface.
 - [x] Prove frame-chunk-independent battle ordering: rune capture before a
       lethal impact wins, an exact tie loses, and every animation/status timer
       consumes only the time after its event.
-- [x] Render and inspect the legacy 178-frame route plus the exact 905-frame
-      Signal Battle chronology under ASan/UBSan; run the SDL host smoke and
-      save-contract tests.
+- [x] Render and inspect the legacy 178-frame route plus the historical v3.9
+      905-frame Signal Battle chronology under ASan/UBSan; run the SDL host
+      smoke and save-contract tests.
 - [x] Build the v3.9 RISC-V cartridge and `.P4R` twice with the pinned compiler,
       verify byte identity and package structure, and record all final hashes.
 - [x] Document a paired-file canary/rollback plan for pink Waveshare unit 1,
@@ -177,22 +202,27 @@ P4 Game API surface.
 - [ ] Tune Star Catcher round length, reward frequency, and touch spring after play feedback.
 - [ ] Add a short first-session tutorial that disappears after the first successful catch.
 - [ ] Add explicit non-development stage preview access before a release candidate.
-- [ ] Decide whether session progress should opt into the reviewed save service on boards
-      that expose it; Byte Buddy's required art sidecar remains read-only and does not
-      authorize writable progress storage.
+- [x] Opt ordinary pet progress into the optional reviewed save service on
+      boards that expose it; the required art sidecar remains read-only and the
+      game still works with session-only ordinary progress when save is absent.
 - [x] Add a second Signal Battle pattern so encounters are not only rapid tapping.
-- [ ] Reconcile the public session-token contract with the device-key behavior
-      before considering durable lineages or writable save integration.
+- [ ] Design and review a game-scoped durable identity ABI before persisting
+      signal tokens, duplicate history, lineage, signal growth/achievements, or
+      Sparks. Provider-side device-key stability alone is not game persistence.
 - [x] Distinguish a transient busy scan request from true radio unavailability
       inside Byte Buddy without discarding a selectable valid snapshot.
-- [ ] Clear stale results in the platform provider's ERROR snapshot before the
+- [x] Clear stale results in the platform provider's ERROR snapshot before the
       Game API validator reads it; keep the approved Waveshare scan named-only.
 - [x] Add Signal Hunt paging so all eight bounded OS results are selectable.
 - [ ] Perform named tablet acceptance for touch feel, panel motion, speaker feedback,
       launcher return, and exact `.P4G`/`.P4R` hashes before calling the work hardware-tested.
-- [ ] After named human SDL and tablet acceptance, preserve the v3.9 rollback
-      pair and canary-install the matched v4 `.P4G`/`.P4R` pair through H2 USB
-      Drive or a powered-off microSD reader with separate authorization.
+- [x] Build the matched v4.2 `.P4R`/`.P4G` pair twice with the pinned Waveshare
+      pipeline and verify its package geometry, payload hashes, registry, and
+      no-flash Console OS bundle.
+- [ ] Connect protocol-2 pink unit 1, preserve the rollback pair, and
+      canary-install matched v4.2 `.P4R` then `.P4G` through H1; pull both files
+      back and verify their hashes before launch. The 2026-08-31 attempt stopped
+      without mutation when connected green unit 2 returned unsupported for P4R.
 
 ## Balance targets
 
@@ -202,3 +232,9 @@ P4 Game API surface.
   miss or calm-crystal catch, and has a hard speed cap.
 - Frame-rate changes do not change catcher or falling-item speed.
 - A new player can earn an upgrade in the first session without the economy exploding.
+- Star Catcher grants its wallet reward once per completed run: zero for no
+  catches, otherwise a bounded 2–6 coins.
+- Signal victories grant only session Sparks; they never inflate the spendable
+  wallet or survive relaunch.
+- Full or rapidly repeated care still animates and restores needs, but only
+  need-qualified actions at the 650 ms cadence advance growth.

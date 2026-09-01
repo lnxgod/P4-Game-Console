@@ -18,6 +18,7 @@
 #include "p4/visual.h"
 
 #include "byte_buddy_internal.h"
+#include "byte_buddy_save.h"
 
 enum {
     STAT_MAX = 100,
@@ -112,7 +113,8 @@ enum {
     BYTE_BUDDY_REACTION_FX_SHEET = 26,
     BYTE_BUDDY_LINEAGE_BADGE_SHEET = 27,
     BYTE_BUDDY_SIGNAL_ATTACK_SHEET = 28,
-    DRAGON_EXTENDED_SHEET_COUNT = 29,
+    BYTE_BUDDY_ENVIRONMENT_CHROME_SHEET = 29,
+    DRAGON_EXTENDED_SHEET_COUNT = 30,
     ACHIEVEMENT_FIRST_CARE = UINT32_C(1) << 0U,
     ACHIEVEMENT_CLEAN = UINT32_C(1) << 1U,
     ACHIEVEMENT_PLAY = UINT32_C(1) << 2U,
@@ -129,6 +131,18 @@ typedef enum {
     ACTION_CLEAN,
     ACTION_REST,
 } buddy_action_t;
+
+_Static_assert((unsigned)ACTION_FEED == (unsigned)BYTE_BUDDY_CARE_FEED,
+               "care action values must stay aligned");
+_Static_assert((unsigned)ACTION_PLAY == (unsigned)BYTE_BUDDY_CARE_PLAY,
+               "care action values must stay aligned");
+_Static_assert((unsigned)ACTION_CLEAN == (unsigned)BYTE_BUDDY_CARE_CLEAN,
+               "care action values must stay aligned");
+_Static_assert((unsigned)ACTION_REST == (unsigned)BYTE_BUDDY_CARE_REST,
+               "care action values must stay aligned");
+_Static_assert((unsigned)ACTION_COUNT + 1U ==
+                   (unsigned)BYTE_BUDDY_CARE_COUNT,
+               "pet is the fifth care action");
 
 typedef enum {
     REACTION_IDLE = 0,
@@ -210,6 +224,7 @@ typedef struct {
     uint8_t signal_focus_row;
     uint8_t menu_selection;
     uint8_t shop_feedback_kind;
+    uint8_t last_care_credit;
     uint8_t evolution_pending_mask;
     uint8_t evolution_active_stage;
     uint8_t play_start_pending;
@@ -230,11 +245,15 @@ typedef struct {
     uint16_t signal_recovery_bonus_ms;
     uint16_t signal_shown_enemy_hp_q8;
     uint16_t signal_shown_player_hp_q8;
+    uint16_t save_retry_ms;
+    uint16_t save_exit_wait_ms;
     uint8_t upgrades[BYTE_BUDDY_UPGRADE_COUNT];
     uint8_t style_unlocked[BYTE_BUDDY_STYLE_COUNT];
     uint8_t style_selected[BYTE_BUDDY_STYLE_COUNT];
     uint16_t coins;
     uint16_t care_actions;
+    uint16_t signal_session_coins;
+    uint16_t signal_session_growth;
     uint16_t style_mix_count;
     uint16_t action_counts[ACTION_COUNT];
     uint16_t pet_actions;
@@ -254,6 +273,12 @@ typedef struct {
     uint32_t signal_reward_ms;
     uint32_t signal_track_refresh_ms;
     uint32_t signal_request_busy_ms;
+    uint32_t save_host_sequence;
+    uint32_t save_ticket;
+    uint32_t save_local_generation;
+    uint32_t save_queued_generation;
+    uint32_t save_progress_signature;
+    uint32_t save_captured_needs;
     p4_q16_t catcher_x_q16;
     p4_q16_t catcher_target_x_q16;
     p4_q16_t catcher_velocity_q16;
@@ -275,6 +300,10 @@ typedef struct {
     bool signal_guard_armed;
     bool controller_active;
     bool touch_was_down;
+    bool save_available;
+    bool save_dirty;
+    bool save_error;
+    bool exit_pending;
     const uint8_t *art_data;
     size_t art_bytes;
     uint16_t art_sheets;
@@ -290,6 +319,32 @@ typedef struct {
 
 static byte_buddy_battle_stats_t current_battle_stats(
     const byte_buddy_state_t *state);
+static void mark_save_dirty(byte_buddy_state_t *state);
+
+static uint32_t save_needs_signature(const byte_buddy_state_t *state)
+{
+    return (uint32_t)state->hunger |
+        (uint32_t)state->joy << 8U |
+        (uint32_t)state->hygiene << 16U |
+        (uint32_t)state->energy << 24U;
+}
+
+static p4_game_result_t request_game_exit(byte_buddy_state_t *state)
+{
+    if (!state->save_available) {
+        return P4_GAME_EXIT_TO_LAUNCHER;
+    }
+    if (state->save_captured_needs != save_needs_signature(state)) {
+        mark_save_dirty(state);
+    }
+    if (!state->save_dirty &&
+        state->save_ticket == P4_GAME_SAVE_INVALID_TICKET) {
+        return P4_GAME_EXIT_TO_LAUNCHER;
+    }
+    state->exit_pending = true;
+    state->save_exit_wait_ms = 0U;
+    return P4_GAME_CONTINUE;
+}
 
 static const char *const s_actions[ACTION_COUNT] = {
     "FEED", "PLAY", "CLEAN", "REST",
@@ -651,9 +706,65 @@ uint16_t byte_buddy_star_fall_speed(uint8_t stage, uint8_t streak)
     return (uint16_t)speed;
 }
 
+uint8_t byte_buddy_star_run_reward(uint8_t catches)
+{
+    if (catches == 0U) {
+        return 0U;
+    }
+    const uint8_t bonus = (uint8_t)(catches / 4U);
+    return (uint8_t)(2U + (bonus > 4U ? 4U : bonus));
+}
+
 static uint8_t battle_stat(uint32_t value)
 {
     return (uint8_t)(value > 99U ? 99U : value);
+}
+
+bool byte_buddy_care_earns_growth(
+    byte_buddy_care_kind_t care,
+    uint8_t need_before,
+    byte_buddy_care_kind_t previous_credit)
+{
+    if ((unsigned)care >= BYTE_BUDDY_CARE_COUNT || need_before > STAT_MAX) {
+        return false;
+    }
+
+    /*
+     * Deep needs always deserve care.  A varied action receives a gentler
+     * threshold, while tapping an already-full need still plays its reaction
+     * without becoming the fastest growth strategy.
+     */
+    if (need_before <= 88U) {
+        return true;
+    }
+    return need_before <= 98U && care != previous_credit;
+}
+
+byte_buddy_battle_stats_t byte_buddy_battle_stats_for_growth(
+    uint16_t growth_credit,
+    uint16_t feed_actions,
+    uint16_t play_actions,
+    uint16_t clean_actions,
+    uint16_t rest_actions,
+    uint16_t pet_actions,
+    uint8_t wings_level,
+    uint8_t aura_level,
+    uint8_t nest_level,
+    uint8_t magnet_level)
+{
+    const uint8_t level = byte_buddy_level_for_interactions(growth_credit);
+    return (byte_buddy_battle_stats_t){
+        .level = level,
+        .power = battle_stat((uint32_t)level + feed_actions / 2U +
+                             (uint32_t)wings_level * 3U),
+        .speed = battle_stat((uint32_t)level + play_actions / 2U +
+                             (uint32_t)magnet_level * 3U),
+        .guard = battle_stat((uint32_t)level +
+                             ((uint32_t)clean_actions + rest_actions) / 3U +
+                             (uint32_t)nest_level * 3U),
+        .magic = battle_stat((uint32_t)level + pet_actions / 2U +
+                             (uint32_t)aura_level * 3U),
+    };
 }
 
 byte_buddy_battle_stats_t byte_buddy_battle_stats(
@@ -672,20 +783,10 @@ byte_buddy_battle_stats_t byte_buddy_battle_stats(
     if (interactions > UINT16_MAX) {
         interactions = UINT16_MAX;
     }
-    const uint8_t level = byte_buddy_level_for_interactions(
-        (uint16_t)interactions);
-    return (byte_buddy_battle_stats_t){
-        .level = level,
-        .power = battle_stat((uint32_t)level + feed_actions / 2U +
-                             (uint32_t)wings_level * 3U),
-        .speed = battle_stat((uint32_t)level + play_actions / 2U +
-                             (uint32_t)magnet_level * 3U),
-        .guard = battle_stat((uint32_t)level +
-                             ((uint32_t)clean_actions + rest_actions) / 3U +
-                             (uint32_t)nest_level * 3U),
-        .magic = battle_stat((uint32_t)level + pet_actions / 2U +
-                             (uint32_t)aura_level * 3U),
-    };
+    return byte_buddy_battle_stats_for_growth(
+        (uint16_t)interactions,
+        feed_actions, play_actions, clean_actions, rest_actions, pet_actions,
+        wings_level, aura_level, nest_level, magnet_level);
 }
 
 byte_buddy_battle_stats_t byte_buddy_lineage_battle_stats(
@@ -911,15 +1012,28 @@ byte_buddy_signal_weave_rules_t byte_buddy_signal_weave_rules(
     byte_buddy_signal_genome_t genome,
     uint8_t strength, uint8_t magnet_level)
 {
+    return byte_buddy_signal_weave_rules_for_magic(
+        genome, strength, magnet_level, 0U);
+}
+
+byte_buddy_signal_weave_rules_t byte_buddy_signal_weave_rules_for_magic(
+    byte_buddy_signal_genome_t genome,
+    uint8_t strength, uint8_t magnet_level, uint8_t magic)
+{
     const uint8_t rarity = genome.rarity < 4U ? genome.rarity : 3U;
     const uint8_t bounded_strength = strength < 101U ? strength : 100U;
     const uint8_t bounded_magnet = magnet_level < 4U
         ? magnet_level : 3U;
+    const unsigned base_hold_ms = 600U + 2U * bounded_strength +
+        40U * rarity;
+    const unsigned magic_percent = magic / 5U < 15U
+        ? magic / 5U : 15U;
+    const unsigned hold_ms = base_hold_ms -
+        base_hold_ms * magic_percent / 100U;
     return (byte_buddy_signal_weave_rules_t){
         .required_locks = (uint8_t)(4U + rarity),
         .touch_radius = (uint8_t)(17U + 2U * bounded_magnet),
-        .hold_ms = (uint16_t)(600U + 2U * bounded_strength +
-                              40U * rarity),
+        .hold_ms = (uint16_t)hold_ms,
     };
 }
 
@@ -1051,6 +1165,36 @@ uint32_t byte_buddy_signal_form_id(
         byte_buddy_signal_habitat_id(channel, flags);
 }
 
+static uint8_t signal_attack_deck_size_for_form(uint32_t form_id)
+{
+    return (uint8_t)(2U + form_id % 3U);
+}
+
+static unsigned signal_encounter_modifier_score(
+    uint8_t attack, uint8_t passive, uint8_t arena,
+    uint8_t starting_ward, uint8_t deck_size,
+    bool protected_signal, bool hidden)
+{
+    unsigned score = (unsigned)starting_ward * 2U;
+    score += protected_signal ? 6U : 0U;
+    score += hidden ? 5U : 0U;
+    score += attack == BYTE_BUDDY_SIGNAL_ATTACK_PRISM_LANCE ? 1U
+        : attack == BYTE_BUDDY_SIGNAL_ATTACK_THORN_SNARE ? 2U
+        : attack == BYTE_BUDDY_SIGNAL_ATTACK_COMET_CRASH ? 3U : 0U;
+    score += passive == BYTE_BUDDY_SIGNAL_PASSIVE_WARD ? 1U
+        : passive == BYTE_BUDDY_SIGNAL_PASSIVE_ECHO ? 3U
+        : passive == BYTE_BUDDY_SIGNAL_PASSIVE_SIPHON ? 4U
+        : passive == BYTE_BUDDY_SIGNAL_PASSIVE_OVERCLOCK ? 5U : 0U;
+    score += arena == BYTE_BUDDY_SIGNAL_ARENA_HEAVY ? 2U
+        : arena == BYTE_BUDDY_SIGNAL_ARENA_QUICK ? 4U
+        : arena == BYTE_BUDDY_SIGNAL_ARENA_ECHO ? 3U
+        : arena == BYTE_BUDDY_SIGNAL_ARENA_SHIFT ? 4U : 0U;
+    if (deck_size > 2U) {
+        score += (unsigned)(deck_size - 2U) * 2U;
+    }
+    return score;
+}
+
 byte_buddy_signal_encounter_t byte_buddy_signal_encounter(
     uint64_t token, int8_t rssi_dbm, uint8_t channel, uint8_t flags)
 {
@@ -1065,9 +1209,24 @@ byte_buddy_signal_encounter_t byte_buddy_signal_encounter(
     const uint8_t arena = family == UINT8_MAX
         ? BYTE_BUDDY_SIGNAL_ARENA_STEADY
         : (uint8_t)(BYTE_BUDDY_SIGNAL_ARENA_HEAVY + family);
+    const uint8_t attack = genome.core < BYTE_BUDDY_SIGNAL_ATTACK_COUNT
+        ? genome.core : BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST;
+    const uint8_t passive = genome.aura < BYTE_BUDDY_SIGNAL_PASSIVE_COUNT
+        ? genome.aura : BYTE_BUDDY_SIGNAL_PASSIVE_WARD;
+    const uint32_t form_id = byte_buddy_signal_form_id(
+        genome.recipe_id, channel, flags);
+    unsigned ward = passive == BYTE_BUDDY_SIGNAL_PASSIVE_WARD ? 1U : 0U;
+    if (protected_signal) {
+        ward += profile.rarity >= 4U ? 2U : 1U;
+    }
+    const uint8_t starting_ward = (uint8_t)(ward > 3U ? 3U : ward);
+    const unsigned modifier_score = signal_encounter_modifier_score(
+        attack, passive, arena, starting_ward,
+        signal_attack_deck_size_for_form(form_id),
+        protected_signal, hidden);
     const uint8_t threat_score = (uint8_t)(
         ((unsigned)profile.strength +
-         (unsigned)(profile.rarity - 1U) * 12U) / 25U);
+         (unsigned)(profile.rarity - 1U) * 12U + modifier_score) / 25U);
     const uint8_t threat = (uint8_t)(
         1U + (threat_score > 4U ? 4U : threat_score));
 
@@ -1124,16 +1283,9 @@ byte_buddy_signal_encounter_t byte_buddy_signal_encounter(
         telegraph_ms = 1200;
     }
 
-    unsigned ward = genome.aura == BYTE_BUDDY_SIGNAL_PASSIVE_WARD
-        ? 1U : 0U;
-    if (protected_signal) {
-        ward += profile.rarity >= 4U ? 2U : 1U;
-    }
     return (byte_buddy_signal_encounter_t){
-        .attack = genome.core < BYTE_BUDDY_SIGNAL_ATTACK_COUNT
-            ? genome.core : BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST,
-        .passive = genome.aura < BYTE_BUDDY_SIGNAL_PASSIVE_COUNT
-            ? genome.aura : BYTE_BUDDY_SIGNAL_PASSIVE_WARD,
+        .attack = attack,
+        .passive = passive,
         .weakness = genome.sigil < 3U
             ? (uint8_t)(BYTE_BUDDY_ELEMENT_FIRE + genome.sigil)
             : BYTE_BUDDY_ELEMENT_MYSTERY,
@@ -1141,11 +1293,10 @@ byte_buddy_signal_encounter_t byte_buddy_signal_encounter(
         .threat = threat,
         .max_hp = (uint8_t)hp,
         .damage = (uint8_t)damage,
-        .starting_ward = (uint8_t)(ward > 3U ? 3U : ward),
+        .starting_ward = starting_ward,
         .attack_period_ms = (uint16_t)period_ms,
         .telegraph_ms = (uint16_t)telegraph_ms,
-        .form_id = byte_buddy_signal_form_id(
-            genome.recipe_id, channel, flags),
+        .form_id = form_id,
         .hidden = hidden,
         .protected_signal = protected_signal,
     };
@@ -1165,14 +1316,55 @@ byte_buddy_signal_attack_t byte_buddy_signal_attack_for(
 {
     const uint8_t base = encounter.attack < BYTE_BUDDY_SIGNAL_ATTACK_COUNT
         ? encounter.attack : BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST;
-    if (encounter.arena != BYTE_BUDDY_SIGNAL_ARENA_SHIFT ||
-        (attack_index & 1U) == 0U) {
-        return (byte_buddy_signal_attack_t)base;
+    const uint8_t deck_size = byte_buddy_signal_attack_deck_size(encounter);
+    uint8_t position = (uint8_t)(attack_index % deck_size);
+    const uint8_t cycle = (uint8_t)(attack_index / deck_size);
+    if (encounter.arena == BYTE_BUDDY_SIGNAL_ARENA_SHIFT &&
+        (cycle & 1U) != 0U) {
+        position = (uint8_t)(deck_size - 1U - position);
     }
-    const uint8_t offset = (uint8_t)(
-        1U + (encounter.form_id >> 5U) % 3U);
+    const uint8_t stride = ((encounter.form_id / 3U) & 1U) != 0U
+        ? 3U : 1U;
     return (byte_buddy_signal_attack_t)(
-        (base + offset) % BYTE_BUDDY_SIGNAL_ATTACK_COUNT);
+        (base + position * stride) % BYTE_BUDDY_SIGNAL_ATTACK_COUNT);
+}
+
+uint8_t byte_buddy_signal_attack_deck_size(
+    byte_buddy_signal_encounter_t encounter)
+{
+    return signal_attack_deck_size_for_form(encounter.form_id);
+}
+
+uint8_t byte_buddy_signal_reward_coins(
+    byte_buddy_signal_profile_t profile,
+    byte_buddy_signal_encounter_t encounter)
+{
+    const unsigned modifier_score = signal_encounter_modifier_score(
+        encounter.attack, encounter.passive, encounter.arena,
+        encounter.starting_ward,
+        byte_buddy_signal_attack_deck_size(encounter),
+        encounter.protected_signal, encounter.hidden);
+    unsigned bonus = (modifier_score + 7U) / 8U;
+    if (bonus > 4U) {
+        bonus = 4U;
+    }
+    const unsigned reward = (unsigned)profile.reward_coins + bonus;
+    return (uint8_t)(reward > UINT8_MAX ? UINT8_MAX : reward);
+}
+
+static uint8_t signal_attack_occurrence(
+    byte_buddy_signal_encounter_t encounter,
+    uint8_t attack_index, byte_buddy_signal_attack_t attack)
+{
+    uint8_t occurrence = 0U;
+    for (unsigned index = 0U; index <= attack_index; ++index) {
+        if (byte_buddy_signal_attack_for(
+                encounter, (uint8_t)index) == attack &&
+            occurrence != UINT8_MAX) {
+            ++occurrence;
+        }
+    }
+    return occurrence;
 }
 
 byte_buddy_signal_defense_t byte_buddy_signal_defense(
@@ -1192,7 +1384,8 @@ byte_buddy_signal_defense_t byte_buddy_signal_defense(
         ++damage;
     }
     if (attack == BYTE_BUDDY_SIGNAL_ATTACK_COMET_CRASH &&
-        attack_index % 3U == 2U) {
+        signal_attack_occurrence(
+            encounter, attack_index, attack) % 3U == 0U) {
         damage += 3U;
     }
     if (damage > 24U) {
@@ -1328,8 +1521,25 @@ uint8_t byte_buddy_signal_player_hp(
 uint16_t byte_buddy_signal_strike_cooldown_ms(uint8_t speed)
 {
     const uint8_t bounded = speed < 91U ? speed : 90U;
-    const unsigned cooldown = 360U - (unsigned)bounded * 2U;
-    return (uint16_t)(cooldown < 180U ? 180U : cooldown);
+    const unsigned cooldown = 360U - (unsigned)bounded * 100U / 90U;
+    return (uint16_t)(cooldown < SIGNAL_HIT_DURATION_MS
+        ? SIGNAL_HIT_DURATION_MS : cooldown);
+}
+
+uint16_t byte_buddy_signal_parry_window_ms(
+    byte_buddy_lineage_battle_traits_t traits)
+{
+    const uint16_t bounded_bonus = traits.guard_time_ms < 481U
+        ? traits.guard_time_ms : 480U;
+    return (uint16_t)(300U + bounded_bonus);
+}
+
+bool byte_buddy_signal_parry_ready(
+    uint16_t time_to_impact_ms,
+    byte_buddy_lineage_battle_traits_t traits)
+{
+    return time_to_impact_ms != 0U &&
+        time_to_impact_ms <= byte_buddy_signal_parry_window_ms(traits);
 }
 
 static uint64_t avalanche_lineage_value(uint64_t value)
@@ -1600,6 +1810,42 @@ static void unlock(p4_game_context_t *context, byte_buddy_state_t *state,
     (void)p4_game_unlock_achievement(context, id, title, description);
 }
 
+static void rehydrate_achievements(
+    p4_game_context_t *context, const byte_buddy_state_t *state)
+{
+    static const struct {
+        uint32_t flag;
+        const char *id;
+        const char *title;
+        const char *description;
+    } achievements[] = {
+        {ACHIEVEMENT_FIRST_CARE, "first-care", "FIRST CARE",
+         "NURTURE YOUR DRAGON EGG"},
+        {ACHIEVEMENT_CLEAN, "clean-sweep", "CLEAN SWEEP",
+         "CLEAN YOUR DRAGON 3 TIMES"},
+        {ACHIEVEMENT_PLAY, "star-catcher", "STAR CATCHER",
+         "CATCH 3 STARS WITH BUDDY"},
+        {ACHIEVEMENT_GROW, "dragon-raised", "DRAGON RAISED",
+         "RAISE AN ELEMENTAL DRAGON"},
+        {ACHIEVEMENT_FIRST_SIGNAL, "first-signal", "SIGNAL TAMER",
+         "DEFEAT AND EAT A SIGNAL SEED"},
+        {ACHIEVEMENT_SIGNAL_CHORUS, "signal-chorus", "SIGNAL CHORUS",
+         "BUILD AN AURORA LINEAGE FROM FIVE SIGNALS"},
+        {ACHIEVEMENT_MYTHIC_LINEAGE, "mythic-lineage", "MYTHIC LINEAGE",
+         "COMBINE TWELVE DIVERSE SIGNAL GENOMES"},
+        {ACHIEVEMENT_ETERNAL_LINEAGE, "eternal-lineage",
+         "ETERNAL LINEAGE", "COMBINE THIRTY-TWO DIVERSE SIGNAL LINKS"},
+    };
+    for (size_t index = 0U;
+         index < sizeof(achievements) / sizeof(achievements[0]); ++index) {
+        if ((state->achievement_mask & achievements[index].flag) != 0U) {
+            (void)p4_game_unlock_achievement(
+                context, achievements[index].id, achievements[index].title,
+                achievements[index].description);
+        }
+    }
+}
+
 static void trigger_reaction(byte_buddy_state_t *state,
                              buddy_reaction_t reaction)
 {
@@ -1740,23 +1986,41 @@ static void advance_growth(p4_game_context_t *context,
     }
 }
 
+static bool record_care_credit(byte_buddy_state_t *state,
+                               byte_buddy_care_kind_t care,
+                               uint8_t need_before,
+                               uint16_t *specialization_count)
+{
+    if (state->care_credit_cooldown_ms != 0U ||
+        specialization_count == NULL ||
+        !byte_buddy_care_earns_growth(
+            care, need_before,
+            (byte_buddy_care_kind_t)state->last_care_credit)) {
+        return false;
+    }
+    if (*specialization_count < UINT16_MAX) {
+        ++*specialization_count;
+    }
+    if (state->care_actions < UINT16_MAX) {
+        ++state->care_actions;
+    }
+    state->last_care_credit = (uint8_t)care;
+    state->care_credit_cooldown_ms = CARE_CREDIT_COOLDOWN_MS;
+    return true;
+}
+
 static void record_action(p4_game_context_t *context,
                           byte_buddy_state_t *state,
                           buddy_action_t action,
-                          buddy_reaction_t reaction)
+                          buddy_reaction_t reaction,
+                          uint8_t need_before)
 {
     if ((unsigned)action >= ACTION_COUNT) {
         return;
     }
-    if (state->care_credit_cooldown_ms == 0U) {
-        if (state->action_counts[action] < UINT16_MAX) {
-            ++state->action_counts[action];
-        }
-        if (state->care_actions < UINT16_MAX) {
-            ++state->care_actions;
-        }
-        state->care_credit_cooldown_ms = CARE_CREDIT_COOLDOWN_MS;
-    }
+    (void)record_care_credit(
+        state, (byte_buddy_care_kind_t)action, need_before,
+        &state->action_counts[action]);
     update_dragon_traits(state);
     trigger_reaction(state, reaction);
     unlock(context, state, ACHIEVEMENT_FIRST_CARE, "first-care",
@@ -1769,22 +2033,19 @@ static void record_action(p4_game_context_t *context,
 }
 
 static void record_pet(p4_game_context_t *context,
-                       byte_buddy_state_t *state)
+                       byte_buddy_state_t *state,
+                       uint8_t need_before)
 {
-    if (state->care_credit_cooldown_ms == 0U) {
-        if (state->pet_actions < UINT16_MAX) {
-            ++state->pet_actions;
-        }
-        if (state->care_actions < UINT16_MAX) {
-            ++state->care_actions;
-        }
-        state->care_credit_cooldown_ms = CARE_CREDIT_COOLDOWN_MS;
-    }
+    (void)record_care_credit(
+        state, BYTE_BUDDY_CARE_PET, need_before, &state->pet_actions);
     update_dragon_traits(state);
     trigger_reaction(state, REACTION_PET);
     unlock(context, state, ACHIEVEMENT_FIRST_CARE, "first-care",
            "FIRST CARE", "NURTURE YOUR DRAGON EGG");
     advance_growth(context, state);
+    if (state->joy != need_before) {
+        mark_save_dirty(state);
+    }
 }
 
 static uint8_t health(const byte_buddy_state_t *state)
@@ -1953,6 +2214,14 @@ static void care_for_buddy(p4_game_context_t *context,
     const buddy_action_t action = (buddy_action_t)state->selected_action;
     const uint8_t care_bonus = (uint8_t)(
         state->upgrades[BYTE_BUDDY_UPGRADE_NEST] * 2U);
+    const uint8_t need_before = action == ACTION_FEED ? state->hunger
+        : action == ACTION_PLAY ? state->joy
+        : action == ACTION_CLEAN ? state->hygiene
+        : action == ACTION_REST ? state->energy : STAT_MAX;
+    const uint8_t hunger_before = state->hunger;
+    const uint8_t joy_before = state->joy;
+    const uint8_t hygiene_before = state->hygiene;
+    const uint8_t energy_before = state->energy;
     buddy_reaction_t reaction = REACTION_IDLE;
     switch (action) {
     case ACTION_FEED:
@@ -1965,7 +2234,8 @@ static void care_for_buddy(p4_game_context_t *context,
     case ACTION_PLAY:
         if (state->energy >= 10U) {
             state->energy = decrease(state->energy, 8U);
-            record_action(context, state, ACTION_PLAY, REACTION_PLAY);
+            record_action(
+                context, state, ACTION_PLAY, REACTION_PLAY, need_before);
             if (state->evolution_fx_ms != 0U ||
                 state->evolution_pending_mask != 0U) {
                 state->play_start_pending = 1U;
@@ -1975,6 +2245,11 @@ static void care_for_buddy(p4_game_context_t *context,
             play_tone(context, 659U, 100U);
             (void)p4_game_audio_effect_play(
                 context, &state->audio, P4_GAME_AUDIO_EFFECT_ACTION);
+            if (state->hunger != hunger_before || state->joy != joy_before ||
+                state->hygiene != hygiene_before ||
+                state->energy != energy_before) {
+                mark_save_dirty(state);
+            }
         } else {
             play_tone(context, 196U, 120U);
             (void)p4_game_audio_effect_play(
@@ -2000,7 +2275,11 @@ static void care_for_buddy(p4_game_context_t *context,
     }
     (void)p4_game_audio_effect_play(
         context, &state->audio, P4_GAME_AUDIO_EFFECT_ACTION);
-    record_action(context, state, action, reaction);
+    record_action(context, state, action, reaction, need_before);
+    if (state->hunger != hunger_before || state->joy != joy_before ||
+        state->hygiene != hygiene_before || state->energy != energy_before) {
+        mark_save_dirty(state);
+    }
 }
 
 static void apply_decay(byte_buddy_state_t *state, uint32_t elapsed_ms)
@@ -2040,6 +2319,7 @@ static void complete_play(byte_buddy_state_t *state)
     state->star_effect_kind = STAR_EFFECT_NONE;
     state->joy = increase(state->joy, 8U);
     state->energy = decrease(state->energy, 3U);
+    mark_save_dirty(state);
     begin_home_evolution_sequence(state);
 }
 
@@ -2050,6 +2330,10 @@ static void finish_play(byte_buddy_state_t *state)
     }
     state->mini_intro_ms = 0U;
     state->mini_summary_ms = MINI_GAME_SUMMARY_MS;
+    const uint16_t reward = byte_buddy_star_run_reward(
+        state->play_catches);
+    state->coins = state->coins > UINT16_MAX - reward
+        ? UINT16_MAX : (uint16_t)(state->coins + reward);
 }
 
 static bool signal_consumed(const byte_buddy_state_t *state, uint64_t token)
@@ -2402,6 +2686,10 @@ static void consume_signal(p4_game_context_t *context,
         byte_buddy_signal_profile(signal->token, signal->rssi_dbm);
     const byte_buddy_signal_genome_t genome =
         byte_buddy_signal_genome(signal->token);
+    const byte_buddy_signal_encounter_t encounter =
+        byte_buddy_signal_encounter(
+            signal->token, signal->rssi_dbm,
+            signal->channel, signal->flags);
     state->signal_consumed[state->signal_consumed_count++] = signal->token;
     if (state->signal_feeds != UINT8_MAX) {
         ++state->signal_feeds;
@@ -2420,12 +2708,23 @@ static void consume_signal(p4_game_context_t *context,
         signal->token, signal->channel, signal->flags);
     const byte_buddy_signal_lineage_t lineage = current_lineage(state);
     state->signal_hue = lineage.primary_hue;
-    state->coins = state->coins > UINT16_MAX - profile.reward_coins
-        ? UINT16_MAX : (uint16_t)(state->coins + profile.reward_coins);
+    const uint8_t reward_coins =
+        byte_buddy_signal_reward_coins(profile, encounter);
+    state->signal_session_coins =
+        state->signal_session_coins > UINT16_MAX - reward_coins
+            ? UINT16_MAX
+            : (uint16_t)(state->signal_session_coins + reward_coins);
     const uint16_t growth = byte_buddy_signal_growth_reward(
         profile.rarity, state->signal_consumed_count);
+    const uint16_t growth_before = state->care_actions;
     state->care_actions = state->care_actions > UINT16_MAX - growth
         ? UINT16_MAX : (uint16_t)(state->care_actions + growth);
+    const uint16_t growth_added = (uint16_t)(
+        state->care_actions - growth_before);
+    state->signal_session_growth =
+        state->signal_session_growth > UINT16_MAX - growth_added
+            ? UINT16_MAX
+            : (uint16_t)(state->signal_session_growth + growth_added);
     state->hunger = increase(state->hunger, 15U);
     state->joy = increase(state->joy, 12U);
     update_dragon_traits(state);
@@ -2513,6 +2812,16 @@ static void strike_signal(p4_game_context_t *context,
     }
 }
 
+static uint16_t signal_time_to_impact_ms(const byte_buddy_state_t *state)
+{
+    if (state->signal_battle_phase == SIGNAL_PHASE_WINDUP) {
+        return (uint16_t)(state->signal_phase_ms +
+                          SIGNAL_ATTACK_TRAVEL_MS);
+    }
+    return state->signal_battle_phase == SIGNAL_PHASE_TRAVEL
+        ? state->signal_phase_ms : 0U;
+}
+
 static void guard_signal(p4_game_context_t *context,
                          byte_buddy_state_t *state)
 {
@@ -2524,12 +2833,15 @@ static void guard_signal(p4_game_context_t *context,
         state->signal_guard_armed) {
         return;
     }
+    const byte_buddy_lineage_battle_traits_t battle_traits =
+        byte_buddy_lineage_battle_traits(current_lineage(state));
+    const uint16_t time_to_impact_ms = signal_time_to_impact_ms(state);
+    if (!byte_buddy_signal_parry_ready(
+            time_to_impact_ms, battle_traits)) {
+        return;
+    }
     --state->signal_guard_charges;
-    const unsigned window = (unsigned)state->signal_phase_ms +
-        (state->signal_battle_phase == SIGNAL_PHASE_WINDUP
-            ? SIGNAL_ATTACK_TRAVEL_MS : 0U) + 80U;
-    state->signal_guard_window_ms = (uint16_t)(
-        window > UINT16_MAX ? UINT16_MAX : window);
+    state->signal_guard_window_ms = (uint16_t)(time_to_impact_ms + 1U);
     state->signal_guard_fx_ms = 0U;
     state->signal_guard_armed = true;
     play_tone(context, 523U, 70U);
@@ -2982,9 +3294,14 @@ static void advance_signal_phase(p4_game_context_t *context,
              state->signal_attack_index % 3U == 2U)) {
             trigger_signal_passive_fx(state);
         }
-        play_tone(context,
-                  (uint16_t)(294U + (unsigned)encounter.attack * 49U),
-                  55U);
+        {
+            const byte_buddy_signal_attack_t attack =
+                byte_buddy_signal_attack_for(
+                    encounter, state->signal_attack_index);
+            play_tone(context,
+                      (uint16_t)(294U + (unsigned)attack * 49U),
+                      55U);
+        }
         break;
     case SIGNAL_PHASE_WINDUP:
         set_signal_phase(
@@ -3053,10 +3370,13 @@ static void update_signal_battle(p4_game_context_t *context,
         byte_buddy_signal_encounter(
             signal->token, signal->rssi_dbm,
             signal->channel, signal->flags);
+    const byte_buddy_battle_stats_t battle_stats =
+        current_battle_stats(state);
     const byte_buddy_signal_weave_rules_t weave_rules =
-        byte_buddy_signal_weave_rules(
+        byte_buddy_signal_weave_rules_for_magic(
             genome, profile.strength,
-            state->upgrades[BYTE_BUDDY_UPGRADE_MAGNET]);
+            state->upgrades[BYTE_BUDDY_UPGRADE_MAGNET],
+            battle_stats.magic);
     const uint32_t limit = signal_battle_duration_ms(state) +
         state->signal_battle_bonus_ms;
 
@@ -3131,6 +3451,10 @@ static void update_signal_battle(p4_game_context_t *context,
             state->signal_strike_cooldown_ms, step_ms);
         state->signal_guard_window_ms = tick_signal_timer(
             state->signal_guard_window_ms, step_ms);
+        if (state->signal_guard_armed &&
+            state->signal_guard_window_ms == 0U) {
+            state->signal_guard_armed = false;
+        }
         state->signal_guard_fx_ms = tick_signal_timer(
             state->signal_guard_fx_ms, step_ms);
         state->signal_passive_fx_ms = tick_signal_timer(
@@ -3220,10 +3544,7 @@ static void update_play(p4_game_context_t *context, byte_buddy_state_t *state,
         state->star_effect_ms = MINI_GAME_EFFECT_DURATION_MS;
         if (distance <= catch_radius) {
             state->star_effect_kind = STAR_EFFECT_CAUGHT;
-            const uint16_t reward = state->star_kind == STAR_KIND_HEART
-                ? 2U : 1U;
-            state->coins = state->coins > UINT16_MAX - reward
-                ? UINT16_MAX : (uint16_t)(state->coins + reward);
+            const uint8_t joy_before = state->joy;
             if (state->play_catches < UINT8_MAX) {
                 ++state->play_catches;
             }
@@ -3242,7 +3563,8 @@ static void update_play(p4_game_context_t *context, byte_buddy_state_t *state,
             if (state->play_streak > state->play_best_streak) {
                 state->play_best_streak = state->play_streak;
             }
-            record_action(context, state, ACTION_PLAY, REACTION_PLAY);
+            record_action(
+                context, state, ACTION_PLAY, REACTION_PLAY, joy_before);
             play_tone(context, 988U, 65U);
             (void)p4_game_audio_effect_play(
                 context, &state->audio, P4_GAME_AUDIO_EFFECT_REWARD);
@@ -3369,7 +3691,7 @@ static p4_game_result_t activate_touch(
         touch->x, touch->y, state->upgrade_shop,
         state->style_shop, false);
     if (target == BYTE_BUDDY_TOUCH_EXIT) {
-        return P4_GAME_EXIT_TO_LAUNCHER;
+        return request_game_exit(state);
     }
     if (state->upgrade_shop) {
         switch (target) {
@@ -3435,14 +3757,16 @@ static p4_game_result_t activate_touch(
         return P4_GAME_CONTINUE;
     }
     switch (target) {
-    case BYTE_BUDDY_TOUCH_DRAGON:
+    case BYTE_BUDDY_TOUCH_DRAGON: {
+        const uint8_t joy_before = state->joy;
         state->joy = increase(state->joy, (uint8_t)(10U +
             state->upgrades[BYTE_BUDDY_UPGRADE_NEST] * 2U));
-        record_pet(context, state);
+        record_pet(context, state, joy_before);
         play_tone(context, 880U, 70U);
         (void)p4_game_audio_effect_play(
             context, &state->audio, P4_GAME_AUDIO_EFFECT_ACTION);
         break;
+    }
     case BYTE_BUDDY_TOUCH_FEED:
     case BYTE_BUDDY_TOUCH_PLAY:
     case BYTE_BUDDY_TOUCH_CLEAN:
@@ -3470,6 +3794,185 @@ static p4_game_result_t activate_touch(
     return P4_GAME_CONTINUE;
 }
 
+static byte_buddy_save_profile_t capture_save_profile(
+    const byte_buddy_state_t *state)
+{
+    const uint16_t durable_growth =
+        state->care_actions >= state->signal_session_growth
+            ? (uint16_t)(state->care_actions - state->signal_session_growth)
+            : 0U;
+    uint32_t durable_achievements = state->achievement_mask &
+        (ACHIEVEMENT_FIRST_CARE | ACHIEVEMENT_CLEAN |
+         ACHIEVEMENT_PLAY | ACHIEVEMENT_GROW);
+    if (durable_growth < GROW_ELEMENTAL_INTERACTIONS) {
+        durable_achievements &= ~(uint32_t)ACHIEVEMENT_GROW;
+    }
+    byte_buddy_save_profile_t profile = {
+        .hunger = state->hunger,
+        .joy = state->joy,
+        .hygiene = state->hygiene,
+        .energy = state->energy,
+        .coins = state->coins,
+        .care_actions = durable_growth,
+        .style_mix_count = state->style_mix_count,
+        .pet_actions = state->pet_actions,
+        .achievement_mask = durable_achievements,
+    };
+    for (unsigned index = 0U; index < ACTION_COUNT; ++index) {
+        profile.action_counts[index] = state->action_counts[index];
+    }
+    for (unsigned index = 0U; index < BYTE_BUDDY_UPGRADE_COUNT; ++index) {
+        profile.upgrades[index] = state->upgrades[index];
+    }
+    for (unsigned index = 0U; index < BYTE_BUDDY_STYLE_COUNT; ++index) {
+        profile.style_unlocked[index] = state->style_unlocked[index];
+        profile.style_selected[index] = state->style_selected[index];
+    }
+    return profile;
+}
+
+static void apply_save_profile(
+    byte_buddy_state_t *state,
+    const byte_buddy_save_profile_t *profile)
+{
+    state->hunger = profile->hunger;
+    state->joy = profile->joy;
+    state->hygiene = profile->hygiene;
+    state->energy = profile->energy;
+    state->coins = profile->coins;
+    state->care_actions = profile->care_actions;
+    state->style_mix_count = profile->style_mix_count;
+    state->pet_actions = profile->pet_actions;
+    state->achievement_mask = profile->achievement_mask;
+    for (unsigned index = 0U; index < ACTION_COUNT; ++index) {
+        state->action_counts[index] = profile->action_counts[index];
+    }
+    for (unsigned index = 0U; index < BYTE_BUDDY_UPGRADE_COUNT; ++index) {
+        state->upgrades[index] = profile->upgrades[index];
+    }
+    for (unsigned index = 0U; index < BYTE_BUDDY_STYLE_COUNT; ++index) {
+        state->style_unlocked[index] = profile->style_unlocked[index];
+        state->style_selected[index] = profile->style_selected[index];
+    }
+    state->stage = (uint8_t)byte_buddy_stage_for_interactions(
+        state->care_actions);
+    update_dragon_traits(state);
+}
+
+static bool save_progress_signature(
+    byte_buddy_save_profile_t profile,
+    uint32_t *signature)
+{
+    /* Passive need decay should not write to SD every five seconds. Needs are
+     * still captured opportunistically whenever durable progress changes. */
+    profile.hunger = 0U;
+    profile.joy = 0U;
+    profile.hygiene = 0U;
+    profile.energy = 0U;
+    uint8_t payload[BYTE_BUDDY_SAVE_PAYLOAD_BYTES];
+    if (signature == NULL ||
+        byte_buddy_save_encode(&profile, payload, sizeof(payload)) == 0U) {
+        return false;
+    }
+    *signature = read_u32(
+        payload + BYTE_BUDDY_SAVE_PAYLOAD_BYTES - 4U);
+    return true;
+}
+
+static void refresh_save_dirty(byte_buddy_state_t *state)
+{
+    if (!state->save_available) {
+        return;
+    }
+    uint32_t signature = 0U;
+    if (!save_progress_signature(
+            capture_save_profile(state), &signature)) {
+        state->save_error = true;
+        state->save_available = false;
+        return;
+    }
+    if (signature == state->save_progress_signature) {
+        return;
+    }
+    state->save_progress_signature = signature;
+    state->save_local_generation =
+        state->save_local_generation == UINT32_MAX
+            ? 1U : state->save_local_generation + 1U;
+    state->save_dirty = true;
+}
+
+static void mark_save_dirty(byte_buddy_state_t *state)
+{
+    if (!state->save_available) {
+        return;
+    }
+    state->save_local_generation =
+        state->save_local_generation == UINT32_MAX
+            ? 1U : state->save_local_generation + 1U;
+    state->save_dirty = true;
+}
+
+static void service_save(
+    p4_game_context_t *context, byte_buddy_state_t *state)
+{
+    if (!state->save_available) {
+        return;
+    }
+    if (state->save_ticket != P4_GAME_SAVE_INVALID_TICKET) {
+        p4_game_save_status_t status = P4_GAME_SAVE_NONE;
+        uint32_t committed_sequence = 0U;
+        if (!p4_game_read_save_status(
+                context, state->save_ticket, &status,
+                &committed_sequence)) {
+            /* The Console OS save worker may briefly hold its status mutex.
+             * Retain the accepted ticket and poll again next frame. */
+            return;
+        }
+        if (status == P4_GAME_SAVE_NONE ||
+            status == P4_GAME_SAVE_READY ||
+            status == P4_GAME_SAVE_QUEUED) {
+            return;
+        }
+        state->save_ticket = P4_GAME_SAVE_INVALID_TICKET;
+        if (status != P4_GAME_SAVE_COMMITTED || committed_sequence == 0U) {
+            state->save_error = true;
+            if (status == P4_GAME_SAVE_UNAVAILABLE ||
+                status == P4_GAME_SAVE_CONFLICT ||
+                status == P4_GAME_SAVE_ERROR) {
+                state->save_available = false;
+            } else {
+                state->save_retry_ms = 1000U;
+            }
+            return;
+        }
+        state->save_host_sequence = committed_sequence;
+        state->save_error = false;
+        if (state->save_local_generation ==
+                state->save_queued_generation) {
+            state->save_dirty = false;
+        }
+    }
+    if (state->save_retry_ms != 0U || !state->save_dirty ||
+        state->save_ticket != P4_GAME_SAVE_INVALID_TICKET) {
+        return;
+    }
+    const byte_buddy_save_profile_t profile = capture_save_profile(state);
+    uint8_t payload[BYTE_BUDDY_SAVE_PAYLOAD_BYTES];
+    const size_t payload_bytes = byte_buddy_save_encode(
+        &profile, payload, sizeof(payload));
+    p4_game_save_ticket_t ticket = P4_GAME_SAVE_INVALID_TICKET;
+    if (payload_bytes == 0U || !p4_game_queue_save(
+            context, "AUTO", BYTE_BUDDY_SAVE_SCHEMA_VERSION,
+            state->save_host_sequence, payload, payload_bytes, &ticket)) {
+        state->save_error = true;
+        state->save_retry_ms = 1000U;
+        return;
+    }
+    state->save_ticket = ticket;
+    state->save_queued_generation = state->save_local_generation;
+    state->save_captured_needs = save_needs_signature(state);
+}
+
 static bool game_start(p4_game_context_t *context)
 {
     if (context == NULL || context->state == NULL ||
@@ -3494,6 +3997,7 @@ static bool game_start(p4_game_context_t *context)
         .hygiene = 75U,
         .energy = 70U,
         .coins = 4U,
+        .last_care_credit = BYTE_BUDDY_CARE_NONE,
         .evolution_active_stage = BYTE_BUDDY_STAGE_COUNT,
         .catcher_x_q16 = INT32_C(160) * P4_Q16_ONE,
         .catcher_target_x_q16 = INT32_C(160) * P4_Q16_ONE,
@@ -3501,6 +4005,36 @@ static bool game_start(p4_game_context_t *context)
         .art_bytes = context->services->resource_bytes,
         .art_sheets = art_sheets,
     };
+    state->save_available =
+        (context->services->available_capabilities & P4_GAME_CAP_SAVE) != 0U;
+    if (state->save_available) {
+        state->save_host_sequence = context->services->save_sequence;
+        if (context->services->save_bytes != 0U) {
+            byte_buddy_save_profile_t profile;
+            if (context->services->save_schema_version !=
+                BYTE_BUDDY_SAVE_SCHEMA_VERSION) {
+                state->save_error = true;
+                state->save_available = false;
+            } else if (context->services->save_sequence == 0U ||
+                       !byte_buddy_save_decode(
+                           &profile, context->services->save_data,
+                           context->services->save_bytes)) {
+                state->save_error = true;
+            } else {
+                apply_save_profile(state, &profile);
+            }
+        }
+        if (state->save_available) {
+            if (!save_progress_signature(
+                    capture_save_profile(state),
+                    &state->save_progress_signature)) {
+                state->save_error = true;
+                state->save_available = false;
+            }
+            state->save_captured_needs = save_needs_signature(state);
+            rehydrate_achievements(context, state);
+        }
+    }
     play_tone(context, 523U, 90U);
     return true;
 }
@@ -3518,8 +4052,28 @@ static p4_game_result_t game_update(
         elapsed_ms > P4_GAME_MAX_FRAME_DELTA_MS
             ? P4_GAME_MAX_FRAME_DELTA_MS : elapsed_ms;
     (void)p4_game_audio_effect_service(context, &state->audio);
+    state->save_retry_ms = tick_signal_timer(
+        state->save_retry_ms, bounded_elapsed_ms);
+    refresh_save_dirty(state);
+    service_save(context, state);
+    if (state->exit_pending) {
+        /* Keep the authored saving indicator alive while scene input stays
+         * latched.  The underlying scene deliberately does not advance. */
+        state->animation_ms += bounded_elapsed_ms;
+        if (!state->save_available ||
+            (!state->save_dirty &&
+             state->save_ticket == P4_GAME_SAVE_INVALID_TICKET)) {
+            return P4_GAME_EXIT_TO_LAUNCHER;
+        }
+        const unsigned waited = (unsigned)state->save_exit_wait_ms +
+            bounded_elapsed_ms;
+        state->save_exit_wait_ms = (uint16_t)(
+            waited > 3000U ? 3000U : waited);
+        return state->save_exit_wait_ms >= 3000U
+            ? P4_GAME_EXIT_TO_LAUNCHER : P4_GAME_CONTINUE;
+    }
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
-        return P4_GAME_EXIT_TO_LAUNCHER;
+        return request_game_exit(state);
     }
     if (state->lineage_panel && state->scene_transition_ms == 0U &&
         (input->pressed & P4_BUTTON_B) != 0U) {
@@ -3660,7 +4214,7 @@ static p4_game_result_t game_update(
                     touch->x, touch->y, false, false, true);
             if (mini_target == BYTE_BUDDY_TOUCH_EXIT) {
                 state->touch_was_down = touch_now;
-                return P4_GAME_EXIT_TO_LAUNCHER;
+                return request_game_exit(state);
             }
             if (mini_target == BYTE_BUDDY_TOUCH_DONE_PLAYING) {
                 finish_play(state);
@@ -3875,16 +4429,18 @@ static unsigned safe_morph(const byte_buddy_state_t *state)
 static byte_buddy_battle_stats_t current_battle_stats(
     const byte_buddy_state_t *state)
 {
-    const byte_buddy_battle_stats_t base = byte_buddy_battle_stats(
-        state->action_counts[ACTION_FEED],
-        state->action_counts[ACTION_PLAY],
-        state->action_counts[ACTION_CLEAN],
-        state->action_counts[ACTION_REST],
-        state->pet_actions,
-        state->upgrades[BYTE_BUDDY_UPGRADE_WINGS],
-        state->upgrades[BYTE_BUDDY_UPGRADE_AURA],
-        state->upgrades[BYTE_BUDDY_UPGRADE_NEST],
-        state->upgrades[BYTE_BUDDY_UPGRADE_MAGNET]);
+    const byte_buddy_battle_stats_t base =
+        byte_buddy_battle_stats_for_growth(
+            state->care_actions,
+            state->action_counts[ACTION_FEED],
+            state->action_counts[ACTION_PLAY],
+            state->action_counts[ACTION_CLEAN],
+            state->action_counts[ACTION_REST],
+            state->pet_actions,
+            state->upgrades[BYTE_BUDDY_UPGRADE_WINGS],
+            state->upgrades[BYTE_BUDDY_UPGRADE_AURA],
+            state->upgrades[BYTE_BUDDY_UPGRADE_NEST],
+            state->upgrades[BYTE_BUDDY_UPGRADE_MAGNET]);
     return byte_buddy_lineage_battle_stats(
         base, current_lineage(state), &state->signal_genes);
 }
@@ -4469,6 +5025,17 @@ static void draw_signal_city_icon(
     if (frame < DRAGON_FRAMES_PER_SHEET) {
         (void)draw_art_frame_scaled(
             surface, state, BYTE_BUDDY_SIGNAL_CITY_SHEET,
+            frame, center_x, center_y, size);
+    }
+}
+
+static void draw_environment_chrome_icon(
+    p4_game_surface_t *surface, const byte_buddy_state_t *state,
+    unsigned frame, int center_x, int center_y, unsigned size)
+{
+    if (frame < DRAGON_FRAMES_PER_SHEET) {
+        (void)draw_art_frame_scaled(
+            surface, state, BYTE_BUDDY_ENVIRONMENT_CHROME_SHEET,
             frame, center_x, center_y, size);
     }
 }
@@ -5274,6 +5841,7 @@ static void draw_shop_backdrop(p4_game_surface_t *surface,
     draw_signal_city_icon(surface, state, 0U, 296, 71, 44U);
     draw_signal_city_icon(surface, state, 2U, 23, 149, 38U);
     draw_signal_city_icon(surface, state, 3U, 298, 145, 42U);
+    draw_environment_chrome_icon(surface, state, 10U, 286, 64, 44U);
 }
 
 static void draw_shop_dragon_preview(p4_game_surface_t *surface,
@@ -5547,6 +6115,13 @@ static void draw_play_game(p4_game_surface_t *surface,
                      UINT16_C(0x7bef), 1U, 4U);
         draw_number(surface, 190, 94, state->play_best_streak,
                     UINT16_C(0xffff));
+        p4_draw_text(surface, 153, 112, "COINS",
+                     UINT16_C(0x7bef), 1U, 5U);
+        p4_draw_text(surface, 190, 112, "+",
+                     UINT16_C(0xffe0), 1U, 1U);
+        draw_number(surface, 199, 112,
+                    byte_buddy_star_run_reward(state->play_catches),
+                    UINT16_C(0xffe0));
     }
 }
 
@@ -5786,6 +6361,13 @@ static void draw_signal_city(p4_game_surface_t *surface,
                               3, 3, signal_color(state));
         }
     }
+    draw_environment_chrome_icon(surface, state, 1U, 238, 74, 94U);
+    draw_environment_chrome_icon(surface, state, 2U, 291, 47, 42U);
+    draw_environment_chrome_icon(surface, state, 0U, 48, 106, 56U);
+    draw_environment_chrome_icon(
+        surface, state, 4U + (state->signal_hue & 3U),
+        101, 49 + eased_ping_pong_offset(
+            state->animation_ms, 55U, -1, 1), 42U);
     draw_signal_city_icon(surface, state, 1U, 75, 68, 50U);
     draw_signal_city_icon(surface, state, 2U, 22, 119, 38U);
     draw_signal_city_icon(surface, state, 3U, 302, 120, 40U);
@@ -5793,7 +6375,8 @@ static void draw_signal_city(p4_game_surface_t *surface,
     draw_signal_city_icon(surface, state, 6U, 123, 125, 40U);
     const unsigned nest_size = 56U +
         (unsigned)state->upgrades[BYTE_BUDDY_UPGRADE_NEST] * 4U;
-    draw_signal_city_icon(surface, state, 4U, 160, 126, nest_size);
+    draw_environment_chrome_icon(
+        surface, state, 3U, 160, 124, nest_size);
 }
 
 static void draw_signal_header(p4_game_surface_t *surface,
@@ -5811,8 +6394,9 @@ static void draw_signal_header(p4_game_surface_t *surface,
     const byte_buddy_battle_stats_t stats = current_battle_stats(state);
     p4_draw_text(surface, 215, 8, "LV", UINT16_C(0x7bef), 1U, 2U);
     draw_number(surface, 232, 8, stats.level, UINT16_C(0xffff));
-    p4_draw_text(surface, 263, 8, "C", UINT16_C(0xffe0), 1U, 1U);
-    draw_number(surface, 274, 8, state->coins, UINT16_C(0xffff));
+    p4_draw_text(surface, 263, 8, "SP", UINT16_C(0xffe0), 1U, 2U);
+    draw_number(surface, 281, 8, state->signal_session_coins,
+                UINT16_C(0xffff));
 }
 
 static void draw_signal_list(p4_game_surface_t *surface,
@@ -5879,7 +6463,11 @@ static void draw_signal_list(p4_game_surface_t *surface,
                 &state->signal_snapshot.results[index];
             const byte_buddy_signal_profile_t profile =
                 byte_buddy_signal_profile(signal->token, signal->rssi_dbm);
-            const int top = 32 + (int)row * 25;
+            const byte_buddy_signal_encounter_t encounter =
+                byte_buddy_signal_encounter(
+                    signal->token, signal->rssi_dbm,
+                    signal->channel, signal->flags);
+            const int top = 36 + (int)row * 25;
             const uint16_t color = signal_color_for_hue(profile.hue);
             p4_draw_fill_rect(surface, 4, top, 312, 22,
                               row % 2U == 0U ? UINT16_C(0x1025)
@@ -5910,10 +6498,12 @@ static void draw_signal_list(p4_game_surface_t *surface,
                 p4_draw_text(surface, 270, top + 7, "FULL",
                              UINT16_C(0xf81f), 1U, 4U);
             } else {
-                p4_draw_text(surface, 270, top + 7, "+",
-                             UINT16_C(0xffe0), 1U, 1U);
-                draw_number(surface, 278, top + 7,
-                            profile.reward_coins, UINT16_C(0xffe0));
+                p4_draw_text(surface, 270, top + 7, "S+",
+                             UINT16_C(0xffe0), 1U, 2U);
+                draw_number(surface, 284, top + 7,
+                            byte_buddy_signal_reward_coins(
+                                profile, encounter),
+                            UINT16_C(0xffe0));
             }
         }
         if (rows != 0U && signal_is_simulated(
@@ -6012,6 +6602,10 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
             byte_buddy_signal_profile(signal->token, signal->rssi_dbm);
         const byte_buddy_signal_genome_t genome =
             byte_buddy_signal_genome(signal->token);
+        const byte_buddy_signal_encounter_t encounter =
+            byte_buddy_signal_encounter(
+                signal->token, signal->rssi_dbm,
+                signal->channel, signal->flags);
         const uint16_t color = signal_color_for_hue(profile.hue);
         if (state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING) {
             draw_scan_fx_frame(
@@ -6049,8 +6643,9 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
                              ? 12U : signal->rssi_dbm >= -78 ? 12U : 4U);
         p4_draw_text(surface, 121, 72, "RSSI", UINT16_C(0x7bef), 1U, 4U);
         draw_rssi(surface, 153, 72, signal->rssi_dbm, UINT16_C(0xffff));
-        p4_draw_text(surface, 121, 89, "REWARD", UINT16_C(0x7bef), 1U, 6U);
-        draw_number(surface, 166, 89, profile.reward_coins,
+        p4_draw_text(surface, 121, 89, "SPARKS", UINT16_C(0x7bef), 1U, 6U);
+        draw_number(surface, 166, 89,
+                    byte_buddy_signal_reward_coins(profile, encounter),
                     UINT16_C(0xffe0));
         p4_draw_text(surface, 121, 105,
                      signal_is_simulated(signal) ? "SIMULATED RSSI" :
@@ -6280,11 +6875,22 @@ static void draw_signal_battle(p4_game_surface_t *surface,
         encounter.passive < BYTE_BUDDY_SIGNAL_PASSIVE_COUNT
             ? (byte_buddy_signal_passive_t)encounter.passive
             : BYTE_BUDDY_SIGNAL_PASSIVE_WARD;
+    const byte_buddy_battle_stats_t battle_stats =
+        current_battle_stats(state);
+    const byte_buddy_lineage_battle_traits_t battle_traits =
+        byte_buddy_lineage_battle_traits(current_lineage(state));
     const byte_buddy_signal_weave_rules_t rules =
-        byte_buddy_signal_weave_rules(
+        byte_buddy_signal_weave_rules_for_magic(
             genome, profile.strength,
-            state->upgrades[BYTE_BUDDY_UPGRADE_MAGNET]);
+            state->upgrades[BYTE_BUDDY_UPGRADE_MAGNET],
+            battle_stats.magic);
     const uint16_t color = signal_color_for_hue(profile.hue);
+    const unsigned arena_frame =
+        encounter.arena == BYTE_BUDDY_SIGNAL_ARENA_STEADY
+            ? 7U : 11U + encounter.arena;
+    draw_environment_chrome_icon(
+        surface, state, arena_frame, 160, 83,
+        weave ? 82U : 94U);
     int shake_x = 0;
     int shake_y = 0;
     if (state->signal_player_hit_ms != 0U) {
@@ -6391,8 +6997,9 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                             ? 3U : 4U);
     p4_draw_text(surface, 272, 29, "T", UINT16_C(0xf81f), 1U, 1U);
     draw_number(surface, 282, 29, encounter.threat, UINT16_C(0xffff));
-    p4_draw_text(surface, 298, 29, "+", UINT16_C(0xffe0), 1U, 1U);
-    draw_number(surface, 307, 29, profile.reward_coins,
+    p4_draw_text(surface, 294, 29, "S+", UINT16_C(0xffe0), 1U, 2U);
+    draw_number(surface, 307, 29,
+                byte_buddy_signal_reward_coins(profile, encounter),
                 UINT16_C(0xffe0));
 
     p4_draw_text(surface, 8, 126, "YOU", UINT16_C(0xbdf7), 1U, 3U);
@@ -6427,14 +7034,33 @@ static void draw_signal_battle(p4_game_surface_t *surface,
     p4_draw_fill_rect(surface, 288, 127,
                       limit == 0U ? 0 : (int)(remaining * 27U / limit), 6,
                       UINT16_C(0xffe0));
-    if (state->signal_battle_phase == SIGNAL_PHASE_WINDUP &&
-        state->signal_battle_outcome == BYTE_BUDDY_COMBAT_ACTIVE) {
-        p4_draw_text(surface, 62, 145, "GUARD NOW:",
-                     UINT16_C(0xffe0), 1U, 10U);
-        p4_draw_text(surface, 129, 145,
-                     s_dragon_ability_names[ability],
-                     UINT16_C(0xffff), 1U,
-                     s_dragon_ability_name_lengths[ability]);
+    const bool guard_ready = state->signal_guard_charges != 0U &&
+        state->signal_battle_outcome == BYTE_BUDDY_COMBAT_ACTIVE &&
+        !state->signal_guard_armed &&
+        (state->signal_battle_phase == SIGNAL_PHASE_WINDUP ||
+         state->signal_battle_phase == SIGNAL_PHASE_TRAVEL) &&
+        byte_buddy_signal_parry_ready(
+            signal_time_to_impact_ms(state), battle_traits);
+    if ((state->signal_battle_phase == SIGNAL_PHASE_WINDUP ||
+         state->signal_battle_phase == SIGNAL_PHASE_TRAVEL) &&
+        state->signal_battle_outcome == BYTE_BUDDY_COMBAT_ACTIVE &&
+        !state->signal_guard_armed) {
+        if (guard_ready) {
+            p4_draw_text(surface, 62, 145, "GUARD NOW:",
+                         UINT16_C(0xffe0), 1U, 10U);
+            p4_draw_text(surface, 129, 145,
+                         s_dragon_ability_names[ability],
+                         UINT16_C(0xffff), 1U,
+                         s_dragon_ability_name_lengths[ability]);
+        } else {
+            const char *const parry_hint =
+                state->signal_guard_charges == 0U
+                    ? "NO GUARDS LEFT" : "WAIT FOR THE FLASH";
+            p4_draw_text(
+                surface, state->signal_guard_charges == 0U ? 112 : 93,
+                145, parry_hint, UINT16_C(0x9cf3), 1U,
+                state->signal_guard_charges == 0U ? 14U : 18U);
+        }
     } else if (state->signal_snare_ms != 0U) {
         p4_draw_text(surface, 92, 145, "THORN SNARE - MOVE SLOWED",
                      UINT16_C(0x87e0), 1U, 25U);
@@ -6474,19 +7100,36 @@ static void draw_signal_battle(p4_game_surface_t *surface,
         draw_number(surface, 174, 182, rules.required_locks,
                     UINT16_C(0xffff));
     } else {
+        const bool strike_ready =
+            state->signal_battle_outcome == BYTE_BUDDY_COMBAT_ACTIVE &&
+            state->signal_battle_phase != SIGNAL_PHASE_INTRO &&
+            state->signal_battle_phase < SIGNAL_PHASE_VICTORY &&
+            state->signal_strike_cooldown_ms == 0U;
         draw_touch_button(surface, 4, 162, 188, 33,
-                          "PULSE STRIKE", 12U,
-                          UINT16_C(0x07ff), state->signal_hit_ms != 0U);
+                          strike_ready ? "PULSE STRIKE" : "RECHARGING",
+                          strike_ready ? 12U : 10U,
+                          strike_ready ? UINT16_C(0x07ff)
+                                       : UINT16_C(0x4208),
+                          state->signal_hit_ms != 0U);
         draw_signal_city_icon(surface, state, 12U, 23, 178, 24U);
     }
-    draw_touch_button(surface, 198, 162, 118, 33, "AURA GUARD", 10U,
-                      UINT16_C(0xffe0),
+    const char *const guard_label = state->signal_guard_armed
+        ? "PARRY ARMED" : state->signal_guard_charges == 0U
+            ? "GUARD EMPTY" : guard_ready ? "GUARD NOW" : "AURA GUARD";
+    const size_t guard_label_length = state->signal_guard_armed
+        ? 11U : state->signal_guard_charges == 0U
+            ? 11U : guard_ready ? 9U : 10U;
+    draw_touch_button(surface, 198, 162, 118, 33,
+                      guard_label, guard_label_length,
+                      state->signal_guard_charges == 0U
+                          ? UINT16_C(0x4208) : UINT16_C(0xffe0),
                       state->signal_guard_armed);
     draw_signal_city_icon(surface, state, 13U, 211, 178, 20U);
     draw_counter_fx_frame(
         surface, state, ability, 0U, 211, 178, 22U);
     draw_number(surface, 300, 166, state->signal_guard_charges,
-                UINT16_C(0x0000));
+                state->signal_guard_armed
+                    ? UINT16_C(0x0000) : UINT16_C(0xffff));
 
     if (state->signal_battle_phase == SIGNAL_PHASE_INTRO) {
         p4_draw_fill_rect(surface, 50, 48, 220, 69, UINT16_C(0x000b));
@@ -6533,7 +7176,7 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                 78, 84, 58U);
             p4_draw_text(surface, 116, 63, "SIGNAL TAMED",
                          UINT16_C(0xffe0), 1U, 12U);
-            p4_draw_text(surface, 98, 87, "DNA + REWARD SECURED",
+            p4_draw_text(surface, 98, 87, "DNA + SPARKS SECURED",
                          UINT16_C(0xffff), 1U, 20U);
         } else {
             const uint16_t defeat_duration =
@@ -6554,7 +7197,7 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                 timeout ? 14U : 11U;
             p4_draw_text(surface, 112, 63, title,
                          UINT16_C(0xf81f), 1U, title_length);
-            p4_draw_text(surface, 98, 87, "NO DNA OR REWARD",
+            p4_draw_text(surface, 98, 87, "NO DNA OR SPARKS",
                          UINT16_C(0xffff), 1U, 16U);
             p4_draw_text(surface, 98, 102, "REMATCH AT TRACKER",
                          UINT16_C(0x9cf3), 1U, 18U);
@@ -6833,8 +7476,12 @@ static void draw_scene_transition(p4_game_surface_t *surface,
     const unsigned icon_size = (unsigned)(
         remaining * 38U / UINT16_MAX);
     if (icon_size >= 4U) {
-        draw_signal_city_icon(
-            surface, state, 15U, center_x, center_y, icon_size);
+        const unsigned transition_frame = state->signal_hunt ? 9U :
+            state->lineage_panel ? 11U : state->upgrade_shop ? 10U :
+            state->mini_game ? 6U : 8U;
+        draw_environment_chrome_icon(
+            surface, state, transition_frame,
+            center_x, center_y, icon_size);
     }
     if (marker >= 2) {
         p4_draw_rect(surface, center_x - marker, center_y - marker,
@@ -6850,6 +7497,40 @@ static void draw_scene_transition(p4_game_surface_t *surface,
     }
 }
 
+static void draw_save_exit_overlay(p4_game_surface_t *surface,
+                                   const byte_buddy_state_t *state)
+{
+    if (!state->exit_pending) {
+        return;
+    }
+    const uint16_t accent = signal_color(state);
+    p4_draw_fill_rect(surface, 82, 69, 156, 62, UINT16_C(0x000b));
+    p4_draw_rect(surface, 82, 69, 156, 62, accent);
+    p4_draw_rect(surface, 84, 71, 152, 58, UINT16_C(0x39e7));
+    draw_scan_fx_frame(
+        surface, state, BYTE_BUDDY_SCAN_FX_BUSY,
+        fx_loop_phase(state->animation_ms, 120U), 108, 100, 38U);
+    p4_draw_text(surface, 135, 84, "SAVING", UINT16_C(0xffff),
+                 2U, sizeof("SAVING") - 1U);
+    p4_draw_text(surface, 139, 108, "BUDDY SAFE",
+                 UINT16_C(0x9cf3), 1U, sizeof("BUDDY SAFE") - 1U);
+}
+
+static void draw_save_error_badge(p4_game_surface_t *surface,
+                                  const byte_buddy_state_t *state)
+{
+    if (!state->save_error || state->exit_pending) {
+        return;
+    }
+    p4_draw_fill_rect(surface, 202, 2, 116, 21, UINT16_C(0x000b));
+    p4_draw_rect(surface, 202, 2, 116, 21, UINT16_C(0xf800));
+    draw_scan_fx_frame(
+        surface, state, BYTE_BUDDY_SCAN_FX_OFFLINE,
+        fx_loop_phase(state->animation_ms, 180U), 213, 12, 16U);
+    p4_draw_text(surface, 225, 8, "SESSION ONLY", UINT16_C(0xffdf),
+                 1U, sizeof("SESSION ONLY") - 1U);
+}
+
 static bool game_render(p4_game_context_t *context,
                         p4_game_surface_t *surface)
 {
@@ -6861,11 +7542,15 @@ static bool game_render(p4_game_context_t *context,
     if (state->signal_hunt) {
         draw_signal_hunt(surface, state);
         draw_scene_transition(surface, state);
+        draw_save_error_badge(surface, state);
+        draw_save_exit_overlay(surface, state);
         return true;
     }
     if (state->lineage_panel) {
         draw_lineage_panel(surface, state);
         draw_scene_transition(surface, state);
+        draw_save_error_badge(surface, state);
+        draw_save_exit_overlay(surface, state);
         return true;
     }
     draw_signal_city(surface, state);
@@ -6880,6 +7565,8 @@ static bool game_render(p4_game_context_t *context,
             draw_upgrade_shop(surface, state);
         }
         draw_scene_transition(surface, state);
+        draw_save_error_badge(surface, state);
+        draw_save_exit_overlay(surface, state);
         return true;
     }
     if (state->mini_game) {
@@ -6961,11 +7648,18 @@ static bool game_render(p4_game_context_t *context,
                           signal_color(state), false);
     }
     draw_scene_transition(surface, state);
+    draw_save_error_badge(surface, state);
+    draw_save_exit_overlay(surface, state);
     return true;
 }
 
 static void game_stop(p4_game_context_t *context)
 {
+    if (context != NULL && context->state != NULL) {
+        byte_buddy_state_t *const state = context->state;
+        refresh_save_dirty(state);
+        service_save(context, state);
+    }
     p4_game_stop_audio(context);
 }
 
@@ -6980,7 +7674,8 @@ const p4_game_descriptor_t p4_byte_buddy_game = {
                              P4_GAME_CAP_STORAGE,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
                              P4_GAME_CAP_AUDIO_STREAM |
-                             P4_GAME_CAP_SIGNAL_SCAN,
+                             P4_GAME_CAP_SIGNAL_SCAN |
+                             P4_GAME_CAP_SAVE,
     .state_bytes = sizeof(byte_buddy_state_t),
     .start = game_start,
     .update = game_update,

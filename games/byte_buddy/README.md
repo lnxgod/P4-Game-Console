@@ -94,12 +94,27 @@ their authored trigger/fade frames only when the matching battle mechanic
 actually fires. The compact 21-pixel signal rows now preserve core, halo,
 sigil, aura, hue, rarity, habitat, and shield/phantom accents, while Genome
 draws the aggregate lineage it names rather than treating entropy as a signal
-token. This pass reuses the same required 29-sheet/464-frame `BYTEBUD.P4R`; it
-does not add placeholder art or increase the resource budget.
+token. The v4.1 release reused the then-current 29-sheet/464-frame
+`BYTEBUD.P4R`; it did not add placeholder art or increase that release's
+resource budget.
+
+Version 4.2 adds an original environment-and-chrome sheet for the skyline,
+moon, towers, rooftop nest, scene gates, and arena overlays. The required bank
+is now 30 sheets and 480 authored frames, with no placeholder launch path.
+Signal encounters now draw a bounded attack deck: Comet Crash gains its spike
+on every third Comet occurrence, and a Shift arena reverses the deck on
+alternate cycles. Pulse Strike is bounded to 260–360 ms, while Aura Guard is
+available only inside its displayed impact window. Star Catcher awards a
+bounded end-of-run coin reward; Signal Battle instead awards session-only
+Sparks. An optional versioned save keeps ordinary pet progress without writing
+signal identity, lineage, history, or signal rewards.
 
 ## Touch play
 
-- Tap **Feed**, **Play**, **Clean**, or **Rest** to provide care.
+- Tap **Feed**, **Play**, **Clean**, or **Rest** to provide care. Feed, Clean,
+  and Rest apply their capped need effects immediately; Play opens Star Catcher
+  when the dragon has enough energy. Growth credit is separately need-qualified
+  so repeatedly tapping a full need is not the fastest route.
 - Tap the egg or dragon directly to pet it.
 - **Play** opens Star Catcher. Swipe anywhere in the full-width lane to send
   the dragon sliding under falling rewards, then tap **Done** to return.
@@ -124,9 +139,9 @@ does not add placeholder art or increase the resource budget.
 ### Signal Hunt
 
 Tap **Signal Hunt** to request a bounded city scan. Use **Prev/Next** to inspect
-all eight bounded results. The list contains only an
-OS-sanitized display name, an opaque session token, and a simple strength and
-reward preview. Select an uneaten signal, walk around, and tap **Rescan Now**.
+all eight bounded results. The list contains only an OS-sanitized display name,
+an opaque provider token, and a simple strength and reward preview. Select an
+uneaten signal, walk around, and tap **Rescan Now**.
 Repeated focused scans provide a deliberately approximate `COLD`, `GETTING
 WARM`, `BATTLE READY`, or `VERY HOT` cue. RSSI is noisy, so this is a playful
 hotter/colder activity rather than real direction or distance.
@@ -141,12 +156,12 @@ both inputs are present.
 At -65 dBm or stronger, **Battle** unlocks. Signal strength maps from -100..-30
 dBm into a clamped 0..100 encounter strength. Stronger signals have more
 health, hit harder, and are harder to defeat before time expires, but pay more
-coins. Each opaque token deterministically chooses Pulse Rush or Resonance
-Weave plus an attack, passive, weakness, and visual genome. RSSI can change
-strength and payout, but never changes those identity-derived traits.
+session Sparks. Each opaque token deterministically chooses Pulse Rush or
+Resonance Weave plus an attack, passive, weakness, and visual genome. RSSI can
+change strength and Sparks, but never changes those identity-derived traits.
 
 **Pulse Rush** uses Pulse Strike damage from Power, Aura upgrades, lineage, and
-matching the displayed weakness. A 0.18–0.36 second Speed-derived cooldown
+matching the displayed weakness. A 260–360 ms Speed-derived cooldown
 prevents tap spam from skipping the animation or encounter. **Resonance Weave**
 asks the player to hold and glide through four to seven large runes; genome
 rarity controls route length, signal strength controls hold time, and Magnet
@@ -158,15 +173,18 @@ Every enemy attack enters a bright windup before its travel and impact frames.
 grace and invokes the current dragon element: Mystery uses Nova Parry, Fire
 uses Flare Counter, Ice uses Glacier Ward, and Acid uses Jam Field. Prism Lance
 always deals one point of chip damage through a perfect full block; Comet Crash
-spikes every third volley. Ward absorbs offense, Echo strengthens every third
+spikes on every third Comet occurrence in the generated deck. Ward absorbs
+offense, Echo strengthens every third
 attack, Siphon heals after an unguarded hit, and Overclock shortens the attack
 cycle. Coarse channel families add Steady, Heavy, Quick, Echo, or Shift arena
-timing without pretending to reveal a physical bearing.
+timing; Shift reverses the attack deck on alternate complete cycles. None of
+these fantasy modifiers pretends to reveal a physical bearing.
 
 Winning plays a completion crest and then turns the encounter into a signal
-seed that the dragon eats automatically. Dragon HP reaching zero, time running
+seed that the dragon eats automatically. Its DNA, signal-fed growth, and Sparks
+apply only to the current running session. Dragon HP reaching zero, time running
 out, or retreating plays a separate result and returns to the tracker with the
-signal intact. Defeat never awards a seed, coins, growth, DNA, or the victory
+signal intact. Defeat never awards a seed, Sparks, growth, DNA, or the victory
 achievement, so a rematch is meaningful rather than an automatic collection.
 
 A seed's base genome still comes only from the opaque token. Its visible
@@ -177,9 +195,10 @@ contexts. The combined `FORM` number is bounded to 0..163,839. A channel change
 may therefore change the habitat accents while preserving the encounter's base
 genome; RSSI never changes either design layer.
 
-Every signal seed is accepted once per session. Its opaque token determines
-rarity, Fire/Ice/Acid affinity, mutation hue, and a core/halo/sigil/aura genome;
-RSSI contributes battle health and payout, never identity. The game folds each
+Every signal seed is accepted once per running game session. Its opaque token
+determines rarity, Fire/Ice/Acid affinity, mutation hue, and a
+core/halo/sigil/aura genome;
+RSSI contributes battle health and Sparks, never identity. The game folds each
 distinct token into an order-independent lineage, so finding the same set in a
 different order yields the same dominant traits. Rarity-weighted votes choose
 the inherited Arc, Prism, Thorn, or Comet family and its overlays. The resulting
@@ -187,10 +206,12 @@ palette applies only when the player has not bought a body color, preserving
 coin customization choices.
 
 The display label is never used as genetic input, and Byte Buddy never receives
-a raw MAC address. The platform may derive its session token internally, but
-the game sees only that opaque, resettable identifier. This keeps deterministic
-encounters and duplicate protection without turning network identity into save
-data or exposing it in the UI.
+a raw MAC address. The Waveshare provider may reproduce an opaque token across
+boots when its device-local NVS key is available, or use a fresh boot-session
+key when NVS is unavailable. That provider behavior does not make Byte Buddy's
+history durable: the game never saves tokens and rejects duplicates only within
+the current run. Relaunching resets signal lineage, consumed-token history,
+signal growth, signal achievements, and Sparks.
 
 Lineage rank requires both quantity and variety. Diversity is the number of
 different core, halo, sigil, aura, hue, and rarity alleles collected; repeated
@@ -253,23 +274,25 @@ coins:
 | Nest | A richer nest plus stronger care and pet stat recovery |
 | Magnet | A wider catch region in Star Catcher |
 
-New sessions receive four coins so the first two upgrades can be previewed.
-Additional coins come from catching stars.
-Signal battles are the second coin source; stronger and rarer encounters pay
-more.
+New profiles receive four coins so the first two upgrades can be previewed.
+Star Catcher adds its coin reward once at the end of a run: zero catches earns
+zero, while a run with catches earns a bounded 2–6 coins. These coins join the
+spendable wallet and are durable when the save capability is available. Signal
+battles award separate session-only Sparks; Sparks cannot buy upgrades or Style.
 Any two purchased upgrade levels unlock the mature rare-morph art.
 
 Style choices are runtime palette channels, so one motion frame supports many
 combinations without duplicating art. Current choices are eight body palettes,
 six eye colors, five horn colors, and five colored/animated trail families.
-Purchased choices remain independently equipped for the session.
+Purchased choices remain independently equipped and, when saving is available,
+persist with the profile.
 The inherited two-family wing trait and eight mutation hues extend that to
 19,200 bounded look recipes. **Remix** recombines only unlocked choices, always
 changes a component when that category has alternatives, and shows the stable
 mixed-radix `LOOK` number for the resulting recipe.
 
 Signals use a separate deterministic genome derived only from their opaque
-session token. Four cores, four halos, four elemental sigils, four auras,
+provider token. Four cores, four halos, four elemental sigils, four auras,
 eight mutation palettes, and four rarity ranks make 8,192 bounded signal-seed
 genomes. Twenty coarse habitat contexts extend those genomes to 163,840
 bounded `FORM` designs. The same base genome follows an encounter from the scan
@@ -278,14 +301,44 @@ selects its context, while changing RSSI affects challenge and reward but never
 either recipe.
 Fire, Ice, and Acid crests match battle affinity; the mystery-star crest keeps
 its affinity concealed until play reveals it. Byte Buddy never receives a raw
-SSID or MAC/BSSID: the OS supplies only a sanitized display label and an opaque,
-session-scoped token that already represents the encounter identity. Labels are
-shown transiently and are never used as lineage input.
+SSID or MAC/BSSID: the OS supplies only a sanitized display label and an opaque
+token that already represents the encounter identity. Labels are shown
+transiently and are never used as lineage input. Byte Buddy does not persist
+either labels or tokens.
+
+## Save and privacy policy
+
+Saving is optional. When Console OS exposes `P4_GAME_CAP_SAVE`, Byte Buddy uses
+a CRC-checked, version-1, 56-byte `AUTO` profile. It persists the four current
+needs when a save is captured, the spendable coin wallet, care-derived growth,
+care and pet action counts, Remix count, Power upgrades, unlocked/equipped
+Style choices, and the four general non-signal achievements. Star Catcher's
+bounded end-of-run coins are part of that wallet. Without the capability, the
+same game remains playable but this ordinary progress lasts only for the run.
+
+Exit waits briefly for the newest accepted save generation while an animated
+`SAVING` / `BUDDY SAFE` overlay keeps the transition legible. A corrupt or
+future-version profile, a write conflict, or a terminal save-service failure
+switches to an authored `SESSION ONLY` state instead of pretending progress is
+durable. The game remains playable and Back still exits within a bounded wait.
+
+The save deliberately excludes signal labels, scan snapshots, RSSI, channels,
+flags, opaque tokens, consumed-token history, lineage genes/entropy, signal-fed
+growth, Sparks, and signal achievements. Those values reset on every game
+relaunch. A platform provider may independently return the same opaque token
+after a reboot, but Byte Buddy neither receives the provider key nor turns that
+token stability into durable duplicate history. Durable signal lineage requires
+a future reviewed, game-scoped identity ABI; the current device-scoped provider
+token is not that contract.
 
 ## Growth and inherited traits
 
-Every successful care action, pet, and caught star counts as interaction. The
-natural stages are:
+Care growth is need-qualified and rate-limited to one credit every 650 ms. An
+accepted care or pet action earns growth whenever its target need is 88 or
+lower; from 89 through 98 it earns growth only when it differs from the previous
+credited care kind; at 99 or 100 its normal capped action and reaction still
+occur but it earns no growth. Catching an object in Star Catcher attempts Play
+care credit under the same need and cadence rules. The natural stages are:
 
 | Interactions | Stage |
 | ---: | --- |
@@ -314,12 +367,13 @@ Care style determines the mature branch rather than a menu choice:
   early stages and choose a dedicated PixelLab adult family when rare art is
   unlocked.
 
-Animation and UI use 464 authored 64×64 source frames. Seven full sheets cover
+Animation and UI use 480 authored 64×64 source frames. Seven full sheets cover
 signal counters, outcomes, passives, scan states, evolution, needs, and
 activity feedback; the remaining sheets cover ambient/care motion, hatch and
 signal-genetic transitions, Star Catcher rewards, items, composable signal
-layers, Signal City props, reactions, lineage regalia, and signal attacks. The
-renderer selects one complete crop-safe authored pose at each bounded cadence
+layers, Signal City props, reactions, lineage regalia, signal attacks, and the
+v4.2 environment/chrome layer. The renderer selects one complete crop-safe
+authored pose at each bounded cadence
 and applies customization to that whole pose. It never blends non-overlapping
 silhouettes, avoiding the ghosted double images caused by per-pixel edge
 dithering while preserving crisp authored poses.
@@ -365,16 +419,17 @@ while Console OS keeps the compatible stable surface and touch mapping.
 
 ## Generated source art
 
-The thirty-seven intentional PNGs at the top level of `assets/` are original
+The thirty-eight intentional PNGs at the top level of `assets/` are original
 project inputs generated in PixelLab or ImageGen for this game. Six PixelLab
 gameplay sheets are transparent 256×256 4-by-4 grids, and the retained 64×64
-style anchor keeps later ImageGen sheets cohesive. Thirty 1254×1254 ImageGen
+style anchor keeps later ImageGen sheets cohesive. Thirty-one 1254×1254 ImageGen
 grids add two egg
 families, baby reactions, flight cycles, elemental breath, nine motion
 expansions, hatch and signal-genetic transitions, Star Catcher rewards, items,
 signal genome layers, city props, reaction effects, lineage regalia, attacks,
 counters, outcomes, passives, scan states, evolution, needs, and activity
-feedback. Only the exact 29-sheet map below enters the runtime. The five
+feedback, plus environment and scene chrome. Only the exact 30-sheet map below
+enters the runtime. The five
 superseded PixelLab stage sheets, the PixelLab style anchor, and the two early
 ImageGen egg-family sheets remain provenance/style inputs and are deliberately
 excluded from the v4 bank. Some
@@ -422,10 +477,11 @@ large enough to be background, preserving small white highlights and sigils.
 | `byte_buddy_evolution_fx_imagegen_v15.png` | `151b649273e7cb634b938f651a9c81b09ae59084c0f13d04c4ee5379b8f46724` |
 | `byte_buddy_need_fx_imagegen_v16.png` | `800f633eb0192d35020483f013e6cbcf26deb006ddaa3735607d49917afd8500` |
 | `byte_buddy_activity_fx_imagegen_v17.png` | `2e66c3f31c26528dcac2adf23f38349638dcc5f7f125459538e1e078cc280fdb` |
+| `byte_buddy_signal_environment_chrome_imagegen_v18.png` | `3e78e93b0f36e68f23004b72a6c91650a152949c8f67c5556756a1bf7566ab79` |
 
-### Exact v4 runtime sheet map
+### Exact v4.2 runtime sheet map
 
-The converter accepts exactly these 29 sources in this order. Each index owns
+The converter accepts exactly these 30 sources in this order. Each index owns
 16 consecutive 64×64 runtime frames, so index `n` maps to frames
 `n * 16` through `n * 16 + 15`.
 
@@ -460,9 +516,10 @@ The converter accepts exactly these 29 sources in this order. Each index owns
 | 26 | 416–431 | `byte_buddy_reaction_fx_imagegen_v8.png` |
 | 27 | 432–447 | `byte_buddy_signal_lineage_badges_imagegen_v9.png` |
 | 28 | 448–463 | `byte_buddy_signal_attack_cycles_imagegen_v10.png` |
+| 29 | 464–479 | `byte_buddy_signal_environment_chrome_imagegen_v18.png` |
 
-The exact prompts are retained here so later sheets can match the same art
-direction.
+Generation briefs and accepted prompts are retained here so later sheets can
+match the same art direction.
 
 ### Egg
 
@@ -843,6 +900,16 @@ layout constraint:
 > summary reward burst. Row 4 contains four distinct shop states from left to
 > right: unlock onset, unlocked, equipped, unavailable.
 
+### ImageGen environment and scene chrome
+
+`byte_buddy_signal_environment_chrome_imagegen_v18.png` was generated with the
+built-in OpenAI ImageGen tool on 2026-08-31 as original Byte Buddy project art.
+The accepted 4-by-4 source supplies reusable Signal City skyline, moon, tower,
+rooftop and nest elements, neutral scene-transition gates, and bounded battle
+arena overlays. These authored sprites replace the remaining low-detail scene
+chrome; the runtime still adds deterministic motion and tinting without a
+placeholder fallback.
+
 ## Deterministic atlas conversion
 
 `tools/png_to_dragon_atlas.py` scales each source sheet to 256×256 with
@@ -851,10 +918,10 @@ gets a deterministic 15-color RGB565 palette plus transparent index zero, and
 two 4-bit indices are packed per byte. A frame therefore occupies 2,080 bytes
 instead of 8,192 bytes of raw RGB565.
 
-All twenty-nine gameplay sheets contain 464 master frames in a 965,184-byte
+All thirty gameplay sheets contain 480 master frames in a 998,464-byte
 resource payload. Console OS wraps that payload as `BYTEBUD.P4R`: a bounded,
 same-ID, SHA-256-verified read-only SD sidecar. Byte Buddy 4.x requires storage
-resource format v1 and the exact ordered 29-sheet bank before initializing.
+resource format v1 and the exact ordered 30-sheet bank before initializing.
 The converter rejects a missing, reordered, renamed, duplicate, or extra source
 before it writes either output. Runtime validation separately fails closed on
 missing, null, truncated, wrong-version, or incomplete art; there is no
@@ -906,13 +973,25 @@ python3 games/byte_buddy/tools/png_to_dragon_atlas.py \
   games/byte_buddy/assets/byte_buddy_signal_city_props_imagegen_v7.png \
   games/byte_buddy/assets/byte_buddy_reaction_fx_imagegen_v8.png \
   games/byte_buddy/assets/byte_buddy_signal_lineage_badges_imagegen_v9.png \
-  games/byte_buddy/assets/byte_buddy_signal_attack_cycles_imagegen_v10.png
+  games/byte_buddy/assets/byte_buddy_signal_attack_cycles_imagegen_v10.png \
+  games/byte_buddy/assets/byte_buddy_signal_environment_chrome_imagegen_v18.png
 
 python3 scripts/build-game-resource.py \
   --manifest games/byte_buddy/game.json \
   --payload games/byte_buddy/assets/generated/byte_buddy_dragon_art.bin \
   --output /tmp/BYTEBUD.P4R
 ```
+
+Current v4.2 source/resource identities:
+
+- v18 environment/chrome source PNG:
+  `3e78e93b0f36e68f23004b72a6c91650a152949c8f67c5556756a1bf7566ab79`;
+- v4.2 full 30-sheet/480-frame `BBDART2` payload: 998,464 bytes,
+  `d52392ffd7794618ae0e8b6f657d60fa07703629a81eb94619bd69bc84d1b0db`.
+
+These source and raw-resource identities were reproduced by two complete atlas
+conversions before the package pair below was built. Hardware gameplay remains
+a separate acceptance step.
 
 Verified v4.0.0 release identities:
 
@@ -957,7 +1036,36 @@ The verified pair is under `build-host/byte-buddy-4.1.0/`. This is a host-built
 artifact candidate only; it has not received a matching firmware build, named
 human play acceptance, tablet acceptance, or deployment.
 
-### v4 deployment candidate
+### v4.2 packaging and acceptance status
+
+The pinned ESP-IDF 5.5.3 Waveshare pipeline built and verified the matched v4.2
+pair twice without flashing:
+
+- `BYTEBUD.P4R`: 998,592 bytes, package SHA-256
+  `60f808582d5c92874cb66de9841cf1ba85022392fdf61234228650ebbab52e7f`;
+  its 998,464-byte payload has SHA-256
+  `d52392ffd7794618ae0e8b6f657d60fa07703629a81eb94619bd69bc84d1b0db`;
+- `BYTEBUD.P4G`: 195,192 bytes, package SHA-256
+  `36e7a5cf599dd94e648328f92f26e22804dbbaad218dd96e4fa8cf1e0249fbdb`;
+  its 194,936-byte ELF payload has SHA-256
+  `33030cc8bd4a557c3276bf370696ea5048371ccb71bfe00e6f225684ed03db5a`.
+
+The independent Waveshare verifier accepted the complete Console OS build,
+both package geometries and hashes, all fourteen native cartridges, the
+resource sidecar, and the H1 P4R implementation. The four deterministic visual
+suites also passed with 11 canonical stills, 178 general-animation frames, 955
+Signal Motion frames, and 112 authored-motion frames.
+
+Deployment remains intentionally incomplete. The only connected H1 port during
+the v4.2 attempt belonged to green unit 2, whose installed transfer protocol
+returned status 9 (`unsupported`) for the P4R class. The host therefore did not
+send the P4G and left the installed pair untouched. Pink unit 1 is the recorded
+protocol-2 canary but was not connected. Connect that canary on its recorded H1
+port, install P4R first and P4G second, pull both back, and complete named tablet
+gameplay before claiming physical acceptance. Do not substitute the historical
+v4.0/v4.1 hashes for this pair.
+
+### Historical v4.0 deployment candidate
 
 The controller-first Waveshare Console OS 0.4.89 build passed its no-flash
 verifier with H1 P4R support and the exact v4 pair above. Its application image
@@ -1003,7 +1111,7 @@ reward card, and one-signal Spark, five-signal Aurora, eight-signal Ascended,
 12-signal Mythic, 16-signal Nova, 24-signal Galaxy, and 32-signal Eternal clips.
 Dedicated Pulse Rush and Resonance Weave frames show their authored effects,
 controller cursor, and hints. The sequence remains exactly 178 frames. The tests
-also run a dedicated 905-frame Signal Battle chronology covering every attack
+also run a dedicated 955-frame Signal Battle chronology covering every attack
 family, all four passive combinations, telegraphs, travel, impact, guard,
 player damage, HP defeat, rematch, retreat, Pulse victory, Resonance victory,
 and delayed rewards. Its passive coverage captures genuine Ward absorption,
@@ -1043,14 +1151,23 @@ low-diversity stalling, capped lineage stats, bounded signal-provider
 integration, guarded rendering, the required storage/resource-v1 contract,
 and rejection of missing, null, malformed, truncated, wrong-version, or
 incomplete full art. CTest renders the eleven primary 320×200 screens, the
-complete 178-frame route, and hashes the exact 905-frame battle and 112-frame
+complete 178-frame route, and hashes the exact 955-frame battle and 112-frame
 authored routes with the committed resource as deterministic preview smokes.
 The v4.1 focused CTest run passed 5/5 and the SDL host smoke/save run passed
 2/2. Its deterministic cartridge/resource pair and independent package checks
 also passed. The matched Waveshare build verifier result above belongs to the
-v4.0 deployment candidate; v4.1 named human SDL play, target integration, and
-physical-tablet acceptance remain pending.
+historical v4.0 deployment candidate. The v4.2 suite adds need-qualified preview
+progression, attack-deck/Comet/Shift timing, guard-window boundaries, Star
+Catcher reward bounds, versioned save encoding/lifecycle coverage, and a
+relaunch regression proving that Sparks and signal lineage remain session-only.
+The v4.2 matched package verification now passes twice with identical payloads
+and packages. Named human SDL play, protocol-2 H1 install/readback, and physical
+tablet acceptance remain pending; the green unit 2 protocol-1 H1 preflight
+stopped on the unsupported `.P4R` status before either member of the pair was
+sent, so its installed game was not mutated.
 
-Care, coins, upgrades, growth, and lineage are session-only until the platform
-exposes a reviewed writable save service. The game owns no display, touch,
-audio, radio, or storage hardware directly.
+On platforms with the optional reviewed save capability, ordinary care, the
+spendable wallet, upgrades, Style, and general achievements follow the durable
+policy above. Signal state and Sparks remain session-only; without save support,
+ordinary progress is session-only too. The game owns no display, touch, audio,
+radio, or storage hardware directly.

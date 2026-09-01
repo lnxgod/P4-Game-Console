@@ -149,8 +149,7 @@ static uint32_t supported_service_capabilities(void)
 static bool host_save_snapshot_valid(const p4_cartridge_host_v1_t *host)
 {
     if (host->save_bytes == 0U) {
-        return host->save_data == NULL && host->save_schema_version == 0U &&
-            host->save_sequence == 0U;
+        return host->save_data == NULL && host->save_schema_version == 0U;
     }
     return host->save_data != NULL &&
         host->save_bytes <= P4_GAME_SAVE_MAX_BYTES &&

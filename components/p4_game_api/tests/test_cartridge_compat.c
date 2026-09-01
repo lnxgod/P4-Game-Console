@@ -27,8 +27,19 @@ typedef struct {
 
 static bool fixture_start(p4_game_context_t *context)
 {
-    return context != NULL && context->state != NULL &&
-        context->state_bytes == sizeof(fixture_game_t);
+    if (context == NULL || context->state == NULL ||
+        context->state_bytes != sizeof(fixture_game_t) ||
+        context->services == NULL) {
+        return false;
+    }
+    if ((context->services->available_capabilities &
+         P4_GAME_CAP_SAVE) != 0U) {
+        return context->services->save_data == NULL &&
+            context->services->save_bytes == 0U &&
+            context->services->save_schema_version == 0U &&
+            context->services->save_sequence == 17U;
+    }
+    return true;
 }
 
 static p4_game_result_t fixture_update(
@@ -204,6 +215,7 @@ static int run_with_size(uint32_t struct_bytes)
         .read_signal_scan = fixture_read_signal,
         .queue_save = fixture_queue_save,
         .read_save_status = fixture_read_save,
+        .save_sequence = 17U,
     };
     char *arguments[] = {(char *)(void *)&host};
     const int result = app_main(1, arguments);

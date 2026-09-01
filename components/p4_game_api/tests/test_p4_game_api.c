@@ -730,6 +730,18 @@ static void test_game_runtime(void)
     CHECK(!p4_game_instance_start(
         &rejected, &s_fixture_game, &invalid_services,
         &rejected_state, sizeof(rejected_state)));
+    p4_game_services_t empty_floor_services = services;
+    empty_floor_services.save_data = NULL;
+    empty_floor_services.save_bytes = 0U;
+    empty_floor_services.save_schema_version = 0U;
+    empty_floor_services.save_sequence = 17U;
+    p4_game_instance_t empty_floor_instance = {0};
+    fixture_state_t empty_floor_state;
+    CHECK(p4_game_instance_start(
+        &empty_floor_instance, &s_fixture_game, &empty_floor_services,
+        &empty_floor_state, sizeof(empty_floor_state)));
+    CHECK(empty_floor_instance.services.save_sequence == 17U);
+    p4_game_instance_stop(&empty_floor_instance);
     invalid_services = services;
     invalid_services.multiplayer_receive = NULL;
     CHECK(!p4_game_instance_start(

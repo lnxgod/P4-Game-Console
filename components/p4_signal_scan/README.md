@@ -17,18 +17,33 @@ For each observation the OS-side adapter:
 
 The key must be generated and owned by Console OS and must never be given to a
 game. Raw BSSIDs stay inside the radio adapter. On the Waveshare build the key
-is random and device-local in NVS, so a pet can reject duplicate encounters
-after a reboot without ever receiving a BSSID. If NVS is unavailable, the
-scanner explicitly degrades to a fresh boot-session key.
+is random and device-local in NVS, so the provider can reproduce an opaque token
+after a reboot without ever exposing a BSSID. If NVS is unavailable, the scanner
+explicitly degrades to a fresh boot-session key.
+
+Token stability is a provider property, not durable game history. Byte Buddy
+deliberately keeps consumed-token duplicate protection, lineage, signal growth,
+signal achievements, and Sparks only for its current running session; it never
+writes opaque tokens to its save. Relaunching may therefore offer a signal again
+even when this provider returns the same token. The current key is scoped to the
+device/provider rather than to one game, so durable per-game identity would
+require a separately reviewed game-scoped ABI instead of saving these tokens.
 
 The SDL game host supplies deterministic fictional observations for gameplay
 and sanitizer testing. The Waveshare Console OS build now includes the
 `platform_signal_scan` candidate: `esp_hosted` 1.4.7 and `esp_wifi_remote`
 0.14.5 are locked; the official P4-to-C6 four-bit SDIO/reset map is explicit;
-the service loads or creates a random device-local key; and a background task runs
-passive scans into a fixed 32-record driver buffer before publishing only the
-strongest eight sanitized results. Focused requests preserve their opaque
-token at the top of the next bounded snapshot when it is still visible.
+the service loads or creates a random device-local key; and a background task
+runs passive scans into a fixed 32-record driver buffer before publishing
+rotating windows of eight sanitized results. The stable RSSI/token ordering
+and bounded cursor expose all 32 candidates across four unchanged general
+scans. Focused requests preserve their opaque token at the top of the next
+bounded snapshot when it is still visible, while the remaining slots continue
+the rotation.
+
+Every non-ready snapshot clears its count and all result bytes. This keeps a
+ready-to-rescan transition valid through `SCANNING`, `ERROR`, `IDLE`, and
+`UNAVAILABLE`, including a failed rescan after results were already published.
 
 ESP-Hosted's managed-package constructor is excluded by an exact-source build
 check without modifying the pinned package. Console OS starts the hosted radio

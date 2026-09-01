@@ -23,7 +23,7 @@
 #include "platform/radio_hosted.h"
 
 enum {
-    PLATFORM_SIGNAL_SCAN_RAW_RESULTS = 32,
+    PLATFORM_SIGNAL_SCAN_RAW_RESULTS = P4_SIGNAL_SCAN_MAX_CANDIDATES,
     PLATFORM_SIGNAL_SCAN_TASK_STACK_BYTES = 12 * 1024,
     PLATFORM_SIGNAL_SCAN_TASK_PRIORITY = 4,
     PLATFORM_SIGNAL_SCAN_PASSIVE_CHANNEL_MS = 120,
@@ -36,6 +36,7 @@ static bool s_ready;
 static bool s_scan_pending;
 static bool s_identity_persistent;
 static uint64_t s_focus_token;
+static size_t s_window_cursor;
 static uint8_t s_session_key[P4_SIGNAL_SCAN_KEY_BYTES];
 static p4_game_signal_snapshot_t s_snapshot = {
     .status = P4_GAME_SIGNAL_UNAVAILABLE,
@@ -93,13 +94,19 @@ static esp_err_t load_or_create_identity_key(void)
     return result;
 }
 
+static void set_nonready_status_locked(p4_game_signal_status_t status)
+{
+    s_snapshot.status = status;
+    p4_signal_scan_clear_results(&s_snapshot);
+    if (s_snapshot.generation != UINT32_MAX) {
+        ++s_snapshot.generation;
+    }
+}
+
 static void publish_status(p4_game_signal_status_t status)
 {
     if (xSemaphoreTake(s_lock, portMAX_DELAY) == pdTRUE) {
-        s_snapshot.status = status;
-        if (s_snapshot.generation != UINT32_MAX) {
-            ++s_snapshot.generation;
-        }
+        set_nonready_status_locked(status);
         (void)xSemaphoreGive(s_lock);
     }
 }
@@ -131,33 +138,27 @@ static void publish_results(const wifi_ap_record_t *records, uint16_t count,
         }
         size_t insert_at = sanitized_count;
         while (insert_at > 0U &&
-               signal.rssi_dbm > sanitized[insert_at - 1U].rssi_dbm) {
+               (signal.rssi_dbm > sanitized[insert_at - 1U].rssi_dbm ||
+                (signal.rssi_dbm == sanitized[insert_at - 1U].rssi_dbm &&
+                 signal.token < sanitized[insert_at - 1U].token))) {
             sanitized[insert_at] = sanitized[insert_at - 1U];
             --insert_at;
         }
         sanitized[insert_at] = signal;
         ++sanitized_count;
     }
-    size_t focus_index = sanitized_count;
-    for (size_t index = 0U; index < sanitized_count; ++index) {
-        if (focus_token != 0U && sanitized[index].token == focus_token) {
-            focus_index = index;
-            next.results[next.count++] = sanitized[index];
-            break;
-        }
-    }
-    for (size_t index = 0U;
-         index < sanitized_count && next.count < P4_GAME_SIGNAL_MAX_RESULTS;
-         ++index) {
-        if (index != focus_index) {
-            next.results[next.count++] = sanitized[index];
-        }
-    }
+    size_t next_window_cursor = 0U;
+    const size_t selected = p4_signal_scan_select_window(
+        sanitized, sanitized_count, s_window_cursor, focus_token,
+        next.results, &next_window_cursor);
+    next.count = (uint8_t)selected;
     if (xSemaphoreTake(s_lock, portMAX_DELAY) == pdTRUE) {
         next.generation = s_snapshot.generation == UINT32_MAX
             ? UINT32_MAX : s_snapshot.generation + 1U;
         s_snapshot = next;
         s_scan_pending = false;
+        s_focus_token = 0U;
+        s_window_cursor = next_window_cursor;
         (void)xSemaphoreGive(s_lock);
     }
     ESP_LOGI(TAG,
@@ -210,10 +211,7 @@ static void signal_scan_task(void *argument)
     }
     if (xSemaphoreTake(s_lock, portMAX_DELAY) == pdTRUE) {
         s_ready = true;
-        s_snapshot.status = P4_GAME_SIGNAL_IDLE;
-        if (s_snapshot.generation != UINT32_MAX) {
-            ++s_snapshot.generation;
-        }
+        set_nonready_status_locked(P4_GAME_SIGNAL_IDLE);
         (void)xSemaphoreGive(s_lock);
     }
     ESP_LOGI(TAG, "C6 passive scanner ready");
@@ -244,11 +242,9 @@ static void signal_scan_task(void *argument)
         } else {
             ESP_LOGW(TAG, "passive scan failed: %s", esp_err_to_name(result));
             if (xSemaphoreTake(s_lock, portMAX_DELAY) == pdTRUE) {
-                s_snapshot.status = P4_GAME_SIGNAL_ERROR;
+                set_nonready_status_locked(P4_GAME_SIGNAL_ERROR);
                 s_scan_pending = false;
-                if (s_snapshot.generation != UINT32_MAX) {
-                    ++s_snapshot.generation;
-                }
+                s_focus_token = 0U;
                 (void)xSemaphoreGive(s_lock);
             }
         }
@@ -307,10 +303,7 @@ bool platform_signal_scan_request(void *context, uint64_t focus_token)
     if (accepted) {
         s_scan_pending = true;
         s_focus_token = focus_token;
-        s_snapshot.status = P4_GAME_SIGNAL_SCANNING;
-        if (s_snapshot.generation != UINT32_MAX) {
-            ++s_snapshot.generation;
-        }
+        set_nonready_status_locked(P4_GAME_SIGNAL_SCANNING);
     }
     (void)xSemaphoreGive(s_lock);
     if (accepted) {
