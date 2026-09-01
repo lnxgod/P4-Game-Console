@@ -222,7 +222,9 @@ P4 Game API surface.
 - [ ] Connect protocol-2 pink unit 1, preserve the rollback pair, and
       canary-install matched v4.2 `.P4R` then `.P4G` through H1; pull both files
       back and verify their hashes before launch. The 2026-08-31 attempt stopped
-      without mutation when connected green unit 2 returned unsupported for P4R.
+      without mutation when connected green unit 2 returned unsupported for P4R;
+      the exact preflight is in
+      `hardware/test-runs/2026-08-31-waveshare-unit2-byte-buddy-v4.2-h1-preflight.json`.
 
 ## Balance targets
 
