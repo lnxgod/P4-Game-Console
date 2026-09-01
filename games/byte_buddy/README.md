@@ -1063,7 +1063,8 @@ send the P4G and left the installed pair untouched. Pink unit 1 is the recorded
 protocol-2 canary but was not connected. Connect that canary on its recorded H1
 port, install P4R first and P4G second, pull both back, and complete named tablet
 gameplay before claiming physical acceptance. Do not substitute the historical
-v4.0/v4.1 hashes for this pair.
+v4.0/v4.1 hashes for this pair. The zero-mutation preflight is recorded in
+`hardware/test-runs/2026-08-31-waveshare-unit2-byte-buddy-v4.2-h1-preflight.json`.
 
 ### Historical v4.0 deployment candidate
 
