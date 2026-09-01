@@ -7,7 +7,7 @@
 enum {
     NET_KIND_PUBLIC_SNAPSHOT = 16,
     NET_KIND_HAND_CHUNK = 17,
-    NET_SNAPSHOT_HEADER_BYTES = 22,
+    NET_SNAPSHOT_HEADER_BYTES = 27,
     NET_HAND_HEADER_BYTES = 10,
     NET_HAND_PAYLOAD_BYTES =
         P4_GAME_MULTIPLAYER_MAX_MESSAGE_BYTES - NET_HAND_HEADER_BYTES,
@@ -30,6 +30,17 @@ static uint32_t read_u32(const uint8_t *bytes)
         (uint32_t)bytes[1] << 8U |
         (uint32_t)bytes[2] << 16U |
         (uint32_t)bytes[3] << 24U;
+}
+
+static void write_u16(uint8_t *bytes, uint16_t value)
+{
+    bytes[0] = (uint8_t)value;
+    bytes[1] = (uint8_t)(value >> 8U);
+}
+
+static uint16_t read_u16(const uint8_t *bytes)
+{
+    return (uint16_t)((uint16_t)bytes[0] | (uint16_t)bytes[1] << 8U);
 }
 
 bool color_clash_network_available(const p4_game_context_t *context)
@@ -64,6 +75,10 @@ static void play_feedback(p4_game_context_t *context, uint8_t kind,
     } else if (kind == COLOR_CLASH_NET_RESTART) {
         (void)p4_game_play_tone(context, 523U, 60U, 3U, P4_WAVE_TRIANGLE);
         (void)p4_game_play_tone(context, 784U, 90U, 3U, P4_WAVE_TRIANGLE);
+    } else if (kind == COLOR_CLASH_NET_UNO) {
+        (void)p4_game_play_tone(context, 784U, 70U, 4U, P4_WAVE_SQUARE);
+        (void)p4_game_play_tone(context, 1047U, 100U, 4U,
+                               P4_WAVE_TRIANGLE);
     }
 }
 
@@ -91,6 +106,8 @@ static bool apply_authoritative_action(p4_game_context_t *context,
         changed = color_clash_choose_hand(state, player, argument);
     } else if (kind == COLOR_CLASH_NET_PASS) {
         changed = color_clash_pass_drawn_card(state, player);
+    } else if (kind == COLOR_CLASH_NET_UNO) {
+        changed = color_clash_call_uno(state, player);
     } else if (kind == COLOR_CLASH_NET_RESTART &&
                state->phase == COLOR_CLASH_GAME_OVER) {
         const uint32_t seed = state->rng ^ state->network_revision ^
@@ -125,7 +142,7 @@ bool color_clash_perform_action(p4_game_context_t *context,
     if (context == NULL || state == NULL) {
         return false;
     }
-    if (kind != COLOR_CLASH_NET_RESTART &&
+    if (kind != COLOR_CLASH_NET_RESTART && kind != COLOR_CLASH_NET_UNO &&
         state->mode == COLOR_CLASH_NETWORK &&
         !color_clash_local_turn(state)) {
         return false;
@@ -133,6 +150,22 @@ bool color_clash_perform_action(p4_game_context_t *context,
     if (state->mode == COLOR_CLASH_NETWORK &&
         state->network_role == P4_GAME_MULTIPLAYER_ROLE_CLIENT) {
         return send_request(context, state, kind, argument);
+    }
+    const uint8_t player = kind == COLOR_CLASH_NET_UNO
+        ? state->local_player_slot : state->current_player;
+    return apply_authoritative_action(context, state, player, kind, argument);
+}
+
+bool color_clash_perform_bot_action(p4_game_context_t *context,
+                                    color_clash_state_t *state,
+                                    uint8_t kind, uint8_t argument)
+{
+    if (context == NULL || state == NULL ||
+        state->current_player >= state->player_count ||
+        (state->mode == COLOR_CLASH_NETWORK &&
+         (state->network_role != P4_GAME_MULTIPLAYER_ROLE_HOST ||
+          state->current_player < state->human_player_count))) {
+        return false;
     }
     return apply_authoritative_action(
         context, state, state->current_player, kind, argument);
@@ -166,6 +199,12 @@ static size_t encode_public_snapshot(const color_clash_state_t *state,
     bytes[20] = state->hand_counts[target];
     bytes[21] = state->phase == COLOR_CLASH_CHOOSE_HAND
         ? state->selected_target : state->selected_color;
+    bytes[22] = state->uno_pending_player;
+    bytes[23] = (uint8_t)state->notice;
+    bytes[24] = state->notice_player;
+    write_u16(bytes + 25U,
+              state->notice_ms > UINT16_MAX
+                  ? UINT16_MAX : (uint16_t)state->notice_ms);
     return NET_SNAPSHOT_HEADER_BYTES;
 }
 
@@ -210,7 +249,13 @@ static bool apply_public_snapshot(color_clash_state_t *state,
         (bytes[13] != NO_WINNER && bytes[13] >= bytes[7]) ||
         bytes[14] > COLOR_CLASH_DECK_CARDS ||
         bytes[15] == 0U || bytes[15] > COLOR_CLASH_DECK_CARDS ||
-        bytes[20] > COLOR_CLASH_HAND_CAPACITY) {
+        bytes[20] > COLOR_CLASH_HAND_CAPACITY ||
+        (bytes[22] != NO_WINNER && bytes[22] >= bytes[7]) ||
+        bytes[23] > COLOR_CLASH_NOTICE_UNO_CAUGHT ||
+        (bytes[24] != NO_WINNER && bytes[24] >= bytes[7]) ||
+        ((bytes[23] == COLOR_CLASH_NOTICE_UNO_CALLED ||
+          bytes[23] == COLOR_CLASH_NOTICE_UNO_CAUGHT) &&
+         bytes[24] == NO_WINNER)) {
         return false;
     }
     const color_clash_phase_t phase = (color_clash_phase_t)bytes[8];
@@ -236,6 +281,9 @@ static bool apply_public_snapshot(color_clash_state_t *state,
     if (bytes[20] != bytes[16U + state->local_player_slot]) {
         return false;
     }
+    if (bytes[22] != NO_WINNER && bytes[16U + bytes[22]] != 1U) {
+        return false;
+    }
     const uint32_t revision = read_u32(bytes + 2U);
     if (revision == 0U || revision < state->network_revision) {
         return false;
@@ -251,6 +299,10 @@ static bool apply_public_snapshot(color_clash_state_t *state,
     state->winner = bytes[13];
     state->deck_count = bytes[14];
     memcpy(state->hand_counts, bytes + 16U, COLOR_CLASH_MAX_PLAYERS);
+    state->uno_pending_player = bytes[22];
+    state->notice = (color_clash_notice_t)bytes[23];
+    state->notice_player = bytes[24];
+    state->notice_ms = read_u16(bytes + 25U);
     memset(state->hands, 0, sizeof(state->hands));
     const uint8_t local_count = state->hand_counts[state->local_player_slot];
     if (phase == COLOR_CLASH_CHOOSE_HAND) {
@@ -315,7 +367,11 @@ static void service_sync(p4_game_context_t *context,
     if (!state->network_sync_pending) {
         return;
     }
-    while (state->network_sync_cursor < state->player_count) {
+    const uint8_t human_players =
+        state->human_player_count >= 2U &&
+        state->human_player_count <= state->player_count
+            ? state->human_player_count : state->player_count;
+    while (state->network_sync_cursor < human_players) {
         const uint8_t target = state->network_sync_cursor;
         if (target == state->local_player_slot) {
             ++state->network_sync_cursor;
@@ -386,11 +442,11 @@ void color_clash_poll_network(p4_game_context_t *context,
     state->local_player_slot = status.local_player_slot;
     state->network_role = status.role;
     state->network_seed = status.session_seed;
-    state->player_count = status.player_count;
+    state->human_player_count = status.player_count;
     if (!state->network_started &&
         status.role == P4_GAME_MULTIPLAYER_ROLE_HOST) {
         color_clash_reset_match(
-            state, status.player_count,
+            state, COLOR_CLASH_MAX_PLAYERS,
             (uint32_t)status.session_seed ^
                 (uint32_t)(status.session_seed >> 32U));
         state->mode = COLOR_CLASH_NETWORK;
@@ -429,6 +485,7 @@ void color_clash_poll_network(p4_game_context_t *context,
         }
         const uint8_t kind = message.data[1];
         if (kind != COLOR_CLASH_NET_RESTART &&
+            kind != COLOR_CLASH_NET_UNO &&
             message.player_slot != state->current_player) {
             continue;
         }

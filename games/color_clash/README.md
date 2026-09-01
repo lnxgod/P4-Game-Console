@@ -5,16 +5,19 @@ classic balanced deck and original branding. Match the discard by color or
 symbol, or play a Wild. Skip, Reverse, Draw Two, Wild Draw Four, and the unique
 Gamechanger card change the round. The first player to empty their hand wins.
 
-Each multiplayer participant uses a separate P4 console. Console OS owns the
-Host/Join room and selected transport, then launches the cartridge with an
-already-sanitized P4MP session. The host validates compact player intents and
-broadcasts revisioned, target-tagged messages no larger than 64 bytes. Public
-round state uses a compact 22-byte snapshot; private hands use ordered chunks
+Each human multiplayer participant uses a separate P4 console. Console OS
+owns the Host/Join room and selected transport, then launches the cartridge
+with an already-sanitized P4MP session. The host validates compact player
+intents and broadcasts revisioned, target-tagged messages no larger than 64
+bytes. Public
+round state uses a compact 27-byte snapshot; private hands use ordered chunks
 of at most 54 cards, supporting the full deck without unbounded packets. Each
 client applies only messages addressed to its player slot, so its screen shows
-its own hand and public opponent card counts. The current Console OS transports
-host two active players; the manifest and protocol are bounded for four-player
-transports when that OS support arrives.
+its own hand and public opponent card counts. With the current two-console
+transport, the authoritative host fills seats three and four with computer
+players, producing a four-seat match with two humans and two CPUs. Future
+three- or four-console transports automatically leave fewer or no CPU seats.
+Only the host advances CPU turns and broadcasts their resulting state.
 
 There is deliberately no pass-and-play mode. A normal launcher start provides
 offline practice against one to three deterministic bots, preserving a useful
@@ -34,6 +37,9 @@ fallback without exposing alternating human hands on one screen.
 - Reverse changes direction; in a two-player match it acts like Skip.
 - If the drawn card is playable, it becomes selected and the player may play
   it or pass. An unplayable drawn card ends the turn. Actions cannot stack.
+- Playing down to one card opens an UNO call window. The player may call UNO
+  for themself; any other player may call them first, making the caught player
+  draw two cards. The window closes when the next normal turn action succeeds.
 - The color chooser labels all four choices: RED, GOLD, TIFF, and PURP.
 - Playing Gamechanger opens a player chooser. Every hand rotates by the same
   offset so the player who used it receives the chosen player's former hand.
@@ -42,14 +48,19 @@ fallback without exposing alternating human hands on one screen.
 
 ## Controls
 
-- **Left/Right** selects a card; **A** plays it.
+- **Left/Right** selects a card and scrolls long hands; **A** plays it.
 - **B** or **Start** draws one card. If that card is playable, **A** plays it
   and **B/Start** passes.
+- While an UNO call is open, **Start** takes priority over draw/pass: it calls
+  UNO for you when you have just played down to one card, or calls out the
+  opponent who currently has an unclaimed UNO.
 - In the Wild chooser, **Left/Right** selects a color and **A** confirms it.
 - **Back** returns from practice to its menu; in network play it exits to the
   launcher and ends the session.
-- Touch selects cards, plays an already-selected card, operates Draw and color
-  buttons, and uses the persistent upper-left Exit control.
+- Swipe the hand left or right to reveal off-screen cards. A swipe never plays
+  a card; a stationary tap selects a card, and tapping it again plays it.
+- Touch also operates Draw, UNO, and color buttons and uses the persistent
+  upper-left Exit control.
 
 The runtime combines original RGB565 drawing primitives, shared font glyphs,
 and the reviewed ImageGen frame atlas; it has no copied commercial card art,

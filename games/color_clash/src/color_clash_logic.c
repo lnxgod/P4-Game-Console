@@ -8,7 +8,9 @@ enum {
     CARD_RANK_MASK = 0x0f,
     CARD_COLOR_SHIFT = 4,
     NO_WINNER = 0xff,
+    NO_PLAYER = 0xff,
     BOT_THINK_MS = 520,
+    UNO_NOTICE_MS = 1400,
 };
 
 static uint32_t random_next(uint32_t *state)
@@ -207,6 +209,7 @@ void color_clash_reset_match(color_clash_state_t *state,
     }
     const color_clash_mode_t mode = state->mode;
     const uint8_t local_slot = state->local_player_slot;
+    const uint8_t human_player_count = state->human_player_count;
     const p4_game_multiplayer_role_t role = state->network_role;
     const uint64_t network_seed = state->network_seed;
     const uint32_t revision = state->network_revision;
@@ -216,9 +219,13 @@ void color_clash_reset_match(color_clash_state_t *state,
     const bool touch_was_down = state->touch_was_down;
     *state = (color_clash_state_t){
         .player_count = player_count,
+        .human_player_count = mode == COLOR_CLASH_NETWORK
+            ? human_player_count : 1U,
         .local_player_slot = local_slot,
         .menu_players = player_count,
         .winner = NO_WINNER,
+        .uno_pending_player = NO_PLAYER,
+        .notice_player = NO_PLAYER,
         .phase = COLOR_CLASH_TURN,
         .mode = mode,
         .network_role = role,
@@ -267,8 +274,14 @@ bool color_clash_play_card(color_clash_state_t *state,
         (color_clash_card_rank(card) == COLOR_CLASH_GAMECHANGER &&
          state->hand_counts[player] == 1U)) {
         state->notice_ms = 900U;
+        state->notice = color_clash_card_rank(card) ==
+                COLOR_CLASH_WILD_DRAW_FOUR
+            ? COLOR_CLASH_NOTICE_DRAW_FOUR_BLOCKED
+            : COLOR_CLASH_NOTICE_INVALID_PLAY;
+        state->notice_player = NO_PLAYER;
         return false;
     }
+    state->uno_pending_player = NO_PLAYER;
     const uint8_t hand_count = state->hand_counts[player];
     if ((uint8_t)(hand_index + 1U) < hand_count) {
         /*
@@ -284,6 +297,9 @@ bool color_clash_play_card(color_clash_state_t *state,
         }
     }
     --state->hand_counts[player];
+    if (state->hand_counts[player] == 1U) {
+        state->uno_pending_player = player;
+    }
     state->discard[state->discard_count++] = card;
     state->phase = COLOR_CLASH_TURN;
     const color_clash_rank_t rank = color_clash_card_rank(card);
@@ -333,6 +349,7 @@ bool color_clash_draw_card(color_clash_state_t *state, uint8_t player)
     }
     const bool drew = draw_one(state, player);
     if (!drew && state->deck_count == 0U && state->discard_count <= 1U) {
+        state->uno_pending_player = NO_PLAYER;
         state->winner = player;
         for (uint8_t candidate = 0U; candidate < state->player_count;
              ++candidate) {
@@ -346,8 +363,11 @@ bool color_clash_draw_card(color_clash_state_t *state, uint8_t player)
     }
     if (!drew) {
         state->notice_ms = 900U;
+        state->notice = COLOR_CLASH_NOTICE_INVALID_PLAY;
+        state->notice_player = NO_PLAYER;
         return false;
     }
+    state->uno_pending_player = NO_PLAYER;
     state->selected_card = (uint8_t)(state->hand_counts[player] - 1U);
     if (color_clash_card_playable_for_player(
             state, player, state->selected_card)) {
@@ -364,8 +384,33 @@ bool color_clash_pass_drawn_card(color_clash_state_t *state, uint8_t player)
         player != state->current_player || player >= state->player_count) {
         return false;
     }
+    state->uno_pending_player = NO_PLAYER;
     state->phase = COLOR_CLASH_TURN;
     advance_player(state, 1U);
+    return true;
+}
+
+bool color_clash_call_uno(color_clash_state_t *state, uint8_t caller)
+{
+    if (state == NULL || caller >= state->player_count ||
+        state->uno_pending_player >= state->player_count ||
+        state->hand_counts[state->uno_pending_player] != 1U ||
+        state->phase == COLOR_CLASH_MENU ||
+        state->phase == COLOR_CLASH_GAME_OVER ||
+        state->phase == COLOR_CLASH_NETWORK_WAIT ||
+        state->phase == COLOR_CLASH_NETWORK_LOST) {
+        return false;
+    }
+    const uint8_t target = state->uno_pending_player;
+    state->uno_pending_player = NO_PLAYER;
+    state->notice_player = target;
+    state->notice_ms = UNO_NOTICE_MS;
+    if (caller == target) {
+        state->notice = COLOR_CLASH_NOTICE_UNO_CALLED;
+    } else {
+        (void)draw_up_to(state, target, 2U);
+        state->notice = COLOR_CLASH_NOTICE_UNO_CAUGHT;
+    }
     return true;
 }
 
@@ -426,6 +471,10 @@ bool color_clash_choose_hand(color_clash_state_t *state,
     while (state->hand_counts[player] < 3U && draw_one(state, player)) {
         /* A chosen one- or two-card hand is topped up to exactly three. */
     }
+    if (state->uno_pending_player < state->player_count &&
+        state->hand_counts[state->uno_pending_player] != 1U) {
+        state->uno_pending_player = NO_PLAYER;
+    }
     state->phase = COLOR_CLASH_TURN;
     advance_player(state, 1U);
     return true;
@@ -453,13 +502,21 @@ void color_clash_update_bot(p4_game_context_t *context,
                             color_clash_state_t *state,
                             uint32_t elapsed_ms)
 {
-    if (state == NULL || state->mode != COLOR_CLASH_PRACTICE ||
-        state->current_player == state->local_player_slot ||
+    const bool practice_bot = state != NULL &&
+        state->mode == COLOR_CLASH_PRACTICE &&
+        state->current_player != state->local_player_slot;
+    const bool network_bot = state != NULL &&
+        state->mode == COLOR_CLASH_NETWORK && state->network_started &&
+        state->network_role == P4_GAME_MULTIPLAYER_ROLE_HOST &&
+        state->human_player_count >= 2U &&
+        state->human_player_count < state->player_count &&
+        state->current_player >= state->human_player_count;
+    if (state == NULL || (!practice_bot && !network_bot) ||
         (state->phase != COLOR_CLASH_TURN &&
          state->phase != COLOR_CLASH_DRAWN_CARD &&
          state->phase != COLOR_CLASH_CHOOSE_COLOR &&
          state->phase != COLOR_CLASH_CHOOSE_HAND)) {
-        if (state != NULL && state->current_player == state->local_player_slot) {
+        if (state != NULL && !practice_bot && !network_bot) {
             state->bot_wait_ms = 0U;
         }
         return;
@@ -470,8 +527,13 @@ void color_clash_update_bot(p4_game_context_t *context,
     }
     state->bot_wait_ms = 0U;
     const uint8_t player = state->current_player;
+    if (state->uno_pending_player < state->player_count) {
+        (void)color_clash_perform_bot_action(
+            context, state, COLOR_CLASH_NET_UNO, 0U);
+        return;
+    }
     if (state->phase == COLOR_CLASH_CHOOSE_COLOR) {
-        (void)color_clash_perform_action(
+        (void)color_clash_perform_bot_action(
             context, state, COLOR_CLASH_NET_COLOR, bot_color(state, player));
         return;
     }
@@ -480,26 +542,26 @@ void color_clash_update_bot(p4_game_context_t *context,
             ? (uint8_t)((player + 1U) % state->player_count)
             : (uint8_t)((player + state->player_count - 1U) %
                         state->player_count);
-        (void)color_clash_perform_action(
+        (void)color_clash_perform_bot_action(
             context, state, COLOR_CLASH_NET_HAND, target);
         return;
     }
     if (state->phase == COLOR_CLASH_DRAWN_CARD) {
         const uint8_t drawn = (uint8_t)(state->hand_counts[player] - 1U);
-        if (!color_clash_perform_action(
+        if (!color_clash_perform_bot_action(
                 context, state, COLOR_CLASH_NET_PLAY, drawn)) {
-            (void)color_clash_perform_action(
+            (void)color_clash_perform_bot_action(
                 context, state, COLOR_CLASH_NET_PASS, 0U);
         }
         return;
     }
     for (uint8_t index = 0U; index < state->hand_counts[player]; ++index) {
         if (color_clash_card_playable_for_player(state, player, index)) {
-            (void)color_clash_perform_action(
+            (void)color_clash_perform_bot_action(
                 context, state, COLOR_CLASH_NET_PLAY, index);
             return;
         }
     }
-    (void)color_clash_perform_action(
+    (void)color_clash_perform_bot_action(
         context, state, COLOR_CLASH_NET_DRAW, 0U);
 }

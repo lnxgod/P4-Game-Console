@@ -15,13 +15,14 @@ enum {
     COLOR_CLASH_HAND_CAPACITY = 108,
     COLOR_CLASH_STARTING_HAND = 7,
     COLOR_CLASH_VISIBLE_CARDS = 9,
-    COLOR_CLASH_NETWORK_PROTOCOL = 2,
+    COLOR_CLASH_NETWORK_PROTOCOL = 4,
     COLOR_CLASH_NET_PLAY = 1,
     COLOR_CLASH_NET_DRAW = 2,
     COLOR_CLASH_NET_COLOR = 3,
     COLOR_CLASH_NET_RESTART = 4,
     COLOR_CLASH_NET_HAND = 5,
     COLOR_CLASH_NET_PASS = 6,
+    COLOR_CLASH_NET_UNO = 7,
 };
 
 typedef enum {
@@ -67,6 +68,14 @@ typedef enum {
     COLOR_CLASH_NETWORK,
 } color_clash_mode_t;
 
+typedef enum {
+    COLOR_CLASH_NOTICE_NONE = 0,
+    COLOR_CLASH_NOTICE_INVALID_PLAY,
+    COLOR_CLASH_NOTICE_DRAW_FOUR_BLOCKED,
+    COLOR_CLASH_NOTICE_UNO_CALLED,
+    COLOR_CLASH_NOTICE_UNO_CAUGHT,
+} color_clash_notice_t;
+
 typedef struct {
     uint8_t hands[COLOR_CLASH_MAX_PLAYERS][COLOR_CLASH_HAND_CAPACITY];
     uint8_t hand_counts[COLOR_CLASH_MAX_PLAYERS];
@@ -75,17 +84,23 @@ typedef struct {
     uint8_t deck_count;
     uint8_t discard_count;
     uint8_t player_count;
+    uint8_t human_player_count;
     uint8_t current_player;
     uint8_t local_player_slot;
     uint8_t direction;
     uint8_t active_color;
     uint8_t selected_card;
+    uint8_t hand_window_start;
+    uint8_t hand_touch_card;
     uint8_t selected_color;
     uint8_t selected_target;
     uint8_t menu_players;
     uint8_t winner;
+    uint8_t uno_pending_player;
+    uint8_t notice_player;
     color_clash_phase_t phase;
     color_clash_mode_t mode;
+    color_clash_notice_t notice;
     p4_game_multiplayer_role_t network_role;
     uint32_t rng;
     uint32_t bot_wait_ms;
@@ -93,7 +108,11 @@ typedef struct {
     uint32_t network_revision;
     uint32_t last_network_sequence[COLOR_CLASH_MAX_PLAYERS];
     uint64_t network_seed;
+    uint16_t hand_touch_last_x;
+    uint16_t hand_touch_start_y;
     bool touch_was_down;
+    bool hand_touch_active;
+    bool hand_touch_scrolled;
     bool network_started;
     bool network_error;
     bool network_sync_pending;
@@ -118,6 +137,7 @@ bool color_clash_play_card(color_clash_state_t *state,
                            uint8_t player, uint8_t hand_index);
 bool color_clash_draw_card(color_clash_state_t *state, uint8_t player);
 bool color_clash_pass_drawn_card(color_clash_state_t *state, uint8_t player);
+bool color_clash_call_uno(color_clash_state_t *state, uint8_t caller);
 bool color_clash_choose_color(color_clash_state_t *state,
                               uint8_t player, uint8_t color);
 bool color_clash_choose_hand(color_clash_state_t *state,
@@ -131,6 +151,9 @@ bool color_clash_local_turn(const color_clash_state_t *state);
 bool color_clash_perform_action(p4_game_context_t *context,
                                 color_clash_state_t *state,
                                 uint8_t kind, uint8_t argument);
+bool color_clash_perform_bot_action(p4_game_context_t *context,
+                                    color_clash_state_t *state,
+                                    uint8_t kind, uint8_t argument);
 void color_clash_poll_network(p4_game_context_t *context,
                               color_clash_state_t *state);
 
