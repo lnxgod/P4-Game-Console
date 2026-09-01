@@ -9,6 +9,7 @@
 #include "p4/game.h"
 
 #include "byte_buddy_internal.h"
+#include "byte_buddy_save.h"
 
 #ifndef BYTE_BUDDY_TEST_ART_PATH
 #error "BYTE_BUDDY_TEST_ART_PATH must name the committed Byte Buddy art bank"
@@ -34,7 +35,64 @@ typedef struct {
     bool reject_reads;
 } fake_signal_scan_t;
 
+typedef struct {
+    uint8_t payload[BYTE_BUDDY_SAVE_PAYLOAD_BYTES];
+    size_t payload_bytes;
+    uint32_t queue_calls;
+    uint32_t read_calls;
+    uint32_t expected_sequence;
+    uint32_t schema_version;
+    uint32_t committed_sequence;
+    p4_game_save_ticket_t ticket;
+    p4_game_save_status_t status;
+    bool reject_queue;
+    bool reject_read;
+} fake_save_t;
+
 static fake_signal_scan_t s_signal_scan;
+
+static bool fake_queue_save(
+    void *context, const char *slot_id, uint32_t schema_version,
+    uint32_t expected_sequence, const uint8_t *data, size_t data_bytes,
+    p4_game_save_ticket_t *ticket_out)
+{
+    fake_save_t *const save = context;
+    if (save == NULL || slot_id == NULL || data == NULL ||
+        ticket_out == NULL || data_bytes > sizeof(save->payload)) {
+        return false;
+    }
+    ++save->queue_calls;
+    save->expected_sequence = expected_sequence;
+    save->schema_version = schema_version;
+    if (save->reject_queue || strcmp(slot_id, "AUTO") != 0) {
+        return false;
+    }
+    memcpy(save->payload, data, data_bytes);
+    save->payload_bytes = data_bytes;
+    save->ticket = 77U;
+    save->status = P4_GAME_SAVE_QUEUED;
+    *ticket_out = save->ticket;
+    return true;
+}
+
+static bool fake_read_save_status(
+    void *context, p4_game_save_ticket_t ticket,
+    p4_game_save_status_t *status_out,
+    uint32_t *committed_sequence_out)
+{
+    fake_save_t *const save = context;
+    if (save == NULL || status_out == NULL ||
+        committed_sequence_out == NULL) {
+        return false;
+    }
+    ++save->read_calls;
+    if (save->reject_read || ticket != save->ticket) {
+        return false;
+    }
+    *status_out = save->status;
+    *committed_sequence_out = save->committed_sequence;
+    return true;
+}
 
 #define CHECK(condition) do { \
         if (!(condition)) { \
@@ -237,11 +295,57 @@ static bool start_game(p4_game_instance_t *instance, void *state,
         state, p4_byte_buddy_game.state_bytes);
 }
 
+static bool start_game_with_save(
+    p4_game_instance_t *instance, void *state, fake_save_t *save,
+    bool save_capability, const uint8_t *save_data, size_t save_bytes,
+    uint32_t save_schema_version, uint32_t save_sequence,
+    p4_audio_mixer_t *mixer,
+    p4_achievement_catalog_t *achievements)
+{
+    s_signal_scan = (fake_signal_scan_t){0};
+    if (mixer != NULL) {
+        p4_audio_mixer_init(mixer);
+    }
+    const p4_game_services_t services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO |
+            P4_GAME_CAP_CONTROLS | P4_GAME_CAP_STORAGE |
+            P4_GAME_CAP_SIGNAL_SCAN |
+            (mixer != NULL ? P4_GAME_CAP_AUDIO_TONE : 0U) |
+            (save_capability ? P4_GAME_CAP_SAVE : 0U),
+        .game_id = p4_byte_buddy_game.id,
+        .audio_context = mixer,
+        .play_tone = mixer == NULL
+            ? NULL : p4_audio_mixer_service_play_tone,
+        .stop_audio = mixer == NULL
+            ? NULL : p4_audio_mixer_service_stop,
+        .resource_data = s_test_art,
+        .resource_bytes = s_test_art_bytes,
+        .resource_format_version = 1U,
+        .achievement_context = achievements,
+        .unlock_achievement = achievements == NULL
+            ? NULL : p4_achievement_catalog_service_unlock,
+        .signal_scan_context = &s_signal_scan,
+        .request_signal_scan = fake_request_signal_scan,
+        .read_signal_scan = fake_read_signal_scan,
+        .save_context = save,
+        .save_data = save_data,
+        .save_bytes = save_bytes,
+        .save_schema_version = save_schema_version,
+        .save_sequence = save_sequence,
+        .queue_save = fake_queue_save,
+        .read_save_status = fake_read_save_status,
+    };
+    *instance = (p4_game_instance_t){0};
+    return p4_game_instance_start(
+        instance, &p4_byte_buddy_game, &services,
+        state, p4_byte_buddy_game.state_bytes);
+}
+
 static void test_required_art_contract(void)
 {
     enum {
         TEST_ART_HEADER_BYTES = 64,
-        TEST_ART_REQUIRED_SHEETS = 29,
+        TEST_ART_REQUIRED_SHEETS = 30,
         TEST_ART_FRAMES_PER_SHEET = 16,
         TEST_ART_REQUIRED_FRAMES =
             TEST_ART_REQUIRED_SHEETS * TEST_ART_FRAMES_PER_SHEET,
@@ -262,6 +366,8 @@ static void test_required_art_contract(void)
            P4_GAME_CAP_STORAGE) != 0U);
     CHECK((p4_byte_buddy_game.optional_capabilities &
            P4_GAME_CAP_STORAGE) == 0U);
+    CHECK((p4_byte_buddy_game.optional_capabilities &
+           P4_GAME_CAP_SAVE) != 0U);
     CHECK(s_test_art != NULL);
     CHECK(s_test_art_bytes >= TEST_ART_HEADER_BYTES);
     if (s_test_art == NULL || s_test_art_bytes < TEST_ART_HEADER_BYTES) {
@@ -532,6 +638,9 @@ static uint16_t latest_tone_frequency(const p4_audio_mixer_t *mixer)
     return frequency_hz;
 }
 
+static bool achievement_present(
+    const p4_achievement_catalog_t *achievements, const char *id);
+
 static void test_care_achievements_and_exit(void)
 {
     CHECK(p4_game_descriptor_valid(&p4_byte_buddy_game));
@@ -552,17 +661,475 @@ static void test_care_achievements_and_exit(void)
     CHECK(achievements.entries[0].id[0] != '\0');
 
     for (unsigned clean = 0U; clean < 3U; ++clean) {
-        for (unsigned wait = 0U; wait < 7U; ++wait) {
-            CHECK(buttons(&instance, 0U, 0U, 100U) ==
-                  P4_GAME_CONTINUE);
-        }
+        advance_idle_ms(&instance, clean == 0U ? 700U : 10000U);
         tap(&instance, 180U, 145U);
+        if (clean + 1U < 3U) {
+            advance_idle_ms(&instance, 10000U);
+            tap(&instance, 20U, 145U);
+        }
     }
     CHECK(achievements.count == 2U);
 
     CHECK(touch(&instance, 20U, 12U) == P4_GAME_EXIT_TO_LAUNCHER);
     p4_game_instance_stop(&instance);
     free(state);
+}
+
+static void test_save_lifecycle_and_recovery(void)
+{
+    uint8_t committed_payload[BYTE_BUDDY_SAVE_PAYLOAD_BYTES] = {0};
+    uint8_t signal_general_payload[BYTE_BUDDY_SAVE_PAYLOAD_BYTES] = {0};
+    fake_save_t save = {0};
+    void *state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state == NULL) {
+        return;
+    }
+    p4_game_instance_t instance;
+    CHECK(start_game_with_save(
+        &instance, state, &save, true, NULL, 0U, 0U, 0U, NULL, NULL));
+    tap(&instance, 20U, 145U);
+    CHECK(save.queue_calls == 1U);
+    CHECK(save.expected_sequence == 0U);
+    CHECK(save.schema_version == BYTE_BUDDY_SAVE_SCHEMA_VERSION);
+    byte_buddy_save_profile_t profile = {0};
+    CHECK(byte_buddy_save_decode(
+        &profile, save.payload, save.payload_bytes));
+    CHECK(profile.care_actions == 1U);
+    CHECK(profile.action_counts[BYTE_BUDDY_CARE_FEED] == 1U);
+    memcpy(committed_payload, save.payload, sizeof(committed_payload));
+    save.status = P4_GAME_SAVE_COMMITTED;
+    save.committed_sequence = 1U;
+    advance_idle_ms(&instance, 16U);
+    const uint32_t committed_queue_calls = save.queue_calls;
+    advance_idle_ms(&instance, 6000U);
+    CHECK(save.queue_calls == committed_queue_calls);
+    p4_game_instance_stop(&instance);
+    free(state);
+
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            NULL, 0U, 0U, 0U, NULL, NULL));
+        advance_idle_ms(&instance, 5000U);
+        CHECK(buttons(
+                  &instance, P4_BUTTON_BACK, P4_BUTTON_BACK, 16U) ==
+              P4_GAME_CONTINUE);
+        CHECK(save.queue_calls == 0U);
+        CHECK(buttons(&instance, 0U, 0U, 16U) == P4_GAME_CONTINUE);
+        CHECK(save.queue_calls == 1U);
+        CHECK(byte_buddy_save_decode(
+            &profile, save.payload, save.payload_bytes));
+        CHECK(profile.hunger == 71U);
+        CHECK(profile.joy == 67U);
+        CHECK(profile.hygiene == 74U);
+        CHECK(profile.energy == 69U);
+        save.status = P4_GAME_SAVE_COMMITTED;
+        save.committed_sequence = 1U;
+        CHECK(buttons(&instance, 0U, 0U, 16U) ==
+              P4_GAME_EXIT_TO_LAUNCHER);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            committed_payload, sizeof(committed_payload),
+            BYTE_BUDDY_SAVE_SCHEMA_VERSION, 1U, NULL, NULL));
+        advance_idle_ms(&instance, 10000U);
+        tap(&instance, 180U, 145U);
+        CHECK(save.queue_calls == 1U);
+        CHECK(save.expected_sequence == 1U);
+        CHECK(byte_buddy_save_decode(
+            &profile, save.payload, save.payload_bytes));
+        CHECK(profile.care_actions == 2U);
+        CHECK(profile.action_counts[BYTE_BUDDY_CARE_FEED] == 1U);
+        CHECK(profile.action_counts[BYTE_BUDDY_CARE_CLEAN] == 1U);
+        save.status = P4_GAME_SAVE_COMMITTED;
+        save.committed_sequence = 2U;
+        advance_idle_ms(&instance, 16U);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            NULL, 0U, 0U, 9U, NULL, NULL));
+        tap(&instance, 20U, 145U);
+        CHECK(save.queue_calls == 1U);
+        CHECK(save.expected_sequence == 9U);
+        save.status = P4_GAME_SAVE_COMMITTED;
+        save.committed_sequence = 10U;
+        advance_idle_ms(&instance, 16U);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, false,
+            NULL, 0U, 0U, 0U, NULL, NULL));
+        tap(&instance, 20U, 145U);
+        CHECK(save.queue_calls == 0U);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    uint8_t corrupt_payload[BYTE_BUDDY_SAVE_PAYLOAD_BYTES];
+    memcpy(corrupt_payload, committed_payload, sizeof(corrupt_payload));
+    corrupt_payload[20U] ^= UINT8_C(0x80);
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            corrupt_payload, sizeof(corrupt_payload),
+            BYTE_BUDDY_SAVE_SCHEMA_VERSION, 4U, NULL, NULL));
+        tap(&instance, 20U, 145U);
+        CHECK(save.queue_calls == 1U);
+        CHECK(save.expected_sequence == 4U);
+        CHECK(byte_buddy_save_decode(
+            &profile, save.payload, save.payload_bytes));
+        CHECK(profile.care_actions == 1U);
+        save.status = P4_GAME_SAVE_COMMITTED;
+        save.committed_sequence = 5U;
+        advance_idle_ms(&instance, 16U);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            NULL, 0U, 0U, 0U, NULL, NULL));
+        tap(&instance, 20U, 145U);
+        CHECK(save.queue_calls == 1U);
+        save.status = P4_GAME_SAVE_CONFLICT;
+        save.committed_sequence = 1U;
+        advance_idle_ms(&instance, 16U);
+        uint16_t *const save_pixels = calloc(
+            P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT,
+            sizeof(*save_pixels));
+        CHECK(save_pixels != NULL);
+        if (save_pixels != NULL) {
+            p4_game_surface_t save_surface = {
+                .pixels = save_pixels,
+                .stride_pixels = P4_GAME_SURFACE_WIDTH,
+                .width = P4_GAME_SURFACE_WIDTH,
+                .height = P4_GAME_SURFACE_HEIGHT,
+            };
+            CHECK(p4_game_instance_render(&instance, &save_surface));
+            CHECK(save_pixels[2U * P4_GAME_SURFACE_WIDTH + 202U] ==
+                  UINT16_C(0xf800));
+            free(save_pixels);
+        }
+        advance_idle_ms(&instance, 10000U);
+        tap(&instance, 180U, 145U);
+        CHECK(save.queue_calls == 1U);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            NULL, 0U, 0U, 0U, NULL, NULL));
+        tap(&instance, 20U, 145U);
+        CHECK(save.queue_calls == 1U);
+        save.status = P4_GAME_SAVE_ERROR;
+        advance_idle_ms(&instance, 16U);
+        CHECK(buttons(
+                  &instance, P4_BUTTON_BACK, P4_BUTTON_BACK, 16U) ==
+              P4_GAME_EXIT_TO_LAUNCHER);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            NULL, 0U, 0U, 0U, NULL, NULL));
+        tap(&instance, 20U, 145U);
+        CHECK(save.queue_calls == 1U);
+        save.reject_read = true;
+        advance_idle_ms(&instance, 16U);
+        CHECK(buttons(
+                  &instance, P4_BUTTON_BACK, P4_BUTTON_BACK, 16U) ==
+              P4_GAME_CONTINUE);
+        CHECK(buttons(&instance, 0U, 0U, 16U) == P4_GAME_CONTINUE);
+        save.reject_read = false;
+        save.status = P4_GAME_SAVE_COMMITTED;
+        save.committed_sequence = 1U;
+        CHECK(buttons(&instance, 0U, 0U, 16U) ==
+              P4_GAME_EXIT_TO_LAUNCHER);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    save = (fake_save_t){.reject_queue = true};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            NULL, 0U, 0U, 0U, NULL, NULL));
+        tap(&instance, 20U, 145U);
+        CHECK(save.queue_calls == 1U);
+        CHECK(buttons(
+                  &instance, P4_BUTTON_BACK, P4_BUTTON_BACK, 16U) ==
+              P4_GAME_CONTINUE);
+        p4_game_result_t exit_result = P4_GAME_CONTINUE;
+        unsigned exit_frames = 0U;
+        while (exit_result == P4_GAME_CONTINUE && exit_frames < 200U) {
+            exit_result = buttons(&instance, 0U, 0U, 16U);
+            ++exit_frames;
+        }
+        CHECK(exit_result == P4_GAME_EXIT_TO_LAUNCHER);
+        CHECK(exit_frames >= 187U && exit_frames <= 189U);
+        CHECK(save.queue_calls >= 3U);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    save = (fake_save_t){.reject_queue = true};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            NULL, 0U, 0U, 0U, NULL, NULL));
+        tap(&instance, 20U, 145U);
+        CHECK(save.queue_calls == 1U);
+        save.reject_queue = false;
+        advance_idle_ms(&instance, 999U);
+        CHECK(save.queue_calls == 1U);
+        advance_idle_ms(&instance, 1U);
+        CHECK(save.queue_calls == 2U);
+        CHECK(save.expected_sequence == 0U);
+        save.status = P4_GAME_SAVE_COMMITTED;
+        save.committed_sequence = 1U;
+        advance_idle_ms(&instance, 16U);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            NULL, 0U, 0U, 0U, NULL, NULL));
+        tap(&instance, 20U, 145U);
+        CHECK(save.queue_calls == 1U);
+        advance_idle_ms(&instance, 10000U);
+        tap(&instance, 180U, 145U);
+        CHECK(buttons(
+                  &instance, P4_BUTTON_BACK, P4_BUTTON_BACK, 16U) ==
+              P4_GAME_CONTINUE);
+        save.status = P4_GAME_SAVE_COMMITTED;
+        save.committed_sequence = 1U;
+        CHECK(buttons(&instance, 0U, 0U, 16U) == P4_GAME_CONTINUE);
+        CHECK(save.queue_calls == 2U);
+        CHECK(save.expected_sequence == 1U);
+        CHECK(byte_buddy_save_decode(
+            &profile, save.payload, save.payload_bytes));
+        CHECK(profile.care_actions == 2U);
+        save.status = P4_GAME_SAVE_COMMITTED;
+        save.committed_sequence = 2U;
+        CHECK(buttons(&instance, 0U, 0U, 16U) ==
+              P4_GAME_EXIT_TO_LAUNCHER);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            committed_payload, sizeof(committed_payload),
+            BYTE_BUDDY_SAVE_SCHEMA_VERSION + 1U, 8U, NULL, NULL));
+        tap(&instance, 20U, 145U);
+        CHECK(save.queue_calls == 0U);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    byte_buddy_save_profile_t needs_only_profile = {
+        .hunger = 99U,
+        .joy = 99U,
+        .hygiene = 99U,
+        .energy = 99U,
+        .coins = 4U,
+    };
+    uint8_t needs_only_payload[BYTE_BUDDY_SAVE_PAYLOAD_BYTES];
+    CHECK(byte_buddy_save_encode(
+        &needs_only_profile, needs_only_payload,
+        sizeof(needs_only_payload)) == sizeof(needs_only_payload));
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            needs_only_payload, sizeof(needs_only_payload),
+            BYTE_BUDDY_SAVE_SCHEMA_VERSION, 3U, NULL, NULL));
+        tap(&instance, 20U, 145U);
+        CHECK(save.queue_calls == 1U);
+        CHECK(byte_buddy_save_decode(
+            &profile, save.payload, save.payload_bytes));
+        CHECK(profile.care_actions == 0U);
+        CHECK(profile.hunger == 100U);
+        save.status = P4_GAME_SAVE_COMMITTED;
+        save.committed_sequence = 4U;
+        advance_idle_ms(&instance, 16U);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        p4_audio_mixer_t signal_mixer;
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            NULL, 0U, 0U, 0U, &signal_mixer, NULL));
+        tap_scene_change(&instance, 70U, 180U);
+        tap_scene_change(&instance, 70U, 42U);
+        tap(&instance, 250U, 180U);
+        advance_idle_ms(&instance, 500U);
+        bool victory_started = false;
+        unsigned successful_strikes = 0U;
+        while (!victory_started && successful_strikes < 16U) {
+            if (successful_strikes != 0U) {
+                advance_idle_ms(&instance, 400U);
+            }
+            CHECK(touch(&instance, 60U, 180U) == P4_GAME_CONTINUE);
+            ++successful_strikes;
+            victory_started = latest_tone_frequency(
+                &signal_mixer) == 988U;
+            if (!victory_started) {
+                release_touch(&instance);
+            }
+        }
+        CHECK(victory_started);
+        advance_idle_ms(&instance, 900U);
+        CHECK(save.queue_calls == 0U);
+        settle_scene_transition(&instance);
+        tap_scene_change(&instance, 20U, 12U);
+        tap(&instance, 20U, 145U);
+        CHECK(save.queue_calls == 1U);
+        CHECK(byte_buddy_save_decode(
+            &profile, save.payload, save.payload_bytes));
+        CHECK(profile.coins == 4U);
+        CHECK(profile.care_actions == 1U);
+        CHECK(profile.achievement_mask == UINT32_C(0x01));
+        memcpy(signal_general_payload, save.payload,
+               sizeof(signal_general_payload));
+        save.status = P4_GAME_SAVE_COMMITTED;
+        save.committed_sequence = 1U;
+        advance_idle_ms(&instance, 16U);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        p4_audio_mixer_t signal_mixer;
+        p4_achievement_catalog_t signal_achievements;
+        p4_achievement_catalog_init(&signal_achievements);
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            signal_general_payload, sizeof(signal_general_payload),
+            BYTE_BUDDY_SAVE_SCHEMA_VERSION, 1U,
+            &signal_mixer, &signal_achievements));
+        CHECK(achievement_present(&signal_achievements, "first-care"));
+        CHECK(!achievement_present(&signal_achievements, "first-signal"));
+        tap_scene_change(&instance, 70U, 180U);
+        tap_scene_change(&instance, 70U, 42U);
+        tap(&instance, 250U, 180U);
+        advance_idle_ms(&instance, 500U);
+        bool victory_started = false;
+        unsigned successful_strikes = 0U;
+        while (!victory_started && successful_strikes < 16U) {
+            if (successful_strikes != 0U) {
+                advance_idle_ms(&instance, 400U);
+            }
+            CHECK(touch(&instance, 60U, 180U) == P4_GAME_CONTINUE);
+            ++successful_strikes;
+            victory_started = latest_tone_frequency(
+                &signal_mixer) == 988U;
+            if (!victory_started) {
+                release_touch(&instance);
+            }
+        }
+        CHECK(victory_started);
+        advance_idle_ms(&instance, 900U);
+        CHECK(achievement_present(&signal_achievements, "first-signal"));
+        CHECK(save.queue_calls == 0U);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    byte_buddy_save_profile_t achievement_profile = {
+        .hunger = 72U,
+        .joy = 68U,
+        .hygiene = 75U,
+        .energy = 70U,
+        .coins = 4U,
+        .care_actions = 3U,
+        .action_counts = {1U, 0U, 3U, 0U},
+        .achievement_mask = UINT32_C(0x03),
+    };
+    uint8_t achievement_payload[BYTE_BUDDY_SAVE_PAYLOAD_BYTES];
+    CHECK(byte_buddy_save_encode(
+        &achievement_profile, achievement_payload,
+        sizeof(achievement_payload)) == sizeof(achievement_payload));
+    p4_achievement_catalog_t achievements;
+    p4_achievement_catalog_init(&achievements);
+    save = (fake_save_t){0};
+    state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state != NULL) {
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            achievement_payload, sizeof(achievement_payload),
+            BYTE_BUDDY_SAVE_SCHEMA_VERSION, 7U, NULL, &achievements));
+        CHECK(achievement_present(&achievements, "first-care"));
+        CHECK(achievement_present(&achievements, "clean-sweep"));
+        CHECK(achievements.count == 2U);
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
 }
 
 static void test_render_bounds(void)
@@ -672,6 +1239,12 @@ static void test_dragon_growth_and_traits(void)
     CHECK(byte_buddy_star_fall_speed(BYTE_BUDDY_STAGE_ELEMENTAL, 6U) ==
           100U);
     CHECK(byte_buddy_star_fall_speed(UINT8_MAX, UINT8_MAX) == 100U);
+    CHECK(byte_buddy_star_run_reward(0U) == 0U);
+    CHECK(byte_buddy_star_run_reward(1U) == 2U);
+    CHECK(byte_buddy_star_run_reward(3U) == 2U);
+    CHECK(byte_buddy_star_run_reward(4U) == 3U);
+    CHECK(byte_buddy_star_run_reward(16U) == 6U);
+    CHECK(byte_buddy_star_run_reward(UINT8_MAX) == 6U);
 
     const int32_t start_q16 = INT32_C(160) * INT32_C(65536);
     const int32_t target_q16 = INT32_C(296) * INT32_C(65536);
@@ -931,6 +1504,27 @@ static void test_dragon_growth_and_traits(void)
     CHECK(stats.speed == 12U);
     CHECK(stats.guard == 8U);
     CHECK(stats.magic == 11U);
+    const byte_buddy_battle_stats_t signal_grown_stats =
+        byte_buddy_battle_stats_for_growth(
+            60U, 1U, 1U, 1U, 1U, 0U, 0U, 0U, 0U, 0U);
+    CHECK(signal_grown_stats.level == 6U);
+    CHECK(signal_grown_stats.power == 6U);
+    CHECK(signal_grown_stats.speed == 6U);
+    CHECK(signal_grown_stats.guard == 6U);
+    CHECK(signal_grown_stats.magic == 6U);
+
+    CHECK(byte_buddy_care_earns_growth(
+              BYTE_BUDDY_CARE_FEED, 98U, BYTE_BUDDY_CARE_CLEAN));
+    CHECK(!byte_buddy_care_earns_growth(
+              BYTE_BUDDY_CARE_FEED, 98U, BYTE_BUDDY_CARE_FEED));
+    CHECK(byte_buddy_care_earns_growth(
+              BYTE_BUDDY_CARE_FEED, 88U, BYTE_BUDDY_CARE_FEED));
+    CHECK(!byte_buddy_care_earns_growth(
+              BYTE_BUDDY_CARE_FEED, 89U, BYTE_BUDDY_CARE_FEED));
+    CHECK(!byte_buddy_care_earns_growth(
+              BYTE_BUDDY_CARE_FEED, 100U, BYTE_BUDDY_CARE_CLEAN));
+    CHECK(!byte_buddy_care_earns_growth(
+              BYTE_BUDDY_CARE_COUNT, 0U, BYTE_BUDDY_CARE_NONE));
 
     CHECK(byte_buddy_touch_target(20U, 12U, false, false, false) ==
           BYTE_BUDDY_TOUCH_EXIT);
@@ -1112,6 +1706,17 @@ static void test_care_growth_cadence(void)
                   P4_GAME_CONTINUE);
         }
         tap(&instance, 160U, 80U);
+    }
+    CHECK(!achievement_present(&achievements, "dragon-raised"));
+
+    static const uint16_t varied_x[4] = {20U, 180U, 260U, 160U};
+    static const uint16_t varied_y[4] = {145U, 145U, 145U, 80U};
+    for (unsigned cycle = 0U; cycle < 26U; ++cycle) {
+        for (size_t action = 0U; action < 4U; ++action) {
+            /* Two decay ticks make near-full varied care meaningful again. */
+            advance_idle_ms(&instance, 10000U);
+            tap(&instance, varied_x[action], varied_y[action]);
+        }
     }
     CHECK(achievement_present(&achievements, "dragon-raised"));
     p4_game_instance_stop(&instance);
@@ -1375,12 +1980,67 @@ static void test_signal_encounter_derivation(void)
                 CHECK(encounter.passive == genome.aura);
                 CHECK(byte_buddy_signal_attack_for(encounter, 0U) ==
                       (byte_buddy_signal_attack_t)encounter.attack);
-                const byte_buddy_signal_attack_t alternate_attack =
-                    byte_buddy_signal_attack_for(encounter, 1U);
-                CHECK(alternate_attack < BYTE_BUDDY_SIGNAL_ATTACK_COUNT);
-                CHECK((encounter.arena == BYTE_BUDDY_SIGNAL_ARENA_SHIFT) ==
-                      (alternate_attack !=
-                       (byte_buddy_signal_attack_t)encounter.attack));
+                const uint8_t deck_size =
+                    byte_buddy_signal_attack_deck_size(encounter);
+                CHECK(deck_size >= 2U && deck_size <= 4U);
+                bool deck_seen[BYTE_BUDDY_SIGNAL_ATTACK_COUNT] = {false};
+                for (uint8_t step = 0U; step < deck_size; ++step) {
+                    const byte_buddy_signal_attack_t attack =
+                        byte_buddy_signal_attack_for(encounter, step);
+                    CHECK(attack < BYTE_BUDDY_SIGNAL_ATTACK_COUNT);
+                    if (attack < BYTE_BUDDY_SIGNAL_ATTACK_COUNT) {
+                        CHECK(!deck_seen[attack]);
+                        deck_seen[attack] = true;
+                    }
+                }
+                bool shifted_order = false;
+                for (uint8_t step = 0U; step < deck_size; ++step) {
+                    const byte_buddy_signal_attack_t first_cycle =
+                        byte_buddy_signal_attack_for(encounter, step);
+                    const byte_buddy_signal_attack_t second_cycle =
+                        byte_buddy_signal_attack_for(
+                            encounter, (uint8_t)(step + deck_size));
+                    if (first_cycle != second_cycle) {
+                        shifted_order = true;
+                    }
+                }
+                CHECK(shifted_order ==
+                      (encounter.arena ==
+                       BYTE_BUDDY_SIGNAL_ARENA_SHIFT));
+                uint8_t comet_occurrences = 0U;
+                for (uint8_t step = 0U;
+                     step < (uint8_t)(deck_size * 3U); ++step) {
+                    const byte_buddy_signal_attack_t attack =
+                        byte_buddy_signal_attack_for(encounter, step);
+                    if (attack ==
+                        BYTE_BUDDY_SIGNAL_ATTACK_COMET_CRASH) {
+                        ++comet_occurrences;
+                    }
+                    const byte_buddy_signal_defense_t defense =
+                        byte_buddy_signal_defense(
+                            encounter, BYTE_BUDDY_ABILITY_NOVA_PARRY,
+                            false, step);
+                    unsigned expected_damage = encounter.damage;
+                    if (encounter.passive ==
+                            BYTE_BUDDY_SIGNAL_PASSIVE_ECHO &&
+                        step % 3U == 2U) {
+                        expected_damage += 2U;
+                    }
+                    if (encounter.arena ==
+                            BYTE_BUDDY_SIGNAL_ARENA_ECHO &&
+                        step % 3U == 2U) {
+                        ++expected_damage;
+                    }
+                    if (attack ==
+                            BYTE_BUDDY_SIGNAL_ATTACK_COMET_CRASH &&
+                        comet_occurrences % 3U == 0U) {
+                        expected_damage += 3U;
+                    }
+                    if (expected_damage > 24U) {
+                        expected_damage = 24U;
+                    }
+                    CHECK(defense.player_damage == expected_damage);
+                }
                 CHECK(encounter.weakness == (genome.sigil < 3U
                     ? (uint8_t)(BYTE_BUDDY_ELEMENT_FIRE + genome.sigil)
                     : BYTE_BUDDY_ELEMENT_MYSTERY));
@@ -1393,6 +2053,14 @@ static void test_signal_encounter_derivation(void)
                       encounter.attack_period_ms <= 3400U);
                 CHECK(encounter.telegraph_ms >= 650U &&
                       encounter.telegraph_ms <= 1200U);
+                const byte_buddy_signal_profile_t reward_profile =
+                    byte_buddy_signal_profile(token, -61);
+                const uint8_t effective_reward =
+                    byte_buddy_signal_reward_coins(
+                        reward_profile, encounter);
+                CHECK(effective_reward >= reward_profile.reward_coins);
+                CHECK(effective_reward <=
+                      (unsigned)reward_profile.reward_coins + 4U);
                 CHECK(encounter.form_id == byte_buddy_signal_form_id(
                           recipe, channels[channel_index], flags));
                 CHECK(encounter.hidden ==
@@ -1421,6 +2089,19 @@ static void test_signal_encounter_derivation(void)
               medium.telegraph_ms >= strong.telegraph_ms);
         CHECK(weak.form_id == medium.form_id &&
               medium.form_id == strong.form_id);
+
+        const byte_buddy_signal_encounter_t plain =
+            byte_buddy_signal_encounter(token, -61, 0U, 0U);
+        const byte_buddy_signal_encounter_t fortified =
+            byte_buddy_signal_encounter(
+                token, -61, 0U,
+                P4_GAME_SIGNAL_PROTECTED | P4_GAME_SIGNAL_HIDDEN);
+        const byte_buddy_signal_profile_t profile =
+            byte_buddy_signal_profile(token, -61);
+        CHECK(fortified.threat >= plain.threat);
+        CHECK(fortified.max_hp > plain.max_hp);
+        CHECK(byte_buddy_signal_reward_coins(profile, fortified) >
+              byte_buddy_signal_reward_coins(profile, plain));
     }
     CHECK(derivation_count == UINT32_C(163840));
 }
@@ -1445,21 +2126,26 @@ static void test_signal_combat_math(void)
     CHECK(byte_buddy_signal_attack_for(steady_arc, 0U) ==
           BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST);
     CHECK(byte_buddy_signal_attack_for(steady_arc, 1U) ==
-          BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST);
-    byte_buddy_signal_encounter_t shifting = steady_arc;
-    shifting.arena = BYTE_BUDDY_SIGNAL_ARENA_SHIFT;
-    CHECK(byte_buddy_signal_attack_for(shifting, 0U) ==
-          BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST);
-    CHECK(byte_buddy_signal_attack_for(shifting, 1U) ==
           BYTE_BUDDY_SIGNAL_ATTACK_PRISM_LANCE);
-    shifting.form_id = 32U;
-    CHECK(byte_buddy_signal_attack_for(shifting, 1U) ==
+    CHECK(byte_buddy_signal_attack_for(steady_arc, 2U) ==
+          BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST);
+    CHECK(byte_buddy_signal_attack_deck_size(steady_arc) == 2U);
+    byte_buddy_signal_encounter_t generated_deck = steady_arc;
+    generated_deck.form_id = 1U;
+    CHECK(byte_buddy_signal_attack_deck_size(generated_deck) == 3U);
+    CHECK(byte_buddy_signal_attack_for(generated_deck, 1U) ==
+          BYTE_BUDDY_SIGNAL_ATTACK_PRISM_LANCE);
+    CHECK(byte_buddy_signal_attack_for(generated_deck, 2U) ==
           BYTE_BUDDY_SIGNAL_ATTACK_THORN_SNARE);
-    shifting.form_id = 64U;
-    CHECK(byte_buddy_signal_attack_for(shifting, 1U) ==
+    generated_deck.form_id = 2U;
+    CHECK(byte_buddy_signal_attack_deck_size(generated_deck) == 4U);
+    CHECK(byte_buddy_signal_attack_for(generated_deck, 3U) ==
           BYTE_BUDDY_SIGNAL_ATTACK_COMET_CRASH);
-    shifting.attack = UINT8_MAX;
-    CHECK(byte_buddy_signal_attack_for(shifting, 0U) ==
+    generated_deck.form_id = 3U;
+    CHECK(byte_buddy_signal_attack_for(generated_deck, 1U) ==
+          BYTE_BUDDY_SIGNAL_ATTACK_COMET_CRASH);
+    generated_deck.attack = UINT8_MAX;
+    CHECK(byte_buddy_signal_attack_for(generated_deck, 0U) ==
           BYTE_BUDDY_SIGNAL_ATTACK_ARC_BURST);
 
     const byte_buddy_signal_encounter_t siphoning_thorns = {
@@ -1489,10 +2175,22 @@ static void test_signal_combat_math(void)
     };
     CHECK(byte_buddy_signal_defense(
               echoing_comet, BYTE_BUDDY_ABILITY_NOVA_PARRY,
-              false, 2U).player_damage == 24U);
+              false, 2U).player_damage == 21U);
     CHECK(byte_buddy_signal_defense(
               echoing_comet, BYTE_BUDDY_ABILITY_NOVA_PARRY,
               false, 1U).player_damage == 18U);
+    byte_buddy_signal_encounter_t cadence_comet = echoing_comet;
+    cadence_comet.passive = BYTE_BUDDY_SIGNAL_PASSIVE_WARD;
+    cadence_comet.arena = BYTE_BUDDY_SIGNAL_ARENA_STEADY;
+    CHECK(byte_buddy_signal_defense(
+              cadence_comet, BYTE_BUDDY_ABILITY_NOVA_PARRY,
+              false, 0U).player_damage == 18U);
+    CHECK(byte_buddy_signal_defense(
+              cadence_comet, BYTE_BUDDY_ABILITY_NOVA_PARRY,
+              false, 2U).player_damage == 18U);
+    CHECK(byte_buddy_signal_defense(
+              cadence_comet, BYTE_BUDDY_ABILITY_NOVA_PARRY,
+              false, 4U).player_damage == 21U);
 
     const byte_buddy_signal_defense_t nova =
         byte_buddy_signal_defense(
@@ -1563,18 +2261,34 @@ static void test_signal_combat_math(void)
     }
 
     CHECK(byte_buddy_signal_strike_cooldown_ms(0U) == 360U);
-    CHECK(byte_buddy_signal_strike_cooldown_ms(45U) == 270U);
-    CHECK(byte_buddy_signal_strike_cooldown_ms(90U) == 180U);
-    CHECK(byte_buddy_signal_strike_cooldown_ms(UINT8_MAX) == 180U);
+    CHECK(byte_buddy_signal_strike_cooldown_ms(45U) == 310U);
+    CHECK(byte_buddy_signal_strike_cooldown_ms(90U) == 260U);
+    CHECK(byte_buddy_signal_strike_cooldown_ms(UINT8_MAX) == 260U);
     uint16_t previous_cooldown =
         byte_buddy_signal_strike_cooldown_ms(0U);
     for (uint8_t speed = 1U; speed <= 90U; ++speed) {
         const uint16_t cooldown =
             byte_buddy_signal_strike_cooldown_ms(speed);
         CHECK(cooldown <= previous_cooldown);
-        CHECK(previous_cooldown - cooldown == 2U);
+        CHECK(cooldown >= 260U);
         previous_cooldown = cooldown;
     }
+
+    const byte_buddy_lineage_battle_traits_t base_parry = {0};
+    CHECK(byte_buddy_signal_parry_window_ms(base_parry) == 300U);
+    CHECK(byte_buddy_signal_parry_ready(300U, base_parry));
+    CHECK(!byte_buddy_signal_parry_ready(301U, base_parry));
+    CHECK(!byte_buddy_signal_parry_ready(0U, base_parry));
+    const byte_buddy_lineage_battle_traits_t phantom_parry = {
+        .guard_time_ms = 420U,
+    };
+    CHECK(byte_buddy_signal_parry_window_ms(phantom_parry) == 720U);
+    CHECK(byte_buddy_signal_parry_ready(720U, phantom_parry));
+    CHECK(!byte_buddy_signal_parry_ready(721U, phantom_parry));
+    CHECK(byte_buddy_signal_parry_window_ms(
+              (byte_buddy_lineage_battle_traits_t){
+                  .guard_time_ms = UINT16_MAX,
+              }) == 780U);
 }
 
 static void test_signal_battle_patterns(void)
@@ -1645,6 +2359,21 @@ static void test_signal_battle_patterns(void)
     CHECK(hardest.required_locks == 7U);
     CHECK(hardest.hold_ms == 920U);
     CHECK(hardest.touch_radius == 23U);
+    const byte_buddy_signal_weave_rules_t magical =
+        byte_buddy_signal_weave_rules_for_magic(
+            (byte_buddy_signal_genome_t){.rarity = 3U},
+            100U, 3U, 99U);
+    CHECK(magical.required_locks == hardest.required_locks);
+    CHECK(magical.touch_radius == hardest.touch_radius);
+    CHECK(magical.hold_ms == 782U);
+    const byte_buddy_signal_weave_rules_t trained_magic =
+        byte_buddy_signal_weave_rules_for_magic(
+            (byte_buddy_signal_genome_t){.rarity = 3U},
+            100U, 3U, 24U);
+    CHECK(trained_magic.required_locks == hardest.required_locks);
+    CHECK(trained_magic.hold_ms == 884U);
+    CHECK(magical.hold_ms < trained_magic.hold_ms &&
+          trained_magic.hold_ms < hardest.hold_ms);
     const byte_buddy_signal_weave_rules_t bounded =
         byte_buddy_signal_weave_rules(
             (byte_buddy_signal_genome_t){.rarity = UINT8_MAX},
@@ -1752,18 +2481,21 @@ static void test_resonance_weave_battle(void)
     free(state);
 }
 
-static void observe_comet_timing_tone(
+static void observe_attack_timing_tone(
     const p4_audio_mixer_t *mixer, uint32_t tones_before,
-    unsigned *impact_count, bool *third_windup_seen)
+    unsigned *impact_count, bool *lethal_windup_seen)
 {
     if (mixer->tones_started == tones_before) {
         return;
     }
     const uint16_t frequency = latest_tone_frequency(mixer);
-    if (frequency == 385U) {
+    if (frequency >= 220U && frequency <= 385U &&
+        (frequency - 220U) % 55U == 0U) {
         ++*impact_count;
-    } else if (frequency == 441U && *impact_count >= 2U) {
-        *third_windup_seen = true;
+    } else if (frequency >= 294U && frequency <= 441U &&
+               (frequency - 294U) % 49U == 0U &&
+               *impact_count >= 3U) {
+        *lethal_windup_seen = true;
     }
 }
 
@@ -1785,12 +2517,12 @@ static bool prepare_weave_event_order_case(
     tap(instance, 250U, 180U);
 
     unsigned impact_count = 0U;
-    bool third_windup_seen = false;
+    bool lethal_windup_seen = false;
     for (unsigned intro_ms = 0U; intro_ms < 500U; ++intro_ms) {
         const uint32_t tones_before = mixer->tones_started;
         CHECK(buttons(instance, 0U, 0U, 1U) == P4_GAME_CONTINUE);
-        observe_comet_timing_tone(
-            mixer, tones_before, &impact_count, &third_windup_seen);
+        observe_attack_timing_tone(
+            mixer, tones_before, &impact_count, &lethal_windup_seen);
     }
 
     for (uint8_t step = 0U; step < 4U; ++step) {
@@ -1800,26 +2532,26 @@ static bool prepare_weave_event_order_case(
             const uint32_t tones_before = mixer->tones_started;
             CHECK(hold_touch(instance, node.x, node.y, 1U) ==
                   P4_GAME_CONTINUE);
-            observe_comet_timing_tone(
-                mixer, tones_before, &impact_count, &third_windup_seen);
+            observe_attack_timing_tone(
+                mixer, tones_before, &impact_count, &lethal_windup_seen);
         }
         for (unsigned settle_ms = 0U;
              settle_ms < TEST_SIGNAL_WEAVE_SETTLE_MS; ++settle_ms) {
             const uint32_t tones_before = mixer->tones_started;
             CHECK(buttons(instance, 0U, 0U, 1U) == P4_GAME_CONTINUE);
-            observe_comet_timing_tone(
-                mixer, tones_before, &impact_count, &third_windup_seen);
+            observe_attack_timing_tone(
+                mixer, tones_before, &impact_count, &lethal_windup_seen);
         }
     }
 
     for (unsigned wait_ms = 0U;
-         !third_windup_seen && wait_ms < 10000U; ++wait_ms) {
+         !lethal_windup_seen && wait_ms < 10000U; ++wait_ms) {
         const uint32_t tones_before = mixer->tones_started;
         CHECK(buttons(instance, 0U, 0U, 1U) == P4_GAME_CONTINUE);
-        observe_comet_timing_tone(
-            mixer, tones_before, &impact_count, &third_windup_seen);
+        observe_attack_timing_tone(
+            mixer, tones_before, &impact_count, &lethal_windup_seen);
     }
-    return impact_count == 2U && third_windup_seen;
+    return impact_count == 3U && lethal_windup_seen;
 }
 
 static void hold_weave_exact_ms(
@@ -1966,10 +2698,17 @@ static void test_signal_guard_exact_expiry_boundary(void)
     CHECK(open_ms > 0U && open_ms < 1400U);
     CHECK(mixer.tones_started > tones_before_windup);
 
-    advance_idle_ms(&instance, encounter.telegraph_ms);
-    advance_idle_ms(&instance, 184U);
+    const uint32_t tones_before_early_guard = mixer.tones_started;
     CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
           P4_GAME_CONTINUE);
+    CHECK(mixer.tones_started == tones_before_early_guard);
+
+    advance_idle_ms(&instance, encounter.telegraph_ms - 16U);
+    advance_idle_ms(&instance, 184U);
+    const uint32_t tones_before_late_guard = mixer.tones_started;
+    CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(mixer.tones_started > tones_before_late_guard);
     advance_idle_ms(&instance, 100U);
 
     bool victory_started = false;
@@ -1987,7 +2726,7 @@ static void test_signal_guard_exact_expiry_boundary(void)
         CHECK(!achievement_present(&achievements, "first-signal"));
     }
     CHECK(victory_started);
-    CHECK(successful_strikes == 7U);
+    CHECK(successful_strikes == 8U);
     CHECK(!achievement_present(&achievements, "first-signal"));
     /* The 16 ms guarded strike frame counts toward the 900 ms result. */
     advance_idle_ms(&instance, 883U);
@@ -2307,6 +3046,7 @@ static void test_signal_lineage_genetics(void)
     CHECK(battle_traits.guard_charges == 1U);
     CHECK(battle_traits.start_time_ms == 400U);
     CHECK(battle_traits.guard_time_ms == 420U);
+    CHECK(byte_buddy_signal_parry_window_ms(battle_traits) == 720U);
     const byte_buddy_lineage_battle_traits_t dormant_traits =
         byte_buddy_lineage_battle_traits(
             (byte_buddy_signal_lineage_t){0});
@@ -2567,6 +3307,7 @@ int main(void)
     test_required_art_contract();
     test_authored_fx_frame_reachability();
     test_care_achievements_and_exit();
+    test_save_lifecycle_and_recovery();
     test_care_growth_cadence();
     test_render_bounds();
     test_dragon_growth_and_traits();

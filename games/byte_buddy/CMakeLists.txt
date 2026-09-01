@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: MIT
 
-set(P4_BYTE_BUDDY_SOURCES "src/byte_buddy.c")
+set(P4_BYTE_BUDDY_SOURCES
+    "src/byte_buddy.c"
+    "src/byte_buddy_save.c"
+)
 
 if(COMMAND idf_component_register)
     idf_component_register(
