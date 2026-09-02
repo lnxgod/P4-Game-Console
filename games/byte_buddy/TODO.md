@@ -26,6 +26,9 @@ P4 Game API surface.
       transfer; do not reuse the verified v4.2 cartridge with the new sidecar.
 - [ ] Complete named SDL and physical-tablet animation acceptance before
       describing v4.3 as play-tested, hardware-tested, or deployed.
+      The 2026-09-02 pink-unit H1 preflight stopped with P4R status 9 before
+      sending any payload; expose and identity-bind pink H2 USB Drive mode for
+      the guarded non-flash bundle install before tablet acceptance.
 
 ## v4.2 integration
 
