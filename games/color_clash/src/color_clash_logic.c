@@ -104,6 +104,93 @@ bool color_clash_card_playable_for_player(
     return true;
 }
 
+bool color_clash_hand_card_playable_now(
+    const color_clash_state_t *state, uint8_t player, uint8_t hand_index)
+{
+    if (state == NULL || player != state->current_player ||
+        player >= state->player_count ||
+        hand_index >= state->hand_counts[player] ||
+        (state->phase != COLOR_CLASH_TURN &&
+         state->phase != COLOR_CLASH_DRAWN_CARD) ||
+        (state->phase == COLOR_CLASH_DRAWN_CARD &&
+         hand_index != (uint8_t)(state->hand_counts[player] - 1U)) ||
+        (color_clash_card_rank(state->hands[player][hand_index]) ==
+             COLOR_CLASH_GAMECHANGER &&
+         state->hand_counts[player] == 1U)) {
+        return false;
+    }
+    return color_clash_card_playable_for_player(state, player, hand_index);
+}
+
+uint8_t color_clash_hand_index_at_visual(
+    const color_clash_state_t *state, uint8_t player, uint8_t visual_index)
+{
+    if (state == NULL || player >= state->player_count ||
+        visual_index >= state->hand_counts[player]) {
+        return UINT8_MAX;
+    }
+    uint8_t position = 0U;
+    for (uint8_t index = 0U; index < state->hand_counts[player]; ++index) {
+        if (color_clash_hand_card_playable_now(state, player, index)) {
+            if (position == visual_index) {
+                return index;
+            }
+            ++position;
+        }
+    }
+    for (uint8_t index = 0U; index < state->hand_counts[player]; ++index) {
+        if (!color_clash_hand_card_playable_now(state, player, index)) {
+            if (position == visual_index) {
+                return index;
+            }
+            ++position;
+        }
+    }
+    return UINT8_MAX;
+}
+
+uint8_t color_clash_hand_visual_index(
+    const color_clash_state_t *state, uint8_t player, uint8_t hand_index)
+{
+    if (state == NULL || player >= state->player_count ||
+        hand_index >= state->hand_counts[player]) {
+        return UINT8_MAX;
+    }
+    const bool target_playable = color_clash_hand_card_playable_now(
+        state, player, hand_index);
+    uint8_t position = 0U;
+    if (!target_playable) {
+        for (uint8_t index = 0U; index < state->hand_counts[player]; ++index) {
+            if (color_clash_hand_card_playable_now(state, player, index)) {
+                ++position;
+            }
+        }
+    }
+    for (uint8_t index = 0U; index < hand_index; ++index) {
+        if (color_clash_hand_card_playable_now(state, player, index) ==
+            target_playable) {
+            ++position;
+        }
+    }
+    return position;
+}
+
+static void select_first_playable_card(color_clash_state_t *state,
+                                       uint8_t player)
+{
+    state->selected_card = 0U;
+    state->hand_window_start = 0U;
+    for (uint8_t index = 0U; index < state->hand_counts[player]; ++index) {
+        if (color_clash_card_playable_for_player(state, player, index) &&
+            !(color_clash_card_rank(state->hands[player][index]) ==
+                  COLOR_CLASH_GAMECHANGER &&
+              state->hand_counts[player] == 1U)) {
+            state->selected_card = index;
+            return;
+        }
+    }
+}
+
 static void build_deck(color_clash_state_t *state)
 {
     uint8_t count = 0U;
@@ -196,7 +283,7 @@ static void advance_player(color_clash_state_t *state, uint8_t steps)
                 state->player_count);
         }
     }
-    state->selected_card = 0U;
+    select_first_playable_card(state, state->current_player);
     state->bot_wait_ms = 0U;
 }
 
@@ -254,6 +341,7 @@ void color_clash_reset_match(color_clash_state_t *state,
     const uint8_t first = state->deck[--state->deck_count];
     state->discard[state->discard_count++] = first;
     state->active_color = (uint8_t)color_clash_card_color(first);
+    select_first_playable_card(state, state->current_player);
 }
 
 bool color_clash_play_card(color_clash_state_t *state,
@@ -339,6 +427,20 @@ bool color_clash_play_card(color_clash_state_t *state,
         state->phase = COLOR_CLASH_GAME_OVER;
     }
     return true;
+}
+
+bool color_clash_play_card_and_call_uno(color_clash_state_t *state,
+                                        uint8_t player,
+                                        uint8_t hand_index)
+{
+    if (state == NULL || player >= state->player_count ||
+        state->hand_counts[player] != 2U ||
+        !color_clash_hand_card_playable_now(state, player, hand_index) ||
+        !color_clash_play_card(state, player, hand_index) ||
+        state->uno_pending_player != player) {
+        return false;
+    }
+    return color_clash_call_uno(state, player);
 }
 
 bool color_clash_draw_card(color_clash_state_t *state, uint8_t player)

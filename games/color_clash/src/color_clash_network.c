@@ -62,9 +62,14 @@ static void play_feedback(p4_game_context_t *context, uint8_t kind,
 {
     if (!accepted) {
         (void)p4_game_play_tone(context, 150U, 80U, 3U, P4_WAVE_SQUARE);
-    } else if (kind == COLOR_CLASH_NET_PLAY) {
+    } else if (kind == COLOR_CLASH_NET_PLAY ||
+               kind == COLOR_CLASH_NET_PLAY_UNO) {
         (void)p4_game_play_tone(context, 659U, 50U, 3U, P4_WAVE_SQUARE);
         (void)p4_game_play_tone(context, 880U, 70U, 3U, P4_WAVE_TRIANGLE);
+        if (kind == COLOR_CLASH_NET_PLAY_UNO) {
+            (void)p4_game_play_tone(
+                context, 1047U, 100U, 4U, P4_WAVE_TRIANGLE);
+        }
     } else if (kind == COLOR_CLASH_NET_DRAW) {
         (void)p4_game_play_tone(context, 220U, 70U, 3U, P4_WAVE_TRIANGLE);
     } else if (kind == COLOR_CLASH_NET_COLOR) {
@@ -98,6 +103,9 @@ static bool apply_authoritative_action(p4_game_context_t *context,
     bool changed = false;
     if (kind == COLOR_CLASH_NET_PLAY) {
         changed = color_clash_play_card(state, player, argument);
+    } else if (kind == COLOR_CLASH_NET_PLAY_UNO) {
+        changed = color_clash_play_card_and_call_uno(
+            state, player, argument);
     } else if (kind == COLOR_CLASH_NET_DRAW) {
         changed = color_clash_draw_card(state, player);
     } else if (kind == COLOR_CLASH_NET_COLOR) {
@@ -352,10 +360,16 @@ static bool apply_hand_chunk(color_clash_state_t *state,
         const uint8_t local_count = bytes[9];
         if (local_count == 0U) {
             state->selected_card = 0U;
-        } else if (state->phase == COLOR_CLASH_DRAWN_CARD ||
+        } else if ((state->current_player == state->local_player_slot &&
+                    (state->phase == COLOR_CLASH_TURN ||
+                     state->phase == COLOR_CLASH_DRAWN_CARD)) ||
                    state->selected_card >= local_count) {
-            state->selected_card = (uint8_t)(local_count - 1U);
+            const uint8_t first = color_clash_hand_index_at_visual(
+                state, state->local_player_slot, 0U);
+            state->selected_card = first == UINT8_MAX
+                ? (uint8_t)(local_count - 1U) : first;
         }
+        state->hand_window_start = 0U;
         state->network_started = true;
     }
     return true;

@@ -15,7 +15,7 @@ enum {
     COLOR_CLASH_HAND_CAPACITY = 108,
     COLOR_CLASH_STARTING_HAND = 7,
     COLOR_CLASH_VISIBLE_CARDS = 9,
-    COLOR_CLASH_NETWORK_PROTOCOL = 4,
+    COLOR_CLASH_NETWORK_PROTOCOL = 5,
     COLOR_CLASH_NET_PLAY = 1,
     COLOR_CLASH_NET_DRAW = 2,
     COLOR_CLASH_NET_COLOR = 3,
@@ -23,6 +23,7 @@ enum {
     COLOR_CLASH_NET_HAND = 5,
     COLOR_CLASH_NET_PASS = 6,
     COLOR_CLASH_NET_UNO = 7,
+    COLOR_CLASH_NET_PLAY_UNO = 8,
 };
 
 typedef enum {
@@ -131,10 +132,19 @@ bool color_clash_card_playable(const color_clash_state_t *state,
                                uint8_t card);
 bool color_clash_card_playable_for_player(
     const color_clash_state_t *state, uint8_t player, uint8_t hand_index);
+bool color_clash_hand_card_playable_now(
+    const color_clash_state_t *state, uint8_t player, uint8_t hand_index);
+uint8_t color_clash_hand_index_at_visual(
+    const color_clash_state_t *state, uint8_t player, uint8_t visual_index);
+uint8_t color_clash_hand_visual_index(
+    const color_clash_state_t *state, uint8_t player, uint8_t hand_index);
 void color_clash_reset_match(color_clash_state_t *state,
                              uint8_t player_count, uint32_t seed);
 bool color_clash_play_card(color_clash_state_t *state,
                            uint8_t player, uint8_t hand_index);
+bool color_clash_play_card_and_call_uno(color_clash_state_t *state,
+                                        uint8_t player,
+                                        uint8_t hand_index);
 bool color_clash_draw_card(color_clash_state_t *state, uint8_t player);
 bool color_clash_pass_drawn_card(color_clash_state_t *state, uint8_t player);
 bool color_clash_call_uno(color_clash_state_t *state, uint8_t caller);

@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.4.0",
+  "version": "1.5.0",
   "package_file": "COLOR_CLASH.P4G",
   "component": "color_clash",
   "sources": [
@@ -34,6 +34,6 @@
     "min_players": 2,
     "max_players": 4,
     "message_bytes": 64,
-    "protocol": 4
+    "protocol": 5
   }
 }

@@ -49,8 +49,16 @@ fallback without exposing alternating human hands on one screen.
 ## Controls
 
 - **Left/Right** selects a card and scrolls long hands; **A** plays it.
+- Cards that are currently legal to play stay grouped at the left of the hand
+  in their original relative order and sit slightly higher than the remaining
+  cards. Selection, taps, and scrolling follow that visual order without
+  changing the authoritative hand order used by multiplayer.
 - **B** or **Start** draws one card. If that card is playable, **A** plays it
   and **B/Start** passes.
+- With exactly two cards, **Start** plays the selected legal card and calls
+  UNO atomically. The active **UNO+PLAY** touch button does the same thing, so
+  multiplayer opponents and bots cannot catch the player between those two
+  actions.
 - While an UNO call is open, **Start** takes priority over draw/pass: it calls
   UNO for you when you have just played down to one card, or calls out the
   opponent who currently has an unclaimed UNO.

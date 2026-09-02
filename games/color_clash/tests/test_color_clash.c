@@ -209,6 +209,121 @@ static void force_nonplayable_draw(color_clash_state_t *state)
     state->deck[state->deck_count - 1U] = color_clash_make_card(color, rank);
 }
 
+static void set_mixed_order_hand(color_clash_state_t *state)
+{
+    state->hand_counts[0] = 6U;
+    state->hands[0][0] = color_clash_make_card(
+        COLOR_CLASH_GOLD, COLOR_CLASH_ONE);
+    state->hands[0][1] = color_clash_make_card(
+        COLOR_CLASH_RED, COLOR_CLASH_FIVE);
+    state->hands[0][2] = color_clash_make_card(
+        COLOR_CLASH_VIOLET, COLOR_CLASH_EIGHT);
+    state->hands[0][3] = color_clash_make_card(
+        COLOR_CLASH_GOLD, COLOR_CLASH_THREE);
+    state->hands[0][4] = color_clash_make_card(
+        COLOR_CLASH_RED, COLOR_CLASH_WILD);
+    state->hands[0][5] = color_clash_make_card(
+        COLOR_CLASH_TIFFANY, COLOR_CLASH_TWO);
+}
+
+static bool region_differs_from(const uint16_t *pixels,
+                                unsigned left, unsigned top,
+                                unsigned width, unsigned height,
+                                uint16_t color)
+{
+    for (unsigned y = top; y < top + height; ++y) {
+        for (unsigned x = left; x < left + width; ++x) {
+            if (pixels[y * P4_GAME_SURFACE_WIDTH + x] != color) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static void test_playable_hand_order_and_lift(void)
+{
+    color_clash_state_t state = simple_state(2U);
+    set_mixed_order_hand(&state);
+    static const uint8_t expected[] = {1U, 3U, 4U, 0U, 2U, 5U};
+    for (uint8_t visual = 0U; visual < sizeof(expected); ++visual) {
+        CHECK(color_clash_hand_index_at_visual(&state, 0U, visual) ==
+              expected[visual]);
+        CHECK(color_clash_hand_visual_index(
+                  &state, 0U, expected[visual]) == visual);
+    }
+    CHECK(color_clash_hand_index_at_visual(&state, 0U, 6U) == UINT8_MAX);
+    CHECK(color_clash_hand_visual_index(&state, 0U, 6U) == UINT8_MAX);
+
+    state.phase = COLOR_CLASH_DRAWN_CARD;
+    state.hands[0][5] = color_clash_make_card(
+        COLOR_CLASH_RED, COLOR_CLASH_TWO);
+    CHECK(color_clash_hand_card_playable_now(&state, 0U, 5U));
+    CHECK(!color_clash_hand_card_playable_now(&state, 0U, 1U));
+    CHECK(color_clash_hand_index_at_visual(&state, 0U, 0U) == 5U);
+
+    state = simple_state(2U);
+    state.hand_counts[0] = 2U;
+    state.hands[0][0] = color_clash_make_card(
+        COLOR_CLASH_RED, COLOR_CLASH_ONE);
+    state.hands[0][1] = color_clash_make_card(
+        COLOR_CLASH_RED, COLOR_CLASH_WILD_DRAW_FOUR);
+    CHECK(color_clash_hand_card_playable_now(&state, 0U, 0U));
+    CHECK(!color_clash_hand_card_playable_now(&state, 0U, 1U));
+    state.hand_counts[0] = 1U;
+    state.hands[0][0] = color_clash_make_card(
+        COLOR_CLASH_RED, COLOR_CLASH_GAMECHANGER);
+    CHECK(!color_clash_hand_card_playable_now(&state, 0U, 0U));
+
+    const p4_game_services_t services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+    };
+    p4_game_instance_t instance = {0};
+    CHECK(p4_game_instance_start(&instance, &p4_color_clash_game, &services,
+                                 &state, sizeof(state)));
+    state = simple_state(2U);
+    set_mixed_order_hand(&state);
+    state.selected_card = 1U;
+    CHECK(update_button(&instance, P4_BUTTON_RIGHT));
+    CHECK(state.selected_card == 3U);
+    CHECK(update_button(&instance, P4_BUTTON_RIGHT));
+    CHECK(state.selected_card == 4U);
+    CHECK(update_button(&instance, P4_BUTTON_RIGHT));
+    CHECK(state.selected_card == 0U);
+    CHECK(update_button(&instance, P4_BUTTON_LEFT));
+    CHECK(state.selected_card == 4U);
+
+    state.selected_card = 5U;
+    uint16_t *const pixels = calloc(
+        P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT, sizeof(*pixels));
+    CHECK(pixels != NULL);
+    if (pixels != NULL) {
+        p4_game_surface_t surface = {
+            .pixels = pixels,
+            .stride_pixels = P4_GAME_SURFACE_WIDTH,
+            .width = P4_GAME_SURFACE_WIDTH,
+            .height = P4_GAME_SURFACE_HEIGHT,
+        };
+        CHECK(p4_game_instance_render(&instance, &surface));
+        CHECK(region_differs_from(
+            pixels, 8U, 140U, 30U, 6U, UINT16_C(0x0926)));
+        CHECK(!region_differs_from(
+            pixels, 110U, 140U, 30U, 6U, UINT16_C(0x0926)));
+        free(pixels);
+    }
+
+    const uint8_t hand_before = state.hand_counts[0];
+    tap(&instance, 12U, 160U);
+    CHECK(state.selected_card == 1U);
+    CHECK(state.hand_counts[0] == hand_before);
+    tap(&instance, 12U, 160U);
+    CHECK(state.hand_counts[0] == (uint8_t)(hand_before - 1U));
+    CHECK(color_clash_card_rank(
+              state.discard[state.discard_count - 1U]) ==
+          COLOR_CLASH_FIVE);
+    p4_game_instance_stop(&instance);
+}
+
 static void test_deck_and_matching(void)
 {
     color_clash_state_t state = {
@@ -433,6 +548,27 @@ static void test_uno_calls(void)
 {
     color_clash_state_t state = simple_state(3U);
     set_uno_hand(&state);
+    CHECK(color_clash_play_card_and_call_uno(&state, 0U, 0U));
+    CHECK(state.current_player == 1U);
+    CHECK(state.hand_counts[0] == 1U);
+    CHECK(state.uno_pending_player == UINT8_C(0xff));
+    CHECK(state.notice == COLOR_CLASH_NOTICE_UNO_CALLED);
+    CHECK(state.notice_player == 0U);
+
+    state = simple_state(3U);
+    set_uno_hand(&state);
+    state.hand_counts[0] = 3U;
+    state.hands[0][2] = color_clash_make_card(
+        COLOR_CLASH_TIFFANY, COLOR_CLASH_TWO);
+    const uint8_t previous_top = state.discard[state.discard_count - 1U];
+    CHECK(!color_clash_play_card_and_call_uno(&state, 0U, 0U));
+    CHECK(state.current_player == 0U);
+    CHECK(state.hand_counts[0] == 3U);
+    CHECK(state.discard[state.discard_count - 1U] == previous_top);
+    CHECK(state.uno_pending_player == UINT8_C(0xff));
+
+    state = simple_state(3U);
+    set_uno_hand(&state);
     CHECK(color_clash_play_card(&state, 0U, 0U));
     CHECK(state.current_player == 1U);
     CHECK(state.hand_counts[0] == 1U);
@@ -554,6 +690,34 @@ static void test_uno_controls(void)
     CHECK(update_button(&instance, P4_BUTTON_START));
     CHECK(state.uno_pending_player == UINT8_C(0xff));
     CHECK(state.hand_counts[0] == 1U);
+    CHECK(state.notice == COLOR_CLASH_NOTICE_UNO_CALLED);
+
+    state = simple_state(2U);
+    set_uno_hand(&state);
+    CHECK(update_button(&instance, P4_BUTTON_START));
+    CHECK(state.current_player == 1U);
+    CHECK(state.hand_counts[0] == 1U);
+    CHECK(state.uno_pending_player == UINT8_C(0xff));
+    CHECK(state.notice == COLOR_CLASH_NOTICE_UNO_CALLED);
+
+    state = simple_state(2U);
+    set_uno_hand(&state);
+    tap(&instance, 280U, 34U);
+    CHECK(state.current_player == 1U);
+    CHECK(state.hand_counts[0] == 1U);
+    CHECK(state.uno_pending_player == UINT8_C(0xff));
+    CHECK(state.notice == COLOR_CLASH_NOTICE_UNO_CALLED);
+
+    state = simple_state(2U);
+    set_uno_hand(&state);
+    state.hands[0][1] = color_clash_make_card(
+        COLOR_CLASH_RED, COLOR_CLASH_SIX);
+    state.selected_card = 1U;
+    state.phase = COLOR_CLASH_DRAWN_CARD;
+    CHECK(update_button(&instance, P4_BUTTON_START));
+    CHECK(state.current_player == 1U);
+    CHECK(state.hand_counts[0] == 1U);
+    CHECK(state.uno_pending_player == UINT8_C(0xff));
     CHECK(state.notice == COLOR_CLASH_NOTICE_UNO_CALLED);
 
     state = simple_state(2U);
@@ -1030,10 +1194,6 @@ static void test_network_uno_calls(void)
 
     set_network_uno_round(&states[0], 1U);
     flush_network(instances, 2U);
-    CHECK(update_button(&instances[1], P4_BUTTON_A));
-    flush_network(instances, 2U);
-    CHECK(states[0].uno_pending_player == 1U);
-    CHECK(states[1].uno_pending_player == 1U);
     CHECK(update_button(&instances[1], P4_BUTTON_START));
     flush_network(instances, 2U);
     CHECK(states[0].uno_pending_player == UINT8_C(0xff));
@@ -1206,6 +1366,7 @@ int main(void)
     test_gamechanger_rotation();
     test_uno_controls();
     test_lifecycle_touch_and_framebuffer();
+    test_playable_hand_order_and_lift();
     test_hand_touch_scrolling();
     test_color_chooser_render();
     test_network_player_counts();
