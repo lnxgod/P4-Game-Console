@@ -9,6 +9,7 @@
 #include "p4/game.h"
 
 #include "byte_buddy_internal.h"
+#include "byte_buddy_save.h"
 
 extern const p4_game_descriptor_t p4_byte_buddy_game;
 
@@ -48,6 +49,12 @@ typedef struct {
     uint16_t bottom;
 } preview_roi_t;
 
+typedef struct {
+    uint8_t payload[BYTE_BUDDY_SAVE_PAYLOAD_BYTES];
+    p4_game_save_ticket_t ticket;
+    uint32_t committed_sequence;
+} preview_save_host_t;
+
 enum {
     PREVIEW_SIGNAL_INTRO_MS = 450,
     PREVIEW_SIGNAL_TRAVEL_MS = 220,
@@ -68,7 +75,76 @@ enum {
         PREVIEW_SCENE_TRANSITION_MS + 1,
     PREVIEW_CARE_NEED_REFRESH_MS = 10000,
     PREVIEW_CARE_VARIANT_COUNT = 4,
+    /* A tap's release update consumes 16 ms of the 1.4 s action clip. */
+    PREVIEW_PLAY_ACTION_AFTER_TAP_MS = 1384,
+    PREVIEW_PLAY_EVOLUTION_TAIL_MS = 1800,
+    PREVIEW_EVOLUTION_AFTER_TAP_MS = 1368,
+    PREVIEW_ATLAS_HEADER_BYTES = 64,
+    PREVIEW_ATLAS_FRAME_WIDTH = 64,
+    PREVIEW_ATLAS_FRAME_HEIGHT = 64,
+    PREVIEW_ATLAS_FRAMES_PER_SHEET = 16,
+    PREVIEW_ATLAS_PALETTE_ENTRIES = 16,
+    PREVIEW_ATLAS_PALETTE_BYTES = 32,
+    PREVIEW_ATLAS_PACKED_FRAME_BYTES = 2048,
+    PREVIEW_ATLAS_EXPECTED_SHEETS = 42,
+    PREVIEW_ATLAS_EXPECTED_FRAMES = 672,
+    PREVIEW_ATLAS_EXPECTED_BYTES = 1397824,
+    PREVIEW_V18_SHEET = 29,
+    PREVIEW_COMPLETION_FIRST_SHEET = 30,
+    PREVIEW_COMPLETION_SHEET_COUNT = 12,
+    PREVIEW_COMPLETION_FRAME_COUNT = 192,
+    PREVIEW_COMPLETION_ACTION_COUNT = 7,
+    PREVIEW_COMPLETION_STAGE_COUNT = 4,
+    PREVIEW_COMPLETION_PHASE_COUNT = 4,
+    PREVIEW_COMPLETION_HATCH_VARIANT_COUNT = 4,
+    PREVIEW_COMPLETION_HATCH_MILESTONE_COUNT = 4,
+    PREVIEW_COMPLETION_CONTACT_COLUMNS = 4,
+    PREVIEW_COMPLETION_CONTACT_ROWS = 3,
+    PREVIEW_RUNTIME_ACTION_COUNT = 7,
+    PREVIEW_RUNTIME_STAGE_COUNT = 4,
+    PREVIEW_RUNTIME_PHASE_COUNT = 4,
+    PREVIEW_RUNTIME_HATCH_MORPH_COUNT = 4,
+    PREVIEW_RUNTIME_HATCH_MILESTONE_COUNT = 4,
+    PREVIEW_RUNTIME_SIGNAL_LIST_FRAMES = PREVIEW_RUNTIME_STAGE_COUNT,
+    PREVIEW_RUNTIME_ACTION_FRAMES =
+        PREVIEW_RUNTIME_ACTION_COUNT * PREVIEW_RUNTIME_STAGE_COUNT *
+            PREVIEW_RUNTIME_PHASE_COUNT +
+        PREVIEW_RUNTIME_SIGNAL_LIST_FRAMES,
+    PREVIEW_RUNTIME_HATCH_FRAMES =
+        PREVIEW_RUNTIME_HATCH_MORPH_COUNT *
+        PREVIEW_RUNTIME_HATCH_MILESTONE_COUNT *
+        PREVIEW_RUNTIME_PHASE_COUNT,
+    PREVIEW_RUNTIME_COMPLETION_FRAMES =
+        PREVIEW_RUNTIME_ACTION_FRAMES + PREVIEW_RUNTIME_HATCH_FRAMES,
+    PREVIEW_RUNTIME_PHASE_STEP_MS = 461,
+    PREVIEW_RUNTIME_SIGNAL_LIST_HOLD_MS = 1600,
 };
+
+_Static_assert(
+    PREVIEW_COMPLETION_SHEET_COUNT ==
+        1 + PREVIEW_COMPLETION_ACTION_COUNT +
+            PREVIEW_COMPLETION_HATCH_VARIANT_COUNT,
+    "completion atlas semantic sheet partition changed");
+_Static_assert(
+    PREVIEW_COMPLETION_FRAME_COUNT ==
+        PREVIEW_COMPLETION_SHEET_COUNT * PREVIEW_ATLAS_FRAMES_PER_SHEET,
+    "completion preview frame budget changed");
+_Static_assert(
+    PREVIEW_COMPLETION_CONTACT_COLUMNS *
+        PREVIEW_COMPLETION_CONTACT_ROWS ==
+            PREVIEW_COMPLETION_SHEET_COUNT,
+    "completion contact sheet no longer covers every sheet");
+_Static_assert(
+    PREVIEW_ATLAS_EXPECTED_BYTES == PREVIEW_ATLAS_HEADER_BYTES +
+        PREVIEW_ATLAS_EXPECTED_FRAMES *
+            (PREVIEW_ATLAS_PALETTE_BYTES +
+             PREVIEW_ATLAS_PACKED_FRAME_BYTES),
+    "completion atlas byte budget changed");
+_Static_assert(
+    PREVIEW_RUNTIME_ACTION_FRAMES == 116 &&
+        PREVIEW_RUNTIME_HATCH_FRAMES == 64 &&
+        PREVIEW_RUNTIME_COMPLETION_FRAMES == 180,
+    "runtime-composited preview budget changed");
 
 typedef enum {
     PREVIEW_SCREEN_SIGNAL_LIST = 0,
@@ -194,6 +270,50 @@ static bool preview_read_signal(void *context,
         return false;
     }
     *snapshot = scan->snapshot;
+    return true;
+}
+
+static bool preview_queue_save(
+    void *context, const char *slot_id, uint32_t schema_version,
+    uint32_t expected_sequence, const uint8_t *data, size_t data_bytes,
+    p4_game_save_ticket_t *ticket_out)
+{
+    preview_save_host_t *const save = context;
+    if (save == NULL || slot_id == NULL || data == NULL ||
+        ticket_out == NULL || strcmp(slot_id, "AUTO") != 0 ||
+        schema_version != BYTE_BUDDY_SAVE_SCHEMA_VERSION ||
+        data_bytes != sizeof(save->payload)) {
+        return false;
+    }
+    memcpy(save->payload, data, data_bytes);
+    save->ticket = save->ticket == UINT32_MAX
+        ? 1U : save->ticket + 1U;
+    if (save->ticket == P4_GAME_SAVE_INVALID_TICKET) {
+        save->ticket = 1U;
+    }
+    save->committed_sequence = expected_sequence == UINT32_MAX
+        ? 1U : expected_sequence + 1U;
+    if (save->committed_sequence == 0U) {
+        save->committed_sequence = 1U;
+    }
+    *ticket_out = save->ticket;
+    return true;
+}
+
+static bool preview_read_save_status(
+    void *context, p4_game_save_ticket_t ticket,
+    p4_game_save_status_t *status_out,
+    uint32_t *committed_sequence_out)
+{
+    const preview_save_host_t *const save = context;
+    if (save == NULL || status_out == NULL ||
+        committed_sequence_out == NULL ||
+        ticket == P4_GAME_SAVE_INVALID_TICKET ||
+        ticket != save->ticket || save->committed_sequence == 0U) {
+        return false;
+    }
+    *status_out = P4_GAME_SAVE_COMMITTED;
+    *committed_sequence_out = save->committed_sequence;
     return true;
 }
 
@@ -518,18 +638,18 @@ static bool semantic_digest_matches(
         {"counter-nova", 1U, UINT64_C(0x98d9e638e0f884e0)},
         {"counter-nova", 2U, UINT64_C(0xe14b419cf7caf48f)},
         {"counter-nova", 3U, UINT64_C(0xcaad1214caebcb41)},
-        {"counter-flare", 0U, UINT64_C(0x5363ee8f15676e16)},
+        {"counter-flare", 0U, UINT64_C(0xc617fa3bb44d073a)},
         {"counter-flare", 1U, UINT64_C(0xdb94953fc4481876)},
         {"counter-flare", 2U, UINT64_C(0x0a753cdf4ec97e9a)},
         {"counter-flare", 3U, UINT64_C(0xbc7836a166a74436)},
-        {"counter-glacier", 0U, UINT64_C(0xe63c8998b798cb70)},
+        {"counter-glacier", 0U, UINT64_C(0x7470a2a899bc4a73)},
         {"counter-glacier", 1U, UINT64_C(0x73c5e0ef190f7617)},
         {"counter-glacier", 2U, UINT64_C(0xa912d531ae27a19f)},
         {"counter-glacier", 3U, UINT64_C(0x9735653ad0d7c1b7)},
-        {"counter-jam", 0U, UINT64_C(0x56890abca491959f)},
-        {"counter-jam", 1U, UINT64_C(0x9ec4b29d072917b8)},
-        {"counter-jam", 2U, UINT64_C(0x0e8107a2c700a6f2)},
-        {"counter-jam", 3U, UINT64_C(0x46119f6879cffe6a)},
+        {"counter-jam", 0U, UINT64_C(0x3dd547a2a2054786)},
+        {"counter-jam", 1U, UINT64_C(0x4a15e0c65415f85b)},
+        {"counter-jam", 2U, UINT64_C(0x1c8f709ff566bece)},
+        {"counter-jam", 3U, UINT64_C(0xa75e229c8fb6ed72)},
         {"outcome-victory", 0U, UINT64_C(0xa6c1d7cbd4ca8e60)},
         {"outcome-victory", 1U, UINT64_C(0xf7377c04272206a7)},
         {"outcome-victory", 2U, UINT64_C(0xdb0cb90d4805efde)},
@@ -586,42 +706,42 @@ static bool semantic_digest_matches(
         {"need-joy", 1U, UINT64_C(0x2c6d1245179f64b3)},
         {"need-joy", 2U, UINT64_C(0x6d7e9326bda90661)},
         {"need-joy", 3U, UINT64_C(0x63267cf0acfc950a)},
-        {"need-energy", 0U, UINT64_C(0x31377397ef8db192)},
-        {"need-energy", 1U, UINT64_C(0x651bcf661f6c6c96)},
-        {"need-energy", 2U, UINT64_C(0x7256056e84215f62)},
-        {"need-energy", 3U, UINT64_C(0x1184dfd3e529dfd2)},
-        {"need-hunger", 0U, UINT64_C(0x2d7b7ff01268b8cd)},
-        {"need-hunger", 1U, UINT64_C(0x8fdf600e9c220ec8)},
-        {"need-hunger", 2U, UINT64_C(0x868aac5690e3c3e9)},
-        {"need-hunger", 3U, UINT64_C(0xe1dde0ff5796a1d6)},
-        {"need-hygiene", 0U, UINT64_C(0x608ac4253f76226d)},
-        {"need-hygiene", 1U, UINT64_C(0x2ca4757d7514f928)},
-        {"need-hygiene", 2U, UINT64_C(0x185d0f41820a0466)},
-        {"need-hygiene", 3U, UINT64_C(0xd9c1f4fee2baaedc)},
+        {"need-energy", 0U, UINT64_C(0x0bcd9375a4ddbd0c)},
+        {"need-energy", 1U, UINT64_C(0xbfba83db82602bf0)},
+        {"need-energy", 2U, UINT64_C(0x0bce454b5c181dbd)},
+        {"need-energy", 3U, UINT64_C(0xf84531ba6df092a1)},
+        {"need-hunger", 0U, UINT64_C(0xcb8d1798a97b36e7)},
+        {"need-hunger", 1U, UINT64_C(0xd607582cca9badca)},
+        {"need-hunger", 2U, UINT64_C(0x9f5a76bf5a24cabe)},
+        {"need-hunger", 3U, UINT64_C(0xa76f9ac936a97659)},
+        {"need-hygiene", 0U, UINT64_C(0x9f01a1a6266becc2)},
+        {"need-hygiene", 1U, UINT64_C(0xce5c5d0e4700dc81)},
+        {"need-hygiene", 2U, UINT64_C(0x8484d3fdc5a97c28)},
+        {"need-hygiene", 3U, UINT64_C(0x96db50d7304492c6)},
         {"evolution-winged-signal", 0U,
-         UINT64_C(0x8f96e1339fb1aae4)},
+         UINT64_C(0x4725213c16bd0b94)},
         {"evolution-winged-signal", 1U,
-         UINT64_C(0x607d0dc2227d766e)},
+         UINT64_C(0x74069be5a61dfcf5)},
         {"evolution-winged-signal", 2U,
-         UINT64_C(0x928c4ad4712b6278)},
+         UINT64_C(0x877ea0a7b6807273)},
         {"evolution-winged-signal", 3U,
-         UINT64_C(0x56195ddec94ef5af)},
-        {"evolution-flying", 0U, UINT64_C(0x6974cba309e34b32)},
-        {"evolution-flying", 1U, UINT64_C(0xb16bb2fb627cd540)},
-        {"evolution-flying", 2U, UINT64_C(0x342c810ef6975021)},
-        {"evolution-flying", 3U, UINT64_C(0x182bac260c62afbf)},
-        {"evolution-elemental", 0U, UINT64_C(0x4b3e754165287bd9)},
-        {"evolution-elemental", 1U, UINT64_C(0xd6ca46a1e47e1a30)},
-        {"evolution-elemental", 2U, UINT64_C(0x38d6aeba684aceff)},
-        {"evolution-elemental", 3U, UINT64_C(0x186836640205e73c)},
+         UINT64_C(0xafd52dac1f484234)},
+        {"evolution-flying", 0U, UINT64_C(0xd7a77e6ddd5d2be8)},
+        {"evolution-flying", 1U, UINT64_C(0xa7b7ec15d4026a8e)},
+        {"evolution-flying", 2U, UINT64_C(0x0633440d0ed3cfab)},
+        {"evolution-flying", 3U, UINT64_C(0xc07094aaba8af2c2)},
+        {"evolution-elemental", 0U, UINT64_C(0xa7fb02c4ab197084)},
+        {"evolution-elemental", 1U, UINT64_C(0x8c3644584af9d3b7)},
+        {"evolution-elemental", 2U, UINT64_C(0x81620ad82adcf292)},
+        {"evolution-elemental", 3U, UINT64_C(0xd923b302c40a3469)},
         {"activity-star-intro", 0U, UINT64_C(0xa1ffd5865272be4a)},
         {"activity-star-intro", 1U, UINT64_C(0x26d9c3f6c255bf3c)},
         {"activity-star-intro", 2U, UINT64_C(0x2088678244447cf7)},
         {"activity-star-intro", 3U, UINT64_C(0x2220aee4c222b5da)},
-        {"activity-star-miss", 0U, UINT64_C(0x7c9d69334a4153c7)},
-        {"activity-star-miss", 1U, UINT64_C(0x807d702f58d99a3a)},
-        {"activity-star-miss", 2U, UINT64_C(0xc47ab7b75832deab)},
-        {"activity-star-miss", 3U, UINT64_C(0x1a5f3a4136a4bb30)},
+        {"activity-star-miss", 0U, UINT64_C(0xcac079a7b142a0bf)},
+        {"activity-star-miss", 1U, UINT64_C(0xffd6d98018c12566)},
+        {"activity-star-miss", 2U, UINT64_C(0x47bf7276daa56032)},
+        {"activity-star-miss", 3U, UINT64_C(0x00f1af702f6767f9)},
         {"activity-star-summary", 0U, UINT64_C(0xe8926b90cc801190)},
         {"activity-star-summary", 1U,
          UINT64_C(0x06ac0e290e44a2d1)},
@@ -843,6 +963,497 @@ static bool hashes_are_pairwise_distinct(
         }
     }
     return true;
+}
+
+static uint64_t preview_ordered_hash_digest(
+    const uint64_t *hashes, size_t count)
+{
+    uint64_t digest = UINT64_C(1469598103934665603);
+    if (hashes == NULL) {
+        return 0U;
+    }
+    for (size_t index = 0U; index < count; ++index) {
+        for (unsigned byte = 0U; byte < 8U; ++byte) {
+            digest ^= (uint8_t)(hashes[index] >> (byte * 8U));
+            digest *= UINT64_C(1099511628211);
+        }
+    }
+    return digest;
+}
+
+typedef struct {
+    const char *label;
+    uint64_t expected_hash;
+} preview_atlas_digest_t;
+
+static uint16_t preview_atlas_read_u16(const uint8_t *data)
+{
+    return (uint16_t)((uint16_t)data[0] |
+                      (uint16_t)((uint16_t)data[1] << 8U));
+}
+
+static uint32_t preview_atlas_read_u32(const uint8_t *data)
+{
+    return (uint32_t)data[0] | (uint32_t)data[1] << 8U |
+        (uint32_t)data[2] << 16U | (uint32_t)data[3] << 24U;
+}
+
+static bool preview_completion_atlas_valid(
+    const uint8_t *art, size_t art_bytes)
+{
+    const uint32_t expected_pixel_offset =
+        PREVIEW_ATLAS_HEADER_BYTES +
+        PREVIEW_ATLAS_EXPECTED_FRAMES * PREVIEW_ATLAS_PALETTE_BYTES;
+    if (art == NULL || art_bytes != PREVIEW_ATLAS_EXPECTED_BYTES ||
+        memcmp(art, "BBDART2\0", 8U) != 0 ||
+        preview_atlas_read_u32(art + 8U) != 2U ||
+        preview_atlas_read_u32(art + 12U) !=
+            PREVIEW_ATLAS_EXPECTED_SHEETS ||
+        preview_atlas_read_u32(art + 16U) !=
+            PREVIEW_ATLAS_FRAME_WIDTH ||
+        preview_atlas_read_u32(art + 20U) !=
+            PREVIEW_ATLAS_FRAME_HEIGHT ||
+        preview_atlas_read_u32(art + 24U) !=
+            PREVIEW_ATLAS_FRAMES_PER_SHEET ||
+        preview_atlas_read_u32(art + 28U) !=
+            PREVIEW_ATLAS_PALETTE_ENTRIES ||
+        preview_atlas_read_u32(art + 32U) !=
+            PREVIEW_ATLAS_EXPECTED_FRAMES ||
+        preview_atlas_read_u32(art + 36U) !=
+            PREVIEW_ATLAS_HEADER_BYTES ||
+        preview_atlas_read_u32(art + 40U) != expected_pixel_offset ||
+        preview_atlas_read_u32(art + 44U) !=
+            PREVIEW_ATLAS_EXPECTED_BYTES) {
+        fprintf(stderr,
+                "completion atlas contract mismatch: expected "
+                "%u sheets, %u frames, %u bytes\n",
+                PREVIEW_ATLAS_EXPECTED_SHEETS,
+                PREVIEW_ATLAS_EXPECTED_FRAMES,
+                PREVIEW_ATLAS_EXPECTED_BYTES);
+        return false;
+    }
+    for (size_t reserved = 48U;
+         reserved < PREVIEW_ATLAS_HEADER_BYTES; ++reserved) {
+        if (art[reserved] != 0U) {
+            fprintf(stderr,
+                    "completion atlas header byte %zu is not reserved zero\n",
+                    reserved);
+            return false;
+        }
+    }
+    return true;
+}
+
+static bool preview_decode_atlas_frame(
+    const uint8_t *art, size_t art_bytes, unsigned global_frame,
+    uint16_t pixels[PREVIEW_ATLAS_FRAME_WIDTH *
+                    PREVIEW_ATLAS_FRAME_HEIGHT])
+{
+    if (!preview_completion_atlas_valid(art, art_bytes) ||
+        pixels == NULL || global_frame >= PREVIEW_ATLAS_EXPECTED_FRAMES) {
+        return false;
+    }
+    const size_t palette_offset = PREVIEW_ATLAS_HEADER_BYTES +
+        (size_t)global_frame * PREVIEW_ATLAS_PALETTE_BYTES;
+    const size_t pixel_bank_offset = PREVIEW_ATLAS_HEADER_BYTES +
+        (size_t)PREVIEW_ATLAS_EXPECTED_FRAMES *
+            PREVIEW_ATLAS_PALETTE_BYTES;
+    const size_t packed_offset = pixel_bank_offset +
+        (size_t)global_frame * PREVIEW_ATLAS_PACKED_FRAME_BYTES;
+    const size_t pixel_count = (size_t)PREVIEW_ATLAS_FRAME_WIDTH *
+        PREVIEW_ATLAS_FRAME_HEIGHT;
+    for (size_t pixel = 0U; pixel < pixel_count; ++pixel) {
+        const uint8_t packed = art[packed_offset + pixel / 2U];
+        const unsigned palette_index = (pixel & 1U) == 0U
+            ? (unsigned)(packed >> 4U)
+            : (unsigned)(packed & UINT8_C(0x0f));
+        pixels[pixel] = preview_atlas_read_u16(
+            art + palette_offset + palette_index * 2U);
+    }
+    return true;
+}
+
+static bool preview_completion_label(
+    unsigned sheet_offset, unsigned frame,
+    char *label, size_t label_bytes)
+{
+    static const char *const signature_names[4] = {
+        "feed", "play", "pet", "signal",
+    };
+    static const char *const action_names[
+        PREVIEW_COMPLETION_ACTION_COUNT] = {
+        "feed", "play", "clean", "rest", "pet", "grow", "signal",
+    };
+    static const char *const stage_names[
+        PREVIEW_COMPLETION_STAGE_COUNT] = {
+        "baby", "winged", "flying", "elemental",
+    };
+    static const char *const hatch_names[
+        PREVIEW_COMPLETION_HATCH_VARIANT_COUNT] = {
+        "nebula", "sungold", "jade", "glacier",
+    };
+    static const char *const milestone_names[
+        PREVIEW_COMPLETION_HATCH_MILESTONE_COUNT] = {
+        "first-crack", "peek", "emerge", "hatch",
+    };
+    int written = -1;
+    if (label == NULL || label_bytes == 0U ||
+        sheet_offset >= PREVIEW_COMPLETION_SHEET_COUNT ||
+        frame >= PREVIEW_ATLAS_FRAMES_PER_SHEET) {
+        return false;
+    }
+    const unsigned row = frame / PREVIEW_COMPLETION_PHASE_COUNT;
+    const unsigned phase = frame % PREVIEW_COMPLETION_PHASE_COUNT;
+    if (sheet_offset == 0U) {
+        written = snprintf(
+            label, label_bytes, "action-fx-%s-phase-%u",
+            signature_names[row], phase);
+    } else if (sheet_offset <= PREVIEW_COMPLETION_ACTION_COUNT) {
+        written = snprintf(
+            label, label_bytes, "action-%s-%s-phase-%u",
+            action_names[sheet_offset - 1U], stage_names[row], phase);
+    } else {
+        written = snprintf(
+            label, label_bytes, "hatch-%s-%s-phase-%u",
+            hatch_names[sheet_offset - 1U -
+                        PREVIEW_COMPLETION_ACTION_COUNT],
+            milestone_names[row], phase);
+    }
+    return written >= 0 && (size_t)written < label_bytes;
+}
+
+static bool preview_validate_v18_cells(
+    const uint8_t *art, size_t art_bytes,
+    uint16_t pixels[PREVIEW_ATLAS_FRAME_WIDTH *
+                    PREVIEW_ATLAS_FRAME_HEIGHT])
+{
+    static const preview_atlas_digest_t expected[
+        PREVIEW_ATLAS_FRAMES_PER_SHEET] = {
+        {"rooftop-observatory", UINT64_C(0x23ff30806b1d7f5d)},
+        {"signal-city-skyline", UINT64_C(0xfb34acf7c4694068)},
+        {"crescent-moon", UINT64_C(0xb2f9a43daccd98fc)},
+        {"rooftop-nest", UINT64_C(0x88560f71787e84ec)},
+        {"rain-cloud", UINT64_C(0xb6e6f751e719dcad)},
+        {"cyan-violet-drift", UINT64_C(0x57cba34fb3217279)},
+        {"golden-swirl", UINT64_C(0x8552842ce42c02c1)},
+        {"steady-vortex", UINT64_C(0xe516ec0bcfffdb24)},
+        {"home-heart-gate", UINT64_C(0x9ca2a2230bbba2b8)},
+        {"signal-star-gate", UINT64_C(0x7c2dbdcdc0396d08)},
+        {"shop-stone-gate", UINT64_C(0xec1815b283c28035)},
+        {"lineage-helix-gate", UINT64_C(0x596ce4240252be26)},
+        {"arena-heavy", UINT64_C(0x8aebbea7ed3336cf)},
+        {"arena-quick", UINT64_C(0x3efd2f09d41c877d)},
+        {"arena-echo", UINT64_C(0xab9ce21b8538539b)},
+        {"arena-shift", UINT64_C(0xce22a7f8db8890fe)},
+    };
+    uint64_t hashes[PREVIEW_ATLAS_FRAMES_PER_SHEET] = {0};
+    const p4_game_surface_t cell = {
+        .pixels = pixels,
+        .stride_pixels = PREVIEW_ATLAS_FRAME_WIDTH,
+        .width = PREVIEW_ATLAS_FRAME_WIDTH,
+        .height = PREVIEW_ATLAS_FRAME_HEIGHT,
+    };
+    for (unsigned frame = 0U;
+         frame < PREVIEW_ATLAS_FRAMES_PER_SHEET; ++frame) {
+        if (!preview_decode_atlas_frame(
+                art, art_bytes,
+                PREVIEW_V18_SHEET * PREVIEW_ATLAS_FRAMES_PER_SHEET + frame,
+                pixels)) {
+            return false;
+        }
+        hashes[frame] = surface_region_hash(
+            &cell, 0U, 0U,
+            PREVIEW_ATLAS_FRAME_WIDTH, PREVIEW_ATLAS_FRAME_HEIGHT);
+        fprintf(stdout,
+                "completion-motion-v18 cell=%u label=%s digest=%016llx\n",
+                frame, expected[frame].label,
+                (unsigned long long)hashes[frame]);
+        if (hashes[frame] != expected[frame].expected_hash) {
+            fprintf(stderr,
+                    "v18 sheet 29 cell %u (%s) digest %016llx, "
+                    "expected %016llx\n",
+                    frame, expected[frame].label,
+                    (unsigned long long)hashes[frame],
+                    (unsigned long long)expected[frame].expected_hash);
+            return false;
+        }
+    }
+    return hashes_are_pairwise_distinct(
+        hashes, PREVIEW_ATLAS_FRAMES_PER_SHEET,
+        "v18 environment chrome cells");
+}
+
+static bool preview_action_sequences_are_distinct(
+    const uint64_t action_hashes[PREVIEW_COMPLETION_ACTION_COUNT]
+                                [PREVIEW_COMPLETION_STAGE_COUNT]
+                                [PREVIEW_COMPLETION_PHASE_COUNT])
+{
+    static const char *const action_names[
+        PREVIEW_COMPLETION_ACTION_COUNT] = {
+        "feed", "play", "clean", "rest", "pet", "grow", "signal",
+    };
+    static const char *const stage_names[
+        PREVIEW_COMPLETION_STAGE_COUNT] = {
+        "baby", "winged", "flying", "elemental",
+    };
+    for (unsigned stage = 0U;
+         stage < PREVIEW_COMPLETION_STAGE_COUNT; ++stage) {
+        for (unsigned action = 0U;
+             action < PREVIEW_COMPLETION_ACTION_COUNT; ++action) {
+            for (unsigned prior = 0U; prior < action; ++prior) {
+                bool identical = true;
+                for (unsigned phase = 0U;
+                     phase < PREVIEW_COMPLETION_PHASE_COUNT; ++phase) {
+                    if (action_hashes[action][stage][phase] !=
+                        action_hashes[prior][stage][phase]) {
+                        identical = false;
+                        break;
+                    }
+                }
+                if (identical) {
+                    fprintf(stderr,
+                            "%s %s and %s ordered action sequences "
+                            "are identical\n",
+                            stage_names[stage], action_names[prior],
+                            action_names[action]);
+                    return false;
+                }
+            }
+        }
+    }
+    return true;
+}
+
+static bool render_completion_motion_sequence(
+    const uint8_t *art, size_t art_bytes, uint16_t *pixels,
+    const char *prefix, unsigned expected_frames)
+{
+    static const preview_atlas_digest_t expected_sheet_digests[
+        PREVIEW_COMPLETION_SHEET_COUNT] = {
+        {"action-signature-fx", UINT64_C(0xddbe3b357abcbbe2)},
+        {"action-feed", UINT64_C(0xb4bbee6515f5d7fa)},
+        {"action-play", UINT64_C(0x09e07713391c96b2)},
+        {"action-clean", UINT64_C(0xea4464a848772f04)},
+        {"action-rest", UINT64_C(0x19d5fca2b6de6adb)},
+        {"action-pet", UINT64_C(0x8b20c58ac3bc96e7)},
+        {"action-grow", UINT64_C(0x3de54e7ad8e51ce5)},
+        {"action-signal", UINT64_C(0xafa74d28d72a29be)},
+        {"hatch-nebula", UINT64_C(0x0c6533bfc06bfce9)},
+        {"hatch-sungold", UINT64_C(0x67d927f81ef481cb)},
+        {"hatch-jade", UINT64_C(0xb7b77301f54b6197)},
+        {"hatch-glacier", UINT64_C(0x13a07361d5b6a7fa)},
+    };
+    static const char *const action_names[
+        PREVIEW_COMPLETION_ACTION_COUNT] = {
+        "feed", "play", "clean", "rest", "pet", "grow", "signal",
+    };
+    static const char *const stage_names[
+        PREVIEW_COMPLETION_STAGE_COUNT] = {
+        "baby", "winged", "flying", "elemental",
+    };
+    static const char *const hatch_names[
+        PREVIEW_COMPLETION_HATCH_VARIANT_COUNT] = {
+        "nebula", "sungold", "jade", "glacier",
+    };
+    static const char *const milestone_names[
+        PREVIEW_COMPLETION_HATCH_MILESTONE_COUNT] = {
+        "first-crack", "peek", "emerge", "hatch",
+    };
+    const unsigned contact_width =
+        PREVIEW_COMPLETION_CONTACT_COLUMNS * 4U *
+        PREVIEW_ATLAS_FRAME_WIDTH;
+    const unsigned contact_height =
+        PREVIEW_COMPLETION_CONTACT_ROWS * 4U *
+        PREVIEW_ATLAS_FRAME_HEIGHT;
+    uint16_t *contact_pixels = NULL;
+    uint64_t sheet_hashes[PREVIEW_COMPLETION_SHEET_COUNT]
+                         [PREVIEW_ATLAS_FRAMES_PER_SHEET] = {{0}};
+    uint64_t fx_hashes[PREVIEW_ATLAS_FRAMES_PER_SHEET] = {0};
+    uint64_t action_hashes[PREVIEW_COMPLETION_ACTION_COUNT]
+                          [PREVIEW_COMPLETION_STAGE_COUNT]
+                          [PREVIEW_COMPLETION_PHASE_COUNT] = {{{0}}};
+    uint64_t hatch_hashes[PREVIEW_COMPLETION_HATCH_VARIANT_COUNT]
+                         [PREVIEW_COMPLETION_HATCH_MILESTONE_COUNT]
+                         [PREVIEW_COMPLETION_PHASE_COUNT] = {{{0}}};
+    unsigned frame_count = 0U;
+    bool success = pixels != NULL && prefix != NULL &&
+        preview_completion_atlas_valid(art, art_bytes) &&
+        preview_validate_v18_cells(art, art_bytes, pixels);
+    if (success && strcmp(prefix, "-") != 0) {
+        contact_pixels = calloc(
+            (size_t)contact_width * contact_height,
+            sizeof(*contact_pixels));
+        success = contact_pixels != NULL;
+    }
+    const p4_game_surface_t cell = {
+        .pixels = pixels,
+        .stride_pixels = PREVIEW_ATLAS_FRAME_WIDTH,
+        .width = PREVIEW_ATLAS_FRAME_WIDTH,
+        .height = PREVIEW_ATLAS_FRAME_HEIGHT,
+    };
+    for (unsigned sheet_offset = 0U;
+         success && sheet_offset < PREVIEW_COMPLETION_SHEET_COUNT;
+         ++sheet_offset) {
+        for (unsigned frame = 0U;
+             success && frame < PREVIEW_ATLAS_FRAMES_PER_SHEET; ++frame) {
+            const unsigned global_frame =
+                (PREVIEW_COMPLETION_FIRST_SHEET + sheet_offset) *
+                    PREVIEW_ATLAS_FRAMES_PER_SHEET + frame;
+            char label[96];
+            char path[1024];
+            success = preview_decode_atlas_frame(
+                    art, art_bytes, global_frame, pixels) &&
+                preview_completion_label(
+                    sheet_offset, frame, label, sizeof(label));
+            if (!success) {
+                break;
+            }
+            const uint64_t hash = surface_region_hash(
+                &cell, 0U, 0U,
+                PREVIEW_ATLAS_FRAME_WIDTH, PREVIEW_ATLAS_FRAME_HEIGHT);
+            fprintf(stdout,
+                    "completion-motion[%03u] sheet=%u cell=%u "
+                    "label=%s digest=%016llx\n",
+                    frame_count,
+                    PREVIEW_COMPLETION_FIRST_SHEET + sheet_offset,
+                    frame, label, (unsigned long long)hash);
+            if (strcmp(prefix, "-") != 0) {
+                const int written = snprintf(
+                    path, sizeof(path), "%s-%03u-%s.ppm",
+                    prefix, frame_count, label);
+                if (written < 0 || (size_t)written >= sizeof(path) ||
+                    !write_ppm(path, &cell)) {
+                    success = false;
+                    break;
+                }
+                const unsigned destination_x =
+                    ((sheet_offset % PREVIEW_COMPLETION_CONTACT_COLUMNS) *
+                         4U + frame % 4U) *
+                    PREVIEW_ATLAS_FRAME_WIDTH;
+                const unsigned destination_y =
+                    ((sheet_offset / PREVIEW_COMPLETION_CONTACT_COLUMNS) *
+                         4U + frame / 4U) *
+                    PREVIEW_ATLAS_FRAME_HEIGHT;
+                for (unsigned y = 0U;
+                     y < PREVIEW_ATLAS_FRAME_HEIGHT; ++y) {
+                    (void)memcpy(
+                        contact_pixels +
+                            (size_t)(destination_y + y) * contact_width +
+                            destination_x,
+                        pixels + (size_t)y * PREVIEW_ATLAS_FRAME_WIDTH,
+                        (size_t)PREVIEW_ATLAS_FRAME_WIDTH *
+                            sizeof(*pixels));
+                }
+            }
+            if (sheet_offset == 0U) {
+                fx_hashes[frame] = hash;
+            } else if (sheet_offset <=
+                       PREVIEW_COMPLETION_ACTION_COUNT) {
+                action_hashes[sheet_offset - 1U]
+                             [frame / PREVIEW_COMPLETION_PHASE_COUNT]
+                             [frame % PREVIEW_COMPLETION_PHASE_COUNT] = hash;
+            } else {
+                hatch_hashes[sheet_offset - 1U -
+                             PREVIEW_COMPLETION_ACTION_COUNT]
+                            [frame / PREVIEW_COMPLETION_PHASE_COUNT]
+                            [frame % PREVIEW_COMPLETION_PHASE_COUNT] = hash;
+            }
+            sheet_hashes[sheet_offset][frame] = hash;
+            ++frame_count;
+        }
+    }
+    if (success && contact_pixels != NULL) {
+        char path[1024];
+        const int written = snprintf(
+            path, sizeof(path), "%s-contact-sheet.ppm", prefix);
+        const p4_game_surface_t contact = {
+            .pixels = contact_pixels,
+            .stride_pixels = (uint16_t)contact_width,
+            .width = (uint16_t)contact_width,
+            .height = (uint16_t)contact_height,
+        };
+        success = written >= 0 && (size_t)written < sizeof(path) &&
+            write_ppm(path, &contact);
+    }
+    if (success) {
+        success = hashes_are_pairwise_distinct(
+            fx_hashes, PREVIEW_ATLAS_FRAMES_PER_SHEET,
+            "action signature FX cells");
+    }
+    for (unsigned action = 0U;
+         success && action < PREVIEW_COMPLETION_ACTION_COUNT; ++action) {
+        for (unsigned stage = 0U;
+             success && stage < PREVIEW_COMPLETION_STAGE_COUNT; ++stage) {
+            char label[96];
+            const int written = snprintf(
+                label, sizeof(label), "%s %s action phases",
+                stage_names[stage], action_names[action]);
+            success = written >= 0 && (size_t)written < sizeof(label) &&
+                hashes_are_pairwise_distinct(
+                    action_hashes[action][stage],
+                    PREVIEW_COMPLETION_PHASE_COUNT, label);
+        }
+    }
+    if (success) {
+        success = preview_action_sequences_are_distinct(action_hashes);
+    }
+    for (unsigned variant = 0U;
+         success && variant < PREVIEW_COMPLETION_HATCH_VARIANT_COUNT;
+         ++variant) {
+        for (unsigned milestone = 0U;
+             success && milestone <
+                 PREVIEW_COMPLETION_HATCH_MILESTONE_COUNT;
+             ++milestone) {
+            char label[96];
+            const int written = snprintf(
+                label, sizeof(label), "%s %s hatch phases",
+                hatch_names[variant], milestone_names[milestone]);
+            success = written >= 0 && (size_t)written < sizeof(label) &&
+                hashes_are_pairwise_distinct(
+                    hatch_hashes[variant][milestone],
+                    PREVIEW_COMPLETION_PHASE_COUNT, label);
+        }
+    }
+    for (unsigned sheet_offset = 0U;
+         success && sheet_offset < PREVIEW_COMPLETION_SHEET_COUNT;
+         ++sheet_offset) {
+        const uint64_t actual_digest = preview_ordered_hash_digest(
+            sheet_hashes[sheet_offset],
+            PREVIEW_ATLAS_FRAMES_PER_SHEET);
+        fprintf(stdout,
+                "completion-motion-sheet-digest sheet=%u label=%s "
+                "digest=%016llx\n",
+                PREVIEW_COMPLETION_FIRST_SHEET + sheet_offset,
+                expected_sheet_digests[sheet_offset].label,
+                (unsigned long long)actual_digest);
+        if (actual_digest !=
+            expected_sheet_digests[sheet_offset].expected_hash) {
+            fprintf(stderr,
+                    "completion sheet %u (%s) digest %016llx, "
+                    "expected %016llx\n",
+                    PREVIEW_COMPLETION_FIRST_SHEET + sheet_offset,
+                    expected_sheet_digests[sheet_offset].label,
+                    (unsigned long long)actual_digest,
+                    (unsigned long long)expected_sheet_digests[
+                        sheet_offset].expected_hash);
+            success = false;
+        }
+    }
+    fprintf(stdout, "completion-motion-expected-frames=%u\n",
+            PREVIEW_COMPLETION_FRAME_COUNT);
+    fprintf(stdout, "completion-motion-frames=%u\n", frame_count);
+    if (expected_frames != PREVIEW_COMPLETION_FRAME_COUNT ||
+        frame_count != PREVIEW_COMPLETION_FRAME_COUNT) {
+        fprintf(stderr,
+                "expected completion-motion argument/count %u/%u, "
+                "got %u/%u\n",
+                PREVIEW_COMPLETION_FRAME_COUNT,
+                PREVIEW_COMPLETION_FRAME_COUNT,
+                expected_frames, frame_count);
+        success = false;
+    }
+    free(contact_pixels);
+    return success;
 }
 
 static uint64_t preview_signal_token(unsigned batch, unsigned index)
@@ -1465,6 +2076,557 @@ static bool restart_preview_game(
         p4_byte_buddy_game.state_bytes);
 }
 
+static const char *const s_runtime_action_names[
+    PREVIEW_RUNTIME_ACTION_COUNT] = {
+    "feed", "play", "clean", "rest", "pet", "grow", "signal",
+};
+
+static const char *const s_runtime_stage_names[
+    PREVIEW_RUNTIME_STAGE_COUNT] = {
+    "baby", "winged", "flying", "elemental",
+};
+
+static const char *const s_runtime_hatch_names[
+    PREVIEW_RUNTIME_HATCH_MORPH_COUNT] = {
+    "nebula", "sungold", "jade", "glacier",
+};
+
+static const char *const s_runtime_hatch_milestone_names[
+    PREVIEW_RUNTIME_HATCH_MILESTONE_COUNT] = {
+    "first-crack", "peek", "emerge", "hatch",
+};
+
+static bool preview_profile_for_stage(
+    unsigned stage_index, byte_buddy_save_profile_t *profile)
+{
+    if (profile == NULL || stage_index >= PREVIEW_RUNTIME_STAGE_COUNT) {
+        return false;
+    }
+    const byte_buddy_stage_t wanted = (byte_buddy_stage_t)(
+        BYTE_BUDDY_STAGE_BABY + stage_index);
+    uint32_t growth = 0U;
+    while (growth <= UINT16_MAX &&
+           byte_buddy_stage_for_interactions((uint16_t)growth) != wanted) {
+        ++growth;
+    }
+    if (growth > UINT16_MAX) {
+        return false;
+    }
+    *profile = (byte_buddy_save_profile_t){
+        .hunger = 100U,
+        .joy = 100U,
+        .hygiene = 100U,
+        .energy = 100U,
+        .coins = 200U,
+        .care_actions = (uint16_t)growth,
+    };
+    return byte_buddy_save_profile_valid(profile);
+}
+
+static bool restart_preview_profile(
+    p4_game_instance_t *instance, void *state,
+    const p4_game_services_t *services, preview_signal_scan_t *scan,
+    preview_save_host_t *save,
+    const byte_buddy_save_profile_t *profile)
+{
+    if (save == NULL || profile == NULL) {
+        return false;
+    }
+    memset(save, 0, sizeof(*save));
+    if (byte_buddy_save_encode(
+            profile, save->payload, sizeof(save->payload)) !=
+        sizeof(save->payload)) {
+        return false;
+    }
+    p4_game_services_t scenario = *services;
+    scenario.available_capabilities |= P4_GAME_CAP_SAVE;
+    scenario.save_context = save;
+    scenario.save_data = save->payload;
+    scenario.save_bytes = sizeof(save->payload);
+    scenario.save_schema_version = BYTE_BUDDY_SAVE_SCHEMA_VERSION;
+    scenario.save_sequence = 1U;
+    scenario.queue_save = preview_queue_save;
+    scenario.read_save_status = preview_read_save_status;
+    return restart_preview_game(
+        instance, state, &scenario, scan, PREVIEW_SCAN_READY);
+}
+
+static bool preview_home_header_hash(
+    p4_game_instance_t *instance, p4_game_surface_t *surface,
+    uint64_t *hash)
+{
+    const preview_roi_t home_header = {48U, 3U, 122U, 22U};
+    return capture_region_hash(instance, surface, home_header, hash);
+}
+
+static bool preview_runtime_render_frame(
+    preview_motion_writer_t *writer,
+    p4_game_instance_t *instance, p4_game_surface_t *surface,
+    const char *label, unsigned local_frame, preview_roi_t roi,
+    uint64_t hashes[PREVIEW_RUNTIME_COMPLETION_FRAMES],
+    uint64_t *hash_out)
+{
+    if (writer == NULL ||
+        writer->frame_count >= PREVIEW_RUNTIME_COMPLETION_FRAMES) {
+        return false;
+    }
+    const unsigned ordinal = writer->frame_count;
+    uint64_t hash = 0U;
+    if (!render_motion_frame_roi(
+            writer, instance, surface, label, local_frame, roi, &hash)) {
+        return false;
+    }
+    hashes[ordinal] = hash;
+    if (hash_out != NULL) {
+        *hash_out = hash;
+    }
+    return true;
+}
+
+static bool preview_runtime_render_phases(
+    preview_motion_writer_t *writer,
+    p4_game_instance_t *instance, p4_game_surface_t *surface,
+    const char *label, preview_roi_t roi,
+    uint64_t all_hashes[PREVIEW_RUNTIME_COMPLETION_FRAMES],
+    uint64_t phase_hashes[PREVIEW_RUNTIME_PHASE_COUNT])
+{
+    /* The wide ROI retains large Elemental FX.  This second ROI excludes the
+     * metadata panel and proves the composited dragon body itself moves. */
+    const preview_roi_t body_roi = {125U, 42U, 198U, 123U};
+    uint64_t body_hashes[PREVIEW_RUNTIME_PHASE_COUNT] = {0};
+    for (unsigned phase = 0U; phase < PREVIEW_RUNTIME_PHASE_COUNT;
+         ++phase) {
+        if (!preview_runtime_render_frame(
+                writer, instance, surface, label, phase, roi,
+                all_hashes, &phase_hashes[phase])) {
+            return false;
+        }
+        body_hashes[phase] = surface_region_hash(
+            surface, body_roi.left, body_roi.top,
+            body_roi.right, body_roi.bottom);
+        if (body_hashes[phase] == 0U ||
+            (phase + 1U < PREVIEW_RUNTIME_PHASE_COUNT &&
+             !advance_ms(instance, PREVIEW_RUNTIME_PHASE_STEP_MS))) {
+            return false;
+        }
+    }
+    return hashes_are_pairwise_distinct(
+               phase_hashes, PREVIEW_RUNTIME_PHASE_COUNT, label) &&
+        hashes_are_pairwise_distinct(
+            body_hashes, PREVIEW_RUNTIME_PHASE_COUNT, label);
+}
+
+static bool preview_runtime_sequences_distinct(
+    const uint64_t *hashes, size_t sequence_count,
+    size_t sequence_length, const char *label)
+{
+    if (hashes == NULL || label == NULL || sequence_length == 0U) {
+        return false;
+    }
+    for (size_t sequence = 0U; sequence < sequence_count; ++sequence) {
+        for (size_t prior = 0U; prior < sequence; ++prior) {
+            if (memcmp(
+                    hashes + sequence * sequence_length,
+                    hashes + prior * sequence_length,
+                    sequence_length * sizeof(*hashes)) == 0) {
+                fprintf(stderr,
+                        "%s sequences %zu and %zu render identically\n",
+                        label, prior, sequence);
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
+static bool preview_runtime_digest_matches(
+    const char *kind, const char *label, uint64_t actual,
+    uint64_t expected, bool review)
+{
+    fprintf(stdout,
+            "runtime-completion-%s label=%s digest=%016llx\n",
+            kind, label, (unsigned long long)actual);
+    if (actual == expected) {
+        return true;
+    }
+    fprintf(stderr,
+            "runtime completion %s %s digest %016llx, expected %016llx\n",
+            kind, label, (unsigned long long)actual,
+            (unsigned long long)expected);
+    return review;
+}
+
+static bool preview_trigger_runtime_action(
+    p4_game_instance_t *instance, unsigned action)
+{
+    static const uint16_t care_points[5][2] = {
+        {20U, 145U}, {110U, 145U}, {180U, 145U},
+        {280U, 145U}, {160U, 80U},
+    };
+    if (action < 5U) {
+        return tap(instance, care_points[action][0], care_points[action][1]);
+    }
+    if (action != 5U) {
+        return false;
+    }
+    /* Grow is production-reachable at every stage through a power upgrade.
+     * The reaction pauses in the shop and begins only after Home returns. */
+    return tap(instance, 180U, 180U) &&
+        settle_scene_transition(instance) &&
+        /* Magnet changes no visible dragon customization behind the clip. */
+        tap(instance, 200U, 130U) &&
+        tap(instance, 240U, 180U) &&
+        settle_scene_transition(instance);
+}
+
+static bool preview_hatch_profile(
+    unsigned morph, unsigned milestone,
+    byte_buddy_save_profile_t *profile, uint16_t *resulting_care)
+{
+    if (profile == NULL || resulting_care == NULL ||
+        morph >= PREVIEW_RUNTIME_HATCH_MORPH_COUNT ||
+        milestone >= PREVIEW_RUNTIME_HATCH_MILESTONE_COUNT) {
+        return false;
+    }
+    byte_buddy_save_profile_t baby_profile;
+    if (!preview_profile_for_stage(0U, &baby_profile) ||
+        baby_profile.care_actions < PREVIEW_RUNTIME_HATCH_MILESTONE_COUNT) {
+        return false;
+    }
+    const uint16_t care_after = (uint16_t)(
+        baby_profile.care_actions -
+        (PREVIEW_RUNTIME_HATCH_MILESTONE_COUNT - 1U - milestone));
+    *profile = (byte_buddy_save_profile_t){
+        .hunger = 60U,
+        .joy = 60U,
+        .hygiene = 60U,
+        .energy = 60U,
+        .coins = 200U,
+        .care_actions = (uint16_t)(care_after - 1U),
+    };
+    switch ((byte_buddy_morph_t)morph) {
+    case BYTE_BUDDY_MORPH_NEBULA:
+        profile->pet_actions = profile->care_actions;
+        break;
+    case BYTE_BUDDY_MORPH_SUNGOLD:
+        profile->action_counts[BYTE_BUDDY_CARE_FEED] =
+            profile->care_actions;
+        break;
+    case BYTE_BUDDY_MORPH_JADE:
+        profile->action_counts[BYTE_BUDDY_CARE_PLAY] =
+            profile->care_actions;
+        break;
+    case BYTE_BUDDY_MORPH_GLACIER:
+        profile->action_counts[BYTE_BUDDY_CARE_CLEAN] =
+            profile->care_actions;
+        break;
+    default:
+        return false;
+    }
+    *resulting_care = care_after;
+    return byte_buddy_save_profile_valid(profile);
+}
+
+static bool preview_trigger_hatch_morph(
+    p4_game_instance_t *instance, unsigned morph)
+{
+    static const uint16_t hatch_points[
+        PREVIEW_RUNTIME_HATCH_MORPH_COUNT][2] = {
+        {160U, 80U},  /* Nebula: Pet */
+        {20U, 145U},  /* Sungold: Feed */
+        {110U, 145U}, /* Jade: Play */
+        {180U, 145U}, /* Glacier: Clean */
+    };
+    return morph < PREVIEW_RUNTIME_HATCH_MORPH_COUNT &&
+        tap(instance, hatch_points[morph][0], hatch_points[morph][1]);
+}
+
+static bool render_runtime_completion_sequence(
+    p4_game_instance_t *instance, p4_game_surface_t *surface,
+    preview_signal_scan_t *scan, void *state,
+    const p4_game_services_t *services, const char *prefix,
+    unsigned expected_frames, bool review)
+{
+    static const uint64_t expected_action_digests[
+        PREVIEW_RUNTIME_ACTION_COUNT][PREVIEW_RUNTIME_STAGE_COUNT] = {
+        {
+            UINT64_C(0x933854eaf07d1538),
+            UINT64_C(0x284a305b5fd4dcad),
+            UINT64_C(0xd4389f568482d80b),
+            UINT64_C(0xc6395026ad050a60),
+        },
+        {
+            UINT64_C(0xa9fb69926e7da4a7),
+            UINT64_C(0x02046dbd9e83c0dd),
+            UINT64_C(0x92c18ccab2d2a937),
+            UINT64_C(0xda32783cbe6a4b79),
+        },
+        {
+            UINT64_C(0x94805879154f7eb3),
+            UINT64_C(0xff864265515d6d05),
+            UINT64_C(0xe9b044c7cf4f9143),
+            UINT64_C(0xcd6ea1cc99625496),
+        },
+        {
+            UINT64_C(0x8da9449a17304bc0),
+            UINT64_C(0x5be0a7548b5c3db4),
+            UINT64_C(0x7a9be90ac7d7e2ad),
+            UINT64_C(0xea07d8ea0a0c7fdb),
+        },
+        {
+            UINT64_C(0x4a4851223ffd131f),
+            UINT64_C(0xf484167ea7935d55),
+            UINT64_C(0x70546ca9aa45b14a),
+            UINT64_C(0x71993aeefa85be55),
+        },
+        {
+            UINT64_C(0xd1438f2285ab133d),
+            UINT64_C(0x9821543d185eb90e),
+            UINT64_C(0xc16d123fa98f62d6),
+            UINT64_C(0x0abea6d03f4e7c6d),
+        },
+        {
+            UINT64_C(0xab138d9e4d1c326a),
+            UINT64_C(0x245a8dc640795042),
+            UINT64_C(0x1a6fbe48b96338d6),
+            UINT64_C(0xccaef9dcab8abb51),
+        },
+    };
+    static const uint64_t expected_hatch_digests[
+        PREVIEW_RUNTIME_HATCH_MORPH_COUNT]
+        [PREVIEW_RUNTIME_HATCH_MILESTONE_COUNT] = {
+        {
+            UINT64_C(0x462759f99baf41f2),
+            UINT64_C(0x8552cb8d1510b3fa),
+            UINT64_C(0x23180c8dc368c2f9),
+            UINT64_C(0xa8dc8d147866e437),
+        },
+        {
+            UINT64_C(0xde7023a752f62f67),
+            UINT64_C(0x1650e6c2c8158bb5),
+            UINT64_C(0x332d83a4a8a20d98),
+            UINT64_C(0x300f122d997d8bb3),
+        },
+        {
+            UINT64_C(0xd8964ba1cd1c4f03),
+            UINT64_C(0x84e835c6e61e0550),
+            UINT64_C(0x0f6cf6404ea83636),
+            UINT64_C(0x15afea675250f0da),
+        },
+        {
+            UINT64_C(0x2950bd1207926d35),
+            UINT64_C(0xc1625677f89715c0),
+            UINT64_C(0x7b9b720bb6f0776c),
+            UINT64_C(0x2202131d16c62ddc),
+        },
+    };
+    static const uint64_t expected_signal_list_hashes[
+        PREVIEW_RUNTIME_STAGE_COUNT] = {
+        UINT64_C(0x1808da7dec99a080),
+        UINT64_C(0x5c3403699cfca6b9),
+        UINT64_C(0xadf775cf1c2a9a50),
+        UINT64_C(0x4f2d039d35d165ad),
+    };
+    static const uint64_t expected_all_digest =
+        UINT64_C(0x97262b8282c5b682);
+    const preview_roi_t dragon_roi = {118U, 40U, 210U, 130U};
+    const preview_roi_t full_surface = {
+        0U, 0U, P4_GAME_SURFACE_WIDTH, P4_GAME_SURFACE_HEIGHT,
+    };
+    preview_motion_writer_t writer = {
+        .prefix = prefix,
+        .require_semantic_digests = false,
+        .print_semantic_digests = review,
+    };
+    uint64_t all_hashes[PREVIEW_RUNTIME_COMPLETION_FRAMES] = {0};
+    uint64_t action_hashes[PREVIEW_RUNTIME_ACTION_COUNT]
+        [PREVIEW_RUNTIME_STAGE_COUNT][PREVIEW_RUNTIME_PHASE_COUNT] = {{{0}}};
+    uint64_t hatch_hashes[PREVIEW_RUNTIME_HATCH_MORPH_COUNT]
+        [PREVIEW_RUNTIME_HATCH_MILESTONE_COUNT]
+        [PREVIEW_RUNTIME_PHASE_COUNT] = {{{0}}};
+    uint64_t signal_list_hashes[PREVIEW_RUNTIME_STAGE_COUNT] = {0};
+    preview_save_host_t save = {0};
+    bool success = true;
+
+    for (unsigned action = 0U;
+         success && action < PREVIEW_RUNTIME_ACTION_COUNT; ++action) {
+        for (unsigned stage = 0U;
+             success && stage < PREVIEW_RUNTIME_STAGE_COUNT; ++stage) {
+            byte_buddy_save_profile_t profile;
+            uint64_t home_header_before = 0U;
+            uint64_t home_header_after = 0U;
+            char label[96];
+            const int label_bytes = snprintf(
+                label, sizeof(label), "runtime-action-%s-%s",
+                s_runtime_action_names[action],
+                s_runtime_stage_names[stage]);
+            if (label_bytes < 0 || (size_t)label_bytes >= sizeof(label) ||
+                !preview_profile_for_stage(stage, &profile) ||
+                !restart_preview_profile(
+                    instance, state, services, scan, &save, &profile) ||
+                !preview_home_header_hash(
+                    instance, surface, &home_header_before)) {
+                success = false;
+                break;
+            }
+            if (action == 6U) {
+                char list_label[112];
+                const int list_bytes = snprintf(
+                    list_label, sizeof(list_label), "%s-list-hold", label);
+                if (list_bytes < 0 ||
+                    (size_t)list_bytes >= sizeof(list_label) ||
+                    !defeat_signal_index(instance, surface, 0U, 0U) ||
+                    !settle_scene_transition(instance) ||
+                    !screen_signature_matches(
+                        instance, surface, PREVIEW_SCREEN_SIGNAL_LIST) ||
+                    !advance_ms(
+                        instance, PREVIEW_RUNTIME_SIGNAL_LIST_HOLD_MS) ||
+                    !screen_signature_matches(
+                        instance, surface, PREVIEW_SCREEN_SIGNAL_LIST) ||
+                    !preview_runtime_render_frame(
+                        &writer, instance, surface, list_label, 0U,
+                        full_surface, all_hashes,
+                        &signal_list_hashes[stage]) ||
+                    !tap(instance, 20U, 12U) ||
+                    !settle_scene_transition(instance)) {
+                    success = false;
+                    break;
+                }
+                success = preview_runtime_digest_matches(
+                    "signal-list", s_runtime_stage_names[stage],
+                    signal_list_hashes[stage],
+                    expected_signal_list_hashes[stage], review);
+            } else {
+                success = preview_trigger_runtime_action(instance, action);
+            }
+            if (!success ||
+                !preview_home_header_hash(
+                    instance, surface, &home_header_after) ||
+                home_header_after != home_header_before ||
+                !preview_runtime_render_phases(
+                    &writer, instance, surface, label, dragon_roi,
+                    all_hashes, action_hashes[action][stage])) {
+                if (success && home_header_after != home_header_before) {
+                    fprintf(stderr,
+                            "%s did not render on Home (%016llx != "
+                            "%016llx)\n",
+                            label,
+                            (unsigned long long)home_header_after,
+                            (unsigned long long)home_header_before);
+                }
+                success = false;
+                break;
+            }
+            const uint64_t digest = preview_ordered_hash_digest(
+                action_hashes[action][stage], PREVIEW_RUNTIME_PHASE_COUNT);
+            success = preview_runtime_digest_matches(
+                "action", label, digest,
+                expected_action_digests[action][stage], review);
+        }
+    }
+
+    for (unsigned action = 0U;
+         success && action < PREVIEW_RUNTIME_ACTION_COUNT; ++action) {
+        success = preview_runtime_sequences_distinct(
+            &action_hashes[action][0U][0U],
+            PREVIEW_RUNTIME_STAGE_COUNT, PREVIEW_RUNTIME_PHASE_COUNT,
+            s_runtime_action_names[action]);
+    }
+    for (unsigned stage = 0U;
+         success && stage < PREVIEW_RUNTIME_STAGE_COUNT; ++stage) {
+        uint64_t stage_sequences[PREVIEW_RUNTIME_ACTION_COUNT]
+            [PREVIEW_RUNTIME_PHASE_COUNT] = {{0}};
+        for (unsigned action = 0U;
+             action < PREVIEW_RUNTIME_ACTION_COUNT; ++action) {
+            memcpy(stage_sequences[action], action_hashes[action][stage],
+                   sizeof(stage_sequences[action]));
+        }
+        success = preview_runtime_sequences_distinct(
+            &stage_sequences[0U][0U], PREVIEW_RUNTIME_ACTION_COUNT,
+            PREVIEW_RUNTIME_PHASE_COUNT, s_runtime_stage_names[stage]);
+    }
+
+    for (unsigned morph = 0U;
+         success && morph < PREVIEW_RUNTIME_HATCH_MORPH_COUNT; ++morph) {
+        for (unsigned milestone = 0U;
+             success && milestone <
+                 PREVIEW_RUNTIME_HATCH_MILESTONE_COUNT; ++milestone) {
+            byte_buddy_save_profile_t profile;
+            uint16_t care_after = 0U;
+            char label[96];
+            const int label_bytes = snprintf(
+                label, sizeof(label), "runtime-hatch-%s-%s",
+                s_runtime_hatch_names[morph],
+                s_runtime_hatch_milestone_names[milestone]);
+            if (label_bytes < 0 || (size_t)label_bytes >= sizeof(label) ||
+                !preview_hatch_profile(
+                    morph, milestone, &profile, &care_after) ||
+                !restart_preview_profile(
+                    instance, state, services, scan, &save, &profile) ||
+                !preview_trigger_hatch_morph(instance, morph)) {
+                success = false;
+                break;
+            }
+            uint16_t counts[5] = {
+                profile.action_counts[0], profile.action_counts[1],
+                profile.action_counts[2], profile.action_counts[3],
+                profile.pet_actions,
+            };
+            ++counts[morph == BYTE_BUDDY_MORPH_NEBULA ? 4U :
+                morph == BYTE_BUDDY_MORPH_SUNGOLD ? 0U :
+                morph == BYTE_BUDDY_MORPH_JADE ? 1U : 2U];
+            if (byte_buddy_morph_for_nurture(
+                    counts[0], counts[1], counts[2], counts[3],
+                    counts[4]) != (byte_buddy_morph_t)morph ||
+                byte_buddy_stage_for_interactions(care_after) !=
+                    (milestone + 1U ==
+                            PREVIEW_RUNTIME_HATCH_MILESTONE_COUNT
+                        ? BYTE_BUDDY_STAGE_BABY
+                        : BYTE_BUDDY_STAGE_EGG) ||
+                !preview_runtime_render_phases(
+                    &writer, instance, surface, label, dragon_roi,
+                    all_hashes, hatch_hashes[morph][milestone])) {
+                success = false;
+                break;
+            }
+            const uint64_t digest = preview_ordered_hash_digest(
+                hatch_hashes[morph][milestone],
+                PREVIEW_RUNTIME_PHASE_COUNT);
+            success = preview_runtime_digest_matches(
+                "hatch", label, digest,
+                expected_hatch_digests[morph][milestone], review);
+        }
+    }
+    if (success) {
+        success = preview_runtime_sequences_distinct(
+            &hatch_hashes[0U][0U][0U],
+            PREVIEW_RUNTIME_HATCH_MORPH_COUNT *
+                PREVIEW_RUNTIME_HATCH_MILESTONE_COUNT,
+            PREVIEW_RUNTIME_PHASE_COUNT, "runtime hatch");
+    }
+
+    const uint64_t all_digest = preview_ordered_hash_digest(
+        all_hashes, writer.frame_count);
+    if (success) {
+        success = preview_runtime_digest_matches(
+            "all", "ordered-180", all_digest, expected_all_digest, review);
+    }
+    fprintf(stdout, "runtime-completion-expected-frames=%u\n",
+            PREVIEW_RUNTIME_COMPLETION_FRAMES);
+    fprintf(stdout, "runtime-completion-frames=%u\n", writer.frame_count);
+    if (expected_frames != PREVIEW_RUNTIME_COMPLETION_FRAMES ||
+        writer.frame_count != PREVIEW_RUNTIME_COMPLETION_FRAMES) {
+        fprintf(stderr,
+                "expected runtime-completion argument/count %u/%u, "
+                "got %u/%u\n",
+                PREVIEW_RUNTIME_COMPLETION_FRAMES,
+                PREVIEW_RUNTIME_COMPLETION_FRAMES,
+                expected_frames, writer.frame_count);
+        success = false;
+    }
+    return success;
+}
+
 static bool render_counter_coverage(
     preview_motion_writer_t *writer,
     p4_game_instance_t *instance, p4_game_surface_t *surface,
@@ -1492,7 +2654,7 @@ static bool render_counter_coverage(
         }
         if (ability == BYTE_BUDDY_ABILITY_JAM_FIELD) {
             if (!tap(instance, 110U, 145U) ||
-                !advance_ms(instance, 720U) ||
+                !advance_ms(instance, PREVIEW_PLAY_ACTION_AFTER_TAP_MS) ||
                 !press_button(instance, P4_BUTTON_B) ||
                 !advance_ms(instance, 900U)) {
                 return false;
@@ -1981,7 +3143,7 @@ static bool render_need_coverage(
             writer, instance, surface, "need-joy", 600U, 4U,
             roi, 4U, &row_hashes[BYTE_BUDDY_NEED_FX_JOY]) ||
         !tap(instance, 110U, 145U) ||
-        !advance_ms(instance, 720U) ||
+        !advance_ms(instance, PREVIEW_PLAY_ACTION_AFTER_TAP_MS) ||
         !press_button(instance, P4_BUTTON_B) ||
         !advance_ms(instance, 900U) ||
         !settle_scene_transition(instance) ||
@@ -2109,12 +3271,13 @@ static bool verify_play_evolution_chronology(
         !care_credits(instance, 27U) ||
         !advance_ms(instance, PREVIEW_CARE_NEED_REFRESH_MS) ||
         !tap(instance, 110U, 145U) ||
+        /* Evolution finishes first; Play's full action clip follows it. */
         !sample_region_hashes(
             instance, surface, evolution_roi, 1000U,
             evolution_hashes) ||
         !hashes_are_pairwise_distinct(
             evolution_hashes, 4U, "Play-triggered evolution") ||
-        !advance_ms(instance, 200U) ||
+        !advance_ms(instance, PREVIEW_PLAY_EVOLUTION_TAIL_MS) ||
         !capture_region_hash(
             instance, surface, transition_roi, &transition_hash) ||
         !settle_scene_transition(instance) ||
@@ -2148,7 +3311,7 @@ static bool verify_evolution_completion_input_scrub(
             instance, state, services, scan, PREVIEW_SCAN_READY) ||
         !care_credits(instance, 27U) ||
         !trigger_care_credit(instance) ||
-        !advance_ms(instance, 1168U) ||
+        !advance_ms(instance, PREVIEW_EVOLUTION_AFTER_TAP_MS) ||
         !tap(instance, 280U, 180U) ||
         !capture_region_hash(
             instance, surface, full_surface, &edge_hash) ||
@@ -2156,7 +3319,7 @@ static bool verify_evolution_completion_input_scrub(
             instance, state, services, scan, PREVIEW_SCAN_READY) ||
         !care_credits(instance, 27U) ||
         !trigger_care_credit(instance) ||
-        !advance_ms(instance, 1168U) ||
+        !advance_ms(instance, PREVIEW_EVOLUTION_AFTER_TAP_MS) ||
         /* Match tap's 16 ms down/up partition; only the edge may differ. */
         !advance_ms(instance, 16U) ||
         !advance_ms(instance, 16U) ||
@@ -2183,7 +3346,12 @@ static bool render_activity_coverage(
     const p4_game_services_t *services)
 {
     const preview_roi_t intro_roi = {128U, 48U, 193U, 113U};
-    const preview_roi_t miss_roi = {188U, 109U, 228U, 150U};
+    /*
+     * The post-action deterministic seed places the first missed star at the
+     * right edge.  Keep this ROI on the authored four-phase miss burst so
+     * moving background streaks cannot satisfy the distinctness assertion.
+     */
+    const preview_roi_t miss_roi = {232U, 104U, 280U, 153U};
     const preview_roi_t summary_roi = {91U, 51U, 152U, 112U};
     const preview_roi_t summary_count_roi = {197U, 70U, 211U, 87U};
     const preview_roi_t transition_roi = {139U, 79U, 182U, 122U};
@@ -2191,6 +3359,7 @@ static bool render_activity_coverage(
     if (!restart_preview_game(
             instance, state, services, scan, PREVIEW_SCAN_READY) ||
         !tap(instance, 110U, 145U) ||
+        !advance_ms(instance, PREVIEW_PLAY_ACTION_AFTER_TAP_MS) ||
         !capture_region_hash(
             instance, surface, transition_roi, &star_wipe_hash) ||
         !settle_scene_transition(instance) ||
@@ -2203,6 +3372,7 @@ static bool render_activity_coverage(
     if (!restart_preview_game(
             instance, state, services, scan, PREVIEW_SCAN_READY) ||
         !tap(instance, 110U, 145U) ||
+        !advance_ms(instance, PREVIEW_PLAY_ACTION_AFTER_TAP_MS) ||
         !settle_scene_transition(instance) ||
         !advance_ms(instance, 944U) ||
         !advance_ms(instance, 1520U) ||
@@ -2216,9 +3386,11 @@ static bool render_activity_coverage(
     if (!restart_preview_game(
             instance, state, services, scan, PREVIEW_SCAN_READY) ||
         !tap(instance, 110U, 145U) ||
+        !advance_ms(instance, PREVIEW_PLAY_ACTION_AFTER_TAP_MS) ||
         !settle_scene_transition(instance) ||
         !advance_ms(instance, 944U) ||
-        !advance_touch_ms(instance, 207U, 80U, 1600U) ||
+        /* Follow the first deterministic post-action spawn for one catch. */
+        !advance_touch_ms(instance, 253U, 80U, 1600U) ||
         !tap(instance, 280U, 12U) ||
         !capture_region_hash(
             instance, surface, summary_count_roi, &summary_one_hash) ||
@@ -2232,6 +3404,7 @@ static bool render_activity_coverage(
 
     uint64_t summary_zero_b_hash = 0U;
     if (!tap(instance, 110U, 145U) ||
+        !advance_ms(instance, PREVIEW_PLAY_ACTION_AFTER_TAP_MS) ||
         !press_button(instance, P4_BUTTON_B) ||
         !settle_scene_transition(instance) ||
         !capture_region_hash(
@@ -2253,6 +3426,7 @@ static bool render_activity_coverage(
 
     uint64_t summary_zero_done_hash = 0U;
     if (!tap(instance, 110U, 145U) ||
+        !advance_ms(instance, PREVIEW_PLAY_ACTION_AFTER_TAP_MS) ||
         !tap(instance, 280U, 12U) ||
         !settle_scene_transition(instance) ||
         !capture_region_hash(
@@ -2318,7 +3492,7 @@ static bool render_activity_coverage(
         UINT64_C(0x09296ddad594a85b),
         UINT64_C(0xe7e237d7006a503f),
     };
-    if (star_wipe_hash != UINT64_C(0x48786ccd283372e6) ||
+    if (star_wipe_hash != UINT64_C(0x5a9b36281e7b9aa0) ||
         shop_wipe_hash != UINT64_C(0x050239ecae6f57f4) ||
         summary_one_hash != UINT64_C(0xe99f14f7257c8383) ||
         summary_zero_b_hash != UINT64_C(0xe39a2dbad8773bd5) ||
@@ -2604,12 +3778,20 @@ int main(int argc, char **argv)
         strcmp(argv[2], "--review-authored-motion") == 0;
     const bool exact_animation = argc == 5 &&
         strcmp(argv[2], "--animation") == 0;
+    const bool completion_motion = argc == 5 &&
+        strcmp(argv[2], "--completion-motion") == 0;
+    const bool runtime_completion = argc == 5 &&
+        strcmp(argv[2], "--runtime-completion-motion") == 0;
+    const bool runtime_completion_review = argc == 5 &&
+        strcmp(argv[2], "--review-runtime-completion-motion") == 0;
     unsigned expected_motion_frames = 0U;
     char trailing = '\0';
     if ((argc != 13 && argc != 3 && !signal_motion && !authored_motion &&
-         !authored_review && !exact_animation) ||
+         !authored_review && !exact_animation && !completion_motion &&
+         !runtime_completion && !runtime_completion_review) ||
         ((signal_motion || authored_motion || authored_review ||
-          exact_animation) &&
+          exact_animation || completion_motion || runtime_completion ||
+          runtime_completion_review) &&
          sscanf(argv[4], "%u%c", &expected_motion_frames, &trailing) != 1)) {
         fprintf(stderr, "usage: %s ART.bin EGG.ppm HATCH.ppm POWER.ppm "
                         "STYLE.ppm CUSTOM.ppm FLYING.ppm ELEMENTAL.ppm "
@@ -2623,7 +3805,17 @@ int main(int argc, char **argv)
                         "EXPECTED_FRAMES\n"
                         "   or: %s ART.bin --review-authored-motion PREFIX "
                         "EXPECTED_FRAMES\n"
+                        "   or: %s ART.bin --completion-motion PREFIX "
+                        "EXPECTED_FRAMES\n"
+                        "   or: %s ART.bin --runtime-completion-motion "
+                        "PREFIX EXPECTED_FRAMES\n"
+                        "   or: %s ART.bin "
+                        "--review-runtime-completion-motion PREFIX "
+                        "EXPECTED_FRAMES\n"
                         "       use PREFIX - to render/hash without files\n",
+                argv[0],
+                argv[0],
+                argv[0],
                 argv[0],
                 argv[0],
                 argv[0],
@@ -2663,9 +3855,27 @@ int main(int argc, char **argv)
         .width = P4_GAME_SURFACE_WIDTH,
         .height = P4_GAME_SURFACE_HEIGHT,
     };
+    if (completion_motion) {
+        const bool success = render_completion_motion_sequence(
+            art, art_bytes, pixels, argv[3], expected_motion_frames);
+        free(art);
+        free(state);
+        free(pixels);
+        return success ? EXIT_SUCCESS : EXIT_FAILURE;
+    }
     bool success = p4_game_instance_start(
         &instance, &p4_byte_buddy_game, &services, state,
         p4_byte_buddy_game.state_bytes);
+    if (success && (runtime_completion || runtime_completion_review)) {
+        success = render_runtime_completion_sequence(
+            &instance, &surface, &signal_scan, state, &services,
+            argv[3], expected_motion_frames, runtime_completion_review);
+        p4_game_instance_stop(&instance);
+        free(art);
+        free(state);
+        free(pixels);
+        return success ? EXIT_SUCCESS : EXIT_FAILURE;
+    }
     if (success && signal_motion) {
         success = render_signal_motion_sequence(
             &instance, &surface, &signal_scan, argv[3],
@@ -2736,7 +3946,7 @@ int main(int argc, char **argv)
         tap(&instance, 110U, 145U) && tap(&instance, 280U, 80U) &&
         animate(&instance, 8U) &&
         render_to(&instance, &surface, argv[9]) &&
-        advance_ms(&instance, 720U) &&
+        advance_ms(&instance, PREVIEW_PLAY_ACTION_AFTER_TAP_MS) &&
         press_button(&instance, P4_BUTTON_B) &&
         advance_ms(&instance, 900U) && tap(&instance, 70U, 180U) &&
         settle_scene_transition(&instance) &&

@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "4.2.0",
+  "version": "4.3.0",
   "stack_frame_limit_bytes": 1024,
   "package_file": "BYTEBUD.P4G",
   "resource_file": "BYTEBUD.P4R",
@@ -28,6 +28,6 @@
     "save"
   ],
   "license": "MIT",
-  "assets": "480 original frames; P4R required; dragons, signal genomes, habitats, care, activity, evolution, battle, reactions, lineage",
+  "assets": "672 original frames; required P4R; stage/action, hatch, signal, genome, lineage, and environment art",
   "enabled": true
 }

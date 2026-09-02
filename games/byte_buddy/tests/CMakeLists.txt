@@ -104,3 +104,26 @@ add_test(
 )
 set_tests_properties(byte_buddy_authored_motion_preview_smoke PROPERTIES
     TIMEOUT 60)
+
+add_test(
+    NAME byte_buddy_completion_motion_preview_smoke
+    COMMAND byte_buddy_touch_previews
+        "${BYTE_BUDDY_TEST_ART_PATH}"
+        --completion-motion
+        -
+        192
+)
+set_tests_properties(byte_buddy_completion_motion_preview_smoke PROPERTIES
+    TIMEOUT 60)
+
+add_test(
+    NAME byte_buddy_runtime_completion_motion_preview_smoke
+    COMMAND byte_buddy_touch_previews
+        "${BYTE_BUDDY_TEST_ART_PATH}"
+        --runtime-completion-motion
+        -
+        180
+)
+set_tests_properties(
+    byte_buddy_runtime_completion_motion_preview_smoke PROPERTIES
+    TIMEOUT 60)

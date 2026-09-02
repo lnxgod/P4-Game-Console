@@ -64,6 +64,23 @@ typedef enum {
 } byte_buddy_care_kind_t;
 
 typedef enum {
+    REACTION_IDLE = 0,
+    REACTION_FEED,
+    REACTION_PLAY,
+    REACTION_CLEAN,
+    REACTION_REST,
+    REACTION_PET,
+    REACTION_GROW,
+    REACTION_SIGNAL,
+    REACTION_HATCH,
+} buddy_reaction_t;
+
+typedef struct {
+    uint8_t sheet;
+    uint8_t frame;
+} byte_buddy_animation_cell_t;
+
+typedef enum {
     BYTE_BUDDY_TOUCH_NONE = 0,
     BYTE_BUDDY_TOUCH_EXIT,
     BYTE_BUDDY_TOUCH_DRAGON,
@@ -454,6 +471,28 @@ uint8_t byte_buddy_need_fx_frame(
     byte_buddy_need_fx_t need, uint8_t phase);
 uint8_t byte_buddy_activity_fx_frame(
     byte_buddy_activity_fx_t activity, uint8_t phase);
+
+bool byte_buddy_dragon_reaction_frame(
+    byte_buddy_stage_t stage, byte_buddy_morph_t hatch_morph,
+    buddy_reaction_t reaction, uint16_t care_actions,
+    uint32_t reaction_ms, byte_buddy_animation_cell_t *out_cell);
+
+bool byte_buddy_reaction_effect_frame(
+    buddy_reaction_t reaction, uint32_t reaction_ms,
+    byte_buddy_animation_cell_t *out_cell);
+
+buddy_reaction_t byte_buddy_growth_reaction(
+    byte_buddy_stage_t previous_stage, byte_buddy_stage_t next_stage);
+
+bool byte_buddy_reaction_can_advance(
+    bool evolution_active, bool scene_transition_active,
+    bool upgrade_shop, bool signal_hunt,
+    byte_buddy_signal_view_t signal_view);
+
+bool byte_buddy_play_start_ready(
+    bool play_start_pending, bool mini_game,
+    buddy_reaction_t reaction, uint32_t reaction_ms,
+    uint16_t evolution_fx_ms, uint8_t evolution_pending_mask);
 
 uint8_t byte_buddy_signal_player_hp(
     byte_buddy_battle_stats_t stats, uint8_t nest_level,
