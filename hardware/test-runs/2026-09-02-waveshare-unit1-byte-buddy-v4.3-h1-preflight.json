@@ -1,0 +1,92 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-09-02T15:01:24-0700",
+  "result": "blocked-no-mutation-live-pink-p4r-unsupported",
+  "scope": "Resource-first H1 deployment preflight for the committed Byte Buddy 4.3.0 cartridge and required authored-art sidecar on the recorded pink Waveshare unit 1; no firmware flash, OS update, H2 storage write, or P4G transfer was attempted",
+  "board": {
+    "vendor": "Waveshare",
+    "sku": "ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "unit_label": "unit1-pink-B289",
+    "chip_revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+    "h1_port": "/dev/cu.wchusbserial5C371865781",
+    "h1_usb_serial": "5C37186578",
+    "identity_source": "hardware/evidence/waveshare-two-unit-color-labels-20260827.json"
+  },
+  "source": {
+    "branch": "codex/byte-buddy-h1-p4r",
+    "byte_buddy_commit": "cbdcbc1b4588161d6c5488354c8421267a28d62b",
+    "toolchain": "ESP-IDF 5.5.3 at 2c211b236707889e8400c4dc5644dd5c4ee071e0"
+  },
+  "release": {
+    "directory": "build-host/byte-buddy-4.3.0",
+    "resource": {
+      "file": "BYTEBUD.P4R",
+      "bytes": 1397952,
+      "package_sha256": "6a7b7dafe0dd5565a867268e5c7e9a53feecbdd80e5c7b8d6e110598963fd698",
+      "payload_bytes": 1397824,
+      "payload_sha256": "ac76b0e89ec0c7c0f18703d2baf853764eded82f1edc067dc3c877a0f14c2931"
+    },
+    "game": {
+      "file": "BYTEBUD.P4G",
+      "version": "4.3.0",
+      "bytes": 195336,
+      "package_sha256": "c135136944e5855d2f41997292507eb18316c2e42791b21df17aabc13f83c895",
+      "payload_bytes": 195080,
+      "payload_sha256": "095244417fcbd6dfbaec0e78f4bde793534140782c24a2194c4881fbf8edc47d"
+    },
+    "focused_build_reproducibility": "pass-twice-byte-identical",
+    "waveshare_pipeline_match": "pass-byte-identical",
+    "package_verification": "pass"
+  },
+  "host_verification": {
+    "game_sdk_host": "pass",
+    "byte_buddy_ctest": "8-of-8-pass",
+    "byte_buddy_sdl_smoke_and_save": "2-of-2-pass",
+    "registry_and_resource_checks": "pass",
+    "waveshare_console_os_build_and_verifier": "pass-no-flash",
+    "runtime_composited_animation_frames": 180,
+    "direct_completion_animation_frames": 192,
+    "hardware_tested": false
+  },
+  "live_inventory": {
+    "pink_h1_present": true,
+    "green_h1_present": true,
+    "green_h1_port": "/dev/cu.wchusbserial5B901593451",
+    "selected_target": "pink-only",
+    "selected_port_busy": false,
+    "h2_mass_storage_present": false,
+    "p4games_volume_present": false
+  },
+  "h1_preflight": {
+    "transport": "h1-ch343-uart",
+    "historical_marker": "P4_FILE_TRANSFER READY protocol=2 p4g_max=524288 p4r_max=8388608 exchange_max=8388608",
+    "historical_marker_source": "hardware/test-runs/2026-08-30-waveshare-unit1-console-os-0.4.89-byte-buddy-v4-h1.json",
+    "attempted_file": "BYTEBUD.P4R",
+    "attempted_command": "/Users/billh/.espressif/python_env/idf5.5_py3.11_env/bin/python scripts/p4-transfer.py push build-host/byte-buddy-4.3.0/BYTEBUD.P4R --port /dev/cu.wchusbserial5C371865781",
+    "response_status": 9,
+    "response_meaning": "unsupported-resource-class",
+    "resource_payload_bytes_sent": 0,
+    "resource_replacement_attempted": false,
+    "game_transfer_attempted": false,
+    "game_replacement_attempted": false,
+    "content_write_attempts": 0,
+    "flash_write_attempts": 0,
+    "installed_pair": "unchanged",
+    "safety_decision": "Stopped immediately. The live endpoint on the recorded pink bridge contradicted the historical protocol-2 marker and rejected P4R before any data chunk. Sending P4G alone, probing the green unit, disguising the resource class, or assuming the historical firmware identity is forbidden."
+  },
+  "deployment_next_step": {
+    "required_user_action": "On the physically identified pink unit, open System and select Turn On USB Mode, then connect H2 to the Mac.",
+    "identity_gate": "Before any copy, require the newly enumerated TinyUSB mass-storage serial to end in the recorded pink node identity B289 and require a FAT32 P4GAMES volume.",
+    "guarded_non_flash_command": "make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES",
+    "install_note": "The guarded installer verifies the complete generated bundle including BYTEBUD.P4R and BYTEBUD.P4G. Copying P4UPDATE.P4U does not install it; any OS update still requires a separate explicit Game Manager confirmation and fresh authorization.",
+    "h1_retry_gate": "Do not retry P4R over H1 until the live pink firmware identity and a protocol-2 ready marker are re-established."
+  },
+  "limitations": [
+    "This record proves a fail-closed live H1 preflight and zero content mutation; it does not prove installation or cartridge readback.",
+    "The historical August 30 record proves that this bridge previously ran protocol 2, but no current evidence explains the live capability regression.",
+    "Host rendering, packaging, SDL smoke, and gameplay tests are green, but named human play and physical-tablet acceptance of v4.3 remain pending.",
+    "No firmware flash, OS update, erase, formatting, H2 content write, P4G transfer, or physical gameplay occurred."
+  ]
+}

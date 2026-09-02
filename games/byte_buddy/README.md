@@ -1104,11 +1104,18 @@ Waveshare verifier accepted the complete build without flashing:
 
 The ignored, ready-to-transfer pair is under
 `build-host/byte-buddy-4.3.0/`. This is a reproducible, host-verified deployment
-candidate, not physical acceptance: no device was flashed or modified. Install
-the `.P4R` first and `.P4G` second only after the recorded pink protocol-2 H1
-canary is connected, then pull both files back and verify the exact hashes
-above before launching. Named human SDL play and tablet animation/gameplay
-acceptance remain separate steps.
+candidate, not physical acceptance. A resource-first H1 attempt selected the
+exact recorded pink unit 1 bridge at `/dev/cu.wchusbserial5C371865781`, but its
+live service returned status 9 (`unsupported`) for P4R before any payload chunk;
+the `.P4G` was therefore not sent and neither unit was modified. That current
+response supersedes the historical protocol-2 readiness record. H2 mass storage
+was not present either. To continue without flashing, open **System > Turn On
+USB Mode** on the physically identified pink unit, connect H2, verify the new
+TinyUSB storage serial ends in its recorded `B289` identity and the FAT32
+`P4GAMES` volume is mounted, then use the guarded full-bundle installer. Named
+human SDL play and tablet animation/gameplay acceptance remain separate steps.
+The zero-mutation v4.3 preflight is recorded in
+`hardware/test-runs/2026-09-02-waveshare-unit1-byte-buddy-v4.3-h1-preflight.json`.
 
 Verified v4.0.0 release identities:
 
@@ -1295,10 +1302,12 @@ The v4.2 matched package verification passed twice with identical payloads and
 packages. The v4.3 focused sanitizer/visual run passes all eight tests, its SDL3
 host smoke/save run passes both tests, and its matched package was reproduced
 by two focused builds plus the locked Waveshare pipeline and independent build
-verifier. Named human SDL play, protocol-2 H1 install/readback, and physical
-tablet acceptance remain pending; the green unit 2 protocol-1 H1 preflight
-stopped on the unsupported `.P4R` status before either member of the pair was
-sent, so its installed game was not mutated.
+verifier. Named human SDL play, a verified device install/readback, and physical
+tablet acceptance remain pending. Both the earlier green-unit preflight and the
+current pink-port v4.3 preflight stopped on unsupported `.P4R` status before a
+payload or matching `.P4G` was sent, so neither installed game was mutated. The
+pink H2 identity-bound USB Drive route now requires the user action documented
+above.
 
 On platforms with the optional reviewed save capability, ordinary care, the
 spendable wallet, upgrades, Style, and general achievements follow the durable
