@@ -64,7 +64,7 @@ enum {
     SIGNAL_RETREAT_MS = 520,
     SIGNAL_GUARD_FX_MS = 360,
     SIGNAL_PASSIVE_FX_MS = 520,
-    EVOLUTION_FX_MS = 1200,
+    EVOLUTION_FX_MS = REACTION_DURATION_MS,
     SHOP_FEEDBACK_MS = 650,
     SIGNAL_TRACK_REFRESH_MS = 1600,
     SIGNAL_REQUEST_BUSY_MS = 1200,
@@ -114,7 +114,19 @@ enum {
     BYTE_BUDDY_LINEAGE_BADGE_SHEET = 27,
     BYTE_BUDDY_SIGNAL_ATTACK_SHEET = 28,
     BYTE_BUDDY_ENVIRONMENT_CHROME_SHEET = 29,
-    DRAGON_EXTENDED_SHEET_COUNT = 30,
+    BYTE_BUDDY_ACTION_SIGNATURE_FX_SHEET = 30,
+    DRAGON_FEED_ACTION_SHEET = 31,
+    DRAGON_PLAY_ACTION_SHEET = 32,
+    DRAGON_CLEAN_ACTION_SHEET = 33,
+    DRAGON_REST_ACTION_SHEET = 34,
+    DRAGON_PET_ACTION_SHEET = 35,
+    DRAGON_GROW_ACTION_SHEET = 36,
+    DRAGON_SIGNAL_ACTION_SHEET = 37,
+    DRAGON_HATCH_NEBULA_SHEET = 38,
+    DRAGON_HATCH_SUNGOLD_SHEET = 39,
+    DRAGON_HATCH_JADE_SHEET = 40,
+    DRAGON_HATCH_GLACIER_SHEET = 41,
+    DRAGON_EXTENDED_SHEET_COUNT = 42,
     ACHIEVEMENT_FIRST_CARE = UINT32_C(1) << 0U,
     ACHIEVEMENT_CLEAN = UINT32_C(1) << 1U,
     ACHIEVEMENT_PLAY = UINT32_C(1) << 2U,
@@ -124,6 +136,34 @@ enum {
     ACHIEVEMENT_MYTHIC_LINEAGE = UINT32_C(1) << 6U,
     ACHIEVEMENT_ETERNAL_LINEAGE = UINT32_C(1) << 7U,
 };
+
+_Static_assert(DRAGON_FEED_ACTION_SHEET ==
+                   BYTE_BUDDY_ACTION_SIGNATURE_FX_SHEET + REACTION_FEED,
+               "Feed action sheet must follow the signature FX sheet");
+_Static_assert(DRAGON_PLAY_ACTION_SHEET ==
+                   BYTE_BUDDY_ACTION_SIGNATURE_FX_SHEET + REACTION_PLAY,
+               "Play action sheet order changed");
+_Static_assert(DRAGON_CLEAN_ACTION_SHEET ==
+                   BYTE_BUDDY_ACTION_SIGNATURE_FX_SHEET + REACTION_CLEAN,
+               "Clean action sheet order changed");
+_Static_assert(DRAGON_REST_ACTION_SHEET ==
+                   BYTE_BUDDY_ACTION_SIGNATURE_FX_SHEET + REACTION_REST,
+               "Rest action sheet order changed");
+_Static_assert(DRAGON_PET_ACTION_SHEET ==
+                   BYTE_BUDDY_ACTION_SIGNATURE_FX_SHEET + REACTION_PET,
+               "Pet action sheet order changed");
+_Static_assert(DRAGON_GROW_ACTION_SHEET ==
+                   BYTE_BUDDY_ACTION_SIGNATURE_FX_SHEET + REACTION_GROW,
+               "Grow action sheet order changed");
+_Static_assert(DRAGON_SIGNAL_ACTION_SHEET ==
+                   BYTE_BUDDY_ACTION_SIGNATURE_FX_SHEET + REACTION_SIGNAL,
+               "Signal action sheet order changed");
+_Static_assert(DRAGON_HATCH_GLACIER_SHEET -
+                   DRAGON_HATCH_NEBULA_SHEET + 1 ==
+                   BYTE_BUDDY_MORPH_COUNT,
+               "Hatch sheets must cover every morph contiguously");
+_Static_assert(EVOLUTION_FX_MS == REACTION_DURATION_MS,
+               "Grow and hatch FX must span the full action timeline");
 
 typedef enum {
     ACTION_FEED = 0,
@@ -143,17 +183,6 @@ _Static_assert((unsigned)ACTION_REST == (unsigned)BYTE_BUDDY_CARE_REST,
 _Static_assert((unsigned)ACTION_COUNT + 1U ==
                    (unsigned)BYTE_BUDDY_CARE_COUNT,
                "pet is the fifth care action");
-
-typedef enum {
-    REACTION_IDLE = 0,
-    REACTION_FEED,
-    REACTION_PLAY,
-    REACTION_CLEAN,
-    REACTION_REST,
-    REACTION_PET,
-    REACTION_GROW,
-    REACTION_SIGNAL,
-} buddy_reaction_t;
 
 typedef enum {
     STAR_KIND_GOLD = 0,
@@ -553,6 +582,36 @@ byte_buddy_stage_t byte_buddy_stage_for_interactions(uint16_t interactions)
         return BYTE_BUDDY_STAGE_BABY;
     }
     return BYTE_BUDDY_STAGE_EGG;
+}
+
+buddy_reaction_t byte_buddy_growth_reaction(
+    byte_buddy_stage_t previous_stage, byte_buddy_stage_t next_stage)
+{
+    return previous_stage == BYTE_BUDDY_STAGE_EGG &&
+                   next_stage == BYTE_BUDDY_STAGE_BABY
+        ? REACTION_HATCH : REACTION_GROW;
+}
+
+bool byte_buddy_reaction_can_advance(
+    bool evolution_active, bool scene_transition_active,
+    bool upgrade_shop, bool signal_hunt,
+    byte_buddy_signal_view_t signal_view)
+{
+    if (evolution_active || scene_transition_active || upgrade_shop) {
+        return false;
+    }
+    return !signal_hunt || signal_view == BYTE_BUDDY_SIGNAL_TRACKER ||
+        signal_view == BYTE_BUDDY_SIGNAL_BATTLE;
+}
+
+bool byte_buddy_play_start_ready(
+    bool play_start_pending, bool mini_game,
+    buddy_reaction_t reaction, uint32_t reaction_ms,
+    uint16_t evolution_fx_ms, uint8_t evolution_pending_mask)
+{
+    return play_start_pending && !mini_game &&
+        reaction == REACTION_IDLE && reaction_ms == 0U &&
+        evolution_fx_ms == 0U && evolution_pending_mask == 0U;
 }
 
 byte_buddy_element_t byte_buddy_element_for_nurture(
@@ -1860,18 +1919,18 @@ static void begin_scene_transition(byte_buddy_state_t *state)
 
 static uint8_t evolution_stage_bit(unsigned stage)
 {
-    if (stage < BYTE_BUDDY_STAGE_WINGED ||
+    if (stage < BYTE_BUDDY_STAGE_BABY ||
         stage > BYTE_BUDDY_STAGE_ELEMENTAL) {
         return 0U;
     }
-    return (uint8_t)(1U << (stage - BYTE_BUDDY_STAGE_WINGED));
+    return (uint8_t)(1U << (stage - BYTE_BUDDY_STAGE_BABY));
 }
 
 static void queue_evolution_milestones(
     byte_buddy_state_t *state, unsigned previous_stage,
     unsigned next_stage)
 {
-    for (unsigned stage = BYTE_BUDDY_STAGE_WINGED;
+    for (unsigned stage = BYTE_BUDDY_STAGE_BABY;
          stage <= BYTE_BUDDY_STAGE_ELEMENTAL; ++stage) {
         if (previous_stage < stage && next_stage >= stage) {
             state->evolution_pending_mask |= evolution_stage_bit(stage);
@@ -1882,7 +1941,7 @@ static void queue_evolution_milestones(
 static bool begin_next_evolution(byte_buddy_state_t *state,
                                  uint16_t lead_in_ms)
 {
-    for (unsigned stage = BYTE_BUDDY_STAGE_WINGED;
+    for (unsigned stage = BYTE_BUDDY_STAGE_BABY;
          stage <= BYTE_BUDDY_STAGE_ELEMENTAL; ++stage) {
         const uint8_t bit = evolution_stage_bit(stage);
         if ((state->evolution_pending_mask & bit) == 0U) {
@@ -1967,11 +2026,11 @@ static void advance_growth(p4_game_context_t *context,
     if ((unsigned)natural_stage <= state->stage) {
         return;
     }
-    const unsigned previous_stage = state->stage;
+    const byte_buddy_stage_t previous_stage =
+        (byte_buddy_stage_t)state->stage;
     queue_evolution_milestones(
-        state, previous_stage, (unsigned)natural_stage);
+        state, (unsigned)previous_stage, (unsigned)natural_stage);
     state->stage = (uint8_t)natural_stage;
-    trigger_reaction(state, REACTION_GROW);
     if (!state->signal_hunt && !state->mini_game &&
         state->evolution_fx_ms == 0U) {
         (void)begin_next_evolution(state, 0U);
@@ -2236,12 +2295,9 @@ static void care_for_buddy(p4_game_context_t *context,
             state->energy = decrease(state->energy, 8U);
             record_action(
                 context, state, ACTION_PLAY, REACTION_PLAY, need_before);
-            if (state->evolution_fx_ms != 0U ||
-                state->evolution_pending_mask != 0U) {
-                state->play_start_pending = 1U;
-            } else {
-                start_play(state);
-            }
+            /* Let every stage finish its authored Play motion on Home before
+             * the Star Catcher scene takes over the dragon. */
+            state->play_start_pending = 1U;
             play_tone(context, 659U, 100U);
             (void)p4_game_audio_effect_play(
                 context, &state->audio, P4_GAME_AUDIO_EFFECT_ACTION);
@@ -4084,7 +4140,13 @@ static p4_game_result_t game_update(
         return P4_GAME_CONTINUE;
     }
     state->animation_ms += bounded_elapsed_ms;
-    update_reaction(state, bounded_elapsed_ms);
+    if (byte_buddy_reaction_can_advance(
+            state->evolution_fx_ms != 0U,
+            state->scene_transition_ms != 0U,
+            state->upgrade_shop, state->signal_hunt,
+            (byte_buddy_signal_view_t)state->signal_view)) {
+        update_reaction(state, bounded_elapsed_ms);
+    }
     state->care_credit_cooldown_ms =
         state->care_credit_cooldown_ms > bounded_elapsed_ms
             ? state->care_credit_cooldown_ms - bounded_elapsed_ms : 0U;
@@ -4104,13 +4166,22 @@ static p4_game_result_t game_update(
     const bool touch_now = input->touch_valid && input->touch_count > 0U;
     if (evolution_was_active && state->evolution_fx_ms == 0U) {
         state->evolution_active_stage = BYTE_BUDDY_STAGE_COUNT;
-        const bool evolution_sequence_started =
-            begin_next_evolution(state, 0U);
-        if (!evolution_sequence_started &&
-            state->play_start_pending != 0U) {
-            start_play(state);
-        }
+        (void)begin_next_evolution(state, 0U);
         /* Never leak the completion-frame edge into the newly revealed scene. */
+        state->touch_was_down = touch_now;
+        return P4_GAME_CONTINUE;
+    }
+    if (byte_buddy_play_start_ready(
+            state->play_start_pending != 0U, state->mini_game,
+            (buddy_reaction_t)state->reaction, state->reaction_ms,
+            state->evolution_fx_ms, state->evolution_pending_mask)) {
+        start_play(state);
+        state->touch_was_down = touch_now;
+        return P4_GAME_CONTINUE;
+    }
+    if (state->play_start_pending != 0U) {
+        /* Keep Play exclusive until its Home reaction (and any queued growth)
+         * has completed, and scrub the release edge before scene hand-off. */
         state->touch_was_down = touch_now;
         return P4_GAME_CONTINUE;
     }
@@ -4464,30 +4535,96 @@ static unsigned reaction_frame_count(uint32_t reaction_ms,
     return frame >= frame_count ? frame_count - 1U : frame;
 }
 
-static unsigned reaction_ping_pong_frame(uint32_t reaction_ms)
+bool byte_buddy_dragon_reaction_frame(
+    byte_buddy_stage_t stage, byte_buddy_morph_t hatch_morph,
+    buddy_reaction_t reaction, uint16_t care_actions,
+    uint32_t reaction_ms, byte_buddy_animation_cell_t *out_cell)
 {
-    const unsigned frame = reaction_frame_count(reaction_ms, 8U);
-    return frame < 4U ? frame : 7U - frame;
+    if (out_cell == NULL) {
+        return false;
+    }
+    const uint8_t phase = (uint8_t)reaction_frame_count(reaction_ms, 4U);
+    if (stage == BYTE_BUDDY_STAGE_EGG) {
+        if (care_actions < 5U || hatch_morph >= BYTE_BUDDY_MORPH_COUNT) {
+            return false;
+        }
+        const uint8_t milestone = care_actions >= 7U
+            ? 2U : (uint8_t)(care_actions - 5U);
+        *out_cell = (byte_buddy_animation_cell_t){
+            .sheet = (uint8_t)(DRAGON_HATCH_NEBULA_SHEET + hatch_morph),
+            .frame = (uint8_t)(milestone * 4U + phase),
+        };
+        return true;
+    }
+    if (stage == BYTE_BUDDY_STAGE_BABY && reaction == REACTION_HATCH) {
+        if (hatch_morph >= BYTE_BUDDY_MORPH_COUNT) {
+            return false;
+        }
+        *out_cell = (byte_buddy_animation_cell_t){
+            .sheet = (uint8_t)(DRAGON_HATCH_NEBULA_SHEET + hatch_morph),
+            .frame = (uint8_t)(3U * 4U + phase),
+        };
+        return true;
+    }
+    if (stage < BYTE_BUDDY_STAGE_BABY ||
+        stage > BYTE_BUDDY_STAGE_ELEMENTAL ||
+        reaction < REACTION_FEED || reaction > REACTION_SIGNAL) {
+        return false;
+    }
+    *out_cell = (byte_buddy_animation_cell_t){
+        .sheet = (uint8_t)(BYTE_BUDDY_ACTION_SIGNATURE_FX_SHEET + reaction),
+        .frame = (uint8_t)(
+            ((unsigned)stage - BYTE_BUDDY_STAGE_BABY) * 4U + phase),
+    };
+    return true;
 }
 
-static unsigned reaction_row(const byte_buddy_state_t *state)
+bool byte_buddy_reaction_effect_frame(
+    buddy_reaction_t reaction, uint32_t reaction_ms,
+    byte_buddy_animation_cell_t *out_cell)
 {
-    if (state->reaction == REACTION_FEED) {
-        return 0U;
+    if (out_cell == NULL) {
+        return false;
     }
-    if (state->reaction == REACTION_CLEAN) {
-        return 2U;
+    uint8_t sheet = BYTE_BUDDY_REACTION_FX_SHEET;
+    uint8_t row = 0U;
+    switch (reaction) {
+    case REACTION_FEED:
+        sheet = BYTE_BUDDY_ACTION_SIGNATURE_FX_SHEET;
+        row = 0U;
+        break;
+    case REACTION_PLAY:
+        sheet = BYTE_BUDDY_ACTION_SIGNATURE_FX_SHEET;
+        row = 1U;
+        break;
+    case REACTION_CLEAN:
+        row = 1U;
+        break;
+    case REACTION_REST:
+        row = 2U;
+        break;
+    case REACTION_PET:
+        sheet = BYTE_BUDDY_ACTION_SIGNATURE_FX_SHEET;
+        row = 2U;
+        break;
+    case REACTION_GROW:
+        row = 3U;
+        break;
+    case REACTION_SIGNAL:
+        sheet = BYTE_BUDDY_ACTION_SIGNATURE_FX_SHEET;
+        row = 3U;
+        break;
+    case REACTION_IDLE:
+    case REACTION_HATCH:
+    default:
+        return false;
     }
-    if (state->reaction == REACTION_REST) {
-        return 3U;
-    }
-    return 1U;
-}
-
-static unsigned elemental_action_row(const byte_buddy_state_t *state)
-{
-    const unsigned element = safe_element(state);
-    return element == BYTE_BUDDY_ELEMENT_MYSTERY ? 3U : element - 1U;
+    *out_cell = (byte_buddy_animation_cell_t){
+        .sheet = sheet,
+        .frame = (uint8_t)(
+            row * 4U + reaction_frame_count(reaction_ms, 4U)),
+    };
+    return true;
 }
 
 static unsigned elemental_mastery_row(const byte_buddy_state_t *state)
@@ -4510,12 +4647,51 @@ static unsigned hatch_variant(const byte_buddy_state_t *state)
     return safe_morph(state);
 }
 
-static uint32_t dragon_frame_interval_ms(const byte_buddy_state_t *state)
+static bool evolution_reaction_active(const byte_buddy_state_t *state)
+{
+    return state->evolution_fx_ms != 0U &&
+        state->evolution_active_stage >= BYTE_BUDDY_STAGE_BABY &&
+        state->evolution_active_stage <= BYTE_BUDDY_STAGE_ELEMENTAL;
+}
+
+static unsigned visual_dragon_stage(const byte_buddy_state_t *state)
+{
+    return evolution_reaction_active(state)
+        ? state->evolution_active_stage : safe_stage(state);
+}
+
+static buddy_reaction_t visual_dragon_reaction(
+    const byte_buddy_state_t *state, buddy_reaction_t fallback)
+{
+    if (!evolution_reaction_active(state)) {
+        return fallback;
+    }
+    const byte_buddy_stage_t next_stage =
+        (byte_buddy_stage_t)state->evolution_active_stage;
+    const byte_buddy_stage_t previous_stage = next_stage ==
+            BYTE_BUDDY_STAGE_BABY
+        ? BYTE_BUDDY_STAGE_EGG
+        : (byte_buddy_stage_t)(next_stage - 1U);
+    return byte_buddy_growth_reaction(previous_stage, next_stage);
+}
+
+static uint32_t visual_reaction_remaining_ms(
+    const byte_buddy_state_t *state, uint32_t fallback_ms)
+{
+    if (!evolution_reaction_active(state)) {
+        return fallback_ms;
+    }
+    return state->evolution_fx_ms > REACTION_DURATION_MS
+        ? REACTION_DURATION_MS : state->evolution_fx_ms;
+}
+
+static uint32_t dragon_frame_interval_ms(unsigned stage)
 {
     static const uint16_t intervals[BYTE_BUDDY_STAGE_COUNT] = {
         220U, 190U, 175U, 150U, 165U,
     };
-    return intervals[safe_stage(state)];
+    return intervals[stage < BYTE_BUDDY_STAGE_COUNT
+        ? stage : BYTE_BUDDY_STAGE_EGG];
 }
 
 static void dragon_sheet_frame(const byte_buddy_state_t *state,
@@ -4525,17 +4701,25 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
                                unsigned *out_sheet,
                                unsigned *out_frame)
 {
-    const uint32_t frame_interval_ms = dragon_frame_interval_ms(state);
+    const unsigned stage = visual_dragon_stage(state);
+    const buddy_reaction_t displayed_reaction = visual_dragon_reaction(
+        state, (buddy_reaction_t)reaction);
+    const uint32_t displayed_reaction_ms = visual_reaction_remaining_ms(
+        state, reaction_ms);
+    const uint32_t frame_interval_ms = dragon_frame_interval_ms(stage);
     const uint32_t idle_animation_ms =
         animation_ms - state->dragon_idle_epoch_ms;
     const unsigned phase4 = (unsigned)(
         (idle_animation_ms / frame_interval_ms) % 4U);
-    const unsigned stage = safe_stage(state);
     const byte_buddy_signal_lineage_t lineage = current_lineage(state);
-    if (stage == BYTE_BUDDY_STAGE_BABY &&
-        reaction == REACTION_GROW) {
-        *out_sheet = DRAGON_HATCH_TRANSITION_SHEET;
-        *out_frame = 3U * 4U + hatch_variant(state);
+    byte_buddy_animation_cell_t reaction_cell;
+    if (byte_buddy_dragon_reaction_frame(
+            (byte_buddy_stage_t)stage,
+            (byte_buddy_morph_t)hatch_variant(state),
+            displayed_reaction, state->care_actions,
+            displayed_reaction_ms, &reaction_cell)) {
+        *out_sheet = reaction_cell.sheet;
+        *out_frame = reaction_cell.frame;
         return;
     }
     if (stage == BYTE_BUDDY_STAGE_EGG) {
@@ -4563,20 +4747,12 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
             *out_frame = phase4 * 4U + variant;
             return;
         }
-        *out_sheet = DRAGON_HATCH_TRANSITION_SHEET;
-        *out_frame = (state->care_actions >= 7U ? 2U :
-                      state->care_actions == 6U ? 1U : 0U) * 4U +
-            hatch_variant(state);
+        /* The validated reaction resolver owns every care-five-plus egg. */
+        *out_sheet = DRAGON_HATCH_NEBULA_SHEET;
+        *out_frame = 3U;
         return;
     }
     if (stage == BYTE_BUDDY_STAGE_BABY) {
-        if (reaction != REACTION_IDLE) {
-            const unsigned frame = reaction_frame_count(reaction_ms, 8U);
-            *out_sheet = frame < 4U ? DRAGON_BABY_REACTION_SHEET :
-                DRAGON_BABY_CARE_SHEET;
-            *out_frame = reaction_row(state) * 4U + frame % 4U;
-            return;
-        }
         const uint32_t clip_ms = frame_interval_ms * 4U * 3U;
         unsigned row = (unsigned)((idle_animation_ms / clip_ms) % 2U);
         if (state->energy < 35U) {
@@ -4591,15 +4767,6 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
     if (stage == BYTE_BUDDY_STAGE_WINGED) {
         const unsigned style = safe_wing_style(state) ==
             BYTE_BUDDY_WINGS_SHINY ? 1U : 0U;
-        if (reaction != REACTION_IDLE) {
-            const unsigned frame = reaction_ping_pong_frame(reaction_ms);
-            const bool quiet = reaction == REACTION_CLEAN ||
-                reaction == REACTION_REST;
-            *out_sheet = DRAGON_WINGED_CARE_SHEET;
-            *out_frame = (style + (quiet ? 2U : 0U)) * 4U +
-                frame % 4U;
-            return;
-        }
         const uint32_t clip_ms = frame_interval_ms * 4U * 3U;
         const unsigned active_clip = (unsigned)(
             (idle_animation_ms / clip_ms) % 2U);
@@ -4610,19 +4777,6 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
     if (stage == BYTE_BUDDY_STAGE_FLYING) {
         const unsigned style = safe_wing_style(state) ==
             BYTE_BUDDY_WINGS_SHINY ? 1U : 0U;
-        if (reaction != REACTION_IDLE) {
-            const unsigned frame = reaction_frame_count(reaction_ms, 8U);
-            const bool active = reaction == REACTION_PLAY ||
-                reaction == REACTION_PET || reaction == REACTION_GROW ||
-                reaction == REACTION_SIGNAL;
-            *out_sheet = active && frame >= 4U
-                ? DRAGON_FLIGHT_AEROBATICS_SHEET
-                : DRAGON_FLIGHT_CYCLE_SHEET;
-            *out_frame = (style + (active ? 2U : 0U)) * 4U +
-                (active ? frame % 4U
-                        : reaction_ping_pong_frame(reaction_ms));
-            return;
-        }
         const uint32_t clip_ms = frame_interval_ms * 4U * 3U;
         const unsigned clip = (unsigned)(
             (idle_animation_ms / clip_ms) % 3U);
@@ -4630,21 +4784,6 @@ static void dragon_sheet_frame(const byte_buddy_state_t *state,
             DRAGON_FLIGHT_AEROBATICS_SHEET;
         const unsigned row = clip < 2U ? style : style + 2U;
         *out_frame = row * 4U + phase4;
-        return;
-    }
-    if (stage == BYTE_BUDDY_STAGE_ELEMENTAL &&
-        reaction != REACTION_IDLE) {
-        const unsigned frame = reaction_frame_count(reaction_ms, 8U);
-        const bool forceful = reaction == REACTION_PLAY ||
-            reaction == REACTION_GROW || reaction == REACTION_SIGNAL;
-        *out_sheet = forceful
-            ? (frame < 4U ? DRAGON_ELEMENT_BREATH_SHEET
-                          : DRAGON_ELEMENT_IMPACT_SHEET)
-            : DRAGON_ELEMENT_MASTERY_SHEET;
-        *out_frame = (forceful ? elemental_action_row(state)
-                               : elemental_mastery_row(state)) * 4U +
-            (forceful ? frame % 4U
-                      : reaction_ping_pong_frame(reaction_ms));
         return;
     }
     if (stage == BYTE_BUDDY_STAGE_ELEMENTAL &&
@@ -5242,7 +5381,7 @@ static void draw_element_particles(p4_game_surface_t *surface,
                                    const byte_buddy_state_t *state,
                                    int left, int top)
 {
-    const unsigned stage = safe_stage(state);
+    const unsigned stage = visual_dragon_stage(state);
     if (stage != BYTE_BUDDY_STAGE_EGG &&
         stage != BYTE_BUDDY_STAGE_ELEMENTAL) {
         return;
@@ -5305,7 +5444,7 @@ static void draw_custom_trail(p4_game_surface_t *surface,
 {
     const unsigned style = state->style_selected[BYTE_BUDDY_STYLE_TRAIL];
     if (style == 0U || style > s_style_max[BYTE_BUDDY_STYLE_TRAIL] ||
-        safe_stage(state) == BYTE_BUDDY_STAGE_EGG) {
+        visual_dragon_stage(state) == BYTE_BUDDY_STAGE_EGG) {
         return;
     }
     const int drift = eased_ping_pong_offset(
@@ -5468,20 +5607,22 @@ static void draw_reaction_effect(p4_game_surface_t *surface,
                                  const byte_buddy_state_t *state,
                                  int left, int top)
 {
-    if (state->reaction_ms == 0U) {
+    const buddy_reaction_t reaction = visual_dragon_reaction(
+        state, (buddy_reaction_t)state->reaction);
+    const uint32_t reaction_ms = visual_reaction_remaining_ms(
+        state, state->reaction_ms);
+    if (reaction_ms == 0U) {
         return;
     }
-    const uint32_t elapsed = state->reaction_ms >= REACTION_DURATION_MS
-        ? 0U : REACTION_DURATION_MS - state->reaction_ms;
-    if (elapsed >= 480U) {
+    byte_buddy_animation_cell_t effect_cell;
+    if (!byte_buddy_reaction_effect_frame(
+            reaction, reaction_ms, &effect_cell)) {
         return;
     }
-    const unsigned animation_frame = (unsigned)(elapsed / 120U);
-    unsigned row = 0U;
     int center_x = left + DRAGON_FRAME_WIDTH - 8;
     int center_y = top + 16;
     unsigned size = 34U;
-    switch ((buddy_reaction_t)state->reaction) {
+    switch (reaction) {
     case REACTION_FEED:
         center_y = top + 40;
         break;
@@ -5491,28 +5632,26 @@ static void draw_reaction_effect(p4_game_surface_t *surface,
         center_y = top + 9;
         break;
     case REACTION_CLEAN:
-        row = 1U;
         center_x = left + DRAGON_FRAME_WIDTH - 6;
         center_y = top + 17;
         break;
     case REACTION_REST:
-        row = 2U;
         center_x = left + DRAGON_FRAME_WIDTH - 7;
         center_y = top + 7;
         break;
     case REACTION_GROW:
     case REACTION_SIGNAL:
-        row = 3U;
         center_x = left + DRAGON_FRAME_WIDTH / 2;
         center_y = top + DRAGON_FRAME_HEIGHT / 2;
         size = 50U;
         break;
     case REACTION_IDLE:
+    case REACTION_HATCH:
     default:
         return;
     }
-    draw_reaction_fx_frame(
-        surface, state, row * 4U + animation_frame,
+    (void)draw_art_frame_scaled(
+        surface, state, effect_cell.sheet, effect_cell.frame,
         center_x, center_y, size);
 }
 
@@ -5520,10 +5659,11 @@ static void draw_dragon(p4_game_surface_t *surface,
                         const byte_buddy_state_t *state,
                         int center_x, int top)
 {
+    const unsigned stage = visual_dragon_stage(state);
     const unsigned motion_phase = (unsigned)(
         (state->animation_ms / 40U) % 32U);
     int hover = (int)(s_eased_motion[motion_phase] / 2U);
-    if (safe_stage(state) >= BYTE_BUDDY_STAGE_FLYING) {
+    if (stage >= BYTE_BUDDY_STAGE_FLYING) {
         hover = (int)s_eased_motion[motion_phase];
         center_x += motion_phase < 16U
             ? (int)(motion_phase / 5U)
@@ -5531,7 +5671,7 @@ static void draw_dragon(p4_game_surface_t *surface,
     }
     const int left = center_x - DRAGON_FRAME_WIDTH / 2;
     top -= hover;
-    const int shadow_width = safe_stage(state) >= BYTE_BUDDY_STAGE_FLYING
+    const int shadow_width = stage >= BYTE_BUDDY_STAGE_FLYING
         ? DRAGON_FRAME_WIDTH * 3 / 8 - hover / 2
         : DRAGON_FRAME_WIDTH / 2 + 2 - hover;
     p4_draw_fill_rect(surface, center_x - shadow_width / 2,
@@ -5557,7 +5697,7 @@ static void draw_dragon(p4_game_surface_t *surface,
             center_x, top + DRAGON_FRAME_HEIGHT / 2, 76U);
     }
     draw_signal_mutation(surface, state, left, top);
-    if (safe_stage(state) >= BYTE_BUDDY_STAGE_WINGED) {
+    if (stage >= BYTE_BUDDY_STAGE_WINGED) {
         if (safe_wing_style(state) == BYTE_BUDDY_WINGS_SHINY) {
             p4_draw_fill_rect(surface, left + 2, top + 13, 6, 1,
                               UINT16_C(0x07ff));
@@ -5598,7 +5738,7 @@ static void draw_dragon(p4_game_surface_t *surface,
         }
     }
     draw_reaction_effect(surface, state, left, top);
-    if (safe_stage(state) == BYTE_BUDDY_STAGE_EGG &&
+    if (stage == BYTE_BUDDY_STAGE_EGG &&
         state->care_actions >= GROW_BABY_INTERACTIONS / 2U) {
         p4_draw_fill_rect(surface, center_x, top + 20, 2, 6,
                           UINT16_C(0xffff));
@@ -5637,7 +5777,7 @@ static void draw_lowest_need(p4_game_surface_t *surface,
 static void draw_growth_panel(p4_game_surface_t *surface,
                               const byte_buddy_state_t *state)
 {
-    const unsigned stage = safe_stage(state);
+    const unsigned stage = visual_dragon_stage(state);
     const byte_buddy_signal_lineage_t lineage = current_lineage(state);
     p4_draw_fill_rect(surface, 198, 29, 116, 106, UINT16_C(0x080f));
     p4_draw_rect(surface, 198, 29, 116, 106, UINT16_C(0x39e7));

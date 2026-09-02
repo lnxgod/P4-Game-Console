@@ -25,6 +25,19 @@ enum {
     TEST_SIGNAL_WEAVE_SETTLE_MS = 300,
     TEST_SIGNAL_ATTACK_TRAVEL_MS = 220,
     TEST_SCENE_TRANSITION_MS = 240,
+    TEST_REACTION_DURATION_MS = 1400,
+    TEST_EVOLUTION_FX_MS = TEST_REACTION_DURATION_MS,
+    TEST_ART_HEADER_BYTES = 64,
+    TEST_ART_REQUIRED_SHEETS = 42,
+    TEST_ART_FRAMES_PER_SHEET = 16,
+    TEST_ART_REQUIRED_FRAMES =
+        TEST_ART_REQUIRED_SHEETS * TEST_ART_FRAMES_PER_SHEET,
+    TEST_ART_PALETTE_ENTRIES = 16,
+    TEST_ART_PALETTE_BYTES = TEST_ART_PALETTE_ENTRIES * 2,
+    TEST_ART_PACKED_FRAME_BYTES = 64 * 64 / 2,
+    TEST_ART_EXPECTED_BYTES = TEST_ART_HEADER_BYTES +
+        TEST_ART_REQUIRED_FRAMES *
+            (TEST_ART_PALETTE_BYTES + TEST_ART_PACKED_FRAME_BYTES),
 };
 
 typedef struct {
@@ -108,6 +121,14 @@ static uint32_t test_read_u32(const uint8_t *data)
         (uint32_t)data[2] << 16U | (uint32_t)data[3] << 24U;
 }
 
+static void test_write_u32(uint8_t *data, uint32_t value)
+{
+    data[0] = (uint8_t)value;
+    data[1] = (uint8_t)(value >> 8U);
+    data[2] = (uint8_t)(value >> 16U);
+    data[3] = (uint8_t)(value >> 24U);
+}
+
 static uint16_t test_read_u16(const uint8_t *data)
 {
     return (uint16_t)((uint16_t)data[0] | (uint16_t)data[1] << 8U);
@@ -155,6 +176,104 @@ static bool load_test_art(void)
     s_test_art = data;
     s_test_art_bytes = (size_t)file_bytes;
     return true;
+}
+
+static bool test_art_geometry_matches_sheet_count(
+    const uint8_t *data, size_t data_bytes, uint32_t sheets)
+{
+    const uint64_t frames =
+        (uint64_t)sheets * TEST_ART_FRAMES_PER_SHEET;
+    const uint64_t pixel_offset = TEST_ART_HEADER_BYTES +
+        frames * TEST_ART_PALETTE_BYTES;
+    const uint64_t total_bytes = pixel_offset +
+        frames * TEST_ART_PACKED_FRAME_BYTES;
+    if (data == NULL || data_bytes < TEST_ART_HEADER_BYTES ||
+        frames > UINT32_MAX || pixel_offset > UINT32_MAX ||
+        total_bytes > UINT32_MAX || total_bytes != data_bytes ||
+        memcmp(data, "BBDART2\0", 8U) != 0 ||
+        test_read_u32(data + 8U) != 2U ||
+        test_read_u32(data + 12U) != sheets ||
+        test_read_u32(data + 16U) != 64U ||
+        test_read_u32(data + 20U) != 64U ||
+        test_read_u32(data + 24U) != TEST_ART_FRAMES_PER_SHEET ||
+        test_read_u32(data + 28U) != TEST_ART_PALETTE_ENTRIES ||
+        test_read_u32(data + 32U) != (uint32_t)frames ||
+        test_read_u32(data + 36U) != TEST_ART_HEADER_BYTES ||
+        test_read_u32(data + 40U) != (uint32_t)pixel_offset ||
+        test_read_u32(data + 44U) != (uint32_t)total_bytes) {
+        return false;
+    }
+    for (size_t offset = 48U; offset < TEST_ART_HEADER_BYTES; ++offset) {
+        if (data[offset] != 0U) {
+            return false;
+        }
+    }
+    return true;
+}
+
+static uint8_t *test_art_with_sheet_count(
+    uint32_t sheets, size_t *fixture_bytes_out)
+{
+    const uint64_t frames_u64 =
+        (uint64_t)sheets * TEST_ART_FRAMES_PER_SHEET;
+    const uint64_t pixel_offset_u64 = TEST_ART_HEADER_BYTES +
+        frames_u64 * TEST_ART_PALETTE_BYTES;
+    const uint64_t total_bytes_u64 = pixel_offset_u64 +
+        frames_u64 * TEST_ART_PACKED_FRAME_BYTES;
+    if (fixture_bytes_out == NULL ||
+        !test_art_geometry_matches_sheet_count(
+            s_test_art, s_test_art_bytes, TEST_ART_REQUIRED_SHEETS) ||
+        frames_u64 > UINT32_MAX || pixel_offset_u64 > UINT32_MAX ||
+        total_bytes_u64 > UINT32_MAX || total_bytes_u64 > SIZE_MAX) {
+        return NULL;
+    }
+
+    const size_t frames = (size_t)frames_u64;
+    const size_t pixel_offset = (size_t)pixel_offset_u64;
+    const size_t total_bytes = (size_t)total_bytes_u64;
+    uint8_t *const fixture = calloc(1U, total_bytes);
+    if (fixture == NULL) {
+        return NULL;
+    }
+
+    memcpy(fixture, s_test_art, TEST_ART_HEADER_BYTES);
+    test_write_u32(fixture + 12U, sheets);
+    test_write_u32(fixture + 32U, (uint32_t)frames_u64);
+    test_write_u32(fixture + 36U, TEST_ART_HEADER_BYTES);
+    test_write_u32(fixture + 40U, (uint32_t)pixel_offset_u64);
+    test_write_u32(fixture + 44U, (uint32_t)total_bytes_u64);
+
+    const size_t source_frames = TEST_ART_REQUIRED_FRAMES;
+    const size_t source_pixel_offset = TEST_ART_HEADER_BYTES +
+        source_frames * TEST_ART_PALETTE_BYTES;
+    const size_t common_frames = frames < source_frames
+        ? frames : source_frames;
+    memcpy(fixture + TEST_ART_HEADER_BYTES,
+           s_test_art + TEST_ART_HEADER_BYTES,
+           common_frames * TEST_ART_PALETTE_BYTES);
+    memcpy(fixture + pixel_offset,
+           s_test_art + source_pixel_offset,
+           common_frames * TEST_ART_PACKED_FRAME_BYTES);
+
+    /* A larger fixture repeats the final authored sheet so every added frame
+     * has a complete palette and packed-pixel payload too. */
+    for (size_t frame = common_frames; frame < frames; ++frame) {
+        const size_t source_frame = source_frames -
+            TEST_ART_FRAMES_PER_SHEET +
+            (frame - common_frames) % TEST_ART_FRAMES_PER_SHEET;
+        memcpy(fixture + TEST_ART_HEADER_BYTES +
+                   frame * TEST_ART_PALETTE_BYTES,
+               s_test_art + TEST_ART_HEADER_BYTES +
+                   source_frame * TEST_ART_PALETTE_BYTES,
+               TEST_ART_PALETTE_BYTES);
+        memcpy(fixture + pixel_offset +
+                   frame * TEST_ART_PACKED_FRAME_BYTES,
+               s_test_art + source_pixel_offset +
+                   source_frame * TEST_ART_PACKED_FRAME_BYTES,
+               TEST_ART_PACKED_FRAME_BYTES);
+    }
+    *fixture_bytes_out = total_bytes;
+    return fixture;
 }
 
 static bool fake_request_signal_scan(void *context, uint64_t focus_token)
@@ -344,24 +463,17 @@ static bool start_game_with_save(
 static void test_required_art_contract(void)
 {
     enum {
-        TEST_ART_HEADER_BYTES = 64,
-        TEST_ART_REQUIRED_SHEETS = 30,
-        TEST_ART_FRAMES_PER_SHEET = 16,
-        TEST_ART_REQUIRED_FRAMES =
-            TEST_ART_REQUIRED_SHEETS * TEST_ART_FRAMES_PER_SHEET,
-        TEST_ART_PALETTE_ENTRIES = 16,
-        TEST_ART_PALETTE_BYTES = TEST_ART_PALETTE_ENTRIES * 2,
-        TEST_ART_PACKED_FRAME_BYTES = 64 * 64 / 2,
-        TEST_ART_EXPECTED_BYTES = TEST_ART_HEADER_BYTES +
-            TEST_ART_REQUIRED_FRAMES *
-                (TEST_ART_PALETTE_BYTES + TEST_ART_PACKED_FRAME_BYTES),
         TEST_ART_MIN_VISIBLE_PIXELS = 64,
         TEST_ART_MIN_TRANSPARENT_PIXELS = 64,
         TEST_ART_MIN_VISIBLE_COLORS = 4,
     };
     static const uint8_t authored_animation_sheets[] = {
         0U, 1U, 2U, 3U, 4U, 6U, 7U,
+        30U, 31U, 32U, 33U, 34U, 35U, 36U, 37U,
+        38U, 39U, 40U, 41U,
     };
+    CHECK(TEST_ART_REQUIRED_FRAMES == 672U);
+    CHECK(TEST_ART_EXPECTED_BYTES == 1397824U);
     CHECK((p4_byte_buddy_game.required_capabilities &
            P4_GAME_CAP_STORAGE) != 0U);
     CHECK((p4_byte_buddy_game.optional_capabilities &
@@ -466,6 +578,166 @@ static void test_required_art_contract(void)
             }
         }
     }
+}
+
+static void test_reaction_animation_routes(void)
+{
+    static const uint32_t remaining_ms[] = {
+        1400U, 1051U, 1050U, 701U, 700U, 351U, 350U, 1U, 0U,
+    };
+    static const uint8_t expected_phases[] = {
+        0U, 0U, 1U, 1U, 2U, 2U, 3U, 3U, 3U,
+    };
+    static const uint8_t effect_sheets[] = {
+        30U, 30U, 26U, 26U, 30U, 26U, 30U,
+    };
+    static const uint8_t effect_rows[] = {
+        0U, 1U, 1U, 2U, 2U, 3U, 3U,
+    };
+    const size_t sample_count =
+        sizeof(remaining_ms) / sizeof(remaining_ms[0]);
+    CHECK(sample_count ==
+          sizeof(expected_phases) / sizeof(expected_phases[0]));
+
+    for (unsigned stage = BYTE_BUDDY_STAGE_BABY;
+         stage <= BYTE_BUDDY_STAGE_ELEMENTAL; ++stage) {
+        for (unsigned reaction = REACTION_FEED;
+             reaction <= REACTION_SIGNAL; ++reaction) {
+            for (size_t sample = 0U; sample < sample_count; ++sample) {
+                byte_buddy_animation_cell_t cell = {UINT8_MAX, UINT8_MAX};
+                CHECK(byte_buddy_dragon_reaction_frame(
+                    (byte_buddy_stage_t)stage, BYTE_BUDDY_MORPH_NEBULA,
+                    (buddy_reaction_t)reaction, 5U,
+                    remaining_ms[sample], &cell));
+                CHECK(cell.sheet == (uint8_t)(30U + reaction));
+                CHECK(cell.frame == (uint8_t)(
+                    (stage - BYTE_BUDDY_STAGE_BABY) * 4U +
+                    expected_phases[sample]));
+            }
+        }
+    }
+
+    static const uint16_t egg_care_actions[] = {5U, 6U, 7U};
+    for (unsigned morph = BYTE_BUDDY_MORPH_NEBULA;
+         morph < BYTE_BUDDY_MORPH_COUNT; ++morph) {
+        for (size_t milestone = 0U;
+             milestone < sizeof(egg_care_actions) /
+                             sizeof(egg_care_actions[0]);
+             ++milestone) {
+            for (unsigned reaction = REACTION_IDLE;
+                 reaction <= REACTION_HATCH; ++reaction) {
+                for (size_t sample = 0U; sample < sample_count; ++sample) {
+                    byte_buddy_animation_cell_t cell = {
+                        UINT8_MAX, UINT8_MAX,
+                    };
+                    CHECK(byte_buddy_dragon_reaction_frame(
+                        BYTE_BUDDY_STAGE_EGG, (byte_buddy_morph_t)morph,
+                        (buddy_reaction_t)reaction,
+                        egg_care_actions[milestone], remaining_ms[sample],
+                        &cell));
+                    CHECK(cell.sheet == (uint8_t)(38U + morph));
+                    CHECK(cell.frame == (uint8_t)(
+                        milestone * 4U + expected_phases[sample]));
+                }
+            }
+        }
+        for (size_t sample = 0U; sample < sample_count; ++sample) {
+            byte_buddy_animation_cell_t hatch = {UINT8_MAX, UINT8_MAX};
+            byte_buddy_animation_cell_t grow = {UINT8_MAX, UINT8_MAX};
+            CHECK(byte_buddy_dragon_reaction_frame(
+                BYTE_BUDDY_STAGE_BABY, (byte_buddy_morph_t)morph,
+                REACTION_HATCH, 8U, remaining_ms[sample], &hatch));
+            CHECK(hatch.sheet == (uint8_t)(38U + morph));
+            CHECK(hatch.frame == (uint8_t)(12U + expected_phases[sample]));
+            CHECK(byte_buddy_dragon_reaction_frame(
+                BYTE_BUDDY_STAGE_BABY, (byte_buddy_morph_t)morph,
+                REACTION_GROW, 8U, remaining_ms[sample], &grow));
+            CHECK(grow.sheet == 36U);
+            CHECK(grow.frame == expected_phases[sample]);
+            CHECK(grow.sheet != hatch.sheet || grow.frame != hatch.frame);
+        }
+    }
+
+    for (unsigned previous = BYTE_BUDDY_STAGE_EGG;
+         previous < BYTE_BUDDY_STAGE_COUNT; ++previous) {
+        for (unsigned next = BYTE_BUDDY_STAGE_EGG;
+             next < BYTE_BUDDY_STAGE_COUNT; ++next) {
+            const buddy_reaction_t reaction = byte_buddy_growth_reaction(
+                (byte_buddy_stage_t)previous, (byte_buddy_stage_t)next);
+            CHECK((reaction == REACTION_HATCH) ==
+                  (previous == BYTE_BUDDY_STAGE_EGG &&
+                   next == BYTE_BUDDY_STAGE_BABY));
+            CHECK(reaction == REACTION_HATCH || reaction == REACTION_GROW);
+        }
+    }
+
+    for (unsigned reaction = REACTION_FEED;
+         reaction <= REACTION_SIGNAL; ++reaction) {
+        for (size_t sample = 0U; sample < sample_count; ++sample) {
+            byte_buddy_animation_cell_t effect = {UINT8_MAX, UINT8_MAX};
+            CHECK(byte_buddy_reaction_effect_frame(
+                (buddy_reaction_t)reaction, remaining_ms[sample], &effect));
+            CHECK(effect.sheet == effect_sheets[reaction - REACTION_FEED]);
+            CHECK(effect.frame == (uint8_t)(
+                effect_rows[reaction - REACTION_FEED] * 4U +
+                expected_phases[sample]));
+        }
+    }
+
+    byte_buddy_animation_cell_t invalid = {UINT8_MAX, UINT8_MAX};
+    CHECK(!byte_buddy_dragon_reaction_frame(
+        BYTE_BUDDY_STAGE_EGG, BYTE_BUDDY_MORPH_NEBULA,
+        REACTION_FEED, 4U, 1400U, &invalid));
+    CHECK(!byte_buddy_dragon_reaction_frame(
+        BYTE_BUDDY_STAGE_WINGED, BYTE_BUDDY_MORPH_NEBULA,
+        REACTION_HATCH, 28U, 1400U, &invalid));
+    CHECK(!byte_buddy_dragon_reaction_frame(
+        BYTE_BUDDY_STAGE_BABY, BYTE_BUDDY_MORPH_COUNT,
+        REACTION_HATCH, 8U, 1400U, &invalid));
+    CHECK(!byte_buddy_dragon_reaction_frame(
+        BYTE_BUDDY_STAGE_BABY, BYTE_BUDDY_MORPH_NEBULA,
+        REACTION_IDLE, 8U, 1400U, &invalid));
+    CHECK(!byte_buddy_dragon_reaction_frame(
+        BYTE_BUDDY_STAGE_BABY, BYTE_BUDDY_MORPH_NEBULA,
+        REACTION_FEED, 8U, 1400U, NULL));
+    CHECK(!byte_buddy_reaction_effect_frame(
+        REACTION_IDLE, 1400U, &invalid));
+    CHECK(!byte_buddy_reaction_effect_frame(
+        REACTION_HATCH, 1400U, &invalid));
+    CHECK(!byte_buddy_reaction_effect_frame(
+        REACTION_FEED, 1400U, NULL));
+
+    CHECK(byte_buddy_reaction_can_advance(
+        false, false, false, false, BYTE_BUDDY_SIGNAL_LIST));
+    CHECK(byte_buddy_reaction_can_advance(
+        false, false, false, true, BYTE_BUDDY_SIGNAL_TRACKER));
+    CHECK(byte_buddy_reaction_can_advance(
+        false, false, false, true, BYTE_BUDDY_SIGNAL_BATTLE));
+    CHECK(!byte_buddy_reaction_can_advance(
+        true, false, false, false, BYTE_BUDDY_SIGNAL_LIST));
+    CHECK(!byte_buddy_reaction_can_advance(
+        false, true, false, false, BYTE_BUDDY_SIGNAL_LIST));
+    CHECK(!byte_buddy_reaction_can_advance(
+        false, false, true, false, BYTE_BUDDY_SIGNAL_LIST));
+    CHECK(!byte_buddy_reaction_can_advance(
+        false, false, false, true, BYTE_BUDDY_SIGNAL_LIST));
+    CHECK(!byte_buddy_reaction_can_advance(
+        false, false, false, true, (byte_buddy_signal_view_t)UINT8_MAX));
+
+    CHECK(byte_buddy_play_start_ready(
+        true, false, REACTION_IDLE, 0U, 0U, 0U));
+    CHECK(!byte_buddy_play_start_ready(
+        false, false, REACTION_IDLE, 0U, 0U, 0U));
+    CHECK(!byte_buddy_play_start_ready(
+        true, true, REACTION_IDLE, 0U, 0U, 0U));
+    CHECK(!byte_buddy_play_start_ready(
+        true, false, REACTION_PLAY, 1U, 0U, 0U));
+    CHECK(!byte_buddy_play_start_ready(
+        true, false, REACTION_PLAY, TEST_REACTION_DURATION_MS, 0U, 0U));
+    CHECK(!byte_buddy_play_start_ready(
+        true, false, REACTION_IDLE, 0U, 1U, 0U));
+    CHECK(!byte_buddy_play_start_ready(
+        true, false, REACTION_IDLE, 0U, 0U, 1U));
 }
 
 static void test_authored_fx_frame_reachability(void)
@@ -3075,6 +3347,7 @@ static void test_controller_star_catcher(void)
     CHECK(start_game(&instance, state, &mixer, &achievements));
     CHECK(buttons(&instance, P4_BUTTON_START, P4_BUTTON_START, 16U) ==
           P4_GAME_CONTINUE);
+    advance_idle_ms(&instance, TEST_REACTION_DURATION_MS + 1200U);
     for (unsigned frame = 0U; frame < 60U; ++frame) {
         CHECK(buttons(&instance, P4_BUTTON_RIGHT, 0U, 16U) ==
               P4_GAME_CONTINUE);
@@ -3088,6 +3361,91 @@ static void test_controller_star_catcher(void)
           P4_GAME_EXIT_TO_LAUNCHER);
     p4_game_instance_stop(&instance);
     free(state);
+}
+
+static uint16_t render_play_scene_probe(
+    p4_game_instance_t *instance, uint16_t *pixels)
+{
+    p4_game_surface_t surface = {
+        .pixels = pixels,
+        .stride_pixels = P4_GAME_SURFACE_WIDTH,
+        .width = P4_GAME_SURFACE_WIDTH,
+        .height = P4_GAME_SURFACE_HEIGHT,
+    };
+    CHECK(p4_game_instance_render(instance, &surface));
+    return pixels[25U * P4_GAME_SURFACE_WIDTH];
+}
+
+static void test_play_reaction_defers_minigame(void)
+{
+    static const uint16_t starting_growth[] = {8U, 7U};
+    static const uint32_t evolution_delay_ms[] = {
+        0U, TEST_EVOLUTION_FX_MS,
+    };
+    uint16_t *const pixels = calloc(
+        P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT,
+        sizeof(*pixels));
+    CHECK(pixels != NULL);
+    if (pixels == NULL) {
+        return;
+    }
+
+    for (size_t scenario = 0U;
+         scenario < sizeof(starting_growth) / sizeof(starting_growth[0]);
+         ++scenario) {
+        const byte_buddy_save_profile_t profile = {
+            .hunger = 72U,
+            .joy = 68U,
+            .hygiene = 75U,
+            .energy = 70U,
+            .coins = 4U,
+            .care_actions = starting_growth[scenario],
+        };
+        uint8_t payload[BYTE_BUDDY_SAVE_PAYLOAD_BYTES] = {0};
+        CHECK(byte_buddy_save_encode(
+                  &profile, payload, sizeof(payload)) == sizeof(payload));
+        fake_save_t save = {0};
+        void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+        CHECK(state != NULL);
+        if (state == NULL) {
+            continue;
+        }
+        p4_game_instance_t instance;
+        p4_audio_mixer_t mixer;
+        p4_achievement_catalog_t achievements;
+        const bool started = start_game_with_save(
+            &instance, state, &save, true,
+            payload, sizeof(payload), BYTE_BUDDY_SAVE_SCHEMA_VERSION, 1U,
+            &mixer, &achievements);
+        CHECK(started);
+        if (!started) {
+            free(state);
+            continue;
+        }
+
+        CHECK(render_play_scene_probe(&instance, pixels) ==
+              UINT16_C(0x080f));
+        CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
+              P4_GAME_CONTINUE);
+        CHECK(render_play_scene_probe(&instance, pixels) ==
+              UINT16_C(0x080f));
+
+        advance_idle_ms(&instance, evolution_delay_ms[scenario]);
+        advance_idle_ms(&instance, TEST_REACTION_DURATION_MS - 1U);
+        CHECK(render_play_scene_probe(&instance, pixels) ==
+              UINT16_C(0x080f));
+
+        advance_idle_ms(&instance, 1U);
+        CHECK(render_play_scene_probe(&instance, pixels) ==
+              UINT16_C(0x000b));
+        advance_idle_ms(&instance, TEST_SCENE_TRANSITION_MS);
+        CHECK(render_play_scene_probe(&instance, pixels) ==
+              UINT16_C(0x0822));
+
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+    free(pixels);
 }
 
 static void move_weave_cursor_axis(
@@ -3283,6 +3641,38 @@ static void test_malformed_extended_art_fails_closed(void)
         &instance, &p4_byte_buddy_game, &truncated_resource, state,
         p4_byte_buddy_game.state_bytes));
 
+    static const uint32_t wrong_sheet_counts[] = {41U, 43U};
+    for (size_t count = 0U;
+         count < sizeof(wrong_sheet_counts) /
+                     sizeof(wrong_sheet_counts[0]);
+         ++count) {
+        size_t wrong_sheet_art_bytes = 0U;
+        uint8_t *const wrong_sheet_art = test_art_with_sheet_count(
+            wrong_sheet_counts[count], &wrong_sheet_art_bytes);
+        CHECK(wrong_sheet_art != NULL);
+        if (wrong_sheet_art == NULL) {
+            continue;
+        }
+        CHECK(test_art_geometry_matches_sheet_count(
+            wrong_sheet_art, wrong_sheet_art_bytes,
+            wrong_sheet_counts[count]));
+        const p4_game_services_t wrong_sheet_resource = {
+            .available_capabilities =
+                P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
+                P4_GAME_CAP_STORAGE,
+            .resource_data = wrong_sheet_art,
+            .resource_bytes = wrong_sheet_art_bytes,
+            .resource_format_version = 1U,
+        };
+        memset(state, 0, p4_byte_buddy_game.state_bytes);
+        instance = (p4_game_instance_t){0};
+        CHECK(!p4_game_instance_start(
+            &instance, &p4_byte_buddy_game,
+            &wrong_sheet_resource, state,
+            p4_byte_buddy_game.state_bytes));
+        free(wrong_sheet_art);
+    }
+
     const p4_game_services_t wrong_resource_version = {
         .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
                                   P4_GAME_CAP_STORAGE,
@@ -3305,12 +3695,14 @@ int main(void)
         return EXIT_FAILURE;
     }
     test_required_art_contract();
+    test_reaction_animation_routes();
     test_authored_fx_frame_reachability();
     test_care_achievements_and_exit();
     test_save_lifecycle_and_recovery();
     test_care_growth_cadence();
     test_render_bounds();
     test_dragon_growth_and_traits();
+    test_play_reaction_defers_minigame();
     test_controller_star_catcher();
     test_controller_signal_hunt();
     test_signal_lineage_genetics();

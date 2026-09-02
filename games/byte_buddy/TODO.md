@@ -4,6 +4,29 @@ This is the working list for the Dragon game's fluidity, pacing, progression,
 and new art. Keep gameplay changes deterministic and bounded on the 320x200
 P4 Game API surface.
 
+## v4.3 full action and hatch art
+
+- [x] Generate and visually inspect twelve original 4-by-4 masters: one
+      transparent signature-FX sheet, seven stage-aware action sheets, and
+      four morph-specific hatch sheets.
+- [x] Append the v19-v21 sources at stable indices 30-41 and make the converter
+      require the exact 42-sheet/672-frame order without renumbering v4.2 art.
+- [x] Apply bounded enclosed-background cleanup to every new opaque neutral
+      checkerboard master while preserving the transparent signature-FX source.
+- [x] Record all twelve source SHA-256 identities, exact cell semantics,
+      generation provenance, prompt briefs, and the no-placeholder compositing
+      contract.
+- [x] Rebuild the atlas twice to byte-identical outputs; verify the
+      1,397,824-byte raw payload and 1,397,952-byte wrapped `.P4R` geometry.
+- [x] Route every care, pet, growth, signal, reaction, and hatch state through
+      the new authored cells, with the existing genetic and habitat overlays.
+- [x] Extend deterministic host coverage for all new frame routes, malformed
+      42-sheet banks, stage/action selection, morph hatching, and clip exits.
+- [x] Build and independently verify a matched v4.3 `.P4G`/`.P4R` pair before
+      transfer; do not reuse the verified v4.2 cartridge with the new sidecar.
+- [ ] Complete named SDL and physical-tablet animation acceptance before
+      describing v4.3 as play-tested, hardware-tested, or deployed.
+
 ## v4.2 integration
 
 - [x] Add and integrate the original v18 environment/chrome atlas for Signal

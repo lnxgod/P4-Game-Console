@@ -34,6 +34,51 @@ static byte_buddy_save_profile_t sample_profile(void)
     };
 }
 
+static const uint8_t s_historical_schema_1_payload[
+    BYTE_BUDDY_SAVE_PAYLOAD_BYTES] = {
+    0x42U, 0x42U, 0x53U, 0x41U, 0x56U, 0x45U, 0x31U, 0x00U,
+    0x01U, 0x00U, 0x38U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+    0x49U, 0x40U, 0x5bU, 0x34U, 0x45U, 0x23U, 0x68U, 0x00U,
+    0x56U, 0x34U, 0x67U, 0x45U, 0x02U, 0x01U, 0x04U, 0x03U,
+    0x06U, 0x05U, 0x08U, 0x07U, 0x00U, 0x01U, 0x02U, 0x03U,
+    0x07U, 0x05U, 0x04U, 0x04U, 0x06U, 0x04U, 0x03U, 0x02U,
+    0x0fU, 0x00U, 0x00U, 0x00U, 0x95U, 0xe3U, 0xacU, 0xe4U,
+};
+
+static byte_buddy_save_profile_t historical_schema_1_profile(void)
+{
+    byte_buddy_save_profile_t profile;
+    /* Keep a recognizable sentinel in any implementation padding. The
+     * encoder must serialize only the explicitly assigned durable fields. */
+    memset(&profile, 0xa5, sizeof(profile));
+    profile.hunger = 73U;
+    profile.joy = 64U;
+    profile.hygiene = 91U;
+    profile.energy = 52U;
+    profile.coins = UINT16_C(0x2345);
+    profile.care_actions = 104U;
+    profile.style_mix_count = UINT16_C(0x3456);
+    profile.pet_actions = UINT16_C(0x4567);
+    profile.action_counts[0] = UINT16_C(0x0102);
+    profile.action_counts[1] = UINT16_C(0x0304);
+    profile.action_counts[2] = UINT16_C(0x0506);
+    profile.action_counts[3] = UINT16_C(0x0708);
+    profile.upgrades[0] = 0U;
+    profile.upgrades[1] = 1U;
+    profile.upgrades[2] = 2U;
+    profile.upgrades[3] = 3U;
+    profile.style_unlocked[0] = 7U;
+    profile.style_unlocked[1] = 5U;
+    profile.style_unlocked[2] = 4U;
+    profile.style_unlocked[3] = 4U;
+    profile.style_selected[0] = 6U;
+    profile.style_selected[1] = 4U;
+    profile.style_selected[2] = 3U;
+    profile.style_selected[3] = 2U;
+    profile.achievement_mask = UINT32_C(0x0f);
+    return profile;
+}
+
 static void test_round_trip(void)
 {
     const byte_buddy_save_profile_t source = sample_profile();
@@ -106,6 +151,54 @@ static bool contains_bytes(const uint8_t *haystack, size_t haystack_bytes,
     return false;
 }
 
+static void test_historical_schema_1_vector(void)
+{
+    CHECK(sizeof(s_historical_schema_1_payload) == 56U);
+    byte_buddy_save_profile_t decoded = {0};
+    CHECK(byte_buddy_save_decode(
+        &decoded, s_historical_schema_1_payload,
+        sizeof(s_historical_schema_1_payload)));
+    CHECK(decoded.hunger == 73U);
+    CHECK(decoded.joy == 64U);
+    CHECK(decoded.hygiene == 91U);
+    CHECK(decoded.energy == 52U);
+    CHECK(decoded.coins == UINT16_C(0x2345));
+    CHECK(decoded.care_actions == 104U);
+    CHECK(decoded.style_mix_count == UINT16_C(0x3456));
+    CHECK(decoded.pet_actions == UINT16_C(0x4567));
+    CHECK(decoded.action_counts[0] == UINT16_C(0x0102));
+    CHECK(decoded.action_counts[1] == UINT16_C(0x0304));
+    CHECK(decoded.action_counts[2] == UINT16_C(0x0506));
+    CHECK(decoded.action_counts[3] == UINT16_C(0x0708));
+    CHECK(decoded.upgrades[0] == 0U);
+    CHECK(decoded.upgrades[1] == 1U);
+    CHECK(decoded.upgrades[2] == 2U);
+    CHECK(decoded.upgrades[3] == 3U);
+    CHECK(decoded.style_unlocked[0] == 7U);
+    CHECK(decoded.style_unlocked[1] == 5U);
+    CHECK(decoded.style_unlocked[2] == 4U);
+    CHECK(decoded.style_unlocked[3] == 4U);
+    CHECK(decoded.style_selected[0] == 6U);
+    CHECK(decoded.style_selected[1] == 4U);
+    CHECK(decoded.style_selected[2] == 3U);
+    CHECK(decoded.style_selected[3] == 2U);
+    CHECK(decoded.achievement_mask == UINT32_C(0x0f));
+
+    const byte_buddy_save_profile_t source =
+        historical_schema_1_profile();
+    uint8_t encoded[BYTE_BUDDY_SAVE_PAYLOAD_BYTES];
+    memset(encoded, 0xa5, sizeof(encoded));
+    CHECK(byte_buddy_save_encode(
+        &source, encoded, sizeof(encoded)) == sizeof(encoded));
+    CHECK(memcmp(encoded, s_historical_schema_1_payload,
+                 sizeof(encoded)) == 0);
+    static const uint8_t privacy_sentinel[] = {
+        0xa5U, 0xa5U, 0xa5U, 0xa5U,
+    };
+    CHECK(!contains_bytes(encoded, sizeof(encoded), privacy_sentinel,
+                          sizeof(privacy_sentinel)));
+}
+
 static void test_payload_has_no_signal_identity_fields(void)
 {
     const byte_buddy_save_profile_t source = sample_profile();
@@ -126,6 +219,7 @@ int main(void)
 {
     test_round_trip();
     test_rejects_invalid_payloads();
+    test_historical_schema_1_vector();
     test_payload_has_no_signal_identity_fields();
     if (s_failures != 0U) {
         fprintf(stderr, "byte buddy save tests failed: %u\n", s_failures);
