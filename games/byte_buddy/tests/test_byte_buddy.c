@@ -26,6 +26,7 @@ enum {
     TEST_SIGNAL_ATTACK_TRAVEL_MS = 220,
     TEST_SCENE_TRANSITION_MS = 240,
     TEST_REACTION_DURATION_MS = 1400,
+    TEST_SIGNAL_SCAN_TIMEOUT_MS = 5000,
     TEST_EVOLUTION_FX_MS = TEST_REACTION_DURATION_MS,
     TEST_ART_HEADER_BYTES = 64,
     TEST_ART_REQUIRED_SHEETS = 42,
@@ -407,6 +408,36 @@ static bool start_game(p4_game_instance_t *instance, void *state,
         .signal_scan_context = &s_signal_scan,
         .request_signal_scan = fake_request_signal_scan,
         .read_signal_scan = fake_read_signal_scan,
+    };
+    *instance = (p4_game_instance_t){0};
+    return p4_game_instance_start(
+        instance, &p4_byte_buddy_game, &services,
+        state, p4_byte_buddy_game.state_bytes);
+}
+
+static bool start_game_without_signal_scan(
+    p4_game_instance_t *instance, void *state,
+    p4_audio_mixer_t *mixer,
+    p4_achievement_catalog_t *achievements)
+{
+    p4_audio_mixer_init(mixer);
+    p4_achievement_catalog_init(achievements);
+    s_signal_scan = (fake_signal_scan_t){0};
+    static p4_game_services_t services;
+    services = (p4_game_services_t){
+        .available_capabilities = P4_GAME_CAP_VIDEO |
+                                  P4_GAME_CAP_CONTROLS |
+                                  P4_GAME_CAP_AUDIO_TONE |
+                                  P4_GAME_CAP_STORAGE,
+        .audio_context = mixer,
+        .game_id = p4_byte_buddy_game.id,
+        .play_tone = p4_audio_mixer_service_play_tone,
+        .stop_audio = p4_audio_mixer_service_stop,
+        .achievement_context = achievements,
+        .unlock_achievement = p4_achievement_catalog_service_unlock,
+        .resource_data = s_test_art,
+        .resource_bytes = s_test_art_bytes,
+        .resource_format_version = 1U,
     };
     *instance = (p4_game_instance_t){0};
     return p4_game_instance_start(
@@ -2168,6 +2199,289 @@ static void test_initial_signal_busy_backoff(void)
     free(state);
 }
 
+static void test_signal_training_fallback(void)
+{
+    const uint64_t first_training_token =
+        UINT64_C(0x00123456789abcde);
+    CHECK(byte_buddy_signal_battle_pattern(
+              byte_buddy_signal_genome(first_training_token)) ==
+          BYTE_BUDDY_BATTLE_PULSE_RUSH);
+    void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    CHECK(state != NULL);
+    if (state == NULL) {
+        return;
+    }
+    p4_game_instance_t instance;
+    p4_audio_mixer_t mixer;
+    p4_achievement_catalog_t achievements;
+    CHECK(start_game_without_signal_scan(
+        &instance, state, &mixer, &achievements));
+
+    buttons_scene_change(&instance, 0U, P4_BUTTON_UP);
+    CHECK(s_signal_scan.requests == 0U);
+    buttons_scene_change(&instance, 0U, P4_BUTTON_A);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_A, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(latest_tone_frequency(&mixer) == 330U);
+
+    advance_idle_ms(&instance, 500U);
+    bool victory_started = false;
+    for (unsigned strike = 0U; strike < 16U && !victory_started; ++strike) {
+        if (strike != 0U) {
+            advance_idle_ms(&instance, 400U);
+        }
+        tap(&instance, 60U, 180U);
+        victory_started = latest_tone_frequency(&mixer) == 988U;
+    }
+    CHECK(victory_started);
+    CHECK(achievements.count == 0U);
+    advance_idle_ms(&instance, 884U);
+    CHECK(achievements.count == 0U);
+    settle_scene_transition(&instance);
+
+    CHECK(buttons(&instance, 0U, P4_BUTTON_A, 16U) ==
+          P4_GAME_CONTINUE);
+    settle_scene_transition(&instance);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_A, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(latest_tone_frequency(&mixer) != 330U);
+
+    CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
+          P4_GAME_CONTINUE);
+    buttons_scene_change(&instance, 0U, P4_BUTTON_A);
+    CHECK(buttons(&instance, 0U, P4_BUTTON_A, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(latest_tone_frequency(&mixer) == 330U);
+
+    p4_game_instance_stop(&instance);
+    free(state);
+}
+
+static void test_signal_training_trait_coverage(void)
+{
+    static const uint64_t tokens[] = {
+        UINT64_C(0x00123456789abcde),
+        UINT64_C(0x3ff0000002445678),
+        UINT64_C(0x1020304050607080),
+        UINT64_C(0x8877665544332211),
+        UINT64_C(0x55aa33cc77ee0011),
+    };
+    static const int8_t strengths[] = {-62, -59, -56, -52, -48};
+    static const uint8_t channels[] = {1U, 6U, 11U, 36U, 149U};
+    static const uint8_t flags[] = {
+        P4_GAME_SIGNAL_SIMULATED,
+        P4_GAME_SIGNAL_PROTECTED | P4_GAME_SIGNAL_SIMULATED,
+        P4_GAME_SIGNAL_SIMULATED,
+        P4_GAME_SIGNAL_PROTECTED | P4_GAME_SIGNAL_SIMULATED,
+        P4_GAME_SIGNAL_HIDDEN | P4_GAME_SIGNAL_SIMULATED,
+    };
+    bool attacks[BYTE_BUDDY_SIGNAL_ATTACK_COUNT] = {false};
+    bool passives[BYTE_BUDDY_SIGNAL_PASSIVE_COUNT] = {false};
+    bool arenas[BYTE_BUDDY_SIGNAL_ARENA_COUNT] = {false};
+    unsigned pulse_count = 0U;
+    unsigned weave_count = 0U;
+    for (size_t index = 0U;
+         index < sizeof(tokens) / sizeof(tokens[0]); ++index) {
+        const byte_buddy_signal_genome_t genome =
+            byte_buddy_signal_genome(tokens[index]);
+        const byte_buddy_signal_encounter_t encounter =
+            byte_buddy_signal_encounter(
+                tokens[index], strengths[index], channels[index],
+                flags[index]);
+        CHECK(encounter.attack < BYTE_BUDDY_SIGNAL_ATTACK_COUNT);
+        CHECK(encounter.passive < BYTE_BUDDY_SIGNAL_PASSIVE_COUNT);
+        attacks[encounter.attack] = true;
+        passives[encounter.passive] = true;
+        CHECK(encounter.arena < BYTE_BUDDY_SIGNAL_ARENA_COUNT);
+        arenas[encounter.arena] = true;
+        if (byte_buddy_signal_battle_pattern(genome) ==
+            BYTE_BUDDY_BATTLE_PULSE_RUSH) {
+            ++pulse_count;
+        } else {
+            ++weave_count;
+        }
+    }
+    for (size_t index = 0U; index < BYTE_BUDDY_SIGNAL_ATTACK_COUNT;
+         ++index) {
+        CHECK(attacks[index]);
+    }
+    for (size_t index = 0U; index < BYTE_BUDDY_SIGNAL_PASSIVE_COUNT;
+         ++index) {
+        CHECK(passives[index]);
+    }
+    for (size_t index = BYTE_BUDDY_SIGNAL_ARENA_HEAVY;
+         index < BYTE_BUDDY_SIGNAL_ARENA_COUNT; ++index) {
+        CHECK(arenas[index]);
+    }
+    CHECK(!arenas[BYTE_BUDDY_SIGNAL_ARENA_STEADY]);
+    CHECK(pulse_count >= 2U);
+    CHECK(weave_count >= 2U);
+}
+
+static void test_signal_stalled_read_timeout(void)
+{
+    void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+    uint16_t *const pixels = calloc(
+        P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT,
+        sizeof(*pixels));
+    CHECK(state != NULL && pixels != NULL);
+    if (state == NULL || pixels == NULL) {
+        free(state);
+        free(pixels);
+        return;
+    }
+    p4_game_instance_t instance;
+    p4_audio_mixer_t mixer;
+    p4_achievement_catalog_t achievements;
+    CHECK(start_game(&instance, state, &mixer, &achievements));
+
+    CHECK(buttons(&instance, 0U, P4_BUTTON_UP, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(s_signal_scan.requests == 1U);
+    s_signal_scan.snapshot.status = P4_GAME_SIGNAL_SCANNING;
+    advance_idle_ms(&instance, TEST_SIGNAL_SCAN_TIMEOUT_MS - 1U);
+    p4_game_surface_t surface = {
+        .pixels = pixels,
+        .stride_pixels = P4_GAME_SURFACE_WIDTH,
+        .width = P4_GAME_SURFACE_WIDTH,
+        .height = P4_GAME_SURFACE_HEIGHT,
+    };
+    CHECK(p4_game_instance_render(&instance, &surface));
+    CHECK(pixels[90U * P4_GAME_SURFACE_WIDTH + 70U] !=
+          UINT16_C(0xf81f));
+
+    advance_idle_ms(&instance, 1U);
+    CHECK(p4_game_instance_render(&instance, &surface));
+    CHECK(pixels[90U * P4_GAME_SURFACE_WIDTH + 70U] ==
+          UINT16_C(0xf81f));
+
+    CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
+          P4_GAME_CONTINUE);
+    CHECK(s_signal_scan.requests == 2U);
+    CHECK(p4_game_instance_render(&instance, &surface));
+    CHECK(pixels[90U * P4_GAME_SURFACE_WIDTH + 70U] !=
+          UINT16_C(0xf81f));
+
+    p4_game_instance_stop(&instance);
+    free(pixels);
+    free(state);
+}
+
+static void test_signal_hunt_interrupts_pending_play(void)
+{
+    {
+        void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+        CHECK(state != NULL);
+        if (state == NULL) {
+            return;
+        }
+        p4_game_instance_t instance;
+        p4_audio_mixer_t mixer;
+        p4_achievement_catalog_t achievements;
+        CHECK(start_game(&instance, state, &mixer, &achievements));
+
+        CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
+              P4_GAME_CONTINUE);
+        CHECK(s_signal_scan.requests == 0U);
+        CHECK(buttons(&instance, 0U, P4_BUTTON_UP, 16U) ==
+              P4_GAME_CONTINUE);
+        CHECK(s_signal_scan.requests == 1U);
+        advance_idle_ms(&instance, TEST_REACTION_DURATION_MS + 500U);
+        buttons_scene_change(&instance, 0U, P4_BUTTON_B);
+        advance_idle_ms(&instance, TEST_REACTION_DURATION_MS + 500U);
+        buttons_scene_change(&instance, 0U, P4_BUTTON_UP);
+        CHECK(s_signal_scan.requests == 2U);
+
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    {
+        void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+        CHECK(state != NULL);
+        if (state == NULL) {
+            return;
+        }
+        p4_game_instance_t instance;
+        p4_audio_mixer_t mixer;
+        p4_achievement_catalog_t achievements;
+        CHECK(start_game(&instance, state, &mixer, &achievements));
+
+        tap(&instance, 100U, 145U);
+        CHECK(s_signal_scan.requests == 0U);
+        tap(&instance, 70U, 180U);
+        CHECK(s_signal_scan.requests == 1U);
+
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    {
+        void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+        CHECK(state != NULL);
+        if (state == NULL) {
+            return;
+        }
+        p4_game_instance_t instance;
+        p4_audio_mixer_t mixer;
+        p4_achievement_catalog_t achievements;
+        CHECK(start_game(&instance, state, &mixer, &achievements));
+
+        CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
+              P4_GAME_CONTINUE);
+        advance_idle_ms(&instance, TEST_REACTION_DURATION_MS - 1U);
+        CHECK(s_signal_scan.requests == 0U);
+        CHECK(buttons(&instance, 0U, P4_BUTTON_UP, 1U) ==
+              P4_GAME_CONTINUE);
+        CHECK(s_signal_scan.requests == 1U);
+
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+
+    {
+        const byte_buddy_save_profile_t profile = {
+            .hunger = 72U,
+            .joy = 68U,
+            .hygiene = 75U,
+            .energy = 70U,
+            .coins = 4U,
+            .care_actions = 7U,
+        };
+        uint8_t payload[BYTE_BUDDY_SAVE_PAYLOAD_BYTES] = {0};
+        CHECK(byte_buddy_save_encode(
+                  &profile, payload, sizeof(payload)) == sizeof(payload));
+        fake_save_t save = {0};
+        void *const state = calloc(1U, p4_byte_buddy_game.state_bytes);
+        CHECK(state != NULL);
+        if (state == NULL) {
+            return;
+        }
+        p4_game_instance_t instance;
+        p4_audio_mixer_t mixer;
+        p4_achievement_catalog_t achievements;
+        CHECK(start_game_with_save(
+            &instance, state, &save, true,
+            payload, sizeof(payload), BYTE_BUDDY_SAVE_SCHEMA_VERSION, 1U,
+            &mixer, &achievements));
+
+        CHECK(buttons(&instance, 0U, P4_BUTTON_START, 16U) ==
+              P4_GAME_CONTINUE);
+        CHECK(buttons(&instance, 0U, P4_BUTTON_UP, 16U) ==
+              P4_GAME_CONTINUE);
+        CHECK(s_signal_scan.requests == 0U);
+        advance_idle_ms(&instance, TEST_EVOLUTION_FX_MS - 17U);
+        CHECK(s_signal_scan.requests == 0U);
+        advance_idle_ms(&instance, 1U);
+        CHECK(s_signal_scan.requests == 1U);
+        advance_idle_ms(&instance, TEST_REACTION_DURATION_MS + 500U);
+        CHECK(s_signal_scan.requests == 1U);
+
+        p4_game_instance_stop(&instance);
+        free(state);
+    }
+}
+
 static uint64_t encounter_test_token(uint16_t recipe)
 {
     static const uint16_t rarity_rolls[4] = {256U, 64U, 8U, 0U};
@@ -3710,6 +4024,10 @@ int main(void)
     test_signal_paging_integration();
     test_signal_busy_preserves_results();
     test_initial_signal_busy_backoff();
+    test_signal_training_fallback();
+    test_signal_training_trait_coverage();
+    test_signal_stalled_read_timeout();
+    test_signal_hunt_interrupts_pending_play();
     test_signal_encounter_derivation();
     test_signal_combat_math();
     test_signal_battle_patterns();

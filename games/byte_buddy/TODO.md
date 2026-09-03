@@ -4,6 +4,29 @@ This is the working list for the Dragon game's fluidity, pacing, progression,
 and new art. Keep gameplay changes deterministic and bounded on the 320x200
 P4 Game API surface.
 
+## v4.3.1 Signal Hunt repair
+
+- [x] Keep Signal Hunt playable without the optional OS scan capability by
+      loading five plainly labeled offline drills through the complete authored
+      signal-creature and battle renderer.
+- [x] Cover both battle modes, all four attacks, all four passives, and all four
+      channel arenas in the bounded training roster.
+- [x] Isolate drill completion from real Link history, lineage, DNA, Sparks,
+      growth, saves, and persistent signal achievements; make **Reset Drill**
+      replay the roster honestly.
+- [x] Bound accepted scans to five seconds, ignore late stale SCANNING
+      snapshots after timeout, and provide an explicit retry state.
+- [x] Buffer Signal Hunt navigation across Play reaction completion and queued
+      growth ceremonies without rolling back the already committed care action.
+- [x] Add sanitizer regressions for no-capability play, drill completion/reset,
+      trait coverage, stale-SCANNING timeout/retry, controller/touch interruption,
+      reaction-boundary input, and growth-ceremony input.
+- [x] Render and inspect the training list, tracker, and battle at 320x200.
+- [x] Reproduce the v4.3.1 `.P4G` and unchanged v4.3 `.P4R` byte-identically
+      twice, record their exact identities, and pass the host package gates.
+- [ ] Install the matched v4.3.1 `.P4G` with the unchanged v4.3 `.P4R` through
+      the guarded H2 transfer route, then complete named tablet acceptance.
+
 ## v4.3 full action and hatch art
 
 - [x] Generate and visually inspect twelve original 4-by-4 masters: one
@@ -50,10 +73,10 @@ P4 Game API surface.
       care growth/counts, upgrades, Style, and general achievements while
       excluding all signal identity, history, lineage, growth, achievements,
       and Sparks.
-- [ ] Build and independently verify the matched v4.2 `.P4G`/`.P4R` pair; record
+- [x] Build and independently verify the matched v4.2 `.P4G`/`.P4R` pair; record
       exact package sizes and hashes before transfer.
-- [ ] Complete named human SDL acceptance, then use the H1 File Transfer app for
-      the paired canary install and retained-log physical-tablet acceptance.
+- [ ] Complete named human SDL acceptance, then use the guarded H2 full-bundle
+      route for the paired canary install and retained-log tablet acceptance.
 
 ## Historical graphics-polish v4.1 candidate
 

@@ -70,6 +70,9 @@ add_test(
         "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-signals.ppm"
         "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-track.ppm"
         "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-battle.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-training.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-training-track.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-training-battle.ppm"
 )
 
 add_test(
