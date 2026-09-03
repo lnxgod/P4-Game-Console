@@ -273,12 +273,14 @@ static bool test_setup_deal_draw_and_win(void)
     CHECK(state.player_count == 2U);
     CHECK(state.human_player_count == 1U);
     CHECK(state.cpu_mask == UINT8_C(0x02));
-    CHECK(p4_rummy_adjust_human_players(&state, true));
-    CHECK(state.human_player_count == 2U && state.cpu_mask == 0U);
-    CHECK(p4_rummy_adjust_human_players(&state, true));
+    CHECK(p4_rummy_adjust_offline_players(&state, true));
     CHECK(state.player_count == 3U);
-    CHECK(p4_rummy_adjust_human_players(&state, true));
+    CHECK(state.human_player_count == 1U);
+    CHECK(state.cpu_mask == UINT8_C(0x06));
+    CHECK(p4_rummy_adjust_offline_players(&state, true));
     CHECK(state.player_count == 4U);
+    CHECK(state.human_player_count == 1U);
+    CHECK(state.cpu_mask == UINT8_C(0x0e));
     CHECK(p4_rummy_begin_round(&state));
     CHECK(state.phase == P4_RUMMY_PHASE_DRAW);
     CHECK(state.discard_count == 1U);
@@ -324,9 +326,6 @@ static bool test_cpu_and_local_lifecycle(void)
     CHECK(state.phase == P4_RUMMY_PHASE_SETUP);
     CHECK(update_button(&instance, P4_BUTTON_A));
     CHECK(state.phase == P4_RUMMY_PHASE_DRAW);
-    CHECK(state.pass_required);
-    CHECK(update_button(&instance, P4_BUTTON_A));
-    CHECK(!state.pass_required);
     CHECK(update_button(&instance, P4_BUTTON_A));
     CHECK(state.phase == P4_RUMMY_PHASE_DISCARD);
     CHECK(update_button(&instance, P4_BUTTON_A));
@@ -367,7 +366,9 @@ static bool test_cpu_and_local_lifecycle(void)
         &touch_instance, &p4_p4_rummy_game, &services,
         &touch_state, sizeof(touch_state)));
     CHECK(tap(&touch_instance, 180U, 102U));
-    CHECK(touch_state.human_player_count == 2U);
+    CHECK(touch_state.player_count == 3U);
+    CHECK(touch_state.human_player_count == 1U);
+    CHECK(touch_state.cpu_mask == UINT8_C(0x06));
     const p4_game_input_t exit_touch = {
         .touch_valid = true,
         .touch_count = 1U,
@@ -481,7 +482,9 @@ static bool test_two_player_network_cpu_fill_and_peer_loss(void)
     CHECK(!states[1].network_mode);
     CHECK(states[1].peer_lost_fallback);
     CHECK(states[1].phase == P4_RUMMY_PHASE_SETUP);
-    CHECK(states[1].human_player_count == 2U);
+    CHECK(states[1].human_player_count == 1U);
+    CHECK(states[1].player_count == 2U);
+    CHECK(states[1].cpu_mask == UINT8_C(0x02));
     stop_network_table(2U, instances);
     return true;
 }

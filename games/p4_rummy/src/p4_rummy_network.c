@@ -219,7 +219,6 @@ static bool apply_snapshot(p4_rummy_state_t *state,
     state->network_request_pending = false;
     state->network_retry_ms = 0U;
     state->cpu_think_ms = 0U;
-    state->pass_required = false;
     return true;
 }
 
@@ -305,10 +304,8 @@ bool p4_rummy_network_begin(p4_game_context_t *context,
 
 static void fall_back_to_local(p4_rummy_state_t *state)
 {
-    const uint8_t humans = state->network_player_count >= 1U
-        ? state->network_player_count : 1U;
     const uint32_t seed = state->rng ^ UINT32_C(0x4c4f5354);
-    p4_rummy_reset_lobby(state, humans, seed);
+    p4_rummy_reset_lobby(state, 1U, seed);
     state->network_error = true;
     state->peer_lost_fallback = true;
 }

@@ -11,19 +11,32 @@
 #include "p4/input.h"
 
 enum {
-    COLOR_BACKGROUND = 0x08a4,
+    COLOR_BACKGROUND = 0x0865,
     COLOR_FELT = 0x0448,
     COLOR_FELT_DARK = 0x02c5,
+    COLOR_FELT_LIGHT = 0x0549,
+    COLOR_RAIL = 0x69e6,
+    COLOR_RAIL_DARK = 0x30c3,
     COLOR_PANEL = 0x18e7,
+    COLOR_PANEL_LIGHT = 0x29aa,
     COLOR_PANEL_EDGE = 0x4a8d,
     COLOR_TEXT = 0xffff,
+    COLOR_CREAM = 0xffbd,
     COLOR_MUTED = 0xb596,
     COLOR_ACCENT = 0x5fea,
     COLOR_GOLD = 0xfe60,
+    COLOR_GOLD_DARK = 0xa3c0,
     COLOR_RED = 0xf986,
+    COLOR_CLUB = 0x04ad,
     COLOR_BLACK = 0x0000,
     COLOR_CARD = 0xffdf,
+    COLOR_CARD_SHADOW = 0x0183,
     COLOR_CARD_BACK = 0x51bf,
+    COLOR_CARD_BACK_DARK = 0x2812,
+    SUIT_HEART_GLYPH = 0x03,
+    SUIT_DIAMOND_GLYPH = 0x04,
+    SUIT_CLUB_GLYPH = 0x05,
+    SUIT_SPADE_GLYPH = 0x06,
     EXIT_X = 2,
     EXIT_Y = 2,
     EXIT_W = 42,
@@ -76,58 +89,235 @@ static size_t append_unsigned(char *text, size_t capacity, size_t length,
     return length;
 }
 
-static char rank_character(uint8_t card)
+static void rank_text(uint8_t card, char text[3])
 {
     const uint8_t rank = (uint8_t)(card % 13U);
     if (rank <= 7U) {
-        return (char)('2' + rank);
+        text[0] = (char)('2' + rank);
+        text[1] = '\0';
+        return;
     }
-    static const char high[] = {'T', 'J', 'Q', 'K', 'A'};
-    return high[rank - 8U];
+    if (rank == 8U) {
+        text[0] = '1';
+        text[1] = '0';
+        text[2] = '\0';
+        return;
+    }
+    static const char high[] = {'J', 'Q', 'K', 'A'};
+    text[0] = high[rank - 9U];
+    text[1] = '\0';
 }
 
-static char suit_character(uint8_t card)
+static uint8_t suit_glyph(uint8_t card)
 {
-    static const char suits[] = {'C', 'D', 'H', 'S'};
+    static const uint8_t suits[] = {
+        SUIT_CLUB_GLYPH,
+        SUIT_DIAMOND_GLYPH,
+        SUIT_HEART_GLYPH,
+        SUIT_SPADE_GLYPH,
+    };
     return suits[card / 13U];
 }
 
 static uint16_t suit_color(uint8_t card)
 {
     const uint8_t suit = (uint8_t)(card / 13U);
+    if (suit == 0U) {
+        return COLOR_CLUB;
+    }
     return suit == 1U || suit == 2U ? COLOR_RED : COLOR_BLACK;
+}
+
+static void fill_rounded_rect(p4_game_surface_t *surface,
+                              int x, int y, int width, int height,
+                              int radius, uint16_t color)
+{
+    if (radius <= 0 || width <= radius * 2 || height <= radius * 2) {
+        p4_draw_fill_rect(surface, x, y, width, height, color);
+        return;
+    }
+    p4_draw_fill_rect(surface, x + radius, y,
+                      width - radius * 2, height, color);
+    p4_draw_fill_rect(surface, x, y + radius,
+                      width, height - radius * 2, color);
+    p4_draw_fill_circle(surface, x + radius, y + radius, radius, color);
+    p4_draw_fill_circle(surface, x + width - radius - 1,
+                        y + radius, radius, color);
+    p4_draw_fill_circle(surface, x + radius,
+                        y + height - radius - 1, radius, color);
+    p4_draw_fill_circle(surface, x + width - radius - 1,
+                        y + height - radius - 1, radius, color);
+}
+
+static void draw_suit(p4_game_surface_t *surface, int x, int y,
+                      uint8_t glyph, uint16_t color,
+                      uint16_t background, unsigned height)
+{
+    const bool large = height == P4_DRAW_CP437_FULL_HEIGHT;
+    const int width = large ? 12 : 8;
+    p4_draw_fill_rect(surface, x, y, width, (int)height, background);
+
+    if (!large) {
+        switch (glyph) {
+        case SUIT_HEART_GLYPH:
+            p4_draw_fill_circle(surface, x + 2, y + 2, 2, color);
+            p4_draw_fill_circle(surface, x + 5, y + 2, 2, color);
+            p4_draw_fill_rect(surface, x + 1, y + 2, 6, 2, color);
+            p4_draw_fill_rect(surface, x + 2, y + 4, 4, 2, color);
+            p4_draw_fill_rect(surface, x + 3, y + 6, 2, 1, color);
+            p4_draw_pixel(surface, x + 3, y, background);
+            p4_draw_pixel(surface, x + 4, y, background);
+            p4_draw_pixel(surface, x + 3, y + 1, background);
+            p4_draw_pixel(surface, x + 4, y + 1, background);
+            break;
+        case SUIT_DIAMOND_GLYPH:
+            p4_draw_pixel(surface, x + 3, y + 1, color);
+            p4_draw_fill_rect(surface, x + 2, y + 2, 3, 1, color);
+            p4_draw_fill_rect(surface, x + 1, y + 3, 5, 2, color);
+            p4_draw_fill_rect(surface, x + 2, y + 5, 3, 1, color);
+            p4_draw_pixel(surface, x + 3, y + 6, color);
+            break;
+        case SUIT_CLUB_GLYPH:
+            p4_draw_fill_circle(surface, x + 4, y + 1, 1, color);
+            p4_draw_fill_circle(surface, x + 2, y + 4, 1, color);
+            p4_draw_fill_circle(surface, x + 6, y + 4, 1, color);
+            p4_draw_fill_rect(surface, x + 4, y + 2, 1, 4, color);
+            p4_draw_fill_rect(surface, x + 3, y + 5, 3, 2, color);
+            p4_draw_fill_rect(surface, x + 2, y + 7, 5, 1, color);
+            break;
+        case SUIT_SPADE_GLYPH:
+        default:
+            p4_draw_pixel(surface, x + 3, y, color);
+            p4_draw_fill_rect(surface, x + 2, y + 1, 3, 1, color);
+            p4_draw_fill_rect(surface, x + 1, y + 2, 5, 2, color);
+            p4_draw_fill_rect(surface, x, y + 4, 7, 1, color);
+            p4_draw_fill_rect(surface, x + 3, y + 4, 2, 3, color);
+            p4_draw_fill_rect(surface, x + 2, y + 6, 4, 1, color);
+            break;
+        }
+        return;
+    }
+
+    switch (glyph) {
+    case SUIT_HEART_GLYPH:
+        p4_draw_fill_circle(surface, x + 3, y + 4, 3, color);
+        p4_draw_fill_circle(surface, x + 8, y + 4, 3, color);
+        p4_draw_fill_rect(surface, x + 1, y + 4, 10, 3, color);
+        p4_draw_fill_rect(surface, x + 2, y + 7, 8, 3, color);
+        p4_draw_fill_rect(surface, x + 3, y + 10, 6, 2, color);
+        p4_draw_fill_rect(surface, x + 4, y + 12, 4, 2, color);
+        p4_draw_fill_rect(surface, x + 5, y + 14, 2, 1, color);
+        p4_draw_fill_rect(surface, x + 5, y + 1, 2, 3, background);
+        break;
+    case SUIT_DIAMOND_GLYPH:
+        p4_draw_fill_rect(surface, x + 5, y + 1, 2, 1, color);
+        p4_draw_fill_rect(surface, x + 4, y + 2, 4, 2, color);
+        p4_draw_fill_rect(surface, x + 3, y + 4, 6, 2, color);
+        p4_draw_fill_rect(surface, x + 1, y + 6, 10, 3, color);
+        p4_draw_fill_rect(surface, x + 3, y + 9, 6, 2, color);
+        p4_draw_fill_rect(surface, x + 4, y + 11, 4, 2, color);
+        p4_draw_fill_rect(surface, x + 5, y + 13, 2, 1, color);
+        break;
+    case SUIT_CLUB_GLYPH:
+        p4_draw_fill_circle(surface, x + 6, y + 3, 2, color);
+        p4_draw_fill_circle(surface, x + 3, y + 8, 2, color);
+        p4_draw_fill_circle(surface, x + 9, y + 8, 2, color);
+        p4_draw_fill_rect(surface, x + 5, y + 5, 3, 8, color);
+        p4_draw_fill_rect(surface, x + 3, y + 13, 7, 2, color);
+        break;
+    case SUIT_SPADE_GLYPH:
+    default:
+        p4_draw_fill_rect(surface, x + 5, y + 1, 2, 1, color);
+        p4_draw_fill_rect(surface, x + 4, y + 2, 4, 2, color);
+        p4_draw_fill_rect(surface, x + 3, y + 4, 6, 2, color);
+        p4_draw_fill_circle(surface, x + 3, y + 8, 3, color);
+        p4_draw_fill_circle(surface, x + 8, y + 8, 3, color);
+        p4_draw_fill_rect(surface, x + 1, y + 7, 10, 2, color);
+        p4_draw_fill_rect(surface, x + 5, y + 9, 3, 5, color);
+        p4_draw_fill_rect(surface, x + 3, y + 13, 7, 2, color);
+        break;
+    }
 }
 
 static void draw_card(p4_game_surface_t *surface, int x, int y,
                       uint8_t card, bool visible, bool selected)
 {
     const uint16_t edge = selected ? COLOR_GOLD : COLOR_TEXT;
+    fill_rounded_rect(surface, x + 2, y + 3,
+                      CARD_W, CARD_H, 3, COLOR_CARD_SHADOW);
     if (!visible || card == P4_RUMMY_NO_CARD) {
-        p4_draw_fill_rect(surface, x, y, CARD_W, CARD_H, COLOR_CARD_BACK);
-        p4_draw_rect(surface, x, y, CARD_W, CARD_H, edge);
-        p4_draw_rect(surface, x + 4, y + 4, CARD_W - 8,
-                     CARD_H - 8, COLOR_ACCENT);
-        p4_draw_text(surface, x + 10, y + 16, "R", COLOR_TEXT, 1U, 1U);
+        fill_rounded_rect(surface, x, y,
+                          CARD_W, CARD_H, 3, edge);
+        fill_rounded_rect(surface, x + 1, y + 1,
+                          CARD_W - 2, CARD_H - 2, 2, COLOR_CARD_BACK_DARK);
+        p4_draw_rect(surface, x + 4, y + 4,
+                     CARD_W - 8, CARD_H - 8, COLOR_ACCENT);
+        p4_draw_rect(surface, x + 6, y + 6,
+                     CARD_W - 12, CARD_H - 12, COLOR_GOLD_DARK);
+        for (int dot_y = y + 9; dot_y <= y + 31; dot_y += 7) {
+            p4_draw_pixel(surface, x + 8, dot_y, COLOR_CARD_BACK);
+            p4_draw_pixel(surface, x + 21, dot_y + 2, COLOR_CARD_BACK);
+        }
+        draw_suit(surface, x + 11, y + 13, SUIT_DIAMOND_GLYPH,
+                  COLOR_CREAM, COLOR_CARD_BACK_DARK,
+                  P4_DRAW_CP437_FULL_HEIGHT);
         return;
     }
-    p4_draw_fill_rect(surface, x, y, CARD_W, CARD_H, COLOR_CARD);
-    p4_draw_rect(surface, x, y, CARD_W, CARD_H, edge);
+    fill_rounded_rect(surface, x, y, CARD_W, CARD_H, 3, edge);
+    fill_rounded_rect(surface, x + 1, y + 1,
+                      CARD_W - 2, CARD_H - 2, 2, COLOR_CARD);
     if (selected) {
         p4_draw_rect(surface, x + 1, y + 1, CARD_W - 2,
                      CARD_H - 2, COLOR_GOLD);
     }
-    char rank[2] = {rank_character(card), '\0'};
-    char suit[2] = {suit_character(card), '\0'};
+    char rank[3] = {0};
+    rank_text(card, rank);
+    const bool ten = (card % 13U) == 8U;
     const uint16_t color = suit_color(card);
-    p4_draw_text(surface, x + 3, y + 3, rank, color, 1U, 1U);
-    p4_draw_text(surface, x + 17, y + 25, suit, color, 1U, 1U);
+    p4_draw_text(surface, x + (ten ? 3 : 4), y + 3,
+                 rank, color, 1U, ten ? 2U : 1U);
+    draw_suit(surface, x + (ten ? 19 : 17), y + 3,
+              suit_glyph(card), color,
+              COLOR_CARD, P4_DRAW_CP437_COMPACT_HEIGHT);
+    draw_suit(surface, x + 11, y + 15, suit_glyph(card), color,
+              COLOR_CARD, P4_DRAW_CP437_FULL_HEIGHT);
+    p4_draw_text(surface, x + (ten ? 16 : 21), y + 32,
+                 rank, color, 1U, ten ? 2U : 1U);
 }
 
 static void draw_exit(p4_game_surface_t *surface)
 {
-    p4_draw_fill_rect(surface, EXIT_X, EXIT_Y, EXIT_W, EXIT_H, COLOR_PANEL);
-    p4_draw_rect(surface, EXIT_X, EXIT_Y, EXIT_W, EXIT_H, COLOR_MUTED);
-    p4_draw_text(surface, 7, 5, "EXIT", COLOR_TEXT, 1U, 4U);
+    fill_rounded_rect(surface, EXIT_X, EXIT_Y,
+                      EXIT_W, EXIT_H, 2, COLOR_GOLD_DARK);
+    fill_rounded_rect(surface, EXIT_X + 1, EXIT_Y + 1,
+                      EXIT_W - 2, EXIT_H - 2, 1, COLOR_PANEL);
+    p4_draw_text(surface, 8, 5, "EXIT", COLOR_CREAM, 1U, 4U);
+}
+
+static void draw_table_base(p4_game_surface_t *surface)
+{
+    p4_draw_clear(surface, COLOR_BACKGROUND);
+    p4_draw_fill_rect(surface, 0, 18, 320, 182, COLOR_RAIL_DARK);
+    p4_draw_fill_rect(surface, 3, 21, 314, 176, COLOR_RAIL);
+    p4_draw_fill_rect(surface, 6, 24, 308, 170, COLOR_FELT);
+    for (int y = 31; y < 194; y += 14) {
+        p4_draw_fill_rect(surface, 7, y, 306, 1, COLOR_FELT_LIGHT);
+    }
+    for (int x = 14; x < 310; x += 22) {
+        p4_draw_pixel(surface, x, 27 + (x % 3), COLOR_GOLD_DARK);
+        p4_draw_pixel(surface, x + 7, 190 - (x % 4), COLOR_GOLD_DARK);
+    }
+    p4_draw_rect(surface, 5, 23, 310, 172, COLOR_GOLD_DARK);
+}
+
+static void draw_title_bar(p4_game_surface_t *surface)
+{
+    draw_suit(surface, 116, 1, SUIT_HEART_GLYPH,
+              COLOR_RED, COLOR_BACKGROUND, P4_DRAW_CP437_FULL_HEIGHT);
+    p4_draw_text(surface, 130, 6, "P4 RUMMY", COLOR_GOLD, 1U, 8U);
+    draw_suit(surface, 191, 1, SUIT_SPADE_GLYPH,
+              COLOR_CREAM, COLOR_BACKGROUND, P4_DRAW_CP437_FULL_HEIGHT);
+    draw_exit(surface);
 }
 
 static void player_label(char text[12], const p4_rummy_state_t *state,
@@ -150,13 +340,28 @@ static void draw_player_strip(p4_game_surface_t *surface,
         const bool current = player == state->current_player &&
             state->phase != P4_RUMMY_PHASE_SETUP &&
             state->phase != P4_RUMMY_PHASE_ROUND_OVER;
-        p4_draw_fill_rect(surface, x, 22, width, 16, COLOR_PANEL);
-        p4_draw_rect(surface, x, 22, width, 16,
-                     current ? COLOR_GOLD : COLOR_PANEL_EDGE);
+        const uint16_t panel = current ? COLOR_PANEL_LIGHT : COLOR_PANEL;
+        fill_rounded_rect(surface, x + 1, 23, width, 16,
+                          2, COLOR_CARD_SHADOW);
+        fill_rounded_rect(surface, x, 22, width, 16,
+                          2, current ? COLOR_GOLD : COLOR_PANEL_EDGE);
+        fill_rounded_rect(surface, x + 1, 23, width - 2, 14,
+                          1, panel);
+        if (current) {
+            p4_draw_fill_rect(surface, x + 2, 25, 2, 10, COLOR_GOLD);
+        }
         char label[12] = {0};
         player_label(label, state, player);
-        p4_draw_text(surface, x + 6, 27, label,
+        p4_draw_text(surface, x + 7, 27, label,
                      current ? COLOR_GOLD : COLOR_TEXT, 1U, 7U);
+        static const uint8_t player_suits[] = {
+            SUIT_HEART_GLYPH, SUIT_SPADE_GLYPH,
+            SUIT_DIAMOND_GLYPH, SUIT_CLUB_GLYPH,
+        };
+        const uint16_t icon_color =
+            player == 0U || player == 2U ? COLOR_RED : COLOR_CREAM;
+        draw_suit(surface, x + 62, 26, player_suits[player],
+                  icon_color, panel, P4_DRAW_CP437_COMPACT_HEIGHT);
     }
 }
 
@@ -194,8 +399,6 @@ static void draw_hand(p4_game_surface_t *surface,
     }
     const uint8_t count = state->hand_counts[player];
     const int start_x = hand_start_x(count);
-    const bool hide = !state->network_mode &&
-        state->human_player_count > 1U && state->pass_required;
     for (uint8_t index = 0U; index < count; ++index) {
         const bool selected = player == state->current_player &&
             p4_rummy_local_turn(state) &&
@@ -203,25 +406,39 @@ static void draw_hand(p4_game_surface_t *surface,
             index == state->selected_card;
         draw_card(surface, start_x + (int)index * 33,
                   selected ? 142 : 147, state->hands[player][index],
-                  !hide, selected);
+                  true, selected);
     }
 }
 
 static void draw_setup(p4_game_surface_t *surface,
                        const p4_rummy_state_t *state)
 {
-    p4_draw_clear(surface, COLOR_BACKGROUND);
-    p4_draw_fill_rect(surface, 24, 21, 272, 158, COLOR_FELT_DARK);
-    p4_draw_rect(surface, 24, 21, 272, 158, COLOR_ACCENT);
-    p4_draw_text(surface, 88, 35, "P4 RUMMY", COLOR_GOLD, 2U, 8U);
-    p4_draw_text(surface, 68, 62, "MELD YOUR WHOLE HAND TO WIN",
-                 COLOR_MUTED, 1U, 27U);
+    draw_table_base(surface);
+    draw_title_bar(surface);
+    fill_rounded_rect(surface, 19, 29, 282, 157,
+                      5, COLOR_CARD_SHADOW);
+    fill_rounded_rect(surface, 17, 27, 282, 157,
+                      5, COLOR_GOLD_DARK);
+    fill_rounded_rect(surface, 19, 29, 278, 153,
+                      4, COLOR_FELT_DARK);
 
-    p4_draw_fill_rect(surface, SETUP_X, SETUP_Y,
-                      SETUP_W, SETUP_H, COLOR_PANEL);
-    p4_draw_rect(surface, SETUP_X, SETUP_Y,
-                 SETUP_W, SETUP_H, COLOR_GOLD);
-    p4_draw_text(surface, 59, 101, "<", COLOR_ACCENT, 1U, 1U);
+    draw_card(surface, 35, 38, 12U, true, false);
+    draw_card(surface, 255, 38, 51U, true, false);
+    p4_draw_text(surface, 112, 38, "P4 RUMMY", COLOR_GOLD, 2U, 8U);
+    draw_suit(surface, 105, 66, SUIT_CLUB_GLYPH,
+              COLOR_CREAM, COLOR_FELT_DARK, P4_DRAW_CP437_COMPACT_HEIGHT);
+    draw_suit(surface, 207, 66, SUIT_SPADE_GLYPH,
+              COLOR_CREAM, COLOR_FELT_DARK, P4_DRAW_CP437_COMPACT_HEIGHT);
+    p4_draw_text(surface, 116, 67, "SETS  +  RUNS",
+                 COLOR_MUTED, 1U, 13U);
+
+    fill_rounded_rect(surface, SETUP_X + 1, SETUP_Y + 2,
+                      SETUP_W, SETUP_H, 3, COLOR_CARD_SHADOW);
+    fill_rounded_rect(surface, SETUP_X, SETUP_Y,
+                      SETUP_W, SETUP_H, 3, COLOR_GOLD);
+    fill_rounded_rect(surface, SETUP_X + 1, SETUP_Y + 1,
+                      SETUP_W - 2, SETUP_H - 2, 2, COLOR_PANEL);
+    p4_draw_text(surface, 61, 101, "<", COLOR_GOLD, 1U, 1U);
     char setting[28] = {0};
     if (state->network_mode) {
         size_t length = append_text(setting, sizeof(setting), 0U,
@@ -230,27 +447,31 @@ static void draw_setup(p4_game_surface_t *surface,
             (unsigned)(state->player_count - state->network_player_count));
     } else {
         size_t length = append_text(setting, sizeof(setting), 0U,
-                                    "HUMAN PLAYERS  ");
+                                    "CPU OPPONENTS  ");
         (void)append_unsigned(setting, sizeof(setting), length,
-                              state->human_player_count);
+                              (unsigned)(state->player_count - 1U));
     }
     p4_draw_text(surface, state->network_mode ? 103 : 88, 101,
                  setting, COLOR_TEXT, 1U,
                  state->network_mode ? 12U : 16U);
-    p4_draw_text(surface, 253, 101, ">", COLOR_ACCENT, 1U, 1U);
+    p4_draw_text(surface, 253, 101, ">", COLOR_GOLD, 1U, 1U);
 
     const bool can_start = !state->network_mode ||
         state->network_role == P4_GAME_MULTIPLAYER_ROLE_HOST;
-    p4_draw_fill_rect(surface, START_X, START_Y,
-                      START_W, START_H, can_start ? COLOR_ACCENT : COLOR_PANEL);
-    p4_draw_rect(surface, START_X, START_Y,
-                 START_W, START_H, COLOR_TEXT);
+    fill_rounded_rect(surface, START_X + 2, START_Y + 2,
+                      START_W, START_H, 4, COLOR_CARD_SHADOW);
+    fill_rounded_rect(surface, START_X, START_Y,
+                      START_W, START_H, 4,
+                      can_start ? COLOR_GOLD : COLOR_PANEL_EDGE);
+    fill_rounded_rect(surface, START_X + 2, START_Y + 2,
+                      START_W - 4, START_H - 4, 2,
+                      can_start ? COLOR_ACCENT : COLOR_PANEL);
     p4_draw_text(surface, can_start ? 119 : 103, 147,
                  can_start ? "A  DEAL" : "WAIT FOR HOST",
                  can_start ? COLOR_BLACK : COLOR_MUTED, 1U,
                  can_start ? 7U : 13U);
     if (state->human_player_count == 1U && !state->network_mode) {
-        p4_draw_text(surface, 100, 171, "SOLO = YOU VS CPU",
+        p4_draw_text(surface, 100, 170, "P4MP = 2-4 HUMANS",
                      COLOR_MUTED, 1U, 17U);
     } else if (state->network_mode) {
         char linked[24] = {0};
@@ -259,18 +480,15 @@ static void draw_setup(p4_game_surface_t *surface,
         length = append_unsigned(linked, sizeof(linked), length,
                                  state->network_player_count);
         (void)append_text(linked, sizeof(linked), length, " HUMANS");
-        p4_draw_text(surface, 98, 171, linked, COLOR_MUTED, 1U, 19U);
+        p4_draw_text(surface, 98, 170, linked, COLOR_MUTED, 1U, 19U);
     }
-    draw_exit(surface);
 }
 
 static void draw_table(p4_game_surface_t *surface,
                        const p4_rummy_state_t *state)
 {
-    p4_draw_clear(surface, COLOR_BACKGROUND);
-    p4_draw_fill_rect(surface, 0, 18, 320, 182, COLOR_FELT);
-    p4_draw_text(surface, 133, 6, "RUMMY", COLOR_GOLD, 1U, 5U);
-    draw_exit(surface);
+    draw_table_base(surface);
+    draw_title_bar(surface);
     draw_player_strip(surface, state);
 
     const bool stock_selected = state->phase == P4_RUMMY_PHASE_DRAW &&
@@ -279,14 +497,24 @@ static void draw_table(p4_game_surface_t *surface,
     const bool discard_selected = state->phase == P4_RUMMY_PHASE_DRAW &&
         state->draw_source == P4_RUMMY_DRAW_DISCARD &&
         p4_rummy_local_turn(state);
+    fill_rounded_rect(surface, STOCK_X - 6, PILE_Y - 5,
+                      CARD_W + 12, CARD_H + 10, 4, COLOR_FELT_DARK);
+    fill_rounded_rect(surface, DISCARD_X - 6, PILE_Y - 5,
+                      CARD_W + 12, CARD_H + 10, 4, COLOR_FELT_DARK);
+    p4_draw_rect(surface, STOCK_X - 5, PILE_Y - 4,
+                 CARD_W + 10, CARD_H + 8,
+                 stock_selected ? COLOR_GOLD : COLOR_GOLD_DARK);
+    p4_draw_rect(surface, DISCARD_X - 5, PILE_Y - 4,
+                 CARD_W + 10, CARD_H + 8,
+                 discard_selected ? COLOR_GOLD : COLOR_GOLD_DARK);
     draw_card(surface, STOCK_X, PILE_Y, P4_RUMMY_NO_CARD,
               false, stock_selected);
     const uint8_t discard_top = state->discard_count == 0U
         ? P4_RUMMY_NO_CARD : state->discard[state->discard_count - 1U];
     draw_card(surface, DISCARD_X, PILE_Y, discard_top,
               discard_top != P4_RUMMY_NO_CARD, discard_selected);
-    p4_draw_text(surface, 107, 112, "STOCK", COLOR_MUTED, 1U, 5U);
-    p4_draw_text(surface, 175, 112, "DISCARD", COLOR_MUTED, 1U, 7U);
+    p4_draw_text(surface, 108, 113, "STOCK", COLOR_CREAM, 1U, 5U);
+    p4_draw_text(surface, 176, 113, "DISCARD", COLOR_CREAM, 1U, 7U);
 
     char action[30] = {0};
     uint16_t action_color = COLOR_TEXT;
@@ -307,44 +535,42 @@ static void draw_table(p4_game_surface_t *surface,
         (void)append_text(action, sizeof(action), 0U,
                           "LEFT/RIGHT CARD  A DISCARD");
     }
-    p4_draw_text(surface, 66, 126, action, action_color, 1U, 28U);
+    fill_rounded_rect(surface, 52, 123, 216, 20,
+                      3, COLOR_CARD_SHADOW);
+    fill_rounded_rect(surface, 51, 122, 216, 20,
+                      3, COLOR_PANEL_EDGE);
+    fill_rounded_rect(surface, 52, 123, 214, 18,
+                      2, COLOR_PANEL);
+    p4_draw_text(surface, 66, 128, action, action_color, 1U, 28U);
     draw_hand(surface, state);
-}
-
-static void draw_pass_overlay(p4_game_surface_t *surface,
-                              const p4_rummy_state_t *state)
-{
-    p4_draw_fill_rect(surface, 39, 53, 242, 94, COLOR_BACKGROUND);
-    p4_draw_rect(surface, 39, 53, 242, 94, COLOR_GOLD);
-    char player[22] = {0};
-    size_t length = append_text(player, sizeof(player), 0U, "PASS TO PLAYER ");
-    (void)append_unsigned(player, sizeof(player), length,
-                          (unsigned)state->current_player + 1U);
-    p4_draw_text(surface, 86, 75, player, COLOR_TEXT, 1U, 16U);
-    p4_draw_text(surface, 101, 102, "A  REVEAL HAND",
-                 COLOR_GOLD, 1U, 14U);
-    p4_draw_text(surface, 85, 125, "KEEP CARDS PRIVATE",
-                 COLOR_MUTED, 1U, 18U);
 }
 
 static void draw_round_over(p4_game_surface_t *surface,
                             const p4_rummy_state_t *state)
 {
     draw_table(surface, state);
-    p4_draw_fill_rect(surface, 52, 48, 216, 88, COLOR_BACKGROUND);
-    p4_draw_rect(surface, 52, 48, 216, 88, COLOR_GOLD);
+    fill_rounded_rect(surface, 55, 51, 216, 88,
+                      5, COLOR_CARD_SHADOW);
+    fill_rounded_rect(surface, 51, 47, 216, 88,
+                      5, COLOR_GOLD);
+    fill_rounded_rect(surface, 53, 49, 212, 84,
+                      4, COLOR_BACKGROUND);
+    draw_suit(surface, 67, 61, SUIT_DIAMOND_GLYPH,
+              COLOR_RED, COLOR_BACKGROUND, P4_DRAW_CP437_FULL_HEIGHT);
+    draw_suit(surface, 245, 61, SUIT_CLUB_GLYPH,
+              COLOR_CREAM, COLOR_BACKGROUND, P4_DRAW_CP437_FULL_HEIGHT);
     char winner[24] = {0};
     size_t length = append_text(winner, sizeof(winner), 0U,
         p4_rummy_player_is_cpu(state, state->winner) ? "CPU" : "PLAYER ");
     length = append_unsigned(winner, sizeof(winner), length,
                              (unsigned)state->winner + 1U);
     (void)append_text(winner, sizeof(winner), length, " WINS!");
-    p4_draw_text(surface, 103, 68, winner, COLOR_GOLD, 1U, 16U);
-    p4_draw_text(surface, 77, 92, "HAND IS ALL SETS + RUNS",
+    p4_draw_text(surface, 103, 65, winner, COLOR_GOLD, 1U, 16U);
+    p4_draw_text(surface, 77, 90, "HAND IS ALL SETS + RUNS",
                  COLOR_TEXT, 1U, 23U);
     const bool can_restart = !state->network_mode ||
         state->network_role == P4_GAME_MULTIPLAYER_ROLE_HOST;
-    p4_draw_text(surface, can_restart ? 106 : 104, 116,
+    p4_draw_text(surface, can_restart ? 106 : 104, 113,
                  can_restart ? "A  NEW ROUND" : "WAIT FOR HOST",
                  COLOR_MUTED, 1U, can_restart ? 12U : 13U);
 }
@@ -353,7 +579,7 @@ static bool adjust_setup(p4_rummy_state_t *state, bool increase)
 {
     const bool changed = state->network_mode
         ? p4_rummy_adjust_cpu_seats(state, increase)
-        : p4_rummy_adjust_human_players(state, increase);
+        : p4_rummy_adjust_offline_players(state, increase);
     if (changed) {
         p4_rummy_mark_snapshot_dirty(state);
     }
@@ -392,12 +618,6 @@ static void handle_touch(p4_game_context_t *context,
             if (p4_rummy_begin_round(state)) {
                 p4_rummy_mark_snapshot_dirty(state);
             }
-        }
-        return;
-    }
-    if (state->pass_required) {
-        if (point_in(x, y, 39, 53, 242, 94)) {
-            state->pass_required = false;
         }
         return;
     }
@@ -496,10 +716,6 @@ static p4_game_result_t game_update(
             p4_rummy_begin_round(state)) {
             p4_rummy_mark_snapshot_dirty(state);
         }
-    } else if (state->pass_required) {
-        if ((pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
-            state->pass_required = false;
-        }
     } else if (state->phase == P4_RUMMY_PHASE_ROUND_OVER) {
         if ((pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
             (void)p4_rummy_request_new_round(context, state);
@@ -580,9 +796,6 @@ static bool game_render(p4_game_context_t *context,
         draw_round_over(surface, state);
     } else {
         draw_table(surface, state);
-        if (state->pass_required) {
-            draw_pass_overlay(surface, state);
-        }
     }
     if (state->peer_lost_fallback) {
         p4_draw_fill_rect(surface, 57, 181, 206, 15, COLOR_BACKGROUND);

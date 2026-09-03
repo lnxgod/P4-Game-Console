@@ -1,10 +1,11 @@
 # P4 Rummy
 
-P4 Rummy is an original, quick-playing Rummy variant for one to four human
-players. A one-player game adds one CPU opponent. Two to four people can play
-locally by passing the console, or join an OS-owned multiplayer room from
-separate consoles. A two-console room can add up to two host-controlled CPU
-seats; the manifest is ready for future four-player Console OS transports.
+P4 Rummy is an original, quick-playing Rummy variant for one to four players.
+Offline play puts one person against one to three CPU opponents and starts the
+table immediately without a pass-and-play gate. Human multiplayer uses an
+OS-owned P4MP room on separate consoles. A two-console room can add up to two
+host-controlled CPU seats; the manifest is ready for future four-player
+Console OS transports.
 
 ## Rules
 
@@ -22,9 +23,8 @@ The CPU keeps melds and prefers draws or discards that lower its deadwood.
 
 ## Controls
 
-- Setup: Left/Right changes the number of human players. In a network room,
-  the host uses it to add CPU seats. A or Start deals.
-- Pass-and-play: hand the console to the named player, then press A to reveal.
+- Setup: Left/Right changes the number of CPU opponents. In a network room,
+  the host uses it to add CPU seats. A or Start deals immediately.
 - Draw: Left/Right, Up/Down, or B switches between stock and discard. A draws.
 - Discard: Left/Right selects a card. A discards it.
 - Touch: tap a pile to draw; tap a hand card to select it and tap it again to
@@ -37,7 +37,7 @@ Console OS owns Host/Join, room discovery, compatibility, physical links, and
 the start barrier. The cartridge starts from the connected session and never
 opens BLE, UART, USB, display, audio, or storage hardware. The host validates
 turn intents and broadcasts a complete 55-byte table snapshot. If the link is
-lost, the game returns to a same-device setup using the connected human count.
+lost, the game returns to offline setup with one person and one CPU opponent.
 
 ## Host checks
 

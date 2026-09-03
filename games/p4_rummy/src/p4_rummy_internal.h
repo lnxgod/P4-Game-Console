@@ -72,14 +72,13 @@ typedef struct {
     bool network_snapshot_dirty;
     bool network_request_pending;
     bool touch_was_down;
-    bool pass_required;
     bool peer_lost_fallback;
 } p4_rummy_state_t;
 
 void p4_rummy_reset_lobby(p4_rummy_state_t *state,
                           uint8_t human_players, uint32_t seed);
-bool p4_rummy_adjust_human_players(p4_rummy_state_t *state,
-                                   bool increase);
+bool p4_rummy_adjust_offline_players(p4_rummy_state_t *state,
+                                     bool increase);
 bool p4_rummy_adjust_cpu_seats(p4_rummy_state_t *state, bool increase);
 bool p4_rummy_begin_round(p4_rummy_state_t *state);
 bool p4_rummy_draw(p4_rummy_state_t *state, uint8_t player,

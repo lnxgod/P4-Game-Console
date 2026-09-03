@@ -213,20 +213,29 @@ void p4_rummy_reset_lobby(p4_rummy_state_t *state,
     state->revision = 1U;
 }
 
-bool p4_rummy_adjust_human_players(p4_rummy_state_t *state,
-                                   bool increase)
+bool p4_rummy_adjust_offline_players(p4_rummy_state_t *state,
+                                     bool increase)
 {
     if (state == NULL || state->phase != P4_RUMMY_PHASE_SETUP ||
         state->network_mode) {
         return false;
     }
-    uint8_t humans = state->human_player_count;
-    humans = increase
-        ? (humans == P4_RUMMY_MAX_PLAYERS ? 1U : (uint8_t)(humans + 1U))
-        : (humans == 1U ? P4_RUMMY_MAX_PLAYERS : (uint8_t)(humans - 1U));
-    state->human_player_count = humans;
-    state->player_count = humans == 1U ? 2U : humans;
-    state->cpu_mask = humans == 1U ? UINT8_C(0x02) : 0U;
+    uint8_t players = state->player_count;
+    if (players < P4_RUMMY_MIN_PLAYERS ||
+        players > P4_RUMMY_MAX_PLAYERS) {
+        players = P4_RUMMY_MIN_PLAYERS;
+    }
+    players = increase
+        ? (players == P4_RUMMY_MAX_PLAYERS
+               ? P4_RUMMY_MIN_PLAYERS : (uint8_t)(players + 1U))
+        : (players == P4_RUMMY_MIN_PLAYERS
+               ? P4_RUMMY_MAX_PLAYERS : (uint8_t)(players - 1U));
+    state->human_player_count = 1U;
+    state->player_count = players;
+    state->cpu_mask = 0U;
+    for (uint8_t player = 1U; player < players; ++player) {
+        state->cpu_mask |= (uint8_t)(UINT8_C(1) << player);
+    }
     ++state->revision;
     return true;
 }
@@ -324,8 +333,6 @@ bool p4_rummy_begin_round(p4_rummy_state_t *state)
     state->turn_count = 0U;
     state->cpu_think_ms = 0U;
     state->network_request_pending = false;
-    state->pass_required = !state->network_mode &&
-        !p4_rummy_player_is_cpu(state, state->current_player);
     ++state->round_number;
     ++state->revision;
     return true;
@@ -408,11 +415,9 @@ bool p4_rummy_discard_card(p4_rummy_state_t *state, uint8_t player,
             state->hands[player], state->hand_counts[player])) {
         state->winner = player;
         state->phase = P4_RUMMY_PHASE_ROUND_OVER;
-        state->pass_required = false;
     } else if (state->turn_count >= P4_RUMMY_TURN_LIMIT) {
         state->winner = lowest_deadwood_player(state);
         state->phase = P4_RUMMY_PHASE_ROUND_OVER;
-        state->pass_required = false;
     } else {
         state->current_player = (uint8_t)(
             (state->current_player + 1U) % state->player_count);
@@ -420,8 +425,6 @@ bool p4_rummy_discard_card(p4_rummy_state_t *state, uint8_t player,
         state->draw_source = P4_RUMMY_DRAW_STOCK;
         state->selected_card = 0U;
         state->cpu_think_ms = 0U;
-        state->pass_required = !state->network_mode &&
-            !p4_rummy_player_is_cpu(state, state->current_player);
     }
     ++state->revision;
     return true;
@@ -435,7 +438,7 @@ bool p4_rummy_local_turn(const p4_rummy_state_t *state)
         return false;
     }
     if (!state->network_mode) {
-        return !state->pass_required;
+        return true;
     }
     return state->network_started &&
         state->current_player == state->local_player_slot;
