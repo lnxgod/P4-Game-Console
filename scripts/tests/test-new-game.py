@@ -62,6 +62,14 @@ def main() -> None:
         assert dry_report["launcher_id"] == 101
         assert dry_report["optional_capabilities"] == ["audio-tone", "save"]
 
+        capability_created = run(
+            CREATOR, "Save Test", "--optional-capability", "save",
+            "--games-root", str(games))
+        assert capability_created.returncode == 0, capability_created.stderr
+        capability_source = (games / "save_test/src/save_test.c").read_text()
+        assert "P4_GAME_CAP_SAVE" in capability_source
+        assert "P4_GAME_CAP_AUDIO_TONE" not in capability_source
+
         duplicate_capability = run(
             CREATOR, "Bad Save", "--optional-capability", "save",
             "--optional-capability", "save",
@@ -108,6 +116,29 @@ def main() -> None:
         multiplayer_check = run(
             GENERATOR, "--games-root", str(games), "--check")
         assert multiplayer_check.returncode == 0, multiplayer_check.stderr
+
+        high_res_created = run(
+            CREATOR, "Card Table", "--high-res",
+            "--games-root", str(games))
+        assert high_res_created.returncode == 0, high_res_created.stderr
+        high_res_manifest = json.loads(
+            (games / "card_table/game.json").read_text())
+        assert "video-highres" in high_res_manifest[
+            "optional_capabilities"]
+        high_res_source = (games / "card_table/src/card_table.c").read_text()
+        assert "P4_GAME_CAP_VIDEO_HIGH_RES" in high_res_source
+        high_res_compile = subprocess.run(
+            ["cc", "-std=c11", "-Wall", "-Wextra", "-Wpedantic",
+             "-Wconversion", "-Wshadow", "-Werror",
+             "-I", str(ROOT / "components/p4_game_api/include"),
+             "-c", str(games / "card_table/src/card_table.c"),
+             "-o", str(pathlib.Path(temporary) / "card_table.o")],
+            cwd=ROOT, check=False, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        assert high_res_compile.returncode == 0, high_res_compile.stderr
+        high_res_check = run(
+            GENERATOR, "--games-root", str(games), "--check")
+        assert high_res_check.returncode == 0, high_res_check.stderr
 
         invalid_folder = run(
             CREATOR, "Bad Folder", "--folder", "GAMES/TOO/DEEP",

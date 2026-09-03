@@ -41,6 +41,7 @@ CAPABILITIES = {
     "multiplayer-session": "P4_GAME_CAP_MULTIPLAYER_SESSION",
     "module-handoff": "P4_GAME_CAP_MODULE_HANDOFF",
     "vector-scenes": "P4_GAME_CAP_VECTOR_SCENES",
+    "video-highres": "P4_GAME_CAP_VIDEO_HIGH_RES",
 }
 
 

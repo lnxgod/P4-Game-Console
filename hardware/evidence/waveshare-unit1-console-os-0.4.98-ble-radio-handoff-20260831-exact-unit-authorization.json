@@ -1,0 +1,115 @@
+{
+  "schema": 1,
+  "active": true,
+  "authorization_id": "waveshare-unit1-console-os-0.4.98-ble-radio-handoff-20260831",
+  "authorized_at_utc": "2026-09-01T03:49:08Z",
+  "authorization_basis": "Operator asked to make the multiplayer process smoother after the pink console repeatedly crashed when BLE multiplayer started while its saved BLE controller was reconnecting.",
+  "scope": "One application-partition-only Console OS successor install on the already backed-up Waveshare 4.3 unit1, permanently labeled pink / node B289. Bootloader, partition table, OTA data, NVS, microSD contents, and every other flash range are read-only.",
+  "source": {
+    "commit": "c17d0040060bd5ae5040ab3ad3f5e32ef2bf5b0d",
+    "branch": "main",
+    "toolchain_lock": "ESP-IDF 5.5.3 at 2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "uncommitted_exact_artifact": true,
+    "handoff_component_sha256": {
+      "CMakeLists.txt": "91b2265941655bb13aa98879cf17977c8e604d6d0f552394c48a6e3a26c4b7f1",
+      "ble_radio_handoff.h": "41b83f1e2d9f61181821baa145712c8aa16e353d98440db0e3090450d6515a72",
+      "ble_radio_handoff.c": "a6e7a40f79ec1cf95e69e891b96bbd609d2e330c464c92e314a53975358b63f1",
+      "test_CMakeLists.txt": "04e2000ccdc07f706b2eebd18333fa8de47fb8acaec00ffad9e2cff1ec86d64f",
+      "test_ble_radio_handoff.c": "d516885ae0d983ae8eede1476c7c778ff044c12cc8f9e9b7e05c86c2da302179"
+    },
+    "console_os_main_sha256": "df38a37aa74b41fa5caef173f61d58bc404706d10dde7477c7d67e413dff14f5",
+    "platform_gamepad_ble_sha256": "bc58967996ee8aa8bf1383c52e907645f3c021cd20f5be2437426ce1d73f2f99"
+  },
+  "board": {
+    "unit_label": "unit1-pink-B289",
+    "color_label": "pink",
+    "node_suffix": "B289",
+    "profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "recorded_port": "/dev/cu.wchusbserial5C371865781",
+    "chip": "ESP32-P4",
+    "revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-factory-before-doom-20260815.bin",
+    "bytes": 33554432,
+    "sha256": "e07627f2f000a9a8416d06a4a6d8e5e2c9f8bcda297bf56f35d35f0004a3217e",
+    "manifest": "hardware/backups/manifest.json"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.98-ble-handoff-ebc0418/bootloader.bin",
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.98-ble-handoff-ebc0418/partition-table.bin",
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "application_offset": "0x20000"
+  },
+  "predecessor": {
+    "version": "0.4.97",
+    "application_bytes": 1840288,
+    "application_sha256": "724d6b3878458b48dfe7c17f5859e26257340b42635581dba61f7cbf96f79faf",
+    "preserve_span_bytes": 1843200,
+    "evidence": "live exact-unit app-header and app-span read on 2026-08-31; the guarded install preserves the full successor span before writing"
+  },
+  "candidate": {
+    "version": "0.4.98",
+    "release_directory": "hardware/local-state/waveshare-two-unit-console-os-0.4.98-ble-handoff-ebc0418",
+    "application": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.98-ble-handoff-ebc0418/p4_console_os.bin",
+      "bytes": 1841600,
+      "sha256": "ebc0418ba6414ed99f67fcb3cc59eaa0525cbbbc8f0e6875d89b3e262f5b76ea",
+      "padded_mutation_bytes": 1843200
+    },
+    "elf": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.98-ble-handoff-ebc0418/p4_console_os.elf",
+      "bytes": 21851208,
+      "sha256": "1d16cbd17590d01f0f91d08039f08379c9242c8ca53eef0c56d3fa50d7cae340"
+    },
+    "update_package": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.98-ble-handoff-ebc0418/P4UPDATE.P4U",
+      "bytes": 1841856,
+      "sha256": "bdd45b1beffafa554b8a0a4a5f966e636ed8f9693a47f2ca042808bb7b012e78"
+    },
+    "sdkconfig": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.98-ble-handoff-ebc0418/sdkconfig",
+      "bytes": 95926,
+      "sha256": "1520c48b59841a81c1134fedb0469d74803e2ede0bf011bf54c66a3f7eaa9cc2"
+    },
+    "dependencies_lock": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.98-ble-handoff-ebc0418/dependencies.lock",
+      "bytes": 3230,
+      "sha256": "02d604c6abda80f1d264f7b2a57fde151a35fdd5437bbeb52819f8cdb7e76606"
+    },
+    "lord_cartridge": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.98-ble-handoff-ebc0418/P4_AIR_HOCKEY.P4G",
+      "version": "1.0.5",
+      "bytes": 142560,
+      "sha256": "8b46272df1a7a4a127153d2bc16ff177d83376750e0b955b4f5f71b27a61ed60"
+    }
+  },
+  "safety": {
+    "firmware_write_scope": "one application-partition write at 0x20000",
+    "content_write_scope": "none",
+    "live_identity_required": true,
+    "factory_backup_required": true,
+    "unchanged_bootloader_required": true,
+    "unchanged_partition_table_required": true,
+    "live_predecessor_required": true,
+    "complete_successor_span_preimage_required": true,
+    "complete_successor_span_readback_required": true,
+    "automatic_rollback_authorized": true,
+    "generic_idf_flash_authorized": false,
+    "full_project_flash_authorized": false,
+    "erase_authorized": false,
+    "formatting_authorized": false,
+    "micro_sd_write_authorized": false
+  }
+}

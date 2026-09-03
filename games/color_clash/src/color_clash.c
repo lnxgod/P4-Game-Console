@@ -65,6 +65,79 @@ static const uint8_t s_color_name_chars[COLOR_CLASH_COLOR_COUNT] = {
     3U, 4U, 4U, 4U,
 };
 
+static bool high_resolution_surface(const p4_game_surface_t *surface)
+{
+    return surface != NULL &&
+        surface->width == P4_GAME_SURFACE_HIGH_RES_WIDTH &&
+        surface->height == P4_GAME_SURFACE_HIGH_RES_HEIGHT;
+}
+
+static int scale_coordinate(const p4_game_surface_t *surface, int value)
+{
+    if (!high_resolution_surface(surface)) {
+        return value;
+    }
+    const int numerator = value * 12;
+    return numerator >= 0 ? (int)((numerator + 2) / 5)
+                          : -(int)((-numerator + 2) / 5);
+}
+
+static int scale_extent(const p4_game_surface_t *surface,
+                        int origin, int extent)
+{
+    return scale_coordinate(surface, origin + extent) -
+        scale_coordinate(surface, origin);
+}
+
+static void high_res_fill_rect(p4_game_surface_t *surface,
+                               int x, int y, int width, int height,
+                               uint16_t color)
+{
+    p4_draw_fill_rect(surface, scale_coordinate(surface, x),
+                      scale_coordinate(surface, y),
+                      scale_extent(surface, x, width),
+                      scale_extent(surface, y, height), color);
+}
+
+static void high_res_rect(p4_game_surface_t *surface,
+                          int x, int y, int width, int height,
+                          uint16_t color)
+{
+    high_res_fill_rect(surface, x, y, width, 1, color);
+    high_res_fill_rect(surface, x, y + height - 1, width, 1, color);
+    high_res_fill_rect(surface, x, y, 1, height, color);
+    high_res_fill_rect(surface, x + width - 1, y, 1, height, color);
+}
+
+static void high_res_fill_circle(p4_game_surface_t *surface,
+                                 int center_x, int center_y, int radius,
+                                 uint16_t color)
+{
+    p4_draw_fill_circle(surface,
+                        scale_coordinate(surface, center_x),
+                        scale_coordinate(surface, center_y),
+                        scale_coordinate(surface, radius), color);
+}
+
+static void high_res_text(p4_game_surface_t *surface,
+                          int x, int y, const char *value,
+                          uint16_t color, unsigned scale,
+                          size_t max_characters)
+{
+    unsigned output_scale = scale;
+    if (high_resolution_surface(surface)) {
+        output_scale = (scale * 12U + 2U) / 5U;
+    }
+    p4_draw_text(surface, scale_coordinate(surface, x),
+                 scale_coordinate(surface, y), value, color,
+                 output_scale, max_characters);
+}
+
+#define p4_draw_fill_rect high_res_fill_rect
+#define p4_draw_rect high_res_rect
+#define p4_draw_fill_circle high_res_fill_circle
+#define p4_draw_text high_res_text
+
 static size_t append_unsigned(char *text, size_t capacity, size_t length,
                               unsigned value)
 {
@@ -674,18 +747,36 @@ static void draw_symbol(p4_game_surface_t *surface, int x, int y,
 {
     const color_clash_rank_t rank = color_clash_card_rank(card);
     if (rank == COLOR_CLASH_GAMECHANGER) {
-        const int logo_w = large ? COLOR_CLASH_LOGO_LARGE_WIDTH
-                                 : COLOR_CLASH_LOGO_SMALL_WIDTH;
-        const int logo_h = large ? COLOR_CLASH_LOGO_LARGE_HEIGHT
-                                 : COLOR_CLASH_LOGO_SMALL_HEIGHT;
-        const int card_w = large ? COLOR_CLASH_FRAME_LARGE_WIDTH
-                                 : COLOR_CLASH_FRAME_SMALL_WIDTH;
-        const int card_h = large ? COLOR_CLASH_FRAME_LARGE_HEIGHT
-                                 : COLOR_CLASH_FRAME_SMALL_HEIGHT;
+        const bool high_res = high_resolution_surface(surface);
+        const int logo_w = high_res
+            ? (large ? COLOR_CLASH_LOGO_HIGH_RES_LARGE_WIDTH
+                     : COLOR_CLASH_LOGO_HIGH_RES_SMALL_WIDTH)
+            : (large ? COLOR_CLASH_LOGO_LARGE_WIDTH
+                     : COLOR_CLASH_LOGO_SMALL_WIDTH);
+        const int logo_h = high_res
+            ? (large ? COLOR_CLASH_LOGO_HIGH_RES_LARGE_HEIGHT
+                     : COLOR_CLASH_LOGO_HIGH_RES_SMALL_HEIGHT)
+            : (large ? COLOR_CLASH_LOGO_LARGE_HEIGHT
+                     : COLOR_CLASH_LOGO_SMALL_HEIGHT);
+        const int card_w = high_res
+            ? (large ? COLOR_CLASH_FRAME_HIGH_RES_LARGE_WIDTH
+                     : COLOR_CLASH_FRAME_HIGH_RES_SMALL_WIDTH)
+            : (large ? COLOR_CLASH_FRAME_LARGE_WIDTH
+                     : COLOR_CLASH_FRAME_SMALL_WIDTH);
+        const int card_h = high_res
+            ? (large ? COLOR_CLASH_FRAME_HIGH_RES_LARGE_HEIGHT
+                     : COLOR_CLASH_FRAME_HIGH_RES_SMALL_HEIGHT)
+            : (large ? COLOR_CLASH_FRAME_LARGE_HEIGHT
+                     : COLOR_CLASH_FRAME_SMALL_HEIGHT);
         p4_draw_sprite_rgb565(
-            surface, x + (card_w - logo_w) / 2,
-            y + (card_h - logo_h) / 2,
-            large ? s_color_clash_logo_large : s_color_clash_logo_small,
+            surface,
+            scale_coordinate(surface, x) + (card_w - logo_w) / 2,
+            scale_coordinate(surface, y) + (card_h - logo_h) / 2,
+            high_res
+                ? (large ? s_color_clash_logo_high_res_large
+                         : s_color_clash_logo_high_res_small)
+                : (large ? s_color_clash_logo_large
+                         : s_color_clash_logo_small),
             (size_t)logo_w, (size_t)logo_h, (size_t)logo_w,
             true, COLOR_CLASH_SPRITE_CHROMA);
         return;
@@ -752,22 +843,38 @@ static void draw_card(p4_game_surface_t *surface, int x, int y,
                       uint8_t card, bool large, bool selected)
 {
     const unsigned frame = frame_for_card(card);
-    const int width = large ? COLOR_CLASH_FRAME_LARGE_WIDTH
-                            : COLOR_CLASH_FRAME_SMALL_WIDTH;
-    const int height = large ? COLOR_CLASH_FRAME_LARGE_HEIGHT
-                             : COLOR_CLASH_FRAME_SMALL_HEIGHT;
-    p4_draw_fill_rect(surface, x + 2, y + 3, width, height, COLOR_BLACK);
+    const bool high_res = high_resolution_surface(surface);
+    const int logical_width = large ? COLOR_CLASH_FRAME_LARGE_WIDTH
+                                    : COLOR_CLASH_FRAME_SMALL_WIDTH;
+    const int logical_height = large ? COLOR_CLASH_FRAME_LARGE_HEIGHT
+                                     : COLOR_CLASH_FRAME_SMALL_HEIGHT;
+    const int width = high_res
+        ? (large ? COLOR_CLASH_FRAME_HIGH_RES_LARGE_WIDTH
+                 : COLOR_CLASH_FRAME_HIGH_RES_SMALL_WIDTH)
+        : logical_width;
+    const int height = high_res
+        ? (large ? COLOR_CLASH_FRAME_HIGH_RES_LARGE_HEIGHT
+                 : COLOR_CLASH_FRAME_HIGH_RES_SMALL_HEIGHT)
+        : logical_height;
+    p4_draw_fill_rect(surface, x + 2, y + 3,
+                      logical_width, logical_height, COLOR_BLACK);
     p4_draw_sprite_rgb565(
-        surface, x, y,
-        large ? s_color_clash_frames_large[frame]
-              : s_color_clash_frames_small[frame],
+        surface, scale_coordinate(surface, x),
+        scale_coordinate(surface, y),
+        high_res
+            ? (large ? s_color_clash_frames_high_res_large[frame]
+                     : s_color_clash_frames_high_res_small[frame])
+            : (large ? s_color_clash_frames_large[frame]
+                     : s_color_clash_frames_small[frame]),
         (size_t)width, (size_t)height, (size_t)width,
         true, COLOR_CLASH_SPRITE_CHROMA);
     draw_symbol(surface, x, y, card, large);
     if (selected) {
-        p4_draw_rect(surface, x - 2, y - 2, width + 4, height + 4,
+        p4_draw_rect(surface, x - 2, y - 2,
+                     logical_width + 4, logical_height + 4,
                      COLOR_ACCENT);
-        p4_draw_rect(surface, x - 1, y - 1, width + 2, height + 2,
+        p4_draw_rect(surface, x - 1, y - 1,
+                     logical_width + 2, logical_height + 2,
                      COLOR_TEXT);
     }
 }
@@ -1198,7 +1305,7 @@ const p4_game_descriptor_t p4_color_clash_game = {
     .accent_rgb565 = UINT16_C(COLOR_ACCENT),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
-        P4_GAME_CAP_MULTIPLAYER_SESSION,
+        P4_GAME_CAP_MULTIPLAYER_SESSION | P4_GAME_CAP_VIDEO_HIGH_RES,
     .state_bytes = sizeof(color_clash_state_t),
     .start = game_start,
     .update = game_update,

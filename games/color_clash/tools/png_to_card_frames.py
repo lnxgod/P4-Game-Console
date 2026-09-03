@@ -8,7 +8,7 @@ import hashlib
 import struct
 from pathlib import Path
 
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageFilter
 
 
 SOURCE_SIZE = (1024, 1536)
@@ -20,6 +20,10 @@ SMALL_SIZE = (28, 42)
 LARGE_SIZE = (42, 62)
 SMALL_LOGO_SIZE = (15, 15)
 LARGE_LOGO_SIZE = (24, 24)
+HIGH_RES_SMALL_SIZE = (67, 101)
+HIGH_RES_LARGE_SIZE = (101, 149)
+HIGH_RES_SMALL_LOGO_SIZE = (36, 36)
+HIGH_RES_LARGE_LOGO_SIZE = (58, 58)
 
 # Hand-reviewed crop boxes in the generated 1024x1536 source. Each contains
 # exactly one card and intentionally drops the opaque generation backdrop.
@@ -49,8 +53,14 @@ def rgb888(value: int) -> tuple[int, int, int]:
 
 
 def rounded_frame(source: Image.Image, crop: tuple[int, int, int, int],
-                  size: tuple[int, int]) -> tuple[list[int], Image.Image]:
-    frame = source.crop(crop).resize(size, Image.Resampling.NEAREST).convert("RGBA")
+                  size: tuple[int, int], *, high_resolution: bool = False
+                  ) -> tuple[list[int], Image.Image]:
+    resampling = (Image.Resampling.LANCZOS if high_resolution
+                  else Image.Resampling.NEAREST)
+    frame = source.crop(crop).resize(size, resampling).convert("RGBA")
+    if high_resolution:
+        frame = frame.filter(
+            ImageFilter.UnsharpMask(radius=0.7, percent=160, threshold=3))
     mask = Image.new("L", size, 0)
     ImageDraw.Draw(mask).rounded_rectangle(
         (0, 0, size[0] - 1, size[1] - 1), radius=max(2, size[0] // 9), fill=255)
@@ -83,8 +93,14 @@ def load_logo(path: Path) -> Image.Image:
     return image
 
 
-def logo_values(logo: Image.Image, size: tuple[int, int]) -> tuple[list[int], Image.Image]:
-    sprite = logo.resize(size, Image.Resampling.NEAREST)
+def logo_values(logo: Image.Image, size: tuple[int, int], *,
+                high_resolution: bool = False) -> tuple[list[int], Image.Image]:
+    resampling = (Image.Resampling.LANCZOS if high_resolution
+                  else Image.Resampling.NEAREST)
+    sprite = logo.resize(size, resampling)
+    if high_resolution:
+        sprite = sprite.filter(
+            ImageFilter.UnsharpMask(radius=0.5, percent=140, threshold=2))
     values: list[int] = []
     pixels = sprite.load()
     for y in range(size[1]):
@@ -129,7 +145,7 @@ def emit_logo(lines: list[str], name: str, values: list[int],
 
 
 def convert(source_path: Path, logo_path: Path, output_path: Path,
-            preview_path: Path) -> None:
+            preview_path: Path, high_res_preview_path: Path | None) -> None:
     if sha256(source_path) != SOURCE_SHA256:
         raise ValueError("ImageGen source SHA-256 differs from reviewed atlas")
     if sha256(logo_path) != LOGO_SHA256:
@@ -139,17 +155,31 @@ def convert(source_path: Path, logo_path: Path, output_path: Path,
         raise ValueError(f"ImageGen source must be {SOURCE_SIZE}")
     small_values: list[list[int]] = []
     large_values: list[list[int]] = []
+    high_res_small_values: list[list[int]] = []
+    high_res_large_values: list[list[int]] = []
     large_previews: list[Image.Image] = []
+    high_res_large_previews: list[Image.Image] = []
     for crop in CROPS:
         small, _ = rounded_frame(source, crop, SMALL_SIZE)
         large, preview = rounded_frame(source, crop, LARGE_SIZE)
+        high_res_small, _ = rounded_frame(
+            source, crop, HIGH_RES_SMALL_SIZE, high_resolution=True)
+        high_res_large, high_res_preview = rounded_frame(
+            source, crop, HIGH_RES_LARGE_SIZE, high_resolution=True)
         small_values.append(small)
         large_values.append(large)
+        high_res_small_values.append(high_res_small)
+        high_res_large_values.append(high_res_large)
         large_previews.append(preview)
+        high_res_large_previews.append(high_res_preview)
 
     logo = load_logo(logo_path)
     small_logo, _ = logo_values(logo, SMALL_LOGO_SIZE)
     large_logo, large_logo_preview = logo_values(logo, LARGE_LOGO_SIZE)
+    high_res_small_logo, _ = logo_values(
+        logo, HIGH_RES_SMALL_LOGO_SIZE, high_resolution=True)
+    high_res_large_logo, high_res_large_logo_preview = logo_values(
+        logo, HIGH_RES_LARGE_LOGO_SIZE, high_resolution=True)
 
     lines = [
         "// SPDX-License-Identifier: MIT",
@@ -164,6 +194,14 @@ def convert(source_path: Path, logo_path: Path, output_path: Path,
         f"    COLOR_CLASH_LOGO_SMALL_HEIGHT = {SMALL_LOGO_SIZE[1]},",
         f"    COLOR_CLASH_LOGO_LARGE_WIDTH = {LARGE_LOGO_SIZE[0]},",
         f"    COLOR_CLASH_LOGO_LARGE_HEIGHT = {LARGE_LOGO_SIZE[1]},",
+        f"    COLOR_CLASH_FRAME_HIGH_RES_SMALL_WIDTH = {HIGH_RES_SMALL_SIZE[0]},",
+        f"    COLOR_CLASH_FRAME_HIGH_RES_SMALL_HEIGHT = {HIGH_RES_SMALL_SIZE[1]},",
+        f"    COLOR_CLASH_FRAME_HIGH_RES_LARGE_WIDTH = {HIGH_RES_LARGE_SIZE[0]},",
+        f"    COLOR_CLASH_FRAME_HIGH_RES_LARGE_HEIGHT = {HIGH_RES_LARGE_SIZE[1]},",
+        f"    COLOR_CLASH_LOGO_HIGH_RES_SMALL_WIDTH = {HIGH_RES_SMALL_LOGO_SIZE[0]},",
+        f"    COLOR_CLASH_LOGO_HIGH_RES_SMALL_HEIGHT = {HIGH_RES_SMALL_LOGO_SIZE[1]},",
+        f"    COLOR_CLASH_LOGO_HIGH_RES_LARGE_WIDTH = {HIGH_RES_LARGE_LOGO_SIZE[0]},",
+        f"    COLOR_CLASH_LOGO_HIGH_RES_LARGE_HEIGHT = {HIGH_RES_LARGE_LOGO_SIZE[1]},",
         "};",
         f"#define COLOR_CLASH_SPRITE_CHROMA UINT16_C(0x{CHROMA_KEY:04x})",
         "",
@@ -179,6 +217,18 @@ def convert(source_path: Path, logo_path: Path, output_path: Path,
     lines.append("")
     emit_logo(lines, "s_color_clash_logo_large", large_logo,
               *LARGE_LOGO_SIZE)
+    lines.append("")
+    emit_array(lines, "s_color_clash_frames_high_res_small",
+               high_res_small_values, *HIGH_RES_SMALL_SIZE)
+    lines.append("")
+    emit_array(lines, "s_color_clash_frames_high_res_large",
+               high_res_large_values, *HIGH_RES_LARGE_SIZE)
+    lines.append("")
+    emit_logo(lines, "s_color_clash_logo_high_res_small",
+              high_res_small_logo, *HIGH_RES_SMALL_LOGO_SIZE)
+    lines.append("")
+    emit_logo(lines, "s_color_clash_logo_high_res_large",
+              high_res_large_logo, *HIGH_RES_LARGE_LOGO_SIZE)
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -197,6 +247,25 @@ def convert(source_path: Path, logo_path: Path, output_path: Path,
     preview_path.parent.mkdir(parents=True, exist_ok=True)
     preview.save(preview_path, optimize=True)
 
+    if high_res_preview_path is not None:
+        high_res_preview = Image.new(
+            "RGBA", (3 * HIGH_RES_LARGE_SIZE[0] + 4 * gap,
+                     2 * HIGH_RES_LARGE_SIZE[1] + 3 * gap),
+            (7, 13, 24, 255))
+        for index, frame in enumerate(high_res_large_previews):
+            x = gap + (index % 3) * (HIGH_RES_LARGE_SIZE[0] + gap)
+            y = gap + (index // 3) * (HIGH_RES_LARGE_SIZE[1] + gap)
+            high_res_preview.alpha_composite(frame, (x, y))
+            if index == 5:
+                logo_x = x + (
+                    HIGH_RES_LARGE_SIZE[0] -
+                    HIGH_RES_LARGE_LOGO_SIZE[0]) // 2
+                logo_y = y + 46
+                high_res_preview.alpha_composite(
+                    high_res_large_logo_preview, (logo_x, logo_y))
+        high_res_preview_path.parent.mkdir(parents=True, exist_ok=True)
+        high_res_preview.save(high_res_preview_path, optimize=True)
+
 
 def main() -> int:
     parser = argparse.ArgumentParser()
@@ -204,8 +273,10 @@ def main() -> int:
     parser.add_argument("logo", type=Path)
     parser.add_argument("output", type=Path)
     parser.add_argument("preview", type=Path)
+    parser.add_argument("--high-res-preview", type=Path)
     args = parser.parse_args()
-    convert(args.source, args.logo, args.output, args.preview)
+    convert(args.source, args.logo, args.output, args.preview,
+            args.high_res_preview)
     return 0
 
 

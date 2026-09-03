@@ -1,0 +1,39 @@
+{
+  "schema": 1,
+  "format": "p4-native-elf-v1",
+  "api_version": 1,
+  "version": "1.1.1",
+  "package_file": "TEXAS_HOLDEM.P4G",
+  "component": "texas_holdem",
+  "sources": [
+    "texas_holdem.c",
+    "texas_holdem_logic.c",
+    "texas_holdem_network.c"
+  ],
+  "entry_symbol": "p4_texas_holdem_game",
+  "launcher_id": 117,
+  "id": "org.p4console.texas-holdem",
+  "title": "TEXAS HOLDEM",
+  "subtitle": "HUMANS + CPU POKER",
+  "folder": "GAMES/ARCADE",
+  "accent_rgb565": "0x07ec",
+  "required_capabilities": [
+    "video",
+    "controls"
+  ],
+  "optional_capabilities": [
+    "audio-tone",
+    "multiplayer-session"
+  ],
+  "multiplayer": {
+    "schema": 1,
+    "style": "turn-based",
+    "min_players": 2,
+    "max_players": 4,
+    "message_bytes": 63,
+    "protocol": 2
+  },
+  "license": "MIT",
+  "assets": "original-code-rendered-cards-and-table-only",
+  "enabled": true
+}

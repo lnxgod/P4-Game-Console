@@ -80,7 +80,11 @@ void p4_game_input_mapper_update(
     uint32_t digital_buttons,
     p4_game_input_t *out_input);
 
-/** Draw the standard Back/Start, D-pad, B, and A touch regions. */
+/**
+ * Draw the standard Back/Start, D-pad, B, and A touch regions. The artwork
+ * scales to either supported render surface while input remains normalized to
+ * the stable 320x200 coordinate space.
+ */
 void p4_game_draw_standard_controls(p4_game_surface_t *surface,
                                     uint16_t color,
                                     uint16_t active_color,

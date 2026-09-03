@@ -27,7 +27,7 @@ features and a full engine does not weaken the kid-facing sandbox:
 | Tier | Best for | Runtime and delivery |
 |---|---|---|
 | Open script cart | Small, readable, AI-remixable games | Lua source in `.P4CART`, 768x480 logical canvas, SD copy, and one- or multi-part QR payloads |
-| Native cartridge | Faster or more advanced original games | C against P4 Game API v1, packaged as storage-installed `.P4G`, with a stable 320x200 RGB565 game surface |
+| Native cartridge | Faster or more advanced original games | C against P4 Game API v1, packaged as storage-installed `.P4G`, with a portable 320x200 RGB565 surface and optional 768x480 high-res mode |
 | OS-integrated engine | Separately reviewed legacy ports such as Doom | Engine integration in Console OS plus legally supplied data; requires an OS build and is not a tradeable kid cartridge |
 
 QR cost estimation, splitting, validation, and exact reassembly are
@@ -71,7 +71,8 @@ they never own display, touch, audio, USB, SD, UART, or raw GPIO drivers.
 
 - `waveshare-esp32-p4-wifi6-touch-lcd-4.3` is the active 4.3 in console target.
   Its 480x800 ST7701 scanout is rotated into an 800x480 landscape console with
-  a native 768x480 OS viewport and stable 320x200 native-game surface. Games
+  a native 768x480 OS viewport. Games use portable 320x200 or negotiate the
+  optional 768x480 Game API high-resolution surface. Games
   and resources live under `GAMES/` on microSD. Build with
   `make console-os-waveshare-idf`; use the on-device USB Drive app plus
   `make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES` for a validated

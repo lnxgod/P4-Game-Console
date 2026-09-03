@@ -92,6 +92,7 @@ def main() -> None:
             "multiplayer-session",
             "module-handoff",
             "vector-scenes",
+            "video-highres",
         ]
         write_manifest(games, "extended_caps", extended)
         result = run("--games-root", str(games), "--check")

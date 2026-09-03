@@ -184,6 +184,13 @@ BLE gaming is deliberately narrow:
   and returns the guest to the room browser; a disconnected host reopens its
   same room until the user leaves the Multiplayer page.
 
+Console OS 0.4.98 makes entry and exit own the shared radio explicitly. A
+disconnected saved controller's queued or active reconnect is cancelled before
+BLE room discovery starts, the UI waits for that bounded GAP cancellation
+without blocking touch, and the saved reconnect resumes after Multiplayer is
+left. An already-connected encrypted controller keeps its link and uses the
+committed controller-plus-peer capacity.
+
 Console OS 0.4.84 adds a backend-host compatibility case for macOS
 CoreBluetooth. Apple's peripheral API can advertise the P4 service UUID but
 not the ten-byte room service-data beacon. A Join browser therefore maps an

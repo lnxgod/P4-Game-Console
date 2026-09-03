@@ -67,6 +67,13 @@ backoff. Reconnect waits while a multiplayer scan or advertisement owns the
 shared radio. Disconnect, Forget, and disabling BLE Pad Mode cancel this
 policy immediately.
 
+Opening Multiplayer also performs an automatic bounded radio handoff. If a
+saved controller is disconnected and scanning, Console OS cancels that pending
+reconnect and waits for the GAP procedure to become idle before starting BLE
+room discovery. Leaving Multiplayer resumes the saved reconnect policy. A
+controller that is already encrypted and connected is not interrupted and may
+coexist with the multiplayer peer.
+
 Select **Map** to bind one physical button each to A, B, X, Y, Start, and Back.
 Release between steps. The wizard rejects multi-button presses and duplicate
 sources, suppresses navigation while capturing, and commits the complete map

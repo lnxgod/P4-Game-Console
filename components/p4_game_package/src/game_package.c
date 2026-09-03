@@ -465,7 +465,8 @@ p4_game_package_result_t p4_game_package_parse(
         P4_GAME_CAP_STORAGE | P4_GAME_CAP_SIGNAL_SCAN |
         P4_GAME_CAP_SAVE | P4_GAME_CAP_TEXT_INPUT |
         P4_GAME_CAP_REALM | P4_GAME_CAP_MULTIPLAYER_SESSION |
-        P4_GAME_CAP_MODULE_HANDOFF | P4_GAME_CAP_VECTOR_SCENES;
+        P4_GAME_CAP_MODULE_HANDOFF | P4_GAME_CAP_VECTOR_SCENES |
+        P4_GAME_CAP_VIDEO_HIGH_RES;
     if (out_info->launcher_id < 100U || !id_valid(out_info->id) ||
         !folder_valid(out_info->folder) ||
         (out_info->required_capabilities & P4_GAME_CAP_VIDEO) == 0U ||

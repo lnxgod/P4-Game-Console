@@ -405,12 +405,12 @@ static void test_visual_helpers(void)
     };
     CHECK(p4_sprite_valid(&sprite));
     p4_sprite_t oversized = sprite;
-    oversized.sheet_width = 512U;
-    oversized.sheet_height = 512U;
-    oversized.stride_pixels = 512U;
+    oversized.sheet_width = 2048U;
+    oversized.sheet_height = 2048U;
+    oversized.stride_pixels = 2048U;
     oversized.source_x = 0U;
-    oversized.width = 512U;
-    oversized.height = 512U;
+    oversized.width = 2048U;
+    oversized.height = 2048U;
     oversized.scale = 1U;
     CHECK(!p4_sprite_valid(&oversized));
     p4_draw_sprite(&surface, 10, 20, &sprite);
@@ -906,6 +906,83 @@ static void test_game_runtime(void)
     CHECK(!instance.active);
 }
 
+static void test_high_res_runtime(void)
+{
+    p4_game_descriptor_t game = s_fixture_game;
+    game.optional_capabilities |= P4_GAME_CAP_VIDEO_HIGH_RES;
+    fixture_state_t state;
+    p4_game_instance_t instance = {0};
+    p4_game_services_t services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO |
+                                  P4_GAME_CAP_CONTROLS,
+    };
+
+    CHECK(p4_game_descriptor_valid(&game));
+    CHECK(p4_game_instance_start(
+        &instance, &game, &services, &state, sizeof(state)));
+    uint16_t *pixels = calloc(
+        (size_t)P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT,
+        sizeof(*pixels));
+    CHECK(pixels != NULL);
+    if (pixels != NULL) {
+        p4_game_surface_t surface = {
+            .pixels = pixels,
+            .stride_pixels = P4_GAME_SURFACE_WIDTH,
+            .width = P4_GAME_SURFACE_WIDTH,
+            .height = P4_GAME_SURFACE_HEIGHT,
+        };
+        CHECK(p4_game_instance_render(&instance, &surface));
+        free(pixels);
+    }
+    p4_game_instance_stop(&instance);
+
+    services.available_capabilities |= P4_GAME_CAP_VIDEO_HIGH_RES;
+    CHECK(p4_game_instance_start(
+        &instance, &game, &services, &state, sizeof(state)));
+    pixels = calloc(
+        (size_t)P4_GAME_SURFACE_HIGH_RES_WIDTH *
+            P4_GAME_SURFACE_HIGH_RES_HEIGHT,
+        sizeof(*pixels));
+    CHECK(pixels != NULL);
+    if (pixels != NULL) {
+        p4_game_surface_t surface = {
+            .pixels = pixels,
+            .stride_pixels = P4_GAME_SURFACE_HIGH_RES_WIDTH,
+            .width = P4_GAME_SURFACE_HIGH_RES_WIDTH,
+            .height = P4_GAME_SURFACE_HIGH_RES_HEIGHT,
+        };
+        CHECK(p4_surface_valid(&surface));
+        CHECK(p4_game_instance_render(&instance, &surface));
+        CHECK(pixels[(size_t)P4_GAME_SURFACE_HIGH_RES_WIDTH *
+                     P4_GAME_SURFACE_HIGH_RES_HEIGHT - 1U] ==
+              UINT16_C(0x1234));
+        surface.width = P4_GAME_SURFACE_WIDTH;
+        surface.height = P4_GAME_SURFACE_HEIGHT;
+        surface.stride_pixels = P4_GAME_SURFACE_WIDTH;
+        CHECK(!p4_game_instance_render(&instance, &surface));
+        free(pixels);
+    }
+    p4_game_input_t input = {
+        .touch_valid = true,
+        .touch_count = 1U,
+        .touches = {{319U, 199U}},
+    };
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_CONTINUE);
+    input.touches[0].x = P4_GAME_SURFACE_WIDTH;
+    CHECK(p4_game_instance_update(&instance, &input, 16U) ==
+          P4_GAME_ERROR);
+    p4_game_instance_stop(&instance);
+
+    game.required_capabilities |= P4_GAME_CAP_VIDEO_HIGH_RES;
+    game.optional_capabilities &=
+        (uint32_t)~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
+    services.available_capabilities &=
+        (uint32_t)~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
+    CHECK(!p4_game_instance_start(
+        &instance, &game, &services, &state, sizeof(state)));
+}
+
 static void test_achievement_bounds(void)
 {
     p4_achievement_catalog_t achievements;
@@ -930,6 +1007,7 @@ int main(void)
     test_audio_stream();
     test_standard_feedback_pack();
     test_game_runtime();
+    test_high_res_runtime();
     test_achievement_bounds();
     if (s_failures != 0) {
         fprintf(stderr, "%d p4 game API test failure(s)\n", s_failures);

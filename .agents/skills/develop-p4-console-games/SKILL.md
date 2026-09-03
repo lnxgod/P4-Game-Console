@@ -88,6 +88,7 @@ Use the repository creator instead of copying an old game:
 
 ```sh
 python3 scripts/new-game.py "Star Hop" --folder GAMES/PLATFORM
+python3 scripts/new-game.py "Card Table" --folder GAMES/CARDS --high-res
 ```
 
 Use `--dry-run` first when the requested title, slug, ID, accent, or folder is
@@ -106,6 +107,11 @@ metadata into `p4_game_descriptor_t`; that descriptor is the stable API ABI.
   `P4_GAME_EXIT_TO_LAUNCHER` on Back.
 - Use `p4/input.h` for normalized held/pressed/released controls.
 - Use `p4/draw.h` for clipped RGB565 primitives or bounded licensed sprites.
+- Default to the portable 320x200 surface. Use optional `video-highres` plus
+  `P4_GAME_CAP_VIDEO_HIGH_RES` for detail-heavy games that can negotiate
+  768x480 and fall back; use required high-res only when fallback is
+  impossible. Branch drawing on `surface->width`/`height`. Touch and standard
+  control hit regions remain normalized to 320x200 in either render mode.
 - Use `p4/visual.h` for fixed-point motion, atlas animation, easing,
   deterministic camera shake, and small caller-owned particle arrays. These
   helpers add polish without giving a game a renderer, allocator, or timer.

@@ -16,10 +16,10 @@ runtime import allowlist do not change. `games/asteroids` is the reference.
 `p4/draw.h` also exposes bounded 8×8 compact and native 8×16 CP437 glyph/text
 drawing. The bytes come from the single pinned font in `components/p4_cp437`,
 which is shared with Console OS's 80×30 ANSI/BBS renderer. The helpers paint
-explicit foreground and background colors, clip to the 320×200 surface, never
-allocate, and compile into a cartridge without adding a host callback or raw
-terminal access. LORD is the reference for compact DOS box, arrow, shade, and
-symbol glyphs.
+explicit foreground and background colors, clip to either the default 320×200
+or negotiated 768×480 surface, never allocate, and compile into a cartridge
+without adding a host callback or raw terminal access. LORD is the reference
+for compact DOS box, arrow, shade, and symbol glyphs.
 
 ## Original audio provenance
 

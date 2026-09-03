@@ -527,6 +527,7 @@ validator:
 | 9 | `multiplayer-session` | Live OS-owned lobby and player-slot input service |
 | 10 | `module-handoff` | Typed exit-to-IGM and return-result service |
 | 11 | `vector-scenes` | Optional bounded vector/RIP-style scene renderer |
+| 12 | `video-highres` | Optional negotiated 768x480 RGB565 game surface; canonical touch remains 320x200 |
 
 Keep `storage` as the existing read-only `.P4R` capability. Do not overload it
 with writes.

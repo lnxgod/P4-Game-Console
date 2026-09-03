@@ -22,6 +22,7 @@ set(P4_CONSOLE_MAIN_REQUIREMENTS
     mbedtls
     p4_content_catalog
     p4_bbs
+    p4_ble_radio_handoff
     p4_desktop
     p4_game_api
     p4_game_save

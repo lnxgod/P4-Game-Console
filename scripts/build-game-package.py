@@ -38,6 +38,7 @@ CAPABILITIES = {
     "multiplayer-session": 1 << 9,
     "module-handoff": 1 << 10,
     "vector-scenes": 1 << 11,
+    "video-highres": 1 << 12,
 }
 ID_RE = re.compile(r"[a-z][a-z0-9.-]{2,47}\Z")
 SYMBOL_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*\Z")

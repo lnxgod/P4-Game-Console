@@ -1445,8 +1445,10 @@ esp_err_t platform_gamepad_ble_connect_or_pair(void)
 void platform_gamepad_ble_cancel(void)
 {
     portENTER_CRITICAL(&s_lock);
-    const bool scanning =
-        s_ble.status.state == PLATFORM_GAMEPAD_BLE_SCANNING;
+    const platform_gamepad_ble_state_t state = s_ble.status.state;
+    const bool scanning = state == PLATFORM_GAMEPAD_BLE_SCANNING;
+    const bool reset_pending_state =
+        state == PLATFORM_GAMEPAD_BLE_STARTING_HOST || scanning;
     s_ble.connect_pending = false;
     s_ble.maintain_connection = false;
     s_ble.reconnect_attempts = 0U;
@@ -1454,11 +1456,29 @@ void platform_gamepad_ble_cancel(void)
     portEXIT_CRITICAL(&s_lock);
     if (scanning) {
         (void)ble_gap_disc_cancel();
+    }
+    if (reset_pending_state) {
         set_state(s_ble.saved_valid
                       ? PLATFORM_GAMEPAD_BLE_STANDBY
                       : PLATFORM_GAMEPAD_BLE_OFF,
                   0);
     }
+}
+
+bool platform_gamepad_ble_radio_idle(void)
+{
+    portENTER_CRITICAL(&s_lock);
+    const platform_gamepad_ble_state_t state = s_ble.status.state;
+    const bool connected = s_ble.status.connected;
+    const bool connect_pending = s_ble.connect_pending;
+    portEXIT_CRITICAL(&s_lock);
+    if (connected) {
+        return true;
+    }
+    const bool connection_busy =
+        state >= PLATFORM_GAMEPAD_BLE_STARTING_HOST &&
+        state <= PLATFORM_GAMEPAD_BLE_SUBSCRIBING;
+    return !connect_pending && !connection_busy && !ble_gap_disc_active();
 }
 
 void platform_gamepad_ble_disconnect(void)

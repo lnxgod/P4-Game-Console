@@ -1,6 +1,6 @@
 ---
 name: develop-p4-games
-description: Create, port, modify, package, install, or test storage-installed games for P4 Console OS. Use for games/*, P4 Game API v1, game.json manifests, .P4G cartridges, launcher metadata, 320x200 RGB565 rendering, normalized controls, tone audio, Game Manager installation or removal, or adding a game to the Program Manager catalog.
+description: Create, port, modify, package, install, or test storage-installed games for P4 Console OS. Use for games/*, P4 Game API v1, game.json manifests, .P4G cartridges, launcher metadata, 320x200 or optional 768x480 RGB565 rendering, normalized controls, tone audio, Game Manager installation or removal, or adding a game to the Program Manager catalog.
 ---
 
 # Develop P4 Console games
@@ -47,6 +47,7 @@ For a new game, inspect the plan before creating files:
 ```sh
 python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE --dry-run
 python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE
+python3 scripts/new-game.py "Card Table" --folder GAMES/CARDS --high-res
 ```
 
 The generator chooses a free launcher ID and never overwrites an existing
@@ -63,8 +64,13 @@ that can be exercised without display, audio, USB, or filesystem hardware.
 
 - Include only headers under `components/p4_game_api/include/p4/`. Never take
   raw display, touch, audio, USB, SD, or filesystem handles from a game.
-- Render a complete 320x200 RGB565 frame with the clipped `p4/draw.h`
-  primitives. Keep state at or below `P4_GAME_MAX_STATE_BYTES` and bound loops,
+- Render a complete RGB565 frame with the clipped `p4/draw.h` primitives.
+  Default to 320x200. For detail-heavy card, board, or productivity games,
+  declare optional `video-highres` in `game.json` and
+  `P4_GAME_CAP_VIDEO_HIGH_RES` in the descriptor, then handle either 320x200
+  or 768x480 from `surface->width`/`height`. Use required high-res only when a
+  low-res fallback is impossible. Touch input remains canonical 320x200 in
+  both modes. Keep state at or below `P4_GAME_MAX_STATE_BYTES` and bound loops,
   coordinates, sprite dimensions, text, timers, and audio requests.
 - Consume complete `held`, `pressed`, and `released` input snapshots. Return
   `P4_GAME_EXIT_TO_LAUNCHER` when Back is pressed.

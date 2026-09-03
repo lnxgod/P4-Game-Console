@@ -68,7 +68,9 @@
     ],
     "native_code_is_security_sandboxed": false,
     "uf2_supported": false,
-    "surface": "RGB565 320x200",
+    "surface": "RGB565 320x200 default; optional negotiated 768x480",
+    "high_resolution_capability": "video-highres",
+    "touch_coordinate_space": "320x200 in both render modes",
     "controls": ["up", "down", "left", "right", "a", "b", "start", "back"],
     "audio": "optional bounded tone and copied PCM16-stereo services at 16000 Hz",
     "return_to_home_supported": true,
@@ -88,10 +90,12 @@
       "LORD.P4G",
       "MAZE.P4G",
       "P4_AIR_HOCKEY.P4G",
+      "P4_RUMMY.P4G",
       "P4_YAHTZEE.P4G",
       "SKYLINE.P4G",
       "SOLITAIR.P4G",
-      "INVADERS.P4G"
+      "INVADERS.P4G",
+      "TEXAS_HOLDEM.P4G"
     ],
     "seed_resources": [
       "BYTEBUD.P4R"
@@ -223,5 +227,5 @@
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "On the two recorded Waveshare 4.3 units with H1 UART retained, install the exact verified Console OS 0.4.97 artifact and measure sustained launcher frame cadence with zero hard display failures, while confirming Windows remains the default, Control Panel stays visible, touch/controller scrolling remains responsive, and BBS remains selectable."
+  "next_hardware_step": "On the two recorded Waveshare 4.3 units with H1 UART retained, install the exact verified Console OS 0.4.99 artifact; prove an optional video-highres cartridge launches at 768x480 with canonical 320x200 touch, a standard cartridge remains 320x200, and the inherited 0.4.98 BLE controller/multiplayer radio handoff still passes."
 }

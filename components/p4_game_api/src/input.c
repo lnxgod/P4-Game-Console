@@ -130,6 +130,16 @@ static uint16_t choose_color(bool active,
     return active ? active_color : color;
 }
 
+static int control_x(const p4_game_surface_t *surface, int value)
+{
+    return value * (int)surface->width / P4_GAME_SURFACE_WIDTH;
+}
+
+static int control_y(const p4_game_surface_t *surface, int value)
+{
+    return value * (int)surface->height / P4_GAME_SURFACE_HEIGHT;
+}
+
 void p4_game_draw_standard_controls(p4_game_surface_t *surface,
                                     uint16_t color,
                                     uint16_t active_color,
@@ -138,42 +148,64 @@ void p4_game_draw_standard_controls(p4_game_surface_t *surface,
     if (!p4_surface_valid(surface)) {
         return;
     }
-    p4_draw_rect(surface, 0, 0, 52, 24,
+    const unsigned text_scale =
+        surface->width == P4_GAME_SURFACE_HIGH_RES_WIDTH ? 2U : 1U;
+    p4_draw_rect(surface, 0, 0,
+                 control_x(surface, 52), control_y(surface, 24),
                  choose_color((held_buttons & P4_BUTTON_BACK) != 0U,
                               color, active_color));
-    p4_draw_text(surface, 8, 8, "EXIT",
+    p4_draw_text(surface, control_x(surface, 8), control_y(surface, 8),
+                 "EXIT",
                  choose_color((held_buttons & P4_BUTTON_BACK) != 0U,
-                              color, active_color), 1U, 4U);
-    p4_draw_rect(surface, 268, 0, 52, 24,
+                              color, active_color), text_scale, 4U);
+    p4_draw_rect(surface, control_x(surface, 268), 0,
+                 control_x(surface, 52), control_y(surface, 24),
                  choose_color((held_buttons & P4_BUTTON_START) != 0U,
                               color, active_color));
-    p4_draw_text(surface, 276, 8, "START",
+    p4_draw_text(surface, control_x(surface, 276), control_y(surface, 8),
+                 "START",
                  choose_color((held_buttons & P4_BUTTON_START) != 0U,
-                              color, active_color), 1U, 5U);
+                              color, active_color), text_scale, 5U);
 
-    p4_draw_fill_rect(surface, 34, 132, 24, 26,
+    p4_draw_fill_rect(surface, control_x(surface, 34),
+                      control_y(surface, 132),
+                      control_x(surface, 24), control_y(surface, 26),
                       choose_color((held_buttons & P4_BUTTON_UP) != 0U,
                                    color, active_color));
-    p4_draw_fill_rect(surface, 34, 174, 24, 26,
+    p4_draw_fill_rect(surface, control_x(surface, 34),
+                      control_y(surface, 174),
+                      control_x(surface, 24), control_y(surface, 26),
                       choose_color((held_buttons & P4_BUTTON_DOWN) != 0U,
                                    color, active_color));
-    p4_draw_fill_rect(surface, 8, 158, 26, 25,
+    p4_draw_fill_rect(surface, control_x(surface, 8),
+                      control_y(surface, 158),
+                      control_x(surface, 26), control_y(surface, 25),
                       choose_color((held_buttons & P4_BUTTON_LEFT) != 0U,
                                    color, active_color));
-    p4_draw_fill_rect(surface, 58, 158, 26, 25,
+    p4_draw_fill_rect(surface, control_x(surface, 58),
+                      control_y(surface, 158),
+                      control_x(surface, 26), control_y(surface, 25),
                       choose_color((held_buttons & P4_BUTTON_RIGHT) != 0U,
                                    color, active_color));
-    p4_draw_text(surface, 43, 142, "U", UINT16_C(0x0000), 1U, 1U);
-    p4_draw_text(surface, 43, 184, "D", UINT16_C(0x0000), 1U, 1U);
-    p4_draw_text(surface, 18, 168, "L", UINT16_C(0x0000), 1U, 1U);
-    p4_draw_text(surface, 68, 168, "R", UINT16_C(0x0000), 1U, 1U);
+    p4_draw_text(surface, control_x(surface, 43), control_y(surface, 142),
+                 "U", UINT16_C(0x0000), text_scale, 1U);
+    p4_draw_text(surface, control_x(surface, 43), control_y(surface, 184),
+                 "D", UINT16_C(0x0000), text_scale, 1U);
+    p4_draw_text(surface, control_x(surface, 18), control_y(surface, 168),
+                 "L", UINT16_C(0x0000), text_scale, 1U);
+    p4_draw_text(surface, control_x(surface, 68), control_y(surface, 168),
+                 "R", UINT16_C(0x0000), text_scale, 1U);
 
-    p4_draw_fill_circle(surface, 286, 158, 22,
+    p4_draw_fill_circle(surface, control_x(surface, 286),
+                        control_y(surface, 158), control_x(surface, 22),
                         choose_color((held_buttons & P4_BUTTON_A) != 0U,
                                      color, active_color));
-    p4_draw_fill_circle(surface, 240, 176, 18,
+    p4_draw_fill_circle(surface, control_x(surface, 240),
+                        control_y(surface, 176), control_x(surface, 18),
                         choose_color((held_buttons & P4_BUTTON_B) != 0U,
                                      color, active_color));
-    p4_draw_text(surface, 283, 155, "A", UINT16_C(0x0000), 1U, 1U);
-    p4_draw_text(surface, 237, 173, "B", UINT16_C(0x0000), 1U, 1U);
+    p4_draw_text(surface, control_x(surface, 283), control_y(surface, 155),
+                 "A", UINT16_C(0x0000), text_scale, 1U);
+    p4_draw_text(surface, control_x(surface, 237), control_y(surface, 173),
+                 "B", UINT16_C(0x0000), text_scale, 1U);
 }

@@ -279,6 +279,8 @@ static uint32_t button_for_key(SDL_Keycode key)
 static bool touch_from_window(SDL_Renderer *renderer,
                               float window_x,
                               float window_y,
+                              uint16_t surface_width,
+                              uint16_t surface_height,
                               p4_physical_touch_t *touch)
 {
     if (touch == NULL) {
@@ -289,8 +291,8 @@ static bool touch_from_window(SDL_Renderer *renderer,
     if (!SDL_RenderCoordinatesFromWindow(
             renderer, window_x, window_y, &logical_x, &logical_y) ||
         logical_x < 0.0F || logical_y < 0.0F ||
-        logical_x >= (float)P4_GAME_SURFACE_WIDTH ||
-        logical_y >= (float)P4_GAME_SURFACE_HEIGHT) {
+        logical_x >= (float)surface_width ||
+        logical_y >= (float)surface_height) {
         return false;
     }
     const uint16_t x = (uint16_t)logical_x;
@@ -298,15 +300,17 @@ static bool touch_from_window(SDL_Renderer *renderer,
     *touch = (p4_physical_touch_t){
         .x = (uint16_t)(P4_INPUT_VIEWPORT_LEFT +
                         ((uint32_t)x * P4_INPUT_VIEWPORT_WIDTH) /
-                            P4_GAME_SURFACE_WIDTH),
+                            surface_width),
         .y = (uint16_t)(P4_INPUT_VIEWPORT_TOP +
                         ((uint32_t)y * P4_INPUT_VIEWPORT_HEIGHT) /
-                            P4_GAME_SURFACE_HEIGHT),
+                            surface_height),
     };
     return true;
 }
 
 static size_t mouse_touch(SDL_Renderer *renderer,
+                          uint16_t surface_width,
+                          uint16_t surface_height,
                           p4_physical_touch_t touch[1])
 {
     float window_x = 0.0F;
@@ -315,7 +319,9 @@ static size_t mouse_touch(SDL_Renderer *renderer,
     if ((state & SDL_BUTTON_LMASK) == 0U) {
         return 0U;
     }
-    return touch_from_window(renderer, window_x, window_y, &touch[0])
+    return touch_from_window(
+        renderer, window_x, window_y,
+        surface_width, surface_height, &touch[0])
         ? 1U : 0U;
 }
 
@@ -356,6 +362,16 @@ int main(int argc, char **argv)
                 argv[0], HOST_MAX_SMOKE_FRAMES);
         return EXIT_FAILURE;
     }
+    const uint32_t requested_capabilities =
+        P4_HOST_GAME_DESCRIPTOR.required_capabilities |
+        P4_HOST_GAME_DESCRIPTOR.optional_capabilities;
+    const bool high_res =
+        (requested_capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) != 0U;
+    const uint16_t surface_width = high_res
+        ? P4_GAME_SURFACE_HIGH_RES_WIDTH : P4_GAME_SURFACE_WIDTH;
+    const uint16_t surface_height = high_res
+        ? P4_GAME_SURFACE_HIGH_RES_HEIGHT : P4_GAME_SURFACE_HEIGHT;
+    const int window_scale = high_res ? 1 : HOST_SCALE;
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO)) {
         fprintf(stderr, "SDL init failed: %s\n", SDL_GetError());
         return EXIT_FAILURE;
@@ -365,8 +381,8 @@ int main(int argc, char **argv)
         (max_frames == 0U ? 0U : SDL_WINDOW_HIDDEN);
     SDL_Window *const window = SDL_CreateWindow(
         P4_HOST_GAME_DESCRIPTOR.title,
-        P4_GAME_SURFACE_WIDTH * HOST_SCALE,
-        P4_GAME_SURFACE_HEIGHT * HOST_SCALE,
+        (int)surface_width * window_scale,
+        (int)surface_height * window_scale,
         window_flags);
     if (window == NULL) {
         fprintf(stderr, "window creation failed: %s\n", SDL_GetError());
@@ -376,8 +392,7 @@ int main(int argc, char **argv)
     SDL_Renderer *const renderer = SDL_CreateRenderer(window, NULL);
     if (renderer == NULL ||
         !SDL_SetRenderLogicalPresentation(
-            renderer, P4_GAME_SURFACE_WIDTH,
-            P4_GAME_SURFACE_HEIGHT,
+            renderer, surface_width, surface_height,
             SDL_LOGICAL_PRESENTATION_INTEGER_SCALE)) {
         fprintf(stderr, "renderer creation failed: %s\n", SDL_GetError());
         SDL_DestroyRenderer(renderer);
@@ -387,12 +402,12 @@ int main(int argc, char **argv)
     }
     SDL_Texture *const texture = SDL_CreateTexture(
         renderer, SDL_PIXELFORMAT_RGB565, SDL_TEXTUREACCESS_STREAMING,
-        P4_GAME_SURFACE_WIDTH, P4_GAME_SURFACE_HEIGHT);
+        surface_width, surface_height);
     if (texture != NULL) {
         (void)SDL_SetTextureScaleMode(texture, SDL_SCALEMODE_NEAREST);
     }
     uint16_t *const pixels = calloc(
-        (size_t)P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT,
+        (size_t)surface_width * surface_height,
         sizeof(*pixels));
     void *const state_memory = calloc(
         1U, P4_HOST_GAME_DESCRIPTOR.state_bytes);
@@ -451,6 +466,7 @@ int main(int argc, char **argv)
     }
     const p4_game_services_t services = {
         .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
+            (high_res ? P4_GAME_CAP_VIDEO_HIGH_RES : 0U) |
             (audio_ready
                 ? P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM : 0U) |
             (resource_data != NULL ? P4_GAME_CAP_STORAGE : 0U) |
@@ -493,6 +509,10 @@ int main(int argc, char **argv)
     }
     printf("Playing %s (%s)\n", P4_HOST_GAME_DESCRIPTOR.title,
            P4_HOST_GAME_DESCRIPTOR.id);
+    printf("Surface: %ux%u RGB565 (touch input: %ux%u)\n",
+           (unsigned)surface_width, (unsigned)surface_height,
+           (unsigned)P4_GAME_SURFACE_WIDTH,
+           (unsigned)P4_GAME_SURFACE_HEIGHT);
     printf("Arrows/WASD move | Space/Z A | X/Shift B | "
            "Enter/P Start | Esc/Backspace/Q Back | mouse = touch\n");
     printf("Timing: %d ms updates/audio | %d FPS render target | "
@@ -504,9 +524,9 @@ int main(int argc, char **argv)
     p4_game_input_mapper_init(&mapper);
     p4_game_surface_t surface = {
         .pixels = pixels,
-        .stride_pixels = P4_GAME_SURFACE_WIDTH,
-        .width = P4_GAME_SURFACE_WIDTH,
-        .height = P4_GAME_SURFACE_HEIGHT,
+        .stride_pixels = surface_width,
+        .width = surface_width,
+        .height = surface_height,
     };
     bool running = true;
     uint32_t service_updates = 0U;
@@ -527,7 +547,8 @@ int main(int argc, char **argv)
             } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN &&
                        event.button.button == SDL_BUTTON_LEFT) {
                 pulsed_touch_valid = touch_from_window(
-                    renderer, event.button.x, event.button.y, &pulsed_touch);
+                    renderer, event.button.x, event.button.y,
+                    surface_width, surface_height, &pulsed_touch);
             }
         }
         if (!running) {
@@ -551,7 +572,8 @@ int main(int argc, char **argv)
         }
 
         p4_physical_touch_t touch[1];
-        size_t touch_count = mouse_touch(renderer, touch);
+        size_t touch_count = mouse_touch(
+            renderer, surface_width, surface_height, touch);
         if (touch_count == 0U && pulsed_touch_valid) {
             touch[0] = pulsed_touch;
             touch_count = 1U;
@@ -585,7 +607,7 @@ int main(int argc, char **argv)
         if (!p4_game_instance_render(&instance, &surface) ||
             !SDL_UpdateTexture(
                 texture, NULL, pixels,
-                P4_GAME_SURFACE_WIDTH * (int)sizeof(*pixels)) ||
+                (int)surface_width * (int)sizeof(*pixels)) ||
             !SDL_SetRenderDrawColor(renderer, 0U, 0U, 0U, 255U) ||
             !SDL_RenderClear(renderer) ||
             !SDL_RenderTexture(renderer, texture, NULL, NULL) ||

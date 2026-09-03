@@ -9,10 +9,14 @@
 
 bool p4_surface_valid(const p4_game_surface_t *surface)
 {
-    return surface != NULL && surface->pixels != NULL &&
-        surface->width == P4_GAME_SURFACE_WIDTH &&
-        surface->height == P4_GAME_SURFACE_HEIGHT &&
-        surface->stride_pixels >= P4_GAME_SURFACE_WIDTH;
+    if (surface == NULL || surface->pixels == NULL ||
+        surface->stride_pixels < surface->width) {
+        return false;
+    }
+    return (surface->width == P4_GAME_SURFACE_WIDTH &&
+            surface->height == P4_GAME_SURFACE_HEIGHT) ||
+        (surface->width == P4_GAME_SURFACE_HIGH_RES_WIDTH &&
+         surface->height == P4_GAME_SURFACE_HIGH_RES_HEIGHT);
 }
 
 void p4_draw_pixel(p4_game_surface_t *surface,
@@ -61,8 +65,11 @@ void p4_draw_fill_rect(p4_game_surface_t *surface,
 
 void p4_draw_clear(p4_game_surface_t *surface, uint16_t color)
 {
+    if (!p4_surface_valid(surface)) {
+        return;
+    }
     p4_draw_fill_rect(surface, 0, 0,
-                      P4_GAME_SURFACE_WIDTH, P4_GAME_SURFACE_HEIGHT,
+                      surface->width, surface->height,
                       color);
 }
 

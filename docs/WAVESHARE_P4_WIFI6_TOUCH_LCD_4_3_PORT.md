@@ -1,5 +1,16 @@
 # Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 port
 
+## Console OS 0.4.98 BLE radio handoff
+
+The shared NimBLE host now has a Console OS ownership transition between a
+disconnected saved controller reconnect and multiplayer discovery. Entering
+Multiplayer cancels queued controller reconnect work, waits until its GAP scan
+is actually idle, and only then enables the room browser. Leaving Multiplayer
+disables its discovery and resumes the saved controller reconnect. An already
+connected encrypted pad remains attached and can coexist with one game peer.
+This removes the timing-dependent Host/Join path that could let two clients
+start competing GAP procedures after boot.
+
 ## Console OS 0.4.97 launcher PPA path
 
 The shell remains 768x480. On this portrait-native panel that surface can be

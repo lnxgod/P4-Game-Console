@@ -35,6 +35,7 @@
 #include "p4/audio.h"
 #include "p4/achievements.h"
 #include "p4/bbs_ui.h"
+#include "p4/ble_radio_handoff.h"
 #include "p4/cartridge.h"
 #include "p4/content_catalog.h"
 #include "p4/content_transfer.h"
@@ -397,6 +398,7 @@ typedef enum {
 static console_mp_lobby_state_t s_multiplayer_lobby_state;
 #if P4_CONSOLE_BLE_GAMEPAD && P4_CONSOLE_BLE_MULTIPLAYER
 static bool s_ble_gamepad_suspended_lobby_browser;
+static p4_ble_radio_handoff_t s_ble_radio_handoff;
 #endif
 static p4_mp_lobby_offer_t s_multiplayer_local_offer;
 static p4_mp_lobby_offer_t s_multiplayer_remote_offer;
@@ -1024,6 +1026,11 @@ _Static_assert((int)CONSOLE_SHELL_WIDTH ==
                    (int)CONSOLE_SHELL_HEIGHT ==
                    (int)PLATFORM_DISPLAY_CONTENT_HEIGHT,
                "Waveshare Console OS must render native 768x480 content");
+_Static_assert((int)P4_GAME_SURFACE_HIGH_RES_WIDTH ==
+                   (int)PLATFORM_DISPLAY_CONTENT_WIDTH &&
+                   (int)P4_GAME_SURFACE_HIGH_RES_HEIGHT ==
+                   (int)PLATFORM_DISPLAY_CONTENT_HEIGHT,
+               "Game API high-res mode must match Waveshare content");
 #endif
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 _Static_assert((int)CONSOLE_SHELL_PHYSICAL_WIDTH ==
@@ -3750,6 +3757,104 @@ static esp_err_t select_multiplayer_transport(
     return result;
 }
 
+#if P4_CONSOLE_BLE_GAMEPAD && P4_CONSOLE_BLE_MULTIPLAYER
+static void release_ble_radio_handoff_to_gamepad(const char *reason)
+{
+    const platform_gamepad_ble_status_t status =
+        platform_gamepad_ble_status();
+    const bool resume = p4_ble_radio_handoff_release(
+        &s_ble_radio_handoff,
+        s_console_settings.ble_controller_enabled,
+        status.connected,
+        status.bonded);
+    if (!resume) {
+        return;
+    }
+    const esp_err_t result = start_ble_gamepad_connection();
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS BLE_RADIO_HANDOFF owner=controller "
+             "state=resume reason=%s result=%s",
+             reason == NULL ? "unknown" : reason,
+             esp_err_to_name(result));
+}
+#endif
+
+#if P4_CONSOLE_BLE_MULTIPLAYER
+static esp_err_t request_ble_multiplayer_transport(void)
+{
+    if (p4cart_scan_running() || p4cart_scan_needs_reload()) {
+        s_multiplayer_ble_enable_pending = true;
+        return ESP_ERR_NOT_FINISHED;
+    }
+#if P4_CONSOLE_BLE_GAMEPAD
+    p4_ble_radio_handoff_action_t handoff_action;
+    if (s_ble_radio_handoff.waiting_for_gamepad) {
+        handoff_action = p4_ble_radio_handoff_poll(
+            &s_ble_radio_handoff,
+            platform_gamepad_ble_radio_idle());
+    } else {
+        const platform_gamepad_ble_status_t status =
+            platform_gamepad_ble_status();
+        handoff_action = p4_ble_radio_handoff_request(
+            &s_ble_radio_handoff,
+            status.connected,
+            status.bonded,
+            ble_gamepad_status_busy(&status));
+    }
+    if (handoff_action == P4_BLE_RADIO_HANDOFF_CANCEL_GAMEPAD) {
+        platform_gamepad_ble_cancel();
+        s_multiplayer_ble_enable_pending = true;
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS BLE_RADIO_HANDOFF owner=multiplayer "
+                 "state=cancel-controller-reconnect");
+        return ESP_ERR_NOT_FINISHED;
+    }
+    if (handoff_action == P4_BLE_RADIO_HANDOFF_WAIT) {
+        s_multiplayer_ble_enable_pending = true;
+        return ESP_ERR_NOT_FINISHED;
+    }
+#endif
+    s_multiplayer_ble_enable_pending = false;
+    const esp_err_t result = select_multiplayer_transport(
+        CONSOLE_MP_TRANSPORT_BLE);
+    if (result == ESP_OK) {
+        reset_multiplayer_lobby("transport-changed");
+        s_multiplayer_peer_last_seen_us = 0;
+        s_multiplayer_next_discovery_us = 0;
+#if P4_CONSOLE_BLE_GAMEPAD
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS BLE_RADIO_HANDOFF owner=multiplayer "
+                 "state=ready");
+#endif
+    }
+#if P4_CONSOLE_BLE_GAMEPAD
+    else {
+        release_ble_radio_handoff_to_gamepad("ble-start-failed");
+    }
+#endif
+    return result;
+}
+
+static esp_err_t release_multiplayer_ble_transport(const char *reason)
+{
+    s_multiplayer_ble_enable_pending = false;
+    esp_err_t result = ESP_OK;
+    if (s_multiplayer_transport == CONSOLE_MP_TRANSPORT_BLE) {
+        result = select_multiplayer_transport(
+            CONSOLE_MP_TRANSPORT_WIRED);
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS BLE_RADIO_HANDOFF owner=wired "
+                 "state=multiplayer-release reason=%s result=%s",
+                 reason == NULL ? "unknown" : reason,
+                 esp_err_to_name(result));
+    }
+#if P4_CONSOLE_BLE_GAMEPAD
+    release_ble_radio_handoff_to_gamepad(reason);
+#endif
+    return result;
+}
+#endif
+
 static uint8_t multiplayer_cycle_range(
     uint8_t value, uint8_t minimum, uint8_t maximum, int delta)
 {
@@ -3910,17 +4015,33 @@ static void handle_multiplayer_config_action(
             s_multiplayer_transport == CONSOLE_MP_TRANSPORT_WIRED
                 ? CONSOLE_MP_TRANSPORT_BLE
                 : CONSOLE_MP_TRANSPORT_WIRED;
-        if (requested_transport == CONSOLE_MP_TRANSPORT_BLE &&
-            p4cart_scan_running()) {
-            s_multiplayer_ble_enable_pending = true;
-            ESP_LOGI(TAG,
-                     "P4_CONSOLE_OS MULTIPLAYER_TRANSPORT_DEFERRED "
-                     "requested=ble reason=p4cart-scan");
-            return;
+        esp_err_t result = ESP_OK;
+        if (requested_transport == CONSOLE_MP_TRANSPORT_BLE) {
+#if P4_CONSOLE_BLE_MULTIPLAYER
+            result = request_ble_multiplayer_transport();
+            if (result == ESP_ERR_NOT_FINISHED) {
+                ESP_LOGI(TAG,
+                         "P4_CONSOLE_OS MULTIPLAYER_TRANSPORT_DEFERRED "
+                         "requested=ble reason=radio-handoff");
+                return;
+            }
+#else
+            result = ESP_ERR_NOT_SUPPORTED;
+#endif
+        } else {
+#if P4_CONSOLE_BLE_MULTIPLAYER
+            result = release_multiplayer_ble_transport(
+                "transport-wired");
+#else
+            result = select_multiplayer_transport(
+                requested_transport);
+#endif
+            if (result == ESP_OK) {
+                reset_multiplayer_lobby("transport-changed");
+                s_multiplayer_peer_last_seen_us = 0;
+                s_multiplayer_next_discovery_us = 0;
+            }
         }
-        s_multiplayer_ble_enable_pending = false;
-        const esp_err_t result = select_multiplayer_transport(
-            requested_transport);
         if (result != ESP_OK) {
             ESP_LOGW(TAG,
                      "P4_CONSOLE_OS MULTIPLAYER_TRANSPORT_REJECTED "
@@ -3930,9 +4051,6 @@ static void handle_multiplayer_config_action(
                      esp_err_to_name(result));
             return;
         }
-        reset_multiplayer_lobby("transport-changed");
-        s_multiplayer_peer_last_seen_us = 0;
-        s_multiplayer_next_discovery_us = 0;
         ESP_LOGI(TAG,
                  "P4_CONSOLE_OS MULTIPLAYER_TRANSPORT selected=%s "
                  "radio_start=lazy",
@@ -6904,6 +7022,7 @@ typedef struct {
     p4_game_result_t game_result;
     bool audio_running;
     bool multiplayer_running;
+    bool high_res_video;
     bool finished;
 } cartridge_run_context_t;
 
@@ -7158,8 +7277,19 @@ static bool cartridge_present(void *opaque)
     if (context == NULL) {
         return false;
     }
-    const esp_err_t result = platform_display_submit_rgb565(
-        s_pixels, P4_GAME_SURFACE_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
+    esp_err_t result;
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    if (context->high_res_video) {
+        result = platform_display_submit_content_rgb565(
+            s_pixels, P4_GAME_SURFACE_HIGH_RES_WIDTH,
+            CONSOLE_SUBMIT_TIMEOUT_MS);
+    } else
+#endif
+    {
+        result = platform_display_submit_rgb565(
+            s_pixels, P4_GAME_SURFACE_WIDTH,
+            CONSOLE_SUBMIT_TIMEOUT_MS);
+    }
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
     if (result == ESP_ERR_TIMEOUT) {
         if (context->display_ack_misses != UINT32_MAX) {
@@ -7337,6 +7467,28 @@ static esp_err_t run_stored_game(
         s_pixels == NULL || !s_display_initialized) {
         return ESP_ERR_INVALID_ARG;
     }
+    const uint32_t capabilities = game->package.required_capabilities |
+        game->package.optional_capabilities;
+    const bool high_res_requested =
+        (capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) != 0U;
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    const bool high_res_video = high_res_requested;
+#else
+    if ((game->package.required_capabilities &
+         P4_GAME_CAP_VIDEO_HIGH_RES) != 0U) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS CARTRIDGE_UNSUPPORTED app=%s "
+                 "capability=video-highres",
+                 game->package.id);
+        return ESP_ERR_NOT_SUPPORTED;
+    }
+    const bool high_res_video = false;
+    (void)high_res_requested;
+#endif
+    const uint16_t surface_width = high_res_video
+        ? P4_GAME_SURFACE_HIGH_RES_WIDTH : P4_GAME_SURFACE_WIDTH;
+    const uint16_t surface_height = high_res_video
+        ? P4_GAME_SURFACE_HIGH_RES_HEIGHT : P4_GAME_SURFACE_HEIGHT;
     if (protected_game_lineage_check(&game->package) ==
         P4_PROTECTED_GAME_REJECTED) {
         ESP_LOGE(TAG,
@@ -7360,6 +7512,7 @@ static esp_err_t run_stored_game(
         .last_wake = xTaskGetTickCount(),
         .last_frame_us = esp_timer_get_time(),
         .multiplayer_running = multiplayer_ready,
+        .high_res_video = high_res_video,
     };
     if (p4_tick_scheduler_init(
             &context->frame_scheduler, configTICK_RATE_HZ,
@@ -7373,8 +7526,6 @@ static esp_err_t run_stored_game(
     }
     p4_audio_mixer_init(&context->mixer);
     p4_game_platform_audio_init(&context->audio);
-    const uint32_t capabilities = game->package.required_capabilities |
-        game->package.optional_capabilities;
     if ((capabilities & P4_GAME_CAP_SAVE) != 0U) {
         context->save = cartridge_save_open(&game->package);
     }
@@ -7407,6 +7558,7 @@ static esp_err_t run_stored_game(
         .struct_bytes = sizeof(host),
         .available_capabilities = P4_GAME_CAP_VIDEO |
             P4_GAME_CAP_CONTROLS |
+            (high_res_video ? P4_GAME_CAP_VIDEO_HIGH_RES : 0U) |
             (context->audio_running
                 ? P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM : 0U) |
             (signal_scan_ready ? P4_GAME_CAP_SIGNAL_SCAN : 0U) |
@@ -7416,9 +7568,9 @@ static esp_err_t run_stored_game(
         .expected_game_id = game->package.id,
         .surface = {
             .pixels = s_pixels,
-            .stride_pixels = P4_GAME_SURFACE_WIDTH,
-            .width = P4_GAME_SURFACE_WIDTH,
-            .height = P4_GAME_SURFACE_HEIGHT,
+            .stride_pixels = surface_width,
+            .width = surface_width,
+            .height = surface_height,
         },
         .context = context,
         .poll_frame = cartridge_poll_frame,
@@ -7459,7 +7611,7 @@ static esp_err_t run_stored_game(
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS CARTRIDGE_START app=%s file=%s api=1 "
              "source=%s runtime=psram-elf audio=%s signals=%s saves=%s "
-             "multiplayer=%s "
+             "multiplayer=%s surface=%ux%u "
              "save_bytes=%u save_sequence=%lu",
              game->package.id, game->file_name,
              game->in_games_directory
@@ -7468,6 +7620,7 @@ static esp_err_t run_stored_game(
              signal_scan_ready ? "ready" : "offline",
              save_ready ? "ready" : "session-only",
              multiplayer_ready ? "connected" : "offline",
+             (unsigned)surface_width, (unsigned)surface_height,
              save_ready
                  ? (unsigned)context->save->service.launch_snapshot_bytes : 0U,
              save_ready
@@ -8659,6 +8812,9 @@ void app_main(void)
                  "P4_CONSOLE_OS MULTIPLAYER_LOBBY_DEGRADED error=%s",
                  esp_err_to_name(lobby_result));
     }
+#if P4_CONSOLE_BLE_GAMEPAD && P4_CONSOLE_BLE_MULTIPLAYER
+    p4_ble_radio_handoff_init(&s_ble_radio_handoff);
+#endif
 #if P4_CONSOLE_BLE_GAMEPAD
     const platform_gamepad_ble_status_t saved_pad =
         platform_gamepad_ble_status();
@@ -8820,16 +8976,26 @@ void app_main(void)
             }
         }
 #if P4_CONSOLE_BLE_MULTIPLAYER
-        if (s_multiplayer_ble_enable_pending &&
-            !p4cart_scan_running() && !p4cart_scan_needs_reload()) {
-            s_multiplayer_ble_enable_pending = false;
-            const esp_err_t ble_start_result =
-                select_multiplayer_transport(
-                    CONSOLE_MP_TRANSPORT_BLE);
-            ESP_LOGI(TAG,
-                     "P4_CONSOLE_OS MULTIPLAYER_TRANSPORT_DEFERRED_COMPLETE "
-                     "requested=ble result=%s",
-                     esp_err_to_name(ble_start_result));
+        if (s_multiplayer_ble_enable_pending) {
+            if (shell->page != CONSOLE_PAGE_MULTIPLAYER) {
+                (void)release_multiplayer_ble_transport(
+                    "deferred-page-left");
+            } else {
+                const esp_err_t ble_start_result =
+                    request_ble_multiplayer_transport();
+                if (ble_start_result != ESP_ERR_NOT_FINISHED) {
+                    ESP_LOGI(
+                        TAG,
+                        "P4_CONSOLE_OS "
+                        "MULTIPLAYER_TRANSPORT_DEFERRED_COMPLETE "
+                        "requested=ble result=%s",
+                        esp_err_to_name(ble_start_result));
+                    const console_shell_runtime_info_t current_runtime =
+                        runtime_info();
+                    console_shell_set_runtime_info(
+                        shell, &current_runtime);
+                }
+            }
         }
 #endif
         if (shell->page == CONSOLE_PAGE_FILES &&
@@ -8860,9 +9026,14 @@ void app_main(void)
         }
         if (action.type == CONSOLE_ACTION_PAGE_CHANGED &&
             page_before_input == CONSOLE_PAGE_MULTIPLAYER &&
-            shell->page != CONSOLE_PAGE_MULTIPLAYER &&
-            s_multiplayer_lobby_state != CONSOLE_MP_LOBBY_BROWSING) {
-            reset_multiplayer_lobby("multiplayer-page-left");
+            shell->page != CONSOLE_PAGE_MULTIPLAYER) {
+            if (s_multiplayer_lobby_state != CONSOLE_MP_LOBBY_BROWSING) {
+                reset_multiplayer_lobby("multiplayer-page-left");
+            }
+#if P4_CONSOLE_BLE_MULTIPLAYER
+            (void)release_multiplayer_ble_transport(
+                "multiplayer-page-left");
+#endif
         }
         if (action.type == CONSOLE_ACTION_COLOR_MODE_CHANGED) {
             ESP_LOGI(TAG,
@@ -8902,9 +9073,17 @@ void app_main(void)
                        CONSOLE_ACTION_MULTIPLAYER_JOIN_LOBBY) {
             const bool create = action.type ==
                 CONSOLE_ACTION_MULTIPLAYER_CREATE_LOBBY;
-            const esp_err_t lobby_action = create
-                ? create_multiplayer_lobby()
-                : join_selected_multiplayer_lobby();
+            esp_err_t lobby_action;
+#if P4_CONSOLE_BLE_MULTIPLAYER
+            if (s_multiplayer_ble_enable_pending) {
+                lobby_action = ESP_ERR_NOT_FINISHED;
+            } else
+#endif
+            {
+                lobby_action = create
+                    ? create_multiplayer_lobby()
+                    : join_selected_multiplayer_lobby();
+            }
             ESP_LOGI(TAG,
                      "P4_CONSOLE_OS MULTIPLAYER_LOBBY_ACTION "
                      "role=%s result=%s",
@@ -8919,17 +9098,14 @@ void app_main(void)
 #if P4_CONSOLE_BLE_MULTIPLAYER
             if (s_multiplayer_transport !=
                     CONSOLE_MP_TRANSPORT_BLE) {
-                if (p4cart_scan_running() ||
-                    p4cart_scan_needs_reload()) {
-                    s_multiplayer_ble_enable_pending = true;
+                const esp_err_t ble_default_result =
+                    request_ble_multiplayer_transport();
+                if (ble_default_result == ESP_ERR_NOT_FINISHED) {
                     ESP_LOGI(
                         TAG,
                         "P4_CONSOLE_OS MULTIPLAYER_DEFAULT "
                         "requested=ble active=wired result=deferred");
                 } else {
-                    const esp_err_t ble_default_result =
-                        select_multiplayer_transport(
-                            CONSOLE_MP_TRANSPORT_BLE);
                     ESP_LOGI(
                         TAG,
                         "P4_CONSOLE_OS MULTIPLAYER_DEFAULT "

@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "evidence_id": "waveshare-two-unit-texas-holdem-1.1.1-delivery-20260902",
+  "status": "installed-both-exact-readback-pass-manual-device-gameplay-pending",
+  "timestamp_utc": "2026-09-03T04:30:22Z",
+  "supersedes_delivery_state": "waveshare-texas-holdem-1.1.1-release-hardening-20260902",
+  "scope": "Game-only H1 delivery of the release-hardened Texas Hold'em 1.1.1 cartridge to both recorded Waveshare 4.3 consoles. No Console OS partition, firmware, bootloader, partition table, OTA data, NVS, save data, or unrelated microSD file was written.",
+  "package": {
+    "path": "build-host/texas_holdem/TEXAS_HOLDEM.P4G",
+    "game_id": "org.p4console.texas-holdem",
+    "version": "1.1.1",
+    "bytes": 19104,
+    "sha256": "88b5d1deb54ec2b2feb397cf7e76217ecc2ec4456e5cb36c0e5d4de40eef0655",
+    "payload_bytes": 18848,
+    "payload_sha256": "f60b31bb191918b032dc63979f7a3fd978ccc6ef396dfd8ef4aacd144d612bf5",
+    "format": "p4-native-elf-v1",
+    "api_version": 1,
+    "multiplayer_protocol": 2
+  },
+  "installation": {
+    "method": "validated atomic P4G upload through each running console's recorded H1 port with native catalog hot reload",
+    "remote_path": "/GAMES/TEXAS_HOLDEM.P4G",
+    "replace_existing": true,
+    "device_activation": "fsync plus complete package and payload double-validation",
+    "firmware_flash": false,
+    "boards": [
+      {
+        "unit_label": "waveshare-4.3-unit1-pink-B289",
+        "port": "/dev/cu.wchusbserial5C371865781",
+        "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+        "push": "pass-19104-bytes-exact-sha256-and-device-activation",
+        "pull_readback": "pass-byte-for-byte-cmp-exact-sha256"
+      },
+      {
+        "unit_label": "waveshare-4.3-unit2-green-386F",
+        "port": "/dev/cu.wchusbserial5B901593451",
+        "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+        "push": "pass-already-present-exact-sha256-verified",
+        "pull_readback": "pass-byte-for-byte-cmp-exact-sha256"
+      }
+    ]
+  },
+  "release_verification": {
+    "focused_asan_ubsan_tests": "pass",
+    "five_card_evaluator": "pass-exhaustive-all-2598960-hands",
+    "seed_matrix": "pass-32-seeds-up-to-250-hands-each",
+    "network_and_cpu_regressions": "pass",
+    "sdl_headless_and_interactive": "pass",
+    "game_sdk_host_and_registry": "pass",
+    "clang_static_analyzer": "pass-zero-diagnostics",
+    "unit1_installed_file": "exact byte-for-byte match",
+    "unit2_installed_file": "exact byte-for-byte match",
+    "manual_panel_launch-cpu-selector-cards-controls-tones-back": "pending-operator-observation",
+    "manual_two-console-host-join-two-cpu-action-sync": "pending-operator-observation"
+  },
+  "operator_checklist": [
+    "Open Games/Arcade and launch Texas Holdem on both consoles.",
+    "Confirm CPU Players appears beneath Start Chips and one to three local CPU seats act automatically.",
+    "Use Multiplayer Host/Join, set CPU Players to 2 on the host, and confirm both consoles show the synchronized four-seat table with C3 and C4 host-controlled.",
+    "Complete one synchronized hand and verify community cards, private human cards, tones, input, showdown, next hand, peer-loss fallback, and Back-to-launcher."
+  ]
+}

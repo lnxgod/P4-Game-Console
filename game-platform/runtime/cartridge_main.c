@@ -122,16 +122,26 @@ static bool host_field_present(const p4_cartridge_host_v1_t *host,
 
 static bool host_valid(const p4_cartridge_host_v1_t *host)
 {
-    return host != NULL && host->magic == P4_CARTRIDGE_HOST_MAGIC &&
-        host->api_version == P4_CARTRIDGE_HOST_API_VERSION &&
-        host_field_present(
+    if (host == NULL || host->magic != P4_CARTRIDGE_HOST_MAGIC ||
+        host->api_version != P4_CARTRIDGE_HOST_API_VERSION ||
+        !host_field_present(
             host, offsetof(p4_cartridge_host_v1_t, finished),
-            sizeof(host->finished)) &&
-        host->expected_game_id != NULL && host->surface.pixels != NULL &&
+            sizeof(host->finished)) ||
+        host->expected_game_id == NULL || host->surface.pixels == NULL ||
+        host->poll_frame == NULL || host->present == NULL) {
+        return false;
+    }
+    const bool standard_surface =
         host->surface.width == P4_GAME_SURFACE_WIDTH &&
         host->surface.height == P4_GAME_SURFACE_HEIGHT &&
-        host->surface.stride_pixels >= P4_GAME_SURFACE_WIDTH &&
-        host->poll_frame != NULL && host->present != NULL;
+        host->surface.stride_pixels >= P4_GAME_SURFACE_WIDTH;
+    const bool high_res_surface =
+        host->surface.width == P4_GAME_SURFACE_HIGH_RES_WIDTH &&
+        host->surface.height == P4_GAME_SURFACE_HIGH_RES_HEIGHT &&
+        host->surface.stride_pixels >= P4_GAME_SURFACE_HIGH_RES_WIDTH &&
+        (host->available_capabilities &
+         P4_GAME_CAP_VIDEO_HIGH_RES) != 0U;
+    return standard_surface || high_res_surface;
 }
 
 static uint32_t supported_service_capabilities(void)
@@ -143,7 +153,8 @@ static uint32_t supported_service_capabilities(void)
         P4_GAME_CAP_STORAGE |
         P4_GAME_CAP_SIGNAL_SCAN |
         P4_GAME_CAP_SAVE |
-        P4_GAME_CAP_MULTIPLAYER_SESSION;
+        P4_GAME_CAP_MULTIPLAYER_SESSION |
+        P4_GAME_CAP_VIDEO_HIGH_RES;
 }
 
 static bool host_save_snapshot_valid(const p4_cartridge_host_v1_t *host)
@@ -196,6 +207,11 @@ int app_main(int argc, char *argv[])
         sizeof(host->multiplayer_profile));
     uint32_t available_capabilities = host->available_capabilities &
         supported_service_capabilities();
+    if (host->surface.width != P4_GAME_SURFACE_HIGH_RES_WIDTH ||
+        host->surface.height != P4_GAME_SURFACE_HIGH_RES_HEIGHT) {
+        available_capabilities &=
+            (uint32_t)~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
+    }
     if (host->play_tone == NULL) {
         available_capabilities &=
             (uint32_t)~(uint32_t)P4_GAME_CAP_AUDIO_TONE;

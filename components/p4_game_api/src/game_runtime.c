@@ -30,7 +30,8 @@ static uint32_t known_capabilities(void)
         P4_GAME_CAP_REALM |
         P4_GAME_CAP_MULTIPLAYER_SESSION |
         P4_GAME_CAP_MODULE_HANDOFF |
-        P4_GAME_CAP_VECTOR_SCENES;
+        P4_GAME_CAP_VECTOR_SCENES |
+        P4_GAME_CAP_VIDEO_HIGH_RES;
 }
 
 static uint32_t implemented_service_capabilities(void)
@@ -42,7 +43,8 @@ static uint32_t implemented_service_capabilities(void)
         P4_GAME_CAP_STORAGE |
         P4_GAME_CAP_SIGNAL_SCAN |
         P4_GAME_CAP_SAVE |
-        P4_GAME_CAP_MULTIPLAYER_SESSION;
+        P4_GAME_CAP_MULTIPLAYER_SESSION |
+        P4_GAME_CAP_VIDEO_HIGH_RES;
 }
 
 static bool save_snapshot_valid(const p4_game_services_t *services)
@@ -218,12 +220,24 @@ p4_game_result_t p4_game_instance_update(p4_game_instance_t *instance,
 bool p4_game_instance_render(p4_game_instance_t *instance,
                              p4_game_surface_t *surface)
 {
-    return instance != NULL && instance->active &&
-        instance->descriptor != NULL && surface != NULL &&
-        surface->pixels != NULL &&
-        surface->width == P4_GAME_SURFACE_WIDTH &&
-        surface->height == P4_GAME_SURFACE_HEIGHT &&
-        surface->stride_pixels >= P4_GAME_SURFACE_WIDTH &&
+    if (instance == NULL || !instance->active ||
+        instance->descriptor == NULL || surface == NULL ||
+        surface->pixels == NULL) {
+        return false;
+    }
+    const bool high_res =
+        ((instance->descriptor->required_capabilities |
+          instance->descriptor->optional_capabilities) &
+         P4_GAME_CAP_VIDEO_HIGH_RES) != 0U &&
+        (instance->services.available_capabilities &
+         P4_GAME_CAP_VIDEO_HIGH_RES) != 0U;
+    const uint16_t expected_width = high_res
+        ? P4_GAME_SURFACE_HIGH_RES_WIDTH : P4_GAME_SURFACE_WIDTH;
+    const uint16_t expected_height = high_res
+        ? P4_GAME_SURFACE_HIGH_RES_HEIGHT : P4_GAME_SURFACE_HEIGHT;
+    return surface->width == expected_width &&
+        surface->height == expected_height &&
+        surface->stride_pixels >= expected_width &&
         instance->descriptor->render(&instance->context, surface);
 }
 

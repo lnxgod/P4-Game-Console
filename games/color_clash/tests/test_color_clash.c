@@ -15,6 +15,11 @@ enum {
     STRIDE = P4_GAME_SURFACE_WIDTH + 9,
     FRAME_WORDS = STRIDE * P4_GAME_SURFACE_HEIGHT,
     TOTAL_WORDS = GUARD_WORDS + FRAME_WORDS + GUARD_WORDS,
+    HIGH_RES_STRIDE = P4_GAME_SURFACE_HIGH_RES_WIDTH + 11,
+    HIGH_RES_FRAME_WORDS =
+        HIGH_RES_STRIDE * P4_GAME_SURFACE_HIGH_RES_HEIGHT,
+    HIGH_RES_TOTAL_WORDS =
+        GUARD_WORDS + HIGH_RES_FRAME_WORDS + GUARD_WORDS,
     LINK_QUEUE = 64,
 };
 
@@ -239,6 +244,115 @@ static bool region_differs_from(const uint16_t *pixels,
         }
     }
     return false;
+}
+
+static size_t region_distinct_colors(const uint16_t *pixels, size_t stride,
+                                     unsigned left, unsigned top,
+                                     unsigned width, unsigned height,
+                                     size_t limit)
+{
+    uint16_t colors[64];
+    size_t count = 0U;
+    if (limit > sizeof(colors) / sizeof(colors[0])) {
+        limit = sizeof(colors) / sizeof(colors[0]);
+    }
+    for (unsigned y = top; y < top + height && count < limit; ++y) {
+        for (unsigned x = left; x < left + width && count < limit; ++x) {
+            const uint16_t candidate = pixels[(size_t)y * stride + x];
+            size_t existing = 0U;
+            while (existing < count && colors[existing] != candidate) {
+                ++existing;
+            }
+            if (existing == count) {
+                colors[count++] = candidate;
+            }
+        }
+    }
+    return count;
+}
+
+static void test_render_resolution_negotiation(void)
+{
+    const p4_game_services_t low_res_services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+    };
+    p4_game_instance_t instance = {0};
+    color_clash_state_t state;
+    CHECK(p4_game_instance_start(
+        &instance, &p4_color_clash_game, &low_res_services,
+        &state, sizeof(state)));
+    state = simple_state(2U);
+    uint16_t *const low_res_pixels = calloc(
+        P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT,
+        sizeof(*low_res_pixels));
+    CHECK(low_res_pixels != NULL);
+    if (low_res_pixels != NULL) {
+        p4_game_surface_t low_res_surface = {
+            .pixels = low_res_pixels,
+            .stride_pixels = P4_GAME_SURFACE_WIDTH,
+            .width = P4_GAME_SURFACE_WIDTH,
+            .height = P4_GAME_SURFACE_HEIGHT,
+        };
+        CHECK(p4_game_instance_render(&instance, &low_res_surface));
+        p4_game_surface_t wrong_surface = {
+            .pixels = low_res_pixels,
+            .stride_pixels = P4_GAME_SURFACE_HIGH_RES_WIDTH,
+            .width = P4_GAME_SURFACE_HIGH_RES_WIDTH,
+            .height = P4_GAME_SURFACE_HIGH_RES_HEIGHT,
+        };
+        CHECK(!p4_game_instance_render(&instance, &wrong_surface));
+        free(low_res_pixels);
+    }
+    p4_game_instance_stop(&instance);
+
+    const p4_game_services_t high_res_services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
+            P4_GAME_CAP_VIDEO_HIGH_RES,
+    };
+    CHECK(p4_game_instance_start(
+        &instance, &p4_color_clash_game, &high_res_services,
+        &state, sizeof(state)));
+    CHECK(state.phase == COLOR_CLASH_MENU);
+    tap(&instance, 150U, 165U);
+    CHECK(state.phase == COLOR_CLASH_TURN);
+    state = simple_state(2U);
+    state.discard[0] = color_clash_make_card(
+        COLOR_CLASH_RED, COLOR_CLASH_GAMECHANGER);
+
+    uint16_t *const allocation = calloc(
+        HIGH_RES_TOTAL_WORDS, sizeof(*allocation));
+    CHECK(allocation != NULL);
+    if (allocation != NULL) {
+        for (size_t index = 0U; index < HIGH_RES_TOTAL_WORDS; ++index) {
+            allocation[index] = UINT16_C(0x5aa5);
+        }
+        p4_game_surface_t high_res_surface = {
+            .pixels = allocation + GUARD_WORDS,
+            .stride_pixels = HIGH_RES_STRIDE,
+            .width = P4_GAME_SURFACE_HIGH_RES_WIDTH,
+            .height = P4_GAME_SURFACE_HIGH_RES_HEIGHT,
+        };
+        CHECK(p4_game_instance_render(&instance, &high_res_surface));
+        for (size_t index = 0U; index < GUARD_WORDS; ++index) {
+            CHECK(allocation[index] == UINT16_C(0x5aa5));
+            CHECK(allocation[GUARD_WORDS + HIGH_RES_FRAME_WORDS + index] ==
+                  UINT16_C(0x5aa5));
+        }
+        for (size_t row = 0U;
+             row < P4_GAME_SURFACE_HIGH_RES_HEIGHT; ++row) {
+            for (size_t column = P4_GAME_SURFACE_HIGH_RES_WIDTH;
+                 column < HIGH_RES_STRIDE; ++column) {
+                CHECK(high_res_surface.pixels[
+                          row * HIGH_RES_STRIDE + column] ==
+                      UINT16_C(0x5aa5));
+            }
+        }
+        CHECK(region_distinct_colors(
+                  high_res_surface.pixels, HIGH_RES_STRIDE,
+                  319U, 130U, 101U, 149U, 48U) == 48U);
+        free(allocation);
+    }
+    p4_game_instance_stop(&instance);
 }
 
 static void test_playable_hand_order_and_lift(void)
@@ -1359,6 +1473,10 @@ int main(void)
     CHECK(p4_game_descriptor_valid(&p4_color_clash_game));
     CHECK(p4_color_clash_game.launcher_id == 114U);
     CHECK(p4_color_clash_game.state_bytes <= P4_GAME_MAX_STATE_BYTES);
+    CHECK((p4_color_clash_game.required_capabilities &
+           P4_GAME_CAP_VIDEO_HIGH_RES) == 0U);
+    CHECK((p4_color_clash_game.optional_capabilities &
+           P4_GAME_CAP_VIDEO_HIGH_RES) != 0U);
     test_deck_and_matching();
     test_action_rules();
     test_drawn_card_choice();
@@ -1366,6 +1484,7 @@ int main(void)
     test_gamechanger_rotation();
     test_uno_controls();
     test_lifecycle_touch_and_framebuffer();
+    test_render_resolution_negotiation();
     test_playable_hand_order_and_lift();
     test_hand_touch_scrolling();
     test_color_chooser_render();

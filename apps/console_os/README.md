@@ -48,6 +48,18 @@ use an interruptible cubic ease. When selected, the Waveshare BBS slides only
 its clipped ANSI door viewport into the existing 768x480 framebuffer, avoiding
 a second frame allocation.
 
+Console OS 0.4.98 coordinates the shared NimBLE GAP procedure before opening
+Multiplayer. A disconnected saved controller's pending reconnect yields
+automatically, BLE Host/Join starts only after that scan is idle, and leaving
+Multiplayer restores the saved reconnect policy. An already-connected
+encrypted controller continues to coexist with one multiplayer peer.
+
+Console OS 0.4.99 preserves the default 320x200 cartridge surface and adds
+negotiated 768x480 RGB565 rendering for detail-heavy native games. Waveshare
+presents that high-resolution surface through its existing 1:1 accelerated
+content path. Touch remains normalized to 320x200, so input and controller
+contracts do not fork when a game selects higher visual detail.
+
 Console OS 0.4.97 keeps that 768x480 launcher contract but rotates it at exact
 1:1 scale with the ESP32-P4 PPA into the centered 480x768 panel viewport. Solid
 UI fills reuse a completed row and the home page no longer clears the complete

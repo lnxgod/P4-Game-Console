@@ -74,6 +74,13 @@ The runtime combines original RGB565 drawing primitives, shared font glyphs,
 and the reviewed ImageGen frame atlas; it has no copied commercial card art,
 radio driver, socket, or raw hardware access.
 
+When Console OS offers the optional `video-highres` capability,
+Color Clash renders directly at 768x480 with a native card atlas and scaled
+code-drawn UI. Older consoles keep the original 320x200 surface and atlas.
+Touch coordinates remain in the Game API's normalized 320x200 input space, so
+the same card, swipe, Draw, UNO, and Exit hit regions work in either video
+mode.
+
 ## Card art and logo provenance
 
 `assets/color_clash_card_frames_imagegen_v3.png` is the selected OpenAI
@@ -96,15 +103,23 @@ owner's request; its repository-pinned SHA-256 is
 `48ee7b2a15a744547884ec6ea7f462277ab60e5dde4d0805bf39db9c0b2bd892`.
 ImageGen never redraws the logo.
 
-Regenerate the runtime atlas and its QA preview with Pillow:
+Regenerate both runtime atlases and their QA previews with Pillow:
 
 ```sh
 python3 games/color_clash/tools/png_to_card_frames.py \
   games/color_clash/assets/color_clash_card_frames_imagegen_v3.png \
   apps/console_os/main/assets/gamechangers_ai_logo.rgb565 \
   games/color_clash/src/generated/color_clash_card_frames.inc \
-  games/color_clash/assets/color_clash_card_frames_runtime_preview_v3.png
+  games/color_clash/assets/color_clash_card_frames_runtime_preview_v3.png \
+  --high-res-preview \
+  games/color_clash/assets/color_clash_card_frames_high_res_preview_v3.png
 ```
+
+The legacy 28x42 and 42x62 sprites use nearest-neighbor reduction to preserve
+their established pixel-art appearance. The high-resolution 67x101 and
+101x149 sprites use high-quality downsampling plus a light sharpening pass,
+which preserves the ornate frame detail instead of enlarging the 320x200
+sprites at runtime.
 
 ## Host verification
 

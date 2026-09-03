@@ -18,18 +18,20 @@ TITLE_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._-]*$")
 ACCENT_RE = re.compile(r"^0x[0-9a-fA-F]{4}$")
 FOLDER_RE = re.compile(
     r"^[A-Z0-9][A-Z0-9 -]{0,14}(?:/[A-Z0-9][A-Z0-9 -]{0,14})?$")
-CAPABILITIES = {
-    "audio-tone",
-    "audio-stream",
-    "storage",
-    "signal-scan",
-    "save",
-    "text-input",
-    "realm",
-    "multiplayer-session",
-    "module-handoff",
-    "vector-scenes",
+CAPABILITY_CONSTANTS = {
+    "audio-tone": "P4_GAME_CAP_AUDIO_TONE",
+    "audio-stream": "P4_GAME_CAP_AUDIO_STREAM",
+    "storage": "P4_GAME_CAP_STORAGE",
+    "signal-scan": "P4_GAME_CAP_SIGNAL_SCAN",
+    "save": "P4_GAME_CAP_SAVE",
+    "text-input": "P4_GAME_CAP_TEXT_INPUT",
+    "realm": "P4_GAME_CAP_REALM",
+    "multiplayer-session": "P4_GAME_CAP_MULTIPLAYER_SESSION",
+    "module-handoff": "P4_GAME_CAP_MODULE_HANDOFF",
+    "vector-scenes": "P4_GAME_CAP_VECTOR_SCENES",
+    "video-highres": "P4_GAME_CAP_VIDEO_HIGH_RES",
 }
+CAPABILITIES = set(CAPABILITY_CONSTANTS)
 
 
 def die(message: str) -> "NoReturn":
@@ -106,9 +108,12 @@ endif()
 
 def source_text(slug: str, game_id: str, title: str,
                 launcher_id: int, accent: str,
-                multiplayer: bool) -> str:
+                optional_capabilities: list[str]) -> str:
     symbol = f"p4_{slug}_game"
     c_title = json.dumps(title.upper())
+    optional_expression = " |\n        ".join(
+        CAPABILITY_CONSTANTS[name] for name in optional_capabilities
+    ) or "UINT32_C(0)"
     return f"""// SPDX-License-Identifier: MIT
 // Generated starter for P4 Game API v1. Replace this with your game.
 
@@ -126,6 +131,16 @@ typedef struct {{
     uint32_t held_buttons;
     uint32_t move_accumulator_ms;
 }} {slug}_state_t;
+
+static int surface_x(const p4_game_surface_t *surface, int x)
+{{
+    return x * (int)surface->width / P4_GAME_SURFACE_WIDTH;
+}}
+
+static int surface_y(const p4_game_surface_t *surface, int y)
+{{
+    return y * (int)surface->height / P4_GAME_SURFACE_HEIGHT;
+}}
 
 static bool game_start(p4_game_context_t *context)
 {{
@@ -180,11 +195,16 @@ static bool game_render(p4_game_context_t *context,
         return false;
     }}
     const {slug}_state_t *const state = context->state;
+    const unsigned text_scale =
+        surface->width == P4_GAME_SURFACE_HIGH_RES_WIDTH ? 2U : 1U;
     p4_draw_clear(surface, UINT16_C(0x0000));
-    p4_draw_text(surface, 8, 6, {c_title}, UINT16_C(0xffff), 1U, 15U);
-    p4_draw_text(surface, 8, 16, \"MOVE + PRESS A\",
-                 UINT16_C(0x9cf3), 1U, 14U);
-    p4_draw_fill_circle(surface, state->x, state->y, 7,
+    p4_draw_text(surface, surface_x(surface, 8), surface_y(surface, 6),
+                 {c_title}, UINT16_C(0xffff), text_scale, 15U);
+    p4_draw_text(surface, surface_x(surface, 8), surface_y(surface, 16),
+                 \"MOVE + PRESS A\", UINT16_C(0x9cf3), text_scale, 14U);
+    p4_draw_fill_circle(surface, surface_x(surface, state->x),
+                        surface_y(surface, state->y),
+                        surface_x(surface, 7),
                         UINT16_C({accent}));
     p4_game_draw_standard_controls(
         surface, UINT16_C(0x7bef), UINT16_C({accent}),
@@ -205,7 +225,7 @@ const p4_game_descriptor_t {symbol} = {{
     .subtitle = \"P4 GAME API V1\",
     .accent_rgb565 = UINT16_C({accent}),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
-    .optional_capabilities = P4_GAME_CAP_AUDIO_TONE{(" |" + chr(10) + "        P4_GAME_CAP_MULTIPLAYER_SESSION") if multiplayer else ""},
+    .optional_capabilities = {optional_expression},
     .state_bytes = sizeof({slug}_state_t),
     .start = game_start,
     .update = game_update,
@@ -216,7 +236,8 @@ const p4_game_descriptor_t {symbol} = {{
 
 
 def readme_text(title: str, folder: str,
-                multiplayer_style: str | None) -> str:
+                multiplayer_style: str | None,
+                high_res: bool) -> str:
     multiplayer = ""
     if multiplayer_style is not None:
         multiplayer = f"""
@@ -231,6 +252,16 @@ only `p4_game_multiplayer_read_profile()`,
 Keep a complete offline mode and increment `multiplayer.protocol` whenever the
 meaning of your game messages changes.
 """
+    resolution = ""
+    if high_res:
+        resolution = """
+
+This starter negotiates the optional `video-highres` capability. It receives
+a 768x480 RGB565 surface on supported hardware and falls back to 320x200.
+Touch coordinates deliberately remain normalized to 320x200 in both modes;
+scale drawing coordinates from that stable space using `surface->width` and
+`surface->height`, as the generated source demonstrates.
+"""
     return f"""# {title}
 
 This starter is a native P4 Game API v1 component. Edit the file in `src/`,
@@ -244,7 +275,7 @@ launcher places the game under
 Use only the `p4/` headers for display, controls, drawing, and sound. Keep
 board drivers and raw ESP-IDF peripheral ownership in platform components.
 Press the on-screen Exit control to return to the launcher.
-{multiplayer}
+{resolution}{multiplayer}
 """
 
 
@@ -280,6 +311,11 @@ def main() -> int:
         help=("add a two-player declarative networking profile and the "
               "multiplayer-session capability"),
     )
+    parser.add_argument(
+        "--high-res", action="store_true",
+        help=("negotiate a 768x480 RGB565 surface with automatic "
+              "320x200 fallback"),
+    )
     parser.add_argument("--games-root", type=pathlib.Path,
                         default=ROOT / "games")
     parser.add_argument("--dry-run", action="store_true")
@@ -309,6 +345,8 @@ def main() -> int:
     if args.multiplayer is not None and \
             "multiplayer-session" not in optional_capabilities:
         optional_capabilities.append("multiplayer-session")
+    if args.high_res and "video-highres" not in optional_capabilities:
+        optional_capabilities.append("video-highres")
     game_id = "org.p4console." + slug.replace("_", "-")
     manifest = {
         "schema": 1,
@@ -344,9 +382,10 @@ def main() -> int:
          json.dumps(manifest, indent=2) + "\n"),
         (pathlib.Path("src") / f"{slug}.c",
          source_text(slug, game_id, args.title, launcher_id,
-                     args.accent.lower(), args.multiplayer is not None)),
+                     args.accent.lower(), optional_capabilities)),
         (pathlib.Path("README.md"),
-         readme_text(args.title, args.folder, args.multiplayer)),
+         readme_text(args.title, args.folder, args.multiplayer,
+                     args.high_res)),
     )
     result = {
         "result": "p4-game-starter-planned" if args.dry_run
@@ -357,6 +396,7 @@ def main() -> int:
         "launcher_id": launcher_id,
         "folder": args.folder,
         "optional_capabilities": optional_capabilities,
+        "high_resolution": args.high_res,
         "multiplayer": manifest.get("multiplayer"),
         "files": [str(relative) for relative, _ in files],
     }

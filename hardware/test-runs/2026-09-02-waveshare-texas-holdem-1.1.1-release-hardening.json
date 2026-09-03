@@ -1,0 +1,91 @@
+{
+  "schema": 1,
+  "evidence_id": "waveshare-texas-holdem-1.1.1-release-hardening-20260902",
+  "status": "host-release-gates-pass-unit2-exact-install-pass-unit1-disconnected-install-pending-manual-device-gameplay-pending",
+  "timestamp_utc": "2026-09-03T04:07:32Z",
+  "scope": "Release-hardening and game-only H1 delivery of Texas Hold'em 1.1.1. No Console OS partition, firmware, bootloader, partition table, OTA data, NVS, save data, or unrelated microSD file was written.",
+  "source": {
+    "manifest": "games/texas_holdem/game.json",
+    "version": "1.1.1",
+    "game_id": "org.p4console.texas-holdem",
+    "launcher_id": 117,
+    "protocol": 2,
+    "content_sha256": {
+      "game_json": "663c2eecddb5a80c7f327487fc190e701ce3111fa8e268c33c15e571f545bbf8",
+      "cmake_lists": "5e90cf93fc8bea3013b47fc976da6572981a642a2ab68b04b5fd6a0baa778b41",
+      "readme": "9d30730e30ad09e057c662031feb6dce09d1a6b29415b6cfbd9bd42b42ce247d",
+      "game_ui": "4ec067f13d7d6135d40a9b910386b292b0deacd72604c814a863bfb2377eadcf",
+      "internal_header": "c948a40cec4b549b800fbef1b95e941d2d26dad745859517d87146b1c645a753",
+      "game_logic": "3cb6450729b76fcb3a25ab1271b3e488dc0bbd65219387c555c4bf4abacf613f",
+      "game_network": "e34cfd0f76590f3c39d70aec69849086e0e9ba1648665108a91d0413d4068c7f",
+      "tests": "2691b81470e3f4ca88673185fca3a53859f7803a0af5b19a2ddcb53a1a563f4b"
+    }
+  },
+  "fixes": [
+    "A short-stacked big blind no longer lowers the full preflop opening price owed by live players.",
+    "Starting the match-over state now clears stale fold, all-in, acted, pot, bet, contribution, community, and hole-card state so clients accept the authoritative snapshot."
+  ],
+  "package": {
+    "path": "build-host/texas_holdem/TEXAS_HOLDEM.P4G",
+    "bytes": 19104,
+    "sha256": "88b5d1deb54ec2b2feb397cf7e76217ecc2ec4456e5cb36c0e5d4de40eef0655",
+    "payload_bytes": 18848,
+    "payload_sha256": "f60b31bb191918b032dc63979f7a3fd978ccc6ef396dfd8ef4aacd144d612bf5",
+    "format": "p4-native-elf-v1",
+    "api_version": 1,
+    "compiler": "/Users/billh/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
+    "multiplayer": {
+      "style": "turn-based",
+      "min_players": 2,
+      "max_players": 4,
+      "message_bytes": 63,
+      "protocol": 2
+    }
+  },
+  "verification": {
+    "focused_asan_ubsan_tests": "pass",
+    "five_card_evaluator": "pass-exhaustive-all-2598960-hands-with-canonical-category-counts",
+    "seed_matrix": "pass-32-seeds-up-to-250-hands-each-with-state-chip-and-card-invariants",
+    "side_pots_and_splits": "pass-layered-folded-dead-money-and-odd-chip-cases",
+    "short_big_blind_regression": "pass",
+    "match_over_network_regression": "pass-malformed-stale-state-rejected-clean-authoritative-state-accepted",
+    "malformed_snapshot_and_resync": "pass-invalid-cpu-mask-and-duplicate-card-rejected-then-resynchronized",
+    "render_stride_guard": "pass",
+    "sdl_headless_smoke": "pass-address-and-undefined-behavior-sanitizers",
+    "game_sdk_host": "pass-full-repository-native-game-api-multiplayer-package-and-registry-suite",
+    "clang_static_analyzer": "pass-zero-diagnostics-for-all-three-game-source-files",
+    "host_interactive": "pass-two-cpus-selected-deal-private-human-reveal-automatic-cpu-actions-face-up-flop-keyboard-action-and-back-exit",
+    "host_touch_regions": "pass-automated-lobby-adjust-deal-reveal-action-and-exit-coverage",
+    "manual_panel_launch-cpu-selector-cards-controls-tones-back": "pending-operator-observation",
+    "manual_two-console-host-join-two-cpu-action-sync": "pending-operator-observation"
+  },
+  "installation": {
+    "method": "validated atomic P4G upload through the running console's recorded H1 port with native catalog hot reload",
+    "remote_path": "/GAMES/TEXAS_HOLDEM.P4G",
+    "replace_existing": true,
+    "device_activation": "fsync plus complete package and payload double-validation",
+    "firmware_flash": false,
+    "boards": [
+      {
+        "unit_label": "waveshare-4.3-unit1-pink-B289",
+        "recorded_port": "/dev/cu.wchusbserial5C371865781",
+        "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+        "result": "pending-device-not-present-on-usb-at-delivery-time"
+      },
+      {
+        "unit_label": "waveshare-4.3-unit2-green-386F",
+        "port": "/dev/cu.wchusbserial5B901593451",
+        "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+        "push": "pass-19104-bytes-exact-sha256-and-device-activation",
+        "pull_readback": "pass-byte-for-byte-cmp-exact-sha256"
+      }
+    ]
+  },
+  "operator_checklist": [
+    "Reconnect or power the pink B289 console, confirm /dev/cu.wchusbserial5C371865781 belongs to that recorded unit, then install and pull-compare this exact cartridge.",
+    "Open Games/Arcade and launch Texas Holdem on each unit; confirm CPU Players appears beneath Start Chips.",
+    "In local play, select one to three CPUs, deal, and confirm CPU-labeled seats act automatically after a short pause.",
+    "Use Multiplayer Host/Join with both consoles, set CPU Players to 2 on the host, and confirm the peer shows four total seats with C3 and C4 controlled by the host.",
+    "Complete at least one synchronized hand and verify face-up community cards, private human cards, tones, touch or controller input, showdown, next hand, and Back-to-launcher on both panels."
+  ]
+}

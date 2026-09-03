@@ -40,8 +40,8 @@ Back returns to Host without destroying the lobby. Opening Multiplayer lazily
 prefers BLE while retaining wired UART as the explicit fallback. BLE is still
 not started during boot, and a failed BLE start leaves the wired path active.
 
-Console OS 0.4.91 hardens the base runtime without changing the 768x480 shell
-or 320x200 cartridge contracts. Native games and the launcher now use the
+Console OS 0.4.91 hardened the base runtime without changing its 768x480 shell
+or original 320x200 cartridge contracts. Native games and the launcher use the
 shared fractional 60 Hz scheduler instead of truncating 16 ms to one 100 Hz
 FreeRTOS tick. Native audio emits the exact repeating 266/267-frame sequence
 required for 16 kHz playback, and deadline telemetry reports genuine misses
@@ -53,15 +53,17 @@ catalog. OTA acceptance is withheld until optional services survive a
 10-second health window; fatal software paths show a red recovery frame rather
 than deliberately blanking a working panel.
 
-The current Waveshare successor changes the home surface, not the Game API.
-Console OS renders the Windows 3.1-style Program Manager natively in the
+The current Waveshare successor also extends Game API v1 with an opt-in
+high-resolution video capability. Console OS renders the Windows 3.1-style
+Program Manager natively in the
 centered 768x480 viewport by default. Appearance can select the 80x30
 CP437/ANSI BBS, which presents games and folders as numbered doors. Touch
 hit testing, keyboard, and controller navigation share the same two-column,
-three-row door geometry. Native games remain 320x200 RGB565 and are scaled by
-the platform display path. The Waveshare adapter uses the P4 hardware scaler
-and alternating DSI framebuffers for that surface while leaving the Game API
-unchanged. Multiplayer now opens with an explicit Host/Join choice. Host
+three-row door geometry. Native games remain portable 320x200 RGB565 by
+default; a game declaring `video-highres` can negotiate a direct 768x480
+surface. The Waveshare adapter uses the P4 hardware scaler for standard games
+and a 1:1 accelerated submit for high-resolution games. Multiplayer opens with
+an explicit Host/Join choice. Host
 selects Doom, Chex Quest, or an installed native cartridge declaring
 `multiplayer-session`, plus settings and link. Join instead browses bounded
 cross-game room rows and resolves the selected room against the exact local
@@ -548,7 +550,7 @@ display, overlays, and exit callbacks in a deterministic order.
 | Resource | Launcher owner | Doom owner | Transition rule |
 |---|---|---|---|
 | MIPI-DSI display | `platform_display` | `platform_display` | Launcher deinitializes it before Doom starts |
-| RGB565 surface | 320x200 shell buffer | Doom video adapter | Never shared concurrently |
+| RGB565 surface | 768x480 shell buffer; native games receive negotiated 320x200 or 768x480 | Doom video adapter | Never shared concurrently |
 | I2C1 GPIO45/46 | `platform_i2c_shared` | `platform_i2c_shared` | Touch borrower is destroyed before bus owner |
 | GT911 touch | `platform_touch` | `platform_touch` + Doom input | Invalid/malformed frames neutralize input |
 | Speaker audio | none on home; reviewed session for native games | Doom audio adapter/factory backend | Only one foreground owner; close must re-prove amplifier shutdown |
@@ -564,8 +566,10 @@ display, overlays, and exit callbacks in a deterministic order.
 The Elecrow and Olimex launcher surface is standard RGB565 at 320x200. The
 Elecrow display service scales it 3x into a 960x600 viewport with 32-pixel black
 margins on the 1024x600 panel. Waveshare renders the ANSI home page natively in
-its fixed centered 768x480 shell viewport. Touch coordinates outside each
-board's declared viewport cannot activate UI.
+its fixed centered 768x480 shell viewport. Waveshare native games may negotiate
+that same 768x480 surface; otherwise its hardware path scales 320x200. Game
+touch input remains canonical 320x200 in both render modes, and physical touch
+coordinates outside each board's declared viewport cannot activate UI.
 
 ## App registry
 

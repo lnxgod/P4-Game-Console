@@ -1,9 +1,10 @@
 # P4 Game SDK v1
 
 P4 Game SDK v1 is the stable C interface for storage-installed Console OS
-games. A game owns bounded gameplay state and draws a 320x200 RGB565 frame.
-Console OS owns the panel, touch, audio, timing, USB, filesystem, and app
-lifecycle.
+games. A game owns bounded gameplay state and normally draws a 320x200 RGB565
+frame. Detail-heavy games may negotiate the additive 768x480 high-resolution
+mode. Console OS owns the panel, touch, audio, timing, USB, filesystem, and
+app lifecycle.
 
 ## Package format
 
@@ -60,6 +61,7 @@ From the repository root:
 ```sh
 python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE --dry-run
 python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE
+python3 scripts/new-game.py "Card Table" --folder GAMES/CARDS --high-res
 cmake -S games/star_hop -B build-host/star_hop -G Ninja
 cmake --build build-host/star_hop
 ```
@@ -156,6 +158,10 @@ letting an unloadable game reach the SD card.
 - bounded `title`, `subtitle`, `folder`, `license`, and RGB565 accent;
 - required and optional capabilities.
 
+Use optional `video-highres` for a dual-resolution game, or place it in
+`required_capabilities` only when the game cannot render at 320x200. The
+creator's `--high-res` flag generates the portable optional form.
+
 Use `scripts/new-game.py --dry-run` to inspect a starter plan. The creator
 never overwrites an existing game.
 
@@ -183,6 +189,29 @@ not issue catch-up bursts after a slow frame. Return
 `P4_GAME_EXIT_TO_LAUNCHER` when Back is pressed.
 `render` receives the caller-owned surface; supplied drawing primitives clip
 to its bounds.
+
+## High-resolution video mode
+
+The default contract remains `P4_GAME_SURFACE_WIDTH` ×
+`P4_GAME_SURFACE_HEIGHT` (320×200). A game that declares the
+`video-highres` manifest capability and
+`P4_GAME_CAP_VIDEO_HIGH_RES` descriptor capability may receive
+`P4_GAME_SURFACE_HIGH_RES_WIDTH` × `P4_GAME_SURFACE_HIGH_RES_HEIGHT`
+(768×480) instead. Check `surface->width` and `surface->height` during every
+render; do not infer the selected mode from the board.
+
+Declaring high resolution as optional is the preferred portable form. Console
+OS selects 768×480 when the target supports it and otherwise starts the game
+with 320×200. Declaring it as required makes launch fail cleanly on a target
+without that surface. The Waveshare 4.3 Console OS and SDL3 host runner support
+the high-resolution surface now.
+
+Input deliberately does not change modes. `p4_game_input_t` touch points and
+the standard control hit regions always use canonical 320×200 coordinates.
+For custom high-resolution hit testing, keep gameplay/UI geometry in that
+canonical space or convert with `pixel_x = touch_x * surface_width / 320` and
+`pixel_y = touch_y * surface_height / 200`. The standard control renderer
+automatically scales its artwork to either surface.
 
 Tone and PCM stream audio are optional. `p4_game_play_tone()` and
 `p4_game_submit_pcm16_stereo()` may return false when their requested service
@@ -379,10 +408,10 @@ cartridge code runs.
 
 Games inherit a stable logical console rather than a board definition:
 
-- Every `.P4G` targets a clipped 320x200 RGB565 Game API surface. Console OS
-  places that stable surface in its board-specific viewport. On Waveshare 4.3,
-  the OS viewport is always 768x480 landscape. A game must not infer scanout
-  rotation, pin maps, stride layout, or backlight behavior.
+- Every `.P4G` targets a clipped RGB565 Game API surface: portable 320x200 by
+  default, or negotiated 768x480 when it declares `video-highres`. On
+  Waveshare 4.3, the OS viewport is always 768x480 landscape. A game must not
+  infer scanout rotation, pin maps, stride layout, or backlight behavior.
 - Input is a complete normalized snapshot. Use only the Game API buttons,
   touch points, and standard on-screen controls; never retain a touch pointer
   or talk to GT911/USB directly.
@@ -393,13 +422,13 @@ Games inherit a stable logical console rather than a board definition:
 
 ### Match the native ANSI/BBS look inside a cartridge
 
-The BBS home page is an 80×30 native terminal, but games remain portable
-320×200 surfaces. Use `p4_draw_cp437_glyph()` or `p4_draw_cp437_text()` when a
-game needs authentic DOS boxes, arrows, blocks, shading, or text. Select the
-8-pixel compact height for game chrome and the native 16-pixel height for
-larger art. Both use the same pinned CP437 font as `components/p4_ansi`, while
-remaining ordinary clipped Game API drawing with no shell, parser, transport,
-or terminal-geometry dependency.
+The BBS home page is an 80×30 native terminal. Use
+`p4_draw_cp437_glyph()` or `p4_draw_cp437_text()` when a game needs authentic
+DOS boxes, arrows, blocks, shading, or text. Select the 8-pixel compact height
+for game chrome and the native 16-pixel height for larger art. Both use the
+same pinned CP437 font as `components/p4_ansi` on either Game API surface,
+while remaining ordinary clipped drawing with no shell, parser, transport, or
+terminal-geometry dependency.
 
 ## Make motion and effects smooth without an engine
 

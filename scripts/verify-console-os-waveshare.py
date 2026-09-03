@@ -32,6 +32,21 @@ HCD_UPSTREAM_SHA256 = "de0471a749547c7d295af0fe2e3e5b61d1eedf46d88c5b57cf20cec20
 HCD_FSLS_BYTES = 120_226
 HCD_FSLS_SHA256 = "c71577cbdcc808828216940671be511a074f51fcd88e4f24ef0948d8aebabb8a"
 HUB_UPSTREAM_SHA256 = "2d7c79c8508f63be6b0243178eafae2351f4e4643a87d9cdc73e980b95985afe"
+GAME_CAPABILITIES = {
+    "video": 1 << 0,
+    "controls": 1 << 1,
+    "audio-tone": 1 << 2,
+    "audio-stream": 1 << 3,
+    "storage": 1 << 4,
+    "signal-scan": 1 << 5,
+    "save": 1 << 6,
+    "text-input": 1 << 7,
+    "realm": 1 << 8,
+    "multiplayer-session": 1 << 9,
+    "module-handoff": 1 << 10,
+    "vector-scenes": 1 << 11,
+    "video-highres": 1 << 12,
+}
 
 
 def require(condition: bool, message: str) -> None:
@@ -120,7 +135,19 @@ def verify_game(path: pathlib.Path, manifest: dict) -> dict[str, object]:
         set(manifest["required_capabilities"]) |
         set(manifest["optional_capabilities"]),
     )
-    require(required & 1 and not (required & optional) and
+    try:
+        expected_required = sum(
+            GAME_CAPABILITIES[name]
+            for name in manifest["required_capabilities"]
+        )
+        expected_optional = sum(
+            GAME_CAPABILITIES[name]
+            for name in manifest["optional_capabilities"]
+        )
+    except (KeyError, TypeError) as error:
+        require(False, f"{path.name} manifest capability is invalid: {error}")
+    require(required == expected_required and optional == expected_optional and
+            required & 1 and not (required & optional) and
             flags == (1 | profile_flag),
             f"{path.name} capabilities or disclosure flags differ")
     require(accent == int(manifest["accent_rgb565"], 16),
@@ -795,6 +822,11 @@ def main() -> None:
         "CONSOLE_APP_CONTROLLERS", "CONSOLE_PAGE_CONTROLLERS",
         "CONSOLE_ACTION_CONTROLLER_PAIR",
         "platform_gamepad_ble_connect_or_pair",
+        "platform_gamepad_ble_cancel",
+        "platform_gamepad_ble_radio_idle",
+        "request_ble_multiplayer_transport",
+        "release_multiplayer_ble_transport",
+        "P4_CONSOLE_OS BLE_RADIO_HANDOFF owner=multiplayer",
         "P4_CONSOLE_OS BLE_CONTROLLER_ACTION name=%s result=%s",
         "stop_usb_input_for_role_switch",
         "P4_CONSOLE_OS USB_ROLE_STOPPED",

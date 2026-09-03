@@ -175,7 +175,8 @@ int main(int argc, char *argv[])
     write_u32(package + 40U,
               P4_GAME_CAP_SAVE | P4_GAME_CAP_TEXT_INPUT |
               P4_GAME_CAP_REALM | P4_GAME_CAP_MULTIPLAYER_SESSION |
-              P4_GAME_CAP_MODULE_HANDOFF | P4_GAME_CAP_VECTOR_SCENES);
+              P4_GAME_CAP_MODULE_HANDOFF | P4_GAME_CAP_VECTOR_SCENES |
+              P4_GAME_CAP_VIDEO_HIGH_RES);
     assert(p4_game_package_parse(package, sizeof(package), &info) ==
            P4_GAME_PACKAGE_VALID);
     assert(!info.multiplayer_profile_declared);

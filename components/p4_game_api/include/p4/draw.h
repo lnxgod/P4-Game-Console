@@ -20,6 +20,7 @@ enum {
     P4_DRAW_CP437_MAX_TEXT_BYTES = 256,
 };
 
+/** Accept either the standard 320x200 or negotiated 768x480 RGB565 surface. */
 bool p4_surface_valid(const p4_game_surface_t *surface);
 void p4_draw_clear(p4_game_surface_t *surface, uint16_t color);
 void p4_draw_pixel(p4_game_surface_t *surface,

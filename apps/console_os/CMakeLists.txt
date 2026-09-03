@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.4.97")
+set(PROJECT_VER "0.4.99")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")
@@ -30,6 +30,7 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components/console_shell"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_ansi"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_bbs"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_ble_radio_handoff"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_cp437"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_board"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_console_settings"

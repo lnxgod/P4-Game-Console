@@ -59,6 +59,13 @@ esp_err_t platform_gamepad_ble_connect_or_pair(void);
 /** Cancel an in-progress scan without disturbing BLE multiplayer. */
 void platform_gamepad_ble_cancel(void);
 
+/**
+ * Return true after a cancelled controller operation no longer owns a GAP
+ * discovery procedure. An established controller link is considered idle
+ * because it can coexist with one multiplayer peer.
+ */
+bool platform_gamepad_ble_radio_idle(void);
+
 /** Disconnect the active pad but retain its persistent bond. */
 void platform_gamepad_ble_disconnect(void);
 

@@ -14,8 +14,12 @@ extern "C" {
 #define P4_GAME_API_VERSION UINT32_C(1)
 
 enum {
+    /** Stable input and default framebuffer coordinate space. */
     P4_GAME_SURFACE_WIDTH = 320,
     P4_GAME_SURFACE_HEIGHT = 200,
+    /** Opt-in native landscape framebuffer for detail-heavy games. */
+    P4_GAME_SURFACE_HIGH_RES_WIDTH = 768,
+    P4_GAME_SURFACE_HIGH_RES_HEIGHT = 480,
     P4_GAME_MAX_STATE_BYTES = 128 * 1024,
     P4_GAME_ID_MAX_BYTES = 48,
     P4_GAME_TITLE_MAX_BYTES = 16,
@@ -47,6 +51,8 @@ typedef enum {
     P4_GAME_CAP_MULTIPLAYER_SESSION = UINT32_C(1) << 9U,
     P4_GAME_CAP_MODULE_HANDOFF = UINT32_C(1) << 10U,
     P4_GAME_CAP_VECTOR_SCENES = UINT32_C(1) << 11U,
+    /** Negotiates a 768x480 RGB565 surface; input remains 320x200. */
+    P4_GAME_CAP_VIDEO_HIGH_RES = UINT32_C(1) << 12U,
 } p4_game_capability_t;
 
 typedef enum {

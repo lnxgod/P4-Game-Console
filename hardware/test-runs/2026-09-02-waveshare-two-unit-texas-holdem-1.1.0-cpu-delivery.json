@@ -1,0 +1,87 @@
+{
+  "schema": 1,
+  "evidence_id": "waveshare-two-unit-texas-holdem-1.1.0-cpu-delivery-20260902",
+  "status": "installed-both-exact-readback-pass-host-cpu-gameplay-pass-manual-device-gameplay-pending",
+  "timestamp_utc": "2026-09-02T19:12:06Z",
+  "scope": "Game-only H1 update of Texas Hold'em 1.1.0 with host-authoritative CPU players on both recorded Waveshare 4.3 consoles; no Console OS partition, firmware, bootloader, partition table, OTA data, NVS, save data, or unrelated microSD file was written.",
+  "source": {
+    "manifest": "games/texas_holdem/game.json",
+    "version": "1.1.0",
+    "game_id": "org.p4console.texas-holdem",
+    "launcher_id": 117,
+    "cpu_modes": [
+      "local four-seat table with zero to three CPU seats",
+      "network table with connected human slots plus host-controlled CPU seats up to four total"
+    ]
+  },
+  "package": {
+    "path": "build-host/texas_holdem/TEXAS_HOLDEM.P4G",
+    "bytes": 19048,
+    "sha256": "017003f74d01da52e582ad6bff9553dc7c16c3a3140b9dce8ae3f847836a7536",
+    "payload_bytes": 18792,
+    "payload_sha256": "519931485b7958cae725e66c913517e5cff6d7bba7cf3471d2031a37f8829e2b",
+    "format": "p4-native-elf-v1",
+    "api_version": 1,
+    "multiplayer": {
+      "style": "turn-based",
+      "min_players": 2,
+      "max_players": 4,
+      "message_bytes": 63,
+      "protocol": 2
+    }
+  },
+  "installation": {
+    "method": "validated atomic P4G upload through each running console's recorded H1 port with native catalog hot reload",
+    "remote_path": "/GAMES/TEXAS_HOLDEM.P4G",
+    "replace_existing": true,
+    "device_activation": "fsync plus complete package and payload double-validation",
+    "firmware_flash": false
+  },
+  "boards": [
+    {
+      "unit_label": "waveshare-4.3-unit1-pink-B289",
+      "port": "/dev/cu.wchusbserial5C371865781",
+      "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+      "push": "pass-19048-bytes-exact-sha256-and-device-activation",
+      "pull_readback": "pass-byte-for-byte-cmp-exact-sha256"
+    },
+    {
+      "unit_label": "waveshare-4.3-unit2-green-386F",
+      "port": "/dev/cu.wchusbserial5B901593451",
+      "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+      "push": "pass-19048-bytes-exact-sha256-and-device-activation",
+      "pull_readback": "pass-byte-for-byte-cmp-exact-sha256"
+    }
+  ],
+  "verification": {
+    "host_unit_tests": "pass-address-and-undefined-behavior-sanitizers-including-160-hand-mixed-human-cpu-simulation",
+    "host_network_tests": "pass-four-human-link-and-two-human-two-host-cpu-link",
+    "host_sdl_smoke": "pass",
+    "host_interactive": "pass-select-two-cpus-deal-automatic-cpu-action-human-private-reveal-flop-and-back",
+    "manifest_registry": "pass",
+    "package_builder": "pass-pinned-risc-v-elf-import-payload-and-protocol-2-validation",
+    "unit1_installed_file": "exact byte-for-byte match",
+    "unit2_installed_file": "exact byte-for-byte match",
+    "manual_panel_launch_cpu-selector-cards-controls-tones-back": "pending operator observation",
+    "manual_two-console_host-join-two-cpu-action-sync": "pending operator observation"
+  },
+  "cpu_behavior": {
+    "authority": "local runtime offline; network host only when linked",
+    "seat_assignment": "highest local seat numbers or contiguous seats after connected network humans",
+    "think_delay_ms": 600,
+    "actions": [
+      "fold",
+      "check-call",
+      "fixed-big-blind-raise"
+    ],
+    "card_ui_privacy": "CPU hole cards remain face-down until a non-folded showdown",
+    "transport_access": false
+  },
+  "operator_checklist": [
+    "Open Games/Arcade and launch Texas Holdem on each unit; confirm CPU Players appears beneath Start Chips.",
+    "In local play, select one to three CPUs, deal, and confirm CPU-labeled seats act automatically after a short pause.",
+    "Confirm CPU hole cards remain face-down before showdown and the human pass/reveal overlay still protects human hands.",
+    "Use Multiplayer Host/Join with both consoles, set CPU Players to 2 on the host, and confirm the peer shows four total seats with C3 and C4 controlled by the host.",
+    "Exercise at least one complete synchronized betting round, tones, touch or controller input, and Back-to-launcher on both panels."
+  ]
+}
