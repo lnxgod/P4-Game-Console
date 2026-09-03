@@ -120,6 +120,19 @@ effect and the existing element, wing, morph, genome, lineage, and habitat
 layers. Every reachable route remains authored: there is no placeholder body,
 hatch, or effect fallback.
 
+Version 4.3.1 repairs Signal Hunt on controller-first systems that do not
+expose the optional scan service. Instead of ending at an offline wall, the
+game opens a clearly labeled five-encounter training roster built from the
+same authored signal, habitat, attack, passive, and arena layers. The drills
+cover both battle styles and all four attacks and passives, but never claim to
+be live Wi-Fi: they award no Signal DNA, Sparks, growth, or achievements and
+use separate resettable completion marks. Real scan requests now fail to an
+explicit retry screen after five seconds, including providers that keep
+returning stale SCANNING snapshots. A Signal Hunt press during Play's handoff
+or a queued growth ceremony is buffered, cancels only the pending Star Catcher
+launch, and opens after the ceremony instead of being lost. The art bank stays
+the same complete 42-sheet/672-frame sidecar; no placeholder path was added.
+
 ## Touch play
 
 - Tap **Feed**, **Play**, **Clean**, or **Rest** to provide care. Feed, Clean,
@@ -263,17 +276,19 @@ and lineage Guard contributes to the dragon's bounded battle HP.
 
 Signal battles are visual fiction. Byte Buddy never connects to a network,
 asks for a password, sends packets, or interferes with Wi-Fi. The SDL host uses
-fictional deterministic encounters. The Waveshare Console OS build now carries
-a locked, passive ESP32-C6 scan provider and exposes it only after background
-initialization succeeds; otherwise the same honest offline screen remains.
-That provider deliberately publishes named results only, preserving the prior
-user-approved policy against `HIDDEN SIGNAL` rows. The generic Game API and SDL
-simulator still support the hidden flag for other providers and deterministic
-fantasy coverage.
-The focused v3.8 host sanitizer, deterministic preview, registry, SDL host,
+fictional deterministic encounters. The stable controller-first Waveshare
+Console OS build does not expose passive scanning, so v4.3.1 uses the labeled
+training roster there. A separately reviewed, compile-time-gated ESP32-C6
+passive-scan candidate exists, but it is not enabled or treated as hardware
+acceptance until its board authorization and retained-UART qualification are
+complete. That candidate publishes named results only, preserving the prior
+policy against `HIDDEN SIGNAL` rows. The generic Game API and SDL simulator
+still support the hidden flag for other providers and deterministic fantasy
+coverage.
+The current v4.3.1 host sanitizer, deterministic preview, registry, SDL host,
 RISC-V cartridge, and sidecar checks pass. This game revision has not been
-flashed or accepted as a complete Waveshare firmware image; live C6 behavior
-remains qualified only by its separately recorded provider evidence.
+installed or accepted on the Waveshare tablet, and no live scan path is enabled
+by this game-only candidate.
 
 The four aspect upgrades have three levels. The next levels cost 2, 5, and 8
 coins:
@@ -1078,7 +1093,7 @@ python3 scripts/build-game-resource.py \
   --output /tmp/BYTEBUD.P4R
 ```
 
-Current v4.3 source/resource identities:
+Current shared v4.3.0/v4.3.1 source and resource identities:
 
 - the twelve accepted v19-v21 source PNG identities are pinned in the SHA-256
   table above;
@@ -1087,10 +1102,12 @@ Current v4.3 source/resource identities:
 - v4.3 wrapped `BYTEBUD.P4R`: 1,397,952 bytes,
   `6a7b7dafe0dd5565a867268e5c7e9a53feecbdd80e5c7b8d6e110598963fd698`.
 
+### Verified v4.3.0 package identities
+
 Two complete conversions reproduced the byte-identical v4.3 include and raw
 resource outputs. Two independent focused builds with
 `riscv32-esp-elf-gcc (crosstool-NG esp-14.2.0_20251107) 14.2.0` then produced
-the same matched v4.3 pair byte for byte. The locked ESP-IDF 5.5.3 Waveshare
+the same matched v4.3.0 pair byte for byte. The locked ESP-IDF 5.5.3 Waveshare
 Console OS pipeline produced that exact pair again, and the independent
 Waveshare verifier accepted the complete build without flashing:
 
@@ -1102,19 +1119,31 @@ Waveshare verifier accepted the complete build without flashing:
   package SHA-256
   `6a7b7dafe0dd5565a867268e5c7e9a53feecbdd80e5c7b8d6e110598963fd698`.
 
-The ignored, ready-to-transfer pair is under
-`build-host/byte-buddy-4.3.0/`. This is a reproducible, host-verified deployment
-candidate, not physical acceptance. A resource-first H1 attempt selected the
-exact recorded pink unit 1 bridge at `/dev/cu.wchusbserial5C371865781`, but its
-live service returned status 9 (`unsupported`) for P4R before any payload chunk;
-the `.P4G` was therefore not sent and neither unit was modified. That current
-response supersedes the historical protocol-2 readiness record. H2 mass storage
-was not present either. To continue without flashing, open **System > Turn On
-USB Mode** on the physically identified pink unit, connect H2, verify the new
-TinyUSB storage serial ends in its recorded `B289` identity and the FAT32
-`P4GAMES` volume is mounted, then use the guarded full-bundle installer. Named
-human SDL play and tablet animation/gameplay acceptance remain separate steps.
-The zero-mutation v4.3 preflight is recorded in
+### Current v4.3.1 candidate identities
+
+Two independent focused builds produced the same current pair byte for byte:
+
+- `BYTEBUD.P4G`: 196,632 bytes with a 196,376-byte ELF payload; payload
+  SHA-256 `7918a4c8a131e2e419d8f3ee3bde1317aea76251e4522f9d5aabf54a0f91b975`
+  and package SHA-256
+  `7c32550b21ee42cbbba0ec1df4d147a7e52a95e4b83f7dc6f93bb8b9da0f541d`;
+- `BYTEBUD.P4R`: unchanged from v4.3.0 at 1,397,952 bytes, with the
+  1,397,824-byte payload above and package SHA-256
+  `6a7b7dafe0dd5565a867268e5c7e9a53feecbdd80e5c7b8d6e110598963fd698`.
+
+The ignored candidates are under `build-host/byte-buddy-4.3.1-a/` and
+`build-host/byte-buddy-4.3.1-b/`. They are reproducible, host-verified artifacts,
+not physical acceptance. The earlier resource-first v4.3.0 H1 attempt selected
+the exact recorded pink unit 1 bridge at `/dev/cu.wchusbserial5C371865781`, but
+its live service returned status 9 (`unsupported`) for P4R before any payload
+chunk; the `.P4G` was therefore not sent and neither unit was modified. No
+v4.3.1 artifact has been transferred. That H1 response supersedes the historical
+protocol-2 readiness record, and H2 mass storage was not present. To continue
+without flashing, open **System > Turn On USB Mode** on the physically identified
+pink unit, connect H2, verify the new TinyUSB storage serial ends in its recorded
+`B289` identity and the FAT32 `P4GAMES` volume is mounted, then use the guarded
+full-bundle installer. Named human SDL play and tablet animation/gameplay
+acceptance remain separate steps. The zero-mutation v4.3.0 preflight is recorded in
 `hardware/test-runs/2026-09-02-waveshare-unit1-byte-buddy-v4.3-h1-preflight.json`.
 
 Verified v4.0.0 release identities:
@@ -1287,7 +1316,8 @@ all five combinable adaptations, the 48-link recovery/fail-safe path,
 low-diversity stalling, capped lineage stats, bounded signal-provider
 integration, guarded rendering, the required storage/resource-v1 contract,
 and rejection of missing, null, malformed, truncated, wrong-version, or
-incomplete full art. CTest renders the eleven primary 320×200 screens, the
+incomplete full art. CTest renders fourteen primary 320×200 screens, including
+the offline training list, tracker, and battle, plus the
 complete 178-frame route, and hashes the exact 955-frame battle, 112-frame
 authored, 192-frame direct-completion, and 180-frame runtime-composited routes
 with the committed resource as deterministic preview smokes.
@@ -1299,15 +1329,19 @@ progression, attack-deck/Comet/Shift timing, guard-window boundaries, Star
 Catcher reward bounds, versioned save encoding/lifecycle coverage, and a
 relaunch regression proving that Sparks and signal lineage remain session-only.
 The v4.2 matched package verification passed twice with identical payloads and
-packages. The v4.3 focused sanitizer/visual run passes all eight tests, its SDL3
-host smoke/save run passes both tests, and its matched package was reproduced
-by two focused builds plus the locked Waveshare pipeline and independent build
-verifier. Named human SDL play, a verified device install/readback, and physical
-tablet acceptance remain pending. Both the earlier green-unit preflight and the
-current pink-port v4.3 preflight stopped on unsupported `.P4R` status before a
-payload or matching `.P4G` was sent, so neither installed game was mutated. The
-pink H2 identity-bound USB Drive route now requires the user action documented
-above.
+packages. The v4.3.0 focused sanitizer/visual run passed all eight tests, its
+SDL3 host smoke/save run passed both tests, and its matched package was
+reproduced by two focused builds plus the locked Waveshare pipeline and
+independent build verifier. The v4.3.1 repair also passes all eight focused
+sanitizer/visual tests and both SDL3 host smoke/save tests; its current `.P4G`
+and unchanged `.P4R` reproduced byte-identically in two builds, and the manifest,
+resource builder, and host transfer validation gates pass. Named human SDL play,
+a verified device install/readback, and physical tablet acceptance remain
+pending. Both the earlier green-unit preflight and the pink-port v4.3.0 preflight
+stopped on unsupported `.P4R` status before a payload or matching `.P4G` was
+sent, so neither installed game was mutated. No v4.3.1 transfer was attempted.
+The pink H2 identity-bound USB Drive route now requires the user action
+documented above.
 
 On platforms with the optional reviewed save capability, ordinary care, the
 spendable wallet, upgrades, Style, and general achievements follow the durable

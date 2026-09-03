@@ -68,6 +68,7 @@ enum {
     SHOP_FEEDBACK_MS = 650,
     SIGNAL_TRACK_REFRESH_MS = 1600,
     SIGNAL_REQUEST_BUSY_MS = 1200,
+    SIGNAL_SCAN_TIMEOUT_MS = 5000,
     SIGNAL_CONTROLLER_CURSOR_SPEED = 125,
     SIGNAL_CONTROLLER_CURSOR_MIN_X = 96,
     SIGNAL_CONTROLLER_CURSOR_MAX_X = 224,
@@ -236,6 +237,8 @@ typedef struct {
     uint8_t signal_page;
     uint8_t signal_selected_index;
     uint8_t signal_consumed_count;
+    uint8_t signal_training_completed_mask;
+    uint8_t signal_training_completed_count;
     uint8_t signal_feeds;
     uint8_t signal_hue;
     uint8_t signal_element_votes[3];
@@ -302,6 +305,7 @@ typedef struct {
     uint32_t signal_reward_ms;
     uint32_t signal_track_refresh_ms;
     uint32_t signal_request_busy_ms;
+    uint32_t signal_scan_timeout_ms;
     uint32_t save_host_sequence;
     uint32_t save_ticket;
     uint32_t save_local_generation;
@@ -325,6 +329,8 @@ typedef struct {
     bool style_shop;
     bool lineage_panel;
     bool signal_hunt;
+    bool signal_training_mode;
+    bool signal_hunt_start_pending;
     bool signal_battle_locked;
     bool signal_guard_armed;
     bool controller_active;
@@ -2350,6 +2356,15 @@ static void apply_decay(byte_buddy_state_t *state, uint32_t elapsed_ms)
     }
 }
 
+static void finish_reaction_now(byte_buddy_state_t *state)
+{
+    state->reaction_ms = 0U;
+    state->reaction = REACTION_IDLE;
+    if (state->stage != BYTE_BUDDY_STAGE_EGG) {
+        state->dragon_idle_epoch_ms = state->animation_ms;
+    }
+}
+
 static void update_reaction(byte_buddy_state_t *state, uint32_t elapsed_ms)
 {
     if (state->reaction_ms == 0U) {
@@ -2359,11 +2374,7 @@ static void update_reaction(byte_buddy_state_t *state, uint32_t elapsed_ms)
         state->reaction_ms -= elapsed_ms;
         return;
     }
-    state->reaction_ms = 0U;
-    state->reaction = REACTION_IDLE;
-    if (state->stage != BYTE_BUDDY_STAGE_EGG) {
-        state->dragon_idle_epoch_ms = state->animation_ms;
-    }
+    finish_reaction_now(state);
 }
 
 static void complete_play(byte_buddy_state_t *state)
@@ -2394,6 +2405,16 @@ static void finish_play(byte_buddy_state_t *state)
 
 static bool signal_consumed(const byte_buddy_state_t *state, uint64_t token)
 {
+    if (state->signal_training_mode) {
+        for (uint8_t index = 0U; index < state->signal_snapshot.count;
+             ++index) {
+            if (state->signal_snapshot.results[index].token == token) {
+                return (state->signal_training_completed_mask &
+                        (uint8_t)(1U << index)) != 0U;
+            }
+        }
+        return false;
+    }
     for (size_t index = 0U; index < state->signal_consumed_count; ++index) {
         if (state->signal_consumed[index] == token) {
             return true;
@@ -2429,6 +2450,68 @@ static bool signal_is_simulated(const p4_game_signal_t *signal)
 {
     return signal != NULL &&
         (signal->flags & P4_GAME_SIGNAL_SIMULATED) != 0U;
+}
+
+static void clamp_signal_focus(byte_buddy_state_t *state);
+
+static void load_training_signals(byte_buddy_state_t *state)
+{
+    static const p4_game_signal_t training_signals[] = {
+        {
+            .token = UINT64_C(0x00123456789abcde),
+            .label = "PULSE GROVE",
+            .rssi_dbm = -62,
+            .channel = 1U,
+            .flags = P4_GAME_SIGNAL_SIMULATED,
+        },
+        {
+            .token = UINT64_C(0x3ff0000002445678),
+            .label = "THORN SCHOOL",
+            .rssi_dbm = -59,
+            .channel = 6U,
+            .flags = P4_GAME_SIGNAL_PROTECTED |
+                     P4_GAME_SIGNAL_SIMULATED,
+        },
+        {
+            .token = UINT64_C(0x1020304050607080),
+            .label = "EMBER ARCADE",
+            .rssi_dbm = -56,
+            .channel = 11U,
+            .flags = P4_GAME_SIGNAL_SIMULATED,
+        },
+        {
+            .token = UINT64_C(0x8877665544332211),
+            .label = "MOON WORKSHOP",
+            .rssi_dbm = -52,
+            .channel = 36U,
+            .flags = P4_GAME_SIGNAL_PROTECTED |
+                     P4_GAME_SIGNAL_SIMULATED,
+        },
+        {
+            .token = UINT64_C(0x55aa33cc77ee0011),
+            .label = "DRAGON DRILL",
+            .rssi_dbm = -48,
+            .channel = 149U,
+            .flags = P4_GAME_SIGNAL_HIDDEN |
+                     P4_GAME_SIGNAL_SIMULATED,
+        },
+    };
+    state->signal_generation = state->signal_generation == UINT32_MAX
+        ? 1U : state->signal_generation + 1U;
+    state->signal_snapshot = (p4_game_signal_snapshot_t){
+        .generation = state->signal_generation,
+        .status = P4_GAME_SIGNAL_READY,
+        .count = (uint8_t)(sizeof(training_signals) /
+                           sizeof(training_signals[0])),
+    };
+    memcpy(state->signal_snapshot.results, training_signals,
+           sizeof(training_signals));
+    state->signal_request_busy_ms = 0U;
+    state->signal_scan_timeout_ms = 0U;
+    state->signal_training_mode = true;
+    state->signal_training_completed_mask = 0U;
+    state->signal_training_completed_count = 0U;
+    clamp_signal_focus(state);
 }
 
 static uint8_t signal_rows_on_page(const byte_buddy_state_t *state)
@@ -2485,12 +2568,10 @@ static bool request_signal_scan(p4_game_context_t *context,
         (context->services->available_capabilities &
          P4_GAME_CAP_SIGNAL_SCAN) != 0U;
     if (!service_available) {
-        state->signal_snapshot = (p4_game_signal_snapshot_t){
-            .status = P4_GAME_SIGNAL_UNAVAILABLE,
-        };
-        state->signal_request_busy_ms = 0U;
-        return false;
+        load_training_signals(state);
+        return true;
     }
+    state->signal_training_mode = false;
     if (state->signal_request_busy_ms != 0U) {
         return false;
     }
@@ -2502,6 +2583,7 @@ static bool request_signal_scan(p4_game_context_t *context,
         return false;
     }
     state->signal_request_busy_ms = 0U;
+    state->signal_scan_timeout_ms = SIGNAL_SCAN_TIMEOUT_MS;
     state->signal_snapshot.status = P4_GAME_SIGNAL_SCANNING;
     if (focus_token == 0U) {
         state->signal_snapshot.count = 0U;
@@ -2512,8 +2594,18 @@ static bool request_signal_scan(p4_game_context_t *context,
 static void poll_signal_scan(p4_game_context_t *context,
                              byte_buddy_state_t *state)
 {
+    if (state->signal_training_mode) {
+        return;
+    }
     p4_game_signal_snapshot_t snapshot;
     if (!p4_game_read_signal_scan(context, &snapshot)) {
+        return;
+    }
+    if (state->signal_snapshot.status == P4_GAME_SIGNAL_ERROR &&
+        state->signal_scan_timeout_ms == 0U &&
+        snapshot.status == P4_GAME_SIGNAL_SCANNING) {
+        /* A late provider snapshot must not resurrect an expired request.
+         * Only an explicit retry rearms the deadline. */
         return;
     }
     if (snapshot.generation == state->signal_generation &&
@@ -2526,6 +2618,9 @@ static void poll_signal_scan(p4_game_context_t *context,
     state->signal_snapshot = snapshot;
     state->signal_generation = snapshot.generation;
     state->signal_request_busy_ms = 0U;
+    if (snapshot.status != P4_GAME_SIGNAL_SCANNING) {
+        state->signal_scan_timeout_ms = 0U;
+    }
     if (snapshot.status == P4_GAME_SIGNAL_READY) {
         clamp_signal_focus(state);
     }
@@ -2576,11 +2671,14 @@ static void update_signal_tracking(p4_game_context_t *context,
     if (state->signal_view != BYTE_BUDDY_SIGNAL_TRACKER) {
         return;
     }
+    if (state->signal_training_mode) {
+        return;
+    }
     state->signal_track_refresh_ms =
         state->signal_track_refresh_ms > UINT32_MAX - elapsed_ms
             ? UINT32_MAX
             : state->signal_track_refresh_ms + elapsed_ms;
-    if (state->signal_snapshot.status != P4_GAME_SIGNAL_SCANNING &&
+    if (state->signal_snapshot.status == P4_GAME_SIGNAL_READY &&
         state->signal_request_busy_ms == 0U &&
         state->signal_track_refresh_ms >= SIGNAL_TRACK_REFRESH_MS) {
         (void)request_signal_scan(
@@ -2667,8 +2765,9 @@ static void start_signal_battle(p4_game_context_t *context,
     const p4_game_signal_t *const signal = selected_signal(state);
     if (signal == NULL || signal->rssi_dbm < SIGNAL_HUNT_UNLOCK_RSSI ||
         signal_consumed(state, signal->token) ||
-        !byte_buddy_signal_collection_has_room(
-            state->signal_consumed_count)) {
+        (!state->signal_training_mode &&
+         !byte_buddy_signal_collection_has_room(
+            state->signal_consumed_count))) {
         play_tone(context, 196U, 100U);
         return;
     }
@@ -2734,8 +2833,25 @@ static void consume_signal(p4_game_context_t *context,
                            const p4_game_signal_t *signal)
 {
     if (signal == NULL || signal_consumed(state, signal->token) ||
-        !byte_buddy_signal_collection_has_room(
-            state->signal_consumed_count)) {
+        (!state->signal_training_mode &&
+         !byte_buddy_signal_collection_has_room(
+            state->signal_consumed_count))) {
+        return;
+    }
+    if (state->signal_training_mode) {
+        for (uint8_t index = 0U; index < state->signal_snapshot.count;
+             ++index) {
+            if (state->signal_snapshot.results[index].token !=
+                signal->token) {
+                continue;
+            }
+            state->signal_training_completed_mask |=
+                (uint8_t)(1U << index);
+            if (state->signal_training_completed_count != UINT8_MAX) {
+                ++state->signal_training_completed_count;
+            }
+            break;
+        }
         return;
     }
     const byte_buddy_signal_profile_t profile =
@@ -4155,6 +4271,16 @@ static p4_game_result_t game_update(
     state->signal_request_busy_ms =
         state->signal_request_busy_ms > bounded_elapsed_ms
             ? state->signal_request_busy_ms - bounded_elapsed_ms : 0U;
+    const bool signal_scan_was_pending =
+        state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING &&
+        state->signal_scan_timeout_ms != 0U;
+    state->signal_scan_timeout_ms =
+        state->signal_scan_timeout_ms > bounded_elapsed_ms
+            ? state->signal_scan_timeout_ms - bounded_elapsed_ms : 0U;
+    if (signal_scan_was_pending && state->signal_scan_timeout_ms == 0U &&
+        state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING) {
+        state->signal_snapshot.status = P4_GAME_SIGNAL_ERROR;
+    }
     const bool evolution_was_active = state->evolution_fx_ms != 0U;
     state->evolution_fx_ms = tick_signal_timer(
         state->evolution_fx_ms, bounded_elapsed_ms);
@@ -4164,10 +4290,39 @@ static p4_game_result_t game_update(
         state->scene_transition_ms, bounded_elapsed_ms);
     apply_decay(state, bounded_elapsed_ms);
     const bool touch_now = input->touch_valid && input->touch_count > 0U;
+    const bool pending_play_signal_button =
+        state->play_start_pending != 0U &&
+        (input->pressed & P4_BUTTON_UP) != 0U;
+    const bool pending_play_signal_touch =
+        state->play_start_pending != 0U && touch_now &&
+        !state->touch_was_down &&
+        byte_buddy_touch_target(
+            input->touches[0].x, input->touches[0].y,
+            false, false, false) == BYTE_BUDDY_TOUCH_SIGNAL_SCAN;
+    if (pending_play_signal_button || pending_play_signal_touch) {
+        /* Play care is already committed; this only skips its queued mini-game
+         * so a deliberate Signal Hunt navigation input is never lost. */
+        state->play_start_pending = 0U;
+        state->signal_hunt_start_pending = true;
+        state->controller_active = !pending_play_signal_touch;
+        finish_reaction_now(state);
+    }
     if (evolution_was_active && state->evolution_fx_ms == 0U) {
         state->evolution_active_stage = BYTE_BUDDY_STAGE_COUNT;
-        (void)begin_next_evolution(state, 0U);
+        const bool next_evolution = begin_next_evolution(state, 0U);
+        if (!next_evolution && state->signal_hunt_start_pending) {
+            state->signal_hunt_start_pending = false;
+            open_signal_hunt(context, state);
+        }
         /* Never leak the completion-frame edge into the newly revealed scene. */
+        state->touch_was_down = touch_now;
+        return P4_GAME_CONTINUE;
+    }
+    if (state->signal_hunt_start_pending &&
+        state->evolution_fx_ms == 0U &&
+        state->evolution_pending_mask == 0U) {
+        state->signal_hunt_start_pending = false;
+        open_signal_hunt(context, state);
         state->touch_was_down = touch_now;
         return P4_GAME_CONTINUE;
     }
@@ -6528,8 +6683,14 @@ static void draw_signal_header(p4_game_surface_t *surface,
                       UINT16_C(0x07ff), false);
     p4_draw_text(surface, 66, 8, title, UINT16_C(0x07ff), 1U,
                  title_length);
-    p4_draw_text(surface, 160, 8, "LINK", UINT16_C(0x7bef), 1U, 4U);
-    draw_number(surface, 190, 8, state->signal_consumed_count,
+    p4_draw_text(surface, 160, 8,
+                 state->signal_training_mode ? "DRILL" : "LINK",
+                 UINT16_C(0x7bef), 1U,
+                 state->signal_training_mode ? 5U : 4U);
+    draw_number(surface, state->signal_training_mode ? 198 : 190, 8,
+                state->signal_training_mode
+                    ? state->signal_training_completed_count
+                    : state->signal_consumed_count,
                 signal_color(state));
     const byte_buddy_battle_stats_t stats = current_battle_stats(state);
     p4_draw_text(surface, 215, 8, "LV", UINT16_C(0x7bef), 1U, 2U);
@@ -6569,6 +6730,18 @@ static void draw_signal_list(p4_game_surface_t *surface,
             160, 68, 58U);
         p4_draw_text(surface, 86, 108, "PRESS SCAN TO RETRY",
                      UINT16_C(0x07ff), 1U,
+                     sizeof("PRESS SCAN TO RETRY") - 1U);
+    } else if (state->signal_snapshot.status == P4_GAME_SIGNAL_ERROR) {
+        draw_scan_fx_frame(
+            surface, state, BYTE_BUDDY_SCAN_FX_OFFLINE,
+            fx_loop_phase(state->animation_ms, 190U),
+            160, 63, 58U);
+        p4_draw_fill_rect(surface, 70, 90, 180, 42, UINT16_C(0x000b));
+        p4_draw_rect(surface, 70, 90, 180, 42, UINT16_C(0xf81f));
+        p4_draw_text(surface, 108, 99, "SCAN TIMED OUT",
+                     UINT16_C(0xf81f), 1U, 14U);
+        p4_draw_text(surface, 91, 115, "PRESS SCAN TO RETRY",
+                     UINT16_C(0x9cf3), 1U,
                      sizeof("PRESS SCAN TO RETRY") - 1U);
     } else if (state->signal_snapshot.status != P4_GAME_SIGNAL_READY) {
         draw_signal_city_icon(surface, state, 10U, 160, 63, 50U);
@@ -6631,8 +6804,13 @@ static void draw_signal_list(p4_game_surface_t *surface,
             draw_rssi(surface, 211, top + 7, signal->rssi_dbm,
                       UINT16_C(0xbdf7));
             if (signal_consumed(state, signal->token)) {
-                p4_draw_text(surface, 270, top + 7, "EATEN",
-                             UINT16_C(0x7bef), 1U, 5U);
+                p4_draw_text(surface, 270, top + 7,
+                             state->signal_training_mode ? "DONE" : "EATEN",
+                             UINT16_C(0x7bef), 1U,
+                             state->signal_training_mode ? 4U : 5U);
+            } else if (state->signal_training_mode) {
+                p4_draw_text(surface, 270, top + 7, "DRILL",
+                             UINT16_C(0xffe0), 1U, 5U);
             } else if (!byte_buddy_signal_collection_has_room(
                            state->signal_consumed_count)) {
                 p4_draw_text(surface, 270, top + 7, "FULL",
@@ -6646,8 +6824,11 @@ static void draw_signal_list(p4_game_surface_t *surface,
                             UINT16_C(0xffe0));
             }
         }
-        if (rows != 0U && signal_is_simulated(
-                &state->signal_snapshot.results[first])) {
+        if (state->signal_training_mode) {
+            p4_draw_text(surface, 229, 27, "TRAINING",
+                         UINT16_C(0xffe0), 1U, 8U);
+        } else if (rows != 0U && signal_is_simulated(
+                       &state->signal_snapshot.results[first])) {
             p4_draw_text(surface, 241, 27, "SIM DATA",
                          UINT16_C(0xf81f), 1U, 8U);
         }
@@ -6710,10 +6891,12 @@ static void draw_signal_list(p4_game_surface_t *surface,
                       false);
     draw_touch_button(surface, 64, 162, 192, 33,
                       state->signal_request_busy_ms != 0U
-                          ? "SCANNER BUSY" : pages == 1U ? "SCAN CITY" :
+                          ? "SCANNER BUSY" : state->signal_training_mode
+                              ? "RESET DRILL" : pages == 1U ? "SCAN CITY" :
                           page == 0U ? "SCAN 1/2" : "SCAN 2/2",
                       state->signal_request_busy_ms != 0U
-                          ? 12U : pages == 1U ? 9U : 8U,
+                          ? 12U : state->signal_training_mode
+                              ? 11U : pages == 1U ? 9U : 8U,
                       state->signal_request_busy_ms != 0U
                           ? UINT16_C(0xffe0) : UINT16_C(0x07ff),
                       state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING);
@@ -6783,39 +6966,62 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
                              ? 12U : signal->rssi_dbm >= -78 ? 12U : 4U);
         p4_draw_text(surface, 121, 72, "RSSI", UINT16_C(0x7bef), 1U, 4U);
         draw_rssi(surface, 153, 72, signal->rssi_dbm, UINT16_C(0xffff));
-        p4_draw_text(surface, 121, 89, "SPARKS", UINT16_C(0x7bef), 1U, 6U);
-        draw_number(surface, 166, 89,
-                    byte_buddy_signal_reward_coins(profile, encounter),
-                    UINT16_C(0xffe0));
+        p4_draw_text(surface, 121, 89,
+                     state->signal_training_mode ? "REWARD" : "SPARKS",
+                     UINT16_C(0x7bef), 1U, 6U);
+        if (state->signal_training_mode) {
+            p4_draw_text(surface, 166, 89, "PRACTICE",
+                         UINT16_C(0xffe0), 1U, 8U);
+        } else {
+            draw_number(surface, 166, 89,
+                        byte_buddy_signal_reward_coins(profile, encounter),
+                        UINT16_C(0xffe0));
+        }
         p4_draw_text(surface, 121, 105,
+                     state->signal_snapshot.status == P4_GAME_SIGNAL_ERROR
+                         ? "SCAN TIMED OUT" :
+                     state->signal_training_mode ? "PRACTICE MODE" :
                      signal_is_simulated(signal) ? "SIMULATED RSSI" :
                      state->signal_samples < 2U ? "LIVE RSSI ACQUIRING" :
                      state->signal_trend_db >= 3 ? "CLOSER" :
                      state->signal_trend_db <= -3 ? "FARTHER" : "STEADY",
+                     state->signal_snapshot.status == P4_GAME_SIGNAL_ERROR
+                         ? UINT16_C(0xf81f) :
+                     state->signal_training_mode ? UINT16_C(0xffe0) :
                      signal_is_simulated(signal) ? UINT16_C(0xf81f) :
                          UINT16_C(0x07e0),
-                     1U, signal_is_simulated(signal) ? 14U :
+                     1U,
+                         state->signal_snapshot.status == P4_GAME_SIGNAL_ERROR
+                             ? 14U :
+                         state->signal_training_mode ? 13U :
+                         signal_is_simulated(signal) ? 14U :
                          state->signal_samples < 2U ? 19U :
                          state->signal_trend_db >= 3 ? 6U :
                          state->signal_trend_db <= -3 ? 7U : 6U);
         draw_signal_meter(surface, 25, 126, 270, profile.strength, color);
         p4_draw_text(surface, state->controller_active ? 66 : 90, 138,
-                     state->controller_active
+                     state->signal_training_mode
+                         ? "OFFLINE TRAINING - B BACK"
+                         : state->controller_active
                          ? "A BATTLE  START SCAN  B BACK"
                          : "AUTO REFRESH - WALK AROUND",
                      UINT16_C(0xbdf7), 1U,
-                     state->controller_active
+                     state->signal_training_mode
+                         ? sizeof("OFFLINE TRAINING - B BACK") - 1U
+                         : state->controller_active
                          ? sizeof("A BATTLE  START SCAN  B BACK") - 1U
                          : sizeof("AUTO REFRESH - WALK AROUND") - 1U);
     }
     draw_touch_button(surface, 4, 162, 188, 33,
                       state->signal_request_busy_ms != 0U
-                          ? "SCANNER BUSY" : "RESCAN NOW",
-                      state->signal_request_busy_ms != 0U ? 12U : 10U,
+                          ? "SCANNER BUSY" : state->signal_training_mode
+                              ? "RESET DRILL" : "RESCAN NOW",
+                      state->signal_request_busy_ms != 0U ? 12U :
+                          state->signal_training_mode ? 11U : 10U,
                       state->signal_request_busy_ms != 0U
                           ? UINT16_C(0xffe0) : UINT16_C(0x07ff),
                       state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING);
-    const bool full = signal != NULL &&
+    const bool full = !state->signal_training_mode && signal != NULL &&
         !signal_consumed(state, signal->token) &&
         !byte_buddy_signal_collection_has_room(
             state->signal_consumed_count);
@@ -7137,10 +7343,12 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                             ? 3U : 4U);
     p4_draw_text(surface, 272, 29, "T", UINT16_C(0xf81f), 1U, 1U);
     draw_number(surface, 282, 29, encounter.threat, UINT16_C(0xffff));
-    p4_draw_text(surface, 294, 29, "S+", UINT16_C(0xffe0), 1U, 2U);
-    draw_number(surface, 307, 29,
-                byte_buddy_signal_reward_coins(profile, encounter),
-                UINT16_C(0xffe0));
+    if (!state->signal_training_mode) {
+        p4_draw_text(surface, 294, 29, "S+", UINT16_C(0xffe0), 1U, 2U);
+        draw_number(surface, 307, 29,
+                    byte_buddy_signal_reward_coins(profile, encounter),
+                    UINT16_C(0xffe0));
+    }
 
     p4_draw_text(surface, 8, 126, "YOU", UINT16_C(0xbdf7), 1U, 3U);
     p4_draw_rect(surface, 31, 126, 83, 8, UINT16_C(0x7bef));
@@ -7314,10 +7522,19 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                 fx_timeline_phase(
                     state->signal_phase_ms, SIGNAL_VICTORY_MS),
                 78, 84, 58U);
-            p4_draw_text(surface, 116, 63, "SIGNAL TAMED",
-                         UINT16_C(0xffe0), 1U, 12U);
-            p4_draw_text(surface, 98, 87, "DNA + SPARKS SECURED",
-                         UINT16_C(0xffff), 1U, 20U);
+            p4_draw_text(surface, state->signal_training_mode ? 110 : 116,
+                         63,
+                         state->signal_training_mode
+                             ? "DRILL COMPLETE" : "SIGNAL TAMED",
+                         UINT16_C(0xffe0), 1U,
+                         state->signal_training_mode ? 14U : 12U);
+            p4_draw_text(surface, state->signal_training_mode ? 89 : 98,
+                         87,
+                         state->signal_training_mode
+                             ? "NO DNA OR SPARKS AWARDED"
+                             : "DNA + SPARKS SECURED",
+                         UINT16_C(0xffff), 1U,
+                         state->signal_training_mode ? 24U : 20U);
         } else {
             const uint16_t defeat_duration =
                 state->signal_battle_outcome == BYTE_BUDDY_COMBAT_RETREATED

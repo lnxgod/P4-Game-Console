@@ -3786,7 +3786,7 @@ int main(int argc, char **argv)
         strcmp(argv[2], "--review-runtime-completion-motion") == 0;
     unsigned expected_motion_frames = 0U;
     char trailing = '\0';
-    if ((argc != 13 && argc != 3 && !signal_motion && !authored_motion &&
+    if ((argc != 16 && argc != 3 && !signal_motion && !authored_motion &&
          !authored_review && !exact_animation && !completion_motion &&
          !runtime_completion && !runtime_completion_review) ||
         ((signal_motion || authored_motion || authored_review ||
@@ -3796,6 +3796,9 @@ int main(int argc, char **argv)
         fprintf(stderr, "usage: %s ART.bin EGG.ppm HATCH.ppm POWER.ppm "
                         "STYLE.ppm CUSTOM.ppm FLYING.ppm ELEMENTAL.ppm "
                         "PLAY.ppm SIGNALS.ppm TRACK.ppm BATTLE.ppm\n"
+                        "       TRAINING.ppm TRAINING_TRACK.ppm and "
+                        "TRAINING_BATTLE.ppm are rendered without the "
+                        "signal-scan capability\n"
                         "   or: %s ART.bin ANIMATION_PREFIX\n"
                         "   or: %s ART.bin --animation PREFIX "
                         "EXPECTED_FRAMES\n"
@@ -3967,6 +3970,31 @@ int main(int argc, char **argv)
             &instance, &surface, PREVIEW_SCREEN_WEAVE_ACTIVE) &&
         render_to(&instance, &surface, argv[12]);
     p4_game_instance_stop(&instance);
+    if (success) {
+        memset(state, 0, p4_byte_buddy_game.state_bytes);
+        p4_game_services_t training_services = services;
+        training_services.available_capabilities &=
+            ~(uint32_t)P4_GAME_CAP_SIGNAL_SCAN;
+        training_services.signal_scan_context = NULL;
+        training_services.request_signal_scan = NULL;
+        training_services.read_signal_scan = NULL;
+        instance = (p4_game_instance_t){0};
+        const bool training_started = p4_game_instance_start(
+            &instance, &p4_byte_buddy_game, &training_services, state,
+            p4_byte_buddy_game.state_bytes);
+        success = training_started && tap(&instance, 70U, 180U) &&
+            settle_scene_transition(&instance) &&
+            render_to(&instance, &surface, argv[13]) &&
+            tap(&instance, 70U, 42U) &&
+            settle_scene_transition(&instance) &&
+            render_to(&instance, &surface, argv[14]) &&
+            tap(&instance, 250U, 180U) &&
+            settle_signal_battle_active(&instance) &&
+            render_to(&instance, &surface, argv[15]);
+        if (training_started) {
+            p4_game_instance_stop(&instance);
+        }
+    }
     free(art);
     free(state);
     free(pixels);
