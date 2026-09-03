@@ -1,0 +1,86 @@
+{
+  "schema": 1,
+  "captured_at_utc": "2026-09-03T05:38:16Z",
+  "result": "unit2-installed-readback-and-startup-pass-highres-game-launch-pending",
+  "purpose": "Install the additive Console OS 0.4.99 Game API high-resolution mode while preserving the default 320x200 game surface, controller-first H2 role, and existing microSD game catalog.",
+  "source": {
+    "commit": "76dcc670606bf216191db21af1fb24a404744f16",
+    "branch": "main",
+    "console_os_version": "0.4.99",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "toolchain": "ESP-IDF 5.5.3 at 2c211b236707889e8400c4dc5644dd5c4ee071e0"
+  },
+  "candidate": {
+    "application_bytes": 1841712,
+    "application_sha256": "8ea4ee932f9cff3b172025ba712bdeede149ec0c5c3862a8ecee7139f27455e5",
+    "update_package_bytes": 1841968,
+    "update_package_sha256": "12e03a2f7c2d5903d00caa165dec81a07d2ba863e1fd68e5e2a9e3cf07a8f5b1",
+    "build_verifier_result": "waveshare-console-os-build-verified",
+    "games_embedded_in_ota": false,
+    "game_execution_source": "microSD-only"
+  },
+  "host_verification": {
+    "p4_game_api": "pass-5-of-5",
+    "p4_game_package": "pass-1-of-1",
+    "p4_ble_radio_handoff": "pass-1-of-1",
+    "color_clash": "pass-1-of-1",
+    "texas_holdem": "pass-1-of-1",
+    "game_registry": "pass",
+    "waveshare_build_verifier": "pass",
+    "diff_check": "pass"
+  },
+  "unit2": {
+    "label": "green-386F",
+    "recorded_port": "/dev/cu.wchusbserial5B901593451",
+    "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+    "factory_backup_sha256": "240a730a882e6437f31729c78ae69db35b132b1aa78f820fec9d88b3397b39e6",
+    "preflight": {
+      "identity": "pass",
+      "flash_bytes": 33554432,
+      "bootloader": "pass",
+      "partition_table": "pass",
+      "live_predecessor": "exact-console-os-0.4.98-pass"
+    },
+    "predecessor": {
+      "version": "0.4.98",
+      "application_bytes": 1841600,
+      "application_sha256": "ebc0418ba6414ed99f67fcb3cc59eaa0525cbbbc8f0e6875d89b3e262f5b76ea",
+      "preserved_span_sha256": "2f14fe5ba54bb48e9ea24dfb7524b43878cd601ce36e7df3510c996d626252d9"
+    },
+    "install": {
+      "scope": "application-only-at-0x20000",
+      "write_attempts": 1,
+      "esptool_write_hash": "pass",
+      "direct_verify": "pass",
+      "independent_padded_readback": "pass",
+      "padded_readback_sha256": "508d88ba8df0be42789908761371a07bfef6c66d19c927ed3e20669500f1bcdb",
+      "bootloader_unchanged": true,
+      "partition_table_unchanged": true,
+      "nvs_unchanged": true,
+      "micro_sd_unchanged": true
+    },
+    "startup": {
+      "result": "pass",
+      "application_version_marker": "0.4.99",
+      "board_marker": true,
+      "console_start_marker": true,
+      "game_catalog_marker": true,
+      "multiplayer_registry_marker": true,
+      "ready_marker": true,
+      "h2_controller_first_marker": true,
+      "stats_observed": 2,
+      "last_two_stats_valid": true,
+      "rejected_markers": [],
+      "raw_bytes": 18945,
+      "raw_sha256": "9f33ccb4a7315fcf5b3c1df0dd8798608dcddc3766ff660c500edae6c768fa1f"
+    },
+    "hardware_acceptance": {
+      "startup": "pass",
+      "optional_768x480_cartridge_launch": "pending-operator-launch",
+      "standard_320x200_cartridge_regression": "pending-operator-launch",
+      "canonical_320x200_touch_in_highres": "pending-operator-input",
+      "visual_quality": "pending-operator-observation"
+    },
+    "final_state": "Console OS 0.4.99 is installed and running on green unit2; unit1 was not connected during this run."
+  }
+}
