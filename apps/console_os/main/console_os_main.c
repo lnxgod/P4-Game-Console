@@ -22,6 +22,7 @@
 /* ESP-IDF 5.5.3 has sign-conversion warnings in inline RISC-V headers. */
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 #include "esp_err.h"
+#include "esp_attr.h"
 #include "esp_heap_caps.h"
 #include "esp_log.h"
 #include "esp_random.h"
@@ -64,6 +65,11 @@
 #include "platform/os_update.h"
 #include "platform/save_seal.h"
 #include "p4_protected_game_lineage.h"
+#if CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
+#define P4_CONSOLE_LARGE_BSS EXT_RAM_BSS_ATTR
+#else
+#define P4_CONSOLE_LARGE_BSS
+#endif
 #ifndef P4_CONSOLE_SIGNAL_SCAN
 #define P4_CONSOLE_SIGNAL_SCAN 0
 #endif
@@ -342,8 +348,8 @@ static console_shell_file_listing_t s_shell_file_listing;
 static char s_file_directory[
     PLATFORM_GAME_STORAGE_RELATIVE_PATH_MAX_BYTES];
 static console_shell_file_listing_t s_manager_listing;
-static platform_game_catalog_t s_game_catalog;
-static platform_game_catalog_t s_catalog_staging;
+static P4_CONSOLE_LARGE_BSS platform_game_catalog_t s_game_catalog;
+static P4_CONSOLE_LARGE_BSS platform_game_catalog_t s_catalog_staging;
 typedef enum {
     GAME_CATALOG_SCAN_IDLE = 0,
     GAME_CATALOG_SCAN_RUNNING,
@@ -758,7 +764,8 @@ void console_os_launch_doom(
     const p4_doom_mp_launch_config_t *multiplayer);
 #endif
 
-static console_app_descriptor_t s_apps[CONSOLE_SHELL_MAX_APPS];
+static P4_CONSOLE_LARGE_BSS
+    console_app_descriptor_t s_apps[CONSOLE_SHELL_MAX_APPS];
 static size_t s_app_count;
 
 static const console_app_descriptor_t s_doom_app = {

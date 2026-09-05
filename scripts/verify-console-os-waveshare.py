@@ -796,7 +796,7 @@ def main() -> None:
         "platform_game_catalog_scan",
         '"microsd-games-directory" : "microsd-root-compat"',
         "static console_shell_t s_shell",
-        "static platform_game_catalog_t s_catalog_staging",
+        "static P4_CONSOLE_LARGE_BSS platform_game_catalog_t s_catalog_staging",
         "P4_CONSOLE_OS BOOT_SCREEN status=visible",
         "P4_CONSOLE_OS STORAGE_INIT_BEGIN mode=background",
         "P4_CONSOLE_OS LOADING_SCREEN status=%s",

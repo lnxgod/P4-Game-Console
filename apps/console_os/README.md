@@ -54,6 +54,11 @@ automatically, BLE Host/Join starts only after that scan is idle, and leaving
 Multiplayer restores the saved reconnect policy. An already-connected
 encrypted controller continues to coexist with one multiplayer peer.
 
+Console OS 0.4.101 keeps the expanded 0.4.100 catalog and places its two
+catalog buffers plus the larger shell registry in external RAM on boards that
+authorize external BSS. This preserves the internal 32 KiB DMA reserve needed
+at startup.
+
 Console OS 0.4.100 raises the validated native cartridge catalog from 16 to
 32 entries and the combined shell registry from 32 to 64 entries. The current
 19-game bundle can therefore remain fully visible alongside built-in system

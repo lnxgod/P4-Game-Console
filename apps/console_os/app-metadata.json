@@ -227,5 +227,5 @@
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "On both recorded Waveshare 4.3 units with H1 UART retained, install the exact verified Console OS 0.4.100 artifact; prove all 19 native cartridges are cataloged without omission, then launch the exact verified Doom shareware data."
+  "next_hardware_step": "On both recorded Waveshare 4.3 units with H1 UART retained, install the exact verified Console OS 0.4.101 artifact; prove the internal DMA reserve survives startup, all 19 native cartridges are cataloged without omission, and the exact verified Doom shareware data launches."
 }
