@@ -47,6 +47,9 @@ typedef struct {
     uint16_t trades;
     bool local_board;
     bool can_go_up;
+    bool battery_supported;
+    bool battery_sample_valid;
+    uint8_t battery_percent;
 } p4_bbs_launcher_model_t;
 
 typedef enum {

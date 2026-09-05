@@ -9,6 +9,7 @@ import glob
 import hashlib
 import os
 from pathlib import Path
+import secrets
 import struct
 import sys
 import time
@@ -29,6 +30,16 @@ HIGH_MAGIC = b"P4H2"
 CHUNK_MAGIC = b"P4C2"
 ACK_MAGIC = b"P4A2"
 DONE_MAGIC = b"P4D2"
+
+USB_DRIVE_REQUEST_MAGIC = b"P4U1"
+USB_DRIVE_RESPONSE_MAGIC = b"P4V1"
+USB_DRIVE_PROTOCOL_VERSION = 1
+USB_DRIVE_REQUEST_BYTES = 20
+USB_DRIVE_RESPONSE_BYTES = 28
+USB_DRIVE_COMMAND_STATUS = 1
+USB_DRIVE_COMMAND_SET_MODE = 2
+USB_DRIVE_STATUS_RETRY_ATTEMPTS = 30
+USB_DRIVE_STATUS_ATTEMPT_TIMEOUT = 1.0
 
 DIRECTION_UPLOAD = 1
 DIRECTION_DOWNLOAD = 2
@@ -58,9 +69,27 @@ STATUS_NAMES = {
     15: "busy",
 }
 
+USB_DRIVE_RESULT_NAMES = {
+    0: "ok",
+    1: "bad-request",
+    2: "unavailable",
+    3: "busy",
+    4: "denied",
+    5: "transition-failed",
+    6: "session-required",
+    7: "session-expired",
+    8: "crc-error",
+    9: "unsupported",
+    10: "stale-sequence",
+}
+
 
 class TransferError(RuntimeError):
     pass
+
+
+class UsbDriveResponseTimeout(TransferError):
+    """The bounded control response was absent; a safe status retry is allowed."""
 
 
 def bounded_done_timeout(value: str) -> float:
@@ -96,9 +125,15 @@ def open_port(path: str) -> serial.Serial:
     connection.baudrate = IDLE_BAUD
     connection.timeout = 0.02
     connection.write_timeout = 15
+    connection.dsrdtr = False
+    connection.rtscts = False
     connection.dtr = False
     connection.rts = False
     connection.open()
+    # Some USB-UART bridges transiently change modem-control lines on open.
+    # Reassert the inactive state before accepting any H1 traffic.
+    connection.dtr = False
+    connection.rts = False
     connection.reset_input_buffer()
     return connection
 
@@ -273,6 +308,142 @@ def make_chunk(sequence: int, payload: bytes) -> bytes:
 
 def make_ack(sequence: int, status: int) -> bytes:
     return struct.pack("<4sIB", ACK_MAGIC, sequence, status)
+
+
+def make_usb_drive_request(
+    command: int, mode: bool, session: int, sequence: int
+) -> bytes:
+    if (
+        command not in (USB_DRIVE_COMMAND_STATUS, USB_DRIVE_COMMAND_SET_MODE)
+        or (command == USB_DRIVE_COMMAND_STATUS and mode)
+        or not 0 < session <= 0xFFFF_FFFF
+        or not 0 <= sequence <= 0xFFFF_FFFF
+    ):
+        raise TransferError("invalid bounded USB Drive control request")
+    body = struct.pack(
+        "<4sBBBBII",
+        USB_DRIVE_REQUEST_MAGIC,
+        USB_DRIVE_PROTOCOL_VERSION,
+        command,
+        int(mode),
+        0,
+        session,
+        sequence,
+    )
+    request = body + struct.pack("<I", crc32(body))
+    if len(request) != USB_DRIVE_REQUEST_BYTES:
+        raise TransferError("USB Drive protocol framing error")
+    return request
+
+
+def read_usb_drive_response(reader: WireReader, timeout: float = 5.0) -> dict[str, int]:
+    try:
+        response = reader.frame(
+            USB_DRIVE_RESPONSE_MAGIC, USB_DRIVE_RESPONSE_BYTES, timeout
+        )
+    except TransferError as error:
+        raise UsbDriveResponseTimeout(
+            "badge did not return a USB Drive control response"
+        ) from error
+    if (
+        response[4] != USB_DRIVE_PROTOCOL_VERSION
+        or crc32(response[:24]) != struct.unpack_from("<I", response, 24)[0]
+    ):
+        raise TransferError("badge returned an invalid USB Drive control response")
+    return {
+        "command": response[5],
+        "result": response[6],
+        "mode": response[7],
+        "storage_state": response[8],
+        "flags": response[9],
+        "generation": struct.unpack_from("<I", response, 12)[0],
+        "session": struct.unpack_from("<I", response, 16)[0],
+        "sequence": struct.unpack_from("<I", response, 20)[0],
+    }
+
+
+def open_usb_drive_session(
+    connection: serial.Serial, reader: WireReader, session: int
+) -> dict[str, int]:
+    """Open one control session, tolerating a bounded post-open reboot window."""
+    request = make_usb_drive_request(
+        USB_DRIVE_COMMAND_STATUS, False, session, 0
+    )
+    last_timeout: UsbDriveResponseTimeout | None = None
+    for attempt in range(1, USB_DRIVE_STATUS_RETRY_ATTEMPTS + 1):
+        write_all(connection, request)
+        try:
+            response = read_usb_drive_response(
+                reader, timeout=USB_DRIVE_STATUS_ATTEMPT_TIMEOUT
+            )
+        except UsbDriveResponseTimeout as error:
+            last_timeout = error
+            continue
+        if (
+            response["command"] != USB_DRIVE_COMMAND_STATUS
+            or response["session"] != session
+            or response["sequence"] != 0
+        ):
+            raise TransferError(
+                "badge returned a mismatched USB Drive status response"
+            )
+        return response
+    raise TransferError(
+        "H1 USB Drive control did not become ready after "
+        f"{USB_DRIVE_STATUS_RETRY_ATTEMPTS} bounded status attempts"
+    ) from last_timeout
+
+
+def render_usb_drive_status(response: dict[str, int]) -> str:
+    flags = response["flags"]
+    return (
+        "P4_H1 USB_DRIVE "
+        f"result={USB_DRIVE_RESULT_NAMES.get(response['result'], 'unknown')} "
+        f"mode={'on' if response['mode'] else 'off'} "
+        f"storage_state={response['storage_state']} "
+        f"generation={response['generation']} "
+        f"supported={int(bool(flags & 1))} "
+        f"attached={int(bool(flags & 2))} "
+        f"ejected={int(bool(flags & 4))} "
+        f"msc_driver={int(bool(flags & 8))} "
+        f"available={int(bool(flags & 16))}"
+    )
+
+
+def usb_drive(args: argparse.Namespace) -> None:
+    port = args.port or detect_port()
+    session = secrets.randbits(32) or 1
+    with open_port(port) as connection:
+        reader = WireReader(connection)
+        response = open_usb_drive_session(connection, reader, session)
+        print(render_usb_drive_status(response))
+        if response["result"] != 0:
+            raise TransferError(
+                "badge did not open a USB Drive control session: "
+                f"{USB_DRIVE_RESULT_NAMES.get(response['result'], 'unknown')}"
+            )
+        if args.usb_drive_command == "status":
+            return
+        desired = args.usb_drive_command == "on"
+        write_all(
+            connection,
+            make_usb_drive_request(
+                USB_DRIVE_COMMAND_SET_MODE, desired, session, 1
+            ),
+        )
+        response = read_usb_drive_response(reader, timeout=20.0)
+        if (
+            response["command"] != USB_DRIVE_COMMAND_SET_MODE
+            or response["session"] != session
+            or response["sequence"] != 1
+        ):
+            raise TransferError("badge returned a mismatched USB Drive mode response")
+        print(render_usb_drive_status(response))
+        if response["result"] != 0 or bool(response["mode"]) != desired:
+            raise TransferError(
+                "USB Drive mode was not changed: "
+                f"{USB_DRIVE_RESULT_NAMES.get(response['result'], 'unknown')}"
+            )
 
 
 def negotiate(
@@ -487,6 +658,12 @@ def parser() -> argparse.ArgumentParser:
         "--class", dest="file_class", choices=("p4g", "exchange"), default="p4g"
     )
     pull_parser.add_argument("--replace", action="store_true")
+    usb_drive_parser = subparsers.add_parser(
+        "usb-drive",
+        help="query or switch the Waveshare H2 USB Drive role through trusted H1",
+    )
+    usb_drive_parser.add_argument("usb_drive_command", choices=("status", "on", "off"))
+    usb_drive_parser.add_argument("--port")
     return result
 
 
@@ -495,7 +672,12 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "push" and args.file_class is None:
         args.file_class = "p4g" if args.input.suffix.lower() == ".p4g" else "exchange"
     try:
-        push(args) if args.command == "push" else pull(args)
+        if args.command == "push":
+            push(args)
+        elif args.command == "pull":
+            pull(args)
+        else:
+            usb_drive(args)
         return 0
     except (OSError, serial.SerialException, TransferError) as error:
         print(f"P4_H1 FAIL {error}", file=sys.stderr)

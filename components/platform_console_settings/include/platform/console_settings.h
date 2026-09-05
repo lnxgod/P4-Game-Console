@@ -16,10 +16,10 @@ extern "C" {
 enum {
     PLATFORM_CONSOLE_SETTINGS_VERSION = 3,
     PLATFORM_CONSOLE_NODE_NAME_BYTES = 17,
-    PLATFORM_CONSOLE_VOLUME_MIN = 1,
+    PLATFORM_CONSOLE_VOLUME_MIN = 0,
     PLATFORM_CONSOLE_VOLUME_MAX = 10,
-    PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT = 3,
-    PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT = 3,
+    PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT = 0,
+    PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT = 0,
 };
 
 typedef struct {
@@ -37,11 +37,11 @@ typedef struct {
 esp_err_t platform_console_settings_init(
     platform_console_settings_t *settings);
 
-/** Persist the master level used by the next boot sound sequence. */
+/** Persist the master level used by the next boot sound sequence (0..10). */
 esp_err_t platform_console_settings_set_boot_volume(
     platform_console_settings_t *settings, uint8_t volume_step);
 
-/** Persist the master level passed to native games and Doom. */
+/** Persist the master level passed to native games and Doom (0..10). */
 esp_err_t platform_console_settings_set_game_volume(
     platform_console_settings_t *settings, uint8_t volume_step);
 

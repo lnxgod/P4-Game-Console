@@ -1,0 +1,3 @@
+add_executable(test_platform_battery test_platform_battery.c)
+target_link_libraries(test_platform_battery PRIVATE platform_battery_math)
+add_test(NAME platform_battery_math COMMAND test_platform_battery)

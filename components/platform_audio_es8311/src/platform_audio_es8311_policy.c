@@ -6,7 +6,7 @@
 
 bool platform_audio_es8311_volume_supported(uint8_t volume_percent)
 {
-    return volume_percent >= UINT8_C(1) && volume_percent <= UINT8_C(10);
+    return volume_percent <= UINT8_C(10);
 }
 
 uint8_t platform_audio_es8311_codec_volume_percent(uint8_t volume_step)
@@ -75,9 +75,13 @@ bool platform_audio_es8311_attenuate_pcm16(const int16_t *input,
 {
     const uint16_t peak =
         platform_audio_es8311_peak_for_volume(volume_percent);
-    if (input == NULL || output == NULL || sample_count == 0U || peak == 0U ||
+    if (input == NULL || output == NULL || sample_count == 0U ||
         ranges_overlap(input, output, sample_count)) {
         return false;
+    }
+    if (peak == 0U) {
+        memset(output, 0, sample_count * sizeof(*output));
+        return true;
     }
 #if defined(CONFIG_PLATFORM_BOARD_TARGET_WAVESHARE_4_3)
     memcpy(output, input, sample_count * sizeof(*input));

@@ -32,6 +32,8 @@ HCD_UPSTREAM_SHA256 = "de0471a749547c7d295af0fe2e3e5b61d1eedf46d88c5b57cf20cec20
 HCD_FSLS_BYTES = 120_226
 HCD_FSLS_SHA256 = "c71577cbdcc808828216940671be511a074f51fcd88e4f24ef0948d8aebabb8a"
 HUB_UPSTREAM_SHA256 = "2d7c79c8508f63be6b0243178eafae2351f4e4643a87d9cdc73e980b95985afe"
+WAVESHARE_SRAM_HIGH_END = 0x4FFA0000
+MIN_BOOTABLE_HIGH_SRAM_BYTES = 40 * 1024
 GAME_CAPABILITIES = {
     "video": 1 << 0,
     "controls": 1 << 1,
@@ -426,6 +428,9 @@ def main() -> None:
     require("#define CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL 32768" in
             sdkconfig,
             "Waveshare image must retain a bootable 32 KiB internal/DMA reserve")
+    require("#define CONFIG_FREERTOS_HZ 1000" in sdkconfig,
+            "Console OS Waveshare image must use a 1 kHz FreeRTOS tick "
+            "for the 60 Hz 16/17 ms scheduler contract")
     if usb_host_image:
         require("#define CONFIG_TINYUSB_MSC_ENABLED 1" in sdkconfig,
                 "controller-first image must link the USB Drive MSC app")
@@ -456,7 +461,7 @@ def main() -> None:
         "platform_board", "platform_display", "platform_touch",
         "platform_console_settings",
         "platform_game_catalog", "platform_game_loader",
-        "platform_game_storage", "platform_os_update",
+        "platform_game_storage", "platform_os_update", "platform_battery",
         "espressif__esp_tinyusb", "espressif__tinyusb",
     }
     require(required_components <= components, "required component missing")
@@ -486,6 +491,211 @@ def main() -> None:
                 "controller-first image is missing the dual-role TinyUSB boundary")
     require(not ({"asteroids", "byte_buddy", "maze_chase", "space_invaders"} & components),
             "games were linked statically into the OS")
+
+    console_source = (APP / "main/console_os_main.c").read_text(
+        encoding="utf-8"
+    )
+    shell_source = (ROOT / "components/console_shell/src/console_shell.c").read_text(
+        encoding="utf-8"
+    )
+    display_header = (ROOT / "components/platform_display/include/platform/display.h").read_text(
+        encoding="utf-8"
+    )
+    display_source = (ROOT / "components/platform_display/src/platform_display.c").read_text(
+        encoding="utf-8"
+    )
+    touch_source = (ROOT / "components/platform_touch/src/platform_touch.c").read_text(
+        encoding="utf-8"
+    )
+    touch_header = (ROOT / "components/platform_touch/include/platform/touch.h").read_text(
+        encoding="utf-8"
+    )
+    app_cmake = (APP / "CMakeLists.txt").read_text(encoding="utf-8")
+    main_cmake = (APP / "main/CMakeLists.txt").read_text(encoding="utf-8")
+    require('set(PROJECT_VER "0.5.12")' in app_cmake and
+            re.search(
+                r"set\(P4_CONSOLE_RUNTIME_STATS_BUILD OFF\)", app_cmake
+            ) is not None and
+            "if(P4_CONSOLE_RUNTIME_STATS_BUILD)" in main_cmake and
+            "set(P4_CONSOLE_RUNTIME_STATS_ENABLED 0)" in main_cmake and
+            "set(P4_CONSOLE_RUNTIME_STATS_ENABLED 1)" in main_cmake and
+            "CONSOLE_OS_ENABLE_RUNTIME_STATS=${P4_CONSOLE_RUNTIME_STATS_ENABLED}" in
+                main_cmake,
+            "0.5.12 release must disable periodic runtime stats by default and "
+            "wire an explicit diagnostic-build opt-in")
+    require("#ifndef CONSOLE_OS_ENABLE_RUNTIME_STATS" in console_source and
+            "#define CONSOLE_OS_ENABLE_RUNTIME_STATS 0" in console_source and
+            "#if CONSOLE_OS_ENABLE_RUNTIME_STATS\nstatic uint32_t " in
+                console_source and
+            "#if CONSOLE_OS_ENABLE_RUNTIME_STATS\n    int64_t next_stats_us" in
+                console_source and
+            "#if CONSOLE_OS_ENABLE_RUNTIME_STATS\n        const int64_t stats_now_us" in
+                console_source and
+            "log_runtime_stats(shell);" in console_source,
+            "periodic runtime stats must be compiled and scheduled only for the "
+            "diagnostic opt-in")
+    require("console_shell_render_native_cached_rgb565" in console_source and
+            "platform_display_submit_content_rgb565" in console_source and
+            "platform_display_submit_content_regions_rgb565" in console_source and
+            "console_shell_get_native_update" in console_source and
+            "console_shell_render_native_cached_rgb565" in shell_source and
+            "native_update_region" in shell_source and
+            "native_home_scroll_pixels" in shell_source and
+            "shift_output_rows" in shell_source,
+            "Waveshare shell must use native cached dirty-region presentation")
+    require("platform_display_submit_content_regions_rgb565" in display_header and
+            "platform_display_layout_compact_content_region" in display_source and
+            "estimated_partial_cost < estimated_full_cost" in display_source and
+            "partial_content_full_fallbacks" in display_source,
+            "Waveshare dirty-region backend must coalesce replay and bound work")
+    require("platform_display_submit_game_content_rgb565" in display_header and
+            "platform_display_submit_game_content_rgb565" in display_source and
+            "platform_display_layout_rgb565_768x480, true" in display_source and
+            "arm_panel_handoff(target_index, interactive_handoff)" in display_source and
+            "wait_for_pending_panel_handoff(started, budget)" in display_source,
+            "Waveshare game presentation must retain synchronous native refresh")
+    require("SCROLL_PHYSICAL_DRAG_THRESHOLD = 4" in shell_source and
+            "press_start_physical_y" in shell_source and
+            "home_drag_row_physical_pixels" in shell_source,
+            "Waveshare launcher drags must preserve raw physical displacement")
+    require("CONSOLE_TOUCH_MAILBOX_HZ = 120" in console_source and
+            "touch_mailbox_worker" in console_source and
+            "read_touch_mailbox_frame" in console_source and
+            "stop_touch_mailbox" in console_source and
+            "TOUCH_MAILBOX_READY sample_hz=%u mode=latest" in console_source,
+            "Waveshare launcher must consume a bounded latest-sample touch mailbox")
+    require("platform_touch_gt911_read_info" in touch_header and
+            "GT911_CONFIG mode=read-only" in console_source and
+            "GT911_CONFIG_HEX mode=read-only" in console_source and
+            "PLATFORM_TOUCH_GT911_CONFIG_BYTES" in touch_header and
+            "product=%02x%02x%02x%02x" in console_source and
+            "shake_raw=0x%02x filter_raw=0x%02x" in console_source and
+            "first_filter=%u" in console_source and
+            "normal_filter=%u" in console_source and
+            "x_threshold=%u y_threshold=%u" in console_source and
+            "mini_filter=0x%02x" in console_source and
+            "refresh_raw=0x%02x refresh_n=%u" in console_source and
+            "report_period_ms=%u" in console_source and
+            "checksum_valid=%u fresh=%u" in console_source,
+            "Waveshare startup must record its GT911 configuration before tuning")
+    require("platform_touch_gt911_restore_reviewed_baseline_request_t" in
+                touch_header and
+            "platform_touch_gt911_restore_reviewed_baseline_result_t" in
+                touch_header and
+            "platform_touch_gt911_restore_reviewed_baseline" in touch_header and
+            "platform_touch_gt911_restore_reviewed_baseline" in console_source and
+            "CONSOLE_GT911_ORIGINAL_NORMAL_FILTER = 8U" in console_source and
+            "s_waveshare_gt911_expected_identity" in console_source and
+            "PLATFORM_TOUCH_GT911_IDENTITY_BYTES" in console_source and
+            "s_waveshare_gt911_original_config" in console_source and
+            "sizeof(request.original_config)" in console_source and
+            "restore_result.observed.normal_filter" in console_source and
+            "GT911_CONFIG_RESTORE target_normal_filter=%u" in console_source and
+            "already_original" in console_source and
+            "may_have_changed=%u" in console_source and
+            "s_gt911_reviewed_baseline_verified = true;" in console_source and
+            "reason=gt911-baseline-not-verified" in console_source and
+            "s_touch_ready = false;" in console_source and
+            "platform_touch_gt911_apply_normal_filter" not in console_source and
+            "platform_touch_gt911_apply_normal_filter" not in touch_header and
+            "platform_touch_gt911_apply_normal_filter" not in touch_source,
+            "Waveshare GT911 handling must restore the exact reviewed filter-8 "
+            "baseline and fail closed, without the rejected filter-4 staging API")
+    require("PLATFORM_TOUCH_GT911_REVIEWED_ORIGINAL_CHECKSUM UINT8_C(0x79)" in
+                touch_source and
+            "PLATFORM_TOUCH_GT911_REVIEWED_FILTER4_CHECKSUM UINT8_C(0x7d)" in
+                touch_source and
+            "gt911_restore_current_is_exact_filter4" in touch_source and
+            "gt911_restore_readback_is_exact_original" in touch_source and
+            "gt911_restore_request_is_reviewed" in touch_source and
+            "s_gt911_reviewed_unit3_identity" in touch_source and
+            "s_gt911_reviewed_unit3_original_config" in touch_source and
+            "memcmp(request->expected_identity" in touch_source and
+            "memcmp(original, s_gt911_reviewed_unit3_original_config" in
+                touch_source and
+            "Fresh=0" in touch_header and
+            "without any retry" in touch_header,
+            "GT911 restore implementation must whitelist only the reviewed "
+            "filter-4 derivative and verify the complete original block")
+    require("status_observed_us" in touch_source and
+            "last_report_timestamp_us" in touch_source and
+            "platform_touch_frame_neutral" in console_source and
+            "const bool contact_frame" in console_source and
+            "if (contact_frame && age_us > CONSOLE_TOUCH_MAILBOX_MAX_AGE_US)" in
+                console_source and
+            "unique_reports=%lu" in console_source and
+            "report_interval_avg_us=%lu" in console_source and
+            "report_interval_min_us=%lu" in console_source and
+            "report_interval_max_us=%lu" in console_source,
+            "Waveshare touch mailbox must preserve neutral validity and report timing")
+    require("platform_display_record_interactive_input_timestamp" in
+                console_source and
+            "interactive_input_to_refresh_last_us" in display_header and
+            "record_interactive_handoff" in display_source and
+            "sample_received_us = esp_timer_get_time()" in touch_source,
+            "touch-to-refresh telemetry must span acquired input through DSI refresh")
+    battery_header = (ROOT / "components/platform_battery/include/"
+                      "platform_battery/battery.h").read_text(encoding="utf-8")
+    battery_source = (ROOT / "components/platform_battery/src/"
+                      "platform_battery_adc.c").read_text(encoding="utf-8")
+    battery_math = (ROOT / "components/platform_battery/src/"
+                    "platform_battery_math.c").read_text(encoding="utf-8")
+    for token in (
+        "#define PLATFORM_BATTERY_ADC_GPIO 20U",
+        "#define PLATFORM_BATTERY_ADC1_CHANNEL 4U",
+        "#define PLATFORM_BATTERY_DIVIDER_TOP_OHMS 200000U",
+        "#define PLATFORM_BATTERY_DIVIDER_BOTTOM_OHMS 100000U",
+    ):
+        require(token in battery_header,
+                f"battery hardware contract is missing {token!r}")
+    require("adc_oneshot_new_unit" in battery_source and
+            "adc_oneshot_config_channel" in battery_source and
+            "adc_cali_raw_to_voltage" in battery_source and
+            "adc_cali_create_scheme_" in battery_source and
+            "PLATFORM_BATTERY_SAMPLE_COUNT = 8U" in battery_source,
+            "battery backend must use calibrated bounded oneshot sampling")
+    require("platform_battery_adc_mv_to_battery_mv" in battery_math and
+            "PLATFORM_BATTERY_DIVIDER_TOP_OHMS +" in battery_math,
+            "battery divider conversion is missing")
+    require("CONSOLE_BATTERY_SAMPLE_INTERVAL_MS = 5000" in console_source and
+            "initialize_battery();" in console_source and
+            "sample_battery(false);" in console_source,
+            "battery service must initialize and sample on its bounded cadence")
+    require("CONSOLE_BATTERY_DISPLAY_MV_HYSTERESIS = 50" in console_source and
+            "static platform_battery_sample_t s_battery_raw_sample" in
+                console_source and
+            "s_battery_raw_sample = sample;" in console_source and
+            "const uint32_t display_mv = s_battery_sample.battery_mv" in
+                console_source and
+            "delta_mv >= CONSOLE_BATTERY_DISPLAY_MV_HYSTERESIS" in
+                console_source and
+            "battery_millivolts = s_battery_raw_sample.battery_mv" in
+                console_source,
+            "battery display must use hysteresis while retaining raw millivolts")
+    battery_changed_match = re.search(
+        r"const bool battery_changed =(?s:.*?)"
+        r"shell->runtime\.battery_percent != runtime->battery_percent;",
+        shell_source,
+    )
+    require(battery_changed_match is not None and
+            "battery_calibrated" not in battery_changed_match.group(0) and
+            "battery_millivolts" not in battery_changed_match.group(0) and
+            "battery_last_error" not in battery_changed_match.group(0) and
+            "(shell->page == CONSOLE_PAGE_HOME &&\n         (storage_changed || battery_changed))" in
+                shell_source,
+            "raw battery millivolts and diagnostics must not dirty Home; only "
+            "meaningful battery state changes may do so")
+    require(re.search(
+        r"(?s)\.id = CONSOLE_APP_POWER,.*?\.page = CONSOLE_PAGE_POWER",
+        console_source,
+    ) is not None and
+            "CONSOLE_BUILTIN_APP_ID_MAX = CONSOLE_APP_POWER" in console_source and
+            ".battery_supported = s_battery_initialized" in console_source and
+            ".battery_sample_valid = s_battery_sample_valid" in console_source and
+            ".battery_percent = s_battery_sample.percent" in console_source and
+            ".battery_millivolts = s_battery_raw_sample.battery_mv > UINT16_MAX" in
+                console_source,
+            "Power app/runtime battery mapping is missing or unbounded")
 
     flasher = read_json(build / "flasher_args.json")
     require(flasher.get("flash_settings") == {
@@ -796,7 +1006,8 @@ def main() -> None:
         "platform_game_catalog_scan",
         '"microsd-games-directory" : "microsd-root-compat"',
         "static console_shell_t s_shell",
-        "static P4_CONSOLE_LARGE_BSS platform_game_catalog_t s_catalog_staging",
+        "static P4_CONSOLE_LARGE_BSS platform_game_catalog_t s_game_catalog;",
+        "static P4_CONSOLE_LARGE_BSS platform_game_catalog_t s_catalog_staging;",
         "P4_CONSOLE_OS BOOT_SCREEN status=visible",
         "P4_CONSOLE_OS STORAGE_INIT_BEGIN mode=background",
         "P4_CONSOLE_OS LOADING_SCREEN status=%s",
@@ -895,11 +1106,11 @@ def main() -> None:
                        "platform_console_settings.c").read_text(encoding="utf-8")
     settings_header = (ROOT / "components/platform_console_settings/include/"
                        "platform/console_settings.h").read_text(encoding="utf-8")
-    require("PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT = 3" in settings_header and
-            "PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT = 3" in settings_header and
+    require("PLATFORM_CONSOLE_BOOT_VOLUME_DEFAULT = 0" in settings_header and
+            "PLATFORM_CONSOLE_GAME_VOLUME_DEFAULT = 0" in settings_header and
             'SETTINGS_NAMESPACE = "p4_console"' in settings_source and
             'VOLUME_POLICY_KEY = "volume_policy"' in settings_source and
-            "VOLUME_POLICY_VERSION = 2" in settings_source and
+            "VOLUME_POLICY_VERSION = 3" in settings_source and
             "migrate_volume_policy" in settings_source and
             'USB_ENUM_PROBE_KEY = "usb_enum_probe"' in settings_source and
             "nvs_commit(handle)" in settings_source and
@@ -1029,6 +1240,16 @@ def main() -> None:
                 "Waveshare scanner must not request hidden networks")
     require("console_shell_t shell;" not in source,
             "large shell state must not live on the main task stack")
+    require('#include "esp_attr.h"' in source and
+            "#if CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY" in source and
+            "#define P4_CONSOLE_LARGE_BSS EXT_RAM_BSS_ATTR" in source and
+            "static P4_CONSOLE_LARGE_BSS platform_game_catalog_t s_game_catalog;" in source and
+            "static P4_CONSOLE_LARGE_BSS platform_game_catalog_t s_catalog_staging;" in source and
+            "static P4_CONSOLE_LARGE_BSS\n"
+            "    console_app_descriptor_t s_apps[CONSOLE_SHELL_MAX_APPS];" in source and
+            "CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL 32768" in sdkconfig,
+            "large catalogs and the app registry must use external BSS when enabled "
+            "while retaining the 32 KiB internal reserve")
     require(
         ".usb_drive_active =\n"
         "            s_game_storage_status.state == "
@@ -1068,6 +1289,37 @@ def main() -> None:
             "result = sdmmc_host_deinit();" not in storage_source,
             "runtime USB switching must use the explicit on-demand helpers "
             "and never globally deinitialize the C6 SDIO host")
+    h1_source = (ROOT / "components/p4_usb_content_transfer/src/"
+                 "h1_usb_drive_control.c").read_text(encoding="utf-8")
+    h1_header = (ROOT / "components/p4_usb_content_transfer/include/p4/"
+                 "h1_usb_drive_control.h").read_text(encoding="utf-8")
+    h1_transfer = (ROOT / "scripts/p4-transfer.py").read_text(encoding="utf-8")
+    h1_cmake = (ROOT / "apps/console_os/main/CMakeLists.txt").read_text(
+        encoding="utf-8")
+    require("p4_usb_content_transfer" in h1_cmake and
+            '#include "p4/h1_usb_drive_control.h"' in h1_source and
+            "P4_H1_USB_DRIVE_PROTOCOL_VERSION" in h1_header and
+            "physical, trusted-local-admin" in (ROOT / "docs/H1_USB_DRIVE_CONTROL.md").read_text(
+                encoding="utf-8"),
+            "H1 USB Drive protocol or physical-local boundary is missing")
+    require("if (file.state != P4_FILE_TRANSFER_IDLE)" in source and
+            "return p4_file_transfer_consume(bytes, bytes_length);" in source and
+            "if (content.state != P4_CONTENT_TRANSFER_IDLE)" in source and
+            "return p4_content_transfer_consume(bytes, bytes_length);" in source and
+            "p4_h1_usb_drive_control_consume" in source,
+            "H1 raw parser priority no longer follows active transfers")
+    require("!p4cart_scan_running()" in source and
+            "content.state != P4_CONTENT_TRANSFER_IDLE" in source and
+            "file.state != P4_FILE_TRANSFER_IDLE" in source and
+            "platform_game_storage_set_usb_mode(false)" in source and
+            "reason=host-not-ejected" in storage_source and
+            "stop_usb_input_for_role_switch()" in source,
+            "H1 role transition or eject gate is not fail-closed")
+    require('subparsers.add_parser(\n        "usb-drive"' in h1_transfer and
+            'choices=("status", "on", "off")' in h1_transfer and
+            'subparsers.add_parser("push"' in h1_transfer and
+            'subparsers.add_parser("pull"' in h1_transfer,
+            "H1 CLI subcommands are incomplete")
     board_defaults = (ROOT / "hardware/boards/"
                       "waveshare-esp32-p4-wifi6-touch-lcd-4.3/"
                       "sdkconfig.defaults").read_text(encoding="utf-8")
@@ -1161,6 +1413,58 @@ def main() -> None:
     ):
         require(f" {symbol}\n" not in symbols_result.stdout,
                 f"OTA ELF still exports embedded-game symbol {symbol}")
+
+    objdump = compiler.with_name(compiler.name.removesuffix("gcc") + "objdump")
+    sections_result = subprocess.run(
+        [str(objdump), "-h", str(elf)], check=False, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    require(sections_result.returncode == 0,
+            "cannot inspect app ELF sections")
+    external_bss = re.search(
+        r"^\s*\d+\s+\.ext_ram\.bss\s+([0-9a-fA-F]+)\s+"
+        r"([0-9a-fA-F]+)\s+",
+        sections_result.stdout,
+        re.MULTILINE,
+    )
+    require(external_bss is not None,
+            "app ELF is missing the external-RAM BSS section")
+    external_bss_bytes = int(external_bss.group(1), 16)
+    external_bss_start = int(external_bss.group(2), 16)
+    external_bss_end = external_bss_start + external_bss_bytes
+    local_symbols_result = subprocess.run(
+        [str(nm), "-S", str(elf)], check=False, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    require(local_symbols_result.returncode == 0,
+            "cannot inspect local app ELF symbols")
+    high_heap_match = re.search(
+        r"^([0-9a-fA-F]+)(?:\s+[0-9a-fA-F]+)?\s+A\s+"
+        r"_heap_start_high$",
+        local_symbols_result.stdout,
+        re.MULTILINE,
+    )
+    require(high_heap_match is not None,
+            "app ELF is missing the high-SRAM heap boundary")
+    high_heap_start = int(high_heap_match.group(1), 16)
+    require(WAVESHARE_SRAM_HIGH_END - high_heap_start >=
+            MIN_BOOTABLE_HIGH_SRAM_BYTES,
+            "app ELF leaves less than 40 KiB high SRAM for the proven 32 KiB DMA reserve")
+    for catalog_symbol in ("s_game_catalog", "s_catalog_staging"):
+        symbol_match = re.search(
+            rf"^([0-9a-fA-F]+)\s+([0-9a-fA-F]+)\s+[bB]\s+"
+            rf"{catalog_symbol}$",
+            local_symbols_result.stdout,
+            re.MULTILINE,
+        )
+        require(symbol_match is not None,
+                f"app ELF is missing {catalog_symbol}")
+        symbol_start = int(symbol_match.group(1), 16)
+        symbol_bytes = int(symbol_match.group(2), 16)
+        require(symbol_bytes == 16664 and
+                external_bss_start <= symbol_start and
+                symbol_start + symbol_bytes <= external_bss_end,
+                f"{catalog_symbol} must be a 32-entry external-RAM snapshot")
     update = verify_update(bundle / "UPDATE/P4UPDATE.P4U", app)
     p4cart = verify_p4cart(bundle / P4CART_SEED)
 

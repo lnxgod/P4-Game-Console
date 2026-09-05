@@ -16,7 +16,7 @@ bool platform_audio_factory_sample_rate_supported(uint32_t sample_rate_hz)
 
 bool platform_audio_factory_volume_supported(uint8_t volume_percent)
 {
-    return volume_percent >= UINT8_C(1) && volume_percent <= UINT8_C(10);
+    return volume_percent <= UINT8_C(10);
 }
 
 uint16_t platform_audio_factory_peak_for_volume(uint8_t volume_percent)
@@ -69,9 +69,13 @@ bool platform_audio_factory_attenuate_pcm16(const int16_t *input,
 {
     const uint16_t peak =
         platform_audio_factory_peak_for_volume(volume_percent);
-    if (input == NULL || output == NULL || sample_count == 0U || peak == 0U ||
+    if (input == NULL || output == NULL || sample_count == 0U ||
         ranges_overlap(input, output, sample_count)) {
         return false;
+    }
+    if (peak == 0U) {
+        memset(output, 0, sample_count * sizeof(*output));
+        return true;
     }
     if (volume_percent == UINT8_C(10)) {
         memcpy(output, input, sample_count * sizeof(*output));

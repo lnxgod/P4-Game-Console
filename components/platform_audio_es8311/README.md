@@ -16,3 +16,16 @@ did not ACK at `0x18`, and the optional NS4168 and expected NS4263B outputs
 converge on the same speakers. Do not flash or execute a GPIO30-low path until
 the power-off population/continuity inventory required by
 `hardware/evidence/elecrow-10.1-audio-path-review.json` is complete.
+
+## Master volume API
+
+The backend exposes a bounded master step of 0..10 through
+`platform_audio_es8311_set_volume()` and `platform_audio_es8311_get_volume()`;
+zero is a true mute and produces exact zero PCM.
+Creation always starts muted with the configured step. While running, a set
+operation mutes and verifies the codec before changing its register and only
+unmutes after readback succeeds; failures leave the backend in its fail-safe
+muted state. Persistence is owned by `platform_console_settings`: callers
+persist only after an accepted deliberate Control Panel change, then pass the
+selected step to Console OS, native games, or Doom when opening an audio
+session.

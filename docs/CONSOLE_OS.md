@@ -2,6 +2,161 @@
 
 ## Status
 
+Console OS 0.5.12 is the selected production baseline. The 0.5.13, 0.5.14,
+and 0.5.15 native-scrolling experiments were rejected/not accepted after
+operator comparison; the exact rollback chain restored 0.5.12. Their capture
+tooling and rejected-version changelog entries remain available for a future,
+separately validated investigation, but none of their production code is
+selected by this source state. Device-specific wrappers, authorizations, and
+raw UART transcripts are omitted from the public branch; the sanitized result
+is recorded in
+`hardware/evidence/waveshare-console-os-0.5.12-public-validation-20260905.json`.
+
+Console OS 0.5.12 rejects the filter-4 GT911 tuning result: the operator found
+scrolling less smooth and touch-follow latency unchanged. It restores the exact
+unit-3 sealed filter-8/checksum-`0x79` baseline, accepting only exact
+filter-4/checksum-`0x7d` or already-original state. Restoration performs one
+full-block write with `Config_Fresh=1`, reads back the complete block, and fails
+closed without retrying. The controller update is not power-loss atomic, and
+rolling firmware back does not itself roll back GT911 configuration NVM. The
+default release disables the synchronous three-second runtime-statistics burst
+after captures showed 132--134 ms
+main-loop stalls (about eight frames); diagnostic builds opt in with
+`-DP4_CONSOLE_RUNTIME_STATS_BUILD=ON`. Battery Home invalidation uses 50 mV
+hysteresis, while Power detail retains raw mV. Full-resolution 768x480 and all
+games are unchanged. Host tests, the exact USB-host build, guarded app-only
+install, complete 1,884,160-byte readback, single baseline restoration, and
+reset-persistent no-write verification pass. Two 60-second captures contain no
+periodic runtime-stat records, resets, panics, or rejected runtime markers.
+The operator confirmed the periodic 3--4 second stutter was gone, while
+continuous touch-follow and reversal lag remained.
+
+Console OS 0.5.11 performs the first staged controller-filter experiment using
+the sealed 0.5.10 unit-3 snapshot. On that exact Waveshare controller only, it
+changes the GT911 normal filter from 8 to 4 while preserving the upper
+first-filter bits and all other configuration data. The known identity prefix,
+a vendor byte bound from the same live controller, firmware, geometry, version,
+baseline bytes, and checksum must match before any write.
+The complete candidate block is applied with a new checksum and verified by
+full readback; any write or verification failure attempts and verifies an
+immediate restore of the original block. A mismatch refuses without writing.
+Shell resolution, rendering, report period, input coordinate contracts, and
+game surfaces are unchanged. GT911 saves equal-version changed configuration,
+so filter 4 can persist across reset. The original complete block is sealed for
+an explicit recovery build; application rollback alone does not restore it,
+and the candidate/restore pair is not atomic against device power loss.
+
+The exact 0.5.11 build and static verifier pass, as do the guarded unit-3
+application install/readback, retained-UART startup apply, and reset-persistence
+captures. Startup records the authorized 8/`0x79` to 4/`0x7d` apply with vendor
+`0x00`; after reset the controller is already at 4/`0x7d`, with no restore.
+The operator latency/jitter test remains pending, and this evidence makes no
+claim of user-visible improvement. The public validation summary above records
+the eventual rejection and restoration outcome without publishing the
+device-specific transcript.
+
+Console OS 0.5.10 is a read-only GT911 characterization candidate. It corrects
+the 0.5.9 mailbox timestamp so repeated coordinates keep the time of the last
+actual data-ready controller report; neutral samples remain valid without
+acquiring artificial age. Startup records the controller identity and full
+186-byte configuration block, validates its checksum, and decodes the report
+period, debounce, filter, and coordinate thresholds. Periodic telemetry now
+reports the cadence of unique controller reports. This revision does not write
+GT911 configuration or alter full-resolution rendering and game geometry.
+The exact unit-3 build, static verifier, guarded app-only install/readback, and
+retained-UART startup gate pass. Its checksum-valid controller snapshot reports
+firmware `0x1060`, configuration version 65, a 10 ms report period, zero X/Y
+movement thresholds, and normal filter 8. The complete original block is
+encoded in the reviewed restoration implementation before the next one-field
+filter experiment.
+
+Console OS 0.5.9 retains the accepted native 768x480 Windows shell, partial
+presentation path, and unchanged 320x200 or negotiated 768x480 game surfaces.
+Launcher drag displacement now stays in raw 800x480 physical touch coordinates:
+four pixels distinguish a drag from a tap, and each one-pixel reversal after
+activation changes the fractional scroll position. On Waveshare, a dedicated
+120 Hz worker continually reads the GT911 into a single latest-sample mailbox
+while the launcher is rendering. There is no event queue to replay. Native
+games, scripts, and Doom stop and join that worker before taking their existing
+direct touch path. Input-correlated display telemetry reports the acquired
+sample's age through the DSI driver frame-boundary callback without adding
+per-frame logs.
+
+The exact unit-3 build, verifier, guarded app-only install/readback, and
+retained-UART startup gate pass. An interactive trace recorded zero mailbox
+failures or stale samples and an 8.849 ms worst sample age. State-changing
+input reached a driver frame boundary in about 39.8--39.9 ms on average, of
+which about 8.6 ms was handoff-to-driver-boundary. Operator testing
+nevertheless found no
+perceptible improvement in finger-follow or direction-reversal delay over
+0.5.8. This rules out stale application polling as the primary cause; 0.5.9
+remains a diagnostic candidate rather than the accepted latency fix.
+
+Console OS 0.5.8 keeps the Waveshare Windows-style shell and persistent RGB565
+framebuffer at native 768x480. Its cached renderer row-shifts the tile viewport
+and redraws only exposed content, while the Waveshare backend now maps that
+conservative damage through the panel rotation and updates only the affected
+DSI rows when cache-aware replay is cheaper than a full transform. Alternating
+framebuffers replay coalesced damage from the authoritative source before
+handoff. Touch drag recognition starts after two logical pixels, preserves the
+full displacement on the first drag frame, and avoids a speculative tile-press
+redraw while the gesture is unresolved. Settled endpoints and structural
+changes remain authoritative full frames. Shell handoff remains pipelined,
+while both the default 320x200 and negotiated 768x480 game paths remain
+refresh-synchronous and unchanged.
+
+The exact unit-3 app-only install/readback and retained-UART startup gate pass
+with one 0.5.8 start, native-content and partial-present markers, and no display
+timeout, display failure, accelerator failure, panic, or reboot marker. The
+idle capture does not exercise scrolling (`partial_submits=0`), so interactive
+dirty-region timing plus operator-visible scrolling and representative game
+acceptance remain pending.
+
+Console OS 0.5.6 preserves the fast 384x240 Waveshare Windows-shell source
+and exact 2x hardware presentation while correcting and streamlining its
+compact raster. The built-in 5x7 font joins each authored bitmap run at a fixed source-pixel stroke
+weight, and one-pixel folder, bevel, scrollbar, and rule edges remain one
+source pixel regardless of their 6:5 layout phase. Native 768x480 rendering
+and the optional 80x30 BBS launcher are unchanged.
+
+Console OS 0.5.4 renders ordinary Waveshare shell pages into a compact
+384x240 source and scales them exactly 2x in hardware to preserve the fixed
+768x480 menu and touch viewport. The native 80x30 BBS launcher retains its
+exact 768x480 surface. This removes three quarters of the full-panel source
+pixels from Windows-style menu animation. The shell also discards overdue
+absolute wake anchors rather than issuing catch-up frames, and its Windows
+scrollbar thumb retains the gesture across every held touch sample. Runtime
+timing counters remain the hardware authority for frame cadence.
+
+Console OS 0.5.3 moves the fractional 60 Hz UI/audio scheduler to a 1 kHz
+FreeRTOS tick. Its 16/17 ms phases now track the Waveshare panel's measured
+16.704 ms refresh cadence instead of quantizing animation frames to an uneven
+10/20/20 ms pattern. Launcher motion uses a shorter quadratic ease-in/out, and
+bounded H1 timing telemetry separates shell render, PPA transform, panel
+handoff, and actual refresh intervals for on-device acceptance.
+
+Console OS 0.5.2 keeps battery state visible in the launcher chrome instead of
+limiting it to Control Panel > Power. Its menu motion uses a symmetric
+ease-in/ease-out curve with enough intermediate samples for the panel cadence,
+and the Waveshare display path pipelines its existing two DSI framebuffers so
+scanout can overlap preparation of the next shell frame without weakening the
+refresh-confirmed ownership fence.
+
+Console OS 0.5.1 adds a Waveshare-only **Power** panel backed by calibrated
+GPIO20 / ADC1 channel 4 samples through the board's 200 kOhm / 100 kOhm
+divider. Voltage is sampled every five seconds and the displayed 0--100%
+value is explicitly a bounded linear estimate, not a fuel gauge or charge-state
+signal. Fresh and one-time-migrated settings start Boot Sounds and Game Audio
+at 0/10; later 0--10 changes remain persistent. The native catalog now admits
+all 32 bounded directory entries and the shell admits 64 launchers. Smooth
+scrolling clears stale touch velocity after a hold or service stall. Finally,
+the physical-local H1 command endpoint can request the existing H2 USB Drive
+transition, while preserving active-transfer priority and the clean-eject gate.
+The live and staging 32-entry game catalogs are kept in external RAM so those
+larger bounds do not consume the fixed 32 KiB internal/DMA reserve. Exact-unit
+testing rejected the superseded 0.5.0 candidate after it exhausted that reserve
+before `app_main`; the device was restored to its sealed 0.4.99 predecessor.
+
 Console OS 0.4.97 accelerates the Waveshare 4.3 launcher without changing its
 fixed 768x480 OS surface. The panel adapter uses the ESP32-P4 PPA for exact
 1:1 rotation into a centered 480x768 native viewport instead of running a
@@ -381,8 +536,10 @@ physical A is the canonical accept/South button, physical B is back/East, and
 Y/X retain their labeled West/North positions. The Waveshare Doom handoff now
 reads the already-running OS-owned gamepad snapshot, preserving USB host
 ownership and hot-plug neutralization while adding D-pad and button controls.
-A one-time volume-policy migration restores the boot sequence to 10/10 and
-games (including Doom) to 9/10; later Control Panel changes remain persistent.
+That release's one-time volume-policy migration restored the boot sequence to
+10/10 and games (including Doom) to 9/10. Console OS 0.5.1 supersedes it with
+the current silent baseline and preserves later deliberate Control Panel
+changes from 0 through 10.
 
 Console OS 0.4.27 extends the Waveshare missed-refresh-acknowledgement policy
 to storage cartridges. A copied game frame that returns `ESP_ERR_TIMEOUT`
@@ -463,6 +620,9 @@ not a mass-storage endpoint.
 For Waveshare, run `make console-os-waveshare-idf`, connect the native H2
 USB-C device port to the laptop, open **Control Panel**, select **System**, and
 press **Turn On USB Mode**.
+With H1 attached, the equivalent bounded local-admin commands are
+`python3 scripts/p4-transfer.py usb-drive status|on|off --port PORT`; `off`
+is refused until Finder ejects the volume or H2 disconnects.
 After the card volume mounts, run
 `make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES`. Eject it in Finder,
 then press **Turn Off USB Mode** to remount and rescan. The same guarded
@@ -618,7 +778,7 @@ exclusive path:
 - 16,000 Hz signed PCM16 stereo
 - Doom sound effects plus WAD MUS procedural synthesis
 - up to 16 music voices
-- Console OS handoff volume step 9/10
+- persistent Console OS Game Audio level, 0/10 through 10/10
 - factory I2S1 speaker TX route, with the pinned factory PDM-clock side effect
 - no external MIDI device or soundfont
 
@@ -631,7 +791,9 @@ From the repository root:
 
 ```sh
 make console-shell-host
+make platform-battery-host
 make platform-game-storage-host
+make h1-usb-drive-control-host
 make gamepad-host
 make game-sdk-host
 make console-os-idf

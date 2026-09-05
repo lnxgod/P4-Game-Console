@@ -75,6 +75,10 @@ esp_err_t platform_audio_start(platform_audio_t *audio);
 esp_err_t platform_audio_write_frames(platform_audio_t *audio,
                                       const int16_t *interleaved_pcm,
                                       size_t frame_count);
+esp_err_t platform_audio_set_volume(platform_audio_t *audio,
+                                     uint8_t volume_step);
+esp_err_t platform_audio_get_volume(const platform_audio_t *audio,
+                                    uint8_t *out_volume_step);
 esp_err_t platform_audio_stop(platform_audio_t *audio);
 esp_err_t platform_audio_get_state(const platform_audio_t *audio,
                                    platform_audio_state_t *out_state);

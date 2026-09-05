@@ -1,8 +1,9 @@
 {
   "schema": 1,
   "app": "console_os",
-  "stage": "sd-only-game-catalog-p4cart-ota-launcher-candidate",
-  "purpose": "FreeRTOS-native Windows 3.1-style launcher with an optional 90s BBS door theme, branded connection boot sequence, achievements, SD-only executable P4G apps, controller-first wired USB input, an explicit USB Drive role switch, validated P4CART catalog compatibility, atomic dual-slot launcher updates, and an exclusive Doom handoff.",
+  "version": "0.5.12",
+  "stage": "sd-only-game-catalog-p4cart-ota-launcher-baseline",
+  "purpose": "FreeRTOS-native Windows 3.1-style launcher with an optional 90s BBS door theme, battery telemetry, persistent 0..10 audio controls, SD-only executable P4G apps, controller-first wired USB input, touchscreen and H1 USB Drive role switching, validated P4CART catalog compatibility, atomic dual-slot launcher updates, and an exclusive Doom handoff.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
   "flash_authorized": false,
@@ -26,9 +27,11 @@
   "shell": {
     "model": "fixed-builtins-plus-storage-cartridge-catalog",
     "scheduler": "FreeRTOS via ESP-IDF",
-    "surface": "Native 768x480 Windows 3.1-style home on Waveshare 4.3 with an optional CP437/ANSI BBS theme; stable 320x200 logical coordinates for detail panels and all Game API surfaces",
-    "font_rendering": "Pinned 8x16 CP437 in 9x16 cells; bold printable ASCII gains one right-hand pixel while cell geometry and line art remain unchanged",
-    "input": "bounded board service: GT911 touch or OS-owned USB gamepad, keyboard, and mouse",
+    "surface": "Waveshare Windows shell renders natively at 768x480 in a persistent RGB565 framebuffer; cached scroll frames shift only the tile rows and redraw the exposed band, then the display backend transforms and presents only conservative coalesced damage while alternating buffers replay missing generations; settled endpoints redraw the complete tile viewport, and structural or invalidated frames use an authoritative full-frame redraw; the optional CP437/ANSI BBS remains native 768x480; stable 320x200 logical coordinates remain the UI and Game API input contract",
+    "font_rendering": "Windows shell rasterizes the built-in 5x7 font directly into the native 768x480 framebuffer; BBS uses pinned 8x16 CP437 in 9x16 cells with its existing bold printable-ASCII extension",
+    "input": "bounded board service: Waveshare launcher consumes a 120 Hz latest-sample GT911 mailbox with raw physical drag displacement, timestamps retained from actual controller data-ready reports, and the exact unit-3 sealed filter-8/checksum-0x79 baseline; restoration accepts only exact filter-4/checksum-0x7d or already-original state, writes the full block once with Config_Fresh=1, reads back, and fails closed without retry; stop/join ownership handoff to direct-polling games; other targets retain direct GT911 touch; OS-owned USB gamepad, keyboard, and mouse remain supported",
+    "home_battery_invalidation": "50 mV hysteresis; raw millivolt changes do not dirty Home, while Power detail exposes raw mV",
+    "runtime_stats": "disabled by default after 132-134 ms main-loop stalls (~8 frames) from synchronous three-second bursts; diagnostic builds opt in with -DP4_CONSOLE_RUNTIME_STATS_BUILD=ON",
     "built_in_apps": [
       "colors",
       "touch",
@@ -41,6 +44,7 @@
       "save-manager",
       "file-transfer",
       "usb-drive",
+      "power",
       "terminal"
     ],
     "apps_per_page": 6,
@@ -121,7 +125,7 @@
     "logo_source_sha256": "903d20f0b3d52c8b5b785686680cbb5e884ea17a5636fdf381e9752ade92efce",
     "first_visible_frame": "native 768x480 ANSI adaptation of the official Game Changers AI lightbulb/circuit mark before removable-storage initialization",
     "storage_initialization": "background task runs behind visible POST, disk seek, ATDT 614-276-3639, V.22bis training, door-directory sync, and CONNECT 2400 phases; the first interactive frame waits for ready or degraded terminal state",
-    "audio": "classic-PC POST beep, separated hard-disk seek clicks, deliberately paced 614-276-3639 DTMF dial, then a condensed V.25/V.22bis 2400-baud handshake; persistent Boot Sounds and Game Audio levels are independently adjustable from 1/10 through 10/10",
+    "audio": "classic-PC POST beep, separated hard-disk seek clicks, deliberately paced 614-276-3639 DTMF dial, then a condensed V.25/V.22bis 2400-baud handshake; fresh and one-time-migrated installs start silent, while persistent Boot Sounds and Game Audio levels are independently adjustable from 0/10 through 10/10",
     "third_party_signature_audio_used": false
   },
   "themes": {
@@ -144,7 +148,7 @@
     "audio_initialized_by_doom": true,
     "sample_rate_hz": 16000,
     "format": "pcm16-stereo",
-    "volume_step": "3/10",
+    "volume_step": "persistent Game Audio setting, 0/10 through 10/10; fresh default 0/10",
     "music": "WAD MUS procedural 16-voice synth",
     "return_to_home_supported": "confirmed quit performs safe teardown and restarts into Console OS"
   },
@@ -202,7 +206,7 @@
       "medium": "removable microSD",
       "filesystem": "FAT32 (MBR), volume name P4GAMES; ExFAT unsupported",
       "runtime_access": "read-only while app-owned; exclusive host read/write while exported",
-      "laptop_transfer": "System-page USB Mode button controls exclusive USB device MSC on native H2; H1 remains programming UART",
+      "laptop_transfer": "USB Drive app or the bounded physical-local H1 command controls exclusive USB device MSC on native H2; H1 remains the programming UART and cannot bypass the host-eject gate",
       "usb_block_addressing": "64-bit byte ranges for the full 32 GB card; bounded DMA-safe 4 KiB SD transactions with synchronous readback",
       "internal_game_data_partition": false,
       "ota_slot_bytes": 8323072,
@@ -227,5 +231,9 @@
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "On both recorded Waveshare 4.3 units with H1 UART retained, install the exact verified Console OS 0.4.101 artifact; prove the internal DMA reserve survives startup, all 19 native cartridges are cataloged without omission, and the exact verified Doom shareware data launches."
+  "release_status": "0.5.15 rejected/not accepted; 0.5.12 restored as the operator-confirmed hardware baseline",
+  "operator_result": "0.5.12 is better; 0.5.15 interaction captures produced no complete gesture marker and must not be used as latency measurements",
+  "diagnostic_free_artifact_status": "built and verified, not flashed",
+  "rollback_chain_status": "0.5.15->0.5.14->0.5.13->0.5.12 passed; restored 0.5.12 startup capture passed",
+  "next_hardware_step": "Keep unit 3 on the restored 0.5.12 baseline. Any future scrolling experiment must retain native 768x480 output, preserve BBS and games, and produce a valid single gesture diagnostic marker before latency claims are made."
 }

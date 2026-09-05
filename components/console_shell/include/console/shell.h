@@ -38,12 +38,17 @@ enum {
     CONSOLE_SHELL_LAYOUT_HEIGHT = 200,
 #if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
     CONSOLE_SHELL_TARGET_HEIGHT == 480U
-    /* Waveshare desktop renders directly into its centered 768x480 viewport. */
+    /* The native BBS and high-resolution paths retain a 768x480 surface. */
     CONSOLE_SHELL_WIDTH = 768,
     CONSOLE_SHELL_HEIGHT = 480,
+    /* A half-size source scales exactly 2x into the same 768x480 viewport. */
+    CONSOLE_SHELL_PRESENT_WIDTH = 384,
+    CONSOLE_SHELL_PRESENT_HEIGHT = 240,
 #else
     CONSOLE_SHELL_WIDTH = CONSOLE_SHELL_LAYOUT_WIDTH,
     CONSOLE_SHELL_HEIGHT = CONSOLE_SHELL_LAYOUT_HEIGHT,
+    CONSOLE_SHELL_PRESENT_WIDTH = CONSOLE_SHELL_LAYOUT_WIDTH,
+    CONSOLE_SHELL_PRESENT_HEIGHT = CONSOLE_SHELL_LAYOUT_HEIGHT,
 #endif
     CONSOLE_SHELL_PHYSICAL_WIDTH = CONSOLE_SHELL_TARGET_WIDTH,
     CONSOLE_SHELL_PHYSICAL_HEIGHT = CONSOLE_SHELL_TARGET_HEIGHT,
@@ -72,6 +77,7 @@ enum {
     CONSOLE_SHELL_VISIBLE_APP_ROWS = 2,
     CONSOLE_SHELL_APPS_PER_VIEW =
         CONSOLE_SHELL_APP_COLUMNS * CONSOLE_SHELL_VISIBLE_APP_ROWS,
+    /* 32 native P4G packages + 16 P4CARTs + built-in control-panel apps. */
     CONSOLE_SHELL_MAX_APPS = 64,
     CONSOLE_SHELL_MAX_CONTACTS = 5,
     CONSOLE_SHELL_TITLE_MAX_BYTES = 16,
@@ -112,6 +118,7 @@ typedef enum {
     CONSOLE_PAGE_FILE_TRANSFER,
     CONSOLE_PAGE_TERMINAL,
     CONSOLE_PAGE_STORAGE,
+    CONSOLE_PAGE_POWER,
     CONSOLE_PAGE_CONTROLLERS,
 } console_page_t;
 
@@ -352,6 +359,12 @@ typedef struct {
     bool physical_keyboard_ready;
     uint16_t valid_cart_count;
     uint16_t builtin_game_count;
+    bool battery_supported;
+    bool battery_sample_valid;
+    bool battery_calibrated;
+    uint16_t battery_millivolts;
+    uint8_t battery_percent;
+    int battery_last_error;
     uint8_t boot_volume_step;
     uint8_t game_volume_step;
     bool audio_settings_persistent;
@@ -461,6 +474,19 @@ typedef struct {
     uint8_t multiplayer_lobby_selection;
 } console_shell_action_t;
 
+typedef enum {
+    CONSOLE_SHELL_NATIVE_UPDATE_FULL = 0,
+    CONSOLE_SHELL_NATIVE_UPDATE_REGION,
+} console_shell_native_update_kind_t;
+
+typedef struct {
+    console_shell_native_update_kind_t kind;
+    uint16_t x;
+    uint16_t y;
+    uint16_t width;
+    uint16_t height;
+} console_shell_native_update_t;
+
 typedef struct {
     const console_app_descriptor_t *apps;
     size_t app_count;
@@ -496,6 +522,9 @@ typedef struct {
     console_shell_file_notice_t file_notice;
     uint16_t press_start_gui_x;
     uint16_t press_start_gui_y;
+    uint16_t press_start_physical_x;
+    uint16_t press_start_physical_y;
+    int16_t scroll_thumb_grab_offset;
     uint32_t animation_clock_ms;
     uint32_t home_drag_sample_ms;
     uint16_t home_scroll_elapsed_ms;
@@ -515,6 +544,27 @@ typedef struct {
     bool pointer_visible;
     bool pointer_pressed;
     uint32_t render_generation;
+    /* Persistent native-home framebuffer cache. The renderer owns these
+     * fields; callers must use console_shell_invalidate_native_cache() before
+     * reusing the framebuffer for non-shell content. */
+    uintptr_t native_home_cache_pixels;
+    size_t native_home_cache_stride;
+    int32_t native_home_cache_scroll_q16;
+    size_t native_home_cache_scroll_row;
+    uint64_t native_home_cache_signature;
+    size_t native_home_cache_selected_item;
+    size_t native_home_cache_pressed_index;
+    console_color_mode_t native_home_cache_color_mode;
+    uint8_t native_home_cache_battery_percent;
+    bool native_home_cache_valid;
+    bool native_home_cache_press_active;
+    bool native_home_cache_battery_supported;
+    bool native_home_cache_battery_valid;
+    uint32_t native_home_full_frames;
+    uint32_t native_home_dynamic_frames;
+    uint32_t native_home_scroll_blit_frames;
+    uint64_t native_home_shifted_pixels;
+    console_shell_native_update_t native_update;
     console_shell_runtime_info_t runtime;
     console_shell_contact_t contacts[CONSOLE_SHELL_MAX_CONTACTS];
     size_t contact_count;
@@ -605,6 +655,9 @@ void console_shell_show_home(console_shell_t *shell);
 /** Return the selected shell palette. The setting is session-only. */
 console_color_mode_t console_shell_color_mode(const console_shell_t *shell);
 
+/** True when the current page requires the native 768x480 BBS surface. */
+bool console_shell_uses_native_bbs_launcher(const console_shell_t *shell);
+
 /** True when input or runtime state changed since the most recent render. */
 bool console_shell_is_dirty(const console_shell_t *shell);
 
@@ -615,6 +668,35 @@ bool console_shell_is_dirty(const console_shell_t *shell);
 bool console_shell_render_rgb565(console_shell_t *shell,
                                  uint16_t *pixels,
                                  size_t stride_pixels);
+
+/**
+ * Render the Windows home page into a persistent native 768x480 framebuffer.
+ *
+ * The first call and every structural change perform an authoritative full
+ * render. Scroll-only frames reuse the existing chrome and shift/redraw only
+ * the moving tile bands, scrollbar, and footer. The caller must preserve the
+ * framebuffer contents between calls and invalidate the cache before another
+ * owner writes those pixels.
+ */
+bool console_shell_render_native_cached_rgb565(console_shell_t *shell,
+                                                uint16_t *pixels,
+                                                size_t stride_pixels);
+
+/**
+ * Return conservative source update metadata for the most recent render.
+ * FULL is reported whenever a partial update cannot be proven safe.
+ */
+bool console_shell_get_native_update(
+    const console_shell_t *shell,
+    console_shell_native_update_t *update_out);
+
+/** Mark the persistent native framebuffer contents unavailable for reuse. */
+void console_shell_invalidate_native_cache(console_shell_t *shell);
+
+/** Render non-BBS pages into the board's accelerated shell source surface. */
+bool console_shell_render_present_rgb565(console_shell_t *shell,
+                                         uint16_t *pixels,
+                                         size_t stride_pixels);
 
 #ifdef __cplusplus
 }

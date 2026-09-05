@@ -16,6 +16,7 @@ extern "C" {
 #endif
 
 enum {
+    /* Matches the bounded GAMES directory listing rather than hiding entries. */
     PLATFORM_GAME_CATALOG_MAX_ENTRIES = 32,
 };
 

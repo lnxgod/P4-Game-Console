@@ -32,6 +32,7 @@ if(COMMAND idf_component_register)
         REQUIRES
             esp_hw_support
             esp_lcd
+            esp_timer
             freertos
             heap
             platform_board
@@ -54,6 +55,7 @@ else()
     add_library(platform_display_layout STATIC src/platform_display_layout.c)
     target_include_directories(platform_display_layout PUBLIC
         src
+        include
         "${CMAKE_CURRENT_LIST_DIR}/../platform_board/include"
     )
     target_compile_features(platform_display_layout PUBLIC c_std_11)

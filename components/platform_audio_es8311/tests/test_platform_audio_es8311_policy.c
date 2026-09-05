@@ -54,7 +54,7 @@ static void test_electrical_contract(void)
     EXPECT_EQ(16000, PLATFORM_AUDIO_ES8311_SAMPLE_RATE_HZ);
     EXPECT_EQ(350, PLATFORM_AUDIO_ES8311_STARTUP_ZERO_MS);
     EXPECT_EQ(1536, PLATFORM_AUDIO_ES8311_ZERO_PREROLL_FRAMES);
-    EXPECT_TRUE(!platform_audio_es8311_volume_supported(UINT8_C(0)));
+    EXPECT_TRUE(platform_audio_es8311_volume_supported(UINT8_C(0)));
     EXPECT_TRUE(platform_audio_es8311_volume_supported(UINT8_C(1)));
     EXPECT_TRUE(platform_audio_es8311_volume_supported(UINT8_C(10)));
     EXPECT_TRUE(!platform_audio_es8311_volume_supported(UINT8_C(11)));
@@ -102,9 +102,12 @@ static void test_attenuation_is_bounded_and_immutable(void)
     }
 #endif
 
-    EXPECT_TRUE(!platform_audio_es8311_attenuate_pcm16(
+    EXPECT_TRUE(platform_audio_es8311_attenuate_pcm16(
         input, output, sizeof(input) / sizeof(input[0]), UINT8_C(0)
     ));
+    for (size_t index = 0U; index < sizeof(output) / sizeof(output[0]); ++index) {
+        EXPECT_EQ(0, output[index]);
+    }
     EXPECT_TRUE(!platform_audio_es8311_attenuate_pcm16(
         input, (int16_t *)(void *)input,
         sizeof(input) / sizeof(input[0]), UINT8_C(10)

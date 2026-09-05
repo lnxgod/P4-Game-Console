@@ -9,17 +9,69 @@ apps/*/sdkconfig.old
 managed_components/
 .tools/
 
+# Stray compiler, linker, CMake, and Ninja products outside build directories.
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.elf
+*.hex
+*.map
+*.uf2
+*.bin
+*.img
+*.iso
+*.dmg
+*.[Pp]4[Gg]
+*.[Pp]4[Rr]
+*.[Pp]4[Uu]
+*.[Pp]4[Cc][Aa][Rr][Tt]
+*.d
+*.dSYM/
+*.gcda
+*.gcno
+*.profraw
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+Testing/
+build.ninja
+rules.ninja
+.ninja_deps
+.ninja_log
+compile_commands.json
+
+# This generated binary is a checked-in runtime game asset, not firmware.
+!games/byte_buddy/assets/generated/byte_buddy_dragon_art.bin
+
 # Local IDE and Python state.
 .idea/
 .vscode/
 __pycache__/
 *.pyc
+.pytest_cache/
+.coverage
+coverage/
 /tmp/
 /result.json
 /.codex-worktrees/
 /.playwright-mcp/
 /agent-*.png
 /grokcoder-*.png
+
+# Local logs, editor swaps, and interrupted-patch residue.
+*.log
+*.tmp
+*.bak
+*.orig
+*.rej
+*~
+*.swp
+*.swo
 
 # Finder/iCloud conflict copies are stale local duplicates, never source.
 * 2.*
@@ -36,9 +88,16 @@ local-data/doom/chex.deh
 # Quake game data is supplied locally/on SD and never committed or embedded.
 *.[Pp][Aa][Kk]
 
-# Device-specific recovery images are kept locally, never in Git.
-hardware/backups/*.bin
+# Device-specific recovery data stays local. The tracked manifest records only
+# provenance and checksums; the required runtime .bin asset is exempted above.
+hardware/backups/*
+!hardware/backups/manifest.json
 test-runs/doom-e6-rollback-*/
+
+# Raw UART transcripts can contain host and physical-device identifiers. Keep
+# them local, except for the historical upstream fixture used by Doom tests.
+hardware/test-runs/*.raw
+!hardware/test-runs/2026-08-13-doom-e5-touch-only-runtime.raw
 
 # Per-device one-shot authorization ledgers and launch receipts are local only.
 hardware/local-state/

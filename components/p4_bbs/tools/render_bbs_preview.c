@@ -74,6 +74,9 @@ int main(int argc, char **argv)
         .uploads = 3U,
         .trades = 1U,
         .local_board = true,
+        .battery_supported = true,
+        .battery_sample_valid = true,
+        .battery_percent = 63U,
     };
     p4_ansi_terminal_t terminal;
     const p4_bbs_boot_model_t boot = {

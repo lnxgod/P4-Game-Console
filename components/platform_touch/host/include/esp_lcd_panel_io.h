@@ -29,6 +29,18 @@ esp_err_t esp_lcd_new_panel_io_i2c(
     const esp_lcd_panel_io_i2c_config_t *config,
     esp_lcd_panel_io_handle_t *out_io
 );
+esp_err_t esp_lcd_panel_io_rx_param(
+    esp_lcd_panel_io_handle_t io,
+    int lcd_cmd,
+    void *param,
+    size_t param_size
+);
+esp_err_t esp_lcd_panel_io_tx_param(
+    esp_lcd_panel_io_handle_t io,
+    int lcd_cmd,
+    const void *param,
+    size_t param_size
+);
 esp_err_t esp_lcd_panel_io_del(esp_lcd_panel_io_handle_t io);
 
 #endif

@@ -124,7 +124,8 @@ esp_err_t platform_audio_factory_create(
 esp_err_t platform_audio_factory_start(platform_audio_factory_t *audio);
 
 /**
- * Write 1..128 frames. Input remains immutable; volume step 10/10 preserves
+ * Write 1..128 frames. Input remains immutable; volume step 0/10 emits exact
+ * zeros, while 10/10 preserves
  * the complete signed PCM16 range [-32768, 32767] bit-for-bit without
  * amplification (maximum absolute magnitude 32768), while lower steps
  * attenuate proportionally in component-owned staging.
@@ -134,6 +135,14 @@ esp_err_t platform_audio_factory_write_frames(
     const int16_t *interleaved_pcm,
     size_t frame_count
 );
+
+/** Change the bounded master step used by subsequent writes. */
+esp_err_t platform_audio_factory_set_volume(
+    platform_audio_factory_t *audio, uint8_t volume_step);
+
+/** Return the currently applied bounded master step. */
+esp_err_t platform_audio_factory_get_volume(
+    const platform_audio_factory_t *audio, uint8_t *out_volume_step);
 
 /**
  * Prove GPIO30 high, overwrite the complete DMA ring with zeros, and return to

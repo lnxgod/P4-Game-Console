@@ -110,6 +110,55 @@ static void select_bbs(console_shell_t *shell)
     shell->dirty = true;
 }
 
+static void render_bbs_reference(console_shell_t *shell,
+                                 uint16_t *output,
+                                 uint16_t *scratch,
+                                 size_t target_row,
+                                 size_t base_row,
+                                 unsigned fraction_pixels)
+{
+    const size_t pixels = (size_t)CONSOLE_SHELL_WIDTH *
+        CONSOLE_SHELL_HEIGHT;
+    shell->home_scroll_row = target_row;
+    shell->home_scroll_visual_q16 = (int32_t)(target_row << 16);
+    CHECK(console_shell_render_rgb565(
+        shell, output, CONSOLE_SHELL_WIDTH));
+    shell->home_scroll_row = base_row;
+    shell->home_scroll_visual_q16 = (int32_t)(base_row << 16);
+    CHECK(console_shell_render_rgb565(
+        shell, scratch, CONSOLE_SHELL_WIDTH));
+    const uint16_t *const base = scratch;
+    uint16_t *const adjacent = calloc(pixels, sizeof(*adjacent));
+    CHECK(adjacent != NULL);
+    if (adjacent == NULL) {
+        return;
+    }
+    shell->home_scroll_row = base_row + 1U;
+    shell->home_scroll_visual_q16 = (int32_t)((base_row + 1U) << 16);
+    CHECK(console_shell_render_rgb565(
+        shell, adjacent, CONSOLE_SHELL_WIDTH));
+    shell->home_scroll_row = target_row;
+    shell->home_scroll_visual_q16 = (int32_t)(
+        (base_row << 16) + fraction_pixels * (1U << 16) / 48U);
+    for (unsigned y = 144U; y < 368U; ++y) {
+        const int base_source_y = (int)y + (int)fraction_pixels;
+        if (base_source_y >= 144 && base_source_y < 368) {
+            memcpy(output + (size_t)y * CONSOLE_SHELL_WIDTH,
+                   base + (size_t)base_source_y * CONSOLE_SHELL_WIDTH,
+                   CONSOLE_SHELL_WIDTH * sizeof(*output));
+        }
+        const int adjacent_source_y = (int)y - 48 +
+            (int)fraction_pixels;
+        if (adjacent_source_y >= 144 && adjacent_source_y < 368) {
+            memcpy(output + (size_t)y * CONSOLE_SHELL_WIDTH,
+                   adjacent + (size_t)adjacent_source_y *
+                       CONSOLE_SHELL_WIDTH,
+                   CONSOLE_SHELL_WIDTH * sizeof(*output));
+        }
+    }
+    free(adjacent);
+}
+
 int main(void)
 {
     CHECK(CONSOLE_SHELL_NATIVE_BBS == 1);
@@ -117,10 +166,14 @@ int main(void)
     CHECK(console_shell_init(
         &shell, s_apps, sizeof(s_apps) / sizeof(s_apps[0])));
     CHECK(console_shell_color_mode(&shell) == CONSOLE_COLOR_MODE_ARCADE);
+    CHECK(!console_shell_uses_native_bbs_launcher(&shell));
     const console_shell_runtime_info_t runtime = {
         .board_kind = CONSOLE_BOARD_WAVESHARE_4_3,
         .content_scan_complete = true,
         .valid_cart_count = 2U,
+        .battery_supported = true,
+        .battery_sample_valid = true,
+        .battery_percent = 63U,
     };
     console_shell_set_runtime_info(&shell, &runtime);
 
@@ -133,6 +186,10 @@ int main(void)
             &shell, pixels, CONSOLE_SHELL_WIDTH));
         const uint64_t windows_hash = frame_hash(pixels, pixel_count);
         select_bbs(&shell);
+        CHECK(console_shell_uses_native_bbs_launcher(&shell));
+        shell.page = CONSOLE_PAGE_SYSTEM;
+        CHECK(!console_shell_uses_native_bbs_launcher(&shell));
+        shell.page = CONSOLE_PAGE_HOME;
         CHECK(console_shell_render_rgb565(
             &shell, pixels, CONSOLE_SHELL_WIDTH));
         if (shell.bbs_terminal.scroll_count != 0U) {
@@ -143,8 +200,19 @@ int main(void)
         CHECK(p4_ansi_cell(&shell.bbs_terminal, 1U, 0U)->character == 0xc9U);
         CHECK(p4_ansi_cell(&shell.bbs_terminal, 5U, 9U)->character == '>');
         CHECK(terminal_contains(&shell.bbs_terminal, "CONTROL PANEL"));
+        CHECK(terminal_contains(&shell.bbs_terminal, "[##] 63%"));
         const uint64_t bbs_hash = frame_hash(pixels, pixel_count);
         CHECK(windows_hash != bbs_hash);
+        uint16_t *const present = calloc(
+            (size_t)CONSOLE_SHELL_PRESENT_WIDTH *
+                CONSOLE_SHELL_PRESENT_HEIGHT,
+            sizeof(*present));
+        CHECK(present != NULL);
+        if (present != NULL) {
+            CHECK(!console_shell_render_present_rgb565(
+                &shell, present, CONSOLE_SHELL_PRESENT_WIDTH));
+            free(present);
+        }
         free(pixels);
     }
 
@@ -154,8 +222,10 @@ int main(void)
     console_shell_action_t action = tap_surface(&shell, 405U, 212U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(strcmp(shell.home_folder_path, "GAMES") == 0);
+    CHECK(console_shell_uses_native_bbs_launcher(&shell));
 
     console_shell_show_home(&shell);
+    CHECK(console_shell_uses_native_bbs_launcher(&shell));
     shell.home_folder_path[0] = '\0';
     shell.home_all_programs = false;
     shell.selected_home_item = 0U;
@@ -193,6 +263,53 @@ int main(void)
             transition_pixels,
             (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT);
         CHECK(transition_hash != first_page_hash);
+        uint16_t *const reference_pixels = calloc(
+            pixel_count, sizeof(*reference_pixels));
+        uint16_t *const reference_scratch = calloc(
+            pixel_count, sizeof(*reference_scratch));
+        CHECK(reference_pixels != NULL);
+        CHECK(reference_scratch != NULL);
+        if (reference_pixels != NULL && reference_scratch != NULL) {
+            for (size_t target_row = 1U; target_row <= 2U; ++target_row) {
+                for (unsigned offset = 1U; offset < 48U;
+                     offset += 23U) {
+                    render_bbs_reference(
+                        &shell, reference_pixels, reference_scratch,
+                        target_row, target_row - 1U, offset);
+                    shell.home_scroll_row = target_row;
+                    shell.home_scroll_visual_q16 = (int32_t)(
+                        ((target_row - 1U) << 16) +
+                        (offset * (1U << 16)) / 48U);
+                    shell.dirty = true;
+                    CHECK(console_shell_render_rgb565(
+                        &shell, transition_pixels, CONSOLE_SHELL_WIDTH));
+                    CHECK(memcmp(transition_pixels, reference_pixels,
+                                 pixel_count * sizeof(*reference_pixels)) == 0);
+                }
+            }
+        }
+        shell.home_scroll_row = 1U;
+        shell.home_scroll_visual_q16 = 1 << 16;
+        shell.dirty = true;
+        free(reference_pixels);
+        free(reference_scratch);
+        uint16_t *const repeat_pixels = calloc(
+            (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
+            sizeof(*repeat_pixels));
+        CHECK(repeat_pixels != NULL);
+        if (repeat_pixels != NULL) {
+            memset(transition_pixels, 0xffff, pixel_count *
+                   sizeof(*transition_pixels));
+            memset(repeat_pixels, 0x5a, pixel_count *
+                   sizeof(*repeat_pixels));
+            CHECK(console_shell_render_rgb565(
+                &shell, repeat_pixels, CONSOLE_SHELL_WIDTH));
+            CHECK(console_shell_render_rgb565(
+                &shell, transition_pixels, CONSOLE_SHELL_WIDTH));
+            CHECK(memcmp(transition_pixels, repeat_pixels,
+                         pixel_count * sizeof(*repeat_pixels)) == 0);
+            free(repeat_pixels);
+        }
         for (unsigned frame = 0U; frame < 20U; ++frame) {
             (void)console_shell_advance(&shell, 16U);
         }

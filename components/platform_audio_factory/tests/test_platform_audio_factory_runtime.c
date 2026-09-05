@@ -109,10 +109,10 @@ static void test_argument_and_high_readback_gates(void)
     configuration.sample_rate_hz = UINT32_C(48000);
     EXPECT_EQ(ESP_ERR_INVALID_ARG,
               platform_audio_factory_create(&configuration, &audio));
-    configuration = valid_config(UINT8_C(0));
+    configuration = valid_config(UINT8_C(11));
     EXPECT_EQ(ESP_ERR_INVALID_ARG,
               platform_audio_factory_create(&configuration, &audio));
-    configuration = valid_config(UINT8_C(11));
+    configuration = valid_config(UINT8_C(12));
     EXPECT_EQ(ESP_ERR_INVALID_ARG,
               platform_audio_factory_create(&configuration, &audio));
 

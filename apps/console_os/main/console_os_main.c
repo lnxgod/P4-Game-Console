@@ -46,6 +46,7 @@
 #include "p4/file_transfer.h"
 #include "p4/game.h"
 #include "p4/game_save_service.h"
+#include "p4/h1_usb_drive_control.h"
 #include "p4/input.h"
 #include "p4/lua_runtime.h"
 #include "p4/multiplayer.h"
@@ -57,8 +58,18 @@
 #include "p4/script_renderer.h"
 #include "mbedtls/sha256.h"
 #include "platform/board.h"
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#include "platform_battery/battery.h"
+#endif
 #include "platform/console_settings.h"
 #include "platform/display.h"
+
+/* Runtime telemetry is useful during bring-up, but its multi-line log burst
+ * is too expensive to schedule during normal interactive use. Diagnostic
+ * builds opt in with -DP4_CONSOLE_RUNTIME_STATS_BUILD=ON. */
+#ifndef CONSOLE_OS_ENABLE_RUNTIME_STATS
+#define CONSOLE_OS_ENABLE_RUNTIME_STATS 0
+#endif
 #include "platform/game_catalog.h"
 #include "platform/game_loader.h"
 #include "platform/game_storage.h"
@@ -97,6 +108,13 @@
 #define P4_CONSOLE_GAMEPAD_INPUT 1
 #else
 #define P4_CONSOLE_GAMEPAD_INPUT 0
+#endif
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
+    CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE && \
+    CONFIG_P4_WAVESHARE_H2_RUNTIME_ROLE_SWITCH
+#define P4_CONSOLE_H1_USB_DRIVE_CONTROL 1
+#else
+#define P4_CONSOLE_H1_USB_DRIVE_CONTROL 0
 #endif
 
 #define CONSOLE_P4CART_APP_ID_BASE UINT32_C(0xf4c00000)
@@ -165,10 +183,19 @@ enum {
     CONSOLE_APP_CHEX_QUEST = 14,
     CONSOLE_APP_FILE_TRANSFER = 15,
     CONSOLE_APP_CONTROLLERS = 16,
-    CONSOLE_BUILTIN_APP_ID_MAX = CONSOLE_APP_CONTROLLERS,
+    CONSOLE_APP_POWER = 17,
+    CONSOLE_BUILTIN_APP_ID_MAX = CONSOLE_APP_POWER,
     CONSOLE_GAME_UPDATE_HZ = 60,
     CONSOLE_SUBMIT_TIMEOUT_MS = 250,
     CONSOLE_BACKLIGHT_PERCENT = 25,
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    /* The launcher consumes newest GT911 input at 60 Hz, but the sampler
+     * runs independently so a PPA/display wait cannot defer acquisition. */
+    CONSOLE_TOUCH_MAILBOX_HZ = 120,
+    CONSOLE_TOUCH_MAILBOX_STACK_BYTES = 4096,
+    CONSOLE_TOUCH_MAILBOX_STOP_TIMEOUT_MS = 500,
+    CONSOLE_TOUCH_MAILBOX_MAX_AGE_US = 50000,
+#endif
 #if P4_CONSOLE_GAMEPAD_INPUT
     CONSOLE_GAMEPAD_STICK_THRESHOLD = 12000,
 #endif
@@ -176,6 +203,8 @@ enum {
     CONSOLE_USB_ENUM_GUARD_CONFIRM_MS = 10000,
 #endif
     CONSOLE_RUNTIME_INFO_INTERVAL_MS = 200,
+    CONSOLE_BATTERY_SAMPLE_INTERVAL_MS = 5000,
+    CONSOLE_BATTERY_DISPLAY_MV_HYSTERESIS = 50,
     CONSOLE_STORAGE_SYNC_INTERVAL_MS = 200,
     CONSOLE_STATS_INTERVAL_MS = 3000,
     CONSOLE_RUNTIME_HEALTH_CONFIRM_MS = 10000,
@@ -282,6 +311,78 @@ static const console_boot_dial_digit_t s_boot_dial[] = {
 };
 
 static const char *const TAG = "p4_console_os";
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+/* Sealed from waveshare-4.3-unit3's read-only 0.5.10 GT911 capture, with the
+ * vendor byte confirmed by the 0.5.11 experiment. This is intentionally not a
+ * generic GT911 profile: restoration refuses every state except this complete
+ * original block or the exact rejected filter-4 derivative. */
+enum {
+    CONSOLE_GT911_ORIGINAL_NORMAL_FILTER = 8U,
+};
+
+static const uint8_t s_waveshare_gt911_expected_identity[
+    PLATFORM_TOUCH_GT911_IDENTITY_BYTES] = {
+    0x39U, 0x31U, 0x31U, 0x00U, 0x60U,
+    0x10U, 0xe0U, 0x01U, 0x20U, 0x03U, 0x00U,
+};
+
+static const uint8_t s_waveshare_gt911_original_config[
+    PLATFORM_TOUCH_GT911_CONFIG_BYTES] = {
+    0x41U, 0xe0U, 0x01U, 0x20U, 0x03U, 0x05U, 0x35U, 0x20U, 0x22U, 0x08U, 0x28U, 0x05U, 0x5aU, 0x3cU, 0x03U, 0x05U,
+    0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x18U, 0x1aU, 0x1eU, 0x14U, 0x87U, 0x27U, 0x09U, 0xcdU, 0xcfU,
+    0xb5U, 0x06U, 0x00U, 0x00U, 0x00U, 0x20U, 0x02U, 0x10U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+    0x00U, 0x00U, 0x00U, 0xb4U, 0xefU, 0x94U, 0xd5U, 0x02U, 0x08U, 0x00U, 0x00U, 0x04U, 0x87U, 0xb9U, 0x00U, 0x82U,
+    0xc4U, 0x00U, 0x7eU, 0xcfU, 0x00U, 0x7bU, 0xdbU, 0x00U, 0x78U, 0xe8U, 0x00U, 0x78U, 0x00U, 0x00U, 0x00U, 0x00U,
+    0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+    0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U, 0x00U,
+    0x12U, 0x10U, 0x0eU, 0x0cU, 0x0aU, 0x08U, 0x06U, 0x04U, 0x02U, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU,
+    0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0x00U, 0x02U,
+    0x04U, 0x06U, 0x08U, 0x0aU, 0x0cU, 0x24U, 0x22U, 0x21U, 0x20U, 0x1fU, 0x1eU, 0x1dU, 0xffU, 0xffU, 0xffU, 0xffU,
+    0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU,
+    0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0xffU, 0x79U, 0x00U,
+};
+
+_Static_assert(sizeof(s_waveshare_gt911_original_config) ==
+                   PLATFORM_TOUCH_GT911_CONFIG_BYTES,
+               "GT911 original configuration must be complete");
+
+static void log_waveshare_gt911_restore(
+    const char *action,
+    const platform_touch_gt911_restore_reviewed_baseline_result_t *result,
+    esp_err_t status)
+{
+    const platform_touch_gt911_info_t empty = {0};
+    const platform_touch_gt911_restore_reviewed_baseline_result_t
+        empty_result = {.result = ESP_ERR_INVALID_STATE};
+    if (result == NULL) {
+        result = &empty_result;
+    }
+    const platform_touch_gt911_info_t *before = &result->before;
+    const platform_touch_gt911_info_t *observed = &result->observed;
+    if (result == &empty_result) {
+        before = &empty;
+        observed = &empty;
+    }
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS GT911_CONFIG_RESTORE target_normal_filter=%u "
+             "result=%s action=%s vendor=0x%02x "
+             "before_filter=%u before_checksum=0x%02x "
+             "after_filter=%u after_checksum=0x%02x "
+             "changed=%u already_original=%u may_have_changed=%u "
+             "restore_result=%s",
+             (unsigned)CONSOLE_GT911_ORIGINAL_NORMAL_FILTER,
+             status == ESP_OK ? "ready" : "not-ready", action,
+             (unsigned)before->vendor_id,
+             (unsigned)before->normal_filter,
+             (unsigned)before->config_checksum,
+             (unsigned)observed->normal_filter,
+             (unsigned)observed->config_checksum,
+             result->changed ? 1U : 0U,
+             result->already_original ? 1U : 0U,
+             result->may_have_changed ? 1U : 0U,
+             esp_err_to_name(status));
+}
+#endif
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 static platform_i2c_shared_t *s_shared_bus;
 static platform_touch_t *s_touch;
@@ -325,9 +426,53 @@ static bool s_touch_ready;
 static uint32_t s_touch_polls;
 static uint32_t s_touch_poll_failures;
 #endif
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+/* Only the mailbox worker calls platform_touch_poll while it is running.
+ * Games stop and join it before retaining their established direct polling
+ * contract. The short spinlock section publishes/copies a whole frame, so a
+ * consumer cannot observe a torn contact list. */
+static platform_touch_frame_t s_touch_mailbox_frame;
+static uint32_t s_touch_mailbox_samples;
+static uint32_t s_touch_mailbox_failures;
+static uint32_t s_touch_mailbox_stale_reads;
+static uint32_t s_touch_mailbox_age_last_us;
+static uint32_t s_touch_mailbox_age_max_us;
+static uint32_t s_touch_mailbox_unique_reports;
+static uint32_t s_touch_mailbox_report_interval_samples;
+static uint32_t s_touch_mailbox_report_interval_total_us;
+static uint32_t s_touch_mailbox_report_interval_min_us;
+static uint32_t s_touch_mailbox_report_interval_max_us;
+/* Owned by the mailbox worker; zero also separates independent contact runs. */
+static int64_t s_touch_mailbox_last_report_timestamp_us;
+static TaskHandle_t s_touch_mailbox_task;
+static bool s_touch_mailbox_stop_requested;
+/* Set only by a touch sample that changes launcher state.  It is consumed by
+ * the next interactive present, rather than repeatedly attributing idle
+ * mailbox snapshots to unrelated frames. */
+static int64_t s_interactive_touch_pending_timestamp_us;
+static StaticSemaphore_t s_touch_mailbox_stopped_storage;
+static SemaphoreHandle_t s_touch_mailbox_stopped;
+static portMUX_TYPE s_touch_mailbox_lock = portMUX_INITIALIZER_UNLOCKED;
+#endif
 static uint32_t s_doom_handoff_count;
 static uint32_t s_loop_count;
 static int64_t s_runtime_services_ready_us;
+/* UI timing remains task-owned: these bounded counters are diagnostic only. */
+static uint32_t s_ui_timing_dirty_frames;
+static uint32_t s_ui_timing_animation_frames;
+static uint32_t s_ui_timing_last_render_us;
+static uint32_t s_ui_timing_max_render_us;
+static uint32_t s_ui_timing_last_submit_us;
+static uint32_t s_ui_timing_max_submit_us;
+static uint32_t s_ui_timing_last_dirty_interval_us;
+static uint32_t s_ui_timing_max_dirty_interval_us;
+static int64_t s_ui_timing_last_dirty_us;
+static uint32_t s_ui_timing_animation_interval_last_us;
+static uint32_t s_ui_timing_animation_interval_max_us;
+static uint32_t s_ui_timing_animation_missed_frames;
+static uint32_t s_ui_timing_animation_burst_frames;
+static uint32_t s_ui_timing_animation_burst_interval_sum_us;
+static int64_t s_ui_timing_last_animation_us;
 static bool s_ota_validation_attempted;
 static bool s_game_storage_status_seen;
 static platform_game_storage_status_t s_game_storage_status;
@@ -348,6 +493,8 @@ static console_shell_file_listing_t s_shell_file_listing;
 static char s_file_directory[
     PLATFORM_GAME_STORAGE_RELATIVE_PATH_MAX_BYTES];
 static console_shell_file_listing_t s_manager_listing;
+/* Keep large catalog snapshots in PSRAM so the 32 KiB internal reserve remains
+ * available for USB/DMA and other latency-sensitive runtime allocations. */
 static P4_CONSOLE_LARGE_BSS platform_game_catalog_t s_game_catalog;
 static P4_CONSOLE_LARGE_BSS platform_game_catalog_t s_catalog_staging;
 typedef enum {
@@ -376,8 +523,19 @@ static p4cart_scan_state_t s_p4cart_scan_state;
 static bool s_p4cart_scan_seen;
 static uint32_t s_p4cart_scan_generation;
 static uint32_t s_file_transfer_generation_seen;
+#if P4_CONSOLE_H1_USB_DRIVE_CONTROL
+static p4_h1_usb_drive_control_t s_h1_usb_drive_control;
+#endif
 static uint32_t s_p4cart_catalog_generation;
 static unsigned s_p4cart_scan_low_water_bytes;
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+static platform_battery_sample_t s_battery_sample;
+static platform_battery_sample_t s_battery_raw_sample;
+static esp_err_t s_battery_last_error = ESP_ERR_INVALID_STATE;
+static bool s_battery_initialized;
+static bool s_battery_sample_valid;
+static bool s_gt911_reviewed_baseline_verified;
+#endif
 
 typedef struct {
     uint32_t app_id;
@@ -726,6 +884,10 @@ static const p4_doom_p4mp_transport_t s_doom_multiplayer_transport = {
 
 static esp_err_t present(console_shell_t *shell);
 static esp_err_t present_interactive(console_shell_t *shell);
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+static void arm_interactive_touch_timestamp_for_present(void);
+static void clear_interactive_touch_timestamp_after_present(void);
+#endif
 static esp_err_t present_boot_screen(unsigned animation_step,
                                      const char *status);
 static console_shell_runtime_info_t runtime_info(void);
@@ -957,6 +1119,17 @@ static const console_app_descriptor_t s_builtin_apps[] = {
 #endif
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
     {
+        .id = CONSOLE_APP_POWER,
+        .title = "POWER",
+        .subtitle = "BATTERY LEVEL",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0x07E0),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY |
+                        CONSOLE_CAPABILITY_TOUCH,
+        .page = CONSOLE_PAGE_POWER,
+        .enabled = true,
+    },
+    {
         .id = CONSOLE_APP_USB_DRIVE,
         .title = "USB DRIVE",
         .subtitle = "SD CARD TO MAC",
@@ -1033,6 +1206,11 @@ _Static_assert((int)CONSOLE_SHELL_WIDTH ==
                    (int)CONSOLE_SHELL_HEIGHT ==
                    (int)PLATFORM_DISPLAY_CONTENT_HEIGHT,
                "Waveshare Console OS must render native 768x480 content");
+_Static_assert((int)CONSOLE_SHELL_PRESENT_WIDTH ==
+                   (int)PLATFORM_DISPLAY_SHELL_WIDTH &&
+                   (int)CONSOLE_SHELL_PRESENT_HEIGHT ==
+                   (int)PLATFORM_DISPLAY_SHELL_HEIGHT,
+               "Waveshare shell source must match the exact PPA viewport");
 _Static_assert((int)P4_GAME_SURFACE_HIGH_RES_WIDTH ==
                    (int)PLATFORM_DISPLAY_CONTENT_WIDTH &&
                    (int)P4_GAME_SURFACE_HIGH_RES_HEIGHT ==
@@ -2308,7 +2486,13 @@ static void handle_manager_action(
     }
     if (action->type == CONSOLE_ACTION_OS_UPDATE_INSTALL) {
         console_shell_set_file_notice(shell, CONSOLE_FILE_NOTICE_UPDATING);
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+        arm_interactive_touch_timestamp_for_present();
+#endif
         const esp_err_t shown = present(shell);
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+        clear_interactive_touch_timestamp_after_present();
+#endif
         if (shown != ESP_OK) {
             halt_dark("update-status-frame", shown);
         }
@@ -3115,6 +3299,70 @@ static const console_mp_lobby_candidate_t *selected_multiplayer_lobby(void)
     return NULL;
 }
 
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+static void sample_battery(bool initial_sample)
+{
+    if (!s_battery_initialized) {
+        return;
+    }
+    platform_battery_sample_t sample;
+    memset(&sample, 0, sizeof(sample));
+    const bool was_valid = s_battery_sample_valid;
+    const uint8_t previous_percent = s_battery_sample.percent;
+    const esp_err_t result = platform_battery_read(&sample);
+    s_battery_last_error = result;
+    if (result != ESP_OK) {
+        s_battery_sample_valid = false;
+        if (initial_sample || was_valid) {
+            ESP_LOGW(TAG,
+                     "P4_CONSOLE_OS BATTERY_SAMPLE valid=0 error=%s",
+                     esp_err_to_name(result));
+        }
+        return;
+    }
+    s_battery_raw_sample = sample;
+    s_battery_sample_valid = true;
+    const uint32_t display_mv = s_battery_sample.battery_mv;
+    const uint32_t delta_mv = sample.battery_mv > display_mv
+        ? sample.battery_mv - display_mv : display_mv - sample.battery_mv;
+    if (initial_sample || !was_valid ||
+        delta_mv >= CONSOLE_BATTERY_DISPLAY_MV_HYSTERESIS) {
+        /* Keep the shell-facing sample stable while retaining the raw ADC
+         * result above for diagnostics and future detail views. */
+        s_battery_sample = sample;
+    }
+    if (initial_sample || !was_valid ||
+        s_battery_sample.percent != previous_percent) {
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS BATTERY_SAMPLE valid=1 adc_mv=%" PRIu32
+                 " battery_mv=%" PRIu32 " percent=%u estimate=linear",
+                 s_battery_raw_sample.adc_mv, s_battery_raw_sample.battery_mv,
+                 (unsigned)s_battery_sample.percent);
+    }
+}
+
+static void initialize_battery(void)
+{
+    s_battery_last_error = platform_battery_init(NULL);
+    s_battery_initialized = s_battery_last_error == ESP_OK;
+    s_battery_sample_valid = false;
+    if (!s_battery_initialized) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS BATTERY_DEGRADED gpio=%u error=%s",
+                 PLATFORM_BATTERY_ADC_GPIO,
+                 esp_err_to_name(s_battery_last_error));
+        return;
+    }
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS BATTERY_READY gpio=%u adc=1 channel=%u "
+             "divider=%u:%u calibrated=1",
+             PLATFORM_BATTERY_ADC_GPIO, PLATFORM_BATTERY_ADC1_CHANNEL,
+             PLATFORM_BATTERY_DIVIDER_TOP_OHMS,
+             PLATFORM_BATTERY_DIVIDER_BOTTOM_OHMS);
+    sample_battery(true);
+}
+#endif
+
 static console_shell_runtime_info_t runtime_info(void)
 {
     const console_mp_transport_status_t multiplayer =
@@ -3402,6 +3650,20 @@ static console_shell_runtime_info_t runtime_info(void)
                       s_p4cart_catalog.valid_cart_count),
         .builtin_game_count = (uint16_t)(
             2U + sizeof(s_builtin_apps) / sizeof(s_builtin_apps[0])),
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+        .battery_supported = s_battery_initialized,
+        .battery_sample_valid = s_battery_sample_valid,
+        .battery_calibrated = s_battery_initialized,
+        .battery_millivolts = s_battery_raw_sample.battery_mv > UINT16_MAX
+            ? UINT16_MAX : (uint16_t)s_battery_raw_sample.battery_mv,
+        .battery_percent = s_battery_sample.percent,
+        .battery_last_error = s_battery_last_error,
+#else
+        .battery_supported = false,
+        .battery_sample_valid = false,
+        .battery_calibrated = false,
+        .battery_last_error = ESP_ERR_NOT_SUPPORTED,
+#endif
         .boot_volume_step = s_console_settings.boot_volume_step,
         .game_volume_step = s_console_settings.game_volume_step,
         .audio_settings_persistent = s_console_settings.persistent,
@@ -3492,6 +3754,123 @@ static esp_err_t content_uart_set_baud(
     return p4_mp_uart_endpoint_set_baudrate(baudrate);
 }
 
+#if P4_CONSOLE_H1_USB_DRIVE_CONTROL
+static bool h1_usb_drive_send(
+    void *context, const uint8_t *bytes, size_t bytes_length)
+{
+    return content_uart_send(context, bytes, bytes_length) == ESP_OK;
+}
+
+static bool h1_usb_drive_status(
+    void *context, p4_h1_usb_drive_status_t *out_status)
+{
+    (void)context;
+    if (out_status == NULL) {
+        return false;
+    }
+    platform_game_storage_status_t storage;
+    memset(&storage, 0, sizeof(storage));
+    if (platform_game_storage_get_status(&storage) != ESP_OK) {
+        return false;
+    }
+    const bool storage_eligible =
+        storage.state == PLATFORM_GAME_STORAGE_APP_READY ||
+        storage.state == PLATFORM_GAME_STORAGE_APP_MISSING ||
+        storage.state == PLATFORM_GAME_STORAGE_APP_INVALID ||
+        storage.state == PLATFORM_GAME_STORAGE_APP_SCANNING ||
+        storage.state == PLATFORM_GAME_STORAGE_USB_HOST ||
+        storage.state == PLATFORM_GAME_STORAGE_USB_FORMAT_REQUIRED;
+    const p4_content_transfer_info_t content = p4_content_transfer_info();
+    const p4_file_transfer_info_t file = p4_file_transfer_info();
+    *out_status = (p4_h1_usb_drive_status_t){
+        .storage_state = (uint8_t)storage.state,
+        .storage_generation = storage.generation,
+        .supported = storage.usb_mode_supported,
+        .usb_drive_active =
+            storage.state == PLATFORM_GAME_STORAGE_USB_HOST ||
+            storage.state == PLATFORM_GAME_STORAGE_USB_FORMAT_REQUIRED,
+        .usb_attached = storage.usb_attached,
+        .usb_host_ejected = storage.usb_host_ejected,
+        .usb_driver_running = storage.usb_driver_running,
+        .control_available = storage.usb_mode_supported && storage_eligible &&
+            !p4cart_scan_running() &&
+            content.state == P4_CONTENT_TRANSFER_IDLE &&
+            file.state == P4_FILE_TRANSFER_IDLE,
+    };
+    return true;
+}
+
+static p4_h1_usb_drive_transition_result_t h1_usb_drive_set_mode(
+    void *context, bool enable_usb_drive)
+{
+    (void)context;
+    const p4_content_transfer_info_t content = p4_content_transfer_info();
+    const p4_file_transfer_info_t file = p4_file_transfer_info();
+    if (p4cart_scan_running() || content.state != P4_CONTENT_TRANSFER_IDLE ||
+        file.state != P4_FILE_TRANSFER_IDLE) {
+        return P4_H1_USB_DRIVE_TRANSITION_DENIED;
+    }
+
+    esp_err_t result = ESP_OK;
+    bool storage_transition_complete = false;
+    if (enable_usb_drive) {
+        result = stop_usb_input_for_role_switch();
+        if (result == ESP_OK) {
+            result = platform_game_storage_set_usb_mode(true);
+            storage_transition_complete = result == ESP_OK;
+        }
+        if (result != ESP_OK) {
+            platform_game_storage_status_t failed_status;
+            memset(&failed_status, 0, sizeof(failed_status));
+            const esp_err_t status_result =
+                platform_game_storage_get_status(&failed_status);
+            const esp_err_t recovery =
+                status_result == ESP_OK && !failed_status.usb_driver_running
+                    ? start_usb_input() : ESP_ERR_INVALID_STATE;
+            ESP_LOGE(TAG,
+                     "P4_CONSOLE_OS H1_USB_DRIVE_FAIL target=usb-drive "
+                     "error=%s controller_recovery=%s",
+                     esp_err_to_name(result), esp_err_to_name(recovery));
+        }
+    } else {
+        /* Storage owns the eject gate and does not release MSC on refusal. */
+        result = platform_game_storage_set_usb_mode(false);
+        if (result == ESP_OK) {
+            storage_transition_complete = true;
+            result = start_usb_input();
+        }
+    }
+
+    if (storage_transition_complete) {
+        game_storage_init_publish(CONSOLE_STORAGE_INIT_READY, ESP_OK);
+        s_file_listing_seen = false;
+        if (!enable_usb_drive) {
+            s_catalog_seen = false;
+            s_p4cart_scan_seen = false;
+        }
+        /* Match the UI's post-handoff status refresh. The storage service
+         * itself rejects local FAT access while MSC owns the card. */
+        sync_game_storage();
+    }
+    if (result == ESP_OK) {
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS H1_USB_DRIVE_MODE requested=%s result=ok "
+                 "target_role=%s",
+                 enable_usb_drive ? "on" : "off",
+                 enable_usb_drive ? "usb-drive" : "controller-host");
+        return P4_H1_USB_DRIVE_TRANSITION_OK;
+    }
+    ESP_LOGW(TAG,
+             "P4_CONSOLE_OS H1_USB_DRIVE_MODE requested=%s result=%s "
+             "target_role=%s",
+             enable_usb_drive ? "on" : "off", esp_err_to_name(result),
+             enable_usb_drive ? "usb-drive" : "controller-host");
+    return result == ESP_ERR_INVALID_STATE
+        ? P4_H1_USB_DRIVE_TRANSITION_DENIED
+        : P4_H1_USB_DRIVE_TRANSITION_FAILED;
+}
+#endif
+
 static bool content_uart_consume(
     void *context, const uint8_t *bytes, size_t bytes_length)
 {
@@ -3504,6 +3883,13 @@ static bool content_uart_consume(
     if (content.state != P4_CONTENT_TRANSFER_IDLE) {
         return p4_content_transfer_consume(bytes, bytes_length);
     }
+#if P4_CONSOLE_H1_USB_DRIVE_CONTROL
+    if (p4_h1_usb_drive_control_consume(
+            &s_h1_usb_drive_control, bytes, bytes_length,
+            (uint64_t)esp_timer_get_time() / UINT64_C(1000))) {
+        return true;
+    }
+#endif
     if (p4_file_transfer_consume(bytes, bytes_length)) {
         return true;
     }
@@ -4917,6 +5303,11 @@ static void poll_multiplayer_link(const console_shell_t *shell)
         storage_available && !content_before.busy);
     p4_content_transfer_poll();
     p4_file_transfer_poll();
+#if P4_CONSOLE_H1_USB_DRIVE_CONTROL
+    p4_h1_usb_drive_control_poll(
+        &s_h1_usb_drive_control,
+        (uint64_t)esp_timer_get_time() / UINT64_C(1000));
+#endif
     const p4_file_transfer_info_t file_after = p4_file_transfer_info();
     if (file_after.generation != s_file_transfer_generation_seen) {
         s_file_transfer_generation_seen = file_after.generation;
@@ -5782,9 +6173,148 @@ static void create_touch_or_continue(void)
         return;
     }
     s_touch_ready = true;
-    ESP_LOGI(TAG,
-             "P4_CONSOLE_OS TOUCH_READY controller=gt911 contacts_max=%u",
-             (unsigned)PLATFORM_TOUCH_MAX_CONTACTS);
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    s_gt911_reviewed_baseline_verified = false;
+    platform_touch_gt911_info_t gt911_info;
+    const esp_err_t gt911_result = platform_touch_gt911_read_info(
+        s_touch, &gt911_info);
+    if (gt911_result != ESP_OK) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS GT911_CONFIG mode=read-only result=error error=%s",
+                 esp_err_to_name(gt911_result));
+        log_waveshare_gt911_restore("error", NULL, gt911_result);
+        /* A restoration attempt without a read-back baseline is unsafe. */
+        s_touch_ready = false;
+    } else {
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS GT911_CONFIG mode=read-only "
+                 "product=%02x%02x%02x%02x firmware=0x%04x "
+                 "identity_resolution=%ux%u config_version=%u "
+                 "config_resolution=%ux%u max_points=%u "
+                 "module_switch_1=0x%02x module_switch_2=0x%02x "
+                 "shake_raw=0x%02x filter_raw=0x%02x first_filter=%u "
+                 "normal_filter=%u large_touch=0x%02x noise_reduction=0x%02x "
+                 "screen_touch_level=0x%02x screen_release_level=0x%02x "
+                 "low_power_control=0x%02x refresh_raw=0x%02x refresh_n=%u "
+                 "report_period_ms=%u x_threshold=%u y_threshold=%u "
+                 "mini_filter=0x%02x checksum=0x%02x "
+                 "checksum_calculated=0x%02x checksum_valid=%u fresh=%u",
+                 (unsigned)gt911_info.product_id[0],
+                 (unsigned)gt911_info.product_id[1],
+                 (unsigned)gt911_info.product_id[2],
+                 (unsigned)gt911_info.product_id[3],
+                 (unsigned)gt911_info.firmware_version,
+                 (unsigned)gt911_info.identity_x_resolution,
+                 (unsigned)gt911_info.identity_y_resolution,
+                 (unsigned)gt911_info.config_version,
+                 (unsigned)gt911_info.config_x_resolution,
+                 (unsigned)gt911_info.config_y_resolution,
+                 (unsigned)gt911_info.max_touch_points,
+                 (unsigned)gt911_info.module_switch_1,
+                 (unsigned)gt911_info.module_switch_2,
+                 (unsigned)gt911_info.shake_count,
+                 (unsigned)gt911_info.filter,
+                 (unsigned)gt911_info.first_filter,
+                 (unsigned)gt911_info.normal_filter,
+                 (unsigned)gt911_info.large_touch,
+                 (unsigned)gt911_info.noise_reduction,
+                 (unsigned)gt911_info.screen_touch_level,
+                 (unsigned)gt911_info.screen_release_level,
+                 (unsigned)gt911_info.low_power_control,
+                 (unsigned)gt911_info.refresh_rate,
+                 (unsigned)gt911_info.refresh_n,
+                 (unsigned)gt911_info.report_period_ms,
+                 (unsigned)gt911_info.x_threshold,
+                 (unsigned)gt911_info.y_threshold,
+                 (unsigned)gt911_info.mini_filter,
+                 (unsigned)gt911_info.config_checksum,
+                 (unsigned)gt911_info.config_checksum_calculated,
+                 gt911_info.config_checksum_valid ? 1U : 0U,
+                 gt911_info.config_fresh ? 1U : 0U);
+        for (size_t offset = 0U;
+             offset < PLATFORM_TOUCH_GT911_CONFIG_BYTES;
+             offset += 32U) {
+            const size_t length =
+                (PLATFORM_TOUCH_GT911_CONFIG_BYTES - offset) < 32U
+                    ? PLATFORM_TOUCH_GT911_CONFIG_BYTES - offset : 32U;
+            char hex[65];
+            for (size_t index = 0U; index < length; ++index) {
+                (void)snprintf(&hex[index * 2U], 3U, "%02x",
+                               (unsigned)gt911_info.config[offset + index]);
+            }
+            hex[length * 2U] = '\0';
+            ESP_LOGI(TAG,
+                     "P4_CONSOLE_OS GT911_CONFIG_HEX mode=read-only "
+                     "offset=%u length=%u data=%s",
+                     (unsigned)offset, (unsigned)length, hex);
+        }
+
+        platform_touch_gt911_restore_reviewed_baseline_request_t request = {
+            0,
+        };
+        memcpy(request.expected_identity,
+               s_waveshare_gt911_expected_identity,
+               sizeof(request.expected_identity));
+        memcpy(request.original_config,
+               s_waveshare_gt911_original_config,
+               sizeof(request.original_config));
+        platform_touch_gt911_restore_reviewed_baseline_result_t
+            restore_result;
+        const esp_err_t restore_status =
+            platform_touch_gt911_restore_reviewed_baseline(
+                s_touch, &request, &restore_result);
+        const bool restore_verified = restore_status == ESP_OK &&
+            (restore_result.changed || restore_result.already_original) &&
+            restore_result.observed.config_checksum_valid &&
+            restore_result.observed.normal_filter ==
+                CONSOLE_GT911_ORIGINAL_NORMAL_FILTER;
+        if (!restore_verified) {
+            log_waveshare_gt911_restore(
+                "error", &restore_result,
+                restore_status == ESP_OK
+                    ? ESP_ERR_INVALID_RESPONSE : restore_status);
+            /* The OS still boots, but no task may consume touch until the
+             * complete reviewed baseline has verified. A later boot can
+             * safely re-evaluate either exact accepted controller state. */
+            s_touch_ready = false;
+        } else {
+            s_gt911_reviewed_baseline_verified = true;
+            log_waveshare_gt911_restore(
+                restore_result.already_original
+                    ? "already-original" : "restored",
+                &restore_result, ESP_OK);
+        }
+    }
+#endif
+    if (s_touch_ready) {
+        ESP_LOGI(TAG,
+                 "P4_CONSOLE_OS TOUCH_READY controller=gt911 contacts_max=%u",
+                 (unsigned)PLATFORM_TOUCH_MAX_CONTACTS);
+    }
+}
+
+static void saturating_atomic_increment_u32(uint32_t *value)
+{
+    uint32_t observed = __atomic_load_n(value, __ATOMIC_RELAXED);
+    while (observed != UINT32_MAX &&
+           !__atomic_compare_exchange_n(
+               value, &observed, observed + 1U, false,
+               __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
+    }
+}
+
+static void saturating_atomic_add_u32(uint32_t *value, uint32_t amount)
+{
+    uint32_t observed = __atomic_load_n(value, __ATOMIC_RELAXED);
+    while (observed != UINT32_MAX) {
+        const uint32_t updated = UINT32_MAX - observed < amount
+            ? UINT32_MAX : observed + amount;
+        if (__atomic_compare_exchange_n(
+                value, &observed, updated, false,
+                __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
+            return;
+        }
+    }
 }
 
 static bool read_touch_frame(platform_touch_frame_t *frame)
@@ -5796,16 +6326,17 @@ static bool read_touch_frame(platform_touch_frame_t *frame)
     if (!s_touch_ready || s_touch == NULL) {
         return false;
     }
-    ++s_touch_polls;
+    saturating_atomic_increment_u32(&s_touch_polls);
     const esp_err_t result = platform_touch_poll(s_touch, frame);
     if (result != ESP_OK || frame->valid == 0U ||
         frame->contact_count > PLATFORM_TOUCH_MAX_CONTACTS) {
-        ++s_touch_poll_failures;
-        if (s_touch_poll_failures == 1U ||
-            s_touch_poll_failures % 120U == 0U) {
+        saturating_atomic_increment_u32(&s_touch_poll_failures);
+        const uint32_t failures = __atomic_load_n(
+            &s_touch_poll_failures, __ATOMIC_RELAXED);
+        if (failures == 1U || failures % 120U == 0U) {
             ESP_LOGW(TAG,
                      "P4_CONSOLE_OS TOUCH_POLL_FAIL count=%lu error=%s",
-                     (unsigned long)s_touch_poll_failures,
+                     (unsigned long)failures,
                      esp_err_to_name(result));
         }
         platform_touch_frame_neutral(frame);
@@ -5814,9 +6345,267 @@ static bool read_touch_frame(platform_touch_frame_t *frame)
     return true;
 }
 
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+static void update_touch_mailbox_age(uint32_t age_us)
+{
+    __atomic_store_n(&s_touch_mailbox_age_last_us, age_us,
+                     __ATOMIC_RELAXED);
+    uint32_t observed = __atomic_load_n(
+        &s_touch_mailbox_age_max_us, __ATOMIC_RELAXED);
+    while (age_us > observed &&
+           !__atomic_compare_exchange_n(
+               &s_touch_mailbox_age_max_us, &observed, age_us, false,
+               __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
+    }
+}
+
+static void publish_touch_mailbox_frame(const platform_touch_frame_t *frame,
+                                        bool successful)
+{
+    if (frame == NULL) {
+        return;
+    }
+    taskENTER_CRITICAL(&s_touch_mailbox_lock);
+    s_touch_mailbox_frame = *frame;
+    taskEXIT_CRITICAL(&s_touch_mailbox_lock);
+    saturating_atomic_increment_u32(&s_touch_mailbox_samples);
+    if (!successful) {
+        saturating_atomic_increment_u32(&s_touch_mailbox_failures);
+        s_touch_mailbox_last_report_timestamp_us = 0;
+    } else if (frame->valid != 0U && frame->contact_count > 0U &&
+               frame->timestamp_us > 0) {
+        const int64_t timestamp_us = frame->timestamp_us;
+        const int64_t previous_timestamp_us =
+            s_touch_mailbox_last_report_timestamp_us;
+        if (timestamp_us != previous_timestamp_us) {
+            saturating_atomic_increment_u32(&s_touch_mailbox_unique_reports);
+            if (previous_timestamp_us > 0U &&
+                timestamp_us > previous_timestamp_us) {
+                const uint64_t elapsed_us = (uint64_t)(timestamp_us -
+                    previous_timestamp_us);
+                const uint32_t interval_us = elapsed_us > UINT32_MAX
+                    ? UINT32_MAX : (uint32_t)elapsed_us;
+                saturating_atomic_increment_u32(
+                    &s_touch_mailbox_report_interval_samples);
+                saturating_atomic_add_u32(
+                    &s_touch_mailbox_report_interval_total_us, interval_us);
+                uint32_t minimum = __atomic_load_n(
+                    &s_touch_mailbox_report_interval_min_us,
+                    __ATOMIC_RELAXED);
+                while ((minimum == 0U || interval_us < minimum) &&
+                       !__atomic_compare_exchange_n(
+                           &s_touch_mailbox_report_interval_min_us,
+                           &minimum, interval_us, false,
+                           __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
+                }
+                uint32_t maximum = __atomic_load_n(
+                    &s_touch_mailbox_report_interval_max_us,
+                    __ATOMIC_RELAXED);
+                while (interval_us > maximum &&
+                       !__atomic_compare_exchange_n(
+                           &s_touch_mailbox_report_interval_max_us,
+                           &maximum, interval_us, false,
+                           __ATOMIC_RELAXED, __ATOMIC_RELAXED)) {
+                }
+            }
+            s_touch_mailbox_last_report_timestamp_us = timestamp_us;
+        }
+    } else if (successful && frame->valid != 0U &&
+               frame->contact_count == 0U) {
+        /* Neutral samples intentionally have timestamp zero. */
+        s_touch_mailbox_last_report_timestamp_us = 0;
+    }
+}
+
+static bool read_touch_mailbox_frame(platform_touch_frame_t *frame)
+{
+    if (frame == NULL) {
+        return false;
+    }
+    taskENTER_CRITICAL(&s_touch_mailbox_lock);
+    const platform_touch_frame_t snapshot = s_touch_mailbox_frame;
+    taskEXIT_CRITICAL(&s_touch_mailbox_lock);
+    uint32_t age_us = 0U;
+    const int64_t now_us = esp_timer_get_time();
+    const bool contact_frame = snapshot.valid != 0U &&
+        snapshot.contact_count > 0U;
+    if (contact_frame) {
+        if (snapshot.timestamp_us <= 0) {
+            /* A contact without provenance is unsafe to retain. */
+            age_us = UINT32_MAX;
+        } else if (now_us > snapshot.timestamp_us) {
+            const uint64_t elapsed = (uint64_t)(now_us -
+                snapshot.timestamp_us);
+            age_us = elapsed > UINT32_MAX ? UINT32_MAX : (uint32_t)elapsed;
+        }
+    }
+    update_touch_mailbox_age(age_us);
+    if (contact_frame && age_us > CONSOLE_TOUCH_MAILBOX_MAX_AGE_US) {
+        saturating_atomic_increment_u32(&s_touch_mailbox_stale_reads);
+        platform_touch_frame_neutral(frame);
+        return false;
+    }
+    *frame = snapshot;
+    if (snapshot.valid == 0U ||
+        snapshot.contact_count > PLATFORM_TOUCH_MAX_CONTACTS) {
+        platform_touch_frame_neutral(frame);
+        return false;
+    }
+    return true;
+}
+
+static void touch_mailbox_worker(void *context)
+{
+    (void)context;
+    p4_tick_scheduler_t scheduler;
+    const bool scheduler_ready = p4_tick_scheduler_init(
+        &scheduler, configTICK_RATE_HZ, CONSOLE_TOUCH_MAILBOX_HZ) ==
+        P4_SCRIPT_STATUS_OK;
+    TickType_t last_wake = xTaskGetTickCount();
+    while (!__atomic_load_n(&s_touch_mailbox_stop_requested,
+                            __ATOMIC_ACQUIRE)) {
+        platform_touch_frame_t frame;
+        const bool successful = read_touch_frame(&frame);
+        publish_touch_mailbox_frame(&frame, successful);
+        uint32_t interval_ticks = 0U;
+        if (!scheduler_ready || p4_tick_scheduler_next(
+                &scheduler, &interval_ticks) != P4_SCRIPT_STATUS_OK ||
+            interval_ticks == 0U) {
+            vTaskDelay(1U);
+            last_wake = xTaskGetTickCount();
+        } else {
+            vTaskDelayUntil(&last_wake, (TickType_t)interval_ticks);
+        }
+    }
+    taskENTER_CRITICAL(&s_touch_mailbox_lock);
+    s_touch_mailbox_task = NULL;
+    taskEXIT_CRITICAL(&s_touch_mailbox_lock);
+    if (s_touch_mailbox_stopped != NULL) {
+        (void)xSemaphoreGive(s_touch_mailbox_stopped);
+    }
+    vTaskDelete(NULL);
+}
+
+static esp_err_t start_touch_mailbox(void)
+{
+    if (!s_touch_ready || s_touch == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    taskENTER_CRITICAL(&s_touch_mailbox_lock);
+    const bool already_running = s_touch_mailbox_task != NULL;
+    const bool stopping = __atomic_load_n(
+        &s_touch_mailbox_stop_requested, __ATOMIC_ACQUIRE);
+    taskEXIT_CRITICAL(&s_touch_mailbox_lock);
+    if (already_running) {
+        return stopping ? ESP_ERR_INVALID_STATE : ESP_OK;
+    }
+    if (s_touch_mailbox_stopped == NULL) {
+        s_touch_mailbox_stopped = xSemaphoreCreateBinaryStatic(
+            &s_touch_mailbox_stopped_storage);
+        if (s_touch_mailbox_stopped == NULL) {
+            return ESP_ERR_NO_MEM;
+        }
+    }
+    while (xSemaphoreTake(s_touch_mailbox_stopped, 0U) == pdTRUE) {
+    }
+    taskENTER_CRITICAL(&s_touch_mailbox_lock);
+    platform_touch_frame_neutral(&s_touch_mailbox_frame);
+    s_touch_mailbox_last_report_timestamp_us = 0;
+    taskEXIT_CRITICAL(&s_touch_mailbox_lock);
+    __atomic_store_n(&s_touch_mailbox_stop_requested, false,
+                     __ATOMIC_RELEASE);
+    TaskHandle_t worker = NULL;
+    const BaseType_t created = xTaskCreate(
+        touch_mailbox_worker, "touch_mailbox",
+        CONSOLE_TOUCH_MAILBOX_STACK_BYTES, NULL, tskIDLE_PRIORITY + 1U,
+        &worker);
+    if (created != pdPASS || worker == NULL) {
+        __atomic_store_n(&s_touch_mailbox_stop_requested, true,
+                         __ATOMIC_RELEASE);
+        return ESP_ERR_NO_MEM;
+    }
+    taskENTER_CRITICAL(&s_touch_mailbox_lock);
+    s_touch_mailbox_task = worker;
+    taskEXIT_CRITICAL(&s_touch_mailbox_lock);
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS TOUCH_MAILBOX_READY sample_hz=%u mode=latest",
+             (unsigned)CONSOLE_TOUCH_MAILBOX_HZ);
+    return ESP_OK;
+}
+
+static esp_err_t stop_touch_mailbox(void)
+{
+    taskENTER_CRITICAL(&s_touch_mailbox_lock);
+    const TaskHandle_t worker = s_touch_mailbox_task;
+    if (worker != NULL) {
+        __atomic_store_n(&s_touch_mailbox_stop_requested, true,
+                         __ATOMIC_RELEASE);
+    }
+    taskEXIT_CRITICAL(&s_touch_mailbox_lock);
+    if (worker == NULL) {
+        return ESP_OK;
+    }
+    if (s_touch_mailbox_stopped == NULL ||
+        xSemaphoreTake(s_touch_mailbox_stopped,
+                       pdMS_TO_TICKS(CONSOLE_TOUCH_MAILBOX_STOP_TIMEOUT_MS))
+            != pdTRUE) {
+        ESP_LOGE(TAG,
+                 "P4_CONSOLE_OS TOUCH_MAILBOX_STOP_TIMEOUT timeout_ms=%u",
+                 (unsigned)CONSOLE_TOUCH_MAILBOX_STOP_TIMEOUT_MS);
+        return ESP_ERR_TIMEOUT;
+    }
+    return ESP_OK;
+}
+
+static bool touch_mailbox_running(void)
+{
+    bool running;
+    taskENTER_CRITICAL(&s_touch_mailbox_lock);
+    running = s_touch_mailbox_task != NULL;
+    taskEXIT_CRITICAL(&s_touch_mailbox_lock);
+    return running;
+}
+
+static void note_interactive_touch_sample(
+    const console_shell_t *shell,
+    const console_shell_action_t *action,
+    int64_t timestamp_us,
+    int32_t scroll_visual_before_q16,
+    size_t scroll_row_before,
+    size_t pressed_index_before,
+    bool press_active_before,
+    bool dirty_before)
+{
+    if (shell == NULL || action == NULL ||
+        timestamp_us <= 0) {
+        s_interactive_touch_pending_timestamp_us = 0;
+        return;
+    }
+    /* A held contact produces repeated GT911 frames.  Attribute only a
+     * sample which actually moved the launcher, changed a touch visual, or
+     * returned a shell action; this avoids idle/repeated-coordinate noise. */
+    const bool correlated = action->type != CONSOLE_ACTION_NONE ||
+        scroll_visual_before_q16 != shell->home_scroll_visual_q16 ||
+        scroll_row_before != shell->home_scroll_row ||
+        press_active_before != shell->press_active ||
+        pressed_index_before != shell->pressed_index ||
+        dirty_before != shell->dirty;
+    s_interactive_touch_pending_timestamp_us = correlated
+        ? timestamp_us : 0;
+}
+#endif
+
 static console_shell_action_t poll_touch_input(console_shell_t *shell)
 {
     platform_touch_frame_t frame;
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    s_interactive_touch_pending_timestamp_us = 0;
+    if (touch_mailbox_running()) {
+        if (!read_touch_mailbox_frame(&frame)) {
+            return console_shell_handle_touch(shell, false, NULL, 0U);
+        }
+    } else
+#endif
     if (!read_touch_frame(&frame)) {
         return console_shell_handle_touch(shell, false, NULL, 0U);
     }
@@ -5826,13 +6615,32 @@ static console_shell_action_t poll_touch_input(console_shell_t *shell)
         contacts[i].x = frame.contacts[i].x;
         contacts[i].y = frame.contacts[i].y;
     }
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    const int32_t scroll_visual_before_q16 = shell->home_scroll_visual_q16;
+    const size_t scroll_row_before = shell->home_scroll_row;
+    const size_t pressed_index_before = shell->pressed_index;
+    const bool press_active_before = shell->press_active;
+    const bool dirty_before = shell->dirty;
+    const console_shell_action_t action = console_shell_handle_touch(
+        shell, true, count == 0U ? NULL : contacts, count);
+    note_interactive_touch_sample(
+        shell, &action, frame.timestamp_us, scroll_visual_before_q16,
+        scroll_row_before, pressed_index_before, press_active_before,
+        dirty_before);
+    return action;
+#else
     return console_shell_handle_touch(
         shell, true, count == 0U ? NULL : contacts, count);
+#endif
 }
 #endif
 
 static console_shell_action_t poll_input(console_shell_t *shell)
 {
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    /* A USB-owned early return has no following touch-originated present. */
+    s_interactive_touch_pending_timestamp_us = 0;
+#endif
 #if P4_CONSOLE_GAMEPAD_INPUT
     platform_gamepad_snapshot_t gamepad;
     uint32_t controller_buttons = read_gamepad_snapshot(&gamepad)
@@ -5888,6 +6696,12 @@ static void log_memory_health(const char *stage)
              (unsigned)heap_caps_get_free_size(MALLOC_CAP_SPIRAM),
              (unsigned)heap_caps_get_minimum_free_size(MALLOC_CAP_SPIRAM),
              (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_SPIRAM));
+}
+
+#if CONSOLE_OS_ENABLE_RUNTIME_STATS
+static uint32_t telemetry_average_us(uint32_t total_us, uint32_t samples)
+{
+    return samples == 0U ? 0U : total_us / samples;
 }
 
 static void log_runtime_stats(const console_shell_t *shell)
@@ -5946,8 +6760,10 @@ static void log_runtime_stats(const console_shell_t *shell)
              (unsigned)shell->page,
              (unsigned long)shell->render_generation,
              s_touch_ready ? 1U : 0U,
-             (unsigned long)s_touch_polls,
-             (unsigned long)s_touch_poll_failures,
+             (unsigned long)__atomic_load_n(
+                 &s_touch_polls, __ATOMIC_RELAXED),
+             (unsigned long)__atomic_load_n(
+                 &s_touch_poll_failures, __ATOMIC_RELAXED),
              (unsigned long)display.submits_started,
              (unsigned long)display.submits_completed,
              (unsigned long)display.submit_timeouts,
@@ -5962,8 +6778,113 @@ static void log_runtime_stats(const console_shell_t *shell)
              (unsigned)s_p4cart_catalog.valid_cart_count,
              (unsigned)s_p4cart_catalog.invalid_cart_count);
 #endif
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    const uint32_t report_interval_samples = __atomic_load_n(
+        &s_touch_mailbox_report_interval_samples, __ATOMIC_RELAXED);
+    const uint32_t report_interval_total_us = __atomic_load_n(
+        &s_touch_mailbox_report_interval_total_us, __ATOMIC_RELAXED);
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS TOUCH_MAILBOX running=%u samples=%lu "
+             "failures=%lu age_us=%lu age_max_us=%lu stale=%lu "
+             "unique_reports=%lu report_interval_avg_us=%lu "
+             "report_interval_min_us=%lu report_interval_max_us=%lu",
+             touch_mailbox_running() ? 1U : 0U,
+             (unsigned long)__atomic_load_n(
+                 &s_touch_mailbox_samples, __ATOMIC_RELAXED),
+             (unsigned long)__atomic_load_n(
+                 &s_touch_mailbox_failures, __ATOMIC_RELAXED),
+             (unsigned long)__atomic_load_n(
+                 &s_touch_mailbox_age_last_us, __ATOMIC_RELAXED),
+             (unsigned long)__atomic_load_n(
+                 &s_touch_mailbox_age_max_us, __ATOMIC_RELAXED),
+             (unsigned long)__atomic_load_n(
+                 &s_touch_mailbox_stale_reads, __ATOMIC_RELAXED),
+             (unsigned long)__atomic_load_n(
+                 &s_touch_mailbox_unique_reports, __ATOMIC_RELAXED),
+             (unsigned long)telemetry_average_us(
+                 report_interval_total_us, report_interval_samples),
+             (unsigned long)__atomic_load_n(
+                 &s_touch_mailbox_report_interval_min_us, __ATOMIC_RELAXED),
+             (unsigned long)__atomic_load_n(
+                 &s_touch_mailbox_report_interval_max_us, __ATOMIC_RELAXED));
+#endif
+    ESP_LOGI(TAG,
+             "P4_CONSOLE_OS UI_TIMING dirty_frames=%lu "
+             "animation_frames=%lu dirty_interval_us=%lu "
+             "dirty_interval_max_us=%lu render_us=%lu render_max_us=%lu "
+             "submit_us=%lu submit_max_us=%lu "
+             "animation_interval_us=%lu animation_interval_max_us=%lu "
+             "animation_missed=%lu animation_burst_frames=%lu "
+             "animation_burst_avg_us=%lu "
+             "reuse_wait_us=%lu reuse_wait_max_us=%lu "
+             "transform_us=%lu transform_max_us=%lu "
+             "handoff_us=%lu handoff_max_us=%lu reserved_refreshes=%lu "
+             "refresh_interval_us=%lu refresh_interval_min_us=%lu "
+             "refresh_interval_max_us=%lu refresh_events=%lu "
+             "partial_submits=%lu partial_pixels=%lu "
+             "partial_full_fallbacks=%lu "
+             "interactive_samples=%lu "
+             "interactive_input_refresh_avg_us=%lu "
+             "interactive_input_refresh_max_us=%lu "
+             "interactive_input_refresh_last_us=%lu "
+             "interactive_handoff_refresh_avg_us=%lu "
+             "interactive_handoff_refresh_max_us=%lu "
+             "interactive_handoff_refresh_last_us=%lu "
+             "interactive_partial=%lu interactive_full=%lu "
+             "interactive_kind=%u interactive_replay_regions=%u "
+             "shell_full_frames=%lu shell_dynamic_frames=%lu "
+             "shell_scroll_blits=%lu shell_shifted_pixels=%" PRIu64,
+             (unsigned long)s_ui_timing_dirty_frames,
+             (unsigned long)s_ui_timing_animation_frames,
+             (unsigned long)s_ui_timing_last_dirty_interval_us,
+             (unsigned long)s_ui_timing_max_dirty_interval_us,
+             (unsigned long)s_ui_timing_last_render_us,
+             (unsigned long)s_ui_timing_max_render_us,
+             (unsigned long)s_ui_timing_last_submit_us,
+             (unsigned long)s_ui_timing_max_submit_us,
+             (unsigned long)s_ui_timing_animation_interval_last_us,
+             (unsigned long)s_ui_timing_animation_interval_max_us,
+             (unsigned long)s_ui_timing_animation_missed_frames,
+             (unsigned long)s_ui_timing_animation_burst_frames,
+             (unsigned long)(s_ui_timing_animation_burst_frames <= 1U
+                 ? 0U : s_ui_timing_animation_burst_interval_sum_us /
+                     (s_ui_timing_animation_burst_frames - 1U)),
+             (unsigned long)display.pipeline_reuse_wait_last_us,
+             (unsigned long)display.pipeline_reuse_wait_max_us,
+             (unsigned long)display.pipeline_transform_last_us,
+             (unsigned long)display.pipeline_transform_max_us,
+             (unsigned long)display.pipeline_handoff_last_us,
+             (unsigned long)display.pipeline_handoff_max_us,
+             (unsigned long)display.pipeline_reserved_refreshes,
+             (unsigned long)display.pipeline_refresh_interval_last_us,
+             (unsigned long)display.pipeline_refresh_interval_min_us,
+             (unsigned long)display.pipeline_refresh_interval_max_us,
+             (unsigned long)display.pipeline_refresh_events,
+             (unsigned long)display.partial_content_submits,
+             (unsigned long)display.partial_content_source_pixels,
+             (unsigned long)display.partial_content_full_fallbacks,
+             (unsigned long)display.interactive_latency_samples,
+             (unsigned long)telemetry_average_us(
+                 display.interactive_input_to_refresh_total_us,
+                 display.interactive_latency_samples),
+             (unsigned long)display.interactive_input_to_refresh_max_us,
+             (unsigned long)display.interactive_input_to_refresh_last_us,
+             (unsigned long)telemetry_average_us(
+                 display.interactive_handoff_to_refresh_total_us,
+                 display.interactive_latency_samples),
+             (unsigned long)display.interactive_handoff_to_refresh_max_us,
+             (unsigned long)display.interactive_handoff_to_refresh_last_us,
+             (unsigned long)display.interactive_partial_presentations,
+             (unsigned long)display.interactive_full_presentations,
+             (unsigned)display.interactive_present_kind,
+             (unsigned)display.interactive_replay_region_count,
+             (unsigned long)shell->native_home_full_frames,
+             (unsigned long)shell->native_home_dynamic_frames,
+             (unsigned long)shell->native_home_scroll_blit_frames,
+             shell->native_home_shifted_pixels);
     log_memory_health("periodic");
 }
+#endif
 
 static void wait_for_console_tick(p4_tick_scheduler_t *scheduler,
                                   TickType_t *last_wake)
@@ -5975,22 +6896,141 @@ static void wait_for_console_tick(p4_tick_scheduler_t *scheduler,
         *last_wake = xTaskGetTickCount();
         return;
     }
-    vTaskDelayUntil(last_wake, (TickType_t)interval_ticks);
+    /* Do not let an over-budget frame create a catch-up burst.  Keep the
+     * scheduler's fractional interval phase, but restart the FreeRTOS wake
+     * anchor from now whenever the requested deadline was already missed. */
+    if (xTaskDelayUntil(last_wake, (TickType_t)interval_ticks) != pdTRUE) {
+        *last_wake = xTaskGetTickCount();
+    }
+}
+
+static void note_animation_frame(int64_t timestamp_us)
+{
+    enum {
+        UI_ANIMATION_BURST_IDLE_US = 250000,
+        UI_ANIMATION_MISSED_FRAME_US = 25000,
+    };
+    if (s_ui_timing_last_animation_us <= 0 ||
+        timestamp_us <= s_ui_timing_last_animation_us ||
+        timestamp_us - s_ui_timing_last_animation_us >
+            UI_ANIMATION_BURST_IDLE_US) {
+        s_ui_timing_animation_burst_frames = 1U;
+        s_ui_timing_animation_burst_interval_sum_us = 0U;
+        s_ui_timing_animation_missed_frames = 0U;
+        s_ui_timing_animation_interval_last_us = 0U;
+        s_ui_timing_animation_interval_max_us = 0U;
+    } else {
+        const uint64_t interval_us = (uint64_t)(
+            timestamp_us - s_ui_timing_last_animation_us);
+        s_ui_timing_animation_interval_last_us = interval_us > UINT32_MAX
+            ? UINT32_MAX : (uint32_t)interval_us;
+        if (s_ui_timing_animation_interval_last_us >
+            s_ui_timing_animation_interval_max_us) {
+            s_ui_timing_animation_interval_max_us =
+                s_ui_timing_animation_interval_last_us;
+        }
+        if (s_ui_timing_animation_burst_interval_sum_us <=
+            UINT32_MAX - s_ui_timing_animation_interval_last_us) {
+            s_ui_timing_animation_burst_interval_sum_us +=
+                s_ui_timing_animation_interval_last_us;
+        } else {
+            s_ui_timing_animation_burst_interval_sum_us = UINT32_MAX;
+        }
+        if (s_ui_timing_animation_burst_frames != UINT32_MAX) {
+            ++s_ui_timing_animation_burst_frames;
+        }
+        if (s_ui_timing_animation_interval_last_us >
+            UI_ANIMATION_MISSED_FRAME_US &&
+            s_ui_timing_animation_missed_frames != UINT32_MAX) {
+            ++s_ui_timing_animation_missed_frames;
+        }
+    }
+    s_ui_timing_last_animation_us = timestamp_us;
+    if (s_ui_timing_animation_frames != UINT32_MAX) {
+        ++s_ui_timing_animation_frames;
+    }
 }
 
 static esp_err_t present(console_shell_t *shell)
 {
+    const int64_t dirty_started_us = esp_timer_get_time();
+    if (s_ui_timing_last_dirty_us > 0 &&
+        dirty_started_us > s_ui_timing_last_dirty_us) {
+        const uint64_t interval_us = (uint64_t)(
+            dirty_started_us - s_ui_timing_last_dirty_us);
+        s_ui_timing_last_dirty_interval_us = interval_us > UINT32_MAX
+            ? UINT32_MAX : (uint32_t)interval_us;
+        if (s_ui_timing_last_dirty_interval_us >
+            s_ui_timing_max_dirty_interval_us) {
+            s_ui_timing_max_dirty_interval_us =
+                s_ui_timing_last_dirty_interval_us;
+        }
+    }
+    s_ui_timing_last_dirty_us = dirty_started_us;
+    if (s_ui_timing_dirty_frames != UINT32_MAX) {
+        ++s_ui_timing_dirty_frames;
+    }
+    const int64_t render_started_us = dirty_started_us;
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    /* Both Windows and BBS pages retain the native 768x480 source. Windows
+     * Home reuses its persistent chrome and updates only moving scroll bands. */
+    const bool rendered = console_shell_uses_native_bbs_launcher(shell)
+        ? console_shell_render_rgb565(
+              shell, s_pixels, CONSOLE_SHELL_WIDTH)
+        : console_shell_render_native_cached_rgb565(
+              shell, s_pixels, CONSOLE_SHELL_WIDTH);
+    if (!rendered) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    console_shell_native_update_t native_update = {
+        .kind = CONSOLE_SHELL_NATIVE_UPDATE_FULL,
+    };
+    if (!console_shell_get_native_update(shell, &native_update)) {
+        return ESP_ERR_INVALID_STATE;
+    }
+#else
     if (!console_shell_render_rgb565(
             shell, s_pixels, CONSOLE_SHELL_WIDTH)) {
         return ESP_ERR_INVALID_STATE;
     }
+#endif
+    const int64_t submit_started_us = esp_timer_get_time();
+    const uint64_t render_us = (uint64_t)(submit_started_us -
+                                          render_started_us);
+    s_ui_timing_last_render_us = render_us > UINT32_MAX
+        ? UINT32_MAX : (uint32_t)render_us;
+    if (s_ui_timing_last_render_us > s_ui_timing_max_render_us) {
+        s_ui_timing_max_render_us = s_ui_timing_last_render_us;
+    }
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
-    return platform_display_submit_content_rgb565(
-        s_pixels, CONSOLE_SHELL_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
+    esp_err_t result;
+    if (native_update.kind == CONSOLE_SHELL_NATIVE_UPDATE_REGION) {
+        const platform_display_rgb565_region_t region = {
+            .x = native_update.x,
+            .y = native_update.y,
+            .width = native_update.width,
+            .height = native_update.height,
+        };
+        result = platform_display_submit_content_regions_rgb565(
+            s_pixels, CONSOLE_SHELL_WIDTH, &region, 1U,
+            CONSOLE_SUBMIT_TIMEOUT_MS);
+    } else {
+        result = platform_display_submit_content_rgb565(
+            s_pixels, CONSOLE_SHELL_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
+    }
 #else
-    return platform_display_submit_rgb565(
+    const esp_err_t result = platform_display_submit_rgb565(
         s_pixels, CONSOLE_SHELL_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
 #endif
+    const int64_t submit_finished_us = esp_timer_get_time();
+    const uint64_t submit_us = submit_finished_us > submit_started_us
+        ? (uint64_t)(submit_finished_us - submit_started_us) : 0U;
+    s_ui_timing_last_submit_us = submit_us > UINT32_MAX
+        ? UINT32_MAX : (uint32_t)submit_us;
+    if (s_ui_timing_last_submit_us > s_ui_timing_max_submit_us) {
+        s_ui_timing_max_submit_us = s_ui_timing_last_submit_us;
+    }
+    return result;
 }
 
 /*
@@ -6000,10 +7040,35 @@ static esp_err_t present(console_shell_t *shell)
  * a dropped acknowledgement rather than a fatal display fault.  Interactive
  * input must never turn that recoverable condition into a black-screen halt.
  */
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+static void arm_interactive_touch_timestamp_for_present(void)
+{
+    if (s_interactive_touch_pending_timestamp_us > 0) {
+        (void)platform_display_record_interactive_input_timestamp(
+            s_interactive_touch_pending_timestamp_us);
+    }
+}
+
+static void clear_interactive_touch_timestamp_after_present(void)
+{
+    if (s_interactive_touch_pending_timestamp_us > 0) {
+        (void)platform_display_record_interactive_input_timestamp(0);
+        s_interactive_touch_pending_timestamp_us = 0;
+    }
+}
+#endif
+
 static esp_err_t present_interactive(console_shell_t *shell)
 {
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    /* Arm only the next native shell handoff, immediately before rendering.
+     * The display owns the timestamp after this call; clear it after this
+     * present so later animation/service frames cannot inherit it. */
+    arm_interactive_touch_timestamp_for_present();
+#endif
     const esp_err_t result = present(shell);
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    clear_interactive_touch_timestamp_after_present();
     if (result == ESP_ERR_TIMEOUT) {
         ESP_LOGW(TAG,
                  "P4_CONSOLE_OS FRAME_ACK_MISSED action=continue "
@@ -6146,14 +7211,20 @@ static esp_err_t present_boot_screen(unsigned animation_step,
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
 static esp_err_t present_home_reveal(console_shell_t *shell)
 {
-    if (shell == NULL || s_pixels == NULL ||
-        !console_shell_render_rgb565(
-            shell, s_pixels, CONSOLE_SHELL_WIDTH)) {
+    if (shell == NULL || s_pixels == NULL) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    const size_t surface_width = CONSOLE_SHELL_WIDTH;
+    const size_t surface_height = CONSOLE_SHELL_HEIGHT;
+    const bool rendered = console_shell_uses_native_bbs_launcher(shell)
+        ? console_shell_render_rgb565(shell, s_pixels, surface_width)
+        : console_shell_render_native_cached_rgb565(
+              shell, s_pixels, surface_width);
+    if (!rendered) {
         return ESP_ERR_INVALID_STATE;
     }
 
-    const size_t pixel_count =
-        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT;
+    const size_t pixel_count = surface_width * surface_height;
     uint16_t *const reveal_pixels = heap_caps_calloc(
         pixel_count, sizeof(*reveal_pixels),
         MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
@@ -6161,7 +7232,7 @@ static esp_err_t present_home_reveal(console_shell_t *shell)
         ESP_LOGW(TAG,
                  "P4_CONSOLE_OS HOME_REVEAL status=skipped reason=no-memory");
         return platform_display_submit_content_rgb565(
-            s_pixels, CONSOLE_SHELL_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
+            s_pixels, surface_width, CONSOLE_SUBMIT_TIMEOUT_MS);
     }
 
     esp_err_t result = ESP_OK;
@@ -6169,17 +7240,16 @@ static esp_err_t present_home_reveal(console_shell_t *shell)
     for (unsigned step = 1U;
          step <= CONSOLE_HOME_REVEAL_STEPS; ++step) {
         const size_t visible_rows =
-            (size_t)CONSOLE_SHELL_HEIGHT * step /
+            surface_height * step /
             CONSOLE_HOME_REVEAL_STEPS;
         const size_t added_rows = visible_rows - previous_rows;
-        memcpy(reveal_pixels + previous_rows * CONSOLE_SHELL_WIDTH,
-               s_pixels + previous_rows * CONSOLE_SHELL_WIDTH,
-               added_rows * CONSOLE_SHELL_WIDTH * sizeof(*s_pixels));
+        memcpy(reveal_pixels + previous_rows * surface_width,
+               s_pixels + previous_rows * surface_width,
+               added_rows * surface_width * sizeof(*s_pixels));
         for (unsigned attempt = 0U;
              attempt < CONSOLE_BOOT_SUBMIT_ATTEMPTS; ++attempt) {
             result = platform_display_submit_content_rgb565(
-                reveal_pixels, CONSOLE_SHELL_WIDTH,
-                CONSOLE_SUBMIT_TIMEOUT_MS);
+                reveal_pixels, surface_width, CONSOLE_SUBMIT_TIMEOUT_MS);
             if (result != ESP_ERR_TIMEOUT) {
                 break;
             }
@@ -6209,6 +7279,13 @@ static esp_err_t present_home_reveal(console_shell_t *shell)
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 static esp_err_t destroy_touch_for_handoff(void)
 {
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    const esp_err_t mailbox_result = stop_touch_mailbox();
+    if (mailbox_result != ESP_OK) {
+        /* Do not destroy the GT911 handle until its sole poller has joined. */
+        return mailbox_result;
+    }
+#endif
     if (s_touch == NULL) {
         s_touch_ready = false;
         return ESP_OK;
@@ -7287,7 +8364,7 @@ static bool cartridge_present(void *opaque)
     esp_err_t result;
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
     if (context->high_res_video) {
-        result = platform_display_submit_content_rgb565(
+        result = platform_display_submit_game_content_rgb565(
             s_pixels, P4_GAME_SURFACE_HIGH_RES_WIDTH,
             CONSOLE_SUBMIT_TIMEOUT_MS);
     } else
@@ -7447,8 +8524,10 @@ static bool cartridge_poll_frame(void *opaque,
                  "touch_polls=%lu touch_failures=%lu audio_running=%u "
                  "tones=%lu audio_frames=%lu",
                  context->game_id, (unsigned long)context->frames,
-                 (unsigned long)s_touch_polls,
-                 (unsigned long)s_touch_poll_failures,
+                 (unsigned long)__atomic_load_n(
+                     &s_touch_polls, __ATOMIC_RELAXED),
+                 (unsigned long)__atomic_load_n(
+                     &s_touch_poll_failures, __ATOMIC_RELAXED),
                  context->audio_running ? 1U : 0U,
                  (unsigned long)stats.tones_started,
                  (unsigned long)context->audio.frames_written);
@@ -7633,6 +8712,20 @@ static esp_err_t run_stored_game(
              save_ready
                  ? (unsigned long)context->save->service.launch_sequence : 0UL);
     log_memory_health("cartridge-start");
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    /* Cartridges retain their direct 60 Hz GT911 reads. Join the launcher
+     * sampler first so no two tasks ever access the driver concurrently. */
+    const esp_err_t touch_mailbox_stop_result = stop_touch_mailbox();
+    if (touch_mailbox_stop_result != ESP_OK) {
+        if (multiplayer_ready) {
+            native_multiplayer_end();
+        }
+        close_native_audio_or_halt(&context->audio);
+        (void)cartridge_save_close(context->save, game->package.id);
+        heap_caps_free(context);
+        return touch_mailbox_stop_result;
+    }
+#endif
     esp_err_t result = platform_game_loader_run(game, &host);
     if (multiplayer_ready) {
         native_multiplayer_end();
@@ -7644,6 +8737,17 @@ static esp_err_t run_stored_game(
          context->game_result != P4_GAME_EXIT_TO_LAUNCHER)) {
         result = ESP_FAIL;
     }
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    const esp_err_t touch_mailbox_start_result = start_touch_mailbox();
+    if (touch_mailbox_start_result != ESP_OK) {
+        /* Launcher falls back to serialized foreground polling. The direct
+         * game contract already completed, so this is non-fatal. */
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS TOUCH_MAILBOX_DEGRADED stage=cartridge-return "
+                 "fallback=launcher-direct error=%s",
+                 esp_err_to_name(touch_mailbox_start_result));
+    }
+#endif
     console_shell_set_achievement_catalog(shell, &s_achievements);
     (void)console_shell_set_save_catalog(shell, &s_saves);
     console_shell_show_home(shell);
@@ -8208,8 +9312,13 @@ static void script_draw_exit_badge(
 static esp_err_t script_present_frame(script_run_context_t *context,
                                       const uint16_t *pixels)
 {
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    const esp_err_t result = platform_display_submit_game_content_rgb565(
+        pixels, P4_SCRIPT_SCREEN_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
+#else
     const esp_err_t result = platform_display_submit_content_rgb565(
         pixels, P4_SCRIPT_SCREEN_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
+#endif
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
     if (result == ESP_ERR_TIMEOUT) {
         if (context->display_ack_misses != UINT32_MAX) {
@@ -8363,6 +9472,18 @@ static esp_err_t run_script_cart(
         .width = P4_SCRIPT_SCREEN_WIDTH,
         .height = P4_SCRIPT_SCREEN_HEIGHT,
     };
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    bool touch_mailbox_paused = false;
+    if (script_status == P4_SCRIPT_STATUS_OK) {
+        const esp_err_t touch_mailbox_stop_result = stop_touch_mailbox();
+        if (touch_mailbox_stop_result != ESP_OK) {
+            script_status = P4_SCRIPT_STATUS_BACKEND_FAILED;
+            result = touch_mailbox_stop_result;
+        } else {
+            touch_mailbox_paused = true;
+        }
+    }
+#endif
     while (script_status == P4_SCRIPT_STATUS_OK) {
         uint32_t interval_ticks = 0U;
         if (p4_tick_scheduler_next(
@@ -8437,6 +9558,17 @@ static esp_err_t run_script_cart(
     heap_caps_free(packet);
     if (owns_framebuffer) heap_caps_free(framebuffer);
     log_memory_health("script-stop");
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    if (touch_mailbox_paused) {
+        const esp_err_t touch_mailbox_start_result = start_touch_mailbox();
+        if (touch_mailbox_start_result != ESP_OK) {
+            ESP_LOGW(TAG,
+                     "P4_CONSOLE_OS TOUCH_MAILBOX_DEGRADED stage=script-return "
+                     "fallback=launcher-direct error=%s",
+                     esp_err_to_name(touch_mailbox_start_result));
+        }
+    }
+#endif
     console_shell_show_home(shell);
     const esp_err_t home_result = present_interactive(shell);
     if (home_result != ESP_OK) {
@@ -8468,6 +9600,17 @@ static void launch_doom_exclusive(
     platform_game_storage_doom_title_t title,
     const p4_doom_mp_launch_config_t *multiplayer)
 {
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    /* Doom recreates the shared I2C/touch stack after the one-way handoff.
+     * Never let a controller or USB input bypass a failed persistent-config
+     * restoration and make that independent runtime poll an unknown state. */
+    if (!s_gt911_reviewed_baseline_verified) {
+        ESP_LOGW(TAG,
+                 "P4_CONSOLE_OS HANDOFF_REJECTED app=doom-or-chex "
+                 "reason=gt911-baseline-not-verified");
+        return;
+    }
+#endif
     if (title >= PLATFORM_GAME_STORAGE_DOOM_TITLE_COUNT ||
         (multiplayer != NULL &&
         (!multiplayer->enabled ||
@@ -8663,6 +9806,9 @@ void app_main(void)
                  "P4_CONSOLE_OS SETTINGS_DEGRADED defaults=1 error=%s",
                  esp_err_to_name(settings_result));
     }
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    initialize_battery();
+#endif
 #if P4_CONSOLE_GAMEPAD_INPUT
     gamepad_button_mapping_default(&s_controller_mapping_current);
     s_controller_mapping_pending = s_controller_mapping_current;
@@ -8736,6 +9882,17 @@ void app_main(void)
 #endif
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
     create_touch_or_continue();
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    if (s_touch_ready) {
+        const esp_err_t touch_mailbox_result = start_touch_mailbox();
+        if (touch_mailbox_result != ESP_OK) {
+            ESP_LOGW(TAG,
+                     "P4_CONSOLE_OS TOUCH_MAILBOX_DEGRADED fallback=launcher-direct "
+                     "error=%s",
+                     esp_err_to_name(touch_mailbox_result));
+        }
+    }
+#endif
 #endif
     const esp_err_t storage_result =
         wait_for_game_storage_with_boot_animation();
@@ -8854,6 +10011,13 @@ void app_main(void)
             content_result = p4_file_transfer_init(
                 PLATFORM_GAME_STORAGE_MOUNT_POINT, &content_transport);
         }
+#if P4_CONSOLE_H1_USB_DRIVE_CONTROL
+        if (content_result == ESP_OK && !p4_h1_usb_drive_control_init(
+                &s_h1_usb_drive_control, h1_usb_drive_send,
+                h1_usb_drive_status, h1_usb_drive_set_mode, NULL)) {
+            content_result = ESP_FAIL;
+        }
+#endif
         if (content_result == ESP_OK) {
             content_result = p4_mp_uart_endpoint_set_raw_handler(
                 content_uart_consume, NULL);
@@ -8862,6 +10026,14 @@ void app_main(void)
             ESP_LOGW(TAG,
                      "P4_CONSOLE_OS H1_CONTENT_DEGRADED error=%s",
                      esp_err_to_name(content_result));
+        } else {
+#if P4_CONSOLE_H1_USB_DRIVE_CONTROL
+            ESP_LOGI(TAG,
+                     "P4_CONSOLE_OS H1_USB_DRIVE_CONTROL_READY "
+                     "protocol=%u transport=h1-ch343 "
+                     "auth=physical-local-only screen=unchanged",
+                     (unsigned)P4_H1_USB_DRIVE_PROTOCOL_VERSION);
+#endif
         }
 #endif
     } else {
@@ -8893,8 +10065,14 @@ void app_main(void)
     TickType_t last_wake = xTaskGetTickCount();
     int64_t next_storage_sync_us = s_runtime_services_ready_us;
     int64_t next_runtime_info_us = s_runtime_services_ready_us;
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    int64_t next_battery_sample_us = s_runtime_services_ready_us +
+        (int64_t)CONSOLE_BATTERY_SAMPLE_INTERVAL_MS * INT64_C(1000);
+#endif
+#if CONSOLE_OS_ENABLE_RUNTIME_STATS
     int64_t next_stats_us = s_runtime_services_ready_us +
         (int64_t)CONSOLE_STATS_INTERVAL_MS * INT64_C(1000);
+#endif
     int64_t shell_animation_last_us = s_runtime_services_ready_us;
     for (;;) {
         ++s_loop_count;
@@ -8960,6 +10138,13 @@ void app_main(void)
             next_storage_sync_us = service_now_us +
                 (int64_t)CONSOLE_STORAGE_SYNC_INTERVAL_MS * INT64_C(1000);
         }
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+        if (service_now_us >= next_battery_sample_us) {
+            sample_battery(false);
+            next_battery_sample_us = service_now_us +
+                (int64_t)CONSOLE_BATTERY_SAMPLE_INTERVAL_MS * INT64_C(1000);
+        }
+#endif
         if (finish_p4cart_scan()) {
             rebuild_shell_registry(shell);
             if (shell->page == CONSOLE_PAGE_GAMES) {
@@ -9020,9 +10205,17 @@ void app_main(void)
                 : (uint32_t)(elapsed_us / UINT64_C(1000));
         }
         shell_animation_last_us = shell_animation_now_us;
-        (void)console_shell_advance(shell, shell_elapsed_ms);
+        bool animation_changed =
+            console_shell_advance(shell, shell_elapsed_ms);
+        const int32_t scroll_after_advance_q16 =
+            shell->home_scroll_visual_q16;
         const console_page_t page_before_input = shell->page;
         const console_shell_action_t action = poll_input(shell);
+        animation_changed = animation_changed ||
+            shell->home_scroll_visual_q16 != scroll_after_advance_q16;
+        if (animation_changed) {
+            note_animation_frame(esp_timer_get_time());
+        }
         const int64_t runtime_now_us = esp_timer_get_time();
         if (runtime_now_us >= next_runtime_info_us) {
             const console_shell_runtime_info_t current_runtime =
@@ -9042,6 +10235,15 @@ void app_main(void)
                 "multiplayer-page-left");
 #endif
         }
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+        /* Launches leave the shell loop before a corresponding launcher
+         * present. Do not let their touch time be consumed by a later return
+         * frame after the game or lobby flow completes. */
+        if (action.type == CONSOLE_ACTION_LAUNCH ||
+            action.type == CONSOLE_ACTION_MULTIPLAYER_LAUNCH_GAME) {
+            s_interactive_touch_pending_timestamp_us = 0;
+        }
+#endif
         if (action.type == CONSOLE_ACTION_COLOR_MODE_CHANGED) {
             ESP_LOGI(TAG,
                      "P4_CONSOLE_OS COLOR_MODE mode=%u persistence=session-only",
@@ -9220,12 +10422,14 @@ void app_main(void)
                 halt_dark("frame-submit", result);
             }
         }
+#if CONSOLE_OS_ENABLE_RUNTIME_STATS
         const int64_t stats_now_us = esp_timer_get_time();
         if (stats_now_us >= next_stats_us) {
             log_runtime_stats(shell);
             next_stats_us = stats_now_us +
                 (int64_t)CONSOLE_STATS_INTERVAL_MS * INT64_C(1000);
         }
+#endif
         wait_for_console_tick(&console_scheduler, &last_wake);
     }
 }

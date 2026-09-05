@@ -19,7 +19,7 @@ extern "C" {
 /*
  * Waveshare's official codec example feeds ordinary PCM to the ES8311 and
  * controls loudness in the codec.  Preserve the full signed PCM16 range;
- * volume_step 1..10 is mapped to codec volume 10..100 by the backend.
+ * volume_step 0..10 is mapped to codec volume 0..100 by the backend.
  */
 #define PLATFORM_AUDIO_ES8311_MAX_OUTPUT_PEAK 32768U
 #else
@@ -38,7 +38,7 @@ typedef struct {
      */
     void *control_bus;
     uint32_t sample_rate_hz;
-    /** Bounded user level 1..10; Waveshare maps it to codec percent 10..100. */
+    /** Bounded user level 0..10; zero is mute. */
     uint8_t volume_percent;
 } platform_audio_es8311_config_t;
 
@@ -82,7 +82,7 @@ esp_err_t platform_audio_es8311_start(platform_audio_es8311_t *audio);
 
 /**
  * Write 1..128 frames. Input remains immutable. The Waveshare target keeps
- * full-scale PCM and applies the requested 1..10 level as codec volume
+ * full-scale PCM and applies the requested 0..10 level as codec volume
  * 10..100; the older Elecrow build-only policy retains its conservative PCM
  * cap.
  */
@@ -91,6 +91,14 @@ esp_err_t platform_audio_es8311_write_frames(
     const int16_t *interleaved_pcm,
     size_t frame_count
 );
+
+/** Change the bounded master step; hardware remains muted during the update. */
+esp_err_t platform_audio_es8311_set_volume(
+    platform_audio_es8311_t *audio, uint8_t volume_step);
+
+/** Return the currently applied bounded master step. */
+esp_err_t platform_audio_es8311_get_volume(
+    const platform_audio_es8311_t *audio, uint8_t *out_volume_step);
 
 /** Mute and verify the codec, then drive GPIO30 high and prime exact zeros. */
 esp_err_t platform_audio_es8311_stop(platform_audio_es8311_t *audio);

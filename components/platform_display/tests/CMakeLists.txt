@@ -34,6 +34,7 @@ add_executable(platform_display_layout_waveshare_tests
 )
 target_include_directories(platform_display_layout_waveshare_tests PRIVATE
     ../src
+    ../include
     ../../platform_board/include
 )
 target_compile_definitions(platform_display_layout_waveshare_tests PRIVATE

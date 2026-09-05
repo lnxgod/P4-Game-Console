@@ -2,7 +2,7 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.4.101")
+set(PROJECT_VER "0.5.12")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")
@@ -18,6 +18,9 @@ if(NOT DEFINED P4_WAVESHARE_BLE_MULTIPLAYER_BUILD)
 endif()
 if(NOT DEFINED P4_WAVESHARE_BLE_GAMEPAD_BUILD)
     set(P4_WAVESHARE_BLE_GAMEPAD_BUILD ON)
+endif()
+if(NOT DEFINED P4_CONSOLE_RUNTIME_STATS_BUILD)
+    set(P4_CONSOLE_RUNTIME_STATS_BUILD OFF)
 endif()
 if(NOT P4_BOARD_PROFILE STREQUAL "elecrow-crowpanel-advanced-10" AND
    NOT P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" AND
@@ -82,6 +85,7 @@ elseif(P4_BOARD_PROFILE STREQUAL
         "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_tinyusb_dual"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_audio_es8311"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_audio_factory"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_battery"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad_usb"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_i2c_shared"
@@ -149,6 +153,8 @@ idf_build_set_property(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD
     "${P4_WAVESHARE_BLE_MULTIPLAYER_BUILD}")
 idf_build_set_property(P4_WAVESHARE_BLE_GAMEPAD_BUILD
     "${P4_WAVESHARE_BLE_GAMEPAD_BUILD}")
+idf_build_set_property(P4_CONSOLE_RUNTIME_STATS_BUILD
+    "${P4_CONSOLE_RUNTIME_STATS_BUILD}")
 project(p4_console_os)
 
 if(P4_BOARD_PROFILE STREQUAL

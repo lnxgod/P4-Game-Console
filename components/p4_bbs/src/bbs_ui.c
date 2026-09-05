@@ -259,11 +259,34 @@ static bool draw_header(p4_ansi_terminal_t *terminal,
                P4_ANSI_COLOR_WHITE, P4_ANSI_COLOR_BLUE, true, true)) {
         return false;
     }
-    return field(terminal, 8U, model->can_go_up ? 18U : 25U,
+    if (!field(terminal, 8U, model->can_go_up ? 18U : 25U,
                  model->can_go_up ? 51U : 31U,
                  model->section[0] == '\0'
                     ? "[ DOOR GAMES ]" : model->section,
                  P4_ANSI_COLOR_YELLOW,
+                 P4_ANSI_COLOR_BLUE, true, true)) {
+        return false;
+    }
+    char battery[9];
+    uint8_t battery_color = P4_ANSI_COLOR_YELLOW;
+    if (!model->battery_supported || !model->battery_sample_valid) {
+        (void)snprintf(battery, sizeof(battery), "[--] N/A");
+    } else {
+        const uint8_t percent = model->battery_percent > 100U
+            ? 100U : model->battery_percent;
+        const unsigned filled = percent >= 50U ? 2U
+            : percent >= 10U ? 1U : 0U;
+        char icon[3] = {' ', ' ', '\0'};
+        for (unsigned index = 0U; index < filled; ++index) {
+            icon[index] = '#';
+        }
+        (void)snprintf(battery, sizeof(battery), "[%s]%3u%%",
+                       icon, (unsigned)percent);
+        battery_color = percent < 10U ? P4_ANSI_COLOR_BRIGHT_RED
+            : percent < 30U ? P4_ANSI_COLOR_YELLOW
+                            : P4_ANSI_COLOR_BRIGHT_GREEN;
+    }
+    return field(terminal, 8U, 69U, 8U, battery, battery_color,
                  P4_ANSI_COLOR_BLUE, true, true);
 }
 

@@ -6,6 +6,7 @@
 
 struct platform_audio_factory {
     platform_audio_factory_state_t state;
+    uint8_t volume_percent;
 };
 
 static platform_audio_factory_config_t s_create_config;
@@ -40,7 +41,30 @@ esp_err_t platform_audio_factory_create(
     ++s_calls;
     s_create_config = *config;
     s_instance.state = PLATFORM_AUDIO_FACTORY_STATE_READY_MUTED;
+    s_instance.volume_percent = config->volume_percent;
     *out_audio = &s_instance;
+    return ESP_OK;
+}
+
+esp_err_t platform_audio_factory_set_volume(
+    platform_audio_factory_t *audio, uint8_t volume_step)
+{
+    ++s_calls;
+    if (audio == NULL || volume_step > 10U) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    audio->volume_percent = volume_step;
+    return ESP_OK;
+}
+
+esp_err_t platform_audio_factory_get_volume(
+    const platform_audio_factory_t *audio, uint8_t *out_volume_step)
+{
+    ++s_calls;
+    if (audio == NULL || out_volume_step == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_volume_step = audio->volume_percent;
     return ESP_OK;
 }
 
@@ -127,6 +151,13 @@ int main(void)
     assert(platform_audio_get_state(audio, &state) == ESP_OK);
     assert(state == PLATFORM_AUDIO_STATE_READY_MUTED);
     assert(platform_audio_start(audio) == ESP_OK);
+    uint8_t volume_step = 0U;
+    assert(platform_audio_get_volume(audio, &volume_step) == ESP_OK);
+    assert(volume_step == 10U);
+    assert(platform_audio_set_volume(audio, 11U) == ESP_ERR_INVALID_ARG);
+    assert(platform_audio_set_volume(audio, 0U) == ESP_OK);
+    assert(platform_audio_get_volume(audio, &volume_step) == ESP_OK);
+    assert(volume_step == 0U);
     platform_audio_adapter_stats_t stats = {0};
     platform_audio_adapter_get_stats(&stats);
     assert(stats.running_low_readback_proven_at_start);
@@ -145,7 +176,7 @@ int main(void)
     s_try_reentrant_safe_call = false;
     assert(s_reentrant_safe_result == ESP_ERR_TIMEOUT);
     /* Five calls completed before the in-flight write; do not count it yet. */
-    assert(s_reentrant_stats.invocations == 5U);
+    assert(s_reentrant_stats.invocations == 7U);
     assert(s_reentrant_stats.write_calls_succeeded == 0U);
     assert(s_reentrant_stats.running_low_readback_proven_at_start);
     assert(s_force_safe_backend_calls == 0U);
@@ -185,6 +216,6 @@ int main(void)
     assert(platform_audio_recover() == ESP_OK);
     assert(platform_audio_get_state(NULL, NULL) == ESP_ERR_INVALID_ARG);
     /* The rejected reentrant safety call never enters the counted seam. */
-    assert(platform_audio_invocation_count() == 15U);
+    assert(platform_audio_invocation_count() == 17U);
     return 0;
 }

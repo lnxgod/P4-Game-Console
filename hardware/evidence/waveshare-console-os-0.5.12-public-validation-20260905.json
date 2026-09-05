@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "record_type": "public-hardware-validation-summary",
+  "recorded_date": "2026-09-05",
+  "public": true,
+  "privacy": {
+    "physical_device_identifiers_included": false,
+    "host_paths_included": false,
+    "serial_ports_included": false,
+    "raw_uart_transcripts_included": false,
+    "note": "Detailed device-local records are intentionally excluded from the public branch."
+  },
+  "hardware": {
+    "board": "Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3",
+    "display": "native 768x480 RGB565",
+    "storage": "removable microSD",
+    "individual_device_label": null
+  },
+  "selected_release": {
+    "application": "Console OS",
+    "version": "0.5.12",
+    "status": "operator-confirmed hardware baseline",
+    "accepted_application_sha256": "c6758f6f438ef501ed7a9f5105464c1081a674de8bd3873b4da85de23be08962",
+    "accepted_install_span_sha256": "a490cf24ecbf6499ee278f3f976ede761c48990cd0119f92cccf4aabf7a9bb4a"
+  },
+  "validated_features": {
+    "battery": "Persistent shell meter plus a bounded voltage-derived percentage and raw millivolts in Power; this is not a fuel gauge or charge-state estimate.",
+    "audio": "Independent persistent Boot Sounds and Game Audio levels from 0 through 10, with safe zero defaults.",
+    "scrolling": "Native 768x480 cached launcher scrolling, conservative partial presentation, functional scrollbar thumb dragging, and the operator-selected 0.5.12 touch/filter cadence.",
+    "usb_storage": "Physical-local H1 control can request eject-gated H2 USB Drive ownership without permitting concurrent app and host filesystem access.",
+    "games": "Full-resolution game presentation and removable-SD catalog behavior remain intact."
+  },
+  "operator_outcome": {
+    "accepted": [
+      "The periodic three-to-four-second stutter is absent.",
+      "Native-resolution fonts and representative games are preserved.",
+      "Scrollbar thumb hold-and-drag works."
+    ],
+    "known_limitation": "Continuous finger-follow and direction-reversal latency remains perceptible.",
+    "rejected_candidates": ["0.5.13", "0.5.14", "0.5.15"],
+    "selection_reason": "Direct operator comparison found 0.5.12 better than the later performance experiments."
+  },
+  "hardware_validation": {
+    "guarded_install_and_readback": "pass",
+    "restored_version": "0.5.12",
+    "restored_gt911_filter": 8,
+    "restored_gt911_checksum": "0x79",
+    "reset_persistence": "pass",
+    "periodic_runtime_stats_present": false,
+    "panic_or_reset_markers_present": false
+  },
+  "public_branch_validation": {
+    "status": "pass",
+    "host_test_suites": "pass",
+    "game_sdk_host_suite": "pass",
+    "waveshare_controller_first_build": {
+      "result": "pass",
+      "application_bytes": 1877312,
+      "application_sha256": "b09c0829ec3ceb96f1e69d316763f5ad581b3fc2a0458cae284d0172809c0d10"
+    },
+    "static_fail_closed_verifier": "pass"
+  }
+}

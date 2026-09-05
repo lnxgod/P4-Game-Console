@@ -124,24 +124,26 @@ static bool select_page(console_shell_t *shell, const char *name)
     return false;
 }
 
-static bool write_ppm(const char *path, const uint16_t *pixels)
+static bool write_ppm(const char *path,
+                      const uint16_t *pixels,
+                      size_t width,
+                      size_t height,
+                      unsigned scale)
 {
-    const unsigned scale = CONSOLE_SHELL_WIDTH ==
-        CONSOLE_SHELL_LAYOUT_WIDTH ? 2U : 1U;
     FILE *const output = fopen(path, "wb");
     if (output == NULL) {
         return false;
     }
     if (fprintf(output, "P6\n%u %u\n255\n",
-                (unsigned)CONSOLE_SHELL_WIDTH * scale,
-                (unsigned)CONSOLE_SHELL_HEIGHT * scale) < 0) {
+                (unsigned)width * scale,
+                (unsigned)height * scale) < 0) {
         (void)fclose(output);
         return false;
     }
-    for (size_t y = 0U; y < CONSOLE_SHELL_HEIGHT; ++y) {
+    for (size_t y = 0U; y < height; ++y) {
         for (unsigned duplicate_y = 0U; duplicate_y < scale; ++duplicate_y) {
-            for (size_t x = 0U; x < CONSOLE_SHELL_WIDTH; ++x) {
-                const uint16_t pixel = pixels[y * CONSOLE_SHELL_WIDTH + x];
+            for (size_t x = 0U; x < width; ++x) {
+                const uint16_t pixel = pixels[y * width + x];
                 const unsigned red5 = (unsigned)((pixel >> 11U) & UINT16_C(0x1F));
                 const unsigned green6 = (unsigned)((pixel >> 5U) & UINT16_C(0x3F));
                 const unsigned blue5 = (unsigned)(pixel & UINT16_C(0x1F));
@@ -165,9 +167,13 @@ static bool write_ppm(const char *path, const uint16_t *pixels)
 
 int main(int argc, char **argv)
 {
-    if (argc != 3) {
+    const bool present = argc == 4 && strcmp(argv[1], "--present") == 0;
+    const int page_argument = present ? 2 : 1;
+    const int path_argument = present ? 3 : 2;
+    if ((!present && argc != 3) || (present && argc != 4)) {
         fprintf(stderr,
-                "usage: %s home|all|games|arcade|system-folder|"
+                "usage: %s [--present] "
+                "home|all|games|arcade|system-folder|"
                 "colors|touch|system|files|manager|audio|multiplayer|"
                 "multiplayer-host|multiplayer-settings|multiplayer-join "
                 "output.ppm\n",
@@ -177,7 +183,7 @@ int main(int argc, char **argv)
     console_shell_t shell;
     if (!console_shell_init(
             &shell, s_apps, sizeof(s_apps) / sizeof(s_apps[0])) ||
-        !select_page(&shell, argv[1])) {
+        !select_page(&shell, argv[page_argument])) {
         fputs("invalid preview page\n", stderr);
         return EXIT_FAILURE;
     }
@@ -188,6 +194,10 @@ int main(int argc, char **argv)
         .game_storage_kib = 9052U,
         .game_storage_state = CONSOLE_STORAGE_READY,
         .touch_ready = true,
+        .battery_supported = true,
+        .battery_sample_valid = true,
+        .battery_percent = 63U,
+        .battery_millivolts = 3890U,
         .audio_handoff_ready = true,
         .boot_volume_step = 3U,
         .game_volume_step = 3U,
@@ -295,15 +305,24 @@ int main(int argc, char **argv)
         shell.contacts[1] = (console_shell_contact_t){.x = 720U, .y = 450U};
     }
 
-    uint16_t *const pixels = calloc(
-        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
-        sizeof(*pixels));
+    const size_t width = present
+        ? CONSOLE_SHELL_PRESENT_WIDTH : CONSOLE_SHELL_WIDTH;
+    const size_t height = present
+        ? CONSOLE_SHELL_PRESENT_HEIGHT : CONSOLE_SHELL_HEIGHT;
+    uint16_t *const pixels = calloc(width * height, sizeof(*pixels));
     if (pixels == NULL) {
         return EXIT_FAILURE;
     }
-    const bool rendered = console_shell_render_rgb565(
-        &shell, pixels, CONSOLE_SHELL_WIDTH);
-    const bool written = rendered && write_ppm(argv[2], pixels);
+    const bool rendered = present
+        ? console_shell_render_present_rgb565(&shell, pixels, width)
+        : console_shell_render_rgb565(&shell, pixels, width);
+    const unsigned output_scale = present &&
+        CONSOLE_SHELL_PRESENT_WIDTH * 2U == CONSOLE_SHELL_WIDTH &&
+        CONSOLE_SHELL_PRESENT_HEIGHT * 2U == CONSOLE_SHELL_HEIGHT
+            ? 2U
+            : (CONSOLE_SHELL_WIDTH == CONSOLE_SHELL_LAYOUT_WIDTH ? 2U : 1U);
+    const bool written = rendered && write_ppm(
+        argv[path_argument], pixels, width, height, output_scale);
     free(pixels);
     return written ? EXIT_SUCCESS : EXIT_FAILURE;
 }

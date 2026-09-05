@@ -996,6 +996,51 @@ esp_err_t platform_audio_es8311_write_frames(
     return result == ESP_OK ? ESP_OK : rollback_to_muted(audio, result);
 }
 
+esp_err_t platform_audio_es8311_set_volume(
+    platform_audio_es8311_t *audio, uint8_t volume_step)
+{
+    if (audio == NULL || audio != s_owner ||
+        !platform_audio_es8311_volume_supported(volume_step)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (audio->state == PLATFORM_AUDIO_ES8311_STATE_FAILED_SAFE) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    const bool was_running =
+        audio->state == PLATFORM_AUDIO_ES8311_STATE_RUNNING;
+    if (was_running) {
+        esp_err_t result = set_codec_mute_verified(audio, true);
+        if (result != ESP_OK) {
+            audio->state = PLATFORM_AUDIO_ES8311_STATE_FAILED_SAFE;
+            return result;
+        }
+        audio->volume_percent = volume_step;
+        result = set_codec_volume_verified(audio);
+        if (result != ESP_OK) {
+            (void)rollback_to_muted(audio, result);
+            return result;
+        }
+        result = set_codec_mute_verified(audio, false);
+        if (result != ESP_OK) {
+            (void)rollback_to_muted(audio, result);
+            return result;
+        }
+    } else {
+        audio->volume_percent = volume_step;
+    }
+    return ESP_OK;
+}
+
+esp_err_t platform_audio_es8311_get_volume(
+    const platform_audio_es8311_t *audio, uint8_t *out_volume_step)
+{
+    if (audio == NULL || audio != s_owner || out_volume_step == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_volume_step = audio->volume_percent;
+    return ESP_OK;
+}
+
 esp_err_t platform_audio_es8311_stop(platform_audio_es8311_t *audio)
 {
     if (audio == NULL || audio != s_owner || !audio->published) {

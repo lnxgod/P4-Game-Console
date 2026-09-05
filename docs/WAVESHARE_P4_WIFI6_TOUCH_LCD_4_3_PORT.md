@@ -1,5 +1,230 @@
 # Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 port
 
+## Selected Console OS 0.5.12 production baseline
+
+The operator selected 0.5.12 after comparing the later native-scrolling
+experiments. The exact unit-3 rollback chain restored 0.5.12; it remains the
+current production source and installed baseline. Versions 0.5.13, 0.5.14,
+and 0.5.15 are rejected/not accepted experiments. Their capture tooling,
+source history, and changelog remain available, but device-specific install
+wrappers, authorizations, and raw serial captures are omitted from the public
+branch. They are not enabled by the selected production source.
+
+## Console OS 0.5.12 baseline restore and runtime cadence
+
+Operator testing rejected GT911 filter 4: scrolling was less smooth and
+touch-follow latency was unchanged. Console OS 0.5.12 restores the exact unit-3
+sealed filter-8/checksum-`0x79` baseline. The guarded restore accepts only an
+exact filter-4/checksum-`0x7d` block or an already-original block, performs one
+full-block write with `Config_Fresh=1`, reads back the complete block, and fails
+closed without retrying on any error or mismatch. The controller update is not
+power-loss atomic, and rolling firmware back does not itself roll back GT911
+configuration NVM.
+
+The default release disables the synchronous three-second runtime-statistics
+burst because captures showed 132--134 ms main-loop stalls (about eight
+frames). Diagnostic builds opt in with
+`-DP4_CONSOLE_RUNTIME_STATS_BUILD=ON`. Battery shell display uses 50 mV
+hysteresis; raw mV changes no longer dirty Home, avoiding five-second noise
+redraws, while Power detail continues to show raw mV. Full-resolution 768x480
+and all game surfaces remain unchanged.
+
+Host tests, the exact USB-host build, guarded app-only install, complete
+1,884,160-byte readback, single baseline restoration, and reset-persistent
+no-write verification pass. Two 60-second captures contain no periodic
+runtime-stat records, resets, panics, or rejected runtime markers. The next
+hardware result confirmed that the periodic 3--4 second stutter was gone,
+while continuous touch-follow and reversal lag remained.
+
+## Console OS 0.5.11 staged GT911 filter experiment
+
+The first exact-unit tuning candidate uses the complete controller snapshot
+captured by 0.5.10. It requires product `911`, firmware `0x1060`, 480x800
+identity and configuration geometry, the known identity prefix plus a vendor
+byte bound from the same live controller before the write, configuration
+version 65, the complete captured baseline, and a valid checksum. It modifies
+only the low six normal-filter bits at `0x8050`, moving from 8 to the
+conservative first stage 4 while preserving the upper first-filter bits.
+
+The firmware recalculates the two's-complement checksum, sets
+`Config_Fresh=1`, writes the complete 186-byte block in one transaction, waits
+for application, and rereads the complete configuration. Candidate success
+requires every byte other than the intended filter/checksum/fresh fields to
+match the sealed preimage. A write or verification failure immediately attempts
+and verifies a full original-block restore; an identity or baseline mismatch
+refuses before any write. Report rate, thresholds, debounce, full-resolution
+rendering, and all game contracts remain unchanged.
+
+GT911 saves changed configuration content carrying the same version, so filter
+4 can persist across a controller reset. The reviewed 186-byte restoration
+baseline is encoded in the platform-touch implementation for an explicit
+recovery build. Application-firmware rollback alone does not restore that
+controller state, and power loss between a failed candidate write and its
+restore cannot be made atomic.
+
+The exact 0.5.11 build, verifier, guarded unit-3 install/readback, retained-UART
+startup apply, and reset-persistence check pass. The captures record vendor
+`0x00`, an 8/`0x79` to 4/`0x7d` apply, then an already-target 4/`0x7d` state after
+reset with no restore. Operator latency/jitter testing remains pending; no
+user-visible improvement is claimed. The complete record is
+summarized without device-specific identifiers in
+`hardware/evidence/waveshare-console-os-0.5.12-public-validation-20260905.json`.
+
+## Console OS 0.5.10 read-only GT911 characterization
+
+The 0.5.9 mailbox trace proved only that the application polled frequently: the
+pinned GT911 driver repeats its cached coordinates when the controller's
+data-ready status is clear. Console OS 0.5.10 preserves the timestamp of the
+last real data-ready report across those repeated polls and reports the cadence
+of unique reports. Neutral frames remain valid and age-free, so a long idle
+period cannot trigger the contact freshness guard.
+
+At startup, Console OS reads and logs the GT911 product/firmware identity and
+the complete 0x8047--0x8100 configuration block in bounded chunks. It validates
+the stored checksum and decodes the configured report period, press/release
+debounce, normal/first filter values, and X/Y movement thresholds. This is a
+read-only capture: no controller configuration is modified. Full-resolution
+shell rendering and every game display/input contract remain unchanged.
+
+The exact unit-3 build, verifier, guarded application-only install/readback,
+and retained-UART startup gate pass. The captured controller is product `911`,
+firmware `0x1060`, with configuration version 65 and a valid `0x79` checksum.
+It uses a 10 ms report period, X/Y movement thresholds of zero, and normal
+filter 8. The exact 186-byte pre-tuning configuration and a restore payload
+with `Config_Fresh=1` are encoded in the reviewed restoration implementation.
+
+## Console OS 0.5.9 touch freshness and reversal response
+
+The accepted full-resolution shell and all game display contracts remain
+unchanged. Home content drags now use raw 800x480 contact displacement instead
+of first quantizing motion into the stable 320x200 UI coordinate space. The
+tap/drag decision uses an explicit four-physical-pixel threshold; after that
+decision, a one-pixel direction reversal immediately changes the fractional
+scroll position. The logical coordinate path remains authoritative for button,
+tile, and scrollbar hit testing.
+
+A low-priority 120 Hz launcher task is the sole GT911 reader and publishes only
+its newest complete frame under a short critical section. This continuously
+acknowledges controller data while a native shell frame is being rendered or
+transformed, without creating an input backlog. The task is stopped and joined
+before native games, script games, or Doom use their unchanged direct polling
+contracts, and restarted on launcher return. A 500 ms timeout fails closed
+instead of allowing concurrent readers or touch destruction.
+
+The display handoff can optionally carry the timestamp of a touch sample that
+actually changed launcher state. The next confirmed DSI refresh records
+input-to-refresh and handoff-to-refresh totals, maxima, and last values along
+with full/partial classification and replay count. These bounded counters are
+reported in the existing periodic serial statistics; the ISR performs no
+logging and ordinary game submissions do not carry the metadata.
+
+The exact build, static verifier, guarded unit-3 app-only install/readback, and
+retained-UART startup gate pass. During interactive scrolling the mailbox
+reported zero read failures, zero stale samples, and a worst sample age of
+8.849 ms. Confirmed-refresh latency settled near 39.8--39.9 ms on average;
+handoff-to-refresh averaged about 8.6 ms and remained within one 16.7 ms panel
+interval. The final cumulative report classified 333 interactive presents as
+partial and 11 as full. Operator testing still found the same finger-follow
+and reversal delay as 0.5.8, so application-side polling freshness is not the
+primary cause and 0.5.9 is not an accepted latency fix. The next investigation
+must isolate GT911-reported coordinate timing from any post-refresh scanout
+phase before changing the renderer again.
+
+## Console OS 0.5.8 dirty-region presentation and touch response
+
+The Windows shell remains a native 768x480 RGB565 source. Cached Home renders
+now return a conservative changed rectangle covering the moving tile band,
+scrollbar, and (when the logical row changes) status footer. The display
+backend transforms that damage into the inactive DSI framebuffer, replays any
+missing generation from the current authoritative source, coalesces contained,
+overlapping, or adjacent rectangles, and selects a full transform whenever the
+cache-aware partial work would be no cheaper. Both buffers therefore remain
+exact, and ordinary scrolling uses a partial transform only when that bounded
+work costs less than transforming the whole source.
+
+Drag recognition now begins after two logical pixels and the first visible
+frame uses the complete displacement from touch-down. A potential tile tap no
+longer triggers a speculative press frame before it becomes a drag, and a held
+drag can continue shifting cached rows across an integer boundary. Settled
+endpoints still converge on the authoritative native renderer. The BBS path,
+structural shell frames, and all game presentation paths are unchanged.
+
+Host frame-difference tests cover fractional movement, row/footer changes,
+scrollbar press/release, and thumb dragging. Console Shell, Console OS, display
+layout, exact build, and static verification gates pass. The exact unit-3
+app-only install/readback and retained-UART startup gate also pass with one
+0.5.8 start, the native-content and partial-present markers, and no display
+timeout, display failure, accelerator failure, panic, or reboot marker. The
+idle startup capture reports `partial_submits=0`; interactive dirty-region
+timing and operator-visible scrolling/game acceptance remain pending.
+
+## Console OS 0.5.7 native shell cache and game handoff
+
+The Windows shell returns to a native 768x480 RGB565 source while each game
+retains its existing 320x200 or negotiated 768x480 geometry. The shell source
+framebuffer persists between frames. A fractional scroll step translates
+cached tile rows by whole native pixels and redraws only the newly exposed
+band; scrollbar and footer changes are clipped redraws. Selection/press
+changes and each settled endpoint redraw the complete tile viewport. Pointer,
+battery, catalog, and structural changes invalidate the cache and fall back to
+an authoritative full-frame redraw. This avoids a full-frame CPU redraw for
+ordinary scroll motion without allowing rounding error to accumulate across
+interactions.
+
+The shell keeps the pipelined display handoff. Standard 320x200 games and
+negotiated 768x480 games use refresh-synchronous handoff, restoring the
+baseline timing contract that avoids added gameplay latency from the shared
+display pipeline. The exact unit-3 0.5.7 app-only install/readback and
+retained-UART startup gate pass. Operator-visible sustained scrolling and
+representative 320x200/768x480 game acceptance remain pending.
+
+## Console OS 0.5.6 compact raster correction
+
+The Windows shell retains the 384x240 source and exact 2x PPA path introduced
+in 0.5.4. Its 5x7 font now rasterizes connected horizontal, vertical, and true
+diagonal bitmap runs with a fixed compact stroke weight instead of independently
+stretching each bitmap cell. Authored one-pixel folder, bevel, scrollbar, and
+rule edges likewise remain one compact pixel. This removes phase-dependent
+two- versus four-panel-pixel strokes without changing the 768x480 viewport,
+touch mapping, display-buffer ownership, native games, or BBS path.
+
+## Console OS 0.5.4 logical shell frames
+
+Ordinary launcher and detail pages now draw into a compact 384x240 source and
+use a dedicated PPA 2x path. The rotated result is the exact centered 480x768
+native block, preserving the established 768x480 shell and touch viewport.
+The optional 80x30 BBS home view continues to use the exact 768x480 content
+path. This removes three quarters of the source pixels from Windows-style
+scrolling without changing games, high-resolution cartridges, or the BBS
+terminal geometry. An overdue UI iteration resets the FreeRTOS wake anchor so
+the fractional 60 Hz scheduler does not emit catch-up bursts, and the Windows
+scrollbar thumb remains captured for the complete drag gesture.
+
+## Console OS 0.5.3 animation cadence
+
+The 60 Hz shell scheduler now runs on a 1 kHz FreeRTOS tick. This represents
+its rational cadence as 16/17/17 ms rather than the 10/20/20 ms pattern forced
+by the former 100 Hz clock. The 30 MHz DSI timing produces a physical refresh
+every approximately 16,704 us, so tick quantization is no longer a continuous
+source of launcher judder. Runtime timing counters report actual refresh,
+source render, PPA transform, buffer-reuse wait, and panel-handoff durations;
+the existing refresh-confirmed double-buffer ownership remains unchanged.
+
+## Console OS 0.5.2 pipelined launcher frames
+
+The launcher still renders a 768x480 source and uses blocking PPA rotation into
+the existing pair of DSI-owned native framebuffers. The refresh fence now sits
+before reuse of the former scanout buffer rather than after every handoff. This
+allows scanout to overlap preparation of the next source frame while the
+refresh callback remains the sole authority that promotes a pending buffer to
+confirmed active. A stale semaphore wake cannot release a buffer because the
+ownership state is rechecked under the ISR-safe lock.
+
+The physical timing remains capped at approximately 59.87 Hz. Hardware
+acceptance must use timestamped submit/completion counters during sustained
+scrolling and still requires zero timeouts, hard failures, and PPA failures;
+the build alone is not a frame-rate result.
+
 ## Console OS 0.4.98 BLE radio handoff
 
 The shared NimBLE host now has a Console OS ownership transition between a

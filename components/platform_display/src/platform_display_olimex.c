@@ -387,11 +387,17 @@ esp_err_t platform_display_show_pattern(platform_display_pattern_t pattern)
     return result;
 }
 
-esp_err_t platform_display_submit_rgb565(const uint16_t *source,
-                                         size_t source_stride_pixels,
-                                         uint32_t timeout_ms)
+typedef bool (*display_hdmi_layout_fn_t)(
+    const uint16_t *, size_t, uint8_t *, size_t, size_t);
+
+static esp_err_t submit_rgb565(const uint16_t *source,
+                               size_t source_stride_pixels,
+                               size_t minimum_stride,
+                               uint32_t timeout_ms,
+                               display_hdmi_layout_fn_t layout)
 {
-    if (source == NULL || source_stride_pixels < PLATFORM_DISPLAY_GAME_WIDTH) {
+    if (source == NULL || source_stride_pixels < minimum_stride ||
+        layout == NULL) {
         __atomic_fetch_add(&s_stats.submit_failures, 1U, __ATOMIC_RELAXED);
         return ESP_ERR_INVALID_ARG;
     }
@@ -420,7 +426,7 @@ esp_err_t platform_display_submit_rgb565(const uint16_t *source,
             goto fail_dark;
         }
     }
-    if (!platform_display_layout_rgb565_to_rgb888_1280x720(
+    if (!layout(
             source, source_stride_pixels, s_submit_frame,
             PLATFORM_DISPLAY_WIDTH * DISPLAY_PIXEL_BYTES,
             PLATFORM_DISPLAY_HEIGHT)) {
@@ -463,6 +469,75 @@ fail:
     return result;
 }
 
+esp_err_t platform_display_submit_rgb565(const uint16_t *source,
+                                         size_t source_stride_pixels,
+                                         uint32_t timeout_ms)
+{
+    return submit_rgb565(
+        source, source_stride_pixels, PLATFORM_DISPLAY_GAME_WIDTH,
+        timeout_ms, platform_display_layout_rgb565_to_rgb888_1280x720);
+}
+
+esp_err_t platform_display_submit_shell_rgb565(
+    const uint16_t *source,
+    size_t source_stride_pixels,
+    uint32_t timeout_ms)
+{
+    return submit_rgb565(
+        source, source_stride_pixels, PLATFORM_DISPLAY_SHELL_WIDTH,
+        timeout_ms,
+        platform_display_layout_rgb565_384x240_to_rgb888_1280x720);
+}
+
+esp_err_t platform_display_submit_content_rgb565(
+    const uint16_t *source,
+    size_t source_stride_pixels,
+    uint32_t timeout_ms)
+{
+    (void)source;
+    (void)source_stride_pixels;
+    (void)timeout_ms;
+    /* The HDMI adapter has no reviewed 768x480-to-1280x720 content layout.
+     * Fail explicitly instead of misinterpreting a native-content buffer as
+     * the existing 320x200 game surface. */
+    return ESP_ERR_NOT_SUPPORTED;
+}
+
+esp_err_t platform_display_submit_content_regions_rgb565(
+    const uint16_t *source,
+    size_t source_stride_pixels,
+    const platform_display_rgb565_region_t *regions,
+    size_t region_count,
+    uint32_t timeout_ms)
+{
+    if (regions == NULL || region_count == 0U) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    /* HDMI has no native-content path; preserve that explicit boundary. */
+    return platform_display_submit_content_rgb565(
+        source, source_stride_pixels, timeout_ms);
+}
+
+esp_err_t platform_display_submit_game_content_rgb565(
+    const uint16_t *source,
+    size_t source_stride_pixels,
+    uint32_t timeout_ms)
+{
+    return platform_display_submit_content_rgb565(
+        source, source_stride_pixels, timeout_ms);
+}
+
+esp_err_t platform_display_record_interactive_input_timestamp(
+    int64_t timestamp_us)
+{
+    if (timestamp_us < 0) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    /* HDMI has no DSI framebuffer handoff to correlate. Keep this a portable
+     * no-op so common shell input code need not special-case the adapter. */
+    return ESP_OK;
+}
+
 esp_err_t platform_display_get_stats(platform_display_stats_t *out_stats)
 {
     if (out_stats == NULL) {
@@ -480,6 +555,34 @@ esp_err_t platform_display_get_stats(platform_display_stats_t *out_stats)
         __atomic_load_n(&s_stats.refresh_completions, __ATOMIC_RELAXED);
     out_stats->accelerated_submits = 0U;
     out_stats->accelerator_failures = 0U;
+    out_stats->pipeline_reuse_wait_last_us = 0U;
+    out_stats->pipeline_reuse_wait_max_us = 0U;
+    out_stats->pipeline_transform_last_us = 0U;
+    out_stats->pipeline_transform_max_us = 0U;
+    out_stats->pipeline_handoff_last_us = 0U;
+    out_stats->pipeline_handoff_max_us = 0U;
+    out_stats->pipeline_reserved_refreshes = 0U;
+    out_stats->pipeline_refresh_interval_last_us = 0U;
+    out_stats->pipeline_refresh_interval_min_us = 0U;
+    out_stats->pipeline_refresh_interval_max_us = 0U;
+    out_stats->pipeline_refresh_events = 0U;
+    out_stats->partial_content_submits = 0U;
+    out_stats->partial_content_source_pixels = 0U;
+    out_stats->partial_content_full_fallbacks = 0U;
+    out_stats->interactive_latency_samples = 0U;
+    out_stats->interactive_partial_presentations = 0U;
+    out_stats->interactive_full_presentations = 0U;
+    out_stats->interactive_input_to_refresh_total_us = 0U;
+    out_stats->interactive_input_to_refresh_max_us = 0U;
+    out_stats->interactive_input_to_refresh_last_us = 0U;
+    out_stats->interactive_handoff_to_refresh_total_us = 0U;
+    out_stats->interactive_handoff_to_refresh_max_us = 0U;
+    out_stats->interactive_handoff_to_refresh_last_us = 0U;
+    out_stats->interactive_reuse_wait_last_us = 0U;
+    out_stats->interactive_transform_last_us = 0U;
+    out_stats->interactive_replay_region_count = 0U;
+    out_stats->interactive_present_kind =
+        PLATFORM_DISPLAY_INTERACTIVE_PRESENT_NONE;
     out_stats->underrun_count_available = false;
     return ESP_OK;
 }

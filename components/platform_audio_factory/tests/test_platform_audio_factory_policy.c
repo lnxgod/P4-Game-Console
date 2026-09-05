@@ -56,7 +56,7 @@ static void test_factory_contract(void)
     EXPECT_TRUE(!platform_audio_factory_amp_gpio_level(true));
     EXPECT_TRUE(platform_audio_factory_sample_rate_supported(16000U));
     EXPECT_TRUE(!platform_audio_factory_sample_rate_supported(48000U));
-    EXPECT_TRUE(!platform_audio_factory_volume_supported(0U));
+    EXPECT_TRUE(platform_audio_factory_volume_supported(0U));
     EXPECT_TRUE(platform_audio_factory_volume_supported(1U));
     EXPECT_TRUE(platform_audio_factory_volume_supported(10U));
     EXPECT_TRUE(!platform_audio_factory_volume_supported(11U));
@@ -80,6 +80,13 @@ static void test_attenuation_boundaries(void)
     ));
     EXPECT_TRUE(memcmp(input, original, sizeof(input)) == 0);
     EXPECT_TRUE(memcmp(input, output, sizeof(input)) == 0);
+
+    EXPECT_TRUE(platform_audio_factory_attenuate_pcm16(
+        input, output, sizeof(input) / sizeof(input[0]), UINT8_C(0)
+    ));
+    for (size_t index = 0U; index < sizeof(output) / sizeof(output[0]); ++index) {
+        EXPECT_EQ(0, output[index]);
+    }
 
     EXPECT_TRUE(!platform_audio_factory_attenuate_pcm16(
         NULL, output, 1U, UINT8_C(10)

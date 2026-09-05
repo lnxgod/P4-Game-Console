@@ -212,6 +212,25 @@ esp_err_t platform_audio_write_frames(platform_audio_t *audio,
     return result;
 }
 
+esp_err_t platform_audio_set_volume(platform_audio_t *audio,
+                                     uint8_t volume_step)
+{
+    if (!try_backend_call()) {
+        return ESP_ERR_TIMEOUT;
+    }
+    count_call();
+    const esp_err_t result = platform_audio_es8311_set_volume(
+        audio, volume_step);
+    finish_backend_call();
+    return result;
+}
+
+esp_err_t platform_audio_get_volume(const platform_audio_t *audio,
+                                    uint8_t *out_volume_step)
+{
+    return platform_audio_es8311_get_volume(audio, out_volume_step);
+}
+
 esp_err_t platform_audio_stop(platform_audio_t *audio)
 {
     if (!try_backend_call()) {

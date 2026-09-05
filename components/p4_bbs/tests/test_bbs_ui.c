@@ -37,6 +37,9 @@ int main(void)
         .page = 1U,
         .page_count = 1U,
         .local_board = true,
+        .battery_supported = true,
+        .battery_sample_valid = true,
+        .battery_percent = 63U,
     };
     CHECK(p4_bbs_build_launcher(&terminal, &model));
     CHECK(terminal.unsupported_sequences == 0U);
@@ -45,6 +48,8 @@ int main(void)
     CHECK(p4_ansi_cell(&terminal, 1U, 0U)->character == 0xc9U);
     CHECK(p4_ansi_cell(&terminal, 5U, 9U)->character == '>');
     CHECK(p4_ansi_cell(&terminal, 5U, 10U)->character == ' ');
+    CHECK(p4_ansi_cell(&terminal, 68U, 7U)->character == '[');
+    CHECK(p4_ansi_cell(&terminal, 75U, 7U)->character == '%');
     const p4_bbs_hit_t first = p4_bbs_hit_test(&model, 80U, 155U);
     CHECK(first.kind == P4_BBS_HIT_DOOR);
     CHECK(first.door_index == 0U);
@@ -66,6 +71,17 @@ int main(void)
     p4_bbs_launcher_model_t unterminated = model;
     memset(unterminated.board_name, 'X', sizeof(unterminated.board_name));
     CHECK(!p4_bbs_build_launcher(&terminal, &unterminated));
+    model.battery_percent = 0U;
+    CHECK(p4_bbs_build_launcher(&terminal, &model));
+    CHECK(p4_ansi_cell(&terminal, 74U, 7U)->character == '0');
+    model.battery_percent = 100U;
+    CHECK(p4_bbs_build_launcher(&terminal, &model));
+    CHECK(p4_ansi_cell(&terminal, 75U, 7U)->character == '%');
+    model.battery_sample_valid = false;
+    CHECK(p4_bbs_build_launcher(&terminal, &model));
+    CHECK(p4_ansi_cell(&terminal, 69U, 7U)->character == '-');
+    CHECK(p4_ansi_cell(&terminal, 5U, 7U)->character == '[');
+    model.battery_sample_valid = true;
     model.selected_door = 2U;
     CHECK(!p4_bbs_build_launcher(&terminal, &model));
     model.selected_door = 0U;

@@ -23,15 +23,14 @@ static const char *const USB_ENUM_PROBE_KEY = "usb_enum_probe";
 
 enum {
     /* Apply the quieter room-friendly baseline once, then preserve UI edits. */
-    VOLUME_POLICY_VERSION = 2,
+    VOLUME_POLICY_VERSION = 3,
 };
 
 static bool settings_ready(const platform_console_settings_t *settings);
 
 bool platform_console_settings_volume_valid(uint8_t volume_step)
 {
-    return volume_step >= PLATFORM_CONSOLE_VOLUME_MIN &&
-           volume_step <= PLATFORM_CONSOLE_VOLUME_MAX;
+    return volume_step <= PLATFORM_CONSOLE_VOLUME_MAX;
 }
 
 bool platform_console_settings_node_name_valid(const char *node_name)
@@ -333,11 +332,6 @@ static esp_err_t persist_volume(platform_console_settings_t *settings,
         !platform_console_settings_volume_valid(volume_step)) {
         return ESP_ERR_INVALID_ARG;
     }
-    if (boot) {
-        settings->boot_volume_step = volume_step;
-    } else {
-        settings->game_volume_step = volume_step;
-    }
     if (!settings->persistent) {
         return ESP_ERR_INVALID_STATE;
     }
@@ -353,6 +347,13 @@ static esp_err_t persist_volume(platform_console_settings_t *settings,
         result = nvs_commit(handle);
     }
     nvs_close(handle);
+    if (result == ESP_OK) {
+        if (boot) {
+            settings->boot_volume_step = volume_step;
+        } else {
+            settings->game_volume_step = volume_step;
+        }
+    }
     return result;
 }
 

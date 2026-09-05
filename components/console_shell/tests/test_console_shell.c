@@ -276,6 +276,38 @@ static void test_launcher_scrolling(void)
     action = drag(&shell, 50U, 80U, 50U, 110U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(shell.home_scroll_row == 0U);
+
+    /* The scrollbar thumb is draggable independently of the tile surface.
+     * Press near its center, move to the lower track, and verify that the
+     * grab offset is retained and the logical row is clamped to the end. */
+    const size_t thumb_maximum =
+        ((10U + CONSOLE_SHELL_APP_COLUMNS - 1U) /
+         CONSOLE_SHELL_APP_COLUMNS) - CONSOLE_SHELL_VISIBLE_APP_ROWS;
+    const console_shell_contact_t thumb_start = physical_point(304U, 70U);
+    const console_shell_contact_t thumb_middle_one =
+        physical_point(304U, 95U);
+    const console_shell_contact_t thumb_middle_two =
+        physical_point(304U, 120U);
+    const console_shell_contact_t thumb_end = physical_point(304U, 145U);
+    shell.dirty = false;
+    CHECK(console_shell_handle_touch(&shell, true, &thumb_start, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(shell.scroll_candidate);
+    CHECK(shell.press_active);
+    CHECK(!shell.dirty);
+    CHECK(console_shell_handle_touch(&shell, true, &thumb_middle_one, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(shell.scroll_gesture);
+    CHECK(console_shell_handle_touch(&shell, true, &thumb_middle_two, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_touch(&shell, true, &thumb_end, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    action = console_shell_handle_touch(&shell, true, NULL, 0U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_scroll_row == thumb_maximum);
+    action = drag(&shell, 304U, 145U, 304U, 70U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_scroll_row == 0U);
 }
 
 static void test_smooth_scroll_timing_and_interruption(void)
@@ -290,6 +322,67 @@ static void test_smooth_scroll_timing_and_interruption(void)
     CHECK(tap(&shell, 20U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(shell.home_all_programs);
 
+    /* A home tile contact remains a tap until it moves four physical pixels.
+     * The press highlight is deferred while that decision is pending, so a
+     * first drag frame can reuse the unpressed native cache. */
+    shell.dirty = false;
+    const console_shell_contact_t latency_start =
+        physical_point(50U, 130U);
+    const console_shell_contact_t latency_subthreshold = {
+        .x = latency_start.x,
+        .y = (uint16_t)(latency_start.y - 1U),
+    };
+    const console_shell_contact_t latency_threshold = {
+        .x = latency_start.x,
+        .y = (uint16_t)(latency_start.y - 5U),
+    };
+    CHECK(console_shell_handle_touch(
+              &shell, true, &latency_start, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(shell.scroll_candidate);
+    CHECK(shell.press_active);
+    CHECK(!shell.dirty);
+    CHECK(console_shell_handle_touch(
+              &shell, true, &latency_subthreshold, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(!shell.scroll_gesture);
+    CHECK(shell.home_scroll_visual_q16 == 0);
+    CHECK(!shell.dirty);
+    CHECK(console_shell_handle_touch(
+              &shell, true, &latency_threshold, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(shell.scroll_gesture);
+    CHECK(shell.home_scroll_visual_q16 > 0);
+    CHECK(shell.dirty);
+    /* The launcher uses the raw contact displacement, so reversing direction
+     * updates immediately instead of remaining quantized to a GUI pixel. */
+    const int32_t forward_scroll = shell.home_scroll_visual_q16;
+    const console_shell_contact_t latency_reverse = {
+        .x = latency_start.x,
+        .y = (uint16_t)(latency_start.y - 4U),
+    };
+    CHECK(console_shell_handle_touch(
+              &shell, true, &latency_reverse, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(shell.home_scroll_visual_q16 < forward_scroll);
+    CHECK(forward_scroll - shell.home_scroll_visual_q16 ==
+          (5 * (1 << 16)) /
+                  ((40 * CONSOLE_SHELL_VIEWPORT_HEIGHT +
+                    CONSOLE_SHELL_LAYOUT_HEIGHT / 2) /
+                   CONSOLE_SHELL_LAYOUT_HEIGHT) -
+              (4 * (1 << 16)) /
+                  ((40 * CONSOLE_SHELL_VIEWPORT_HEIGHT +
+                    CONSOLE_SHELL_LAYOUT_HEIGHT / 2) /
+                   CONSOLE_SHELL_LAYOUT_HEIGHT));
+    CHECK(console_shell_handle_touch(&shell, true, NULL, 0U).type ==
+          CONSOLE_ACTION_NONE);
+
+    /* The small gesture above is intentionally isolated from the animation
+     * timing checks below; a fresh home page also models a new contact. */
+    CHECK(console_shell_init(&shell, apps, 10U));
+    CHECK(tap(&shell, 20U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_all_programs);
+
     CHECK(tap(&shell, 304U, 165U).type ==
           CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(shell.home_scroll_row == 1U);
@@ -297,9 +390,23 @@ static void test_smooth_scroll_timing_and_interruption(void)
     CHECK(console_shell_advance(&shell, 16U));
     const int32_t first_step = shell.home_scroll_visual_q16;
     CHECK(first_step > 0);
+    CHECK(first_step > (1 << 11));
+    CHECK(first_step < (1 << 12));
     CHECK(first_step < (1 << 16));
+    unsigned intermediate_samples = 1U;
+    int32_t previous = first_step;
     CHECK(console_shell_advance(&shell, 16U));
     CHECK(shell.home_scroll_visual_q16 > first_step);
+    previous = shell.home_scroll_visual_q16;
+    ++intermediate_samples;
+    while (shell.home_scroll_visual_q16 < (1 << 16)) {
+        CHECK(console_shell_advance(&shell, 16U));
+        CHECK(shell.home_scroll_visual_q16 >= previous);
+        previous = shell.home_scroll_visual_q16;
+        ++intermediate_samples;
+    }
+    CHECK(intermediate_samples >= 4U);
+    CHECK(shell.home_scroll_visual_q16 == (1 << 16));
 
     const int32_t interrupted_at = shell.home_scroll_visual_q16;
     CHECK(tap(&shell, 304U, 50U).type ==
@@ -316,12 +423,104 @@ static void test_smooth_scroll_timing_and_interruption(void)
     CHECK(tap(&shell, 304U, 165U).type ==
           CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(console_shell_advance(&shell, 10000U));
-    CHECK(shell.home_scroll_visual_q16 > 0);
-    CHECK(shell.home_scroll_visual_q16 < (1 << 16));
+    const int32_t clamped_visual = shell.home_scroll_visual_q16;
+    CHECK(clamped_visual > 0);
+    CHECK(clamped_visual < (1 << 16));
+    CHECK(console_shell_init(&shell, apps, 10U));
+    CHECK(tap(&shell, 20U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_all_programs);
+    CHECK(tap(&shell, 304U, 165U).type ==
+          CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(console_shell_advance(&shell, 50U));
+    CHECK(shell.home_scroll_visual_q16 == clamped_visual);
     for (unsigned frame = 0U; frame < 20U; ++frame) {
         (void)console_shell_advance(&shell, 16U);
     }
     CHECK(shell.home_scroll_visual_q16 == (1 << 16));
+}
+
+static void test_smooth_scroll_large_catalog_and_stale_fling(void)
+{
+    console_app_descriptor_t apps[CONSOLE_SHELL_MAX_APPS];
+    for (size_t index = 0U; index < CONSOLE_SHELL_MAX_APPS; ++index) {
+        apps[index] = s_apps[index % TEST_APP_COUNT];
+        apps[index].id = (uint32_t)(1000U + index);
+        apps[index].folder_path = "";
+    }
+
+    console_shell_t shell;
+    CHECK(console_shell_init(
+        &shell, apps, CONSOLE_SHELL_MAX_APPS));
+    CHECK(tap(&shell, 20U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_all_programs);
+    for (size_t row = 1U;
+         row < (CONSOLE_SHELL_MAX_APPS +
+                CONSOLE_SHELL_APP_COLUMNS - 1U) /
+                   CONSOLE_SHELL_APP_COLUMNS;
+         ++row) {
+        (void)press_button(&shell, CONSOLE_BUTTON_DOWN);
+    }
+    const size_t row_count =
+        (CONSOLE_SHELL_MAX_APPS + CONSOLE_SHELL_APP_COLUMNS - 1U) /
+        CONSOLE_SHELL_APP_COLUMNS;
+    const size_t maximum = row_count - CONSOLE_SHELL_VISIBLE_APP_ROWS;
+    CHECK(shell.home_scroll_row == maximum);
+    for (unsigned frame = 0U; frame < 20U; ++frame) {
+        (void)console_shell_advance(&shell, 16U);
+    }
+    CHECK(shell.home_scroll_visual_q16 ==
+          (int32_t)(maximum * (size_t)(1U << 16)));
+
+    console_app_descriptor_t short_apps[10];
+    for (size_t index = 0U; index < 10U; ++index) {
+        short_apps[index] = s_apps[index % TEST_APP_COUNT];
+        short_apps[index].id = (uint32_t)(2000U + index);
+        short_apps[index].folder_path = "";
+    }
+    CHECK(console_shell_init(&shell, short_apps, 10U));
+    CHECK(tap(&shell, 20U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+
+    const console_shell_contact_t start = physical_point(50U, 130U);
+    const console_shell_contact_t moved = physical_point(50U, 115U);
+    CHECK(console_shell_handle_touch(&shell, true, &start, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    (void)console_shell_advance(&shell, 1U);
+    CHECK(console_shell_handle_touch(&shell, true, &moved, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(shell.scroll_gesture);
+    CHECK(shell.home_scroll_visual_q16 > 0);
+    CHECK(shell.home_scroll_visual_q16 < (1 << 15));
+
+    /* A release immediately after a service stall must not reuse velocity. */
+    (void)console_shell_advance(&shell, 101U);
+    CHECK(console_shell_handle_touch(&shell, true, NULL, 0U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(shell.home_scroll_row == 0U);
+    for (unsigned frame = 0U; frame < 20U; ++frame) {
+        (void)console_shell_advance(&shell, 16U);
+    }
+    CHECK(shell.home_scroll_visual_q16 == 0);
+
+    /* A held sample after the stall remains a valid way to clear velocity. */
+    CHECK(console_shell_init(&shell, short_apps, 10U));
+    CHECK(tap(&shell, 20U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(console_shell_handle_touch(&shell, true, &start, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    (void)console_shell_advance(&shell, 1U);
+    CHECK(console_shell_handle_touch(&shell, true, &moved, 1U).type ==
+          CONSOLE_ACTION_NONE);
+
+    /* A held finger after a long service interval clears its stale velocity. */
+    (void)console_shell_advance(&shell, 200U);
+    CHECK(console_shell_handle_touch(&shell, true, &moved, 1U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_touch(&shell, true, NULL, 0U).type ==
+          CONSOLE_ACTION_NONE);
+    CHECK(shell.home_scroll_row == 0U);
+    for (unsigned frame = 0U; frame < 20U; ++frame) {
+        (void)console_shell_advance(&shell, 16U);
+    }
+    CHECK(shell.home_scroll_visual_q16 == 0);
 }
 
 static void test_render_bounds_and_stride(void)
@@ -369,6 +568,391 @@ static void test_render_bounds_and_stride(void)
     free(allocation);
 }
 
+static void test_present_render_contract(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    const size_t full_pixels = (size_t)CONSOLE_SHELL_WIDTH *
+        CONSOLE_SHELL_HEIGHT;
+    const size_t present_pixels = (size_t)CONSOLE_SHELL_PRESENT_WIDTH *
+        CONSOLE_SHELL_PRESENT_HEIGHT;
+    uint16_t *const full = calloc(full_pixels, sizeof(*full));
+    uint16_t *const present = calloc(present_pixels, sizeof(*present));
+    CHECK(full != NULL && present != NULL);
+    if (full == NULL || present == NULL) {
+        free(full);
+        free(present);
+        return;
+    }
+    CHECK(console_shell_render_rgb565(&shell, full, CONSOLE_SHELL_WIDTH));
+    CHECK(console_shell_render_present_rgb565(
+        &shell, present, CONSOLE_SHELL_PRESENT_WIDTH));
+    if (CONSOLE_SHELL_PRESENT_WIDTH == CONSOLE_SHELL_LAYOUT_WIDTH &&
+        CONSOLE_SHELL_PRESENT_HEIGHT == CONSOLE_SHELL_LAYOUT_HEIGHT) {
+        for (size_t y = 0U; y < CONSOLE_SHELL_LAYOUT_HEIGHT; ++y) {
+            const size_t full_y = y * CONSOLE_SHELL_HEIGHT /
+                CONSOLE_SHELL_LAYOUT_HEIGHT;
+            for (size_t x = 0U; x < CONSOLE_SHELL_LAYOUT_WIDTH; ++x) {
+                const size_t full_x = x * CONSOLE_SHELL_WIDTH /
+                    CONSOLE_SHELL_LAYOUT_WIDTH;
+                CHECK(present[y * CONSOLE_SHELL_PRESENT_WIDTH + x] ==
+                      full[full_y * CONSOLE_SHELL_WIDTH + full_x]);
+            }
+        }
+    }
+    if (CONSOLE_SHELL_PRESENT_WIDTH == 384 &&
+        CONSOLE_SHELL_PRESENT_HEIGHT == 240) {
+        /* The first home tile is ALL PROGRAMS.  Its first L begins at logical
+         * (26, 74).  At 6:5 compact scale, both the stem and foot must remain
+         * exactly one source pixel thick, with joins filling skipped raster
+         * coordinates.  The panel's exact 2x pass then presents both at the
+         * same two-pixel physical weight. */
+        for (size_t y = 88U; y < 96U; ++y) {
+            CHECK(present[y * CONSOLE_SHELL_PRESENT_WIDTH + 31U] ==
+                  UINT16_C(0x0000));
+            CHECK(present[y * CONSOLE_SHELL_PRESENT_WIDTH + 32U] !=
+                  UINT16_C(0x0000));
+        }
+        for (size_t x = 31U; x <= 36U; ++x) {
+            CHECK(present[96U * CONSOLE_SHELL_PRESENT_WIDTH + x] ==
+                  UINT16_C(0x0000));
+        }
+        CHECK(present[95U * CONSOLE_SHELL_PRESENT_WIDTH + 36U] !=
+              UINT16_C(0x0000));
+
+        /* Folder bevel rules are also fixed at one compact pixel regardless
+         * of the logical edge's phase within the 6:5 conversion. */
+        CHECK(present[64U * CONSOLE_SHELL_PRESENT_WIDTH + 60U] ==
+              UINT16_C(0xffff));
+        CHECK(present[65U * CONSOLE_SHELL_PRESENT_WIDTH + 60U] ==
+              UINT16_C(0xffe0));
+        CHECK(present[75U * CONSOLE_SHELL_PRESENT_WIDTH + 49U] ==
+              UINT16_C(0xffff));
+        CHECK(present[75U * CONSOLE_SHELL_PRESENT_WIDTH + 50U] ==
+              UINT16_C(0xc618));
+    }
+    free(full);
+    free(present);
+}
+
+#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+static bool output_point_in_layout_rect(size_t x,
+                                        size_t y,
+                                        unsigned left,
+                                        unsigned top,
+                                        unsigned width,
+                                        unsigned height)
+{
+    const size_t output_left =
+        (size_t)left * CONSOLE_SHELL_WIDTH / CONSOLE_SHELL_LAYOUT_WIDTH;
+    const size_t output_top =
+        (size_t)top * CONSOLE_SHELL_HEIGHT / CONSOLE_SHELL_LAYOUT_HEIGHT;
+    const size_t output_right =
+        (size_t)(left + width) * CONSOLE_SHELL_WIDTH /
+        CONSOLE_SHELL_LAYOUT_WIDTH;
+    const size_t output_bottom =
+        (size_t)(top + height) * CONSOLE_SHELL_HEIGHT /
+        CONSOLE_SHELL_LAYOUT_HEIGHT;
+    return x >= output_left && x < output_right &&
+        y >= output_top && y < output_bottom;
+}
+#endif
+
+static void test_native_home_scroll_cache(void)
+{
+#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+    enum {
+        APP_COUNT = 12,
+        STRIDE = CONSOLE_SHELL_WIDTH + 5,
+    };
+    console_app_descriptor_t apps[APP_COUNT];
+    for (size_t index = 0U; index < APP_COUNT; ++index) {
+        apps[index] = s_apps[index % TEST_APP_COUNT];
+        apps[index].id = (uint32_t)(1000U + index);
+        apps[index].folder_path = "";
+    }
+    const size_t frame_words = (size_t)STRIDE * CONSOLE_SHELL_HEIGHT;
+    uint16_t *const frame = malloc(frame_words * sizeof(*frame));
+    uint16_t *const initial = malloc(frame_words * sizeof(*initial));
+    uint16_t *const reference = malloc(frame_words * sizeof(*reference));
+    CHECK(frame != NULL && initial != NULL && reference != NULL);
+    if (frame == NULL || initial == NULL || reference == NULL) {
+        free(frame);
+        free(initial);
+        free(reference);
+        return;
+    }
+    for (size_t index = 0U; index < frame_words; ++index) {
+        frame[index] = UINT16_C(0xBEEF);
+        reference[index] = UINT16_C(0xBEEF);
+    }
+
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, apps, APP_COUNT));
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, STRIDE));
+    CHECK(shell.native_home_cache_valid);
+    CHECK(shell.native_home_full_frames == 1U);
+    memcpy(initial, frame, frame_words * sizeof(*initial));
+
+    shell.home_scroll_row = 1U;
+    shell.home_scroll_visual_q16 = 1 << 15;
+    shell.dirty = true;
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, STRIDE));
+    CHECK(shell.native_home_scroll_blit_frames == 1U);
+    CHECK(shell.native_home_shifted_pixels > 0U);
+    for (size_t y = 0U; y < CONSOLE_SHELL_HEIGHT; ++y) {
+        for (size_t x = 0U; x < CONSOLE_SHELL_WIDTH; ++x) {
+            const bool dynamic = output_point_in_layout_rect(
+                    x, y, 11U, 44U, 281U, 127U) ||
+                output_point_in_layout_rect(
+                    x, y, 297U, 43U, 15U, 130U) ||
+                output_point_in_layout_rect(
+                    x, y, 8U, 178U, 305U, 15U);
+            if (!dynamic) {
+                CHECK(frame[y * STRIDE + x] == initial[y * STRIDE + x]);
+            }
+        }
+        for (size_t x = CONSOLE_SHELL_WIDTH; x < STRIDE; ++x) {
+            CHECK(frame[y * STRIDE + x] == UINT16_C(0xBEEF));
+        }
+    }
+
+    shell.home_scroll_visual_q16 = 1 << 14;
+    shell.dirty = true;
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, STRIDE));
+    CHECK(shell.native_home_scroll_blit_frames == 2U);
+
+    /* Reversing to a settled row must discard every fractional-raster phase
+     * and converge byte-for-byte on the authoritative endpoint. */
+    shell.home_scroll_row = 0U;
+    shell.home_scroll_visual_q16 = 0;
+    shell.dirty = true;
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, STRIDE));
+    CHECK(shell.native_home_dynamic_frames == 1U);
+    CHECK(memcmp(frame, initial, frame_words * sizeof(*frame)) == 0);
+
+    shell.home_scroll_row = 1U;
+    shell.home_scroll_visual_q16 = 1 << 16;
+    shell.dirty = true;
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, STRIDE));
+    CHECK(shell.native_home_dynamic_frames == 2U);
+
+    console_shell_t reference_shell;
+    CHECK(console_shell_init(&reference_shell, apps, APP_COUNT));
+    reference_shell.home_scroll_row = 1U;
+    reference_shell.home_scroll_visual_q16 = 1 << 16;
+    CHECK(console_shell_render_rgb565(
+        &reference_shell, reference, STRIDE));
+    CHECK(memcmp(frame, reference, frame_words * sizeof(*frame)) == 0);
+
+    /* A held drag may cross an integer row without paying for a complete
+     * tile redraw. The eventual settled endpoint remains authoritative. */
+    const uint32_t blits_before_crossing =
+        shell.native_home_scroll_blit_frames;
+    const uint32_t dynamic_before_crossing =
+        shell.native_home_dynamic_frames;
+    shell.scroll_gesture = true;
+    shell.home_scroll_visual_q16 = (3 << 14);
+    shell.dirty = true;
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, STRIDE));
+    shell.home_scroll_visual_q16 = (5 << 14);
+    shell.dirty = true;
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, STRIDE));
+    CHECK(shell.native_home_scroll_blit_frames ==
+          blits_before_crossing + 2U);
+    CHECK(shell.native_home_dynamic_frames == dynamic_before_crossing);
+
+    shell.scroll_gesture = false;
+    shell.home_scroll_row = 1U;
+    shell.home_scroll_visual_q16 = 1 << 16;
+    shell.dirty = true;
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, STRIDE));
+    CHECK(shell.native_home_dynamic_frames == dynamic_before_crossing + 1U);
+    CHECK(memcmp(frame, reference, frame_words * sizeof(*frame)) == 0);
+
+    console_shell_invalidate_native_cache(&shell);
+    CHECK(!shell.native_home_cache_valid);
+    console_shell_set_pointer(&shell, true, 120U, 90U, false);
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, STRIDE));
+    CHECK(shell.native_home_full_frames == 2U);
+    CHECK(!shell.native_home_cache_valid);
+
+    free(frame);
+    free(initial);
+    free(reference);
+#endif
+}
+
+#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+static void check_native_update_covers_frame_diff(
+    const uint16_t *before,
+    const uint16_t *after,
+    const console_shell_native_update_t *update,
+    const char *label)
+{
+    CHECK(before != NULL && after != NULL && update != NULL);
+    if (before == NULL || after == NULL || update == NULL ||
+        update->kind == CONSOLE_SHELL_NATIVE_UPDATE_FULL) {
+        return;
+    }
+    const uint32_t right = (uint32_t)update->x + update->width;
+    const uint32_t bottom = (uint32_t)update->y + update->height;
+    CHECK(update->kind == CONSOLE_SHELL_NATIVE_UPDATE_REGION);
+    CHECK(update->width > 0U && update->height > 0U);
+    CHECK(right <= CONSOLE_SHELL_WIDTH);
+    CHECK(bottom <= CONSOLE_SHELL_HEIGHT);
+    size_t changed = 0U;
+    size_t outside = 0U;
+    size_t first_x = 0U;
+    size_t first_y = 0U;
+    for (size_t y = 0U; y < CONSOLE_SHELL_HEIGHT; ++y) {
+        for (size_t x = 0U; x < CONSOLE_SHELL_WIDTH; ++x) {
+            const size_t index = y * CONSOLE_SHELL_WIDTH + x;
+            if (before[index] == after[index]) {
+                continue;
+            }
+            ++changed;
+            if (x < update->x || x >= right ||
+                y < update->y || y >= bottom) {
+                if (outside == 0U) {
+                    first_x = x;
+                    first_y = y;
+                }
+                ++outside;
+            }
+        }
+    }
+    CHECK(changed > 0U);
+    if (outside != 0U) {
+        fprintf(stderr,
+                "FAIL native update %s missed %zu pixels; first=(%zu,%zu)\n",
+                label, outside, first_x, first_y);
+        ++s_failures;
+    }
+}
+#endif
+
+static void test_native_home_update_metadata(void)
+{
+#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+    enum { APP_COUNT = 12 };
+    console_app_descriptor_t apps[APP_COUNT];
+    for (size_t index = 0U; index < APP_COUNT; ++index) {
+        apps[index] = s_apps[index % TEST_APP_COUNT];
+        apps[index].id = (uint32_t)(3000U + index);
+        apps[index].folder_path = "";
+    }
+    uint16_t *const frame = calloc(
+        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
+        sizeof(*frame));
+    uint16_t *const previous = malloc(
+        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT *
+        sizeof(*previous));
+    CHECK(frame != NULL && previous != NULL);
+    if (frame == NULL || previous == NULL) {
+        free(previous);
+        free(frame);
+        return;
+    }
+
+    console_shell_t shell;
+    console_shell_native_update_t update;
+    CHECK(console_shell_init(&shell, apps, APP_COUNT));
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, CONSOLE_SHELL_WIDTH));
+    CHECK(console_shell_get_native_update(&shell, &update));
+    CHECK(update.kind == CONSOLE_SHELL_NATIVE_UPDATE_FULL);
+
+    memcpy(previous, frame,
+           (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT *
+               sizeof(*previous));
+    shell.home_scroll_visual_q16 = 1 << 15;
+    shell.dirty = true;
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, CONSOLE_SHELL_WIDTH));
+    CHECK(console_shell_get_native_update(&shell, &update));
+    CHECK(update.kind == CONSOLE_SHELL_NATIVE_UPDATE_REGION);
+    CHECK(update.x == 26U && update.y == 103U &&
+          update.width == 722U && update.height == 312U);
+    check_native_update_covers_frame_diff(
+        previous, frame, &update, "fractional drag");
+
+    memcpy(previous, frame,
+           (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT *
+               sizeof(*previous));
+    shell.home_scroll_row = 1U;
+    shell.dirty = true;
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, CONSOLE_SHELL_WIDTH));
+    CHECK(console_shell_get_native_update(&shell, &update));
+    CHECK(update.kind == CONSOLE_SHELL_NATIVE_UPDATE_REGION);
+    CHECK(update.x == 19U && update.y == 103U &&
+          update.width == 732U && update.height == 360U);
+    check_native_update_covers_frame_diff(
+        previous, frame, &update, "row status transition");
+
+    /* Scrollbar press/release and thumb movement exercise damage which is
+     * outside the tile grid but still inside the conservative update band. */
+    memcpy(previous, frame,
+           (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT *
+               sizeof(*previous));
+    const console_shell_contact_t down_arrow = physical_point(304U, 165U);
+    CHECK(console_shell_handle_touch(
+              &shell, true, &down_arrow, 1U).type == CONSOLE_ACTION_NONE);
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, CONSOLE_SHELL_WIDTH));
+    CHECK(console_shell_get_native_update(&shell, &update));
+    check_native_update_covers_frame_diff(
+        previous, frame, &update, "scrollbar press");
+
+    memcpy(previous, frame,
+           (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT *
+               sizeof(*previous));
+    CHECK(console_shell_handle_touch(
+              &shell, true, NULL, 0U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, CONSOLE_SHELL_WIDTH));
+    CHECK(console_shell_get_native_update(&shell, &update));
+    check_native_update_covers_frame_diff(
+        previous, frame, &update, "scrollbar release");
+
+    const console_shell_contact_t thumb_start = physical_point(304U, 90U);
+    const console_shell_contact_t thumb_move = physical_point(304U, 110U);
+    CHECK(console_shell_handle_touch(
+              &shell, true, &thumb_start, 1U).type == CONSOLE_ACTION_NONE);
+    CHECK(console_shell_handle_touch(
+              &shell, true, &thumb_move, 1U).type == CONSOLE_ACTION_NONE);
+    memcpy(previous, frame,
+           (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT *
+               sizeof(*previous));
+    CHECK(console_shell_render_native_cached_rgb565(
+        &shell, frame, CONSOLE_SHELL_WIDTH));
+    CHECK(console_shell_get_native_update(&shell, &update));
+    check_native_update_covers_frame_diff(
+        previous, frame, &update, "scrollbar thumb drag");
+    (void)console_shell_handle_touch(&shell, true, NULL, 0U);
+
+    console_shell_invalidate_native_cache(&shell);
+    CHECK(console_shell_get_native_update(&shell, &update));
+    CHECK(update.kind == CONSOLE_SHELL_NATIVE_UPDATE_FULL);
+    free(previous);
+    free(frame);
+#endif
+}
+
 static uint64_t frame_hash(const uint16_t *frame)
 {
     uint64_t hash = UINT64_C(1469598103934665603);
@@ -397,13 +981,13 @@ static void test_window_manager_visual_contract(void)
 {
 #if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
     CONSOLE_SHELL_TARGET_HEIGHT == 480U
-    const uint64_t desktop_hash = UINT64_C(0x155472def3e4ea55);
-    const uint64_t elecrow_system_hash = UINT64_C(0x0789d647ad2a0a01);
-    const uint64_t olimex_system_hash = UINT64_C(0xc6c3730bc38ab857);
+    const uint64_t desktop_hash = UINT64_C(0x44ee51847211ee71);
+    const uint64_t elecrow_system_hash = UINT64_C(0xe29f2fdd3c3faa81);
+    const uint64_t olimex_system_hash = UINT64_C(0x4ee9aa1f85dbf4d7);
 #else
-    const uint64_t desktop_hash = UINT64_C(0x05e38d72f3b45343);
-    const uint64_t elecrow_system_hash = UINT64_C(0x23cd965c66dd2b3b);
-    const uint64_t olimex_system_hash = UINT64_C(0x478271be1fc12dac);
+    const uint64_t desktop_hash = UINT64_C(0xc658981647609597);
+    const uint64_t elecrow_system_hash = UINT64_C(0x81938adab227edcf);
+    const uint64_t olimex_system_hash = UINT64_C(0x67f18f6ba8f50b20);
 #endif
     uint16_t *const frame = calloc(
         (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
@@ -452,6 +1036,7 @@ static void test_color_modes_and_achievements(void)
     console_shell_t shell;
     CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
     CHECK(console_shell_color_mode(&shell) == CONSOLE_COLOR_MODE_ARCADE);
+    CHECK(!console_shell_uses_native_bbs_launcher(&shell));
     shell.page = CONSOLE_PAGE_COLORS;
     shell.active_app_id = APP_COLORS;
     const console_shell_action_t color =
@@ -460,6 +1045,7 @@ static void test_color_modes_and_achievements(void)
     CHECK(color.color_mode == CONSOLE_COLOR_MODE_GAMECHANGERS);
     CHECK(console_shell_color_mode(&shell) ==
           CONSOLE_COLOR_MODE_GAMECHANGERS);
+    CHECK(!console_shell_uses_native_bbs_launcher(&shell));
 
     p4_achievement_catalog_t achievements;
     p4_achievement_catalog_init(&achievements);
@@ -1172,6 +1758,156 @@ static void test_touch_page_and_runtime(void)
     CHECK(shell.dirty);
 }
 
+static void test_power_page(void)
+{
+    const console_app_descriptor_t app = {
+        .id = 4000U,
+        .title = "POWER",
+        .subtitle = "BATTERY STATUS",
+        .folder_path = "",
+        .accent_rgb565 = UINT16_C(0x07E0),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY,
+        .page = CONSOLE_PAGE_POWER,
+        .enabled = true,
+    };
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, &app, 1U));
+    CHECK(tap(&shell, 120U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.page == CONSOLE_PAGE_POWER);
+    console_shell_runtime_info_t runtime = {
+        .battery_supported = true,
+        .battery_sample_valid = true,
+        .battery_calibrated = true,
+        .battery_millivolts = 3875U,
+        .battery_percent = 63U,
+    };
+    console_shell_set_runtime_info(&shell, &runtime);
+    uint16_t *const frame = calloc(
+        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
+        sizeof(*frame));
+    CHECK(frame != NULL);
+    if (frame != NULL) {
+        CHECK(console_shell_render_rgb565(
+            &shell, frame, CONSOLE_SHELL_WIDTH));
+        free(frame);
+    }
+    shell.dirty = false;
+    runtime.battery_millivolts = 3876U;
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(shell.dirty);
+    CHECK(shell.runtime.battery_millivolts == 3876U);
+    shell.dirty = false;
+    runtime.battery_percent = 255U;
+    runtime.battery_millivolts = 4200U;
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(shell.dirty);
+}
+
+static uint32_t indicator_checksum(const uint16_t *pixels, size_t stride,
+                                   int left)
+{
+    uint32_t checksum = 0U;
+    const int scaled_left = left * CONSOLE_SHELL_WIDTH /
+        CONSOLE_SHELL_LAYOUT_WIDTH;
+    const int scaled_right = (left + 42) * CONSOLE_SHELL_WIDTH /
+        CONSOLE_SHELL_LAYOUT_WIDTH;
+    const int scaled_top = 10 * CONSOLE_SHELL_HEIGHT /
+        CONSOLE_SHELL_LAYOUT_HEIGHT;
+    const int scaled_bottom = 23 * CONSOLE_SHELL_HEIGHT /
+        CONSOLE_SHELL_LAYOUT_HEIGHT;
+    for (int y = scaled_top; y < scaled_bottom; ++y) {
+        for (int x = scaled_left; x < scaled_right; ++x) {
+            checksum = checksum * 33U + pixels[(size_t)y * stride +
+                                                (size_t)x];
+        }
+    }
+    return checksum;
+}
+
+static void test_battery_indicator_chrome(void)
+{
+    const console_app_descriptor_t app = {
+        .id = 4100U,
+        .title = "SYSTEM",
+        .subtitle = "SYSTEM",
+        .folder_path = "",
+        .accent_rgb565 = UINT16_C(0x07E0),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY,
+        .page = CONSOLE_PAGE_SYSTEM,
+        .enabled = true,
+    };
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, &app, 1U));
+    shell.page = CONSOLE_PAGE_SYSTEM;
+    shell.active_app_id = app.id;
+    uint16_t *const frame = calloc(
+        (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
+        sizeof(*frame));
+    CHECK(frame != NULL);
+    if (frame == NULL) {
+        return;
+    }
+
+    console_shell_runtime_info_t runtime = {
+        .battery_supported = false,
+        .battery_sample_valid = false,
+    };
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    const uint32_t unavailable = indicator_checksum(
+        frame, CONSOLE_SHELL_WIDTH, 210);
+
+    runtime.battery_supported = true;
+    runtime.battery_sample_valid = true;
+    runtime.battery_percent = 63U;
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    const uint32_t readable = indicator_checksum(
+        frame, CONSOLE_SHELL_WIDTH, 210);
+    CHECK(readable != unavailable);
+
+    runtime.battery_percent = 0U;
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    const uint32_t empty = indicator_checksum(
+        frame, CONSOLE_SHELL_WIDTH, 210);
+    runtime.battery_percent = 100U;
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    const uint32_t full = indicator_checksum(
+        frame, CONSOLE_SHELL_WIDTH, 210);
+    CHECK(empty != full);
+    runtime.battery_percent = UINT8_MAX;
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    CHECK(indicator_checksum(frame, CONSOLE_SHELL_WIDTH, 210) == full);
+
+    console_shell_show_home(&shell);
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    const uint32_t home_readable = indicator_checksum(
+        frame, CONSOLE_SHELL_WIDTH, 160);
+    CHECK(!shell.dirty);
+    runtime.battery_sample_valid = false;
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(shell.dirty);
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    CHECK(indicator_checksum(frame, CONSOLE_SHELL_WIDTH, 160) != home_readable);
+    CHECK(!shell.dirty);
+    runtime.battery_sample_valid = true;
+    runtime.battery_percent = 50U;
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(shell.dirty);
+    shell.dirty = false;
+    runtime.battery_millivolts = 3900U;
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(!shell.dirty);
+    CHECK(shell.runtime.battery_millivolts == 3900U);
+    runtime.battery_percent = 49U;
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(shell.dirty);
+    free(frame);
+}
+
 static void test_file_manager(void)
 {
     console_shell_t shell;
@@ -1442,6 +2178,9 @@ int main(void)
 {
     test_registry_validation();
     test_render_bounds_and_stride();
+    test_present_render_contract();
+    test_native_home_scroll_cache();
+    test_native_home_update_metadata();
     test_window_manager_visual_contract();
     test_color_modes_and_achievements();
     test_usb_mode_button();
@@ -1454,8 +2193,11 @@ int main(void)
     test_controller_navigation();
     test_launcher_scrolling();
     test_smooth_scroll_timing_and_interruption();
+    test_smooth_scroll_large_catalog_and_stale_fling();
     test_fail_closed_gestures();
     test_touch_page_and_runtime();
+    test_power_page();
+    test_battery_indicator_chrome();
     test_file_manager();
     test_game_manager();
     test_controller_game_manager();

@@ -137,6 +137,162 @@ bool platform_display_layout_rgb565_768x480(const uint16_t *source,
     return true;
 }
 
+bool platform_display_layout_map_content_region_ccw(
+    const platform_display_rgb565_region_t *source,
+    platform_display_rgb565_region_t *destination)
+{
+    enum {
+        CONTENT_WIDTH = 768,
+        CONTENT_HEIGHT = 480,
+        NATIVE_CONTENT_TOP = 16,
+    };
+    if (source == NULL || destination == NULL || source->width == 0U ||
+        source->height == 0U || source->x >= CONTENT_WIDTH ||
+        source->y >= CONTENT_HEIGHT ||
+        source->width > CONTENT_WIDTH - source->x ||
+        source->height > CONTENT_HEIGHT - source->y) {
+        return false;
+    }
+#if PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES == 90U
+    destination->x = source->y;
+    destination->y = (uint16_t)(NATIVE_CONTENT_TOP + CONTENT_WIDTH -
+                                (source->x + source->width));
+    destination->width = source->height;
+    destination->height = source->width;
+    return true;
+#else
+    (void)CONTENT_HEIGHT;
+    return false;
+#endif
+}
+
+static uint32_t region_area(
+    const platform_display_rgb565_region_t *region)
+{
+    return (uint32_t)region->width * (uint32_t)region->height;
+}
+
+static bool region_contains(
+    const platform_display_rgb565_region_t *outer,
+    const platform_display_rgb565_region_t *inner)
+{
+    return outer->x <= inner->x && outer->y <= inner->y &&
+        (uint32_t)outer->x + outer->width >=
+            (uint32_t)inner->x + inner->width &&
+        (uint32_t)outer->y + outer->height >=
+            (uint32_t)inner->y + inner->height;
+}
+
+bool platform_display_layout_compact_content_region(
+    platform_display_rgb565_region_t *regions,
+    size_t *region_count,
+    size_t region_capacity,
+    const platform_display_rgb565_region_t *candidate)
+{
+    platform_display_rgb565_region_t mapped;
+    if (regions == NULL || region_count == NULL || candidate == NULL ||
+        *region_count > region_capacity ||
+        !platform_display_layout_map_content_region_ccw(candidate, &mapped)) {
+        return false;
+    }
+    platform_display_rgb565_region_t merged = *candidate;
+    size_t index = 0U;
+    while (index < *region_count) {
+        if (region_contains(&regions[index], &merged)) {
+            return true;
+        }
+        const uint32_t left = regions[index].x < merged.x
+            ? regions[index].x : merged.x;
+        const uint32_t top = regions[index].y < merged.y
+            ? regions[index].y : merged.y;
+        const uint32_t region_right =
+            (uint32_t)regions[index].x + regions[index].width;
+        const uint32_t merged_right = (uint32_t)merged.x + merged.width;
+        const uint32_t right = region_right > merged_right
+            ? region_right : merged_right;
+        const uint32_t region_bottom =
+            (uint32_t)regions[index].y + regions[index].height;
+        const uint32_t merged_bottom = (uint32_t)merged.y + merged.height;
+        const uint32_t bottom = region_bottom > merged_bottom
+            ? region_bottom : merged_bottom;
+        const uint32_t bounding_area = (right - left) * (bottom - top);
+        const uint32_t separate_area =
+            region_area(&regions[index]) + region_area(&merged);
+        if (region_contains(&merged, &regions[index]) ||
+            bounding_area <= separate_area) {
+            merged = (platform_display_rgb565_region_t){
+                .x = (uint16_t)left,
+                .y = (uint16_t)top,
+                .width = (uint16_t)(right - left),
+                .height = (uint16_t)(bottom - top),
+            };
+            regions[index] = regions[*region_count - 1U];
+            --*region_count;
+            index = 0U;
+            continue;
+        }
+        ++index;
+    }
+    if (*region_count == region_capacity) {
+        return false;
+    }
+    regions[*region_count] = merged;
+    ++*region_count;
+    return true;
+}
+
+bool platform_display_layout_rgb565_384x240(const uint16_t *source,
+                                            size_t source_stride_pixels,
+                                            uint16_t *destination,
+                                            size_t destination_stride_pixels,
+                                            size_t destination_height)
+{
+    enum { SHELL_WIDTH = 384, SHELL_HEIGHT = 240 };
+    if (source == NULL || destination == NULL ||
+        source_stride_pixels < SHELL_WIDTH ||
+        destination_stride_pixels < DESTINATION_WIDTH ||
+        destination_height < DESTINATION_HEIGHT) {
+        return false;
+    }
+#if PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES == 90U
+    for (size_t native_y = 0U; native_y < DESTINATION_HEIGHT; ++native_y) {
+        uint16_t *const row = destination + native_y * destination_stride_pixels;
+        memset(row, 0, (size_t)DESTINATION_WIDTH * sizeof(*row));
+        const size_t logical_x = (size_t)LOGICAL_WIDTH - 1U - native_y;
+        const size_t viewport_x = logical_x - LEFT_MARGIN;
+        if (viewport_x >= VIEWPORT_WIDTH) {
+            continue;
+        }
+        const size_t source_x = viewport_x * SHELL_WIDTH / VIEWPORT_WIDTH;
+        for (size_t viewport_y = 0U; viewport_y < VIEWPORT_HEIGHT;
+             ++viewport_y) {
+            const size_t source_y =
+                viewport_y * SHELL_HEIGHT / VIEWPORT_HEIGHT;
+            row[TOP_MARGIN + viewport_y] =
+                source[source_y * source_stride_pixels + source_x];
+        }
+    }
+#else
+    for (size_t native_y = 0U; native_y < DESTINATION_HEIGHT; ++native_y) {
+        uint16_t *const row = destination + native_y * destination_stride_pixels;
+        memset(row, 0, (size_t)DESTINATION_WIDTH * sizeof(*row));
+        const size_t viewport_y = native_y - TOP_MARGIN;
+        if (viewport_y >= VIEWPORT_HEIGHT) {
+            continue;
+        }
+        const size_t source_y = viewport_y * SHELL_HEIGHT / VIEWPORT_HEIGHT;
+        for (size_t viewport_x = 0U; viewport_x < VIEWPORT_WIDTH;
+             ++viewport_x) {
+            const size_t source_x =
+                viewport_x * SHELL_WIDTH / VIEWPORT_WIDTH;
+            row[LEFT_MARGIN + viewport_x] =
+                source[source_y * source_stride_pixels + source_x];
+        }
+    }
+#endif
+    return true;
+}
+
 bool platform_display_layout_rgb565_to_rgb888_1280x720(
     const uint16_t *source, size_t source_stride_pixels,
     uint8_t *destination, size_t destination_stride_bytes,
@@ -187,6 +343,62 @@ bool platform_display_layout_rgb565_to_rgb888_1280x720(
         for (size_t repeat = 1U; repeat < HDMI_SCALE; ++repeat) {
             memcpy(first_row + repeat * destination_stride_bytes,
                    first_row, active_row_bytes);
+        }
+    }
+    return true;
+}
+
+bool platform_display_layout_rgb565_384x240_to_rgb888_1280x720(
+    const uint16_t *source, size_t source_stride_pixels,
+    uint8_t *destination, size_t destination_stride_bytes,
+    size_t destination_height)
+{
+    enum {
+        SHELL_WIDTH = 384,
+        SHELL_HEIGHT = 240,
+        HDMI_WIDTH = 1280,
+        HDMI_HEIGHT = 720,
+        HDMI_PIXEL_BYTES = 3,
+        HDMI_VIEWPORT_WIDTH = 960,
+        HDMI_VIEWPORT_HEIGHT = 600,
+        HDMI_LEFT_MARGIN = 160,
+        HDMI_TOP_MARGIN = 60,
+    };
+    const size_t active_row_bytes = HDMI_WIDTH * HDMI_PIXEL_BYTES;
+    if (source == NULL || destination == NULL ||
+        source_stride_pixels < SHELL_WIDTH ||
+        destination_stride_bytes < active_row_bytes ||
+        destination_height < HDMI_HEIGHT) {
+        return false;
+    }
+    for (size_t y = 0U; y < HDMI_HEIGHT; ++y) {
+        memset(destination + y * destination_stride_bytes, 0,
+               active_row_bytes);
+    }
+    for (size_t viewport_y = 0U; viewport_y < HDMI_VIEWPORT_HEIGHT;
+         ++viewport_y) {
+        const size_t source_y =
+            viewport_y * SHELL_HEIGHT / HDMI_VIEWPORT_HEIGHT;
+        uint8_t *const output_row = destination +
+            (HDMI_TOP_MARGIN + viewport_y) * destination_stride_bytes;
+        const uint16_t *const source_row =
+            source + source_y * source_stride_pixels;
+        for (size_t viewport_x = 0U; viewport_x < HDMI_VIEWPORT_WIDTH;
+             ++viewport_x) {
+            const size_t source_x =
+                viewport_x * SHELL_WIDTH / HDMI_VIEWPORT_WIDTH;
+            const uint16_t pixel = source_row[source_x];
+            const uint8_t red =
+                (uint8_t)(((pixel >> 11U) & 0x1fU) * 255U / 31U);
+            const uint8_t green =
+                (uint8_t)(((pixel >> 5U) & 0x3fU) * 255U / 63U);
+            const uint8_t blue =
+                (uint8_t)((pixel & 0x1fU) * 255U / 31U);
+            uint8_t *const out = output_row +
+                (HDMI_LEFT_MARGIN + viewport_x) * HDMI_PIXEL_BYTES;
+            out[0] = red;
+            out[1] = green;
+            out[2] = blue;
         }
     }
     return true;

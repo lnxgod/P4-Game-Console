@@ -13,16 +13,18 @@ organizes built-ins plus the current storage catalog as:
 - Games
   - Action: Doom (exclusive foreground handoff)
   - Arcade: installed reentrant Game API cartridges
-- Control Panel: Appearance, Touch, System status, Audio, Achievements, File
-  Manager, Game Manager, Multiplayer, Controllers, Save Manager, and Terminal
+- Control Panel: Appearance, Touch, System status, Power, Audio, Achievements,
+  File Manager, Game Manager, USB Drive, Multiplayer, Controllers, Save
+  Manager, and Terminal
   - Tools: Calculator
   - Tests: Input Test and AV Test
 
-Boot first displays the official Game Changers AI logo, starts SD initialization,
-plays a louder classic-PC POST beep with a deliberate pause and separated
-hard-disk seek clicks, dials `614-276-3639` with deliberately paced
-dual-frequency DTMF pairs, then plays a condensed V.25/V.22bis 2400-baud handshake at boot master
-step 10/10. Display and the
+Boot first displays the official Game Changers AI logo and starts SD
+initialization. Fresh installs start Boot Sounds and Game Audio at 0/10; the
+Audio panel can persist either level from 0 through 10. When Boot Sounds are
+enabled, the sequence plays a classic-PC POST beep, separated hard-disk seek
+clicks, a deliberately paced dual-frequency DTMF dial of `614-276-3639`, and a
+condensed V.25/V.22bis 2400-baud handshake. Display and the
 branded frame still come first, followed by the minimum codec control bus,
 background storage worker, exact P4G catalog worker, boot audio, and input. The branded
 loading screen remains visible with a state-driven SD animation until the
@@ -36,9 +38,33 @@ BBS door view or the Windows, Ocean, and Sunset palettes. There is no CRT
 filter.
 
 The shell and native Game API runtime use a fractional 60 Hz scheduler on the
-100 Hz FreeRTOS clock. Native audio follows the matching 266/267-frame cadence
+1 kHz FreeRTOS clock. Native audio follows the matching 266/267-frame cadence
 at 16 kHz. High-churn storage and diagnostic counters are sampled at 5 Hz so a
 controller or multiplayer page cannot force continuous full-screen redraws.
+Console OS 0.5.12 is the selected production baseline. The later 0.5.13,
+0.5.14, and 0.5.15 scrolling experiments are rejected/not accepted; their
+source history, diagnostic tooling, and changelog remain, but device-specific
+wrappers, authorizations, and raw captures are omitted from the public branch.
+None of those rejected candidates is part of this production image. The exact
+rollback chain restored 0.5.12 after the operator reported it was better.
+Console OS 0.5.12 restores the exact unit-3 sealed GT911 filter-8/checksum-
+`0x79` baseline. Restoration accepts only an exact filter-4/checksum-`0x7d`
+candidate or an already-original block, writes the complete block once with
+`Config_Fresh=1`, reads it back, and fails closed without retrying. That
+controller write is not power-loss atomic, and a firmware rollback does not
+itself restore GT911 configuration NVM. The default release also disables the
+synchronous three-second runtime-statistics burst;
+diagnostic builds opt in with `-DP4_CONSOLE_RUNTIME_STATS_BUILD=ON` because
+captures showed 132--134 ms main-loop stalls (about eight frames). Battery
+Home invalidation uses 50 mV hysteresis, so raw millivolt noise no longer causes
+five-second redraws while Power detail retains the raw mV value. Full-resolution
+768x480 rendering and games are unchanged. Host tests, the exact USB-host
+build, guarded application-only install, complete 1,884,160-byte readback,
+single baseline restoration, and reset-persistent no-write verification pass.
+Two 60-second startup captures contain no periodic runtime-stat records,
+resets, panics, or rejected runtime markers. The operator confirmed the
+periodic 3--4 second stutter was gone, while continuous touch-follow and
+reversal lag remained.
 Console OS 0.4.96 defaults to the readable Windows 3.1 launcher, displays the
 compatible `SYSTEM/...` namespace as **Control Panel** on the root screen, and
 preserves a session theme across live catalog refreshes. Console OS 0.4.95
@@ -54,6 +80,111 @@ automatically, BLE Host/Join starts only after that scan is idle, and leaving
 Multiplayer restores the saved reconnect policy. An already-connected
 encrypted controller continues to coexist with one multiplayer peer.
 
+Console OS 0.5.2 adds a persistent battery icon and percentage to launcher
+chrome, replaces the front-loaded menu easing with continuous ease-in/out
+motion, and pipelines the Waveshare panel's two DSI framebuffers so the next
+shell frame can be prepared during scanout while buffer reuse remains
+refresh-gated.
+
+Console OS 0.5.3 runs that 60 Hz UI scheduler from a 1 kHz FreeRTOS tick,
+producing 16/17 ms frame phases instead of the visibly uneven 10/20/20 ms
+quantization of the former 100 Hz tick. Launcher motion also uses a shorter,
+responsive quadratic ease, and bounded timing counters expose render,
+transform, handoff, and physical panel-refresh cadence over H1.
+
+Console OS 0.5.10 characterizes the GT911 without changing its persistent
+configuration. Startup logs its identity and complete checksum-validated
+186-byte configuration block, while the touch mailbox now distinguishes an
+actual data-ready controller report from a cached coordinate snapshot. Unique
+report cadence and true sample age are included in periodic telemetry. Neutral
+frames remain valid after idle, and shell resolution, display presentation,
+and all game surfaces are unchanged.
+The exact unit-3 install/readback and startup gate pass; the captured live
+configuration is checksum-valid and shows a 10 ms report period, zero movement
+thresholds, and normal filter 8. Its complete original block is retained before
+any controller tuning.
+
+Console OS 0.5.11 used that sealed baseline for one staged, exact-unit
+experiment. It lowers only the GT911 normal-filter field from 8 to 4, verifies
+the complete post-apply controller block, and attempts a verified restore of
+the original block if writing or readback fails. Any identity, baseline, or
+checksum mismatch refuses before writing. The 10 ms report period, zero
+movement thresholds, debounce, display pipeline, and game contracts remain
+unchanged. The GT911 saves equal-version configuration changes, so a successful
+filter-4 update can survive reset. Its original 186-byte block is retained for
+an explicit recovery build; the write/restore sequence cannot be atomic across
+a loss of device power.
+The exact build, verifier, guarded application-only install/readback, initial
+8-to-4 apply capture, and already-target reset capture pass on unit 3. Visual
+touch-follow latency and stationary-finger jitter still require operator
+acceptance.
+
+Console OS 0.5.9 keeps the accepted full-resolution Windows shell and game
+surfaces while testing touch-report freshness. Launcher drags use the GT911's
+raw 800x480 physical coordinates, with a four-pixel activation threshold and
+one-pixel response after activation. A Waveshare-only 120 Hz worker drains
+fresh controller reports into a latest-sample mailbox while the 60 Hz shell is
+drawing or presenting; native games, scripts, and Doom retain exclusive direct
+touch ownership through a bounded stop-and-join handoff. Periodic telemetry
+correlates changed touch samples with the GDMA/DPI driver frame boundary so remaining
+software latency can be measured rather than inferred. The exact-unit trace
+showed fresh mailbox data (8.849 ms worst observed age) and roughly 39.8--39.9
+ms average input-to-driver-frame-boundary latency, but operator testing found no
+perceptible improvement over 0.5.8. The mailbox hypothesis is therefore not
+the accepted fix; controller-reported coordinate timing and final scanout are
+the next isolation targets.
+
+Console OS 0.5.8 keeps the Windows shell at its crisp native 768x480
+resolution while extending the persistent cache through the display backend.
+Ordinary Home scrolling now rotates and presents only the conservative moving
+tile/scrollbar band; overlapping damage from the alternating DSI buffers is
+coalesced, with a full-frame cutoff whenever replay would be more expensive.
+Touch drag recognition begins after two logical pixels, preserves the full
+initial displacement, and avoids a speculative press redraw before the input
+is known to be a tap. BBS and game presentation paths are unchanged. The exact
+unit-3 app-only install/readback and retained-UART startup gate pass; the idle
+capture confirms the new telemetry but does not exercise a partial scroll, so
+interactive scrolling and representative game acceptance remain pending.
+
+Console OS 0.5.7 returns the Waveshare Windows shell to a native 768x480
+source and keeps that framebuffer persistent between frames. During ordinary
+scrolling, cached tile rows are shifted in place and only the newly exposed
+band is redrawn; scrollbar and footer regions are clipped redraws, while
+selection/press changes and settled endpoints redraw the complete tile
+viewport. Pointer, battery, catalog, and structural changes use an
+authoritative full-frame redraw. Native shell submits remain pipelined, but
+320x200 default games and negotiated 768x480 games use refresh-synchronous
+handoff so the shared display pipeline does not add gameplay latency. The
+exact unit-3 app-only install/readback and retained-UART startup gate pass;
+operator-visible sustained-scroll and gameplay acceptance remain pending.
+
+Console OS 0.5.6 keeps the fast compact Waveshare shell path while giving its
+5x7 bitmap font and one-pixel chrome a dedicated crisp raster policy. Glyph
+runs remain connected but use a fixed source-pixel stroke weight, and folder,
+bevel, scrollbar, and rule edges no longer alternate between one and two
+source pixels at different 6:5 layout phases. The panel still receives the
+same exact 2x hardware-scaled 768x480 viewport.
+
+Console OS 0.5.4 removes the full 768x480 source render from ordinary
+Waveshare menu frames. Windows-style launcher and detail pages draw into a
+compact 384x240 source and scale exactly 2x in hardware to preserve the fixed
+768x480 shell/touch viewport; the optional 80x30 BBS launcher remains
+pixel-exact at 768x480. Missed frame deadlines reset the task's wake anchor
+instead of producing catch-up bursts, and the Windows scrollbar thumb now
+keeps touch ownership while it is dragged along the track.
+
+Console OS 0.5.1 adds calibrated Waveshare battery voltage and a bounded
+percentage estimate in Control Panel > Power, expands the launcher and native
+catalog bounds for the full SD library, and hardens smooth scrolling so a held
+finger or long service stall cannot reuse stale fling velocity. H1 can now
+request the same eject-gated H2 USB Drive transition as the touchscreen with
+`scripts/p4-transfer.py usb-drive`; it cannot bypass storage ownership or a
+Mac that has not cleanly ejected the volume.
+
+The two 32-entry catalog snapshots live in external RAM. This preserves the
+board's proven 32 KiB internal/DMA reserve while keeping the full catalog
+available; the superseded 0.5.0 candidate exhausted that reserve before
+`app_main` on exact-unit testing and was rejected.
 Console OS 0.4.101 keeps the expanded 0.4.100 catalog and places its two
 catalog buffers plus the larger shell registry in external RAM on boards that
 authorize external BSS. This preserves the internal 32 KiB DMA reserve needed
@@ -105,6 +236,9 @@ verifies each host write synchronously. Eject the volume in Finder (or
 disconnect H2), then press **Turn Off USB Mode** to remount and rescan it. The
 off button stays locked while an attached Mac has not cleanly ejected, and
 firmware never formats the card.
+With both cables attached, the same transition is available through H1:
+`python3 scripts/p4-transfer.py usb-drive on|off --port /dev/cu.usbmodem...`.
+The `off` command keeps MSC active if macOS has not cleanly ejected the card.
 Full-card byte addresses remain 64-bit even though the ESP32-P4 ABI is 32-bit,
 so laptop writes above the first 4 GB are accepted and verified correctly.
 If a fresh or damaged card cannot mount, Console OS keeps it host-owned and
@@ -161,8 +295,9 @@ older cards.
 No `.P4G` cartridge is linked into the OTA application. The complete runtime
 launcher catalog comes from validated microSD files. Its lightweight desktop
 view shows three columns by two rows, scrolls smoothly with vertical arrows,
-controller input, or a one-finger drag, and supports up to 32 apps. It derives at most
-two folder levels from validated package metadata. The skin is drawn with
+controller input, a one-finger content drag, or direct scrollbar-thumb drag,
+and supports up to 32 apps. It derives at most two folder levels from validated
+package metadata. The skin is drawn with
 RGB565 primitives and adds no launcher bitmap asset. Create a native starter
 without editing the launcher:
 
@@ -208,8 +343,8 @@ pass the same structural ELF policy used by the on-device catalog.
 The home shell never energizes the amplifier. When Doom is selected, the shell
 darkens the panel and releases touch, I2C1, and display ownership before
 entering the existing Doom composite. Doom then reinitializes those services
-and owns the exact 16 kHz PCM16-stereo SFX + procedural MUS path at volume
-step 9/10.
+and owns the exact 16 kHz PCM16-stereo SFX + procedural MUS path at the
+persistent Game Audio level selected in Control Panel (0/10 through 10/10).
 
 This handoff remains deliberately non-reentrant. Confirming Doom's quit prompt
 with keyboard Y/Enter or touch Y safely tears down its owned services and
@@ -230,7 +365,9 @@ The exact ignored shareware WAD documented in the repository is required at
 
 ```sh
 make console-shell-host
+make platform-battery-host
 make platform-game-storage-host
+make h1-usb-drive-control-host
 make game-sdk-host
 make console-os-idf
 ```

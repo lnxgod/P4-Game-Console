@@ -787,6 +787,30 @@ esp_err_t platform_audio_factory_write_frames(
     return ESP_OK;
 }
 
+esp_err_t platform_audio_factory_set_volume(
+    platform_audio_factory_t *audio, uint8_t volume_step)
+{
+    if (audio == NULL || audio != s_live_owner ||
+        !platform_audio_factory_volume_supported(volume_step)) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    if (audio->state == PLATFORM_AUDIO_FACTORY_STATE_FAILED_SAFE) {
+        return ESP_ERR_INVALID_STATE;
+    }
+    audio->volume_percent = volume_step;
+    return ESP_OK;
+}
+
+esp_err_t platform_audio_factory_get_volume(
+    const platform_audio_factory_t *audio, uint8_t *out_volume_step)
+{
+    if (audio == NULL || audio != s_live_owner || out_volume_step == NULL) {
+        return ESP_ERR_INVALID_ARG;
+    }
+    *out_volume_step = audio->volume_percent;
+    return ESP_OK;
+}
+
 esp_err_t platform_audio_factory_stop(platform_audio_factory_t *audio)
 {
     if (audio == NULL || audio != s_live_owner ||
