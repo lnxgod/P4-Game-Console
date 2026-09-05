@@ -1,0 +1,77 @@
+{
+  "schema": 1,
+  "date_local": "2026-09-04",
+  "purpose": "Update both recorded Waveshare 4.3 consoles, remove the 16-game catalog ceiling, synchronize the complete native game bundle, and verify the pinned Doom shareware content identity.",
+  "source": {
+    "branch": "main",
+    "console_os_commit": "4f159e38ac0238a1a91ef860a92b5509142a40c8",
+    "console_os_version": "0.4.101",
+    "application_bytes": 1841328,
+    "application_sha256": "25945b54a714f1ee2f47ca6ae33cb7ebe0b5f4f652549d8251df42d9b1e9a0d6",
+    "toolchain": "ESP-IDF 5.5.3",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host"
+  },
+  "intermediate_failed_candidate": {
+    "version": "0.4.100",
+    "application_sha256": "53b5266beee50b24bdab44983a76f6adb2eb56cb420b56e4e7b158eb4bf0bba0",
+    "result": "boot-loop",
+    "failure": "ESP-IDF could not reserve its 32 KiB internal/DMA pool after the expanded static catalogs consumed internal RAM.",
+    "evidence_raw_sha256": "d4941f102ebb5ce366182c3e24384185f98d3f0bd97eacc863a8907296583447",
+    "correction": "0.4.101 places the large catalog and shell registry buffers in authorized external BSS on Waveshare."
+  },
+  "units": [
+    {
+      "unit": "unit1-pink-B289",
+      "port": "/dev/cu.wchusbserial5C371865781",
+      "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+      "install": "app-only write at 0x20000; full padded readback passed",
+      "preimage_sha256": "80b10e22a9611302458b768e640a9a1eeba46d17728809d9e725adaed3683b43",
+      "padded_readback_sha256": "43971270aaea562aa07df045c249ea374d76d6b189022a0e6af7c09e018f6df1",
+      "boot_result": "pass",
+      "boot_raw_sha256": "5718646052852a914d03245e37374aa9792c61158560ee17c20d4cbf542483ec",
+      "catalog": {
+        "packages": 19,
+        "valid": 19,
+        "omitted": 0,
+        "canonical_bundle_hashes_verified_by_h1": 19
+      },
+      "memory": {
+        "internal_free": 124923,
+        "dma_free": 85343,
+        "psram_free": 31224044
+      }
+    },
+    {
+      "unit": "unit2-green-386F",
+      "port": "/dev/cu.wchusbserial5B901593451",
+      "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+      "install": "app-only write at 0x20000; full padded readback passed",
+      "preimage_sha256": "80b10e22a9611302458b768e640a9a1eeba46d17728809d9e725adaed3683b43",
+      "padded_readback_sha256": "43971270aaea562aa07df045c249ea374d76d6b189022a0e6af7c09e018f6df1",
+      "boot_result": "pass",
+      "boot_raw_sha256": "cedc278727e27871ffc06e82241fa3e4dd744fd21e6dd199816cda5e15dce024",
+      "catalog": {
+        "packages": 21,
+        "valid": 21,
+        "omitted": 0,
+        "canonical_bundle_hashes_verified_by_h1": 19,
+        "additional_user_packages_preserved": 2
+      },
+      "memory": {
+        "internal_free": 124927,
+        "dma_free": 85347,
+        "psram_free": 31224044
+      }
+    }
+  ],
+  "doom": {
+    "content": "DOOM1.WAD",
+    "bytes": 4196020,
+    "sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+    "unit1_h1_result": "already-present hash=verified",
+    "unit2_h1_result": "already-present hash=verified",
+    "runtime_launch_result": "not-sampled",
+    "runtime_note": "A 90-second receive-only capture observed a stable launcher but no operator Doom launch; do not claim Doom runtime acceptance until a physical launch is captured."
+  },
+  "result": "firmware-and-content-pass-doom-runtime-pending"
+}
