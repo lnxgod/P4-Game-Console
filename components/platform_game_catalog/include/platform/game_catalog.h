@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 enum {
-    PLATFORM_GAME_CATALOG_MAX_ENTRIES = 16,
+    PLATFORM_GAME_CATALOG_MAX_ENTRIES = 32,
 };
 
 typedef struct {

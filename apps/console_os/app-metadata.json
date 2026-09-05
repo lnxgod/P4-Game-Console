@@ -44,7 +44,7 @@
       "terminal"
     ],
     "apps_per_page": 6,
-    "maximum_registered_apps": 32,
+    "maximum_registered_apps": 64,
     "folder_model": "bounded two-level hierarchy from built-ins and validated package metadata",
     "root_folders": ["all-programs", "games", "system"],
     "maximum_folder_depth": 2,
@@ -176,7 +176,7 @@
       "host_owned_access_allowed": false
     },
     "game_manager": {
-      "catalog_limit": 16,
+      "catalog_limit": 32,
       "install_or_update": "copy or replace one .P4G file in GAMES through J16, then eject",
       "remove": "two-step on-device confirmation",
       "invalid_packages_visible": true,
@@ -227,5 +227,5 @@
     "wireless",
     "codec_i2c"
   ],
-  "next_hardware_step": "On the two recorded Waveshare 4.3 units with H1 UART retained, install the exact verified Console OS 0.4.99 artifact; prove an optional video-highres cartridge launches at 768x480 with canonical 320x200 touch, a standard cartridge remains 320x200, and the inherited 0.4.98 BLE controller/multiplayer radio handoff still passes."
+  "next_hardware_step": "On both recorded Waveshare 4.3 units with H1 UART retained, install the exact verified Console OS 0.4.100 artifact; prove all 19 native cartridges are cataloged without omission, then launch the exact verified Doom shareware data."
 }

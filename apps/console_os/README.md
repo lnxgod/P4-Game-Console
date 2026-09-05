@@ -54,6 +54,11 @@ automatically, BLE Host/Join starts only after that scan is idle, and leaving
 Multiplayer restores the saved reconnect policy. An already-connected
 encrypted controller continues to coexist with one multiplayer peer.
 
+Console OS 0.4.100 raises the validated native cartridge catalog from 16 to
+32 entries and the combined shell registry from 32 to 64 entries. The current
+19-game bundle can therefore remain fully visible alongside built-in system
+apps instead of silently omitting games after the sixteenth package.
+
 Console OS 0.4.99 preserves the default 320x200 cartridge surface and adds
 negotiated 768x480 RGB565 rendering for detail-heavy native games. Waveshare
 presents that high-resolution surface through its existing 1:1 accelerated
