@@ -1,0 +1,106 @@
+{
+  "schema": 1,
+  "active": true,
+  "authorization_id": "waveshare-unit2-console-os-0.4.101-catalog-psram-20260904",
+  "authorized_at_utc": "2026-09-05T03:00:00Z",
+  "authorization_basis": "Operator explicitly requested both devices on the latest code with all games deployed; the 0.4.100 hardware boot exposed and bounded this required startup-RAM correction.",
+  "scope": "One application-partition-only Console OS 0.4.101 corrective successor install on the already backed-up Waveshare 4.3 unit2, permanently labeled green / node 386F. Bootloader, partition table, OTA data, NVS, microSD contents, and every other flash range are read-only.",
+  "source": {
+    "commit": "4f159e38ac0238a1a91ef860a92b5509142a40c8",
+    "branch": "main",
+    "toolchain_lock": "ESP-IDF 5.5.3 at 2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "uncommitted_exact_artifact": false
+  },
+  "board": {
+    "unit_label": "unit2-green-386F",
+    "color_label": "green",
+    "node_suffix": "386F",
+    "profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "recorded_port": "/dev/cu.wchusbserial5B901593451",
+    "chip": "ESP32-P4",
+    "revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-unit2-factory-20260820.bin",
+    "bytes": 33554432,
+    "sha256": "240a730a882e6437f31729c78ae69db35b132b1aa78f820fec9d88b3397b39e6",
+    "manifest": "hardware/backups/manifest.json"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.101-catalog-psram-25945b5/bootloader.bin",
+      "offset": "0x2000",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30"
+    },
+    "partition_table": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.101-catalog-psram-25945b5/partition-table.bin",
+      "offset": "0x8000",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "application_offset": "0x20000"
+  },
+  "predecessor": {
+    "version": "0.4.100",
+    "application_bytes": 1841328,
+    "application_sha256": "53b5266beee50b24bdab44983a76f6adb2eb56cb420b56e4e7b158eb4bf0bba0",
+    "preserve_span_bytes": 1843200,
+    "evidence": "The guarded installer requires the exact live 0.4.100 image whose boot panic was captured and preserves the complete 0.4.101 mutation span before writing."
+  },
+  "candidate": {
+    "version": "0.4.101",
+    "release_directory": "hardware/local-state/waveshare-two-unit-console-os-0.4.101-catalog-psram-25945b5",
+    "application": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.101-catalog-psram-25945b5/p4_console_os.bin",
+      "bytes": 1841328,
+      "sha256": "25945b54a714f1ee2f47ca6ae33cb7ebe0b5f4f652549d8251df42d9b1e9a0d6",
+      "padded_mutation_bytes": 1843200
+    },
+    "elf": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.101-catalog-psram-25945b5/p4_console_os.elf",
+      "bytes": 21856944,
+      "sha256": "6f58a65f536d11d7544dd8ccc2b47f9777e99f58a2ad9e60ebbc658d8c8d455c"
+    },
+    "update_package": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.101-catalog-psram-25945b5/P4UPDATE.P4U",
+      "bytes": 1841584,
+      "sha256": "dd041f5010224911838c2c277b60bb2ea50303cb159b819f8f15ad6df003553b"
+    },
+    "sdkconfig": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.101-catalog-psram-25945b5/sdkconfig",
+      "bytes": 95926,
+      "sha256": "1520c48b59841a81c1134fedb0469d74803e2ede0bf011bf54c66a3f7eaa9cc2"
+    },
+    "dependencies_lock": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.101-catalog-psram-25945b5/dependencies.lock",
+      "bytes": 6296,
+      "sha256": "c92a685c30ab82ec1e4c208a6f90907bc45d4086d1f7ce83e7b3354de60fab1c"
+    },
+    "lord_cartridge": {
+      "path": "hardware/local-state/waveshare-two-unit-console-os-0.4.101-catalog-psram-25945b5/COLOR_CLASH.P4G",
+      "version": "1.7.0",
+      "bytes": 341312,
+      "sha256": "2dc8fe61371b2b97ea704a2a333b549a87414f1d2fb6795ff29d2c52d07cb5cb"
+    }
+  },
+  "safety": {
+    "firmware_write_scope": "one application-partition write at 0x20000",
+    "content_write_scope": "none",
+    "live_identity_required": true,
+    "factory_backup_required": true,
+    "unchanged_bootloader_required": true,
+    "unchanged_partition_table_required": true,
+    "live_predecessor_required": true,
+    "complete_successor_span_preimage_required": true,
+    "complete_successor_span_readback_required": true,
+    "automatic_rollback_authorized": true,
+    "generic_idf_flash_authorized": false,
+    "full_project_flash_authorized": false,
+    "erase_authorized": false,
+    "formatting_authorized": false,
+    "micro_sd_write_authorized": false
+  }
+}
