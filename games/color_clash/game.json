@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.6.0",
+  "version": "1.7.0",
   "package_file": "COLOR_CLASH.P4G",
   "component": "color_clash",
   "sources": [
@@ -27,7 +27,7 @@
     "video-highres"
   ],
   "license": "MIT",
-  "assets": "dual-resolution-original-imagegen-card-frames-v3-plus-authorized-gamechangersai-org-logo-and-code-ui",
+  "assets": "dual-resolution-original-imagegen-card-frames-v3-plus-authorized-gamechangersai-org-logo-and-accessible-code-ui",
   "enabled": true,
   "multiplayer": {
     "schema": 1,

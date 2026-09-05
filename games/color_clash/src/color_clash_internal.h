@@ -70,6 +70,13 @@ typedef enum {
 } color_clash_mode_t;
 
 typedef enum {
+    COLOR_CLASH_COLOR_AID_STANDARD = 0,
+    COLOR_CLASH_COLOR_AID_SYMBOLS,
+    COLOR_CLASH_COLOR_AID_HIGH_CONTRAST,
+    COLOR_CLASH_COLOR_AID_COUNT,
+} color_clash_color_aid_t;
+
+typedef enum {
     COLOR_CLASH_NOTICE_NONE = 0,
     COLOR_CLASH_NOTICE_INVALID_PLAY,
     COLOR_CLASH_NOTICE_DRAW_FOUR_BLOCKED,
@@ -96,6 +103,7 @@ typedef struct {
     uint8_t selected_color;
     uint8_t selected_target;
     uint8_t menu_players;
+    uint8_t color_aid;
     uint8_t winner;
     uint8_t uno_pending_player;
     uint8_t notice_player;

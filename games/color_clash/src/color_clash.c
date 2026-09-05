@@ -51,6 +51,12 @@ enum {
     UNO_W = 72,
     UNO_H = 22,
     NO_CARD = 0xff,
+    MENU_PLAYER_Y = 113,
+    MENU_PLAYER_H = 25,
+    MENU_AID_Y = 141,
+    MENU_AID_H = 20,
+    MENU_START_Y = 164,
+    MENU_START_H = 21,
 };
 
 static const uint16_t s_colors[COLOR_CLASH_COLOR_COUNT] = {
@@ -63,6 +69,18 @@ static const char *const s_color_names[COLOR_CLASH_COLOR_COUNT] = {
 
 static const uint8_t s_color_name_chars[COLOR_CLASH_COLOR_COUNT] = {
     3U, 4U, 4U, 4U,
+};
+
+static const char s_color_letters[COLOR_CLASH_COLOR_COUNT] = {
+    'R', 'G', 'T', 'P',
+};
+
+static const char *const s_color_aid_names[COLOR_CLASH_COLOR_AID_COUNT] = {
+    "STANDARD", "SYMBOLS", "HI-CONTRAST",
+};
+
+static const uint8_t s_color_aid_name_chars[COLOR_CLASH_COLOR_AID_COUNT] = {
+    8U, 7U, 11U,
 };
 
 static bool high_resolution_surface(const p4_game_surface_t *surface)
@@ -159,6 +177,21 @@ static bool point_in(uint16_t px, uint16_t py,
 {
     return (int)px >= x && (int)px < x + width &&
         (int)py >= y && (int)py < y + height;
+}
+
+static uint8_t color_aid_mode(const color_clash_state_t *state)
+{
+    return state != NULL && state->color_aid < COLOR_CLASH_COLOR_AID_COUNT
+        ? state->color_aid : COLOR_CLASH_COLOR_AID_SYMBOLS;
+}
+
+static void cycle_color_aid(color_clash_state_t *state, bool forward)
+{
+    const uint8_t current = color_aid_mode(state);
+    state->color_aid = forward
+        ? (uint8_t)((current + 1U) % COLOR_CLASH_COLOR_AID_COUNT)
+        : (uint8_t)((current + COLOR_CLASH_COLOR_AID_COUNT - 1U) %
+                    COLOR_CLASH_COLOR_AID_COUNT);
 }
 
 static bool can_play_and_call_uno(const color_clash_state_t *state)
@@ -265,8 +298,10 @@ static void return_to_menu(color_clash_state_t *state)
     const uint8_t menu_players = state->menu_players < 2U
         ? 2U : state->menu_players;
     const uint32_t rng = state->rng;
+    const uint8_t color_aid = color_aid_mode(state);
     *state = (color_clash_state_t){
         .menu_players = menu_players,
+        .color_aid = color_aid,
         .winner = NO_WINNER,
         .uno_pending_player = NO_WINNER,
         .notice_player = NO_WINNER,
@@ -287,12 +322,17 @@ static void start_practice(color_clash_state_t *state)
 static void handle_menu_touch(color_clash_state_t *state,
                               uint16_t x, uint16_t y)
 {
-    if (point_in(x, y, 48, 116, 58, 28) && state->menu_players > 2U) {
+    if (point_in(x, y, 48, MENU_PLAYER_Y, 58, MENU_PLAYER_H) &&
+        state->menu_players > 2U) {
         --state->menu_players;
-    } else if (point_in(x, y, 214, 116, 58, 28) &&
+    } else if (point_in(x, y, 214, MENU_PLAYER_Y, 58, MENU_PLAYER_H) &&
                state->menu_players < COLOR_CLASH_MAX_PLAYERS) {
         ++state->menu_players;
-    } else if (point_in(x, y, 91, 151, 138, 30)) {
+    } else if (point_in(x, y, 48, MENU_AID_Y, 112, MENU_AID_H)) {
+        cycle_color_aid(state, false);
+    } else if (point_in(x, y, 160, MENU_AID_Y, 112, MENU_AID_H)) {
+        cycle_color_aid(state, true);
+    } else if (point_in(x, y, 91, MENU_START_Y, 138, MENU_START_H)) {
         start_practice(state);
     }
 }
@@ -443,6 +483,10 @@ static void handle_turn_touch(p4_game_context_t *context,
                               color_clash_state_t *state,
                               uint16_t x, uint16_t y)
 {
+    if (point_in(x, y, 118, 23, 104, 15)) {
+        cycle_color_aid(state, true);
+        return;
+    }
     if (point_in(x, y, UNO_X, UNO_Y, UNO_W, UNO_H) &&
         state->uno_pending_player < state->player_count) {
         (void)color_clash_perform_action(
@@ -503,6 +547,7 @@ static bool game_start(p4_game_context_t *context)
     color_clash_state_t *const state = context->state;
     *state = (color_clash_state_t){
         .menu_players = 2U,
+        .color_aid = COLOR_CLASH_COLOR_AID_SYMBOLS,
         .winner = NO_WINNER,
         .uno_pending_player = NO_WINNER,
         .notice_player = NO_WINNER,
@@ -532,13 +577,19 @@ static bool game_start(p4_game_context_t *context)
 static void update_menu(color_clash_state_t *state,
                         const p4_game_input_t *input)
 {
-    if ((input->pressed & (P4_BUTTON_LEFT | P4_BUTTON_UP)) != 0U &&
+    if ((input->pressed & P4_BUTTON_LEFT) != 0U &&
         state->menu_players > 2U) {
         --state->menu_players;
     }
-    if ((input->pressed & (P4_BUTTON_RIGHT | P4_BUTTON_DOWN)) != 0U &&
+    if ((input->pressed & P4_BUTTON_RIGHT) != 0U &&
         state->menu_players < COLOR_CLASH_MAX_PLAYERS) {
         ++state->menu_players;
+    }
+    if ((input->pressed & P4_BUTTON_UP) != 0U) {
+        cycle_color_aid(state, false);
+    }
+    if ((input->pressed & P4_BUTTON_DOWN) != 0U) {
+        cycle_color_aid(state, true);
     }
     if ((input->pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
         start_practice(state);
@@ -645,6 +696,12 @@ static p4_game_result_t game_update(
         update_menu(state, input);
         return P4_GAME_CONTINUE;
     }
+    if ((input->pressed & P4_BUTTON_UP) != 0U) {
+        cycle_color_aid(state, false);
+    }
+    if ((input->pressed & P4_BUTTON_DOWN) != 0U) {
+        cycle_color_aid(state, true);
+    }
     if (state->phase == COLOR_CLASH_GAME_OVER) {
         if ((input->pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
             (void)color_clash_perform_action(
@@ -742,8 +799,78 @@ static unsigned frame_for_card(uint8_t card)
     return (unsigned)color_clash_card_color(card);
 }
 
+static void draw_color_shape_layer(p4_game_surface_t *surface,
+                                   int center_x, int center_y,
+                                   uint8_t color, int radius,
+                                   uint16_t ink)
+{
+    if (color == COLOR_CLASH_RED) {
+        p4_draw_fill_circle(surface, center_x, center_y, radius, ink);
+        return;
+    }
+    if (color == COLOR_CLASH_GOLD) {
+        for (int row = -radius; row <= radius; ++row) {
+            const int half = radius - (row < 0 ? -row : row);
+            p4_draw_fill_rect(surface, center_x - half, center_y + row,
+                              half * 2 + 1, 1, ink);
+        }
+        return;
+    }
+    if (color == COLOR_CLASH_TIFFANY) {
+        const int diameter = radius * 2;
+        for (int row = 0; row <= diameter; ++row) {
+            const int half = diameter == 0 ? 0 : row * radius / diameter;
+            p4_draw_fill_rect(surface, center_x - half,
+                              center_y - radius + row,
+                              half * 2 + 1, 1, ink);
+        }
+        return;
+    }
+    p4_draw_fill_rect(surface, center_x - radius, center_y - radius,
+                      radius * 2 + 1, radius * 2 + 1, ink);
+}
+
+static void draw_color_shape(p4_game_surface_t *surface,
+                             int center_x, int center_y,
+                             uint8_t color, int radius)
+{
+    if (color >= COLOR_CLASH_COLOR_COUNT) {
+        return;
+    }
+    draw_color_shape_layer(surface, center_x, center_y, color,
+                           radius + 1, COLOR_BLACK);
+    draw_color_shape_layer(surface, center_x, center_y, color,
+                           radius, COLOR_TEXT);
+}
+
+static void draw_card_color_badge(p4_game_surface_t *surface,
+                                  int x, int y, uint8_t color,
+                                  bool large, uint8_t color_aid)
+{
+    if (color_aid == COLOR_CLASH_COLOR_AID_STANDARD ||
+        color >= COLOR_CLASH_COLOR_COUNT) {
+        return;
+    }
+    const int center_x = x + (large ? 9 : 7);
+    const int center_y = y + (large ? 10 : 7);
+    const int radius = large ? 4 : 2;
+    if (color_aid == COLOR_CLASH_COLOR_AID_HIGH_CONTRAST) {
+        const int width = large ? 35 : 24;
+        const int height = large ? 16 : 12;
+        p4_draw_fill_rect(surface, x + 2, y + 2, width, height,
+                          COLOR_BLACK);
+        p4_draw_rect(surface, x + 2, y + 2, width, height, COLOR_TEXT);
+    }
+    draw_color_shape(surface, center_x, center_y, color, radius);
+    if (color_aid == COLOR_CLASH_COLOR_AID_HIGH_CONTRAST) {
+        char letter[2] = {s_color_letters[color], '\0'};
+        p4_draw_text(surface, x + (large ? 22 : 15),
+                     y + (large ? 6 : 4), letter, COLOR_TEXT, 1U, 1U);
+    }
+}
+
 static void draw_symbol(p4_game_surface_t *surface, int x, int y,
-                        uint8_t card, bool large)
+                        uint8_t card, bool large, uint8_t color_aid)
 {
     const color_clash_rank_t rank = color_clash_card_rank(card);
     if (rank == COLOR_CLASH_GAMECHANGER) {
@@ -788,18 +915,33 @@ static void draw_symbol(p4_game_surface_t *surface, int x, int y,
         const int radius = large ? 3 : 2;
         const int spread_x = large ? 10 : 7;
         const int spread_y = large ? 9 : 7;
-        p4_draw_fill_circle(surface, center_x - spread_x,
-                            center_y - spread_y,
-                            radius, COLOR_RED);
-        p4_draw_fill_circle(surface, center_x + spread_x,
-                            center_y - spread_y,
-                            radius, COLOR_YELLOW);
-        p4_draw_fill_circle(surface, center_x - spread_x,
-                            center_y + spread_y,
-                            radius, COLOR_TIFFANY);
-        p4_draw_fill_circle(surface, center_x + spread_x,
-                            center_y + spread_y,
-                            radius, COLOR_VIOLET);
+        if (color_aid == COLOR_CLASH_COLOR_AID_STANDARD) {
+            p4_draw_fill_circle(surface, center_x - spread_x,
+                                center_y - spread_y,
+                                radius, COLOR_RED);
+            p4_draw_fill_circle(surface, center_x + spread_x,
+                                center_y - spread_y,
+                                radius, COLOR_YELLOW);
+            p4_draw_fill_circle(surface, center_x - spread_x,
+                                center_y + spread_y,
+                                radius, COLOR_TIFFANY);
+            p4_draw_fill_circle(surface, center_x + spread_x,
+                                center_y + spread_y,
+                                radius, COLOR_VIOLET);
+        } else {
+            draw_color_shape(surface, center_x - spread_x,
+                             center_y - spread_y,
+                             COLOR_CLASH_RED, radius);
+            draw_color_shape(surface, center_x + spread_x,
+                             center_y - spread_y,
+                             COLOR_CLASH_GOLD, radius);
+            draw_color_shape(surface, center_x - spread_x,
+                             center_y + spread_y,
+                             COLOR_CLASH_TIFFANY, radius);
+            draw_color_shape(surface, center_x + spread_x,
+                             center_y + spread_y,
+                             COLOR_CLASH_VIOLET, radius);
+        }
         const char *const label = rank == COLOR_CLASH_WILD_DRAW_FOUR
             ? "+4" : "W";
         const unsigned label_chars = rank == COLOR_CLASH_WILD_DRAW_FOUR
@@ -840,7 +982,8 @@ static void draw_symbol(p4_game_surface_t *surface, int x, int y,
 }
 
 static void draw_card(p4_game_surface_t *surface, int x, int y,
-                      uint8_t card, bool large, bool selected)
+                      uint8_t card, bool large, bool selected,
+                      uint8_t color_aid)
 {
     const unsigned frame = frame_for_card(card);
     const bool high_res = high_resolution_surface(surface);
@@ -868,7 +1011,13 @@ static void draw_card(p4_game_surface_t *surface, int x, int y,
                      : s_color_clash_frames_small[frame]),
         (size_t)width, (size_t)height, (size_t)width,
         true, COLOR_CLASH_SPRITE_CHROMA);
-    draw_symbol(surface, x, y, card, large);
+    draw_symbol(surface, x, y, card, large, color_aid);
+    const color_clash_rank_t rank = color_clash_card_rank(card);
+    if (rank <= COLOR_CLASH_DRAW_TWO) {
+        draw_card_color_badge(surface, x, y,
+                              (uint8_t)color_clash_card_color(card),
+                              large, color_aid);
+    }
     if (selected) {
         p4_draw_rect(surface, x - 2, y - 2,
                      logical_width + 4, logical_height + 4,
@@ -879,7 +1028,8 @@ static void draw_card(p4_game_surface_t *surface, int x, int y,
     }
 }
 
-static void draw_card_back(p4_game_surface_t *surface, int x, int y)
+static void draw_card_back(p4_game_surface_t *surface, int x, int y,
+                           uint8_t color_aid)
 {
     p4_draw_fill_rect(surface, x + 2, y + 3,
                       COLOR_CLASH_FRAME_LARGE_WIDTH,
@@ -894,6 +1044,11 @@ static void draw_card_back(p4_game_surface_t *surface, int x, int y)
     for (uint8_t color = 0U; color < COLOR_CLASH_COLOR_COUNT; ++color) {
         p4_draw_fill_rect(surface, x + 9, y + 14 + (int)color * 8,
                           24, 5, s_colors[color]);
+        if (color_aid != COLOR_CLASH_COLOR_AID_STANDARD) {
+            draw_color_shape(surface, x + 14,
+                             y + 16 + (int)color * 8,
+                             color, 2);
+        }
     }
 }
 
@@ -916,26 +1071,41 @@ static void draw_menu(p4_game_surface_t *surface,
                   color_clash_make_card(
                       (color_clash_color_t)color,
                       (color_clash_rank_t)(color + 2U)),
-                  false, false);
+                  false, false, color_aid_mode(state));
     }
     draw_card(surface, 146, 47,
               color_clash_make_card(
                   COLOR_CLASH_RED, COLOR_CLASH_GAMECHANGER),
-              false, false);
+              false, false, color_aid_mode(state));
     p4_draw_text(surface, 89, 99, "SOLO PRACTICE VS BOTS",
                  COLOR_GOLD, 1U, 21U);
-    p4_draw_fill_rect(surface, 48, 116, 58, 28, COLOR_PANEL);
-    p4_draw_rect(surface, 48, 116, 58, 28, COLOR_LINE);
-    p4_draw_text(surface, 70, 126, "-", COLOR_TEXT, 1U, 1U);
+    p4_draw_fill_rect(surface, 48, MENU_PLAYER_Y, 58, MENU_PLAYER_H,
+                      COLOR_PANEL);
+    p4_draw_rect(surface, 48, MENU_PLAYER_Y, 58, MENU_PLAYER_H, COLOR_LINE);
+    p4_draw_text(surface, 70, 122, "-", COLOR_TEXT, 1U, 1U);
     char players[14] = "2 PLAYERS";
     players[0] = (char)('0' + state->menu_players);
-    p4_draw_text(surface, 119, 126, players, COLOR_TEXT, 1U, 9U);
-    p4_draw_fill_rect(surface, 214, 116, 58, 28, COLOR_PANEL);
-    p4_draw_rect(surface, 214, 116, 58, 28, COLOR_LINE);
-    p4_draw_text(surface, 237, 126, "+", COLOR_TEXT, 1U, 1U);
-    p4_draw_fill_rect(surface, 91, 151, 138, 30, COLOR_ACCENT);
-    p4_draw_rect(surface, 91, 151, 138, 30, COLOR_TEXT);
-    p4_draw_text(surface, 124, 162, "START PRACTICE",
+    p4_draw_text(surface, 119, 122, players, COLOR_TEXT, 1U, 9U);
+    p4_draw_fill_rect(surface, 214, MENU_PLAYER_Y, 58, MENU_PLAYER_H,
+                      COLOR_PANEL);
+    p4_draw_rect(surface, 214, MENU_PLAYER_Y, 58, MENU_PLAYER_H, COLOR_LINE);
+    p4_draw_text(surface, 237, 122, "+", COLOR_TEXT, 1U, 1U);
+    p4_draw_fill_rect(surface, 48, MENU_AID_Y, 224, MENU_AID_H,
+                      COLOR_PANEL_ALT);
+    p4_draw_rect(surface, 48, MENU_AID_Y, 224, MENU_AID_H, COLOR_ACCENT);
+    p4_draw_text(surface, 61, 148, "<", COLOR_TEXT, 1U, 1U);
+    p4_draw_text(surface, 253, 148, ">", COLOR_TEXT, 1U, 1U);
+    const uint8_t aid = color_aid_mode(state);
+    char aid_label[24] = "COLOR AID: ";
+    memcpy(aid_label + 11, s_color_aid_names[aid],
+           s_color_aid_name_chars[aid] + 1U);
+    const int aid_chars = 11 + (int)s_color_aid_name_chars[aid];
+    p4_draw_text(surface, 160 - aid_chars * 3, 148,
+                 aid_label, COLOR_TEXT, 1U, (size_t)aid_chars);
+    p4_draw_fill_rect(surface, 91, MENU_START_Y, 138, MENU_START_H,
+                      COLOR_ACCENT);
+    p4_draw_rect(surface, 91, MENU_START_Y, 138, MENU_START_H, COLOR_TEXT);
+    p4_draw_text(surface, 124, 171, "START PRACTICE",
                  COLOR_BG, 1U, 14U);
     p4_draw_text(surface, 61, 188, "NETWORK PLAY: OPEN P4MP LOBBY",
                  COLOR_MUTED, 1U, 31U);
@@ -984,7 +1154,15 @@ static void draw_status(p4_game_surface_t *surface,
     p4_draw_fill_rect(surface, 123, 25, 18, 10,
                       s_colors[state->active_color]);
     p4_draw_rect(surface, 123, 25, 18, 10, COLOR_TEXT);
-    p4_draw_text(surface, 154, 27,
+    const uint8_t aid = color_aid_mode(state);
+    if (aid != COLOR_CLASH_COLOR_AID_STANDARD) {
+        draw_color_shape(surface, 132, 30, state->active_color, 2);
+        p4_draw_text(surface, 144, 27,
+                     s_color_names[state->active_color], COLOR_TEXT,
+                     1U, s_color_name_chars[state->active_color]);
+    }
+    p4_draw_text(surface,
+                 aid == COLOR_CLASH_COLOR_AID_STANDARD ? 154 : 174, 27,
                  state->direction == 0U ? "ORDER >" : "ORDER <",
                  COLOR_MUTED, 1U, 7U);
 }
@@ -1047,7 +1225,7 @@ static void draw_hand(p4_game_surface_t *surface,
         draw_card(surface, HAND_X + (int)visible * HAND_STEP,
                   HAND_Y - lift,
                   state->hands[state->local_player_slot][index],
-                  false, selected);
+                  false, selected, color_aid_mode(state));
     }
     if (count > COLOR_CLASH_VISIBLE_CARDS) {
         const uint8_t end = (uint8_t)(
@@ -1092,9 +1270,15 @@ static void draw_choice_overlay(p4_game_surface_t *surface,
             p4_draw_rect(surface, x, 89, 50, 38,
                          color == state->selected_color
                             ? COLOR_TEXT : COLOR_LINE);
+            const uint8_t aid = color_aid_mode(state);
+            if (aid != COLOR_CLASH_COLOR_AID_STANDARD) {
+                draw_color_shape(surface, x + 25, 98, color, 3);
+            }
             const int text_x = x +
                 (50 - (int)s_color_name_chars[color] * 6) / 2;
-            p4_draw_text(surface, text_x, 104, s_color_names[color],
+            p4_draw_text(surface, text_x,
+                         aid == COLOR_CLASH_COLOR_AID_STANDARD ? 104 : 112,
+                         s_color_names[color],
                          color == COLOR_CLASH_GOLD ||
                          color == COLOR_CLASH_TIFFANY
                             ? COLOR_BLACK : COLOR_TEXT,
@@ -1136,7 +1320,7 @@ static void draw_game_over(p4_game_surface_t *surface,
     draw_card(surface, 55, 67,
               color_clash_make_card(
                   COLOR_CLASH_RED, COLOR_CLASH_GAMECHANGER),
-              true, false);
+              true, false, color_aid_mode(state));
     p4_draw_text(surface, 126, 60, "ROUND COMPLETE", COLOR_GOLD, 1U, 14U);
     char winner[18] = "PLAYER 1 WINS";
     winner[7] = (char)('1' + state->winner);
@@ -1188,8 +1372,9 @@ static bool game_render(p4_game_context_t *context,
     draw_status(surface, state);
     draw_uno_button(surface, state);
     draw_card(surface, 133, 54,
-              state->discard[state->discard_count - 1U], true, false);
-    draw_card_back(surface, 192, 54);
+              state->discard[state->discard_count - 1U], true, false,
+              color_aid_mode(state));
+    draw_card_back(surface, 192, 54, color_aid_mode(state));
     char deck[10] = "DECK 0";
     (void)append_unsigned(deck, sizeof(deck), 5U, state->deck_count);
     p4_draw_text(surface, 194, 119, deck, COLOR_MUTED, 1U, 9U);

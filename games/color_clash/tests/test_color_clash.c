@@ -282,6 +282,7 @@ static void test_render_resolution_negotiation(void)
         &instance, &p4_color_clash_game, &low_res_services,
         &state, sizeof(state)));
     state = simple_state(2U);
+    state.color_aid = COLOR_CLASH_COLOR_AID_HIGH_CONTRAST;
     uint16_t *const low_res_pixels = calloc(
         P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT,
         sizeof(*low_res_pixels));
@@ -316,6 +317,7 @@ static void test_render_resolution_negotiation(void)
     tap(&instance, 150U, 165U);
     CHECK(state.phase == COLOR_CLASH_TURN);
     state = simple_state(2U);
+    state.color_aid = COLOR_CLASH_COLOR_AID_HIGH_CONTRAST;
     state.discard[0] = color_clash_make_card(
         COLOR_CLASH_RED, COLOR_CLASH_GAMECHANGER);
 
@@ -869,6 +871,15 @@ static void test_lifecycle_touch_and_framebuffer(void)
     CHECK(p4_game_instance_start(&instance, &p4_color_clash_game, &services,
                                  &state, sizeof(state)));
     CHECK(state.phase == COLOR_CLASH_MENU);
+    CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_SYMBOLS);
+    CHECK(update_button(&instance, P4_BUTTON_UP));
+    CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_STANDARD);
+    CHECK(state.menu_players == 2U);
+    CHECK(update_button(&instance, P4_BUTTON_DOWN));
+    CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_SYMBOLS);
+    CHECK(update_button(&instance, P4_BUTTON_DOWN));
+    CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_HIGH_CONTRAST);
+    CHECK(state.menu_players == 2U);
     CHECK(update_button(&instance, P4_BUTTON_RIGHT));
     CHECK(update_button(&instance, P4_BUTTON_RIGHT));
     CHECK(state.menu_players == 4U);
@@ -876,6 +887,17 @@ static void test_lifecycle_touch_and_framebuffer(void)
     CHECK(state.phase == COLOR_CLASH_TURN);
     CHECK(state.player_count == 4U);
     CHECK(state.local_player_slot == 0U);
+    CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_HIGH_CONTRAST);
+    CHECK(update_button(&instance, P4_BUTTON_UP));
+    CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_SYMBOLS);
+    CHECK(update_button(&instance, P4_BUTTON_DOWN));
+    CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_HIGH_CONTRAST);
+    tap(&instance, 132U, 30U);
+    CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_STANDARD);
+    tap(&instance, 132U, 30U);
+    CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_SYMBOLS);
+    CHECK(update_button(&instance, P4_BUTTON_DOWN));
+    CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_HIGH_CONTRAST);
 
     const uint8_t before = state.hand_counts[0];
     force_nonplayable_draw(&state);
@@ -923,6 +945,11 @@ static void test_lifecycle_touch_and_framebuffer(void)
     }
     CHECK(update_button(&instance, P4_BUTTON_BACK));
     CHECK(state.phase == COLOR_CLASH_MENU);
+    CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_HIGH_CONTRAST);
+    tap(&instance, 60U, 150U);
+    CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_SYMBOLS);
+    tap(&instance, 250U, 150U);
+    CHECK(state.color_aid == COLOR_CLASH_COLOR_AID_HIGH_CONTRAST);
     const p4_game_input_t back = {
         .held = P4_BUTTON_BACK,
         .pressed = P4_BUTTON_BACK,
@@ -991,6 +1018,7 @@ static void test_color_chooser_render(void)
     CHECK(p4_game_instance_start(&instance, &p4_color_clash_game, &services,
                                  &state, sizeof(state)));
     state = simple_state(2U);
+    state.color_aid = COLOR_CLASH_COLOR_AID_SYMBOLS;
     state.phase = COLOR_CLASH_CHOOSE_COLOR;
     state.hand_counts[0] = 1U;
     state.hands[0][0] = color_clash_make_card(
@@ -1340,6 +1368,7 @@ static void test_four_player_network(void)
     CHECK(states[0].network_started);
     for (uint8_t slot = 1U; slot < link.player_count; ++slot) {
         CHECK(states[slot].network_started);
+        CHECK(states[slot].color_aid == COLOR_CLASH_COLOR_AID_SYMBOLS);
         CHECK(states[slot].player_count == 4U);
         CHECK(states[slot].network_revision == states[0].network_revision);
         CHECK(states[slot].hand_counts[slot] == COLOR_CLASH_STARTING_HAND);
@@ -1348,6 +1377,10 @@ static void test_four_player_network(void)
         const uint8_t hidden = slot == 1U ? 2U : 1U;
         CHECK(states[slot].hands[hidden][0] == 0U);
     }
+
+    CHECK(update_button(&instances[1], P4_BUTTON_DOWN));
+    CHECK(states[1].color_aid == COLOR_CLASH_COLOR_AID_HIGH_CONTRAST);
+    CHECK(states[0].color_aid == COLOR_CLASH_COLOR_AID_SYMBOLS);
 
     states[0].hand_counts[1] = 60U;
     for (uint8_t index = 0U; index < states[0].hand_counts[1]; ++index) {

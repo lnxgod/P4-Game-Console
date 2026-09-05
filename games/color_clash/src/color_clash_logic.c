@@ -300,6 +300,8 @@ void color_clash_reset_match(color_clash_state_t *state,
     const p4_game_multiplayer_role_t role = state->network_role;
     const uint64_t network_seed = state->network_seed;
     const uint32_t revision = state->network_revision;
+    const uint8_t color_aid = state->color_aid < COLOR_CLASH_COLOR_AID_COUNT
+        ? state->color_aid : COLOR_CLASH_COLOR_AID_SYMBOLS;
     uint32_t sequences[COLOR_CLASH_MAX_PLAYERS];
     memcpy(sequences, state->last_network_sequence, sizeof(sequences));
     const bool network_started = state->network_started;
@@ -310,6 +312,7 @@ void color_clash_reset_match(color_clash_state_t *state,
             ? human_player_count : 1U,
         .local_player_slot = local_slot,
         .menu_players = player_count,
+        .color_aid = color_aid,
         .winner = NO_WINNER,
         .uno_pending_player = NO_PLAYER,
         .notice_player = NO_PLAYER,

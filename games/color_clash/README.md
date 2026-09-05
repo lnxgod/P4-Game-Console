@@ -41,6 +41,10 @@ fallback without exposing alternating human hands on one screen.
   for themself; any other player may call them first, making the caught player
   draw two cards. The window closes when the next normal turn action succeeds.
 - The color chooser labels all four choices: RED, GOLD, TIFF, and PURP.
+- Color Aid defaults to Symbols, assigning a circle to red, diamond to gold,
+  triangle to Tiffany blue, and square to purple. High Contrast adds a dark
+  badge and the letters R/G/T/P to every colored card. The same marks appear
+  on Wilds, the deck, the active-color status, and the color chooser.
 - Playing Gamechanger opens a player chooser. Every hand rotates by the same
   offset so the player who used it receives the chosen player's former hand.
   If that received hand has one or two cards, only the Gamechanger player draws
@@ -48,6 +52,13 @@ fallback without exposing alternating human hands on one screen.
 
 ## Controls
 
+- On the practice menu, **Left/Right** changes the player count and
+  **Up/Down** selects Standard, Symbols, or High Contrast Color Aid. The
+  setting stays active when restarting or returning to the menu. Touch users
+  can tap the left or right half of the Color Aid row.
+- During practice or multiplayer, **Up/Down** can change Color Aid locally at
+  any time without affecting the match or another console. Touch users can
+  tap the active-color indicator at the top of the table to cycle modes.
 - **Left/Right** selects a card and scrolls long hands; **A** plays it.
 - Cards that are currently legal to play stay grouped at the left of the hand
   in their original relative order and sit slightly higher than the remaining
