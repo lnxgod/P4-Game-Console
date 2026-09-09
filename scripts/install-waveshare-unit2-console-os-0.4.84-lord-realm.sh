@@ -374,10 +374,21 @@ P4_PREDECESSOR_HASH=$(head -c "$P4_PREDECESSOR_BYTES" "$P4_PREIMAGE" | \
 }
 P4_OLD_TAIL_NON_FF=$(tail -c +$((P4_PREDECESSOR_BYTES + 1)) "$P4_PREIMAGE" | \
     LC_ALL=C tr -d '\377' | wc -c | tr -d ' ')
-[ "$P4_OLD_TAIL_NON_FF" = 0 ] || {
-    printf 'Refusing to install: predecessor sector padding is not erased.\n' >&2
-    exit 1
-}
+P4_TAIL_ERASED_REQUIRED=$(python3 - "$P4_AUTH" <<'PY'
+import json
+import pathlib
+import sys
+
+data = json.loads(pathlib.Path(sys.argv[1]).read_text(encoding="utf-8"))
+print(str(data["predecessor"].get("tail_erased_required", True)).lower())
+PY
+)
+if [ "$P4_TAIL_ERASED_REQUIRED" = true ]; then
+    [ "$P4_OLD_TAIL_NON_FF" = 0 ] || {
+        printf 'Refusing to install: predecessor sector padding is not erased.\n' >&2
+        exit 1
+    }
+fi
 P4_PREIMAGE_HASH=$(p4_sha256_file "$P4_PREIMAGE")
 
 python3 - "$P4_LEDGER" "$P4_AUTH_EXPECTED" \
