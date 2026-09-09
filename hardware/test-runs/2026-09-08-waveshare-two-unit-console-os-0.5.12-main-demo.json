@@ -1,0 +1,121 @@
+{
+  "schema": 1,
+  "date_local": "2026-09-08",
+  "purpose": "Integrate the selected Console OS 0.5.12 baseline into main, install the exact controller-first build on both recorded Waveshare 4.3 demo units, and reconcile their removable-SD demo content.",
+  "source": {
+    "branch": "main",
+    "feature_commit": "85496e08333dbb0b6031fda555735f497c64fd12",
+    "integration_commit": "8d621e5",
+    "origin_sync": "main...origin/main=0/0 after fetch",
+    "feature_history": "origin/feature/device-power-audio-scroll-sd-control is an ancestor of main",
+    "console_os_version": "0.5.12",
+    "board_profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "toolchain": "ESP-IDF 5.5.3 at 2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "application_bytes": 1877248,
+    "application_sha256": "1b969c8b9b5a7dc1b8ed048dc44c09b0d47d1dda1b57bfc80151a7567a3b1d72",
+    "elf_sha256": "0cc0d62f555812f6f1fb2bc0f2275c6560c48042464118ad2bc30e6506e1da4b",
+    "update_sha256": "3bf2116a631295563cb29d08aaf6a8aae413867b847bdb0703341f14de826b9c",
+    "padded_mutation_bytes": 1880064
+  },
+  "software_validation": {
+    "make_verify": "pass",
+    "controller_first_build": "pass",
+    "waveshare_build_verifier": "pass",
+    "native_p4g_packages": 19,
+    "native_p4g_manifest_sha256": "b1da162fe50b899a6db01730f5b3efa8ce5b7c572de0ed034aecd1526108d535",
+    "commercial_wads_embedded": false
+  },
+  "units": [
+    {
+      "unit": "unit1-pink-B289",
+      "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+      "authorization_sha256": "84d158f4316de8469b6f57ecc94854cb053a3cda07a8295e0834416be083a99a",
+      "install": "app-only write at 0x20000; esptool digest and complete padded readback passed",
+      "preimage_sha256": "506502976a7a3a2093750bc07b7ef6837c21e7357c9cf1c1b1f25684a921dad6",
+      "padded_readback_sha256": "551571629675f8a1e37fdb1d5d91b15c1849256a22b452aca8469422ed4c24b6",
+      "retained_uart": {
+        "result": "pass",
+        "capture_seconds": 105.456,
+        "raw_sha256": "5687a2e170c675ad9437f8f117049d9d72c0306554dbc48c8801cf2e42846f48",
+        "start_count": 1,
+        "panic_or_reboot": false,
+        "usb_input_ready": true,
+        "touch_ready": true,
+        "catalog_packages": 19,
+        "catalog_valid": 19,
+        "catalog_omitted": 0,
+        "p4cart_valid": 1
+      }
+    },
+    {
+      "unit": "unit2-green-386F",
+      "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+      "authorization_sha256": "593678d374d0f46fec497fb460db92dc22f4c6381eba20a25b8504bde6d7bc86",
+      "install": "app-only write at 0x20000; esptool digest and complete padded readback passed",
+      "preimage_sha256": "46b5f543db9ab94c114d1bbd435f7e952cfe03d0e0a67e2a1a8acdb185870b26",
+      "padded_readback_sha256": "551571629675f8a1e37fdb1d5d91b15c1849256a22b452aca8469422ed4c24b6",
+      "retained_uart": {
+        "result": "pass",
+        "capture_seconds": 103.751,
+        "raw_sha256": "1463b72e7a0d91052c4c1ff6f88880176aa9e18bb998aa668f18e39a45c2b3f3",
+        "start_count": 1,
+        "panic_or_reboot": false,
+        "usb_input_ready": true,
+        "touch_ready": true,
+        "catalog_packages": 21,
+        "catalog_valid": 21,
+        "catalog_omitted": 0,
+        "additional_user_packages_preserved": 2,
+        "p4cart_valid": 0
+      }
+    }
+  ],
+  "content": {
+    "native_p4g": {
+      "result": "pass",
+      "evidence": "The complete 19-package bundle was exact-H1 verified on both units under Console OS 0.4.101; the microSD was preserved by this app-only update, and games, the Game API, the resource format, and package tooling have no source changes between that deployment and this build.",
+      "yahtzee_current_exact_h1": {
+        "bytes": 40388,
+        "sha256": "38c17a2d6b6982a4c6311850f5aeca158a294ea2a5a9edcbf3d4fe53ae01226c",
+        "unit1": "already-present hash=verified",
+        "unit2": "already-present hash=verified"
+      }
+    },
+    "doom_shareware": {
+      "bytes": 4196020,
+      "sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+      "unit1": "already-present hash=verified",
+      "unit2": "already-present hash=verified",
+      "runtime_launch": "not-sampled; both bounded captures remained stable at the launcher and contained no Doom handoff marker"
+    },
+    "chex_quest": {
+      "wad_bytes": 12361532,
+      "wad_sha256": "d8eb5277918883f490fb1a4be3c9a8588df2dbaee6dc4beb8df4929148bbffb1",
+      "deh_bytes": 20367,
+      "deh_sha256": "8c0345089fb227fa7f71c25a6c6e31ff5bd4bea0580f286cd74e05918d72dd40",
+      "unit1": "wad and deh already-present hash=verified",
+      "unit2": "wad and deh already-present hash=verified"
+    },
+    "h2_only_assets": {
+      "status": "physical-H2-attachment-pending",
+      "reason": "The current H1 file service accepts native P4G or TRANSFER files, not P4R or P4CART installation targets, and neither H2 device interface was attached to the Mac during this run.",
+      "byte_buddy_resource": {
+        "file": "GAMES/BYTEBUD.P4R",
+        "bytes": 965312,
+        "sha256": "5d3b604daa3bf97f2c99268b4f2eedb3a4270f18558415fa7aee8e0a9a40dcd4"
+      },
+      "source_cartridges": [
+        {
+          "file": "P4/GAMES/BOUNCE-LAB.P4CART",
+          "sha256": "943f55008aba146364abd4b61cc6ff81f5b38e87bf65db8c6bd17422ae966682"
+        },
+        {
+          "file": "P4/GAMES/QR-DODGE.P4CART",
+          "sha256": "15b51f0e374612435390b4aefa87a5ebf5696fe3436bdb91ec0a5bf4e584573a"
+        }
+      ],
+      "observed": "unit1 reported one valid P4CART; unit2 reported zero; exact BYTEBUD.P4R presence was not remotely observable"
+    }
+  },
+  "result": "firmware-and-native-catalog-pass-h2-assets-and-doom-runtime-pending"
+}
