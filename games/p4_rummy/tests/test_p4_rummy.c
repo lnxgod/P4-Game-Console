@@ -771,8 +771,20 @@ static bool test_network_meld_request_and_snapshot(void)
     CHECK(sync_from_host(2U, instances, states));
     states[1].selected_card = 0U;
     CHECK(update_button(&instances[1], P4_BUTTON_B));
+    for (uint8_t tick = 0U; tick < 70U; ++tick) {
+        CHECK(update_empty(&instances[0], 16U));
+        CHECK(update_empty(&instances[1], 16U));
+    }
+    CHECK(states[1].selected_card == 0U);
+    CHECK(states[1].selected_mask == 0x01U);
     CHECK(update_button(&instances[1], P4_BUTTON_RIGHT));
     CHECK(update_button(&instances[1], P4_BUTTON_B));
+    for (uint8_t tick = 0U; tick < 70U; ++tick) {
+        CHECK(update_empty(&instances[0], 16U));
+        CHECK(update_empty(&instances[1], 16U));
+    }
+    CHECK(states[1].selected_card == 1U);
+    CHECK(states[1].selected_mask == 0x03U);
     CHECK(update_button(&instances[1], P4_BUTTON_RIGHT));
     CHECK(update_button(&instances[1], P4_BUTTON_B));
     CHECK(update_button(&instances[1], P4_BUTTON_START));

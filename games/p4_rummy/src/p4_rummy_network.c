@@ -483,10 +483,25 @@ static bool apply_snapshot(p4_rummy_state_t *state,
     if (!snapshot_valid(state, bytes, byte_count)) {
         return false;
     }
-    state->revision = read_u32(bytes + 2U);
-    state->phase = (p4_rummy_phase_t)snapshot_phase(bytes);
+    const uint32_t incoming_revision = read_u32(bytes + 2U);
+    const p4_rummy_phase_t incoming_phase =
+        (p4_rummy_phase_t)snapshot_phase(bytes);
+    const uint8_t incoming_current_player =
+        snapshot_current_player(bytes);
+    const bool preserve_selection =
+        state->network_started &&
+        incoming_revision == state->revision &&
+        state->phase == P4_RUMMY_PHASE_DISCARD &&
+        incoming_phase == P4_RUMMY_PHASE_DISCARD &&
+        state->current_player == state->local_player_slot &&
+        incoming_current_player == state->local_player_slot;
+    const uint8_t prior_selected_card = state->selected_card;
+    const uint8_t prior_selected_mask = state->selected_mask;
+
+    state->revision = incoming_revision;
+    state->phase = incoming_phase;
     state->player_count = snapshot_player_count(bytes);
-    state->current_player = snapshot_current_player(bytes);
+    state->current_player = incoming_current_player;
     state->cpu_mask = snapshot_cpu_mask(bytes);
     state->winner = snapshot_winner(bytes);
     state->discard_count = bytes[NET_DISCARD_OFFSET] == P4_RUMMY_NO_CARD
@@ -534,6 +549,18 @@ static bool apply_snapshot(p4_rummy_state_t *state,
         state->current_player == state->local_player_slot) {
         state->selected_card = (uint8_t)(
             state->hand_counts[state->current_player] - 1U);
+        if (preserve_selection) {
+            const uint8_t hand_count =
+                state->hand_counts[state->current_player];
+            const uint8_t valid_mask = hand_count >= 8U
+                ? UINT8_MAX
+                : (uint8_t)((UINT8_C(1) << hand_count) - 1U);
+            state->selected_mask =
+                (uint8_t)(prior_selected_mask & valid_mask);
+            if (prior_selected_card < hand_count) {
+                state->selected_card = prior_selected_card;
+            }
+        }
     }
     state->network_started = true;
     state->network_request_pending = false;
