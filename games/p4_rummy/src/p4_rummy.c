@@ -46,6 +46,14 @@ enum {
     PILE_Y = 66,
     CARD_W = 30,
     CARD_H = 42,
+    MELD_BUTTON_X = 51,
+    MELD_BUTTON_Y = 122,
+    MELD_BUTTON_W = 104,
+    MELD_BUTTON_H = 20,
+    DISCARD_BUTTON_X = 163,
+    DISCARD_BUTTON_Y = 122,
+    DISCARD_BUTTON_W = 104,
+    DISCARD_BUTTON_H = 20,
     SETUP_X = 52,
     SETUP_Y = 91,
     SETUP_W = 216,
@@ -55,6 +63,89 @@ enum {
     START_W = 138,
     START_H = 27,
 };
+
+static bool high_resolution_surface(const p4_game_surface_t *surface)
+{
+    return surface != NULL &&
+        surface->width == P4_GAME_SURFACE_HIGH_RES_WIDTH &&
+        surface->height == P4_GAME_SURFACE_HIGH_RES_HEIGHT;
+}
+
+static int scale_coordinate(const p4_game_surface_t *surface, int value)
+{
+    if (!high_resolution_surface(surface)) {
+        return value;
+    }
+    const int numerator = value * 12;
+    return numerator >= 0 ? (numerator + 2) / 5
+                          : -((-numerator + 2) / 5);
+}
+
+static int scale_extent(const p4_game_surface_t *surface,
+                        int origin, int extent)
+{
+    return scale_coordinate(surface, origin + extent) -
+        scale_coordinate(surface, origin);
+}
+
+static void high_res_fill_rect(p4_game_surface_t *surface,
+                               int x, int y, int width, int height,
+                               uint16_t color)
+{
+    p4_draw_fill_rect(surface, scale_coordinate(surface, x),
+                      scale_coordinate(surface, y),
+                      scale_extent(surface, x, width),
+                      scale_extent(surface, y, height), color);
+}
+
+static void high_res_rect(p4_game_surface_t *surface,
+                          int x, int y, int width, int height,
+                          uint16_t color)
+{
+    high_res_fill_rect(surface, x, y, width, 1, color);
+    high_res_fill_rect(surface, x, y + height - 1, width, 1, color);
+    high_res_fill_rect(surface, x, y, 1, height, color);
+    high_res_fill_rect(surface, x + width - 1, y, 1, height, color);
+}
+
+static void high_res_fill_circle(p4_game_surface_t *surface,
+                                 int center_x, int center_y, int radius,
+                                 uint16_t color)
+{
+    p4_draw_fill_circle(surface,
+                        scale_coordinate(surface, center_x),
+                        scale_coordinate(surface, center_y),
+                        scale_coordinate(surface, radius), color);
+}
+
+static void high_res_pixel(p4_game_surface_t *surface,
+                           int x, int y, uint16_t color)
+{
+    high_res_fill_rect(surface, x, y, 1, 1, color);
+}
+
+static void high_res_text(p4_game_surface_t *surface,
+                          int x, int y, const char *value,
+                          uint16_t color, unsigned scale,
+                          size_t max_characters)
+{
+    unsigned output_scale = scale;
+    if (high_resolution_surface(surface)) {
+        output_scale = (scale * 12U + 2U) / 5U;
+    }
+    p4_draw_text(surface, scale_coordinate(surface, x),
+                 scale_coordinate(surface, y), value, color,
+                 output_scale, max_characters);
+}
+
+/* Keep touch/gameplay geometry in canonical 320x200 coordinates while every
+ * code-rendered primitive is rasterized directly into the negotiated surface.
+ */
+#define p4_draw_fill_rect high_res_fill_rect
+#define p4_draw_rect high_res_rect
+#define p4_draw_fill_circle high_res_fill_circle
+#define p4_draw_pixel high_res_pixel
+#define p4_draw_text high_res_text
 
 static bool point_in(uint16_t px, uint16_t py,
                      int x, int y, int width, int height)
@@ -87,6 +178,16 @@ static size_t append_unsigned(char *text, size_t capacity, size_t length,
     }
     text[length] = '\0';
     return length;
+}
+
+static size_t append_signed(char *text, size_t capacity, size_t length,
+                            int value)
+{
+    if (value < 0) {
+        length = append_text(text, capacity, length, "-");
+        value = -value;
+    }
+    return append_unsigned(text, capacity, length, (unsigned)value);
 }
 
 static void rank_text(uint8_t card, char text[3])
@@ -126,6 +227,16 @@ static uint16_t suit_color(uint8_t card)
         return COLOR_CLUB;
     }
     return suit == 1U || suit == 2U ? COLOR_RED : COLOR_BLACK;
+}
+
+static uint8_t selection_count(uint8_t selection_mask)
+{
+    uint8_t count = 0U;
+    while (selection_mask != 0U) {
+        count = (uint8_t)(count + (selection_mask & 1U));
+        selection_mask >>= 1U;
+    }
+    return count;
 }
 
 static void fill_rounded_rect(p4_game_surface_t *surface,
@@ -285,6 +396,54 @@ static void draw_card(p4_game_surface_t *surface, int x, int y,
                  rank, color, 1U, ten ? 2U : 1U);
 }
 
+static void draw_mini_card(p4_game_surface_t *surface, int x, int y,
+                           uint8_t card)
+{
+    p4_draw_fill_rect(surface, x + 1, y + 1, 16, 14, COLOR_CARD_SHADOW);
+    p4_draw_fill_rect(surface, x, y, 16, 14, COLOR_CARD);
+    p4_draw_rect(surface, x, y, 16, 14, COLOR_PANEL_EDGE);
+    char rank[3] = {0};
+    rank_text(card, rank);
+    const uint16_t color = suit_color(card);
+    if (rank[1] == '\0') {
+        p4_draw_text(surface, x + 1, y + 4, rank, color, 1U, 1U);
+    } else {
+        p4_draw_fill_rect(surface, x + 2, y + 4, 1, 7, color);
+        p4_draw_pixel(surface, x + 1, y + 5, color);
+        p4_draw_fill_rect(surface, x + 1, y + 10, 3, 1, color);
+        p4_draw_rect(surface, x + 5, y + 4, 3, 7, color);
+    }
+    draw_suit(surface, x + 8, y + 3, suit_glyph(card),
+              color, COLOR_CARD,
+              P4_DRAW_CP437_COMPACT_HEIGHT);
+}
+
+static void draw_table_melds(p4_game_surface_t *surface,
+                             const p4_rummy_state_t *state)
+{
+    for (uint8_t meld = 0U; meld < state->meld_count; ++meld) {
+        const int x = (meld & 1U) == 0U ? 7 : 226;
+        const int y = 43 + (int)(meld / 2U) * 19;
+        fill_rounded_rect(surface, x, y, 87, 17, 2, COLOR_PANEL_EDGE);
+        fill_rounded_rect(surface, x + 1, y + 1, 85, 15, 1, COLOR_PANEL);
+        char owner[3] = {'P',
+            (char)('1' + state->meld_owners[meld]), '\0'};
+        p4_draw_text(surface, x + 3, y + 5, owner,
+                     COLOR_GOLD, 1U, 2U);
+        const uint8_t visible = state->meld_counts[meld] <= 4U
+            ? state->meld_counts[meld] : 3U;
+        for (uint8_t index = 0U; index < visible; ++index) {
+            draw_mini_card(surface, x + 18 + (int)index * 17,
+                           y + 1, state->melds[meld][index]);
+        }
+        if (state->meld_counts[meld] > visible) {
+            const char more[2] = {'+', '\0'};
+            p4_draw_text(surface, x + 72, y + 5, more,
+                         COLOR_GOLD, 1U, 1U);
+        }
+    }
+}
+
 static void draw_exit(p4_game_surface_t *surface)
 {
     fill_rounded_rect(surface, EXIT_X, EXIT_Y,
@@ -314,21 +473,26 @@ static void draw_title_bar(p4_game_surface_t *surface)
 {
     draw_suit(surface, 116, 1, SUIT_HEART_GLYPH,
               COLOR_RED, COLOR_BACKGROUND, P4_DRAW_CP437_FULL_HEIGHT);
-    p4_draw_text(surface, 130, 6, "P4 RUMMY", COLOR_GOLD, 1U, 8U);
+    p4_draw_text(surface, 130, 6, "RUMMY 500", COLOR_GOLD, 1U, 9U);
     draw_suit(surface, 191, 1, SUIT_SPADE_GLYPH,
               COLOR_CREAM, COLOR_BACKGROUND, P4_DRAW_CP437_FULL_HEIGHT);
+    p4_draw_text(surface, 247, 6, "HAND/SCORE",
+                 COLOR_MUTED, 1U, 10U);
     draw_exit(surface);
 }
 
-static void player_label(char text[12], const p4_rummy_state_t *state,
+static void player_label(char text[16], const p4_rummy_state_t *state,
                          uint8_t player)
 {
-    size_t length = append_text(text, 12U, 0U,
+    size_t length = append_text(text, 16U, 0U,
                                 p4_rummy_player_is_cpu(state, player)
-                                    ? "CPU" : "P");
-    length = append_unsigned(text, 12U, length, (unsigned)player + 1U);
-    length = append_text(text, 12U, length, "  ");
-    (void)append_unsigned(text, 12U, length, state->hand_counts[player]);
+                                    ? "C" : "P");
+    length = append_unsigned(text, 16U, length, (unsigned)player + 1U);
+    length = append_text(text, 16U, length, " ");
+    length = append_unsigned(text, 16U, length,
+                             state->hand_counts[player]);
+    length = append_text(text, 16U, length, "/");
+    (void)append_signed(text, 16U, length, state->scores[player]);
 }
 
 static void draw_player_strip(p4_game_surface_t *surface,
@@ -350,18 +514,10 @@ static void draw_player_strip(p4_game_surface_t *surface,
         if (current) {
             p4_draw_fill_rect(surface, x + 2, 25, 2, 10, COLOR_GOLD);
         }
-        char label[12] = {0};
+        char label[16] = {0};
         player_label(label, state, player);
-        p4_draw_text(surface, x + 7, 27, label,
-                     current ? COLOR_GOLD : COLOR_TEXT, 1U, 7U);
-        static const uint8_t player_suits[] = {
-            SUIT_HEART_GLYPH, SUIT_SPADE_GLYPH,
-            SUIT_DIAMOND_GLYPH, SUIT_CLUB_GLYPH,
-        };
-        const uint16_t icon_color =
-            player == 0U || player == 2U ? COLOR_RED : COLOR_CREAM;
-        draw_suit(surface, x + 62, 26, player_suits[player],
-                  icon_color, panel, P4_DRAW_CP437_COMPACT_HEIGHT);
+        p4_draw_text(surface, x + 5, 27, label,
+                     current ? COLOR_GOLD : COLOR_TEXT, 1U, 13U);
     }
 }
 
@@ -400,13 +556,20 @@ static void draw_hand(p4_game_surface_t *surface,
     const uint8_t count = state->hand_counts[player];
     const int start_x = hand_start_x(count);
     for (uint8_t index = 0U; index < count; ++index) {
-        const bool selected = player == state->current_player &&
+        const bool local = player == state->current_player &&
             p4_rummy_local_turn(state) &&
-            state->phase == P4_RUMMY_PHASE_DISCARD &&
-            index == state->selected_card;
+            state->phase == P4_RUMMY_PHASE_DISCARD;
+        const bool marked = local &&
+            (state->selected_mask & (UINT8_C(1) << index)) != 0U;
+        const bool focused = local && index == state->selected_card;
         draw_card(surface, start_x + (int)index * 33,
-                  selected ? 142 : 147, state->hands[player][index],
-                  true, selected);
+                  marked ? 142 : 147, state->hands[player][index],
+                  true, marked);
+        if (focused) {
+            p4_draw_fill_rect(surface,
+                start_x + (int)index * 33 + 7, 191,
+                16, 2, COLOR_GOLD);
+        }
     }
 }
 
@@ -424,13 +587,15 @@ static void draw_setup(p4_game_surface_t *surface,
 
     draw_card(surface, 35, 38, 12U, true, false);
     draw_card(surface, 255, 38, 51U, true, false);
-    p4_draw_text(surface, 112, 38, "P4 RUMMY", COLOR_GOLD, 2U, 8U);
+    p4_draw_text(surface, 106, 38, "RUMMY 500", COLOR_GOLD, 2U, 9U);
     draw_suit(surface, 105, 66, SUIT_CLUB_GLYPH,
               COLOR_CREAM, COLOR_FELT_DARK, P4_DRAW_CP437_COMPACT_HEIGHT);
     draw_suit(surface, 207, 66, SUIT_SPADE_GLYPH,
               COLOR_CREAM, COLOR_FELT_DARK, P4_DRAW_CP437_COMPACT_HEIGHT);
     p4_draw_text(surface, 116, 67, "SETS  +  RUNS",
                  COLOR_MUTED, 1U, 13U);
+    p4_draw_text(surface, 124, 79, "FIRST TO 500",
+                 COLOR_GOLD, 1U, 12U);
 
     fill_rounded_rect(surface, SETUP_X + 1, SETUP_Y + 2,
                       SETUP_W, SETUP_H, 3, COLOR_CARD_SHADOW);
@@ -466,10 +631,10 @@ static void draw_setup(p4_game_surface_t *surface,
     fill_rounded_rect(surface, START_X + 2, START_Y + 2,
                       START_W - 4, START_H - 4, 2,
                       can_start ? COLOR_ACCENT : COLOR_PANEL);
-    p4_draw_text(surface, can_start ? 119 : 103, 147,
-                 can_start ? "A  DEAL" : "WAIT FOR HOST",
+    p4_draw_text(surface, can_start ? 148 : 103, 147,
+                 can_start ? "DEAL" : "WAIT FOR HOST",
                  can_start ? COLOR_BLACK : COLOR_MUTED, 1U,
-                 can_start ? 7U : 13U);
+                 can_start ? 4U : 13U);
     if (state->human_player_count == 1U && !state->network_mode) {
         p4_draw_text(surface, 100, 170, "P4MP = 2-4 HUMANS",
                      COLOR_MUTED, 1U, 17U);
@@ -490,6 +655,7 @@ static void draw_table(p4_game_surface_t *surface,
     draw_table_base(surface);
     draw_title_bar(surface);
     draw_player_strip(surface, state);
+    draw_table_melds(surface, state);
 
     const bool stock_selected = state->phase == P4_RUMMY_PHASE_DRAW &&
         state->draw_source == P4_RUMMY_DRAW_STOCK &&
@@ -516,32 +682,62 @@ static void draw_table(p4_game_surface_t *surface,
     p4_draw_text(surface, 108, 113, "STOCK", COLOR_CREAM, 1U, 5U);
     p4_draw_text(surface, 176, 113, "DISCARD", COLOR_CREAM, 1U, 7U);
 
-    char action[30] = {0};
-    uint16_t action_color = COLOR_TEXT;
-    if (state->network_request_pending) {
-        (void)append_text(action, sizeof(action), 0U, "SENDING MOVE...");
-        action_color = COLOR_GOLD;
-    } else if (p4_rummy_player_is_cpu(state, state->current_player)) {
-        (void)append_text(action, sizeof(action), 0U, "CPU IS THINKING...");
-        action_color = COLOR_MUTED;
-    } else if (state->phase == P4_RUMMY_PHASE_DRAW) {
-        (void)append_text(action, sizeof(action), 0U,
-                          "LEFT/RIGHT CHOOSE  A DRAW");
-    } else if (state->selected_card == state->drawn_card_index) {
-        (void)append_text(action, sizeof(action), 0U,
-                          "NEW PICK LOCKED - CHOOSE CARD");
-        action_color = COLOR_GOLD;
+    if (state->phase == P4_RUMMY_PHASE_DISCARD &&
+        p4_rummy_local_turn(state) && !state->network_request_pending) {
+        const uint8_t marked = selection_count(state->selected_mask);
+        fill_rounded_rect(surface, MELD_BUTTON_X + 1,
+                          MELD_BUTTON_Y + 1,
+                          MELD_BUTTON_W, MELD_BUTTON_H,
+                          3, COLOR_CARD_SHADOW);
+        fill_rounded_rect(surface, MELD_BUTTON_X, MELD_BUTTON_Y,
+                          MELD_BUTTON_W, MELD_BUTTON_H,
+                          3, marked == 0U ? COLOR_PANEL_EDGE : COLOR_GOLD);
+        fill_rounded_rect(surface, MELD_BUTTON_X + 1,
+                          MELD_BUTTON_Y + 1,
+                          MELD_BUTTON_W - 2, MELD_BUTTON_H - 2,
+                          2, COLOR_PANEL);
+        p4_draw_text(surface, 91, 128, "MELD",
+                     marked == 0U ? COLOR_MUTED : COLOR_GOLD,
+                     1U, 4U);
+
+        fill_rounded_rect(surface, DISCARD_BUTTON_X + 1,
+                          DISCARD_BUTTON_Y + 1,
+                          DISCARD_BUTTON_W, DISCARD_BUTTON_H,
+                          3, COLOR_CARD_SHADOW);
+        fill_rounded_rect(surface, DISCARD_BUTTON_X, DISCARD_BUTTON_Y,
+                          DISCARD_BUTTON_W, DISCARD_BUTTON_H,
+                          3, COLOR_PANEL_EDGE);
+        fill_rounded_rect(surface, DISCARD_BUTTON_X + 1,
+                          DISCARD_BUTTON_Y + 1,
+                          DISCARD_BUTTON_W - 2, DISCARD_BUTTON_H - 2,
+                          2, COLOR_PANEL);
+        p4_draw_text(surface, 194, 128, "DISCARD",
+                     state->selected_card == state->drawn_card_index
+                         ? COLOR_MUTED : COLOR_TEXT,
+                     1U, 7U);
     } else {
-        (void)append_text(action, sizeof(action), 0U,
-                          "LEFT/RIGHT CARD  A DISCARD");
+        char action[30] = {0};
+        uint16_t action_color = COLOR_TEXT;
+        if (state->network_request_pending) {
+            (void)append_text(action, sizeof(action), 0U,
+                              "SENDING MOVE...");
+            action_color = COLOR_GOLD;
+        } else if (p4_rummy_player_is_cpu(state, state->current_player)) {
+            (void)append_text(action, sizeof(action), 0U,
+                              "CPU IS THINKING...");
+            action_color = COLOR_MUTED;
+        } else {
+            (void)append_text(action, sizeof(action), 0U,
+                              "TAP STOCK OR DISCARD");
+        }
+        fill_rounded_rect(surface, 52, 123, 216, 20,
+                          3, COLOR_CARD_SHADOW);
+        fill_rounded_rect(surface, 51, 122, 216, 20,
+                          3, COLOR_PANEL_EDGE);
+        fill_rounded_rect(surface, 52, 123, 214, 18,
+                          2, COLOR_PANEL);
+        p4_draw_text(surface, 91, 128, action, action_color, 1U, 21U);
     }
-    fill_rounded_rect(surface, 52, 123, 216, 20,
-                      3, COLOR_CARD_SHADOW);
-    fill_rounded_rect(surface, 51, 122, 216, 20,
-                      3, COLOR_PANEL_EDGE);
-    fill_rounded_rect(surface, 52, 123, 214, 18,
-                      2, COLOR_PANEL);
-    p4_draw_text(surface, 66, 128, action, action_color, 1U, 28U);
     draw_hand(surface, state);
 }
 
@@ -549,30 +745,51 @@ static void draw_round_over(p4_game_surface_t *surface,
                             const p4_rummy_state_t *state)
 {
     draw_table(surface, state);
-    fill_rounded_rect(surface, 55, 51, 216, 88,
+    fill_rounded_rect(surface, 49, 43, 226, 124,
                       5, COLOR_CARD_SHADOW);
-    fill_rounded_rect(surface, 51, 47, 216, 88,
+    fill_rounded_rect(surface, 45, 39, 226, 124,
                       5, COLOR_GOLD);
-    fill_rounded_rect(surface, 53, 49, 212, 84,
+    fill_rounded_rect(surface, 47, 41, 222, 120,
                       4, COLOR_BACKGROUND);
-    draw_suit(surface, 67, 61, SUIT_DIAMOND_GLYPH,
+    draw_suit(surface, 56, 49, SUIT_DIAMOND_GLYPH,
               COLOR_RED, COLOR_BACKGROUND, P4_DRAW_CP437_FULL_HEIGHT);
-    draw_suit(surface, 245, 61, SUIT_CLUB_GLYPH,
+    draw_suit(surface, 252, 49, SUIT_CLUB_GLYPH,
               COLOR_CREAM, COLOR_BACKGROUND, P4_DRAW_CP437_FULL_HEIGHT);
-    char winner[24] = {0};
+    const uint8_t match_winner = p4_rummy_match_winner(state);
+    const uint8_t shown_winner = match_winner == P4_RUMMY_NO_PLAYER
+        ? state->winner : match_winner;
+    char winner[28] = {0};
     size_t length = append_text(winner, sizeof(winner), 0U,
-        p4_rummy_player_is_cpu(state, state->winner) ? "CPU" : "PLAYER ");
+        p4_rummy_player_is_cpu(state, shown_winner) ? "CPU" : "PLAYER ");
     length = append_unsigned(winner, sizeof(winner), length,
-                             (unsigned)state->winner + 1U);
-    (void)append_text(winner, sizeof(winner), length, " WINS!");
-    p4_draw_text(surface, 103, 65, winner, COLOR_GOLD, 1U, 16U);
-    p4_draw_text(surface, 77, 90, "HAND IS ALL SETS + RUNS",
-                 COLOR_TEXT, 1U, 23U);
+                             (unsigned)shown_winner + 1U);
+    (void)append_text(winner, sizeof(winner), length,
+        match_winner == P4_RUMMY_NO_PLAYER ? " WINS ROUND" : " WINS MATCH");
+    p4_draw_text(surface, 96, 51, winner, COLOR_GOLD, 1U, 20U);
+    p4_draw_text(surface, 112, 65, "MATCH TOTALS",
+                 COLOR_MUTED, 1U, 12U);
+    for (uint8_t player = 0U; player < state->player_count; ++player) {
+        char score[20] = {0};
+        size_t score_length = append_text(
+            score, sizeof(score), 0U,
+            p4_rummy_player_is_cpu(state, player) ? "CPU" : "P");
+        score_length = append_unsigned(
+            score, sizeof(score), score_length, (unsigned)player + 1U);
+        score_length = append_text(
+            score, sizeof(score), score_length, "  TOTAL ");
+        (void)append_signed(score, sizeof(score), score_length,
+                            state->scores[player]);
+        p4_draw_text(surface, 105, 79 + (int)player * 12, score,
+                     player == shown_winner ? COLOR_GOLD : COLOR_TEXT,
+                     1U, 19U);
+    }
     const bool can_restart = !state->network_mode ||
         state->network_role == P4_GAME_MULTIPLAYER_ROLE_HOST;
-    p4_draw_text(surface, can_restart ? 106 : 104, 113,
-                 can_restart ? "A  NEW ROUND" : "WAIT FOR HOST",
-                 COLOR_MUTED, 1U, can_restart ? 12U : 13U);
+    const char *const action = match_winner == P4_RUMMY_NO_PLAYER
+        ? "NEW ROUND" : "NEW MATCH";
+    p4_draw_text(surface, can_restart ? 130 : 119, 143,
+                 can_restart ? action : "WAIT FOR HOST",
+                 COLOR_MUTED, 1U, can_restart ? 9U : 13U);
 }
 
 static bool adjust_setup(p4_rummy_state_t *state, bool increase)
@@ -592,14 +809,19 @@ static void move_selection(p4_rummy_state_t *state, bool right)
     if (count == 0U) {
         return;
     }
-    for (uint8_t step = 0U; step < count; ++step) {
-        state->selected_card = right
-            ? (uint8_t)((state->selected_card + 1U) % count)
-            : (uint8_t)((state->selected_card + count - 1U) % count);
-        if (state->selected_card != state->drawn_card_index) {
-            return;
-        }
+    state->selected_card = right
+        ? (uint8_t)((state->selected_card + 1U) % count)
+        : (uint8_t)((state->selected_card + count - 1U) % count);
+}
+
+static void toggle_selected_card(p4_rummy_state_t *state)
+{
+    const uint8_t count = state->hand_counts[state->current_player];
+    if (state->selected_card >= count) {
+        return;
     }
+    state->selected_mask ^=
+        (uint8_t)(UINT8_C(1) << state->selected_card);
 }
 
 static void handle_touch(p4_game_context_t *context,
@@ -622,7 +844,7 @@ static void handle_touch(p4_game_context_t *context,
         return;
     }
     if (state->phase == P4_RUMMY_PHASE_ROUND_OVER) {
-        if (point_in(x, y, 52, 48, 216, 88)) {
+        if (point_in(x, y, 45, 39, 226, 124)) {
             (void)p4_rummy_request_new_round(context, state);
         }
         return;
@@ -644,19 +866,25 @@ static void handle_touch(p4_game_context_t *context,
         }
         return;
     }
+    if (point_in(x, y, MELD_BUTTON_X, MELD_BUTTON_Y,
+                 MELD_BUTTON_W, MELD_BUTTON_H)) {
+        (void)p4_rummy_perform_meld(
+            context, state, state->selected_mask);
+        return;
+    }
+    if (point_in(x, y, DISCARD_BUTTON_X, DISCARD_BUTTON_Y,
+                 DISCARD_BUTTON_W, DISCARD_BUTTON_H)) {
+        (void)p4_rummy_perform_discard(
+            context, state, state->selected_card);
+        return;
+    }
     const uint8_t count = state->hand_counts[state->current_player];
     const int start_x = hand_start_x(count);
     for (uint8_t index = 0U; index < count; ++index) {
         if (point_in(x, y, start_x + (int)index * 33, 137,
                      CARD_W, 58)) {
-            if (index == state->drawn_card_index) {
-                return;
-            }
-            if (index == state->selected_card) {
-                (void)p4_rummy_perform_discard(context, state, index);
-            } else {
-                state->selected_card = index;
-            }
+            state->selected_card = index;
+            toggle_selected_card(state);
             return;
         }
     }
@@ -740,7 +968,14 @@ static p4_game_result_t game_update(
             if ((pressed & P4_BUTTON_RIGHT) != 0U) {
                 move_selection(state, true);
             }
-            if ((pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
+            if ((pressed & P4_BUTTON_B) != 0U) {
+                toggle_selected_card(state);
+            }
+            if ((pressed & P4_BUTTON_START) != 0U) {
+                (void)p4_rummy_perform_meld(
+                    context, state, state->selected_mask);
+            }
+            if ((pressed & P4_BUTTON_A) != 0U) {
                 (void)p4_rummy_perform_discard(
                     context, state, state->selected_card);
             }
@@ -815,12 +1050,12 @@ const p4_game_descriptor_t p4_p4_rummy_game = {
     .api_version = P4_GAME_API_VERSION,
     .launcher_id = UINT32_C(118),
     .id = "org.p4console.p4-rummy",
-    .title = "P4 RUMMY",
-    .subtitle = "1-4 PLAYER CARD GAME",
+    .title = "P4 RUMMY 500",
+    .subtitle = "1-4 PLAYER SCORING RUMMY",
     .accent_rgb565 = UINT16_C(COLOR_ACCENT),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
-        P4_GAME_CAP_MULTIPLAYER_SESSION,
+        P4_GAME_CAP_MULTIPLAYER_SESSION | P4_GAME_CAP_VIDEO_HIGH_RES,
     .state_bytes = sizeof(p4_rummy_state_t),
     .start = game_start,
     .update = game_update,

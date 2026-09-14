@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.1.0",
+  "version": "2.0.0",
   "package_file": "P4_RUMMY.P4G",
   "component": "p4_rummy",
   "sources": [
@@ -13,8 +13,8 @@
   "entry_symbol": "p4_p4_rummy_game",
   "launcher_id": 118,
   "id": "org.p4console.p4-rummy",
-  "title": "P4 RUMMY",
-  "subtitle": "1-4 PLAYER RUMMY",
+  "title": "P4 RUMMY 500",
+  "subtitle": "1-4 PLAYER SCORING RUMMY",
   "folder": "GAMES/PUZZLE",
   "accent_rgb565": "0x5fea",
   "required_capabilities": [
@@ -23,17 +23,18 @@
   ],
   "optional_capabilities": [
     "audio-tone",
-    "multiplayer-session"
+    "multiplayer-session",
+    "video-highres"
   ],
   "license": "MIT",
-  "assets": "original-code-rendered-cards-and-table-only",
+  "assets": "dual-resolution-original-code-rendered-cards-suits-and-table-only",
   "enabled": true,
   "multiplayer": {
     "schema": 1,
     "style": "turn-based",
     "min_players": 2,
     "max_players": 4,
-    "message_bytes": 55,
-    "protocol": 1
+    "message_bytes": 64,
+    "protocol": 3
   }
 }
