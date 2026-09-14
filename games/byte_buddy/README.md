@@ -1121,18 +1121,21 @@ Waveshare verifier accepted the complete build without flashing:
 
 ### Current v4.3.1 candidate identities
 
-Two independent focused builds produced the same current pair byte for byte:
+Two independent focused builds on the current core integration produced the
+same pair byte for byte. The integrated cartridge includes the current core's
+high-resolution runtime plumbing, so this identity supersedes the smaller
+feature-branch-only candidate:
 
-- `BYTEBUD.P4G`: 196,632 bytes with a 196,376-byte ELF payload; payload
-  SHA-256 `7918a4c8a131e2e419d8f3ee3bde1317aea76251e4522f9d5aabf54a0f91b975`
+- `BYTEBUD.P4G`: 196,776 bytes with a 196,520-byte ELF payload; payload
+  SHA-256 `7e64a2cb7d74a048edf877f0cc67b4f32d9ddcc9cf9b23d0469e69b5cf925599`
   and package SHA-256
-  `7c32550b21ee42cbbba0ec1df4d147a7e52a95e4b83f7dc6f93bb8b9da0f541d`;
+  `71eed392d74b36c6a0c2122edd9d63f11bf9d3f91465965292146e0725679eb9`;
 - `BYTEBUD.P4R`: unchanged from v4.3.0 at 1,397,952 bytes, with the
   1,397,824-byte payload above and package SHA-256
   `6a7b7dafe0dd5565a867268e5c7e9a53feecbdd80e5c7b8d6e110598963fd698`.
 
-The ignored candidates are under `build-host/byte-buddy-4.3.1-a/` and
-`build-host/byte-buddy-4.3.1-b/`. They are reproducible, host-verified artifacts,
+The ignored candidates are under `build-host/byte-buddy-core-a/` and
+`build-host/byte-buddy-core-b/`. They are reproducible, host-verified artifacts,
 not physical acceptance. The earlier resource-first v4.3.0 H1 attempt selected
 the exact recorded pink unit 1 bridge at `/dev/cu.wchusbserial5C371865781`, but
 its live service returned status 9 (`unsupported`) for P4R before any payload
