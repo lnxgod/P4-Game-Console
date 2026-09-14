@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "2.0.1",
+  "version": "2.1.0",
   "package_file": "P4_RUMMY.P4G",
   "component": "p4_rummy",
   "sources": [
@@ -35,6 +35,6 @@
     "min_players": 2,
     "max_players": 4,
     "message_bytes": 64,
-    "protocol": 3
+    "protocol": 4
   }
 }

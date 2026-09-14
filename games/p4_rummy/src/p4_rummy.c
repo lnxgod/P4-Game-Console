@@ -41,11 +41,24 @@ enum {
     EXIT_Y = 2,
     EXIT_W = 42,
     EXIT_H = 14,
-    STOCK_X = 109,
-    DISCARD_X = 181,
+    STOCK_X = 96,
+    DISCARD_FAN_X = 138,
+    DISCARD_FAN_STEP = 14,
+    DISCARD_VISIBLE_CARDS = 5,
+    DISCARD_PAGE_LEFT_X = 138,
+    DISCARD_PAGE_RIGHT_X = 204,
+    DISCARD_PAGE_Y = 48,
+    DISCARD_PAGE_W = 18,
+    DISCARD_PAGE_H = 14,
     PILE_Y = 66,
     CARD_W = 30,
     CARD_H = 42,
+    HAND_VISIBLE_CARDS = 8,
+    HAND_PAGE_LEFT_X = 3,
+    HAND_PAGE_RIGHT_X = 299,
+    HAND_PAGE_Y = 153,
+    HAND_PAGE_W = 18,
+    HAND_PAGE_H = 32,
     MELD_BUTTON_X = 51,
     MELD_BUTTON_Y = 122,
     MELD_BUTTON_W = 104,
@@ -229,7 +242,7 @@ static uint16_t suit_color(uint8_t card)
     return suit == 1U || suit == 2U ? COLOR_RED : COLOR_BLACK;
 }
 
-static uint8_t selection_count(uint8_t selection_mask)
+static uint8_t selection_count(uint64_t selection_mask)
 {
     uint8_t count = 0U;
     while (selection_mask != 0U) {
@@ -418,18 +431,33 @@ static void draw_mini_card(p4_game_surface_t *surface, int x, int y,
               P4_DRAW_CP437_COMPACT_HEIGHT);
 }
 
+static void meld_bounds(uint8_t meld, int *x, int *y)
+{
+    if (x != NULL) {
+        *x = (meld & 1U) == 0U ? 7 : 226;
+    }
+    if (y != NULL) {
+        *y = 43 + (int)(meld / 2U) * 19;
+    }
+}
+
 static void draw_table_melds(p4_game_surface_t *surface,
                              const p4_rummy_state_t *state)
 {
     for (uint8_t meld = 0U; meld < state->meld_count; ++meld) {
-        const int x = (meld & 1U) == 0U ? 7 : 226;
-        const int y = 43 + (int)(meld / 2U) * 19;
-        fill_rounded_rect(surface, x, y, 87, 17, 2, COLOR_PANEL_EDGE);
+        int x = 0;
+        int y = 0;
+        meld_bounds(meld, &x, &y);
+        const bool target = p4_rummy_local_turn(state) &&
+            state->phase == P4_RUMMY_PHASE_DISCARD &&
+            state->selected_meld == meld;
+        fill_rounded_rect(surface, x, y, 87, 17, 2,
+                          target ? COLOR_GOLD : COLOR_PANEL_EDGE);
         fill_rounded_rect(surface, x + 1, y + 1, 85, 15, 1, COLOR_PANEL);
         char owner[3] = {'P',
             (char)('1' + state->meld_owners[meld]), '\0'};
         p4_draw_text(surface, x + 3, y + 5, owner,
-                     COLOR_GOLD, 1U, 2U);
+                     target ? COLOR_TEXT : COLOR_GOLD, 1U, 2U);
         const uint8_t visible = state->meld_counts[meld] <= 4U
             ? state->meld_counts[meld] : 3U;
         for (uint8_t index = 0U; index < visible; ++index) {
@@ -546,6 +574,41 @@ static int hand_start_x(uint8_t count)
     return (320 - width) / 2;
 }
 
+static uint8_t hand_window_start(const p4_rummy_state_t *state,
+                                 uint8_t player)
+{
+    if (state == NULL || player >= state->player_count ||
+        state->hand_counts[player] <= HAND_VISIBLE_CARDS) {
+        return 0U;
+    }
+    const uint8_t focused = state->selected_card <
+            state->hand_counts[player]
+        ? state->selected_card : 0U;
+    return (uint8_t)((focused / HAND_VISIBLE_CARDS) *
+                     HAND_VISIBLE_CARDS);
+}
+
+static uint8_t hand_window_count(const p4_rummy_state_t *state,
+                                 uint8_t player, uint8_t start)
+{
+    const uint8_t remaining =
+        (uint8_t)(state->hand_counts[player] - start);
+    return remaining < HAND_VISIBLE_CARDS
+        ? remaining : HAND_VISIBLE_CARDS;
+}
+
+static void draw_hand_page_arrow(p4_game_surface_t *surface,
+                                 int x, const char *label)
+{
+    fill_rounded_rect(surface, x, HAND_PAGE_Y,
+                      HAND_PAGE_W, HAND_PAGE_H, 3, COLOR_PANEL_EDGE);
+    fill_rounded_rect(surface, x + 1, HAND_PAGE_Y + 1,
+                      HAND_PAGE_W - 2, HAND_PAGE_H - 2,
+                      2, COLOR_PANEL);
+    p4_draw_text(surface, x + 6, HAND_PAGE_Y + 12,
+                 label, COLOR_GOLD, 1U, 1U);
+}
+
 static void draw_hand(p4_game_surface_t *surface,
                       const p4_rummy_state_t *state)
 {
@@ -553,23 +616,32 @@ static void draw_hand(p4_game_surface_t *surface,
     if (player >= state->player_count || state->hand_counts[player] == 0U) {
         return;
     }
-    const uint8_t count = state->hand_counts[player];
-    const int start_x = hand_start_x(count);
-    for (uint8_t index = 0U; index < count; ++index) {
+    const uint8_t window_start = hand_window_start(state, player);
+    const uint8_t visible = hand_window_count(
+        state, player, window_start);
+    const int start_x = hand_start_x(visible);
+    for (uint8_t shown = 0U; shown < visible; ++shown) {
+        const uint8_t index = (uint8_t)(window_start + shown);
         const bool local = player == state->current_player &&
             p4_rummy_local_turn(state) &&
             state->phase == P4_RUMMY_PHASE_DISCARD;
         const bool marked = local &&
-            (state->selected_mask & (UINT8_C(1) << index)) != 0U;
+            (state->selected_mask & (UINT64_C(1) << index)) != 0U;
         const bool focused = local && index == state->selected_card;
-        draw_card(surface, start_x + (int)index * 33,
+        draw_card(surface, start_x + (int)shown * 33,
                   marked ? 142 : 147, state->hands[player][index],
                   true, marked);
         if (focused) {
             p4_draw_fill_rect(surface,
-                start_x + (int)index * 33 + 7, 191,
+                start_x + (int)shown * 33 + 7, 191,
                 16, 2, COLOR_GOLD);
         }
+    }
+    if (window_start > 0U) {
+        draw_hand_page_arrow(surface, HAND_PAGE_LEFT_X, "<");
+    }
+    if ((uint8_t)(window_start + visible) < state->hand_counts[player]) {
+        draw_hand_page_arrow(surface, HAND_PAGE_RIGHT_X, ">");
     }
 }
 
@@ -649,6 +721,79 @@ static void draw_setup(p4_game_surface_t *surface,
     }
 }
 
+static uint8_t discard_window_start(const p4_rummy_state_t *state)
+{
+    if (state->discard_count <= DISCARD_VISIBLE_CARDS) {
+        return 0U;
+    }
+    const uint8_t maximum = (uint8_t)(
+        state->discard_count - DISCARD_VISIBLE_CARDS);
+    if (state->selected_discard < maximum) {
+        return state->selected_discard;
+    }
+    return maximum;
+}
+
+static uint8_t discard_window_count(const p4_rummy_state_t *state,
+                                    uint8_t start)
+{
+    const uint8_t remaining = (uint8_t)(state->discard_count - start);
+    return remaining < DISCARD_VISIBLE_CARDS
+        ? remaining : DISCARD_VISIBLE_CARDS;
+}
+
+static void draw_discard_pile(p4_game_surface_t *surface,
+                              const p4_rummy_state_t *state,
+                              bool pile_selected)
+{
+    const uint8_t start = discard_window_start(state);
+    const uint8_t visible = discard_window_count(state, start);
+    const int width = visible == 0U ? CARD_W
+        : CARD_W + ((int)visible - 1) * DISCARD_FAN_STEP;
+    fill_rounded_rect(surface, DISCARD_FAN_X - 5, PILE_Y - 5,
+                      width + 10, CARD_H + 10, 4, COLOR_FELT_DARK);
+    p4_draw_rect(surface, DISCARD_FAN_X - 4, PILE_Y - 4,
+                 width + 8, CARD_H + 8,
+                 pile_selected ? COLOR_GOLD : COLOR_GOLD_DARK);
+    for (uint8_t shown = 0U; shown < visible; ++shown) {
+        const uint8_t index = (uint8_t)(start + shown);
+        const bool selected = pile_selected &&
+            index == state->selected_discard;
+        draw_card(surface,
+                  DISCARD_FAN_X + (int)shown * DISCARD_FAN_STEP,
+                  selected ? PILE_Y - 3 : PILE_Y,
+                  state->discard[index], true, selected);
+    }
+    char label[24] = {0};
+    size_t length = append_text(label, sizeof(label), 0U, "PILE ");
+    length = append_unsigned(label, sizeof(label), length,
+                             state->discard_count);
+    if (pile_selected &&
+        state->selected_discard < state->discard_count) {
+        length = append_text(label, sizeof(label), length, "  TAKE ");
+        (void)append_unsigned(
+            label, sizeof(label), length,
+            (unsigned)(state->discard_count - state->selected_discard));
+    }
+    p4_draw_text(surface, 137, 113, label,
+                 pile_selected ? COLOR_GOLD : COLOR_CREAM,
+                 1U, 14U);
+    if (start > 0U) {
+        fill_rounded_rect(surface, DISCARD_PAGE_LEFT_X, DISCARD_PAGE_Y,
+                          DISCARD_PAGE_W, DISCARD_PAGE_H, 2,
+                          COLOR_PANEL_EDGE);
+        p4_draw_text(surface, DISCARD_PAGE_LEFT_X + 6,
+                     DISCARD_PAGE_Y + 3, "<", COLOR_GOLD, 1U, 1U);
+    }
+    if ((uint8_t)(start + visible) < state->discard_count) {
+        fill_rounded_rect(surface, DISCARD_PAGE_RIGHT_X, DISCARD_PAGE_Y,
+                          DISCARD_PAGE_W, DISCARD_PAGE_H, 2,
+                          COLOR_PANEL_EDGE);
+        p4_draw_text(surface, DISCARD_PAGE_RIGHT_X + 6,
+                     DISCARD_PAGE_Y + 3, ">", COLOR_GOLD, 1U, 1U);
+    }
+}
+
 static void draw_table(p4_game_surface_t *surface,
                        const p4_rummy_state_t *state)
 {
@@ -665,22 +810,13 @@ static void draw_table(p4_game_surface_t *surface,
         p4_rummy_local_turn(state);
     fill_rounded_rect(surface, STOCK_X - 6, PILE_Y - 5,
                       CARD_W + 12, CARD_H + 10, 4, COLOR_FELT_DARK);
-    fill_rounded_rect(surface, DISCARD_X - 6, PILE_Y - 5,
-                      CARD_W + 12, CARD_H + 10, 4, COLOR_FELT_DARK);
     p4_draw_rect(surface, STOCK_X - 5, PILE_Y - 4,
                  CARD_W + 10, CARD_H + 8,
                  stock_selected ? COLOR_GOLD : COLOR_GOLD_DARK);
-    p4_draw_rect(surface, DISCARD_X - 5, PILE_Y - 4,
-                 CARD_W + 10, CARD_H + 8,
-                 discard_selected ? COLOR_GOLD : COLOR_GOLD_DARK);
     draw_card(surface, STOCK_X, PILE_Y, P4_RUMMY_NO_CARD,
               false, stock_selected);
-    const uint8_t discard_top = state->discard_count == 0U
-        ? P4_RUMMY_NO_CARD : state->discard[state->discard_count - 1U];
-    draw_card(surface, DISCARD_X, PILE_Y, discard_top,
-              discard_top != P4_RUMMY_NO_CARD, discard_selected);
-    p4_draw_text(surface, 108, 113, "STOCK", COLOR_CREAM, 1U, 5U);
-    p4_draw_text(surface, 176, 113, "DISCARD", COLOR_CREAM, 1U, 7U);
+    draw_discard_pile(surface, state, discard_selected);
+    p4_draw_text(surface, 95, 113, "STOCK", COLOR_CREAM, 1U, 5U);
 
     if (state->phase == P4_RUMMY_PHASE_DISCARD &&
         p4_rummy_local_turn(state) && !state->network_request_pending) {
@@ -696,9 +832,24 @@ static void draw_table(p4_game_surface_t *surface,
                           MELD_BUTTON_Y + 1,
                           MELD_BUTTON_W - 2, MELD_BUTTON_H - 2,
                           2, COLOR_PANEL);
-        p4_draw_text(surface, 91, 128, "MELD",
+        char play_label[14] = {0};
+        size_t play_length = 0U;
+        if (state->selected_meld < state->meld_count) {
+            play_length = append_text(
+                play_label, sizeof(play_label), 0U, "ADD TO P");
+            (void)append_unsigned(
+                play_label, sizeof(play_label), play_length,
+                (unsigned)state->meld_owners[state->selected_meld] + 1U);
+        } else {
+            (void)append_text(play_label, sizeof(play_label), 0U,
+                              state->required_meld_card != P4_RUMMY_NO_CARD
+                                  ? "MELD PICK" : "PLAY CARDS");
+        }
+        p4_draw_text(surface,
+                     state->selected_meld < state->meld_count ? 70 : 69,
+                     128, play_label,
                      marked == 0U ? COLOR_MUTED : COLOR_GOLD,
-                     1U, 4U);
+                     1U, 10U);
 
         fill_rounded_rect(surface, DISCARD_BUTTON_X + 1,
                           DISCARD_BUTTON_Y + 1,
@@ -711,10 +862,17 @@ static void draw_table(p4_game_surface_t *surface,
                           DISCARD_BUTTON_Y + 1,
                           DISCARD_BUTTON_W - 2, DISCARD_BUTTON_H - 2,
                           2, COLOR_PANEL);
-        p4_draw_text(surface, 194, 128, "DISCARD",
-                     state->selected_card == state->drawn_card_index
+        p4_draw_text(surface,
+                     state->required_meld_card != P4_RUMMY_NO_CARD
+                         ? 184 : 194,
+                     128,
+                     state->required_meld_card != P4_RUMMY_NO_CARD
+                         ? "MELD FIRST" : "DISCARD",
+                     state->selected_card == state->drawn_card_index ||
+                             state->required_meld_card != P4_RUMMY_NO_CARD
                          ? COLOR_MUTED : COLOR_TEXT,
-                     1U, 7U);
+                     1U, state->required_meld_card != P4_RUMMY_NO_CARD
+                         ? 10U : 7U);
     } else {
         char action[30] = {0};
         uint16_t action_color = COLOR_TEXT;
@@ -728,7 +886,7 @@ static void draw_table(p4_game_surface_t *surface,
             action_color = COLOR_MUTED;
         } else {
             (void)append_text(action, sizeof(action), 0U,
-                              "TAP STOCK OR DISCARD");
+                              "TAP STOCK OR A PILE CARD");
         }
         fill_rounded_rect(surface, 52, 123, 216, 20,
                           3, COLOR_CARD_SHADOW);
@@ -736,7 +894,7 @@ static void draw_table(p4_game_surface_t *surface,
                           3, COLOR_PANEL_EDGE);
         fill_rounded_rect(surface, 52, 123, 214, 18,
                           2, COLOR_PANEL);
-        p4_draw_text(surface, 91, 128, action, action_color, 1U, 21U);
+        p4_draw_text(surface, 70, 128, action, action_color, 1U, 26U);
     }
     draw_hand(surface, state);
 }
@@ -821,7 +979,106 @@ static void toggle_selected_card(p4_rummy_state_t *state)
         return;
     }
     state->selected_mask ^=
-        (uint8_t)(UINT8_C(1) << state->selected_card);
+        UINT64_C(1) << state->selected_card;
+}
+
+static void move_hand_page(p4_rummy_state_t *state, bool right)
+{
+    const uint8_t count = state->hand_counts[state->current_player];
+    if (count <= HAND_VISIBLE_CARDS) {
+        return;
+    }
+    if (right) {
+        const uint8_t next = (uint8_t)(state->selected_card +
+                                       HAND_VISIBLE_CARDS);
+        state->selected_card = next < count
+            ? next : (uint8_t)(count - 1U);
+    } else {
+        state->selected_card = state->selected_card >= HAND_VISIBLE_CARDS
+            ? (uint8_t)(state->selected_card - HAND_VISIBLE_CARDS) : 0U;
+    }
+}
+
+static void move_discard_selection(p4_rummy_state_t *state, bool right)
+{
+    if (state->discard_count == 0U) {
+        state->selected_discard = P4_RUMMY_NO_CARD;
+        return;
+    }
+    state->draw_source = P4_RUMMY_DRAW_DISCARD;
+    if (state->selected_discard >= state->discard_count) {
+        state->selected_discard = (uint8_t)(state->discard_count - 1U);
+    } else if (right &&
+               state->selected_discard + 1U < state->discard_count) {
+        ++state->selected_discard;
+    } else if (!right && state->selected_discard > 0U) {
+        --state->selected_discard;
+    }
+}
+
+static void move_discard_page(p4_rummy_state_t *state, bool newer)
+{
+    if (state->discard_count <= DISCARD_VISIBLE_CARDS) {
+        return;
+    }
+    state->draw_source = P4_RUMMY_DRAW_DISCARD;
+    if (state->selected_discard >= state->discard_count) {
+        state->selected_discard = (uint8_t)(state->discard_count - 1U);
+    }
+    if (newer) {
+        const uint8_t next = (uint8_t)(state->selected_discard +
+                                       DISCARD_VISIBLE_CARDS);
+        state->selected_discard = next < state->discard_count
+            ? next : (uint8_t)(state->discard_count - 1U);
+    } else {
+        state->selected_discard =
+            state->selected_discard >= DISCARD_VISIBLE_CARDS
+                ? (uint8_t)(state->selected_discard -
+                            DISCARD_VISIBLE_CARDS)
+                : 0U;
+    }
+}
+
+static void move_meld_target(p4_rummy_state_t *state, bool forward)
+{
+    if (state->meld_count == 0U) {
+        state->selected_meld = P4_RUMMY_NO_CARD;
+        return;
+    }
+    if (state->selected_meld >= state->meld_count) {
+        state->selected_meld = forward
+            ? 0U : (uint8_t)(state->meld_count - 1U);
+    } else if (forward) {
+        state->selected_meld =
+            state->selected_meld + 1U < state->meld_count
+                ? (uint8_t)(state->selected_meld + 1U)
+                : P4_RUMMY_NO_CARD;
+    } else {
+        state->selected_meld = state->selected_meld == 0U
+            ? P4_RUMMY_NO_CARD
+            : (uint8_t)(state->selected_meld - 1U);
+    }
+}
+
+static uint8_t touched_discard(const p4_rummy_state_t *state,
+                               uint16_t x, uint16_t y)
+{
+    const uint8_t start = discard_window_start(state);
+    const uint8_t visible = discard_window_count(state, start);
+    if (visible == 0U ||
+        !point_in(x, y, DISCARD_FAN_X - 4, PILE_Y - 8,
+                  CARD_W + ((int)visible - 1) * DISCARD_FAN_STEP + 8,
+                  CARD_H + 16)) {
+        return P4_RUMMY_NO_CARD;
+    }
+    int shown = ((int)x - DISCARD_FAN_X) / DISCARD_FAN_STEP;
+    if ((int)x < DISCARD_FAN_X) {
+        shown = 0;
+    }
+    if (shown >= visible) {
+        shown = visible - 1;
+    }
+    return (uint8_t)(start + shown);
 }
 
 static void handle_touch(p4_game_context_t *context,
@@ -853,23 +1110,49 @@ static void handle_touch(p4_game_context_t *context,
         return;
     }
     if (state->phase == P4_RUMMY_PHASE_DRAW) {
-        if (point_in(x, y, STOCK_X - 8, PILE_Y - 5,
+        if (point_in(x, y, DISCARD_PAGE_LEFT_X, DISCARD_PAGE_Y,
+                     DISCARD_PAGE_W, DISCARD_PAGE_H)) {
+            move_discard_page(state, false);
+        } else if (point_in(x, y, DISCARD_PAGE_RIGHT_X, DISCARD_PAGE_Y,
+                            DISCARD_PAGE_W, DISCARD_PAGE_H)) {
+            move_discard_page(state, true);
+        } else if (point_in(x, y, STOCK_X - 8, PILE_Y - 5,
                      CARD_W + 16, CARD_H + 24)) {
             state->draw_source = P4_RUMMY_DRAW_STOCK;
             (void)p4_rummy_perform_draw(
-                context, state, P4_RUMMY_DRAW_STOCK);
-        } else if (point_in(x, y, DISCARD_X - 8, PILE_Y - 5,
-                            CARD_W + 16, CARD_H + 24)) {
+                context, state, P4_RUMMY_DRAW_STOCK,
+                P4_RUMMY_NO_CARD);
+        } else {
+            const uint8_t discard_index = touched_discard(state, x, y);
+            if (discard_index == P4_RUMMY_NO_CARD) {
+                return;
+            }
             state->draw_source = P4_RUMMY_DRAW_DISCARD;
+            state->selected_discard = discard_index;
             (void)p4_rummy_perform_draw(
-                context, state, P4_RUMMY_DRAW_DISCARD);
+                context, state, P4_RUMMY_DRAW_DISCARD,
+                discard_index);
         }
         return;
     }
+    for (uint8_t meld = 0U; meld < state->meld_count; ++meld) {
+        int meld_x = 0;
+        int meld_y = 0;
+        meld_bounds(meld, &meld_x, &meld_y);
+        if (point_in(x, y, meld_x, meld_y, 87, 17)) {
+            state->selected_meld = meld;
+            if (state->selected_mask != 0U) {
+                (void)p4_rummy_perform_meld_to(
+                    context, state, state->selected_mask, meld);
+            }
+            return;
+        }
+    }
     if (point_in(x, y, MELD_BUTTON_X, MELD_BUTTON_Y,
                  MELD_BUTTON_W, MELD_BUTTON_H)) {
-        (void)p4_rummy_perform_meld(
-            context, state, state->selected_mask);
+        (void)p4_rummy_perform_meld_to(
+            context, state, state->selected_mask,
+            state->selected_meld);
         return;
     }
     if (point_in(x, y, DISCARD_BUTTON_X, DISCARD_BUTTON_Y,
@@ -878,10 +1161,24 @@ static void handle_touch(p4_game_context_t *context,
             context, state, state->selected_card);
         return;
     }
-    const uint8_t count = state->hand_counts[state->current_player];
-    const int start_x = hand_start_x(count);
-    for (uint8_t index = 0U; index < count; ++index) {
-        if (point_in(x, y, start_x + (int)index * 33, 137,
+    if (point_in(x, y, HAND_PAGE_LEFT_X, HAND_PAGE_Y,
+                 HAND_PAGE_W, HAND_PAGE_H)) {
+        move_hand_page(state, false);
+        return;
+    }
+    if (point_in(x, y, HAND_PAGE_RIGHT_X, HAND_PAGE_Y,
+                 HAND_PAGE_W, HAND_PAGE_H)) {
+        move_hand_page(state, true);
+        return;
+    }
+    const uint8_t window_start = hand_window_start(
+        state, state->current_player);
+    const uint8_t visible = hand_window_count(
+        state, state->current_player, window_start);
+    const int start_x = hand_start_x(visible);
+    for (uint8_t shown = 0U; shown < visible; ++shown) {
+        const uint8_t index = (uint8_t)(window_start + shown);
+        if (point_in(x, y, start_x + (int)shown * 33, 137,
                      CARD_W, 58)) {
             state->selected_card = index;
             toggle_selected_card(state);
@@ -951,15 +1248,41 @@ static p4_game_result_t game_update(
     } else if (p4_rummy_local_turn(state) &&
                !state->network_request_pending) {
         if (state->phase == P4_RUMMY_PHASE_DRAW) {
-            if ((pressed & (P4_BUTTON_LEFT | P4_BUTTON_RIGHT |
-                            P4_BUTTON_UP | P4_BUTTON_DOWN |
+            if ((pressed & (P4_BUTTON_UP | P4_BUTTON_DOWN |
                             P4_BUTTON_B)) != 0U) {
                 state->draw_source = state->draw_source == P4_RUMMY_DRAW_STOCK
                     ? P4_RUMMY_DRAW_DISCARD : P4_RUMMY_DRAW_STOCK;
+                if (state->draw_source == P4_RUMMY_DRAW_DISCARD &&
+                    state->discard_count != 0U) {
+                    state->selected_discard =
+                        (uint8_t)(state->discard_count - 1U);
+                }
+            }
+            if ((pressed & P4_BUTTON_LEFT) != 0U) {
+                if (state->draw_source == P4_RUMMY_DRAW_STOCK) {
+                    state->draw_source = P4_RUMMY_DRAW_DISCARD;
+                    state->selected_discard = state->discard_count == 0U
+                        ? P4_RUMMY_NO_CARD
+                        : (uint8_t)(state->discard_count - 1U);
+                } else {
+                    move_discard_selection(state, false);
+                }
+            }
+            if ((pressed & P4_BUTTON_RIGHT) != 0U) {
+                if (state->draw_source == P4_RUMMY_DRAW_STOCK) {
+                    state->draw_source = P4_RUMMY_DRAW_DISCARD;
+                    state->selected_discard = state->discard_count == 0U
+                        ? P4_RUMMY_NO_CARD
+                        : (uint8_t)(state->discard_count - 1U);
+                } else {
+                    move_discard_selection(state, true);
+                }
             }
             if ((pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
                 (void)p4_rummy_perform_draw(
-                    context, state, state->draw_source);
+                    context, state, state->draw_source,
+                    state->draw_source == P4_RUMMY_DRAW_DISCARD
+                        ? state->selected_discard : P4_RUMMY_NO_CARD);
             }
         } else if (state->phase == P4_RUMMY_PHASE_DISCARD) {
             if ((pressed & P4_BUTTON_LEFT) != 0U) {
@@ -968,12 +1291,19 @@ static p4_game_result_t game_update(
             if ((pressed & P4_BUTTON_RIGHT) != 0U) {
                 move_selection(state, true);
             }
+            if ((pressed & P4_BUTTON_UP) != 0U) {
+                move_meld_target(state, false);
+            }
+            if ((pressed & P4_BUTTON_DOWN) != 0U) {
+                move_meld_target(state, true);
+            }
             if ((pressed & P4_BUTTON_B) != 0U) {
                 toggle_selected_card(state);
             }
             if ((pressed & P4_BUTTON_START) != 0U) {
-                (void)p4_rummy_perform_meld(
-                    context, state, state->selected_mask);
+                (void)p4_rummy_perform_meld_to(
+                    context, state, state->selected_mask,
+                    state->selected_meld);
             }
             if ((pressed & P4_BUTTON_A) != 0U) {
                 (void)p4_rummy_perform_discard(

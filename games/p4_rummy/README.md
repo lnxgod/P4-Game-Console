@@ -19,12 +19,15 @@ substitute a `T` abbreviation.
 
 ## Rules and scoring
 
-Each player receives seven cards. On a turn, draw from the face-down stock or
-the face-up discard pile, play any valid melds, then discard one card. Played
-melds stay visible on the table, and later turns may add matching cards to an
-existing set or either end of a run. A card just taken from the discard pile
-cannot be returned immediately, but it may be used in a meld. The first player
-to play or discard their last card ends the round:
+Each player receives seven cards. On a turn, draw one card from the face-down
+stock or choose any visible card in the ordered face-up discard pile. Taking a
+deeper discard also takes every card above it. When digging into the pile, the
+chosen card is marked automatically and must be played in a meld before the
+turn can end. Play any valid melds, then discard one card. Played melds stay
+visible on the table, and later turns may add matching cards to any player's
+existing set or either end of a run. A card just chosen from the discard pile
+cannot be returned immediately. The first player to play or discard their last
+card ends the round:
 
 - a set is three or four cards of one rank;
 - a run is three or more consecutive cards of one suit; and
@@ -37,35 +40,40 @@ in an A-2-3 low run scores 1. Scores may be negative. Further rounds are
 played until at least one player reaches 500; the highest total wins, and a
 tie at the top requires another round.
 
-This compact P4 variant deals seven cards to every player, uses the top discard
-only, and has no jokers or discard-pile digging. After 200 turns, the bounded
-round ends, applies the same meld-minus-hand scoring, and names the
-lowest-deadwood hand as the round winner. The CPU plays available melds and
-prefers draws or discards that lower its deadwood.
+This P4 variant deals seven cards to every player and has no jokers. Hands are
+bounded by the complete 52-card deck, and large hands use touchable eight-card
+pages. After 200 turns, the bounded round ends, applies the same
+meld-minus-hand scoring, and names the lowest-deadwood hand as the round
+winner. The CPU plays available melds and prefers draws or discards that lower
+its deadwood.
 
 ## Controls
 
 - Setup: Left/Right changes the number of CPU opponents. In a network room,
   the host uses it to add CPU seats. A or Start deals immediately.
-- Draw: Left/Right, Up/Down, or B switches between stock and discard. A draws.
-- Play: Left/Right focuses a card, B marks or unmarks it, and Start plays the
-  marked cards as a new set/run or onto an existing meld. A discards the
-  focused card.
-- Touch/mouse: tap DEAL, tap the stock or discard pile to draw, then tap hand
-  cards to mark them. Tap MELD to play the marked cards or DISCARD to end the
-  turn with the focused card. Cards left in your hand are held automatically.
-  All setup and round-over actions are also touchable.
+- Draw: Up/Down or B switches between stock and the discard pile. Left/Right
+  moves through the discard pile, and A or Start takes the selected card plus
+  every card above it.
+- Play: Left/Right focuses a hand card, B marks or unmarks it, Up/Down chooses
+  a table meld, and Start plays the marked cards. A discards the focused card.
+- Touch/mouse: tap DEAL, tap the stock to draw one, or tap any displayed pile
+  card to take it and the cards above it. Pile arrows reveal older or newer
+  discards when more than five are present. Tap hand cards to mark them. Tap
+  PLAY CARDS for automatic placement, or tap a visible P1-P4 meld to lay the
+  marked cards onto that exact meld. Tap DISCARD to end the turn. Large hands
+  show touchable page arrows. All setup and round-over actions are touchable.
 - Back or the upper-left Exit target returns to the launcher.
 
 ## Multiplayer
 
 Console OS owns Host/Join, room discovery, compatibility, physical links, and
-the start barrier. Protocol 3 carries bounded hands, table melds, signed scores,
-and match state in one 64-byte host-authoritative snapshot. The cartridge
-starts from the connected session and never opens BLE, UART, USB, display,
-audio, or storage hardware. The host validates turn intents and broadcasts the
-complete table snapshot. If the link is lost, the game returns to offline setup
-with one person and one CPU opponent.
+the start barrier. Protocol 4 carries full hands, the ordered discard pile,
+table melds, signed scores, and match state as a pair of bounded
+64-byte host-authoritative messages. The cartridge starts from the connected
+session and never opens BLE, UART, USB, display, audio, or storage hardware.
+The host validates turn intents and broadcasts the complete table snapshot.
+If the link is lost, the game returns to offline setup with one person and one
+CPU opponent.
 
 ## Host checks
 

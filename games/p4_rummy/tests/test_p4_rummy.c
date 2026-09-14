@@ -24,6 +24,7 @@ enum {
     TEST_SURFACE_STRIDE = P4_GAME_SURFACE_WIDTH + 3,
     TEST_HIGH_RES_SURFACE_STRIDE = P4_GAME_SURFACE_HIGH_RES_WIDTH + 5,
     TEST_PADDING_SENTINEL = 0xa55a,
+    TEST_DRAWN_CARDS = P4_RUMMY_HAND_CARDS + 1,
 };
 
 typedef struct {
@@ -225,6 +226,33 @@ static uint8_t card(uint8_t suit, uint8_t rank)
                      (rank == 1U ? 12U : (uint8_t)(rank - 2U)));
 }
 
+static uint8_t find_card_index(const uint8_t *cards, uint8_t count,
+                               uint8_t wanted)
+{
+    for (uint8_t index = 0U; index < count; ++index) {
+        if (cards[index] == wanted) {
+            return index;
+        }
+    }
+    return P4_RUMMY_NO_CARD;
+}
+
+static uint64_t card_mask(const uint8_t *hand, uint8_t count,
+                          const uint8_t *wanted, uint8_t wanted_count)
+{
+    uint64_t mask = 0U;
+    for (uint8_t wanted_index = 0U;
+         wanted_index < wanted_count; ++wanted_index) {
+        const uint8_t index = find_card_index(
+            hand, count, wanted[wanted_index]);
+        if (index == P4_RUMMY_NO_CARD) {
+            return 0U;
+        }
+        mask |= UINT64_C(1) << index;
+    }
+    return mask;
+}
+
 static bool all_dealt_cards_unique(const p4_rummy_state_t *state)
 {
     uint64_t seen = 0U;
@@ -238,12 +266,13 @@ static bool all_dealt_cards_unique(const p4_rummy_state_t *state)
             seen |= UINT64_C(1) << dealt;
         }
     }
-    if (state->discard_count != 0U) {
-        const uint8_t top = state->discard[state->discard_count - 1U];
-        if (top >= P4_RUMMY_DECK_CARDS ||
-            (seen & (UINT64_C(1) << top)) != 0U) {
+    for (uint8_t index = 0U; index < state->discard_count; ++index) {
+        const uint8_t discarded = state->discard[index];
+        if (discarded >= P4_RUMMY_DECK_CARDS ||
+            (seen & (UINT64_C(1) << discarded)) != 0U) {
             return false;
         }
+        seen |= UINT64_C(1) << discarded;
     }
     return true;
 }
@@ -348,8 +377,8 @@ static bool test_play_melds_and_go_out(void)
     CHECK(p4_rummy_begin_round(&state));
     state.phase = P4_RUMMY_PHASE_DISCARD;
     state.current_player = 0U;
-    state.hand_counts[0] = P4_RUMMY_DRAWN_CARDS;
-    const uint8_t hand[P4_RUMMY_DRAWN_CARDS] = {
+    state.hand_counts[0] = TEST_DRAWN_CARDS;
+    const uint8_t hand[TEST_DRAWN_CARDS] = {
         card(0U, 2U), card(1U, 2U), card(2U, 2U), card(3U, 2U),
         card(3U, 5U), card(3U, 6U), card(3U, 7U), card(3U, 9U),
     };
@@ -357,7 +386,7 @@ static bool test_play_melds_and_go_out(void)
     state.drawn_card_index = P4_RUMMY_NO_CARD;
 
     CHECK(!p4_rummy_play_meld(&state, 0U, UINT8_C(0x03)));
-    CHECK(state.hand_counts[0] == P4_RUMMY_DRAWN_CARDS);
+    CHECK(state.hand_counts[0] == TEST_DRAWN_CARDS);
     CHECK(p4_rummy_play_meld(&state, 0U, UINT8_C(0x07)));
     CHECK(state.meld_count == 1U);
     CHECK(state.meld_counts[0] == 3U);
@@ -406,12 +435,97 @@ static bool test_setup_deal_draw_and_win(void)
     }
 
     const uint8_t top = state.discard[state.discard_count - 1U];
-    CHECK(p4_rummy_draw(&state, 0U, P4_RUMMY_DRAW_DISCARD));
+    CHECK(p4_rummy_draw(&state, 0U, P4_RUMMY_DRAW_DISCARD,
+                        (uint8_t)(state.discard_count - 1U)));
     CHECK(state.phase == P4_RUMMY_PHASE_DISCARD);
-    CHECK(state.hands[0][7] == top);
-    CHECK(!p4_rummy_discard_card(&state, 0U, 7U));
-    CHECK(p4_rummy_discard_card(&state, 0U, 0U));
+    CHECK(state.drawn_card_index < state.hand_counts[0]);
+    CHECK(state.hands[0][state.drawn_card_index] == top);
+    CHECK(!p4_rummy_discard_card(
+        &state, 0U, state.drawn_card_index));
+    const uint8_t discard_index = state.drawn_card_index == 0U ? 1U : 0U;
+    CHECK(p4_rummy_discard_card(&state, 0U, discard_index));
 
+    return true;
+}
+
+static bool test_discard_pile_pickup_and_required_meld(void)
+{
+    p4_rummy_state_t state;
+    p4_rummy_reset_lobby(&state, 1U, UINT32_C(0x50494c45));
+    CHECK(p4_rummy_begin_round(&state));
+    memset(state.hands[0], P4_RUMMY_NO_CARD,
+           sizeof(state.hands[0]));
+    const uint8_t starting_hand[P4_RUMMY_HAND_CARDS] = {
+        card(0U, 5U), card(1U, 5U), card(0U, 7U), card(1U, 8U),
+        card(2U, 9U), card(3U, 10U), card(0U, 11U),
+    };
+    memcpy(state.hands[0], starting_hand, sizeof(starting_hand));
+    state.hand_counts[0] = P4_RUMMY_HAND_CARDS;
+    const uint8_t pile[4] = {
+        card(3U, 2U), card(2U, 5U),
+        card(0U, 9U), card(3U, 13U),
+    };
+    memset(state.discard, P4_RUMMY_NO_CARD, sizeof(state.discard));
+    memcpy(state.discard, pile, sizeof(pile));
+    state.discard_count = 4U;
+    state.phase = P4_RUMMY_PHASE_DRAW;
+    state.current_player = 0U;
+
+    CHECK(p4_rummy_draw(
+        &state, 0U, P4_RUMMY_DRAW_DISCARD, 1U));
+    CHECK(state.discard_count == 1U);
+    CHECK(state.discard[0] == pile[0]);
+    CHECK(state.hand_counts[0] == 10U);
+    CHECK(state.required_meld_card == pile[1]);
+    CHECK(state.drawn_card_index < state.hand_counts[0]);
+    CHECK(state.hands[0][state.drawn_card_index] == pile[1]);
+    CHECK(state.selected_mask ==
+          (UINT64_C(1) << state.drawn_card_index));
+    CHECK(!p4_rummy_discard_card(&state, 0U, 0U));
+
+    const uint8_t set[3] = {
+        card(0U, 5U), card(1U, 5U), card(2U, 5U),
+    };
+    const uint64_t mask = card_mask(
+        state.hands[0], state.hand_counts[0], set, 3U);
+    CHECK(mask != 0U);
+    CHECK(p4_rummy_play_meld_to(
+        &state, 0U, mask, P4_RUMMY_NO_CARD));
+    CHECK(state.required_meld_card == P4_RUMMY_NO_CARD);
+    CHECK(state.drawn_card_index == P4_RUMMY_NO_CARD);
+    CHECK(state.meld_count == 1U);
+    CHECK(state.meld_counts[0] == 3U);
+    CHECK(state.hand_counts[0] == 7U);
+    CHECK(state.scores[0] == 15);
+    CHECK(p4_rummy_discard_card(&state, 0U, 0U));
+    return true;
+}
+
+static bool test_layoff_to_another_players_meld(void)
+{
+    p4_rummy_state_t state;
+    p4_rummy_reset_lobby(&state, 2U, UINT32_C(0x4c41594f));
+    CHECK(p4_rummy_begin_round(&state));
+    state.phase = P4_RUMMY_PHASE_DISCARD;
+    state.current_player = 1U;
+    state.hand_counts[1] = 2U;
+    state.hands[1][0] = card(2U, 8U);
+    state.hands[1][1] = card(0U, 12U);
+    state.drawn_card_index = P4_RUMMY_NO_CARD;
+    state.required_meld_card = P4_RUMMY_NO_CARD;
+    state.meld_count = 1U;
+    state.meld_counts[0] = 3U;
+    state.meld_owners[0] = 0U;
+    state.melds[0][0] = card(2U, 5U);
+    state.melds[0][1] = card(2U, 6U);
+    state.melds[0][2] = card(2U, 7U);
+
+    CHECK(p4_rummy_play_meld_to(&state, 1U, UINT64_C(1), 0U));
+    CHECK(state.meld_count == 1U);
+    CHECK(state.meld_counts[0] == 4U);
+    CHECK(state.meld_owners[0] == 0U);
+    CHECK(state.hand_counts[1] == 1U);
+    CHECK(state.scores[1] == 8);
     return true;
 }
 
@@ -425,8 +539,8 @@ static bool test_meld_controls(void)
         &instance, &p4_p4_rummy_game, &services, &state, sizeof(state)));
     state.phase = P4_RUMMY_PHASE_DISCARD;
     state.current_player = 0U;
-    state.hand_counts[0] = P4_RUMMY_DRAWN_CARDS;
-    const uint8_t hand[P4_RUMMY_DRAWN_CARDS] = {
+    state.hand_counts[0] = TEST_DRAWN_CARDS;
+    const uint8_t hand[TEST_DRAWN_CARDS] = {
         card(0U, 4U), card(1U, 4U), card(2U, 4U), card(0U, 6U),
         card(0U, 7U), card(0U, 8U), card(1U, 10U), card(2U, 13U),
     };
@@ -453,7 +567,7 @@ static bool test_meld_controls(void)
         &touch_state, sizeof(touch_state)));
     touch_state.phase = P4_RUMMY_PHASE_DISCARD;
     touch_state.current_player = 0U;
-    touch_state.hand_counts[0] = P4_RUMMY_DRAWN_CARDS;
+    touch_state.hand_counts[0] = TEST_DRAWN_CARDS;
     memcpy(touch_state.hands[0], hand, sizeof(hand));
     touch_state.selected_card = 0U;
     touch_state.selected_mask = 0U;
@@ -469,6 +583,78 @@ static bool test_meld_controls(void)
     CHECK(touch_state.current_player == 1U);
     CHECK(touch_state.phase == P4_RUMMY_PHASE_DRAW);
     p4_game_instance_stop(&touch_instance);
+    return true;
+}
+
+static bool test_touch_pile_and_targeted_layoff(void)
+{
+    audio_mock_t audio = {0};
+    const p4_game_services_t services = local_services(&audio);
+    p4_game_instance_t pile_instance = {0};
+    p4_rummy_state_t pile_state;
+    CHECK(p4_game_instance_start(
+        &pile_instance, &p4_p4_rummy_game, &services,
+        &pile_state, sizeof(pile_state)));
+    pile_state.phase = P4_RUMMY_PHASE_DRAW;
+    pile_state.current_player = 0U;
+    pile_state.hand_counts[0] = P4_RUMMY_HAND_CARDS;
+    const uint8_t hand[P4_RUMMY_HAND_CARDS] = {
+        card(0U, 5U), card(1U, 5U), card(0U, 7U), card(1U, 8U),
+        card(2U, 9U), card(3U, 10U), card(0U, 11U),
+    };
+    memcpy(pile_state.hands[0], hand, sizeof(hand));
+    const uint8_t pile[8] = {
+        card(3U, 2U), card(2U, 5U),
+        card(0U, 9U), card(3U, 13U),
+        card(2U, 3U), card(1U, 4U),
+        card(3U, 6U), card(2U, 12U),
+    };
+    memcpy(pile_state.discard, pile, sizeof(pile));
+    pile_state.discard_count = 8U;
+    pile_state.selected_discard = 7U;
+    p4_game_surface_t surface = {
+        .pixels = &s_surface_pixels[0][0],
+        .stride_pixels = TEST_SURFACE_STRIDE,
+        .width = P4_GAME_SURFACE_WIDTH,
+        .height = P4_GAME_SURFACE_HEIGHT,
+    };
+    CHECK(p4_game_instance_render(&pile_instance, &surface));
+    CHECK(tap(&pile_instance, 145U, 54U));
+    CHECK(pile_state.phase == P4_RUMMY_PHASE_DRAW);
+    CHECK(pile_state.selected_discard == 2U);
+    CHECK(tap(&pile_instance, 140U, 80U));
+    CHECK(pile_state.discard_count == 2U);
+    CHECK(pile_state.hand_counts[0] == 13U);
+    CHECK(pile_state.required_meld_card == pile[2]);
+    p4_game_instance_stop(&pile_instance);
+
+    p4_game_instance_t layoff_instance = {0};
+    p4_rummy_state_t layoff_state;
+    CHECK(p4_game_instance_start(
+        &layoff_instance, &p4_p4_rummy_game, &services,
+        &layoff_state, sizeof(layoff_state)));
+    layoff_state.phase = P4_RUMMY_PHASE_DISCARD;
+    layoff_state.current_player = 0U;
+    layoff_state.hand_counts[0] = 2U;
+    layoff_state.hands[0][0] = card(2U, 8U);
+    layoff_state.hands[0][1] = card(0U, 12U);
+    layoff_state.drawn_card_index = P4_RUMMY_NO_CARD;
+    layoff_state.required_meld_card = P4_RUMMY_NO_CARD;
+    layoff_state.meld_count = 1U;
+    layoff_state.meld_counts[0] = 3U;
+    layoff_state.meld_owners[0] = 1U;
+    layoff_state.melds[0][0] = card(2U, 5U);
+    layoff_state.melds[0][1] = card(2U, 6U);
+    layoff_state.melds[0][2] = card(2U, 7U);
+    layoff_state.selected_card = 0U;
+    layoff_state.selected_mask = 0U;
+    CHECK(tap(&layoff_instance, 140U, 160U));
+    CHECK(layoff_state.selected_mask == UINT64_C(1));
+    CHECK(tap(&layoff_instance, 50U, 50U));
+    CHECK(layoff_state.meld_counts[0] == 4U);
+    CHECK(layoff_state.meld_owners[0] == 1U);
+    CHECK(layoff_state.hand_counts[0] == 1U);
+    p4_game_instance_stop(&layoff_instance);
     return true;
 }
 
@@ -624,8 +810,8 @@ static bool prepare_network_rank_meld(p4_rummy_state_t *state,
             }
         }
     }
-    if (state->discard_count != 0U) {
-        seen[state->discard[state->discard_count - 1U]] = true;
+    for (uint8_t index = 0U; index < state->discard_count; ++index) {
+        seen[state->discard[index]] = true;
     }
     for (uint8_t rank = 0U; rank < 13U; ++rank) {
         uint8_t found = 0U;
@@ -641,6 +827,52 @@ static bool prepare_network_rank_meld(p4_rummy_state_t *state,
             state->drawn_card_index = P4_RUMMY_NO_CARD;
             state->selected_card = 0U;
             state->selected_mask = 0U;
+            ++state->revision;
+            p4_rummy_mark_snapshot_dirty(state);
+            return true;
+        }
+    }
+    return false;
+}
+
+static bool prepare_network_layoff(p4_rummy_state_t *state,
+                                   uint8_t player)
+{
+    bool seen[P4_RUMMY_DECK_CARDS] = {false};
+    for (uint8_t other = 0U; other < state->player_count; ++other) {
+        for (uint8_t index = 0U; index < state->hand_counts[other]; ++index) {
+            if (other != player || index != 0U) {
+                seen[state->hands[other][index]] = true;
+            }
+        }
+    }
+    for (uint8_t index = 0U; index < state->discard_count; ++index) {
+        seen[state->discard[index]] = true;
+    }
+    for (uint8_t suit = 0U; suit < 4U; ++suit) {
+        for (uint8_t rank = 0U; rank + 3U < 13U; ++rank) {
+            uint8_t run[4];
+            bool available = true;
+            for (uint8_t offset = 0U; offset < 4U; ++offset) {
+                run[offset] = (uint8_t)(suit * 13U + rank + offset);
+                available = available && !seen[run[offset]];
+            }
+            if (!available) {
+                continue;
+            }
+            state->meld_count = 1U;
+            state->meld_counts[0] = 3U;
+            state->meld_owners[0] = 0U;
+            memcpy(state->melds[0], run, 3U);
+            state->hands[player][0] = run[3];
+            state->deck_index = (uint8_t)(state->deck_index + 3U);
+            state->phase = P4_RUMMY_PHASE_DISCARD;
+            state->current_player = player;
+            state->drawn_card_index = P4_RUMMY_NO_CARD;
+            state->required_meld_card = P4_RUMMY_NO_CARD;
+            state->selected_card = 0U;
+            state->selected_mask = 0U;
+            state->selected_meld = P4_RUMMY_NO_CARD;
             ++state->revision;
             p4_rummy_mark_snapshot_dirty(state);
             return true;
@@ -756,6 +988,130 @@ static bool test_four_player_host_authority(void)
     return true;
 }
 
+static bool test_network_discard_pile_pickup(void)
+{
+    test_link_t link;
+    audio_mock_t audio[P4_RUMMY_MAX_PLAYERS] = {{0}};
+    p4_game_services_t services[P4_RUMMY_MAX_PLAYERS];
+    p4_game_instance_t instances[P4_RUMMY_MAX_PLAYERS] = {{0}};
+    p4_rummy_state_t states[P4_RUMMY_MAX_PLAYERS];
+    CHECK(start_network_table(&link, 2U, audio, services,
+                              instances, states));
+    CHECK(update_button(&instances[0], P4_BUTTON_A));
+    CHECK(sync_from_host(2U, instances, states));
+    CHECK(take_network_turn(0U, 2U, instances, states));
+    CHECK(take_network_turn(1U, 2U, instances, states));
+    CHECK(take_network_turn(0U, 2U, instances, states));
+    CHECK(states[1].current_player == 1U);
+    CHECK(states[1].phase == P4_RUMMY_PHASE_DRAW);
+    CHECK(states[1].discard_count == 4U);
+    states[1].draw_source = P4_RUMMY_DRAW_DISCARD;
+    states[1].selected_discard = 1U;
+    CHECK(update_button(&instances[1], P4_BUTTON_A));
+    CHECK(states[1].network_request_pending);
+    CHECK(sync_from_host(2U, instances, states));
+    CHECK(states[0].discard_count == 1U);
+    CHECK(states[0].hand_counts[1] == 10U);
+    CHECK(states[0].required_meld_card != P4_RUMMY_NO_CARD);
+    CHECK(states[1].discard_count == states[0].discard_count);
+    CHECK(states[1].hand_counts[1] == states[0].hand_counts[1]);
+    CHECK(states[1].required_meld_card == states[0].required_meld_card);
+    CHECK(memcmp(states[1].discard, states[0].discard,
+                 sizeof(states[0].discard)) == 0);
+    CHECK(memcmp(states[1].hands, states[0].hands,
+                 sizeof(states[0].hands)) == 0);
+    CHECK(states[1].selected_mask ==
+          (UINT64_C(1) << states[1].drawn_card_index));
+    stop_network_table(2U, instances);
+    return true;
+}
+
+static bool test_network_targeted_layoff(void)
+{
+    test_link_t link;
+    audio_mock_t audio[P4_RUMMY_MAX_PLAYERS] = {{0}};
+    p4_game_services_t services[P4_RUMMY_MAX_PLAYERS];
+    p4_game_instance_t instances[P4_RUMMY_MAX_PLAYERS] = {{0}};
+    p4_rummy_state_t states[P4_RUMMY_MAX_PLAYERS];
+    CHECK(start_network_table(&link, 2U, audio, services,
+                              instances, states));
+    CHECK(update_button(&instances[0], P4_BUTTON_A));
+    CHECK(sync_from_host(2U, instances, states));
+    CHECK(prepare_network_layoff(&states[0], 1U));
+    CHECK(sync_from_host(2U, instances, states));
+    states[1].selected_card = 0U;
+    states[1].selected_meld = 0U;
+    CHECK(update_button(&instances[1], P4_BUTTON_B));
+    CHECK(update_button(&instances[1], P4_BUTTON_START));
+    CHECK(states[1].network_request_pending);
+    CHECK(sync_from_host(2U, instances, states));
+    CHECK(states[0].meld_count == 1U);
+    CHECK(states[0].meld_counts[0] == 4U);
+    CHECK(states[0].meld_owners[0] == 0U);
+    CHECK(states[0].hand_counts[1] == 6U);
+    CHECK(states[1].meld_counts[0] == 4U);
+    CHECK(states[1].meld_owners[0] == 0U);
+    stop_network_table(2U, instances);
+    return true;
+}
+
+static bool test_network_full_deck_and_round_over_snapshots(void)
+{
+    test_link_t link;
+    audio_mock_t audio[P4_RUMMY_MAX_PLAYERS] = {{0}};
+    p4_game_services_t services[P4_RUMMY_MAX_PLAYERS];
+    p4_game_instance_t instances[P4_RUMMY_MAX_PLAYERS] = {{0}};
+    p4_rummy_state_t states[P4_RUMMY_MAX_PLAYERS];
+    CHECK(start_network_table(&link, 2U, audio, services,
+                              instances, states));
+    p4_rummy_state_t *const host = &states[0];
+    memset(host->hands, P4_RUMMY_NO_CARD, sizeof(host->hands));
+    memset(host->discard, P4_RUMMY_NO_CARD, sizeof(host->discard));
+    memset(host->melds, P4_RUMMY_NO_CARD, sizeof(host->melds));
+    memset(host->meld_counts, 0, sizeof(host->meld_counts));
+    memset(host->meld_owners, P4_RUMMY_NO_PLAYER,
+           sizeof(host->meld_owners));
+    host->hand_counts[0] = 50U;
+    host->hand_counts[1] = 1U;
+    for (uint8_t index = 0U; index < 50U; ++index) {
+        host->hands[0][index] = index;
+    }
+    host->hands[1][0] = 50U;
+    host->discard[0] = 51U;
+    host->discard_count = 1U;
+    host->deck_count = P4_RUMMY_DECK_CARDS;
+    host->deck_index = P4_RUMMY_DECK_CARDS;
+    host->meld_count = 0U;
+    host->phase = P4_RUMMY_PHASE_DRAW;
+    host->current_player = 0U;
+    host->winner = P4_RUMMY_NO_PLAYER;
+    host->drawn_card_index = P4_RUMMY_NO_CARD;
+    host->required_meld_card = P4_RUMMY_NO_CARD;
+    ++host->revision;
+    p4_rummy_mark_snapshot_dirty(host);
+    CHECK(sync_from_host(2U, instances, states));
+    CHECK(states[1].hand_counts[0] == 50U);
+    CHECK(states[1].hand_counts[1] == 1U);
+    CHECK(states[1].discard_count == 1U);
+    CHECK(memcmp(states[1].hands, host->hands,
+                 sizeof(host->hands)) == 0);
+
+    host->phase = P4_RUMMY_PHASE_ROUND_OVER;
+    host->winner = 1U;
+    host->hand_counts[1] = 0U;
+    host->discard_count = 2U;
+    host->discard[1] = 50U;
+    ++host->revision;
+    p4_rummy_mark_snapshot_dirty(host);
+    CHECK(sync_from_host(2U, instances, states));
+    CHECK(states[1].phase == P4_RUMMY_PHASE_ROUND_OVER);
+    CHECK(states[1].winner == 1U);
+    CHECK(states[1].hand_counts[1] == 0U);
+    CHECK(states[1].discard_count == 2U);
+    stop_network_table(2U, instances);
+    return true;
+}
+
 static bool test_network_meld_request_and_snapshot(void)
 {
     test_link_t link;
@@ -812,10 +1168,16 @@ int main(void)
         !test_rummy_500_scoring() ||
         !test_play_melds_and_go_out() ||
         !test_setup_deal_draw_and_win() ||
+        !test_discard_pile_pickup_and_required_meld() ||
+        !test_layoff_to_another_players_meld() ||
         !test_meld_controls() ||
+        !test_touch_pile_and_targeted_layoff() ||
         !test_cpu_and_local_lifecycle() ||
         !test_two_player_network_cpu_fill_and_peer_loss() ||
         !test_four_player_host_authority() ||
+        !test_network_discard_pile_pickup() ||
+        !test_network_targeted_layoff() ||
+        !test_network_full_deck_and_round_over_snapshots() ||
         !test_network_meld_request_and_snapshot()) {
         return EXIT_FAILURE;
     }

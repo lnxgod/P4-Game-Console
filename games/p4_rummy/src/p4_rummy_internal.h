@@ -13,13 +13,13 @@ enum {
     P4_RUMMY_MAX_PLAYERS = 4,
     P4_RUMMY_DECK_CARDS = 52,
     P4_RUMMY_HAND_CARDS = 7,
-    P4_RUMMY_DRAWN_CARDS = 8,
+    P4_RUMMY_MAX_HAND_CARDS = P4_RUMMY_DECK_CARDS,
     P4_RUMMY_MAX_MELDS = 8,
     P4_RUMMY_MAX_MELD_CARDS = 13,
     P4_RUMMY_MATCH_TARGET = 500,
     P4_RUMMY_NO_CARD = 0xff,
     P4_RUMMY_NO_PLAYER = 0xff,
-    P4_RUMMY_NETWORK_PROTOCOL = 3,
+    P4_RUMMY_NETWORK_PROTOCOL = 4,
     P4_RUMMY_NETWORK_MESSAGE_BYTES = 64,
     P4_RUMMY_CPU_THINK_MS = 420,
     P4_RUMMY_TURN_LIMIT = 200,
@@ -43,7 +43,7 @@ typedef enum {
 } p4_rummy_draw_source_t;
 
 typedef struct {
-    uint8_t hands[P4_RUMMY_MAX_PLAYERS][P4_RUMMY_DRAWN_CARDS];
+    uint8_t hands[P4_RUMMY_MAX_PLAYERS][P4_RUMMY_MAX_HAND_CARDS];
     uint8_t hand_counts[P4_RUMMY_MAX_PLAYERS];
     uint8_t melds[P4_RUMMY_MAX_MELDS][P4_RUMMY_MAX_MELD_CARDS];
     uint8_t meld_counts[P4_RUMMY_MAX_MELDS];
@@ -61,9 +61,12 @@ typedef struct {
     uint8_t winner;
     uint8_t cpu_mask;
     uint8_t selected_card;
-    uint8_t selected_mask;
+    uint8_t selected_discard;
+    uint8_t selected_meld;
     uint8_t drawn_card_index;
+    uint8_t required_meld_card;
     uint8_t meld_count;
+    uint64_t selected_mask;
     int16_t scores[P4_RUMMY_MAX_PLAYERS];
     int16_t round_scores[P4_RUMMY_MAX_PLAYERS];
     p4_rummy_phase_t phase;
@@ -74,6 +77,8 @@ typedef struct {
     uint32_t cpu_think_ms;
     uint32_t network_retry_ms;
     uint32_t last_network_sequence[P4_RUMMY_MAX_PLAYERS];
+    uint32_t network_header_revision;
+    uint32_t network_cards_revision;
     uint16_t turn_count;
     uint16_t round_number;
     uint64_t session_seed;
@@ -82,8 +87,12 @@ typedef struct {
     bool network_error;
     bool network_snapshot_dirty;
     bool network_request_pending;
+    bool network_header_ready;
+    bool network_cards_ready;
     bool touch_was_down;
     bool peer_lost_fallback;
+    uint8_t network_header[P4_RUMMY_NETWORK_MESSAGE_BYTES];
+    uint8_t network_cards[P4_RUMMY_NETWORK_MESSAGE_BYTES];
 } p4_rummy_state_t;
 
 void p4_rummy_reset_lobby(p4_rummy_state_t *state,
@@ -93,12 +102,16 @@ bool p4_rummy_adjust_offline_players(p4_rummy_state_t *state,
 bool p4_rummy_adjust_cpu_seats(p4_rummy_state_t *state, bool increase);
 bool p4_rummy_begin_round(p4_rummy_state_t *state);
 bool p4_rummy_draw(p4_rummy_state_t *state, uint8_t player,
-                   p4_rummy_draw_source_t source);
+                   p4_rummy_draw_source_t source,
+                   uint8_t discard_index);
 bool p4_rummy_discard_card(p4_rummy_state_t *state, uint8_t player,
                            uint8_t hand_index);
 bool p4_rummy_meld_is_valid(const uint8_t *cards, uint8_t count);
 bool p4_rummy_play_meld(p4_rummy_state_t *state, uint8_t player,
-                        uint8_t selection_mask);
+                        uint64_t selection_mask);
+bool p4_rummy_play_meld_to(p4_rummy_state_t *state, uint8_t player,
+                           uint64_t selection_mask,
+                           uint8_t meld_index);
 bool p4_rummy_player_is_cpu(const p4_rummy_state_t *state,
                             uint8_t player);
 bool p4_rummy_local_turn(const p4_rummy_state_t *state);
@@ -115,13 +128,18 @@ void p4_rummy_network_poll(p4_game_context_t *context,
                            uint32_t elapsed_ms);
 bool p4_rummy_perform_draw(p4_game_context_t *context,
                            p4_rummy_state_t *state,
-                           p4_rummy_draw_source_t source);
+                           p4_rummy_draw_source_t source,
+                           uint8_t discard_index);
 bool p4_rummy_perform_discard(p4_game_context_t *context,
                               p4_rummy_state_t *state,
                               uint8_t hand_index);
 bool p4_rummy_perform_meld(p4_game_context_t *context,
                            p4_rummy_state_t *state,
-                           uint8_t selection_mask);
+                           uint64_t selection_mask);
+bool p4_rummy_perform_meld_to(p4_game_context_t *context,
+                              p4_rummy_state_t *state,
+                              uint64_t selection_mask,
+                              uint8_t meld_index);
 bool p4_rummy_request_new_round(p4_game_context_t *context,
                                 p4_rummy_state_t *state);
 void p4_rummy_mark_snapshot_dirty(p4_rummy_state_t *state);
