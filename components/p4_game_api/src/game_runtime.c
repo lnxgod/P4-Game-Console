@@ -31,7 +31,8 @@ static uint32_t known_capabilities(void)
         P4_GAME_CAP_MULTIPLAYER_SESSION |
         P4_GAME_CAP_MODULE_HANDOFF |
         P4_GAME_CAP_VECTOR_SCENES |
-        P4_GAME_CAP_VIDEO_HIGH_RES;
+        P4_GAME_CAP_VIDEO_HIGH_RES |
+        P4_GAME_CAP_DICE_ACCESSORY;
 }
 
 static uint32_t implemented_service_capabilities(void)
@@ -44,7 +45,8 @@ static uint32_t implemented_service_capabilities(void)
         P4_GAME_CAP_SIGNAL_SCAN |
         P4_GAME_CAP_SAVE |
         P4_GAME_CAP_MULTIPLAYER_SESSION |
-        P4_GAME_CAP_VIDEO_HIGH_RES;
+        P4_GAME_CAP_VIDEO_HIGH_RES |
+        P4_GAME_CAP_DICE_ACCESSORY;
 }
 
 static bool save_snapshot_valid(const p4_game_services_t *services)
@@ -124,6 +126,10 @@ static bool services_valid(const p4_game_services_t *services)
          services->multiplayer_read_status == NULL ||
          services->multiplayer_send == NULL ||
          services->multiplayer_receive == NULL)) {
+        return false;
+    }
+    if ((services->available_capabilities & P4_GAME_CAP_DICE_ACCESSORY) != 0U &&
+        (services->dice_context == NULL || services->dice_exchange == NULL)) {
         return false;
     }
     if (services->multiplayer_profile != NULL &&
@@ -650,4 +656,34 @@ void p4_game_stop_audio(p4_game_context_t *context)
         context->services->stop_audio != NULL) {
         context->services->stop_audio(context->services->audio_context);
     }
+}
+
+bool p4_game_dice_exchange(p4_game_context_t *context,
+    const p4_dice_request_t *request, p4_dice_status_t *status)
+{
+    if (status) *status = (p4_dice_status_t){0};
+    if (!context || !context->services || !request || !status ||
+        !(context->services->available_capabilities & P4_GAME_CAP_DICE_ACCESSORY) ||
+        !context->services->dice_exchange || !context->services->dice_context ||
+        !request->token || request->player_slot >= 4 || !request->count ||
+        request->count > P4_DICE_MAX || request->sides < 2 ||
+        ((unsigned)request->held_mask >> request->count)) return false;
+    size_t n=bounded_length(request->player_name,P4_DICE_NAME_BYTES);
+    if (!n || n==P4_DICE_NAME_BYTES) return false;
+    for (size_t i=0; i<n; ++i)
+        if ((unsigned char)request->player_name[i]<32 ||
+            (unsigned char)request->player_name[i]>126) return false;
+    for (size_t i=0; i<P4_DICE_MAX; ++i)
+        if (i<request->count ? (request->faces[i]<1 || request->faces[i]>request->sides)
+                            : request->faces[i]!=0) return false;
+    if (!context->services->dice_exchange(context->services->dice_context,request,status) ||
+        status->phase < P4_DICE_OFFLINE || status->phase > P4_DICE_ROLLED ||
+        (status->hold_changed && (!request->can_hold ||
+         status->phase != P4_DICE_WAITING || status->hold_sequence == request->hold_ack ||
+         ((unsigned)status->held_mask >> request->count))) ||
+        (status->phase >= P4_DICE_WAITING &&
+         (status->token != request->token || status->player_slot != request->player_slot))) {
+        *status=(p4_dice_status_t){0}; return false;
+    }
+    return true;
 }

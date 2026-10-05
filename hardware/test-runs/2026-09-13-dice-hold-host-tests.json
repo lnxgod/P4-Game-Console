@@ -1,0 +1,43 @@
+{
+  "candidate": "Core2 0.6.0 / Yahtzee 1.3.1 / console fe51c95",
+  "source_sha256": {
+    "games/p4_yahtzee/src/p4_yahtzee.c": "4e9bfbc6f5bd44ffdc31ad52516d200d6ffa5d513ca540913585294b360a4d93",
+    "games/p4_yahtzee/src/p4_yahtzee_network.c": "659342266bafce78b0f38fabb708c77f41b5f0660d989129212aa32572ebb4a9",
+    "games/p4_yahtzee/src/p4_yahtzee_internal.h": "609f4b45e6f49b769e025597f15ecd8107e9bea253537ee651b559aecf425e92",
+    "components/p4_game_api/include/p4/dice.h": "4a9ee228bab0aee3b7dd7db43880e3337ec193417ddbd4bc577e6cf2f5ae68d6",
+    "components/p4_multiplayer/src/dice_accessory.c": "e0fde9c75c1edecfe7d2a71140aba0779291fef37715be3ddcca1ec52ca1d2de",
+    "components/platform_dice_ble/src/dice_ble.c": "8a8d2b3ef0920faf9e85c3642d1b46ca268566d144ae2058072d4aa1d86cd088",
+    "apps/dice_core2/main/dice_core2.cpp": "fbc8467af2d7a8203b94201db80c7ab3d264cf180ebcec9717b2ca907bb24772",
+    "apps/dice_core2/main/dice_controls.h": "7394b7108f6652207fc47ea9a4885e5b63c642a9b0fb42559030457d9b241632",
+    "apps/dice_core2/main/dice_view.cpp": "19820f6bee8f880d5c7b939aef4ac0d9d32583f1c490d29b38115e1f740f0633"
+  },
+  "host_tests": {
+    "core2_controls_feedback_cup_dirty_presentation": "PASS with ASan/UBSan",
+    "multiplayer_codec_status": "2/2 PASS",
+    "yahtzee": "1/1 PASS: remote-player hold/unhold, all-held release, keep/undo acknowledgement, rerolls and existing randomness/stale-token cases",
+    "game_sdk": "PASS, including all v1/v2 host-tail byte lengths",
+    "sdl": "2/2 PASS"
+  },
+  "interactive_desktop": {
+    "tester": "Codex via CUA",
+    "controls": "Keyboard Start, A keep, Start reroll, Back to menu, Back exit",
+    "observed_roll1": [
+      6,
+      2,
+      1,
+      3,
+      3
+    ],
+    "observed_roll2": [
+      6,
+      5,
+      4,
+      6,
+      4
+    ],
+    "held_mask": 1,
+    "held_value_preserved": true,
+    "touch_limitation": "CUA coordinate click arrived at an offset SDL window coordinate; temporary tracing removed. No physical touch acceptance inferred."
+  },
+  "physical_core2_connection_hold_shake": "PENDING until updated device is connected and exercised"
+}

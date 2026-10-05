@@ -293,7 +293,9 @@ play-game:
 
 game-registry-check:
 	python3 scripts/generate-game-registry.py --games-root games --check
+	python3 scripts/p4cart_seed_registry.py --check
 	python3 scripts/tests/test-game-registry.py
+	python3 scripts/tests/test-p4cart-seed-registry.py
 	python3 scripts/tests/test-game-resource.py
 	python3 scripts/tests/test-protected-game-lineage.py
 	python3 scripts/tests/test-new-game.py
@@ -314,10 +316,14 @@ console-os-idf: board-port-check console-shell-host platform-game-storage-host g
 console-os-olimex-idf: board-port-check platform-board-host console-shell-host platform-game-storage-host gamepad-host
 	./scripts/build.sh console_os olimex-esp32-p4-pc
 	python3 ./scripts/verify-console-os-olimex.py
+	python3 ./scripts/install-olimex-sd-card.py --check-bundle-only
 
 console-os-waveshare-idf: board-port-check platform-board-host console-shell-host platform-game-storage-host game-sdk-host
 	./scripts/build-waveshare-console-os.sh
 	python3 ./scripts/verify-console-os-waveshare.py
+	python3 ./scripts/install-olimex-sd-card.py \
+		--bundle apps/console_os/build-waveshare-landscape/sd-card \
+		--check-bundle-only
 
 install-olimex-sd-card:
 	@test -n "$(SD_MOUNT)" || (echo "usage: make install-olimex-sd-card SD_MOUNT=/Volumes/P4GAMES" >&2; exit 2)

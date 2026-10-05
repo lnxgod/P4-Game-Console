@@ -1,0 +1,126 @@
+{
+  "schema": 1,
+  "active": true,
+  "authorization_id": "waveshare-unit2-dice-hold-20260913",
+  "authorized_at_utc": "2026-09-14T05:33:15.175837+00:00",
+  "authorization_basis": "User explicitly requested fixing dice connectivity and tap-to-hold/reroll, then directed continued work until the fix is ready. Existing exact-device update scope applies.",
+  "scope": "Application-only dice v2 connection/hold successor on recorded Waveshare unit2; only matching Yahtzee 1.3.1 cartridge via separately verified H1 transfer.",
+  "source": {
+    "commit": "a474ded7946cff9540c515be4b5748a1ea560cd9",
+    "branch": "detached snapshot",
+    "snapshot": "/tmp/p4-dice-hold-candidate",
+    "uncommitted_exact_artifact": true,
+    "toolchain_lock": "ESP-IDF 5.5.3 at 2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "isolation": "Working source snapshot; unrelated in-progress games/p4_rummy kept at committed HEAD. No other cartridges installed.",
+    "content_manifest": {
+      "path": "hardware/local-state/waveshare-dice-hold-fe51c95/source-files.sha256",
+      "sha256": "d6c5e5cbd76344ad78c66a63b31d2fc30d4dc9d0e38b6b0d4659617f37acb61c"
+    }
+  },
+  "board": {
+    "unit_label": "unit2-green-386F",
+    "color_label": "green",
+    "node_suffix": "386F",
+    "profile": "waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+    "recorded_port": "/dev/cu.wchusbserial5B901593451",
+    "chip": "ESP32-P4",
+    "revision": "v1.3",
+    "flash_bytes": 33554432,
+    "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79"
+  },
+  "factory_backup": {
+    "path": "hardware/backups/waveshare-4.3-unit2-factory-20260820.bin",
+    "bytes": 33554432,
+    "sha256": "240a730a882e6437f31729c78ae69db35b132b1aa78f820fec9d88b3397b39e6",
+    "manifest": "hardware/backups/manifest.json"
+  },
+  "installed_layout": {
+    "bootloader": {
+      "path": "hardware/local-state/waveshare-dice-hold-fe51c95/bootloader.bin",
+      "bytes": 23056,
+      "sha256": "4ce7187e60dc830bae8a42b9161ec7762bad33e0a391942071c0ec225eccdb30",
+      "offset": "0x2000"
+    },
+    "partition_table": {
+      "path": "hardware/local-state/waveshare-dice-hold-fe51c95/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871",
+      "offset": "0x8000"
+    },
+    "application_offset": "0x20000"
+  },
+  "predecessor": {
+    "version": "0.5.12",
+    "application_bytes": 1884176,
+    "application_sha256": "e2a49f9890730dd7649fbb4ba8d70c0a22c69d3214b75ede9b05fd6bf8ea79ef",
+    "preserve_span_bytes": 1888256,
+    "tail_erased_required": false,
+    "evidence": "Previous exact-unit shared-dice install/readback receipt; live predecessor hash is required again by the guarded installer."
+  },
+  "candidate": {
+    "application": {
+      "path": "hardware/local-state/waveshare-dice-hold-fe51c95/p4_console_os.bin",
+      "bytes": 1885536,
+      "sha256": "fe51c95e9cdb3a811139e64e90149390c458488b1bdcdff3bd5d184fe7c41bca",
+      "padded_mutation_bytes": 1888256
+    },
+    "elf": {
+      "path": "hardware/local-state/waveshare-dice-hold-fe51c95/p4_console_os.elf",
+      "bytes": 22287036,
+      "sha256": "4a155931ac8958d58bc4c28331b56574e9771b29e75fb1ef13a4fa04f5fd2f99"
+    },
+    "update_package": {
+      "path": "hardware/local-state/waveshare-dice-hold-fe51c95/P4UPDATE.P4U",
+      "bytes": 1885792,
+      "sha256": "f7302ce08448cb4a8a1ec38f04bae9a19ba1cb84f2d0de1492f955f08032e9d4"
+    },
+    "sdkconfig": {
+      "path": "hardware/local-state/waveshare-dice-hold-fe51c95/sdkconfig",
+      "bytes": 96131,
+      "sha256": "542fdb04875f04b6a7203b152dd4d2ba8c926976a8315943c422e6c33dc4fa4f"
+    },
+    "dependencies_lock": {
+      "path": "hardware/local-state/waveshare-dice-hold-fe51c95/dependencies-waveshare.lock",
+      "bytes": 6296,
+      "sha256": "bfcf00ff616e3b532c52b6733869bbb5f1bffee28a29d12833f23a881f1afa9e"
+    },
+    "lord_cartridge": {
+      "path": "hardware/local-state/waveshare-dice-hold-fe51c95/LORD.P4G",
+      "bytes": 212012,
+      "sha256": "963070eacc6eab5864acbb88787e49f28ec9a5f7909d1304ba58f236d71dd555"
+    },
+    "yahtzee_cartridge": {
+      "path": "hardware/local-state/waveshare-dice-hold-fe51c95/P4_YAHTZEE.P4G",
+      "bytes": 42168,
+      "sha256": "05a55116d0d1a01f83723b6dfbc21d807d5eb7ae158fb128041f8e51a80b364c"
+    },
+    "version": "0.5.12",
+    "artifact_label": "dice-hold-fe51c95",
+    "release_directory": "hardware/local-state/waveshare-dice-hold-fe51c95"
+  },
+  "safety": {
+    "firmware_write_scope": "one application-partition write at 0x20000",
+    "content_write_scope": "Only P4_YAHTZEE.P4G via separately verified H1 transfer; legacy installer LORD artifact is checked but never installed.",
+    "live_identity_required": true,
+    "factory_backup_required": true,
+    "unchanged_bootloader_required": true,
+    "unchanged_partition_table_required": true,
+    "live_predecessor_required": true,
+    "complete_successor_span_preimage_required": true,
+    "complete_successor_span_readback_required": true,
+    "automatic_rollback_authorized": true,
+    "generic_idf_flash_authorized": false,
+    "full_project_flash_authorized": false,
+    "erase_authorized": false,
+    "formatting_authorized": false,
+    "micro_sd_write_authorized": false
+  },
+  "validation": {
+    "verifier": {
+      "path": "hardware/local-state/waveshare-dice-hold-fe51c95/verifier.json",
+      "bytes": 3649,
+      "sha256": "6984148023a2ddb147ec52334f283685d0cca83476a7428a6a194ba59038b8e6"
+    },
+    "host_tests": "Core2 controls/feedback/cup/presentation sanitizer tests; dice codec/status validation; Yahtzee host/peer holds, keep/undo ack and rerolls; Game SDK including v1/v2 tail compatibility; SDL smoke and interactive keyboard lifecycle/hold/reroll. Hardware touch/BLE acceptance remains pending."
+  }
+}

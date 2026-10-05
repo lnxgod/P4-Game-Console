@@ -219,6 +219,7 @@ static p4_game_result_t game_update(
         state->mode = P4_YAHTZEE_LOCAL;
         state->network_started = false;
         state->network_error = false;
+        p4_yahtzee_poll_dice(context, state);
         return P4_GAME_CONTINUE;
     }
     if (input->touch_valid && input->touch_count != 0U &&
@@ -234,6 +235,7 @@ static p4_game_result_t game_update(
         state->phase != P4_YAHTZEE_MENU) {
         p4_yahtzee_poll_network(context, state);
     }
+    p4_yahtzee_poll_dice(context, state);
     if (input->touch_valid && input->touch_count != 0U &&
         !state->touch_was_down) {
         handle_touch(context, state, input->touches[0].x,
@@ -607,8 +609,16 @@ static bool game_render(p4_game_context_t *context,
                      SCORE_COL_W + 1, 7, COLOR_TEXT);
     p4_draw_fill_rect(surface, 2, 185, 224, 13, COLOR_PANEL);
     p4_draw_text(surface, 6, 188,
-        !p4_yahtzee_local_turn(state) ? "WAITING FOR OTHER PLAYER" :
         state->roll_animation_ms != 0U ? "ROLLING DICE..." :
+        state->accessory_phase == P4_DICE_SEARCHING && state->accessory_request.enabled
+            ? "TAP CONNECT ON CORE2" :
+        state->accessory_phase == P4_DICE_SHAKING ? "SHAKING DICE..." :
+        state->accessory_phase == P4_DICE_READY ? "SHAKE YOUR DICE" :
+        state->accessory_phase == P4_DICE_WAITING && state->accessory_request.enabled
+            ? "TAP READY ON YOUR DICE" :
+        !p4_yahtzee_local_turn(state) ? "WAITING FOR OTHER PLAYER" :
+        state->shared_accessory && state->roll_count == 0U
+            ? "CORE2: READY + SHAKE OR ROLL" :
         state->roll_count == 0U ? "START ROLLS THE DICE" :
         state->focus == P4_YAHTZEE_FOCUS_DICE
             ? "PINK ROWS SCORE  B SCORES" :
@@ -641,7 +651,7 @@ const p4_game_descriptor_t p4_p4_yahtzee_game = {
     .accent_rgb565 = UINT16_C(COLOR_ACCENT),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
-        P4_GAME_CAP_MULTIPLAYER_SESSION,
+        P4_GAME_CAP_MULTIPLAYER_SESSION | P4_GAME_CAP_DICE_ACCESSORY,
     .state_bytes = sizeof(p4_yahtzee_state_t),
     .start = game_start,
     .update = game_update,

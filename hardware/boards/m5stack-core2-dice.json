@@ -1,0 +1,29 @@
+{
+  "schema": 1,
+  "board": "m5stack-core2",
+  "label_confirmation": "Owner confirmed back case says core2 on 2026-09-13",
+  "chip": "esp32",
+  "chip_revision": 301,
+  "flash_bytes": 16777216,
+  "device_identity_sha256": "c1f4a3f3751be1d87ed7b5d84f359c0f97fddb2b6c5e933d54f34383acac8bd5",
+  "backup_sha256": "f44e82082822397ece6619bf98ac03e6a74243acf056d7295d42637418f9b64e",
+  "app_offset": 65536,
+  "app_partition_bytes": 6553600,
+  "driver": {
+    "m5stack/m5unified": "0.2.20",
+    "m5stack/m5gfx": "0.2.27",
+    "idf": "5.5.3"
+  },
+  "peripheral_scope": [
+    "Core2 display and touch",
+    "vendor-detected Core2 IMU",
+    "vendor-detected Core2 PMIC motor supply",
+    "internal speaker",
+    "encrypted bonded BLE accessory"
+  ],
+  "official_sources": [
+    "https://docs.m5stack.com/en/core/core2",
+    "https://github.com/m5stack/M5Unified/tree/0.2.20"
+  ],
+  "write_scope": "App-only replacement in existing app0; existing bootloader, partition table, OTA selection, filesystems and eFuses remain untouched by installer. Firmware adds NimBLE bonds in existing NVS without erasing it."
+}

@@ -78,6 +78,7 @@ static bool select_page(console_shell_t *shell, const char *name)
     if (strcmp(name, "multiplayer") == 0 ||
         strcmp(name, "multiplayer-host") == 0 ||
         strcmp(name, "multiplayer-settings") == 0 ||
+        strcmp(name, "multiplayer-dice") == 0 ||
         strcmp(name, "multiplayer-join") == 0) {
         shell->page = CONSOLE_PAGE_MULTIPLAYER;
         shell->active_app_id =
@@ -86,6 +87,13 @@ static bool select_page(console_shell_t *shell, const char *name)
             shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_HOST;
             shell->multiplayer_selected_row =
                 CONSOLE_MULTIPLAYER_OPTION_COUNT;
+        } else if (strcmp(name, "multiplayer-dice") == 0) {
+            shell->runtime.multiplayer_game_is_doom = false;
+            shell->runtime.multiplayer_dice_available = true;
+            shell->runtime.multiplayer_dice_enabled = true;
+            strcpy(shell->runtime.multiplayer_game_title, "P4 YAHTZEE");
+            shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS;
+            shell->multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_DICE;
         } else if (strcmp(name, "multiplayer-settings") == 0) {
             shell->multiplayer_view =
                 CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS;
@@ -175,7 +183,7 @@ int main(int argc, char **argv)
                 "usage: %s [--present] "
                 "home|all|games|arcade|system-folder|"
                 "colors|touch|system|files|manager|audio|multiplayer|"
-                "multiplayer-host|multiplayer-settings|multiplayer-join "
+                "multiplayer-host|multiplayer-settings|multiplayer-dice|multiplayer-join "
                 "output.ppm\n",
                 argv[0]);
         return EXIT_FAILURE;
@@ -305,6 +313,13 @@ int main(int argc, char **argv)
         shell.contacts[1] = (console_shell_contact_t){.x = 720U, .y = 450U};
     }
 
+    if (strcmp(argv[page_argument], "multiplayer-dice") == 0) {
+        shell.runtime.multiplayer_game_is_doom = false;
+        shell.runtime.multiplayer_dice_available = true;
+        shell.runtime.multiplayer_dice_enabled = true;
+        strcpy(shell.runtime.multiplayer_game_title, "P4 YAHTZEE");
+        shell.multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_DICE;
+    }
     const size_t width = present
         ? CONSOLE_SHELL_PRESENT_WIDTH : CONSOLE_SHELL_WIDTH;
     const size_t height = present

@@ -583,6 +583,7 @@ static multiplayer_option_layout_t multiplayer_option_layout(
         layout.width = 0U;
         layout.height = 0U;
         break;
+    case CONSOLE_MULTIPLAYER_OPTION_DICE:
     case CONSOLE_MULTIPLAYER_OPTION_MODE:
         layout.top = MULTIPLAYER_MODE_TOP;
         break;
@@ -664,6 +665,13 @@ static const size_t s_multiplayer_native_navigation_rows[] = {
     CONSOLE_MULTIPLAYER_OPTION_COUNT,
 };
 
+static const size_t s_multiplayer_dice_navigation_rows[] = {
+    CONSOLE_MULTIPLAYER_OPTION_TRANSPORT,
+    CONSOLE_MULTIPLAYER_OPTION_GAME,
+    CONSOLE_MULTIPLAYER_OPTION_DICE,
+    CONSOLE_MULTIPLAYER_OPTION_COUNT,
+};
+
 static const size_t s_multiplayer_join_navigation_rows[] = {
     CONSOLE_MULTIPLAYER_OPTION_TRANSPORT,
     CONSOLE_MULTIPLAYER_OPTION_LOBBY,
@@ -684,6 +692,12 @@ static const size_t *multiplayer_navigation_rows(
         *count = sizeof(s_multiplayer_join_navigation_rows) /
             sizeof(s_multiplayer_join_navigation_rows[0]);
         return s_multiplayer_join_navigation_rows;
+    }
+    if (shell != NULL && !shell->runtime.multiplayer_game_is_doom &&
+        shell->runtime.multiplayer_dice_available) {
+        *count = sizeof(s_multiplayer_dice_navigation_rows) /
+            sizeof(s_multiplayer_dice_navigation_rows[0]);
+        return s_multiplayer_dice_navigation_rows;
     }
     if (shell != NULL && !shell->runtime.multiplayer_game_is_doom) {
         *count = sizeof(s_multiplayer_native_navigation_rows) /
@@ -1563,7 +1577,11 @@ static console_shell_action_t multiplayer_config_action(
 {
     if (shell == NULL || option >= CONSOLE_MULTIPLAYER_OPTION_COUNT ||
         !shell->runtime.multiplayer_settings_editable ||
-        shell->runtime.multiplayer_launch_syncing || delta == 0) {
+        shell->runtime.multiplayer_launch_syncing || delta == 0 ||
+        (option == CONSOLE_MULTIPLAYER_OPTION_DICE &&
+         (!shell->runtime.multiplayer_dice_available ||
+          shell->runtime.multiplayer_game_is_doom ||
+          shell->multiplayer_view != CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS))) {
         return no_action();
     }
     shell->multiplayer_selected_row = (size_t)option;
@@ -1874,7 +1892,12 @@ static size_t control_at(const console_shell_t *shell,
                         option != CONSOLE_MULTIPLAYER_OPTION_TRANSPORT) {
                         continue;
                     }
+                    if (option == CONSOLE_MULTIPLAYER_OPTION_DICE &&
+                        (!shell->runtime.multiplayer_dice_available ||
+                         shell->runtime.multiplayer_game_is_doom)) continue;
                     if (!shell->runtime.multiplayer_game_is_doom &&
+                        !(option == CONSOLE_MULTIPLAYER_OPTION_DICE &&
+                          shell->runtime.multiplayer_dice_available) &&
                         option != CONSOLE_MULTIPLAYER_OPTION_GAME &&
                         option != CONSOLE_MULTIPLAYER_OPTION_TRANSPORT &&
                         option != CONSOLE_MULTIPLAYER_OPTION_LOBBY) {
@@ -3532,6 +3555,8 @@ void console_shell_set_runtime_info(
             runtime->multiplayer_game_ready ||
         shell->runtime.multiplayer_game_is_doom !=
             runtime->multiplayer_game_is_doom ||
+        shell->runtime.multiplayer_dice_available != runtime->multiplayer_dice_available ||
+        shell->runtime.multiplayer_dice_enabled != runtime->multiplayer_dice_enabled ||
         shell->runtime.multiplayer_game_selection !=
             runtime->multiplayer_game_selection ||
         shell->runtime.multiplayer_game_count !=
@@ -3655,6 +3680,9 @@ void console_shell_set_runtime_info(
                    CONSOLE_MULTIPLAYER_OPTION_TRANSPORT &&
                shell->multiplayer_selected_row !=
                    CONSOLE_MULTIPLAYER_OPTION_GAME &&
+               !(shell->multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS &&
+                 shell->runtime.multiplayer_dice_available &&
+                 shell->multiplayer_selected_row == CONSOLE_MULTIPLAYER_OPTION_DICE) &&
                !(shell->multiplayer_view ==
                      CONSOLE_MULTIPLAYER_VIEW_HOST &&
                  shell->multiplayer_selected_row ==
@@ -6328,6 +6356,10 @@ static void draw_multiplayer_host(const console_shell_t *shell,
                 shell->runtime.multiplayer_no_monsters ? "OFF" : "ON",
                 (unsigned)shell->runtime.multiplayer_time_limit_minutes);
         }
+    } else if (shell->runtime.multiplayer_dice_available) {
+        strcpy(summary_one, "2 PLAYERS / TAKE TURNS");
+        strcpy(summary_two, shell->runtime.multiplayer_dice_enabled
+            ? "DICE ACCESSORY: ON - SHARED" : "DICE ACCESSORY: OFF");
     } else {
         strcpy(summary_one, "2 PLAYERS / EXACT GAME HASH");
         strcpy(summary_two, "HOST-AUTHORITATIVE SESSION");
@@ -6525,6 +6557,19 @@ static void draw_multiplayer(const console_shell_t *shell,
         draw_multiplayer_option(
             shell, pixels, stride, CONSOLE_MULTIPLAYER_OPTION_TIME_LIMIT,
             "LIMIT", limit);
+    } else if (shell->runtime.multiplayer_dice_available) {
+        draw_text(pixels, stride, 8, 87, "DICE ACCESSORY", COLOR_CYAN, 1U, 14U);
+        draw_multiplayer_option(shell, pixels, stride,
+            CONSOLE_MULTIPLAYER_OPTION_DICE, "DICE",
+            shell->runtime.multiplayer_dice_enabled ? "ON - SHARED CORE2" : "OFF");
+        draw_centered_text(pixels, stride, 16, 118, 288,
+            shell->runtime.multiplayer_dice_enabled
+                ? "ONE CORE2 FOR EVERY PLAYER" : "ROLL WITH TOUCH OR CONTROLLER",
+            COLOR_WHITE, 40U);
+        draw_centered_text(pixels, stride, 16, 134, 288,
+            "AFTER START: TAP CONNECT ON CORE2", COLOR_MUTED, 40U);
+        draw_centered_text(pixels, stride, 16, 150, 288,
+            "THEN READY + SHAKE ON YOUR TURN", COLOR_MUTED, 40U);
     } else {
         fill_rect(pixels, stride, 8, 94, 304, 66, COLOR_PANEL);
         outline_rect(pixels, stride, 8, 94, 304, 66, COLOR_GROUP);

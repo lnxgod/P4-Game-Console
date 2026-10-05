@@ -13,6 +13,7 @@ import sys
 import tempfile
 
 from p4_multiplayer_manifest import expected_multiplayer_extension
+from p4cart_seed_registry import SeedCart, load_seed_carts
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -28,7 +29,6 @@ GAME_DATA_BYTES = 0x8F0000
 P4G_HEADER_BYTES = 256
 P4R_HEADER_BYTES = 128
 P4U_HEADER_BYTES = 256
-P4CART_SEED = pathlib.Path("P4/GAMES/BOUNCE-LAB.P4CART")
 
 
 def fail(message: str) -> None:
@@ -184,7 +184,7 @@ def verify_os_update(path: pathlib.Path, app_binary: pathlib.Path) -> dict:
     }
 
 
-def verify_p4cart(path: pathlib.Path) -> dict:
+def verify_p4cart(path: pathlib.Path, seed: SeedCart) -> dict:
     inspect = subprocess.run(
         [sys.executable,
          str(ROOT / "game-platform/scripts/p4cart.py"),
@@ -195,19 +195,19 @@ def verify_p4cart(path: pathlib.Path) -> dict:
     require(inspect.returncode == 0,
             f"seed P4 Cart is invalid: {inspect.stderr.strip()}")
     with tempfile.TemporaryDirectory(prefix="p4cart-seed-") as temporary:
-        rebuilt = pathlib.Path(temporary) / "BOUNCE-LAB.P4CART"
+        rebuilt = pathlib.Path(temporary) / seed.output_name
         packed = subprocess.run(
             [sys.executable,
              str(ROOT / "game-platform/scripts/p4cart.py"),
-             "pack", str(ROOT / "game-platform/templates/bounce-lab"),
+             "pack", str(seed.template_directory),
              str(rebuilt)],
             cwd=ROOT, check=False, text=True,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         require(packed.returncode == 0 and rebuilt.read_bytes() == path.read_bytes(),
-                f"seed P4 Cart is not the deterministic Bounce Lab package: "
+                f"seed P4 Cart is not deterministic for {seed.template_name}: "
                 f"{packed.stderr.strip()}")
-    return {"file": str(P4CART_SEED), "bytes": path.stat().st_size,
+    return {"file": str(seed.relative_path), "bytes": path.stat().st_size,
             "sha256": sha256(path)}
 
 
@@ -279,10 +279,14 @@ def main() -> None:
                 for name in expected_seed_packages),
             "seed package metadata differs")
     legacy = metadata.get("legacy_p4cart", {})
+    p4cart_seeds = load_seed_carts()
     require(legacy.get("format") == "p4-cart-source-v1" and
             legacy.get("game_manager_visible") is True and
             legacy.get("runtime_implemented") is False and
-            legacy.get("seed_cart") == str(P4CART_SEED),
+            legacy.get("seed_cart") == str(p4cart_seeds[0].relative_path) and
+            legacy.get("seed_carts") == [
+                str(seed.relative_path) for seed in p4cart_seeds
+            ],
             "legacy P4 Cart metadata differs")
     shell = metadata.get("shell", {})
     require(shell.get("dynamic_executable_loading") is True and
@@ -389,7 +393,14 @@ def main() -> None:
     require(app_binary.stat().st_size <= OTA0_BYTES,
             "app does not fit the smaller OTA slot")
     os_update = verify_os_update(build / "P4UPDATE.P4U", app_binary)
-    p4cart = verify_p4cart(build / "game-storage-seed" / P4CART_SEED)
+    p4carts = [
+        verify_p4cart(
+            build / "game-storage-seed" /
+                pathlib.Path(*seed.relative_path.parts),
+            seed,
+        )
+        for seed in p4cart_seeds
+    ]
 
     package_reports: list[dict] = []
     manifests: list[dict] = []
@@ -482,9 +493,11 @@ def main() -> None:
                 sorted(item.name for item in (volume / "GAMES").iterdir()) ==
                 sorted(expected_seed_packages + expected_seed_resources),
                 "generated FAT GAMES contents differ")
-        require((volume / P4CART_SEED).read_bytes() ==
-                (build / "game-storage-seed" / P4CART_SEED).read_bytes(),
-                "generated FAT contains the wrong P4 Cart seed")
+        for seed in p4cart_seeds:
+            relative = pathlib.Path(*seed.relative_path.parts)
+            require((volume / relative).read_bytes() ==
+                    (build / "game-storage-seed" / relative).read_bytes(),
+                    f"generated FAT contains the wrong {seed.output_name}")
         require((volume / "UPDATE").is_dir() and
                 not any((volume / "UPDATE").iterdir()),
                 "generated FAT UPDATE directory differs")
@@ -659,7 +672,8 @@ def main() -> None:
             "smallest_ota_free_bytes": OTA0_BYTES - app_binary.stat().st_size,
         },
         "os_update": os_update,
-        "legacy_p4cart": p4cart,
+        "legacy_p4cart": p4carts[0],
+        "legacy_p4carts": p4carts,
         "game_packages": package_reports,
         "game_resources": resource_reports,
         "game_data": {

@@ -1,0 +1,11 @@
+{
+  "generator": "scripts/render-dice-core2-atlas.py",
+  "license": "MIT",
+  "size": 64,
+  "tumble_frames": 96,
+  "rest_frames": 6,
+  "held_frames": 6,
+  "format": "RGB565 big endian",
+  "transparent": 0,
+  "sha256": "21148def18dbce513313e2299e89af492700e789242932bdd20e3ca3aa6ab9f9"
+}

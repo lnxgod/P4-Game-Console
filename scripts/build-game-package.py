@@ -38,6 +38,7 @@ CAPABILITIES = {
     "multiplayer-session": 1 << 9,
     "module-handoff": 1 << 10,
     "vector-scenes": 1 << 11,
+    "dice-accessory": 1 << 13,
     "video-highres": 1 << 12,
 }
 ID_RE = re.compile(r"[a-z][a-z0-9.-]{2,47}\Z")

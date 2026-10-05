@@ -11,8 +11,10 @@ import re
 import struct
 import subprocess
 import sys
+import tempfile
 
 from p4_multiplayer_manifest import expected_multiplayer_extension
+from p4cart_seed_registry import SeedCart, load_seed_carts
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -94,6 +96,32 @@ def verify_game(path: pathlib.Path, manifest: dict) -> dict[str, object]:
     require(package[240:256] == profile_bytes,
             f"{path.name} multiplayer profile differs")
     return {"file": path.name, "bytes": len(package), "sha256": sha256(path)}
+
+
+def verify_p4cart(path: pathlib.Path, seed: SeedCart) -> dict[str, object]:
+    inspect = subprocess.run(
+        [sys.executable,
+         str(ROOT / "game-platform/scripts/p4cart.py"),
+         "inspect", str(path)],
+        cwd=ROOT, check=False, text=True,
+        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+    )
+    require(inspect.returncode == 0,
+            f"seed P4 Cart is invalid: {inspect.stderr.strip()}")
+    with tempfile.TemporaryDirectory(prefix="p4cart-seed-") as temporary:
+        rebuilt = pathlib.Path(temporary) / seed.output_name
+        packed = subprocess.run(
+            [sys.executable,
+             str(ROOT / "game-platform/scripts/p4cart.py"),
+             "pack", str(seed.template_directory), str(rebuilt)],
+            cwd=ROOT, check=False, text=True,
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+        )
+        require(packed.returncode == 0 and rebuilt.read_bytes() == path.read_bytes(),
+                f"seed P4 Cart is not deterministic for {seed.template_name}: "
+                f"{packed.stderr.strip()}")
+    return {"file": str(seed.relative_path), "bytes": path.stat().st_size,
+            "sha256": sha256(path)}
 
 
 def main() -> None:
@@ -211,14 +239,25 @@ def main() -> None:
             (APP / "game-storage/README-OLIMEX.TXT").read_bytes(),
             "SD bundle has the wrong instructions")
 
+    app_metadata = read_json(APP / "app-metadata.json")
+    p4cart_seeds = load_seed_carts()
+    legacy = app_metadata.get("legacy_p4cart", {})
+    require(legacy.get("seed_cart") == str(p4cart_seeds[0].relative_path) and
+            legacy.get("seed_carts") == [
+                str(seed.relative_path) for seed in p4cart_seeds
+            ], "legacy P4 Cart metadata differs")
+    p4carts = [
+        verify_p4cart(bundle.joinpath(*seed.relative_path.parts), seed)
+        for seed in p4cart_seeds
+    ]
+
     games: list[dict[str, object]] = []
     for manifest_path in sorted((ROOT / "games").glob("*/game.json")):
         manifest = read_json(manifest_path)
         if manifest.get("enabled") is True:
             games.append(verify_game(
                 bundle / "GAMES" / manifest["package_file"], manifest))
-    expected_games = read_json(APP / "app-metadata.json")[
-        "native_game_api"]["seed_packages"]
+    expected_games = app_metadata["native_game_api"]["seed_packages"]
     require([game["file"] for game in games] == expected_games,
             "SD seed game set differs")
     app_data = app.read_bytes()
@@ -273,6 +312,8 @@ def main() -> None:
         "audio": "ES8311/I2S1 build-tested; hardware unverified",
         "doom": "storage-backed gamepad/keyboard/mouse/audio handoff linked",
         "games": games,
+        "legacy_p4cart": p4carts[0],
+        "legacy_p4carts": p4carts,
         "update": update,
         "hardware_tested": False,
     }, sort_keys=True))

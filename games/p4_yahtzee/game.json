@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.1.0",
+  "version": "1.3.1",
   "package_file": "P4_YAHTZEE.P4G",
   "component": "p4_yahtzee",
   "sources": [
@@ -23,7 +23,8 @@
   ],
   "optional_capabilities": [
     "audio-tone",
-    "multiplayer-session"
+    "multiplayer-session",
+    "dice-accessory"
   ],
   "multiplayer": {
     "schema": 1,
@@ -31,7 +32,7 @@
     "min_players": 2,
     "max_players": 4,
     "message_bytes": 61,
-    "protocol": 3
+    "protocol": 4
   },
   "license": "MIT",
   "assets": "original-imagegen-dice-atlas-v1-plus-code-rendered-ui",

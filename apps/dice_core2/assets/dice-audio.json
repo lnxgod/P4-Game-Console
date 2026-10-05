@@ -1,0 +1,91 @@
+{
+  "source_url": "https://kenney.nl/assets/casino-audio",
+  "creator": "Kenney",
+  "license": "CC0-1.0",
+  "sample_rate": 22050,
+  "format": "mono signed 16-bit little endian",
+  "sha256": "5139e4a12b0c1dbf3653d277a1d526037cb36a6c2bb622816dddbdc034581eab",
+  "clips": [
+    {
+      "source": "dice-shake-1.ogg",
+      "source_sha256": "ba603441c857204dbe3ff3345902c7e1c3f523bf1bd314acf088609bc6c1e4e5",
+      "source_start_sample": 8797,
+      "offset_samples": 0,
+      "samples": 5181,
+      "attack_lead_ms": 35,
+      "second_pulse_ms": 0
+    },
+    {
+      "source": "dice-shake-1.ogg",
+      "source_sha256": "ba603441c857204dbe3ff3345902c7e1c3f523bf1bd314acf088609bc6c1e4e5",
+      "source_start_sample": 15222,
+      "offset_samples": 5181,
+      "samples": 5181,
+      "attack_lead_ms": 35,
+      "second_pulse_ms": 0
+    },
+    {
+      "source": "dice-shake-2.ogg",
+      "source_sha256": "47e8e2cb0adb95bcd7348b58db8dc2bbfe3c553e50a4e9ef007e67891ed51ca2",
+      "source_start_sample": 10809,
+      "offset_samples": 10362,
+      "samples": 5181,
+      "attack_lead_ms": 35,
+      "second_pulse_ms": 0
+    },
+    {
+      "source": "dice-shake-2.ogg",
+      "source_sha256": "47e8e2cb0adb95bcd7348b58db8dc2bbfe3c553e50a4e9ef007e67891ed51ca2",
+      "source_start_sample": 18673,
+      "offset_samples": 15543,
+      "samples": 5181,
+      "attack_lead_ms": 35,
+      "second_pulse_ms": 0
+    },
+    {
+      "source": "dice-shake-3.ogg",
+      "source_sha256": "aecd1dd0de6e42ebb510d1f9bfe91a580a8af238dd73bdfda368b90b894b5c09",
+      "source_start_sample": 8108,
+      "offset_samples": 20724,
+      "samples": 5181,
+      "attack_lead_ms": 35,
+      "second_pulse_ms": 0
+    },
+    {
+      "source": "dice-shake-3.ogg",
+      "source_sha256": "aecd1dd0de6e42ebb510d1f9bfe91a580a8af238dd73bdfda368b90b894b5c09",
+      "source_start_sample": 21202,
+      "offset_samples": 25905,
+      "samples": 5181,
+      "attack_lead_ms": 35,
+      "second_pulse_ms": 0
+    },
+    {
+      "source": "dice-throw-1.ogg",
+      "source_sha256": "4e6581c73465cdd7ec32e86a709b4ea5c682e819c9bdb7989d1df1880ba67886",
+      "source_start_sample": 618,
+      "offset_samples": 31086,
+      "samples": 6214,
+      "attack_lead_ms": 35,
+      "second_pulse_ms": 0
+    },
+    {
+      "source": "dice-throw-2.ogg",
+      "source_sha256": "e0b8c370503b2c5c2a72d311cccae30fe63a6afd48f2be32e771fcf1a98585d6",
+      "source_start_sample": 261,
+      "offset_samples": 37300,
+      "samples": 4344,
+      "attack_lead_ms": 35,
+      "second_pulse_ms": 0
+    },
+    {
+      "source": "dice-throw-3.ogg",
+      "source_sha256": "09c13d35a9a30bfce31a5e9bca94adc5be189ddecd0b4500237d54c7fd05227c",
+      "source_start_sample": 1138,
+      "offset_samples": 41644,
+      "samples": 11087,
+      "attack_lead_ms": 35,
+      "second_pulse_ms": 196
+    }
+  ]
+}

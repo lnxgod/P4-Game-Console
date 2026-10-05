@@ -8,7 +8,7 @@ snapshots; the cartridge never receives a socket, route, radio, or peer
 identity.
 
 Its `game.json` is also the reference declarative profile: turn-based,
-two-to-four-player, protocol 3, with a 61-byte message ceiling sized for the
+two-to-four-player, protocol 4, with a 61-byte message ceiling sized for the
 complete four-player host snapshot. Scores use a bounded six-bit packing so
 all four scorecards remain inside the Console API's 64-byte message limit.
 Console OS derives lobby compatibility and timing from that metadata; Yahtzee
@@ -75,3 +75,25 @@ make play-game GAME=p4_yahtzee
 ```
 
 The `.P4G` remains installable under `GAMES/ARCADE` without an OS reflash.
+
+## Virtual dice accessory
+
+Version 1.3.1 optionally uses the reusable P4MP dice accessory service. On a
+matching Console OS build, tap CONNECT on the Core2, then READY for the named
+player, shake, and settle. Held dice and the three-roll limit are preserved;
+network results still come from the game host. Touch/Start remains available
+without an accessory. See `docs/DICE_ACCESSORY.md` for firmware, practice
+mode, pairing, and the hardware acceptance status.
+
+For a network match, choose **Multiplayer → Host → P4 YAHTZEE → Match Settings
+→ Dice → ON - SHARED CORE2** before opening the room. The single Core2 connects
+to the host and is passed between players. Tap Connect after launching, then
+Ready and shake on each turn. Both consoles show the host-generated result.
+Off disables the accessory for that match; controller/touch rolls remain
+available in either mode. Both peers need the updated protocol-4 cartridge.
+
+Real rolls use a separate PCG stream and unbiased six-face sampling. Rendering
+never advances that stream. This fixes the former every-other-LCG-output parity
+pattern without suppressing naturally repeated dice.
+
+The v2 dice service accepts confirmed Core2 hold/unhold selections for the current player, including the remote player through the shared host. All-held selections can be released; Ready/shake rerolls only unheld dice.

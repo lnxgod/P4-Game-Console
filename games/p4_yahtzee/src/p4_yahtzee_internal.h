@@ -14,7 +14,7 @@ enum {
     P4_YAHTZEE_DICE = 5,
     P4_YAHTZEE_CATEGORIES = 13,
     P4_YAHTZEE_ROLLS_PER_TURN = 3,
-    P4_YAHTZEE_NETWORK_PROTOCOL = 3,
+    P4_YAHTZEE_NETWORK_PROTOCOL = 4,
     P4_YAHTZEE_NET_ROLL = 1,
     P4_YAHTZEE_NET_HOLD = 2,
     P4_YAHTZEE_NET_SCORE = 3,
@@ -72,12 +72,21 @@ typedef struct {
     p4_yahtzee_mode_t mode;
     p4_yahtzee_focus_t focus;
     p4_game_multiplayer_role_t network_role;
-    uint32_t rng;
+    uint32_t rng; /* animation/menu timing only */
+    uint64_t roll_rng; /* authoritative PCG stream; never consumed by rendering */
     uint32_t roll_animation_ms;
     uint32_t animation_step_ms;
     uint32_t network_revision;
     uint32_t last_network_sequence[P4_YAHTZEE_PLAYERS];
     uint64_t network_seed;
+    p4_dice_request_t accessory_request;
+    uint16_t accessory_hold_ack;
+    p4_dice_phase_t accessory_phase;
+    uint32_t accessory_consumed_token;
+    uint32_t accessory_pending_revision;
+    uint64_t accessory_pending_since_ms;
+    bool accessory_pending;
+    bool shared_accessory;
     bool touch_was_down;
     bool network_started;
     bool network_error;
@@ -94,6 +103,7 @@ bool p4_yahtzee_score_turn(
     p4_yahtzee_state_t *state, p4_yahtzee_category_t category);
 void p4_yahtzee_update_animation(
     p4_yahtzee_state_t *state, uint32_t elapsed_ms);
+void p4_yahtzee_poll_dice(p4_game_context_t *context, p4_yahtzee_state_t *state);
 bool p4_yahtzee_network_available(const p4_game_context_t *context);
 bool p4_yahtzee_local_turn(const p4_yahtzee_state_t *state);
 bool p4_yahtzee_perform_action(

@@ -97,6 +97,10 @@ typedef struct {
     p4_cartridge_multiplayer_receive_fn multiplayer_receive;
     /** Optional v1 extension: immutable validated game.json profile. */
     const p4_game_multiplayer_profile_t *multiplayer_profile;
+    /** Optional v1 extension; presence is checked using struct_bytes. */
+    p4_game_dice_exchange_fn dice_exchange;
+    /** v2 dice requests/status support tap-to-hold. Never call through v1. */
+    p4_game_dice_exchange_fn dice_exchange_v2;
 } p4_cartridge_host_v1_t;
 
 typedef enum {

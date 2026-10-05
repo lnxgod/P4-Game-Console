@@ -68,6 +68,7 @@ typedef enum {
     P4_MP_PACKET_REJECT = 10,
     /** Transport-neutral payload copied to a connected native cartridge. */
     P4_MP_PACKET_GAME_MESSAGE = 11,
+    P4_MP_PACKET_ACCESSORY = 12,
 } p4_mp_packet_type_t;
 
 typedef enum {

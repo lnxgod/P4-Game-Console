@@ -111,6 +111,7 @@ elseif(P4_BOARD_PROFILE STREQUAL
     if(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD)
         list(APPEND EXTRA_COMPONENT_DIRS
             "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_multiplayer_ble"
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_dice_ble"
         )
     endif()
     if(P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
@@ -517,8 +518,36 @@ function(p4_add_script_cart_seed OUTPUT_NAME TEMPLATE_NAME)
         ${P4_SCRIPT_CART_OUTPUTS} "${P4_CART_OUTPUT}" PARENT_SCOPE)
 endfunction()
 
-p4_add_script_cart_seed("BOUNCE-LAB.P4CART" "bounce-lab")
-p4_add_script_cart_seed("QR-DODGE.P4CART" "qr-dodge")
+set(P4_SCRIPT_CART_REGISTRY
+    "${P4_REPOSITORY_ROOT}/scripts/p4cart_seed_registry.py")
+set(P4_SCRIPT_CART_METADATA
+    "${CMAKE_CURRENT_LIST_DIR}/app-metadata.json")
+file(GLOB P4_SCRIPT_CART_MANIFESTS CONFIGURE_DEPENDS
+    "${P4_REPOSITORY_ROOT}/game-platform/templates/*/p4.json")
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${P4_SCRIPT_CART_REGISTRY}"
+    "${P4_SCRIPT_CART_METADATA}"
+    ${P4_SCRIPT_CART_MANIFESTS})
+set(P4_GENERATED_SCRIPT_CARTS_CMAKE
+    "${CMAKE_BINARY_DIR}/p4-script-carts.cmake")
+execute_process(
+    COMMAND
+        "${P4_IDF_PYTHON}"
+        "${P4_SCRIPT_CART_REGISTRY}"
+        --metadata "${P4_SCRIPT_CART_METADATA}"
+        --templates-root
+            "${P4_REPOSITORY_ROOT}/game-platform/templates"
+        --output-cmake "${P4_GENERATED_SCRIPT_CARTS_CMAKE}"
+    RESULT_VARIABLE P4_SCRIPT_CART_REGISTRY_RESULT
+    OUTPUT_VARIABLE P4_SCRIPT_CART_REGISTRY_REPORT
+    ERROR_VARIABLE P4_SCRIPT_CART_REGISTRY_ERROR
+)
+if(NOT P4_SCRIPT_CART_REGISTRY_RESULT EQUAL 0)
+    message(FATAL_ERROR
+        "P4 Cart seed validation failed: ${P4_SCRIPT_CART_REGISTRY_ERROR}")
+endif()
+message(STATUS "${P4_SCRIPT_CART_REGISTRY_REPORT}")
+include("${P4_GENERATED_SCRIPT_CARTS_CMAKE}")
 add_custom_target(p4_script_cart_seed ALL
     DEPENDS ${P4_SCRIPT_CART_OUTPUTS})
 

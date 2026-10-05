@@ -5,7 +5,7 @@ Dragon*. It installs under `GAMES/ADVENTURE`, renders at 320×200 in a
 16-color ANSI/RIP-inspired style, and uses only the stable P4 Game API for
 video, controls, tone audio, shared CP437 drawing, and optional durable saves.
 
-Version 1.8.0 includes:
+Version 1.8.1 includes:
 
 - named hero or heroine characters and Death Knight, Mystical, and Thieving
   professions;
@@ -69,9 +69,13 @@ Version 1.8.0 includes:
 - the same pinned 8×16 CP437 font as the Console OS BBS, compacted safely for
   real DOS box, arrow, diamond, smile, music, block, and shade glyphs at
   320×200;
-- a generated/dithered dragon-and-castle title, twelve code-drawn RIP-style
-  scenes, and additional kid-friendly CP437 compositions for the inn, Seth,
-  Violet, Dragon Dice, recovery, and victory;
+- a generated/dithered dragon-and-castle title and 28 original CP437 location
+  compositions: illustrated menu strips, twelve full-height ANSI gallery
+  exhibits, and distinct scenes for all seven IGM locations. Forges, armour,
+  the vault, mail, the hearth and bard, friendship tables, club banners, and
+  forest trails replace empty menu space; ordinary message screens reuse
+  their return location's art. Existing animated creature portraits, inn
+  panels, recovery, and victory artwork remain intact;
 - an explicit, deterministic, CRC-protected version-5 save codec with
   validated version-3 and version-4 migration paths. Version 5 persists
   opaque directory identities, the last applied realm event, and the last
@@ -130,9 +134,10 @@ OS-owned journaled save service for the authorized Waveshare profile. The
 historically accepted Console OS 0.4.88 / LORD 1.6.1 host/build baseline adds
 device-local authentication and a monotonic freshness anchor, so ordinary SD
 edits, cross-device copies, and SD-only rollback fail
-closed. That baseline was not installed on Pink or Green. The current Console
-OS 0.4.90 / LORD 1.8.0 tree is an unsealed, unflashed successor candidate with
-no exact-device acceptance yet. LORD progress survives exit and relaunch when
+closed. That baseline was not installed on Pink or Green. The Console
+OS 0.4.90 / LORD 1.8.0 tree was initially recorded as an unsealed, unflashed
+successor candidate. This 1.8.1 graphics refresh does not itself establish
+new exact-device acceptance. LORD progress survives exit and relaunch when
 the OS supplies the accepted save service; other profiles may still withhold
 `save` and fall back to the current session. With a LORD P4MP room and the Mac
 realm hub, it labels the realm `MAC REALM`, synchronizes that actor, lists other
@@ -178,7 +183,12 @@ ctest --test-dir build-host/play-lord --output-on-failure
 Run `make play-game GAME=lord` for the interactive SDL3 preview. To capture
 all screens without a visible desktop, create a directory and run the unit
 binary with `LORD_CAPTURE_DIR=/absolute/path`; it emits deterministic PPM
-frames after the same sanitizer-backed render-bound checks.
+frames for all 43 screen types, twelve gallery exhibits, and seven IGM
+locations after the same sanitizer-backed render-bound checks. The tests
+also require visible foreground art in each menu strip, distinct gallery
+and IGM illustrations, and unchanged game state across rendering. Art uses
+only the existing CP437 renderer; save bytes and multiplayer messages are
+unchanged by this refresh.
 
 A normal Console OS cartridge build discovers `game.json` and produces
 `LORD.P4G` in the generated game-storage seed. See

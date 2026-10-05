@@ -1,0 +1,13 @@
+{
+  "board": "M5Stack Core2",
+  "app_sha256": "a23a4b1cdfa006bcbaa528cbd827979e017fb65337947911da444eae0276cec0",
+  "source": "owner feedback in task",
+  "accepted": false,
+  "observations": [
+    "Sound too quiet; clicks and clacks sound wrong; more shaking noise wanted",
+    "Vibration too light and ticky; stronger haptic feel wanted",
+    "Flicker or partial redraws",
+    "Dice appearance unsatisfactory; good 3D graphics requested"
+  ],
+  "successor": "Core2 firmware 0.2.0"
+}

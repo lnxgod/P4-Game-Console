@@ -1,0 +1,18 @@
+{
+  "board": "M5Stack Core2",
+  "device_identity_sha256": "c1f4a3f3751be1d87ed7b5d84f359c0f97fddb2b6c5e933d54f34383acac8bd5",
+  "port": "/dev/cu.wchusbserial5C9A0619521",
+  "app_offset": 65536,
+  "app_bytes": 1392928,
+  "app_sha256": "f7d17e3ab1b8eddc6086473449b8a7a8c9980e0cb46ad124cbb3983648b0b22e",
+  "full_app_readback_verified": true,
+  "boot_partition_nvs_prefix_preserved": true,
+  "factory_backup_sha256": "f44e82082822397ece6619bf98ac03e6a74243acf056d7295d42637418f9b64e",
+  "installed": true,
+  "acoustic_acceptance": false,
+  "haptic_acceptance": false,
+  "wireless_game_acceptance": false,
+  "boot_log": "hardware/test-runs/2026-09-14T040821Z-core2-dice-f7d17e3ab1b8-boot.log",
+  "boot_marker_observed": true,
+  "panic_observed": false
+}

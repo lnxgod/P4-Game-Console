@@ -1,0 +1,21 @@
+{
+  "game": "p4_yahtzee",
+  "version": "1.3.0",
+  "protocol": 4,
+  "source_sha256": {
+    "games/p4_yahtzee/src/p4_yahtzee.c": "4e9bfbc6f5bd44ffdc31ad52516d200d6ffa5d513ca540913585294b360a4d93",
+    "games/p4_yahtzee/src/p4_yahtzee_logic.c": "ef9b29d6e144dab9a5a0bba79beb5a89c3309ec1e8b33f7cdb5c27818bbc1c98",
+    "games/p4_yahtzee/src/p4_yahtzee_network.c": "5deb5aa9465203cd71644aaa7863249d76dded5abcf38546d5dca00f09eac7e2",
+    "games/p4_yahtzee/src/p4_yahtzee_internal.h": "5a82aefa256612ba5ac5900966f62dadb9a2fe85859535f9d0fdf2f3ba920817"
+  },
+  "unit_tests": "1/1 sanitizer tests passed, including 12000 rolls, cadence independence and shared host accessory handoff",
+  "sdl_smoke": "2/2 passed",
+  "interactive_operator": "Codex using CUA and actual SDL3 runner",
+  "interactive_verified": [
+    "Start",
+    "visible final PCG roll 4,3,6,5,1",
+    "earlier same-session held/reroll/score/pass-to-player and Back to menu and exit; final PCG change affects rolls only",
+    "Final PCG build Back to menu and Back exit confirmed through CUA"
+  ],
+  "physical_network_acceptance": false
+}

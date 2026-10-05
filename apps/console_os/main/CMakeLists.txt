@@ -117,6 +117,7 @@ else()
         if(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD)
             list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
                 platform_multiplayer_ble
+                platform_dice_ble
             )
             set(P4_CONSOLE_BLE_MULTIPLAYER_ENABLED 1)
             if(P4_BLE_DIAGNOSTIC_AUTOSTART)

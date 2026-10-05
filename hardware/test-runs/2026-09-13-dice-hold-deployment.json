@@ -1,0 +1,28 @@
+{
+  "console_units": {
+    "unit1": {
+      "receipt": "hardware/test-runs/2026-09-13-waveshare-unit1-dice-hold-install.json",
+      "app_sha256": "fe51c95e9cdb3a811139e64e90149390c458488b1bdcdff3bd5d184fe7c41bca",
+      "yahtzee_sha256": "05a55116d0d1a01f83723b6dfbc21d807d5eb7ae158fb128041f8e51a80b364c",
+      "native_multiplayer_count": 6
+    },
+    "unit2": {
+      "receipt": "hardware/test-runs/2026-09-13-waveshare-unit2-dice-hold-install.json",
+      "app_sha256": "fe51c95e9cdb3a811139e64e90149390c458488b1bdcdff3bd5d184fe7c41bca",
+      "yahtzee_sha256": "05a55116d0d1a01f83723b6dfbc21d807d5eb7ae158fb128041f8e51a80b364c",
+      "native_multiplayer_count": 6
+    }
+  },
+  "core2": {
+    "board": "m5stack-core2",
+    "chip": "esp32",
+    "idf": "5.5.3",
+    "bytes": 1743968,
+    "sha256": "45ef67226f9bcf775b161d0f522015d297fa4a990490f81d862e71421a3b80f0",
+    "staging_directory": "/tmp/p4-dice-build-72c9a022cee7",
+    "version": "0.6.0",
+    "installed": false,
+    "blocker": "Core2 USB port absent; matching firmware must be installed before v2 connection/hold testing."
+  },
+  "wireless_acceptance": false
+}

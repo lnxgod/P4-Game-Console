@@ -1,0 +1,51 @@
+{
+  "board": "Waveshare 4.3 unit2",
+  "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+  "app_sha256": "e2a49f9890730dd7649fbb4ba8d70c0a22c69d3214b75ede9b05fd6bf8ea79ef",
+  "application_readback_verified": true,
+  "bootloader_partition_ota_nvs_preserved": true,
+  "ledger": {
+    "schema": 1,
+    "authorization_sha256": "8b602b47ff05e46dc084c047c2569f72a3d71f91c0c4596103f0dc23ef2497b1",
+    "device_identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79",
+    "preimage_sha256": "8196bfa27bdc40d4255d4a80920b44842684e80d5aecc69e8d455fdd4cfd9577",
+    "candidate_sha256": "e2a49f9890730dd7649fbb4ba8d70c0a22c69d3214b75ede9b05fd6bf8ea79ef",
+    "install_write_attempt_count": 1,
+    "restore_required": false,
+    "automatic_rollback_authorized": true,
+    "state": "installed-readback-pass-awaiting-retained-uart",
+    "padded_readback_sha256": "1780c7cfb09038dab4716aebe11c1eaebf4891488659afd642f8de5faf22da93"
+  },
+  "boot_log": "hardware/test-runs/2026-09-13-waveshare-unit2-shared-dice-boot.log",
+  "panic_observed": false,
+  "radio_worker_core1": true,
+  "wireless_game_acceptance": false,
+  "boot_ready": true,
+  "ble_host_ready": true,
+  "boot_warnings": [
+    "Boot audio reported ESP_ERR_INVALID_ARG; no console acoustic acceptance claimed."
+  ],
+  "yahtzee": {
+    "version": "1.3.0",
+    "protocol": 4,
+    "bytes": 42168,
+    "sha256": "63b4a11f2112c0877a13172c7b96078308c6fe800b9253da4b97587a939c5de4",
+    "verified_h1_transfer": true,
+    "protocol4_registered_after_restart": true
+  },
+  "post_cartridge_restart_log": "hardware/test-runs/2026-09-13-waveshare-unit2-after-yahtzee-boot.log",
+  "post_cartridge_catalog": {
+    "valid_cartridges": 21,
+    "native_multiplayer_games": [
+      "org.p4console.checkers",
+      "org.p4console.color-clash",
+      "org.p4console.p4-air-hockey",
+      "org.p4console.p4-rummy",
+      "org.p4console.p4-yahtzee",
+      "org.p4console.texas-holdem"
+    ],
+    "total_multiplayer_entries_including_doom_chex": 8,
+    "recovery": "Restart after upload restored the native catalog; precise cause of transient empty runtime registry was not established."
+  },
+  "live_test_status": "Owner needs to charge or power the Core2/devices first. BLE connection, shared shake and player handoff remain pending."
+}

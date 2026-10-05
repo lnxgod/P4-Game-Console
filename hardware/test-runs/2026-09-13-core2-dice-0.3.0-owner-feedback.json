@@ -1,0 +1,13 @@
+{
+  "board": "M5Stack Core2",
+  "app_sha256": "f7d17e3ab1b8eddc6086473449b8a7a8c9980e0cb46ad124cbb3983648b0b22e",
+  "source": "owner feedback in task",
+  "response": "its pretty awesome!",
+  "pulse_response": "the pulses feel rpetty good",
+  "enhancements_requested": [
+    "More dynamic dice dancing like inside a cup",
+    "Improve sound and synchronize it with pulses for realism"
+  ],
+  "wireless_game_acceptance": false,
+  "successor": "Core2 firmware 0.4.0"
+}

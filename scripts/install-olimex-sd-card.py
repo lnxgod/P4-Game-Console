@@ -17,13 +17,13 @@ import sys
 import tempfile
 
 from p4_multiplayer_manifest import expected_multiplayer_extension
+from p4cart_seed_registry import load_seed_carts
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 DEFAULT_BUNDLE = ROOT / "apps/console_os/build-olimex-esp32-p4-pc/sd-card"
 DOOM_BYTES = 4_196_020
 DOOM_SHA256 = "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
-P4CART_SEED = pathlib.Path("P4/GAMES/BOUNCE-LAB.P4CART")
 
 
 def sha256(path: pathlib.Path) -> str:
@@ -196,10 +196,14 @@ def bundle_files(manifests: dict[str, dict[str, object]]) -> tuple[pathlib.Path,
         for manifest in manifests.values()
         if isinstance(manifest.get("resource_file"), str)
     )
+    script_carts = tuple(
+        pathlib.Path(*seed.relative_path.parts)
+        for seed in load_seed_carts()
+    )
     return tuple(pathlib.Path("GAMES") / name for name in manifests) + resources + (
         pathlib.Path("DOOM1.WAD"),
         pathlib.Path("README.TXT"),
-        P4CART_SEED,
+        *script_carts,
         pathlib.Path("UPDATE/P4UPDATE.P4U"),
     )
 
@@ -226,7 +230,8 @@ def validate_bundle(bundle: pathlib.Path) -> tuple[pathlib.Path, ...]:
             validate_game_resource(
                 bundle / "GAMES" / resource_name, manifests[name]
             )
-    validate_p4cart(bundle / P4CART_SEED)
+    for seed in load_seed_carts():
+        validate_p4cart(bundle.joinpath(*seed.relative_path.parts))
     validate_update(bundle / "UPDATE/P4UPDATE.P4U")
     return files
 
@@ -264,22 +269,46 @@ def copy_atomic(source: pathlib.Path, destination: pathlib.Path) -> dict[str, ob
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--target", required=True, type=pathlib.Path)
+    action = parser.add_mutually_exclusive_group(required=True)
+    action.add_argument("--target", type=pathlib.Path)
+    action.add_argument("--check-bundle-only", action="store_true")
     parser.add_argument("--bundle", type=pathlib.Path, default=DEFAULT_BUNDLE)
     parser.add_argument("--require-waveshare-h2-fat32", action="store_true")
     arguments = parser.parse_args()
-    target = mounted_card(arguments.target)
-    if arguments.require_waveshare_h2_fat32:
-        require_waveshare_h2_fat32(target)
+    if arguments.check_bundle_only and arguments.require_waveshare_h2_fat32:
+        parser.error(
+            "--require-waveshare-h2-fat32 requires a mounted --target"
+        )
     bundle = arguments.bundle.expanduser().resolve(strict=True)
     if not bundle.is_dir():
         raise SystemExit(f"bundle is not a directory: {bundle}")
     files = validate_bundle(bundle)
+    native_games = [str(path) for path in files if path.suffix == ".P4G"]
+    script_games = [str(path) for path in files if path.suffix == ".P4CART"]
+    if arguments.check_bundle_only:
+        print(json.dumps({
+            "result": "p4-sd-card-bundle-verified",
+            "bundle": str(bundle),
+            "native_game_count": len(native_games),
+            "native_games": native_games,
+            "script_game_count": len(script_games),
+            "script_games": script_games,
+        }, sort_keys=True))
+        return
+
+    assert arguments.target is not None
+    target = mounted_card(arguments.target)
+    if arguments.require_waveshare_h2_fat32:
+        require_waveshare_h2_fat32(target)
     required = sum((bundle / relative).stat().st_size for relative in files)
     if shutil.disk_usage(target).free < required + 1024 * 1024:
         raise SystemExit("microSD card does not have enough free space")
     installed = [copy_atomic(bundle / relative, target / relative) for relative in files]
     print(json.dumps({"result": "p4-sd-card-ready", "target": str(target),
+                      "native_game_count": len(native_games),
+                      "native_games": native_games,
+                      "script_game_count": len(script_games),
+                      "script_games": script_games,
                       "files": installed}, sort_keys=True))
 
 

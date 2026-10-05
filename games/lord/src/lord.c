@@ -91,7 +91,7 @@ static const char *const s_town_menu[] = {
     "Other Places (IGMs)",
     "The Daily News",
     "Hall of Rankings",
-    "RIP Art Gallery",
+    "ANSI Art Gallery",
     "Character Stats",
     "Skill Mastery",
     "Adventure Club Hall",
@@ -438,6 +438,8 @@ static void draw_caption_strip(p4_game_surface_t *surface,
     draw_cp437(surface, 296, 32, right_symbol, accent, ANSI_PANEL_ALT);
     draw_centered_text(surface, 33, caption, ANSI_WHITE, 32, 288);
 }
+
+#include "lord_ansi_scenes.h"
 
 static void draw_progress_bar(p4_game_surface_t *surface,
                               int x, int y, int width,
@@ -2682,174 +2684,26 @@ static void draw_battle(p4_game_surface_t *surface,
     draw_battle_menu(surface, state, menu);
 }
 
-static int positive_distance(int left, int right)
-{
-    return left < right ? right - left : left - right;
-}
-
-static void draw_line(p4_game_surface_t *surface, int x0, int y0,
-                      int x1, int y1, uint16_t color)
-{
-    const int dx = positive_distance(x0, x1);
-    const int sx = x0 < x1 ? 1 : -1;
-    const int dy = -positive_distance(y0, y1);
-    const int sy = y0 < y1 ? 1 : -1;
-    int error = dx + dy;
-    for (unsigned step = 0U; step < 640U; ++step) {
-        p4_draw_pixel(surface, x0, y0, color);
-        if (x0 == x1 && y0 == y1) {
-            break;
-        }
-        const int twice_error = error * 2;
-        if (twice_error >= dy) {
-            error += dy;
-            x0 += sx;
-        }
-        if (twice_error <= dx) {
-            error += dx;
-            y0 += sy;
-        }
-    }
-}
-
-static void draw_rip_town(p4_game_surface_t *surface)
-{
-    p4_draw_fill_circle(surface, 272, 43, 12, ANSI_YELLOW);
-    p4_draw_fill_rect(surface, 0, 111, 320, 25, ANSI_GREEN);
-    const int homes[] = {22, 96, 184, 250};
-    for (size_t index = 0U; index < sizeof(homes) / sizeof(homes[0]);
-         ++index) {
-        const int x = homes[index];
-        p4_draw_fill_rect(surface, x, 72, 50, 40,
-                          index % 2U == 0U ? ANSI_BROWN : ANSI_RED);
-        draw_line(surface, x - 4, 72, x + 25, 48, ANSI_BRIGHT_RED);
-        draw_line(surface, x + 25, 48, x + 54, 72, ANSI_BRIGHT_RED);
-        p4_draw_fill_rect(surface, x + 20, 89, 11, 23, ANSI_BLACK);
-        p4_draw_fill_rect(surface, x + 6, 80, 9, 9, ANSI_BRIGHT_CYAN);
-    }
-    p4_draw_fill_rect(surface, 150, 80, 5, 32, ANSI_DARK_GRAY);
-    p4_draw_fill_rect(surface, 136, 78, 34, 4, ANSI_DARK_GRAY);
-    for (int x = 0; x < 320; x += P4_DRAW_CP437_CELL_WIDTH) {
-        draw_cp437(surface, x, 112,
-                   x % 24 == 0 ? CP437_SHADE_DARK : CP437_SHADE_MEDIUM,
-                   ANSI_BRIGHT_GREEN, ANSI_GREEN);
-    }
-}
-
-static void draw_rip_forest(p4_game_surface_t *surface)
-{
-    p4_draw_fill_circle(surface, 270, 48, 15, ANSI_LIGHT_GRAY);
-    for (int x = 15; x < 320; x += 42) {
-        p4_draw_fill_rect(surface, x + 15, 79, 9, 45, ANSI_BROWN);
-        p4_draw_fill_circle(surface, x + 19, 68, 21, ANSI_GREEN);
-        p4_draw_fill_circle(surface, x + 6, 79, 14, ANSI_GREEN);
-        p4_draw_fill_circle(surface, x + 32, 79, 14, ANSI_GREEN);
-        draw_cp437(surface, x + 15, 58, UINT8_C(0x06),
-                   ANSI_BRIGHT_GREEN, ANSI_BLACK);
-    }
-    p4_draw_fill_rect(surface, 0, 122, 320, 14, ANSI_DARK_GRAY);
-    draw_line(surface, 145, 136, 162, 105, ANSI_YELLOW);
-    draw_line(surface, 179, 136, 162, 105, ANSI_YELLOW);
-}
-
-static void draw_rip_inn(p4_game_surface_t *surface)
-{
-    p4_draw_fill_rect(surface, 16, 39, 288, 91, ANSI_BROWN);
-    p4_draw_fill_rect(surface, 35, 54, 65, 61, ANSI_DARK_GRAY);
-    p4_draw_fill_rect(surface, 45, 67, 45, 42, ANSI_RED);
-    p4_draw_fill_circle(surface, 67, 93, 19, ANSI_YELLOW);
-    p4_draw_fill_rect(surface, 128, 93, 150, 12, ANSI_RED);
-    p4_draw_fill_rect(surface, 140, 104, 8, 23, ANSI_RED);
-    p4_draw_fill_rect(surface, 258, 104, 8, 23, ANSI_RED);
-    for (int x = 151; x <= 247; x += 32) {
-        p4_draw_fill_circle(surface, x, 89, 6, ANSI_YELLOW);
-    }
-    draw_ansi_box(surface, 128, 48, 152, 24,
-                  ANSI_YELLOW, ANSI_RED, true);
-    draw_text(surface, 142, 57, "TALES  DICE  REST", ANSI_WHITE);
-    for (int x = 128; x < 280; x += P4_DRAW_CP437_CELL_WIDTH) {
-        draw_cp437(surface, x, 104, CP437_SHADE_LIGHT,
-                   ANSI_BRIGHT_RED, ANSI_RED);
-    }
-}
-
-static void draw_rip_battle(p4_game_surface_t *surface)
-{
-    p4_draw_fill_circle(surface, 68, 67, 12, ANSI_LIGHT_GRAY);
-    p4_draw_fill_rect(surface, 61, 79, 15, 35, ANSI_BRIGHT_BLUE);
-    draw_line(surface, 64, 87, 39, 110, ANSI_WHITE);
-    draw_line(surface, 74, 88, 104, 61, ANSI_WHITE);
-    p4_draw_fill_circle(surface, 247, 67, 13, ANSI_GREEN);
-    p4_draw_fill_rect(surface, 238, 79, 18, 36, ANSI_GREEN);
-    draw_line(surface, 238, 89, 208, 61, ANSI_YELLOW);
-    draw_line(surface, 256, 89, 282, 111, ANSI_YELLOW);
-    p4_draw_fill_rect(surface, 0, 119, 320, 17, ANSI_BROWN);
-    draw_line(surface, 110, 43, 207, 111, ANSI_BRIGHT_RED);
-    draw_text(surface, 126, 55, "CLASH!", ANSI_YELLOW);
-    draw_cp437(surface, 108, 39, UINT8_C(0x2f),
-               ANSI_WHITE, ANSI_BLACK);
-    draw_cp437(surface, 204, 39, UINT8_C(0x5c),
-               ANSI_WHITE, ANSI_BLACK);
-}
-
-static void draw_rip_dragon(p4_game_surface_t *surface)
-{
-    p4_draw_sprite_rgb565(surface, 0, 25, s_lord_title_art,
-                          LORD_TITLE_ART_WIDTH, LORD_TITLE_ART_HEIGHT,
-                          LORD_TITLE_ART_WIDTH, false, 0U);
-}
-
-static void draw_rip_building(p4_game_surface_t *surface, uint8_t scene)
-{
-    const uint16_t walls[] = {
-        ANSI_BROWN, ANSI_RED, ANSI_GREEN, ANSI_BRIGHT_BLUE,
-        ANSI_YELLOW, ANSI_DARK_GRAY, ANSI_MAGENTA,
-    };
-    const uint16_t wall = walls[(size_t)(scene - 5U) %
-        (sizeof(walls) / sizeof(walls[0]))];
-    p4_draw_fill_circle(surface, 270, 44, 12, ANSI_YELLOW);
-    p4_draw_fill_rect(surface, 34, 66, 252, 61, wall);
-    draw_line(surface, 25, 66, 160, 35, ANSI_BRIGHT_RED);
-    draw_line(surface, 160, 35, 295, 66, ANSI_BRIGHT_RED);
-    p4_draw_fill_rect(surface, 139, 88, 42, 39, ANSI_BLACK);
-    p4_draw_fill_rect(surface, 55, 80, 38, 24, ANSI_BRIGHT_CYAN);
-    p4_draw_fill_rect(surface, 227, 80, 38, 24, ANSI_BRIGHT_CYAN);
-    draw_cp437(surface, 64, 88, CP437_SHADE_LIGHT,
-               ANSI_WHITE, ANSI_BRIGHT_CYAN);
-    draw_cp437(surface, 240, 88, CP437_SHADE_LIGHT,
-               ANSI_WHITE, ANSI_BRIGHT_CYAN);
-    if (scene == 9U) {
-        p4_draw_fill_circle(surface, 160, 58, 10, ANSI_YELLOW);
-        draw_text(surface, 153, 55, "$", ANSI_BLACK);
-    } else if (scene == 10U) {
-        for (int x = 53; x < 278; x += 45) {
-            p4_draw_fill_rect(surface, x, 111, 22, 7, ANSI_LIGHT_GRAY);
-        }
-    } else if (scene == 11U) {
-        p4_draw_fill_rect(surface, 108, 75, 104, 12, ANSI_RED);
-        draw_text(surface, 118, 77, "DARKCLOAK", ANSI_WHITE);
-    }
-}
-
 static void draw_rip_scene(p4_game_surface_t *surface,
                            const lord_state_t *state)
 {
-    switch (state->rip_scene) {
-    case 0U: draw_rip_town(surface); break;
-    case 1U: draw_rip_forest(surface); break;
-    case 2U: draw_rip_inn(surface); break;
-    case 3U: draw_rip_battle(surface); break;
-    case 4U: draw_rip_dragon(surface); break;
-    default: draw_rip_building(surface, state->rip_scene); break;
-    }
-    for (int x = 0; x < 320; x += P4_DRAW_CP437_CELL_WIDTH) {
-        draw_cp437(surface, x, 116, CP437_SHADE_DARK,
-                   ANSI_RED, ANSI_BLACK);
-    }
-    p4_draw_fill_rect(surface, 0, 124, 320, 8, ANSI_BLACK);
-    draw_text(surface, 8, 121, lord_rip_scene_name(state->rip_scene),
-              ANSI_BRIGHT_CYAN);
-    draw_text(surface, 214, 121, "A/B: GALLERY", ANSI_YELLOW);
+    static const lord_scene_t scenes[LORD_RIP_SCENE_COUNT] = {
+        LORD_SCENE_TOWN, LORD_SCENE_FOREST, LORD_SCENE_INN,
+        LORD_SCENE_DUEL, LORD_SCENE_DRAGON, LORD_SCENE_WEAPONS,
+        LORD_SCENE_ARMOUR, LORD_SCENE_HEALER, LORD_SCENE_TRAINING,
+        LORD_SCENE_BANK, LORD_SCENE_GRAVEYARD, LORD_SCENE_DARKCLOAK,
+    };
+    const lord_scene_t scene = state->rip_scene < LORD_RIP_SCENE_COUNT ?
+        scenes[state->rip_scene] : LORD_SCENE_TOWN;
+    draw_ansi_box(surface, 0, 24, 320, 96,
+                  ANSI_BRIGHT_BLUE, ANSI_BLACK, true);
+    draw_location_scene(surface, scene, 32, P4_DRAW_CP437_FULL_HEIGHT);
+    draw_centered_text(surface, 124, lord_rip_scene_name(state->rip_scene),
+                       ANSI_YELLOW, 8, 312);
+    draw_centered_text(surface, 141, s_ansi_scenes[scene].caption,
+                       ANSI_LIGHT_GRAY, 8, 312);
+    draw_centered_text(surface, 160, "A/B: RETURN TO GALLERY",
+                       ANSI_BRIGHT_CYAN, 8, 312);
 }
 
 static void draw_keyboard(p4_game_surface_t *surface,
@@ -3302,15 +3156,15 @@ static void render_screen(p4_game_surface_t *surface,
         draw_skills(surface, state);
         break;
     case LORD_SCREEN_RIP_GALLERY:
-        draw_header(surface, "RIP ART GALLERY");
+        draw_header(surface, "ANSI ART GALLERY");
         draw_text(surface, 10, 29,
-                  "ANSI/RIP-style scenes; choose an exhibit.",
+                  "CP437 scenes; choose an exhibit.",
                   ANSI_BRIGHT_CYAN);
         draw_menu(surface, state, s_rip_gallery_menu,
                   LORD_RIP_SCENE_COUNT + 1U, 48);
         break;
     case LORD_SCREEN_RIP_SCENE:
-        draw_header(surface, "RIP-STYLE SCENE");
+        draw_header(surface, "ANSI SCENE");
         draw_rip_scene(surface, state);
         break;
     case LORD_SCREEN_STATS:
@@ -3324,12 +3178,16 @@ static void render_screen(p4_game_surface_t *surface,
     case LORD_SCREEN_MESSAGE:
         draw_header(surface, "WORD FROM THE REALM");
         if (!draw_message_creature_art(surface, state)) {
-            draw_ansi_box(surface, 8, 40, 304, 56,
-                          ANSI_BRIGHT_BLUE, ANSI_PANEL, false);
-            draw_text(surface, 18, 52, state->message_line_1, ANSI_WHITE);
-            draw_text(surface, 18, 69, state->message_line_2,
+            draw_ansi_box(surface, 0, 24, 320, 96,
+                          ANSI_BRIGHT_BLUE, ANSI_BLACK, true);
+            draw_location_scene(surface,
+                screen_location_scene(state, state->return_screen),
+                32, P4_DRAW_CP437_FULL_HEIGHT);
+            draw_text(surface, 8, 128, state->message_line_1, ANSI_WHITE);
+            draw_text(surface, 8, 141, state->message_line_2,
                       ANSI_BRIGHT_CYAN);
-            draw_text(surface, 90, 111, "CHOOSE TO CONTINUE", ANSI_YELLOW);
+            draw_centered_text(surface, 158, "CHOOSE TO CONTINUE",
+                               ANSI_YELLOW, 8, 312);
         }
         break;
     case LORD_SCREEN_DEAD:
@@ -3734,6 +3592,7 @@ static bool game_render(p4_game_context_t *context,
     const lord_state_t *const state = context->state;
     p4_draw_clear(surface, ANSI_BLACK);
     render_screen(surface, state);
+    draw_location_band(surface, state);
     draw_global_status_overlay(surface, state);
     draw_command_footer(surface);
     return true;

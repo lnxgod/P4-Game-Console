@@ -116,7 +116,11 @@
     "game_manager_visible": true,
     "runtime": "p4-lua-5.4-v1",
     "runtime_implemented": false,
-    "seed_cart": "P4/GAMES/BOUNCE-LAB.P4CART"
+    "seed_cart": "P4/GAMES/BOUNCE-LAB.P4CART",
+    "seed_carts": [
+      "P4/GAMES/BOUNCE-LAB.P4CART",
+      "P4/GAMES/QR-DODGE.P4CART"
+    ]
   },
   "boot": {
     "brand": "GameChangers AI",

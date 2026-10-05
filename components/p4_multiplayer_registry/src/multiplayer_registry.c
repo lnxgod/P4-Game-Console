@@ -163,3 +163,42 @@ const char *p4_mp_registration_result_name(
         return "unknown";
     }
 }
+
+bool p4_mp_game_supports_dice(const p4_game_package_info_t *package)
+{
+    return package != NULL && ((package->required_capabilities |
+        package->optional_capabilities) & P4_GAME_CAP_DICE_ACCESSORY) != 0U;
+}
+
+bool p4_mp_game_dice_settings_encode(const p4_game_package_info_t *package,
+    bool enabled, uint8_t settings[P4_MP_GAME_SETTINGS_BYTES])
+{
+    if (package == NULL || settings == NULL ||
+        (enabled && !p4_mp_game_supports_dice(package))) return false;
+    memset(settings, 0, P4_MP_GAME_SETTINGS_BYTES);
+    if (enabled) { settings[0] = 1U; settings[1] = 1U; }
+    return true;
+}
+
+bool p4_mp_game_dice_settings_decode(const p4_game_package_info_t *package,
+    const uint8_t settings[P4_MP_GAME_SETTINGS_BYTES], bool *enabled)
+{
+    if (package == NULL || settings == NULL || enabled == NULL) return false;
+    *enabled = false;
+    uint8_t combined = 0U;
+    for (size_t i = 0U; i < P4_MP_GAME_SETTINGS_BYTES; ++i) combined |= settings[i];
+    if (combined == 0U) return true;
+    if (settings[0] != 1U || settings[1] != 1U ||
+        !p4_mp_game_supports_dice(package)) return false;
+    for (size_t i = 2U; i < P4_MP_GAME_SETTINGS_BYTES; ++i)
+        if (settings[i] != 0U) return false;
+    *enabled = true;
+    return true;
+}
+
+bool p4_mp_game_dice_service_allowed(const p4_game_package_info_t *package,
+    bool hardware_ready, bool multiplayer, bool host, bool shared_dice)
+{
+    return hardware_ready && p4_mp_game_supports_dice(package) &&
+        (!multiplayer || (host && shared_dice));
+}

@@ -1,0 +1,16 @@
+{
+  "ports": {
+    "unit1": {
+      "opened": true,
+      "disconnected": false
+    },
+    "unit2": {
+      "opened": true,
+      "disconnected": false
+    }
+  },
+  "dice_event_lines": [],
+  "user_visual_confirmation": false,
+  "stopped_reason": "Owner requested time to charge or power devices; monitor stopped intentionally with logs preserved.",
+  "wireless_game_acceptance": false
+}

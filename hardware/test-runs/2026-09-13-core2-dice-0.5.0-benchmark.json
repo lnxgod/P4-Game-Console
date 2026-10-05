@@ -1,0 +1,28 @@
+{
+  "board": "M5Stack Core2",
+  "app_sha256": "96220cf1ce75a590aafe137f22fe70354d993dc052040d97a92df5987d567969",
+  "kind": "render-only synthetic cup on dedicated CPU1; motion/audio CPU0",
+  "markers": [
+    {
+      "frames": 48,
+      "fps_x10": 462,
+      "render_us": 8756,
+      "transfer_us": 9887
+    },
+    {
+      "frames": 51,
+      "fps_x10": 491,
+      "render_us": 8153,
+      "transfer_us": 8747
+    },
+    {
+      "frames": 8,
+      "fps_x10": 278,
+      "render_us": 8526,
+      "transfer_us": 8098
+    }
+  ],
+  "complete": true,
+  "acoustic_acceptance": false,
+  "wireless_game_acceptance": false
+}

@@ -122,7 +122,8 @@ static bool encode_snapshot(const p4_yahtzee_state_t *state,
             ? state->turns_scored[player] : 0U;
     }
     bytes[NET_ANIMATION_OFFSET] =
-        state->roll_animation_ms != 0U ? 1U : 0U;
+        (uint8_t)((state->roll_animation_ms != 0U ? 1U : 0U) |
+                  (state->shared_accessory ? 2U : 0U));
     return true;
 }
 
@@ -154,7 +155,7 @@ static bool apply_snapshot(p4_yahtzee_state_t *state,
         bytes[9] < (uint8_t)P4_YAHTZEE_TURN ||
         bytes[9] > (uint8_t)P4_YAHTZEE_GAME_OVER ||
         bytes[10] >= P4_YAHTZEE_CATEGORIES ||
-        bytes[NET_ANIMATION_OFFSET] > 1U) {
+        bytes[NET_ANIMATION_OFFSET] > 3U) {
         return false;
     }
     for (size_t index = 0U; index < P4_YAHTZEE_DICE; ++index) {
@@ -202,7 +203,8 @@ static bool apply_snapshot(p4_yahtzee_state_t *state,
     }
     state->roll_animation_ms = 0U;
     state->animation_step_ms = 0U;
-    if (bytes[NET_ANIMATION_OFFSET] != 0U) {
+    state->shared_accessory = (bytes[NET_ANIMATION_OFFSET] & 2U) != 0U;
+    if ((bytes[NET_ANIMATION_OFFSET] & 1U) != 0U) {
         state->roll_animation_ms = 330U;
         state->animation_step_ms = 55U;
     }
@@ -339,6 +341,8 @@ void p4_yahtzee_poll_network(
         state->network_role = status.role;
         state->network_seed = status.session_seed;
         state->network_revision = 1U;
+        state->shared_accessory = context->services != NULL &&
+            (context->services->available_capabilities & P4_GAME_CAP_DICE_ACCESSORY) != 0U;
         state->network_started = send_snapshot(context, state);
     }
     p4_game_multiplayer_message_t message;
@@ -367,5 +371,72 @@ void p4_yahtzee_poll_network(
         }
         (void)apply_host_action(
             context, state, kind, message.data[6]);
+    }
+}
+
+void p4_yahtzee_poll_dice(p4_game_context_t *context, p4_yahtzee_state_t *s)
+{
+    if (s->accessory_pending && (s->network_revision != s->accessory_pending_revision ||
+        s->network_error || s->mode != P4_YAHTZEE_NETWORK ||
+        context->elapsed_ms-s->accessory_pending_since_ms > 2000U)) s->accessory_pending=false;
+    p4_dice_request_t request={0};
+    request.token=s->accessory_request.token;
+    request.player_slot=s->current_player;
+    request.count=P4_YAHTZEE_DICE; request.sides=6;
+    request.held_mask=s->held_mask;
+    request.hold_ack=s->accessory_hold_ack;
+    for (size_t i=0; i<P4_YAHTZEE_DICE; ++i)
+        request.faces[i]=s->dice[i] >= 1 && s->dice[i] <= 6 ? s->dice[i] : 1;
+    memcpy(request.player_name,"PLAYER 1",9);
+    request.player_name[7]=(char)('1'+s->current_player);
+    /* Console OS grants the shared accessory only to the host. Its validated
+     * shake belongs to the displayed current player, including a remote turn.
+     * Controller/touch actions still use the local-player authorization path. */
+    const bool shared_host = s->mode == P4_YAHTZEE_NETWORK &&
+        s->network_role == P4_GAME_MULTIPLAYER_ROLE_HOST && s->network_started &&
+        s->shared_accessory;
+    const bool turn_active=s->phase == P4_YAHTZEE_TURN &&
+        (p4_yahtzee_local_turn(s) || shared_host) &&
+        !s->network_error && !s->accessory_pending && s->roll_animation_ms == 0 &&
+        s->roll_count < P4_YAHTZEE_ROLLS_PER_TURN;
+    request.enabled=turn_active && s->held_mask != 31;
+    request.can_hold=turn_active && s->roll_count > 0;
+    if (!request.token || memcmp(&request,&s->accessory_request,sizeof(request))) {
+        ++request.token;
+        if (!request.token) request.token=1;
+        s->accessory_request=request;
+    }
+    p4_dice_status_t status={0};
+    if (!p4_game_dice_exchange(context,&request,&status)) {
+        s->accessory_phase=P4_DICE_OFFLINE; return;
+    }
+    s->accessory_phase=status.phase;
+    if (status.hold_changed && request.can_hold &&
+        status.phase == P4_DICE_WAITING && status.token == request.token &&
+        status.player_slot == s->current_player && status.held_mask < 32 &&
+        s->accessory_consumed_token != request.token &&
+        (s->mode != P4_YAHTZEE_NETWORK || shared_host)) {
+        /* One absolute selection is consumed once, then acknowledged by the
+         * next request token. This also handles unholding all/any dice. */
+        s->accessory_consumed_token=request.token;
+        s->held_mask=status.held_mask;
+        s->accessory_hold_ack=status.hold_sequence;
+        play_action_tone(context,P4_YAHTZEE_NET_HOLD,s->held_mask != 0);
+        if (shared_host) { ++s->network_revision; (void)send_snapshot(context,s); }
+        return;
+    }
+    if (!request.enabled || status.phase != P4_DICE_ROLLED ||
+        status.token != request.token || status.player_slot != s->current_player ||
+        s->accessory_consumed_token == request.token) return;
+    s->accessory_consumed_token=request.token;
+    const bool rolled = shared_host
+        ? apply_host_action(context,s,P4_YAHTZEE_NET_ROLL,0)
+        : p4_yahtzee_perform_action(context,s,P4_YAHTZEE_NET_ROLL,0);
+    if (rolled &&
+        s->mode == P4_YAHTZEE_NETWORK &&
+        s->network_role == P4_GAME_MULTIPLAYER_ROLE_CLIENT) {
+        s->accessory_pending=true;
+        s->accessory_pending_revision=s->network_revision;
+        s->accessory_pending_since_ms=context->elapsed_ms;
     }
 }

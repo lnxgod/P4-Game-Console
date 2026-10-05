@@ -1,0 +1,5 @@
+{
+  "result": "interrupted",
+  "reason": "Serial device disconnected during receive-only monitoring; no pairing/roll event had been printed. Buffered logs were not saved before interruption.",
+  "wireless_game_acceptance": false
+}

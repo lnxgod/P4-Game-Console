@@ -1,0 +1,47 @@
+{
+  "board": "unit1-pink-B289",
+  "identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+  "application": {
+    "path": "hardware/local-state/waveshare-dice-hold-fe51c95/p4_console_os.bin",
+    "bytes": 1885536,
+    "sha256": "fe51c95e9cdb3a811139e64e90149390c458488b1bdcdff3bd5d184fe7c41bca",
+    "padded_mutation_bytes": 1888256
+  },
+  "ledger": {
+    "schema": 1,
+    "authorization_sha256": "7161e09406edf337fbd03b9dac430dd3b5501064ba418f4a71d833be5f2d0f3c",
+    "device_identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d",
+    "preimage_sha256": "1780c7cfb09038dab4716aebe11c1eaebf4891488659afd642f8de5faf22da93",
+    "candidate_sha256": "fe51c95e9cdb3a811139e64e90149390c458488b1bdcdff3bd5d184fe7c41bca",
+    "install_write_attempt_count": 1,
+    "restore_required": false,
+    "automatic_rollback_authorized": true,
+    "state": "installed-readback-pass-awaiting-retained-uart",
+    "padded_readback_sha256": "93710838b11e789da1fd1d8684945ec9d944af9bc03593574ee306e517824f24"
+  },
+  "boot_log": "hardware/test-runs/2026-09-13-waveshare-unit1-dice-hold-boot.log",
+  "post_cartridge_boot_log": "hardware/test-runs/2026-09-13-waveshare-unit1-dice-hold-after-cartridge-boot.log",
+  "boot_ready": true,
+  "radio_worker_core1": true,
+  "native_multiplayer_games": [
+    "org.p4console.checkers",
+    "org.p4console.color-clash",
+    "org.p4console.p4-air-hockey",
+    "org.p4console.p4-rummy",
+    "org.p4console.p4-yahtzee",
+    "org.p4console.texas-holdem"
+  ],
+  "yahtzee": {
+    "path": "hardware/local-state/waveshare-dice-hold-fe51c95/P4_YAHTZEE.P4G",
+    "bytes": 42168,
+    "sha256": "05a55116d0d1a01f83723b6dfbc21d807d5eb7ae158fb128041f8e51a80b364c",
+    "version": "1.3.1",
+    "protocol": 4,
+    "verified_h1_transfer": true,
+    "registered_after_restart": true
+  },
+  "boot_warnings": [
+    "Boot dial/modem audio reported ESP_ERR_INVALID_ARG; no console acoustic acceptance claimed."
+  ],
+  "shared_core2_hardware_acceptance": false
+}

@@ -96,6 +96,7 @@
 #if P4_CONSOLE_BLE_MULTIPLAYER
 #include "p4/multiplayer_ble.h"
 #include "platform/multiplayer_ble.h"
+#include "platform/dice_ble.h"
 #endif
 #if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
     (CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
@@ -566,6 +567,11 @@ static p4_ble_radio_handoff_t s_ble_radio_handoff;
 #endif
 static p4_mp_lobby_offer_t s_multiplayer_local_offer;
 static p4_mp_lobby_offer_t s_multiplayer_remote_offer;
+static bool s_multiplayer_shared_dice;
+static bool s_multiplayer_launch_shared_dice;
+#if P4_CONSOLE_BLE_MULTIPLAYER
+static bool s_dice_ready;
+#endif
 typedef enum {
     CONSOLE_MP_LAUNCH_NONE = 0,
     CONSOLE_MP_LAUNCH_DOOM,
@@ -3143,6 +3149,16 @@ static const char *multiplayer_selected_game_title(void)
     return multiplayer_game_title_at(s_multiplayer_game_selection);
 }
 
+static bool multiplayer_dice_available(void)
+{
+#if P4_CONSOLE_BLE_MULTIPLAYER
+    const platform_game_catalog_entry_t *const game = multiplayer_selected_native_game();
+    return s_dice_ready && game != NULL && p4_mp_game_supports_dice(&game->package);
+#else
+    return false;
+#endif
+}
+
 static p4_doom_mp_setup_t multiplayer_display_setup(void)
 {
     if (s_doom_multiplayer_launch.enabled &&
@@ -3603,6 +3619,9 @@ static console_shell_runtime_info_t runtime_info(void)
         .multiplayer_game_ready = selected_game_ready,
         .multiplayer_game_is_doom =
             multiplayer_selected_game_is_doom(),
+        .multiplayer_dice_available = multiplayer_dice_available(),
+        .multiplayer_dice_enabled = s_multiplayer_launch_kind == CONSOLE_MP_LAUNCH_NATIVE
+            ? s_multiplayer_launch_shared_dice : s_multiplayer_shared_dice,
         .multiplayer_game_selection =
             s_multiplayer_game_selection > UINT8_MAX
                 ? UINT8_MAX : (uint8_t)s_multiplayer_game_selection,
@@ -3995,6 +4014,9 @@ static esp_err_t configure_multiplayer_local_offer(void)
         if (!native_game_supports_multiplayer(game)) {
             return ESP_ERR_NOT_FOUND;
         }
+        if (!p4_mp_game_dice_settings_encode(&game->package,
+                multiplayer_dice_available() && s_multiplayer_shared_dice,
+                offer.game_settings)) return ESP_ERR_INVALID_STATE;
         const p4_game_multiplayer_profile_t *const profile =
             &game->package.multiplayer_profile;
         offer.mode = native_multiplayer_mode(profile);
@@ -4057,6 +4079,7 @@ static void reset_multiplayer_lobby(const char *reason)
     s_multiplayer_remote_offer = (p4_mp_lobby_offer_t){0};
     s_doom_multiplayer_launch = (p4_doom_mp_launch_config_t){0};
     s_multiplayer_launch_kind = CONSOLE_MP_LAUNCH_NONE;
+    s_multiplayer_launch_shared_dice = false;
     s_multiplayer_local_player_slot = P4_MP_PLAYER_SLOT_ANY;
     s_multiplayer_player_count = 0U;
     s_multiplayer_launch_route_id = 0U;
@@ -4321,6 +4344,25 @@ static void handle_multiplayer_config_action(
         action->multiplayer_option >= CONSOLE_MULTIPLAYER_OPTION_COUNT ||
         action->multiplayer_delta == 0 ||
         !multiplayer_settings_editable()) {
+        return;
+    }
+    if (action->multiplayer_option == CONSOLE_MULTIPLAYER_OPTION_DICE) {
+        if (shell->multiplayer_view != CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS ||
+            !multiplayer_dice_available()) return;
+        const bool previous = s_multiplayer_shared_dice;
+        const p4_mp_lobby_offer_t previous_offer = s_multiplayer_local_offer;
+        s_multiplayer_shared_dice = !previous;
+        if (configure_multiplayer_local_offer() != ESP_OK) {
+            s_multiplayer_shared_dice = previous;
+            s_multiplayer_local_offer = previous_offer;
+            return;
+        }
+        reset_multiplayer_lobby("dice-option-changed");
+        s_multiplayer_next_discovery_us = 0;
+        ESP_LOGI(TAG, "P4_CONSOLE_OS DICE_OPTION shared=%u",
+                 s_multiplayer_shared_dice ? 1U : 0U);
+        const console_shell_runtime_info_t current_runtime = runtime_info();
+        console_shell_set_runtime_info(shell, &current_runtime);
         return;
     }
     p4_doom_mp_setup_t requested = s_multiplayer_local_setup;
@@ -4703,6 +4745,7 @@ static esp_err_t reopen_multiplayer_host_lobby(void)
     s_multiplayer_local_offer.players_present = 1U;
     s_doom_multiplayer_launch = (p4_doom_mp_launch_config_t){0};
     s_multiplayer_launch_kind = CONSOLE_MP_LAUNCH_NONE;
+    s_multiplayer_launch_shared_dice = false;
     s_multiplayer_local_player_slot = P4_MP_PLAYER_SLOT_ANY;
     s_multiplayer_player_count = 0U;
     s_multiplayer_launch_route_id = 0U;
@@ -4963,6 +5006,16 @@ static void configure_multiplayer_launch(
             reset_multiplayer_lobby("invalid-native-launch-config");
             return;
         }
+        bool shared_dice = false;
+        if (!p4_mp_game_dice_settings_decode(&game->package,
+                accept->game_settings, &shared_dice) ||
+            (role == P4_MP_ROLE_HOST && shared_dice && !multiplayer_dice_available())) {
+            reset_multiplayer_lobby("invalid-native-dice-setting");
+            return;
+        }
+        s_multiplayer_launch_shared_dice = shared_dice;
+        ESP_LOGI(TAG, "P4_CONSOLE_OS DICE_MATCH shared=%u owner=%s",
+                 shared_dice ? 1U : 0U, role == P4_MP_ROLE_HOST ? "host" : "remote-host");
         s_doom_multiplayer_launch = (p4_doom_mp_launch_config_t){0};
         s_multiplayer_launch_kind = CONSOLE_MP_LAUNCH_NATIVE;
         s_multiplayer_native_launcher_id = game->package.launcher_id;
@@ -8538,6 +8591,9 @@ static bool cartridge_poll_frame(void *opaque,
 
 static void cartridge_finished(void *opaque, p4_game_result_t result)
 {
+#if P4_CONSOLE_BLE_MULTIPLAYER
+    platform_dice_ble_close();
+#endif
     cartridge_run_context_t *const context = opaque;
     if (context != NULL) {
         context->game_result = result;
@@ -8638,6 +8694,11 @@ static esp_err_t run_stored_game(
     const bool save_ready = context->save != NULL &&
         context->save->worker != NULL &&
         p4_game_save_service_available(&context->save->service);
+#if P4_CONSOLE_BLE_MULTIPLAYER
+    const bool dice_ready = p4_mp_game_dice_service_allowed(&game->package,
+        s_dice_ready, multiplayer_ready,
+        s_multiplayer_session.role == P4_MP_ROLE_HOST, s_multiplayer_launch_shared_dice);
+#endif
     p4_cartridge_host_v1_t host = {
         .magic = P4_CARTRIDGE_HOST_MAGIC,
         .api_version = P4_CARTRIDGE_HOST_API_VERSION,
@@ -8645,12 +8706,18 @@ static esp_err_t run_stored_game(
         .available_capabilities = P4_GAME_CAP_VIDEO |
             P4_GAME_CAP_CONTROLS |
             (high_res_video ? P4_GAME_CAP_VIDEO_HIGH_RES : 0U) |
+#if P4_CONSOLE_BLE_MULTIPLAYER
+            (dice_ready ? P4_GAME_CAP_DICE_ACCESSORY : 0U) |
+#endif
             (context->audio_running
                 ? P4_GAME_CAP_AUDIO_TONE | P4_GAME_CAP_AUDIO_STREAM : 0U) |
             (signal_scan_ready ? P4_GAME_CAP_SIGNAL_SCAN : 0U) |
             (save_ready ? P4_GAME_CAP_SAVE : 0U) |
             (multiplayer_ready
                 ? P4_GAME_CAP_MULTIPLAYER_SESSION : 0U),
+#if P4_CONSOLE_BLE_MULTIPLAYER
+        .dice_exchange_v2 = dice_ready ? platform_dice_ble_exchange : NULL,
+#endif
         .expected_game_id = game->package.id,
         .surface = {
             .pixels = s_pixels,
@@ -9835,6 +9902,11 @@ void app_main(void)
 #if P4_CONSOLE_BLE_MULTIPLAYER
     const esp_err_t ble_multiplayer_prepare =
         platform_multiplayer_ble_prepare();
+    const esp_err_t dice_prepare = platform_dice_ble_prepare();
+    s_dice_ready = dice_prepare == ESP_OK;
+    if (dice_prepare != ESP_OK) {
+        ESP_LOGW(TAG, "DICE_PREPARE_DEGRADED error=%s", esp_err_to_name(dice_prepare));
+    }
     if (ble_multiplayer_prepare != ESP_OK) {
         ESP_LOGW(TAG,
                  "P4_CONSOLE_OS BLE_PREPARE_DEGRADED client=multiplayer "

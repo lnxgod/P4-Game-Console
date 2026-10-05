@@ -318,14 +318,15 @@ bounded background task, verifies their complete container and payload hashes,
 and lists valid carts alongside P4G packages. This does not rename or execute
 them: the original project did not finish the required sandboxed Lua 5.4
 backend. The generated storage bundle includes the MIT-licensed Bounce Lab
-reference cart so this compatibility path is reproducible.
+and QR Dodge reference carts so this compatibility path is reproducible.
 
 The Waveshare 4.3 build obtains its complete executable cartridge catalog from
 microSD while retaining the P4CART compatibility catalog. Build and verify it
 with `make console-os-waveshare-idf`. Connect H2, wait for its volume to mount,
 and run
 `make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES`; the installer
-validates every enabled cartridge and preserves unrelated files. It requires
+validates every enabled native cartridge, every declared source cartridge,
+and every resource sidecar before preserving unrelated files. It requires
 an external USB FAT32 volume named `P4GAMES` and rejects ExFAT. Recover a fresh
 or corrupt card with `diskutil eraseDisk MS-DOS P4GAMES MBRFormat /dev/diskN`
 only after resolving the exact external disk. Waveshare SD initialization tries

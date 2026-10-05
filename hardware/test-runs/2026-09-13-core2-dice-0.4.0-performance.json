@@ -1,0 +1,28 @@
+{
+  "board": "M5Stack Core2",
+  "app_sha256": "b55ad560b12185ee0cf6660668d7d0c6e28cad2a05c7c4eecd1492296efcad07",
+  "serial_markers": [
+    {
+      "frames": 16,
+      "fps": 14.9,
+      "render_us": 27926,
+      "transfer_us": 25971
+    },
+    {
+      "frames": 17,
+      "fps": 15.7,
+      "render_us": 24658,
+      "transfer_us": 24387
+    },
+    {
+      "frames": 10,
+      "fps": 12.9,
+      "render_us": 26299,
+      "transfer_us": 24601
+    }
+  ],
+  "practice_roll_observed": true,
+  "owner_response": "super laggy looking; sound pulses need a little more work",
+  "accepted": false,
+  "successor": "0.4.1"
+}

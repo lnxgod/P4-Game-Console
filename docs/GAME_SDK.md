@@ -559,3 +559,34 @@ growth, coin upgrades, a mini-game, tones, achievements, PixelLab sprite art,
 and direct return to the launcher through P4 APIs.
 Calculator, Input Test, and AV Test demonstrate removable utility and
 diagnostic cartridges under the System hierarchy.
+
+## Dice accessories
+
+Optional `dice-accessory` / `P4_GAME_CAP_DICE_ACCESSORY` exposes an OS-owned
+P4MP accessory connection through `p4_game_dice_exchange()`. Games publish a
+bounded player label, token, enabled state, held mask, and authoritative dice
+faces, and consume one matching Ready/shake completion per token. The API
+supports 1–8 dice with 2–255 sides; hardware and BLE stay outside cartridges.
+See [DICE_ACCESSORY.md](DICE_ACCESSORY.md) for the full contract, Core2 firmware,
+connection lifecycle, and build/acceptance instructions.
+
+
+Console OS offers **Dice: ON - SHARED CORE2** in Host match settings for native
+games declaring `dice-accessory`. In a network match the service is available
+only to the host when enabled; clients retain normal controls and receive the
+host's game snapshots. Shared-dice games should publish the current player's
+label and accept a validated shake for that player through their authoritative
+roll path, including remote turns. This does not grant the host controller the
+right to act for other players. Off disables scanning and service exposure for
+that match. No additional game-specific lobby or hardware ownership is needed.
+
+
+Dice accessory v2 (`dice_exchange_v2` in the size-checked cartridge host tail)
+adds `request.can_hold`, `request.hold_ack`, and status `held_mask`,
+`hold_changed`, `hold_sequence`. A game enables hold selection only between
+rolls, validates token/current player, applies the absolute mask once, and
+returns the selection sequence as `hold_ack` under a new request token.
+Acknowledgements also apply to an unchanged mask after a quick keep/undo.
+The old dice callback remains null on a v2 host to avoid interpreting old
+structure padding as new fields. New games on old consoles retain manual
+controls through optional-capability negotiation.

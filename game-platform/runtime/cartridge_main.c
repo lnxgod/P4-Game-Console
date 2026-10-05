@@ -89,6 +89,14 @@ static bool host_read_save_status(
                                committed_sequence_out);
 }
 
+static bool host_dice_exchange(void *opaque, const p4_dice_request_t *request,
+    p4_dice_status_t *status)
+{
+    const p4_cartridge_host_v1_t *host=opaque;
+    return host && host->dice_exchange_v2 &&
+        host->dice_exchange_v2(host->context, request, status);
+}
+
 static bool host_multiplayer_read_status(
     void *opaque, p4_game_multiplayer_status_t *status_out)
 {
@@ -154,7 +162,8 @@ static uint32_t supported_service_capabilities(void)
         P4_GAME_CAP_SIGNAL_SCAN |
         P4_GAME_CAP_SAVE |
         P4_GAME_CAP_MULTIPLAYER_SESSION |
-        P4_GAME_CAP_VIDEO_HIGH_RES;
+        P4_GAME_CAP_VIDEO_HIGH_RES |
+        P4_GAME_CAP_DICE_ACCESSORY;
 }
 
 static bool host_save_snapshot_valid(const p4_cartridge_host_v1_t *host)
@@ -205,6 +214,9 @@ int app_main(int argc, char *argv[])
     const bool has_multiplayer_profile = host_field_present(
         host, offsetof(p4_cartridge_host_v1_t, multiplayer_profile),
         sizeof(host->multiplayer_profile));
+    const bool has_dice = host_field_present(
+        host, offsetof(p4_cartridge_host_v1_t, dice_exchange_v2),
+        sizeof(host->dice_exchange_v2));
     uint32_t available_capabilities = host->available_capabilities &
         supported_service_capabilities();
     if (host->surface.width != P4_GAME_SURFACE_HIGH_RES_WIDTH ||
@@ -241,6 +253,9 @@ int app_main(int argc, char *argv[])
         available_capabilities &=
             (uint32_t)~(uint32_t)P4_GAME_CAP_MULTIPLAYER_SESSION;
     }
+    if (!has_dice || !host->dice_exchange_v2) {
+        available_capabilities &= (uint32_t)~(uint32_t)P4_GAME_CAP_DICE_ACCESSORY;
+    }
     if ((game->required_capabilities & ~available_capabilities) != 0U) {
         return P4_CARTRIDGE_EXIT_CAPABILITY_MISSING;
     }
@@ -251,6 +266,9 @@ int app_main(int argc, char *argv[])
     }
     const p4_game_services_t services = {
         .available_capabilities = available_capabilities,
+        .dice_context = host,
+        .dice_exchange = (available_capabilities & P4_GAME_CAP_DICE_ACCESSORY)
+            ? host_dice_exchange : NULL,
         .audio_context = host,
         .game_id = game->id,
         .play_tone = host->play_tone == NULL ? NULL : host_play_tone,

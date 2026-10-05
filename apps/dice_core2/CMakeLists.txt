@@ -1,0 +1,5 @@
+cmake_minimum_required(VERSION 3.16)
+set(EXTRA_COMPONENT_DIRS "../../components/p4_multiplayer")
+set(IDF_TARGET esp32)
+include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+project(p4_dice_core2 VERSION 0.6.0)

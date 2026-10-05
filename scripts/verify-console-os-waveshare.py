@@ -13,6 +13,7 @@ import sys
 import tempfile
 
 from p4_multiplayer_manifest import expected_multiplayer_extension
+from p4cart_seed_registry import SeedCart, load_seed_carts
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -22,7 +23,6 @@ WAD_BYTES = 4_196_020
 WAD_SHA256 = "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771"
 LOGO_BYTES = 25_088
 LOGO_SHA256 = "48ee7b2a15a744547884ec6ea7f462277ab60e5dde4d0805bf39db9c0b2bd892"
-P4CART_SEED = pathlib.Path("P4/GAMES/BOUNCE-LAB.P4CART")
 EXT_PORT_UPSTREAM_BYTES = 49_731
 EXT_PORT_UPSTREAM_SHA256 = "0760b3c8ef14813db621b66c19d27caea5391793c592ca480b6ce18121797736"
 EXT_PORT_SERIALIZED_BYTES = 53_413
@@ -48,6 +48,7 @@ GAME_CAPABILITIES = {
     "module-handoff": 1 << 10,
     "vector-scenes": 1 << 11,
     "video-highres": 1 << 12,
+    "dice-accessory": 1 << 13,
 }
 
 
@@ -208,7 +209,7 @@ def verify_update(path: pathlib.Path, app: pathlib.Path) -> dict[str, object]:
     return {"file": path.name, "bytes": len(package), "sha256": sha256(path)}
 
 
-def verify_p4cart(path: pathlib.Path) -> dict[str, object]:
+def verify_p4cart(path: pathlib.Path, seed: SeedCart) -> dict[str, object]:
     inspect = subprocess.run(
         [sys.executable,
          str(ROOT / "game-platform/scripts/p4cart.py"),
@@ -219,18 +220,19 @@ def verify_p4cart(path: pathlib.Path) -> dict[str, object]:
     require(inspect.returncode == 0,
             f"seed P4 Cart is invalid: {inspect.stderr.strip()}")
     with tempfile.TemporaryDirectory(prefix="p4cart-seed-") as temporary:
-        rebuilt = pathlib.Path(temporary) / "BOUNCE-LAB.P4CART"
+        rebuilt = pathlib.Path(temporary) / seed.output_name
         packed = subprocess.run(
             [sys.executable,
              str(ROOT / "game-platform/scripts/p4cart.py"),
-             "pack", str(ROOT / "game-platform/templates/bounce-lab"),
+             "pack", str(seed.template_directory),
              str(rebuilt)],
             cwd=ROOT, check=False, text=True,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         require(packed.returncode == 0 and rebuilt.read_bytes() == path.read_bytes(),
-                f"seed P4 Cart is not deterministic: {packed.stderr.strip()}")
-    return {"file": str(P4CART_SEED), "bytes": path.stat().st_size,
+                f"seed P4 Cart is not deterministic for {seed.template_name}: "
+                f"{packed.stderr.strip()}")
+    return {"file": str(seed.relative_path), "bytes": path.stat().st_size,
             "sha256": sha256(path)}
 
 
@@ -1380,10 +1382,14 @@ def main() -> None:
             metadata.get("seed_resources", []),
             "built resource sidecar list differs from app metadata")
     legacy = read_json(APP / "app-metadata.json")["legacy_p4cart"]
+    p4cart_seeds = load_seed_carts()
     require(legacy.get("format") == "p4-cart-source-v1" and
             legacy.get("game_manager_visible") is True and
             legacy.get("runtime_implemented") is False and
-            legacy.get("seed_cart") == str(P4CART_SEED),
+            legacy.get("seed_cart") == str(p4cart_seeds[0].relative_path) and
+            legacy.get("seed_carts") == [
+                str(seed.relative_path) for seed in p4cart_seeds
+            ],
             "legacy P4 Cart metadata differs")
     require(metadata.get("games_embedded_in_ota") is False and
             metadata.get("execution_source") ==
@@ -1466,7 +1472,12 @@ def main() -> None:
                 symbol_start + symbol_bytes <= external_bss_end,
                 f"{catalog_symbol} must be a 32-entry external-RAM snapshot")
     update = verify_update(bundle / "UPDATE/P4UPDATE.P4U", app)
-    p4cart = verify_p4cart(bundle / P4CART_SEED)
+    p4carts = [
+        verify_p4cart(
+            bundle / pathlib.Path(*seed.relative_path.parts), seed
+        )
+        for seed in p4cart_seeds
+    ]
 
     print(json.dumps({
         "result": "waveshare-console-os-build-verified",
@@ -1478,7 +1489,8 @@ def main() -> None:
         "games_embedded_in_ota": False,
         "games": reports,
         "game_resources": resource_reports,
-        "legacy_p4cart": p4cart,
+        "legacy_p4cart": p4carts[0],
+        "legacy_p4carts": p4carts,
         "update": update,
         "storage_policy": "app-owned/controller-host by default; USB Drive app exclusively switches H2 to MSC; return requires host eject or disconnect; firmware never formats",
         "hardware_tested": False,

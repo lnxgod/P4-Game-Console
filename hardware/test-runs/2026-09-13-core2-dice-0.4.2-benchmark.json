@@ -1,0 +1,27 @@
+{
+  "board": "M5Stack Core2",
+  "app_sha256": "333586b613442338a38431f483004675556ce4210b3e1ab5e8ef95ad27d7bf62",
+  "kind": "render-only synthetic cup benchmark immediately after guarded install",
+  "markers": [
+    {
+      "frames": 26,
+      "fps": 24.1,
+      "render_us": 10185,
+      "transfer_us": 25409
+    },
+    {
+      "frames": 27,
+      "fps": 25.7,
+      "render_us": 9354,
+      "transfer_us": 23851
+    },
+    {
+      "frames": 4,
+      "fps": 12.1,
+      "render_us": 9396,
+      "transfer_us": 23820
+    }
+  ],
+  "completed": true,
+  "physical_sound_haptic_acceptance": false
+}

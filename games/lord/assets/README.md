@@ -49,7 +49,19 @@ recovery panel, and victory celebration were manually redrawn from that
 composition reference using the shared pinned CP437 glyphs. This keeps the
 runtime deterministic and small while preserving the reference provenance.
 
-The twelve RIP-style location scenes are code-drawn with clipped
-Game API rectangles, circles, lines, sprites, ANSI palette colors, and the
-platform's pinned CP437 block/shade/symbol glyphs. They do not embed or execute
-upstream `.ICN`, `.LRD`, RIPscrip, terminal commands, or file operations.
+The 1.8.1 location refresh in `src/lord_ansi_scenes.h` is original,
+hand-composed CP437 art, not a new raster asset or an upstream RIP import.
+Twenty-eight location compositions arrange three bounded five-row motifs
+over a shared floor. They use the existing 16-color palette and pinned
+block/shade/symbol glyphs: compact 8-pixel rows above the command footer on
+39 ordinary screen types, and native 16-pixel rows for twelve gallery
+exhibits and ordinary location messages. All seven IGM locations have their
+own composition. Existing two-frame monster and narrative creature art is
+unchanged.
+
+The renderer reads only static glyph tables and the current location; it
+does not allocate, advance random numbers, or modify saved/networked state.
+Gallery screen IDs retain their internal `RIP` names for compatibility, but
+the visible menu now says ANSI Art Gallery. These scenes do not embed or
+execute upstream `.ICN`, `.LRD`, RIPscrip, terminal commands, or file
+operations. No additional image-generation asset is needed for this refresh.

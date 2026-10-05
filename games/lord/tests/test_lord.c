@@ -3412,8 +3412,8 @@ static void test_p4rm_commit_result_retry(void)
     p4_game_instance_stop(&instance);
 }
 
-static void capture_frame_if_requested(const p4_game_surface_t *surface,
-                                       lord_screen_t screen)
+static void capture_named_frame_if_requested(const p4_game_surface_t *surface,
+                                             const char *name)
 {
     const char *const directory = getenv("LORD_CAPTURE_DIR");
     if (directory == NULL || directory[0] == '\0') {
@@ -3421,8 +3421,7 @@ static void capture_frame_if_requested(const p4_game_surface_t *surface,
     }
     char path[512];
     const int path_length = snprintf(path, sizeof(path),
-                                     "%s/screen-%02d.ppm", directory,
-                                     (int)screen);
+                                     "%s/%s.ppm", directory, name);
     CHECK(path_length > 0 && (size_t)path_length < sizeof(path));
     if (path_length <= 0 || (size_t)path_length >= sizeof(path)) {
         return;
@@ -3449,6 +3448,14 @@ static void capture_frame_if_requested(const p4_game_surface_t *surface,
         }
     }
     CHECK(fclose(file) == 0);
+}
+
+static void capture_frame_if_requested(const p4_game_surface_t *surface,
+                                       lord_screen_t screen)
+{
+    char name[32];
+    (void)snprintf(name, sizeof(name), "screen-%02d", (int)screen);
+    capture_named_frame_if_requested(surface, name);
 }
 
 static void capture_monster_frame_if_requested(
@@ -4190,15 +4197,78 @@ static void test_runtime_save_render_and_exit(void)
                      "You win 10 ChompCoin! The table cheers.");
         (void)strcpy(state.conversation, "THE DRAGON IS RESTLESS TONIGHT");
         (void)strcpy(state.editor_text, "MEET ME AT THE INN");
+        uint32_t location_hashes[LORD_SCREEN_GUILD_STANDINGS + 1U] = {0};
+        size_t location_count = 0U;
         for (int screen = LORD_SCREEN_TITLE;
              screen <= LORD_SCREEN_GUILD_STANDINGS; ++screen) {
             state.screen = (lord_screen_t)screen;
             state.selection = 0U;
             state.menu_scroll = 0U;
             state.selected_igm = 0U;
+            const lord_state_t before_render = state;
             CHECK(p4_game_instance_render(&instance, &surface));
+            CHECK(memcmp(&state, &before_render, sizeof(state)) == 0);
             capture_frame_if_requested(&surface, state.screen);
+            if (state.screen != LORD_SCREEN_TITLE &&
+                state.screen != LORD_SCREEN_BATTLE &&
+                state.screen != LORD_SCREEN_MESSAGE &&
+                state.screen != LORD_SCREEN_RIP_SCENE) {
+                /* Check actual foreground art above the floor, not a border
+                 * or a solid panel masquerading as a location illustration. */
+                for (unsigned landmark = 0U; landmark < 3U; ++landmark) {
+                    CHECK(surface_region_non_color_count(
+                        &surface, 16U + landmark * 104U, 136U, 80U, 32U,
+                        UINT16_C(0x0000)) >= 48U);
+                }
+                const uint32_t art_hash = surface_region_hash(
+                    &surface, 8U, 136U, 304U, 40U);
+                bool seen = false;
+                for (size_t earlier = 0U; earlier < location_count; ++earlier) {
+                    if (location_hashes[earlier] == art_hash) {
+                        seen = true;
+                    }
+                }
+                if (!seen) {
+                    location_hashes[location_count++] = art_hash;
+                }
+            }
         }
+        CHECK(location_count >= 20U);
+
+        /* Gallery exhibits and the seven IGM doors must be distinct, and
+         * full-height glyphs must not spill into captions or footer controls. */
+        uint32_t exhibit_hashes[LORD_RIP_SCENE_COUNT];
+        for (uint8_t exhibit = 0U; exhibit < LORD_RIP_SCENE_COUNT; ++exhibit) {
+            state.screen = LORD_SCREEN_RIP_SCENE;
+            state.rip_scene = exhibit;
+            CHECK(p4_game_instance_render(&instance, &surface));
+            exhibit_hashes[exhibit] = surface_region_hash(
+                &surface, 8U, 32U, 304U, 80U);
+            for (uint8_t earlier = 0U; earlier < exhibit; ++earlier) {
+                CHECK(exhibit_hashes[exhibit] != exhibit_hashes[earlier]);
+            }
+            char capture_name[32];
+            (void)snprintf(capture_name, sizeof(capture_name),
+                           "gallery-%02u", (unsigned)exhibit);
+            capture_named_frame_if_requested(&surface, capture_name);
+        }
+        uint32_t igm_hashes[LORD_IGM_COUNT];
+        for (uint8_t igm = 0U; igm < LORD_IGM_COUNT; ++igm) {
+            state.screen = LORD_SCREEN_IGM_DETAIL;
+            state.selected_igm = igm;
+            CHECK(p4_game_instance_render(&instance, &surface));
+            igm_hashes[igm] = surface_region_hash(
+                &surface, 8U, 136U, 304U, 40U);
+            for (uint8_t earlier = 0U; earlier < igm; ++earlier) {
+                CHECK(igm_hashes[igm] != igm_hashes[earlier]);
+            }
+            char capture_name[32];
+            (void)snprintf(capture_name, sizeof(capture_name),
+                           "igm-%02u", (unsigned)igm);
+            capture_named_frame_if_requested(&surface, capture_name);
+        }
+        state.rip_scene = 0U;
+        state.selected_igm = 0U;
 
         /* Every imported forest monster must render a substantial animated
          * portrait. 5600 ms is phase one for every supported cadence:

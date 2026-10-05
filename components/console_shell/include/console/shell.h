@@ -231,6 +231,7 @@ typedef enum {
     CONSOLE_MULTIPLAYER_OPTION_TRANSPORT,
     /** CREATE NEW followed by compatible discovered room choices. */
     CONSOLE_MULTIPLAYER_OPTION_LOBBY,
+    CONSOLE_MULTIPLAYER_OPTION_DICE,
     CONSOLE_MULTIPLAYER_OPTION_COUNT,
 } console_multiplayer_option_t;
 
@@ -333,6 +334,8 @@ typedef struct {
     bool multiplayer_settings_editable;
     bool multiplayer_game_ready;
     bool multiplayer_game_is_doom;
+    bool multiplayer_dice_available;
+    bool multiplayer_dice_enabled;
     uint8_t multiplayer_game_selection;
     uint8_t multiplayer_game_count;
     char multiplayer_game_title[CONSOLE_SHELL_TITLE_MAX_BYTES];

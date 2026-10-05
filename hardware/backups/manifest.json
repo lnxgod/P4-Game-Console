@@ -136,5 +136,20 @@
       },
       "write_status": "ready-for-guarded-first-console-os-layout-write; peripheral acceptance remains shared-code build evidence until observed on unit 2"
     }
+  ],
+  "accessory_backups": [
+    {
+      "captured_at": "2026-09-14T03:39:01.939340+00:00",
+      "board": "M5Stack Core2 (back case label confirmed by owner)",
+      "chip": "ESP32-D0WDQ6-V3 revision 3.1",
+      "port": "/dev/cu.wchusbserial5C9A0619521",
+      "file": "hardware/backups/core2-factory-before-dice-20260913.bin",
+      "bytes": 16777216,
+      "sha256": "f44e82082822397ece6619bf98ac03e6a74243acf056d7295d42637418f9b64e",
+      "device_identity_sha256": "c1f4a3f3751be1d87ed7b5d84f359c0f97fddb2b6c5e933d54f34383acac8bd5",
+      "identity_normalization": "base MAC lowercase hex without separators",
+      "git_ignored": true,
+      "mode": "0600"
+    }
   ]
 }

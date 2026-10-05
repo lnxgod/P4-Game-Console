@@ -626,9 +626,10 @@ is refused until Finder ejects the volume or H2 disconnects.
 After the card volume mounts, run
 `make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES`. Eject it in Finder,
 then press **Turn Off USB Mode** to remount and rescan. The same guarded
-installer copies all enabled packages and declared resource sidecars (including
-`GAMES/BYTEBUD.P4G` and `GAMES/BYTEBUD.P4R`), verifies every hash, and leaves
-unrelated card data untouched. It requires an external
+installer copies all enabled packages, declared source cartridges, and
+resource sidecars (including `GAMES/BYTEBUD.P4G`, `GAMES/BYTEBUD.P4R`,
+`P4/GAMES/BOUNCE-LAB.P4CART`, and `P4/GAMES/QR-DODGE.P4CART`), verifies every
+hash, and leaves unrelated card data untouched. It requires an external
 USB FAT32 volume named `P4GAMES`; ExFAT is rejected because the pinned firmware
 mount does not support it. Recover a card with `diskutil eraseDisk MS-DOS
 P4GAMES MBRFormat /dev/diskN` only after resolving the exact external disk. H1

@@ -640,8 +640,171 @@ static void test_touch_regions(void)
     p4_game_instance_stop(&instance);
 }
 
+typedef struct { p4_dice_request_t request; p4_dice_status_t reply; } dice_fixture_t;
+static bool dice_exchange(void *opaque,const p4_dice_request_t *r,p4_dice_status_t *out)
+{
+    dice_fixture_t *f=opaque; f->request=*r; *out=f->reply; return true;
+}
+static void test_dice_accessory(void)
+{
+    dice_fixture_t fixture={0};
+    p4_game_services_t services={.available_capabilities=P4_GAME_CAP_DICE_ACCESSORY,
+        .dice_context=&fixture,.dice_exchange=dice_exchange};
+    p4_game_context_t context={.services=&services};
+    p4_yahtzee_state_t state={0};p4_yahtzee_reset_match(&state,7);
+    p4_yahtzee_poll_dice(&context,&state);
+    CHECK(fixture.request.enabled && fixture.request.player_slot==0 && !fixture.request.can_hold);
+    fixture.reply=(p4_dice_status_t){.token=fixture.request.token,.player_slot=1,.phase=P4_DICE_ROLLED};
+    p4_yahtzee_poll_dice(&context,&state);CHECK(state.roll_count==0);
+    fixture.reply.player_slot=0;
+    p4_yahtzee_poll_dice(&context,&state);CHECK(state.roll_count==1);
+    p4_yahtzee_poll_dice(&context,&state);CHECK(state.roll_count==1 && !fixture.request.enabled);
+    p4_yahtzee_update_animation(&state,1000);state.held_mask=1;
+    p4_yahtzee_poll_dice(&context,&state);
+    CHECK(fixture.request.enabled && fixture.request.held_mask==1);
+    uint8_t held=state.dice[0];
+    fixture.reply=(p4_dice_status_t){.token=fixture.request.token,.player_slot=0,.phase=P4_DICE_ROLLED};
+    p4_yahtzee_poll_dice(&context,&state);CHECK(state.roll_count==2 && state.dice[0]==held);
+    p4_yahtzee_update_animation(&state,1000);state.roll_count=3;
+    p4_yahtzee_poll_dice(&context,&state);CHECK(!fixture.request.enabled);
+    state.roll_count=0;state.current_player=1;state.mode=P4_YAHTZEE_NETWORK;state.local_player_slot=0;
+    p4_yahtzee_poll_dice(&context,&state);CHECK(!fixture.request.enabled);
+    state.mode=P4_YAHTZEE_LOCAL;state.phase=P4_YAHTZEE_PASS;
+    p4_yahtzee_poll_dice(&context,&state);CHECK(!fixture.request.enabled);
+    uint32_t previous=fixture.request.token;
+    p4_yahtzee_reset_match(&state,8);p4_yahtzee_poll_dice(&context,&state);
+    CHECK(fixture.request.token>previous);
+}
+
+static void test_network_dice_accessory(void)
+{
+    test_link_t link; init_link(&link,2);
+    dice_fixture_t fixture={0};
+    p4_game_services_t host_services=network_services(&link.endpoints[0]);
+    p4_game_services_t client_services=network_services(&link.endpoints[1]);
+    client_services.available_capabilities|=P4_GAME_CAP_DICE_ACCESSORY;
+    client_services.dice_context=&fixture;client_services.dice_exchange=dice_exchange;
+    p4_game_instance_t host={0},client={0};
+    p4_yahtzee_state_t hs,cs;
+    CHECK(p4_game_instance_start(&host,&p4_p4_yahtzee_game,&host_services,&hs,sizeof(hs)));
+    CHECK(p4_game_instance_start(&client,&p4_p4_yahtzee_game,&client_services,&cs,sizeof(cs)));
+    CHECK(update_empty(&host,16));CHECK(update_empty(&client,16));
+    CHECK(!fixture.request.enabled);
+    CHECK(update_button(&host,P4_BUTTON_START));CHECK(update_empty(&client,16));
+    settle_roll(&host);settle_roll(&client);
+    CHECK(update_button(&host,P4_BUTTON_B));CHECK(update_button(&host,P4_BUTTON_A));
+    CHECK(update_empty(&client,16));CHECK(fixture.request.enabled && fixture.request.player_slot==1);
+    fixture.reply=(p4_dice_status_t){.token=fixture.request.token,.player_slot=1,.phase=P4_DICE_ROLLED};
+    CHECK(update_empty(&client,16));CHECK(cs.accessory_pending && cs.roll_count==0);
+    CHECK(update_empty(&client,16));CHECK(link.endpoints[0].queue_count==1);
+    CHECK(update_empty(&host,16));CHECK(update_empty(&client,16));
+    CHECK(hs.roll_count==1 && cs.roll_count==1 && !cs.accessory_pending);
+    CHECK(!memcmp(hs.dice,cs.dice,sizeof(hs.dice)));
+    p4_game_instance_stop(&client);p4_game_instance_stop(&host);
+}
+
+static void test_shared_host_dice(void)
+{
+    test_link_t link; init_link(&link,2);
+    dice_fixture_t fixture={0};
+    p4_game_services_t host_services=network_services(&link.endpoints[0]);
+    p4_game_services_t client_services=network_services(&link.endpoints[1]);
+    host_services.available_capabilities|=P4_GAME_CAP_DICE_ACCESSORY;
+    host_services.dice_context=&fixture;host_services.dice_exchange=dice_exchange;
+    p4_game_instance_t host={0},client={0}; p4_yahtzee_state_t hs,cs;
+    CHECK(p4_game_instance_start(&host,&p4_p4_yahtzee_game,&host_services,&hs,sizeof(hs)));
+    CHECK(p4_game_instance_start(&client,&p4_p4_yahtzee_game,&client_services,&cs,sizeof(cs)));
+    CHECK(update_empty(&host,16));CHECK(update_empty(&client,16));
+    CHECK(hs.shared_accessory && cs.shared_accessory && fixture.request.enabled);
+    CHECK(!strcmp(fixture.request.player_name,"PLAYER 1"));
+    const uint32_t old_token=fixture.request.token;
+    fixture.reply=(p4_dice_status_t){.token=old_token,.player_slot=0,.phase=P4_DICE_ROLLED};
+    CHECK(update_empty(&host,16));CHECK(update_empty(&client,16));
+    CHECK(hs.roll_count==1 && cs.roll_count==1);
+    settle_roll(&host);settle_roll(&client);
+    CHECK(update_button(&host,P4_BUTTON_B));CHECK(update_button(&host,P4_BUTTON_A));
+    CHECK(update_empty(&client,16));CHECK(update_empty(&host,16));
+    CHECK(hs.current_player==1 && fixture.request.enabled && fixture.request.player_slot==1);
+    CHECK(!strcmp(fixture.request.player_name,"PLAYER 2") && fixture.request.token!=old_token);
+    CHECK(update_empty(&host,16));CHECK(hs.roll_count==0); /* stale player-one shake */
+    CHECK(update_button(&host,P4_BUTTON_START));CHECK(hs.roll_count==0); /* host pad cannot roll peer turn */
+    fixture.reply=(p4_dice_status_t){.token=fixture.request.token,.player_slot=1,.phase=P4_DICE_ROLLED};
+    CHECK(update_empty(&host,16));CHECK(update_empty(&client,16));
+    CHECK(hs.roll_count==1 && cs.roll_count==1 && !memcmp(hs.dice,cs.dice,sizeof(hs.dice)));
+    CHECK(update_empty(&host,16));CHECK(hs.roll_count==1); /* duplicate */
+    settle_roll(&host);settle_roll(&client);
+    CHECK(update_button(&client,P4_BUTTON_A));CHECK(update_empty(&host,16));CHECK(update_empty(&client,16));
+    CHECK(hs.held_mask==1 && fixture.request.held_mask==1);
+    CHECK(fixture.request.can_hold);
+    uint32_t hold_token=fixture.request.token;
+    fixture.reply=(p4_dice_status_t){.token=hold_token,.player_slot=1,
+        .phase=P4_DICE_WAITING,.held_mask=31,.hold_changed=true,.hold_sequence=1};
+    CHECK(update_empty(&host,16));CHECK(update_empty(&client,16));
+    CHECK(hs.held_mask==31 && cs.held_mask==31);
+    CHECK(update_empty(&host,16));CHECK(fixture.request.can_hold && !fixture.request.enabled);
+    CHECK(fixture.request.token!=hold_token);
+    fixture.reply.token=fixture.request.token;fixture.reply.held_mask=5;fixture.reply.hold_sequence=2;
+    CHECK(update_empty(&host,16));CHECK(update_empty(&client,16));
+    CHECK(hs.held_mask==5 && cs.held_mask==5);
+    CHECK(update_empty(&host,16));CHECK(fixture.request.enabled && fixture.request.held_mask==5);
+    hold_token=fixture.request.token;
+    fixture.reply=(p4_dice_status_t){.token=hold_token,.player_slot=1,
+        .phase=P4_DICE_WAITING,.held_mask=5,.hold_changed=true,.hold_sequence=3};
+    CHECK(update_empty(&host,16));CHECK(update_empty(&client,16));CHECK(update_empty(&host,16));
+    CHECK(hs.held_mask==5 && fixture.request.hold_ack==3 && fixture.request.token!=hold_token);
+    uint8_t held=hs.dice[0],held2=hs.dice[2];
+    fixture.reply=(p4_dice_status_t){.token=fixture.request.token,.player_slot=1,.phase=P4_DICE_ROLLED};
+    CHECK(update_empty(&host,16));CHECK(update_empty(&client,16));
+    CHECK(hs.roll_count==2 && cs.roll_count==2 && hs.dice[0]==held && cs.dice[0]==held && hs.dice[2]==held2 && cs.dice[2]==held2);
+    settle_roll(&host);settle_roll(&client);
+    fixture.reply.phase=P4_DICE_OFFLINE;
+    CHECK(update_button(&client,P4_BUTTON_START));CHECK(update_empty(&host,16));CHECK(update_empty(&client,16));
+    CHECK(hs.roll_count==3 && cs.roll_count==3); /* ordinary roll survives accessory loss */
+    settle_roll(&host);CHECK(!fixture.request.enabled);
+    hs.network_error=true;CHECK(update_empty(&host,16));CHECK(!fixture.request.enabled);
+    p4_game_instance_stop(&client);p4_game_instance_stop(&host);
+}
+
+static void test_roll_distribution(void)
+{
+    p4_yahtzee_state_t state={0};p4_yahtzee_reset_match(&state,1234567U);
+    unsigned counts[5][6]={{0}},mixed_parity=0,repeated=0;
+    uint8_t previous[5]={0};
+    for (unsigned roll=0;roll<12000U;++roll) {
+        state.roll_count=0;state.roll_animation_ms=0;
+        CHECK(p4_yahtzee_roll(&state));
+        bool odd=false,even=false;
+        for (unsigned i=0;i<5;++i) {
+            CHECK(state.dice[i]>=1 && state.dice[i]<=6);
+            ++counts[i][state.dice[i]-1U];
+            odd |= (state.dice[i]&1U)!=0;even |= (state.dice[i]&1U)==0;
+        }
+        mixed_parity+=(unsigned)(odd&&even);
+        repeated+=(unsigned)(memcmp(previous,state.dice,sizeof(previous))==0);
+        memcpy(previous,state.dice,sizeof(previous));
+    }
+    CHECK(mixed_parity>10800U); /* rejects the old every-other-output parity defect */
+    CHECK(repeated<20U);
+    for (unsigned i=0;i<5;++i) for (unsigned face=0;face<6;++face)
+        CHECK(counts[i][face]>1800U && counts[i][face]<2200U);
+    p4_yahtzee_state_t quick={0},slow={0};
+    p4_yahtzee_reset_match(&quick,42U);p4_yahtzee_reset_match(&slow,42U);
+    for (unsigned roll=0;roll<3U;++roll) {
+        CHECK(p4_yahtzee_roll(&quick));CHECK(p4_yahtzee_roll(&slow));
+        CHECK(!memcmp(quick.dice,slow.dice,sizeof(quick.dice)));
+        p4_yahtzee_update_animation(&quick,1000U);
+        for (unsigned frame=0;frame<25U;++frame) p4_yahtzee_update_animation(&slow,16U);
+    }
+    p4_yahtzee_reset_match(&state,0U);
+    CHECK(p4_yahtzee_roll(&state));
+}
+
 int main(void)
 {
+    test_roll_distribution();
+    test_shared_host_dice();
+    test_dice_accessory();
+    test_network_dice_accessory();
     CHECK(p4_game_descriptor_valid(&p4_p4_yahtzee_game));
     CHECK(p4_p4_yahtzee_game.launcher_id == 113U);
     test_scoring_rules();

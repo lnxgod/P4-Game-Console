@@ -101,8 +101,35 @@ static void test_console_os_rejects_unsafe_registrations(void)
     assert(registry.game_count == 1U);
 }
 
+static void test_shared_dice_setting(void)
+{
+    p4_game_package_info_t dice = package(113U, "org.p4console.p4-yahtzee", "YAHTZEE");
+    p4_game_package_info_t other = package(114U, "org.example.other", "OTHER");
+    dice.optional_capabilities |= P4_GAME_CAP_DICE_ACCESSORY;
+    uint8_t settings[P4_MP_GAME_SETTINGS_BYTES];
+    bool enabled = true;
+    assert(p4_mp_game_dice_settings_encode(&dice, false, settings));
+    assert(p4_mp_game_dice_settings_decode(&dice, settings, &enabled) && !enabled);
+    assert(p4_mp_game_dice_settings_encode(&dice, true, settings));
+    assert(p4_mp_game_dice_settings_decode(&dice, settings, &enabled) && enabled);
+    assert(!p4_mp_game_dice_settings_decode(&other, settings, &enabled));
+    assert(!p4_mp_game_dice_settings_encode(&other, true, settings));
+    for (size_t i = 0U; i < sizeof(settings); ++i) {
+        const uint8_t saved = settings[i]; settings[i] = 255U;
+        assert(!p4_mp_game_dice_settings_decode(&dice, settings, &enabled));
+        settings[i] = saved;
+    }
+    assert(p4_mp_game_dice_service_allowed(&dice, true, true, true, true));
+    assert(!p4_mp_game_dice_service_allowed(&dice, true, true, true, false));
+    assert(!p4_mp_game_dice_service_allowed(&dice, true, true, false, true));
+    assert(!p4_mp_game_dice_service_allowed(&dice, false, true, true, true));
+    assert(!p4_mp_game_dice_service_allowed(&other, true, true, true, true));
+    assert(p4_mp_game_dice_service_allowed(&dice, true, false, false, false));
+}
+
 int main(void)
 {
+    test_shared_dice_setting();
     test_console_os_registers_yahtzee_and_kid_game();
     test_console_os_rejects_unsafe_registrations();
     puts("p4 multiplayer registry tests passed");

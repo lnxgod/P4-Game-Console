@@ -25,7 +25,7 @@ The original open P4 Cart layout is also preserved:
 
 Game Manager verifies and lists these carts. The Lua 5.4 sandbox is not in
 this firmware yet, so P4CART entries remain catalog-only. The bundle includes
-the open BOUNCE-LAB.P4CART reference cart.
+the open BOUNCE-LAB.P4CART and QR-DODGE.P4CART reference carts.
 
 Console OS updates use:
 

@@ -1316,6 +1316,34 @@ static void test_multiplayer_start_lockout(void)
     CHECK(shell.multiplayer_selected_row ==
           CONSOLE_MULTIPLAYER_OPTION_COUNT);
 
+    /* The shared dice switch belongs only to compatible host match settings. */
+    refreshed_runtime = shell.runtime;
+    refreshed_runtime.multiplayer_game_is_doom = false;
+    refreshed_runtime.multiplayer_dice_available = true;
+    console_shell_set_runtime_info(&shell, &refreshed_runtime);
+    action = tap(&shell, 160U, 160U);
+    CHECK(shell.multiplayer_view == CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS);
+    action = tap(&shell, 280U, 100U);
+    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_CONFIGURE);
+    CHECK(action.multiplayer_option == CONSOLE_MULTIPLAYER_OPTION_DICE);
+    refreshed_runtime.multiplayer_dice_enabled = true;
+    console_shell_set_runtime_info(&shell, &refreshed_runtime);
+    CHECK(shell.multiplayer_selected_row == CONSOLE_MULTIPLAYER_OPTION_DICE);
+    action = press_button(&shell, CONSOLE_BUTTON_LEFT);
+    CHECK(action.type == CONSOLE_ACTION_MULTIPLAYER_CONFIGURE);
+    CHECK(action.multiplayer_option == CONSOLE_MULTIPLAYER_OPTION_DICE);
+    refreshed_runtime.multiplayer_settings_editable = false;
+    console_shell_set_runtime_info(&shell, &refreshed_runtime);
+    CHECK(tap(&shell, 280U, 100U).type == CONSOLE_ACTION_NONE);
+    refreshed_runtime.multiplayer_settings_editable = true;
+    refreshed_runtime.multiplayer_dice_available = false;
+    console_shell_set_runtime_info(&shell, &refreshed_runtime);
+    CHECK(shell.multiplayer_selected_row == CONSOLE_MULTIPLAYER_OPTION_GAME);
+    CHECK(tap(&shell, 280U, 100U).type == CONSOLE_ACTION_NONE);
+    refreshed_runtime.multiplayer_game_is_doom = true;
+    console_shell_set_runtime_info(&shell, &refreshed_runtime);
+    CHECK(tap(&shell, 160U, 185U).type == CONSOLE_ACTION_PAGE_CHANGED);
+
     shell.runtime.multiplayer_launch_syncing = true;
     CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
           CONSOLE_ACTION_NONE);

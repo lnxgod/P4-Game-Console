@@ -13,13 +13,43 @@ enum {
 
 static uint32_t random_next(uint32_t *state)
 {
-    *state = *state * UINT32_C(1664525) + UINT32_C(1013904223);
-    return *state;
+    /* Mix all bits. The old LCG alternated parity; taking every second
+     * output for real dice (between animation draws) made a roll all odd
+     * or all even. Xorshift has no such low-bit alternation. */
+    uint32_t value = *state != 0U ? *state : UINT32_C(0x59414854);
+    value ^= value << 13U;
+    value ^= value >> 17U;
+    value ^= value << 5U;
+    *state = value;
+    return value;
 }
 
 static uint8_t random_die(uint32_t *state)
 {
-    return (uint8_t)(random_next(state) % 6U + 1U);
+    uint32_t value;
+    const uint32_t limit = UINT32_MAX - UINT32_MAX % 6U;
+    do { value = random_next(state); } while (value >= limit);
+    return (uint8_t)(value % 6U + 1U);
+}
+
+/* PCG XSH-RR: https://www.pcg-random.org/using-pcg-c-basic.html
+ * Full-width output permutation avoids the LCG low-bit/parity defect.
+ * The independent 64-bit state is advanced only for actual game dice. */
+static uint32_t roll_random_next(uint64_t *state)
+{
+    const uint64_t old = *state;
+    *state = old * UINT64_C(6364136223846793005) + UINT64_C(1442695040888963407);
+    const uint32_t mixed = (uint32_t)(((old >> 18U) ^ old) >> 27U);
+    const uint32_t rotation = (uint32_t)(old >> 59U);
+    return (mixed >> rotation) | (mixed << ((0U - rotation) & 31U));
+}
+
+static uint8_t roll_die(uint64_t *state)
+{
+    const uint32_t limit = UINT32_MAX - UINT32_MAX % 6U;
+    uint32_t value;
+    do { value = roll_random_next(state); } while (value >= limit);
+    return (uint8_t)(value % 6U + 1U);
 }
 
 int p4_yahtzee_score_dice(
@@ -109,6 +139,7 @@ void p4_yahtzee_reset_match(p4_yahtzee_state_t *state, uint32_t seed)
     if (state == NULL) {
         return;
     }
+    const uint32_t accessory_token = state->accessory_request.token;
     const p4_yahtzee_mode_t mode = state->mode;
     const uint8_t player_count =
         state->player_count >= P4_YAHTZEE_MIN_PLAYERS &&
@@ -122,7 +153,9 @@ void p4_yahtzee_reset_match(p4_yahtzee_state_t *state, uint32_t seed)
     memcpy(last_network_sequence, state->last_network_sequence,
            sizeof(last_network_sequence));
     const bool network_started = state->network_started;
+    const bool shared_accessory = state->shared_accessory;
     memset(state, 0, sizeof(*state));
+    state->accessory_request.token = accessory_token;
     for (size_t player = 0U; player < P4_YAHTZEE_PLAYERS; ++player) {
         for (size_t category = 0U; category < P4_YAHTZEE_CATEGORIES;
              ++category) {
@@ -142,9 +175,14 @@ void p4_yahtzee_reset_match(p4_yahtzee_state_t *state, uint32_t seed)
     memcpy(state->last_network_sequence, last_network_sequence,
            sizeof(last_network_sequence));
     state->network_started = network_started;
+    state->shared_accessory = shared_accessory;
     state->phase = P4_YAHTZEE_TURN;
     state->focus = P4_YAHTZEE_FOCUS_DICE;
     state->rng = seed == 0U ? UINT32_C(0x59414854) : seed;
+    state->roll_rng = 0U;
+    (void)roll_random_next(&state->roll_rng);
+    state->roll_rng += network_seed ^ ((uint64_t)state->rng << 32U) ^ state->rng;
+    (void)roll_random_next(&state->roll_rng);
 }
 
 bool p4_yahtzee_roll(p4_yahtzee_state_t *state)
@@ -159,7 +197,7 @@ bool p4_yahtzee_roll(p4_yahtzee_state_t *state)
     }
     for (size_t index = 0U; index < P4_YAHTZEE_DICE; ++index) {
         if ((state->held_mask & (UINT8_C(1) << index)) == 0U) {
-            state->dice[index] = random_die(&state->rng);
+            state->dice[index] = roll_die(&state->roll_rng);
             state->animation_dice[index] = random_die(&state->rng);
         }
     }

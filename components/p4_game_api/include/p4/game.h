@@ -6,6 +6,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
+#include "p4/dice.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -53,6 +54,7 @@ typedef enum {
     P4_GAME_CAP_VECTOR_SCENES = UINT32_C(1) << 11U,
     /** Negotiates a 768x480 RGB565 surface; input remains 320x200. */
     P4_GAME_CAP_VIDEO_HIGH_RES = UINT32_C(1) << 12U,
+    P4_GAME_CAP_DICE_ACCESSORY = UINT32_C(1) << 13U,
 } p4_game_capability_t;
 
 typedef enum {
@@ -304,6 +306,9 @@ typedef struct {
     p4_game_multiplayer_receive_fn multiplayer_receive;
     /** Optional v1 tail: validated declarative profile from game.json. */
     const p4_game_multiplayer_profile_t *multiplayer_profile;
+    /** Optional v1 tail: copied dice request/status; hardware stays with OS. */
+    void *dice_context;
+    p4_game_dice_exchange_fn dice_exchange;
 } p4_game_services_t;
 
 typedef struct {
@@ -313,6 +318,10 @@ typedef struct {
     uint64_t elapsed_ms;
     uint32_t frame_index;
 } p4_game_context_t;
+
+/** Publish desired player/roll state and copy accessory status without waiting. */
+bool p4_game_dice_exchange(p4_game_context_t *context,
+    const p4_dice_request_t *request, p4_dice_status_t *status);
 
 typedef enum {
     P4_GAME_CONTINUE = 0,

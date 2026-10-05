@@ -68,6 +68,17 @@ const p4_mp_registered_game_t *p4_mp_game_registry_at(
 const p4_mp_registered_game_t *p4_mp_game_registry_find_launcher(
     const p4_mp_game_registry_t *registry, uint32_t launcher_id);
 
+/** Native lobby setting: one shared dice accessory belongs to the host.
+ * All-zero settings preserve the default (off). Unknown encodings fail closed.
+ * The host service is granted only after the accepted settings are validated. */
+bool p4_mp_game_supports_dice(const p4_game_package_info_t *package);
+bool p4_mp_game_dice_settings_encode(const p4_game_package_info_t *package,
+    bool enabled, uint8_t settings[P4_MP_GAME_SETTINGS_BYTES]);
+bool p4_mp_game_dice_settings_decode(const p4_game_package_info_t *package,
+    const uint8_t settings[P4_MP_GAME_SETTINGS_BYTES], bool *enabled);
+bool p4_mp_game_dice_service_allowed(const p4_game_package_info_t *package,
+    bool hardware_ready, bool multiplayer, bool host, bool shared_dice);
+
 const char *p4_mp_registration_result_name(
     p4_mp_registration_result_t result);
 

@@ -25,10 +25,17 @@ typedef struct {
     uint32_t updates;
 } fixture_game_t;
 
+static bool expect_dice;
 static bool fixture_start(p4_game_context_t *context)
 {
-    return context != NULL && context->state != NULL &&
-        context->state_bytes == sizeof(fixture_game_t);
+    if (!context || !context->state || context->state_bytes != sizeof(fixture_game_t)) return false;
+    bool granted=(context->services->available_capabilities & P4_GAME_CAP_DICE_ACCESSORY)!=0U;
+    if(granted!=expect_dice) return false;
+    p4_dice_request_t request={.token=1,.count=1,.sides=6,.faces={3},
+        .player_name="TEST",.enabled=true,.can_hold=true};
+    p4_dice_status_t status;
+    bool exchanged=p4_game_dice_exchange(context,&request,&status);
+    return exchanged==expect_dice && (!exchanged || (status.hold_changed && status.held_mask==1));
 }
 
 static p4_game_result_t fixture_update(
@@ -167,7 +174,7 @@ const p4_game_descriptor_t p4_test_cartridge_game = {
     .accent_rgb565 = UINT16_C(0x5fea),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
         (P4_TEST_SAVE_MODE == 1 ? P4_GAME_CAP_SAVE : 0U),
-    .optional_capabilities =
+    .optional_capabilities = P4_GAME_CAP_DICE_ACCESSORY |
         (P4_TEST_SAVE_MODE == 2 ? P4_GAME_CAP_SAVE : 0U),
     .state_bytes = sizeof(fixture_game_t),
     .start = fixture_start,
@@ -175,11 +182,21 @@ const p4_game_descriptor_t p4_test_cartridge_game = {
     .render = fixture_render,
 };
 
+static bool legacy_dice(void *context,const p4_dice_request_t *r,p4_dice_status_t *s)
+{ (void)context;(void)r;(void)s;abort(); } /* must never read padding as a v2 request */
+static bool fixture_dice(void *context,const p4_dice_request_t *r,p4_dice_status_t *s)
+{
+    if(!context || !r->can_hold) return false;
+    *s=(p4_dice_status_t){.token=r->token,.player_slot=r->player_slot,
+        .phase=P4_DICE_WAITING,.held_mask=1,.hold_changed=true,.hold_sequence=1};
+    return true;
+}
 static int run_with_size(uint32_t struct_bytes)
 {
     static uint16_t pixels[
         (size_t)P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT];
     fixture_host_t fixture = {0};
+    expect_dice=struct_bytes >= offsetof(p4_cartridge_host_v1_t,dice_exchange_v2)+sizeof(p4_game_dice_exchange_fn);
     p4_cartridge_host_v1_t host = {
         .magic = P4_CARTRIDGE_HOST_MAGIC,
         .api_version = P4_CARTRIDGE_HOST_API_VERSION,
@@ -204,6 +221,8 @@ static int run_with_size(uint32_t struct_bytes)
         .read_signal_scan = fixture_read_signal,
         .queue_save = fixture_queue_save,
         .read_save_status = fixture_read_save,
+        .dice_exchange = legacy_dice,
+        .dice_exchange_v2 = fixture_dice,
     };
     char *arguments[] = {(char *)(void *)&host};
     const int result = app_main(1, arguments);

@@ -1,0 +1,14 @@
+{
+  "ports": {
+    "unit1": {
+      "opened": true,
+      "disconnected": false
+    },
+    "core2": {
+      "opened": true,
+      "disconnected": false
+    }
+  },
+  "dice_event_lines": [],
+  "user_visual_confirmation": false
+}

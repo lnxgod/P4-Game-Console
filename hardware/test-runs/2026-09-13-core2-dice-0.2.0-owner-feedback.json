@@ -1,0 +1,14 @@
+{
+  "board": "M5Stack Core2",
+  "app_sha256": "b5ee88b69761f6664e0823454bbf4ca8e5fc6202f652dcd4dcf24fc2d0958644",
+  "source": "owner feedback in task",
+  "functional_response": "it works",
+  "accepted": false,
+  "observations": [
+    "Sound does not resemble dice clanking",
+    "3D dice poor; hard to identify landed result",
+    "Frame rate poor",
+    "Vibration initially not bad, then clarified as continuous buzz rather than pulses"
+  ],
+  "successor": "Core2 firmware 0.3.0"
+}

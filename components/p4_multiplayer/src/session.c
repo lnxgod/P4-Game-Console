@@ -288,6 +288,10 @@ p4_mp_status_t p4_mp_session_receive(
     if (status != P4_MP_OK) {
         return status;
     }
+    /* Accessories have their own route/session and never refresh a player. */
+    if (packet.type == P4_MP_PACKET_ACCESSORY) {
+        return P4_MP_BAD_TYPE;
+    }
     if (packet.type == P4_MP_PACKET_DISCOVER ||
         packet.type == P4_MP_PACKET_OFFER ||
         packet.session_id != session->session_id) {

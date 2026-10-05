@@ -23,7 +23,8 @@ Open, source-included P4 Cart v1 files keep their original layout:
 
 Game Manager verifies and lists these carts without renaming them to P4G.
 The Lua 5.4 sandbox is not in this firmware yet, so P4CART entries are
-catalog-only and cannot launch. BOUNCE-LAB.P4CART is the open reference cart.
+catalog-only and cannot launch. BOUNCE-LAB.P4CART and QR-DODGE.P4CART are the
+open reference carts.
 
 Console OS updates use:
 
