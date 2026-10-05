@@ -1,0 +1,269 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-10-05T04:49:24.977665+00:00",
+  "board": "m5stack-tab5",
+  "status": "exact-app-readback-and-repeated-warm-boots-verified; gameplay-acoustic-and-scroll-acceptance-pending",
+  "source_base_commit": "da77cd744b63dc6cdee00e89155248ca90716a3f",
+  "source_files": {
+    "components/platform_tab5/src/tab5.c": "7e5d99e3bafff424cb47eb0acb4583540687a6a64d0ca21fc782ecfb39eed9a1",
+    "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c": "e3592e12358a9f191163751a9cdd31749172490ff32ac3af6164f2c4e79711a4",
+    "apps/doom_embedded_touch_audio/main/runtime_gate.c": "71f2f450d0dff692c71410a0c55fe4df4c7e76b7113108f1cd8feee6eedd8d17",
+    "apps/doom_embedded_touch_audio/main/runtime_gate.h": "2f36ec3255f70e46286c6baeddf05c915192437a6d19349ae651c83858eeadfa",
+    "apps/doom_embedded_touch_audio/tests/test_runtime_gate.c": "737e28f41a9ae77084570cf4385cda7bd346ccc14b87105c4ef4c0517a7e2a33",
+    "scripts/capture-tab5-warm-boot.py": "1a79ef81c34210a01ae62d27bdd0b1cae407ec6b047d25a88425afdc44d3017e"
+  },
+  "application": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 1383072,
+    "sha256": "37c4e4c3a7beca110793760e334aa7dde38f81898d1ac14685d95305611df87e"
+  },
+  "authorizations": {
+    "mute_candidate": {
+      "file": "hardware/evidence/tab5-console-os-20261004-mute-authorization.json",
+      "bytes": 8387,
+      "sha256": "a2b971dbd207a171892120f34f941f4379597f72bcbae9f12684d28f5e47bcf8"
+    },
+    "current_candidate": {
+      "file": "hardware/evidence/tab5-console-os-20261004-i2c-recovery-authorization.json",
+      "bytes": 8527,
+      "sha256": "4b839bd7567ff6f6079d425e0a00914f687dcdb955a79fdfa6b7a183ab6ef8db"
+    }
+  },
+  "toolchain": {
+    "schema": 1,
+    "esp_idf": {
+      "version": "5.5.3",
+      "git_tag": "v5.5.3",
+      "git_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+      "repository": "https://github.com/espressif/esp-idf.git"
+    },
+    "target": {
+      "chip": "esp32p4",
+      "silicon_family": "revision_1_x",
+      "min_revision_full": 100,
+      "max_revision_full": 199
+    },
+    "managed_components": {
+      "espressif/esp_codec_dev": "1.5.4",
+      "espressif/esp_hosted": "1.4.7",
+      "espressif/esp_lcd_lt8912b": "0.2.0",
+      "espressif/esp_tinyusb": "2.0.1",
+      "espressif/esp_wifi_remote": "0.14.5",
+      "espressif/usb": "1.5.0",
+      "espressif/usb_host_hid": "1.2.0"
+    },
+    "policy": {
+      "commit_dependencies_lock": true,
+      "upgrade_only_with_hardware_regression": true
+    }
+  },
+  "previous_game_installation_evidence": {
+    "file": "hardware/evidence/tab5-console-os-20261004-usb-game-testing.json",
+    "bytes": 20951,
+    "sha256": "00a9544db9a4e54e173270c6d3a613f79626f6dca94970f8855b3303fa160336"
+  },
+  "game_bundle_continuity": {
+    "previously_verified_usb_files": 22,
+    "latest_build_files_match_all_previous_hashes": true,
+    "sd_content_not_rewritten_by_this_app_only_install": true
+  },
+  "changes": [
+    "Before live touch/audio clients exist, initial PI4IOE5V6408 construction retries at most three times; failed recoverable attempts reset the SDK I2C bus and wait 50 ms. Allocation/argument errors and exhausted attempts fail closed.",
+    "Console Doom preserves volume zero as mute; out-of-range volumes also remain silent. Volume never grants audio hardware authorization. Standalone default remains unchanged."
+  ],
+  "observed_failure_and_recovery": {
+    "a_previous_app_sha256": "0919deacfbdcf9ae17322f3b92d816c548e4e426b1eb18f22e9a9c80ae9f260b",
+    "a_initial_failure": {
+      "file": "hardware/backups/tab5-a-install-ch6cj8sh/runtime.log",
+      "bytes": 5063,
+      "sha256": "7ff66082b9d39c6cfce9684d0315845a92ba503fd4bf1b12eb3a8bd20d44fd9f"
+    },
+    "a_failure": "Initial expander reset returned ESP_ERR_INVALID_STATE, followed by FATAL_HOLD stage=display-init. An electrically stuck SDA line was not measured.",
+    "a_interrupted_install_receipt": {
+      "file": "hardware/backups/tab5-a-install-tzxtz9le/receipt.json",
+      "bytes": 1440,
+      "sha256": "cadcbbd2c33ab1b9e3aab744f988273a8660daba54a8ddfaa3e0898e053e1b67"
+    },
+    "a_interrupted_install_log": {
+      "file": "hardware/backups/tab5-a-install-tzxtz9le/esptool.log",
+      "bytes": 3287,
+      "sha256": "183efac7420ce1e13f5c5e2d40000e5ade3ca733915767169cdd489b753b72f9"
+    },
+    "a_recovery": "USB disappeared after esptool reported the write hash verified, before exact readback completed. With A in download mode, a new identity/security-bound readback matched all 1,383,072 application bytes, then watchdog reset booted the image. No additional flash write was performed during recovery.",
+    "b_retry_branch_observed": {
+      "log": {
+        "file": "hardware/backups/tab5-b-warm-37c4-20261004/cycle-1.log",
+        "bytes": 10875,
+        "sha256": "c65ddb970fba799103bd698e102ca281bd898104894388e98942b6252eef1b00"
+      },
+      "initial_error": "ESP_ERR_INVALID_STATE",
+      "retry_attempt": 2,
+      "bus_reset": "ESP_OK",
+      "subsequent_panel": "ST7123",
+      "launcher_ready_ms": 6421,
+      "health_ready_ms": 16434,
+      "result": "pass"
+    }
+  },
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "chip_revision": "v1.3",
+      "flash_bytes": 16777216,
+      "psram_bytes": 33554432,
+      "pcb_revision": "unconfirmed suffix; scoped common C145 interfaces",
+      "panel": "ST7121 firmware 1 (1.80.1.16)",
+      "sd_capacity_bytes": 16012804096,
+      "receipt": {
+        "file": "hardware/backups/tab5-a-interrupted-recovery-1znx36bq/receipt.json",
+        "bytes": 673,
+        "sha256": "ffcfe804232e36c338e4e39d5082eb1d820f1b9ce27aa8024b6ab74adf2808cc"
+      },
+      "runtime": {
+        "file": "hardware/backups/tab5-a-interrupted-recovery-1znx36bq/runtime.log",
+        "bytes": 10555,
+        "sha256": "6f801e8b2d541be7e92a9bc052f90bbb09655de04a383eef304b620997f6fa4f"
+      },
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "startup": {
+        "launcher_ready_ms": 7323,
+        "sd_init_ms": 48,
+        "native_games": 19,
+        "lua_games": 2
+      },
+      "warm_boots": {
+        "receipt": {
+          "file": "hardware/backups/tab5-a-warm-37c4-20261004/receipt.json",
+          "bytes": 968,
+          "sha256": "195e7069e82686456e437b266ba080f8c0daa7bd2adc836d370833a0b2f2162f"
+        },
+        "cycles": [
+          {
+            "cycle": 1,
+            "passed": true,
+            "seconds": 17.48,
+            "log": "hardware/backups/tab5-a-warm-37c4-20261004/cycle-1.log",
+            "sha256": "657ac05b6c4aea3b0280f351fd8313fa53949c1cb644f03afe579c4d6a12037c",
+            "i2c_retries": 0,
+            "capture_error": null
+          },
+          {
+            "cycle": 2,
+            "passed": true,
+            "seconds": 17.391,
+            "log": "hardware/backups/tab5-a-warm-37c4-20261004/cycle-2.log",
+            "sha256": "27c7ed1ff37b0177f41f67eb19af2d9b2c1f63b8eb1c5064015d23655b5949c6",
+            "i2c_retries": 0,
+            "capture_error": null
+          },
+          {
+            "cycle": 3,
+            "passed": true,
+            "seconds": 17.386,
+            "log": "hardware/backups/tab5-a-warm-37c4-20261004/cycle-3.log",
+            "sha256": "525e367690237301f25ff18cb098e0848e90db4e818fb342d96f4ce77a2bce30",
+            "i2c_retries": 0,
+            "capture_error": null
+          }
+        ]
+      }
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "chip_revision": "v1.3",
+      "flash_bytes": 16777216,
+      "psram_bytes": 33554432,
+      "pcb_revision": "unconfirmed suffix; scoped common C145 interfaces",
+      "panel": "ST7123 firmware 3 (1.71.1.3)",
+      "sd_capacity_bytes": 32010928128,
+      "receipt": {
+        "file": "hardware/backups/tab5-b-install-o1zdnx1y/receipt.json",
+        "bytes": 1554,
+        "sha256": "37ee2675d5cf0d5cc92b51ba0582913c60f66dac81ac920ddb6a0aca0f4c6633"
+      },
+      "runtime": {
+        "file": "hardware/backups/tab5-b-install-o1zdnx1y/runtime.log",
+        "bytes": 10630,
+        "sha256": "1b5b1ef6d88a73197e16163082ac4e98cedb17d943093a9631c9707cf44899ec"
+      },
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "startup": {
+        "launcher_ready_ms": 6427,
+        "sd_init_ms": 47,
+        "native_games": 21,
+        "lua_games": 2
+      },
+      "warm_boots": {
+        "receipt": {
+          "file": "hardware/backups/tab5-b-warm-37c4-20261004/receipt.json",
+          "bytes": 969,
+          "sha256": "44f6dad006efe6df15cc60dc7c3a8fc6852cac1079a6df163712aaaa2103340f"
+        },
+        "cycles": [
+          {
+            "cycle": 1,
+            "passed": true,
+            "seconds": 16.543,
+            "log": "hardware/backups/tab5-b-warm-37c4-20261004/cycle-1.log",
+            "sha256": "c65ddb970fba799103bd698e102ca281bd898104894388e98942b6252eef1b00",
+            "i2c_retries": 1,
+            "capture_error": null
+          },
+          {
+            "cycle": 2,
+            "passed": true,
+            "seconds": 16.551,
+            "log": "hardware/backups/tab5-b-warm-37c4-20261004/cycle-2.log",
+            "sha256": "a98849c24900e082daa81dfcc2b01637a047a5987fa3d4110725c65d8d6d2789",
+            "i2c_retries": 0,
+            "capture_error": null
+          },
+          {
+            "cycle": 3,
+            "passed": true,
+            "seconds": 16.541,
+            "log": "hardware/backups/tab5-b-warm-37c4-20261004/cycle-3.log",
+            "sha256": "975bbfa4bb99726e51dc936450a0f1a20c496d2c6365ef3bd881188cd13b080e",
+            "i2c_retries": 0,
+            "capture_error": null
+          }
+        ]
+      }
+    }
+  },
+  "validation": {
+    "tab5_build_and_verifier": "pass; pinned ESP-IDF 5.5.3 revision 1.x image",
+    "build_log": {
+      "file": "build-host/tab5-mute-i2c-build.log",
+      "bytes": 13837,
+      "sha256": "0101ab07fdfbb94a907d1b7f963ac8a5d5e8bc28d302ed34ac6f8d5070f1f7be"
+    },
+    "focused_platform_host_tests": "26 passed; board-port contract and tests passed",
+    "doom_mute_and_gate_regression": "pass; volumes 0, 1-10, 11 and 255; all gate combinations plus reserved/null cases",
+    "doom_mute_test_log": {
+      "file": "build-host/doom_embedded_touch_audio/Testing/Temporary/LastTest.log",
+      "bytes": 784,
+      "sha256": "caa35163b394f3a8a04c8faecf6daae79f6c156bffbf300ac22382d62bfcc1cb"
+    },
+    "warm_boot_summary": "A 3/3; B 3/3; all launcher, native/Lua catalog and ten-second health gates pass. B cycle 1 exercised the retry path.",
+    "reset_method": "Native USB port open on this Mac; CHIP_USB_UART_RESET observed in every cycle. This is not cold power-cycle qualification.",
+    "repository_wide_check": "Not rerun for this scoped successor; previously recorded unrelated E5 authorization assertion remains unresolved."
+  },
+  "pending_acceptance": [
+    "Operator confirmation of the current image visible on A after recovery.",
+    "Doom engine launch, gameplay and return after the prior display-reset repair.",
+    "Native and Lua game play, touch controls and return-to-launcher.",
+    "Speaker sound with a deliberately nonzero game volume; saved game volume is currently zero.",
+    "Sustained smooth scrolling, touch drag behavior, tearing and cold power cycles."
+  ],
+  "safety": {
+    "complete_original_backups_preserved": true,
+    "global_flash_authorized": false,
+    "writes": "authorized app range at 0x20000 only; no card formatting, bootloader rewrite or erase-all",
+    "local_only": "Firmware, game data, exact flash readbacks and raw sanitized logs remain ignored; this file records hashes only."
+  }
+}

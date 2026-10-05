@@ -38,7 +38,20 @@ esp_err_t platform_tab5_init(void)
         ret = i2c_new_master_bus(&cfg, &s_bus);
     }
     if (ret == ESP_OK && !s_expander) {
-        ret = esp_io_expander_new_i2c_pi4ioe5v6408(s_bus, 0x43, &s_expander);
+        /* A USB warm reset can interrupt a transaction while the external
+         * devices remain powered. Recover only during first board setup,
+         * before touch/audio borrow the bus, never under live clients. The
+         * vendor constructor removes its temporary device on failure. */
+        for (unsigned attempt = 0U; attempt < 3U; ++attempt) {
+            ret = esp_io_expander_new_i2c_pi4ioe5v6408(s_bus, 0x43, &s_expander);
+            if (ret == ESP_OK || ret == ESP_ERR_NO_MEM ||
+                ret == ESP_ERR_INVALID_ARG || attempt == 2U) break;
+            const esp_err_t reset_result = i2c_master_bus_reset(s_bus);
+            ESP_LOGW("tab5", "I2C_INIT_RETRY attempt=%u error=%s bus_reset=%s",
+                     attempt + 2U, esp_err_to_name(ret), esp_err_to_name(reset_result));
+            if (reset_result != ESP_OK) { ret = reset_result; break; }
+            vTaskDelay(pdMS_TO_TICKS(50));
+        }
     }
     xSemaphoreGive(s_lock);
     return ret;

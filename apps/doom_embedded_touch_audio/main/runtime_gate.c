@@ -41,3 +41,11 @@ doom_touch_audio_runtime_mode_t doom_touch_audio_runtime_gate_mode(
         ? DOOM_TOUCH_AUDIO_RUNTIME_TOUCH_AND_AUDIO
         : DOOM_TOUCH_AUDIO_RUNTIME_TOUCH_ONLY;
 }
+
+bool doom_touch_audio_runtime_sound_allowed(
+    const doom_touch_audio_runtime_gate_t *gate, uint8_t volume_step)
+{
+    return volume_step >= 1U && volume_step <= 10U &&
+        doom_touch_audio_runtime_gate_mode(gate) ==
+            DOOM_TOUCH_AUDIO_RUNTIME_TOUCH_AND_AUDIO;
+}

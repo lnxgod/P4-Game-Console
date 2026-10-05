@@ -73,7 +73,6 @@
 #define DOOM_MAX_SLEEP_MS UINT32_C(60000)
 #define DOOM_STATS_INTERVAL_FRAMES UINT32_C(150)
 #define DOOM_BACKEND_VOLUME_DEFAULT_STEP UINT8_C(8)
-#define DOOM_BACKEND_VOLUME_MIN_STEP UINT8_C(1)
 #define DOOM_BACKEND_VOLUME_MAX_STEP UINT8_C(10)
 #define TOUCH_POLL_INTERVAL_MS UINT32_C(16)
 #define TOUCH_RETRY_INTERVAL_MS UINT32_C(5000)
@@ -1114,10 +1113,10 @@ void app_main(void)
     const bool multiplayer_enabled =
         multiplayer != NULL && multiplayer->enabled;
     s_console_os_launch_active = true;
-    s_backend_volume_step =
-        master_volume_step >= DOOM_BACKEND_VOLUME_MIN_STEP &&
-        master_volume_step <= DOOM_BACKEND_VOLUME_MAX_STEP
-            ? master_volume_step : DOOM_BACKEND_VOLUME_DEFAULT_STEP;
+    /* Console step zero means mute. Invalid values also fail silent; neither
+     * may turn a muted game into the standalone application's default 8/10. */
+    s_backend_volume_step = master_volume_step <= DOOM_BACKEND_VOLUME_MAX_STEP
+        ? master_volume_step : 0U;
 #endif
     doom_touch_audio_runtime_gate_t gate = {0};
     doom_touch_audio_runtime_gate_read(&gate);
@@ -1175,7 +1174,12 @@ void app_main(void)
 #endif
     s_audio_gate_enabled =
         mode == DOOM_TOUCH_AUDIO_RUNTIME_TOUCH_AND_AUDIO;
-    s_audio_calls_allowed = s_audio_gate_enabled;
+    s_audio_calls_allowed = doom_touch_audio_runtime_sound_allowed(
+        &s_runtime_gate, s_backend_volume_step);
+    if (s_audio_gate_enabled && !s_audio_calls_allowed) {
+        ESP_LOGI(TAG, "P4_DOOM USER_MUTE volume_step=%u audio_initialization=skipped",
+                 (unsigned)s_backend_volume_step);
+    }
     if (s_audio_calls_allowed) {
         s_audio_lifecycle.hardware_touched = true;
         const esp_err_t safe_result = platform_audio_force_safe_shutdown();

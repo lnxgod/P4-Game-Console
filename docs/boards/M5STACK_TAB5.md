@@ -7,7 +7,8 @@ loading is verified. Doom gameplay, speaker sound and sustained scrolling
 acceptance remain pending; a clean boot is not gameplay proof.
 Both units are ESP32-P4 v1.3 with 16 MiB flash and 32 MiB PSRAM.
 Global `flash_authorized` stays false; only hash-bound exact-unit installs apply.
-See `hardware/evidence/tab5-console-os-20261004-usb-game-testing.json` for current evidence.
+See `hardware/evidence/tab5-console-os-20261004-startup-recovery-testing.json` for the current
+artifact and its link to the USB/game-installation evidence.
 
 ## Build
 
@@ -49,6 +50,13 @@ ST7121, byte 3 selects ST7123; otherwise 0x14 selects ILI9881C/GT911. An unknown
 0x55 firmware value fails closed. LCD reset is expander 0x43 P4: assert low,
 then release as input with pull-up, never drive high. Touch reset is P5.
 Only the ILI/GT911 assembly gets the official GPIO23-low resistor workaround.
+After an observed initial expander transaction failure on A, board setup now
+allows at most three constructor attempts, with an SDK I2C bus reset and 50 ms
+delay between attempts. Recovery runs only before touch/audio borrow the bus;
+initialization still fails closed if the bounded attempts do not succeed.
+Both units passed three USB warm restarts on the successor image. B reproduced
+the initial failure in cycle 1, recovered on attempt 2, and passed the launcher
+and ten-second health gates. These checks do not qualify cold power cycles.
 
 The ST712x adapter bounds report slots to ten before reading at most 70 bytes,
 then publishes at most five valid contacts. It uses the official driver's
@@ -63,6 +71,9 @@ PCM linearly; codec output is fixed at 60/100 for this candidate. Factory
 GPIO30/PDM telemetry fields remain zero: GPIO30 is Tab5 MCLK, not amplifier
 shutdown. Audio cleanup retains ownership on failure for retry. Acoustic quality,
 headphone routing, volume and pop-free transitions still need measurement.
+Doom now preserves Console OS volume 0 as mute and rejects invalid volume values
+by remaining silent. The standalone default of 8/10 no longer replaces console
+mute. Volume is an additional constraint on the unchanged hardware gates.
 
 Display handoff waits two refresh boundaries and retains a pending buffer after
 timeout so it cannot be overwritten while potentially scanning. PPA performs
