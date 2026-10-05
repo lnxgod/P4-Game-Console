@@ -29,7 +29,7 @@ static esp_lcd_panel_handle_t s_panel;
 static esp_ldo_channel_handle_t s_ldo;
 static uint16_t *s_frames[2];
 static unsigned s_active;
-static bool s_ready, s_pending, s_backlight;
+static bool s_ready, s_pending, s_backlight, s_pattern;
 static uint32_t s_pending_refresh;
 static StaticSemaphore_t s_lock_storage, s_refresh_storage;
 static SemaphoreHandle_t s_lock, s_refresh;
@@ -138,14 +138,12 @@ esp_err_t platform_display_init(void)
     TRY(esp_lcd_panel_reset(s_panel));
     TRY(esp_lcd_panel_init(s_panel));
     TRY(esp_lcd_dpi_panel_get_frame_buffer(s_panel,2,(void **)&s_frames[0],(void **)&s_frames[1]));
-    for (unsigned i=0;i<2;++i) {
-        memset(s_frames[i],0,FRAME_BYTES);
-        TRY(esp_cache_msync(s_frames[i],FRAME_BYTES,ESP_CACHE_MSYNC_FLAG_DIR_C2M));
-    }
+    /* The DPI driver allocates and clears both buffers before enabling scanout.
+     * Do not rewrite its active buffer after panel_init has started DMA. */
     const esp_lcd_dpi_panel_event_callbacks_t callbacks = {.on_refresh_done=refreshed};
     TRY(esp_lcd_dpi_panel_register_event_callbacks(s_panel,&callbacks,NULL));
     TRY(esp_lcd_panel_disp_on_off(s_panel,true));
-    s_active=0; s_pending=false; s_ready=true;
+    s_active=0; s_pending=false; s_pattern=false; s_ready=true;
     ESP_LOGI("tab5_display","P4_DISPLAY READY board=m5stack-tab5 panel=%s native=720x1280 logical=1280x720 viewport=1152x720+64+0 format=rgb565",platform_tab5_panel_name(kind));
     xSemaphoreGive(s_lock); return ESP_OK;
 fail:
@@ -195,16 +193,30 @@ static esp_err_t submit(const uint16_t *source,size_t stride,size_t width,uint32
     }
     ret=esp_cache_msync(dest,FRAME_BYTES,ESP_CACHE_MSYNC_FLAG_DIR_C2M);
     if (ret!=ESP_OK) goto done;
-    ret=esp_lcd_dpi_panel_set_pattern(s_panel,MIPI_DSI_PATTERN_NONE);
-    if (ret!=ESP_OK) goto done;
+    if (s_pattern) {
+        ret=esp_lcd_dpi_panel_set_pattern(s_panel,MIPI_DSI_PATTERN_NONE);
+        if (ret!=ESP_OK) goto done;
+        s_pattern=false;
+    }
     ret=esp_lcd_panel_draw_bitmap(s_panel,0,0,720,1280,dest);
     if (ret!=ESP_OK) goto done;
     s_pending_refresh=__atomic_load_n(&s_refresh_count,__ATOMIC_ACQUIRE);
     s_pending=true;
     ret=finish_pending(start,budget);
-    if (ret==ESP_OK) ++s_stats.submits_completed;
+    if (ret==ESP_OK) {
+        ++s_stats.submits_completed;
+        if (s_stats.submits_completed==1U)
+            ESP_LOGI("tab5_display", "FIRST_FRAME elapsed_ticks=%lu refresh=%lu",
+                (unsigned long)(xTaskGetTickCount()-start),
+                (unsigned long)__atomic_load_n(&s_refresh_count,__ATOMIC_ACQUIRE));
+    }
 done:
-    if (ret==ESP_ERR_TIMEOUT) ++s_stats.submit_timeouts;
+    if (ret==ESP_ERR_TIMEOUT) {
+        ++s_stats.submit_timeouts;
+        ESP_LOGW("tab5_display", "SUBMIT_TIMEOUT pending=%u refresh=%lu armed=%lu elapsed_ticks=%lu budget_ticks=%lu",
+            s_pending, (unsigned long)__atomic_load_n(&s_refresh_count,__ATOMIC_ACQUIRE),
+            (unsigned long)s_pending_refresh, (unsigned long)(xTaskGetTickCount()-start), (unsigned long)budget);
+    }
     else if (ret!=ESP_OK) ++s_stats.submit_failures;
     xSemaphoreGive(s_lock); return ret;
 }
@@ -249,6 +261,7 @@ esp_err_t platform_display_show_pattern(platform_display_pattern_t pattern)
     default:xSemaphoreGive(s_lock);return ESP_ERR_INVALID_ARG;
     }
     esp_err_t ret=s_ready ? esp_lcd_dpi_panel_set_pattern(s_panel,value):ESP_ERR_INVALID_STATE;
+    if (ret==ESP_OK) s_pattern=value!=MIPI_DSI_PATTERN_NONE;
     if (ret==ESP_OK && pattern==PLATFORM_DISPLAY_PATTERN_BLACK) {
         const TickType_t start=xTaskGetTickCount(),budget=pdMS_TO_TICKS(250);
         ret=finish_pending(start,budget);

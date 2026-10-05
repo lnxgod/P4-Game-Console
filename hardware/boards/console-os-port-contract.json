@@ -205,7 +205,7 @@
       ],
       "touch": true,
       "laptop_content_transfer": "powered-off-removable-media",
-      "exact_target_seen_on_hardware": false,
+      "exact_target_seen_on_hardware": true,
       "full_feature_set_hardware_tested": false
     }
   }

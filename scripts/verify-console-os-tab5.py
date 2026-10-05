@@ -25,9 +25,8 @@ def digest(path: pathlib.Path) -> str:
 def verify(build: pathlib.Path) -> dict:
     profile = json.loads((ROOT / "hardware/boards/m5stack-tab5/board-profile.json").read_text())
     require(profile["id"] == "m5stack-tab5", "wrong board profile")
-    require(profile["flash_authorized"] is False and
-            profile["exact_target_seen_on_hardware"] is False,
-            "build-only verifier cannot qualify hardware or authorize flashing")
+    require(profile["flash_authorized"] is False,
+            "global flash gate must stay closed; use an exact-unit/artifact authorization")
     provenance = json.loads((ROOT / "third_party/tab5-bsp.json").read_text())
     for entry in provenance["files"]:
         require(digest(ROOT / entry["path"]) == entry["sha256"],

@@ -1,8 +1,12 @@
 # M5Stack Tab5 Console OS port
 
-Status: initial core port, build and host checks verified; no Tab5 has been
-flashed or tested. The exact unit, PCB revision, panel label, factory image and
-live silicon revision are not yet recorded. `flash_authorized` remains false.
+Status: unit B has a verified Console OS install, ST7123 panel/touch detection,
+launcher startup and ten-second runtime health proof (2026-10-04). Unit A is
+backed up and authorized but awaits its programming port. Visual/touch acceptance,
+audio, SD/gameplay, and the remaining peripherals are not yet qualified.
+Both units are ESP32-P4 v1.3 with 16 MiB flash; B reports 32 MiB working PSRAM.
+Global `flash_authorized` stays false; only hash-bound exact-unit installs apply.
+See `hardware/evidence/tab5-console-os-20261004-bringup.json` for the serial evidence.
 
 ## Build
 
@@ -61,8 +65,10 @@ headphone routing, volume and pop-free transitions still need measurement.
 
 Display handoff waits two refresh boundaries and retains a pending buffer after
 timeout so it cannot be overwritten while potentially scanning. Rotation/scaling
-is currently CPU based; dirty-region submissions redraw the full frame. Frame
-rate, latency and tearing have not been measured on hardware.
+uses CPU tiles of 32×32 pixels to keep neighboring source pixels in cache; dirty-region submissions redraw the full frame. The initial column loop missed
+the 250 ms frame deadline at 397–404 ms; the tiled implementation completed its
+first frame in 85 ms on B. Sustained frame rate, input latency and tearing remain
+unmeasured.
 
 ## Not enabled in this candidate
 
@@ -106,6 +112,34 @@ log. Check boot/backlight/colors/orientation, all touch corners and releases,
 card mount/save persistence, boot audio/volume/mute, native and Lua games, Doom,
 return to launcher, and repeated cleanup/reinitialization. Qualify radio, USB and
 power-management services separately before enabling them.
+
+## Exact-unit install and current testing state
+
+Use `scripts/flash-console-os-tab5.py` with the pinned IDF Python environment.
+Its default mode checks local inputs only. `--install` requires an explicit port,
+unit A/B, authorization file and its SHA-256. It stages immutable image bytes,
+checks the full recovery snapshot, verifies live identity/revision/flash/security,
+and uses the same open connection for predecessor comparison, write and exact
+readback. A failed check leaves the unit unmodified or in the loader after a
+write failure. The app-only route also verifies the bootloader, partitions and
+CRC-valid active OTA slot; it preserves the existing OTA selector.
+
+The current B app is 1,340,992 bytes, SHA-256
+`3c0bc589497c847d4125f0286e19ee52a123fcfcbf9bea67ae8160625cce94bb`.
+Both full pre-install snapshots contain the existing USB bridge firmware, not
+factory firmware. Their complete byte counts, hashes and unit bindings are in
+`hardware/backups/manifest.json`; all binaries remain ignored locally.
+
+B found no responsive SD card, so its game catalog is empty. Insert a prepared
+FAT32 card with the generated SD bundle while powered off before gameplay tests.
+Boot and game volume currently default to zero; audio remains unverified. The
+generic `TOUCH_READY controller=gt911` text is a legacy label: B's driver-specific
+log identifies ST7123 firmware 3 and a 720×1280 touch range.
+
+A's bridge application takes over USB and hides the programming port. With USB-C
+connected, hold its reset button about two seconds until the green LED flashes
+rapidly, then release. Identify A by its stored hash, never by port order. Its
+ready authorization is `hardware/evidence/tab5-console-os-20261004-a-ready-authorization.json`.
 
 ## Sources
 

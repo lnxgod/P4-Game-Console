@@ -7,5 +7,8 @@ Build: `make console-os-tab5-idf`.
 Details, limitations, source pins and first-hardware workflow:
 [Tab5 port notes](../../../docs/boards/M5STACK_TAB5.md).
 
-Hardware verification, complete factory backup, hashed live-device binding and
-first-write authorization are still pending. `flash_authorized=false`.
+A and B have full pre-install bridge-firmware backups and hashed identity bindings.
+B passed exact readback, ST7123 driver initialization and launcher boot health;
+physical screen/touch, audio, SD and gameplay acceptance remain pending. A awaits
+its download port. Global `flash_authorized=false`; installations use explicit
+per-unit artifact authorizations and `scripts/flash-console-os-tab5.py`.

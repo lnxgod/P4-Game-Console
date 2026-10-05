@@ -1,0 +1,69 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-10-05T03:08:57.151811+00:00",
+  "board": "m5stack-tab5",
+  "unit": "B",
+  "pcb_revision": "not separately confirmed; scoped common C145 interfaces",
+  "panel": "ST7123; I2C firmware 3 (1.71.1.3), max 720x1280, ten slots",
+  "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+  "chip_revision": "v1.3",
+  "flash_bytes": 16777216,
+  "psram_bytes": 33554432,
+  "source_base_commit": "97c69e89d8b42ee8cb976fde21fcd45531e32df6",
+  "source_files": {
+    "components/platform_display/src/platform_display_tab5.c": "d679f7696193ed48da8639369f460499090037faffc06d152920f5e7ed80d5af",
+    "components/platform_display/src/platform_display_layout.c": "a7d8fef6a2228e260da6557e45c2568d72dd872b13bd8f0a59033c750a615dce"
+  },
+  "application": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 1340992,
+    "sha256": "3c0bc589497c847d4125f0286e19ee52a123fcfcbf9bea67ae8160625cce94bb"
+  },
+  "toolchain": "ESP-IDF v5.5.3 locked commit 2c211b236707889e8400c4dc5644dd5c4ee071e0; esptool 4.12.0",
+  "fixture": "Mac native USB-C Serial/JTAG; no host-power test",
+  "install_receipt": "hardware/backups/tab5-b-install-6zhxpx5s/receipt.json",
+  "serial_log": "hardware/backups/tab5-b-install-6zhxpx5s/runtime.log",
+  "serial_log_sha256": "dddc7347aa4e7851995a88a99615f48f69fecb10dc13031137951d9c7c6aa053",
+  "serial_markers": [
+    "I (1364) esp_psram: SPI SRAM memory test OK",
+    "I (1907) tab5: TAB5 PANEL model=st7123",
+    "I (2376) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7123 native=720x1280 logical=1280x720 viewport=1152x720+64+0 format=rgb565",
+    "I (2511) tab5_display: FIRST_FRAME elapsed_ticks=85 refresh=8",
+    "I (3397) p4_console_os: P4_CONSOLE_OS STORAGE_INIT status=degraded result=ESP_ERR_TIMEOUT elapsed_ms=873 worker_low_water_bytes=10012",
+    "I (10516) ST7123: Firmware version: 3(1.71.1.3), Max.X: 720, Max.Y: 1280, Max.Touchs: 10",
+    "I (10517) p4_console_os: P4_CONSOLE_OS TOUCH_MAILBOX_READY sample_hz=120 mode=latest",
+    "I (10519) p4_console_os: P4_CONSOLE_OS GAME_CATALOG available=0 packages=0 valid=0 omitted=0 generation=0 source=microsd-only scan=background worker_low_water_bytes=32488 storage_result=ESP_ERR_TIMEOUT update=3 result=ESP_ERR_TIMEOUT",
+    "I (11755) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+    "I (21774) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized"
+  ],
+  "result": {
+    "flash_readback": "pass",
+    "boot_and_10s_health": "pass",
+    "frame_deadline": "pass; first frame 85 ticks at 1000 Hz against 250 ms deadline",
+    "touch_driver_initialization": "pass",
+    "physical_screen_and_touch": "awaiting operator observation",
+    "audio": "unverified; boot/game settings 0 (mute), boot audio opener returned ESP_ERR_INVALID_ARG for step 0",
+    "storage": "not verified; no SD response, ESP_ERR_TIMEOUT at all attempted clock rates",
+    "gameplay": "not tested; zero storage-installed games found",
+    "radio_usb_power_camera": "disabled/unqualified"
+  },
+  "bringup_findings": [
+    {
+      "image_sha256": "e1da66c27f89fd1310714ec4072a37cb3c5b98bde4bda976fbc82a0a8ee5c990",
+      "result": "first-frame timeout after verified install"
+    },
+    {
+      "image_sha256": "bd42dd10cb256b1cb1f0f060984afa001e465476099ae133504edcc485d8276f",
+      "result": "refresh counter advanced; CPU layout consumed 397-404 ticks before refresh wait, exceeding 250-tick budget"
+    },
+    {
+      "image_sha256": "3c0bc589497c847d4125f0286e19ee52a123fcfcbf9bea67ae8160625cce94bb",
+      "result": "32x32 tiled rotation fixed cache thrashing; pixel mapping unchanged and sanitizer-checked"
+    }
+  ],
+  "notes": [
+    "Generic TOUCH_READY log still says controller=gt911; the driver-specific ST7123 firmware log is the actual detected controller.",
+    "Original bridge firmware was already custom; the full pre-install images are recovery snapshots, not claimed as factory binaries.",
+    "A is fully backed up and authorized but still awaiting its programming port."
+  ]
+}

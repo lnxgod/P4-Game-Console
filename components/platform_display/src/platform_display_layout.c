@@ -29,6 +29,42 @@ _Static_assert(PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES == 0U ||
                    PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES == 90U,
                "display layout supports native or clockwise-90 scanout");
 
+#if defined(CONFIG_P4_BOARD_M5STACK_TAB5) && CONFIG_P4_BOARD_M5STACK_TAB5
+/* Reading a full PSRAM column thrashes cache sets on the 720x1280 panel.
+ * Tile both axes so adjacent source pixels are reused while still resident.
+ * All scaling remains the same integer nearest-neighbor mapping. */
+static bool layout_tab5_tiled(const uint16_t *source, size_t source_stride,
+    size_t source_width, size_t source_height, uint16_t *destination,
+    size_t destination_stride)
+{
+    enum { TILE = 32 };
+    _Static_assert(TOP_MARGIN == 0 && VIEWPORT_HEIGHT == DESTINATION_WIDTH,
+                   "Tab5 tiled viewport must span native width");
+    const size_t first_y = LOGICAL_WIDTH - LEFT_MARGIN - VIEWPORT_WIDTH;
+    const size_t end_y = LOGICAL_WIDTH - LEFT_MARGIN;
+    size_t source_rows[DESTINATION_WIDTH];
+    for (size_t x=0; x<DESTINATION_WIDTH; ++x)
+        source_rows[x] = (x * source_height / VIEWPORT_HEIGHT) * source_stride;
+    for (size_t y=0; y<first_y; ++y)
+        memset(destination+y*destination_stride, 0, DESTINATION_WIDTH*sizeof(uint16_t));
+    for (size_t y=end_y; y<DESTINATION_HEIGHT; ++y)
+        memset(destination+y*destination_stride, 0, DESTINATION_WIDTH*sizeof(uint16_t));
+    for (size_t by=first_y; by<end_y; by+=TILE) {
+        const size_t limit_y = by+TILE<end_y ? by+TILE : end_y;
+        for (size_t bx=0; bx<DESTINATION_WIDTH; bx+=TILE) {
+            const size_t limit_x = bx+TILE<DESTINATION_WIDTH ? bx+TILE : DESTINATION_WIDTH;
+            for (size_t y=by; y<limit_y; ++y) {
+                const size_t sx = (LOGICAL_WIDTH-1U-y-LEFT_MARGIN)*source_width/VIEWPORT_WIDTH;
+                uint16_t *row = destination+y*destination_stride;
+                for (size_t x=bx; x<limit_x; ++x)
+                    row[x] = source[source_rows[x]+sx];
+            }
+        }
+    }
+    return true;
+}
+#endif
+
 bool platform_display_layout_rgb565_320x200(const uint16_t *source,
                                             size_t source_stride_pixels,
                                             uint16_t *destination,
@@ -42,7 +78,10 @@ bool platform_display_layout_rgb565_320x200(const uint16_t *source,
         return false;
     }
 
-#if PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES == 90U
+#if defined(CONFIG_P4_BOARD_M5STACK_TAB5) && CONFIG_P4_BOARD_M5STACK_TAB5
+    return layout_tab5_tiled(source, source_stride_pixels, 320, 200,
+                             destination, destination_stride_pixels);
+#elif PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES == 90U
     for (size_t native_y = 0U; native_y < DESTINATION_HEIGHT; ++native_y) {
         uint16_t *const destination_row =
             destination + native_y * destination_stride_pixels;
@@ -98,7 +137,10 @@ bool platform_display_layout_rgb565_768x480(const uint16_t *source,
         destination_height < DESTINATION_HEIGHT) {
         return false;
     }
-#if PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES == 90U
+#if defined(CONFIG_P4_BOARD_M5STACK_TAB5) && CONFIG_P4_BOARD_M5STACK_TAB5
+    return layout_tab5_tiled(source, source_stride_pixels, 768, 480,
+                             destination, destination_stride_pixels);
+#elif PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES == 90U
     for (size_t native_y = 0U; native_y < DESTINATION_HEIGHT; ++native_y) {
         uint16_t *const row = destination + native_y * destination_stride_pixels;
         memset(row, 0, (size_t)DESTINATION_WIDTH * sizeof(*row));
@@ -254,7 +296,10 @@ bool platform_display_layout_rgb565_384x240(const uint16_t *source,
         destination_height < DESTINATION_HEIGHT) {
         return false;
     }
-#if PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES == 90U
+#if defined(CONFIG_P4_BOARD_M5STACK_TAB5) && CONFIG_P4_BOARD_M5STACK_TAB5
+    return layout_tab5_tiled(source, source_stride_pixels, 384, 240,
+                             destination, destination_stride_pixels);
+#elif PLATFORM_BOARD_DISPLAY_ROTATION_CW_DEGREES == 90U
     for (size_t native_y = 0U; native_y < DESTINATION_HEIGHT; ++native_y) {
         uint16_t *const row = destination + native_y * destination_stride_pixels;
         memset(row, 0, (size_t)DESTINATION_WIDTH * sizeof(*row));

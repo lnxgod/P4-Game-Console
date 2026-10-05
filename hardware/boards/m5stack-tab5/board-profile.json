@@ -5,7 +5,7 @@
     "reason": "Dedicated panel, reset/rail control, touch and ES8388 audio adapters required; no inherited board identity or flash authorization."
   },
   "device_identity": null,
-  "exact_target_seen_on_hardware": false,
+  "exact_target_seen_on_hardware": true,
   "factory_backup": null,
   "flash_authorized": false,
   "full_feature_set_hardware_tested": false,
@@ -109,9 +109,18 @@
   "product": "Tab5 C145/K145",
   "schema": 1,
   "soc": "ESP32-P4 revision 1.x build family",
-  "status": "initial-core-port-hardware-unverified",
+  "status": "unit-b-boot-readback-verified-core-acceptance-pending",
   "touch": true,
   "vendor": "M5Stack",
   "build_ready": true,
-  "verification_document": "docs/boards/M5STACK_TAB5.md"
+  "verification_document": "docs/boards/M5STACK_TAB5.md",
+  "pin_map_authorized": false,
+  "peripheral_authorizations": {
+    "core_console_exact_units": {
+      "evidence": "hardware/evidence/tab5-console-os-20261004-install-authorization.json",
+      "scope": "display, touch, ES8388 output, SD, shared control and native USB console only; exact A/B identities and artifacts",
+      "broad_flash_authorization": false
+    }
+  },
+  "hardware_evidence": "hardware/evidence/tab5-console-os-20261004-bringup.json"
 }

@@ -52,9 +52,11 @@ Keep the build target and physical target paired exactly:
 For Tab5, select `m5stack-tab5` explicitly and read
 `docs/boards/M5STACK_TAB5.md` and
 `hardware/boards/m5stack-tab5/board-profile.json`. Use
-`make console-os-tab5-idf`. This is a build-verified core port with no live-unit
-acceptance or flash authorization; preserve the complete factory image and bind
-the exact unit before any first write. C6 radio and USB-A host power are disabled.
+`make console-os-tab5-idf`. Unit B has boot/readback evidence; physical acceptance, audio and SD/gameplay
+remain pending. A/B are separately backed up and have exact-artifact test-install
+authorizations. Use `scripts/flash-console-os-tab5.py` with an explicit unit, port
+and authorization digest; its default is a local-only check. Preserve and bind
+any new unit before its first write. C6 radio and USB-A host power are disabled.
 
 For another ESP32-P4 board, use `scripts/board-port.py` and
 `docs/BOARD_PORTING.md`. Start with `check` and `matrix`, then feed a
