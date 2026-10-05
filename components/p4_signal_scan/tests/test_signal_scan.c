@@ -57,6 +57,104 @@ int main(void)
     CHECK(!p4_signal_scan_make_game_signal(
         key, bssid, ssid, sizeof(ssid), 1, 1U, false, &hidden));
 
+    p4_game_signal_snapshot_t stale = {
+        .generation = 9U,
+        .status = P4_GAME_SIGNAL_ERROR,
+        .count = 2U,
+        .results = {
+            {.token = 41U, .label = "OLD ONE", .rssi_dbm = -45},
+            {.token = 42U, .label = "OLD TWO", .rssi_dbm = -55},
+        },
+    };
+    p4_signal_scan_clear_results(&stale);
+    CHECK(stale.generation == 9U);
+    CHECK(stale.status == P4_GAME_SIGNAL_ERROR);
+    CHECK(stale.count == 0U);
+    p4_game_signal_t empty_results[P4_GAME_SIGNAL_MAX_RESULTS] = {0};
+    CHECK(memcmp(stale.results, empty_results, sizeof(empty_results)) == 0);
+    p4_signal_scan_clear_results(NULL);
+
+    p4_game_signal_t candidates[P4_SIGNAL_SCAN_MAX_CANDIDATES] = {0};
+    for (size_t index = 0U; index < P4_SIGNAL_SCAN_MAX_CANDIDATES; ++index) {
+        candidates[index].token = (uint64_t)index + 1U;
+        candidates[index].rssi_dbm = (int8_t)(-30 - (int)index);
+    }
+    p4_game_signal_t window[P4_GAME_SIGNAL_MAX_RESULTS];
+    bool seen[P4_SIGNAL_SCAN_MAX_CANDIDATES] = {false};
+    size_t cursor = 0U;
+    for (size_t scan = 0U;
+         scan < P4_SIGNAL_SCAN_MAX_CANDIDATES /
+                    P4_GAME_SIGNAL_MAX_RESULTS;
+         ++scan) {
+        const size_t selected = p4_signal_scan_select_window(
+            candidates, P4_SIGNAL_SCAN_MAX_CANDIDATES, cursor, 0U,
+            window, &cursor);
+        CHECK(selected == P4_GAME_SIGNAL_MAX_RESULTS);
+        for (size_t index = 0U; index < selected; ++index) {
+            CHECK(window[index].token >= 1U);
+            CHECK(window[index].token <= P4_SIGNAL_SCAN_MAX_CANDIDATES);
+            const size_t seen_index = (size_t)(window[index].token - 1U);
+            CHECK(!seen[seen_index]);
+            seen[seen_index] = true;
+        }
+    }
+    CHECK(cursor == 0U);
+    for (size_t index = 0U; index < P4_SIGNAL_SCAN_MAX_CANDIDATES; ++index) {
+        CHECK(seen[index]);
+    }
+
+    for (size_t candidate_count = 1U;
+         candidate_count <= (size_t)P4_SIGNAL_SCAN_MAX_CANDIDATES;
+         ++candidate_count) {
+        (void)memset(seen, 0, sizeof(seen));
+        cursor = candidate_count - 1U;
+        for (size_t scan = 0U; scan < candidate_count; ++scan) {
+            const size_t selected = p4_signal_scan_select_window(
+                candidates, candidate_count, cursor, 0U,
+                window, &cursor);
+            const size_t expected =
+                candidate_count < (size_t)P4_GAME_SIGNAL_MAX_RESULTS
+                ? candidate_count : (size_t)P4_GAME_SIGNAL_MAX_RESULTS;
+            CHECK(selected == expected);
+            for (size_t index = 0U; index < selected; ++index) {
+                const size_t seen_index =
+                    (size_t)(window[index].token - 1U);
+                CHECK(seen_index < candidate_count);
+                if (seen_index < candidate_count) {
+                    seen[seen_index] = true;
+                }
+            }
+        }
+        for (size_t index = 0U; index < candidate_count; ++index) {
+            CHECK(seen[index]);
+        }
+    }
+
+    size_t next_cursor = 0U;
+    const size_t focused = p4_signal_scan_select_window(
+        candidates, P4_SIGNAL_SCAN_MAX_CANDIDATES, 0U, 25U,
+        window, &next_cursor);
+    CHECK(focused == P4_GAME_SIGNAL_MAX_RESULTS);
+    CHECK(window[0].token == 25U);
+    for (size_t index = 1U; index < focused; ++index) {
+        CHECK(window[index].token == (uint64_t)index);
+    }
+    CHECK(next_cursor == 7U);
+
+    const size_t absent_focus = p4_signal_scan_select_window(
+        candidates, 10U, 8U, UINT64_C(999), window, &next_cursor);
+    CHECK(absent_focus == P4_GAME_SIGNAL_MAX_RESULTS);
+    CHECK(window[0].token == 9U);
+    CHECK(window[1].token == 10U);
+    CHECK(window[2].token == 1U);
+    CHECK(next_cursor == 6U);
+    (void)memset(window, UINT8_C(0xa5), sizeof(window));
+    CHECK(p4_signal_scan_select_window(
+        candidates, P4_SIGNAL_SCAN_MAX_CANDIDATES + 1U, 0U, 0U,
+        window, &next_cursor) == 0U);
+    CHECK(next_cursor == 0U);
+    CHECK(memcmp(window, empty_results, sizeof(window)) == 0);
+
     if (s_failures != 0) {
         fprintf(stderr, "%d signal scan test failure(s)\n", s_failures);
         return EXIT_FAILURE;

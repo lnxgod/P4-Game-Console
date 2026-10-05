@@ -54,6 +54,33 @@ typedef enum {
 } byte_buddy_morph_t;
 
 typedef enum {
+    BYTE_BUDDY_CARE_FEED = 0,
+    BYTE_BUDDY_CARE_PLAY,
+    BYTE_BUDDY_CARE_CLEAN,
+    BYTE_BUDDY_CARE_REST,
+    BYTE_BUDDY_CARE_PET,
+    BYTE_BUDDY_CARE_COUNT,
+    BYTE_BUDDY_CARE_NONE = UINT8_MAX,
+} byte_buddy_care_kind_t;
+
+typedef enum {
+    REACTION_IDLE = 0,
+    REACTION_FEED,
+    REACTION_PLAY,
+    REACTION_CLEAN,
+    REACTION_REST,
+    REACTION_PET,
+    REACTION_GROW,
+    REACTION_SIGNAL,
+    REACTION_HATCH,
+} buddy_reaction_t;
+
+typedef struct {
+    uint8_t sheet;
+    uint8_t frame;
+} byte_buddy_animation_cell_t;
+
+typedef enum {
     BYTE_BUDDY_TOUCH_NONE = 0,
     BYTE_BUDDY_TOUCH_EXIT,
     BYTE_BUDDY_TOUCH_DRAGON,
@@ -292,6 +319,7 @@ typedef struct {
     uint8_t secondary_hue;
     uint8_t part_diversity;
     uint8_t hue_diversity;
+    uint8_t rarity_diversity;
     uint8_t diversity;
     uint8_t channel_families;
     bool shielded;
@@ -352,6 +380,8 @@ uint8_t byte_buddy_level_for_interactions(uint16_t interactions);
 
 uint16_t byte_buddy_star_fall_speed(uint8_t stage, uint8_t streak);
 
+uint8_t byte_buddy_star_run_reward(uint8_t catches);
+
 int32_t byte_buddy_catcher_step_q16(
     int32_t current_q16, int32_t target_q16,
     int32_t *velocity_q16, uint32_t elapsed_ms);
@@ -370,6 +400,23 @@ byte_buddy_battle_stats_t byte_buddy_battle_stats(
     uint8_t aura_level,
     uint8_t nest_level,
     uint8_t magnet_level);
+
+byte_buddy_battle_stats_t byte_buddy_battle_stats_for_growth(
+    uint16_t growth_credit,
+    uint16_t feed_actions,
+    uint16_t play_actions,
+    uint16_t clean_actions,
+    uint16_t rest_actions,
+    uint16_t pet_actions,
+    uint8_t wings_level,
+    uint8_t aura_level,
+    uint8_t nest_level,
+    uint8_t magnet_level);
+
+bool byte_buddy_care_earns_growth(
+    byte_buddy_care_kind_t care,
+    uint8_t need_before,
+    byte_buddy_care_kind_t previous_credit);
 
 byte_buddy_touch_target_t byte_buddy_touch_target(
     uint16_t x, uint16_t y, bool upgrade_shop,
@@ -398,6 +445,13 @@ byte_buddy_dragon_ability_t byte_buddy_dragon_ability(
 byte_buddy_signal_attack_t byte_buddy_signal_attack_for(
     byte_buddy_signal_encounter_t encounter, uint8_t attack_index);
 
+uint8_t byte_buddy_signal_attack_deck_size(
+    byte_buddy_signal_encounter_t encounter);
+
+uint8_t byte_buddy_signal_reward_coins(
+    byte_buddy_signal_profile_t profile,
+    byte_buddy_signal_encounter_t encounter);
+
 byte_buddy_signal_defense_t byte_buddy_signal_defense(
     byte_buddy_signal_encounter_t encounter,
     byte_buddy_dragon_ability_t ability,
@@ -418,11 +472,40 @@ uint8_t byte_buddy_need_fx_frame(
 uint8_t byte_buddy_activity_fx_frame(
     byte_buddy_activity_fx_t activity, uint8_t phase);
 
+bool byte_buddy_dragon_reaction_frame(
+    byte_buddy_stage_t stage, byte_buddy_morph_t hatch_morph,
+    buddy_reaction_t reaction, uint16_t care_actions,
+    uint32_t reaction_ms, byte_buddy_animation_cell_t *out_cell);
+
+bool byte_buddy_reaction_effect_frame(
+    buddy_reaction_t reaction, uint32_t reaction_ms,
+    byte_buddy_animation_cell_t *out_cell);
+
+buddy_reaction_t byte_buddy_growth_reaction(
+    byte_buddy_stage_t previous_stage, byte_buddy_stage_t next_stage);
+
+bool byte_buddy_reaction_can_advance(
+    bool evolution_active, bool scene_transition_active,
+    bool upgrade_shop, bool signal_hunt,
+    byte_buddy_signal_view_t signal_view);
+
+bool byte_buddy_play_start_ready(
+    bool play_start_pending, bool mini_game,
+    buddy_reaction_t reaction, uint32_t reaction_ms,
+    uint16_t evolution_fx_ms, uint8_t evolution_pending_mask);
+
 uint8_t byte_buddy_signal_player_hp(
     byte_buddy_battle_stats_t stats, uint8_t nest_level,
     byte_buddy_signal_lineage_t lineage);
 
 uint16_t byte_buddy_signal_strike_cooldown_ms(uint8_t speed);
+
+uint16_t byte_buddy_signal_parry_window_ms(
+    byte_buddy_lineage_battle_traits_t traits);
+
+bool byte_buddy_signal_parry_ready(
+    uint16_t time_to_impact_ms,
+    byte_buddy_lineage_battle_traits_t traits);
 
 uint8_t byte_buddy_signal_weave_node_index(
     byte_buddy_signal_genome_t genome, uint8_t step);
@@ -433,6 +516,10 @@ byte_buddy_signal_weave_node_t byte_buddy_signal_weave_node(
 byte_buddy_signal_weave_rules_t byte_buddy_signal_weave_rules(
     byte_buddy_signal_genome_t genome,
     uint8_t strength, uint8_t magnet_level);
+
+byte_buddy_signal_weave_rules_t byte_buddy_signal_weave_rules_for_magic(
+    byte_buddy_signal_genome_t genome,
+    uint8_t strength, uint8_t magnet_level, uint8_t magic);
 
 uint32_t byte_buddy_signal_weave_charge(
     uint32_t charge_units, uint32_t elapsed_ms,

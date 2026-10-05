@@ -127,3 +127,62 @@ bool p4_signal_scan_make_game_signal(
     sanitize_label(ssid, ssid_bytes, out_signal->label);
     return true;
 }
+
+void p4_signal_scan_clear_results(p4_game_signal_snapshot_t *snapshot)
+{
+    if (snapshot == NULL) {
+        return;
+    }
+    snapshot->count = 0U;
+    (void)memset(snapshot->results, 0, sizeof(snapshot->results));
+}
+
+size_t p4_signal_scan_select_window(
+    const p4_game_signal_t *candidates,
+    size_t candidate_count,
+    size_t window_cursor,
+    uint64_t focus_token,
+    p4_game_signal_t *out_results,
+    size_t *next_window_cursor)
+{
+    if (next_window_cursor == NULL) {
+        return 0U;
+    }
+    *next_window_cursor = 0U;
+    if (out_results != NULL) {
+        (void)memset(out_results, 0,
+                     sizeof(*out_results) * P4_GAME_SIGNAL_MAX_RESULTS);
+    }
+    if (out_results == NULL || candidate_count > P4_SIGNAL_SCAN_MAX_CANDIDATES ||
+        (candidate_count != 0U && candidates == NULL)) {
+        return 0U;
+    }
+    if (candidate_count == 0U) {
+        return 0U;
+    }
+
+    const size_t start = window_cursor % candidate_count;
+    size_t output_count = 0U;
+    if (focus_token != 0U) {
+        for (size_t index = 0U; index < candidate_count; ++index) {
+            if (candidates[index].token == focus_token) {
+                out_results[output_count++] = candidates[index];
+                break;
+            }
+        }
+    }
+
+    size_t inspected = 0U;
+    while (inspected < candidate_count &&
+           output_count < P4_GAME_SIGNAL_MAX_RESULTS) {
+        const size_t index = (start + inspected) % candidate_count;
+        ++inspected;
+        if (focus_token != 0U &&
+            candidates[index].token == focus_token) {
+            continue;
+        }
+        out_results[output_count++] = candidates[index];
+    }
+    *next_window_cursor = (start + inspected) % candidate_count;
+    return output_count;
+}

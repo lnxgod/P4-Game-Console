@@ -28,14 +28,34 @@ typedef struct {
 static bool expect_dice;
 static bool fixture_start(p4_game_context_t *context)
 {
-    if (!context || !context->state || context->state_bytes != sizeof(fixture_game_t)) return false;
-    bool granted=(context->services->available_capabilities & P4_GAME_CAP_DICE_ACCESSORY)!=0U;
-    if(granted!=expect_dice) return false;
-    p4_dice_request_t request={.token=1,.count=1,.sides=6,.faces={3},
-        .player_name="TEST",.enabled=true,.can_hold=true};
+    if (context == NULL || context->state == NULL ||
+        context->state_bytes != sizeof(fixture_game_t) ||
+        context->services == NULL) {
+        return false;
+    }
+    const bool granted = (context->services->available_capabilities &
+                          P4_GAME_CAP_DICE_ACCESSORY) != 0U;
+    if (granted != expect_dice) {
+        return false;
+    }
+    const p4_dice_request_t request = {
+        .token = 1, .count = 1, .sides = 6, .faces = {3},
+        .player_name = "TEST", .enabled = true, .can_hold = true,
+    };
     p4_dice_status_t status;
-    bool exchanged=p4_game_dice_exchange(context,&request,&status);
-    return exchanged==expect_dice && (!exchanged || (status.hold_changed && status.held_mask==1));
+    const bool exchanged = p4_game_dice_exchange(context, &request, &status);
+    if (exchanged != expect_dice ||
+        (exchanged && (!status.hold_changed || status.held_mask != 1))) {
+        return false;
+    }
+    if ((context->services->available_capabilities &
+         P4_GAME_CAP_SAVE) != 0U) {
+        return context->services->save_data == NULL &&
+            context->services->save_bytes == 0U &&
+            context->services->save_schema_version == 0U &&
+            context->services->save_sequence == 17U;
+    }
+    return true;
 }
 
 static p4_game_result_t fixture_update(
@@ -223,6 +243,7 @@ static int run_with_size(uint32_t struct_bytes)
         .read_save_status = fixture_read_save,
         .dice_exchange = legacy_dice,
         .dice_exchange_v2 = fixture_dice,
+        .save_sequence = 17U,
     };
     char *arguments[] = {(char *)(void *)&host};
     const int result = app_main(1, arguments);

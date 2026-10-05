@@ -24,6 +24,22 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
 endif()
 add_test(NAME byte_buddy_tests COMMAND byte_buddy_tests)
 
+add_executable(byte_buddy_save_tests test_byte_buddy_save.c)
+target_link_libraries(byte_buddy_save_tests PRIVATE byte_buddy)
+target_include_directories(byte_buddy_save_tests PRIVATE
+    "${CMAKE_CURRENT_LIST_DIR}/../src")
+target_compile_features(byte_buddy_save_tests PRIVATE c_std_11)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(byte_buddy_save_tests PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer
+    )
+    target_link_options(byte_buddy_save_tests PRIVATE
+        -fsanitize=address,undefined
+    )
+endif()
+add_test(NAME byte_buddy_save_tests COMMAND byte_buddy_save_tests)
+
 add_executable(byte_buddy_touch_previews ../tools/render_touch_previews.c)
 target_link_libraries(byte_buddy_touch_previews PRIVATE byte_buddy p4_game_api)
 target_include_directories(byte_buddy_touch_previews PRIVATE
@@ -54,6 +70,9 @@ add_test(
         "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-signals.ppm"
         "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-track.ppm"
         "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-battle.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-training.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-training-track.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-training-battle.ppm"
 )
 
 add_test(
@@ -72,7 +91,8 @@ add_test(
         "${BYTE_BUDDY_TEST_ART_PATH}"
         --signal-motion
         -
-        905
+        # Need-qualified Feed/Clean/Rest/Pet seeding fixes this motion budget.
+        955
 )
 set_tests_properties(byte_buddy_signal_motion_preview_smoke PROPERTIES
     TIMEOUT 30)
@@ -86,4 +106,27 @@ add_test(
         112
 )
 set_tests_properties(byte_buddy_authored_motion_preview_smoke PROPERTIES
+    TIMEOUT 60)
+
+add_test(
+    NAME byte_buddy_completion_motion_preview_smoke
+    COMMAND byte_buddy_touch_previews
+        "${BYTE_BUDDY_TEST_ART_PATH}"
+        --completion-motion
+        -
+        192
+)
+set_tests_properties(byte_buddy_completion_motion_preview_smoke PROPERTIES
+    TIMEOUT 60)
+
+add_test(
+    NAME byte_buddy_runtime_completion_motion_preview_smoke
+    COMMAND byte_buddy_touch_previews
+        "${BYTE_BUDDY_TEST_ART_PATH}"
+        --runtime-completion-motion
+        -
+        180
+)
+set_tests_properties(
+    byte_buddy_runtime_completion_motion_preview_smoke PROPERTIES
     TIMEOUT 60)

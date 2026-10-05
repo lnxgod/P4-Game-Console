@@ -26,12 +26,36 @@ PACKED_FRAME_BYTES = FRAME_WIDTH * FRAME_HEIGHT // 2
 SIGNAL_GENOME_SHEET_INDEX = 24
 SIGNAL_CITY_PROPS_SHEET_INDEX = 25
 SIGNAL_LINEAGE_BADGES_SHEET_INDEX = 27
+SIGNAL_ENVIRONMENT_CHROME_SHEET_INDEX = 29
+DRAGON_FEED_ACTIONS_SHEET_INDEX = 31
+DRAGON_PLAY_ACTIONS_SHEET_INDEX = 32
+DRAGON_CLEAN_ACTIONS_SHEET_INDEX = 33
+DRAGON_REST_ACTIONS_SHEET_INDEX = 34
+DRAGON_PET_ACTIONS_SHEET_INDEX = 35
+DRAGON_GROW_ACTIONS_SHEET_INDEX = 36
+DRAGON_SIGNAL_ACTIONS_SHEET_INDEX = 37
+DRAGON_HATCH_NEBULA_CYCLES_SHEET_INDEX = 38
+DRAGON_HATCH_SUNGOLD_CYCLES_SHEET_INDEX = 39
+DRAGON_HATCH_JADE_CYCLES_SHEET_INDEX = 40
+DRAGON_HATCH_GLACIER_CYCLES_SHEET_INDEX = 41
 LARGE_BACKGROUND_COMPONENT_PIXELS = 64
 PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 ENCLOSED_BACKGROUND_SHEET_INDEXES = frozenset({
     SIGNAL_GENOME_SHEET_INDEX,
     SIGNAL_CITY_PROPS_SHEET_INDEX,
     SIGNAL_LINEAGE_BADGES_SHEET_INDEX,
+    SIGNAL_ENVIRONMENT_CHROME_SHEET_INDEX,
+    DRAGON_FEED_ACTIONS_SHEET_INDEX,
+    DRAGON_PLAY_ACTIONS_SHEET_INDEX,
+    DRAGON_CLEAN_ACTIONS_SHEET_INDEX,
+    DRAGON_REST_ACTIONS_SHEET_INDEX,
+    DRAGON_PET_ACTIONS_SHEET_INDEX,
+    DRAGON_GROW_ACTIONS_SHEET_INDEX,
+    DRAGON_SIGNAL_ACTIONS_SHEET_INDEX,
+    DRAGON_HATCH_NEBULA_CYCLES_SHEET_INDEX,
+    DRAGON_HATCH_SUNGOLD_CYCLES_SHEET_INDEX,
+    DRAGON_HATCH_JADE_CYCLES_SHEET_INDEX,
+    DRAGON_HATCH_GLACIER_CYCLES_SHEET_INDEX,
 })
 EXPECTED_SHEETS = (
     "byte_buddy_signal_counter_fx_imagegen_v11.png",
@@ -63,6 +87,19 @@ EXPECTED_SHEETS = (
     "byte_buddy_reaction_fx_imagegen_v8.png",
     "byte_buddy_signal_lineage_badges_imagegen_v9.png",
     "byte_buddy_signal_attack_cycles_imagegen_v10.png",
+    "byte_buddy_signal_environment_chrome_imagegen_v18.png",
+    "byte_buddy_action_signature_fx_imagegen_v19.png",
+    "byte_buddy_dragon_feed_actions_imagegen_v20.png",
+    "byte_buddy_dragon_play_actions_imagegen_v20.png",
+    "byte_buddy_dragon_clean_actions_imagegen_v20.png",
+    "byte_buddy_dragon_rest_actions_imagegen_v20.png",
+    "byte_buddy_dragon_pet_actions_imagegen_v20.png",
+    "byte_buddy_dragon_grow_actions_imagegen_v20.png",
+    "byte_buddy_dragon_signal_actions_imagegen_v20.png",
+    "byte_buddy_dragon_hatch_nebula_cycles_imagegen_v21.png",
+    "byte_buddy_dragon_hatch_sungold_cycles_imagegen_v21.png",
+    "byte_buddy_dragon_hatch_jade_cycles_imagegen_v21.png",
+    "byte_buddy_dragon_hatch_glacier_cycles_imagegen_v21.png",
 )
 
 

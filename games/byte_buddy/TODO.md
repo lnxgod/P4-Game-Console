@@ -4,7 +4,103 @@ This is the working list for the Dragon game's fluidity, pacing, progression,
 and new art. Keep gameplay changes deterministic and bounded on the 320x200
 P4 Game API surface.
 
-## Full graphics v4 pass
+## v4.3.1 Signal Hunt repair
+
+- [x] Keep Signal Hunt playable without the optional OS scan capability by
+      loading five plainly labeled offline drills through the complete authored
+      signal-creature and battle renderer.
+- [x] Cover both battle modes, all four attacks, all four passives, and all four
+      channel arenas in the bounded training roster.
+- [x] Isolate drill completion from real Link history, lineage, DNA, Sparks,
+      growth, saves, and persistent signal achievements; make **Reset Drill**
+      replay the roster honestly.
+- [x] Bound accepted scans to five seconds, ignore late stale SCANNING
+      snapshots after timeout, and provide an explicit retry state.
+- [x] Buffer Signal Hunt navigation across Play reaction completion and queued
+      growth ceremonies without rolling back the already committed care action.
+- [x] Add sanitizer regressions for no-capability play, drill completion/reset,
+      trait coverage, stale-SCANNING timeout/retry, controller/touch interruption,
+      reaction-boundary input, and growth-ceremony input.
+- [x] Render and inspect the training list, tracker, and battle at 320x200.
+- [x] Reproduce the v4.3.1 `.P4G` and unchanged v4.3 `.P4R` byte-identically
+      twice, record their exact identities, and pass the host package gates.
+- [ ] Install the matched v4.3.1 `.P4G` with the unchanged v4.3 `.P4R` through
+      the guarded H2 transfer route, then complete named tablet acceptance.
+
+## v4.3 full action and hatch art
+
+- [x] Generate and visually inspect twelve original 4-by-4 masters: one
+      transparent signature-FX sheet, seven stage-aware action sheets, and
+      four morph-specific hatch sheets.
+- [x] Append the v19-v21 sources at stable indices 30-41 and make the converter
+      require the exact 42-sheet/672-frame order without renumbering v4.2 art.
+- [x] Apply bounded enclosed-background cleanup to every new opaque neutral
+      checkerboard master while preserving the transparent signature-FX source.
+- [x] Record all twelve source SHA-256 identities, exact cell semantics,
+      generation provenance, prompt briefs, and the no-placeholder compositing
+      contract.
+- [x] Rebuild the atlas twice to byte-identical outputs; verify the
+      1,397,824-byte raw payload and 1,397,952-byte wrapped `.P4R` geometry.
+- [x] Route every care, pet, growth, signal, reaction, and hatch state through
+      the new authored cells, with the existing genetic and habitat overlays.
+- [x] Extend deterministic host coverage for all new frame routes, malformed
+      42-sheet banks, stage/action selection, morph hatching, and clip exits.
+- [x] Build and independently verify a matched v4.3 `.P4G`/`.P4R` pair before
+      transfer; do not reuse the verified v4.2 cartridge with the new sidecar.
+- [ ] Complete named SDL and physical-tablet animation acceptance before
+      describing v4.3 as play-tested, hardware-tested, or deployed.
+      The 2026-09-02 pink-unit H1 preflight stopped with P4R status 9 before
+      sending any payload; expose and identity-bind pink H2 USB Drive mode for
+      the guarded non-flash bundle install before tablet acceptance.
+
+## v4.2 integration
+
+- [x] Add and integrate the original v18 environment/chrome atlas for Signal
+      City skyline, moon, towers, rooftop nest, scene gates, and arena overlays;
+      require the exact 30-sheet/480-frame bank with no placeholder path.
+- [x] Record the 998,464-byte raw art-bank SHA-256
+      `d52392ffd7794618ae0e8b6f657d60fa07703629a81eb94619bd69bc84d1b0db`
+      and v18 source SHA-256
+      `3e78e93b0f36e68f23004b72a6c91650a152949c8f67c5556756a1bf7566ab79`.
+- [x] Give each signal a bounded attack deck, make Comet spike on every third
+      Comet occurrence, reverse Shift decks on alternate cycles, and keep Pulse
+      Strike within its 260–360 ms animation-safe cooldown.
+- [x] Gate Aura Guard to the real displayed time-to-impact window and keep the
+      authored tell, travel, impact, counter, and resolution order coherent.
+- [x] Bound Star Catcher's once-per-run wallet reward to zero or 2–6 coins and
+      split Signal Battle rewards into non-spendable session-only Sparks.
+- [x] Integrate the optional version-1 general-profile save for needs, wallet,
+      care growth/counts, upgrades, Style, and general achievements while
+      excluding all signal identity, history, lineage, growth, achievements,
+      and Sparks.
+- [x] Build and independently verify the matched v4.2 `.P4G`/`.P4R` pair; record
+      exact package sizes and hashes before transfer.
+- [ ] Complete named human SDL acceptance, then use the guarded H2 full-bundle
+      route for the paired canary install and retained-log tablet acceptance.
+
+## Historical graphics-polish v4.1 candidate
+
+- [x] Make Ward, Echo, Siphon, and Overclock animation event-driven so authored
+      trigger/fade frames correspond to real battle mechanics.
+- [x] Align dragon clip changes to complete loops, keep calm reactions out of
+      attack poses, and remove wrap/reset pops from particles, trails, city
+      stars, habitat orbits, and Star Catcher streaks.
+- [x] Compose core, halo, sigil, aura, hue, rarity, habitat, and shield/phantom
+      details into every compact signal icon instead of dropping layers at
+      list scale.
+- [x] Make the Genome art use the lineage traits shown in its text, including
+      rarity and band diversity, with a truthful dormant state.
+- [x] Capture actual passive procs, add pairwise visual-distinction checks for
+      every genome dimension and all twenty habitats, and inspect the complete
+      112-frame authored route.
+- [x] Pass the focused ASan/UBSan game suite (5/5), SDL host smoke/save suite
+      (2/2), and visual review without adding placeholder art or another atlas.
+- [x] Build and verify the deterministic v4.1 `.P4G` candidate and run the
+      manifest/registry gate.
+- [ ] Complete named human SDL and physical-tablet acceptance before deploying
+      or describing v4.1 as play-tested or hardware-tested.
+
+## Historical full-graphics v4 pass
 
 - [x] Audit every reachable care, activity, shop, growth, scan, tracker,
       battle, reward, loss, lineage, and transition state for missing authored
@@ -115,7 +211,7 @@ P4 Game API surface.
 - [x] Generate and inspect an original crop-safe 4x4 signal-attack atlas with
       chronological Arc Burst, Prism Lance, Thorn Snare, and Comet Crash rows.
 - [x] Append the attack atlas at stable sheet index 28 and regenerate the
-      deterministic 29-sheet/464-frame `.P4R` payload twice byte-identically.
+      historical v3.9 29-sheet/464-frame `.P4R` payload twice byte-identically.
 - [x] Combine attack, passive, weakness, channel arena, rarity, hue, and
       protected/hidden traits into bounded deterministic encounter genomes;
       keep labels and raw MAC/BSSID data out of every derivation helper.
@@ -130,9 +226,9 @@ P4 Game API surface.
 - [x] Prove frame-chunk-independent battle ordering: rune capture before a
       lethal impact wins, an exact tie loses, and every animation/status timer
       consumes only the time after its event.
-- [x] Render and inspect the legacy 178-frame route plus the exact 905-frame
-      Signal Battle chronology under ASan/UBSan; run the SDL host smoke and
-      save-contract tests.
+- [x] Render and inspect the legacy 178-frame route plus the historical v3.9
+      905-frame Signal Battle chronology under ASan/UBSan; run the SDL host
+      smoke and save-contract tests.
 - [x] Build the v3.9 RISC-V cartridge and `.P4R` twice with the pinned compiler,
       verify byte identity and package structure, and record all final hashes.
 - [x] Document a paired-file canary/rollback plan for pink Waveshare unit 1,
@@ -155,22 +251,29 @@ P4 Game API surface.
 - [ ] Tune Star Catcher round length, reward frequency, and touch spring after play feedback.
 - [ ] Add a short first-session tutorial that disappears after the first successful catch.
 - [ ] Add explicit non-development stage preview access before a release candidate.
-- [ ] Decide whether session progress should opt into the reviewed save service on boards
-      that expose it; Byte Buddy's required art sidecar remains read-only and does not
-      authorize writable progress storage.
+- [x] Opt ordinary pet progress into the optional reviewed save service on
+      boards that expose it; the required art sidecar remains read-only and the
+      game still works with session-only ordinary progress when save is absent.
 - [x] Add a second Signal Battle pattern so encounters are not only rapid tapping.
-- [ ] Reconcile the public session-token contract with the device-key behavior
-      before considering durable lineages or writable save integration.
+- [ ] Design and review a game-scoped durable identity ABI before persisting
+      signal tokens, duplicate history, lineage, signal growth/achievements, or
+      Sparks. Provider-side device-key stability alone is not game persistence.
 - [x] Distinguish a transient busy scan request from true radio unavailability
       inside Byte Buddy without discarding a selectable valid snapshot.
-- [ ] Clear stale results in the platform provider's ERROR snapshot before the
+- [x] Clear stale results in the platform provider's ERROR snapshot before the
       Game API validator reads it; keep the approved Waveshare scan named-only.
 - [x] Add Signal Hunt paging so all eight bounded OS results are selectable.
 - [ ] Perform named tablet acceptance for touch feel, panel motion, speaker feedback,
       launcher return, and exact `.P4G`/`.P4R` hashes before calling the work hardware-tested.
-- [ ] After named human SDL and tablet acceptance, preserve the v3.9 rollback
-      pair and canary-install the matched v4 `.P4G`/`.P4R` pair through H2 USB
-      Drive or a powered-off microSD reader with separate authorization.
+- [x] Build the matched v4.2 `.P4R`/`.P4G` pair twice with the pinned Waveshare
+      pipeline and verify its package geometry, payload hashes, registry, and
+      no-flash Console OS bundle.
+- [ ] Connect protocol-2 pink unit 1, preserve the rollback pair, and
+      canary-install matched v4.2 `.P4R` then `.P4G` through H1; pull both files
+      back and verify their hashes before launch. The 2026-08-31 attempt stopped
+      without mutation when connected green unit 2 returned unsupported for P4R;
+      the exact preflight is in
+      `hardware/test-runs/2026-08-31-waveshare-unit2-byte-buddy-v4.2-h1-preflight.json`.
 
 ## Balance targets
 
@@ -180,3 +283,9 @@ P4 Game API surface.
   miss or calm-crystal catch, and has a hard speed cap.
 - Frame-rate changes do not change catcher or falling-item speed.
 - A new player can earn an upgrade in the first session without the economy exploding.
+- Star Catcher grants its wallet reward once per completed run: zero for no
+  catches, otherwise a bounded 2–6 coins.
+- Signal victories grant only session Sparks; they never inflate the spendable
+  wallet or survive relaunch.
+- Full or rapidly repeated care still animates and restores needs, but only
+  need-qualified actions at the 650 ms cadence advance growth.

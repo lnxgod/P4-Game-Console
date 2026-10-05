@@ -53,8 +53,7 @@ static bool save_snapshot_valid(const p4_game_services_t *services)
 {
     if (services->save_bytes == 0U) {
         return services->save_data == NULL &&
-            services->save_schema_version == 0U &&
-            services->save_sequence == 0U;
+            services->save_schema_version == 0U;
     }
     return services->save_data != NULL &&
         services->save_bytes <= P4_GAME_SAVE_MAX_BYTES &&
