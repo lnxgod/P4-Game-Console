@@ -5640,7 +5640,11 @@ static void draw_file_transfer(const console_shell_t *shell,
             ? "P4G"
             : shell->runtime.file_transfer_class ==
                     CONSOLE_FILE_TRANSFER_CLASS_EXCHANGE
-                ? "EXCHANGE" : "NONE";
+                ? "EXCHANGE"
+                : shell->runtime.file_transfer_class == CONSOLE_FILE_TRANSFER_CLASS_P4R
+                    ? "P4R"
+                    : shell->runtime.file_transfer_class == CONSOLE_FILE_TRANSFER_CLASS_P4CART
+                        ? "P4CART" : "NONE";
     char detail[48];
     (void)snprintf(
         detail, sizeof(detail), "%s %s  %lu/%lu BYTES",

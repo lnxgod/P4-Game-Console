@@ -20,7 +20,7 @@ COMMIT_RE = re.compile(r"^[0-9a-f]{40}$")
 SHA256_RE = re.compile(r"^[0-9a-f]{64}$")
 SAFE_TEXT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9 ._+()/:-]{0,95}$")
 INPUTS = {"touch", "gamepad", "keyboard", "mouse"}
-TRANSFERS = {"usb-device-msc", "powered-off-removable-media"}
+TRANSFERS = {"usb-device-msc", "powered-off-removable-media", "native-usb-serial"}
 
 
 def die(message: str) -> NoReturn:

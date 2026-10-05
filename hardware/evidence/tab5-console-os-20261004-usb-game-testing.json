@@ -1,0 +1,452 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-10-05T04:31:24.672670+00:00",
+  "board": "m5stack-tab5",
+  "source_base_commit": "80184ff8d8db",
+  "source_files": {
+    "components/platform_tab5/src/tab5.c": "a1f104bf843915c1d09d1df2960a974e1917a7a08fb89a8dac877816aca5eaf6",
+    "components/platform_display/src/platform_display_tab5.c": "1c9af637aa05fa471d1374a987b70bc0ae1563ae3ecbb0cb819e92fc5de59161",
+    "components/platform_game_storage/src/platform_game_storage.c": "1b37e9365c3853266e4a13dece104fe930a8aa14240fb65193ed23f6067b6817",
+    "components/platform_display/CMakeLists.txt": "2dd04f4e5d48c178d9e21b99fe29177e42eaaf98bca061d153591c3cc05386f8",
+    "apps/console_os/main/console_os_main.c": "fa7c103592e81531388688a3c1cd0ed568d912bfafde702668e0249c6c26ccbe",
+    "components/p4_multiplayer/src/uart_endpoint_dual.c": "3fd4d30892fcaa982049b970bf224e79b6ac3dd6d4f1ab1f0bdb0293db39ffc8",
+    "components/p4_multiplayer/CMakeLists.txt": "42ef67727f7f68b491717baa43bc1c48e8095b49740fb8f4024786adf2fa0949",
+    "components/p4_usb_content_transfer/include/p4/file_transfer.h": "573143168024cc1b5235ce9cfe4075584d3462adaba4e442875ecc7d023f7342",
+    "components/p4_usb_content_transfer/src/file_transfer.c": "e6c1d5e6ec85124b074baf6d4d2e9abc71f704f6ce0f08b58a91e895e3ed3cfe",
+    "components/p4_usb_content_transfer/src/content_transfer.c": "9b83702e8bf4b67d64079fb2a083d295c6b2ebca450839ac3f898c6b0cc3e497",
+    "components/console_shell/include/console/shell.h": "1b13c74e6f7ec1aea08a6a3abbdca8b05eb73fea29dbcec3f6019a3613771aa0",
+    "components/console_shell/src/console_shell.c": "a271f5be3418647553011801d0f13746a4d21d4b3ba6475ce8a4987c578d140a",
+    "scripts/p4-transfer.py": "9c4e3060884fc3a840fb05ed19f01c6bc1a5ef8e4bd3a04fab136e370b773294",
+    "scripts/p4-usb-content.py": "abdabbdf968fee2dc697554d6af123288305750eb4d0407078c07cb756f240ed"
+  },
+  "application": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 1382368,
+    "sha256": "d7c3c8140addc23ab18bd3989034b41cc1b16cc21eb5ca15730bf4501c3bcc4b"
+  },
+  "authorization": {
+    "file": "hardware/evidence/tab5-console-os-20261004-usb-bundle-authorization.json",
+    "bytes": 8015,
+    "sha256": "ae8f7e8b19f201877089c5dd5308bde3b0ab2ceac71522f393b06e6c9fc6250b"
+  },
+  "toolchain": {
+    "schema": 1,
+    "esp_idf": {
+      "version": "5.5.3",
+      "git_tag": "v5.5.3",
+      "git_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+      "repository": "https://github.com/espressif/esp-idf.git"
+    },
+    "target": {
+      "chip": "esp32p4",
+      "silicon_family": "revision_1_x",
+      "min_revision_full": 100,
+      "max_revision_full": 199
+    },
+    "managed_components": {
+      "espressif/esp_codec_dev": "1.5.4",
+      "espressif/esp_hosted": "1.4.7",
+      "espressif/esp_lcd_lt8912b": "0.2.0",
+      "espressif/esp_tinyusb": "2.0.1",
+      "espressif/esp_wifi_remote": "0.14.5",
+      "espressif/usb": "1.5.0",
+      "espressif/usb_host_hid": "1.2.0"
+    },
+    "policy": {
+      "commit_dependencies_lock": true,
+      "upgrade_only_with_hardware_regression": true
+    }
+  },
+  "fixture": "Mac native USB-C Serial/JTAG; both cards stayed in the tablets; no USB-A host power",
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "chip_revision": "v1.3",
+      "flash_bytes": 16777216,
+      "psram_bytes": 33554432,
+      "pcb_revision": "unconfirmed suffix; scoped common C145 interfaces",
+      "panel": "ST7121 firmware 1 (1.80.1.16)",
+      "sd_capacity_bytes": 16012804096,
+      "install_receipt": {
+        "file": "hardware/backups/tab5-a-install-p15tt3oj/receipt.json",
+        "bytes": 1554,
+        "sha256": "d9267782329e86676d4c0c06e1a2b9ea8d58e01477c8c6a59f5cf3c22457f8f4"
+      },
+      "install_runtime": {
+        "file": "hardware/backups/tab5-a-install-p15tt3oj/runtime.log",
+        "bytes": 9301,
+        "sha256": "74c451ad8611ce6846774714a3da2a4b6a7eb8e41f2cf3dd944be89fa281e9be"
+      },
+      "post_install_runtime": {
+        "file": "hardware/backups/tab5-a-install-p15tt3oj/catalog-runtime.log",
+        "bytes": 10548,
+        "sha256": "957d5172ab881cd0760ff73f49289a1373380eb29860b2850fdd3039a7062467"
+      },
+      "bundle_transfer": {
+        "file": "hardware/backups/tab5-a-install-p15tt3oj/bundle-usb.log",
+        "bytes": 14904,
+        "sha256": "38bec3191232046f2ee210d4f9e3f71d5843dcaa96b6a9c0c19a28a4a734d839"
+      },
+      "bundle_files": [
+        {
+          "name": "BYTEBUD.P4R",
+          "bytes": 1397952,
+          "sha256": "6a7b7dafe0dd5565a867268e5c7e9a53feecbdd80e5c7b8d6e110598963fd698"
+        },
+        {
+          "name": "ASTER2.P4G",
+          "bytes": 148236,
+          "sha256": "4c3b8fa778debc603cd8f45c366fc8278017e50a96ce391dda302c7e9ce584d5"
+        },
+        {
+          "name": "ASTEROID.P4G",
+          "bytes": 173636,
+          "sha256": "f23d65af44f94a673b9aacd3d37c67bec7b01cdff8377423cb3e11afe94d28be"
+        },
+        {
+          "name": "AVTEST.P4G",
+          "bytes": 8740,
+          "sha256": "c13f382ed712597265020495e3da2a865393b2cf76c07dd2b8f4b447eef8e5f7"
+        },
+        {
+          "name": "BREAKOUT.P4G",
+          "bytes": 145460,
+          "sha256": "7252a6b14daa5bd8ccf71d607350acf3847fcdac4d86420d2a6dd9362aec8c50"
+        },
+        {
+          "name": "BYTEBUD.P4G",
+          "bytes": 196904,
+          "sha256": "cadc5cdeb4125af00a8bff5a26fd5bc7132d8ae68bf9d70aa82d429ca185bd8d"
+        },
+        {
+          "name": "CALC.P4G",
+          "bytes": 10012,
+          "sha256": "bc95a96349439d59c70a299acc7e52fa3104cbe697aabe272417533b09083794"
+        },
+        {
+          "name": "CHECKERS.P4G",
+          "bytes": 13804,
+          "sha256": "2f9d053fae6ab5a20a6e9769f97337897e3f75587b498b21609e3930d80bf313"
+        },
+        {
+          "name": "COLOR_CLASH.P4G",
+          "bytes": 341432,
+          "sha256": "8660476c2136e9a188af2b99c9a7dbb02546c33ddf0dbb4cd626442d3bc793e1"
+        },
+        {
+          "name": "FROGHOP.P4G",
+          "bytes": 179316,
+          "sha256": "ba9c409a6bb635771dddac8ef4b5f4588d7fd1caea0f5190eeed9649c9d8cdee"
+        },
+        {
+          "name": "INPUT.P4G",
+          "bytes": 8888,
+          "sha256": "48af1a62cae2b9fea0977f4270996bd6a923a833ca830407e78db183aa7f9ad4"
+        },
+        {
+          "name": "INVADERS.P4G",
+          "bytes": 147580,
+          "sha256": "5355c4f5796a3d4bd79f608f8529e9ec5138faaf7cebd8c9add75d025ce35230"
+        },
+        {
+          "name": "LORD.P4G",
+          "bytes": 212012,
+          "sha256": "abd9b2ffa75bb9e2fbc8815840246cf81aad7e5bd1616157bcdbfb61fd584855"
+        },
+        {
+          "name": "MAZE.P4G",
+          "bytes": 147628,
+          "sha256": "c1c523d75888ea6280e883c0338c6a762b5dcdc79148c1f444c9e4eed9b2e097"
+        },
+        {
+          "name": "P4_AIR_HOCKEY.P4G",
+          "bytes": 142788,
+          "sha256": "2368cdf676a504cbf6fe2cc06a3ac3b7260e2cd70b779981014bfaa5551e8301"
+        },
+        {
+          "name": "P4_RUMMY.P4G",
+          "bytes": 27208,
+          "sha256": "c39fc54277193a4e7396b9d234b90038f387a5d3b6e59bb0708f5e048bb9f406"
+        },
+        {
+          "name": "P4_YAHTZEE.P4G",
+          "bytes": 42168,
+          "sha256": "5bdf75bb7a66c3b42c164ea87101ddd6e3c290a5659a1788385698154b873094"
+        },
+        {
+          "name": "SKYLINE.P4G",
+          "bytes": 199784,
+          "sha256": "5efbdef4e50b6c67a100901b730a347c6e1db6d674e2c4ecb469106808851a8a"
+        },
+        {
+          "name": "SOLITAIR.P4G",
+          "bytes": 148016,
+          "sha256": "517b6988103994a26f3abf24d22c1806511a7c2a876be9b129095074a088244f"
+        },
+        {
+          "name": "TEXAS_HOLDEM.P4G",
+          "bytes": 19364,
+          "sha256": "d4e1d652fd01ec45340847cf033565d6153fb1cdafd23e3adc5aab97ab1cb7ee"
+        },
+        {
+          "name": "BOUNCE-LAB.P4CART",
+          "bytes": 6031,
+          "sha256": "943f55008aba146364abd4b61cc6ff81f5b38e87bf65db8c6bd17422ae966682"
+        },
+        {
+          "name": "QR-DODGE.P4CART",
+          "bytes": 4187,
+          "sha256": "15b51f0e374612435390b4aefa87a5ebf5696fe3436bdb91ec0a5bf4e584573a"
+        }
+      ],
+      "serial_markers": [
+        "I (1860) tab5: TAB5 PANEL model=st7121",
+        "I (3054) tab5_display: PPA_READY rotation_ccw=90 viewport=1152x720 shell_scale=3 content_scale=1.5 game_prescale=384x240",
+        "I (3055) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7121 native=720x1280 logical=1280x720 viewport=1152x720+64+0 format=rgb565",
+        "I (3156) tab5_display: FIRST_FRAME elapsed_ticks=51 transform_us=19882 refresh=6",
+        "I (3170) ST7123: Firmware version: 1(1.80.1.16), Max.X: 720, Max.Y: 1280, Max.Touchs: 10",
+        "I (3215) p4_console_os: P4_CONSOLE_OS STORAGE_INIT status=ready result=ESP_OK elapsed_ms=48 worker_low_water_bytes=10048",
+        "I (6580) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_GAME_REGISTERED id=org.p4console.lord title=LORD launcher=112 style=1 protocol=19539 source=validated-p4g-manifest",
+        "I (6582) p4_console_os: P4_CONSOLE_OS GAME_CATALOG available=1 packages=19 valid=19 omitted=0 generation=1 source=microsd-only scan=background worker_low_water_bytes=11416 storage_result=ESP_OK update=0 result=ESP_OK",
+        "I (7326) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (7328) p4_mp_uart: P4_USB_SERIAL_READY transport=native-usb-serial-jtag content=1",
+        "I (7467) p4_console_os: P4_CONSOLE_OS P4CART_READY valid=2 rejected=0 candidates=2 truncated=0 generation=1 worker_low_water_bytes=11620 runtime=p4-lua-5.4-v1 writes=0",
+        "I (17337) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized"
+      ],
+      "native_catalog_valid": 19,
+      "lua_catalog_valid": 2,
+      "flash_readback": "pass",
+      "post_install_boot_health": "pass",
+      "legacy_content_uploads": [
+        {
+          "file": "hardware/backups/tab5-a-install-qbwhozfv/doom-usb.log",
+          "bytes": 1490,
+          "sha256": "f60fdd389434a84c991d68fa0a026e62c0815c25feb86809a59f9a44da896596"
+        },
+        {
+          "file": "hardware/backups/tab5-a-install-qbwhozfv/chex-usb.log",
+          "bytes": 2124,
+          "sha256": "3ad41df90d26bff915927bd001f83b25e197700b21327f8cd7cfdb106bda1d56"
+        }
+      ]
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "chip_revision": "v1.3",
+      "flash_bytes": 16777216,
+      "psram_bytes": 33554432,
+      "pcb_revision": "unconfirmed suffix; scoped common C145 interfaces",
+      "panel": "ST7123 firmware 3 (1.71.1.3)",
+      "sd_capacity_bytes": 32010928128,
+      "install_receipt": {
+        "file": "hardware/backups/tab5-b-install-ut1gd2ij/receipt.json",
+        "bytes": 1554,
+        "sha256": "001c81d842be3f9b0ad3c3d0c5aba206b3781c85196af203404e5b22d54097df"
+      },
+      "install_runtime": {
+        "file": "hardware/backups/tab5-b-install-ut1gd2ij/runtime.log",
+        "bytes": 10630,
+        "sha256": "e5925cf6003e7a6cf5c008990d3925cbdd672e8817562b592e8d7571a2bef9e6"
+      },
+      "post_install_runtime": {
+        "file": "hardware/backups/tab5-b-install-ut1gd2ij/catalog-runtime.log",
+        "bytes": 10655,
+        "sha256": "30a753a0beb008fd64bfb9c998b1354736a120ec3a6e923d47d61669c11ddab0"
+      },
+      "bundle_transfer": {
+        "file": "hardware/backups/tab5-b-install-ut1gd2ij/bundle-usb.log",
+        "bytes": 14034,
+        "sha256": "1439d36fa014d90a9c9253fb8a8123616691e6a2cb657b0935c04a14aad14271"
+      },
+      "bundle_files": [
+        {
+          "name": "BYTEBUD.P4R",
+          "bytes": 1397952,
+          "sha256": "6a7b7dafe0dd5565a867268e5c7e9a53feecbdd80e5c7b8d6e110598963fd698"
+        },
+        {
+          "name": "ASTER2.P4G",
+          "bytes": 148236,
+          "sha256": "4c3b8fa778debc603cd8f45c366fc8278017e50a96ce391dda302c7e9ce584d5"
+        },
+        {
+          "name": "ASTEROID.P4G",
+          "bytes": 173636,
+          "sha256": "f23d65af44f94a673b9aacd3d37c67bec7b01cdff8377423cb3e11afe94d28be"
+        },
+        {
+          "name": "AVTEST.P4G",
+          "bytes": 8740,
+          "sha256": "c13f382ed712597265020495e3da2a865393b2cf76c07dd2b8f4b447eef8e5f7"
+        },
+        {
+          "name": "BREAKOUT.P4G",
+          "bytes": 145460,
+          "sha256": "7252a6b14daa5bd8ccf71d607350acf3847fcdac4d86420d2a6dd9362aec8c50"
+        },
+        {
+          "name": "BYTEBUD.P4G",
+          "bytes": 196904,
+          "sha256": "cadc5cdeb4125af00a8bff5a26fd5bc7132d8ae68bf9d70aa82d429ca185bd8d"
+        },
+        {
+          "name": "CALC.P4G",
+          "bytes": 10012,
+          "sha256": "bc95a96349439d59c70a299acc7e52fa3104cbe697aabe272417533b09083794"
+        },
+        {
+          "name": "CHECKERS.P4G",
+          "bytes": 13804,
+          "sha256": "2f9d053fae6ab5a20a6e9769f97337897e3f75587b498b21609e3930d80bf313"
+        },
+        {
+          "name": "COLOR_CLASH.P4G",
+          "bytes": 341432,
+          "sha256": "8660476c2136e9a188af2b99c9a7dbb02546c33ddf0dbb4cd626442d3bc793e1"
+        },
+        {
+          "name": "FROGHOP.P4G",
+          "bytes": 179316,
+          "sha256": "ba9c409a6bb635771dddac8ef4b5f4588d7fd1caea0f5190eeed9649c9d8cdee"
+        },
+        {
+          "name": "INPUT.P4G",
+          "bytes": 8888,
+          "sha256": "48af1a62cae2b9fea0977f4270996bd6a923a833ca830407e78db183aa7f9ad4"
+        },
+        {
+          "name": "INVADERS.P4G",
+          "bytes": 147580,
+          "sha256": "5355c4f5796a3d4bd79f608f8529e9ec5138faaf7cebd8c9add75d025ce35230"
+        },
+        {
+          "name": "LORD.P4G",
+          "bytes": 212012,
+          "sha256": "abd9b2ffa75bb9e2fbc8815840246cf81aad7e5bd1616157bcdbfb61fd584855"
+        },
+        {
+          "name": "MAZE.P4G",
+          "bytes": 147628,
+          "sha256": "c1c523d75888ea6280e883c0338c6a762b5dcdc79148c1f444c9e4eed9b2e097"
+        },
+        {
+          "name": "P4_AIR_HOCKEY.P4G",
+          "bytes": 142788,
+          "sha256": "2368cdf676a504cbf6fe2cc06a3ac3b7260e2cd70b779981014bfaa5551e8301"
+        },
+        {
+          "name": "P4_RUMMY.P4G",
+          "bytes": 27208,
+          "sha256": "c39fc54277193a4e7396b9d234b90038f387a5d3b6e59bb0708f5e048bb9f406"
+        },
+        {
+          "name": "P4_YAHTZEE.P4G",
+          "bytes": 42168,
+          "sha256": "5bdf75bb7a66c3b42c164ea87101ddd6e3c290a5659a1788385698154b873094"
+        },
+        {
+          "name": "SKYLINE.P4G",
+          "bytes": 199784,
+          "sha256": "5efbdef4e50b6c67a100901b730a347c6e1db6d674e2c4ecb469106808851a8a"
+        },
+        {
+          "name": "SOLITAIR.P4G",
+          "bytes": 148016,
+          "sha256": "517b6988103994a26f3abf24d22c1806511a7c2a876be9b129095074a088244f"
+        },
+        {
+          "name": "TEXAS_HOLDEM.P4G",
+          "bytes": 19364,
+          "sha256": "d4e1d652fd01ec45340847cf033565d6153fb1cdafd23e3adc5aab97ab1cb7ee"
+        },
+        {
+          "name": "BOUNCE-LAB.P4CART",
+          "bytes": 6031,
+          "sha256": "943f55008aba146364abd4b61cc6ff81f5b38e87bf65db8c6bd17422ae966682"
+        },
+        {
+          "name": "QR-DODGE.P4CART",
+          "bytes": 4187,
+          "sha256": "15b51f0e374612435390b4aefa87a5ebf5696fe3436bdb91ec0a5bf4e584573a"
+        }
+      ],
+      "serial_markers": [
+        "I (1860) tab5: TAB5 PANEL model=st7123",
+        "I (2329) tab5_display: PPA_READY rotation_ccw=90 viewport=1152x720 shell_scale=3 content_scale=1.5 game_prescale=384x240",
+        "I (2329) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7123 native=720x1280 logical=1280x720 viewport=1152x720+64+0 format=rgb565",
+        "I (2430) tab5_display: FIRST_FRAME elapsed_ticks=50 transform_us=20154 refresh=6",
+        "I (2444) ST7123: Firmware version: 3(1.71.1.3), Max.X: 720, Max.Y: 1280, Max.Touchs: 10",
+        "I (2487) p4_console_os: P4_CONSOLE_OS STORAGE_INIT status=ready result=ESP_OK elapsed_ms=47 worker_low_water_bytes=10048",
+        "I (5626) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_GAME_REGISTERED id=org.p4console.lord title=LORD launcher=112 style=1 protocol=19539 source=validated-p4g-manifest",
+        "I (5628) p4_console_os: P4_CONSOLE_OS GAME_CATALOG available=1 packages=21 valid=21 omitted=0 generation=1 source=microsd-only scan=background worker_low_water_bytes=11416 storage_result=ESP_OK update=0 result=ESP_OK",
+        "I (6373) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (6375) p4_mp_uart: P4_USB_SERIAL_READY transport=native-usb-serial-jtag content=1",
+        "I (6515) p4_console_os: P4_CONSOLE_OS P4CART_READY valid=2 rejected=0 candidates=2 truncated=0 generation=1 worker_low_water_bytes=11620 runtime=p4-lua-5.4-v1 writes=0",
+        "I (16386) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized"
+      ],
+      "native_catalog_valid": 21,
+      "lua_catalog_valid": 2,
+      "flash_readback": "pass",
+      "post_install_boot_health": "pass",
+      "legacy_content_validation": {
+        "log": {
+          "file": "hardware/backups/tab5-b-sd-check-b6yd_u4m/runtime.log",
+          "bytes": 10129,
+          "sha256": "64b47ac659ca0e1bffab291eb3870ffb72835d9e82058844fa47ffab3da7121a"
+        },
+        "marker": "WAD_VALIDATION_COMPLETE generation=1 doom=ready chex=ready full_sha256=1",
+        "note": "Pre-existing data was fully verified before these game-only uploads; this is not engine gameplay acceptance."
+      }
+    }
+  },
+  "acceptance": {
+    "physical_display_touch": "operator confirmed both display/touch; subsequently confirmed B touch after mirror correction",
+    "usb_game_installation": "pass on A and B, 22 files each: 19 native cartridges, one resource sidecar, two Lua cartridges; full validation and readback",
+    "doom_handoff": "prior repeated display-init failure diagnosed and code repaired; fresh engine launch not observed after repair",
+    "audio": "pending; saved boot/game volumes are zero; operator requested to test at game volume 3",
+    "gameplay_and_return": "pending native/Lua/Doom launch, controls, gameplay and return-to-launcher acceptance",
+    "smooth_scrolling": "PPA active; first transforms measured near 20 ms; sustained frame rate, input latency and tearing unmeasured",
+    "other_peripherals": "C6 radio/BLE, USB-A host power, USB Drive/MSC, battery management, camera, microphone, IMU, RTC and expansion remain unqualified/disabled"
+  },
+  "software_validation": [
+    "Locked ESP-IDF 5.5.3 Tab5 build and exact image verifier pass",
+    "26 focused C host tests pass, including shared shell, storage, touch, board, layout and updates",
+    "19 focused Python installer/USB tests pass (5 installer, 6 existing USB control, 4 framing/startup, 4 game formats)",
+    "Board-port contract and board-port tests pass; git diff --check passes",
+    "Full repository check has pre-existing E5 authorization assertion failure; not waived"
+  ],
+  "findings": [
+    {
+      "problem": "B image/touch mirrored",
+      "cause": "ST7123 vendor MADCTL initially sets both mirror bits",
+      "repair": "Match official BSP post-init invert(false)/mirror(false,false)",
+      "acceptance": "operator: touch works, after image 50f3d7b7"
+    },
+    {
+      "problem": "SD boot took about 25 seconds",
+      "repair": "Demand-trigger full WAD validation and skip muted boot animation",
+      "acceptance": "Latest populated startup A 7.326s, B 6.373s; SD initialization A 48ms, B 47ms"
+    },
+    {
+      "problem": "Doom returned to launcher",
+      "failure_log": {
+        "file": "hardware/backups/tab5-b-install-oy0c0zj1/runtime.log",
+        "bytes": 37926,
+        "sha256": "4b0f1c35598fa38036ee9556805ba901121f9d97e485d959793357116f98dbb8"
+      },
+      "cause": "expander Pin[4] can't set level in input mode after launcher releases LCD reset",
+      "repair": "Assert reset through open-drain output, release as input with pull-up; release backlight pin on display teardown",
+      "acceptance": "build-tested and installed; fresh Doom play test pending"
+    },
+    {
+      "problem": "CPU rotation slowed rendering",
+      "repair": "PPA scale/rotate, small CPU prescale for 320x200, queued shell frames with refresh-fenced reuse",
+      "acceptance": "Latest first transforms A 19882us / B 20154us; first presentations A 51ms / B 50ms; no sustained FPS claim"
+    },
+    {
+      "problem": "Connected USB could not install games on Tab5",
+      "repair": "Native Serial/JTAG transport for existing verified transfer services; P4R/P4CART classes and persistent-connection bundle tool",
+      "acceptance": "All 22 bundle files verified on each unit; A Doom/Chex verified through same cable"
+    }
+  ]
+}

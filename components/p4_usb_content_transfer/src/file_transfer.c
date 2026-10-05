@@ -24,6 +24,7 @@
 #include "mbedtls/sha256.h"
 #include "p4/content_catalog.h"
 #include "p4/game_package.h"
+#include "p4/game_resource.h"
 
 enum {
     REQUEST_BYTES = 88,
@@ -285,14 +286,15 @@ static bool request_name(char output[P4_FILE_TRANSFER_NAME_BYTES])
     return true;
 }
 
-static bool p4g_name_valid(const char *name)
+static bool game_name_valid(const char *name, const char *extension)
 {
     const size_t length = strlen(name);
-    if (length < 5U || length > 36U ||
-        strcmp(name + length - 4U, ".P4G") != 0) {
+    const size_t suffix_length = strlen(extension);
+    if (length <= suffix_length || length >= P4_FILE_TRANSFER_NAME_BYTES ||
+        strcmp(name + length - suffix_length, extension) != 0) {
         return false;
     }
-    const size_t base_length = length - 4U;
+    const size_t base_length = length - suffix_length;
     if (base_length > 32U ||
         !((name[0] >= 'A' && name[0] <= 'Z') ||
           (name[0] >= '0' && name[0] <= '9'))) {
@@ -334,8 +336,16 @@ static bool exchange_name_valid(const char *name)
 static p4_file_transfer_status_t prepare_paths(void)
 {
     const char *const suffix =
-        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4G
-            ? "/GAMES" : "/TRANSFER";
+        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_EXCHANGE ? "/TRANSFER" :
+        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4CART ? "/P4/GAMES" : "/GAMES";
+    if (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4CART) {
+        char parent[P4_CONTENT_PATH_BYTES];
+        if (!append_path(parent, sizeof(parent), s_transfer.storage_root, "/P4")) {
+            return P4_FILE_TRANSFER_STATUS_STORAGE;
+        }
+        const p4_file_transfer_status_t parent_status = ensure_directory(parent);
+        if (parent_status != P4_FILE_TRANSFER_STATUS_OK) return parent_status;
+    }
     char directory[P4_CONTENT_PATH_BYTES];
     if (!append_path(directory, sizeof(directory),
                      s_transfer.storage_root, suffix)) {
@@ -499,7 +509,7 @@ static p4_file_transfer_status_t digest_memory(
     return status;
 }
 
-static p4_file_transfer_status_t validate_p4g(
+static p4_file_transfer_status_t validate_native(
     const char *path, uint32_t size)
 {
     uint8_t *package = heap_caps_malloc(
@@ -529,21 +539,33 @@ static p4_file_transfer_status_t validate_p4g(
         (void)esp_task_wdt_reset();
     }
     const bool close_ok = close(descriptor) == 0;
-    p4_game_package_info_t info;
-    p4_file_transfer_status_t status =
-        offset == size && close_ok &&
-        p4_game_package_parse(package, size, &info) ==
-            P4_GAME_PACKAGE_VALID
-            ? P4_FILE_TRANSFER_STATUS_OK
-            : P4_FILE_TRANSFER_STATUS_BAD_PACKAGE;
+    p4_file_transfer_status_t status = P4_FILE_TRANSFER_STATUS_BAD_PACKAGE;
+    uint32_t payload_offset = 0U, payload_bytes = 0U;
+    uint8_t expected_digest[32];
+    if (offset == size && close_ok) {
+        if (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4R) {
+            p4_game_resource_info_t info;
+            if (p4_game_resource_parse(package, size, &info) == P4_GAME_RESOURCE_VALID) {
+                payload_offset = info.payload_offset;
+                payload_bytes = info.payload_bytes;
+                memcpy(expected_digest, info.payload_sha256, 32U);
+                status = P4_FILE_TRANSFER_STATUS_OK;
+            }
+        } else {
+            p4_game_package_info_t info;
+            if (p4_game_package_parse(package, size, &info) == P4_GAME_PACKAGE_VALID) {
+                payload_offset = info.payload_offset;
+                payload_bytes = info.payload_bytes;
+                memcpy(expected_digest, info.payload_sha256, 32U);
+                status = P4_FILE_TRANSFER_STATUS_OK;
+            }
+        }
+    }
     uint8_t payload_digest[32];
     if (status == P4_FILE_TRANSFER_STATUS_OK) {
-        status = digest_memory(
-            package + info.payload_offset,
-            info.payload_bytes, payload_digest);
+        status = digest_memory(package + payload_offset, payload_bytes, payload_digest);
         if (status == P4_FILE_TRANSFER_STATUS_OK &&
-            memcmp(payload_digest, info.payload_sha256,
-                   sizeof(payload_digest)) != 0) {
+            memcmp(payload_digest, expected_digest, sizeof(payload_digest)) != 0) {
             status = P4_FILE_TRANSFER_STATUS_BAD_PACKAGE;
         }
     }
@@ -574,8 +596,16 @@ static p4_file_transfer_status_t validate_path(
         status = P4_FILE_TRANSFER_STATUS_HASH;
     }
     if (status == P4_FILE_TRANSFER_STATUS_OK &&
-        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4G) {
-        status = validate_p4g(path, actual_size);
+        (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4G ||
+         s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4R)) {
+        status = validate_native(path, actual_size);
+    }
+    if (status == P4_FILE_TRANSFER_STATUS_OK &&
+        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4CART) {
+        p4_content_item_t item;
+        if (p4_content_validate_cart_file(path, &item) != P4_CONTENT_OK) {
+            status = P4_FILE_TRANSFER_STATUS_BAD_PACKAGE;
+        }
     }
     if (status == P4_FILE_TRANSFER_STATUS_OK) {
         if (size_out != NULL) {
@@ -852,12 +882,18 @@ static void accept_request(void)
         return;
     }
     if (s_transfer.file_class != P4_FILE_TRANSFER_CLASS_P4G &&
-        s_transfer.file_class != P4_FILE_TRANSFER_CLASS_EXCHANGE) {
+        s_transfer.file_class != P4_FILE_TRANSFER_CLASS_EXCHANGE &&
+        s_transfer.file_class != P4_FILE_TRANSFER_CLASS_P4R &&
+        s_transfer.file_class != P4_FILE_TRANSFER_CLASS_P4CART) {
         reject_request(P4_FILE_TRANSFER_STATUS_UNSUPPORTED);
         return;
     }
     if ((s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4G &&
-         !p4g_name_valid(s_transfer.file_name)) ||
+         !game_name_valid(s_transfer.file_name, ".P4G")) ||
+        (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4R &&
+         !game_name_valid(s_transfer.file_name, ".P4R")) ||
+        (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4CART &&
+         !game_name_valid(s_transfer.file_name, ".P4CART")) ||
         (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_EXCHANGE &&
          !exchange_name_valid(s_transfer.file_name))) {
         reject_request(P4_FILE_TRANSFER_STATUS_BAD_NAME);
@@ -1137,7 +1173,7 @@ esp_err_t p4_file_transfer_init(
     s_transfer.last_status = P4_FILE_TRANSFER_STATUS_OK;
     reset_request_parser();
     ESP_LOGI(TAG,
-             "P4_FILE_TRANSFER READY protocol=%u transport=h1-ch343-uart "
+             "P4_FILE_TRANSFER READY protocol=%u transport=console-link "
              "idle_baud=%u transfer_baud=%u chunk=%u "
              "p4g_max=%u exchange_max=%u",
              (unsigned)P4_FILE_TRANSFER_PROTOCOL_VERSION,

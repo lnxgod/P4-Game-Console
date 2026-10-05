@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Push or pull verified files through a running P4 Console OS H1 port."""
+"""Push or pull verified files through a running P4 Console OS programming USB port."""
 
 from __future__ import annotations
 
 import argparse
+from contextlib import nullcontext
+import importlib.util
+import re
 import binascii
 import glob
 import hashlib
@@ -45,6 +48,9 @@ DIRECTION_UPLOAD = 1
 DIRECTION_DOWNLOAD = 2
 CLASS_P4G = 1
 CLASS_EXCHANGE = 2
+CLASS_P4R = 3
+CLASS_P4CART = 4
+FILE_CLASSES = {"p4g": CLASS_P4G, "exchange": CLASS_EXCHANGE, "p4r": CLASS_P4R, "p4cart": CLASS_P4CART}
 FLAG_REPLACE = 1
 
 STATUS_OK = 0
@@ -199,10 +205,10 @@ class WireReader:
         return result
 
 
-def p4g_name_valid(name: str) -> bool:
-    if not name.endswith(".P4G") or not 5 <= len(name) <= 36:
+def game_name_valid(name: str, extension: str) -> bool:
+    if not name.endswith(extension) or not len(extension) < len(name) < NAME_BYTES:
         return False
-    base = name[:-4]
+    base = name[:-len(extension)]
     return (
         bool(base)
         and len(base) <= 32
@@ -210,6 +216,10 @@ def p4g_name_valid(name: str) -> bool:
         and base.isascii()
         and all(byte.isupper() or byte.isdigit() or byte in "_-" for byte in base)
     )
+
+
+def p4g_name_valid(name: str) -> bool:
+    return game_name_valid(name, ".P4G")
 
 
 def exchange_name_valid(name: str) -> bool:
@@ -224,9 +234,10 @@ def exchange_name_valid(name: str) -> bool:
 
 
 def checked_remote_name(name: str, file_class: int) -> str:
-    valid = p4g_name_valid(name) if file_class == CLASS_P4G else exchange_name_valid(name)
+    extension = {CLASS_P4G: ".P4G", CLASS_P4R: ".P4R", CLASS_P4CART: ".P4CART"}.get(file_class)
+    valid = game_name_valid(name, extension) if extension else exchange_name_valid(name)
     if not valid:
-        kind = "uppercase NAME.P4G" if file_class == CLASS_P4G else "safe basename"
+        kind = f"uppercase NAME{extension}" if extension else "safe basename"
         raise TransferError(f"invalid remote filename {name!r}; expected {kind}")
     return name
 
@@ -253,6 +264,31 @@ def validate_p4g_host(data: bytes) -> None:
         raise TransferError("P4G embedded payload digest is invalid")
 
 
+def validate_resource_host(data: bytes) -> None:
+    if not 128 < len(data) <= EXCHANGE_MAX_BYTES or data[:8] != b"P4RES01\0":
+        raise TransferError("input is not a bounded P4RES01 resource")
+    header, total, offset, payload, version, flags = struct.unpack_from("<6I", data, 8)
+    if (header != 128 or total != len(data) or offset != 128 or
+        payload != len(data) - 128 or version != 1 or flags or any(data[112:128])):
+        raise TransferError("P4R layout/version is invalid")
+    game_id, separator, padding = data[64:112].partition(b"\0")
+    if not separator or any(padding) or re.fullmatch(rb"[a-z][a-z0-9.-]{2,46}", game_id) is None:
+        raise TransferError("P4R game identity is invalid")
+    if data[32:64] != hashlib.sha256(data[128:]).digest():
+        raise TransferError("P4R embedded payload digest is invalid")
+
+
+def validate_cart_host(path: Path) -> None:
+    tool = Path(__file__).resolve().parents[1] / "game-platform/scripts/p4cart.py"
+    spec = importlib.util.spec_from_file_location("p4cart_transfer_validator", tool)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    try:
+        module.inspect_cart(path)
+    except (ValueError, OSError) as error:
+        raise TransferError(f"P4CART validation failed: {error}") from error
+
+
 def validate_upload(path: Path, file_class: int) -> tuple[int, bytes]:
     if not path.is_file() or path.is_symlink():
         raise TransferError(f"input must be one regular file: {path}")
@@ -260,9 +296,14 @@ def validate_upload(path: Path, file_class: int) -> tuple[int, bytes]:
     maximum = P4G_MAX_BYTES if file_class == CLASS_P4G else EXCHANGE_MAX_BYTES
     if not 0 < size <= maximum:
         raise TransferError(f"input size {size} exceeds the {maximum}-byte bound")
-    data = path.read_bytes() if file_class == CLASS_P4G else None
+    data = path.read_bytes() if file_class in (CLASS_P4G, CLASS_P4R) else None
+    if file_class == CLASS_P4CART:
+        validate_cart_host(path)
     if data is not None:
-        validate_p4g_host(data)
+        if file_class == CLASS_P4G:
+            validate_p4g_host(data)
+        else:
+            validate_resource_host(data)
         digest = hashlib.sha256(data).digest()
     else:
         sha256 = hashlib.sha256()
@@ -500,8 +541,8 @@ def verify_done(done: bytes, expected_size: int, expected_digest: bytes) -> None
 
 def push(args: argparse.Namespace) -> None:
     source = args.input.resolve()
-    file_class = CLASS_P4G if args.file_class == "p4g" else CLASS_EXCHANGE
-    default_name = source.name.upper() if file_class == CLASS_P4G else source.name
+    file_class = FILE_CLASSES[args.file_class]
+    default_name = source.name.upper() if file_class != CLASS_EXCHANGE else source.name
     name = checked_remote_name(args.remote_name or default_name, file_class)
     size, digest = validate_upload(source, file_class)
     request = make_request(
@@ -516,7 +557,8 @@ def push(args: argparse.Namespace) -> None:
     print(
         f"P4_H1 PUSH port={port} name={name} bytes={size} sha256={digest.hex()}"
     )
-    with open_port(port) as connection:
+    existing = getattr(args, "connection", None)
+    with (nullcontext(existing) if existing is not None else open_port(port)) as connection:
         reader = WireReader(connection)
         status, accepted_size, accepted_digest, chunk_bytes = negotiate(
             connection, reader, request, DIRECTION_UPLOAD, file_class
@@ -561,7 +603,7 @@ def push(args: argparse.Namespace) -> None:
 
 
 def pull(args: argparse.Namespace) -> None:
-    file_class = CLASS_P4G if args.file_class == "p4g" else CLASS_EXCHANGE
+    file_class = FILE_CLASSES[args.file_class]
     name = checked_remote_name(args.remote_name, file_class)
     output = args.output.resolve()
     if output.exists() and not args.replace:
@@ -619,6 +661,10 @@ def pull(args: argparse.Namespace) -> None:
                 raise TransferError("download SHA-256 differs from badge proof")
             if file_class == CLASS_P4G:
                 validate_p4g_host(temporary.read_bytes())
+            elif file_class == CLASS_P4R:
+                validate_resource_host(temporary.read_bytes())
+            elif file_class == CLASS_P4CART:
+                validate_cart_host(temporary)
             temporary.replace(output)
             completed = True
             print(
@@ -630,6 +676,33 @@ def pull(args: argparse.Namespace) -> None:
             temporary.unlink()
 
 
+def push_bundle(args: argparse.Namespace) -> None:
+    root = args.input.resolve()
+    entries = []
+    # Resource sidecars precede their native games; Lua carts have their own directory.
+    for directory, extension, kind in (("GAMES", "P4R", "p4r"),
+                                        ("GAMES", "P4G", "p4g"),
+                                        ("P4/GAMES", "P4CART", "p4cart")):
+        for source in sorted((root / directory).glob(f"*.{extension}")):
+            checked_remote_name(source.name, FILE_CLASSES[kind])
+            validate_upload(source, FILE_CLASSES[kind])
+            if kind == "p4r":
+                native = source.with_suffix(".P4G")
+                validate_upload(native, CLASS_P4G)
+                if source.read_bytes()[64:112] != native.read_bytes()[80:128]:
+                    raise TransferError(f"resource identity differs from {native.name}")
+            entries.append((source, kind))
+    if not entries:
+        raise TransferError("bundle contains no supported game files")
+    port = args.port or detect_port()
+    with open_port(port) as connection:
+        for source, kind in entries:
+            push(argparse.Namespace(input=source, file_class=kind, remote_name=None,
+                 no_replace=args.no_replace, port=port, done_timeout=args.done_timeout,
+                 connection=connection))
+    print(f"P4_H1 BUNDLE_PASS files={len(entries)} port={port}")
+
+
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(
         description="Push or pull verified files through the P4 Console OS H1 port."
@@ -639,7 +712,7 @@ def parser() -> argparse.ArgumentParser:
     push_parser.add_argument("input", type=Path)
     push_parser.add_argument("--port")
     push_parser.add_argument(
-        "--class", dest="file_class", choices=("p4g", "exchange"), default="p4g"
+        "--class", dest="file_class", choices=tuple(FILE_CLASSES), default="p4g"
     )
     push_parser.add_argument("--remote-name")
     push_parser.add_argument("--no-replace", action="store_true")
@@ -655,9 +728,14 @@ def parser() -> argparse.ArgumentParser:
     pull_parser.add_argument("output", type=Path)
     pull_parser.add_argument("--port")
     pull_parser.add_argument(
-        "--class", dest="file_class", choices=("p4g", "exchange"), default="p4g"
+        "--class", dest="file_class", choices=tuple(FILE_CLASSES), default="p4g"
     )
     pull_parser.add_argument("--replace", action="store_true")
+    bundle = subparsers.add_parser("push-bundle", help="install validated native, resource and Lua game files")
+    bundle.add_argument("input", type=Path, help="board bundle root containing GAMES and P4/GAMES")
+    bundle.add_argument("--port")
+    bundle.add_argument("--no-replace", action="store_true")
+    bundle.add_argument("--done-timeout", type=bounded_done_timeout, default=600.0)
     usb_drive_parser = subparsers.add_parser(
         "usb-drive",
         help="query or switch the Waveshare H2 USB Drive role through trusted H1",
@@ -674,6 +752,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "push":
             push(args)
+        elif args.command == "push-bundle":
+            push_bundle(args)
         elif args.command == "pull":
             pull(args)
         else:

@@ -7,6 +7,10 @@
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 #include "driver/ledc.h"
+#include "driver/gpio.h"
+#include "driver/ppa.h"
+#include "esp_heap_caps.h"
+#include "esp_timer.h"
 #include "esp_lcd_mipi_dsi.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_io.h"
@@ -28,6 +32,8 @@ static esp_lcd_panel_io_handle_t s_io;
 static esp_lcd_panel_handle_t s_panel;
 static esp_ldo_channel_handle_t s_ldo;
 static uint16_t *s_frames[2];
+static uint16_t *s_game_scale;
+static ppa_client_handle_t s_scaler;
 static unsigned s_active;
 static bool s_ready, s_pending, s_backlight, s_pattern;
 static uint32_t s_pending_refresh;
@@ -58,6 +64,12 @@ static esp_err_t release(void)
     s_ready=false;
     esp_err_t ret=s_backlight?brightness(0):ESP_OK;
     if (ret!=ESP_OK) return ret;
+    if (s_scaler) {
+        ret=ppa_unregister_client(s_scaler);
+        if (ret!=ESP_OK) return ret;
+        s_scaler=NULL;
+    }
+    heap_caps_free(s_game_scale); s_game_scale=NULL;
     if (s_panel) {
         const esp_lcd_dpi_panel_event_callbacks_t callbacks={0};
         ret=esp_lcd_dpi_panel_register_event_callbacks(s_panel,&callbacks,NULL);
@@ -71,6 +83,8 @@ static esp_err_t release(void)
     if (s_ldo) { ret=esp_ldo_release_channel(s_ldo); if (ret!=ESP_OK) return ret; s_ldo=NULL; }
     if (s_backlight) {
         ret=ledc_stop(LEDC_LOW_SPEED_MODE,LEDC_CHANNEL_0,0);
+        if (ret!=ESP_OK) return ret;
+        ret=gpio_reset_pin(PLATFORM_BOARD_LCD_BACKLIGHT_GPIO);
         if (ret!=ESP_OK) return ret;
         s_backlight=false;
     }
@@ -137,13 +151,22 @@ esp_err_t platform_display_init(void)
     TRY(ili ? esp_lcd_new_panel_ili9881c(s_io,&cfg,&s_panel) : esp_lcd_new_panel_st7123(s_io,&cfg,&s_panel));
     TRY(esp_lcd_panel_reset(s_panel));
     TRY(esp_lcd_panel_init(s_panel));
+    /* The ST7123 table sets both MADCTL mirror bits. Match the pinned BSP's
+     * post-init normalization so display pixels and native touch share axes. */
+    TRY(esp_lcd_panel_invert_color(s_panel,false));
+    TRY(esp_lcd_panel_mirror(s_panel,false,false));
     TRY(esp_lcd_dpi_panel_get_frame_buffer(s_panel,2,(void **)&s_frames[0],(void **)&s_frames[1]));
     /* The DPI driver allocates and clears both buffers before enabling scanout.
      * Do not rewrite its active buffer after panel_init has started DMA. */
     const esp_lcd_dpi_panel_event_callbacks_t callbacks = {.on_refresh_done=refreshed};
     TRY(esp_lcd_dpi_panel_register_event_callbacks(s_panel,&callbacks,NULL));
     TRY(esp_lcd_panel_disp_on_off(s_panel,true));
+    const ppa_client_config_t scaler_config={.oper_type=PPA_OPERATION_SRM,.max_pending_trans_num=1U};
+    TRY(ppa_register_client(&scaler_config,&s_scaler));
+    s_game_scale=heap_caps_aligned_alloc(64,384U*240U*sizeof(uint16_t),MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
+    if (!s_game_scale) { ret=ESP_ERR_NO_MEM; goto fail; }
     s_active=0; s_pending=false; s_pattern=false; s_ready=true;
+    ESP_LOGI("tab5_display","PPA_READY rotation_ccw=90 viewport=1152x720 shell_scale=3 content_scale=1.5 game_prescale=384x240");
     ESP_LOGI("tab5_display","P4_DISPLAY READY board=m5stack-tab5 panel=%s native=720x1280 logical=1280x720 viewport=1152x720+64+0 format=rgb565",platform_tab5_panel_name(kind));
     xSemaphoreGive(s_lock); return ESP_OK;
 fail:
@@ -172,11 +195,34 @@ static esp_err_t finish_pending(TickType_t start, TickType_t budget)
         TickType_t elapsed=xTaskGetTickCount()-start;
         if (elapsed>=budget || xSemaphoreTake(s_refresh,budget-elapsed)!=pdTRUE) return ESP_ERR_TIMEOUT;
     }
-    if (s_pending) { s_active^=1U; s_pending=false; }
+    if (s_pending) { s_active^=1U; s_pending=false; ++s_stats.submits_completed; }
     return ESP_OK;
 }
 typedef bool (*layout_fn)(const uint16_t *,size_t,uint16_t *,size_t,size_t);
-static esp_err_t submit(const uint16_t *source,size_t stride,size_t width,uint32_t timeout,layout_fn layout)
+static esp_err_t accelerate(const uint16_t *source,size_t stride,size_t width,uint16_t *dest)
+{
+    size_t height=width==768U?480U:240U;
+    if (width==320U) {
+        /* 3.6 is not representable by PPA's four fractional bits. A small
+         * CPU prescale followed by exact 3x PPA keeps the full touch viewport. */
+        for (size_t y=0;y<240U;++y) {
+            const uint16_t *row=source+(y*200U/240U)*stride;
+            for (size_t x=0;x<384U;++x) s_game_scale[y*384U+x]=row[x*320U/384U];
+        }
+        source=s_game_scale; stride=384U; width=384U;
+    }
+    const ppa_srm_oper_config_t op={
+        .in={.buffer=source,.pic_w=(uint32_t)stride,.pic_h=(uint32_t)height,
+            .block_w=(uint32_t)width,.block_h=(uint32_t)height,.srm_cm=PPA_SRM_COLOR_MODE_RGB565},
+        .out={.buffer=dest,.buffer_size=(uint32_t)FRAME_BYTES,
+            .pic_w=720U,.pic_h=1280U,.block_offset_y=64U,.srm_cm=PPA_SRM_COLOR_MODE_RGB565},
+        .rotation_angle=PPA_SRM_ROTATION_ANGLE_90,
+        .scale_x=width==768U?1.5f:3.0f,.scale_y=width==768U?1.5f:3.0f,
+        .mode=PPA_TRANS_MODE_BLOCKING,
+    };
+    return ppa_do_scale_rotate_mirror(s_scaler,&op);
+}
+static esp_err_t submit(const uint16_t *source,size_t stride,size_t width,uint32_t timeout,layout_fn layout,bool wait_presented)
 {
     if (!source || stride<width || stride>SIZE_MAX/480U/sizeof(uint16_t)) return ESP_ERR_INVALID_ARG;
     if (!s_lock) return ESP_ERR_INVALID_STATE;
@@ -188,9 +234,20 @@ static esp_err_t submit(const uint16_t *source,size_t stride,size_t width,uint32
     ret=finish_pending(start,budget);
     if (ret!=ESP_OK) goto done;
     uint16_t *dest=s_frames[s_active^1U];
-    if (!layout(source,stride,dest,PLATFORM_DISPLAY_NATIVE_WIDTH,PLATFORM_DISPLAY_NATIVE_HEIGHT)) {
-        ret=ESP_ERR_INVALID_ARG; goto done;
+    const int64_t transform_start=esp_timer_get_time();
+    ret=accelerate(source,stride,width,dest);
+    if (ret==ESP_OK) ++s_stats.accelerated_submits;
+    else {
+        ++s_stats.accelerator_failures;
+        if (s_stats.accelerator_failures==1U)
+            ESP_LOGW("tab5_display","PPA_FAILED error=%s fallback=cpu",esp_err_to_name(ret));
+        if (!layout(source,stride,dest,PLATFORM_DISPLAY_NATIVE_WIDTH,PLATFORM_DISPLAY_NATIVE_HEIGHT)) {
+            ret=ESP_ERR_INVALID_ARG; goto done;
+        }
     }
+    s_stats.pipeline_transform_last_us=(uint32_t)(esp_timer_get_time()-transform_start);
+    if (s_stats.pipeline_transform_last_us>s_stats.pipeline_transform_max_us)
+        s_stats.pipeline_transform_max_us=s_stats.pipeline_transform_last_us;
     ret=esp_cache_msync(dest,FRAME_BYTES,ESP_CACHE_MSYNC_FLAG_DIR_C2M);
     if (ret!=ESP_OK) goto done;
     if (s_pattern) {
@@ -202,14 +259,13 @@ static esp_err_t submit(const uint16_t *source,size_t stride,size_t width,uint32
     if (ret!=ESP_OK) goto done;
     s_pending_refresh=__atomic_load_n(&s_refresh_count,__ATOMIC_ACQUIRE);
     s_pending=true;
-    ret=finish_pending(start,budget);
-    if (ret==ESP_OK) {
-        ++s_stats.submits_completed;
-        if (s_stats.submits_completed==1U)
-            ESP_LOGI("tab5_display", "FIRST_FRAME elapsed_ticks=%lu refresh=%lu",
-                (unsigned long)(xTaskGetTickCount()-start),
-                (unsigned long)__atomic_load_n(&s_refresh_count,__ATOMIC_ACQUIRE));
-    }
+    const bool first_frame=s_stats.submits_completed==0U;
+    ret=wait_presented || first_frame ? finish_pending(start,budget) : ESP_OK;
+    if (ret==ESP_OK && first_frame)
+        ESP_LOGI("tab5_display", "FIRST_FRAME elapsed_ticks=%lu transform_us=%lu refresh=%lu",
+            (unsigned long)(xTaskGetTickCount()-start),
+            (unsigned long)s_stats.pipeline_transform_last_us,
+            (unsigned long)__atomic_load_n(&s_refresh_count,__ATOMIC_ACQUIRE));
 done:
     if (ret==ESP_ERR_TIMEOUT) {
         ++s_stats.submit_timeouts;
@@ -221,13 +277,13 @@ done:
     xSemaphoreGive(s_lock); return ret;
 }
 esp_err_t platform_display_submit_rgb565(const uint16_t *s,size_t stride,uint32_t timeout)
-{ return submit(s,stride,320,timeout,platform_display_layout_rgb565_320x200); }
+{ return submit(s,stride,320,timeout,platform_display_layout_rgb565_320x200,true); }
 esp_err_t platform_display_submit_shell_rgb565(const uint16_t *s,size_t stride,uint32_t timeout)
-{ return submit(s,stride,384,timeout,platform_display_layout_rgb565_384x240); }
+{ return submit(s,stride,384,timeout,platform_display_layout_rgb565_384x240,false); }
 esp_err_t platform_display_submit_content_rgb565(const uint16_t *s,size_t stride,uint32_t timeout)
-{ return submit(s,stride,768,timeout,platform_display_layout_rgb565_768x480); }
+{ return submit(s,stride,768,timeout,platform_display_layout_rgb565_768x480,false); }
 esp_err_t platform_display_submit_game_content_rgb565(const uint16_t *s,size_t stride,uint32_t timeout)
-{ return platform_display_submit_content_rgb565(s,stride,timeout); }
+{ return submit(s,stride,768,timeout,platform_display_layout_rgb565_768x480,true); }
 esp_err_t platform_display_submit_content_regions_rgb565(const uint16_t *s,size_t stride,
     const platform_display_rgb565_region_t *regions,size_t count,uint32_t timeout)
 {

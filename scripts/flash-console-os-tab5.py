@@ -104,8 +104,11 @@ def main():
     parser.add_argument('--authorization-sha256', required=True)
     parser.add_argument('--unit', choices=('A', 'B'), required=True)
     parser.add_argument('--port')
+    parser.add_argument('--monitor-seconds', type=int, default=60,
+                        help='capture boot and operator testing on one open connection (30-600 seconds)')
     parser.add_argument('--install', action='store_true', help='write after all checks; default checks local inputs only')
     args = parser.parse_args()
+    require(30 <= args.monitor_seconds <= 600, 'monitor duration must be 30-600 seconds')
     raw = args.authorization.read_bytes()
     require(sha(raw) == args.authorization_sha256, 'authorization digest differs')
     auth = json.loads(raw)
@@ -194,7 +197,8 @@ def main():
         esp._port.close()
         esp = None
         captured = bytearray()
-        deadline = time.monotonic() + 35
+        deadline = time.monotonic() + args.monitor_seconds
+        announced = set()
         while time.monotonic() < deadline and len(captured) < 1024*1024:
             port = serial.Serial(port=None, baudrate=115200, timeout=.25)
             port.dtr = False
@@ -204,6 +208,17 @@ def main():
                 port.open()
                 while time.monotonic() < deadline and len(captured) < 1024*1024:
                     captured.extend(port.read(4096))
+                    # Keep a sanitized live log so a game failure can be inspected
+                    # without closing/reopening native USB and resetting the board.
+                    text = captured.decode('utf-8', 'replace')
+                    complete = text.rsplit('\n', 1)[0] + '\n' if '\n' in text else ''
+                    (run / 'runtime.log').write_text(redact(complete))
+                    for marker in ('P4_CONSOLE_OS READY board=m5stack-tab5',
+                                   'OTA_BOOT_VALID result=ESP_OK', 'Guru Meditation',
+                                   'P4_CONSOLE_OS FATAL_HOLD'):
+                        if marker in text and marker not in announced:
+                            print(f'Tab5 {args.unit}: {marker}', flush=True)
+                            announced.add(marker)
             except (serial.SerialException, OSError):
                 time.sleep(.25)
             finally:
@@ -213,6 +228,7 @@ def main():
         receipt['boot_ready'] = 'P4_CONSOLE_OS READY board=m5stack-tab5' in log and not any(
             marker in log for marker in ('Guru Meditation', 'panic_abort', 'abort() was called', 'P4_CONSOLE_OS HALT', 'P4_CONSOLE_OS FATAL_HOLD'))
         receipt['runtime_log_sha256'] = sha(log.encode())
+        receipt['health_ready'] = 'OTA_BOOT_VALID result=ESP_OK' in log
         print(log[-24000:])
         require(receipt['boot_ready'], 'flash/readback passed, but launcher boot acceptance failed; inspect runtime.log')
     finally:

@@ -14,6 +14,7 @@ if(COMMAND idf_component_register)
         INCLUDE_DIRS "include" "../p4_game_api/include"
         REQUIRES
             esp_driver_uart
+            esp_driver_usb_serial_jtag
             freertos
             log
     )

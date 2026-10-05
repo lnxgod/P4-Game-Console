@@ -1,0 +1,190 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "created_at": "2026-10-05T04:08:50.634835+00:00",
+  "install_authorized": true,
+  "operation": "app-only",
+  "operator_request": "Please fix all the hardware issues; sound and games working with smooth scrolling; load games through the connected USB.",
+  "source_commit": "80184ff8d8db plus recorded Tab5 touch/SD/Doom/accelerated-renderer/native-USB-transfer fixes",
+  "toolchain": {
+    "schema": 1,
+    "esp_idf": {
+      "version": "5.5.3",
+      "git_tag": "v5.5.3",
+      "git_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+      "repository": "https://github.com/espressif/esp-idf.git"
+    },
+    "target": {
+      "chip": "esp32p4",
+      "silicon_family": "revision_1_x",
+      "min_revision_full": 100,
+      "max_revision_full": 199
+    },
+    "managed_components": {
+      "espressif/esp_codec_dev": "1.5.4",
+      "espressif/esp_hosted": "1.4.7",
+      "espressif/esp_lcd_lt8912b": "0.2.0",
+      "espressif/esp_tinyusb": "2.0.1",
+      "espressif/esp_wifi_remote": "0.14.5",
+      "espressif/usb": "1.5.0",
+      "espressif/usb_host_hid": "1.2.0"
+    },
+    "policy": {
+      "commit_dependencies_lock": true,
+      "upgrade_only_with_hardware_regression": true
+    }
+  },
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "backup_sha256": "afe3e5df1ef2580aac055abc13a9c62bdfbd4816b46384d92978bdfa1abf16c8",
+      "model_confirmed": true,
+      "predecessor": {
+        "file": "hardware/backups/tab5-a-install-_9njt0xb/0x20000.bin",
+        "bytes": 1340992,
+        "sha256": "3c0bc589497c847d4125f0286e19ee52a123fcfcbf9bea67ae8160625cce94bb"
+      }
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "backup_sha256": "5539e586c84d653cbe96d8c94b9aa775ad0ce5f134c3b28a5192af01429dc1c9",
+      "model_confirmed": true,
+      "predecessor": {
+        "file": "hardware/backups/tab5-b-install-9tlz1wtj/0x20000.bin",
+        "bytes": 1342144,
+        "sha256": "bd909172ad17b0387c79321fe767d9629651714b1661dfb515f2c31fdedca45c"
+      }
+    }
+  },
+  "artifacts": {
+    "0x2000": {
+      "file": "apps/console_os/build-tab5/bootloader/bootloader.bin",
+      "bytes": 23136,
+      "sha256": "058cf4c0434733d72800c383e1bddb54aa33cf667b21254c8bd9d2f4f7f43443"
+    },
+    "0x8000": {
+      "file": "apps/console_os/build-tab5/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "0x10000": {
+      "file": "apps/console_os/build-tab5/ota_data_initial.bin",
+      "bytes": 8192,
+      "sha256": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f"
+    },
+    "0x20000": {
+      "file": "apps/console_os/build-tab5/p4_console_os.bin",
+      "bytes": 1381632,
+      "sha256": "8d5c593f524e0eb87dbb40d4b02b6f7a23118b3ebada3d54bfdc42302d6cfe80"
+    }
+  },
+  "write_review": {
+    "reason": "App-only exact predecessors: tested touch correction and fast SD startup, LCD reset handoff repair, muted animation skip, PPA scaling/rotation with guarded framebuffer reuse, native USB Serial/JTAG backend for existing verified file/content transfer protocols.",
+    "offset": "0x20000",
+    "preserve": "bootloader, partition table, NVS, PHY and active OTA selector",
+    "erase_all": false,
+    "force_revision": false,
+    "readback_required": "exact full app range before boot"
+  },
+  "peripheral_scope": {
+    "global_pin_map_authorized": false,
+    "pcb_revision": "not separately marked/confirmed; bounded common C145 interfaces only",
+    "published_variants_reviewed": [
+      "initial 2025-05-09 ILI9881C/GT911",
+      "2025-10-14 ST7123",
+      "2026-04-28 ST7121"
+    ],
+    "official_source": {
+      "commit": "73ee07b1ad56f865f13a2739be8bb6808c1da58a",
+      "manual_sha256": "6c054369e4fb1a7d04fa95fb31adda26feaa9de3540942f733eb2c1a68cd81e1",
+      "manual_url": "https://docs.m5stack.com/en/core/Tab5",
+      "repository": "https://github.com/espressif/esp-bsp",
+      "schematic_sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329",
+      "schematic_url": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1132/Tab5_Schematics_PDF.pdf"
+    },
+    "review": "Official C145 schematic and Tab5 manual give one shared P4/expander/audio/SD wiring map for all three published panel assemblies. The pinned BSP supplies distinct panel timings/init and GPIO23 handling, selected by the touch controller. Unknown panel firmware fails closed. No factory-binary pin inference used.",
+    "allowed": {
+      "display": {
+        "backlight_gpio": 22,
+        "bus": "MIPI-DSI",
+        "dphy_ldo_channel": 3,
+        "dphy_ldo_mv": 2500,
+        "logical_height": 720,
+        "logical_width": 1280,
+        "native_height": 1280,
+        "native_width": 720,
+        "panels": [
+          "ILI9881C",
+          "ST7123",
+          "ST7121"
+        ],
+        "reset": "PI4IOE5V6408 0x43 P4, release as input pull-up",
+        "rotation_cw_degrees": 90
+      },
+      "i2c": {
+        "expanders": [
+          67,
+          68
+        ],
+        "port": 1,
+        "scl": 32,
+        "sda": 31
+      },
+      "touch": {
+        "controllers": [
+          "GT911 at 0x14",
+          "ST7123/ST7121 at 0x55"
+        ],
+        "interrupt_gpio": 23,
+        "reset": "expander 0x43 P5"
+      },
+      "audio": {
+        "address_7bit": 16,
+        "amp_enable": "expander 0x43 P1 active high",
+        "bclk": 27,
+        "codec": "ES8388",
+        "dout": 26,
+        "i2s_port": 1,
+        "lrclk": 29,
+        "mclk": 30
+      },
+      "sd": {
+        "clk": 43,
+        "cmd": 44,
+        "data": [
+          39,
+          40,
+          41,
+          42
+        ],
+        "format_on_failure": false,
+        "power_ldo_channel": 4,
+        "slot": 0,
+        "width": 4
+      }
+    },
+    "usb_console": "native FS USB Serial/JTAG GPIO24/25 only",
+    "excluded": [
+      "radio",
+      "USB-A host power",
+      "expander 0x44 power/charge controls",
+      "external 5V",
+      "camera",
+      "mic",
+      "battery",
+      "IMU",
+      "RTC",
+      "expansion GPIO"
+    ]
+  },
+  "supersedes_candidate_reason": "Current CPU renderer costs ~85 ms/frame; native USB transfer was not connected. Keep original physical scope, add no external pins or USB host-power control.",
+  "source_files": {
+    "components/platform_tab5/src/tab5.c": "a1f104bf843915c1d09d1df2960a974e1917a7a08fb89a8dac877816aca5eaf6",
+    "components/platform_display/src/platform_display_tab5.c": "1c9af637aa05fa471d1374a987b70bc0ae1563ae3ecbb0cb819e92fc5de59161",
+    "components/platform_game_storage/src/platform_game_storage.c": "1b37e9365c3853266e4a13dece104fe930a8aa14240fb65193ed23f6067b6817",
+    "components/platform_display/CMakeLists.txt": "2dd04f4e5d48c178d9e21b99fe29177e42eaaf98bca061d153591c3cc05386f8",
+    "apps/console_os/main/console_os_main.c": "824a8b147bb534ec9ca7417a9a0bed1943539084762bfcc4a267999fc656cea8",
+    "components/p4_multiplayer/src/uart_endpoint_dual.c": "3fd4d30892fcaa982049b970bf224e79b6ac3dd6d4f1ab1f0bdb0293db39ffc8",
+    "components/p4_multiplayer/CMakeLists.txt": "42ef67727f7f68b491717baa43bc1c48e8095b49740fb8f4024786adf2fa0949"
+  }
+}

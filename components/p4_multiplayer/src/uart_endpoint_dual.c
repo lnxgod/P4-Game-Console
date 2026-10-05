@@ -16,6 +16,14 @@
 #include "p4/multiplayer.h"
 #include "sdkconfig.h"
 
+#if CONFIG_P4_BOARD_M5STACK_TAB5 && CONFIG_ESP_CONSOLE_USB_SERIAL_JTAG
+#define P4_MP_NATIVE_USB_RELAY 1
+#include "driver/usb_serial_jtag.h"
+#include "driver/usb_serial_jtag_vfs.h"
+#else
+#define P4_MP_NATIVE_USB_RELAY 0
+#endif
+
 #ifndef CONFIG_ESP_CONSOLE_UART
 #define CONFIG_ESP_CONSOLE_UART 0
 #endif
@@ -99,7 +107,23 @@ static void initialize_channel(
 
 static esp_err_t initialize_relay(void)
 {
-#if !CONFIG_ESP_CONSOLE_UART
+#if P4_MP_NATIVE_USB_RELAY
+    p4_mp_uart_channel_t *const channel = &s_endpoint.relay;
+    initialize_channel(channel, UART_NUM_0, P4_MP_UART_RELAY_ROUTE_ID, 115200U, true);
+    if (!usb_serial_jtag_is_driver_installed()) {
+        usb_serial_jtag_driver_config_t config = {
+            .rx_buffer_size = 8192U, .tx_buffer_size = 8192U,
+        };
+        const esp_err_t result = usb_serial_jtag_driver_install(&config);
+        if (result != ESP_OK) return result;
+    }
+    /* Logs and binary frames share one buffered TX owner, preserving each
+     * write's bytes. No TinyUSB PHY takeover or USB-A power is involved. */
+    usb_serial_jtag_vfs_use_driver();
+    channel->ready = true;
+    ESP_LOGI(TAG, "P4_USB_SERIAL_READY transport=native-usb-serial-jtag content=1");
+    return ESP_OK;
+#elif !CONFIG_ESP_CONSOLE_UART
     return ESP_ERR_NOT_SUPPORTED;
 #else
     p4_mp_uart_channel_t *const channel = &s_endpoint.relay;
@@ -343,6 +367,14 @@ static void poll_channel(p4_mp_uart_channel_t *channel)
     for (unsigned pass = 0U;
          pass < P4_MP_UART_MAX_READS_PER_POLL;
          ++pass) {
+        int count;
+#if P4_MP_NATIVE_USB_RELAY
+        if (channel == &s_endpoint.relay) {
+            count = usb_serial_jtag_read_bytes(channel->receive,
+                (uint32_t)sizeof(channel->receive), 0U);
+        } else
+#endif
+        {
         size_t available = 0U;
         esp_err_t result = uart_get_buffered_data_len(
             channel->port, &available);
@@ -357,8 +389,9 @@ static void poll_channel(p4_mp_uart_channel_t *channel)
         if (requested > sizeof(channel->receive)) {
             requested = sizeof(channel->receive);
         }
-        const int count = uart_read_bytes(
+        count = uart_read_bytes(
             channel->port, channel->receive, (uint32_t)requested, 0U);
+        }
         if (count <= 0) {
             break;
         }
@@ -432,8 +465,13 @@ static esp_err_t write_channel(
     if (channel == NULL || !channel->ready) {
         return ESP_ERR_NOT_SUPPORTED;
     }
-    const int written = uart_write_bytes(
-        channel->port, bytes, bytes_length);
+    const int written =
+#if P4_MP_NATIVE_USB_RELAY
+        channel == &s_endpoint.relay
+            ? usb_serial_jtag_write_bytes(bytes, bytes_length, pdMS_TO_TICKS(1000U))
+            :
+#endif
+        uart_write_bytes(channel->port, bytes, bytes_length);
     if (written < 0 || (size_t)written != bytes_length) {
         return ESP_FAIL;
     }
@@ -521,8 +559,12 @@ esp_err_t p4_mp_uart_endpoint_wait_tx_done(uint32_t timeout_ms)
     if (!s_endpoint.relay.ready) {
         return ESP_ERR_NOT_SUPPORTED;
     }
-    const esp_err_t result = uart_wait_tx_done(
-        s_endpoint.relay.port, pdMS_TO_TICKS(timeout_ms));
+    const esp_err_t result =
+#if P4_MP_NATIVE_USB_RELAY
+        usb_serial_jtag_wait_tx_done(pdMS_TO_TICKS(timeout_ms));
+#else
+        uart_wait_tx_done(s_endpoint.relay.port, pdMS_TO_TICKS(timeout_ms));
+#endif
     s_endpoint.last_error = result;
     return result;
 }
@@ -538,8 +580,13 @@ esp_err_t p4_mp_uart_endpoint_set_baudrate(uint32_t baudrate)
     if (!s_endpoint.relay.ready) {
         return ESP_ERR_NOT_SUPPORTED;
     }
-    const esp_err_t result = uart_set_baudrate(
-        s_endpoint.relay.port, baudrate);
+    /* CDC baud is host metadata for native USB; physical USB rate is fixed. */
+    const esp_err_t result =
+#if P4_MP_NATIVE_USB_RELAY
+        ESP_OK;
+#else
+        uart_set_baudrate(s_endpoint.relay.port, baudrate);
+#endif
     if (result == ESP_OK) {
         s_endpoint.relay.baudrate = baudrate;
     }
@@ -566,7 +613,15 @@ void p4_mp_uart_endpoint_reset_route(void)
         (void)uart_flush_input(s_endpoint.direct.port);
     }
     if (s_endpoint.relay.ready) {
+#if P4_MP_NATIVE_USB_RELAY
+        /* Bounded drain; do not touch an unrelated UART peripheral. */
+        for (unsigned pass=0; pass<P4_MP_UART_MAX_READS_PER_POLL; ++pass) {
+            if (usb_serial_jtag_read_bytes(s_endpoint.relay.receive,
+                    (uint32_t)sizeof(s_endpoint.relay.receive), 0U) <= 0) break;
+        }
+#else
         (void)uart_flush_input(s_endpoint.relay.port);
+#endif
     }
 }
 

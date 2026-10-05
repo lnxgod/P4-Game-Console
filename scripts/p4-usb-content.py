@@ -178,23 +178,36 @@ def write_all(connection: serial.Serial, data: bytes) -> None:
         offset += count
 
 
-def read_frame(
-    connection: serial.Serial, marker: bytes, frame_bytes: int, timeout: float
-) -> bytes:
-    deadline = time.monotonic() + timeout
-    buffered = bytearray()
-    while time.monotonic() < deadline:
-        block = connection.read(max(1, connection.in_waiting))
-        if block:
-            buffered.extend(block)
-            location = buffered.find(marker)
-            if location >= 0 and len(buffered) >= location + frame_bytes:
-                return bytes(buffered[location : location + frame_bytes])
-            if location < 0 and len(buffered) > 8192:
-                del buffered[:-len(marker)]
-        else:
-            time.sleep(0.01)
-    raise TransferError(f"badge did not return {marker.decode('ascii')} in time")
+class WireReader:
+    """Retain trailing bytes when USB delivers multiple protocol frames at once."""
+
+    def __init__(self, connection: serial.Serial) -> None:
+        self.connection = connection
+        self.buffer = bytearray()
+
+    def frame(self, marker: bytes, frame_bytes: int, timeout: float,
+              startup_manifest: bytes | None = None) -> bytes:
+        deadline = time.monotonic() + timeout
+        while time.monotonic() < deadline:
+            location = self.buffer.find(marker)
+            if location >= 0 and len(self.buffer) >= location + frame_bytes:
+                result = bytes(self.buffer[location:location + frame_bytes])
+                del self.buffer[:location + frame_bytes]
+                return result
+            # Native Serial/JTAG may reboot on port-open. A manifest sent
+            # before the driver starts is lost; retry only upon an explicit
+            # service-ready marker, never while the card is hashing a file.
+            if startup_manifest is not None and b"P4_USB_CONTENT READY" in self.buffer:
+                write_all(self.connection, startup_manifest)
+                startup_manifest = None
+            if location < 0 and len(self.buffer) > 65536:
+                del self.buffer[:-256]
+            block = self.connection.read(max(1, self.connection.in_waiting))
+            if block:
+                self.buffer.extend(block)
+            else:
+                time.sleep(0.005)
+        raise TransferError(f"badge did not return {marker.decode('ascii')} in time")
 
 
 def status_name(status: int) -> str:
@@ -202,35 +215,16 @@ def status_name(status: int) -> str:
 
 
 def wait_for_content_ready(
-    connection: serial.Serial, spec: ContentSpec, timeout: float = 600.0
+    connection: serial.Serial, reader: WireReader, timeout: float = 600.0
 ) -> bool:
+    # The activation response already proves the complete on-card digest.
+    # Demand-validated boards intentionally do not hash every WAD at boot.
     connection.baudrate = IDLE_BAUD
-    connection.reset_input_buffer()
-    deadline = time.monotonic() + timeout
-    buffered = bytearray()
-    while time.monotonic() < deadline:
-        block = connection.read(4096)
-        if block:
-            buffered.extend(block)
-            if spec.command == "doom":
-                if (
-                    b"doom=ready" in buffered
-                    and b"P4_MP_UART_READY" in buffered
-                ):
-                    return True
-            elif spec.command == "chex-wad":
-                if b"P4_MP_UART_READY" in buffered:
-                    return True
-            elif spec.command == "chex-deh":
-                if b"chex=ready" in buffered and b"P4_MP_UART_READY" in buffered:
-                    return True
-            elif b"CONTENT_READY" in buffered and b"quake_shareware=1" in buffered:
-                return True
-            if len(buffered) > 64 * 1024:
-                del buffered[:32 * 1024]
-        else:
-            time.sleep(0.02)
-    return False
+    try:
+        reader.frame(b"P4_USB_CONTENT READY", len(b"P4_USB_CONTENT READY"), timeout)
+        return True
+    except TransferError:
+        return False
 
 
 def install_content(spec: ContentSpec, path: Path, port: str) -> None:
@@ -240,11 +234,12 @@ def install_content(spec: ContentSpec, path: Path, port: str) -> None:
 
     with open_port(port) as connection:
         print(f"P4_H1 connecting port={port} baud={IDLE_BAUD}")
+        reader = WireReader(connection)
         time.sleep(0.25)
         write_all(connection, manifest)
         # Already-installed content is re-hashed before the badge reports that
         # result. Slow 1-bit cards can need several minutes for this gate.
-        ready = read_frame(connection, READY_MAGIC, 11, 600.0)
+        ready = reader.frame(READY_MAGIC, 11, 600.0, startup_manifest=manifest)
         status = ready[4]
         transfer_baud = struct.unpack_from("<I", ready, 5)[0]
         chunk_bytes = struct.unpack_from("<H", ready, 9)[0]
@@ -259,7 +254,7 @@ def install_content(spec: ContentSpec, path: Path, port: str) -> None:
             )
 
         connection.baudrate = transfer_baud
-        read_frame(connection, HIGH_MAGIC, 4, 5.0)
+        reader.frame(HIGH_MAGIC, 4, 5.0)
         started = time.monotonic()
         last_percent = -1
         sequence = 0
@@ -270,7 +265,7 @@ def install_content(spec: ContentSpec, path: Path, port: str) -> None:
                 if not payload:
                     break
                 write_all(connection, make_chunk(sequence, payload))
-                ack = read_frame(connection, ACK_MAGIC, 9, 20.0)
+                ack = reader.frame(ACK_MAGIC, 9, 20.0)
                 ack_sequence = struct.unpack_from("<I", ack, 4)[0]
                 ack_status = ack[8]
                 if ack_sequence != sequence or ack_status != 0:
@@ -292,7 +287,7 @@ def install_content(spec: ContentSpec, path: Path, port: str) -> None:
 
         # Final activation includes a complete SD readback hash. Do not turn a
         # slow card into a false host-side failure while that proof is active.
-        done = read_frame(connection, DONE_MAGIC, 41, 900.0)
+        done = reader.frame(DONE_MAGIC, 41, 900.0)
         done_status = done[4]
         installed_bytes = struct.unpack_from("<I", done, 5)[0]
         installed_digest = done[9:41]
@@ -305,11 +300,11 @@ def install_content(spec: ContentSpec, path: Path, port: str) -> None:
             f"P4_H1 ACTIVATED bytes={installed_bytes} sha256={digest.hex()} "
             f"seconds={elapsed:.1f}"
         )
-        if not wait_for_content_ready(connection, spec):
+        if not wait_for_content_ready(connection, reader):
             raise TransferError(
                 "content activated, but the reboot log did not confirm it before timeout"
             )
-        print(f"P4_H1 PASS rebooted=1 {spec.command}_shareware=1")
+        print(f"P4_H1 PASS rebooted=1 transfer_service=ready kind={spec.command} hash=verified")
 
 
 def parser() -> argparse.ArgumentParser:

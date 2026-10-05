@@ -198,7 +198,7 @@
           }
         }
       ],
-      "write_status": "operator-authorized-exact-candidate-first-console-os-layout",
+      "write_status": "current-console-os-app-installed; exact readback, SD, native-USB bundle and boot health verified; gameplay/audio acceptance pending",
       "saved_firmware_board_markers": [
         "m5stack-tab5",
         "tab5_board",
@@ -211,6 +211,13 @@
         "flash_encryption": false,
         "flags": "0x00000000",
         "esptool": "4.12.0"
+      },
+      "runtime_panel": "ST7121 firmware 1 (1.80.1.16)",
+      "console_os_evidence": "hardware/evidence/tab5-console-os-20261004-usb-game-testing.json",
+      "current_console_application": {
+        "file": "apps/console_os/build-tab5/p4_console_os.bin",
+        "bytes": 1382368,
+        "sha256": "d7c3c8140addc23ab18bd3989034b41cc1b16cc21eb5ca15730bf4501c3bcc4b"
       }
     },
     {
@@ -275,9 +282,14 @@
           }
         }
       ],
-      "write_status": "console-os-tiled-candidate-installed; exact app readback and boot health passed; physical acceptance pending",
+      "write_status": "current-console-os-app-installed; exact readback, SD, native-USB bundle and boot health verified; gameplay/audio acceptance pending",
       "runtime_panel": "ST7123 firmware 3 (1.71.1.3)",
-      "console_os_evidence": "hardware/evidence/tab5-console-os-20261004-bringup.json"
+      "console_os_evidence": "hardware/evidence/tab5-console-os-20261004-usb-game-testing.json",
+      "current_console_application": {
+        "file": "apps/console_os/build-tab5/p4_console_os.bin",
+        "bytes": 1382368,
+        "sha256": "d7c3c8140addc23ab18bd3989034b41cc1b16cc21eb5ca15730bf4501c3bcc4b"
+      }
     }
   ],
   "accessory_backups": [

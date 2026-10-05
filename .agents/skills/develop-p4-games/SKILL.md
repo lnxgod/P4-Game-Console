@@ -7,7 +7,7 @@ description: Create, port, modify, package, install, or test storage-installed g
 
 Build games against the stable P4 Game API, then install their `.P4G` files
 through the Elecrow `P4 GAMES` USB volume, an Olimex/Waveshare microSD bundle,
-or the Waveshare H1 verified live-transfer path. Keep Console OS in charge of
+or the Waveshare H1 / Tab5 native USB verified live-transfer paths. Keep Console OS in charge of
 hardware, storage, and lifecycle services so adding or removing a game never
 requires an OS reflash.
 
@@ -166,6 +166,23 @@ bounded package validation, SHA-256 verification, atomic staging, and readback
 under `/GAMES`; a successful P4G upload invalidates and reloads the native game
 catalog without rebooting. Use `--class exchange` only for the separate
 File Transfer exchange area, never to bypass native cartridge validation.
+
+On M5Stack Tab5 use `make console-os-tab5-idf`, then keep the card in the
+powered tablet and use its connected USB-C Serial/JTAG port:
+
+```sh
+python scripts/p4-transfer.py push-bundle apps/console_os/build-tab5/sd-card --port /dev/cu.usbmodem1101
+python scripts/p4-usb-content.py doom --port /dev/cu.usbmodem1101
+```
+
+Use the explicit current port for A or B, not an assumed enumeration order.
+`push-bundle` validates and installs native `.P4G`, `.P4R` resources and `.P4CART`
+source cartridges over one connection. Individual resources/carts use `push`
+with `--class p4r` / `--class p4cart`. Each format has its own directory and
+validator; never use `exchange` to bypass it. Native USB may reboot on open on
+macOS; the tools tolerate startup. Content activation reboots; native/cart file
+activation refreshes the appropriate catalog. USB Drive/MSC and USB-A host power
+remain disabled on Tab5. Do not ask for a card reader when the USB path is available.
 
 For a hardware acceptance, perform one named run that launches the changed
 game, exercises its changed behavior, and returns to the launcher with Back.

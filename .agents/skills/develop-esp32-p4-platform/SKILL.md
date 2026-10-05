@@ -52,9 +52,14 @@ Keep the build target and physical target paired exactly:
 For Tab5, select `m5stack-tab5` explicitly and read
 `docs/boards/M5STACK_TAB5.md` and
 `hardware/boards/m5stack-tab5/board-profile.json`. Use
-`make console-os-tab5-idf`. Unit B has boot/readback evidence; physical acceptance, audio and SD/gameplay
-remain pending. A/B are separately backed up and have exact-artifact test-install
-authorizations. Use `scripts/flash-console-os-tab5.py` with an explicit unit, port
+`make console-os-tab5-idf`. A/ST7121 and B/ST7123 have boot/readback, mounted-SD and native-USB transfer
+evidence; the operator confirmed touch after B's mirror correction. Doom gameplay,
+speaker sound and sustained scrolling still need acceptance. A/B are separately
+backed up and have exact-artifact test-install
+authorizations. Load games through the connected USB-C cable with
+`scripts/p4-transfer.py push-bundle apps/console_os/build-tab5/sd-card --port <port>`
+and Doom/Chex through `scripts/p4-usb-content.py`; no card reader is needed.
+Use `scripts/flash-console-os-tab5.py` with an explicit unit, port
 and authorization digest; its default is a local-only check. Preserve and bind
 any new unit before its first write. C6 radio and USB-A host power are disabled.
 

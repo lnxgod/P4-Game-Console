@@ -92,7 +92,7 @@
       "type_c": "native FS USB Serial/JTAG GPIO24/25"
     }
   },
-  "laptop_content_transfer": "powered-off-removable-media",
+  "laptop_content_transfer": "native-usb-serial",
   "memory": {
     "flash_bytes": 16777216,
     "psram_bytes": 33554432
@@ -109,7 +109,7 @@
   "product": "Tab5 C145/K145",
   "schema": 1,
   "soc": "ESP32-P4 revision 1.x build family",
-  "status": "unit-b-boot-readback-verified-core-acceptance-pending",
+  "status": "units-a-b-boot-sd-usb-verified-gameplay-audio-acceptance-pending",
   "touch": true,
   "vendor": "M5Stack",
   "build_ready": true,
@@ -122,5 +122,5 @@
       "broad_flash_authorization": false
     }
   },
-  "hardware_evidence": "hardware/evidence/tab5-console-os-20261004-bringup.json"
+  "hardware_evidence": "hardware/evidence/tab5-console-os-20261004-usb-game-testing.json"
 }

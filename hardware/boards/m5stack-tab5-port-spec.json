@@ -105,5 +105,5 @@
     "touch"
   ],
   "touch": true,
-  "laptop_content_transfer": "powered-off-removable-media"
+  "laptop_content_transfer": "native-usb-serial"
 }

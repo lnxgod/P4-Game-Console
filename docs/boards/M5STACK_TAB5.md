@@ -1,12 +1,13 @@
 # M5Stack Tab5 Console OS port
 
-Status: unit B has a verified Console OS install, ST7123 panel/touch detection,
-launcher startup and ten-second runtime health proof (2026-10-04). Unit A is
-backed up and authorized but awaits its programming port. Visual/touch acceptance,
-audio, SD/gameplay, and the remaining peripherals are not yet qualified.
-Both units are ESP32-P4 v1.3 with 16 MiB flash; B reports 32 MiB working PSRAM.
+Status: both A (ST7121) and B (ST7123) have verified app readback, mounted SD,
+launcher startup and ten-second runtime health proof (2026-10-04). The operator
+confirmed display/touch, including B after its mirror correction. USB game
+loading is verified. Doom gameplay, speaker sound and sustained scrolling
+acceptance remain pending; a clean boot is not gameplay proof.
+Both units are ESP32-P4 v1.3 with 16 MiB flash and 32 MiB PSRAM.
 Global `flash_authorized` stays false; only hash-bound exact-unit installs apply.
-See `hardware/evidence/tab5-console-os-20261004-bringup.json` for the serial evidence.
+See `hardware/evidence/tab5-console-os-20261004-usb-game-testing.json` for current evidence.
 
 ## Build
 
@@ -64,23 +65,60 @@ shutdown. Audio cleanup retains ownership on failure for retry. Acoustic quality
 headphone routing, volume and pop-free transitions still need measurement.
 
 Display handoff waits two refresh boundaries and retains a pending buffer after
-timeout so it cannot be overwritten while potentially scanning. Rotation/scaling
-uses CPU tiles of 32×32 pixels to keep neighboring source pixels in cache; dirty-region submissions redraw the full frame. The initial column loop missed
-the 250 ms frame deadline at 397–404 ms; the tiled implementation completed its
-first frame in 85 ms on B. Sustained frame rate, input latency and tearing remain
-unmeasured.
+timeout so it cannot be overwritten while potentially scanning. PPA performs
+landscape rotation and 1.5x/3x scaling. A small CPU prescale converts 320x200 games
+to 384x240 before exact 3x scaling. CPU tiles remain the error fallback. B's
+first transform measured about 20 ms, with first presentation at 50 ms;
+this is not a sustained frame-rate or tear-free claim. Shell submissions can
+return after queuing; framebuffer reuse still waits for the refresh fence.
+
+ST7123's vendor table starts mirrored. Post-init mirror normalization aligns
+its pixels with touch. Repeated display initialization now asserts the reset
+pin through open-drain output before releasing it as an input, fixing the
+captured Doom handoff failure (`Pin[4] can't set level in input mode`). A fresh
+Doom play test is still required. The backlight GPIO is released on teardown.
+
+SD startup defers whole-WAD hashing until Doom/Chex is requested, retaining full
+SHA-256 verification and the PSRAM snapshot before engine use. B's SD initialization
+measured 47 ms; populated-card launcher startup fell from about 25 seconds to
+about six seconds. Muted boot skips the eight-second audio animation.
 
 ## Not enabled in this candidate
 
 - C6 Wi-Fi/Bluetooth, wireless multiplayer and BLE controllers/dice.
-- USB-A host power and HID controllers, USB Drive mode and serial file transfer.
+- USB-A host power and HID controllers, and USB Drive/MSC mode.
 - Battery/charging management, microphone, camera, IMU, RTC and expansion ports.
 
-The multiplayer core is shared, but no physical multiplayer transport is enabled.
-Content transfer uses removable microSD with the tablet powered off. Copy the
-contents of the generated `sd-card` directory to a FAT32 card and eject it cleanly.
-Do not remove a card while the console is running or saving. Firmware binaries,
-WADs, generated SD content and factory backups remain local and ignored by Git.
+The multiplayer core is shared; native USB supplies its wired relay channel.
+Physical multiplayer acceptance remains pending. Content transfer uses the
+existing USB-C Serial/JTAG cable while Console OS owns the mounted SD card.
+It does not expose a writable disk to the Mac. Do not remove a card while the
+console is running or saving. Firmware binaries, WADs, generated SD content and
+pre-install backups remain local and ignored by Git.
+
+## Load games through the connected USB cable
+
+Use the pinned Python environment (with pyserial), the explicit current port,
+and a running launcher. No card reader is required:
+
+```sh
+python scripts/p4-transfer.py push-bundle apps/console_os/build-tab5/sd-card \
+  --port /dev/cu.usbmodem1101
+python scripts/p4-usb-content.py doom --port /dev/cu.usbmodem1101
+python scripts/p4-usb-content.py chex --port /dev/cu.usbmodem1101
+```
+
+The recorded A/B ports were `1101`/`2101`; port names may change. Bind the unit
+before flashing. `push-bundle` installs 19 native `.P4G` files, the `.P4R`
+resource sidecar and two `.P4CART` source games through one open connection.
+Doom/Chex data are separate exact-hash local inputs. The device validates each
+format, stages writes, verifies the digest, activates atomically and reads back.
+Native and Lua catalogs refresh separately. Individual transfers use `push`
+with `--class p4g`, `p4r` or `p4cart`; `exchange` remains isolated in `/TRANSFER`.
+Opening native Serial/JTAG can reset the board on this Mac; tools wait for the
+service and tolerate that startup window. Avoid repeatedly reopening monitors
+during a play test. Content installation restarts the launcher after activation.
+
 Tab5 P4U packages use the distinct target tag `esp32p4-tab5`. The Tab5 runtime
 rejects legacy `esp32p4` packages, and existing runtimes reject Tab5 packages.
 This prevents accidental cross-board updates; it is not a cryptographic signature.
@@ -124,22 +162,19 @@ readback. A failed check leaves the unit unmodified or in the loader after a
 write failure. The app-only route also verifies the bootloader, partitions and
 CRC-valid active OTA slot; it preserves the existing OTA selector.
 
-The current B app is 1,340,992 bytes, SHA-256
-`3c0bc589497c847d4125f0286e19ee52a123fcfcbf9bea67ae8160625cce94bb`.
-Both full pre-install snapshots contain the existing USB bridge firmware, not
-factory firmware. Their complete byte counts, hashes and unit bindings are in
-`hardware/backups/manifest.json`; all binaries remain ignored locally.
+Both units' current artifact, install receipts, SD sizes, upload hashes and
+acceptance limits are recorded in the current evidence JSON. Full pre-install
+snapshots contain the existing USB bridge firmware, not factory firmware; their
+byte counts, hashes and unit bindings are in `hardware/backups/manifest.json`.
+All binaries remain ignored locally.
 
-B found no responsive SD card, so its game catalog is empty. Insert a prepared
-FAT32 card with the generated SD bundle while powered off before gameplay tests.
-Boot and game volume currently default to zero; audio remains unverified. The
-generic `TOUCH_READY controller=gt911` text is a legacy label: B's driver-specific
-log identifies ST7123 firmware 3 and a 720×1280 touch range.
+Boot and game volume were saved at zero on both units. Set game volume to 3 for
+the pending speaker/Doom test. The generic `TOUCH_READY controller=gt911` text is
+a legacy label; driver-specific logs identify A's ST7121 and B's ST7123.
 
-A's bridge application takes over USB and hides the programming port. With USB-C
-connected, hold its reset button about two seconds until the green LED flashes
-rapidly, then release. Identify A by its stored hash, never by port order. Its
-ready authorization is `hardware/evidence/tab5-console-os-20261004-a-ready-authorization.json`.
+Recovery: with USB-C connected, hold reset about two seconds until the green LED
+flashes rapidly, then release. The guarded installer identifies the selected unit
+by its stored hash and uses the P4 watchdog reset to leave download mode.
 
 ## Sources
 

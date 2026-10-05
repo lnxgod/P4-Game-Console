@@ -121,6 +121,15 @@ python3 scripts/p4-transfer.py push /absolute/path/STAR_HOP.P4G \
   --port /dev/cu.wchusbserial...
 ```
 
+Tab5 uses the same verified protocol through native USB-C Serial/JTAG; select
+its `/dev/cu.usbmodem...` port explicitly. `push --class p4r` installs a validated
+resource sidecar and `push --class p4cart` installs a validated Lua cartridge.
+`push-bundle apps/console_os/build-tab5/sd-card --port <port>` installs all three
+formats over one connection, with sidecars before native cartridges. The device
+keeps exclusive SD ownership and reuses each format's validator before and after
+atomic activation. The `exchange` class remains confined to `/TRANSFER`.
+
+
 `push` defaults to class `p4g`. The host and badge independently validate the
 uppercase safe name, package bound and geometry, API version, embedded payload
 digest, and complete-file SHA-256. Console OS writes through a staging file,

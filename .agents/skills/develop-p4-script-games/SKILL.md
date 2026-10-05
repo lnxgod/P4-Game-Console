@@ -112,6 +112,18 @@ python3 scripts/p4-content.py cart /tmp/GAME.P4CART \
   --sd-root /Volumes/P4GAMES
 ```
 
+For Tab5 with the native USB transfer firmware, leave the card in the tablet
+and use the connected cable instead:
+
+```sh
+python scripts/p4-transfer.py push /tmp/GAME.P4CART --class p4cart --port /dev/cu.usbmodem1101
+```
+
+Select the actual unit's port. The host and device validate the cartridge before
+atomic activation under `P4/GAMES`; the Lua catalog then refreshes. Use
+`--no-replace` to reject an existing destination. The transport remains Console
+OS-owned; cartridges receive no USB or raw storage access.
+
 Use `--replace` only when replacement is intentional. The tool validates,
 stages, syncs, reads back, and atomically activates the complete cart without
 formatting or deleting unrelated files. Never let Console OS and the laptop

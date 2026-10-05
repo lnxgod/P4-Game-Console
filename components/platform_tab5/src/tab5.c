@@ -70,7 +70,12 @@ esp_err_t platform_tab5_display_reset(void)
     esp_err_t ret = platform_tab5_init();
     if (ret != ESP_OK) return ret;
     if (xSemaphoreTake(s_lock, pdMS_TO_TICKS(1000)) != pdTRUE) return ESP_ERR_TIMEOUT;
-    ret = output_locked(IO_EXPANDER_PIN_NUM_4, false);
+    /* The previous initialization releases LCD_RST as an input. The generic
+     * expander setter refuses writes to inputs, so enter open-drain output
+     * first. An old high latch is high impedance, never a driven-high reset. */
+    ret = esp_io_expander_set_output_mode(s_expander, IO_EXPANDER_PIN_NUM_4, IO_EXPANDER_OUTPUT_MODE_OPEN_DRAIN);
+    if (ret == ESP_OK) ret = esp_io_expander_set_dir(s_expander, IO_EXPANDER_PIN_NUM_4, IO_EXPANDER_OUTPUT);
+    if (ret == ESP_OK) ret = esp_io_expander_set_level(s_expander, IO_EXPANDER_PIN_NUM_4, false);
     if (ret == ESP_OK) {
         vTaskDelay(pdMS_TO_TICKS(20));
         ret = esp_io_expander_set_pullupdown(s_expander, IO_EXPANDER_PIN_NUM_4, IO_EXPANDER_PULL_UP);

@@ -308,7 +308,8 @@ workflow.
 
 The separate `m5stack-tab5` Console OS build uses the official C145/K145 wiring
 and detects ILI9881C/GT911, ST7123 or ST7121 panels. Its core display, touch, SD
-and ES8388 audio adapters are build verified. Unit B has exact readback, ST7123
-driver initialization and launcher boot-health evidence; physical acceptance,
-audio and SD/gameplay remain pending. A/B have separate full pre-install backups
-and exact-unit test authorizations; the global flash gate stays closed. See [Tab5 port notes](boards/M5STACK_TAB5.md).
+and ES8388 audio adapters are build verified. A (ST7121) and B (ST7123) have
+exact readback, mounted SD, launcher health and native USB game-transfer evidence.
+The operator confirmed touch after B's mirror correction. Doom gameplay, audio
+and sustained scrolling acceptance remain pending. A/B have separate full
+pre-install backups and exact-unit authorizations; the global flash gate stays closed. See [Tab5 port notes](boards/M5STACK_TAB5.md).

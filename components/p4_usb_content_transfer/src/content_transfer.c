@@ -596,7 +596,7 @@ static void accept_manifest(void)
     s_transfer.last_activity_us = esp_timer_get_time();
     ESP_LOGI(TAG,
              "P4_USB_CONTENT START kind=%s bytes=%lu "
-             "transport=h1-ch343-uart baud=%u staging=fixed-path",
+             "transport=console-link baud=%u staging=fixed-path",
              spec->label,
              (unsigned long)s_transfer.expected_bytes,
              (unsigned)P4_CONTENT_TRANSFER_BAUD);
@@ -796,7 +796,7 @@ esp_err_t p4_content_transfer_init(
     s_transfer.last_status = WIRE_STATUS_OK;
     reset_idle_parser();
     ESP_LOGI(TAG,
-             "P4_USB_CONTENT READY transport=h1-ch343-uart idle_baud=%u "
+             "P4_USB_CONTENT READY transport=console-link idle_baud=%u "
              "transfer_baud=%u chunk=%u "
              "targets=doom-shareware-v1,quake-shareware-v1,"
              "chex-quest-wad-v1,chex-quest-deh-v1",

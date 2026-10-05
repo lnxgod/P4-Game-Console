@@ -53,6 +53,10 @@ typedef enum {
     P4_FILE_TRANSFER_CLASS_P4G = 1,
     /** Opaque hash-checked exchange file under /TRANSFER. */
     P4_FILE_TRANSFER_CLASS_EXCHANGE = 2,
+    /** Validated resource sidecar under /GAMES. */
+    P4_FILE_TRANSFER_CLASS_P4R = 3,
+    /** Validated source cartridge under /P4/GAMES. */
+    P4_FILE_TRANSFER_CLASS_P4CART = 4,
 } p4_file_transfer_class_t;
 
 typedef enum {

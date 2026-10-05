@@ -3756,7 +3756,7 @@ static const uint8_t s_chex_quest_sha256[P4_MP_SHA256_BYTES] = {
 
 static uint8_t s_multiplayer_tx_datagram[P4_MP_MAX_DATAGRAM_BYTES];
 
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
 static esp_err_t content_uart_send(
     void *context, const uint8_t *bytes, size_t bytes_length)
 {
@@ -5370,7 +5370,8 @@ static void poll_multiplayer_link(const console_shell_t *shell)
     if (file_after.generation != s_file_transfer_generation_seen) {
         s_file_transfer_generation_seen = file_after.generation;
         if (file_after.direction == P4_FILE_TRANSFER_UPLOAD &&
-            file_after.file_class == P4_FILE_TRANSFER_CLASS_P4G) {
+            (file_after.file_class == P4_FILE_TRANSFER_CLASS_P4G ||
+             file_after.file_class == P4_FILE_TRANSFER_CLASS_P4R)) {
             /* P4G is the native ELF catalog. P4CART has a separate Lua
              * scanner and must not be invalidated for this transaction. */
             s_catalog_seen = false;
@@ -5379,6 +5380,11 @@ static void poll_multiplayer_link(const console_shell_t *shell)
                      "generation=%lu action=native-catalog-rescan",
                      file_after.file_name,
                      (unsigned long)file_after.generation);
+        }
+        if (file_after.direction == P4_FILE_TRANSFER_UPLOAD &&
+            file_after.file_class == P4_FILE_TRANSFER_CLASS_P4CART) {
+            s_p4cart_scan_seen = false;
+            ESP_LOGI(TAG, "P4_CONSOLE_OS P4CART_TRANSFER_ACTIVATED name=%s", file_after.file_name);
         }
     }
     /* H1 remains live for content uploads even while BLE owns game traffic. */
@@ -7576,6 +7582,12 @@ static bool play_boot_tone_pair(p4_game_platform_audio_t *audio,
 
 static void play_boot_chime(void)
 {
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (s_console_settings.boot_volume_step == 0U) {
+        ESP_LOGI(TAG, "P4_CONSOLE_OS BOOT_AUDIO status=muted animation=skipped");
+        return;
+    }
+#endif
     if (!native_audio_runtime_allowed()) {
         ESP_LOGI(TAG,
                  "P4_CONSOLE_OS BOOT_POST status=silent reason=runtime-gate");
@@ -10078,13 +10090,17 @@ void app_main(void)
     s_multiplayer_ble_enable_pending = true;
 #endif
     if (multiplayer_result == ESP_OK) {
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
         const p4_content_transfer_transport_t content_transport = {
             .send = content_uart_send,
             .wait_tx = content_uart_wait_tx,
             .set_baud = content_uart_set_baud,
             .context = NULL,
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+            .idle_baud = 115200U,
+#else
             .idle_baud = CONFIG_ESP_CONSOLE_UART_BAUDRATE,
+#endif
         };
         esp_err_t content_result = p4_content_transfer_init(
             PLATFORM_GAME_STORAGE_MOUNT_POINT, &content_transport);
