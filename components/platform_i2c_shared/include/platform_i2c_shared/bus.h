@@ -23,7 +23,9 @@ typedef struct platform_i2c_shared platform_i2c_shared_t;
  *
  * The caller must already own the board rail that powers VDDPST_5. Touch and
  * audio borrow the returned ESP-IDF handle and must release every device
- * before this object is destroyed.
+ * before this object is destroyed. On Tab5 this object is a client wrapper:
+ * the board service owns the persistent bus and destroying the wrapper does
+ * not delete that bus or its expander clients.
  */
 esp_err_t platform_i2c_shared_create(platform_i2c_shared_t **out_bus);
 

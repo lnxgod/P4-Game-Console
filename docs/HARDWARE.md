@@ -303,3 +303,10 @@ workflow.
 - [Elecrow 10.1-inch V1.2 schematic at the pinned commit](https://github.com/Elecrow-RD/CrowPanel-Advanced-10.1inch-ESP32-P4-HMI-AI-Display-1024x600-IPS-Touch-Screen/blob/c5a437311b951aaa9d17115bf420877a8f1f7b83/Eagle_SCH%26PCB/1.2/ESP32-P4%20Display%2010.1%20inch%20V1.2.sch)
 - [Espressif USB Host guide](https://docs.espressif.com/projects/esp-usb/en/latest/esp32p4/usb_host.html)
 - [ESP32-P4 hardware design guidelines](https://docs.espressif.com/projects/esp-hardware-design-guidelines/en/latest/esp32p4/index.html)
+
+## M5Stack Tab5 development target
+
+The separate `m5stack-tab5` Console OS build uses the official C145/K145 wiring
+and detects ILI9881C/GT911, ST7123 or ST7121 panels. Its core display, touch, SD
+and ES8388 audio adapters are build verified; no physical Tab5 acceptance or
+flash authorization is recorded. See [Tab5 port notes](boards/M5STACK_TAB5.md).

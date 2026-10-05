@@ -6,7 +6,8 @@ set(PLATFORM_GAME_STORAGE_MODEL_SOURCES
 
 if(COMMAND idf_component_register)
     idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
-    if(P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" OR
+    if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5" OR
+       P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" OR
        P4_ACTIVE_BOARD_PROFILE STREQUAL
            "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
         set(PLATFORM_GAME_STORAGE_BACKEND_SOURCES
@@ -65,7 +66,8 @@ if(COMMAND idf_component_register)
     # esp_tinyusb 2.0.1 defers WRITE(10) after copying into one reusable
     # buffer. Route the callback through the platform service so a transfer is
     # committed and read back before the host receives success.
-    if(NOT P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" AND
+    if(NOT P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5" AND
+       NOT P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" AND
        (NOT CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE OR
         CONFIG_P4_WAVESHARE_H2_RUNTIME_ROLE_SWITCH))
         target_link_options(${COMPONENT_LIB} INTERFACE

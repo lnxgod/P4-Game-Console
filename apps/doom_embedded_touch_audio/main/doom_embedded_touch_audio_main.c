@@ -156,7 +156,10 @@ static uint32_t ticks_ms(void)
 static void log_sound_disabled(void)
 {
     const uint32_t audio_calls = platform_audio_invocation_count();
-    if (platform_board_kind() == PLATFORM_BOARD_WAVESHARE_4_3) {
+    if (platform_board_kind() == PLATFORM_BOARD_M5STACK_TAB5) {
+        ESP_LOGI(TAG,"P4_DOOM SOUND_DISABLED board=m5stack-tab5 amp=expander-0x43-p1 audio_calls=%" PRIu32,audio_calls);
+        return;
+    } else if (platform_board_kind() == PLATFORM_BOARD_WAVESHARE_4_3) {
         ESP_LOGI(TAG,
                  "P4_DOOM_E6 SOUND_DISABLED audio_gate=%u "
                  "audio_calls=%" PRIu32 " amp_gpio=53 state=%s",
@@ -670,13 +673,21 @@ static bool try_audio_enable(void)
         if (recover_result != ESP_OK) {
             ESP_LOGE(TAG,
                      "P4_DOOM_E6 AUDIO_SAFETY_FAULT "
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+                     "stage=tab5-audio-create error=%s recover=%s halt=1",
+#else
                      "stage=factory-audio-create error=%s recover=%s halt=1",
+#endif
                      esp_err_to_name(result),
                      esp_err_to_name(recover_result));
             halt_dark("audio-create-safety", recover_result);
         }
         ESP_LOGW(TAG,
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+                 "P4_DOOM_E6 SOUND_DEGRADED stage=tab5-audio-create "
+#else
                  "P4_DOOM_E6 SOUND_DEGRADED stage=factory-audio-create "
+#endif
                  "error=%s recover=%s fallback=silent auto_fallback=0",
                  esp_err_to_name(result), esp_err_to_name(recover_result));
         return false;
@@ -706,7 +717,9 @@ static bool try_audio_enable(void)
         return false;
     }
     s_audio_lifecycle.runtime_bound = true;
-    if (platform_board_kind() == PLATFORM_BOARD_WAVESHARE_4_3) {
+    if (platform_board_kind() == PLATFORM_BOARD_M5STACK_TAB5) {
+        ESP_LOGI(TAG,"P4_DOOM SOUND_BOUND backend=tab5-es8388 rate_hz=16000 format=pcm16-stereo amp=expander-0x43-p1 codec_addr=0x10");
+    } else if (platform_board_kind() == PLATFORM_BOARD_WAVESHARE_4_3) {
         ESP_LOGI(TAG,
                  "P4_DOOM_E6 SOUND_BOUND backend=waveshare-es8311 "
                  "state=ready-muted amp_gpio=53 safe_level=low "
@@ -880,7 +893,9 @@ static void log_runtime_stats(void)
 
 static void log_sound_ready(uint32_t audio_calls)
 {
-    if (platform_board_kind() == PLATFORM_BOARD_WAVESHARE_4_3) {
+    if (platform_board_kind() == PLATFORM_BOARD_M5STACK_TAB5) {
+        ESP_LOGI(TAG,"P4_DOOM SOUND_READY board=m5stack-tab5 codec=es8388 audio_calls=%" PRIu32,audio_calls);
+    } else if (platform_board_kind() == PLATFORM_BOARD_WAVESHARE_4_3) {
         ESP_LOGI(TAG,
                  "P4_DOOM_E6 SOUND_READY state=running amp_gpio=53 "
                  "enabled_level=high codec=es8311 codec_volume=%u/100 "
@@ -907,6 +922,17 @@ static void verify_audio_start_or_safe_degrade(bool sound_requested)
     }
     platform_audio_telemetry_t backend = {0};
     const esp_err_t telemetry_result = platform_audio_get_telemetry(&backend);
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (telemetry_result == ESP_OK && backend.running && backend.codec_open &&
+        backend.tx_created && backend.tx_enabled && !backend.resources_retained) {
+        log_sound_ready(platform_audio_invocation_count());
+        return;
+    }
+    doom_e6_audio_release_result_t release_result;
+    const esp_err_t result=doom_e6_audio_release(&s_audio_lifecycle,&release_result);
+    if (result!=ESP_OK) halt_dark("tab5-audio-start-cleanup",result);
+    ESP_LOGW(TAG,"P4_DOOM SOUND_DEGRADED board=m5stack-tab5 fallback=silent");
+#else
     const doom_touch_audio_factory_start_witness_t witness = {
         .snapshot_valid = telemetry_result == ESP_OK,
         .state = (uint32_t)backend.state,
@@ -953,6 +979,7 @@ static void verify_audio_start_or_safe_degrade(bool sound_requested)
              telemetry_result == ESP_OK ? (unsigned)backend.state : 2U,
              telemetry_result == ESP_OK && backend.running ? 1U : 0U);
     halt_dark("audio-start-safety", ESP_ERR_INVALID_STATE);
+#endif
 }
 
 void DG_Init(void)
@@ -1097,7 +1124,9 @@ void app_main(void)
     s_runtime_gate = gate;
     const doom_touch_audio_runtime_mode_t mode =
         doom_touch_audio_runtime_gate_mode(&gate);
-    if (platform_board_kind() == PLATFORM_BOARD_WAVESHARE_4_3) {
+    if (platform_board_kind() == PLATFORM_BOARD_M5STACK_TAB5) {
+        ESP_LOGI(TAG,"P4_DOOM START board=m5stack-tab5 input=panel-matched-touch sound=es8388 runtime=build-candidate");
+    } else if (platform_board_kind() == PLATFORM_BOARD_WAVESHARE_4_3) {
         ESP_LOGI(TAG,
                  "P4_DOOM_E6 START board=%s input=gt911-multitouch "
                  "sound=es8311-i2s1-speaker-sfx-mus amp_gpio=53 "
@@ -1154,12 +1183,18 @@ void app_main(void)
             s_audio_calls_allowed = false;
             ESP_LOGE(TAG,
                      "P4_DOOM_E6 AUDIO_SAFETY_FAULT stage=initial-safe "
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+                     "error=%s amplifier-off-not-proven halt=1",
+#else
                      "error=%s gpio30=high-not-proven halt=1",
+#endif
                      esp_err_to_name(safe_result));
             halt_dark("audio-initial-safe", safe_result);
         } else {
             s_audio_lifecycle.safe_high_proven = true;
-            if (platform_board_kind() == PLATFORM_BOARD_WAVESHARE_4_3) {
+            if (platform_board_kind() == PLATFORM_BOARD_M5STACK_TAB5) {
+                ESP_LOGI(TAG,"P4_DOOM AUDIO_SAFE board=m5stack-tab5 amplifier=disabled expander_readback=proven");
+            } else if (platform_board_kind() == PLATFORM_BOARD_WAVESHARE_4_3) {
                 ESP_LOGI(TAG,
                          "P4_DOOM_E6 AUDIO_SAFE amp_gpio=53 "
                          "safe_level=low pad_readback=proven "

@@ -31,6 +31,13 @@ typedef struct {
     void *driver_data;
 } esp_lcd_touch_config_t;
 
+typedef struct {
+    uint8_t track_id;
+    uint16_t x, y, strength;
+} esp_lcd_touch_point_data_t;
+esp_err_t esp_lcd_touch_get_data(esp_lcd_touch_handle_t touch,
+    esp_lcd_touch_point_data_t *data, uint8_t *count, uint8_t max_count);
+
 esp_err_t esp_lcd_touch_read_data(esp_lcd_touch_handle_t touch);
 bool esp_lcd_touch_get_coordinates(
     esp_lcd_touch_handle_t touch,

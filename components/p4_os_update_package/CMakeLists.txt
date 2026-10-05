@@ -7,6 +7,11 @@ if(COMMAND idf_component_register)
         SRCS ${P4_OS_UPDATE_PACKAGE_SOURCES}
         INCLUDE_DIRS "include"
     )
+    idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
+    if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
+        target_compile_definitions(${COMPONENT_LIB} PUBLIC
+            P4_OS_UPDATE_ACCEPTED_TARGET="esp32p4-tab5")
+    endif()
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)
     target_compile_options(${COMPONENT_LIB} PRIVATE
         -Wall -Wextra -Wconversion -Wshadow -Werror

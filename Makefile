@@ -365,3 +365,17 @@ gamepad-host: p4-ble-radio-handoff-host
 
 gamepad-idf: gamepad-host
 	./scripts/build.sh gamepad_diag
+
+.PHONY: console-os-tab5-idf tab5-host
+
+tab5-host: platform-board-host platform-touch-host console-shell-host platform-game-storage-host p4-os-update-package-host
+	cmake -S components/platform_i2c_shared -B build-host/platform_i2c_shared -G Ninja
+	cmake --build build-host/platform_i2c_shared
+	ctest --test-dir build-host/platform_i2c_shared --output-on-failure
+	cmake -S components/platform_display -B build-host/platform_display -G Ninja
+	cmake --build build-host/platform_display
+	ctest --test-dir build-host/platform_display --output-on-failure
+
+console-os-tab5-idf: board-port-check tab5-host
+	./scripts/build.sh console_os m5stack-tab5
+	python3 scripts/verify-console-os-tab5.py

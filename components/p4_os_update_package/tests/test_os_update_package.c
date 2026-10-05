@@ -26,7 +26,7 @@ static void make_valid(uint8_t package[P4_OS_UPDATE_HEADER_BYTES + 4U])
     write_u32(package + 24U, 1U);
     memcpy(package + 64U, "1.2.3", sizeof("1.2.3"));
     memcpy(package + 96U, "test-build", sizeof("test-build"));
-    memcpy(package + 160U, "esp32p4", sizeof("esp32p4"));
+    memcpy(package + 160U, P4_OS_UPDATE_ACCEPTED_TARGET, sizeof(P4_OS_UPDATE_ACCEPTED_TARGET));
     package[P4_OS_UPDATE_HEADER_BYTES] = UINT8_C(0xe9);
 }
 
@@ -40,7 +40,7 @@ int main(void)
     assert(info.payload_bytes == 4U);
     assert(strcmp(info.version, "1.2.3") == 0);
     assert(strcmp(info.build, "test-build") == 0);
-    assert(strcmp(info.target, "esp32p4") == 0);
+    assert(strcmp(info.target, P4_OS_UPDATE_ACCEPTED_TARGET) == 0);
 
     assert(p4_os_update_package_parse(NULL, sizeof(package), &info) ==
            P4_OS_UPDATE_PACKAGE_BAD_ARGUMENT);
@@ -60,6 +60,13 @@ int main(void)
     make_valid(package);
     package[160] = 'x';
     assert(p4_os_update_package_parse(package, sizeof(package), &info) ==
+           P4_OS_UPDATE_PACKAGE_BAD_METADATA);
+    make_valid(package);
+    const char *other = strcmp(P4_OS_UPDATE_ACCEPTED_TARGET,"esp32p4") == 0
+        ? "esp32p4-tab5" : "esp32p4";
+    memset(package+160U,0,16U);
+    memcpy(package+160U,other,strlen(other));
+    assert(p4_os_update_package_parse(package,sizeof(package),&info)==
            P4_OS_UPDATE_PACKAGE_BAD_METADATA);
     make_valid(package);
     package[P4_OS_UPDATE_HEADER_BYTES] = 0U;

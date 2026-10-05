@@ -22,7 +22,8 @@ endif()
 if(NOT DEFINED P4_CONSOLE_RUNTIME_STATS_BUILD)
     set(P4_CONSOLE_RUNTIME_STATS_BUILD OFF)
 endif()
-if(NOT P4_BOARD_PROFILE STREQUAL "elecrow-crowpanel-advanced-10" AND
+if(NOT P4_BOARD_PROFILE STREQUAL "m5stack-tab5" AND
+   NOT P4_BOARD_PROFILE STREQUAL "elecrow-crowpanel-advanced-10" AND
    NOT P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" AND
    NOT P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
@@ -71,6 +72,19 @@ if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad_usb"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_usb_host"
+        "${CMAKE_CURRENT_LIST_DIR}/../doom/components/doom_audio"
+        "${CMAKE_CURRENT_LIST_DIR}/../doom_audio_probe/components/doom_engine_audio"
+    )
+elseif(P4_BOARD_PROFILE STREQUAL "m5stack-tab5")
+    list(APPEND EXTRA_COMPONENT_DIRS
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/board_deps_tab5"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_tab5"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/tab5/platform_audio"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_touch_input"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_video"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_i2c_shared"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_touch"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_platform"
         "${CMAKE_CURRENT_LIST_DIR}/../doom/components/doom_audio"
         "${CMAKE_CURRENT_LIST_DIR}/../doom_audio_probe/components/doom_engine_audio"
     )
@@ -140,6 +154,8 @@ if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
     # The two hardware profiles intentionally resolve different managed
     # component graphs. Keep each resolution independently authoritative.
     idf_build_set_property(DEPENDENCIES_LOCK dependencies-olimex.lock)
+elseif(P4_BOARD_PROFILE STREQUAL "m5stack-tab5")
+    idf_build_set_property(DEPENDENCIES_LOCK dependencies-tab5.lock)
 elseif(P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
     idf_build_set_property(DEPENDENCIES_LOCK dependencies-waveshare.lock)
@@ -447,7 +463,8 @@ endif()
 
 # A reviewed full-project install seeds a valid wear-levelled FAT volume.
 # Subsequent app-only updates leave this persistent partition untouched.
-if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" OR
+if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5" OR
+   P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" OR
    P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
     set(P4_GAME_STORAGE_SEED_DIR "${CMAKE_BINARY_DIR}/sd-card")
@@ -491,6 +508,11 @@ configure_file(
     "${P4_GAME_STORAGE_SEED_DIR}/DOOM1.WAD"
     COPYONLY
 )
+
+if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5")
+    configure_file("${CMAKE_CURRENT_LIST_DIR}/game-storage/README-TAB5.TXT"
+        "${P4_GAME_STORAGE_SEED_DIR}/README.TXT" COPYONLY)
+endif()
 
 # Seed two open, source-included games for the sandboxed Lua runtime. They
 # remain additive to native P4G games and are loaded only from the SD bundle.
@@ -684,7 +706,8 @@ add_dependencies(${P4_CONSOLE_MAIN_LIB} p4_protected_game_lineage)
 target_include_directories(${P4_CONSOLE_MAIN_LIB} PRIVATE
     "${P4_PROTECTED_LINEAGE_DIR}")
 
-if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" OR
+if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5" OR
+   P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" OR
    P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
     add_custom_target(p4_sd_card_bundle ALL
@@ -705,6 +728,10 @@ else()
     )
 endif()
 
+set(P4_OS_UPDATE_TARGET "esp32p4")
+if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5")
+    set(P4_OS_UPDATE_TARGET "esp32p4-tab5")
+endif()
 set(P4_OS_UPDATE_OUTPUT "${CMAKE_BINARY_DIR}/P4UPDATE.P4U")
 add_custom_target(p4_os_update_package ALL
     COMMAND
@@ -712,6 +739,7 @@ add_custom_target(p4_os_update_package ALL
         "${CMAKE_CURRENT_LIST_DIR}/../../scripts/build-os-update.py"
         --image "${CMAKE_BINARY_DIR}/${CMAKE_PROJECT_NAME}.bin"
         --version "${PROJECT_VER}"
+        --target "${P4_OS_UPDATE_TARGET}"
         --source-root "${CMAKE_CURRENT_LIST_DIR}/../.."
         --output "${P4_OS_UPDATE_OUTPUT}"
     DEPENDS
@@ -720,7 +748,8 @@ add_custom_target(p4_os_update_package ALL
     BYPRODUCTS "${P4_OS_UPDATE_OUTPUT}"
     VERBATIM
 )
-if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" OR
+if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5" OR
+   P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc" OR
    P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
     add_custom_command(TARGET p4_os_update_package POST_BUILD

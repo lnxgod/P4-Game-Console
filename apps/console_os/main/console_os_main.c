@@ -50,6 +50,7 @@
 #include "p4/input.h"
 #include "p4/lua_runtime.h"
 #include "p4/multiplayer.h"
+#include "p4/multiplayer_ble.h"
 #include "p4/multiplayer_registry.h"
 #include "p4/multiplayer_uart.h"
 #include "p4/platform.h"
@@ -189,7 +190,7 @@ enum {
     CONSOLE_GAME_UPDATE_HZ = 60,
     CONSOLE_SUBMIT_TIMEOUT_MS = 250,
     CONSOLE_BACKLIGHT_PERCENT = 25,
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     /* The launcher consumes newest GT911 input at 60 Hz, but the sampler
      * runs independently so a PPA/display wait cannot defer acquisition. */
     CONSOLE_TOUCH_MAILBOX_HZ = 120,
@@ -427,7 +428,7 @@ static bool s_touch_ready;
 static uint32_t s_touch_polls;
 static uint32_t s_touch_poll_failures;
 #endif
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
 /* Only the mailbox worker calls platform_touch_poll while it is running.
  * Games stop and join it before retaining their established direct polling
  * contract. The short spinlock section publishes/copies a whole frame, so a
@@ -645,7 +646,9 @@ typedef struct {
 static console_mp_transport_kind_t s_multiplayer_transport =
     CONSOLE_MP_TRANSPORT_WIRED;
 static bool s_multiplayer_uart_ready;
+#if P4_CONSOLE_BLE_MULTIPLAYER
 static bool s_multiplayer_ble_enable_pending;
+#endif
 static uint32_t s_multiplayer_discovery_sequence = 1U;
 static int64_t s_multiplayer_next_discovery_us;
 static int64_t s_multiplayer_peer_last_seen_us;
@@ -890,7 +893,7 @@ static const p4_doom_p4mp_transport_t s_doom_multiplayer_transport = {
 
 static esp_err_t present(console_shell_t *shell);
 static esp_err_t present_interactive(console_shell_t *shell);
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
 static void arm_interactive_touch_timestamp_for_present(void);
 static void clear_interactive_touch_timestamp_after_present(void);
 #endif
@@ -1029,7 +1032,7 @@ static const console_app_descriptor_t s_builtin_apps[] = {
     {
         .id = CONSOLE_APP_FILES,
         .title = "FILE MANAGER",
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
+#if CONFIG_P4_BOARD_M5STACK_TAB5 || CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
     CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
         .subtitle = "MICROSD GAMES",
 #else
@@ -1104,7 +1107,7 @@ static const console_app_descriptor_t s_builtin_apps[] = {
         .page = CONSOLE_PAGE_SAVES,
         .enabled = true,
     },
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
+#if CONFIG_P4_BOARD_M5STACK_TAB5 || CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
     CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
     {
         .id = CONSOLE_APP_STORAGE,
@@ -1206,7 +1209,7 @@ _Static_assert((int)CONSOLE_SHELL_LAYOUT_WIDTH ==
 _Static_assert((int)CONSOLE_SHELL_LAYOUT_HEIGHT ==
                    (int)PLATFORM_DISPLAY_GAME_HEIGHT,
                "console input layout must match the game height");
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
 _Static_assert((int)CONSOLE_SHELL_WIDTH ==
                    (int)PLATFORM_DISPLAY_CONTENT_WIDTH &&
                    (int)CONSOLE_SHELL_HEIGHT ==
@@ -1564,7 +1567,7 @@ static void set_doom_storage_state(
                 ? "FREEWARE 1.0 / READY" : "PRESS TO VERIFY";
             break;
         }
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
+#if CONFIG_P4_BOARD_M5STACK_TAB5 || CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
     CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
         if (!doom_ready) {
             doom_subtitle = "COPY DOOM1.WAD TO MICROSD";
@@ -1632,7 +1635,7 @@ static void set_game_manager_update_state(platform_os_update_state_t state)
         subtitle = "BAD UPDATE - REMOVE";
         break;
     case PLATFORM_OS_UPDATE_UNAVAILABLE:
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
+#if CONFIG_P4_BOARD_M5STACK_TAB5 || CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
     CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
         subtitle = "CHECK MICROSD UPDATE";
 #else
@@ -2492,11 +2495,11 @@ static void handle_manager_action(
     }
     if (action->type == CONSOLE_ACTION_OS_UPDATE_INSTALL) {
         console_shell_set_file_notice(shell, CONSOLE_FILE_NOTICE_UPDATING);
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
         arm_interactive_touch_timestamp_for_present();
 #endif
         const esp_err_t shown = present(shell);
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
         clear_interactive_touch_timestamp_after_present();
 #endif
         if (shown != ESP_OK) {
@@ -3499,6 +3502,8 @@ static console_shell_runtime_info_t runtime_info(void)
         .board_kind =
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
             CONSOLE_BOARD_WAVESHARE_4_3,
+#elif CONFIG_P4_BOARD_M5STACK_TAB5
+            CONSOLE_BOARD_M5STACK_TAB5,
 #else
             CONSOLE_BOARD_ELECROW_10,
 #endif
@@ -3549,7 +3554,7 @@ static console_shell_runtime_info_t runtime_info(void)
         .mouse_ready = false,
 #endif
         .sd_card_storage =
-#if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
+#if CONFIG_P4_BOARD_M5STACK_TAB5 || CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
     CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
             true,
 #else
@@ -6398,7 +6403,7 @@ static bool read_touch_frame(platform_touch_frame_t *frame)
     return true;
 }
 
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
 static void update_touch_mailbox_age(uint32_t age_us)
 {
     __atomic_store_n(&s_touch_mailbox_age_last_us, age_us,
@@ -6651,7 +6656,7 @@ static void note_interactive_touch_sample(
 static console_shell_action_t poll_touch_input(console_shell_t *shell)
 {
     platform_touch_frame_t frame;
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     s_interactive_touch_pending_timestamp_us = 0;
     if (touch_mailbox_running()) {
         if (!read_touch_mailbox_frame(&frame)) {
@@ -6668,7 +6673,7 @@ static console_shell_action_t poll_touch_input(console_shell_t *shell)
         contacts[i].x = frame.contacts[i].x;
         contacts[i].y = frame.contacts[i].y;
     }
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     const int32_t scroll_visual_before_q16 = shell->home_scroll_visual_q16;
     const size_t scroll_row_before = shell->home_scroll_row;
     const size_t pressed_index_before = shell->pressed_index;
@@ -6690,7 +6695,7 @@ static console_shell_action_t poll_touch_input(console_shell_t *shell)
 
 static console_shell_action_t poll_input(console_shell_t *shell)
 {
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     /* A USB-owned early return has no following touch-originated present. */
     s_interactive_touch_pending_timestamp_us = 0;
 #endif
@@ -6831,7 +6836,7 @@ static void log_runtime_stats(const console_shell_t *shell)
              (unsigned)s_p4cart_catalog.valid_cart_count,
              (unsigned)s_p4cart_catalog.invalid_cart_count);
 #endif
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     const uint32_t report_interval_samples = __atomic_load_n(
         &s_touch_mailbox_report_interval_samples, __ATOMIC_RELAXED);
     const uint32_t report_interval_total_us = __atomic_load_n(
@@ -7024,7 +7029,7 @@ static esp_err_t present(console_shell_t *shell)
         ++s_ui_timing_dirty_frames;
     }
     const int64_t render_started_us = dirty_started_us;
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     /* Both Windows and BBS pages retain the native 768x480 source. Windows
      * Home reuses its persistent chrome and updates only moving scroll bands. */
     const bool rendered = console_shell_uses_native_bbs_launcher(shell)
@@ -7055,7 +7060,7 @@ static esp_err_t present(console_shell_t *shell)
     if (s_ui_timing_last_render_us > s_ui_timing_max_render_us) {
         s_ui_timing_max_render_us = s_ui_timing_last_render_us;
     }
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     esp_err_t result;
     if (native_update.kind == CONSOLE_SHELL_NATIVE_UPDATE_REGION) {
         const platform_display_rgb565_region_t region = {
@@ -7093,7 +7098,7 @@ static esp_err_t present(console_shell_t *shell)
  * a dropped acknowledgement rather than a fatal display fault.  Interactive
  * input must never turn that recoverable condition into a black-screen halt.
  */
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
 static void arm_interactive_touch_timestamp_for_present(void)
 {
     if (s_interactive_touch_pending_timestamp_us > 0) {
@@ -7113,14 +7118,14 @@ static void clear_interactive_touch_timestamp_after_present(void)
 
 static esp_err_t present_interactive(console_shell_t *shell)
 {
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     /* Arm only the next native shell handoff, immediately before rendering.
      * The display owns the timestamp after this call; clear it after this
      * present so later animation/service frames cannot inherit it. */
     arm_interactive_touch_timestamp_for_present();
 #endif
     const esp_err_t result = present(shell);
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     clear_interactive_touch_timestamp_after_present();
     if (result == ESP_ERR_TIMEOUT) {
         ESP_LOGW(TAG,
@@ -7134,7 +7139,7 @@ static esp_err_t present_interactive(console_shell_t *shell)
     return result;
 }
 
-#if !CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if !CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && !CONFIG_P4_BOARD_M5STACK_TAB5
 static void draw_gamechangers_ai_logo(p4_game_surface_t *surface,
                                       int left, int top)
 {
@@ -7165,7 +7170,7 @@ static void draw_gamechangers_ai_logo(p4_game_surface_t *surface,
 }
 #endif
 
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
 static p4_bbs_boot_phase_t bbs_boot_phase_for_status(const char *status)
 {
     if (status == NULL || strstr(status, "START") != NULL ||
@@ -7200,7 +7205,7 @@ static esp_err_t present_boot_screen(unsigned animation_step,
     if (s_pixels == NULL) {
         return ESP_ERR_INVALID_STATE;
     }
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     const p4_bbs_boot_phase_t phase = bbs_boot_phase_for_status(status);
     p4_bbs_boot_model_t model = {
         .phase = phase,
@@ -7261,7 +7266,7 @@ static esp_err_t present_boot_screen(unsigned animation_step,
 #endif
 }
 
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
 static esp_err_t present_home_reveal(console_shell_t *shell)
 {
     if (shell == NULL || s_pixels == NULL) {
@@ -7332,7 +7337,7 @@ static esp_err_t present_home_reveal(console_shell_t *shell)
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
 static esp_err_t destroy_touch_for_handoff(void)
 {
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     const esp_err_t mailbox_result = stop_touch_mailbox();
     if (mailbox_result != ESP_OK) {
         /* Do not destroy the GT911 handle until its sole poller has joined. */
@@ -7387,7 +7392,7 @@ static bool native_audio_runtime_allowed(void)
 
 static void *native_audio_control_bus(void)
 {
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     return s_shared_bus == NULL
         ? NULL : (void *)platform_i2c_shared_handle(s_shared_bus);
 #else
@@ -8415,7 +8420,7 @@ static bool cartridge_present(void *opaque)
         return false;
     }
     esp_err_t result;
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     if (context->high_res_video) {
         result = platform_display_submit_game_content_rgb565(
             s_pixels, P4_GAME_SURFACE_HIGH_RES_WIDTH,
@@ -8427,7 +8432,7 @@ static bool cartridge_present(void *opaque)
             s_pixels, P4_GAME_SURFACE_WIDTH,
             CONSOLE_SUBMIT_TIMEOUT_MS);
     }
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     if (result == ESP_ERR_TIMEOUT) {
         if (context->display_ack_misses != UINT32_MAX) {
             ++context->display_ack_misses;
@@ -8613,7 +8618,7 @@ static esp_err_t run_stored_game(
         game->package.optional_capabilities;
     const bool high_res_requested =
         (capabilities & P4_GAME_CAP_VIDEO_HIGH_RES) != 0U;
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     const bool high_res_video = high_res_requested;
 #else
     if ((game->package.required_capabilities &
@@ -8779,7 +8784,7 @@ static esp_err_t run_stored_game(
              save_ready
                  ? (unsigned long)context->save->service.launch_sequence : 0UL);
     log_memory_health("cartridge-start");
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     /* Cartridges retain their direct 60 Hz GT911 reads. Join the launcher
      * sampler first so no two tasks ever access the driver concurrently. */
     const esp_err_t touch_mailbox_stop_result = stop_touch_mailbox();
@@ -8804,7 +8809,7 @@ static esp_err_t run_stored_game(
          context->game_result != P4_GAME_EXIT_TO_LAUNCHER)) {
         result = ESP_FAIL;
     }
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     const esp_err_t touch_mailbox_start_result = start_touch_mailbox();
     if (touch_mailbox_start_result != ESP_OK) {
         /* Launcher falls back to serialized foreground polling. The direct
@@ -9379,14 +9384,14 @@ static void script_draw_exit_badge(
 static esp_err_t script_present_frame(script_run_context_t *context,
                                       const uint16_t *pixels)
 {
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     const esp_err_t result = platform_display_submit_game_content_rgb565(
         pixels, P4_SCRIPT_SCREEN_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
 #else
     const esp_err_t result = platform_display_submit_content_rgb565(
         pixels, P4_SCRIPT_SCREEN_WIDTH, CONSOLE_SUBMIT_TIMEOUT_MS);
 #endif
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     if (result == ESP_ERR_TIMEOUT) {
         if (context->display_ack_misses != UINT32_MAX) {
             ++context->display_ack_misses;
@@ -9539,7 +9544,7 @@ static esp_err_t run_script_cart(
         .width = P4_SCRIPT_SCREEN_WIDTH,
         .height = P4_SCRIPT_SCREEN_HEIGHT,
     };
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     bool touch_mailbox_paused = false;
     if (script_status == P4_SCRIPT_STATUS_OK) {
         const esp_err_t touch_mailbox_stop_result = stop_touch_mailbox();
@@ -9625,7 +9630,7 @@ static esp_err_t run_script_cart(
     heap_caps_free(packet);
     if (owns_framebuffer) heap_caps_free(framebuffer);
     log_memory_health("script-stop");
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     if (touch_mailbox_paused) {
         const esp_err_t touch_mailbox_start_result = start_touch_mailbox();
         if (touch_mailbox_start_result != ESP_OK) {
@@ -9824,6 +9829,8 @@ void app_main(void)
              (unsigned)s_app_count,
 #if CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
              board->slug, "usb-hid-pad+kbd+mouse", "microsd",
+#elif CONFIG_P4_BOARD_M5STACK_TAB5
+             board->slug, "auto-detected-multitouch", "microsd",
 #elif CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 && \
       CONFIG_P4_WAVESHARE_H2_USB_HOST_MODE
              board->slug, "gt911-touch+usb-hid+ble-hid", "microsd",
@@ -9929,7 +9936,7 @@ void app_main(void)
              "controller_links=1 multiplayer_peer_links=1 "
              "host=shared order=pair-controller-before-lobby");
 #endif
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     (void)create_shared_control_bus_or_continue();
 #endif
     const esp_err_t storage_start_result =
@@ -9954,7 +9961,7 @@ void app_main(void)
 #endif
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
     create_touch_or_continue();
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     if (s_touch_ready) {
         const esp_err_t touch_mailbox_result = start_touch_mailbox();
         if (touch_mailbox_result != ESP_OK) {
@@ -9992,7 +9999,7 @@ void app_main(void)
     vTaskDelay(pdMS_TO_TICKS(CONSOLE_BBS_CONNECT_HOLD_MS));
     const console_shell_runtime_info_t initial_runtime = runtime_info();
     console_shell_set_runtime_info(shell, &initial_runtime);
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     result = present_home_reveal(shell);
 #else
     result = present(shell);
@@ -10014,6 +10021,8 @@ void app_main(void)
              "P4_CONSOLE_OS READY page=home display=hdmi "
              "audio=es8311-deferred-until-app "
              "storage=microsd removal=power-off-first");
+#elif CONFIG_P4_BOARD_M5STACK_TAB5
+    ESP_LOGI(TAG, "P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending");
 #elif CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
     ESP_LOGI(TAG,
              "P4_CONSOLE_OS READY page=home display=mipi-dsi "
@@ -10307,7 +10316,7 @@ void app_main(void)
                 "multiplayer-page-left");
 #endif
         }
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
         /* Launches leave the shell loop before a corresponding launcher
          * present. Do not let their touch time be consumed by a later return
          * frame after the game or lobby flow completes. */

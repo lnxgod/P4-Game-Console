@@ -11,3 +11,7 @@ target_link_libraries(test_platform_board_waveshare
     PRIVATE platform_board_waveshare)
 add_test(NAME platform_board_waveshare_descriptor
          COMMAND test_platform_board_waveshare)
+
+add_executable(test_platform_board_tab5 test_platform_board_tab5.c)
+target_link_libraries(test_platform_board_tab5 PRIVATE platform_board_tab5)
+add_test(NAME platform_board_tab5_descriptor COMMAND test_platform_board_tab5)

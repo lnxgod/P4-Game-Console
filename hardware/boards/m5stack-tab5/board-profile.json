@@ -1,0 +1,117 @@
+{
+  "adapter_template": "waveshare-esp32-p4-wifi6-touch-lcd-4-3",
+  "backend_compatibility": {
+    "proven": false,
+    "reason": "Dedicated panel, reset/rail control, touch and ES8388 audio adapters required; no inherited board identity or flash authorization."
+  },
+  "device_identity": null,
+  "exact_target_seen_on_hardware": false,
+  "factory_backup": null,
+  "flash_authorized": false,
+  "full_feature_set_hardware_tested": false,
+  "id": "m5stack-tab5",
+  "inputs": [
+    "touch"
+  ],
+  "interfaces": {
+    "audio": {
+      "address_7bit": 16,
+      "amp_enable": "expander 0x43 P1 active high",
+      "bclk": 27,
+      "codec": "ES8388",
+      "dout": 26,
+      "i2s_port": 1,
+      "lrclk": 29,
+      "mclk": 30
+    },
+    "display": {
+      "backlight_gpio": 22,
+      "bus": "MIPI-DSI",
+      "dphy_ldo_channel": 3,
+      "dphy_ldo_mv": 2500,
+      "logical_height": 720,
+      "logical_width": 1280,
+      "native_height": 1280,
+      "native_width": 720,
+      "panels": [
+        "ILI9881C",
+        "ST7123",
+        "ST7121"
+      ],
+      "reset": "PI4IOE5V6408 0x43 P4, release as input pull-up",
+      "rotation_cw_degrees": 90
+    },
+    "i2c": {
+      "expanders": [
+        67,
+        68
+      ],
+      "port": 1,
+      "scl": 32,
+      "sda": 31
+    },
+    "radio": {
+      "chip": "ESP32-C6",
+      "clk": 12,
+      "cmd": 13,
+      "data": [
+        11,
+        10,
+        9,
+        8
+      ],
+      "power_enable": "expander 0x44 P0",
+      "reset": 15,
+      "sdio_slot": 1
+    },
+    "sd": {
+      "clk": 43,
+      "cmd": 44,
+      "data": [
+        39,
+        40,
+        41,
+        42
+      ],
+      "format_on_failure": false,
+      "power_ldo_channel": 4,
+      "slot": 0,
+      "width": 4
+    },
+    "touch": {
+      "controllers": [
+        "GT911 at 0x14",
+        "ST7123/ST7121 at 0x55"
+      ],
+      "interrupt_gpio": 23,
+      "reset": "expander 0x43 P5"
+    },
+    "usb": {
+      "host_power_enabled_by_initial_port": false,
+      "type_a": "native HS USB host dedicated PHY; power expander 0x44 P3",
+      "type_c": "native FS USB Serial/JTAG GPIO24/25"
+    }
+  },
+  "laptop_content_transfer": "powered-off-removable-media",
+  "memory": {
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432
+  },
+  "official_source": {
+    "commit": "73ee07b1ad56f865f13a2739be8bb6808c1da58a",
+    "manual_sha256": "6c054369e4fb1a7d04fa95fb31adda26feaa9de3540942f733eb2c1a68cd81e1",
+    "manual_url": "https://docs.m5stack.com/en/core/Tab5",
+    "repository": "https://github.com/espressif/esp-bsp",
+    "schematic_sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329",
+    "schematic_url": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1132/Tab5_Schematics_PDF.pdf"
+  },
+  "pcb_revision": "Unconfirmed - official C145 schematic",
+  "product": "Tab5 C145/K145",
+  "schema": 1,
+  "soc": "ESP32-P4 revision 1.x build family",
+  "status": "initial-core-port-hardware-unverified",
+  "touch": true,
+  "vendor": "M5Stack",
+  "build_ready": true,
+  "verification_document": "docs/boards/M5STACK_TAB5.md"
+}

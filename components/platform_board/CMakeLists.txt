@@ -36,9 +36,13 @@ else()
         CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B=0
         CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3=1
     )
+    add_library(platform_board_tab5 STATIC src/platform_board.c)
+    target_include_directories(platform_board_tab5 PUBLIC include tests/include)
+    target_compile_features(platform_board_tab5 PUBLIC c_std_11)
+    target_compile_definitions(platform_board_tab5 PUBLIC CONFIG_P4_BOARD_M5STACK_TAB5=1)
     if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
         foreach(target platform_board platform_board_olimex
-                       platform_board_waveshare)
+                       platform_board_waveshare platform_board_tab5)
             target_compile_options(${target} PRIVATE
                 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
             )

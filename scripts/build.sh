@@ -19,6 +19,12 @@ case "$P4_BOARD" in
         P4_BOARD_DEFAULTS="$P4_PROJECT_ROOT/hardware/boards/elecrow-crowpanel-advanced-10/sdkconfig.defaults"
         P4_BOARD_ARGUMENTS="$P4_APP_DIR/sdkconfig.defaults;$P4_BOARD_DEFAULTS"
         ;;
+    m5stack-tab5)
+        [ "$P4_APP" = console_os ] || { printf "%s\n" "Tab5 currently supports console_os" >&2; exit 2; }
+        P4_BUILD_DIR="$P4_APP_DIR/build-tab5"
+        P4_BOARD_DEFAULTS="$P4_PROJECT_ROOT/hardware/boards/m5stack-tab5/sdkconfig.defaults"
+        P4_BOARD_ARGUMENTS="$P4_APP_DIR/sdkconfig.defaults;$P4_BOARD_DEFAULTS"
+        ;;
     olimex-esp32-p4-pc)
         P4_BUILD_DIR="$P4_APP_DIR/build-olimex-esp32-p4-pc"
         P4_BOARD_DEFAULTS="$P4_PROJECT_ROOT/hardware/boards/olimex-esp32-p4-pc-rev-b/sdkconfig.defaults"
@@ -47,7 +53,7 @@ case "$P4_BOARD" in
         ;;
     *)
         printf 'Unsupported board: %s\n' "$P4_BOARD" >&2
-        printf '%s\n' 'Known boards: elecrow-crowpanel-advanced-10, olimex-esp32-p4-pc, waveshare-esp32-p4-wifi6-touch-lcd-4.3, waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host' >&2
+        printf '%s\n' 'Known boards: m5stack-tab5, elecrow-crowpanel-advanced-10, olimex-esp32-p4-pc, waveshare-esp32-p4-wifi6-touch-lcd-4.3, waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host' >&2
         exit 2
         ;;
 esac
@@ -159,7 +165,8 @@ fi
 # staging directory and recreates it during configure, so force that safe
 # cleanup only when an existing removable-media bundle is malformed.
 if [ "$P4_APP" = console_os ] &&
-   { [ "$P4_BOARD_PROFILE" = olimex-esp32-p4-pc ] ||
+   { [ "$P4_BOARD_PROFILE" = m5stack-tab5 ] ||
+     [ "$P4_BOARD_PROFILE" = olimex-esp32-p4-pc ] ||
      [ "$P4_BOARD_PROFILE" = waveshare-esp32-p4-wifi6-touch-lcd-4.3 ]; } &&
    ! p4_console_sd_root_is_exact "$P4_BUILD_DIR/sd-card"; then
     printf 'Regenerating malformed Console OS SD staging root.\n'
@@ -173,7 +180,8 @@ fi
 p4_idf_action build
 
 if [ "$P4_APP" = console_os ] &&
-   { [ "$P4_BOARD_PROFILE" = olimex-esp32-p4-pc ] ||
+   { [ "$P4_BOARD_PROFILE" = m5stack-tab5 ] ||
+     [ "$P4_BOARD_PROFILE" = olimex-esp32-p4-pc ] ||
      [ "$P4_BOARD_PROFILE" = waveshare-esp32-p4-wifi6-touch-lcd-4.3 ]; } &&
    ! p4_console_sd_root_is_exact "$P4_BUILD_DIR/sd-card"; then
     p4_console_sd_prune_generated_conflicts "$P4_BUILD_DIR/sd-card" || {

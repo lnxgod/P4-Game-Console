@@ -102,7 +102,7 @@ p4_os_update_package_result_t p4_os_update_package_parse(
                    data + UPDATE_BUILD_TEXT) ||
         !copy_text(out_info->target, sizeof(out_info->target),
                    data + UPDATE_TARGET_TEXT) ||
-        strcmp(out_info->target, "esp32p4") != 0) {
+        strcmp(out_info->target, P4_OS_UPDATE_ACCEPTED_TARGET) != 0) {
         return P4_OS_UPDATE_PACKAGE_BAD_METADATA;
     }
     if (data[out_info->payload_offset] != UINT8_C(0xe9)) {

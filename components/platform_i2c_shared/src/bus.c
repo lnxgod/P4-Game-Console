@@ -4,6 +4,9 @@
 #include <stdlib.h>
 
 #include "driver/gpio.h"
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+#include "platform/tab5.h"
+#endif
 
 struct platform_i2c_shared {
     i2c_master_bus_handle_t handle;
@@ -24,6 +27,11 @@ esp_err_t platform_i2c_shared_create(platform_i2c_shared_t **out_bus)
     if (bus == NULL) {
         return ESP_ERR_NO_MEM;
     }
+    /* Tab5 keeps one board-owned bus alive across display/audio handoffs. */
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    const esp_err_t result = platform_tab5_init();
+    bus->handle = platform_tab5_i2c();
+#else
     const i2c_master_bus_config_t config = {
         .i2c_port = PLATFORM_I2C_SHARED_PORT,
         .sda_io_num = (gpio_num_t)PLATFORM_I2C_SHARED_SDA_GPIO,
@@ -38,6 +46,8 @@ esp_err_t platform_i2c_shared_create(platform_i2c_shared_t **out_bus)
         },
     };
     const esp_err_t result = i2c_new_master_bus(&config, &bus->handle);
+
+#endif
     if (result != ESP_OK) {
         free(bus);
         return result;
@@ -75,10 +85,12 @@ esp_err_t platform_i2c_shared_destroy(platform_i2c_shared_t **bus)
         (*bus)->handle == NULL) {
         return ESP_ERR_INVALID_ARG;
     }
+#if !CONFIG_P4_BOARD_M5STACK_TAB5
     const esp_err_t result = i2c_del_master_bus((*bus)->handle);
     if (result != ESP_OK) {
         return result;
     }
+#endif
     (*bus)->handle = NULL;
     free(*bus);
     *bus = NULL;

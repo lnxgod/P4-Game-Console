@@ -4898,7 +4898,7 @@ static void draw_touch(const console_shell_t *shell,
         outline_rect(pixels, stride, (int)x - 4, (int)y - 4,
                      9, 9, COLOR_WHITE);
     }
-    draw_text(pixels, stride, 8, 190, "UP TO 5 GT911 CONTACTS",
+    draw_text(pixels, stride, 8, 190, "UP TO 5 TOUCH CONTACTS",
               COLOR_MUTED, 1U, 22U);
 }
 
@@ -4915,6 +4915,9 @@ static void draw_system(const console_shell_t *shell,
     } else if (shell->runtime.board_kind == CONSOLE_BOARD_WAVESHARE_4_3) {
         board_name = "WAVESHARE P4 LCD 4.3";
         soc_name = "ESP32-P4NRW32";
+    } else if (shell->runtime.board_kind == CONSOLE_BOARD_M5STACK_TAB5) {
+        board_name = "M5STACK TAB5";
+        soc_name = "ESP32-P4";
     } else if (shell->runtime.board_kind == CONSOLE_BOARD_HOST_PREVIEW) {
         board_name = "PC 768X480 PREVIEW";
         soc_name = "HOST SDL3";

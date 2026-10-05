@@ -1,8 +1,15 @@
 set(PLATFORM_TOUCH_PURE_SOURCES src/platform_touch_frame.c)
 
 if(COMMAND idf_component_register)
+    set(TOUCH_SOURCE src/platform_touch.c)
+    set(TOUCH_BOARD_DEPS)
+    idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
+    if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
+        set(TOUCH_SOURCE src/platform_touch_tab5.c)
+        set(TOUCH_BOARD_DEPS platform_tab5 espressif__esp_lcd_touch_st7123)
+    endif()
     idf_component_register(
-        SRCS src/platform_touch.c ${PLATFORM_TOUCH_PURE_SOURCES}
+        SRCS ${TOUCH_SOURCE} ${PLATFORM_TOUCH_PURE_SOURCES}
         INCLUDE_DIRS include
         PRIV_INCLUDE_DIRS src
         REQUIRES
@@ -12,7 +19,7 @@ if(COMMAND idf_component_register)
             esp_timer
             espressif__esp_lcd_touch
             espressif__esp_lcd_touch_gt911
-            platform_board
+            platform_board ${TOUCH_BOARD_DEPS}
     )
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)
     target_compile_options(${COMPONENT_LIB} PRIVATE

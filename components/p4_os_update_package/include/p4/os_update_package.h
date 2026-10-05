@@ -10,6 +10,11 @@
 extern "C" {
 #endif
 
+/* Existing boards retain their legacy target; new ports can bind packages. */
+#ifndef P4_OS_UPDATE_ACCEPTED_TARGET
+#define P4_OS_UPDATE_ACCEPTED_TARGET "esp32p4"
+#endif
+
 #define P4_OS_UPDATE_MAGIC "P4OSUP1\0"
 
 enum {

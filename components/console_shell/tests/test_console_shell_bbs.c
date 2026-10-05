@@ -66,8 +66,10 @@ static console_shell_action_t tap_surface(console_shell_t *shell,
                                           uint16_t surface_y)
 {
     const console_shell_contact_t contact = {
-        .x = (uint16_t)(CONSOLE_SHELL_VIEWPORT_LEFT + surface_x),
-        .y = (uint16_t)(CONSOLE_SHELL_VIEWPORT_TOP + surface_y),
+        .x = (uint16_t)(CONSOLE_SHELL_VIEWPORT_LEFT +
+            (uint32_t)surface_x * CONSOLE_SHELL_VIEWPORT_WIDTH / CONSOLE_SHELL_WIDTH),
+        .y = (uint16_t)(CONSOLE_SHELL_VIEWPORT_TOP +
+            (uint32_t)surface_y * CONSOLE_SHELL_VIEWPORT_HEIGHT / CONSOLE_SHELL_HEIGHT),
     };
     (void)console_shell_handle_touch(shell, true, &contact, 1U);
     return release_touch(shell);

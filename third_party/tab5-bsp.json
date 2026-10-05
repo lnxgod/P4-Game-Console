@@ -1,0 +1,46 @@
+{
+  "schema": 1,
+  "repository": "https://github.com/espressif/esp-bsp",
+  "commit": "73ee07b1ad56f865f13a2739be8bb6808c1da58a",
+  "license": "Apache-2.0",
+  "files": [
+    {
+      "source": "bsp/m5stack_tab5/priv_include/disp_init_data.h",
+      "path": "components/platform_tab5/vendor/disp_init_data.h",
+      "sha256": "7571c61a4e80e4e263d1d5e709746d98587b04522fd351c3f86c593393890f69"
+    },
+    {
+      "source": "bsp/m5stack_tab5/priv_include/disp_init_data_1.h",
+      "path": "components/platform_tab5/vendor/disp_init_data_1.h",
+      "sha256": "748882dad015816d1ca83853297b1751ae3e722f5385911061a56fed927056e2"
+    },
+    {
+      "source": "bsp/m5stack_tab5/priv_include/disp_init_data_st7121.h",
+      "path": "components/platform_tab5/vendor/disp_init_data_st7121.h",
+      "sha256": "7b8777fab8953df9d56b0717958542444d8e60513644b66cd78893d55adfd326"
+    },
+    {
+      "source": "bsp/m5stack_tab5/LICENSE",
+      "path": "components/platform_tab5/vendor/LICENSE",
+      "sha256": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30"
+    }
+  ],
+  "reference_files": [
+    {
+      "path": "bsp/m5stack_tab5/src/bsp_display.c",
+      "sha256": "c167abf2a6c8468fd0dcf2d7c7de768cff1013c991c077291434f9bf884ba0e2"
+    },
+    {
+      "path": "bsp/m5stack_tab5/src/bsp_feature_en.c",
+      "sha256": "a159383221285fe473ed4d9de65adf85255745ba03be6be967ce87b907b1ae95"
+    },
+    {
+      "path": "bsp/m5stack_tab5/src/bsp_audio.c",
+      "sha256": "b931df22f51b2911f2c284b61c5cabe04dc31ec7af00b5c52efab9946d7c5040"
+    },
+    {
+      "path": "bsp/m5stack_tab5/src/bsp_storage.c",
+      "sha256": "0ba222a0d4a15cbda5ac178c7c3003b8b5c7371b8ebf72898133f1855dc16dec"
+    }
+  ]
+}

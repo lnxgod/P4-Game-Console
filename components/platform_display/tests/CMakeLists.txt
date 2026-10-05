@@ -60,3 +60,35 @@ endif()
 
 add_test(NAME platform_display_layout_waveshare_tests
          COMMAND platform_display_layout_waveshare_tests)
+
+add_executable(platform_display_layout_tab5_tests
+    test_platform_display_tab5.c
+    ../src/platform_display_layout.c
+)
+target_include_directories(platform_display_layout_tab5_tests PRIVATE
+    ../src
+    ../include
+    ../../platform_board/include
+)
+target_compile_definitions(platform_display_layout_tab5_tests PRIVATE
+    CONFIG_P4_BOARD_M5STACK_TAB5=1
+)
+target_compile_features(platform_display_layout_tab5_tests PRIVATE c_std_11)
+
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(platform_display_layout_tab5_tests PRIVATE
+        -Wall
+        -Wextra
+        -Wpedantic
+        -Wconversion
+        -Wshadow
+        -Werror
+        -fsanitize=address,undefined
+        -fno-omit-frame-pointer
+    )
+    target_link_options(platform_display_layout_tab5_tests PRIVATE
+        -fsanitize=address,undefined)
+endif()
+
+add_test(NAME platform_display_layout_tab5_tests
+         COMMAND platform_display_layout_tab5_tests)

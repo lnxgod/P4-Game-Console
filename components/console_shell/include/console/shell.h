@@ -20,8 +20,8 @@
 #define CONSOLE_SHELL_TARGET_HEIGHT 600U
 #endif
 
-#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
-    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+#if (CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+     CONSOLE_SHELL_TARGET_HEIGHT == 480U) || CONFIG_P4_BOARD_M5STACK_TAB5
 #define CONSOLE_SHELL_NATIVE_BBS 1
 #include "p4/bbs_ui.h"
 #else
@@ -36,8 +36,8 @@ enum {
     /* Stable UI coordinate space used for layout and bounded input. */
     CONSOLE_SHELL_LAYOUT_WIDTH = 320,
     CONSOLE_SHELL_LAYOUT_HEIGHT = 200,
-#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
-    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+#if (CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+     CONSOLE_SHELL_TARGET_HEIGHT == 480U) || CONFIG_P4_BOARD_M5STACK_TAB5
     /* The native BBS and high-resolution paths retain a 768x480 surface. */
     CONSOLE_SHELL_WIDTH = 768,
     CONSOLE_SHELL_HEIGHT = 480,
@@ -180,6 +180,7 @@ typedef enum {
     CONSOLE_BOARD_OLIMEX_P4_PC,
     CONSOLE_BOARD_WAVESHARE_4_3,
     CONSOLE_BOARD_HOST_PREVIEW,
+    CONSOLE_BOARD_M5STACK_TAB5,
 } console_shell_board_kind_t;
 
 typedef enum {

@@ -49,6 +49,13 @@ Keep the build target and physical target paired exactly:
 - Any other target needs its own ID and source-pinned profile through the board
   port contract. Reusing an adapter never permits reusing a board identity.
 
+For Tab5, select `m5stack-tab5` explicitly and read
+`docs/boards/M5STACK_TAB5.md` and
+`hardware/boards/m5stack-tab5/board-profile.json`. Use
+`make console-os-tab5-idf`. This is a build-verified core port with no live-unit
+acceptance or flash authorization; preserve the complete factory image and bind
+the exact unit before any first write. C6 radio and USB-A host power are disabled.
+
 For another ESP32-P4 board, use `scripts/board-port.py` and
 `docs/BOARD_PORTING.md`. Start with `check` and `matrix`, then feed a
 source-pinned hardware spec to `plan` and `scaffold`. The generated adapter map

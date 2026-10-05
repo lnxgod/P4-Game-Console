@@ -27,6 +27,7 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--image", type=pathlib.Path, required=True)
     parser.add_argument("--version", required=True)
+    parser.add_argument("--target", choices=("esp32p4", "esp32p4-tab5"), default="esp32p4")
     build_source = parser.add_mutually_exclusive_group(required=True)
     build_source.add_argument("--build")
     build_source.add_argument("--source-root", type=pathlib.Path)
@@ -76,7 +77,7 @@ def main() -> int:
     header[32:64] = digest
     header[64:96] = bounded(args.version, 32, "version")
     header[96:160] = bounded(build, 64, "build")
-    header[160:176] = bounded("esp32p4", 16, "target")
+    header[160:176] = bounded(args.target, 16, "target")
     package = bytes(header) + image
     args.output.parent.mkdir(parents=True, exist_ok=True)
     temporary = args.output.with_suffix(args.output.suffix + ".tmp")

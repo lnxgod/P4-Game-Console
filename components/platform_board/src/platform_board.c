@@ -4,7 +4,26 @@
 
 #include "sdkconfig.h"
 
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+static const platform_board_descriptor_t s_board = {
+    .id = PLATFORM_BOARD_M5STACK_TAB5,
+    .slug = "m5stack-tab5",
+    .vendor = "M5Stack",
+    .product = "Tab5 C145/K145",
+    .revision = "official C145 profile; exact unit unverified",
+    .display_width = 1280,
+    .display_height = 720,
+    .flash_bytes = UINT32_C(16777216),
+    .psram_bytes = UINT32_C(33554432),
+    .has_touch = true,
+    .has_hdmi = false,
+    .has_sd_card = true,
+    .has_usb_device_game_storage = false,
+    .has_integrated_usb_host_hub = false,
+    .has_speaker = true,
+    .has_headphone_codec = true,
+};
+#elif CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
 static const platform_board_descriptor_t s_board = {
     .id = PLATFORM_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3,
     .slug = "waveshare-esp32-p4-wifi6-touch-lcd-4.3",

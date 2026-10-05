@@ -63,6 +63,18 @@
         "audio": "apps/doom_embedded_touch_audio/components/platform_audio",
         "dependencies": "components/board_deps_waveshare"
       }
+    },
+    "m5stack-tab5": {
+      "board_profile": "hardware/boards/m5stack-tab5/board-profile.json",
+      "sdkconfig_defaults": "hardware/boards/m5stack-tab5/sdkconfig.defaults",
+      "build_command": "make console-os-tab5-idf",
+      "adapters": {
+        "display": "components/platform_display/src/platform_display_tab5.c",
+        "storage": "components/platform_game_storage/src/platform_game_storage.c",
+        "input": "components/platform_touch/src/platform_touch_tab5.c",
+        "audio": "components/tab5/platform_audio",
+        "dependencies": "components/board_deps_tab5"
+      }
     }
   },
   "targets": {
@@ -90,7 +102,9 @@
         "atomic_os_updates": true,
         "audio": true
       },
-      "inputs": ["touch"],
+      "inputs": [
+        "touch"
+      ],
       "touch": true,
       "laptop_content_transfer": "usb-device-msc",
       "exact_target_seen_on_hardware": true,
@@ -120,7 +134,11 @@
         "atomic_os_updates": true,
         "audio": true
       },
-      "inputs": ["gamepad", "keyboard", "mouse"],
+      "inputs": [
+        "gamepad",
+        "keyboard",
+        "mouse"
+      ],
       "touch": false,
       "laptop_content_transfer": "powered-off-removable-media",
       "exact_target_seen_on_hardware": false,
@@ -150,10 +168,44 @@
         "atomic_os_updates": true,
         "audio": true
       },
-      "inputs": ["touch"],
+      "inputs": [
+        "touch"
+      ],
       "touch": true,
       "laptop_content_transfer": "usb-device-msc",
       "exact_target_seen_on_hardware": true,
+      "full_feature_set_hardware_tested": false
+    },
+    "m5stack-tab5": {
+      "template": "m5stack-tab5",
+      "features": {
+        "window_manager": true,
+        "program_manager": true,
+        "color_themes": true,
+        "achievements": true,
+        "file_manager": true,
+        "game_manager": true,
+        "save_manager": true,
+        "multiplayer_core": true,
+        "terminal": true,
+        "native_cartridges": true,
+        "legacy_p4cart_catalog": true,
+        "maze_chase": true,
+        "space_invaders": true,
+        "calculator_cartridge": true,
+        "input_test_cartridge": true,
+        "av_test_cartridge": true,
+        "doom": true,
+        "persistent_game_storage": true,
+        "atomic_os_updates": true,
+        "audio": true
+      },
+      "inputs": [
+        "touch"
+      ],
+      "touch": true,
+      "laptop_content_transfer": "powered-off-removable-media",
+      "exact_target_seen_on_hardware": false,
       "full_feature_set_hardware_tested": false
     }
   }

@@ -1,0 +1,64 @@
+{
+  "adapter_template": "waveshare-esp32-p4-wifi6-touch-lcd-4-3",
+  "adapters": {
+    "display": {
+      "action": "implemented-build-verified",
+      "path": "components/platform_display/src/platform_display_tab5.c"
+    },
+    "storage": {
+      "action": "implemented-build-verified",
+      "path": "components/platform_game_storage/src/platform_game_storage.c"
+    },
+    "input": {
+      "action": "implemented-build-verified",
+      "path": "components/platform_touch/src/platform_touch_tab5.c"
+    },
+    "audio": {
+      "action": "implemented-build-verified",
+      "path": "components/tab5/platform_audio"
+    },
+    "dependencies": {
+      "action": "implemented-build-verified",
+      "path": "components/board_deps_tab5"
+    }
+  },
+  "backend_compatibility_proven": false,
+  "board": "m5stack-tab5",
+  "build_ready": true,
+  "console_feature_contract": [
+    "window_manager",
+    "program_manager",
+    "color_themes",
+    "achievements",
+    "file_manager",
+    "game_manager",
+    "save_manager",
+    "multiplayer_core",
+    "terminal",
+    "native_cartridges",
+    "legacy_p4cart_catalog",
+    "maze_chase",
+    "space_invaders",
+    "calculator_cartridge",
+    "input_test_cartridge",
+    "av_test_cartridge",
+    "doom",
+    "persistent_game_storage",
+    "atomic_os_updates",
+    "audio"
+  ],
+  "flash_authorized": false,
+  "inputs": [
+    "touch"
+  ],
+  "laptop_content_transfer": "powered-off-removable-media",
+  "mandatory_before_first_write": [
+    "complete factory flash backup",
+    "backup byte count and SHA-256",
+    "hashed live-device identity binding",
+    "reviewed exact-board flash authorization"
+  ],
+  "result": "board-port-plan",
+  "touch_required": true,
+  "status": "initial-core-port-hardware-unverified"
+}

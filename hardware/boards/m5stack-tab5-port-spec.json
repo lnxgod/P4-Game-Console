@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "id": "m5stack-tab5",
+  "vendor": "M5Stack",
+  "product": "Tab5 C145/K145",
+  "pcb_revision": "Unconfirmed - official C145 schematic",
+  "soc": "ESP32-P4 revision 1.x build family",
+  "memory": {
+    "flash_bytes": 16777216,
+    "psram_bytes": 33554432
+  },
+  "official_source": {
+    "repository": "https://github.com/espressif/esp-bsp",
+    "commit": "73ee07b1ad56f865f13a2739be8bb6808c1da58a",
+    "manual_url": "https://docs.m5stack.com/en/core/Tab5",
+    "manual_sha256": "6c054369e4fb1a7d04fa95fb31adda26feaa9de3540942f733eb2c1a68cd81e1",
+    "schematic_url": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1132/Tab5_Schematics_PDF.pdf",
+    "schematic_sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329"
+  },
+  "adapter_template": "waveshare-esp32-p4-wifi6-touch-lcd-4-3",
+  "backend_compatibility": {
+    "proven": false,
+    "reason": "Dedicated panel, reset/rail control, touch and ES8388 audio adapters required; no inherited board identity or flash authorization."
+  },
+  "interfaces": {
+    "display": {
+      "bus": "MIPI-DSI",
+      "native_width": 720,
+      "native_height": 1280,
+      "logical_width": 1280,
+      "logical_height": 720,
+      "rotation_cw_degrees": 90,
+      "panels": [
+        "ILI9881C",
+        "ST7123",
+        "ST7121"
+      ],
+      "backlight_gpio": 22,
+      "reset": "PI4IOE5V6408 0x43 P4, release as input pull-up",
+      "dphy_ldo_channel": 3,
+      "dphy_ldo_mv": 2500
+    },
+    "i2c": {
+      "port": 1,
+      "sda": 31,
+      "scl": 32,
+      "expanders": [
+        67,
+        68
+      ]
+    },
+    "touch": {
+      "controllers": [
+        "GT911 at 0x14",
+        "ST7123/ST7121 at 0x55"
+      ],
+      "interrupt_gpio": 23,
+      "reset": "expander 0x43 P5"
+    },
+    "audio": {
+      "codec": "ES8388",
+      "address_7bit": 16,
+      "i2s_port": 1,
+      "mclk": 30,
+      "bclk": 27,
+      "lrclk": 29,
+      "dout": 26,
+      "amp_enable": "expander 0x43 P1 active high"
+    },
+    "sd": {
+      "slot": 0,
+      "width": 4,
+      "clk": 43,
+      "cmd": 44,
+      "data": [
+        39,
+        40,
+        41,
+        42
+      ],
+      "power_ldo_channel": 4,
+      "format_on_failure": false
+    },
+    "radio": {
+      "chip": "ESP32-C6",
+      "sdio_slot": 1,
+      "clk": 12,
+      "cmd": 13,
+      "data": [
+        11,
+        10,
+        9,
+        8
+      ],
+      "reset": 15,
+      "power_enable": "expander 0x44 P0"
+    },
+    "usb": {
+      "type_c": "native FS USB Serial/JTAG GPIO24/25",
+      "type_a": "native HS USB host dedicated PHY; power expander 0x44 P3",
+      "host_power_enabled_by_initial_port": false
+    }
+  },
+  "inputs": [
+    "touch"
+  ],
+  "touch": true,
+  "laptop_content_transfer": "powered-off-removable-media"
+}
