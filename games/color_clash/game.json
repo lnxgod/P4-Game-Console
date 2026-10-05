@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.7.0",
+  "version": "1.7.1",
   "package_file": "COLOR_CLASH.P4G",
   "component": "color_clash",
   "sources": [
@@ -13,9 +13,9 @@
   "entry_symbol": "p4_color_clash_game",
   "launcher_id": 114,
   "id": "org.p4console.color-clash",
-  "title": "COLOR CLASH",
-  "subtitle": "2-4 PLAYER CARD CLASH",
-  "folder": "GAMES/ARCADE",
+  "title": "Color Clash",
+  "subtitle": "Match colors. Clear your hand.",
+  "folder": "GAMES/CARDS",
   "accent_rgb565": "0x5fea",
   "required_capabilities": [
     "video",

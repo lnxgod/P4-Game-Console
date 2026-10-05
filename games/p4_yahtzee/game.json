@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.3.1",
+  "version": "1.3.2",
   "package_file": "P4_YAHTZEE.P4G",
   "component": "p4_yahtzee",
   "sources": [
@@ -13,9 +13,9 @@
   "entry_symbol": "p4_p4_yahtzee_game",
   "launcher_id": 113,
   "id": "org.p4console.p4-yahtzee",
-  "title": "P4 YAHTZEE",
-  "subtitle": "2-4 PLAYER DICE",
-  "folder": "GAMES/ARCADE",
+  "title": "Yahtzee",
+  "subtitle": "Roll, hold and fill your card",
+  "folder": "GAMES/TABLETOP",
   "accent_rgb565": "0x5fea",
   "required_capabilities": [
     "video",

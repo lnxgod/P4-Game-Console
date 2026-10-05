@@ -32,10 +32,7 @@ def main() -> None:
     actual = run("--check")
     assert actual.returncode == 0, actual.stderr
     report = json.loads(actual.stdout)
-    assert report["seed_carts"] == [
-        "P4/GAMES/BOUNCE-LAB.P4CART",
-        "P4/GAMES/QR-DODGE.P4CART",
-    ]
+    assert report["seed_carts"] == []
 
     with tempfile.TemporaryDirectory() as temporary:
         root = pathlib.Path(temporary)
@@ -71,13 +68,14 @@ def main() -> None:
             "--templates-root", str(templates),
             "--check",
         )
-        assert undeclared.returncode != 0
-        assert "source cartridge templates are not declared" in undeclared.stderr
+        assert undeclared.returncode == 0, undeclared.stderr
+        metadata.write_text(json.dumps({"legacy_p4cart": {"seed_carts": []}}))
+        empty = run("--metadata", str(metadata), "--templates-root", str(templates), "--check")
+        assert empty.returncode == 0, empty.stderr
         (templates / "undeclared-game/p4.json").unlink()
         (templates / "undeclared-game").rmdir()
 
         invalid_values = (
-            [],
             ["P4/GAMES/FIRST-GAME.P4CART"] * 2,
             ["../FIRST-GAME.P4CART"],
             ["P4/GAMES/MISSING.P4CART"],

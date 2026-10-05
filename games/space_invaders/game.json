@@ -2,18 +2,24 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "package_file": "INVADERS.P4G",
   "component": "space_invaders",
   "entry_symbol": "p4_space_invaders_game",
   "launcher_id": 101,
   "id": "org.p4console.space-invaders",
-  "title": "SPACE INVADERS",
-  "subtitle": "DEFEND THE P4",
+  "title": "Space Invaders",
+  "subtitle": "Defend against alien waves",
   "folder": "GAMES/ARCADE",
   "accent_rgb565": "0x07ff",
-  "required_capabilities": ["video", "controls"],
-  "optional_capabilities": ["audio-tone", "audio-stream"],
+  "required_capabilities": [
+    "video",
+    "controls"
+  ],
+  "optional_capabilities": [
+    "audio-tone",
+    "audio-stream"
+  ],
   "license": "MIT",
   "assets": "original-clean-room-code-rendered-geometry-only",
   "enabled": true

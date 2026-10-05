@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "note": "Retired identities are reserved permanently; never reuse their game or launcher IDs.",
+  "games": [
+    {
+      "id": "org.p4console.asteroids",
+      "launcher_id": 103,
+      "title": "ASTEROIDS",
+      "package_file": "ASTEROID.P4G",
+      "reason": "Removed from the product library at the owner's request; obsolete arcade demo.",
+      "last_package_sha256": "f23d65af44f94a673b9aacd3d37c67bec7b01cdff8377423cb3e11afe94d28be"
+    },
+    {
+      "id": "org.p4console.asteroids-2",
+      "launcher_id": 104,
+      "title": "ASTEROIDS 2",
+      "package_file": "ASTER2.P4G",
+      "reason": "Removed from the product library at the owner's request; obsolete arcade demo.",
+      "last_package_sha256": "4c3b8fa778debc603cd8f45c366fc8278017e50a96ce391dda302c7e9ce584d5"
+    },
+    {
+      "id": "org.p4console.breakout",
+      "launcher_id": 102,
+      "title": "BREAKOUT",
+      "package_file": "BREAKOUT.P4G",
+      "reason": "Removed from the product library at the owner's request; obsolete arcade demo.",
+      "last_package_sha256": "7252a6b14daa5bd8ccf71d607350acf3847fcdac4d86420d2a6dd9362aec8c50"
+    }
+  ]
+}

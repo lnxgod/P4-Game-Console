@@ -1,0 +1,376 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "recorded_at": "2026-10-05T06:15:09.476207+00:00",
+  "status": "exact-readback-boot-health-and-library-verified-physical-acceptance-pending",
+  "source_base": "9789174",
+  "source_binding": "hardware/evidence/tab5-console-os-20261004-control-panel-connections-authorization.json",
+  "authorization_sha256": "034b66289bf2c602e2cf25de37b1c1616561da61dc97d88f6d7cae45e316b64a",
+  "app": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 1403680,
+    "sha256": "bb9e425e98c9cfac8d754a23456c066a81f40fdcf39aea592663fb21aea311c1"
+  },
+  "usb_host_enabled": false,
+  "full_feature_set_hardware_tested": false,
+  "units": {
+    "A": {
+      "panel": "ST7121",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "soc_revision": "v1.3",
+      "flash_bytes": 16777216,
+      "psram_bytes": 33554432,
+      "connection": "existing native USB-C Serial/JTAG cable; SD inserted",
+      "install_receipt": "hardware/backups/tab5-a-install-e2qy3e8h/receipt.json",
+      "install_receipt_sha256": "42c1026160543be680b851aba99bec0f524f0d6d6231a50ca1047d6aed808b3c",
+      "runtime_log": "hardware/backups/tab5-a-install-e2qy3e8h/runtime.log",
+      "runtime_log_sha256": "73d39945c88eeaec9a4ce978f07b0c622e3d0c5ef2883807261eda068f0288d5",
+      "write_offsets": [
+        "0x20000"
+      ],
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "serial_markers": [
+        "I (3113) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7121 native=720x1280 logical=1280x720 viewport=1152x720+64+0 format=rgb565",
+        "I (9248) p4_console_os: P4_CONSOLE_OS BOOT_MODEM status=played profile=v22bis-2400 phases=6 codec_volume=5 tone_volume=5 elapsed_ms=1564",
+        "I (9248) p4_console_os: P4_CONSOLE_OS AUDIO_PROFILE boot_volume=5 runtime_volume=9 runtime_restore=on-next-open",
+        "I (9322) p4_console_os: P4_CONSOLE_OS GAME_CATALOG available=1 packages=16 valid=16 omitted=0 generation=1 source=microsd-only scan=background worker_low_water_bytes=11416 storage_result=ESP_OK update=0 result=ESP_OK",
+        "I (10059) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (10084) p4_console_os: P4_CONSOLE_OS P4CART_READY valid=0 rejected=0 candidates=0 truncated=0 generation=1 worker_low_water_bytes=22332 runtime=p4-lua-5.4-v1 writes=0",
+        "I (10606) tab5_sensors: SENSORS_INIT ina226=ESP_OK bmi270=ESP_OK rx8130=ESP_OK",
+        "I (10608) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1231 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=7,97,-1002 gyro_mdps=122,183,-61 rtc_valid=1 date=2020-08-07 time=10:54:20",
+        "I (20084) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized",
+        "I (20620) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1230 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=7,98,-1002 gyro_mdps=183,183,-122 rtc_valid=1 date=2020-08-07 time=10:54:30"
+      ],
+      "library": {
+        "receipt": "hardware/backups/tab5-a-library-curation-20261004.json",
+        "receipt_sha256": "cdcf477f4454449aa59509141619c800e69dc776fff74d024e52065a03f73071",
+        "passed": true,
+        "wrong_digest_remove_rejected": true,
+        "installed": [
+          {
+            "name": "BYTEBUD.P4R",
+            "sha256": "6a7b7dafe0dd5565a867268e5c7e9a53feecbdd80e5c7b8d6e110598963fd698"
+          },
+          {
+            "name": "AVTEST.P4G",
+            "sha256": "14ee266e7067866a8f8ff879b96f73e866c9205553a891552330149ac9073bee"
+          },
+          {
+            "name": "BYTEBUD.P4G",
+            "sha256": "6d11f92cd8558d9561fe66654757e6610198afd467bd716ac5d8b329f1409b7a"
+          },
+          {
+            "name": "CALC.P4G",
+            "sha256": "35bc740c104aa42de074d1e38a7bbf380c77bc65a2c265371af20c298f64aa96"
+          },
+          {
+            "name": "CHECKERS.P4G",
+            "sha256": "1e0abf9ae68b8d0ba4479227d68d0688b3a9450184a6e6ffb7a26f8760efc97b"
+          },
+          {
+            "name": "COLOR_CLASH.P4G",
+            "sha256": "5ef64d7d6cf12b5d1a30d0a7caea077c5846e7218b0e4c68aa9f1ec16a17956f"
+          },
+          {
+            "name": "FROGHOP.P4G",
+            "sha256": "d5ac5763c48338d6e313fc48b9060ecff8f2c350e4e2e587907f37749ebee40d"
+          },
+          {
+            "name": "INPUT.P4G",
+            "sha256": "592de962f6f0965e7ac4737af387956e98cb6322b21ad10d2f4ac24318d63ab4"
+          },
+          {
+            "name": "INVADERS.P4G",
+            "sha256": "f3297b2cc759c13a1db3d2250e426559a85ac8c36ad7388b3ce7d4b835ea939c"
+          },
+          {
+            "name": "LORD.P4G",
+            "sha256": "83ad36c700691cb52f106c42c2213a5b4dbf84933cedd314a943754d332dc16c"
+          },
+          {
+            "name": "MAZE.P4G",
+            "sha256": "34b3ad807837862791297259eef5b3f961a0d59a5491f6f381a885c00e0e2c82"
+          },
+          {
+            "name": "P4_AIR_HOCKEY.P4G",
+            "sha256": "6f1ae7391705f7f36e0bdfeafd6989884515a7fe93f795a93ab3b6c2af3a7a67"
+          },
+          {
+            "name": "P4_RUMMY.P4G",
+            "sha256": "205be7d4be99a5f40c491c1226973ca0289f45daf6edc809edf5dbc528966a6e"
+          },
+          {
+            "name": "P4_YAHTZEE.P4G",
+            "sha256": "97c99f2225e89660dae9967767b388360baaba65bdd56c08ada268a038867edc"
+          },
+          {
+            "name": "SKYLINE.P4G",
+            "sha256": "7bbec8b01e5d46bb754ddbb980237e66e169196029d8e2f3e2f232c722f38e7e"
+          },
+          {
+            "name": "SOLITAIR.P4G",
+            "sha256": "1fc029a18d590d1192d73fa3a8d9825aed15afb77ce58d9393ab8c6300574f5f"
+          },
+          {
+            "name": "TEXAS_HOLDEM.P4G",
+            "sha256": "a657dc44253a16c960e9b786d22f5500b8f0d027f0d16fe7250139c17692e341"
+          }
+        ],
+        "removed_and_confirmed_absent": [
+          "ASTEROID.P4G",
+          "ASTER2.P4G",
+          "BREAKOUT.P4G",
+          "BOUNCE-LAB.P4CART",
+          "QR-DODGE.P4CART"
+        ]
+      },
+      "physical_control_panel_scroll_and_game_acceptance": "pending"
+    },
+    "B": {
+      "panel": "ST7123",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "soc_revision": "v1.3",
+      "flash_bytes": 16777216,
+      "psram_bytes": 33554432,
+      "connection": "existing native USB-C Serial/JTAG cable; SD inserted",
+      "install_receipt": "hardware/backups/tab5-b-install-fnjkwaws/receipt.json",
+      "install_receipt_sha256": "43661b56545c40b57582fa4aa07f68b523915ec431cdf906c4d8ba8245cffb5f",
+      "runtime_log": "hardware/backups/tab5-b-install-fnjkwaws/runtime.log",
+      "runtime_log_sha256": "82c1501e4727b141bce061e29a238f551b9eda8c6118dfa667329f8f99c85c62",
+      "write_offsets": [
+        "0x20000"
+      ],
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "serial_markers": [
+        "I (2386) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7123 native=720x1280 logical=1280x720 viewport=1152x720+64+0 format=rgb565",
+        "I (4859) p4_console_os: P4_CONSOLE_OS GAME_CATALOG available=1 packages=18 valid=18 omitted=0 generation=1 source=microsd-only scan=background worker_low_water_bytes=11416 storage_result=ESP_OK update=0 result=ESP_OK",
+        "I (5603) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (5628) p4_console_os: P4_CONSOLE_OS P4CART_READY valid=0 rejected=0 candidates=0 truncated=0 generation=1 worker_low_water_bytes=22328 runtime=p4-lua-5.4-v1 writes=0",
+        "I (6149) tab5_sensors: SENSORS_INIT ina226=ESP_OK bmi270=ESP_OK rx8130=ESP_OK",
+        "I (6151) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1206 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=10,141,-985 gyro_mdps=122,-244,61 rtc_valid=0 date=0000-00-00 time=00:00:00",
+        "I (15628) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized",
+        "I (16163) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1206 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=9,140,-985 gyro_mdps=122,-305,0 rtc_valid=0 date=0000-00-00 time=00:00:00",
+        "I (26175) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1206 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=10,140,-985 gyro_mdps=61,-305,-122 rtc_valid=0 date=0000-00-00 time=00:00:00"
+      ],
+      "library": {
+        "receipt": "hardware/backups/tab5-b-library-curation-resumed-20261004.json",
+        "receipt_sha256": "2d01cc5089f691b225e5298d260ebbe40b47025e7d337e1af1bc461736052f1f",
+        "passed": true,
+        "wrong_digest_remove_rejected": true,
+        "installed": [
+          {
+            "name": "BYTEBUD.P4R",
+            "sha256": "6a7b7dafe0dd5565a867268e5c7e9a53feecbdd80e5c7b8d6e110598963fd698"
+          },
+          {
+            "name": "AVTEST.P4G",
+            "sha256": "14ee266e7067866a8f8ff879b96f73e866c9205553a891552330149ac9073bee"
+          },
+          {
+            "name": "BYTEBUD.P4G",
+            "sha256": "6d11f92cd8558d9561fe66654757e6610198afd467bd716ac5d8b329f1409b7a"
+          },
+          {
+            "name": "CALC.P4G",
+            "sha256": "35bc740c104aa42de074d1e38a7bbf380c77bc65a2c265371af20c298f64aa96"
+          },
+          {
+            "name": "CHECKERS.P4G",
+            "sha256": "1e0abf9ae68b8d0ba4479227d68d0688b3a9450184a6e6ffb7a26f8760efc97b"
+          },
+          {
+            "name": "COLOR_CLASH.P4G",
+            "sha256": "5ef64d7d6cf12b5d1a30d0a7caea077c5846e7218b0e4c68aa9f1ec16a17956f"
+          },
+          {
+            "name": "FROGHOP.P4G",
+            "sha256": "d5ac5763c48338d6e313fc48b9060ecff8f2c350e4e2e587907f37749ebee40d"
+          },
+          {
+            "name": "INPUT.P4G",
+            "sha256": "592de962f6f0965e7ac4737af387956e98cb6322b21ad10d2f4ac24318d63ab4"
+          },
+          {
+            "name": "INVADERS.P4G",
+            "sha256": "f3297b2cc759c13a1db3d2250e426559a85ac8c36ad7388b3ce7d4b835ea939c"
+          },
+          {
+            "name": "LORD.P4G",
+            "sha256": "83ad36c700691cb52f106c42c2213a5b4dbf84933cedd314a943754d332dc16c"
+          },
+          {
+            "name": "MAZE.P4G",
+            "sha256": "34b3ad807837862791297259eef5b3f961a0d59a5491f6f381a885c00e0e2c82"
+          },
+          {
+            "name": "P4_AIR_HOCKEY.P4G",
+            "sha256": "6f1ae7391705f7f36e0bdfeafd6989884515a7fe93f795a93ab3b6c2af3a7a67"
+          },
+          {
+            "name": "P4_RUMMY.P4G",
+            "sha256": "205be7d4be99a5f40c491c1226973ca0289f45daf6edc809edf5dbc528966a6e"
+          },
+          {
+            "name": "P4_YAHTZEE.P4G",
+            "sha256": "97c99f2225e89660dae9967767b388360baaba65bdd56c08ada268a038867edc"
+          },
+          {
+            "name": "SKYLINE.P4G",
+            "sha256": "7bbec8b01e5d46bb754ddbb980237e66e169196029d8e2f3e2f232c722f38e7e"
+          },
+          {
+            "name": "SOLITAIR.P4G",
+            "sha256": "1fc029a18d590d1192d73fa3a8d9825aed15afb77ce58d9393ab8c6300574f5f"
+          },
+          {
+            "name": "TEXAS_HOLDEM.P4G",
+            "sha256": "a657dc44253a16c960e9b786d22f5500b8f0d027f0d16fe7250139c17692e341"
+          }
+        ],
+        "removed_and_confirmed_absent": [
+          "ASTEROID.P4G",
+          "ASTER2.P4G",
+          "BREAKOUT.P4G",
+          "BOUNCE-LAB.P4CART",
+          "QR-DODGE.P4CART"
+        ],
+        "recovery": "Resumed exact files after first CALC upload transfer-timeout; 2s between files for terminal hold/catalog refresh.",
+        "preserved_custom_cartridges": [
+          "AC53759A65.P4G",
+          "AC670906CD.P4G"
+        ]
+      },
+      "physical_control_panel_scroll_and_game_acceptance": "pending"
+    }
+  },
+  "sensors": {
+    "communication": "INA226, BMI270 and RX8130CE initialized successfully on both units",
+    "battery": "A 1230 mV; B 1206 mV on current boot. Outside a valid 2S pack range; no percentage displayed. Pack presence and capacity are not established.",
+    "motion": "Live acceleration/rotation samples valid on both units; calibration/physical accuracy not established.",
+    "rtc": "A reports historical 2020-08-07 time; B reports invalid time. Neither unit has verified accurate wall time. Setter remains pending."
+  },
+  "audio": {
+    "A": "Operator confirmed startup sound, Doom music and effects on the earlier speaker-repair image bdcc6a9ba51ac052d9636cf6c16b0110af26635ffb4c95cc2efd67f974261506. Current boot logs confirm sound path playback, not acoustic acceptance.",
+    "B": "Last saved game/startup volumes were zero. Audible speaker test at nonzero volume remains pending."
+  },
+  "verification": {
+    "firmware": "make console-os-tab5-idf passed with pinned ESP-IDF 5.5.3 after Connections grouping correction; exact artifact verifier passed; isolated from concurrent USB-A/branding changes.",
+    "control_panel": "8 shell tests passed under ASan/UBSan, including Tab5 navigation, inline volume actions, Connections launch/Back, All Programs collapse, paging and external utility return. Exact-build Overview/Preferences/Storage previews visually inspected.",
+    "templates": "9 cartridge/QR, 6 content and 5 transfer tests passed using inert fixtures after deleting both template trees.",
+    "hardware_services": "5 speaker/sensor mock tests and 5 USB build-feature tests passed.",
+    "registry_and_sdk": "Game registry/retirement/generator checks and Game SDK host checks passed.",
+    "games": {
+      "results": [
+        {
+          "game": "space_invaders",
+          "host_smoke_pass": true,
+          "log": "build-host/tab5-library-audit/space_invaders.log"
+        },
+        {
+          "game": "maze_chase",
+          "host_smoke_pass": true,
+          "log": "build-host/tab5-library-audit/maze_chase.log"
+        },
+        {
+          "game": "frog_hop",
+          "host_smoke_pass": true,
+          "log": "build-host/tab5-library-audit/frog_hop.log"
+        },
+        {
+          "game": "byte_buddy",
+          "host_smoke_pass": true,
+          "log": "build-host/tab5-library-audit/byte_buddy.log"
+        },
+        {
+          "game": "skyline_leap",
+          "host_smoke_pass": true,
+          "log": "build-host/tab5-library-audit/skyline_leap.log"
+        },
+        {
+          "game": "color_clash",
+          "host_smoke_pass": true,
+          "log": "build-host/tab5-library-audit/color_clash.log"
+        },
+        {
+          "game": "texas_holdem",
+          "host_smoke_pass": true,
+          "log": "build-host/tab5-library-audit/texas_holdem.log"
+        },
+        {
+          "game": "p4_yahtzee",
+          "host_smoke_pass": true,
+          "log": "build-host/tab5-library-audit/p4_yahtzee.log"
+        },
+        {
+          "game": "p4_air_hockey",
+          "host_smoke_pass": true,
+          "log": "build-host/tab5-library-audit/p4_air_hockey.log"
+        },
+        {
+          "game": "solitaire",
+          "host_smoke_pass": true,
+          "log": "build-host/tab5-library-audit/solitaire.log"
+        },
+        {
+          "game": "checkers",
+          "host_smoke_pass": true,
+          "log": "build-host/tab5-library-audit/checkers.log"
+        },
+        {
+          "game": "p4_rummy",
+          "host_smoke_pass": true,
+          "log": "build-host/tab5-library-audit/p4_rummy.log"
+        },
+        {
+          "game": "lord",
+          "host_smoke_pass": true,
+          "log": "build-host/tab5-library-audit/lord.log"
+        }
+      ],
+      "limit": "Eight-frame SDL3 ASan/UBSan startup smoke before metadata-only edits; not a scored play session or complete on-device acceptance."
+    },
+    "repo_wide": "make check remains blocked by the pre-existing Doom E5 authorization expectation; gate was not weakened."
+  },
+  "pending": [
+    "Physical use of Control Panel, Back, scrolling and game transitions on both units",
+    "Doom quit/relaunch verification on current image",
+    "Audible B startup/music/effects at nonzero saved volume",
+    "Battery pack presence/measurement comparison and capacity calibration",
+    "Accurate RTC setting",
+    "Full game and transport acceptance; camera/microphone/radio/USB-A remain outside this candidate"
+  ],
+  "previous_control_panel_candidate": {
+    "source_binding": "hardware/evidence/tab5-console-os-20261004-control-panel-authorization.json",
+    "authorization_sha256": "b24bfe7cdb60062c946b46247545d73c24b2ab079151cb8f05dda20a33e52ec0",
+    "app": {
+      "file": "apps/console_os/build-tab5/p4_console_os.bin",
+      "bytes": 1403680,
+      "sha256": "bb381c43a4e14cc78eb6951c589b829f56efb64eee645067241d444b97564815"
+    },
+    "superseded_reason": "Place Tab5 Multiplayer, File Transfer and Controllers inside the unified Control Panel; verify Connections launch/back and single All Programs destination.",
+    "units": {
+      "A": {
+        "install_receipt": "hardware/backups/tab5-a-install-vc28m0v6/receipt.json",
+        "install_receipt_sha256": "872744008553bbe415b9ff55e47df831d2f75a263debc476f27ef1e830a71e5a",
+        "runtime_log": "hardware/backups/tab5-a-install-vc28m0v6/runtime.log",
+        "runtime_log_sha256": "4f03276af408d551eb0ba6d3aea868a7726434636d06476ad2d4200349981d0e",
+        "readback_verified": true,
+        "boot_ready": true,
+        "health_ready": true
+      },
+      "B": {
+        "install_receipt": "hardware/backups/tab5-b-install-2c8_jnuf/receipt.json",
+        "install_receipt_sha256": "f52c3781cbda5de6cdbf9a54247dd82a312f28d0ee3f59bf5b3e20cc0ab2ca6e",
+        "runtime_log": "hardware/backups/tab5-b-install-2c8_jnuf/runtime.log",
+        "runtime_log_sha256": "2c853dc140b52a8e8979169d1debf8cf184379f7883498a56ca1346b9ab5322d",
+        "readback_verified": true,
+        "boot_ready": true,
+        "health_ready": true
+      }
+    }
+  }
+}

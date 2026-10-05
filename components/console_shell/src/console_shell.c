@@ -444,7 +444,7 @@ static bool folder_path_is_valid(const char *path)
 static bool valid_page(console_page_t page)
 {
     return page >= CONSOLE_PAGE_EXTERNAL &&
-        page <= CONSOLE_PAGE_CONTROLLERS;
+        page <= CONSOLE_PAGE_CONTROL_PANEL;
 }
 
 static bool registry_is_valid(const console_app_descriptor_t *apps,
@@ -842,14 +842,111 @@ static void populate_folder_item(
     }
 }
 
+
+/* One settings destination; app IDs and service actions remain unchanged. */
+enum { PANEL_SECTION_COUNT = 6, PANEL_VISIBLE_ROWS = 4,
+       PANEL_NAV_BASE = 1000, PANEL_ROW_BASE = 1010,
+       PANEL_PREVIOUS = 1020, PANEL_NEXT, PANEL_VOLUME_BASE = 1030 };
+static const char *const s_panel_names[PANEL_SECTION_COUNT] = {
+    "Overview", "Preferences", "Controls", "Storage", "Connections", "Advanced"
+};
+static bool panel_app(const console_app_descriptor_t *app)
+{
+    return path_is_at_or_below(app->folder_path, "SYSTEM");
+}
+static unsigned panel_section(const console_app_descriptor_t *app)
+{
+    switch (app->page) {
+    case CONSOLE_PAGE_COLORS: case CONSOLE_PAGE_AUDIO: return 1U;
+    case CONSOLE_PAGE_TOUCH: case CONSOLE_PAGE_CONTROLLERS: return 2U;
+    case CONSOLE_PAGE_FILES: case CONSOLE_PAGE_GAMES: case CONSOLE_PAGE_SAVES:
+    case CONSOLE_PAGE_STORAGE: case CONSOLE_PAGE_USB_DRIVE: return 3U;
+    case CONSOLE_PAGE_MULTIPLAYER: case CONSOLE_PAGE_FILE_TRANSFER: return 4U;
+    default: return 5U;
+    }
+}
+static size_t panel_items(const console_shell_t *shell,
+                          size_t indexes[CONSOLE_SHELL_MAX_APPS])
+{
+    size_t count = 0U;
+    for (size_t i = 0U; i < shell->app_count; ++i) {
+        const console_app_descriptor_t *app = &shell->apps[i];
+        if (!panel_app(app) || !app->enabled ||
+            panel_section(app) != shell->control_panel_section ||
+            (app->page == CONSOLE_PAGE_USB_DRIVE && !shell->runtime.usb_storage_supported) ||
+            (shell->control_panel_section == 1U && app->page == CONSOLE_PAGE_AUDIO)) continue;
+        indexes[count++] = i;
+    }
+    return count;
+}
+static void panel_select_section(console_shell_t *shell, unsigned section)
+{
+    shell->control_panel_section = (uint8_t)(section < PANEL_SECTION_COUNT ? section : 0U);
+    shell->control_panel_first = 0U;
+    shell->control_panel_selection = 0U;
+    shell->control_panel_row_focus = false;
+    shell->dirty = true;
+}
+static void panel_open(console_shell_t *shell)
+{
+    shell->page = CONSOLE_PAGE_CONTROL_PANEL;
+    shell->active_app_id = 0U;
+    shell->control_panel_active = true;
+    shell->press_active = false;
+    shell->pressed_index = SIZE_MAX;
+    shell->dirty = true;
+}
+
+static int home_item_order(const console_shell_t *shell, const home_item_t *a, const home_item_t *b)
+{
+    const unsigned ak = a->kind == HOME_ITEM_ALL_PROGRAMS ? 0U : a->kind == HOME_ITEM_FOLDER ? 1U : 2U;
+    const unsigned bk = b->kind == HOME_ITEM_ALL_PROGRAMS ? 0U : b->kind == HOME_ITEM_FOLDER ? 1U : 2U;
+    if (ak != bk) return ak < bk ? -1 : 1;
+    const char *at = a->kind == HOME_ITEM_APP ? shell->apps[a->app_index].title : a->path_segment;
+    const char *bt = b->kind == HOME_ITEM_APP ? shell->apps[b->app_index].title : b->path_segment;
+    for (size_t i = 0U; i < sizeof(a->title); ++i) {
+        unsigned char ac = (unsigned char)at[i], bc = (unsigned char)bt[i];
+        if (ac >= 'a' && ac <= 'z') ac = (unsigned char)(ac - 'a' + 'A');
+        if (bc >= 'a' && bc <= 'z') bc = (unsigned char)(bc - 'a' + 'A');
+        if (ac != bc) return ac < bc ? -1 : 1;
+        if (!ac) break;
+    }
+    if (a->kind == HOME_ITEM_APP) {
+        const uint32_t ai = shell->apps[a->app_index].id, bi = shell->apps[b->app_index].id;
+        return ai < bi ? -1 : ai > bi ? 1 : 0;
+    }
+    return 0;
+}
+
+static void sort_home_items(const console_shell_t *shell, home_item_t *items, size_t count)
+{
+    for (size_t i = 1U; i < count; ++i) {
+        const home_item_t item = items[i];
+        size_t j = i;
+        while (j > 0U && home_item_order(shell, &item, &items[j - 1U]) < 0) {
+            items[j] = items[j - 1U]; --j;
+        }
+        items[j] = item;
+    }
+}
+
 static size_t build_home_items(
     const console_shell_t *shell,
     home_item_t items[HOME_ITEM_CAPACITY])
 {
     size_t count = 0U;
     if (shell->home_all_programs) {
+        if (shell->runtime.control_panel_enabled) {
+            for (size_t i = 0U; i < shell->app_count; ++i) {
+                if (panel_app(&shell->apps[i])) {
+                    populate_folder_item(shell, "", "SYSTEM", &items[count++]);
+                    break;
+                }
+            }
+        }
         for (size_t i = 0U;
              i < shell->app_count && count < HOME_ITEM_CAPACITY; ++i) {
+            if (shell->runtime.control_panel_enabled && panel_app(&shell->apps[i])) continue;
             items[count++] = (home_item_t){
                 .kind = HOME_ITEM_APP,
                 .app_index = i,
@@ -859,6 +956,7 @@ static size_t build_home_items(
                 .enabled = shell->apps[i].enabled,
             };
         }
+        sort_home_items(shell, items, count);
         return count;
     }
 
@@ -910,6 +1008,7 @@ static size_t build_home_items(
             };
         }
     }
+    sort_home_items(shell, items, count);
     return count;
 }
 
@@ -1739,6 +1838,29 @@ static size_t control_at(const console_shell_t *shell,
                           BACK_WIDTH, BACK_HEIGHT)) {
             return BACK_CONTROL;
         }
+        if (shell->page == CONSOLE_PAGE_CONTROL_PANEL) {
+            for (size_t i = 0; i < PANEL_SECTION_COUNT; ++i)
+                if (point_in_rect(gui_x, gui_y, 5U, 42U + (unsigned)i * 23U, 89U, 22U))
+                    return PANEL_NAV_BASE + i;
+            size_t indexes[CONSOLE_SHELL_MAX_APPS];
+            const size_t count = panel_items(shell, indexes);
+            if (shell->control_panel_section == 1U) {
+                for (unsigned i = 0; i < 4U; ++i)
+                    if (point_in_rect(gui_x, gui_y, 228U + (i % 2U) * 43U,
+                                      71U + (i / 2U) * 34U, 36U, 25U))
+                        return PANEL_VOLUME_BASE + i;
+                if (count && point_in_rect(gui_x, gui_y, 106U, 145U, 202U, 25U))
+                    return PANEL_ROW_BASE;
+            } else if (shell->control_panel_section != 0U) {
+                for (size_t i = 0; i < PANEL_VISIBLE_ROWS; ++i)
+                    if (shell->control_panel_first + i < count &&
+                        point_in_rect(gui_x, gui_y, 105U, 65U + (unsigned)i * 25U, 203U, 24U))
+                        return PANEL_ROW_BASE + i;
+                if (shell->control_panel_first > 0U && point_in_rect(gui_x,gui_y,105U,168U,96U,20U)) return PANEL_PREVIOUS;
+                if (shell->control_panel_first + PANEL_VISIBLE_ROWS < count && point_in_rect(gui_x,gui_y,211U,168U,97U,20U)) return PANEL_NEXT;
+            }
+            return SIZE_MAX;
+        }
         if (shell->page == CONSOLE_PAGE_COLORS) {
             for (size_t mode = 0U; mode < CONSOLE_COLOR_MODE_COUNT; ++mode) {
                 if (point_in_rect(
@@ -2166,6 +2288,11 @@ static void reset_home_grid(console_shell_t *shell)
 
 static void open_home_folder(console_shell_t *shell, const char *segment)
 {
+    if (shell->runtime.control_panel_enabled && strcmp(segment, "SYSTEM") == 0) {
+        panel_select_section(shell, 0U);
+        panel_open(shell);
+        return;
+    }
     char path[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
     if (!compose_child_path(shell->home_folder_path, segment, path)) {
         return;
@@ -2221,26 +2348,9 @@ static console_shell_action_t page_changed(uint32_t app_id)
     return action;
 }
 
-static console_shell_action_t activate_home_selection(console_shell_t *shell)
+static console_shell_action_t activate_app_index(console_shell_t *shell, size_t app_index)
 {
-    home_item_t items[HOME_ITEM_CAPACITY];
-    const size_t item_count = build_home_items(shell, items);
-    const size_t item_index = shell->selected_home_item;
-    if (item_index >= item_count || !items[item_index].enabled) {
-        return no_action();
-    }
-    if (items[item_index].kind == HOME_ITEM_ALL_PROGRAMS) {
-        open_all_programs(shell);
-        return page_changed(0U);
-    }
-    if (items[item_index].kind == HOME_ITEM_FOLDER) {
-        open_home_folder(shell, items[item_index].path_segment);
-        return page_changed(0U);
-    }
-    if (items[item_index].app_index >= shell->app_count) {
-        return no_action();
-    }
-    const size_t app_index = items[item_index].app_index;
+    if (app_index >= shell->app_count || !shell->apps[app_index].enabled) return no_action();
     const console_app_descriptor_t *const app = &shell->apps[app_index];
     shell->selected_index = app_index;
     shell->dirty = true;
@@ -2273,6 +2383,82 @@ static console_shell_action_t activate_home_selection(console_shell_t *shell)
         normalize_file_selection(shell);
     }
     return page_changed(app->id);
+}
+
+static console_shell_action_t activate_home_selection(console_shell_t *shell)
+{
+    home_item_t items[HOME_ITEM_CAPACITY];
+    const size_t item_count = build_home_items(shell, items);
+    const size_t item_index = shell->selected_home_item;
+    if (item_index >= item_count || !items[item_index].enabled) {
+        return no_action();
+    }
+    if (items[item_index].kind == HOME_ITEM_ALL_PROGRAMS) {
+        open_all_programs(shell);
+        return page_changed(0U);
+    }
+    if (items[item_index].kind == HOME_ITEM_FOLDER) {
+        open_home_folder(shell, items[item_index].path_segment);
+        return page_changed(0U);
+    }
+    if (items[item_index].app_index >= shell->app_count) {
+        return no_action();
+    }
+    return activate_app_index(shell, items[item_index].app_index);
+}
+
+
+static console_shell_action_t panel_action(console_shell_t *shell, size_t control)
+{
+    if (control >= PANEL_NAV_BASE && control < PANEL_NAV_BASE + PANEL_SECTION_COUNT) {
+        panel_select_section(shell, (unsigned)(control - PANEL_NAV_BASE));
+        return page_changed(0U);
+    }
+    if (shell->control_panel_section == 1U && control >= PANEL_VOLUME_BASE && control < PANEL_VOLUME_BASE + 4U)
+        return audio_volume_action(shell, control - PANEL_VOLUME_BASE < 2U,
+                                   ((control - PANEL_VOLUME_BASE) % 2U) == 0U ? -1 : 1);
+    size_t indexes[CONSOLE_SHELL_MAX_APPS];
+    const size_t count = panel_items(shell, indexes);
+    if (control == PANEL_PREVIOUS && shell->control_panel_first >= PANEL_VISIBLE_ROWS)
+        shell->control_panel_first -= PANEL_VISIBLE_ROWS;
+    else if (control == PANEL_NEXT && shell->control_panel_first + PANEL_VISIBLE_ROWS < count)
+        shell->control_panel_first += PANEL_VISIBLE_ROWS;
+    else if (control >= PANEL_ROW_BASE && control < PANEL_ROW_BASE + PANEL_VISIBLE_ROWS) {
+        const size_t index = shell->control_panel_first + control - PANEL_ROW_BASE;
+        if (index < count) return activate_app_index(shell, indexes[index]);
+        return no_action();
+    } else return no_action();
+    shell->control_panel_selection = 0U;
+    shell->dirty = true;
+    return page_changed(0U);
+}
+static console_shell_action_t panel_buttons(console_shell_t *shell, uint32_t pressed)
+{
+    size_t indexes[CONSOLE_SHELL_MAX_APPS];
+    const size_t count = panel_items(shell, indexes);
+    const size_t actions = shell->control_panel_section == 1U ? 4U + (count ? 1U : 0U) : count;
+    if (pressed & CONSOLE_BUTTON_LEFT) shell->control_panel_row_focus = false;
+    else if (pressed & CONSOLE_BUTTON_RIGHT) shell->control_panel_row_focus = actions != 0U;
+    else if (pressed & (CONSOLE_BUTTON_UP | CONSOLE_BUTTON_DOWN)) {
+        if (!shell->control_panel_row_focus) {
+            const unsigned next = (shell->control_panel_section + ((pressed & CONSOLE_BUTTON_UP) ? PANEL_SECTION_COUNT - 1U : 1U)) % PANEL_SECTION_COUNT;
+            panel_select_section(shell, next);
+        } else if (actions) {
+            shell->control_panel_selection = (shell->control_panel_selection + ((pressed & CONSOLE_BUTTON_UP) ? actions - 1U : 1U)) % actions;
+            if (shell->control_panel_section != 1U)
+                shell->control_panel_first = shell->control_panel_selection / PANEL_VISIBLE_ROWS * PANEL_VISIBLE_ROWS;
+        }
+    } else if (pressed & CONSOLE_BUTTON_ACCEPT) {
+        if (!shell->control_panel_row_focus) shell->control_panel_row_focus = actions != 0U;
+        else if (actions) {
+            const size_t selected = shell->control_panel_selection < actions ? shell->control_panel_selection : 0U;
+            return panel_action(shell, shell->control_panel_section == 1U
+                ? (selected < 4U ? PANEL_VOLUME_BASE + selected : PANEL_ROW_BASE)
+                : PANEL_ROW_BASE + selected % PANEL_VISIBLE_ROWS);
+        }
+    }
+    shell->dirty = true;
+    return no_action();
 }
 
 static void select_home_direction(console_shell_t *shell, int row_delta,
@@ -2404,9 +2590,12 @@ console_shell_action_t console_shell_handle_buttons(
             shell->dirty = true;
             return page_changed(shell->active_app_id);
         }
+        if (shell->page == CONSOLE_PAGE_CONTROL_PANEL) shell->control_panel_active = false;
         console_shell_show_home(shell);
         return page_changed(0U);
     }
+
+    if (shell->page == CONSOLE_PAGE_CONTROL_PANEL) return panel_buttons(shell, pressed);
 
     if (shell->page == CONSOLE_PAGE_HOME) {
         if ((pressed & CONSOLE_BUTTON_UP) != 0U) {
@@ -3014,9 +3203,11 @@ console_shell_action_t console_shell_handle_touch(
                 shell->dirty = true;
                 return page_changed(shell->active_app_id);
             }
+            if (shell->page == CONSOLE_PAGE_CONTROL_PANEL) shell->control_panel_active = false;
             console_shell_show_home(shell);
             return page_changed(0U);
         }
+        if (shell->page == CONSOLE_PAGE_CONTROL_PANEL) return panel_action(shell, released_control);
         if (released_control >= COLOR_MODE_CONTROL_BASE &&
             released_control < COLOR_MODE_CONTROL_LIMIT) {
             const console_color_mode_t requested =
@@ -3290,38 +3481,7 @@ console_shell_action_t console_shell_handle_touch(
             return no_action();
         }
 
-        const size_t app_index = items[item_index].app_index;
-        const console_app_descriptor_t *const app = &shell->apps[app_index];
-        shell->selected_index = app_index;
-        if (app->page == CONSOLE_PAGE_EXTERNAL) {
-            const console_shell_action_t action = {
-                .type = CONSOLE_ACTION_LAUNCH,
-                .app_id = app->id,
-                .file_source_index = UINT32_MAX,
-            };
-            return action;
-        }
-        shell->page = app->page;
-        shell->active_app_id = app->id;
-        if (app->page == CONSOLE_PAGE_MULTIPLAYER) {
-            shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_ROLE;
-            shell->multiplayer_role_selection = 0U;
-            shell->multiplayer_selected_row =
-                CONSOLE_MULTIPLAYER_OPTION_COUNT;
-        }
-        if (app->page == CONSOLE_PAGE_STORAGE) {
-            reset_storage_controls(shell);
-        }
-        if (app->page == CONSOLE_PAGE_CONTROLLERS) {
-            reset_controller_controls(shell);
-        }
-        if (app->page == CONSOLE_PAGE_FILES ||
-            app->page == CONSOLE_PAGE_GAMES) {
-            shell->file_delete_confirm = false;
-            shell->file_notice = CONSOLE_FILE_NOTICE_NONE;
-            normalize_file_selection(shell);
-        }
-        return page_changed(app->id);
+        return activate_app_index(shell, items[item_index].app_index);
     }
 
     if (contact_count != 1U) {
@@ -3705,9 +3865,11 @@ void console_shell_set_runtime_info(
             shell, shell->controller_selected_action)) {
         reset_controller_controls(shell);
     }
-    if (shell->page == CONSOLE_PAGE_SYSTEM ||
+    if (shell->page == CONSOLE_PAGE_CONTROL_PANEL ||
+        shell->page == CONSOLE_PAGE_SYSTEM ||
         shell->page == CONSOLE_PAGE_STORAGE ||
         shell->page == CONSOLE_PAGE_POWER ||
+        shell->page == CONSOLE_PAGE_SENSORS ||
         shell->page == CONSOLE_PAGE_CONTROLLERS ||
         shell->page == CONSOLE_PAGE_USB_DRIVE ||
         shell->page == CONSOLE_PAGE_FILE_TRANSFER ||
@@ -3899,7 +4061,8 @@ void console_shell_show_home(console_shell_t *shell)
     if (shell == NULL) {
         return;
     }
-    shell->page = CONSOLE_PAGE_HOME;
+    shell->page = shell->control_panel_active
+        ? CONSOLE_PAGE_CONTROL_PANEL : CONSOLE_PAGE_HOME;
     shell->active_app_id = 0U;
     shell->contact_down = false;
     shell->press_active = false;
@@ -4813,7 +4976,7 @@ static void draw_detail_header(console_shell_t *shell,
                                 CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS
                           ? "< HOST"
                           : "< ROLE"
-                      : "< HOME",
+                      : shell->control_panel_active ? "< PANEL" : "< HOME",
               COLOR_WHITE, 1U, 6U);
     const console_app_descriptor_t *const app = active_app(shell);
     draw_text(pixels, stride, 68, 11,
@@ -4822,6 +4985,103 @@ static void draw_detail_header(console_shell_t *shell,
               1U, 15U);
     fill_rect(pixels, stride, 0, 31,
               CONSOLE_SHELL_LAYOUT_WIDTH, 1, COLOR_CYAN);
+}
+
+
+static void draw_control_panel(console_shell_t *shell, uint16_t *pixels, size_t stride)
+{
+    const uint16_t ink = UINT16_C(0x18E3), muted = UINT16_C(0x6B6D);
+    const uint16_t paper = UINT16_C(0xFFFF), rail = UINT16_C(0xE71C);
+    const uint16_t line = UINT16_C(0xCE79), blue = UINT16_C(0x1950);
+    const uint16_t good = UINT16_C(0x23C9), warning = UINT16_C(0x9AA0);
+    fill_rect(pixels,stride,0,0,320,200,paper);
+    fill_rect(pixels,stride,0,0,320,32,blue);
+    draw_text(pixels,stride,10,12,"< Home",paper,1U,6U);
+    draw_text(pixels,stride,69,11,"Control Panel",paper,1U,13U);
+    fill_rect(pixels,stride,0,32,98,168,rail);
+    fill_rect(pixels,stride,97,32,1,168,line);
+    for (size_t i=0; i<PANEL_SECTION_COUNT; ++i) {
+        const int y=42+(int)i*23;
+        const bool selected=i==shell->control_panel_section;
+        if (selected) fill_rect(pixels,stride,5,y,89,22,blue);
+        draw_text(pixels,stride,11,y+8,s_panel_names[i],selected?paper:ink,1U,13U);
+        if (selected && !shell->control_panel_row_focus)
+            fill_rect(pixels,stride,6,y+3,2,16,UINT16_C(0x6E5F));
+    }
+    const unsigned section = shell->control_panel_section < PANEL_SECTION_COUNT ? shell->control_panel_section : 0U;
+    draw_text(pixels,stride,106,44,s_panel_names[section],ink,1U,20U);
+    fill_rect(pixels,stride,106,57,202,1,line);
+    if (section==0U) {
+        char value[40];
+        draw_text(pixels,stride,106,70,"Battery",muted,1U,8U);
+        if (shell->runtime.battery_sample_valid) {
+            (void)snprintf(value,sizeof(value),"%u%% estimated",(unsigned)shell->runtime.battery_percent);
+            draw_text(pixels,stride,181,70,value,good,1U,20U);
+        } else draw_text(pixels,stride,181,70,"No pack reading",warning,1U,20U);
+        draw_text(pixels,stride,106,93,"Storage",muted,1U,8U);
+        if (shell->runtime.game_storage_filesystem_ready) {
+            (void)snprintf(value,sizeof(value),"%lu MB free",(unsigned long)(shell->runtime.game_storage_free_kib/1024U));
+            draw_text(pixels,stride,181,93,value,ink,1U,20U);
+        } else draw_text(pixels,stride,181,93,"SD unavailable",warning,1U,20U);
+        draw_text(pixels,stride,106,116,"Motion",muted,1U,8U);
+        draw_text(pixels,stride,181,116,shell->runtime.motion_valid?"Sensor online":"Unavailable",
+                  shell->runtime.motion_valid?good:warning,1U,20U);
+        draw_text(pixels,stride,106,139,"Clock",muted,1U,8U);
+        draw_text(pixels,stride,181,139,shell->runtime.rtc_valid?shell->runtime.rtc_datetime:"Needs setting",ink,1U,10U);
+        if (shell->runtime.rtc_valid && strlen(shell->runtime.rtc_datetime)>11U)
+            draw_text(pixels,stride,181,151,shell->runtime.rtc_datetime+11,muted,1U,8U);
+        fill_rect(pixels,stride,106,168,202,1,line);
+        (void)snprintf(value,sizeof(value),"Up %lu min  |  Details in Advanced",(unsigned long)(shell->runtime.uptime_seconds/60U));
+        draw_text(pixels,stride,106,178,value,muted,1U,33U);
+        return;
+    }
+    size_t indexes[CONSOLE_SHELL_MAX_APPS];
+    const size_t count=panel_items(shell,indexes);
+    if (section==1U) {
+        for (unsigned row=0; row<2U; ++row) {
+            const int y=71+(int)row*34;
+            const unsigned volume=row==0U?shell->runtime.boot_volume_step:shell->runtime.game_volume_step;
+            char level[12];(void)snprintf(level,sizeof(level),"%u / 10",volume>10U?10U:volume);
+            draw_text(pixels,stride,106,y+1,row==0U?"Startup sound":"Game sound",ink,1U,18U);
+            draw_text(pixels,stride,106,y+14,volume==0U?"Muted":level,muted,1U,12U);
+            for (unsigned button=0; button<2U; ++button) {
+                const size_t control=PANEL_VOLUME_BASE+row*2U+button;
+                const bool pressed=shell->press_active&&shell->pressed_index==control;
+                const bool focused=shell->control_panel_row_focus&&shell->control_panel_selection==row*2U+button;
+                fill_rect(pixels,stride,228+(int)button*43,y,36,25,pressed||focused?blue:rail);
+                draw_text(pixels,stride,244+(int)button*43,y+8,button==0U?"-":"+",pressed||focused?paper:ink,1U,1U);
+            }
+        }
+        if (count) {
+            const bool focused=shell->control_panel_row_focus&&shell->control_panel_selection==4U;
+            fill_rect(pixels,stride,106,145,202,25,focused?blue:rail);
+            draw_text(pixels,stride,114,154,"Appearance",focused?paper:ink,1U,20U);
+            draw_text(pixels,stride,295,154,">",focused?paper:ink,1U,1U);
+        }
+        draw_text(pixels,stride,106,178,shell->runtime.audio_settings_persistent
+            ? "Volume changes are saved" : "Volume applies this session",muted,1U,33U);
+        return;
+    }
+    if (!count) draw_text(pixels,stride,106,77,"No available tools",muted,1U,30U);
+    for (size_t row=0; row<PANEL_VISIBLE_ROWS && shell->control_panel_first+row<count; ++row) {
+        const size_t index=shell->control_panel_first+row;
+        const console_app_descriptor_t *app=&shell->apps[indexes[index]];
+        const bool focused=shell->control_panel_row_focus&&shell->control_panel_selection==index;
+        const bool pressed=shell->press_active&&shell->pressed_index==PANEL_ROW_BASE+row;
+        const int y=65+(int)row*25;
+        if (focused||pressed) fill_rect(pixels,stride,105,y,203,24,blue);
+        draw_text(pixels,stride,112,y+8,app->title,focused||pressed?paper:ink,1U,26U);
+        draw_text(pixels,stride,294,y+8,">",focused||pressed?paper:muted,1U,1U);
+        if (!focused&&!pressed) fill_rect(pixels,stride,112,y+24,190,1,line);
+    }
+    if (shell->control_panel_first>0U) {
+        fill_rect(pixels,stride,105,168,96,20,rail);
+        draw_text(pixels,stride,111,175,"< Previous",ink,1U,12U);
+    }
+    if (shell->control_panel_first+PANEL_VISIBLE_ROWS<count) {
+        fill_rect(pixels,stride,211,168,97,20,rail);
+        draw_text(pixels,stride,241,175,"More >",ink,1U,9U);
+    }
 }
 
 static void draw_colors(const console_shell_t *shell,
@@ -5065,10 +5325,10 @@ static void draw_power(const console_shell_t *shell,
               COLOR_WHITE, 2U, 14U);
     if (!shell->runtime.battery_supported) {
         draw_centered_text(pixels, stride, 20, 78, 280,
-                           "BATTERY ADC UNAVAILABLE",
-                           COLOR_YELLOW, 23U);
+                           "BATTERY READING UNAVAILABLE",
+                           COLOR_YELLOW, 28U);
         draw_centered_text(pixels, stride, 20, 102, 280,
-                           "CHECK BOARD SENSE ROUTE",
+                           "CHECK BATTERY CONNECTION",
                            COLOR_MUTED, 23U);
         draw_text(pixels, stride, 12, 166, "NO ESTIMATE REPORTED",
                   COLOR_RED, 1U, 20U);
@@ -5076,8 +5336,13 @@ static void draw_power(const console_shell_t *shell,
     }
     if (!shell->runtime.battery_sample_valid) {
         draw_centered_text(pixels, stride, 20, 84, 280,
-                           "READING BATTERY...",
-                           COLOR_YELLOW, 18U);
+                           shell->runtime.battery_last_error == 0
+                               ? "READING BATTERY..." : "NO VALID BATTERY READING",
+                           COLOR_YELLOW, 26U);
+        if (shell->runtime.battery_last_error != 0) {
+            draw_centered_text(pixels, stride, 20, 108, 280,
+                               "CHECK BATTERY PACK", COLOR_MUTED, 20U);
+        }
         draw_text(pixels, stride, 12, 166, "LAST ERROR",
                   COLOR_MUTED, 1U, 10U);
         const int last_error = shell->runtime.battery_last_error;
@@ -5118,13 +5383,49 @@ static void draw_power(const console_shell_t *shell,
               COLOR_WHITE, 1U, 15U);
     draw_text(pixels, stride, 12, 160, "ESTIMATE", COLOR_MUTED, 1U, 8U);
     draw_text(pixels, stride, 96, 160,
-              shell->runtime.battery_calibrated
-                  ? "CALIBRATED ADC" : "UNCALIBRATED",
-              shell->runtime.battery_calibrated ? COLOR_CYAN : COLOR_YELLOW,
-              1U, 14U);
-    draw_text(pixels, stride, 12, 182,
-              "CHARGE/DISCHARGE STATE NOT WIRED",
-              COLOR_MUTED, 1U, 34U);
+              "VOLTAGE BASED", COLOR_CYAN, 1U, 14U);
+    if (shell->runtime.battery_current_valid) {
+        char flow[48];
+        const int32_t ma = shell->runtime.battery_milliamps;
+        const uint32_t magnitude = (uint32_t)(ma < 0 ? -(int64_t)ma : ma);
+        (void)snprintf(flow, sizeof(flow), "%s  %lu mA",
+            ma < -10 ? "CHARGING" : ma > 10 ? "DISCHARGING" : "IDLE", (unsigned long)magnitude);
+        draw_text(pixels, stride, 12, 182, flow, COLOR_MUTED, 1U, 36U);
+    } else {
+        draw_text(pixels, stride, 12, 182, "APPROXIMATE CHARGE LEVEL", COLOR_MUTED, 1U, 28U);
+    }
+}
+
+static void draw_sensors(const console_shell_t *shell, uint16_t *pixels, size_t stride)
+{
+    draw_text(pixels, stride, 12, 36, "SENSORS", COLOR_WHITE, 2U, 7U);
+    char value[48];
+    draw_text(pixels, stride, 12, 66, "ACCEL  X / Y / Z (mg)", COLOR_MUTED, 1U, 24U);
+    if (shell->runtime.motion_valid) {
+        (void)snprintf(value, sizeof(value), "%ld / %ld / %ld",
+            (long)shell->runtime.accel_mg[0], (long)shell->runtime.accel_mg[1], (long)shell->runtime.accel_mg[2]);
+    } else {
+        (void)snprintf(value, sizeof(value), "%s", shell->runtime.motion_supported ? "WAITING FOR SAMPLE" : "MOTION SENSOR UNAVAILABLE");
+    }
+    draw_text(pixels, stride, 12, 80, value, COLOR_CYAN, 1U, 38U);
+    draw_text(pixels, stride, 12, 103, "GYRO   X / Y / Z (deg/s)", COLOR_MUTED, 1U, 26U);
+    if (shell->runtime.motion_valid) {
+        (void)snprintf(value, sizeof(value), "%ld / %ld / %ld",
+            (long)(shell->runtime.gyro_mdps[0] / 1000), (long)(shell->runtime.gyro_mdps[1] / 1000), (long)(shell->runtime.gyro_mdps[2] / 1000));
+        draw_text(pixels, stride, 12, 117, value, COLOR_CYAN, 1U, 38U);
+    }
+    if (shell->runtime.temperature_valid) {
+        const int32_t temp = shell->runtime.temperature_millicelsius;
+        const uint32_t magnitude = (uint32_t)(temp < 0 ? -(int64_t)temp : temp);
+        (void)snprintf(value, sizeof(value), "SENSOR TEMP  %s%lu.%lu C", temp < 0 ? "-" : "",
+            (unsigned long)(magnitude / 1000U), (unsigned long)(magnitude % 1000U / 100U));
+        draw_text(pixels, stride, 12, 144, value, COLOR_WHITE, 1U, 38U);
+    }
+    draw_text(pixels, stride, 12, 165, "CLOCK", COLOR_MUTED, 1U, 5U);
+    draw_text(pixels, stride, 12, 180,
+        shell->runtime.rtc_valid ? shell->runtime.rtc_datetime :
+        shell->runtime.rtc_supported ? "CLOCK NEEDS SETTING" : "CLOCK UNAVAILABLE",
+        shell->runtime.rtc_valid ? COLOR_WHITE : COLOR_YELLOW, 1U, 32U);
 }
 
 static void draw_storage_button(const console_shell_t *shell,
@@ -6991,8 +7292,11 @@ static bool render_rgb565_target(console_shell_t *shell,
         fill_rect(pixels, stride_pixels, 0, 0,
                   CONSOLE_SHELL_LAYOUT_WIDTH,
                   CONSOLE_SHELL_LAYOUT_HEIGHT, COLOR_BLACK);
-        draw_detail_header(shell, pixels, stride_pixels);
+        if (shell->page != CONSOLE_PAGE_CONTROL_PANEL) draw_detail_header(shell, pixels, stride_pixels);
         switch (shell->page) {
+        case CONSOLE_PAGE_CONTROL_PANEL:
+            draw_control_panel(shell, pixels, stride_pixels);
+            break;
         case CONSOLE_PAGE_COLORS:
             draw_colors(shell, pixels, stride_pixels);
             break;
@@ -7034,6 +7338,9 @@ static bool render_rgb565_target(console_shell_t *shell,
             break;
         case CONSOLE_PAGE_POWER:
             draw_power(shell, pixels, stride_pixels);
+            break;
+        case CONSOLE_PAGE_SENSORS:
+            draw_sensors(shell, pixels, stride_pixels);
             break;
         case CONSOLE_PAGE_CONTROLLERS:
             draw_controllers(shell, pixels, stride_pixels);

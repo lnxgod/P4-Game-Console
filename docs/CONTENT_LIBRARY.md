@@ -23,12 +23,12 @@ back, and atomically activate it on the mounted card:
 
 ```sh
 python3 game-platform/scripts/p4cart.py pack \
-  game-platform/templates/bounce-lab /tmp/bounce-lab.p4cart
-python3 scripts/p4-content.py cart /tmp/bounce-lab.p4cart \
+  /path/to/your-game /tmp/GAME.P4CART
+python3 scripts/p4-content.py cart /tmp/GAME.P4CART \
   --sd-root /Volumes/P4SD
 ```
 
-The destination is `/P4/GAMES/bounce-lab.p4cart`. The tool refuses links,
+The destination is `/P4/GAMES/GAME.P4CART`. The tool refuses links,
 invalid names, invalid containers, occupied staging files, and an existing
 destination. Use `--replace` only when replacement is intentional. It never
 formats the card or deletes unrelated content.

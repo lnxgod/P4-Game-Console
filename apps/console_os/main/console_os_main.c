@@ -59,6 +59,9 @@
 #include "p4/script_renderer.h"
 #include "mbedtls/sha256.h"
 #include "platform/board.h"
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+#include "platform/tab5_sensors.h"
+#endif
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
 #include "platform_battery/battery.h"
 #endif
@@ -186,7 +189,8 @@ enum {
     CONSOLE_APP_FILE_TRANSFER = 15,
     CONSOLE_APP_CONTROLLERS = 16,
     CONSOLE_APP_POWER = 17,
-    CONSOLE_BUILTIN_APP_ID_MAX = CONSOLE_APP_POWER,
+    CONSOLE_APP_SENSORS = 18,
+    CONSOLE_BUILTIN_APP_ID_MAX = CONSOLE_APP_SENSORS,
     CONSOLE_GAME_UPDATE_HZ = 60,
     CONSOLE_SUBMIT_TIMEOUT_MS = 250,
     CONSOLE_BACKLIGHT_PERCENT = 25,
@@ -941,9 +945,9 @@ static size_t s_app_count;
 
 static const console_app_descriptor_t s_doom_app = {
     .id = CONSOLE_APP_DOOM,
-    .title = "DOOM",
+    .title = "Doom",
     .subtitle = s_doom_subtitle,
-    .folder_path = "GAMES/ACTION",
+    .folder_path = "GAMES/SHOOTERS",
     .accent_rgb565 = UINT16_C(0xF904),
     .capabilities = CONSOLE_CAPABILITY_DISPLAY |
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
@@ -957,9 +961,9 @@ static const console_app_descriptor_t s_doom_app = {
 
 static const console_app_descriptor_t s_chex_app = {
     .id = CONSOLE_APP_CHEX_QUEST,
-    .title = "CHEX QUEST",
+    .title = "Chex Quest",
     .subtitle = s_chex_subtitle,
-    .folder_path = "GAMES/ACTION",
+    .folder_path = "GAMES/SHOOTERS",
     .accent_rgb565 = UINT16_C(0xFFE0),
     .capabilities = CONSOLE_CAPABILITY_DISPLAY |
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
@@ -974,8 +978,8 @@ static const console_app_descriptor_t s_chex_app = {
 static const console_app_descriptor_t s_builtin_apps[] = {
     {
         .id = CONSOLE_APP_COLORS,
-        .title = "APPEARANCE",
-        .subtitle = "BBS / WINDOWS",
+        .title = "Appearance",
+        .subtitle = "Choose a desktop style",
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x5FFF),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY,
@@ -985,8 +989,8 @@ static const console_app_descriptor_t s_builtin_apps[] = {
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
     {
         .id = CONSOLE_APP_TOUCH,
-        .title = "TOUCH",
-        .subtitle = "GT911 CONTACTS",
+        .title = "Touch",
+        .subtitle = "Check touch response",
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0xFFE0),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
@@ -997,8 +1001,8 @@ static const console_app_descriptor_t s_builtin_apps[] = {
 #endif
     {
         .id = CONSOLE_APP_SYSTEM,
-        .title = "SYSTEM",
-        .subtitle = "RTOS STATUS",
+        .title = "System Info",
+        .subtitle = "Memory and device status",
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x5FEA),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY
@@ -1011,8 +1015,8 @@ static const console_app_descriptor_t s_builtin_apps[] = {
     },
     {
         .id = CONSOLE_APP_AUDIO,
-        .title = "AUDIO",
-        .subtitle = "DOOM SOUND PATH",
+        .title = "Sound",
+        .subtitle = "Startup and game volume",
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0xF81F),
         .capabilities = CONSOLE_CAPABILITY_AUDIO,
@@ -1021,8 +1025,8 @@ static const console_app_descriptor_t s_builtin_apps[] = {
     },
     {
         .id = CONSOLE_APP_ACHIEVEMENTS,
-        .title = "ACHIEVEMENTS",
-        .subtitle = "SESSION BADGES",
+        .title = "Achievements",
+        .subtitle = "Badges earned this session",
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0xFD20),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY,
@@ -1031,12 +1035,12 @@ static const console_app_descriptor_t s_builtin_apps[] = {
     },
     {
         .id = CONSOLE_APP_FILES,
-        .title = "FILE MANAGER",
+        .title = "Files",
 #if CONFIG_P4_BOARD_M5STACK_TAB5 || CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
     CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
-        .subtitle = "MICROSD GAMES",
+        .subtitle = "Browse your SD card",
 #else
-        .subtitle = "P4 GAMES USB",
+        .subtitle = "Browse game storage",
 #endif
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0xFD20),
@@ -1050,7 +1054,7 @@ static const console_app_descriptor_t s_builtin_apps[] = {
     },
     {
         .id = CONSOLE_APP_GAMES,
-        .title = "GAME MANAGER",
+        .title = "Game Manager",
         .subtitle = s_game_manager_subtitle,
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x5FEA),
@@ -1064,9 +1068,13 @@ static const console_app_descriptor_t s_builtin_apps[] = {
     },
     {
         .id = CONSOLE_APP_MULTIPLAYER,
-        .title = "MULTIPLAYER",
-        .subtitle = "2-PLAYER DOOM",
+        .title = "Multiplayer",
+        .subtitle = "Host or join a game",
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        .folder_path = "SYSTEM",
+#else
         .folder_path = "",
+#endif
         .accent_rgb565 = UINT16_C(0xFFE0),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
@@ -1079,9 +1087,13 @@ static const console_app_descriptor_t s_builtin_apps[] = {
     },
     {
         .id = CONSOLE_APP_FILE_TRANSFER,
-        .title = "FILE TRANSFER",
-        .subtitle = "H1 PUSH / PULL",
+        .title = "File Transfer",
+        .subtitle = "Send files over USB",
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        .folder_path = "SYSTEM",
+#else
         .folder_path = "",
+#endif
         .accent_rgb565 = UINT16_C(0xF81F),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
 #if !CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B
@@ -1093,8 +1105,8 @@ static const console_app_descriptor_t s_builtin_apps[] = {
     },
     {
         .id = CONSOLE_APP_SAVES,
-        .title = "SAVE MANAGER",
-        .subtitle = "OS OWNED SAVE SLOTS",
+        .title = "Saved Games",
+        .subtitle = "Manage game progress",
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x07FF),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
@@ -1111,8 +1123,8 @@ static const console_app_descriptor_t s_builtin_apps[] = {
     CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
     {
         .id = CONSOLE_APP_STORAGE,
-        .title = "SD CARD",
-        .subtitle = "CHECK + FAT REPAIR",
+        .title = "SD Card",
+        .subtitle = "Storage health and repair",
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0xFFE0),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
@@ -1126,11 +1138,11 @@ static const console_app_descriptor_t s_builtin_apps[] = {
         .enabled = true,
     },
 #endif
-#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || CONFIG_P4_BOARD_M5STACK_TAB5
     {
         .id = CONSOLE_APP_POWER,
-        .title = "POWER",
-        .subtitle = "BATTERY LEVEL",
+        .title = "Battery",
+        .subtitle = "Charge level and power use",
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x07E0),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
@@ -1138,10 +1150,24 @@ static const console_app_descriptor_t s_builtin_apps[] = {
         .page = CONSOLE_PAGE_POWER,
         .enabled = true,
     },
+#endif
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    {
+        .id = CONSOLE_APP_SENSORS,
+        .title = "Sensors",
+        .subtitle = "Motion, temperature and clock",
+        .folder_path = "SYSTEM",
+        .accent_rgb565 = UINT16_C(0x07FF),
+        .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH,
+        .page = CONSOLE_PAGE_SENSORS,
+        .enabled = true,
+    },
+#endif
+#if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
     {
         .id = CONSOLE_APP_USB_DRIVE,
-        .title = "USB DRIVE",
-        .subtitle = "SD CARD TO MAC",
+        .title = "USB Drive",
+        .subtitle = "Open SD card on your computer",
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x07FF),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
@@ -1154,9 +1180,13 @@ static const console_app_descriptor_t s_builtin_apps[] = {
 #if P4_CONSOLE_BLE_GAMEPAD
     {
         .id = CONSOLE_APP_CONTROLLERS,
-        .title = "CONTROLLERS",
-        .subtitle = "PAIR + MAP GAMEPADS",
+        .title = "Controllers",
+        .subtitle = "Connect and check gamepads",
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        .folder_path = "SYSTEM",
+#else
         .folder_path = "",
+#endif
         .accent_rgb565 = UINT16_C(0x5FFF),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
                         CONSOLE_CAPABILITY_TOUCH,
@@ -1166,8 +1196,8 @@ static const console_app_descriptor_t s_builtin_apps[] = {
 #endif
     {
         .id = CONSOLE_APP_TERMINAL,
-        .title = "TERMINAL",
-        .subtitle = "COMMANDS + SSH STATUS",
+        .title = "Terminal",
+        .subtitle = "Console commands",
         .folder_path = "SYSTEM",
         .accent_rgb565 = UINT16_C(0x5FEA),
         .capabilities = CONSOLE_CAPABILITY_DISPLAY |
@@ -1947,6 +1977,13 @@ static esp_err_t publish_game_catalog_scan(
         s_game_catalog = s_catalog_staging;
     } else {
         memset(&s_game_catalog, 0, sizeof(s_game_catalog));
+    }
+    if (!s_catalog_seen && catalog_available) {
+        for (size_t i = 0U; i < s_game_catalog.entry_count; ++i) {
+            const platform_game_catalog_entry_t *const game = &s_game_catalog.entries[i];
+            if (game->valid) ESP_LOGI(TAG, "GAME_ENTRY file=%s id=%s title=%s folder=%s",
+                game->file_name, game->package.id, game->package.title, game->package.folder);
+        }
     }
     rebuild_multiplayer_game_registry();
     s_os_update_info = s_update_staging;
@@ -3384,6 +3421,9 @@ static void initialize_battery(void)
 
 static console_shell_runtime_info_t runtime_info(void)
 {
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    const platform_tab5_telemetry_t sensors = platform_tab5_sensors_snapshot();
+#endif
     const console_mp_transport_status_t multiplayer =
         multiplayer_transport_status();
     const int64_t now_us = esp_timer_get_time();
@@ -3682,6 +3722,24 @@ static console_shell_runtime_info_t runtime_info(void)
             ? UINT16_MAX : (uint16_t)s_battery_raw_sample.battery_mv,
         .battery_percent = s_battery_sample.percent,
         .battery_last_error = s_battery_last_error,
+#elif CONFIG_P4_BOARD_M5STACK_TAB5
+        .control_panel_enabled = true,
+        .battery_supported = sensors.battery_ready,
+        .battery_sample_valid = sensors.battery_valid,
+        .battery_calibrated = false,
+        .battery_millivolts = sensors.battery_mv,
+        .battery_percent = sensors.battery_percent,
+        .battery_last_error = sensors.battery_error,
+        .battery_current_valid = sensors.battery_valid,
+        .battery_milliamps = sensors.battery_ma,
+        .motion_supported = sensors.imu_ready,
+        .motion_valid = sensors.imu_valid,
+        .rtc_supported = sensors.rtc_present,
+        .rtc_valid = sensors.rtc_valid,
+        .accel_mg = {sensors.accel_mg[0], sensors.accel_mg[1], sensors.accel_mg[2]},
+        .gyro_mdps = {sensors.gyro_mdps[0], sensors.gyro_mdps[1], sensors.gyro_mdps[2]},
+        .temperature_valid = sensors.temperature_valid,
+        .temperature_millicelsius = sensors.temperature_mc,
 #else
         .battery_supported = false,
         .battery_sample_valid = false,
@@ -3692,6 +3750,13 @@ static console_shell_runtime_info_t runtime_info(void)
         .game_volume_step = s_console_settings.game_volume_step,
         .audio_settings_persistent = s_console_settings.persistent,
     };
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (sensors.rtc_valid) {
+        (void)snprintf(info.rtc_datetime, sizeof(info.rtc_datetime),
+            "%04u-%02u-%02u %02u:%02u:%02u", sensors.rtc.year,
+            sensors.rtc.month, sensors.rtc.day, sensors.rtc.hour, sensors.rtc.minute, sensors.rtc.second);
+    }
+#endif
     (void)snprintf(
         info.multiplayer_game_title,
         sizeof(info.multiplayer_game_title), "%s",
@@ -5369,7 +5434,8 @@ static void poll_multiplayer_link(const console_shell_t *shell)
     const p4_file_transfer_info_t file_after = p4_file_transfer_info();
     if (file_after.generation != s_file_transfer_generation_seen) {
         s_file_transfer_generation_seen = file_after.generation;
-        if (file_after.direction == P4_FILE_TRANSFER_UPLOAD &&
+        if ((file_after.direction == P4_FILE_TRANSFER_UPLOAD ||
+             file_after.direction == P4_FILE_TRANSFER_REMOVE) &&
             (file_after.file_class == P4_FILE_TRANSFER_CLASS_P4G ||
              file_after.file_class == P4_FILE_TRANSFER_CLASS_P4R)) {
             /* P4G is the native ELF catalog. P4CART has a separate Lua
@@ -5381,7 +5447,8 @@ static void poll_multiplayer_link(const console_shell_t *shell)
                      file_after.file_name,
                      (unsigned long)file_after.generation);
         }
-        if (file_after.direction == P4_FILE_TRANSFER_UPLOAD &&
+        if ((file_after.direction == P4_FILE_TRANSFER_UPLOAD ||
+             file_after.direction == P4_FILE_TRANSFER_REMOVE) &&
             file_after.file_class == P4_FILE_TRANSFER_CLASS_P4CART) {
             s_p4cart_scan_seen = false;
             ESP_LOGI(TAG, "P4_CONSOLE_OS P4CART_TRANSFER_ACTIVATED name=%s", file_after.file_name);
@@ -10158,6 +10225,10 @@ void app_main(void)
             CONSOLE_GAME_UPDATE_HZ) != P4_SCRIPT_STATUS_OK) {
         halt_dark("console-scheduler", ESP_ERR_INVALID_STATE);
     }
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    const esp_err_t sensors_start = platform_tab5_sensors_start();
+    if (sensors_start != ESP_OK) ESP_LOGW(TAG, "SENSORS_START error=%s", esp_err_to_name(sensors_start));
+#endif
     s_runtime_services_ready_us = esp_timer_get_time();
     TickType_t last_wake = xTaskGetTickCount();
     int64_t next_storage_sync_us = s_runtime_services_ready_us;

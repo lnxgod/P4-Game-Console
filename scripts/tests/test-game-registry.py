@@ -249,6 +249,21 @@ def main() -> None:
             assert result.returncode != 0, sources
             assert "sources" in result.stderr
 
+    for key in ("id", "launcher_id", "package_file"):
+        for enabled in (False, True):
+            with tempfile.TemporaryDirectory() as temporary:
+                games = pathlib.Path(temporary)
+                draft = manifest("new_game", 300)
+                draft["enabled"] = enabled
+                retired = {"id": "org.example.retired", "launcher_id": 301,
+                           "package_file": "OLD.P4G"}
+                retired[key] = draft[key]
+                write_manifest(games, "new_game", draft)
+                (games / "retired.json").write_text(json.dumps({"schema": 1, "games": [retired]}))
+                result = run("--games-root", str(games), "--check")
+                assert result.returncode != 0, (key, enabled)
+                assert f"{key} is reserved by retired game" in result.stderr
+
     print("game registry tests passed")
 
 

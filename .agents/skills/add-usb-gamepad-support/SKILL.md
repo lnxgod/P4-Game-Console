@@ -1,6 +1,6 @@
 ---
 name: add-usb-gamepad-support
-description: Add, change, diagnose, or test console-level USB or Bluetooth controller input on this ESP32-P4 platform. Use for USB Host, BLE HID/HOGP pairing, HID report descriptors, gamepads, controller hotplug, mappings, deadzones, Doom controls, or shared game input adapters.
+description: Add, change, diagnose, or test console-level USB or Bluetooth controller services on this ESP32-P4 platform. Use for USB Host, BLE HID/HOGP pairing, HID parsing, controller hotplug, shared mappings, deadzones or Doom input adapters. Ordinary game action mappings use the native or Lua authoring skill and existing normalized controls.
 ---
 
 # Add console gamepad support
@@ -10,7 +10,10 @@ to every game. Do not put USB Host calls, NimBLE/GATT calls, pairing state,
 descriptor parsing, device quirks, or pin configuration inside a game.
 
 If a game only maps the existing normalized P4 buttons to game actions, use
-`$develop-p4-games` and that game's focused host tests. Use this skill when the
+`$develop-p4-console-games` (or `$develop-p4-script-games` for Lua) and that
+game's focused host tests. New games should consume the existing controls by
+default; no per-game USB support layer is needed. For linked-console game logic,
+add `$develop-p4-multiplayer-games` without changing controller ownership. Use this skill when the
 canonical input contract, parser, profile, lifecycle, transport, or physical
 controller support changes. Read `references/architecture.md` for either
 transport, and `references/acceptance.md` before a named hardware claim.
@@ -35,7 +38,7 @@ Resolve the exact target before touching USB code:
   hub; firmware does not source VBUS. H1 CH343 remains programming, serial, and
   content transfer only. The USB Drive app is the explicit role switch from H2
   Host to H2 device/MSC and must unmount FAT before exposing it.
-- A third target must have its own source-pinned board-port profile and USB
+- Another target must have its own source-pinned board-port profile and USB
   adapter plan. Never inherit either identity from a connector name.
 
 Elecrow's published CrowPanel Advanced reference circuit wires the USB-C connector as a sink/device port: its CC pins use `Rd`, and VBUS feeds the board rather than sourcing a controller. Until the exact unit and PCB revision are confirmed and their circuit is reviewed, treat this physical port the same way. Do not connect a passive USB-A adapter or enable host mode until a powered, current-limited, backfeed-safe host fixture has been reviewed for the exact board revision.
@@ -82,6 +85,14 @@ queues releases before presses, and neutralizes invalid or disconnected input.
 Do not treat wired Xbox/XInput/GIP, Xbox Wireless Adapter, or another
 vendor-class device as generic USB HID. Add a separate transport/profile tier
 when required.
+
+For an Xbox-compatible controller, identify its actual USB mode before
+choosing an adapter. The user may have a third-party pad with a different
+protocol from an official Microsoft controller. A Windows DirectInput label
+does not prove a raw USB HID interface. Record unknown identity/mode and
+hardware availability honestly; do not repeat a request for a controller the
+user has already said is unavailable. Continue work that has sufficient
+protocol evidence and keep model-specific acceptance pending.
 
 ## Implement the BLE HID lifecycle
 
@@ -136,7 +147,7 @@ descriptor capture, input mapping, hotplug, disconnect neutralization,
 malformed-report behavior, and named hardware run have passed.
 
 For Console OS integration, the exact firmware builds are
-`make console-os-idf` for Elecrow and `make console-os-olimex-idf` for the
+`make console-os-elecrow-idf` for Elecrow and `make console-os-olimex-idf` for the
 Olimex Rev.B development board. The standard BLE-controller Waveshare build is
 `./scripts/build-waveshare-console-os.sh`, followed by
 `python3 scripts/verify-console-os-waveshare.py`. The proven wired

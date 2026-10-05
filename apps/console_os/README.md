@@ -1,23 +1,29 @@
 # P4 Console OS
 
+M5Stack Tab5 is the primary target. Start with
+[`docs/boards/M5STACK_TAB5.md`](../../docs/boards/M5STACK_TAB5.md) and
+`make console-os-tab5-idf` (`make console-os-idf` is its default alias).
+The Elecrow sections below use `make console-os-elecrow-idf` explicitly.
+
+
 This is the FreeRTOS-native console shell for the ESP32-P4 console boards.
 The OTA image contains the launcher, fixed system apps, platform services, and
 the legacy Doom engine only. Every executable Game API cartridge—including
-Byte Buddy, Calculator, Input Test, and AV Test—loads from microSD, so adding
+Byte Buddy, Calculator, Input Monitor, and Sound & Motion—loads from microSD, so adding
 or removing one never requires an OS reflash.
 
 The home screen keeps the accepted Program Manager-style interface and
 organizes built-ins plus the current storage catalog as:
 
-- All Programs (every entry in one scrollable view)
-- Games
-  - Action: Doom (exclusive foreground handoff)
-  - Arcade: installed reentrant Game API cartridges
-- Control Panel: Appearance, Touch, System status, Power, Audio, Achievements,
-  File Manager, Game Manager, USB Drive, Multiplayer, Controllers, Save
-  Manager, and Terminal
-  - Tools: Calculator
-  - Tests: Input Test and AV Test
+- All Programs: alphabetically sorted games and one Control Panel entry on Tab5
+- Games: Adventure, Arcade, Cards, Platform, Shooters, Sports and Tabletop
+- Control Panel on Tab5: Overview, Preferences, Controls, Storage, Connections
+  and Advanced; diagnostics and utilities stay inside these sections
+
+The Tab5 Control Panel combines battery, motion, storage and clock status and
+provides startup/game volume controls. Back returns from a detail or utility to
+the same section. Other board targets retain their existing system navigation.
+See `docs/GAME_LIBRARY.md` for the current names and provisional quality ranking.
 
 Boot first displays the official Game Changers AI logo and starts SD
 initialization. Fresh installs start Boot Sounds and Game Audio at 0/10; the
@@ -192,7 +198,7 @@ at startup.
 
 Console OS 0.4.100 raises the validated native cartridge catalog from 16 to
 32 entries and the combined shell registry from 32 to 64 entries. The current
-19-game bundle can therefore remain fully visible alongside built-in system
+curated native bundle can therefore remain fully visible alongside built-in system
 apps instead of silently omitting games after the sixteenth package.
 
 Console OS 0.4.99 preserves the default 320x200 cartridge surface and adds
@@ -304,7 +310,7 @@ without editing the launcher:
 ```sh
 python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE
 make game-sdk-host
-make console-os-idf
+make console-os-elecrow-idf
 ```
 
 Copy the resulting cartridge from `build/game-storage-seed/GAMES/` into
@@ -312,13 +318,10 @@ Copy the resulting cartridge from `build/game-storage-seed/GAMES/` into
 `docs/GAME_SDK.md` for the API and package contract. This project does not use
 UF2.
 
-Game Manager also restores the original open P4 Cart catalog. Source-included
-`P4CART1` files live under `P4/GAMES/*.P4CART`; the firmware scans them on a
-bounded background task, verifies their complete container and payload hashes,
-and lists valid carts alongside P4G packages. This does not rename or execute
-them: the original project did not finish the required sandboxed Lua 5.4
-backend. The generated storage bundle includes the MIT-licensed Bounce Lab
-and QR Dodge reference carts so this compatibility path is reproducible.
+Readable Lua `P4CART1` files live under `P4/GAMES/*.P4CART`. Console OS scans
+and validates installed source cartridges and launches the bounded Lua 5.4
+runtime. The old Lua teaching games have been removed; no demo carts are seeded. See `docs/GAME_LIBRARY.md` for the curated native
+library, categories and draft workflow.
 
 The Waveshare 4.3 build obtains its complete executable cartridge catalog from
 microSD while retaining the P4CART compatibility catalog. Build and verify it
@@ -370,7 +373,7 @@ make platform-battery-host
 make platform-game-storage-host
 make h1-usb-drive-control-host
 make game-sdk-host
-make console-os-idf
+make console-os-elecrow-idf
 ```
 
 The first migration needs a guarded J1 write for the bootloader, partition

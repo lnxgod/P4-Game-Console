@@ -31,7 +31,7 @@
     "elecrow-crowpanel-advanced-10": {
       "board_profile": "hardware/board-profile.json",
       "sdkconfig_defaults": "hardware/boards/elecrow-crowpanel-advanced-10/sdkconfig.defaults",
-      "build_command": "make console-os-idf",
+      "build_command": "make console-os-elecrow-idf",
       "adapters": {
         "display": "components/platform_display/src/platform_display.c",
         "storage": "components/platform_game_storage/src/platform_game_storage.c",

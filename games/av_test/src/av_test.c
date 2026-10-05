@@ -178,7 +178,7 @@ static bool game_render(p4_game_context_t *context,
     default: draw_gradient(surface); break;
     }
     p4_draw_fill_rect(surface, 0, 0, 320, 19, UINT16_C(0x0010));
-    p4_draw_text(surface, 7, 6, "AV TEST", UINT16_C(0xF81F), 1U, 7U);
+    p4_draw_text(surface, 7, 6, "SOUND & MOTION", UINT16_C(0xF81F), 1U, 14U);
     p4_draw_text(surface, 80, 6, "LEFT/RIGHT PATTERN",
                  UINT16_C(0xFFFF), 1U, 18U);
     p4_draw_fill_rect(surface, state->motion_x - 2, 20, 5, 130,
@@ -205,8 +205,8 @@ const p4_game_descriptor_t p4_av_test_game = {
     .api_version = P4_GAME_API_VERSION,
     .launcher_id = UINT32_C(111),
     .id = "org.p4console.av-test",
-    .title = "AV TEST",
-    .subtitle = "DISPLAY MOTION AND TONES",
+    .title = "Sound & Motion",
+    .subtitle = "Check screen motion and tones",
     .accent_rgb565 = UINT16_C(0xF81F),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE,

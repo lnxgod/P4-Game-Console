@@ -1,9 +1,13 @@
 ---
 name: develop-esp32-p4-platform
-description: Build, diagnose, flash, monitor, or extend firmware for this ESP32-P4 platform, including the Elecrow 10 in variant, Olimex ESP32-P4-PC Rev.B, and Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3. Use for ESP-IDF apps, board support and pin changes, display, SD, audio, touch or USB bring-up, toolchain setup, recovery, and hardware verification.
+description: Build, diagnose, flash, monitor, or extend firmware for this ESP32-P4 platform, with M5Stack Tab5 as the primary target, plus the Elecrow 10 in variant, Olimex ESP32-P4-PC Rev.B, and Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3. Use for ESP-IDF apps, board support and pin changes, display, SD, audio, touch or USB bring-up, toolchain setup, recovery, and hardware verification.
 ---
 
 # Develop the ESP32-P4 platform
+
+M5Stack Tab5 is the permanent primary Console OS target. `make console-os-idf`
+is its default alias; `make console-os-tab5-idf` names it explicitly. Keep older
+boards available through their explicitly named targets.
 
 Build every app on the same pinned platform and leave reproducible evidence. Treat an unknown board revision or an unverified electrical interface as a hardware gate, not a software detail.
 
@@ -39,7 +43,7 @@ capability from its USB-C shape or from host-mode firmware.
 
 Keep the build target and physical target paired exactly:
 
-- `elecrow-crowpanel-advanced-10` / `make console-os-idf` means the Elecrow
+- `elecrow-crowpanel-advanced-10` / `make console-os-elecrow-idf` means the Elecrow
   CrowPanel Advanced 10.1-inch device only.
 - `olimex-esp32-p4-pc` / `make console-os-olimex-idf` means the Olimex
   ESP32-P4-PC **Rev.B development board** only.
@@ -53,15 +57,15 @@ For Tab5, select `m5stack-tab5` explicitly and read
 `docs/boards/M5STACK_TAB5.md` and
 `hardware/boards/m5stack-tab5/board-profile.json`. Use
 `make console-os-tab5-idf`. A/ST7121 and B/ST7123 have boot/readback, mounted-SD and native-USB transfer
-evidence; the operator confirmed touch after B's mirror correction. Doom gameplay,
-speaker sound and sustained scrolling still need acceptance. A/B are separately
+evidence; the operator confirmed touch after B's mirror correction. Doom lifecycle,
+sustained scrolling and B speaker sound still need acceptance; the operator confirmed A startup and Doom music/effects on the speaker-repair candidate. A/B are separately
 backed up and have exact-artifact test-install
 authorizations. Load games through the connected USB-C cable with
 `scripts/p4-transfer.py push-bundle apps/console_os/build-tab5/sd-card --port <port>`
 and Doom/Chex through `scripts/p4-usb-content.py`; no card reader is needed.
 Use `scripts/flash-console-os-tab5.py` with an explicit unit, port
 and authorization digest; its default is a local-only check. Preserve and bind
-any new unit before its first write. C6 radio and USB-A host power are disabled.
+any new unit before its first write. USB-A power/host and C6 radio remain disabled in this configuration.
 
 For another ESP32-P4 board, use `scripts/board-port.py` and
 `docs/BOARD_PORTING.md`. Start with `check` and `matrix`, then feed a
@@ -127,17 +131,18 @@ Label evidence accurately:
 
 A successful build is not hardware proof.
 
-For the two Console OS profiles, use exactly one physically matching target
+For Console OS profiles, use exactly one physically matching target
 after focused tests:
 
 ```sh
-make console-os-idf          # Elecrow CrowPanel Advanced 10.1-inch
+make console-os-tab5-idf     # M5Stack Tab5, primary target
+make console-os-elecrow-idf          # Elecrow CrowPanel Advanced 10.1-inch
 make console-os-olimex-idf   # Olimex ESP32-P4-PC Rev.B development board
 make console-os-waveshare-idf # Waveshare 4.3 landscape bundle
 ```
 
-Run both only when shared Console OS or board-selection code changed. Do not
-repeat either build after documentation-only edits.
+Build additional targets only when a shared change or a concrete board-selection
+risk requires them. Do not repeat builds after documentation-only edits.
 
 ## Flash and monitor
 

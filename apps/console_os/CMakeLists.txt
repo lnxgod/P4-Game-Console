@@ -5,7 +5,7 @@ cmake_minimum_required(VERSION 3.16)
 set(PROJECT_VER "0.5.12")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
-    set(P4_BOARD_PROFILE "elecrow-crowpanel-advanced-10")
+    set(P4_BOARD_PROFILE "m5stack-tab5")
 endif()
 if(NOT DEFINED P4_WAVESHARE_CONTROLLER_FIRST_BUILD)
     set(P4_WAVESHARE_CONTROLLER_FIRST_BUILD OFF)

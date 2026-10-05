@@ -33,8 +33,8 @@ class ContentInstallTests(unittest.TestCase):
         self.root = Path(self.temporary.name)
         self.sd = self.root / "sd"
         self.sd.mkdir()
-        self.cart = self.root / "bounce.p4cart"
-        packer.pack_source(ROOT / "game-platform" / "templates" / "bounce-lab", self.cart)
+        self.cart = self.root / "fixture.p4cart"
+        packer.pack_source(ROOT / "game-platform" / "tests" / "fixtures" / "minimal-cart", self.cart)
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
@@ -43,7 +43,7 @@ class ContentInstallTests(unittest.TestCase):
         destination, digest = content.install_cart(self.cart, self.sd)
         self.assertEqual(
             destination,
-            self.sd.resolve() / "P4" / "GAMES" / "bounce.p4cart",
+            self.sd.resolve() / "P4" / "GAMES" / "fixture.p4cart",
         )
         self.assertTrue(destination.is_file())
         self.assertEqual(content.validate_p4cart(destination), digest)
@@ -82,7 +82,7 @@ class ContentInstallTests(unittest.TestCase):
         self.assertEqual(list(outside.iterdir()), [])
 
     def test_replace_refuses_non_file_destination(self) -> None:
-        destination = self.sd / "P4" / "GAMES" / "bounce.p4cart"
+        destination = self.sd / "P4" / "GAMES" / "fixture.p4cart"
         destination.mkdir(parents=True)
         with self.assertRaisesRegex(content.ContentError, "regular file"):
             content.install_cart(self.cart, self.sd, replace=True)

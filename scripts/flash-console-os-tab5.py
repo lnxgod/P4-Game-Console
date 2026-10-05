@@ -76,7 +76,9 @@ def prepare(auth, unit):
     spec = importlib.util.spec_from_file_location('tab5_verify', ROOT / 'scripts/verify-console-os-tab5.py')
     verifier = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(verifier)
-    verifier.verify(BUILD)
+    verified = verifier.verify(BUILD)
+    require(verified["usb_host_enabled"] == auth.get("usb_host_enabled", False),
+            "USB host selection differs from exact-artifact authorization")
     artifacts = {}
     for offset, relative in LAYOUT.items():
         entry = auth['artifacts'][offset]

@@ -5,23 +5,37 @@ description: Create, scaffold, categorize, modify, or integrate native C P4 Cons
 
 # Develop P4 Console Games
 
-Build games against the stable platform APIs and make their launcher category
-explicit. Keep hardware ownership in platform components and keep every game
-bounded enough for the ESP32-P4 runtime.
+Start from the user's idea, including a free-form concept or genre combination.
+Use `docs/GAME_STARTERS.md` to choose an optional scaffold/example only when it
+helps; do not require a template menu or constrain the user's mechanics or art.
+Infer routine choices, ask only about missing decisions that change gameplay,
+and build a playable core before tuning it with the user.
+
+Native C is the general-purpose route for Console OS games, including its
+networked sessions. Use `$develop-p4-script-games` when readable Lua remixes are
+the better fit or the user requests them. Honor explicit format choices and
+explain a missing service before proposing a different runtime.
+
+Build against stable platform APIs, make the launcher category explicit and
+keep hardware ownership in platform components. Keep state and work bounded
+for the ESP32-P4 runtime.
 
 ## Load the contracts
 
 Read `AGENTS.md`, `docs/GAME_SDK.md`, `docs/CONSOLE_OS.md`, and the target
 game's `game.json` before editing. Also use:
 
-- `$develop-esp32-p4-platform` for the locked ESP-IDF toolchain or board work.
-- `$use-elecrow-p4-display` for panel, framebuffer, or on-device visual work.
-- `$use-elecrow-p4-audio` for factory-speaker integration or acoustic tests.
-- `$add-usb-gamepad-support` only when USB HID input is in scope.
-- `$test-p4-games-locally` for the required pre-firmware play, smoke, and
-  gameplay-tuning loop.
-- `$test-console-os-builds` for candidate verification, flashing, recovery, or
-  manual tablet acceptance.
+- `$develop-p4-multiplayer-games` automatically for linked-console multiplayer;
+  the user does not need to name the skill.
+- `$test-p4-games-locally` for native SDL3 play, sanitizer smoke and tuning.
+- `$develop-p4-games` for manifests, packages and content installation.
+- `$develop-esp32-p4-platform` for actual toolchain, shared-service or board work.
+  Ordinary drawing, tones and normalized controls do not require bring-up.
+- `$add-usb-gamepad-support` only for missing/broken shared controller support
+  or a physical HID/transport change, not ordinary button mappings.
+- The matching board skill for hardware acceptance. Use
+  `$test-console-os-builds` and the Elecrow display/audio skills only on their
+  exact Elecrow target; Tab5 uses `docs/boards/M5STACK_TAB5.md`.
 
 ## Preserve the native model
 
@@ -57,16 +71,20 @@ Prefer a broad reusable type under `GAMES`:
 
 | Folder | Use for |
 |---|---|
-| `GAMES/ARCADE` | Fixed-screen, maze, score-chase, or classic shooter games |
-| `GAMES/ACTION` | Combat, FPS, survival, or fast action games |
-| `GAMES/PUZZLE` | Logic, matching, word, or block puzzles |
+| `GAMES/ARCADE` | Short score, maze, wave or crossing games |
+| `GAMES/ADVENTURE` | Exploration, narrative or companion games |
 | `GAMES/PLATFORM` | Side-view jumping and platform games |
-| `GAMES/RACING` | Driving, racing, or time-trial games |
-| `GAMES/ADVENTURE` | Exploration or narrative games |
+| `GAMES/SPORTS` | Hockey and other sports |
+| `GAMES/CARDS` | Card games and solitaire |
+| `GAMES/TABLETOP` | Dice and board games |
+| `GAMES/SHOOTERS` | First-person shooters such as Doom and Chex Quest |
 
-Reuse an existing type when it fits. Default to `GAMES/ARCADE` when the game
-is ambiguous; do not create a near-duplicate category for one title. Reserve
-`SYSTEM` for built-in diagnostics and platform tools, not ordinary games.
+Reuse a current type before adding a new category. Add Puzzle or Racing only
+when an actual finished game needs one. Reserve `SYSTEM/TESTS` for diagnostics
+and `SYSTEM/TOOLS` for utilities. Use player-facing Title Case names and a
+short description of the game; omit P4, API versions and implementation terms.
+Keep game IDs, package filenames, saves and network protocol identities stable
+when renaming. See `docs/GAME_LIBRARY.md` for the current library and quality bar.
 
 The shell derives its hierarchy from manifests:
 
@@ -84,7 +102,9 @@ number of registered apps, not the number of visible root folders.
 
 ## Scaffold a game
 
-Use the repository creator instead of copying an old game:
+Use the repository creator for a fresh identity, then borrow only the needed
+patterns from `docs/GAME_STARTERS.md`. A scaffold is optional guidance for the
+implementation, not a restriction on the game idea:
 
 ```sh
 python3 scripts/new-game.py "Star Hop" --folder GAMES/PLATFORM
@@ -93,7 +113,11 @@ python3 scripts/new-game.py "Card Table" --folder GAMES/CARDS --high-res
 
 Use `--dry-run` first when the requested title, slug, ID, accent, or folder is
 uncertain. The creator refuses overwrites, chooses a free launcher ID, and
-writes the validated folder metadata. Do not add a central launcher entry;
+writes the validated folder metadata. New scaffolds are unpublished
+(`enabled: false`); use `-DP4_ALLOW_DRAFT_GAME=ON` in the local runner, or
+`make play-game GAME=<slug>`, while developing them. Enable the finished game
+for packaging after focused validation; keep retired identities reserved by
+`games/retired.json`. Do not add a central launcher entry;
 configure-time registry generation discovers enabled manifests and emits the
 parallel game/folder tables.
 
@@ -105,7 +129,13 @@ metadata into `p4_game_descriptor_t`; that descriptor is the stable API ABI.
 
 - Use `p4/game.h` for lifecycle/capabilities and return
   `P4_GAME_EXIT_TO_LAUNCHER` on Back.
-- Use `p4/input.h` for normalized held/pressed/released controls.
+- Use `p4/input.h` for normalized held/pressed/released controls. By default
+  map title/start, menus, gameplay, pause, retry and Back to D-pad/A/B/Start/
+  Back wherever the mechanics permit; retain touch as well. Supported USB/BLE
+  pads feed this existing OS input path, so a game needs no USB capability,
+  driver, pairing screen or raw controller access. Use held for movement and
+  transitions for actions. Preserve an explicitly touch-only design, but state
+  that limit. Never infer physical Tab5 HID support from the shared API.
 - Use `p4/draw.h` for clipped RGB565 primitives or bounded licensed sprites.
 - Default to the portable 320x200 surface. Use optional `video-highres` plus
   `P4_GAME_CAP_VIDEO_HIGH_RES` for detail-heavy games that can negotiate
@@ -118,26 +148,19 @@ metadata into `p4_game_descriptor_t`; that descriptor is the stable API ABI.
 - Use `p4/audio.h` for host-owned sound.
 - Stop all requested sound in the game's `stop` callback.
 
-For optional multiplayer, declare `multiplayer-session` and use only the
-non-blocking `p4_game_multiplayer_*` calls. Console OS owns BLE/UART/USB
-transport, discovery, compatibility, timeouts, and peer identity. A game sees
-only a bounded session snapshot and copied messages up to 64 bytes, and must
-retain a complete same-device/offline mode. Prefer host-authoritative state for
-turn-based games. Never open a radio, UART, USB handle, or socket from a game.
-Also add the validated `game.json` `multiplayer` object. Start with
-`{"schema":1,"style":"turn-based"}` or scaffold with
-`scripts/new-game.py "Title" --multiplayer turn-based`. Use `realtime` for
-host-authoritative action and `lockstep` only for deterministic simulations.
-Set `protocol` when message meaning changes and set `message_bytes` to the
-largest actual packet; do not add transport names or addresses. Read the
-canonical runtime values with `p4_game_multiplayer_read_profile()`.
+For linked-console multiplayer, automatically use
+`$develop-p4-multiplayer-games`. Declare the optional `multiplayer-session`
+capability and validated `multiplayer` profile; consume only the bounded,
+non-blocking `p4_game_multiplayer_*` API. Console OS owns registration,
+Host/Join, transport selection and the start barrier. The game owns its rules,
+messages and offline/peer-loss behavior. `new-game.py --multiplayer` creates
+metadata only; it does not implement synchronization.
 
-Do not recreate Console OS multiplayer UI inside a game. The shell first asks
-`HOST` or `JOIN`; Host owns game/settings/link selection and Join binds a
-selected cross-game room beacon to the exact installed cartridge. Both launch
-only after the shared start barrier, so `game_start` should read the connected
-session and enter play directly. Keep a complete same-device/offline path for
-ordinary launcher starts and peer loss.
+Use the public APIs for optional saves, achievements, resource sidecars and
+dice accessories when the design needs them. See `docs/GAME_STARTERS.md` and
+the corresponding Game SDK section before adding a service. Neither `storage`
+nor `save` gives a game a filesystem path; missing optional capabilities need
+an honest fallback.
 
 For simple sound, request `audio-tone` and call `p4_game_play_tone()`. For a
 software mixer, request `audio-stream`, declare
@@ -202,28 +225,27 @@ do not request a guarded install for an unplayed or failing changed game.
 
 ## Verify the hierarchy and game
 
-After local play passes, run the full host checks:
+Verify only the boundaries changed:
 
-```sh
-python3 scripts/generate-game-registry.py --games-root games --check
-python3 scripts/tests/test-game-registry.py
-python3 scripts/tests/test-new-game.py
-make game-sdk-host
-make console-shell-host
-```
+- For game behavior, run that game's focused CMake/CTest target and the local
+  SDL3 loop. Multiplayer also needs its two-instance session tests.
+- For a new/changed manifest or folder, run `make game-registry-check`.
+  Registry generation discovers the game automatically.
+- For a new launcher category behavior, exercise navigation into the category,
+  launch/return and Up; change shared shell tests only if shell behavior changed.
+- For shared Game API, loader or package changes, run `make game-sdk-host`;
+  for shared shell changes, run `make console-shell-host`.
+- For skill/documentation-only changes, validate the skills and references;
+  do not rebuild firmware.
 
-Tests must prove the manifest folder is valid and aligned with its generated
-game entry. For a new type, add launcher tests that open Root -> Games -> Type,
-launch the game, return to the same type folder, and navigate Up to Root.
-Preserve All Programs scrolling and gesture-suppression coverage.
+When packaging or a firmware candidate is requested, use one matching target:
+`make console-os-tab5-idf` (the default), `make console-os-elecrow-idf`,
+`make console-os-olimex-idf`,
+or `make console-os-waveshare-idf`.
+Follow the matching board route for any install. A build is not hardware
+acceptance. Game-only updates use the existing content path and need no OS
+reflash.
 
-When the request includes a firmware candidate, run only the matching target:
-`make console-os-idf`, `make console-os-olimex-idf`, or
-`make console-os-waveshare-idf`. Use `$test-console-os-builds` for the exact
-Elecrow tablet route and `$develop-waveshare-p4-4.3` for the Waveshare route.
-A build is not hardware acceptance and does not authorize a flash.
-
-Update `docs/GAME_SDK.md` only when the reusable contract changes. Record a
-new exact build artifact instead of rewriting an executed or historical
-record. Use `$develop-p4-games` for package validation and H1/SD installation;
-do not flash Console OS for a cartridge-only update.
+Update `docs/GAME_SDK.md` only when the reusable contract changes. Record
+current evidence separately from historical runs. Use `$develop-p4-games`
+for package validation and installation.

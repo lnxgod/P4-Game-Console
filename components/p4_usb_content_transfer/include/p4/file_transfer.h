@@ -45,6 +45,8 @@ typedef enum {
     P4_FILE_TRANSFER_DIRECTION_NONE = 0,
     P4_FILE_TRANSFER_UPLOAD,
     P4_FILE_TRANSFER_DOWNLOAD,
+    /** Remove one exact hash-matched game file; never save data or arbitrary paths. */
+    P4_FILE_TRANSFER_REMOVE,
 } p4_file_transfer_direction_t;
 
 typedef enum {

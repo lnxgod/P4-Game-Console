@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.1.1",
+  "version": "1.1.2",
   "package_file": "TEXAS_HOLDEM.P4G",
   "component": "texas_holdem",
   "sources": [
@@ -13,9 +13,9 @@
   "entry_symbol": "p4_texas_holdem_game",
   "launcher_id": 117,
   "id": "org.p4console.texas-holdem",
-  "title": "TEXAS HOLDEM",
-  "subtitle": "HUMANS + CPU POKER",
-  "folder": "GAMES/ARCADE",
+  "title": "Texas Hold'em",
+  "subtitle": "Poker with friends or the CPU",
+  "folder": "GAMES/CARDS",
   "accent_rgb565": "0x07ec",
   "required_capabilities": [
     "video",

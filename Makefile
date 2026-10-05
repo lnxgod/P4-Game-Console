@@ -1,12 +1,12 @@
 APP ?= bringup
-BOARD ?= elecrow-crowpanel-advanced-10
+BOARD ?= $(if $(filter console_os,$(APP)),m5stack-tab5,elecrow-crowpanel-advanced-10)
 PORT ?=
 WAD ?= local-data/doom/doom1.wad
 DOOM_FRAMES ?= 8
 DOOMGENERIC_SOURCE ?=
 GAME ?= space_invaders
 
-.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf doom-multiplayer-host platform-board-host platform-audio-host platform-audio-factory-host platform-battery-host platform-touch-host platform-game-storage-host platform-save-seal-host h1-usb-drive-control-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host console-os-host play-console-os p4-ansi-host p4-bbs-host p4-desktop-host p4-game-api-host p4-game-save-host p4-signal-scan-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host p4-multiplayer-registry-host p4-ble-radio-handoff-host lord-realm-e2e-host maze-chase-host space-invaders-host breakout-host asteroids-host asteroids-2-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host p4-yahtzee-host calculator-host input-test-host av-test-host play-game game-registry-check game-sdk-host board-port-check console-os-idf console-os-olimex-idf console-os-waveshare-idf gamepad-host gamepad-idf install-olimex-sd-card install-waveshare-sd-card
+.PHONY: setup verify build check backup flash flash-app monitor doom-provenance doom-vendor doom-host doom-smoke doom-idf doom-audio-host doom-audio-idf doom-multiplayer-host platform-board-host platform-audio-host platform-audio-factory-host platform-battery-host platform-touch-host platform-game-storage-host platform-save-seal-host h1-usb-drive-control-host doom-touch-host doom-touch-audio-host doom-touch-audio-idf console-shell-host console-os-host play-console-os p4-ansi-host p4-bbs-host p4-desktop-host p4-game-api-host p4-game-save-host p4-signal-scan-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host p4-multiplayer-registry-host p4-ble-radio-handoff-host lord-realm-e2e-host maze-chase-host space-invaders-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host p4-yahtzee-host calculator-host input-test-host av-test-host play-game game-registry-check game-sdk-host board-port-check console-os-idf console-os-elecrow-idf console-os-olimex-idf console-os-waveshare-idf gamepad-host gamepad-idf install-olimex-sd-card install-waveshare-sd-card
 
 setup:
 	./scripts/install-esp-idf.sh
@@ -213,19 +213,6 @@ space-invaders-host:
 	cmake --build build-host/space_invaders
 	ctest --test-dir build-host/space_invaders --output-on-failure
 
-breakout-host:
-	cmake -S games/breakout -B build-host/breakout -G Ninja
-	cmake --build build-host/breakout
-	ctest --test-dir build-host/breakout --output-on-failure
-
-asteroids-host:
-	cmake -S games/asteroids -B build-host/asteroids -G Ninja
-	cmake --build build-host/asteroids
-
-asteroids-2-host:
-	cmake -S games/asteroids_2 -B build-host/asteroids_2 -G Ninja
-	cmake --build build-host/asteroids_2
-
 frog-hop-host:
 	cmake -S games/frog_hop -B build-host/frog_hop -G Ninja
 	cmake --build build-host/frog_hop
@@ -288,7 +275,7 @@ av-test-host:
 	ctest --test-dir build-host/play-av_test --output-on-failure
 
 play-game:
-	cmake -S tools/p4-game-host -B "build-host/play-$(GAME)" -G Ninja -DP4_GAME="$(GAME)"
+	cmake -S tools/p4-game-host -B "build-host/play-$(GAME)" -G Ninja -DP4_GAME="$(GAME)" -DP4_ALLOW_DRAFT_GAME=ON
 	cmake --build "build-host/play-$(GAME)"
 	"build-host/play-$(GAME)/p4_game_host.app/Contents/MacOS/p4_game_host"
 
@@ -301,15 +288,17 @@ game-registry-check:
 	python3 scripts/tests/test-protected-game-lineage.py
 	python3 scripts/tests/test-new-game.py
 
-game-sdk-host: p4-desktop-host p4-game-api-host p4-game-save-host platform-save-seal-host p4-signal-scan-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host p4-multiplayer-registry-host lord-realm-e2e-host maze-chase-host space-invaders-host breakout-host asteroids-host asteroids-2-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host p4-yahtzee-host calculator-host input-test-host av-test-host game-registry-check
+game-sdk-host: p4-desktop-host p4-game-api-host p4-game-save-host platform-save-seal-host p4-signal-scan-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host p4-multiplayer-registry-host lord-realm-e2e-host maze-chase-host space-invaders-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host p4-yahtzee-host calculator-host input-test-host av-test-host game-registry-check
 
 board-port-check:
 	python3 scripts/board-port.py check
 	python3 scripts/board-port.py matrix
 	python3 scripts/tests/test-board-port.py
 
-console-os-idf: board-port-check console-shell-host platform-game-storage-host game-sdk-host
-	./scripts/build.sh console_os
+console-os-idf: console-os-tab5-idf
+
+console-os-elecrow-idf: board-port-check console-shell-host platform-game-storage-host game-sdk-host
+	./scripts/build.sh console_os elecrow-crowpanel-advanced-10
 	python3 ./scripts/verify-console-os.py apps/console_os/build
 	python3 ./scripts/tests/test-console-os-game-manager-runtime-capture.py
 	python3 ./scripts/tests/test-console-os-game-manager-migrate.py
@@ -370,6 +359,9 @@ gamepad-idf: gamepad-host
 .PHONY: console-os-tab5-idf tab5-host
 
 tab5-host: platform-board-host platform-touch-host console-shell-host platform-game-storage-host p4-os-update-package-host
+	cmake -S components/platform_tab5/tests -B build-host/platform_tab5 -G Ninja
+	cmake --build build-host/platform_tab5
+	ctest --test-dir build-host/platform_tab5 --output-on-failure
 	cmake -S components/platform_i2c_shared -B build-host/platform_i2c_shared -G Ninja
 	cmake --build build-host/platform_i2c_shared
 	ctest --test-dir build-host/platform_i2c_shared --output-on-failure

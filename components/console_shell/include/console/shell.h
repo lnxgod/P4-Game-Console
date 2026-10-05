@@ -120,6 +120,8 @@ typedef enum {
     CONSOLE_PAGE_STORAGE,
     CONSOLE_PAGE_POWER,
     CONSOLE_PAGE_CONTROLLERS,
+    CONSOLE_PAGE_SENSORS,
+    CONSOLE_PAGE_CONTROL_PANEL,
 } console_page_t;
 
 typedef enum {
@@ -371,6 +373,14 @@ typedef struct {
     uint16_t battery_millivolts;
     uint8_t battery_percent;
     int battery_last_error;
+    bool control_panel_enabled;
+    bool battery_current_valid;
+    int32_t battery_milliamps; /* Positive discharge, negative charge. */
+    bool motion_supported, motion_valid, rtc_supported, rtc_valid;
+    int32_t accel_mg[3], gyro_mdps[3];
+    bool temperature_valid;
+    int32_t temperature_millicelsius;
+    char rtc_datetime[32];
     uint8_t boot_volume_step;
     uint8_t game_volume_step;
     bool audio_settings_persistent;
@@ -541,6 +551,11 @@ typedef struct {
     bool scroll_candidate;
     bool scroll_gesture;
     bool home_all_programs;
+    bool control_panel_active;
+    bool control_panel_row_focus;
+    uint8_t control_panel_section;
+    size_t control_panel_first;
+    size_t control_panel_selection;
     bool file_delete_confirm;
     bool storage_repair_confirm;
     bool dirty;

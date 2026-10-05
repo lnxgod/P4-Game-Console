@@ -15,6 +15,7 @@
 
 static i2c_master_bus_handle_t s_bus;
 static esp_io_expander_handle_t s_expander;
+static i2c_master_dev_handle_t s_expander_readback;
 static StaticSemaphore_t s_lock_storage;
 static SemaphoreHandle_t s_lock;
 static platform_tab5_panel_t s_panel;
@@ -26,15 +27,15 @@ esp_err_t platform_tab5_init(void)
     if (!s_lock) s_lock = xSemaphoreCreateMutexStatic(&s_lock_storage);
     if (xSemaphoreTake(s_lock, pdMS_TO_TICKS(1000)) != pdTRUE) return ESP_ERR_TIMEOUT;
     esp_err_t ret = ESP_OK;
-    if (!s_bus) {
-        const i2c_master_bus_config_t cfg = {
+    const i2c_master_bus_config_t cfg = {
             .i2c_port = PLATFORM_BOARD_I2C_PORT,
             .sda_io_num = PLATFORM_BOARD_I2C_SDA_GPIO,
             .scl_io_num = PLATFORM_BOARD_I2C_SCL_GPIO,
             .clk_source = I2C_CLK_SRC_DEFAULT,
             .glitch_ignore_cnt = 7,
             .flags.enable_internal_pullup = true,
-        };
+    };
+    if (!s_bus) {
         ret = i2c_new_master_bus(&cfg, &s_bus);
     }
     if (ret == ESP_OK && !s_expander) {
@@ -49,7 +50,18 @@ esp_err_t platform_tab5_init(void)
             const esp_err_t reset_result = i2c_master_bus_reset(s_bus);
             ESP_LOGW("tab5", "I2C_INIT_RETRY attempt=%u error=%s bus_reset=%s",
                      attempt + 2U, esp_err_to_name(ret), esp_err_to_name(reset_result));
-            if (reset_result != ESP_OK) { ret = reset_result; break; }
+            if (reset_result != ESP_OK) {
+                /* A failed bus-clear leaves the controller unusable on some
+                 * warm starts. No clients exist yet: discard that controller
+                 * and retry with a new one. Never reset a borrowed live bus. */
+                ret = i2c_del_master_bus(s_bus);
+                if (ret != ESP_OK) break;
+                s_bus = NULL;
+                vTaskDelay(pdMS_TO_TICKS(50));
+                ret = i2c_new_master_bus(&cfg, &s_bus);
+                if (ret != ESP_OK) break;
+                ESP_LOGW("tab5", "I2C_INIT_RECREATED attempt=%u", attempt + 2U);
+            }
             vTaskDelay(pdMS_TO_TICKS(50));
         }
     }
@@ -72,9 +84,32 @@ esp_err_t platform_tab5_speaker_enable(bool enabled)
     if (ret != ESP_OK) return ret;
     if (xSemaphoreTake(s_lock, pdMS_TO_TICKS(1000)) != pdTRUE) return ESP_ERR_TIMEOUT;
     ret = output_locked(IO_EXPANDER_PIN_NUM_1, enabled);
-    uint32_t actual = 0;
-    if (ret == ESP_OK) ret = esp_io_expander_get_level(s_expander, IO_EXPANDER_PIN_NUM_1, &actual);
-    if (ret == ESP_OK && !!(actual & IO_EXPANDER_PIN_NUM_1) != enabled) ret = ESP_FAIL;
+    /* PI4IOE5V6408 input status (0x0f) always reads zero for outputs.
+     * Verify live direction/latch/drive registers instead of the driver's
+     * cached values. This confirms control state, not an electrical pin
+     * measurement. Datasheet DS40583 tables 4-6 and 10. */
+    if (ret == ESP_OK && !s_expander_readback) {
+        const i2c_device_config_t cfg = {
+            .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+            .device_address = 0x43,
+            .scl_speed_hz = 400000,
+        };
+        ret = i2c_master_bus_add_device(s_bus, &cfg, &s_expander_readback);
+    }
+    uint8_t direction = 0, latch = 0, highz = 0;
+    const uint8_t registers[] = {0x03, 0x05, 0x07};
+    uint8_t *const values[] = {&direction, &latch, &highz};
+    for (unsigned i = 0; i < 3 && ret == ESP_OK; ++i) {
+        ret = i2c_master_transmit_receive(s_expander_readback,
+            &registers[i], 1, values[i], 1, 100);
+    }
+    const uint8_t pin = IO_EXPANDER_PIN_NUM_1;
+    if (ret == ESP_OK && (!(direction & pin) || (highz & pin) ||
+                          !!(latch & pin) != enabled)) ret = ESP_FAIL;
+    if (ret != ESP_OK) {
+        ESP_LOGE("tab5", "SPEAKER_CONTROL_FAIL enable=%u dir=0x%02x latch=0x%02x highz=0x%02x error=%s",
+                 (unsigned)enabled, direction, latch, highz, esp_err_to_name(ret));
+    }
     xSemaphoreGive(s_lock);
     return ret;
 }

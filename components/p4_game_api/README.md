@@ -11,7 +11,7 @@ scene engine: signed Q16.16 movement, smoothstep easing, looping or ping-pong
 atlas timing, clipped/flipped/integer-scaled RGB565 sprites, deterministic
 camera shake, and bounded caller-owned particles. Cartridge packaging compiles
 these helpers into each game that uses them, so Game API v1 and its frozen
-runtime import allowlist do not change. `games/asteroids` is the reference.
+runtime import allowlist do not change. `games/frog_hop` is the reference.
 
 `p4/draw.h` also exposes bounded 8×8 compact and native 8×16 CP437 glyph/text
 drawing. The bytes come from the single pinned font in `components/p4_cp437`,

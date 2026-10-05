@@ -1,0 +1,298 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "created_at": "2026-10-05T05:29:56.955938+00:00",
+  "install_authorized": true,
+  "operation": "app-only",
+  "operator_request": "Permanently target Tab5; fix battery and sensors, game names/sorting/library, maintain sound, recover both connected A/B units and sync GitHub. Earlier flash/USB authorization continues.",
+  "source_commit": "9789174 plus Tab5 sensors, curated library, alphabetical launcher, verified USB removal, bounded controller recreation and deferred Doom cleanup",
+  "toolchain": {
+    "schema": 1,
+    "esp_idf": {
+      "version": "5.5.3",
+      "git_tag": "v5.5.3",
+      "git_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+      "repository": "https://github.com/espressif/esp-idf.git"
+    },
+    "target": {
+      "chip": "esp32p4",
+      "silicon_family": "revision_1_x",
+      "min_revision_full": 100,
+      "max_revision_full": 199
+    },
+    "managed_components": {
+      "espressif/esp_codec_dev": "1.5.4",
+      "espressif/esp_hosted": "1.4.7",
+      "espressif/esp_lcd_lt8912b": "0.2.0",
+      "espressif/esp_tinyusb": "2.0.1",
+      "espressif/esp_wifi_remote": "0.14.5",
+      "espressif/usb": "1.5.0",
+      "espressif/usb_host_hid": "1.2.0"
+    },
+    "policy": {
+      "commit_dependencies_lock": true,
+      "upgrade_only_with_hardware_regression": true
+    }
+  },
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "backup_sha256": "afe3e5df1ef2580aac055abc13a9c62bdfbd4816b46384d92978bdfa1abf16c8",
+      "model_confirmed": true,
+      "predecessor": {
+        "file": "hardware/backups/tab5-a-install-mg_f2niz/0x20000.bin",
+        "bytes": 1383856,
+        "sha256": "bdcc6a9ba51ac052d9636cf6c16b0110af26635ffb4c95cc2efd67f974261506"
+      }
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "backup_sha256": "5539e586c84d653cbe96d8c94b9aa775ad0ce5f134c3b28a5192af01429dc1c9",
+      "model_confirmed": true,
+      "predecessor": {
+        "file": "hardware/backups/tab5-b-install-t8vekpfe/0x20000.bin",
+        "bytes": 1383856,
+        "sha256": "bdcc6a9ba51ac052d9636cf6c16b0110af26635ffb4c95cc2efd67f974261506"
+      }
+    }
+  },
+  "artifacts": {
+    "0x2000": {
+      "file": "apps/console_os/build-tab5/bootloader/bootloader.bin",
+      "bytes": 23136,
+      "sha256": "058cf4c0434733d72800c383e1bddb54aa33cf667b21254c8bd9d2f4f7f43443"
+    },
+    "0x8000": {
+      "file": "apps/console_os/build-tab5/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "0x10000": {
+      "file": "apps/console_os/build-tab5/ota_data_initial.bin",
+      "bytes": 8192,
+      "sha256": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f"
+    },
+    "0x20000": {
+      "file": "apps/console_os/build-tab5/p4_console_os.bin",
+      "bytes": 1398624,
+      "sha256": "8816f8a02a5a2a11c5fb50888ff58efdcef54634ae22bdc1f562ab2d0d7ef3ca"
+    }
+  },
+  "write_review": {
+    "reason": "Exact app-only successor: voltage-based INA226 battery status, BMI270 motion/temperature, RX8130CE validity, title/category/alphabetical library, hash-bound cartridge removal, bounded warm-start I2C recreation before live clients, deferred Doom WAD/peripheral cleanup.",
+    "offset": "0x20000",
+    "preserve": "bootloader, partition table, NVS, PHY and active OTA selector",
+    "erase_all": false,
+    "force_revision": false,
+    "readback_required": "exact full app range before boot",
+    "register_reference": "https://www.diodes.com/datasheet/download/PI4IOE5V6408.pdf tables 4-6 and 10; input status is always low for outputs; output register readback confirms latch state, not pin voltage."
+  },
+  "peripheral_scope": {
+    "global_pin_map_authorized": false,
+    "pcb_revision": "not separately marked/confirmed; bounded common C145 interfaces only",
+    "published_variants_reviewed": [
+      "initial 2025-05-09 ILI9881C/GT911",
+      "2025-10-14 ST7123",
+      "2026-04-28 ST7121"
+    ],
+    "official_source": {
+      "commit": "73ee07b1ad56f865f13a2739be8bb6808c1da58a",
+      "manual_sha256": "6c054369e4fb1a7d04fa95fb31adda26feaa9de3540942f733eb2c1a68cd81e1",
+      "manual_url": "https://docs.m5stack.com/en/core/Tab5",
+      "repository": "https://github.com/espressif/esp-bsp",
+      "schematic_sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329",
+      "schematic_url": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1132/Tab5_Schematics_PDF.pdf"
+    },
+    "review": "Official C145 schematic and Tab5 manual give one shared P4/expander/audio/SD wiring map for all three published panel assemblies. The pinned BSP supplies distinct panel timings/init and GPIO23 handling, selected by the touch controller. Unknown panel firmware fails closed. No factory-binary pin inference used. INA226 0x41/5 mOhm shunt, BMI270 0x68 and RX8130CE 0x32 use the same published shared I2C1 map; identity and configuration readback precede telemetry. The RTC backup control matches the fitted rechargeable supply. Charger/rail controls stay excluded.",
+    "allowed": {
+      "display": {
+        "backlight_gpio": 22,
+        "bus": "MIPI-DSI",
+        "dphy_ldo_channel": 3,
+        "dphy_ldo_mv": 2500,
+        "logical_height": 720,
+        "logical_width": 1280,
+        "native_height": 1280,
+        "native_width": 720,
+        "panels": [
+          "ILI9881C",
+          "ST7123",
+          "ST7121"
+        ],
+        "reset": "PI4IOE5V6408 0x43 P4, release as input pull-up",
+        "rotation_cw_degrees": 90
+      },
+      "i2c": {
+        "expanders": [
+          67,
+          68
+        ],
+        "port": 1,
+        "scl": 32,
+        "sda": 31
+      },
+      "touch": {
+        "controllers": [
+          "GT911 at 0x14",
+          "ST7123/ST7121 at 0x55"
+        ],
+        "interrupt_gpio": 23,
+        "reset": "expander 0x43 P5"
+      },
+      "audio": {
+        "address_7bit": 16,
+        "amp_enable": "expander 0x43 P1 active high",
+        "bclk": 27,
+        "codec": "ES8388",
+        "dout": 26,
+        "i2s_port": 1,
+        "lrclk": 29,
+        "mclk": 30
+      },
+      "sd": {
+        "clk": 43,
+        "cmd": 44,
+        "data": [
+          39,
+          40,
+          41,
+          42
+        ],
+        "format_on_failure": false,
+        "power_ldo_channel": 4,
+        "slot": 0,
+        "width": 4
+      },
+      "sensors": {
+        "provenance": "third_party/tab5-sensors.json",
+        "power": "INA226 at 0x41, 5 mOhm shunt, voltage-based 2S estimate",
+        "motion": "BMI270 at 0x68, 4g / 2000 degrees per second",
+        "clock": "RX8130CE at 0x32, validity checked"
+      }
+    },
+    "usb_console": "native FS USB Serial/JTAG GPIO24/25 only",
+    "excluded": [
+      "radio",
+      "USB-A host power",
+      "expander 0x44 power/charge controls",
+      "external 5V",
+      "camera",
+      "mic",
+      "expansion GPIO"
+    ],
+    "sensor_reference": "third_party/tab5-sensors.json"
+  },
+  "supersedes_candidate_reason": "Preserve confirmed A speaker/music/effects and address battery/sensor support, startup recovery, game curation and Doom quit cleanup.",
+  "source_files": {
+    "components/platform_tab5/src/tab5.c": "f3fb581615868feadcd1d75650fa5cb51da56dd4bfedf7a58a22e997e4c15fab",
+    "components/platform_display/src/platform_display_tab5.c": "1c9af637aa05fa471d1374a987b70bc0ae1563ae3ecbb0cb819e92fc5de59161",
+    "components/platform_game_storage/src/platform_game_storage.c": "1b37e9365c3853266e4a13dece104fe930a8aa14240fb65193ed23f6067b6817",
+    "components/platform_display/CMakeLists.txt": "2dd04f4e5d48c178d9e21b99fe29177e42eaaf98bca061d153591c3cc05386f8",
+    "apps/console_os/main/console_os_main.c": "ecaf891fa93996b162a3d1bba522f3fdbfb8ad88d6c24797389538d29cb005c3",
+    "components/p4_multiplayer/src/uart_endpoint_dual.c": "3fd4d30892fcaa982049b970bf224e79b6ac3dd6d4f1ab1f0bdb0293db39ffc8",
+    "components/p4_multiplayer/CMakeLists.txt": "42ef67727f7f68b491717baa43bc1c48e8095b49740fb8f4024786adf2fa0949",
+    "components/p4_usb_content_transfer/include/p4/file_transfer.h": "23295618c55832c9447edcf9c5d5e3292ec15c83aebcf297140268be1f515baf",
+    "components/p4_usb_content_transfer/src/file_transfer.c": "4c5870492275de653ffecf8ac156e7203f32663d064bf14107000c997aa139c5",
+    "components/p4_usb_content_transfer/src/content_transfer.c": "9b83702e8bf4b67d64079fb2a083d295c6b2ebca450839ac3f898c6b0cc3e497",
+    "components/console_shell/include/console/shell.h": "19c226bb0c0c5e8752651b116065c8fb9e0bd24decf6867494ddcad35c4c5581",
+    "components/console_shell/src/console_shell.c": "66a828136ef4fe92b287fb3099e2e7c461cc86edc6271f622b40326994d44cab",
+    "scripts/p4-transfer.py": "d7c029d59e8ea7755aac10e6fcb64c45d985f9a36f530192bc2c942513ad2ab9",
+    "scripts/p4-usb-content.py": "abdabbdf968fee2dc697554d6af123288305750eb4d0407078c07cb756f240ed",
+    "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c": "896b36112a8b5caacaa9c63fc6956624b0ed84ae5176794e5af15fc755ce1cf9",
+    "apps/doom_embedded_touch_audio/main/runtime_gate.c": "71f2f450d0dff692c71410a0c55fe4df4c7e76b7113108f1cd8feee6eedd8d17",
+    "apps/doom_embedded_touch_audio/main/runtime_gate.h": "2f36ec3255f70e46286c6baeddf05c915192437a6d19349ae651c83858eeadfa",
+    "components/platform_tab5/src/sensors.c": "1cebb471ddfe284685e73229fd19d1abd7b85a868a3aba6ac3bf7fbcf1d4891a",
+    "components/platform_tab5/src/sensor_decode.c": "6404706d10827ce93e31ba09ebed4182f0c9381975c51bc8a9cb56bf57db5a38",
+    "components/platform_tab5/include/platform/tab5_sensors.h": "ec2e9f3177e977509edd80ff118938dbbf63ff144c4976fd3a0f8cf75493af57",
+    "third_party/bmi270/config.inc": "390ebef88ef70baaa77cba9c02f012b9995eee236d3924fd26c46026788a6d49",
+    "third_party/tab5-sensors.json": "d703280722ba282b7a358567bd7c48b851dd6d1e9d273c8ec3cb552ed17f78fa",
+    "apps/console_os/app-metadata.json": "176ed85294da24c0c0bcc975de7235367881c6436db9283725a5b62270d01f46"
+  },
+  "native_packages": [
+    {
+      "file": "AVTEST.P4G",
+      "bytes": 8768,
+      "sha256": "14ee266e7067866a8f8ff879b96f73e866c9205553a891552330149ac9073bee"
+    },
+    {
+      "file": "BYTEBUD.P4G",
+      "bytes": 196928,
+      "sha256": "6d11f92cd8558d9561fe66654757e6610198afd467bd716ac5d8b329f1409b7a"
+    },
+    {
+      "file": "BYTEBUD.P4R",
+      "bytes": 1397952,
+      "sha256": "6a7b7dafe0dd5565a867268e5c7e9a53feecbdd80e5c7b8d6e110598963fd698"
+    },
+    {
+      "file": "CALC.P4G",
+      "bytes": 10020,
+      "sha256": "35bc740c104aa42de074d1e38a7bbf380c77bc65a2c265371af20c298f64aa96"
+    },
+    {
+      "file": "CHECKERS.P4G",
+      "bytes": 13820,
+      "sha256": "1e0abf9ae68b8d0ba4479227d68d0688b3a9450184a6e6ffb7a26f8760efc97b"
+    },
+    {
+      "file": "COLOR_CLASH.P4G",
+      "bytes": 341452,
+      "sha256": "5ef64d7d6cf12b5d1a30d0a7caea077c5846e7218b0e4c68aa9f1ec16a17956f"
+    },
+    {
+      "file": "FROGHOP.P4G",
+      "bytes": 179336,
+      "sha256": "d5ac5763c48338d6e313fc48b9060ecff8f2c350e4e2e587907f37749ebee40d"
+    },
+    {
+      "file": "INPUT.P4G",
+      "bytes": 8896,
+      "sha256": "592de962f6f0965e7ac4737af387956e98cb6322b21ad10d2f4ac24318d63ab4"
+    },
+    {
+      "file": "INVADERS.P4G",
+      "bytes": 147608,
+      "sha256": "f3297b2cc759c13a1db3d2250e426559a85ac8c36ad7388b3ce7d4b835ea939c"
+    },
+    {
+      "file": "LORD.P4G",
+      "bytes": 212012,
+      "sha256": "83ad36c700691cb52f106c42c2213a5b4dbf84933cedd314a943754d332dc16c"
+    },
+    {
+      "file": "MAZE.P4G",
+      "bytes": 147652,
+      "sha256": "34b3ad807837862791297259eef5b3f961a0d59a5491f6f381a885c00e0e2c82"
+    },
+    {
+      "file": "P4_AIR_HOCKEY.P4G",
+      "bytes": 142792,
+      "sha256": "6f1ae7391705f7f36e0bdfeafd6989884515a7fe93f795a93ab3b6c2af3a7a67"
+    },
+    {
+      "file": "P4_RUMMY.P4G",
+      "bytes": 27204,
+      "sha256": "205be7d4be99a5f40c491c1226973ca0289f45daf6edc809edf5dbc528966a6e"
+    },
+    {
+      "file": "P4_YAHTZEE.P4G",
+      "bytes": 42168,
+      "sha256": "97c99f2225e89660dae9967767b388360baaba65bdd56c08ada268a038867edc"
+    },
+    {
+      "file": "SKYLINE.P4G",
+      "bytes": 199812,
+      "sha256": "7bbec8b01e5d46bb754ddbb980237e66e169196029d8e2f3e2f232c722f38e7e"
+    },
+    {
+      "file": "SOLITAIR.P4G",
+      "bytes": 148024,
+      "sha256": "1fc029a18d590d1192d73fa3a8d9825aed15afb77ce58d9393ab8c6300574f5f"
+    },
+    {
+      "file": "TEXAS_HOLDEM.P4G",
+      "bytes": 19376,
+      "sha256": "a657dc44253a16c960e9b786d22f5500b8f0d027f0d16fe7250139c17692e341"
+    }
+  ]
+}

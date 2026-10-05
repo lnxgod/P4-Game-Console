@@ -50,7 +50,11 @@
     "apps_per_page": 6,
     "maximum_registered_apps": 64,
     "folder_model": "bounded two-level hierarchy from built-ins and validated package metadata",
-    "root_folders": ["all-programs", "games", "system"],
+    "root_folders": [
+      "all-programs",
+      "games",
+      "system"
+    ],
     "maximum_folder_depth": 2,
     "dynamic_executable_loading": true
   },
@@ -75,7 +79,16 @@
     "surface": "RGB565 320x200 default; optional negotiated 768x480",
     "high_resolution_capability": "video-highres",
     "touch_coordinate_space": "320x200 in both render modes",
-    "controls": ["up", "down", "left", "right", "a", "b", "start", "back"],
+    "controls": [
+      "up",
+      "down",
+      "left",
+      "right",
+      "a",
+      "b",
+      "start",
+      "back"
+    ],
     "audio": "optional bounded tone and copied PCM16-stereo services at 16000 Hz",
     "return_to_home_supported": true,
     "games_embedded_in_ota": false,
@@ -116,11 +129,7 @@
     "game_manager_visible": true,
     "runtime": "p4-lua-5.4-v1",
     "runtime_implemented": false,
-    "seed_cart": "P4/GAMES/BOUNCE-LAB.P4CART",
-    "seed_carts": [
-      "P4/GAMES/BOUNCE-LAB.P4CART",
-      "P4/GAMES/QR-DODGE.P4CART"
-    ]
+    "seed_carts": []
   },
   "boot": {
     "brand": "GameChangers AI",
@@ -134,7 +143,12 @@
   },
   "themes": {
     "persistence": "session-only",
-    "modes": ["windows-3.1-default", "bbs-optional", "ocean-windows", "sunset-windows"],
+    "modes": [
+      "windows-3.1-default",
+      "bbs-optional",
+      "ocean-windows",
+      "sunset-windows"
+    ],
     "crt_filter": false
   },
   "achievements": {
@@ -145,7 +159,10 @@
   "doom_handoff": {
     "mode": "exclusive-one-way-until-restart",
     "wad_source": "microSD root: exact DOOM1.WAD or CHEX.WAD + CHEX.DEH",
-    "supported_titles": ["Doom shareware 1.9", "Chex Quest freeware 1.0"],
+    "supported_titles": [
+      "Doom shareware 1.9",
+      "Chex Quest freeware 1.0"
+    ],
     "wad_embedded_in_app": false,
     "shell_display_touch_and_i2c_released_first": true,
     "audio_initialized_by_shell": false,
@@ -157,10 +174,22 @@
     "return_to_home_supported": "confirmed quit performs safe teardown and restarts into Console OS"
   },
   "partitions": {
-    "ota_data": {"offset": "0x10000", "bytes": 8192},
-    "ota_0": {"offset": "0x20000", "bytes": 3604480},
-    "ota_1": {"offset": "0x390000", "bytes": 3670016},
-    "game_data": {"offset": "0x710000", "bytes": 9371648}
+    "ota_data": {
+      "offset": "0x10000",
+      "bytes": 8192
+    },
+    "ota_0": {
+      "offset": "0x20000",
+      "bytes": 3604480
+    },
+    "ota_1": {
+      "offset": "0x390000",
+      "bytes": 3670016
+    },
+    "game_data": {
+      "offset": "0x710000",
+      "bytes": 9371648
+    }
   },
   "game_storage": {
     "partition_label": "game_data",
@@ -173,7 +202,10 @@
     "full_project_image_seeds_volume": true,
     "ota_update_preserves_volume": true,
     "doom_path": "/DOOM1.WAD",
-    "chex_quest_paths": ["/CHEX.WAD", "/CHEX.DEH"],
+    "chex_quest_paths": [
+      "/CHEX.WAD",
+      "/CHEX.DEH"
+    ],
     "game_directory": "/GAMES with root-package compatibility",
     "file_manager": {
       "scope": "bounded FAT directory navigation with a visible relative path and confirmed regular-file deletion on writable board profiles",

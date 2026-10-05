@@ -21,7 +21,7 @@ Read these files before changing a cart or its runtime:
 5. `game-platform/api/cartridge-container-v1.md`
 6. `game-platform/api/qr-cartridge-transfer-v1.md` when QR size or transport
    is in scope
-7. The closest source-included template under `game-platform/templates/`
+7. The requested game sources, if they already exist
 
 Use `$develop-p4-console-games` and `$develop-p4-games` instead for native C
 source and `.P4G` packaging. Use `$develop-esp32-p4-platform` only when the
@@ -29,9 +29,24 @@ request changes Console OS, the Lua runtime adapter, or a board service.
 
 ## Create or remix a cart
 
-Start from `bounce-lab` for a straightforward full-API example or `qr-dodge`
-for a compact `p4.arcade` example. A source project contains an explicit
-`p4.json` manifest, text-only `main.lua`, `README.md`, and license notice.
+Accept a free-form idea and implement its own rules, art and structure from the
+documented lifecycle and manifest contracts. The old teaching games are removed;
+do not restore them or copy inert test fixtures into a new game. See
+`docs/GAME_STARTERS.md` for the repository's curated examples and service
+boundaries. A source project contains an explicit `p4.json` manifest, text-only
+`main.lua`, `README.md`, and license notice.
+
+Use normalized `p4.input` buttons for menus and gameplay wherever suitable so
+the OS's supported controllers work without cart-specific drivers. Back/Home
+and controller transport remain OS-owned. Do not infer a second active local
+controller from the manifest's player limit. For linked-console requests also
+use `$develop-p4-multiplayer-games`: the current native service is available,
+but the Lua network adapter is not. Explain that distinction before changing
+an explicitly chosen Lua project to C.
+
+Do not add teaching demos to `legacy_p4cart.seed_carts`; the curated default
+contains no Lua seeds. Test fixtures are not playable authoring examples.
+Install a finished requested cart explicitly through Tab5 native USB.
 
 For a new game or remix:
 
@@ -137,7 +152,7 @@ durable save persistence across reboot remains pending. The API describes up
 to four players, but the first integrated device adapter currently populates
 only player one. Networked Host/Join sessions are currently exposed only to
 native `.P4G` games through `multiplayer-session`; `.P4CART` games remain local
-and must not claim BLE/UART room support. Use `$develop-p4-console-games` when
+and must not claim BLE/UART room support. Use `$develop-p4-console-games` with `$develop-p4-multiplayer-games` when
 a requested networked game needs that service. QR bitmap rendering, camera
 scanning, and device import UI remain pending. State these limits in the game
 README when its design depends on them.

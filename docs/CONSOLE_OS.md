@@ -627,8 +627,7 @@ After the card volume mounts, run
 `make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES`. Eject it in Finder,
 then press **Turn Off USB Mode** to remount and rescan. The same guarded
 installer copies all enabled packages, declared source cartridges, and
-resource sidecars (including `GAMES/BYTEBUD.P4G`, `GAMES/BYTEBUD.P4R`,
-`P4/GAMES/BOUNCE-LAB.P4CART`, and `P4/GAMES/QR-DODGE.P4CART`), verifies every
+resource sidecars (including `GAMES/BYTEBUD.P4G` and `GAMES/BYTEBUD.P4R`), verifies every
 hash, and leaves unrelated card data untouched. It requires an external
 USB FAT32 volume named `P4GAMES`; ExFAT is rejected because the pinned firmware
 mount does not support it. Recover a card with `diskutil eraseDisk MS-DOS
@@ -797,7 +796,8 @@ make platform-game-storage-host
 make h1-usb-drive-control-host
 make gamepad-host
 make game-sdk-host
-make console-os-idf
+make console-os-tab5-idf       # Primary target
+make console-os-elecrow-idf    # Explicit legacy target
 make console-os-olimex-idf
 make console-os-waveshare-idf
 ```

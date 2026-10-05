@@ -1,14 +1,23 @@
 # M5Stack Tab5 Console OS port
 
-Status: both A (ST7121) and B (ST7123) have verified app readback, mounted SD,
-launcher startup and ten-second runtime health proof (2026-10-04). The operator
-confirmed display/touch, including B after its mirror correction. USB game
-loading is verified. Doom gameplay, speaker sound and sustained scrolling
-acceptance remain pending; a clean boot is not gameplay proof.
+M5Stack Tab5 is the permanent primary target. `make console-os-idf` aliases
+`make console-os-tab5-idf`; Elecrow now requires `make console-os-elecrow-idf`.
+
+A (ST7121) and B (ST7123) have exact app readback, mounted SD, launcher and
+runtime-health evidence. The operator confirmed display/touch and A startup
+sound plus Doom music/effects on the speaker-repair image. The new sensor
+service communicates with INA226, BMI270 and RX8130CE on both units; pack
+voltage and clock-setting limitations are recorded separately. A boot is not
+full gameplay, sound-quality or sustained-scroll acceptance.
+
 Both units are ESP32-P4 v1.3 with 16 MiB flash and 32 MiB PSRAM.
 Global `flash_authorized` stays false; only hash-bound exact-unit installs apply.
-See `hardware/evidence/tab5-console-os-20261004-startup-recovery-testing.json` for the current
-artifact and its link to the USB/game-installation evidence.
+Current Control Panel installs are bound by
+`hardware/evidence/tab5-console-os-20261004-control-panel-connections-authorization.json`.
+Readback, boot, library and remaining acceptance details are in
+`hardware/evidence/tab5-console-os-20261004-control-panel-testing.json`.
+The installer verifies that its
+`usb_host_enabled` selection (false for earlier authorizations) matches the image.
 
 ## Build
 
@@ -38,9 +47,10 @@ is not the first-install workflow.
 | Service | Tab5 implementation |
 | --- | --- |
 | Display | Official ILI9881C, ST7123 and ST7121 initialization tables; 720×1280 scanout, clockwise landscape 1280×720; RGB565 double buffers |
-| UI/games | Shared 768×480 launcher/content, 384×240 shell and 320×200 games; centered 1152×720 viewport with 64-pixel side margins |
+| UI/games | 768×480 shell/high-resolution games and 320×200 games; scaled to a centered 1152×720 viewport with 64-pixel side margins |
 | Touch | Panel-matched GT911 at 0x14 or ST712x at 0x55; up to five contacts, matching rotation, invalid frames release input |
 | Audio | ES8388 at 0x10, I2S1 stereo 16 kHz; MCLK30/BCLK27/LRCLK29/DOUT26; speaker enable through expander 0x43 P1 |
+| Sensors | INA226 2S voltage/current estimate, BMI270 acceleration/rotation/die temperature, RX8130CE clock with invalid-time detection; shared I2C1 |
 | Storage | Four-bit SDMMC slot 0, LDO4 supply, CLK43/CMD44/D0–3=39–42; no automatic formatting |
 | Shared control | One persistent board-owned I2C bus on SDA31/SCL32; touch/audio clients borrow it across launcher/Doom handoffs |
 | Game/runtime features | Shared game catalog, native cartridges, Lua cartridges, saves, themes, BBS/Windows launcher, Doom and update service |
@@ -52,7 +62,8 @@ then release as input with pull-up, never drive high. Touch reset is P5.
 Only the ILI/GT911 assembly gets the official GPIO23-low resistor workaround.
 After an observed initial expander transaction failure on A, board setup now
 allows at most three constructor attempts, with an SDK I2C bus reset and 50 ms
-delay between attempts. Recovery runs only before touch/audio borrow the bus;
+delay between attempts. A failed SDK bus clear now deletes/recreates the
+controller only while no other clients exist. Recovery runs only before touch/audio borrow the bus;
 initialization still fails closed if the bounded attempts do not succeed.
 Both units passed three USB warm restarts on the successor image. B reproduced
 the initial failure in cycle 1, recovered on attempt 2, and passed the launcher
@@ -66,7 +77,10 @@ retain their original timestamp; a failed poll clears cached input before reuse.
 The existing exact-unit Waveshare GT911 restoration is unavailable on Tab5.
 
 Audio keeps the amplifier off during initialization, writes a complete DMA ring
-of zeros before enabling it, and checks expander readback. User steps 0–10 scale
+of zeros before enabling it, and checks the live expander direction, latch and high-impedance registers.
+PI4IOE5V6408 input status always reads low for output pins; using it for speaker
+verification was the cause of the silent boot/Doom path. Readback proves control
+state, not electrical voltage. User steps 0–10 scale
 PCM linearly; codec output is fixed at 60/100 for this candidate. Factory
 GPIO30/PDM telemetry fields remain zero: GPIO30 is Tab5 MCLK, not amplifier
 shutdown. Audio cleanup retains ownership on failure for retry. Acoustic quality,
@@ -94,11 +108,51 @@ SHA-256 verification and the PSRAM snapshot before engine use. B's SD initializa
 measured 47 ms; populated-card launcher startup fell from about 25 seconds to
 about six seconds. Muted boot skips the eight-second audio animation.
 
+## Unified Control Panel
+
+Tab5 has one Control Panel rather than individual system icons in All Programs.
+Overview combines battery, storage, motion and clock state. Preferences exposes
+saved startup/game volume and Appearance; Controls, Storage and Connections
+group everyday actions. Advanced holds detailed diagnostics and utilities.
+Touch and normalized controller input use the same action path; Back returns to
+the same group, including after an external utility. Existing confirmations for
+file deletion and SD repair stay in force.
+
+## Battery, motion and clock
+
+The Battery page uses INA226 bus/shunt readings over the schematic's 5 mOhm
+resistor. Its 0..100% is the M5Unified 6.6..8.2 V estimate for a 2S pack, not
+measured remaining capacity. Positive current means discharge; negative means
+charge. Invalid/absent pack voltage displays no percentage and asks to check
+the battery pack, rather than showing a fabricated level. A responding INA226
+alone does not establish that a battery is attached.
+
+Sensors initializes Bosch's pinned 8192-byte BMI270 configuration, verifies
+identity and settings, and publishes acceleration, rotation and die temperature
+four times per second. It preserves the RTC validity flags; B's unset clock is
+reported as needing setting. A's readable clock held a historical date, so
+neither unit currently has confirmed accurate wall time. Clock setting and
+battery capacity calibration remain follow-ups. Motion data do not rotate the
+screen or alter touch calibration.
+
+The service owns device handles on the existing shared bus and initializes
+asynchronously after the launcher. No game owns these devices. Telemetry has a
+two-second freshness limit; I2C errors hide stale values. Sources and settings
+are pinned in `third_party/tab5-sensors.json`; Bosch's BSD-3-Clause notice is
+preserved in `third_party/bmi270/LICENSE`.
+
+Doom quit now suppresses process-exiting ENDOOM and defers audio/WAD/display
+cleanup until the engine tick has returned. A fresh quit-to-launcher check is
+still needed for this successor; old speaker-image evidence showed the game
+returning but retaining its WAD handle during cleanup.
+
 ## Not enabled in this candidate
 
 - C6 Wi-Fi/Bluetooth, wireless multiplayer and BLE controllers/dice.
-- USB-A host power and HID controllers, and USB Drive/MSC mode.
-- Battery/charging management, microphone, camera, IMU, RTC and expansion ports.
+- USB-A host power/HID and USB Drive/MSC mode.
+- Charger/rail management, microphone, camera and expansion ports.
+- Battery capacity calibration and clock setting; telemetry and sensor reads
+  are implemented.
 
 The multiplayer core is shared; native USB supplies its wired relay channel.
 Physical multiplayer acceptance remains pending. Content transfer uses the
@@ -106,6 +160,7 @@ existing USB-C Serial/JTAG cable while Console OS owns the mounted SD card.
 It does not expose a writable disk to the Mac. Do not remove a card while the
 console is running or saving. Firmware binaries, WADs, generated SD content and
 pre-install backups remain local and ignored by Git.
+
 
 ## Load games through the connected USB cable
 
@@ -120,8 +175,10 @@ python scripts/p4-usb-content.py chex --port /dev/cu.usbmodem1101
 ```
 
 The recorded A/B ports were `1101`/`2101`; port names may change. Bind the unit
-before flashing. `push-bundle` installs 19 native `.P4G` files, the `.P4R`
-resource sidecar and two `.P4CART` source games through one open connection.
+before flashing. `push-bundle` currently installs 16 native `.P4G` files (13 games and three
+utilities) and the Byte Buddy `.P4R` sidecar through one open connection.
+The teaching Lua games have been removed from the repository; none are seeded. See `docs/GAME_LIBRARY.md` for ranking,
+alphabetical categories and draft authoring rules.
 Doom/Chex data are separate exact-hash local inputs. The device validates each
 format, stages writes, verifies the digest, activates atomically and reads back.
 Native and Lua catalogs refresh separately. Individual transfers use `push`
@@ -129,6 +186,18 @@ with `--class p4g`, `p4r` or `p4cart`; `exchange` remains isolated in `/TRANSFER
 Opening native Serial/JTAG can reset the board on this Mac; tools wait for the
 service and tolerate that startup window. Avoid repeatedly reopening monitors
 during a play test. Content installation restarts the launcher after activation.
+
+Remove a requested game through the same cable:
+
+```sh
+python scripts/p4-transfer.py remove /absolute/path/EXACT.P4G --port /dev/cu.usbmodem1101
+```
+
+The exact local size and SHA-256 must match the device file. `.P4R` resources
+must be supplied explicitly and are removed before `.P4G`; `.P4CART` is also
+supported. Saves and WADs are outside this command. Unknown temporary upload
+files cause refusal, and are never removed as a side effect. A subsequent
+catalog refresh applies the new library without an OS reflash.
 
 Tab5 P4U packages use the distinct target tag `esp32p4-tab5`. The Tab5 runtime
 rejects legacy `esp32p4` packages, and existing runtimes reject Tab5 packages.
@@ -141,8 +210,8 @@ surface sizes, pixel rotation/scaling, untouched destination padding, touch
 coordinate bounds, BBS navigation, storage policy, malformed device counts and
 retryable touch cleanup, and cross-board update rejection. Driver tests use mocks. `make board-port-check` checks
 the shared 20-feature software contract with hardware acceptance still false.
-`scripts/verify-console-os-tab5.py` checks the built artifact and the 19 currently
-enabled native cartridges.
+`scripts/verify-console-os-tab5.py` checks the built artifact and the enabled native cartridges. It validates host-on and host-off builds
+against their selected components, source adapters and linked entry points.
 
 The broader `make check` currently stops at the existing
 `scripts/tests/test-doom-e5-gate.py:43`: it expects
@@ -159,8 +228,8 @@ Olimex or Waveshare unit identity/authorization applies to this device.
 On-device acceptance must record the image SHA-256, board/panel identity and serial
 log. Check boot/backlight/colors/orientation, all touch corners and releases,
 card mount/save persistence, boot audio/volume/mute, native and Lua games, Doom,
-return to launcher, and repeated cleanup/reinitialization. Qualify radio, USB and
-power-management services separately before enabling them.
+return to launcher, and repeated cleanup/reinitialization. Qualify USB-A, radio
+and power-management services separately before enabling them.
 
 ## Exact-unit install and current testing state
 
@@ -179,8 +248,8 @@ snapshots contain the existing USB bridge firmware, not factory firmware; their
 byte counts, hashes and unit bindings are in `hardware/backups/manifest.json`.
 All binaries remain ignored locally.
 
-Boot and game volume were saved at zero on both units. Set game volume to 3 for
-the pending speaker/Doom test. The generic `TOUCH_READY controller=gt911` text is
+A startup/game volume 4 was operator-confirmed audible. B was last recorded
+muted; use Control Panel > Preferences to select a nonzero game volume for its speaker test. The generic `TOUCH_READY controller=gt911` text is
 a legacy label; driver-specific logs identify A's ST7121 and B's ST7123.
 
 Recovery: with USB-C connected, hold reset about two seconds until the green LED
@@ -196,5 +265,5 @@ by its stored hash and uses the P4 watchdog reset to leave download mode.
 `hardware/boards/m5stack-tab5-port-spec.json` records source hashes and wiring;
 `third_party/tab5-bsp.json` pins the Apache-2.0 vendor tables and source references.
 Schematic pages 1 and 4 show the native full-speed USB device pair at GPIO24/25
-and the dedicated high-speed pair routed to USB-A. The initial port uses the
-native USB Serial/JTAG console and does not enable USB-A power.
+and the dedicated high-speed pair routed to USB-A. This configuration uses
+native USB Serial/JTAG on USB-C and does not enable USB-A power.

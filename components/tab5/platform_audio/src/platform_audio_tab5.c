@@ -20,6 +20,7 @@
 #include "esp_codec_dev.h"
 #include "esp_codec_dev_defaults.h"
 #include "es8388_codec.h"
+#include "esp_log.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
 
@@ -45,6 +46,7 @@ struct platform_audio {
     platform_audio_state_t state;
     uint8_t volume_step;
     bool codec_open;
+    bool tx_enabled;
     int16_t staging[
         PLATFORM_AUDIO_MAX_WRITE_FRAMES * PLATFORM_AUDIO_CHANNEL_COUNT];
 };
@@ -132,6 +134,7 @@ static esp_err_t release_resources(platform_audio_t *audio)
         const int close_result = esp_codec_dev_close(audio->codec);
         if (close_result == ESP_CODEC_DEV_OK) {
             audio->codec_open = false;
+            audio->tx_enabled = false;
         } else if (result == ESP_OK) {
             result = (esp_err_t)close_result;
         }
@@ -162,6 +165,14 @@ static esp_err_t release_resources(platform_audio_t *audio)
         audio->data_if = NULL;
     }
     if (audio->tx != NULL) {
+        const esp_err_t disable_result = audio->tx_enabled
+            ? i2s_channel_disable(audio->tx) : ESP_OK;
+        if (disable_result != ESP_OK && disable_result != ESP_ERR_INVALID_STATE) {
+            audio->state = PLATFORM_AUDIO_STATE_FAILED_SAFE;
+            telemetry_publish(audio);
+            return disable_result;
+        }
+        audio->tx_enabled = false;
         const esp_err_t delete_result = i2s_del_channel(audio->tx);
         if (delete_result == ESP_OK) {
             audio->tx = NULL;
@@ -230,7 +241,14 @@ static esp_err_t configure_i2s(platform_audio_t *audio)
             },
         },
     };
-    return i2s_channel_init_std_mode(audio->tx, &standard_config);
+    result = i2s_channel_init_std_mode(audio->tx, &standard_config);
+    /* Match the BSP: the codec data interface expects a running channel
+     * before it disables/reconfigures it during esp_codec_dev_open(). */
+    if (result == ESP_OK) {
+        result = i2s_channel_enable(audio->tx);
+        audio->tx_enabled = result == ESP_OK;
+    }
+    return result;
 }
 
 static esp_err_t configure_codec(platform_audio_t *audio)
@@ -362,6 +380,7 @@ esp_err_t platform_audio_start(platform_audio_t *audio)
         codec_result = esp_codec_dev_open(audio->codec,
                                           (esp_codec_dev_sample_info_t *)&sample_info);
         audio->codec_open = codec_result == ESP_CODEC_DEV_OK;
+        if (audio->codec_open) audio->tx_enabled = true;
     }
     if (codec_result == ESP_CODEC_DEV_OK) codec_result = esp_codec_dev_set_out_mute(audio->codec, true);
     if (codec_result == ESP_CODEC_DEV_OK) codec_result = esp_codec_dev_set_out_vol(audio->codec, 60);
@@ -381,6 +400,8 @@ esp_err_t platform_audio_start(platform_audio_t *audio)
         return (esp_err_t)codec_result;
     }
     audio->state = PLATFORM_AUDIO_STATE_RUNNING;
+    ESP_LOGI("tab5_audio", "AUDIO_READY codec=es8388 speaker=ns4150b rate=16000 channels=2 volume_step=%u amp_control=verified",
+             (unsigned)audio->volume_step);
     telemetry_publish(audio);
     finish_api();
     return ESP_OK;
@@ -464,6 +485,7 @@ esp_err_t platform_audio_stop(platform_audio_t *audio)
     const int close_result = esp_codec_dev_close(audio->codec);
     if (close_result == ESP_CODEC_DEV_OK) {
         audio->codec_open = false;
+        audio->tx_enabled = false;
     } else if (result == ESP_OK) {
         result = (esp_err_t)close_result;
     }

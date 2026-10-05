@@ -241,7 +241,7 @@ static void test_launcher_scrolling(void)
         apps[i] = s_apps[i % TEST_APP_COUNT];
         apps[i].id = (uint32_t)(100U + i);
     }
-    apps[6].title = "PAGE TWO";
+    apps[6].title = "ZZ PAGE TWO";
     apps[6].subtitle = "SEVENTH APP";
 
     console_shell_t shell;
@@ -979,8 +979,8 @@ static void check_frame_hash(uint64_t actual, uint64_t expected,
 
 static void test_window_manager_visual_contract(void)
 {
-#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
-    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+#if (CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+     CONSOLE_SHELL_TARGET_HEIGHT == 480U) || CONFIG_P4_BOARD_M5STACK_TAB5
     const uint64_t desktop_hash = UINT64_C(0x44ee51847211ee71);
     const uint64_t elecrow_system_hash = UINT64_C(0xe29f2fdd3c3faa81);
     const uint64_t olimex_system_hash = UINT64_C(0x4ee9aa1f85dbf4d7);
@@ -1539,7 +1539,7 @@ static void test_navigation_and_launch(void)
     action = tap(&shell, 220U, 50U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(strcmp(shell.home_folder_path, "SYSTEM") == 0);
-    action = tap(&shell, 20U, 50U);
+    action = tap(&shell, 120U, 50U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(action.app_id == APP_COLORS);
     CHECK(shell.page == CONSOLE_PAGE_COLORS);
@@ -1599,14 +1599,14 @@ static void test_system_cartridge_folders(void)
           CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(strcmp(shell.home_folder_path, "SYSTEM") == 0);
 
-    /* Child folders retain manifest order: Tools, then Tests. */
+    /* Child folders sort alphabetically: Tests, then Tools. */
     CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
           CONSOLE_ACTION_PAGE_CHANGED);
-    CHECK(strcmp(shell.home_folder_path, "SYSTEM/TOOLS") == 0);
+    CHECK(strcmp(shell.home_folder_path, "SYSTEM/TESTS") == 0);
     console_shell_action_t action =
         press_button(&shell, CONSOLE_BUTTON_ACCEPT);
     CHECK(action.type == CONSOLE_ACTION_LAUNCH);
-    CHECK(action.app_id == 109U);
+    CHECK(action.app_id == 111U);
 
     CHECK(press_button(&shell, CONSOLE_BUTTON_BACK).type ==
           CONSOLE_ACTION_PAGE_CHANGED);
@@ -1615,10 +1615,46 @@ static void test_system_cartridge_folders(void)
           CONSOLE_ACTION_NONE);
     CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
           CONSOLE_ACTION_PAGE_CHANGED);
-    CHECK(strcmp(shell.home_folder_path, "SYSTEM/TESTS") == 0);
+    CHECK(strcmp(shell.home_folder_path, "SYSTEM/TOOLS") == 0);
     action = press_button(&shell, CONSOLE_BUTTON_ACCEPT);
     CHECK(action.type == CONSOLE_ACTION_LAUNCH);
-    CHECK(action.app_id == 110U);
+    CHECK(action.app_id == 109U);
+}
+
+static void test_alphabetical_game_order(void)
+{
+    console_app_descriptor_t apps[4];
+    const char *titles[] = {"zeta", "ALPHA", "Beta", "alpha"};
+    const uint32_t ids[] = {103U, 101U, 102U, 100U};
+    for (size_t i = 0; i < 4; ++i) {
+        apps[i] = s_apps[1];
+        apps[i].id = ids[i];
+        apps[i].title = titles[i];
+    }
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, apps, 4U));
+    CHECK(tap(&shell, 20U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.home_all_programs);
+    /* Alphabetical, independent of case, with stable IDs breaking ties. */
+    for (uint32_t id = 100U; id <= 103U; ++id) {
+        if (id == 103U) {
+            (void)press_button(&shell, CONSOLE_BUTTON_LEFT);
+            (void)press_button(&shell, CONSOLE_BUTTON_LEFT);
+            (void)press_button(&shell, CONSOLE_BUTTON_DOWN);
+        }
+        else if (id != 100U) (void)press_button(&shell, CONSOLE_BUTTON_RIGHT);
+        const console_shell_action_t action = press_button(&shell, CONSOLE_BUTTON_ACCEPT);
+        CHECK(action.type == CONSOLE_ACTION_LAUNCH);
+        CHECK(action.app_id == id);
+    }
+    CHECK(press_button(&shell, CONSOLE_BUTTON_BACK).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(tap(&shell, 120U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(tap(&shell, 20U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(strcmp(shell.home_folder_path, "GAMES/ARCADE") == 0);
+    CHECK(tap(&shell, 20U, 50U).app_id == 100U);
+    CHECK(tap(&shell, 120U, 50U).app_id == 101U);
+    CHECK(tap(&shell, 220U, 50U).app_id == 102U);
+    CHECK(tap(&shell, 20U, 120U).app_id == 103U);
 }
 
 static void test_controller_navigation(void)
@@ -1711,7 +1747,7 @@ static void test_touch_page_and_runtime(void)
     console_shell_t shell;
     CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
     CHECK(tap(&shell, 220U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
-    CHECK(tap(&shell, 120U, 50U).app_id == APP_TOUCH);
+    CHECK(tap(&shell, 220U, 120U).app_id == APP_TOUCH);
 
     console_shell_contact_t contacts[CONSOLE_SHELL_MAX_CONTACTS];
     for (size_t i = 0U; i < CONSOLE_SHELL_MAX_CONTACTS; ++i) {
@@ -1757,7 +1793,7 @@ static void test_touch_page_and_runtime(void)
     CHECK(shell.runtime.uptime_seconds == 123U);
     shell.dirty = false;
 
-    CHECK(tap(&shell, 220U, 50U).app_id == APP_SYSTEM);
+    CHECK(tap(&shell, 120U, 120U).app_id == APP_SYSTEM);
     shell.dirty = false;
     console_shell_set_runtime_info(&shell, &runtime);
     CHECK(!shell.dirty);
@@ -1941,7 +1977,7 @@ static void test_file_manager(void)
     console_shell_t shell;
     CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
     CHECK(tap(&shell, 220U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
-    console_shell_action_t action = tap(&shell, 120U, 120U);
+    console_shell_action_t action = tap(&shell, 220U, 50U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(action.app_id == APP_FILES);
     CHECK(shell.page == CONSOLE_PAGE_FILES);
@@ -2057,7 +2093,7 @@ static void test_game_manager(void)
     console_shell_t shell;
     CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
     CHECK(tap(&shell, 220U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
-    console_shell_action_t action = tap(&shell, 220U, 120U);
+    console_shell_action_t action = tap(&shell, 20U, 120U);
     CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(action.app_id == APP_GAMES);
     CHECK(shell.page == CONSOLE_PAGE_GAMES);
@@ -2112,8 +2148,6 @@ static void test_controller_game_manager(void)
           CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(strcmp(shell.home_folder_path, "SYSTEM") == 0);
     (void)press_button(&shell, CONSOLE_BUTTON_DOWN);
-    (void)press_button(&shell, CONSOLE_BUTTON_RIGHT);
-    (void)press_button(&shell, CONSOLE_BUTTON_RIGHT);
     CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
           CONSOLE_ACTION_PAGE_CHANGED);
     CHECK(shell.page == CONSOLE_PAGE_GAMES);
@@ -2202,8 +2236,125 @@ static void test_input_fuzz(void)
     free(frame);
 }
 
+
+static void test_refined_control_panel(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    console_shell_runtime_info_t runtime = {
+        .control_panel_enabled = true, .boot_volume_step = 1U,
+        .game_volume_step = 2U, .touch_ready = true,
+    };
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(tap(&shell, 220U, 50U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.page == CONSOLE_PAGE_CONTROL_PANEL && shell.control_panel_active);
+    CHECK(shell.control_panel_section == 0U);
+    CHECK(tap(&shell, 35U, 75U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.control_panel_section == 1U);
+    console_shell_action_t action = tap(&shell, 289U, 83U);
+    CHECK(action.type == CONSOLE_ACTION_BOOT_VOLUME_SET && action.volume_step == 2U);
+    action = tap(&shell, 289U, 117U);
+    CHECK(action.type == CONSOLE_ACTION_GAME_VOLUME_SET && action.volume_step == 3U);
+    action = tap(&shell, 160U, 156U);
+    CHECK(action.type == CONSOLE_ACTION_PAGE_CHANGED && action.app_id == APP_COLORS);
+    CHECK(shell.page == CONSOLE_PAGE_COLORS);
+    (void)tap(&shell, 10U, 10U);
+    CHECK(shell.page == CONSOLE_PAGE_CONTROL_PANEL && shell.control_panel_section == 1U);
+    (void)tap(&shell, 35U, 98U);
+    action = tap(&shell, 170U, 77U);
+    CHECK(action.app_id == APP_TOUCH && shell.page == CONSOLE_PAGE_TOUCH);
+    (void)press_button(&shell, CONSOLE_BUTTON_BACK);
+    CHECK(shell.page == CONSOLE_PAGE_CONTROL_PANEL && shell.control_panel_section == 2U);
+    (void)tap(&shell, 35U, 121U);
+    action = tap(&shell, 170U, 77U);
+    CHECK(action.app_id == APP_FILES && shell.page == CONSOLE_PAGE_FILES);
+    (void)press_button(&shell, CONSOLE_BUTTON_BACK);
+    CHECK(shell.page == CONSOLE_PAGE_CONTROL_PANEL && shell.control_panel_section == 3U);
+    (void)press_button(&shell, CONSOLE_BUTTON_BACK);
+    CHECK(shell.page == CONSOLE_PAGE_HOME && !shell.control_panel_active);
+    (void)tap(&shell, 20U, 50U); /* All Programs has one system destination. */
+    CHECK(shell.home_all_programs);
+    (void)press_button(&shell, CONSOLE_BUTTON_ACCEPT);
+    CHECK(shell.page == CONSOLE_PAGE_CONTROL_PANEL);
+    (void)press_button(&shell, CONSOLE_BUTTON_DOWN); /* Preferences */
+    CHECK(shell.control_panel_section == 1U);
+    (void)press_button(&shell, CONSOLE_BUTTON_RIGHT); /* First inline control */
+    (void)press_button(&shell, CONSOLE_BUTTON_DOWN); /* Startup plus */
+    action = press_button(&shell, CONSOLE_BUTTON_ACCEPT);
+    CHECK(action.type == CONSOLE_ACTION_BOOT_VOLUME_SET);
+    (void)press_button(&shell, CONSOLE_BUTTON_LEFT);
+    (void)press_button(&shell, CONSOLE_BUTTON_UP);
+    CHECK(shell.control_panel_section == 0U);
+    CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type == CONSOLE_ACTION_NONE);
+    console_shell_set_runtime_info(&shell, &runtime);
+    CHECK(shell.dirty);
+}
+
+
+static void test_control_panel_paging_and_utility_return(void)
+{
+    console_app_descriptor_t apps[7];
+    char names[7][16];
+    for (size_t i=0; i<7U; ++i) {
+        (void)snprintf(names[i], sizeof(names[i]), "Utility %u", (unsigned)i);
+        apps[i]=(console_app_descriptor_t){.id=200U+(uint32_t)i,.title=names[i],
+            .subtitle="Test utility",.folder_path="SYSTEM/TOOLS",
+            .page=CONSOLE_PAGE_EXTERNAL,.enabled=true};
+    }
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, apps, 7U));
+    shell.runtime.control_panel_enabled=true;
+    (void)tap(&shell,120U,50U);
+    CHECK(shell.page==CONSOLE_PAGE_CONTROL_PANEL);
+    (void)tap(&shell,35U,167U);
+    (void)tap(&shell,250U,177U);
+    CHECK(shell.control_panel_first==4U);
+    console_shell_action_t action=tap(&shell,170U,77U);
+    CHECK(action.type==CONSOLE_ACTION_LAUNCH && action.app_id==204U);
+    console_shell_show_home(&shell); /* External utility stopped. */
+    CHECK(shell.page==CONSOLE_PAGE_CONTROL_PANEL && shell.control_panel_section==5U);
+    CHECK(shell.control_panel_first==4U);
+    (void)tap(&shell,145U,177U);
+    CHECK(shell.control_panel_first==0U);
+    CHECK(tap(&shell,170U,77U).app_id==200U);
+}
+
+static void test_control_panel_connections(void)
+{
+    const console_app_descriptor_t apps[] = {
+        {.id=201U,.title="Multiplayer",.subtitle="Host or join",
+         .folder_path="SYSTEM",.page=CONSOLE_PAGE_MULTIPLAYER,.enabled=true},
+        {.id=202U,.title="File Transfer",.subtitle="Send files",
+         .folder_path="SYSTEM",.page=CONSOLE_PAGE_FILE_TRANSFER,.enabled=true},
+    };
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, apps, 2U));
+    shell.runtime.control_panel_enabled=true;
+    (void)tap(&shell,120U,50U);
+    CHECK(shell.page==CONSOLE_PAGE_CONTROL_PANEL);
+    (void)tap(&shell,35U,144U);
+    CHECK(shell.control_panel_section==4U);
+    CHECK(tap(&shell,170U,77U).app_id==201U);
+    CHECK(shell.page==CONSOLE_PAGE_MULTIPLAYER);
+    (void)press_button(&shell,CONSOLE_BUTTON_BACK);
+    CHECK(shell.page==CONSOLE_PAGE_CONTROL_PANEL && shell.control_panel_section==4U);
+    CHECK(tap(&shell,170U,102U).app_id==202U);
+    CHECK(shell.page==CONSOLE_PAGE_FILE_TRANSFER);
+    (void)press_button(&shell,CONSOLE_BUTTON_BACK);
+    CHECK(shell.page==CONSOLE_PAGE_CONTROL_PANEL);
+    (void)press_button(&shell,CONSOLE_BUTTON_BACK);
+    (void)tap(&shell,20U,50U);
+    CHECK(shell.home_all_programs);
+    CHECK(tap(&shell,120U,50U).type==CONSOLE_ACTION_NONE);
+    (void)press_button(&shell,CONSOLE_BUTTON_ACCEPT);
+    CHECK(shell.page==CONSOLE_PAGE_CONTROL_PANEL);
+}
+
 int main(void)
 {
+    test_control_panel_connections();
+    test_control_panel_paging_and_utility_return();
+    test_refined_control_panel();
     test_registry_validation();
     test_render_bounds_and_stride();
     test_present_render_contract();
@@ -2218,6 +2369,7 @@ int main(void)
     test_desktop_pages();
     test_navigation_and_launch();
     test_system_cartridge_folders();
+    test_alphabetical_game_order();
     test_controller_navigation();
     test_launcher_scrolling();
     test_smooth_scroll_timing_and_interruption();

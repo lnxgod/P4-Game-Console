@@ -43,13 +43,34 @@ class GameTransferTests(unittest.TestCase):
                 with self.assertRaises(tool.TransferError):
                     tool.checked_remote_name(name, kind)
 
+    def test_removal_requires_a_valid_exact_game_copy(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            path = Path(temporary) / "GAME.P4R"
+            path.write_bytes(self.resource())
+            source, kind, size, digest = tool.removal_input(path)
+            self.assertEqual(kind, tool.CLASS_P4R)
+            self.assertEqual(digest, hashlib.sha256(path.read_bytes()).digest())
+            frame = tool.make_request(tool.DIRECTION_REMOVE, kind, source.name, size, digest)
+            self.assertEqual(frame[4], 3)
+            self.assertEqual(frame[12:44], digest)
+            self.assertEqual(struct.unpack_from("<I", frame, 84)[0], tool.crc32(frame[:84]))
+            for name in ("SAVE.DAT", "game.P4R", "BAD.P4G"):
+                bad = Path(temporary) / name
+                bad.write_bytes(b"not a game")
+                with self.assertRaises(tool.TransferError):
+                    tool.removal_input(bad)
+            link = Path(temporary) / "LINK.P4R"
+            link.symlink_to(path)
+            with self.assertRaises(tool.TransferError):
+                tool.removal_input(link)
+
     def test_lua_cart_uses_canonical_validator(self):
         spec = importlib.util.spec_from_file_location("p4cart_fixture", ROOT / "game-platform/scripts/p4cart.py")
         packer = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(packer)
         with tempfile.TemporaryDirectory() as temporary:
             valid = Path(temporary) / "GOOD.P4CART"
-            packer.pack_source(ROOT / "game-platform/templates/bounce-lab", valid)
+            packer.pack_source(ROOT / "game-platform/tests/fixtures/minimal-cart", valid)
             tool.validate_upload(valid, tool.CLASS_P4CART)
             bad = Path(temporary) / "BAD.P4CART"
             data = bytearray(valid.read_bytes())

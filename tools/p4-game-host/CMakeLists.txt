@@ -3,6 +3,7 @@
 cmake_minimum_required(VERSION 3.19)
 project(p4_game_host VERSION 0.1.0 LANGUAGES C)
 
+option(P4_ALLOW_DRAFT_GAME "Allow local play of an unpublished draft" OFF)
 set(P4_GAME "" CACHE STRING "Native game directory name under games/")
 if(NOT P4_GAME MATCHES "^[a-z0-9][a-z0-9_]*$")
     message(FATAL_ERROR "Set -DP4_GAME to a game slug such as space_invaders")
@@ -33,7 +34,7 @@ else()
     endif()
 endif()
 if(NOT P4_GAME_FORMAT STREQUAL "p4-native-elf-v1" OR
-   NOT P4_GAME_API_VERSION EQUAL 1 OR NOT P4_GAME_ENABLED)
+   NOT P4_GAME_API_VERSION EQUAL 1 OR (NOT P4_GAME_ENABLED AND NOT P4_ALLOW_DRAFT_GAME))
     message(FATAL_ERROR "${P4_GAME} is not an enabled P4 Game API v1 game")
 endif()
 if(NOT P4_GAME_ENTRY MATCHES "^[A-Za-z_][A-Za-z0-9_]*$")

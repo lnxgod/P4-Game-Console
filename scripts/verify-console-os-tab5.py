@@ -22,6 +22,29 @@ def digest(path: pathlib.Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def verify_usb_host(enabled: bool, components: set[str], sources: set[str], symbols: str) -> None:
+    """Qualify the selected build feature, including an explicitly disabled host.
+
+    An existing exact-artifact install may predate the controller candidate.
+    Disabled builds must contain neither the host component nor power symbols.
+    """
+    required_components = {"platform_usb_host", "platform_gamepad_usb", "platform_gamepad", "doom_gamepad_input"}
+    required_sources = {"key_merge.c", "usb_power_control.c", "platform_usb_host.c", "platform_gamepad_usb.c"}
+    required_symbols = {"platform_tab5_usb_host_power", "platform_usb_host_start",
+                        "platform_usb_host_enable_root_port", "platform_gamepad_usb_start",
+                        "doom_gamepad_input_update", "doom_key_merge_update"}
+    present_symbols = {name for name in required_symbols
+                       if re.search(r"\b" + name + r"$", symbols, re.M)}
+    if enabled:
+        require(required_components <= components, "enabled Tab5 USB host lacks components")
+        require(required_sources <= sources, "enabled Tab5 USB host lacks source adapters")
+        require(required_symbols <= present_symbols, "enabled Tab5 USB host lacks linked drivers")
+    else:
+        require(not ({"platform_usb_host", "platform_gamepad_usb"} & components),
+                "USB host component present in a disabled build")
+        require(not present_symbols, "USB host entry points present in a disabled build")
+
+
 def verify(build: pathlib.Path) -> dict:
     profile = json.loads((ROOT / "hardware/boards/m5stack-tab5/board-profile.json").read_text())
     require(profile["id"] == "m5stack-tab5", "wrong board profile")
@@ -31,7 +54,11 @@ def verify(build: pathlib.Path) -> dict:
     for entry in provenance["files"]:
         require(digest(ROOT / entry["path"]) == entry["sha256"],
                 f"upstream vendor file changed: {entry['path']}")
+    bmi = json.loads((ROOT / "third_party/bmi270/source.json").read_text())
+    require(digest(ROOT / "third_party/bmi270/config.inc") == bmi["config_inc_sha256"],
+            "BMI270 configuration differs from pinned Bosch data")
     sdk = (build / "sdkconfig").read_text()
+    usb_host_enabled = "CONFIG_P4_TAB5_USB_HOST=y" in sdk.splitlines()
     for line in (
         "CONFIG_P4_BOARD_M5STACK_TAB5=y", 'CONFIG_ESPTOOLPY_FLASHSIZE="16MB"',
         'CONFIG_PARTITION_TABLE_CUSTOM_FILENAME="partitions-tab5.csv"',
@@ -56,11 +83,12 @@ def verify(build: pathlib.Path) -> dict:
     components = set(project["build_components"])
     require({"platform_tab5", "board_deps_tab5", "platform_touch", "platform_audio", "console_shell"} <= components,
             "missing Tab5 core component")
-    require(not ({"platform_audio_factory", "platform_audio_es8311", "platform_usb_host", "platform_radio_hosted"} & components),
-            "unexpected legacy audio or unqualified radio/USB host")
+    require(not ({"platform_audio_factory", "platform_audio_es8311", "platform_radio_hosted"} & components),
+            "unexpected legacy audio or unqualified radio")
     commands = json.loads((build / "compile_commands.json").read_text())
     sources = {pathlib.Path(command["file"]).name for command in commands}
-    for name in ("platform_display_tab5.c", "platform_touch_tab5.c", "platform_audio_tab5.c", "tab5.c"):
+    for name in ("platform_display_tab5.c", "platform_touch_tab5.c", "platform_audio_tab5.c", "tab5.c",
+                 "sensors.c", "sensor_decode.c"):
         require(name in sources, f"dedicated adapter not compiled: {name}")
     require("platform_touch.c" not in sources, "legacy touch reset code was compiled")
     flasher = json.loads((build / "flasher_args.json").read_text())
@@ -100,11 +128,13 @@ def verify(build: pathlib.Path) -> dict:
                 data[48:80] == hashlib.sha256(data[256:]).digest(), f"corrupt native cartridge: {path.name}")
     nm = pathlib.Path(project["c_compiler"]).with_name("riscv32-esp-elf-nm")
     symbols = subprocess.check_output([str(nm), "--defined-only", str(build / project["app_elf"])], text=True)
+    verify_usb_host(usb_host_enabled, components, sources, symbols)
     for name in ("platform_tab5_display_reset", "es8388_codec_new", "esp_lcd_new_panel_ili9881c",
                  "esp_lcd_new_panel_st7123", "esp_lcd_touch_new_i2c_gt911", "esp_lcd_touch_new_i2c_st7123"):
         require(re.search(r'\b' + name + r'$', symbols, re.M) is not None, f"missing linked driver: {name}")
     return {"result": "tab5-build-candidate-verified", "board": "m5stack-tab5", "image_bytes": len(image),
             "image_sha256": digest(image_path), "native_cartridges": len(packages),
+            "usb_host_enabled": usb_host_enabled,
             "hardware_verified": False, "flash_authorized": False}
 
 

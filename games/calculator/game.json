@@ -2,18 +2,23 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "package_file": "CALC.P4G",
   "component": "calculator",
   "entry_symbol": "p4_calculator_game",
   "launcher_id": 109,
   "id": "org.p4console.calculator",
-  "title": "CALCULATOR",
-  "subtitle": "INTEGER DESK CALCULATOR",
+  "title": "Calculator",
+  "subtitle": "A pocket calculator",
   "folder": "SYSTEM/TOOLS",
   "accent_rgb565": "0xffe0",
-  "required_capabilities": ["video", "controls"],
-  "optional_capabilities": ["audio-tone"],
+  "required_capabilities": [
+    "video",
+    "controls"
+  ],
+  "optional_capabilities": [
+    "audio-tone"
+  ],
   "license": "MIT",
   "assets": "original-code-rendered-shapes-only",
   "enabled": true

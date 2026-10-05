@@ -230,6 +230,7 @@ static void finish_terminal(p4_file_transfer_status_t status,
     close_descriptor();
     free_sha256();
     if (status != P4_FILE_TRANSFER_STATUS_OK &&
+        s_transfer.direction != P4_FILE_TRANSFER_REMOVE &&
         s_transfer.temp_path[0] != '\0') {
         (void)unlink(s_transfer.temp_path);
     }
@@ -859,6 +860,48 @@ static void start_download(void)
              (unsigned)P4_CONTENT_TRANSFER_BAUD);
 }
 
+static void start_remove(void)
+{
+    p4_file_transfer_status_t status = prepare_paths();
+    /* Uninstall never cleans or restores unverified transfer leftovers. A
+     * pending upload must be recovered by that upload's own transaction. */
+    bool pending = false;
+    if (status == P4_FILE_TRANSFER_STATUS_OK) status = regular_file_exists(s_transfer.backup_path, &pending);
+    if (status == P4_FILE_TRANSFER_STATUS_OK && pending) status = P4_FILE_TRANSFER_STATUS_OCCUPIED;
+    if (status == P4_FILE_TRANSFER_STATUS_OK) status = regular_file_exists(s_transfer.temp_path, &pending);
+    if (status == P4_FILE_TRANSFER_STATUS_OK && pending) status = P4_FILE_TRANSFER_STATUS_OCCUPIED;
+    uint8_t digest[32] = {0}; uint32_t size = 0;
+    if (status == P4_FILE_TRANSFER_STATUS_OK) {
+        status = hash_file(s_transfer.target_path, P4_FILE_TRANSFER_EXCHANGE_MAX_BYTES, &size, digest);
+    }
+    if (status == P4_FILE_TRANSFER_STATUS_OK &&
+        (size != s_transfer.expected_bytes || memcmp(digest, s_transfer.expected_digest, 32) != 0))
+        status = P4_FILE_TRANSFER_STATUS_HASH;
+    /* Sidecars have their own identity/digest. Require a separately verified
+     * resource removal first, so uninstall never silently deletes unknown data. */
+    if (status == P4_FILE_TRANSFER_STATUS_OK && s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4G) {
+        char resource[P4_CONTENT_PATH_BYTES];
+        memcpy(resource, s_transfer.target_path, sizeof(resource));
+        resource[strlen(resource) - 1U] = 'R';
+        bool present = false;
+        status = regular_file_exists(resource, &present);
+        if (status == P4_FILE_TRANSFER_STATUS_OK && present) status = P4_FILE_TRANSFER_STATUS_OCCUPIED;
+    }
+    if (status != P4_FILE_TRANSFER_STATUS_OK) { reject_request(status); return; }
+    send_ready(P4_FILE_TRANSFER_STATUS_OK, size, digest);
+    if (!switch_to_high_speed()) { finish_terminal(P4_FILE_TRANSFER_STATUS_IO, NULL); return; }
+    if (unlink(s_transfer.target_path) != 0) status = P4_FILE_TRANSFER_STATUS_IO;
+    bool remains = true;
+    if (status == P4_FILE_TRANSFER_STATUS_OK) {
+        status = regular_file_exists(s_transfer.target_path, &remains);
+        if (status == P4_FILE_TRANSFER_STATUS_OK && remains) status = P4_FILE_TRANSFER_STATUS_IO;
+    }
+    s_transfer.transferred_bytes = status == P4_FILE_TRANSFER_STATUS_OK ? size : 0;
+    ESP_LOGI(TAG, "P4_FILE_TRANSFER REMOVE name=%s bytes=%lu status=%u",
+        s_transfer.file_name, (unsigned long)size, (unsigned)status);
+    finish_terminal(status, status == P4_FILE_TRANSFER_STATUS_OK ? digest : NULL);
+}
+
 static void accept_request(void)
 {
     const uint32_t supplied_crc = read_u32_le(
@@ -877,7 +920,8 @@ static void accept_request(void)
         return;
     }
     if (s_transfer.direction != P4_FILE_TRANSFER_UPLOAD &&
-        s_transfer.direction != P4_FILE_TRANSFER_DOWNLOAD) {
+        s_transfer.direction != P4_FILE_TRANSFER_DOWNLOAD &&
+        s_transfer.direction != P4_FILE_TRANSFER_REMOVE) {
         reject_request(P4_FILE_TRANSFER_STATUS_UNSUPPORTED);
         return;
     }
@@ -901,6 +945,18 @@ static void accept_request(void)
     }
     if (!s_transfer.available) {
         reject_request(P4_FILE_TRANSFER_STATUS_STORAGE);
+        return;
+    }
+    if (s_transfer.direction == P4_FILE_TRANSFER_REMOVE) {
+        if (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_EXCHANGE || flags != 0U ||
+            size == 0U || size > P4_FILE_TRANSFER_EXCHANGE_MAX_BYTES ||
+            all_zero(&s_transfer.request[12], 32U)) {
+            reject_request(P4_FILE_TRANSFER_STATUS_BAD_REQUEST); return;
+        }
+        s_transfer.expected_bytes = size;
+        memcpy(s_transfer.expected_digest, &s_transfer.request[12], 32U);
+        s_transfer.replace_requested = false;
+        start_remove();
         return;
     }
     if (s_transfer.direction == P4_FILE_TRANSFER_UPLOAD) {

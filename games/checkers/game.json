@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.0.0",
+  "version": "1.0.1",
   "package_file": "CHECKERS.P4G",
   "component": "checkers",
   "sources": [
@@ -13,9 +13,9 @@
   "entry_symbol": "p4_checkers_game",
   "launcher_id": 116,
   "id": "org.p4console.checkers",
-  "title": "CHECKERS",
-  "subtitle": "LOCAL + LINK PLAY",
-  "folder": "GAMES/PUZZLE",
+  "title": "Checkers",
+  "subtitle": "Jump, crown and capture",
+  "folder": "GAMES/TABLETOP",
   "accent_rgb565": "0x5fea",
   "required_capabilities": [
     "video",

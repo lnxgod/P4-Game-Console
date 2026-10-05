@@ -32,6 +32,9 @@ def main() -> None:
         assert (created / "CMakeLists.txt").is_file()
         assert (created / "src/star_hop.c").is_file()
         manifest = json.loads((created / "game.json").read_text())
+        assert manifest["title"] == "Star Hop"
+        assert manifest["enabled"] is False
+        assert manifest["subtitle"] == "WORK IN PROGRESS"
         assert manifest["format"] == "p4-native-elf-v1"
         assert manifest["version"] == "1.0.0"
         assert manifest["package_file"] == "STAR_HOP.P4G"
@@ -148,6 +151,15 @@ def main() -> None:
         invalid = run(
             CREATOR, "Bad/Game", "--games-root", str(games))
         assert invalid.returncode != 0
+
+    with tempfile.TemporaryDirectory() as temporary:
+        games = pathlib.Path(temporary)
+        (games / "retired.json").write_text(json.dumps({"schema": 1, "games": [{
+            "id": "org.p4console.asteroids", "launcher_id": 103,
+            "package_file": "ASTEROID.P4G"}]}))
+        retired = run(CREATOR, "Asteroids", "--games-root", str(games))
+        assert retired.returncode != 0 and "reserved by a retired game" in retired.stderr
+        assert not (games / "asteroids").exists()
 
     print("new game creator tests passed")
 

@@ -15,6 +15,7 @@ def main():
     parser.add_argument("--unit", required=True, choices=("A", "B"))
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--cycles", type=int, choices=(1, 2, 3), default=3)
+    parser.add_argument("--expected-script-carts", type=int, choices=range(17), default=0)
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     reports = []
@@ -56,7 +57,7 @@ def main():
             path.write_text(text)
             passed = capture_error is None and all(marker in text for marker in (
                 "CHIP_USB_UART_RESET", "P4_CONSOLE_OS READY board=m5stack-tab5",
-                "OTA_BOOT_VALID result=ESP_OK", "P4CART_READY valid=2 rejected=0")) and not any(
+                "OTA_BOOT_VALID result=ESP_OK", f"P4CART_READY valid={args.expected_script_carts} rejected=0")) and not any(
                 marker in text for marker in ("FATAL_HOLD", "Guru Meditation", "HALT stage="))
             report = {"cycle": cycle, "passed": passed, "seconds": round(time.monotonic() - started, 3),
                       "log": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),

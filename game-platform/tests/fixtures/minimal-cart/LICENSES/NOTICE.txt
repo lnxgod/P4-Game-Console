@@ -1,0 +1,2 @@
+SPDX-License-Identifier: MIT
+Original test fixture. No third-party game assets.

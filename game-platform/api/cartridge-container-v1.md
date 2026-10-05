@@ -31,7 +31,7 @@ credentials, editor state, and unrelated assets cannot be included by an
 accidental recursive archive.
 
 ```text
-bounce-lab/
+my-game/
   p4.json
   main.lua
   README.md

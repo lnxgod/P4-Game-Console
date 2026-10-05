@@ -456,7 +456,7 @@ static void draw_menu(p4_game_context_t *context,
                       p4_game_surface_t *surface,
                       const p4_yahtzee_state_t *state)
 {
-    p4_draw_text(surface, 80, 9, "P4 YAHTZEE", COLOR_TEXT, 2U, 10U);
+    p4_draw_text(surface, 80, 9, "YAHTZEE", COLOR_TEXT, 2U, 10U);
     p4_draw_text(surface, 92, 31, "2-4 PLAYER DICE", COLOR_MUTED, 1U, 18U);
     for (uint8_t die = 0U; die < P4_YAHTZEE_DICE; ++die) {
         draw_die(surface, 15 + (int)die * 61, 48,
@@ -646,8 +646,8 @@ const p4_game_descriptor_t p4_p4_yahtzee_game = {
     .api_version = P4_GAME_API_VERSION,
     .launcher_id = UINT32_C(113),
     .id = "org.p4console.p4-yahtzee",
-    .title = "P4 YAHTZEE",
-    .subtitle = "2-4 PLAYER DICE",
+    .title = "Yahtzee",
+    .subtitle = "Roll, hold and fill your card",
     .accent_rgb565 = UINT16_C(COLOR_ACCENT),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |

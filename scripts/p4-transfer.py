@@ -46,6 +46,7 @@ USB_DRIVE_STATUS_ATTEMPT_TIMEOUT = 1.0
 
 DIRECTION_UPLOAD = 1
 DIRECTION_DOWNLOAD = 2
+DIRECTION_REMOVE = 3
 CLASS_P4G = 1
 CLASS_EXCHANGE = 2
 CLASS_P4R = 3
@@ -676,6 +677,40 @@ def pull(args: argparse.Namespace) -> None:
             temporary.unlink()
 
 
+def removal_input(path: Path) -> tuple[Path, int, int, bytes]:
+    source = path.expanduser().absolute()
+    kinds = {".P4G": CLASS_P4G, ".P4R": CLASS_P4R, ".P4CART": CLASS_P4CART}
+    file_class = kinds.get(source.suffix)
+    if file_class is None:
+        raise TransferError("remove requires an exact local .P4G, .P4R or .P4CART copy")
+    checked_remote_name(source.name, file_class)
+    size, digest = validate_upload(source, file_class)
+    return source, file_class, size, digest
+
+
+def remove_files(args: argparse.Namespace) -> None:
+    # Validate the whole requested list before any device mutation. A resource
+    # must be explicitly included and removed before its executable.
+    entries = [removal_input(path) for path in args.input]
+    entries.sort(key=lambda e: 0 if e[1] == CLASS_P4R else 1)
+    if len({(e[0].name, e[1]) for e in entries}) != len(entries):
+        raise TransferError("duplicate removal target")
+    port = args.port or detect_port()
+    with open_port(port) as connection:
+        for source, kind, size, digest in entries:
+            reader = WireReader(connection)
+            request = make_request(DIRECTION_REMOVE, kind, source.name, size, digest)
+            status, accepted_size, accepted_digest, _ = negotiate(
+                connection, reader, request, DIRECTION_REMOVE, kind)
+            if status != STATUS_OK or accepted_size != size or accepted_digest != digest:
+                raise TransferError("badge removal proof differs from the exact local file")
+            verify_done(reader.frame(DONE_MAGIC, 41, 30.0), size, digest)
+            connection.baudrate = IDLE_BAUD
+            print(f"P4_H1 REMOVE_PASS name={source.name} bytes={size} sha256={digest.hex()}", flush=True)
+            time.sleep(1.1)  # Allow the service's terminal hold and catalog refresh.
+    print(f"P4_H1 REMOVE_BUNDLE_PASS files={len(entries)} port={port}")
+
+
 def push_bundle(args: argparse.Namespace) -> None:
     root = args.input.resolve()
     entries = []
@@ -708,6 +743,9 @@ def parser() -> argparse.ArgumentParser:
         description="Push or pull verified files through the P4 Console OS H1 port."
     )
     subparsers = result.add_subparsers(dest="command", required=True)
+    remove_parser = subparsers.add_parser("remove", help="remove only game files matching exact local copies; preserves saves")
+    remove_parser.add_argument("input", nargs="+", type=Path)
+    remove_parser.add_argument("--port")
     push_parser = subparsers.add_parser("push", help="upload a P4G or exchange file")
     push_parser.add_argument("input", type=Path)
     push_parser.add_argument("--port")
@@ -752,6 +790,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "push":
             push(args)
+        elif args.command == "remove":
+            remove_files(args)
         elif args.command == "push-bundle":
             push_bundle(args)
         elif args.command == "pull":

@@ -1,13 +1,22 @@
-# DEF CON ESP32-P4 game platform
+# P4 Console OS for M5Stack Tab5
 
-This repository is the experimental firmware platform for a future ESP32-P4 badge. Doom is the first end-to-end acceptance game; USB/Bluetooth controllers, display, storage, audio, and lifecycle services are reusable platform components rather than Doom-specific code.
+M5Stack Tab5 is the permanent primary hardware for this game console. Build it
+with `make console-os-tab5-idf` or `make console-os-idf`. Use the connected USB-C
+cable to install games while the SD card stays in the device. The
+[Tab5 guide](docs/boards/M5STACK_TAB5.md) records exact-board installation and
+hardware acceptance. Other ESP32-P4 boards retain explicit build targets.
+
+The [game library](docs/GAME_LIBRARY.md) lists the curated games, categories,
+ranking and release quality bar. New projects stay out of the installed library
+until they are ready.
 
 Console OS has versioned game APIs for drawing, normalized input, bounded
 audio, saves, multiplayer-facing player slots, and return-to-launcher
 lifecycle. Native C games are bounded `.P4G` RISC-V cartridges loaded from
 persistent storage. Open script games are readable Lua `.P4CART` files. Neither
 format is UF2, and installing either one does not require an OS reflash. Maze
-Chase, Space Invaders, Bounce Lab, and QR Dodge are clean-room samples. See
+Chase and Space Invaders are finished native references. Retired teaching
+games have been removed from the repository and default library. See
 [the native P4 Game SDK](docs/GAME_SDK.md) and
 [the open script-game platform](game-platform/README.md).
 
@@ -35,12 +44,24 @@ implemented. QR bitmap rendering and the on-device scan/import UI are still
 pending, so do not describe QR installation as hardware-ready yet.
 
 Repository-local Codex skills live under `.agents/skills/`. Open this
-repository at its root and name the relevant skill directly in the request:
+repository at its root and describe the game you want in your own words.
+The skills route ordinary requests automatically; naming a skill is optional.
+[Game starters and OS services](docs/GAME_STARTERS.md) offers examples without
+requiring a template or limiting the idea:
 
+- Use `$installos` for Console OS installation and first setup. It asks about
+  microSD, includes basic games and verified Doom shareware, and offers Chex
+  Quest only with SD. See its [Tab5 storage status](.agents/skills/installos/references/tab5-storage.md)
+  for the internal-storage implementation requirements; the current Tab5
+  firmware still uses SD.
 - Use `$develop-p4-script-games` for Lua source carts, compact `p4.arcade`
   helpers, packaging, remixing, and QR-size work.
 - Use `$develop-p4-console-games` to design or change a native C game, its
-  manifest, drawing, controls, sound, and launcher category.
+  manifest, drawing, controls, sound, and launcher category. Include normalized
+  controller mappings by default; the OS owns the USB/BLE hardware.
+- Add `$develop-p4-multiplayer-games` automatically for linked-console play.
+  It guides the game's synchronization through existing OS Host/Join sessions,
+  while preserving the original game idea.
 - Add `$test-p4-games-locally` to play the native game's real sources in the
   SDL3 runner before making firmware.
 - Use `$develop-p4-games` for `.P4G` packaging, resource sidecars, catalog

@@ -1,0 +1,116 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "references": [
+    {
+      "repository": "https://github.com/m5stack/M5Unified",
+      "commit": "fd40d58b8405ad1e7ed7afab548dab5e7cec5bbb",
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "44611d917bece311f5c8eeffce83d8bf9e9ca3f815d262f694ff4a7996af50ea"
+        },
+        {
+          "path": "src/utility/Power_Class.hpp",
+          "sha256": "526e7bd2afcbad4149e4738b034a4805aebbf5cb620d3c6abf70c1b2f66b98a6"
+        },
+        {
+          "path": "src/utility/Power_Class.inl",
+          "sha256": "dbac7aac1b8163825f43b6917076ba8d12f4476b26a4fc487b57e639e273fb64"
+        },
+        {
+          "path": "src/utility/imu/BMI270_Class.hpp",
+          "sha256": "12c01eafb03ef7fc84daef6cdb9114a99fed991af085afa37a94f00893b75996"
+        },
+        {
+          "path": "src/utility/imu/BMI270_Class.inl",
+          "sha256": "b1b6f574abc6bc7bd3d756c71719cb5555ab9067f2f35dfa5feeebdfcede2991"
+        },
+        {
+          "path": "src/utility/imu/BMI270_config.inl",
+          "sha256": "ec222804ea51d438084e36b5fa2cfefa6ebefb498cce6585dae5a73e3b672175"
+        },
+        {
+          "path": "src/utility/power/INA226_Class.hpp",
+          "sha256": "f8cc463b4932dfe0c0ee50b8e42755fc647a912e1682379681304a16412dd6d2"
+        },
+        {
+          "path": "src/utility/power/INA226_Class.inl",
+          "sha256": "25274eb8554dbe92e27ac416f8498f1f056c7ea7864b90b07b12d339c62c0f5f"
+        },
+        {
+          "path": "src/utility/rtc/RX8130_Class.hpp",
+          "sha256": "b9c3c6176a4951dc22c3e6d7f5c0ddb662c890d5d757ae1a9c0e546b78d4b32a"
+        },
+        {
+          "path": "src/utility/rtc/RX8130_Class.inl",
+          "sha256": "d743f6cd7f51ddb7821990771e58438082df5b66f4d4114cfee5c87d636e9336"
+        }
+      ]
+    },
+    {
+      "repository": "https://github.com/m5stack/M5Tab5-UserDemo",
+      "commit": "b4e356bc491ca070d54004718dad789c07d5fc93",
+      "files": [
+        {
+          "path": "platforms/tab5/components/power_monitor_ina226/include/ina226.hpp",
+          "sha256": "a91a0e049803daad33898da3975c86795baf3fd4a4219ebc259e4f9141b3ed7e"
+        },
+        {
+          "path": "platforms/tab5/components/power_monitor_ina226/src/ina226.cpp",
+          "sha256": "6630d0c0f3a2b97f8974ff9cd627ec3cd53976bc4368a5f9db434e3cb2e109ce"
+        },
+        {
+          "path": "platforms/tab5/main/hal/utils/rx8130/rx8130.cpp",
+          "sha256": "f291fd033f446a020abae4200b2943671dba2c7062cab7bf88807c3265da383f"
+        },
+        {
+          "path": "platforms/tab5/main/hal/utils/rx8130/rx8130.h",
+          "sha256": "9233fb55eada3012429e1e41193212daf33771b14e462b40f4721d813c1c3359"
+        }
+      ]
+    }
+  ],
+  "schematic": {
+    "url": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1132/Tab5_Schematics_PDF.pdf",
+    "sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329"
+  },
+  "shared_bus": {
+    "port": 1,
+    "sda_gpio": 31,
+    "scl_gpio": 32,
+    "frequency_hz": 400000
+  },
+  "power": {
+    "chip": "INA226",
+    "address_7bit": 65,
+    "identity_registers": {
+      "0xfe": "0x5449",
+      "0xff_mask_fff0": "0x2260"
+    },
+    "shunt_ohms": 0.005,
+    "config_register": "0x4527",
+    "voltage_mv_per_lsb": 1.25,
+    "shunt_uv_per_lsb": 2.5,
+    "positive_current": "discharge",
+    "percent": "Clamp ((millivolts - 6600) * 100 / 1600) to 0..100, matching M5Unified; voltage estimate, not measured capacity or battery-presence proof."
+  },
+  "motion": {
+    "chip": "BMI270",
+    "address_7bit": 104,
+    "chip_id": "0x24",
+    "configuration": "third_party/bmi270/source.json",
+    "rate_hz": 100,
+    "accel_range_g": 4,
+    "gyro_range_dps": 2000,
+    "ui_sample_hz": 4,
+    "temperature": "sensor die, not ambient"
+  },
+  "clock": {
+    "chip": "RX8130CE",
+    "address_7bit": 50,
+    "datetime_start_register": "0x10",
+    "validity": "Reject VLF (0x1d bit 1), STOP (0x1e bit 6), invalid BCD/calendar/weekday. Never clear clock validity merely to display a time.",
+    "backup": "RMW 0x1f bits 4 and 5 for fitted rechargeable backup supply, matching M5Unified."
+  }
+}

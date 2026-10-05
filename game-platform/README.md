@@ -11,7 +11,7 @@ The current implementation contains:
 
 - the normative v1 game API, Lua API, container, and transfer protocol;
 - a strict host validator/packer/unpacker, QR estimator/splitter/reassembler,
-  and open Bounce Lab and QR Dodge source templates;
+  and minimal automated-test fixtures;
 - additive `p4.arcade` helpers for compact games without limiting the complete
   Lua API;
 - an exact source-locked Lua 5.4.8 text-only sandbox with a counting allocator,

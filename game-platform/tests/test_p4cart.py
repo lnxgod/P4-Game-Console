@@ -10,7 +10,7 @@ import unittest
 
 GAME_PLATFORM = Path(__file__).resolve().parents[1]
 SCRIPT = GAME_PLATFORM / "scripts" / "p4cart.py"
-TEMPLATE = GAME_PLATFORM / "templates" / "bounce-lab"
+FIXTURE = GAME_PLATFORM / "tests" / "fixtures" / "minimal-cart"
 SPEC = importlib.util.spec_from_file_location("p4cart", SCRIPT)
 assert SPEC is not None and SPEC.loader is not None
 p4cart = importlib.util.module_from_spec(SPEC)
@@ -22,7 +22,7 @@ class P4CartTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
         self.source = self.root / "source"
-        shutil.copytree(TEMPLATE, self.source)
+        shutil.copytree(FIXTURE, self.source)
 
     def tearDown(self):
         self.temporary.cleanup()

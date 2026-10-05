@@ -99,6 +99,12 @@
       "type_c": "native FS USB Serial/JTAG GPIO24/25",
       "type_a": "native HS USB host dedicated PHY; power expander 0x44 P3",
       "host_power_enabled_by_initial_port": false
+    },
+    "sensors": {
+      "provenance": "third_party/tab5-sensors.json",
+      "power": "INA226 at 0x41, 5 mOhm shunt, voltage-based 2S estimate",
+      "motion": "BMI270 at 0x68, 4g / 2000 degrees per second",
+      "clock": "RX8130CE at 0x32, validity checked"
     }
   },
   "inputs": [

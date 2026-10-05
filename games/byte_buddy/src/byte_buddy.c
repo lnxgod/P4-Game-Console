@@ -8024,8 +8024,8 @@ const p4_game_descriptor_t p4_byte_buddy_game = {
     .api_version = P4_GAME_API_VERSION,
     .launcher_id = UINT32_C(108),
     .id = "org.p4console.byte-buddy",
-    .title = "BYTE BUDDY",
-    .subtitle = "SIGNAL DRAGONS",
+    .title = "Byte Buddy",
+    .subtitle = "Raise a signal dragon",
     .accent_rgb565 = UINT16_C(0xF81F),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
                              P4_GAME_CAP_STORAGE,

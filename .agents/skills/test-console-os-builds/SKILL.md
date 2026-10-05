@@ -57,7 +57,7 @@ git diff --check
 ```
 
 For every candidate that adds or changes a native Game API game, complete the
-`$test-p4-games-locally` workflow before `make console-os-idf` and before
+`$test-p4-games-locally` workflow before `make console-os-elecrow-idf` and before
 creating any successor install route. Require both the sanitizer-backed
 headless smoke and explicit interactive play of the exact game revision.
 Record the slug, source revision (or content hash when the tree is dirty),
@@ -86,7 +86,7 @@ make verify
 make game-sdk-host
 make console-shell-host
 make check
-make console-os-idf
+make console-os-elecrow-idf
 python3 scripts/verify-console-os.py apps/console_os/build
 ```
 

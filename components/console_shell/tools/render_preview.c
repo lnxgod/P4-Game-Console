@@ -48,6 +48,14 @@ static const console_app_descriptor_t s_apps[] = {
      .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
          CONSOLE_CAPABILITY_STORAGE,
      .page = CONSOLE_PAGE_GAMES, .enabled = true},
+    {.id = 17U, .title = "Battery", .subtitle = "Charge level and power use",
+     .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0x07E0),
+     .capabilities = CONSOLE_CAPABILITY_DISPLAY,
+     .page = CONSOLE_PAGE_POWER, .enabled = true},
+    {.id = 18U, .title = "Sensors", .subtitle = "Motion, temperature and clock",
+     .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0x07FF),
+     .capabilities = CONSOLE_CAPABILITY_DISPLAY,
+     .page = CONSOLE_PAGE_SENSORS, .enabled = true},
     {.id = 8U, .title = "MULTIPLAYER", .subtitle = "LOCAL LINK",
      .folder_path = "SYSTEM", .accent_rgb565 = UINT16_C(0xFFE0),
      .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH,
@@ -56,6 +64,14 @@ static const console_app_descriptor_t s_apps[] = {
 
 static bool select_page(console_shell_t *shell, const char *name)
 {
+    if (strncmp(name, "panel", 5) == 0) {
+        shell->page = CONSOLE_PAGE_CONTROL_PANEL;
+        shell->control_panel_active = true;
+        shell->runtime.control_panel_enabled = true;
+        shell->control_panel_section = strcmp(name, "panel-preferences") == 0 ? 1U :
+            strcmp(name, "panel-storage") == 0 ? 3U : strcmp(name, "panel-advanced") == 0 ? 5U : 0U;
+        return true;
+    }
     if (strcmp(name, "home") == 0) {
         return true;
     }
@@ -114,6 +130,8 @@ static bool select_page(console_shell_t *shell, const char *name)
     for (size_t i = 1U; i < sizeof(s_apps) / sizeof(s_apps[0]); ++i) {
         const char *expected = NULL;
         switch (s_apps[i].page) {
+        case CONSOLE_PAGE_POWER: expected = "power"; break;
+        case CONSOLE_PAGE_SENSORS: expected = "sensors"; break;
         case CONSOLE_PAGE_COLORS: expected = "colors"; break;
         case CONSOLE_PAGE_TOUCH: expected = "touch"; break;
         case CONSOLE_PAGE_SYSTEM: expected = "system"; break;
@@ -182,7 +200,7 @@ int main(int argc, char **argv)
         fprintf(stderr,
                 "usage: %s [--present] "
                 "home|all|games|arcade|system-folder|"
-                "colors|touch|system|files|manager|audio|multiplayer|"
+                "power|sensors|colors|touch|system|files|manager|audio|multiplayer|"
                 "multiplayer-host|multiplayer-settings|multiplayer-dice|multiplayer-join "
                 "output.ppm\n",
                 argv[0]);
@@ -205,7 +223,12 @@ int main(int argc, char **argv)
         .battery_supported = true,
         .battery_sample_valid = true,
         .battery_percent = 63U,
-        .battery_millivolts = 3890U,
+        .battery_millivolts = 7608U,
+        .battery_current_valid = true, .battery_milliamps = -340,
+        .motion_supported = true, .motion_valid = true,
+        .accel_mg = {-11, 28, 997}, .gyro_mdps = {-120, 250, 310},
+        .temperature_valid = true, .temperature_millicelsius = 28500,
+        .rtc_supported = true, .rtc_valid = true, .rtc_datetime = "2026-10-04 22:30:00",
         .audio_handoff_ready = true,
         .boot_volume_step = 3U,
         .game_volume_step = 3U,

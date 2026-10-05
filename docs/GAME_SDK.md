@@ -66,7 +66,10 @@ cmake -S games/star_hop -B build-host/star_hop -G Ninja
 cmake --build build-host/star_hop
 ```
 
-The starter compiles on the host immediately. Before adding nontrivial game
+The starter begins as an unpublished draft (`enabled: false`). Preview it with
+`make play-game GAME=star_hop`; this explicitly allows drafts in the local runner.
+Before publishing, follow [the game library quality bar](GAME_LIBRARY.md), replace
+its placeholder subtitle, and set `enabled: true`. The starter compiles locally. Before adding nontrivial game
 logic, follow an existing game's `tests/` and CMake wiring, then run
 `ctest --test-dir build-host/star_hop --output-on-failure`.
 
@@ -93,13 +96,19 @@ for example `GAMES/STAR_HOP.P4R`. Install, update, and remove the `.P4G` and its
 same-name `.P4R` as one game. Game Manager removes the sidecar before the
 executable so stale resources cannot be inherited by a later package.
 
-Run `make console-os-idf` after the focused game test when a distributable
+Tab5 is the default Console OS target. Run `make console-os-tab5-idf` after the focused game test when a distributable
 cartridge or device install is needed. Use `make game-registry-check` for a
 manifest or generator change and `make game-sdk-host` for shared API, package,
 loader, or cross-game changes. Do not run repo-wide `make check` for an
 isolated game change.
 
-On Elecrow, connect the laptop to J16, copy `STAR_HOP.P4G` into the `GAMES`
+On Tab5, leave the SD inserted and use
+`python3 scripts/p4-transfer.py push-bundle apps/console_os/build-tab5/sd-card --port <port>`.
+Use `remove /path/EXACT.P4G --port <port>` to remove a cartridge whose exact
+local size and SHA-256 match. Include its `.P4R` first when present. Removal
+preserves save data and refuses unknown file versions.
+
+On Elecrow, build explicitly with `make console-os-elecrow-idf`, connect the laptop to J16, copy `STAR_HOP.P4G` into the `GAMES`
 directory on `P4 GAMES`, eject the volume cleanly, and open Game Manager. On
 Olimex Rev.B, power off, move the microSD card to the laptop, copy the cartridge
 into `GAMES` (or rebuild the complete card bundle and run
@@ -173,6 +182,11 @@ creator's `--high-res` flag generates the portable optional form.
 
 Use `scripts/new-game.py --dry-run` to inspect a starter plan. The creator
 never overwrites an existing game.
+
+For optional scaffolds, examples and free-form authoring guidance, see
+[Game starters and OS services](GAME_STARTERS.md). Linked-console game requests
+also use the [multiplayer authoring skill](../.agents/skills/develop-p4-multiplayer-games/SKILL.md);
+ordinary controller mappings consume the existing normalized input API.
 
 ## API at a glance
 
@@ -457,7 +471,7 @@ Include `p4/visual.h` and keep the game loop simple:
 
 For collision-heavy games, retain a fixed-step accumulator for gameplay and
 use the measured delta only to feed the accumulator. Cap the number of steps
-per update as Asteroids does so a late frame cannot create a spiral of death.
+per update so a late frame cannot create an unbounded catch-up loop.
 Render once after the update. These helpers improve presentation while leaving
 physics, collision rules, and game state under the cartridge's control.
 
@@ -560,9 +574,11 @@ Use this workflow:
 - Run the changed game's focused host sanitizer tests. A successful build is
   not hardware acceptance or permission to flash.
 
-Maze Chase, Space Invaders, Asteroids, and Byte Buddy are complete original
-examples. Asteroids is the compact reference for an atlas sprite, fixed-step
-simulation, fixed-point particles, and deterministic camera shake.
+Maze Chase, Space Invaders, Skyline Leap and Byte Buddy are original examples.
+Use `p4/visual.h` and its shared API tests for atlas animation, fixed-point
+particles and deterministic camera shake. The current optional reference map
+is maintained in [GAME_STARTERS.md](GAME_STARTERS.md); do not reuse identities
+reserved in `games/retired.json`.
 Byte Buddy demonstrates touch-first virtual-pet care, interaction-driven dragon
 growth, coin upgrades, a mini-game, tones, achievements, PixelLab sprite art,
 and direct return to the launcher through P4 APIs.

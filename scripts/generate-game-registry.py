@@ -184,6 +184,23 @@ def discover(games_root: pathlib.Path) -> list[dict[str, Any]]:
     if not games_root.is_dir():
         raise ManifestError(f"games root is not a directory: {games_root}")
     manifests = [load_manifest(path) for path in sorted(games_root.glob("*/game.json"))]
+    retired_path = games_root / "retired.json"
+    if retired_path.exists():
+        try:
+            retired = json.loads(retired_path.read_text(encoding="utf-8"))
+            if not isinstance(retired, dict) or retired.get("schema") != 1 or not isinstance(retired.get("games"), list):
+                fail(retired_path, "invalid retirement registry")
+            for entry in retired["games"]:
+                if not isinstance(entry, dict) or any(
+                    key not in entry for key in ("id", "launcher_id", "package_file")
+                ):
+                    fail(retired_path, "retired games must reserve id, launcher_id and package_file")
+                for manifest in manifests:
+                    for key in ("id", "launcher_id", "package_file"):
+                        if manifest[key] == entry[key]:
+                            fail(manifest["_path"], f"{key} is reserved by retired game {entry['id']}")
+        except (OSError, UnicodeError, json.JSONDecodeError) as error:
+            fail(retired_path, f"cannot read retirement registry: {error}")
     enabled = [manifest for manifest in manifests if manifest["enabled"]]
     for key in (
         "component", "entry_symbol", "id", "launcher_id", "package_file",

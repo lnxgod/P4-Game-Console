@@ -3,7 +3,11 @@
 set -eu
 
 P4_APP=${1:-bringup}
-P4_BOARD=${2:-elecrow-crowpanel-advanced-10}
+if [ "$P4_APP" = console_os ]; then
+    P4_BOARD=${2:-m5stack-tab5}
+else
+    P4_BOARD=${2:-elecrow-crowpanel-advanced-10}
+fi
 P4_BOARD_PROFILE=$P4_BOARD
 P4_WAVESHARE_CONTROLLER_FIRST_BUILD=0
 P4_SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)

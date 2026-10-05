@@ -21,10 +21,8 @@ Open, source-included P4 Cart v1 files keep their original layout:
 
   P4/GAMES/*.P4CART   validated Lua-source cartridges
 
-Game Manager verifies and lists these carts without renaming them to P4G.
-The Lua 5.4 sandbox is not in this firmware yet, so P4CART entries are
-catalog-only and cannot launch. BOUNCE-LAB.P4CART and QR-DODGE.P4CART are the
-open reference carts.
+Game Manager verifies installed Lua source cartridges and launches them through
+the bounded Lua 5.4 runtime. No teaching/demo cartridges ship by default.
 
 Console OS updates use:
 

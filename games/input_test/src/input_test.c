@@ -105,7 +105,7 @@ static bool game_render(p4_game_context_t *context,
     const input_test_state_t *const state = context->state;
     p4_draw_clear(surface, UINT16_C(0x0008));
     p4_draw_fill_rect(surface, 0, 0, 320, 19, UINT16_C(0x001F));
-    p4_draw_text(surface, 8, 6, "INPUT TEST", UINT16_C(0xFFFF), 1U, 10U);
+    p4_draw_text(surface, 8, 6, "INPUT MONITOR", UINT16_C(0xFFFF), 1U, 13U);
     p4_draw_text(surface, 222, 6, "BACK EXITS", UINT16_C(0xBDF7), 1U, 10U);
 
     static const struct {
@@ -168,8 +168,8 @@ const p4_game_descriptor_t p4_input_test_game = {
     .api_version = P4_GAME_API_VERSION,
     .launcher_id = UINT32_C(110),
     .id = "org.p4console.input-test",
-    .title = "INPUT TEST",
-    .subtitle = "BUTTON AND TOUCH MONITOR",
+    .title = "Input Monitor",
+    .subtitle = "Check buttons and touch",
     .accent_rgb565 = UINT16_C(0x07FF),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     .optional_capabilities = 0U,

@@ -14,9 +14,12 @@ Read `AGENTS.md`, `docs/GAME_SDK.md`, the target `games/<slug>/game.json`, and
 the target source before testing. Also use `$develop-p4-console-games` when
 changing game code or its manifest.
 
-Require an enabled `p4-native-elf-v1` manifest with API version 1, a valid
-entry symbol, and C sources under `games/<slug>/src/`. Let the runner reject an
-unknown, disabled, or incompatible game instead of bypassing its checks.
+Require a `p4-native-elf-v1` manifest with API version 1, a valid entry symbol
+and C sources under `games/<slug>/src/`. New generator drafts use
+`enabled: false`; pass `-DP4_ALLOW_DRAFT_GAME=ON` to the local runner to preview
+one without publishing it in the catalog. `make play-game` already selects
+that draft option. Never bypass unknown-format, invalid-symbol or missing-source
+checks; enable a finished game only when ready for validated packaging.
 
 ## Run the fast loop
 
@@ -25,7 +28,7 @@ smoke test first:
 
 ```sh
 cmake -S tools/p4-game-host -B build-host/play-space_invaders -G Ninja \
-  -DP4_GAME=space_invaders
+  -DP4_GAME=space_invaders -DP4_ALLOW_DRAFT_GAME=ON
 cmake --build build-host/play-space_invaders
 ctest --test-dir build-host/play-space_invaders --output-on-failure
 ```
@@ -59,7 +62,8 @@ After each change:
 3. Check Start and Back, edge movement, rapid button presses, mouse/touch
    regions, restart behavior, and audio when relevant.
 4. Run the target's focused host tests when present, then run
-   `make game-sdk-host` before producing a firmware candidate.
+   the wider `make game-sdk-host` only when a shared API/package change warrants
+   it; use the selected board's normal build dependencies for firmware.
 
 Treat a sanitizer error, nonzero exit, invalid manifest, frozen game loop, or
 failure to return on Back as a local test failure. Fix it before an ESP-IDF
@@ -89,9 +93,14 @@ and common memory or undefined-behavior failures.
 Local play cannot validate ESP32-P4 performance or memory pressure, MIPI-DSI
 panel output, physical GT911 touch, factory-speaker acoustics, USB host input,
 power behavior, flash safety, or launcher integration on the tablet. Never
-convert local success into hardware acceptance or permission to flash. Use
-`$test-console-os-builds` for a firmware candidate, guarded install, recovery,
-and manual tablet acceptance.
+convert local success into hardware acceptance or permission to flash. Use the matching board's guarded install/acceptance route:
+`$test-console-os-builds` for its exact Elecrow target, the Waveshare platform
+skill for Waveshare, and `$develop-esp32-p4-platform` with
+`docs/boards/M5STACK_TAB5.md` for Tab5.
+
+For multiplayer changes, also use `$develop-p4-multiplayer-games` and the
+selected game's two-instance session harness. This single-game SDL runner does
+not provide a real Host/Join link or prove two-console synchronization.
 
 Legacy Doom does not implement the reentrant Game API and is outside this SDL3
 runner. Use its pinned `make doom-smoke WAD=/absolute/path/to/freedoom1.wad`

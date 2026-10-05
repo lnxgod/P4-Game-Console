@@ -10,7 +10,7 @@ import unittest
 GAME_PLATFORM = Path(__file__).resolve().parents[1]
 P4CART_SCRIPT = GAME_PLATFORM / "scripts" / "p4cart.py"
 P4QR_SCRIPT = GAME_PLATFORM / "scripts" / "p4qr.py"
-TEMPLATE = GAME_PLATFORM / "templates" / "bounce-lab"
+FIXTURE = GAME_PLATFORM / "tests" / "fixtures" / "minimal-cart"
 
 
 def load_module(name, path):
@@ -30,8 +30,8 @@ class P4QrTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.root = Path(self.temporary.name)
         self.source = self.root / "source"
-        shutil.copytree(TEMPLATE, self.source)
-        self.cart = self.root / "bounce-lab.p4cart"
+        shutil.copytree(FIXTURE, self.source)
+        self.cart = self.root / "fixture.p4cart"
         p4cart.pack_source(self.source, self.cart)
 
     def tearDown(self):
@@ -61,7 +61,7 @@ class P4QrTests(unittest.TestCase):
         frame_directory = self.root / "frames"
         summary = p4qr.write_frame_set(self.cart, frame_directory, 384)
         self.assertEqual(summary["qr_codes"], len(list(frame_directory.glob("*.p4qr"))))
-        self.assertEqual(summary["game"]["title"], "Bounce Lab")
+        self.assertEqual(summary["game"]["title"], "Test Fixture")
 
         inspection = p4qr.inspect_frame_set(frame_directory)
         self.assertTrue(inspection["complete"])

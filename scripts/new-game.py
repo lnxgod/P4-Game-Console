@@ -47,6 +47,10 @@ def derived_slug(title: str) -> str:
 
 def occupied_launcher_ids(games_root: pathlib.Path) -> set[int]:
     occupied: set[int] = set()
+    retired = games_root / "retired.json"
+    if retired.is_file():
+        for game in json.loads(retired.read_text())["games"]:
+            occupied.add(game["launcher_id"])
     for path in games_root.glob("*/game.json"):
         try:
             manifest = json.loads(path.read_text(encoding="utf-8"))
@@ -110,7 +114,7 @@ def source_text(slug: str, game_id: str, title: str,
                 launcher_id: int, accent: str,
                 optional_capabilities: list[str]) -> str:
     symbol = f"p4_{slug}_game"
-    c_title = json.dumps(title.upper())
+    c_title = json.dumps(title)
     optional_expression = " |\n        ".join(
         CAPABILITY_CONSTANTS[name] for name in optional_capabilities
     ) or "UINT32_C(0)"
@@ -222,7 +226,7 @@ const p4_game_descriptor_t {symbol} = {{
     .launcher_id = UINT32_C({launcher_id}),
     .id = \"{game_id}\",
     .title = {c_title},
-    .subtitle = \"P4 GAME API V1\",
+    .subtitle = \"WORK IN PROGRESS\",
     .accent_rgb565 = UINT16_C({accent}),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     .optional_capabilities = {optional_expression},
@@ -237,44 +241,84 @@ const p4_game_descriptor_t {symbol} = {{
 
 def readme_text(title: str, folder: str,
                 multiplayer_style: str | None,
-                high_res: bool) -> str:
+                high_res: bool, slug: str) -> str:
     multiplayer = ""
     if multiplayer_style is not None:
         multiplayer = f"""
 
-This starter declares the `{multiplayer_style}` multiplayer profile in
-`game.json`. After installation, Console OS validates the P4G and automatically
-registers it in the Multiplayer selector before its first launch. There is no
-game-side registration call and no central OS table to edit. Game code uses
-only `p4_game_multiplayer_read_profile()`,
-`p4_game_multiplayer_read_status()`, `p4_game_multiplayer_send()`, and
-`p4_game_multiplayer_receive()`; it never chooses BLE, UART, or USB directly.
-Keep a complete offline mode and increment `multiplayer.protocol` whenever the
-meaning of your game messages changes.
+## Multiplayer
+
+The `{multiplayer_style}` profile and optional `multiplayer-session`
+capability are declared in `game.json`. This scaffold adds metadata only:
+the generated game does not yet synchronize players or state.
+
+Use the [multiplayer skill](../../.agents/skills/develop-p4-multiplayer-games/SKILL.md)
+to implement the game's bounded protocol. Checkers provides a small turn-based
+example; Air Hockey provides real-time host-authority and two-instance tests.
+Console OS owns registration, Host/Join, room discovery, exact-game matching,
+transport and the start barrier. There is no game-side registration call or
+central table to edit.
+
+Read the already-connected session through `p4_game_multiplayer_read_profile()`
+and `p4_game_multiplayer_read_status()`; exchange only bounded game messages
+with `p4_game_multiplayer_send()` and `p4_game_multiplayer_receive()`.
+Keep a complete offline mode and increment `multiplayer.protocol` when message
+meaning changes. Set `message_bytes` to the largest actual packet, at most 64.
+The current OS links support two human consoles.
 """
     resolution = ""
     if high_res:
         resolution = """
 
-This starter negotiates the optional `video-highres` capability. It receives
-a 768x480 RGB565 surface on supported hardware and falls back to 320x200.
-Touch coordinates deliberately remain normalized to 320x200 in both modes;
-scale drawing coordinates from that stable space using `surface->width` and
-`surface->height`, as the generated source demonstrates.
+This starter negotiates optional `video-highres`: a 768x480 RGB565 surface
+where supported, with 320x200 fallback. Touch remains normalized to 320x200;
+scale drawing using `surface->width` and `surface->height`.
 """
     return f"""# {title}
 
-This starter is a native P4 Game API v1 component. Edit the file in `src/`,
-then run `make game-sdk-host` and `make console-os-idf` from the repository
-root. The build discovers `game.json` automatically and creates a `.P4G`
-cartridge under `apps/console_os/build/game-storage-seed/GAMES/`. Copy that
-file into the `GAMES` directory on the `P4 GAMES` USB volume and eject it; the
-launcher places the game under
-`{folder}` without an OS reflash.
+This is a minimal native P4 Game API v1 scaffold, ready for your own rules,
+art and gameplay. The [starter guide](../../docs/GAME_STARTERS.md) offers
+optional examples; you do not need to keep this moving-circle demo or use a
+particular template. It starts unpublished (`enabled: false`) so the demo does
+not enter the product catalog. Edit `src/{slug}.c`, and list additional C files
+in `game.json`'s `sources` when splitting the implementation. Keep identities
+in `games/retired.json` reserved.
 
-Use only the `p4/` headers for display, controls, drawing, and sound. Keep
-board drivers and raw ESP-IDF peripheral ownership in platform components.
-Press the on-screen Exit control to return to the launcher.
+Use only public `p4/` APIs. Console OS owns display, audio, USB/BLE controllers,
+storage, timing and launcher lifecycle. The starter consumes normalized
+D-pad movement and A; map the completed game's menus/actions to A/B/Start/Back
+and touch as appropriate. Back returns to the launcher. No per-game HID driver,
+USB flag or pairing screen is needed. Hardware support still depends on the
+selected board's OS.
+
+## Build and play locally
+
+From the repository root:
+
+```sh
+cmake -S tools/p4-game-host -B build-host/play-{slug} -G Ninja -DP4_GAME={slug} -DP4_ALLOW_DRAFT_GAME=ON
+cmake --build build-host/play-{slug}
+ctest --test-dir build-host/play-{slug} --output-on-failure
+make play-game GAME={slug}
+```
+
+Add focused rule/protocol tests as the game grows. Run `make game-registry-check`
+after manifest changes. Follow the
+[local testing skill](../../.agents/skills/test-p4-games-locally/SKILL.md) for
+sanitizer smoke and interactive controls/lifecycle checks.
+
+## Package for the selected console
+
+After the finished game passes its focused tests and local play checks, set
+`enabled` to `true` in `game.json` and validate it again. The build discovers
+the enabled manifest and puts the game in `{folder}`. Use the
+[package skill](../../.agents/skills/develop-p4-games/SKILL.md) and the matching
+target: `make console-os-tab5-idf`, `make console-os-waveshare-idf`,
+`make console-os-olimex-idf` or `make console-os-elecrow-idf` for Elecrow.
+Install the resulting `.P4G` and any required resource sidecar through that
+board's documented content path. A compatible game-only update does not need
+an OS reflash. Use [installos](../../.agents/skills/installos/SKILL.md) only when
+setting up the OS itself.
 {resolution}{multiplayer}
 """
 
@@ -308,7 +352,7 @@ def main() -> int:
     parser.add_argument(
         "--multiplayer",
         choices=("turn-based", "realtime", "lockstep"),
-        help=("add a two-player declarative networking profile and the "
+        help=("add two-player networking metadata (not synchronization) and the "
               "multiplayer-session capability"),
     )
     parser.add_argument(
@@ -348,6 +392,12 @@ def main() -> int:
     if args.high_res and "video-highres" not in optional_capabilities:
         optional_capabilities.append("video-highres")
     game_id = "org.p4console." + slug.replace("_", "-")
+    retired_path = games_root / "retired.json"
+    if retired_path.exists():
+        retired = json.loads(retired_path.read_text(encoding="utf-8"))
+        for entry in retired["games"]:
+            if entry["id"] == game_id or entry["package_file"] == f"{slug.upper()}.P4G":
+                die("game identity or package filename is reserved by a retired game")
     manifest = {
         "schema": 1,
         "format": "p4-native-elf-v1",
@@ -358,15 +408,15 @@ def main() -> int:
         "entry_symbol": f"p4_{slug}_game",
         "launcher_id": launcher_id,
         "id": game_id,
-        "title": args.title.upper(),
-        "subtitle": "P4 GAME API V1",
+        "title": args.title,
+        "subtitle": "WORK IN PROGRESS",
         "folder": args.folder,
         "accent_rgb565": args.accent.lower(),
         "required_capabilities": ["video", "controls"],
         "optional_capabilities": optional_capabilities,
         "license": "MIT",
         "assets": "original-code-rendered-shapes-only",
-        "enabled": True,
+        "enabled": False,
     }
     if args.multiplayer is not None:
         manifest["multiplayer"] = {
@@ -385,7 +435,7 @@ def main() -> int:
                      args.accent.lower(), optional_capabilities)),
         (pathlib.Path("README.md"),
          readme_text(args.title, args.folder, args.multiplayer,
-                     args.high_res)),
+                     args.high_res, slug)),
     )
     result = {
         "result": "p4-game-starter-planned" if args.dry_run

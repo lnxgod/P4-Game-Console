@@ -26,6 +26,7 @@
 #include "doom/audio_runtime.h"
 #include "doom/video.h"
 #include "doomgeneric.h"
+#include "m_config.h"
 #include "doomkeys.h"
 #include "i_system.h"
 #include "m_controls.h"
@@ -34,6 +35,7 @@
 #include "touch_controls.h"
 #ifdef P4_CONSOLE_OS_EMBEDDED
 #include "p4/doom_multiplayer.h"
+#include "w_wad.h"
 #endif
 #if defined(P4_CONSOLE_OS_EMBEDDED) && \
     defined(CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3) && \
@@ -644,8 +646,27 @@ static esp_err_t submit_startup_frame(void)
 
 static void engine_exit_composite(void)
 {
+#ifndef P4_CONSOLE_OS_EMBEDDED
     composite_cleanup();
+#endif
+    /* Console cleanup runs after Tick returns. Doom may still invoke input
+     * and rendering from the tick containing I_Quit. */
 }
+#ifdef P4_CONSOLE_OS_EMBEDDED
+static void close_engine_wads(void)
+{
+    /* All engine exit callbacks and the current tick are finished, and the
+     * audio worker is stopped. Detach every alias before closing each WAD. */
+    for (unsigned i = 0; i < numlumps; ++i) {
+        wad_file_t *file = lumpinfo[i].wad_file;
+        if (!file) continue;
+        for (unsigned j = i; j < numlumps; ++j) {
+            if (lumpinfo[j].wad_file == file) lumpinfo[j].wad_file = NULL;
+        }
+        W_CloseFile(file);
+    }
+}
+#endif
 
 static bool try_audio_enable(void)
 {
@@ -1356,9 +1377,20 @@ void app_main(void)
     if (s_frame_error != ESP_OK) {
         halt_dark("engine-first-frame", s_frame_error);
     }
+#ifdef P4_CONSOLE_OS_EMBEDDED
+    /* The upstream ENDOOM callback calls process exit(), which aborts under
+     * ESP-IDF before the platform quit/cleanup callback can return us home. */
+    if (!M_SetVariable("show_endoom", "0")) {
+        halt_dark("quit-config", ESP_ERR_INVALID_STATE);
+    }
+#endif
     for (;;) {
         doomgeneric_Tick();
         if (doomgeneric_QuitRequested()) {
+#ifdef P4_CONSOLE_OS_EMBEDDED
+            if (release_audio()) close_engine_wads();
+            composite_cleanup();
+#endif
             ESP_LOGI(TAG,
                      "P4_DOOM_E6 EXIT status=confirmed action=restart-to-home "
                      "cleanup_complete=%u",

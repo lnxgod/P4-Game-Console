@@ -52,9 +52,9 @@ def load_seed_carts(
     if not isinstance(legacy, dict):
         raise SeedRegistryError("legacy_p4cart metadata is missing")
     paths = legacy.get("seed_carts")
-    if (not isinstance(paths, list) or not paths or len(paths) > 16 or
+    if (not isinstance(paths, list) or len(paths) > 16 or
             any(not isinstance(path, str) for path in paths)):
-        raise SeedRegistryError("seed_carts must contain 1..16 paths")
+        raise SeedRegistryError("seed_carts must contain 0..16 paths")
     if len(paths) != len(set(paths)):
         raise SeedRegistryError("seed_carts contains a duplicate path")
 
@@ -90,16 +90,9 @@ def load_seed_carts(
             )
         seeds.append(SeedCart(relative, output_name, template_name, template))
 
-    declared_templates = {seed.template_name for seed in seeds}
-    undeclared_templates = sorted(available_templates - declared_templates)
-    if undeclared_templates:
-        raise SeedRegistryError(
-            "source cartridge templates are not declared in seed_carts: " +
-            ", ".join(undeclared_templates)
-        )
-
+    # Templates are authoring examples; only explicitly selected seeds ship.
     first = legacy.get("seed_cart")
-    if first is not None and first != paths[0]:
+    if first is not None and (not paths or first != paths[0]):
         raise SeedRegistryError("legacy seed_cart must match seed_carts[0]")
     return tuple(seeds)
 

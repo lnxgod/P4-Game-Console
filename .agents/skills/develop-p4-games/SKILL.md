@@ -11,6 +11,8 @@ or the Waveshare H1 / Tab5 native USB verified live-transfer paths. Keep Console
 hardware, storage, and lifecycle services so adding or removing a game never
 requires an OS reflash.
 
+M5Stack Tab5 is the primary target: `m5stack-tab5`,
+`make console-os-tab5-idf`, native USB-C transfer with the card left inserted.
 Target names are exact: `elecrow-crowpanel-advanced-10` is the Elecrow 10 in
 device, `olimex-esp32-p4-pc` is the Olimex ESP32-P4-PC Rev.B development board,
 and `waveshare-esp32-p4-wifi6-touch-lcd-4.3` is the Waveshare 4.3 in console.
@@ -19,8 +21,12 @@ must match the physical target. Any new target must first appear in
 `hardware/boards/console-os-port-contract.json`; never infer a board from its
 display connector or reuse another board's identity.
 
-Use `$develop-p4-console-games` for gameplay/source authoring and
-`$test-p4-games-locally` for the SDL3 edit-play loop. Use this skill for the
+Use `$develop-p4-console-games` for free-form gameplay/source authoring and
+`$test-p4-games-locally` for the SDL3 edit-play loop. Add
+`$develop-p4-multiplayer-games` automatically for linked-console games; it owns
+game-protocol guidance while Console OS owns rooms and links. Optional examples
+live in `docs/GAME_STARTERS.md`. Supported controllers enter through the normal
+`controls` API; never add USB/HID code to a cartridge. Use this skill for the
 native package, catalog, storage, installation, and removal boundary. Use
 `$develop-p4-script-games` instead for readable Lua `.P4CART` games.
 
@@ -50,8 +56,9 @@ python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE
 python3 scripts/new-game.py "Card Table" --folder GAMES/CARDS --high-res
 ```
 
-The generator chooses a free launcher ID and never overwrites an existing
-game. It creates the manifest and CMake entry at the game root, runtime code
+The generator chooses a free non-retired launcher ID, never overwrites a game,
+and starts with `enabled: false`. Preview drafts with `make play-game GAME=<slug>`.
+Publish only after the quality checks in `docs/GAME_LIBRARY.md` pass. It creates the manifest and CMake entry at the game root, runtime code
 under `src/`, and a README. Add deterministic host tests under `tests/` and an
 optional preview tool under `tools/` as the game grows; follow an existing game
 for their CMake wiring.
@@ -114,7 +121,8 @@ Choose the smallest proof that covers the modified boundary:
 - A shared game API, package format, loader contract, or change spanning every
   maintained game: run `make game-sdk-host`.
 - A distributable cartridge or Console OS integration change: after focused
-  host checks pass, run exactly one matching build: `make console-os-idf` for
+  host checks pass, run exactly one matching build: `make console-os-tab5-idf` for
+  Tab5, `make console-os-elecrow-idf` for
   Elecrow, `make console-os-olimex-idf` for Olimex Rev.B, or
   `make console-os-waveshare-idf` for Waveshare 4.3.
 
@@ -129,6 +137,7 @@ report unrelated failures without expanding the task.
 The board-specific Console OS builds write each enabled cartridge to:
 
 ```text
+apps/console_os/build-tab5/sd-card/GAMES/<PACKAGE>.P4G
 apps/console_os/build/game-storage-seed/GAMES/<PACKAGE>.P4G
 apps/console_os/build-olimex-esp32-p4-pc/sd-card/GAMES/<PACKAGE>.P4G
 apps/console_os/build-waveshare-landscape/sd-card/GAMES/<PACKAGE>.P4G
@@ -198,3 +207,13 @@ A game change is complete when its manifest remains valid, its focused host
 tests pass, a requested `.P4G` validates, and any claimed device behavior has
 one recorded hardware acceptance. State any remaining package, copy, or device
 check plainly instead of running broader unrelated tests.
+
+## Remove a known cartridge over Tab5 USB
+
+Use `python3 scripts/p4-transfer.py remove /absolute/path/EXACT.P4G --port <port>`
+when the user requests removal. Supply the exact locally validated copy; the
+device checks its byte count and SHA-256 before deleting that named cartridge.
+A changed or unknown file is rejected. For sidecars supply both `.P4R` and `.P4G`;
+the client removes the resource first. Lua `.P4CART` uses the same command.
+This does not delete saved progress, WADs or arbitrary files. Older firmware
+without remove support must first receive a separately authorized OS update.
