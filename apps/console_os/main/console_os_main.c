@@ -61,6 +61,7 @@
 #include "platform/board.h"
 #if CONFIG_P4_BOARD_M5STACK_TAB5
 #include "platform/tab5_sensors.h"
+#include "p4/clock_control.h"
 #endif
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
 #include "platform_battery/battery.h"
@@ -529,6 +530,9 @@ static p4cart_scan_state_t s_p4cart_scan_state;
 static bool s_p4cart_scan_seen;
 static uint32_t s_p4cart_scan_generation;
 static uint32_t s_file_transfer_generation_seen;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+static p4_clock_control_t s_clock_control;
+#endif
 #if P4_CONSOLE_H1_USB_DRIVE_CONTROL
 static p4_h1_usb_drive_control_t s_h1_usb_drive_control;
 #endif
@@ -3753,7 +3757,7 @@ static console_shell_runtime_info_t runtime_info(void)
 #if CONFIG_P4_BOARD_M5STACK_TAB5
     if (sensors.rtc_valid) {
         (void)snprintf(info.rtc_datetime, sizeof(info.rtc_datetime),
-            "%04u-%02u-%02u %02u:%02u:%02u", sensors.rtc.year,
+            "%04u-%02u-%02u %02u:%02u:%02u UTC", sensors.rtc.year,
             sensors.rtc.month, sensors.rtc.day, sensors.rtc.hour, sensors.rtc.minute, sensors.rtc.second);
     }
 #endif
@@ -3842,6 +3846,33 @@ static esp_err_t content_uart_set_baud(
     (void)context;
     return p4_mp_uart_endpoint_set_baudrate(baudrate);
 }
+
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+static bool clock_usb_send(void *context, const uint8_t *bytes, size_t size)
+{
+    return content_uart_send(context, bytes, size) == ESP_OK;
+}
+static p4_clock_status_t clock_usb_status(void *context)
+{
+    (void)context;
+    const platform_tab5_telemetry_t sensors = platform_tab5_sensors_snapshot();
+    p4_clock_status_t status = {
+        .present=sensors.rtc_present, .pending=sensors.rtc_set_pending,
+        .valid=sensors.rtc_valid,
+        .error=sensors.rtc_set_error ? sensors.rtc_set_error : sensors.rtc_error,
+    };
+    if (status.valid && !platform_tab5_datetime_to_unix(&sensors.rtc, &status.unix_seconds))
+        status.valid=false;
+    return status;
+}
+static int clock_usb_set(void *context, uint32_t seconds)
+{
+    (void)context;
+    const esp_err_t result=platform_tab5_clock_set(seconds);
+    return result==ESP_OK ? 0 : result==ESP_ERR_NOT_FINISHED ? 2 :
+        result==ESP_ERR_INVALID_STATE ? 3 : result==ESP_ERR_INVALID_ARG ? 1 : 4;
+}
+#endif
 
 #if P4_CONSOLE_H1_USB_DRIVE_CONTROL
 static bool h1_usb_drive_send(
@@ -3972,6 +4003,10 @@ static bool content_uart_consume(
     if (content.state != P4_CONTENT_TRANSFER_IDLE) {
         return p4_content_transfer_consume(bytes, bytes_length);
     }
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (p4_clock_control_consume(&s_clock_control, bytes, bytes_length,
+            (uint64_t)esp_timer_get_time() / 1000U)) return true;
+#endif
 #if P4_CONSOLE_H1_USB_DRIVE_CONTROL
     if (p4_h1_usb_drive_control_consume(
             &s_h1_usb_drive_control, bytes, bytes_length,
@@ -10181,6 +10216,11 @@ void app_main(void)
                 h1_usb_drive_status, h1_usb_drive_set_mode, NULL)) {
             content_result = ESP_FAIL;
         }
+#endif
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        s_clock_control=(p4_clock_control_t){
+            .send=clock_usb_send, .status=clock_usb_status, .set=clock_usb_set,
+        };
 #endif
         if (content_result == ESP_OK) {
             content_result = p4_mp_uart_endpoint_set_raw_handler(

@@ -111,6 +111,18 @@
     "address_7bit": 50,
     "datetime_start_register": "0x10",
     "validity": "Reject VLF (0x1d bit 1), STOP (0x1e bit 6), invalid BCD/calendar/weekday. Never clear clock validity merely to display a time.",
-    "backup": "RMW 0x1f bits 4 and 5 for fitted rechargeable backup supply, matching M5Unified."
+    "backup": "RMW 0x1f bits 4 and 5 for fitted rechargeable backup supply, matching M5Unified.",
+    "application_manual": {
+      "url": "https://download.epsondevice.com/td/pdf/app/RX8130CE_en.pdf",
+      "revision": "ETM50E-10",
+      "sha256": "db027a5fa2dd17b333da81e95063764eb5536d2878c63b64949348d2ec4b8a22",
+      "sections": [
+        "13.2 register table",
+        "14.5 VLF write-zero-to-clear",
+        "18.5 sequential calendar setting without STOP",
+        "18.6 sequential calendar reading"
+      ]
+    },
+    "setting": "Explicit physical USB UTC sync only, years 2000..2099: one 7-byte calendar write at 0x10..0x16, verify calendar, clear only VLF with 0xBD at 0x1D, clear a pre-existing STOP bit at 0x1E after successful calendar verification, then verify full readback. No interrupt/timer, offset, charging or other power-control changes. Failed attempts remain invalid in the running sampler until a verified sync."
   }
 }

@@ -1,0 +1,249 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "recorded_at": "2026-10-05T06:37:05.877803+00:00",
+  "status": "clock-sync-and-warm-restart-verified-physical-acceptance-pending",
+  "source_base": "8e62792086184db5e58e7d95cf95f1676139f78b",
+  "firmware_source_binding": {
+    "file": "hardware/evidence/tab5-console-os-20261004-clock-authorization.json",
+    "sha256": "e444eee4c062e700ad249519a740459792c7184bec93494176cf845e4d0df5da"
+  },
+  "app": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 1406800,
+    "sha256": "a6791abf6d22a36a0b9eea22f10022d2f2b5b323d0f2a8aace95bd7c06fbc894"
+  },
+  "usb_host_enabled": false,
+  "full_feature_set_hardware_tested": false,
+  "previous_control_panel_and_library_evidence": "hardware/evidence/tab5-console-os-20261004-control-panel-testing.json",
+  "units": {
+    "A": {
+      "panel": "ST7121",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "soc_revision": "v1.3",
+      "flash_bytes": 16777216,
+      "psram_bytes": 33554432,
+      "port": "/dev/cu.usbmodem1101",
+      "connection": "Existing native USB-C cable; mounted microSD; no power removal during acceptance",
+      "install_receipt": {
+        "file": "hardware/backups/tab5-a-install-lpu3397u/receipt.json",
+        "sha256": "1be30414905b84364544035e878f9e345235f977cb6704a6218a599c7836a7a9"
+      },
+      "runtime_log": {
+        "file": "hardware/backups/tab5-a-install-lpu3397u/runtime.log",
+        "sha256": "e340821182644484845d48adceec9624ea4b3501642ff6f22d7d1fad8978a321"
+      },
+      "write_offsets": [
+        "0x20000"
+      ],
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "serial_markers": [
+        "I (3111) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7121 native=720x1280 logical=1280x720 viewport=1152x720+64+0 format=rgb565",
+        "I (9328) p4_console_os: P4_CONSOLE_OS GAME_CATALOG available=1 packages=16 valid=16 omitted=0 generation=1 source=microsd-only scan=background worker_low_water_bytes=11416 storage_result=ESP_OK update=0 result=ESP_OK",
+        "I (10070) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (10617) tab5_sensors: SENSORS_INIT ina226=ESP_OK bmi270=ESP_OK rx8130=ESP_OK",
+        "I (10619) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1211 ma=-1 percent=0 estimate=voltage imu_valid=1 accel_mg=6,104,-1003 gyro_mdps=122,183,-122 rtc_valid=1 date=2020-08-07 time=11:11:54",
+        "I (20080) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized",
+        "I (20633) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1210 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=7,104,-1001 gyro_mdps=183,122,-122 rtc_valid=1 date=2020-08-07 time=11:12:04"
+      ],
+      "clock_sync": {
+        "file": "hardware/backups/tab5-a-clock-sync-20261004.json",
+        "sha256": "ad1fbec86733dc2ef10dee18a3286c438f667e34e4debefe283a919f35366569",
+        "response": {
+          "error": 0,
+          "host_minus_rtc_seconds": 0,
+          "pending": false,
+          "port": "/dev/cu.usbmodem1101",
+          "present": true,
+          "requested_unix": 1791181869,
+          "result": "clock-sync-verified",
+          "result_code": 0,
+          "unix_seconds": 1791181869,
+          "utc": "2026-10-05T06:31:09+00:00",
+          "valid": true
+        }
+      },
+      "warm_restart": {
+        "file": "hardware/backups/tab5-a-clock-retention-20261004/receipt.json",
+        "sha256": "4224e58bea1210e16371cda7e29c0ac179fd776b8e08763429dc3c4808d83038",
+        "log": {
+          "file": "hardware/backups/tab5-a-clock-retention-20261004/cycle-1.log",
+          "sha256": "6081b4e827c1b74fd00716ad186a276113a989833986859a6c9bb4b0a74087db"
+        },
+        "passed": true,
+        "serial_markers": [
+          "rst:0x17 (CHIP_USB_UART_RESET),boot:0x30f (SPI_FAST_FLASH_BOOT)",
+          "I (10553) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1208 ma=-1 percent=0 estimate=voltage imu_valid=1 accel_mg=7,104,-1001 gyro_mdps=61,183,-61 rtc_valid=1 date=2026-10-05 time=06:31:35",
+          "I (20015) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized"
+        ]
+      },
+      "advancing_read_only_clock": {
+        "file": "hardware/backups/tab5-a-clock-status-20261004.json",
+        "sha256": "29167cae872cfa020ee966dea6acf5c559ddf2d76b85dbaf86ced28a79d05b0e",
+        "result": {
+          "unit": "A",
+          "host_before_unix": 1791182012.358612,
+          "host_after_unix": 1791182023.0099251,
+          "read_only_status": {
+            "error": 0,
+            "pending": false,
+            "port": "/dev/cu.usbmodem1101",
+            "present": true,
+            "result": "clock-status",
+            "result_code": 0,
+            "unix_seconds": 1791182022,
+            "utc": "2026-10-05T06:33:42+00:00",
+            "valid": true
+          },
+          "seconds_since_sync": 153,
+          "host_minus_rtc_seconds": 1,
+          "passed": true
+        }
+      },
+      "cold_power_loss_retention_tested": false
+    },
+    "B": {
+      "panel": "ST7123",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "soc_revision": "v1.3",
+      "flash_bytes": 16777216,
+      "psram_bytes": 33554432,
+      "port": "/dev/cu.usbmodem2101",
+      "connection": "Existing native USB-C cable; mounted microSD; no power removal during acceptance",
+      "install_receipt": {
+        "file": "hardware/backups/tab5-b-install-t8myg4wf/receipt.json",
+        "sha256": "4a90eb359ce8bfa6a8b865998d7f7eec3794792ec176b3eaeebed78e2387ac1e"
+      },
+      "runtime_log": {
+        "file": "hardware/backups/tab5-b-install-t8myg4wf/runtime.log",
+        "sha256": "a3abfe529eaf4ccac3a44b189d7bd6c0cfe540cf9382f284ad1e636c1583c168"
+      },
+      "write_offsets": [
+        "0x20000"
+      ],
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "serial_markers": [
+        "I (2387) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7123 native=720x1280 logical=1280x720 viewport=1152x720+64+0 format=rgb565",
+        "I (4871) p4_console_os: P4_CONSOLE_OS GAME_CATALOG available=1 packages=18 valid=18 omitted=0 generation=1 source=microsd-only scan=background worker_low_water_bytes=11416 storage_result=ESP_OK update=0 result=ESP_OK",
+        "I (5614) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (6160) tab5_sensors: SENSORS_INIT ina226=ESP_OK bmi270=ESP_OK rx8130=ESP_OK",
+        "I (6162) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1198 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=9,140,-985 gyro_mdps=122,-244,61 rtc_valid=0 date=0000-00-00 time=00:00:00",
+        "I (15624) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized",
+        "I (16175) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1196 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=8,140,-986 gyro_mdps=61,-244,61 rtc_valid=0 date=0000-00-00 time=00:00:00",
+        "I (26187) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1196 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=8,138,-985 gyro_mdps=183,-305,61 rtc_valid=0 date=0000-00-00 time=00:00:00"
+      ],
+      "clock_sync": {
+        "file": "hardware/backups/tab5-b-clock-sync-20261004.json",
+        "sha256": "3e5a448667509e5591b1f47649bb6a222de09ec25ae791d026da5b50492c327a",
+        "response": {
+          "error": 0,
+          "host_minus_rtc_seconds": 0,
+          "pending": false,
+          "port": "/dev/cu.usbmodem2101",
+          "present": true,
+          "requested_unix": 1791182098,
+          "result": "clock-sync-verified",
+          "result_code": 0,
+          "unix_seconds": 1791182098,
+          "utc": "2026-10-05T06:34:58+00:00",
+          "valid": true
+        }
+      },
+      "warm_restart": {
+        "file": "hardware/backups/tab5-b-clock-retention-20261004/receipt.json",
+        "sha256": "78b42400c5fec9366da2e4beda6aa4128be73cf0bfc62c9991d7e176b960c451",
+        "log": {
+          "file": "hardware/backups/tab5-b-clock-retention-20261004/cycle-1.log",
+          "sha256": "d2d1dbdd2128acfa42ec2423e86a4597913bc234a4597d70d1aed6ee043c77d4"
+        },
+        "passed": true,
+        "serial_markers": [
+          "rst:0x17 (CHIP_USB_UART_RESET),boot:0x30f (SPI_FAST_FLASH_BOOT)",
+          "I (6100) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1196 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=10,139,-984 gyro_mdps=122,-244,61 rtc_valid=1 date=2026-10-05 time=06:35:28",
+          "I (15560) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized"
+        ]
+      },
+      "advancing_read_only_clock": {
+        "file": "hardware/backups/tab5-b-clock-status-20261004.json",
+        "sha256": "ba737db617b7461204f698d8a08d7e38164dbf22728265cc94b1cb340156427e",
+        "result": {
+          "unit": "B",
+          "host_before_unix": 1791182155.292979,
+          "host_after_unix": 1791182161.470809,
+          "read_only_status": {
+            "error": 0,
+            "pending": false,
+            "port": "/dev/cu.usbmodem2101",
+            "present": true,
+            "result": "clock-status",
+            "result_code": 0,
+            "unix_seconds": 1791182161,
+            "utc": "2026-10-05T06:36:01+00:00",
+            "valid": true
+          },
+          "seconds_since_sync": 63,
+          "host_minus_rtc_seconds": 0,
+          "passed": true
+        }
+      },
+      "cold_power_loss_retention_tested": false
+    }
+  },
+  "verification": {
+    "firmware": {
+      "file": "hardware/backups/tab5-clock-artifact/firmware-build.log",
+      "sha256": "2a4b9f9dc2bacf6307a8787555d629c3ae0c989545681d751b2f2653db9d0065",
+      "result": "Pinned ESP-IDF 5.5.3 Console OS build and exact artifact verifier passed; USB-A host off, C6 radio disabled"
+    },
+    "rtc_host": {
+      "file": "hardware/backups/tab5-clock-artifact/rtc-host-tests.log",
+      "sha256": "f739c1e3d04ad491c4672b087c10ed97ca6d8bfba2d9715048c8088e2393c507",
+      "passed": 6,
+      "sanitizers": [
+        "ASan",
+        "UBSan"
+      ],
+      "coverage": "Every calendar day 2000-2099, one-hot weekday, 2038 and range boundaries; invalid dates, all six I2C failure points, VLF preservation/clear and ignored/corrupt readback"
+    },
+    "usb_clock_host": {
+      "file": "hardware/backups/tab5-clock-artifact/usb-clock-host-tests.log",
+      "sha256": "659d3be5b8b6bcd826988174d286c70c9cb457cd37d052bb72f9796a842d6ac2",
+      "passed": 2,
+      "sanitizers": [
+        "ASan",
+        "UBSan"
+      ],
+      "coverage": "Bounded framing, fragmented/coalesced input, noise, partial timeout, duplicate-write prevention, invalid time/CRC, busy/unavailable RTC"
+    },
+    "python_clock": {
+      "file": "hardware/backups/tab5-clock-artifact/clock-python-tests.log",
+      "sha256": "d03ce458f2a6cd2b4f27522f3aacad03ce1872c028853507c3ad02ca621bdcad",
+      "passed": 5,
+      "coverage": "UTC encoding, CRC/nonce/reserved validation, read-only asynchronous-probe wait and actual probe-error reporting"
+    }
+  },
+  "post_build_client_fix": {
+    "file": "scripts/p4-transfer.py",
+    "sha256": "4d7e28d036c3edb66a390075545c4c8193f54d95906b12c1f779eaa0a4f4c90d",
+    "reason": "After the firmware build, read-only status was made to wait for the asynchronous RTC probe, like sync already did; firmware bytes are unchanged. The authorization preserves the exact build-time client hash.",
+    "observed_initial_failure": {
+      "file": "hardware/backups/tab5-a-clock-status-early-probe-20261004.json",
+      "sha256": "768e586adafce75675918746ba171e0eddc60869c9485791b357b46f57473b53"
+    },
+    "original_build_time_tool": {
+      "file": "hardware/backups/tab5-clock-artifact/p4-transfer-before-status-retry.py",
+      "sha256": "a72142c9479091cbb71a6d495c3fe6711a70baa713e72057a76c99db608b528b"
+    }
+  },
+  "hardware_limits": [
+    "Warm USB restarts are verified; full power-off retention and long-term clock accuracy are untested.",
+    "Battery pack presence/capacity and motion calibration remain unverified; invalid 2S voltage does not produce a percentage.",
+    "Physical Control Panel interaction, sustained scrolling, game/Doom quit-relaunch and B speaker at nonzero volume still need acceptance.",
+    "A startup/Doom audio was operator-confirmed on the earlier speaker repair; serial playback markers alone do not prove current acoustic quality.",
+    "C6 radio, USB-A host, camera/microphone and charger controls remain outside this installed candidate."
+  ]
+}

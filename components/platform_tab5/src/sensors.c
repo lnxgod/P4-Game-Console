@@ -2,6 +2,7 @@
 // Register references and Bosch configuration provenance: third_party/tab5-sensors.json.
 #include "platform/tab5_sensors.h"
 #include "platform/tab5.h"
+#include "rtc_clock.h"
 #include "esp_log.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -13,6 +14,9 @@ static i2c_master_dev_handle_t s_power, s_imu, s_rtc;
 static portMUX_TYPE s_snapshot_lock = portMUX_INITIALIZER_UNLOCKED;
 static platform_tab5_telemetry_t s_snapshot;
 static TaskHandle_t s_task;
+static bool s_clock_pending;
+static uint32_t s_clock_requested;
+static int s_clock_result;
 static const char *TAG = "tab5_sensors";
 
 static esp_err_t device(uint16_t address, i2c_master_dev_handle_t *out)
@@ -155,11 +159,32 @@ static void sensor_task(void *unused)
         esp_err_to_name(sample.battery_error), esp_err_to_name(sample.imu_error), esp_err_to_name(sample.rtc_error));
     bool first = true; uint8_t last_percent = 255; unsigned tick = 0;
     for (;;) {
+        portENTER_CRITICAL(&s_snapshot_lock);
+        const bool set_clock = s_clock_pending;
+        const uint32_t requested = s_clock_requested;
+        portEXIT_CRITICAL(&s_snapshot_lock);
+        if (set_clock) {
+            const esp_err_t result = platform_tab5_rtc_write(s_rtc, requested);
+            sample_clock(&sample);
+            if (result != ESP_OK) sample.rtc_valid = false;
+            sample.sampled_us = (uint64_t)esp_timer_get_time();
+            portENTER_CRITICAL(&s_snapshot_lock);
+            s_snapshot = sample;
+            s_clock_result = result;
+            s_clock_pending = false;
+            portEXIT_CRITICAL(&s_snapshot_lock);
+            ESP_LOGI(TAG, "RTC_SET unix=%lu result=%s readback=%u",
+                (unsigned long)requested, esp_err_to_name(result),
+                (unsigned)(result == ESP_OK && sample.rtc_valid));
+        }
         if ((tick++ % 4U) == 0U) {
             if (sample.battery_ready) sample_power(&sample);
             if (sample.rtc_present) sample_clock(&sample);
         }
         if (sample.imu_ready) sample_motion(&sample);
+        /* A failed setting attempt is not accepted just because its partial
+         * calendar happens to decode. A new verified sync clears this error. */
+        if (s_clock_result != ESP_OK) sample.rtc_valid = false;
         sample.sampled_us = (uint64_t)esp_timer_get_time();
         publish(&sample);
         if (first || tick % 40U == 1U || (sample.battery_valid && sample.battery_percent != last_percent)) {
@@ -182,9 +207,29 @@ esp_err_t platform_tab5_sensors_start(void)
 platform_tab5_telemetry_t platform_tab5_sensors_snapshot(void)
 {
     platform_tab5_telemetry_t result;
-    portENTER_CRITICAL(&s_snapshot_lock); result = s_snapshot; portEXIT_CRITICAL(&s_snapshot_lock);
+    portENTER_CRITICAL(&s_snapshot_lock);
+    result = s_snapshot;
+    result.rtc_set_pending = s_clock_pending;
+    result.rtc_set_error = s_clock_result;
+    portEXIT_CRITICAL(&s_snapshot_lock);
     if (!result.sampled_us || (uint64_t)esp_timer_get_time() - result.sampled_us > 2000000U) {
         result.battery_valid = result.imu_valid = result.rtc_valid = result.temperature_valid = false;
     }
+    return result;
+}
+
+esp_err_t platform_tab5_clock_set(uint32_t unix_seconds)
+{
+    platform_tab5_datetime_t date;
+    if (!platform_tab5_datetime_from_unix(unix_seconds, &date)) return ESP_ERR_INVALID_ARG;
+    esp_err_t result = ESP_OK;
+    portENTER_CRITICAL(&s_snapshot_lock);
+    if (!s_snapshot.rtc_present) result = ESP_ERR_INVALID_STATE;
+    else if (s_clock_pending) result = ESP_ERR_NOT_FINISHED;
+    else {
+        s_clock_requested = unix_seconds;
+        s_clock_pending = true;
+    }
+    portEXIT_CRITICAL(&s_snapshot_lock);
     return result;
 }

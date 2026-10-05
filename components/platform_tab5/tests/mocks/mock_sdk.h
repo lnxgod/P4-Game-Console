@@ -10,6 +10,7 @@ typedef int esp_err_t;
 #define ESP_ERR_INVALID_STATE 0x103
 #define ESP_ERR_NOT_SUPPORTED 0x106
 #define ESP_ERR_TIMEOUT 0x107
+#define ESP_ERR_INVALID_RESPONSE 0x108
 const char *esp_err_to_name(int value);
 void mock_log(const char *tag, const char *format, ...);
 #define ESP_LOGI mock_log
@@ -58,3 +59,5 @@ typedef struct {int dev_addr,scl_speed_hz,control_phase_bytes,lcd_cmd_bits,lcd_p
 esp_err_t esp_lcd_panel_io_del(esp_lcd_panel_io_handle_t);
 esp_err_t esp_lcd_new_panel_io_i2c(i2c_master_bus_handle_t,const esp_lcd_panel_io_i2c_config_t *,esp_lcd_panel_io_handle_t *);
 esp_err_t esp_lcd_panel_io_rx_param(esp_lcd_panel_io_handle_t,int,void *,size_t);
+
+esp_err_t i2c_master_transmit(i2c_master_dev_handle_t,const uint8_t *,size_t,int);

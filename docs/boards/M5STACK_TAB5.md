@@ -7,15 +7,18 @@ A (ST7121) and B (ST7123) have exact app readback, mounted SD, launcher and
 runtime-health evidence. The operator confirmed display/touch and A startup
 sound plus Doom music/effects on the speaker-repair image. The new sensor
 service communicates with INA226, BMI270 and RX8130CE on both units; pack
-voltage and clock-setting limitations are recorded separately. A boot is not
+voltage limitations are recorded separately. Both clocks now have verified UTC
+sync and warm-restart retention. A boot is not
 full gameplay, sound-quality or sustained-scroll acceptance.
 
 Both units are ESP32-P4 v1.3 with 16 MiB flash and 32 MiB PSRAM.
 Global `flash_authorized` stays false; only hash-bound exact-unit installs apply.
-Current Control Panel installs are bound by
-`hardware/evidence/tab5-console-os-20261004-control-panel-connections-authorization.json`.
-Readback, boot, library and remaining acceptance details are in
-`hardware/evidence/tab5-console-os-20261004-control-panel-testing.json`.
+Current Control Panel and RTC installs are bound by
+`hardware/evidence/tab5-console-os-20261004-clock-authorization.json`.
+Readback, boot and UTC clock evidence are in
+`hardware/evidence/tab5-console-os-20261004-clock-testing.json`; the preceding
+`hardware/evidence/tab5-console-os-20261004-control-panel-testing.json` records
+library curation and Control Panel acceptance limits.
 The installer verifies that its
 `usb_host_enabled` selection (false for earlier authorizations) matches the image.
 
@@ -129,11 +132,13 @@ alone does not establish that a battery is attached.
 
 Sensors initializes Bosch's pinned 8192-byte BMI270 configuration, verifies
 identity and settings, and publishes acceleration, rotation and die temperature
-four times per second. It preserves the RTC validity flags; B's unset clock is
-reported as needing setting. A's readable clock held a historical date, so
-neither unit currently has confirmed accurate wall time. Clock setting and
-battery capacity calibration remain follow-ups. Motion data do not rotate the
-screen or alter touch calibration.
+four times per second. It preserves invalid RTC status until an explicit,
+verified clock setting. USB UTC sync corrected A's historical date and B's
+invalid clock. Both units retained the time through a captured warm restart;
+subsequent read-only samples advanced and stayed within one second of the Mac.
+Full power-off retention, long-term clock accuracy and battery capacity
+calibration remain follow-ups. Motion data do not rotate the screen or alter
+touch calibration.
 
 The service owns device handles on the existing shared bus and initializes
 asynchronously after the launcher. No game owns these devices. Telemetry has a
@@ -151,8 +156,8 @@ returning but retaining its WAD handle during cleanup.
 - C6 Wi-Fi/Bluetooth, wireless multiplayer and BLE controllers/dice.
 - USB-A host power/HID and USB Drive/MSC mode.
 - Charger/rail management, microphone, camera and expansion ports.
-- Battery capacity calibration and clock setting; telemetry and sensor reads
-  are implemented.
+- Battery capacity calibration; telemetry, sensor reads and explicit USB UTC
+  clock setting are implemented.
 
 The multiplayer core is shared; native USB supplies its wired relay channel.
 Physical multiplayer acceptance remains pending. Content transfer uses the
@@ -161,6 +166,24 @@ It does not expose a writable disk to the Mac. Do not remove a card while the
 console is running or saving. Firmware binaries, WADs, generated SD content and
 pre-install backups remain local and ignored by Git.
 
+
+## Set the device clock
+
+With the launcher running, use the existing transfer tool and an explicit port:
+
+```sh
+python scripts/p4-transfer.py clock --port /dev/cu.usbmodem1101
+python scripts/p4-transfer.py clock --sync --port /dev/cu.usbmodem1101
+```
+
+The first command only reads status. `--sync` uses the Mac's current UTC time,
+queues work on the board-owned sensor task, and reports success only after the
+RTC calendar reads back within two seconds of the Mac. The UI labels the clock
+as UTC. No time is invented at boot; an invalid clock remains visibly invalid
+until a successful setting. Use a fresh explicit sync after a reported write
+failure. Native-USB warm-restart retention is verified on A and B; full
+power-loss retention is separate acceptance. Read-only status waits for the
+asynchronous sensor probe before reporting presence or a real probe error.
 
 ## Load games through the connected USB cable
 

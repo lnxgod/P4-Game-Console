@@ -55,3 +55,56 @@ void platform_tab5_decode_motion(const uint8_t raw[12], int32_t acc[3], int32_t 
         gyro[i] = (int32_t)((int64_t)g * 2000000 / 32768); /* +/-2000 deg/s */
     }
 }
+
+/* The RX8130 calendar represents 2000..2099, all within unsigned Unix time. */
+static unsigned month_days(unsigned year, unsigned month)
+{
+    static const uint8_t days[] = {31,28,31,30,31,30,31,31,30,31,30,31};
+    return days[month - 1U] + (month == 2U && year % 4U == 0U ? 1U : 0U);
+}
+bool platform_tab5_datetime_to_unix(const platform_tab5_datetime_t *d, uint32_t *out)
+{
+    if (!d || !out || d->year < 2000U || d->year > 2099U ||
+        d->month < 1U || d->month > 12U || d->day < 1U ||
+        d->day > month_days(d->year, d->month) ||
+        d->hour > 23U || d->minute > 59U || d->second > 59U) return false;
+    uint32_t days = 0;
+    for (unsigned y = 2000U; y < d->year; ++y) days += y % 4U == 0U ? 366U : 365U;
+    for (unsigned m = 1U; m < d->month; ++m) days += month_days(d->year, m);
+    days += (uint32_t)d->day - 1U;
+    *out = UINT32_C(946684800) + days * 86400U +
+        (uint32_t)d->hour * 3600U + (uint32_t)d->minute * 60U + d->second;
+    return true;
+}
+bool platform_tab5_datetime_from_unix(uint32_t seconds, platform_tab5_datetime_t *out)
+{
+    if (!out || seconds < UINT32_C(946684800) || seconds > UINT32_C(4102444799)) return false;
+    uint32_t elapsed = seconds - UINT32_C(946684800);
+    uint32_t days = elapsed / 86400U;
+    platform_tab5_datetime_t d = {.year=2000U,.month=1U};
+    while (days >= (d.year % 4U == 0U ? 366U : 365U)) {
+        days -= d.year % 4U == 0U ? 366U : 365U; ++d.year;
+    }
+    while (days >= month_days(d.year, d.month)) {
+        days -= month_days(d.year, d.month); ++d.month;
+    }
+    d.day = (uint8_t)(days + 1U);
+    d.hour = (uint8_t)(elapsed % 86400U / 3600U);
+    d.minute = (uint8_t)(elapsed % 3600U / 60U);
+    d.second = (uint8_t)(elapsed % 60U);
+    *out = d;
+    return true;
+}
+static uint8_t to_bcd(unsigned value)
+{
+    return (uint8_t)((value / 10U << 4U) | (value % 10U));
+}
+bool platform_tab5_encode_rtc(uint32_t seconds, uint8_t r[7])
+{
+    platform_tab5_datetime_t d;
+    if (!r || !platform_tab5_datetime_from_unix(seconds, &d)) return false;
+    r[0]=to_bcd(d.second); r[1]=to_bcd(d.minute); r[2]=to_bcd(d.hour);
+    r[3]=(uint8_t)(1U << ((seconds / 86400U + 4U) % 7U)); /* Sunday bit 0. */
+    r[4]=to_bcd(d.day); r[5]=to_bcd(d.month); r[6]=to_bcd(d.year - 2000U);
+    return true;
+}

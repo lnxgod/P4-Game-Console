@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import argparse
+import json
+from datetime import datetime, timezone
 from contextlib import nullcontext
 import importlib.util
 import re
@@ -738,11 +740,85 @@ def push_bundle(args: argparse.Namespace) -> None:
     print(f"P4_H1 BUNDLE_PASS files={len(entries)} port={port}")
 
 
+def make_clock_request(command: int, nonce: int, seconds: int = 0) -> bytes:
+    if (command not in (1, 2) or not 0 < nonce <= 0xFFFFFFFF or
+            (command == 1 and seconds != 0) or
+            (command == 2 and not 946684800 <= seconds <= 4102444799)):
+        raise TransferError("invalid clock request")
+    data = struct.pack("<4sBBBBII", b"P4K1", 1, command, 0, 0, nonce, seconds)
+    return data + struct.pack("<I", crc32(data))
+
+
+def parse_clock_response(data: bytes, command: int, nonce: int) -> dict:
+    if (len(data) != 28 or data[:4] != b"P4L1" or data[4] != 1 or
+            data[5] != command or data[6] > 4 or data[7] & ~7 or
+            struct.unpack_from("<I", data, 8)[0] != nonce or any(data[20:24]) or
+            struct.unpack_from("<I", data, 24)[0] != crc32(data[:24])):
+        raise TransferError("invalid or mismatched clock response")
+    seconds, error = struct.unpack_from("<Ii", data, 12)
+    valid = bool(data[7] & 2)
+    if valid and not 946684800 <= seconds <= 4102444799:
+        raise TransferError("invalid RTC calendar in response")
+    return {"result_code": data[6], "present": bool(data[7] & 1), "valid": valid,
+            "pending": bool(data[7] & 4), "unix_seconds": seconds,
+            "utc": datetime.fromtimestamp(seconds, timezone.utc).isoformat() if valid else None,
+            "error": error}
+
+
+def clock_command(args: argparse.Namespace) -> None:
+    port = args.port or detect_port()
+    nonce = secrets.randbits(32) or 1
+    with open_port(port) as connection:
+        reader = WireReader(connection)
+        status_request = make_clock_request(1, nonce)
+        response = None
+        for attempt in range(30):
+            write_all(connection, status_request)
+            try:
+                data = reader.frame(b"P4L1", 28, 1.0)
+            except TransferError:
+                continue  # Only read-only status is retried across startup.
+            response = parse_clock_response(data, 1, nonce)
+            # USB becomes ready slightly before the asynchronous RTC probe.
+            # Wait for presence or a real probe error for read-only status too.
+            if response["present"] or (not args.sync and response["error"]):
+                break
+            time.sleep(0.1)
+        if response is None:
+            raise TransferError("clock service did not become ready")
+        if args.sync:
+            if not response["present"] or response["pending"]:
+                raise TransferError("RTC is unavailable or already being set")
+            requested = int(time.time())
+            write_all(connection, make_clock_request(2, nonce, requested))
+            response = parse_clock_response(reader.frame(b"P4L1", 28, 3.0), 2, nonce)
+            if response["result_code"]:
+                raise TransferError(f"RTC rejected sync: {response}")
+            for _ in range(40):
+                time.sleep(0.1)
+                write_all(connection, status_request)
+                response = parse_clock_response(reader.frame(b"P4L1", 28, 1.0), 1, nonce)
+                if not response["pending"]:
+                    break
+            drift = int(time.time()) - response["unix_seconds"]
+            if response["pending"] or not response["valid"] or response["error"] or abs(drift) > 2:
+                raise TransferError(f"RTC sync/readback did not verify: {response}; drift={drift}")
+            response.update(result="clock-sync-verified", requested_unix=requested,
+                            host_minus_rtc_seconds=drift)
+        else:
+            response["result"] = "clock-status"
+        response["port"] = port
+        print(json.dumps(response, sort_keys=True))
+
+
 def parser() -> argparse.ArgumentParser:
     result = argparse.ArgumentParser(
         description="Push or pull verified files through the P4 Console OS H1 port."
     )
     subparsers = result.add_subparsers(dest="command", required=True)
+    clock_parser = subparsers.add_parser("clock", help="read RTC status or sync UTC from this computer")
+    clock_parser.add_argument("--port")
+    clock_parser.add_argument("--sync", action="store_true", help="set UTC and verify the hardware readback")
     remove_parser = subparsers.add_parser("remove", help="remove only game files matching exact local copies; preserves saves")
     remove_parser.add_argument("input", nargs="+", type=Path)
     remove_parser.add_argument("--port")
@@ -788,7 +864,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "push" and args.file_class is None:
         args.file_class = "p4g" if args.input.suffix.lower() == ".p4g" else "exchange"
     try:
-        if args.command == "push":
+        if args.command == "clock":
+            clock_command(args)
+        elif args.command == "push":
             push(args)
         elif args.command == "remove":
             remove_files(args)

@@ -92,7 +92,7 @@ h1-usb-drive-control-host:
 	cmake --build build-host/p4_usb_content_transfer
 	ctest --test-dir build-host/p4_usb_content_transfer --output-on-failure
 	python3 -m unittest scripts/tests/test-p4-transfer-usb-drive.py
-	python3 -m unittest scripts/tests/test-p4-transfer-games.py scripts/tests/test-p4-usb-content-wire.py
+	python3 -m unittest scripts/tests/test-p4-transfer-games.py scripts/tests/test-p4-usb-content-wire.py scripts/tests/test-p4-clock.py
 
 doom-touch-host:
 	cmake -S components/doom_touch_input -B build-host/doom_touch_input -G Ninja
