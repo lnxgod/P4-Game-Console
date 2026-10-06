@@ -3,13 +3,17 @@
 M5Stack Tab5 is the permanent primary target. `make console-os-idf` aliases
 `make console-os-tab5-idf`; Elecrow now requires `make console-os-elecrow-idf`.
 
-The isolated **0.53** [Game Changers AI arena candidate](../GAME_CHANGERS_AI_DOOM.md)
-adds a special Multiplayer selection, four-slot local Wi-Fi Doom adapter,
-verified SD-backed Freedoom/Pure Hell/DWANGO 5 reads, host map selection,
-in-game majority voting and connected idle breaks. It is host/build-tested;
-no installation or four-console hardware acceptance is recorded for it.
+The current arena successor is **0.56**, based on the native 0.55 launch.
+Both A/ST7121 and B/ST7123 have exact application readback, launcher/health
+checks, eleven verified arena-content files each, and healthy post-transfer
+warm boots in [the installation record](../../test-runs/2026-10-06-doom-arena-install.json).
+The [Game Changers AI mode](../GAME_CHANGERS_AI_DOOM.md) adds four-slot local
+Wi-Fi play, verified SD-backed Freedoom/Pure Hell/DWANGO 5 reads, host map
+selection, in-game voting and connected idle breaks. Four-console gameplay
+and device cadence remain pending. The existing 0.55 Red Dragon payload is
+unchanged and still registers on both units.
 
-The current Tab5 presentation release is **0.52**. Both A/ST7121 and B/ST7123
+The earlier Tab5 presentation release was **0.52**. Both A/ST7121 and B/ST7123
 have exact 4,508,176-byte application readback, launcher boot, post-service
 health, and eleven verified presentation-cartridge uploads each in
 [the installation evidence](../../hardware/evidence/tab5-0.52-game-presentation-testing.json).

@@ -1,0 +1,490 @@
+{
+  "schema": 1,
+  "title": "Tab5 0.56 Game Changers AI arena installation",
+  "created_at_utc": "2026-10-06T07:12:43.727622+00:00",
+  "status": "PASS guarded app readback, boot, 11-file content installation and post-transfer warm boot on both connected Tab5 units",
+  "source_commit": "93b2f4cba35430210dc26089b10b42e67459ffad",
+  "base_release": "0.55 / 132a89d4b10486ca851ffb3c9c1f81d4bf3e3a31",
+  "authorization": {
+    "path": "hardware/evidence/tab5-0.56-arena-install-authorization.json",
+    "sha256": "bd96e1a907d0307f82670c287c62939553634a973c2a1e50646efa3b0d38c48c"
+  },
+  "app": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4317712,
+    "sha256": "98dae268cfbe1bfedd6721394eee5c16abd1cc4cacdf99a1415aa807a4f0e36e"
+  },
+  "update": {
+    "path": "apps/console_os/build-tab5/P4UPDATE.P4U",
+    "sha256": "392c2174ec38c98832d1bc7409d3fe432984e05a1f01be01a80932cc92ef7cff"
+  },
+  "paired_protected_game": {
+    "file": "apps/console_os/build-tab5/sd-card/GAMES/LORD.P4G",
+    "sha256": "bc737068ddf41e651132e7003f5cf60d59bb85f01d8421a5859d2f33996fb46e",
+    "payload_sha256": "5a2f96266b305ad7abc549aeaa838b3d21b9cfd666c2b4c2f775aa5cd7d373ff",
+    "save_identity_unchanged": true
+  },
+  "content": {
+    "version": "pure-hell-0.5-dwango5-freedoom-0.13.0",
+    "default_map": 1,
+    "rotation": [
+      1,
+      2
+    ],
+    "max_players": 4,
+    "identity_encoding": "ASCII P4-GCA-ARENAS-1 NUL then binary SHA-256 of IWAD, Pure Hell PWAD, DWANGO5 PWAD in that order",
+    "content_sha256": "6fbdec7a25f87088884382706fbe2c73dba284c3139ee04f1113d7fb7bba3960",
+    "source": "User-supplied Pure-Hell-v0.5-Shotguns-Rockets-Metal.zip, 218033 bytes, SHA-256 c8990cbfbc6c08a693151309452dffe6f0d4e4f463f0312e8beb444c69456271",
+    "notice": "Pure Hell v0.5 and its unchanged music/credits are published with the owner's explicit authorization. External Freedoom/DWANGO inputs stay ignored; preserve all notices.",
+    "files": [
+      {
+        "symbol": "BASE",
+        "usb_kind": 5,
+        "directory": "",
+        "filename": "FREEDOOM2.WAD",
+        "local_path": "local-data/doom/freedoom2.wad",
+        "command": "freedoom2",
+        "size_bytes": 28787748,
+        "sha256": "a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b"
+      },
+      {
+        "symbol": "PWAD",
+        "usb_kind": 6,
+        "directory": "",
+        "filename": "PUREHELL.WAD",
+        "local_path": "game-data/pure-hell/v0.5/PUREHELL.WAD",
+        "command": "pure-hell",
+        "size_bytes": 875026,
+        "sha256": "b0e8ab211fe263bdf263b219cd0f3584cac0071ec1cf3ce73defa843f00a3663",
+        "repository_asset": true
+      },
+      {
+        "symbol": "DWANGO",
+        "usb_kind": 13,
+        "directory": "",
+        "filename": "DWANGO5.WAD",
+        "local_path": "local-data/doom/arena-inbox/dwango5/DWANGO5.WAD",
+        "command": "dwango5",
+        "size_bytes": 2109396,
+        "sha256": "2b7658f126321fc2ccf953dbbe8d585b4162350080b9715b46fc617d32cdb13a"
+      },
+      {
+        "symbol": "COPYING",
+        "usb_kind": 7,
+        "directory": "/GCADOOM",
+        "filename": "Freedoom-0.13.0-COPYING.txt",
+        "local_path": "game-data/pure-hell/v0.5/Freedoom-0.13.0-COPYING.txt",
+        "command": "arena-copying",
+        "size_bytes": 1644,
+        "sha256": "7c62f2c520769c798774f416637eec4921e5f0aafdac1245ae7c8a8cf65fe102",
+        "repository_asset": true
+      },
+      {
+        "symbol": "CREDITS_MUSIC",
+        "usb_kind": 8,
+        "directory": "/GCADOOM",
+        "filename": "Freedoom-0.13.0-CREDITS-MUSIC.txt",
+        "local_path": "game-data/pure-hell/v0.5/Freedoom-0.13.0-CREDITS-MUSIC.txt",
+        "command": "arena-credits-music",
+        "size_bytes": 9388,
+        "sha256": "2bb77677bbc4e587bba44ccb6514ee0f5397c7bb8ae9580b9188d3d6a57c0a31",
+        "repository_asset": true
+      },
+      {
+        "symbol": "CREDITS",
+        "usb_kind": 9,
+        "directory": "/GCADOOM",
+        "filename": "Freedoom-0.13.0-CREDITS.txt",
+        "local_path": "game-data/pure-hell/v0.5/Freedoom-0.13.0-CREDITS.txt",
+        "command": "arena-credits",
+        "size_bytes": 15872,
+        "sha256": "72364333d295c598d75ef9553d3b3661ad0b60e27271c87b7637c74b2f46918a",
+        "repository_asset": true
+      },
+      {
+        "symbol": "README",
+        "usb_kind": 10,
+        "directory": "/GCADOOM",
+        "filename": "README.txt",
+        "local_path": "game-data/pure-hell/v0.5/README.txt",
+        "command": "arena-readme",
+        "size_bytes": 4220,
+        "sha256": "e10bcbce5d602672fd7dcac442861d9675db902c3669fb7b9510062def04832d",
+        "repository_asset": true
+      },
+      {
+        "symbol": "MANIFEST",
+        "usb_kind": 11,
+        "directory": "/GCADOOM",
+        "filename": "build-manifest.json",
+        "local_path": "game-data/pure-hell/v0.5/build-manifest.json",
+        "command": "arena-manifest",
+        "size_bytes": 2823,
+        "sha256": "90b9629971c5af62a7aa2406727c2153ebaca567a3b0fbcd002e8115f8c8c721",
+        "repository_asset": true
+      },
+      {
+        "symbol": "MIDI",
+        "usb_kind": 12,
+        "directory": "/GCADOOM",
+        "filename": "Beasts-of-Horizon.mid",
+        "local_path": "game-data/pure-hell/v0.5/Beasts-of-Horizon.mid",
+        "command": "arena-midi",
+        "size_bytes": 43798,
+        "sha256": "01c7618d0e03224156f29cdb07895ca224f0a30ba41fe67595fffadf0454fa89",
+        "repository_asset": true
+      },
+      {
+        "symbol": "DWANGO_NOTICE",
+        "usb_kind": 14,
+        "directory": "/GCADOOM",
+        "filename": "DWANGO5.TXT",
+        "local_path": "local-data/doom/arena-inbox/dwango5/DWANGO5.TXT",
+        "command": "dwango5-notice",
+        "size_bytes": 2234,
+        "sha256": "bfb0a573af27da78ac853deedd7754c73e53f472798f5f129500eedbef856cf1"
+      },
+      {
+        "symbol": "DWANGO_DIZ",
+        "usb_kind": 15,
+        "directory": "/GCADOOM",
+        "filename": "FILE_ID.DIZ",
+        "local_path": "local-data/doom/arena-inbox/dwango5/FILE_ID.DIZ",
+        "command": "dwango5-diz",
+        "size_bytes": 210,
+        "sha256": "faaa4a0867d05ea49114b9e05ddad783062b9ddba64f8716d5f2556d63aac485"
+      }
+    ],
+    "selections": [
+      {
+        "id": 1,
+        "pack": "PUREHELL",
+        "map": 1,
+        "title": "Pure Hell Shotguns"
+      },
+      {
+        "id": 2,
+        "pack": "PUREHELL",
+        "map": 2,
+        "title": "Pure Hell Rockets"
+      },
+      {
+        "id": 3,
+        "pack": "DWANGO5",
+        "map": 1,
+        "title": "DWANGO 5 MAP01"
+      },
+      {
+        "id": 4,
+        "pack": "DWANGO5",
+        "map": 2,
+        "title": "DWANGO 5 MAP02"
+      },
+      {
+        "id": 5,
+        "pack": "DWANGO5",
+        "map": 3,
+        "title": "DWANGO 5 MAP03"
+      },
+      {
+        "id": 6,
+        "pack": "DWANGO5",
+        "map": 4,
+        "title": "DWANGO 5 MAP04"
+      },
+      {
+        "id": 7,
+        "pack": "DWANGO5",
+        "map": 5,
+        "title": "DWANGO 5 MAP05"
+      },
+      {
+        "id": 8,
+        "pack": "DWANGO5",
+        "map": 6,
+        "title": "DWANGO 5 MAP06"
+      },
+      {
+        "id": 9,
+        "pack": "DWANGO5",
+        "map": 7,
+        "title": "DWANGO 5 MAP07"
+      },
+      {
+        "id": 10,
+        "pack": "DWANGO5",
+        "map": 8,
+        "title": "DWANGO 5 MAP08"
+      },
+      {
+        "id": 11,
+        "pack": "DWANGO5",
+        "map": 9,
+        "title": "DWANGO 5 MAP09"
+      },
+      {
+        "id": 12,
+        "pack": "DWANGO5",
+        "map": 10,
+        "title": "DWANGO 5 MAP10"
+      },
+      {
+        "id": 13,
+        "pack": "DWANGO5",
+        "map": 11,
+        "title": "DWANGO 5 MAP11"
+      },
+      {
+        "id": 14,
+        "pack": "DWANGO5",
+        "map": 12,
+        "title": "DWANGO 5 MAP12"
+      },
+      {
+        "id": 15,
+        "pack": "DWANGO5",
+        "map": 13,
+        "title": "DWANGO 5 MAP13"
+      },
+      {
+        "id": 16,
+        "pack": "DWANGO5",
+        "map": 14,
+        "title": "DWANGO 5 MAP14"
+      },
+      {
+        "id": 17,
+        "pack": "DWANGO5",
+        "map": 15,
+        "title": "DWANGO 5 MAP15"
+      },
+      {
+        "id": 18,
+        "pack": "DWANGO5",
+        "map": 16,
+        "title": "DWANGO 5 MAP16"
+      },
+      {
+        "id": 19,
+        "pack": "DWANGO5",
+        "map": 17,
+        "title": "DWANGO 5 MAP17"
+      },
+      {
+        "id": 20,
+        "pack": "DWANGO5",
+        "map": 18,
+        "title": "DWANGO 5 MAP18"
+      },
+      {
+        "id": 21,
+        "pack": "DWANGO5",
+        "map": 19,
+        "title": "DWANGO 5 MAP19"
+      },
+      {
+        "id": 22,
+        "pack": "DWANGO5",
+        "map": 20,
+        "title": "DWANGO 5 MAP20"
+      },
+      {
+        "id": 23,
+        "pack": "DWANGO5",
+        "map": 21,
+        "title": "DWANGO 5 MAP21"
+      },
+      {
+        "id": 24,
+        "pack": "DWANGO5",
+        "map": 22,
+        "title": "DWANGO 5 MAP22"
+      },
+      {
+        "id": 25,
+        "pack": "DWANGO5",
+        "map": 23,
+        "title": "DWANGO 5 MAP23"
+      },
+      {
+        "id": 26,
+        "pack": "DWANGO5",
+        "map": 24,
+        "title": "DWANGO 5 MAP24"
+      }
+    ],
+    "dwango5_source": {
+      "url": "https://www.doom2.net/doom2/wads/DWANGO5.ZIP",
+      "archive_size_bytes": 716652,
+      "archive_sha256": "f6cc5b7adcb38f9e1bcee979668f155f2d8815d6218a694869f81c27386a407c",
+      "notes": "Unmodified local input from the community deathmatch archive. Preserve DWANGO5.TXT and FILE_ID.DIZ. No redistribution by this repository. In-memory lump namespace isolates legacy graphics/sounds; maps and map music are selected explicitly."
+    }
+  },
+  "initial_content_timeout": {
+    "unit": "A",
+    "path": "build-host/game-changers-ai/0.56-content-A-attempt1.log",
+    "sha256": "d1144ee89899406a42ac7278cc86973ebb9495a3747c94c0bdae646c192f5025",
+    "outcome": "ACK wait timed out before activation; retry completed with all 11 file hashes verified. Root cause not determined."
+  },
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "panel": "ST7121",
+      "flash_bytes": 16777216,
+      "silicon": "v1.3",
+      "write_offsets": [
+        "0x20000"
+      ],
+      "app_readback_verified": true,
+      "launcher_ready": true,
+      "ten_second_health_gate": true,
+      "install_receipt": {
+        "path": "hardware/backups/tab5-a-install-po8t_oga/receipt.json",
+        "sha256": "5ec53163a2201853e2dab532bb9fa17f144f1b8285a94cbded98bd25ee3e0f4f"
+      },
+      "install_runtime_log": {
+        "path": "hardware/backups/tab5-a-install-po8t_oga/runtime.log",
+        "sha256": "f3f3570a8aafc9573edbbf6d54bfacda666e77c20ae33c0139357fecdfbf5edb"
+      },
+      "content_files_hash_verified": 11,
+      "content_transfer": {
+        "path": "build-host/game-changers-ai/0.56-content-A.log",
+        "sha256": "4abaaa320b76bd622437a24e49db85a8db5b4b3f03bda2225138acc99937a3c5"
+      },
+      "post_content_warm_boot": {
+        "unit": "A",
+        "port": "/dev/cu.usbmodem2101",
+        "kind": "native-usb-port-open-warm-boot",
+        "cycles": [
+          {
+            "cycle": 1,
+            "passed": true,
+            "seconds": 21.43,
+            "log": "build-host/game-changers-ai/0.56-post-content-A/cycle-1.log",
+            "sha256": "d5f44dc63b8f2c8922db4ab7e4287f795975a235eaac24e5e6a9cf01f702ae09",
+            "i2c_retries": 0,
+            "capture_error": null
+          }
+        ]
+      }
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "panel": "ST7123",
+      "flash_bytes": 16777216,
+      "silicon": "v1.3",
+      "write_offsets": [
+        "0x20000"
+      ],
+      "app_readback_verified": true,
+      "launcher_ready": true,
+      "ten_second_health_gate": true,
+      "install_receipt": {
+        "path": "hardware/backups/tab5-b-install-g8o1mbw0/receipt.json",
+        "sha256": "14c3e694b9c1d07edb651c4ba2499fe59840c31ee6e5451d3230327efb93c68f"
+      },
+      "install_runtime_log": {
+        "path": "hardware/backups/tab5-b-install-g8o1mbw0/runtime.log",
+        "sha256": "4920c6459292c695bbf76642f2b5db4e5f14e3d846c39d8149e71a12f566d72c"
+      },
+      "content_files_hash_verified": 11,
+      "content_transfer": {
+        "path": "build-host/game-changers-ai/0.56-content-B.log",
+        "sha256": "1905e3f878b6736f5e8fb81a7a41779d47b1a728a944c078ec95dd4a6bdaa2bb"
+      },
+      "post_content_warm_boot": {
+        "unit": "B",
+        "port": "/dev/cu.usbmodem1101",
+        "kind": "native-usb-port-open-warm-boot",
+        "cycles": [
+          {
+            "cycle": 1,
+            "passed": true,
+            "seconds": 19.688,
+            "log": "build-host/game-changers-ai/0.56-post-content-B/cycle-1.log",
+            "sha256": "e8610ce7dd7f3b55a7cfe862d2623af2513c11908e14ceceb72c486c27fa6973",
+            "i2c_retries": 0,
+            "capture_error": null
+          }
+        ]
+      }
+    }
+  },
+  "host_evidence": {
+    "0.56-host.log": {
+      "path": "build-host/game-changers-ai/0.56-host.log",
+      "sha256": "26ab7c17ab791dc5fe96ab379a1db85c3045bd60600f67c66c7f3cc3c1162c4a"
+    },
+    "0.56-ui-storage.log": {
+      "path": "build-host/game-changers-ai/0.56-ui-storage.log",
+      "sha256": "6af052e39237d865970c99d69fe5b2802d9918934deec5da6ac283a3ed895211"
+    },
+    "0.56-usb-host.log": {
+      "path": "build-host/game-changers-ai/0.56-usb-host.log",
+      "sha256": "47e456af3b9f5878d4bd840d3e7e4eb8fb71e75a99d084343b20e536151be919"
+    },
+    "0.56-engine-smoke.log": {
+      "path": "build-host/game-changers-ai/0.56-engine-smoke.log",
+      "sha256": "323529a220be463a5f054bd1d05221099eb52fcdec8454494bdbd474bd30eeaf"
+    },
+    "0.56-engine-build.log": {
+      "path": "build-host/game-changers-ai/0.56-engine-build.log",
+      "sha256": "e79cd0f52d72248554aed5751b0764b1a99d3f8126b87df75dace604d82d851f"
+    },
+    "0.56-ordinary-doom-smoke.log": {
+      "path": "build-host/game-changers-ai/0.56-ordinary-doom-smoke.log",
+      "sha256": "93f2dc3079d8433c1f2e364820e4d6895c97435c6d71fb3efb1986a14620bf11"
+    },
+    "0.56-ordinary-freedoom-smoke.log": {
+      "path": "build-host/game-changers-ai/0.56-ordinary-freedoom-smoke.log",
+      "sha256": "a57a824e55f891ac5038360bd765e4700be3aca32ed02cf60e4b322fce0f3fb3"
+    },
+    "0.56-clean-fetch.json": {
+      "path": "build-host/game-changers-ai/0.56-clean-fetch.json",
+      "sha256": "043eb987412c2f12dc3767165aa7ef12ccbdeab91bee83d8d3c744bf96da709e"
+    },
+    "0.56-github-reproduction.log": {
+      "path": "build-host/game-changers-ai/0.56-github-reproduction.log",
+      "sha256": "c3de88ed0b316640b9db20c95d33691190fbe67814fce6d6ebc29a72bc40c7ba"
+    },
+    "0.56-r2-host.log": {
+      "path": "build-host/game-changers-ai/0.56-r2-host.log",
+      "sha256": "24cc58d388923684ba06cb3fd62b0a710cb33054ac966a812db3d57dba259113"
+    },
+    "0.56-r2-tab5-build.log": {
+      "path": "build-host/game-changers-ai/0.56-r2-tab5-build.log",
+      "sha256": "0a0e252ea65c6e04c2f59c1a502b99756c74ca63bc25608df62057fdce122ef3"
+    }
+  },
+  "tests": [
+    "7 Doom multiplayer/session/arena/lockstep tests, including four real adapter instances over lossy duplicated sockets",
+    "7 shell tests",
+    "6 storage/VFS/cache tests",
+    "3 native USB service tests and 22 Python transfer/clock tests",
+    "5 fetch conflict/archive/member/symlink tests",
+    "2 linked PSRAM placement tests",
+    "Full ASAN Doom engine arena pass including all 26 selections, idle/fire/break/return, voting and rotation",
+    "Separate ordinary Doom and Freedoom ASAN smoke: 35 frames each",
+    "Fresh-clone official archive downloads, all 11 pinned files verified, corrupt existing file preserved; repeated successfully from a clean sparse clone of the published GitHub branch",
+    "Pinned 205-file engine patch and native-only source audits"
+  ],
+  "rejected_first_candidate": {
+    "app_sha256": "e1391ae4aae59e6fa59c58de96a9633f22079242c4a459209ceb14fa8dd35f94",
+    "unit": "A",
+    "readback_verified": true,
+    "boot_passed": false,
+    "reason": "ESP-IDF startup could not reserve 64 KiB internal/DMA pool; arena command history and three stream caches occupied internal BSS.",
+    "correction": "Move task-only history and caches to external BSS; retain internal storage/DMA staging and the full 64 KiB reserve. Build verifier now rejects internal placements.",
+    "receipt": {
+      "path": "hardware/backups/tab5-a-install-1fnymmzi/receipt.json",
+      "sha256": "76fe0a15818e980cf739e1d755cdb86fb0f840c3efc29ca12f0fd80f57096d5a"
+    },
+    "repaired_using_exact_predecessor_guard": true
+  },
+  "limits": [
+    "True late admission is not implemented; disconnected consoles join before Start. Connected players use the accepted 15-second idle/score-reset break and Use-to-return fallback.",
+    "Four-console radio play, in-game controls/audio and sustained device frame cadence remain pending. Boot/content acceptance is not gameplay acceptance.",
+    "Only the two connected identity-bound Tab5 units were written; no other board authorization was reused.",
+    "External Freedoom/DWANGO WADs and firmware binaries remain outside Git; only the owner-authorized Pure Hell pack is included."
+  ]
+}

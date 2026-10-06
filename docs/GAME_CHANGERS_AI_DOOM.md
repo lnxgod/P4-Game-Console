@@ -185,3 +185,24 @@ The release branch is `codex/doom-arena-release`, based on the native 0.55
 release. The earlier 0.53 receipts remain historical host/build evidence. The prior
 [implementation receipt](../test-runs/2026-10-05-game-changers-ai-doom-implementation.json)
 is historical and predates the supplied PWAD/voting work.
+
+## Installed Tab5 0.56 successor
+
+[The exact installation record](../test-runs/2026-10-06-doom-arena-install.json)
+covers the two connected, separately backed-up Tab5s: A/ST7121 and B/ST7123.
+Both received only the app range at `0x20000`; full readback, launcher startup,
+the ten-second service health gate and post-content warm boot passed. All
+11 content files were activated with matching device readback hashes on each
+unit. Existing games/saves and the paired 0.55 Red Dragon cartridge were retained.
+
+The installed 4,317,712-byte app has SHA-256
+`98dae268cfbe1bfedd6721394eee5c16abd1cc4cacdf99a1415aa807a4f0e36e`.
+The first A candidate failed before app startup because arena state consumed
+internal memory needed for the DMA reserve. Its task-owned history and read
+caches now occupy 23,672 bytes of PSRAM, and the build verifier rejects internal
+placement. The corrected image passed on both units. A's first content transfer
+timed out before activation; its retry completed and every file was verified.
+
+A clean sparse clone of the published GitHub branch also fetched and staged all
+11 files successfully. These are boot, content and reproducibility results;
+physical multiplayer controls/audio and sustained game cadence remain pending.
