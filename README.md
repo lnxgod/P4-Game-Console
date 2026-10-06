@@ -228,3 +228,11 @@ scripts/       Reproducible setup/build/flash/monitor commands
 third_party/   Exact source pins and third-party licensing policy
 .agents/skills Project-scoped Codex workflows learned from verified work
 ```
+
+## Doom multiplayer arenas
+
+Console OS 0.56 adds the Game Changers AI special multiplayer mode with Pure
+Hell’s shotgun/rocket arenas, DWANGO 5 map selection and in-game voting.
+[Setup and pinned downloads](docs/GAME_CHANGERS_AI_DOOM.md) includes a one-command
+verified content fetch. [Pure Hell v0.5](game-data/pure-hell/README.md) is included
+with its music notices; Freedoom and DWANGO 5 are downloaded separately.

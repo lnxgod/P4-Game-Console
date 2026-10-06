@@ -1,9 +1,8 @@
 # Game Changers AI multiplayer arena
 
-M5Stack Tab5 candidate, Console OS **0.53**. This is a special selection inside
+M5Stack Tab5 candidate, Console OS **0.56**. This is a special selection inside
 **Multiplayer**, with no separate launcher tile. Ordinary Doom shareware and
-Chex Quest retain their separate content and two-player adapters. No devices
-have been flashed or hardware-qualified for this candidate.
+Chex Quest retain their separate content and two-player adapters. Installation and physical acceptance are recorded separately below.
 
 ## Playing and choosing arenas
 
@@ -69,9 +68,11 @@ all. Startup exact-hashes every required file, including the notices.
 
 DWANGO 5 was acquired from the [Doom2.net archive](https://www.doom2.net/doom2/wads/DWANGO5.ZIP).
 Its archive digest, original credits and local paths are pinned in
-`third_party/game-data.json`. Downloaded archives, WADs, MIDI and notices remain
-ignored local inputs, absent from Git and firmware binaries. This integration
-does not grant redistribution rights to the compilation or its music.
+`third_party/game-data.json`. Freedoom and DWANGO remain ignored local inputs.
+[Pure Hell v0.5](../game-data/pure-hell/v0.5/PUREHELL.WAD) and its original
+MIDI, notices and build manifest are included with the owner’s authorization.
+No WAD is embedded in firmware. This integration does not grant redistribution
+rights to DWANGO or its music.
 
 The engine loads Freedoom Phase 2 plus both PWADs. It records each admitted
 pack's map/music indices and isolates DWANGO's global lump names in memory.
@@ -94,10 +95,19 @@ reader. Three digest tables and block caches total about **255 KiB**, rather
 than retaining 30 MiB of WAD snapshots. Ordinary Doom/Chex keep their existing
 immutable PSRAM snapshots. USB/content writes remain excluded during play.
 
-Verify and stage a local bundle without touching a device:
+From a fresh clone, fetch the pinned external files and stage the complete
+bundle without touching a device. Downloads and extracted files must pass
+size and SHA-256 checks; conflicting existing files are never overwritten.
+
+- [Freedoom 0.13.0 ZIP](https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0.zip)
+  ([official checksums](https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0-CHECKSUM)); use **freedoom2.wad**.
+- [DWANGO 5 ZIP](https://www.doom2.net/doom2/wads/DWANGO5.ZIP); preserve both notices.
+- [Pure Hell pack in this repository](../game-data/pure-hell/README.md).
+
+Run:
 
 ```sh
-python3 scripts/doom/arena-content.py --check
+python3 scripts/doom/arena-content.py --fetch
 python3 scripts/doom/arena-content.py --stage build-host/game-changers-ai/sd-card
 ```
 
@@ -108,11 +118,12 @@ reboots through the existing service:
 ```sh
 python3 scripts/p4-usb-content.py game-changers-ai \
   local-data/doom/freedoom2.wad \
-  --pack local-data/doom/arena-inbox/Pure-Hell-v0.5 \
+  --pack game-data/pure-hell/v0.5 \
   --dwango local-data/doom/arena-inbox/dwango5 --port /dev/cu.<tab5>
 ```
 
-That device-writing command was **not run** for this candidate.
+Use the guarded Tab5 installation workflow for firmware; this command installs
+content only and requires the matching 0.56 firmware.
 
 ## Synchronization and validation
 
@@ -159,7 +170,7 @@ Reproduce the full engine test with the pinned host compiler/SDK:
 P4_DOOM_ASAN=1 P4_DOOM_ARENA_HOST_TEST=1 scripts/doom/build-host.sh
 P4_DOOM_MAX_FRAMES=100000 build-host/doom/doom-arena-headless \
   -iwad local-data/doom/freedoom2.wad \
-  -file local-data/doom/arena-inbox/Pure-Hell-v0.5/PUREHELL.WAD \
+  -file game-data/pure-hell/v0.5/PUREHELL.WAD \
         local-data/doom/arena-inbox/dwango5/DWANGO5.WAD -warp 1 -skill 3
 ```
 
@@ -170,7 +181,7 @@ Four Tab5s still need discovery/startup, controls, sound, SD latency, memory
 headroom, sustained frame cadence, and loss/recovery checks. A build does not
 qualify the device's 30 FPS release floor.
 
-The isolated branch is `codex/game-changers-ai`. Commit `a07e566` is a captured
-saved-project baseline, not this feature's authored diff. The prior
+The release branch is `codex/doom-arena-release`, based on the native 0.55
+release. The earlier 0.53 receipts remain historical host/build evidence. The prior
 [implementation receipt](../test-runs/2026-10-05-game-changers-ai-doom-implementation.json)
 is historical and predates the supplied PWAD/voting work.

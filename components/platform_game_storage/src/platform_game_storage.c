@@ -205,7 +205,12 @@ static game_storage_content_t s_chex_content = GAME_STORAGE_CONTENT_UNKNOWN;
 enum { ARENA_WAD_COUNT = 3 };
 static FILE *s_arena_file[ARENA_WAD_COUNT];
 static uint8_t *s_arena_hashes[ARENA_WAD_COUNT];
+#if CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
+/* Task-owned stream caches; the storage/DMA staging buffer stays internal. */
+static EXT_RAM_BSS_ATTR p4_verified_reader_t s_arena_reader[ARENA_WAD_COUNT];
+#else
 static p4_verified_reader_t s_arena_reader[ARENA_WAD_COUNT];
+#endif
 static const struct { const char *path; size_t bytes; const char *sha256; }
 s_arena_content[P4_GCA_FILE_COUNT] = {
 #define GCA_STORAGE(kind, symbol, dir, name, size, hash) {"/game-data" dir "/" name, size, hash},

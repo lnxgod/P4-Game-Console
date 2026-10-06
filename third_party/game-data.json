@@ -3,7 +3,16 @@
   "policy": {
     "bytes_in_git": false,
     "bytes_in_firmware": false,
-    "redistribution_by_project": false
+    "redistribution_by_project": false,
+    "repository_asset_exceptions": [
+      "game-data/pure-hell/v0.5/PUREHELL.WAD",
+      "game-data/pure-hell/v0.5/Freedoom-0.13.0-COPYING.txt",
+      "game-data/pure-hell/v0.5/Freedoom-0.13.0-CREDITS-MUSIC.txt",
+      "game-data/pure-hell/v0.5/Freedoom-0.13.0-CREDITS.txt",
+      "game-data/pure-hell/v0.5/README.txt",
+      "game-data/pure-hell/v0.5/build-manifest.json",
+      "game-data/pure-hell/v0.5/Beasts-of-Horizon.mid"
+    ]
   },
   "game_data": [
     {
@@ -128,7 +137,7 @@
     "identity_encoding": "ASCII P4-GCA-ARENAS-1 NUL then binary SHA-256 of IWAD, Pure Hell PWAD, DWANGO5 PWAD in that order",
     "content_sha256": "6fbdec7a25f87088884382706fbe2c73dba284c3139ee04f1113d7fb7bba3960",
     "source": "User-supplied Pure-Hell-v0.5-Shotguns-Rockets-Metal.zip, 218033 bytes, SHA-256 c8990cbfbc6c08a693151309452dffe6f0d4e4f463f0312e8beb444c69456271",
-    "notice": "Local inputs only; retain all provided notices and MIDI. The Pure Hell maps are a new user-authorized reconstruction, not a historical recovered WAD.",
+    "notice": "Pure Hell v0.5 and its unchanged music/credits are published with the owner's explicit authorization. External Freedoom/DWANGO inputs stay ignored; preserve all notices.",
     "files": [
       {
         "symbol": "BASE",
@@ -145,10 +154,11 @@
         "usb_kind": 6,
         "directory": "",
         "filename": "PUREHELL.WAD",
-        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/PUREHELL.WAD",
+        "local_path": "game-data/pure-hell/v0.5/PUREHELL.WAD",
         "command": "pure-hell",
         "size_bytes": 875026,
-        "sha256": "b0e8ab211fe263bdf263b219cd0f3584cac0071ec1cf3ce73defa843f00a3663"
+        "sha256": "b0e8ab211fe263bdf263b219cd0f3584cac0071ec1cf3ce73defa843f00a3663",
+        "repository_asset": true
       },
       {
         "symbol": "DWANGO",
@@ -165,60 +175,66 @@
         "usb_kind": 7,
         "directory": "/GCADOOM",
         "filename": "Freedoom-0.13.0-COPYING.txt",
-        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/Freedoom-0.13.0-COPYING.txt",
+        "local_path": "game-data/pure-hell/v0.5/Freedoom-0.13.0-COPYING.txt",
         "command": "arena-copying",
         "size_bytes": 1644,
-        "sha256": "7c62f2c520769c798774f416637eec4921e5f0aafdac1245ae7c8a8cf65fe102"
+        "sha256": "7c62f2c520769c798774f416637eec4921e5f0aafdac1245ae7c8a8cf65fe102",
+        "repository_asset": true
       },
       {
         "symbol": "CREDITS_MUSIC",
         "usb_kind": 8,
         "directory": "/GCADOOM",
         "filename": "Freedoom-0.13.0-CREDITS-MUSIC.txt",
-        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/Freedoom-0.13.0-CREDITS-MUSIC.txt",
+        "local_path": "game-data/pure-hell/v0.5/Freedoom-0.13.0-CREDITS-MUSIC.txt",
         "command": "arena-credits-music",
         "size_bytes": 9388,
-        "sha256": "2bb77677bbc4e587bba44ccb6514ee0f5397c7bb8ae9580b9188d3d6a57c0a31"
+        "sha256": "2bb77677bbc4e587bba44ccb6514ee0f5397c7bb8ae9580b9188d3d6a57c0a31",
+        "repository_asset": true
       },
       {
         "symbol": "CREDITS",
         "usb_kind": 9,
         "directory": "/GCADOOM",
         "filename": "Freedoom-0.13.0-CREDITS.txt",
-        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/Freedoom-0.13.0-CREDITS.txt",
+        "local_path": "game-data/pure-hell/v0.5/Freedoom-0.13.0-CREDITS.txt",
         "command": "arena-credits",
         "size_bytes": 15872,
-        "sha256": "72364333d295c598d75ef9553d3b3661ad0b60e27271c87b7637c74b2f46918a"
+        "sha256": "72364333d295c598d75ef9553d3b3661ad0b60e27271c87b7637c74b2f46918a",
+        "repository_asset": true
       },
       {
         "symbol": "README",
         "usb_kind": 10,
         "directory": "/GCADOOM",
         "filename": "README.txt",
-        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/README.txt",
+        "local_path": "game-data/pure-hell/v0.5/README.txt",
         "command": "arena-readme",
         "size_bytes": 4220,
-        "sha256": "e10bcbce5d602672fd7dcac442861d9675db902c3669fb7b9510062def04832d"
+        "sha256": "e10bcbce5d602672fd7dcac442861d9675db902c3669fb7b9510062def04832d",
+        "repository_asset": true
       },
       {
         "symbol": "MANIFEST",
         "usb_kind": 11,
         "directory": "/GCADOOM",
         "filename": "build-manifest.json",
-        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/build-manifest.json",
+        "local_path": "game-data/pure-hell/v0.5/build-manifest.json",
         "command": "arena-manifest",
         "size_bytes": 2823,
-        "sha256": "90b9629971c5af62a7aa2406727c2153ebaca567a3b0fbcd002e8115f8c8c721"
+        "sha256": "90b9629971c5af62a7aa2406727c2153ebaca567a3b0fbcd002e8115f8c8c721",
+        "repository_asset": true
       },
       {
         "symbol": "MIDI",
         "usb_kind": 12,
         "directory": "/GCADOOM",
         "filename": "Beasts-of-Horizon.mid",
-        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/Beasts-of-Horizon.mid",
+        "local_path": "game-data/pure-hell/v0.5/Beasts-of-Horizon.mid",
         "command": "arena-midi",
         "size_bytes": 43798,
-        "sha256": "01c7618d0e03224156f29cdb07895ca224f0a30ba41fe67595fffadf0454fa89"
+        "sha256": "01c7618d0e03224156f29cdb07895ca224f0a30ba41fe67595fffadf0454fa89",
+        "repository_asset": true
       },
       {
         "symbol": "DWANGO_NOTICE",

@@ -12,7 +12,19 @@
 #include "freertos/task.h"
 #pragma GCC diagnostic pop
 
-static struct {
+#if defined(ESP_PLATFORM)
+#include "esp_attr.h"
+#include "sdkconfig.h"
+#endif
+#if defined(CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY) && CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
+#define P4_ARENA_LARGE_BSS EXT_RAM_BSS_ATTR
+#else
+#define P4_ARENA_LARGE_BSS
+#endif
+
+/* This bounded command history is task-owned, never accessed by an ISR or DMA.
+ * Keep it out of the internal heap needed by startup and peripheral drivers. */
+static P4_ARENA_LARGE_BSS struct {
     p4_mp_session_t *session;
     p4_doom_mp_launch_config_t config;
     p4_doom_p4mp_transport_t transport;

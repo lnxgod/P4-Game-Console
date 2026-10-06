@@ -33,6 +33,14 @@ def verify_native_only(components: set[str], symbols: str) -> None:
             "retired Lua execution symbol in native-only build")
 
 
+def verify_arena_memory(symbols: str) -> None:
+    """Arena histories/caches must not consume the startup DMA reserve."""
+    for name in ("gc", "s_arena_reader"):
+        match = re.search(r"^([0-9a-fA-F]+) [bB] " + name + r"$", symbols, re.M)
+        require(match is not None and 0x48000000 <= int(match[1], 16) < 0x4a000000,
+                f"Arena {name} must be in PSRAM to preserve startup DMA memory")
+
+
 def verify_usb_host(enabled: bool, components: set[str], sources: set[str], symbols: str) -> None:
     """Qualify the selected build feature, including an explicitly disabled host.
 
@@ -168,6 +176,8 @@ def verify(build: pathlib.Path, firmware_only: bool = False) -> dict:
     nm = pathlib.Path(project["c_compiler"]).with_name("riscv32-esp-elf-nm")
     symbols = subprocess.check_output([str(nm), "--defined-only", str(build / project["app_elf"])], text=True)
     verify_native_only(components, symbols)
+    if "doom_gc_p4mp.c" in sources:
+        verify_arena_memory(symbols)
     if ble_enabled:
         require("esp_hosted_host_init.c" not in sources, "radio constructor must be excluded")
         for name in ("platform_tab5_radio_power", "platform_multiplayer_ble_enable", "platform_multiplayer_wifi_enable"):

@@ -63,7 +63,9 @@ Keep these rules true for every change:
 
 ## Set up Doom game data on a fresh clone
 
-WAD files are local inputs, never repository content. Keep them under the
+WAD files are local inputs, except the owner-authorized original Pure Hell v0.5
+pack under `game-data/pure-hell/v0.5/`, with its unchanged music and notices.
+That narrow exception does not permit other WADs or WAD-bearing firmware in Git. Keep them under the
 ignored `local-data/doom/` directory and confirm `git check-ignore` succeeds
 before building. The exact identities and upstream URLs are authoritative in
 `third_party/game-data.json`; do not substitute an unverified mirror or commit
