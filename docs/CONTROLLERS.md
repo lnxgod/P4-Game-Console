@@ -91,6 +91,10 @@ report-map SHA-256, never by a broad `Xbox` name match.
 5. Use **Disconnect** to retain the bond or **Forget** to remove only that
    controller's saved identity and keys.
 
+If a controller has lost its keys and requests pairing again, the console
+rejects that request without deleting the existing bond. Select **Forget** for
+that controller, then **Pair**, to deliberately establish a replacement bond.
+
 A saved controller reconnects after the launcher is usable when BLE Pad Mode
 is enabled; it does not block the boot screen or SD mount. Turning BLE Pad
 Mode off disconnects and suppresses only the controller client. It does not

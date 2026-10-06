@@ -1010,6 +1010,17 @@ static int subscription_complete(
 
 static void publish_ready(void)
 {
+    /* Authorize before publishing a connected model to concurrent readers. */
+    struct ble_gap_conn_desc description;
+    const int found = ble_gap_conn_find(s_ble.conn_handle, &description);
+    if (found != 0 || !description.sec_state.encrypted ||
+        !description.sec_state.bonded ||
+        !saved_identity_matches(&description.peer_id_addr)) {
+        fail_connection(s_ble.conn_handle,
+                        found != 0 ? found : BLE_HS_EAUTHEN,
+                        "ready-security");
+        return;
+    }
     uint8_t digest[PLATFORM_GAMEPAD_DESCRIPTOR_SHA256_BYTES];
     if (mbedtls_sha256(s_ble.report_map, s_ble.report_map_length,
                        digest, 0) != 0) {
@@ -1036,14 +1047,6 @@ static void publish_ready(void)
         return;
     }
 
-    struct ble_gap_conn_desc description;
-    const int found = ble_gap_conn_find(s_ble.conn_handle, &description);
-    if (found != 0 || !description.sec_state.encrypted) {
-        fail_connection(s_ble.conn_handle,
-                        found != 0 ? found : BLE_HS_EAUTHEN,
-                        "ready-security");
-        return;
-    }
     portENTER_CRITICAL(&s_lock);
     s_ble.peer_id_address = description.peer_id_addr;
     s_ble.status.connected = true;
@@ -1126,7 +1129,8 @@ static void connection_encrypted(uint16_t conn_handle)
 {
     struct ble_gap_conn_desc description;
     const int found = ble_gap_conn_find(conn_handle, &description);
-    if (found != 0 || !description.sec_state.encrypted) {
+    if (found != 0 || !description.sec_state.encrypted ||
+        !description.sec_state.bonded) {
         fail_connection(conn_handle,
                         found != 0 ? found : BLE_HS_EAUTHEN,
                         "encryption");
@@ -1336,15 +1340,14 @@ static int gap_event(struct ble_gap_event *event, void *argument)
             portEXIT_CRITICAL(&s_lock);
         }
         break;
-    case BLE_GAP_EVENT_REPEAT_PAIRING: {
-        struct ble_gap_conn_desc description;
-        if (ble_gap_conn_find(event->repeat_pairing.conn_handle,
-                              &description) == 0) {
-            (void)ble_store_util_delete_peer(&description.peer_id_addr);
-            return BLE_GAP_REPEAT_PAIRING_RETRY;
+    case BLE_GAP_EVENT_REPEAT_PAIRING:
+        /* A peer cannot replace an existing bond during reconnect. The user
+         * must explicitly Forget the selected controller before pairing anew. */
+        if (connection_matches(event->repeat_pairing.conn_handle)) {
+            fail_connection(event->repeat_pairing.conn_handle, BLE_HS_EAUTHEN,
+                            "repeat-pairing-requires-forget");
         }
         return BLE_GAP_REPEAT_PAIRING_IGNORE;
-    }
     default:
         break;
     }

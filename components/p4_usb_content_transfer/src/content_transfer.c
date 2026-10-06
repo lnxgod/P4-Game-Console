@@ -24,6 +24,7 @@
 #pragma GCC diagnostic pop
 #include "mbedtls/sha256.h"
 #include "content_limits.h"
+#include "transfer_file.h"
 #include "platform/doom_arena_content.h"
 
 enum {
@@ -633,12 +634,9 @@ static wire_status_t activate_staged_file(uint8_t digest[32])
     if (s_transfer.spec == NULL) {
         return WIRE_STATUS_BAD_MANIFEST;
     }
-    if (fsync(s_transfer.descriptor) != 0 ||
-        close(s_transfer.descriptor) != 0) {
-        s_transfer.descriptor = -1;
+    if (!p4_transfer_sync_close(&s_transfer.descriptor)) {
         return WIRE_STATUS_IO;
     }
-    s_transfer.descriptor = -1;
     if (mbedtls_sha256_finish(&s_transfer.sha256, digest) != 0) {
         return WIRE_STATUS_HASH;
     }
