@@ -1,0 +1,894 @@
+{
+  "schema": 1,
+  "date": "2026-10-06",
+  "classification": "repository-cleanup-host-and-tab5-build-verified-no-hardware-write",
+  "baseline": {
+    "default_branch": "main",
+    "sha": "615321ff45020387fba96572b5b42376b0d1be52",
+    "pull_requests": [
+      {
+        "baseRefName": "main",
+        "headRefName": "codex/doom-arena-release",
+        "mergedAt": "2026-10-06T21:08:52Z",
+        "number": 13,
+        "state": "MERGED",
+        "title": "Add Doom arena multiplayer, Pure Hell, and verified map setup",
+        "url": "https://github.com/lnxgod/P4-Game-Console/pull/13"
+      },
+      {
+        "baseRefName": "main",
+        "headRefName": "codex/m5stack-tab5",
+        "mergedAt": "2026-10-06T06:22:12Z",
+        "number": 12,
+        "state": "MERGED",
+        "title": "Make Tab5 the primary console with a unified Control Panel and curated games",
+        "url": "https://github.com/lnxgod/P4-Game-Console/pull/12"
+      },
+      {
+        "baseRefName": "main",
+        "headRefName": "codex/doom-multiplayer-engine-barrier",
+        "mergedAt": "2026-08-24T00:10:06Z",
+        "number": 11,
+        "state": "MERGED",
+        "title": "Codex/doom multiplayer engine barrier",
+        "url": "https://github.com/lnxgod/P4-Game-Console/pull/11"
+      },
+      {
+        "baseRefName": "main",
+        "headRefName": "codex/waveshare-console-os",
+        "mergedAt": "2026-08-17T01:26:53Z",
+        "number": 10,
+        "state": "MERGED",
+        "title": "Restore P4CART compatibility and complete Console OS recovery",
+        "url": "https://github.com/lnxgod/P4-Game-Console/pull/10"
+      },
+      {
+        "baseRefName": "main",
+        "headRefName": "codex/waveshare-console-os",
+        "mergedAt": "2026-08-17T00:55:18Z",
+        "number": 9,
+        "state": "MERGED",
+        "title": "Add Waveshare Console OS platform and game suite",
+        "url": "https://github.com/lnxgod/P4-Game-Console/pull/9"
+      },
+      {
+        "baseRefName": "main",
+        "headRefName": "codex/game-manager-usb-updates",
+        "mergedAt": "2026-08-15T20:15:07Z",
+        "number": 8,
+        "state": "MERGED",
+        "title": "Redact ESP USB-JTAG identities from diagnostics",
+        "url": "https://github.com/lnxgod/P4-Game-Console/pull/8"
+      },
+      {
+        "baseRefName": "main",
+        "headRefName": "codex/game-manager-usb-updates",
+        "mergedAt": "2026-08-15T20:09:18Z",
+        "number": 7,
+        "state": "MERGED",
+        "title": "Fix manual-loader factory backup on native USB",
+        "url": "https://github.com/lnxgod/P4-Game-Console/pull/7"
+      },
+      {
+        "baseRefName": "main",
+        "headRefName": "codex/game-manager-usb-updates",
+        "mergedAt": "2026-08-15T20:05:57Z",
+        "number": 6,
+        "state": "MERGED",
+        "title": "Console OS: Game Manager, USB/SD updates, and Olimex P4-PC",
+        "url": "https://github.com/lnxgod/P4-Game-Console/pull/6"
+      },
+      {
+        "baseRefName": "main",
+        "headRefName": "codex/program-manager-file-manager",
+        "mergedAt": "2026-08-15T04:34:26Z",
+        "number": 5,
+        "state": "MERGED",
+        "title": "Add USB-backed File Manager app",
+        "url": "https://github.com/lnxgod/P4-Game-Console/pull/5"
+      },
+      {
+        "baseRefName": "main",
+        "headRefName": "codex/usb-game-storage-program-manager",
+        "mergedAt": "2026-08-15T03:03:39Z",
+        "number": 4,
+        "state": "MERGED",
+        "title": "Restore Program Manager UI with USB game storage",
+        "url": "https://github.com/lnxgod/P4-Game-Console/pull/4"
+      },
+      {
+        "baseRefName": "main",
+        "headRefName": "codex/usb-game-storage-device-install",
+        "mergedAt": "2026-08-14T23:39:10Z",
+        "number": 3,
+        "state": "MERGED",
+        "title": "Bind USB install to preserved device boot prefix",
+        "url": "https://github.com/lnxgod/P4-Game-Console/pull/3"
+      },
+      {
+        "baseRefName": "main",
+        "headRefName": "codex/usb-game-storage-device-install",
+        "mergedAt": "2026-08-14T23:01:49Z",
+        "number": 2,
+        "state": "MERGED",
+        "title": "Add guarded exact-device USB storage installer",
+        "url": "https://github.com/lnxgod/P4-Game-Console/pull/2"
+      },
+      {
+        "baseRefName": "main",
+        "headRefName": "codex/usb-game-storage",
+        "mergedAt": "2026-08-14T22:42:15Z",
+        "number": 1,
+        "state": "MERGED",
+        "title": "Add USB game storage to Console OS",
+        "url": "https://github.com/lnxgod/P4-Game-Console/pull/1"
+      }
+    ],
+    "open_pull_requests": 0,
+    "source_checkout_head": "0b2376b803b6ee117fd777ff61b9cb56710ad438",
+    "source_checkout_clean_at_start": true,
+    "source_checkout_unmerged_commits": [
+      "d4a3759",
+      "0b2376b"
+    ]
+  },
+  "branch_audit": {
+    "local": [
+      {
+        "name": "codex/byte-buddy-core-update",
+        "sha": "93c0aab023495a4f891f9f4a7df9da5bd1093446",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "codex/byte-buddy-h1-p4r",
+        "sha": "4f9c708425798b9e90ff2ce31b62f33f911eadbd",
+        "ancestor_of_baseline": false,
+        "action": "retained"
+      },
+      {
+        "name": "codex/doom-arena-release",
+        "sha": "3670f7892d7418d8e5d7fabebd525da8619ee0fb",
+        "ancestor_of_baseline": true,
+        "action": "deleted-merged-no-worktree"
+      },
+      {
+        "name": "codex/doom-multiplayer-engine-barrier",
+        "sha": "a36e523a84128c6280baa7ea62c310a90eed99be",
+        "ancestor_of_baseline": true,
+        "action": "deleted-merged-no-worktree"
+      },
+      {
+        "name": "codex/fix-skyline-leap",
+        "sha": "54cb90861ea85afd3a4287da88101a918d08c8a9",
+        "ancestor_of_baseline": false,
+        "action": "retained"
+      },
+      {
+        "name": "codex/game-changers-ai",
+        "sha": "b7afa7a3ae5c1ab92877365c07ce6b261f66ab17",
+        "ancestor_of_baseline": false,
+        "action": "retained"
+      },
+      {
+        "name": "codex/game-manager-usb-updates",
+        "sha": "55395edd4ca8c2ae08c4711397db710a5d12462c",
+        "ancestor_of_baseline": true,
+        "action": "deleted-merged-no-worktree"
+      },
+      {
+        "name": "codex/game-suite-polish",
+        "sha": "6b9e0452d93c0c0ff1b258f6d25767193aed08ca",
+        "ancestor_of_baseline": false,
+        "action": "retained"
+      },
+      {
+        "name": "codex/m5stack-tab5",
+        "sha": "0b2376b803b6ee117fd777ff61b9cb56710ad438",
+        "ancestor_of_baseline": false,
+        "action": "retained"
+      },
+      {
+        "name": "codex/program-manager-file-manager",
+        "sha": "a767e1a533d72889408886e695f3e47b22795a46",
+        "ancestor_of_baseline": true,
+        "action": "deleted-merged-no-worktree"
+      },
+      {
+        "name": "codex/repository-cleanup",
+        "sha": "615321ff45020387fba96572b5b42376b0d1be52",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "codex/repository-cleanup-execution",
+        "sha": "615321ff45020387fba96572b5b42376b0d1be52",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "codex/tide-maze",
+        "sha": "8264c2fea8644959a2e127b5974583e58af7c0b8",
+        "ancestor_of_baseline": false,
+        "action": "retained"
+      },
+      {
+        "name": "codex/tide-maze-3d",
+        "sha": "0b2376b803b6ee117fd777ff61b9cb56710ad438",
+        "ancestor_of_baseline": false,
+        "action": "retained"
+      },
+      {
+        "name": "codex/usb-game-storage",
+        "sha": "50502ce24b688d562e1be8a99a1548ebf21e21f3",
+        "ancestor_of_baseline": true,
+        "action": "deleted-merged-no-worktree"
+      },
+      {
+        "name": "codex/usb-game-storage-device-install",
+        "sha": "d35bf86685b6d3a8247e7042058386e4992e38cb",
+        "ancestor_of_baseline": true,
+        "action": "deleted-merged-no-worktree"
+      },
+      {
+        "name": "codex/usb-game-storage-program-manager",
+        "sha": "5348cd2025e6c08e9669acf0404f3251a286d572",
+        "ancestor_of_baseline": true,
+        "action": "deleted-merged-no-worktree"
+      },
+      {
+        "name": "codex/waveshare-console-os",
+        "sha": "c98ae3af189c203c34f0e1b469c564302020ab9a",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "codex/wireless-multiplayer",
+        "sha": "5ec54214193de8f70b61117bcc09aafd081a64f7",
+        "ancestor_of_baseline": true,
+        "action": "deleted-merged-no-worktree"
+      },
+      {
+        "name": "main",
+        "sha": "9a73ea67c51e576d47c8e63f5c709b9ed432fe92",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      }
+    ],
+    "remote": [
+      {
+        "name": "origin",
+        "sha": "615321ff45020387fba96572b5b42376b0d1be52",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/byte-buddy-core-update",
+        "sha": "93c0aab023495a4f891f9f4a7df9da5bd1093446",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/byte-buddy-h1-p4r",
+        "sha": "4f9c708425798b9e90ff2ce31b62f33f911eadbd",
+        "ancestor_of_baseline": false,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/doom-arena-release",
+        "sha": "3670f7892d7418d8e5d7fabebd525da8619ee0fb",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/doom-multiplayer-engine-barrier",
+        "sha": "a36e523a84128c6280baa7ea62c310a90eed99be",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/fix-skyline-leap",
+        "sha": "54cb90861ea85afd3a4287da88101a918d08c8a9",
+        "ancestor_of_baseline": false,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/game-manager-usb-updates",
+        "sha": "55395edd4ca8c2ae08c4711397db710a5d12462c",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/game-suite-polish",
+        "sha": "6b9e0452d93c0c0ff1b258f6d25767193aed08ca",
+        "ancestor_of_baseline": false,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/m5stack-tab5",
+        "sha": "0b2376b803b6ee117fd777ff61b9cb56710ad438",
+        "ancestor_of_baseline": false,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/program-manager-file-manager",
+        "sha": "a767e1a533d72889408886e695f3e47b22795a46",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/tide-maze",
+        "sha": "d146d19e847efeec837972dc20998922c1617b19",
+        "ancestor_of_baseline": false,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/usb-game-storage",
+        "sha": "50502ce24b688d562e1be8a99a1548ebf21e21f3",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/usb-game-storage-device-install",
+        "sha": "d35bf86685b6d3a8247e7042058386e4992e38cb",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/usb-game-storage-program-manager",
+        "sha": "5348cd2025e6c08e9669acf0404f3251a286d572",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "origin/codex/waveshare-console-os",
+        "sha": "c98ae3af189c203c34f0e1b469c564302020ab9a",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "origin/feature/device-power-audio-scroll-sd-control",
+        "sha": "85496e08333dbb0b6031fda555735f497c64fd12",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      },
+      {
+        "name": "origin/main",
+        "sha": "615321ff45020387fba96572b5b42376b0d1be52",
+        "ancestor_of_baseline": true,
+        "action": "retained"
+      }
+    ],
+    "worktree_count_at_audit": 14,
+    "worktree_registrations_removed": 0,
+    "remote_branches_deleted": 0,
+    "active_work_preserved": [
+      "Build a multiplayer tilt maze game",
+      "Analyze Whackey Racers",
+      "codex/repository-cleanup (separate active cleanup checkout)",
+      "both Byte Buddy checkouts"
+    ],
+    "missing_worktrees": "Eight prunable registrations retained, including unmerged branch tips and detached historical artifacts."
+  },
+  "scope": {
+    "tracked_files_at_baseline": 2560,
+    "root_counts": {
+      ".agents": 34,
+      ".gitattributes": 1,
+      ".gitignore": 1,
+      "AGENTS.md": 1,
+      "CHANGELOG.md": 1,
+      "Makefile": 1,
+      "README.md": 1,
+      "apps": 314,
+      "components": 606,
+      "design": 67,
+      "docs": 30,
+      "game-data": 8,
+      "games": 503,
+      "hardware": 307,
+      "osupgrade.md": 1,
+      "ports": 14,
+      "scripts": 245,
+      "test-runs": 47,
+      "third_party": 349,
+      "toolchain.lock.json": 1,
+      "tools": 28
+    },
+    "skills_reviewed": 14,
+    "agent_instruction_files_reviewed": [
+      "AGENTS.md"
+    ],
+    "method": [
+      "tracked-tree filename/content inventory including hidden files",
+      "Lua runtime/game/tool/dependency/build/doc/skill references",
+      "C/C++ build references and Python function consumers",
+      "test entrypoints, fixtures, dynamic imports, CLI/workflow and immutable-digest consumers",
+      "asset manifests, converters and generated includes",
+      "Make/CMake wiring, lockfiles, skills and maintained Markdown links"
+    ],
+    "maintained_broken_markdown_links": 0,
+    "vendor_missing_images_retained": 5,
+    "syntax_checks": {
+      "json": 463,
+      "project_python": 214,
+      "project_shell": 69
+    }
+  },
+  "removals": {
+    "scripts/gamepad-diag-capture.py:_obsolete_substring_summarize_never_use": {
+      "first_line": 753,
+      "last_line": 888,
+      "sha256": "b9d415a3c45641ff08d2861765dcea58db7b818764b3daedd05073e4ed28c8d9"
+    },
+    "scripts/verify-audio-direct-diag.py:_verify_central_flash_path_legacy": {
+      "first_line": 602,
+      "last_line": 777,
+      "sha256": "a873978c16d1bcf641cd9dc4ef50761452e1ac3a81f72d641f3702751b77c0d4"
+    },
+    "scripts/p4-transfer.py:p4g_name_valid": {
+      "first_line": 225,
+      "last_line": 226,
+      "sha256": "9934867063a73914778a96a3031c0c24b7f5ea7986e0a265c027884ac70f996a"
+    },
+    "scripts/capture-waveshare-console-os-0.4.85.py": {
+      "bytes": 472,
+      "sha256": "6f39d6add0bdeac68cde5548c50898526c581e7c10c61800dea92b0e965e34a2"
+    },
+    "scripts/capture-waveshare-console-os-0.4.86.py": {
+      "bytes": 468,
+      "sha256": "9badfab2d4e56d07bdcc29f0092b1d2f178088b769a4b8c5d33c13726d423998"
+    },
+    "games/lord/src/generated/lord_title_art.h": {
+      "bytes": 798252,
+      "sha256": "4bfc35317a1319cf8b01cafc00fe8a8b2c38115d7aa7ec8674b06e01f84d9a28"
+    },
+    "games/lord/tools/build_title_art.py": {
+      "bytes": 2655,
+      "sha256": "034c19347ae904f4d181ab459cfdf6250e68633d81329462c0016a8ca7d504ca"
+    },
+    "games/lord/assets/title-background-ansi.png": {
+      "bytes": 9510,
+      "sha256": "3b36deb6a1d7aa12d134faf41cbbe9325430d4df2e692a51fc05bb6869abcf15"
+    }
+  },
+  "retained_bound_helpers": {
+    "path": "scripts/doom-e6-install.py",
+    "functions": [
+      "_file_binding",
+      "_durable_restore_mark"
+    ],
+    "reason": "Although not called by name, the whole file digest is an active frozen recovery dependency. Original bytes restored before final verification.",
+    "sha256": "f5d2255f37ca9373fdaf42ebe711968c31dc51b3dbbc2f7e501a235fbb546471"
+  },
+  "source_binding": {
+    "implementation_head": "3b28df9981d0a5b6b1083cd75a8145ec88c75414",
+    "baseline_to_implementation_diff_sha256": "26bd9e10bc00c78d602cc5d06fe5297c2b9b91676fdb02a70fc05adbdc5bebd6",
+    "tracked_snapshot_sha256": "a1358fbd4537e32f930a27df8dec3863f7c534c436bbac7a5a9b8f9d37c66a95",
+    "snapshot_method": "sorted tracked path UTF-8 + NUL + binary SHA256(file); audit report files not yet added",
+    "build_note": "Firmware built from the same modified code before local cleanup commits; its embedded build label remains the baseline commit. No source/asset code changed afterward."
+  },
+  "checks": {
+    "make_verify": "pass with existing locked IDF and idf5.5_py3.11_env",
+    "make_game_registry_check": "pass; 17 enabled native games",
+    "console_shell_host": "7/7 pass",
+    "p4_desktop_host": "1/1 pass",
+    "console_os_host": "8/8 pass including SDL dummy ASan/UBSan smoke",
+    "p4_content_host": "3/3 CTest plus 8 content and 5 native-bundle tests pass",
+    "lord_host": "3/3 pass including presentation and gameplay trace",
+    "script_tests": [
+      {
+        "test": "scripts/tests/test-arena-content.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-arena-content.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-board-port.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-board-port.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-capture-waveshare-console-os-scroll-boundary.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-capture-waveshare-console-os-scroll-boundary.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-console-os-file-manager-install.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-console-os-file-manager-install.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-console-os-game-manager-migrate.py",
+        "exit": 1,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-console-os-game-manager-migrate.py.log",
+        "classification": "not-exercised-missing-historical-elecrow-build",
+        "reason": "Requires apps/console_os/build with verified Elecrow migration artifacts. Only Tab5 was built; its files are not interchangeable."
+      },
+      {
+        "test": "scripts/tests/test-console-os-game-manager-runtime-capture.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-console-os-game-manager-runtime-capture.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-console-os-runtime-capture.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-console-os-runtime-capture.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-console-os-usb-install.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-console-os-usb-install.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-console-os-usb-runtime-capture.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-console-os-usb-runtime-capture.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-d23-capture-transport.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-d23-capture-transport.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-d24-gate.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-d24-gate.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-doom-e3-install-gate.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-doom-e3-install-gate.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-doom-e5-gate.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-doom-e5-gate.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-doom-e5-install.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-doom-e5-install.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-doom-e5-runtime-capture.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-doom-e5-runtime-capture.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-doom-e6-authorized-route.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-doom-e6-authorized-route.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-doom-e6-install.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-doom-e6-install.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-doom-e6-runtime-capture.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-doom-e6-runtime-capture.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-doom-source-tree.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-doom-source-tree.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-espressif-usb-ext-port-overlay.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-espressif-usb-ext-port-overlay.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-espressif-usb-hcd-fsls-overlay.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-espressif-usb-hcd-fsls-overlay.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-game-registry.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-game-registry.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-game-resource.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-game-resource.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-gamepad-diag-flash-route.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-gamepad-diag-flash-route.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-gamepad-diag-gate.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-gamepad-diag-gate.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-gamepad-diag-install.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-gamepad-diag-install.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-gamepad-diag-restore.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-gamepad-diag-restore.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-gamepad-diag-state-contract.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-gamepad-diag-state-contract.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-native-board-verifiers.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-native-board-verifiers.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-native-content-retirement.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-native-content-retirement.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-native-only-sources.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-native-only-sources.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-new-game.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-new-game.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-p4-clock.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-p4-clock.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-p4-content.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-p4-content.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-p4-multiplayer-relay.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-p4-multiplayer-relay.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-p4-transfer-games.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-p4-transfer-games.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-p4-transfer-usb-drive.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-p4-transfer-usb-drive.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-p4-usb-content-wire.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-p4-usb-content-wire.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-p4cart-seed-registry.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-p4cart-seed-registry.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-prepare-game-data.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-prepare-game-data.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-protected-game-lineage.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-protected-game-lineage.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-tab5-arena-memory.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-tab5-arena-memory.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-tab5-build-features.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-tab5-build-features.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-tab5-install.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-tab5-install.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-tab5-warm-boot-capture.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-tab5-warm-boot-capture.py.log",
+        "classification": "pass"
+      },
+      {
+        "test": "scripts/tests/test-waveshare-console-os-capture.py",
+        "exit": 0,
+        "log": "build-host/repository-cleanup/logs/p4-cleanup-final-test-waveshare-console-os-capture.py.log",
+        "classification": "pass"
+      }
+    ],
+    "shell_tests": {
+      "test-project-env.sh": "pass",
+      "test-app-readback.sh": "pass"
+    },
+    "all_skills_quick_validate": "14/14 pass",
+    "make_console_os_tab5_idf": "pass; full native bundle verified; all target host dependencies passed",
+    "git_diff_check": "pass",
+    "unchanged_contracts": [
+      "toolchain.lock.json",
+      "all committed dependency lockfiles",
+      "third_party/source-lock.json",
+      "game manifests and retired identities",
+      "hardware profiles, authorizations, backup manifests and historical evidence",
+      "gameplay/save/network code",
+      "third-party source/provenance"
+    ]
+  },
+  "tab5_artifacts": {
+    "p4_console_os.bin": {
+      "bytes": 4317760,
+      "sha256": "2a2cde5dd8cf46e1366f318f0db1a5c4755078b8c5af2cafefe8e70b835f7959"
+    },
+    "p4_console_os.elf": {
+      "bytes": 24167488,
+      "sha256": "98fa5ac8de9ffb7771ea7a59ccfb65641ceca419bc11febb77f73eb78b37004a"
+    },
+    "P4UPDATE.P4U": {
+      "bytes": 4318016,
+      "sha256": "1c3b9b40dc2e39262f1ca4dabb81a55aa831377305a73ceb31e209819bfc1637"
+    },
+    "bootloader/bootloader.bin": {
+      "bytes": 23136,
+      "sha256": "058cf4c0434733d72800c383e1bddb54aa33cf667b21254c8bd9d2f4f7f43443"
+    },
+    "partition_table/partition-table.bin": {
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    }
+  },
+  "native_packages": [
+    {
+      "name": "AVTEST.P4G",
+      "bytes": 51912,
+      "sha256": "4810d7d94f4c6d6192bebd14dcdff922297b4036b08d69d2c813b74e3b045efe"
+    },
+    {
+      "name": "BLAST_CIRCUIT.P4G",
+      "bytes": 462532,
+      "sha256": "611536b5eb78bdb19d48130cd4dd5a0d6101c7ed8491f41b63bb70f5b91f135c"
+    },
+    {
+      "name": "BYTEBUD.P4G",
+      "bytes": 449768,
+      "sha256": "d2adf9d81f02df95b2bad4a8b6af39cd425dffc586e08517a37f4b7af54c09e6"
+    },
+    {
+      "name": "CALC.P4G",
+      "bytes": 53088,
+      "sha256": "d6b714a12b5ec4d703cf7aad874712636bf7d0c6515484028dc74652defabf6b"
+    },
+    {
+      "name": "CHECKERS.P4G",
+      "bytes": 94824,
+      "sha256": "26bc5730658df11334c2672231a56c21b7a83388aadde02bfb11da5f51cbc5e4"
+    },
+    {
+      "name": "COLOR_CLASH.P4G",
+      "bytes": 437412,
+      "sha256": "e0fe5b003452fa1c0d01a465506e943fd2bc1924f020461e9f0bf295caef3b18"
+    },
+    {
+      "name": "FROGHOP.P4G",
+      "bytes": 487396,
+      "sha256": "a41c88bcd50311075a8cae6d1a6fd98e959f52b79a8511b6ade903ce891547ee"
+    },
+    {
+      "name": "INPUT.P4G",
+      "bytes": 51976,
+      "sha256": "6e6b4e11015b6fb55615cf279e74d2858a7c49dc2f2784aba349d1600c681965"
+    },
+    {
+      "name": "INVADERS.P4G",
+      "bytes": 402512,
+      "sha256": "d314e8dab365c187035cc47f9cebae203aade492e495301d2e01cb039670e19d"
+    },
+    {
+      "name": "LORD.P4G",
+      "bytes": 434820,
+      "sha256": "bc737068ddf41e651132e7003f5cf60d59bb85f01d8421a5859d2f33996fb46e"
+    },
+    {
+      "name": "MAZE.P4G",
+      "bytes": 370576,
+      "sha256": "c45a9f15a3a4545a4a84b085ce08ca7d67e8de4041a2597c12459ff35142d4b7"
+    },
+    {
+      "name": "P4_AIR_HOCKEY.P4G",
+      "bytes": 133136,
+      "sha256": "291a9a01375a7b357d6546fcf0b1b8894cf877695dbccd07374716365f84c47d"
+    },
+    {
+      "name": "P4_RUMMY.P4G",
+      "bytes": 123224,
+      "sha256": "2b1ef030d6a218751f1aca95f95ab3a1aadef490d743d2e47adfdba190da090d"
+    },
+    {
+      "name": "P4_YAHTZEE.P4G",
+      "bytes": 321536,
+      "sha256": "6b68116c4c2b72f43acfe6f9a5baca42f40ff9e16fa7c7bec587bc65e5a23388"
+    },
+    {
+      "name": "SOLITAIR.P4G",
+      "bytes": 245908,
+      "sha256": "d72164fcb7337c84e3ddcbd91bbeacefac964e572f5e2295cec0d9978661c7f6"
+    },
+    {
+      "name": "TEXAS_HOLDEM.P4G",
+      "bytes": 115888,
+      "sha256": "c8f38f0dd9c502f6b6dd547a13253196225737d1c999b1ee0ff7c11d5ae60130"
+    },
+    {
+      "name": "TIDE_MAZE.P4G",
+      "bytes": 198448,
+      "sha256": "78a15a65078f2d8667aab279facbf7011911cbb3aeae5768e9208f125a3ab790"
+    }
+  ],
+  "acceptance": {
+    "hardware_write_performed": false,
+    "hardware_verified": false,
+    "interactive_gameplay": "not required: no gameplay or active game rendering behavior changed",
+    "device_cadence": "not measured or newly claimed",
+    "other_board_builds": "not run; no board driver or pin change, canonical affected candidate is Tab5",
+    "published": false,
+    "merged": false,
+    "historical_elecrow_migration_test": "missing separate Elecrow build artifact; retained for its existing exact-board workflow"
+  }
+}
