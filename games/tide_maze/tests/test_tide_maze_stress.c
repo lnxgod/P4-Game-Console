@@ -3,6 +3,7 @@
 #include "tide_maze_internal.h"
 #include "p4/input.h"
 #include <assert.h>
+#include <stdlib.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -326,15 +327,15 @@ static p4_game_result_t touch_sample(p4_game_instance_t *g,p4_game_input_mapper_
 static void touch_regions(void) {
     tm_state s={0};p4_game_instance_t g={0};start_solo(&g,&s);
     p4_game_input_mapper_t mapper={0};
-    assert(touch_sample(&g,&mapper,281,180,true)==P4_GAME_CONTINUE);
+    assert(touch_sample(&g,&mapper,285,187,true)==P4_GAME_CONTINUE);
     assert(s.phase==TM_PAUSE);
-    assert(touch_sample(&g,&mapper,281,180,false)==P4_GAME_CONTINUE);
+    assert(touch_sample(&g,&mapper,285,187,false)==P4_GAME_CONTINUE);
     assert(touch_sample(&g,&mapper,100,140,true)==P4_GAME_CONTINUE);
     assert(s.phase==TM_PLAY);
     assert(touch_sample(&g,&mapper,100,140,false)==P4_GAME_CONTINUE);
-    assert(touch_sample(&g,&mapper,280,125,true)==P4_GAME_CONTINUE);
+    assert(touch_sample(&g,&mapper,185,188,true)==P4_GAME_CONTINUE);
     assert(s.intent[0].brake);
-    assert(touch_sample(&g,&mapper,280,125,false)==P4_GAME_CONTINUE);
+    assert(touch_sample(&g,&mapper,185,188,false)==P4_GAME_CONTINUE);
     assert(!s.intent[0].brake);
     assert(touch_sample(&g,&mapper,100,56,true)==P4_GAME_CONTINUE);
     assert(s.intent[0].x>0);
@@ -361,6 +362,24 @@ static void variable_frames(void) {
     assert(p4_game_instance_update(&gb,&in,UINT32_MAX)==P4_GAME_CONTINUE);
     assert(before-b.time_ms==100 && b.accumulator<TM_STEP);
     puts("frame timing: identical fixed-step physics at variable 0..100 ms; bounded UINT32_MAX catch-up");
+}
+static void local_presentation(void){
+ tm_state s={0};tm_reset(&s,0);s.intent[0].x=600;
+ tm_simulate(&s);int32_t start=s.previous_x[0],end=s.ball[0].x,last=start,x,y;
+ assert(end>start);
+ for(unsigned ms=0;ms<20;++ms){s.accumulator=ms;tm_visual_ball(&s,0,&x,&y);assert(x>=last&&x>=start&&x<=end);last=x;}
+ assert(last>start&&last<end);
+ s.phase=TM_PAUSE;tm_visual_ball(&s,0,&x,&y);assert(x==end);
+ tm_reset(&s,0);s.ball[0].x=40*TM_Q;s.ball[0].y=120*TM_Q;tm_simulate(&s);
+ assert(s.ball[0].rescue&&s.previous_x[0]==s.ball[0].x&&s.previous_y[0]==s.ball[0].y);
+ /* Independent double-precision projection followed by integer touch inverse. */
+ for(int py=8;py<144;py+=8)for(int px=8;px<240;px+=8){
+  double xc=px-120,d=600-py-xc/10;
+  int sx=(int)(156+(xc*530+(py-72)*60)/d+.5);
+  int sy=(int)(42+(py*330+xc*45-1200)/d+.5),bx,by;
+  assert(tm_screen_to_board(sx,sy,&bx,&by));assert(abs(bx-px)<=2&&abs(by-py)<=2);
+ }
+ puts("Local presentation: fractional motion, pause, respawn and perspective touch inversion PASS");
 }
 static int32_t visible_x(const tm_state *s, unsigned player) {
     return s->previous_x[player]+(s->ball[player].x-s->previous_x[player])*(int32_t)s->blend_ms/50;
@@ -423,7 +442,7 @@ int main(int argc, char **argv) {
         cooperative_voyage(0x713);cooperative_voyage(0x983af);cooperative_voyage(0x573341);
     }
     if(argc==1||strcmp(argv[1],"lifecycle")==0)pause_timeout_retry();
-    if(argc==1||strcmp(argv[1],"timing")==0){variable_frames();network_timing();}
+    if(argc==1||strcmp(argv[1],"timing")==0){variable_frames();network_timing();local_presentation();}
     if(argc==1||strcmp(argv[1],"touch")==0)touch_regions();
     puts("Tide Maze adversarial stress PASS");
     return 0;

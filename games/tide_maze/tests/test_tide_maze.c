@@ -133,7 +133,10 @@ static void frames(const char *directory){
   if(w==320)g.services.available_capabilities&=~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
   p4_game_surface_t f={.pixels=data+16,.stride_pixels=stride,.width=(uint16_t)w,.height=(uint16_t)h};
   const tm_phase phases[]={TM_TITLE,TM_PLAY,TM_PAUSE,TM_CLEAR,TM_WON,TM_LOST,TM_LINK_LOST,TM_WAIT};
-  for(unsigned p=0;p<8;++p){for(size_t i=0;i<words;++i)data[i]=0xa55a;s.phase=phases[p];assert(p4_game_instance_render(&g,&f));
+  for(unsigned p=0;p<8;++p){for(size_t i=0;i<words;++i)data[i]=0xa55a;
+   tm_reset(&s,p%TM_LEVELS);s.intent[0]=(tm_intent){1000,-850,900,1000,false};
+   for(unsigned tick=0;tick<100;++tick)tm_fluid(&s);
+   s.animation_ms=1777U+p*137U;s.phase=phases[p];assert(p4_game_instance_render(&g,&f));
    for(unsigned i=0;i<16;++i){assert(data[i]==0xa55a);assert(data[words-1-i]==0xa55a);}
    for(unsigned y=0;y<h;++y)for(unsigned x=w;x<stride;++x)assert(f.pixels[(size_t)y*stride+x]==0xa55a);
    if(directory){char path[512];snprintf(path,sizeof(path),"%s/tide-%u-%u.ppm",directory,w,p);FILE *file=fopen(path,"wb");assert(file);fprintf(file,"P6\n%u %u\n255\n",w,h);

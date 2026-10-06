@@ -1,0 +1,307 @@
+{
+  "schema": 1,
+  "game": "org.p4console.tide-maze",
+  "version": "0.2.0",
+  "status": "device candidate; lag complaint remains open",
+  "supersedes": {
+    "version": "0.1.1",
+    "package_sha256": "f253372131f24ad4fa8d6e2d66d9bdb0acfa95b84027bd71321a46f131484083",
+    "operator_acceptance": "FAIL: severe lag and flat visual presentation rejected",
+    "both_device_readbacks_matched": true
+  },
+  "changes": [
+    "Native perspective scene, raised wall faces/tray, shaded marbles and projected textured water",
+    "Continuous local fixed-step presentation and camera-correct touch targets",
+    "Reused optimized shared draw helpers; pinned RV32 -Os fill inner loop reduced from 14 instructions including per-pixel multiply and wide counters to 3 store/advance/branch instructions",
+    "Original generated water material (98304 bytes) and refreshed cartridge icon (9744 bytes)",
+    "4000-byte state and multiplayer protocol 1 retained"
+  ],
+  "candidate": {
+    "compiler": "/Users/billh/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
+    "compiler_sha256": "69e796c3a3e35ab36b256209e2d40f21cc946bf842718b4fc6d45159208d7910",
+    "flags": [
+      "-std=gnu17",
+      "-Os",
+      "-march=rv32imafc_zicsr_zifencei",
+      "-mabi=ilp32f",
+      "-fPIC",
+      "-fvisibility=hidden",
+      "-fno-jump-tables"
+    ],
+    "entry": "p4_tide_maze_game",
+    "preprocessed_sha256": {
+      "game-platform/runtime/cartridge_main.c": "734156a1cecb8836686df76c6db3c6b053d4082746ced58854236668775cff3b",
+      "games/tide_maze/src/tide_maze.c": "55f17e1ce6524fb38f78109a44717d584562ad66a6ab430da3bd75461c3b43f5",
+      "games/tide_maze/src/tide_maze_network.c": "fcd86eaf0f75a583b1a357704f6802adc70ec06153cd86f600f3ec6725dc872b",
+      "games/tide_maze/src/tide_maze_physics.c": "df3b83d033529d45390eb792b53fb566de8e2420abf2739d7a712b1d04f22176",
+      "games/tide_maze/src/tide_maze_render.c": "67156416c4738846807c570214fe4619bfa1fba78cb44e02e97cd4277ad47251",
+      "components/p4_game_api/src/audio_pack.c": "05a9ac05cb7ddfae8a6099ff3d9e78b53784e3f33c882b44ea6feea0cf165a14",
+      "components/p4_game_api/src/draw.c": "748da3f657627a955f6cb2458c310fe126d55ffecc5c21c0cf619ea82c9d1782",
+      "components/p4_game_api/src/feedback.c": "e46c674fce265cb0e51ba31b128c43523ae663045ab4bcbd7064ca10fb04b498",
+      "components/p4_game_api/src/game_runtime.c": "36aed5f6c82ddd4086ce1414488b534bbe08648526264d952e0d12d9160136e2",
+      "components/p4_game_api/src/input.c": "9256daae4fe31cdb8c095226696d7deae045bb83f24e3bacc4d499053ed82930",
+      "components/p4_game_api/src/presentation_font.c": "90883acd07b0701ea49207a4bc059a7ce245b19972ddade325cb7b68a9d2080d",
+      "components/p4_game_api/src/visual.c": "d7f8329ea434bf0d3c8b18c8554a2dfda0d6ed035682aad96d6cf0e1406497e9",
+      "components/p4_cp437/src/cp437.c": "b27fa0e271b2791214870b52031c77c8e951d7c803262d10613207a4fe6767a3"
+    },
+    "package": {
+      "bytes": 162612,
+      "file": "TIDE_MAZE.P4G",
+      "id": "org.p4console.tide-maze",
+      "multiplayer": {
+        "input_delay_ticks": 0,
+        "max_players": 2,
+        "message_bytes": 64,
+        "min_players": 2,
+        "protocol": 1,
+        "schema": 1,
+        "style": "realtime",
+        "style_code": 2,
+        "tick_rate_hz": 20
+      },
+      "package_sha256": "3acdf93a42bd9c9a6a4e83416240179834f0bf8249036add0ffa8921cf20af2f",
+      "payload_bytes": 162356,
+      "payload_sha256": "d544b64fd45eaf7ffc2f85f178a556bfecbeea9e26db31592c7cda7aa60b50a1",
+      "result": "p4-game-package-built",
+      "stack_frame_limit_bytes": 2048
+    },
+    "tracked_input_sha256": {
+      "games/tide_maze/src/generated/cover.inc": "8ffa5716335b9289f976ade37ce021577d9f2993bc900f21ae9a7f6786f5f55c",
+      "games/tide_maze/src/generated/water.inc": "1b5fab8ab93d590c6b7ec597752c64bada57686d9f7d1bbaa893038a07ae878a",
+      "games/tide_maze/src/tide_maze.c": "c046a7026ca4cedd430d3648af6506941a05362fa372646034f01aecc19678a7",
+      "games/tide_maze/src/tide_maze_internal.h": "92913d9274372091e799b124948c34e4e92b172f3e463f4051ec26fb4d0cb4dc",
+      "games/tide_maze/src/tide_maze_network.c": "ba3e3ecb17f7885203b728449fd55a6a9d471e15e18c890450a0aa8dd1e24c4b",
+      "games/tide_maze/src/tide_maze_physics.c": "67a871f9a5cecb7c5a726bc4fee2a2d7438107f808c64034131e5753165b1c2c",
+      "games/tide_maze/src/tide_maze_render.c": "615a238eab9229eef58ca997bae5d1b72cbc21150f66ab2192debb1959c2a823",
+      "components/p4_game_api/include/p4/achievements.h": "c389a044b056142d11796b8de48a50fa6ce5214e50c733455a32c9a0a663d37d",
+      "components/p4_game_api/include/p4/audio.h": "9b8fdf601e9a0d767816625572ce454dd49f764f6af98329353c00038ea3d13a",
+      "components/p4_game_api/include/p4/audio_pack.h": "8dcead613074e3e5db390039754942f432bd4aa024e33f61bff202a9fcc5818e",
+      "components/p4_game_api/include/p4/cartridge.h": "b3c7f4c0b3e3ff67e9e3ba9a81b162991922c8cf4a819758e4e6a9f9ac518f6a",
+      "components/p4_game_api/include/p4/dice.h": "4a9ee228bab0aee3b7dd7db43880e3337ec193417ddbd4bc577e6cf2f5ae68d6",
+      "components/p4_game_api/include/p4/draw.h": "47d5b29c0e736d62f421a231ba7c0fd8a97b7209a580ba5fc9f815c8fbe5ea1a",
+      "components/p4_game_api/include/p4/feedback.h": "ede8ccc4e9cab3c73b14dd3467a5276794c3cee90006581307bb525040396915",
+      "components/p4_game_api/include/p4/game.h": "33e65134e86f1597fe732f64df88720c5892280ff31ca00ac9cbee15beac7459",
+      "components/p4_game_api/include/p4/input.h": "4dd1d878598e81c1ec99d40b095b82202a49e3b80169a7217a6528d8f4ad6eb1",
+      "components/p4_game_api/include/p4/mesh.h": "3e7dd39f0e2df522a365227ca579e670ca8f8f8dcef841883f26959ea91e1394",
+      "components/p4_game_api/include/p4/motion.h": "08768be7e8788299c44cffcbffafbdfd2d05a5603aa79ae8eaeb6c312cd41abb",
+      "components/p4_game_api/include/p4/presentation.h": "c82e11e65836eb5de29a473f254d583daaa1946c357f4d8c9b3a76461f272d21",
+      "components/p4_game_api/include/p4/presentation_font.h": "0bc9a110a5f9b0e8f1cc44ffa212206758ebdd58e15ac488030f65fe72a7f448",
+      "components/p4_game_api/include/p4/visual.h": "206e74c98b2a47202f0e253f126dcfdf5e57dda6c25de732c0360fe542543979",
+      "tools/p4-game-host/CMakeLists.txt": "3ce03653c3393046a988a94586286035afe22b015ea7188e973b7a9505ed7bd3",
+      "tools/p4-game-host/benchmark_game.c": "d923d0d7957bdfde8c8b09ef36b5178ed8d2da43de01bfaf3cdfa2b174b50d35",
+      "tools/p4-game-host/frame_pacer.h": "4ff832b5242db46e176c79e2c4e13d5134e55f089b061014173c3d45d477c9f3",
+      "tools/p4-game-host/host_mouse.h": "7e09d5ff075109d6118ee7ac497a046274c1d724d2f4032d30584c65f2a10a50",
+      "tools/p4-game-host/host_service.c": "31f94486708417449b0144c5566dc2a1b32a2c54a7191508d7d0093bdb94e5e9",
+      "tools/p4-game-host/host_service.h": "729be99c640331ef538c7f0dbc744d198c813d87736fadff1215a31a76d2204b",
+      "tools/p4-game-host/play_game.c": "749d0439cc5ed0cbb88194202406236558b7ac9fd816f128ca09568b71aeeba2",
+      "tools/p4-game-host/test_audio_timing.c": "715434bac53e4507326cf55a73dbf0d878823a033009a6d9ab91c5e93fe4d2f8",
+      "tools/p4-game-host/test_exit_status.c": "c248419572449aed2f822d7d1423c2276a7a35ec692da24f5041be60af28ea65",
+      "tools/p4-game-host/test_mouse_events.c": "9a728e476c11c06c0ea043c3a7fbb742c884c94054cf253b8fb61cc5761ce5e0",
+      "games/tide_maze/game.json": "94c4462a8dd681badd31a7e23c262c18abcfacceb5264cc459761f1d912baeaa",
+      "games/tide_maze/assets/launcher.p4i": "df35281f28e4878b2505e82dfa583f919dbc101d4b7321b455b82628702f9920",
+      "games/tide_maze/assets/water-source.png": "78c39d4ceaea510a0e9dfe5ec6cd9a0e7789ff2557ec4b903b50c566dffdb0ae",
+      "games/tide_maze/tests/endurance-input.txt": "ccb3165c77bb9432661e69eef6f03af57069924f8ee3aac4c2527d95435831ea"
+    }
+  },
+  "checks": {
+    "game": "7/7 sanitizer suites PASS; all three mazes, stressed water fields, both surface sizes, padded stride",
+    "shared_api": "7/7 PASS, including independent mesh geometry/UV and 360 full raster equivalence comparisons",
+    "sdl": "5/5 PASS including mouse queue, audio timing and error exit checks",
+    "sdk": "make game-sdk-host PASS",
+    "package": "native parser, strict ELF validator and icon PASS",
+    "skills": "four changed skills pass quick_validate.py",
+    "interactive": "Codex exercised title selection, keyboard steering/reversal, pause/resume and Back in the real SDL game. Mouse automation did not trigger the clicked control; mouse/manual touch acceptance remains pending.",
+    "interactive_mac_timing": {
+      "target_hz": 60,
+      "average_fps": 59.98,
+      "maximum_gap_ms": 30.253,
+      "gaps_over_33_333ms": 0,
+      "renders": 2211,
+      "scope": "Mac SDL only; before the final offscreen-span guard; does not qualify tablet cadence"
+    },
+    "device_installation": "Final 0.2.0 hash verified and catalog registered on both previously authorized M5Stack Tab5 units running OS 0.53 (ST7121 and ST7123); OS not changed.",
+    "device_play": "Both native USB streams held open for 90 seconds after final installation without reopening or resetting; no active-game timing records. Earlier candidate capture lasted 300 seconds with the same limitation. Operator feedback requested; not received during this run."
+  },
+  "benchmarks": {
+    "768": {
+      "game": "org.p4console.tide-maze",
+      "frames": 10000,
+      "width": 768,
+      "height": 480,
+      "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+      "changed_frames": 9999,
+      "last_frame_hash": "1ac65c5a",
+      "update_audio_ms": {
+        "mean": 0.002,
+        "p50": 0.002,
+        "p95": 0.003,
+        "p99": 0.003,
+        "max": 0.031,
+        "over_33_333ms": 0
+      },
+      "render_ms": {
+        "mean": 0.1368,
+        "p50": 0.134,
+        "p95": 0.154,
+        "p99": 0.203,
+        "max": 0.556,
+        "over_33_333ms": 0
+      },
+      "total_ms": {
+        "mean": 0.1388,
+        "p50": 0.136,
+        "p95": 0.155,
+        "p99": 0.206,
+        "max": 0.558,
+        "over_33_333ms": 0
+      }
+    },
+    "320": {
+      "game": "org.p4console.tide-maze",
+      "frames": 10000,
+      "width": 320,
+      "height": 200,
+      "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+      "changed_frames": 9999,
+      "last_frame_hash": "020ba189",
+      "update_audio_ms": {
+        "mean": 0.0019,
+        "p50": 0.002,
+        "p95": 0.003,
+        "p99": 0.003,
+        "max": 0.016,
+        "over_33_333ms": 0
+      },
+      "render_ms": {
+        "mean": 0.0459,
+        "p50": 0.046,
+        "p95": 0.048,
+        "p99": 0.053,
+        "max": 0.268,
+        "over_33_333ms": 0
+      },
+      "total_ms": {
+        "mean": 0.0478,
+        "p50": 0.048,
+        "p95": 0.05,
+        "p99": 0.055,
+        "max": 0.27,
+        "over_33_333ms": 0
+      }
+    }
+  },
+  "device_installations": [
+    {
+      "superseded": true,
+      "receipt": {
+        "game": "org.p4console.tide-maze",
+        "version": "0.2.0",
+        "package_sha256": "aab425c7c5a8ca59908ecda37ad978c9248513c31af3a8df7a1b98655bc9178c",
+        "bytes": 162612,
+        "os_written": false,
+        "qualification": "candidate; operator-reported 0.1.1 lag remains open until active physical testing",
+        "units": {
+          "A": {
+            "port": "/dev/cu.usbmodem2101",
+            "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+            "backup_verified": true,
+            "installed": true,
+            "observed_os": "0.53",
+            "panel": "ST7121",
+            "previous_package_sha256": "f253372131f24ad4fa8d6e2d66d9bdb0acfa95b84027bd71321a46f131484083",
+            "device_sha256_verified": true,
+            "installed_utc": "2026-10-06T05:07:50.091437+00:00",
+            "catalog_registered": true,
+            "timing_lines": []
+          },
+          "B": {
+            "port": "/dev/cu.usbmodem1101",
+            "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+            "backup_verified": true,
+            "installed": true,
+            "observed_os": "0.53",
+            "panel": "ST7123",
+            "previous_package_sha256": "f253372131f24ad4fa8d6e2d66d9bdb0acfa95b84027bd71321a46f131484083",
+            "device_sha256_verified": true,
+            "installed_utc": "2026-10-06T05:08:24.129757+00:00",
+            "catalog_registered": true,
+            "timing_lines": []
+          }
+        }
+      },
+      "local_receipt": "build-host/tide-maze-fluidity/20261006T050719Z/receipt.json",
+      "receipt_sha256": "3ef85f3d3611a2ec723d97517f5a51f4c95a8d8bf0ada04dc5b117634a8e3276",
+      "local_serial_logs": {
+        "build-host/tide-maze-fluidity/20261006T050719Z/A-serial.log": {
+          "bytes": 37131,
+          "sha256": "70c002f200cd3e5c628cbebaedadf9a4ef0d581ea14a213360f3bfb1bdaca8b4"
+        },
+        "build-host/tide-maze-fluidity/20261006T050719Z/B-serial.log": {
+          "bytes": 36665,
+          "sha256": "1daaee93b47df649d9b771532670202f5600b1b84c263444e0918c150dfa2b87"
+        }
+      },
+      "active_gameplay_observed": false,
+      "qualification": "Installation and catalog registration verified; no active-game timing captured. Physical gameplay acceptance remains pending."
+    },
+    {
+      "superseded": false,
+      "receipt": {
+        "game": "org.p4console.tide-maze",
+        "version": "0.2.0",
+        "package_sha256": "3acdf93a42bd9c9a6a4e83416240179834f0bf8249036add0ffa8921cf20af2f",
+        "bytes": 162612,
+        "os_written": false,
+        "qualification": "candidate; operator-reported 0.1.1 lag remains open until active physical testing",
+        "units": {
+          "A": {
+            "port": "/dev/cu.usbmodem2101",
+            "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+            "backup_verified": true,
+            "installed": true,
+            "observed_os": "0.53",
+            "panel": "ST7121",
+            "previous_package_sha256": "aab425c7c5a8ca59908ecda37ad978c9248513c31af3a8df7a1b98655bc9178c",
+            "device_sha256_verified": true,
+            "installed_utc": "2026-10-06T05:14:26.523926+00:00",
+            "catalog_registered": true,
+            "timing_lines": []
+          },
+          "B": {
+            "port": "/dev/cu.usbmodem1101",
+            "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+            "backup_verified": true,
+            "installed": true,
+            "observed_os": "0.53",
+            "panel": "ST7123",
+            "previous_package_sha256": "aab425c7c5a8ca59908ecda37ad978c9248513c31af3a8df7a1b98655bc9178c",
+            "device_sha256_verified": true,
+            "installed_utc": "2026-10-06T05:15:01.908750+00:00",
+            "catalog_registered": true,
+            "timing_lines": []
+          }
+        }
+      },
+      "local_receipt": "build-host/tide-maze-fluidity/20261006T051355Z/receipt.json",
+      "receipt_sha256": "da1d6ee9c019dff3cbefcd1bd26fc3ea5ac0748231b669f53d3430802bea4254",
+      "local_serial_logs": {
+        "build-host/tide-maze-fluidity/20261006T051355Z/A-serial.log": {
+          "bytes": 32900,
+          "sha256": "1186cc0f70100952fcf749860fd880c69b26357baf69a605d151727373b60ba0"
+        },
+        "build-host/tide-maze-fluidity/20261006T051355Z/B-serial.log": {
+          "bytes": 32857,
+          "sha256": "f67ac4c0ba7afbe157f057cdcb0b9d9cc739309426e5dfbcbb3d985ce846363b"
+        }
+      },
+      "active_gameplay_observed": false,
+      "qualification": "Installation and catalog registration verified; no active-game timing captured. Physical gameplay acceptance remains pending."
+    }
+  ],
+  "remaining": [
+    "Actual-device sustained cadence and physical tilt/touch responsiveness",
+    "Both roles on the physical wireless link",
+    "Operator acceptance of the new visual direction"
+  ],
+  "art_provenance": "assets/perspective-provenance.json"
+}

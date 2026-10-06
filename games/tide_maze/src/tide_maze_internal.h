@@ -36,5 +36,7 @@ void tm_controls(p4_game_context_t *ctx, tm_state *s,const p4_game_input_t *in, 
 bool tm_network_begin(p4_game_context_t *ctx,tm_state *s);
 bool tm_network_poll(p4_game_context_t *ctx,tm_state *s,uint32_t ms);
 void tm_network_publish(p4_game_context_t *ctx,tm_state *s);
+void tm_visual_ball(const tm_state *s,unsigned player,int32_t *x,int32_t *y);
+bool tm_screen_to_board(int sx,int sy,int *x,int *y);
 bool tm_render(p4_game_context_t *ctx,p4_game_surface_t *surface);
 #endif

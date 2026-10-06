@@ -105,3 +105,18 @@ not provide a real Host/Join link or prove two-console synchronization.
 Legacy Doom does not implement the reentrant Game API and is outside this SDL3
 runner. Use its pinned `make doom-smoke WAD=/absolute/path/to/freedoom1.wad`
 host proof where applicable, then follow the separate guarded tablet route.
+
+## Retest the delivered source closure
+
+After isolation, cherry-picking or preparing a push, rebuild and benchmark in
+the checkout that produces the cartridge. Matching game source files is not
+enough: fingerprint the linked shared drawing/presentation code, headers,
+cartridge runtime, assets and compiler flags as well. Do not carry a fast Mac
+result from another checkout onto a package containing older raster helpers.
+The exact final source closure must pass the SDL and focused checks again.
+
+For fixed-step action, test frames shorter than one physics tick, reversals,
+pause, respawn and early network snapshots; a retained Q8 position alone does
+not prove continuous presentation. Perspective games also need projection /
+touch-inverse coverage at the edges and both render sizes. Capture demanding
+active water/effect states, not only the neutral starting board.

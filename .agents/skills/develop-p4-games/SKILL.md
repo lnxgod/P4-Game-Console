@@ -217,3 +217,19 @@ A changed or unknown file is rejected. For sidecars supply both `.P4R` and `.P4G
 the client removes the resource first. Lua `.P4CART` uses the same command.
 This does not delete saved progress, WADs or arbitrary files. Older firmware
 without remove support must first receive a separately authorized OS update.
+
+## Close the performance loop after a complaint
+
+A user report of severe lag or unacceptable presentation rejects that installed
+candidate's gameplay acceptance. Record the report against its known package
+and device; do not overwrite it with a transfer PASS or merely leave the old
+result as unmeasured. Preserve the rejected artifact for comparison.
+
+Follow GAME_PERFORMANCE.md to isolate update, drawing, input and presentation
+costs, rebuild the complete cartridge source closure, and repeat representative
+play on the intended device. A requested diagnostic installation can proceed
+within existing authorization, but label it as a candidate. A successful copy
+and registration never closes a lag complaint. Keep the defect open until
+measured cadence and physical responsiveness/visual acceptance support the fix;
+report missing operator play or device timing explicitly without claiming it
+is resolved. Do not add an OS flash to a game-only fix.

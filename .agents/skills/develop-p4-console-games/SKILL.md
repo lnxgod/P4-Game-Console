@@ -249,3 +249,21 @@ reflash.
 Update `docs/GAME_SDK.md` only when the reusable contract changes. Record
 current evidence separately from historical runs. Use `$develop-p4-games`
 for package validation and installation.
+
+## Match the intended spatial experience
+
+For a physical marble, tilting tray or water-maze request, establish the camera
+and depth in the first playable scene. When the user expects 3D or 3D-like play,
+use a native projected scene with visible wall faces, occlusion, shaded actors
+and a water surface that responds continuously to the simulation. A flat grid
+with decorative ripples does not meet that brief. Keep reusable bounded mesh
+rasterization in the shared API; games own the camera and scene. Do not route
+this class of real-time game into Lua unless readable Lua is explicitly wanted.
+
+Show an actual native-resolution gameplay capture early, before lengthy polish
+or packaging. A concept image is not evidence of the renderer. Check motion as
+well as a still: interpolate local fixed-step actors, preserve fractional
+projection, handle respawns without tweening across walls, and invert the
+actual camera for touch targeting. Keep input, physics and multiplayer rules
+independent of the view. A rejected visual direction requires a scene/rendering
+change, not just another texture on the same presentation.

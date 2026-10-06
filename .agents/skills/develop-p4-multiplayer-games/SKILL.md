@@ -145,3 +145,13 @@ extension. Tab5 has native-USB relay plumbing; USB-A host and C6 radio remain di
 in the installed configuration. Controller and physical multiplayer
 acceptance are pending; never inherit Waveshare hardware claims. Report host,
 build and device evidence separately.
+
+## Responsiveness is part of multiplayer acceptance
+
+For real-time games, exercise steering in each role while rendering and effects
+are busy. Track input-to-visible-motion delay separately from snapshot rate and
+frame cadence. Interpolation can hide packet steps while adding a full snapshot
+period of control delay; do not describe it as responsive without checking the
+guest's own controls. If local prediction is needed, bound reconciliation, keep
+collisions/rules authoritative, reset on respawn and timeout, and test loss and
+reordering. Preserve protocol compatibility unless message meanings change.

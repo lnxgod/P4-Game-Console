@@ -1,132 +1,166 @@
 // SPDX-License-Identifier: MIT
 #include "tide_maze_internal.h"
 #include "p4/presentation.h"
+#include "p4/mesh.h"
+#include "generated/water.inc"
 
-#include "generated/cover.inc"
-/* Caller reserves eleven bytes; all UI values are bounded game state. */
-static char *number(char *out,unsigned value){
- char digits[10];unsigned n=0;
- do{digits[n++]=(char)('0'+value%10U);value/=10U;}while(value&&n<10U);
- while(n)*out++=digits[--n];*out=0;return out;
-}
+typedef p4_mesh_point_t point;
+static const int8_t wave[64]={0,12,25,37,49,60,71,81,90,98,106,112,117,122,125,126,127,126,125,122,117,112,106,98,90,81,71,60,49,37,25,12,0,-12,-25,-37,-49,-60,-71,-81,-90,-98,-106,-112,-117,-122,-125,-126,-127,-126,-125,-122,-117,-112,-106,-98,-90,-81,-71,-60,-49,-37,-25,-12};
 static uint16_t rgb(int r,int g,int b){return (uint16_t)(((r>>3)<<11)|((g>>2)<<5)|(b>>3));}
-static void rect(p4_game_surface_t *f,int x,int y,int w,int h,uint16_t c){
- int px=p4_ui_x(f,x),py=p4_ui_y(f,y);p4_draw_fill_rect(f,px,py,p4_ui_x(f,x+w)-px,p4_ui_y(f,y+h)-py,c);
+static char *number(char *out,unsigned value){char a[10];unsigned n=0;do{a[n++]=(char)('0'+value%10U);value/=10U;}while(value&&n<10U);while(n)*out++=a[--n];*out=0;return out;}
+static void rect(p4_game_surface_t *f,int x,int y,int w,int h,uint16_t c){int px=p4_ui_x(f,x),py=p4_ui_y(f,y);p4_draw_fill_rect(f,px,py,p4_ui_x(f,x+w)-px,p4_ui_y(f,y+h)-py,c);}
+static void text(p4_game_surface_t *f,int x,int y,const char *t,uint16_t c,int size){p4_ui_text(f,p4_ui_x(f,x),p4_ui_y(f,y),t,c,(unsigned)p4_ui_y(f,size),60);}
+/* Q8 world -> perspective -> native pixels. No intermediate integer logical
+ * pixel truncation: slow marble motion survives both negotiated resolutions. */
+static point project(const p4_game_surface_t *f,int x,int y,int z){
+ const int xc=x-120*TM_Q;
+ const int depth=600-y/TM_Q-xc/(10*TM_Q);
+ const int sx=156*TM_Q+(xc*530+(y-72*TM_Q)*60)/depth;
+ const int sy=42*TM_Q+(y*330+xc*45-z*600)/depth;
+ return (point){sx*(int)f->width/(320*TM_Q),sy*(int)f->height/(200*TM_Q)};
 }
-static void text(p4_game_surface_t *f,int x,int y,const char *t,uint16_t c,int size){
- p4_ui_text(f,p4_ui_x(f,x),p4_ui_y(f,y),t,c,(unsigned)p4_ui_y(f,size),60);
+static void face(p4_game_surface_t *f,point a,point b,point c,point d,uint16_t color){const point v[4]={a,b,c,d};p4_draw_face(f,v,4,color);}
+static void line(p4_game_surface_t *f,point a,point b,uint16_t color){p4_draw_mesh_line(f,a,b,color);}
+static void plane(p4_game_surface_t *f,int x,int y,int w,int h,int z,uint16_t color){
+ face(f,project(f,x,y,z),project(f,x+w,y,z),project(f,x+w,y+h,z),project(f,x,y+h,z),color);
 }
-static void circle(p4_game_surface_t *f,int x,int y,int r,uint16_t c){p4_draw_fill_circle(f,p4_ui_x(f,x),p4_ui_y(f,y),p4_ui_x(f,r),c);}
-static void button(p4_game_surface_t *f,int y,const char *title,bool on){
- p4_ui_round_rect(f,p4_ui_x(f,253),p4_ui_y(f,y),p4_ui_x(f,59),p4_ui_y(f,24),p4_ui_x(f,3),on?rgb(46,133,146):rgb(23,56,69));
- text(f,259,y+6,title,rgb(228,245,237),9);
+static void box(p4_game_surface_t *f,int x,int y,int w,int h,int bottom,int top,uint16_t front,uint16_t side,uint16_t cap){
+ point a=project(f,x,y,top),b=project(f,x+w,y,top),c=project(f,x+w,y+h,top),d=project(f,x,y+h,top);
+ point aa=project(f,x,y,bottom),bb=project(f,x+w,y,bottom),cc=project(f,x+w,y+h,bottom),dd=project(f,x,y+h,bottom);
+ if(x<120*TM_Q)face(f,b,bb,cc,c,side);
+ if(x+w>120*TM_Q)face(f,aa,a,d,dd,side);
+ face(f,d,c,cc,dd,front);face(f,a,b,c,d,cap);
 }
-static void marble(p4_game_surface_t *f,int32_t x,int32_t y,int radius,bool coral){
- /* Bounded Q8 positions times 768 fit int32; avoid RV32 non-PIC divdi3. */
- const int px=p4_ui_x(f,8)+(int)(x*(int32_t)f->width/(TM_Q*320));
- const int py=p4_ui_y(f,32)+(int)(y*(int32_t)f->height/(TM_Q*200));
- const int r=p4_ui_x(f,radius);
- p4_draw_fill_circle(f,px+2,py+3,r+1,rgb(5,57,69));
- for(int i=r;i>0;--i){int light=200-i*120/(r?r:1);
-  p4_draw_fill_circle(f,px,py,i,coral?rgb(245,light,light*3/4):rgb(light/2,light+35,245));}
- p4_draw_fill_circle(f,px-r/3,py-r/3,r/3? r/3:1,rgb(237,255,249));
+static int surface_height(const tm_state *s,int x,int y){
+ int sum=0,n=0;
+ for(int dy=-1;dy<=0;++dy)for(int dx=-1;dx<=0;++dx){int xx=x+dx,yy=y+dy;
+  if(xx>=0&&xx<TM_W&&yy>=0&&yy<TM_H&&s->wet[yy*TM_W+xx]){sum+=s->water[yy*TM_W+xx];++n;}}
+ int level=n?sum/n:320;
+ /* The solver drives the large slosh. Two small travelling waves prevent a
+  * stationary, tile-coloured surface; phase is evaluated every render. */
+ unsigned t=s->animation_ms;
+ int ripple=wave[(t/19U+(unsigned)x*5U+(unsigned)y*3U)%64U]+wave[(t/27U+(unsigned)x*2U+64U-(unsigned)y%64U)%64U];
+ return 2*TM_Q+tm_clamp((level-320)*2,-TM_Q,2*TM_Q)+ripple*2/3;
 }
-static unsigned collected(unsigned bits){unsigned n=0;for(;bits;bits>>=1)n+=bits&1U;return n;}
-static void board(p4_game_surface_t *f,tm_state *s){
- rect(f,6,30,244,148,rgb(7,25,36));
- for(int y=0;y<TM_H;++y)for(int x=0;x<TM_W;++x){
-  int i=y*TM_W+x;if(!s->wet[i])continue;
-  int h=tm_clamp(s->water[i],0,700);int shade=h/18;
-  uint16_t color=p4_ui_blend(rgb(162,176,146),rgb(12,116+shade,142+shade),(unsigned)tm_clamp(h/12,0,15));
-  rect(f,8+x*8,32+y*8,8,8,color);
-  /* Native-pixel caustics move with local flow and pressure, not a scaled frame. */
-  int px=p4_ui_x(f,8+x*8),py=p4_ui_y(f,32+y*8),w=p4_ui_x(f,8),hh=p4_ui_y(f,8);
-  unsigned phase=(s->animation_ms/70U+(unsigned)(x*7+y*11)+(unsigned)h/12U)%24U;
-  int yy=(int)phase*hh/24;
-  const int curve[8]={0,1,2,3,3,2,1,0};
-  for(int k=2;k<w-2;++k){
-   int bend=curve[(unsigned)(k+(int)phase)%8U]*hh/20;
-   if(yy+bend<hh)p4_draw_pixel(f,px+k,py+yy+bend,rgb(69,184+shade,194+shade));
-  }
-  if(h>340){
-   uint16_t foam=rgb(137+shade,218,214);
-   if(x>0&&!s->wet[i-1])p4_draw_fill_rect(f,px,py,2,hh,foam);
-   if(y>0&&!s->wet[i-TM_W])p4_draw_fill_rect(f,px,py,w,2,foam);
-  }
-  if(h>410)p4_draw_fill_rect(f,px+3,py+yy+2,w/2,1,rgb(170,220,217));
+static void water_cell(p4_game_surface_t *f,const tm_state *s,int x,int y){
+ int i=y*TM_W+x;if(!s->wet[i])return;
+ int xx=x*8*TM_Q,yy=y*8*TM_Q;
+ int h0=surface_height(s,x,y),h1=surface_height(s,x+1,y),h2=surface_height(s,x+1,y+1),h3=surface_height(s,x,y+1);
+ point a=project(f,xx,yy,h0),b=project(f,xx+8*TM_Q,yy,h1),c=project(f,xx+8*TM_Q,yy+8*TM_Q,h2),d=project(f,xx,yy+8*TM_Q,h3);
+ int light=tm_clamp((h0-h2)/6+(h1-h3)/9,-20,32);
+ if((y>0&&!s->wet[i-TM_W])||(x>0&&!s->wet[i-1]))light-=12;
+ int u=x*16*TM_Q+(int)(s->animation_ms%32768U)*2;
+ int v=y*16*TM_Q+(int)(s->animation_ms%32768U);
+ int du=(h1-h0)/2,dv=(h3-h0)/2;
+ const p4_mesh_tex_vertex_t uv[4]={{a,u,v},{b,u+16*TM_Q+du,v},{c,u+16*TM_Q+du,v+16*TM_Q+dv},{d,u,v+16*TM_Q+dv}};
+ unsigned palette=light < -12?0U:(light>18?2U:1U);
+ p4_draw_textured_face(f,uv,4,water_material+palette*16384U,128);
+ if(x>0&&!s->wet[i-1])line(f,a,d,rgb(162,224,213));
+ if(y>0&&!s->wet[i-TM_W])line(f,a,b,rgb(128,209,207));
+}
+static void ellipse(p4_game_surface_t *f,int x,int y,int rx,int ry,uint16_t color){
+ if(rx<1||ry<1)return;
+ for(int row=-ry;row<=ry;++row){int half=rx*(ry*ry-row*row)/(ry*ry);if(half<1)half=1;p4_draw_fill_rect(f,x-half,y+row,half*2+1,1,color);}
+}
+static void marble(p4_game_surface_t *f,const tm_state *s,unsigned p){
+ if(s->ball[p].rescue&&(s->animation_ms/100U%2U))return;
+ int32_t x,y;tm_visual_ball(s,p,&x,&y);
+ point shadow=project(f,x+TM_Q,y+2*TM_Q,2*TM_Q),center=project(f,x,y,5*TM_Q);
+ int radius=(int)f->width*2450/((600-y/TM_Q)*320);if(radius<3)radius=3;
+ ellipse(f,shadow.x,shadow.y,radius+2,radius/2,rgb(15,83,98));
+ /* Small bounded sphere raster, with diffuse falloff, reflected water and a
+  * moving equatorial stripe. This is geometry, not an enlarged pixel sprite. */
+ const int rr=radius*radius;
+ for(int dy=-radius;dy<=radius;++dy)for(int dx=-radius;dx<=radius;++dx){
+  int d=dx*dx+dy*dy;if(d>rr)continue;
+  int light=tm_clamp(176-d*100/rr-(dx+dy)*34/radius,35,245);
+  bool stripe=((dx+dy+(x+y)/(TM_Q/2))%(radius+2))<2;
+  int r=p?light:light*3/4,g=p?light*3/5:light,b=p?light/3:tm_clamp(light+30,0,255);
+  if(stripe){r=r*4/5;g=g*4/5;b=b*4/5;}
+  p4_draw_pixel(f,center.x+dx,center.y+dy,rgb(r,g,b));
  }
- for(int y=0;y<TM_ROWS;++y)for(int x=0;x<TM_COLS;++x){
-  if(tm_tile(s->level,x,y)!='#')continue;
-  int bx=8+x*16,by=32+y*16;
-  rect(f,bx,by,16,16,rgb(134,148,137));
-  rect(f,bx,by,16,13,rgb(219,220,187));
-  rect(f,bx,by,16,1,rgb(251,244,214));
-  rect(f,bx,by,1,14,rgb(239,235,202));
-  rect(f,bx+15,by+1,1,15,rgb(114,135,126));
-  /* Fine joints and bevels stay native geometry. */
-  rect(f,bx+3,by+11,10,1,rgb(200,207,177));
- }
- unsigned pearl=0;
- for(int y=1;y<TM_ROWS-1;++y)for(int x=1;x<TM_COLS-1;++x){
-  const char t=tm_tile(s->level,x,y);int bx=8+x*16+8,by=32+y*16+8;
+ p4_draw_fill_circle(f,center.x-radius/3,center.y-radius/3,radius/4,rgb(255,255,245));
+ if(s->linked){text(f,center.x*320/(int)f->width-2,center.y*200/(int)f->height-13,p==0?"1":"2",rgb(247,244,216),8);}
+}
+static void objects(p4_game_surface_t *f,const tm_state *s,int row,unsigned *pearl){
+ for(int x=1;x<TM_COLS-1;++x){char t=tm_tile(s->level,x,row);int xx=(x*16+8)*TM_Q,yy=(row*16+8)*TM_Q;
+  point a=project(f,xx,yy,2*TM_Q);int r=p4_ui_x(f,3);
   if(t=='o'){
-   if(!(s->pearls&(1U<<pearl))){circle(f,bx,by,5,rgb(38,163,170));circle(f,bx,by,3,rgb(244,222,154));circle(f,bx-1,by-1,1,rgb(255,255,235));}
-   ++pearl;
+   if(!(s->pearls&(1U<<*pearl))){
+    ellipse(f,a.x+2,a.y+3,r+2,r/2,rgb(25,106,118));
+    int z=4*TM_Q+wave[(s->animation_ms/18U+(unsigned)x*7U)%64U]/2;
+    point c=project(f,xx,yy,z);
+    p4_draw_fill_circle(f,c.x,c.y,r+1,rgb(120,92,45));p4_draw_fill_circle(f,c.x,c.y-1,r,rgb(234,183,89));p4_draw_fill_circle(f,c.x-1,c.y-2,r/2,rgb(255,242,191));
+   }++*pearl;
   }else if(t=='~'){
-   circle(f,bx,by,6,rgb(13,102,127));circle(f,bx,by,4,rgb(12,66,91));circle(f,bx,by,2,rgb(4,35,56));
-   int o=(int)(s->animation_ms/130U%4U);rect(f,bx-5+o,by-4,4,1,rgb(151,230,225));
+   ellipse(f,a.x,a.y,r*2,r,rgb(11,75,96));ellipse(f,a.x,a.y,r,r/2,rgb(4,29,46));
+   unsigned phase=s->animation_ms/14U%64U;int dx=wave[phase]*r*2/128,dy=wave[(phase+16U)%64U]*r/128;
+   p4_draw_fill_circle(f,a.x+dx,a.y+dy,r/3,rgb(168,229,218));
   }else if(t=='E'){
    bool ready=s->pearls==((1U<<s->all_pearls)-1U);
-   circle(f,bx,by,7,ready?rgb(230,199,104):rgb(66,99,104));circle(f,bx,by,5,rgb(16,81,95));
-   text(f,bx-3,by-4,"E",rgb(245,239,199),8);
+   ellipse(f,a.x,a.y,r*3,r*2,ready?rgb(245,197,92):rgb(91,116,110));
+   ellipse(f,a.x,a.y,r*2,r,rgb(25,90,102));
+   text(f,a.x*320/(int)f->width-3,a.y*200/(int)f->height-4,"E",rgb(255,238,187),8);
   }
  }
- for(unsigned p=0;p<(s->linked?2U:1U);++p){
-  if(s->ball[p].rescue&&(s->animation_ms/100U%2U))continue;
-  int32_t x=s->ball[p].x,y=s->ball[p].y;
-  if(s->linked&&!s->host){x=s->previous_x[p]+(x-s->previous_x[p])*(int32_t)s->blend_ms/50;y=s->previous_y[p]+(y-s->previous_y[p])*(int32_t)s->blend_ms/50;}
-  marble(f,x,y,3,p==1);
-  if(s->linked)text(f,8+x/TM_Q-2,32+y/TM_Q-10,p==0?"1":"2",rgb(255,255,233),7);
- }
+ for(unsigned p=0;p<(s->linked?2U:1U);++p){int32_t x,y;tm_visual_ball(s,p,&x,&y);if(y/(16*TM_Q)==row)marble(f,s,p);}
 }
+static void scene(p4_game_surface_t *f,const tm_state *s){
+ /* A single background pass, followed by bounded, back-to-front mesh faces. */
+ for(int y=0;y<(int)f->height;++y){int t=y*18/(int)f->height;p4_draw_fill_rect(f,0,y,f->width,1,rgb(16-t/3,29-t/2,43-t/2));}
+ plane(f,-5*TM_Q,4*TM_Q,250*TM_Q,146*TM_Q,-12*TM_Q,rgb(4,12,22));
+ box(f,-3*TM_Q,-3*TM_Q,246*TM_Q,150*TM_Q,-9*TM_Q,0,rgb(45,58,62),rgb(64,77,76),rgb(97,119,115));
+ plane(f,0,0,240*TM_Q,144*TM_Q,0,rgb(18,94,113));
+ unsigned pearl=0;
+ for(int y=0;y<TM_ROWS;++y){
+  for(int x=0;x<TM_COLS;++x){
+   if(tm_tile(s->level,x,y)=='#'){
+    int end=x+1;while(end<TM_COLS&&tm_tile(s->level,end,y)=='#')++end;
+    int xx=x*16*TM_Q,yy=y*16*TM_Q,ww=(end-x)*16*TM_Q;
+    box(f,xx,yy,ww,16*TM_Q,0,6*TM_Q,rgb(72,108,117),rgb(98,135,140),rgb(166,193,187));
+    plane(f,xx+TM_Q/2,yy+TM_Q/2,ww-TM_Q,15*TM_Q,6*TM_Q+16,rgb(214,223,201));
+    line(f,project(f,xx,yy,6*TM_Q),project(f,xx+ww,yy,6*TM_Q),rgb(249,244,218));
+    x=end-1;
+   }else{
+    for(int dy=0;dy<2;++dy)for(int dx=0;dx<2;++dx)water_cell(f,s,x*2+dx,y*2+dy);
+   }
+  }
+  if(y>0&&y<TM_ROWS-1)objects(f,s,y,&pearl);
+ }
+ point a=project(f,-3*TM_Q,147*TM_Q,-2*TM_Q),b=project(f,243*TM_Q,147*TM_Q,-2*TM_Q);line(f,a,b,rgb(181,160,104));
+}
+static void button(p4_game_surface_t *f,int x,const char *label,bool active){
+ p4_ui_round_rect(f,p4_ui_x(f,x),p4_ui_y(f,180),p4_ui_x(f,49),p4_ui_y(f,17),p4_ui_x(f,4),active?rgb(51,130,142):rgb(31,53,68));text(f,x+6,184,label,rgb(218,233,224),8);
+}
+static unsigned collected(unsigned bits){unsigned n=0;for(;bits;bits>>=1)n+=bits&1U;return n;}
 bool tm_render(p4_game_context_t *ctx,p4_game_surface_t *f){
  if(!p4_surface_valid(f))return false;tm_state *s=ctx->state;
- const uint16_t white=rgb(236,243,222),muted=rgb(143,191,195),gold=rgb(246,212,142);
- p4_draw_clear(f,rgb(11,31,45));
- text(f,9,5,"TIDE MAZE",white,16);
- const char *names[]={"01  STILLWATER","02  CROSSCURRENT","03  THE UNDERTOW"};
- text(f,9,22,names[s->level],muted,7);
- text(f,288,1,"Exit",muted,8);
- text(f,252,12,s->linked?"TOGETHER":"SOLO DIVE",gold,9);
- board(f,s);
- char line[64];
- if(s->linked){text(f,252,25,"You are",white,8);number(line,(unsigned)s->slot+1U);text(f,280,25,line,white,8);}
- char *end=number(line,collected(s->pearls));*end++=' ';*end++='/';*end++=' ';number(end,s->all_pearls);
- text(f,258,36,"PEARLS",muted,8);text(f,257,48,line,gold,18);
- end=number(line,s->time_ms/60000U);*end++=':';
- *end++=(char)('0'+s->time_ms/10000U%6U);*end++=(char)('0'+s->time_ms/1000U%10U);*end=0;
- text(f,258,75,"TIME LEFT",muted,8);text(f,257,86,line,white,16);
- button(f,113,"A  Brake",s->intent[s->slot].brake);button(f,141,"B  Center",false);button(f,169,"Pause",s->phase==TM_PAUSE);
- text(f,10,184,s->motion_live?"TILT TO ROLL   /   GENTLE MOVES, SMALL WAVES":"DRAG TO STEER   /   ARROWS TO ROLL   /   A TO BRAKE",muted,8);
- if(s->phase==TM_TITLE){
-  p4_ui_sprite(f,p4_ui_x(f,8),p4_ui_y(f,31),p4_ui_x(f,240),p4_ui_y(f,146),cover,288,162,false,0);
- }
+ const uint16_t white=rgb(239,242,222),muted=rgb(148,186,191),gold=rgb(241,202,123);
+ scene(f,s);
+ text(f,9,4,"TIDE MAZE",white,13);
+ const char *names[]={"STILLWATER","CROSSCURRENT","THE UNDERTOW"};text(f,10,20,names[s->level],muted,7);
+ char value[32],*end=number(value,collected(s->pearls));*end++='/';number(end,s->all_pearls);
+ text(f,151,5,"PEARLS",muted,7);text(f,152,15,value,gold,11);
+ end=number(value,s->time_ms/60000U);*end++=':';*end++=(char)('0'+s->time_ms/10000U%6U);*end++=(char)('0'+s->time_ms/1000U%10U);*end=0;
+ text(f,216,5,"TIME",muted,7);text(f,214,15,value,white,11);text(f,291,5,"Exit",muted,8);
+ text(f,10,183,s->linked?"TWO MARBLES. ONE TIDE.":"ROLL WITH THE TIDE.",gold,8);
+ text(f,10,193,s->motion_live?"Tilt gently. B sets your center.":"Drag the marble or use arrows.",muted,6);
+ button(f,164,"A Brake",s->intent[s->slot].brake);button(f,216,"B Center",false);button(f,268,"Pause",s->phase==TM_PAUSE);
  if(s->phase!=TM_PLAY){
-  p4_ui_round_rect(f,p4_ui_x(f,30),p4_ui_y(f,53),p4_ui_x(f,202),p4_ui_y(f,105),p4_ui_x(f,6),rgb(7,34,48));
-  const char *title="Tide Maze",*a="Collect every pearl. Find the gold exit.",*b="Tilt gently; hold A to steady your marble.",*c="A / tap to dive in";
-  if(s->phase==TM_PAUSE){title="A moment of calm";a="Take a breath. The tide can wait.";b="B rotates tilt axes; A resumes.";c="A / tap to resume";}
-  if(s->phase==TM_CLEAR){title="Safe in the harbor";a="Every pearl recovered. Beautiful sailing.";b="A new labyrinth waits beyond the tide.";c="A / tap for next maze";}
-  if(s->phase==TM_WON){title="Masters of the tide";a=s->linked?"Two marbles. Three mazes. One great team.":"Three labyrinths safely navigated.";b="Try a quicker run, or bring a friend.";c="A / tap to dive again";}
-  if(s->phase==TM_LOST){title="The tide rolled in";a="Time ran out. Your next run starts fresh.";b="Whirlpools cost three seconds. Brake early.";c="A / tap to try again";}
-  if(s->phase==TM_LINK_LOST){title="Your friend drifted away";a="The linked run has ended.";b="Reconnect in the console's Multiplayer menu.";c="A / tap for a fresh solo run";}
-  if(s->phase==TM_WAIT){title="Catching the same wave";a="Waiting for the first shared game state.";b="Both players collect pearls and reach E.";c="Back returns to the console";}
+  /* Keep the actual 3D labyrinth visible around a compact, readable modal. */
+  p4_ui_round_rect(f,p4_ui_x(f,57),p4_ui_y(f,62),p4_ui_x(f,206),p4_ui_y(f,94),p4_ui_x(f,6),rgb(7,26,40));
+  rect(f,70,72,20,1,gold);
+  const char *title="TIDE MAZE",*a="A marble. A labyrinth. A restless tide.",*b="Collect the pearls. Reach the gold dock.",*c="A / tap to dive in";
+  if(s->phase==TM_PAUSE){title="A moment of calm";a="The water can wait.";b="B rotates tilt axes. A resumes.";c="A / tap to resume";}
+  if(s->phase==TM_CLEAR){title="Safe in the harbor";a="Every pearl recovered.";b="A new labyrinth waits beyond the tide.";c="A / tap for next maze";}
+  if(s->phase==TM_WON){title="Masters of the tide";a=s->linked?"Two marbles. Three mazes. One team.":"Three labyrinths safely navigated.";b="Try a quicker run, or bring a friend.";c="A / tap to dive again";}
+  if(s->phase==TM_LOST){title="The tide rolled in";a="The next voyage starts fresh.";b="Brake early around the whirlpools.";c="A / tap to try again";}
+  if(s->phase==TM_LINK_LOST){title="Your friend drifted away";a="Your linked run has ended.";b="Reconnect through Console Multiplayer.";c="A / tap for solo play";}
+  if(s->phase==TM_WAIT){title="Catching the same wave";a="Waiting for your friend's game state.";b="Both marbles must reach the dock.";c="Back returns to the console";}
   if(s->linked&&!s->host&&s->phase!=TM_WAIT)c="Your host continues the voyage";
-  text(f,40,63,title,white,14);text(f,40,87,a,muted,8);text(f,40,101,b,muted,8);
-  if(s->phase==TM_TITLE){
-   text(f,40,116,"Arrows: maze",gold,8);number(line,s->level+1U);text(f,88,116,line,gold,8);
-   text(f,116,116,"B: tilt axes",gold,8);number(line,(unsigned)s->orientation+1U);text(f,157,116,line,gold,8);
-  }
-  text(f,40,139,c,gold,9);
+  text(f,70,80,title,white,13);text(f,70,102,a,muted,8);text(f,70,115,b,muted,8);
+  if(s->phase==TM_TITLE){text(f,70,128,"Arrows: maze    B: rotate tilt axes",muted,7);}
+  text(f,70,140,c,gold,9);
  }
  return true;
 }

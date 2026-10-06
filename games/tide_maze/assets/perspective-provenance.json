@@ -1,0 +1,19 @@
+{
+  "generator": "built-in image_gen",
+  "date": "2026-10-06",
+  "assets": [
+    {
+      "source": "water-source.png",
+      "sha256": "78c39d4ceaea510a0e9dfe5ec6cd9a0e7789ff2557ec4b903b50c566dffdb0ae",
+      "prompt": "Use case: stylized-concept. Asset type: seamless square game texture for a real-time native 3D water surface, sampled repeatedly on a perspective maze. Create ONE square perfectly top-down orthographic, seamless tile of translucent blue-green turquoise pool water. Premium restrained rendered material, softly refracted natural caustic loops, irregular broad connected curves with soft edges, subtle depth modulation. Mostly mid-dark deep teal water (roughly #127e91 to #299eaa), sparse pale aqua caustics, no pure white glare. Broad low-frequency smooth patterns, never small busy noise, avoid horizontal lines, square grid, ripples around one center or visible tile borders. No environment, no pool border, no objects, no marble, no typography, no UI, no perspective, no photographic grain. This is a raw texture material to be downsampled to 128x128 then animated by water geometry.",
+      "use": "128x128 RGB565 water texture, three lighting palettes, Lanczos; 98304 bytes"
+    },
+    {
+      "source": "launcher-3d-source.png",
+      "sha256": "6ad3069d697cfa8d8722dc4d77ca1ab3ed506dda872c4eb87b770cfe2e56de29",
+      "prompt": "Use case: stylized-concept. Create original launcher artwork for Tide Maze, a native 3D-ish marble labyrinth game. Wide 16:9 composition, no text. One luminous blue glass marble as the clear focal point, in the foreground channel of a compact raised ivory ceramic labyrinth flooded with deep teal water. A small gold pearl farther down the channel. Perspective view, beautifully shaded raised wall faces, turquoise refracted caustics, restrained midnight navy backdrop. Premium miniature physical puzzle toy, calm focused material design, rounded marble, realistic soft shadows. NOT pixel art, no UI, no screenshot border, no symbols, no generic fantasy landscape, no extra characters. Readable when reduced to a 128x72 console launcher icon.",
+      "use": "128x72 indexed launcher illustration, Lanczos+median-cut; 9744 bytes"
+    }
+  ],
+  "license_notice": "Original generated artwork accompanies the MIT game; not third-party commercial game assets."
+}

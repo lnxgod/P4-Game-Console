@@ -77,6 +77,7 @@ void tm_simulate(tm_state *s){
  s->docked=0;
  for(unsigned p=0;p<count;++p){
   tm_ball *b=&s->ball[p];const tm_intent *in=&s->intent[p];
+  s->previous_x[p]=b->x;s->previous_y[p]=b->y;
   if(b->rescue){b->rescue=(uint16_t)(b->rescue>TM_STEP?b->rescue-TM_STEP:0);continue;}
   int ix=tm_clamp(b->x/(8*TM_Q),1,TM_W-2),iy=tm_clamp(b->y/(8*TM_Q),1,TM_H-2),i=iy*TM_W+ix;
   int drag=in->brake?190:246;
@@ -94,6 +95,7 @@ void tm_simulate(tm_state *s){
    if(t=='~' && d<100){
     b->vx=tm_clamp(b->vx-dx*3,-280,280);b->vy=tm_clamp(b->vy-dy*3,-280,280);
     if(d<9){b->x=(24+(int)p*3)*TM_Q;b->y=24*TM_Q;b->vx=b->vy=0;b->rescue=700;
+     s->previous_x[p]=b->x;s->previous_y[p]=b->y;
      ++s->rescues;s->time_ms=s->time_ms>3000?s->time_ms-3000:0;}
    }
   }
@@ -152,10 +154,36 @@ void tm_controls(p4_game_context_t *ctx,tm_state *s,const p4_game_input_t *in,ui
  out->brake=(in->held&P4_BUTTON_A)!=0;
  if(in->touch_valid&&in->touch_count){
   int x=in->touches[0].x,y=in->touches[0].y;
-  if(x<248&&y>=32&&y<176){
-   out->x=(int16_t)tm_clamp((x-8-s->ball[s->slot].x/TM_Q)*50,-1000,1000);
-   out->y=(int16_t)tm_clamp((y-32-s->ball[s->slot].y/TM_Q)*50,-1000,1000);
+  int bx,by;
+  if(tm_screen_to_board(x,y,&bx,&by)){
+   out->x=(int16_t)tm_clamp((bx-s->ball[s->slot].x/TM_Q)*50,-1000,1000);
+   out->y=(int16_t)tm_clamp((by-s->ball[s->slot].y/TM_Q)*50,-1000,1000);
   }
-  if(x>=252&&y>=113&&y<137)out->brake=true;
+  if(x>=164&&x<215&&y>=178)out->brake=true;
  }
+}
+
+/* Rendering interpolates the last completed local physics step. The rules and
+ * collision positions remain untouched. Teleports reset both endpoints. */
+void tm_visual_ball(const tm_state *s,unsigned p,int32_t *x,int32_t *y){
+ *x=s->ball[p].x;*y=s->ball[p].y;
+ if(s->phase!=TM_PLAY)return;
+ const unsigned period=s->linked&&!s->host?50U:TM_STEP;
+ const unsigned fraction=s->linked&&!s->host?s->blend_ms:s->accumulator;
+ *x=s->previous_x[p]+(*x-s->previous_x[p])*(int32_t)fraction/(int32_t)period;
+ *y=s->previous_y[p]+(*y-s->previous_y[p])*(int32_t)fraction/(int32_t)period;
+}
+/* Inverse of the perspective board projection at the water plane; input stays
+ * in canonical 320x200 coordinates regardless of the physical display. */
+bool tm_screen_to_board(int sx,int sy,int *x,int *y){
+ if(sy<20||sy>173||sx<0||sx>=320)return false;
+ const int u=sx-156,v=sy-42;
+ const int a=5300+u,b=600+10*u,c=450+v,d=3300+10*v;
+ /* For bounded 320x200 input all products fit int32. The determinant
+  * is exactly divisible by ten; reduce it before division on RV32. */
+ const int r=600*u+4320,t=600*v+1200;
+ const int det=(a*d-b*c)/10;
+ *x=120+(r*d-b*t)/det;
+ *y=(a*t-r*c)/det;
+ return *x>=0&&*x<240&&*y>=0&&*y<144;
 }

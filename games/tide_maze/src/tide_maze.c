@@ -15,11 +15,11 @@ static p4_game_result_t update(p4_game_context_t *ctx,const p4_game_input_t *in,
  const bool tap=touch&&!s->touching;s->touching=touch;in=&clean;
  const int tx=touch?in->touches[0].x:0,ty=touch?in->touches[0].y:0;
  if((in->pressed&P4_BUTTON_BACK)||(tap&&tx>=280&&ty<12))return P4_GAME_EXIT_TO_LAUNCHER;
- const bool action=(in->pressed&P4_BUTTON_A)||(tap&&s->phase!=TM_PLAY&&tx<248&&ty>=32);
- const bool pause=(in->pressed&P4_BUTTON_START)||(tap&&tx>=252&&ty>=169);
- const bool cal=(in->pressed&P4_BUTTON_B)||(tap&&tx>=252&&ty>=141&&ty<165);
- if(s->phase==TM_TITLE && (in->pressed&P4_BUTTON_LEFT))s->level=(s->level+TM_LEVELS-1U)%TM_LEVELS;
- if(s->phase==TM_TITLE && (in->pressed&P4_BUTTON_RIGHT))s->level=(s->level+1U)%TM_LEVELS;
+ const bool action=(in->pressed&P4_BUTTON_A)||(tap&&s->phase!=TM_PLAY&&ty>=32&&ty<178);
+ const bool pause=(in->pressed&P4_BUTTON_START)||(tap&&tx>=267&&ty>=178);
+ const bool cal=(in->pressed&P4_BUTTON_B)||(tap&&tx>=216&&tx<267&&ty>=178);
+ if(s->phase==TM_TITLE && (in->pressed&P4_BUTTON_LEFT)){tm_reset(s,(s->level+TM_LEVELS-1U)%TM_LEVELS);s->phase=TM_TITLE;}
+ if(s->phase==TM_TITLE && (in->pressed&P4_BUTTON_RIGHT)){tm_reset(s,(s->level+1U)%TM_LEVELS);s->phase=TM_TITLE;}
  if((s->phase==TM_TITLE||s->phase==TM_PAUSE)&&cal){s->orientation=(uint8_t)((s->orientation+1U)%4U);s->calibrated=false;}
  tm_controls(ctx,s,in,ms,cal);
  if(s->linked&&!tm_network_poll(ctx,s,ms)){
