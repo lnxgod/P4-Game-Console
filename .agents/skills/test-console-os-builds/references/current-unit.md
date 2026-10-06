@@ -1,9 +1,19 @@
-# Recorded Elecrow Console OS state (2026-08-14)
+# Elecrow exact-unit installation history
 
-Read this file before touching the programming UART or interpreting the
-recorded tablet result. This is the 2026-08-14 snapshot; inspect later exact-unit
-install records before claiming what is currently installed. These facts are
-history, not authorization for a different board or future artifact.
+Read this file before touching the programming UART or interpreting a current
+tablet result. These facts are exact-unit history, not authorization for a
+different board or future artifact. Do not infer live installed state from this
+file; reconcile later records and the retained ledger before a hardware action.
+
+## Latest recorded layout
+
+`hardware/test-runs/2026-08-14-console-os-game-manager-migration.json` records
+the later dual-OTA migration, superseding the single-app folder image below.
+It installed a 910,512-byte app at `0x20000`, SHA-256
+`8216435c609694608718110f261e275661be365ff5d50cbceb7486c9c3bcd543`,
+with separate bootloader, partition-table and OTA-data readbacks. Startup passed;
+J16 cartridge/OTA acceptance remained pending. Preserve that distinction.
+The old `0x10000` application route must not be reused on the migrated layout.
 
 ## Bound hardware
 
@@ -27,9 +37,9 @@ pre-E6 live backup is also preserved there with SHA-256
 `c567d0a4d960156b59216e4c424d78856e7b8dbe52e05810d47a69a3e58f4217`.
 Both binary files are local/ignored.
 
-## Image installed in this record
+## Historical folder image (before the dual-OTA migration)
 
-The recorded installed Console OS was the badge-free folder launcher:
+The earlier badge-free folder launcher was:
 
 - sealed build path at install time:
   `apps/console_os/build-folder-clean/p4_console_os.bin`
@@ -58,9 +68,9 @@ native games' visuals/controls/tones/return behavior, Doom SFX and MUS music,
 the built-in System pages, and restart-to-launcher on this exact installed
 artifact.
 
-Use the completed install record and its sealed recovery directory as the
-authority for what remains on the tablet; never infer installed state only from
-a mutable build output.
+Use this completed install record only for its historical artifact and recovery
+span. Later migration evidence controls the layout; mutable build output cannot
+establish live installed state.
 
 ## Historical predecessor candidates
 
@@ -119,7 +129,7 @@ bytes `0x00`, `0xab`, `0xfc`, and `0xff` while still requiring low 24 bits
 generalize this exception to another unit, runtime, stub, or successor without
 a new binding.
 
-## Game and asset state
+## Game and asset state of the historical folder image
 
 - Native format: `p4-native-static-v1`, statically linked RISC-V code in the
   Console OS ELF/BIN; not UF2.
@@ -151,11 +161,11 @@ The focused Game API, shell, registry, generated-game, locked ESP-IDF build,
 and Console OS verifier passed for the installed artifact. As of 2026-08-14,
 the broad historical `make check` also traverses sealed E5 and D0.5 exact-
 artifact assertions that predate the current Doom/Console successor state.
-Run it only when the parent skill's broader-test scope applies; report its
-result without rewriting historical evidence to make that suite green. Distinguish a current candidate failure from a stale historical
-binding.
+When the task requires that broad suite, report its result without rewriting
+historical evidence to make it green. Distinguish a current candidate failure
+from a stale historical binding; use focused checks for narrower work.
 
-## Latest guarded hardware acceptance
+## Guarded acceptance of the historical folder image
 
 The badge-free folder install used its exact-unit route rather than generic
 `idf.py flash`:

@@ -9,19 +9,20 @@ This board's official schematic identifies an ES8311 codec, an ES7210
 echo-cancellation input chip, and an 8 ohm 2 W speaker header. Do not reuse the
 Elecrow factory I2S1/GPIO30 contract or its in-memory codec shim.
 
-Read `docs/WAVESHARE_P4_WIFI6_TOUCH_LCD_4_3_PORT.md`, the Waveshare board
-profile and `../develop-waveshare-p4-4-3/SKILL.md` for the implemented path and
-named evidence. Trace the selected `components/platform_audio` board branch
-and its dependencies before editing; the similarly named
-`components/platform_audio_es8311` is an Elecrow build-only investigation,
-not the Waveshare implementation.
+Read `hardware/board-profiles/waveshare-esp32-p4-wifi6-touch-lcd-4.3.json`,
+`docs/WAVESHARE_P4_WIFI6_TOUCH_LCD_4_3_PORT.md` and
+`components/platform_audio_es8311/README.md`. The implementation is
+`components/platform_audio_es8311`, selected through the counted adapter in
+`apps/doom_embedded_touch_audio/components/platform_audio`; games consume the
+stable P4 audio API. Use `$develop-waveshare-p4-4-3` for build/install gates.
 
-Preserve the exact vendor initialization, I2C address, I2S pins, master clock,
-amplifier polarity and bounded startup/shutdown behavior. Keep hardware in
-`components/`; games use the stable tone/PCM API. Run focused host checks and
-one matching Waveshare build for implementation changes, then record acoustic
-startup, playback and shutdown acceptance on the named unit. Existing speaker
-results do not establish microphone support or authorize a different board.
+Preserve the profile's exact I2C/I2S pins, master clock, amplifier polarity,
+muted startup and ordered shutdown. The ES7210's presence does not establish a
+supported microphone service. Check the existing audio service's host tests
+and build the consuming Waveshare target after a service change; ordinary
+game audio uses focused game tests. Record delivery counters and acoustic
+feedback separately for each named artifact/unit. Do not require a fresh board
+bring-up for games using the already implemented audio API.
 
 ## Game Changers AI OS release quality
 

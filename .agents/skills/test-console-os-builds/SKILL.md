@@ -5,6 +5,9 @@ description: Build, verify, guarded-flash, recover, or manually qualify the P4 C
 
 # Test Console OS builds
 
+This skill is for the Elecrow 10 in variant only. Tab5 uses
+`docs/boards/M5STACK_TAB5.md` and `$develop-esp32-p4-platform`; Waveshare uses
+`$develop-waveshare-p4-4-3`. Never inherit this route's authorization or offsets.
 Test the software and the named tablet as separate stages. Preserve the
 currently working image until the successor passes exact readback and retained
 startup capture.
@@ -79,14 +82,18 @@ echo '1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771  local-da
 git check-ignore -q local-data/doom/doom1.wad
 ```
 
-Run `make verify`, then the focused host checks for the changed boundary.
-For an Elecrow Console OS candidate, run `make console-os-elecrow-idf` once;
-its dependencies already run the board, shell, storage and game-SDK checks,
-and the target runs `scripts/verify-console-os.py` on the resulting image.
-Do not repeat those unchanged checks separately. Use `make check` only for an
-explicit whole-repository test request, a deliberate toolchain/lock change,
-or a cross-cutting change spanning maintained applications. Documentation or
-skill-only edits need reference/skill validation, not firmware builds.
+For a complete Elecrow integration candidate, use the locked build target:
+
+```sh
+make verify
+make console-os-elecrow-idf
+```
+
+The target includes its shell, storage, SDK and artifact checks. For an isolated
+component change, run its focused host target first. Run `make check` only for
+an explicit full-suite request, lock/toolchain changes or changes spanning
+maintained applications; it includes historical exact-artifact checks and
+unrelated diagnostic builds. Documentation-only edits need no firmware build.
 
 Do not conceal a broad historical-suite failure by editing sealed evidence.
 Run and report focused current tests separately, identify whether the failure
@@ -168,25 +175,20 @@ identity.
 Automated startup must prove the exact app count bound by the new candidate
 route, ordered display/touch readiness, monotonically increasing
 launcher/touch counters, equal display submission/completion counts, zero
-timeouts/failures, no Doom handoff, and amplifier-off state. The historical
-six-entry predecessor and seven-app folder successor in
-`references/current-unit.md` are examples tied to their recorded artifacts;
-they do not establish the current installed image or candidate app count.
-Derive counts and visible entries from the selected artifact and manifests,
-and never mistake root folder tiles for the registry count.
+timeouts/failures, no Doom handoff, and amplifier-off state. Derive the expected
+app count from the candidate's built-ins and validated native catalog. The
+six/seven-app counts in the August folder records are historical, not a current
+catalog contract. Root folder tiles are not registered-app counts.
 
-Then ask the operator to check only what requires eyes, hands, or ears.
-The list below describes the historical folder successor; adapt app names,
-counts and navigation to the selected candidate while preserving the same
-input, lifecycle, display and acoustic checks:
+Then ask the operator to check only what requires eyes, hands, or ears:
 
 1. Root shows `ALL PROGRAMS`, `GAMES`, and `SYSTEM` with folder icons, no
    corrupt pixels, and no developer-facing `V/T/A/S` capability labels.
-2. Open `GAMES`; confirm `ACTION` and `ARCADE`. Open `ARCADE`; confirm
-   `MAZE CHASE` and `SPACE INVADERS`. Use `UP` twice and confirm Arcade ->
+2. Open `GAMES`; confirm the candidate's manifest-derived categories and native
+   titles. Open `ARCADE` and launch a validated cartridge. Use `UP` twice and confirm Arcade ->
    Games -> Root without wrapping or launching a tile.
 3. Open `ALL PROGRAMS`. Swipe upward in the app area and use the down arrow;
-   both reveal the seventh app without launching the tile where the gesture
+   both reveal additional apps without launching the tile where the gesture
    began. Swipe/back-arrow to the first row and confirm the boundary does not
    wrap.
 4. Maze Chase renders and the on-screen direction controls are playable.
@@ -226,9 +228,10 @@ Use these classifications precisely:
 - `operator-confirmed`: only the listed visual, control, or acoustic checks
   were explicitly confirmed by a person.
 
-End by stating what passed, what remains manual, what is currently installed,
-and the exact next control the operator should tap. Never call pending evidence
-a pass.
+End by stating what passed, what remains manual and the last evidenced install.
+For an active hardware test, name the next relevant control. A software-only
+test does not establish the currently installed image. Never call pending
+evidence a pass.
 
 ## Game Changers AI OS release quality
 

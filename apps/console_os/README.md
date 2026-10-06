@@ -1,13 +1,16 @@
 # P4 Console OS
 
-Current Tab5 release: **GameChangersAI OS 0.51**. The native 1280×720
+Current Tab5 release: **Game Changers AI OS 0.56**. See the
+[Tab5 board record](../../docs/boards/M5STACK_TAB5.md) for exact installed
+artifacts, arena content and pending four-console/game-cadence acceptance.
+The native 1280×720
 interface retains the 0.44 layout, cached momentum scrolling, game categories,
 cartridge artwork and protected file actions. The status bar shows game volume
 and opens Sound; startup and game audio default to level 3 through a one-time
 migration that preserves later adjustments. The optimized flying-joystick boot
 uses stationary status/activity dots and an explicit Ready handoff.
 
-0.51 also carries the reviewed triple display buffers, per-buffer damage replay,
+The earlier 0.51 integration introduced triple display buffers, per-buffer damage replay,
 cartridge timing/audio and optional motion snapshots, plus OS-owned local Wi-Fi
 and Bluetooth multiplayer and scoped charging support. Game cartridges remain
 separate installations. See `hardware/evidence/tab5-0.51-combined-testing.json`
@@ -41,7 +44,8 @@ the same section. Other board targets retain their existing system navigation.
 See `docs/GAME_LIBRARY.md` for the current names and provisional quality ranking.
 
 Boot first displays the GameChangersAI logo and starts SD initialization.
-Fresh installs start Boot Sounds and Game Audio at 0/10; the Audio panel can
+Tab5 initializes Boot Sounds and Game Audio to 3/10 through a one-time migration
+that preserves later choices; other boards retain their defaults. The Audio panel can
 persist either level from 0 through 10. Tab5 plays an original one-second
 rising-bell treasure fanfare at the saved boot volume. There is no modem noise,
 ATDT/digit dialing or staged desktop wipe on Tab5; other targets retain their

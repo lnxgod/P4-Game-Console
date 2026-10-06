@@ -36,10 +36,9 @@ configured.
 ## Project implementation
 
 `components/platform_audio_factory` preserves the speaker TX pins, controller,
-format, and amplifier polarity. Its current implementation also creates and
-enables the bounded PDM RX clock/input lifecycle before TX, without consuming
-microphone samples. Preserve that lifecycle when claiming complete factory-init
-equivalence. It deliberately improves lifecycle safety:
+format, and amplifier polarity. It implements the bounded PDM RX clock/input
+lifecycle before speaker TX without consuming microphone data. It
+deliberately improves lifecycle safety:
 GPIO30 is latched/read back high first, the full DMA ring is zero-filled,
 GPIO30 is pulled low once, exact zeros run for at least 350 ms, and every error
 tries to restore and prove the high shutdown state.
@@ -61,11 +60,12 @@ If sound is absent, keep the project path unchanged and diagnose the observed
 factory-compatible waveform before introducing any codec, MCLK, alternate
 GPIO, or amplifier assumption.
 
-The newer uninstalled Game API v1 implementation accepts copied blocks of
+The current Game API v1 implementation accepts copied blocks of
 1–256 signed 16 kHz PCM16-stereo frames into a 512-frame software FIFO and
 mixes them with its bounded tone voices before the counted platform adapter.
-That software path is host/build-tested, not yet acoustically accepted on the
-tablet. It does not change the factory initializer or GPIO ownership above.
+Host/build evidence for that path does not establish acoustic acceptance of
+streaming PCM on a new artifact; the earlier installed native games exercised
+tones. It does not change the factory initializer or GPIO ownership above.
 
 Published topology still permits two output families to converge. Prefer a
 powered-off population/continuity release. An owner-directed exception is valid

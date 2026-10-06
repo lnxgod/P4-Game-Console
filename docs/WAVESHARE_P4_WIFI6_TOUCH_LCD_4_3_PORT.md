@@ -494,8 +494,8 @@ degradation test. Do not log raw SSIDs, BSSIDs, or session tokens.
 7. Only then port the Console OS shell and native games behind the existing
    platform APIs.
 
-The selectable build boundary is `P4_BOARD_PROFILE`: Elecrow stays the
-default, while Waveshare selects its own display, touch, audio, and microSD
+The selectable build boundary is `P4_BOARD_PROFILE`: Tab5 is the Console OS
+default, while explicit Waveshare builds select their own display, touch, audio, and microSD
 implementations. `make console-os-waveshare-idf` now resolves the pinned
 ST7701, GT911, ES8311, ESP-Hosted, remote-Wi-Fi, ELF-loader, and ESP-IDF 5.5.3
 graph and emits the

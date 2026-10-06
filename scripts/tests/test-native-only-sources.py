@@ -6,7 +6,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[2]
 for retired in (
     "game-platform", "scripts/lua", "third_party/lua-5.4.8",
-    "third_party/lua-5.4.8.manifest", "components/p4_script_audio",
+    "third_party/lua-5.4.8.manifest", "components/p4_lua_runtime",
+    "components/p4_game_runtime_core", "components/p4_script_audio",
     "components/p4_script_renderer", "components/p4_content_catalog",
     ".agents/skills/develop-p4-script-games",
 ):

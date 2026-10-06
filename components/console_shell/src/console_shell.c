@@ -6207,7 +6207,7 @@ static void draw_files(console_shell_t *shell,
              shell->files.storage_generation, COLOR_BLACK);
 
     const char *notice = games
-        ? "NATIVE P4G GAMES / P4U UPDATES"
+        ? "SELECT A NATIVE P4G GAME"
         : (shell->runtime.usb_storage_supported
             ? "OPEN FOLDERS / USB MODE EDITS"
             : shell->runtime.sd_card_storage

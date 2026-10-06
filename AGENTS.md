@@ -19,10 +19,11 @@ Use [`installos`](.agents/skills/installos/SKILL.md) as the default entry point
 for Console OS installation, provisioning and first-time setup. Ask whether the
 user will have a microSD card unless already answered. The default content is
 basic games plus the pinned Doom shareware WAD, including its verified download
-when missing. Offer optional Chex Quest only with SD. The intended no-SD route
-uses internal flash and supports adding SD at a later restart without reflashing;
-verify that the selected firmware actually implements this before installing.
-Creating the skill does not itself enable that firmware behavior.
+when missing. Offer optional Chex Quest only with explicit selection and SD.
+Current Tab5 game storage requires microSD. The intended future no-SD route
+would use internal flash and support adding SD at a later restart without
+reflashing; verify implementation before promising that route. Creating the
+skill does not itself enable that firmware behavior.
 
 Use the repository skills in `.agents/skills` whenever their descriptions match:
 
@@ -40,6 +41,8 @@ Use the repository skills in `.agents/skills` whenever their descriptions match:
   ideas; use `docs/GAME_STARTERS.md` as optional guidance, not a mandatory
   template menu. New games should map gameplay and menus to OS-normalized
   controls so supported controllers work without per-game USB/BLE code.
+- `create-p4-game-art` for native-resolution art, launcher icons, provenance
+  and deterministic packing without changing gameplay or save identities.
 - `develop-p4-multiplayer-games` automatically alongside game authoring when
   a game needs linked-console co-op, versus or synchronized play. Reuse the
   OS-owned Host/Join, session and registration services; implement only the
@@ -60,6 +63,8 @@ Keep these rules true for every change:
 9. For game work, follow [the ESP32-P4 performance contract](docs/GAME_PERFORMANCE.md): native 768×480 with 320×200 fallback, a 60 FPS target and actual-device 30 FPS release floor. Prefer bounded shared rendering and retain fractional motion. Host CPU results do not qualify device cadence; preserve exact package/OS/unit evidence and leave unmeasured acceptance pending.
 
 10. Every released game needs recognizable launcher artwork and a coherent opening/ready view, legible game identity during play, and appropriate pause/results screens. Follow [the complete presentation contract](docs/GAME_ART.md#complete-game-presentation); native games carry their own validated launcher icon. Preserve direct-touch card/board play and multiplayer start barriers.
+
+11. Apply [launch and remix quality](docs/LAUNCH_QUALITY.md) when preparing Game Changers AI OS releases: preserve gameplay/save identities during visual remixes, exclude incomplete prototypes from default bundles, use artwork matching the actual title, and retain failed device acceptance until retested.
 
 ## Set up Doom game data on a fresh clone
 
@@ -116,5 +121,3 @@ artifact/evidence update. For SD-backed firmware use `DOOM1.WAD`,
 `FREEDOOM1.WAD`, or `FREEDOOM2.WAD` at the SD root as documented in
 `docs/DOOM.md`. Never push WADs, generated WAD assembly, WAD-bearing firmware
 binaries, or local recovery images to GitHub.
-
-11. Apply [launch and remix quality](docs/LAUNCH_QUALITY.md) when preparing Game Changers AI OS releases: preserve gameplay/save identities during visual remixes, exclude incomplete prototypes from default bundles, use artwork matching the actual title, and retain failed device acceptance until retested.

@@ -18,8 +18,8 @@ enum {
 
 static const console_app_descriptor_t apps[] = {
 #if defined(CONFIG_P4_BOARD_M5STACK_TAB5) && CONFIG_P4_BOARD_M5STACK_TAB5
-    {110U,"Byte Buddy","Platform adventure","GAMES/ARCADE",0,0,CONSOLE_PAGE_EXTERNAL,true},
-    {111U,"Blast Circuit","Bomb arena","GAMES/ARCADE",0,0,CONSOLE_PAGE_EXTERNAL,true},
+    {110U,"Byte Buddy","Platform adventure","GAMES/ARCADE",0,0,CONSOLE_PAGE_EXTERNAL,true,NULL,NULL,NULL},
+    {111U,"Blast Circuit","Bomb arena","GAMES/ARCADE",0,0,CONSOLE_PAGE_EXTERNAL,true,NULL,NULL,NULL},
 #endif
     {1U, "DOOM", "SHAREWARE 1.9", "GAMES/ACTION", UINT16_C(0xF904),
      CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
@@ -129,7 +129,7 @@ static void populate_desktop(console_shell_t *shell)
                            P4_FILE_KIND_FOLDER, true);
     (void)p4_file_list_add(&files, "SAVES", 0U,
                            P4_FILE_KIND_FOLDER, true);
-    (void)p4_file_list_add(&files, "SOLITAIR.P4G", UINT64_C(18342),
+    (void)p4_file_list_add(&files, "MAZE.P4G", UINT64_C(18342),
                            P4_FILE_KIND_CARTRIDGE, true);
     (void)console_shell_set_file_list(shell, &files);
     p4_save_catalog_t saves;
