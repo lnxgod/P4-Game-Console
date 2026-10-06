@@ -7,7 +7,7 @@
 - Archive: `factory_sourcecode/V1.0/ESP32-P4-Adcance-brookesia_phone_inch10_1.zip`.
 - Archive SHA-256: `73b32c4d4dc89cc0b091388d6a7862d827d6548412717bcb1f36f7adb8da2e28`.
 
-The reviewed board source is
+The reviewed board source inside that vendor archive is
 `components/espressif__esp32_p4_function_ev_board/esp32_p4_function_ev_board.c`
 (SHA-256 `f0aa354307710744f37d57b8ea23942b13d6ae38c26a98ad118c606ae5b11b69`).
 Its `bsp_audio_init()` creates I2S1 TX with six 256-frame DMA descriptors,
@@ -36,9 +36,10 @@ configured.
 ## Project implementation
 
 `components/platform_audio_factory` preserves the speaker TX pins, controller,
-format, and amplifier polarity. A complete factory-init successor must add the
-bounded PDM RX clock/input lifecycle without using captured microphone data. It
-deliberately improves lifecycle safety:
+format, and amplifier polarity. Its current implementation also creates and
+enables the bounded PDM RX clock/input lifecycle before TX, without consuming
+microphone samples. Preserve that lifecycle when claiming complete factory-init
+equivalence. It deliberately improves lifecycle safety:
 GPIO30 is latched/read back high first, the full DMA ring is zero-filled,
 GPIO30 is pulled low once, exact zeros run for at least 350 ms, and every error
 tries to restore and prove the high shutdown state.

@@ -125,7 +125,7 @@ unless that artwork work is requested; respect an existing parallel remix.
   folder of at most two uppercase segments, and accurate version, license,
   asset, and capability declarations. Use the optional bounded `sources` list
   for a multi-file game instead of creating a second package path.
-- For a multiplayer game, require `multiplayer-session` and validate the
+- For a multiplayer game, declare optional `multiplayer-session` and validate the
   declarative `multiplayer` profile described in `docs/GAME_SDK.md`. Package
   the canonical profile into the reviewed `.P4G` header extension; never
   create a transport-specific sidecar or let a game choose BLE/UART/USB.
@@ -229,8 +229,11 @@ connection. Individual resources use `push --class p4r`. Each format has its own
 directory and validator; never use `exchange` to bypass it. Native USB may
 reboot on open on macOS; the tools
 tolerate startup. Content activation reboots; native file
-activation refreshes the appropriate catalog. USB Drive/MSC and USB-A host power
-remain disabled on Tab5. Do not ask for a card reader when the USB path is available.
+activation refreshes the appropriate catalog. USB Drive/MSC remains disabled on
+Tab5. The default USB-A HID/XUSB candidate has a separate board-owned host-power
+path; consult the Tab5 board document for exact-artifact and named-controller
+acceptance. Native USB-C content transfer does not depend on USB-A host mode.
+Do not ask for a card reader when the USB path is available.
 
 For a hardware acceptance, perform one named run that launches the changed
 game, exercises its changed behavior, and returns to the launcher with Back.

@@ -1,8 +1,9 @@
-# Current exact-unit Console OS state
+# Recorded Elecrow Console OS state (2026-08-14)
 
-Read this file before touching the programming UART or interpreting a current
-tablet result. These facts are exact-unit history, not authorization for a
-different board or future artifact.
+Read this file before touching the programming UART or interpreting the
+recorded tablet result. This is the 2026-08-14 snapshot; inspect later exact-unit
+install records before claiming what is currently installed. These facts are
+history, not authorization for a different board or future artifact.
 
 ## Bound hardware
 
@@ -26,9 +27,9 @@ pre-E6 live backup is also preserved there with SHA-256
 `c567d0a4d960156b59216e4c424d78856e7b8dbe52e05810d47a69a3e58f4217`.
 Both binary files are local/ignored.
 
-## Currently installed image
+## Image installed in this record
 
-The installed Console OS is the badge-free folder launcher:
+The recorded installed Console OS was the badge-free folder launcher:
 
 - sealed build path at install time:
   `apps/console_os/build-folder-clean/p4_console_os.bin`
@@ -150,9 +151,9 @@ The focused Game API, shell, registry, generated-game, locked ESP-IDF build,
 and Console OS verifier passed for the installed artifact. As of 2026-08-14,
 the broad historical `make check` also traverses sealed E5 and D0.5 exact-
 artifact assertions that predate the current Doom/Console successor state.
-Run it and report its result, but never rewrite historical evidence merely to
-make that broad suite green. Distinguish a current candidate failure from a
-stale historical binding.
+Run it only when the parent skill's broader-test scope applies; report its
+result without rewriting historical evidence to make that suite green. Distinguish a current candidate failure from a stale historical
+binding.
 
 ## Latest guarded hardware acceptance
 

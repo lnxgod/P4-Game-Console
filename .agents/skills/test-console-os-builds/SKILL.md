@@ -79,16 +79,14 @@ echo '1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771  local-da
 git check-ignore -q local-data/doom/doom1.wad
 ```
 
-Run the locked checks in this order:
-
-```sh
-make verify
-make game-sdk-host
-make console-shell-host
-make check
-make console-os-elecrow-idf
-python3 scripts/verify-console-os.py apps/console_os/build
-```
+Run `make verify`, then the focused host checks for the changed boundary.
+For an Elecrow Console OS candidate, run `make console-os-elecrow-idf` once;
+its dependencies already run the board, shell, storage and game-SDK checks,
+and the target runs `scripts/verify-console-os.py` on the resulting image.
+Do not repeat those unchanged checks separately. Use `make check` only for an
+explicit whole-repository test request, a deliberate toolchain/lock change,
+or a cross-cutting change spanning maintained applications. Documentation or
+skill-only edits need reference/skill validation, not firmware builds.
 
 Do not conceal a broad historical-suite failure by editing sealed evidence.
 Run and report focused current tests separately, identify whether the failure
@@ -170,13 +168,17 @@ identity.
 Automated startup must prove the exact app count bound by the new candidate
 route, ordered display/touch readiness, monotonically increasing
 launcher/touch counters, equal display submission/completion counts, zero
-timeouts/failures, no Doom handoff, and amplifier-off state. The installed
-predecessor has six entries; the current folder successor still registers
-seven apps even though root renders three logical folder tiles. Never reuse a
-six-entry startup parser for the seven-app artifact, and never mistake the
-three root tiles for the registry count.
+timeouts/failures, no Doom handoff, and amplifier-off state. The historical
+six-entry predecessor and seven-app folder successor in
+`references/current-unit.md` are examples tied to their recorded artifacts;
+they do not establish the current installed image or candidate app count.
+Derive counts and visible entries from the selected artifact and manifests,
+and never mistake root folder tiles for the registry count.
 
-Then ask the operator to check only what requires eyes, hands, or ears:
+Then ask the operator to check only what requires eyes, hands, or ears.
+The list below describes the historical folder successor; adapt app names,
+counts and navigation to the selected candidate while preserving the same
+input, lifecycle, display and acoustic checks:
 
 1. Root shows `ALL PROGRAMS`, `GAMES`, and `SYSTEM` with folder icons, no
    corrupt pixels, and no developer-facing `V/T/A/S` capability labels.

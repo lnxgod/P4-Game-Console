@@ -33,8 +33,9 @@ Elecrow pin map under a Waveshare build flag.
   and uses blocking PPA SRM for the 320x200 surface; preserve a bounded CPU
   fallback. Prove speed from timestamped runtime frame counters and PPA
   success/failure counters, not from a build or visual impression.
-- Keep the active Elecrow `hardware/board-profile.json` unchanged until the
-  Waveshare target has independent evidence.
+- Preserve the Elecrow `hardware/board-profile.json`; Waveshare has its own
+  profile and exact-unit evidence. Changes to either board never authorize the
+  other's peripherals.
 
 ## Build and install
 
