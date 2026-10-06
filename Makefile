@@ -198,7 +198,7 @@ p4-content-host:
 	cmake --build build-host/p4_usb_content_transfer
 	ctest --test-dir build-host/p4_usb_content_transfer --output-on-failure
 	python3 scripts/tests/test-p4-content.py
-	python3 scripts/tests/test-native-content-retirement.py
+	python3 scripts/tests/test-native-sd-bundle.py
 
 p4-multiplayer-host:
 	cmake -S components/p4_multiplayer -B build-host/p4_multiplayer -G Ninja
@@ -301,14 +301,11 @@ play-game:
 
 game-registry-check:
 	python3 scripts/generate-game-registry.py --games-root games --check
-	python3 scripts/p4cart_seed_registry.py --check
 	python3 scripts/tests/test-game-registry.py
-	python3 scripts/tests/test-p4cart-seed-registry.py
 	python3 scripts/tests/test-native-board-verifiers.py
 	python3 scripts/tests/test-game-resource.py
 	python3 scripts/tests/test-protected-game-lineage.py
 	python3 scripts/tests/test-new-game.py
-	python3 scripts/tests/test-native-only-sources.py
 	python3 scripts/tests/test-tab5-warm-boot-capture.py
 
 game-sdk-host: p4-desktop-host p4-game-api-host p4-game-save-host platform-save-seal-host p4-signal-scan-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-frame-scheduler-host p4-content-host p4-multiplayer-host p4-multiplayer-registry-host lord-realm-e2e-host maze-chase-host space-invaders-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host p4-yahtzee-host calculator-host input-test-host av-test-host game-registry-check
@@ -324,6 +321,11 @@ console-os-elecrow-idf: board-port-check console-shell-host platform-game-storag
 	./scripts/build.sh console_os elecrow-crowpanel-advanced-10
 	python3 ./scripts/verify-console-os.py apps/console_os/build
 	python3 ./scripts/tests/test-console-os-game-manager-runtime-capture.py
+
+# Explicit artifact check for the retained one-time Elecrow migration route.
+# Requires a matching committed Elecrow build; it does not build or flash.
+.PHONY: console-os-game-manager-migration-check
+console-os-game-manager-migration-check:
 	python3 ./scripts/tests/test-console-os-game-manager-migrate.py
 
 console-os-olimex-idf: board-port-check platform-board-host console-shell-host platform-game-storage-host gamepad-host

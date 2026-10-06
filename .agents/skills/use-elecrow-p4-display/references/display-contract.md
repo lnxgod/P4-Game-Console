@@ -53,7 +53,11 @@ The tested app-only image at offset 0x10000 was 226,560 bytes with SHA-256 `b41f
 
 This proves the bounded display path and pattern generator. It does not prove framebuffer submission, moving-image tearing behavior, touch, SD, audio, wireless, camera, or USB.
 
-`components/platform_display/include/platform/display.h` therefore exposes patterns and brightness only today. A game framebuffer API is a new qualification boundary, not an implied capability of the M1 result.
+At M1, the API exposed only patterns and brightness. The current
+`components/platform_display/include/platform/display.h` also provides bounded
+framebuffer submission used by Doom and Console OS. Preserve its ownership,
+stride, timeout and completion contract; M1 alone does not qualify that later
+path. Use the exact consuming image's dated framebuffer/runtime evidence.
 
 The pinned doomgeneric tree's `-gfxmode rgb565` conversion is compatible with
 this contract: its 16-bit branch masks and packs standard RGB565 words. The

@@ -56,18 +56,17 @@ Keep the build target and physical target paired exactly:
 For Tab5, select `m5stack-tab5` explicitly and read
 `docs/boards/M5STACK_TAB5.md` and
 `hardware/boards/m5stack-tab5/board-profile.json`. Use
-`make console-os-tab5-idf`. A/ST7121 and B/ST7123 have boot/readback, mounted-SD and native-USB transfer
-evidence; the operator confirmed touch after B's mirror correction. Doom lifecycle,
-sustained scrolling and B speaker sound still need acceptance; the operator confirmed A startup and Doom music/effects on the speaker-repair candidate. A/B are separately
-backed up and have exact-artifact test-install
-authorizations. Load games through the connected USB-C cable with
+`make console-os-tab5-idf`. The board document links the latest exact-artifact
+records for A/ST7121 and B/ST7123; use those records for installed-image and
+peripheral claims instead of carrying acceptance forward from an older version.
+A/B are separately backed up. Load games through the connected USB-C cable with
 `scripts/p4-transfer.py push-bundle apps/console_os/build-tab5/sd-card --port <port>`
 and Doom/Chex through `scripts/p4-usb-content.py`; no card reader is needed.
 Use `scripts/flash-console-os-tab5.py` with an explicit unit, port
 and authorization digest; its default is a local-only check. Preserve and bind
-any new unit before its first write. The 0.45 core update adds an explicitly scoped C6 Bluetooth/local Wi-Fi and
-500 mA non-QC charging candidate; consult current exact-artifact evidence for
-installation and physical acceptance. USB-A HID controller support is a host/build-tested
+any new unit before its first write. The current build includes scoped C6
+Bluetooth/local Wi-Fi and 500 mA non-QC charging; consult the exact-artifact
+records for installation and physical acceptance. USB-A HID controller support is a host/build-tested
 candidate with named controller acceptance pending; use `$add-usb-gamepad-support`
 and the Tab5 board document before hardware claims.
 
@@ -100,7 +99,7 @@ boundary, an ESP-IDF build, or physical hardware behavior.
 ## Choose the safe scope
 
 - If `pin_map_authorized` is false, restrict work to pin-independent bring-up plus any subsystem explicitly enabled under `peripheral_authorizations`. Use only the resources named by that authorization; every other pin and peripheral remains locked.
-- Preserve the explicit ESP32-P4 silicon family selection from `toolchain.lock.json`. This prototype is confirmed as revision v1.3 with 16 MiB flash and 32 MiB PSRAM; P4 `<3.0` and `>=3.0` images are mutually incompatible. The build wrapper must enforce revision 1.0 through 1.99, and esptool's revision gate must never be bypassed with `--force`.
+- Preserve the explicit ESP32-P4 silicon family selection from `toolchain.lock.json`. P4 `<3.0` and `>=3.0` images are mutually incompatible. The build wrapper must enforce revision 1.0 through 1.99, and esptool's revision gate must never be bypassed with `--force`. Resolve flash/PSRAM capacity from the selected board and exact-unit record; the Elecrow/Tab5 16 MiB flash measurement does not describe every supported board.
 - Do not copy a BSP or pin map from another CrowPanel size or PCB revision. Prefer a physically confirmed size/SKU/revision. A bounded subsystem may proceed without the final revision suffix only when commit-pinned official schematics prove its complete electrical path and effective driver settings invariant across every published revision, that evidence is reproducibly verified, and the board profile grants only that subsystem's exact resources. Factory-firmware evidence alone is insufficient.
 - Keep board code behind reusable components. Games consume display, audio, storage, input, and time services; they do not configure board pins directly.
 - Keep generated `sdkconfig`, build output, managed components, firmware binaries, WADs, and local backups out of Git.

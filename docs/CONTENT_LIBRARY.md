@@ -19,6 +19,15 @@ python3 scripts/p4-transfer.py push /absolute/path/GAME.P4G --port /dev/cu.usbmo
 The transfer validates package structure and hashes before atomic activation;
 never use the general file-exchange area to bypass game validation.
 
+General file exchange keeps transaction files under `TRANSFER/.P4FT/`.
+Names such as `NOTE.TXT.P4T` and `NOTE.TXT.P4B` remain ordinary user files
+under `TRANSFER/`; uploading `NOTE.TXT` must never delete or restore them.
+Interrupted transactions created by older firmware may leave suffix files in
+`TRANSFER/`. They are preserved because the new receiver cannot distinguish
+them from user data. Inspect and recover those old files manually if needed.
+A media-sync failure closes the upload descriptor, reports failure, and leaves
+an existing target intact.
+
 ## H1 verified content upload
 
 Waveshare Console OS shares H1 between diagnostics, multiplayer, and an

@@ -22,7 +22,7 @@ Read these repository files before changing display-facing code:
 5. `references/display-contract.md`
 
 Also use `$develop-esp32-p4-platform` for toolchain, build, flash, recovery, and general hardware rules.
-For combined display/touch/audio firmware, read that skill's `references/elecrow-10-in-variant.md`; this display authorization never expands another subsystem.
+For combined display/touch/audio firmware, read [the exact-variant reference](../develop-esp32-p4-platform/references/elecrow-10-in-variant.md); this display authorization never expands another subsystem.
 When combined firmware enables speaker sound, also use
 `$use-elecrow-p4-audio`; display initialization does not authorize or own I2S1
 or GPIO30.
@@ -100,9 +100,11 @@ Software logs cannot prove visibility. Record a still image as gross scanout evi
 
 ## Extend from patterns to game video
 
-The M1 pass validates panel initialization and the DSI hardware pattern generator, not a game framebuffer. For Doom or another game:
+The M1 pass validates panel initialization and the DSI hardware pattern
+generator, not a game framebuffer. The current Doom variants already use the
+bounded framebuffer path described below. For a new framebuffer mode:
 
-- extend `platform_display` with a bounded RGB565 surface/submit contract;
+- extend the existing `platform_display` RGB565 surface/submit contract;
 - keep the 1024×600 scanout mode and place scaling below the game API;
 - prefer a centered 3× nearest-neighbor expansion of Doom's 320×200 frame to 960×600 with 32-pixel black side margins for the first proof;
 - qualify PSRAM buffer ownership, cache synchronization, frame completion, and tearing separately;

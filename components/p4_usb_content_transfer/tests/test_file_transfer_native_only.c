@@ -53,6 +53,7 @@ int main(void){
  request(1,2,"NOTE.TXT",88,digest,sizeof(payload));assert(response[4]==P4_FILE_TRANSFER_STATUS_OK);assert(p4_file_transfer_info().busy);
  uint8_t chunk[21]={'P','4','C','2'};chunk[8]=sizeof(payload);put32(chunk+12,crc(payload,sizeof(payload)));memcpy(chunk+16,payload,sizeof(payload));response_bytes=0;assert(p4_file_transfer_consume(chunk,sizeof(chunk)));assert(p4_file_transfer_info().state==P4_FILE_TRANSFER_COMPLETE);assert(p4_file_transfer_info().generation==1);assert(p4_file_transfer_info().last_status==P4_FILE_TRANSFER_STATUS_OK);
  snprintf(path,sizeof(path),"%s/TRANSFER/NOTE.TXT",root);f=fopen(path,"rb");assert(f);uint8_t saved[6];assert(fread(saved,1,sizeof(saved),f)==sizeof(payload));assert(memcmp(saved,payload,sizeof(payload))==0);assert(fclose(f)==0);assert(unlink(path)==0);
+ snprintf(path,sizeof(path),"%s/TRANSFER/.P4FT",root);assert(rmdir(path)==0);
  snprintf(path,sizeof(path),"%s/TRANSFER",root);assert(rmdir(path)==0);snprintf(path,sizeof(path),"%s/P4/GAMES/OLD.P4CART",root);assert(unlink(path)==0);snprintf(path,sizeof(path),"%s/P4/GAMES",root);assert(rmdir(path)==0);snprintf(path,sizeof(path),"%s/P4",root);assert(rmdir(path)==0);assert(rmdir(root)==0);
  puts("retired class: 9 fragmented requests rejected; old archive unchanged; 3 native/resource/exchange routes retained; exchange upload/hash/activation passed");return 0;
 }

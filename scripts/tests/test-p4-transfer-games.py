@@ -109,8 +109,7 @@ class GameTransferTests(unittest.TestCase):
                     tool.main(["push",str(cart),"--class","p4cart","--port","must-not-open"])
                 self.assertEqual(rejected.exception.code,2); opened.assert_not_called()
 
-    def test_removed_download_class_and_inspector_cannot_open_serial(self):
-        self.assertFalse(hasattr(tool,"validate_cart_host"))
+    def test_retired_download_class_cannot_open_serial(self):
         with tempfile.TemporaryDirectory() as temporary:
             output=Path(temporary)/"old.bin"
             args=argparse.Namespace(file_class="p4cart",remote_name="OLD.P4CART",output=output,

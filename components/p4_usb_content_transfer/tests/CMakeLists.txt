@@ -37,3 +37,21 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_link_options(test_file_transfer_native_only PRIVATE -fsanitize=address,undefined)
 endif()
 add_test(NAME file_transfer_native_only COMMAND test_file_transfer_native_only)
+
+add_executable(test_file_transfer_failures
+    test_file_transfer_failures.c
+    ../../p4_game_package/src/game_package.c
+    ../../p4_game_package/src/game_resource.c
+    ../../p4_game_api/src/game_runtime.c
+    stubs/sha256.c)
+target_include_directories(test_file_transfer_failures PRIVATE
+    stubs ../include ../../p4_game_package/include ../../p4_game_api/include)
+target_compile_features(test_file_transfer_failures PRIVATE c_std_11)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(test_file_transfer_failures PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(test_file_transfer_failures PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME file_transfer_sync_failure COMMAND test_file_transfer_failures sync)
+add_test(NAME file_transfer_transaction_namespace COMMAND test_file_transfer_failures namespace)

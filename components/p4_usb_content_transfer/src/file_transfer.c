@@ -23,6 +23,7 @@
 #pragma GCC diagnostic pop
 #include "mbedtls/sha256.h"
 #include "content_limits.h"
+#include "transfer_file.h"
 #include "p4/game_package.h"
 #include "p4/game_resource.h"
 
@@ -355,12 +356,29 @@ static p4_file_transfer_status_t prepare_paths(void)
         (size_t)target_count >= sizeof(s_transfer.target_path)) {
         return P4_FILE_TRANSFER_STATUS_STORAGE;
     }
+    /* Exchange names are opaque: NOTE.TXT.P4T and NOTE.TXT.P4B are valid
+     * user files. Keep transaction files in a namespace that the wire name
+     * validator cannot address, rather than treating those user files as
+     * abandoned uploads. Native cartridge/resource suffixes cannot collide. */
+    char exchange_staging[P4_CONTENT_PATH_BYTES];
+    const char *transaction_directory = directory;
+    if (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_EXCHANGE) {
+        if (!append_path(exchange_staging, sizeof(exchange_staging),
+                         directory, "/.P4FT")) {
+            return P4_FILE_TRANSFER_STATUS_STORAGE;
+        }
+        status = ensure_directory(exchange_staging);
+        if (status != P4_FILE_TRANSFER_STATUS_OK) {
+            return status;
+        }
+        transaction_directory = exchange_staging;
+    }
     const int temp_count = snprintf(
         s_transfer.temp_path, sizeof(s_transfer.temp_path),
-        "%s.P4T", s_transfer.target_path);
+        "%s/%s.P4T", transaction_directory, s_transfer.file_name);
     const int backup_count = snprintf(
         s_transfer.backup_path, sizeof(s_transfer.backup_path),
-        "%s.P4B", s_transfer.target_path);
+        "%s/%s.P4B", transaction_directory, s_transfer.file_name);
     if (temp_count < 0 ||
         (size_t)temp_count >= sizeof(s_transfer.temp_path) ||
         backup_count < 0 ||
@@ -629,17 +647,9 @@ static p4_file_transfer_status_t activate_upload(uint8_t digest[32])
              "P4_FILE_TRANSFER ACTIVATE stage=fsync-begin name=%s bytes=%lu",
              s_transfer.file_name,
              (unsigned long)s_transfer.expected_bytes);
-    if (s_transfer.descriptor < 0 || fsync(s_transfer.descriptor) != 0) {
-        s_transfer.descriptor = -1;
+    if (!p4_transfer_sync_close(&s_transfer.descriptor)) {
         return P4_FILE_TRANSFER_STATUS_IO;
     }
-    ESP_LOGI(TAG, "P4_FILE_TRANSFER ACTIVATE stage=fsync-pass elapsed_ms=%lld",
-             (long long)((esp_timer_get_time() - started_us) / 1000));
-    if (close(s_transfer.descriptor) != 0) {
-        s_transfer.descriptor = -1;
-        return P4_FILE_TRANSFER_STATUS_IO;
-    }
-    s_transfer.descriptor = -1;
     ESP_LOGI(TAG, "P4_FILE_TRANSFER ACTIVATE stage=close-pass elapsed_ms=%lld",
              (long long)((esp_timer_get_time() - started_us) / 1000));
     if (mbedtls_sha256_finish(&s_transfer.sha256, digest) != 0) {

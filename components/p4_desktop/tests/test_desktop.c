@@ -12,11 +12,11 @@ int main(void)
 {
     p4_file_list_t files;
     p4_file_list_init(&files);
-    CHECK(p4_file_list_add(&files, "B.P4CART", 2048U,
+    CHECK(p4_file_list_add(&files, "B.P4G", 2048U,
                            P4_FILE_KIND_CARTRIDGE, false));
-    CHECK(p4_file_list_add(&files, "A.P4CART", 4096U,
+    CHECK(p4_file_list_add(&files, "A.P4G", 4096U,
                            P4_FILE_KIND_CARTRIDGE, false));
-    CHECK(strcmp(files.entries[0].name, "A.P4CART") == 0);
+    CHECK(strcmp(files.entries[0].name, "A.P4G") == 0);
     p4_file_list_set_sort(&files, P4_FILE_SORT_SIZE, true);
     CHECK(files.entries[0].size_bytes == 4096U);
     char size[16];

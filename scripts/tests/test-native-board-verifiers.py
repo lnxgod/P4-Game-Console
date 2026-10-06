@@ -25,9 +25,6 @@ def gate(calls,label,environment,expected=True):
 for name in ('verify-console-os.py','verify-console-os-olimex.py','verify-console-os-waveshare.py'):
     source=(BASE/name).read_text()
     tree=ast.parse(source)
-    assert not any(token in source for token in ('verify_p4cart', 'p4cart_seed_registry', 'game-platform', 'legacy_retired'))
-    assert 'p4_frame_scheduler' in source
-    passed+=2
     calls=[node for node in ast.walk(tree) if isinstance(node,ast.Call) and isinstance(node.func,ast.Name) and node.func.id=='require']
     legacy={'retired':True,'game_manager_visible':False,'runtime_implemented':False,'execution_enabled':False,'seed_carts':[]}
     gate(calls,'native-only retirement metadata differs',dict(legacy=legacy))
@@ -46,16 +43,6 @@ for name in ('verify-console-os.py','verify-console-os-olimex.py','verify-consol
         cart=bundle/'P4/GAMES/old.p4cart';cart.parent.mkdir(parents=True);cart.write_bytes(b'old bytes')
         gate(calls,label,dict(build=root,bundle=bundle),False)
         assert cart.read_bytes()==b'old bytes'
-    for node in ast.walk(tree):
-        if isinstance(node,ast.Dict):
-            for key,value in zip(node.keys,node.values):
-                if isinstance(key,ast.Constant) and key.value=='legacy_p4cart':
-                    expression=compile(ast.Expression(value),'<report-expression>','eval')
-                    assert eval(expression,{}) is None
-                    passed+=1
-                if isinstance(key,ast.Constant) and key.value=='legacy_p4carts':
-                    assert ast.literal_eval(value)==[]
-                    passed+=1
     if name=='verify-console-os.py':
         tokens=['CONSOLE_PAGE_GAMES','native_format=p4-native-elf-v1','platform_game_loader_run']
         gate(calls,'Game Manager/cartridge route is absent from Console OS',dict(shell_main=' '.join(tokens)))

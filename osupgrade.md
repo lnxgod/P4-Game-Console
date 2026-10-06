@@ -805,10 +805,12 @@ OS-owned typed handoff:
 5. LORD relaunches, consumes the result once, validates every delta against
    declared limits, applies it, and queues a new save.
 
-Prefer the planned `p4-lua-5.4-v1` sandbox for third-party IGMs. If native IGMs
-are allowed, treat them as fully trusted packages but still isolate data with
-the typed handoff. Result IDs are single-use and expire. Cap ChompCoin/stat/item
-deltas so a malformed module cannot overflow LORD state.
+External IGMs are a future native C/`.P4G` extension, not an implemented
+handoff service. Native cartridges are trusted code, not a security sandbox;
+keep data exchange behind the proposed typed handoff. Result IDs must be
+single-use and expire. Cap ChompCoin/stat/item deltas so a malformed module
+cannot overflow LORD state. The retired Lua format is not an implementation
+option.
 
 ## 6. RIP-style scene support
 

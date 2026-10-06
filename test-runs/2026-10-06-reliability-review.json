@@ -1,0 +1,204 @@
+{
+  "schema": 1,
+  "date": "2026-10-06",
+  "scope": "focused reliability, security and performance review",
+  "branch": "codex/reliability-performance-review",
+  "base_commit": "a89342dc543c4ce05c6d2503b9fea6556064cade",
+  "implementation_commits": [
+    "08966f1fbc2fee06f5a7cc7c847b08ed911babe5",
+    "0dfc4b0cff06003f28a1d9c2c5f813be3704e0f3"
+  ],
+  "esp_idf_version": "5.5.3",
+  "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+  "summary": {
+    "findings_fixed": 4,
+    "distinct_ctest_cases_passed": 31,
+    "python_tests_passed": 40,
+    "audio_threadsanitizer_stress_runs_passed": 1,
+    "hardware_tested": false,
+    "performance_gain_measured": false
+  },
+  "findings": [
+    {
+      "id": "exchange-transaction-namespace",
+      "priority": "P1",
+      "proof": "public wire reproduction failed before fix; passes after fix",
+      "status": "fixed-host-tested"
+    },
+    {
+      "id": "sync-failure-descriptor-leak",
+      "priority": "P2",
+      "proof": "fault injection detects unclosed descriptor before fix; passes after fix",
+      "status": "fixed-host-tested",
+      "limit": "fixed-content receiver uses same helper; no separate full receiver fault injection"
+    },
+    {
+      "id": "ble-bond-required-before-publication",
+      "priority": "P2",
+      "proof": "source and pinned NimBLE state review; changed source compiled",
+      "status": "fixed-build-tested",
+      "hardware_acceptance": "pending"
+    },
+    {
+      "id": "ble-repeat-pairing-and-error-neutralization",
+      "priority": "P2",
+      "proof": "source review; changed source compiled; snapshot disconnect behavior covered by existing model tests",
+      "status": "fixed-build-tested",
+      "hardware_acceptance": "pending"
+    }
+  ],
+  "commands": [
+    {
+      "command": "make p4-game-platform-host platform-game-storage-host p4-game-package-host p4-os-update-package-host",
+      "result": "passed",
+      "log": "core-host.log"
+    },
+    {
+      "command": "make gamepad-host",
+      "result": "passed",
+      "log": "gamepad-host.log"
+    },
+    {
+      "command": "cmake -S components/platform_display -B build-host/platform_display -G Ninja && cmake --build build-host/platform_display && ctest --test-dir build-host/platform_display --output-on-failure",
+      "result": "passed",
+      "log": "display-host.log"
+    },
+    {
+      "command": "make h1-usb-drive-control-host p4-game-platform-host",
+      "environment": "existing IDF Python 3.11 virtualenv bin first in PATH",
+      "result": "passed",
+      "log": "focused-after.log"
+    },
+    {
+      "command": "clang -std=c11 -Wall -Wextra -Wconversion -Wshadow -Werror -g -fsanitize=thread -fno-omit-frame-pointer -pthread -Icomponents/p4_game_platform/tests/mocks -Icomponents/p4_game_platform/include -Icomponents/p4_game_api/include components/p4_game_platform/tests/test_audio_worker_concurrency.c components/p4_game_platform/tests/mock_worker_runtime.c components/p4_game_platform/src/audio_worker.c components/p4_game_api/src/audio_mixer.c -o build-host/reliability-review/audio-concurrency-tsan && build-host/reliability-review/audio-concurrency-tsan",
+      "result": "passed-no-race-report",
+      "log": "audio-concurrency-tsan.log"
+    },
+    {
+      "command": "./scripts/build.sh console_os m5stack-tab5",
+      "result": "passed",
+      "log": "tab5-build.log"
+    },
+    {
+      "command": "python scripts/verify-console-os-tab5.py",
+      "result": "passed",
+      "log": "tab5-verify.log"
+    },
+    {
+      "command": "./scripts/build.sh console_os waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host",
+      "result": "passed",
+      "log": "waveshare-build.log"
+    },
+    {
+      "command": "python scripts/verify-console-os-waveshare.py apps/console_os/build-waveshare-usb-host",
+      "result": "failed-existing-version-guard",
+      "log": "waveshare-verify.log"
+    }
+  ],
+  "retained_failures": [
+    "Both upload regression cases failed against original production code; failures preserved in transfer-before.log.",
+    "Default Python 3.14 lacked pyserial; rerun with existing IDF Python environment passed all 28 transfer Python cases.",
+    "Original timing-sensitive audio worker test failed a queue admission assertion under ThreadSanitizer; no race diagnostic. Normal sanitizer test and new timing-independent ThreadSanitizer stress test passed.",
+    "Waveshare verifier requires literal PROJECT_VER 0.42 while baseline app version is 0.56. Verifier and app/main CMake files unchanged from review baseline. Later verifier checks are unverified."
+  ],
+  "protected_paths_changed": [],
+  "firmware": {
+    "build-tab5": {
+      "source_commit": "08966f1fbc2fee06f5a7cc7c847b08ed911babe5",
+      "build": "passed",
+      "verifier": "passed",
+      "hardware_tested": false,
+      "artifacts": {
+        "p4_console_os.bin": {
+          "bytes": 4317776,
+          "sha256": "91aa5c5ce2bd61c6dfa220b550bea3a424b48153a12600bc9e63146855e27d5d"
+        },
+        "P4UPDATE.P4U": {
+          "bytes": 4318032,
+          "sha256": "8dc01d9021634575bd1b796baf41640f500e08395cc04cf338cb380c0b576a63"
+        }
+      },
+      "ble_controller_translation_units": 0
+    },
+    "build-waveshare-usb-host": {
+      "source_commit": "0dfc4b0cff06003f28a1d9c2c5f813be3704e0f3",
+      "build": "passed",
+      "verifier": "failed-existing-version-guard",
+      "hardware_tested": false,
+      "artifacts": {
+        "p4_console_os.bin": {
+          "bytes": 2242064,
+          "sha256": "045188f4837b8f08379f74a411c8bc8422395d0893028dd6b6dada8c8b0455f3"
+        },
+        "P4UPDATE.P4U": {
+          "bytes": 2242320,
+          "sha256": "84cefb91d313e1a251420f48b042b50dcf5edebfabbbfcbff71348c9ddfb3def"
+        }
+      },
+      "ble_controller_translation_units": 1
+    }
+  },
+  "local_logs": {
+    "transfer-before.log": {
+      "path": "build-host/reliability-review/transfer-before.log",
+      "bytes": 925,
+      "sha256": "512ccdefa6d81f90fece80bba7417c2d6dcbbfe7c0223936d326588f9a454847"
+    },
+    "focused-after.log": {
+      "path": "build-host/reliability-review/focused-after.log",
+      "bytes": 3114,
+      "sha256": "dd1b816ca65894ff6e21d3d6b6144b64ebd41c3442ccb464a977179f921e942a"
+    },
+    "core-host.log": {
+      "path": "build-host/reliability-review/core-host.log",
+      "bytes": 6318,
+      "sha256": "fafde903b672dfa2cc9ca0e024c3beb5fcad41d8ae6a8736758713c9546fa2a2"
+    },
+    "gamepad-host.log": {
+      "path": "build-host/reliability-review/gamepad-host.log",
+      "bytes": 11849,
+      "sha256": "675a29a22ef42a2dd06a0771c641e9d3bb54ae32f5ef87a6d8cdea68a178c5b3"
+    },
+    "display-host.log": {
+      "path": "build-host/reliability-review/display-host.log",
+      "bytes": 905,
+      "sha256": "2a56d8ae42effb21988e5e2817084298a0973e28a18317af68d945d63e8d3f93"
+    },
+    "audio-worker-tsan.log": {
+      "path": "build-host/reliability-review/audio-worker-tsan.log",
+      "bytes": 106,
+      "sha256": "9c5b6a200433b70001b176b2270cbf8ed7162de63da36a98738f6d48ca19dbe2"
+    },
+    "audio-concurrency-tsan.log": {
+      "path": "build-host/reliability-review/audio-concurrency-tsan.log",
+      "bytes": 114,
+      "sha256": "f516fb4ff11f4e7b09dacd7b1ba83c23c27e2695ea31e07f0297662dc51ae54d"
+    },
+    "tab5-build.log": {
+      "path": "build-host/reliability-review/tab5-build.log",
+      "bytes": 4950,
+      "sha256": "d734cc8839656332f7d899c24d07b79ff8684e61b97f60c0138b10b43770a0aa"
+    },
+    "tab5-verify.log": {
+      "path": "build-host/reliability-review/tab5-verify.log",
+      "bytes": 435,
+      "sha256": "0b8b8feacaea7c5531d95902e48c9c30f85f7af6bf0356f73bc898958a5c0a3b"
+    },
+    "waveshare-build.log": {
+      "path": "build-host/reliability-review/waveshare-build.log",
+      "bytes": 247404,
+      "sha256": "ea1df4b1199937d9a263a28b45c31e358b0661c3415a0890c36f452588f13d39"
+    },
+    "waveshare-verify.log": {
+      "path": "build-host/reliability-review/waveshare-verify.log",
+      "bytes": 147,
+      "sha256": "6153ca0df7da88b7b66b78ccc2b33cf9f70c6f685447be1f37cb200431789d30"
+    }
+  },
+  "limitations": [
+    "No hardware flash, pairing/reconnect test, SD power-loss test or device timing measurement.",
+    "BLE authorization code was source-reviewed and compiled, without a mocked NimBLE event integration test.",
+    "Manual review covered listed boundaries, not all repo source or third-party dependencies."
+  ],
+  "report": "docs/RELIABILITY_REVIEW_2026_10_06.md"
+}

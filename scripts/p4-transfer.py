@@ -222,10 +222,6 @@ def game_name_valid(name: str, extension: str) -> bool:
     )
 
 
-def p4g_name_valid(name: str) -> bool:
-    return game_name_valid(name, ".P4G")
-
-
 def exchange_name_valid(name: str) -> bool:
     return (
         0 < len(name) < NAME_BYTES
