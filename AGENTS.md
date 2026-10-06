@@ -1,6 +1,9 @@
 # ESP32-P4 badge platform invariants
 
-M5Stack Tab5 is the permanent primary Console OS target. Use
+M5Stack Tab5 is the only actively maintained Console OS board target. All
+other board targets are legacy; preserve their source and recovery contracts,
+and use their board-specific workflows only for explicitly requested legacy
+maintenance. New development, setup, and default validation target Tab5. Use
 `make console-os-tab5-idf` (or its default alias `make console-os-idf`),
 `docs/boards/M5STACK_TAB5.md`, and the Tab5 native USB content/guarded-flash
 workflow. Elecrow uses `make console-os-elecrow-idf` explicitly. Never inherit
