@@ -13,22 +13,18 @@ Run `python3 games/lord/tools/build_illustrated_title.py` with Pillow to reprodu
 center-fit and deterministic 256-color median-cut quantization produce separate
 736×306 native and 304×126 fallback images. The opaque byte-indexed images and
 two 512-byte palettes occupy 264,544 bytes. Runtime blits perform bounded palette
-lookups without scaling, decompression, allocation or image decoding. The old
-87,040-byte title RGB565 array is retained as historical source but no longer
-linked into the game. The existing launcher icon remains unchanged.
+lookups without scaling, decompression, allocation or image decoding.
 
-## Earlier assets
+The existing launcher icon remains unchanged. The superseded 87,040-byte
+RGB565 title array, its derived preview, and its unused converter were removed
+in the repository cleanup. They are recoverable from commit
+`615321ff45020387fba96572b5b42376b0d1be52`; no current game source includes them.
 
-`title-background-ansi.png` is the checked-in 320×136, 16-color game asset.
-`src/generated/lord_title_art.h` is its deterministic RGB565 representation.
-Regenerate both with:
+## Earlier source artwork
 
-```sh
-python3 games/lord/tools/build_title_art.py \
-  games/lord/assets/source/title-background-generated.png \
-  games/lord/assets/title-background-ansi.png \
-  games/lord/src/generated/lord_title_art.h
-```
+`source/title-background-generated.png` remains as the original source and
+provenance for the earlier 16-color title. Its derived assets are no longer
+part of the maintained rendering or conversion workflow.
 
 The source image was generated for this port with the built-in OpenAI image
 generation tool on 2026-08-18. It is new project art and does not copy or
@@ -43,8 +39,9 @@ Final generation prompt:
 > logo, UI controls, watermark, photorealism, blurry gradients, or modern
 > objects.
 
-The conversion script downsamples with a box filter, dithers into the classic
-16-color ANSI palette, writes the preview PNG, and emits explicit RGB565 data.
+The retired conversion script downsampled with a box filter, dithered into the
+classic 16-color ANSI palette, wrote the preview PNG, and emitted explicit
+RGB565 data.
 
 `source/friendship-ansi-concept-imagegen-v1.png` is a second original reference
 sheet generated with the built-in OpenAI image tool on 2026-08-23. It is a
