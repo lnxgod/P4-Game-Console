@@ -88,3 +88,26 @@ python3 components/p4_game_api/tools/png_to_feedback_atlas.py \
   components/p4_game_api/assets/animation/p4_console_effects_atlas_v1.png \
   components/p4_game_api/src/generated/feedback_atlas.inc
 ```
+
+## Bounded software 3D and shallow water
+
+`p4/scene3d.h` provides optional header-only perspective triangle rasterization
+with caller-projected subpixel vertices, reciprocal depth, Gouraud RGB565 color
+and a translucent surface pass. A caller-owned horizontal depth band avoids a
+full-screen z-buffer. Re-submit the bounded geometry per band; submit opaque
+objects first. The optional material-tag/32x32 texture path refracts a tiled
+substrate from caller-supplied UVs; it is not a general optical ray tracer.
+Callers validate the surface/band capacity and near-clip vertices before use.
+
+`p4/shallow_water.h` advances caller-owned height/face-velocity/solid-volume
+arrays on a bounded staggered grid. Its fixed substep advection, gravity and
+conservative face flux preserve volume, and a speed bound prevents negative
+water depths. It requires positive dt/dx, valid same-size arrays, and a closed
+solid outer boundary. Solid coupling and force units belong to the caller.
+A height field cannot represent overturning water or detached liquid sheets.
+
+Tide Maze supplies the integration and sanitizer tests for both helpers,
+including low-force response, mass conservation, solid isolation, buoyancy,
+draw-order-independent depth, exact render regressions and guard buffers.
+These helpers have no ABI, allocator, task or raw hardware ownership. Qualify
+device cadence separately; native C and host throughput alone are not proof.

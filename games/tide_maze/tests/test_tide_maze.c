@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "tide_maze_internal.h"
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,14 +13,14 @@ static bool send(void *p,const uint8_t *b,size_t n){endpoint *e=p;if(e->reject||
  p4_game_multiplayer_message_t *m=&e->peer->queue[e->peer->tail++%32];memset(m,0,sizeof(*m));m->sequence=++e->sequence;m->player_slot=e->status.local_player_slot;m->bytes=(uint8_t)n;memcpy(m->data,b,n);return true;}
 static bool receive(void *p,p4_game_multiplayer_message_t *m){endpoint *e=p;if(e->head==e->tail)return false;*m=e->queue[e->head++%32];return true;}
 static bool motion(void *p,p4_game_motion_t *out){*out=*(p4_game_motion_t*)p;return true;}
-static const p4_game_multiplayer_profile_t profile={.schema=1,.style=P4_GAME_MULTIPLAYER_STYLE_REALTIME,.min_players=2,.max_players=2,.tick_rate_hz=20,.message_bytes=64,.protocol=1};
+static const p4_game_multiplayer_profile_t profile={.schema=1,.style=P4_GAME_MULTIPLAYER_STYLE_REALTIME,.min_players=2,.max_players=2,.tick_rate_hz=20,.message_bytes=64,.protocol=2};
 static void begin(p4_game_instance_t *game,tm_state *s,endpoint *e){
  p4_game_services_t svc={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_VIDEO_HIGH_RES,.game_id=p4_tide_maze_game.id};
  if(e){svc.available_capabilities|=P4_GAME_CAP_MULTIPLAYER_SESSION;svc.multiplayer_context=e;svc.multiplayer_read_status=status;svc.multiplayer_send=send;svc.multiplayer_receive=receive;svc.multiplayer_profile=&profile;}
  assert(p4_game_instance_start(game,&p4_tide_maze_game,&svc,s,sizeof(*s)));
 }
 static void tick(p4_game_instance_t *g,uint32_t held,uint32_t pressed){p4_game_input_t in={.held=held,.pressed=pressed};assert(p4_game_instance_update(g,&in,20)==P4_GAME_CONTINUE);}
-static int volume(tm_state *s){int sum=0;for(int i=0;i<TM_CELLS;++i)sum+=s->water[i];return sum;}
+static double volume(tm_state *s){double sum=0;for(int i=0;i<TM_CELLS;++i)sum+=s->water[i];return sum;}
 static void maps(void){
  for(unsigned l=0;l<TM_LEVELS;++l){
   int queue[135],head=0,tail=0;bool seen[135]={false};queue[tail++]=16;seen[16]=true;
@@ -32,7 +33,7 @@ static void maps(void){
 static void rules(void){
  tm_state s={0};p4_game_instance_t g={0};begin(&g,&s,NULL);assert(s.phase==TM_TITLE);
  tick(&g,P4_BUTTON_A,P4_BUTTON_A);assert(s.phase==TM_PLAY);int32_t x=s.ball[0].x;
- for(int i=0;i<60;++i)tick(&g,P4_BUTTON_RIGHT,0);assert(s.ball[0].x>x);assert(s.ball[0].x<=93*TM_Q);
+ for(int i=0;i<60;++i)tick(&g,P4_BUTTON_RIGHT,0);assert(s.ball[0].x>x);assert(s.ball[0].x<=220*TM_Q);
  int v=s.ball[0].vx;tick(&g,P4_BUTTON_A,0);assert(s.ball[0].vx<v);
  tick(&g,0,P4_BUTTON_START);assert(s.phase==TM_PAUSE);uint32_t time=s.time_ms;tick(&g,0,0);assert(s.time_ms==time);
  tick(&g,0,P4_BUTTON_START);assert(s.phase==TM_PLAY);
@@ -43,7 +44,7 @@ static void rules(void){
  }
  tm_reset(&s,0);s.time_ms=10;tm_simulate(&s);assert(s.phase==TM_LOST);tick(&g,0,P4_BUTTON_A);assert(s.phase==TM_PLAY);
  s.ball[0].x=40*TM_Q;s.ball[0].y=120*TM_Q;tm_simulate(&s);assert(s.rescues==1&&s.ball[0].rescue>0);
- p4_game_input_t touch={.touch_valid=true,.touch_count=1,.touches={{100,56}}};assert(p4_game_instance_update(&g,&touch,20)==P4_GAME_CONTINUE);assert(s.intent[0].x>0);
+ p4_game_input_t touch={.touch_valid=true,.touch_count=1,.touches={{100,100}}};assert(p4_game_instance_update(&g,&touch,20)==P4_GAME_CONTINUE);assert(s.intent[0].x>0);
  touch.pressed=P4_BUTTON_BACK|P4_BUTTON_START|P4_BUTTON_B;assert(p4_game_instance_update(&g,&touch,20)==P4_GAME_CONTINUE);assert(s.phase==TM_PLAY);
  p4_game_input_t back={.pressed=P4_BUTTON_BACK};assert(p4_game_instance_update(&g,&back,20)==P4_GAME_EXIT_TO_LAUNCHER);
 }
@@ -78,9 +79,9 @@ static void complete_voyage(void){
   if(level<2)tick(&g,0,P4_BUTTON_A);
  }
 }
-static void water(void){tm_state s={0};tm_reset(&s,0);int vol=volume(&s);s.intent[0]=(tm_intent){800,-650,400,900,false};
+static void water(void){tm_state s={0};tm_reset(&s,0);double vol=volume(&s);s.intent[0]=(tm_intent){800,-650,400,900,false};
  for(int n=0;n<10000;++n){tm_fluid(&s);if(n==300)s.intent[0]=(tm_intent){-700,550,-600,-1000,false};}
- assert(volume(&s)==vol);bool moved=false;for(int i=0;i<TM_CELLS;++i){assert(s.water[i]>=0&&s.water[i]<=1024);if(!s.wet[i])assert(s.water[i]==0);else if(s.water[i]!=320)moved=true;}assert(moved);
+ assert(fabs(volume(&s)-vol)<vol*0.0001);bool moved=false;for(int i=0;i<TM_CELLS;++i){assert(s.water[i]>=0&&s.water[i]<=1024);if(!s.wet[i])assert(s.water[i]==0);else if(s.water[i]!=6.0f)moved=true;}assert(moved);
 }
 static void sensors(void){
  tm_state s={0};tm_reset(&s,0);p4_game_motion_t m={.sequence=1,.valid=true,.accel_mg={0,0,1000}},out;
@@ -99,13 +100,13 @@ static void network(void){
  endpoint b={.status={.generation=7,.session_seed=42,.state=P4_GAME_MULTIPLAYER_CONNECTED,.role=P4_GAME_MULTIPLAYER_ROLE_CLIENT,.local_player_slot=1,.player_count=2}};
  a.peer=&b;b.peer=&a;tm_state host={0},client={0};p4_game_instance_t gh={0},gc={0};begin(&gh,&host,&a);begin(&gc,&client,&b);
  assert(host.linked&&client.phase==TM_WAIT);
- for(int n=0;n<60;++n){tick(&gc,P4_BUTTON_RIGHT,0);tick(&gh,0,0);}assert(host.ball[1].x>27*TM_Q);assert(client.snapshot_seen&&client.phase==host.phase);
+ for(int n=0;n<60;++n){tick(&gc,P4_BUTTON_RIGHT,0);tick(&gh,0,0);}assert(host.ball[1].x>34*TM_Q);assert(client.snapshot_seen&&client.phase==host.phase);
  a.reject=true;uint32_t rev=host.revision;for(int n=0;n<5;++n){tick(&gc,0,0);tick(&gh,0,0);}assert(host.revision==rev);a.reject=false;
  /* Receive a final complete snapshot without another host simulation tick. */
  host.net_ms=50;tm_network_publish(&gh.context,&host);assert(tm_network_poll(&gc.context,&client,0));assert(client.ball[1].x==host.ball[1].x&&client.time_ms==host.time_ms);
  b.reject=true;for(int n=0;n<20;++n)tick(&gh,0,0);assert(host.intent[1].x==0);b.reject=false;
  /* Malformed, stale, wrong-player packets must not move the remote marble. */
- p4_game_multiplayer_message_t bad={.sequence=900,.player_slot=1,.bytes=TM_INPUT,.data={1,1}};
+ p4_game_multiplayer_message_t bad={.sequence=900,.player_slot=1,.bytes=TM_INPUT,.data={2,1}};
  bad.data[4]=(uint8_t)host.revision;bad.data[8]=0xff;bad.data[9]=0x7f;a.queue[a.tail++%32]=bad;uint32_t seq=host.received_seq;
  assert(tm_network_poll(&gh.context,&host,0));assert(host.received_seq==seq&&host.intent[1].x==0);
  assert(tm_network_poll(&gc.context,&client,0));
@@ -114,15 +115,29 @@ static void network(void){
  /* Semantic fuzzing is bounded and cannot manufacture a valid future state. */
  for(unsigned n=0;n<=64;++n){
   p4_game_multiplayer_message_t malformed={.sequence=1000U+n,.player_slot=1,.bytes=(uint8_t)n};
-  memset(malformed.data,0xff,sizeof(malformed.data));malformed.data[0]=1;malformed.data[1]=1;
+  memset(malformed.data,0xff,sizeof(malformed.data));malformed.data[0]=2;malformed.data[1]=1;
   a.queue[a.tail++%32]=malformed;uint32_t before=host.received_seq;
   assert(tm_network_poll(&gh.context,&host,0));assert(host.received_seq==before);
  }
  /* Replayed input and a packet attributed to our own slot are ignored. */
- bad=(p4_game_multiplayer_message_t){.sequence=host.received_seq,.player_slot=1,.bytes=TM_INPUT,.data={1,1}};
+ bad=(p4_game_multiplayer_message_t){.sequence=host.received_seq,.player_slot=1,.bytes=TM_INPUT,.data={2,1}};
  a.queue[a.tail++%32]=bad;assert(tm_network_poll(&gh.context,&host,0));assert(host.intent[1].x==0);
  bad.sequence=1200;bad.player_slot=0;a.queue[a.tail++%32]=bad;assert(tm_network_poll(&gh.context,&host,0));assert(host.intent[1].x==0);
- host.pearls=(1U<<host.all_pearls)-1U;host.ball[0]=(tm_ball){.x=200*TM_Q,.y=120*TM_Q};host.ball[1]=(tm_ball){.x=200*TM_Q,.y=120*TM_Q};
+ /* Reject out-of-range vertical fields in otherwise valid protocol-2 snapshots. */
+ const unsigned offsets[]={56,56,58,58,60,62};
+ const int values[]={3*256,23*256,61*256,-61*256,23*256,-61*256};
+ for(unsigned n=0;n<sizeof(offsets)/sizeof(offsets[0]);++n){
+  host.net_ms=50;tm_network_publish(&gh.context,&host);assert(b.tail==b.head+1);
+  uint8_t *field=b.queue[(b.tail-1)%32].data+offsets[n];unsigned v=(uint16_t)values[n];
+  field[0]=(uint8_t)v;field[1]=(uint8_t)(v>>8);uint32_t before=client.received_revision;
+  assert(tm_network_poll(&gc.context,&client,0));assert(client.received_revision==before);
+ }
+ host.ball[0].z=5.123f;host.ball[0].vz=-3.234f;host.net_ms=50;
+ tm_network_publish(&gh.context,&host);assert(tm_network_poll(&gc.context,&client,0));
+ assert(client.received_revision==host.revision);
+ assert(fabsf(client.ball[0].z-host.ball[0].z)<1.0f/256.0f);
+ assert(fabsf(client.ball[0].vz-host.ball[0].vz)<1.0f/256.0f);
+ host.pearls=(1U<<host.all_pearls)-1U;host.ball[0]=(tm_ball){.x=200*TM_Q,.y=120*TM_Q,.z=4};host.ball[1]=(tm_ball){.x=200*TM_Q,.y=120*TM_Q,.z=4};
  tm_simulate(&host);assert(host.phase==TM_CLEAR);host.net_ms=50;tm_network_publish(&gh.context,&host);assert(tm_network_poll(&gc.context,&client,0));assert(client.phase==TM_CLEAR);
  ++a.status.generation;tick(&gh,0,0);assert(!host.linked&&host.phase==TM_LINK_LOST&&host.intent[1].x==0);tick(&gh,0,P4_BUTTON_A);assert(host.phase==TM_PLAY&&!host.linked&&host.slot==0);
  b.status.state=P4_GAME_MULTIPLAYER_PEER_LEFT;tick(&gc,0,0);assert(client.phase==TM_LINK_LOST);tick(&gc,0,P4_BUTTON_A);assert(!client.linked&&client.slot==0);
@@ -144,4 +159,4 @@ static void frames(const char *directory){
   }free(data);
  }
 }
-int main(int argc,char **argv){maps();rules();complete_voyage();water();sensors();network();frames(argc>1?argv[1]:NULL);printf("Tide Maze: rules, connectivity, conservative water, six-axis input, two-instance protocol and guarded frames PASS; state=%zu\n",sizeof(tm_state));return 0;}
+int main(int argc,char **argv){if(argc>1){frames(argv[1]);return 0;}maps();rules();complete_voyage();water();sensors();network();frames(argc>1?argv[1]:NULL);printf("Tide Maze: rules, connectivity, conservative water, six-axis input, two-instance protocol and guarded frames PASS; state=%zu\n",sizeof(tm_state));return 0;}

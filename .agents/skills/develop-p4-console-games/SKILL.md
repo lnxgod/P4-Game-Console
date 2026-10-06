@@ -303,6 +303,24 @@ actual camera for touch targeting. Keep input, physics and multiplayer rules
 independent of the view. A rejected visual direction requires a scene/rendering
 change, not just another texture on the same presentation.
 
+## Water and rigid-body requests
+
+When water is a gameplay mechanic, separate the 3D renderer from the fluid model.
+A projected textured plane does not establish water physics. Choose a bounded
+model appropriate to the device, state its limits (for example, a height field
+cannot overturn), and prove small-force response, wave propagation after release,
+volume conservation, solid boundaries, displacement and forces back on objects.
+For multiplayer, distinguish host-authoritative body/rule state from locally
+reconstructed surface effects; do not call an unsent fluid field synchronized.
+
+Review a moving reference or interactive demo when the expected interaction is
+unclear. Compare an actual source-rendered motion capture with it before packaging;
+do not describe a read article or a static image as a watched video. The optional
+`p4/shallow_water.h` and `p4/scene3d.h` helpers demonstrate caller-owned bounded
+storage, physical volume/momentum and banded native depth rendering. They are
+choices, not required templates or evidence of device frame rate. Include depth,
+refraction scratch and projected vertices in the 128 KiB state budget.
+
 ## Game Changers AI OS release quality
 
 For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).

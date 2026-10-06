@@ -16,7 +16,7 @@ static bool intent_read(const uint8_t *p,tm_intent *out){
 }
 bool tm_network_begin(p4_game_context_t *ctx,tm_state *s){
  p4_game_multiplayer_profile_t p;p4_game_multiplayer_status_t st;
- if(!p4_game_multiplayer_read_profile(ctx,&p)||p.style!=P4_GAME_MULTIPLAYER_STYLE_REALTIME||p.protocol!=1||p.message_bytes<64||p.tick_rate_hz!=20||p.min_players!=2||p.max_players!=2||
+ if(!p4_game_multiplayer_read_profile(ctx,&p)||p.style!=P4_GAME_MULTIPLAYER_STYLE_REALTIME||p.protocol!=2||p.message_bytes<64||p.tick_rate_hz!=20||p.min_players!=2||p.max_players!=2||
   !p4_game_multiplayer_read_status(ctx,&st)||st.state!=P4_GAME_MULTIPLAYER_CONNECTED||st.player_count!=2||
   !((st.role==P4_GAME_MULTIPLAYER_ROLE_HOST&&st.local_player_slot==0)||(st.role==P4_GAME_MULTIPLAYER_ROLE_CLIENT&&st.local_player_slot==1)))return false;
  s->linked=true;s->host=st.role==P4_GAME_MULTIPLAYER_ROLE_HOST;s->slot=st.local_player_slot;
@@ -30,11 +30,11 @@ static bool snapshot(tm_state *s,const uint8_t *b){
  if(pearls>=(1U<<n))return false;
  tm_ball ball[2];tm_intent intent[2];
  for(unsigned i=0;i<2;++i){
-  unsigned k=16+i*8;ball[i]=(tm_ball){(int32_t)r16(b+k),(int32_t)r16(b+k+2),signed16(b+k+4),signed16(b+k+6),(uint16_t)r16(b+32+i*2)};
+  unsigned k=16+i*8;ball[i]=(tm_ball){(int32_t)r16(b+k),(int32_t)r16(b+k+2),signed16(b+k+4),signed16(b+k+6),(uint16_t)r16(b+32+i*2),(float)r16(b+56+i*4)/256.0f,(float)signed16(b+58+i*4)/256.0f,0.0f};
   if(ball[i].x<19*TM_Q||ball[i].x>221*TM_Q||ball[i].y<19*TM_Q||ball[i].y>125*TM_Q||
-   ball[i].vx < -280||ball[i].vx>280||ball[i].vy < -280||ball[i].vy>280||ball[i].rescue>700||!intent_read(b+36+i*10,&intent[i]))return false;
+   ball[i].vx < -280||ball[i].vx>280||ball[i].vy < -280||ball[i].vy>280||ball[i].rescue>700||ball[i].z<4.0f||ball[i].z>22.0f||ball[i].vz < -60.0f||ball[i].vz>60.0f||!intent_read(b+36+i*10,&intent[i]))return false;
  }
- for(unsigned i=56;i<64;++i)if(b[i])return false;
+
  /* Time only increases when a maze restarts. This also detects a retry whose
   * result screen was lost in transit, and resets the client's cosmetic water. */
  const bool reset=level!=s->level||(s->snapshot_seen&&time>s->time_ms);
@@ -45,6 +45,7 @@ static bool snapshot(tm_state *s,const uint8_t *b){
   const bool blend=s->snapshot_seen&&!reset;
   s->previous_x[i]=blend?s->previous_x[i]+(s->ball[i].x-s->previous_x[i])*(int32_t)s->blend_ms/50:ball[i].x;
   s->previous_y[i]=blend?s->previous_y[i]+(s->ball[i].y-s->previous_y[i])*(int32_t)s->blend_ms/50:ball[i].y;
+  ball[i].previous_z=blend?s->ball[i].previous_z+(s->ball[i].z-s->ball[i].previous_z)*(float)s->blend_ms/50.0f:ball[i].z;
   s->ball[i]=ball[i];
  }
  s->intent[0]=intent[0]; /* Local input remains local until the next intent send. */
@@ -59,7 +60,7 @@ bool tm_network_poll(p4_game_context_t *ctx,tm_state *s,uint32_t ms){
  p4_game_multiplayer_message_t message;
  for(unsigned count=0;count<8&&p4_game_multiplayer_receive(ctx,&message);++count){
   const uint8_t *b=message.data;
-  if(message.player_slot!=(s->host?1:0)||message.sequence<=s->received_seq||message.bytes<2||b[0]!=1)continue;
+  if(message.player_slot!=(s->host?1:0)||message.sequence<=s->received_seq||message.bytes<2||b[0]!=2)continue;
   bool accepted=false;
   if(s->host&&message.bytes==TM_INPUT&&b[1]==1&&b[2]==0&&b[3]==0){
    uint32_t revision=r32(b+4);
@@ -74,13 +75,14 @@ bool tm_network_poll(p4_game_context_t *ctx,tm_state *s,uint32_t ms){
 }
 void tm_network_publish(p4_game_context_t *ctx,tm_state *s){
  if(s->net_ms<50)return;
- uint8_t b[TM_SNAPSHOT]={1,2};size_t bytes=TM_SNAPSHOT;
+ uint8_t b[TM_SNAPSHOT]={2,2};size_t bytes=TM_SNAPSHOT;
  if(s->host){
   b[2]=(uint8_t)s->phase;b[3]=(uint8_t)s->level;w32(b+4,s->revision+1U);w32(b+8,s->time_ms);
   w16(b+12,s->pearls);b[14]=(uint8_t)(s->rescues>255?255:s->rescues);b[15]=(uint8_t)s->docked;
   for(unsigned i=0;i<2;++i){unsigned k=16+i*8;const tm_ball *a=&s->ball[i];
    w16(b+k,(unsigned)a->x);w16(b+k+2,(unsigned)a->y);w16(b+k+4,(uint16_t)a->vx);w16(b+k+6,(uint16_t)a->vy);
-   w16(b+32+i*2,a->rescue);intent_write(b+36+i*10,&s->intent[i]);}
+   w16(b+32+i*2,a->rescue);intent_write(b+36+i*10,&s->intent[i]);
+   w16(b+56+i*4,(unsigned)(a->z*256.0f));w16(b+58+i*4,(uint16_t)(int16_t)(a->vz*256.0f));}
  }else{bytes=TM_INPUT;b[1]=1;w32(b+4,s->received_revision);intent_write(b+8,&s->intent[1]);}
  /* Keep the fractional period, without bursting a backlog after rejection. */
  if(p4_game_multiplayer_send(ctx,b,bytes)){s->net_ms%=50;if(s->host)++s->revision;}

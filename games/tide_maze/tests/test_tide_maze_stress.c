@@ -3,6 +3,7 @@
 #include "tide_maze_internal.h"
 #include "p4/input.h"
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 #include <limits.h>
 #include <stdio.h>
@@ -99,7 +100,7 @@ static bool receive(void *context, p4_game_multiplayer_message_t *out) {
 static const p4_game_multiplayer_profile_t profile = {
     .schema = 1, .style = P4_GAME_MULTIPLAYER_STYLE_REALTIME,
     .min_players = 2, .max_players = 2, .tick_rate_hz = 20,
-    .message_bytes = 64, .protocol = 1
+    .message_bytes = 64, .protocol = 2
 };
 static void begin(pair *p, uint32_t seed, bool chaos) {
     memset(p, 0, sizeof(*p));
@@ -126,17 +127,17 @@ static void step(pair *p, uint32_t host, uint32_t guest, uint32_t press, uint32_
     in = (p4_game_input_t){.held = host, .pressed = press};
     assert(p4_game_instance_update(&p->game[0], &in, ms) == P4_GAME_CONTINUE);
 }
-static int volume(const tm_state *s) {
-    int v = 0;
+static double volume(const tm_state *s) {
+    double v = 0;
     for (unsigned i = 0; i < TM_CELLS; ++i) v += s->water[i];
     return v;
 }
-static void water_invariants(const tm_state *s, int original) {
-    assert(volume(s) == original);
+static void water_invariants(const tm_state *s, double original) {
+    assert(fabs(volume(s)-original)<original*0.0001);
     for (unsigned i = 0; i < TM_CELLS; ++i) {
         assert(s->water[i] >= 0 && s->water[i] <= 1024);
-        assert(s->flow_x[i] >= -40 && s->flow_x[i] <= 40);
-        assert(s->flow_y[i] >= -40 && s->flow_y[i] <= 40);
+        assert(s->flow_x[i] >= -96.001f && s->flow_x[i] <= 96.001f);
+        assert(s->flow_y[i] >= -96.001f && s->flow_y[i] <= 96.001f);
         if (!s->wet[i]) assert(s->water[i] == 0);
         if (i % TM_W + 1 < TM_W && (!s->wet[i] || !s->wet[i + 1])) assert(s->flow_x[i] == 0);
         if (i / TM_W + 1 < TM_H && (!s->wet[i] || !s->wet[i + TM_W])) assert(s->flow_y[i] == 0);
@@ -147,7 +148,7 @@ static void water_stress(void) {
     for (unsigned level = 0; level < TM_LEVELS; ++level) {
         tm_state s = {0};
         tm_reset(&s, level); s.linked = true;
-        int original = volume(&s);
+        double original = volume(&s);
         for (unsigned frame = 0; frame < 60000; ++frame) {
             if (frame % 37 == 0) {
                 for (unsigned player = 0; player < 2; ++player) {
@@ -274,6 +275,8 @@ static void converge(pair *p) {
     for(unsigned i=0;i<2;++i){
         assert(c->ball[i].x==h->ball[i].x && c->ball[i].y==h->ball[i].y);
         assert(c->ball[i].vx==h->ball[i].vx && c->ball[i].vy==h->ball[i].vy && c->ball[i].rescue==h->ball[i].rescue);
+        assert(fabsf(c->ball[i].z-h->ball[i].z)<1.0f/256.0f);
+        assert(fabsf(c->ball[i].vz-h->ball[i].vz)<1.0f/256.0f);
     }
 }
 static void cooperative_voyage(uint32_t seed) {
@@ -337,9 +340,9 @@ static void touch_regions(void) {
     assert(s.intent[0].brake);
     assert(touch_sample(&g,&mapper,185,188,false)==P4_GAME_CONTINUE);
     assert(!s.intent[0].brake);
-    assert(touch_sample(&g,&mapper,100,56,true)==P4_GAME_CONTINUE);
+    assert(touch_sample(&g,&mapper,100,100,true)==P4_GAME_CONTINUE);
     assert(s.intent[0].x>0);
-    assert(touch_sample(&g,&mapper,100,56,false)==P4_GAME_CONTINUE);
+    assert(touch_sample(&g,&mapper,100,100,false)==P4_GAME_CONTINUE);
     assert(touch_sample(&g,&mapper,300,5,true)==P4_GAME_EXIT_TO_LAUNCHER);
     puts("touch mapping: physical viewport to canonical steering, Brake, Pause, resume and Exit");
 }
@@ -372,12 +375,15 @@ static void local_presentation(void){
  s.phase=TM_PAUSE;tm_visual_ball(&s,0,&x,&y);assert(x==end);
  tm_reset(&s,0);s.ball[0].x=40*TM_Q;s.ball[0].y=120*TM_Q;tm_simulate(&s);
  assert(s.ball[0].rescue&&s.previous_x[0]==s.ball[0].x&&s.previous_y[0]==s.ball[0].y);
- /* Independent double-precision projection followed by integer touch inverse. */
- for(int py=8;py<144;py+=8)for(int px=8;px<240;px+=8){
-  double xc=px-120,d=600-py-xc/10;
-  int sx=(int)(156+(xc*530+(py-72)*60)/d+.5);
-  int sy=(int)(42+(py*330+xc*45-1200)/d+.5),bx,by;
-  assert(tm_screen_to_board(sx,sy,&bx,&by));assert(abs(bx-px)<=2&&abs(by-py)<=2);
+ /* Tilted perspective and inverse picking agree throughout the playable
+  * basin, including both extreme tray tilts. */
+ for(int tilt=-1;tilt<=1;++tilt){s.view_x=s.previous_view_x=(float)tilt*0.17f;s.view_y=s.previous_view_y=(float)tilt*-0.17f;
+  for(int py=20;py<=124;py+=8)for(int px=20;px<=220;px+=8){
+   p4_3d_vertex_t v=tm_project(&s,320,200,(float)px,(float)py,6.0f,0);int bx,by;
+   int sx=(v.x+4)/8,sy=(v.y+4)/8;
+   if(sy>=178)continue;
+   assert(tm_screen_to_board(&s,sx,sy,&bx,&by));assert(abs(bx-px)<=2&&abs(by-py)<=2);
+  }
  }
  puts("Local presentation: fractional motion, pause, respawn and perspective touch inversion PASS");
 }

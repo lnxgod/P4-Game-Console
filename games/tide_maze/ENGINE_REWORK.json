@@ -1,0 +1,426 @@
+{
+  "schema": 1,
+  "date": "2026-10-06",
+  "title": "Tide Maze 0.3.0 native 3D and coupled water candidate",
+  "status": "BUILT_AND_HOST_TESTED; DEVICE_INSTALL_AND_ACCEPTANCE_PENDING",
+  "source_base": "0b2376b803b6ee117fd777ff61b9cb56710ad438",
+  "branch": "codex/tide-maze-3d",
+  "scope": [
+    "Original native C depth-tested 3D renderer, perspective camera, inverse touch projection, sphere geometry and raised beveled maze",
+    "Floating-point staggered shallow-water grid with momentum advection, pressure, simultaneous conservative flux and solid boundaries",
+    "Submerged sphere displacement, buoyancy, drag, pressure forces, wall sliding and sphere contact",
+    "Interpolated camera, surface and marble positions; simulated-normal highlights and tiled-bed refraction",
+    "Protocol 2 adds authoritative body height/vertical speed without growing the 64-byte snapshot",
+    "Authoring skill updated with fluid-model, reference review, motion capture and hardware-evidence requirements",
+    "Continuous interpolation and smooth shading of the rolling marble stripe"
+  ],
+  "model_limits": [
+    "One surface height per cell; cannot overturn or produce detached liquid sheets/droplets",
+    "Two-way forces are a bounded game approximation, not a full 3D Navier-Stokes or exact momentum-conserving rigid-body solver",
+    "Refracted tiled bed is an analytic material; submerged objects use depth-tested transparency",
+    "Host owns bodies/rules. Guest water is reconstructed locally and not identical. No client-side body prediction",
+    "Device frame rate, physical IMU feel, touch and linked latency remain unmeasured for this candidate"
+  ],
+  "reference_review": {
+    "interactive_demo": "https://matthias-research.github.io/pages/tenMinutePhysics/20-heightFieldWater.html",
+    "paper": "https://matthias-research.github.io/pages/publications/hfFluid.pdf",
+    "method": "Opened and ran official interactive demo; observed solid displacement and propagating surface motion. Read primary fluid reference. Did not watch the linked video.",
+    "implementation": "Original C; no external demo code copied"
+  },
+  "budgets": {
+    "state_bytes": 121304,
+    "state_limit_bytes": 131072,
+    "width": 768,
+    "height": 480,
+    "fallback": [
+      320,
+      200
+    ],
+    "grid": [
+      60,
+      36
+    ],
+    "fluid_substep_ms": 10,
+    "fluid_substeps_per_tick": 2,
+    "body_tick_ms": 20,
+    "depth_band_bytes": 18432,
+    "material_band_bytes": 9216,
+    "runtime_heap_allocation": false,
+    "largest_render_function_frame_bytes": 336,
+    "cartridge_frame_limit_bytes": 2048,
+    "hardware_target_fps": 60,
+    "hardware_release_floor_fps": 30
+  },
+  "package": {
+    "bytes": 71552,
+    "file": "TIDE_MAZE.P4G",
+    "id": "org.p4console.tide-maze",
+    "multiplayer": {
+      "input_delay_ticks": 0,
+      "max_players": 2,
+      "message_bytes": 64,
+      "min_players": 2,
+      "protocol": 2,
+      "schema": 1,
+      "style": "realtime",
+      "style_code": 2,
+      "tick_rate_hz": 20
+    },
+    "package_sha256": "619599295f85ad459fe717ddfde80df7a210e7ba15ec5bf0ec2c80e68a8e77b8",
+    "payload_bytes": 71296,
+    "payload_sha256": "8c3e44f39fa8a1f31145a3ba558aaa63b2303291648e27287d7cfb89f9b9b769",
+    "result": "p4-game-package-built",
+    "stack_frame_limit_bytes": 2048
+  },
+  "source_closure": {
+    "compiler": "/Users/billh/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
+    "compiler_sha256": "69e796c3a3e35ab36b256209e2d40f21cc946bf842718b4fc6d45159208d7910",
+    "flags": [
+      "-std=gnu17",
+      "-Os",
+      "-march=rv32imafc_zicsr_zifencei",
+      "-mabi=ilp32f",
+      "-fPIC",
+      "-shared",
+      "-nostdlib",
+      "-nostartfiles",
+      "-static-libgcc",
+      "-ffunction-sections",
+      "-fdata-sections",
+      "-fvisibility=hidden",
+      "-fno-jump-tables",
+      "-Werror=frame-larger-than=2048",
+      "-DP4_GAME_ENTRY_SYMBOL=p4_tide_maze_game"
+    ],
+    "include_flags": [
+      "-Icomponents/p4_game_api/include",
+      "-Icomponents/p4_cp437/include",
+      "-Igames/tide_maze/include",
+      "-Igames/tide_maze/src"
+    ],
+    "preprocessing": "GCC -E -P; line markers omitted so root path does not affect hashes",
+    "preprocessed_sha256": {
+      "components/p4_game_api/runtime/cartridge_main.c": "734156a1cecb8836686df76c6db3c6b053d4082746ced58854236668775cff3b",
+      "games/tide_maze/src/tide_maze.c": "c134d423b16cf1285662fca684cbccf83a11aa107fae66064c8509487b756b0b",
+      "games/tide_maze/src/tide_maze_physics.c": "4d213ebfc03b39e0a41ea6670874a7e32a1b2563d0d243a37b3c1e063d4d9852",
+      "games/tide_maze/src/tide_maze_network.c": "426f286447d2f7775f920d840736aa69242d131be25c7af853a48caea78a495e",
+      "games/tide_maze/src/tide_maze_render.c": "0b2ac66b5daf7a0aee909a167e2d26c9677061a2863230d092bfc34bf93cf16f",
+      "games/tide_maze/src/tide_maze_water.c": "4e49a3dea938d9f99a4b9309dccc95cb7ca3dc41a8152bc8a48df25caf62c556",
+      "components/p4_cp437/src/cp437.c": "b27fa0e271b2791214870b52031c77c8e951d7c803262d10613207a4fe6767a3",
+      "components/p4_game_api/src/audio_pack.c": "05a9ac05cb7ddfae8a6099ff3d9e78b53784e3f33c882b44ea6feea0cf165a14",
+      "components/p4_game_api/src/draw.c": "748da3f657627a955f6cb2458c310fe126d55ffecc5c21c0cf619ea82c9d1782",
+      "components/p4_game_api/src/feedback.c": "e46c674fce265cb0e51ba31b128c43523ae663045ab4bcbd7064ca10fb04b498",
+      "components/p4_game_api/src/game_runtime.c": "36aed5f6c82ddd4086ce1414488b534bbe08648526264d952e0d12d9160136e2",
+      "components/p4_game_api/src/input.c": "84bc70fd50c27bf5047a9bdb78e59bc1e068c9773e42368d1ba9d187f1b3469c",
+      "components/p4_game_api/src/presentation_font.c": "90883acd07b0701ea49207a4bc059a7ce245b19972ddade325cb7b68a9d2080d",
+      "components/p4_game_api/src/visual.c": "fae5aaeffa23e824c997980768cc61518b03f31c46cf977bf8658c77407a221b"
+    },
+    "source_sha256": {
+      "components/p4_game_api/runtime/cartridge_main.c": "a6b7062db30979c4d32728d451793cbde1d1303ceebc524a46b935f193a77c6d",
+      "games/tide_maze/src/tide_maze.c": "c046a7026ca4cedd430d3648af6506941a05362fa372646034f01aecc19678a7",
+      "games/tide_maze/src/tide_maze_physics.c": "a961654c663699c593132cae301ff970cd1b05f66dc0d256026cfb4468dce9b6",
+      "games/tide_maze/src/tide_maze_network.c": "3bbf22537e323b00e63dafc000d67ec26a38a4929a4f9543a15acae8311ac1d3",
+      "games/tide_maze/src/tide_maze_render.c": "96741b622e1bcc8b67d4cb8e24684a5287f313762c5127ca71cc724e3f8096b3",
+      "games/tide_maze/src/tide_maze_water.c": "130912ead9269846f2504b379b4773d42ceee507a4f79a77306edf1380ae6f04",
+      "components/p4_cp437/src/cp437.c": "10405ddafb45fbf288362acf6f3b346de0a6483c9e014cc588036300dd521bdf",
+      "components/p4_game_api/src/audio_pack.c": "d12cc933706012124784300f6abb15227d4534a298082ea9e8b23948acd9da71",
+      "components/p4_game_api/src/draw.c": "3056f2a5b8bb9f9db7c1df2d197e5a676b9c20f12d10398bc92f6c44b887fa36",
+      "components/p4_game_api/src/feedback.c": "2f05229f018a488576a8bacef4a91096b97e6c0495c51138c4518ee6cd01be4a",
+      "components/p4_game_api/src/game_runtime.c": "c1ac69e7c45192b287e07fec350d47826888117b1b41e25d90f2e7319d2c1996",
+      "components/p4_game_api/src/input.c": "b895eff5252e8d141fb49dc3c8e31fbd629bcda72068f14917dcf425bc7a81f7",
+      "components/p4_game_api/src/presentation_font.c": "149b2e510c0a0b8dfe5c4a7ac4be2f8006c4360c09a82c088209f7ece1eb65c5",
+      "components/p4_game_api/src/visual.c": "8160e9798853236da029abc8bf55e5ddf95909872a830469270afb7fa8ba6e23",
+      "toolchain.lock.json": "6c45009fd4ba924dac63e442d4bcdbff134cf81037cadb8f2d12209c41564a55",
+      "scripts/build-game-package.py": "3c3c5e6a458be87993a90caa6bbf3c42d39e8c2655a1304ba754d286390e65ff",
+      "games/tide_maze/game.json": "7080e5e77e6576183b778cbebcc52c1e2fd44996bf35612127967aade5ee82e0",
+      "games/tide_maze/assets/launcher.p4i": "df35281f28e4878b2505e82dfa583f919dbc101d4b7321b455b82628702f9920",
+      "games/tide_maze/src/generated/floor.inc": "fc4c5a3f49907583e926c62a4a862702162223b7cbb3d097e2884f577a68b40b",
+      "components/p4_game_api/include/p4/scene3d.h": "3b6dc7482187ce13f978207095096f5f4eace0bd94596a3129e37103b2f39f78",
+      "components/p4_game_api/include/p4/shallow_water.h": "0eeecf7702f63e76165218bdbb1c1752e486222e42f66e0faccda8b2810a0c48",
+      "games/tide_maze/src/tide_maze_internal.h": "06b4730bc56732ee4eca925ceb8b15eb754f54fc31f4efff8026dcf3ac26eac7"
+    },
+    "render_stack_usage": [
+      "components/p4_game_api/include/p4/scene3d.h:21:20:p4_3d_triangle\t272\tstatic",
+      "games/tide_maze/src/tide_maze_render.c:5:14:number\t16\tstatic",
+      "games/tide_maze/src/tide_maze_render.c:21:23:project\t16\tstatic",
+      "games/tide_maze/src/tide_maze_render.c:63:14:height\t0\tstatic",
+      "games/tide_maze/src/tide_maze_render.c:129:13:disc\t144\tstatic",
+      "games/tide_maze/src/tide_maze_render.c:4:17:rgb\t16\tstatic",
+      "components/p4_game_api/include/p4/presentation.h:10:19:p4_ui_x\t0\tstatic",
+      "components/p4_game_api/include/p4/presentation.h:15:19:p4_ui_y\t0\tstatic",
+      "components/p4_game_api/include/p4/presentation.h:98:20:p4_ui_round_rect\t32\tstatic",
+      "games/tide_maze/src/tide_maze_render.c:7:13:text\t336\tstatic",
+      "games/tide_maze/src/tide_maze_render.c:179:13:button\t48\tstatic",
+      "games/tide_maze/src/tide_maze_render.c:42:13:quad\t80\tstatic",
+      "games/tide_maze/src/tide_maze_render.c:50:13:box\t256\tstatic",
+      "games/tide_maze/src/tide_maze_render.c:12:6:tm_camera\t112\tstatic",
+      "games/tide_maze/src/tide_maze_render.c:31:16:tm_project\t96\tstatic",
+      "games/tide_maze/src/tide_maze_render.c:32:6:tm_screen_to_board\t80\tstatic",
+      "games/tide_maze/src/tide_maze_render.c:183:6:tm_render\t304\tstatic"
+    ],
+    "render_assembly_sha256": "2f6f5589b85993d559209761ff85b3e382dc104cb45ecac48c22dce78aa17151"
+  },
+  "validation": {
+    "game_sanitizers": {
+      "result": "PASS",
+      "tests": 10,
+      "instrumentation": [
+        "ASan",
+        "UBSan"
+      ],
+      "checks": [
+        "All three solo mazes completed through ordinary controller inputs",
+        "Three complete co-op voyages with packet loss, delay, duplicates, reordering and temporary outages",
+        "180000 fluid steps, 60 simulated minutes; mass and nonnegative depths",
+        "120000 synthetic six-axis samples; calibration, stale input and latency",
+        "192 render regressions at both surface sizes with clipping, padded stride, guard pixels and physical-state immutability",
+        "Unforced rest, small-force response, wave motion after release, solid isolation, displacement, buoyancy and current force",
+        "Depth ordering independent of triangle submission order",
+        "Lifecycle, canonical touch inversion, fractional interpolation and respawn"
+      ]
+    },
+    "final_protocol_review": {
+      "result": "PASS",
+      "tests_rerun": 3,
+      "checks": [
+        "Updated malformed-message fixtures to protocol 2",
+        "Out-of-range z and vz rejected for both bodies in otherwise valid snapshots",
+        "Accepted z/vz preserve Q8 quantization tolerance",
+        "Co-op convergence includes vertical state"
+      ]
+    },
+    "sdl_host_suite": {
+      "result": "PASS",
+      "tests": 5,
+      "checks": [
+        "Smoke",
+        "Audio timing",
+        "Exit status",
+        "Canonical mouse events",
+        "Save runtime"
+      ],
+      "log": {
+        "path": "build-host/tide-3d/sdl-ctest-final.log",
+        "bytes": 679,
+        "sha256": "36fadffe028619793c033c609e5db9895a28f5d4ba7a69ceeab101f539ee37f6"
+      }
+    },
+    "active_input_host_benchmarks": [
+      {
+        "game": "org.p4console.tide-maze",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1999,
+        "last_frame_hash": "3cce598b",
+        "update_audio_ms": {
+          "mean": 0.016,
+          "p50": 0.019,
+          "p95": 0.02,
+          "p99": 0.022,
+          "max": 0.049,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 1.0325,
+          "p50": 1.02,
+          "p95": 1.15,
+          "p99": 1.226,
+          "max": 1.391,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 1.0484,
+          "p50": 1.037,
+          "p95": 1.17,
+          "p99": 1.238,
+          "max": 1.392,
+          "over_33_333ms": 0
+        }
+      },
+      {
+        "game": "org.p4console.tide-maze",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1999,
+        "last_frame_hash": "055da66e",
+        "update_audio_ms": {
+          "mean": 0.0157,
+          "p50": 0.018,
+          "p95": 0.019,
+          "p99": 0.02,
+          "max": 0.043,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.3337,
+          "p50": 0.325,
+          "p95": 0.394,
+          "p99": 0.419,
+          "max": 0.563,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.3494,
+          "p50": 0.341,
+          "p95": 0.412,
+          "p99": 0.437,
+          "max": 0.584,
+          "over_33_333ms": 0
+        }
+      }
+    ],
+    "tab5_full_build": {
+      "command": "IDF_PYTHON_ENV_PATH=<pinned idf5.5_py3.11_env> P4_IDF_PATH=<pinned esp-idf-v5.5.3 checkout> make console-os-tab5-idf",
+      "result": "PASS",
+      "verification": {
+        "ble_multiplayer_enabled": true,
+        "board": "m5stack-tab5",
+        "charger_control_enabled": true,
+        "content_bundle_verified": true,
+        "flash_authorized": false,
+        "hardware_verified": false,
+        "image_bytes": 4297968,
+        "image_sha256": "cd975183241a35b3946c9c835770106abcde40b4279f2feee0e0f5c9217e6a3b",
+        "native_cartridges": 17,
+        "result": "tab5-build-candidate-verified",
+        "usb_host_enabled": true,
+        "version": "0.55",
+        "wifi_multiplayer_enabled": true
+      },
+      "installed": false,
+      "note": "OS build candidate is 0.55; devices last verified at 0.56. No firmware downgrade or flash performed; game-only update uses stable ABI."
+    },
+    "game_registry_check": {
+      "result": "PASS",
+      "command": "make game-registry-check"
+    },
+    "broad_sdk_check": {
+      "result": "INCOMPLETE",
+      "command": "make game-sdk-host",
+      "blocker": "Existing Skyline Leap SDL target rejects its disabled game manifest. Tide Maze tests and registry checks pass independently."
+    },
+    "skill_validation": {
+      "result": "PASS",
+      "command": "<idf5.5_py3.11_env>/bin/python <skill-creator>/scripts/quick_validate.py .agents/skills/develop-p4-console-games"
+    },
+    "rv32_review": {
+      "optimization": "-Os",
+      "result": "Integer per-pixel spans have no floating point or division; scalar interpolants and constant-face depth-only fast path matched the original 192-scene baseline. Final 192-scene regression hashes were updated for the intentional continuous stripe shading change."
+    },
+    "interactive_pre_final_paint": {
+      "platform": "macOS SDL3, native 768x480",
+      "result": "PASS before the last stripe interpolation change; longer cadence run retained as historical host evidence",
+      "exit_code": 0,
+      "renders": 29567,
+      "average_fps": 60.0,
+      "max_presentation_gap_ms": 37.285,
+      "gaps_over_33_333_ms": 1,
+      "limits": [
+        "Includes substantial paused time; active input CPU benchmark is separate",
+        "Not a Tab5 cadence measurement",
+        "CUA pointer movement was visible but click/drag gameplay was not confirmed; do not count as a manual touch pass",
+        "No pearl audio was triggered in this manual run; no acoustic acceptance"
+      ]
+    },
+    "interactive_final": {
+      "platform": "macOS SDL3 native 768x480",
+      "result": "PASS for keyboard start/movement/pause/resume/exit and visual inspection",
+      "exit_code": 0,
+      "renders": 2023,
+      "average_fps": 59.97,
+      "max_presentation_gap_ms": 31.174,
+      "gaps_over_33_333_ms": 0,
+      "limits": [
+        "Desktop only; includes title/pause time",
+        "Not physical touch/IMU/acoustic acceptance"
+      ]
+    }
+  },
+  "captures": {
+    "method": "Offline frames from real C game callbacks and ordinary controller input, encoded at 60fps; not proof of runtime/device FPS",
+    "video": {
+      "path": "build-host/tide-3d/captures/tide-3d-motion.mp4",
+      "bytes": 702208,
+      "sha256": "cb7965df5390aeabd515583853bb9891c923ba59002c843dd09cb9f33b3e11fe"
+    },
+    "preview": {
+      "path": "build-host/tide-3d/captures/tide-3d-motion.gif",
+      "bytes": 8469544,
+      "sha256": "495d355cebd4b392bcbcd711d40cc3ce14699ebcdd7e48e1d7374da4db2599ff"
+    }
+  },
+  "log_closure": {
+    "ctest-final.log": {
+      "path": "build-host/tide-3d/ctest-final.log",
+      "bytes": 1383,
+      "sha256": "0c4586ca63b09e62d460426ea3ea499df407cdab1f811650b52203c69f63e8df"
+    },
+    "network-final.log": {
+      "path": "build-host/tide-3d/network-final.log",
+      "bytes": 511,
+      "sha256": "4c4a374ee4b29d730a7c8d3ca88840b29678c74d4248d427e0d20a017594ba35"
+    },
+    "sdl-final.log": {
+      "path": "build-host/tide-3d/sdl-final.log",
+      "bytes": 491,
+      "sha256": "249f213318471c38fb86e6f9ea57941d274aca4708851eb715703af011cbcd2e"
+    },
+    "tab5-build.log": {
+      "path": "build-host/tide-3d/tab5-build.log",
+      "bytes": 18466,
+      "sha256": "6718766a543eec7a70e00a6d3a4c3f018da386db21bd202970f7cbd71880a41e"
+    },
+    "sdk-check.log": {
+      "path": "build-host/tide-3d/sdk-check.log",
+      "bytes": 693624,
+      "sha256": "b458469c73391e10c14b8f553faa2cce88bfc3bd9189b70f18e2453dfac2f520"
+    },
+    "registry-check.log": {
+      "path": "build-host/tide-3d/registry-check.log",
+      "bytes": 2433,
+      "sha256": "6c062865edcd7dbf1c7dbd8d380263524c00bb7e5aa746e9addbd161bad56daf"
+    },
+    "render-rv32.s": {
+      "path": "build-host/tide-3d/render-rv32.s",
+      "bytes": 64486,
+      "sha256": "2f6f5589b85993d559209761ff85b3e382dc104cb45ecac48c22dce78aa17151"
+    },
+    "sdl-stripe-final.log": {
+      "path": "build-host/tide-3d/sdl-stripe-final.log",
+      "bytes": 488,
+      "sha256": "656d7ce910f09576a6ae350e2c44db740c460fb3f640a1f31a9df99af72f612d"
+    },
+    "sdl-ctest-final.log": {
+      "path": "build-host/tide-3d/sdl-ctest-final.log",
+      "bytes": 679,
+      "sha256": "36fadffe028619793c033c609e5db9895a28f5d4ba7a69ceeab101f539ee37f6"
+    },
+    "render-3d-before-stripe.h": {
+      "path": "build-host/tide-3d/render-3d-before-stripe.h",
+      "bytes": 5920,
+      "sha256": "d72963a285609a934fea1c362b6a4dca02e4ee75185ea6bb20bd794a02ef51cf"
+    }
+  },
+  "previous_device_failure": {
+    "status": "FAIL_RETAINED",
+    "version": "0.2.1",
+    "package_sha256": "78a15a65078f2d8667aab279facbf7011911cbb3aeae5768e9208f125a3ab790",
+    "report": "Operator rejected appearance and fluid feel; complaint does not identify which previously installed unit was tested",
+    "not_closed_by": "Host tests, builds, screenshots or USB content installation"
+  },
+  "device": {
+    "status": "BLOCKED_NO_TAB5_CONNECTED",
+    "serial_inventory": [
+      "/dev/cu.Bluetooth-Incoming-Port",
+      "/dev/cu.debug-console"
+    ],
+    "candidate_installed": false,
+    "device_frame_times": null,
+    "physical_operator_acceptance": "PENDING",
+    "next": "Reconnect known Tab5 units, retain native USB identity binding and old cartridge, install exact candidate with full readback, then measure active native device cadence and physical six-axis/linked play."
+  }
+}

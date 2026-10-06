@@ -3,9 +3,9 @@
 #include <string.h>
 /* Original hand-authored labyrinths: # stone, o pearl, ~ whirlpool, E dock. */
 const char *const tm_maps[TM_LEVELS][TM_ROWS]={
- {"###############","#S....#...o...#","#.##..#.###.#.#","#..o..#.....#.#","###.#####.#.#.#","#...#...o.#...#","#.#.#.###.###.#","#o~.........E.#","###############"},
- {"###############","#S..#...o.....#","#.#.#.#####.#.#","#.#...#...#.#.#","#.#####.~.#.#.#","#...o...#...#.#","###.###.#####.#","#o....~.....E.#","###############"},
- {"###############","#S....~...#..o#","#.#######.#.#.#","#...#o....#.#.#","###.#.#####.#.#","#o..#...~...#.#","#.#####.###.#.#","#.....o.....E.#","###############"}
+ {"###############","#S............#","#.....#...o...#","#..o..#.......#","#.....#...#...#","#.........#o..#","#..#......#...#","#o~.........E.#","###############"},
+ {"###############","#S......o.....#","#....###......#","#........#....#","#..##....#.~..#","#..o.....#....#","#.....##......#","#o....~.....E.#","###############"},
+ {"###############","#S....~......o#","#...#....##...#","#...#o........#","#...#...#.....#","#o......#.~...#","#...##..#.....#","#.....o.....E.#","###############"}
 };
 int tm_clamp(int value,int lo,int hi){return value<lo?lo:(value>hi?hi:value);}
 char tm_tile(unsigned level,int x,int y){
@@ -16,58 +16,59 @@ void tm_reset(tm_state *s,unsigned level){
  s->level=level%TM_LEVELS;s->pearls=0;s->all_pearls=0;s->docked=0;s->rescues=0;
  s->time_ms=150000;s->accumulator=0;s->phase=TM_PLAY;
  memset(s->intent,0,sizeof(s->intent));
- memset(s->flow_x,0,sizeof(s->flow_x));memset(s->flow_y,0,sizeof(s->flow_y));
- for(int y=0;y<TM_H;++y)for(int x=0;x<TM_W;++x){
-  int i=y*TM_W+x;s->wet[i]=(uint8_t)(tm_tile(s->level,x/2,y/2)!='#');
-  s->water[i]=(int16_t)(s->wet[i]?320:0);
- }
+ tm_water_reset(s);
  for(int y=0;y<TM_ROWS;++y)for(int x=0;x<TM_COLS;++x)
   if(tm_tile(s->level,x,y)=='o')++s->all_pearls;
- for(int p=0;p<2;++p){s->ball[p]=(tm_ball){.x=(24+p*3)*TM_Q,.y=24*TM_Q};
+ for(int p=0;p<2;++p){s->ball[p]=(tm_ball){.x=(24+p*10)*TM_Q,.y=24*TM_Q,.z=6.0f,.previous_z=6.0f};
   s->previous_x[p]=s->ball[p].x;s->previous_y[p]=s->ball[p].y;}
 }
-/* Conservative face fluxes. Each pair exchanges equal volume, walls reflect,
- * bounded pressure and damping form a shallow-water approximation at 50 Hz. */
-static void flux(tm_state *s,int a,int b,int16_t *velocity,int force){
- if(!s->wet[a]||!s->wet[b]){*velocity=0;return;}
- int v=(*velocity*29)/32+(s->water[a]-s->water[b])/10+force;
- v=tm_clamp(v,-40,40);
- v=tm_clamp(v,-s->water[b]/4,s->water[a]/4);
- v=tm_clamp(v,-(1024-s->water[a])/4,(1024-s->water[b])/4);
- *velocity=(int16_t)v;
- s->water[a]=(int16_t)(s->water[a]-v);s->water[b]=(int16_t)(s->water[b]+v);
-}
-void tm_fluid(tm_state *s){
- const int count=s->linked?2:1;
- const int ax=(s->intent[0].x+(count==2?s->intent[1].x:0))/count;
- const int ay=(s->intent[0].y+(count==2?s->intent[1].y:0))/count;
- const int spin=(s->intent[0].spin+(count==2?s->intent[1].spin:0))/count;
- for(int y=0;y<TM_H;++y)for(int x=0;x<TM_W;++x){
-  int i=y*TM_W+x;
-  if(x+1<TM_W)flux(s,i,i+1,&s->flow_x[i],ax/100-spin*(y-TM_H/2)/1000);
-  if(y+1<TM_H)flux(s,i,i+TM_W,&s->flow_y[i],ay/100+spin*(x-TM_W/2)/1000);
- }
- for(int p=0;p<count;++p){
-  const tm_ball *b=&s->ball[p];int x=tm_clamp(b->x/(8*TM_Q),1,TM_W-2);
-  int y=tm_clamp(b->y/(8*TM_Q),1,TM_H-2),i=y*TM_W+x;
-  if(s->wet[i]){
-   /* A wake and vertical jolt move volume into adjacent cells, never create it. */
-   int kick=tm_clamp((abs_i(b->vx)+abs_i(b->vy))/64+abs_i(s->intent[p].jolt)/50,0,24);
-   const int neighbor[4]={i-1,i+1,i-TM_W,i+TM_W};
-   for(int n=0;n<4;++n){int j=neighbor[n];if(!s->wet[j])continue;
-    int amount=tm_clamp(kick,0,s->water[i]/8);
-    amount=tm_clamp(amount,0,(1024-s->water[j])/8);
-    s->water[i]=(int16_t)(s->water[i]-amount);s->water[j]=(int16_t)(s->water[j]+amount);
+/* Circle/AABB contacts, not a square hit box. Resolve the closest wall
+ * normal and remove inward velocity, leaving tangential rolling intact. */
+static void collide(tm_state *s,tm_ball *b){
+ const int r=4*TM_Q;
+ for(int cy=(b->y-r)/(16*TM_Q);cy<=(b->y+r)/(16*TM_Q);++cy)
+  for(int cx=(b->x-r)/(16*TM_Q);cx<=(b->x+r)/(16*TM_Q);++cx){
+   if(tm_tile(s->level,cx,cy)!='#')continue;
+   int near_x=tm_clamp(b->x,cx*16*TM_Q,(cx+1)*16*TM_Q);
+   int near_y=tm_clamp(b->y,cy*16*TM_Q,(cy+1)*16*TM_Q);
+   int dx=b->x-near_x,dy=b->y-near_y,d2=dx*dx+dy*dy;
+   if(d2>=r*r)continue;
+   if(d2==0){/* Invalid spawn/network pose: choose the nearest outer face. */
+    int left=b->x-cx*16*TM_Q,right=(cx+1)*16*TM_Q-b->x;
+    int top=b->y-cy*16*TM_Q,bottom=(cy+1)*16*TM_Q-b->y;
+    int m=left;if(right<m)m=right;if(top<m)m=top;if(bottom<m)m=bottom;
+    if(m==left)b->x=cx*16*TM_Q-r;else if(m==right)b->x=(cx+1)*16*TM_Q+r;
+    else if(m==top)b->y=cy*16*TM_Q-r;else b->y=(cy+1)*16*TM_Q+r;
+    b->vx=b->vy=0;continue;
    }
+   float distance=(float)r;for(int n=0;n<6;++n)distance=0.5f*(distance+(float)d2/distance);
+   float nx=(float)dx/distance,ny=(float)dy/distance;
+   b->x+=(int32_t)(nx*((float)r-distance));b->y+=(int32_t)(ny*((float)r-distance));
+   float inward=(float)b->vx*nx+(float)b->vy*ny;
+   if(inward<0.0f){b->vx-=(int32_t)(1.22f*inward*nx);b->vy-=(int32_t)(1.22f*inward*ny);}
   }
- }
+ b->x=tm_clamp(b->x,20*TM_Q,220*TM_Q);b->y=tm_clamp(b->y,20*TM_Q,124*TM_Q);
 }
-static bool blocked(tm_state *s,int32_t x,int32_t y){
- const int r=3*TM_Q;
- for(int cy=(y-r)/(16*TM_Q);cy<=(y+r)/(16*TM_Q);++cy)
-  for(int cx=(x-r)/(16*TM_Q);cx<=(x+r)/(16*TM_Q);++cx)
-   if(tm_tile(s->level,cx,cy)=='#')return true;
- return x<r||y<r||x>(240*TM_Q-r)||y>(144*TM_Q-r);
+extern void tm_ball_forces(tm_state *s,unsigned p);
+static void marble_contact(tm_state *s){
+ if(!s->linked||s->ball[0].rescue||s->ball[1].rescue)return;
+ tm_ball *a=&s->ball[0],*b=&s->ball[1];
+ float dx=(float)(b->x-a->x)/256.0f,dy=(float)(b->y-a->y)/256.0f,dz=b->z-a->z;
+ float d2=dx*dx+dy*dy+dz*dz;if(d2>=64.0f)return;
+ if(d2<0.001f){dx=0.1f;d2=0.01f;}
+ float d=8.0f;for(int i=0;i<7;++i)d=0.5f*(d+d2/d);
+ float nx=dx/d,ny=dy/d,nz=dz/d,penetration=(8.0f-d)*0.5f;
+ a->x-=(int32_t)(nx*penetration*256.0f);a->y-=(int32_t)(ny*penetration*256.0f);a->z-=nz*penetration;
+ b->x+=(int32_t)(nx*penetration*256.0f);b->y+=(int32_t)(ny*penetration*256.0f);b->z+=nz*penetration;
+ float relative=(float)(b->vx-a->vx)*nx/5.12f+(float)(b->vy-a->vy)*ny/5.12f+(b->vz-a->vz)*nz;
+ if(relative<0.0f){float impulse=-relative*0.625f;
+  a->vx-=(int32_t)(impulse*nx*5.12f);a->vy-=(int32_t)(impulse*ny*5.12f);a->vz-=impulse*nz;
+  b->vx+=(int32_t)(impulse*nx*5.12f);b->vy+=(int32_t)(impulse*ny*5.12f);b->vz+=impulse*nz;
+ }
+ for(int i=0;i<2;++i){tm_ball *ball=&s->ball[i];
+  ball->vx=tm_clamp(ball->vx,-280,280);ball->vy=tm_clamp(ball->vy,-280,280);
+  ball->z=p4_water_limit(ball->z,4.0f,22.0f);ball->vz=p4_water_limit(ball->vz,-60.0f,60.0f);collide(s,ball);
+ }
 }
 void tm_simulate(tm_state *s){
  if(s->phase!=TM_PLAY)return;
@@ -76,16 +77,11 @@ void tm_simulate(tm_state *s){
  const unsigned count=s->linked?2U:1U;
  s->docked=0;
  for(unsigned p=0;p<count;++p){
-  tm_ball *b=&s->ball[p];const tm_intent *in=&s->intent[p];
+  tm_ball *b=&s->ball[p];
   s->previous_x[p]=b->x;s->previous_y[p]=b->y;
   if(b->rescue){b->rescue=(uint16_t)(b->rescue>TM_STEP?b->rescue-TM_STEP:0);continue;}
-  int ix=tm_clamp(b->x/(8*TM_Q),1,TM_W-2),iy=tm_clamp(b->y/(8*TM_Q),1,TM_H-2),i=iy*TM_W+ix;
-  int drag=in->brake?190:246;
-  b->vx=tm_clamp((b->vx*drag)/256+in->x/18+s->flow_x[i]/3,-280,280);
-  b->vy=tm_clamp((b->vy*drag)/256+in->y/18+s->flow_y[i]/3,-280,280);
-  /* Max speed <1.1 logical pixels/tick, far below a wall thickness. */
-  if(!blocked(s,b->x+b->vx,b->y))b->x+=b->vx;else b->vx=-b->vx/3;
-  if(!blocked(s,b->x,b->y+b->vy))b->y+=b->vy;else b->vy=-b->vy/3;
+  tm_ball_forces(s,p);
+  b->x+=b->vx;b->y+=b->vy;collide(s,b);
   unsigned pearl=0;
   for(int y=1;y<TM_ROWS-1;++y)for(int x=1;x<TM_COLS-1;++x){
    char t=tm_tile(s->level,x,y);int dx=b->x/TM_Q-(x*16+8),dy=b->y/TM_Q-(y*16+8);
@@ -94,11 +90,17 @@ void tm_simulate(tm_state *s){
    if(t=='E' && d<64)s->docked|=1U<<p;
    if(t=='~' && d<100){
     b->vx=tm_clamp(b->vx-dx*3,-280,280);b->vy=tm_clamp(b->vy-dy*3,-280,280);
-    if(d<9){b->x=(24+(int)p*3)*TM_Q;b->y=24*TM_Q;b->vx=b->vy=0;b->rescue=700;
+    if(d<9){b->x=(24+(int)p*10)*TM_Q;b->y=24*TM_Q;b->vx=b->vy=0;b->rescue=700;b->z=b->previous_z=6.0f;b->vz=0.0f;
      s->previous_x[p]=b->x;s->previous_y[p]=b->y;
      ++s->rescues;s->time_ms=s->time_ms>3000?s->time_ms-3000:0;}
    }
   }
+ }
+ marble_contact(s);
+ s->docked=0;
+ for(unsigned p=0;p<count;++p)for(int y=1;y<TM_ROWS-1;++y)for(int x=1;x<TM_COLS-1;++x)if(tm_tile(s->level,x,y)=='E'){
+  int dx=s->ball[p].x/TM_Q-(x*16+8),dy=s->ball[p].y/TM_Q-(y*16+8);
+  if(dx*dx+dy*dy<64&&!s->ball[p].rescue)s->docked|=1U<<p;
  }
  if(s->pearls==((1U<<s->all_pearls)-1U)&&s->docked==((1U<<count)-1U))
   s->phase=s->level+1U==TM_LEVELS?TM_WON:TM_CLEAR;
@@ -171,7 +173,7 @@ void tm_controls(p4_game_context_t *ctx,tm_state *s,const p4_game_input_t *in,ui
  if(in->touch_valid&&in->touch_count){
   int x=in->touches[0].x,y=in->touches[0].y;
   int bx,by;
-  if(tm_screen_to_board(x,y,&bx,&by)){
+  if(tm_screen_to_board(s,x,y,&bx,&by)){
    out->x=(int16_t)tm_clamp((bx-s->ball[s->slot].x/TM_Q)*50,-1000,1000);
    out->y=(int16_t)tm_clamp((by-s->ball[s->slot].y/TM_Q)*50,-1000,1000);
   }
@@ -188,18 +190,4 @@ void tm_visual_ball(const tm_state *s,unsigned p,int32_t *x,int32_t *y){
  const unsigned fraction=s->linked&&!s->host?s->blend_ms:s->accumulator;
  *x=s->previous_x[p]+(*x-s->previous_x[p])*(int32_t)fraction/(int32_t)period;
  *y=s->previous_y[p]+(*y-s->previous_y[p])*(int32_t)fraction/(int32_t)period;
-}
-/* Inverse of the perspective board projection at the water plane; input stays
- * in canonical 320x200 coordinates regardless of the physical display. */
-bool tm_screen_to_board(int sx,int sy,int *x,int *y){
- if(sy<20||sy>173||sx<0||sx>=320)return false;
- const int u=sx-156,v=sy-42;
- const int a=5300+u,b=600+10*u,c=450+v,d=3300+10*v;
- /* For bounded 320x200 input all products fit int32. The determinant
-  * is exactly divisible by ten; reduce it before division on RV32. */
- const int r=600*u+4320,t=600*v+1200;
- const int det=(a*d-b*c)/10;
- *x=120+(r*d-b*t)/det;
- *y=(a*t-r*c)/det;
- return *x>=0&&*x<240&&*y>=0&&*y<144;
 }

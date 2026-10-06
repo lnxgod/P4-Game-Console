@@ -5,11 +5,12 @@
 #include <stdlib.h>
 #include <string.h>
 #ifndef TM_RECORD_RENDER_HASHES
-#include "render_hashes.h"
+#include "render_3d_hashes.h"
 #endif
-/* Frozen pre-optimization pixels, covering both native sizes, three labyrinths,
+
+/* New renderer guard/physical-state coverage for both sizes and three mazes,
  * stressed water, both marble colors/depths/stripe phases, every overlay, stride
- * padding and buffer guards. Render alone must never mutate game state. */
+ * padding and buffer guards. Render scratch may change; physical state must not. */
 int main(void){
  unsigned case_number=0;
  for(unsigned size=0;size<2;++size){
@@ -28,7 +29,7 @@ int main(void){
     s.ball[p].y=(19+(int)((sample*11+p*41)%107U))*TM_Q;
     s.previous_x[p]=s.ball[p].x-71;s.previous_y[p]=s.ball[p].y+45;
    }
-   tm_state before=s;p4_game_context_t ctx={.state=&s};assert(tm_render(&ctx,&f));assert(memcmp(&s,&before,sizeof(s))==0);
+   tm_state before=s;p4_game_context_t ctx={.state=&s};assert(tm_render(&ctx,&f));assert(memcmp(&s,&before,offsetof(tm_state,water_vertices))==0);
    uint64_t hash=UINT64_C(1469598103934665603);
    for(unsigned y=0;y<h;++y){
     for(unsigned x=0;x<w;++x){hash^=f.pixels[(size_t)y*stride+x];hash*=UINT64_C(1099511628211);}
@@ -38,15 +39,14 @@ int main(void){
 #ifdef TM_RECORD_RENDER_HASHES
    printf("UINT64_C(0x%016llx),\n",(unsigned long long)hash);
 #else
-   if(hash!=tm_render_hashes[case_number])fprintf(stderr,"case %u: %016llx != %016llx\n",case_number,(unsigned long long)hash,(unsigned long long)tm_render_hashes[case_number]);
-   assert(hash==tm_render_hashes[case_number]);
+   assert(hash==tm_render_3d_hashes[case_number]);
 #endif
    ++case_number;
   }free(pixels);
  }
+ assert(case_number==192);
 #ifndef TM_RECORD_RENDER_HASHES
- assert(case_number==sizeof(tm_render_hashes)/sizeof(tm_render_hashes[0]));
- puts("192 original-scene hashes match: both resolutions, water, actors, menus, guards and no state mutation");
-#endif
+ puts("192 new 3D scenes: both resolutions, guards and unchanged physical state PASS");
+ #endif
  return 0;
 }

@@ -5,30 +5,39 @@ pearls and roll into the gold dock. Three original mazes share a conservative
 water simulation. Currents push the marble; braking steadies it. Whirlpools
 return it to the start and cost three seconds.
 
-Version 0.2.0 replaced the rejected flat 0.1.1 presentation with a perspective
-scene. Raised wall faces, bevels, the tray, sphere lighting, shadows, floating
-pearls and water geometry are drawn at the negotiated native resolution.
-The water mesh follows the simulated pressure field, with continuously animated
-refraction from a bounded material. Local marble presentation interpolates the
-50 Hz physics step; touch steering inverts the actual perspective projection.
-The game remains native C, with no Lua or private hardware/transport ownership.
+Version 0.3.0 replaces both the renderer and the water solver. It is a native C
+software 3D scene: a rotating tray/camera transform, inverse perspective touch
+picking, reciprocal-depth triangles, beveled walls, spherical marble meshes,
+underwater shadows, a translucent free surface and normal-driven refraction of
+the tiled bed. Depth tests handle wall/ball/water overlap. Camera, water height
+and marble positions interpolate between simulation steps.
 
-The 0.2.1 lag-rework candidate preserves those scene pixels and rules. It reuses
-water-grid vertex rows, renders the background in 18 bands, and bakes the exact
-sphere lighting into a 35,680-byte lookup table. The water sampler keeps its
-palette pointer in a register on the pinned RV32 compiler. A 192-scene regression
-covers both sizes, all overlays, active water and both marble colors. The game
-still has no full-frame cache or private display/thread ownership.
+The 60x36 staggered grid retains floating-point water volume and face velocity.
+Two 10 ms substeps advect momentum, apply gravity/pressure and exchange volume
+across faces from the same prior state. Closed faces reflect flow; the bounded
+outgoing flux preserves nonnegative water and mass to floating-point tolerance.
+A submerged sphere contributes solid column volume to the free surface; motion
+of that volume generates waves. Buoyancy, submerged drag and pressure gradients
+act back on the marble. Circle/wall and sphere/sphere contacts replace the old
+square collision box. Wider mazes make currents and wakes visible.
 
-Tilt correction now uses a 30 ms exponential filter with fractional precision,
-rather than a 120 ms correction. Tests cover response/reversal, variable update
-intervals, neutral noise, calibration, stale sensors and zero-time updates.
-This reduces game-side input delay; it does not qualify the sensor/display path.
-The operator also rejected the installed 0.2.0 candidate for lag. A captured
-Tab5 B / OS 0.54 run averaged 78.6 ms per game cycle, with 52.3 ms in game work
-and 23.5 ms in presentation. That failed acceptance remains open until this
-candidate is measured and played on the device. See the dedicated
-`test-runs/2026-10-05-tide-maze-lag-rework.json` record.
+This is a **coupled shallow-water approximation**, not a volumetric particle
+solver: it has one surface height per grid cell, cannot overturn or produce
+free-flying liquid sheets, and its material uses an analytic tiled-bed refraction
+approximation. There are no time-scrolling water textures or unforced decorative
+waves. The current surface on a guest is reconstructed locally, while the host
+owns both marble bodies, pearls, timers and results.
+
+The installed 0.2.1 was rejected by the operator for appearance and fluid feel.
+That failure remains recorded. Earlier 0.2.0 device timing also failed: one
+Tab5 B / OS 0.54 capture averaged 78.6 ms per cycle (52.3 ms game work, 23.5 ms
+presentation). Host tests and transfers do not close either defect. Version
+0.3.0 is a new candidate requiring actual-device cadence and operator acceptance.
+The native C language has been used throughout; this was never a Lua conversion.
+
+The existing 30 ms complementary tilt filter and sensor-free controls remain.
+All three acceleration and gyro axes contribute through the calibrated basis;
+spinning affects water momentum and vertical jolts affect the submerged body.
 
 In linked co-op each player steers one marble, shares collected pearls and stirs
 the water. Both must reach the dock. Start through Console OS Multiplayer / Host
@@ -56,18 +65,18 @@ The Mac runner has keyboard/touch fallback, with synthetic six-axis host tests.
 ## Build and test
 
 ```sh
-cmake -S games/tide_maze -B build-host/tide-fluid -G Ninja
-cmake --build build-host/tide-fluid
-ctest --test-dir build-host/tide-fluid --output-on-failure
-cmake -S tools/p4-game-host -B build-host/tide-fluid-play -G Ninja \
+cmake -S games/tide_maze -B build-host/tide-3d -G Ninja
+cmake --build build-host/tide-3d
+ctest --test-dir build-host/tide-3d --output-on-failure
+cmake -S tools/p4-game-host -B build-host/tide-3d-play -G Ninja \
   -DP4_GAME=tide_maze -DP4_ALLOW_DRAFT_GAME=ON
-cmake --build build-host/tide-fluid-play
-ctest --test-dir build-host/tide-fluid-play --output-on-failure
+cmake --build build-host/tide-3d-play
+ctest --test-dir build-host/tide-3d-play --output-on-failure
 make play-game GAME=tide_maze
 ```
 
 `PERFORMANCE_REWORK.json` preserves the historical 0.2.0 candidate, source closure and checks.
-`LOCAL_TESTING.json`, `STRESS_TESTING.json` and `PUSH_TESTING.json` retain historical
+`LOCAL_TESTING.json` and `STRESS_TESTING.json` retain historical
 0.1.x evidence. The operator rejected 0.1.1 for lag and its flat visual direction;
 its successful transfers and host tests never qualified physical gameplay.
 
@@ -85,21 +94,26 @@ open until active device cadence and physical responsiveness support acceptance.
 
 ## Budgets and rendering
 
-State remains 4,000 bytes. Simulation uses 20 ms fixed steps with bounded catch-up
-and retained fractional time. The 30x18 face-flux water grid conserves volume,
-reflects walls and supports pressure, damping, wakes and impulses. Water rendering
-adds cosmetic travelling waves; authoritative physics stays in the solver.
+State and scratch are statically bounded below the unchanged 128 KiB API limit.
+See `ENGINE_REWORK.json` for the exact measured size and package/source closure.
+The 12-row reciprocal-depth band occupies 18,432 bytes; material tags add 9,216.
+There is no full-screen depth/color cache, heap allocation or private worker.
+Projected water/sphere vertices and all solver scratch belong to each instance.
+RGB565 drawing is native 768x480 with the 320x200 fallback; input stays canonical.
 
-The shared `p4/mesh.h` renderer uses clipped, bounded convex faces and scanline
-texture sampling. It has no full-frame cache, z-buffer, allocator or per-pixel
-division. The game controls painter order, camera and scene. Surfaces remain
-768x480 RGB565 with 320x200 fallback; input stays canonical 320x200.
+`p4/scene3d.h` and `p4/shallow_water.h` are optional header-only shared helpers;
+no OS ABI or firmware update is needed. Single-precision instructions use the
+pinned P4 F extension. The RV32 `-Os` span loop has no per-pixel division or
+floating point; constant opaque faces take a depth-only path. A 192-scene baseline
+checks exact pixels after optimization, both sizes, clipping/stride guards,
+overlays and unchanged physical state. The old render hash file remains historical.
 
-The host owns both marbles and synchronized rules. Clients send 20-byte intents;
-the host publishes 64-byte snapshots at 20 Hz using protocol 1. Guest marble
-positions interpolate snapshots; guest water is cosmetic. Input expires after
-250 ms and a silent link ends after three seconds. Actual radio responsiveness
-in both roles is a separate device check.
+Protocol **2** retains 20-byte intents and 64-byte snapshots at 20 Hz. The host
+also sends authoritative height and vertical speed. Guests interpolate the body
+snapshots and simulate their water view locally; the full fluid field is not
+transmitted and local prediction is not implemented. Both units require the
+same new cartridge. Input expires after 250 ms; link loss ends the run after
+three seconds. Physical linked latency and cadence remain separate acceptance.
 
 The cartridge requires a motion-aware OS validator (installed Tab5 0.51 and
 later recognize the optional motion bit). Missing sensor data falls back to
@@ -108,17 +122,21 @@ Game updates use the existing native USB content transfer, without an OS flash.
 
 ## Original artwork
 
-`assets/water-source.png` is original ImageGen material. `tools/convert_water.py`
-Lanczos-resamples it to 128x128 and produces three RGB565 lighting palettes:
-98,304 bytes total. Water is sampled on moving geometry; no PNG is decoded at
-runtime. `assets/launcher-3d-source.png` supplies the updated 128x72 indexed icon
-via `scripts/pack-game-icon.py` (9,744 bytes). Exact prompts, hashes and conversion
-parameters are in `assets/perspective-provenance.json`. The older cover and its
-provenance remain historical source art; that cover is no longer linked.
+The original ImageGen launcher illustration still ships in the cartridge as a
+9,744-byte indexed icon; provenance is in `assets/perspective-provenance.json`.
+It depicts the same marble/water-maze identity. Previous generated water and
+sphere assets remain historical inputs and are no longer linked into the game.
+The current bed is a 2,048-byte deterministic procedural tile pattern generated
+by `tools/compile_floor.py`. All current scene animation is code-native geometry.
+
+Reference reviewed: Matthias Müller's [interactive height-field water demo](https://matthias-research.github.io/pages/tenMinutePhysics/20-heightFieldWater.html)
+for two-way solid/water interaction, and Chentanez/Müller's
+[height-field fluid paper](https://matthias-research.github.io/pages/publications/hfFluid.pdf)
+for velocity advection and mass transport. The implementation here is original
+C, not copied JavaScript or a claim to reproduce that paper's GPU solver.
 
 Code is MIT-licensed. The shared Arimo font retains its OFL attribution. The
 launcher artwork is an illustration; gameplay captures come from the C renderer.
 
-`tools/compile_marble_lighting.py` reproduces `src/generated/marble_lighting.inc`
-from the original integer shading equations. This is an exact performance
-lookup, not replacement artwork. The original ImageGen material is unchanged.
+The earlier marble-lighting lookup and its generator are retained as historical
+0.2.x assets; the 0.3.0 spherical meshes no longer use them.

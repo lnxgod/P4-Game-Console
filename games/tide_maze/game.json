@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "0.2.1",
+  "version": "0.3.0",
   "package_file": "TIDE_MAZE.P4G",
   "component": "tide_maze",
   "entry_symbol": "p4_tide_maze_game",
@@ -23,14 +23,14 @@
     "motion"
   ],
   "license": "MIT",
-  "assets": "native-projected-maze-water-and-marble; original-imagegen-water-material-and-launcher-art",
+  "assets": "native-depth-tested-3d-scene-and-coupled-shallow-water; original-imagegen-launcher-art",
   "enabled": true,
   "multiplayer": {
     "schema": 1,
     "style": "realtime",
     "min_players": 2,
     "max_players": 2,
-    "protocol": 1,
+    "protocol": 2,
     "tick_rate_hz": 20,
     "message_bytes": 64
   },
@@ -38,7 +38,8 @@
     "tide_maze.c",
     "tide_maze_physics.c",
     "tide_maze_network.c",
-    "tide_maze_render.c"
+    "tide_maze_render.c",
+    "tide_maze_water.c"
   ],
   "launcher_icon": "assets/launcher.p4i",
   "stack_frame_limit_bytes": 2048

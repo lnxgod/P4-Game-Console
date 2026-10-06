@@ -1,168 +1,180 @@
 // SPDX-License-Identifier: MIT
 #include "tide_maze_internal.h"
 #include "p4/presentation.h"
-#include "p4/mesh.h"
-#include "generated/water.inc"
-#include "generated/marble_lighting.inc"
-
-typedef p4_mesh_point_t point;
-static const int8_t wave[64]={0,12,25,37,49,60,71,81,90,98,106,112,117,122,125,126,127,126,125,122,117,112,106,98,90,81,71,60,49,37,25,12,0,-12,-25,-37,-49,-60,-71,-81,-90,-98,-106,-112,-117,-122,-125,-126,-127,-126,-125,-122,-117,-112,-106,-98,-90,-81,-71,-60,-49,-37,-25,-12};
-static uint16_t rgb(int r,int g,int b){return (uint16_t)(((r>>3)<<11)|((g>>2)<<5)|(b>>3));}
+static uint16_t rgb(int r,int g,int b){return (uint16_t)(((unsigned)tm_clamp(r,0,255)>>3<<11)|((unsigned)tm_clamp(g,0,255)>>2<<5)|((unsigned)tm_clamp(b,0,255)>>3));}
 static char *number(char *out,unsigned value){char a[10];unsigned n=0;do{a[n++]=(char)('0'+value%10U);value/=10U;}while(value&&n<10U);while(n)*out++=a[--n];*out=0;return out;}
 static void rect(p4_game_surface_t *f,int x,int y,int w,int h,uint16_t c){int px=p4_ui_x(f,x),py=p4_ui_y(f,y);p4_draw_fill_rect(f,px,py,p4_ui_x(f,x+w)-px,p4_ui_y(f,y+h)-py,c);}
 static void text(p4_game_surface_t *f,int x,int y,const char *t,uint16_t c,int size){p4_ui_text(f,p4_ui_x(f,x),p4_ui_y(f,y),t,c,(unsigned)p4_ui_y(f,size),60);}
-/* Q8 world -> perspective -> native pixels. No intermediate integer logical
- * pixel truncation: slow marble motion survives both negotiated resolutions. */
-static point project(const p4_game_surface_t *f,int x,int y,int z){
- const int xc=x-120*TM_Q;
- const int depth=600-y/TM_Q-xc/(10*TM_Q);
- const int sx=156*TM_Q+(xc*530+(y-72*TM_Q)*60)/depth;
- const int sy=42*TM_Q+(y*330+xc*45-z*600)/depth;
- return (point){sx*(int)f->width/(320*TM_Q),sy*(int)f->height/(200*TM_Q)};
+static float absolute(float a){return a<0.0f?-a:a;}
+/* Angles are bounded to +/-0.17 radians. Polynomial rotation has <1e-6
+ * error here; no libm/runtime imports. Matrix includes board roll/pitch and
+ * the fixed camera yaw/elevation; inverse picking uses its transpose. */
+void tm_camera(const tm_state *s,float m[9]){
+ float alpha=s->phase==TM_PLAY?(float)s->accumulator/20.0f:1.0f;
+ float a=s->previous_view_x+(s->view_x-s->previous_view_x)*alpha,b=s->previous_view_y+(s->view_y-s->previous_view_y)*alpha,sa=a-a*a*a/6.0f,ca=1.0f-a*a*0.5f+a*a*a*a/24.0f;
+ float sb=b-b*b*b/6.0f,cb=1.0f-b*b*0.5f+b*b*b*b/24.0f;
+ /* Camera basis: right, down, toward camera. Orthonormal to float precision. */
+ const float camera[9]={0.9928086f,0.1197122f,0.0f,-0.0861928f,0.7148222f,-0.6939741f,-0.0830772f,0.6889834f,0.72f};
+ const float rotation[9]={ca,0.0f,sa,-sb*sa,cb,sb*ca,-cb*sa,-sb,cb*ca};
+ for(int row=0;row<3;++row)for(int col=0;col<3;++col){m[row*3+col]=0.0f;for(int k=0;k<3;++k)m[row*3+col]+=camera[row*3+k]*rotation[k*3+col];}
 }
-static void face(p4_game_surface_t *f,point a,point b,point c,point d,uint16_t color){const point v[4]={a,b,c,d};p4_draw_face(f,v,4,color);}
-static void line(p4_game_surface_t *f,point a,point b,uint16_t color){p4_draw_mesh_line(f,a,b,color);}
-static void plane(p4_game_surface_t *f,int x,int y,int w,int h,int z,uint16_t color){
- face(f,project(f,x,y,z),project(f,x+w,y,z),project(f,x+w,y+h,z),project(f,x,y+h,z),color);
+static p4_3d_vertex_t project(const float m[9],int w,int h,float x,float y,float z,uint16_t color){
+ x-=120.0f;y-=72.0f;
+ float u=m[0]*x+m[1]*y+m[2]*z,v=m[3]*x+m[4]*y+m[5]*z;
+ float depth=420.0f-m[6]*x-m[7]*y-m[8]*z;
+ if(!(depth>100.0f))return (p4_3d_vertex_t){0};
+ float scale=385.0f/depth;
+ float sx=(160.0f+u*scale)*(float)w/320.0f,sy=(104.0f+v*scale)*(float)h/200.0f;
+ if(!(sx>-2048.0f&&sx<2048.0f&&sy>-2048.0f&&sy<2048.0f))return (p4_3d_vertex_t){0};
+ return (p4_3d_vertex_t){(int16_t)(sx*8.0f),(int16_t)(sy*8.0f),(uint16_t)(4000000.0f/depth),color,0,0};
 }
-static void box(p4_game_surface_t *f,int x,int y,int w,int h,int bottom,int top,uint16_t front,uint16_t side,uint16_t cap){
- point a=project(f,x,y,top),b=project(f,x+w,y,top),c=project(f,x+w,y+h,top),d=project(f,x,y+h,top);
- point aa=project(f,x,y,bottom),bb=project(f,x+w,y,bottom),cc=project(f,x+w,y+h,bottom),dd=project(f,x,y+h,bottom);
- if(x<120*TM_Q)face(f,b,bb,cc,c,side);
- if(x+w>120*TM_Q)face(f,aa,a,d,dd,side);
- face(f,d,c,cc,dd,front);face(f,a,b,c,d,cap);
+p4_3d_vertex_t tm_project(const tm_state *s,int w,int h,float x,float y,float z,uint16_t color){float m[9];tm_camera(s,m);return project(m,w,h,x,y,z,color);}
+bool tm_screen_to_board(const tm_state *s,int sx,int sy,int *x,int *y){
+ if(sy<30||sy>=178||sx<0||sx>=320)return false;
+ float m[9];tm_camera(s,m);float u=(float)(sx-160)/385.0f,v=(float)(sy-104)/385.0f;
+ /* camera point (u*d,v*d,420-d), intersect with world z=6. */
+ float denominator=m[2]*u+m[5]*v-m[8];if(absolute(denominator)<0.01f)return false;
+ float d=(6.0f-420.0f*m[8])/denominator;
+ *x=(int)(120.0f+m[0]*u*d+m[3]*v*d+m[6]*(420.0f-d)+0.5f);
+ *y=(int)(72.0f+m[1]*u*d+m[4]*v*d+m[7]*(420.0f-d)+0.5f);
+ return *x>=0&&*x<240&&*y>=0&&*y<144;
 }
-typedef struct { point position; int height; } water_vertex;
-static int surface_height(const tm_state *s,int x,int y,unsigned phase_a,unsigned phase_b){
- int sum=0,n=0;
+static void quad(p4_3d_band_t *band,const p4_3d_vertex_t *a,const p4_3d_vertex_t *b,const p4_3d_vertex_t *c,const p4_3d_vertex_t *d,uint16_t color){
+ p4_3d_vertex_t v[4]={*a,*b,*c,*d};for(int n=0;n<4;++n)v[n].color=color;p4_3d_quad(band,v,false);
+}
+static void plane(p4_3d_band_t *band,const float m[9],float x,float y,float w,float h,float z,uint16_t color){
+ p4_game_surface_t *f=band->surface;
+ p4_3d_vertex_t v[4]={project(m,f->width,f->height,x,y,z,color),project(m,f->width,f->height,x+w,y,z,color),project(m,f->width,f->height,x+w,y+h,z,color),project(m,f->width,f->height,x,y+h,z,color)};
+ p4_3d_quad(band,v,false);
+}
+static void box(p4_3d_band_t *band,const float m[9],float x,float y,float w,float h,float low,float high){
+ p4_game_surface_t *f=band->surface;p4_3d_vertex_t v[12];
+ for(int i=0;i<4;++i){float xx=x+((i==1||i==2)?w:0.0f),yy=y+(i>=2?h:0.0f);
+  v[i]=project(m,f->width,f->height,xx,yy,low,0);
+  v[i+4]=project(m,f->width,f->height,xx,yy,high-0.7f,0);
+  v[i+8]=project(m,f->width,f->height,xx+((i==1||i==2)?-0.7f:0.7f),yy+(i>=2?-0.7f:0.7f),high,0);
+ }
+ for(int i=0;i<4;++i){int j=(i+1)%4;
+  quad(band,&v[i],&v[j],&v[j+4],&v[i+4],i==2?rgb(74,101,116):rgb(113,143,153));
+  quad(band,&v[i+4],&v[j+4],&v[j+8],&v[i+8],i==2?rgb(181,200,200):rgb(220,230,218));
+ }
+ quad(band,&v[8],&v[9],&v[10],&v[11],rgb(225,234,222));
+}
+static float height(const tm_state *s,int x,int y,float alpha){
+ float sum=0.0f;int count=0;
  for(int dy=-1;dy<=0;++dy)for(int dx=-1;dx<=0;++dx){int xx=x+dx,yy=y+dy;
-  if(xx>=0&&xx<TM_W&&yy>=0&&yy<TM_H&&s->wet[yy*TM_W+xx]){sum+=s->water[yy*TM_W+xx];++n;}}
- int level=n?sum/n:320;
- /* The solver drives the large slosh. Two small travelling waves prevent a
-  * stationary, tile-coloured surface; phase is evaluated every render. */
- int ripple=wave[(phase_a+(unsigned)x*5U+(unsigned)y*3U)%64U]+wave[(phase_b+(unsigned)x*2U+64U-(unsigned)y%64U)%64U];
- return 2*TM_Q+tm_clamp((level-320)*2,-TM_Q,2*TM_Q)+ripple*2/3;
+  if(xx<0||xx>=TM_W||yy<0||yy>=TM_H)continue;int i=yy*TM_W+xx;
+  if(s->wet[i]){sum+=s->previous_water[i]*(1.0f-alpha)+(s->water[i]+s->body[i])*alpha;++count;}
+ }
+ return count?sum/(float)count:6.0f;
 }
-/* Three rolling vertex rows replace four independent height/projection queries
- * for every water cell. Geometry and painter order remain exactly the same. */
-static void water_row(p4_game_surface_t *f,const tm_state *s,int y,water_vertex *row){
- const unsigned phase_a=s->animation_ms/19U,phase_b=s->animation_ms/27U;
- for(int x=0;x<=TM_W;++x){
-  row[x].height=surface_height(s,x,y,phase_a,phase_b);
-  row[x].position=project(f,x*8*TM_Q,y*8*TM_Q,row[x].height);
+static void prepare_water(tm_state *s,const float m[9],int w,int h){
+ float alpha=s->phase==TM_PLAY?(float)s->accumulator/20.0f:1.0f;
+ /* Reuse work arrays only in simulation; rendering scratch has independent
+  * lifetime, leaving all physical state untouched. */
+ for(int y=0;y<=TM_H;++y)for(int x=0;x<=TM_W;++x){
+  float z=height(s,x,y,alpha);
+  float nx=(height(s,x-1,y,alpha)-height(s,x+1,y,alpha))*0.125f;
+  float ny=(height(s,x,y-1,alpha)-height(s,x,y+1,alpha))*0.125f;
+  float slope=nx*nx+ny*ny;
+  /* A broad skylight and a small sun lobe reflect from SIMULATED normals.
+   * No time-scrolling UVs or unforced cosmetic surface waves. */
+  float light=p4_water_limit(0.58f+nx*0.4f-ny*0.6f,0.12f,1.1f);
+  float spec=p4_water_limit(1.0f-((nx-0.2f)*(nx-0.2f)+(ny+0.28f)*(ny+0.28f))*5.0f,0.0f,1.0f);
+  spec*=spec;spec*=spec;spec*=spec;
+  float foam=p4_water_limit((slope-0.12f)*0.55f,0.0f,0.45f);
+  int r=(int)(18.0f+light*35.0f+spec*180.0f+foam*200.0f);
+  int g=(int)(102.0f+light*58.0f+spec*135.0f+foam*100.0f);
+  int b=(int)(134.0f+light*64.0f+spec*85.0f+foam*60.0f);
+  p4_3d_vertex_t *vertex=&s->water_vertices[y*(TM_W+1)+x];
+  *vertex=project(m,w,h,(float)x*4.0f,(float)y*4.0f,z,rgb(r,g,b));
+  /* Refract the submerged tiled bed through the local surface normal. The
+   * depth/tag test preserves actual underwater balls, coins and wall faces. */
+  vertex->u=(uint16_t)(p4_water_limit((float)x*4.0f-nx*z*2.5f,0.0f,255.0f)*256.0f);
+  vertex->v=(uint16_t)(p4_water_limit((float)y*4.0f-ny*z*2.5f,0.0f,255.0f)*256.0f);
  }
 }
-/* Compile the bounded shared raster with an already-resolved palette pointer.
- * RV32 -Os otherwise reloads the palette offset inside every texture sample. */
-static __attribute__((noinline)) void water_face(p4_game_surface_t *f,const p4_mesh_tex_vertex_t *v,const uint16_t *texture){
- p4_draw_textured_face(f,v,4,texture,128);
+static const float sine[17]={0.0f,0.3826834f,0.7071068f,0.9238795f,1.0f,0.9238795f,0.7071068f,0.3826834f,0.0f,-0.3826834f,-0.7071068f,-0.9238795f,-1.0f,-0.9238795f,-0.7071068f,-0.3826834f,0.0f};
+static void prepare_sphere(tm_state *s,unsigned p,const float m[9],int w,int h){
+ int32_t px,py;tm_visual_ball(s,p,&px,&py);float x=(float)px/256.0f,y=(float)py/256.0f;
+ float a=s->phase==TM_PLAY?(s->linked&&!s->host?(float)s->blend_ms/50.0f:(float)s->accumulator/20.0f):1.0f;
+ float z=s->ball[p].previous_z*(1.0f-a)+s->ball[p].z*a;
+ /* Continuous table interpolation keeps the painted band from snapping by
+  * one longitude segment when the marble crosses a position threshold. */
+ float roll=(x+y)*0.1f;int step=(int)roll,phase=step%16;float fraction=roll-(float)step;
+ float roll_sin=sine[phase]*(1.0f-fraction)+sine[phase+1]*fraction;
+ float roll_cos=sine[(phase+4)%16]*(1.0f-fraction)+sine[(phase+5)%16]*fraction;
+ for(int lat=0;lat<=8;++lat)for(int lon=0;lon<=16;++lon){
+  float nz=sine[(lat+4)%16],ring=sine[lat],nx=ring*sine[(lon+4)%16],ny=ring*sine[lon];
+  float light=p4_water_limit(0.4f-0.35f*nx-0.25f*ny+0.6f*nz,0.1f,1.0f);
+  float spec=p4_water_limit(-0.25f*nx-0.45f*ny+0.86f*nz,0.0f,1.0f);spec*=spec;spec*=spec;spec*=spec;spec*=spec;
+  /* Great-circle band makes rolling readable on the spherical geometry. */
+  float stripe=nx*roll_sin+nz*roll_cos;
+  float band=p4_water_limit((0.30f-absolute(stripe))*8.0f,0.0f,1.0f);
+  float base_r=p?90.0f:245.0f,base_g=p?197.0f:155.0f,base_b=p?240.0f:48.0f;
+  int r=(int)((base_r+(55.0f-base_r)*band)*light+spec*(150.0f+20.0f*band));
+  int g=(int)((base_g+(72.0f-base_g)*band)*light+spec*(150.0f+20.0f*band));
+  int b=(int)((base_b+(78.0f-base_b)*band)*light+spec*(150.0f+20.0f*band));
+  s->sphere_vertices[p][lat*17+lon]=project(m,w,h,x+nx*4.0f,y+ny*4.0f,z+nz*4.0f,rgb(r,g,b));
+ }
 }
-/* Bound stack/register lifetime to one cell, independent of the scene/UI. */
-static __attribute__((noinline)) void water_cell(p4_game_surface_t *f,const tm_state *s,int x,int y,const water_vertex *top,const water_vertex *bottom){
- int i=y*TM_W+x;if(!s->wet[i])return;
- int h0=top[x].height,h1=top[x+1].height,h2=bottom[x+1].height,h3=bottom[x].height;
- point a=top[x].position,b=top[x+1].position,c=bottom[x+1].position,d=bottom[x].position;
- int light=tm_clamp((h0-h2)/6+(h1-h3)/9,-20,32);
- if((y>0&&!s->wet[i-TM_W])||(x>0&&!s->wet[i-1]))light-=12;
- int u=x*16*TM_Q+(int)(s->animation_ms%32768U)*2;
- int v=y*16*TM_Q+(int)(s->animation_ms%32768U);
- int du=(h1-h0)/2,dv=(h3-h0)/2;
- const p4_mesh_tex_vertex_t uv[4]={{a,u,v},{b,u+16*TM_Q+du,v},{c,u+16*TM_Q+du,v+16*TM_Q+dv},{d,u,v+16*TM_Q+dv}};
- unsigned palette=light < -12?0U:(light>18?2U:1U);
- water_face(f,uv,water_material+palette*16384U);
- if(x>0&&!s->wet[i-1])line(f,a,d,rgb(162,224,213));
- if(y>0&&!s->wet[i-TM_W])line(f,a,b,rgb(128,209,207));
-}
-static void ellipse(p4_game_surface_t *f,int x,int y,int rx,int ry,uint16_t color){
- if(rx<1||ry<1)return;
- for(int row=-ry;row<=ry;++row){int half=rx*(ry*ry-row*row)/(ry*ry);if(half<1)half=1;p4_draw_fill_rect(f,x-half,y+row,half*2+1,1,color);}
-}
-static void marble(p4_game_surface_t *f,const tm_state *s,unsigned p){
- if(s->ball[p].rescue&&(s->animation_ms/100U%2U))return;
- int32_t x,y;tm_visual_ball(s,p,&x,&y);
- point shadow=project(f,x+TM_Q,y+2*TM_Q,2*TM_Q),center=project(f,x,y,5*TM_Q);
- int radius=(int)f->width*2450/((600-y/TM_Q)*320);if(radius<3)radius=3;
- ellipse(f,shadow.x,shadow.y,radius+2,radius/2,rgb(15,83,98));
- /* The baked LUT exactly retains the former integer lighting. The dynamic
-  * stripe only selects a palette; the hot loop performs no divide, remainder,
-  * validation call or color arithmetic per pixel. Physical game bounds make
-  * the radius 4..12 at the two supported surfaces (3..14 is provisioned). */
- if(radius>14)return;
- const int diameter=radius*2+1,area=diameter*diameter;
- const uint16_t *base=tm_marble_lighting+tm_marble_offsets[radius]+(int)p*area*2;
- const int left=center.x-radius,top=center.y-radius;
- const int first_x=left<0?-left:0,last_x=left+diameter>(int)f->width?(int)f->width-left:diameter;
- const int first_y=top<0?-top:0,last_y=top+diameter>(int)f->height?(int)f->height-top:diameter;
- const int period=radius+2;
- for(int row=first_y;row<last_y;++row){
-  const uint16_t *normal=base+row*diameter+first_x,*striped=normal+area;
-  uint16_t *dst=f->pixels+(size_t)(top+row)*f->stride_pixels+(size_t)(left+first_x);
-  int raw=(x+y)/(TM_Q/2)+row+first_x-radius*2;
-  int phase=raw>0?raw%period:0;
-  for(int column=first_x;column<last_x;++column){
-   const uint16_t color=(raw<0||phase<2)?*striped:*normal;
-   if(color)*dst=color;
-   ++dst;++normal;++striped;++raw;
-   if(raw>0&&++phase==period)phase=0;
+static void spheres(p4_3d_band_t *band,const tm_state *s){
+ for(unsigned p=0;p<(s->linked?2U:1U);++p){if(s->ball[p].rescue&&(s->animation_ms/100U%2U))continue;
+  for(int lat=0;lat<8;++lat)for(int lon=0;lon<16;++lon){int i=lat*17+lon;
+   const p4_3d_vertex_t *v=s->sphere_vertices[p];
+   p4_3d_triangle(band,v+i,v+i+1,v+i+18,false);p4_3d_triangle(band,v+i,v+i+18,v+i+17,false);
   }
  }
- p4_draw_fill_circle(f,center.x-radius/3,center.y-radius/3,radius/4,rgb(255,255,245));
- if(s->linked){text(f,center.x*320/(int)f->width-2,center.y*200/(int)f->height-13,p==0?"1":"2",rgb(247,244,216),8);}
 }
-static void objects(p4_game_surface_t *f,const tm_state *s,int row,unsigned *pearl){
- for(int x=1;x<TM_COLS-1;++x){char t=tm_tile(s->level,x,row);int xx=(x*16+8)*TM_Q,yy=(row*16+8)*TM_Q;
-  point a=project(f,xx,yy,2*TM_Q);int r=p4_ui_x(f,3);
-  if(t=='o'){
-   if(!(s->pearls&(1U<<*pearl))){
-    ellipse(f,a.x+2,a.y+3,r+2,r/2,rgb(25,106,118));
-    int z=4*TM_Q+wave[(s->animation_ms/18U+(unsigned)x*7U)%64U]/2;
-    point c=project(f,xx,yy,z);
-    p4_draw_fill_circle(f,c.x,c.y,r+1,rgb(120,92,45));p4_draw_fill_circle(f,c.x,c.y-1,r,rgb(234,183,89));p4_draw_fill_circle(f,c.x-1,c.y-2,r/2,rgb(255,242,191));
-   }++*pearl;
-  }else if(t=='~'){
-   ellipse(f,a.x,a.y,r*2,r,rgb(11,75,96));ellipse(f,a.x,a.y,r,r/2,rgb(4,29,46));
-   unsigned phase=s->animation_ms/14U%64U;int dx=wave[phase]*r*2/128,dy=wave[(phase+16U)%64U]*r/128;
-   p4_draw_fill_circle(f,a.x+dx,a.y+dy,r/3,rgb(168,229,218));
-  }else if(t=='E'){
-   bool ready=s->pearls==((1U<<s->all_pearls)-1U);
-   ellipse(f,a.x,a.y,r*3,r*2,ready?rgb(245,197,92):rgb(91,116,110));
-   ellipse(f,a.x,a.y,r*2,r,rgb(25,90,102));
-   text(f,a.x*320/(int)f->width-3,a.y*200/(int)f->height-4,"E",rgb(255,238,187),8);
+static void disc(p4_3d_band_t *band,const float m[9],float x,float y,float radius,float z,uint16_t color){
+ p4_game_surface_t *f=band->surface;p4_3d_vertex_t center=project(m,f->width,f->height,x,y,z,color);
+ for(int i=0;i<16;++i){p4_3d_vertex_t a=project(m,f->width,f->height,x+sine[i]*radius,y+sine[(i+4)%16]*radius,z,color),b=project(m,f->width,f->height,x+sine[i+1]*radius,y+sine[(i+5)%16]*radius,z,color);p4_3d_triangle(band,&center,&a,&b,false);}
+}
+static void geometry(p4_3d_band_t *band,const float m[9],const tm_state *s){
+ band->material=1;
+ /* Solid basin, visible grouted bed and beveled stone dividers. */
+ box(band,m,-2.0f,-2.0f,244.0f,148.0f,-6.0f,0.0f);band->material=2;
+ for(int y=0;y<TM_ROWS;++y)for(int x=0;x<TM_COLS;++x){
+  if(tm_tile(s->level,x,y)=='#'){
+   int end=x+1;while(end<TM_COLS&&tm_tile(s->level,end,y)=='#')++end;
+   box(band,m,(float)(x*16),(float)(y*16),(float)((end-x)*16),16.0f,0.0f,18.0f);x=end-1;
+  }else{
+   band->material=1;
+   plane(band,m,(float)(x*16)+0.35f,(float)(y*16)+0.35f,15.3f,15.3f,0.1f,((x+y)&1)?rgb(115,168,177):rgb(153,190,188));band->material=2;
   }
  }
- for(unsigned p=0;p<(s->linked?2U:1U);++p){int32_t x,y;tm_visual_ball(s,p,&x,&y);if(y/(16*TM_Q)==row)marble(f,s,p);}
-}
-static __attribute__((noinline)) void scene(p4_game_surface_t *f,const tm_state *s){
- /* A single background pass, followed by bounded, back-to-front mesh faces. */
- for(int t=0;t<18;++t){
-  int first=(t*(int)f->height+17)/18,last=((t+1)*(int)f->height+17)/18;
-  p4_draw_fill_rect(f,0,first,f->width,last-first,rgb(16-t/3,29-t/2,43-t/2));
- }
- plane(f,-5*TM_Q,4*TM_Q,250*TM_Q,146*TM_Q,-12*TM_Q,rgb(4,12,22));
- box(f,-3*TM_Q,-3*TM_Q,246*TM_Q,150*TM_Q,-9*TM_Q,0,rgb(45,58,62),rgb(64,77,76),rgb(97,119,115));
- plane(f,0,0,240*TM_Q,144*TM_Q,0,rgb(18,94,113));
  unsigned pearl=0;
- water_vertex rows[3][TM_W+1];
- water_vertex *top=rows[0],*middle=rows[1],*bottom=rows[2];
- water_row(f,s,0,top);
- for(int y=0;y<TM_ROWS;++y){
-  water_row(f,s,y*2+1,middle);water_row(f,s,y*2+2,bottom);
-  for(int x=0;x<TM_COLS;++x){
-   if(tm_tile(s->level,x,y)=='#'){
-    int end=x+1;while(end<TM_COLS&&tm_tile(s->level,end,y)=='#')++end;
-    int xx=x*16*TM_Q,yy=y*16*TM_Q,ww=(end-x)*16*TM_Q;
-    box(f,xx,yy,ww,16*TM_Q,0,6*TM_Q,rgb(72,108,117),rgb(98,135,140),rgb(166,193,187));
-    plane(f,xx+TM_Q/2,yy+TM_Q/2,ww-TM_Q,15*TM_Q,6*TM_Q+16,rgb(214,223,201));
-    line(f,project(f,xx,yy,6*TM_Q),project(f,xx+ww,yy,6*TM_Q),rgb(249,244,218));
-    x=end-1;
-   }else{
-    for(int dy=0;dy<2;++dy)for(int dx=0;dx<2;++dx)water_cell(f,s,x*2+dx,y*2+dy,dy?middle:top,dy?bottom:middle);
-   }
+ for(int y=1;y<TM_ROWS-1;++y)for(int x=1;x<TM_COLS-1;++x){char tile=tm_tile(s->level,x,y);float xx=(float)(x*16+8),yy=(float)(y*16+8);
+  if(tile=='o'){
+   if(!(s->pearls&(1U<<pearl))){disc(band,m,xx,yy,3.5f,0.2f,rgb(89,105,89));disc(band,m,xx,yy,2.8f,3.5f,rgb(248,206,110));disc(band,m,xx-0.7f,yy-0.7f,1.2f,3.6f,rgb(255,245,203));}++pearl;
+  }else if(tile=='~'){
+   disc(band,m,xx,yy,5.0f,0.3f,rgb(25,51,67));disc(band,m,xx,yy,3.0f,0.4f,rgb(6,17,29));
+  }else if(tile=='E'){
+   bool ready=s->pearls==((1U<<s->all_pearls)-1U);
+   disc(band,m,xx,yy,6.3f,0.4f,ready?rgb(255,225,91):rgb(201,178,123));disc(band,m,xx,yy,4.5f,0.5f,rgb(51,104,107));
   }
-  if(y>0&&y<TM_ROWS-1)objects(f,s,y,&pearl);
-  water_vertex *swap=top;top=bottom;bottom=swap;
  }
- point a=project(f,-3*TM_Q,147*TM_Q,-2*TM_Q),b=project(f,243*TM_Q,147*TM_Q,-2*TM_Q);line(f,a,b,rgb(181,160,104));
+ for(unsigned p=0;p<(s->linked?2U:1U);++p){int32_t x,y;tm_visual_ball(s,p,&x,&y);disc(band,m,(float)x/256.0f+0.7f,(float)y/256.0f+0.8f,4.2f,0.2f,rgb(40,73,83));}
+}
+static void water_mesh(p4_3d_band_t *band,const tm_state *s){
+ for(int y=0;y<TM_H;++y)for(int x=0;x<TM_W;++x){
+  int i=y*TM_W+x;if(!s->wet[i]||s->water[i]<0.025f)continue;
+  int j=y*(TM_W+1)+x;const p4_3d_vertex_t *v=s->water_vertices;
+  int top=p4_3d_min(p4_3d_min(v[j].y,v[j+1].y),p4_3d_min(v[j+TM_W+1].y,v[j+TM_W+2].y));
+  int bottom=p4_3d_max(p4_3d_max(v[j].y,v[j+1].y),p4_3d_max(v[j+TM_W+1].y,v[j+TM_W+2].y));
+  if(bottom<band->top*8||top>=band->bottom*8)continue;
+  p4_3d_triangle(band,v+j,v+j+1,v+j+TM_W+2,true);
+  p4_3d_triangle(band,v+j,v+j+TM_W+2,v+j+TM_W+1,true);
+ }
+}
+static const uint16_t floor_texture[1024]={
+#include "generated/floor.inc"
+};
+static void scene(p4_game_surface_t *f,tm_state *s){
+ for(int y=0;y<f->height;++y){int shade=y*12/(int)f->height;p4_draw_fill_rect(f,0,y,f->width,1,rgb(10+shade/3,20+shade/2,32+shade));}
+ float m[9];tm_camera(s,m);prepare_water(s,m,f->width,f->height);
+ for(unsigned p=0;p<(s->linked?2U:1U);++p)prepare_sphere(s,p,m,f->width,f->height);
+ for(int row=0;row<f->height;row+=TM_BAND){p4_3d_band_t band;p4_3d_begin(&band,f,s->depth_band,row,TM_BAND);band.tags=s->material_band;memset(band.tags,0,(size_t)(band.bottom-band.top)*f->width);geometry(&band,m,s);spheres(&band,s);band.refraction_texture=floor_texture;water_mesh(&band,s);}
 }
 static void button(p4_game_surface_t *f,int x,const char *label,bool active){
  p4_ui_round_rect(f,p4_ui_x(f,x),p4_ui_y(f,180),p4_ui_x(f,49),p4_ui_y(f,17),p4_ui_x(f,4),active?rgb(51,130,142):rgb(31,53,68));text(f,x+6,184,label,rgb(218,233,224),8);
