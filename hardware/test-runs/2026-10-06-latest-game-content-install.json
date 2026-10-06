@@ -1,0 +1,158 @@
+{
+  "schema": 1,
+  "created_at_utc": "2026-10-06T16:38:39.177942+00:00",
+  "commit": "d4a3759b170ba60424ae0048865d0f68f963f6e1",
+  "versions": {
+    "byte_buddy": "5.1.0",
+    "tide_maze": "0.2.1"
+  },
+  "os_written": false,
+  "qualification": "Content installation/readback only; physical gameplay and fluidity remain unqualified. No replacement fluid engine implemented.",
+  "artifacts": [
+    {
+      "name": "BYTEBUD.P4R",
+      "bytes": 8322304,
+      "sha256": "63f19311734020ac79bed3b16f4ac24b3bb3789bbde2c017840f51233b5baa61"
+    },
+    {
+      "name": "BYTEBUD.P4G",
+      "bytes": 242324,
+      "sha256": "9a299a3abca22ffb67de0b705c8e0647dab89292fa281d4191d62c9d0759a47f"
+    },
+    {
+      "name": "TIDE_MAZE.P4G",
+      "bytes": 198448,
+      "sha256": "78a15a65078f2d8667aab279facbf7011911cbb3aeae5768e9208f125a3ab790"
+    }
+  ],
+  "units": {
+    "A": {
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "backup_verified": true,
+      "files": {
+        "BYTEBUD.P4R": {
+          "previous_sha256": "6a7b7dafe0dd5565a867268e5c7e9a53feecbdd80e5c7b8d6e110598963fd698",
+          "expected_sha256": "63f19311734020ac79bed3b16f4ac24b3bb3789bbde2c017840f51233b5baa61",
+          "already_current": false,
+          "readback_verified": true,
+          "pushed": true,
+          "device_completion_digest_verified": true,
+          "bytes": 8322304,
+          "readback_artifact": {
+            "path": "build-host/latest-game-install-20261006/20261006T163839Z/A/after-BYTEBUD.P4R",
+            "sha256": "63f19311734020ac79bed3b16f4ac24b3bb3789bbde2c017840f51233b5baa61",
+            "bytes": 8322304
+          }
+        },
+        "BYTEBUD.P4G": {
+          "previous_sha256": "d2adf9d81f02df95b2bad4a8b6af39cd425dffc586e08517a37f4b7af54c09e6",
+          "expected_sha256": "9a299a3abca22ffb67de0b705c8e0647dab89292fa281d4191d62c9d0759a47f",
+          "already_current": false,
+          "readback_verified": true,
+          "pushed": true,
+          "device_completion_digest_verified": true,
+          "bytes": 242324,
+          "readback_artifact": {
+            "path": "build-host/latest-game-install-20261006/20261006T163839Z/A/after-BYTEBUD.P4G",
+            "sha256": "9a299a3abca22ffb67de0b705c8e0647dab89292fa281d4191d62c9d0759a47f",
+            "bytes": 242324
+          }
+        },
+        "TIDE_MAZE.P4G": {
+          "previous_sha256": "78a15a65078f2d8667aab279facbf7011911cbb3aeae5768e9208f125a3ab790",
+          "expected_sha256": "78a15a65078f2d8667aab279facbf7011911cbb3aeae5768e9208f125a3ab790",
+          "already_current": true,
+          "readback_verified": true,
+          "bytes": 198448,
+          "readback_artifact": {
+            "path": "build-host/latest-game-install-20261006/20261006T163839Z/A/before-TIDE_MAZE.P4G",
+            "sha256": "78a15a65078f2d8667aab279facbf7011911cbb3aeae5768e9208f125a3ab790",
+            "bytes": 198448
+          }
+        }
+      },
+      "complete": true,
+      "observed_os": "0.56",
+      "panel": "ST7121",
+      "serial_log": {
+        "path": "build-host/latest-game-install-20261006/20261006T163839Z/A-serial.log",
+        "sha256": "c5b78b567a380bc05e81011567553201b709e9a0b1ed22744c734fd210cd6c6b"
+      },
+      "catalog_refresh_observed": true,
+      "tide_registered": true,
+      "verified_utc": "2026-10-06T16:44:20.342516+00:00"
+    },
+    "B": {
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "backup_verified": true,
+      "files": {
+        "BYTEBUD.P4R": {
+          "previous_sha256": "6a7b7dafe0dd5565a867268e5c7e9a53feecbdd80e5c7b8d6e110598963fd698",
+          "expected_sha256": "63f19311734020ac79bed3b16f4ac24b3bb3789bbde2c017840f51233b5baa61",
+          "already_current": false,
+          "readback_verified": true,
+          "pushed": true,
+          "device_completion_digest_verified": true,
+          "bytes": 8322304,
+          "readback_artifact": {
+            "path": "build-host/latest-game-install-20261006/20261006T163839Z/B/after-BYTEBUD.P4R",
+            "sha256": "63f19311734020ac79bed3b16f4ac24b3bb3789bbde2c017840f51233b5baa61",
+            "bytes": 8322304
+          }
+        },
+        "BYTEBUD.P4G": {
+          "previous_sha256": "d2adf9d81f02df95b2bad4a8b6af39cd425dffc586e08517a37f4b7af54c09e6",
+          "expected_sha256": "9a299a3abca22ffb67de0b705c8e0647dab89292fa281d4191d62c9d0759a47f",
+          "already_current": false,
+          "readback_verified": true,
+          "pushed": true,
+          "device_completion_digest_verified": true,
+          "bytes": 242324,
+          "readback_artifact": {
+            "path": "build-host/latest-game-install-20261006/20261006T163839Z/B/after-BYTEBUD.P4G",
+            "sha256": "9a299a3abca22ffb67de0b705c8e0647dab89292fa281d4191d62c9d0759a47f",
+            "bytes": 242324
+          }
+        },
+        "TIDE_MAZE.P4G": {
+          "previous_sha256": "78a15a65078f2d8667aab279facbf7011911cbb3aeae5768e9208f125a3ab790",
+          "expected_sha256": "78a15a65078f2d8667aab279facbf7011911cbb3aeae5768e9208f125a3ab790",
+          "already_current": true,
+          "readback_verified": true,
+          "bytes": 198448,
+          "readback_artifact": {
+            "path": "build-host/latest-game-install-20261006/20261006T163839Z/B/before-TIDE_MAZE.P4G",
+            "sha256": "78a15a65078f2d8667aab279facbf7011911cbb3aeae5768e9208f125a3ab790",
+            "bytes": 198448
+          }
+        }
+      },
+      "complete": true,
+      "observed_os": "0.56",
+      "panel": "ST7123",
+      "serial_log": {
+        "path": "build-host/latest-game-install-20261006/20261006T163839Z/B-serial.log",
+        "sha256": "9619d9fb03ada9a9604ba4741055326fbceb265883c95b9596dae1d0a1e6eaa4"
+      },
+      "catalog_refresh_observed": true,
+      "tide_registered": true,
+      "verified_utc": "2026-10-06T16:49:43.173565+00:00"
+    }
+  },
+  "completed_at_utc": "2026-10-06T16:50:01.124644+00:00",
+  "local_transfer_receipt": {
+    "path": "build-host/latest-game-install-20261006/20261006T163839Z/receipt.json",
+    "sha256": "29d3f1e6e8887476fe65011da1fa4938e911c1d097c5b230ae9796b18cf3c04b"
+  },
+  "transfer_log": {
+    "path": "build-host/latest-game-install-20261006/transfer-final.log",
+    "sha256": "eb74dfde5337bb92a25330c8086b3252f11f34eebe20317b1e80b14d45b90d26"
+  },
+  "host_qualification": "hardware/test-runs/2026-10-05-byte-buddy-original-upscale-host.json",
+  "fluidity_failure_retained": "test-runs/2026-10-06-tide-maze-fluid-audit.json",
+  "result": "PASS: Byte Buddy 5.1.0 cartridge/resource installed and independently read back on A and B; Tide Maze 0.2.1 already present and independently read back on both.",
+  "physical_acceptance": "Pending: gameplay, touch, audio, resource-load memory pressure, actual-device frame cadence and fluidity. Installation does not close prior rejected gameplay/visual acceptance.",
+  "save_files_changed_by_this_operation": false
+}
