@@ -1,0 +1,3107 @@
+{
+  "schema": 1,
+  "recorded_at_utc": "2026-10-06T22:27:39.546103+00:00",
+  "result": "pass-host-checks-and-obsolete-test-audit",
+  "base_commit": "a89342dc543c4ce05c6d2503b9fea6556064cade",
+  "implementation_commit": "55cf5cd37498b0d7c4acb7920454ac3886fe2870",
+  "branch": "codex/obsolete-tests-follow-up",
+  "scope": "Tab5-focused obsolete test follow-up in an isolated worktree; original cleanup checkout preserved. Elecrow firmware excluded at user direction.",
+  "changes": {
+    "deleted_test_entrypoints": [
+      "scripts/tests/test-native-only-sources.py",
+      "scripts/tests/test-p4cart-seed-registry.py",
+      "scripts/tests/test-capture-waveshare-console-os-scroll-boundary.py"
+    ],
+    "deleted_obsolete_tools": [
+      "scripts/p4cart_seed_registry.py",
+      "scripts/capture-waveshare-console-os-scroll-boundary.py"
+    ],
+    "renamed_bundle_test": {
+      "from": "scripts/tests/test-native-content-retirement.py",
+      "to": "scripts/tests/test-native-sd-bundle.py",
+      "retained_behavior_cases": 4
+    },
+    "other_pruning": [
+      "Removed source/attribute absence assertions and constant legacy report-shape assertions.",
+      "Removed the exit-only Lua installer stub test; compatibility stub stays unchanged.",
+      "Moved the retained Elecrow migration artifact check to an explicit Make target; ordinary builds no longer invoke it.",
+      "Corrected obsolete E5 test-failure guidance in the Tab5 board document."
+    ]
+  },
+  "validation_summary": {
+    "self_contained_script_entrypoints_passed": 44,
+    "self_contained_script_entrypoints_failed": 0,
+    "native_content_ctest_cases_passed": 3,
+    "native_package_ctest_cases_passed": 1,
+    "registry_enabled_native_games": 17,
+    "native_board_verifier_gate_cases": 73,
+    "firmware_source_changes": [],
+    "firmware_built": false,
+    "hardware_accessed": false,
+    "flashed": false,
+    "published": false,
+    "merged_to_source_or_main": false
+  },
+  "environment": {
+    "python": "/Users/billh/.espressif/python_env/idf5.5_py3.11_env/bin/python",
+    "pyyaml": "6.0.3",
+    "compiler": "AppleClang 21.0.0.21000099",
+    "local_dependency_preparation": "Copied only the 3 exact pinned USB 1.5.0 source files into ignored managed_components for existing host overlay tests; no package upgrade or firmware build.",
+    "copied_usb_source_sha256": {
+      "ext_port.c": "0760b3c8ef14813db621b66c19d27caea5391793c592ca480b6ce18121797736",
+      "hub.c": "2d7c79c8508f63be6b0243178eafae2351f4e4643a87d9cdc73e980b95985afe",
+      "hcd_dwc.c": "de0471a749547c7d295af0fe2e3e5b61d1eedf46d88c5b57cf20cec202d6c749"
+    }
+  },
+  "not_run": [
+    {
+      "check": "console-os-game-manager-migration-check",
+      "reason": "Retained artifact-specific route; no matching Elecrow build in this checkout and Elecrow is outside the requested focus. Only Make routing was dry-run; not reported as PASS."
+    },
+    {
+      "check": "make check / full game-sdk-host / all unchanged component and game suites",
+      "reason": "No firmware, game or shared runtime input changed; registration/source audit and relevant existing host checks cover this cleanup. Static audit is not execution or device acceptance."
+    }
+  ],
+  "inventory": {
+    "schema": 1,
+    "base_commit": "a89342dc543c4ce05c6d2503b9fea6556064cade",
+    "scope": "First-party tracked test sources, fixtures, CTest registrations, Make/shell runners and maintained Markdown instructions. Vendored upstream tests are outside maintained ownership. Static audit does not claim all suites executed.",
+    "test_files_at_base": 306,
+    "suites": [
+      {
+        "suite": "apps/audio_diag/components/platform_audio",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "apps/audio_diag/components/platform_audio/tests/test_platform_audio.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "apps/console_os",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "apps/console_os/tests/test_cartridge_timing.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "apps/dice_core2",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "apps/dice_core2/tests/fakes/M5Unified.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/dice_core2/tests/fakes/esp_random.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/dice_core2/tests/test_dice_controls.cpp",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/dice_core2/tests/test_dice_cup.cpp",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/dice_core2/tests/test_dice_dirty.cpp",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/dice_core2/tests/test_dice_feedback.cpp",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/dice_core2/tests/test_dice_presentation.cpp",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "apps/doom/components/doom_audio",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "apps/doom/components/doom_audio/tests/mocks/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/doom/components/doom_audio/tests/mocks/freertos/FreeRTOS.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/doom/components/doom_audio/tests/mocks/freertos/semphr.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/doom/components/doom_audio/tests/mocks/freertos/task.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/doom/components/doom_audio/tests/mocks/platform/audio.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/doom/components/doom_audio/tests/test_doom_audio.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/doom/components/doom_audio/tests/test_doom_audio_runtime.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/doom/components/doom_audio/tests/test_doom_audio_wad.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "apps/doom_embedded_touch_audio",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "apps/doom_embedded_touch_audio/tests/test_audio_lifecycle.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/doom_embedded_touch_audio/tests/test_degraded_policy.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/doom_embedded_touch_audio/tests/test_runtime_gate.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/doom_embedded_touch_audio/tests/test_source_contract.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "apps/doom_embedded_touch_audio/tests/test_touch_controls.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "apps/doom_embedded_touch_audio/components/platform_audio",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "apps/doom_embedded_touch_audio/components/platform_audio/tests/test_platform_audio_adapter.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "apps/gamepad_diag",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "apps/gamepad_diag/tests/test_gamepad_diag_arm_model.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/console_shell",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/console_shell/tests/test_console_shell.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/console_shell/tests/test_console_shell_bbs.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/console_shell/tests/test_nextgen.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/console_startup",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/console_startup/tests/flight_preview.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/console_startup/tests/preview.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/doom_gamepad_input",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/doom_gamepad_input/tests/test_doom_gamepad_input.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/doom_gamepad_input/tests/test_key_merge.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/doom_multiplayer",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/doom_multiplayer/tests/mocks/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/doom_multiplayer/tests/mocks/esp_log.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/doom_multiplayer/tests/mocks/esp_timer.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/doom_multiplayer/tests/mocks/freertos/FreeRTOS.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/doom_multiplayer/tests/mocks/freertos/task.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/doom_multiplayer/tests/test_doom_arena.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/doom_multiplayer/tests/test_doom_gc_adapter.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/doom_multiplayer/tests/test_doom_lockstep.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/doom_multiplayer/tests/test_doom_multiplayer.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/doom_touch_input",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/doom_touch_input/tests/test_doom_touch_input.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/doom_video",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/doom_video/tests/test_doom_video.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/doom_video/tests/test_pinned_doom_rgb565.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/gamepad_core",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/gamepad_core/tests/test_gamepad_core.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/gamepad_core/tests/test_xusb.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_ansi",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_ansi/tests/test_ansi.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_bbs",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_bbs/tests/test_bbs_ui.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_ble_radio_handoff",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_ble_radio_handoff/tests/test_ble_radio_handoff.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_desktop",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_desktop/tests/test_desktop.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_frame_scheduler",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_frame_scheduler/tests/test_frame_scheduler.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_game_api",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_game_api/tests/raster_reference.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_api/tests/test_cartridge_compat.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_api/tests/test_mesh.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_api/tests/test_p4_game_api.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_api/tests/test_presentation.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_api/tests/test_raster_equivalence.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_game_package",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_game_package/tests/test_game_package.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_game_platform",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_game_platform/tests/mock_worker_runtime.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_platform/tests/mocks/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_platform/tests/mocks/esp_heap_caps.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_platform/tests/mocks/esp_timer.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_platform/tests/mocks/freertos/FreeRTOS.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_platform/tests/mocks/freertos/queue.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_platform/tests/mocks/freertos/semphr.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_platform/tests/mocks/freertos/task.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_platform/tests/mocks/platform/audio.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_platform/tests/mocks/sdkconfig.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_platform/tests/mocks/worker_runtime.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_platform/tests/test_audio_session.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_game_platform/tests/test_audio_worker.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_game_save",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_game_save/tests/test_game_save.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_midi",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_midi/tests/test_midi.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_multiplayer",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_multiplayer/tests/test_dice_accessory.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_multiplayer/tests/test_group.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_multiplayer/tests/test_p4_multiplayer.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_multiplayer_registry",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_multiplayer_registry/tests/test_multiplayer_registry.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_os_update_package",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_os_update_package/tests/test_os_update_package.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_signal_scan",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_signal_scan/tests/test_signal_scan.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/p4_usb_content_transfer",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/p4_usb_content_transfer/tests/stubs/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_usb_content_transfer/tests/stubs/esp_heap_caps.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_usb_content_transfer/tests/stubs/esp_log.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_usb_content_transfer/tests/stubs/esp_task_wdt.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_usb_content_transfer/tests/stubs/esp_timer.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_usb_content_transfer/tests/stubs/fake_sdk.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_usb_content_transfer/tests/stubs/freertos/FreeRTOS.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_usb_content_transfer/tests/stubs/freertos/task.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_usb_content_transfer/tests/stubs/mbedtls/sha256.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_usb_content_transfer/tests/stubs/sha256.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_usb_content_transfer/tests/stubs/sha256.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_usb_content_transfer/tests/test_clock_control.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_usb_content_transfer/tests/test_file_transfer_native_only.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/p4_usb_content_transfer/tests/test_h1_usb_drive_control.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_audio",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_audio/tests/mocks/driver/gpio.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio/tests/mocks/driver/i2s_std.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio/tests/mocks/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio/tests/mocks/freertos/FreeRTOS.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio/tests/mocks/freertos/task.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio/tests/mocks/mock_esp32_runtime.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio/tests/mocks/mock_esp32_runtime.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio/tests/mocks/sdkconfig.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio/tests/test_platform_audio.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio/tests/test_platform_audio_runtime.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_audio_es8311",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_audio_es8311/tests/mocks/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio_es8311/tests/mocks/platform_audio_es8311_test_hal.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio_es8311/tests/test_platform_audio_es8311_policy.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_audio_factory",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_audio_factory/tests/mocks/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio_factory/tests/mocks/mock_factory_runtime.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio_factory/tests/mocks/mock_factory_runtime.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio_factory/tests/mocks/platform_audio_factory_test_hal.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio_factory/tests/test_platform_audio_factory_policy.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_audio_factory/tests/test_platform_audio_factory_runtime.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_battery",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_battery/tests/test_platform_battery.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_board",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_board/tests/include/sdkconfig.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_board/tests/test_platform_board.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_board/tests/test_platform_board_olimex.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_board/tests/test_platform_board_tab5.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_board/tests/test_platform_board_waveshare.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_console_settings",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_console_settings/tests/stubs/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_console_settings/tests/stubs/esp_log.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_console_settings/tests/stubs/esp_mac.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_console_settings/tests/stubs/nvs.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_console_settings/tests/stubs/nvs_flash.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_console_settings/tests/stubs/sdk.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_console_settings/tests/test_settings.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_display",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_display/tests/test_platform_display_layout.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_display/tests/test_platform_display_tab5.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_display/tests/test_tab5_frame_queue.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_game_storage",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_game_storage/tests/mocks/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_game_storage/tests/mocks/esp_log.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_game_storage/tests/mocks/esp_vfs.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_game_storage/tests/mocks/freertos/FreeRTOS.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_game_storage/tests/mocks/freertos/semphr.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_game_storage/tests/test_arena_vfs.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_game_storage/tests/test_game_storage_files.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_game_storage/tests/test_game_storage_model.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_game_storage/tests/test_msc_write_policy.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_game_storage/tests/test_verified_reader.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_game_storage/tests/test_verified_wad.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_gamepad_usb",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_gamepad_usb/tests/test_platform_gamepad_model.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_gamepad_xusb",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_gamepad_xusb/tests/fake_esp.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_gamepad_xusb/tests/mocks/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_gamepad_xusb/tests/mocks/esp_log.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_gamepad_xusb/tests/mocks/esp_timer.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_gamepad_xusb/tests/mocks/freertos/FreeRTOS.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_gamepad_xusb/tests/mocks/freertos/event_groups.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_gamepad_xusb/tests/mocks/freertos/task.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_gamepad_xusb/tests/mocks/mbedtls/sha256.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_gamepad_xusb/tests/mocks/usb/usb_host.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_gamepad_xusb/tests/test_broker.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_gamepad_xusb/tests/test_lifecycle.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_i2c_shared",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_i2c_shared/tests/mocks/driver/gpio.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_i2c_shared/tests/mocks/driver/i2c_master.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_i2c_shared/tests/mocks/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_i2c_shared/tests/mocks/platform/tab5.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_i2c_shared/tests/test_platform_i2c_shared.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_i2c_shared/tests/test_platform_i2c_shared_tab5.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_multiplayer_wifi",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_multiplayer_wifi/tests/mocks/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_multiplayer_wifi/tests/mocks/esp_event.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_multiplayer_wifi/tests/mocks/esp_heap_caps.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_multiplayer_wifi/tests/mocks/esp_log.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_multiplayer_wifi/tests/mocks/esp_netif.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_multiplayer_wifi/tests/mocks/esp_timer.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_multiplayer_wifi/tests/mocks/esp_wifi.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_multiplayer_wifi/tests/mocks/freertos/FreeRTOS.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_multiplayer_wifi/tests/mocks/freertos/idf_additions.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_multiplayer_wifi/tests/mocks/freertos/semphr.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_multiplayer_wifi/tests/mocks/freertos/task.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_multiplayer_wifi/tests/mocks/lwip/sockets.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_multiplayer_wifi/tests/mocks/mock.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_multiplayer_wifi/tests/test_wifi.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_readonly_blob",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_readonly_blob/tests/test_readonly_blob_core.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_save_seal",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_save_seal/tests/fake_esp.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_save_seal/tests/fake_esp.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_save_seal/tests/stubs/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_save_seal/tests/stubs/esp_random.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_save_seal/tests/stubs/mbedtls/sha256.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_save_seal/tests/stubs/nvs.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_save_seal/tests/test_platform_save_seal.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_storage",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_storage/tests/test_platform_storage_wad.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_tab5",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_tab5/tests/mocks/driver/i2c_master.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/mocks/esp_err.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/mocks/esp_io_expander.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/mocks/esp_io_expander_pi4ioe5v6408.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/mocks/esp_lcd_panel_io.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/mocks/esp_log.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/mocks/esp_timer.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/mocks/freertos/FreeRTOS.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/mocks/freertos/semphr.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/mocks/freertos/task.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/mocks/mock_sdk.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/mocks/platform/board.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/test_charger.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/test_game_motion.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/test_radio_power.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/test_rtc_clock.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/test_sensor_service.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/test_sensors.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/test_speaker.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_tab5/tests/test_usb_power.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_touch",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_touch/tests/tab5_mocks/esp_lcd_touch_st7123.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_touch/tests/tab5_mocks/platform/tab5.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_touch/tests/test_platform_touch_frame.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_touch/tests/test_platform_touch_runtime.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "components/platform_touch/tests/test_platform_touch_tab5.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "components/platform_usb_host",
+        "decision": "Retain: current app/component source and host registration; matching production path remains tracked.",
+        "files": [
+          {
+            "path": "components/platform_usb_host/tests/test_platform_usb_host.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/blast_circuit",
+        "decision": "Retain: current native manifest org.p4console.blast-circuit; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/blast_circuit/tests/test_blast_circuit.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/blast_circuit/tests/test_features.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/blast_circuit/tests/test_music.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/byte_buddy",
+        "decision": "Retain: current native manifest org.p4console.byte-buddy; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/byte_buddy/tests/test_byte_buddy.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/byte_buddy/tests/test_byte_buddy_save.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/calculator",
+        "decision": "Retain: current native manifest org.p4console.calculator; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/calculator/tests/test_calculator.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/checkers",
+        "decision": "Retain: current native manifest org.p4console.checkers; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/checkers/tests/test_checkers.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/checkers/tests/test_presentation.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/color_clash",
+        "decision": "Retain: current native manifest org.p4console.color-clash; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/color_clash/tests/test_color_clash.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/color_clash/tests/test_presentation.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/color_clash/tests/test_touch_drag.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/frog_hop",
+        "decision": "Retain: current native manifest org.p4console.frog-hop; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/frog_hop/tests/test_frog_hop.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/lord",
+        "decision": "Retain: current native manifest org.p4console.lord; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/lord/tests/test_lord.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/lord/tests/test_presentation.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/lord/tests/test_trace.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/maze_chase",
+        "decision": "Retain: current native manifest org.p4console.maze-chase; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/maze_chase/tests/test_backdrop.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/maze_chase/tests/test_maze_chase.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/maze_chase/tests/test_touch_pipeline.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/p4_air_hockey",
+        "decision": "Retain: current native manifest org.p4console.p4-air-hockey; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/p4_air_hockey/tests/test_p4_air_hockey.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/p4_air_hockey/tests/test_presentation.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/p4_rummy",
+        "decision": "Retain: current native manifest org.p4console.p4-rummy; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/p4_rummy/tests/test_p4_rummy.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/p4_rummy/tests/test_presentation.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/p4_rummy/tests/test_touch_drag.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/p4_yahtzee",
+        "decision": "Retain: current native manifest org.p4console.p4-yahtzee; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/p4_yahtzee/tests/test_p4_yahtzee.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/p4_yahtzee/tests/test_presentation.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/skyline_leap",
+        "decision": "Retain: current native manifest org.p4console.skyline-leap; enabled=False; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/skyline_leap/tests/test_skyline_leap.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/solitaire",
+        "decision": "Retain: current native manifest org.p4console.solitaire; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/solitaire/tests/test_presentation.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/solitaire/tests/test_solitaire.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/space_invaders",
+        "decision": "Retain: current native manifest org.p4console.space-invaders; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/space_invaders/tests/test_space_invaders.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/texas_holdem",
+        "decision": "Retain: current native manifest org.p4console.texas-holdem; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/texas_holdem/tests/test_presentation.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/texas_holdem/tests/test_texas_holdem.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "games/tide_maze",
+        "decision": "Retain: current native manifest org.p4console.tide-maze; enabled=True; tests use this game's C implementation.",
+        "files": [
+          {
+            "path": "games/tide_maze/tests/render_hashes.h",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/tide_maze/tests/test_tide_maze.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/tide_maze/tests/test_tide_maze_latency.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/tide_maze/tests/test_tide_maze_render.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "games/tide_maze/tests/test_tide_maze_stress.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "scripts",
+        "decision": "Inspect each script test against its import, CLI and frozen-gate consumers; per-file decisions in the follow-up audit.",
+        "files": [
+          {
+            "path": "scripts/test-dice-core2-feedback.sh",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/fixtures/esptool.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/native-starter-motion.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-app-readback.sh",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-arena-content.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-board-port.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-capture-waveshare-console-os-scroll-boundary.py",
+            "disposition": "removed"
+          },
+          {
+            "path": "scripts/tests/test-console-os-file-manager-install.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-console-os-game-manager-migrate.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-console-os-game-manager-runtime-capture.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-console-os-runtime-capture.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-console-os-usb-install.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-console-os-usb-runtime-capture.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-d23-capture-transport.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-d24-gate.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-doom-e3-install-gate.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-doom-e5-gate.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-doom-e5-install.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-doom-e5-runtime-capture.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-doom-e6-authorized-route.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-doom-e6-install.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-doom-e6-runtime-capture.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-doom-source-tree.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-espressif-usb-ext-port-overlay.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-espressif-usb-hcd-fsls-overlay.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-game-registry.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-game-resource.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-gamepad-diag-flash-route.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-gamepad-diag-gate.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-gamepad-diag-install.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-gamepad-diag-restore.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-gamepad-diag-state-contract.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-native-board-verifiers.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-native-content-retirement.py",
+            "disposition": "renamed to scripts/tests/test-native-sd-bundle.py; 4 live bundle cases retained"
+          },
+          {
+            "path": "scripts/tests/test-native-only-sources.py",
+            "disposition": "removed"
+          },
+          {
+            "path": "scripts/tests/test-new-game.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-p4-clock.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-p4-content.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-p4-multiplayer-relay.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-p4-transfer-games.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-p4-transfer-usb-drive.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-p4-usb-content-wire.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-p4cart-seed-registry.py",
+            "disposition": "removed"
+          },
+          {
+            "path": "scripts/tests/test-prepare-game-data.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-project-env.sh",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-protected-game-lineage.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-tab5-arena-memory.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-tab5-build-features.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-tab5-install.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-tab5-warm-boot-capture.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/tests/test-waveshare-console-os-capture.py",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "scripts/wacky",
+        "decision": "Retain: active optional Wacky port harness; generated .tools/wacky-p4-port and local shareware are intentional prerequisites, not evidence of retirement.",
+        "files": [
+          {
+            "path": "scripts/wacky/four_checks.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/wacky/full_checks.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/wacky/network_checks.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/wacky/probe_checks.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "scripts/wacky/touch_checks.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "tools/p4-game-host",
+        "decision": "Retain: shared SDL3 runner audio timing, input events, failure/exit status and per-game smoke.",
+        "files": [
+          {
+            "path": "tools/p4-game-host/test_audio_timing.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "tools/p4-game-host/test_exit_status.c",
+            "disposition": "retained"
+          },
+          {
+            "path": "tools/p4-game-host/test_mouse_events.c",
+            "disposition": "retained"
+          }
+        ]
+      },
+      {
+        "suite": "tools/p4_realm_hub",
+        "decision": "Retain: live Realm hub protocol, persistence, multiplayer campaigns and end-to-end clients.",
+        "files": [
+          {
+            "path": "tools/p4_realm_hub/tests/__init__.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "tools/p4_realm_hub/tests/test_four_player_campaign.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "tools/p4_realm_hub/tests/test_guild_campaign.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "tools/p4_realm_hub/tests/test_protocol.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "tools/p4_realm_hub/tests/test_ten_player_chaos.py",
+            "disposition": "retained"
+          },
+          {
+            "path": "tools/p4_realm_hub/tests/test_two_client_e2e.py",
+            "disposition": "retained"
+          }
+        ]
+      }
+    ],
+    "ctest_registration_files": [
+      {
+        "path": "apps/audio_diag/components/platform_audio/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_audio_policy_tests COMMAND platform_audio_policy_tests"
+        ]
+      },
+      {
+        "path": "apps/console_os/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME cartridge_timing_tests COMMAND cartridge_timing_tests"
+        ]
+      },
+      {
+        "path": "apps/doom/components/doom_audio/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME doom_audio_core_tests COMMAND doom_audio_core_tests",
+          "NAME doom_audio_runtime_tests COMMAND doom_audio_runtime_tests",
+          "NAME doom_audio_wad_tests COMMAND doom_audio_wad_tests \"${P4_LOCAL_DOOM_WAD}\""
+        ]
+      },
+      {
+        "path": "apps/doom_embedded_touch_audio/components/platform_audio/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_audio_adapter COMMAND test_platform_audio_adapter"
+        ]
+      },
+      {
+        "path": "apps/doom_embedded_touch_audio/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME doom_touch_audio_gate COMMAND test_doom_touch_audio_gate",
+          "NAME doom_touch_audio_degraded_policy COMMAND test_doom_touch_audio_degraded_policy",
+          "NAME doom_e6_audio_lifecycle COMMAND test_doom_e6_audio_lifecycle",
+          "NAME doom_touch_controls COMMAND test_doom_touch_controls",
+          "NAME doom_touch_audio_source_contract COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/test_source_contract.py"
+        ]
+      },
+      {
+        "path": "apps/gamepad_diag/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME gamepad_diag_arm_model_tests COMMAND gamepad_diag_arm_model_tests"
+        ]
+      },
+      {
+        "path": "components/console_shell/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME console_shell_tests COMMAND console_shell_tests",
+          "NAME console_shell_waveshare_tests COMMAND console_shell_waveshare_tests",
+          "NAME console_shell_bbs_tests COMMAND console_shell_bbs_tests",
+          "NAME console_shell_tab5_tests COMMAND console_shell_tab5_tests"
+        ]
+      },
+      {
+        "path": "components/console_startup/CMakeLists.txt",
+        "registrations": [
+          "NAME console_startup_flight_validation COMMAND console_startup_flight_preview \"${CMAKE_CURRENT_LIST_DIR}/../../apps/console_os/main/assets/gamechangers_mark_flight.rgb565a8\"",
+          "NAME console_startup_validation COMMAND console_startup_preview \"${CMAKE_CURRENT_LIST_DIR}/../../apps/console_os/main/assets/gamechangers_mark_v042.rgb565a8\" \"${CMAKE_CURRENT_BINARY_DIR}/boot.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/fanfare.wav\""
+        ]
+      },
+      {
+        "path": "components/doom_gamepad_input/CMakeLists.txt",
+        "registrations": [
+          "NAME doom_key_merge_tests COMMAND doom_key_merge_tests",
+          "NAME doom_gamepad_input_tests COMMAND doom_gamepad_input_tests"
+        ]
+      },
+      {
+        "path": "components/doom_gamepad_input/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME doom_gamepad_input COMMAND test_doom_gamepad_input"
+        ]
+      },
+      {
+        "path": "components/doom_multiplayer/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME doom_multiplayer_tests COMMAND doom_multiplayer_tests",
+          "NAME doom_arena_tests COMMAND doom_arena_tests",
+          "NAME doom_lockstep_tests COMMAND doom_lockstep_tests",
+          "NAME doom_gc_adapter_tests COMMAND doom_gc_adapter_tests"
+        ]
+      },
+      {
+        "path": "components/doom_touch_input/CMakeLists.txt",
+        "registrations": [
+          "NAME doom_touch_input_tests COMMAND doom_touch_input_tests",
+          "NAME doom_touch_input_waveshare_tests COMMAND doom_touch_input_waveshare_tests"
+        ]
+      },
+      {
+        "path": "components/doom_touch_input/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME doom_touch_input COMMAND test_doom_touch_input"
+        ]
+      },
+      {
+        "path": "components/doom_video/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME doom_video_tests COMMAND doom_video_tests",
+          "NAME doom_pinned_rgb565_tests COMMAND doom_pinned_rgb565_tests"
+        ]
+      },
+      {
+        "path": "components/gamepad_core/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME gamepad_core_tests COMMAND gamepad_core_tests",
+          "NAME xusb_core_tests COMMAND xusb_core_tests"
+        ]
+      },
+      {
+        "path": "components/p4_ansi/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_ansi_tests COMMAND p4_ansi_tests"
+        ]
+      },
+      {
+        "path": "components/p4_bbs/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_bbs_tests COMMAND p4_bbs_tests"
+        ]
+      },
+      {
+        "path": "components/p4_ble_radio_handoff/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_ble_radio_handoff_tests COMMAND p4_ble_radio_handoff_tests"
+        ]
+      },
+      {
+        "path": "components/p4_desktop/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_desktop_tests COMMAND p4_desktop_tests"
+        ]
+      },
+      {
+        "path": "components/p4_frame_scheduler/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_frame_scheduler COMMAND p4_frame_scheduler_tests"
+        ]
+      },
+      {
+        "path": "components/p4_game_api/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_game_api_tests COMMAND p4_game_api_tests",
+          "NAME p4_game_api_waveshare_tests COMMAND p4_game_api_waveshare_tests",
+          "NAME ${target} COMMAND ${target}",
+          "NAME p4_presentation_tests COMMAND p4_presentation_tests",
+          "NAME p4_raster_equivalence_tests COMMAND p4_raster_equivalence_tests",
+          "NAME p4_mesh_tests COMMAND p4_mesh_tests"
+        ]
+      },
+      {
+        "path": "components/p4_game_package/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_game_package COMMAND test_p4_game_package"
+        ]
+      },
+      {
+        "path": "components/p4_game_platform/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_game_platform_tests COMMAND p4_game_platform_tests",
+          "NAME p4_game_audio_worker_tests COMMAND p4_game_audio_worker_tests"
+        ]
+      },
+      {
+        "path": "components/p4_game_save/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_game_save_tests COMMAND p4_game_save_tests"
+        ]
+      },
+      {
+        "path": "components/p4_midi/CMakeLists.txt",
+        "registrations": [
+          "NAME midi COMMAND test_midi"
+        ]
+      },
+      {
+        "path": "components/p4_multiplayer/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_multiplayer_tests COMMAND p4_multiplayer_tests",
+          "NAME p4_dice_tests COMMAND p4_dice_tests",
+          "NAME multiplayer_group COMMAND test_group"
+        ]
+      },
+      {
+        "path": "components/p4_multiplayer_registry/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_multiplayer_registry_tests COMMAND p4_multiplayer_registry_tests"
+        ]
+      },
+      {
+        "path": "components/p4_os_update_package/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_os_update_package COMMAND test_p4_os_update_package",
+          "NAME p4_os_update_tab5_board_binding COMMAND test_p4_os_update_tab5"
+        ]
+      },
+      {
+        "path": "components/p4_signal_scan/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_signal_scan_tests COMMAND p4_signal_scan_tests"
+        ]
+      },
+      {
+        "path": "components/p4_usb_content_transfer/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME h1_usb_drive_control COMMAND test_h1_usb_drive_control",
+          "NAME usb_clock_control COMMAND test_clock_control",
+          "NAME file_transfer_native_only COMMAND test_file_transfer_native_only"
+        ]
+      },
+      {
+        "path": "components/platform_audio/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_audio_policy_tests COMMAND platform_audio_policy_tests",
+          "NAME platform_audio_runtime_tests COMMAND platform_audio_runtime_tests"
+        ]
+      },
+      {
+        "path": "components/platform_audio_es8311/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_audio_es8311_policy_tests COMMAND platform_audio_es8311_policy_tests",
+          "NAME platform_audio_es8311_waveshare_policy_tests COMMAND platform_audio_es8311_waveshare_policy_tests"
+        ]
+      },
+      {
+        "path": "components/platform_audio_factory/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_audio_factory_policy_tests COMMAND platform_audio_factory_policy_tests",
+          "NAME platform_audio_factory_runtime_tests COMMAND platform_audio_factory_runtime_tests"
+        ]
+      },
+      {
+        "path": "components/platform_battery/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_battery_math COMMAND test_platform_battery"
+        ]
+      },
+      {
+        "path": "components/platform_board/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_board_descriptor COMMAND test_platform_board",
+          "NAME platform_board_olimex_descriptor COMMAND test_platform_board_olimex",
+          "NAME platform_board_waveshare_descriptor COMMAND test_platform_board_waveshare",
+          "NAME platform_board_tab5_descriptor COMMAND test_platform_board_tab5"
+        ]
+      },
+      {
+        "path": "components/platform_console_settings/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME console_settings_tests COMMAND console_settings_tests"
+        ]
+      },
+      {
+        "path": "components/platform_display/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_display_layout_tests COMMAND platform_display_layout_tests",
+          "NAME platform_display_layout_waveshare_tests COMMAND platform_display_layout_waveshare_tests",
+          "NAME platform_display_layout_tab5_tests COMMAND platform_display_layout_tab5_tests",
+          "NAME platform_display_tab5_queue_tests COMMAND platform_display_tab5_queue_tests"
+        ]
+      },
+      {
+        "path": "components/platform_game_storage/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_game_storage_model COMMAND test_platform_game_storage_model",
+          "NAME platform_game_storage_files COMMAND test_platform_game_storage_files",
+          "NAME platform_game_storage_msc_write_policy COMMAND test_platform_game_storage_msc_write_policy",
+          "NAME verified_reader COMMAND test_verified_reader",
+          "NAME verified_wad COMMAND test_verified_wad",
+          "NAME arena_vfs COMMAND test_arena_vfs"
+        ]
+      },
+      {
+        "path": "components/platform_gamepad_usb/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_gamepad_model_tests COMMAND platform_gamepad_model_tests"
+        ]
+      },
+      {
+        "path": "components/platform_gamepad_xusb/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME xusb_lifecycle_tests COMMAND xusb_lifecycle_tests",
+          "NAME xusb_broker_tests COMMAND xusb_broker_tests"
+        ]
+      },
+      {
+        "path": "components/platform_i2c_shared/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_i2c_shared COMMAND platform_i2c_shared_tests",
+          "NAME platform_i2c_shared_tab5 COMMAND platform_i2c_shared_tab5_tests"
+        ]
+      },
+      {
+        "path": "components/platform_multiplayer_wifi/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME standalone_wifi COMMAND wifi_test"
+        ]
+      },
+      {
+        "path": "components/platform_readonly_blob/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_readonly_blob_tests COMMAND platform_readonly_blob_tests"
+        ]
+      },
+      {
+        "path": "components/platform_save_seal/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_save_seal COMMAND test_platform_save_seal"
+        ]
+      },
+      {
+        "path": "components/platform_storage/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_storage_wad_tests COMMAND platform_storage_wad_tests"
+        ]
+      },
+      {
+        "path": "components/platform_tab5/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME tab5_speaker_readback COMMAND tab5_speaker_test",
+          "NAME tab5_sensor_decode COMMAND tab5_sensor_test",
+          "NAME tab5_startup_retry COMMAND tab5_speaker_test retry",
+          "NAME tab5_startup_recreate COMMAND tab5_speaker_test recreate",
+          "NAME tab5_startup_bounded COMMAND tab5_speaker_test bounded",
+          "NAME tab5_rtc_clock COMMAND tab5_rtc_clock_test",
+          "NAME tab5_sensor_service COMMAND tab5_sensor_service_test",
+          "NAME tab5_charger_control COMMAND tab5_charger_test",
+          "NAME tab5_charger_api COMMAND tab5_speaker_test charger",
+          "NAME tab5_sensor_service_charger_disabled COMMAND tab5_sensor_service_no_charger_test",
+          "NAME tab5_radio_power COMMAND tab5_radio_power_test",
+          "NAME tab5_game_motion_freshness COMMAND tab5_game_motion_test"
+        ]
+      },
+      {
+        "path": "components/platform_tab5/tests/usb_power/CMakeLists.txt",
+        "registrations": [
+          "NAME tab5_usb_power_tests COMMAND tab5_usb_power_tests"
+        ]
+      },
+      {
+        "path": "components/platform_touch/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_touch_frame_tests COMMAND platform_touch_frame_tests",
+          "NAME platform_touch_frame_waveshare_tests COMMAND platform_touch_frame_waveshare_tests",
+          "NAME platform_touch_runtime_tests COMMAND platform_touch_runtime_tests",
+          "NAME platform_touch_frame_tab5_tests COMMAND platform_touch_frame_tab5_tests",
+          "NAME platform_touch_tab5_runtime_tests COMMAND platform_touch_tab5_runtime_tests"
+        ]
+      },
+      {
+        "path": "components/platform_usb_host/CMakeLists.txt",
+        "registrations": [
+          "NAME platform_usb_host_tests COMMAND platform_usb_host_tests"
+        ]
+      },
+      {
+        "path": "games/blast_circuit/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME blast_circuit_tests COMMAND blast_circuit_tests",
+          "NAME blast_circuit_features COMMAND blast_circuit_features",
+          "NAME blast_circuit_music COMMAND blast_circuit_music"
+        ]
+      },
+      {
+        "path": "games/byte_buddy/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME byte_buddy_tests COMMAND byte_buddy_tests",
+          "NAME byte_buddy_save_tests COMMAND byte_buddy_save_tests",
+          "NAME byte_buddy_touch_preview_smoke COMMAND byte_buddy_touch_previews \"${BYTE_BUDDY_TEST_ART_PATH}\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-egg.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-hatch.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-power.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-style.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-custom.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-flying.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-elemental.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-play.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-signals.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-track.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-battle.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-training.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-training-track.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-training-battle.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-genome.ppm\"",
+          "NAME byte_buddy_animation_preview_smoke COMMAND byte_buddy_touch_previews \"${BYTE_BUDDY_TEST_ART_PATH}\" --animation \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-animation\" 178",
+          "NAME byte_buddy_signal_motion_preview_smoke COMMAND byte_buddy_touch_previews \"${BYTE_BUDDY_TEST_ART_PATH}\" --signal-motion - # Need-qualified Feed/Clean/Rest/Pet seeding fixes this motion budget. 955",
+          "NAME byte_buddy_authored_motion_preview_smoke COMMAND byte_buddy_touch_previews \"${BYTE_BUDDY_TEST_ART_PATH}\" --authored-motion - 112",
+          "NAME byte_buddy_completion_motion_preview_smoke COMMAND byte_buddy_touch_previews \"${BYTE_BUDDY_TEST_ART_PATH}\" --completion-motion - 192",
+          "NAME byte_buddy_runtime_completion_motion_preview_smoke COMMAND byte_buddy_touch_previews \"${BYTE_BUDDY_TEST_ART_PATH}\" --runtime-completion-motion - 180",
+          "NAME byte_buddy_native_preview_smoke COMMAND byte_buddy_touch_previews \"${BYTE_BUDDY_TEST_ART_PATH}\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-egg.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-hatch.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-power.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-style.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-custom.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-flying.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-elemental.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-play.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-signals.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-track.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-battle.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-training.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-training-track.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-training-battle.ppm\" \"${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-genome.ppm\""
+        ]
+      },
+      {
+        "path": "games/calculator/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME calculator_tests COMMAND test_calculator"
+        ]
+      },
+      {
+        "path": "games/checkers/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME checkers_tests COMMAND checkers_tests",
+          "NAME checkers_presentation_tests COMMAND checkers_presentation_tests"
+        ]
+      },
+      {
+        "path": "games/color_clash/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME color_clash_tests COMMAND color_clash_tests",
+          "NAME color_clash_presentation_tests COMMAND color_clash_presentation_tests",
+          "NAME color_clash_touch_drag_tests COMMAND color_clash_touch_drag_tests"
+        ]
+      },
+      {
+        "path": "games/frog_hop/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME frog_hop_tests COMMAND frog_hop_tests"
+        ]
+      },
+      {
+        "path": "games/lord/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME lord_tests COMMAND lord_tests",
+          "NAME lord_presentation_tests COMMAND lord_presentation_tests",
+          "NAME lord_trace_tests COMMAND lord_trace_tests"
+        ]
+      },
+      {
+        "path": "games/maze_chase/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME maze_chase_tests COMMAND maze_chase_tests",
+          "NAME maze_chase_touch_pipeline_tests COMMAND maze_chase_touch_pipeline_tests",
+          "NAME maze_chase_backdrop_tests COMMAND maze_chase_backdrop_tests"
+        ]
+      },
+      {
+        "path": "games/p4_air_hockey/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_air_hockey_tests COMMAND p4_air_hockey_tests",
+          "NAME p4_air_hockey_presentation_tests COMMAND p4_air_hockey_presentation_tests"
+        ]
+      },
+      {
+        "path": "games/p4_rummy/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_rummy_tests COMMAND p4_rummy_tests",
+          "NAME p4_rummy_presentation_tests COMMAND p4_rummy_presentation_tests",
+          "NAME p4_rummy_touch_drag_tests COMMAND p4_rummy_touch_drag_tests"
+        ]
+      },
+      {
+        "path": "games/p4_yahtzee/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_yahtzee_tests COMMAND p4_yahtzee_tests",
+          "NAME p4_yahtzee_presentation_tests COMMAND p4_yahtzee_presentation_tests"
+        ]
+      },
+      {
+        "path": "games/skyline_leap/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME skyline_leap_tests COMMAND skyline_leap_tests"
+        ]
+      },
+      {
+        "path": "games/solitaire/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME solitaire_tests COMMAND solitaire_tests",
+          "NAME solitaire_presentation_tests COMMAND solitaire_presentation_tests"
+        ]
+      },
+      {
+        "path": "games/space_invaders/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME space_invaders_tests COMMAND space_invaders_tests"
+        ]
+      },
+      {
+        "path": "games/texas_holdem/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME texas_holdem_tests COMMAND texas_holdem_tests",
+          "NAME texas_holdem_presentation_tests COMMAND texas_holdem_presentation_tests"
+        ]
+      },
+      {
+        "path": "games/tide_maze/tests/CMakeLists.txt",
+        "registrations": [
+          "NAME tide_maze_rules_motion_water_network COMMAND tide_maze_tests",
+          "NAME tide_maze_stress_${part} COMMAND tide_maze_stress_tests ${part}",
+          "NAME tide_maze_original_render_pixels COMMAND tide_maze_render_tests",
+          "NAME tide_maze_tilt_latency COMMAND tide_maze_latency_tests"
+        ]
+      },
+      {
+        "path": "ports/quake/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_quake_host_usage COMMAND p4_quake_host --help",
+          "NAME p4_quake_host_smoke COMMAND p4_quake_host --headless --no-audio --frames 8"
+        ]
+      },
+      {
+        "path": "scripts/wacky/CMakeLists.txt",
+        "registrations": [
+          "NAME wacky_touch_checks COMMAND wacky_touch_checks",
+          "NAME wacky_play_smoke COMMAND wacky_play --frames 240",
+          "NAME wacky_port_checks COMMAND wacky_checks",
+          "NAME wacky_network_checks COMMAND wacky_network_checks",
+          "NAME wacky_full_checks COMMAND wacky_full_checks",
+          "NAME wacky_four_checks COMMAND wacky_four_checks",
+          "NAME wacky_${count}_players_course_${seed} COMMAND wacky_four_checks ${count} ${seed}"
+        ]
+      },
+      {
+        "path": "tools/p4-console-host/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_console_host_smoke COMMAND p4_console_host --frames 8"
+        ]
+      },
+      {
+        "path": "tools/p4-game-host/CMakeLists.txt",
+        "registrations": [
+          "NAME p4_game_host_smoke COMMAND p4_game_host --frames 8",
+          "NAME p4_host_audio_timing COMMAND p4_host_audio_timing_tests",
+          "NAME p4_host_exit_status COMMAND p4_host_exit_status_tests",
+          "NAME p4_host_mouse_events COMMAND p4_host_mouse_events_tests"
+        ]
+      }
+    ],
+    "runners": [
+      "Makefile",
+      "scripts/check.sh",
+      "scripts/test-dice-core2-feedback.sh",
+      "scripts/doom/build-host.sh",
+      "scripts/doom/smoke-host.sh"
+    ],
+    "instruction_files": [
+      "AGENTS.md",
+      "README.md",
+      ".agents/skills/README.md",
+      ".agents/skills/add-usb-gamepad-support/SKILL.md",
+      ".agents/skills/add-usb-gamepad-support/references/acceptance.md",
+      ".agents/skills/add-usb-gamepad-support/references/architecture.md",
+      ".agents/skills/create-p4-game-art/SKILL.md",
+      ".agents/skills/develop-esp32-p4-platform/SKILL.md",
+      ".agents/skills/develop-esp32-p4-platform/references/elecrow-10-in-variant.md",
+      ".agents/skills/develop-esp32-p4-platform/references/hardware-safety.md",
+      ".agents/skills/develop-esp32-p4-platform/references/workflow.md",
+      ".agents/skills/develop-p4-console-games/SKILL.md",
+      ".agents/skills/develop-p4-games/SKILL.md",
+      ".agents/skills/develop-p4-multiplayer-games/SKILL.md",
+      ".agents/skills/develop-waveshare-p4-4-3/SKILL.md",
+      ".agents/skills/installos/SKILL.md",
+      ".agents/skills/installos/references/tab5-storage.md",
+      ".agents/skills/test-console-os-builds/SKILL.md",
+      ".agents/skills/test-console-os-builds/references/current-unit.md",
+      ".agents/skills/test-p4-games-locally/SKILL.md",
+      ".agents/skills/use-elecrow-p4-audio/SKILL.md",
+      ".agents/skills/use-elecrow-p4-audio/references/factory-audio-contract.md",
+      ".agents/skills/use-elecrow-p4-display/SKILL.md",
+      ".agents/skills/use-elecrow-p4-display/references/display-contract.md",
+      ".agents/skills/use-waveshare-p4-4-3-audio/SKILL.md",
+      ".agents/skills/use-waveshare-p4-4-3-display/SKILL.md",
+      "docs/ARCHITECTURE.md",
+      "docs/AUDIO.md",
+      "docs/BBS.md",
+      "docs/BOARD_PORTING.md",
+      "docs/CONSOLE_OS.md",
+      "docs/CONTENT_LIBRARY.md",
+      "docs/CONTROLLERS.md",
+      "docs/DESKTOP_OS.md",
+      "docs/DICE_ACCESSORY.md",
+      "docs/DOOM.md",
+      "docs/DOOM_MUSIC_TEST.md",
+      "docs/GAME_ART.md",
+      "docs/GAME_CHANGERS_AI_DOOM.md",
+      "docs/GAME_LIBRARY.md",
+      "docs/GAME_MANAGER.md",
+      "docs/GAME_PERFORMANCE.md",
+      "docs/GAME_SDK.md",
+      "docs/GAME_STARTERS.md",
+      "docs/H1_USB_DRIVE_CONTROL.md",
+      "docs/HARDWARE.md",
+      "docs/INITIAL_LAUNCH.md",
+      "docs/LAUNCH_QUALITY.md",
+      "docs/LORD_OFFLINE_SECURITY.md",
+      "docs/LORD_REALM_FLASH_TEST.md",
+      "docs/LORD_REALM_HUB.md",
+      "docs/MULTIPLAYER.md",
+      "docs/REPOSITORY_CLEANUP_2026_10_06.md",
+      "docs/REPOSITORY_CLEANUP_2026_10_06_1F75.md",
+      "docs/ROADMAP.md",
+      "docs/WAVESHARE_P4_WIFI6_TOUCH_LCD_4_3_PORT.md",
+      "docs/boards/M5STACK_TAB5.md",
+      "docs/boards/OLIMEX_ESP32_P4_PC.md"
+    ],
+    "source_reference_check": {
+      "literal_references": 293,
+      "missing": [],
+      "generated_inputs": [
+        {
+          "cmake": "scripts/wacky/CMakeLists.txt",
+          "source": "${PORT}/port.c"
+        },
+        {
+          "cmake": "scripts/wacky/CMakeLists.txt",
+          "source": "${PORT}/network.c"
+        },
+        {
+          "cmake": "scripts/wacky/CMakeLists.txt",
+          "source": "${PORT}/port_support.c"
+        },
+        {
+          "cmake": "scripts/wacky/CMakeLists.txt",
+          "source": "${PORT}/portable_libc.c"
+        },
+        {
+          "cmake": "scripts/wacky/CMakeLists.txt",
+          "source": "${PORT}/sound.c"
+        },
+        {
+          "cmake": "scripts/wacky/CMakeLists.txt",
+          "source": "${PORT}/front.c"
+        },
+        {
+          "cmake": "scripts/wacky/CMakeLists.txt",
+          "source": "${PORT}/controls.c"
+        }
+      ],
+      "note": "Literal-reference scan is supplemental; registration and dynamic import consumers were reviewed separately."
+    },
+    "instruction_files_with_test_guidance": [
+      "AGENTS.md",
+      "README.md",
+      ".agents/skills/README.md",
+      ".agents/skills/add-usb-gamepad-support/SKILL.md",
+      ".agents/skills/add-usb-gamepad-support/references/acceptance.md",
+      ".agents/skills/add-usb-gamepad-support/references/architecture.md",
+      ".agents/skills/create-p4-game-art/SKILL.md",
+      ".agents/skills/develop-esp32-p4-platform/SKILL.md",
+      ".agents/skills/develop-esp32-p4-platform/references/elecrow-10-in-variant.md",
+      ".agents/skills/develop-esp32-p4-platform/references/hardware-safety.md",
+      ".agents/skills/develop-esp32-p4-platform/references/workflow.md",
+      ".agents/skills/develop-p4-console-games/SKILL.md",
+      ".agents/skills/develop-p4-games/SKILL.md",
+      ".agents/skills/develop-p4-multiplayer-games/SKILL.md",
+      ".agents/skills/develop-waveshare-p4-4-3/SKILL.md",
+      ".agents/skills/installos/SKILL.md",
+      ".agents/skills/installos/references/tab5-storage.md",
+      ".agents/skills/test-console-os-builds/SKILL.md",
+      ".agents/skills/test-console-os-builds/references/current-unit.md",
+      ".agents/skills/test-p4-games-locally/SKILL.md",
+      ".agents/skills/use-elecrow-p4-audio/SKILL.md",
+      ".agents/skills/use-elecrow-p4-audio/references/factory-audio-contract.md",
+      ".agents/skills/use-elecrow-p4-display/SKILL.md",
+      ".agents/skills/use-elecrow-p4-display/references/display-contract.md",
+      ".agents/skills/use-waveshare-p4-4-3-audio/SKILL.md",
+      ".agents/skills/use-waveshare-p4-4-3-display/SKILL.md",
+      "docs/ARCHITECTURE.md",
+      "docs/AUDIO.md",
+      "docs/BBS.md",
+      "docs/BOARD_PORTING.md",
+      "docs/CONSOLE_OS.md",
+      "docs/CONTENT_LIBRARY.md",
+      "docs/CONTROLLERS.md",
+      "docs/DESKTOP_OS.md",
+      "docs/DICE_ACCESSORY.md",
+      "docs/DOOM.md",
+      "docs/DOOM_MUSIC_TEST.md",
+      "docs/GAME_ART.md",
+      "docs/GAME_CHANGERS_AI_DOOM.md",
+      "docs/GAME_LIBRARY.md",
+      "docs/GAME_MANAGER.md",
+      "docs/GAME_PERFORMANCE.md",
+      "docs/GAME_SDK.md",
+      "docs/GAME_STARTERS.md",
+      "docs/H1_USB_DRIVE_CONTROL.md",
+      "docs/HARDWARE.md",
+      "docs/INITIAL_LAUNCH.md",
+      "docs/LAUNCH_QUALITY.md",
+      "docs/LORD_OFFLINE_SECURITY.md",
+      "docs/LORD_REALM_FLASH_TEST.md",
+      "docs/LORD_REALM_HUB.md",
+      "docs/MULTIPLAYER.md",
+      "docs/REPOSITORY_CLEANUP_2026_10_06.md",
+      "docs/REPOSITORY_CLEANUP_2026_10_06_1F75.md",
+      "docs/ROADMAP.md",
+      "docs/WAVESHARE_P4_WIFI6_TOUCH_LCD_4_3_PORT.md",
+      "docs/boards/M5STACK_TAB5.md",
+      "docs/boards/OLIMEX_ESP32_P4_PC.md"
+    ],
+    "script_import_and_cli_paths": [
+      {
+        "path": "scripts/tests/test-arena-content.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/doom/arena-content.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-board-port.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/board-port.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-capture-waveshare-console-os-scroll-boundary.py",
+        "disposition": "removed",
+        "existing_subject_and_support_files": []
+      },
+      {
+        "path": "scripts/tests/test-console-os-file-manager-install.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/console-os-file-manager-install.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-console-os-game-manager-migrate.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/console-os-game-manager-migrate.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-console-os-game-manager-runtime-capture.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/capture-console-os-game-manager-runtime.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-console-os-runtime-capture.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/capture-console-os-runtime.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-console-os-usb-install.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/console-os-usb-install.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-console-os-usb-runtime-capture.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/capture-console-os-usb-runtime.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-d23-capture-transport.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/analyze-audio-tone.py",
+          "scripts/capture-audio-direct-diag.py",
+          "scripts/d23_capture_transport.py",
+          "scripts/flash.sh",
+          "scripts/verify-audio-direct-diag.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-d24-gate.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/analyze-audio-level-tone.py",
+          "scripts/capture-audio-level-diag.py",
+          "scripts/d24_capture_transport.py",
+          "scripts/flash-audio-level-diag.sh",
+          "scripts/verify-audio-level-diag.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-doom-e3-install-gate.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/doom-e3-one-shot-state.py",
+          "scripts/flash.sh",
+          "scripts/verify-doom-embedded-gamepad.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-doom-e5-gate.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/flash.sh",
+          "scripts/verify-doom-embedded-touch-audio.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-doom-e5-install.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/doom-e5-install.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-doom-e5-runtime-capture.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/capture-doom-e5-runtime.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-doom-e6-authorized-route.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/doom-e6-authorized-route.py",
+          "scripts/doom-e6-install.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-doom-e6-install.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/capture-doom-e6-runtime.py",
+          "scripts/doom-e5-install.py",
+          "scripts/doom-e6-install.py",
+          "scripts/gamepad-diag-restore.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-doom-e6-runtime-capture.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/capture-doom-e6-runtime.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-doom-source-tree.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/doom/verify-source-tree.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-espressif-usb-ext-port-overlay.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/generate-espressif-usb-ext-port-overlay.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-espressif-usb-hcd-fsls-overlay.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/generate-espressif-usb-hcd-fsls-overlay.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-game-registry.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/generate-game-registry.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-game-resource.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/build-game-resource.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-gamepad-diag-flash-route.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/flash.sh"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-gamepad-diag-gate.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/flash.sh",
+          "scripts/gamepad-diag-capture.py",
+          "scripts/gamepad-diag-install.py",
+          "scripts/gamepad-diag-one-shot-state.py",
+          "scripts/gamepad-diag-restore.py",
+          "scripts/tests/test-gamepad-diag-install.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-gamepad-diag-install.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/gamepad-diag-install.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-gamepad-diag-restore.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/gamepad-diag-restore.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-gamepad-diag-state-contract.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/gamepad-diag-one-shot-state.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-native-board-verifiers.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/verify-console-os-olimex.py",
+          "scripts/verify-console-os-waveshare.py",
+          "scripts/verify-console-os.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-native-content-retirement.py",
+        "disposition": "renamed to scripts/tests/test-native-sd-bundle.py; 4 live bundle cases retained",
+        "existing_subject_and_support_files": [
+          "scripts/install-olimex-sd-card.py",
+          "scripts/install-waveshare-console-os-p4cart.sh"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-native-only-sources.py",
+        "disposition": "removed",
+        "existing_subject_and_support_files": []
+      },
+      {
+        "path": "scripts/tests/test-new-game.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/generate-game-registry.py",
+          "scripts/new-game.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-p4-clock.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/p4-transfer.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-p4-content.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/p4-content.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-p4-multiplayer-relay.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/p4-multiplayer-relay.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-p4-transfer-games.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/p4-transfer.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-p4-transfer-usb-drive.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/p4-transfer.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-p4-usb-content-wire.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/p4-usb-content.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-p4cart-seed-registry.py",
+        "disposition": "removed",
+        "existing_subject_and_support_files": []
+      },
+      {
+        "path": "scripts/tests/test-prepare-game-data.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/prepare-game-data.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-protected-game-lineage.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/generate-protected-game-lineage.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-tab5-arena-memory.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/verify-console-os-tab5.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-tab5-build-features.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/verify-console-os-tab5.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-tab5-install.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/flash-console-os-tab5.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-tab5-warm-boot-capture.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/capture-tab5-warm-boot.py"
+        ]
+      },
+      {
+        "path": "scripts/tests/test-waveshare-console-os-capture.py",
+        "disposition": "retained",
+        "existing_subject_and_support_files": [
+          "scripts/capture-waveshare-console-os-0.4.84.py"
+        ]
+      }
+    ],
+    "script_shell_subjects": {
+      "scripts/tests/test-project-env.sh": [
+        "scripts/lib/project-env.sh"
+      ],
+      "scripts/tests/test-app-readback.sh": [
+        "scripts/lib/app-readback.sh",
+        "scripts/tests/fixtures/esptool.py"
+      ],
+      "scripts/test-dice-core2-feedback.sh": [
+        "apps/dice_core2/main/dice_feedback.cpp",
+        "apps/dice_core2/main/dice_cup.cpp",
+        "apps/dice_core2/main/dice_dirty.cpp",
+        "apps/dice_core2/tests"
+      ]
+    }
+  },
+  "script_results": [
+    {
+      "test": "scripts/tests/test-app-readback.sh",
+      "exit_code": 0,
+      "seconds": 0.963,
+      "log": "build-host/obsolete-tests/test-app-readback.sh.log",
+      "output_tail": "application readback tests: PASS chunks=3 max_chunk_bytes=524288 retry=per-chunk fail_closed=true\n"
+    },
+    {
+      "test": "scripts/tests/test-arena-content.py",
+      "exit_code": 0,
+      "seconds": 0.059,
+      "log": "build-host/obsolete-tests/test-arena-content.py.log",
+      "output_tail": ".....\n----------------------------------------------------------------------\nRan 5 tests in 0.006s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-board-port.py",
+      "exit_code": 0,
+      "seconds": 0.159,
+      "log": "build-host/obsolete-tests/test-board-port.py.log",
+      "output_tail": "board port tests passed\n"
+    },
+    {
+      "test": "scripts/tests/test-console-os-file-manager-install.py",
+      "exit_code": 0,
+      "seconds": 0.038,
+      "log": "build-host/obsolete-tests/test-console-os-file-manager-install.py.log",
+      "output_tail": "Console OS File Manager exact app-only contract tests passed\n"
+    },
+    {
+      "test": "scripts/tests/test-console-os-game-manager-runtime-capture.py",
+      "exit_code": 0,
+      "seconds": 0.021,
+      "log": "build-host/obsolete-tests/test-console-os-game-manager-runtime-capture.py.log",
+      "output_tail": "Console OS Game Manager runtime capture tests passed\n"
+    },
+    {
+      "test": "scripts/tests/test-console-os-runtime-capture.py",
+      "exit_code": 0,
+      "seconds": 0.021,
+      "log": "build-host/obsolete-tests/test-console-os-runtime-capture.py.log",
+      "output_tail": "console OS runtime capture tests passed\n"
+    },
+    {
+      "test": "scripts/tests/test-console-os-usb-install.py",
+      "exit_code": 0,
+      "seconds": 0.167,
+      "log": "build-host/obsolete-tests/test-console-os-usb-install.py.log",
+      "output_tail": "Console OS USB installer transaction tests passed\n"
+    },
+    {
+      "test": "scripts/tests/test-console-os-usb-runtime-capture.py",
+      "exit_code": 0,
+      "seconds": 0.021,
+      "log": "build-host/obsolete-tests/test-console-os-usb-runtime-capture.py.log",
+      "output_tail": "Console OS USB runtime capture tests passed\n"
+    },
+    {
+      "test": "scripts/tests/test-d23-capture-transport.py",
+      "exit_code": 0,
+      "seconds": 0.045,
+      "log": "build-host/obsolete-tests/test-d23-capture-transport.py.log",
+      "output_tail": "D2.3 authorization reserved: /private/tmp/tmp6o_hl73k/reservation.json\nD2.3 capture transport tests: PASS same_handle=1 receipt_atomic=1 one_shot=1\n"
+    },
+    {
+      "test": "scripts/tests/test-d24-gate.py",
+      "exit_code": 0,
+      "seconds": 1.574,
+      "log": "build-host/obsolete-tests/test-d24-gate.py.log",
+      "output_tail": "D2.4 authorization reserved: /private/tmp/tmp77iziaoy/state.json\nD2.4 gate tests: PASS receipt_one_shot=1 same_handle=1 wav_bound=1 clipping_rejected=1 analyzer_no_clobber=1 direct_run=0\n"
+    },
+    {
+      "test": "scripts/tests/test-doom-e3-install-gate.py",
+      "exit_code": 0,
+      "seconds": 0.031,
+      "log": "build-host/obsolete-tests/test-doom-e3-install-gate.py.log",
+      "output_tail": "E3 install gate adversarial tests PASS\n"
+    },
+    {
+      "test": "scripts/tests/test-doom-e5-gate.py",
+      "exit_code": 0,
+      "seconds": 0.144,
+      "log": "build-host/obsolete-tests/test-doom-e5-gate.py.log",
+      "output_tail": "E5 historical evidence/current closed flash gate tests: PASS\n"
+    },
+    {
+      "test": "scripts/tests/test-doom-e5-install.py",
+      "exit_code": 0,
+      "seconds": 0.072,
+      "log": "build-host/obsolete-tests/test-doom-e5-install.py.log",
+      "output_tail": "cal=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=write-boundary raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\n..P4_DOOM_E5 FLASH_DENSITY stage=post-stub-initial-rdid raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=post-66-99-final-rdid raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=prewrite-policy raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=write-boundary raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\n..P4_DOOM_E5 FLASH_DENSITY stage=post-stub-initial-rdid raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=post-66-99-final-rdid raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=prewrite-policy raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=write-boundary raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=prelaunch raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\n.P4_DOOM_E5 FLASH_DENSITY stage=post-stub-initial-rdid raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=post-66-99-final-rdid raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=prewrite-policy raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\n.P4_DOOM_E5 FLASH_DENSITY stage=post-stub-initial-rdid raw=0x001840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\n.\n----------------------------------------------------------------------\nRan 18 tests in 0.033s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-doom-e5-runtime-capture.py",
+      "exit_code": 0,
+      "seconds": 0.025,
+      "log": "build-host/obsolete-tests/test-doom-e5-runtime-capture.py.log",
+      "output_tail": "E5 receive-only runtime capture adversarial tests PASS\n"
+    },
+    {
+      "test": "scripts/tests/test-doom-e6-authorized-route.py",
+      "exit_code": 0,
+      "seconds": 0.02,
+      "log": "build-host/obsolete-tests/test-doom-e6-authorized-route.py.log",
+      "output_tail": "E6 acyclic authorized-route tests PASS\n"
+    },
+    {
+      "test": "scripts/tests/test-doom-e6-install.py",
+      "exit_code": 0,
+      "seconds": 0.138,
+      "log": "build-host/obsolete-tests/test-doom-e6-install.py.log",
+      "output_tail": "ash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=post-stub-initial-rdid raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=post-66-99-final-rdid raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\n...P4_DOOM_E5 FLASH_DENSITY stage=post-stub-initial-rdid raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=post-66-99-final-rdid raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=e5-restore-write-boundary raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=e5-restore-prelaunch raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\n..P4_DOOM_E5 FLASH_DENSITY stage=post-stub-initial-rdid raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=post-66-99-final-rdid raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=e6-write-boundary raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=e6-prelaunch raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\n.P4_DOOM_E5 FLASH_DENSITY stage=post-stub-initial-rdid raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=post-66-99-final-rdid raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=e6-write-boundary raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\nP4_DOOM_E5 FLASH_DENSITY stage=e6-prelaunch raw=0xff1840c8 canonical=0x1840c8 size_id=0x18 flash_bytes=16777216\n.\n----------------------------------------------------------------------\nRan 22 tests in 0.078s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-doom-e6-runtime-capture.py",
+      "exit_code": 0,
+      "seconds": 0.07,
+      "log": "build-host/obsolete-tests/test-doom-e6-runtime-capture.py.log",
+      "output_tail": "E6 retained-UART runtime capture adversarial tests PASS\n"
+    },
+    {
+      "test": "scripts/tests/test-doom-source-tree.py",
+      "exit_code": 0,
+      "seconds": 0.114,
+      "log": "build-host/obsolete-tests/test-doom-source-tree.py.log",
+      "output_tail": "..........\n----------------------------------------------------------------------\nRan 10 tests in 0.084s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-espressif-usb-ext-port-overlay.py",
+      "exit_code": 0,
+      "seconds": 0.029,
+      "log": "build-host/obsolete-tests/test-espressif-usb-ext-port-overlay.py.log",
+      "output_tail": "......\n----------------------------------------------------------------------\nRan 6 tests in 0.001s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-espressif-usb-hcd-fsls-overlay.py",
+      "exit_code": 0,
+      "seconds": 0.068,
+      "log": "build-host/obsolete-tests/test-espressif-usb-hcd-fsls-overlay.py.log",
+      "output_tail": "......\n----------------------------------------------------------------------\nRan 6 tests in 0.038s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-game-registry.py",
+      "exit_code": 0,
+      "seconds": 1.033,
+      "log": "build-host/obsolete-tests/test-game-registry.py.log",
+      "output_tail": "game registry tests passed\n"
+    },
+    {
+      "test": "scripts/tests/test-game-resource.py",
+      "exit_code": 0,
+      "seconds": 0.092,
+      "log": "build-host/obsolete-tests/test-game-resource.py.log",
+      "output_tail": "game resource builder tests passed\n"
+    },
+    {
+      "test": "scripts/tests/test-gamepad-diag-flash-route.py",
+      "exit_code": 0,
+      "seconds": 0.236,
+      "log": "build-host/obsolete-tests/test-gamepad-diag-flash-route.py.log",
+      "output_tail": "..........\n----------------------------------------------------------------------\nRan 10 tests in 0.209s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-gamepad-diag-gate.py",
+      "exit_code": 0,
+      "seconds": 0.098,
+      "log": "build-host/obsolete-tests/test-gamepad-diag-gate.py.log",
+      "output_tail": "......................................\n----------------------------------------------------------------------\nRan 38 tests in 0.032s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-gamepad-diag-install.py",
+      "exit_code": 0,
+      "seconds": 0.088,
+      "log": "build-host/obsolete-tests/test-gamepad-diag-install.py.log",
+      "output_tail": ".........\n----------------------------------------------------------------------\nRan 9 tests in 0.026s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-gamepad-diag-restore.py",
+      "exit_code": 0,
+      "seconds": 0.042,
+      "log": "build-host/obsolete-tests/test-gamepad-diag-restore.py.log",
+      "output_tail": "gamepad diagnostic restore tests: PASS\n"
+    },
+    {
+      "test": "scripts/tests/test-gamepad-diag-state-contract.py",
+      "exit_code": 0,
+      "seconds": 0.038,
+      "log": "build-host/obsolete-tests/test-gamepad-diag-state-contract.py.log",
+      "output_tail": ".....\n----------------------------------------------------------------------\nRan 5 tests in 0.002s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-native-board-verifiers.py",
+      "exit_code": 0,
+      "seconds": 0.043,
+      "log": "build-host/obsolete-tests/test-native-board-verifiers.py.log",
+      "output_tail": "{\"result\": \"PASS\", \"native_verifier_gate_cases\": 73, \"device_io\": false, \"production_changes\": false}\n"
+    },
+    {
+      "test": "scripts/tests/test-native-sd-bundle.py",
+      "exit_code": 0,
+      "seconds": 0.056,
+      "log": "build-host/obsolete-tests/test-native-sd-bundle.py.log",
+      "output_tail": "....\n----------------------------------------------------------------------\nRan 4 tests in 0.009s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-new-game.py",
+      "exit_code": 0,
+      "seconds": 1.08,
+      "log": "build-host/obsolete-tests/test-new-game.py.log",
+      "output_tail": "new game creator tests passed\n"
+    },
+    {
+      "test": "scripts/tests/test-p4-clock.py",
+      "exit_code": 0,
+      "seconds": 0.051,
+      "log": "build-host/obsolete-tests/test-p4-clock.py.log",
+      "output_tail": ".....\n----------------------------------------------------------------------\nRan 5 tests in 0.002s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-p4-content.py",
+      "exit_code": 0,
+      "seconds": 0.035,
+      "log": "build-host/obsolete-tests/test-p4-content.py.log",
+      "output_tail": ".......\n----------------------------------------------------------------------\nRan 7 tests in 0.005s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-p4-multiplayer-relay.py",
+      "exit_code": 0,
+      "seconds": 0.022,
+      "log": "build-host/obsolete-tests/test-p4-multiplayer-relay.py.log",
+      "output_tail": "p4 multiplayer relay tests PASS\n"
+    },
+    {
+      "test": "scripts/tests/test-p4-transfer-games.py",
+      "exit_code": 0,
+      "seconds": 0.055,
+      "log": "build-host/obsolete-tests/test-p4-transfer-games.py.log",
+      "output_tail": "..........\n----------------------------------------------------------------------\nRan 10 tests in 0.006s\n\nOK\nP4_H1 BUNDLE_PASS files=2 port=fixture\n"
+    },
+    {
+      "test": "scripts/tests/test-p4-transfer-usb-drive.py",
+      "exit_code": 0,
+      "seconds": 0.033,
+      "log": "build-host/obsolete-tests/test-p4-transfer-usb-drive.py.log",
+      "output_tail": "......\n----------------------------------------------------------------------\nRan 6 tests in 0.000s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-p4-usb-content-wire.py",
+      "exit_code": 0,
+      "seconds": 0.046,
+      "log": "build-host/obsolete-tests/test-p4-usb-content-wire.py.log",
+      "output_tail": ".......\n----------------------------------------------------------------------\nRan 7 tests in 0.001s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-prepare-game-data.py",
+      "exit_code": 0,
+      "seconds": 0.065,
+      "log": "build-host/obsolete-tests/test-prepare-game-data.py.log",
+      "output_tail": "aPreparationTests.test_chex_requires_explicit_selection_and_sd) ... ok\ntest_concurrent_valid_file_is_preserved (__main__.DataPreparationTests.test_concurrent_valid_file_is_preserved) ... ok\ntest_decompression_bound_prevents_oversized_activation (__main__.DataPreparationTests.test_decompression_bound_prevents_oversized_activation) ... ok\ntest_destination_ignore_failure_precedes_network_or_creation (__main__.DataPreparationTests.test_destination_ignore_failure_precedes_network_or_creation) ... ok\ntest_duplicate_wad_members_are_rejected (__main__.DataPreparationTests.test_duplicate_wad_members_are_rejected) ... ok\ntest_fresh_default_is_verified_and_reused_without_network (__main__.DataPreparationTests.test_fresh_default_is_verified_and_reused_without_network) ... ok\ntest_https_redirect_downgrade_is_rejected (__main__.DataPreparationTests.test_https_redirect_downgrade_is_rejected) ... ok\ntest_local_only_policy_and_paths_are_required (__main__.DataPreparationTests.test_local_only_policy_and_paths_are_required) ... ok\ntest_network_failure_preserves_existing_file (__main__.DataPreparationTests.test_network_failure_preserves_existing_file) ... ok\ntest_pinned_manifest_contract_and_patch_raw_version (__main__.DataPreparationTests.test_pinned_manifest_contract_and_patch_raw_version) ... ok\ntest_symlink_destination_and_parent_are_rejected (__main__.DataPreparationTests.test_symlink_destination_and_parent_are_rejected) ... ok\ntest_transport_bound_prevents_oversized_download (__main__.DataPreparationTests.test_transport_bound_prevents_oversized_download) ... ok\ntest_truncated_gzip_preserves_existing_file (__main__.DataPreparationTests.test_truncated_gzip_preserves_existing_file) ... ok\n\n----------------------------------------------------------------------\nRan 17 tests in 0.014s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-project-env.sh",
+      "exit_code": 0,
+      "seconds": 0.308,
+      "log": "build-host/obsolete-tests/test-project-env.sh.log",
+      "output_tail": "project-env tests: PASS\n"
+    },
+    {
+      "test": "scripts/tests/test-protected-game-lineage.py",
+      "exit_code": 0,
+      "seconds": 0.022,
+      "log": "build-host/obsolete-tests/test-protected-game-lineage.py.log",
+      "output_tail": ""
+    },
+    {
+      "test": "scripts/tests/test-tab5-arena-memory.py",
+      "exit_code": 0,
+      "seconds": 0.03,
+      "log": "build-host/obsolete-tests/test-tab5-arena-memory.py.log",
+      "output_tail": "..\n----------------------------------------------------------------------\nRan 2 tests in 0.000s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-tab5-build-features.py",
+      "exit_code": 0,
+      "seconds": 0.022,
+      "log": "build-host/obsolete-tests/test-tab5-build-features.py.log",
+      "output_tail": "Tab5 USB host feature gates PASS\nTab5 native-only execution gates PASS\n"
+    },
+    {
+      "test": "scripts/tests/test-tab5-install.py",
+      "exit_code": 0,
+      "seconds": 0.03,
+      "log": "build-host/obsolete-tests/test-tab5-install.py.log",
+      "output_tail": ".....\n----------------------------------------------------------------------\nRan 5 tests in 0.000s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-tab5-warm-boot-capture.py",
+      "exit_code": 0,
+      "seconds": 0.045,
+      "log": "build-host/obsolete-tests/test-tab5-warm-boot-capture.py.log",
+      "output_tail": ".....\n----------------------------------------------------------------------\nRan 5 tests in 0.002s\n\nOK\n"
+    },
+    {
+      "test": "scripts/tests/test-waveshare-console-os-capture.py",
+      "exit_code": 0,
+      "seconds": 0.029,
+      "log": "build-host/obsolete-tests/test-waveshare-console-os-capture.py.log",
+      "output_tail": "Waveshare Console OS capture GT911 marker tests passed\n"
+    }
+  ],
+  "make_results": [
+    {
+      "command": [
+        "make",
+        "p4-content-host"
+      ],
+      "exit_code": 0,
+      "seconds": 1.32,
+      "log": "build-host/obsolete-tests/p4-content-host.log",
+      "output_tail": "esp32-p4_2/components/p4_game_package/src/game_resource.c.o\n[2/14] Building C object tests/CMakeFiles/test_clock_control.dir/test_clock_control.c.o\n[3/14] Building C object CMakeFiles/p4_h1_usb_drive_control.dir/src/clock_control.c.o\n[4/14] Building C object tests/CMakeFiles/test_h1_usb_drive_control.dir/test_h1_usb_drive_control.c.o\n[5/14] Building C object tests/CMakeFiles/test_file_transfer_native_only.dir/stubs/sha256.c.o\n[6/14] Building C object CMakeFiles/p4_h1_usb_drive_control.dir/src/h1_usb_drive_control.c.o\n[7/14] Building C object tests/CMakeFiles/test_file_transfer_native_only.dir/test_file_transfer_native_only.c.o\n[8/14] Building C object tests/CMakeFiles/test_file_transfer_native_only.dir/Users/billh/.codex/worktrees/obsolete-tests/esp32-p4_2/components/p4_game_package/src/game_package.c.o\n[9/14] Building C object tests/CMakeFiles/test_file_transfer_native_only.dir/Users/billh/.codex/worktrees/obsolete-tests/esp32-p4_2/components/p4_game_api/src/game_runtime.c.o\n[10/14] Building C object tests/CMakeFiles/test_file_transfer_native_only.dir/__/src/file_transfer.c.o\n[11/14] Linking C static library libp4_h1_usb_drive_control.a\n[12/14] Linking C executable tests/test_file_transfer_native_only\n[13/14] Linking C executable tests/test_h1_usb_drive_control\n[14/14] Linking C executable tests/test_clock_control\nctest --test-dir build-host/p4_usb_content_transfer --output-on-failure\nTest project /Users/billh/.codex/worktrees/obsolete-tests/esp32-p4 2/build-host/p4_usb_content_transfer\n    Start 1: h1_usb_drive_control\n1/3 Test #1: h1_usb_drive_control .............   Passed    0.35 sec\n    Start 2: usb_clock_control\n2/3 Test #2: usb_clock_control ................   Passed    0.25 sec\n    Start 3: file_transfer_native_only\n3/3 Test #3: file_transfer_native_only ........   Passed    0.25 sec\n\n100% tests passed, 0 tests failed out of 3\n\nTotal Test time (real) =   0.86 sec\npython3 scripts/tests/test-p4-content.py\n.......\n----------------------------------------------------------------------\nRan 7 tests in 0.005s\n\nOK\npython3 scripts/tests/test-native-sd-bundle.py\n....\n----------------------------------------------------------------------\nRan 4 tests in 0.009s\n\nOK\n"
+    },
+    {
+      "command": [
+        "make",
+        "p4-game-package-host"
+      ],
+      "exit_code": 0,
+      "seconds": 0.694,
+      "log": "build-host/obsolete-tests/p4-game-package-host.log",
+      "output_tail": "e -S components/p4_game_package -B build-host/p4_game_package -G Ninja\n-- The C compiler identification is AppleClang 21.0.0.21000099\n-- Detecting C compiler ABI info\n-- Detecting C compiler ABI info - done\n-- Check for working C compiler: /usr/bin/cc - skipped\n-- Detecting C compile features\n-- Detecting C compile features - done\n-- Configuring done (0.2s)\n-- Generating done (0.0s)\n-- Build files have been written to: /Users/billh/.codex/worktrees/obsolete-tests/esp32-p4 2/build-host/p4_game_package\ncmake --build build-host/p4_game_package\n[1/17] Building C object p4_game_api/p4_cp437/CMakeFiles/p4_cp437.dir/src/cp437.c.o\n[2/17] Building C object p4_game_api/CMakeFiles/p4_game_api.dir/src/achievements.c.o\n[3/17] Building C object p4_game_api/CMakeFiles/p4_game_api.dir/src/presentation_font.c.o\n[4/17] Building C object CMakeFiles/p4_game_package.dir/src/game_resource.c.o\n[5/17] Building C object p4_game_api/CMakeFiles/p4_game_api.dir/src/visual.c.o\n[6/17] Building C object p4_game_api/CMakeFiles/p4_game_api.dir/src/audio_mixer.c.o\n[7/17] Building C object p4_game_api/CMakeFiles/p4_game_api.dir/src/feedback.c.o\n[8/17] Building C object p4_game_api/CMakeFiles/p4_game_api.dir/src/input.c.o\n[9/17] Building C object CMakeFiles/p4_game_package.dir/src/game_package.c.o\n[10/17] Building C object tests/CMakeFiles/test_p4_game_package.dir/test_game_package.c.o\n[11/17] Building C object p4_game_api/CMakeFiles/p4_game_api.dir/src/audio_pack.c.o\n[12/17] Building C object p4_game_api/CMakeFiles/p4_game_api.dir/src/game_runtime.c.o\n[13/17] Building C object p4_game_api/CMakeFiles/p4_game_api.dir/src/draw.c.o\n[14/17] Linking C static library p4_game_api/p4_cp437/libp4_cp437.a\n[15/17] Linking C static library p4_game_api/libp4_game_api.a\n[16/17] Linking C static library libp4_game_package.a\n[17/17] Linking C executable tests/test_p4_game_package\nctest --test-dir build-host/p4_game_package --output-on-failure\nTest project /Users/billh/.codex/worktrees/obsolete-tests/esp32-p4 2/build-host/p4_game_package\n    Start 1: p4_game_package\n1/1 Test #1: p4_game_package ..................   Passed    0.26 sec\n\n100% tests passed, 0 tests failed out of 1\n\nTotal Test time (real) =   0.26 sec\n"
+    },
+    {
+      "command": [
+        "make",
+        "game-registry-check"
+      ],
+      "exit_code": 0,
+      "seconds": 2.393,
+      "log": "build-host/obsolete-tests/game-registry-check.log",
+      "output_tail": "python3 scripts/generate-game-registry.py --games-root games --check\n{\"api_version\": 1, \"components\": [\"av_test\", \"blast_circuit\", \"byte_buddy\", \"calculator\", \"checkers\", \"color_clash\", \"frog_hop\", \"input_test\", \"lord\", \"maze_chase\", \"p4_air_hockey\", \"p4_rummy\", \"p4_yahtzee\", \"solitaire\", \"space_invaders\", \"texas_holdem\", \"tide_maze\"], \"enabled_games\": [\"org.p4console.av-test\", \"org.p4console.blast-circuit\", \"org.p4console.byte-buddy\", \"org.p4console.calculator\", \"org.p4console.checkers\", \"org.p4console.color-clash\", \"org.p4console.frog-hop\", \"org.p4console.input-test\", \"org.p4console.lord\", \"org.p4console.maze-chase\", \"org.p4console.p4-air-hockey\", \"org.p4console.p4-rummy\", \"org.p4console.p4-yahtzee\", \"org.p4console.solitaire\", \"org.p4console.space-invaders\", \"org.p4console.texas-holdem\", \"org.p4console.tide-maze\"], \"format\": \"p4-native-elf-v1\", \"multiplayer_games\": [\"org.p4console.blast-circuit\", \"org.p4console.checkers\", \"org.p4console.color-clash\", \"org.p4console.lord\", \"org.p4console.p4-air-hockey\", \"org.p4console.p4-rummy\", \"org.p4console.p4-yahtzee\", \"org.p4console.texas-holdem\", \"org.p4console.tide-maze\"], \"packages\": [\"AVTEST.P4G\", \"BLAST_CIRCUIT.P4G\", \"BYTEBUD.P4G\", \"CALC.P4G\", \"CHECKERS.P4G\", \"COLOR_CLASH.P4G\", \"FROGHOP.P4G\", \"INPUT.P4G\", \"LORD.P4G\", \"MAZE.P4G\", \"P4_AIR_HOCKEY.P4G\", \"P4_RUMMY.P4G\", \"P4_YAHTZEE.P4G\", \"SOLITAIR.P4G\", \"INVADERS.P4G\", \"TEXAS_HOLDEM.P4G\", \"TIDE_MAZE.P4G\"], \"resources\": [\"BYTEBUD.P4R\"], \"result\": \"p4-game-manifests-valid\"}\npython3 scripts/tests/test-game-registry.py\ngame registry tests passed\npython3 scripts/tests/test-native-board-verifiers.py\n{\"result\": \"PASS\", \"native_verifier_gate_cases\": 73, \"device_io\": false, \"production_changes\": false}\npython3 scripts/tests/test-game-resource.py\ngame resource builder tests passed\npython3 scripts/tests/test-protected-game-lineage.py\npython3 scripts/tests/test-new-game.py\nnew game creator tests passed\npython3 scripts/tests/test-tab5-warm-boot-capture.py\n.....\n----------------------------------------------------------------------\nRan 5 tests in 0.002s\n\nOK\n"
+    }
+  ],
+  "review_checks": {
+    "make_routing": {
+      "console-os-elecrow-idf": {
+        "exit_code": 0,
+        "migration_check_calls": 0
+      },
+      "console-os-game-manager-migration-check": {
+        "exit_code": 0,
+        "migration_check_calls": 1
+      }
+    },
+    "remaining_removed_path_consumers": [],
+    "unchanged_frozen_files": {
+      "scripts/doom-e5-install.py": "4371a5985968053dc59c7d29c8a2d425ea35210f5cc0b36b924ecce0045497c1",
+      "scripts/doom-e6-install.py": "f5d2255f37ca9373fdaf42ebe711968c31dc51b3dbbc2f7e501a235fbb546471",
+      "scripts/gamepad-diag-capture.py": "941792e627fc49e303353d38578ae1b30426f99cc15973bc568ebac01af6a473",
+      "scripts/gamepad-diag-restore.py": "5be16e889116cc8a9e9009d730c2d0bcd3438ac07ead2d726ac1a346a5f0e244",
+      "scripts/check.sh": "c30b11d0638ac8eedb7921bac973e4c46a20a1390677db38b48dc8a3c6391691",
+      "scripts/tests/test-console-os-game-manager-migrate.py": "24ea18cbfcc7b95d6b2988edc5ca6fe3942102fa7b6ef5d20de89bd8fffe6d15"
+    }
+  },
+  "changed_file_sha256": {
+    "Makefile": "fe588edab85c6b5f9de2d14766a88a3d9ed8e0993887753667b7f01d4baccd58",
+    "docs/GAME_MANAGER.md": "7b87bdbd2c3b2886942e6958c0a1473edc861577a682bdcb58e493a33be0979b",
+    "docs/boards/M5STACK_TAB5.md": "21c1e2022bd9fed6d620d240ee06c00bf62793418b9d3361fcedfc0a7515b9b3",
+    "scripts/capture-waveshare-console-os-scroll-boundary.py": null,
+    "scripts/p4cart_seed_registry.py": null,
+    "scripts/tests/test-capture-waveshare-console-os-scroll-boundary.py": null,
+    "scripts/tests/test-native-board-verifiers.py": "dd111d3176b5cf4c8b1bce5a53848be0936ac548fc8a1cd314b1bbae57aaa610",
+    "scripts/tests/test-native-only-sources.py": null,
+    "scripts/tests/test-native-sd-bundle.py": "a87c4b07773d5f205b18bc3331c16cf263c0941e18f6118a6a9f371f2359a79f",
+    "scripts/tests/test-p4-content.py": "06fc9b7d51fd5596bbdf5e6b4912a0ac39628a84f729443229f7c07c736dfab6",
+    "scripts/tests/test-p4-transfer-games.py": "8c1664f3a7c14f8506512f3086adf5b7e9aed8b07047e698de11d82315fbe004",
+    "scripts/tests/test-p4cart-seed-registry.py": null
+  }
+}
