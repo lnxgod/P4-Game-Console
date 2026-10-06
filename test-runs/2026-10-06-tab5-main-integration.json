@@ -1,0 +1,64 @@
+{
+  "schema": 1,
+  "date": "2026-10-06",
+  "purpose": "Integrate completed cleanup, skills, test cleanup and reliability fixes; make Tab5 the only active board target",
+  "base_main": "615321ff45020387fba96572b5b42376b0d1be52",
+  "integration_source_commit": "cc374e7c91067748022ad1673c5cd5e677d6a809",
+  "included_branches": {
+    "codex/repository-cleanup-execution": "a89342dc543c4ce05c6d2503b9fea6556064cade",
+    "codex/obsolete-tests-follow-up": "712c24138c47a016696e3fc94ceeafbf33abd344",
+    "codex/reliability-performance-review": "1078a3ef77c597b398c1fa86a9a3a1ad5b38388c"
+  },
+  "documentation": [
+    "README.md rewritten around Tab5 setup, game development and USB-C transfer",
+    "AGENTS.md makes all other board targets legacy",
+    "Skill index separates shared/Tab5 workflows from legacy board maintenance"
+  ],
+  "validation": [
+    {
+      "command": "make game-registry-check p4-content-host h1-usb-drive-control-host",
+      "result": "passed",
+      "environment": "existing ESP-IDF Python 3.11 environment first in PATH"
+    },
+    {
+      "command": "python scripts/verify-console-os-tab5.py",
+      "result": "passed",
+      "native_cartridges": 17
+    },
+    {
+      "check": "All 51 relative links in changed README/AGENTS/skill index resolve",
+      "result": "passed"
+    },
+    {
+      "check": "All three completed branches are ancestors of integration HEAD",
+      "result": "passed"
+    },
+    {
+      "check": "No application/component/game/hardware/toolchain inputs changed after 0dfc4b0",
+      "result": "passed"
+    },
+    {
+      "check": "No new firmware/cartridge/resource-package/WAD binary in diff from main",
+      "result": "passed"
+    }
+  ],
+  "firmware_evidence": "2026-10-06-reliability-review.json",
+  "firmware_rebuilt": false,
+  "firmware_rebuild_reason": "Integration adds test/tool cleanup and documentation only beyond the reviewed fixes; existing Tab5 artifact reverified successfully.",
+  "tab5_image_sha256": "91aa5c5ce2bd61c6dfa220b550bea3a424b48153a12600bc9e63146855e27d5d",
+  "local_logs": [
+    {
+      "path": "build-host/main-integration/focused-checks.log",
+      "bytes": 5207,
+      "sha256": "e9738789e082c65425280bb9fe960bfd86de434c7bffd2d58333768f6f17ad8f"
+    },
+    {
+      "path": "build-host/main-integration/tab5-verify.log",
+      "bytes": 435,
+      "sha256": "0b8b8feacaea7c5531d95902e48c9c30f85f7af6bf0356f73bc898958a5c0a3b"
+    }
+  ],
+  "legacy_limitation": "Prior Waveshare build passed; full verifier still rejects the baseline 0.56 app because it requires literal version 0.42. Preserved in reliability report.",
+  "hardware_accessed": false,
+  "flashed": false
+}
