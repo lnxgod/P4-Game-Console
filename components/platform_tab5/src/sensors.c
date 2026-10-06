@@ -131,6 +131,10 @@ static void sample_motion(platform_tab5_telemetry_t *sample)
     if (err == ESP_OK) err = read_regs(s_imu, 0x0c, data, sizeof(data));
     if (err == ESP_OK) platform_tab5_decode_motion(data, sample->accel_mg, sample->gyro_mdps);
     sample->imu_error = err; sample->imu_valid = err == ESP_OK;
+    if (err == ESP_OK) {
+        sample->motion_sampled_us = (uint64_t)esp_timer_get_time();
+        if (++sample->motion_sequence == 0U) ++sample->motion_sequence;
+    }
     sample->temperature_valid = false;
     if (err == ESP_OK && read_regs(s_imu, 0x22, temp, 2) == ESP_OK) {
         const uint16_t raw = (uint16_t)(temp[0] | (uint16_t)temp[1] << 8);
@@ -177,7 +181,7 @@ static void sensor_task(void *unused)
                 (unsigned long)requested, esp_err_to_name(result),
                 (unsigned)(result == ESP_OK && sample.rtc_valid));
         }
-        if ((tick++ % 4U) == 0U) {
+        if ((tick++ % 50U) == 0U) {
             if (sample.battery_ready) sample_power(&sample);
             if (sample.rtc_present) sample_clock(&sample);
         }
@@ -187,7 +191,7 @@ static void sensor_task(void *unused)
         if (s_clock_result != ESP_OK) sample.rtc_valid = false;
         sample.sampled_us = (uint64_t)esp_timer_get_time();
         publish(&sample);
-        if (first || tick % 40U == 1U || (sample.battery_valid && sample.battery_percent != last_percent)) {
+        if (first || tick % 500U == 1U || (sample.battery_valid && sample.battery_percent != last_percent)) {
             ESP_LOGI(TAG, "SENSORS_SAMPLE battery_valid=%u mv=%u ma=%ld percent=%u estimate=voltage imu_valid=%u accel_mg=%ld,%ld,%ld gyro_mdps=%ld,%ld,%ld rtc_valid=%u date=%04u-%02u-%02u time=%02u:%02u:%02u",
                 (unsigned)sample.battery_valid, sample.battery_mv, (long)sample.battery_ma, sample.battery_percent,
                 (unsigned)sample.imu_valid, (long)sample.accel_mg[0], (long)sample.accel_mg[1], (long)sample.accel_mg[2],
@@ -195,7 +199,7 @@ static void sensor_task(void *unused)
                 (unsigned)sample.rtc_valid, sample.rtc.year, sample.rtc.month, sample.rtc.day, sample.rtc.hour, sample.rtc.minute, sample.rtc.second);
             first = false; last_percent = sample.battery_percent;
         }
-        vTaskDelay(pdMS_TO_TICKS(250));
+        vTaskDelay(pdMS_TO_TICKS(20));
     }
 }
 esp_err_t platform_tab5_sensors_start(void)

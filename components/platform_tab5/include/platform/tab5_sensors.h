@@ -11,6 +11,8 @@ typedef struct {
 
 typedef struct {
     uint64_t sampled_us;
+    uint64_t motion_sampled_us;
+    uint32_t motion_sequence;
     bool battery_ready, battery_valid, imu_ready, imu_valid, rtc_present, rtc_valid;
     uint16_t battery_mv;
     int32_t battery_ma; /* Positive discharge, negative charge, per Tab5 shunt wiring. */

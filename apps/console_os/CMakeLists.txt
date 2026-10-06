@@ -578,7 +578,10 @@ set(P4_PACKAGE_SCRIPT
     "${CMAKE_CURRENT_LIST_DIR}/../../scripts/build-game-package.py")
 set(P4_RESOURCE_SCRIPT
     "${CMAKE_CURRENT_LIST_DIR}/../../scripts/build-game-resource.py")
+file(GLOB_RECURSE P4_CARTRIDGE_SHARED_HEADERS CONFIGURE_DEPENDS
+    "${P4_REPOSITORY_ROOT}/components/p4_game_api/include/p4/*.h")
 set(P4_CARTRIDGE_COMMON_SOURCES
+    ${P4_CARTRIDGE_SHARED_HEADERS}
     "${P4_PACKAGE_SCRIPT}"
     "${CMAKE_CURRENT_LIST_DIR}/../../game-platform/runtime/cartridge_main.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_cp437/include/p4/cp437.h"
@@ -596,6 +599,7 @@ set(P4_CARTRIDGE_COMMON_SOURCES
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/generated/feedback_atlas.inc"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/game_runtime.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/input.c"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/presentation_font.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/visual.c"
 )
 
@@ -605,7 +609,8 @@ function(p4_add_seed_game PACKAGE_NAME GAME_NAME RESOURCE_NAME RESOURCE_PAYLOAD)
     set(P4_PACKAGE_OUTPUT
         "${P4_GAME_STORAGE_SEED_DIR}/GAMES/${PACKAGE_NAME}")
     file(GLOB_RECURSE P4_GAME_SOURCES CONFIGURE_DEPENDS
-        "${P4_GAME_DIR}/*.c" "${P4_GAME_DIR}/*.h")
+        "${P4_GAME_DIR}/*.c" "${P4_GAME_DIR}/*.h"
+        "${P4_GAME_DIR}/*.inc" "${P4_GAME_DIR}/*.p4i")
     add_custom_command(
         OUTPUT "${P4_PACKAGE_OUTPUT}"
         COMMAND

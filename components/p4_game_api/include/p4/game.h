@@ -7,6 +7,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "p4/dice.h"
+#include "p4/motion.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,6 +56,7 @@ typedef enum {
     /** Negotiates a 768x480 RGB565 surface; input remains 320x200. */
     P4_GAME_CAP_VIDEO_HIGH_RES = UINT32_C(1) << 12U,
     P4_GAME_CAP_DICE_ACCESSORY = UINT32_C(1) << 13U,
+    P4_GAME_CAP_MOTION = UINT32_C(1) << 14U,
 } p4_game_capability_t;
 
 typedef enum {
@@ -309,6 +311,9 @@ typedef struct {
     /** Optional v1 tail: copied dice request/status; hardware stays with OS. */
     void *dice_context;
     p4_game_dice_exchange_fn dice_exchange;
+    /** Optional v1 tail: latest OS-owned six-axis sample, never bus I/O. */
+    void *motion_context;
+    p4_game_read_motion_fn read_motion;
 } p4_game_services_t;
 
 typedef struct {
@@ -467,6 +472,9 @@ bool p4_game_multiplayer_profile_default(
 bool p4_game_multiplayer_read_profile(
     p4_game_context_t *context,
     p4_game_multiplayer_profile_t *profile_out);
+
+/** Invalid, stale (>150 ms), or out-of-range samples return false and zero output. */
+bool p4_game_read_motion(p4_game_context_t *context, p4_game_motion_t *out);
 
 void p4_game_stop_audio(p4_game_context_t *context);
 

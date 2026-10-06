@@ -61,6 +61,7 @@
 #include "platform/board.h"
 #if CONFIG_P4_BOARD_M5STACK_TAB5
 #include "platform/tab5_sensors.h"
+#include "platform/tab5_game_motion.h"
 #include "p4/clock_control.h"
 #endif
 #if CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
@@ -8503,6 +8504,15 @@ static bool cartridge_read_signal_scan(
 }
 #endif
 
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+static bool cartridge_read_motion(void *opaque, p4_game_motion_t *out)
+{
+    (void)opaque;
+    const platform_tab5_telemetry_t sample = platform_tab5_sensors_snapshot();
+    return platform_tab5_game_motion(&sample, (uint64_t)esp_timer_get_time(), out);
+}
+#endif
+
 static bool cartridge_play_tone(void *opaque, const p4_tone_t *tone)
 {
     cartridge_run_context_t *const context = opaque;
@@ -8824,6 +8834,9 @@ static esp_err_t run_stored_game(
         .struct_bytes = sizeof(host),
         .available_capabilities = P4_GAME_CAP_VIDEO |
             P4_GAME_CAP_CONTROLS |
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+            P4_GAME_CAP_MOTION |
+#endif
             (high_res_video ? P4_GAME_CAP_VIDEO_HIGH_RES : 0U) |
 #if P4_CONSOLE_BLE_MULTIPLAYER
             (dice_ready ? P4_GAME_CAP_DICE_ACCESSORY : 0U) |
@@ -8836,6 +8849,9 @@ static esp_err_t run_stored_game(
                 ? P4_GAME_CAP_MULTIPLAYER_SESSION : 0U),
 #if P4_CONSOLE_BLE_MULTIPLAYER
         .dice_exchange_v2 = dice_ready ? platform_dice_ble_exchange : NULL,
+#endif
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        .read_motion = cartridge_read_motion,
 #endif
         .expected_game_id = game->package.id,
         .surface = {

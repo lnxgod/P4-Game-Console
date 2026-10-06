@@ -1,0 +1,318 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "game": "tide_maze",
+  "version": "0.1.1",
+  "status": "local keyboard-play-tested; sanitizer/stress/build-tested; hardware acceptance pending",
+  "source_digest_sha256": "8db9db23e31dcf44e51a725709723020741aa464138b55930e2c3250cd3c895c",
+  "source_digest_algorithm": "SHA-256 of sorted lines: <file sha256><two spaces><relative path><newline>",
+  "source_sha256": {
+    "games/tide_maze/assets/launcher.p4i": "33892570b3800d9e6b40e320eff359603f8f2fd398c22f93dd2021b325aadb8b",
+    "games/tide_maze/game.json": "0978223e7f817de71ba678143f32c67bb4617600e4343e17c670e181137dc945",
+    "games/tide_maze/src/generated/cover.inc": "8ffa5716335b9289f976ade37ce021577d9f2993bc900f21ae9a7f6786f5f55c",
+    "games/tide_maze/src/tide_maze.c": "eaae646b8a1c41a03b8ab6947241b225e77ecfc07c3e89ba194833a346d173c1",
+    "games/tide_maze/src/tide_maze_internal.h": "bb318142ef51508a501b8c5c97baa6f7ac1b098d37ced32764a530e8ab5520e8",
+    "games/tide_maze/src/tide_maze_network.c": "ba3e3ecb17f7885203b728449fd55a6a9d471e15e18c890450a0aa8dd1e24c4b",
+    "games/tide_maze/src/tide_maze_physics.c": "bd439f57e5781235ef853dce3fed665a6e9b091c289373b8d59d9b5541a16920",
+    "games/tide_maze/src/tide_maze_render.c": "8d46ba982e737c811713461821a03d310a4bc511f68cd6400a45ff643e187e18"
+  },
+  "test_sources": {
+    "games/tide_maze/tests/CMakeLists.txt": "0d89f97d4e25c68bdb05ac3f73f46966a0e62f74da9ba4c80da26ecb8f8ef192",
+    "games/tide_maze/tests/endurance-input.txt": "ccb3165c77bb9432661e69eef6f03af57069924f8ee3aac4c2527d95435831ea",
+    "games/tide_maze/tests/performance-input.txt": "4774496a8c6a245bdc408345a8b7948fe5140c737b3548a6057e1fe2fa129534",
+    "games/tide_maze/tests/test_tide_maze.c": "ee6645fff21e886551de069f5296ce8248a367619b4bae380d7c43e292599e88",
+    "games/tide_maze/tests/test_tide_maze_stress.c": "f643e028f5032826fcd4aaf26712b922dbcd093ca9db0e98dcf00ffc21ba22ce"
+  },
+  "changes_verified": [
+    {
+      "issue": "Client water and currents survived same-maze retry",
+      "regression_failed_before_fix": true,
+      "fix": "Reset cosmetic fluid when a newer snapshot increases the round timer, including when the result snapshot was lost."
+    },
+    {
+      "issue": "50 Hz game updates produced approximately 16.7 Hz publications instead of 20 Hz",
+      "regression_failed_before_fix": true,
+      "fix": "Retain the fractional send interval while discarding missed periods after backpressure."
+    },
+    {
+      "issue": "An early snapshot jumped from the visible marble position to the prior target",
+      "regression_failed_before_fix": true,
+      "fix": "Interpolate from the currently drawn position; snap to the new round on retry."
+    }
+  ],
+  "focused_tests": {
+    "command": "ctest --test-dir build-host/tide_maze --output-on-failure",
+    "result": "7/7 PASS",
+    "sanitizers": [
+      "AddressSanitizer",
+      "UndefinedBehaviorSanitizer"
+    ],
+    "log": "build-host/tide-maze-stress-final.log",
+    "coverage": {
+      "water_steps": 180000,
+      "water_simulated_minutes": 60,
+      "water_mazes": 3,
+      "water_invariants": "Exact volume conservation every step; depth 0..1024; face flux -40..40; no wall flux.",
+      "full_range_six_axis_samples": 120000,
+      "neutral_poses": 12,
+      "steering_orientations": 4,
+      "cooperative_voyages": 3,
+      "cooperative_maze_completions": 9,
+      "link_conditions": {
+        "random_loss_percent": 15,
+        "delay_ms": [
+          0,
+          120
+        ],
+        "duplicate_probability_percent": 10,
+        "periodic_outage_ms": 600
+      },
+      "cooperative_control": "Normal A+direction inputs for both players. Guest uses its own delayed snapshot. Pearls split between players, then both dock. No teleports, extended clocks or disabled collisions.",
+      "frame_timing": "Variable 0,1,7,16,33,64,100 ms updates match 20 ms fixed updates exactly for the tested input; UINT32_MAX catch-up limited to 100 ms.",
+      "touch": "Actual physical viewport mapping into game steering, Brake, Pause, resume and Exit.",
+      "lifecycle": "Pause heartbeats; three-second silence timeout; fresh solo fallback; same-maze retry with and without delivered result; authoritative state convergence.",
+      "existing_suite": "Solo voyage, rescues, stale/invalid motion, packet validation, backpressure, replay/wrong-player rejection and guarded rendering at both resolutions."
+    }
+  },
+  "cooperative_results": [
+    {
+      "seed": 1811,
+      "completion_ms": [
+        30900,
+        28180,
+        41780
+      ],
+      "rescues": 0,
+      "sent": 4038,
+      "dropped": 762,
+      "duplicates": 318,
+      "late_or_duplicate_deliveries": 823
+    },
+    {
+      "seed": 623535,
+      "completion_ms": [
+        33900,
+        27920,
+        51220
+      ],
+      "rescues": 0,
+      "sent": 4525,
+      "dropped": 827,
+      "duplicates": 383,
+      "late_or_duplicate_deliveries": 933
+    },
+    {
+      "seed": 5714753,
+      "completion_ms": [
+        33280,
+        28360,
+        54400
+      ],
+      "rescues": 0,
+      "sent": 4645,
+      "dropped": 868,
+      "duplicates": 381,
+      "late_or_duplicate_deliveries": 969
+    }
+  ],
+  "test_harness_note": "The first chaos pilot lost its route after a legitimate whirlpool rescue; its route planner now returns through legal corridors after a rescue. Game rules, hazards and time limits were not relaxed.",
+  "sdl_sanitizer": {
+    "result": "5/5 PASS",
+    "command": "ctest --test-dir build-host/play-tide_maze --output-on-failure",
+    "log": "build-host/tide-maze-sdl-final.log"
+  },
+  "interactive": {
+    "tester": "Codex using CUA; no human playtest",
+    "result": "Keyboard and rendering PASS; automated mouse check inconclusive",
+    "actions": [
+      "Third-maze selection and start",
+      "Visible marble movement and water wake",
+      "A brake",
+      "Keyboard pause and resume",
+      "B orientation control",
+      "Escape exits with status 0"
+    ],
+    "clean_run": {
+      "frames": 6698,
+      "average_fps": 59.98,
+      "max_gap_ms": 43.705,
+      "gaps_over_33_333_ms": 1
+    },
+    "diagnostic_run": {
+      "frames": 3746,
+      "average_fps": 59.97,
+      "max_gap_ms": 28.542,
+      "gaps_over_33_333_ms": 0
+    },
+    "mouse_limitation": "CUA sidebar click at screenshot (1350,928) produced raw SDL (0,0). Overlay click at (450,750) produced raw SDL (455.78,479), canonical (189,199). Drag generated no held motion in the observed log. This prevents a reliable native-mouse acceptance claim for this run. Automated mapper and SDL event-queue tests pass.",
+    "input_diagnostic_log": "build-host/tide-maze-input-diagnostic.log",
+    "temporary_logging_removed": true,
+    "audio": "No pickup tones triggered in this visible check; audio mixer tests passed. Human acoustic acceptance remains pending."
+  },
+  "benchmarks": [
+    {
+      "game": "org.p4console.tide-maze",
+      "frames": 10000,
+      "width": 768,
+      "height": 480,
+      "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+      "changed_frames": 7887,
+      "last_frame_hash": "d5182d23",
+      "update_audio_ms": {
+        "mean": 0.0017,
+        "p50": 0.002,
+        "p95": 0.003,
+        "p99": 0.003,
+        "max": 0.008,
+        "over_33_333ms": 0
+      },
+      "render_ms": {
+        "mean": 0.1122,
+        "p50": 0.103,
+        "p95": 0.153,
+        "p99": 0.169,
+        "max": 0.424,
+        "over_33_333ms": 0
+      },
+      "total_ms": {
+        "mean": 0.114,
+        "p50": 0.105,
+        "p95": 0.154,
+        "p99": 0.17,
+        "max": 0.428,
+        "over_33_333ms": 0
+      }
+    },
+    {
+      "game": "org.p4console.tide-maze",
+      "frames": 10000,
+      "width": 320,
+      "height": 200,
+      "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+      "changed_frames": 7838,
+      "last_frame_hash": "71cbce62",
+      "update_audio_ms": {
+        "mean": 0.0018,
+        "p50": 0.002,
+        "p95": 0.003,
+        "p99": 0.003,
+        "max": 0.004,
+        "over_33_333ms": 0
+      },
+      "render_ms": {
+        "mean": 0.0257,
+        "p50": 0.024,
+        "p95": 0.033,
+        "p99": 0.036,
+        "max": 0.061,
+        "over_33_333ms": 0
+      },
+      "total_ms": {
+        "mean": 0.0275,
+        "p50": 0.026,
+        "p95": 0.034,
+        "p99": 0.037,
+        "max": 0.061,
+        "over_33_333ms": 0
+      }
+    }
+  ],
+  "benchmark_trace": {
+    "path": "games/tide_maze/tests/endurance-input.txt",
+    "bytes": 7428,
+    "sha256": "ccb3165c77bb9432661e69eef6f03af57069924f8ee3aac4c2527d95435831ea"
+  },
+  "benchmark_scope": "10,000 frames at each size, keyboard movement and sustained changing touch targets. Some frames are stationary or result/retry states; changed-frame counts are retained. CPU only, excludes device, display, link transport and live IMU.",
+  "executables": {
+    "sanitizer": {
+      "path": "build-host/play-tide_maze/p4_game_host.app/Contents/MacOS/p4_game_host",
+      "bytes": 1007008,
+      "sha256": "70e9f27df5f6615f2d47b584707ca10fe7c64c9807235b98643a4c0de3848f27"
+    },
+    "optimized": {
+      "path": "build-host/play-tide_maze/p4_game_benchmark",
+      "bytes": 353744,
+      "sha256": "e1324194e2880217a9d43da12f6a5114f3f3ab93aa126ed7e39ccd62ba6c89de"
+    },
+    "stress": {
+      "path": "build-host/tide_maze/tests/tide_maze_stress_tests",
+      "bytes": 890376,
+      "sha256": "48a14c04f58ef0cbe430ff2fdd490c80620c8f91f51320ee89a19d682de6c8cf"
+    }
+  },
+  "state_bytes_on_mac": 4000,
+  "multiplayer_protocol": 1,
+  "package": {
+    "path": "apps/console_os/build-tab5/sd-card/GAMES/TIDE_MAZE.P4G",
+    "bytes": 153896,
+    "sha256": "99a71b78aa91ae20d8b5dabaa90eb80027888df79920f6383e7cc8aabb035765",
+    "build": {
+      "bytes": 153896,
+      "file": "TIDE_MAZE.P4G",
+      "id": "org.p4console.tide-maze",
+      "multiplayer": {
+        "input_delay_ticks": 0,
+        "max_players": 2,
+        "message_bytes": 64,
+        "min_players": 2,
+        "protocol": 1,
+        "schema": 1,
+        "style": "realtime",
+        "style_code": 2,
+        "tick_rate_hz": 20
+      },
+      "package_sha256": "99a71b78aa91ae20d8b5dabaa90eb80027888df79920f6383e7cc8aabb035765",
+      "payload_bytes": 153640,
+      "payload_sha256": "92dafb48615fb2a6383260826efb615fac101147dfa16940ea3ce237a21c1534",
+      "result": "p4-game-package-built",
+      "stack_frame_limit_bytes": 2048
+    },
+    "native_parser": "valid",
+    "native_elf_validator": "valid",
+    "embedded_icon": "PASS",
+    "transfer_header_and_digest": "PASS"
+  },
+  "tab5_os": {
+    "command": "make console-os-tab5-idf",
+    "result": {
+      "ble_multiplayer_enabled": true,
+      "board": "m5stack-tab5",
+      "charger_control_enabled": true,
+      "content_bundle_verified": true,
+      "flash_authorized": false,
+      "hardware_verified": false,
+      "image_bytes": 4015392,
+      "image_sha256": "2edcaf22917a847d927af5af010098d7066baaa93ff68b921b58ee3580c7f08a",
+      "native_cartridges": 18,
+      "result": "tab5-build-candidate-verified",
+      "usb_host_enabled": true,
+      "version": "0.51",
+      "wifi_multiplayer_enabled": true
+    },
+    "image": {
+      "path": "apps/console_os/build-tab5/p4_console_os.bin",
+      "bytes": 4015392,
+      "sha256": "2edcaf22917a847d927af5af010098d7066baaa93ff68b921b58ee3580c7f08a"
+    },
+    "update": {
+      "path": "apps/console_os/build-tab5/P4UPDATE.P4U",
+      "bytes": 4015648,
+      "sha256": "bb89acdba24f09ae76e4b51f2c7979550f86579a528f960ccac25373388564c8"
+    },
+    "installed": false,
+    "note": "Built against the shared workspace current OS 0.51. This game-only retest did not change the OS version."
+  },
+  "hardware_pending": [
+    "Physical six-axis sensor response and comfortable calibration",
+    "Physical touch and manual desktop mouse acceptance",
+    "Speaker acoustics and sustained tablet frame deadlines",
+    "Two physical consoles over an OS-supported Host/Join link",
+    "Guarded exact-unit installation and hardware acceptance"
+  ],
+  "notes": [
+    "No board was written or flashed.",
+    "No SDK or component upgrades.",
+    "No additional shared runtime code changes in this retest.",
+    "LOCAL_TESTING.json preserves the original 0.1.0 candidate evidence."
+  ]
+}

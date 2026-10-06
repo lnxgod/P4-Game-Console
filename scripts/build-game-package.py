@@ -39,6 +39,7 @@ CAPABILITIES = {
     "module-handoff": 1 << 10,
     "vector-scenes": 1 << 11,
     "dice-accessory": 1 << 13,
+    "motion": 1 << 14,
     "video-highres": 1 << 12,
 }
 ID_RE = re.compile(r"[a-z][a-z0-9.-]{2,47}\Z")
@@ -204,6 +205,7 @@ def build_elf(
         root / "components" / "p4_game_api" / "src" / "feedback.c",
         root / "components" / "p4_game_api" / "src" / "game_runtime.c",
         root / "components" / "p4_game_api" / "src" / "input.c",
+        root / "components" / "p4_game_api" / "src" / "presentation_font.c",
         root / "components" / "p4_game_api" / "src" / "visual.c",
     ]
     for item in inputs:
@@ -257,13 +259,26 @@ def build_elf(
             ],
             check=True,
         )
+        icon_name = manifest.get("launcher_icon")
+        if icon_name is not None:
+            if not isinstance(icon_name, str):
+                raise PackageError("launcher_icon must name a packed .p4i file inside the game")
+            icon = (game_dir / icon_name).resolve()
+            if not icon.is_relative_to(game_dir.resolve()) or icon.suffix.lower() != ".p4i":
+                raise PackageError("launcher_icon must stay inside the game directory")
+            data = icon.read_bytes()
+            if len(data) != 9744 or data[:8] != b"P4ICON1\0" or struct.unpack_from("<HHI", data, 8) != (128, 72, 1):
+                raise PackageError("launcher_icon has invalid geometry or format")
+            objcopy = compiler.with_name("riscv32-esp-elf-objcopy")
+            subprocess.run([str(objcopy), "--add-section", f".p4icon={icon}",
+                            "--set-section-flags", ".p4icon=readonly", str(output)], check=True)
         validate_elf_imports(output, compiler)
         return output.read_bytes()
 
 
 def build_header(manifest: dict[str, Any], payload: bytes) -> bytes:
     if len(payload) == 0 or HEADER_BYTES + len(payload) > 512 * 1024:
-        raise PackageError("ELF payload is outside the package size bound")
+        raise PackageError(f"ELF payload is outside the package size bound: {HEADER_BYTES + len(payload)} > 524288 bytes")
     header = bytearray(HEADER_BYTES)
     header[0:8] = MAGIC
     struct.pack_into(

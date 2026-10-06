@@ -1,7 +1,7 @@
 # Game library
 
 Tab5 is the primary Console OS target. The default native bundle contains
-13 games and three utilities. Doom and Chex Quest are separate engine entries
+14 games and three utilities. Doom and Chex Quest are separate engine entries
 whose game data stays local. Teaching templates and unfinished drafts do not
 ship in the default library.
 
@@ -14,7 +14,7 @@ changes only presentation: launching and saved progress still use stable IDs.
 | Category | Games |
 |---|---|
 | Adventure | Byte Buddy, Red Dragon |
-| Arcade | Frog Hop, Maze Chase, Space Invaders |
+| Arcade | Frog Hop, Maze Chase, Space Invaders, Tide Maze |
 | Cards | Color Clash, Rummy 500, Solitaire, Texas Hold'em |
 | Platform | Skyline Leap |
 | Shooters | Chex Quest, Doom; require their separate local game data |
@@ -106,3 +106,11 @@ and SHA-256 on the device. It refuses changed or unknown versions, arbitrary
 files and symlinks. Supply a matching `.P4R` before its `.P4G` when present;
 `.P4CART` removal is supported too. Saved progress and game WADs are preserved.
 Use firmware with this protocol extension; old firmware rejects the request.
+
+## Tide Maze development cartridge
+
+Tide Maze adds three flooded labyrinths, calibrated six-axis motion, touch/controller
+fallback and two-player co-op over an OS-owned supported session. Its sanitizer
+suite completes solo and linked voyages; physical tilt, audio and two-tablet link
+acceptance remain pending. See `games/tide_maze/README.md` and its testing records.
+The historical ranking above predates this addition.

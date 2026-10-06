@@ -1,0 +1,57 @@
+{
+  "schema": 1,
+  "game": "tide_maze",
+  "version": "0.1.1",
+  "branch": "codex/tide-maze",
+  "base_commit": "5a9daeb0359b830624270594189d05b3791a4322",
+  "scope": "Isolated game and required motion/presentation/icon-packaging dependencies; unrelated shared-workspace changes excluded.",
+  "checks": {
+    "tide_maze": "7/7 sanitizer suites PASS",
+    "tab5_host": "7/7 PASS including independent motion timestamp adapter",
+    "sdl_host": "2/2 PASS on the isolated branch baseline runner",
+    "game_sdk_host": "make game-sdk-host PASS",
+    "registry": "make game-registry-check PASS; 17 enabled packages",
+    "rv32_cartridge": {
+      "bytes": 154420,
+      "file": "TIDE_MAZE.P4G",
+      "id": "org.p4console.tide-maze",
+      "multiplayer": {
+        "input_delay_ticks": 0,
+        "max_players": 2,
+        "message_bytes": 64,
+        "min_players": 2,
+        "protocol": 1,
+        "schema": 1,
+        "style": "realtime",
+        "style_code": 2,
+        "tick_rate_hz": 20
+      },
+      "package_sha256": "f253372131f24ad4fa8d6e2d66d9bdb0acfa95b84027bd71321a46f131484083",
+      "payload_bytes": 154164,
+      "payload_sha256": "9062437fd640c275090ac9bc13cff835a752f170d713d31ae13d8cf9b7d22178",
+      "result": "p4-game-package-built",
+      "stack_frame_limit_bytes": 2048
+    },
+    "native_package_parser": "valid",
+    "native_elf_validator": "valid",
+    "embedded_icon": "PASS"
+  },
+  "game_sources_match_stress_record": true,
+  "game_source_sha256": {
+    "games/tide_maze/assets/launcher.p4i": "33892570b3800d9e6b40e320eff359603f8f2fd398c22f93dd2021b325aadb8b",
+    "games/tide_maze/game.json": "0978223e7f817de71ba678143f32c67bb4617600e4343e17c670e181137dc945",
+    "games/tide_maze/src/generated/cover.inc": "8ffa5716335b9289f976ade37ce021577d9f2993bc900f21ae9a7f6786f5f55c",
+    "games/tide_maze/src/tide_maze.c": "eaae646b8a1c41a03b8ab6947241b225e77ecfc07c3e89ba194833a346d173c1",
+    "games/tide_maze/src/tide_maze_internal.h": "bb318142ef51508a501b8c5c97baa6f7ac1b098d37ced32764a530e8ab5520e8",
+    "games/tide_maze/src/tide_maze_network.c": "ba3e3ecb17f7885203b728449fd55a6a9d471e15e18c890450a0aa8dd1e24c4b",
+    "games/tide_maze/src/tide_maze_physics.c": "bd439f57e5781235ef853dce3fed665a6e9b091c289373b8d59d9b5541a16920",
+    "games/tide_maze/src/tide_maze_render.c": "8d46ba982e737c811713461821a03d310a4bc511f68cd6400a45ff643e187e18"
+  },
+  "limitations": [
+    "Full firmware was not rebuilt or installed from this isolated branch. The earlier OS 0.50/0.51 hashes belong to combined-workspace builds.",
+    "Interactive play and CPU timings in prior records used the shared workspace runner; this branch separately passed its baseline SDL smoke checks.",
+    "Physical tilt, touch, sound, sustained device performance and two-console transport qualification remain pending.",
+    "The transfer Python script was not rerun here because the fresh worktree interpreter lacks pyserial; the native parser and strict ELF validator passed."
+  ],
+  "excluded_artifacts": "No firmware images, WADs, recovery dumps, build directories or local device evidence are committed."
+}

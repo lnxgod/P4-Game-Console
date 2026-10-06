@@ -49,6 +49,7 @@ GAME_CAPABILITIES = {
     "vector-scenes": 1 << 11,
     "video-highres": 1 << 12,
     "dice-accessory": 1 << 13,
+    "motion": 1 << 14,
 }
 
 

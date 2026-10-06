@@ -28,3 +28,9 @@ target_compile_options(tab5_rtc_clock_test PRIVATE -Wall -Wextra -Wconversion -W
 target_link_options(tab5_rtc_clock_test PRIVATE -fsanitize=address,undefined)
 add_test(NAME tab5_rtc_clock COMMAND tab5_rtc_clock_test)
 set_tests_properties(tab5_rtc_clock PROPERTIES TIMEOUT 15)
+
+add_executable(tab5_game_motion_test test_game_motion.c)
+target_include_directories(tab5_game_motion_test PRIVATE ../include ../../p4_game_api/include)
+target_compile_options(tab5_game_motion_test PRIVATE -Wall -Wextra -Wconversion -Wshadow -Werror -fsanitize=address,undefined)
+target_link_options(tab5_game_motion_test PRIVATE -fsanitize=address,undefined)
+add_test(NAME tab5_game_motion_freshness COMMAND tab5_game_motion_test)

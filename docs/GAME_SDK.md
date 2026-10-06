@@ -615,3 +615,25 @@ Acknowledgements also apply to an unchanged mask after a quick keep/undo.
 The old dice callback remains null on a v2 host to avoid interpreting old
 structure padding as new fields. New games on old consoles retain manual
 controls through optional-capability negotiation.
+
+## Six-axis motion snapshots (Tab5 0.50 candidate)
+
+Optional `motion` / `P4_GAME_CAP_MOTION` exposes `p4_game_read_motion()`.
+The OS copies the latest sample; no sensor or bus read occurs on the cartridge
+thread. `p4_game_motion_t` contains a nonzero sequence, sample age, validity,
+three physical-axis acceleration values in mg and three rotation rates in
+millidegrees per second. Bounds are +/-4000 mg and +/-2000000 mdps. The API
+returns false and zeroes output for unavailable, invalid, out-of-range, or older
+than 150 ms samples. Games calibrate a neutral pose and provide ordinary
+normalized touch/controller fallback. No automatic screen rotation is implied.
+
+The API v1 cartridge host table appends `read_motion`; `struct_bytes` gates all
+access, and a missing callback removes the capability. Old cartridges retain
+their ABI. Older firmware's strict package validator will reject a new cartridge
+that declares the unknown bit, even when optional, so install a motion-aware OS
+before this cartridge. The Tab5 adapter preserves physical axes and uses an
+independent IMU timestamp, so a clock or battery update cannot freshen old motion.
+Its existing background sampler targets a 20 ms cadence, with battery/RTC reads
+and retry/log work kept at their slower cadence. Device latency/axis acceptance
+must be measured separately from host tests. See Tide Maze for calibrated
+six-axis input and a sensor-free fallback example.

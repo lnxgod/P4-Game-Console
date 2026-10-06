@@ -290,3 +290,22 @@ by its stored hash and uses the P4 watchdog reset to leave download mode.
 Schematic pages 1 and 4 show the native full-speed USB device pair at GPIO24/25
 and the dedicated high-speed pair routed to USB-A. This configuration uses
 native USB Serial/JTAG on USB-C and does not enable USB-A power.
+
+## Motion-cartridge support
+
+The existing BMI270 background service now targets 50 motion samples/second
+(20 ms delay between sampling passes); its chip configuration remains pinned at
+100 Hz, +/-4 g and +/-2000 dps. Power and clock reads remain approximately once
+per second. A separate IMU timestamp and sequence feed a copied optional native
+Game API motion snapshot with a 150 ms freshness limit. The game thread performs
+no I2C operations. Existing source axes and display/touch calibration are retained.
+This supersedes the four-Hz motion publication described in the historical sensor
+section. Physical cadence, comfortable tilt direction and additional shared-bus
+load remain hardware acceptance work.
+
+Tide Maze adds a tilt marble labyrinth with bounded shallow-water physics and
+host-authoritative two-console co-op. It uses the existing OS Multiplayer flow;
+no transport qualification is inherited. See `games/tide_maze/LOCAL_TESTING.json`
+for local/build evidence. This candidate was not installed by the game-authoring
+task; an exact-artifact, exact-unit guarded OS update is needed before loading
+a cartridge with the new motion capability on older firmware.

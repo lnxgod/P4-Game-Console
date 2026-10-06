@@ -157,10 +157,40 @@ static void expect_package(const char *path, const char *expected_id)
     free(data);
 }
 
+static void test_cartridge_icon(void)
+{
+    uint8_t package[SYNTHETIC_PACKAGE_BYTES]; make_synthetic(package);
+    uint8_t elf[288 + P4_GAME_ICON_BYTES] = {0};
+    memcpy(elf,package+P4_GAME_PACKAGE_HEADER_BYTES,SYNTHETIC_ELF_BYTES);
+    write_u16(elf+48,3); write_u32(elf+184,256); write_u32(elf+188,19);
+    memcpy(elf+256,"\0.shstrtab\0.p4icon",19);
+    write_u32(elf+208,11); write_u32(elf+212,1);
+    write_u32(elf+224,288); write_u32(elf+228,P4_GAME_ICON_BYTES);
+    memcpy(elf+288,"P4ICON1\0",8); write_u16(elf+296,128); write_u16(elf+298,72); write_u32(elf+300,1);
+    write_u16(elf+304,0xf800); memset(elf+288+528,7,P4_GAME_ICON_PIXELS);
+    p4_game_icon_t icon;
+    assert(p4_game_package_read_icon(elf,sizeof(elf),&icon));
+    assert(icon.palette[0]==0xf800 && icon.pixels[P4_GAME_ICON_PIXELS-1]==7);
+    write_u16(elf+296,65535);assert(!p4_game_package_read_icon(elf,sizeof(elf),&icon));write_u16(elf+296,128);
+    write_u32(elf+224,UINT32_MAX);assert(!p4_game_package_read_icon(elf,sizeof(elf),&icon));write_u32(elf+224,288);
+    write_u32(elf+216,2);assert(!p4_game_package_read_icon(elf,sizeof(elf),&icon));write_u32(elf+216,0);
+    assert(!p4_game_package_read_icon(elf,sizeof(elf)-1,&icon));
+    assert(!p4_game_package_read_icon(package+P4_GAME_PACKAGE_HEADER_BYTES,SYNTHETIC_ELF_BYTES,&icon));
+}
+
 int main(int argc, char *argv[])
 {
+    if (argc==3 && strcmp(argv[1],"--icon")==0) {
+        FILE *f=fopen(argv[2],"rb");assert(f);
+        assert(fseek(f,0,SEEK_END)==0);long bytes=ftell(f);assert(bytes>0 && bytes<=P4_GAME_PACKAGE_MAX_BYTES);
+        assert(fseek(f,0,SEEK_SET)==0);uint8_t *data=malloc((size_t)bytes);assert(data);
+        assert(fread(data,1,(size_t)bytes,f)==(size_t)bytes);fclose(f);
+        p4_game_icon_t icon;assert(p4_game_package_read_icon(data,(size_t)bytes,&icon));
+        free(data);puts("Real RISC-V cartridge icon validated");return 0;
+    }
     assert(argc == 1 || argc == 3);
     test_resource_package();
+    test_cartridge_icon();
     if (argc == 3) {
         expect_package(argv[1], "org.p4console.maze-chase");
         expect_package(argv[2], "org.p4console.space-invaders");

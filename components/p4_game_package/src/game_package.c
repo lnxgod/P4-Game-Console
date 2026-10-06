@@ -467,7 +467,7 @@ p4_game_package_result_t p4_game_package_parse(
         P4_GAME_CAP_REALM | P4_GAME_CAP_MULTIPLAYER_SESSION |
         P4_GAME_CAP_MODULE_HANDOFF | P4_GAME_CAP_VECTOR_SCENES |
         P4_GAME_CAP_VIDEO_HIGH_RES |
-        P4_GAME_CAP_DICE_ACCESSORY;
+        P4_GAME_CAP_DICE_ACCESSORY | P4_GAME_CAP_MOTION;
     if (out_info->launcher_id < 100U || !id_valid(out_info->id) ||
         !folder_valid(out_info->folder) ||
         (out_info->required_capabilities & P4_GAME_CAP_VIDEO) == 0U ||
@@ -523,4 +523,32 @@ const char *p4_game_package_result_name(p4_game_package_result_t result)
     case P4_GAME_PACKAGE_BAD_DIGEST: return "bad-digest";
     default: return "unknown";
     }
+}
+
+
+bool p4_game_package_read_icon(const uint8_t *elf, size_t bytes, p4_game_icon_t *out)
+{
+    if (!out || p4_game_package_validate_elf(elf, bytes) != P4_GAME_PACKAGE_VALID) return false;
+    const uint32_t table = read_u32(elf + 32U);
+    const uint16_t count = read_u16(elf + 48U);
+    const uint8_t *names_header;
+    if (!section_header(elf, bytes, table, count, read_u16(elf + 50U), &names_header)) return false;
+    const uint32_t names_offset = read_u32(names_header + 16U);
+    const uint32_t names_bytes = read_u32(names_header + 20U);
+    const uint8_t *icon = NULL;
+    for (uint16_t i=0; i<count; ++i) {
+        const uint8_t *section;
+        if (!section_header(elf,bytes,table,count,i,&section)) return false;
+        const uint32_t name = read_u32(section);
+        if (!range_valid(names_bytes,name,8U) || memcmp(elf+names_offset+name,".p4icon",8U)) continue;
+        const uint32_t offset=read_u32(section+16U), size=read_u32(section+20U);
+        if (icon || read_u32(section+4U)!=ELF_SHT_PROGBITS ||
+            read_u32(section+8U)!=0U || size!=P4_GAME_ICON_BYTES || !range_valid(bytes,offset,size)) return false;
+        icon=elf+offset;
+    }
+    if (!icon || memcmp(icon,"P4ICON1\0",8U) || read_u16(icon+8U)!=P4_GAME_ICON_WIDTH ||
+        read_u16(icon+10U)!=P4_GAME_ICON_HEIGHT || read_u32(icon+12U)!=1U) return false;
+    for (size_t i=0;i<256;++i) out->palette[i]=read_u16(icon+16U+i*2U);
+    memcpy(out->pixels,icon+528U,P4_GAME_ICON_PIXELS);
+    return true;
 }

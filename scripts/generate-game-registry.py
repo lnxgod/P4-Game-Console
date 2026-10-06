@@ -42,6 +42,7 @@ CAPABILITIES = {
     "module-handoff": "P4_GAME_CAP_MODULE_HANDOFF",
     "vector-scenes": "P4_GAME_CAP_VECTOR_SCENES",
     "dice-accessory": "P4_GAME_CAP_DICE_ACCESSORY",
+    "motion": "P4_GAME_CAP_MOTION",
     "video-highres": "P4_GAME_CAP_VIDEO_HIGH_RES",
 }
 

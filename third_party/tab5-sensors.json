@@ -104,6 +104,7 @@
     "accel_range_g": 4,
     "gyro_range_dps": 2000,
     "ui_sample_hz": 4,
+    "game_sampler_target_hz": 50,
     "temperature": "sensor die, not ambient"
   },
   "clock": {
