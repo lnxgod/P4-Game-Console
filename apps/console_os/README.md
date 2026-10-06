@@ -353,11 +353,11 @@ only after resolving the exact external disk. Waveshare SD initialization tries
 10 MHz, 5 MHz, 1 MHz, then 400 kHz so normal cards mount promptly while the
 slow-card recovery path remains available.
 
-The 0.4.6 catalog correction gives the optional legacy P4CART scanner a 24 KiB
-PSRAM stack and logs its measured low-water mark. Native package generation now
-rejects unsupported ELF imports before a `.P4G` can reach the card; Calculator
-uses only the frozen Game API/runtime import set, so all 12 generated packages
-pass the same structural ELF policy used by the on-device catalog.
+Native package generation rejects unsupported ELF imports before a `.P4G`
+can reach the card. Enabled cartridges use the frozen Game API/runtime import
+set and the same structural ELF policy as the on-device catalog. The old
+0.4.6 source-cartridge scanner was removed; its historical stack measurements
+do not describe the current native catalog.
 
 ## Doom and audio lifecycle
 

@@ -6044,9 +6044,7 @@ static void draw_file_transfer(const console_shell_t *shell,
                     CONSOLE_FILE_TRANSFER_CLASS_EXCHANGE
                 ? "EXCHANGE"
                 : shell->runtime.file_transfer_class == CONSOLE_FILE_TRANSFER_CLASS_P4R
-                    ? "P4R"
-                    : shell->runtime.file_transfer_class == CONSOLE_FILE_TRANSFER_CLASS_P4CART
-                        ? "P4CART" : "NONE";
+                    ? "P4R" : "NONE";
     char detail[48];
     (void)snprintf(
         detail, sizeof(detail), "%s %s  %lu/%lu BYTES",
@@ -6209,7 +6207,7 @@ static void draw_files(console_shell_t *shell,
              shell->files.storage_generation, COLOR_BLACK);
 
     const char *notice = games
-        ? "P4G RUNS / P4CART LUA PENDING"
+        ? "NATIVE P4G GAMES / P4U UPDATES"
         : (shell->runtime.usb_storage_supported
             ? "OPEN FOLDERS / USB MODE EDITS"
             : shell->runtime.sd_card_storage

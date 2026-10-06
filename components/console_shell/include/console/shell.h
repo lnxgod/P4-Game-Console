@@ -82,7 +82,7 @@ enum {
     CONSOLE_SHELL_VISIBLE_APP_ROWS = 2,
     CONSOLE_SHELL_APPS_PER_VIEW =
         CONSOLE_SHELL_APP_COLUMNS * CONSOLE_SHELL_VISIBLE_APP_ROWS,
-    /* 32 native P4G packages + 16 P4CARTs + built-in control-panel apps. */
+    /* Native P4G packages and built-in control-panel apps. */
     CONSOLE_SHELL_MAX_APPS = 64,
     CONSOLE_SHELL_MAX_CONTACTS = 5,
     CONSOLE_SHELL_TITLE_MAX_BYTES = 16,
@@ -240,7 +240,6 @@ typedef enum {
     CONSOLE_FILE_TRANSFER_CLASS_P4G,
     CONSOLE_FILE_TRANSFER_CLASS_EXCHANGE,
     CONSOLE_FILE_TRANSFER_CLASS_P4R,
-    CONSOLE_FILE_TRANSFER_CLASS_P4CART,
 } console_file_transfer_class_t;
 
 typedef enum {
