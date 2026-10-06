@@ -135,7 +135,7 @@ set_tests_properties(
 add_test(
     NAME byte_buddy_native_preview_smoke
     COMMAND byte_buddy_touch_previews
-        "${BYTE_BUDDY_TEST_ART_PATH}"
+        "${CMAKE_CURRENT_LIST_DIR}/../assets/generated/byte_buddy_dragon_art_hd.bin"
         "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-egg.ppm"
         "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-hatch.ppm"
         "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-power.ppm"
@@ -155,6 +155,18 @@ add_test(
 
 set_tests_properties(byte_buddy_native_preview_smoke PROPERTIES
     ENVIRONMENT "P4_BB_NATIVE_PREVIEW=1")
+
+add_executable(byte_buddy_original_upscale_tests test_original_upscale.c)
+target_link_libraries(byte_buddy_original_upscale_tests PRIVATE byte_buddy p4_game_api)
+target_compile_definitions(byte_buddy_original_upscale_tests PRIVATE
+    "BB_HD_ART_PATH=\"${CMAKE_CURRENT_LIST_DIR}/../assets/generated/byte_buddy_dragon_art_hd.bin\"")
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(byte_buddy_original_upscale_tests PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(byte_buddy_original_upscale_tests PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME byte_buddy_original_upscale_tests COMMAND byte_buddy_original_upscale_tests)
 
 # Resource-backed optimized evidence uses the actual linked source closure.
 get_target_property(BB_API_DIR p4_game_api SOURCE_DIR)

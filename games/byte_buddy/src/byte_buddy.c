@@ -86,6 +86,9 @@ enum {
     DRAGON_ART_PALETTE_OFFSET_FIELD = 36,
     DRAGON_ART_PIXEL_OFFSET_FIELD = 40,
     DRAGON_ART_TOTAL_BYTES_FIELD = 44,
+    DRAGON_HD_FRAME_WIDTH = 128,
+    DRAGON_HD_PALETTE_BYTES = 64,
+    DRAGON_HD_PACKED_FRAME_BYTES = 10240,
     BYTE_BUDDY_SIGNAL_COUNTER_FX_SHEET = 0,
     BYTE_BUDDY_SIGNAL_OUTCOME_FX_SHEET = 1,
     BYTE_BUDDY_SIGNAL_PASSIVE_FX_SHEET = 2,
@@ -567,8 +570,23 @@ static bool art_bank_valid(const uint8_t *data, size_t bytes,
         pixel_offset != palette_offset + frames * DRAGON_PALETTE_BYTES ||
         total_bytes != pixel_offset +
             frames * DRAGON_PACKED_FRAME_BYTES ||
-        total_bytes != bytes) {
+        total_bytes > bytes) {
         return false;
+    }
+    if (bytes != total_bytes) {
+        const size_t hd_bytes = DRAGON_ART_HEADER_BYTES +
+            (size_t)frames * (DRAGON_HD_PALETTE_BYTES +
+                             DRAGON_HD_PACKED_FRAME_BYTES);
+        if (bytes - total_bytes != hd_bytes) return false;
+        const uint8_t *const hd = data + total_bytes;
+        if (memcmp(hd, "BBDHD5\0\0", 8U) != 0 ||
+            read_u32(hd + 8U) != 1U || read_u32(hd + 12U) != sheets ||
+            read_u32(hd + 16U) != 128U || read_u32(hd + 20U) != 128U ||
+            read_u32(hd + 24U) != 16U || read_u32(hd + 28U) != 32U ||
+            read_u32(hd + 32U) != frames || read_u32(hd + 36U) != 64U ||
+            read_u32(hd + 40U) != 64U + frames * 64U ||
+            read_u32(hd + 44U) != hd_bytes) return false;
+        for (unsigned i = 48U; i < 64U; ++i) if (hd[i] != 0U) return false;
     }
     *out_sheets = (uint16_t)sheets;
     return true;
@@ -5116,6 +5134,8 @@ static uint16_t customize_color(const byte_buddy_state_t *state,
 typedef struct {
     const uint8_t *palette;
     const uint8_t *pixels;
+    const uint8_t *native_palette;
+    const uint8_t *native_pixels;
     bool valid;
 } dragon_frame_view_t;
 
@@ -5132,11 +5152,19 @@ static dragon_frame_view_t dragon_frame_view(
         state->art_data + DRAGON_ART_PALETTE_OFFSET_FIELD);
     const uint32_t pixel_offset = read_u32(
         state->art_data + DRAGON_ART_PIXEL_OFFSET_FIELD);
+    const uint32_t legacy_bytes = read_u32(
+        state->art_data + DRAGON_ART_TOTAL_BYTES_FIELD);
+    const uint8_t *const hd = state->art_bytes > legacy_bytes
+        ? state->art_data + legacy_bytes : NULL;
     return (dragon_frame_view_t){
         .palette = state->art_data + palette_offset +
             frame_index * DRAGON_PALETTE_BYTES,
         .pixels = state->art_data + pixel_offset +
             frame_index * DRAGON_PACKED_FRAME_BYTES,
+        .native_palette = hd == NULL ? NULL : hd + DRAGON_ART_HEADER_BYTES +
+            frame_index * DRAGON_HD_PALETTE_BYTES,
+        .native_pixels = hd == NULL ? NULL : hd + read_u32(hd + 40U) +
+            frame_index * DRAGON_HD_PACKED_FRAME_BYTES,
         .valid = true,
     };
 }
@@ -5159,7 +5187,7 @@ static bool dragon_frame_color(const dragon_frame_view_t *view,
     return true;
 }
 
-/* One 64-pixel decoded row and a bounded sampling map: no per-native-pixel
+/* One 128-pixel decoded row and a bounded sampling map: no per-native-pixel
  * palette conversion, division, allocation or resource-service call. */
 static bool draw_native_art(p4_game_surface_t *surface,
                             const byte_buddy_state_t *state,
@@ -5295,24 +5323,38 @@ static bool draw_native_art(p4_game_surface_t *surface,
     const int y1 = top+height > surface->height ? surface->height-top : height;
     if (x0 >= x1 || y0 >= y1) return true;
     uint8_t map[308];
-    uint16_t colors[16];
-    uint16_t decoded[64];
-    for (int x=x0; x<x1; ++x) map[x]=(uint8_t)(x*64/width);
+    const bool hd = view.native_pixels != NULL;
+    const unsigned source_width = hd ? 128U : 64U;
+    const unsigned palette_count = hd ? 32U : 16U;
+    const uint8_t *const palette = hd ? view.native_palette : view.palette;
+    uint16_t colors[32];
+    uint16_t decoded[128];
+    for (int x=x0; x<x1; ++x) map[x]=(uint8_t)(x*(int)source_width/width);
     colors[0]=0U;
-    for (unsigned i=1U; i<16U; ++i) {
-        const uint16_t value=read_u16(view.palette+i*2U);
+    for (unsigned i=1U; i<palette_count; ++i) {
+        const uint16_t value=read_u16(palette+i*2U);
         colors[i]=treatment==2U ? signal_layer_color(value,hue) : lift_sprite_color(value);
     }
     int previous_y=-1;
     for (int y=y0; y<y1; ++y) {
-        const int sy=y*64/height;
+        const int sy=y*(int)source_width/height;
         if (sy!=previous_y) {
-            const uint8_t *row=view.pixels+(unsigned)sy*32U;
-            for (unsigned x=0U; x<64U; ++x) {
-                const unsigned packed=row[x/2U];
-                const unsigned index=(x&1U)==0U ? packed>>4U : packed&15U;
+            const uint8_t *row = hd ? view.native_pixels+(unsigned)sy*80U
+                                    : view.pixels+(unsigned)sy*32U;
+            for (unsigned x=0U; x<source_width; ++x) {
+                unsigned index;
+                if (hd) {
+                    const unsigned bit=x*5U, byte=bit>>3U, shift=bit&7U;
+                    unsigned packed=row[byte];
+                    if (shift>3U) packed|=(unsigned)row[byte+1U]<<8U;
+                    index=(packed>>shift)&31U;
+                } else {
+                    const unsigned packed=row[x/2U];
+                    index=(x&1U)==0U ? packed>>4U : packed&15U;
+                }
                 decoded[x]=index==0U ? 0U : treatment==1U
-                    ? customize_color(state,colors[index],(int)x,sy) : colors[index];
+                    ? customize_color(state,colors[index],hd ? (int)(x/2U) : (int)x,
+                                      hd ? sy/2 : sy) : colors[index];
                 /* Opaque art may be black; zero is reserved only for the
                  * transparent index in this temporary row. */
                 if (index!=0U && decoded[x]==0U) decoded[x]=1U;
@@ -6106,15 +6148,15 @@ static void draw_touch_button(p4_game_surface_t *surface,
         const int px=p4_ui_x(surface,x), py=p4_ui_y(surface,y);
         const int w=p4_ui_x(surface,width), h=p4_ui_y(surface,height);
         const uint16_t edge=active ? UINT16_C(0xffff) : bb_ink(surface,accent);
-        p4_ui_round_rect(surface,px,py,w,h,9,edge);
-        p4_ui_round_rect(surface,px+1,py+1,w-2,h-2,8,
-                         active ? UINT16_C(0x2a4d) : UINT16_C(0x1127));
+        bb_fill(surface,x,y,width,height,active ? accent : UINT16_C(0x1025));
+        p4_draw_rect(surface,px,py,w,h,edge);
+        bb_fill(surface,x+2,y+2,width-4,1,active ? UINT16_C(0xffff) : UINT16_C(0x39e7));
+        bb_fill(surface,x+2,y+height-2,width-4,1,UINT16_C(0x000b));
         unsigned font=height >= 24 ? 26U : 22U;
         while (font>16U && p4_ui_text_width(label,font,label_length)>w-18) --font;
         const int text_width=p4_ui_text_width(label,font,label_length);
         p4_ui_text(surface,px+(w-text_width)/2,py+(h-(int)font)/2,
-                   label,UINT16_C(0xffff),font,label_length);
-        if (active) p4_ui_round_rect(surface,px+5,py+8,3,h-16,1,edge);
+                   label,active ? UINT16_C(0x0000) : UINT16_C(0xffff),font,label_length);
         return;
     }
     bb_fill(surface, x, y, width, height,
@@ -6239,10 +6281,6 @@ static void draw_shop_tabs(p4_game_surface_t *surface, bool style_shop)
 static void draw_shop_backdrop(p4_game_surface_t *surface,
                                const byte_buddy_state_t *state)
 {
-    if (bb_native(surface)) {
-        bb_city(surface,true);
-        return;
-    }
     bb_fill(surface, 0, 25, P4_GAME_SURFACE_WIDTH, 175,
                       UINT16_C(0x080f));
     bb_fill(surface, 0, 98, P4_GAME_SURFACE_WIDTH, 102,
@@ -6404,10 +6442,6 @@ static const char *star_pace_name(uint16_t speed, size_t *length)
 static void draw_play_game(p4_game_surface_t *surface,
                            const byte_buddy_state_t *state)
 {
-    if (bb_native(surface)) {
-        bb_city(surface,false);
-        bb_fill(surface,0,137,320,28,UINT16_C(0x000b));
-    } else {
     bb_fill(surface, 0, 25, P4_GAME_SURFACE_WIDTH, 112,
                       UINT16_C(0x0822));
     bb_fill(surface, 0, 121, P4_GAME_SURFACE_WIDTH, 16,
@@ -6415,7 +6449,6 @@ static void draw_play_game(p4_game_surface_t *surface,
     draw_signal_city_icon(surface, state, 7U, 278, 91, 74U);
     draw_signal_city_icon(surface, state, 0U, 57, 93, 50U);
     draw_signal_city_icon(surface, state, 3U, 235, 111, 38U);
-    }
     const int lane_drift = (int)((state->animation_ms / 18U) % 320U);
     for (int streak = 0; streak < 5; ++streak) {
         const int x = (lane_drift + streak * 71) % 320;
@@ -6754,16 +6787,6 @@ static void draw_signal_meter(p4_game_surface_t *surface,
 static void draw_signal_city(p4_game_surface_t *surface,
                              const byte_buddy_state_t *state)
 {
-    if (bb_native(surface)) {
-        bb_city(surface,false);
-        const unsigned nest_size = 56U +
-            (unsigned)state->upgrades[BYTE_BUDDY_UPGRADE_NEST] * 4U;
-        const int width=p4_ui_x(surface,(int)nest_size);
-        p4_ui_round_rect(surface,384-width/2,297,width,15,7,UINT16_C(0x08a4));
-        p4_ui_round_rect(surface,386-width/2,294,width-4,10,5,UINT16_C(0x4bb3));
-        p4_ui_round_rect(surface,390-width/2,295,width-12,4,2,UINT16_C(0x9f3e));
-        return;
-    }
     bb_fill(surface, 0, 25, 320, 112, UINT16_C(0x080f));
     bb_fill(surface, 0, 65, 320, 72, UINT16_C(0x181f));
     bb_fill(surface, 0, 101, 320, 36, UINT16_C(0x281f));
@@ -7344,11 +7367,6 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                        weave ? "RESONANCE" : "SIGNAL BATTLE",
                        weave ? 9U : 13U);
     bb_fill(surface, 0, 25, 320, 175, UINT16_C(0x080f));
-    if (bb_native(surface)) {
-        bb_city(surface,true);
-        bb_fill(surface,0,25,320,16,UINT16_C(0x080f));
-        bb_fill(surface,0,120,320,22,UINT16_C(0x080f));
-    }
     const p4_game_signal_t *const signal = selected_signal(state);
     if (signal == NULL) {
         return;
@@ -7386,11 +7404,9 @@ static void draw_signal_battle(p4_game_surface_t *surface,
     const unsigned arena_frame =
         encounter.arena == BYTE_BUDDY_SIGNAL_ARENA_STEADY
             ? 7U : 11U + encounter.arena;
-    if (!bb_native(surface)) {
-        draw_environment_chrome_icon(
-            surface, state, arena_frame, 160, 83,
-            weave ? 82U : 94U);
-    }
+    draw_environment_chrome_icon(
+        surface, state, arena_frame, 160, 83,
+        weave ? 82U : 94U);
     int shake_x = 0;
     int shake_y = 0;
     if (state->signal_player_hit_ms != 0U) {
@@ -8097,9 +8113,6 @@ static bool game_render(p4_game_context_t *context,
             surface, state, STAR_CATCHER_REWARD_SHEET, 0U,
             267, 11, 12U);
         draw_number(surface, 274, 7, state->coins, UINT16_C(0xffff));
-        if (bb_native(surface)) {
-            p4_ui_round_rect(surface,10,69,309,114,10,UINT16_C(0x10e7));
-        }
         draw_bar(surface, 34, "FULL", state->hunger, UINT16_C(0x07E0));
         draw_bar(surface, 44, "JOY", state->joy, UINT16_C(0xFFE0));
         draw_bar(surface, 54, "CLEAN", state->hygiene, UINT16_C(0x07FF));

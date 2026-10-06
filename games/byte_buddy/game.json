@@ -2,11 +2,11 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "5.0.0",
+  "version": "5.1.0",
   "stack_frame_limit_bytes": 1024,
   "package_file": "BYTEBUD.P4G",
   "resource_file": "BYTEBUD.P4R",
-  "resource_payload": "assets/generated/byte_buddy_dragon_art.bin",
+  "resource_payload": "assets/generated/byte_buddy_dragon_art_hd.bin",
   "component": "byte_buddy",
   "sources": [
     "byte_buddy.c",
@@ -32,7 +32,7 @@
     "video-highres"
   ],
   "license": "MIT",
-  "assets": "672 dragon/action frames in required P4R; ImageGen city and dragon cover; Arimo UI. Provenance: assets/launch-v5.",
+  "assets": "Original 672 frames: 128px/32-color native bank, exact 64px fallback; original scenery and dragon launcher; no replacement art.",
   "enabled": true,
-  "launcher_icon": "assets/launch-v5/launcher.p4i"
+  "launcher_icon": "assets/original-upscale/launcher.p4i"
 }

@@ -60,7 +60,7 @@ int main(int argc,char **argv) {
     if ((width!=320U && width!=768U)||stage>4U) return 2;
     FILE *f=fopen(argv[1],"rb");if (!f) return 2;
     if (fseek(f,0,SEEK_END)!=0) return 2;
-    const long bytes=ftell(f);if (bytes<=0 || bytes>2*1024*1024) return 2;
+    const long bytes=ftell(f);if (bytes<=0 || bytes>8*1024*1024) return 2;
     rewind(f);uint8_t *art=malloc((size_t)bytes);
     if (!art || fread(art,1,(size_t)bytes,f)!=(size_t)bytes) return 2;
     fclose(f);

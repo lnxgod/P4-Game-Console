@@ -1,0 +1,198 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "mode": "Original art only; deterministic runtime upscale",
+  "sources": [
+    {
+      "path": "assets/byte_buddy_signal_counter_fx_imagegen_v11.png",
+      "sha256": "f209ef282a3abcd177343cef3705273d9116d12899bcea79dca57ae561dec7b1"
+    },
+    {
+      "path": "assets/byte_buddy_signal_outcome_fx_imagegen_v12.png",
+      "sha256": "3adf996dde1954d807fbab2985723d03bfba0120850da4a15430e178fdb06aee"
+    },
+    {
+      "path": "assets/byte_buddy_signal_passive_fx_imagegen_v13.png",
+      "sha256": "a64c7336836fc1d2920ee018d92379ce37d83ac5d6ab4a7f584306b48d211f57"
+    },
+    {
+      "path": "assets/byte_buddy_signal_scan_fx_imagegen_v14.png",
+      "sha256": "98007f62ab1a72076ac7db289437836394adad90caf58496ff88696ada4fe8de"
+    },
+    {
+      "path": "assets/byte_buddy_evolution_fx_imagegen_v15.png",
+      "sha256": "151b649273e7cb634b938f651a9c81b09ae59084c0f13d04c4ee5379b8f46724"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_rare_variants_pixellab_v1.png",
+      "sha256": "f6b0ac432193e2b50a2846adc506bfa668bdbcf50b2cb41755b8b98d2f4996b0"
+    },
+    {
+      "path": "assets/byte_buddy_need_fx_imagegen_v16.png",
+      "sha256": "800f633eb0192d35020483f013e6cbcf26deb006ddaa3735607d49917afd8500"
+    },
+    {
+      "path": "assets/byte_buddy_activity_fx_imagegen_v17.png",
+      "sha256": "2e66c3f31c26528dcac2adf23f38349638dcc5f7f125459538e1e078cc280fdb"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_baby_reactions_imagegen_v1.png",
+      "sha256": "e177f372d00debb6121c66ec7704fbb08c8aae772247ba4488956fdcf8e06b08"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_flight_cycles_imagegen_v1.png",
+      "sha256": "6108423cd35284c47aee259fd32c5fe53ec2b4f07d0f5be94af7e98e665a9c72"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_elemental_breath_imagegen_v1.png",
+      "sha256": "94fe69ef77c2810133a69f213770e5394c6ef4c842e8429b8fe4ddfec66ca9e9"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_egg_morph_ambient_imagegen_v2.png",
+      "sha256": "ad1f7ecc6b5189b793fb4133238804d1f58c4153b4c5016a53674570a5fc06fd"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_egg_element_ambient_imagegen_v2.png",
+      "sha256": "9177a8e0ac868f0a919b52cfec8ddf5472eb06b4ef07eb4d4a9bc6192d737483"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_baby_idle_cycles_imagegen_v2.png",
+      "sha256": "6a5eb4f9ac3ee221f5be0698e4fbe3d05024514b65591bea223b792e82e3d951"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_baby_care_cycles_imagegen_v2.png",
+      "sha256": "5bbf3c8d1cbeed00ad4a48574b6cbbb973839ad78b2b7d13356bd7d714468475"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_winged_idle_cycles_imagegen_v2.png",
+      "sha256": "1359426fc0076f38e67bddd1b006dbfc520c49c4d059004c6ec6f17c9a0499cc"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_winged_care_cycles_imagegen_v2.png",
+      "sha256": "ee4415fb9b809fe937a4bd73989c492628e29b901f0f4de9de6c4ff532677c16"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_flight_aerobatics_imagegen_v2.png",
+      "sha256": "475f926b97edd09780fbd9feb3e2f998401dff0428a734c261132b3d7aff1d3f"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_elemental_mastery_imagegen_v2.png",
+      "sha256": "57c14984ae2392f31371e9fb2fe355eb2403985616be0fc6ae14a125d621a09d"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_elemental_impacts_imagegen_v2.png",
+      "sha256": "859c3f149a71043f2316c687cfc7bf7ae50e972175c453046ab069a580fcf611"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_hatch_transitions_imagegen_v3.png",
+      "sha256": "e23e20adcd51a907e3e39152183a34d78153de1ff23b351abfa9f93a430c020d"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_signal_genetics_imagegen_v3.png",
+      "sha256": "eddef200a2449753a08dedbfc5cf4c69fe75b8f154b141f80a031e8303bc9937"
+    },
+    {
+      "path": "assets/byte_buddy_star_catcher_rewards_imagegen_v4.png",
+      "sha256": "166f98b052a89f1d30b9a59fbce317f350a1df4a1dc48be30662ec623b5bc67f"
+    },
+    {
+      "path": "assets/byte_buddy_items_components_imagegen_v5.png",
+      "sha256": "e8fade6f70766057b1915d0d3b0f2143f6fe7c2ce723ee1004cd5243e8732b68"
+    },
+    {
+      "path": "assets/byte_buddy_signal_genome_layers_imagegen_v6.png",
+      "sha256": "a52c1f331f1afb4cca20d5bc8d350c9f45cbb256fe05aa739cd532d903d8b503"
+    },
+    {
+      "path": "assets/byte_buddy_signal_city_props_imagegen_v7.png",
+      "sha256": "67d97a21d7675c3c738832b84698e94806eaf3f391a281818a7982b394b789f3"
+    },
+    {
+      "path": "assets/byte_buddy_reaction_fx_imagegen_v8.png",
+      "sha256": "b1cbd3061e1e4a19a570d37e4b9cb4abaf9a88d971dc2032292b32e280e3bf65"
+    },
+    {
+      "path": "assets/byte_buddy_signal_lineage_badges_imagegen_v9.png",
+      "sha256": "7ef6e4e6b7f6153edb4c05f8515ca8ad4233d328329b22b76a90a2cc8050ebb8"
+    },
+    {
+      "path": "assets/byte_buddy_signal_attack_cycles_imagegen_v10.png",
+      "sha256": "e660d48ec4d3a721c14fd1dd6dab29dbf32b0ac6a1bca41bd1eb5eb3b185e191"
+    },
+    {
+      "path": "assets/byte_buddy_signal_environment_chrome_imagegen_v18.png",
+      "sha256": "3e78e93b0f36e68f23004b72a6c91650a152949c8f67c5556756a1bf7566ab79"
+    },
+    {
+      "path": "assets/byte_buddy_action_signature_fx_imagegen_v19.png",
+      "sha256": "5c94d88333959d215549118df09c94d930e5959e337ddc247f592ce0f3292f90"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_feed_actions_imagegen_v20.png",
+      "sha256": "9d7cc5c500510598bf815b8b3ac353d34539fe1f12f145a0551a3de68fd1bd0f"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_play_actions_imagegen_v20.png",
+      "sha256": "d06817a1ae13438344f6521109ad1b3f72b4e8b0de0fb7c9248d39fa80cfeeb4"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_clean_actions_imagegen_v20.png",
+      "sha256": "8e3f1253eb3826133960a2e69e688a34de8fcc278402197ed23e5b34c8b46667"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_rest_actions_imagegen_v20.png",
+      "sha256": "c58ba384073eda7d3479f2e89b72ba94d9a560ef6ba8b0f31a90fadc68a9d16a"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_pet_actions_imagegen_v20.png",
+      "sha256": "9c2ec21b66d54b9d644c5075fd435cedfa7aee0bcc6648e66694e12635779705"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_grow_actions_imagegen_v20.png",
+      "sha256": "4c5195d768fa36fd542df9f0e9be5ed6729078aaaf61497ea0df1dc337c29ce9"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_signal_actions_imagegen_v20.png",
+      "sha256": "97b99aaa8b6912cd0f923e69415d09a52d841c8a5892b82a4a5324b8a045ac36"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_hatch_nebula_cycles_imagegen_v21.png",
+      "sha256": "c355123ef2d3cbd615607e758ee1a62137eab71034b457fad18fd448e5e19eac"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_hatch_sungold_cycles_imagegen_v21.png",
+      "sha256": "f3e64e812076c387c56df1c9539c0657af8dc53b9e6612a5c7de514cf3c865d4"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_hatch_jade_cycles_imagegen_v21.png",
+      "sha256": "04ad9e62fc627e53b2e4c7886b23ebe77e7cff88324c463c7bc3a98a44f53bd3"
+    },
+    {
+      "path": "assets/byte_buddy_dragon_hatch_glacier_cycles_imagegen_v21.png",
+      "sha256": "7f83e811c1e4d5cbc9e325214fd94096b857bbf524a307486a4dc33923e88468"
+    }
+  ],
+  "conversion": "Original 4x4 cell mapping and nearest-neighbor sampling at 512x512 per sheet; same alpha/checkerboard cleanup, area threshold scaled 4x; 31 opaque median-cut colors plus transparent index 0; RGB565 palette and little-endian 5-bit pixels. No dithering.",
+  "pillow": "12.3.0",
+  "frames": 672,
+  "native_frame": [
+    128,
+    128
+  ],
+  "legacy_frame": [
+    64,
+    64
+  ],
+  "legacy_bytes": 1397824,
+  "native_bytes": 6924352,
+  "resource_payload_bytes": 8322176,
+  "resource_payload_sha256": "327f2c1945df089c9ad1f7dc4f2bda2aa51f50f871658e3580b02a80d4f31825",
+  "legacy_sha256": "ac76b0e89ec0c7c0f18703d2baf853764eded82f1edc067dc3c877a0f14c2931",
+  "source_pngs_modified": false,
+  "new_images_generated": false,
+  "launcher": {
+    "mode": "Original environment sheet 29 cells 1/2 and baby-idle sheet 13 cell 0, nearest-neighbor composition; shared P4ICON1 conversion",
+    "source_sha256": "50a98eb6c08af8ee147ad6fbe42c94407b6ad7ec04dfb2d050a1a36a97bb54b5",
+    "packed_sha256": "cfc871a4f24fd61354905438bc597a444590ef312cbb091714cfcf9873206525"
+  }
+}

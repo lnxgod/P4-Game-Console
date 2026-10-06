@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "date": "2026-10-06",
+  "game": "org.p4console.tide-maze",
+  "kind": "research and source-level diagnosis; no game replacement or device write",
+  "operator_feedback": {
+    "result": "FAIL: current engine still feels awkward and insufficiently fluid",
+    "scope": "User report; exact currently running unit/package was not re-read during this audit. Preserve the failure until retested."
+  },
+  "source": {
+    "checkout_head": "132a89d4b10486ca851ffb3c9c1f81d4bf3e3a31",
+    "manifest_version": "0.2.1",
+    "sha256": {
+      "games/tide_maze/src/tide_maze_physics.c": "a003398c33c7209adcaa329098743144c3906737485d5ab7b1eaede595358ad5",
+      "games/tide_maze/src/tide_maze_render.c": "e679cedb034c3c8ae2bdcbaf5d17e040bc5492ef8b627b5119b5162bfed721f8",
+      "games/tide_maze/src/tide_maze_internal.h": "e79fd996e122032bc1c885ef8ac736123082ed15ca19a867be645910f50a387e",
+      "components/p4_game_api/include/p4/game.h": "33e65134e86f1597fe732f64df88720c5892280ff31ca00ac9cbee15beac7459"
+    }
+  },
+  "last_recorded_install": {
+    "evidence": "test-runs/2026-10-05-initial-launch.json",
+    "file": "TIDE_MAZE.P4G",
+    "bytes": 198448,
+    "sha256": "78a15a65078f2d8667aab279facbf7011911cbb3aeae5768e9208f125a3ab790",
+    "scope": "Historical receipt, not a live readback in this audit"
+  },
+  "probe": {
+    "result": {
+      "intent_response_after_1_second": [
+        {
+          "intent": 0,
+          "water_change_l1": 0
+        },
+        {
+          "intent": 35,
+          "water_change_l1": 0
+        },
+        {
+          "intent": 50,
+          "water_change_l1": 0
+        },
+        {
+          "intent": 99,
+          "water_change_l1": 0
+        },
+        {
+          "intent": 100,
+          "water_change_l1": 1760
+        },
+        {
+          "intent": 200,
+          "water_change_l1": 18172
+        }
+      ],
+      "low_flow_decay_ms": 80,
+      "damping_only_initial_velocity": 4,
+      "full_game_state_bytes": 4000
+    },
+    "source": "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include \"tide_maze_physics.c\"\nbool p4_game_read_motion(p4_game_context_t *context, p4_game_motion_t *out) {(void)context;(void)out;return false;}\nstatic int total_change(const tm_state *s){int n=0;for(int i=0;i<TM_CELLS;++i)if(s->wet[i])n+=abs(s->water[i]-320);return n;}\nint main(void){\n printf(\"{\\\"intent_response_after_1_second\\\":[\");\n const int forces[]={0,35,50,99,100,200};\n for(unsigned k=0;k<sizeof(forces)/sizeof(forces[0]);++k){tm_state s={0};tm_reset(&s,0);s.intent[0].x=(int16_t)forces[k];for(int j=0;j<50;++j)tm_fluid(&s);printf(\"%s{\\\"intent\\\":%d,\\\"water_change_l1\\\":%d}\",k?\",\":\"\",forces[k],total_change(&s));}\n tm_state s={0};s.wet[0]=s.wet[1]=1;int16_t velocity=4;int steps=0;\n while(velocity&&steps<100){s.water[0]=s.water[1]=320;flux(&s,0,1,&velocity,0);++steps;}\n printf(\"],\\\"low_flow_decay_ms\\\":%d,\\\"damping_only_initial_velocity\\\":4,\\\"full_game_state_bytes\\\":%zu}\\n\",steps*TM_STEP,sizeof(tm_state));\n}\n",
+    "compiler": "clang -std=c11 -Os -fsanitize=address,undefined -fno-omit-frame-pointer",
+    "scope": "Actual current native fluid functions, sensor service stubbed off. Stationary marble, level 0, 50 fluid steps per intent. Damping isolation resets equal neighboring heights before each flux step. Host arithmetic diagnosis, not physical frame/latency evidence."
+  },
+  "findings": [
+    "Integer force division yields zero tilt force for absolute intent below 100/1000. A resting basin has an abrupt response threshold.",
+    "Integer damping rounds a velocity of four to zero after four 20ms steps under isolated equal-pressure conditions.",
+    "Surface texture coordinates depend on animation time, not the simulated velocity field.",
+    "Water updates mutate neighboring heights immediately in traversal order; the solver has no velocity self-advection.",
+    "A newer 0.2.1 control filter already reduces accelerometer correction time to 30ms and preserves Q4 fractions. The water solver remains unchanged from 0.2.0."
+  ],
+  "references": [
+    {
+      "url": "https://github.com/colonelwatch/ESP32-fluid-simulation",
+      "assessment": "MIT ESP32 Arduino demo; author reports 80x60 dye simulation upscaled to 320x240 at 28-30FPS. Useful solver reference, not free-surface sloshing or Tab5 qualification."
+    },
+    {
+      "url": "https://github.com/Vateva/Esp32FluidSimulation8x8",
+      "assessment": "MIT ESP32-S3 FLIP/PIC demonstration with 400 particles, 20x20 grid and 8x8 LED display. Useful particle/free-surface reference; cannot transfer its performance numbers to our full-screen maze."
+    },
+    {
+      "url": "https://matthias-research.github.io/pages/publications/hfFluid.pdf",
+      "assessment": "Primary research on shallow-water height/velocity fields, conservative transport and object coupling; algorithm reference, not a drop-in embedded engine."
+    },
+    {
+      "url": "https://matthias-research.github.io/pages/tenMinutePhysics/20-heightFieldWater.html",
+      "assessment": "Interactive height-field/object-coupling reference; visual target only, WebGL rendering is not the Console API."
+    }
+  ],
+  "recommendation": {
+    "route": "Native C shallow-water module under components, using established equations rather than the existing integer flux approximation.",
+    "prototype": [
+      "Start with an unadorned basin, one obstacle and one marble. Compare tilt reversal, rest, wave reflection, wake and low-speed flow before maze integration.",
+      "Store fractional water height and staggered horizontal momentum; bound time steps and conserve volume at solid walls.",
+      "Evaluate a 60x36 grid within the 128KiB game-state limit, with explicit scratch and particle budgets; performance remains to be measured.",
+      "Drive rendered surface height, normals, refraction and small foam/splash effects from the same simulation.",
+      "Keep responsive marble controls independent of visual smoothing; profile update, render, display and input delay on the exact Tab5 package.",
+      "Retain host-authoritative multiplayer; separately qualify guest responsiveness."
+    ],
+    "qualification": "60FPS target and actual-device 30FPS floor are goals, not results. No new engine implementation is claimed by this audit."
+  }
+}
