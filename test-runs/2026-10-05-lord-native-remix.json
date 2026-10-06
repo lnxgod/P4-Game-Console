@@ -741,5 +741,15 @@
     "bounded_rendering": "Pinned RV32 -Os assembly and stack reviewed; assets budgeted; 434820 bytes remains under unchanged 524288-byte cartridge limit.",
     "lineage": "Public ID, save schema and multiplayer manifest preserved; integrated Tab5 OS0.55 protected digest matches exact final payload.",
     "evidence_and_limits": "Dedicated evidence and exact artifact hashes saved; actual-device acceptance explicitly remains pending."
+  },
+  "coordinator_installation": {
+    "record": "test-runs/2026-10-05-initial-launch.json",
+    "os": "0.55",
+    "units": [
+      "A/ST7121",
+      "B/ST7123"
+    ],
+    "content_hash_verified": true,
+    "device_gameplay_qualification": "pending"
   }
 }

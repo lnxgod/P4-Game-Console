@@ -5,7 +5,15 @@ M5Stack Tab5 is the primary target. The repository includes the complete
 [skill index](../.agents/skills/README.md), native C game SDK, local SDL runner,
 asset sources/converters, focused tests and exact-board installation tools.
 
-The release line is Console OS 0.55. Native game creation supports custom 2D,
+Console OS 0.55 and all 17 native cartridges (14 games and 3 utilities), plus
+Byte Buddy's required animation resource, are installed on Tab5 A and B.
+Both app readbacks, startup checks and all 18 content-file hashes passed;
+the protected Red Dragon cartridge registered against its paired OS. See the
+[exact installation and test record](../test-runs/2026-10-05-initial-launch.json).
+These checks establish installation, not universal gameplay or frame-rate
+acceptance.
+
+Native game creation supports custom 2D,
 software 3D and raycasting within the Game API's surface, lifecycle and resource
 contracts. The Lua creation/runtime/tooling stack is removed. The required
 [performance contract](GAME_PERFORMANCE.md) targets 60 FPS and requires actual
@@ -39,6 +47,11 @@ Tide Maze 0.2.1 reduces rendering work and input filtering delay. Earlier
 installed versions failed the operator's smoothness acceptance. Keep that
 failure open until exact-package device cadence and physical play establish
 the replacement's result. Host timing is recorded separately.
+
+The Tab5 build, native SDK and focused game/setup checks pass. Repository-wide
+`make check` still stops in the legacy Elecrow `display_diag` build, whose broad
+component discovery includes conflicting pre-existing touch dependency pins
+(1.1.2 and 1.2.1). No dependency versions or lockfiles were changed to bypass it.
 
 Both Star Sprout prototypes are removed from Tab5 A and B, with reserved
 identities and [exact receipts](../test-runs/2026-10-05-star-sprout-removal.json).
