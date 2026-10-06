@@ -445,6 +445,9 @@ static void fail_connection(uint16_t conn_handle, int error, const char *stage)
     ESP_LOGW(TAG, "BLE_GAMEPAD_SETUP_FAIL stage=%s rc=%d", stage, error);
     count_drop(error);
     set_state(PLATFORM_GAMEPAD_BLE_ERROR, error);
+    /* Termination completes asynchronously. Stop exposing held input now,
+     * including when a ready peer requests replacement pairing. */
+    neutralize_model();
     if (conn_handle != BLE_HS_CONN_HANDLE_NONE) {
         (void)ble_gap_terminate(conn_handle, BLE_ERR_REM_USER_CONN_TERM);
     } else {
