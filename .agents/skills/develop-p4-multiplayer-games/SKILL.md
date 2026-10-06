@@ -33,6 +33,20 @@ Only ask whether players share one console or use linked consoles when context
 does not settle it and the choice changes implementation. Infer cooperative
 versus competitive rules from the idea; do not force a transport questionnaire.
 
+## Keep presentation separate from synchronized rules
+
+Use the native 768x480 presentation standard in `docs/GAME_ART.md` with the
+320x200 fallback. Native touch and network coordinates stay canonical; do not
+change packet fields, simulation rates, seat counts or saved state just to
+upgrade art. Preserve each game's supported player count, including four-player
+games. Run its existing multi-instance tests after a rendering upgrade, and
+verify readable player colors plus non-color seat/turn cues at both sizes.
+
+Apply the [ESP32-P4 performance contract](../../../docs/GAME_PERFORMANCE.md)
+in both roles: budget per-update message work and interpolate presentation
+without changing synchronized rules. Qualify active session load on the exact
+packages, OS and units; offline host CPU timing does not qualify linked cadence.
+
 ## Declare the existing service
 
 For a new game:
@@ -67,10 +81,12 @@ Set `message_bytes` to the largest actual packet, at most 64. Increment
 `protocol` when message meaning changes. Use the schema's validated timing
 fields where needed; never add transport names or addresses.
 
-The current OS adapters support two active human players. Four-player metadata,
-extra CPU seats or two locally connected pads do not prove four-console play.
-If more simultaneous humans are requested, identify the missing OS adapter
-rather than hiding a private transport inside the game.
+The Tab5 0.53 candidate supports up to four active human players through the
+OS Local Wi-Fi adapter; Bluetooth and the USB serial relay retain their
+two-player limit. Shared-component and multi-instance game tests do not prove
+four-console hardware acceptance. Check the selected OS artifact and current
+device evidence before promising an available link. Never hide a private
+transport inside the game to bypass an OS adapter limit.
 
 ## Let Console OS own connection setup
 
@@ -139,9 +155,29 @@ board's supported link. The existing serial relay is
 `scripts/p4-multiplayer-relay.py`; read its arguments and topology before use.
 Two USB device ports do not form a link just because a cable fits.
 
-Lua `.P4CART` currently has no networked Host/Join adapter. Explain that limit
-for an explicit Lua request and offer native C or a separately scoped runtime
-extension. Tab5 has native-USB relay plumbing; USB-A host and C6 radio remain disabled
-in the installed configuration. Controller and physical multiplayer
-acceptance are pending; never inherit Waveshare hardware claims. Report host,
-build and device evidence separately.
+New games use native C through the stable game contract. Tab5 0.45 adds a
+core-OS candidate
+for encrypted Bluetooth and standalone local Wi-Fi Host/Join alongside the USB relay. Wi-Fi hosts create
+their own nearby game network; no router, account or internet is required.
+Games use the same P4MP API on every transport. This does not automatically
+make a single-player game multiplayer: it still needs its declared profile,
+bounded rules/protocol and two-instance tests. Consult the current Tab5
+hardware evidence before claiming either radio link is hardware-qualified.
+Never inherit another board's claims; report host, build and device evidence
+separately.
+
+## Responsiveness is part of multiplayer acceptance
+
+For real-time games, exercise steering in each role while rendering and effects
+are busy. Track input-to-visible-motion delay separately from snapshot rate and
+frame cadence. Interpolation can hide packet steps while adding a full snapshot
+period of control delay; do not describe it as responsive without checking the
+guest's own controls. If local prediction is needed, bound reconciliation, keep
+collisions/rules authoritative, reset on respawn and timeout, and test loss and
+reordering. Preserve protocol compatibility unless message meanings change.
+
+## Game Changers AI OS release quality
+
+For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).
+Preserve gameplay and saves, keep incomplete titles out of default bundles,
+and distinguish native-size art, operator feedback and measured P4 cadence.

@@ -173,3 +173,9 @@ Serial counters prove data reached the backend, not that a speaker produced
 sound. Record acoustic confirmation separately and never infer it from GPIO30,
 I2S, or frame counters alone. GPIO pad readback likewise proves only the P4 pad
 level, not a downstream amplifier's electrical state.
+
+## Game Changers AI OS release quality
+
+For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).
+Preserve gameplay and saves, keep incomplete titles out of default bundles,
+and distinguish native-size art, operator feedback and measured P4 cadence.

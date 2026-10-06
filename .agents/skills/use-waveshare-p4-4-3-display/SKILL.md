@@ -1,5 +1,5 @@
 ---
-name: use-waveshare-p4-4.3-display
+name: use-waveshare-p4-4-3-display
 description: Qualify and extend the Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 MIPI-DSI display path.
 ---
 
@@ -14,3 +14,9 @@ Keep DSI, panel reset, power rails, backlight, framebuffer ownership, and
 cache synchronization inside a board-specific platform display component.
 Begin with zero backlight, a known test frame, and stage-specific markers.
 Qualify scanout before connecting the shell or games.
+
+## Game Changers AI OS release quality
+
+For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).
+Preserve gameplay and saves, keep incomplete titles out of default bundles,
+and distinguish native-size art, operator feedback and measured P4 cadence.

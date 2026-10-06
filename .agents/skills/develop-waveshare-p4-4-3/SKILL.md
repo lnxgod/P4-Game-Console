@@ -1,5 +1,5 @@
 ---
-name: develop-waveshare-p4-4.3
+name: develop-waveshare-p4-4-3
 description: Build, port, diagnose, and qualify firmware for the Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 board.
 ---
 
@@ -25,8 +25,9 @@ Elecrow pin map under a Waveshare build flag.
   layer; games never own DSI, I2C, codec, USB, or raw GPIO.
 - The physical panel is 480x800 and is initialized as 800x480 landscape.
   Console OS renders its shell at the fixed 768x480 logical resolution; native
-  games retain the portable 320x200 RGB565 Game API surface. Do not rotate or
-  shrink these contracts in game code.
+  games should request native 768x480 RGB565 through optional `video-highres`,
+  retaining the 320x200 fallback. Follow `docs/GAME_ART.md`; input remains
+  canonical 320x200. Do not rotate or shrink these contracts in game code.
 - Keep game scaling, rotation, panel framebuffer selection, and any PPA use in
   `platform_display`. The reviewed fast path alternates two DSI-owned buffers
   and uses blocking PPA SRM for the 320x200 surface; preserve a bounded CPU
@@ -109,3 +110,9 @@ controller, hub topology, board unit, or electrical arrangement needs its own
 acceptance evidence. A performance claim needs a sustained measured interval,
 zero hard display failures, and multiplayer transport drop/stall counters from
 the same run. Build success alone is only `build-tested`.
+
+## Game Changers AI OS release quality
+
+For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).
+Preserve gameplay and saves, keep incomplete titles out of default bundles,
+and distinguish native-size art, operator feedback and measured P4 cadence.

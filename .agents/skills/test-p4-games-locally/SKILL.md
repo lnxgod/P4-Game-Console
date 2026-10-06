@@ -69,6 +69,22 @@ Treat a sanitizer error, nonzero exit, invalid manifest, frozen game loop, or
 failure to return on Back as a local test failure. Fix it before an ESP-IDF
 build unless the user explicitly asks only for diagnosis.
 
+## Inspect high-resolution presentation
+
+Follow `docs/GAME_ART.md`. New and upgraded games should negotiate 768x480,
+with guarded render coverage for the 320x200 fallback and padded strides.
+Inspect native-size captures of gameplay, menus and results; check text bounds,
+card overlap, texture contrast, selected states and sprites at screen edges.
+The SDL runner follows the manifest; a large window alone does not prove that
+the game draws native detail. Test canonical 320x200 touch hit regions against
+the visible high-resolution controls. Record asset bytes and cartridge size.
+
+Follow the canonical [ESP32-P4 performance contract](../../../docs/GAME_PERFORMANCE.md)
+for native/fallback CPU benchmarks, deliberately active movement/drag traces,
+changed-frame checks and exact artifact bindings. Review real motion, timers
+and audio in the SDL runner; its FPS title and Mac CPU results cannot establish
+the actual-device 30 FPS release floor. Report limited or idle trace coverage.
+
 ## Hand off the local result
 
 Before handing a changed game to the firmware workflow, report:
@@ -85,6 +101,12 @@ person played the game. Never allow an unplayed or failing local candidate to
 advance to a guarded device install.
 
 ## Keep acceptance claims honest
+
+For a multicore service change, run the shared service's concurrent producer/
+consumer, backpressure, stop/restart and teardown tests with race detection
+where available. Host threads validate synchronization, not ESP32-P4 affinity
+or deadlines. Follow `docs/GAME_PERFORMANCE.md`: record actual game/audio core
+IDs, queue rejections, underruns, clipping and frame timing on the named device.
 
 Local play can validate game rules, RGB565 drawing through the shared API,
 normalized keyboard and mouse input, lifecycle behavior, tone-mixer requests,
@@ -105,3 +127,24 @@ not provide a real Host/Join link or prove two-console synchronization.
 Legacy Doom does not implement the reentrant Game API and is outside this SDL3
 runner. Use its pinned `make doom-smoke WAD=/absolute/path/to/freedoom1.wad`
 host proof where applicable, then follow the separate guarded tablet route.
+
+## Retest the delivered source closure
+
+After isolation, cherry-picking or preparing a push, rebuild and benchmark in
+the checkout that produces the cartridge. Matching game source files is not
+enough: fingerprint the linked shared drawing/presentation code, headers,
+cartridge runtime, assets and compiler flags as well. Do not carry a fast Mac
+result from another checkout onto a package containing older raster helpers.
+The exact final source closure must pass the SDL and focused checks again.
+
+For fixed-step action, test frames shorter than one physics tick, reversals,
+pause, respawn and early network snapshots; a retained Q8 position alone does
+not prove continuous presentation. Perspective games also need projection /
+touch-inverse coverage at the edges and both render sizes. Capture demanding
+active water/effect states, not only the neutral starting board.
+
+## Game Changers AI OS release quality
+
+For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).
+Preserve gameplay and saves, keep incomplete titles out of default bundles,
+and distinguish native-size art, operator feedback and measured P4 cadence.

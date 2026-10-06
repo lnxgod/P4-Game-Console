@@ -8,6 +8,13 @@ another board's flash authorization. New game scaffolds are drafts until
 play-tested; follow `docs/GAME_LIBRARY.md` for names, categories and release
 quality. Retired game identities in `games/retired.json` stay reserved.
 
+Game creation is native-only: use C and `.P4G` through the stable Game API.
+Free-form custom 2D engines, software 3D and raycasting are allowed within the
+same surface, lifecycle and resource contracts; helpers are optional. The old
+Lua game-creation stack, tooling and skill are removed.
+C++ ports need an explicitly tested C-ABI/toolchain adapter; current packaging
+supports C sources. See `docs/GAME_SDK.md` and `docs/GAME_PERFORMANCE.md`.
+
 Use [`installos`](.agents/skills/installos/SKILL.md) as the default entry point
 for Console OS installation, provisioning and first-time setup. Ask whether the
 user will have a microSD card unless already answered. The default content is
@@ -50,6 +57,9 @@ Keep these rules true for every change:
 6. Treat USB and BLE HID descriptors/reports as untrusted input. Bound all lengths/counts, require encrypted identity-bound BLE pairing, and neutralize controller state immediately on disconnect.
 7. Keep copyrighted commercial Doom WADs out of the repository. Use Freedoom or a user-supplied legally owned WAD outside Git.
 8. A build is not hardware verification. Record the serial evidence and exact hardware used for every on-device acceptance result.
+9. For game work, follow [the ESP32-P4 performance contract](docs/GAME_PERFORMANCE.md): native 768×480 with 320×200 fallback, a 60 FPS target and actual-device 30 FPS release floor. Prefer bounded shared rendering and retain fractional motion. Host CPU results do not qualify device cadence; preserve exact package/OS/unit evidence and leave unmeasured acceptance pending.
+
+10. Every released game needs recognizable launcher artwork and a coherent opening/ready view, legible game identity during play, and appropriate pause/results screens. Follow [the complete presentation contract](docs/GAME_ART.md#complete-game-presentation); native games carry their own validated launcher icon. Preserve direct-touch card/board play and multiplayer start barriers.
 
 ## Set up Doom game data on a fresh clone
 
@@ -104,3 +114,5 @@ artifact/evidence update. For SD-backed firmware use `DOOM1.WAD`,
 `FREEDOOM1.WAD`, or `FREEDOOM2.WAD` at the SD root as documented in
 `docs/DOOM.md`. Never push WADs, generated WAD assembly, WAD-bearing firmware
 binaries, or local recovery images to GitHub.
+
+11. Apply [launch and remix quality](docs/LAUNCH_QUALITY.md) when preparing Game Changers AI OS releases: preserve gameplay/save identities during visual remixes, exclude incomplete prototypes from default bundles, use artwork matching the actual title, and retain failed device acceptance until retested.

@@ -1,4 +1,0 @@
-interface:
-  display_name: "P4 Script Game Development"
-  short_description: "Build open Lua and QR-tradable P4 games"
-  default_prompt: "Use $develop-p4-script-games to create or remix a readable Lua game and validate its P4 Cart package."

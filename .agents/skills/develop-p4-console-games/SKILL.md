@@ -11,10 +11,13 @@ helps; do not require a template menu or constrain the user's mechanics or art.
 Infer routine choices, ask only about missing decisions that change gameplay,
 and build a playable core before tuning it with the user.
 
-Native C is the general-purpose route for Console OS games, including its
-networked sessions. Use `$develop-p4-script-games` when readable Lua remixes are
-the better fit or the user requests them. Honor explicit format choices and
-explain a missing service before proposing a different runtime.
+Native C and `.P4G` are the supported game-creation route, including networked
+sessions. The former Lua authoring stack and skill are removed. Custom software
+2D/3D engines and raycasting are allowed: draw
+into the negotiated RGB565 surface through the stable lifecycle and resource
+contracts. Shared rendering helpers are optional. Current packaging supports C;
+a C++ port requires an explicitly tested C-ABI/toolchain adapter, not an assumed
+C++/STL runtime. No language choice guarantees smooth device play.
 
 Build against stable platform APIs, make the launcher category explicit and
 keep hardware ownership in platform components. Keep state and work bounded
@@ -59,6 +62,15 @@ game's `game.json` before editing. Also use:
 - Use fixed storage and bounded loops. Do not bypass the reviewed ELF package
   validator/loader, add a second loader, or add an unbounded recursive folder
   walk.
+
+## Ship the title and icon with the game
+
+For every new game or remix, update the cartridge's own title, version and
+launcher artwork. Follow `$develop-p4-games`'s cartridge-owned presentation
+contract (`launcher_icon` in `game.json`); verify an install changes the tile
+without adding a title/ID mapping to Console OS. Preserve the 0.44 nextgen
+launcher design. Artwork for a separate ongoing remix remains that remix's
+work; shared-service changes do not authorize replacing all game art.
 
 ## Choose a game type
 
@@ -136,17 +148,39 @@ metadata into `p4_game_descriptor_t`; that descriptor is the stable API ABI.
   driver, pairing screen or raw controller access. Use held for movement and
   transitions for actions. Preserve an explicitly touch-only design, but state
   that limit. Never infer physical Tab5 HID support from the shared API.
-- Use `p4/draw.h` for clipped RGB565 primitives or bounded licensed sprites.
-- Default to the portable 320x200 surface. Use optional `video-highres` plus
-  `P4_GAME_CAP_VIDEO_HIGH_RES` for detail-heavy games that can negotiate
-  768x480 and fall back; use required high-res only when fallback is
-  impossible. Branch drawing on `surface->width`/`height`. Touch and standard
-  control hit regions remain normalized to 320x200 in either render mode.
+- For card and tabletop games, make visible cards, pieces, dice and semantic
+  actions the primary touch interface. Support natural legal drag-and-drop and
+  tap alternatives; omit a permanent virtual D-pad/A/B overlay when direct touch
+  already covers play. Retain normalized physical-controller support. Consume
+  touch gestures through release before interpreting synthesized button bits so
+  a card drag cannot trigger an invisible controller action. Follow the direct
+  interaction section of `docs/GAME_ART.md`.
+- Use optional `p4/draw.h` primitives and licensed sprites, or a bounded custom
+  software renderer. Keep clipping, stride and resource ownership correct.
+- Target native 768x480 RGB565 by default, with optional `video-highres` plus
+  `P4_GAME_CAP_VIDEO_HIGH_RES` and a tested 320x200 fallback. The creator now
+  requests this automatically. Render directly into the negotiated surface;
+  enlarging a finished low-resolution frame is not a visual upgrade. Touch
+  and standard control hit regions remain normalized to 320x200 in either mode.
+- Read `docs/GAME_ART.md` for the shared presentation and ImageGen contract.
+  Use `p4/presentation.h` for cartridge-local antialiased text and materials;
+  keep important card ranks, suits, scores and instructions exact and legible.
 - Use `p4/visual.h` for fixed-point motion, atlas animation, easing,
   deterministic camera shake, and small caller-owned particle arrays. These
-  helpers add polish without giving a game a renderer, allocator, or timer.
+  helpers are optional building blocks for the game's engine; custom rendering
+  still uses the OS-owned lifecycle, timing and supplied surface.
+- Apply the canonical [ESP32-P4 performance contract](../../../docs/GAME_PERFORMANCE.md)
+  from the first playable build: bounded shared raster work, fractional motion,
+  pinned RV32 hot-path review and exact-device cadence evidence. Target 60 FPS;
+  qualify the actual-device 30 FPS release floor separately from host success.
 - Use `p4/audio.h` for host-owned sound.
 - Stop all requested sound in the game's `stop` callback.
+- Use both P4 cores through OS-owned services, as described in
+  `docs/GAME_PERFORMANCE.md`. Games submit bounded PCM/tone commands; the Tab5
+  0.54 candidate's shared core-1 audio worker handles mixing/output while the
+  foreground core runs the game. Never create private tasks or move cartridge
+  callbacks to another core. Measure producer jitter and backpressure; a
+  successful synth test alone does not prove continuous device audio.
 
 For linked-console multiplayer, automatically use
 `$develop-p4-multiplayer-games`. Declare the optional `multiplayer-session`
@@ -172,20 +206,21 @@ busy-wait in a callback.
 Use original or correctly licensed assets. Never import arcade ROMs, maps,
 sprites, fonts, sounds, or commercial Doom WAD content.
 
-## Make animated 8-bit art usable in firmware
+## Make high-resolution art usable in firmware
 
-When a game needs generated pixel art, request a purpose-built sprite atlas,
-not a scenic illustration. Describe the exact grid, every frame in each row,
-a shared baseline, a uniform transparent background, limited palette, hard
-pixel edges, and no text or cell borders. Inspect the generated image before
-using it; regenerate it if the frames are not independently crop-safe.
+Use ImageGen for new or materially revised raster art. Request crop-safe
+sprite atlases or seamless materials sized for their native 768x480 use.
+Describe the grid, frame contents, shared baseline, palette and transparency;
+keep important text and symbols code-rendered. Inspect converted artwork at
+native size. Pixel art may retain hard edges, but it is not the default style
+for every game; follow the user's art direction and `docs/GAME_ART.md`.
 
 - Keep the original source PNG under `games/<slug>/assets/` and explain its
   provenance, row/frame layout, and license in that game's README.
 - Commit a game-local converter under `games/<slug>/tools/` which takes the
   source PNG to a fixed-size RGB565 include under `src/generated/`. Use
-  nearest-neighbor scaling and map transparent pixels to one explicit chroma
-  key. Never decode PNGs, allocate image buffers, or use a texture loader at
+  nearest-neighbor scaling for pixel art or a recorded quality offline filter
+  for painted materials, and map transparency to one explicit chroma key. Never decode PNGs, allocate image buffers, or use a texture loader at
   runtime.
 - Bound every atlas dimension and account for `width * height * 2` bytes in
   the static firmware budget. Draw an individual cell with
@@ -249,3 +284,27 @@ reflash.
 Update `docs/GAME_SDK.md` only when the reusable contract changes. Record
 current evidence separately from historical runs. Use `$develop-p4-games`
 for package validation and installation.
+
+## Match the intended spatial experience
+
+For a physical marble, tilting tray or water-maze request, establish the camera
+and depth in the first playable scene. When the user expects 3D or 3D-like play,
+use a native projected scene with visible wall faces, occlusion, shaded actors
+and a water surface that responds continuously to the simulation. A flat grid
+with decorative ripples does not meet that brief. Keep reusable bounded mesh
+rasterization in the shared API; games own the camera and scene. Use the native
+cartridge path for this class of real-time game.
+
+Show an actual native-resolution gameplay capture early, before lengthy polish
+or packaging. A concept image is not evidence of the renderer. Check motion as
+well as a still: interpolate local fixed-step actors, preserve fractional
+projection, handle respawns without tweening across walls, and invert the
+actual camera for touch targeting. Keep input, physics and multiplayer rules
+independent of the view. A rejected visual direction requires a scene/rendering
+change, not just another texture on the same presentation.
+
+## Game Changers AI OS release quality
+
+For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).
+Preserve gameplay and saves, keep incomplete titles out of default bundles,
+and distinguish native-size art, operator feedback and measured P4 cadence.

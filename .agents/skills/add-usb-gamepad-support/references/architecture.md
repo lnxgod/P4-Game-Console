@@ -3,7 +3,8 @@
 ## Layers
 
 1. `platform_usb_host` or `platform_ble_host`: one transport owner and lifecycle.
-2. `platform_gamepad_usb` or `platform_gamepad_ble`: bounded HID discovery and report transfer.
+2. `platform_gamepad_usb` or `platform_gamepad_ble`: bounded HID discovery and report transfer;
+   Tab5's `platform_gamepad_xusb` is a separate wired-XUSB client on the same host.
 3. `gamepad_core`: descriptor parsing, field extraction, profiles, normalization, and transport snapshots.
 4. `platform_gamepad`: deterministic USB-priority/BLE-fallback broker.
 5. Game adapter: maps canonical controls to semantic actions or engine events.

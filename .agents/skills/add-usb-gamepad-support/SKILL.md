@@ -1,6 +1,6 @@
 ---
 name: add-usb-gamepad-support
-description: Add, change, diagnose, or test console-level USB or Bluetooth controller services on this ESP32-P4 platform. Use for USB Host, BLE HID/HOGP pairing, HID parsing, controller hotplug, shared mappings, deadzones or Doom input adapters. Ordinary game action mappings use the native or Lua authoring skill and existing normalized controls.
+description: Add, change, diagnose, or test console-level USB or Bluetooth controller services on this ESP32-P4 platform. Use for USB Host, BLE HID/HOGP pairing, HID parsing, controller hotplug, shared mappings, deadzones or Doom input adapters. Ordinary game action mappings use the native game-authoring skill and existing normalized controls.
 ---
 
 # Add console gamepad support
@@ -10,7 +10,7 @@ to every game. Do not put USB Host calls, NimBLE/GATT calls, pairing state,
 descriptor parsing, device quirks, or pin configuration inside a game.
 
 If a game only maps the existing normalized P4 buttons to game actions, use
-`$develop-p4-console-games` (or `$develop-p4-script-games` for Lua) and that
+`$develop-p4-console-games` and that
 game's focused host tests. New games should consume the existing controls by
 default; no per-game USB support layer is needed. For linked-console game logic,
 add `$develop-p4-multiplayer-games` without changing controller ownership. Use this skill when the
@@ -38,6 +38,14 @@ Resolve the exact target before touching USB code:
   hub; firmware does not source VBUS. H1 CH343 remains programming, serial, and
   content transfer only. The USB Drive app is the explicit role switch from H2
   Host to H2 device/MSC and must unmount FAT before exposing it.
+- `m5stack-tab5` uses its dedicated USB-A connector and the native HS PHY.
+  The default candidate enables the shared USB/HID path and controls USB5V_EN
+  through the board service on expander 0x44/P3. USB-C remains Serial/JTAG.
+  Read `docs/boards/M5STACK_TAB5.md`; this path is build-tested, with exact-unit
+  controller acceptance pending. The wired XUSB client also recognizes
+  alternate-zero `ff/5d/01` interfaces and has host/build tests. Read
+  `components/platform_gamepad_xusb/README.md`. Do not claim named-pad
+  acceptance, GIP, wireless receivers, hubs or multiple simultaneous pads.
 - Another target must have its own source-pinned board-port profile and USB
   adapter plan. Never inherit either identity from a connector name.
 
@@ -64,7 +72,8 @@ USB Host or BLE HOGP lifecycle
   -> per-game action adapter
 ```
 
-Reuse `components/gamepad_core` and `components/platform_gamepad`. Extend the
+Reuse `components/gamepad_core` and `components/platform_gamepad`. Tab5's
+`platform_gamepad_xusb` supplies the separate bounded wired-XUSB tier. Extend the
 stable public state only when a control cannot be represented there. Keep Doom
 key translation in the project-owned `components/doom_gamepad_input` adapter,
 while connect, pairing, decode, normalization, hotplug, and device quirks
@@ -87,7 +96,8 @@ vendor-class device as generic USB HID. Add a separate transport/profile tier
 when required.
 
 For an Xbox-compatible controller, identify its actual USB mode before
-choosing an adapter. The user may have a third-party pad with a different
+choosing an adapter. Tab5 selects the existing HID or wired-XUSB adapter from
+its descriptors; an XInput label alone does not distinguish wired XUSB from GIP. The user may have a third-party pad with a different
 protocol from an official Microsoft controller. A Windows DirectInput label
 does not prove a raw USB HID interface. Record unknown identity/mode and
 hardware availability honestly; do not repeat a request for a controller the
@@ -157,5 +167,15 @@ followed by `python3 scripts/verify-console-os-waveshare.py
 apps/console_os/build-waveshare-usb-host`. A generic SNES-style USB HID pad has
 named direct/hub evidence on that route, including D-pad/button mapping and
 disconnect recovery; do not generalize that result to other descriptors.
+For Tab5, run `make tab5-usb-host` and `make gamepad-host`, then
+`make console-os-tab5-idf`. The guarded build verifier checks the linked host,
+board power and Doom adapters. Use the exact-unit/artifact install route in the
+Tab5 board document before any hardware test.
 Build only the physically selected target unless shared input or board
 selection code changed.
+
+## Game Changers AI OS release quality
+
+For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).
+Preserve gameplay and saves, keep incomplete titles out of default bundles,
+and distinguish native-size art, operator feedback and measured P4 cadence.

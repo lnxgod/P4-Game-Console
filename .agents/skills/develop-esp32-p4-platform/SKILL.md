@@ -34,7 +34,7 @@ complete 16 MiB factory image and hashed live identity have been recorded and
 the profile's write gate has been deliberately authorized.
 
 For Waveshare, select `waveshare-esp32-p4-wifi6-touch-lcd-4.3` explicitly and
-use `$develop-waveshare-p4-4.3`. The deployed controller-first profile uses
+use `$develop-waveshare-p4-4-3`. The deployed controller-first profile uses
 the synthetic build target
 `waveshare-esp32-p4-wifi6-touch-lcd-4.3-usb-host`: H1 CH343 is programming,
 monitoring, and verified content transfer, while externally powered H2 is the
@@ -65,7 +65,11 @@ authorizations. Load games through the connected USB-C cable with
 and Doom/Chex through `scripts/p4-usb-content.py`; no card reader is needed.
 Use `scripts/flash-console-os-tab5.py` with an explicit unit, port
 and authorization digest; its default is a local-only check. Preserve and bind
-any new unit before its first write. USB-A power/host and C6 radio remain disabled in this configuration.
+any new unit before its first write. The 0.45 core update adds an explicitly scoped C6 Bluetooth/local Wi-Fi and
+500 mA non-QC charging candidate; consult current exact-artifact evidence for
+installation and physical acceptance. USB-A HID controller support is a host/build-tested
+candidate with named controller acceptance pending; use `$add-usb-gamepad-support`
+and the Tab5 board document before hardware claims.
 
 For another ESP32-P4 board, use `scripts/board-port.py` and
 `docs/BOARD_PORTING.md`. Start with `check` and `matrix`, then feed a
@@ -84,6 +88,10 @@ ES8311 service in `components/olimex/platform_audio` on shared I2C1 and I2S1;
 the external result is the board's 3.5mm audio jack and remains hardware
 unverified until a named acceptance run.
 
+Game presentation defaults to negotiated 768x480 with 320x200 fallback;
+see `docs/GAME_ART.md`. Preserve native touch coordinates and board-owned
+scaling. Authoring policy does not itself add high-resolution board support.
+
 For a game that only consumes the stable P4 video, controls, tone, timing, and
 lifecycle APIs, use `$develop-p4-games` instead. Escalate to this platform skill
 only when the task changes Console OS, a shared service, the package/loader
@@ -99,6 +107,16 @@ boundary, an ESP-IDF build, or physical hardware behavior.
 - Pin ESP-IDF, managed components, third-party source, and board references. Commit dependency lockfiles once generated.
 
 ## Verify in proportion to the change
+
+For CPU or audio stutter, follow `docs/GAME_PERFORMANCE.md`'s multicore
+contract. Use both P4 application cores for independent work through shared
+OS services: the Tab5 0.54 candidate keeps game callbacks on core 0 and native
+audio output on the core-1 `p4_game_platform` audio worker. The C6 remains the
+radio processor. Do not equate SMP configuration with measured core use.
+Preserve single ownership, bounded copied commands, nonblocking game callbacks
+and joined teardown before freeing resources. Test concurrency and failure
+paths, and capture actual core IDs, audio queue/underrun/clipping counters,
+stack reserve and game cadence before claiming a device improvement.
 
 Choose the smallest proof that covers the modified boundary:
 
@@ -144,6 +162,25 @@ make console-os-waveshare-idf # Waveshare 4.3 landscape bundle
 Build additional targets only when a shared change or a concrete board-selection
 risk requires them. Do not repeat builds after documentation-only edits.
 
+## Core OS successors
+
+Use 0.44's nextgen Tab5 interface as the baseline; preserve its layout and
+styling. Version core successors consistently in `apps/console_os/CMakeLists.txt`,
+`apps/console_os/app-metadata.json`, `components/console_shell/include/console/brand.h`,
+and the generated update package. Retain 0.46's continuous Games/Files scrolling,
+cartridge-derived category filters, and protected file actions. Retain 0.47's
+cached scrolling, native damage replay and bounded momentum; do not route every
+scroll frame through a full scene redraw. Compare cached frames to the full
+renderer and preserve the display buffer reuse fence when optimizing. Ordinary-file Open
+must never lead to deletion; removal belongs in the small actions menu followed
+by a named confirmation with Cancel selected. Preserve uncommitted interface/game work;
+do not rebase or overwrite a shared working tree to manufacture a clean base.
+For an app-only Tab5 successor during independent game remixes, use
+`P4_TAB5_FIRMWARE_ONLY=1 make console-os-tab5-idf`. Its verifier explicitly
+excludes the removable content bundle while retaining firmware, board, slot,
+peripheral and update digest checks. Record `firmware_only: true` in the new
+app-only authorization. It never authorizes installing an incomplete bundle.
+
 ## Flash and monitor
 
 Before the first project write, require a complete flash backup with matching byte count, SHA-256, and hashed live-device identity in `hardware/backups/manifest.json`. Use an explicit serial port:
@@ -164,6 +201,14 @@ post-write hash verification before resetting each unit.
 
 The flash script must verify the application readback before a run can be recorded as a PASS. Never erase the whole flash merely to solve a build or connection problem. Preserve the factory backup and record the exact app, toolchain, board identity hash, result, and observed serial markers after a hardware test. Do not store or print the raw base identity.
 
+Before qualifying an OS update, check [protected game payloads](../../../docs/GAME_SDK.md#protected-game-payloads). Even a firmware-only build regenerates the Red Dragon allowlist from its paired cartridge. Confirm installed protected content matches that exact OS lineage, or complete the authorized paired content update; preserve the guard and save identity.
+
 ## Definition of done
 
 A platform change is done only when its reusable boundary is clear, locks and documentation match it, relevant host tests pass, the target image builds from a clean configuration, and hardware-facing claims have serial or physical evidence. Record any unresolved electrical dependency explicitly.
+
+## Game Changers AI OS release quality
+
+For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).
+Preserve gameplay and saves, keep incomplete titles out of default bundles,
+and distinguish native-size art, operator feedback and measured P4 cadence.

@@ -107,13 +107,13 @@ Code-generated shapes and embedded correctly licensed RGB565 arrays are both
 valid. Validate width, height, stride, byte order, clipping, flash/PSRAM cost,
 and licensing. Keep image conversion deterministic and host-tested.
 
-The retro Console OS launcher is intentionally drawn from RGB565 rectangles,
-lines, and the built-in 5x7 font. Do not add the ImageGen layout reference or
-another full-screen bitmap to firmware merely to reproduce its chrome.
-
-Maze Chase intentionally uses code-rendered shapes and needs no external image
-file. Never import Pac-Man ROMs, maps, sprites, sounds, or artwork. Never
-commit a commercial WAD, a WAD-bearing firmware image, or local recovery data.
+Follow `docs/GAME_ART.md` for native 768x480 game presentation and the tested
+320x200 fallback. This exact Elecrow route retains the platform's negotiated
+surface; do not claim Tab5/Waveshare high-resolution support as Elecrow evidence.
+Check real art contrast, text, sprites, touch alignment and memory/performance
+on the selected device. Record ImageGen sources and deterministic conversion.
+Never import Pac-Man ROMs, maps, sprites, sounds, or artwork. Never commit a
+commercial WAD, a WAD-bearing firmware image, or local recovery data.
 
 ## Install only through a successor route
 
@@ -227,3 +227,9 @@ Use these classifications precisely:
 End by stating what passed, what remains manual, what is currently installed,
 and the exact next control the operator should tap. Never call pending evidence
 a pass.
+
+## Game Changers AI OS release quality
+
+For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).
+Preserve gameplay and saves, keep incomplete titles out of default bundles,
+and distinguish native-size art, operator feedback and measured P4 cadence.

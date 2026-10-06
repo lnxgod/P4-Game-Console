@@ -1,6 +1,6 @@
 ---
 name: installos
-description: Default repository workflow for installing or provisioning P4 Console OS. Ask about microSD, prepare basic games and verified Doom shareware, select supported internal-flash or SD storage, and offer Chex Quest only with SD. Use for OS installation and first setup; use develop-p4-games for game-only updates.
+description: "Set up and provision P4 Console OS from a fresh checkout: verify the pinned environment, prepare basic native games, automatically acquire verified Doom shareware, install through the exact-board route, and configure first boot. Ask about microSD; current Tab5 game storage is SD-only. Offer Chex only with explicit selection and SD. Use develop-p4-games for game-only updates."
 ---
 
 # Install Console OS
@@ -24,12 +24,30 @@ Use information already supplied in the conversation; do not ask again.
 The normal installation includes the basic game bundle **and Doom v1.9
 shareware**. Treat obtaining and installing the WAD as part of the job, not a
 manual prerequisite to hand back to the user. Respect an explicit request to
-omit a game.
+omit a game. Doom is the only default engine-data title. Chex Quest is an
+optional add-on under `GAMES/OPTIONAL`; its launcher tile does not mean its
+resources are installed. Do not fetch, stage or transfer Chex unless the user
+explicitly opts in and has SD storage. Preserve an already-installed copy
+unless removal is separately requested.
 
-For basic games, use the enabled native manifests under `games/`, their required
-resource sidecars. Lua teaching samples are not part of the default bundle;
-install a finished Lua cart only when requested. Measure the final bundle rather than hard-coding a game count or size.
-Do not silently drop required resources or Doom to make a layout fit.
+For basic games, use the enabled native manifests under `games/` and their
+required resource sidecars, following [library policy](../../../docs/GAME_LIBRARY.md).
+Incomplete prototypes stay out of default bundles; retain an explicitly requested
+WIP title with its status visible. System tools and diagnostics retain
+`SYSTEM/TOOLS` and `SYSTEM/TESTS` folders. Measure the final native bundle rather
+than hard-coding a game count or size. Do not silently drop required resources
+or Doom to make a layout fit.
+
+## Prepare a fresh checkout
+
+Run commands from the repository root. Use the checked-in skills and scripts;
+no personal skill directory or machine-specific SDK path is required. Read
+`toolchain.lock.json`; use `make setup` only when its pinned tools are absent,
+then `make verify` as described by the
+[platform workflow](../develop-esp32-p4-platform/references/workflow.md).
+Use that environment's Python for serial transfer (pyserial is required); the
+data-preparation helper below uses only the Python standard library and Git.
+Preserve SDK/component locks, existing saves, installed data and preferences.
 
 ## Choose a supported storage route
 
@@ -39,52 +57,68 @@ build/install route and `../develop-p4-games/SKILL.md` for content validation an
 transfer. Use other board/testing skills only where their actual scope applies;
 the Elecrow acceptance workflow is not a Tab5 installer.
 
-| User choice | Required installation outcome |
+**Current Tab5 game storage requires microSD.** Read
+[the storage status](references/tab5-storage.md) before promising a no-SD
+installation or automatic internal-plus-SD expansion.
+
+| User choice | Current Tab5 outcome |
 | --- | --- |
-| No microSD | Persistent internal-flash game storage containing basic games and Doom; no card required to boot, play or retain saves |
-| Has microSD | Basic games and Doom available, SD enabled for additional content, and Chex only if selected |
-| Adds microSD later | Detect a supported card at the next startup without reflashing; retain access to internal games and preserve saves |
+| Has microSD | SD-backed basic games and Doom; Chex only if selected |
+| No microSD | Prepare and verify local content, then report the unimplemented internal-storage route; do not call an SD-only flash a completed no-SD install |
+| Adds microSD later | The current SD backend can mount a supported card at startup; internal starter content and combined catalogs are not implemented |
 
-For Tab5, read [references/tab5-storage.md](references/tab5-storage.md) before
-planning a no-SD install or promising automatic SD expansion. It distinguishes
-the intended behavior from the existing SD-only implementation.
-
-Use one firmware capable of internal storage and later SD expansion when that
-route is implemented. An SD card should expand the available catalog, not make
-the internal starter games disappear. Preserve existing files; mounting a card
-does not authorize formatting, copying over saves or migrating data. The owner confirmed
-detection after reboot: insert/remove with power off, then restart.
-Do not promise live insertion/removal without separate implementation and tests.
+For SD setup, verify a supported FAT card mounts and has room for the measured
+bundle, data, saves and temporary upload files. Mount failure does not authorize
+formatting or deleting files. Insert/remove the card with power off, then restart;
+live insertion/removal is not established. A future internal-storage route needs
+its own implementation, capacity checks, migration and exact-device evidence.
 
 For other boards, verify their own storage capabilities and installation route.
 The Tab5 capacity calculation does not authorize repartitioning an Elecrow,
 Olimex or Waveshare device.
 
-## Prepare the game data
+## Prepare the game data automatically
 
-1. Read the exact file identities and acquisition URLs from
-   `third_party/game-data.json`. Keep game data in ignored local paths.
-2. Reuse `local-data/doom/doom1.wad` only after verifying its byte count and
-   SHA-256. If absent or invalid, acquire the pinned shareware using the
-   repository's instructions in `AGENTS.md`. Download to a temporary local
-   staging path, check command failures, decompress/extract only the intended
-   input, verify it, then move the verified file into place. Never activate a
-   partial download or substitute an unverified mirror.
-3. The required Doom identity is 4,196,020 bytes and SHA-256
-   `1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771`.
-   Run `git check-ignore -q local-data/doom/doom1.wad` before building.
-   Preserve the original shareware notices.
-4. If SD is available **and** Chex was selected, obtain and verify both
-   `chex.wad` and `chex.deh` from the pinned manifest. Chex is optional;
-   a failed Chex acquisition must not be reported as installed.
-5. Keep WADs, generated storage images, packages containing game data and recovery
-   images out of Git. Doom stays a separately provisioned data file; do not
-   embed it into the OS executable or change the repository's distribution policy.
+Run the checked-in [preparation helper](../../../scripts/prepare-game-data.py)
+as part of setup; do not hand acquisition back as a manual prerequisite:
 
-If acquisition fails, report the concrete failure and keep the installation
-incomplete for the affected content. Do not call an empty Doom launcher tile a
-successful Doom installation. Do not substitute Freedoom for the pinned runtime
-without the separately reviewed compatibility change.
+```sh
+python3 scripts/prepare-game-data.py
+```
+
+It reads the exact identities and HTTPS sources from
+[`third_party/game-data.json`](../../../third_party/game-data.json), reuses a
+hash-valid `local-data/doom/doom1.wad`, or downloads and verifies the missing or
+invalid input. Downloads and decompression are bounded; verified files replace
+local destinations atomically. Failed acquisition preserves existing files.
+Every destination must be Git-ignored. The default is Doom v1.9 shareware:
+4,196,020 bytes, SHA-256
+`1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771`.
+
+Only after the user chooses Chex **and** SD storage, run:
+
+```sh
+python3 scripts/prepare-game-data.py --chex --sd
+```
+
+This prepares Doom plus both pinned Chex files. It verifies the Chex archive
+before reading its WAD and obtains the same-version patch bytes from the raw
+Debian data URL corresponding to the manifest's source page. Both Chex files
+must verify before any downloaded file is activated. An HTML page is not a
+valid patch. Chex is never selected merely because a local copy already exists.
+
+Save the JSON output with the setup evidence: `local-data-ready` means verified
+local inputs, **not installed content**. Keep the manifest notices. Never commit,
+embed, mirror or redistribute these data files from the project. The helper
+performs no build, flash or transfer. For an isolated acquisition check use
+`--output-root build-host/game-data-check`; normal transfer commands consume the
+default `local-data/doom/` paths, not that test directory.
+
+If acquisition fails, report the specific failure and keep the affected content
+incomplete. Do not activate partial data, substitute an unpinned mirror or call
+an empty Doom tile an installed game. Respect an explicit request to omit Doom;
+do not substitute Freedoom for this pinned runtime without its compatibility
+review.
 
 ## Build, install and verify
 
@@ -121,13 +155,48 @@ python scripts/p4-usb-content.py chex --port <explicit-port>
 These are existing **SD-backed** commands, not proof of a no-SD route. Use the
 documented successor commands once internal storage support exists.
 
-Complete focused package/build checks and exact write readback. Record boot,
-game catalog and storage evidence for the exact unit. For no-SD acceptance,
-boot with the card physically absent, launch a basic game and Doom, return to
-the launcher and verify saves after restart. For later-card support, also test
-a populated card, an empty supported card, conflicting game IDs and a restart
-after card removal; verify internal games and saves remain accessible.
+Complete focused package/build checks and exact write readback. Bind each
+protected cartridge, including Red Dragon, to the compatible OS lineage before
+transfer; keep required `.P4R` resources with their cartridges. Record the exact
+OS, game/data hashes, unit and transfer receipts. A failed optional Chex WAD or
+patch transfer leaves Chex incomplete, even when the other file succeeded.
 
-Report what was installed, storage used/free, Doom and optional Chex status,
-and which behavior is build-tested, hardware-tested or operator-confirmed.
-Never label a skill specification or a successful compile as working hardware.
+## Complete initial configuration and acceptance
+
+After the authorized install, with that exact unit running the launcher:
+
+1. Confirm SD mounted, catalog entries and covers are present, and free space
+   permits saves and later atomic updates. An icon alone does not prove data
+   readiness. Keep existing saves and preferences during upgrades.
+2. Read the device clock and, for first-time setup, synchronize UTC from the
+   host's correct clock with verified hardware readback:
+   ```sh
+   python scripts/p4-transfer.py clock --port <explicit-port>
+   python scripts/p4-transfer.py clock --sync --port <explicit-port>
+   ```
+   The current UI displays UTC. Record failed or invalid clock status honestly.
+3. In **Control Panel > Preferences**, confirm startup/game volume and Appearance.
+   Apply preferences already supplied by the owner; otherwise preserve current
+   values. Verify mute and an audible setting when acoustic testing is authorized.
+   Do not erase saved preferences to manufacture a first-boot experience.
+4. Exercise touch navigation, back/return, one native game, Doom launch/play/exit,
+   and save persistence after restart. If Chex was selected, test it only after
+   both data files have verified transfer receipts. Record sound and physical
+   input feedback separately from frame-cadence measurements.
+5. Configure/test a controller or linked-console session only when requested;
+   use the relevant repository skill and the selected firmware's actual support.
+   Data downloads happen on the host and do not require inventing device Wi-Fi
+   credentials or enabling unverified radio/USB-host features.
+
+Report installed OS/content, storage used/free, local preparation versus device
+readback, clock/preferences, Doom and optional Chex status, and any acceptance
+still pending. A successful build or transfer does not prove smooth gameplay.
+The future no-SD route additionally needs absent-card boot/play/save tests and
+later-card/removal/conflicting-ID tests from the storage reference; do not mark
+those complete on current SD-only firmware.
+
+## Game Changers AI OS release quality
+
+For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).
+Preserve gameplay and saves, keep incomplete titles out of default bundles,
+and distinguish native-size art, operator feedback and measured P4 cadence.

@@ -1,6 +1,6 @@
 ---
 name: develop-p4-games
-description: Create, port, modify, package, install, or test storage-installed games for P4 Console OS. Use for games/*, P4 Game API v1, game.json manifests, .P4G cartridges, launcher metadata, 320x200 or optional 768x480 RGB565 rendering, normalized controls, tone audio, Game Manager installation or removal, or adding a game to the Program Manager catalog.
+description: Create, port, modify, package, install, or test storage-installed games for P4 Console OS. Use for games/*, P4 Game API v1, game.json manifests, .P4G cartridges, launcher metadata, native 768x480 RGB565 rendering with 320x200 fallback, normalized controls, tone audio, Game Manager installation or removal, or adding a game to the Program Manager catalog.
 ---
 
 # Develop P4 Console games
@@ -27,10 +27,17 @@ Use `$develop-p4-console-games` for free-form gameplay/source authoring and
 game-protocol guidance while Console OS owns rooms and links. Optional examples
 live in `docs/GAME_STARTERS.md`. Supported controllers enter through the normal
 `controls` API; never add USB/HID code to a cartridge. Use this skill for the
-native package, catalog, storage, installation, and removal boundary. Use
-`$develop-p4-script-games` instead for readable Lua `.P4CART` games.
+native package, catalog, storage, installation, and removal boundary. Native
+C is the supported creation path. The old Lua games, tools and skill are
+removed. Follow `docs/GAME_SDK.md` for custom engine freedom and current C
+source/toolchain limits.
 
 ## Load the game contract
+
+Use the canonical [ESP32-P4 performance contract](../../../docs/GAME_PERFORMANCE.md)
+when authoring or qualifying a game. It covers bounded rendering, active traces
+and the actual-device 30 FPS release floor; host tests and package transfers
+remain distinct from device qualification.
 
 Read these files before changing a game:
 
@@ -40,7 +47,7 @@ Read these files before changing a game:
 4. The closest example under `games/`, normally `maze_chase` or
    `space_invaders`
 
-Read `$develop-esp32-p4-platform`, `$develop-waveshare-p4-4.3`, a matching
+Read `$develop-esp32-p4-platform`, `$develop-waveshare-p4-4-3`, a matching
 board display/audio skill, or `$add-usb-gamepad-support` only when the request
 changes or diagnoses that platform boundary. Ordinary drawing, normalized
 button handling, and tone playback through existing `p4/` APIs do not require
@@ -67,22 +74,52 @@ For an existing game, preserve its public ID unless the task intentionally
 creates a different title. Prefer small, deterministic game-state transitions
 that can be exercised without display, audio, USB, or filesystem hardware.
 
+## Cartridge-owned launcher presentation
+
+New games and game remixes must ship their updated launcher title and artwork
+inside the cartridge. Console OS 0.45 reads the title from the `.P4G` header
+and prefers the optional `.p4icon` section for the tile; installing a game or
+changing its art must not require an OS reflash or an OS-side title/ID table.
+Preserve the 0.44 nextgen interface layout and styling when extending this path.
+
+Keep `game.json`'s title/subtitle/version accurate. Finish the game's icon art
+as part of its remix, then run `python3 scripts/pack-game-icon.py <art.png>
+--output games/<slug>/assets/launcher.p4i` and set
+`"launcher_icon": "assets/launcher.p4i"` in that manifest. Keep the source art,
+license/provenance, and packed icon with the game. Read `docs/GAME_SDK.md`'s
+"Cartridge launcher artwork" contract for exact bounds. This is title artwork,
+not a screenshot of implementation details or generic placeholder art.
+
+Verify the built cartridge contains the icon, install it, and confirm the
+launcher title and tile refresh from the new cartridge without a firmware
+change. Missing/invalid optional icons use the existing fallback; a fallback
+does not count as an upgraded icon for a new/remixed release. Stay within the
+512 KiB package limit including the icon. Do not recreate other games' icons
+unless that artwork work is requested; respect an existing parallel remix.
+
 ## Preserve runtime and package rules
 
 - Include only headers under `components/p4_game_api/include/p4/`. Never take
   raw display, touch, audio, USB, SD, or filesystem handles from a game.
-- Render a complete RGB565 frame with the clipped `p4/draw.h` primitives.
-  Default to 320x200. For detail-heavy card, board, or productivity games,
-  declare optional `video-highres` in `game.json` and
-  `P4_GAME_CAP_VIDEO_HIGH_RES` in the descriptor, then handle either 320x200
-  or 768x480 from `surface->width`/`height`. Use required high-res only when a
-  low-res fallback is impossible. Touch input remains canonical 320x200 in
-  both modes. Keep state at or below `P4_GAME_MAX_STATE_BYTES` and bound loops,
+- Render a complete RGB565 frame using optional clipped `p4/draw.h` primitives
+  or a bounded custom software renderer on the supplied surface.
+  Target 768x480 by default: declare optional `video-highres` in `game.json`
+  and `P4_GAME_CAP_VIDEO_HIGH_RES` in the descriptor, with a tested 320x200
+  fallback selected from `surface->width`/`height`. New scaffolds do this
+  automatically. Follow `docs/GAME_ART.md` for native-detail layouts, exact
+  text/symbols, ImageGen assets and byte budgets. Touch input stays canonical
+  320x200 in both modes. Keep state at or below `P4_GAME_MAX_STATE_BYTES` and bound loops,
   coordinates, sprite dimensions, text, timers, and audio requests.
 - Consume complete `held`, `pressed`, and `released` input snapshots. Return
   `P4_GAME_EXIT_TO_LAUNCHER` when Back is pressed.
 - Treat tone audio as optional and tolerate `p4_game_play_tone()` returning
   false. Put reusable services in `components/`, never in a game.
+- Use the shared OS multicore services described in `docs/GAME_PERFORMANCE.md`.
+  Tab5 OS 0.54 moves native audio output onto P4 core 1 while game callbacks
+  remain on core 0; cartridges must not create their own hardware-owning tasks.
+  Bounded PCM submissions can fail under backpressure. Preserve buffer lifetimes
+  and test uneven delivery, stop/restart and teardown. Actual core IDs, underrun
+  counters and device cadence are required before claiming a multicore speedup.
 - Keep `game.json` authoritative. Retain format `p4-native-elf-v1`, API version
   1, a unique game ID and launcher ID, an uppercase root `.P4G` filename, a
   folder of at most two uppercase segments, and accurate version, license,
@@ -133,6 +170,8 @@ flash, or hardware diagnostic. Stop when the risk-matched checks pass and
 report unrelated failures without expanding the task.
 
 ## Package and install without flashing
+
+For protected games, first apply [Protected game payloads](../../../docs/GAME_SDK.md#protected-game-payloads). Red Dragon requires the exact payload approved by the installed OS; a fresh category-only rebuild can change linked shared code. Use its paired artifact, preserve its save identity, and verify registration after transfer. Ordinary package validation is not a protected-lineage check.
 
 The board-specific Console OS builds write each enabled cartridge to:
 
@@ -185,11 +224,11 @@ python scripts/p4-usb-content.py doom --port /dev/cu.usbmodem1101
 ```
 
 Use the explicit current port for A or B, not an assumed enumeration order.
-`push-bundle` validates and installs native `.P4G`, `.P4R` resources and `.P4CART`
-source cartridges over one connection. Individual resources/carts use `push`
-with `--class p4r` / `--class p4cart`. Each format has its own directory and
-validator; never use `exchange` to bypass it. Native USB may reboot on open on
-macOS; the tools tolerate startup. Content activation reboots; native/cart file
+`push-bundle` validates and installs native `.P4G` and `.P4R` resources over one
+connection. Individual resources use `push --class p4r`. Each format has its own
+directory and validator; never use `exchange` to bypass it. Native USB may
+reboot on open on macOS; the tools
+tolerate startup. Content activation reboots; native file
 activation refreshes the appropriate catalog. USB Drive/MSC and USB-A host power
 remain disabled on Tab5. Do not ask for a card reader when the USB path is available.
 
@@ -214,6 +253,28 @@ Use `python3 scripts/p4-transfer.py remove /absolute/path/EXACT.P4G --port <port
 when the user requests removal. Supply the exact locally validated copy; the
 device checks its byte count and SHA-256 before deleting that named cartridge.
 A changed or unknown file is rejected. For sidecars supply both `.P4R` and `.P4G`;
-the client removes the resource first. Lua `.P4CART` uses the same command.
+the client removes the resource first.
 This does not delete saved progress, WADs or arbitrary files. Older firmware
 without remove support must first receive a separately authorized OS update.
+
+## Close the performance loop after a complaint
+
+A user report of severe lag or unacceptable presentation rejects that installed
+candidate's gameplay acceptance. Record the report against its known package
+and device; do not overwrite it with a transfer PASS or merely leave the old
+result as unmeasured. Preserve the rejected artifact for comparison.
+
+Follow GAME_PERFORMANCE.md to isolate update, drawing, input and presentation
+costs, rebuild the complete cartridge source closure, and repeat representative
+play on the intended device. A requested diagnostic installation can proceed
+within existing authorization, but label it as a candidate. A successful copy
+and registration never closes a lag complaint. Keep the defect open until
+measured cadence and physical responsiveness/visual acceptance support the fix;
+report missing operator play or device timing explicitly without claiming it
+is resolved. Do not add an OS flash to a game-only fix.
+
+## Game Changers AI OS release quality
+
+For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).
+Preserve gameplay and saves, keep incomplete titles out of default bundles,
+and distinguish native-size art, operator feedback and measured P4 cadence.

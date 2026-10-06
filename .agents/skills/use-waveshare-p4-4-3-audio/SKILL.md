@@ -1,5 +1,5 @@
 ---
-name: use-waveshare-p4-4.3-audio
+name: use-waveshare-p4-4-3-audio
 description: Qualify and extend the Waveshare ESP32-P4-WIFI6-Touch-LCD-4.3 ES8311/ES7210 audio path.
 ---
 
@@ -13,3 +13,9 @@ Record the exact vendor initialization, I2C address, I2S pins, master-clock
 requirements, amplifier enable polarity, and microphone path from the exact
 board revision. Keep the implementation behind `components/` and require a
 power-off-safe startup/shutdown diagnostic before native games request audio.
+
+## Game Changers AI OS release quality
+
+For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).
+Preserve gameplay and saves, keep incomplete titles out of default bundles,
+and distinguish native-size art, operator feedback and measured P4 cadence.

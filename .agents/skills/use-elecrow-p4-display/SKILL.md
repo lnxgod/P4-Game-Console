@@ -142,3 +142,9 @@ Re-run the display diagnostic after changing panel power, DSI, DPI, pixel format
 - If geometry is unstable, restore the exact recorded Elecrow timing instead of using the generic EK79007 timing macro.
 
 Keep touch, storage, audio, and controller investigations in their own diagnostics and skills so a display pass never becomes an unsupported whole-board claim.
+
+## Game Changers AI OS release quality
+
+For game-related work, apply [the launch and remix gates](../../../docs/LAUNCH_QUALITY.md).
+Preserve gameplay and saves, keep incomplete titles out of default bundles,
+and distinguish native-size art, operator feedback and measured P4 cadence.
