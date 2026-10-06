@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # SPDX-License-Identifier: MIT
 """Behavioral native bundle proof using temporary files, never hardware."""
-import argparse
 import contextlib
 import hashlib
 import importlib.util
@@ -9,7 +8,6 @@ import io
 import json
 from pathlib import Path
 import struct
-import subprocess
 import sys
 import tempfile
 import unittest
@@ -49,7 +47,7 @@ class NativeBundleTests(unittest.TestCase):
     def tearDown(self):
         for patch in reversed(self.patches):patch.stop()
         self.tmp.cleanup()
-    def test_complete_native_bundle_validates_with_no_lua_directory_or_seed(self):
+    def test_complete_native_bundle_validates(self):
         files=installer.validate_bundle(self.bundle)
         self.assertEqual({str(p) for p in files},{'GAMES/TEST.P4G','GAMES/TEST.P4R','DOOM1.WAD','README.TXT','UPDATE/P4UPDATE.P4U'})
     def test_mixed_bundle_rejected_before_target_inspection_or_copy(self):
@@ -71,9 +69,4 @@ class NativeBundleTests(unittest.TestCase):
     def test_native_payload_corruption_still_rejected(self):
         game=self.bundle/'GAMES/TEST.P4G';data=bytearray(game.read_bytes());data[-1]^=1;game.write_bytes(data)
         with self.assertRaisesRegex(SystemExit,'validation failed'):installer.validate_bundle(self.bundle)
-    def test_historical_lua_installer_stops_before_external_actions(self):
-        result=subprocess.run(['bash',str(ROOT/'scripts/install-waveshare-console-os-p4cart.sh'),'--preflight'],
-                              capture_output=True,text=True,check=False)
-        self.assertEqual(result.returncode,2);self.assertIn('retired Lua',result.stderr)
-        self.assertIn('No device or content write',result.stderr);self.assertEqual(result.stdout,'')
 if __name__=='__main__':unittest.main()

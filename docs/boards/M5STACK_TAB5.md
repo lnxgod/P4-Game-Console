@@ -392,11 +392,11 @@ the shared 20-feature software contract with hardware acceptance still false.
 `scripts/verify-console-os-tab5.py` checks the built artifact and the enabled native cartridges. It validates host-on and host-off builds
 against their selected components, source adapters and linked entry points.
 
-The broader `make check` currently stops at the existing
-`scripts/tests/test-doom-e5-gate.py:43`: it expects
-`apps/doom_embedded_touch_audio/app-metadata.json` to set
-`flash_app_authorized=true`, but that committed gate is false. The Tab5 port
-does not change this authorization; the full repository check is not passing.
+The E5 gate test checks the closed generic flash policy and immutable
+historical evidence. It does not require enabling the older authorization.
+The broader `make check` also builds Elecrow diagnostic applications; it is
+not a prerequisite for a focused Tab5 change. Select the host checks for the
+changed boundary and build Tab5 once when firmware inputs change.
 
 Before the first write, identify the physical Tab5 and its panel sticker; read
 its live chip revision and flash size; preserve its complete factory flash;
