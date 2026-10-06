@@ -16,6 +16,7 @@
 //	Moving object handling. Spawn functions.
 //
 
+#include "p4_doom_net.h"
 #include <stdio.h>
 
 #include "i_system.h"
@@ -440,6 +441,9 @@ P_NightmareRespawn (mobj_t* mobj)
 //
 void P_MobjThinker (mobj_t* mobj)
 {
+    if (mobj->player && !P4_DoomArenaPlayerActive((int)(mobj->player - players)))
+        return;
+
     // momentum movement
     if (mobj->momx
 	|| mobj->momy

@@ -8,6 +8,8 @@ set(P4_DOOM_GAMEPAD_AUDIO_MAIN
 set(P4_CONSOLE_MAIN_SOURCES
     "console_os_main.c"
     "doom_p4mp_adapter.c"
+    "doom_gc_p4mp.c"
+    "doom_gc_engine.c"
 )
 set(P4_CONSOLE_MAIN_INCLUDE_DIRS ".")
 set(P4_CONSOLE_MAIN_REQUIREMENTS

@@ -30,6 +30,7 @@ enum {
 typedef enum {
     P4_DOOM_MP_GAME_DOOM = 0,
     P4_DOOM_MP_GAME_CHEX_QUEST,
+    P4_DOOM_MP_GAME_GAME_CHANGERS_AI,
     P4_DOOM_MP_GAME_COUNT,
 } p4_doom_mp_game_t;
 

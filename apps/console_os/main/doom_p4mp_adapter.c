@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 
 #include "doom_p4mp_adapter.h"
+#include "doom_gc_p4mp.h"
 
 #include <inttypes.h>
 #include <limits.h>
@@ -469,6 +470,9 @@ esp_err_t p4_doom_p4mp_prepare(
 {
     restore_session_timeout();
     memset(&s_net, 0, sizeof(s_net));
+    (void)p4_doom_gc_prepare(NULL, NULL, NULL);
+    if (config != NULL && config->setup.game == P4_DOOM_MP_GAME_GAME_CHANGERS_AI)
+        return p4_doom_gc_prepare(session, config, transport);
     if (session == NULL && config == NULL && transport == NULL) {
         return ESP_OK;
     }
@@ -522,11 +526,12 @@ esp_err_t p4_doom_p4mp_prepare(
 
 boolean P4_DoomNetActive(void)
 {
-    return s_net.prepared;
+    return s_net.prepared || p4_doom_gc_active();
 }
 
 boolean P4_DoomNetConfigure(net_gamesettings_t *settings)
 {
+    if (p4_doom_gc_active()) return p4_doom_gc_configure(settings);
     if (!s_net.prepared || settings == NULL) {
         return false;
     }
@@ -639,6 +644,7 @@ boolean P4_DoomNetConfigure(net_gamesettings_t *settings)
 
 void P4_DoomNetSubmitTic(const ticcmd_t *command, int tic_number)
 {
+    if (p4_doom_gc_active()) { p4_doom_gc_submit(command, tic_number); return; }
     if (!s_net.prepared || command == NULL || tic_number < 0) {
         return;
     }
@@ -673,6 +679,7 @@ void P4_DoomNetSubmitTic(const ticcmd_t *command, int tic_number)
 
 void P4_DoomNetPoll(void)
 {
+    if (p4_doom_gc_active()) { p4_doom_gc_poll(); return; }
     if (!s_net.prepared) {
         return;
     }
@@ -718,11 +725,13 @@ void P4_DoomNetPoll(void)
 
 boolean P4_DoomNetFailed(void)
 {
+    if (p4_doom_gc_active()) return p4_doom_gc_failed();
     return s_net.prepared && s_net.peer_failed;
 }
 
 void P4_DoomNetQuit(void)
 {
+    if (p4_doom_gc_active()) { p4_doom_gc_quit(); return; }
     if (s_net.prepared && s_net.session != NULL &&
         remote_peer() != NULL) {
         const uint8_t reason[2] = {0U, 0U};

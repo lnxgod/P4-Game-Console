@@ -19,6 +19,7 @@
 
 
 
+#include "p4_doom_net.h"
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -471,6 +472,8 @@ void R_ProjectSprite (mobj_t* thing)
     angle_t		ang;
     fixed_t		iscale;
     
+    if (thing->player && !P4_DoomArenaPlayerActive((int)(thing->player - players)))
+        return;
     // transform the origin point
     tr_x = thing->x - viewx;
     tr_y = thing->y - viewy;
@@ -737,6 +740,8 @@ void R_DrawPSprite (pspdef_t* psp)
 //
 void R_DrawPlayerSprites (void)
 {
+    if (!P4_DoomArenaPlayerActive(consoleplayer)) return;
+
     int		i;
     int		lightnum;
     pspdef_t*	psp;

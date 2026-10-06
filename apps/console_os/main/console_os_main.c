@@ -931,6 +931,18 @@ static esp_err_t doom_transport_send(
     return multiplayer_transport_send(datagram, datagram_length);
 }
 
+static esp_err_t doom_transport_send_to(void *context, uint64_t route_id,
+                                         const uint8_t *datagram, size_t length)
+{
+    (void)context;
+#if P4_CONSOLE_WIFI_MULTIPLAYER
+    if (s_multiplayer_transport == CONSOLE_MP_TRANSPORT_WIFI)
+        return platform_multiplayer_wifi_send_to(route_id, datagram, length);
+#endif
+    (void)route_id;
+    return multiplayer_transport_send(datagram, length);
+}
+
 static bool doom_transport_connected(void *context, uint64_t route_id)
 {
     (void)context;
@@ -949,6 +961,7 @@ static const p4_doom_p4mp_transport_t s_doom_multiplayer_transport = {
     .set_handler = doom_transport_set_handler,
     .poll = doom_transport_poll,
     .send = doom_transport_send,
+    .send_to = doom_transport_send_to,
     .connected = doom_transport_connected,
     .route_name = doom_transport_route_name,
 };
@@ -2965,8 +2978,12 @@ static bool multiplayer_selected_game_is_chex(void)
         (size_t)P4_DOOM_MP_GAME_CHEX_QUEST;
 }
 
+static bool multiplayer_selected_game_is_arena(void)
+{ return s_multiplayer_game_selection == P4_DOOM_MP_GAME_GAME_CHANGERS_AI; }
+
 static const char *multiplayer_game_title_at(size_t selection)
 {
+    if (selection == P4_DOOM_MP_GAME_GAME_CHANGERS_AI) return "GAME CHANGERS AI";
     if (selection == (size_t)P4_DOOM_MP_GAME_DOOM) {
         return "DOOM";
     }
@@ -3478,6 +3495,7 @@ static console_shell_runtime_info_t runtime_info(void)
             s_multiplayer_group_start.phase == P4_MP_GROUP_COMMITTED,
         .multiplayer_settings_editable = multiplayer_settings_editable(),
         .multiplayer_game_ready = selected_game_ready,
+        .multiplayer_game_is_arena = multiplayer_selected_game_is_arena(),
         .multiplayer_game_is_doom =
             multiplayer_selected_game_is_doom(),
         .multiplayer_dice_available = multiplayer_dice_available(),
@@ -3616,6 +3634,8 @@ static console_shell_runtime_info_t runtime_info(void)
     }
     return info;
 }
+
+static const uint8_t s_arena_content_sha256[32] = P4_GCA_CONTENT_SHA256;
 
 static const uint8_t s_doom_shareware_sha256[P4_MP_SHA256_BYTES] = {
     0x1d, 0x7d, 0x43, 0xbe, 0x50, 0x1e, 0x67, 0xd9,
@@ -3864,6 +3884,11 @@ static bool multiplayer_content_ready_for(size_t selection)
     if (s_game_storage_status.state != PLATFORM_GAME_STORAGE_APP_READY) {
         return false;
     }
+    if (selection == P4_DOOM_MP_GAME_GAME_CHANGERS_AI) {
+        return s_multiplayer_transport==CONSOLE_MP_TRANSPORT_WIFI &&
+            !s_game_storage_status.content_validation_running &&
+            platform_game_storage_arena_present();
+    }
     if (selection < P4_DOOM_MP_GAME_COUNT) {
         /*
          * Opening or joining a lobby must not hash every Doom-family asset.
@@ -3901,16 +3926,25 @@ static esp_err_t configure_multiplayer_local_offer(void)
     };
     if (multiplayer_selected_game_is_doom()) {
         p4_doom_mp_setup_t setup = s_multiplayer_local_setup;
-        setup.game = multiplayer_selected_game_is_chex()
-            ? P4_DOOM_MP_GAME_CHEX_QUEST : P4_DOOM_MP_GAME_DOOM;
+        setup.game = (p4_doom_mp_game_t)s_multiplayer_game_selection;
+        if (multiplayer_selected_game_is_arena()) {
+            offer.player_capacity=4;
+            setup.mode=P4_DOOM_MP_MODE_ALTDEATH;
+            setup.episode=1;
+            if (setup.game!=s_multiplayer_local_setup.game || setup.map<1 || setup.map>26) setup.map=1;
+            setup.no_monsters=true;
+            setup.fast_monsters=false;
+            setup.respawn_monsters=false;
+            setup.time_limit_minutes=0;
+        } else if (setup.map>P4_DOOM_MP_MAX_MAP) setup.map=1;
         offer.mode = P4_MP_GAME_MODE_LOCKSTEP;
         offer.input_delay_tics = 2U;
         offer.tick_rate_hz = P4_DOOM_MP_TICK_RATE_HZ;
-        offer.game_protocol = CONSOLE_DOOM_MULTIPLAYER_PROTOCOL;
-        strcpy(offer.game_id, multiplayer_selected_game_is_chex()
+        offer.game_protocol = multiplayer_selected_game_is_arena() ? 4U : CONSOLE_DOOM_MULTIPLAYER_PROTOCOL;
+        strcpy(offer.game_id, multiplayer_selected_game_is_arena() ? "org.p4console.gamechangersai" : multiplayer_selected_game_is_chex()
             ? "org.p4console.chexquest" : "org.p4console.doom");
         const uint8_t *const content_sha256 =
-            multiplayer_selected_game_is_chex()
+            multiplayer_selected_game_is_arena() ? s_arena_content_sha256 : multiplayer_selected_game_is_chex()
                 ? s_chex_quest_sha256 : s_doom_shareware_sha256;
         memcpy(offer.content_sha256, content_sha256,
                P4_MP_SHA256_BYTES);
@@ -4417,7 +4451,8 @@ static void handle_multiplayer_config_action(
         console_shell_set_runtime_info(shell, &current_runtime);
         return;
     }
-    if (!multiplayer_selected_game_is_doom()) {
+    if (!multiplayer_selected_game_is_doom() ||
+        (multiplayer_selected_game_is_arena() && action->multiplayer_option!=CONSOLE_MULTIPLAYER_OPTION_MAP)) {
         return;
     }
     switch (action->multiplayer_option) {
@@ -4430,7 +4465,7 @@ static void handle_multiplayer_config_action(
     case CONSOLE_MULTIPLAYER_OPTION_MAP:
         requested.map = multiplayer_cycle_range(
             requested.map, 1U,
-            multiplayer_selected_game_is_chex()
+            multiplayer_selected_game_is_arena() ? 26U : multiplayer_selected_game_is_chex()
                 ? P4_DOOM_MP_MAX_CHEX_MAP : P4_DOOM_MP_MAX_MAP,
             delta);
         break;
@@ -4911,9 +4946,7 @@ static void configure_multiplayer_launch(
     }
     p4_doom_mp_setup_t setup = s_multiplayer_local_setup;
     if (multiplayer_selected_game_is_doom()) {
-        const p4_doom_mp_game_t expected_game =
-            multiplayer_selected_game_is_chex()
-                ? P4_DOOM_MP_GAME_CHEX_QUEST : P4_DOOM_MP_GAME_DOOM;
+        const p4_doom_mp_game_t expected_game = (p4_doom_mp_game_t)s_multiplayer_game_selection;
         if (!p4_doom_mp_setup_decode(
                 accept->game_settings, sizeof(accept->game_settings),
                 &setup) || setup.episode != 1U ||
@@ -5014,6 +5047,7 @@ static esp_err_t begin_multiplayer_start_sync(void)
         if(!p4_mp_group_begin(&s_multiplayer_group_start,multiplayer_start_token(),
             multiplayer_members(),(uint64_t)esp_timer_get_time()/1000U))return ESP_ERR_INVALID_STATE;
         s_multiplayer_player_count=s_multiplayer_group_start.count;
+        if (s_doom_multiplayer_launch.enabled) s_doom_multiplayer_launch.player_count=s_multiplayer_player_count;
         return ESP_OK;
     }
     const uint64_t now_ms =
@@ -5224,12 +5258,15 @@ static void multiplayer_frame_received(
             return;
         }
     }
-    if(multiplayer_group_enabled() && (event.type==P4_MP_EVENT_PING||event.type==P4_MP_EVENT_PONG) &&
+    if(multiplayer_group_enabled() && event.type==P4_MP_EVENT_GAME_MESSAGE &&
        event.packet.payload_length==P4_MP_GROUP_BYTES && !memcmp(event.packet.payload,"P4GS",4)) {
         if(s_multiplayer_lobby_state==CONSOLE_MP_LOBBY_CONNECTED &&
            p4_mp_group_receive(&s_multiplayer_group_start,s_multiplayer_local_player_slot,event.player_slot,
-            multiplayer_start_token(),event.packet.payload,event.packet.payload_length,(uint64_t)now_us/1000U))
+            multiplayer_start_token(),event.packet.payload,event.packet.payload_length,(uint64_t)now_us/1000U)) {
             s_multiplayer_player_count=s_multiplayer_group_start.count;
+            if (s_doom_multiplayer_launch.enabled)
+                s_doom_multiplayer_launch.player_count=s_multiplayer_player_count;
+        }
         return;
     }
     if (!multiplayer_group_enabled() && (event.type == P4_MP_EVENT_PING ||
@@ -5432,7 +5469,7 @@ static void poll_multiplayer_link(const console_shell_t *shell)
     if(s_multiplayer_lobby_state==CONSOLE_MP_LOBBY_CONNECTED && multiplayer_group_enabled()) {
         uint8_t group_payload[P4_MP_GROUP_BYTES];
         if(p4_mp_group_poll(&s_multiplayer_group_start,(uint64_t)now_us/1000U,group_payload))
-            (void)send_session_multiplayer_packet(P4_MP_PACKET_PING,0,group_payload,sizeof(group_payload));
+            (void)send_session_multiplayer_packet(P4_MP_GROUP_PACKET_TYPE,0,group_payload,sizeof(group_payload));
         if(s_multiplayer_group_start.phase==P4_MP_GROUP_DUE){s_multiplayer_launch_due=true;return;}
         if(s_multiplayer_group_start.phase==P4_MP_GROUP_FAILED){reset_multiplayer_lobby("group-start-timeout");return;}
         if(s_multiplayer_group_start.phase!=P4_MP_GROUP_IDLE)return;
@@ -9213,6 +9250,8 @@ static void launch_doom_exclusive(
         (!multiplayer->enabled ||
          !p4_doom_mp_launch_config_valid(multiplayer) ||
          s_multiplayer_session.state != P4_MP_SESSION_CONNECTED ||
+         (multiplayer->setup.game == P4_DOOM_MP_GAME_GAME_CHANGERS_AI) !=
+             (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI) ||
          (multiplayer->setup.game == P4_DOOM_MP_GAME_CHEX_QUEST) !=
              (title ==
               PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST)))) {
@@ -9725,7 +9764,9 @@ void app_main(void)
             if (s_multiplayer_launch_kind == CONSOLE_MP_LAUNCH_DOOM) {
                 launch_doom_exclusive(
                     shell,
-                    s_doom_multiplayer_launch.setup.game ==
+                    s_doom_multiplayer_launch.setup.game == P4_DOOM_MP_GAME_GAME_CHANGERS_AI
+                        ? PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI
+                        : s_doom_multiplayer_launch.setup.game ==
                             P4_DOOM_MP_GAME_CHEX_QUEST
                         ? PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST
                         : PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM,

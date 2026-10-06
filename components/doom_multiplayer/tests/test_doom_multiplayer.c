@@ -131,6 +131,27 @@ static void test_setup_codec(void)
     CHECK(!p4_doom_mp_setup_decode(bytes, sizeof(bytes), &decoded));
 }
 
+static void test_arena_setup(void)
+{
+    p4_doom_mp_setup_t setup={.game=P4_DOOM_MP_GAME_GAME_CHANGERS_AI,
+        .mode=P4_DOOM_MP_MODE_ALTDEATH,.episode=1,.map=1,.skill=3,.no_monsters=true};
+    uint8_t bytes[P4_DOOM_MP_SETUP_BYTES];
+    CHECK(p4_doom_mp_setup_encode(&setup,bytes));
+    p4_doom_mp_setup_t result;
+    CHECK(p4_doom_mp_setup_decode(bytes,sizeof(bytes),&result));
+    CHECK(result.game==setup.game && result.map==1);
+    setup.map=2; CHECK(p4_doom_mp_setup_valid(&setup));
+    for (uint8_t map=3;map<=26;++map) {
+        setup.map=map; CHECK(p4_doom_mp_setup_encode(&setup,bytes));
+        CHECK(p4_doom_mp_setup_decode(bytes,sizeof(bytes),&result) && result.map==map);
+    }
+    setup.map=27; CHECK(!p4_doom_mp_setup_valid(&setup));
+    setup.map=32; CHECK(!p4_doom_mp_setup_valid(&setup));
+    setup.map=1; setup.no_monsters=false; CHECK(!p4_doom_mp_setup_valid(&setup));
+    setup.no_monsters=true; setup.mode=P4_DOOM_MP_MODE_COOPERATIVE;
+    CHECK(!p4_doom_mp_setup_valid(&setup));
+}
+
 static void test_engine_barrier(void)
 {
     uint8_t ready[P4_DOOM_MP_ENGINE_CONTROL_BYTES];
@@ -303,6 +324,7 @@ int main(void)
     test_input_mapping();
     test_launch_config();
     test_setup_codec();
+    test_arena_setup();
     test_engine_barrier();
     test_lockstep_queue();
     test_tick_wrap();

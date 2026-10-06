@@ -34,3 +34,20 @@ __attribute__((weak)) boolean P4_DoomNetFailed(void)
 __attribute__((weak)) void P4_DoomNetQuit(void)
 {
 }
+
+__attribute__((weak)) boolean P4_DoomArenaActive(void) { return false; }
+__attribute__((weak)) boolean P4_DoomArenaPlayerActive(int slot) { (void)slot; return true; }
+__attribute__((weak)) void P4_DoomArenaTicker(void) {}
+__attribute__((weak)) void P4_DoomArenaKill(int killer, int victim) { (void)killer; (void)victim; }
+__attribute__((weak)) boolean P4_DoomArenaCompleted(void) { return false; }
+__attribute__((weak)) void P4_DoomArenaHUD(void) {}
+
+__attribute__((weak)) int P4_DoomArenaFragCount(int vanilla) { return vanilla; }
+
+__attribute__((weak)) void P4_DoomArenaWadLoaded(const char *file,int first,int count)
+{ (void)file; (void)first; (void)count; }
+__attribute__((weak)) int P4_DoomArenaMapLump(int vanilla) { return vanilla; }
+__attribute__((weak)) int P4_DoomArenaMusicLump(int vanilla) { return vanilla; }
+__attribute__((weak)) void P4_DoomArenaBuildCommand(ticcmd_t *command) { (void)command; }
+__attribute__((weak)) boolean P4_DoomArenaMenuKey(int key) { (void)key; return false; }
+__attribute__((weak)) boolean P4_DoomArenaMenuDraw(void) { return false; }

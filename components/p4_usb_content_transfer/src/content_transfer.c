@@ -24,6 +24,7 @@
 #pragma GCC diagnostic pop
 #include "mbedtls/sha256.h"
 #include "content_limits.h"
+#include "platform/doom_arena_content.h"
 
 enum {
     MANIFEST_BYTES = 48,
@@ -35,6 +36,7 @@ enum {
     CONTENT_KIND_DOOM_SHAREWARE = 2,
     CONTENT_KIND_CHEX_QUEST_WAD = 3,
     CONTENT_KIND_CHEX_QUEST_DEH = 4,
+    CONTENT_KIND_FREEDOOM2 = 5,
     CONTENT_FLAG_REPLACE = 1,
     DOOM_SHAREWARE_BYTES = 4196020,
     CHEX_QUEST_WAD_BYTES = 12361532,
@@ -120,7 +122,14 @@ static const char CHEX_DEH_SHA256_HEX[] =
 static const char *const QUAKE_DIRECTORIES[] = {
     "/GAMES", "/GAMES/QUAKE", "/GAMES/QUAKE/ID1",
 };
+static const char *const ARENA_DIRECTORIES[] = {"/GCADOOM"};
 static const content_spec_t CONTENT_SPECS[] = {
+#define GCA_SPEC(id, symbol, dir, name, size, hash) { \
+    .kind=id, .bytes=size, .sha256_hex=hash, .label="arena-" #symbol, \
+    .directory_suffix=dir, .target_name=name, .temporary_name="GCA" #id ".TMP", \
+    .required_directories=ARENA_DIRECTORIES, .required_directory_count=1 },
+    P4_GCA_CONTENT_FILES(GCA_SPEC)
+#undef GCA_SPEC
     {
         .kind = CONTENT_KIND_QUAKE_SHAREWARE,
         .bytes = P4_CONTENT_QUAKE_SHAREWARE_BYTES,

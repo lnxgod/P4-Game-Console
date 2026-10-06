@@ -1,0 +1,201 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-10-06T05:08:38.989123+00:00",
+  "task": "Game Changers AI special Multiplayer arena",
+  "version": "0.53",
+  "target": "m5stack-tab5",
+  "branch": "codex/game-changers-ai",
+  "baseline_commit": "a07e566e3063b19ac4db7f71aa642bda0598cdbb",
+  "baseline_note": "Local snapshot of active saved-project sources, not feature-authored changes. Source changes remain uncommitted in this isolated checkout. Saved checkout was not modified.",
+  "implementation": {
+    "entry": "Multiplayer only; no standalone tile",
+    "players": "2-4 total: playing host plus up to three guests",
+    "transport": "OS local Wi-Fi",
+    "server_policy": "fixed host remains server through its own player break; host shutdown ends session",
+    "idle_tics": 525,
+    "tic_rate_hz": 35,
+    "activity": "normalized movement or fire input; turning and Use do not reset timeout",
+    "return": "fresh Use edge while connected, fresh spawn and zero-score visit",
+    "score": "shared per-visit player kills, independent of vanilla level frags; status widget and shared HUD agree",
+    "maps": "chosen Freedoom MAP01-MAP32 repeats on normal/secret exit; no custom arena files supplied",
+    "live_join": false,
+    "fallback": "initial lobby roster plus connected break/return",
+    "content_bytes": 28787748,
+    "content_sha256": "a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b",
+    "wad_runtime_cache_and_digest_bytes": 229024,
+    "startup_control": "12-byte OS group barrier uses GAME_MESSAGE, with wire-envelope coverage",
+    "departure_recovery": "host keeps sending 500ms heartbeats while waiting for a missing guest; forced lost-LEAVE case passed three consecutive sanitizer-backed four-process runs"
+  },
+  "checks": {
+    "adapter-tests.log": {
+      "sha256": "2c2934ac0ae13a356fd29931581a750f32be90bbba05ea7a1c6653fba3314fed",
+      "bytes": 2430,
+      "result_lines": [
+        "100% tests passed, 0 tests failed out of 3",
+        "100% tests passed, 0 tests failed out of 7"
+      ]
+    },
+    "wifi-tests.log": {
+      "sha256": "7a3df32a01671fa6723d4d5a9c990d0247f795863b0fb394055b2004e17b560f",
+      "bytes": 1139,
+      "result_lines": [
+        "100% tests passed, 0 tests failed out of 1"
+      ]
+    },
+    "tab5-final-build.log": {
+      "sha256": "5b47876e7e4fd4365430a1bd29e4545bd3b1bb058b8fe57e27faf203d12757ba",
+      "bytes": 17720,
+      "result_lines": [
+        "100% tests passed, 0 tests failed out of 2",
+        "100% tests passed, 0 tests failed out of 1",
+        "100% tests passed, 0 tests failed out of 1",
+        "100% tests passed, 0 tests failed out of 4",
+        "100% tests passed, 0 tests failed out of 5",
+        "100% tests passed, 0 tests failed out of 7",
+        "100% tests passed, 0 tests failed out of 4",
+        "100% tests passed, 0 tests failed out of 2",
+        "100% tests passed, 0 tests failed out of 12",
+        "100% tests passed, 0 tests failed out of 2",
+        "100% tests passed, 0 tests failed out of 4",
+        "{\"ble_multiplayer_enabled\": true, \"board\": \"m5stack-tab5\", \"charger_control_enabled\": true, \"content_bundle_verified\": false, \"flash_authorized\": false, \"hardware_verified\": false, \"image_bytes\": 4520960, \"image_sha256\": \"013568359cc5b473903893864f736b38fcf23e25bdccb478e8c5c761f5f08de7\", \"native_cartridges\": null, \"result\": \"tab5-build-candidate-verified\", \"usb_host_enabled\": true, \"version\": \"0.53\", \"wifi_multiplayer_enabled\": true}"
+      ]
+    },
+    "arena-engine-smoke.log": {
+      "sha256": "f1df505574b2401e2846deef3df4bf9937cb353840eb5126879b7da3dd945e9a",
+      "bytes": 2124,
+      "result_lines": [
+        "P4_DOOM_ARENA PASS four seats, shared kills, 15-second break, fire activity, fresh return, repeated map with retained visit score"
+      ]
+    },
+    "shareware-regression.log": {
+      "sha256": "d709b1d36964b4d3382881205638ff3dd1767627b748e6da3e17dcadbeffb4e6",
+      "bytes": 1724,
+      "result_lines": [
+        "P4_DOOM_D0 PASS frames=35 checksum=66673460ed81a3b5 elapsed_ms=1003"
+      ]
+    },
+    "freedoom-regression.log": {
+      "sha256": "f60d6a18da016cdc151026f3d7df65d7ee780eb684298142f524725cb9f2797d",
+      "bytes": 2058,
+      "result_lines": [
+        "P4_DOOM_D0 PASS frames=35 checksum=fe7742143e57a9d3 elapsed_ms=1005"
+      ]
+    },
+    "engine-build.log": {
+      "sha256": "568ac53a8281d15f638c5d2e589a0f146e983875880902d53d8d6cd9b6f3d6fe",
+      "bytes": 541,
+      "result_lines": [
+        "P4_DOOM_D0 BUILD PASS binary=/Users/billh/.codex/worktrees/7f01/esp32-p4 2/build-host/doom/doomgeneric-headless"
+      ]
+    },
+    "toolchain-verify.log": {
+      "sha256": "7c691753a20c654f097573b250733c9ed365a98e7983cf66ebff23d2ee76d5c3",
+      "bytes": 1330,
+      "result_lines": [
+        "Environment OK: ESP-IDF 5.5.3 (v5.5.3) at /Users/billh/Documents/ChatGPT/esp32-p4 2/.tools/esp-idf-v5.5.3"
+      ]
+    },
+    "departure-recovery-repeat.log": {
+      "sha256": "164f1ab600e056dc88c5ddab7c06172c0cf93354a24f086ca5819402668e787c",
+      "bytes": 480,
+      "result_lines": [
+        "100% tests passed, 0 tests failed out of 1"
+      ]
+    }
+  },
+  "firmware": {
+    "path": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4520960,
+    "sha256": "013568359cc5b473903893864f736b38fcf23e25bdccb478e8c5c761f5f08de7",
+    "firmware_only": true,
+    "package_path": "apps/console_os/build-tab5/P4UPDATE.P4U",
+    "package_sha256": "0533f39741bc20f675c7a424621f3d79cb6baf7fec8aa8022e5001d961dbc5f9",
+    "content_bundle_verified": false
+  },
+  "engine_visuals": {
+    "break_ppm": "3181d41b1316ccb2a8db6247b780438393c9ed938be483744b7ab8cdc1a9c0dd",
+    "return_ppm": "f416bff25dbb4f4dd8a82ba59aefd3a7bee0f9da7cc6a9eedb67ac69794bd4a0",
+    "inspection": "320x200 shared HUD and Take a break text inspected; local FRAGS widget zero on break."
+  },
+  "source_sha256": {
+    ".gitignore": "83ecb22fd8c54c8b40af9538e4497b89eebd3db110022202789dd5066da9264c",
+    "apps/console_os/CMakeLists.txt": "1c92d043409ea6c6e73c968a7c1aa6ba9bfa7bbbe4d3881d2010aeb707be915d",
+    "apps/console_os/app-metadata.json": "77821b1739c48b2c9fd865daabaf403e40efdee502f82a872f7e2499704c4807",
+    "apps/console_os/components/platform_readonly_blob/platform_game_storage_blob.c": "8288d1ab29e91fc83cd4cf6085956afdfa23c3fbf102582cfc8dece77adc26aa",
+    "apps/console_os/main/CMakeLists.txt": "43c54d6f2850728c019dc437079be93ffb5caf255ee0655bdc0b33abdd6a83cc",
+    "apps/console_os/main/console_os_main.c": "d6fa4da551a612f05c31e82ef47ea913ac6de268c9db3c0835c076d951e8e4b0",
+    "apps/console_os/main/doom_gc_engine.c": "9bc3ffc7dea2a6fa706defc5fb63f565cde3e319feace7e8e91df766a024af55",
+    "apps/console_os/main/doom_gc_p4mp.c": "70e1ef668862db3ad36da649833c434de6b4dc204806cda65315d6a01d24d905",
+    "apps/console_os/main/doom_gc_p4mp.h": "0125fe2258dc974031ba3bf19eacfd7aa6ac6c37c5ce25e1028ac6ed3b082b5a",
+    "apps/console_os/main/doom_p4mp_adapter.c": "2b6239b3197701fe9b8ccf980c5b69ab9cf7b65b77baf50d0240e42c135b508c",
+    "apps/console_os/main/doom_p4mp_adapter.h": "9232903f2138fde49e93b7c7b23e9fcf45aa24bfe2fd093cbfbd215e50a357ca",
+    "apps/doom/host/doom_arena_smoke.c": "135cca6494997103ead6e967faa817012aa2416216ad9ea31db56ed4867eb7c5",
+    "apps/doom/host/doomgeneric_headless.c": "145145eda7ce5399fe62806790fbd194bf3ac792297a56c9555195689a0a68f8",
+    "apps/doom_audio_probe/components/doom_engine_audio/p4_doom_net.h": "0d8dd11a17b1d166ff6904713b77072f58bf592133057eb3d123fa611fe2bc65",
+    "apps/doom_audio_probe/components/doom_engine_audio/p4_doom_net_stub.c": "75adf4bb3197508ab5f7539465d4e03e76c3bc480f10a2bf3b4a5c39cd67258c",
+    "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c": "2b27278c3cec99c3995539502957a21fcc4881e7847097af5b9476501f42439d",
+    "components/console_shell/include/console/brand.h": "7b8ffb104f10db96cd457ced8172f884ff08a03d7cc8bb82fc905dd9253a34b1",
+    "components/console_shell/include/console/shell.h": "9396ee9bb5fc9e64d14a0bd927b7f671e9ca21e2b3812131e6c50794e414d086",
+    "components/console_shell/src/console_shell.c": "e68c638ad335a9027e956603450eb32132b1d558bf5b911ecde64bc38e820028",
+    "components/console_shell/tests/test_console_shell.c": "793d254167d094c6d1c5964091d654bfe2accf6c8d19236ee1f2d7b97cc89389",
+    "components/doom_multiplayer/CMakeLists.txt": "817070a75b44a2d15b776076e72fa2e72fc2c6b9fc5e52c8b6fb1b7f9863a1ff",
+    "components/doom_multiplayer/include/p4/doom_arena.h": "d1908d1127f66abfe8e2ae2ae9c6c9374caae5a0cffc48d04cacb9783e59f5ac",
+    "components/doom_multiplayer/include/p4/doom_lockstep.h": "9d6088fb6fcc947f667fa254f3f03dabf082e6508b8c515d67d9fecad6d354c7",
+    "components/doom_multiplayer/include/p4/doom_multiplayer.h": "a289a9305e9c153c963ab71c2dab3f5f5502bec3052ebbfe85f2de3f1aaaaaae",
+    "components/doom_multiplayer/src/doom_arena.c": "f66fbc67194302d7d8be208d09b13d964f1b7ed3c8e305007edfd8c923dd045b",
+    "components/doom_multiplayer/src/doom_lockstep.c": "ec541c21f241719eca791e1900649424bd6c042ac497423d4b7700674584afdb",
+    "components/doom_multiplayer/src/doom_multiplayer.c": "985c6f0860e8593e36f4d52c74561139cd73c94d29da00cc7d1c2fddd18181c5",
+    "components/doom_multiplayer/tests/CMakeLists.txt": "0d759acecac7064241d4cd17d3470fceaf1c15ce87d837250652e8127c24f57b",
+    "components/doom_multiplayer/tests/mocks/esp_err.h": "d63f1f209f767767c2513313e5b6e5781dc485c5b0e5de66d51d24c786ab1469",
+    "components/doom_multiplayer/tests/mocks/esp_log.h": "605b8b3cc6ee7747c797658e3ec12cdaf3dc8f8840345ad306666b12ff6682e8",
+    "components/doom_multiplayer/tests/mocks/esp_timer.h": "82a7c14acf5d1cdcbea1b23bab880c69562da88013adc34ff5f2ae2115fb08d1",
+    "components/doom_multiplayer/tests/mocks/freertos/FreeRTOS.h": "0ccb47032f5fd0b9ddbd24467031540872bcf1ce7735888031243cd70e87fb82",
+    "components/doom_multiplayer/tests/mocks/freertos/task.h": "3eec1d0f08a0b88c9e5736a06c9a722442b00e430f5ac686b765331d8e1a4763",
+    "components/doom_multiplayer/tests/test_doom_arena.c": "13420641401561b135055fe7cadaafab746926bc8d05af4c00d95fa8e3c8d854",
+    "components/doom_multiplayer/tests/test_doom_gc_adapter.c": "46e50bd1f115a087649c0f840bc3a5e38439096de075f361cec075c0d3cc7e72",
+    "components/doom_multiplayer/tests/test_doom_lockstep.c": "7d66709e6466d1f5e48a159325685123014c19185840dedb8a5e312e400ff700",
+    "components/doom_multiplayer/tests/test_doom_multiplayer.c": "c7511f084245ecd994958ce11e28e847f337b246844ff2c1b8b51497cfbea07d",
+    "components/p4_multiplayer/include/p4/multiplayer_group.h": "44588df982eb7644e9fdd0471ddfb29a6d3d0713f766ae15a217fd3b8f06fc35",
+    "components/p4_multiplayer/tests/test_group.c": "8a106af46f2ea2e24dba210e2fcc070f3f45f5fa450eddd6379da73c6042c286",
+    "components/p4_usb_content_transfer/src/content_transfer.c": "3b845cf92cf2a802e580de38beef8f46d9f83ec636b1a6f6d0ce1c413a870352",
+    "components/platform_game_storage/CMakeLists.txt": "75d60b673c5780199c015bb78debc047bb86cdfbeed491ff6296f6b86b373d8b",
+    "components/platform_game_storage/include/platform/game_storage.h": "987ce1fc8ee3eec281b3c11ae357f9df8afffdd9bb741301d5379fa786fadc2d",
+    "components/platform_game_storage/src/platform_game_storage.c": "67f25f6d80a70b475af2055e8eb9fe5a8f9e0b1148c16a0b8833c856a24aa5ed",
+    "components/platform_game_storage/src/verified_reader.c": "5b618ebd343d6b11a1774cbff69004c52b95b092bb49106383aec088a0f33e9e",
+    "components/platform_game_storage/src/verified_reader.h": "3ce80630edd79b76e0bed0d0fb9fd67ceee2e55740e27b67a565ceaa5541aa34",
+    "components/platform_game_storage/tests/CMakeLists.txt": "d8b37d3d4f8fa459e61e0583cd41a18e2e2c8ecc89884aab7c1c0985d20f3ecf",
+    "components/platform_game_storage/tests/test_verified_reader.c": "e35f031883b78eff57c7d405e20a1c166091b4e29720ae1409d28e342c3a0795",
+    "components/platform_multiplayer_wifi/src/platform_multiplayer_wifi.c": "138c7b4378c6110520071e230264236563484a2e40263e8b9742b3a72a927cea",
+    "components/platform_multiplayer_wifi/tests/test_wifi.c": "eb419c0156c89cdbcd2e5106e5cb99948dcab27e14ac4d0b8ccd003d2af141f3",
+    "docs/GAME_CHANGERS_AI_DOOM.md": "37f072c986a0f43746dbb44bddf2fc3c70140e9cc2b41b42afe0baa4be0ad2f7",
+    "docs/MULTIPLAYER.md": "24369a9678375d8692e3fa35b9fe7d0a8bd2897084bbd8872d4b9661ef8c1df6",
+    "docs/boards/M5STACK_TAB5.md": "9025488b4fe3fa24bf5d22086ea535a451c0a5895a92ccaa18a21698372d8edd",
+    "scripts/doom/build-host.sh": "c37451756d7b3d1a016c0255bba01e559e98b8f977e6e25c77b9480a419fc3a7",
+    "scripts/p4-usb-content.py": "0be422d9170762cdcddfeb6294a53dc7448a9e51d2004c9e4fbfc3e718db94ee",
+    "third_party/doomgeneric-p4.json": "b71886bb0ef2f9db7d88ef82f42824d7d86d94d2e44d7239ce9524dc9ffd4403",
+    "third_party/doomgeneric-p4.patch": "60797401d850ddc255b59f9c083a9bbe670c4a5d756355522df1a2c042bbfebb",
+    "third_party/doomgeneric/doomgeneric/g_game.c": "fb670287f43e78cd7cb5584b34e0d73c11ea7e7f05e3e899d6611e1e45a26f02",
+    "third_party/doomgeneric/doomgeneric/hu_stuff.c": "15865275696b0433c407366f2d4312f2f41a365ec0dc1e9713e8ec29b4a30f6e",
+    "third_party/doomgeneric/doomgeneric/p_inter.c": "ffaa4f356ef81c0f02436df3fde35ca4d819ff19f66681df60f5d05364645836",
+    "third_party/doomgeneric/doomgeneric/p_mobj.c": "dbaffbae44118d6bdda0564000b4ff3efa9fa6ce87915fdcb24188267719e5c1",
+    "third_party/doomgeneric/doomgeneric/p_tick.c": "b1904ddcd0a7aec0df77ad7abab0033e5426ed1c81db3536188f9ca3fd033cf8",
+    "third_party/doomgeneric/doomgeneric/r_things.c": "3a67d954bcb29b4cb83447e7e1f1ee78a956a454c9851d7e6bcfbf80a116a8e0",
+    "third_party/doomgeneric/doomgeneric/st_stuff.c": "821d4e5b90c8c2f7f1cf0e707b8de0de5e459add06acfefb20d488b56a775263",
+    "third_party/game-data.json": "9c47f33fc38cbe3f750e26b63475517579e0bdba33592049172591cd20977312"
+  },
+  "dependency_locks_changed": false,
+  "hardware_tested": false,
+  "flashed": false,
+  "content_transferred": false,
+  "remaining": [
+    "Four physical consoles: discovery/startup, cadence, SD latency/RAM, controls and sound.",
+    "Custom arena pack validation and integration after files are supplied.",
+    "True running-world admission is not implemented.",
+    "User confirmation of microSD availability and whether server is one of four players remains pending."
+  ],
+  "limits": [
+    "Headless engine smoke is not interactive play-testing.",
+    "Host network tests use four real adapter/P4MP session instances over lossy duplicated Unix datagrams; this is not radio acceptance.",
+    "Freedoom DeHackEd/Boom/MBF compatibility and all-map play are not qualified."
+  ]
+}

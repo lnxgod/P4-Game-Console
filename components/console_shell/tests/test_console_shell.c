@@ -1379,6 +1379,21 @@ static void test_multiplayer_start_lockout(void)
     console_shell_set_runtime_info(&shell, &refreshed_runtime);
     CHECK(tap(&shell, 160U, 185U).type == CONSOLE_ACTION_PAGE_CHANGED);
 
+    /* Special arena settings allow map selection, without hidden editable rules. */
+    refreshed_runtime = shell.runtime;
+    refreshed_runtime.multiplayer_game_is_arena = true;
+    console_shell_set_runtime_info(&shell,&refreshed_runtime);
+    CHECK(tap(&shell,160U,160U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    CHECK(shell.multiplayer_selected_row == CONSOLE_MULTIPLAYER_OPTION_MAP);
+    CHECK(tap(&shell,280U,100U).type == CONSOLE_ACTION_NONE);
+    CHECK(tap(&shell,280U,165U).type == CONSOLE_ACTION_NONE);
+    const console_shell_action_t arena_map=tap(&shell,280U,115U);
+    CHECK(arena_map.type == CONSOLE_ACTION_MULTIPLAYER_CONFIGURE);
+    CHECK(arena_map.multiplayer_option == CONSOLE_MULTIPLAYER_OPTION_MAP);
+    CHECK(tap(&shell,160U,185U).type == CONSOLE_ACTION_PAGE_CHANGED);
+    refreshed_runtime.multiplayer_game_is_arena = false;
+    console_shell_set_runtime_info(&shell,&refreshed_runtime);
+
     shell.runtime.multiplayer_launch_syncing = true;
     CHECK(press_button(&shell, CONSOLE_BUTTON_ACCEPT).type ==
           CONSOLE_ACTION_NONE);

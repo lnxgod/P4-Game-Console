@@ -2,11 +2,20 @@
 #include "p4/multiplayer_group.h"
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 int main(void) {
  for(uint8_t count=2;count<=4;++count) {
   p4_mp_group_start_t g[4]={0};uint8_t b[12];assert(p4_mp_group_begin(&g[0],77,count,0));
   for(uint64_t now=0;now<2000;now+=20)for(uint8_t i=0;i<count;++i) {
    if(!p4_mp_group_poll(&g[i],now,b))continue;
+   /* Exercise the production envelope: PING would reject this 12-byte control. */
+   uint8_t wire[P4_MP_MAX_DATAGRAM_BYTES]; size_t length=0;
+   assert(p4_mp_packet_encode(P4_MP_GROUP_PACKET_TYPE,7,100U+i,1,0,b,sizeof(b),
+       wire,sizeof(wire),&length)==P4_MP_OK);
+   p4_mp_packet_view_t decoded;
+   assert(p4_mp_packet_decode(wire,length,&decoded)==P4_MP_OK);
+   assert(decoded.type==P4_MP_PACKET_GAME_MESSAGE && decoded.payload_length==sizeof(b));
+   memcpy(b,decoded.payload,sizeof(b));
    if(i==0){for(uint8_t j=1;j<count;++j)if((now/20+j)%7)assert(p4_mp_group_receive(&g[j],j,0,77,b,12,now)||g[j].phase==P4_MP_GROUP_DUE);}
    else if((now/20+i)%5)assert(p4_mp_group_receive(&g[0],0,i,77,b,12,now)||g[0].phase==P4_MP_GROUP_DUE);
   }

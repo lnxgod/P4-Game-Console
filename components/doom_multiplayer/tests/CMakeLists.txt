@@ -13,3 +13,30 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     )
 endif()
 add_test(NAME doom_multiplayer_tests COMMAND doom_multiplayer_tests)
+
+add_executable(doom_arena_tests test_doom_arena.c)
+target_link_libraries(doom_arena_tests PRIVATE doom_multiplayer)
+target_compile_options(doom_arena_tests PRIVATE -Wall -Wextra -Wconversion -Werror -fsanitize=address,undefined)
+target_link_options(doom_arena_tests PRIVATE -fsanitize=address,undefined)
+add_test(NAME doom_arena_tests COMMAND doom_arena_tests)
+
+add_executable(doom_lockstep_tests test_doom_lockstep.c)
+target_link_libraries(doom_lockstep_tests PRIVATE doom_multiplayer)
+target_compile_options(doom_lockstep_tests PRIVATE -Wall -Wextra -Wconversion -Werror -fsanitize=address,undefined)
+target_link_options(doom_lockstep_tests PRIVATE -fsanitize=address,undefined)
+add_test(NAME doom_lockstep_tests COMMAND doom_lockstep_tests)
+
+if(UNIX)
+    add_executable(doom_gc_adapter_tests test_doom_gc_adapter.c
+        ../../../apps/console_os/main/doom_gc_p4mp.c)
+    target_include_directories(doom_gc_adapter_tests PRIVATE mocks
+        ../../../apps/console_os/main
+        ../../../apps/doom_audio_probe/components/doom_engine_audio)
+    target_include_directories(doom_gc_adapter_tests SYSTEM PRIVATE
+        ../../../third_party/doomgeneric/doomgeneric)
+    target_link_libraries(doom_gc_adapter_tests PRIVATE doom_multiplayer)
+    target_compile_options(doom_gc_adapter_tests PRIVATE -Wall -Wextra -Wconversion -Wshadow -Werror -fsanitize=address,undefined)
+    target_link_options(doom_gc_adapter_tests PRIVATE -fsanitize=address,undefined)
+    add_test(NAME doom_gc_adapter_tests COMMAND doom_gc_adapter_tests)
+    set_tests_properties(doom_gc_adapter_tests PROPERTIES TIMEOUT 35)
+endif()

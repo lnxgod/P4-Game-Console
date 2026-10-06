@@ -1267,18 +1267,20 @@ void app_main(void)
     const uint8_t *const wad_start = &s_console_storage_wad_marker;
     const bool chex =
         title == PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST;
-    const size_t wad_size = chex
+    const bool arena = title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI;
+    const size_t wad_size = arena ? (size_t)PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES : chex
         ? (size_t)PLATFORM_GAME_STORAGE_CHEX_WAD_BYTES
         : (size_t)PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES;
-    const char *const wad_file_name = chex ? "chex.wad" : "doom1.wad";
-    const char *const wad_path = chex ? "/doom/chex.wad" : EMBEDDED_WAD_PATH;
-    const char *const wad_identity = chex
+    const char *const wad_file_name = arena ? "freedoom2.wad" : chex ? "chex.wad" : "doom1.wad";
+    const char *const wad_path = arena ? "/doom/freedoom2.wad" : chex ? "/doom/chex.wad" : EMBEDDED_WAD_PATH;
+    const char *const wad_identity = arena ? "freedoom-phase2-0.13.0" : chex
         ? "chex-quest-1.0" : "doom-shareware-1.9";
-    const char *const wad_sha256 = chex
+    const char *const wad_sha256 = arena ? "a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b" : chex
         ? "d8eb5277918883f490fb1a4be3c9a8588df2dbaee6dc4beb8df4929148bbffb1"
         : "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771";
 #else
     const bool chex = false;
+    const bool arena = false;
     const uint8_t *const wad_start = _binary_doom_shareware_wad_start;
     const uint8_t *const wad_end = _binary_doom_shareware_wad_end;
     const uintptr_t wad_start_address = (uintptr_t)wad_start;
@@ -1314,6 +1316,17 @@ void app_main(void)
         halt_dark("wad-vfs-register", result);
     }
     s_blob_registered = true;
+#ifdef P4_CONSOLE_OS_EMBEDDED
+    if (arena) {
+        result=verify_readonly_vfs("/doom/purehell.wad",
+            (size_t)PLATFORM_GAME_STORAGE_PUREHELL_WAD_BYTES,true);
+        if (result!=ESP_OK) halt_dark("arena-pwad-vfs-readback",result);
+        result=verify_readonly_vfs("/doom/dwango5.wad",
+            (size_t)PLATFORM_GAME_STORAGE_DWANGO5_WAD_BYTES,true);
+        if (result!=ESP_OK) halt_dark("arena-dwango-vfs-readback",result);
+        ESP_LOGI(TAG,"P4_DOOM_ARENA CONTENT pure-hell=0.5 dwango5=24 default=01,02 vote=majority midi=embedded");
+    }
+#endif
     result = verify_readonly_vfs(wad_path, wad_size, chex);
     if (result != ESP_OK) {
         halt_dark("wad-vfs-readback", result);
@@ -1345,14 +1358,18 @@ void app_main(void)
         halt_dark("backlight", result);
     }
 
-    char *sound_argv[] = {
-        "doom", "-iwad", (char *)wad_path,
-        "-gfxmode", "rgba8888",
-    };
-    char *silent_argv[] = {
-        "doom", "-iwad", (char *)wad_path,
-        "-gfxmode", "rgba8888", "-nosound", "-nomusic",
-    };
+    char *engine_argv[11] = {"doom", "-iwad", (char *)wad_path,
+                              "-gfxmode", "rgba8888"};
+    int engine_argc=5;
+    if (arena) {
+        engine_argv[engine_argc++]="-file";
+        engine_argv[engine_argc++]="/doom/purehell.wad";
+        engine_argv[engine_argc++]="/doom/dwango5.wad";
+    }
+    if (!sound_enabled) {
+        engine_argv[engine_argc++]="-nosound";
+        engine_argv[engine_argc++]="-nomusic";
+    }
 #if P4_DOOM_SHARED_GAMEPAD
     ESP_LOGI(TAG,
              "P4_DOOM_E6 ENGINE_START wad=%s touch=%s overlay=visible "
@@ -1377,13 +1394,7 @@ void app_main(void)
         /* Doom sound Init may transition GPIO30 from proven-high to low. */
         s_audio_lifecycle.safe_high_proven = false;
     }
-    if (sound_enabled) {
-        doomgeneric_Create(
-            (int)(sizeof(sound_argv) / sizeof(sound_argv[0])), sound_argv);
-    } else {
-        doomgeneric_Create(
-            (int)(sizeof(silent_argv) / sizeof(silent_argv[0])), silent_argv);
-    }
+    doomgeneric_Create(engine_argc, engine_argv);
     verify_audio_start_or_safe_degrade(sound_enabled);
     key_prevweapon = '[';
     key_nextweapon = ']';

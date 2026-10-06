@@ -16,6 +16,7 @@
 //
 
 
+#include "p4_doom_net.h"
 #include <ctype.h>
 
 #include "doomdef.h"
@@ -382,6 +383,7 @@ void HU_Start(void)
 
 void HU_Drawer(void)
 {
+    P4_DoomArenaHUD();
 
     HUlib_drawSText(&w_message);
     HUlib_drawIText(&w_chat);

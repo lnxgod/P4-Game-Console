@@ -17,6 +17,7 @@
 
 
 
+#include "p4_doom_net.h"
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
@@ -426,7 +427,8 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
     }
 
     // buttons
-    cmd->chatchar = HU_dequeueChatChar(); 
+    cmd->chatchar = HU_dequeueChatChar();
+    P4_DoomArenaBuildCommand(cmd);
  
     if (gamekeydown[key_fire] || mousebuttons[mousebfire] 
 	|| joybuttons[joybfire]) 
@@ -652,6 +654,10 @@ void G_DoLoadLevel (void)
 	memset (players[i].frags,0,sizeof(players[i].frags)); 
     } 
 		 
+    // Removed seats will not be spawned after the old level is freed.
+    if (P4_DoomArenaActive())
+        for (i = 0; i < MAXPLAYERS; ++i)
+            if (!playeringame[i]) players[i].mo = NULL;
     P_SetupLevel (gameepisode, gamemap, 0, gameskill);    
     displayplayer = consoleplayer;		// view the guy you are playing    
     gameaction = ga_nothing; 
@@ -859,7 +865,8 @@ void G_Ticker (void)
     
     // do player reborns if needed
     for (i=0 ; i<MAXPLAYERS ; i++) 
-	if (playeringame[i] && players[i].playerstate == PST_REBORN) 
+	if (playeringame[i] && players[i].playerstate == PST_REBORN
+            && !(P4_DoomArenaActive() && gameaction == ga_loadlevel))
 	    G_DoReborn (i);
     
     // do things to change the game state
@@ -959,6 +966,12 @@ void G_Ticker (void)
 	}
     }
     
+    // An arena keeps running while a player opens their local menu.
+    if (P4_DoomArenaActive())
+        for (i = 0; i < MAXPLAYERS; ++i)
+            if (players[i].cmd.buttons & BT_SPECIAL)
+                players[i].cmd.buttons = 0;
+
     // check for special buttons
     for (i=0 ; i<MAXPLAYERS ; i++)
     {
@@ -1127,7 +1140,8 @@ G_CheckSpot
     {
 	// first spawn of level, before corpses
 	for (i=0 ; i<playernum ; i++)
-	    if (players[i].mo->x == mthing->x << FRACBITS
+	    if (players[i].mo != NULL
+                && players[i].mo->x == mthing->x << FRACBITS
 		&& players[i].mo->y == mthing->y << FRACBITS)
 		return false;	
 	return true;
@@ -1347,6 +1361,8 @@ void G_DoCompleted (void)
 { 
     int             i; 
 	 
+    if (P4_DoomArenaCompleted()) return;
+
     gameaction = ga_nothing; 
  
     for (i=0 ; i<MAXPLAYERS ; i++) 

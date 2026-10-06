@@ -311,3 +311,21 @@ Its game ID stays `org.p4console.wacky-probe`; launcher ID changes from 120 to
 all five race courses, and shared group-start plus real UDP route tests pass.
 Physical four-console acceptance and device cadence remain pending. See
 `test-runs/2026-10-06-wacky-wheels-full-port.json` for exact artifact/unit results.
+
+## Game Changers AI arena candidate (Tab5 0.56)
+
+The special **Multiplayer → Game Changers AI** mode uses the OS local Wi-Fi
+room with one playing host and up to three guests. Its separate Doom adapter
+relays bounded four-slot command batches with per-guest recovery; ordinary
+Doom/Chex and Bluetooth/serial keep their existing two-player path. The host
+stays the server even while its player takes a break. After 15 seconds without
+movement/fire, that visit ends; Use returns the connected player at zero.
+New/disconnected consoles join at the initial lobby, not during a running world.
+
+See [mode behavior, storage, tests and limitations](GAME_CHANGERS_AI_DOOM.md).
+This source/build candidate does not extend historical two-board radio evidence
+to four physical consoles. The supplied Pure Hell two-map loop is the default;
+the host can select either Pure Hell arena or DWANGO 5 MAP01–24. The in-game
+menu proposes a map and takes a strict-majority vote through synchronized tic
+commands, preserving visit scores. All consoles admit the same exact three-WAD
+bundle with notices. Physical acceptance remains pending.

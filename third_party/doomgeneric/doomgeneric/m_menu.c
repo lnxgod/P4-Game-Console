@@ -1,3 +1,4 @@
+#include "p4_doom_net.h"
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 2005-2014 Simon Howard
@@ -1562,6 +1563,8 @@ boolean M_Responder (event_t* ev)
     if (key == -1)
 	return false;
 
+    if (P4_DoomArenaMenuKey(key)) return true;
+
     // Save Game string input
     if (saveStringEnter)
     {
@@ -1968,6 +1971,7 @@ void M_Drawer (void)
     char               *name;
     int			start;
 
+    if (P4_DoomArenaMenuDraw()) return;
     inhelpscreens = false;
     
     // Horiz. & Vertically center string and print it.

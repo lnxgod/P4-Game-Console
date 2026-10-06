@@ -60,7 +60,9 @@ static void wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
         s_ip_ready=true;
     } else if (base==WIFI_EVENT && id==WIFI_EVENT_AP_STACONNECTED && s_mode==MODE_HOST) {
         s_associated=true;
-    } else if (base==WIFI_EVENT && (id==WIFI_EVENT_STA_DISCONNECTED || id==WIFI_EVENT_AP_STADISCONNECTED)) {
+    /* An AP station departure must not erase other players' routes. Each
+     * missing peer expires independently; client link loss clears its host. */
+    } else if (base==WIFI_EVENT && id==WIFI_EVENT_STA_DISCONNECTED) {
         s_associated=false; s_status.connected=false; s_status.route_id=0; s_peer_ip=0; s_last_rx=0;
         memset(s_peer_ips,0,sizeof(s_peer_ips));memset(s_peer_seen,0,sizeof(s_peer_seen));
         if (s_mode==MODE_CLIENT) { s_ip_ready=false; s_status.ready=false; }

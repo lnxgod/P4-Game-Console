@@ -185,6 +185,101 @@ index fd8708f..a49685b 100644
  
  
  //Implement below functions for your platform
+diff --git a/doomgeneric/g_game.c b/doomgeneric/g_game.c
+index 9954d78..8e3bf0d 100644
+--- a/doomgeneric/g_game.c
++++ b/doomgeneric/g_game.c
+@@ -17,6 +17,7 @@
+ 
+ 
+ 
++#include "p4_doom_net.h"
+ #include <string.h>
+ #include <stdlib.h>
+ #include <math.h>
+@@ -426,7 +427,8 @@ void G_BuildTiccmd (ticcmd_t* cmd, int maketic)
+     }
+ 
+     // buttons
+-    cmd->chatchar = HU_dequeueChatChar(); 
++    cmd->chatchar = HU_dequeueChatChar();
++    P4_DoomArenaBuildCommand(cmd);
+  
+     if (gamekeydown[key_fire] || mousebuttons[mousebfire] 
+ 	|| joybuttons[joybfire]) 
+@@ -652,6 +654,10 @@ void G_DoLoadLevel (void)
+ 	memset (players[i].frags,0,sizeof(players[i].frags)); 
+     } 
+ 		 
++    // Removed seats will not be spawned after the old level is freed.
++    if (P4_DoomArenaActive())
++        for (i = 0; i < MAXPLAYERS; ++i)
++            if (!playeringame[i]) players[i].mo = NULL;
+     P_SetupLevel (gameepisode, gamemap, 0, gameskill);    
+     displayplayer = consoleplayer;		// view the guy you are playing    
+     gameaction = ga_nothing; 
+@@ -859,7 +865,8 @@ void G_Ticker (void)
+     
+     // do player reborns if needed
+     for (i=0 ; i<MAXPLAYERS ; i++) 
+-	if (playeringame[i] && players[i].playerstate == PST_REBORN) 
++	if (playeringame[i] && players[i].playerstate == PST_REBORN
++            && !(P4_DoomArenaActive() && gameaction == ga_loadlevel))
+ 	    G_DoReborn (i);
+     
+     // do things to change the game state
+@@ -959,6 +966,12 @@ void G_Ticker (void)
+ 	}
+     }
+     
++    // An arena keeps running while a player opens their local menu.
++    if (P4_DoomArenaActive())
++        for (i = 0; i < MAXPLAYERS; ++i)
++            if (players[i].cmd.buttons & BT_SPECIAL)
++                players[i].cmd.buttons = 0;
++
+     // check for special buttons
+     for (i=0 ; i<MAXPLAYERS ; i++)
+     {
+@@ -1127,7 +1140,8 @@ G_CheckSpot
+     {
+ 	// first spawn of level, before corpses
+ 	for (i=0 ; i<playernum ; i++)
+-	    if (players[i].mo->x == mthing->x << FRACBITS
++	    if (players[i].mo != NULL
++                && players[i].mo->x == mthing->x << FRACBITS
+ 		&& players[i].mo->y == mthing->y << FRACBITS)
+ 		return false;	
+ 	return true;
+@@ -1347,6 +1361,8 @@ void G_DoCompleted (void)
+ { 
+     int             i; 
+ 	 
++    if (P4_DoomArenaCompleted()) return;
++
+     gameaction = ga_nothing; 
+  
+     for (i=0 ; i<MAXPLAYERS ; i++) 
+diff --git a/doomgeneric/hu_stuff.c b/doomgeneric/hu_stuff.c
+index b63cac7..63772e0 100644
+--- a/doomgeneric/hu_stuff.c
++++ b/doomgeneric/hu_stuff.c
+@@ -16,6 +16,7 @@
+ //
+ 
+ 
++#include "p4_doom_net.h"
+ #include <ctype.h>
+ 
+ #include "doomdef.h"
+@@ -382,6 +383,7 @@ void HU_Start(void)
+ 
+ void HU_Drawer(void)
+ {
++    P4_DoomArenaHUD();
+ 
+     HUlib_drawSText(&w_message);
+     HUlib_drawIText(&w_chat);
 diff --git a/doomgeneric/i_system.c b/doomgeneric/i_system.c
 index 53ab2c9..55d59d0 100644
 --- a/doomgeneric/i_system.c
@@ -214,10 +309,24 @@ index 53ab2c9..55d59d0 100644
  }
 -
 diff --git a/doomgeneric/m_menu.c b/doomgeneric/m_menu.c
-index 6df9655..c50611d 100644
+index 6df9655..ae36cea 100644
 --- a/doomgeneric/m_menu.c
 +++ b/doomgeneric/m_menu.c
-@@ -1626,6 +1626,16 @@ boolean M_Responder (event_t* ev)
+@@ -1,3 +1,4 @@
++#include "p4_doom_net.h"
+ //
+ // Copyright(C) 1993-1996 Id Software, Inc.
+ // Copyright(C) 2005-2014 Simon Howard
+@@ -1562,6 +1563,8 @@ boolean M_Responder (event_t* ev)
+     if (key == -1)
+ 	return false;
+ 
++    if (P4_DoomArenaMenuKey(key)) return true;
++
+     // Save Game string input
+     if (saveStringEnter)
+     {
+@@ -1626,6 +1629,16 @@ boolean M_Responder (event_t* ev)
      {
  	if (messageNeedsInput)
          {
@@ -234,8 +343,203 @@ index 6df9655..c50611d 100644
              if (key != ' ' && key != KEY_ESCAPE
               && key != key_menu_confirm && key != key_menu_abort)
              {
-@@ -2122,4 +2132,3 @@ void M_Init (void)
+@@ -1958,6 +1971,7 @@ void M_Drawer (void)
+     char               *name;
+     int			start;
+ 
++    if (P4_DoomArenaMenuDraw()) return;
+     inhelpscreens = false;
+     
+     // Horiz. & Vertically center string and print it.
+@@ -2122,4 +2136,3 @@ void M_Init (void)
  
      //opldev = M_CheckParm("-opldev") > 0;
  }
 -
+diff --git a/doomgeneric/p_inter.c b/doomgeneric/p_inter.c
+index 1eb58cf..ac696b9 100644
+--- a/doomgeneric/p_inter.c
++++ b/doomgeneric/p_inter.c
+@@ -20,6 +20,7 @@
+ 
+ 
+ // Data.
++#include "p4_doom_net.h"
+ #include "doomdef.h"
+ #include "dstrings.h"
+ #include "sounds.h"
+@@ -670,6 +671,9 @@ P_KillMobj
+     mobjtype_t	item;
+     mobj_t*	mo;
+ 	
++    if (source && source->player && target->player)
++        P4_DoomArenaKill((int)(source->player - players),
++                         (int)(target->player - players));
+     target->flags &= ~(MF_SHOOTABLE|MF_FLOAT|MF_SKULLFLY);
+ 
+     if (target->type != MT_SKULL)
+diff --git a/doomgeneric/p_mobj.c b/doomgeneric/p_mobj.c
+index a3b9c43..0d709c6 100644
+--- a/doomgeneric/p_mobj.c
++++ b/doomgeneric/p_mobj.c
+@@ -16,6 +16,7 @@
+ //	Moving object handling. Spawn functions.
+ //
+ 
++#include "p4_doom_net.h"
+ #include <stdio.h>
+ 
+ #include "i_system.h"
+@@ -440,6 +441,9 @@ P_NightmareRespawn (mobj_t* mobj)
+ //
+ void P_MobjThinker (mobj_t* mobj)
+ {
++    if (mobj->player && !P4_DoomArenaPlayerActive((int)(mobj->player - players)))
++        return;
++
+     // momentum movement
+     if (mobj->momx
+ 	|| mobj->momy
+diff --git a/doomgeneric/p_setup.c b/doomgeneric/p_setup.c
+index 00306e8..e25f1f4 100644
+--- a/doomgeneric/p_setup.c
++++ b/doomgeneric/p_setup.c
+@@ -1,3 +1,4 @@
++#include "p4_doom_net.h"
+ //
+ // Copyright(C) 1993-1996 Id Software, Inc.
+ // Copyright(C) 2005-2014 Simon Howard
+@@ -788,7 +789,7 @@ P_SetupLevel
+ 	lumpname[4] = 0;
+     }
+ 
+-    lumpnum = W_GetNumForName (lumpname);
++    lumpnum = P4_DoomArenaMapLump(W_GetNumForName (lumpname));
+ 	
+     leveltime = 0;
+ 	
+diff --git a/doomgeneric/p_tick.c b/doomgeneric/p_tick.c
+index 2289350..0a7358d 100644
+--- a/doomgeneric/p_tick.c
++++ b/doomgeneric/p_tick.c
+@@ -18,10 +18,12 @@
+ //
+ 
+ 
++#include "p4_doom_net.h"
+ #include "z_zone.h"
+ #include "p_local.h"
+ 
+ #include "doomstat.h"
++#include "d_main.h"
+ 
+ 
+ int	leveltime;
+@@ -138,8 +140,12 @@ void P_Ticker (void)
+     }
+     
+ 		
++    P4_DoomArenaTicker();
++    // A passed vote has scheduled a new world. Do not run old-map triggers
++    // or thinkers that could overwrite that selection with an exit action.
++    if (P4_DoomArenaActive() && gameaction == ga_loadlevel) return;
+     for (i=0 ; i<MAXPLAYERS ; i++)
+-	if (playeringame[i])
++	if (playeringame[i] && P4_DoomArenaPlayerActive(i))
+ 	    P_PlayerThink (&players[i]);
+ 			
+     P_RunThinkers ();
+diff --git a/doomgeneric/r_things.c b/doomgeneric/r_things.c
+index 74e7369..bbe5dce 100644
+--- a/doomgeneric/r_things.c
++++ b/doomgeneric/r_things.c
+@@ -19,6 +19,7 @@
+ 
+ 
+ 
++#include "p4_doom_net.h"
+ #include <stdio.h>
+ #include <stdlib.h>
+ 
+@@ -471,6 +472,8 @@ void R_ProjectSprite (mobj_t* thing)
+     angle_t		ang;
+     fixed_t		iscale;
+     
++    if (thing->player && !P4_DoomArenaPlayerActive((int)(thing->player - players)))
++        return;
+     // transform the origin point
+     tr_x = thing->x - viewx;
+     tr_y = thing->y - viewy;
+@@ -737,6 +740,8 @@ void R_DrawPSprite (pspdef_t* psp)
+ //
+ void R_DrawPlayerSprites (void)
+ {
++    if (!P4_DoomArenaPlayerActive(consoleplayer)) return;
++
+     int		i;
+     int		lightnum;
+     pspdef_t*	psp;
+diff --git a/doomgeneric/s_sound.c b/doomgeneric/s_sound.c
+index f6d8be1..17fb533 100644
+--- a/doomgeneric/s_sound.c
++++ b/doomgeneric/s_sound.c
+@@ -1,3 +1,4 @@
++#include "p4_doom_net.h"
+ //
+ // Copyright(C) 1993-1996 Id Software, Inc.
+ // Copyright(C) 2005-2014 Simon Howard
+@@ -622,7 +623,7 @@ void S_ChangeMusic(int musicnum, int looping)
+         music = &S_music[musicnum];
+     }
+ 
+-    if (mus_playing == music)
++    if (mus_playing == music && P4_DoomArenaMusicLump(music->lumpnum)==music->lumpnum)
+     {
+         return;
+     }
+@@ -637,6 +638,7 @@ void S_ChangeMusic(int musicnum, int looping)
+         music->lumpnum = W_GetNumForName(namebuf);
+     }
+ 
++    music->lumpnum = P4_DoomArenaMusicLump(music->lumpnum);
+     music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
+ 
+     handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));
+diff --git a/doomgeneric/st_stuff.c b/doomgeneric/st_stuff.c
+index e25accc..7fd0a97 100644
+--- a/doomgeneric/st_stuff.c
++++ b/doomgeneric/st_stuff.c
+@@ -20,6 +20,7 @@
+ 
+ 
+ 
++#include "p4_doom_net.h"
+ #include <stdio.h>
+ 
+ #include "i_system.h"
+@@ -915,6 +916,8 @@ void ST_updateWidgets(void)
+ 	    st_fragscount -= plyr->frags[i];
+     }
+ 
++    st_fragscount = P4_DoomArenaFragCount(st_fragscount);
++
+     // get rid of chat window if up because of message
+     if (!--st_msgcounter)
+ 	st_chat = st_oldchat;
+diff --git a/doomgeneric/w_wad.c b/doomgeneric/w_wad.c
+index 1248046..34dc2b3 100644
+--- a/doomgeneric/w_wad.c
++++ b/doomgeneric/w_wad.c
+@@ -1,3 +1,4 @@
++#include "p4_doom_net.h"
+ //
+ // Copyright(C) 1993-1996 Id Software, Inc.
+ // Copyright(C) 2005-2014 Simon Howard
+@@ -226,6 +227,7 @@ wad_file_t *W_AddFile (char *filename)
+     }
+ 
+     Z_Free(fileinfo);
++    P4_DoomArenaWadLoaded(filename, startlump, newnumlumps-startlump);
+ 
+     if (lumphash != NULL)
+     {

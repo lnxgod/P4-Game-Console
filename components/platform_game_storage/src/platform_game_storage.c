@@ -77,6 +77,8 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/semphr.h"
 #include "game_storage_files.h"
+#include "verified_reader.h"
+#include "verified_wad.h"
 #include "game_storage_model.h"
 #include "msc_write_policy.h"
 #include "platform_game_storage_internal.h"
@@ -200,6 +202,16 @@ static DRAM_ATTR uint8_t s_hash_buffer[GAME_STORAGE_HASH_BUFFER_BYTES]
 static bool s_maintenance;
 static game_storage_content_t s_doom_content = GAME_STORAGE_CONTENT_UNKNOWN;
 static game_storage_content_t s_chex_content = GAME_STORAGE_CONTENT_UNKNOWN;
+enum { ARENA_WAD_COUNT = 3 };
+static FILE *s_arena_file[ARENA_WAD_COUNT];
+static uint8_t *s_arena_hashes[ARENA_WAD_COUNT];
+static p4_verified_reader_t s_arena_reader[ARENA_WAD_COUNT];
+static const struct { const char *path; size_t bytes; const char *sha256; }
+s_arena_content[P4_GCA_FILE_COUNT] = {
+#define GCA_STORAGE(kind, symbol, dir, name, size, hash) {"/game-data" dir "/" name, size, hash},
+    P4_GCA_CONTENT_FILES(GCA_STORAGE)
+#undef GCA_STORAGE
+};
 static uint8_t *s_locked_wad_data;
 static size_t s_locked_wad_size_bytes;
 static uint8_t *s_locked_deh_data;
@@ -238,6 +250,13 @@ static void unlock_storage(void)
 
 static void release_locked_doom_snapshot(void)
 {
+    for (unsigned i=0; i<ARENA_WAD_COUNT; ++i) {
+        if (s_arena_file[i]) (void)fclose(s_arena_file[i]);
+        s_arena_file[i]=NULL;
+        heap_caps_free(s_arena_hashes[i]);
+        s_arena_hashes[i]=NULL;
+        memset(&s_arena_reader[i],0,sizeof(s_arena_reader[i]));
+    }
     heap_caps_free(s_locked_deh_data);
     heap_caps_free(s_locked_wad_data);
     s_locked_deh_data = NULL;
@@ -581,6 +600,70 @@ static game_storage_content_t inspect_chex_data(esp_err_t *out_error)
     return GAME_STORAGE_CONTENT_MISSING;
 }
 
+static bool arena_read_block(void *context,size_t offset,void *out,size_t bytes)
+{
+    FILE *file=context;
+    return offset<=LONG_MAX && fseek(file,(long)offset,SEEK_SET)==0 &&
+        fread(out,1,bytes,file)==bytes && !ferror(file);
+}
+static bool arena_digest(const void *data,size_t bytes,uint8_t digest[32])
+{ return mbedtls_sha256(data,bytes,digest,0)==0; }
+
+static game_storage_content_t inspect_arena_stream(unsigned file, esp_err_t *error)
+{
+    const size_t size=s_arena_content[file].bytes;
+    const size_t blocks=(size+P4_VERIFIED_BLOCK_BYTES-1U)/P4_VERIFIED_BLOCK_BYTES;
+    struct stat metadata;
+    if (stat(s_arena_content[file].path,&metadata)!=0) {
+        *error=ESP_ERR_NOT_FOUND; return GAME_STORAGE_CONTENT_MISSING;
+    }
+    if (!S_ISREG(metadata.st_mode) || metadata.st_size!=(off_t)size) {
+        *error=ESP_ERR_INVALID_SIZE; return GAME_STORAGE_CONTENT_INVALID;
+    }
+    FILE *stream=fopen(s_arena_content[file].path,"rb");
+    if (!stream) { *error=ESP_FAIL; return GAME_STORAGE_CONTENT_INVALID; }
+    uint8_t *hashes=NULL;
+    if (file<ARENA_WAD_COUNT) {
+        s_arena_file[file]=stream;
+        hashes=heap_caps_malloc(blocks*32U,MALLOC_CAP_SPIRAM|MALLOC_CAP_8BIT);
+        s_arena_hashes[file]=hashes;
+        if (!hashes) { *error=ESP_ERR_NO_MEM; return GAME_STORAGE_CONTENT_INVALID; }
+    }
+    /* Disable read-ahead so cache misses re-read and verify the leased SD. */
+    (void)setvbuf(stream,NULL,_IONBF,0);
+    mbedtls_sha256_context sha;
+    mbedtls_sha256_init(&sha);
+    bool valid=mbedtls_sha256_starts(&sha,0)==0;
+    for (size_t block=0; valid && block<blocks; ++block) {
+        const size_t offset=block*P4_VERIFIED_BLOCK_BYTES;
+        size_t n=size-offset;
+        if (n>P4_VERIFIED_BLOCK_BYTES) n=P4_VERIFIED_BLOCK_BYTES;
+        valid=arena_read_block(stream,offset,s_hash_buffer,n) &&
+            (!hashes || arena_digest(s_hash_buffer,n,hashes+block*32U)) &&
+            mbedtls_sha256_update(&sha,s_hash_buffer,n)==0;
+        content_validation_note_bytes(n);
+    }
+    uint8_t digest[32];
+    valid=valid && mbedtls_sha256_finish(&sha,digest)==0;
+    mbedtls_sha256_free(&sha);
+    static const char hex[]="0123456789abcdef";
+    for (size_t i=0; valid && i<32; ++i) {
+        valid=hex[digest[i]>>4]==s_arena_content[file].sha256[i*2] &&
+              hex[digest[i]&15]==s_arena_content[file].sha256[i*2+1];
+    }
+    if (file>=ARENA_WAD_COUNT && fclose(stream)!=0) valid=false;
+    if (!valid) { *error=ESP_ERR_INVALID_CRC; return GAME_STORAGE_CONTENT_INVALID; }
+    if (file<ARENA_WAD_COUNT) {
+        s_arena_reader[file]=(p4_verified_reader_t){.context=stream,.read=arena_read_block,
+            .sha256=arena_digest,.digests=hashes,.size=size,.digest_bytes=blocks*32U};
+        if (!p4_verified_wad_validate(&s_arena_reader[file],(p4_wad_kind_t)file)) {
+            *error=ESP_ERR_INVALID_RESPONSE; return GAME_STORAGE_CONTENT_INVALID;
+        }
+    }
+    *error=ESP_OK;
+    return GAME_STORAGE_CONTENT_READY;
+}
+
 static game_storage_content_t inspect_doom_title_snapshot(
     platform_game_storage_doom_title_t title,
     esp_err_t *out_error)
@@ -596,7 +679,12 @@ static game_storage_content_t inspect_doom_title_snapshot(
     release_locked_doom_snapshot();
     const int64_t started_us = esp_timer_get_time();
     game_storage_content_t selected = GAME_STORAGE_CONTENT_INVALID;
-    if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM) {
+    if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI) {
+        selected = GAME_STORAGE_CONTENT_READY;
+        for (unsigned i=0; i<P4_GCA_FILE_COUNT && selected==GAME_STORAGE_CONTENT_READY; ++i)
+            selected = inspect_arena_stream(i,out_error);
+        s_locked_wad_size_bytes=(size_t)PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES;
+    } else if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM) {
         selected = inspect_exact_file(
             PLATFORM_GAME_STORAGE_DOOM_WAD_PATH,
             PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES,
@@ -650,11 +738,12 @@ static game_storage_content_t inspect_doom_title_snapshot(
     ESP_LOGI(TAG,
              "P4_GAME_STORAGE LOCKED_SNAPSHOT_READY title=%s "
              "wad_bytes=%u deh_bytes=%u source=single-pass-exact-sha256 "
-             "target=psram elapsed_ms=%lld",
+             "target=%s elapsed_ms=%lld",
              title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM
-                 ? "doom" : "chex",
+                 ? "doom" : title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI ? "game-changers-ai" : "chex",
              (unsigned)s_locked_wad_size_bytes,
              (unsigned)s_locked_deh_size_bytes,
+             title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI ? "verified-sd-blocks" : "psram",
              (long long)((esp_timer_get_time() - started_us) /
                  INT64_C(1000)));
     return GAME_STORAGE_CONTENT_READY;
@@ -2539,7 +2628,7 @@ esp_err_t platform_game_storage_lock_for_doom_title(
         inspect_doom_title_snapshot(title, &result);
     if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM) {
         s_doom_content = selected;
-    } else {
+    } else if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST) {
         s_chex_content = selected;
     }
     const bool ready = selected == GAME_STORAGE_CONTENT_READY &&
@@ -2577,7 +2666,7 @@ esp_err_t platform_game_storage_lock_for_doom_title(
                 inspect_doom_title_snapshot(title, &result);
             if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM) {
                 s_doom_content = selected;
-            } else {
+            } else if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST) {
                 s_chex_content = selected;
             }
             if (selected != GAME_STORAGE_CONTENT_READY && result == ESP_OK) {
@@ -2671,4 +2760,39 @@ const char *platform_game_storage_state_name(
     case PLATFORM_GAME_STORAGE_FAULT: return "fault";
     default: return "unknown";
     }
+}
+
+
+bool platform_game_storage_arena_present(void)
+{
+    if (!s_initialized || !lock_storage()) return false;
+    static bool sampled, present;
+    static uint32_t generation;
+    if (s_model.owner!=GAME_STORAGE_OWNER_APP) {
+        unlock_storage(); return false;
+    }
+    /* Content transfer remounts/restarts; avoid filesystem work every UI tick.
+     * Launch always verifies the current file, regardless of this hint. */
+    if (!sampled || generation!=s_model.generation) {
+        struct stat metadata;
+        present=true;
+        for (unsigned i=0; i<P4_GCA_FILE_COUNT && present; ++i)
+            present=stat(s_arena_content[i].path,&metadata)==0 && S_ISREG(metadata.st_mode) &&
+                metadata.st_size==(off_t)s_arena_content[i].bytes;
+        sampled=true;
+        generation=s_model.generation;
+    }
+    unlock_storage();
+    return present;
+}
+
+esp_err_t platform_game_storage_read_arena_wad(unsigned file,size_t offset,void *out,size_t bytes)
+{
+    if (!s_initialized || !lock_storage()) return ESP_ERR_INVALID_STATE;
+    const bool valid=s_model.owner==GAME_STORAGE_OWNER_GAME &&
+        s_locked_snapshot_title==PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI &&
+        file<ARENA_WAD_COUNT && s_arena_file[file] &&
+        p4_verified_read(&s_arena_reader[file],offset,out,bytes);
+    unlock_storage();
+    return valid?ESP_OK:ESP_FAIL;
 }

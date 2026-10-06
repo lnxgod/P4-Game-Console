@@ -119,6 +119,10 @@ void DG_DrawFrame(void)
         }
     }
 
+#if P4_DOOM_ARENA_HOST_TEST
+    extern void p4_doom_arena_capture(const uint32_t *pixels);
+    p4_doom_arena_capture(DG_ScreenBuffer);
+#endif
     ++p4_doom_frame_count;
     if (p4_doom_frame_count >= p4_doom_frame_limit) {
         printf("P4_DOOM_D0 PASS frames=%u checksum=%016" PRIx64 " elapsed_ms=%" PRIu64 "\n",

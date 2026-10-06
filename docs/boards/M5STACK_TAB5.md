@@ -3,6 +3,12 @@
 M5Stack Tab5 is the permanent primary target. `make console-os-idf` aliases
 `make console-os-tab5-idf`; Elecrow now requires `make console-os-elecrow-idf`.
 
+The isolated **0.53** [Game Changers AI arena candidate](../GAME_CHANGERS_AI_DOOM.md)
+adds a special Multiplayer selection, four-slot local Wi-Fi Doom adapter,
+verified SD-backed Freedoom/Pure Hell/DWANGO 5 reads, host map selection,
+in-game majority voting and connected idle breaks. It is host/build-tested;
+no installation or four-console hardware acceptance is recorded for it.
+
 The current Tab5 presentation release is **0.52**. Both A/ST7121 and B/ST7123
 have exact 4,508,176-byte application readback, launcher boot, post-service
 health, and eleven verified presentation-cartridge uploads each in

@@ -40,6 +40,26 @@
       "notice": "Preferred redistributable game data for public reproducibility; supply separately and preserve Freedoom notices."
     },
     {
+      "id": "freedoom-0.13.0-phase-2",
+      "filename": "freedoom2.wad",
+      "local_path": "local-data/doom/freedoom2.wad",
+      "kind": "IWAD",
+      "version": "0.13.0",
+      "size_bytes": 28787748,
+      "sha256": "a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b",
+      "source": "https://github.com/freedoom/freedoom/releases/tag/v0.13.0",
+      "source_commit": "cfb8644b1a8dc7d7d2177e6a892ccaa2922bdaae",
+      "source_archive": {
+        "filename": "freedoom-0.13.0.zip",
+        "url": "https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0.zip",
+        "size_bytes": 24143781,
+        "sha256": "3f9b264f3e3ce503b4fb7f6bdcb1f419d93c7b546f4df3e874dd878db9688f59",
+        "checksum_url": "https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0-CHECKSUM"
+      },
+      "license": "BSD-3-Clause",
+      "notice": "Exact Phase 2 base for the Game Changers AI multiplayer candidate; preserve COPYING.txt and credits. Keep WAD and archive under ignored local-data/doom. Hardware acceptance is recorded separately."
+    },
+    {
       "id": "chex-quest-1.0",
       "filename": "chex.wad",
       "local_path": "local-data/doom/chex.wad",
@@ -55,7 +75,7 @@
         "url": "https://www.chexquest3.com/downloads/chex.zip",
         "size_bytes": 3773924,
         "sha256": "df8e391b0f802f82ac9b71ec4faea4b1cd858097d04eb70aff2d1a39150e0419",
-        "publisher": "Digital Café / General Mills"
+        "publisher": "Digital Caf\u00e9 / General Mills"
       },
       "notice": "Officially hosted freeware game data. Keep it as ignored local/SD input; do not commit or embed it in project firmware artifacts. Chex and Chex Quest are General Mills trademarks."
     },
@@ -96,5 +116,294 @@
       },
       "notice": "Local development and user-supplied SD input only. Do not commit, embed, modify, or redistribute the extracted PAK from this project. The original shareware license permits only constrained distribution of the complete unmodified package with its agreement."
     }
-  ]
+  ],
+  "game_changers_ai_bundle": {
+    "version": "pure-hell-0.5-dwango5-freedoom-0.13.0",
+    "default_map": 1,
+    "rotation": [
+      1,
+      2
+    ],
+    "max_players": 4,
+    "identity_encoding": "ASCII P4-GCA-ARENAS-1 NUL then binary SHA-256 of IWAD, Pure Hell PWAD, DWANGO5 PWAD in that order",
+    "content_sha256": "6fbdec7a25f87088884382706fbe2c73dba284c3139ee04f1113d7fb7bba3960",
+    "source": "User-supplied Pure-Hell-v0.5-Shotguns-Rockets-Metal.zip, 218033 bytes, SHA-256 c8990cbfbc6c08a693151309452dffe6f0d4e4f463f0312e8beb444c69456271",
+    "notice": "Local inputs only; retain all provided notices and MIDI. The Pure Hell maps are a new user-authorized reconstruction, not a historical recovered WAD.",
+    "files": [
+      {
+        "symbol": "BASE",
+        "usb_kind": 5,
+        "directory": "",
+        "filename": "FREEDOOM2.WAD",
+        "local_path": "local-data/doom/freedoom2.wad",
+        "command": "freedoom2",
+        "size_bytes": 28787748,
+        "sha256": "a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b"
+      },
+      {
+        "symbol": "PWAD",
+        "usb_kind": 6,
+        "directory": "",
+        "filename": "PUREHELL.WAD",
+        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/PUREHELL.WAD",
+        "command": "pure-hell",
+        "size_bytes": 875026,
+        "sha256": "b0e8ab211fe263bdf263b219cd0f3584cac0071ec1cf3ce73defa843f00a3663"
+      },
+      {
+        "symbol": "DWANGO",
+        "usb_kind": 13,
+        "directory": "",
+        "filename": "DWANGO5.WAD",
+        "local_path": "local-data/doom/arena-inbox/dwango5/DWANGO5.WAD",
+        "command": "dwango5",
+        "size_bytes": 2109396,
+        "sha256": "2b7658f126321fc2ccf953dbbe8d585b4162350080b9715b46fc617d32cdb13a"
+      },
+      {
+        "symbol": "COPYING",
+        "usb_kind": 7,
+        "directory": "/GCADOOM",
+        "filename": "Freedoom-0.13.0-COPYING.txt",
+        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/Freedoom-0.13.0-COPYING.txt",
+        "command": "arena-copying",
+        "size_bytes": 1644,
+        "sha256": "7c62f2c520769c798774f416637eec4921e5f0aafdac1245ae7c8a8cf65fe102"
+      },
+      {
+        "symbol": "CREDITS_MUSIC",
+        "usb_kind": 8,
+        "directory": "/GCADOOM",
+        "filename": "Freedoom-0.13.0-CREDITS-MUSIC.txt",
+        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/Freedoom-0.13.0-CREDITS-MUSIC.txt",
+        "command": "arena-credits-music",
+        "size_bytes": 9388,
+        "sha256": "2bb77677bbc4e587bba44ccb6514ee0f5397c7bb8ae9580b9188d3d6a57c0a31"
+      },
+      {
+        "symbol": "CREDITS",
+        "usb_kind": 9,
+        "directory": "/GCADOOM",
+        "filename": "Freedoom-0.13.0-CREDITS.txt",
+        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/Freedoom-0.13.0-CREDITS.txt",
+        "command": "arena-credits",
+        "size_bytes": 15872,
+        "sha256": "72364333d295c598d75ef9553d3b3661ad0b60e27271c87b7637c74b2f46918a"
+      },
+      {
+        "symbol": "README",
+        "usb_kind": 10,
+        "directory": "/GCADOOM",
+        "filename": "README.txt",
+        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/README.txt",
+        "command": "arena-readme",
+        "size_bytes": 4220,
+        "sha256": "e10bcbce5d602672fd7dcac442861d9675db902c3669fb7b9510062def04832d"
+      },
+      {
+        "symbol": "MANIFEST",
+        "usb_kind": 11,
+        "directory": "/GCADOOM",
+        "filename": "build-manifest.json",
+        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/build-manifest.json",
+        "command": "arena-manifest",
+        "size_bytes": 2823,
+        "sha256": "90b9629971c5af62a7aa2406727c2153ebaca567a3b0fbcd002e8115f8c8c721"
+      },
+      {
+        "symbol": "MIDI",
+        "usb_kind": 12,
+        "directory": "/GCADOOM",
+        "filename": "Beasts-of-Horizon.mid",
+        "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/Beasts-of-Horizon.mid",
+        "command": "arena-midi",
+        "size_bytes": 43798,
+        "sha256": "01c7618d0e03224156f29cdb07895ca224f0a30ba41fe67595fffadf0454fa89"
+      },
+      {
+        "symbol": "DWANGO_NOTICE",
+        "usb_kind": 14,
+        "directory": "/GCADOOM",
+        "filename": "DWANGO5.TXT",
+        "local_path": "local-data/doom/arena-inbox/dwango5/DWANGO5.TXT",
+        "command": "dwango5-notice",
+        "size_bytes": 2234,
+        "sha256": "bfb0a573af27da78ac853deedd7754c73e53f472798f5f129500eedbef856cf1"
+      },
+      {
+        "symbol": "DWANGO_DIZ",
+        "usb_kind": 15,
+        "directory": "/GCADOOM",
+        "filename": "FILE_ID.DIZ",
+        "local_path": "local-data/doom/arena-inbox/dwango5/FILE_ID.DIZ",
+        "command": "dwango5-diz",
+        "size_bytes": 210,
+        "sha256": "faaa4a0867d05ea49114b9e05ddad783062b9ddba64f8716d5f2556d63aac485"
+      }
+    ],
+    "selections": [
+      {
+        "id": 1,
+        "pack": "PUREHELL",
+        "map": 1,
+        "title": "Pure Hell Shotguns"
+      },
+      {
+        "id": 2,
+        "pack": "PUREHELL",
+        "map": 2,
+        "title": "Pure Hell Rockets"
+      },
+      {
+        "id": 3,
+        "pack": "DWANGO5",
+        "map": 1,
+        "title": "DWANGO 5 MAP01"
+      },
+      {
+        "id": 4,
+        "pack": "DWANGO5",
+        "map": 2,
+        "title": "DWANGO 5 MAP02"
+      },
+      {
+        "id": 5,
+        "pack": "DWANGO5",
+        "map": 3,
+        "title": "DWANGO 5 MAP03"
+      },
+      {
+        "id": 6,
+        "pack": "DWANGO5",
+        "map": 4,
+        "title": "DWANGO 5 MAP04"
+      },
+      {
+        "id": 7,
+        "pack": "DWANGO5",
+        "map": 5,
+        "title": "DWANGO 5 MAP05"
+      },
+      {
+        "id": 8,
+        "pack": "DWANGO5",
+        "map": 6,
+        "title": "DWANGO 5 MAP06"
+      },
+      {
+        "id": 9,
+        "pack": "DWANGO5",
+        "map": 7,
+        "title": "DWANGO 5 MAP07"
+      },
+      {
+        "id": 10,
+        "pack": "DWANGO5",
+        "map": 8,
+        "title": "DWANGO 5 MAP08"
+      },
+      {
+        "id": 11,
+        "pack": "DWANGO5",
+        "map": 9,
+        "title": "DWANGO 5 MAP09"
+      },
+      {
+        "id": 12,
+        "pack": "DWANGO5",
+        "map": 10,
+        "title": "DWANGO 5 MAP10"
+      },
+      {
+        "id": 13,
+        "pack": "DWANGO5",
+        "map": 11,
+        "title": "DWANGO 5 MAP11"
+      },
+      {
+        "id": 14,
+        "pack": "DWANGO5",
+        "map": 12,
+        "title": "DWANGO 5 MAP12"
+      },
+      {
+        "id": 15,
+        "pack": "DWANGO5",
+        "map": 13,
+        "title": "DWANGO 5 MAP13"
+      },
+      {
+        "id": 16,
+        "pack": "DWANGO5",
+        "map": 14,
+        "title": "DWANGO 5 MAP14"
+      },
+      {
+        "id": 17,
+        "pack": "DWANGO5",
+        "map": 15,
+        "title": "DWANGO 5 MAP15"
+      },
+      {
+        "id": 18,
+        "pack": "DWANGO5",
+        "map": 16,
+        "title": "DWANGO 5 MAP16"
+      },
+      {
+        "id": 19,
+        "pack": "DWANGO5",
+        "map": 17,
+        "title": "DWANGO 5 MAP17"
+      },
+      {
+        "id": 20,
+        "pack": "DWANGO5",
+        "map": 18,
+        "title": "DWANGO 5 MAP18"
+      },
+      {
+        "id": 21,
+        "pack": "DWANGO5",
+        "map": 19,
+        "title": "DWANGO 5 MAP19"
+      },
+      {
+        "id": 22,
+        "pack": "DWANGO5",
+        "map": 20,
+        "title": "DWANGO 5 MAP20"
+      },
+      {
+        "id": 23,
+        "pack": "DWANGO5",
+        "map": 21,
+        "title": "DWANGO 5 MAP21"
+      },
+      {
+        "id": 24,
+        "pack": "DWANGO5",
+        "map": 22,
+        "title": "DWANGO 5 MAP22"
+      },
+      {
+        "id": 25,
+        "pack": "DWANGO5",
+        "map": 23,
+        "title": "DWANGO 5 MAP23"
+      },
+      {
+        "id": 26,
+        "pack": "DWANGO5",
+        "map": 24,
+        "title": "DWANGO 5 MAP24"
+      }
+    ],
+    "dwango5_source": {
+      "url": "https://www.doom2.net/doom2/wads/DWANGO5.ZIP",
+      "archive_size_bytes": 716652,
+      "archive_sha256": "f6cc5b7adcb38f9e1bcee979668f155f2d8815d6218a694869f81c27386a407c",
+      "notes": "Unmodified local input from the community deathmatch archive. Preserve DWANGO5.TXT and FILE_ID.DIZ. No redistribution by this repository. In-memory lump namespace isolates legacy graphics/sounds; maps and map music are selected explicitly."
+    }
+  }
 }

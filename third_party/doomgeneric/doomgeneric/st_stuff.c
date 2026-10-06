@@ -20,6 +20,7 @@
 
 
 
+#include "p4_doom_net.h"
 #include <stdio.h>
 
 #include "i_system.h"
@@ -914,6 +915,8 @@ void ST_updateWidgets(void)
 	else
 	    st_fragscount -= plyr->frags[i];
     }
+
+    st_fragscount = P4_DoomArenaFragCount(st_fragscount);
 
     // get rid of chat window if up because of message
     if (!--st_msgcounter)
