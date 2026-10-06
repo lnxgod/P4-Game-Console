@@ -1,0 +1,186 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-10-06T05:15:59.071445+00:00",
+  "game_id": "org.p4console.wacky-probe",
+  "launcher_id": 9001,
+  "version": "0.1.1",
+  "status": "OS 0.54 and Wacky Wheels 0.1.1 installed and hash verified on A/B; physical touch/music/cadence and local Wi-Fi acceptance pending",
+  "predecessor_evidence": "test-runs/2026-10-06-wacky-wheels-full-port.json",
+  "reported_failure": {
+    "os_version": "0.53",
+    "game_version": "0.1.0",
+    "user_quote": "Yeah, there's no on-screen stuff, and the music's all clippy and shit, like derping.",
+    "acceptance": "failed physical touch presentation and audible music continuity",
+    "serial_evidence": "build-host/wacky-0.53/play-B.log",
+    "frame_window_us": {
+      "samples": 300,
+      "wall_avg": 39038,
+      "wall_max": 48001,
+      "audio_avg": 8944,
+      "present_avg": 19859,
+      "transform_avg": 16793
+    },
+    "diagnosis": "512-frame 16 kHz FIFO holds 32 ms, less than the roughly 39 ms submitted frame audio; foreground I2S writes also lengthen frames."
+  },
+  "packages": {
+    "WACKYTRY.P4G": {
+      "bytes": 68804,
+      "sha256": "a376d0edb01ad546d4aa5520c28d0535c8ed2370abb7e59ece796b2da411e739"
+    },
+    "WACKYTRY.P4R": {
+      "bytes": 4399076,
+      "sha256": "56373050954dc9126a001bcbdba8f24c7a0b7c65ccd73553ccd0735ef33f09c1"
+    }
+  },
+  "changes": [
+    "Visible canonical touch regions and held highlights; menu/slides return footer",
+    "OS-owned core-1 audio worker; core-0 game callbacks; 8 copied commands; 2048-frame PCM FIFO; 768-frame prefill; joined teardown",
+    "Platform/game/local-testing skills and performance contract document multicore ownership and actual-device evidence"
+  ],
+  "validation": {
+    "wacky_asan_ubsan": {
+      "passed": 16,
+      "failed": 0,
+      "log": "build-host/wacky-0.53/touch-tests.log",
+      "log_sha256": "3920c67e334996e02cfd027fea44d3fe91ed67861d73408ffbd7f8ec9927d09e"
+    },
+    "final_label_touch_smoke": "2/2 passed after GAS/BRK label-only change",
+    "game_api_asan_ubsan": {
+      "passed": 7,
+      "failed": 0,
+      "log": "build-host/wacky-0.53/game-api-audio-tests.log",
+      "log_sha256": "415935921034724a8dba49415cb3d3ab944cb5486a3eb98d3cf402971fcdbb82"
+    },
+    "audio_worker_asan_ubsan": "2/2 passed",
+    "audio_worker_tsan": {
+      "result": "passed",
+      "log": "build-host/wacky-0.53/audio-worker-tsan.log",
+      "log_sha256": "4695617fdd889fd4443e7219a9df7673ffd9b376307b4ffb37be2b4d04312590"
+    },
+    "cartridge": "actual Console OS ELF/import/4 KiB frame checks and four-player package registration passed",
+    "interactive": {
+      "actor": "assistant through desktop UI",
+      "observed": "Touch menu selection, race launch, visible gas/brake/steering/fire, brief gas press, pause, resume and exit; final labels inspected",
+      "log": "build-host/wacky-0.53/touch-final-interactive.log",
+      "renders": 9419,
+      "average_fps": 60.0,
+      "maximum_gap_ms": 21.847,
+      "gaps_over_33_333_ms": 0,
+      "audio_submitted": 2511952,
+      "audio_rendered": 2511952,
+      "audio_rejected": 0,
+      "audio_underrun": 0,
+      "audio_clipped": 0,
+      "physical_listening": "pending; desktop tool does not establish speaker quality",
+      "log_sha256": "2606f03f0d1497398d8c923e2aa75dcd9ff53fd0c9f785ae248a13ae9d972e3c"
+    },
+    "guard_preflight": {
+      "initial_result": "rejected before hardware access: shared native-only cleanup updated verifier after first build; rebuilding source closure",
+      "initial_authorization": "hardware/evidence/tab5-0.54-wacky-audio-authorization.json",
+      "rebuild": "Current native-only firmware verifier passed",
+      "final_result": "Passed for A and B with exact rebuilt image and full backed-up identities"
+    },
+    "compiled_affinity": {
+      "main_task": "CONFIG_ESP_MAIN_TASK_AFFINITY_CPU0=1",
+      "cores": 2,
+      "audio_worker": "xTaskCreatePinnedToCore(..., core=1); actual device core counters pending"
+    }
+  },
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "panel": "ST7121",
+      "installation": "guarded readback, launcher boot and service health passed",
+      "touch_music_acceptance": "pending",
+      "actual_core_affinity": "pending",
+      "active_frame_cadence": "pending",
+      "guarded_receipt": "hardware/backups/tab5-a-install-k2w0oquy/receipt.json",
+      "app_readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "runtime_log_sha256": "70f0d6c2a35f554267b52775495753d7a4218286716e1ba02334f47933b7e635",
+      "content_install": {
+        "cartridge": "push passed; fsync and double-validation activation",
+        "resource": "unchanged from hash-verified 0.53 installation",
+        "log": "build-host/wacky-0.54/content-A.log",
+        "log_sha256": "c11bb1e6667dc805c959862dff47c6d455931acd9acbaa9024f493dda85c44f6"
+      },
+      "active_capture": "build-host/wacky-0.54/play-A.log",
+      "runtime_registration": {
+        "os_version": "0.54",
+        "launcher_id": 9001,
+        "game_protocol": 2,
+        "runtime_players": 4,
+        "excerpt": "build-host/wacky-0.54/registered-A.log",
+        "excerpt_sha256": "f2055bd8b103df0af29ed7b2cca7d249fcabd6cbac86e68599baea965b922f78"
+      }
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "panel": "ST7123",
+      "installation": "guarded readback, launcher boot and service health passed",
+      "touch_music_acceptance": "pending",
+      "actual_core_affinity": "pending",
+      "active_frame_cadence": "pending",
+      "guarded_receipt": "hardware/backups/tab5-b-install-pellmkhh/receipt.json",
+      "app_readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "runtime_log_sha256": "b0f12e7d536302010198d213ace2078cbdc6715e434371142bf4616aebed3bda",
+      "content_install": {
+        "cartridge": "push passed; fsync and double-validation activation",
+        "resource": "unchanged from hash-verified 0.53 installation",
+        "log": "build-host/wacky-0.54/content-B.log",
+        "log_sha256": "bd8ebab5b09a55e287c286a9256350920eec79e55942ac3bcd1b6c2e06b7863f"
+      },
+      "active_capture": "build-host/wacky-0.54/play-B.log",
+      "runtime_registration": {
+        "os_version": "0.54",
+        "launcher_id": 9001,
+        "game_protocol": 2,
+        "runtime_players": 4,
+        "excerpt": "build-host/wacky-0.54/registered-B.log",
+        "excerpt_sha256": "3b89bd0569723c470f48c8843ed38175097f4a367108eee7ae7857172192a88a"
+      }
+    }
+  },
+  "multiplayer": {
+    "host_harness": "two, three and four instances passed; prior protocol 2 evidence remains applicable",
+    "physical_two_console_wifi": "pending",
+    "physical_four_console": "unavailable: only two units connected"
+  },
+  "limits": [
+    "320x200 original presentation retained; native 768x480 detail not implemented",
+    "Network mode is non-contact, three laps, no item combat or CPU racers; random course from the shared seed",
+    "Upstream two-player shootout and split-screen remain unimplemented; not a full commercial-data port",
+    "Four physical consoles have not been tested; only A/B are connected",
+    "Championship transition tests seed finish state; checkpoint tests place cars on actual checkpoints before real physics/lap evaluation",
+    "Actual-device 30 FPS release floor and physical speaker/touch acceptance remain pending",
+    "Unknown upstream source license and local shareware assets: not published to shipping catalog"
+  ],
+  "authorization": "hardware/evidence/tab5-0.54-wacky-audio-authorization-r2.json",
+  "authorization_sha256": "ce46ef61bf9137c4d0081c30793958bdc1e7b8f21588c197ddf12e8568936a0a",
+  "os": {
+    "ble_multiplayer_enabled": true,
+    "board": "m5stack-tab5",
+    "charger_control_enabled": true,
+    "content_bundle_verified": false,
+    "flash_authorized": true,
+    "hardware_verified": false,
+    "image_bytes": 4297952,
+    "image_sha256": "fa106603175559029ce4432234c7bc98cb1f992c7445f6254c3024d5ee43b17c",
+    "native_cartridges": null,
+    "result": "tab5-guarded-install-readback-and-boot-health-passed",
+    "usb_host_enabled": true,
+    "version": "0.54",
+    "wifi_multiplayer_enabled": true,
+    "hardware_verification_scope": "Exact app readback, launcher boot and service health on A and B; game audio/touch/multiplayer acceptance pending"
+  },
+  "installation_preparation": {
+    "logs": [
+      "build-host/wacky-0.54/before-update-A.log",
+      "build-host/wacky-0.54/before-update-B.log"
+    ],
+    "observed": "Native USB open restarted both consoles (CHIP_USB_UART_RESET) despite DTR/RTS false. Both booted to launcher/service READY, with no cartridge launch observed. No flash write in this capture."
+  }
+}

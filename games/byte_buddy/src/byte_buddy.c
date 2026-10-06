@@ -19,6 +19,7 @@
 
 #include "byte_buddy_internal.h"
 #include "byte_buddy_save.h"
+#include "byte_buddy_presentation.h"
 
 enum {
     STAT_MAX = 100,
@@ -4558,9 +4559,9 @@ static p4_game_result_t game_update(
 static void draw_bar(p4_game_surface_t *surface, int top,
                      const char *label, uint8_t value, uint16_t color)
 {
-    p4_draw_text(surface, 8, top, label, UINT16_C(0xBDF7), 1U, 8U);
-    p4_draw_rect(surface, 58, top, 72, 7, UINT16_C(0x7BEF));
-    p4_draw_fill_rect(surface, 59, top + 1,
+    bb_text(surface, 8, top, label, UINT16_C(0xBDF7), 1U, 8U);
+    bb_rect(surface, 58, top, 72, 7, UINT16_C(0x7BEF));
+    bb_fill(surface, 59, top + 1,
                       (int)((uint32_t)value * 70U / STAT_MAX), 5, color);
 }
 
@@ -4574,7 +4575,7 @@ static void draw_number(p4_game_surface_t *surface, int x, int y,
         text[--position] = (char)('0' + value % 10U);
         value /= 10U;
     } while (value != 0U && position != 0U);
-    p4_draw_text(surface, x, y, &text[position], color, 1U,
+    bb_text(surface, x, y, &text[position], color, 1U,
                  sizeof(text) - position);
 }
 
@@ -5158,6 +5159,14 @@ static bool dragon_frame_color(const dragon_frame_view_t *view,
     return true;
 }
 
+/* One 64-pixel decoded row and a bounded sampling map: no per-native-pixel
+ * palette conversion, division, allocation or resource-service call. */
+static bool draw_native_art(p4_game_surface_t *surface,
+                            const byte_buddy_state_t *state,
+                            dragon_frame_view_t view, int center_x, int center_y,
+                            unsigned size, unsigned treatment, uint8_t hue,
+                            int offset_x, int offset_y);
+
 static bool draw_art_frame_scaled(p4_game_surface_t *surface,
                                   const byte_buddy_state_t *state,
                                   unsigned sheet, unsigned frame,
@@ -5170,6 +5179,10 @@ static bool draw_art_frame_scaled(p4_game_surface_t *surface,
     const dragon_frame_view_t view = dragon_frame_view(state, sheet, frame);
     if (!view.valid) {
         return false;
+    }
+    if (bb_native(surface)) {
+        return draw_native_art(surface, state, view, center_x, center_y,
+                               size, 0U, 0U, 0, 0);
     }
     const int left = center_x - (int)size / 2;
     const int top = center_y - (int)size / 2;
@@ -5209,6 +5222,10 @@ static bool draw_customized_frame_scaled(
     const dragon_frame_view_t view = dragon_frame_view(state, sheet, frame);
     if (!view.valid) {
         return false;
+    }
+    if (bb_native(surface)) {
+        return draw_native_art(surface, state, view, center_x, center_y,
+                               size, 1U, 0U, 0, 0);
     }
     const int left = center_x - (int)size / 2;
     const int top = center_y - (int)size / 2;
@@ -5261,6 +5278,56 @@ static uint16_t signal_layer_color(uint16_t value, uint8_t hue)
         mixed_red << 11U | mixed_green << 5U | mixed_blue));
 }
 
+static bool draw_native_art(p4_game_surface_t *surface,
+                            const byte_buddy_state_t *state,
+                            dragon_frame_view_t view, int center_x, int center_y,
+                            unsigned size, unsigned treatment, uint8_t hue,
+                            int offset_x, int offset_y)
+{
+    if (!view.valid || size == 0U || size > 128U) return false;
+    const int width = p4_ui_x(surface, (int)size);
+    const int height = p4_ui_y(surface, (int)size);
+    const int left = p4_ui_x(surface, center_x) - width/2 + offset_x;
+    const int top = p4_ui_y(surface, center_y) - height/2 + offset_y;
+    const int x0 = left < 0 ? -left : 0;
+    const int y0 = top < 0 ? -top : 0;
+    const int x1 = left+width > surface->width ? surface->width-left : width;
+    const int y1 = top+height > surface->height ? surface->height-top : height;
+    if (x0 >= x1 || y0 >= y1) return true;
+    uint8_t map[308];
+    uint16_t colors[16];
+    uint16_t decoded[64];
+    for (int x=x0; x<x1; ++x) map[x]=(uint8_t)(x*64/width);
+    colors[0]=0U;
+    for (unsigned i=1U; i<16U; ++i) {
+        const uint16_t value=read_u16(view.palette+i*2U);
+        colors[i]=treatment==2U ? signal_layer_color(value,hue) : lift_sprite_color(value);
+    }
+    int previous_y=-1;
+    for (int y=y0; y<y1; ++y) {
+        const int sy=y*64/height;
+        if (sy!=previous_y) {
+            const uint8_t *row=view.pixels+(unsigned)sy*32U;
+            for (unsigned x=0U; x<64U; ++x) {
+                const unsigned packed=row[x/2U];
+                const unsigned index=(x&1U)==0U ? packed>>4U : packed&15U;
+                decoded[x]=index==0U ? 0U : treatment==1U
+                    ? customize_color(state,colors[index],(int)x,sy) : colors[index];
+                /* Opaque art may be black; zero is reserved only for the
+                 * transparent index in this temporary row. */
+                if (index!=0U && decoded[x]==0U) decoded[x]=1U;
+            }
+            previous_y=sy;
+        }
+        uint16_t *dst=surface->pixels+(size_t)(top+y)*surface->stride_pixels+(size_t)(left+x0);
+        for (int x=x0; x<x1; ++x,++dst) {
+            const uint16_t color=decoded[map[x]];
+            if (color!=0U) *dst=color;
+        }
+    }
+    return true;
+}
+
 static bool draw_signal_layer_scaled(
     p4_game_surface_t *surface, const byte_buddy_state_t *state,
     unsigned frame, uint8_t hue, int center_x, int center_y,
@@ -5273,6 +5340,10 @@ static bool draw_signal_layer_scaled(
         state, BYTE_BUDDY_SIGNAL_GENOME_SHEET, frame);
     if (!view.valid) {
         return false;
+    }
+    if (bb_native(surface)) {
+        return draw_native_art(surface, state, view, center_x, center_y,
+                               size, 2U, hue, 0, 0);
     }
     const int left = center_x - (int)size / 2;
     const int top = center_y - (int)size / 2;
@@ -5525,6 +5596,31 @@ static void draw_dragon_sprite(p4_game_surface_t *surface,
     dragon_sheet_frame(
         state, state->animation_ms, state->reaction,
         state->reaction_ms, &sheet, &frame);
+    if (bb_native(surface)) {
+        const unsigned stage=visual_dragon_stage(state);
+        const unsigned phase=(unsigned)((state->animation_ms/40U)%32U);
+        const unsigned next=(phase+1U)%32U;
+        const int blend=(int)(state->animation_ms%40U);
+        const int divisor=stage>=BYTE_BUDDY_STAGE_FLYING ? 1 : 2;
+        const int old_hover=(int)s_eased_motion[phase]/divisor;
+        const int smooth_hover=((int)s_eased_motion[phase]*40+
+            ((int)s_eased_motion[next]-(int)s_eased_motion[phase])*blend)*480/(40*200*divisor);
+        int dx=0;
+        if (stage>=BYTE_BUDDY_STAGE_FLYING) {
+            const int old_x=phase<16U ? (int)(phase/5U) : (int)((31U-phase)/5U);
+            const int travel=(int)(state->animation_ms%1280U);
+            const int ping=travel<640 ? travel : 1280-travel;
+            dx=ping*3*768/(640*320)-p4_ui_x(surface,old_x);
+        }
+        if (state->mini_game) {
+            const int native_x=(int)(state->catcher_x_q16*12/(5*65536));
+            dx+=native_x-p4_ui_x(surface,p4_q16_to_int_round(state->catcher_x_q16));
+        }
+        (void)draw_native_art(surface,state,dragon_frame_view(state,sheet,frame),
+            left+DRAGON_FRAME_WIDTH/2,top+DRAGON_FRAME_HEIGHT/2,
+            DRAGON_FRAME_WIDTH,1U,0U,dx,p4_ui_y(surface,old_hover)-smooth_hover);
+        return;
+    }
     (void)draw_customized_frame_scaled(
         surface, state, sheet, frame,
         left + DRAGON_FRAME_WIDTH / 2,
@@ -5546,49 +5642,49 @@ static void draw_element_particles(p4_game_surface_t *surface,
     const uint16_t color = element_color(state);
     switch ((byte_buddy_element_t)safe_element(state)) {
     case BYTE_BUDDY_ELEMENT_FIRE:
-        p4_draw_fill_rect(surface, left + 4, top + 35 - drift, 2, 4, color);
-        p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH - 6,
+        bb_fill(surface, left + 4, top + 35 - drift, 2, 4, color);
+        bb_fill(surface, left + DRAGON_FRAME_WIDTH - 6,
                           top + 28 - drift, 2, 3,
                           UINT16_C(0xffe0));
-        p4_draw_fill_rect(surface, left + 10, top + 18 + drift, 2, 2, color);
+        bb_fill(surface, left + 10, top + 18 + drift, 2, 2, color);
         break;
     case BYTE_BUDDY_ELEMENT_ICE:
-        p4_draw_fill_rect(surface, left + 2, top + 14 + drift, 7, 1, color);
-        p4_draw_fill_rect(surface, left + 5, top + 11 + drift, 1, 7, color);
-        p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH - 7,
+        bb_fill(surface, left + 2, top + 14 + drift, 7, 1, color);
+        bb_fill(surface, left + 5, top + 11 + drift, 1, 7, color);
+        bb_fill(surface, left + DRAGON_FRAME_WIDTH - 7,
                           top + 30 - drift, 5, 1, color);
-        p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH - 5,
+        bb_fill(surface, left + DRAGON_FRAME_WIDTH - 5,
                           top + 28 - drift, 1, 5, color);
         break;
     case BYTE_BUDDY_ELEMENT_ACID:
-        p4_draw_fill_circle(surface, left + 5, top + 36 - drift, 2, color);
-        p4_draw_fill_circle(surface, left + DRAGON_FRAME_WIDTH - 5,
+        bb_circle(surface, left + 5, top + 36 - drift, 2, color);
+        bb_circle(surface, left + DRAGON_FRAME_WIDTH - 5,
                             top + 20 + drift, 2, color);
-        p4_draw_fill_circle(surface, left + 10, top + 10 + drift, 1,
+        bb_circle(surface, left + 10, top + 10 + drift, 1,
                             UINT16_C(0x07e0));
         break;
     case BYTE_BUDDY_ELEMENT_MYSTERY:
     default:
-        p4_draw_fill_rect(surface, left + 5, top + 14 + drift, 3, 3, color);
-        p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH - 7,
+        bb_fill(surface, left + 5, top + 14 + drift, 3, 3, color);
+        bb_fill(surface, left + DRAGON_FRAME_WIDTH - 7,
                           top + 31 - drift, 3, 3,
                           UINT16_C(0x07ff));
         break;
     }
     if (state->upgrades[BYTE_BUDDY_UPGRADE_AURA] >= 1U) {
-        p4_draw_fill_rect(surface, left - 2, top + 23 - drift, 2, 2,
+        bb_fill(surface, left - 2, top + 23 - drift, 2, 2,
                           color);
-        p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH,
+        bb_fill(surface, left + DRAGON_FRAME_WIDTH,
                           top + 13 + drift, 2, 2,
                           color);
     }
     if (state->upgrades[BYTE_BUDDY_UPGRADE_AURA] >= 2U) {
-        p4_draw_rect(surface, left - 3, top - 3,
+        bb_rect(surface, left - 3, top - 3,
                      DRAGON_FRAME_WIDTH + 6, DRAGON_FRAME_HEIGHT + 6,
                      color);
     }
     if (state->upgrades[BYTE_BUDDY_UPGRADE_AURA] >= 3U) {
-        p4_draw_fill_circle(surface, left + 24, top - 5 - drift / 2, 2,
+        bb_circle(surface, left + 24, top - 5 - drift / 2, 2,
                             UINT16_C(0xffff));
     }
 }
@@ -5611,37 +5707,37 @@ static void draw_custom_trail(p4_game_surface_t *surface,
     const int y2 = top + 8 + drift;
     switch (style) {
     case 1U: /* stars */
-        p4_draw_fill_rect(surface, x1 - 3, y1, 7, 1, color);
-        p4_draw_fill_rect(surface, x1, y1 - 3, 1, 7, color);
-        p4_draw_fill_rect(surface, x2 - 2, y2, 5, 1, color);
-        p4_draw_fill_rect(surface, x2, y2 - 2, 1, 5, color);
+        bb_fill(surface, x1 - 3, y1, 7, 1, color);
+        bb_fill(surface, x1, y1 - 3, 1, 7, color);
+        bb_fill(surface, x2 - 2, y2, 5, 1, color);
+        bb_fill(surface, x2, y2 - 2, 1, 5, color);
         break;
     case 2U: /* hearts */
-        p4_draw_fill_rect(surface, x1 - 3, y1 - 2, 3, 3, color);
-        p4_draw_fill_rect(surface, x1 + 1, y1 - 2, 3, 3, color);
-        p4_draw_fill_rect(surface, x1 - 1, y1 + 1, 3, 3, color);
-        p4_draw_fill_rect(surface, x2 - 2, y2 - 1, 2, 2, color);
-        p4_draw_fill_rect(surface, x2 + 1, y2 - 1, 2, 2, color);
-        p4_draw_fill_rect(surface, x2, y2 + 1, 1, 2, color);
+        bb_fill(surface, x1 - 3, y1 - 2, 3, 3, color);
+        bb_fill(surface, x1 + 1, y1 - 2, 3, 3, color);
+        bb_fill(surface, x1 - 1, y1 + 1, 3, 3, color);
+        bb_fill(surface, x2 - 2, y2 - 1, 2, 2, color);
+        bb_fill(surface, x2 + 1, y2 - 1, 2, 2, color);
+        bb_fill(surface, x2, y2 + 1, 1, 2, color);
         break;
     case 3U: /* frost */
-        p4_draw_fill_rect(surface, x1 - 4, y1, 9, 1, color);
-        p4_draw_fill_rect(surface, x1, y1 - 4, 1, 9, color);
-        p4_draw_fill_rect(surface, x2 - 3, y2, 7, 1, color);
-        p4_draw_fill_rect(surface, x2, y2 - 3, 1, 7, color);
+        bb_fill(surface, x1 - 4, y1, 9, 1, color);
+        bb_fill(surface, x1, y1 - 4, 1, 9, color);
+        bb_fill(surface, x2 - 3, y2, 7, 1, color);
+        bb_fill(surface, x2, y2 - 3, 1, 7, color);
         break;
     case 4U: /* sparks */
-        p4_draw_fill_rect(surface, x1 - 4, y1 + 2, 5, 2, color);
-        p4_draw_fill_rect(surface, x1 + 2, y1 - 2, 3, 2,
+        bb_fill(surface, x1 - 4, y1 + 2, 5, 2, color);
+        bb_fill(surface, x1 + 2, y1 - 2, 3, 2,
                           UINT16_C(0xffff));
-        p4_draw_fill_rect(surface, x2 - 2, y2 + 2, 4, 2, color);
+        bb_fill(surface, x2 - 2, y2 + 2, 4, 2, color);
         break;
     default:
         break;
     }
     if (state->upgrades[BYTE_BUDDY_UPGRADE_WINGS] >= 2U) {
-        p4_draw_fill_rect(surface, left - 7 - drift, top + 20, 4, 2, color);
-        p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH + 1 + drift,
+        bb_fill(surface, left - 7 - drift, top + 20, 4, 2, color);
+        bb_fill(surface, left + DRAGON_FRAME_WIDTH + 1 + drift,
                           top + 34, 3, 2,
                           color);
     }
@@ -5711,7 +5807,7 @@ static void draw_signal_mutation(p4_game_surface_t *surface,
                 ? signal_color_for_hue((uint8_t)(
                     (lineage.primary_hue + spark) & 7U))
                 : (spark & 1U) == 0U ? color : secondary;
-        p4_draw_fill_circle(surface, sparkle_x, sparkle_y, 1,
+        bb_circle(surface, sparkle_x, sparkle_y, 1,
                             sparkle_color);
     }
     if (lineage.tier >= BYTE_BUDDY_LINEAGE_CREST &&
@@ -5829,10 +5925,10 @@ static void draw_dragon(p4_game_surface_t *surface,
     const int shadow_width = stage >= BYTE_BUDDY_STAGE_FLYING
         ? DRAGON_FRAME_WIDTH * 3 / 8 - hover / 2
         : DRAGON_FRAME_WIDTH / 2 + 2 - hover;
-    p4_draw_fill_rect(surface, center_x - shadow_width / 2,
+    bb_fill(surface, center_x - shadow_width / 2,
                       top + DRAGON_FRAME_HEIGHT + hover - 2,
                       shadow_width, 2, UINT16_C(0x18c3));
-    p4_draw_fill_rect(surface, center_x - shadow_width / 3,
+    bb_fill(surface, center_x - shadow_width / 3,
                       top + DRAGON_FRAME_HEIGHT + hover,
                       shadow_width * 2 / 3, 1, UINT16_C(0x1082));
     draw_element_particles(surface, state, left, top);
@@ -5854,40 +5950,40 @@ static void draw_dragon(p4_game_surface_t *surface,
     draw_signal_mutation(surface, state, left, top);
     if (stage >= BYTE_BUDDY_STAGE_WINGED) {
         if (safe_wing_style(state) == BYTE_BUDDY_WINGS_SHINY) {
-            p4_draw_fill_rect(surface, left + 2, top + 13, 6, 1,
+            bb_fill(surface, left + 2, top + 13, 6, 1,
                               UINT16_C(0x07ff));
-            p4_draw_fill_rect(surface, left + 5, top + 10, 1, 7,
+            bb_fill(surface, left + 5, top + 10, 1, 7,
                               UINT16_C(0x07ff));
-            p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH - 7,
+            bb_fill(surface, left + DRAGON_FRAME_WIDTH - 7,
                               top + 25, 5, 1,
                               UINT16_C(0xffe0));
-            p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH - 5,
+            bb_fill(surface, left + DRAGON_FRAME_WIDTH - 5,
                               top + 23, 1, 5,
                               UINT16_C(0xffe0));
         } else {
-            p4_draw_fill_rect(surface, left, top + 15, 4, 2,
+            bb_fill(surface, left, top + 15, 4, 2,
                               element_color(state));
-            p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH - 4,
+            bb_fill(surface, left + DRAGON_FRAME_WIDTH - 4,
                               top + 20, 4, 2,
                               element_color(state));
-            p4_draw_fill_rect(surface, left + 3, top + 10, 2, 4,
+            bb_fill(surface, left + 3, top + 10, 2, 4,
                               element_color(state));
-            p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH - 5,
+            bb_fill(surface, left + DRAGON_FRAME_WIDTH - 5,
                               top + 14, 2, 4,
                               element_color(state));
         }
         if (state->upgrades[BYTE_BUDDY_UPGRADE_WINGS] >= 1U) {
             const int trail = (int)(
                 state->upgrades[BYTE_BUDDY_UPGRADE_WINGS] * 2U);
-            p4_draw_fill_rect(surface, left - trail, top + 22,
+            bb_fill(surface, left - trail, top + 22,
                               trail, 2, trail_color(state));
-            p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH, top + 34,
+            bb_fill(surface, left + DRAGON_FRAME_WIDTH, top + 34,
                               trail, 2, trail_color(state));
         }
         if (state->upgrades[BYTE_BUDDY_UPGRADE_WINGS] >= 3U) {
-            p4_draw_fill_rect(surface, left - 5, top + 10, 3, 3,
+            bb_fill(surface, left - 5, top + 10, 3, 3,
                               UINT16_C(0xffff));
-            p4_draw_fill_rect(surface, left + DRAGON_FRAME_WIDTH + 2,
+            bb_fill(surface, left + DRAGON_FRAME_WIDTH + 2,
                               top + 20, 3, 3,
                               UINT16_C(0xffff));
         }
@@ -5895,9 +5991,9 @@ static void draw_dragon(p4_game_surface_t *surface,
     draw_reaction_effect(surface, state, left, top);
     if (stage == BYTE_BUDDY_STAGE_EGG &&
         state->care_actions >= GROW_BABY_INTERACTIONS / 2U) {
-        p4_draw_fill_rect(surface, center_x, top + 20, 2, 6,
+        bb_fill(surface, center_x, top + 20, 2, 6,
                           UINT16_C(0xffff));
-        p4_draw_fill_rect(surface, center_x - 3, top + 25, 4, 2,
+        bb_fill(surface, center_x - 3, top + 25, 4, 2,
                           UINT16_C(0xffff));
     }
 }
@@ -5934,18 +6030,18 @@ static void draw_growth_panel(p4_game_surface_t *surface,
 {
     const unsigned stage = visual_dragon_stage(state);
     const byte_buddy_signal_lineage_t lineage = current_lineage(state);
-    p4_draw_fill_rect(surface, 198, 29, 116, 106, UINT16_C(0x080f));
-    p4_draw_rect(surface, 198, 29, 116, 106, UINT16_C(0x39e7));
-    p4_draw_fill_rect(surface, 200, 31, 112, 1, signal_color(state));
-    p4_draw_text(surface, 204, 34, "STAGE", UINT16_C(0x7bef), 1U, 5U);
-    p4_draw_text(surface, 204, 44, s_stage_names[stage],
+    bb_fill(surface, 198, 29, 116, 106, UINT16_C(0x080f));
+    bb_rect(surface, 198, 29, 116, 106, UINT16_C(0x39e7));
+    bb_fill(surface, 200, 31, 112, 1, signal_color(state));
+    bb_text(surface, 204, 34, "STAGE", UINT16_C(0x7bef), 1U, 5U);
+    bb_text(surface, 204, 44, s_stage_names[stage],
                  UINT16_C(0xffff), 1U, 9U);
-    p4_draw_text(surface, 204, 58, "ELEMENT", UINT16_C(0x7bef), 1U, 7U);
-    p4_draw_text(surface, 204, 68, s_element_names[safe_element(state)],
+    bb_text(surface, 204, 58, "ELEMENT", UINT16_C(0x7bef), 1U, 7U);
+    bb_text(surface, 204, 68, s_element_names[safe_element(state)],
                  element_color(state), 1U, 7U);
     if (stage >= BYTE_BUDDY_STAGE_WINGED) {
-        p4_draw_text(surface, 204, 82, "WINGS", UINT16_C(0x7bef), 1U, 5U);
-        p4_draw_text(surface, 204, 92,
+        bb_text(surface, 204, 82, "WINGS", UINT16_C(0x7bef), 1U, 5U);
+        bb_text(surface, 204, 92,
                      s_wing_names[safe_wing_style(state)],
                      UINT16_C(0xffff), 1U, 6U);
     }
@@ -5953,26 +6049,26 @@ static void draw_growth_panel(p4_game_surface_t *surface,
         lineage.tier != BYTE_BUDDY_LINEAGE_DORMANT) {
         draw_lineage_badge(
             surface, state, lineage_badge_frame(lineage), 296, 116, 18U);
-        p4_draw_text(surface, 204, 108, "LINEAGE", UINT16_C(0x7bef),
+        bb_text(surface, 204, 108, "LINEAGE", UINT16_C(0x7bef),
                      1U, 7U);
-        p4_draw_text(surface, 204, 118,
+        bb_text(surface, 204, 118,
                      s_lineage_names[lineage.tier],
                      signal_color(state), 1U,
                      s_lineage_name_lengths[lineage.tier]);
-        p4_draw_text(surface, 204, 128, "LINK", UINT16_C(0x7bef),
+        bb_text(surface, 204, 128, "LINK", UINT16_C(0x7bef),
                      1U, 4U);
         draw_number(surface, 238, 128,
                     state->signal_consumed_count, UINT16_C(0xffff));
-        p4_draw_text(surface, 260, 128, "DNA", UINT16_C(0x7bef),
+        bb_text(surface, 260, 128, "DNA", UINT16_C(0x7bef),
                      1U, 3U);
         draw_number(surface, 284, 128,
                     lineage.diversity, UINT16_C(0xffff));
     } else if (stage == BYTE_BUDDY_STAGE_ELEMENTAL &&
         rare_morph_unlocked(state)) {
-        p4_draw_text(surface, 204, 108, "RARE MORPH", UINT16_C(0xffe0),
+        bb_text(surface, 204, 108, "RARE MORPH", UINT16_C(0xffe0),
                      1U, 10U);
         const unsigned morph = safe_morph(state);
-        p4_draw_text(surface, 204, 118, s_morph_names[morph],
+        bb_text(surface, 204, 118, s_morph_names[morph],
                      element_color(state), 1U,
                      s_morph_name_lengths[morph]);
     } else if (stage + 1U < BYTE_BUDDY_STAGE_COUNT) {
@@ -5984,19 +6080,19 @@ static void draw_growth_panel(p4_game_surface_t *surface,
         const uint16_t span = (uint16_t)(end - start);
         const uint16_t remaining = state->care_actions >= end
             ? 0U : (uint16_t)(end - state->care_actions);
-        p4_draw_text(surface, 204, 108, "GROWTH", UINT16_C(0x7bef),
+        bb_text(surface, 204, 108, "GROWTH", UINT16_C(0x7bef),
                      1U, 6U);
-        p4_draw_rect(surface, 204, 118, 104, 7, UINT16_C(0x7bef));
-        p4_draw_fill_rect(surface, 205, 119,
+        bb_rect(surface, 204, 118, 104, 7, UINT16_C(0x7bef));
+        bb_fill(surface, 205, 119,
                           (int)((uint32_t)progress * 102U / span), 5,
                           element_color(state));
-        p4_draw_text(surface, 204, 128, "NEXT", UINT16_C(0x7bef),
+        bb_text(surface, 204, 128, "NEXT", UINT16_C(0x7bef),
                      1U, 4U);
         draw_number(surface, 238, 128, remaining, UINT16_C(0xffff));
     } else {
-        p4_draw_text(surface, 204, 108, "GROWTH", UINT16_C(0x7bef),
+        bb_text(surface, 204, 108, "GROWTH", UINT16_C(0x7bef),
                      1U, 6U);
-        p4_draw_text(surface, 204, 120, "MAX", element_color(state),
+        bb_text(surface, 204, 120, "MAX", element_color(state),
                      1U, 3U);
     }
 }
@@ -6006,18 +6102,33 @@ static void draw_touch_button(p4_game_surface_t *surface,
                               const char *label, size_t label_length,
                               uint16_t accent, bool active)
 {
-    p4_draw_fill_rect(surface, x, y, width, height,
+    if (bb_native(surface)) {
+        const int px=p4_ui_x(surface,x), py=p4_ui_y(surface,y);
+        const int w=p4_ui_x(surface,width), h=p4_ui_y(surface,height);
+        const uint16_t edge=active ? UINT16_C(0xffff) : bb_ink(surface,accent);
+        p4_ui_round_rect(surface,px,py,w,h,9,edge);
+        p4_ui_round_rect(surface,px+1,py+1,w-2,h-2,8,
+                         active ? UINT16_C(0x2a4d) : UINT16_C(0x1127));
+        unsigned font=height >= 24 ? 26U : 22U;
+        while (font>16U && p4_ui_text_width(label,font,label_length)>w-18) --font;
+        const int text_width=p4_ui_text_width(label,font,label_length);
+        p4_ui_text(surface,px+(w-text_width)/2,py+(h-(int)font)/2,
+                   label,UINT16_C(0xffff),font,label_length);
+        if (active) p4_ui_round_rect(surface,px+5,py+8,3,h-16,1,edge);
+        return;
+    }
+    bb_fill(surface, x, y, width, height,
                       active ? accent : UINT16_C(0x1025));
-    p4_draw_rect(surface, x, y, width, height,
+    bb_rect(surface, x, y, width, height,
                  active ? UINT16_C(0xffff) : accent);
     if (width > 4 && height > 4) {
-        p4_draw_fill_rect(surface, x + 2, y + 2, width - 4, 1,
+        bb_fill(surface, x + 2, y + 2, width - 4, 1,
                           active ? UINT16_C(0xffff) : UINT16_C(0x39e7));
-        p4_draw_fill_rect(surface, x + 2, y + height - 2,
+        bb_fill(surface, x + 2, y + height - 2,
                           width - 4, 1, UINT16_C(0x000b));
     }
     const int text_width = (int)label_length * 6;
-    p4_draw_text(surface, x + (width - text_width) / 2,
+    bb_text(surface, x + (width - text_width) / 2,
                  y + (height - 7) / 2, label,
                  active ? UINT16_C(0x0000) : UINT16_C(0xffff),
                  1U, label_length);
@@ -6027,12 +6138,12 @@ static void draw_coin_badge(p4_game_surface_t *surface,
                             const byte_buddy_state_t *state,
                             int x, int y, int width, int height)
 {
-    p4_draw_fill_rect(surface, x, y, width, height, UINT16_C(0x4208));
-    p4_draw_rect(surface, x, y, width, height, UINT16_C(0xffe0));
+    bb_fill(surface, x, y, width, height, UINT16_C(0x4208));
+    bb_rect(surface, x, y, width, height, UINT16_C(0xffe0));
     (void)draw_art_frame_scaled(
         surface, state, STAR_CATCHER_REWARD_SHEET, 0U,
         x + 10, y + height / 2, 14U);
-    p4_draw_text(surface, x + 20, y + 6,
+    bb_text(surface, x + 20, y + 6,
                  "COINS", UINT16_C(0xffe0), 1U, 5U);
     draw_number(surface, x + width - 25, y + 6, state->coins,
                 UINT16_C(0xffff));
@@ -6042,13 +6153,13 @@ static void draw_battle_stats(p4_game_surface_t *surface,
                               const byte_buddy_state_t *state)
 {
     const byte_buddy_battle_stats_t stats = current_battle_stats(state);
-    p4_draw_text(surface, 5, 168, "PWR", UINT16_C(0xfd20), 1U, 3U);
+    bb_text(surface, 5, 168, "PWR", UINT16_C(0xfd20), 1U, 3U);
     draw_number(surface, 28, 168, stats.power, UINT16_C(0xffff));
-    p4_draw_text(surface, 5, 181, "GRD", UINT16_C(0x07ff), 1U, 3U);
+    bb_text(surface, 5, 181, "GRD", UINT16_C(0x07ff), 1U, 3U);
     draw_number(surface, 28, 181, stats.guard, UINT16_C(0xffff));
-    p4_draw_text(surface, 244, 168, "SPD", UINT16_C(0xffe0), 1U, 3U);
+    bb_text(surface, 244, 168, "SPD", UINT16_C(0xffe0), 1U, 3U);
     draw_number(surface, 267, 168, stats.speed, UINT16_C(0xffff));
-    p4_draw_text(surface, 244, 181, "MAG", UINT16_C(0xf81f), 1U, 3U);
+    bb_text(surface, 244, 181, "MAG", UINT16_C(0xf81f), 1U, 3U);
     draw_number(surface, 267, 181, stats.magic, UINT16_C(0xffff));
 }
 
@@ -6064,24 +6175,24 @@ static void draw_upgrade_card(p4_game_surface_t *surface,
     const bool affordable = cost != UINT16_MAX && state->coins >= cost;
     const uint16_t accent = affordable
         ? element_color(state) : UINT16_C(0x7bef);
-    p4_draw_fill_rect(surface, x, y, 148, 54, UINT16_C(0x1025));
-    p4_draw_rect(surface, x, y, 148, 54,
+    bb_fill(surface, x, y, 148, 54, UINT16_C(0x1025));
+    bb_rect(surface, x, y, 148, 54,
                  state->controller_active &&
                          state->menu_selection == (uint8_t)upgrade
                      ? UINT16_C(0xffff) : accent);
     draw_item_component_icon(
         surface, state, 4U + (unsigned)upgrade, x + 18, y + 14, 20U);
-    p4_draw_text(surface, x + 33, y + 7, label, UINT16_C(0xffff),
+    bb_text(surface, x + 33, y + 7, label, UINT16_C(0xffff),
                  1U, label_length);
-    p4_draw_text(surface, x + 33, y + 19, detail, UINT16_C(0x9cf3),
+    bb_text(surface, x + 33, y + 19, detail, UINT16_C(0x9cf3),
                  1U, detail_length);
-    p4_draw_text(surface, x + 8, y + 36, "LV", UINT16_C(0x7bef), 1U, 2U);
+    bb_text(surface, x + 8, y + 36, "LV", UINT16_C(0x7bef), 1U, 2U);
     draw_number(surface, x + 25, y + 36, level, UINT16_C(0xffff));
     if (cost == UINT16_MAX) {
-        p4_draw_text(surface, x + 101, y + 36, "MAX", UINT16_C(0xffe0),
+        bb_text(surface, x + 101, y + 36, "MAX", UINT16_C(0xffe0),
                      1U, 3U);
     } else {
-        p4_draw_text(surface, x + 77, y + 36, "COST", UINT16_C(0x7bef),
+        bb_text(surface, x + 77, y + 36, "COST", UINT16_C(0x7bef),
                      1U, 4U);
         draw_number(surface, x + 112, y + 36, cost,
                     affordable ? UINT16_C(0xffe0) : UINT16_C(0xf800));
@@ -6128,9 +6239,13 @@ static void draw_shop_tabs(p4_game_surface_t *surface, bool style_shop)
 static void draw_shop_backdrop(p4_game_surface_t *surface,
                                const byte_buddy_state_t *state)
 {
-    p4_draw_fill_rect(surface, 0, 25, P4_GAME_SURFACE_WIDTH, 175,
+    if (bb_native(surface)) {
+        bb_city(surface,true);
+        return;
+    }
+    bb_fill(surface, 0, 25, P4_GAME_SURFACE_WIDTH, 175,
                       UINT16_C(0x080f));
-    p4_draw_fill_rect(surface, 0, 98, P4_GAME_SURFACE_WIDTH, 102,
+    bb_fill(surface, 0, 98, P4_GAME_SURFACE_WIDTH, 102,
                       UINT16_C(0x181f));
     draw_signal_city_icon(surface, state, 7U, 160, 108, 104U);
     draw_signal_city_icon(surface, state, 0U, 296, 71, 44U);
@@ -6181,31 +6296,31 @@ static void draw_style_card(p4_game_surface_t *surface,
     const uint16_t cost = byte_buddy_style_cost(style, unlocked);
     size_t name_length = 0U;
     const char *const name = style_name(style, selected, &name_length);
-    p4_draw_fill_rect(surface, x, y, 148, 55, UINT16_C(0x1025));
-    p4_draw_rect(surface, x, y, 148, 55,
+    bb_fill(surface, x, y, 148, 55, UINT16_C(0x1025));
+    bb_rect(surface, x, y, 148, 55,
                  state->controller_active &&
                          state->menu_selection == (uint8_t)style
                      ? UINT16_C(0xffff) : element_color(state));
-    p4_draw_text(surface, x + 7, y + 6, label, UINT16_C(0x7bef),
+    bb_text(surface, x + 7, y + 6, label, UINT16_C(0x7bef),
                  1U, label_length);
     draw_item_component_icon(
         surface, state, 8U + (unsigned)style, x + 96, y + 16, 26U);
     if (name != NULL) {
-        p4_draw_text(surface, x + 7, y + 20, name, UINT16_C(0xffff),
+        bb_text(surface, x + 7, y + 20, name, UINT16_C(0xffff),
                      1U, name_length);
     }
-    p4_draw_text(surface, x + 7, y + 39,
+    bb_text(surface, x + 7, y + 39,
                  state->controller_active ? "A SELECT" : "TAP SELECT",
                  UINT16_C(0x9cf3), 1U,
                  state->controller_active ? 8U : 10U);
-    p4_draw_fill_rect(surface, x + 110, y + 1, 37, 53,
+    bb_fill(surface, x + 110, y + 1, 37, 53,
                       cost != UINT16_MAX && state->coins >= cost
                           ? UINT16_C(0x39e7) : UINT16_C(0x2104));
     if (cost == UINT16_MAX) {
-        p4_draw_text(surface, x + 119, y + 22, "MAX",
+        bb_text(surface, x + 119, y + 22, "MAX",
                      UINT16_C(0xffe0), 1U, 3U);
     } else {
-        p4_draw_text(surface, x + 119, y + 12, "BUY",
+        bb_text(surface, x + 119, y + 12, "BUY",
                      UINT16_C(0xffff), 1U, 3U);
         draw_number(surface, x + 124, y + 29, cost, UINT16_C(0xffe0));
     }
@@ -6215,7 +6330,7 @@ static void draw_upgrade_shop(p4_game_surface_t *surface,
                               const byte_buddy_state_t *state)
 {
     draw_shop_backdrop(surface, state);
-    p4_draw_text(surface, 70, 8, "DRAGON UPGRADES", UINT16_C(0xffff),
+    bb_text(surface, 70, 8, "DRAGON UPGRADES", UINT16_C(0xffff),
                  1U, 15U);
     draw_coin_badge(surface, state, 236, 3, 80, 20);
     draw_shop_tabs(surface, false);
@@ -6238,9 +6353,9 @@ static void draw_style_shop(p4_game_surface_t *surface,
                             const byte_buddy_state_t *state)
 {
     draw_shop_backdrop(surface, state);
-    p4_draw_text(surface, 70, 8, "DRAGON STYLES", UINT16_C(0xffff),
+    bb_text(surface, 70, 8, "DRAGON STYLES", UINT16_C(0xffff),
                  1U, 13U);
-    p4_draw_text(surface, 158, 8, "LOOK", UINT16_C(0x7bef), 1U, 4U);
+    bb_text(surface, 158, 8, "LOOK", UINT16_C(0x7bef), 1U, 4U);
     draw_number(surface, 188, 8, byte_buddy_style_recipe_id(
                     state->style_selected[BYTE_BUDDY_STYLE_BODY],
                     state->style_selected[BYTE_BUDDY_STYLE_EYES],
@@ -6289,30 +6404,39 @@ static const char *star_pace_name(uint16_t speed, size_t *length)
 static void draw_play_game(p4_game_surface_t *surface,
                            const byte_buddy_state_t *state)
 {
-    p4_draw_fill_rect(surface, 0, 25, P4_GAME_SURFACE_WIDTH, 112,
+    if (bb_native(surface)) {
+        bb_city(surface,false);
+        bb_fill(surface,0,137,320,28,UINT16_C(0x000b));
+    } else {
+    bb_fill(surface, 0, 25, P4_GAME_SURFACE_WIDTH, 112,
                       UINT16_C(0x0822));
-    p4_draw_fill_rect(surface, 0, 121, P4_GAME_SURFACE_WIDTH, 16,
+    bb_fill(surface, 0, 121, P4_GAME_SURFACE_WIDTH, 16,
                       UINT16_C(0x101b));
     draw_signal_city_icon(surface, state, 7U, 278, 91, 74U);
     draw_signal_city_icon(surface, state, 0U, 57, 93, 50U);
     draw_signal_city_icon(surface, state, 3U, 235, 111, 38U);
+    }
     const int lane_drift = (int)((state->animation_ms / 18U) % 320U);
     for (int streak = 0; streak < 5; ++streak) {
         const int x = (lane_drift + streak * 71) % 320;
         const uint16_t streak_color = streak % 2 == 0
             ? trail_color(state) : UINT16_C(0x7bef);
-        p4_draw_fill_rect(surface, x, 48 + streak * 14, 9, 1,
+        bb_fill(surface, x, 48 + streak * 14, 9, 1,
                           streak_color);
         if (x > (int)P4_GAME_SURFACE_WIDTH - 9) {
-            p4_draw_fill_rect(surface, x - (int)P4_GAME_SURFACE_WIDTH,
+            bb_fill(surface, x - (int)P4_GAME_SURFACE_WIDTH,
                               48 + streak * 14, 9, 1, streak_color);
         }
     }
-    p4_draw_text(surface, 66, 8, "CATCH THE STARS", UINT16_C(0xffff),
-                 1U, 15U);
+    if (bb_native(surface)) {
+        p4_ui_text(surface,158,3,"BYTE BUDDY",UINT16_C(0x9cf5),14U,10U);
+        p4_ui_text(surface,158,23,"STAR CATCHER",UINT16_C(0xffff),24U,12U);
+    } else {
+        bb_text(surface,66,8,"CATCH THE STARS",UINT16_C(0xffff),1U,15U);
+    }
     draw_touch_button(surface, 260, 3, 56, 20, "DONE", 4U,
                       element_color(state), false);
-    p4_draw_text(surface, 93, 29, "SWIPE OR LEFT/RIGHT", UINT16_C(0xbdf7),
+    bb_text(surface, 93, 29, "SWIPE OR LEFT/RIGHT", UINT16_C(0xbdf7),
                  1U, 19U);
     const int star_y = p4_q16_to_int_round(state->star_y_q16);
     const int catcher_x = p4_q16_to_int_round(state->catcher_x_q16);
@@ -6327,10 +6451,19 @@ static void draw_play_game(p4_game_surface_t *surface,
     const unsigned star_size = 8U + (unsigned)(
         (uint32_t)p4_ease_smoothstep_u16(spawn_progress) * 14U /
         UINT16_MAX);
+    if (bb_native(surface)) {
+        const int native_y=(int)(state->star_y_q16*12/(5*65536));
+        (void)draw_native_art(surface,state,
+            dragon_frame_view(state,STAR_CATCHER_REWARD_SHEET,
+                (unsigned)state->star_kind*4U+reward_frame),
+            state->star_x,star_y,star_size,0U,0U,0,
+            native_y-p4_ui_y(surface,star_y));
+    } else {
     (void)draw_art_frame_scaled(
         surface, state, STAR_CATCHER_REWARD_SHEET,
         (unsigned)state->star_kind * 4U + reward_frame,
         state->star_x, star_y, star_size);
+    }
     if (state->star_effect_ms != 0U) {
         const uint8_t effect_phase = fx_timeline_phase(
             state->star_effect_ms, MINI_GAME_EFFECT_DURATION_MS);
@@ -6355,64 +6488,64 @@ static void draw_play_game(p4_game_surface_t *surface,
         speed = speed > MINI_GAME_CATCHER_MAX_SPEED
             ? MINI_GAME_CATCHER_MAX_SPEED : speed;
         const int trail_length = 5 + speed / 24;
-        p4_draw_fill_rect(surface,
+        bb_fill(surface,
                           catcher_x + direction * (25 + trail_length),
                           110, 8 + trail_length, 2, trail_color(state));
-        p4_draw_fill_rect(surface,
+        bb_fill(surface,
                           catcher_x + direction * (21 + trail_length / 2),
                           119, 5 + trail_length / 2, 1, UINT16_C(0xffff));
     }
     draw_dragon(surface, state, catcher_x, 82);
     const int catch_radius = 18 +
         (int)state->upgrades[BYTE_BUDDY_UPGRADE_MAGNET] * 5;
-    p4_draw_rect(surface, catcher_x - catch_radius, 129,
+    bb_rect(surface, catcher_x - catch_radius, 129,
                  catch_radius * 2, 7, element_color(state));
     draw_coin_badge(surface, state, 6, 166, 84, 28);
-    p4_draw_text(surface, 102, 169, "STREAK", UINT16_C(0x7bef),
+    bb_text(surface, 102, 169, "STREAK", UINT16_C(0x7bef),
                  1U, 6U);
     draw_number(surface, 146, 169, state->play_streak, UINT16_C(0xffff));
-    p4_draw_text(surface, 178, 169, "PACE", UINT16_C(0x7bef), 1U, 4U);
+    bb_text(surface, 178, 169, "PACE", UINT16_C(0x7bef), 1U, 4U);
     size_t pace_length = 0U;
     const char *const pace = star_pace_name(fall_speed, &pace_length);
-    p4_draw_text(surface, 211, 169, pace, element_color(state),
+    bb_text(surface, 211, 169, pace, element_color(state),
                  1U, pace_length);
     const uint32_t remaining = state->mini_elapsed_ms >= MINI_GAME_DURATION_MS
         ? 0U : MINI_GAME_DURATION_MS - state->mini_elapsed_ms;
-    p4_draw_rect(surface, 105, 184, 205, 6, UINT16_C(0x7bef));
-    p4_draw_fill_rect(surface, 106, 185,
+    bb_rect(surface, 105, 184, 205, 6, UINT16_C(0x7bef));
+    bb_fill(surface, 106, 185,
                       (int)(remaining * 203U / MINI_GAME_DURATION_MS), 4,
                       element_color(state));
     if (state->mini_intro_ms != 0U) {
         const uint8_t phase = fx_timeline_phase(
             state->mini_intro_ms, MINI_GAME_READY_VISIBLE_MS);
-        p4_draw_fill_rect(surface, 92, 48, 136, 76, UINT16_C(0x000b));
-        p4_draw_rect(surface, 92, 48, 136, 76, UINT16_C(0xffe0));
+        bb_fill(surface, 92, 48, 136, 76, UINT16_C(0x000b));
+        bb_rect(surface, 92, 48, 136, 76, UINT16_C(0xffe0));
         draw_activity_fx_frame(
             surface, state, BYTE_BUDDY_ACTIVITY_FX_STAR_READY,
             phase, 160, 80, 62U);
-        p4_draw_text(surface, 127, 109, "GET READY",
+        bb_text(surface, 127, 109, "GET READY",
                      UINT16_C(0xffff), 1U, 9U);
     } else if (state->mini_summary_ms != 0U) {
         const uint8_t phase = fx_timeline_phase(
             state->mini_summary_ms, MINI_GAME_SUMMARY_MS);
-        p4_draw_fill_rect(surface, 82, 44, 156, 86, UINT16_C(0x000b));
-        p4_draw_rect(surface, 82, 44, 156, 86, UINT16_C(0xffe0));
+        bb_fill(surface, 82, 44, 156, 86, UINT16_C(0x000b));
+        bb_rect(surface, 82, 44, 156, 86, UINT16_C(0xffe0));
         draw_activity_fx_frame(
             surface, state, BYTE_BUDDY_ACTIVITY_FX_STAR_SUMMARY,
             phase, 121, 81, 58U);
-        p4_draw_text(surface, 153, 58, "STAR RUN",
+        bb_text(surface, 153, 58, "STAR RUN",
                      UINT16_C(0xffff), 1U, 8U);
-        p4_draw_text(surface, 153, 76, "CAUGHT",
+        bb_text(surface, 153, 76, "CAUGHT",
                      UINT16_C(0x7bef), 1U, 6U);
         draw_number(surface, 201, 76, state->play_catches,
                     UINT16_C(0xffe0));
-        p4_draw_text(surface, 153, 94, "BEST",
+        bb_text(surface, 153, 94, "BEST",
                      UINT16_C(0x7bef), 1U, 4U);
         draw_number(surface, 190, 94, state->play_best_streak,
                     UINT16_C(0xffff));
-        p4_draw_text(surface, 153, 112, "COINS",
+        bb_text(surface, 153, 112, "COINS",
                      UINT16_C(0x7bef), 1U, 5U);
-        p4_draw_text(surface, 190, 112, "+",
+        bb_text(surface, 190, 112, "+",
                      UINT16_C(0xffe0), 1U, 1U);
         draw_number(surface, 199, 112,
                     byte_buddy_star_run_reward(state->play_catches),
@@ -6432,7 +6565,7 @@ static size_t signal_label_length(const char *label, size_t maximum)
 static void draw_rssi(p4_game_surface_t *surface, int x, int y,
                       int8_t rssi, uint16_t color)
 {
-    p4_draw_text(surface, x, y, "-", color, 1U, 1U);
+    bb_text(surface, x, y, "-", color, 1U, 1U);
     const uint32_t magnitude = rssi < 0
         ? (uint32_t)(-(int)rssi) : (uint32_t)rssi;
     draw_number(surface, x + 7, y, magnitude, color);
@@ -6471,7 +6604,7 @@ static void draw_signal_habitat_accents(
             rotation + node * 16U / nodes) & 15U;
         const int node_x = x + directions[direction][0] * radius / 8;
         const int node_y = y + directions[direction][1] * radius / 8;
-        p4_draw_fill_circle(
+        bb_circle(
             surface, node_x, node_y, size >= 40U ? 2 : 1,
             signal_color_for_hue((uint8_t)((hue + node * 2U) & 7U)));
     }
@@ -6479,13 +6612,13 @@ static void draw_signal_habitat_accents(
         const int extent = (int)size / 2;
         const int corner = size >= 32U ? 5 : 3;
         const uint16_t shield = UINT16_C(0xffff);
-        p4_draw_fill_rect(surface, x - extent, y - extent,
+        bb_fill(surface, x - extent, y - extent,
                           corner, 1, shield);
-        p4_draw_fill_rect(surface, x - extent, y - extent,
+        bb_fill(surface, x - extent, y - extent,
                           1, corner, shield);
-        p4_draw_fill_rect(surface, x + extent - corner + 1,
+        bb_fill(surface, x + extent - corner + 1,
                           y + extent, corner, 1, shield);
-        p4_draw_fill_rect(surface, x + extent,
+        bb_fill(surface, x + extent,
                           y + extent - corner + 1, 1, corner, shield);
     }
     if ((flags & P4_GAME_SIGNAL_HIDDEN) != 0U) {
@@ -6493,9 +6626,9 @@ static void draw_signal_habitat_accents(
             animation_ms, 40U, 0, 3);
         const uint16_t ghost = signal_color_for_hue(
             (uint8_t)((hue + 4U) & 7U));
-        p4_draw_fill_circle(surface, x - (int)size / 3,
+        bb_circle(surface, x - (int)size / 3,
                             y + (int)size / 3 - drift, 2, ghost);
-        p4_draw_fill_circle(surface, x + (int)size / 3,
+        bb_circle(surface, x + (int)size / 3,
                             y - (int)size / 3 + drift, 1,
                             UINT16_C(0xffff));
     }
@@ -6518,10 +6651,10 @@ static void draw_signal_rarity_marks(
         const uint16_t color = mark == bright ? UINT16_C(0xffff) :
             signal_color_for_hue((uint8_t)((hue + mark * 2U) & 7U));
         if (size >= 32U) {
-            p4_draw_fill_rect(surface, mark_x - 2, mark_y, 5, 1, color);
-            p4_draw_fill_rect(surface, mark_x, mark_y - 2, 1, 5, color);
+            bb_fill(surface, mark_x - 2, mark_y, 5, 1, color);
+            bb_fill(surface, mark_x, mark_y - 2, 1, 5, color);
         } else {
-            p4_draw_pixel(surface, mark_x, mark_y, color);
+            bb_pixel(surface, mark_x, mark_y, color);
         }
     }
 }
@@ -6612,8 +6745,8 @@ static void draw_signal_meter(p4_game_surface_t *surface,
                               int x, int y, int width,
                               uint8_t strength, uint16_t color)
 {
-    p4_draw_rect(surface, x, y, width, 7, UINT16_C(0x7bef));
-    p4_draw_fill_rect(surface, x + 1, y + 1,
+    bb_rect(surface, x, y, width, 7, UINT16_C(0x7bef));
+    bb_fill(surface, x + 1, y + 1,
                       (int)((uint32_t)(width - 2) * strength / 100U),
                       5, color);
 }
@@ -6621,14 +6754,24 @@ static void draw_signal_meter(p4_game_surface_t *surface,
 static void draw_signal_city(p4_game_surface_t *surface,
                              const byte_buddy_state_t *state)
 {
-    p4_draw_fill_rect(surface, 0, 25, 320, 112, UINT16_C(0x080f));
-    p4_draw_fill_rect(surface, 0, 65, 320, 72, UINT16_C(0x181f));
-    p4_draw_fill_rect(surface, 0, 101, 320, 36, UINT16_C(0x281f));
+    if (bb_native(surface)) {
+        bb_city(surface,false);
+        const unsigned nest_size = 56U +
+            (unsigned)state->upgrades[BYTE_BUDDY_UPGRADE_NEST] * 4U;
+        const int width=p4_ui_x(surface,(int)nest_size);
+        p4_ui_round_rect(surface,384-width/2,297,width,15,7,UINT16_C(0x08a4));
+        p4_ui_round_rect(surface,386-width/2,294,width-4,10,5,UINT16_C(0x4bb3));
+        p4_ui_round_rect(surface,390-width/2,295,width-12,4,2,UINT16_C(0x9f3e));
+        return;
+    }
+    bb_fill(surface, 0, 25, 320, 112, UINT16_C(0x080f));
+    bb_fill(surface, 0, 65, 320, 72, UINT16_C(0x181f));
+    bb_fill(surface, 0, 101, 320, 36, UINT16_C(0x281f));
     const int drift = (int)((state->animation_ms / 240U) % 320U);
     for (int star = 0; star < 9; ++star) {
         const int x = (star * 43 + 17 + drift) % 320;
         const int y = 31 + (star * 19) % 58;
-        p4_draw_fill_rect(surface, x, y, star % 3 == 0 ? 2 : 1, 1,
+        bb_fill(surface, x, y, star % 3 == 0 ? 2 : 1, 1,
                           star % 2 == 0 ? UINT16_C(0x07ff)
                                         : UINT16_C(0xf81f));
     }
@@ -6637,22 +6780,22 @@ static void draw_signal_city(p4_game_surface_t *surface,
         const int height = 18 + (building * 13) % 42;
         const int x = building * 29 - 8;
         const int top = 137 - height;
-        p4_draw_fill_rect(surface, x, top, width, height,
+        bb_fill(surface, x, top, width, height,
                           building % 2 == 0 ? UINT16_C(0x1025)
                                             : UINT16_C(0x182d));
         for (int window = 0; window < 3; ++window) {
             const int wx = x + 4 + window * 7;
             if (wx + 2 < x + width) {
-                p4_draw_fill_rect(surface, wx, top + 7 + window * 9,
+                bb_fill(surface, wx, top + 7 + window * 9,
                                   2, 3, window % 2 == 0
                                       ? UINT16_C(0x07ff)
                                       : UINT16_C(0xfd20));
             }
         }
         if (building % 3 == 0) {
-            p4_draw_fill_rect(surface, x + width / 2, top - 8, 1, 8,
+            bb_fill(surface, x + width / 2, top - 8, 1, 8,
                               UINT16_C(0x7bef));
-            p4_draw_fill_rect(surface, x + width / 2 - 1, top - 10,
+            bb_fill(surface, x + width / 2 - 1, top - 10,
                               3, 3, signal_color(state));
         }
     }
@@ -6678,12 +6821,16 @@ static void draw_signal_header(p4_game_surface_t *surface,
                                const byte_buddy_state_t *state,
                                const char *title, size_t title_length)
 {
-    p4_draw_fill_rect(surface, 0, 0, 320, 25, UINT16_C(0x000b));
+    bb_fill(surface, 0, 0, 320, 25, UINT16_C(0x000b));
     draw_touch_button(surface, 4, 3, 52, 19, "BACK", 4U,
                       UINT16_C(0x07ff), false);
-    p4_draw_text(surface, 66, 8, title, UINT16_C(0x07ff), 1U,
-                 title_length);
-    p4_draw_text(surface, 160, 8,
+    if (bb_native(surface)) {
+        p4_ui_text(surface,158,3,"BYTE BUDDY",UINT16_C(0x9cf5),14U,10U);
+        p4_ui_text(surface,158,23,title,UINT16_C(0x5e7e),22U,title_length);
+    } else {
+        bb_text(surface,66,8,title,UINT16_C(0x07ff),1U,title_length);
+    }
+    bb_text(surface, 160, 8,
                  state->signal_training_mode ? "DRILL" : "LINK",
                  UINT16_C(0x7bef), 1U,
                  state->signal_training_mode ? 5U : 4U);
@@ -6693,9 +6840,9 @@ static void draw_signal_header(p4_game_surface_t *surface,
                     : state->signal_consumed_count,
                 signal_color(state));
     const byte_buddy_battle_stats_t stats = current_battle_stats(state);
-    p4_draw_text(surface, 215, 8, "LV", UINT16_C(0x7bef), 1U, 2U);
+    bb_text(surface, 215, 8, "LV", UINT16_C(0x7bef), 1U, 2U);
     draw_number(surface, 232, 8, stats.level, UINT16_C(0xffff));
-    p4_draw_text(surface, 263, 8, "SP", UINT16_C(0xffe0), 1U, 2U);
+    bb_text(surface, 263, 8, "SP", UINT16_C(0xffe0), 1U, 2U);
     draw_number(surface, 281, 8, state->signal_session_coins,
                 UINT16_C(0xffff));
 }
@@ -6704,16 +6851,16 @@ static void draw_signal_list(p4_game_surface_t *surface,
                              const byte_buddy_state_t *state)
 {
     draw_signal_header(surface, state, "SIGNAL HUNT", 11U);
-    p4_draw_fill_rect(surface, 0, 25, 320, 175, UINT16_C(0x080f));
+    bb_fill(surface, 0, 25, 320, 175, UINT16_C(0x080f));
     if (state->signal_request_busy_ms != 0U &&
         state->signal_snapshot.status != P4_GAME_SIGNAL_READY) {
         draw_scan_fx_frame(
             surface, state, BYTE_BUDDY_SCAN_FX_BUSY,
             fx_loop_phase(state->animation_ms, 180U),
             160, 65, 58U);
-        p4_draw_text(surface, 78, 96, "SCANNER BUSY - TRY AGAIN",
+        bb_text(surface, 78, 96, "SCANNER BUSY - TRY AGAIN",
                      UINT16_C(0xffe0), 1U, 24U);
-        p4_draw_text(surface, 72, 112, "PRESS SCAN AFTER COOLDOWN",
+        bb_text(surface, 72, 112, "PRESS SCAN AFTER COOLDOWN",
                      UINT16_C(0x9cf3), 1U,
                      sizeof("PRESS SCAN AFTER COOLDOWN") - 1U);
     } else if (state->signal_snapshot.status == P4_GAME_SIGNAL_SCANNING) {
@@ -6721,14 +6868,14 @@ static void draw_signal_list(p4_game_surface_t *surface,
             surface, state, BYTE_BUDDY_SCAN_FX_SCANNING,
             fx_loop_phase(state->animation_ms, 180U),
             160, 68, 62U);
-        p4_draw_text(surface, 108, 109, "SCANNING CITY",
+        bb_text(surface, 108, 109, "SCANNING CITY",
                      UINT16_C(0x07ff), 1U, 13U);
     } else if (state->signal_snapshot.status == P4_GAME_SIGNAL_IDLE) {
         draw_scan_fx_frame(
             surface, state, BYTE_BUDDY_SCAN_FX_EMPTY,
             fx_loop_phase(state->animation_ms, 190U),
             160, 68, 58U);
-        p4_draw_text(surface, 86, 108, "PRESS SCAN TO RETRY",
+        bb_text(surface, 86, 108, "PRESS SCAN TO RETRY",
                      UINT16_C(0x07ff), 1U,
                      sizeof("PRESS SCAN TO RETRY") - 1U);
     } else if (state->signal_snapshot.status == P4_GAME_SIGNAL_ERROR) {
@@ -6736,11 +6883,11 @@ static void draw_signal_list(p4_game_surface_t *surface,
             surface, state, BYTE_BUDDY_SCAN_FX_OFFLINE,
             fx_loop_phase(state->animation_ms, 190U),
             160, 63, 58U);
-        p4_draw_fill_rect(surface, 70, 90, 180, 42, UINT16_C(0x000b));
-        p4_draw_rect(surface, 70, 90, 180, 42, UINT16_C(0xf81f));
-        p4_draw_text(surface, 108, 99, "SCAN TIMED OUT",
+        bb_fill(surface, 70, 90, 180, 42, UINT16_C(0x000b));
+        bb_rect(surface, 70, 90, 180, 42, UINT16_C(0xf81f));
+        bb_text(surface, 108, 99, "SCAN TIMED OUT",
                      UINT16_C(0xf81f), 1U, 14U);
-        p4_draw_text(surface, 91, 115, "PRESS SCAN TO RETRY",
+        bb_text(surface, 91, 115, "PRESS SCAN TO RETRY",
                      UINT16_C(0x9cf3), 1U,
                      sizeof("PRESS SCAN TO RETRY") - 1U);
     } else if (state->signal_snapshot.status != P4_GAME_SIGNAL_READY) {
@@ -6749,9 +6896,9 @@ static void draw_signal_list(p4_game_surface_t *surface,
             surface, state, BYTE_BUDDY_SCAN_FX_OFFLINE,
             fx_loop_phase(state->animation_ms, 190U),
             160, 63, 58U);
-        p4_draw_text(surface, 91, 101, "SIGNAL RADIO OFFLINE",
+        bb_text(surface, 91, 101, "SIGNAL RADIO OFFLINE",
                      UINT16_C(0xf81f), 1U, 20U);
-        p4_draw_text(surface, 74, 117, "NO NETWORK DATA IS EXPOSED",
+        bb_text(surface, 74, 117, "NO NETWORK DATA IS EXPOSED",
                      UINT16_C(0x7bef), 1U, 26U);
     } else {
         if (state->signal_snapshot.count == 0U) {
@@ -6759,7 +6906,7 @@ static void draw_signal_list(p4_game_surface_t *surface,
                 surface, state, BYTE_BUDDY_SCAN_FX_EMPTY,
                 fx_loop_phase(state->animation_ms, 190U),
                 160, 68, 58U);
-            p4_draw_text(surface, 101, 108, "NO SIGNALS FOUND",
+            bb_text(surface, 101, 108, "NO SIGNALS FOUND",
                          UINT16_C(0x7bef), 1U, 16U);
         }
         const uint8_t page = byte_buddy_signal_clamp_page(
@@ -6782,13 +6929,13 @@ static void draw_signal_list(p4_game_surface_t *surface,
                     signal->channel, signal->flags);
             const int top = 36 + (int)row * 25;
             const uint16_t color = signal_color_for_hue(profile.hue);
-            p4_draw_fill_rect(surface, 4, top, 312, 22,
+            bb_fill(surface, 4, top, 312, 22,
                               row % 2U == 0U ? UINT16_C(0x1025)
                                               : UINT16_C(0x181f));
-            p4_draw_rect(surface, 4, top, 312, 22, color);
+            bb_rect(surface, 4, top, 312, 22, color);
             if (state->controller_active &&
                 row == state->signal_focus_row) {
-                p4_draw_rect(surface, 5, top + 1, 310, 20,
+                bb_rect(surface, 5, top + 1, 310, 20,
                              UINT16_C(0xffff));
             }
             draw_signal_seed(
@@ -6796,7 +6943,7 @@ static void draw_signal_list(p4_game_surface_t *surface,
                 signal->channel, signal->flags,
                 17, top + 11, 21U,
                 state->animation_ms + (uint32_t)index * 70U);
-            p4_draw_text(surface, 29, top + 7, signal->label,
+            bb_text(surface, 29, top + 7, signal->label,
                          UINT16_C(0xffff), 1U,
                          signal_label_length(signal->label, 17U));
             draw_signal_meter(surface, 139, top + 7, 66,
@@ -6804,19 +6951,19 @@ static void draw_signal_list(p4_game_surface_t *surface,
             draw_rssi(surface, 211, top + 7, signal->rssi_dbm,
                       UINT16_C(0xbdf7));
             if (signal_consumed(state, signal->token)) {
-                p4_draw_text(surface, 270, top + 7,
+                bb_text(surface, 270, top + 7,
                              state->signal_training_mode ? "DONE" : "EATEN",
                              UINT16_C(0x7bef), 1U,
                              state->signal_training_mode ? 4U : 5U);
             } else if (state->signal_training_mode) {
-                p4_draw_text(surface, 270, top + 7, "DRILL",
+                bb_text(surface, 270, top + 7, "DRILL",
                              UINT16_C(0xffe0), 1U, 5U);
             } else if (!byte_buddy_signal_collection_has_room(
                            state->signal_consumed_count)) {
-                p4_draw_text(surface, 270, top + 7, "FULL",
+                bb_text(surface, 270, top + 7, "FULL",
                              UINT16_C(0xf81f), 1U, 4U);
             } else {
-                p4_draw_text(surface, 270, top + 7, "S+",
+                bb_text(surface, 270, top + 7, "S+",
                              UINT16_C(0xffe0), 1U, 2U);
                 draw_number(surface, 284, top + 7,
                             byte_buddy_signal_reward_coins(
@@ -6825,15 +6972,15 @@ static void draw_signal_list(p4_game_surface_t *surface,
             }
         }
         if (state->signal_training_mode) {
-            p4_draw_text(surface, 229, 27, "TRAINING",
+            bb_text(surface, 229, 27, "TRAINING",
                          UINT16_C(0xffe0), 1U, 8U);
         } else if (rows != 0U && signal_is_simulated(
                        &state->signal_snapshot.results[first])) {
-            p4_draw_text(surface, 241, 27, "SIM DATA",
+            bb_text(surface, 241, 27, "SIM DATA",
                          UINT16_C(0xf81f), 1U, 8U);
         }
         if (state->controller_active) {
-            p4_draw_text(surface, 60, 27, "DPAD+A SELECT  START SCAN",
+            bb_text(surface, 60, 27, "DPAD+A SELECT  START SCAN",
                          UINT16_C(0x9cf3), 1U, 25U);
         }
     }
@@ -6842,44 +6989,44 @@ static void draw_signal_list(p4_game_surface_t *surface,
         size_t badge_length = 0U;
         const char *const badge = lineage_badge_name(
             lineage, &badge_length);
-        p4_draw_fill_rect(surface, 72, 65, 176, 66, UINT16_C(0x000b));
-        p4_draw_rect(surface, 72, 65, 176, 66, signal_color(state));
+        bb_fill(surface, 72, 65, 176, 66, UINT16_C(0x000b));
+        bb_rect(surface, 72, 65, 176, 66, signal_color(state));
         draw_evolution_fx_frame(
             surface, state, BYTE_BUDDY_EVOLUTION_FX_GENOME,
             fx_timeline_phase(
                 state->signal_reward_ms, REACTION_DURATION_MS),
             94, 100, 46U);
-        p4_draw_text(surface, 104, 74, "LINEAGE UPDATED",
+        bb_text(surface, 104, 74, "LINEAGE UPDATED",
                      UINT16_C(0xffff), 1U, 15U);
         draw_lineage_badge(
             surface, state, lineage_badge_frame(lineage), 94, 100, 32U);
-        p4_draw_text(surface, 115, 91, badge,
+        bb_text(surface, 115, 91, badge,
                      signal_color(state), 1U, badge_length);
-        p4_draw_text(surface, 189, 91, "DNA", UINT16_C(0x7bef),
+        bb_text(surface, 189, 91, "DNA", UINT16_C(0x7bef),
                      1U, 3U);
         draw_number(surface, 213, 91,
                     lineage.diversity, UINT16_C(0xffff));
-        p4_draw_text(surface, 88, 106, "BAND", UINT16_C(0x7bef),
+        bb_text(surface, 88, 106, "BAND", UINT16_C(0x7bef),
                      1U, 4U);
         draw_number(surface, 122, 106, lineage.channel_families,
                     UINT16_C(0xffff));
-        p4_draw_text(surface, 132, 106, "/4", UINT16_C(0x7bef),
+        bb_text(surface, 132, 106, "/4", UINT16_C(0x7bef),
                      1U, 2U);
-        p4_draw_text(surface, 165, 106, "HUE", UINT16_C(0x7bef),
+        bb_text(surface, 165, 106, "HUE", UINT16_C(0x7bef),
                      1U, 3U);
         draw_number(surface, 191, 106,
                     lineage.hue_diversity < 6U
                         ? lineage.hue_diversity : 6U,
                     UINT16_C(0xffff));
-        p4_draw_text(surface, 201, 106, "/6", UINT16_C(0x7bef),
+        bb_text(surface, 201, 106, "/6", UINT16_C(0x7bef),
                      1U, 2U);
-        p4_draw_text(surface, 120, 117, "MIX", UINT16_C(0x7bef),
+        bb_text(surface, 120, 117, "MIX", UINT16_C(0x7bef),
                      1U, 3U);
         draw_number(surface, 147, 117,
                     lineage.part_diversity < 14U
                         ? lineage.part_diversity : 14U,
                     UINT16_C(0xffff));
-        p4_draw_text(surface, 163, 117, "/14", UINT16_C(0x7bef),
+        bb_text(surface, 163, 117, "/14", UINT16_C(0x7bef),
                      1U, 3U);
     }
     const uint8_t pages = byte_buddy_signal_page_count(
@@ -6910,7 +7057,7 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
                                 const byte_buddy_state_t *state)
 {
     draw_signal_header(surface, state, "TRACK SIGNAL", 12U);
-    p4_draw_fill_rect(surface, 0, 25, 320, 175, UINT16_C(0x080f));
+    bb_fill(surface, 0, 25, 320, 175, UINT16_C(0x080f));
     const p4_game_signal_t *const signal = selected_signal(state);
     if (signal == NULL) {
         draw_signal_city_icon(surface, state, 11U, 160, 70, 52U);
@@ -6918,7 +7065,7 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
             surface, state, BYTE_BUDDY_SCAN_FX_EMPTY,
             fx_loop_phase(state->animation_ms, 190U),
             160, 70, 60U);
-        p4_draw_text(surface, 98, 109, "SIGNAL MOVED AWAY",
+        bb_text(surface, 98, 109, "SIGNAL MOVED AWAY",
                      UINT16_C(0xf81f), 1U, 17U);
     } else {
         const byte_buddy_signal_profile_t profile =
@@ -6946,15 +7093,15 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
             signal->channel, signal->flags,
             83, 82, 50U, state->animation_ms);
         draw_dragon(surface, state, 245, 55);
-        p4_draw_text(surface, 14, 31, "FORM", UINT16_C(0x7bef),
+        bb_text(surface, 14, 31, "FORM", UINT16_C(0x7bef),
                      1U, 4U);
         draw_number(surface, 45, 31, byte_buddy_signal_form_id(
                         genome.recipe_id, signal->channel, signal->flags),
                     UINT16_C(0xffff));
-        p4_draw_text(surface, 121, 39, signal->label,
+        bb_text(surface, 121, 39, signal->label,
                      UINT16_C(0xffff), 1U,
                      signal_label_length(signal->label, 18U));
-        p4_draw_text(surface, 121, 55,
+        bb_text(surface, 121, 55,
                      signal->rssi_dbm >= -49 ? "VERY HOT" :
                      signal->rssi_dbm >= SIGNAL_HUNT_UNLOCK_RSSI
                          ? "BATTLE READY" : signal->rssi_dbm >= -78
@@ -6964,20 +7111,20 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
                      1U, signal->rssi_dbm >= -49 ? 8U :
                          signal->rssi_dbm >= SIGNAL_HUNT_UNLOCK_RSSI
                              ? 12U : signal->rssi_dbm >= -78 ? 12U : 4U);
-        p4_draw_text(surface, 121, 72, "RSSI", UINT16_C(0x7bef), 1U, 4U);
+        bb_text(surface, 121, 72, "RSSI", UINT16_C(0x7bef), 1U, 4U);
         draw_rssi(surface, 153, 72, signal->rssi_dbm, UINT16_C(0xffff));
-        p4_draw_text(surface, 121, 89,
+        bb_text(surface, 121, 89,
                      state->signal_training_mode ? "REWARD" : "SPARKS",
                      UINT16_C(0x7bef), 1U, 6U);
         if (state->signal_training_mode) {
-            p4_draw_text(surface, 166, 89, "PRACTICE",
+            bb_text(surface, 166, 89, "PRACTICE",
                          UINT16_C(0xffe0), 1U, 8U);
         } else {
             draw_number(surface, 166, 89,
                         byte_buddy_signal_reward_coins(profile, encounter),
                         UINT16_C(0xffe0));
         }
-        p4_draw_text(surface, 121, 105,
+        bb_text(surface, 121, 105,
                      state->signal_snapshot.status == P4_GAME_SIGNAL_ERROR
                          ? "SCAN TIMED OUT" :
                      state->signal_training_mode ? "PRACTICE MODE" :
@@ -6999,7 +7146,7 @@ static void draw_signal_tracker(p4_game_surface_t *surface,
                          state->signal_trend_db >= 3 ? 6U :
                          state->signal_trend_db <= -3 ? 7U : 6U);
         draw_signal_meter(surface, 25, 126, 270, profile.strength, color);
-        p4_draw_text(surface, state->controller_active ? 66 : 90, 138,
+        bb_text(surface, state->controller_active ? 66 : 90, 138,
                      state->signal_training_mode
                          ? "OFFLINE TRAINING - B BACK"
                          : state->controller_active
@@ -7043,7 +7190,7 @@ static void draw_signal_path_line(
     const int step_y = y0 < y1 ? 1 : -1;
     int error = dx + dy;
     for (;;) {
-        p4_draw_pixel(surface, x0, y0, color);
+        bb_pixel(surface, x0, y0, color);
         if (x0 == x1 && y0 == y1) {
             break;
         }
@@ -7128,9 +7275,9 @@ static void draw_signal_weave_arena(
             state->signal_cursor_y_q16);
         draw_signal_city_icon(
             surface, state, 14U, cursor_x, cursor_y, 16U);
-        p4_draw_fill_rect(surface, cursor_x - 8, cursor_y,
+        bb_fill(surface, cursor_x - 8, cursor_y,
                           17, 1, color);
-        p4_draw_fill_rect(surface, cursor_x, cursor_y - 8,
+        bb_fill(surface, cursor_x, cursor_y - 8,
                           1, 17, color);
     }
 }
@@ -7196,7 +7343,12 @@ static void draw_signal_battle(p4_game_surface_t *surface,
     draw_signal_header(surface, state,
                        weave ? "RESONANCE" : "SIGNAL BATTLE",
                        weave ? 9U : 13U);
-    p4_draw_fill_rect(surface, 0, 25, 320, 175, UINT16_C(0x080f));
+    bb_fill(surface, 0, 25, 320, 175, UINT16_C(0x080f));
+    if (bb_native(surface)) {
+        bb_city(surface,true);
+        bb_fill(surface,0,25,320,16,UINT16_C(0x080f));
+        bb_fill(surface,0,120,320,22,UINT16_C(0x080f));
+    }
     const p4_game_signal_t *const signal = selected_signal(state);
     if (signal == NULL) {
         return;
@@ -7234,9 +7386,11 @@ static void draw_signal_battle(p4_game_surface_t *surface,
     const unsigned arena_frame =
         encounter.arena == BYTE_BUDDY_SIGNAL_ARENA_STEADY
             ? 7U : 11U + encounter.arena;
-    draw_environment_chrome_icon(
-        surface, state, arena_frame, 160, 83,
-        weave ? 82U : 94U);
+    if (!bb_native(surface)) {
+        draw_environment_chrome_icon(
+            surface, state, arena_frame, 160, 83,
+            weave ? 82U : 94U);
+    }
     int shake_x = 0;
     int shake_y = 0;
     if (state->signal_player_hit_ms != 0U) {
@@ -7322,64 +7476,64 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                 64U, 8U, SIGNAL_GUARD_FX_MS * 2U));
     }
 
-    p4_draw_text(surface, 8, 29,
+    bb_text(surface, 8, 29,
                  s_signal_attack_names[current_attack], color, 1U,
                  s_signal_attack_name_lengths[current_attack]);
-    p4_draw_text(surface, 82, 29,
+    bb_text(surface, 82, 29,
                  s_signal_passive_names[encounter.passive],
                  UINT16_C(0xfd20), 1U,
                  s_signal_passive_name_lengths[encounter.passive]);
-    p4_draw_text(surface, 146, 29,
+    bb_text(surface, 146, 29,
                  s_signal_arena_names[encounter.arena],
                  UINT16_C(0x9cf3), 1U,
                  s_signal_arena_name_lengths[encounter.arena]);
-    p4_draw_text(surface, 193, 29, "WEAK", UINT16_C(0x7bef), 1U, 4U);
-    p4_draw_text(surface, 222, 29,
+    bb_text(surface, 193, 29, "WEAK", UINT16_C(0x7bef), 1U, 4U);
+    bb_text(surface, 222, 29,
                  s_element_names[encounter.weakness],
                  UINT16_C(0xffff), 1U,
                  encounter.weakness == BYTE_BUDDY_ELEMENT_MYSTERY
                     ? 7U : encounter.weakness == BYTE_BUDDY_ELEMENT_FIRE
                         ? 4U : encounter.weakness == BYTE_BUDDY_ELEMENT_ICE
                             ? 3U : 4U);
-    p4_draw_text(surface, 272, 29, "T", UINT16_C(0xf81f), 1U, 1U);
+    bb_text(surface, 272, 29, "T", UINT16_C(0xf81f), 1U, 1U);
     draw_number(surface, 282, 29, encounter.threat, UINT16_C(0xffff));
     if (!state->signal_training_mode) {
-        p4_draw_text(surface, 294, 29, "S+", UINT16_C(0xffe0), 1U, 2U);
+        bb_text(surface, 294, 29, "S+", UINT16_C(0xffe0), 1U, 2U);
         draw_number(surface, 307, 29,
                     byte_buddy_signal_reward_coins(profile, encounter),
                     UINT16_C(0xffe0));
     }
 
-    p4_draw_text(surface, 8, 126, "YOU", UINT16_C(0xbdf7), 1U, 3U);
-    p4_draw_rect(surface, 31, 126, 83, 8, UINT16_C(0x7bef));
+    bb_text(surface, 8, 126, "YOU", UINT16_C(0xbdf7), 1U, 3U);
+    bb_rect(surface, 31, 126, 83, 8, UINT16_C(0x7bef));
     const uint32_t shown_player = state->signal_shown_player_hp_q8;
     const uint32_t player_max_q8 =
         (uint32_t)state->signal_player_max_hp << 8U;
-    p4_draw_fill_rect(surface, 32, 127,
+    bb_fill(surface, 32, 127,
                       player_max_q8 == 0U ? 0 :
                           (int)(shown_player * 81U / player_max_q8),
                       6, UINT16_C(0x07e0));
-    p4_draw_text(surface, 121, 126, "FOE", UINT16_C(0xbdf7), 1U, 3U);
-    p4_draw_rect(surface, 144, 126, 83, 8, UINT16_C(0x7bef));
+    bb_text(surface, 121, 126, "FOE", UINT16_C(0xbdf7), 1U, 3U);
+    bb_rect(surface, 144, 126, 83, 8, UINT16_C(0x7bef));
     const uint32_t shown_enemy = state->signal_shown_enemy_hp_q8;
     const uint32_t enemy_max_q8 =
         (uint32_t)state->signal_battle_max_hp << 8U;
-    p4_draw_fill_rect(surface, 145, 127,
+    bb_fill(surface, 145, 127,
                       enemy_max_q8 == 0U ? 0 :
                           (int)(shown_enemy * 81U / enemy_max_q8),
                       6, UINT16_C(0xf81f));
     if (state->signal_enemy_ward != 0U) {
-        p4_draw_text(surface, 231, 126, "W", UINT16_C(0x07ff), 1U, 1U);
+        bb_text(surface, 231, 126, "W", UINT16_C(0x07ff), 1U, 1U);
         draw_number(surface, 240, 126, state->signal_enemy_ward,
                     UINT16_C(0x07ff));
     }
-    p4_draw_text(surface, 259, 126, "TIME", UINT16_C(0xbdf7), 1U, 4U);
+    bb_text(surface, 259, 126, "TIME", UINT16_C(0xbdf7), 1U, 4U);
     const uint32_t limit = signal_battle_duration_ms(state) +
         state->signal_battle_bonus_ms;
     const uint32_t remaining = state->signal_battle_elapsed_ms >= limit
         ? 0U : limit - state->signal_battle_elapsed_ms;
-    p4_draw_rect(surface, 287, 126, 29, 8, UINT16_C(0x7bef));
-    p4_draw_fill_rect(surface, 288, 127,
+    bb_rect(surface, 287, 126, 29, 8, UINT16_C(0x7bef));
+    bb_fill(surface, 288, 127,
                       limit == 0U ? 0 : (int)(remaining * 27U / limit), 6,
                       UINT16_C(0xffe0));
     const bool guard_ready = state->signal_guard_charges != 0U &&
@@ -7394,9 +7548,9 @@ static void draw_signal_battle(p4_game_surface_t *surface,
         state->signal_battle_outcome == BYTE_BUDDY_COMBAT_ACTIVE &&
         !state->signal_guard_armed) {
         if (guard_ready) {
-            p4_draw_text(surface, 62, 145, "GUARD NOW:",
+            bb_text(surface, 62, 145, "GUARD NOW:",
                          UINT16_C(0xffe0), 1U, 10U);
-            p4_draw_text(surface, 129, 145,
+            bb_text(surface, 129, 145,
                          s_dragon_ability_names[ability],
                          UINT16_C(0xffff), 1U,
                          s_dragon_ability_name_lengths[ability]);
@@ -7404,13 +7558,13 @@ static void draw_signal_battle(p4_game_surface_t *surface,
             const char *const parry_hint =
                 state->signal_guard_charges == 0U
                     ? "NO GUARDS LEFT" : "WAIT FOR THE FLASH";
-            p4_draw_text(
+            bb_text(
                 surface, state->signal_guard_charges == 0U ? 112 : 93,
                 145, parry_hint, UINT16_C(0x9cf3), 1U,
                 state->signal_guard_charges == 0U ? 14U : 18U);
         }
     } else if (state->signal_snare_ms != 0U) {
-        p4_draw_text(surface, 92, 145, "THORN SNARE - MOVE SLOWED",
+        bb_text(surface, 92, 145, "THORN SNARE - MOVE SLOWED",
                      UINT16_C(0x87e0), 1U, 25U);
     } else {
         const char *const battle_hint = state->controller_active
@@ -7420,31 +7574,31 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                        "TAP STRIKE - GUARD THE TELL");
         const size_t battle_hint_length = state->controller_active
             ? (weave ? 28U : 23U) : (weave ? 25U : 27U);
-        p4_draw_text(surface, weave ? 76 : 72, 145,
+        bb_text(surface, weave ? 76 : 72, 145,
                      battle_hint, UINT16_C(0xbdf7), 1U,
                      battle_hint_length);
     }
     if (weave) {
         const uint32_t threshold_units = (uint32_t)rules.hold_ms * 2U;
-        p4_draw_fill_rect(surface, 4, 162, 188, 33, UINT16_C(0x1025));
-        p4_draw_rect(surface, 4, 162, 188, 33, color);
+        bb_fill(surface, 4, 162, 188, 33, UINT16_C(0x1025));
+        bb_rect(surface, 4, 162, 188, 33, color);
         draw_signal_city_icon(surface, state, 14U, 25, 178, 24U);
-        p4_draw_text(surface, 43, 167, "RUNE CHARGE",
+        bb_text(surface, 43, 167, "RUNE CHARGE",
                      UINT16_C(0xffff), 1U, 11U);
-        p4_draw_rect(surface, 43, 182, 97, 7, UINT16_C(0x7bef));
-        p4_draw_fill_rect(surface, 44, 183,
+        bb_rect(surface, 43, 182, 97, 7, UINT16_C(0x7bef));
+        bb_fill(surface, 44, 183,
                           threshold_units == 0U ? 0 : (int)(
                               state->signal_weave_charge_units * 95U /
                               threshold_units),
                           5, color);
-        p4_draw_text(surface, 150, 167, "STEP", UINT16_C(0x7bef),
+        bb_text(surface, 150, 167, "STEP", UINT16_C(0x7bef),
                      1U, 4U);
         draw_number(surface, 151, 182,
                     state->signal_weave_step < rules.required_locks
                         ? (uint32_t)state->signal_weave_step + 1U
                         : rules.required_locks,
                     UINT16_C(0xffff));
-        p4_draw_text(surface, 165, 182, "/", UINT16_C(0x7bef), 1U, 1U);
+        bb_text(surface, 165, 182, "/", UINT16_C(0x7bef), 1U, 1U);
         draw_number(surface, 174, 182, rules.required_locks,
                     UINT16_C(0xffff));
     } else {
@@ -7480,9 +7634,9 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                     ? UINT16_C(0x0000) : UINT16_C(0xffff));
 
     if (state->signal_battle_phase == SIGNAL_PHASE_INTRO) {
-        p4_draw_fill_rect(surface, 50, 48, 220, 69, UINT16_C(0x000b));
-        p4_draw_rect(surface, 50, 48, 220, 69, color);
-        p4_draw_text(surface, 104, 57, "ENCOUNTER GENOME",
+        bb_fill(surface, 50, 48, 220, 69, UINT16_C(0x000b));
+        bb_rect(surface, 50, 48, 220, 69, color);
+        bb_text(surface, 104, 57, "ENCOUNTER GENOME",
                      UINT16_C(0xffff), 1U, 16U);
         draw_passive_fx_frame(
             surface, state, passive,
@@ -7492,14 +7646,14 @@ static void draw_signal_battle(p4_game_surface_t *surface,
             surface, state, current_attack,
             (unsigned)(state->animation_ms / 130U) % 2U,
             245, 87, 38U);
-        p4_draw_text(surface, 110, 77,
+        bb_text(surface, 110, 77,
                      s_signal_attack_names[current_attack], color, 1U,
                      s_signal_attack_name_lengths[current_attack]);
-        p4_draw_text(surface, 110, 93,
+        bb_text(surface, 110, 93,
                      s_signal_passive_names[encounter.passive],
                      UINT16_C(0xfd20), 1U,
                      s_signal_passive_name_lengths[encounter.passive]);
-        p4_draw_text(surface, 176, 93,
+        bb_text(surface, 176, 93,
                      s_signal_arena_names[encounter.arena],
                      UINT16_C(0x9cf3), 1U,
                      s_signal_arena_name_lengths[encounter.arena]);
@@ -7508,8 +7662,8 @@ static void draw_signal_battle(p4_game_surface_t *surface,
         const byte_buddy_combat_outcome_t outcome =
             (byte_buddy_combat_outcome_t)state->signal_battle_outcome;
         const bool victory = outcome == BYTE_BUDDY_COMBAT_VICTORY;
-        p4_draw_fill_rect(surface, 44, 48, 232, 74, UINT16_C(0x000b));
-        p4_draw_rect(surface, 44, 48, 232, 74,
+        bb_fill(surface, 44, 48, 232, 74, UINT16_C(0x000b));
+        bb_rect(surface, 44, 48, 232, 74,
                      victory ? UINT16_C(0xffe0) : UINT16_C(0xf81f));
         if (victory) {
             draw_signal_city_icon(
@@ -7522,13 +7676,13 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                 fx_timeline_phase(
                     state->signal_phase_ms, SIGNAL_VICTORY_MS),
                 78, 84, 58U);
-            p4_draw_text(surface, state->signal_training_mode ? 110 : 116,
+            bb_text(surface, state->signal_training_mode ? 110 : 116,
                          63,
                          state->signal_training_mode
                              ? "DRILL COMPLETE" : "SIGNAL TAMED",
                          UINT16_C(0xffe0), 1U,
                          state->signal_training_mode ? 14U : 12U);
-            p4_draw_text(surface, state->signal_training_mode ? 89 : 98,
+            bb_text(surface, state->signal_training_mode ? 89 : 98,
                          87,
                          state->signal_training_mode
                              ? "NO DNA OR SPARKS AWARDED"
@@ -7552,11 +7706,11 @@ static void draw_signal_battle(p4_game_surface_t *surface,
                 timeout ? "LINK TIMED OUT" : "DRAGON DOWN";
             const size_t title_length = retreated ? 10U :
                 timeout ? 14U : 11U;
-            p4_draw_text(surface, 112, 63, title,
+            bb_text(surface, 112, 63, title,
                          UINT16_C(0xf81f), 1U, title_length);
-            p4_draw_text(surface, 98, 87, "NO DNA OR SPARKS",
+            bb_text(surface, 98, 87, "NO DNA OR SPARKS",
                          UINT16_C(0xffff), 1U, 16U);
-            p4_draw_text(surface, 98, 102, "REMATCH AT TRACKER",
+            bb_text(surface, 98, 102, "REMATCH AT TRACKER",
                          UINT16_C(0x9cf3), 1U, 18U);
         }
     }
@@ -7591,15 +7745,15 @@ static void draw_lineage_panel(p4_game_surface_t *surface,
             BYTE_BUDDY_ADAPTATION_PRISMATIC) != 0U
         ? secondary_color : primary_color;
     draw_signal_header(surface, state, "DRAGON GENOME", 13U);
-    p4_draw_fill_rect(surface, 0, 25, 320, 175, UINT16_C(0x080f));
-    p4_draw_text(surface, 12, 32, "CURRENT LINEAGE",
+    bb_fill(surface, 0, 25, 320, 175, UINT16_C(0x080f));
+    bb_text(surface, 12, 32, "CURRENT LINEAGE",
                  UINT16_C(0x7bef), 1U, 15U);
-    p4_draw_text(surface, 12, 44, s_lineage_names[lineage.tier],
+    bb_text(surface, 12, 44, s_lineage_names[lineage.tier],
                  primary_color, 1U,
                  s_lineage_name_lengths[lineage.tier]);
     if (lineage.resonance > BYTE_BUDDY_RESONANCE_NONE &&
         lineage.resonance < BYTE_BUDDY_RESONANCE_COUNT) {
-        p4_draw_text(surface, 12, 57,
+        bb_text(surface, 12, 57,
                      s_resonance_names[lineage.resonance],
                      signal_color_for_hue(lineage.secondary_hue), 1U,
                      s_resonance_name_lengths[lineage.resonance]);
@@ -7610,7 +7764,7 @@ static void draw_lineage_panel(p4_game_surface_t *surface,
         draw_lineage_badge(
             surface, state, lineage_badge_frame(lineage), 116, 52, 34U);
     }
-    draw_dragon(surface, state, 68, 96);
+    draw_dragon(surface, state, 68, bb_native(surface) ? 70 : 96);
     if (lineage.tier == BYTE_BUDDY_LINEAGE_DORMANT) {
         draw_scan_fx_frame(
             surface, state, BYTE_BUDDY_SCAN_FX_EMPTY,
@@ -7623,114 +7777,114 @@ static void draw_lineage_panel(p4_game_surface_t *surface,
     }
 
     if (lineage.tier == BYTE_BUDDY_LINEAGE_DORMANT) {
-        p4_draw_text(surface, 146, 47, "FIND YOUR FIRST SIGNAL",
+        bb_text(surface, 146, 47, "FIND YOUR FIRST SIGNAL",
                      UINT16_C(0x07ff), 1U, 22U);
-        p4_draw_text(surface, 146, 67, "EACH OPAQUE TOKEN ADDS",
+        bb_text(surface, 146, 67, bb_native(surface) ? "EACH NEW SIGNAL ADDS" : "EACH OPAQUE TOKEN ADDS",
                      UINT16_C(0x9cf3), 1U, 22U);
-        p4_draw_text(surface, 146, 79, "CORE HALO SIGIL AURA",
+        bb_text(surface, 146, 79, "CORE HALO SIGIL AURA",
                      UINT16_C(0x9cf3), 1U, 21U);
-        p4_draw_text(surface, 146, 99, "VARIETY BUILDS DNA",
+        bb_text(surface, 146, 99, "VARIETY BUILDS DNA",
                      UINT16_C(0xffe0), 1U, 18U);
     } else {
-        p4_draw_text(surface, 146, 32, "FAMILY", UINT16_C(0x7bef),
+        bb_text(surface, 146, 32, "FAMILY", UINT16_C(0x7bef),
                      1U, 6U);
-        p4_draw_text(surface, 207, 32,
+        bb_text(surface, 207, 32,
                      s_lineage_family_names[lineage.family & 3U],
                      primary_color, 1U, 6U);
-        p4_draw_text(surface, 146, 47, "HALO", UINT16_C(0x7bef),
+        bb_text(surface, 146, 47, "HALO", UINT16_C(0x7bef),
                      1U, 4U);
-        p4_draw_text(surface, 207, 47,
+        bb_text(surface, 207, 47,
                      s_lineage_halo_names[lineage.halo & 3U],
                      halo_color, 1U, 5U);
-        p4_draw_text(surface, 146, 62, "SIGIL", UINT16_C(0x7bef),
+        bb_text(surface, 146, 62, "SIGIL", UINT16_C(0x7bef),
                      1U, 5U);
-        p4_draw_text(surface, 207, 62,
+        bb_text(surface, 207, 62,
                      s_lineage_mark_names[lineage.marking & 3U],
                      secondary_color, 1U, 5U);
-        p4_draw_text(surface, 146, 77, "AURA", UINT16_C(0x7bef),
+        bb_text(surface, 146, 77, "AURA", UINT16_C(0x7bef),
                      1U, 4U);
-        p4_draw_text(surface, 207, 77,
+        bb_text(surface, 207, 77,
                      s_lineage_aura_names[lineage.aura & 3U],
                      secondary_color, 1U, 5U);
-        p4_draw_text(surface, 146, 92, "HUE", UINT16_C(0x7bef),
+        bb_text(surface, 146, 92, "HUE", UINT16_C(0x7bef),
                      1U, 3U);
         draw_number(surface, 207, 92, lineage.primary_hue,
                     signal_color_for_hue(lineage.primary_hue));
         if (lineage.tier >= BYTE_BUDDY_LINEAGE_MYTHIC) {
-            p4_draw_text(surface, 221, 92, "+", UINT16_C(0x7bef),
+            bb_text(surface, 221, 92, "+", UINT16_C(0x7bef),
                          1U, 1U);
             draw_number(surface, 231, 92, lineage.secondary_hue,
                         signal_color_for_hue(lineage.secondary_hue));
         }
         draw_lineage_badge(surface, state, 13U, 138, 109, 8U);
-        p4_draw_text(surface, 146, 107, "BAND", UINT16_C(0x7bef),
+        bb_text(surface, 146, 107, "BAND", UINT16_C(0x7bef),
                      1U, 4U);
         draw_number(surface, 180, 107, lineage.channel_families,
                     UINT16_C(0xffff));
-        p4_draw_text(surface, 190, 107, "/4", UINT16_C(0x7bef),
+        bb_text(surface, 190, 107, "/4", UINT16_C(0x7bef),
                      1U, 2U);
         draw_lineage_badge(surface, state, 14U, 214, 109, 8U);
-        p4_draw_text(surface, 222, 107, "HUE", UINT16_C(0x7bef),
+        bb_text(surface, 222, 107, "HUE", UINT16_C(0x7bef),
                      1U, 3U);
         draw_number(surface, 248, 107,
                     lineage.hue_diversity < 6U
                         ? lineage.hue_diversity : 6U,
                     UINT16_C(0xffff));
-        p4_draw_text(surface, 258, 107, "/6", UINT16_C(0x7bef),
+        bb_text(surface, 258, 107, "/6", UINT16_C(0x7bef),
                      1U, 2U);
         draw_lineage_badge(surface, state, 15U, 138, 119, 8U);
-        p4_draw_text(surface, 146, 117, "MIX", UINT16_C(0x7bef),
+        bb_text(surface, 146, 117, "MIX", UINT16_C(0x7bef),
                      1U, 3U);
         draw_number(surface, 174, 117,
                     lineage.part_diversity < 14U
                         ? lineage.part_diversity : 14U,
                     UINT16_C(0xffff));
-        p4_draw_text(surface, 190, 117, "/14", UINT16_C(0x7bef),
+        bb_text(surface, 190, 117, "/14", UINT16_C(0x7bef),
                      1U, 3U);
-        p4_draw_text(surface, 222, 117, "RAR", UINT16_C(0x7bef),
+        bb_text(surface, 222, 117, "RAR", UINT16_C(0x7bef),
                      1U, 3U);
         draw_number(surface, 248, 117,
                     lineage.rarity_diversity < 4U
                         ? lineage.rarity_diversity : 4U,
                     UINT16_C(0xffff));
-        p4_draw_text(surface, 258, 117, "/4", UINT16_C(0x7bef),
+        bb_text(surface, 258, 117, "/4", UINT16_C(0x7bef),
                      1U, 2U);
         if (lineage.shielded) {
             draw_lineage_badge(surface, state, 8U, 138, 128, 8U);
-            p4_draw_text(surface, 146, 126, "WARD",
+            bb_text(surface, 146, 126, "WARD",
                          UINT16_C(0x07ff), 1U, 4U);
         }
         if (lineage.phantom) {
             draw_lineage_badge(surface, state, 9U, 175, 128, 8U);
-            p4_draw_text(surface, 183, 126, "GHOST",
+            bb_text(surface, 183, 126, "GHOST",
                          UINT16_C(0xf81f), 1U, 5U);
         }
         if ((lineage.adaptations &
              BYTE_BUDDY_ADAPTATION_WIDEBAND) != 0U) {
             draw_lineage_badge(surface, state, 10U, 220, 128, 8U);
-            p4_draw_text(surface, 228, 126, "WIDE",
+            bb_text(surface, 228, 126, "WIDE",
                          UINT16_C(0xffe0), 1U, 4U);
         }
         if ((lineage.adaptations &
              BYTE_BUDDY_ADAPTATION_PRISMATIC) != 0U) {
             draw_lineage_badge(surface, state, 11U, 138, 136, 8U);
-            p4_draw_text(surface, 146, 133, "PRISM",
+            bb_text(surface, 146, 133, "PRISM",
                          signal_color_for_hue(lineage.secondary_hue),
                          1U, 5U);
         }
         if ((lineage.adaptations &
              BYTE_BUDDY_ADAPTATION_CHIMERA) != 0U) {
             draw_lineage_badge(surface, state, 12U, 184, 136, 8U);
-            p4_draw_text(surface, 192, 133, "CHIMERA",
+            bb_text(surface, 192, 133, "CHIMERA",
                          signal_color_for_hue(lineage.primary_hue),
                          1U, 7U);
         }
     }
 
-    p4_draw_rect(surface, 4, 140, 312, 24, UINT16_C(0x4208));
+    bb_rect(surface, 4, 140, 312, 24, UINT16_C(0x4208));
     if (lineage.resonance >= BYTE_BUDDY_RESONANCE_ETERNAL) {
         draw_lineage_badge(surface, state, 7U, 59, 152, 20U);
-        p4_draw_text(surface, 72, 149, "ETERNAL GENOME COMPLETE",
+        bb_text(surface, 72, 149, "ETERNAL GENOME COMPLETE",
                      UINT16_C(0xffe0), 1U, 23U);
     } else {
         const bool next_is_resonance =
@@ -7753,26 +7907,26 @@ static void draw_lineage_panel(p4_game_surface_t *surface,
             ? 4U + next_rank : (unsigned)next_rank - 1U;
         draw_lineage_badge(
             surface, state, next_badge_frame, 18, 151, 18U);
-        p4_draw_text(surface, 30, 145, "NEXT", UINT16_C(0x7bef),
+        bb_text(surface, 30, 145, "NEXT", UINT16_C(0x7bef),
                      1U, 4U);
-        p4_draw_text(surface, 64, 145, next_name,
+        bb_text(surface, 64, 145, next_name,
                      primary_color, 1U, next_name_length);
-        p4_draw_text(surface, 126, 145, "LINK", UINT16_C(0x7bef),
+        bb_text(surface, 126, 145, "LINK", UINT16_C(0x7bef),
                      1U, 4U);
         draw_number(surface, 160, 145, state->signal_consumed_count,
                     UINT16_C(0xffff));
-        p4_draw_text(surface, 174, 145, "/", UINT16_C(0x7bef), 1U, 1U);
+        bb_text(surface, 174, 145, "/", UINT16_C(0x7bef), 1U, 1U);
         draw_number(surface, 184, 145, next_links,
                     UINT16_C(0xffff));
-        p4_draw_text(surface, 215, 145, "DNA", UINT16_C(0x7bef),
+        bb_text(surface, 215, 145, "DNA", UINT16_C(0x7bef),
                      1U, 3U);
         if (next_diversity == 0U) {
-            p4_draw_text(surface, 239, 145, "OPEN",
+            bb_text(surface, 239, 145, "OPEN",
                          UINT16_C(0xffff), 1U, 4U);
         } else {
             draw_number(surface, 239, 145, lineage.diversity,
                         UINT16_C(0xffff));
-            p4_draw_text(surface, 253, 145, "/", UINT16_C(0x7bef),
+            bb_text(surface, 253, 145, "/", UINT16_C(0x7bef),
                          1U, 1U);
             draw_number(surface, 263, 145, next_diversity,
                         UINT16_C(0xffff));
@@ -7781,7 +7935,7 @@ static void draw_lineage_panel(p4_game_surface_t *surface,
             next_rank == BYTE_BUDDY_RESONANCE_ETERNAL &&
             state->signal_consumed_count >= next_links &&
             lineage.diversity < next_diversity;
-        p4_draw_text(
+        bb_text(
             surface, 12, 155,
             eternal_fallback
                 ? "48 LINKS GUARANTEES ETERNAL"
@@ -7814,14 +7968,14 @@ static void draw_scene_transition(p4_game_surface_t *surface,
         (uint32_t)(UINT16_MAX - eased) *
         (P4_GAME_SURFACE_WIDTH / 2U) / UINT16_MAX);
     if (cover > 0) {
-        p4_draw_fill_rect(surface, 0, 0, cover,
+        bb_fill(surface, 0, 0, cover,
                           P4_GAME_SURFACE_HEIGHT, UINT16_C(0x000b));
-        p4_draw_fill_rect(surface, P4_GAME_SURFACE_WIDTH - cover, 0,
+        bb_fill(surface, P4_GAME_SURFACE_WIDTH - cover, 0,
                           cover, P4_GAME_SURFACE_HEIGHT,
                           UINT16_C(0x000b));
-        p4_draw_fill_rect(surface, cover - 1, 0, 2,
+        bb_fill(surface, cover - 1, 0, 2,
                           P4_GAME_SURFACE_HEIGHT, signal_color(state));
-        p4_draw_fill_rect(surface,
+        bb_fill(surface,
                           P4_GAME_SURFACE_WIDTH - cover - 1, 0, 2,
                           P4_GAME_SURFACE_HEIGHT, signal_color(state));
     }
@@ -7841,15 +7995,15 @@ static void draw_scene_transition(p4_game_surface_t *surface,
             center_x, center_y, icon_size);
     }
     if (marker >= 2) {
-        p4_draw_rect(surface, center_x - marker, center_y - marker,
+        bb_rect(surface, center_x - marker, center_y - marker,
                      marker * 2 + 1, marker * 2 + 1, accent);
-        p4_draw_fill_rect(surface, center_x - 1, center_y - marker - 3,
+        bb_fill(surface, center_x - 1, center_y - marker - 3,
                           3, 2, UINT16_C(0xffff));
-        p4_draw_fill_rect(surface, center_x - 1, center_y + marker + 2,
+        bb_fill(surface, center_x - 1, center_y + marker + 2,
                           3, 2, UINT16_C(0xffff));
-        p4_draw_fill_rect(surface, center_x - marker - 3, center_y - 1,
+        bb_fill(surface, center_x - marker - 3, center_y - 1,
                           2, 3, UINT16_C(0xffff));
-        p4_draw_fill_rect(surface, center_x + marker + 2, center_y - 1,
+        bb_fill(surface, center_x + marker + 2, center_y - 1,
                           2, 3, UINT16_C(0xffff));
     }
 }
@@ -7861,15 +8015,15 @@ static void draw_save_exit_overlay(p4_game_surface_t *surface,
         return;
     }
     const uint16_t accent = signal_color(state);
-    p4_draw_fill_rect(surface, 82, 69, 156, 62, UINT16_C(0x000b));
-    p4_draw_rect(surface, 82, 69, 156, 62, accent);
-    p4_draw_rect(surface, 84, 71, 152, 58, UINT16_C(0x39e7));
+    bb_fill(surface, 82, 69, 156, 62, UINT16_C(0x000b));
+    bb_rect(surface, 82, 69, 156, 62, accent);
+    bb_rect(surface, 84, 71, 152, 58, UINT16_C(0x39e7));
     draw_scan_fx_frame(
         surface, state, BYTE_BUDDY_SCAN_FX_BUSY,
         fx_loop_phase(state->animation_ms, 120U), 108, 100, 38U);
-    p4_draw_text(surface, 135, 84, "SAVING", UINT16_C(0xffff),
+    bb_text(surface, 135, 84, "SAVING", UINT16_C(0xffff),
                  2U, sizeof("SAVING") - 1U);
-    p4_draw_text(surface, 139, 108, "BUDDY SAFE",
+    bb_text(surface, 139, 108, "BUDDY SAFE",
                  UINT16_C(0x9cf3), 1U, sizeof("BUDDY SAFE") - 1U);
 }
 
@@ -7879,12 +8033,12 @@ static void draw_save_error_badge(p4_game_surface_t *surface,
     if (!state->save_error || state->exit_pending) {
         return;
     }
-    p4_draw_fill_rect(surface, 202, 2, 116, 21, UINT16_C(0x000b));
-    p4_draw_rect(surface, 202, 2, 116, 21, UINT16_C(0xf800));
+    bb_fill(surface, 202, 2, 116, 21, UINT16_C(0x000b));
+    bb_rect(surface, 202, 2, 116, 21, UINT16_C(0xf800));
     draw_scan_fx_frame(
         surface, state, BYTE_BUDDY_SCAN_FX_OFFLINE,
         fx_loop_phase(state->animation_ms, 180U), 213, 12, 16U);
-    p4_draw_text(surface, 225, 8, "SESSION ONLY", UINT16_C(0xffdf),
+    bb_text(surface, 225, 8, "SESSION ONLY", UINT16_C(0xffdf),
                  1U, sizeof("SESSION ONLY") - 1U);
 }
 
@@ -7895,7 +8049,7 @@ static bool game_render(p4_game_context_t *context,
         return false;
     }
     const byte_buddy_state_t *const state = context->state;
-    p4_draw_clear(surface, UINT16_C(0x000b));
+    bb_clear(surface, UINT16_C(0x000b));
     if (state->signal_hunt) {
         draw_signal_hunt(surface, state);
         draw_scene_transition(surface, state);
@@ -7911,7 +8065,7 @@ static bool game_render(p4_game_context_t *context,
         return true;
     }
     draw_signal_city(surface, state);
-    p4_draw_fill_rect(surface, 0, 24, P4_GAME_SURFACE_WIDTH, 1,
+    bb_fill(surface, 0, 24, P4_GAME_SURFACE_WIDTH, 1,
                       signal_color(state));
     draw_touch_button(surface, 4, 3, 40, 18, "EXIT", 4U,
                       UINT16_C(0x7bef), false);
@@ -7929,35 +8083,38 @@ static bool game_render(p4_game_context_t *context,
     if (state->mini_game) {
         draw_play_game(surface, state);
         p4_game_feedback_draw_audio_effect(
-            surface, &state->audio, state->star_x,
-            p4_q16_to_int_round(state->star_y_q16));
+            surface, &state->audio, p4_ui_x(surface,state->star_x),
+            p4_ui_y(surface,p4_q16_to_int_round(state->star_y_q16)));
     } else {
-        p4_draw_text(surface, 52, 7, "BYTE BUDDY",
+        bb_text(surface, 52, 7, "BYTE BUDDY",
                      UINT16_C(0xffff), 1U, 10U);
         const byte_buddy_battle_stats_t stats = current_battle_stats(state);
-        p4_draw_text(surface, 127, 7, "LV", UINT16_C(0x7bef), 1U, 2U);
+        bb_text(surface, 127, 7, "LV", UINT16_C(0x7bef), 1U, 2U);
         draw_number(surface, 144, 7, stats.level, UINT16_C(0xffff));
-        p4_draw_text(surface, 169, 7, mood(state), element_color(state),
+        bb_text(surface, 169, 7, mood(state), element_color(state),
                      1U, 10U);
         (void)draw_art_frame_scaled(
             surface, state, STAR_CATCHER_REWARD_SHEET, 0U,
             267, 11, 12U);
         draw_number(surface, 274, 7, state->coins, UINT16_C(0xffff));
+        if (bb_native(surface)) {
+            p4_ui_round_rect(surface,10,69,309,114,10,UINT16_C(0x10e7));
+        }
         draw_bar(surface, 34, "FULL", state->hunger, UINT16_C(0x07E0));
         draw_bar(surface, 44, "JOY", state->joy, UINT16_C(0xFFE0));
         draw_bar(surface, 54, "CLEAN", state->hygiene, UINT16_C(0x07FF));
         draw_bar(surface, 64, "ENERGY", state->energy, UINT16_C(0xF81F));
         draw_growth_panel(surface, state);
         p4_game_feedback_draw_audio_effect(
-            surface, &state->audio, 160, 96);
+            surface, &state->audio, p4_ui_x(surface,160), p4_ui_y(surface,96));
         draw_dragon(surface, state, 160, 58);
         draw_lowest_need(surface, state, 126, 102);
         const byte_buddy_signal_lineage_t lineage = current_lineage(state);
-        p4_draw_fill_rect(surface, 8, 109, 106, 24, UINT16_C(0x000b));
-        p4_draw_rect(surface, 8, 109, 106, 24, signal_color(state));
+        bb_fill(surface, 8, 109, 106, 24, UINT16_C(0x000b));
+        bb_rect(surface, 8, 109, 106, 24, signal_color(state));
         if (lineage.tier == BYTE_BUDDY_LINEAGE_DORMANT) {
             draw_reaction_fx_frame(surface, state, 0U, 20, 121, 18U);
-            p4_draw_text(surface, 32, 118, "TAP TO PET",
+            bb_text(surface, 32, 118, "TAP TO PET",
                          UINT16_C(0x9cf3), 1U, 10U);
         } else {
             size_t length = 0U;
@@ -7966,7 +8123,7 @@ static bool game_render(p4_game_context_t *context,
             draw_lineage_badge(
                 surface, state, lineage_badge_frame(lineage),
                 20, 121, 18U);
-            p4_draw_text(surface, 32, 118, badge,
+            bb_text(surface, 32, 118, badge,
                          signal_color(state), 1U, length);
         }
         draw_touch_button(surface, 4, 138, 74, 27, s_actions[ACTION_FEED],
@@ -8032,7 +8189,7 @@ const p4_game_descriptor_t p4_byte_buddy_game = {
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
                              P4_GAME_CAP_AUDIO_STREAM |
                              P4_GAME_CAP_SIGNAL_SCAN |
-                             P4_GAME_CAP_SAVE,
+                             P4_GAME_CAP_SAVE | P4_GAME_CAP_VIDEO_HIGH_RES,
     .state_bytes = sizeof(byte_buddy_state_t),
     .start = game_start,
     .update = game_update,

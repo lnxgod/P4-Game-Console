@@ -1,5 +1,24 @@
 # LORD visual assets
 
+## Illustrated opening, 1.9.0 revision
+
+The first code-rendered native opening was rejected by the user for poor visual
+quality on 2026-10-05. `source/title-illustrated-v2.png` replaces it with original
+built-in ImageGen artwork. The exact prompt is `title-illustrated-prompt.txt`;
+source hashes, generator and conversion settings are in
+`title-illustrated-provenance.json`. All labels remain separately rendered text.
+
+Run `python3 games/lord/tools/build_illustrated_title.py` with Pillow to reproduce
+`src/generated/lord_illustrated_title.h` and both RGB565 preview PNGs. Lanczos
+center-fit and deterministic 256-color median-cut quantization produce separate
+736×306 native and 304×126 fallback images. The opaque byte-indexed images and
+two 512-byte palettes occupy 264,544 bytes. Runtime blits perform bounded palette
+lookups without scaling, decompression, allocation or image decoding. The old
+87,040-byte title RGB565 array is retained as historical source but no longer
+linked into the game. The existing launcher icon remains unchanged.
+
+## Earlier assets
+
 `title-background-ansi.png` is the checked-in 320×136, 16-color game asset.
 `src/generated/lord_title_art.h` is its deterministic RGB565 representation.
 Regenerate both with:

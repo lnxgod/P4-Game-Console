@@ -1,0 +1,791 @@
+{
+  "schema": 1,
+  "record": "byte-buddy-launch-v5-host",
+  "recorded_at_utc": "2026-10-06T06:12:34.527891+00:00",
+  "game": {
+    "slug": "byte_buddy",
+    "version": "5.0.0",
+    "id": "org.p4console.byte-buddy",
+    "launcher_id": 108,
+    "folder": "GAMES/WIP"
+  },
+  "status": "host-tested; limited Codex CUA interactive play completed; physical acceptance pending",
+  "scope": {
+    "shared_component_edits": false,
+    "hardware_access": false,
+    "staged_committed_or_pushed_by_this_chat": false,
+    "target_for_later_device_acceptance": "M5Stack Tab5",
+    "working_tree": "shared dirty checkout; hashes bind the tested closure"
+  },
+  "base_commit": "8b760d046f5330ad89e0813cb39aee43c2291494",
+  "preservation": {
+    "gameplay_before_render_unchanged": {
+      "p4g_host_validation": "pass",
+      "p4r_host_validation": "pass",
+      "gameplay_prefix_unchanged": true,
+      "gameplay_prefix_sha256": "87bc1328a7f72f18b1c1505e21534cdf12b3d3720ad722b23fe77a376dd9ebc3",
+      "manifest_assets_utf8_bytes": 113
+    },
+    "save_schema": 1,
+    "save_payload_bytes": 56,
+    "save_slot": "AUTO",
+    "signal_lineage_and_sparks": "session-only, unchanged",
+    "controls": "Original normalized controls and canonical touch rectangles. Start retains Play/Scan/Guard; no new pause mapping.",
+    "unchanged_files": [
+      {
+        "path": "games/byte_buddy/src/byte_buddy_save.c",
+        "bytes": 5535,
+        "sha256": "b03be258c2b08953ae4c60f957c32d01bcccbeb51249ac99a4a186f15284f680"
+      },
+      {
+        "path": "games/byte_buddy/src/byte_buddy_save.h",
+        "bytes": 1214,
+        "sha256": "2f2e94ae60fdf61803d7a1f5281ea5a7de707fc4631ac3e9ab812be3ffb77f9f"
+      },
+      {
+        "path": "games/byte_buddy/src/byte_buddy_internal.h",
+        "bytes": 16306,
+        "sha256": "552fcdbfa982976e732dbd8c30ab5e9a9e387f8c0d84883946031f327307c518"
+      }
+    ]
+  },
+  "art": {
+    "provenance": {
+      "path": "games/byte_buddy/assets/launch-v5/provenance.json",
+      "bytes": 2968,
+      "sha256": "130aed051ba51e803274a9ea9ef8b364724b4831f5cf7713474e6837f6f8107c"
+    },
+    "city_static_bytes": 206848,
+    "city_geometry": [
+      768,
+      268
+    ],
+    "source_dimensions": {
+      "city": [
+        2122,
+        741
+      ],
+      "cover": [
+        1672,
+        941
+      ]
+    },
+    "sprite_resource": "Original 42-sheet/672-frame bank unchanged",
+    "conversion_reproducible": true,
+    "runtime_allocation_for_new_city": 0,
+    "assets": [
+      {
+        "path": "games/byte_buddy/assets/launch-v5/city-source.png",
+        "bytes": 1738334,
+        "sha256": "1bedd614dd13801fd96e0a678828ce11717c5482a498e7513872020b4240586f"
+      },
+      {
+        "path": "games/byte_buddy/assets/launch-v5/dragon-cover-source.png",
+        "bytes": 2249484,
+        "sha256": "11cf5cbf79de77571755306663dfdfbcfda5e62e4d3991b6fe11b8501ee6ec74"
+      },
+      {
+        "path": "games/byte_buddy/assets/launch-v5/launcher.p4i",
+        "bytes": 9744,
+        "sha256": "7c420120704fee42159e57e2cd68ac90e22313c6915551dd12759d3faecd3ed3"
+      }
+    ]
+  },
+  "build": {
+    "compiler": "esp-14.2.0_20251107/riscv32-esp-elf-gcc",
+    "flags": [
+      "-std=gnu17",
+      "-Os",
+      "-march=rv32imafc_zicsr_zifencei",
+      "-mabi=ilp32f",
+      "-fPIC",
+      "-shared",
+      "-nostdlib",
+      "-nostartfiles",
+      "-static-libgcc",
+      "-ffunction-sections",
+      "-fdata-sections",
+      "-fvisibility=hidden",
+      "-fno-jump-tables",
+      "-Werror=frame-larger-than=1024"
+    ],
+    "package": {
+      "bytes": 449768,
+      "file": "BYTEBUD.P4G",
+      "id": "org.p4console.byte-buddy",
+      "multiplayer": null,
+      "package_sha256": "d2adf9d81f02df95b2bad4a8b6af39cd425dffc586e08517a37f4b7af54c09e6",
+      "payload_bytes": 449512,
+      "payload_sha256": "bd19470e9123a7318efa8fba30c201265d623395afd0b903feb174002866859f",
+      "result": "p4-game-package-built",
+      "stack_frame_limit_bytes": 1024
+    },
+    "resource": {
+      "bytes": 1397952,
+      "file": "BYTEBUD.P4R",
+      "game_id": "org.p4console.byte-buddy",
+      "payload_bytes": 1397824,
+      "payload_sha256": "ac76b0e89ec0c7c0f18703d2baf853764eded82f1edc067dc3c877a0f14c2931",
+      "sha256": "6a7b7dafe0dd5565a867268e5c7e9a53feecbdd80e5c7b8d6e110598963fd698"
+    },
+    "package_ceiling_bytes": 524288,
+    "package_headroom_bytes": 74520,
+    "reproducible_package": true,
+    "validation": {
+      "p4g_host_validation": "pass",
+      "p4r_host_validation": "pass",
+      "gameplay_prefix_unchanged": true,
+      "gameplay_prefix_sha256": "87bc1328a7f72f18b1c1505e21534cdf12b3d3720ad722b23fe77a376dd9ebc3",
+      "manifest_assets_utf8_bytes": 113
+    },
+    "reproducible_resource": true,
+    "integrated_bundle_match": {
+      "reported_bytes": 449768,
+      "reported_sha256": "d2adf9d81f02df95b2bad4a8b6af39cd425dffc586e08517a37f4b7af54c09e6",
+      "matches_final_candidate": true,
+      "source": "Coordinator supplied final bundle identity; candidate independently hashed here."
+    }
+  },
+  "automated": {
+    "focused": {
+      "command": "ctest --test-dir build-host/byte-buddy-launch --output-on-failure",
+      "passed": 9,
+      "failed": 0,
+      "log": {
+        "path": "build-host/byte-buddy-launch/ctest-final.log",
+        "bytes": 1394,
+        "sha256": "3624edcc60cbf15223c18436b7fd35187eb8adf254c49e1839ec801e9d299949"
+      }
+    },
+    "sdl": {
+      "command": "ctest --test-dir build-host/play-byte-buddy-launch --output-on-failure",
+      "passed": 5,
+      "failed": 0,
+      "log": {
+        "path": "build-host/byte-buddy-launch/sdl-smoke-final.log",
+        "bytes": 680,
+        "sha256": "51a32f65103b45bf2983ad201163e3b9fd323c2d0e4013442fc0391e4771ffe3"
+      }
+    },
+    "native_guarded_preview": {
+      "scenes": 15,
+      "width": 768,
+      "height": 480,
+      "stride_pixels": 775,
+      "guard_words_each_end": 31,
+      "assert_render_does_not_mutate_gameplay_state": true
+    },
+    "native_animation": {
+      "frames": 178,
+      "log": {
+        "path": "build-host/byte-buddy-launch/native-animation.log",
+        "bytes": 21,
+        "sha256": "935b8afb774762f74352777865dde3419f92660587e055d91b20ae8dfbdce8da"
+      }
+    },
+    "unchanged_pinned_motion_checks": {
+      "signal": 955,
+      "authored": 112,
+      "completion": 192,
+      "runtime_completion": 180
+    },
+    "registry_check": {
+      "command": "make game-registry-check",
+      "result": "pass",
+      "log": {
+        "path": "build-host/byte-buddy-launch/registry-final.log",
+        "bytes": 2330,
+        "sha256": "e785daa542df9af36e04eb48b4e2b6b9532eb617a12fbd86a70dd16d2c721c61"
+      }
+    },
+    "preview_harness_correction": "Unpinned overview route settles scene transitions before later touch events, restarts before the signal suite, and adds Genome. Old flying/play captures sometimes remained in the shop. Pinned motion suites still pass unchanged; all overview image hashes are not comparable across revised scripted timing.",
+    "byte_identical_320x200_baseline_scenes": [
+      "egg",
+      "hatch"
+    ]
+  },
+  "cpu_trace": {
+    "host": "arm64 macOS, Apple clang 21.0.0 (clang-2100.0.123.102)",
+    "flags": "-O2, no sanitizers for CPU measurement; separate sanitizer CTests pass",
+    "input": {
+      "path": "games/byte_buddy/tools/launch-input.txt",
+      "bytes": 2837,
+      "sha256": "1dbcb7b60bb7efd3c3396c5c28ae8d98d3eb8db31bfa358ee83bc9cc04f9b244"
+    },
+    "initial_stage": 4,
+    "frames": 2000,
+    "events": 209,
+    "coverage": "Active Star Catcher full-width repeated drags/reversals; exit; signal list/tracker; repeated Pulse Strike and Aura Guard combat; actual resource and tone/PCM mixer. No display submission measured.",
+    "native": {
+      "mode": "optimized host CPU; real game, resource and tone/PCM mixer; excludes device/display",
+      "width": 768,
+      "frames": 2000,
+      "initial_stage": 4,
+      "events": 209,
+      "changed_frames": 1881,
+      "update_audio_ms": {
+        "p50": 0.001,
+        "p95": 0.002,
+        "p99": 0.003,
+        "max": 0.017,
+        "over_33_333ms": 0
+      },
+      "render_ms": {
+        "p50": 0.143,
+        "p95": 0.23,
+        "p99": 0.258,
+        "max": 0.332,
+        "over_33_333ms": 0
+      },
+      "total_ms": {
+        "p50": 0.145,
+        "p95": 0.232,
+        "p99": 0.261,
+        "max": 0.338,
+        "over_33_333ms": 0
+      }
+    },
+    "fallback": {
+      "mode": "optimized host CPU; real game, resource and tone/PCM mixer; excludes device/display",
+      "width": 320,
+      "frames": 2000,
+      "initial_stage": 4,
+      "events": 209,
+      "changed_frames": 1749,
+      "update_audio_ms": {
+        "p50": 0.001,
+        "p95": 0.002,
+        "p99": 0.002,
+        "max": 0.003,
+        "over_33_333ms": 0
+      },
+      "render_ms": {
+        "p50": 0.057,
+        "p95": 0.071,
+        "p99": 0.08,
+        "max": 0.132,
+        "over_33_333ms": 0
+      },
+      "total_ms": {
+        "p50": 0.058,
+        "p95": 0.072,
+        "p99": 0.082,
+        "max": 0.133,
+        "over_33_333ms": 0
+      }
+    },
+    "device_cadence_qualified": false
+  },
+  "rv32_assembly_review": {
+    "assembly": {
+      "path": "build-host/byte-buddy-launch/byte_buddy-rv32.s",
+      "bytes": 991276,
+      "sha256": "2c77f3f1500ce2f67979d2d5562303ea73dc213060186bd1376a9223f91c24b3"
+    },
+    "stack_usage": {
+      "path": "build-host/byte-buddy-launch/byte_buddy-rv32.su",
+      "bytes": 12845,
+      "sha256": "23bae02dbe5d4db28653b1eca9da7e59a4c52c53191713d38873627c0d553692"
+    },
+    "compiler_flags": "Packaging architecture and -Os; -fstack-usage",
+    "largest_game_function_frame_bytes": 688,
+    "native_sprite_frame_bytes": 576,
+    "notes": [
+      "bb_city .L27 indexes preconverted palette and stores RGB565; no call/div/rem/multiply in native pixel loop.",
+      "draw_native_art .L547/.L556 samples a cached 64-pixel decoded row via bounded byte x-map; no call/div/rem/multiply in native pixel loop.",
+      "Sampling divisions are per x-map entry and per output row; color treatment occurs per source row pixel, not per scaled native pixel.",
+      "Single-frame limit remains 1024; whole call-chain/device stack pressure still requires hardware acceptance."
+    ]
+  },
+  "visual_review": {
+    "reviewer": "Codex image inspection",
+    "native_scenes": [
+      "egg",
+      "hatch",
+      "power",
+      "style",
+      "custom",
+      "flying",
+      "elemental",
+      "play",
+      "signals",
+      "track",
+      "battle",
+      "training",
+      "training-track",
+      "training-battle",
+      "genome"
+    ],
+    "animation_contact": "30 sampled views from the 178-frame native timeline; includes transition wipes",
+    "screenshots": [
+      {
+        "path": "build-host/byte-buddy-launch/native-contact-final.png",
+        "bytes": 922476,
+        "sha256": "05fddc64445b1b5910f8c73dba77886e3d68b5f869af6213ba30475c8e719af9"
+      },
+      {
+        "path": "build-host/byte-buddy-launch/animation-contact-final.png",
+        "bytes": 779859,
+        "sha256": "c82b378bc0d067929c625db5bb04f3e8f21a85981e7e7f51c04a909f023c8ced"
+      },
+      {
+        "path": "build-host/byte-buddy-launch/tests/byte-buddy-native-flying.png",
+        "bytes": 89910,
+        "sha256": "9a2caf0c6ab38a49c99032206c77846dbba56f23da2a63a826aae8804c250d40"
+      },
+      {
+        "path": "build-host/byte-buddy-launch/tests/byte-buddy-native-play.png",
+        "bytes": 152797,
+        "sha256": "d8e8923f1b2a8aa61b4ca73458385f5585e9b7815e2129211b30540665f37006"
+      },
+      {
+        "path": "build-host/byte-buddy-launch/tests/byte-buddy-native-battle.png",
+        "bytes": 118233,
+        "sha256": "813595d200ba9f75bc3e795516d60e28fcd2d08b1f3aa93380768a272c932903"
+      },
+      {
+        "path": "build-host/byte-buddy-launch/tests/byte-buddy-native-genome.png",
+        "bytes": 33707,
+        "sha256": "3eb10584a4edf2de9dbdc411bb2296b315bffba83a8a02775fc2faa586e4e946"
+      }
+    ]
+  },
+  "interactive": {
+    "operator": "Codex using cua_repl; no human sign-off",
+    "baseline_320x200": "Care, keyboard selection, Star Catcher drag/results, upgrades, Genome and back routes were inspected before the remix.",
+    "native_before_genome_correction": "Feed, Clean, Rest and direct pet care effects; Return/Start launching timed Star Catcher; falling rewards and timed return; keyboard selection and Genome. Found dragon overlap in Genome next-rank text.",
+    "final_native": "CLI-launched real SDL runner; verified corrected Genome preview without text overlap and B return to care. Process exited with status 0 after 1534 renders; exact initiating exit action was not observed.",
+    "mouse_input_limit": "Brief synthetic clicks/drags were not consistently registered or long enough to confirm full-width interactive steering. Automated active trace independently exercises sustained drag/reversal and combat.",
+    "presentation": "Original Start Play/Scan/Guard semantics retained, no new pause mapping.",
+    "audio": "Mixer/runtime tests pass; final short Genome session submitted no new sound requests; no acoustic listening acceptance.",
+    "startup_limitation": "Launching signed generated app via macOS app launch stalled inside resource fopen; standard direct CLI launch succeeded. No permission/settings changes made.",
+    "log": {
+      "path": "build-host/byte-buddy-launch/interactive-final.log",
+      "bytes": 1904,
+      "sha256": "020ffba1c74271e13d352871dfc7b5e8e4b9eea585ef91af1c1bb324216d17f6"
+    },
+    "final_binary": {
+      "path": "build-host/play-byte-buddy-launch/ByteBuddyFinal.app/Contents/MacOS/p4_game_host",
+      "bytes": 1998816,
+      "sha256": "3bb32d899319a96fc335bf9a19b30cb708a61f6a39cebbe267778c9ab03b6d74"
+    },
+    "all_own_app_processes_closed": true,
+    "cua_slot_released": true,
+    "human_operator_approval": false,
+    "acoustic_acceptance": false
+  },
+  "pending": [
+    "Named human sustained edge steering, touch/controller and subjective gameplay acceptance.",
+    "Tab5 exact OS/package/unit install and launcher integration.",
+    "Physical touch, supported controller, speaker/acoustic and memory-pressure acceptance.",
+    "Actual-device frame cadence, 60 FPS target and 30 FPS release floor."
+  ],
+  "source_closure": [
+    {
+      "path": "games/byte_buddy/src/byte_buddy.c",
+      "bytes": 320509,
+      "sha256": "b3b6ed6a7460629656ac2cd697aae5c0d2626c8928f4ea7e20f89f6461f572de"
+    },
+    {
+      "path": "games/byte_buddy/src/byte_buddy_internal.h",
+      "bytes": 16306,
+      "sha256": "552fcdbfa982976e732dbd8c30ab5e9a9e387f8c0d84883946031f327307c518"
+    },
+    {
+      "path": "games/byte_buddy/src/byte_buddy_presentation.h",
+      "bytes": 3077,
+      "sha256": "365b1e14095005e2bf28c04410aa82c4550f884fa52c02fc7d6124fde09d37a2"
+    },
+    {
+      "path": "games/byte_buddy/src/byte_buddy_save.c",
+      "bytes": 5535,
+      "sha256": "b03be258c2b08953ae4c60f957c32d01bcccbeb51249ac99a4a186f15284f680"
+    },
+    {
+      "path": "games/byte_buddy/src/byte_buddy_save.h",
+      "bytes": 1214,
+      "sha256": "2f2e94ae60fdf61803d7a1f5281ea5a7de707fc4631ac3e9ab812be3ffb77f9f"
+    },
+    {
+      "path": "games/byte_buddy/src/generated/byte_buddy_city.inc",
+      "bytes": 771206,
+      "sha256": "5c110d3dab2229084e349be17117193cc8cc0027ea05603a430c88e169ed9f57"
+    },
+    {
+      "path": "games/byte_buddy/src/generated/byte_buddy_dragon_atlas.inc",
+      "bytes": 3062875,
+      "sha256": "87586dab97edfd44b19a05851a7479ab2f6c5576a61edcd3dc0d8c6779dfa91d"
+    },
+    {
+      "path": "games/byte_buddy/tests/CMakeLists.txt",
+      "bytes": 7233,
+      "sha256": "ce725f260dc4404bc6c061681fbd66daa3f9ac5387cb4cf1908b16c4895d6f13"
+    },
+    {
+      "path": "games/byte_buddy/tests/test_byte_buddy.c",
+      "bytes": 162067,
+      "sha256": "7b14991318a5e9ed4a9d0d9da4645d4bdb1c6125611a3f4b56faf4c148395ccb"
+    },
+    {
+      "path": "games/byte_buddy/tests/test_byte_buddy_save.c",
+      "bytes": 9025,
+      "sha256": "8148f06ef1d2285d2fccddf7ec37a2d2a4ba24d5aa5adaa19b2b3d2f68588cdd"
+    },
+    {
+      "path": "games/byte_buddy/tools/measure_launch.c",
+      "bytes": 7500,
+      "sha256": "1abcd2a87221e79bfae5b28c1c904a0057236995b90caa25c4c37b0b0ae20d1b"
+    },
+    {
+      "path": "games/byte_buddy/tools/render_touch_previews.c",
+      "bytes": 158456,
+      "sha256": "3d99b70786e06432a640244964bea162a7edbb09cc421305495051b53dcc17ee"
+    },
+    {
+      "path": "components/p4_game_api/CMakeLists.txt",
+      "bytes": 1686,
+      "sha256": "7baf6890d8fdfad69950925460e8c841f4869ec92adabe520f73d50f9e9adf7a"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/achievements.h",
+      "bytes": 1788,
+      "sha256": "c389a044b056142d11796b8de48a50fa6ce5214e50c733455a32c9a0a663d37d"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/audio.h",
+      "bytes": 3129,
+      "sha256": "8b57ae696ed091bad426e09d6232ea52ab9e9a8bd70741d76f51bdaba4ee87a5"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/audio_pack.h",
+      "bytes": 1548,
+      "sha256": "8dcead613074e3e5db390039754942f432bd4aa024e33f61bff202a9fcc5818e"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/card_art.h",
+      "bytes": 7560,
+      "sha256": "b8af8b6137dd0681d2dc3b7555fb0e8d0ccf9cd064d9f12c1bcb7bfa2214db4f"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/cartridge.h",
+      "bytes": 4880,
+      "sha256": "b3c7f4c0b3e3ff67e9e3ba9a81b162991922c8cf4a819758e4e6a9f9ac518f6a"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/dice.h",
+      "bytes": 1095,
+      "sha256": "4a9ee228bab0aee3b7dd7db43880e3337ec193417ddbd4bc577e6cf2f5ae68d6"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/draw.h",
+      "bytes": 2417,
+      "sha256": "47d5b29c0e736d62f421a231ba7c0fd8a97b7209a580ba5fc9f815c8fbe5ea1a"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/feedback.h",
+      "bytes": 1050,
+      "sha256": "ede8ccc4e9cab3c73b14dd3467a5276794c3cee90006581307bb525040396915"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/game.h",
+      "bytes": 16412,
+      "sha256": "33e65134e86f1597fe732f64df88720c5892280ff31ca00ac9cbee15beac7459"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/input.h",
+      "bytes": 2998,
+      "sha256": "4dd1d878598e81c1ec99d40b095b82202a49e3b80169a7217a6528d8f4ad6eb1"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/mesh.h",
+      "bytes": 5206,
+      "sha256": "3e7dd39f0e2df522a365227ca579e670ca8f8f8dcef841883f26959ea91e1394"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/motion.h",
+      "bytes": 498,
+      "sha256": "08768be7e8788299c44cffcbffafbdfd2d05a5603aa79ae8eaeb6c312cd41abb"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/presentation.h",
+      "bytes": 9371,
+      "sha256": "c82e11e65836eb5de29a473f254d583daaa1946c357f4d8c9b3a76461f272d21"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/presentation_font.h",
+      "bytes": 162003,
+      "sha256": "0bc9a110a5f9b0e8f1cc44ffa212206758ebdd58e15ac488030f65fe72a7f448"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/visual.h",
+      "bytes": 2875,
+      "sha256": "206e74c98b2a47202f0e253f126dcfdf5e57dda6c25de732c0360fe542543979"
+    },
+    {
+      "path": "components/p4_game_api/runtime/cartridge_main.c",
+      "bytes": 14832,
+      "sha256": "a6b7062db30979c4d32728d451793cbde1d1303ceebc524a46b935f193a77c6d"
+    },
+    {
+      "path": "components/p4_game_api/src/achievements.c",
+      "bytes": 3672,
+      "sha256": "7e9fc731cedbf3cc6d93f3a2946972cbcd84a6f5f54d1e71c498f309d1c24a95"
+    },
+    {
+      "path": "components/p4_game_api/src/audio_mixer.c",
+      "bytes": 8839,
+      "sha256": "e09639fb540e7854bf2cb4da74439db5dc6b575ac09bacf6bb3a2d4f68f90500"
+    },
+    {
+      "path": "components/p4_game_api/src/audio_pack.c",
+      "bytes": 3437,
+      "sha256": "d12cc933706012124784300f6abb15227d4534a298082ea9e8b23948acd9da71"
+    },
+    {
+      "path": "components/p4_game_api/src/draw.c",
+      "bytes": 12509,
+      "sha256": "3056f2a5b8bb9f9db7c1df2d197e5a676b9c20f12d10398bc92f6c44b887fa36"
+    },
+    {
+      "path": "components/p4_game_api/src/feedback.c",
+      "bytes": 2098,
+      "sha256": "2f05229f018a488576a8bacef4a91096b97e6c0495c51138c4518ee6cd01be4a"
+    },
+    {
+      "path": "components/p4_game_api/src/game_runtime.c",
+      "bytes": 27502,
+      "sha256": "c1ac69e7c45192b287e07fec350d47826888117b1b41e25d90f2e7319d2c1996"
+    },
+    {
+      "path": "components/p4_game_api/src/generated/audio_pack.inc",
+      "bytes": 214823,
+      "sha256": "74eea3afeaea981a75fc89fe8f015c06c8e105b87ab0e8622029e1ab2c83335a"
+    },
+    {
+      "path": "components/p4_game_api/src/generated/feedback_atlas.inc",
+      "bytes": 469467,
+      "sha256": "b12b1deb0a7134f43b894bf063f9cecf1475d6e87a26c68b07486c6f679fd890"
+    },
+    {
+      "path": "components/p4_game_api/src/input.c",
+      "bytes": 10628,
+      "sha256": "b895eff5252e8d141fb49dc3c8e31fbd629bcda72068f14917dcf425bc7a81f7"
+    },
+    {
+      "path": "components/p4_game_api/src/presentation_font.c",
+      "bytes": 193,
+      "sha256": "149b2e510c0a0b8dfe5c4a7ac4be2f8006c4360c09a82c088209f7ece1eb65c5"
+    },
+    {
+      "path": "components/p4_game_api/src/visual.c",
+      "bytes": 9580,
+      "sha256": "8160e9798853236da029abc8bf55e5ddf95909872a830469270afb7fa8ba6e23"
+    },
+    {
+      "path": "components/p4_game_api/tests/CMakeLists.txt",
+      "bytes": 4256,
+      "sha256": "78c38990a1cc63f38511d2b63da2e3cd73dd91b3eec17d0f73ee15a971b68ebb"
+    },
+    {
+      "path": "components/p4_game_api/tests/raster_reference.h",
+      "bytes": 9194,
+      "sha256": "f0fd5c542b453e7505c022287069cfd0444b26cbf7b385f05d057fc7ba0a05e7"
+    },
+    {
+      "path": "components/p4_game_api/tests/test_cartridge_compat.c",
+      "bytes": 9409,
+      "sha256": "252a5711b43d1b6fb7db19d7bf8a5200c91ea6eb8d287540fba33d9aa6e5ad22"
+    },
+    {
+      "path": "components/p4_game_api/tests/test_mesh.c",
+      "bytes": 6766,
+      "sha256": "b28eb7aaa42743aeb9bae795ad1cb0dedac885e5d73e7936c9cb2bdc525099b0"
+    },
+    {
+      "path": "components/p4_game_api/tests/test_p4_game_api.c",
+      "bytes": 42683,
+      "sha256": "ce29226ab298e7c10ab13b31d7b5d63c011b05c67d6771cea52c603854291cb9"
+    },
+    {
+      "path": "components/p4_game_api/tests/test_presentation.c",
+      "bytes": 2492,
+      "sha256": "e41370abffb3c944e65f6b884c79a8fa28a9f09b574513b6953eab0a8274c7f8"
+    },
+    {
+      "path": "components/p4_game_api/tests/test_raster_equivalence.c",
+      "bytes": 11923,
+      "sha256": "27979217632924e8e1b8f9c03081545a12c10eed55c874f9b430236a59b4f286"
+    },
+    {
+      "path": "components/p4_cp437/CMakeLists.txt",
+      "bytes": 1011,
+      "sha256": "7af144564b546daa033b17a55dfc3ee07b38cc56512199c4934333e2b533b4d6"
+    },
+    {
+      "path": "components/p4_cp437/include/p4/cp437.h",
+      "bytes": 494,
+      "sha256": "bfbcc829d7c91a1d8c4f1335394a9f78c446fa8146fd4d16c5298142b00e5b55"
+    },
+    {
+      "path": "components/p4_cp437/src/cp437.c",
+      "bytes": 25159,
+      "sha256": "10405ddafb45fbf288362acf6f3b346de0a6483c9e014cc588036300dd521bdf"
+    },
+    {
+      "path": "tools/p4-game-host/CMakeLists.txt",
+      "bytes": 7197,
+      "sha256": "3ce03653c3393046a988a94586286035afe22b015ea7188e973b7a9505ed7bd3"
+    },
+    {
+      "path": "tools/p4-game-host/benchmark_game.c",
+      "bytes": 5562,
+      "sha256": "d923d0d7957bdfde8c8b09ef36b5178ed8d2da43de01bfaf3cdfa2b174b50d35"
+    },
+    {
+      "path": "tools/p4-game-host/frame_pacer.h",
+      "bytes": 588,
+      "sha256": "4ff832b5242db46e176c79e2c4e13d5134e55f089b061014173c3d45d477c9f3"
+    },
+    {
+      "path": "tools/p4-game-host/host_mouse.h",
+      "bytes": 3342,
+      "sha256": "7e09d5ff075109d6118ee7ac497a046274c1d724d2f4032d30584c65f2a10a50"
+    },
+    {
+      "path": "tools/p4-game-host/host_service.c",
+      "bytes": 1124,
+      "sha256": "31f94486708417449b0144c5566dc2a1b32a2c54a7191508d7d0093bdb94e5e9"
+    },
+    {
+      "path": "tools/p4-game-host/host_service.h",
+      "bytes": 473,
+      "sha256": "729be99c640331ef538c7f0dbc744d198c813d87736fadff1215a31a76d2204b"
+    },
+    {
+      "path": "tools/p4-game-host/play_game.c",
+      "bytes": 26251,
+      "sha256": "749d0439cc5ed0cbb88194202406236558b7ac9fd816f128ca09568b71aeeba2"
+    },
+    {
+      "path": "tools/p4-game-host/test_audio_timing.c",
+      "bytes": 5371,
+      "sha256": "715434bac53e4507326cf55a73dbf0d878823a033009a6d9ab91c5e93fe4d2f8"
+    },
+    {
+      "path": "tools/p4-game-host/test_exit_status.c",
+      "bytes": 1832,
+      "sha256": "c248419572449aed2f822d7d1423c2276a7a35ec692da24f5041be60af28ea65"
+    },
+    {
+      "path": "tools/p4-game-host/test_mouse_events.c",
+      "bytes": 5410,
+      "sha256": "9a728e476c11c06c0ea043c3a7fbb742c884c94054cf253b8fb61cc5761ce5e0"
+    },
+    {
+      "path": "components/p4_game_save/CMakeLists.txt",
+      "bytes": 1431,
+      "sha256": "92c173a610a3a379155eff19fb397dc4fd02064baa229f0f1b13889ef95883e7"
+    },
+    {
+      "path": "components/p4_game_save/include/p4/game_save.h",
+      "bytes": 6925,
+      "sha256": "78c13fc036ab2850a2db12942a1b6524a05d92ff8a8cd7a90ec2a5da846c70e9"
+    },
+    {
+      "path": "components/p4_game_save/include/p4/game_save_service.h",
+      "bytes": 2569,
+      "sha256": "cb653a55231b7eff9b8b5a2e7142b81ed7ca9b9d0f834b7587a8554769e8229c"
+    },
+    {
+      "path": "components/p4_game_save/include/p4/game_save_store.h",
+      "bytes": 5393,
+      "sha256": "af3a56628fe51d464cefff26f962d3a3ad364a470b82ab9875c424a6de7a68d5"
+    },
+    {
+      "path": "components/p4_game_save/src/game_save.c",
+      "bytes": 21454,
+      "sha256": "ec9a3dec3b5a25d2cc0ec3b007b7e8c56bc7ae8e032960b305dd9f290a46bd7b"
+    },
+    {
+      "path": "components/p4_game_save/src/memory.c",
+      "bytes": 11694,
+      "sha256": "541948a50869da5a826d8781b07f48c959a4e6784158504d956632ddbd98baa1"
+    },
+    {
+      "path": "components/p4_game_save/src/service.c",
+      "bytes": 9941,
+      "sha256": "75499e33ee70945ee915e7d50b38c3a6a160fe34af5bb15d326b4b8501f3dd31"
+    },
+    {
+      "path": "components/p4_game_save/src/sha256.c",
+      "bytes": 6163,
+      "sha256": "244739832a6a5f22d98ef1accc0f7ca90d2dc58c2163c2697407e5a454af382a"
+    },
+    {
+      "path": "components/p4_game_save/src/sha256.h",
+      "bytes": 626,
+      "sha256": "16842c560db4a083fdb2b002221bd4077169f540475354e4cb9a06a2e5eec573"
+    },
+    {
+      "path": "components/p4_game_save/src/store.c",
+      "bytes": 34133,
+      "sha256": "08ce08d6a0dc77751ec8b46d0827ef1a33303bd200a70cfdfe79974effc125ba"
+    },
+    {
+      "path": "components/p4_game_save/tests/CMakeLists.txt",
+      "bytes": 599,
+      "sha256": "6c4d9dad15d752f27b3568e82084b5b29173034ffeb2cb894c5aed7ba878c156"
+    },
+    {
+      "path": "components/p4_game_save/tests/test_game_save.c",
+      "bytes": 47732,
+      "sha256": "833883ca72bed1a6eb76efc72b31adb8748077054bfdc8499b7c3ecede422f0d"
+    },
+    {
+      "path": "toolchain.lock.json",
+      "bytes": 755,
+      "sha256": "6c45009fd4ba924dac63e442d4bcdbff134cf81037cadb8f2d12209c41564a55"
+    },
+    {
+      "path": "games/byte_buddy/game.json",
+      "bytes": 991,
+      "sha256": "484492cb6674888c608b2cabc05eed19550d25b63c68c4cbe855bcc7db101604"
+    },
+    {
+      "path": "games/byte_buddy/CMakeLists.txt",
+      "bytes": 1144,
+      "sha256": "7505e569f9f3ca07b247a8e0712e2f70dee5c4a469a1f4a0a56ea3dc3e04f856"
+    },
+    {
+      "path": "games/byte_buddy/tools/launch-input.txt",
+      "bytes": 2837,
+      "sha256": "1dbcb7b60bb7efd3c3396c5c28ae8d98d3eb8db31bfa358ee83bc9cc04f9b244"
+    },
+    {
+      "path": "games/byte_buddy/tools/pack_launch_art.py",
+      "bytes": 3056,
+      "sha256": "96766b80ebfe7a059ac46afa5e738fe4602e48b5b5b85a6e34dec3a3d9b67a43"
+    },
+    {
+      "path": "scripts/build-game-package.py",
+      "bytes": 14250,
+      "sha256": "3c3c5e6a458be87993a90caa6bbf3c42d39e8c2655a1304ba754d286390e65ff"
+    },
+    {
+      "path": "scripts/build-game-resource.py",
+      "bytes": 3755,
+      "sha256": "b064d7ecbd431aa3c12c841cc9444aa09f702395c04dcfc64f8ed65fa7dfd3ce"
+    },
+    {
+      "path": "scripts/pack-game-icon.py",
+      "bytes": 1216,
+      "sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f"
+    },
+    {
+      "path": "scripts/p4-transfer.py",
+      "bytes": 35779,
+      "sha256": "cc1417d4175fbf0943980893e575532c4971cfbcd7f95575ae689881a33c4247"
+    }
+  ],
+  "source_closure_sha256": "0a96c356ba67a1ea4daac4924de34965af1a67ece9f0b2e3c815bd49ee273774"
+}

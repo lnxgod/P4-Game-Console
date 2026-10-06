@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "mode": "Original code-native semantic symbol",
+  "source": "launcher-source.png",
+  "source_recipe": "games/calculator/tools/pack_launcher.py",
+  "basis": "Existing calculator display/keypad vocabulary in games/calculator/src/calculator.c",
+  "license": "MIT; original project vector geometry, no third-party artwork or fonts.",
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "reproduce": "python3 games/calculator/tools/pack_launcher.py",
+    "description": "512x288 source, center-fit128x72 Lanczos,256 RGB565 palette entries,opaque indexed pixels.",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "recipe_sha256": "e2ef1ea843687724c207f1de17cae3fa45e0a5ea5a6b461c6d33a3da194d89aa"
+  },
+  "source_sha256": "bc6d42c354cc28bdf8078dcf76dc1e31083e29347cdc683401f899cab1a46763",
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "bytes": 9744,
+    "sha256": "a9174a7c2bca6ebb17c23e1b63b1aee8fda7ab06a77e21b3ad64de4b85a1976d",
+    "format": "P4ICON1,128x72,256 RGB565 palette entries,opaque indexed pixels"
+  }
+}

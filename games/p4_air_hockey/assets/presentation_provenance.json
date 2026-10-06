@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "mode": "built-in image_gen generation",
+  "source": "presentation_imagegen_v2.png",
+  "sha256": "b1693b555022c22e28bf7e1093f8ed88e1bc04cee0856a29dda4b9817c0b0b60",
+  "prompt": "Use case: stylized-concept. Asset type: production sprite and material atlas for a premium high-resolution arcade air hockey game. EXACT 3-column 2-row grid, six isolated centered equally spaced square cells, truly transparent background and wide empty gutters. Strict orthographic overhead view, no perspective. Row 1: a circular electric cyan air-hockey striker with a centered raised handle and brushed metal rim; an identical circular striker in vivid coral-magenta; a small circular black rubber hockey puck with a bright pale silver thin outer ring. Make silhouettes circular, flat overhead, crisp and readable, same lighting upper-left, glossy polished arcade materials. Row 2: square seamless midnight blue air-hockey playing-surface texture, subtle perforated microdots, very subdued fine scratches, no lines or symbols; square brushed dark gunmetal rail material; square deep navy matte rubber trim material. Materials are flat front-facing squares centered at 75 percent of cell size. Detailed clean original 2D game art, suitable for 64 pixel striker sprites and repeating 64 pixel material tiles. No text, lettering, logos, watermarks, rink diagram, surrounding scene, extra objects, cell borders or shadow outside object bounds.",
+  "license": "Original AI-generated artwork for this project, distributed under the project MIT license. No third-party game assets.",
+  "conversion": "tools/convert_presentation.py; source alpha >=160, nearest-neighbor crops, explicit 0xf81f transparency; opaque material interiors; material rows pre-expanded to128 pixels as original64 pixels plus their mirror, identical runtime appearance",
+  "groups": [
+    {
+      "name": "hockey_objects_hd",
+      "size": 66,
+      "rects": [
+        [
+          90,
+          68,
+          488,
+          466
+        ],
+        [
+          567,
+          68,
+          965,
+          466
+        ],
+        [
+          1093,
+          116,
+          1414,
+          439
+        ]
+      ],
+      "opaque": 0
+    },
+    {
+      "name": "hockey_material",
+      "size": 64,
+      "rects": [
+        [
+          220,
+          760,
+          412,
+          940
+        ],
+        [
+          562,
+          531,
+          978,
+          940
+        ],
+        [
+          1049,
+          529,
+          1465,
+          940
+        ]
+      ],
+      "opaque": 3,
+      "mirror_rows": true
+    }
+  ]
+}

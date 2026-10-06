@@ -1,0 +1,111 @@
+{
+  "schema": 1,
+  "title": "Game Changers AI OS initial launch",
+  "created_at_utc": "2026-10-06T06:05:32.984447+00:00",
+  "status": "source/build validated launch candidate; AOS installed, native content and B install in progress; device gameplay qualification pending",
+  "skills_commit": "8b760d046f5330ad89e0813cb39aee43c2291494",
+  "skills": {
+    "count": 14,
+    "validation": "14/14 quick_validate pass in pinned IDF Python",
+    "local_references": "95 pre-index skill/reference links and43 launch/index README links checked"
+  },
+  "setup": {
+    "default": "basic native games plus pinned Doom v1.9 shareware",
+    "doom_download": "fresh isolated download matched4196020bytes and manifest SHA256; second-run reuse passed",
+    "tests": "17 offline cases pass; independent review found no actionable bug",
+    "chex": "explicit --chex --sd; opt-in only; fresh Chex network acquisition not tested",
+    "storage": "current Tab5 SD-only; no internal-storage claim"
+  },
+  "star_sprout_removal": "test-runs/2026-10-05-star-sprout-removal.json",
+  "tests": {
+    "game_sdk_host": "PASS:88 CTest cases across27 suites, plus Python registry/package/native-only checks",
+    "console_shell": "7/7 pass",
+    "game_registry": "pass;17 enabled native manifests",
+    "repo_check": "FAIL: pre-existing Elecrow display_diag component discovery sees conflicting pinned esp_lcd_touch1.2.1/1.1.2 board dependencies. E5 gate and board-aware touch verifier stale tests repaired and pass; no dependency versions or lockfiles changed for this repair.",
+    "tab5_build": {
+      "result": "PASS",
+      "version": "0.55",
+      "bytes": 4297952,
+      "sha256": "19c2c854cbf0a9ac40022dbc33fc4ed8711a8a2cfaeb44254bf97fe5ce7473b9",
+      "native_cartridges": 17,
+      "content_bundle_verified": true
+    },
+    "legacy_repair_scope": {
+      "e5_gate": "Host test now verifies current closed flash gates separately from immutable historical E5 records; no metadata/hardware policy changes",
+      "platform_touch": "Public header contracts compiled for all4 supported board selections plus legacy host fallback; existing borrowed I2C/GT911 ownership checks retained"
+    }
+  },
+  "games": {
+    "maze_chase": "operator said movement and graphics improved; this does not qualify other games",
+    "tide_maze": "0.2.1 installed B with exact verified hash; active device cadence/physical acceptance pending",
+    "red_dragon": "1.9.0 final ImageGen/native ANSI candidate passed keyboard and explicit-left-button touch SDL play (creation,shops,stats,combat,victory,return,exit). Exact fullbundle package bc737068ddf41e651132e7003f5cf60d59bb85f01d8421a5859d2f33996fb46e matches the OS0.55 protected allowlist.",
+    "byte_buddy": "5.0.0 final native Genome layout verified in SDL; care/actions/menus exercised; native package matches fullbundle449768bytes/d2adf9d81f02df95b2bad4a8b6af39cd425dffc586e08517a37f4b7af54c09e6; device cadence pending"
+  },
+  "doom_cover": {
+    "status": "packed classic gold/steel original vector wordmark",
+    "provenance": "components/console_shell/assets/game-covers/source.json",
+    "tool_limit": "ImageGen attempts did not return an image; original editable SVG created instead"
+  },
+  "publication": {
+    "visibility_change_performed": false,
+    "contents_review": "no high-confidence credentials/private-key or WAD/PAK magic found in audit; not a secret-free certification",
+    "curation": "local generated PPM duplicates, raw capture files and downloaded vendor research excluded; source/converters/provenance retained",
+    "historical_identifiers": "older raw identifiers and author metadata remain in pre-existing history; no rewrite",
+    "rights_pending": [
+      "top-level license map",
+      "public redistribution scope for LORD permission; port permission documented",
+      "Wacky fetched upstream/data/playable artifacts stay local"
+    ]
+  },
+  "logs": {
+    "build-host/initial-launch/game-sdk.log": {
+      "bytes": 31108,
+      "sha256": "bfe0f6e3ed245a3d63f147bfdc1167092f779eddc67b6e6a987d48f7c3f36d76"
+    },
+    "build-host/initial-launch/game-registry.log": {
+      "bytes": 2433,
+      "sha256": "0c5d20820a6adce0a424713476c212c1d2350c34ac50f9ba816540ecfc9a18c5"
+    },
+    "build-host/initial-launch/console-shell.log": {
+      "bytes": 2409,
+      "sha256": "b8954f0b226f1143107cddf369f6461f59cb155778f64377ad29bc63f2b07f8f"
+    },
+    "build-host/initial-launch/game-data-tests.log": {
+      "bytes": 2470,
+      "sha256": "2a4eff24d7735d63fcfe3998fd9ff1d32ab63aa69114c0f977c103f9bc681c5a"
+    },
+    "build-host/initial-launch/skill-validation.json": {
+      "bytes": 1723,
+      "sha256": "2a4dc01060bf5f36a17a38118a86f6cd05807db0f7e0bc465f305df19ae32f58"
+    },
+    "build-host/initial-launch/tab5-build.log": {
+      "bytes": 48542,
+      "sha256": "7c4d4ce7c3d784c302adf37392eff01d4c349bc385f1c3d7982254ab05c08f2b"
+    }
+  },
+  "installation": {
+    "authorization": "hardware/evidence/tab5-0.55-initial-launch-authorization.json",
+    "authorization_sha256": "dc98937f60628e2d55c141c90aa18366569b30f9f2106aeff84e7800a6c00171",
+    "A": {
+      "receipt": "hardware/backups/tab5-a-install-500fm8nu/receipt.json",
+      "receipt_sha256": "e487d0ca8e0dda610f9cd49516f8c7b443d6f315abce73f3be5584fa78eb9640",
+      "app_readback_verified": true,
+      "boot_ready": true,
+      "boot_health_marker": "OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized",
+      "content": "transfer in progress"
+    },
+    "B": {
+      "status": "pending sequential guarded install"
+    }
+  },
+  "tide_candidate_capture": {
+    "path": "build-host/initial-launch/tide-play-B.log",
+    "bytes": 32782,
+    "sha256": "5f59acad12ae6c212de91ac5c4ac6ab1fd06799853e57dfc90fef0e26b7484b6",
+    "duration_seconds": 900,
+    "os": "0.54",
+    "game_sha256": "78a15a65078f2d8667aab279facbf7011911cbb3aeae5768e9208f125a3ab790",
+    "gameplay_timing_observed": false,
+    "result": "launcher/idle capture only; operator play request unanswered during capture; no cadence claim"
+  }
+}

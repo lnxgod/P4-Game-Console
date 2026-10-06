@@ -1,0 +1,41 @@
+{
+  "schema": 1,
+  "assets": [
+    {
+      "name": "doom",
+      "source": "doom-classic.png",
+      "sha256": "ea99ea8f769ce9880d7ce0cde8528514234125a5b13c626d98ea797360354c86",
+      "prompt": "Classic-game DOOM wordmark: angular gold-and-steel-blue lettering on charcoal, logo only; no newer-sequel characters or branding.",
+      "generator": "Original repository-authored SVG; rendered with rsvg-convert",
+      "cover_size": [
+        640,
+        360
+      ],
+      "icon_size": [
+        128,
+        72
+      ],
+      "provenance": "Original editable vector treatment for the classic Doom launcher; not extracted from WAD/game data. DOOM is a trademark of its respective owner.",
+      "editable_source": "doom-classic.svg",
+      "editable_source_sha256": "390a86797e7b34ad807800f6c13cb8f1dfd89cac72054e7e31ec9820dd181043",
+      "created_date": "2026-10-05"
+    },
+    {
+      "name": "chex",
+      "source": "chex.png",
+      "sha256": "df4242db123c9453a2a168b622af74d00800302ae05125db6b1d68c3b0616a6e",
+      "prompt": "Use case: stylized-concept. Create one original premium illustrated game-library cover for the family friendly sci-fi game Chex Quest. Landscape 16:9. A brave cereal-shaped astronaut in golden square woven waffle armor and a glossy domed helmet, dark teal undersuit, holding a chunky nonlethal futuristic zapping device, faces a few playful lime-green slime aliens in a bright space-station corridor. Confident adventure pose, lively clean colors, glowing turquoise and warm gold lighting, polished hand-painted 3D animated adventure look with clear readable silhouette. Main figure centered and safe in a central square crop; composition must read at small128x72 tile and640x360 cover size. Newly drawn cover art, not a reproduction of existing box art or a screenshot. No text or letters, no branding or logos, no UI, no watermark, no borders, no scary gore.",
+      "generator": "built-in image_gen",
+      "cover_size": [
+        640,
+        360
+      ],
+      "icon_size": [
+        128,
+        72
+      ],
+      "provenance": "New original generated launcher illustration; no WAD or game data extracted."
+    }
+  ],
+  "conversion": "Lanczos fit, median-cut256 indexed RGB565, no runtime image decoding"
+}

@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "created_utc": "2026-10-05T05:54:39.941298+00:00",
+  "product": "GameChangersAI OS",
+  "version": "0.42",
+  "board": "m5stack-tab5",
+  "result": "host-and-build-tested",
+  "hardware_verified": false,
+  "flash_authorized": false,
+  "display": {
+    "shell_source": [
+      1152,
+      720
+    ],
+    "previous_source": [
+      768,
+      480
+    ],
+    "native_panel_landscape": [
+      1280,
+      720
+    ],
+    "viewport_side_margins": 64,
+    "game_surfaces_unchanged": true
+  },
+  "boot": {
+    "style": "Windows-95-inspired",
+    "asset_manifest": "apps/console_os/main/assets/gamechangers_mark_v042.json",
+    "original_synthesized_modem_seconds": 8.065,
+    "saved_boot_volume_and_mute_preserved": true
+  },
+  "validation": {
+    "pinned_environment": "passed",
+    "startup_sanitizer_checks": "passed",
+    "shell_interaction_and_cached_scroll_suites": 8,
+    "display_mapping_suites": 3,
+    "tab5_build": "passed",
+    "artifact_verifier": {
+      "board": "m5stack-tab5",
+      "flash_authorized": false,
+      "hardware_verified": false,
+      "image_bytes": 2023360,
+      "image_sha256": "8cc53d0d026c376e30063eddae1f938d5d96e9be8a7519867878604f75d5b5da",
+      "native_cartridges": 16,
+      "result": "tab5-build-candidate-verified",
+      "usb_host_enabled": true
+    },
+    "linked_native_ui_and_audio_symbols": "passed",
+    "warnings": "Existing pinned third_party/doomgeneric warnings; no warnings from the changed UI/startup sources."
+  },
+  "artifacts": {
+    "p4_console_os.bin": {
+      "bytes": 2023360,
+      "sha256": "8cc53d0d026c376e30063eddae1f938d5d96e9be8a7519867878604f75d5b5da"
+    },
+    "p4_console_os.elf": {
+      "bytes": 17947952,
+      "sha256": "29ebeef9918b18ee549b4464522d5873dab94bda60446df967a7141982d6a9d2"
+    },
+    "bootloader/bootloader.bin": {
+      "bytes": 23136,
+      "sha256": "058cf4c0434733d72800c383e1bddb54aa33cf667b21254c8bd9d2f4f7f43443"
+    },
+    "partition_table/partition-table.bin": {
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "P4UPDATE.P4U": {
+      "bytes": 2023616,
+      "sha256": "21b220dd2c34c907ce909051722ca0417db9093710da7ddc718c615a1cd06be3"
+    }
+  },
+  "hardware_acceptance_pending": [
+    "boot appearance on ST7121/ST7123",
+    "speaker modem audio and uninterrupted playback",
+    "native UI scrolling performance and touch targets"
+  ],
+  "notes": "Built from the existing dirty shared checkout. This record grants no board-write authorization."
+}

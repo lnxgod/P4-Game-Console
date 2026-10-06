@@ -14,12 +14,12 @@ enum {
     SOLITAIRE_DECK = 52,
     SOLITAIRE_STOCK_MAX = 24,
     SOLITAIRE_TABLEAU_MAX = 19,
-    SOLITAIRE_CARD_WIDTH = 36,
-    SOLITAIRE_CARD_HEIGHT = 30,
+    SOLITAIRE_CARD_WIDTH = 40,
+    SOLITAIRE_CARD_HEIGHT = 46,
     SOLITAIRE_CARD_TOP = 27,
-    SOLITAIRE_TABLEAU_TOP = 62,
-    SOLITAIRE_TABLEAU_BOTTOM = 130,
-    SOLITAIRE_CARD_GAP_X = 7,
+    SOLITAIRE_TABLEAU_TOP = 79,
+    SOLITAIRE_TABLEAU_BOTTOM = 190,
+    SOLITAIRE_CARD_GAP_X = 4,
 };
 
 typedef enum {
@@ -53,6 +53,16 @@ typedef struct {
     uint32_t deal_number;
     uint32_t moves;
     p4_game_audio_effect_player_t audio;
+    /* Transient UI only; the rules and card identities remain unchanged. */
+    int16_t press_x, press_y, touch_x, touch_y;
+    int16_t drag_offset_x, drag_offset_y;
+    uint8_t press_action;
+    solitaire_source_kind_t press_source;
+    uint8_t press_pile, press_index;
+    bool gesture_active;
+    bool gesture_moved;
+    bool dragging;
+    bool keyboard_focus;
     bool touch_was_down;
     bool won;
 } solitaire_state_t;

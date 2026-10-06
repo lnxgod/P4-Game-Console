@@ -1,0 +1,122 @@
+{
+  "version": "1.1.0",
+  "assets": [
+    {
+      "game": "maze_chase",
+      "source": "/Users/billh/.codex/generated_images/01a10e4d-8eac-7052-b410-c517e93f4e11/exec-1255dc7d-4f01-4539-8d01-f78ea3de0dae.png",
+      "width": 32,
+      "height": 32,
+      "prompt": "Use case: stylized-concept. Asset type: original top-down arcade maze sprite atlas, transparent PNG. Create EXACT 4x4 grid with 16 isolated objects and ample transparent gutters, no borders. Row 1: one original golden round beetle-like friendly maze robot, blue visor and antenna, facing right, down, left, up (four distinct direction frames). Row 2: four friendly but mischievous floating jelly spirits, respectively coral red, aqua cyan, violet purple, orange gold, each with huge readable ivory eyes, taillets and subtle glossy shading; no known commercial character. Row 3: two frames of vulnerable blue-white startled spirits, an ivory glowing collectible pearl, a larger golden power crystal. Row 4: four square bevelled deep cobalt blue stone wall tiles, clearly visible pale cyan bevel highlight on top and left, navy lower shadow, fine geometric chisel texture (these wall tiles are solid square shapes). Style refined 2D arcade pixel art built for 768x480 high resolution, each rendered sprite about 32x32 pixels; sharp crisp outlines, very readable silhouettes, consistent overhead view. No words, no logo, no grid, no backdrops, no ground shadow, each object fully isolated, truly transparent background.",
+      "asset": "assets/hires_atlas_v2.png",
+      "sha256": "32bc7690a1c7189356c95bb5d318c49e35cf6412caa17a0d7a41c506536128fb",
+      "mode": "built-in image_gen",
+      "transparent_background": true
+    }
+  ],
+  "conversion": {
+    "cell_dimensions": [
+      32,
+      32
+    ],
+    "measured_opaque_bounds": [
+      [
+        88,
+        24,
+        272,
+        243
+      ],
+      [
+        445,
+        18,
+        632,
+        243
+      ],
+      [
+        832,
+        25,
+        1014,
+        242
+      ],
+      [
+        1172,
+        19,
+        1359,
+        239
+      ],
+      [
+        63,
+        291,
+        298,
+        512
+      ],
+      [
+        427,
+        291,
+        661,
+        512
+      ],
+      [
+        796,
+        291,
+        1026,
+        519
+      ],
+      [
+        1155,
+        291,
+        1385,
+        513
+      ],
+      [
+        70,
+        553,
+        298,
+        795
+      ],
+      [
+        405,
+        554,
+        662,
+        770
+      ],
+      [
+        837,
+        613,
+        970,
+        747
+      ],
+      [
+        1168,
+        555,
+        1363,
+        790
+      ],
+      [
+        75,
+        821,
+        294,
+        1042
+      ],
+      [
+        434,
+        821,
+        654,
+        1042
+      ],
+      [
+        795,
+        821,
+        1014,
+        1042
+      ],
+      [
+        1156,
+        821,
+        1374,
+        1042
+      ]
+    ],
+    "resize": "nearest-neighbor, preserve aspect, alpha >=160 to RGB565 chroma key 0",
+    "atlas_static_bytes": 32768
+  }
+}

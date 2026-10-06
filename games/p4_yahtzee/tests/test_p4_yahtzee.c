@@ -799,8 +799,89 @@ static void test_roll_distribution(void)
     CHECK(p4_yahtzee_roll(&state));
 }
 
+static void test_animation_elapsed_partition(void)
+{
+    p4_yahtzee_state_t seed = {0};
+    p4_yahtzee_reset_match(&seed, 42U);
+    CHECK(p4_yahtzee_roll(&seed));
+    seed.held_mask = 1U;
+    seed.animation_dice[0] = seed.dice[0];
+    p4_yahtzee_state_t regular = seed, delayed = seed;
+    for (unsigned frame = 0; frame < 6U; ++frame)
+        p4_yahtzee_update_animation(&regular, 33U);
+    p4_yahtzee_update_animation(&delayed, 198U);
+    CHECK(regular.roll_animation_ms == delayed.roll_animation_ms);
+    CHECK(regular.animation_step_ms == delayed.animation_step_ms);
+    CHECK(regular.rng == delayed.rng);
+    CHECK(memcmp(regular.animation_dice, delayed.animation_dice,
+                 sizeof(regular.animation_dice)) == 0);
+    CHECK(regular.animation_dice[0] == seed.dice[0]);
+    CHECK(regular.roll_rng == seed.roll_rng);
+    CHECK(memcmp(regular.dice, seed.dice, sizeof(seed.dice)) == 0);
+    for (unsigned frame = 0; frame < 4U; ++frame)
+        p4_yahtzee_update_animation(&regular, 33U);
+    p4_yahtzee_update_animation(&delayed, 1000U);
+    CHECK(regular.roll_animation_ms == 0U && delayed.roll_animation_ms == 0U);
+    CHECK(regular.rng == delayed.rng);
+    CHECK(memcmp(regular.animation_dice, seed.dice, sizeof(seed.dice)) == 0);
+    CHECK(memcmp(delayed.animation_dice, seed.dice, sizeof(seed.dice)) == 0);
+}
+
+static void touch_with_buttons(p4_game_instance_t *instance, bool down,
+                               uint16_t x, uint16_t y)
+{
+    const uint32_t synthetic = P4_BUTTON_A | P4_BUTTON_B | P4_BUTTON_START |
+        P4_BUTTON_BACK | P4_BUTTON_RIGHT | P4_BUTTON_DOWN;
+    const p4_game_input_t input = {.pressed = synthetic, .held = synthetic,
+        .touch_valid = true, .touch_count = down ? 1U : 0U, .touches = {{x, y}}};
+    CHECK(p4_game_instance_update(instance, &input, 16U) == P4_GAME_CONTINUE);
+}
+
+static void test_touch_owns_gesture(void)
+{
+    const p4_game_services_t services = {
+        .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
+    };
+    p4_game_instance_t instance = {0}; p4_yahtzee_state_t state;
+    CHECK(p4_game_instance_start(&instance, &p4_p4_yahtzee_game, &services,
+                                 &state, sizeof(state)));
+    touch_with_buttons(&instance, true, 245U, 117U);
+    touch_with_buttons(&instance, false, 0U, 0U);
+    CHECK(state.player_count == 3U && state.phase == P4_YAHTZEE_MENU);
+    touch_with_buttons(&instance, true, 245U, 117U);
+    touch_with_buttons(&instance, false, 0U, 0U);
+    CHECK(state.player_count == 4U);
+    touch_with_buttons(&instance, true, 160U, 117U);
+    touch_with_buttons(&instance, false, 0U, 0U);
+    CHECK(state.phase == P4_YAHTZEE_TURN && state.roll_count == 0U);
+    touch_with_buttons(&instance, true, 270U, 191U);
+    touch_with_buttons(&instance, false, 0U, 0U);
+    CHECK(state.roll_count == 1U);
+    settle_roll(&instance);
+    touch_with_buttons(&instance, true, 38U, 52U);
+    touch_with_buttons(&instance, true, 38U, 52U);
+    touch_with_buttons(&instance, false, 0U, 0U);
+    CHECK(state.held_mask == 1U && state.selected_die == 0U);
+    CHECK(state.focus == P4_YAHTZEE_FOCUS_DICE);
+    touch_with_buttons(&instance, true, 80U, 166U); /* Bonus summary. */
+    touch_with_buttons(&instance, false, 0U, 0U);
+    CHECK(state.turns_scored[0] == 0U && state.phase == P4_YAHTZEE_TURN);
+    touch_with_buttons(&instance, true, 80U, 94U);
+    touch_with_buttons(&instance, false, 0U, 0U);
+    CHECK(state.turns_scored[0] == 1U && state.phase == P4_YAHTZEE_PASS);
+    CHECK(state.current_player == 1U);
+    touch_with_buttons(&instance, true, 160U, 124U);
+    touch_with_buttons(&instance, false, 0U, 0U);
+    CHECK(state.phase == P4_YAHTZEE_TURN && state.roll_count == 0U);
+    CHECK(update_button(&instance, P4_BUTTON_START));
+    CHECK(state.roll_count == 1U); /* Physical controller resumes normally. */
+    p4_game_instance_stop(&instance);
+}
+
 int main(void)
 {
+    test_touch_owns_gesture();
+    test_animation_elapsed_partition();
     test_roll_distribution();
     test_shared_host_dice();
     test_dice_accessory();

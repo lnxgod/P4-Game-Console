@@ -6,6 +6,7 @@ set -eu
 P4_DG_SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 P4_DG_ROOT=$(CDPATH= cd -- "$P4_DG_SCRIPT_DIR/../.." && pwd)
 P4_DG_SOURCE_DIR="$P4_DG_ROOT/third_party/doomgeneric/doomgeneric"
+P4_DG_NET_DIR="$P4_DG_ROOT/apps/doom_audio_probe/components/doom_engine_audio"
 P4_DG_ADAPTER="$P4_DG_ROOT/apps/doom/host/doomgeneric_headless.c"
 P4_DG_BUILD_DIR="$P4_DG_ROOT/build-host/doom"
 P4_DG_OUTPUT="$P4_DG_BUILD_DIR/doomgeneric-headless"
@@ -68,8 +69,8 @@ set -- \
     "$P4_DG_SOURCE_DIR/w_file_stdc.c" "$P4_DG_SOURCE_DIR/i_input.c" \
     "$P4_DG_SOURCE_DIR/i_video.c" "$P4_DG_SOURCE_DIR/doomgeneric.c"
 
-# Preserve all compiler diagnostics from immutable legacy upstream source, but
-# keep normal checks concise. A failed upstream compile prints the complete log.
+# Preserve diagnostics from pinned upstream plus the reviewed P4 patch.
+# Keep normal checks concise. A failed upstream compile prints the complete log.
 : >"$P4_DG_WARNING_LOG"
 if ! (
     cd "$P4_DG_OBJECT_DIR/upstream"
@@ -78,7 +79,7 @@ if ! (
         -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE \
         -DNORMALUNIX -DLINUX -DSNDSERV \
         -DDOOMGENERIC_RESX=320 -DDOOMGENERIC_RESY=200 \
-        -I"$P4_DG_SOURCE_DIR" -c "$@"
+        -I"$P4_DG_SOURCE_DIR" -I"$P4_DG_NET_DIR" -c "$@"
 ) 2>"$P4_DG_WARNING_LOG"; then
     cat "$P4_DG_WARNING_LOG" >&2
     exit 1
@@ -93,8 +94,16 @@ fi
     -I"$P4_DG_SOURCE_DIR" -c "$P4_DG_ADAPTER" \
     -o "$P4_DG_OBJECT_DIR/doomgeneric_headless.o"
 
+# The production engine calls the P4MP seam even in a single-player build.
+# Compile its existing neutral adapter with project-owned warnings fatal.
+"$P4_DG_CC" -std=c99 -O2 -g0 -Wall -Wextra -Werror \
+    -isystem "$P4_DG_SOURCE_DIR" -I"$P4_DG_NET_DIR" \
+    -c "$P4_DG_NET_DIR/p4_doom_net_stub.c" \
+    -o "$P4_DG_OBJECT_DIR/p4_doom_net_stub.o"
+
 "$P4_DG_CC" "$P4_DG_OBJECT_DIR/upstream"/*.o \
-    "$P4_DG_OBJECT_DIR/doomgeneric_headless.o" -o "$P4_DG_OUTPUT" -lm
+    "$P4_DG_OBJECT_DIR/doomgeneric_headless.o" \
+    "$P4_DG_OBJECT_DIR/p4_doom_net_stub.o" -o "$P4_DG_OUTPUT" -lm
 
 P4_DG_WARNING_COUNT=$(awk '/warning:/{count++} END{print count+0}' "$P4_DG_WARNING_LOG")
 

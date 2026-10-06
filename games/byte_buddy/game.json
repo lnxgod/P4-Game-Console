@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "4.3.2",
+  "version": "5.0.0",
   "stack_frame_limit_bytes": 1024,
   "package_file": "BYTEBUD.P4G",
   "resource_file": "BYTEBUD.P4R",
@@ -17,7 +17,7 @@
   "id": "org.p4console.byte-buddy",
   "title": "Byte Buddy",
   "subtitle": "Raise a signal dragon",
-  "folder": "GAMES/ADVENTURE",
+  "folder": "GAMES/WIP",
   "accent_rgb565": "0xf81f",
   "required_capabilities": [
     "video",
@@ -28,9 +28,11 @@
     "audio-tone",
     "audio-stream",
     "signal-scan",
-    "save"
+    "save",
+    "video-highres"
   ],
   "license": "MIT",
-  "assets": "672 original frames; required P4R; stage/action, hatch, signal, genome, lineage, and environment art",
-  "enabled": true
+  "assets": "672 dragon/action frames in required P4R; ImageGen city and dragon cover; Arimo UI. Provenance: assets/launch-v5.",
+  "enabled": true,
+  "launcher_icon": "assets/launch-v5/launcher.p4i"
 }

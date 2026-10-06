@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 // Reset sequencing derived from Espressif esp-bsp, pinned in third_party/tab5-bsp.json.
 #include "platform/tab5.h"
+#include "usb_power_control.h"
+#include "radio_power_control.h"
+#include "charger_control.h"
 #include "platform/board.h"
 #include "esp_io_expander_pi4ioe5v6408.h"
 #include "freertos/FreeRTOS.h"
@@ -178,3 +181,115 @@ const char *platform_tab5_panel_name(platform_tab5_panel_t panel)
     default: return "unknown";
     }
 }
+
+typedef struct {
+    i2c_master_dev_handle_t device;
+    esp_err_t error;
+} tab5_usb_bus_t;
+
+static i2c_master_dev_handle_t s_usb_power_device;
+
+static bool usb_power_read(void *context, uint8_t reg, uint8_t *value)
+{
+    tab5_usb_bus_t *bus = context;
+    const esp_err_t result = i2c_master_transmit_receive(
+        bus->device, &reg, sizeof(reg), value, sizeof(*value), 100);
+    if (result != ESP_OK) bus->error = result;
+    return result == ESP_OK;
+}
+
+static bool usb_power_write(void *context, uint8_t reg, uint8_t value)
+{
+    tab5_usb_bus_t *bus = context;
+    const uint8_t data[] = {reg, value};
+    const esp_err_t result = i2c_master_transmit(
+        bus->device, data, sizeof(data), 100);
+    if (result != ESP_OK) bus->error = result;
+    return result == ESP_OK;
+}
+
+#if CONFIG_P4_TAB5_USB_HOST
+esp_err_t platform_tab5_usb_host_power(bool enabled)
+{
+    esp_err_t ret = platform_tab5_init();
+    if (ret != ESP_OK) return ret;
+    if (xSemaphoreTake(s_lock, pdMS_TO_TICKS(1000)) != pdTRUE) return ESP_ERR_TIMEOUT;
+    if (!s_usb_power_device) {
+        const i2c_device_config_t config = {
+            .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+            .device_address = 0x44,
+            .scl_speed_hz = 400000,
+        };
+        /* Do not construct/reset the second expander: it also owns charging,
+         * radio and power-off controls. Only USB5V_EN (P3) may change here. */
+        ret = i2c_master_bus_add_device(s_bus, &config, &s_usb_power_device);
+    }
+    if (ret == ESP_OK) {
+        tab5_usb_bus_t bus = {.device = s_usb_power_device, .error = ESP_OK};
+        const tab5_usb_power_result_t result = tab5_usb_power_apply(
+            &bus, usb_power_read, usb_power_write, enabled);
+        if (result != TAB5_USB_POWER_OK) {
+            ret = bus.error != ESP_OK ? bus.error : ESP_ERR_INVALID_RESPONSE;
+        }
+    }
+    xSemaphoreGive(s_lock);
+    if (ret == ESP_OK) {
+        ESP_LOGI("tab5", "USB_A_POWER enabled=%u expander=0x44 pin=3 readback=ok",
+                 enabled ? 1U : 0U);
+    } else {
+        ESP_LOGE("tab5", "USB_A_POWER_FAILED requested=%u error=%s state=unverified",
+                 enabled ? 1U : 0U, esp_err_to_name(ret));
+    }
+    return ret;
+}
+#endif /* CONFIG_P4_TAB5_USB_HOST */
+
+
+esp_err_t platform_tab5_charger_init(void)
+{
+    esp_err_t ret = platform_tab5_init();
+    if (ret != ESP_OK) return ret;
+    if (xSemaphoreTake(s_lock, pdMS_TO_TICKS(1000)) != pdTRUE) return ESP_ERR_TIMEOUT;
+    if (!s_usb_power_device) {
+        const i2c_device_config_t config = {
+            .dev_addr_length = I2C_ADDR_BIT_LEN_7, .device_address = 0x44,
+            .scl_speed_hz = 400000,
+        };
+        ret = i2c_master_bus_add_device(s_bus, &config, &s_usb_power_device);
+    }
+    if (ret == ESP_OK) {
+        tab5_usb_bus_t bus = {.device=s_usb_power_device, .error=ESP_OK};
+        const tab5_charger_result_t result = tab5_charger_enable_500ma(
+            &bus, usb_power_read, usb_power_write);
+        if (result != TAB5_CHARGER_OK)
+            ret = bus.error != ESP_OK ? bus.error : ESP_ERR_INVALID_RESPONSE;
+    }
+    xSemaphoreGive(s_lock);
+    ESP_LOGI("tab5", "CHARGER_INIT result=%s selection_ma=500 qc=disabled control_readback=%u",
+             esp_err_to_name(ret), (unsigned)(ret == ESP_OK));
+    return ret;
+}
+
+#if CONFIG_P4_TAB5_BLE_MULTIPLAYER
+esp_err_t platform_tab5_radio_power(bool enabled)
+{
+    esp_err_t ret = platform_tab5_init();
+    if (ret != ESP_OK) return ret;
+    if (xSemaphoreTake(s_lock, pdMS_TO_TICKS(1000)) != pdTRUE) return ESP_ERR_TIMEOUT;
+    if (!s_usb_power_device) {
+        const i2c_device_config_t config = {
+            .dev_addr_length = I2C_ADDR_BIT_LEN_7,
+            .device_address = 0x44, .scl_speed_hz = 400000,
+        };
+        ret = i2c_master_bus_add_device(s_bus, &config, &s_usb_power_device);
+    }
+    if (ret == ESP_OK) {
+        tab5_usb_bus_t bus = {.device = s_usb_power_device, .error = ESP_OK};
+        if (tab5_radio_power_apply(&bus, usb_power_read, usb_power_write, enabled) != TAB5_RADIO_POWER_OK)
+            ret = bus.error != ESP_OK ? bus.error : ESP_ERR_INVALID_RESPONSE;
+    }
+    xSemaphoreGive(s_lock);
+    if (ret == ESP_OK) ESP_LOGI("tab5", "TAB5_C6_POWER enabled=%u readback=ok", enabled);
+    return ret;
+}
+#endif

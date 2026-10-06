@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 
 #include "console/shell.h"
+#include "console/brand.h"
+#include "console/game_art.h"
+#include "game_covers.inc"
+#include "console/ui_font.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -10,7 +14,7 @@
 #define P4_CONSOLE_OS_VERSION "DEV"
 #endif
 
-#define P4_CONSOLE_OS_VERSION_LABEL "OS " P4_CONSOLE_OS_VERSION
+#define P4_CONSOLE_OS_VERSION_LABEL "OS " CONSOLE_PRODUCT_VERSION
 
 /* Rendering is single-tasked by the shell owner; this state lets the same
  * layout primitives target either native 768x480 or the compact presentation
@@ -347,12 +351,18 @@ enum {
 
 static const char s_terminal_keys[] = "QWERTYUIOPASDFGHJKLZXCVBNM";
 
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+static console_shell_action_t nextgen_buttons(console_shell_t *, uint32_t);
+static console_shell_action_t nextgen_touch(console_shell_t *, bool, const console_shell_contact_t *, size_t);
+static bool nextgen_render(console_shell_t *, uint16_t *, size_t, bool);
+static bool nextgen_advance(console_shell_t *, uint32_t);
+#endif
 static console_shell_action_t no_action(void);
 static console_shell_action_t page_changed(uint32_t app_id);
 
 static bool use_bbs_launcher(const console_shell_t *shell)
 {
-#if CONSOLE_SHELL_NATIVE_BBS && \
+#if CONSOLE_SHELL_NATIVE_BBS && !CONFIG_P4_BOARD_M5STACK_TAB5 && \
     !defined(CONSOLE_SHELL_FORCE_WINDOWS)
     return shell != NULL &&
         shell->color_mode == CONSOLE_COLOR_MODE_GAMECHANGERS;
@@ -444,7 +454,7 @@ static bool folder_path_is_valid(const char *path)
 static bool valid_page(console_page_t page)
 {
     return page >= CONSOLE_PAGE_EXTERNAL &&
-        page <= CONSOLE_PAGE_CONTROL_PANEL;
+        page <= CONSOLE_PAGE_APPEARANCE;
 }
 
 static bool registry_is_valid(const console_app_descriptor_t *apps,
@@ -1093,6 +1103,10 @@ static void build_bbs_launcher_model_at_row(
     model->battery_supported = shell->runtime.battery_supported;
     model->battery_sample_valid = shell->runtime.battery_sample_valid;
     model->battery_percent = shell->runtime.battery_percent;
+    model->storage_is_sd = shell->runtime.sd_card_storage;
+    model->storage_space_valid = shell->runtime.game_storage_space_valid;
+    model->storage_total_kib = shell->runtime.game_storage_kib;
+    model->storage_free_kib = shell->runtime.game_storage_free_kib;
     const size_t maximum = home_max_scroll_row(shell);
     if (scroll_row > maximum) {
         scroll_row = maximum;
@@ -1332,6 +1346,9 @@ bool console_shell_advance(console_shell_t *shell, uint32_t elapsed_ms)
     if (shell == NULL) {
         return false;
     }
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    return nextgen_advance(shell, elapsed_ms);
+#endif
     shell->animation_clock_ms += elapsed_ms;
     if (shell->scroll_gesture &&
         shell->home_drag_velocity_q16_per_ms != 0 &&
@@ -2555,6 +2572,9 @@ console_shell_action_t console_shell_handle_buttons(
         return no_action();
     }
 
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    return nextgen_buttons(shell, pressed);
+#endif
     if ((pressed & CONSOLE_BUTTON_BACK) != 0U) {
         if (shell->page == CONSOLE_PAGE_HOME) {
             if (shell->home_all_programs ||
@@ -3113,6 +3133,9 @@ console_shell_action_t console_shell_handle_touch(
     if (shell == NULL) {
         return no_action();
     }
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    return nextgen_touch(shell, valid, contacts, contact_count);
+#endif
     remember_contacts(shell, valid, contacts, contact_count);
 
     if (!valid || contact_count > CONSOLE_SHELL_MAX_CONTACTS ||
@@ -3775,6 +3798,8 @@ void console_shell_set_runtime_info(
         shell->runtime.game_volume_step != runtime->game_volume_step ||
         shell->runtime.audio_settings_persistent !=
             runtime->audio_settings_persistent ||
+        shell->runtime.game_storage_space_valid != runtime->game_storage_space_valid ||
+        shell->runtime.sd_card_storage != runtime->sd_card_storage ||
         shell->runtime.game_storage_free_kib !=
             runtime->game_storage_free_kib ||
         shell->runtime.game_storage_sector_bytes !=
@@ -3812,6 +3837,9 @@ void console_shell_set_runtime_info(
         return;
     }
     const bool storage_changed =
+        shell->runtime.game_storage_space_valid != runtime->game_storage_space_valid ||
+        shell->runtime.sd_card_storage != runtime->sd_card_storage ||
+        shell->runtime.game_storage_free_kib != runtime->game_storage_free_kib ||
         shell->runtime.game_storage_kib != runtime->game_storage_kib ||
         shell->runtime.game_storage_state != runtime->game_storage_state ||
         shell->runtime.game_storage_usb_attached !=
@@ -3825,6 +3853,9 @@ void console_shell_set_runtime_info(
             runtime->usb_input_host_active ||
         shell->runtime.doom_wad_ready != runtime->doom_wad_ready;
     const bool battery_changed =
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        shell->runtime.game_volume_step != runtime->game_volume_step ||
+#endif
         shell->runtime.battery_supported != runtime->battery_supported ||
         shell->runtime.battery_sample_valid !=
             runtime->battery_sample_valid ||
@@ -3878,8 +3909,7 @@ void console_shell_set_runtime_info(
         shell->page == CONSOLE_PAGE_AUDIO ||
         shell->page == CONSOLE_PAGE_MULTIPLAYER ||
         shell->page == CONSOLE_PAGE_TERMINAL ||
-        (shell->page == CONSOLE_PAGE_HOME &&
-         (storage_changed || battery_changed))) {
+        storage_changed || battery_changed) {
         shell->dirty = true;
     }
 }
@@ -3937,6 +3967,19 @@ bool console_shell_set_file_listing(
             return false;
         }
     }
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    if (shell->files.revision != listing->revision || shell->files.storage_generation != listing->storage_generation ||
+        memcmp(&shell->files, listing, sizeof(*listing)) != 0) {
+        shell->file_delete_confirm = false;
+        shell->press_active = false;
+        shell->ng_list_first = 0U;
+        shell->ng_file_scroll = 0;
+        shell->ng_file_menu = false;
+        shell->ng_scroll_kind = 0;
+        shell->ng_glide_kind = 0;
+        shell->ng_velocity_q16 = 0;
+    }
+#endif
     shell->files = *listing;
     normalize_file_selection(shell);
     if (shell->page == CONSOLE_PAGE_FILES ||
@@ -4562,6 +4605,32 @@ static void draw_text(uint16_t *pixels, size_t stride,
     int cursor = x;
     for (size_t index = 0U;
          index < max_characters && text[index] != '\0'; ++index) {
+        if (s_render_height >= 720U) {
+            const unsigned char character = (unsigned char)text[index];
+            const int left = layout_to_output_x(cursor);
+            const int top = layout_to_output_y(y);
+            const int glyph_width = layout_to_output_x(cursor + (int)(5U * scale)) - left;
+            const int glyph_height = layout_to_output_y(y + (int)(7U * scale)) - top;
+            for (int py = 0; py < glyph_height; ++py) {
+                for (int px = 0; px < glyph_width; ++px) {
+                    const unsigned alpha = console_ui_glyph_alpha(character,
+                        (unsigned)(px * 24 / glyph_width), (unsigned)(py * 28 / glyph_height));
+                    const int ox = left + px, oy = top + py;
+                    if (alpha == 0U || ox < s_output_clip_left || ox >= s_output_clip_right ||
+                        oy < s_output_clip_top || oy >= s_output_clip_bottom ||
+                        ox < layout_to_output_x(s_clip_left) || ox >= layout_to_output_x(s_clip_right) ||
+                        oy < layout_to_output_y(s_clip_top) || oy >= layout_to_output_y(s_clip_bottom)) continue;
+                    uint16_t *dst = &pixels[(size_t)oy * stride + (size_t)ox];
+                    const unsigned inverse = 15U - alpha;
+                    const unsigned r = (((unsigned)color >> 11U) * alpha + ((unsigned)*dst >> 11U) * inverse + 7U) / 15U;
+                    const unsigned g = ((((unsigned)color >> 5U) & 63U) * alpha + (((unsigned)*dst >> 5U) & 63U) * inverse + 7U) / 15U;
+                    const unsigned b = (((unsigned)color & 31U) * alpha + ((unsigned)*dst & 31U) * inverse + 7U) / 15U;
+                    *dst = (uint16_t)((r << 11U) | (g << 5U) | b);
+                }
+            }
+            cursor += (int)(6U * scale);
+            continue;
+        }
         uint8_t rows[7];
         glyph_rows(text[index], rows);
         if (uses_compact_raster()) {
@@ -4836,7 +4905,7 @@ static void draw_home(console_shell_t *shell, uint16_t *pixels, size_t stride)
     outline_rect(pixels, stride, TITLE_LEFT + 3, TITLE_TOP + 4,
                  7, 7, COLOR_LIGHT);
     draw_text(pixels, stride, TITLE_LEFT + 15, TITLE_TOP + 5,
-              "P4 PROGRAM MANAGER", COLOR_WHITE, 1U, 18U);
+              "GameChangersAI", COLOR_WHITE, 1U, 14U);
     bevel_rect(pixels, stride, 281, TITLE_TOP + 2, 13, 13,
                COLOR_FACE, false);
     bevel_rect(pixels, stride, 297, TITLE_TOP + 2, 13, 13,
@@ -4885,7 +4954,7 @@ static bool draw_bbs_home(console_shell_t *shell,
     const int32_t fraction_q16 = visual_q16 -
         home_scroll_row_q16(base_row);
     if (fraction_q16 == 0 || base_row >= home_max_scroll_row(shell)) {
-        return p4_ansi_render_rgb565(
+        return p4_ansi_render_scaled_rgb565(
             &shell->bbs_terminal, pixels, stride,
             CONSOLE_SHELL_WIDTH, CONSOLE_SHELL_HEIGHT);
     }
@@ -4897,18 +4966,18 @@ static bool draw_bbs_home(console_shell_t *shell,
         memset(pixels + row * stride, 0,
                CONSOLE_SHELL_WIDTH * sizeof(*pixels));
     }
-    if (!p4_ansi_render_rows_rgb565(
+    if (!p4_ansi_render_scaled_rows_rgb565(
             &shell->bbs_terminal, pixels, stride,
             CONSOLE_SHELL_WIDTH, CONSOLE_SHELL_HEIGHT,
             0U, BBS_DOOR_FIRST_ANSI_ROW, 0, 0U,
-            CONSOLE_SHELL_HEIGHT) ||
-        !p4_ansi_render_rows_rgb565(
+            P4_ANSI_SURFACE_HEIGHT) ||
+        !p4_ansi_render_scaled_rows_rgb565(
             &shell->bbs_terminal, pixels, stride,
             CONSOLE_SHELL_WIDTH, CONSOLE_SHELL_HEIGHT,
             BBS_DOOR_FIRST_ANSI_ROW + BBS_DOOR_ANSI_ROW_COUNT,
             P4_ANSI_ROWS - (BBS_DOOR_FIRST_ANSI_ROW +
                             BBS_DOOR_ANSI_ROW_COUNT),
-            0, 0U, CONSOLE_SHELL_HEIGHT)) {
+            0, 0U, P4_ANSI_SURFACE_HEIGHT)) {
         return false;
     }
 
@@ -4918,7 +4987,7 @@ static bool draw_bbs_home(console_shell_t *shell,
     p4_bbs_launcher_model_t moving_model;
     build_bbs_launcher_model_at_row(shell, base_row, &moving_model);
     if (!p4_bbs_build_launcher(&shell->bbs_terminal, &moving_model) ||
-        !p4_ansi_render_rows_rgb565(
+        !p4_ansi_render_scaled_rows_rgb565(
             &shell->bbs_terminal, pixels, stride,
             CONSOLE_SHELL_WIDTH, CONSOLE_SHELL_HEIGHT,
             BBS_DOOR_FIRST_ANSI_ROW, BBS_DOOR_ANSI_ROW_COUNT,
@@ -4931,7 +5000,7 @@ static bool draw_bbs_home(console_shell_t *shell,
          (size_t)(BBS_DOOR_PITCH_PIXELS - offset_pixels) +
          P4_ANSI_CELL_HEIGHT - 1U) / P4_ANSI_CELL_HEIGHT;
     if (!p4_bbs_build_launcher(&shell->bbs_terminal, &moving_model) ||
-        !p4_ansi_render_rows_rgb565(
+        !p4_ansi_render_scaled_rows_rgb565(
             &shell->bbs_terminal, pixels, stride,
             CONSOLE_SHELL_WIDTH, CONSOLE_SHELL_HEIGHT,
             BBS_DOOR_FIRST_ANSI_ROW, entering_rows,
@@ -4982,7 +5051,7 @@ static void draw_detail_header(console_shell_t *shell,
     draw_text(pixels, stride, 68, 11,
               app != NULL ? app->title : "CONSOLE",
               app != NULL ? app->accent_rgb565 : COLOR_WHITE,
-              1U, 15U);
+              1U, 14U);
     fill_rect(pixels, stride, 0, 31,
               CONSOLE_SHELL_LAYOUT_WIDTH, 1, COLOR_CYAN);
 }
@@ -5343,6 +5412,12 @@ static void draw_power(const console_shell_t *shell,
             draw_centered_text(pixels, stride, 20, 108, 280,
                                "CHECK BATTERY PACK", COLOR_MUTED, 20U);
         }
+        if (shell->runtime.board_kind == CONSOLE_BOARD_M5STACK_TAB5) {
+            char voltage[32];
+            (void)snprintf(voltage, sizeof(voltage), "MEASURED %u mV",
+                           (unsigned)shell->runtime.battery_millivolts);
+            draw_centered_text(pixels, stride, 20, 132, 280, voltage, COLOR_MUTED, 28U);
+        }
         draw_text(pixels, stride, 12, 166, "LAST ERROR",
                   COLOR_MUTED, 1U, 10U);
         const int last_error = shell->runtime.battery_last_error;
@@ -5631,6 +5706,11 @@ static void draw_controllers(const console_shell_t *shell,
         shell->runtime.controller_transport ==
             CONSOLE_CONTROLLER_TRANSPORT_USB_HID) {
         active = "USB HID (PRIORITY)";
+        active_color = COLOR_GREEN;
+    } else if (shell->runtime.controller_ready &&
+               shell->runtime.controller_transport ==
+                   CONSOLE_CONTROLLER_TRANSPORT_USB_XUSB) {
+        active = "USB XINPUT";
         active_color = COLOR_GREEN;
     } else if (shell->runtime.controller_ready &&
                shell->runtime.controller_transport ==
@@ -6430,7 +6510,7 @@ static void draw_multiplayer_role(const console_shell_t *shell,
 
     char link[20];
     (void)snprintf(link, sizeof(link), "CURRENT LINK: %s",
-                   ble ? "BLE" : "WIRED");
+                   ble ? "BLE" : (shell->runtime.multiplayer_transport_kind==2U ? "WI-FI" : "WIRED"));
     draw_centered_text(pixels, stride, 8, 169, 304, link,
                        ble ? COLOR_GREEN : COLOR_WHITE, 19U);
     draw_centered_text(pixels, stride, 8, 184, 304,
@@ -6452,7 +6532,7 @@ static void draw_multiplayer_join(const console_shell_t *shell,
 
     draw_multiplayer_option(
         shell, pixels, stride, CONSOLE_MULTIPLAYER_OPTION_TRANSPORT,
-        "LINK", ble ? "BLE" : "WIRED AUTO");
+        "LINK", ble ? "BLE" : (shell->runtime.multiplayer_transport_kind==2U ? "LOCAL WI-FI" : "WIRED AUTO"));
     draw_text(pixels, stride, 12, 75, "GAME", COLOR_CYAN, 1U, 4U);
     draw_text(pixels, stride, 116, 75, "ROOM ID", COLOR_CYAN, 1U, 7U);
     draw_text(pixels, stride, 226, 75, "PLAY", COLOR_CYAN, 1U, 4U);
@@ -6584,7 +6664,7 @@ static void draw_multiplayer_host(const console_shell_t *shell,
                 ? "START" : "OFF";
     char link[16];
     (void)snprintf(link, sizeof(link), "%s %s",
-                   ble ? "BLE" : "WIRED", link_state);
+                   ble ? "BLE" : (shell->runtime.multiplayer_transport_kind==2U ? "WI-FI" : "WIRED"), link_state);
     draw_text(pixels, stride, ble ? 250 : 238, 38, link,
               shell->runtime.multiplayer_transport_ready
                   ? COLOR_GREEN : COLOR_YELLOW,
@@ -6745,7 +6825,7 @@ static void draw_multiplayer_host(const console_shell_t *shell,
         strcpy(launch, "PREPARING BLE HOST...");
     } else {
         (void)snprintf(launch, sizeof(launch), "CREATE %s ROOM - A / TAP",
-                       ble ? "BLE" : "WIRED");
+                       ble ? "BLE" : (shell->runtime.multiplayer_transport_kind==2U ? "WI-FI" : "WIRED"));
     }
     draw_centered_text(
         pixels, stride, MULTIPLAYER_LAUNCH_LEFT,
@@ -6774,7 +6854,7 @@ static void draw_multiplayer(const console_shell_t *shell,
     }
     const bool ble = shell->runtime.multiplayer_transport_kind == 1U;
     const char *const link = ble
-        ? "BLE"
+        ? "BLE" : shell->runtime.multiplayer_transport_kind==2U ? "WI-FI"
         : shell->runtime.multiplayer_route_id == 2U
             ? "WIRE"
             : shell->runtime.multiplayer_route_id == 1U ? "RELAY" : "AUTO";
@@ -6809,7 +6889,7 @@ static void draw_multiplayer(const console_shell_t *shell,
         (unsigned)shell->runtime.multiplayer_game_count);
     draw_multiplayer_option(
         shell, pixels, stride, CONSOLE_MULTIPLAYER_OPTION_TRANSPORT,
-        "LINK", ble ? "BLE" : "WIRED AUTO");
+        "LINK", ble ? "BLE" : (shell->runtime.multiplayer_transport_kind==2U ? "LOCAL WI-FI" : "WIRED AUTO"));
     draw_multiplayer_option(
         shell, pixels, stride, CONSOLE_MULTIPLAYER_OPTION_GAME,
         "GAME", game);
@@ -7041,6 +7121,25 @@ static void draw_os_version(const console_shell_t *shell,
     draw_text(pixels, stride, left, top, label, color, 1U, length);
 }
 
+static void draw_storage_indicator(const console_shell_t *shell,
+                                    uint16_t *pixels, size_t stride)
+{
+    const int left = shell->page == CONSOLE_PAGE_HOME ? 112 : 162;
+    const console_shell_runtime_info_t *r = &shell->runtime;
+    draw_text(pixels, stride, left, 8, r->sd_card_storage ? "SD FREE" : "INT FREE",
+              COLOR_WHITE, 1U, 8U);
+    char label[5] = "--";
+    const bool valid = r->game_storage_space_valid && r->game_storage_kib > 0U &&
+        r->game_storage_free_kib <= r->game_storage_kib;
+    if (valid) {
+        const unsigned percent = (unsigned)((uint64_t)r->game_storage_free_kib *
+            100U / r->game_storage_kib);
+        (void)snprintf(label, sizeof(label), "%u%%", percent);
+    }
+    draw_text(pixels, stride, left, 18, label,
+              valid ? COLOR_WHITE : COLOR_YELLOW, 1U, 4U);
+}
+
 static void draw_battery_indicator(const console_shell_t *shell,
                                    uint16_t *pixels, size_t stride)
 {
@@ -7101,6 +7200,14 @@ static uint64_t home_cache_hash_text(uint64_t hash,
 static uint64_t home_cache_signature(const console_shell_t *shell)
 {
     uint64_t hash = UINT64_C(1469598103934665603);
+    hash = home_cache_hash_bytes(hash, &shell->runtime.game_storage_space_valid,
+        sizeof(shell->runtime.game_storage_space_valid));
+    hash = home_cache_hash_bytes(hash, &shell->runtime.game_storage_kib,
+        sizeof(shell->runtime.game_storage_kib));
+    hash = home_cache_hash_bytes(hash, &shell->runtime.game_storage_free_kib,
+        sizeof(shell->runtime.game_storage_free_kib));
+    hash = home_cache_hash_bytes(hash, &shell->runtime.sd_card_storage,
+        sizeof(shell->runtime.sd_card_storage));
     hash = home_cache_hash_bytes(
         hash, &shell->app_count, sizeof(shell->app_count));
     hash = home_cache_hash_bytes(
@@ -7191,10 +7298,12 @@ static void native_update_region(console_shell_t *shell,
 {
     shell->native_update = (console_shell_native_update_t){
         .kind = CONSOLE_SHELL_NATIVE_UPDATE_REGION,
-        .x = include_status ? 19U : 26U,
-        .y = 103U,
-        .width = include_status ? 732U : 722U,
-        .height = include_status ? 360U : 312U,
+        .x = (uint16_t)layout_to_output_x(include_status ? 8 : 11),
+        .y = (uint16_t)layout_to_output_y(43),
+        .width = (uint16_t)(layout_to_output_x(include_status ? 313 : 312) -
+            layout_to_output_x(include_status ? 8 : 11)),
+        .height = (uint16_t)(layout_to_output_y(include_status ? 193 : 173) -
+            layout_to_output_y(43)),
     };
 }
 
@@ -7250,6 +7359,10 @@ static void shift_output_rows(uint16_t *pixels,
     }
 }
 
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+#include "nextgen.inc"
+#endif
+
 static bool render_rgb565_target(console_shell_t *shell,
                                  uint16_t *pixels,
                                  size_t stride_pixels,
@@ -7261,6 +7374,10 @@ static bool render_rgb565_target(console_shell_t *shell,
         stride_pixels < width || width == 0U || height == 0U) {
         return false;
     }
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    return width == CONSOLE_SHELL_WIDTH && height == CONSOLE_SHELL_HEIGHT &&
+        nextgen_render(shell, pixels, stride_pixels, false);
+#endif
     shell->native_update = (console_shell_native_update_t){
         .kind = CONSOLE_SHELL_NATIVE_UPDATE_FULL,
     };
@@ -7297,6 +7414,7 @@ static bool render_rgb565_target(console_shell_t *shell,
         case CONSOLE_PAGE_CONTROL_PANEL:
             draw_control_panel(shell, pixels, stride_pixels);
             break;
+        case CONSOLE_PAGE_APPEARANCE:
         case CONSOLE_PAGE_COLORS:
             draw_colors(shell, pixels, stride_pixels);
             break;
@@ -7356,9 +7474,11 @@ static bool render_rgb565_target(console_shell_t *shell,
     }
 #if CONSOLE_SHELL_NATIVE_BBS
     if (!(shell->page == CONSOLE_PAGE_HOME && use_bbs_launcher(shell))) {
+        draw_storage_indicator(shell, pixels, stride_pixels);
         draw_battery_indicator(shell, pixels, stride_pixels);
     }
 #else
+    draw_storage_indicator(shell, pixels, stride_pixels);
     draw_battery_indicator(shell, pixels, stride_pixels);
 #endif
     draw_os_version(shell, pixels, stride_pixels);
@@ -7408,6 +7528,9 @@ bool console_shell_render_native_cached_rgb565(console_shell_t *shell,
         stride_pixels < CONSOLE_SHELL_WIDTH) {
         return false;
     }
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    return nextgen_render(shell, pixels, stride_pixels, true);
+#endif
     const uint64_t signature = home_cache_signature(shell);
     if (!native_home_cache_candidate(
             shell, pixels, stride_pixels, signature)) {

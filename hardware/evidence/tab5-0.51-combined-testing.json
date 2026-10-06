@@ -1,0 +1,204 @@
+{
+  "schema": 1,
+  "version": "0.51",
+  "board": "m5stack-tab5",
+  "status": "installed on A and B; exact app readback,0.51 launcher and post-service health passed",
+  "candidate": {
+    "path": "build-host/combined-0.51/candidate.json",
+    "bytes": 199016,
+    "sha256": "682c5da30365d1ba94100846f60acbb8c664f399b97e06ab87249da37be946c1"
+  },
+  "authorization": {
+    "path": "hardware/evidence/tab5-0.51-combined-authorization.json",
+    "bytes": 80812,
+    "sha256": "8df7f33224c59f9230ccc3038741a5e66195c6e33a756dd1855bc9a7603d3542"
+  },
+  "image": {
+    "path": "build-host/combined-0.51/p4_console_os.bin",
+    "bytes": 4015392,
+    "sha256": "2edcaf22917a847d927af5af010098d7066baaa93ff68b921b58ee3580c7f08a"
+  },
+  "update": {
+    "path": "build-host/combined-0.51/P4UPDATE.P4U",
+    "bytes": 4015648,
+    "sha256": "bb89acdba24f09ae76e4b51f2c7979550f86579a528f960ccac25373388564c8"
+  },
+  "verification": {
+    "ble_multiplayer_enabled": true,
+    "board": "m5stack-tab5",
+    "charger_control_enabled": true,
+    "content_bundle_verified": false,
+    "flash_authorized": false,
+    "hardware_verified": false,
+    "image_bytes": 4015392,
+    "image_sha256": "2edcaf22917a847d927af5af010098d7066baaa93ff68b921b58ee3580c7f08a",
+    "native_cartridges": null,
+    "result": "tab5-build-candidate-verified",
+    "usb_host_enabled": true,
+    "version": "0.51",
+    "wifi_multiplayer_enabled": true
+  },
+  "validation": {
+    "prerequisite_tests_passed": 43,
+    "game_api_tests_passed": 6,
+    "cartridge_timing_tests_passed": 1,
+    "compiler_warning_count": 0,
+    "game_api_log": {
+      "path": "build-host/combined-0.51/game-api-tests.log",
+      "bytes": 4392,
+      "sha256": "927339255e0ee74f265ddc1cd88d3de30523b1169b30cb0e107ea297029253a6"
+    },
+    "cartridge_timing_log": {
+      "path": "build-host/combined-0.51/timing-tests.log",
+      "bytes": 857,
+      "sha256": "9fbfc8b5f56d2e7e257ddc0dce89730e530a0a4647b35f9b05dd36dcf3a15ae2"
+    },
+    "total_tests_passed": 50,
+    "source_inventory_files": 542,
+    "extra_compiler_header_files": 122,
+    "source_snapshot_still_matches": true
+  },
+  "features": {
+    "ui": "0.44 native layout/art/fonts, 0.46 categories/file safety, 0.47 cached/momentum scrolling",
+    "volume": "Game N/10/Muted status and Sound shortcut, Tab5 defaults 3/3, one-time policy 4 migration",
+    "boot": "0.50-spans optimized flight/status/completion and exclusive worker handoff",
+    "performance": "triple buffering, two-refresh retirement, per-buffer damage replay, reviewed cartridge timing/queued audio and shared draw code",
+    "motion": "optional native cartridge snapshot with sequence, timestamp and 150ms freshness, background 20ms sample delay",
+    "services": "OS-owned Bluetooth and standalone local Wi-Fi Host/Join, USB/BLE controllers, scoped 500mA charger",
+    "catalog": "cartridge metadata/icons, game category filter, catalog cleanup; already installed game upgrades preserved"
+  },
+  "units": {
+    "A": {
+      "receipt": {
+        "path": "hardware/backups/tab5-a-install-e925cvik/receipt.json",
+        "bytes": 1554,
+        "sha256": "a6eafdf0f6f95480bc843727dd93420d45b242b88862f606aaceb28210a49f33"
+      },
+      "panel": "ST7121",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "runtime_log": {
+        "path": "hardware/backups/tab5-a-install-e925cvik/runtime.log",
+        "bytes": 15764,
+        "sha256": "6f8bf9153c4dda852fc76bbe2dde8a8a8245446de9a722c6dc83c088da2c58f1"
+      },
+      "volume_boot": 3,
+      "volume_game": 3,
+      "volume_policy_migrated": true,
+      "catalog_valid": 17,
+      "multiplayer_registered_games": 7,
+      "boot_flight": {
+        "frames": 52,
+        "max_frame_ms": 129,
+        "max_render_ms": 101,
+        "max_submit_ms": 43
+      },
+      "physical_acceptance": "pending",
+      "serial_evidence": [
+        "I (3579) tab5_display: FRAME_QUEUE buffers=3 framebuffer_bytes=1843200 extra_psram_bytes=1843200 free_psram_bytes=27163556 retirement_refreshes=2",
+        "I (3782) p4_settings: P4_SETTINGS boot=3 game=3 node=GC-P4-4119 ble_pad=1 source=volume-policy+nvs persistent=1",
+        "I (4954) p4_console_os: P4_CONSOLE_OS BOOT_AUDIO status=played profile=treasure-chords sample_rate=16000 frames=16000 volume=3 nominal_ms=1000 elapsed_ms=1154",
+        "I (9565) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_REGISTRY_READY games=7 runtime_players=2 owner=console-os",
+        "I (9567) p4_console_os: P4_CONSOLE_OS GAME_CATALOG available=1 packages=17 valid=17 omitted=0 generation=1 source=microsd-only scan=background worker_low_water_bytes=11416 storage_result=ESP_OK update=0 result=ESP_OK",
+        "I (9619) p4_console_os: P4_CONSOLE_OS BOOT_FLIGHT frames=52 max_frame_ms=129 max_render_ms=101 max_submit_ms=43 stack_remaining=2888 result=ESP_OK animation_hold_ms=0",
+        "I (9810) p4_console_os: P4_CONSOLE_OS INTERFACE version=0.51 renderer=nextgen native=1280x720 legacy_theme=0",
+        "I (9823) tab5: CHARGER_INIT result=ESP_OK selection_ma=500 qc=disabled control_readback=1",
+        "I (19834) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized"
+      ],
+      "protected_cartridge_correction": {
+        "package_sha256": "208756ef3e23e3fe21e76842894ea67c1de83f61c7e8dddd750ad2ae6669f4f7",
+        "transfer_verified": true,
+        "registered": true,
+        "rejected": false,
+        "registration_log": {
+          "path": "build-host/red-dragon-lineage-repair/A-registration.log",
+          "bytes": 15046,
+          "sha256": "720ea8d803ce46ad2d0478ab5ff69a0582b95ae0e77318f1be6a1642de1f654f"
+        },
+        "multiplayer_registered_games_after_correction": 8,
+        "gameplay_verified": false
+      }
+    },
+    "B": {
+      "receipt": {
+        "path": "hardware/backups/tab5-b-install-un1zkt6o/receipt.json",
+        "bytes": 1554,
+        "sha256": "faa7b77cdaa85ca10f0700fb22cc46554eeb935d44b81b532e3344dad60dd61d"
+      },
+      "panel": "ST7123",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "runtime_log": {
+        "path": "hardware/backups/tab5-b-install-un1zkt6o/runtime.log",
+        "bytes": 15729,
+        "sha256": "92d1dc64d690570903a4fa9704cf83824c4977382a77f5d6891d682528121de7"
+      },
+      "volume_boot": 8,
+      "volume_game": 10,
+      "volume_policy_migrated": false,
+      "catalog_valid": 19,
+      "multiplayer_registered_games": 7,
+      "boot_flight": {
+        "frames": 43,
+        "max_frame_ms": 130,
+        "max_render_ms": 104,
+        "max_submit_ms": 43
+      },
+      "physical_acceptance": "pending",
+      "serial_evidence": [
+        "I (2855) tab5_display: FRAME_QUEUE buffers=3 framebuffer_bytes=1843200 extra_psram_bytes=1843200 free_psram_bytes=27163556 retirement_refreshes=2",
+        "I (3053) p4_settings: P4_SETTINGS boot=8 game=10 node=GC-P4-68ED ble_pad=1 source=nvs persistent=1",
+        "I (4224) p4_console_os: P4_CONSOLE_OS BOOT_AUDIO status=played profile=treasure-chords sample_rate=16000 frames=16000 volume=8 nominal_ms=1000 elapsed_ms=1153",
+        "I (7799) p4_console_os: P4_CONSOLE_OS MULTIPLAYER_REGISTRY_READY games=7 runtime_players=2 owner=console-os",
+        "I (7799) p4_console_os: P4_CONSOLE_OS GAME_CATALOG available=1 packages=19 valid=19 omitted=0 generation=1 source=microsd-only scan=background worker_low_water_bytes=11288 storage_result=ESP_OK update=0 result=ESP_OK",
+        "I (7876) p4_console_os: P4_CONSOLE_OS BOOT_FLIGHT frames=43 max_frame_ms=130 max_render_ms=104 max_submit_ms=43 stack_remaining=2876 result=ESP_OK animation_hold_ms=0",
+        "I (8068) p4_console_os: P4_CONSOLE_OS INTERFACE version=0.51 renderer=nextgen native=1280x720 legacy_theme=0",
+        "I (8082) tab5: CHARGER_INIT result=ESP_OK selection_ma=500 qc=disabled control_readback=1",
+        "I (18092) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized"
+      ],
+      "protected_cartridge_correction": {
+        "package_sha256": "208756ef3e23e3fe21e76842894ea67c1de83f61c7e8dddd750ad2ae6669f4f7",
+        "transfer_verified": true,
+        "registered": true,
+        "rejected": false,
+        "registration_log": {
+          "path": "build-host/red-dragon-lineage-repair/B-registration.log",
+          "bytes": 15042,
+          "sha256": "a89ef6a9cf3134731c45eac8c0a812b2183c36cdaa3aca181e16db198e9de541"
+        },
+        "multiplayer_registered_games_after_correction": 8,
+        "gameplay_verified": false
+      }
+    }
+  },
+  "limitations": [
+    "Physical scrolling/game cadence/audio/tilt and two-device wireless gameplay need named acceptance; build and boot do not establish them.",
+    "Boot maximum frame cost is retained in per-unit evidence; no60fps boot-animation claim.",
+    "Red Dragon compatibility/registration repaired; launch/save gameplay and visual/performance qualification remain separate."
+  ],
+  "recorded_utc": "2026-10-06T03:33:58.818566+00:00",
+  "volume_policy_observation": "A migrated once to3/3. B had already migrated under0.50 and retained its later saved boot8/game10; policy4 correctly does not reset subsequent edits.",
+  "content_workflow": {
+    "firmware_write_scope": "app only at0x20000; SD games/resources/saves not written",
+    "existing_game_installation_evidence": "build-host/hires-tab5-qualification/installation-reconciliation.json",
+    "protected_game_correction": {
+      "status": "paired cartridge installed and registration verified on A/B; saves and OS unchanged",
+      "installations": {
+        "path": "build-host/red-dragon-lineage-repair/installations.json",
+        "bytes": 2174,
+        "sha256": "76df5c9f241d5cbe1e48f6fcfadc9626aec268b22178f4637da6340713aeee1f"
+      },
+      "proof": {
+        "path": "build-host/red-dragon-lineage-repair/proof.json",
+        "bytes": 6536,
+        "sha256": "04f661637bcb846d8a178483ce12b9112731c5be3b586c3cff94a237337c5c6c"
+      }
+    }
+  }
+}

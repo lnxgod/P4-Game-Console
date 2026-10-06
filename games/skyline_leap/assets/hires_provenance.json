@@ -1,0 +1,133 @@
+{
+  "version": "1.1.0",
+  "assets": [
+    {
+      "game": "skyline_leap",
+      "source": "/Users/billh/.codex/generated_images/01a10e4d-8eac-7052-b410-c517e93f4e11/exec-44f43705-aea6-4244-8d6d-800d9d965259.png",
+      "width": 96,
+      "height": 96,
+      "prompt": "Use case: stylized-concept. Asset type: original 2D side-view action platformer sprite atlas for Skyline Leap. Transparent PNG EXACT regular 4 column by 4 row sprite sheet with 16 equally sized cells, no dividing lines. Row 1: one original athletic courier girl in short mustard yellow jacket, midnight trousers, red scarf, teal sneaker soles, dark bob hair, compact futuristic backpack: four coherent right-facing running cycle frames. Row 2: same courier right-facing jumping, same courier landing crouch, same courier firing a small wrist energy pulse right, same courier in hurt/recoil. Row 3: four frames of one small rounded purple patrol robot with cyan face screen and two mechanical feet walking right, clear antenna and plated shell. Row 4: glowing cyan collectible crystal, closed orange metal exit hatch, golden collectible spark, open teal lit exit portal. Polished high-detail hand-painted pixel-art side-view, bright readable silhouettes, material shading, coherent scale and shared baseline for character rows, designed to downsample to 96x60 sprites for a 768x480 game. All figures fully within cells with 15 percent transparent gutters and no contact between cells. No words, no grid, no scenery, no logos, no familiar commercial characters. Genuine transparent background.",
+      "asset": "assets/hires_atlas_v2.png",
+      "sha256": "c967b7c2a2b144563ed3b5ae8cea20324a5bcbb51252dfa4ecb7b404991080ca",
+      "mode": "built-in image_gen",
+      "transparent_background": true
+    },
+    {
+      "game": "skyline_leap",
+      "source": "/Users/billh/.codex/generated_images/01a10e4d-8eac-7052-b410-c517e93f4e11/exec-1ace5970-c601-43bb-949a-bb6b289106cc.png",
+      "background": true,
+      "prompt": "Use case: stylized-concept. Asset type: background art for an original side-view rooftop platformer named Skyline Leap. A panoramic futuristic coastal city at blue hour, deep blue and violet towers, small illuminated windows and rooftop antennae, distant hazy skyline and a soft peach horizon, night sky above with subtle stars. Foreground gameplay area must remain simple and uncluttered: this is BACKGROUND ONLY, with all buildings in the lower half, no foreground platforms, no characters, no interface, no text, no logos. Crisp richly detailed pixel-art illustration, polished 16-bit-to-modern arcade style, 2.5:1 landscape composition, dramatic but restrained contrast so yellow courier and cyan pickups will stand out. Edge-to-edge opaque background.",
+      "asset": "assets/hires_city_v2.png",
+      "sha256": "11cde80697b873c148068a92b52e4c972a1006868715089ad8f755e8ab1cbaea",
+      "mode": "built-in image_gen",
+      "transparent_background": false
+    }
+  ],
+  "conversion": {
+    "cell_dimensions": [
+      80,
+      80
+    ],
+    "measured_opaque_bounds": [
+      [
+        35,
+        21,
+        295,
+        296
+      ],
+      [
+        353,
+        18,
+        591,
+        298
+      ],
+      [
+        663,
+        21,
+        923,
+        299
+      ],
+      [
+        1003,
+        21,
+        1231,
+        299
+      ],
+      [
+        71,
+        318,
+        302,
+        605
+      ],
+      [
+        343,
+        414,
+        603,
+        614
+      ],
+      [
+        655,
+        344,
+        958,
+        614
+      ],
+      [
+        958,
+        344,
+        1247,
+        617
+      ],
+      [
+        50,
+        646,
+        255,
+        907
+      ],
+      [
+        379,
+        649,
+        572,
+        907
+      ],
+      [
+        711,
+        652,
+        916,
+        907
+      ],
+      [
+        1029,
+        651,
+        1231,
+        907
+      ],
+      [
+        76,
+        940,
+        248,
+        1181
+      ],
+      [
+        343,
+        940,
+        598,
+        1184
+      ],
+      [
+        705,
+        947,
+        877,
+        1182
+      ],
+      [
+        982,
+        940,
+        1249,
+        1184
+      ]
+    ],
+    "resize": "nearest-neighbor, preserve aspect, alpha >=160 to RGB565 chroma key 0",
+    "atlas_static_bytes": 204800,
+    "background_static_bytes": 118272
+  }
+}

@@ -1,6 +1,6 @@
 if(COMMAND idf_component_register)
     idf_component_register(
-        SRCS "src/input.c"
+        SRCS "src/input.c" "src/key_merge.c"
         INCLUDE_DIRS "include"
         REQUIRES gamepad_core
     )
@@ -19,6 +19,7 @@ else()
 
     add_library(doom_gamepad_input STATIC
         src/input.c
+        src/key_merge.c
         ../gamepad_core/src/gamepad.c
     )
     target_include_directories(doom_gamepad_input PUBLIC
@@ -35,8 +36,12 @@ else()
     )
     target_compile_features(doom_gamepad_input_tests PRIVATE c_std_11)
 
+    add_executable(doom_key_merge_tests tests/test_key_merge.c)
+    target_link_libraries(doom_key_merge_tests PRIVATE doom_gamepad_input)
+    target_compile_features(doom_key_merge_tests PRIVATE c_std_11)
+
     if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
-        foreach(target doom_gamepad_input doom_gamepad_input_tests)
+        foreach(target doom_gamepad_input doom_gamepad_input_tests doom_key_merge_tests)
             target_compile_options(${target} PRIVATE
                 -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
                 -fsanitize=address,undefined -fno-omit-frame-pointer
@@ -48,6 +53,7 @@ else()
     endif()
 
     include(CTest)
+    add_test(NAME doom_key_merge_tests COMMAND doom_key_merge_tests)
     add_test(NAME doom_gamepad_input_tests
              COMMAND doom_gamepad_input_tests)
 endif()

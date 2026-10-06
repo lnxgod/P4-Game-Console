@@ -1,0 +1,805 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "game": "solitaire",
+  "version": "1.1.0",
+  "status": "local-play-tested; build-tested; current game package installed; hardware gameplay pending",
+  "source_sha256": "724b6b15352ba0e8ef88bb98ed142556a49e2f0e80ca0a249191ceb70b055cb2",
+  "source_files": {
+    "CMakeLists.txt": "77c7e642d9e0ef99de1997cd31e7f08539672a04d80f0709b46282f9d1bd5d99",
+    "README.md": "fbdafea4a9adf710b72c8573d647bdc98fd0952ec3e0dfc9995fb5d40d69d033",
+    "assets/launcher-provenance.json": "714db65f0f6706e7c1a13fde83ade7a79bacbc4d395db752c89eff9dba39b0ae",
+    "assets/launcher-source.png": "25adc6c2e35b304449dffe9db026b5b169a410e695cf6daa892b9ded6a4608c1",
+    "assets/launcher.p4i": "cb1135659efdc88caae47b36d0902562017315af0dc03523f19a7c26a0e92abc",
+    "assets/table-materials-imagegen.png": "2ce0b7313a819bfe3697f70f55cc43cafc148d2d613f9ad46c6815f800af5546",
+    "assets/table-materials-provenance.json": "c7c699d6175928ec76aca81696ace209535858fe9c5a465ea26fc2d94e7703f8",
+    "game.json": "56e1f56e2124c77a111a3553933b9a6d81132d6b377807342356a06d556bdb00",
+    "src/generated/table_materials.inc": "dadda67dbfbcbccf4d01e81f11b3f83998a7f907565e87a3d65bdbe9c91ad6eb",
+    "src/solitaire.c": "a7263a5163c9542a466c72bbf2c0aa03a271f702315be1b9e52182c29ec1838c",
+    "src/solitaire_internal.h": "211b82ade926e41e96fff89e770010d107981b8e47c03dc8a7c1970790b6df44",
+    "tests/CMakeLists.txt": "02fe0f12cddd6dbd8147d8947c1250240a9eeb181b13f464df6c33625f3e9d1b",
+    "tests/performance-input.txt": "e092e19b9e6867ca94cf1d817852bab88c5887259011429466824d5253419568",
+    "tests/test_presentation.c": "dd496a04adb3d280786d02594ab056baf2118917de901032c6a9a71486796bab",
+    "tests/test_solitaire.c": "09da0fd33a91634e13042d3110650a41fd0167053146f5a869f280ad63fca141",
+    "tools/convert_table_materials.py": "829446d812006a775bd7184d60eb3b4a409e5bb0c4e5463566481d851ccda344"
+  },
+  "shared_presentation_dependencies": {
+    "components/p4_game_api/include/p4/card_art.h": "e606ba8b802e7a71dc715264c3c85ed857e507c10d75738de5d174c06cff7a53",
+    "components/p4_game_api/include/p4/presentation.h": "5b4ad858a5497e5fa75f5aa3ad07c65bc4d646095fbc17b012a99bbc20adbab8",
+    "components/p4_game_api/include/p4/presentation_font.h": "0bc9a110a5f9b0e8f1cc44ffa212206758ebdd58e15ac488030f65fe72a7f448",
+    "components/p4_game_api/src/presentation_font.c": "149b2e510c0a0b8dfe5c4a7ac4be2f8006c4360c09a82c088209f7ece1eb65c5"
+  },
+  "automated": {
+    "focused_ctest": {
+      "command": "ctest --test-dir build-host/solitaire --output-on-failure",
+      "passed": 2,
+      "failed": 0,
+      "tests": [
+        "solitaire_tests",
+        "solitaire_presentation_tests"
+      ],
+      "log": {
+        "path": "build-host/solitaire/Testing/Temporary/LastTest.log",
+        "sha256": "fb2a93b626fee29f38e3f2c1b42d195a44488d340f9fa99ba1a6f0779dd310e9"
+      }
+    },
+    "generic_sdl_ctest": {
+      "passed": 5,
+      "failed": 0,
+      "source": "build-host/final-simulator-validation.json"
+    },
+    "sanitizers": [
+      "address",
+      "undefined"
+    ],
+    "converter_reproducible": true,
+    "render_checks": [
+      "320x200 and 768x480 negotiated surface",
+      "padded stride and allocation guards",
+      "full-frame coverage",
+      "menu and gameplay actual-render captures",
+      "existing Back lifecycle"
+    ],
+    "unchanged_rules_and_multiplayer": "Existing focused suite passed; no game logic or networking source modified."
+  },
+  "visual_review": {
+    "reviewer": "Card-game agent",
+    "inspected": [
+      "native and fallback gameplay",
+      "native and fallback three-face-up-card fan with focus preview"
+    ],
+    "captures": {
+      "build-host/solitaire/crisp-captures/solitaire-320-0.png": "8efe405bf1892972d5706d97458f955b4c4325450336d19cde4ecf96b0f77077",
+      "build-host/solitaire/crisp-captures/solitaire-320-1.png": "df082780be418c92eb51fd30c1ba5f245edd4e79e79f0d3b927f1096c28e4ee4",
+      "build-host/solitaire/crisp-captures/solitaire-320-2.png": "8ac6b8f33286d20986fc37f9c01252718c759e10ebc638d54162476090f8036d",
+      "build-host/solitaire/crisp-captures/solitaire-320-3.png": "dd87c11fa21ea0c4d54d6f217a6bddecd0187a6017d964536444fe28130a51b3",
+      "build-host/solitaire/crisp-captures/solitaire-768-0.png": "56f9f1c2f8de89814b75c0bbb176ab730a2e89bebd6fa1697b68d9d644129e7f",
+      "build-host/solitaire/crisp-captures/solitaire-768-1.png": "feea50f2248bce301fa7830bc484226888246e35958f00c65701fd97d90b1432",
+      "build-host/solitaire/crisp-captures/solitaire-768-2.png": "2af3b3306737892147f31f1186c3f8c59b1201380e17d2b21a45611725ab7117",
+      "build-host/solitaire/crisp-captures/solitaire-768-3.png": "e0daa66c98f4bb7ce8839d480e66eda9dc80f6d5c4122b70e64736a8bd4118eb"
+    }
+  },
+  "interactive": {
+    "status": "local-play-tested",
+    "tester": "Codex primary agent using CUA keyboard and mouse in the real SDL3 simulator",
+    "date": "2026-10-06",
+    "observations": [
+      "Played stock, waste touch, tableau selection, an ace to its foundation, a legal black 6 onto red 7, new deal and Back.",
+      "Replayed the compact overlapping rank strip and full focused-card preview; both remain readable.",
+      "Final simulator replay moved the ace to the foundation and showed 60.0 FPS.",
+      "Direct-touch layout replay: larger cards and no virtual gamepad; tap-selected black 8 onto red 9, moved ace of spades to foundation, and drew stock. Sampled title 59.9\u201360.0 FPS. Fast drag revealed shared simulator event loss; final drag replay pending runner repair."
+    ],
+    "sampled_title_fps_range": [
+      58.3,
+      60.1
+    ],
+    "fps_sample_source_field": "fps",
+    "observation_record": {
+      "fps": [
+        58.3,
+        60.1
+      ],
+      "observations": [
+        "Played stock, waste touch, tableau selection, an ace to its foundation, a legal black 6 onto red 7, new deal and Back.",
+        "Replayed the compact overlapping rank strip and full focused-card preview; both remain readable.",
+        "Final simulator replay moved the ace to the foundation and showed 60.0 FPS.",
+        "Direct-touch layout replay: larger cards and no virtual gamepad; tap-selected black 8 onto red 9, moved ace of spades to foundation, and drew stock. Sampled title 59.9\u201360.0 FPS. Fast drag revealed shared simulator event loss; final drag replay pending runner repair."
+      ],
+      "drag_acceptance": {
+        "automated_game_and_real_sdl_events": "passed",
+        "cua_interactive": "unverified; native automation emitted down then up at0,0 withoutheldmotion, as preserved in build-host/solitaire/cua-drag-events.log",
+        "physical_finger": "pending"
+      }
+    },
+    "fps_limitation": "One-second title samples during local play, not a per-frame minimum guarantee or physical-device measurement.",
+    "runtime_equivalence": "Shared raster performance changes are expected in every cartridge relative to the old gameplay package; exact-pixel clipping tests and assembly evidence qualify that helper change, not binary equivalence. Touch input/render changes are also expected. Final source/package hashes, focused tests and current SDL observations identify this revision.",
+    "simulator_validation_source": "build-host/final-simulator-validation.json"
+  },
+  "art": {
+    "provenance": "assets/table-materials-provenance.json",
+    "mode": "built-in image_gen",
+    "static_material_bytes": 51200,
+    "runtime_image_decoding": false
+  },
+  "hardware_acceptance": null,
+  "installed_on_device": true,
+  "externally_published": false,
+  "pending": [
+    "Native display and physical touch",
+    "ESP32-P4 timing and memory pressure",
+    "Speaker acoustics",
+    "Real linked-console multiplayer"
+  ],
+  "performance": {
+    "revision_scope": "shared raster optimization; current source benchmark",
+    "scope": "Optimized development-Mac CPU update/render/audio; excludes SDL presentation, physical device, transport and I/O.",
+    "frames_per_resolution": 2000,
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "input_tape": "games/solitaire/tests/performance-input.txt",
+    "input_sha256": "e092e19b9e6867ca94cf1d817852bab88c5887259011429466824d5253419568",
+    "benchmark_binary": "build-host/play-solitaire/p4_game_benchmark",
+    "benchmark_binary_sha256": "cea7fbf1d7349d56eb4a6ac0c082aafa985c859dad78d2c7c07ff699bb864e5c",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.solitaire",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1243,
+        "last_frame_hash": "31f292e4",
+        "update_audio_ms": {
+          "mean": 0.0009,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.012,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.186,
+          "p50": 0.186,
+          "p95": 0.197,
+          "p99": 0.211,
+          "max": 0.336,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1869,
+          "p50": 0.187,
+          "p95": 0.198,
+          "p99": 0.212,
+          "max": 0.338,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.solitaire",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1243,
+        "last_frame_hash": "0c97b340",
+        "update_audio_ms": {
+          "mean": 0.0008,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.001,
+          "max": 0.002,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0434,
+          "p50": 0.043,
+          "p95": 0.045,
+          "p99": 0.048,
+          "max": 0.073,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0443,
+          "p50": 0.044,
+          "p95": 0.046,
+          "p99": 0.05,
+          "max": 0.074,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "measurement_files": {
+      "768": {
+        "path": "build-host/smoothness-packages/solitaire/benchmark-768.json",
+        "sha256": "03009c43aa8ad296f5f7d3935ea4897ee04099ef8755005df102d7e1ef5e72f3",
+        "bytes": 525
+      },
+      "320": {
+        "path": "build-host/smoothness-packages/solitaire/benchmark-320.json",
+        "sha256": "d3fb1d455fe65b3e0c2051f471c41d94e178a2838b4e684ba887361f3a75bd48",
+        "bytes": 525
+      }
+    },
+    "motion_coverage": "Existing direct-touch trace; stock/card interactions and long held/moving periods.",
+    "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+    "hardware_fps_verified": false,
+    "pre_touch_baseline_only": false
+  },
+  "final_simulator": {
+    "path": "build-host/play-solitaire/p4_game_host.app/Contents/MacOS/p4_game_host",
+    "sha256": "a952001f253dd81892a01c3e353bcc43670b8e811787aece5df01c3ff66e4a24",
+    "bytes": 1052496,
+    "fps_title_present": true,
+    "tests_passed": 5,
+    "tests_failed": 0,
+    "build_log": {
+      "path": "build-host/smoothness-packages/solitaire/sdl-build.log",
+      "sha256": "1d18145052228ff1ceab823e262d46860b839e79a090b239e84e7e0e9768819f",
+      "bytes": 3952
+    },
+    "test_log": {
+      "path": "build-host/smoothness-packages/solitaire/sdl-tests.log",
+      "sha256": "2f30a77ceb011fb2a184096b1d79a00d51322e1d2b44c2c5315fc022133711c4",
+      "bytes": 756
+    },
+    "evidence_path": "games/solitaire/PRESENTATION_TESTING.json"
+  },
+  "pre_raster_performance": {
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "scope": "Optimized development-Mac CPU update + render + audio; excludes display, device, transport and presentation scheduling",
+    "frames_per_resolution": 2000,
+    "input_trace": "build-host/crisp-package/card-performance/solitaire.txt",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.solitaire",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 147,
+        "last_frame_hash": "d834d60f",
+        "update_audio_ms": {
+          "mean": 0.0008,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.007,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.1409,
+          "p50": 0.129,
+          "p95": 0.205,
+          "p99": 0.29,
+          "max": 0.442,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1417,
+          "p50": 0.129,
+          "p95": 0.207,
+          "p99": 0.291,
+          "max": 0.445,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.solitaire",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 147,
+        "last_frame_hash": "dc73934c",
+        "update_audio_ms": {
+          "mean": 0.0008,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.001,
+          "max": 0.002,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0294,
+          "p50": 0.029,
+          "p95": 0.033,
+          "p99": 0.038,
+          "max": 0.06,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0302,
+          "p50": 0.03,
+          "p95": 0.034,
+          "p99": 0.039,
+          "max": 0.061,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "art_equivalence": "All native and fallback capture PNG hashes match the preceding presentation pass",
+    "optimization": "Clipped 128-pixel native felt-row memcpy spans; no extra buffers or game state",
+    "isolated_felt_before_median_us": 80,
+    "isolated_felt_after_median_us": 10,
+    "timing_audit": "No blocking waits; CPU think delays use elapsed_ms. Rummy analysis bounded at 8 cards/256 subsets; Holdem rank evaluation at 21 five-card combinations. No AI rule rewrite needed for measured host budget.",
+    "hardware_fps_verified": false
+  },
+  "source_hash_method": "Sorted game-relative UTF-8 path plus NUL plus binary SHA-256 of each file; excludes LOCAL_TESTING.json, PRESENTATION_TESTING.json, TOUCH_TESTING.json, .DS_Store and __pycache__.",
+  "shared_raster_validation": {
+    "path": "build-host/crisp-package/raster-performance/proof.json",
+    "sha256": "49d0d633753d08c467f19c13588eea7f221dd9df26aa7b95493aed685f49bb1c",
+    "bytes": 3752
+  },
+  "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+  "raster_revision_package_candidate": {
+    "path": "build-host/smoothness-packages/GAMES/SOLITAIR.P4G",
+    "sha256": "34c9eb50979527ed87d69afa8692ba7c7f786606325957117ae87357ded2125f",
+    "bytes": 245136,
+    "id": "org.p4console.solitaire",
+    "title": "Solitaire",
+    "version": "1.1.0",
+    "folder": "GAMES/CARDS",
+    "launcher_id": 107,
+    "payload_sha256": "c24f9ef73995d27d2dec9284420bf95904ed8417bf673448fe2c02a36104e864",
+    "limit_bytes": 524288,
+    "icon": {
+      "name": ".p4icon",
+      "type": 1,
+      "flags": 0,
+      "address": 0,
+      "size": 9744,
+      "alignment": 1,
+      "sha256": "cb1135659efdc88caae47b36d0902562017315af0dc03523f19a7c26a0e92abc"
+    },
+    "allocated_sections": [
+      {
+        "name": ".hash",
+        "type": 5,
+        "flags": 2,
+        "address": 212,
+        "size": 48,
+        "alignment": 4,
+        "sha256": "319003b6abdf4c44f1447f7aa279af445fc17025d3d91cc91806a0a89cb3554a"
+      },
+      {
+        "name": ".dynsym",
+        "type": 11,
+        "flags": 2,
+        "address": 260,
+        "size": 112,
+        "alignment": 4,
+        "sha256": "215b67f83fb686aabe4e9c49423e574902d5b16bec2157fd9df29426bc51368f"
+      },
+      {
+        "name": ".dynstr",
+        "type": 3,
+        "flags": 2,
+        "address": 372,
+        "size": 34,
+        "alignment": 1,
+        "sha256": "34cc7ef5f58386f0d5892d0a37fcd268e86f0eb72987a5888b0584bb03c8e53a"
+      },
+      {
+        "name": ".rela.dyn",
+        "type": 4,
+        "flags": 2,
+        "address": 408,
+        "size": 192,
+        "alignment": 4,
+        "sha256": "9bc9b5e1d7f3572be3b51db5f930563ceb855c1dbef14d3eac9458e298085374"
+      },
+      {
+        "name": ".rela.plt",
+        "type": 4,
+        "flags": 66,
+        "address": 600,
+        "size": 60,
+        "alignment": 4,
+        "sha256": "f57d71da3724f06d00610c3edf01420e8904920a8c83c7e6474a9653977e2ac7"
+      },
+      {
+        "name": ".plt",
+        "type": 1,
+        "flags": 6,
+        "address": 672,
+        "size": 112,
+        "alignment": 16,
+        "sha256": "7f07fc92b976ae66687aa6c92701af85da50438560b7ac36c39689f63ea37f22"
+      },
+      {
+        "name": ".text",
+        "type": 1,
+        "flags": 6,
+        "address": 784,
+        "size": 13884,
+        "alignment": 2,
+        "sha256": "2f45c47962180057351bdfc2187fe2d0d3c2a8b1d8b566a943888126d5ff56e0"
+      },
+      {
+        "name": ".rodata",
+        "type": 1,
+        "flags": 2,
+        "address": 14668,
+        "size": 219475,
+        "alignment": 4,
+        "sha256": "8f7fc821c758e4a27de40e9342a98388b2bc5d6b6512979a18ddafac06164005"
+      },
+      {
+        "name": ".data.rel.ro",
+        "type": 1,
+        "flags": 3,
+        "address": 238240,
+        "size": 92,
+        "alignment": 4,
+        "sha256": "239b66925f9073ca47146fcc9e060916e9c73fdaeaae8ca6cae550627134355b"
+      },
+      {
+        "name": ".dynamic",
+        "type": 6,
+        "flags": 3,
+        "address": 238332,
+        "size": 144,
+        "alignment": 4,
+        "sha256": "02ce1f48e27b2fa329c638ac9114bd3ec498edc36cc3e9869bb71306ab2cab85"
+      },
+      {
+        "name": ".got",
+        "type": 1,
+        "flags": 3,
+        "address": 238476,
+        "size": 16,
+        "alignment": 4,
+        "sha256": "848bd38235d1bb35d396d339d96fffe5ee7edfda1663b18bf864d5c0f3c33520"
+      },
+      {
+        "name": ".got.plt",
+        "type": 1,
+        "flags": 3,
+        "address": 238492,
+        "size": 28,
+        "alignment": 4,
+        "sha256": "1cef43fdad35bc9151399b5d318dc8121648806d558958d00a88183415e4ba17"
+      }
+    ],
+    "build_log": {
+      "path": "build-host/smoothness-packages/solitaire/package-build.log",
+      "sha256": "8d625ee12a7f32d6249d9670a84cf443720bc430cd03f072e420d8fd97ea5938",
+      "bytes": 823
+    },
+    "validation_log": {
+      "path": "build-host/smoothness-packages/solitaire/package-validation.log",
+      "sha256": "a1c37dbb3501f0f85e0866cc08f2201ee47e4fc2675353fec62ec1111a96fb95",
+      "bytes": 283
+    }
+  },
+  "raster_revision_captures": {
+    "build-host/smoothness-packages/solitaire/captures/solitaire-320-0.ppm": "554d3ac7ae5bd4ae64d8bc22608417721404c64bc512fcb8223497d306d6ea62",
+    "build-host/smoothness-packages/solitaire/captures/solitaire-320-1.ppm": "36741140cdcf033302b769dcefef394ba722e163474f2c02e93bf593ff2db6b8",
+    "build-host/smoothness-packages/solitaire/captures/solitaire-320-2.ppm": "b2831280d50f3f8e536e23e53eb0f5c5f25c8573283694e2895c063cd6927479",
+    "build-host/smoothness-packages/solitaire/captures/solitaire-320-3.ppm": "67516fe50df1e8eac36cd9f12ea0eb9e8593672bb289fdafd9fc3524c3d86ebf",
+    "build-host/smoothness-packages/solitaire/captures/solitaire-320-4.ppm": "4b0d980cd277f5d488fd3b55a210295aabc960b48c55f766a9702364337ee921",
+    "build-host/smoothness-packages/solitaire/captures/solitaire-320-5.ppm": "d78d7ee44047b5bbd0a376c2e00b0aff4a04aa14e5785952465035a07754c8c2",
+    "build-host/smoothness-packages/solitaire/captures/solitaire-320-6.ppm": "3c008305536f3638858266dfa9cc691596a50d7b0698b7a6a9e5da6c7974b9a5",
+    "build-host/smoothness-packages/solitaire/captures/solitaire-768-0.ppm": "5ce0f49ed9cd1d57a518f3b76d57f98e89f7a429792f57ee0419e5061e1ccf0b",
+    "build-host/smoothness-packages/solitaire/captures/solitaire-768-1.ppm": "e1079ec52c8a4125df5b9b3f321314035a38450b070bb1715737b8a190d85262",
+    "build-host/smoothness-packages/solitaire/captures/solitaire-768-2.ppm": "32f0b3da604dedadad3227ff19382cf7e96d75fffec821710c60337b2c272359",
+    "build-host/smoothness-packages/solitaire/captures/solitaire-768-3.ppm": "bd478df3860a85e0bf07a8400d449362e5aaabf0e205b36dfa820d292dcfd4ce",
+    "build-host/smoothness-packages/solitaire/captures/solitaire-768-4.ppm": "4c914e7fd34cf792f2870497c48cbf7b30f15d8e604de38bebaf1f3ca7088b0c",
+    "build-host/smoothness-packages/solitaire/captures/solitaire-768-5.ppm": "fc78bd7f14166382af70f35cf0cf06b968ba15beb118ed28af37c4ae4f30d413",
+    "build-host/smoothness-packages/solitaire/captures/solitaire-768-6.ppm": "e7a1a75546a121d41150b8cefdc952f495ae8f4781ebcc9235e494ee7127f169"
+  },
+  "raster_revision_scope": "Shared exact-output raster optimization only; local build/test/CPU validation. No new physical-device acceptance or installation performed by this pass.",
+  "pre_icon_source_sha256": "724b6b15352ba0e8ef88bb98ed142556a49e2f0e80ca0a249191ceb70b055cb2",
+  "package_validation": {
+    "path": "build-host/hires-install-bundle/GAMES/SOLITAIR.P4G",
+    "sha256": "34c9eb50979527ed87d69afa8692ba7c7f786606325957117ae87357ded2125f",
+    "bytes": 245136,
+    "limit_bytes": 524288,
+    "icon_bytes": 9744,
+    "staged_manifest": {
+      "path": "build-host/hires-install-bundle/manifest.json",
+      "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee"
+    },
+    "staged_manifest_entry": "solitaire",
+    "allocated_code_and_data_unchanged_from_playtested_package": false,
+    "allocated_section_comparison": "historical comparison retained; expected shared raster performance changes and touch input/render changes",
+    "expected_shared_raster_performance_changes": true,
+    "shared_raster_pixel_equivalence_proof": {
+      "path": "build-host/crisp-package/raster-performance/proof.json",
+      "sha256": "49d0d633753d08c467f19c13588eea7f221dd9df26aa7b95493aed685f49bb1c"
+    },
+    "expected_touch_changes": true,
+    "expected_art_layout_animation_changes": false,
+    "changed_allocated_sections": [
+      ".data.rel.ro",
+      ".dynamic",
+      ".dynsym",
+      ".got",
+      ".got.plt",
+      ".plt",
+      ".rela.dyn",
+      ".rela.plt",
+      ".rodata",
+      ".text"
+    ],
+    "comparison_baseline": {
+      "path": "build-host/hires-gameplay-packages/SOLITAIR.P4G",
+      "sha256": "c0788ec7c089b5e605aad76ab19669cb880d152850f79a026beaf496d3f7ff1d",
+      "scope": "pre-touch, pre-icon gameplay package"
+    }
+  },
+  "touch_validation": {
+    "path": "build-host/solitaire/direct-touch-validation.json",
+    "sha256": "a38e021ea729de83972b695f86f0038b5a7266b558bb4c57a4372a3cd0518f77",
+    "scope": "Direct Solitaire touch dragging and expanded native/fallback table; no manifest/assets/shared code changes",
+    "focused_ctest": "2/2 passed, ASan+UBSan",
+    "captures": {
+      "build-host/solitaire/direct-touch-captures/solitaire-320-0.png": "620d4201b4b7eb360f55ab31787e98302f9ed0a6d47b7b1821cf0d7626653a14",
+      "build-host/solitaire/direct-touch-captures/solitaire-320-1.png": "38512f1a4f1c83c849bb3760a64752129dc6c304e7ae01b632509194b51f5153",
+      "build-host/solitaire/direct-touch-captures/solitaire-320-2.png": "e97bf64207ef9892b55a8d5d33e13db124b1ff67d6027fe1eb26e361736cce10",
+      "build-host/solitaire/direct-touch-captures/solitaire-320-3.png": "2342050d19570b66c2b77a938fa37c674d2cc6008a79eca8caf96aa8bb4c4b44",
+      "build-host/solitaire/direct-touch-captures/solitaire-320-4.png": "3839341ca0ff8f0b92ce58825c7123ffe45a436413c2609efa364199a0a08739",
+      "build-host/solitaire/direct-touch-captures/solitaire-320-5.png": "e74927146a34ae10fb2bdcc059ce11d011a9e8f77680de0450ecec8da93d8c71",
+      "build-host/solitaire/direct-touch-captures/solitaire-320-6.png": "c6ee9365c9586ef0f653487dd542129431474503daf9abba4832b7d9acde54de",
+      "build-host/solitaire/direct-touch-captures/solitaire-768-0.png": "0d22fc4a0df814b24c0a4763f3472d6d70f316e92e25656502bfd4dc5f03a344",
+      "build-host/solitaire/direct-touch-captures/solitaire-768-1.png": "59b24e04c995d57df5f1810d3da53583138f96f82f7c29c9018316b538d7ad7d",
+      "build-host/solitaire/direct-touch-captures/solitaire-768-2.png": "37a04d98ae4d2e0f15b256df2471be788253ce4bbd8523242e8f5a79147dfbca",
+      "build-host/solitaire/direct-touch-captures/solitaire-768-3.png": "8e4e84d0bd336fe246dcf082b168ae7bb07f48b014bf7c9a1533606b9c83a4c1",
+      "build-host/solitaire/direct-touch-captures/solitaire-768-4.png": "6431b6bd6db4ff8999bd7b3ebbe8d8baeebcf8142badbf6bf7101d1b9ed66b82",
+      "build-host/solitaire/direct-touch-captures/solitaire-768-5.png": "b296d48b86781aa9ce56858920dbf7fb4540771855df72df4e21fb59fc108e90",
+      "build-host/solitaire/direct-touch-captures/solitaire-768-6.png": "7601612d1b56697e61db12cfc76019fe39305c26fad61b06c6863b5631b6e8fa"
+    },
+    "covered": [
+      "no mutation until release",
+      "legal full-run drop and covered-card flip",
+      "illegal/same-color/multi-card foundation/outside-pile drops preserve cards and moves",
+      "actual input mapper old A/B/D-pad regions cannot trigger actions",
+      "drag across New deal does not reset",
+      "lost or multiple contacts cancel",
+      "stock tap and stock drag distinction",
+      "waste to foundation, foundation to tableau, king to empty pile",
+      "New deal and Exit touch buttons",
+      "retained keyboard and Back behavior",
+      "native/fallback padded stride guards and 14 actual-render captures",
+      "touch-selected full-card preview for the deepest supported 19-card pile"
+    ]
+  },
+  "pre_touch_performance": {
+    "revision_scope": "shared raster optimization; current source benchmark",
+    "scope": "Optimized development-Mac CPU update/render/audio; excludes SDL presentation, physical device, transport and I/O.",
+    "frames_per_resolution": 2000,
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "input_tape": "games/solitaire/tests/performance-input.txt",
+    "input_sha256": "e092e19b9e6867ca94cf1d817852bab88c5887259011429466824d5253419568",
+    "benchmark_binary": "build-host/play-solitaire/p4_game_benchmark",
+    "benchmark_binary_sha256": "cea7fbf1d7349d56eb4a6ac0c082aafa985c859dad78d2c7c07ff699bb864e5c",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.solitaire",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1243,
+        "last_frame_hash": "31f292e4",
+        "update_audio_ms": {
+          "mean": 0.0009,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.012,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.186,
+          "p50": 0.186,
+          "p95": 0.197,
+          "p99": 0.211,
+          "max": 0.336,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1869,
+          "p50": 0.187,
+          "p95": 0.198,
+          "p99": 0.212,
+          "max": 0.338,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.solitaire",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1243,
+        "last_frame_hash": "0c97b340",
+        "update_audio_ms": {
+          "mean": 0.0008,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.001,
+          "max": 0.002,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0434,
+          "p50": 0.043,
+          "p95": 0.045,
+          "p99": 0.048,
+          "max": 0.073,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0443,
+          "p50": 0.044,
+          "p95": 0.046,
+          "p99": 0.05,
+          "max": 0.074,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "measurement_files": {
+      "768": {
+        "path": "build-host/smoothness-packages/solitaire/benchmark-768.json",
+        "sha256": "03009c43aa8ad296f5f7d3935ea4897ee04099ef8755005df102d7e1ef5e72f3",
+        "bytes": 525
+      },
+      "320": {
+        "path": "build-host/smoothness-packages/solitaire/benchmark-320.json",
+        "sha256": "d3fb1d455fe65b3e0c2051f471c41d94e178a2838b4e684ba887361f3a75bd48",
+        "bytes": 525
+      }
+    },
+    "motion_coverage": "Existing direct-touch trace; stock/card interactions and long held/moving periods.",
+    "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+    "hardware_fps_verified": false,
+    "pre_touch_baseline_only": false
+  },
+  "current_package_installed_on_device": true,
+  "current_package_installed_units": [
+    "Tab5 A",
+    "Tab5 B"
+  ],
+  "latest_successful_installation_by_unit": {
+    "Tab5 A": {
+      "slug": "solitaire",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "34c9eb50979527ed87d69afa8692ba7c7f786606325957117ae87357ded2125f",
+      "package_bytes": 245136,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    },
+    "Tab5 B": {
+      "slug": "solitaire",
+      "title": "Solitaire",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "34c9eb50979527ed87d69afa8692ba7c7f786606325957117ae87357ded2125f",
+      "package_bytes": 245136,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "SOLITAIR.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=SOLITAIR.P4G bytes=245136 sha256=34c9eb50979527ed87d69afa8692ba7c7f786606325957117ae87357ded2125f seconds=4.3",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "solitaire"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    }
+  },
+  "installation_history": [
+    {
+      "slug": "solitaire",
+      "title": "Solitaire",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "usb_serial_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "2996f54c9b0cd25a8cad031d71bed4c3932a44b3c0d6db3aaf2420f0e0cf5e1e",
+      "package_bytes": 245056,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T00:30:06.294159+00:00",
+      "verification": {
+        "method": "Native USB transfer: device SHA-256, atomic activation and readback; existing identical files verified by device hash",
+        "log": "build-host/hires-tab5-qualification/A-ready-table-install-retry.log",
+        "log_sha256": "910c61277893523ce5b067b1c8baa5430da58f18ea7f38c0b1e973c1348dcc2d",
+        "bundle_result": "BUNDLE_PASS files=7"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    {
+      "slug": "solitaire",
+      "title": "Solitaire",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "usb_serial_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "2996f54c9b0cd25a8cad031d71bed4c3932a44b3c0d6db3aaf2420f0e0cf5e1e",
+      "package_bytes": 245056,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T00:31:58.157929+00:00",
+      "verification": {
+        "method": "Native USB transfer: device SHA-256, atomic activation and readback; existing identical files verified by device hash",
+        "log": "build-host/hires-tab5-qualification/B-ready-table-install-retry.log",
+        "log_sha256": "c4ea3bb6a76879a2afffe7cb9ea43e6e3caa57bbb890c23be397b8f9d204cab2",
+        "bundle_result": "BUNDLE_PASS files=7"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    {
+      "slug": "solitaire",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "34c9eb50979527ed87d69afa8692ba7c7f786606325957117ae87357ded2125f",
+      "package_bytes": 245136,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    },
+    {
+      "slug": "solitaire",
+      "title": "Solitaire",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "34c9eb50979527ed87d69afa8692ba7c7f786606325957117ae87357ded2125f",
+      "package_bytes": 245136,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "SOLITAIR.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=SOLITAIR.P4G bytes=245136 sha256=34c9eb50979527ed87d69afa8692ba7c7f786606325957117ae87357ded2125f seconds=4.3",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "solitaire"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    }
+  ],
+  "installation_limitation": "Records identify successful transfers of specific packages to specific units; they do not establish hardware gameplay or frame-rate acceptance."
+}

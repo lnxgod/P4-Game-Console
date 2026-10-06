@@ -1,0 +1,19 @@
+{
+  "source": "assets/space_backdrop_v3.png",
+  "generation": "built-in image_gen",
+  "generated_date": "2026-10-05",
+  "prompt": "Create an ORIGINAL premium 1990s 2D horizontal-space arcade background painting for a small-screen fixed-screen space shooter, late TurboGrafx-16 / PlayStation 2D painted pixel-art craft, substantially richer than early Atari graphics. Asset type: opaque raster BACKGROUND ONLY; no UI, text, logos, ships, enemies, weapons, shield bunkers or recognizable copyrighted designs. Wide landscape 2:1 composition. Deep ink-navy space with layered smoky teal/cobalt nebula wisps at far left and far right; a beautifully shaded small dusty-violet crescent planet toward the lower right, distant orange stellar rim glow near bottom left, a subtle asteroid dust arc across lower third. The central 80 percent remains mostly dark, calm and low contrast so bright enemy sprites and shots read clearly. Fine sparse stars of varied luminance, never a grid, not dense visual noise. Controlled dark-blue/purple/teal palette, refined atmospheric depth, crisp deliberate pixel-art clusters and rich hand-painted shading. No border, no vignette frame, no gradients that band into large horizontal stripes. Designed to be downsampled offline to 384x192 RGB565 and drawn behind a native768x480 game. Produce the finished background art filling the entire image.",
+  "source_sha256": "ee65eae862523aeef797b885b8585f812e6fcc3b492374fe6499791d32bd8d4a",
+  "license": "Original project ImageGen artwork, distributed under project MIT license; no third-party game art",
+  "conversion": {
+    "script": "tools/convert_background.py",
+    "width": 384,
+    "height": 192,
+    "filter": "Pillow LANCZOS",
+    "format": "RGB565 opaque",
+    "static_bytes": 147456,
+    "pillow_version": "12.3.0",
+    "output_sha256": "ae92639b38eaf0799c647ffd461b7f014f58442cb106a0286c6de69597b4bab5",
+    "verified_byte_identical": true
+  }
+}

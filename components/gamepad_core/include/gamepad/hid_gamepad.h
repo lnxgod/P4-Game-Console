@@ -79,7 +79,7 @@ typedef struct {
     uint8_t reserved;
 } gamepad_hid_field_t;
 
-/** Expected input payload length for one HID Report ID. */
+/** Expected input payload length for one HID Report ID across all collections. */
 typedef struct {
     uint16_t payload_bits;
     uint16_t payload_bytes;
@@ -110,8 +110,10 @@ typedef struct {
 void gamepad_hid_layout_init(gamepad_hid_layout_t *layout);
 
 /**
- * Parse the first top-level Joystick, Game Pad, or Multi-axis Application
- * Collection. Reports owned only by later application collections are ignored.
+ * Map controls from the first top-level Joystick, Game Pad, or Multi-axis
+ * Application Collection. Track input sizes and bit offsets across all
+ * collections on the interface, including reports with no mapped controls.
+ * GAMEPAD_HID_MAX_REPORTS bounds all declared input reports.
  *
  * The descriptor is untrusted. Parsing is allocation-free and rejects inputs
  * that exceed any public bound. On failure, `layout` is reset to an empty valid
@@ -161,8 +163,10 @@ uint32_t gamepad_hid_capabilities(const gamepad_hid_layout_t *layout);
  *
  * Reports with IDs include the ID as byte zero. The byte count must exactly
  * match the descriptor-derived report size; short data and trailing data are
- * rejected. Decoding is transactional: an invalid report leaves `state`
- * unchanged.
+ * rejected. A valid report from another collection leaves controls unchanged
+ * and advances the snapshot sequence/timestamp, so transports can accept it
+ * without disconnecting the gamepad. Unknown report IDs remain errors.
+ * Decoding is transactional: an invalid report leaves `state` unchanged.
  */
 gamepad_status_t gamepad_hid_decode_report(const gamepad_hid_layout_t *layout,
                                            const uint8_t *report,

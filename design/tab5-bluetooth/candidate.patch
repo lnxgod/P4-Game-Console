@@ -1,0 +1,575 @@
+--- /dev/null
++++ b/components/platform_tab5/src/radio_power_control.c
+@@ -0,0 +1,61 @@
++// SPDX-License-Identifier: MIT
++#include "radio_power_control.h"
++#include <stddef.h>
++
++enum {
++    RADIO_ENABLE = 1U << 0,
++    IO_DIRECTION = 0x03,
++    OUTPUT_LATCH = 0x05,
++    OUTPUT_HIGH_Z = 0x07,
++};
++
++tab5_radio_power_result_t tab5_radio_power_apply(
++    void *context, tab5_radio_read_reg_fn read_reg,
++    tab5_radio_write_reg_fn write_reg, bool enabled)
++{
++    if (read_reg == NULL || write_reg == NULL) {
++        return TAB5_RADIO_POWER_INVALID_ARGUMENT;
++    }
++    /* Unlike the vendor expander constructor, these masked operations never
++     * reset charging, USB or power-off controls sharing the same device. */
++    const uint8_t registers[] = {OUTPUT_LATCH, OUTPUT_HIGH_Z, IO_DIRECTION};
++    uint8_t expected[3];
++    for (size_t i = 0; i < 3; ++i) {
++        if (!read_reg(context, registers[i], &expected[i])) {
++            return TAB5_RADIO_POWER_IO_ERROR;
++        }
++    }
++    expected[0] = enabled ? (uint8_t)(expected[0] | RADIO_ENABLE)
++                          : (uint8_t)(expected[0] & (uint8_t)~RADIO_ENABLE);
++    expected[1] &= (uint8_t)~RADIO_ENABLE;
++    expected[2] |= RADIO_ENABLE;
++
++    tab5_radio_power_result_t result = TAB5_RADIO_POWER_OK;
++    /* Latch first, then driven output mode and direction. This makes the
++     * initial disable drive low without a transient high RADIO power pulse. */
++    for (size_t i = 0; i < 3; ++i) {
++        if (!write_reg(context, registers[i], expected[i])) {
++            result = TAB5_RADIO_POWER_IO_ERROR;
++            break;
++        }
++    }
++    for (size_t i = 0; i < 3 && result == TAB5_RADIO_POWER_OK; ++i) {
++        uint8_t actual = 0;
++        if (!read_reg(context, registers[i], &actual)) {
++            result = TAB5_RADIO_POWER_IO_ERROR;
++        } else if (actual != expected[i]) {
++            result = TAB5_RADIO_POWER_VERIFY_ERROR;
++        }
++    }
++    if (result != TAB5_RADIO_POWER_OK && enabled) {
++        /* Best effort only: preserve other live latch bits and report the
++         * failure even if this rollback succeeds. Never claim power is off
++         * when a bus error prevented readback. */
++        uint8_t actual = 0;
++        if (read_reg(context, OUTPUT_LATCH, &actual)) {
++            (void)write_reg(context, OUTPUT_LATCH,
++                            (uint8_t)(actual & (uint8_t)~RADIO_ENABLE));
++        }
++    }
++    return result;
++}
+--- /dev/null
++++ b/components/platform_tab5/src/radio_power_control.h
+@@ -0,0 +1,20 @@
++// SPDX-License-Identifier: MIT
++#pragma once
++#include <stdbool.h>
++#include <stdint.h>
++
++typedef bool (*tab5_radio_read_reg_fn)(void *context, uint8_t reg, uint8_t *value);
++typedef bool (*tab5_radio_write_reg_fn)(void *context, uint8_t reg, uint8_t value);
++
++typedef enum {
++    TAB5_RADIO_POWER_OK = 0,
++    TAB5_RADIO_POWER_INVALID_ARGUMENT,
++    TAB5_RADIO_POWER_IO_ERROR,
++    TAB5_RADIO_POWER_VERIFY_ERROR,
++} tab5_radio_power_result_t;
++
++/* Caller serializes access to expander 0x44. Never resets the expander or
++ * changes pins other than P0; an enable failure attempts to clear P0. */
++tab5_radio_power_result_t tab5_radio_power_apply(
++    void *context, tab5_radio_read_reg_fn read_reg,
++    tab5_radio_write_reg_fn write_reg, bool enabled);
+--- /dev/null
++++ b/components/platform_tab5/tests/test_radio_power.c
+@@ -0,0 +1,94 @@
++// SPDX-License-Identifier: MIT
++#include <assert.h>
++#include <stdio.h>
++#include <string.h>
++#include "../src/radio_power_control.h"
++
++typedef struct {
++    uint8_t registers[256];
++    uint8_t written_registers[16];
++    unsigned reads;
++    unsigned writes;
++    unsigned fail_read;
++    unsigned fail_write;
++    bool corrupt_latch_readback;
++} bus_t;
++
++static bool read_reg(void *context, uint8_t reg, uint8_t *value)
++{
++    bus_t *bus = context;
++    assert(reg == 0x03 || reg == 0x05 || reg == 0x07);
++    if (++bus->reads == bus->fail_read) return false;
++    *value = bus->registers[reg];
++    if (bus->corrupt_latch_readback && bus->writes >= 3 && reg == 0x05) {
++        *value ^= 1U;
++    }
++    return true;
++}
++static bool write_reg(void *context, uint8_t reg, uint8_t value)
++{
++    bus_t *bus = context;
++    assert(reg == 0x03 || reg == 0x05 || reg == 0x07);
++    assert(bus->writes < 16);
++    bus->written_registers[bus->writes++] = reg;
++    if (bus->writes == bus->fail_write) return false;
++    bus->registers[reg] = value;
++    return true;
++}
++static bus_t make_bus(void)
++{
++    bus_t bus = {0};
++    /* Distinct non-RADIO state, including radio/charging/power-off pins. */
++    bus.registers[0x03] = 0xa5;
++    bus.registers[0x05] = 0x72;
++    bus.registers[0x07] = 0xc9;
++    return bus;
++}
++static void unchanged_other_pins(const bus_t *bus, const bus_t *before)
++{
++    for (unsigned reg = 0; reg < 256; ++reg) {
++        uint8_t mask = (reg == 0x03 || reg == 0x05 || reg == 0x07) ? 0xfe : 0xff;
++        assert((bus->registers[reg] & mask) == (before->registers[reg] & mask));
++    }
++}
++int main(void)
++{
++    for (unsigned initial = 0; initial < 256; ++initial) {
++        bus_t bus = make_bus();
++        bus.registers[0x05] = (uint8_t)initial;
++        bus_t before = bus;
++        assert(tab5_radio_power_apply(&bus, read_reg, write_reg, false) == TAB5_RADIO_POWER_OK);
++        assert((bus.registers[0x05] & 1U) == 0);
++        assert((bus.registers[0x03] & 1U) != 0);
++        assert((bus.registers[0x07] & 1U) == 0);
++        assert(bus.written_registers[0] == 0x05);
++        unchanged_other_pins(&bus, &before);
++        assert(tab5_radio_power_apply(&bus, read_reg, write_reg, true) == TAB5_RADIO_POWER_OK);
++        assert((bus.registers[0x05] & 1U) != 0);
++        unchanged_other_pins(&bus, &before);
++        assert(tab5_radio_power_apply(&bus, read_reg, write_reg, false) == TAB5_RADIO_POWER_OK);
++        assert((bus.registers[0x05] & 1U) == 0);
++    }
++    for (unsigned failure = 1; failure <= 3; ++failure) {
++        bus_t bus = make_bus(), before = bus;
++        bus.fail_write = failure;
++        assert(tab5_radio_power_apply(&bus, read_reg, write_reg, true) == TAB5_RADIO_POWER_IO_ERROR);
++        assert((bus.registers[0x05] & 1U) == 0);
++        unchanged_other_pins(&bus, &before);
++    }
++    for (unsigned failure = 1; failure <= 6; ++failure) {
++        bus_t bus = make_bus(), before = bus;
++        bus.fail_read = failure;
++        assert(tab5_radio_power_apply(&bus, read_reg, write_reg, true) == TAB5_RADIO_POWER_IO_ERROR);
++        if (failure <= 3) assert(bus.writes == 0);
++        assert((bus.registers[0x05] & 1U) == 0);
++        unchanged_other_pins(&bus, &before);
++    }
++    bus_t bus = make_bus();
++    bus.corrupt_latch_readback = true;
++    assert(tab5_radio_power_apply(&bus, read_reg, write_reg, true) == TAB5_RADIO_POWER_VERIFY_ERROR);
++    assert((bus.registers[0x05] & 1U) == 0);
++    assert(tab5_radio_power_apply(&bus, NULL, write_reg, false) == TAB5_RADIO_POWER_INVALID_ARGUMENT);
++    puts("Tab5 RADIO power preserves other pins and rejects write/readback failures");
++    return 0;
++}
+--- a/components/platform_tab5/tests/CMakeLists.txt
++++ b/components/platform_tab5/tests/CMakeLists.txt
+@@ -55,3 +55,8 @@
+ target_link_options(tab5_sensor_service_no_charger_test PRIVATE -fsanitize=address,undefined)
+ add_test(NAME tab5_sensor_service_charger_disabled COMMAND tab5_sensor_service_no_charger_test)
+ set_tests_properties(tab5_sensor_service_charger_disabled PROPERTIES TIMEOUT 15)
++
++add_executable(tab5_radio_power_test test_radio_power.c ../src/radio_power_control.c)
++target_compile_options(tab5_radio_power_test PRIVATE -Wall -Wextra -Wconversion -Wshadow -Werror -fsanitize=address,undefined)
++target_link_options(tab5_radio_power_test PRIVATE -fsanitize=address,undefined)
++add_test(NAME tab5_radio_power COMMAND tab5_radio_power_test)
+--- a/components/platform_tab5/CMakeLists.txt
++++ b/components/platform_tab5/CMakeLists.txt
+@@ -1,5 +1,5 @@
+ idf_component_register(
+-    SRCS "src/tab5.c" "src/usb_power_control.c" "src/charger_control.c" "src/sensors.c" "src/sensor_decode.c" "src/rtc_clock.c"
++    SRCS "src/tab5.c" "src/radio_power_control.c" "src/usb_power_control.c" "src/charger_control.c" "src/sensors.c" "src/sensor_decode.c" "src/rtc_clock.c"
+     INCLUDE_DIRS "include"
+     REQUIRES platform_board esp_driver_i2c esp_lcd
+         espressif__esp_io_expander espressif__esp_io_expander_pi4ioe5v6408
+--- a/components/platform_tab5/Kconfig
++++ b/components/platform_tab5/Kconfig
+@@ -7,3 +7,11 @@
+         Enable only for a verified compatible pack and separately authorized
+         charger control. Disabled by default; voltage/current telemetry remains.
+ endmenu
++
++config P4_TAB5_BLE_MULTIPLAYER
++    bool "Tab5 C6 Bluetooth multiplayer"
++    depends on P4_BOARD_M5STACK_TAB5
++    default n
++    help
++        Lazily enable the C6 radio only when the user selects Bluetooth.
++        The build wrapper must supply the Tab5 SDIO transport overlay.
+--- a/components/platform_tab5/include/platform/tab5.h
++++ b/components/platform_tab5/include/platform/tab5.h
+@@ -26,3 +26,6 @@
+ 
+ /* Standard C145 charging; readback confirms controls, not pack state. */
+ esp_err_t platform_tab5_charger_init(void);
++
++/* Serialized and verified P0-only writes to the radio rail at expander 0x44. */
++esp_err_t platform_tab5_radio_power(bool enabled);
+--- a/components/platform_tab5/src/tab5.c
++++ b/components/platform_tab5/src/tab5.c
+@@ -2,6 +2,7 @@
+ // Reset sequencing derived from Espressif esp-bsp, pinned in third_party/tab5-bsp.json.
+ #include "platform/tab5.h"
+ #include "usb_power_control.h"
++#include "radio_power_control.h"
+ #include "charger_control.h"
+ #include "platform/board.h"
+ #include "esp_io_expander_pi4ioe5v6408.h"
+@@ -268,3 +269,27 @@
+              esp_err_to_name(ret), (unsigned)(ret == ESP_OK));
+     return ret;
+ }
++
++#if CONFIG_P4_TAB5_BLE_MULTIPLAYER
++esp_err_t platform_tab5_radio_power(bool enabled)
++{
++    esp_err_t ret = platform_tab5_init();
++    if (ret != ESP_OK) return ret;
++    if (xSemaphoreTake(s_lock, pdMS_TO_TICKS(1000)) != pdTRUE) return ESP_ERR_TIMEOUT;
++    if (!s_usb_power_device) {
++        const i2c_device_config_t config = {
++            .dev_addr_length = I2C_ADDR_BIT_LEN_7,
++            .device_address = 0x44, .scl_speed_hz = 400000,
++        };
++        ret = i2c_master_bus_add_device(s_bus, &config, &s_usb_power_device);
++    }
++    if (ret == ESP_OK) {
++        tab5_usb_bus_t bus = {.device = s_usb_power_device, .error = ESP_OK};
++        if (tab5_radio_power_apply(&bus, usb_power_read, usb_power_write, enabled) != TAB5_RADIO_POWER_OK)
++            ret = bus.error != ESP_OK ? bus.error : ESP_ERR_INVALID_RESPONSE;
++    }
++    xSemaphoreGive(s_lock);
++    if (ret == ESP_OK) ESP_LOGI("tab5", "TAB5_C6_POWER enabled=%u readback=ok", enabled);
++    return ret;
++}
++#endif
+--- a/components/platform_radio_hosted/CMakeLists.txt
++++ b/components/platform_radio_hosted/CMakeLists.txt
+@@ -1,9 +1,14 @@
++set(P4_RADIO_BOARD_REQUIREMENTS platform_board)
++if(CONFIG_P4_BOARD_M5STACK_TAB5)
++    list(APPEND P4_RADIO_BOARD_REQUIREMENTS platform_tab5)
++endif()
+ # SPDX-License-Identifier: MIT
+ 
+ idf_component_register(
+     SRCS "src/platform_radio_hosted.c"
+     INCLUDE_DIRS "include"
+     REQUIRES
++        ${P4_RADIO_BOARD_REQUIREMENTS}
+         esp_hosted
+         esp_driver_sdmmc
+         freertos
+--- a/components/platform_radio_hosted/src/platform_radio_hosted.c
++++ b/components/platform_radio_hosted/src/platform_radio_hosted.c
+@@ -1,6 +1,10 @@
+ // SPDX-License-Identifier: MIT
+ 
+ #include "platform/radio_hosted.h"
++#include "sdkconfig.h"
++#if CONFIG_P4_BOARD_M5STACK_TAB5
++#include "platform/tab5.h"
++#endif
+ 
+ #pragma GCC diagnostic push
+ /* ESP-IDF 5.5.3 has sign-conversion warnings in inline RISC-V headers. */
+@@ -8,6 +12,7 @@
+ #include "esp_hosted.h"
+ #include "esp_log.h"
+ #include "freertos/FreeRTOS.h"
++#include "freertos/task.h"
+ #pragma GCC diagnostic pop
+ 
+ static const char *const TAG = "p4_hosted_radio";
+@@ -33,7 +38,12 @@
+     portEXIT_CRITICAL(&s_lock);
+ 
+     ESP_LOGI(TAG, "starting board-authorized C6 SDIO transport");
+-    const esp_err_t result = esp_hosted_init();
++    esp_err_t result = ESP_OK;
++#if CONFIG_P4_BOARD_M5STACK_TAB5
++    result = platform_tab5_radio_power(true);
++    if (result == ESP_OK) vTaskDelay(pdMS_TO_TICKS(20));
++#endif
++    if (result == ESP_OK) result = esp_hosted_init();
+ 
+     portENTER_CRITICAL(&s_lock);
+     s_status.last_error = result;
+--- /dev/null
++++ b/hardware/boards/m5stack-tab5/sdkconfig.ble.defaults
+@@ -0,0 +1,49 @@
++# SPDX-License-Identifier: MIT
++
++# ESP32-P4 has no native radio. Run NimBLE on P4 and transport HCI over the
++# board-authorized SDIO link to the onboard ESP32-C6 controller.
++CONFIG_BT_ENABLED=y
++CONFIG_BT_CONTROLLER_DISABLED=y
++CONFIG_BT_BLUEDROID_ENABLED=n
++CONFIG_BT_NIMBLE_ENABLED=y
++CONFIG_BT_NIMBLE_TRANSPORT_UART=n
++CONFIG_BT_NIMBLE_ROLE_CENTRAL=y
++CONFIG_BT_NIMBLE_ROLE_PERIPHERAL=y
++CONFIG_BT_NIMBLE_ROLE_BROADCASTER=y
++CONFIG_BT_NIMBLE_ROLE_OBSERVER=y
++CONFIG_BT_NIMBLE_GATT_CLIENT=y
++CONFIG_BT_NIMBLE_GATT_SERVER=y
++# One encrypted HOGP controller plus one Console OS multiplayer peer.
++CONFIG_BT_NIMBLE_MAX_CONNECTIONS=2
++CONFIG_BT_NIMBLE_MAX_BONDS=4
++CONFIG_BT_NIMBLE_MAX_CCCDS=16
++CONFIG_BT_NIMBLE_NVS_PERSIST=y
++CONFIG_BT_NIMBLE_ATT_PREFERRED_MTU=247
++CONFIG_BT_NIMBLE_HOST_TASK_STACK_SIZE=6144
++CONFIG_BT_NIMBLE_PINNED_TO_CORE=1
++CONFIG_BT_NIMBLE_PINNED_TO_CORE_1=y
++CONFIG_BT_NIMBLE_SECURITY_ENABLE=y
++CONFIG_BT_NIMBLE_SM_SC=y
++# Per-packet NimBLE INFO traces can consume the debug UART during 35 Hz games.
++CONFIG_BT_NIMBLE_LOG_LEVEL_WARNING=y
++
++CONFIG_ESP_WIFI_REMOTE_LIBRARY_HOSTED=y
++CONFIG_ESP_HOSTED_ENABLE_BT_NIMBLE=y
++CONFIG_ESP_HOSTED_NIMBLE_HCI_VHCI=y
++
++# C145 schematic SHA-256 13cf3fd9...c8ea329, sheet 1. ESP-Hosted 1.4.7
++# hard-codes SDMMC slot 1; ACTIVE_HIGH means high-low-high (C6 EN low resets).
++CONFIG_P4_TAB5_BLE_MULTIPLAYER=y
++CONFIG_SLAVE_IDF_TARGET_ESP32C6=y
++CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE=y
++CONFIG_ESP_HOSTED_SDIO_RESET_ACTIVE_HIGH=y
++CONFIG_ESP_HOSTED_SDIO_GPIO_RESET_SLAVE=15
++CONFIG_ESP_HOSTED_SDIO_4_BIT_BUS=y
++CONFIG_ESP_HOSTED_SDIO_CLOCK_FREQ_KHZ=10000
++CONFIG_ESP_HOSTED_SDIO_PIN_CLK=12
++CONFIG_ESP_HOSTED_SDIO_PIN_CMD=13
++CONFIG_ESP_HOSTED_SDIO_PIN_D0=11
++CONFIG_ESP_HOSTED_SDIO_PRIV_PIN_D1_4BIT_BUS=10
++CONFIG_ESP_HOSTED_SDIO_PRIV_PIN_D2_4BIT_BUS=9
++CONFIG_ESP_HOSTED_SDIO_PRIV_PIN_D3_4BIT_BUS=8
++CONFIG_ESP_WIFI_SOFTAP_SUPPORT=n
+--- a/apps/console_os/CMakeLists.txt
++++ b/apps/console_os/CMakeLists.txt
+@@ -6,6 +6,9 @@
+ 
+ if(NOT DEFINED P4_BOARD_PROFILE)
+     set(P4_BOARD_PROFILE "m5stack-tab5")
++endif()
++if(NOT DEFINED P4_TAB5_BLE_MULTIPLAYER_BUILD)
++    set(P4_TAB5_BLE_MULTIPLAYER_BUILD ON)
+ endif()
+ if(NOT DEFINED P4_TAB5_USB_HOST_BUILD)
+     set(P4_TAB5_USB_HOST_BUILD ON)
+@@ -97,6 +100,13 @@
+         "${CMAKE_CURRENT_LIST_DIR}/../doom/components/doom_audio"
+         "${CMAKE_CURRENT_LIST_DIR}/../doom_audio_probe/components/doom_engine_audio"
+     )
++    if(P4_TAB5_BLE_MULTIPLAYER_BUILD)
++        list(APPEND EXTRA_COMPONENT_DIRS
++            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_ble_host"
++            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_radio_hosted"
++            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_multiplayer_ble"
++            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_dice_ble")
++    endif()
+ elseif(P4_BOARD_PROFILE STREQUAL
+        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
+     list(APPEND EXTRA_COMPONENT_DIRS
+@@ -171,6 +181,7 @@
+ endif()
+ idf_build_set_property(MINIMAL_BUILD ON)
+ idf_build_set_property(P4_BOARD_PROFILE "${P4_BOARD_PROFILE}")
++idf_build_set_property(P4_TAB5_BLE_MULTIPLAYER_BUILD "${P4_TAB5_BLE_MULTIPLAYER_BUILD}")
+ idf_build_set_property(P4_TAB5_USB_HOST_BUILD "${P4_TAB5_USB_HOST_BUILD}")
+ idf_build_set_property(P4_WAVESHARE_CONTROLLER_FIRST_BUILD
+     "${P4_WAVESHARE_CONTROLLER_FIRST_BUILD}")
+@@ -230,6 +241,28 @@
+             "and the committed bounded CCCD table; regenerate sdkconfig "
+             "with scripts/build-waveshare-console-os.sh")
+     endif()
++endif()
++if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5" AND P4_TAB5_BLE_MULTIPLAYER_BUILD)
++    if(NOT CONFIG_P4_TAB5_BLE_MULTIPLAYER OR
++       NOT CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE OR
++       NOT CONFIG_ESP_HOSTED_SDIO_RESET_ACTIVE_HIGH OR
++       NOT CONFIG_ESP_HOSTED_SDIO_GPIO_RESET_SLAVE EQUAL 15 OR
++       NOT CONFIG_ESP_HOSTED_SDIO_CLOCK_FREQ_KHZ EQUAL 10000 OR
++       NOT CONFIG_ESP_HOSTED_SDIO_PIN_CLK EQUAL 12 OR
++       NOT CONFIG_ESP_HOSTED_SDIO_PIN_CMD EQUAL 13 OR
++       NOT CONFIG_ESP_HOSTED_SDIO_PIN_D0 EQUAL 11 OR
++       NOT CONFIG_ESP_HOSTED_SDIO_PIN_D1 EQUAL 10 OR
++       NOT CONFIG_ESP_HOSTED_SDIO_PIN_D2 EQUAL 9 OR
++       NOT CONFIG_ESP_HOSTED_SDIO_PIN_D3 EQUAL 8 OR
++       NOT CONFIG_BT_NIMBLE_ENABLED OR
++       NOT CONFIG_BT_CONTROLLER_DISABLED OR
++       NOT CONFIG_ESP_HOSTED_ENABLE_BT_NIMBLE OR
++       NOT CONFIG_ESP_HOSTED_NIMBLE_HCI_VHCI OR
++       NOT CONFIG_BT_NIMBLE_NVS_PERSIST)
++        message(FATAL_ERROR "Tab5 BLE requires its exact C6 SDIO/NimBLE overlay; refusing fallback pins")
++    endif()
++elseif(P4_BOARD_PROFILE STREQUAL "m5stack-tab5" AND CONFIG_P4_TAB5_BLE_MULTIPLAYER)
++    message(FATAL_ERROR "Tab5 BLE component selection and sdkconfig differ")
+ endif()
+ idf_build_get_property(P4_IDF_PYTHON PYTHON)
+ get_filename_component(P4_REPOSITORY_ROOT
+@@ -377,11 +410,10 @@
+ # This keeps the controller-first H2 image from losing Byte Buddy's passive
+ # signal capability while preserving explicit OS-owned startup ordering. The
+ # managed component contents remain untouched and authoritative.
+-if(P4_BOARD_PROFILE STREQUAL
+-       "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
+-   (P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD OR
+-    P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR
+-    P4_WAVESHARE_BLE_GAMEPAD_BUILD))
++if((P4_BOARD_PROFILE STREQUAL "m5stack-tab5" AND P4_TAB5_BLE_MULTIPLAYER_BUILD) OR
++   (P4_BOARD_PROFILE STREQUAL "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
++    (P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD OR
++     P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR P4_WAVESHARE_BLE_GAMEPAD_BUILD)))
+     idf_component_get_property(
+         P4_HOSTED_COMPONENT_LIB espressif__esp_hosted COMPONENT_LIB)
+     get_target_property(
+@@ -412,10 +444,10 @@
+ # internal DMA RAM even though 32 MiB of PSRAM is idle. Generate an exact-source
+ # overlay that uses ESP-IDF's supported WithCaps API for those worker stacks;
+ # the managed component and lockfile remain untouched.
+-if(P4_BOARD_PROFILE STREQUAL
+-       "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
+-   (P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR
+-    P4_WAVESHARE_BLE_GAMEPAD_BUILD))
++if((P4_BOARD_PROFILE STREQUAL "m5stack-tab5" AND P4_TAB5_BLE_MULTIPLAYER_BUILD) OR
++   (P4_BOARD_PROFILE STREQUAL "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
++    (P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD OR
++     P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR P4_WAVESHARE_BLE_GAMEPAD_BUILD)))
+     set(P4_HOSTED_OS_WRAPPER_UPSTREAM
+         "${CMAKE_CURRENT_LIST_DIR}/managed_components/espressif__esp_hosted/host/port/src/os_wrapper.c")
+     set(P4_HOSTED_OS_WRAPPER_GENERATOR
+--- a/apps/console_os/main/CMakeLists.txt
++++ b/apps/console_os/main/CMakeLists.txt
+@@ -45,6 +45,7 @@
+ )
+ 
+ idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
++idf_build_get_property(P4_TAB5_BLE_MULTIPLAYER_BUILD P4_TAB5_BLE_MULTIPLAYER_BUILD)
+ idf_build_get_property(P4_TAB5_USB_HOST_BUILD P4_TAB5_USB_HOST_BUILD)
+ idf_build_get_property(P4_WAVESHARE_SIGNAL_SCAN_BUILD
+     P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
+@@ -134,6 +135,10 @@
+         endif()
+     elseif(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
+         set(P4_TOUCH_BOARD_DEPS board_deps_tab5 platform_tab5)
++        if(P4_TAB5_BLE_MULTIPLAYER_BUILD)
++            list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS platform_multiplayer_ble platform_dice_ble)
++            set(P4_CONSOLE_BLE_MULTIPLAYER_ENABLED 1)
++        endif()
+         if(P4_TAB5_USB_HOST_BUILD)
+             list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
+                 doom_gamepad_input gamepad_core platform_gamepad
+--- a/scripts/build.sh
++++ b/scripts/build.sh
+@@ -30,6 +30,15 @@
+         P4_BOARD_ARGUMENTS="$P4_APP_DIR/sdkconfig.defaults;$P4_BOARD_DEFAULTS"
+         # Keep a display/audio-only successor on its installed peripheral scope.
+         # The default remains the separate USB-A controller candidate.
++        P4_TAB5_BLE_MULTIPLAYER=${P4_TAB5_BLE_MULTIPLAYER:-1}
++        case "$P4_TAB5_BLE_MULTIPLAYER" in
++            1)
++                P4_TAB5_BLE_CONFIG='CONFIG_P4_TAB5_BLE_MULTIPLAYER=y'
++                P4_BOARD_ARGUMENTS="$P4_BOARD_ARGUMENTS;$P4_PROJECT_ROOT/hardware/boards/m5stack-tab5/sdkconfig.ble.defaults"
++                ;;
++            0) P4_TAB5_BLE_CONFIG='# CONFIG_P4_TAB5_BLE_MULTIPLAYER is not set' ;;
++            *) printf '%s\n' 'P4_TAB5_BLE_MULTIPLAYER must be 0 or 1' >&2; exit 2 ;;
++        esac
+         P4_TAB5_USB_HOST=${P4_TAB5_USB_HOST:-1}
+         case "$P4_TAB5_USB_HOST" in
+             1) P4_TAB5_USB_CONFIG='CONFIG_P4_TAB5_USB_HOST=y' ;;
+@@ -84,7 +93,7 @@
+     fi
+     if [ "$P4_APP" = console_os ] &&
+        [ "$P4_BOARD_PROFILE" = m5stack-tab5 ]; then
+-        set -- -D "P4_TAB5_USB_HOST_BUILD=$P4_TAB5_USB_HOST" "$@"
++        set -- -D "P4_TAB5_USB_HOST_BUILD=$P4_TAB5_USB_HOST" -D "P4_TAB5_BLE_MULTIPLAYER_BUILD=$P4_TAB5_BLE_MULTIPLAYER" "$@"
+     fi
+     if [ "$P4_APP" = console_os ] &&
+        [ "$P4_WAVESHARE_CONTROLLER_FIRST_BUILD" -eq 1 ]; then
+@@ -185,7 +194,8 @@
+ if [ "$P4_APP" = console_os ] &&
+    [ "$P4_BOARD_PROFILE" = m5stack-tab5 ] &&
+    [ -f "$P4_BUILD_DIR/sdkconfig" ] &&
+-   ! grep -Fqx "$P4_TAB5_USB_CONFIG" "$P4_BUILD_DIR/sdkconfig"; then
++   { ! grep -Fqx "$P4_TAB5_USB_CONFIG" "$P4_BUILD_DIR/sdkconfig" ||
++     ! grep -Fqx "$P4_TAB5_BLE_CONFIG" "$P4_BUILD_DIR/sdkconfig"; }; then
+     printf 'Regenerating Tab5 Console OS sdkconfig for USB-A host=%s.\n' "$P4_TAB5_USB_HOST"
+     cmake -E remove "$P4_BUILD_DIR/sdkconfig"
+     p4_idf_action reconfigure
+--- a/scripts/verify-console-os-tab5.py
++++ b/scripts/verify-console-os-tab5.py
+@@ -89,8 +89,19 @@
+     components = set(project["build_components"])
+     require({"platform_tab5", "board_deps_tab5", "platform_touch", "platform_audio", "console_shell"} <= components,
+             "missing Tab5 core component")
+-    require(not ({"platform_audio_factory", "platform_audio_es8311", "platform_radio_hosted"} & components),
++    require(not ({"platform_audio_factory", "platform_audio_es8311"} & components),
+             "unexpected legacy audio or unqualified radio")
++    ble_enabled = "CONFIG_P4_TAB5_BLE_MULTIPLAYER=y" in sdk.splitlines()
++    radio_components = {"platform_radio_hosted", "platform_ble_host", "platform_multiplayer_ble"}
++    if ble_enabled:
++        require(radio_components <= components, "missing Tab5 BLE service")
++        for key, value in {"CLK":12,"CMD":13,"D0":11,"D1":10,"D2":9,"D3":8}.items():
++            require(f"CONFIG_ESP_HOSTED_SDIO_PIN_{key}={value}" in sdk.splitlines(), "wrong Tab5 SDIO pin")
++        for value in ("CONFIG_ESP_HOSTED_SDIO_GPIO_RESET_SLAVE=15", "CONFIG_ESP_HOSTED_SDIO_CLOCK_FREQ_KHZ=10000",
++                      "CONFIG_ESP_HOSTED_SDIO_RESET_ACTIVE_HIGH=y", "CONFIG_ESP_HOSTED_NIMBLE_HCI_VHCI=y"):
++            require(value in sdk.splitlines(), "wrong Tab5 C6 transport")
++    else:
++        require(not radio_components & components, "BLE service linked in radio-off build")
+     commands = json.loads((build / "compile_commands.json").read_text())
+     sources = {pathlib.Path(command["file"]).name for command in commands}
+     for name in ("platform_display_tab5.c", "platform_touch_tab5.c", "platform_audio_tab5.c", "tab5.c",
+@@ -134,6 +145,10 @@
+                 data[48:80] == hashlib.sha256(data[256:]).digest(), f"corrupt native cartridge: {path.name}")
+     nm = pathlib.Path(project["c_compiler"]).with_name("riscv32-esp-elf-nm")
+     symbols = subprocess.check_output([str(nm), "--defined-only", str(build / project["app_elf"])], text=True)
++    if ble_enabled:
++        require("esp_hosted_host_init.c" not in sources, "radio constructor must be excluded")
++        for name in ("platform_tab5_radio_power", "platform_multiplayer_ble_enable"):
++            require(re.search(r'\b' + name + r'$', symbols, re.M) is not None, "missing linked BLE adapter")
+     verify_usb_host(usb_host_enabled, components, sources, symbols)
+     if not charger_control_enabled:
+         require(re.search(r"\bplatform_tab5_charger_init$", symbols, re.M) is None,
+@@ -141,7 +156,7 @@
+     for name in ("platform_tab5_display_reset", "es8388_codec_new", "esp_lcd_new_panel_ili9881c",
+                  "esp_lcd_new_panel_st7123", "esp_lcd_touch_new_i2c_gt911", "esp_lcd_touch_new_i2c_st7123"):
+         require(re.search(r'\b' + name + r'$', symbols, re.M) is not None, f"missing linked driver: {name}")
+-    return {"result": "tab5-build-candidate-verified", "board": "m5stack-tab5", "image_bytes": len(image),
++    return {"result": "tab5-build-candidate-verified", "board": "m5stack-tab5", "image_bytes": len(image), "ble_multiplayer_enabled": ble_enabled,
+             "image_sha256": digest(image_path), "native_cartridges": len(packages),
+             "usb_host_enabled": usb_host_enabled,
+             "charger_control_enabled": charger_control_enabled,
+--- a/scripts/flash-console-os-tab5.py
++++ b/scripts/flash-console-os-tab5.py
+@@ -81,6 +81,8 @@
+             "USB host selection differs from exact-artifact authorization")
+     require(verified["charger_control_enabled"] == auth.get("charger_control_enabled", False),
+             "Charger selection differs from exact-artifact authorization")
++    require(verified["ble_multiplayer_enabled"] == auth.get("ble_multiplayer_enabled", False),
++            "BLE selection differs from exact-artifact authorization")
+     artifacts = {}
+     for offset, relative in LAYOUT.items():
+         entry = auth['artifacts'][offset]

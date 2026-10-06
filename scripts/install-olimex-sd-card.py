@@ -17,7 +17,6 @@ import sys
 import tempfile
 
 from p4_multiplayer_manifest import expected_multiplayer_extension
-from p4cart_seed_registry import load_seed_carts
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -166,19 +165,6 @@ def validate_update(path: pathlib.Path) -> None:
         raise SystemExit("P4UPDATE.P4U validation failed")
 
 
-def validate_p4cart(path: pathlib.Path) -> None:
-    result = subprocess.run(
-        [sys.executable,
-         str(ROOT / "game-platform/scripts/p4cart.py"),
-         "inspect", str(path)],
-        cwd=ROOT, check=False, text=True,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-    )
-    if result.returncode != 0:
-        detail = result.stderr.strip() or result.stdout.strip()
-        raise SystemExit(f"P4 Cart validation failed: {detail}")
-
-
 def enabled_manifests() -> dict[str, dict[str, object]]:
     return {
         manifest["package_file"]: manifest
@@ -196,19 +182,19 @@ def bundle_files(manifests: dict[str, dict[str, object]]) -> tuple[pathlib.Path,
         for manifest in manifests.values()
         if isinstance(manifest.get("resource_file"), str)
     )
-    script_carts = tuple(
-        pathlib.Path(*seed.relative_path.parts)
-        for seed in load_seed_carts()
-    )
     return tuple(pathlib.Path("GAMES") / name for name in manifests) + resources + (
         pathlib.Path("DOOM1.WAD"),
         pathlib.Path("README.TXT"),
-        *script_carts,
         pathlib.Path("UPDATE/P4UPDATE.P4U"),
     )
 
 
 def validate_bundle(bundle: pathlib.Path) -> tuple[pathlib.Path, ...]:
+    retired = sorted(path for path in bundle.rglob("*")
+                     if path.suffix.lower() == ".p4cart")
+    if retired:
+        raise SystemExit("Lua .P4CART installation is retired; native bundle contains " +
+                         str(retired[0].relative_to(bundle)))
     manifests = enabled_manifests()
     files = bundle_files(manifests)
     missing = [str(relative) for relative in files if not (bundle / relative).is_file()]
@@ -230,8 +216,6 @@ def validate_bundle(bundle: pathlib.Path) -> tuple[pathlib.Path, ...]:
             validate_game_resource(
                 bundle / "GAMES" / resource_name, manifests[name]
             )
-    for seed in load_seed_carts():
-        validate_p4cart(bundle.joinpath(*seed.relative_path.parts))
     validate_update(bundle / "UPDATE/P4UPDATE.P4U")
     return files
 
@@ -284,15 +268,14 @@ def main() -> None:
         raise SystemExit(f"bundle is not a directory: {bundle}")
     files = validate_bundle(bundle)
     native_games = [str(path) for path in files if path.suffix == ".P4G"]
-    script_games = [str(path) for path in files if path.suffix == ".P4CART"]
     if arguments.check_bundle_only:
         print(json.dumps({
             "result": "p4-sd-card-bundle-verified",
             "bundle": str(bundle),
             "native_game_count": len(native_games),
             "native_games": native_games,
-            "script_game_count": len(script_games),
-            "script_games": script_games,
+            "script_game_count": 0,
+            "script_games": [],
         }, sort_keys=True))
         return
 
@@ -307,8 +290,8 @@ def main() -> None:
     print(json.dumps({"result": "p4-sd-card-ready", "target": str(target),
                       "native_game_count": len(native_games),
                       "native_games": native_games,
-                      "script_game_count": len(script_games),
-                      "script_games": script_games,
+                      "script_game_count": 0,
+                      "script_games": [],
                       "files": installed}, sort_keys=True))
 
 

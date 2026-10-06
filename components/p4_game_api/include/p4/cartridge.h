@@ -101,6 +101,8 @@ typedef struct {
     p4_game_dice_exchange_fn dice_exchange;
     /** v2 dice requests/status support tap-to-hold. Never call through v1. */
     p4_game_dice_exchange_fn dice_exchange_v2;
+    /** Optional v1 extension, guarded by struct_bytes and MOTION capability. */
+    p4_game_read_motion_fn read_motion;
 } p4_cartridge_host_v1_t;
 
 typedef enum {

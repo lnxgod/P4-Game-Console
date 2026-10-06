@@ -57,7 +57,7 @@ typedef enum {
     P4_FILE_TRANSFER_CLASS_EXCHANGE = 2,
     /** Validated resource sidecar under /GAMES. */
     P4_FILE_TRANSFER_CLASS_P4R = 3,
-    /** Validated source cartridge under /P4/GAMES. */
+    /** Reserved retired source-cartridge class; rejected as unsupported. */
     P4_FILE_TRANSFER_CLASS_P4CART = 4,
 } p4_file_transfer_class_t;
 

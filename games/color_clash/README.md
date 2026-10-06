@@ -52,42 +52,40 @@ fallback without exposing alternating human hands on one screen.
 
 ## Controls
 
-- On the practice menu, **Left/Right** changes the player count and
-  **Up/Down** selects Standard, Symbols, or High Contrast Color Aid. The
-  setting stays active when restarting or returning to the menu. Touch users
-  can tap the left or right half of the Color Aid row.
-- During practice or multiplayer, **Up/Down** can change Color Aid locally at
-  any time without affecting the match or another console. Touch users can
-  tap the active-color indicator at the top of the table to cycle modes.
-- **Left/Right** selects a card and scrolls long hands; **A** plays it.
-- Cards that are currently legal to play stay grouped at the left of the hand
-  in their original relative order and sit slightly higher than the remaining
-  cards. Selection, taps, and scrolling follow that visual order without
-  changing the authoritative hand order used by multiplayer.
-- **B** or **Start** draws one card. If that card is playable, **A** plays it
-  and **B/Start** passes.
-- With exactly two cards, **Start** plays the selected legal card and calls
-  UNO atomically. The active **UNO+PLAY** touch button does the same thing, so
-  multiplayer opponents and bots cannot catch the player between those two
-  actions.
-- While an UNO call is open, **Start** takes priority over draw/pass: it calls
-  UNO for you when you have just played down to one card, or calls out the
-  opponent who currently has an unclaimed UNO.
-- In the Wild chooser, **Left/Right** selects a color and **A** confirms it.
-- **Back** returns from practice to its menu; in network play it exits to the
-  launcher and ends the session.
-- Swipe the hand left or right to reveal off-screen cards. A swipe never plays
-  a card; a stationary tap selects a card, and tapping it again plays it.
-- Touch also operates Draw, UNO, and color buttons and uses the persistent
-  upper-left Exit control.
+The default table shows semantic **Play**, **Draw/Pass**, **UNO**, and **Exit**
+actions, with no virtual controller or controller-button prompts.
+
+- Drag a hand card upward onto the central discard pile or Play button. The
+  lifted card follows the finger/mouse; a green target allows the drop and a
+  red target rejects it. Releasing elsewhere returns the card unchanged.
+- A stationary tap selects a card; tapping it again or tapping Play plays it.
+  Swipe horizontally within the hand to reveal off-screen cards. Cards stay
+  in their existing visual order; dragging does not rearrange the hand.
+- Tap the deck or Draw to draw. If the drawn card can be played, drag that card
+  to the pile, tap Play, or tap Pass. Other cards cannot be substituted for it.
+- Tap a color after a Wild, or a player after a Gamechanger. Existing legality
+  rules, including the Wild Draw Four restriction, apply to drops too.
+- With two cards, UNO+PLAY plays the selected legal card and calls UNO
+  atomically. Call UNO and Catch remain available during their normal window.
+- Tap menu rows to adjust players and Color Aid; tap the active-color indicator
+  during play to cycle the local aid. Exit always returns to the launcher.
+
+Keyboard and controller controls remain available without on-table prompts:
+Left/Right selects, A plays, B/Start draws or passes, Up/Down changes Color Aid,
+and Back returns from practice to its menu or exits a network session. Start
+still prioritizes an open UNO call or UNO+PLAY when applicable. Left/Right and
+A operate choice dialogs. Touch gestures suppress the mapper's synthetic
+controller buttons until release, so invisible controller regions cannot
+play, draw, or exit accidentally.
 
 The runtime combines original RGB565 drawing primitives, shared font glyphs,
 and the reviewed ImageGen frame atlas; it has no copied commercial card art,
 radio driver, socket, or raw hardware access.
 
 When Console OS offers the optional `video-highres` capability,
-Color Clash renders directly at 768x480 with a native card atlas and scaled
-code-drawn UI. Older consoles keep the original 320x200 surface and atlas.
+Color Clash 1.8.0 renders directly at 768x480 with its native card atlas,
+crisp antialiased typography, and original ImageGen table material and deck
+back. Older consoles retain a readable 320x200 surface and compact atlas.
 Touch coordinates remain in the Game API's normalized 320x200 input space, so
 the same card, swipe, Draw, UNO, and Exit hit regions work in either video
 mode.
@@ -144,3 +142,76 @@ cmake -S tools/p4-game-host -B build-host/play-color_clash -G Ninja \
 cmake --build build-host/play-color_clash
 ctest --test-dir build-host/play-color_clash --output-on-failure
 ```
+
+## Native-resolution presentation (1.8.0)
+
+The preferred surface is 768x480 RGB565 with an optional `video-highres`
+capability and a complete 320x200 fallback. Fonts, rounded card edges, and
+mathematical suit silhouettes are rasterized at the negotiated resolution;
+no 320x200 framebuffer is enlarged to produce the high-resolution game.
+Input, rules, card identities, saves, and multiplayer messages remain unchanged.
+Exact ranks, numbers, and suits are drawn by code, so generated art cannot
+change card meaning. Small fallback labels retain the proven compact font.
+
+`assets/table-materials-imagegen.png` is original artwork generated with the
+built-in ImageGen tool for this upgrade. It contains emerald and midnight felt
+plus navy/gold and violet/silver card-back material. The exact final prompt,
+source SHA-256, crop layout, and selected quadrants are recorded in
+`assets/table-materials-provenance.json`. The selected felt is 128x128 RGB565
+and the selected card-back material is 96x96 RGB565: **51,200 static bytes**.
+The illustration converter uses area filtering to preserve fine fibers and
+ornamental lines; there is no runtime image decoding or heap allocation.
+The artwork is distributed under the project's MIT license. The shared
+Arimo typography uses the separately recorded SIL OFL license.
+
+Reproduce the material include with Pillow installed:
+
+```sh
+python3 games/color_clash/tools/convert_table_materials.py
+```
+
+Focused sanitizer tests include both negotiated surfaces, padded framebuffer
+strides, render captures, and Back lifecycle. Existing rule and multiplayer
+tests remain in place. Optional screenshots come from the actual game renderer:
+
+```sh
+P4_CARD_CAPTURE_DIR=/absolute/existing/output/directory \
+  ctest --test-dir build-host/color_clash --output-on-failure
+```
+
+`PRESENTATION_TESTING.json` records this host-validation pass. Native panel,
+physical touch, on-device frame timing, speakers, and real linked consoles
+still require device acceptance. No firmware was installed by this pass.
+
+The felt renderer copies clipped native texture-row spans instead of computing
+an address and wrapping mask for every framebuffer pixel. A 2,000-frame
+isolated host comparison produced identical pixels while reducing median
+felt-render time from 80 microseconds to 10 microseconds. Reproducible action
+traces and complete update/audio/render timings are recorded in
+`PRESENTATION_TESTING.json`. The measured host runs stayed below the 33.333 ms
+budget; these CPU measurements exclude display transfer and do not certify
+30 FPS on the ESP32-P4 hardware.
+
+## Direct-touch verification
+
+`tests/test_touch_drag.c` checks canonical touch at both 320x200 and 768x480,
+including lifted-card framebuffer guards, valid and invalid drops, stale-gesture
+cancellation, existing keyboard actions, and synthetic controller isolation.
+The focused rule/network tests remain unchanged. `TOUCH_TESTING.json` records
+this pass separately from the preceding art/package acceptance.
+
+```sh
+cmake --build build-host/play-color_clash --target p4_game_benchmark
+build-host/play-color_clash/p4_game_benchmark 2000 768 games/color_clash/tests/touch-performance-input.txt
+```
+
+The same trace can be run with `320` for the fallback. This measures Mac CPU
+update, audio and rendering during continuous drag; display/device timing,
+physical touch, and linked-console acceptance remain separate checks.
+
+## Launcher presentation
+
+The cartridge owns its title and `assets/launcher.p4i` icon. Source artwork,
+conversion details and provenance live beside the packed icon. The game name
+stays visible beside player status during play. Existing touch actions and
+setup choices remain direct; no extra launch confirmation is added.

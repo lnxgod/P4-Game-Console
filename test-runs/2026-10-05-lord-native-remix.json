@@ -1,0 +1,745 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-10-06T06:19:31.991229+00:00",
+  "game": "org.p4console.lord",
+  "version": "1.9.0",
+  "status": "local-play-tested",
+  "scope": "Native ANSI presentation with ImageGen illustrated opening; no hardware, OS, shared-source, Git staging, commit or push actions by this task.",
+  "changes": [
+    "Native 768x480 text, full 16-row CP437 glyph contours, crisp borders and coherent midnight/ivory/garnet/brass palette.",
+    "Original ImageGen dragon and moonlit town opening at both sizes; native exact title/prompts remain code-rendered. Persistent game identity and keyboard hints retain canonical touch layout.",
+    "Native menu spacing, two-column player-record actions, readable recipient prompt and unobstructed victory prompt.",
+    "Tested 320x200 fallback with narrow-layout spacing repairs; original launcher icon retained."
+  ],
+  "identity_preservation": {
+    "id": "org.p4console.lord",
+    "launcher_id": 112,
+    "package": "LORD.P4G",
+    "save_slot": "AUTO",
+    "save_schema": 5,
+    "multiplayer": {
+      "schema": 1,
+      "style": "turn-based",
+      "min_players": 2,
+      "max_players": 2,
+      "tick_rate_hz": 30,
+      "message_bytes": 64,
+      "protocol": 19539
+    },
+    "baseline_unchanged_sources": [
+      {
+        "path": "games/lord/src/lord_internal.h",
+        "bytes": 12615,
+        "sha256": "40e488cdb905c885f86830ed48b96271073e8d85e426841982c421398c780205"
+      },
+      {
+        "path": "games/lord/src/lord_logic_impl.h",
+        "bytes": 116284,
+        "sha256": "c62abb1fc0f107de6e3624f9287bb974eee3d2a43ea4cf8a4c31c3e788f69746"
+      },
+      {
+        "path": "games/lord/src/lord_save_impl.h",
+        "bytes": 24155,
+        "sha256": "c2253f2ec4b065c677167abe423b78d1f65d254e639968415d3cad810acd5ff6"
+      },
+      {
+        "path": "games/lord/src/lord_sync_impl.h",
+        "bytes": 5153,
+        "sha256": "db2818028b050e4172c4308c07ddd614e3c1e1c6c5bbf5d6728240a3ac38b915"
+      },
+      {
+        "path": "games/lord/src/lord_realm_net_impl.h",
+        "bytes": 109496,
+        "sha256": "facc1653afad50187a0f0a03805c6f91ade8a1fa6c1c98f7bd1e84a93332531c"
+      }
+    ],
+    "runtime_unchanged": "game_start, game_update, input/touch mapping, save barriers, event tones and creature animation timing byte-identical to initial source; only renderer and high-res descriptor capability changed."
+  },
+  "tests": {
+    "focused": {
+      "result": "3/3 passed with ASan/UBSan",
+      "log": {
+        "path": "build-host/lord-launch/focused.log",
+        "bytes": 457,
+        "sha256": "993ef22fd6435c7d49b07ccdb70057fc12b8e3ad8f5a8f0571eda559c716392f"
+      },
+      "scope": [
+        "Existing full-port rules/progression/save migration/barrier/realm reconciliation/protocol/touch/monster animation suite.",
+        "43 screens x normal/extreme/scrolled variants x 2 resolutions = 258 guarded captures; padded stride, complete rendering, read-only state and save bytes.",
+        "2000 paired input frames: byte-identical game state and final saves, 105 transitions, 390 combat frames, shops/status/forest/messages/recovery, Back exit."
+      ]
+    },
+    "trace": {
+      "path": "build-host/lord-launch/trace.log",
+      "bytes": 356,
+      "sha256": "5514658da221684b2445750bfe9f6d01cf7ed4a280699a3648beb210dba0acd3"
+    },
+    "sdl_smoke": {
+      "result": "5/5 passed",
+      "log": {
+        "path": "build-host/lord-launch/sdl-smoke.log",
+        "bytes": 674,
+        "sha256": "a501a88a33d7ef9fcd85e50c039b2477dbcd2b22bfc435dae8fa08e1170402c6"
+      }
+    },
+    "registry": "make game-registry-check passed, including protected-lineage tamper/identity gates and 85 native board verifier fixtures.",
+    "exact_package": "Protected lineage inspector accepted current package ID, save capability and payload digest; extracted .p4icon matched assets/launcher.p4i byte-for-byte."
+  },
+  "benchmarks": {
+    "native": {
+      "game": "org.p4console.lord",
+      "frames": 2000,
+      "width": 768,
+      "height": 480,
+      "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+      "changed_frames": 160,
+      "last_frame_hash": "54177ca1",
+      "update_audio_ms": {
+        "mean": 0.001,
+        "p50": 0.001,
+        "p95": 0.001,
+        "p99": 0.002,
+        "max": 0.017,
+        "over_33_333ms": 0
+      },
+      "render_ms": {
+        "mean": 0.0759,
+        "p50": 0.073,
+        "p95": 0.099,
+        "p99": 0.107,
+        "max": 0.352,
+        "over_33_333ms": 0
+      },
+      "total_ms": {
+        "mean": 0.0769,
+        "p50": 0.074,
+        "p95": 0.1,
+        "p99": 0.109,
+        "max": 0.361,
+        "over_33_333ms": 0
+      }
+    },
+    "fallback": {
+      "game": "org.p4console.lord",
+      "frames": 2000,
+      "width": 320,
+      "height": 200,
+      "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+      "changed_frames": 159,
+      "last_frame_hash": "72ff8289",
+      "update_audio_ms": {
+        "mean": 0.0009,
+        "p50": 0.001,
+        "p95": 0.001,
+        "p99": 0.002,
+        "max": 0.004,
+        "over_33_333ms": 0
+      },
+      "render_ms": {
+        "mean": 0.0178,
+        "p50": 0.017,
+        "p95": 0.021,
+        "p99": 0.025,
+        "max": 0.067,
+        "over_33_333ms": 0
+      },
+      "total_ms": {
+        "mean": 0.0188,
+        "p50": 0.018,
+        "p95": 0.022,
+        "p99": 0.026,
+        "max": 0.071,
+        "over_33_333ms": 0
+      }
+    }
+  },
+  "input_tape": {
+    "path": "games/lord/tests/performance-input.txt",
+    "bytes": 3405,
+    "sha256": "d34e116c493fa289c2a1cb71711b6b9764ebf6fd0544babad8e977a9777b007a"
+  },
+  "visual_review": {
+    "tester": "Codex, inspecting actual C-rendered PNG captures at native size plus all-screen contact sheets",
+    "reviewed": [
+      "Title, town, shops, status, maximum numeric values, battle and animated second phase, player record, recipient menu, recovery and victory at native size; fallback title/town/combat/player record/victory.",
+      "All 43 screen states scanned in contact sheets. Secondary-menu overlaps found and repaired.",
+      "ImageGen revision: native/fallback opening with original detailed crimson dragon, quiet title space and separately rendered exact labels. Source, packed RGB565 previews and final C-rendered screens inspected."
+    ],
+    "captures": [
+      {
+        "path": "build-host/lord-launch/captures/768-00-0.png",
+        "bytes": 250771,
+        "sha256": "5e00d233e7b2dd081e1a72c99174a8d09e999002285ff67ebe09b75429676e26"
+      },
+      {
+        "path": "build-host/lord-launch/captures/768-04-0.png",
+        "bytes": 28777,
+        "sha256": "6e3d1967ac84fd39e39e2c3f6be2436dd82b850062bfdb3d39dda7d30127c201"
+      },
+      {
+        "path": "build-host/lord-launch/captures/768-04-1.png",
+        "bytes": 29098,
+        "sha256": "0fcf784139f7926c07a6555b79f5877541102fd4b281f8e5dc94fd9f7c9976c8"
+      },
+      {
+        "path": "build-host/lord-launch/captures/768-06-0.png",
+        "bytes": 28336,
+        "sha256": "c2e777b5dba4334e8745ff927c658ef64aae282b3680f5a04eae99671abbbdec"
+      },
+      {
+        "path": "build-host/lord-launch/captures/768-19-0.png",
+        "bytes": 24545,
+        "sha256": "2d9ad30a7ee084e71103e36f6ff609dfdef49536e03a7bdf6f0c851e0f040012"
+      },
+      {
+        "path": "build-host/lord-launch/captures/768-22-0.png",
+        "bytes": 29293,
+        "sha256": "ac77e25d896d66a827e97bd6b66871bc9888e4ff7b579a6a25f5e430ccace79c"
+      },
+      {
+        "path": "build-host/lord-launch/captures/768-30-1.png",
+        "bytes": 27704,
+        "sha256": "713c6a10378ae1f20937e752c95893e23b4ec1051651a7d953577c1e21ef1958"
+      },
+      {
+        "path": "build-host/lord-launch/captures/768-31-0.png",
+        "bytes": 23010,
+        "sha256": "1118b7f7aba36e66a89286b930b394399aad93b5f3360259486e6c3269269793"
+      },
+      {
+        "path": "build-host/lord-launch/captures/768-31-1.png",
+        "bytes": 22485,
+        "sha256": "197a0556b8daa114417e567a0af3c4c446199b71bfd05f9e379aaad8b1064ca9"
+      },
+      {
+        "path": "build-host/lord-launch/captures/768-33-0.png",
+        "bytes": 17616,
+        "sha256": "bf70dd7cb16462d1b9a70bda1a707bf88c93ffcbf31bc40ba7ffe6884d89ca84"
+      },
+      {
+        "path": "build-host/lord-launch/captures/768-34-0.png",
+        "bytes": 16375,
+        "sha256": "bebb8011dd18576db594134754bbecd7446d52a04ed9f86457c065ff74392cfa"
+      },
+      {
+        "path": "build-host/lord-launch/captures/320-00-0.png",
+        "bytes": 46913,
+        "sha256": "a0ef6cbdf533726dcddc4cac56ce8441ea4d10ee0d74c71d40dc76d237121149"
+      },
+      {
+        "path": "build-host/lord-launch/captures/320-04-0.png",
+        "bytes": 4171,
+        "sha256": "0336aa0423526b47c32975f64338af9f878522dfb7b09dd8873e6861f4f6ba6f"
+      },
+      {
+        "path": "build-host/lord-launch/captures/320-19-0.png",
+        "bytes": 3838,
+        "sha256": "0b56fdc5f6fb0c1f47c5e5e76079dc86e4cb39734718ccdddbea6111eef22c6f"
+      },
+      {
+        "path": "build-host/lord-launch/captures/320-30-1.png",
+        "bytes": 3882,
+        "sha256": "af9e3edb6b66a3a105e8b0944a98bcb45d9bf4461e9d03cdd90e2b9020154462"
+      },
+      {
+        "path": "build-host/lord-launch/captures/320-31-0.png",
+        "bytes": 3816,
+        "sha256": "2d2910604f0d5ff9f0b06ff726b05013865047ae5dee4639b35cb5555c248814"
+      },
+      {
+        "path": "build-host/lord-launch/captures/320-34-0.png",
+        "bytes": 2821,
+        "sha256": "06f240b00f0b7421518fa185e431e3fa6f8235708d2aa7ee20bc50687f424809"
+      }
+    ],
+    "all_ppm_count": 258,
+    "rejected_candidate": {
+      "package_sha256": "bac298f09f49c474b1acc64c6e3a5db0713227d94d0805354ba9d7f92d1a73ce",
+      "payload_sha256": "b54ce155cd5c9279c65b0fb6b611c404c2e6532ea35a079058702710f11e6781",
+      "feedback_date": "2026-10-05",
+      "feedback": "User rejected new graphics as poor quality and asked why ImageGen was not used.",
+      "resolution": "Replaced opening glyph dragon with original built-in ImageGen illustration; acceptance of the new candidate has not been inferred from the earlier version."
+    }
+  },
+  "interactive_SDL": {
+    "status": "passed-keyboard-and-mouse",
+    "tester": "Codex via CUA, observing the real native C SDL3 runner",
+    "surface": "768x480 RGB565 with canonical 320x200 touch",
+    "host_binary": {
+      "path": "build-host/lord-launch/RedDragonReview.app/Contents/MacOS/p4_game_host",
+      "bytes": 2338864,
+      "sha256": "6011b0e22d2cbf66294df0bd84b08f23a46e563d498b5ec982a69240a1e025db"
+    },
+    "host_bundle_note": "Copied the exact tested executable into a uniquely identified local .app to distinguish concurrent previews; executable bytes unchanged.",
+    "keyboard": {
+      "result": "pass",
+      "log": {
+        "path": "build-host/lord-launch/interactive-illustrated-keyboard.log",
+        "bytes": 485,
+        "sha256": "61536b3ff97827edcf6eb96edb21f257b0baaec846cbff5e0f13125fb02133c0"
+      },
+      "rendered_frames": 7889,
+      "actions": [
+        "Enter opening; ABC using Space and arrows; Done; Heroine and Mystical skill creation.",
+        "Town to weapon shop; scroll beyond first page; B return; Character Stats.",
+        "Forest combat; six-command grid to Stats; B return; Guard, Strike, victory message, return to town.",
+        "Escape/Back exits with process status 0."
+      ],
+      "limits": "Brief controlled play, not an endurance or hardware cadence claim."
+    },
+    "mouse": {
+      "result": "pass",
+      "log": {
+        "path": "build-host/lord-launch/mouse-debug.log",
+        "bytes": 23593,
+        "sha256": "78c15a69c137a41a40e9e1b8c1b5c2266c7060b9873ce30756ab4925b9c31875"
+      },
+      "actions": [
+        "Explicit left click on header Choose; character keys A/B/C and Done.",
+        "Footer Next, Previous and Choose; class selection and forest encounter.",
+        "Direct battle Stats and Guard; footer Back; direct Strike yields victory; return to town.",
+        "Header Exit closes the app with status 0."
+      ],
+      "tooling_note": "Initial CUA click calls without an explicit mouseButton unexpectedly exited. Repeating with mouseButton=left succeeded at the same visible controls. No game-source change. Mouse run used LLDB with an auto-continuing breakpoint on host coordinate conversion; its timing is not used for performance acceptance.",
+      "audio_note": "LLDB run emitted macOS AudioQueue stop warning -66671 during shutdown; game exited 0. Non-debug keyboard run had no such warning. Acoustic acceptance remains pending."
+    },
+    "screenshots": [
+      {
+        "path": "build-host/lord-launch/sdl-battle-mouse.png",
+        "bytes": 184416,
+        "sha256": "28336494f7cc502a411688de20ba45049ca5a4037f3898bb38e7f7386ca67fb2"
+      },
+      {
+        "path": "build-host/lord-launch/sdl-victory-mouse.png",
+        "bytes": 226122,
+        "sha256": "11379521f9295233bd4528f509a1804a355875332ed9623e7acab701b0770978"
+      },
+      {
+        "path": "build-host/lord-launch/sdl-town-mouse.png",
+        "bytes": 243029,
+        "sha256": "7e9a3222a6c5a83f4464c957d3be3e3b36c450f0d570444e828cbbc23a3f3a50"
+      }
+    ],
+    "audio": "The SDL mixer ran during real events; non-debug keyboard log reports no queue rejections, underruns, clipping or empty SDL queue observations. No subjective acoustic acceptance is claimed.",
+    "animation": "Live combat screenshots observed both CP437 creature phases; existing animation timing and automated animation tests retained.",
+    "cleanup": "All RedDragonReview app instances exited; CUA explicitly released."
+  },
+  "p4_render_review": {
+    "compiler": "riscv32-esp-elf-gcc (crosstool-NG esp-14.2.0_20251107) 14.2.0",
+    "flags": [
+      "-std=gnu17",
+      "-Os",
+      "-march=rv32imafc_zicsr_zifencei",
+      "-mabi=ilp32f",
+      "-fPIC",
+      "-ffunction-sections",
+      "-fdata-sections",
+      "-fvisibility=hidden",
+      "-fno-jump-tables",
+      "-DP4_GAME_ENTRY_SYMBOL=p4_lord_game",
+      "-Icomponents/p4_game_api/include",
+      "-Icomponents/p4_cp437/include",
+      "-Igames/lord/include",
+      "-Igames/lord/src"
+    ],
+    "assembly": {
+      "path": "build-host/lord-launch/lord-rv32.s",
+      "bytes": 1298403,
+      "sha256": "897411e0a4c425f66a95558f3514e02acd011306ad268a923d66c954b6a516f0"
+    },
+    "stack_report": {
+      "path": "build-host/lord-launch/lord-rv32.su",
+      "bytes": 9009,
+      "sha256": "18296f990a689f4842e9caba870e79185e55375c7e3f92e57bddfc0b6da1908e"
+    },
+    "findings": [
+      "New glyph raster clips once; at most 20 sampling masks and 39 rows per glyph.",
+      "RV32 -Os inner pixel loop has byte loads, mask/branch, halfword store and pointer increments; no division, 64-bit helper or per-pixel draw call. Mapping divisions occur once per column or row.",
+      "lord_glyph stack 112 bytes; p4_ui_text 336 bytes; game_render 64 bytes. Shared text helper caches bounded sampling maps.",
+      "No added state bytes, heap allocations, framebuffer cache, decoder, private frame loop or peripheral ownership.",
+      "Illustrated title is separately sized offline for each surface. Pinned RV32 -Os inner loop is lbu, palette address, lhu, sh and bounded index/branch; no division, floating-point, 64-bit arithmetic or decoder. draw_title stack is 16 bytes. No full-screen cache."
+    ],
+    "assets": {
+      "retained_title_rgb565_bytes": 0,
+      "shared_cp437_bytes": 4096,
+      "presentation_font_alpha_bytes": 31920,
+      "presentation_font_advances": 95,
+      "launcher_icon_bytes": 9744,
+      "new_raster_assets_bytes": 264544,
+      "historical_title_not_linked_bytes": 87040,
+      "new_raster_pixel_indices_bytes": 263520,
+      "new_raster_rgb565_palette_bytes": 1024
+    },
+    "device_cadence": "Unmeasured. Host CPU timings exclude panel, P4, transport and live realm service; no 30 FPS qualification."
+  },
+  "package": {
+    "bytes": 434820,
+    "file": "LORD.P4G",
+    "id": "org.p4console.lord",
+    "multiplayer": {
+      "input_delay_ticks": 0,
+      "max_players": 2,
+      "message_bytes": 64,
+      "min_players": 2,
+      "protocol": 19539,
+      "schema": 1,
+      "style": "turn-based",
+      "style_code": 1,
+      "tick_rate_hz": 30
+    },
+    "package_sha256": "bc737068ddf41e651132e7003f5cf60d59bb85f01d8421a5859d2f33996fb46e",
+    "payload_bytes": 434564,
+    "payload_sha256": "5a2f96266b305ad7abc549aeaa838b3d21b9cfd666c2b4c2f775aa5cd7d373ff",
+    "result": "p4-game-package-built",
+    "stack_frame_limit_bytes": null,
+    "artifact": {
+      "path": "build-host/lord-launch/LORD.P4G",
+      "bytes": 434820,
+      "sha256": "bc737068ddf41e651132e7003f5cf60d59bb85f01d8421a5859d2f33996fb46e"
+    },
+    "log": {
+      "path": "build-host/lord-launch/package.log",
+      "bytes": 521,
+      "sha256": "7eedf867e6b1c8000755bfa0a7f50aaa2855d292063676e34d8e80fb5f8729b2"
+    },
+    "protected_successor": true,
+    "installed": false,
+    "pairing": "Coordinator must regenerate and review the matching OS protected-game lineage from this exact final payload. Existing OS/unit acceptance is not inherited.",
+    "paired_os_build": {
+      "version": "0.55",
+      "image": {
+        "path": "apps/console_os/build-tab5/p4_console_os.bin",
+        "bytes": 4297952,
+        "sha256": "19c2c854cbf0a9ac40022dbc33fc4ed8711a8a2cfaeb44254bf97fe5ce7473b9"
+      },
+      "protected_header": {
+        "path": "apps/console_os/build-tab5/generated/protected-games/p4_protected_game_lineage.h",
+        "bytes": 1141,
+        "sha256": "877068af79618b5889112868907fd9b3a63b1ace00213e16909d4acdb5f79973"
+      },
+      "bundle_package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/LORD.P4G",
+        "bytes": 434820,
+        "sha256": "bc737068ddf41e651132e7003f5cf60d59bb85f01d8421a5859d2f33996fb46e"
+      },
+      "verification": "Independent byte comparison confirms integrated LORD.P4G equals this final candidate; protected digest equals exact payload. Root-owned Tab5 build log reports 17 cartridges verified.",
+      "build_log": {
+        "path": "build-host/initial-launch/tab5-build.log",
+        "bytes": 48542,
+        "sha256": "7c4d4ce7c3d784c302adf37392eff01d4c349bc385f1c3d7982254ab05c08f2b"
+      }
+    }
+  },
+  "source_closure": [
+    {
+      "path": "components/p4_cp437/include/p4/cp437.h",
+      "bytes": 494,
+      "sha256": "bfbcc829d7c91a1d8c4f1335394a9f78c446fa8146fd4d16c5298142b00e5b55"
+    },
+    {
+      "path": "components/p4_cp437/src/cp437.c",
+      "bytes": 25159,
+      "sha256": "10405ddafb45fbf288362acf6f3b346de0a6483c9e014cc588036300dd521bdf"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/achievements.h",
+      "bytes": 1788,
+      "sha256": "c389a044b056142d11796b8de48a50fa6ce5214e50c733455a32c9a0a663d37d"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/audio.h",
+      "bytes": 3129,
+      "sha256": "8b57ae696ed091bad426e09d6232ea52ab9e9a8bd70741d76f51bdaba4ee87a5"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/audio_pack.h",
+      "bytes": 1548,
+      "sha256": "8dcead613074e3e5db390039754942f432bd4aa024e33f61bff202a9fcc5818e"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/card_art.h",
+      "bytes": 7560,
+      "sha256": "b8af8b6137dd0681d2dc3b7555fb0e8d0ccf9cd064d9f12c1bcb7bfa2214db4f"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/cartridge.h",
+      "bytes": 4880,
+      "sha256": "b3c7f4c0b3e3ff67e9e3ba9a81b162991922c8cf4a819758e4e6a9f9ac518f6a"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/dice.h",
+      "bytes": 1095,
+      "sha256": "4a9ee228bab0aee3b7dd7db43880e3337ec193417ddbd4bc577e6cf2f5ae68d6"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/draw.h",
+      "bytes": 2417,
+      "sha256": "47d5b29c0e736d62f421a231ba7c0fd8a97b7209a580ba5fc9f815c8fbe5ea1a"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/feedback.h",
+      "bytes": 1050,
+      "sha256": "ede8ccc4e9cab3c73b14dd3467a5276794c3cee90006581307bb525040396915"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/game.h",
+      "bytes": 16412,
+      "sha256": "33e65134e86f1597fe732f64df88720c5892280ff31ca00ac9cbee15beac7459"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/input.h",
+      "bytes": 2998,
+      "sha256": "4dd1d878598e81c1ec99d40b095b82202a49e3b80169a7217a6528d8f4ad6eb1"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/mesh.h",
+      "bytes": 5206,
+      "sha256": "3e7dd39f0e2df522a365227ca579e670ca8f8f8dcef841883f26959ea91e1394"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/motion.h",
+      "bytes": 498,
+      "sha256": "08768be7e8788299c44cffcbffafbdfd2d05a5603aa79ae8eaeb6c312cd41abb"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/presentation.h",
+      "bytes": 9371,
+      "sha256": "c82e11e65836eb5de29a473f254d583daaa1946c357f4d8c9b3a76461f272d21"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/presentation_font.h",
+      "bytes": 162003,
+      "sha256": "0bc9a110a5f9b0e8f1cc44ffa212206758ebdd58e15ac488030f65fe72a7f448"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/visual.h",
+      "bytes": 2875,
+      "sha256": "206e74c98b2a47202f0e253f126dcfdf5e57dda6c25de732c0360fe542543979"
+    },
+    {
+      "path": "components/p4_game_api/runtime/cartridge_main.c",
+      "bytes": 14832,
+      "sha256": "a6b7062db30979c4d32728d451793cbde1d1303ceebc524a46b935f193a77c6d"
+    },
+    {
+      "path": "components/p4_game_api/src/achievements.c",
+      "bytes": 3672,
+      "sha256": "7e9fc731cedbf3cc6d93f3a2946972cbcd84a6f5f54d1e71c498f309d1c24a95"
+    },
+    {
+      "path": "components/p4_game_api/src/audio_mixer.c",
+      "bytes": 8839,
+      "sha256": "e09639fb540e7854bf2cb4da74439db5dc6b575ac09bacf6bb3a2d4f68f90500"
+    },
+    {
+      "path": "components/p4_game_api/src/audio_pack.c",
+      "bytes": 3437,
+      "sha256": "d12cc933706012124784300f6abb15227d4534a298082ea9e8b23948acd9da71"
+    },
+    {
+      "path": "components/p4_game_api/src/draw.c",
+      "bytes": 12509,
+      "sha256": "3056f2a5b8bb9f9db7c1df2d197e5a676b9c20f12d10398bc92f6c44b887fa36"
+    },
+    {
+      "path": "components/p4_game_api/src/feedback.c",
+      "bytes": 2098,
+      "sha256": "2f05229f018a488576a8bacef4a91096b97e6c0495c51138c4518ee6cd01be4a"
+    },
+    {
+      "path": "components/p4_game_api/src/game_runtime.c",
+      "bytes": 27502,
+      "sha256": "c1ac69e7c45192b287e07fec350d47826888117b1b41e25d90f2e7319d2c1996"
+    },
+    {
+      "path": "components/p4_game_api/src/input.c",
+      "bytes": 10628,
+      "sha256": "b895eff5252e8d141fb49dc3c8e31fbd629bcda72068f14917dcf425bc7a81f7"
+    },
+    {
+      "path": "components/p4_game_api/src/presentation_font.c",
+      "bytes": 193,
+      "sha256": "149b2e510c0a0b8dfe5c4a7ac4be2f8006c4360c09a82c088209f7ece1eb65c5"
+    },
+    {
+      "path": "components/p4_game_api/src/visual.c",
+      "bytes": 9580,
+      "sha256": "8160e9798853236da029abc8bf55e5ddf95909872a830469270afb7fa8ba6e23"
+    },
+    {
+      "path": "games/lord/assets/launcher.p4i",
+      "bytes": 9744,
+      "sha256": "f03ae3e767ed0762d07c5564c24bf7683e4c93043727fb862385869b2e3fd405"
+    },
+    {
+      "path": "games/lord/assets/source/title-illustrated-v2.png",
+      "bytes": 2639309,
+      "sha256": "af7ad5763ce1c70421e0a98644d0385e15fe6de86169b196c0839f07eaf24891"
+    },
+    {
+      "path": "games/lord/assets/title-illustrated-prompt.txt",
+      "bytes": 1888,
+      "sha256": "f942c6473c7b8b17467d135bdc942ef2d17403f549b72f3b2e9256f93ad8c33e"
+    },
+    {
+      "path": "games/lord/assets/title-illustrated-provenance.json",
+      "bytes": 1104,
+      "sha256": "71e95a1dfd4772d8775e4cd369943dc6633b8e26408df477e4a941ae0769843b"
+    },
+    {
+      "path": "games/lord/game.json",
+      "bytes": 911,
+      "sha256": "310f120556d3ba03f2c22c8680223e9527f321b5312cd0516d130759bb7ef9c3"
+    },
+    {
+      "path": "games/lord/src/generated/lord_illustrated_title.h",
+      "bytes": 983465,
+      "sha256": "8843bb9f63a327d3ba3043f7deaf24e70390c095b5664fd287e1e3a256b89244"
+    },
+    {
+      "path": "games/lord/src/generated/lord_monsters.h",
+      "bytes": 14930,
+      "sha256": "2ae1f22f208f5281cdfead220dc23750b6469e9d4e76f26dd0de49bc85d37945"
+    },
+    {
+      "path": "games/lord/src/generated/lord_title_art.h",
+      "bytes": 798252,
+      "sha256": "4bfc35317a1319cf8b01cafc00fe8a8b2c38115d7aa7ec8674b06e01f84d9a28"
+    },
+    {
+      "path": "games/lord/src/lord.c",
+      "bytes": 152565,
+      "sha256": "e1b10a790b109ef028c9059bda32d9eaa10b358f50f3ebfcb552c3a480989f4b"
+    },
+    {
+      "path": "games/lord/src/lord_ansi_scenes.h",
+      "bytes": 14532,
+      "sha256": "7aec8c54e68d32dd301b6d6e08c68a41af6d5234ec97a187d03e1756131fe84b"
+    },
+    {
+      "path": "games/lord/src/lord_internal.h",
+      "bytes": 12615,
+      "sha256": "40e488cdb905c885f86830ed48b96271073e8d85e426841982c421398c780205"
+    },
+    {
+      "path": "games/lord/src/lord_logic_impl.h",
+      "bytes": 116284,
+      "sha256": "c62abb1fc0f107de6e3624f9287bb974eee3d2a43ea4cf8a4c31c3e788f69746"
+    },
+    {
+      "path": "games/lord/src/lord_presentation.h",
+      "bytes": 5207,
+      "sha256": "db630a2d63e38e05c2b0f149263e7d2d18cca315e3e278095fb1e10dd60db45f"
+    },
+    {
+      "path": "games/lord/src/lord_realm_net_impl.h",
+      "bytes": 109496,
+      "sha256": "facc1653afad50187a0f0a03805c6f91ade8a1fa6c1c98f7bd1e84a93332531c"
+    },
+    {
+      "path": "games/lord/src/lord_save_impl.h",
+      "bytes": 24155,
+      "sha256": "c2253f2ec4b065c677167abe423b78d1f65d254e639968415d3cad810acd5ff6"
+    },
+    {
+      "path": "games/lord/src/lord_sync_impl 2.h",
+      "bytes": 4890,
+      "sha256": "0820d56f4d9a37e52c48ac856129ada12f3a107a4b77cbca8198bb1ef82e4c9a"
+    },
+    {
+      "path": "games/lord/src/lord_sync_impl.h",
+      "bytes": 5153,
+      "sha256": "db2818028b050e4172c4308c07ddd614e3c1e1c6c5bbf5d6728240a3ac38b915"
+    },
+    {
+      "path": "games/lord/tools/build_illustrated_title.py",
+      "bytes": 2598,
+      "sha256": "715f6056c54dbe5c104b5c6dc3c3f3da854c4d8ee8d16a7a0049f5ca3086e98d"
+    },
+    {
+      "path": "scripts/build-game-package.py",
+      "bytes": 14250,
+      "sha256": "3c3c5e6a458be87993a90caa6bbf3c42d39e8c2655a1304ba754d286390e65ff"
+    },
+    {
+      "path": "scripts/p4_multiplayer_manifest.py",
+      "bytes": 5743,
+      "sha256": "3f5d75c8808d7e4186b1c95dce971e19c95b84f6e883b9fb845d19e972691679"
+    },
+    {
+      "path": "toolchain.lock.json",
+      "bytes": 755,
+      "sha256": "6c45009fd4ba924dac63e442d4bcdbff134cf81037cadb8f2d12209c41564a55"
+    },
+    {
+      "path": "tools/p4-game-host/CMakeLists.txt",
+      "bytes": 7197,
+      "sha256": "3ce03653c3393046a988a94586286035afe22b015ea7188e973b7a9505ed7bd3"
+    },
+    {
+      "path": "tools/p4-game-host/benchmark_game.c",
+      "bytes": 5562,
+      "sha256": "d923d0d7957bdfde8c8b09ef36b5178ed8d2da43de01bfaf3cdfa2b174b50d35"
+    },
+    {
+      "path": "tools/p4-game-host/host_service.c",
+      "bytes": 1124,
+      "sha256": "31f94486708417449b0144c5566dc2a1b32a2c54a7191508d7d0093bdb94e5e9"
+    },
+    {
+      "path": "tools/p4-game-host/host_service.h",
+      "bytes": 473,
+      "sha256": "729be99c640331ef538c7f0dbc744d198c813d87736fadff1215a31a76d2204b"
+    },
+    {
+      "path": "tools/p4-game-host/play_game.c",
+      "bytes": 26251,
+      "sha256": "749d0439cc5ed0cbb88194202406236558b7ac9fd816f128ca09568b71aeeba2"
+    }
+  ],
+  "source_closure_sha256": "94af46935c6e7c35770395be9100caa868a3ef6e8a7822d4547eb18678b60d91",
+  "pending": [
+    "Coordinating task owns guarded installation and protected registration verification on each exact Tab5.",
+    "Exact Tab5 package/OS/unit panel, physical touch, controller, speaker and live multiplayer acceptance.",
+    "Sustained actual-device presented cadence: 60 FPS target, 30 FPS release floor."
+  ],
+  "limitations": [
+    "GAMES/WIP classification is preserved. Host and visual evidence does not establish release-ready device acceptance.",
+    "No standalone pause added: Start retains activate semantics, turn-based decisions remain unchanged.",
+    "Existing generated launcher retained. Opening artwork uses new original ImageGen art with exact prompt/provenance and deterministic offline conversion. In-game ANSI scenes and creature animation remain terminal-style."
+  ],
+  "artwork": {
+    "generator": "OpenAI built-in image_gen",
+    "provenance": {
+      "path": "games/lord/assets/title-illustrated-provenance.json",
+      "bytes": 1104,
+      "sha256": "71e95a1dfd4772d8775e4cd369943dc6633b8e26408df477e4a941ae0769843b"
+    },
+    "prompt": {
+      "path": "games/lord/assets/title-illustrated-prompt.txt",
+      "bytes": 1888,
+      "sha256": "f942c6473c7b8b17467d135bdc942ef2d17403f549b72f3b2e9256f93ad8c33e"
+    },
+    "source": {
+      "path": "games/lord/assets/source/title-illustrated-v2.png",
+      "bytes": 2639309,
+      "sha256": "af7ad5763ce1c70421e0a98644d0385e15fe6de86169b196c0839f07eaf24891"
+    },
+    "converter": {
+      "path": "games/lord/tools/build_illustrated_title.py",
+      "bytes": 2598,
+      "sha256": "715f6056c54dbe5c104b5c6dc3c3f3da854c4d8ee8d16a7a0049f5ca3086e98d"
+    },
+    "deterministic_regeneration": "Passed byte-for-byte",
+    "budget": "Final 434820-byte package remains below unchanged 524288-byte limit."
+  },
+  "completion_audit": {
+    "native_and_fallback": "Native C descriptor/manifest request high resolution; 258 guarded frames at both sizes pass.",
+    "gameplay_save_and_commands": "Core game update/start/save/input/audio block exactly equals HEAD baseline; unchanged logic/save/sync/realm hashes; 2000 paired frame trace yields identical native/fallback state and saves.",
+    "presentation": "Original illustrated opening replaces rejected version; reviewed title/town/shops/stats/battle/results and all-screen captures, native/fallback.",
+    "local_play": "Real final SDL keyboard and explicit left mouse paths passed; clean keyboard and touch exits.",
+    "bounded_rendering": "Pinned RV32 -Os assembly and stack reviewed; assets budgeted; 434820 bytes remains under unchanged 524288-byte cartridge limit.",
+    "lineage": "Public ID, save schema and multiplayer manifest preserved; integrated Tab5 OS0.55 protected digest matches exact final payload.",
+    "evidence_and_limits": "Dedicated evidence and exact artifact hashes saved; actual-device acceptance explicitly remains pending."
+  }
+}

@@ -130,6 +130,15 @@ const p4_ansi_cell_t *p4_ansi_cell(const p4_ansi_terminal_t *terminal,
                                    size_t column,
                                    size_t row);
 
+/** Scale the bounded terminal to a larger surface. Row offsets and clips use
+ * the stable 768x480 terminal coordinates, independently of output resolution. */
+bool p4_ansi_render_scaled_rows_rgb565(const p4_ansi_terminal_t *terminal,
+    uint16_t *pixels, size_t stride_pixels, size_t width, size_t height,
+    size_t first_row, size_t row_count, int32_t y_offset_pixels,
+    size_t clip_top, size_t clip_height);
+bool p4_ansi_render_scaled_rgb565(const p4_ansi_terminal_t *terminal,
+    uint16_t *pixels, size_t stride_pixels, size_t width, size_t height);
+
 #ifdef __cplusplus
 }
 #endif

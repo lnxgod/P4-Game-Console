@@ -61,3 +61,13 @@ esp_err_t esp_lcd_new_panel_io_i2c(i2c_master_bus_handle_t,const esp_lcd_panel_i
 esp_err_t esp_lcd_panel_io_rx_param(esp_lcd_panel_io_handle_t,int,void *,size_t);
 
 esp_err_t i2c_master_transmit(i2c_master_dev_handle_t,const uint8_t *,size_t,int);
+
+#define ESP_ERR_NOT_FINISHED 0x10c
+#define pdPASS 1
+typedef void *TaskHandle_t;
+typedef int portMUX_TYPE;
+#define portMUX_INITIALIZER_UNLOCKED 0
+#define portENTER_CRITICAL(p) ((void)(p))
+#define portEXIT_CRITICAL(p) ((void)(p))
+int xTaskCreate(void (*entry)(void *), const char *, unsigned, void *, unsigned, TaskHandle_t *);
+int64_t esp_timer_get_time(void);

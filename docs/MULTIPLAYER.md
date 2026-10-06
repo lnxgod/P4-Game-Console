@@ -268,3 +268,46 @@ relay, public matchmaking, arbitrary Internet listener, or Wi-Fi game mode.
 4. Hardware-accept one P4 Yahtzee match launched from the multi-game lobby over
    the selected two-console transport without weakening the existing Doom
    evidence boundary.
+
+
+## Tab5 0.45 standalone radio candidate
+
+Core OS provides USB relay, Bluetooth and **Local Wi-Fi** choices in the shared
+Multiplayer screen. Host creates a room; Join selects a nearby room. Local
+Wi-Fi creates a tablet-owned AP on demand, scans only versioned P4 game room
+names, binds association to the selected BSSID, obtains DHCP automatically,
+and carries the existing P4MP datagrams over UDP port 42424. It requires no
+router or internet. Only one guest associates; the current game adapter
+supports two human players. This local AP is open (no password/encryption),
+has no uplink/forwarding and exposes no content-transfer or administration
+service. Bluetooth retains the existing encrypted, bonded GATT path.
+
+Scanning/connection/RPC work runs on an OS worker. Active games perform bounded
+nonblocking sends and at most eight received datagrams per poll. Exact package
+compatibility, lobby handshake, start synchronization and game messages remain
+owned by the existing P4MP service. Invalid sizes/CRC/session/source endpoints
+are rejected; link state expires after three seconds without received traffic.
+Games do not implement radio drivers. A single-player cartridge still needs a
+multiplayer implementation before it can participate.
+
+Wacky Wheels' local prototype uses the same OS service for its two-player
+sprint. Its game protocol has host tests; this statement is not hardware
+acceptance. Radio and charging evidence must name the exact 0.45 image/unit.
+
+## Tab5 0.53 four-racer candidate
+
+The 0.53 native-game adapter accepts declared profiles up to four players.
+Local Wi-Fi admits three guests, keeps a separate bounded route per guest,
+and addresses JOIN acceptance to its recipient. The host may keep admitting
+players after the first joins, until Start freezes the roster. A reusable
+`p4_multiplayer/group.c` start exchange waits for every admitted player's ACK;
+missing members time out before gameplay. Bluetooth, the USB serial relay,
+and Doom retain their existing two-player limits.
+
+Wacky Wheels 0.1.0 uses protocol 2 (64-byte maximum) for two to four racers.
+The old track-one prototype is incompatible and must be updated on all peers.
+Its game ID stays `org.p4console.wacky-probe`; launcher ID changes from 120 to
+9001 to avoid the current Tide Maze identity. Three/four-instance tests pass on
+all five race courses, and shared group-start plus real UDP route tests pass.
+Physical four-console acceptance and device cadence remain pending. See
+`test-runs/2026-10-06-wacky-wheels-full-port.json` for exact artifact/unit results.

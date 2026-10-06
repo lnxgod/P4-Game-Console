@@ -39,6 +39,7 @@ def main() -> None:
         assert manifest["version"] == "1.0.0"
         assert manifest["package_file"] == "STAR_HOP.P4G"
         assert manifest["folder"] == "GAMES/ARCADE"
+        assert "video-highres" in manifest["optional_capabilities"]
         assert "GAMES/ARCADE" in (created / "README.md").read_text()
         compile_result = subprocess.run(
             ["cc", "-std=c11", "-Wall", "-Wextra", "-Wpedantic",
@@ -49,6 +50,33 @@ def main() -> None:
             cwd=ROOT, check=False, text=True,
             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         assert compile_result.returncode == 0, compile_result.stderr
+
+        # Run the real generated game against the sanitizer-backed Game API.
+        # This catches cadence-dependent stepping that compilation cannot find.
+        motion = pathlib.Path(temporary) / "motion"
+        motion.mkdir()
+        (motion / "CMakeLists.txt").write_text(f'''\
+cmake_minimum_required(VERSION 3.16)
+project(starter_motion LANGUAGES C)
+add_subdirectory("{ROOT / 'components/p4_game_api'}" p4_game_api)
+add_executable(starter_motion
+    "{ROOT / 'scripts/tests/native-starter-motion.c'}"
+    "{created / 'src/star_hop.c'}")
+target_link_libraries(starter_motion PRIVATE p4_game_api)
+target_compile_options(starter_motion PRIVATE
+    -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+    -fsanitize=address,undefined -fno-omit-frame-pointer)
+target_link_options(starter_motion PRIVATE -fsanitize=address,undefined)
+''')
+        for command in (
+            ["cmake", "-S", str(motion), "-B", str(motion / "build"), "-G", "Ninja"],
+            ["cmake", "--build", str(motion / "build")],
+            [str(motion / "build/starter_motion")],
+        ):
+            checked = subprocess.run(command, check=False, text=True,
+                                     stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                     timeout=60)
+            assert checked.returncode == 0, checked.stdout + checked.stderr
 
         check = run(GENERATOR, "--games-root", str(games), "--check")
         assert check.returncode == 0, check.stderr
@@ -63,7 +91,7 @@ def main() -> None:
         assert not (games / "moon_run").exists()
         dry_report = json.loads(dry_run.stdout)
         assert dry_report["launcher_id"] == 101
-        assert dry_report["optional_capabilities"] == ["audio-tone", "save"]
+        assert dry_report["optional_capabilities"] == ["audio-tone", "save", "video-highres"]
 
         capability_created = run(
             CREATOR, "Save Test", "--optional-capability", "save",
@@ -142,6 +170,11 @@ def main() -> None:
         high_res_check = run(
             GENERATOR, "--games-root", str(games), "--check")
         assert high_res_check.returncode == 0, high_res_check.stderr
+
+        low_res = run(CREATOR, "Legacy Demo", "--low-res",
+                      "--games-root", str(games), "--dry-run")
+        assert low_res.returncode == 0, low_res.stderr
+        assert "video-highres" not in json.loads(low_res.stdout)["optional_capabilities"]
 
         invalid_folder = run(
             CREATOR, "Bad Folder", "--folder", "GAMES/TOO/DEEP",

@@ -207,7 +207,7 @@ static void draw_scene_motif(p4_game_surface_t *surface,
             case 'C': color = ANSI_YELLOW; break;
             default: break;
             }
-            p4_draw_cp437_glyph(surface, x + (int)column * 8,
+            lord_glyph(surface, x + (int)column * 8,
                                 y + (int)row * cell_height,
                                 glyph, color, ANSI_BLACK, cell_height);
         }
@@ -222,11 +222,11 @@ static void draw_location_scene(p4_game_surface_t *surface,
         scene = LORD_SCENE_TOWN;
     }
     const lord_scene_composition_t *const composition = &s_ansi_scenes[scene];
-    p4_draw_fill_rect(surface, 8, y, 304, 5 * cell_height, ANSI_BLACK);
+    lord_fill(surface, 8, y, 304, 5 * cell_height, ANSI_BLACK);
     /* A continuous flagstone floor ties the three landmarks into one scene.
      * Its muted gutters stay behind the foreground silhouettes. */
     for (int x = 8; x < 312; x += 8) {
-        p4_draw_cp437_glyph(surface, x, y + 4 * cell_height,
+        lord_glyph(surface, x, y + 4 * cell_height,
                             CP437_SHADE_LIGHT, ANSI_BROWN, ANSI_BLACK,
                             cell_height);
     }
@@ -296,7 +296,7 @@ static void draw_location_band(p4_game_surface_t *surface,
         return; /* These screens already own their illustration area. */
     default: break;
     }
-    p4_draw_fill_rect(surface, 16, 133, 288, 1, ANSI_BLUE);
+    lord_fill(surface, 16, 133, 288, 1, ANSI_BLUE);
     draw_location_scene(surface, screen_location_scene(state, state->screen),
                          136, P4_DRAW_CP437_COMPACT_HEIGHT);
 }

@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "mode": "exact original ImageGen launcher reuse",
+  "source": "launcher-source.png",
+  "source_sha256": "25adc6c2e35b304449dffe9db026b5b169a410e695cf6daa892b9ded6a4608c1",
+  "generation_source": "/Users/billh/Documents/ChatGPT/esp32-p4 2/components/console_shell/assets/nextgen/solitaire.png",
+  "prompt": "Generate a game cover illustration asset matching the approved reference's Solitaire artwork: four elegant white playing cards fanned over a dark teal geometric landscape with a luminous pale teal moon, calm green grid floor and mountains. Real card suits and small A ranks are allowed on cards ONLY. Wide 16:9 composition. Polished minimalist 3D game packaging art, color restrained teal/mint. NO titles, interface, border or controls.",
+  "reference_assets": [],
+  "license": "Original AI-generated project artwork, distributed under the project MIT license. No third-party game art.",
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "sha256": "cb1135659efdc88caae47b36d0902562017315af0dc03523f19a7c26a0e92abc",
+    "bytes": 9744,
+    "width": 128,
+    "height": 72,
+    "palette_entries": 256,
+    "palette_format": "little-endian RGB565",
+    "pixels": "row-major uint8 palette indices",
+    "opaque": true
+  },
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "command": "python3 scripts/pack-game-icon.py games/solitaire/assets/launcher-source.png --output games/solitaire/assets/launcher.p4i",
+    "description": "Standard center-fit Lanczos resize and 256-color median-cut quantization. No gameplay or runtime assets changed."
+  },
+  "original_generation": {
+    "name": "solitaire",
+    "prompt": "Generate a game cover illustration asset matching the approved reference's Solitaire artwork: four elegant white playing cards fanned over a dark teal geometric landscape with a luminous pale teal moon, calm green grid floor and mountains. Real card suits and small A ranks are allowed on cards ONLY. Wide 16:9 composition. Polished minimalist 3D game packaging art, color restrained teal/mint. NO titles, interface, border or controls.",
+    "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-ad6609a1-6065-4323-82a3-38163b0126c7.png",
+    "sha256": "25adc6c2e35b304449dffe9db026b5b169a410e695cf6daa892b9ded6a4608c1"
+  }
+}

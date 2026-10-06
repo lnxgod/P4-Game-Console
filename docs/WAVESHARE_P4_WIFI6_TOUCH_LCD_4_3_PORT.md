@@ -107,7 +107,7 @@ A low-priority 120 Hz launcher task is the sole GT911 reader and publishes only
 its newest complete frame under a short critical section. This continuously
 acknowledges controller data while a native shell frame is being rendered or
 transformed, without creating an input backlog. The task is stopped and joined
-before native games, script games, or Doom use their unchanged direct polling
+before native games or Doom use their unchanged direct polling
 contracts, and restarted on launcher return. A 500 ms timeout fails closed
 instead of allowing concurrent readers or touch destruction.
 

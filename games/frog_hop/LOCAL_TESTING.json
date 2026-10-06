@@ -1,0 +1,389 @@
+{
+  "schema": 1,
+  "game": "frog_hop",
+  "version": "1.1.0",
+  "tested_at": "2026-10-06T04:26:12.773201+00:00",
+  "status": "host-tested",
+  "scope": "Persistent branded two-row header within original18px HUD; all gameplay unchanged.",
+  "source_sha256": "e39e4ec2ae5f93dbdb9e3fadc9e3493cfb618b1281f4dbe5d1b0dd9064b845b1",
+  "files": {
+    "CMakeLists.txt": "a5d8879881fe52293c67eae931f419270b6b25c7cffaca7768b6864819306598",
+    "README.md": "5954db0a1eb7a4d2c5b321252b931fb0d5d70748ab26961609905e2fe05f52fa",
+    "assets/environment_compiled_preview.png": "90252caa86958062deb6037bd720619e653a62c2ea9fc45a5690594df9096bcd",
+    "assets/environment_provenance.json": "f7c2be4270ca6f0a540a92ab677eccfee3300ba842e7b975ae77e3a4c33ec7e9",
+    "assets/environment_v1.png": "388623113aa9e4e26c4cd97766069b705f90d7092cef4ff2b149fac1ea20abd9",
+    "assets/frog_hop_animation_atlas_v1.png": "e81bfc0bf9e26665a9b2059088ac9b7511598fad89ae958c491ad40937e49d03",
+    "assets/hires_atlas_v2.png": "6258462af6ceb7eb6c1a1363002033fb23cb3d57860d53259dcaf82df3cf4912",
+    "assets/hires_compiled_preview.png": "844f2801da205fe8802963adea48d0cd007e512ebb49773b83e9c288e21d83a9",
+    "assets/hires_provenance.json": "ec47e16f9ec1944268d618ca32108cad1608a56d27d721273acd18322a4e31ca",
+    "assets/launcher-provenance.json": "b8ec7e9e9e59fa9c1532940bd4c78e46e9d4981febb0ffc943f78d4378cd938c",
+    "assets/launcher-source.png": "6e6a7d00ab2cf3e7832276cf2d58439169859543df6ef2819a0a9459b6afae74",
+    "assets/launcher.p4i": "a63636bd22f7b616166a85f677e4053dee650529c76a0842bcc1242cccabaa63",
+    "assets/title_frog_preview.png": "1e5d6dc41d2b3d11938e032fcfb542cea7ad36137c3d1dcfbd6d42c20dfb887c",
+    "game.json": "11ca21aa48948641a0b1ab944a7642b10ee3f88237d6d64549cd5600e06ae3db",
+    "src/frog_hop.c": "a78c8c3a98303d7a941e649f9938f41713beae28ac1f9ae53653f23d1ceac124",
+    "src/frog_hop_internal.h": "957718378625e99807906e4d8e2c5c1410504f93dc39eb03b98781077432f5ba",
+    "src/generated/environment.inc": "b186e663442d05ebd7e650194427e6df344482d91b28b95b709d04152a254c12",
+    "src/generated/frog_hop_animation_atlas.inc": "181e6600eecc6aba3c63bd844430633dcfc3c3899562ec569ed2d35f7f107352",
+    "src/generated/hires_art.inc": "30cd1231f48d4725bed6dcd5609603274589ebc7870e234f9a79effec932df8a",
+    "src/hires.h": "481a635c0d155fdaf984a7a928946fc2d7da5da6ef32cdbad75cfcc3664bc74f",
+    "tests/CMakeLists.txt": "27ee8ee8d1530eb83760ce5321b9060757c9dd305a51463e32bc79734a0d341e",
+    "tests/performance-input.txt": "a8b155bc69b98370508ad3178133fe9cdc0ac1fb1b3a04d4188147cc755d4d58",
+    "tests/test_frog_hop.c": "f6ad67718346fdbf6edd4f704d58700f2d77d137db1ec0454aab8dc26580ac51",
+    "tools/convert_environment.py": "193e1950bd8f896787c6dac36008f598bcdffe30e5f9fb20cb90e4bba97c85a5",
+    "tools/convert_hires.py": "fea6002436bf3100313763346a70246c50159a06ecde7a05043f4d573e135a29",
+    "tools/png_to_animation_atlas.py": "c5852afd1b113fd03a4969793f6a3ed902189087f357c93b71efdbf4b71d5ed4",
+    "tools/render_hires.c": "25e09d8c0dcf8c419f37fee2d79b43bff95b3d014a62e173d1a743de6d7d759c"
+  },
+  "source_hash_method": "Sorted game-relative UTF-8 path plus NUL plus binary SHA-256; excludes LOCAL_TESTING.json, PRESENTATION_TESTING.json, TOUCH_TESTING.json, .DS_Store and __pycache__.",
+  "automated": {
+    "focused_ctest": {
+      "passed": 1,
+      "failed": 0,
+      "log": {
+        "path": "build-host/presentation-pass/frog_hop/focused-tests.log",
+        "bytes": 253,
+        "sha256": "efb37d0a0a5ca72d199cbb997d737dea80e880ac7f65caafd6316dbc9bccb9a5"
+      }
+    },
+    "generic_sdl_ctest": {
+      "passed": 5,
+      "failed": 0,
+      "log": {
+        "path": "build-host/presentation-pass/frog_hop/sdl-tests.log",
+        "bytes": 671,
+        "sha256": "d9452af08af91bd7c9aa9eadbd8b38e78b2847498e96dd7ca7c0f8c50926e6f3"
+      }
+    },
+    "regression_output": {
+      "path": "build-host/presentation-pass/frog_hop/regression-output.log",
+      "bytes": 255,
+      "sha256": "5535d130c52b668d2b79f6446917e494035c932aa2e5f64e8c9a2f6d4ee63259"
+    }
+  },
+  "captures": {
+    "build-host/presentation-pass/frog_hop/after-gameplay-320.ppm": "95f0589d3111805eb98c65caae02693b45644567b3dd0633104edfa6f68cf000",
+    "build-host/presentation-pass/frog_hop/after-gameplay-768.ppm": "f0b5261de6f63a16557034e82c0d294a6eabd1c6765b494e6ae8a95be3ed4d02",
+    "build-host/presentation-pass/frog_hop/after-header-limits-320.ppm": "873002543c494e2dc074688496c84fa0dd5e170006dd410979af5d7fc4a8132a",
+    "build-host/presentation-pass/frog_hop/after-header-limits-768.ppm": "8a0771320078c183dbc921761dc8f7bd2681b420fce896e2ae6b89893c141ded",
+    "build-host/presentation-pass/frog_hop/after-opening-320.ppm": "6428374085c6af316ddb419eb8f7d7246dc09573380ee20cdeddbc3222aeec0b",
+    "build-host/presentation-pass/frog_hop/after-opening-768.ppm": "94a7d4bcf747ed3bf505408b7040646f163bd214896481a8a293eaa5453e1064",
+    "build-host/presentation-pass/frog_hop/after-paused-320.ppm": "177d983c8c049be8010757e1f803dd4dc8e5a766343471733734be32a1359a3d",
+    "build-host/presentation-pass/frog_hop/after-paused-768.ppm": "bdda280994f75c39e3f22c3c9a8b5fd1e764449d4c26dafc199ad5cc124da6d5"
+  },
+  "capture_scope": "Actual-source native/fallback opening, gameplay, pause. Invaders damaged-edge/game-over are seeded fixtures; Frog header-limits uses maximum score/round. Inspected PNGs are derived from these PPMs.",
+  "package_validation": {
+    "path": "build-host/presentation-pass/frog_hop/FROGHOP.P4G",
+    "bytes": 487396,
+    "sha256": "a41c88bcd50311075a8cae6d1a6fd98e959f52b79a8511b6ade903ce891547ee",
+    "package": {
+      "path": "build-host/presentation-pass/frog_hop/FROGHOP.P4G",
+      "bytes": 487396,
+      "sha256": "a41c88bcd50311075a8cae6d1a6fd98e959f52b79a8511b6ade903ce891547ee"
+    },
+    "header_payload_icon": "passed",
+    "import_allowlist": "passed by pinned packager",
+    "payload_sha256": "020dcce8359439de0364e7bd61aeb83d7a5d6aee5bc44cfd8194f11cc65591a9",
+    "limit_bytes": 524288,
+    "remaining_bytes": 36892,
+    "validation": {
+      "path": "build-host/presentation-pass/frog_hop/package-validation.json",
+      "bytes": 417,
+      "sha256": "acd32f7c9f3580f585981e467d00b2fcca8051826b78354485606e7f3cb85e0e"
+    },
+    "staged": false,
+    "uploaded": false
+  },
+  "artifacts": {
+    "package": {
+      "path": "build-host/presentation-pass/frog_hop/FROGHOP.P4G",
+      "bytes": 487396,
+      "sha256": "a41c88bcd50311075a8cae6d1a6fd98e959f52b79a8511b6ade903ce891547ee"
+    },
+    "static_game_image_bytes": 292864,
+    "added_raster_bytes": 0
+  },
+  "performance": {
+    "method": "2000 frames per resolution, real game and tone/PCM mixer, optimized desktop CPU; excludes ESP32 execution/display/transport",
+    "input_tape": {
+      "path": "games/frog_hop/tests/performance-input.txt",
+      "bytes": 2295,
+      "sha256": "a8b155bc69b98370508ad3178133fe9cdc0ac1fb1b3a04d4188147cc755d4d58"
+    },
+    "raw_results": {
+      "768": {
+        "path": "build-host/presentation-pass/frog_hop/benchmark-768.json",
+        "bytes": 524,
+        "sha256": "781cec4282f8c3b502edbab663bff9e51b4fa27228455f2bcdde0dbc2c83b478"
+      },
+      "320": {
+        "path": "build-host/presentation-pass/frog_hop/benchmark-320.json",
+        "bytes": 524,
+        "sha256": "6db71cd849298738ae6c35bf5c19583d923b636c69bd0e12a4434b85e7a100d0"
+      }
+    },
+    "results": {
+      "768": {
+        "game": "org.p4console.frog-hop",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1615,
+        "last_frame_hash": "3823f821",
+        "update_audio_ms": {
+          "mean": 0.0011,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.019,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.2311,
+          "p50": 0.181,
+          "p95": 0.44,
+          "p99": 0.46,
+          "max": 0.529,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.2322,
+          "p50": 0.182,
+          "p95": 0.441,
+          "p99": 0.461,
+          "max": 0.53,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.frog-hop",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1615,
+        "last_frame_hash": "471fc88d",
+        "update_audio_ms": {
+          "mean": 0.001,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.003,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0608,
+          "p50": 0.052,
+          "p95": 0.102,
+          "p99": 0.105,
+          "max": 0.12,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0618,
+          "p50": 0.053,
+          "p95": 0.103,
+          "p99": 0.106,
+          "max": 0.121,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "benchmark_binary": {
+      "path": "build-host/play-frog_hop/p4_game_benchmark",
+      "bytes": 552000,
+      "sha256": "66ae29582f94fefafd8a689ae86f2d9abb708762470f20437bd61a051c9621d2"
+    },
+    "rv32_assembly": {
+      "path": "build-host/presentation-pass/frog_hop/after-rv32.s",
+      "bytes": 1650225,
+      "sha256": "dd94a5294da8d15310059c4ac98bcab453a624b1dca3b8d0ce08cee9f2788b8d"
+    },
+    "cost_notes": "No new per-pixel game loop or heap allocation. Invaders title reuses three ship sprite draws, existing backdrop and bounded shared text/rectangles; Frog only replaces original HUD labels. Static assembly review is not device-cycle measurement."
+  },
+  "final_simulator": {
+    "path": "build-host/play-frog_hop/p4_game_host.app/Contents/MacOS/p4_game_host",
+    "bytes": 1299856,
+    "sha256": "8a01b7cd1cbf25f07012d0212f51fa1a3d5e61093c4a9d10f6713f2f8fbd7941",
+    "build_log": {
+      "path": "build-host/presentation-pass/frog_hop/sdl-build.log",
+      "bytes": 413,
+      "sha256": "9759c7b1aed45eb2ac199e4ac67e585ac2d4590ac56137c6f12d9401debfeee9"
+    },
+    "test_log": {
+      "path": "build-host/presentation-pass/frog_hop/sdl-tests.log",
+      "bytes": 671,
+      "sha256": "d9452af08af91bd7c9aa9eadbd8b38e78b2847498e96dd7ca7c0f8c50926e6f3"
+    },
+    "tests_passed": 5,
+    "tests_failed": 0
+  },
+  "test_logs": {
+    "build-host/presentation-pass/frog_hop/benchmark-build.log": "c2ed93ffd93c840755c0e91392ae593b1b52de9b7aaf6c208123feaceb1dde2e",
+    "build-host/presentation-pass/frog_hop/captures.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "build-host/presentation-pass/frog_hop/focused-build.log": "6b3fc4dffea5dccd27dc6bcd4c385f2069d477c83fbdd3ff8b8a185cf1749186",
+    "build-host/presentation-pass/frog_hop/focused-tests.log": "efb37d0a0a5ca72d199cbb997d737dea80e880ac7f65caafd6316dbc9bccb9a5",
+    "build-host/presentation-pass/frog_hop/package.log": "721ffc1ef07a998447d548eb6d46c58a82153c97bb81796c592abba7638f60a0",
+    "build-host/presentation-pass/frog_hop/regression-output.log": "5535d130c52b668d2b79f6446917e494035c932aa2e5f64e8c9a2f6d4ee63259",
+    "build-host/presentation-pass/frog_hop/sdl-build.log": "9759c7b1aed45eb2ac199e4ac67e585ac2d4590ac56137c6f12d9401debfeee9",
+    "build-host/presentation-pass/frog_hop/sdl-tests.log": "d9452af08af91bd7c9aa9eadbd8b38e78b2847498e96dd7ca7c0f8c50926e6f3"
+  },
+  "interactive_play": {
+    "status": "host-tested",
+    "observations": [],
+    "pending": "Root CUA of this exact final presentation binary"
+  },
+  "shared_dependencies": {
+    "components/p4_game_api/include/p4/presentation.h": "c82e11e65836eb5de29a473f254d583daaa1946c357f4d8c9b3a76461f272d21",
+    "components/p4_game_api/include/p4/presentation_font.h": "0bc9a110a5f9b0e8f1cc44ffa212206758ebdd58e15ac488030f65fe72a7f448",
+    "components/p4_game_api/src/presentation_font.c": "149b2e510c0a0b8dfe5c4a7ac4be2f8006c4360c09a82c088209f7ece1eb65c5",
+    "components/p4_game_api/src/input.c": "b895eff5252e8d141fb49dc3c8e31fbd629bcda72068f14917dcf425bc7a81f7",
+    "tools/p4-game-host/play_game.c": "749d0439cc5ed0cbb88194202406236558b7ac9fd816f128ca09568b71aeeba2",
+    "tools/p4-game-host/frame_pacer.h": "4ff832b5242db46e176c79e2c4e13d5134e55f089b061014173c3d45d477c9f3",
+    "tools/p4-game-host/benchmark_game.c": "d923d0d7957bdfde8c8b09ef36b5178ed8d2da43de01bfaf3cdfa2b174b50d35",
+    "third_party/arimo/source.json": "13fb89fa53e03f902e0b54ae6cd1cd3e85c7ce3afc5273cf5d9f8b78472d8eba",
+    "third_party/arimo/OFL.txt": "11cce536cd2f3864d767003af5dcd739e2e15818cf2279b6175edeadd3960992",
+    "components/p4_game_api/src/draw.c": "3056f2a5b8bb9f9db7c1df2d197e5a676b9c20f12d10398bc92f6c44b887fa36",
+    "components/p4_game_api/src/visual.c": "8160e9798853236da029abc8bf55e5ddf95909872a830469270afb7fa8ba6e23",
+    "tools/p4-game-host/host_mouse.h": "7e09d5ff075109d6118ee7ac497a046274c1d724d2f4032d30584c65f2a10a50",
+    "tools/p4-game-host/host_service.c": "31f94486708417449b0144c5566dc2a1b32a2c54a7191508d7d0093bdb94e5e9",
+    "scripts/build-game-package.py": "caf815ddcf35e9d09dfb528f0f11f9661ca333310d96ac06a5a62c93a96fafbb"
+  },
+  "previous_evidence": {
+    "path": "build-host/presentation-pass/frog_hop/previous-local-testing.json",
+    "bytes": 20838,
+    "sha256": "fb8acd57ce518914c53fb4f61ee6bb00bee3864e242ea398a0fa90c77236575d"
+  },
+  "hardware_acceptance": null,
+  "current_package_installed_on_device": false,
+  "current_package_installed_units": [],
+  "installed_on_device": true,
+  "externally_published": false,
+  "installation_limitation": "Prior exact-artifact installation history is retained; this presentation candidate has not been transferred or qualified by this task.",
+  "pending": [
+    "Physical tablet performance/input/display/speaker acceptance",
+    "Parent-controlled installation",
+    "Root CUA of the final presentation binary"
+  ],
+  "playfield_equivalence": {
+    "path": "build-host/presentation-pass/frog_hop/playfield-equivalence.json",
+    "bytes": 630,
+    "sha256": "803adca18dafe5ce58ce8c534351f35e8bb3d91c3c9d7c90a281de76edb72506"
+  },
+  "latest_successful_installation_by_unit": {
+    "Tab5 A": {
+      "slug": "frog_hop",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "313e898e32d06b3d78fc51f35d801ba3f969f79844dacfcd20d1bbe9b7c3d425",
+      "package_bytes": 486200,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    "Tab5 B": {
+      "slug": "frog_hop",
+      "title": "Frog Hop",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "313e898e32d06b3d78fc51f35d801ba3f969f79844dacfcd20d1bbe9b7c3d425",
+      "package_bytes": 486200,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "FROGHOP.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=FROGHOP.P4G bytes=486200 sha256=313e898e32d06b3d78fc51f35d801ba3f969f79844dacfcd20d1bbe9b7c3d425 seconds=8.5",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "frog_hop"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    }
+  },
+  "installation_history": [
+    {
+      "slug": "frog_hop",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "627bcc3a6fa0e58745bb5d756d35e7cd82528abfcf11a1efa07ec85b80b50531",
+      "package_bytes": 486120,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T00:46:05.227426+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle atomic staging, package validation and device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/B-ready-arcade-install.log",
+        "log_sha256": "401295a2ca9d269515160e49c9a482e577146abc2792149922c3eaaade8a69b2"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    {
+      "slug": "frog_hop",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "313e898e32d06b3d78fc51f35d801ba3f969f79844dacfcd20d1bbe9b7c3d425",
+      "package_bytes": 486200,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    },
+    {
+      "slug": "frog_hop",
+      "title": "Frog Hop",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "313e898e32d06b3d78fc51f35d801ba3f969f79844dacfcd20d1bbe9b7c3d425",
+      "package_bytes": 486200,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "FROGHOP.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=FROGHOP.P4G bytes=486200 sha256=313e898e32d06b3d78fc51f35d801ba3f969f79844dacfcd20d1bbe9b7c3d425 seconds=8.5",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "frog_hop"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    }
+  ]
+}

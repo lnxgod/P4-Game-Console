@@ -87,6 +87,9 @@ if [ "$P4_DG_GENERATED_MANIFEST_SHA256" != "$P4_DG_MANIFEST_SHA256" ]; then
     exit 1
 fi
 
+python3 "$P4_DG_SCRIPT_DIR/verify-source-tree.py" "$P4_DG_ROOT" \
+    --apply-to "$P4_DG_TEMP_DIR/stage"
+
 if [ -e "$P4_DG_VENDOR" ]; then
     if ! diff -qr "$P4_DG_TEMP_DIR/stage" "$P4_DG_VENDOR" >/dev/null; then
         echo "existing vendor tree diverges; inspect it instead of overwriting it" >&2
@@ -106,4 +109,4 @@ else
 fi
 
 "$P4_DG_SCRIPT_DIR/verify-doomgeneric.sh"
-echo "doomgeneric vendor copy matches the locked upstream checkout"
+echo "doomgeneric vendor copy matches locked upstream plus the pinned P4 patch"

@@ -104,6 +104,7 @@
     "accel_range_g": 4,
     "gyro_range_dps": 2000,
     "ui_sample_hz": 4,
+    "game_sampler_target_hz": 50,
     "temperature": "sensor die, not ambient"
   },
   "clock": {
@@ -124,5 +125,25 @@
       ]
     },
     "setting": "Explicit physical USB UTC sync only, years 2000..2099: one 7-byte calendar write at 0x10..0x16, verify calendar, clear only VLF with 0xBD at 0x1D, clear a pre-existing STOP bit at 0x1E after successful calendar verification, then verify full readback. No interrupt/timer, offset, charging or other power-control changes. Failed attempts remain invalid in the running sampler until a verified sync."
+  },
+  "charger": {
+    "chip": "IP2326",
+    "expander_address_7bit": 68,
+    "pins": {
+      "P7": "CHG_EN active high",
+      "P5": "nCHG_QC_EN high disables QC",
+      "P6": "CHG_STAT input"
+    },
+    "selection_ma": 500,
+    "qc_enabled": false,
+    "registers": {
+      "latch": "0x05",
+      "direction": "0x03",
+      "high_impedance": "0x07",
+      "pull_enable": "0x0b"
+    },
+    "source": "M5Unified fd40d58b8405ad1e7ed7afab548dab5e7cec5bbb Power_Class.inl setChargeCurrent Tab5 case and pinned schematic power page",
+    "implementation": "Masked updates preserve other pins; verify disabled configuration before enabling; verify enabled state; failure attempts disable and remains failure.",
+    "qualification": "Host/build tested candidate only. No charger-specific live-device installation scope or charging acceptance in this task."
   }
 }

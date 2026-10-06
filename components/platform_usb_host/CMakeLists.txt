@@ -16,6 +16,9 @@ if(COMMAND idf_component_register)
     else()
         set(PLATFORM_USB_HOST_TRANSPORT src/platform_usb_host.c)
         set(PLATFORM_USB_HOST_DRIVER_REQUIREMENTS usb)
+        if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
+            list(APPEND PLATFORM_USB_HOST_DRIVER_REQUIREMENTS platform_tab5)
+        endif()
     endif()
     idf_component_register(
         SRCS

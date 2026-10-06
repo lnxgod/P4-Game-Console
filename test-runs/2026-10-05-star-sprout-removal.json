@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-10-06T05:50:35.744692+00:00",
+  "request": "Remove incomplete Star Sprout from both Tab5 units; preserve saves.",
+  "result": "removed-from-B-already-absent-on-A",
+  "targets": [
+    {
+      "file": "AC53759A65.P4G",
+      "id": "org.gamechangers.student.swarm-53759a65",
+      "title": "STAR SPROUT RES",
+      "bytes": 8180,
+      "sha256": "8a030a1d5fd05f3ca2b16c25f13692983909e42708a0d0b0af568c82a915696c"
+    },
+    {
+      "file": "AC670906CD.P4G",
+      "id": "org.gamechangers.student.swarm-670906cd",
+      "title": "STAR SPROUT RES",
+      "bytes": 8204,
+      "sha256": "e1d42cbda11e544bb75eea0722809677379496f296f4d9dec274e0371adfc965"
+    }
+  ],
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "result": "already absent",
+      "logs": [
+        {
+          "path": "build-host/initial-launch/star-sprout/A/pull-53759.log",
+          "sha256": "3fd23cd3883cb1461c0ad777509a360a31718eb001bf437040a26378899b9161"
+        },
+        {
+          "path": "build-host/initial-launch/star-sprout/A/pull-AC670906CD.P4G.log",
+          "sha256": "35bf30c6907739712fbcdf9e10e97f58441d4fe7611d86889bc9a4aa543c3fb2"
+        }
+      ]
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "result": "exact-file removal and subsequent not-found verified",
+      "logs": [
+        {
+          "path": "build-host/initial-launch/star-sprout/B/absence-AC53759A65.P4G.log",
+          "sha256": "3319a94fcbfa01dd55cab27e068114ed9857ec0b11b26700a00a1e2bfb311321"
+        },
+        {
+          "path": "build-host/initial-launch/star-sprout/B/absence-AC670906CD.P4G.log",
+          "sha256": "37b7d9fd49d30c57d3e0b804454ea06f941192c76d3461ba6c8c796e70a817dc"
+        },
+        {
+          "path": "build-host/initial-launch/star-sprout/B/pull-AC53759A65.P4G.log",
+          "sha256": "c6d83b47fffff9de168da3c09fa45a5151f036cc1db93a8e8015e3305c0412f3"
+        },
+        {
+          "path": "build-host/initial-launch/star-sprout/B/pull-AC670906CD.P4G.log",
+          "sha256": "c7779f60ada3deb632ca0c199b2f92a4cf4cb279e5202fb66d36acdea49e09f1"
+        },
+        {
+          "path": "build-host/initial-launch/star-sprout/B/remove.log",
+          "sha256": "2c2eba51538264c8187c384e5915c768270806897cac011e0904f7a61b3af44e"
+        }
+      ]
+    }
+  },
+  "save_files_touched": false,
+  "firmware_flashed": false,
+  "retired_identities": "games/retired.json"
+}

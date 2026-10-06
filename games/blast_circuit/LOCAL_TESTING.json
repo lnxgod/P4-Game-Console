@@ -1,0 +1,730 @@
+{
+  "schema": 1,
+  "game": "blast_circuit",
+  "version": "0.2.6",
+  "status": "local-play-tested",
+  "recorded_at_utc": "2026-10-05T19:51:51.722707+00:00",
+  "source_sha256": "13c7e7de494b6e846fdb770c2721c5f98789f8ca6a572f47ba51809d3b62312b",
+  "hash_recipe": "SHA256 of sorted game-relative UTF-8 path + NUL + binary SHA256(file), concatenated for files below; LOCAL_TESTING.json excluded",
+  "files": {
+    "CMakeLists.txt": "96f9b36388806f9e746d7900e47c6ff042edc0379e8adf8fd045bcaeeb2b7293",
+    "LICENSE": "6cbfea5ec7887a04d3371f097f3edf251bf0cbc196feb9ae921e1dbdfe276234",
+    "README.md": "f26b58d75e5715b61484197038b16a4592fd411e006b5d101deeb2d8d499c3a5",
+    "assets/audio-provenance.json": "86f8c13ceb7d21f5887f6a163080f63491243a3b161ac73e05f816cccf9a04e5",
+    "assets/biomes.png": "5701ad190121eb82a5696137fe999216a99739b0db3ad2f7672132c19508dc38",
+    "assets/effects.png": "7046f23b0487fb5d032488eb4808706ebc586ea4370e3d26712eea80ae8a0850",
+    "assets/ember.png": "8f59deb7907c4aa62f5689ebb4715c7240bc4a26195af1b9bfb645b92107129f",
+    "assets/ember_crate.png": "a6744e598b7c89cbfcd3e2f3c43f81a678a1ea3562266e86cba6106cf9b34003",
+    "assets/gilt.png": "7caaa096e61c5f2e777390a2652bddf93307cb1e8c319cde2a8df8f4728c70b9",
+    "assets/greenhouse.png": "e7804e9fc05867283ac43f42cd0d25807971546f61a6b3cfd97562b2941a2dd3",
+    "assets/music-provenance.json": "732fac73fdbb0d49afbf54fff9a8da078bf5db0cabcc9d7c32d7e8e465c25c71",
+    "assets/music/badinerie-franko-1911-violin.pdf": "913179feb0ca304006e8c9d9369be924f4352c92a8dc6c61b5727d8a291db37b",
+    "assets/music/invention8-mutopia.ly": "ddc634821a618e9a5e9ffcefbd96005bd02bd1f12573e2fefc4e6e6653d83ebe",
+    "assets/music/invention8-mutopia.mid": "07238719180171f76283756405ee43a0319226e869283bf29affb9e4c360e6f8",
+    "assets/music/prelude2-mutopia.ly": "2923478f3436ddc12525fab5514e354025a9715205424944fd0e5f7f24ba70d9",
+    "assets/music/prelude2-mutopia.mid": "9e29d5b640d875bcfa93824cc963a4d9419ce2139cfd4e786148d45127e602d8",
+    "assets/provenance.json": "d226ae022126a1ca98f46a271cfcd3a1b6e34a38ece6f9ad039274c40b3fc550",
+    "assets/reinforced.png": "71174f685c6546cc301c365c7161c6f3f59f08f49d11bcc1f17196d4c9d32ecd",
+    "assets/runner.png": "1b6d925104cc343548001c2898aad610225ee8dafa67163060ddd9949c584f9f",
+    "assets/volt.png": "227f78d99503f47a3e12de2a310214fffc7a82e42b76dd18b2403192a6c6854a",
+    "game.json": "f389b22183c3022bb038dd53e2c0d28d447f1f45ca972eb2ed49c9cbf147c8fa",
+    "src/blast_circuit.c": "86bf83450ab3f55640883194d0c5aed172cd9c5bfc9bcaaf6cda96a0de041c71",
+    "src/blast_circuit_audio.c": "0c79a449082e7efc9d2f8d57ffd6951b87035a6bd13ad28e88e7e224d158d5d5",
+    "src/blast_circuit_internal.h": "93d3c114bab494660793fe57674ea94592fe9220c619a428d62a783b19d6816a",
+    "src/blast_circuit_levels.c": "52e1036c83fb58ea4ad51ad0e825a65465c6b22d56fc2d87e7740ee3f71702b7",
+    "src/blast_circuit_logic.c": "30f4ff321432c61bb1bc1d76078d27680bfaffff7ba0e5ca059e49a2b6a1ec27",
+    "src/blast_circuit_network.c": "fe4770ac9eddfcd6560359185fa640bc9d39177b54a4bc30bf48b4be8e48264d",
+    "src/blast_circuit_render.c": "61f6f383d833d7f39b847216391be5d642c5eedf2cd8d666930cda88136ea5f3",
+    "src/generated/audio.inc": "65bf4950dad5043a8fce71629d9ebc461bb3e5601251922e421e3e6caf6c5fdd",
+    "src/generated/biomes.inc": "87e5d64af0a9450c403701015edc229f09bb3b34edb115fcdfe35eac748f9b1f",
+    "src/generated/effects.inc": "c5a71e34d5b3c12749687035489f8ce28f9d6b189cad64d0ba1205c90fafcfca",
+    "src/generated/ember.inc": "6f2cec6278475ad330b578332ba8228d0eebcd62058e23539dce19c222dd4785",
+    "src/generated/ember_crate.inc": "3e04cd12dfc2cda8f452cc9d3453db76c5a16ebf53c8a0bae98c807a49134417",
+    "src/generated/gilt.inc": "3fa9479955a0c873ff2ac807bce242212be67f58572c1444f99e7ff3c2fe66a8",
+    "src/generated/greenhouse.inc": "74847ebecfdb16448af1e90834df81972878fb733827655162c38259de4b263c",
+    "src/generated/music.inc": "360163347f0ef9cbca445cf45761ddad8019d81714a393f1e18edc9f0d94d48b",
+    "src/generated/reinforced.inc": "56d9bd05d5c0c1d7858441279acb16f773689467f1287fd6320ff5e01458b609",
+    "src/generated/runner.inc": "ece8443052a106b2ada0b659a0c395a373b4dd5535aed545278239d8b17514ff",
+    "src/generated/volt.inc": "9561f71aa8a9ee0d8fcbf3fb966339c701140afd863e283773eeee51ce90a813",
+    "tests/CMakeLists.txt": "bf1ed4f1e48d83b79c4303b0089be599761a944c9319937c6cd4ffcd95acd2ba",
+    "tests/test_blast_circuit.c": "470c98f422c4ef9f4b666f048ff06bd2084900bc996764b7020560e59be9e189",
+    "tests/test_features.c": "78f08aacc209ff262fda02361d50e52f86ca52dcaa505a70056d80796f3f6662",
+    "tests/test_music.c": "59e038abe971db6c1e3b83a17df6954fb8862cb26bc8e25d74604223f51722ea",
+    "tools/arrange_music.py": "2fd63c3ec1dcc5a367cb618d9ebbab37de5de4ed8b48a635a0d1555dd15ddb4d",
+    "tools/convert_assets.py": "4eebfa1041e967f59cb717bb3cad342e319077ddd125085b3fd95ee721835a8a",
+    "tools/music_score.py": "831ffb84deb6e76737fabe0403c5d8d4b3a1362f20c069b95797cbc1bc657f07",
+    "tools/synthesize_audio.py": "b25f9aaf361a1cb2eacda9f4148aca47895b8eb7480bb3fa896bf6dad3779f43"
+  },
+  "game_state_bytes": 12520,
+  "static_atlas_bytes": 276480,
+  "static_adpcm_bytes": 81600,
+  "resolution": [
+    768,
+    480
+  ],
+  "fallback_resolution": [
+    320,
+    200
+  ],
+  "arena": [
+    17,
+    13
+  ],
+  "automated_checks": [
+    {
+      "command": "ctest --test-dir build-host/blast_circuit --output-on-failure",
+      "result": "3/3 passed",
+      "sanitizers": [
+        "ASan",
+        "UBSan"
+      ],
+      "bot_seeds": 16,
+      "completed_bot_rounds": 32,
+      "explosion_ticks": 3898,
+      "preset_validations": 300,
+      "mutated_levels": 5000,
+      "mutated_snapshots": 8000,
+      "distinct_decoded_sound_cues": 30,
+      "session_instance_counts": [
+        2,
+        3,
+        4
+      ],
+      "coverage": [
+        "Across all three presets and 100 seeds each: both-axis symmetry, protected escape lanes, permanent interior pillars, all crate materials, no permanently disconnected floor, and exact shortest paths of three or four blocks across all six spawn pairs.",
+        "Two distinct blasts crack/clear armor and stop at each hit; permanent interior pillars survive repeated blasts and stop rays.",
+        "Ember crates stop the incoming ray, clear to floor and burn for 28 ticks versus 8 normal ticks. Crossing early is lethal, crossing after expiry safe; later blasts do not shorten fire, bots avoid active fire.",
+        "Unfair asymmetric, over-open, over-dense and disconnected custom maps are refused for matches while structurally valid unfinished drafts retain save support.",
+        "All 28 fire lifetimes round-trip exactly; malformed excessive fire counters rejected atomically, and rendering remains bounded at both resolutions.",
+        "Protocol-2 sessions rejected on startup; two-, three- and four-instance protocol-3 sessions synchronize the longer timer with 554-byte snapshots / 12 bounded chunks.",
+        "All three presets across 300 seeds/layouts have permanent walls only on the rim, mirrored contents and protected corner escapes; each former pillar takes two separate bombs, stops each blast, ignores lingering fire and becomes walkable after destruction.",
+        "Mirror, protected spawn/border cells, whole-stroke undo/redo, fast horizontal/diagonal touch samples and no-op paint",
+        "Three-slot save/reload, CRC corruption, queued versus committed status, edits while pending, conflict/rejection/missing service",
+        "Play-test return and restoration of the exact base map each round",
+        "Four-instance host editing heartbeat, custom map and theme sharing, host-only source validation",
+        "Reordered/corrupt/incomplete level chunks, wrong-checksum ACK and withheld final-player ACK",
+        "Persistent two-packet send budget, transfer timeout, stale IDs, round/input replay, snapshot atomicity and peer loss",
+        "Padded/guarded rendering at both supported sizes",
+        "Complete 241.6-second three-track rotation and wrap; each boundary reaches zero and clears old voices/echoes; per-track signal bounds; callback partition invariance, round continuity, stereo, rejected FIFO, pause/mute/resume",
+        "All 30 sound cues decode independently with distinct PCM hashes, bounded non-clipping amplitude, and rejected FIFO writes."
+      ]
+    },
+    {
+      "command": "ctest --test-dir build-host/play-blast_circuit --output-on-failure",
+      "result": "3/3 passed",
+      "coverage": [
+        "Actual-game headless smoke",
+        "Shared-host audio timing: old failure reproduced, all samples continuous across 900 jittered updates, input edges once, bounded catch-up and errors",
+        "Save tests"
+      ]
+    },
+    {
+      "command": "make game-registry-check",
+      "result": "passed; enabled for generated cartridge bundles"
+    },
+    {
+      "command": "python3 games/blast_circuit/tools/convert_assets.py; python3 games/blast_circuit/tools/synthesize_audio.py",
+      "result": "All nine atlas includes and the 30-cue audio include reproduced byte-for-byte; original eight atlases and all music files unchanged from 0.2.5."
+    },
+    {
+      "command": "make console-os-tab5-idf",
+      "result": "passed; 17 native cartridges including Blast Circuit; Tab5 verifier accepted build",
+      "idf_version": "5.5.3",
+      "idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+      "compiler": "esp-14.2.0_20251107"
+    },
+    {
+      "command": "build-host/blast_circuit/inspect_package apps/console_os/build-tab5/sd-card/GAMES/BLAST_CIRCUIT.P4G",
+      "result": "passed; actual console C package/ELF parser under ASan/UBSan, expected 0.2.6 identity and four-player protocol 3 profile"
+    },
+    {
+      "command": "python3 games/blast_circuit/tools/arrange_music.py",
+      "result": "All three track event arrays, shared instruments and provenance reproduced byte-for-byte",
+      "scope": "Historical generation proof retained; all music files and tools unchanged in 0.2.6."
+    }
+  ],
+  "interactive": {
+    "tester": "Codex through cua_repl native UI automation",
+    "runner": "Repository SDL3 host; actual native game sources",
+    "confirmed": [
+      "Live Greenhouse preview clearly separates permanent mint pillars, tan wood, ivory two-hit armor, and red ember crates.",
+      "Played one Greenhouse round: moved P1 down beside the ember crate, placed a bomb, and retreated around the permanent corner pillar.",
+      "Observed lingering flame on the destroyed ember square after surrounding blast flames had disappeared; bots opened lanes while permanent pillars stayed intact.",
+      "P1 was eliminated during the later crossing attempt; safe crossing after expiry is proven by focused tests, not claimed from this live attempt.",
+      "Selected EMBER in the workshop, verified BURNS +1 SEC and fair-map guidance, turned mirror off, painted one cell, and saw the asymmetric-map warning.",
+      "Test Arena refused the asymmetric layout; Undo restored it. Returned through workshop tools to the corrected Greenhouse arena picker."
+    ],
+    "notes": [
+      "All live input used native CUA keyboard controls. Tool/model delays limit reaction-time and difficulty conclusions.",
+      "Reviewed actual RGB565 preset images at 320x200 and 768x480. Live play and editor ran at high resolution.",
+      "No completed match or human multiplayer claim. Four-instance protocol simulations are separate automated evidence.",
+      "No hardware installation, physical performance/touch/speaker acceptance or persistent device-save acceptance.",
+      "The generic SDL save backend is session-only; the editor exercise used an unsaved simulator copy."
+    ]
+  },
+  "art_mode": "Built-in image generation; exact prompts and source hashes in assets/provenance.json",
+  "audio_origin": "29 original ADPCM effects and three original electronic Bach arrangements; public-domain historical score plus two public-domain Mutopia engravings/MIDI, no performance recordings",
+  "hardware_acceptance": null,
+  "package_built": true,
+  "pending": [
+    "Compatible four-human target OS adapter/build and sustained four-device play",
+    "Target call-chain stack high-water mark, memory pressure and frame rate",
+    "Physical touch/controller checks, including continuous editor dragging",
+    "Persistent target OS save/reload",
+    "Speaker listening, mix and balance tuning; scored SNES-quality benchmark"
+  ],
+  "game_test_log": {
+    "path": "build-host/blast_circuit/Testing/Temporary/LastTest.log",
+    "sha256": "c247a0e4b9955072bba2154248e6ddbe1a16d97c0ad9c8dcbc9f8c473487f9f9"
+  },
+  "host_test_log": {
+    "path": "build-host/play-blast_circuit/Testing/Temporary/LastTest.log",
+    "sha256": "77734aa3414d9eb71e896b087a3d458872b85292124eaaae3357e15d2f3b7dae"
+  },
+  "simulator_binary": {
+    "path": "build-host/play-blast_circuit/p4_game_host.app/Contents/MacOS/p4_game_host",
+    "sha256": "b9e4dd72209f7687e7b2cb4a8653fadf4202f0e8a2f800180e955f1e96068ec1"
+  },
+  "sound_audition": {
+    "path": "build-host/blast_circuit/sound-audition.wav",
+    "sha256": "2c6417a88ecc9aa5a706b90573065cbe9ca5beb2a5f72ff238f41d898e69ab1a",
+    "scope": "Historical 29-cue audition; the new ember hiss is exercised by current automated mixer tests, without separate user listening approval."
+  },
+  "previous_feature_pass": {
+    "version": "0.2.0",
+    "source_sha256": "946c3980c0fa448aed81d65680e19bdb457f78f5c84355bce9d0af06cf9190e8",
+    "interactive_confirmed": [
+      "Title/start and three preset arena choices",
+      "Four different animated robot designs and material art",
+      "Copy-template custom slot selection",
+      "Keyboard brush/cursor and touch single-cell painting",
+      "Mirror on/off, undo, clear-to-floor and undo restoration",
+      "Workshop tools, Save Levels committed feedback",
+      "Custom arena play-test and Start return to intact editable layout",
+      "Keyboard movement, bomb placement/escape and animated combat",
+      "Final-build touch pause, sound on/off feedback, resume and Back exit",
+      "Final-build workshop default tools focus and single-cell undo",
+      "Clean final title reopened for the user"
+    ]
+  },
+  "build_status": "build-tested",
+  "render_equivalence": {
+    "reference_source_sha256": "946c3980c0fa448aed81d65680e19bdb457f78f5c84355bce9d0af06cf9190e8",
+    "result": "12/12 PPM frames byte-identical after optimization",
+    "frames": {
+      "arena-320.ppm": "919b492d2941ba468e5ee1b2d99eb004eb3435a2b1c38f46404bcd46acb563d3",
+      "arena-768.ppm": "b1ea27c8bb5f700580749f1e9dffa264f5026eed0ed11e2b08be0876519d814d",
+      "foundry-320.ppm": "de5babe14a923cd8c8451414e317e26965b316affa395e0bb07f83f59b1b2fda",
+      "foundry-768.ppm": "25011a698585ccc05f990e90ca68bdfbb44e8d15ca5ff8bc9ee1668cf0472144",
+      "greenhouse-320.ppm": "1b8da0b7c752145529bbd31c015c32de1ccc36b705d92e5027479d7cc451f14c",
+      "greenhouse-768.ppm": "cbf5c265880b893653260df79d6661b5e72e95074672b510d0326a73580e9095",
+      "prism-320.ppm": "e1058ec42074f441b1b74d12a3d28ac1d79c79b413875834ff2c449bf66108bc",
+      "prism-768.ppm": "d2e0cd09acfe9447f450688da0bfc588379aa96eeccf80d563ccea98827ea2d3",
+      "tools-320.ppm": "3de57ba107d44ed9c9f588f9df7ef828bbc108101d3054ee69645cf8132320bf",
+      "tools-768.ppm": "5040a4f87605c42ce14415442ae442a9d10700695c5ec61672e839b8c361c938",
+      "workshop-320.ppm": "18a4b12b236665b20f27dcbd90c04f386c8c85ae632cbf46a63df90d7044b469",
+      "workshop-768.ppm": "de7768f204f3ad6f378078f6ab6348820e76bacdefd18a812078e22f973e55fd"
+    },
+    "scope": "Historical pre-0.2.4 sprite optimization proof; subsequent HUD and reinforced-block revisions intentionally change frames."
+  },
+  "enabled_for_local_bundles": true,
+  "installed_on_device": false,
+  "externally_published": false,
+  "cartridge": {
+    "path": "apps/console_os/build-tab5/sd-card/GAMES/BLAST_CIRCUIT.P4G",
+    "bytes": 452660,
+    "sha256": "cb46c83d8f702a21910cf3c8920712cca3d5302fcb4569e7bf94c06244641cc8",
+    "payload_sha256": "b375c8fd0e9edc60ce6ad7dc2eb91a2714e0224a9f7447a8aef79c1be6e439be",
+    "payload_digest_verified": true,
+    "max_package_bytes": 524288,
+    "individual_stack_frame_limit_bytes": 2048,
+    "runtime_imports": [
+      "calloc",
+      "free",
+      "memcmp",
+      "memcpy",
+      "memset",
+      "strcmp"
+    ],
+    "profile": {
+      "max_players": 4,
+      "protocol": 3,
+      "tick_rate_hz": 20,
+      "message_bytes": 60
+    }
+  },
+  "tab5_build_log": {
+    "path": "build-host/blast_circuit/tab5-build.log",
+    "sha256": "33d1a21d38d4168a01838dafc71557a78f8c34255a899168661703e2c35ca60b"
+  },
+  "tab5_integration_image": {
+    "path": "apps/console_os/build-tab5/p4_console_os.bin",
+    "sha256": "b93336fb04b8d66bf2fe38d121cef29ae1c7563887516344523df385bdd2ba43"
+  },
+  "additional_documentation": {
+    "docs/GAME_LIBRARY.md": "b3ffa23912dd056130e6afecd4c27cdec176fbcd86017df814efdd72f2a05e06"
+  },
+  "previous_music_baseline": {
+    "version": "0.2.1",
+    "source_sha256": "22e76cd70e862f4bde683ea03b0b690b9443ac178a3c78f6bbb59a357a9d6133",
+    "interactive": {
+      "tester": "Codex through cua_repl native UI automation",
+      "runner": "Repository SDL3 host; actual native game sources",
+      "confirmed": [
+        "0.2.2 arena selection and battle countdown",
+        "Keyboard movement, bomb input, pause, sound off/on feedback, resume and Back",
+        "After fixing shared-host audio timing: reopened title and arena preview with music enabled"
+      ],
+      "notes": [
+        "The generic SDL host save backend is in-memory; preview saves do not persist across quitting.",
+        "CUA drag automation visibly delivered only the initial painted cell; continuous physical dragging remains visually unverified. Bounded multi-sample horizontal/diagonal strokes and whole-stroke undo pass focused tests.",
+        "Some mixed keyboard/mouse automation sessions produced a normalized (0,0) touch and clean Back exit. Fresh mouse-only binding worked; temporary input diagnostics were removed.",
+        "Generic host targets 31 FPS rendering and 16-ms service updates, not an on-device performance measurement.",
+        "User liked the Bach arrangement but reported severe popping/distortion in the first live preview. A shared SDL host timing defect was then reproduced and corrected; listening confirmation for the corrected preview remains pending.",
+        "Current host drains matching audio duration after <=16-ms substeps and primes 64 ms; no physical speaker or scored SNES benchmark acceptance."
+      ]
+    },
+    "cartridge": {
+      "path": "apps/console_os/build-tab5/sd-card/GAMES/BLAST_CIRCUIT.P4G",
+      "bytes": 415280,
+      "sha256": "52d1a911d508ab3d35d06de51fc1b1fb028e59eb821ae1de664787b636543fba",
+      "payload_sha256": "e7eefd6c4ad97d42952738b8a254df2b784b96d570984b23f2ff8af8f9af436c",
+      "payload_digest_verified": true,
+      "max_package_bytes": 524288,
+      "individual_stack_frame_limit_bytes": 2048,
+      "runtime_imports": [
+        "calloc",
+        "free",
+        "memcmp",
+        "memcpy",
+        "memset",
+        "strcmp"
+      ],
+      "profile": {
+        "max_players": 4,
+        "protocol": 2,
+        "tick_rate_hz": 20,
+        "message_bytes": 60
+      }
+    }
+  },
+  "music": {
+    "playlist_seconds": 241.6,
+    "order": [
+      "Badinerie / Circuit Mix",
+      "Invention No. 8 / Neon Relay",
+      "Prelude in C minor / Foundry Rush"
+    ],
+    "tracks": [
+      {
+        "title": "Badinerie / Circuit Mix",
+        "work": "BWV 1067, Badinerie",
+        "source_edition": "Sam Franko, violin transcription, G. Schirmer, New York, 1911",
+        "source_catalog": "https://hdl.handle.net/1802/26605",
+        "source_rights": "Sibley Music Library explicitly marks this item public domain.",
+        "source_files": [
+          "assets/music/badinerie-franko-1911-violin.pdf"
+        ],
+        "external_midi_used": false,
+        "transcription": "Approved AABB melody and accompaniment preserved. Ornaments and tied articulations simplified, lead one octave lower.",
+        "bpm": 150,
+        "key": "A minor with source modulations",
+        "ticks": 1280,
+        "tick_frames": 800,
+        "duration_seconds": 64.0,
+        "events": 1274,
+        "source_sha256": {
+          "assets/music/badinerie-franko-1911-violin.pdf": "913179feb0ca304006e8c9d9369be924f4352c92a8dc6c61b5727d8a291db37b"
+        }
+      },
+      {
+        "title": "Invention No. 8 / Neon Relay",
+        "work": "BWV 779",
+        "source_edition": "Bach-Gesellschaft; public-domain engraving by Allen Garvin, Mutopia-2008/06/15-61",
+        "source_catalog": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=61",
+        "source_rights": "Mutopia lists Public Domain; LilyPond source includes the typesetter dedication.",
+        "source_files": [
+          "assets/music/invention8-mutopia.ly",
+          "assets/music/invention8-mutopia.mid"
+        ],
+        "external_midi_used": true,
+        "transcription": "All 34 bars, both contrapuntal parts at written pitch, twice with a stronger answering voice and percussion variation on the second pass. New 3/4 electronic groove.",
+        "bpm": 150,
+        "key": "F major with source modulations",
+        "ticks": 1632,
+        "tick_frames": 800,
+        "duration_seconds": 81.6,
+        "events": 1196,
+        "source_sha256": {
+          "assets/music/invention8-mutopia.ly": "ddc634821a618e9a5e9ffcefbd96005bd02bd1f12573e2fefc4e6e6653d83ebe",
+          "assets/music/invention8-mutopia.mid": "07238719180171f76283756405ee43a0319226e869283bf29affb9e4c360e6f8"
+        }
+      },
+      {
+        "title": "Prelude in C minor / Foundry Rush",
+        "work": "BWV 847, Prelude",
+        "source_edition": "Breitkopf & Hartel, 1866; public-domain engraving by Davide Castellone, Mutopia-2006/07/02-550",
+        "source_catalog": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=550",
+        "source_rights": "Mutopia lists Public Domain; LilyPond source includes the typesetter dedication.",
+        "source_files": [
+          "assets/music/prelude2-mutopia.ly",
+          "assets/music/prelude2-mutopia.mid"
+        ],
+        "external_midi_used": true,
+        "transcription": "Driving passage, source bars 1\u201332, both parts at written pitch; repeated with percussion breakdown/build. Fixed 160 BPM instead of source tempo changes; later cadenza/Adagio omitted.",
+        "bpm": 160,
+        "key": "C minor with source modulations",
+        "ticks": 2048,
+        "tick_frames": 750,
+        "duration_seconds": 96.0,
+        "events": 1918,
+        "source_sha256": {
+          "assets/music/prelude2-mutopia.ly": "2923478f3436ddc12525fab5514e354025a9715205424944fd0e5f7f24ba70d9",
+          "assets/music/prelude2-mutopia.mid": "9e29d5b640d875bcfa93824cc963a4d9419ce2139cfd4e786148d45127e602d8"
+        }
+      }
+    ],
+    "transition_fade_ms": 100,
+    "continues_across_rounds": true,
+    "approved_badinerie_comparison": "Actual C mixer output byte-identical to the approved 0.2.2 audition outside the 100-ms start/end fades",
+    "signal_checks": [
+      {
+        "file": "bach-arcade-playlist",
+        "seconds": 241.6,
+        "peak_dbfs": -8.19,
+        "rms_dbfs": -24.26,
+        "clipped_samples": 0
+      },
+      {
+        "file": "neon-relay",
+        "seconds": 81.6,
+        "peak_dbfs": -9.06,
+        "rms_dbfs": -24.51,
+        "clipped_samples": 0
+      },
+      {
+        "file": "foundry-rush",
+        "seconds": 96.0,
+        "peak_dbfs": -8.71,
+        "rms_dbfs": -24.35,
+        "clipped_samples": 0
+      }
+    ],
+    "new_track_human_listening": {
+      "reviewer": "user",
+      "result": "Expanded playlist approved",
+      "feedback": "Yep, it works. It's jamming. We're good to go.",
+      "scope": "Mac simulator playback"
+    }
+  },
+  "host_audio_fix": {
+    "previous_failure": {
+      "rejected_blocks": 80,
+      "discontinuous_frames": 21888
+    },
+    "fixed": {
+      "jittered_updates": 900,
+      "rejected_blocks": 0,
+      "underrun_frames": 0,
+      "mismatched_frames": 0
+    },
+    "scope": "Shared SDL simulator only; no embedded audio service change",
+    "startup_buffer_ms": 64,
+    "maximum_service_slice_ms": 16
+  },
+  "music_audition": {
+    "path": "build-host/blast_circuit/bach-arcade-playlist.wav",
+    "sha256": "a27bb453376f048a18886cb05ceec8e4eb5477d45865052f1f4a48d43bbe7af3",
+    "source": "Actual C mixer; all three pieces and transitions",
+    "frames": 3865600,
+    "sample_rate_hz": 16000,
+    "channels": 2
+  },
+  "host_sources": {
+    "tools/p4-game-host/CMakeLists.txt": "d3277cdc703805ebfd89d4d162024fd6d6d6cd9e088de881627983cf2a97ff25",
+    "tools/p4-game-host/host_service.c": "31f94486708417449b0144c5566dc2a1b32a2c54a7191508d7d0093bdb94e5e9",
+    "tools/p4-game-host/host_service.h": "729be99c640331ef538c7f0dbc744d198c813d87736fadff1215a31a76d2204b",
+    "tools/p4-game-host/play_game.c": "8d767e73c8779ae437b55a8f0b79ac53c0298c5b196b740b260e5fbe07199d72",
+    "tools/p4-game-host/test_audio_timing.c": "57e07d498fa6fdb5de25e55d8ab1a06c33176650a45a307faf94fe3bad0316ca"
+  },
+  "previous_approved_track": {
+    "version": "0.2.2",
+    "source_sha256": "459622eb432545e9c666e6267fd81e0f950842981e06e5aa5c09a7e4e5011aeb",
+    "music": {
+      "title": "Badinerie / Circuit Mix",
+      "composer": "J. S. Bach",
+      "source": "https://hdl.handle.net/1802/26605",
+      "tempo_bpm": 150,
+      "seconds": 64,
+      "form": "AABB",
+      "percussion_pcm_bytes": 17920,
+      "score_events": 1274,
+      "clipped_audition_samples": 0,
+      "peak_dbfs": -8.19,
+      "rms_dbfs": -23.82,
+      "listening_after_host_fix": {
+        "reviewer": "user",
+        "result": "Popping gone; arrangement approved",
+        "feedback": [
+          "Yes, the popping is gone",
+          "this song rocks"
+        ],
+        "scope": "Mac simulator playback, not tablet speaker acceptance"
+      }
+    },
+    "cartridge": {
+      "status": "historical identity not independently retained",
+      "note": "Earlier nested record duplicated the 0.2.3 cartridge. The approved 0.2.2 audio audition and source hash remain recorded here; see previous_playlist_pass for the actual 0.2.3 package."
+    },
+    "music_audition": {
+      "path": "build-host/blast_circuit/badinerie-circuit-mix.wav",
+      "sha256": "cc5a89034bde6f8bf47bf76f3ed46af28fa71216eb6170268b5994d2a1d6821a",
+      "source": "Actual C music mixer, not a Python approximation",
+      "frames": 1024000,
+      "sample_rate_hz": 16000,
+      "channels": 2
+    }
+  },
+  "additional_music_auditions": [
+    {
+      "path": "build-host/blast_circuit/neon-relay.wav",
+      "sha256": "c46bb07f13176895b243c6c9236957fb7f794c30723796da80f4cc119b9fa0c6"
+    },
+    {
+      "path": "build-host/blast_circuit/foundry-rush.wav",
+      "sha256": "71b3e7b4f56d7e64f6d0f377eea93b89b108de574e08995dd34ab265abd38504"
+    }
+  ],
+  "previous_playlist_pass": {
+    "version": "0.2.3",
+    "source_sha256": "29c60d7de1f6d2514fb9d048c2cce797c69bc6ae8ce35f27f573ce0e6ef09adc",
+    "cartridge": {
+      "path": "apps/console_os/build-tab5/sd-card/GAMES/BLAST_CIRCUIT.P4G",
+      "bytes": 434380,
+      "sha256": "f276ccb9428eb3b9c10fe76aa009d3d672e91ea906ddbb932d7f1d78e5470a97",
+      "payload_sha256": "810bb27cf40dad09ec2bee8b93a5daf12a62f8bba6cdf70d1eaa4b1ce75388da",
+      "payload_digest_verified": true,
+      "max_package_bytes": 524288,
+      "individual_stack_frame_limit_bytes": 2048,
+      "runtime_imports": [
+        "calloc",
+        "free",
+        "memcmp",
+        "memcpy",
+        "memset",
+        "strcmp"
+      ],
+      "profile": {
+        "max_players": 4,
+        "protocol": 2,
+        "tick_rate_hz": 20,
+        "message_bytes": 60
+      }
+    },
+    "interactive": {
+      "tester": "Codex through cua_repl native UI automation",
+      "runner": "Repository SDL3 host; actual native game sources",
+      "confirmed": [
+        "0.2.3 sound off/on feedback on title, arena selection and battle countdown",
+        "Keyboard movement and bomb input; pause and resume",
+        "Clean keyboard Back exit; final arena preview reopened with sound enabled"
+      ],
+      "notes": [
+        "The generic SDL host save backend is in-memory; preview saves do not persist across quitting.",
+        "CUA drag automation visibly delivered only the initial painted cell; continuous physical dragging remains visually unverified. Bounded multi-sample horizontal/diagonal strokes and whole-stroke undo pass focused tests.",
+        "Some mixed keyboard/mouse automation sessions produced a normalized (0,0) touch and clean Back exit. Fresh mouse-only binding worked; temporary input diagnostics were removed.",
+        "Generic host targets 31 FPS rendering and 16-ms service updates, not an on-device performance measurement.",
+        "User liked the Bach arrangement but reported severe popping/distortion in the first live preview. A shared SDL host timing defect was then reproduced and corrected; the user then confirmed the popping was gone and approved the music.",
+        "Current host drains matching audio duration after <=16-ms substeps and primes 64 ms; no physical speaker or scored SNES benchmark acceptance.",
+        "0.2.3 adds two pieces and automatic rotation; new songs have automated full-length audio checks but no user listening approval yet. Earlier user approval applies to Badinerie and the retained host timing fix."
+      ]
+    }
+  },
+  "previous_hud_pass": {
+    "version": "0.2.4",
+    "source_sha256": "174bbdc05a375a61de5d27ea08bb120ddb804ef8769dfcb50faaf7f083232628",
+    "cartridge": {
+      "path": "apps/console_os/build-tab5/sd-card/GAMES/BLAST_CIRCUIT.P4G",
+      "bytes": 434452,
+      "sha256": "522c866974f75742e7db55268367ca87f17f2819c934178e325c9bef788408ce",
+      "payload_sha256": "ab7f763b4703c0eeed561f9c26c2d549736ca2111d9ff4bc59179d25d8bc9185",
+      "payload_digest_verified": true,
+      "max_package_bytes": 524288,
+      "individual_stack_frame_limit_bytes": 2048,
+      "runtime_imports": [
+        "calloc",
+        "free",
+        "memcmp",
+        "memcpy",
+        "memset",
+        "strcmp"
+      ],
+      "profile": {
+        "max_players": 4,
+        "protocol": 2,
+        "tick_rate_hz": 20,
+        "message_bytes": 60
+      }
+    },
+    "interactive": {
+      "tester": "Codex through cua_repl native UI automation",
+      "runner": "Repository SDL3 host; actual native game sources",
+      "confirmed": [
+        "Five active keyboard round attempts across all three presets; two Greenhouse attempts, one Foundry attempt, one Prism attempt, then one Greenhouse replay after the HUD fix",
+        "Placed bombs and escaped blasts, broke wood/glass, dented metal, and collected an extra-bomb upgrade in Prism (visible BOMBS increase from 1 to 2)",
+        "Player eliminated in every attempt; observed CPU round-win score increments and automatic next-round countdowns",
+        "0.2.4 local player bomb/fire stats visibly under P1 rather than P2; labels readable and clear of portraits and scores",
+        "0.2.4 replayed movement, bombs/escape, pause/resume and clean Back exit; reopened arena picker for the user"
+      ],
+      "notes": [
+        "The generic SDL host save backend is in-memory; preview saves do not persist across quitting.",
+        "CUA drag automation visibly delivered only the initial painted cell; continuous physical dragging remains visually unverified. Bounded multi-sample horizontal/diagonal strokes and whole-stroke undo pass focused tests.",
+        "Some mixed keyboard/mouse automation sessions produced a normalized (0,0) touch and clean Back exit. Fresh mouse-only binding worked; temporary input diagnostics were removed.",
+        "Generic host targets 31 FPS rendering and 16-ms service updates, not an on-device performance measurement.",
+        "User liked the Bach arrangement but reported severe popping/distortion in the first live preview. A shared SDL host timing defect was then reproduced and corrected; the user then confirmed the popping was gone and approved the music.",
+        "Current host drains matching audio duration after <=16-ms substeps and primes 64 ms; no physical speaker or scored SNES benchmark acceptance.",
+        "User approved the expanded playlist: \"Yep, it works. It's jamming. We're good to go.\" Simulator only.",
+        "All active input was issued through native CUA keyboard controls; no P1 bot, direct state manipulation, or scripted game-state replay was used for this interactive pass.",
+        "CUA emits short taps and incurs tool/model delays; some rapid directions were lost or hit pillars. Losses are not a reliable human difficulty or reaction-time benchmark. No fuse, movement, or bot tuning was justified from these losses.",
+        "This pass did not complete a first-to-three match, perform a sustained held-button fast-forward, or play against linked human devices. Existing automated checks cover rule/protocol boundaries separately."
+      ],
+      "gameplay_assessment": {
+        "tester": "Codex, qualitative observation through native UI",
+        "greenhouse": "Pillar turns require deliberate escape planning; bots broke through to the local corner.",
+        "foundry": "Open cross lanes brought a rival into view early; metal damage was visually distinct before breaking.",
+        "prism": "Wider lanes gave more escape room; clearing glass/wood exposed an extra-bomb pickup and opened approach routes for rivals.",
+        "change": "Moved and clarified local-player capacity/range HUD; retained gameplay balance and timing.",
+        "assessment_limit": "Promising combat loop, not a scored human fun study, SNES parity claim, or AAA completion claim."
+      }
+    }
+  },
+  "previous_block_readability_pass": {
+    "version": "0.2.5",
+    "source_sha256": "4547587a94715d8cdcf46b8adbb67633919e2c2bb5dfbe998e306b3e815eada4",
+    "cartridge": {
+      "path": "apps/console_os/build-tab5/sd-card/GAMES/BLAST_CIRCUIT.P4G",
+      "bytes": 438372,
+      "sha256": "ac283b51c57e49ccf858b5b2966c97ac0075efa9e6225f892b978dab62da4414",
+      "payload_sha256": "8bf7c05783a0bd2d08d2c05156eb7d6441ba1b1feea2938239173cd9e470f160",
+      "payload_digest_verified": true,
+      "max_package_bytes": 524288,
+      "individual_stack_frame_limit_bytes": 2048,
+      "runtime_imports": [
+        "calloc",
+        "free",
+        "memcmp",
+        "memcpy",
+        "memset",
+        "strcmp"
+      ],
+      "profile": {
+        "max_players": 4,
+        "protocol": 2,
+        "tick_rate_hz": 20,
+        "message_bytes": 60
+      }
+    },
+    "interactive": {
+      "tester": "Codex through cua_repl native UI automation",
+      "runner": "Repository SDL3 host; actual native game sources",
+      "confirmed": [
+        "Reviewed all three preset arenas; former interior pillars are bright reinforced crates and every theme uses the same permanent wall sprite.",
+        "Played Greenhouse: bomb from (1,2) cracked armor at (2,2); escaped to upper lane, returned, placed a second bomb, escaped again, then walked P1 into the cleared (2,2) tile.",
+        "Observed intact and cracked block states, bots breaking armor and new paths opening during live play.",
+        "Pause and clean Back exit; reopened simulator and reviewed Foundry and Prism previews.",
+        "Copied Prism into simulator Custom 1, selected ARMOR in the editor and visually verified its matching sprite and 2 HITS hint.",
+        "Returned through workshop tools and left Orbital Greenhouse arena picker ready to play."
+      ],
+      "notes": [
+        "All interactive gameplay input used native CUA keyboard controls; no direct world-state manipulation or P1 bot.",
+        "CUA command delays limit timing and difficulty conclusions; this targeted pass verifies readability and the two-hit obstacle sequence, not a scored fun or SNES benchmark.",
+        "The SDL save backend is in-memory. Test copy stayed in the simulator session and was not installed or uploaded to a device.",
+        "Real multi-device play, physical controls/display/audio, persistent device saves and hardware performance remain unverified."
+      ],
+      "gameplay_assessment": {
+        "change": "All preset interior pillars become two-hit armor, with bright intact/cracked sprites and one consistent permanent-wall appearance.",
+        "observation": "Armor remains visually distinct on jade, charcoal and violet floors; its second hit opens routes previously blocked for the whole round.",
+        "assessment_limit": "Targeted simulator review only; no claim of AAA completion or hardware acceptance."
+      }
+    },
+    "block_readability_pass": {
+      "version": "0.2.5",
+      "asset": {
+        "path": "games/blast_circuit/assets/reinforced.png",
+        "sha256": "71174f685c6546cc301c365c7161c6f3f59f08f49d11bcc1f17196d4c9d32ecd",
+        "mode": "built-in imagegen, transparent background",
+        "prompt_record": "games/blast_circuit/assets/provenance.json",
+        "compiled_frames": 2,
+        "compiled_frame_size": [
+          32,
+          32
+        ],
+        "static_bytes": 4096
+      },
+      "reviewed": [
+        "All three arena previews at 768x480 and 320x200",
+        "Intact and cracked armor during actual gameplay",
+        "Editor ARMOR preview with 2 HITS hint"
+      ],
+      "frame_directory": "build-host/blast_circuit/blocks-025",
+      "frames": {
+        "arena-320.ppm": "cb3f9d0ce8c0202060fd5ca9766ff6fab491d46743b33ef792ad4339fce280a8",
+        "arena-768.ppm": "7441ff3145d2d8f6ac6d0874991ecb60a1ba74db662aa85940a8d6ff351dd0da",
+        "foundry-320.ppm": "54fc0149d408f0921be9200cd29b4709d9be58eb3534b4e894823bd9156b5ea2",
+        "foundry-768.ppm": "895ec34034855c463680e396830b429e179e1bd0ba5fa277afd41212344cb2d9",
+        "greenhouse-320.ppm": "cc09a5013f6a160e31cb44e3cb627b73697a94183c7daeda1d11b770492f9e2e",
+        "greenhouse-768.ppm": "3658f2689550b75154c8687540b67f013c3eca1950bfcf49e17e96e86c62a293",
+        "prism-320.ppm": "077a8dabe8963f900de0e19216ef4eeabb381bc5940afb6fc2e2c73f8f2c04d4",
+        "prism-768.ppm": "5bb67d5419420e4dac1c52da96f60752a14727fe9c85e719ba26aaa7cbf86223",
+        "tools-320.ppm": "6e53324d733c5a549c8dfdd4f69ffd9adb574f7cd9a9ea1d9b93e278458d1166",
+        "tools-768.ppm": "506adb3d53d41968f14ecbc8900375595adbe5a2c9a8c6a3504d03bdb1776f22",
+        "workshop-320.ppm": "0abd1d7c1d13aff4537e3ef28ba751588cb3b76b192de04decd05a95546d54a3",
+        "workshop-768.ppm": "a29955fe1a147a0d9533d66a301cfbbd851fbf516963cd05298237e3d355edd1"
+      },
+      "compatibility": "Tile IDs, save schema 1 and multiplayer protocol 2 unchanged. Existing custom layouts retain their saved rules; custom walls use the single wall sprite."
+    }
+  },
+  "state_bytes_mac_abi": 12976,
+  "arena_fairness_pass": {
+    "version": "0.2.6",
+    "starting_route_blocks": {
+      "P1-P2": 4,
+      "P1-P3": 4,
+      "P1-P4": 3,
+      "P2-P3": 3,
+      "P2-P4": 4,
+      "P3-P4": 4
+    },
+    "rule": "Minimum breakable-cell cost over all paths between each pair; solid walls impassable. Armor counts as one block requiring two hits. Enforced for each new match and received base arena.",
+    "ember_fire_ms": 1400,
+    "normal_fire_ms": 400,
+    "snapshot_bytes": 554,
+    "snapshot_chunks": 12,
+    "protocol": 3,
+    "new_asset": {
+      "path": "games/blast_circuit/assets/ember_crate.png",
+      "sha256": "a6744e598b7c89cbfcd3e2f3c43f81a678a1ea3562266e86cba6106cf9b34003",
+      "mode": "built-in imagegen, transparent background",
+      "prompt_record": "games/blast_circuit/assets/provenance.json",
+      "static_bytes": 2048
+    },
+    "frame_directory": "build-host/blast_circuit/maps-026",
+    "frames": {
+      "arena-320.ppm": "ea4528b0ced466825a84ed8e7fcf769ef392e92051b8c272664a2e64bec5d246",
+      "arena-768.ppm": "39b4b346c5e8d4ebbfcd51d795ae5cc62304df8aafa0b519ab598fbee6cafac1",
+      "embers-320.ppm": "ea4528b0ced466825a84ed8e7fcf769ef392e92051b8c272664a2e64bec5d246",
+      "embers-768.ppm": "c9ead71b8c8fae1335b0616f6d9439eee092ecbdf92b8969fcd2019b436c7f53",
+      "foundry-320.ppm": "c5c153b8c0f681d10325a8215e39f79ebd8a8cf5a579555b80065fba1ebebda0",
+      "foundry-768.ppm": "4e8a89b8416e06209aa988651930dcc3469d8962a3098fe28ba8c814c45e8728",
+      "greenhouse-320.ppm": "174e74ff2c971aadc9106f5b26b8c009aaa9ead13a00eb6ca1ea8164a503453d",
+      "greenhouse-768.ppm": "1423b1c5f865fce350e6fb016868f42b575f0435efdd0d995f26b1baf786639b",
+      "prism-320.ppm": "1f10187ac99567e65ad3d3c2e56ade54701d56bdb54c494f54095b7d9ad6ebec",
+      "prism-768.ppm": "9903826f57ce296f1eb175a939f3f815f2913f2118f8a8b4b8dd84b0441f3689",
+      "tools-320.ppm": "9e7edafefa56e0960a08cc645206774a68961bbc5f3df732538314443add9817",
+      "tools-768.ppm": "b6d171c45de250287ce3076ba7a2e727b10916c3423fa76868221863dcc4ab1a",
+      "workshop-320.ppm": "f844d51d50319a88b9b4e68d4c015b5e9f24461791791cf9afb42bfd22b2c5af",
+      "workshop-768.ppm": "177a57f58f7afc1883a880b72c62e9df5b638ee33f81eb339c5a1604636a87fd"
+    },
+    "compatibility": "OS exact content-hash and protocol matching isolate old games; own protocol gate rejects version 2. Existing 675-byte schema-1 saves remain readable and editable; unfair drafts must be repaired before play. No OS or transport change."
+  }
+}

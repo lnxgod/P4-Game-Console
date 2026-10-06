@@ -13,7 +13,7 @@ import subprocess
 
 
 HEADER_BYTES = 256
-MAX_IMAGE_BYTES = 0x370000
+MAX_IMAGE_BYTES_BY_TARGET = {"esp32p4": 0x370000, "esp32p4-tab5": 0x7f0000}
 
 
 def bounded(text: str, width: int, label: str) -> bytes:
@@ -58,7 +58,7 @@ def main() -> int:
             "build must be exactly 12 ASCII hexadecimal digits"
         ) from error
     image = args.image.read_bytes()
-    if not image or len(image) > MAX_IMAGE_BYTES or image[0] != 0xE9:
+    if not image or len(image) > MAX_IMAGE_BYTES_BY_TARGET[args.target] or image[0] != 0xE9:
         raise ValueError("input is not a bounded ESP-IDF app image")
     header = bytearray(HEADER_BYTES)
     header[0:8] = b"P4OSUP1\0"

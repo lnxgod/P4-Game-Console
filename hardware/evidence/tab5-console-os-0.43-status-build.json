@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "board": "m5stack-tab5",
+  "version": "0.43",
+  "status": "superseded-after-startup-memory-failure",
+  "hardware_verified": false,
+  "device_written": false,
+  "flash_authorized": false,
+  "changes": [
+    "Core shell persistent-storage percentage beside battery in Windows/BBS",
+    "SD free-space initialization and five-second cached FAT refresh with explicit validity",
+    "All-page battery redraw and native-header cache invalidation",
+    "Retry failed INA226 startup without duplicate I2C handles; expose invalid measured mV",
+    "Complete current Core OS build includes native Tab5 UI and prior USB HID/wired XUSB integration"
+  ],
+  "verification": {
+    "command": "make console-os-tab5-idf",
+    "result": "PASS: standard target host checks, firmware build and scripts/verify-console-os-tab5.py",
+    "focused_shell": "8 CTest tests pass, ASan/UBSan; free-only updates, unavailable/full/corrupt counts, native cache, omitted battery pages and BBS 32-bit limits",
+    "focused_tab5": "7 CTest tests pass, ASan/UBSan; actual sensor task simulated across startup failure/retry, failed samples, invalid voltage, recovery and freshness timeout",
+    "preview": "Native Tab5 Windows Home/Control Panel, compact Windows Home and native Tab5 BBS visually inspected",
+    "warnings": "No warnings or errors in this incremental complete-target build log",
+    "usb_host_enabled": true,
+    "native_cartridges": 17
+  },
+  "artifact": {
+    "image": {
+      "path": "hardware/backups/tab5-a-install-v6nv9irj/0x20000.bin",
+      "bytes": 2032496,
+      "sha256": "2414f464892cde98c1042f524072d79789b83b9684b5e03403c48d2297465c17"
+    },
+    "update": {
+      "path": "local-data/firmware/tab5/0.43/rejected-2414f464/P4UPDATE.P4U",
+      "bytes": 2032752,
+      "sha256": "285b22b0cd4c30a8877a636f50a4acc14b3096631a32ff74253db5331128e4fe",
+      "target": "esp32p4-tab5"
+    }
+  },
+  "battery": {
+    "hardware_log_reference": "hardware/evidence/tab5-gamechangers-os-0.42-treasure-testing.json",
+    "observed_mv_a": 1141,
+    "observed_mv_b": 1186,
+    "reading_valid": false,
+    "interpretation": "INA226 communication succeeds but these readings are outside the pack-validity range; attached-pack operation and voltage diagnosis remain unresolved. Do not claim an update repairs this hardware reading."
+  },
+  "limitations": [
+    "No on-device test or flash performed",
+    "No internal-flash no-SD game-storage implementation added",
+    "First FAT count can add storage-initialization latency; cached subsequent queries refresh at five-second intervals",
+    "Specific third-party Xbox controller hardware remains unverified"
+  ],
+  "source_files_sha256": {
+    "apps/console_os/CMakeLists.txt": "54186365c01ca115d23e24ea7df4e0970b103db1bdd30dcb55b3abe14b118541",
+    "apps/console_os/app-metadata.json": "6bbd6941e69a742f85d90c90aa4a9dc6194dc57ca676df08a7f41cb5ab4d8e11",
+    "apps/console_os/main/console_os_main.c": "691835a82fbbb3b1589d792e7b6c24d9f592e73899286f4581cb5349ead5fe6f",
+    "components/console_shell/include/console/brand.h": "e5c166f8c02d6bd0c28c68f1e630e431bdfa28e5d59b1d03066a4cd044f4ce74",
+    "components/console_shell/include/console/shell.h": "44c248709510043309c4e3c73595df295b769cc4f63ccc0222159805a33ba432",
+    "components/console_shell/src/console_shell.c": "643e5afe1424386c2cb1ac236999c14cb888b6b52546bc3e93d75a303388ddbd",
+    "components/console_shell/tests/test_console_shell.c": "3fdf5c9e8536a3e1cf8963b8b39adffcc83d67848ac3d6554ca95bbdb3200e16",
+    "components/console_shell/tools/render_preview.c": "e485cfd478009dc1cac4cce53c9335111588f63fb8872b49342dd5693e474540",
+    "components/p4_bbs/include/p4/bbs_ui.h": "539fb526d3e1ce054958ca0cbc6e8e55b33f92c082200f220e0b662701202da2",
+    "components/p4_bbs/src/bbs_ui.c": "04ff7a2a5373633acb3a4e5f63dd5ec71ab4445b8ec19c18594742549aa53571",
+    "components/p4_bbs/tests/test_bbs_ui.c": "437866159b3b4d2648c40327713ea3d03765fefe5b5b610be18fdc74b9b66e6f",
+    "components/platform_game_storage/include/platform/game_storage.h": "74270cbbdceee05d8e2066f5c93213c8e40df1fccc2f519c7724368a025759bc",
+    "components/platform_game_storage/src/platform_game_storage.c": "b56c60c31a9a909b04093688e2e2a5ee82b6d6c641419afe59bc431f06054b9d",
+    "components/platform_gamepad_xusb/src/xusb_host.c": "126a5b74e50c71628ce00a01443b442715269a74f51a823a62664fc18f6d5d51",
+    "components/platform_tab5/src/sensors.c": "7e5224de62ada2cc96a03be22eb3c2ea0cdd58c94a26938ba3a933200f3fe4a1",
+    "components/platform_tab5/tests/CMakeLists.txt": "03a55ad73f806b15341fdfed16bc484e1ec59f34590b8a057430b6149bd887b1",
+    "components/platform_tab5/tests/mocks/esp_timer.h": "4a5a38dd774ad3c3cb3c2f48f2d3a1f13517591979cf58d3d2ae2947f8480106",
+    "components/platform_tab5/tests/mocks/mock_sdk.h": "1534e2d0817443ce6ce977adfde84d8c2ea78378ec58c55c7b3708eb9118fd7f",
+    "components/platform_tab5/tests/test_sensor_service.c": "32c843b727162a34d2dc4704419c3670d13b430160dde2e12d38798156e74824",
+    "components/platform_usb_host/src/platform_usb_host.c": "ecc1f5dc99adc7dbec9f8bb5f3b7cb69ff2e01607c0e6cbc449674b4ffce7342"
+  },
+  "logs": {
+    "build_sha256": "487950b1cb46057f77beff795ec9373843b7fcbde4e3230435c4c7b04e9fdb95",
+    "shell_sha256": "7c708a8eafba84dbee874b258433449d2c93b6c3bb92bb28cbf28358777ff2ef"
+  },
+  "hardware_followup": "hardware/evidence/tab5-console-os-0.43-initial-install-failure.json"
+}

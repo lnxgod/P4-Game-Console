@@ -25,6 +25,22 @@
       "package_file": "BREAKOUT.P4G",
       "reason": "Removed from the product library at the owner's request; obsolete arcade demo.",
       "last_package_sha256": "7252a6b14daa5bd8ccf71d607350acf3847fcdac4d86420d2a6dd9362aec8c50"
+    },
+    {
+      "id": "org.gamechangers.student.swarm-53759a65",
+      "launcher_id": 9594,
+      "title": "STAR SPROUT RES",
+      "package_file": "AC53759A65.P4G",
+      "reason": "Incomplete student prototype removed from both launch tablets at the owner request; excluded from the initial launch.",
+      "last_package_sha256": "8a030a1d5fd05f3ca2b16c25f13692983909e42708a0d0b0af568c82a915696c"
+    },
+    {
+      "id": "org.gamechangers.student.swarm-670906cd",
+      "launcher_id": 9518,
+      "title": "STAR SPROUT RES",
+      "package_file": "AC670906CD.P4G",
+      "reason": "Incomplete student prototype removed from both launch tablets at the owner request; excluded from the initial launch.",
+      "last_package_sha256": "e1d42cbda11e544bb75eea0722809677379496f296f4d9dec274e0371adfc965"
     }
   ]
 }

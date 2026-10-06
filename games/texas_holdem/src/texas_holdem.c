@@ -7,6 +7,8 @@
 #include <stdint.h>
 
 #include "p4/draw.h"
+#include "p4/card_art.h"
+#include "generated/table_materials.inc"
 #include "p4/game.h"
 #include "p4/input.h"
 
@@ -40,6 +42,14 @@ enum {
     SETUP_CPU_Y = 127,
     SETUP_DEAL_Y = 158,
 };
+
+
+/* Layout stays in canonical touch coordinates. Each primitive and glyph draws
+ * directly into the negotiated surface; there is no scaled low-res frame. */
+#define p4_draw_fill_rect p4_card_fill
+#define p4_draw_rect p4_card_outline
+#define p4_draw_fill_circle p4_card_circle
+#define p4_draw_text p4_card_text
 
 static const char *const s_phase_names[] = {
     "SETUP", "PREFLOP", "FLOP", "TURN", "RIVER", "SHOWDOWN", "CHAMPION",
@@ -124,29 +134,14 @@ static char suit_character(uint8_t card)
     return suits[card / 13U];
 }
 
-static uint16_t suit_color(uint8_t card)
-{
-    const uint8_t suit = (uint8_t)(card / 13U);
-    return suit == 1U || suit == 2U ? COLOR_RED : COLOR_BLACK;
-}
-
-static void draw_card(p4_game_surface_t *surface, int x, int y,
-                      uint8_t card, bool visible)
+static void draw_card(p4_game_surface_t *surface,int x,int y,uint8_t card,bool visible)
 {
     if (!visible || card == TEXAS_HOLDEM_NO_CARD) {
-        p4_draw_fill_rect(surface, x, y, 27, 34, COLOR_CARD_BACK);
-        p4_draw_rect(surface, x, y, 27, 34, COLOR_TEXT);
-        p4_draw_rect(surface, x + 4, y + 4, 19, 26, COLOR_ACCENT);
-        p4_draw_text(surface, x + 9, y + 12, "P4", COLOR_TEXT, 1U, 2U);
+        p4_card_back(surface,x,y,27,34,card_table_back,false);
         return;
     }
-    p4_draw_fill_rect(surface, x, y, 27, 34, COLOR_CARD);
-    p4_draw_rect(surface, x, y, 27, 34, COLOR_BLACK);
-    char rank[2] = {rank_character(card), '\0'};
-    char suit[2] = {suit_character(card), '\0'};
-    const uint16_t color = suit_color(card);
-    p4_draw_text(surface, x + 3, y + 3, rank, color, 1U, 1U);
-    p4_draw_text(surface, x + 15, y + 19, suit, color, 1U, 1U);
+    const unsigned rank=(unsigned)(card%13U)+2U;
+    p4_card_face(surface,x,y,27,34,rank==14U?1U:rank,card/13U,false);
 }
 
 static void hole_abbreviation(char text[6], const uint8_t hole[2])
@@ -189,7 +184,7 @@ static void draw_setup(p4_game_surface_t *surface,
                        const texas_holdem_state_t *state)
 {
     p4_draw_clear(surface, COLOR_BACKGROUND);
-    p4_draw_fill_rect(surface, 20, 22, 280, 160, COLOR_FELT_DARK);
+    p4_card_felt(surface,20,22,280,160,card_table_felt);
     p4_draw_rect(surface, 20, 22, 280, 160, COLOR_ACCENT);
     p4_draw_text(surface, 84, 34, "TEXAS HOLD'EM",
                  COLOR_GOLD, 2U, 13U);
@@ -232,8 +227,8 @@ static void draw_setup(p4_game_surface_t *surface,
         p4_draw_fill_rect(surface, 104, SETUP_DEAL_Y, 112, 20, COLOR_ACCENT);
         p4_draw_text(surface, 132, SETUP_DEAL_Y + 6, "DEAL",
                      COLOR_BLACK, 1U, 4U);
-        p4_draw_text(surface, 47, 186, "UP/DOWN  LEFT/RIGHT  A DEAL",
-                     COLOR_MUTED, 1U, 28U);
+        p4_draw_text(surface, 68, 186, "TAP ARROWS THEN DEAL",
+                     COLOR_MUTED, 1U, 20U);
     } else {
         p4_draw_text(surface, 70, 158, "HOST SETS CHIPS + CPUS",
                      COLOR_GOLD, 1U, 22U);
@@ -315,7 +310,7 @@ static void draw_table(p4_game_surface_t *surface,
                        const texas_holdem_state_t *state)
 {
     p4_draw_clear(surface, COLOR_BACKGROUND);
-    p4_draw_fill_rect(surface, 4, 53, 312, 107, COLOR_FELT);
+    p4_card_felt(surface,4,53,312,107,card_table_felt);
     p4_draw_rect(surface, 4, 53, 312, 107, COLOR_GOLD);
     p4_draw_text(surface, 51, 5, "TEXAS HOLD'EM",
                  COLOR_GOLD, 1U, 13U);
@@ -351,7 +346,7 @@ static void draw_table(p4_game_surface_t *surface,
                      owner ? COLOR_BLACK : COLOR_MUTED,
                      1U, owner ? 9U : 13U);
     } else if (state->phase == TEXAS_HOLDEM_PHASE_MATCH_OVER) {
-        p4_draw_text(surface, 104, 136, "TABLE CHAMPION!",
+        p4_draw_text(surface, 7, 136, "CHAMPION!",
                      COLOR_GOLD, 1U, 15U);
         const bool owner = !state->network_mode ||
             state->network_role == P4_GAME_MULTIPLAYER_ROLE_HOST;
@@ -362,7 +357,7 @@ static void draw_table(p4_game_surface_t *surface,
                      owner ? COLOR_BLACK : COLOR_MUTED,
                      1U, owner ? 9U : 13U);
     } else if (state->network_mode && !state->network_started) {
-        p4_draw_text(surface, 100, 138, "SYNCING TABLE...",
+        p4_draw_text(surface, 100, 173, "SYNCING TABLE...",
                      COLOR_GOLD, 1U, 16U);
     } else if (texas_holdem_player_is_cpu(
                    state, state->current_player)) {
@@ -371,14 +366,14 @@ static void draw_table(p4_game_surface_t *surface,
         length = append_unsigned(turn, sizeof(turn), length,
                                  (unsigned)state->current_player + 1U);
         (void)append_text(turn, sizeof(turn), length, " THINKING");
-        p4_draw_text(surface, 105, 139, turn, COLOR_GOLD, 1U, 15U);
+        p4_draw_text(surface, 105, 173, turn, COLOR_GOLD, 1U, 15U);
     } else if (!texas_holdem_local_turn(state)) {
         char turn[20];
         size_t length = append_text(turn, sizeof(turn), 0U, "P");
         length = append_unsigned(turn, sizeof(turn), length,
                                  (unsigned)state->current_player + 1U);
         (void)append_text(turn, sizeof(turn), length, " TO ACT");
-        p4_draw_text(surface, 115, 139, turn, COLOR_MUTED, 1U, 12U);
+        p4_draw_text(surface, 115, 173, turn, COLOR_MUTED, 1U, 12U);
     } else {
         draw_actions(surface, state);
     }
@@ -388,9 +383,6 @@ static void draw_table(p4_game_surface_t *surface,
     } else if (state->peer_lost_fallback) {
         p4_draw_text(surface, 77, 188, "LINK LOST - PASS & PLAY",
                      COLOR_RED, 1U, 23U);
-    } else {
-        p4_draw_text(surface, 71, 188, "LEFT/RIGHT  A ACT  B FOLD",
-                     COLOR_MUTED, 1U, 26U);
     }
     draw_exit(surface);
 }
@@ -515,23 +507,28 @@ static p4_game_result_t game_update(
 
     const bool touch_down = input->touch_valid && input->touch_count != 0U;
     const bool touch_pressed = touch_down && !state->touch_was_down;
+    /* The shared mapper also produces virtual-gamepad bits from a touch.
+     * The table owns these pixels, so only its semantic hit targets act. */
+    const uint32_t pressed = touch_down || state->touch_was_down
+        ? 0U : input->pressed;
     const uint16_t touch_x = touch_down ? input->touches[0].x : 0U;
     const uint16_t touch_y = touch_down ? input->touches[0].y : 0U;
     state->touch_was_down = touch_down;
-    if ((input->pressed & P4_BUTTON_BACK) != 0U ||
+    if ((pressed & P4_BUTTON_BACK) != 0U ||
         (touch_pressed && point_in(
             touch_x, touch_y, EXIT_X, EXIT_Y, EXIT_W, EXIT_H))) {
         return P4_GAME_EXIT_TO_LAUNCHER;
     }
 
     if (state->phase == TEXAS_HOLDEM_PHASE_SETUP) {
-        handle_setup_input(context, state, input->pressed,
+        handle_setup_input(context, state, pressed,
                            touch_pressed, touch_x, touch_y);
         return P4_GAME_CONTINUE;
     }
     if (state->pass_required && !state->network_mode) {
-        if ((input->pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U ||
-            touch_pressed) {
+        if ((pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U ||
+            (touch_pressed && point_in(
+                touch_x, touch_y, 105, 124, 110, 19))) {
             state->pass_required = false;
         }
         return P4_GAME_CONTINUE;
@@ -556,7 +553,7 @@ static p4_game_result_t game_update(
     }
     state->cpu_think_ms = 0U;
     if (state->phase == TEXAS_HOLDEM_PHASE_SHOWDOWN) {
-        if ((input->pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U ||
+        if ((pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U ||
             (touch_pressed &&
              point_in(touch_x, touch_y, 104, 166, 112, 20))) {
             (void)texas_holdem_request_next_hand(context, state);
@@ -564,7 +561,7 @@ static p4_game_result_t game_update(
         return P4_GAME_CONTINUE;
     }
     if (state->phase == TEXAS_HOLDEM_PHASE_MATCH_OVER) {
-        if ((input->pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U ||
+        if ((pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U ||
             (touch_pressed &&
              point_in(touch_x, touch_y, 104, 166, 112, 20))) {
             (void)texas_holdem_request_new_match(context, state);
@@ -575,18 +572,18 @@ static p4_game_result_t game_update(
         return P4_GAME_CONTINUE;
     }
 
-    if ((input->pressed & P4_BUTTON_LEFT) != 0U) {
+    if ((pressed & P4_BUTTON_LEFT) != 0U) {
         cycle_action(state, false);
-    } else if ((input->pressed & P4_BUTTON_RIGHT) != 0U) {
+    } else if ((pressed & P4_BUTTON_RIGHT) != 0U) {
         cycle_action(state, true);
     }
-    if ((input->pressed & P4_BUTTON_B) != 0U) {
+    if ((pressed & P4_BUTTON_B) != 0U) {
         (void)texas_holdem_perform_action(
             context, state, TEXAS_HOLDEM_ACTION_FOLD);
-    } else if ((input->pressed & P4_BUTTON_START) != 0U) {
+    } else if ((pressed & P4_BUTTON_START) != 0U) {
         (void)texas_holdem_perform_action(
             context, state, TEXAS_HOLDEM_ACTION_CALL);
-    } else if ((input->pressed & P4_BUTTON_A) != 0U) {
+    } else if ((pressed & P4_BUTTON_A) != 0U) {
         (void)texas_holdem_perform_action(
             context, state,
             (texas_holdem_action_t)state->action_selection);
@@ -640,7 +637,7 @@ const p4_game_descriptor_t p4_texas_holdem_game = {
     .accent_rgb565 = UINT16_C(COLOR_ACCENT),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
-        P4_GAME_CAP_MULTIPLAYER_SESSION,
+        P4_GAME_CAP_MULTIPLAYER_SESSION | P4_GAME_CAP_VIDEO_HIGH_RES,
     .state_bytes = sizeof(texas_holdem_state_t),
     .start = game_start,
     .update = game_update,

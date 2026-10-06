@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-10-06T03:37:36.472528+00:00",
+  "status": "corrected paired cartridge installed and protected registration verified on A and B",
+  "repair_proof": {
+    "path": "build-host/red-dragon-lineage-repair/proof.json",
+    "bytes": 6536,
+    "sha256": "04f661637bcb846d8a178483ce12b9112731c5be3b586c3cff94a237337c5c6c"
+  },
+  "installation_evidence": {
+    "path": "build-host/red-dragon-lineage-repair/installations.json",
+    "bytes": 2174,
+    "sha256": "76df5c9f241d5cbe1e48f6fcfadc9626aec268b22178f4637da6340713aeee1f"
+  },
+  "catalog_installation_history": {
+    "path": "build-host/hires-tab5-qualification/catalog-installations.json",
+    "bytes": 14054,
+    "sha256": "a92d77a89a1dfab9ee62bb1abc9b1ebfafd5eb26df77d5fb7cdd28a354da870c"
+  },
+  "historical_catalog_records_preserved": 9,
+  "catalog_history_records_now": 11,
+  "firmware": {
+    "path": "build-host/combined-0.51/p4_console_os.bin",
+    "bytes": 4015392,
+    "sha256": "2edcaf22917a847d927af5af010098d7066baaa93ff68b921b58ee3580c7f08a"
+  },
+  "paired_package": {
+    "path": "build-host/red-dragon-lineage-repair/GAMES/LORD.P4G",
+    "bytes": 212012,
+    "sha256": "208756ef3e23e3fe21e76842894ea67c1de83f61c7e8dddd750ad2ae6669f4f7",
+    "payload_sha256": "78d981ce7400daa26fd170313ae195f438a814d4dde8f517b5332bbb11a1a2e0"
+  },
+  "units": {
+    "A": {
+      "registered": true,
+      "rejected": false,
+      "observed_os_051": true,
+      "boot_ready": true,
+      "transfer_verified": true,
+      "gameplay_verified": false
+    },
+    "B": {
+      "registered": true,
+      "rejected": false,
+      "observed_os_051": true,
+      "boot_ready": true,
+      "transfer_verified": true,
+      "gameplay_verified": false
+    }
+  },
+  "changes_to_core_firmware": false,
+  "saved_data_touched": false,
+  "usb_released": true,
+  "limitations": [
+    "Protected registration and exact transfer verified; manual game launch, saved progression and linked gameplay not exercised.",
+    "This repair is not a graphical upgrade or a 30FPS gameplay qualification."
+  ]
+}

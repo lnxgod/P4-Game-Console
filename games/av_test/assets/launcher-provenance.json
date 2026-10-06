@@ -1,0 +1,22 @@
+{
+  "schema": 1,
+  "mode": "Original code-native semantic symbol",
+  "source": "launcher-source.png",
+  "source_recipe": "games/av_test/tools/pack_launcher.py",
+  "basis": "Existing project gamepad/speaker symbols in components/console_shell/src/nextgen.inc:ng_icon",
+  "license": "MIT; original project vector geometry, no third-party artwork or fonts.",
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "reproduce": "python3 games/av_test/tools/pack_launcher.py",
+    "description": "512x288 source, center-fit128x72 Lanczos,256 RGB565 palette entries,opaque indexed pixels.",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "recipe_sha256": "3f83f3f5f95164605bd384b98d27b6fa43441c427f19b4b3d2f78bbea3eb762c"
+  },
+  "source_sha256": "a1f8e26b7f447169ae7a32cf9c959343f1827eeda1af408b6f1fef40031fce2b",
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "bytes": 9744,
+    "sha256": "7ed41ca2b51152cabf7c3e6c65a72ec2a2a79168fc8e2cabe16eeb562300d90a",
+    "format": "P4ICON1,128x72,256 RGB565 palette entries,opaque indexed pixels"
+  }
+}

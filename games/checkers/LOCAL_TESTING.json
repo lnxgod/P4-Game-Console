@@ -1,0 +1,814 @@
+{
+  "schema": 1,
+  "game": "checkers",
+  "version": "1.1.0",
+  "status": "local-play-tested; build-tested; current game package installed; hardware gameplay pending",
+  "recorded_utc": "2026-10-05T23:28:58.568052+00:00",
+  "source_sha256": "0b612aab12317fb2faaa6f58e00fc04c54bdf78d3eacdb72574ed9930ca86f00",
+  "source_hash_method": "Sorted game-relative UTF-8 path plus NUL plus binary SHA-256 of each file; excludes LOCAL_TESTING.json, PRESENTATION_TESTING.json, TOUCH_TESTING.json, .DS_Store and __pycache__.",
+  "files": {
+    "CMakeLists.txt": "b03e8cfd28550f13aa8b3a603586eba8b5caa04307bf5a827153c5ecfdf96578",
+    "README.md": "3f2728e8d807e9427d67e5e4d7d1f6a18a2a7b38a95978a81c9f9c186ff11705",
+    "assets/launcher-provenance.json": "97b2fd99e8c6c3131676fcd3a8ada571c0d38092b3b22f37daf7a77516272993",
+    "assets/launcher-source.png": "c79675c914df84cda35b7ecada2db5e017ea06b4ca37e2be56bfa8a342c97c27",
+    "assets/launcher.p4i": "e2ded1a31e27d69f0e8c2c4e1e28ed72b0144eff911cdcf19bc59a0791a59647",
+    "assets/presentation_imagegen_v2.png": "cf502792b8fd52fb663ab5f0fbd815beb0dcf54a5713eedbd5a89c91602411d7",
+    "assets/presentation_provenance.json": "23b230319c4e4c9b0eacabba92960228dc56beaf1073f3bd7fec561131754ae0",
+    "game.json": "93dca96df82bdb38dacf2bb1fc912f747dbaa52b868ba26647574def94ede9e5",
+    "src/checkers.c": "ead3b9b9df241a8361f5edf32a79403dc5ffa59b5933eb986d3dfafd2a12acba",
+    "src/checkers_internal.h": "b62858e5494c5473954f174ad7b2247c093de8a2f2e7c3724c68e796b07bac8c",
+    "src/checkers_logic.c": "940b83d076d5ede55b80c12f20e1bcbb8181aedce418b22453a127859f5cddb0",
+    "src/checkers_network.c": "fab7025e9df2841a50d2a981ffd69ea6cbcb6ee4f6874468cac2e73a467ea9b6",
+    "src/generated/presentation_assets.inc": "648667dadf43eacb1f3373bb5ef7ff45a2fb398d7557406da678a994a82b4ad2",
+    "src/table_presentation.h": "0466a6ec07d85f97c61dfcc17f56485c079c21c140bcfec020107e32af0b0e13",
+    "tests/CMakeLists.txt": "ff13d39dd47ccf5608157cb8a9a9b3275ebc4ee843d59330d78b267096be3524",
+    "tests/performance-input.txt": "fb50ef2c4451a3d7cb6252e520b2d24620b160bbeefad7115211d08fc95eef2f",
+    "tests/test_checkers.c": "f8d8a375098e7cbdcf1aa46ed6219a12bc548ca7e21a7f29140b7ba00d0cba0e",
+    "tests/test_presentation.c": "df7fc5ae5bef48d485eb92b20262e549e7cc2f556b2412988dd4b9810ab6804f",
+    "tools/convert_presentation.py": "b655cbc0bc3c23d2ebd6e0b136414ac0a4b9de3efa91cc2027f1f73369fb1089"
+  },
+  "rendering": {
+    "native": [
+      768,
+      480
+    ],
+    "fallback": [
+      320,
+      200
+    ],
+    "touch": [
+      320,
+      200
+    ],
+    "compiled_rgb565_bytes": 27648,
+    "native_font_cell_heights": [
+      24,
+      38
+    ],
+    "fallback_font": "shared compact bitmap font",
+    "complete_frame_upscale": false
+  },
+  "automated": {
+    "focused_ctest": {
+      "command": "ctest --test-dir build-host/checkers --output-on-failure",
+      "passed": 2,
+      "failed": 0,
+      "tests": [
+        "checkers_tests",
+        "checkers_presentation_tests"
+      ],
+      "log": {
+        "path": "build-host/checkers/Testing/Temporary/LastTest.log",
+        "sha256": "f3688a23b31101e3deeec1d7952a078bc8238969064c9c1aae5fe0c618e0a062"
+      }
+    },
+    "sdl_ctest": "4/4 passed; host smoke, audio/frame timing, runtime error/normal exit status, save suite",
+    "new_checks": [
+      "Guarded padded-stride native and fallback render",
+      "Both opposite framebuffer corners painted",
+      "Same canonical touch target acts in both render modes",
+      "Representative native and fallback play/result captures"
+    ],
+    "existing_rules_and_mock_multiplayer": "passed unchanged",
+    "converter_reproducible": true,
+    "generic_sdl_ctest": {
+      "passed": 5,
+      "failed": 0,
+      "source": "build-host/final-simulator-validation.json"
+    }
+  },
+  "native_frame_review": {
+    "tester": "Codex tabletop/sports agent",
+    "dimensions": [
+      [
+        768,
+        480
+      ],
+      [
+        320,
+        200
+      ]
+    ],
+    "observed": [
+      "Text, sprites and table materials readable in native rendered captures",
+      "No clipping on reviewed main play and result layouts",
+      "Checkers selected/crowned pieces distinguishable",
+      "Yahtzee four-player tracker, held dice and score previews distinct",
+      "Air Hockey rink bounds, goals and reflected client objects align to canonical physics"
+    ]
+  },
+  "interactive": {
+    "status": "local-play-tested",
+    "tester": "Codex primary agent using CUA keyboard and mouse in the real SDL3 simulator",
+    "date": "2026-10-06",
+    "observations": [
+      "Made a legal red move from 17 to 24 and a white reply from 40 to 33; turn changed correctly each time.",
+      "Selected pieces, board contrast and Back verified.",
+      "No interactive promotion or full match completion claimed.",
+      "Final direct-touch replay made red17\u219224 andwhite40\u219233 with tap-select/tap-destination; eachturn changed correctly; no virtualgamepad or controllerprompts. Escape exited. Sampled title59.8\u201360.0FPS."
+    ],
+    "sampled_title_fps_range": [
+      59.8,
+      60.0
+    ],
+    "fps_sample_source_field": "direct_touch_fps_samples",
+    "observation_record": {
+      "fps": [
+        60,
+        60.1
+      ],
+      "observations": [
+        "Made a legal red move from 17 to 24 and a white reply from 40 to 33; turn changed correctly each time.",
+        "Selected pieces, board contrast and Back verified.",
+        "No interactive promotion or full match completion claimed.",
+        "Final direct-touch replay made red17\u219224 andwhite40\u219233 with tap-select/tap-destination; eachturn changed correctly; no virtualgamepad or controllerprompts. Escape exited. Sampled title59.8\u201360.0FPS."
+      ],
+      "direct_touch_fps_samples": [
+        59.8,
+        60.0
+      ],
+      "drag_acceptance": {
+        "automated_game_and_real_sdl_events": "passed",
+        "cua_interactive": "unverified; native automation emitted down then up at0,0 withoutheldmotion, as preserved in build-host/solitaire/cua-drag-events.log",
+        "physical_finger": "pending"
+      }
+    },
+    "fps_limitation": "One-second title samples during local play, not a per-frame minimum guarantee or physical-device measurement.",
+    "runtime_equivalence": "Shared raster performance changes are expected in every cartridge relative to the old gameplay package; exact-pixel clipping tests and assembly evidence qualify that helper change, not binary equivalence. Touch input/render changes are also expected. Final source/package hashes, focused tests and current SDL observations identify this revision.",
+    "simulator_validation_source": "build-host/final-simulator-validation.json"
+  },
+  "hardware_acceptance": null,
+  "installed_on_device": true,
+  "package_validation": {
+    "path": "build-host/hires-install-bundle/GAMES/CHECKERS.P4G",
+    "sha256": "4763badd3d85ade797b3123f9db76dcc5b013345517857710c2a1d95d1d79be3",
+    "bytes": 85412,
+    "limit_bytes": 524288,
+    "icon_bytes": 9744,
+    "staged_manifest": {
+      "path": "build-host/hires-install-bundle/manifest.json",
+      "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee"
+    },
+    "staged_manifest_entry": "checkers",
+    "allocated_code_and_data_unchanged_from_playtested_package": false,
+    "allocated_section_comparison": "historical comparison retained; expected shared raster performance changes and touch input/render changes",
+    "expected_shared_raster_performance_changes": true,
+    "shared_raster_pixel_equivalence_proof": {
+      "path": "build-host/crisp-package/raster-performance/proof.json",
+      "sha256": "49d0d633753d08c467f19c13588eea7f221dd9df26aa7b95493aed685f49bb1c"
+    },
+    "expected_touch_changes": true,
+    "expected_art_layout_animation_changes": false,
+    "changed_allocated_sections": [
+      ".data.rel.ro",
+      ".dynamic",
+      ".got",
+      ".got.plt",
+      ".plt",
+      ".rela.dyn",
+      ".rela.plt",
+      ".rodata",
+      ".text"
+    ],
+    "comparison_baseline": {
+      "path": "build-host/hires-gameplay-packages/CHECKERS.P4G",
+      "sha256": "0e39d4cff1c9e88dd0f529f6e808621cc28067ee95dae39a1e9dfc44ce94f302",
+      "scope": "pre-touch, pre-icon gameplay package"
+    }
+  },
+  "shared_presentation": {
+    "components/p4_game_api/include/p4/presentation.h": "5b4ad858a5497e5fa75f5aa3ad07c65bc4d646095fbc17b012a99bbc20adbab8",
+    "components/p4_game_api/include/p4/presentation_font.h": "0bc9a110a5f9b0e8f1cc44ffa212206758ebdd58e15ac488030f65fe72a7f448",
+    "components/p4_game_api/src/presentation_font.c": "149b2e510c0a0b8dfe5c4a7ac4be2f8006c4360c09a82c088209f7ece1eb65c5"
+  },
+  "artifacts": {
+    "focused_log": {
+      "path": "build-host/checkers/Testing/Temporary/LastTest.log",
+      "sha256": "dd9aa1ee1660c906d990ff0bbdc4aca48fa3fc45f21554d4515427904b877e4b"
+    },
+    "sdl_log": {
+      "path": "build-host/play-checkers/Testing/Temporary/LastTest.log",
+      "sha256": "00e21291e429803ed0cf1bf3f250b3583edd93b6f76f679dab4115d5cd341ea2"
+    },
+    "simulator": {
+      "path": "build-host/play-checkers/p4_game_host.app/Contents/MacOS/p4_game_host",
+      "sha256": "e9669a5b062877d75c3a5296a69b79d5bee824857dd4b74f54ac527bf8c3b711"
+    },
+    "cpu_benchmark": {
+      "path": "build-host/play-checkers/p4_game_benchmark",
+      "sha256": "9d358c07a995fa31c829ab7772dca0f78802e4a52714de8209d1bdece738bd51"
+    },
+    "cpu_benchmark_result": {
+      "path": "build-host/table-performance/checkers-shared-after.json",
+      "sha256": "d79b748268e740ec8d65209025fdd2ce4e0662012e55cfe98aba75b1fb689206"
+    },
+    "simulator_pacer": {
+      "path": "tools/p4-game-host/frame_pacer.h",
+      "sha256": "4ff832b5242db46e176c79e2c4e13d5134e55f089b061014173c3d45d477c9f3"
+    },
+    "simulator_source": {
+      "path": "tools/p4-game-host/play_game.c",
+      "sha256": "7365a8d5d65fb0c7f3680e51bd7ff138c5667d0844d10c9613364ddef58c3010"
+    }
+  },
+  "captures": {
+    "build-host/checkers/hires-captures/initial-320.ppm": "07cf1d31fd83487cd73d2d44ed6da3e6b1087f48096b78449202226fcacee5bb",
+    "build-host/checkers/hires-captures/initial-768.ppm": "9adf692e1178403ecf07d4931e20dd165e1243bd4960bb976cf6981ad66571ac",
+    "build-host/checkers/hires-captures/kings-320.ppm": "493d2c1baf716cf7547032095ec9f22a6ef776aff446af10e2f018a38080c3a2",
+    "build-host/checkers/hires-captures/kings-768.ppm": "a09d4be1d239da02bfb6cd860285a4bed8c195545d9c7084e8fe18ef9d19ff18",
+    "build-host/checkers/hires-captures/result-320.ppm": "c0f78899662c6e6022ce7c6f53a9418591991d260ab89cfd28ab13766dcf3776",
+    "build-host/checkers/hires-captures/result-768.ppm": "095088942ce088742b338a909181dff954c1f4622f8e5d08bceae5dd858c3098",
+    "build-host/checkers/hires-captures/selected-320.ppm": "819d7898e9c1b086132f70062cdfafa69458eb3904482e1e4b5021bb1def8a19",
+    "build-host/checkers/hires-captures/selected-768.ppm": "d88e2f7baed059bd35ba142108aef7c3df2d09c687d127467ddfb1f4caae0d26"
+  },
+  "previous_presentation_source_sha256": "3217e20d8335218b9695c707abbca92af353a73f014c8cb76ae9e299a74a1547",
+  "performance": {
+    "revision_scope": "shared raster optimization; current source benchmark",
+    "scope": "Optimized development-Mac CPU update/render/audio; excludes SDL presentation, physical device, transport and I/O.",
+    "frames_per_resolution": 2000,
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "input_tape": "games/checkers/tests/performance-input.txt",
+    "input_sha256": "fb50ef2c4451a3d7cb6252e520b2d24620b160bbeefad7115211d08fc95eef2f",
+    "benchmark_binary": "build-host/play-checkers/p4_game_benchmark",
+    "benchmark_binary_sha256": "0e95ca3caa0e1d83a3ba72966ee049ffc531d0a42c81c005248f1c2e4735077f",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.checkers",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 7,
+        "last_frame_hash": "3635a91e",
+        "update_audio_ms": {
+          "mean": 0.001,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.005,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.1907,
+          "p50": 0.182,
+          "p95": 0.246,
+          "p99": 0.34,
+          "max": 0.567,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1917,
+          "p50": 0.183,
+          "p95": 0.247,
+          "p99": 0.342,
+          "max": 0.571,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.checkers",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 7,
+        "last_frame_hash": "a61c629a",
+        "update_audio_ms": {
+          "mean": 0.0009,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.013,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0295,
+          "p50": 0.029,
+          "p95": 0.031,
+          "p99": 0.032,
+          "max": 0.05,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0304,
+          "p50": 0.03,
+          "p95": 0.032,
+          "p99": 0.034,
+          "max": 0.052,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "measurement_files": {
+      "768": {
+        "path": "build-host/smoothness-packages/checkers/benchmark-768.json",
+        "sha256": "7cabe3de83076019b9801761c10e7f1bf03aafcc47f1189c5c0a14379bd02a85",
+        "bytes": 521
+      },
+      "320": {
+        "path": "build-host/smoothness-packages/checkers/benchmark-320.json",
+        "sha256": "cbfa88878f1946722ec937b8aa85bcdf289e6c2fccbead6b35058ba64337e0e7",
+        "bytes": 521
+      }
+    },
+    "motion_coverage": "Existing touch move trace then idle; not sustained drag stress.",
+    "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+    "hardware_fps_verified": false,
+    "pre_touch_baseline_only": false
+  },
+  "pre_raster_performance": {
+    "target_presented_fps": 30,
+    "budget_ms": 33.333,
+    "device_minimum_fps_verified": false,
+    "host_cpu": "Apple M5 Max, arm64",
+    "build_mode": "Optimized native -O2, no sanitizers; CPU timings exclude SDL presentation/display, physical device, transport and I/O. Shared benchmark includes actual game updates, real 16kHz audio mixing and rendering.",
+    "shared_benchmark": {
+      "game": "org.p4console.checkers",
+      "frames": 2000,
+      "width": 768,
+      "height": 480,
+      "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+      "changed_frames": 7,
+      "last_frame_hash": "74b31a0a",
+      "update_audio_ms": {
+        "mean": 0.0008,
+        "p50": 0.001,
+        "p95": 0.001,
+        "p99": 0.001,
+        "max": 0.003,
+        "over_33_333ms": 0
+      },
+      "render_ms": {
+        "mean": 0.1747,
+        "p50": 0.175,
+        "p95": 0.19,
+        "p99": 0.206,
+        "max": 0.279,
+        "over_33_333ms": 0
+      },
+      "total_ms": {
+        "mean": 0.1755,
+        "p50": 0.176,
+        "p95": 0.191,
+        "p99": 0.207,
+        "max": 0.281,
+        "over_33_333ms": 0
+      }
+    },
+    "input_tape": "tests/performance-input.txt",
+    "render_only_conditions": "Same fixed starting scene at768x480; optimized -O2 -DNDEBUG;100 warmup frames then2000 measured render calls, no updates/audio/display; shared presentation optimization is included in the final measurement.",
+    "render_only_before": "Checkers render_ms p50=0.2580 p95=0.2830 max=0.3160",
+    "render_only_after": "Checkers render_ms p50=0.1780 p95=0.1890 max=0.2440",
+    "visual_equivalence": "All24 existing captures across all3 games, including this game's8 native/fallback states, remain byte-identical after the material optimizations. Dynamic subpixel/cadence behavior is separately regression tested.",
+    "simulator_target_hz": 60,
+    "regressions": []
+  },
+  "final_simulator": {
+    "path": "build-host/play-checkers/p4_game_host.app/Contents/MacOS/p4_game_host",
+    "sha256": "e5dd7b97cf2b6cb4883c2504f7718edcdda9d7ea0f47c8dcc31cd07e3e1a20b2",
+    "bytes": 821872,
+    "fps_title_present": true,
+    "tests_passed": 5,
+    "tests_failed": 0,
+    "build_log": {
+      "path": "build-host/smoothness-packages/checkers/sdl-build.log",
+      "sha256": "0c8c222e00333b693cc08d251a3e8589837b61832f00b02246d7757572fcb41b",
+      "bytes": 4493
+    },
+    "test_log": {
+      "path": "build-host/smoothness-packages/checkers/sdl-tests.log",
+      "sha256": "863fb85f91fe8beb4b6187911c2e5e0c457424472708104a4dca046ea92e0641",
+      "bytes": 754
+    },
+    "evidence_path": "games/checkers/LOCAL_TESTING.json"
+  },
+  "shared_raster_validation": {
+    "path": "build-host/crisp-package/raster-performance/proof.json",
+    "sha256": "49d0d633753d08c467f19c13588eea7f221dd9df26aa7b95493aed685f49bb1c",
+    "bytes": 3752
+  },
+  "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+  "raster_revision_package_candidate": {
+    "path": "build-host/smoothness-packages/GAMES/CHECKERS.P4G",
+    "sha256": "4763badd3d85ade797b3123f9db76dcc5b013345517857710c2a1d95d1d79be3",
+    "bytes": 85412,
+    "id": "org.p4console.checkers",
+    "title": "Checkers",
+    "version": "1.1.0",
+    "folder": "GAMES/TABLETOP",
+    "launcher_id": 116,
+    "payload_sha256": "05a0e15024027e81df4e1a53c15ed020205757bb751fb16259ca270c280e2d87",
+    "limit_bytes": 524288,
+    "icon": {
+      "name": ".p4icon",
+      "type": 1,
+      "flags": 0,
+      "address": 0,
+      "size": 9744,
+      "alignment": 1,
+      "sha256": "e2ded1a31e27d69f0e8c2c4e1e28ed72b0144eff911cdcf19bc59a0791a59647"
+    },
+    "allocated_sections": [
+      {
+        "name": ".hash",
+        "type": 5,
+        "flags": 2,
+        "address": 212,
+        "size": 48,
+        "alignment": 4,
+        "sha256": "319003b6abdf4c44f1447f7aa279af445fc17025d3d91cc91806a0a89cb3554a"
+      },
+      {
+        "name": ".dynsym",
+        "type": 11,
+        "flags": 2,
+        "address": 260,
+        "size": 112,
+        "alignment": 4,
+        "sha256": "9214e49bb754adcf886204fc739fa2cfb264cecf01c2afadf7c0c70cb1ccf138"
+      },
+      {
+        "name": ".dynstr",
+        "type": 3,
+        "flags": 2,
+        "address": 372,
+        "size": 34,
+        "alignment": 1,
+        "sha256": "34cc7ef5f58386f0d5892d0a37fcd268e86f0eb72987a5888b0584bb03c8e53a"
+      },
+      {
+        "name": ".rela.dyn",
+        "type": 4,
+        "flags": 2,
+        "address": 408,
+        "size": 120,
+        "alignment": 4,
+        "sha256": "b5663a32b15940d571f077bd2a4eb16451f93f21697c35bcffb8ed026abd03c5"
+      },
+      {
+        "name": ".rela.plt",
+        "type": 4,
+        "flags": 66,
+        "address": 528,
+        "size": 60,
+        "alignment": 4,
+        "sha256": "f88e75a7855aeac9384a65a41865b007ad4f9155c1af0714b7ad69a5c73aa140"
+      },
+      {
+        "name": ".plt",
+        "type": 1,
+        "flags": 6,
+        "address": 592,
+        "size": 112,
+        "alignment": 16,
+        "sha256": "1b40cc97c23d52b9ac73dcde7caaf130495a4a84ce72679c72302f81a86b4e9d"
+      },
+      {
+        "name": ".text",
+        "type": 1,
+        "flags": 6,
+        "address": 704,
+        "size": 13678,
+        "alignment": 2,
+        "sha256": "c0da44534cf248d00ec3c597debe7f13be90635a730f8c91b324946b02e5558e"
+      },
+      {
+        "name": ".rodata",
+        "type": 1,
+        "flags": 2,
+        "address": 14384,
+        "size": 60075,
+        "alignment": 4,
+        "sha256": "e46a250705c4231e16f6116895e2cdeb18e43741a4695c6ebcee041368d1f255"
+      },
+      {
+        "name": ".data.rel.ro",
+        "type": 1,
+        "flags": 3,
+        "address": 78556,
+        "size": 52,
+        "alignment": 4,
+        "sha256": "c158d84e48343360e3cf3bf10ac2b8c4c79828dd1d58399e184991b67487730f"
+      },
+      {
+        "name": ".dynamic",
+        "type": 6,
+        "flags": 3,
+        "address": 78608,
+        "size": 144,
+        "alignment": 4,
+        "sha256": "3f8bf1756d171f662973452fc22aa87288501062f27b955794a2d7b9d96f1b97"
+      },
+      {
+        "name": ".got",
+        "type": 1,
+        "flags": 3,
+        "address": 78752,
+        "size": 16,
+        "alignment": 4,
+        "sha256": "9a93db20446c8cd391e3d7d50d8949eebbc331adc34d5e9e74be4994255afe4f"
+      },
+      {
+        "name": ".got.plt",
+        "type": 1,
+        "flags": 3,
+        "address": 78768,
+        "size": 28,
+        "alignment": 4,
+        "sha256": "38655db0224f87e50596041031e891641cafc7d7a720d7031e7b8ea49d601979"
+      }
+    ],
+    "build_log": {
+      "path": "build-host/smoothness-packages/checkers/package-build.log",
+      "sha256": "a5fbbf88b2eafe10e3a74ba4d2eead679dd4577c84d1f5878ac80905a4544b7e",
+      "bytes": 984
+    },
+    "validation_log": {
+      "path": "build-host/smoothness-packages/checkers/package-validation.log",
+      "sha256": "7ca75f8bbe4dd57ef70764ce8def7b52ad216b0e61511cc234b0804ae50f5a9f",
+      "bytes": 285
+    }
+  },
+  "raster_revision_captures": {
+    "build-host/smoothness-packages/checkers/captures/dragging-320.ppm": "87e11c8e22485a09ae52f4a3540d203849498fbd09f81f04407d5df445d4a893",
+    "build-host/smoothness-packages/checkers/captures/dragging-768.ppm": "5a1b5b7906e826d07f62c58c2251822261540a2ad81e7a5fb6b7f549dd7ea29b",
+    "build-host/smoothness-packages/checkers/captures/initial-320.ppm": "bbc6c5c0a627628b56ccff20dddbba4a7e4978a731714b948453f8dbe646fbbf",
+    "build-host/smoothness-packages/checkers/captures/initial-768.ppm": "c0d668ec1592e91a6d44177314a8203a947329d4a7f1c91b7714bc9e52bb7a8b",
+    "build-host/smoothness-packages/checkers/captures/kings-320.ppm": "8af0e58d761b0d913ff570afb97951779a61139a5a15e7e908569926b45cf3a3",
+    "build-host/smoothness-packages/checkers/captures/kings-768.ppm": "5c7fa2aeb48e545676cdeed8d35a8a35ddc82d3ef104b2f8dcc9e19da1020b53",
+    "build-host/smoothness-packages/checkers/captures/result-320.ppm": "8f354c72ffc5a71910e8d83508734321b49457d5ab1b484f4d301ef8329e935b",
+    "build-host/smoothness-packages/checkers/captures/result-768.ppm": "a0eab4bfce2295101b9f2ac1839a6415d3f7e1e754eb928f6802622eedb68a3d",
+    "build-host/smoothness-packages/checkers/captures/selected-320.ppm": "40707646593ba1720301ce00c1ec16e8735b7184caedf0db7fc6fe6126bacc7d",
+    "build-host/smoothness-packages/checkers/captures/selected-768.ppm": "e7b55399d3584218988b5a8a5b8018e755a67651572346291d32e5d87052d326"
+  },
+  "raster_revision_scope": "Shared exact-output raster optimization only; local build/test/CPU validation. No new physical-device acceptance or installation performed by this pass.",
+  "pre_icon_source_sha256": "0b612aab12317fb2faaa6f58e00fc04c54bdf78d3eacdb72574ed9930ca86f00",
+  "touch_validation": {
+    "path": "build-host/crisp-package/direct-touch-checkers-yahtzee.json",
+    "sha256": "c3dd4c0701629e15ce53ed6d15c8186a7812540a08e6dc593d4c4d656c58b51b",
+    "entry": "checkers",
+    "focused_ctest": {
+      "passed": 2,
+      "failed": 0
+    },
+    "captures": {
+      "build-host/checkers/direct-touch-captures/dragging-320.png": "b77e52b4a8c923882d62bf052c202ad9defa2eb3e5c9844c9d77f1b8eb30ed48",
+      "build-host/checkers/direct-touch-captures/dragging-768.png": "a1fcfc6b9029f73b935e4c9d58424146034cd8e12e2a74287d8d7a6ce37accc6",
+      "build-host/checkers/direct-touch-captures/initial-320.png": "d2dd0c49b9851140f8342a3d87ad5413023ee37206344d0a735b639b6bfcc36c",
+      "build-host/checkers/direct-touch-captures/initial-768.png": "3ccaf3c393aee73a8a1cac1d10f3d9c3667462dd5e3f9fb6f8dec3876667f588",
+      "build-host/checkers/direct-touch-captures/kings-320.png": "b2bfb05df2e2c5490378713d1c18bde8d7c81c0f62a136e71bdeacf2b220371a",
+      "build-host/checkers/direct-touch-captures/kings-768.png": "e15bba9fa0a0964d6e8a2c8bb6ccf05e6ce3274662d74ac7a69befb8a722d655",
+      "build-host/checkers/direct-touch-captures/result-320.png": "3940ff7bdfa442340177a3801abb556b7a91a5419188c34be9836977220d9d69",
+      "build-host/checkers/direct-touch-captures/result-768.png": "9bb06d2270d159bbbd39c5850cf5ab294f77f28750c4a2b66b79ec043c6c9f88",
+      "build-host/checkers/direct-touch-captures/selected-320.png": "1c3ec5f92596d56436b784ed891e24c179f513aaf8d57e580c3e5fed1b8cc145",
+      "build-host/checkers/direct-touch-captures/selected-768.png": "32b49b0535f23d54b51544745dc001e591d0a1562892d6978a50153613fe90b8"
+    },
+    "regressions": [
+      "press/hold/release ignores synthesized buttons",
+      "tap select/cancel and physical controller resume",
+      "legal drag/drop; invalid/outside drops preserve board",
+      "compulsory capture and continued jump",
+      "host/client synchronized move and rotated white-player drag"
+    ],
+    "network_protocol_changed": false
+  },
+  "pre_touch_performance": {
+    "revision_scope": "shared raster optimization; current source benchmark",
+    "scope": "Optimized development-Mac CPU update/render/audio; excludes SDL presentation, physical device, transport and I/O.",
+    "frames_per_resolution": 2000,
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "input_tape": "games/checkers/tests/performance-input.txt",
+    "input_sha256": "fb50ef2c4451a3d7cb6252e520b2d24620b160bbeefad7115211d08fc95eef2f",
+    "benchmark_binary": "build-host/play-checkers/p4_game_benchmark",
+    "benchmark_binary_sha256": "0e95ca3caa0e1d83a3ba72966ee049ffc531d0a42c81c005248f1c2e4735077f",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.checkers",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 7,
+        "last_frame_hash": "3635a91e",
+        "update_audio_ms": {
+          "mean": 0.001,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.005,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.1907,
+          "p50": 0.182,
+          "p95": 0.246,
+          "p99": 0.34,
+          "max": 0.567,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1917,
+          "p50": 0.183,
+          "p95": 0.247,
+          "p99": 0.342,
+          "max": 0.571,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.checkers",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 7,
+        "last_frame_hash": "a61c629a",
+        "update_audio_ms": {
+          "mean": 0.0009,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.013,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0295,
+          "p50": 0.029,
+          "p95": 0.031,
+          "p99": 0.032,
+          "max": 0.05,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0304,
+          "p50": 0.03,
+          "p95": 0.032,
+          "p99": 0.034,
+          "max": 0.052,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "measurement_files": {
+      "768": {
+        "path": "build-host/smoothness-packages/checkers/benchmark-768.json",
+        "sha256": "7cabe3de83076019b9801761c10e7f1bf03aafcc47f1189c5c0a14379bd02a85",
+        "bytes": 521
+      },
+      "320": {
+        "path": "build-host/smoothness-packages/checkers/benchmark-320.json",
+        "sha256": "cbfa88878f1946722ec937b8aa85bcdf289e6c2fccbead6b35058ba64337e0e7",
+        "bytes": 521
+      }
+    },
+    "motion_coverage": "Existing touch move trace then idle; not sustained drag stress.",
+    "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+    "hardware_fps_verified": false,
+    "pre_touch_baseline_only": false
+  },
+  "pending": [],
+  "current_package_installed_on_device": true,
+  "current_package_installed_units": [
+    "Tab5 A",
+    "Tab5 B"
+  ],
+  "latest_successful_installation_by_unit": {
+    "Tab5 A": {
+      "slug": "checkers",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "4763badd3d85ade797b3123f9db76dcc5b013345517857710c2a1d95d1d79be3",
+      "package_bytes": 85412,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    },
+    "Tab5 B": {
+      "slug": "checkers",
+      "title": "Checkers",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "4763badd3d85ade797b3123f9db76dcc5b013345517857710c2a1d95d1d79be3",
+      "package_bytes": 85412,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "CHECKERS.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=CHECKERS.P4G bytes=85412 sha256=4763badd3d85ade797b3123f9db76dcc5b013345517857710c2a1d95d1d79be3 seconds=1.6",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "checkers"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    }
+  },
+  "installation_history": [
+    {
+      "slug": "checkers",
+      "title": "Checkers",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "usb_serial_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "22bf506d2370330c88311f9e9d864ae244400bf660c4ea4213ca280d40d33827",
+      "package_bytes": 85328,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T00:30:06.294159+00:00",
+      "verification": {
+        "method": "Native USB transfer: device SHA-256, atomic activation and readback; existing identical files verified by device hash",
+        "log": "build-host/hires-tab5-qualification/A-ready-table-install-retry.log",
+        "log_sha256": "910c61277893523ce5b067b1c8baa5430da58f18ea7f38c0b1e973c1348dcc2d",
+        "bundle_result": "BUNDLE_PASS files=7"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    {
+      "slug": "checkers",
+      "title": "Checkers",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "usb_serial_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "22bf506d2370330c88311f9e9d864ae244400bf660c4ea4213ca280d40d33827",
+      "package_bytes": 85328,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T00:31:58.157929+00:00",
+      "verification": {
+        "method": "Native USB transfer: device SHA-256, atomic activation and readback; existing identical files verified by device hash",
+        "log": "build-host/hires-tab5-qualification/B-ready-table-install-retry.log",
+        "log_sha256": "c4ea3bb6a76879a2afffe7cb9ea43e6e3caa57bbb890c23be397b8f9d204cab2",
+        "bundle_result": "BUNDLE_PASS files=7"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    {
+      "slug": "checkers",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "4763badd3d85ade797b3123f9db76dcc5b013345517857710c2a1d95d1d79be3",
+      "package_bytes": 85412,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    },
+    {
+      "slug": "checkers",
+      "title": "Checkers",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "4763badd3d85ade797b3123f9db76dcc5b013345517857710c2a1d95d1d79be3",
+      "package_bytes": 85412,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "CHECKERS.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=CHECKERS.P4G bytes=85412 sha256=4763badd3d85ade797b3123f9db76dcc5b013345517857710c2a1d95d1d79be3 seconds=1.6",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "checkers"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    }
+  ],
+  "installation_limitation": "Records identify successful transfers of specific packages to specific units; they do not establish hardware gameplay or frame-rate acceptance."
+}

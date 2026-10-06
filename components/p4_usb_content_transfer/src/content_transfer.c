@@ -23,7 +23,7 @@
 #include "freertos/task.h"
 #pragma GCC diagnostic pop
 #include "mbedtls/sha256.h"
-#include "p4/content_catalog.h"
+#include "content_limits.h"
 
 enum {
     MANIFEST_BYTES = 48,

@@ -22,8 +22,12 @@ static const char *const VOLUME_POLICY_KEY = "volume_policy";
 static const char *const USB_ENUM_PROBE_KEY = "usb_enum_probe";
 
 enum {
-    /* Apply the quieter room-friendly baseline once, then preserve UI edits. */
+    /* Give Tab5 an audible baseline once, then preserve subsequent UI edits. */
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    VOLUME_POLICY_VERSION = 4,
+#else
     VOLUME_POLICY_VERSION = 3,
+#endif
 };
 
 static bool settings_ready(const platform_console_settings_t *settings);

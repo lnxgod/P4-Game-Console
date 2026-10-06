@@ -25,7 +25,7 @@ typedef struct {
     uint32_t updates;
 } fixture_game_t;
 
-static bool expect_dice;
+static bool expect_dice, expect_motion;
 static bool fixture_start(p4_game_context_t *context)
 {
     if (context == NULL || context->state == NULL ||
@@ -33,6 +33,9 @@ static bool fixture_start(p4_game_context_t *context)
         context->services == NULL) {
         return false;
     }
+    p4_game_motion_t motion;
+    if (p4_game_read_motion(context, &motion) != expect_motion ||
+        (expect_motion && motion.accel_mg[2] != 1000)) return false;
     const bool granted = (context->services->available_capabilities &
                           P4_GAME_CAP_DICE_ACCESSORY) != 0U;
     if (granted != expect_dice) {
@@ -211,11 +214,18 @@ static bool fixture_dice(void *context,const p4_dice_request_t *r,p4_dice_status
         .phase=P4_DICE_WAITING,.held_mask=1,.hold_changed=true,.hold_sequence=1};
     return true;
 }
+static bool fixture_motion(void *context, p4_game_motion_t *out)
+{
+    if (!context) return false;
+    *out = (p4_game_motion_t){.sequence=1,.valid=true,.accel_mg={0,0,1000}};
+    return true;
+}
 static int run_with_size(uint32_t struct_bytes)
 {
     static uint16_t pixels[
         (size_t)P4_GAME_SURFACE_WIDTH * P4_GAME_SURFACE_HEIGHT];
     fixture_host_t fixture = {0};
+    expect_motion=struct_bytes >= offsetof(p4_cartridge_host_v1_t,read_motion)+sizeof(p4_game_read_motion_fn);
     expect_dice=struct_bytes >= offsetof(p4_cartridge_host_v1_t,dice_exchange_v2)+sizeof(p4_game_dice_exchange_fn);
     p4_cartridge_host_v1_t host = {
         .magic = P4_CARTRIDGE_HOST_MAGIC,
@@ -243,6 +253,7 @@ static int run_with_size(uint32_t struct_bytes)
         .read_save_status = fixture_read_save,
         .dice_exchange = legacy_dice,
         .dice_exchange_v2 = fixture_dice,
+        .read_motion = fixture_motion,
         .save_sequence = 17U,
     };
     char *arguments[] = {(char *)(void *)&host};

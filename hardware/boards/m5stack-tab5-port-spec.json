@@ -98,7 +98,15 @@
     "usb": {
       "type_c": "native FS USB Serial/JTAG GPIO24/25",
       "type_a": "native HS USB host dedicated PHY; power expander 0x44 P3",
-      "host_power_enabled_by_initial_port": false
+      "host_power_enabled_by_initial_port": false,
+      "controller_host": {
+        "build_enabled": true,
+        "config": "CONFIG_P4_TAB5_USB_HOST",
+        "hardware_verified": false,
+        "connector": "USB-A direct HID or wired XUSB gamepad",
+        "power_switch": "U27 MT9700; active-high USB5V_EN at expander 0x44/P3",
+        "evidence": "hardware/evidence/tab5-usb-gamepad-20261004-xusb-build.json"
+      }
     },
     "sensors": {
       "provenance": "third_party/tab5-sensors.json",

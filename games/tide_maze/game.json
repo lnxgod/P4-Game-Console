@@ -1,0 +1,45 @@
+{
+  "schema": 1,
+  "format": "p4-native-elf-v1",
+  "api_version": 1,
+  "version": "0.2.1",
+  "package_file": "TIDE_MAZE.P4G",
+  "component": "tide_maze",
+  "entry_symbol": "p4_tide_maze_game",
+  "launcher_id": 120,
+  "id": "org.p4console.tide-maze",
+  "title": "Tide Maze",
+  "subtitle": "Tilt, slosh and escape together",
+  "folder": "GAMES/ARCADE",
+  "accent_rgb565": "0x2e5b",
+  "required_capabilities": [
+    "video",
+    "controls"
+  ],
+  "optional_capabilities": [
+    "audio-tone",
+    "multiplayer-session",
+    "video-highres",
+    "motion"
+  ],
+  "license": "MIT",
+  "assets": "native-projected-maze-water-and-marble; original-imagegen-water-material-and-launcher-art",
+  "enabled": true,
+  "multiplayer": {
+    "schema": 1,
+    "style": "realtime",
+    "min_players": 2,
+    "max_players": 2,
+    "protocol": 1,
+    "tick_rate_hz": 20,
+    "message_bytes": 64
+  },
+  "sources": [
+    "tide_maze.c",
+    "tide_maze_physics.c",
+    "tide_maze_network.c",
+    "tide_maze_render.c"
+  ],
+  "launcher_icon": "assets/launcher.p4i",
+  "stack_frame_limit_bytes": 2048
+}

@@ -1,0 +1,771 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "game": "texas_holdem",
+  "version": "1.2.0",
+  "status": "local-play-tested; build-tested; current game package installed; hardware gameplay pending",
+  "source_sha256": "26d63155c5a49fae7168531be69b086ba165114c0833b20e93032c40552e2947",
+  "source_files": {
+    "CMakeLists.txt": "859546856ffd3143ce552e9f9d6653ae483b47f0a9d3d5d9055cc13917a6550b",
+    "README.md": "c550783d75b5e963f58894b1ce1b431f85788435d8a98dd72e21a74f08e36a63",
+    "assets/launcher-provenance.json": "5472cc0c29b4ee9188f61a97d8c2bae7fce12c8ff706da7cd98d45ad45cdf005",
+    "assets/launcher-source.png": "4867608d5c5310313250d6ffe0cd07789cfa2d429e9d24b5243955a6ac0f8bfd",
+    "assets/launcher.p4i": "9f22f74f965fc76b1b87105ce26b92c1adc0c36eaec82d936015896ffbbc57fb",
+    "assets/table-materials-imagegen.png": "2ce0b7313a819bfe3697f70f55cc43cafc148d2d613f9ad46c6815f800af5546",
+    "assets/table-materials-provenance.json": "e4aa89f4473c22e4c201e44aca853d85c18aeb8d264b4b36722c246817d3062d",
+    "game.json": "044e520a551b62dee697e71df550925e2a57c55289344b38c775d11235f55ea6",
+    "src/generated/table_materials.inc": "c86736e7517ffe1fed403551d91ae8f9fe9bc4d288d39344fdcabc1642c240cf",
+    "src/texas_holdem.c": "facb8cf7df7c1220e620a9c70243f32da2cdac32cb658c8f0737ea19aea50263",
+    "src/texas_holdem_internal.h": "c948a40cec4b549b800fbef1b95e941d2d26dad745859517d87146b1c645a753",
+    "src/texas_holdem_logic.c": "3cb6450729b76fcb3a25ab1271b3e488dc0bbd65219387c555c4bf4abacf613f",
+    "src/texas_holdem_network.c": "e34cfd0f76590f3c39d70aec69849086e0e9ba1648665108a91d0413d4068c7f",
+    "tests/CMakeLists.txt": "bd5524383a59d6b59dc7ececadf563b7ff330f09b92f292c610ec603f30f96fa",
+    "tests/test_presentation.c": "1323f314cc95deed88b66a01958a2c3e0b8555f5b0c36594a55eca34c75059e0",
+    "tests/test_texas_holdem.c": "e3f231d647038114f5b674a39e2ac923d7cd0b406c2e174c9794c8d3828c38f9",
+    "tools/convert_table_materials.py": "829446d812006a775bd7184d60eb3b4a409e5bb0c4e5463566481d851ccda344"
+  },
+  "shared_presentation_dependencies": {
+    "components/p4_game_api/include/p4/card_art.h": "e606ba8b802e7a71dc715264c3c85ed857e507c10d75738de5d174c06cff7a53",
+    "components/p4_game_api/include/p4/presentation.h": "5b4ad858a5497e5fa75f5aa3ad07c65bc4d646095fbc17b012a99bbc20adbab8",
+    "components/p4_game_api/include/p4/presentation_font.h": "0bc9a110a5f9b0e8f1cc44ffa212206758ebdd58e15ac488030f65fe72a7f448",
+    "components/p4_game_api/src/presentation_font.c": "149b2e510c0a0b8dfe5c4a7ac4be2f8006c4360c09a82c088209f7ece1eb65c5"
+  },
+  "automated": {
+    "focused_ctest": {
+      "command": "ctest --test-dir build-host/texas_holdem --output-on-failure",
+      "passed": 2,
+      "failed": 0,
+      "tests": [
+        "texas_holdem_tests",
+        "texas_holdem_presentation_tests"
+      ],
+      "log": {
+        "path": "build-host/texas_holdem/Testing/Temporary/LastTest.log",
+        "sha256": "d6078144f3f3d552b00a1491eddbdd43a319916bb1484a00aa05149c774d6f07"
+      }
+    },
+    "generic_sdl_ctest": {
+      "passed": 5,
+      "failed": 0,
+      "source": "build-host/final-simulator-validation.json"
+    },
+    "sanitizers": [
+      "address",
+      "undefined"
+    ],
+    "converter_reproducible": true,
+    "render_checks": [
+      "320x200 and 768x480 negotiated surface",
+      "padded stride and allocation guards",
+      "full-frame coverage",
+      "menu and gameplay actual-render captures",
+      "existing Back lifecycle"
+    ],
+    "unchanged_rules_and_multiplayer": "Existing focused suite passed; no game logic or networking source modified."
+  },
+  "visual_review": {
+    "reviewer": "Card-game agent",
+    "inspected": [
+      "native and fallback gameplay",
+      "native and fallback setup/menu"
+    ],
+    "captures": {
+      "build-host/texas_holdem/crisp-captures/texas_holdem-320-0.png": "45a525977e1541e1049f0e38fd0822f24607eede01f11580dd0af773923365f9",
+      "build-host/texas_holdem/crisp-captures/texas_holdem-320-1.png": "77659318b1011337305afcfae41de388c1c9f261b3d4dd95162c9a470d7d80f9",
+      "build-host/texas_holdem/crisp-captures/texas_holdem-320-2.png": "09458bc577b5cca5a7d82a37e9a7646c8e4852a9c90216bd7844d25020815751",
+      "build-host/texas_holdem/crisp-captures/texas_holdem-320-3.png": "ad7affce1fa02e32f82211205ddc99fa6e9410b9c14c526efef4a5d540236d00",
+      "build-host/texas_holdem/crisp-captures/texas_holdem-768-0.png": "0905d67c511a787294729ecad4cb0ad4234fff83bb2207d4b6af02168a055dbf",
+      "build-host/texas_holdem/crisp-captures/texas_holdem-768-1.png": "f51f666b17eaf24e8af7d164e7fc62e45ba207bab1fda9c5c83252cb9b551f2c",
+      "build-host/texas_holdem/crisp-captures/texas_holdem-768-2.png": "035077bd5c7c7fe52a267c36ee7e14f9b2befa42957c2e121347f747af28d7d6",
+      "build-host/texas_holdem/crisp-captures/texas_holdem-768-3.png": "19eb38bb0bec9a39f369ddf4b928c082e93da653d7427fc99ff3fd7debadc739"
+    }
+  },
+  "interactive": {
+    "status": "local-play-tested",
+    "tester": "Codex primary agent using CUA keyboard and mouse in the real SDL3 simulator",
+    "date": "2026-10-06",
+    "observations": [
+      "Configured one human and three CPUs; played a full hand through flop, turn, river and showdown during the graphics pass.",
+      "Final simulator replay exercised reveal and check/call through CPU turns into the flop.",
+      "Hole cards and the relocated status labels remain readable.",
+      "Direct-touch replay: tapped CPU selector to three CPUs, Deal, Reveal, then Raise in the former B-button region. Player one stack changed from 1000 to 960 and CPU turns advanced to flop; no accidental human fold. Escape exited. Sampled title 59.8\u201360.1 FPS."
+    ],
+    "sampled_title_fps_range": [
+      56.6,
+      60
+    ],
+    "fps_sample_source_field": "fps",
+    "observation_record": {
+      "fps": [
+        56.6,
+        60
+      ],
+      "observations": [
+        "Configured one human and three CPUs; played a full hand through flop, turn, river and showdown during the graphics pass.",
+        "Final simulator replay exercised reveal and check/call through CPU turns into the flop.",
+        "Hole cards and the relocated status labels remain readable.",
+        "Direct-touch replay: tapped CPU selector to three CPUs, Deal, Reveal, then Raise in the former B-button region. Player one stack changed from 1000 to 960 and CPU turns advanced to flop; no accidental human fold. Escape exited. Sampled title 59.8\u201360.1 FPS."
+      ]
+    },
+    "fps_limitation": "One-second title samples during local play, not a per-frame minimum guarantee or physical-device measurement.",
+    "runtime_equivalence": "Shared raster performance changes are expected in every cartridge relative to the old gameplay package; exact-pixel clipping tests and assembly evidence qualify that helper change, not binary equivalence. Touch input/render changes are also expected. Final source/package hashes, focused tests and current SDL observations identify this revision.",
+    "simulator_validation_source": "build-host/final-simulator-validation.json"
+  },
+  "art": {
+    "provenance": "assets/table-materials-provenance.json",
+    "mode": "built-in image_gen",
+    "static_material_bytes": 51200,
+    "runtime_image_decoding": false
+  },
+  "hardware_acceptance": null,
+  "installed_on_device": true,
+  "externally_published": false,
+  "pending": [
+    "Native display and physical touch",
+    "ESP32-P4 timing and memory pressure",
+    "Speaker acoustics",
+    "Real linked-console multiplayer"
+  ],
+  "performance": {
+    "revision_scope": "shared raster optimization; current source benchmark",
+    "scope": "Optimized development-Mac CPU update/render/audio; excludes SDL presentation, physical device, transport and I/O.",
+    "frames_per_resolution": 2000,
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "input_tape": "build-host/crisp-package/card-performance/texas_holdem.txt",
+    "input_sha256": "3fe4f5aa61c9e6f4fe14df9a79df5a871e7e0db741b32df57305840aa17ca936",
+    "benchmark_binary": "build-host/play-texas_holdem/p4_game_benchmark",
+    "benchmark_binary_sha256": "c231b80b144d377436c3e0e695c7bcd234643e4b0cc2ac80c7301e9897b7512e",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.texas-holdem",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 40,
+        "last_frame_hash": "d4eca279",
+        "update_audio_ms": {
+          "mean": 0.001,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.019,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0809,
+          "p50": 0.075,
+          "p95": 0.131,
+          "p99": 0.152,
+          "max": 0.318,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0819,
+          "p50": 0.076,
+          "p95": 0.133,
+          "p99": 0.155,
+          "max": 0.321,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.texas-holdem",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 39,
+        "last_frame_hash": "8ca406d0",
+        "update_audio_ms": {
+          "mean": 0.0008,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.005,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0141,
+          "p50": 0.014,
+          "p95": 0.016,
+          "p99": 0.017,
+          "max": 0.039,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.015,
+          "p50": 0.015,
+          "p95": 0.017,
+          "p99": 0.018,
+          "max": 0.04,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "measurement_files": {
+      "768": {
+        "path": "build-host/smoothness-packages/texas_holdem/benchmark-768.json",
+        "sha256": "e662a12cd11ed023bf09fb0173eaed61289909278feb084d92e096993bb11902",
+        "bytes": 526
+      },
+      "320": {
+        "path": "build-host/smoothness-packages/texas_holdem/benchmark-320.json",
+        "sha256": "c3e492f5bf1a77a2ea2258f38a06777de48044c8ffca841d372e2029527e06ea",
+        "bytes": 526
+      }
+    },
+    "motion_coverage": "Existing CPU-hand keyboard trace; sparse state changes between scheduled decisions.",
+    "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+    "hardware_fps_verified": false,
+    "pre_touch_baseline_only": false
+  },
+  "final_simulator": {
+    "path": "build-host/play-texas_holdem/p4_game_host.app/Contents/MacOS/p4_game_host",
+    "sha256": "af2f261e6b041fc42ba8f40609486f9dcd73cf93c56d33e713ca23c458752a8c",
+    "bytes": 990640,
+    "fps_title_present": true,
+    "tests_passed": 5,
+    "tests_failed": 0,
+    "build_log": {
+      "path": "build-host/smoothness-packages/texas_holdem/sdl-build.log",
+      "sha256": "36488eec3e57d008693cb1ae8b37681e160aea24b86cfae9e12d640dd0314e59",
+      "bytes": 4545
+    },
+    "test_log": {
+      "path": "build-host/smoothness-packages/texas_holdem/sdl-tests.log",
+      "sha256": "ef5a2749667cc3fddb33ca970da895dbc30201eec3f27d9d91a46c9e230db4b5",
+      "bytes": 762
+    },
+    "evidence_path": "games/texas_holdem/PRESENTATION_TESTING.json"
+  },
+  "pre_raster_performance": {
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "scope": "Optimized development-Mac CPU update + render + audio; excludes display, device, transport and presentation scheduling",
+    "frames_per_resolution": 2000,
+    "input_trace": "build-host/crisp-package/card-performance/texas_holdem.txt",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.texas-holdem",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 40,
+        "last_frame_hash": "7a7dc731",
+        "update_audio_ms": {
+          "mean": 0.0009,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.027,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0879,
+          "p50": 0.082,
+          "p95": 0.137,
+          "p99": 0.179,
+          "max": 0.333,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0889,
+          "p50": 0.083,
+          "p95": 0.138,
+          "p99": 0.18,
+          "max": 0.336,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.texas-holdem",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 39,
+        "last_frame_hash": "00d4c45e",
+        "update_audio_ms": {
+          "mean": 0.0008,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.005,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0143,
+          "p50": 0.014,
+          "p95": 0.018,
+          "p99": 0.02,
+          "max": 0.038,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0151,
+          "p50": 0.015,
+          "p95": 0.019,
+          "p99": 0.021,
+          "max": 0.038,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "art_equivalence": "All native and fallback capture PNG hashes match the preceding presentation pass",
+    "optimization": "Clipped 128-pixel native felt-row memcpy spans; no extra buffers or game state",
+    "isolated_felt_before_median_us": 80,
+    "isolated_felt_after_median_us": 10,
+    "timing_audit": "No blocking waits; CPU think delays use elapsed_ms. Rummy analysis bounded at 8 cards/256 subsets; Holdem rank evaluation at 21 five-card combinations. No AI rule rewrite needed for measured host budget.",
+    "hardware_fps_verified": false
+  },
+  "source_hash_method": "Sorted game-relative UTF-8 path plus NUL plus binary SHA-256 of each file; excludes LOCAL_TESTING.json, PRESENTATION_TESTING.json, TOUCH_TESTING.json, .DS_Store and __pycache__.",
+  "shared_raster_validation": {
+    "path": "build-host/crisp-package/raster-performance/proof.json",
+    "sha256": "49d0d633753d08c467f19c13588eea7f221dd9df26aa7b95493aed685f49bb1c",
+    "bytes": 3752
+  },
+  "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+  "raster_revision_package_candidate": {
+    "path": "build-host/smoothness-packages/GAMES/TEXAS_HOLDEM.P4G",
+    "sha256": "18ddf5941d5a87c59f26a4f6762ee5466cb7a196e41b3ba779dbdba359295dd6",
+    "bytes": 115256,
+    "id": "org.p4console.texas-holdem",
+    "title": "Texas Hold'em",
+    "version": "1.2.0",
+    "folder": "GAMES/CARDS",
+    "launcher_id": 117,
+    "payload_sha256": "b180bb0213852a3fa319393be692d930a489846645a6e2e5477ce5b324f3afa2",
+    "limit_bytes": 524288,
+    "icon": {
+      "name": ".p4icon",
+      "type": 1,
+      "flags": 0,
+      "address": 0,
+      "size": 9744,
+      "alignment": 1,
+      "sha256": "9f22f74f965fc76b1b87105ce26b92c1adc0c36eaec82d936015896ffbbc57fb"
+    },
+    "allocated_sections": [
+      {
+        "name": ".hash",
+        "type": 5,
+        "flags": 2,
+        "address": 212,
+        "size": 48,
+        "alignment": 4,
+        "sha256": "319003b6abdf4c44f1447f7aa279af445fc17025d3d91cc91806a0a89cb3554a"
+      },
+      {
+        "name": ".dynsym",
+        "type": 11,
+        "flags": 2,
+        "address": 260,
+        "size": 112,
+        "alignment": 4,
+        "sha256": "d55470cbb038dfcecee683d95f3eac72a089af9dea6889321bfe389430e92db4"
+      },
+      {
+        "name": ".dynstr",
+        "type": 3,
+        "flags": 2,
+        "address": 372,
+        "size": 34,
+        "alignment": 1,
+        "sha256": "34cc7ef5f58386f0d5892d0a37fcd268e86f0eb72987a5888b0584bb03c8e53a"
+      },
+      {
+        "name": ".rela.dyn",
+        "type": 4,
+        "flags": 2,
+        "address": 408,
+        "size": 252,
+        "alignment": 4,
+        "sha256": "e417c4ce9c752bfdefc04f89b77d21b669154aa19455621e92d2597ac5ec2be1"
+      },
+      {
+        "name": ".rela.plt",
+        "type": 4,
+        "flags": 66,
+        "address": 660,
+        "size": 60,
+        "alignment": 4,
+        "sha256": "e276e60eefa95b8cd5fa8de6324a4a284a40804b7c458ba7183a3abcabbf0d0f"
+      },
+      {
+        "name": ".plt",
+        "type": 1,
+        "flags": 6,
+        "address": 720,
+        "size": 112,
+        "alignment": 16,
+        "sha256": "42918d12fff55e7e4c51f4dc6080d24ab7b6d798827e73dbfa11d0edc55272be"
+      },
+      {
+        "name": ".text",
+        "type": 1,
+        "flags": 6,
+        "address": 832,
+        "size": 19606,
+        "alignment": 2,
+        "sha256": "7f775eb9c8c688a2b596c229f9e216b67ac175dbba830b3b1a20d122977d1fce"
+      },
+      {
+        "name": ".rodata",
+        "type": 1,
+        "flags": 2,
+        "address": 20440,
+        "size": 83819,
+        "alignment": 4,
+        "sha256": "c794ead7c989efad1af45ac26e5ff6c647675af96fc4c14dd05b8adaf649a2a1"
+      },
+      {
+        "name": ".data.rel.ro",
+        "type": 1,
+        "flags": 3,
+        "address": 108356,
+        "size": 92,
+        "alignment": 4,
+        "sha256": "28d98323f406453cd2b4e5c69873427d16d6ccb6bb0908b3ae81dbce716c2697"
+      },
+      {
+        "name": ".dynamic",
+        "type": 6,
+        "flags": 3,
+        "address": 108448,
+        "size": 144,
+        "alignment": 4,
+        "sha256": "11ae0e17ba9287b3828c0766f7ce4b0315d7e3271fc53c95629c43d4555e8893"
+      },
+      {
+        "name": ".got",
+        "type": 1,
+        "flags": 3,
+        "address": 108592,
+        "size": 20,
+        "alignment": 4,
+        "sha256": "dce55ecf1811c0f18e883c32fb41cb11466569a39a8770040620b14c3a6a17ef"
+      },
+      {
+        "name": ".got.plt",
+        "type": 1,
+        "flags": 3,
+        "address": 108612,
+        "size": 28,
+        "alignment": 4,
+        "sha256": "3ad62a4e32977393b214337459aad9a5121aff24b7e13222bfba4299e12f68fb"
+      }
+    ],
+    "build_log": {
+      "path": "build-host/smoothness-packages/texas_holdem/package-build.log",
+      "sha256": "de8f9b836f3fa41628356f3cada4b718e827ed5e64456a2993eff541e928563e",
+      "bytes": 1002
+    },
+    "validation_log": {
+      "path": "build-host/smoothness-packages/texas_holdem/package-validation.log",
+      "sha256": "c0a6ad1e4caab2f9289df0da49b08c44957e3c51b66c8576c166f6d154239da5",
+      "bytes": 297
+    }
+  },
+  "raster_revision_captures": {
+    "build-host/smoothness-packages/texas_holdem/captures/texas_holdem-320-0.ppm": "f4456d4a4f66fe157b91f489cddff5373e913db9c0261e342fcd683df932a53e",
+    "build-host/smoothness-packages/texas_holdem/captures/texas_holdem-320-1.ppm": "5fa00560fafcba6a06e39c4ba885977c1661bcb1127fec478c74d5b6f2c2669d",
+    "build-host/smoothness-packages/texas_holdem/captures/texas_holdem-320-2.ppm": "d08e9e55d14c16aa39c3c029e7b2cee34a6c4810f420bf629b16d2375bb1adbc",
+    "build-host/smoothness-packages/texas_holdem/captures/texas_holdem-320-3.ppm": "00c3a14094e6dab0f54ed7b714be1e9da75e467027dd19345a4c5d030179dcba",
+    "build-host/smoothness-packages/texas_holdem/captures/texas_holdem-768-0.ppm": "b34b6fc1e72f35a809bff6103c1d13940f5f05f98c2099532556e783fddd22a7",
+    "build-host/smoothness-packages/texas_holdem/captures/texas_holdem-768-1.ppm": "03efb66258ea9259401393574472bd57ff0c1079b4f98d6f39cd89245044a6fc",
+    "build-host/smoothness-packages/texas_holdem/captures/texas_holdem-768-2.ppm": "f72a2e6299b279b93c380eee203b8f229d24b78ecfedcd5bf1817d57f3f2714a",
+    "build-host/smoothness-packages/texas_holdem/captures/texas_holdem-768-3.ppm": "d04e0a5c665638c6329d97388cf4aaa7f7ffb4d94462f1d8d5f0955640447b2d"
+  },
+  "raster_revision_scope": "Shared exact-output raster optimization only; local build/test/CPU validation. No new physical-device acceptance or installation performed by this pass.",
+  "pre_icon_source_sha256": "26d63155c5a49fae7168531be69b086ba165114c0833b20e93032c40552e2947",
+  "package_validation": {
+    "path": "build-host/hires-install-bundle/GAMES/TEXAS_HOLDEM.P4G",
+    "sha256": "18ddf5941d5a87c59f26a4f6762ee5466cb7a196e41b3ba779dbdba359295dd6",
+    "bytes": 115256,
+    "limit_bytes": 524288,
+    "icon_bytes": 9744,
+    "staged_manifest": {
+      "path": "build-host/hires-install-bundle/manifest.json",
+      "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee"
+    },
+    "staged_manifest_entry": "texas_holdem",
+    "allocated_code_and_data_unchanged_from_playtested_package": false,
+    "allocated_section_comparison": "historical comparison retained; expected shared raster performance changes and touch input/render changes",
+    "expected_shared_raster_performance_changes": true,
+    "shared_raster_pixel_equivalence_proof": {
+      "path": "build-host/crisp-package/raster-performance/proof.json",
+      "sha256": "49d0d633753d08c467f19c13588eea7f221dd9df26aa7b95493aed685f49bb1c"
+    },
+    "expected_touch_changes": true,
+    "expected_art_layout_animation_changes": false,
+    "changed_allocated_sections": [
+      ".data.rel.ro",
+      ".dynamic",
+      ".got",
+      ".got.plt",
+      ".plt",
+      ".rela.dyn",
+      ".rela.plt",
+      ".rodata",
+      ".text"
+    ],
+    "comparison_baseline": {
+      "path": "build-host/hires-gameplay-packages/TEXAS_HOLDEM.P4G",
+      "sha256": "da74d0f4b287f2f1bde1c6a8d4269ea64baa50e9857154ce24ba510f5020a686",
+      "scope": "pre-touch, pre-icon gameplay package"
+    }
+  },
+  "touch_validation": {
+    "scope": "Semantic direct-touch controls; focused results read from the final CTest log",
+    "benchmark_sources": {
+      "768": {
+        "path": "build-host/texas_holdem/touch-benchmark-768.json",
+        "sha256": "e662a12cd11ed023bf09fb0173eaed61289909278feb084d92e096993bb11902"
+      },
+      "320": {
+        "path": "build-host/texas_holdem/touch-benchmark-320.json",
+        "sha256": "c3e492f5bf1a77a2ea2258f38a06777de48044c8ffca841d372e2029527e06ea"
+      }
+    }
+  },
+  "pre_touch_performance": {
+    "revision_scope": "shared raster optimization; current source benchmark",
+    "scope": "Optimized development-Mac CPU update/render/audio; excludes SDL presentation, physical device, transport and I/O.",
+    "frames_per_resolution": 2000,
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "input_tape": "build-host/crisp-package/card-performance/texas_holdem.txt",
+    "input_sha256": "3fe4f5aa61c9e6f4fe14df9a79df5a871e7e0db741b32df57305840aa17ca936",
+    "benchmark_binary": "build-host/play-texas_holdem/p4_game_benchmark",
+    "benchmark_binary_sha256": "c231b80b144d377436c3e0e695c7bcd234643e4b0cc2ac80c7301e9897b7512e",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.texas-holdem",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 40,
+        "last_frame_hash": "d4eca279",
+        "update_audio_ms": {
+          "mean": 0.001,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.019,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0809,
+          "p50": 0.075,
+          "p95": 0.131,
+          "p99": 0.152,
+          "max": 0.318,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0819,
+          "p50": 0.076,
+          "p95": 0.133,
+          "p99": 0.155,
+          "max": 0.321,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.texas-holdem",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 39,
+        "last_frame_hash": "8ca406d0",
+        "update_audio_ms": {
+          "mean": 0.0008,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.005,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0141,
+          "p50": 0.014,
+          "p95": 0.016,
+          "p99": 0.017,
+          "max": 0.039,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.015,
+          "p50": 0.015,
+          "p95": 0.017,
+          "p99": 0.018,
+          "max": 0.04,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "measurement_files": {
+      "768": {
+        "path": "build-host/smoothness-packages/texas_holdem/benchmark-768.json",
+        "sha256": "e662a12cd11ed023bf09fb0173eaed61289909278feb084d92e096993bb11902",
+        "bytes": 526
+      },
+      "320": {
+        "path": "build-host/smoothness-packages/texas_holdem/benchmark-320.json",
+        "sha256": "c3e492f5bf1a77a2ea2258f38a06777de48044c8ffca841d372e2029527e06ea",
+        "bytes": 526
+      }
+    },
+    "motion_coverage": "Existing CPU-hand keyboard trace; sparse state changes between scheduled decisions.",
+    "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+    "hardware_fps_verified": false,
+    "pre_touch_baseline_only": false
+  },
+  "current_package_installed_on_device": true,
+  "current_package_installed_units": [
+    "Tab5 A",
+    "Tab5 B"
+  ],
+  "latest_successful_installation_by_unit": {
+    "Tab5 A": {
+      "slug": "texas_holdem",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "18ddf5941d5a87c59f26a4f6762ee5466cb7a196e41b3ba779dbdba359295dd6",
+      "package_bytes": 115256,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    },
+    "Tab5 B": {
+      "slug": "texas_holdem",
+      "title": "Texas Hold'em",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "18ddf5941d5a87c59f26a4f6762ee5466cb7a196e41b3ba779dbdba359295dd6",
+      "package_bytes": 115256,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "TEXAS_HOLDEM.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=TEXAS_HOLDEM.P4G bytes=115256 sha256=18ddf5941d5a87c59f26a4f6762ee5466cb7a196e41b3ba779dbdba359295dd6 seconds=2.1",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "texas_holdem"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    }
+  },
+  "installation_history": [
+    {
+      "slug": "texas_holdem",
+      "title": "Texas Hold'em",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "usb_serial_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "af9d0457c26e9d9c8012b3c6a228d378f953cfbb536afcbd9ee0ae4ac22131d5",
+      "package_bytes": 115172,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T00:30:06.294159+00:00",
+      "verification": {
+        "method": "Native USB transfer: device SHA-256, atomic activation and readback; existing identical files verified by device hash",
+        "log": "build-host/hires-tab5-qualification/A-ready-table-install-retry.log",
+        "log_sha256": "910c61277893523ce5b067b1c8baa5430da58f18ea7f38c0b1e973c1348dcc2d",
+        "bundle_result": "BUNDLE_PASS files=7"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    {
+      "slug": "texas_holdem",
+      "title": "Texas Hold'em",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "usb_serial_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "af9d0457c26e9d9c8012b3c6a228d378f953cfbb536afcbd9ee0ae4ac22131d5",
+      "package_bytes": 115172,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T00:31:58.157929+00:00",
+      "verification": {
+        "method": "Native USB transfer: device SHA-256, atomic activation and readback; existing identical files verified by device hash",
+        "log": "build-host/hires-tab5-qualification/B-ready-table-install-retry.log",
+        "log_sha256": "c4ea3bb6a76879a2afffe7cb9ea43e6e3caa57bbb890c23be397b8f9d204cab2",
+        "bundle_result": "BUNDLE_PASS files=7"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    {
+      "slug": "texas_holdem",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "18ddf5941d5a87c59f26a4f6762ee5466cb7a196e41b3ba779dbdba359295dd6",
+      "package_bytes": 115256,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    },
+    {
+      "slug": "texas_holdem",
+      "title": "Texas Hold'em",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "18ddf5941d5a87c59f26a4f6762ee5466cb7a196e41b3ba779dbdba359295dd6",
+      "package_bytes": 115256,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "TEXAS_HOLDEM.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=TEXAS_HOLDEM.P4G bytes=115256 sha256=18ddf5941d5a87c59f26a4f6762ee5466cb7a196e41b3ba779dbdba359295dd6 seconds=2.1",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "texas_holdem"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    }
+  ],
+  "installation_limitation": "Records identify successful transfers of specific packages to specific units; they do not establish hardware gameplay or frame-rate acceptance."
+}

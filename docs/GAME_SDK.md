@@ -1,10 +1,30 @@
 # P4 Game SDK v1
 
 P4 Game SDK v1 is the stable C interface for storage-installed Console OS
-games. A game owns bounded gameplay state and normally draws a 320x200 RGB565
-frame. Detail-heavy games may negotiate the additive 768x480 high-resolution
-mode. Console OS owns the panel, touch, audio, timing, USB, filesystem, and
+games. New and visually upgraded games draw native 768x480 RGB565 frames,
+negotiated through the existing optional high-resolution capability, with a
+tested 320x200 fallback. A game owns bounded gameplay state. Console OS owns the panel, touch, audio, timing, USB, filesystem, and
 app lifecycle.
+
+## Supported authoring path
+
+Create games in native C and package them as `.P4G`. Game designs are free-form:
+a custom 2D engine, software 3D rasterizer or raycaster can render directly into
+the supplied RGB565 surface. The shared drawing, text and animation helpers are
+optional building blocks, not a required engine. Preserve the negotiated
+resolution/stride, complete-frame lifecycle, normalized input and bounded
+memory/resource contracts; raw hardware and display ownership remain in the OS.
+Use [the performance contract](GAME_PERFORMANCE.md) for active-play evidence.
+Neither a language nor a rendering style proves the actual-device frame rate.
+
+The current manifest, packager and host runner support C sources. A C++ port
+requires an explicitly implemented and tested C-ABI/toolchain adapter, including
+runtime/import and resource bounds; C++/STL package support is not established.
+Do not silently substitute a script format for a native game.
+
+The old Lua game-creation stack is removed, including its runtime, games,
+tools and authoring skill. The repository provides native game creation only.
+A source change alone does not establish what an older installed OS loads.
 
 ## Package format
 
@@ -42,17 +62,35 @@ cartridge can still execute CPU instructions, so install only packages you
 trust. This format is not UF2; UF2 is a flashing container, while `.P4G` is a
 Console OS runtime package.
 
-The earlier `.P4CART` format remains supported as a distinct open-source
-container under `P4/GAMES/*.P4CART`. Console OS bounds and hashes those
-`P4CART1` Lua-source packages, shows valid entries in the launcher, revalidates
-their source before every launch, and executes them with the bounded
-`p4-lua-5.4-v1` sandbox. They must never be renamed to `.P4G`; native machine
-code and source cartridges remain separate execution paths. See
-`docs/CONTENT_LIBRARY.md`.
-
 Doom remains a special legacy case. Its engine is linked into the OS, but its
 WAD is read from `P4 GAMES`; it uses an exclusive one-way handoff until the
 engine has a reviewed reentrant teardown.
+
+## Protected game payloads
+
+Red Dragon (`org.p4console.lord`, `LORD.P4G`) is bound to an exact payload
+SHA-256 in the running OS. The build generates
+`generated/protected-games/p4_protected_game_lineage.h` from its paired
+cartridge. Package/ELF validation and matching game ID/version do not establish
+that this additional launch, save and multiplayer check will pass.
+
+Before installing this protected cartridge, compare its payload digest with
+the frozen lineage header or equivalent evidence for the **installed OS**.
+Use the exact paired cartridge when repairing a mismatch. Preserve the game ID
+and save namespace; do not disable the guard, add an unreviewed digest or rename
+the game to bypass it. A payload change requires a reviewed paired OS/cartridge
+release. Unprotected games retain their normal game-only update workflow.
+
+For a metadata-only recategorization, preserve the complete approved ELF
+payload. Recompiling from otherwise unchanged game sources can incorporate
+new shared helpers and change the payload. A same-source comparison with a
+second fresh build does not prove compatibility with the installed OS.
+
+A firmware-only build still generates this protected cartridge for its
+allowlist. An OS upgrade must account for the paired cartridge even when other
+game files are intentionally left alone. Record the OS image, paired payload
+and device transfer/registration evidence; retain a pending result if they do
+not match. A successful upload alone does not prove protected-game acceptance.
 
 ## Make and install a game
 
@@ -132,9 +170,9 @@ python3 scripts/p4-transfer.py push /absolute/path/STAR_HOP.P4G \
 
 Tab5 uses the same verified protocol through native USB-C Serial/JTAG; select
 its `/dev/cu.usbmodem...` port explicitly. `push --class p4r` installs a validated
-resource sidecar and `push --class p4cart` installs a validated Lua cartridge.
-`push-bundle apps/console_os/build-tab5/sd-card --port <port>` installs all three
-formats over one connection, with sidecars before native cartridges. The device
+resource sidecar.
+`push-bundle apps/console_os/build-tab5/sd-card --port <port>` installs the native
+bundle over one connection, with sidecars before cartridges. The device
 keeps exclusive SD ownership and reuses each format's validator before and after
 atomic activation. The `exchange` class remains confined to `/TRANSFER`.
 
@@ -148,9 +186,7 @@ is already present without overwriting it. Use H2 USB Drive mode only when a
 mounted FAT volume or complete bundle workflow is actually needed.
 
 Executable `.P4G` packages are never linked into the OTA application. The
-launcher and loader support storage-backed native entries. The separate
-P4CART launcher executes source games through its Lua sandbox and never sends
-them to the native ELF loader.
+launcher and loader support storage-backed native entries.
 
 Packaging fails if a cartridge imports a symbol outside the frozen runtime
 allowlist (`calloc`, `free`, `memcmp`, `memcpy`, `memset`, and `strcmp`). This
@@ -178,7 +214,8 @@ letting an unloadable game reach the SD card.
 
 Use optional `video-highres` for a dual-resolution game, or place it in
 `required_capabilities` only when the game cannot render at 320x200. The
-creator's `--high-res` flag generates the portable optional form.
+creator generates the portable optional form by default; `--high-res` remains
+a compatible explicit option and `--low-res` is a legacy opt-out.
 
 Use `scripts/new-game.py --dry-run` to inspect a starter plan. The creator
 never overwrites an existing game.
@@ -198,6 +235,8 @@ Include only headers under `components/p4_game_api/include/p4/`:
   on-screen controls;
 - `p4/draw.h`: clipped pixels, shapes, text, shared CP437 glyphs, and RGB565
   sprites;
+- `p4/presentation.h`: cartridge-local antialiased text, measured text widths,
+  rounded rectangles and scaled RGB565 sprites; see [Game art](GAME_ART.md);
 - `p4/visual.h`: fixed-point motion, atlas frames, animation timing, easing,
   camera shake, and caller-owned particles;
 - `p4/audio.h`: the host-owned eight-voice tone and copied-PCM mixer;
@@ -213,10 +252,18 @@ not issue catch-up bursts after a slow frame. Return
 `render` receives the caller-owned surface; supplied drawing primitives clip
 to its bounds.
 
+The native cartridge entry is
+[`components/p4_game_api/runtime/cartridge_main.c`](../components/p4_game_api/runtime/cartridge_main.c).
+OS frame scheduling lives in
+[`components/p4_frame_scheduler`](../components/p4_frame_scheduler), with
+`p4/frame_scheduler.h`; games keep using the supplied lifecycle callbacks
+rather than owning a private frame loop.
+
 ## High-resolution video mode
 
-The default contract remains `P4_GAME_SURFACE_WIDTH` ×
-`P4_GAME_SURFACE_HEIGHT` (320×200). A game that declares the
+The ABI's fallback and input contract remains `P4_GAME_SURFACE_WIDTH` ×
+`P4_GAME_SURFACE_HEIGHT` (320×200). New game authoring defaults to native
+768×480; see [the presentation standard](GAME_ART.md). A game that declares the
 `video-highres` manifest capability and
 `P4_GAME_CAP_VIDEO_HIGH_RES` descriptor capability may receive
 `P4_GAME_SURFACE_HIGH_RES_WIDTH` × `P4_GAME_SURFACE_HIGH_RES_HEIGHT`
@@ -226,8 +273,9 @@ render; do not infer the selected mode from the board.
 Declaring high resolution as optional is the preferred portable form. Console
 OS selects 768×480 when the target supports it and otherwise starts the game
 with 320×200. Declaring it as required makes launch fail cleanly on a target
-without that surface. The Waveshare 4.3 Console OS and SDL3 host runner support
-the high-resolution surface now.
+without that surface. The Tab5 and Waveshare 4.3 Console OS paths and the SDL3
+host runner support the high-resolution surface now. Other targets retain the
+fallback until their platform implementation supports negotiation.
 
 Input deliberately does not change modes. `p4_game_input_t` touch points and
 the standard control hit regions always use canonical 320×200 coordinates.
@@ -366,12 +414,14 @@ and respectively 10/30/60 Hz; lockstep defaults to a two-tick input delay.
 Unknown fields and impossible combinations fail the build instead of being
 silently ignored.
 
-The current Console OS transport adapters host two active players; a profile
-whose minimum is greater than two remains valid package metadata but is not
-offered by this OS version. A future four-player adapter can consume the same
-package without changing the game ABI. Never put `ble`, `uart`, `usb`, an
-address, or credentials in this object—the player chooses an available link
-and the OS preserves the same game contract on every transport.
+The Tab5 0.53 candidate extends the native-game Local Wi-Fi adapter to four
+active players without changing the game ABI. Bluetooth and the USB serial
+relay retain their two-player limit. The OS admits each guest, assigns its
+slot, and waits for the complete roster before launching. Shared-component
+and multi-instance game tests pass; physical four-console acceptance remains
+pending. See `docs/MULTIPLAYER.md` for exact-version evidence. Never put `ble`,
+`uart`, `usb`, an address, or credentials in this object—the player chooses an
+available link and the OS preserves the same game contract on every transport.
 
 At runtime, `p4_game_multiplayer_read_profile()` copies the immutable profile.
 The API enforces its per-message budget on both send and receive. Console OS
@@ -431,8 +481,8 @@ cartridge code runs.
 
 Games inherit a stable logical console rather than a board definition:
 
-- Every `.P4G` targets a clipped RGB565 Game API surface: portable 320x200 by
-  default, or negotiated 768x480 when it declares `video-highres`. On
+- Every `.P4G` targets a clipped RGB565 Game API surface: new games request
+  native 768x480 with `video-highres` and retain a 320x200 fallback. On
   Waveshare 4.3, the OS viewport is always 768x480 landscape. A game must not
   infer scanout rotation, pin maps, stride layout, or backlight behavior.
 - Input is a complete normalized snapshot. Use only the Game API buttons,
@@ -541,8 +591,9 @@ Use this workflow:
 
 1. Ask ImageGen for one crop-safe animation atlas: state the exact frame grid,
    cell size, every animation row, a shared baseline, transparent background,
-   limited palette, hard pixel edges, and no text, borders, shadows, or scenery
-   outside a frame.
+   coherent palette and no text or cell borders. Choose native-detail painted
+   or pixel art according to the game; see [Game art](GAME_ART.md) for materials
+   and exact typography. Keep shadows and scenery inside their intended cell.
 2. Inspect every frame before committing. Regenerate it when a frame bleeds
    into another cell, loses the shared baseline, has opaque background pixels,
    or cannot be cropped independently.
@@ -551,7 +602,8 @@ Use this workflow:
    purpose, grid, license/provenance, and source filename in the owning README;
    keep source-only art out of runtime dependencies.
 4. Commit a deterministic converter beside the owning game or shared component
-   that produces a bounded RGB565 include. Use nearest-neighbor conversion and
+   that produces a bounded RGB565 include. Record a nearest-neighbor filter
+   for pixel art or a quality offline filter for painted materials, and use
    one explicit transparent chroma key. Runtime code must never decode PNGs or
    allocate an image loader.
 5. Test regeneration: the converter output must exactly match the committed
@@ -615,3 +667,51 @@ Acknowledgements also apply to an unchanged mask after a quick keep/undo.
 The old dice callback remains null on a v2 host to avoid interpreting old
 structure padding as new fields. New games on old consoles retain manual
 controls through optional-capability negotiation.
+
+
+## Cartridge launcher artwork
+
+Console OS 0.45 retains the 0.44 nextgen interface and reads optional native
+cartridge artwork from an ELF `.p4icon` section. Existing `.P4G` API/version 1
+headers and executable ABI remain unchanged. Titles/subtitles still come from
+the validated package header. No title lookup or OS rebuild is needed for a
+new icon. Missing/invalid artwork keeps the existing tile fallback.
+
+Set `"launcher_icon": "assets/launcher.p4i"` in `game.json`. Generate the file
+from finished art with `python3 scripts/pack-game-icon.py <source.png> --output
+<game>/assets/launcher.p4i` (Pillow is an authoring dependency only). The pinned
+RISC-V objcopy packs it as a **non-allocated, read-only** ELF section after
+stripping. The ordinary cartridge payload SHA-256 covers the icon as well as
+the executable. The complete `.P4G` must still fit 512 KiB. A changed `.p4i`
+invalidates the cartridge build dependency; it does not change the firmware.
+
+The section is exactly 9,744 bytes: magic `P4ICON1` plus NUL (8 bytes), width
+128 and height 72 as little-endian uint16, format 1 as little-endian uint32,
+256 little-endian RGB565 palette entries, then 9,216 row-major palette indices.
+All pixels are opaque. The catalog validates and copies this bounded data
+without executing the game or giving it display/storage handles. Unsupported
+geometry, duplicate sections, allocated sections and invalid ELF ranges cannot
+become image pointers. Titles and art refresh through the normal post-transfer
+catalog rescan. Old cartridges remain usable.
+
+## Six-axis motion snapshots (Tab5 0.50 candidate)
+
+Optional `motion` / `P4_GAME_CAP_MOTION` exposes `p4_game_read_motion()`.
+The OS copies the latest sample; no sensor or bus read occurs on the cartridge
+thread. `p4_game_motion_t` contains a nonzero sequence, sample age, validity,
+three physical-axis acceleration values in mg and three rotation rates in
+millidegrees per second. Bounds are +/-4000 mg and +/-2000000 mdps. The API
+returns false and zeroes output for unavailable, invalid, out-of-range, or older
+than 150 ms samples. Games calibrate a neutral pose and provide ordinary
+normalized touch/controller fallback. No automatic screen rotation is implied.
+
+The API v1 cartridge host table appends `read_motion`; `struct_bytes` gates all
+access, and a missing callback removes the capability. Old cartridges retain
+their ABI. Older firmware's strict package validator will reject a new cartridge
+that declares the unknown bit, even when optional, so install a motion-aware OS
+before this cartridge. The Tab5 adapter preserves physical axes and uses an
+independent IMU timestamp, so a clock or battery update cannot freshen old motion.
+Its existing background sampler targets a 20 ms cadence, with battery/RTC reads
+and retry/log work kept at their slower cadence. Device latency/axis acceptance
+must be measured separately from host tests. See Tide Maze for calibrated
+six-axis input and a sensor-free fallback example.

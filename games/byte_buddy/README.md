@@ -6,6 +6,26 @@ kind of care it receives. PixelLab and ImageGen source sheets supply the dragon
 art; code adds eased motion, palette customization, particles, reactions,
 touch UI, growth, levels, battle stats, and the coin economy.
 
+Version 5.0 adds native 768×480 presentation through the existing optional
+`video-highres` capability, with the original 320×200 fallback. An original
+ImageGen Signal City panorama, softer panel colors, measured Arimo labels,
+rounded touch controls and a matching dragon launcher cover refresh the
+presentation. The renderer draws directly into the negotiated surface and
+uses fractional motion for the native dragon and falling rewards. The 672
+authored dragon/action frames remain unchanged.
+
+The remix preserves game identity, progression, prices, rewards, touch regions,
+controller mappings and the schema-1 ordinary-progress save. Signal lineage
+and Sparks remain session-only. Start still opens Play/Scan or guards in battle;
+it has not been reassigned to a pause menu.
+
+Launch artwork and exact prompts are in `assets/launch-v5/provenance.json`.
+Rebuild the indexed city and launcher icon offline with
+`python3 games/byte_buddy/tools/pack_launch_art.py` and Pillow 12.3.0. The city
+uses 206,848 static bytes including its normal/dim RGB565 palettes and needs
+no runtime decode buffer. The source PNGs are not shipped in the cartridge.
+The existing 512 KiB package ceiling and 1,024-byte stack-frame gate remain.
+
 Version 3 adds Signal City, a privacy-bounded Wi-Fi-inspired hunt, and local
 fantasy signal battles. Version 3.1 raises the runtime dragon art to 64×64,
 adds authored hatch and signal-genetic atlases, and blends adjacent poses at
@@ -438,11 +458,11 @@ large touch targets, minimal chrome, dark indigo/cyan/gold/emerald color
 language, and no arrows or controller glyphs. ImageGen returned larger master
 images, which are preserved rather than destructively resized.
 
-Byte Buddy remains on the stable 320×200 Game API v1 surface. On Waveshare
-4.3, Console OS maps that surface to its exact-aspect 768×480 viewport. A
-Byte-Buddy-only native framebuffer would require a new shared render/input
-contract. Version 3.1 and later instead preserve more art detail with 64×64 sprites,
-while Console OS keeps the compatible stable surface and touch mapping.
+These older concepts targeted the original 320×200 Game API v1 surface.
+Version 5.0 uses the established optional 768×480 contract while preserving
+the 320×200 fallback and canonical touch mapping. The 64×64 authored sprites
+are sampled directly into the selected framebuffer alongside native-size
+city artwork and antialiased labels.
 
 ## Generated source art
 
@@ -1351,3 +1371,38 @@ spendable wallet, upgrades, Style, and general achievements follow the durable
 policy above. Signal state and Sparks remain session-only; without save support,
 ordinary progress is session-only too. The game owns no display, touch, audio,
 radio, or storage hardware directly.
+
+## Launcher presentation
+
+The cartridge owns its title and `assets/launch-v5/launcher.p4i` dragon icon.
+Source artwork, exact prompts and conversion details live beside that icon.
+Reproduce it with `python3 games/byte_buddy/tools/pack_launch_art.py`.
+Older launcher sources remain historical inputs and are not selected by v5.
+
+## Version 5 local qualification
+
+Focused tests include save/rule regressions, pinned authored-motion checks,
+and native/fallback previews. Native previews check 768×480 rendering with
+padded stride, guard words and unchanged gameplay state across render calls.
+The generic SDL runner links these actual game sources and exercises the
+normalized keyboard/touch contract with sanitizers enabled.
+
+`tools/measure_launch.c` is an optimized CPU evidence harness, separate from
+interactive SDL play. It runs the actual resource-backed game, valid saved
+progress and tone/PCM mixer through 2,000 frames using `tools/launch-input.txt`:
+sustained Star Catcher drags, reversals, signal entry and repeated combat.
+It reports update/audio, render and combined percentiles plus changed frames;
+it does not measure display submission or ESP32-P4 cadence.
+
+Exact artifact hashes, test results and remaining acceptance are recorded in
+`hardware/test-runs/2026-10-05-byte-buddy-launch-v5-host.json`. The Tab5 install,
+launcher integration, touch/speaker behavior and actual-device 30 FPS release
+floor remain pending; local CPU timings cannot qualify those requirements.
+
+The final local candidate passes 9 focused and 5 SDL tests. Codex exercised
+native care and Star Catcher, found and corrected a Genome preview overlap,
+then verified the corrected screen and B return in the real SDL runner.
+Short synthetic mouse inputs did not consistently demonstrate sustained edge
+steering; the active CPU trace covers that path automatically, and direct
+human touch/controller and acoustic acceptance remain pending. The final
+449,768-byte cartridge reproduces exactly in two builds.

@@ -60,7 +60,7 @@ static p4_game_package_result_t validate_data(
 
 static p4_game_package_result_t validate_file(
     const char *name, bool in_games_directory,
-    p4_game_package_info_t *out_info)
+    platform_game_catalog_entry_t *entry)
 {
     uint8_t *data = NULL;
     size_t size_bytes = 0U;
@@ -74,7 +74,11 @@ static p4_game_package_result_t validate_file(
             ? P4_GAME_PACKAGE_BAD_SIZE : P4_GAME_PACKAGE_BAD_LAYOUT;
     }
     const p4_game_package_result_t result =
-        validate_data(data, size_bytes, out_info);
+        validate_data(data, size_bytes, &entry->package);
+    if (result == P4_GAME_PACKAGE_VALID) {
+        entry->icon_valid = p4_game_package_read_icon(
+            data + entry->package.payload_offset, entry->package.payload_bytes, &entry->icon);
+    }
     platform_game_storage_release_file(data);
     return result;
 }
@@ -125,7 +129,7 @@ static void scan_listing(
         entry->file_bytes = file->size_bytes;
         entry->in_games_directory = in_games_directory;
         entry->validation = validate_file(
-            file->name, in_games_directory, &entry->package);
+            file->name, in_games_directory, entry);
         entry->valid = entry->validation == P4_GAME_PACKAGE_VALID;
         invalidate_duplicates(catalog, catalog->entry_count);
         ++catalog->entry_count;

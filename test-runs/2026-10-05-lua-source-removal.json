@@ -1,0 +1,975 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-10-06T05:22:45.341091+00:00",
+  "request": "Remove the old Lua game-creation stack; retain native Maze Chase, Byte Buddy and Red Dragon.",
+  "status": "source-removed-host-and-tab5-build-tested",
+  "changes": [
+    "Physically removed game-platform Lua engine, old APIs, examples, packers, QR tools and generated caches.",
+    "Removed Lua vendor source/scripts, script renderer/audio, Lua-only content parser, and retired skill including its archive.",
+    "Preserved the native cartridge entry byte-for-byte under p4_game_api/runtime and extracted clock scheduling into p4_frame_scheduler.",
+    "Retained native USB/WAD transfer bounds and test SHA-256 independently of the removed parser.",
+    "Removed host pack/inspect implementations. Compatibility commands only reject old formats without mutation.",
+    "Updated active skills/docs and added guards against retired components, symbols and source trees."
+  ],
+  "native_games": [
+    {
+      "slug": "av_test",
+      "id": "org.p4console.av-test",
+      "version": "1.0.2",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/av_test/game.json",
+        "bytes": 641,
+        "sha256": "51ef18262705738d08787d0fa8337534a31d50fc2642b1e8d7c134fc1d5c0736"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/AVTEST.P4G",
+        "bytes": 51912,
+        "sha256": "4810d7d94f4c6d6192bebd14dcdff922297b4036b08d69d2c813b74e3b045efe"
+      },
+      "sources": [
+        {
+          "path": "games/av_test/src/av_test.c",
+          "bytes": 7194,
+          "sha256": "576d03f7e2a8468f98463287a82d029d585032931f4db2307c8b3a71f2d3281a"
+        }
+      ]
+    },
+    {
+      "slug": "blast_circuit",
+      "id": "org.p4console.blast-circuit",
+      "version": "0.2.7",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/blast_circuit/game.json",
+        "bytes": 1154,
+        "sha256": "5f67e99139cadbf8930271b383c3f9ba20c2359da6b3ca1d8cf50a2e0834a3ae"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/BLAST_CIRCUIT.P4G",
+        "bytes": 462532,
+        "sha256": "611536b5eb78bdb19d48130cd4dd5a0d6101c7ed8491f41b63bb70f5b91f135c"
+      },
+      "sources": [
+        {
+          "path": "games/blast_circuit/src/blast_circuit.c",
+          "bytes": 7270,
+          "sha256": "86bf83450ab3f55640883194d0c5aed172cd9c5bfc9bcaaf6cda96a0de041c71"
+        },
+        {
+          "path": "games/blast_circuit/src/blast_circuit_audio.c",
+          "bytes": 10048,
+          "sha256": "0c79a449082e7efc9d2f8d57ffd6951b87035a6bd13ad28e88e7e224d158d5d5"
+        },
+        {
+          "path": "games/blast_circuit/src/blast_circuit_logic.c",
+          "bytes": 10866,
+          "sha256": "30f4ff321432c61bb1bc1d76078d27680bfaffff7ba0e5ca059e49a2b6a1ec27"
+        },
+        {
+          "path": "games/blast_circuit/src/blast_circuit_network.c",
+          "bytes": 14634,
+          "sha256": "fe4770ac9eddfcd6560359185fa640bc9d39177b54a4bc30bf48b4be8e48264d"
+        },
+        {
+          "path": "games/blast_circuit/src/blast_circuit_render.c",
+          "bytes": 24433,
+          "sha256": "61f6f383d833d7f39b847216391be5d642c5eedf2cd8d666930cda88136ea5f3"
+        },
+        {
+          "path": "games/blast_circuit/src/blast_circuit_levels.c",
+          "bytes": 16696,
+          "sha256": "52e1036c83fb58ea4ad51ad0e825a65465c6b22d56fc2d87e7740ee3f71702b7"
+        }
+      ]
+    },
+    {
+      "slug": "byte_buddy",
+      "id": "org.p4console.byte-buddy",
+      "version": "4.3.3",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/byte_buddy/game.json",
+        "bytes": 947,
+        "sha256": "286674da8e638f3f8e0984d566e45e6ebb7ce323c9881258254b13787b9f5f19"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/BYTEBUD.P4G",
+        "bytes": 207016,
+        "sha256": "5d744681b6ea8791e3617a0aeda9277c02f375685bf189b5110a411bb1eabe67"
+      },
+      "sources": [
+        {
+          "path": "games/byte_buddy/src/byte_buddy.c",
+          "bytes": 315258,
+          "sha256": "1e40625c9601a5fca4cd768b280627882b85bc21706021550495ba8beb866d2d"
+        },
+        {
+          "path": "games/byte_buddy/src/byte_buddy_save.c",
+          "bytes": 5535,
+          "sha256": "b03be258c2b08953ae4c60f957c32d01bcccbeb51249ac99a4a186f15284f680"
+        }
+      ]
+    },
+    {
+      "slug": "calculator",
+      "id": "org.p4console.calculator",
+      "version": "1.0.2",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/calculator/game.json",
+        "bytes": 634,
+        "sha256": "f8f634992ca93a51a528235eea8a72b16e17e87018c057e0abc6eeffe6e338f9"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/CALC.P4G",
+        "bytes": 53088,
+        "sha256": "d6b714a12b5ec4d703cf7aad874712636bf7d0c6515484028dc74652defabf6b"
+      },
+      "sources": [
+        {
+          "path": "games/calculator/src/calculator.c",
+          "bytes": 12741,
+          "sha256": "a1331c734a51d2097a72b0480150f11c324457cb3a9f1f962a163ce20cc661b6"
+        }
+      ]
+    },
+    {
+      "slug": "checkers",
+      "id": "org.p4console.checkers",
+      "version": "1.1.0",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/checkers/game.json",
+        "bytes": 930,
+        "sha256": "93dca96df82bdb38dacf2bb1fc912f747dbaa52b868ba26647574def94ede9e5"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/CHECKERS.P4G",
+        "bytes": 94824,
+        "sha256": "26bc5730658df11334c2672231a56c21b7a83388aadde02bfb11da5f51cbc5e4"
+      },
+      "sources": [
+        {
+          "path": "games/checkers/src/checkers.c",
+          "bytes": 19599,
+          "sha256": "e7eee5c716d0d869f5d74f6ed8dde4422e03d4b15ff1603c0ef007b2a48a0d8b"
+        },
+        {
+          "path": "games/checkers/src/checkers_logic.c",
+          "bytes": 11198,
+          "sha256": "940b83d076d5ede55b80c12f20e1bcbb8181aedce418b22453a127859f5cddb0"
+        },
+        {
+          "path": "games/checkers/src/checkers_network.c",
+          "bytes": 16784,
+          "sha256": "fab7025e9df2841a50d2a981ffd69ea6cbcb6ee4f6874468cac2e73a467ea9b6"
+        }
+      ]
+    },
+    {
+      "slug": "color_clash",
+      "id": "org.p4console.color-clash",
+      "version": "1.8.1",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/color_clash/game.json",
+        "bytes": 1014,
+        "sha256": "27929ec1b334408b60c235d52b6ccad249a0d5ef865dea2397a590f7d3c78192"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/COLOR_CLASH.P4G",
+        "bytes": 437412,
+        "sha256": "e0fe5b003452fa1c0d01a465506e943fd2bc1924f020461e9f0bf295caef3b18"
+      },
+      "sources": [
+        {
+          "path": "games/color_clash/src/color_clash.c",
+          "bytes": 60308,
+          "sha256": "8a2587617ad71d0d0c506f4b244ae6499308eb4768d8007371db4e4386e4c645"
+        },
+        {
+          "path": "games/color_clash/src/color_clash_logic.c",
+          "bytes": 24794,
+          "sha256": "c08f416b8cd002f5a66696732550d24b17a895684f0290d544bd35b9487683f3"
+        },
+        {
+          "path": "games/color_clash/src/color_clash_network.c",
+          "bytes": 20081,
+          "sha256": "ba33d0971247a23cdb13a3295117ccbf5cc09d45f9db5cc45cad8ce81459e9db"
+        }
+      ]
+    },
+    {
+      "slug": "frog_hop",
+      "id": "org.p4console.frog-hop",
+      "version": "1.1.0",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/frog_hop/game.json",
+        "bytes": 714,
+        "sha256": "11ca21aa48948641a0b1ab944a7642b10ee3f88237d6d64549cd5600e06ae3db"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/FROGHOP.P4G",
+        "bytes": 487396,
+        "sha256": "a41c88bcd50311075a8cae6d1a6fd98e959f52b79a8511b6ade903ce891547ee"
+      },
+      "sources": [
+        {
+          "path": "games/frog_hop/src/frog_hop.c",
+          "bytes": 26538,
+          "sha256": "a78c8c3a98303d7a941e649f9938f41713beae28ac1f9ae53653f23d1ceac124"
+        }
+      ]
+    },
+    {
+      "slug": "input_test",
+      "id": "org.p4console.input-test",
+      "version": "1.0.2",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/input_test/game.json",
+        "bytes": 622,
+        "sha256": "6be7a641778ff56c548eb2ad6fc7607076907b59e5d1e63523564b1ef2da23fa"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/INPUT.P4G",
+        "bytes": 51976,
+        "sha256": "6e6b4e11015b6fb55615cf279e74d2858a7c49dc2f2784aba349d1600c681965"
+      },
+      "sources": [
+        {
+          "path": "games/input_test/src/input_test.c",
+          "bytes": 6286,
+          "sha256": "be2368db3f6f36ed2ba510bed8d85dedf6a47d8cb921506362d8bb0c4447ac42"
+        }
+      ]
+    },
+    {
+      "slug": "lord",
+      "id": "org.p4console.lord",
+      "version": "1.8.3",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/lord/game.json",
+        "bytes": 890,
+        "sha256": "188cdb5adcf81644ef972fe0df262f6a4bfc6cf82952a7d71ce5a9538390b9ce"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/LORD.P4G",
+        "bytes": 221804,
+        "sha256": "a39820c4a365b3cfd1a8d97e56c61595d57b1805900df9e925bb20593a184f58"
+      },
+      "sources": [
+        {
+          "path": "games/lord/src/lord.c",
+          "bytes": 148344,
+          "sha256": "8a4383437b8afb6004c1b53d2939b68bee3069f6d23386b2cfbe9425c2132392"
+        }
+      ]
+    },
+    {
+      "slug": "maze_chase",
+      "id": "org.p4console.maze-chase",
+      "version": "1.1.1",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/maze_chase/game.json",
+        "bytes": 725,
+        "sha256": "19c18ce40c3cb660705e353b761b9ca86e46868e04b1c1dfd7de58907be91b95"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/MAZE.P4G",
+        "bytes": 370576,
+        "sha256": "c45a9f15a3a4545a4a84b085ce08ca7d67e8de4041a2597c12459ff35142d4b7"
+      },
+      "sources": [
+        {
+          "path": "games/maze_chase/src/maze_chase.c",
+          "bytes": 35587,
+          "sha256": "42370ddc0e82629fcb3d64b33faf8099332de104f59741cc2099f5f3137e8338"
+        }
+      ]
+    },
+    {
+      "slug": "p4_air_hockey",
+      "id": "org.p4console.p4-air-hockey",
+      "version": "1.1.0",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/p4_air_hockey/game.json",
+        "bytes": 992,
+        "sha256": "fc2975715f2a4993778b2b7a2f0b7283352805c6f7781d593c251550a7abdf50"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/P4_AIR_HOCKEY.P4G",
+        "bytes": 133136,
+        "sha256": "291a9a01375a7b357d6546fcf0b1b8894cf877695dbccd07374716365f84c47d"
+      },
+      "sources": [
+        {
+          "path": "games/p4_air_hockey/src/p4_air_hockey.c",
+          "bytes": 17277,
+          "sha256": "354c88a451aedba3c4d76d179fb4c55a89bce9885ed1dd292306f4c6ec08b11e"
+        },
+        {
+          "path": "games/p4_air_hockey/src/p4_air_hockey_logic.c",
+          "bytes": 11475,
+          "sha256": "33ddfe50789b3aaf48d47a2e12f6fc9bafa4b2c1d4bf2c6cd5c51d91232e93de"
+        },
+        {
+          "path": "games/p4_air_hockey/src/p4_air_hockey_network.c",
+          "bytes": 12139,
+          "sha256": "79e996c43546dd37beb71b2e05aaa7e3cfb0267ad75ef9968a2ddad98e440e01"
+        }
+      ]
+    },
+    {
+      "slug": "p4_rummy",
+      "id": "org.p4console.p4-rummy",
+      "version": "2.2.0",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/p4_rummy/game.json",
+        "bytes": 960,
+        "sha256": "4195617b8141e28bfe7d60e8081101d961b80c8ad9c75f49c37f188230603abb"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/P4_RUMMY.P4G",
+        "bytes": 123224,
+        "sha256": "2b1ef030d6a218751f1aca95f95ab3a1aadef490d743d2e47adfdba190da090d"
+      },
+      "sources": [
+        {
+          "path": "games/p4_rummy/src/p4_rummy.c",
+          "bytes": 51868,
+          "sha256": "a965f3e01e3385eb68b4627f25a2e62db61743bea9fc993d8e5461d3d31d6d79"
+        },
+        {
+          "path": "games/p4_rummy/src/p4_rummy_logic.c",
+          "bytes": 31407,
+          "sha256": "c41a2430c52bf46116b3089d0e6f6748a2cd31f35eacfaa778e556dab89cd707"
+        },
+        {
+          "path": "games/p4_rummy/src/p4_rummy_network.c",
+          "bytes": 38775,
+          "sha256": "05d241c7bdda35b84b149c896ac9a9f7225d9de39cfd12777eb3e1fd3fd90185"
+        }
+      ]
+    },
+    {
+      "slug": "p4_yahtzee",
+      "id": "org.p4console.p4-yahtzee",
+      "version": "1.4.1",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/p4_yahtzee/game.json",
+        "bytes": 971,
+        "sha256": "d4d2036d84343f7b3b3881bf4e7ced9560e36514755921e60f2f97dc377cc7c8"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/P4_YAHTZEE.P4G",
+        "bytes": 321536,
+        "sha256": "6b68116c4c2b72f43acfe6f9a5baca42f40ff9e16fa7c7bec587bc65e5a23388"
+      },
+      "sources": [
+        {
+          "path": "games/p4_yahtzee/src/p4_yahtzee.c",
+          "bytes": 26773,
+          "sha256": "d3883359f952a303b0f2b6d8f30f7bdfe96a79a59547a32fb6e3d9c3846f607d"
+        },
+        {
+          "path": "games/p4_yahtzee/src/p4_yahtzee_logic.c",
+          "bytes": 9932,
+          "sha256": "4706cc6aedf9ddeb6a0c400bb3695a6d418aec91c6c29708b95c7bc4cda10b83"
+        },
+        {
+          "path": "games/p4_yahtzee/src/p4_yahtzee_network.c",
+          "bytes": 17816,
+          "sha256": "659342266bafce78b0f38fabb708c77f41b5f0660d989129212aa32572ebb4a9"
+        }
+      ]
+    },
+    {
+      "slug": "solitaire",
+      "id": "org.p4console.solitaire",
+      "version": "1.1.0",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/solitaire/game.json",
+        "bytes": 714,
+        "sha256": "56e1f56e2124c77a111a3553933b9a6d81132d6b377807342356a06d556bdb00"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/SOLITAIR.P4G",
+        "bytes": 245908,
+        "sha256": "d72164fcb7337c84e3ddcbd91bbeacefac964e572f5e2295cec0d9978661c7f6"
+      },
+      "sources": [
+        {
+          "path": "games/solitaire/src/solitaire.c",
+          "bytes": 36889,
+          "sha256": "a7263a5163c9542a466c72bbf2c0aa03a271f702315be1b9e52182c29ec1838c"
+        }
+      ]
+    },
+    {
+      "slug": "space_invaders",
+      "id": "org.p4console.space-invaders",
+      "version": "1.1.0",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/space_invaders/game.json",
+        "bytes": 743,
+        "sha256": "11cc92eca3ed2e13a94b2d6fe8ff5ea10a507fec07756e6807fa7404f802d250"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/INVADERS.P4G",
+        "bytes": 402512,
+        "sha256": "d314e8dab365c187035cc47f9cebae203aade492e495301d2e01cb039670e19d"
+      },
+      "sources": [
+        {
+          "path": "games/space_invaders/src/space_invaders.c",
+          "bytes": 37271,
+          "sha256": "9ada6636afd1ff1fc88465a4368bbb2eb441cc3171931ace0053da2931215329"
+        }
+      ]
+    },
+    {
+      "slug": "texas_holdem",
+      "id": "org.p4console.texas-holdem",
+      "version": "1.2.0",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/texas_holdem/game.json",
+        "bytes": 996,
+        "sha256": "044e520a551b62dee697e71df550925e2a57c55289344b38c775d11235f55ea6"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/TEXAS_HOLDEM.P4G",
+        "bytes": 115888,
+        "sha256": "c8f38f0dd9c502f6b6dd547a13253196225737d1c999b1ee0ff7c11d5ae60130"
+      },
+      "sources": [
+        {
+          "path": "games/texas_holdem/src/texas_holdem.c",
+          "bytes": 25031,
+          "sha256": "facb8cf7df7c1220e620a9c70243f32da2cdac32cb658c8f0737ea19aea50263"
+        },
+        {
+          "path": "games/texas_holdem/src/texas_holdem_logic.c",
+          "bytes": 27930,
+          "sha256": "3cb6450729b76fcb3a25ab1271b3e488dc0bbd65219387c555c4bf4abacf613f"
+        },
+        {
+          "path": "games/texas_holdem/src/texas_holdem_network.c",
+          "bytes": 20912,
+          "sha256": "e34cfd0f76590f3c39d70aec69849086e0e9ba1648665108a91d0413d4068c7f"
+        }
+      ]
+    },
+    {
+      "slug": "tide_maze",
+      "id": "org.p4console.tide-maze",
+      "version": "0.2.0",
+      "format": "p4-native-elf-v1",
+      "manifest": {
+        "path": "games/tide_maze/game.json",
+        "bytes": 1072,
+        "sha256": "94c4462a8dd681badd31a7e23c262c18abcfacceb5264cc459761f1d912baeaa"
+      },
+      "package": {
+        "path": "apps/console_os/build-tab5/sd-card/GAMES/TIDE_MAZE.P4G",
+        "bytes": 162612,
+        "sha256": "3acdf93a42bd9c9a6a4e83416240179834f0bf8249036add0ffa8921cf20af2f"
+      },
+      "sources": [
+        {
+          "path": "games/tide_maze/src/tide_maze.c",
+          "bytes": 3369,
+          "sha256": "c046a7026ca4cedd430d3648af6506941a05362fa372646034f01aecc19678a7"
+        },
+        {
+          "path": "games/tide_maze/src/tide_maze_physics.c",
+          "bytes": 9882,
+          "sha256": "67a871f9a5cecb7c5a726bc4fee2a2d7438107f808c64034131e5753165b1c2c"
+        },
+        {
+          "path": "games/tide_maze/src/tide_maze_network.c",
+          "bytes": 5868,
+          "sha256": "ba3e3ecb17f7885203b728449fd55a6a9d471e15e18c890450a0aa8dd1e24c4b"
+        },
+        {
+          "path": "games/tide_maze/src/tide_maze_render.c",
+          "bytes": 11000,
+          "sha256": "615a238eab9229eef58ca997bae5d1b72cbc21150f66ab2192debb1959c2a823"
+        }
+      ]
+    }
+  ],
+  "priority_game_audit": {
+    "maze_chase": "Already native C 1.1.1; no Lua port required.",
+    "byte_buddy": "Already native C 4.3.3; save identity preserved.",
+    "lord": "Already native C 1.8.3; protected payload lineage and save identity preserved."
+  },
+  "validation": {
+    "game_sdk_host": {
+      "result": "pass",
+      "ctest_suites": 27,
+      "ctest_cases": 87,
+      "additional": "Registry, starter motion, resource, protected lineage, retirement and warm-boot checks passed.",
+      "log": {
+        "path": "build-host/native-source-cleanup/game-sdk-host.log",
+        "bytes": 44981,
+        "sha256": "6788f8c1de6c8ebede56c9de45b1f6af38e9b4fe3da0b9fcf330e57b0261ef48"
+      }
+    },
+    "focused_games": {
+      "maze_chase": 3,
+      "byte_buddy": 8,
+      "lord": 1,
+      "result": "all passed",
+      "directories": [
+        "build-host/native-source-cleanup/maze-chase",
+        "build-host/native-source-cleanup/byte-buddy",
+        "build-host/native-source-cleanup/lord"
+      ]
+    },
+    "maze_sdl_tests": {
+      "result": "5/5 passed",
+      "directory": "build-host/native-source-cleanup/play-maze"
+    },
+    "maze_interactive_play": {
+      "method": "Actual native SDL app via macOS UI automation",
+      "observations": [
+        "Distinct gold player, four colored spirits, blue maze walls and title screen.",
+        "Movement and pellet collection changed score 0 to 40 to 90 to 130; pellets 176 to 172 to 167 to 163.",
+        "Observed ghost collision and lives 3 to 2.",
+        "Paused, inspected PAUSED screen, resumed movement, exited with Escape."
+      ],
+      "device_fps_qualification": false
+    },
+    "maze_active_benchmarks": [
+      {
+        "log": {
+          "path": "build-host/native-source-cleanup/maze-native.json",
+          "bytes": 526,
+          "sha256": "210659c97ec1cd272ff2bd78826a98608bc12e33899c2d544f802f25fa81c49a"
+        },
+        "measurements": {
+          "game": "org.p4console.maze-chase",
+          "frames": 2000,
+          "width": 768,
+          "height": 480,
+          "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+          "changed_frames": 1724,
+          "last_frame_hash": "9754a5a9",
+          "update_audio_ms": {
+            "mean": 0.0013,
+            "p50": 0.001,
+            "p95": 0.002,
+            "p99": 0.002,
+            "max": 0.018,
+            "over_33_333ms": 0
+          },
+          "render_ms": {
+            "mean": 0.0909,
+            "p50": 0.075,
+            "p95": 0.303,
+            "p99": 0.328,
+            "max": 0.426,
+            "over_33_333ms": 0
+          },
+          "total_ms": {
+            "mean": 0.0922,
+            "p50": 0.076,
+            "p95": 0.304,
+            "p99": 0.329,
+            "max": 0.427,
+            "over_33_333ms": 0
+          }
+        }
+      },
+      {
+        "log": {
+          "path": "build-host/native-source-cleanup/maze-fallback.json",
+          "bytes": 526,
+          "sha256": "9a69f5ca971642828bc0a82e51d73d71be841c1b04a8813eb441f85797b1d6d7"
+        },
+        "measurements": {
+          "game": "org.p4console.maze-chase",
+          "frames": 2000,
+          "width": 320,
+          "height": 200,
+          "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+          "changed_frames": 1724,
+          "last_frame_hash": "bf44dc77",
+          "update_audio_ms": {
+            "mean": 0.0013,
+            "p50": 0.001,
+            "p95": 0.002,
+            "p99": 0.002,
+            "max": 0.014,
+            "over_33_333ms": 0
+          },
+          "render_ms": {
+            "mean": 0.0201,
+            "p50": 0.017,
+            "p95": 0.056,
+            "p99": 0.065,
+            "max": 0.112,
+            "over_33_333ms": 0
+          },
+          "total_ms": {
+            "mean": 0.0215,
+            "p50": 0.019,
+            "p95": 0.057,
+            "p99": 0.066,
+            "max": 0.113,
+            "over_33_333ms": 0
+          }
+        }
+      }
+    ],
+    "tab5_feature_regression": {
+      "result": "pass",
+      "log": {
+        "path": "build-host/native-source-cleanup/tab5-build-features.log",
+        "bytes": 71,
+        "sha256": "07aefa514ccad0d7749bb2deff0db89ff8f1bc521a0c9b75b2ae8add067b1e0a"
+      }
+    },
+    "tab5_build": {
+      "command": "make console-os-tab5-idf",
+      "result": "pass",
+      "candidate": {
+        "ble_multiplayer_enabled": true,
+        "board": "m5stack-tab5",
+        "charger_control_enabled": true,
+        "content_bundle_verified": true,
+        "flash_authorized": false,
+        "hardware_verified": false,
+        "image_bytes": 4297952,
+        "image_sha256": "fa106603175559029ce4432234c7bc98cb1f992c7445f6254c3024d5ee43b17c",
+        "native_cartridges": 17,
+        "result": "tab5-build-candidate-verified",
+        "usb_host_enabled": true,
+        "version": "0.54",
+        "wifi_multiplayer_enabled": true
+      },
+      "log": {
+        "path": "build-host/native-source-cleanup/tab5-build.log",
+        "bytes": 25757,
+        "sha256": "73e1b9c2f6c3bbfcccdf27df35a226db672b83537b7bcee0498eaac0badc8d0b"
+      },
+      "native_frame_scheduler_linked": true,
+      "concurrent_core1_audio_worker_preserved": true,
+      "retired_components_absent": [
+        "p4_lua_runtime",
+        "p4_script_renderer",
+        "p4_script_audio",
+        "p4_game_runtime_core",
+        "p4_content_catalog",
+        "lua"
+      ]
+    },
+    "source_audit": {
+      "result": "pass",
+      "enabled_native_games": 17,
+      "lua_files_in_maintained_source": 0
+    },
+    "extraction_evidence": {
+      "path": "build-host/native-only/extraction/handoff.json",
+      "bytes": 2858,
+      "sha256": "ed2fbb518a5cffcf0fce2cee8ef17b3f844ad47dcb4b49d632931f37e9065460"
+    },
+    "host_tool_evidence": {
+      "path": "build-host/native-only-tool-removal/handoff.json",
+      "bytes": 6690,
+      "sha256": "40856a6f34896f1b369703fbdbc064325080ed547d95a2bf099a543602f0e1fe"
+    },
+    "docs_skill_evidence": {
+      "path": "build-host/lua-removal-docs/validation.json",
+      "bytes": 20469,
+      "sha256": "833c4bb1c98ad804f1993be826e4eb4cce3f755e74cdde56e73800f4bcdec12c"
+    }
+  },
+  "frozen_artifacts": [
+    {
+      "path": "build-host/native-source-cleanup/artifacts/BYTEBUD.P4G",
+      "bytes": 207016,
+      "sha256": "5d744681b6ea8791e3617a0aeda9277c02f375685bf189b5110a411bb1eabe67"
+    },
+    {
+      "path": "build-host/native-source-cleanup/artifacts/LORD.P4G",
+      "bytes": 221804,
+      "sha256": "a39820c4a365b3cfd1a8d97e56c61595d57b1805900df9e925bb20593a184f58"
+    },
+    {
+      "path": "build-host/native-source-cleanup/artifacts/MAZE.P4G",
+      "bytes": 370576,
+      "sha256": "c45a9f15a3a4545a4a84b085ce08ca7d67e8de4041a2597c12459ff35142d4b7"
+    },
+    {
+      "path": "build-host/native-source-cleanup/artifacts/P4UPDATE.P4U",
+      "bytes": 4298208,
+      "sha256": "e46b10229e0a1d91028ae63afeb9a1447d8b915a51ed30ce6ad0868f2c8d9f32"
+    },
+    {
+      "path": "build-host/native-source-cleanup/artifacts/p4_console_os.bin",
+      "bytes": 4297952,
+      "sha256": "fa106603175559029ce4432234c7bc98cb1f992c7445f6254c3024d5ee43b17c"
+    }
+  ],
+  "same_image_parallel_install_evidence": [
+    {
+      "unit": "A",
+      "receipt": {
+        "path": "hardware/backups/tab5-a-install-k2w0oquy/receipt.json",
+        "bytes": 1554,
+        "sha256": "1b4713c1d53e1dd77291293227cb2e258d831a59080a5ec1dd5036894980f196"
+      },
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "scope": "Independent parallel OS update; game FPS/visual acceptance not established."
+    },
+    {
+      "unit": "B",
+      "receipt": {
+        "path": "hardware/backups/tab5-b-install-pellmkhh/receipt.json",
+        "bytes": 1554,
+        "sha256": "0aa829f3ac3dc22f9584a0be30c90ed1034f8b226a3e062676c396e4bfc1b5e7"
+      },
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "scope": "Independent parallel OS update; game FPS/visual acceptance not established."
+    }
+  ],
+  "source_bindings": [
+    {
+      "path": "AGENTS.md",
+      "bytes": 8133,
+      "sha256": "f47dfbc65c33084927279f653bca1e9398eb95befb26e3624cec788a202515ae"
+    },
+    {
+      "path": "Makefile",
+      "bytes": 18877,
+      "sha256": "b12cbbee3fb01e8b17a4ba975ef846f0c962ba3e015c23bb55f2d06ab614b268"
+    },
+    {
+      "path": "apps/console_os/CMakeLists.txt",
+      "bytes": 36008,
+      "sha256": "c390a99725ffa62c319eb804afd3a827f4a83bcff1eb3da0aa3d589d5516c32d"
+    },
+    {
+      "path": "apps/console_os/app-metadata.json",
+      "bytes": 14579,
+      "sha256": "141e61a10bac3a33c9b41c8ccc10e96194c902cbfeb17c3cee1069e544eae3ba"
+    },
+    {
+      "path": "apps/console_os/main/CMakeLists.txt",
+      "bytes": 7815,
+      "sha256": "0c999156f9c2a630d89aabb12cee0305d4dfa492851f987f26d77ca09868504f"
+    },
+    {
+      "path": "apps/console_os/main/console_os_main.c",
+      "bytes": 403611,
+      "sha256": "b1460ae3f2d23ffe0514dfb785299d9762714e87d8a74e8e57297cd49944348a"
+    },
+    {
+      "path": "components/p4_frame_scheduler/CMakeLists.txt",
+      "bytes": 1320,
+      "sha256": "0d75f4d2e4dd87161056713addf5af693a2e45d52bb52e7c093efdba4a32f7e7"
+    },
+    {
+      "path": "components/p4_frame_scheduler/include/p4/frame_scheduler.h",
+      "bytes": 890,
+      "sha256": "370e7ac2fc9673787195ec1742e0517a18b71b27230188889ea84347392d6103"
+    },
+    {
+      "path": "components/p4_frame_scheduler/src/frame_scheduler.c",
+      "bytes": 1165,
+      "sha256": "976a1abe416af018967a399da8515b59293d54b4cbb7418a9fbc683d1bf6d9bf"
+    },
+    {
+      "path": "components/p4_frame_scheduler/tests/test_frame_scheduler.c",
+      "bytes": 2185,
+      "sha256": "770c05b3f856d5a9b9cb19ed8a793662a69371b95d5e7de2f032ff9ad5d76747"
+    },
+    {
+      "path": "components/p4_game_api/runtime/cartridge_main.c",
+      "bytes": 14832,
+      "sha256": "a6b7062db30979c4d32728d451793cbde1d1303ceebc524a46b935f193a77c6d"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/CMakeLists.txt",
+      "bytes": 1332,
+      "sha256": "8f9394dd1ff5bc323d768b8e6d6a1fdbea07ceafaa10b5248afd4ce60636602d"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/include/p4/clock_control.h",
+      "bytes": 930,
+      "sha256": "bfa4cc1b4e52c01969382784a9eccb2951038f9f2097c54b0970b46c7c31d60e"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/include/p4/content_transfer.h",
+      "bytes": 2275,
+      "sha256": "b9ba0e066f8ab2a76cac80f5cc5f15aa35d3ce55dbb7508c7c53d29a857655d3"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/include/p4/file_transfer 2.h",
+      "bytes": 3152,
+      "sha256": "312cedc9d3aa50a3b9f3c553c1785cf835bbb2436b99c53237b197007332ee3a"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/include/p4/file_transfer.h",
+      "bytes": 3473,
+      "sha256": "abd1ecbf2cce2636eadb3d4c4cc1ba00a83dc34193a515288f24966efc71ee33"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/include/p4/h1_usb_drive_control.h",
+      "bytes": 3237,
+      "sha256": "0c9d0d8f18c1ae44ef690c4d478edc0669176daaf8abe3db87dd3a7e580e7c0b"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/src/clock_control.c",
+      "bytes": 2572,
+      "sha256": "d42e39c163f118cee91c3d2d039b580f423988fa5e72ea72d657b264c8f4a931"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/src/content_limits.h",
+      "bytes": 309,
+      "sha256": "0de0e54b408975fe90bb8a3da2040e9d6a64034eaf9892998dc03324963827f7"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/src/content_transfer.c",
+      "bytes": 28823,
+      "sha256": "4aaf5506a22e6b5557b8967fdb3820c6ff69c2b3dbd313adeb15fdc5b508d259"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/src/file_transfer 2.c",
+      "bytes": 41049,
+      "sha256": "6855c67f858e03cdb7bfcbf7237bdfe48878e01a59f58ad04638c66770faba23"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/src/file_transfer.c",
+      "bytes": 46867,
+      "sha256": "1dd8e81a3f6474a3c23ae911770be9b0ba5c4386868ac7aeb51ee079b74f7a94"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/src/h1_usb_drive_control.c",
+      "bytes": 9941,
+      "sha256": "e800745f4b75ca36956e111b8acf40dd73eaf0065e83a09425cec93cc4beeda3"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/CMakeLists.txt",
+      "bytes": 1959,
+      "sha256": "c81673a3c009144ad3dc711c3b3a5dfb9c35b9080112eb211098c4ea20f143b4"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/stubs/esp_err.h",
+      "bytes": 54,
+      "sha256": "d6b91bfbd643fb3a2e361aaa271ab95552f44d836c544f8ff11a755e38cc3c80"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/stubs/esp_heap_caps.h",
+      "bytes": 54,
+      "sha256": "d6b91bfbd643fb3a2e361aaa271ab95552f44d836c544f8ff11a755e38cc3c80"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/stubs/esp_log.h",
+      "bytes": 54,
+      "sha256": "d6b91bfbd643fb3a2e361aaa271ab95552f44d836c544f8ff11a755e38cc3c80"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/stubs/esp_task_wdt.h",
+      "bytes": 54,
+      "sha256": "d6b91bfbd643fb3a2e361aaa271ab95552f44d836c544f8ff11a755e38cc3c80"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/stubs/esp_timer.h",
+      "bytes": 54,
+      "sha256": "d6b91bfbd643fb3a2e361aaa271ab95552f44d836c544f8ff11a755e38cc3c80"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/stubs/fake_sdk.h",
+      "bytes": 1165,
+      "sha256": "79f70ca7561eb0e41f2e4e8c3b0936bfdcb9cb43c617a067871ff0d6bc4c23ab"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/stubs/freertos/FreeRTOS.h",
+      "bytes": 54,
+      "sha256": "d6b91bfbd643fb3a2e361aaa271ab95552f44d836c544f8ff11a755e38cc3c80"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/stubs/freertos/task.h",
+      "bytes": 54,
+      "sha256": "d6b91bfbd643fb3a2e361aaa271ab95552f44d836c544f8ff11a755e38cc3c80"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/stubs/mbedtls/sha256.h",
+      "bytes": 54,
+      "sha256": "d6b91bfbd643fb3a2e361aaa271ab95552f44d836c544f8ff11a755e38cc3c80"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/stubs/sha256.c",
+      "bytes": 5860,
+      "sha256": "00713c17b8e99e4a512c63aaaef24ad6e0f21acb31b35a38026ec42aaafb148a"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/stubs/sha256.h",
+      "bytes": 456,
+      "sha256": "ce3dde2fa62939405a158866f6409c96f022bad49d30f991a29490b82471b165"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/test_clock_control.c",
+      "bytes": 2746,
+      "sha256": "e166a6e7569b3d174abe5af570786629a5f15cb95a99fa17ff6094584a6bed62"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/test_file_transfer_native_only.c",
+      "bytes": 5603,
+      "sha256": "6c61a554944c785958eb050867295cc3513df0d12e473c016ffcd9ede4172fdf"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/tests/test_h1_usb_drive_control.c",
+      "bytes": 6780,
+      "sha256": "49d4d64eecee2a232055fdb1027a4915eb9056cb9a60fccaa6aa92415efdcd6d"
+    },
+    {
+      "path": "scripts/build-game-package.py",
+      "bytes": 14250,
+      "sha256": "3c3c5e6a458be87993a90caa6bbf3c42d39e8c2655a1304ba754d286390e65ff"
+    },
+    {
+      "path": "scripts/tests/test-native-only-sources.py",
+      "bytes": 1634,
+      "sha256": "3681012ba6bdc5424dcf5ff1f2dba5db5ddfde6f55e41f9f44d69a9d7519a3ca"
+    },
+    {
+      "path": "scripts/tests/test-tab5-build-features.py",
+      "bytes": 3530,
+      "sha256": "f2374a0805ed14f1255e7eebc11ab33a33571c6cc147d09967455c9d20c2dce8"
+    },
+    {
+      "path": "scripts/verify-console-os-tab5.py",
+      "bytes": 13331,
+      "sha256": "532b086fa0bc9d8a4323dc77cae88b16fec3ea9260126ffffdd8ac6c6851cb9a"
+    },
+    {
+      "path": "third_party/source-lock.json",
+      "bytes": 2833,
+      "sha256": "5e1d23a01e9707d4432a190e972d1ebba699bf057f6ec7ead43e65cd03d0555c"
+    }
+  ],
+  "limits": [
+    "This cleanup turn performed no hardware access or installation. Matching OS image installation evidence belongs to the parallel OS update.",
+    "Host CPU timings exclude display/device/transport; no new all-game smoothness or actual-device 30 FPS acceptance is claimed.",
+    "Historical evidence and recovery backups remain; no executable Lua authoring archive remains in maintained source.",
+    "No visual rewrite of the three priority games was required or claimed by this source-removal change."
+  ]
+}

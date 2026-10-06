@@ -6,19 +6,14 @@ from __future__ import annotations
 
 import argparse
 import hashlib
-import importlib.util
 import os
 from pathlib import Path
-import re
 import shutil
 import stat
 import sys
 from typing import Callable
 
 
-REPOSITORY_ROOT = Path(__file__).resolve().parents[1]
-P4CART_TOOL = REPOSITORY_ROOT / "game-platform" / "scripts" / "p4cart.py"
-P4CART_NAME = re.compile(r"[A-Za-z0-9][A-Za-z0-9._ -]{0,55}\.p4cart", re.IGNORECASE)
 QUAKE_SHAREWARE_SIZE = 18_689_235
 QUAKE_SHAREWARE_SHA256 = "35a9c55e5e5a284a159ad2a62e0e8def23d829561fe2f54eb402dbc0a9a946af"
 COPY_CHUNK_BYTES = 128 * 1024
@@ -26,15 +21,6 @@ COPY_CHUNK_BYTES = 128 * 1024
 
 class ContentError(RuntimeError):
     """A validation or safe-install boundary was rejected."""
-
-
-def _load_p4cart_module():
-    spec = importlib.util.spec_from_file_location("p4cart_tool", P4CART_TOOL)
-    if spec is None or spec.loader is None:
-        raise ContentError("cannot load the pinned P4 Cart validator")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def _regular_file(path: Path) -> os.stat_result:
@@ -81,19 +67,6 @@ def validate_quake_shareware(path: Path) -> str:
     if size != QUAKE_SHAREWARE_SIZE or digest != QUAKE_SHAREWARE_SHA256:
         raise ContentError("Quake shareware PAK SHA-256 does not match the pinned v1.06 data")
     return digest
-
-
-def validate_p4cart(path: Path) -> str:
-    _regular_file(path)
-    try:
-        _manifest, _payloads, digest = _load_p4cart_module().inspect_cart(path)
-    except Exception as error:  # p4cart.py owns the detailed format diagnostics.
-        raise ContentError(f"P4 Cart validation failed: {error}") from error
-    if isinstance(digest, bytes):
-        return digest.hex()
-    if isinstance(digest, str) and re.fullmatch(r"[0-9a-f]{64}", digest):
-        return digest
-    raise ContentError("P4 Cart validator returned an invalid package digest")
 
 
 def _sync_directory(path: Path) -> None:
@@ -186,19 +159,9 @@ def install_cart(
     name: str | None = None,
     replace: bool = False,
 ) -> tuple[Path, str]:
-    selected_name = name or source.name
-    if P4CART_NAME.fullmatch(selected_name) is None or Path(selected_name).name != selected_name:
-        raise ContentError(
-            "cart name must be a bounded plain filename ending in .p4cart"
-        )
-    return _install(
-        source,
-        storage_root,
-        Path("P4") / "GAMES" / selected_name,
-        selected_name,
-        validate_p4cart,
-        replace,
-    )
+    # Keep a clear failure for old callers, without validating, staging,
+    # creating directories or replacing an existing source cartridge.
+    raise ContentError("Lua .P4CART installation is retired; use native .P4G games")
 
 
 def install_quake(
@@ -221,7 +184,7 @@ def _parser() -> argparse.ArgumentParser:
         description="Validate, stage, sync, and atomically install game content onto an SD root."
     )
     subparsers = parser.add_subparsers(dest="kind", required=True)
-    cart = subparsers.add_parser("cart", help="install one source-included .p4cart")
+    cart = subparsers.add_parser("cart", help="retired Lua install route (always rejected)")
     cart.add_argument("input", type=Path)
     cart.add_argument("--sd-root", type=Path, required=True)
     cart.add_argument("--name")

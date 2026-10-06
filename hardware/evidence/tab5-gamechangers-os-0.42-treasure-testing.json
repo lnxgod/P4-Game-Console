@@ -1,0 +1,130 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "product": "GameChangersAI OS",
+  "version": "0.42",
+  "recorded_at": "2026-10-05T17:43:05.951095+00:00",
+  "status": "both-units-treasure-fanfare-readback-boot-health-verified",
+  "authorization": {
+    "file": "hardware/evidence/tab5-gamechangers-os-0.42-treasure-authorization.json",
+    "sha256": "8134eaac6032e9adacc5594d2c3c771aa4a0a09a17c0b6fb4919e9beededd985"
+  },
+  "app": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 1911408,
+    "sha256": "74369e469516a13558144f83cbd1f7b0624d455770c660cf5182e00ee14edca4"
+  },
+  "usb_host_enabled": false,
+  "build_verifier": {
+    "board": "m5stack-tab5",
+    "flash_authorized": false,
+    "hardware_verified": false,
+    "image_bytes": 1911408,
+    "image_sha256": "74369e469516a13558144f83cbd1f7b0624d455770c660cf5182e00ee14edca4",
+    "native_cartridges": 17,
+    "result": "tab5-build-candidate-verified",
+    "usb_host_enabled": false
+  },
+  "startup_audio": {
+    "profile": "treasure-fanfare",
+    "sample_rate": 16000,
+    "stereo_frames": 16000,
+    "duration_ms": 1000,
+    "peak_absolute_pcm": 7350,
+    "dialing": false,
+    "saved_volume_preserved": true,
+    "provenance": "Original composition and deterministic fixed-point bell synthesis; no sampled game audio or transcribed Nintendo melody.",
+    "preview_sha256": "50548b0a152ba6d899ddd60fc274ea82e27576fdb4f20b32c1c8f48b08aef68e"
+  },
+  "units": {
+    "A": {
+      "panel": "ST7121",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "soc_revision": "v1.3",
+      "flash_bytes": 16777216,
+      "port": "/dev/cu.usbmodem1101",
+      "connection": "Existing native USB-C; mounted microSD; sequential app-only update",
+      "write_offsets": [
+        "0x20000"
+      ],
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "install_receipt": {
+        "file": "hardware/backups/tab5-a-install-fd0jwh65/receipt.json",
+        "sha256": "4ec4c761b37a924aeaa3c61d987ea38dd37c9a30893838cf2f075dde7fe0b632"
+      },
+      "runtime_log": {
+        "file": "hardware/backups/tab5-a-install-fd0jwh65/runtime.log",
+        "sha256": "641cdeaf9612312a4b093e5c96bad52d5f4e8a696acb32a7b61f99b014a9f154"
+      },
+      "reset_to_desktop_ms": 6323,
+      "previous_reset_to_desktop_ms": 6270,
+      "serial_markers": [
+        "I (1468) app_init: App version:      0.42",
+        "I (3194) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7121 native=720x1280 logical=1280x720 viewport=1152x720+64+0 format=rgb565",
+        "I (3418) p4_console_os: P4_CONSOLE_OS BOOT_SCREEN status=visible brand=gamechangers-ai format=rgb565 source=reviewed-joystick-mark product=GameChangersAI-OS version=0.42 storage=pending",
+        "I (4499) p4_console_os: P4_CONSOLE_OS BOOT_AUDIO status=played profile=treasure-fanfare sample_rate=16000 frames=16000 volume=6 nominal_ms=1000 elapsed_ms=1067",
+        "I (6181) p4_console_os: P4_CONSOLE_OS GAME_CATALOG available=1 packages=16 valid=16 omitted=0 generation=1 source=microsd-only scan=background worker_low_water_bytes=11416 storage_result=ESP_OK update=0 result=ESP_OK",
+        "I (6181) p4_console_os: P4_CONSOLE_OS GAME_CATALOG_SCAN_COMPLETE elapsed_ms=2751 launcher_gate=ready",
+        "I (6321) p4_console_os: P4_CONSOLE_OS HOME_REVEAL status=complete rows=720 steps=1 mode=immediate",
+        "I (6323) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (6347) p4_console_os: P4_CONSOLE_OS P4CART_READY valid=0 rejected=0 candidates=0 truncated=0 generation=1 worker_low_water_bytes=22332 runtime=p4-lua-5.4-v1 writes=0",
+        "I (6885) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1143 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=78,163,-990 gyro_mdps=122,122,-183 rtc_valid=1 date=2026-10-05 time=17:40:22",
+        "I (16334) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized",
+        "I (16897) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1141 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=79,162,-991 gyro_mdps=244,183,-183 rtc_valid=1 date=2026-10-05 time=17:40:32",
+        "I (26909) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1141 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=78,161,-990 gyro_mdps=244,122,-183 rtc_valid=1 date=2026-10-05 time=17:40:42"
+      ],
+      "physical_acoustic_acceptance": "pending"
+    },
+    "B": {
+      "panel": "ST7123",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "soc_revision": "v1.3",
+      "flash_bytes": 16777216,
+      "port": "/dev/cu.usbmodem2101",
+      "connection": "Existing native USB-C; mounted microSD; sequential app-only update",
+      "write_offsets": [
+        "0x20000"
+      ],
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "install_receipt": {
+        "file": "hardware/backups/tab5-b-install-wivgcn_6/receipt.json",
+        "sha256": "c7fe8a5271528e0ddb168735c9e0501a75973de5c9d1dad63081a1a94b800cf3"
+      },
+      "runtime_log": {
+        "file": "hardware/backups/tab5-b-install-wivgcn_6/runtime.log",
+        "sha256": "6e908a4f0d3b015a3281811fd6aa8326def976a87da737479266dc6e166e49e7"
+      },
+      "reset_to_desktop_ms": 5251,
+      "previous_reset_to_desktop_ms": 5248,
+      "serial_markers": [
+        "I (1469) app_init: App version:      0.42",
+        "I (2470) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7123 native=720x1280 logical=1280x720 viewport=1152x720+64+0 format=rgb565",
+        "I (2710) p4_console_os: P4_CONSOLE_OS BOOT_SCREEN status=visible brand=gamechangers-ai format=rgb565 source=reviewed-joystick-mark product=GameChangersAI-OS version=0.42 storage=pending",
+        "I (2722) p4_console_os: P4_CONSOLE_OS BOOT_AUDIO status=muted animation=skipped",
+        "I (5108) p4_console_os: P4_CONSOLE_OS GAME_CATALOG available=1 packages=18 valid=18 omitted=0 generation=1 source=microsd-only scan=background worker_low_water_bytes=11416 storage_result=ESP_OK update=0 result=ESP_OK",
+        "I (5109) p4_console_os: P4_CONSOLE_OS GAME_CATALOG_SCAN_COMPLETE elapsed_ms=2388 launcher_gate=ready",
+        "I (5250) p4_console_os: P4_CONSOLE_OS HOME_REVEAL status=complete rows=720 steps=1 mode=immediate",
+        "I (5251) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (5276) p4_console_os: P4_CONSOLE_OS P4CART_READY valid=0 rejected=0 candidates=0 truncated=0 generation=1 worker_low_water_bytes=22328 runtime=p4-lua-5.4-v1 writes=0",
+        "I (5814) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1188 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=9,-5,-995 gyro_mdps=122,-305,0 rtc_valid=1 date=2026-10-05 time=17:41:37",
+        "I (15264) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized",
+        "I (15827) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1186 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=8,-7,-994 gyro_mdps=183,-305,0 rtc_valid=1 date=2026-10-05 time=17:41:47",
+        "I (25839) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1186 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=9,-8,-995 gyro_mdps=183,-305,61 rtc_valid=1 date=2026-10-05 time=17:41:57"
+      ],
+      "physical_acoustic_acceptance": "pending"
+    }
+  },
+  "timing_scope": "One native USB reset per unit, ESP boot-log time to fully populated launcher; cold power-on not measured.",
+  "audio": "A completed all 16000 frames at saved volume 6; nominal 1000 ms, 1067 ms including codec setup/cleanup. B retained its saved mute. Original treasure-discovery fanfare; no sampled or transcribed Nintendo melody.",
+  "validation": "Startup sanitizer checks passed: <=1 second budget, bounded headroom, DC, zero endpoints, identical stereo and arbitrary-chunk stability. Firmware and Tab5 prerequisite checks passed.",
+  "preserved": "Immediate desktop frame, full game validation, saved preferences, existing SD content, Control Panel, RTC and hardware scope. Only app offset 0x20000 written.",
+  "physical_acceptance_pending": [
+    "User acceptance of the new fanfare sound on the speaker",
+    "Touch and sustained scrolling"
+  ],
+  "previous_install_evidence": "hardware/evidence/tab5-gamechangers-os-0.42-fast-connect-testing.json"
+}

@@ -1,57 +1,46 @@
 # Skyline Leap
 
-Skyline Leap is an original, four-stage native P4 Game API v1 rooftop
-platform game. Guide a courier over short rooftop routes, collect three signal
-shards, stomp wind-up patrol bots, and reach the open beacon. It is a
-clean-room platform-game tribute: it does not use Mario, Nintendo characters,
-names, stages, art, sound, music, or level layouts.
+Version 1.1.0. Cross four rooftop routes, collect three signal shards, disable patrol bots, and reach the open exit.
 
-The launcher discovers `game.json` automatically and puts it in
-`GAMES/PLATFORM`. Use arrows or the touchscreen D-pad to move, A or Up to
-jump, B to launch a pulse that disables patrol bots, Start to pause, and the Exit control to return to the
-launcher. The campaign contains four fixed stages, a three-life run, restart,
-title, pause, route-clear, and end screens, plus bounded original tone cues.
+An original yellow-jacket courier, animated purple robots, crystal pickups, exit doors, a detailed ImageGen coastal city background, and riveted metal platforms make the 768x480 view distinct. Courier art follows facing, jump/fall, firing, and hurt states without changing physics. Four route tints distinguish the stages.
 
-## Cartridge
+Left/Right moves; A or Up jumps; B fires a pulse; Start pauses; A begins/restarts; Back exits. Keyboard bindings in the SDL host are arrows/WASD, Space/Z for A, X/Shift for B, Enter/P for Start, and Escape/Backspace/Q for Back. Touch remains normalized to 320x200 in both display modes.
 
-Skyline Leap's source, artwork, manifest, and package identity live together
-in this folder. Its manifest produces `SKYLINE.P4G`; after an Elecrow Console
-OS build, the USB-share-ready cartridge is generated at
-`apps/console_os/build/game-storage-seed/GAMES/SKYLINE.P4G`. Copy that file to
-the root of the console's `P4 GAMES` USB share when the device is connected. The
-generated cartridge is a build artifact, so the repository tracks this source
-folder rather than a stale binary copy.
+## Rendering and original art
 
-## ImageGen art provenance
+The game opts into **768x480 RGB565** and retains a 320x200 fallback. It draws directly into the negotiated surface; it does not stretch a rendered low-resolution framebuffer. The high-resolution path uses the shared antialiased Arimo presentation font, native image detail, and translucent standard controls. Fallback labels retain their compact pixel font. Rules, game identity, lifecycle, audio, and platform ownership are preserved.
 
-`assets/skyline_leap_animation_atlas_v1.png` is original ImageGen output with
-an alpha channel. It is a 4x4 source atlas: courier run/jump frames, courier
-state frames, patrol-bot frames, then shard/keycard/spring/beacon props. The
-runtime never opens this PNG. `tools/png_to_animation_atlas.py` nearest-neighbor
-scales it to a 160x100 RGB565 atlas with transparent pixels mapped to chroma
-key `0x0000`, producing the committed fixed-size include.
+`assets/hires_atlas_v2.png` is original project artwork produced with the built-in ImageGen tool. `assets/hires_provenance.json` records the exact prompts, generation mode, source hashes, measured crop bounds, and conversion geometry. It contains no imported commercial game assets. Game art/code are MIT; the shared Arimo font is OFL-1.1 with its notice in `third_party/arimo/OFL.txt` (pinned source: `third_party/arimo/source.json`).
 
-The built-in ImageGen prompt was:
-
-> Create one transparent, crop-safe 4x4 pixel-art sprite atlas for an embedded
-> retro platform game: an original rooftop courier in eight motion/state poses,
-> a round wind-up patrol bot in four poses, and four original collectible/goal
-> props. Use hard pixels, a limited navy/teal/coral/gold palette, shared
-> baselines, no text, no borders, no scenery, and no copyrighted characters,
-> logos, pipes, mushrooms, turtles, question blocks, or castle motifs.
-
-Regenerate the runtime include after intentionally replacing the source PNG:
+`tools/convert_hires.py` takes the crop-safe 4x4 sheet to a bounded RGB565 atlas, using nearest-neighbor sampling and explicit transparent chroma key 0. Character proportions are retained within their measured atlas cells. The skyline image is filtered once at conversion to 384x154; the runtime never decodes PNGs. Total new static game image data: **323,072 bytes**. No runtime asset allocation or texture decoder is used.
 
 ```sh
-python3 games/skyline_leap/tools/png_to_animation_atlas.py \
-  games/skyline_leap/assets/skyline_leap_animation_atlas_v1.png \
-  games/skyline_leap/src/generated/skyline_leap_animation_atlas.inc
+python3 games/skyline_leap/tools/convert_hires.py
 ```
 
-The source image was generated through the built-in ImageGen tool. It is
-original project art under this game's MIT license; no third-party game assets
-are included.
+The older `*_v1.png` sources and old atlas converter remain as historical art and are no longer included by the runtime.
 
-`assets/preview_title_v1.png` and `assets/preview_gameplay_attack_v1.png` are
-host-rendered inspection captures made by `tools/render_preview.c`; they are
-not runtime assets.
+## Local verification
+
+```sh
+cmake -S games/skyline_leap -B build-host/skyline_leap -G Ninja
+cmake --build build-host/skyline_leap
+ctest --test-dir build-host/skyline_leap --output-on-failure
+build-host/skyline_leap/skyline_leap_hires_preview build-host/skyline_leap/hires
+cmake -S tools/p4-game-host -B build-host/play-skyline_leap -G Ninja -DP4_GAME=skyline_leap
+cmake --build build-host/play-skyline_leap
+ctest --test-dir build-host/play-skyline_leap --output-on-failure
+make play-game GAME=skyline_leap
+```
+
+`tools/render_hires.c` renders opening, gameplay, and pause captures at both resolutions from the real game sources, then verifies Back exits. The focused sanitizer test and all three generic SDL host checks pass. `LOCAL_TESTING.json` records source/art hashes and the tested scope. These are host results; hardware display, physical input, speaker acoustics, and device performance remain pending. Interactive play is recorded separately by the integrating agent.
+
+The optimized host CPU benchmark runs 2,000 frames of movement and action inputs from `tests/performance-input.txt`, including the real tone/PCM mixer. At 768x480, total update/audio/render time was **0.265 ms at p99** and **0.405 ms maximum**, with no frame above 33.3 ms; the 320x200 run also had no misses. This excludes display presentation and ESP32 execution, so it does not establish hardware frame rate. The simulator independently targets 60 Hz and reports measured presentation FPS in its title. Full results and input/source hashes are in `LOCAL_TESTING.json`.
+
+```sh
+cmake --build build-host/play-skyline_leap --target p4_game_benchmark
+build-host/play-skyline_leap/p4_game_benchmark 2000 768 games/skyline_leap/tests/performance-input.txt
+build-host/play-skyline_leap/p4_game_benchmark 2000 320 games/skyline_leap/tests/performance-input.txt
+```
+
+The board-independent cartridge is built through `make console-os-tab5-idf` for the primary Tab5 target and installed through its verified native USB content path. Game code consumes only the public `p4/` API; the OS owns display, touch, timing, audio, storage, and lifecycle services.

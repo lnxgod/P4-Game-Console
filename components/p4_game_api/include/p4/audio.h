@@ -19,7 +19,9 @@ enum {
     P4_GAME_AUDIO_MAX_VOICES = 8,
     /* ceil(16 kHz / 60 Hz); permits exact fractional 266/267 scheduling. */
     P4_GAME_AUDIO_MAX_RENDER_FRAMES = 267,
-    P4_GAME_AUDIO_STREAM_BUFFER_FRAMES = 512,
+    /* 128 ms: holds the API's bounded 100 ms catch-up plus one output block.
+     * The old 32 ms FIFO necessarily rejected PCM at a 39 ms game cadence. */
+    P4_GAME_AUDIO_STREAM_BUFFER_FRAMES = 2048,
 };
 
 typedef struct {

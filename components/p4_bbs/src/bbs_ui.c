@@ -260,13 +260,25 @@ static bool draw_header(p4_ansi_terminal_t *terminal,
         return false;
     }
     if (!field(terminal, 8U, model->can_go_up ? 18U : 25U,
-                 model->can_go_up ? 51U : 31U,
+                 model->can_go_up ? 35U : 28U,
                  model->section[0] == '\0'
                     ? "[ DOOR GAMES ]" : model->section,
                  P4_ANSI_COLOR_YELLOW,
                  P4_ANSI_COLOR_BLUE, true, true)) {
         return false;
     }
+    char storage[14];
+    const char *media = model->storage_is_sd ? "SD" : "INT";
+    if (model->storage_space_valid && model->storage_total_kib > 0U &&
+        model->storage_free_kib <= model->storage_total_kib) {
+        const unsigned percent = (unsigned)((uint64_t)model->storage_free_kib *
+            100U / model->storage_total_kib);
+        (void)snprintf(storage, sizeof(storage), "%s %u%% FREE", media, percent);
+    } else {
+        (void)snprintf(storage, sizeof(storage), "%s -- FREE", media);
+    }
+    if (!field(terminal, 8U, 55U, 13U, storage, P4_ANSI_COLOR_WHITE,
+               P4_ANSI_COLOR_BLUE, true, true)) return false;
     char battery[9];
     uint8_t battery_color = P4_ANSI_COLOR_YELLOW;
     if (!model->battery_supported || !model->battery_sample_valid) {

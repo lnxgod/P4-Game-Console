@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GameChangersAI · Tab5 design walkthrough</title><link rel="stylesheet" href="preview.css">
+<body><header><div><b>GameChangersAI</b><span>Tab5 · next interface</span></div><nav aria-label="Design documents"><a href="native/#home">Installed OS 0.44 · native screens</a><a href="README.md">Design notes</a><a href="BATTERY.md">Battery findings</a><a href="prompts.json">ImageGen prompts</a></nav></header>
+<main><div class="intro"><h1>Choose a screen. Explore the new OS.</h1><p>The native interface is installed as OS 0.44. <a href="native/#home">View the actual C-rendered screens →</a><br>Below: the original 23 ImageGen concepts with illustrative data.</p></div>
+<div class="toolbar"><label>Screen <select id="picker"></select></label><button id="prev" aria-label="Previous screen">←</button><button id="next" aria-label="Next screen">→</button><button id="size" aria-pressed="false">1280 × 720 view</button><label class="check"><input id="targets" type="checkbox"> Show click targets</label><a id="original" target="_blank">Full image ↗</a></div>
+<div id="viewport"><div id="stage"><img id="art" alt=""><div id="hotspots" aria-label="Screen navigation"></div></div></div>
+<div class="caption"><div><h2 id="title"></h2><p id="note"></p></div><div id="quicklinks" aria-label="Related screens"></div></div>
+<p class="hint">Click navigation or outlined targets. Use Tab and Enter, or ← / → between screens. 1280 × 720 mode uses CSS pixels; physical size depends on your monitor.</p>
+<p id="notice" role="status" aria-live="polite"></p>
+<section aria-label="All screen concepts"><h2>All 23 screens</h2><div id="gallery"></div></section>
+</main><script src="screens.js"></script><script src="preview.js"></script></body></html>

@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "mode": "Exact reuse of existing original project illustration",
+  "source": "launcher-source.png",
+  "source_sha256": "92826c9a3b1e0069d61ddaa5af09d60ad449dbe5aba9bd9e991c50f3f490a0ca",
+  "original_source": "components/console_shell/assets/nextgen/blast.png",
+  "original_provenance": "components/console_shell/assets/nextgen/source.json",
+  "original_generation": {
+    "name": "blast",
+    "prompt": "Generate a game cover illustration asset matching the approved reference's Blast Circuit artwork: top-down isometric navy grid bomb arena, steel blocks, orange wooden crates, round black bombs with fuses, one colorful orange explosion, small friendly black and silver robot with cyan eyes. Wide 16:9 composition. Polished 3D cyberspace game packaging art. NO text, labels, letters, interface, borders, spaceship or controls. Keep identifiable arena subject within central region.",
+    "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-b8e64dd0-37d7-45ef-a918-858a1d14e83c.png",
+    "sha256": "92826c9a3b1e0069d61ddaa5af09d60ad449dbe5aba9bd9e991c50f3f490a0ca"
+  },
+  "license": "Original project artwork; no third-party game art. Existing game code/license remains unchanged.",
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "reproduce": "python3 games/blast_circuit/tools/pack_launcher.py",
+    "description": "Center-fit128x72 Lanczos,256 RGB565 palette entries,opaque indexed pixels.",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "recipe_sha256": "5adefb65d0c953eba8646e43815de9a0e9433a1b551fe17524914b5d45e66926"
+  },
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "bytes": 9744,
+    "sha256": "9da4ae5c954396a610d1605f738619b3f2db6e8aa1981cac5d3afe426fd02b0c",
+    "format": "P4ICON1,128x72,256 RGB565 palette entries,opaque indexed pixels"
+  }
+}

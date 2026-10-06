@@ -65,6 +65,36 @@ static bool layout_tab5_tiled(const uint16_t *source, size_t source_stride,
 }
 #endif
 
+#if defined(CONFIG_P4_BOARD_M5STACK_TAB5) && CONFIG_P4_BOARD_M5STACK_TAB5
+bool platform_display_layout_rgb565_1280x720(const uint16_t *source,
+    size_t source_stride, uint16_t *destination, size_t destination_stride, size_t height)
+{
+    if (!source || !destination || source_stride < 1280U ||
+        source_stride > SIZE_MAX / 720U / sizeof(*source) ||
+        destination_stride < 720U || destination_stride > SIZE_MAX / 1280U / sizeof(*destination) ||
+        height < 1280U) return false;
+    for (size_t by=0; by<1280U; by+=32U)
+        for (size_t bx=0; bx<720U; bx+=32U)
+            for (size_t y=by; y<by+32U && y<1280U; ++y)
+                for (size_t x=bx; x<bx+32U && x<720U; ++x)
+                    destination[y*destination_stride+x]=source[x*source_stride+1279U-y];
+    return true;
+}
+
+bool platform_display_layout_rgb565_1152x720(const uint16_t *source,
+    size_t source_stride_pixels, uint16_t *destination,
+    size_t destination_stride_pixels, size_t destination_height)
+{
+    if (source == NULL || destination == NULL || source_stride_pixels < 1152U ||
+        source_stride_pixels > SIZE_MAX / 720U / sizeof(*source) ||
+        destination_stride_pixels < DESTINATION_WIDTH ||
+        destination_stride_pixels > SIZE_MAX / DESTINATION_HEIGHT / sizeof(*destination) ||
+        destination_height < DESTINATION_HEIGHT) return false;
+    return layout_tab5_tiled(source, source_stride_pixels, 1152U, 720U,
+        destination, destination_stride_pixels);
+}
+#endif
+
 bool platform_display_layout_rgb565_320x200(const uint16_t *source,
                                             size_t source_stride_pixels,
                                             uint16_t *destination,
@@ -206,6 +236,37 @@ bool platform_display_layout_map_content_region_ccw(
     (void)CONTENT_HEIGHT;
     return false;
 #endif
+}
+
+static bool tab5_region_valid(const platform_display_rgb565_region_t *r)
+{
+    return r&&r->width&&r->height&&r->x<1280U&&r->y<720U&&
+        r->width<=1280U-r->x&&r->height<=720U-r->y;
+}
+bool platform_display_layout_tab5_damage(
+    const platform_display_rgb565_region_t *current,
+    const platform_display_rgb565_region_t *previous,
+    platform_display_rgb565_region_t *source,
+    platform_display_rgb565_region_t *destination)
+{
+    if(!tab5_region_valid(current)||!source||!destination||
+       (previous&&!tab5_region_valid(previous)))return false;
+    *source=(platform_display_rgb565_region_t){0,0,1280,720};
+    if(previous){
+        const unsigned x=current->x<previous->x?current->x:previous->x;
+        const unsigned y=current->y<previous->y?current->y:previous->y;
+        const unsigned cr=(unsigned)current->x+current->width,pr=(unsigned)previous->x+previous->width;
+        const unsigned cb=(unsigned)current->y+current->height,pb=(unsigned)previous->y+previous->height;
+        *source=(platform_display_rgb565_region_t){(uint16_t)x,(uint16_t)y,
+            (uint16_t)((cr>pr?cr:pr)-x),(uint16_t)((cb>pb?cb:pb)-y)};
+    }
+    /* IDF 5.5.3 PPA pre-invalidates input-height output rows even after
+     * rotation. Widen narrow left-edge damage so that range stays in the FB. */
+    if((unsigned)source->x+source->width<source->height)
+        source->width=(uint16_t)(source->height-source->x);
+    *destination=(platform_display_rgb565_region_t){source->y,
+        (uint16_t)(1280U-source->x-source->width),source->height,source->width};
+    return true;
 }
 
 static uint32_t region_area(

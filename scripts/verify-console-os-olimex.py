@@ -11,10 +11,8 @@ import re
 import struct
 import subprocess
 import sys
-import tempfile
 
 from p4_multiplayer_manifest import expected_multiplayer_extension
-from p4cart_seed_registry import SeedCart, load_seed_carts
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -98,30 +96,6 @@ def verify_game(path: pathlib.Path, manifest: dict) -> dict[str, object]:
     return {"file": path.name, "bytes": len(package), "sha256": sha256(path)}
 
 
-def verify_p4cart(path: pathlib.Path, seed: SeedCart) -> dict[str, object]:
-    inspect = subprocess.run(
-        [sys.executable,
-         str(ROOT / "game-platform/scripts/p4cart.py"),
-         "inspect", str(path)],
-        cwd=ROOT, check=False, text=True,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-    )
-    require(inspect.returncode == 0,
-            f"seed P4 Cart is invalid: {inspect.stderr.strip()}")
-    with tempfile.TemporaryDirectory(prefix="p4cart-seed-") as temporary:
-        rebuilt = pathlib.Path(temporary) / seed.output_name
-        packed = subprocess.run(
-            [sys.executable,
-             str(ROOT / "game-platform/scripts/p4cart.py"),
-             "pack", str(seed.template_directory), str(rebuilt)],
-            cwd=ROOT, check=False, text=True,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        )
-        require(packed.returncode == 0 and rebuilt.read_bytes() == path.read_bytes(),
-                f"seed P4 Cart is not deterministic for {seed.template_name}: "
-                f"{packed.stderr.strip()}")
-    return {"file": str(seed.relative_path), "bytes": path.stat().st_size,
-            "sha256": sha256(path)}
 
 
 def main() -> None:
@@ -181,11 +155,13 @@ def main() -> None:
             project.get("min_rev") == "100" and
             project.get("max_rev") == "199", "target/revision bounds differ")
     components = set(project.get("build_components", []))
+    require(not ({"p4_lua_runtime", "p4_script_renderer", "p4_script_audio", "lua"} & components),
+            "retired Lua runtime component linked")
     for component in (
         "console_shell", "platform_board", "platform_display",
         "platform_game_storage", "platform_gamepad_usb", "platform_usb_host",
         "platform_game_loader", "platform_os_update", "gamepad_core",
-        "p4_multiplayer_registry",
+        "p4_multiplayer_registry", "p4_frame_scheduler",
         "platform_audio", "platform_readonly_blob", "doom_audio",
         "doom_engine_audio", "doom_gamepad_input", "doom_video",
     ):
@@ -240,16 +216,16 @@ def main() -> None:
             "SD bundle has the wrong instructions")
 
     app_metadata = read_json(APP / "app-metadata.json")
-    p4cart_seeds = load_seed_carts()
     legacy = app_metadata.get("legacy_p4cart", {})
-    require(legacy.get("seed_cart") == str(p4cart_seeds[0].relative_path) and
-            legacy.get("seed_carts") == [
-                str(seed.relative_path) for seed in p4cart_seeds
-            ], "legacy P4 Cart metadata differs")
-    p4carts = [
-        verify_p4cart(bundle.joinpath(*seed.relative_path.parts), seed)
-        for seed in p4cart_seeds
-    ]
+    require(legacy.get("retired") is True and
+            legacy.get("game_manager_visible") is False and
+            legacy.get("runtime_implemented") is False and
+            legacy.get("execution_enabled") is False and
+            legacy.get("seed_carts") == [] and
+            legacy.get("seed_cart") is None,
+            "native-only retirement metadata differs")
+    require(not any(p.suffix.lower() == ".p4cart" for p in bundle.rglob("*")),
+            "retired Lua cartridge in native SD bundle")
 
     games: list[dict[str, object]] = []
     for manifest_path in sorted((ROOT / "games").glob("*/game.json")):
@@ -273,6 +249,10 @@ def main() -> None:
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
     require(symbols_result.returncode == 0, "cannot inspect ELF symbols")
+    require(not any(line.split() and line.split()[-1].startswith(
+                ("lua_", "luaL_", "luaopen_", "p4_lua_"))
+                for line in symbols_result.stdout.splitlines()),
+            "retired Lua VM symbol linked")
     symbols = symbols_result.stdout
     for symbol in (
         "app_main", "esp_lcd_new_panel_lt8912b", "esp_vfs_fat_sdmmc_mount",
@@ -312,8 +292,8 @@ def main() -> None:
         "audio": "ES8311/I2S1 build-tested; hardware unverified",
         "doom": "storage-backed gamepad/keyboard/mouse/audio handoff linked",
         "games": games,
-        "legacy_p4cart": p4carts[0],
-        "legacy_p4carts": p4carts,
+        "legacy_p4cart": None,
+        "legacy_p4carts": [],
         "update": update,
         "hardware_tested": False,
     }, sort_keys=True))

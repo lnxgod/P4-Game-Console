@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "mode": "built-in image_gen generation",
+  "source": "presentation_imagegen_v2.png",
+  "sha256": "cf502792b8fd52fb663ab5f0fbd815beb0dcf54a5713eedbd5a89c91602411d7",
+  "prompt": "Use case: stylized-concept. Asset type: original native-resolution game sprite/material atlas for a premium checkers game. Create a transparent PNG with EXACTLY a 3-column by 2-row grid of SIX isolated, equally spaced assets, each centered in its own square cell, large transparent gutters. Orthographic overhead view, no camera perspective. Row 1 from left: one square of warm pale maple wood with subtle horizontal grain (square flat full tile, no border); one square of dark chocolate walnut with subtle horizontal grain (square flat full tile, no border); one round ruby red lacquer checker with concentric grooved rim and glossy bevel. Row 2: one round ivory enamel checker with concentric grooved rim and glossy bevel; one identical red checker bearing a clearly engraved gold crown emblem; one identical ivory checker bearing a clearly engraved dark gold crown emblem. All checker discs circular seen straight overhead, identical diameter and outline, crown emblems small and entirely within disc. Rich tactile materials, restrained studio light upper left, strong readable silhouettes, detailed clean 2D game art suitable for 48 pixel cells, no pixelation. No text, lettering, scenery, extra objects, cell borders, watermark, drop shadows outside asset bounds.",
+  "license": "Original AI-generated artwork for this project, distributed under the project MIT license. No third-party game assets.",
+  "conversion": "tools/convert_presentation.py; source alpha >=160, nearest-neighbor crops, explicit 0xf81f transparency; opaque material interiors; mirrored material row periods are expanded offline to avoid per-frame reconstruction",
+  "groups": [
+    {
+      "name": "checkers_art",
+      "size": 48,
+      "rects": [
+        [
+          112,
+          77,
+          467,
+          432
+        ],
+        [
+          591,
+          77,
+          945,
+          431
+        ],
+        [
+          1061,
+          75,
+          1436,
+          448
+        ],
+        [
+          102,
+          561,
+          477,
+          935
+        ],
+        [
+          581,
+          561,
+          956,
+          935
+        ],
+        [
+          1062,
+          562,
+          1436,
+          935
+        ]
+      ],
+      "opaque": 2
+    },
+    {
+      "name": "checkers_wood_mirrored",
+      "size": 48,
+      "rects": [
+        [
+          591,
+          77,
+          945,
+          431
+        ]
+      ],
+      "opaque": 1,
+      "mirror_rows": true
+    }
+  ]
+}

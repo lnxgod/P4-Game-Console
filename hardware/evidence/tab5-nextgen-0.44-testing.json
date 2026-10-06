@@ -1,0 +1,167 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "product": "GameChangersAI OS",
+  "version": "0.44",
+  "recorded_at": "2026-10-05T22:14:07.217400+00:00",
+  "status": "both-units-readback-and-boot-health-verified",
+  "authorization": {
+    "file": "hardware/evidence/tab5-nextgen-0.44-authorization.json",
+    "sha256": "32d5e0ae8168a13e5dff3da40b67ae9ddcb44c7a1fcb166313a2721cc0889629"
+  },
+  "image": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 3420048,
+    "sha256": "d7c9b684cce3146cd4e48bd38e9233b934bfc0e5f5b63e3a3ee144fd22008a43"
+  },
+  "update": {
+    "file": "local-data/firmware/tab5/0.44/P4UPDATE.P4U",
+    "bytes": 3420304,
+    "sha256": "07b5064d7fefab91df2f8da976d9a7726658860233cac5c925ca8004994f2657"
+  },
+  "interface": {
+    "renderer": "native C nextgen",
+    "resolution": [
+      1280,
+      720
+    ],
+    "legacy_tab5_bbs": false,
+    "game_viewport": [
+      1152,
+      720,
+      64,
+      0
+    ],
+    "production_art_assets": 4,
+    "native_preview_frames": 26,
+    "preview_data": "synthetic fixtures; not evidence of battery/connection health"
+  },
+  "validation": {
+    "firmware": "make console-os-tab5-idf, ESP-IDF 5.5.3, USB host enabled, charger disabled; scripts/verify-console-os-tab5.py passed",
+    "prerequisite_host_tests": 38,
+    "prerequisite_host_failures": 0,
+    "sdl_suite_tests": 8,
+    "sdl_suite_failures": 0,
+    "coverage": "ASan/UBSan navigation, catalog paging, volume/file actions, confirmation invalidation, touch cancellation, rendering bounds, full-width display rotation, startup audio/render, default-off charger service, existing board regressions; native SDL smoke",
+    "visual_review": "All native screen variants rendered and inspected, final Home and full keyboard inspected at 1280x720; gallery dimensions checked.",
+    "build_log_sha256": "def67d162437a522cc410e4854bd993e19b0011c332501324555bb341e5b07df",
+    "sdl_log_sha256": "f0323f5f76fd6c91b54425ca1ccbb86b817a7b335121c5eb4b2931aab3c4d39f",
+    "physical_acceptance": "pending; no claim of human-screen, acoustic or full game-performance acceptance"
+  },
+  "charger": {
+    "enabled": false,
+    "linked_init_symbol": false,
+    "battery_status": "Both units still report invalid pack voltage; pack hardware remains unconfirmed. No charging success claimed."
+  },
+  "preserved": "bootloader, partitions, active OTA selector, NVS/preferences, SD games and saves. No storage formatting or game-content replacement.",
+  "diagnostic_label_caveat": "Two inherited boot log strings still say surface=rgb565-320x200 and version=0.43. App descriptor, update metadata, rendered OS and INTERFACE marker verify 0.44 / 1280x720.",
+  "units": {
+    "A": {
+      "panel": "ST7121",
+      "port": "/dev/cu.usbmodem1101",
+      "live": {
+        "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+        "revision": "v1.3",
+        "flash_bytes": 16777216
+      },
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "write_offsets": [
+        "0x20000"
+      ],
+      "desktop_ready_ms_from_boot_log": 6607,
+      "receipt": {
+        "file": "hardware/backups/tab5-a-install-3uhxpd_4/receipt.json",
+        "sha256": "0cd22d49c4583c908d3f7f937350d9da20a74bebef374655577c7a172394152e"
+      },
+      "runtime_log": {
+        "file": "hardware/backups/tab5-a-install-3uhxpd_4/runtime.log",
+        "sha256": "3aa6a8e6da116579daa0e5f37cc5e8617621142114100a9f77a17fc916609abf"
+      },
+      "battery": {
+        "valid": false,
+        "millivolts": 1150,
+        "milliamps": 0,
+        "percent": null
+      },
+      "serial_markers": [
+        "I (1718) app_init: App version:      0.44",
+        "I (3443) tab5_display: PPA_READY rotation_ccw=90 os=1280x720 os_scale=1 game_viewport=1152x720 content_scale=1.5 game_prescale=384x240",
+        "I (3444) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7121 native=720x1280 logical=1280x720 os=1280x720 game_viewport=1152x720+64+0 format=rgb565",
+        "I (3615) tab5_display: FIRST_FRAME elapsed_ticks=72 transform_us=42860 refresh=10",
+        "I (4696) p4_console_os: P4_CONSOLE_OS BOOT_AUDIO status=played profile=treasure-chords sample_rate=16000 frames=16000 volume=6 nominal_ms=1000 elapsed_ms=1067",
+        "I (6607) p4_console_os: P4_CONSOLE_OS INTERFACE version=0.44 renderer=nextgen native=1280x720 legacy_theme=0",
+        "I (6607) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (7171) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1150 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=7,123,-999 gyro_mdps=61,122,-183 rtc_valid=1 date=2026-10-05 time=22:10:49",
+        "I (16630) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized",
+        "I (17185) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1150 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=715,-108,-704 gyro_mdps=-793,-1220,610 rtc_valid=1 date=2026-10-05 time=22:10:59",
+        "I (27203) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1150 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=7,-40,-1002 gyro_mdps=-1037,671,-61 rtc_valid=1 date=2026-10-05 time=22:11:09",
+        "I (36997) p4_console_os: P4_CONSOLE_OS CARTRIDGE_START app=org.p4console.texas-holdem file=TEXAS_HOLDEM.P4G api=1 source=microsd-games-directory runtime=psram-elf audio=ready signals=offline saves=session-only multiplayer=offline surface=320x200 save_bytes=0 save_sequence=0",
+        "I (37229) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1150 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=22,-121,-999 gyro_mdps=976,-427,-1037 rtc_valid=1 date=2026-10-05 time=22:11:19",
+        "I (39410) p4_console_os: P4_CONSOLE_OS CARTRIDGE_STOP app=org.p4console.texas-holdem result=ESP_OK frames=42 deadline_misses=42 max_frame_ms=100 max_late_ms=1625 display_ack_misses=0 return=launcher audio_frames=11200 audio_stream_underrun_frames=0 amp_safe=1"
+      ],
+      "physical_acceptance": "pending"
+    },
+    "B": {
+      "panel": "ST7123",
+      "port": "/dev/cu.usbmodem2101",
+      "live": {
+        "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+        "revision": "v1.3",
+        "flash_bytes": 16777216
+      },
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "write_offsets": [
+        "0x20000"
+      ],
+      "desktop_ready_ms_from_boot_log": 5320,
+      "receipt": {
+        "file": "hardware/backups/tab5-b-install-69bmx035/receipt.json",
+        "sha256": "bd11b67651f41cf15b3b9b64c7f42dc2902bdf547103be681a12b403fed52089"
+      },
+      "runtime_log": {
+        "file": "hardware/backups/tab5-b-install-69bmx035/runtime.log",
+        "sha256": "382820b98cab1e796ce10358a3e3eb259708ecbbdc2bf3b82466540fcece5b75"
+      },
+      "battery": {
+        "valid": false,
+        "millivolts": 1185,
+        "milliamps": 0,
+        "percent": null
+      },
+      "serial_markers": [
+        "I (1720) app_init: App version:      0.44",
+        "I (2720) tab5_display: PPA_READY rotation_ccw=90 os=1280x720 os_scale=1 game_viewport=1152x720 content_scale=1.5 game_prescale=384x240",
+        "I (2720) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7123 native=720x1280 logical=1280x720 os=1280x720 game_viewport=1152x720+64+0 format=rgb565",
+        "I (2890) tab5_display: FIRST_FRAME elapsed_ticks=70 transform_us=43164 refresh=10",
+        "I (2903) p4_console_os: P4_CONSOLE_OS BOOT_AUDIO status=muted animation=skipped",
+        "I (5320) p4_console_os: P4_CONSOLE_OS INTERFACE version=0.44 renderer=nextgen native=1280x720 legacy_theme=0",
+        "I (5320) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (5883) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1185 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=6,-7,-996 gyro_mdps=122,-305,0 rtc_valid=1 date=2026-10-05 time=22:12:32",
+        "I (15343) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized",
+        "I (15896) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1185 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=8,-7,-994 gyro_mdps=122,-305,61 rtc_valid=1 date=2026-10-05 time=22:12:42",
+        "I (25908) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1185 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=7,-6,-996 gyro_mdps=183,-305,61 rtc_valid=1 date=2026-10-05 time=22:12:52",
+        "I (35920) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1185 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=7,-6,-995 gyro_mdps=61,-366,0 rtc_valid=1 date=2026-10-05 time=22:13:02"
+      ],
+      "physical_acceptance": "pending"
+    }
+  },
+  "observed_game_lifecycle": {
+    "unit": "A",
+    "game": "Texas Hold\u2019em",
+    "evidence": "CARTRIDGE_START followed by CARTRIDGE_STOP result=ESP_OK return=launcher amp_safe=1",
+    "frames": 42,
+    "deadline_misses": 42,
+    "max_frame_ms": 100,
+    "display_ack_misses": 0,
+    "interpretation": "Launch/return lifecycle observed during the capture. Frame deadline misses mean this is not a game performance acceptance result."
+  },
+  "pending": [
+    "Physical review of text, touch, sound and controller feel on both panels",
+    "Compatible-pack/charging qualification; live voltage remains invalid",
+    "Game frame pacing qualification; observed Texas Hold\u2019em run missed frame deadlines"
+  ]
+}

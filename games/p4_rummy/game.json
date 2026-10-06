@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "2.1.1",
+  "version": "2.2.0",
   "package_file": "P4_RUMMY.P4G",
   "component": "p4_rummy",
   "sources": [
@@ -27,7 +27,7 @@
     "video-highres"
   ],
   "license": "MIT",
-  "assets": "dual-resolution-original-code-rendered-cards-suits-and-table-only",
+  "assets": "original-imagegen-felt-and-card-backs-plus-native-resolution-code-cards-suits-and-crisp-ui",
   "enabled": true,
   "multiplayer": {
     "schema": 1,
@@ -36,5 +36,6 @@
     "max_players": 4,
     "message_bytes": 64,
     "protocol": 4
-  }
+  },
+  "launcher_icon": "assets/launcher.p4i"
 }

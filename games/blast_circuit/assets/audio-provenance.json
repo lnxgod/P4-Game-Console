@@ -1,0 +1,250 @@
+{
+  "schema": 1,
+  "source": "tools/synthesize_audio.py",
+  "license": "MIT",
+  "sample_rate": 16000,
+  "codec": "IMA ADPCM, low nibble first; reset predictor=0/index=0 per voice",
+  "bank_bytes": 92800,
+  "sounds": [
+    {
+      "name": "nav",
+      "frames": 960,
+      "seconds": 0.06,
+      "adpcm_bytes": 480,
+      "sha256": "6c5775664acb6eb884841a914d17006c47cf9b943df2a5b18652746b58ad65a8",
+      "peak": 4037
+    },
+    {
+      "name": "confirm",
+      "frames": 2880,
+      "seconds": 0.18,
+      "adpcm_bytes": 1440,
+      "sha256": "6d2692b1ceb88a640ede2a087350326bd55b56aca09e5e979f5933d97245462c",
+      "peak": 7000
+    },
+    {
+      "name": "place",
+      "frames": 2560,
+      "seconds": 0.16,
+      "adpcm_bytes": 1280,
+      "sha256": "dfa4ea6fb7eb3642d57c338c5c511115782ca7bc2714db40fd16d175b0f9a919",
+      "peak": 8562
+    },
+    {
+      "name": "blast",
+      "frames": 10560,
+      "seconds": 0.66,
+      "adpcm_bytes": 5280,
+      "sha256": "c9a4733bd364d37c244b27800d95e4226fc38f13d30dc78177a2f8dba2d3a66b",
+      "peak": 19962
+    },
+    {
+      "name": "wood",
+      "frames": 4480,
+      "seconds": 0.28,
+      "adpcm_bytes": 2240,
+      "sha256": "5375019dd6411ec1e19a58e2c2b58f85ff7be7d6d27b916417608046358a5bae",
+      "peak": 10199
+    },
+    {
+      "name": "metal",
+      "frames": 6400,
+      "seconds": 0.4,
+      "adpcm_bytes": 3200,
+      "sha256": "309b42fbe5072e8c62f5a40a2f320386890c4c734a9728650a4227ac56cf2bda",
+      "peak": 9965
+    },
+    {
+      "name": "glass",
+      "frames": 6720,
+      "seconds": 0.42,
+      "adpcm_bytes": 3360,
+      "sha256": "e25a80d847a4765bf244bbc3e5b6a32f3898fa522cb376e02a1ba3c4f69b99b4",
+      "peak": 9684
+    },
+    {
+      "name": "range",
+      "frames": 4800,
+      "seconds": 0.3,
+      "adpcm_bytes": 2400,
+      "sha256": "40879b44800194f52e27cca6ed5a4adcf1992d8353fe9d1c571b7717ef3b3b55",
+      "peak": 7859
+    },
+    {
+      "name": "extra",
+      "frames": 5120,
+      "seconds": 0.32,
+      "adpcm_bytes": 2560,
+      "sha256": "c502adc269cdea437b488087822221b6be7326fbfeb5837028fefe799f4dfc1c",
+      "peak": 7962
+    },
+    {
+      "name": "speed",
+      "frames": 4800,
+      "seconds": 0.3,
+      "adpcm_bytes": 2400,
+      "sha256": "d1202adf6ad7dd4dac261ad1993fe6f4c4088e7997d1fa1b553f46c47fdbb122",
+      "peak": 6300
+    },
+    {
+      "name": "step",
+      "frames": 880,
+      "seconds": 0.055,
+      "adpcm_bytes": 440,
+      "sha256": "58ca713ec84f4adedcbdd1acc570519c512c486628d92d3bef57fea0458a6ee0",
+      "peak": 2128
+    },
+    {
+      "name": "death",
+      "frames": 7680,
+      "seconds": 0.48,
+      "adpcm_bytes": 3840,
+      "sha256": "cb577ca4c66d3685081cdefb005e7cf48bae6718b2eebd495a9ee028e8a41d21",
+      "peak": 11104
+    },
+    {
+      "name": "count",
+      "frames": 2720,
+      "seconds": 0.17,
+      "adpcm_bytes": 1360,
+      "sha256": "322ffad57bd6376dec516a286ebabe30ef6adc0e163481a1ef8e2df6444317b9",
+      "peak": 6888
+    },
+    {
+      "name": "go",
+      "frames": 6080,
+      "seconds": 0.38,
+      "adpcm_bytes": 3040,
+      "sha256": "25858ea5822ce4683c72af573270bf8bf65eaf9749446a3bae333f1673686ca1",
+      "peak": 11885
+    },
+    {
+      "name": "round",
+      "frames": 12480,
+      "seconds": 0.78,
+      "adpcm_bytes": 6240,
+      "sha256": "c8e373755ab8a668700e9888f376b3c7bbb5928a04f028e04b6957d7e3cdc3a3",
+      "peak": 10332
+    },
+    {
+      "name": "champion",
+      "frames": 22080,
+      "seconds": 1.38,
+      "adpcm_bytes": 11040,
+      "sha256": "433c8712d3bae5ac44ef1ba1e275f41e6f5fe5c040bab4df99365d80737e6e43",
+      "peak": 11178
+    },
+    {
+      "name": "draw",
+      "frames": 7360,
+      "seconds": 0.46,
+      "adpcm_bytes": 3680,
+      "sha256": "9c3a0759468c35bb0e263e875f1e0ab26abf2c1d623914274f43819d7cdb56d0",
+      "peak": 7835
+    },
+    {
+      "name": "pause",
+      "frames": 2560,
+      "seconds": 0.16,
+      "adpcm_bytes": 1280,
+      "sha256": "d2a48182b4ad1440edac7627788fd682ee2151c715e9245f95fcd7b5caeb30f8",
+      "peak": 5583
+    },
+    {
+      "name": "paint",
+      "frames": 1120,
+      "seconds": 0.07,
+      "adpcm_bytes": 560,
+      "sha256": "7bcc11b9ce7c55187a1f89c6ff849d3f9eaed7acc370a1966da438de6d637061",
+      "peak": 4398
+    },
+    {
+      "name": "erase",
+      "frames": 1920,
+      "seconds": 0.12,
+      "adpcm_bytes": 960,
+      "sha256": "2281fa352854b6d0c026899cf1863b7f215f512e3185edbfc96d3de7342aaf9f",
+      "peak": 3934
+    },
+    {
+      "name": "save",
+      "frames": 6080,
+      "seconds": 0.38,
+      "adpcm_bytes": 3040,
+      "sha256": "76ec38932235db73a52a6777f1b5ec2659392b6bd5bd9d3c5a80e45934463715",
+      "peak": 7163
+    },
+    {
+      "name": "error",
+      "frames": 2560,
+      "seconds": 0.16,
+      "adpcm_bytes": 1280,
+      "sha256": "6376b07974f4be185b9717b4bb6adf63a098db32d76cae011502506afde4554a",
+      "peak": 5909
+    },
+    {
+      "name": "transfer",
+      "frames": 8000,
+      "seconds": 0.5,
+      "adpcm_bytes": 4000,
+      "sha256": "e30a12cc2fb1f332a2a4c3738c4a6bb2b8aeb3915b6ed27179384075e5f1da1f",
+      "peak": 6612
+    },
+    {
+      "name": "warning",
+      "frames": 6720,
+      "seconds": 0.42,
+      "adpcm_bytes": 3360,
+      "sha256": "7efcf7ff3c5dcd35e932d398f9311d1cf34dc25237276bd15f30eb04af7a3471",
+      "peak": 8241
+    },
+    {
+      "name": "step_metal",
+      "frames": 1040,
+      "seconds": 0.065,
+      "adpcm_bytes": 520,
+      "sha256": "ef189c11d2c016cd8f618dfe0ae9522cb2f115bd8a7e7082aa9d006643f6fd7d",
+      "peak": 2155
+    },
+    {
+      "name": "step_glass",
+      "frames": 960,
+      "seconds": 0.06,
+      "adpcm_bytes": 480,
+      "sha256": "bbb6cd766176e563e05b903f5d662100fd6fa1b20dd4f0021d6141033ae95432",
+      "peak": 2074
+    },
+    {
+      "name": "death_ember",
+      "frames": 7680,
+      "seconds": 0.48,
+      "adpcm_bytes": 3840,
+      "sha256": "26da27380e14d8de401624d8804fc1a5df7ec5740474465049d1836d8ee0b4a7",
+      "peak": 11301
+    },
+    {
+      "name": "death_volt",
+      "frames": 7680,
+      "seconds": 0.48,
+      "adpcm_bytes": 3840,
+      "sha256": "3482ee836d023cfaa27aea768a1144efa62c9305631851b62d5d2f2cc5af1f4d",
+      "peak": 11021
+    },
+    {
+      "name": "death_gilt",
+      "frames": 8320,
+      "seconds": 0.52,
+      "adpcm_bytes": 4160,
+      "sha256": "38195b6c20a25ad15614be48369256a6f32652d0397cfa3691541191632d94b2",
+      "peak": 11726
+    },
+    {
+      "name": "sizzle",
+      "frames": 22400,
+      "seconds": 1.4,
+      "adpcm_bytes": 11200,
+      "sha256": "a11e9b937efda5dffeb75f1a7881fa2fa8d976634b0a89046c7bad0e40d33009",
+      "peak": 7291
+    }
+  ]
+}

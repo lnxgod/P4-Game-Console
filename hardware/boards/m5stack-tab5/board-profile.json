@@ -89,7 +89,20 @@
     "usb": {
       "host_power_enabled_by_initial_port": false,
       "type_a": "native HS USB host dedicated PHY; power expander 0x44 P3",
-      "type_c": "native FS USB Serial/JTAG GPIO24/25"
+      "type_c": "native FS USB Serial/JTAG GPIO24/25",
+      "controller_host": {
+        "build_enabled": true,
+        "config": "CONFIG_P4_TAB5_USB_HOST",
+        "hardware_verified": false,
+        "connector": "USB-A direct HID or wired XUSB gamepad",
+        "power_switch": "U27 MT9700; active-high USB5V_EN at expander 0x44/P3",
+        "evidence": "hardware/evidence/tab5-usb-gamepad-20261004-xusb-build.json",
+        "startup_verified_units": [
+          "A",
+          "B"
+        ],
+        "startup_evidence": "hardware/evidence/tab5-console-os-0.43-memory-fix-testing.json"
+      }
     },
     "sensors": {
       "provenance": "third_party/tab5-sensors.json",
@@ -115,7 +128,7 @@
   "product": "Tab5 C145/K145",
   "schema": 1,
   "soc": "ESP32-P4 revision 1.x build family",
-  "status": "units-a-b-control-panel-library-clock-boot-health-verified-physical-acceptance-pending",
+  "status": "units-a-b-0.43-readback-boot-health-verified-usb-services-ready-physical-acceptance-pending",
   "touch": true,
   "vendor": "M5Stack",
   "build_ready": true,
@@ -136,7 +149,20 @@
       "scope": "Shared existing I2C1 GPIO31/32 only: INA226 config/read at 0x41, BMI270 identity/config/read at 0x68, RX8130CE read and fitted backup-supply enable at 0x32. No charger, rail, camera, USB host, radio or other GPIO authorization. Exact-unit firmware installation requires a separate artifact authorization. Explicit UTC sync adds RX8130CE calendar 0x10..0x16 writes, VLF-only W0C at 0x1D and clearing pre-existing STOP at 0x1E after readback, per pinned Epson application manual. No alarm, timer, clock-output or digital-offset configuration changes.",
       "broad_flash_authorization": false,
       "hardware_acceptance": "A/B communication and live samples, UTC clock setting and warm-restart retention verified; pack validity, motion calibration, cold power-loss retention and long-term clock accuracy pending"
+    },
+    "c6_local_multiplayer": {
+      "evidence": "design/tab5-bluetooth/proposal.json",
+      "scope": "User explicitly approved C6 Bluetooth and local Wi-Fi Host/Join on 2026-10-05. Shared I2C1 GPIO31/32, masked expander 0x44/P0 WLAN 3.3V enable only; SDMMC slot1 GPIO12 CLK,13 CMD,11/10/9/8 D0-D3 at initial 10 MHz, GPIO15 C6 EN high-low-high reset. No C6 flash writes or unrelated pins/rails. Exact P4 artifact and backed-up unit must pass the installation guard.",
+      "broad_flash_authorization": false,
+      "hardware_acceptance": "pending"
+    },
+    "battery_charger_500ma": {
+      "authorized": true,
+      "date": "2026-10-05",
+      "basis": "User confirms attached batteries and requests fixing charging; pinned official M5Unified and C145 schematic in third_party/tab5-sensors.json.",
+      "scope": "Shared I2C1 GPIO31/32, expander 0x44 P7 CHG_EN, P5 QC disabled, P6 charge status input. 500 mA selection only; preserve all other pins. Exact-artifact guarded install required.",
+      "hardware_acceptance": "pending"
     }
   },
-  "hardware_evidence": "hardware/evidence/tab5-console-os-20261004-clock-testing.json"
+  "hardware_evidence": "hardware/evidence/tab5-console-os-0.43-memory-fix-testing.json"
 }

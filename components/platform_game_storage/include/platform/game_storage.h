@@ -90,6 +90,8 @@ typedef struct {
     uint32_t usb_verified_writes;
     uint32_t usb_write_failures;
     uint64_t free_bytes;
+    uint64_t filesystem_bytes; /* Usable FAT data capacity, excluding metadata. */
+    bool space_valid;
     uint32_t real_frequency_khz;
     uint32_t root_entries;
     uint32_t checks;

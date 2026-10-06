@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "mode": "built-in image_gen; cover derived from upgraded game artwork",
+  "source": "launcher-source.png",
+  "source_sha256": "ae6670a1d08f6172197cd85879ae96d7d642b261ca044979bbd15e504bfe6f5d",
+  "generation_source": "/Users/billh/.codex/generated_images/01a10e4d-67fb-7561-b76d-25c549064ff2/exec-74e456de-9597-480d-ace5-f2ff2dbca38c.png",
+  "prompt": "Use case: stylized-concept. Asset type: finished landscape 16:9 launcher cover illustration for a console game, optimized for a tiny 128x72 thumbnail. Create ONE cohesive edge-to-edge scene, not a sprite atlas. Clear large silhouettes, center-safe subject, premium polished game illustration with restrained dark background and luminous material detail. Absolutely no title, letters, logos, interface, numbers, watermarks or border. Opaque background. Game: Air Hockey. Reference defines cyan and coral-magenta strikers with polished silver rims, a black puck with silver ring, and deep midnight-blue perforated rink. Create a dramatic close 3/4 view of those two glossy strikers facing off across the rink, black puck streaking through center with subtle cyan motion trail. Include crisp rink centerline/circle but no text. Cyan striker foreground left, magenta farther right; strong clean forms, dark navy surface, exciting arcade lighting. Keep materials and colors faithful.",
+  "reference_assets": [
+    {
+      "path": "games/p4_air_hockey/assets/presentation_imagegen_v2.png",
+      "sha256": "b1693b555022c22e28bf7e1093f8ed88e1bc04cee0856a29dda4b9817c0b0b60"
+    }
+  ],
+  "license": "Original AI-generated project artwork, distributed under the project MIT license. No third-party game art.",
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "sha256": "ec85000a7d2375886742933dc787a760c1429df5eb8a0adc457d251b4e4d06a1",
+    "bytes": 9744,
+    "width": 128,
+    "height": 72,
+    "palette_entries": 256,
+    "palette_format": "little-endian RGB565",
+    "pixels": "row-major uint8 palette indices",
+    "opaque": true
+  },
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "command": "python3 scripts/pack-game-icon.py games/p4_air_hockey/assets/launcher-source.png --output games/p4_air_hockey/assets/launcher.p4i",
+    "description": "Standard center-fit Lanczos resize and 256-color median-cut quantization. No gameplay or runtime assets changed."
+  }
+}

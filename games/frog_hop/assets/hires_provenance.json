@@ -1,0 +1,122 @@
+{
+  "version": "1.1.0",
+  "assets": [
+    {
+      "game": "frog_hop",
+      "source": "/Users/billh/.codex/generated_images/01a10e4d-8eac-7052-b410-c517e93f4e11/exec-e4b69912-0f3d-41d4-8f4b-6a0365e13253.png",
+      "width": 96,
+      "height": 60,
+      "prompt": "Use case: stylized-concept. Asset type: original 2D arcade sprite atlas for Frog Hop, a friendly road-and-river crossing game, transparent PNG. Draw an EXACT 4 column by 4 row regular grid, 16 independently isolated sprites, equal cells, no grid lines. Row 1: same bright lime-green tree frog viewed from directly above, facing up, 4 hop-cycle frames (crouch, stretch, midair, landing). Row 2: four top-down compact cars pointing right: coral coupe, yellow taxi without text, blue van, cream station wagon. Row 3: four horizontal floating driftwood logs, with warm rich bark, pale cut ends, subtle moss and distinctive wood texture; same long narrow collision silhouette each. Row 4: four round lily pad home docks, from empty dark green leaf with yellow flower to three slight leaf/flower animation variations, no frog. Camera strictly orthographic overhead. Polished hand-painted arcade pixel art with crisp silhouette edges and fine material highlights, designed for a 768x480 game, each object will be sampled to about 90x50 pixels. Every sprite centered in its cell, 15 percent transparent margin, all frogs consistent scale, logs/cars horizontally longer than tall. Transparent background only, no shadows outside object, no text, no labels, no scenery, no known game characters. Make readable high contrast.",
+      "asset": "assets/hires_atlas_v2.png",
+      "sha256": "6258462af6ceb7eb6c1a1363002033fb23cb3d57860d53259dcaf82df3cf4912",
+      "mode": "built-in image_gen",
+      "transparent_background": true
+    }
+  ],
+  "conversion": {
+    "cell_dimensions": [
+      96,
+      60
+    ],
+    "measured_opaque_bounds": [
+      [
+        100,
+        95,
+        285,
+        245
+      ],
+      [
+        491,
+        14,
+        661,
+        268
+      ],
+      [
+        826,
+        24,
+        1094,
+        245
+      ],
+      [
+        1257,
+        92,
+        1435,
+        245
+      ],
+      [
+        35,
+        319,
+        351,
+        486
+      ],
+      [
+        420,
+        319,
+        735,
+        486
+      ],
+      [
+        794,
+        306,
+        1134,
+        500
+      ],
+      [
+        1194,
+        315,
+        1507,
+        490
+      ],
+      [
+        23,
+        565,
+        361,
+        693
+      ],
+      [
+        407,
+        564,
+        745,
+        693
+      ],
+      [
+        791,
+        538,
+        1130,
+        693
+      ],
+      [
+        1176,
+        579,
+        1514,
+        693
+      ],
+      [
+        76,
+        752,
+        309,
+        982
+      ],
+      [
+        458,
+        751,
+        693,
+        982
+      ],
+      [
+        844,
+        751,
+        1078,
+        983
+      ],
+      [
+        1228,
+        752,
+        1462,
+        984
+      ]
+    ],
+    "resize": "Lanczos from measured original ImageGen crops; fitted to existing collision silhouettes; alpha >=160 to RGB565 chroma key 0",
+    "atlas_static_bytes": 184320
+  }
+}

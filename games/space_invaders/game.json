@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.0.1",
+  "version": "1.1.0",
   "package_file": "INVADERS.P4G",
   "component": "space_invaders",
   "entry_symbol": "p4_space_invaders_game",
@@ -18,9 +18,11 @@
   ],
   "optional_capabilities": [
     "audio-tone",
-    "audio-stream"
+    "audio-stream",
+    "video-highres"
   ],
   "license": "MIT",
-  "assets": "original-clean-room-code-rendered-geometry-only",
-  "enabled": true
+  "assets": "original-ImageGen-high-resolution-sprite-atlas-and-native-detail; Arimo-OFL-1.1-presentation-font",
+  "enabled": true,
+  "launcher_icon": "assets/launcher.p4i"
 }

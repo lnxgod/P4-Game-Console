@@ -8,10 +8,13 @@
 #include <string.h>
 
 #include "p4/draw.h"
+#include "table_presentation.h"
+#include "generated/presentation_assets.inc"
 #include "p4/game.h"
 #include "p4/input.h"
 
-#include "generated/p4_yahtzee_dice_atlas.inc"
+/* Stable logical touch footprint, independent of the 112px native sprite. */
+enum { P4_YAHTZEE_DIE_SPRITE_SIZE = 46 };
 
 enum {
     COLOR_BG = 0x0844,
@@ -159,6 +162,8 @@ static void handle_touch(p4_game_context_t *context,
     }
     if (y >= SCORE_Y && y < SCORE_Y + SCORE_ROW_H * 7) {
         const uint8_t row = (uint8_t)((y - SCORE_Y) / SCORE_ROW_H);
+        /* The left seventh row is the bonus summary, not a score target. */
+        if (x >= 317U || (x < SCORE_COL_W && row >= 6U)) return;
         uint8_t category = row;
         if (x >= SCORE_COL_W) {
             category = (uint8_t)(P4_YAHTZEE_THREE_KIND + row);
@@ -211,7 +216,10 @@ static p4_game_result_t game_update(
     uint32_t elapsed_ms)
 {
     p4_yahtzee_state_t *const state = context->state;
-    if ((input->pressed & P4_BUTTON_BACK) != 0U) {
+    const bool touch_down = input->touch_valid && input->touch_count != 0U;
+    const bool touch_owned = touch_down || state->touch_was_down;
+    const uint32_t pressed = touch_owned ? 0U : input->pressed;
+    if ((pressed & P4_BUTTON_BACK) != 0U) {
         if (state->phase == P4_YAHTZEE_MENU) {
             return P4_GAME_EXIT_TO_LAUNCHER;
         }
@@ -241,21 +249,24 @@ static p4_game_result_t game_update(
         handle_touch(context, state, input->touches[0].x,
                      input->touches[0].y);
     }
-    state->touch_was_down = input->touch_valid && input->touch_count != 0U;
+    state->touch_was_down = touch_down;
+    /* A raw touch may also carry virtual-controller presses. Consume its
+     * release frame too so scoring or holding a die cannot fire twice. */
+    if (touch_owned) return P4_GAME_CONTINUE;
 
     if (state->phase == P4_YAHTZEE_MENU) {
-        if ((input->pressed & (P4_BUTTON_UP | P4_BUTTON_DOWN)) != 0U) {
+        if ((pressed & (P4_BUTTON_UP | P4_BUTTON_DOWN)) != 0U) {
             state->menu_selection ^= 1U;
         }
         if (state->menu_selection == 0U &&
-            (input->pressed & P4_BUTTON_LEFT) != 0U) {
+            (pressed & P4_BUTTON_LEFT) != 0U) {
             adjust_player_count(state, false);
         }
         if (state->menu_selection == 0U &&
-            (input->pressed & P4_BUTTON_RIGHT) != 0U) {
+            (pressed & P4_BUTTON_RIGHT) != 0U) {
             adjust_player_count(state, true);
         }
-        if ((input->pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
+        if ((pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
             if (state->menu_selection == 0U) {
                 state->mode = P4_YAHTZEE_LOCAL;
                 p4_yahtzee_reset_match(state, state->rng);
@@ -267,13 +278,13 @@ static p4_game_result_t game_update(
         return P4_GAME_CONTINUE;
     }
     if (state->phase == P4_YAHTZEE_PASS) {
-        if ((input->pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
+        if ((pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
             state->phase = P4_YAHTZEE_TURN;
         }
         return P4_GAME_CONTINUE;
     }
     if (state->phase == P4_YAHTZEE_GAME_OVER) {
-        if ((input->pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
+        if ((pressed & (P4_BUTTON_A | P4_BUTTON_START)) != 0U) {
             (void)p4_yahtzee_perform_action(
                 context, state, P4_YAHTZEE_NET_RESTART, 0U);
         }
@@ -283,41 +294,41 @@ static p4_game_result_t game_update(
         !p4_yahtzee_local_turn(state) || state->roll_animation_ms != 0U) {
         return P4_GAME_CONTINUE;
     }
-    if ((input->pressed & P4_BUTTON_B) != 0U) {
+    if ((pressed & P4_BUTTON_B) != 0U) {
         state->focus = state->focus == P4_YAHTZEE_FOCUS_DICE
             ? P4_YAHTZEE_FOCUS_SCORE : P4_YAHTZEE_FOCUS_DICE;
     }
-    if ((input->pressed & P4_BUTTON_START) != 0U) {
+    if ((pressed & P4_BUTTON_START) != 0U) {
         (void)p4_yahtzee_perform_action(
             context, state, P4_YAHTZEE_NET_ROLL, 0U);
     }
     if (state->focus == P4_YAHTZEE_FOCUS_DICE) {
-        if ((input->pressed & P4_BUTTON_LEFT) != 0U) {
+        if ((pressed & P4_BUTTON_LEFT) != 0U) {
             state->selected_die = (uint8_t)((state->selected_die +
                 P4_YAHTZEE_DICE - 1U) % P4_YAHTZEE_DICE);
         }
-        if ((input->pressed & P4_BUTTON_RIGHT) != 0U) {
+        if ((pressed & P4_BUTTON_RIGHT) != 0U) {
             state->selected_die = (uint8_t)((state->selected_die + 1U) %
                                              P4_YAHTZEE_DICE);
         }
-        if ((input->pressed & P4_BUTTON_DOWN) != 0U) {
+        if ((pressed & P4_BUTTON_DOWN) != 0U) {
             state->focus = P4_YAHTZEE_FOCUS_SCORE;
         }
-        if ((input->pressed & P4_BUTTON_A) != 0U) {
+        if ((pressed & P4_BUTTON_A) != 0U) {
             (void)p4_yahtzee_perform_action(
                 context, state, P4_YAHTZEE_NET_HOLD, state->selected_die);
         }
     } else {
-        if ((input->pressed & (P4_BUTTON_UP | P4_BUTTON_LEFT)) != 0U) {
+        if ((pressed & (P4_BUTTON_UP | P4_BUTTON_LEFT)) != 0U) {
             state->selected_category = (uint8_t)(
                 (state->selected_category + P4_YAHTZEE_CATEGORIES - 1U) %
                 P4_YAHTZEE_CATEGORIES);
         }
-        if ((input->pressed & (P4_BUTTON_DOWN | P4_BUTTON_RIGHT)) != 0U) {
+        if ((pressed & (P4_BUTTON_DOWN | P4_BUTTON_RIGHT)) != 0U) {
             state->selected_category = (uint8_t)(
                 (state->selected_category + 1U) % P4_YAHTZEE_CATEGORIES);
         }
-        if ((input->pressed & P4_BUTTON_A) != 0U) {
+        if ((pressed & P4_BUTTON_A) != 0U) {
             (void)p4_yahtzee_perform_action(
                 context, state, P4_YAHTZEE_NET_SCORE,
                 state->selected_category);
@@ -332,18 +343,16 @@ static void draw_die(p4_game_surface_t *surface, int x, int y, uint8_t value,
     if (value < 1U || value > 6U) {
         value = 1U;
     }
-    p4_draw_sprite_rgb565(
-        surface, x, y, s_p4_yahtzee_dice[value - 1U],
-        P4_YAHTZEE_DIE_SPRITE_SIZE, P4_YAHTZEE_DIE_SPRITE_SIZE,
-        P4_YAHTZEE_DIE_SPRITE_SIZE, true, P4_YAHTZEE_DIE_CHROMA);
+    table_sprite(surface, x, y, P4_YAHTZEE_DIE_SPRITE_SIZE,
+                 P4_YAHTZEE_DIE_SPRITE_SIZE, yahtzee_dice_hd[value - 1U], 112, true);
     if (held) {
-        p4_draw_rect(surface, x, y, P4_YAHTZEE_DIE_SPRITE_SIZE,
+        table_rect(surface, x, y, P4_YAHTZEE_DIE_SPRITE_SIZE,
                      P4_YAHTZEE_DIE_SPRITE_SIZE, COLOR_GOLD);
-        p4_draw_rect(surface, x + 2, y + 2,
+        table_rect(surface, x + 2, y + 2,
                      P4_YAHTZEE_DIE_SPRITE_SIZE - 4,
                      P4_YAHTZEE_DIE_SPRITE_SIZE - 4, COLOR_GOLD);
     } else if (selected) {
-        p4_draw_rect(surface, x, y, P4_YAHTZEE_DIE_SPRITE_SIZE,
+        table_rect(surface, x, y, P4_YAHTZEE_DIE_SPRITE_SIZE,
                      P4_YAHTZEE_DIE_SPRITE_SIZE, COLOR_ACCENT);
     }
 }
@@ -354,15 +363,15 @@ static void draw_player_panel(p4_game_surface_t *surface,
 {
     const bool active = state->current_player == player &&
         state->phase != P4_YAHTZEE_MENU;
-    p4_draw_fill_rect(surface, x, 2, width, 25,
+    table_fill(surface, x, 2, width, 25,
                       active ? COLOR_PANEL_ALT : COLOR_PANEL);
-    p4_draw_rect(surface, x, 2, width, 25,
+    table_rect(surface, x, 2, width, 25,
                  active ? COLOR_ACCENT : COLOR_LINE);
     char line[12] = "P1 ";
     line[1] = (char)('1' + player);
     (void)append_unsigned(line, sizeof(line), 3U,
                           (unsigned)p4_yahtzee_total(state, player));
-    p4_draw_text(surface, x + 4, 5, line,
+    table_text(surface, x + 4, 5, line,
                  active ? COLOR_TEXT : COLOR_MUTED, 1U, 9U);
     char upper[12] = "U";
     const int upper_total = p4_yahtzee_upper_total(state, player);
@@ -375,14 +384,14 @@ static void draw_player_panel(p4_game_surface_t *surface,
         upper[length++] = '5';
         upper[length] = '\0';
     }
-    p4_draw_text(surface, x + 4, 16, upper, COLOR_MUTED, 1U, 9U);
+    table_text(surface, x + 4, 16, upper, COLOR_MUTED, 1U, 9U);
 }
 
 static void draw_exit_button(p4_game_surface_t *surface)
 {
-    p4_draw_fill_rect(surface, EXIT_X, EXIT_Y, EXIT_W, EXIT_H, COLOR_DANGER);
-    p4_draw_rect(surface, EXIT_X, EXIT_Y, EXIT_W, EXIT_H, COLOR_GOLD);
-    p4_draw_text(surface, EXIT_X + 12, EXIT_Y + 9, "EXIT",
+    table_fill(surface, EXIT_X, EXIT_Y, EXIT_W, EXIT_H, COLOR_DANGER);
+    table_rect(surface, EXIT_X, EXIT_Y, EXIT_W, EXIT_H, COLOR_GOLD);
+    table_text(surface, EXIT_X + 12, EXIT_Y + 9, "EXIT",
                  COLOR_TEXT, 1U, 4U);
 }
 
@@ -403,37 +412,37 @@ static void draw_score_row(p4_game_surface_t *surface,
         p4_yahtzee_score_dice(state->dice,
                               (p4_yahtzee_category_t)category);
     const bool scoring_option = selectable && preview > 0;
-    p4_draw_fill_rect(surface, x + 1, y + 1, SCORE_COL_W - 3,
+    table_fill(surface, x + 1, y + 1, SCORE_COL_W - 3,
                       SCORE_ROW_H - 1,
                       stored >= 0 ? COLOR_USED :
                       selected && selectable ? COLOR_PANEL_ALT :
                       scoring_option ? COLOR_OPTION_PANEL : COLOR_PANEL);
     if (stored >= 0) {
-        p4_draw_fill_rect(surface, x + 1, y + 1, 4,
+        table_fill(surface, x + 1, y + 1, 4,
                           SCORE_ROW_H - 1, COLOR_GOLD);
     } else if (scoring_option) {
-        p4_draw_fill_rect(surface, x + 1, y + 1, 4,
+        table_fill(surface, x + 1, y + 1, 4,
                           SCORE_ROW_H - 1, COLOR_OPTION_PINK);
     }
     if (selected) {
-        p4_draw_rect(surface, x + 1, y + 1, SCORE_COL_W - 3,
+        table_rect(surface, x + 1, y + 1, SCORE_COL_W - 3,
                      SCORE_ROW_H - 1,
                      selectable ? COLOR_ACCENT : COLOR_LINE);
     }
-    p4_draw_text(surface, x + 5, y + 3, s_category_names[category],
+    table_text(surface, x + 5, y + 3, s_category_names[category],
                  stored >= 0 ? COLOR_MUTED :
                  selected && selectable ? COLOR_ACCENT :
                  scoring_option ? COLOR_OPTION_PINK : COLOR_TEXT, 1U, 12U);
     char value[5];
     score_text(value, stored >= 0 ? stored : preview);
-    p4_draw_text(surface, x + 130, y + 3, value,
+    table_text(surface, x + 130, y + 3, value,
                  stored >= 0 ? COLOR_MUTED :
                  state->roll_count != 0U ? COLOR_GOLD : COLOR_MUTED,
                  1U, 4U);
     if (stored >= 0) {
-        p4_draw_text(surface, x + 106, y + 3, "SET", COLOR_GOLD, 1U, 3U);
+        table_text(surface, x + 106, y + 3, "SET", COLOR_GOLD, 1U, 3U);
     } else if (selectable) {
-        p4_draw_text(surface, x + 102, y + 3, "PICK",
+        table_text(surface, x + 102, y + 3, "PICK",
                      selected ? COLOR_ACCENT :
                      scoring_option ? COLOR_OPTION_PINK : COLOR_MUTED,
                      1U, 4U);
@@ -444,63 +453,63 @@ static void draw_summary_row(p4_game_surface_t *surface, const char *label,
                              int value, int x, int row, uint16_t color)
 {
     const int y = SCORE_Y + row * SCORE_ROW_H;
-    p4_draw_fill_rect(surface, x + 1, y + 1, SCORE_COL_W - 3,
+    table_fill(surface, x + 1, y + 1, SCORE_COL_W - 3,
                       SCORE_ROW_H - 1, COLOR_PANEL_ALT);
-    p4_draw_text(surface, x + 5, y + 3, label, color, 1U, 12U);
+    table_text(surface, x + 5, y + 3, label, color, 1U, 12U);
     char text[5];
     score_text(text, value);
-    p4_draw_text(surface, x + 130, y + 3, text, color, 1U, 4U);
+    table_text(surface, x + 130, y + 3, text, color, 1U, 4U);
 }
 
 static void draw_menu(p4_game_context_t *context,
                       p4_game_surface_t *surface,
                       const p4_yahtzee_state_t *state)
 {
-    p4_draw_text(surface, 80, 9, "YAHTZEE", COLOR_TEXT, 2U, 10U);
-    p4_draw_text(surface, 92, 31, "2-4 PLAYER DICE", COLOR_MUTED, 1U, 18U);
+    table_text(surface, 80, 9, "YAHTZEE", COLOR_TEXT, 2U, 10U);
+    table_text(surface, 92, 31, "2-4 PLAYER DICE", COLOR_MUTED, 1U, 18U);
     for (uint8_t die = 0U; die < P4_YAHTZEE_DICE; ++die) {
         draw_die(surface, 15 + (int)die * 61, 48,
                  (uint8_t)(die + 1U), false, false);
     }
     const bool network = p4_yahtzee_network_available(context);
-    p4_draw_fill_rect(surface, 61, 105, 198, 25, COLOR_PANEL);
-    p4_draw_rect(surface, 61, 105, 198, 25,
+    table_fill(surface, 61, 105, 198, 25, COLOR_PANEL);
+    table_rect(surface, 61, 105, 198, 25,
                  state->menu_selection == 0U ? COLOR_ACCENT : COLOR_LINE);
     char local_line[17] = "LOCAL 2 PLAYERS";
     local_line[6] = (char)('0' + display_player_count(state));
-    p4_draw_text(surface, 105, 114, local_line, COLOR_TEXT, 1U, 16U);
-    p4_draw_text(surface, 70, 114, "<", COLOR_GOLD, 1U, 1U);
-    p4_draw_text(surface, 244, 114, ">", COLOR_GOLD, 1U, 1U);
-    p4_draw_fill_rect(surface, 61, 136, 198, 25, COLOR_PANEL);
-    p4_draw_rect(surface, 61, 136, 198, 25,
+    table_text(surface, 105, 114, local_line, COLOR_TEXT, 1U, 16U);
+    table_text(surface, 70, 114, "<", COLOR_GOLD, 1U, 1U);
+    table_text(surface, 244, 114, ">", COLOR_GOLD, 1U, 1U);
+    table_fill(surface, 61, 136, 198, 25, COLOR_PANEL);
+    table_rect(surface, 61, 136, 198, 25,
                  state->menu_selection == 1U ? COLOR_ACCENT : COLOR_LINE);
-    p4_draw_text(surface, 101, 145, "NETWORK 2-4 PLAYERS",
-                 network ? COLOR_TEXT : COLOR_MUTED, 1U, 18U);
-    p4_draw_text(surface, 65, 172,
+    table_text(surface, 101, 145, "NETWORK 2-4 PLAYERS",
+                 network ? COLOR_TEXT : COLOR_MUTED, 1U, 20U);
+    table_text(surface, 65, 172,
         network ? (state->menu_selection == 0U
-            ? "LEFT/RIGHT PLAYERS  A SELECTS"
-            : "A OPENS P4MP  BACK EXITS") :
-            "NETWORK: OPEN FROM P4MP LOBBY",
+            ? "TAP ARROWS, THEN LOCAL PLAY"
+            : "TAP NETWORK TO PLAY TOGETHER") :
+            "LINKED PLAY: USE MULTIPLAYER",
         network ? COLOR_MUTED : COLOR_DANGER, 1U, 31U);
 }
 
 static void draw_pass(p4_game_surface_t *surface,
                       const p4_yahtzee_state_t *state)
 {
-    p4_draw_fill_rect(surface, 31, 45, 258, 110, COLOR_PANEL);
-    p4_draw_rect(surface, 31, 45, 258, 110, COLOR_ACCENT);
-    p4_draw_text(surface, 86, 59, "PASS THE DEVICE", COLOR_GOLD, 1U, 18U);
+    table_fill(surface, 31, 45, 258, 110, COLOR_PANEL);
+    table_rect(surface, 31, 45, 258, 110, COLOR_ACCENT);
+    table_text(surface, 86, 59, "PASS THE DEVICE", COLOR_GOLD, 1U, 18U);
     char line[9] = "PLAYER 1";
     line[7] = (char)('1' + state->current_player);
-    p4_draw_text(surface, 97, 84, line, COLOR_TEXT, 2U, 8U);
-    p4_draw_text(surface, 74, 124, "PRESS A WHEN READY", COLOR_MUTED, 1U, 20U);
+    table_text(surface, 97, 84, line, COLOR_TEXT, 2U, 8U);
+    table_text(surface, 74, 124, "TAP WHEN READY", COLOR_MUTED, 1U, 20U);
 }
 
 static void draw_game_over(p4_game_surface_t *surface,
                            const p4_yahtzee_state_t *state)
 {
     const uint8_t player_count = display_player_count(state);
-    p4_draw_text(surface, 88, 22, "FINAL SCORES", COLOR_GOLD, 1U, 16U);
+    table_text(surface, 88, 22, "FINAL SCORES", COLOR_GOLD, 1U, 16U);
     int best_score = -1;
     uint8_t best_player = 0U;
     uint8_t leader_count = 0U;
@@ -509,7 +518,7 @@ static void draw_game_over(p4_game_surface_t *surface,
         char line[12] = "P1 ";
         line[1] = (char)('1' + player);
         (void)append_unsigned(line, sizeof(line), 3U, (unsigned)score);
-        p4_draw_text(surface, 33 + (int)(player % 2U) * 155,
+        table_text(surface, 33 + (int)(player % 2U) * 155,
                      55 + (int)(player / 2U) * 30,
                      line, COLOR_TEXT, 2U, 9U);
         if (score > best_score) {
@@ -528,8 +537,8 @@ static void draw_game_over(p4_game_surface_t *surface,
         (void)append_unsigned(winner, sizeof(winner), 7U,
                               (unsigned)best_score);
     }
-    p4_draw_text(surface, 80, 125, winner, COLOR_ACCENT, 1U, 20U);
-    p4_draw_text(surface, 57, 166, "A: PLAY AGAIN  BACK: MENU",
+    table_text(surface, 80, 125, winner, COLOR_ACCENT, 1U, 20U);
+    table_text(surface, 57, 166, "TAP TO PLAY AGAIN",
                  COLOR_MUTED, 1U, 28U);
 }
 
@@ -540,20 +549,29 @@ static bool game_render(p4_game_context_t *context,
         return false;
     }
     const p4_yahtzee_state_t *const state = context->state;
-    p4_draw_clear(surface, COLOR_BG);
+    /* Only the visible walnut border is painted; felt covers the interior. */
+    table_material(surface, 0, 0, 320, 3, yahtzee_material[2], 96);
+    table_material(surface, 0, 197, 320, 3, yahtzee_material[2], 96);
+    table_material(surface, 0, 3, 3, 194, yahtzee_material[2], 96);
+    table_material(surface, 317, 3, 3, 194, yahtzee_material[2], 96);
+    table_material(surface, 3, 3, 314, 194, yahtzee_material[0], 96);
     if (state->phase == P4_YAHTZEE_MENU) {
         draw_menu(context, surface, state);
         draw_exit_button(surface);
         return true;
     }
+    /* Name and player totals have separate bounded header columns. */
+    p4_ui_text(surface,p4_ui_x(surface,55),p4_ui_y(surface,10),
+               "YAHTZEE",COLOR_TEXT,surface->width==320U?9U:22U,7U);
+    table_fill(surface,110,5,1,19,COLOR_LINE);
     if (state->phase == P4_YAHTZEE_NETWORK_WAIT) {
-        p4_draw_text(surface, 64, 42, "NETWORK MATCH", COLOR_TEXT, 2U, 13U);
-        p4_draw_text(surface, 61, 91,
-            state->network_error ? "SESSION LOST - BACK" :
-            "WAITING FOR P4MP PEER...",
+        table_text(surface, 64, 42, "NETWORK MATCH", COLOR_TEXT, 2U, 13U);
+        table_text(surface, 61, 91,
+            state->network_error ? "SESSION LOST - EXIT" :
+            "WAITING FOR PLAYERS...",
             state->network_error ? COLOR_DANGER : COLOR_ACCENT, 1U, 28U);
-        p4_draw_text(surface, 41, 132,
-            "ENCRYPTED LINK / OS-OWNED SESSION", COLOR_MUTED, 1U, 34U);
+        table_text(surface, 41, 132,
+            "KEEP BOTH GAMES OPEN", COLOR_MUTED, 1U, 34U);
         draw_exit_button(surface);
         return true;
     }
@@ -563,7 +581,7 @@ static bool game_render(p4_game_context_t *context,
         return true;
     }
     const uint8_t player_count = display_player_count(state);
-    const int tracker_x = EXIT_X + EXIT_W + 4;
+    const int tracker_x = 114;
     const int tracker_width = P4_GAME_SURFACE_WIDTH - tracker_x - 2;
     const int panel_width = tracker_width / player_count;
     for (uint8_t player = 0U; player < player_count; ++player) {
@@ -591,7 +609,7 @@ static bool game_render(p4_game_context_t *context,
         roll_line[length++] = (char)('1' + state->current_player);
         roll_line[length] = '\0';
     }
-    p4_draw_text(surface, 8, 78, roll_line, COLOR_MUTED, 1U, 27U);
+    table_text(surface, 8, 78, roll_line, COLOR_MUTED, 1U, 27U);
     for (uint8_t row = 0U; row < 6U; ++row) {
         draw_score_row(surface, state, row, 1, row);
     }
@@ -607,8 +625,8 @@ static bool game_render(p4_game_context_t *context,
     draw_summary_row(surface, "GRAND TOTAL",
                      p4_yahtzee_total(state, state->current_player),
                      SCORE_COL_W + 1, 7, COLOR_TEXT);
-    p4_draw_fill_rect(surface, 2, 185, 224, 13, COLOR_PANEL);
-    p4_draw_text(surface, 6, 188,
+    table_fill(surface, 2, 185, 224, 13, COLOR_PANEL);
+    table_text(surface, 6, 188,
         state->roll_animation_ms != 0U ? "ROLLING DICE..." :
         state->accessory_phase == P4_DICE_SEARCHING && state->accessory_request.enabled
             ? "TAP CONNECT ON CORE2" :
@@ -619,15 +637,15 @@ static bool game_render(p4_game_context_t *context,
         !p4_yahtzee_local_turn(state) ? "WAITING FOR OTHER PLAYER" :
         state->shared_accessory && state->roll_count == 0U
             ? "CORE2: READY + SHAKE OR ROLL" :
-        state->roll_count == 0U ? "START ROLLS THE DICE" :
+        state->roll_count == 0U ? "TAP ROLL TO BEGIN" :
         state->focus == P4_YAHTZEE_FOCUS_DICE
-            ? "PINK ROWS SCORE  B SCORES" :
-              "A PICKS ROW  B DICE",
-        !p4_yahtzee_local_turn(state) ? COLOR_GOLD : COLOR_MUTED, 1U, 28U);
-    p4_draw_fill_rect(surface, 230, 185, 86, 13,
+            ? "TAP DICE TO HOLD; ROW TO SCORE" :
+              "TAP A ROW TO SCORE",
+        !p4_yahtzee_local_turn(state) ? COLOR_GOLD : COLOR_MUTED, 1U, 32U);
+    table_fill(surface, 230, 185, 86, 13,
                       state->roll_count < P4_YAHTZEE_ROLLS_PER_TURN
                         ? COLOR_ACCENT : COLOR_LINE);
-    p4_draw_text(surface, 250, 188,
+    table_text(surface, 250, 188,
         state->roll_count == 0U ? "ROLL" : "REROLL",
         COLOR_BG, 1U, 8U);
     if (state->phase == P4_YAHTZEE_PASS) {
@@ -651,7 +669,8 @@ const p4_game_descriptor_t p4_p4_yahtzee_game = {
     .accent_rgb565 = UINT16_C(COLOR_ACCENT),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
-        P4_GAME_CAP_MULTIPLAYER_SESSION | P4_GAME_CAP_DICE_ACCESSORY,
+        P4_GAME_CAP_MULTIPLAYER_SESSION | P4_GAME_CAP_DICE_ACCESSORY |
+        P4_GAME_CAP_VIDEO_HIGH_RES,
     .state_bytes = sizeof(p4_yahtzee_state_t),
     .start = game_start,
     .update = game_update,

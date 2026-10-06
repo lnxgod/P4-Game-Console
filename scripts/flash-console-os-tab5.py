@@ -76,9 +76,17 @@ def prepare(auth, unit):
     spec = importlib.util.spec_from_file_location('tab5_verify', ROOT / 'scripts/verify-console-os-tab5.py')
     verifier = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(verifier)
-    verified = verifier.verify(BUILD)
+    firmware_only = auth.get("firmware_only", False)
+    require(not firmware_only or auth["operation"] == "app-only", "firmware-only requires app-only installation")
+    verified = verifier.verify(BUILD, firmware_only=firmware_only)
     require(verified["usb_host_enabled"] == auth.get("usb_host_enabled", False),
             "USB host selection differs from exact-artifact authorization")
+    require(verified["charger_control_enabled"] == auth.get("charger_control_enabled", False),
+            "Charger selection differs from exact-artifact authorization")
+    require(verified["ble_multiplayer_enabled"] == auth.get("ble_multiplayer_enabled", False),
+            "BLE selection differs from exact-artifact authorization")
+    require(verified["wifi_multiplayer_enabled"] == auth.get("wifi_multiplayer_enabled", False),
+            "Wi-Fi selection differs from exact-artifact authorization")
     artifacts = {}
     for offset, relative in LAYOUT.items():
         entry = auth['artifacts'][offset]

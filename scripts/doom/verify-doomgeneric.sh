@@ -78,43 +78,7 @@ case "$P4_DG_TEMP_DIR" in
 esac
 trap 'rm -rf "$P4_DG_TEMP_DIR"' EXIT HUP INT TERM
 
-: >"$P4_DG_TEMP_DIR/manifest-paths"
-while read -r P4_DG_MODE P4_DG_TYPE P4_DG_BLOB P4_DG_PATH; do
-    if [ "$P4_DG_TYPE" != "blob" ] || [ -z "$P4_DG_PATH" ]; then
-        echo "invalid entry in $P4_DG_MANIFEST" >&2
-        exit 1
-    fi
-    case "$P4_DG_PATH" in
-        /*|*..*) echo "unsafe path in doomgeneric manifest: $P4_DG_PATH" >&2; exit 1 ;;
-    esac
-    if [ ! -f "$P4_DG_VENDOR/$P4_DG_PATH" ]; then
-        echo "missing vendored doomgeneric file: $P4_DG_PATH" >&2
-        exit 1
-    fi
-    P4_DG_ACTUAL_BLOB=$(git hash-object "$P4_DG_VENDOR/$P4_DG_PATH")
-    if [ "$P4_DG_ACTUAL_BLOB" != "$P4_DG_BLOB" ]; then
-        echo "modified vendored doomgeneric file: $P4_DG_PATH" >&2
-        exit 1
-    fi
-    printf '%s\n' "$P4_DG_PATH" >>"$P4_DG_TEMP_DIR/manifest-paths"
-done <"$P4_DG_MANIFEST"
-
-if [ ! -s "$P4_DG_TEMP_DIR/manifest-paths" ]; then
-    echo "doomgeneric manifest is empty" >&2
-    exit 1
-fi
-
-(
-    cd "$P4_DG_VENDOR"
-    find . -type f -print | sed 's#^\./##' | LC_ALL=C sort
-) >"$P4_DG_TEMP_DIR/vendor-paths"
-LC_ALL=C sort "$P4_DG_TEMP_DIR/manifest-paths" >"$P4_DG_TEMP_DIR/expected-paths"
-
-if ! cmp -s "$P4_DG_TEMP_DIR/expected-paths" "$P4_DG_TEMP_DIR/vendor-paths"; then
-    echo "doomgeneric vendor tree contains missing or unmanifested files" >&2
-    diff -u "$P4_DG_TEMP_DIR/expected-paths" "$P4_DG_TEMP_DIR/vendor-paths" >&2 || true
-    exit 1
-fi
+python3 "$P4_DG_SCRIPT_DIR/verify-source-tree.py" "$P4_DG_ROOT"
 
 P4_DG_TRACKED_WADS=$(git -C "$P4_DG_ROOT" ls-files | awk 'tolower($0) ~ /\.wad$/ { print }')
 if [ -n "$P4_DG_TRACKED_WADS" ]; then
@@ -134,4 +98,4 @@ done <"$P4_DG_TEMP_DIR/local-wads"
 
 python3 "$P4_DG_SCRIPT_DIR/verify-metadata.py" "$P4_DG_ROOT"
 
-echo "P4_DOOM_D0 PROVENANCE PASS commit=$P4_DG_COMMIT tree=$P4_DG_TREE files=$(wc -l < "$P4_DG_TEMP_DIR/manifest-paths" | tr -d ' ')"
+echo "P4_DOOM_D0 PROVENANCE PASS commit=$P4_DG_COMMIT tree=$P4_DG_TREE files=$(wc -l < "$P4_DG_MANIFEST" | tr -d ' ')"

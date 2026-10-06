@@ -1,0 +1,122 @@
+{
+  "schema": 1,
+  "version": "0.50",
+  "board": "m5stack-tab5",
+  "recorded_utc": "2026-10-06T01:25:29.295755+00:00",
+  "status": "B exact-readback boot and service-health verified; A disconnected",
+  "candidate": "build-host/boot-flight/candidate-0.50-spans.json",
+  "image": {
+    "path": "build-host/boot-flight/os-0.50-spans/p4_console_os.bin",
+    "bytes": 4015392,
+    "sha256": "75b9e9c4ae01c5c5388679b17bafdb19ab6556c8e8350a742cacf6f2e882dd88"
+  },
+  "update": {
+    "path": "build-host/boot-flight/os-0.50-spans/P4UPDATE.P4U",
+    "bytes": 4015648,
+    "sha256": "4b5ab4a31f35cb111cbace1e8e5cbfcf882579713d4d71df3d29f81af355272f"
+  },
+  "build_log": {
+    "path": "build-host/boot-flight/os-0.50-spans/build.log",
+    "bytes": 17659,
+    "sha256": "1bd6b10636139e097169732bb8a428d44de3cab185b48971dff03434918c716d"
+  },
+  "verification": {
+    "ble_multiplayer_enabled": true,
+    "board": "m5stack-tab5",
+    "charger_control_enabled": true,
+    "content_bundle_verified": false,
+    "flash_authorized": false,
+    "hardware_verified": false,
+    "image_bytes": 4015392,
+    "image_sha256": "75b9e9c4ae01c5c5388679b17bafdb19ab6556c8e8350a742cacf6f2e882dd88",
+    "native_cartridges": null,
+    "result": "tab5-build-candidate-verified",
+    "usb_host_enabled": true,
+    "version": "0.50",
+    "wifi_multiplayer_enabled": true
+  },
+  "authorization": {
+    "path": "hardware/evidence/tab5-0.50-flight-spans-authorization.json",
+    "sha256": "e4823bb9dc3c372cc4c38ae6db591f26b263c1525b1dc842bd565c547bae604d"
+  },
+  "changes": [
+    "Generated transparent chrome/lime/cyan joystick mark",
+    "Short perspective entrance with orbit and fixed status/dots; no marquee",
+    "Native Arimo branding and OS0.50 label",
+    "Exclusive boot framebuffer worker joins before Home/fatal reuse; no animation hold",
+    "Fixed-point texture spans and validated central display damage band",
+    "Reviewed game timing/audio, triple display buffering and per-buffer damage history preserved"
+  ],
+  "validation": {
+    "tab5_build_prerequisite_tests": 43,
+    "compiler_warnings": 0,
+    "startup_sanitizers": "ASan/UBSan2/2, three sizes,30elapsed times, long/short statuses, complete/full equality and damage containment",
+    "source_snapshot_still_matches": true,
+    "reviewed_performance_source_count": 8,
+    "boot_preview": "design/tab5-nextgen/boot-flight/preview.gif"
+  },
+  "units": {
+    "A": {
+      "status": "not installed; USB disconnected",
+      "last_verified_version": "0.47",
+      "predecessor_receipt": "hardware/backups/tab5-a-install-2xef33lb/receipt.json",
+      "local_artifact_backup_precheck": "passed; failed first attempt stopped before serial/write"
+    },
+    "B": {
+      "panel": "ST7123",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "receipt": "hardware/backups/tab5-b-install-v7mvxt_3/receipt.json",
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "runtime_log": "hardware/backups/tab5-b-install-v7mvxt_3/runtime.log",
+      "runtime_log_sha256": "d93cbbb78382125e9b225900707138b611642a469f03e51a6fb01d8d8fc84792",
+      "home_log_timestamp_ms": 8286,
+      "boot_worker": {
+        "frames": 45,
+        "max_frame_ms": 131,
+        "max_render_ms": 102,
+        "max_submit_ms": 43,
+        "stack_remaining": 2876,
+        "animation_hold_ms": 0
+      },
+      "serial_evidence": [
+        "I (2856) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7123 native=720x1280 logical=1280x720 os=1280x720 game_viewport=1152x720+64+0 format=rgb565",
+        "I (3043) p4_console_os: P4_CONSOLE_OS BOOT_SCREEN status=visible brand=gamechangers-ai format=rgb565 source=reviewed-joystick-mark product=GameChangersAI-OS version=0.50 storage=pending",
+        "I (8097) p4_console_os: P4_CONSOLE_OS BOOT_FLIGHT frames=45 max_frame_ms=131 max_render_ms=102 max_submit_ms=43 stack_remaining=2876 result=ESP_OK animation_hold_ms=0",
+        "I (8286) p4_console_os: P4_CONSOLE_OS HOME_REVEAL status=complete rows=720 steps=1 mode=immediate",
+        "I (8287) p4_console_os: P4_CONSOLE_OS INTERFACE version=0.50 renderer=nextgen native=1280x720 legacy_theme=0",
+        "I (8287) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (18303) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized"
+      ],
+      "physical_visual_acceptance": "pending operator inspection"
+    }
+  },
+  "iterations": [
+    {
+      "candidate": "build-host/boot-flight/candidate-0.50.json",
+      "receipt": "hardware/backups/tab5-b-install-gj1j9d5v/receipt.json",
+      "max_boot_frame_ms": 222,
+      "result": "superseded"
+    },
+    {
+      "candidate": "build-host/boot-flight/candidate-0.50-fast.json",
+      "receipt": "hardware/backups/tab5-b-install-jh7x84_d/receipt.json",
+      "max_boot_frame_ms": 136,
+      "result": "superseded"
+    },
+    {
+      "candidate": "build-host/boot-flight/candidate-0.50-spans.json",
+      "receipt": "hardware/backups/tab5-b-install-v7mvxt_3/receipt.json",
+      "max_boot_frame_ms": 131,
+      "result": "installed on B"
+    }
+  ],
+  "limitations": [
+    "8.286s is the firmware Home log timestamp for this boot, not a measured power-button-to-visible-frame guarantee.",
+    "Animation targets60ms cadence but device worst frame cost was131ms; no60fps or physical smoothness claim.",
+    "Game cadence/audio/tearing acceptance is owned by the coordinated game task and remains pending an operator play session.",
+    "A must reconnect before its guarded install can proceed."
+  ]
+}

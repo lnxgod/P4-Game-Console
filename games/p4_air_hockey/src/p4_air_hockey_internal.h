@@ -21,6 +21,7 @@ enum {
     P4_AIR_HOCKEY_PUCK_RADIUS = 5,
     P4_AIR_HOCKEY_FIXED_SHIFT = 8,
     P4_AIR_HOCKEY_STEP_MS = 16,
+    P4_AIR_HOCKEY_SNAPSHOT_MS = 33,
     P4_AIR_HOCKEY_SNAPSHOT_BYTES = 32,
     P4_AIR_HOCKEY_INPUT_BYTES = 8,
     P4_AIR_HOCKEY_PROTOCOL = 4,
@@ -57,6 +58,18 @@ enum {
         P4_AIR_HOCKEY_EVENT_SERVE,
 };
 
+typedef enum {
+    P4_AIR_HOCKEY_UI_PLAY = 0,
+    P4_AIR_HOCKEY_UI_TITLE,
+    P4_AIR_HOCKEY_UI_PAUSED,
+} p4_air_hockey_ui_t;
+
+typedef struct {
+    int32_t paddle_x[P4_AIR_HOCKEY_PLAYERS];
+    int32_t paddle_y[P4_AIR_HOCKEY_PLAYERS];
+    int32_t puck_x, puck_y;
+} p4_air_hockey_pose_t;
+
 typedef struct {
     p4_air_hockey_mode_t mode;
     p4_air_hockey_phase_t phase;
@@ -90,8 +103,18 @@ typedef struct {
     bool last_sent_touch_active;
     bool snapshot_received;
     bool restart_requested;
+    /* Presentation only: never serialized or used by collisions/scoring. */
+    p4_air_hockey_pose_t previous_pose;
+    uint32_t client_visual_ms;
+    bool visual_ready;
+    /* Local UI only. Linked games always stay in UI_PLAY. */
+    p4_air_hockey_ui_t ui_screen;
+    bool touch_was_down;
+    bool touch_on_rink;
 } p4_air_hockey_state_t;
 
+p4_air_hockey_pose_t p4_air_hockey_render_pose(const p4_air_hockey_state_t *state);
+void p4_air_hockey_visual_snap(p4_air_hockey_state_t *state);
 void p4_air_hockey_reset_match(p4_air_hockey_state_t *state, uint32_t seed);
 uint32_t p4_air_hockey_step(p4_air_hockey_state_t *state,
                             uint32_t elapsed_ms, bool cpu_opponent);

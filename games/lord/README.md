@@ -201,3 +201,59 @@ The project owner authorized this port from the pinned Synchronet source on
 permission and uses newly generated/project-rendered art. Exact source hashes,
 add-on paths, and regeneration details are in [UPSTREAM.md](UPSTREAM.md) and
 [assets/README.md](assets/README.md).
+
+## Launcher presentation
+
+The cartridge owns its title and `assets/launcher.p4i` icon. Source artwork,
+conversion details and provenance live beside the packed icon. Reproduce it
+with `python3 games/lord/tools/pack_launcher.py` (offline Pillow only).
+The icon changes the protected payload digest: release it only with its
+reviewed paired Console OS lineage, preserving the game ID and save namespace.
+
+## Native ANSI presentation (1.9.0)
+
+The optional `video-highres` capability now requests a native 768×480 surface.
+The renderer keeps the canonical 320×200 command/touch layout and paints text,
+panels and glyphs directly into the negotiated surface. It does not stretch an
+already rendered frame. Native screens use ivory text, midnight panels, brass
+accents and garnet selections, with a persistent Red Dragon identity, clearer
+command keys, an ImageGen-illustrated dragon opening, and carefully spaced menus.
+CP437 art samples all 16 source rows at native size, including short scenery
+cells; the shared pinned CP437 font and Arimo presentation atlas are linked
+inside the cartridge. The opening has separate 736×306 and 304×126 indexed
+images with RGB565 palettes, totaling 264,544 bytes, and no runtime asset decoder.
+The existing original launcher illustration and its provenance are retained.
+
+The low-resolution renderer remains available at 320×200. Minor text spacing
+fixes keep player records, the recipient prompt, dice messages and the victory
+prompt clear of panel borders. Rules, progression, input handling, creature
+animation timing, realm protocol, public ID, save slot `AUTO` and LDSV schema 5
+are unchanged. Start still activates the current command; this turn-based
+game has no independent pause state.
+
+Reproduce the focused sanitizer and presentation checks:
+
+```sh
+cmake -S games/lord -B build-host/lord-launch -G Ninja
+cmake --build build-host/lord-launch
+ctest --test-dir build-host/lord-launch --output-on-failure
+cmake -S tools/p4-game-host -B build-host/play-lord-launch -G Ninja -DP4_GAME=lord
+cmake --build build-host/play-lord-launch
+ctest --test-dir build-host/play-lord-launch --output-on-failure
+```
+
+`lord_presentation_tests` covers all 43 screens, ordinary and maximum values,
+last-page selections, both resolutions and padded framebuffer strides, and
+checks that rendering changes neither state nor encoded saves. Set
+`LORD_PRESENTATION_CAPTURE_DIR` to an existing absolute directory for PPMs.
+`lord_trace_tests` replays `tests/performance-input.txt` for 2,000 frames and
+requires identical native/fallback state and final saves, real combat and
+menu transitions, plus Back exit. Use the same tape with `p4_game_benchmark`
+at 768 and 320 to measure active local CPU cost.
+
+This remains a protected successor candidate in `GAMES/WIP`. A new payload
+requires the coordinating OS release to regenerate and review the exact
+protected-game lineage; do not replace the installed cartridge independently
+or carry acceptance from an earlier payload. Device cadence, real panel/touch,
+speaker, controllers and live realm acceptance remain separate gates. The
+current evidence is in `test-runs/2026-10-05-lord-native-remix.json`.

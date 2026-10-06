@@ -1,0 +1,265 @@
+{
+  "schema": 1,
+  "game": "p4_rummy",
+  "tested_at": "2026-10-06T00:04:18.361861+00:00",
+  "scope": "Direct touch/drag input and rendering only. Rule, network, manifest and art sources were not modified by this pass.",
+  "runtime_test_source_sha256": "5907b5c0e92ff2f39d527c7d23808fff4bc9f8f96ce6c579a34f2cf24f3d2d5e",
+  "runtime_test_source_files": {
+    "CMakeLists.txt": "7ad918c0a213605897a090a6cb3ba69c171b0311d349885a83d9f43d0a2a286e",
+    "README.md": "165d796f322c37c83863bafac0f09797dd8d773d33ca1250a65e2391b5dd596d",
+    "src/generated/table_materials.inc": "7a65f03b16077a077d7f05e1744697b61e77443861a54e5b2fb3c80aac71e683",
+    "src/p4_rummy.c": "a965f3e01e3385eb68b4627f25a2e62db61743bea9fc993d8e5461d3d31d6d79",
+    "src/p4_rummy_internal.h": "2b03be49b4ff67b3055a23dfa0fd5327c128a62cf0073ca1d6c4a7e6cad495fb",
+    "src/p4_rummy_logic.c": "c41a2430c52bf46116b3089d0e6f6748a2cd31f35eacfaa778e556dab89cd707",
+    "src/p4_rummy_network.c": "05d241c7bdda35b84b149c896ac9a9f7225d9de39cfd12777eb3e1fd3fd90185",
+    "tests/CMakeLists.txt": "1f28ef719e664afe7b634551387ceeb6c719da82d0d095b5ba66cfd407ff7ba8",
+    "tests/test_p4_rummy.c": "ba4e84f7abf1fa15f3a64ec05d914c48b56ad59f936221810719689548615c2e",
+    "tests/test_presentation.c": "7f9a63cf397db89611abac85aa4458c7787beca57b96f62a5b8641fb4b47d810",
+    "tests/test_touch_drag.c": "d5a3205cfc29ebc2eefb5c1885a4bd729731d79625603671a0d4957f9d39f7d8",
+    "tests/touch-performance-input.txt": "f32b8888c2fb4ebb0ff75b6e749d09dc7a4f13d89506869bda0446ca592daa74"
+  },
+  "focused_ctest": {
+    "passed": 3,
+    "failed": 0,
+    "build_log": {
+      "path": "build-host/smoothness-packages/p4_rummy/focused-build.log",
+      "sha256": "3dc4fab66740e1997a2b505160ca8dcd804177fcf4db5781338daa82ba708913",
+      "bytes": 1478
+    },
+    "test_log": {
+      "path": "build-host/smoothness-packages/p4_rummy/focused-tests.log",
+      "sha256": "f6c1e35e0c303b30297f7782e2b630af32f026a85cc3e61fc476054a38d7665d",
+      "bytes": 549
+    }
+  },
+  "generic_sdl_ctest": {
+    "passed": 5,
+    "failed": 0
+  },
+  "test_logs": {
+    "build-host/p4_rummy/Testing/Temporary/LastTest.log": "48a92965cfd40f26282125c325cc09359c6d4f7536d0a2c344b6e43962b25060",
+    "build-host/play-p4_rummy/Testing/Temporary/LastTest.log": "ce0064464c7842c8a5c3eba2dc5cefb3789851d34c87ade93ee72262f2c89238"
+  },
+  "captures": {
+    "build-host/card-touch-captures/p4_rummy-320-0.png": "0678594e75adaefdc179e81ca1b400c59f9bd1f2a2745fd4bcc1564d30784a1c",
+    "build-host/card-touch-captures/p4_rummy-320-1.png": "211d96b6537f9d9a5b7c3c791909d87b53440936a13706814f69fedcdb080ede",
+    "build-host/card-touch-captures/p4_rummy-320-2.png": "2fac8997e0d158002a5b8bf0c8fdd99cc5368660d2dc0baf61bf5722d0b29a5c",
+    "build-host/card-touch-captures/p4_rummy-768-0.png": "532facfa1b6689ba99dd04dbb814f3f6f8e025c964f3ed0ff998e2c3cd39e24a",
+    "build-host/card-touch-captures/p4_rummy-768-1.png": "d133f444b9ab391c2e284931a1155ebf463555e84484b0b5d4f809538197aad9",
+    "build-host/card-touch-captures/p4_rummy-768-2.png": "52f0f0ebad68a7892b590c57bf08294b6efe2be60180eb43e60bb8ee22ae1f31",
+    "build-host/card-touch-captures/p4_rummy-drag-320-0.png": "a7738f80b3e0e9ab2d688a558d008037e6a42b6fd5207ef6f70995c4539f825a",
+    "build-host/card-touch-captures/p4_rummy-drag-320-1.png": "2036207dfffba6a99a994234285282c6cafb1fad73683bb19dbc03040a3bccaa",
+    "build-host/card-touch-captures/p4_rummy-drag-320-2.png": "ed145d0d81db7fe30a845fbaddd3aaebbffdba69c4217cb54e6b32c9dd972666",
+    "build-host/card-touch-captures/p4_rummy-drag-768-0.png": "fdc3082380dd755b66e054bc943925434056fc8fa8cfd1e291d49876c7f8b281",
+    "build-host/card-touch-captures/p4_rummy-drag-768-1.png": "d46dd60767ffe419382a7e72b3f9292693e5b26f8872684404800be7e5f89537",
+    "build-host/card-touch-captures/p4_rummy-drag-768-2.png": "5b025d690842a36b2134920a054cdaaca902a19d2b5924c3be560e6a46408fec"
+  },
+  "visual_review": "Native and fallback table and drag captures inspected; semantic actions readable, lifted card and valid/invalid target visible.",
+  "performance": {
+    "revision_scope": "shared raster optimization; current source benchmark",
+    "scope": "Optimized development-Mac CPU update/render/audio; excludes SDL presentation, physical device, transport and I/O.",
+    "frames_per_resolution": 2000,
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "input_tape": "games/p4_rummy/tests/touch-performance-input.txt",
+    "input_sha256": "f32b8888c2fb4ebb0ff75b6e749d09dc7a4f13d89506869bda0446ca592daa74",
+    "benchmark_binary": "build-host/play-p4_rummy/p4_game_benchmark",
+    "benchmark_binary_sha256": "d8af2e3ee1c51214c82e2669a9a9a85acf142483e5710afa7448b3ea06e01ee1",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.p4-rummy",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1980,
+        "last_frame_hash": "1aed0676",
+        "update_audio_ms": {
+          "mean": 0.001,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.004,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.1081,
+          "p50": 0.099,
+          "p95": 0.151,
+          "p99": 0.218,
+          "max": 0.407,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1091,
+          "p50": 0.1,
+          "p95": 0.152,
+          "p99": 0.22,
+          "max": 0.411,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.p4-rummy",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1980,
+        "last_frame_hash": "7deb3d57",
+        "update_audio_ms": {
+          "mean": 0.0008,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.001,
+          "max": 0.002,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0247,
+          "p50": 0.025,
+          "p95": 0.026,
+          "p99": 0.028,
+          "max": 0.057,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0255,
+          "p50": 0.025,
+          "p95": 0.027,
+          "p99": 0.029,
+          "max": 0.059,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "measurement_files": {
+      "768": {
+        "path": "build-host/smoothness-packages/p4_rummy/benchmark-768.json",
+        "sha256": "84f065cfe980e4f98354b67adb0daa1df25e6e1140e345e3357a66a251f6b126",
+        "bytes": 524
+      },
+      "320": {
+        "path": "build-host/smoothness-packages/p4_rummy/benchmark-320.json",
+        "sha256": "9583d8aabc952ee71b3002e85ba2a01c703194178fbdd35ea28f108877e0311b",
+        "bytes": 524
+      }
+    },
+    "motion_coverage": "Existing direct-touch drag/input trace.",
+    "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+    "hardware_fps_verified": false
+  },
+  "simulator": {
+    "path": "build-host/play-p4_rummy/p4_game_host.app/Contents/MacOS/p4_game_host",
+    "sha256": "0776a2b3e154934d5b6c70d4c8acffc26bf55e72d1fab57244ca5b8ab9682887",
+    "bytes": 1140432,
+    "tests_passed": 5,
+    "tests_failed": 0,
+    "build_log": {
+      "path": "build-host/smoothness-packages/p4_rummy/sdl-build.log",
+      "sha256": "462f541563caf0d45a9ab6b987401c3ae420e61ec0ded903e6a32fcefe74d5bf",
+      "bytes": 4493
+    },
+    "test_log": {
+      "path": "build-host/smoothness-packages/p4_rummy/sdl-tests.log",
+      "sha256": "fb8823e5dd9cc6926ce0c3e7944a3e5dea3ebe1d434e98324922532c1f707de2",
+      "bytes": 754
+    }
+  },
+  "shared_dependencies": {
+    "components/p4_game_api/include/p4/card_art.h": "e606ba8b802e7a71dc715264c3c85ed857e507c10d75738de5d174c06cff7a53",
+    "components/p4_game_api/src/input.c": "b895eff5252e8d141fb49dc3c8e31fbd629bcda72068f14917dcf425bc7a81f7",
+    "tools/p4-game-host/play_game.c": "7365a8d5d65fb0c7f3680e51bd7ff138c5667d0844d10c9613364ddef58c3010",
+    "tools/p4-game-host/frame_pacer.h": "4ff832b5242db46e176c79e2c4e13d5134e55f089b061014173c3d45d477c9f3",
+    "components/p4_game_api/src/draw.c": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac"
+  },
+  "interactive": {
+    "status": "Pending parent play of the direct-touch revision"
+  },
+  "hardware_acceptance": null,
+  "installed_on_device": false,
+  "limitations": [
+    "No hand reordering",
+    "Existing hand paging/swipe behavior retained",
+    "New drag gestures need parent interactive and physical touch acceptance",
+    "Prior PRESENTATION_TESTING.json cartridge hash describes the preceding art candidate, not this source revision"
+  ],
+  "pre_raster_performance": {
+    "scope": "Optimized native Mac CPU including real game/audio; excludes SDL display, device and transport",
+    "input_tape": "games/p4_rummy/tests/touch-performance-input.txt",
+    "input_sha256": "f32b8888c2fb4ebb0ff75b6e749d09dc7a4f13d89506869bda0446ca592daa74",
+    "frames_per_resolution": 2000,
+    "measurements": {
+      "768": {
+        "game": "org.p4console.p4-rummy",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1980,
+        "last_frame_hash": "1aed0676",
+        "update_audio_ms": {
+          "mean": 0.0009,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.004,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.1032,
+          "p50": 0.097,
+          "p95": 0.148,
+          "p99": 0.186,
+          "max": 0.413,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1041,
+          "p50": 0.098,
+          "p95": 0.149,
+          "p99": 0.187,
+          "max": 0.417,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.p4-rummy",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1980,
+        "last_frame_hash": "7deb3d57",
+        "update_audio_ms": {
+          "mean": 0.0008,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.001,
+          "max": 0.012,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0224,
+          "p50": 0.022,
+          "p95": 0.025,
+          "p99": 0.028,
+          "max": 0.061,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0232,
+          "p50": 0.023,
+          "p95": 0.026,
+          "p99": 0.029,
+          "max": 0.064,
+          "over_33_333ms": 0
+        }
+      }
+    }
+  },
+  "raster_revision_logs": {
+    "build-host/smoothness-packages/p4_rummy/focused-tests.log": "f6c1e35e0c303b30297f7782e2b630af32f026a85cc3e61fc476054a38d7665d",
+    "build-host/smoothness-packages/p4_rummy/sdl-tests.log": "fb8823e5dd9cc6926ce0c3e7944a3e5dea3ebe1d434e98324922532c1f707de2"
+  }
+}

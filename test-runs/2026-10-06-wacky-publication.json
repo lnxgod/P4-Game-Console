@@ -1,0 +1,256 @@
+{
+  "schema": 1,
+  "prepared_utc": "2026-10-06T05:47:32.535930+00:00",
+  "status": "source-ready-for-combined-launch-publication; remote commit not yet verified",
+  "repository": "lnxgod/esp32-p4-console",
+  "game_id": "org.p4console.wacky-probe",
+  "game_version": "0.1.1",
+  "os_version": "0.54",
+  "contents": [
+    "Wacky source adapters, preparation/build scripts and tests",
+    "GPL-2.0-or-later shared MIDI component",
+    "OS-owned core-1 audio worker, bounded PCM FIFO and concurrent tests",
+    "Multiplayer protocol 2 and four-instance host test harness",
+    "Updated project skills, performance guidance and acceptance evidence"
+  ],
+  "validation": {
+    "source_match": "Wacky/MIDI/audio/game API/host source closure unchanged from tested OS 0.54 candidate before this documentation-only publication update",
+    "wacky_tests": "16/16 ASan/UBSan passed; final label-only touch/smoke checks 2/2 passed",
+    "audio_worker": "2/2 ASan/UBSan plus ThreadSanitizer passed",
+    "game_api": "7/7 passed",
+    "interactive": "Actual SDL touch menu/race/pause/resume/exit checked; final controls inspected",
+    "hardware": "Both OS and cartridge installs hash verified; no Wacky launch in subsequent capture; physical game acceptance pending"
+  },
+  "excluded_local_artifacts": [
+    ".tools/wacky-wheels-upstream",
+    ".tools/wacky-shareware",
+    "build-host/wacky-riscv",
+    "build-host/wacky-0.54",
+    "hardware/backups",
+    "wacky-client.rgb565",
+    "wacky-host.rgb565",
+    "wacky-menu.rgb565"
+  ],
+  "source_files": [
+    {
+      "path": "apps/console_os/main/console_os_main.c",
+      "sha256": "b1460ae3f2d23ffe0514dfb785299d9762714e87d8a74e8e57297cd49944348a"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/audio.h",
+      "sha256": "8b57ae696ed091bad426e09d6232ea52ab9e9a8bd70741d76f51bdaba4ee87a5"
+    },
+    {
+      "path": "components/p4_game_api/tests/test_p4_game_api.c",
+      "sha256": "ce29226ab298e7c10ab13b31d7b5d63c011b05c67d6771cea52c603854291cb9"
+    },
+    {
+      "path": "components/p4_game_platform/CMakeLists.txt",
+      "sha256": "fa93e4db4ae4d98ccad02398ccdf5a5f083b9c8fe1ca17dacb26c8608a033757"
+    },
+    {
+      "path": "components/p4_game_platform/include/p4/audio_worker.h",
+      "sha256": "5485d19c08b14287cc43862488282a42a57892a902890c3a32e027fd29c40e93"
+    },
+    {
+      "path": "components/p4_game_platform/include/p4/platform.h",
+      "sha256": "f0f02776d938fbbe3938888290e3e018976a81a43aeb0fe3f86f23852c5824ed"
+    },
+    {
+      "path": "components/p4_game_platform/src/audio_session.c",
+      "sha256": "99b12f085ad668cc4db617957825979c4cca8cc3ca20e9e6c34c7e10d502d0cb"
+    },
+    {
+      "path": "components/p4_game_platform/src/audio_worker.c",
+      "sha256": "57b94619044c68765da5fbbf7fc75ed7f786de93fba6f63b8e296dfe35fe4d7e"
+    },
+    {
+      "path": "components/p4_game_platform/tests/CMakeLists.txt",
+      "sha256": "96a3ca6bb6a287fc162f681f982c8f3853ec837482e96de9319ea7127f819947"
+    },
+    {
+      "path": "components/p4_game_platform/tests/mock_worker_runtime.c",
+      "sha256": "318d9999d464e772027d70b2c00ee32795e0ddc2c21d59325016ac0fe1356a37"
+    },
+    {
+      "path": "components/p4_game_platform/tests/mocks/esp_err.h",
+      "sha256": "b197cb04812a7bf7ad6c085570fc6688c508499485859c81dfde58a2a6d6d4e7"
+    },
+    {
+      "path": "components/p4_game_platform/tests/mocks/esp_heap_caps.h",
+      "sha256": "72efa5214f419604e13be282aa7ee8d1282e85073f7e817d39fa73acc871ea5e"
+    },
+    {
+      "path": "components/p4_game_platform/tests/mocks/esp_timer.h",
+      "sha256": "72efa5214f419604e13be282aa7ee8d1282e85073f7e817d39fa73acc871ea5e"
+    },
+    {
+      "path": "components/p4_game_platform/tests/mocks/freertos/FreeRTOS.h",
+      "sha256": "72efa5214f419604e13be282aa7ee8d1282e85073f7e817d39fa73acc871ea5e"
+    },
+    {
+      "path": "components/p4_game_platform/tests/mocks/freertos/queue.h",
+      "sha256": "72efa5214f419604e13be282aa7ee8d1282e85073f7e817d39fa73acc871ea5e"
+    },
+    {
+      "path": "components/p4_game_platform/tests/mocks/freertos/semphr.h",
+      "sha256": "72efa5214f419604e13be282aa7ee8d1282e85073f7e817d39fa73acc871ea5e"
+    },
+    {
+      "path": "components/p4_game_platform/tests/mocks/freertos/task.h",
+      "sha256": "72efa5214f419604e13be282aa7ee8d1282e85073f7e817d39fa73acc871ea5e"
+    },
+    {
+      "path": "components/p4_game_platform/tests/mocks/platform/audio.h",
+      "sha256": "11beb78557df02b647f71d2663c7c22b74357aaa600028302c383edbd224eb88"
+    },
+    {
+      "path": "components/p4_game_platform/tests/mocks/sdkconfig.h",
+      "sha256": "dc8522a7671b953f2b35ae1affe6fb3e9951b183e6a66ab0f39db9bdfa092fb3"
+    },
+    {
+      "path": "components/p4_game_platform/tests/mocks/worker_runtime.h",
+      "sha256": "76a9d5b01b44d86a1b7c9333700faca73944b49002a8656c4ab700bdc8cb3f03"
+    },
+    {
+      "path": "components/p4_game_platform/tests/test_audio_session.c",
+      "sha256": "7a6055c744e18d2f278a597e409844ff695309ecabd0cc047dfaee42d9d8eeb2"
+    },
+    {
+      "path": "components/p4_game_platform/tests/test_audio_worker.c",
+      "sha256": "5d960d2c89d8c4d5883bb0b3d819d3b5306e24be578bdf3eec9f4607a841f4c0"
+    },
+    {
+      "path": "components/p4_midi/CMakeLists.txt",
+      "sha256": "2909456f548b1c086255770f0f7b947940b920580fa93f89575266a7bb4373df"
+    },
+    {
+      "path": "components/p4_midi/include/p4/midi.h",
+      "sha256": "d2fd01f4e116c01f18a886c0bf94c638326bbf14505f625e89b181fee8e4293d"
+    },
+    {
+      "path": "components/p4_midi/src/midi.c",
+      "sha256": "e187e68e69fb744547ca8a00530774871034409d6968d2c00076714163c2e8d3"
+    },
+    {
+      "path": "components/p4_midi/tests/test_midi.c",
+      "sha256": "d064566de0f5dfc1de6ee46bbeaf260eee4ba859b171cd45b56fcf8127773627"
+    },
+    {
+      "path": "docs/GAME_PERFORMANCE.md",
+      "sha256": "9a5d7c32b9c044cbbe33d2d6b24b1b8fd33ffec7597ddfb629026a799126997c"
+    },
+    {
+      "path": "scripts/wacky/CMakeLists.txt",
+      "sha256": "0b70f475f856ba6cccf9f5a4cf62b8a362c63f5d0bdd86caaf4c94b7be52bc7c"
+    },
+    {
+      "path": "scripts/wacky/README.md",
+      "sha256": "585ae1e7dc50ddbb83fc6b2ef5cfa2669dccb780480db0f0bc78f41485f61c4e"
+    },
+    {
+      "path": "scripts/wacky/SDL.h",
+      "sha256": "3062cb4951a14fa15609a72ab31a6d309410cb9e571c3dcccfbf5884112dd812"
+    },
+    {
+      "path": "scripts/wacky/controls.c",
+      "sha256": "5ddc4e77f34ed12b5eeff87655c3bc69d3ab015e86ad7ab2220eed0e42561709"
+    },
+    {
+      "path": "scripts/wacky/controls.h",
+      "sha256": "3c758b592b851b1d944d453e1c61f996eef158a0af7f4a337a8c5c729dba0a50"
+    },
+    {
+      "path": "scripts/wacky/cross_build.py",
+      "sha256": "160181d6a1591babd8a61806a6cd7fff7d39752542fd50579f5989c6d61a2581"
+    },
+    {
+      "path": "scripts/wacky/fetch.py",
+      "sha256": "188e4716336c8b2e771355906f8c68a4bb745c973a50a0ebcaed937bdc28313c"
+    },
+    {
+      "path": "scripts/wacky/four_checks.c",
+      "sha256": "eb5e0039abea59da749bfc6552a23a5d9696be7850b25890765dd9b914376d78"
+    },
+    {
+      "path": "scripts/wacky/front.c",
+      "sha256": "57b74888e2ea7448a7bd3064eed08d3d0ec44ea4e57ac551ebbb4099595ac041"
+    },
+    {
+      "path": "scripts/wacky/front.h",
+      "sha256": "0a375b346f1070e5f34205dade4b3ea8569930fccf79e5b9c8e130fd031f6bdb"
+    },
+    {
+      "path": "scripts/wacky/full_checks.c",
+      "sha256": "0ad9c18b0ebfcda240cb55f2a684c78718e1db51bfae97970b8299a4475d0ac1"
+    },
+    {
+      "path": "scripts/wacky/intro_audio.h",
+      "sha256": "e58dd71b81bc1413a788d38f3f924e50c149769d15d7bdb3d381632b5d33d389"
+    },
+    {
+      "path": "scripts/wacky/network.c",
+      "sha256": "fd7bc97ea4a186d267a3531019984bea9aa5ec2d412607f25f898e80c5cf760d"
+    },
+    {
+      "path": "scripts/wacky/network.h",
+      "sha256": "5fe8be957fa240c1f5b6adde9ad05ebb05cf06b6241687959ce90ae7c3c10818"
+    },
+    {
+      "path": "scripts/wacky/network_checks.c",
+      "sha256": "66b415c21594052f53a8f214aea8ae62ee70595ee576d5c2caecf3eb60605762"
+    },
+    {
+      "path": "scripts/wacky/package_probe.py",
+      "sha256": "a40fec569d1506973e7b2a62860dc4f980fbe4cb5da34cb76654848482f4f386"
+    },
+    {
+      "path": "scripts/wacky/port.c",
+      "sha256": "80e68f08c81db01d0c0d0b31fd7bbc94f1942a48fd27a8c68531644f6bbe2190"
+    },
+    {
+      "path": "scripts/wacky/port_support.c",
+      "sha256": "729203923ab6419b1a7a48d36d2b8a370e582556c9c72c1c6e50cc8abf93dacd"
+    },
+    {
+      "path": "scripts/wacky/port_support.h",
+      "sha256": "3548cdfb170e099706e7f65beb4202ff5a80e6b63a884f7d06f7c64c103efde2"
+    },
+    {
+      "path": "scripts/wacky/portable_libc.c",
+      "sha256": "8cdd37da64b6a99b3889d9b848508ddf108554b3b69df3bc0019f9430c6638ab"
+    },
+    {
+      "path": "scripts/wacky/prepare.py",
+      "sha256": "d1a8d835e0d8aebe9cce744001f2705de9564fa6b7efaa31431f4922cc8d4042"
+    },
+    {
+      "path": "scripts/wacky/probe_checks.c",
+      "sha256": "2a24540790f23f74315eb9350decf921cb3f66b7080cb2e04f1366c6c499a2c4"
+    },
+    {
+      "path": "scripts/wacky/sound.c",
+      "sha256": "302a581c4fc6dad7d33e274b11a8023d34daed283063c603bac7dfbe20db6576"
+    },
+    {
+      "path": "scripts/wacky/sound.h",
+      "sha256": "bd13305db8b966a3202c7ae5fb9514bd47819d75b186d3e97e69cf4d4bcb2fd6"
+    },
+    {
+      "path": "scripts/wacky/touch_checks.c",
+      "sha256": "3942b726b9c125c86bb40683b0a80596970fd95af0f6ca62444f19e44c10670b"
+    },
+    {
+      "path": "scripts/wacky/validate_elf.c",
+      "sha256": "c5085173baba85de55d79d0491c880a78e8aaa84084e3362a9c31712fd64a7e4"
+    },
+    {
+      "path": "test-runs/2026-10-06-wacky-touch-dualcore.json",
+      "sha256": "ed45f6381c6d30ab76a81ff7b337a820d0bd6e4b143a1c623e74c212f8a9560f"
+    },
+    {
+      "path": "test-runs/2026-10-06-wacky-wheels-full-port.json",
+      "sha256": "13485ca7c64b96de3b11aabe273cf3636f4064f07c84d17a4b51ab5c9a0175b8"
+    }
+  ]
+}

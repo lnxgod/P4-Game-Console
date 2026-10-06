@@ -1,17 +1,6 @@
 {
   "schema": 1,
   "sources": {
-    "lua_5_4": {
-      "repository": "https://www.lua.org/",
-      "version": "5.4.8",
-      "archive": "https://www.lua.org/ftp/lua-5.4.8.tar.gz",
-      "archive_sha256": "4f18ddae154e793e46eeab727c59ef1c0c0c2b744e7b94219710d76f530629ae",
-      "vendor_path": "third_party/lua-5.4.8",
-      "vendor_manifest": "third_party/lua-5.4.8.manifest",
-      "vendor_manifest_sha256": "4e665f33fc38c422dec0704047da42a7b8153b77743066d0efb11001ead9b167",
-      "usage": "pinned interpreter core for the sandboxed p4-lua-5.4-v1 cartridge runtime",
-      "license": "MIT"
-    },
     "doomgeneric": {
       "repository": "https://github.com/ozkl/doomgeneric.git",
       "commit": "dcb7a8dbc7a16ce3dda29382ac9aae9d77d21284",

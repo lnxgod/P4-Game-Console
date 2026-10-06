@@ -1,9 +1,9 @@
 {
   "schema": 1,
   "app": "console_os",
-  "version": "0.5.12",
-  "stage": "sd-only-game-catalog-p4cart-ota-launcher-baseline",
-  "purpose": "FreeRTOS-native Windows 3.1-style launcher with an optional 90s BBS door theme, battery telemetry, persistent 0..10 audio controls, SD-only executable P4G apps, controller-first wired USB input, touchscreen and H1 USB Drive role switching, validated P4CART catalog compatibility, atomic dual-slot launcher updates, and an exclusive Doom handoff.",
+  "version": "0.55",
+  "stage": "native-game-catalog-ota-launcher",
+  "purpose": "GameChangersAI OS: native 1280x720 navy/cyan Tab5 interface with live system services, installed-game library, normalized touch/controller input and existing game viewport compatibility.",
   "runtime_supported": false,
   "top_level_runtime_authorized": false,
   "flash_authorized": false,
@@ -30,7 +30,7 @@
     "surface": "Waveshare Windows shell renders natively at 768x480 in a persistent RGB565 framebuffer; cached scroll frames shift only the tile rows and redraw the exposed band, then the display backend transforms and presents only conservative coalesced damage while alternating buffers replay missing generations; settled endpoints redraw the complete tile viewport, and structural or invalidated frames use an authoritative full-frame redraw; the optional CP437/ANSI BBS remains native 768x480; stable 320x200 logical coordinates remain the UI and Game API input contract",
     "font_rendering": "Windows shell rasterizes the built-in 5x7 font directly into the native 768x480 framebuffer; BBS uses pinned 8x16 CP437 in 9x16 cells with its existing bold printable-ASCII extension",
     "input": "bounded board service: Waveshare launcher consumes a 120 Hz latest-sample GT911 mailbox with raw physical drag displacement, timestamps retained from actual controller data-ready reports, and the exact unit-3 sealed filter-8/checksum-0x79 baseline; restoration accepts only exact filter-4/checksum-0x7d or already-original state, writes the full block once with Config_Fresh=1, reads back, and fails closed without retry; stop/join ownership handoff to direct-polling games; other targets retain direct GT911 touch; OS-owned USB gamepad, keyboard, and mouse remain supported",
-    "home_battery_invalidation": "50 mV hysteresis; raw millivolt changes do not dirty Home, while Power detail exposes raw mV",
+    "home_battery_invalidation": "Battery availability/validity/percent changes redraw every shell page; raw millivolt changes do not dirty Home.",
     "runtime_stats": "disabled by default after 132-134 ms main-loop stalls (~8 frames) from synchronous three-second bursts; diagnostic builds opt in with -DP4_CONSOLE_RUNTIME_STATS_BUILD=ON",
     "built_in_apps": [
       "colors",
@@ -56,7 +56,12 @@
       "system"
     ],
     "maximum_folder_depth": 2,
-    "dynamic_executable_loading": true
+    "dynamic_executable_loading": true,
+    "tab5_surface": "1152x720 RGB565 native viewport; antialiased Arimo detail text; stable touch coordinates and game surfaces",
+    "storage_indicator": "Active local game-storage FAT percentage free beside the battery in Windows and BBS themes; unknown measurements display --, never a fabricated 0%. SD is sampled at initialization and every five seconds from FatFs allocation accounting.",
+    "tab5_battery_recovery": "Retry failed INA226 startup every five seconds with the existing I2C device handle. Failed/stale/out-of-pack-range samples remain unavailable; Battery details show measured mV for invalid samples.",
+    "tab5_interface": "Full 1280x720 native RGB565; shared draw/hit geometry, antialiased Arimo, generated cover artwork, five-route navigation, truthful live telemetry; compact desktop/BBS renderers remain for other boards.",
+    "tab5_game_volume_status": "Game N/10 or Muted in the status bar; dedicated shortcut opens Sound; volume changes invalidate cached frames."
   },
   "native_game_api": {
     "api_version": 1,
@@ -119,27 +124,27 @@
     ]
   },
   "legacy_p4cart": {
-    "format": "p4-cart-source-v1",
-    "container_magic": "P4CART1",
-    "storage_path": "/P4/GAMES/*.P4CART",
-    "maximum_candidates": 128,
-    "maximum_listed_valid_carts": 16,
-    "maximum_cart_bytes": 8388608,
-    "validation": "bounded container geometry plus whole-container and per-payload SHA-256",
-    "game_manager_visible": true,
-    "runtime": "p4-lua-5.4-v1",
+    "game_manager_visible": false,
     "runtime_implemented": false,
-    "seed_carts": []
+    "seed_carts": [],
+    "retired": true,
+    "execution_enabled": false
   },
   "boot": {
     "brand": "GameChangers AI",
     "logo_asset": "main/assets/gamechangers_ai_logo.rgb565",
     "logo_source": "https://www.gamechangersai.org/assets/gamechangers-128.png",
     "logo_source_sha256": "903d20f0b3d52c8b5b785686680cbb5e884ea17a5636fdf381e9752ade92efce",
-    "first_visible_frame": "native 768x480 ANSI adaptation of the official Game Changers AI lightbulb/circuit mark before removable-storage initialization",
+    "first_visible_frame": "Reviewed joystick-mark refresh on a Windows-95-inspired sky and cycling stripe; Tab5 native 1152x720",
     "storage_initialization": "background task runs behind visible POST, disk seek, ATDT 614-276-3639, V.22bis training, door-directory sync, and CONNECT 2400 phases; the first interactive frame waits for ready or degraded terminal state",
     "audio": "classic-PC POST beep, separated hard-disk seek clicks, deliberately paced 614-276-3639 DTMF dial, then a condensed V.25/V.22bis 2400-baud handshake; fresh and one-time-migrated installs start silent, while persistent Boot Sounds and Game Audio levels are independently adjustable from 0/10 through 10/10",
-    "third_party_signature_audio_used": false
+    "third_party_signature_audio_used": false,
+    "tab5_audio": "Original one-second chord fanfare. Startup and game master levels default to 3/10; Tab5 volume policy 4 migrates older settings once, then remembers later changes including mute.",
+    "high_resolution_mark": "main/assets/gamechangers_mark_v042.rgb565a8",
+    "high_resolution_mark_sha256": "f0dea8368982c71c6d82ce3b6d711cf3d699e66e12c9ef8af93c2133a6bc9683",
+    "tab5_visual": "Native 1280x720 perspective joystick fly-in, cyan orbital accents, stationary status and activity dots; independent bounded worker stops before Home owns the framebuffer. No animation minimum or completion hold.",
+    "tab5_mark": "main/assets/gamechangers_mark_flight.rgb565a8",
+    "tab5_mark_sha256": "4cf8a16d89b645fb0f6d8b4d4c6080f73224100f8b42834d9672b1a2283bb11e"
   },
   "themes": {
     "persistence": "session-only",
@@ -169,7 +174,7 @@
     "audio_initialized_by_doom": true,
     "sample_rate_hz": 16000,
     "format": "pcm16-stereo",
-    "volume_step": "persistent Game Audio setting, 0/10 through 10/10; fresh default 0/10",
+    "volume_step": "Persistent Game Audio setting, 0/10 through 10/10; Tab5 fresh and one-time policy-4 default 3/10, other boards retain their existing defaults.",
     "music": "WAD MUS procedural 16-voice synth",
     "return_to_home_supported": "confirmed quit performs safe teardown and restarts into Console OS"
   },
@@ -220,7 +225,7 @@
       "install_or_update": "copy or replace one .P4G file in GAMES through J16, then eject",
       "remove": "two-step on-device confirmation",
       "invalid_packages_visible": true,
-      "legacy_p4cart_catalog": "validates and lists P4/GAMES/*.P4CART without executing it",
+      "legacy_p4cart_catalog": "retired; source carts are neither scanned nor executed; existing user files remain untouched",
       "host_owned_access_allowed": false
     },
     "save_manager": {
@@ -271,5 +276,26 @@
   "operator_result": "0.5.12 is better; 0.5.15 interaction captures produced no complete gesture marker and must not be used as latency measurements",
   "diagnostic_free_artifact_status": "built and verified, not flashed",
   "rollback_chain_status": "0.5.15->0.5.14->0.5.13->0.5.12 passed; restored 0.5.12 startup capture passed",
-  "next_hardware_step": "Keep unit 3 on the restored 0.5.12 baseline. Any future scrolling experiment must retain native 768x480 output, preserve BBS and games, and produce a valid single gesture diagnostic marker before latency claims are made."
+  "next_hardware_step": "Keep unit 3 on the restored 0.5.12 baseline. Any future scrolling experiment must retain native 768x480 output, preserve BBS and games, and produce a valid single gesture diagnostic marker before latency claims are made.",
+  "product_name": "GameChangersAI OS",
+  "tab5_core_update": {
+    "base": "0.51 installed combined boot, game-performance and services baseline",
+    "features": [
+      "Bluetooth P4MP Host/Join",
+      "standalone local Wi-Fi P4MP Host/Join",
+      "500 mA non-QC battery charging",
+      "cartridge-derived titles, icons and category filters",
+      "continuous cached Games/Files scrolling with bounded momentum",
+      "file actions overflow menu with named confirmation and Cancel default",
+      "status-bar game volume and Sound shortcut",
+      "startup/game master levels 3/10 with one-time migration and persistent later edits",
+      "native boot flight, activity status and explicit Ready completion",
+      "triple display buffering with two-refresh retirement and per-buffer damage history",
+      "reviewed cartridge timing, queued audio and shared RGB565 drawing optimizations",
+      "optional fresh BMI270 motion snapshots for native cartridges",
+      "dedicated original Doom/Chex cover art and branded game-loading screen",
+      "cartridge-owned artwork throughout the enabled native catalog"
+    ],
+    "status": "0.55 Game Changers AI OS initial launch candidate; classic Doom cover and protected Red Dragon native ANSI remix; core-1 audio and four-player local Wi-Fi retained; exact-image hardware acceptance recorded separately"
+  }
 }

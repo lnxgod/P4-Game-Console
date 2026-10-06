@@ -12,7 +12,7 @@
 #pragma GCC diagnostic pop
 
 enum {
-    PLATFORM_GAMEPAD_PROVIDER_COUNT = 2,
+    PLATFORM_GAMEPAD_PROVIDER_COUNT = 3,
 };
 
 typedef struct {
@@ -42,8 +42,10 @@ static size_t provider_index(platform_gamepad_transport_t transport)
     switch (transport) {
     case PLATFORM_GAMEPAD_TRANSPORT_USB_HID:
         return 0U;
-    case PLATFORM_GAMEPAD_TRANSPORT_BLE_HID:
+    case PLATFORM_GAMEPAD_TRANSPORT_USB_XUSB:
         return 1U;
+    case PLATFORM_GAMEPAD_TRANSPORT_BLE_HID:
+        return 2U;
     case PLATFORM_GAMEPAD_TRANSPORT_NONE:
     default:
         return PLATFORM_GAMEPAD_PROVIDER_COUNT;

@@ -61,7 +61,7 @@ add_subdirectory(
     "${CMAKE_CURRENT_BINARY_DIR}/p4_game_save"
 )
 
-add_executable(p4_game_host play_game.c ${P4_GAME_SOURCES})
+add_executable(p4_game_host play_game.c host_service.c ${P4_GAME_SOURCES})
 set_target_properties(p4_game_host PROPERTIES
     MACOSX_BUNDLE TRUE
     MACOSX_BUNDLE_GUI_IDENTIFIER "org.p4console.game-host"
@@ -95,3 +95,68 @@ add_test(NAME p4_game_host_smoke COMMAND p4_game_host --frames 8)
 set_tests_properties(p4_game_host_smoke PROPERTIES
     ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy"
 )
+
+add_executable(p4_host_audio_timing_tests test_audio_timing.c host_service.c)
+target_link_libraries(p4_host_audio_timing_tests PRIVATE p4_game_api)
+target_compile_features(p4_host_audio_timing_tests PRIVATE c_std_11)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(p4_host_audio_timing_tests PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(p4_host_audio_timing_tests PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME p4_host_audio_timing COMMAND p4_host_audio_timing_tests)
+
+# Separate optimized CPU benchmark: simulator/sanitizer acceptance stays unchanged.
+add_executable(p4_game_benchmark benchmark_game.c ${P4_GAME_SOURCES}
+    "${P4_REPO_ROOT}/components/p4_game_api/src/achievements.c"
+    "${P4_REPO_ROOT}/components/p4_game_api/src/audio_mixer.c"
+    "${P4_REPO_ROOT}/components/p4_game_api/src/audio_pack.c"
+    "${P4_REPO_ROOT}/components/p4_game_api/src/draw.c"
+    "${P4_REPO_ROOT}/components/p4_game_api/src/feedback.c"
+    "${P4_REPO_ROOT}/components/p4_game_api/src/game_runtime.c"
+    "${P4_REPO_ROOT}/components/p4_game_api/src/input.c"
+    "${P4_REPO_ROOT}/components/p4_game_api/src/presentation_font.c"
+    "${P4_REPO_ROOT}/components/p4_game_api/src/visual.c"
+    "${P4_REPO_ROOT}/components/p4_cp437/src/cp437.c")
+target_include_directories(p4_game_benchmark PRIVATE
+    "${P4_GAME_DIR}/include" "${P4_GAME_DIR}/src"
+    "${P4_REPO_ROOT}/components/p4_game_api/include"
+    "${P4_REPO_ROOT}/components/p4_cp437/include")
+target_compile_definitions(p4_game_benchmark PRIVATE "P4_HOST_GAME_DESCRIPTOR=${P4_GAME_ENTRY}")
+target_compile_features(p4_game_benchmark PRIVATE c_std_11)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(p4_game_benchmark PRIVATE -O2
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror)
+endif()
+
+# Black-box process status: update/render failure must fail the smoke gate;
+# a game's ordinary Back/launcher exit remains successful.
+add_executable(p4_host_exit_status_tests test_exit_status.c host_service.c)
+target_link_libraries(p4_host_exit_status_tests PRIVATE
+    p4_game_save p4_signal_scan PkgConfig::SDL3)
+target_compile_features(p4_host_exit_status_tests PRIVATE c_std_11)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(p4_host_exit_status_tests PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(p4_host_exit_status_tests PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME p4_host_exit_status COMMAND p4_host_exit_status_tests)
+set_tests_properties(p4_host_exit_status PROPERTIES
+    ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy")
+
+# A complete fast desktop drag must not collapse into only its initial click.
+add_executable(p4_host_mouse_events_tests test_mouse_events.c host_service.c)
+target_link_libraries(p4_host_mouse_events_tests PRIVATE
+    p4_game_save p4_signal_scan PkgConfig::SDL3)
+target_compile_features(p4_host_mouse_events_tests PRIVATE c_std_11)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(p4_host_mouse_events_tests PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(p4_host_mouse_events_tests PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME p4_host_mouse_events COMMAND p4_host_mouse_events_tests)
+set_tests_properties(p4_host_mouse_events PROPERTIES
+    ENVIRONMENT "SDL_VIDEODRIVER=dummy;SDL_AUDIODRIVER=dummy")

@@ -1,0 +1,36 @@
+{
+  "schema": 1,
+  "mode": "built-in image_gen; cover derived from upgraded game artwork",
+  "source": "launcher-source.png",
+  "source_sha256": "8161f6857fd88224968feed9efe8a498557936fb3966b8b7e2b398ec662532b5",
+  "generation_source": "/Users/billh/.codex/generated_images/01a10e4d-67fb-7561-b76d-25c549064ff2/exec-761fcfa1-dea1-4fdf-b686-3356e2955f83.png",
+  "prompt": "Use case: stylized-concept. Asset type: finished landscape 16:9 launcher cover illustration for a console game, optimized for a tiny 128x72 thumbnail. Create ONE cohesive edge-to-edge scene, not a sprite atlas. Clear large silhouettes, center-safe subject, premium polished game illustration with restrained dark background and luminous material detail. Absolutely no title, letters, logos, interface, numbers, watermarks or border. Opaque background. Game: Skyline Leap. Reference 1 defines the original courier girl with mustard jacket, red scarf, dark bob hair, midnight trousers, teal sneaker soles and compact backpack. Reference 2 defines the blue-hour coastal neon skyline. Depict the same courier making an exciting side-view leap between two rooftops in that city, scarf flowing, one small purple cyan-eyed patrol robot on the rooftop below. Courier fills the central 60 percent vertically. Keep exact costume and character identity, deep violet city with warm peach horizon and cyan highlights. Polished illustrated arcade cover, no UI.",
+  "reference_assets": [
+    {
+      "path": "games/skyline_leap/assets/hires_atlas_v2.png",
+      "sha256": "c967b7c2a2b144563ed3b5ae8cea20324a5bcbb51252dfa4ecb7b404991080ca"
+    },
+    {
+      "path": "games/skyline_leap/assets/hires_city_v2.png",
+      "sha256": "11cde80697b873c148068a92b52e4c972a1006868715089ad8f755e8ab1cbaea"
+    }
+  ],
+  "license": "Original AI-generated project artwork, distributed under the project MIT license. No third-party game art.",
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "sha256": "66d711ec49ff51429565055535e1ff1319db0bdf3b769d8a420f43047bea3380",
+    "bytes": 9744,
+    "width": 128,
+    "height": 72,
+    "palette_entries": 256,
+    "palette_format": "little-endian RGB565",
+    "pixels": "row-major uint8 palette indices",
+    "opaque": true
+  },
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "command": "python3 scripts/pack-game-icon.py games/skyline_leap/assets/launcher-source.png --output games/skyline_leap/assets/launcher.p4i",
+    "description": "Standard center-fit Lanczos resize and 256-color median-cut quantization. No gameplay or runtime assets changed."
+  }
+}

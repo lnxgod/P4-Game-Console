@@ -38,10 +38,11 @@
 #include "w_wad.h"
 #endif
 #if defined(P4_CONSOLE_OS_EMBEDDED) && \
-    defined(CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3) && \
-    CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    (CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3 || \
+     (CONFIG_P4_BOARD_M5STACK_TAB5 && CONFIG_P4_TAB5_USB_HOST))
 #define P4_DOOM_SHARED_GAMEPAD 1
 #include "doom_gamepad/input.h"
+#include "doom_gamepad/key_merge.h"
 #else
 #define P4_DOOM_SHARED_GAMEPAD 0
 #endif
@@ -117,6 +118,7 @@ static uint32_t s_touch_retries;
 
 #if P4_DOOM_SHARED_GAMEPAD
 static doom_gamepad_input_t s_gamepad_input;
+static doom_key_merge_t s_merged_keys;
 static bool s_gamepad_connection_known;
 static uint8_t s_gamepad_connected;
 static uint32_t s_gamepad_session;
@@ -1094,6 +1096,10 @@ int DG_GetKey(int *pressed, unsigned char *key)
         if (!doom_gamepad_action_key(gamepad_event.action, &mapped_key)) {
             continue;
         }
+        if (!doom_key_merge_update(&s_merged_keys, DOOM_KEY_SOURCE_GAMEPAD,
+                                   mapped_key, gamepad_event.pressed == 1U)) {
+            continue;
+        }
         *pressed = gamepad_event.pressed == 1U ? 1 : 0;
         *key = mapped_key;
         return 1;
@@ -1106,6 +1112,12 @@ int DG_GetKey(int *pressed, unsigned char *key)
         if (!doom_touch_audio_action_key(event.action, &mapped_key)) {
             continue;
         }
+#if P4_DOOM_SHARED_GAMEPAD
+        if (!doom_key_merge_update(&s_merged_keys, DOOM_KEY_SOURCE_TOUCH,
+                                   mapped_key, event.pressed == 1U)) {
+            continue;
+        }
+#endif
         *pressed = event.pressed == 1U ? 1 : 0;
         *key = mapped_key;
         return 1;
@@ -1192,6 +1204,7 @@ void app_main(void)
     doom_touch_input_init(&s_touch_input);
 #if P4_DOOM_SHARED_GAMEPAD
     doom_gamepad_input_init(&s_gamepad_input);
+    doom_key_merge_init(&s_merged_keys);
 #endif
     s_audio_gate_enabled =
         mode == DOOM_TOUCH_AUDIO_RUNTIME_TOUCH_AND_AUDIO;

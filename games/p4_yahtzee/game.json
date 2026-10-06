@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.3.2",
+  "version": "1.4.1",
   "package_file": "P4_YAHTZEE.P4G",
   "component": "p4_yahtzee",
   "sources": [
@@ -24,7 +24,8 @@
   "optional_capabilities": [
     "audio-tone",
     "multiplayer-session",
-    "dice-accessory"
+    "dice-accessory",
+    "video-highres"
   ],
   "multiplayer": {
     "schema": 1,
@@ -35,6 +36,7 @@
     "protocol": 4
   },
   "license": "MIT",
-  "assets": "original-imagegen-dice-atlas-v1-plus-code-rendered-ui",
-  "enabled": true
+  "assets": "original-imagegen-hd-materials-and-sprites-v2-plus-native-ui",
+  "enabled": true,
+  "launcher_icon": "assets/launcher.p4i"
 }

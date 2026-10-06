@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "p4/os_update_package.h"
@@ -75,6 +76,16 @@ int main(void)
     assert(strcmp(p4_os_update_package_result_name(
                       P4_OS_UPDATE_PACKAGE_BAD_LAYOUT),
                   "bad-layout") == 0);
+    /* Exercise each board's real OTA boundary and one byte beyond it. */
+    const size_t limit = P4_OS_UPDATE_MAX_PACKAGE_BYTES;
+    uint8_t *large = calloc(limit + 1U, 1U);
+    assert(large != NULL);
+    make_valid(large);
+    write_u32(large + 12U, (uint32_t)limit);
+    write_u32(large + 20U, P4_OS_UPDATE_MAX_IMAGE_BYTES);
+    assert(p4_os_update_package_parse(large, limit, &info) == P4_OS_UPDATE_PACKAGE_VALID);
+    assert(p4_os_update_package_parse(large, limit + 1U, &info) == P4_OS_UPDATE_PACKAGE_BAD_SIZE);
+    free(large);
     puts("p4 OS update package tests passed");
     return 0;
 }

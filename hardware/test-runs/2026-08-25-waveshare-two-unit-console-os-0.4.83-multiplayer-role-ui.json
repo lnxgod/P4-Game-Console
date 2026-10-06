@@ -39,20 +39,20 @@
     {
       "unit_label": "waveshare-4.3-unit1-B289",
       "port": "/dev/cu.wchusbserial5C371865781",
-      "mac": "e8:f6:0a:e0:b2:89",
       "chip": "ESP32-P4 revision v1.3",
       "write": "pass; esptool compressed write hash verified",
       "verify_flash": "pass; digest matched",
-      "runtime": "stable launcher page=0, USB input ready, audio es8311-ready, storage app-ready, display_failures=0, no panic or reboot loop"
+      "runtime": "stable launcher page=0, USB input ready, audio es8311-ready, storage app-ready, display_failures=0, no panic or reboot loop",
+      "identity_sha256": "c9004de451366bc54158d9d1f3504892c068153610a3f31093785827f1de380d"
     },
     {
       "unit_label": "waveshare-4.3-unit2-386F",
       "port": "/dev/cu.wchusbserial5B901593451",
-      "mac": "e8:f6:0a:e5:38:6f",
       "chip": "ESP32-P4 revision v1.3",
       "write": "pass; esptool compressed write hash verified",
       "verify_flash": "pass; digest matched",
-      "runtime": "launcher ready at 15.841 seconds, game catalog packages=2 valid=2, P4 Yahtzee multiplayer registration present, USB input ready, BLE host ready, display_failures=0, no panic or reboot loop"
+      "runtime": "launcher ready at 15.841 seconds, game catalog packages=2 valid=2, P4 Yahtzee multiplayer registration present, USB input ready, BLE host ready, display_failures=0, no panic or reboot loop",
+      "identity_sha256": "cb175826408c181592f300640029fd45de66e3e38df9bd1f7d8a3c0b9f055e79"
     }
   ],
   "ui_verification": {

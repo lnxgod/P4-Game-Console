@@ -1,0 +1,232 @@
+{
+  "schema": 1,
+  "assets": [
+    {
+      "file": "runner.png",
+      "sha256": "1b6d925104cc343548001c2898aad610225ee8dafa67163060ddd9949c584f9f",
+      "tool": "image_gen.imagegen",
+      "mode": "built-in generation",
+      "transparent_background": true,
+      "prompt": "Create a production game sprite sheet for an ORIGINAL top-down arena action game titled Blast Circuit. Transparent background. Exactly 1024 x 1024 pixels with a STRICT invisible 4-column by 4-row grid, each cell 256 x 256. Exactly sixteen isolated sprites, one centered per cell, same baseline y=216 within its cell, no labels, no grid lines, no scenery, no text. Sprite occupies about 160 pixels width and 176 pixels height inside each 256 cell, ample transparent margins, no overlap. Beautiful precise pixel art with an effective 32x32-pixel aesthetic, sharp clusters and controlled shading, late 1990s premium console quality. Original squat turquoise repair-robot character: broad angular teal shell, rectangular luminous cream face visor with two dark eyes, orange scarf, dark navy boots, two tiny antenna fins; expressive cute heroic robot, absolutely not any existing character. Warm upper-left light, dark navy outlines, saturated jade highlights. Four directional walk cycles, four frames each. Row 1 facing DOWN toward viewer, frames left-foot forward, neutral, right-foot forward, neutral with small body bob. Row 2 facing LEFT, same four walking poses, visor left. Row 3 facing RIGHT, same four walking poses, visor right. Row 4 facing UP away from viewer, back panel visible, same four walking poses. Camera is top-down three-quarter orthographic as used in grid-based bomb arena games. Maintain character proportions, scale and exact center alignment across all 16 sprites. Crisp alpha transparency, no shadow outside the body. These are actual usable in-game sprites, not a promotional illustration.",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "grid": [
+        4,
+        4
+      ],
+      "compiled_cell_size": 48
+    },
+    {
+      "file": "greenhouse.png",
+      "sha256": "e7804e9fc05867283ac43f42cd0d25807971546f61a6b3cfd97562b2941a2dd3",
+      "tool": "image_gen.imagegen",
+      "mode": "built-in generation",
+      "transparent_background": true,
+      "prompt": "Use case: stylized-concept. Asset type: production pixel-art tileset for an original game, Blast Circuit. Create exactly a 1024x1024 sheet, strict invisible 4x4 grid of 256x256 cells, sixteen game tiles. Top-down three-quarter orthographic, square faces, no isometric diamonds. Each object centered consistently, no overlap or labels or grid. Premium late-1990s console pixel art, crisp controlled pixel clusters and dark navy outlines, warmly lit upper left. Theme: abandoned orbital greenhouse, jade and dark blue machinery with warm orange cargo. Row 1, four seamless square FLOOR textures covering their entire cells edge-to-edge: dark desaturated blue-green metal panels, subtle diagonal seams, small rivets, sparse overgrown teal moss. Low contrast so characters read clearly. Row 2: indestructible square navy stone-tech block with turquoise inset top; destructible amber wooden cargo crate with cream diagonal braces; same crate visibly cracked; blue-grey metal block variant with tiny luminous mint bars. Row2 objects occupy roughly 224x224 inside the cell and have transparent space around them. Row 3: four animation frames of a round black navy bomb with a vivid amber fuse, increasingly bright fuse spark and gradually swelling sphere; centered 160x160, transparent background. Row 4: four isolated power-up tokens, centered 160x160: orange flame symbol on a gold square chip; a navy bomb on a mint chip; a winged boot on an electric-blue chip; a gold trophy with a mint gem. All sprites are separate and crop-safe. No text, watermarks, gradients, blur, scenery, or characters. Alpha transparency outside objects except opaque floor tiles.",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "grid": [
+        4,
+        4
+      ],
+      "compiled_cell_size": 32
+    },
+    {
+      "file": "effects.png",
+      "sha256": "7046f23b0487fb5d032488eb4808706ebc586ea4370e3d26712eea80ae8a0850",
+      "tool": "image_gen.imagegen",
+      "mode": "built-in generation",
+      "transparent_background": true,
+      "prompt": "Use case: stylized-concept. Asset type: actual animated explosion sprite atlas for the original pixel-art arena game Blast Circuit. Exactly a square 4 by 4 grid of 16 independently crop-safe sprites on genuine alpha transparency, no labels, no borders. Every cell is exactly the same size, centered to its cell, consistent aligned effect center. Crisp high-quality pixel art intended to be downsampled to 32x32 pixels per cell, luminous ivory cores, golden yellow inner flames, vivid tangerine red outer flames, occasional sharp sparks, dark red edge pixels. No blur or soft photo glow. Row 1: four consecutive frames of a compact roughly square radial explosion core, initial impact, full bright burst, curling flame tongues, dissipating embers. Row 2: four consecutive frames of a HORIZONTAL jet of fire, spanning almost full width of each cell, hot center band with rounded flickering ends, initial/full/curling/embers. Row 3: four consecutive frames of a VERTICAL jet of fire, spanning almost full height of each cell, same phases and palette. Row 4: four consecutive frames of an amber wooden cargo crate shattering into small angular pixel debris, initial bright fracture, outward flying wooden pieces, scattered fragments, tiny embers. Every sprite stays WITHIN its own grid cell with an 8 percent clear transparent margin. The camera is orthographic overhead as in a premium 16-bit console bomb arena game. Effects must be easy to read over dark jade metal floor tiles. No character, no scenery, no words. This is game animation art, not an infographic.",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "grid": [
+        4,
+        4
+      ],
+      "compiled_cell_size": 32
+    },
+    {
+      "file": "ember.png",
+      "sha256": "8f59deb7907c4aa62f5689ebb4715c7240bc4a26195af1b9bfb645b92107129f",
+      "tool": "image_gen.imagegen",
+      "mode": "built-in generation",
+      "transparent_background": true,
+      "prompt": "Use case: stylized-concept. Production sprite atlas for the ORIGINAL top-down pixel-art bomb arena game Blast Circuit. Genuine transparent background. Square sheet with STRICT invisible 4x4 grid, exactly sixteen independently crop-safe sprites, equal cell sizes and shared baseline, generous 12 percent margins, no labels or grid or text. Original character: coral-red and magenta compact robot with rounded helmet, one short ivory horn, dark faceplate with two amber eyes, ivory scarf, chunky wine-red boots. Premium detailed late-1990s pixel art, dark navy outline, crisp pixel clusters readable at 32x32, top-down three-quarter orthographic, upper-left light. Same character scale and exact alignment in EVERY frame. Row 1 four-frame walk facing DOWN toward viewer: left foot forward, neutral, right foot forward, neutral bob. Row 2 four-frame walk facing LEFT. Row 3 four-frame walk facing RIGHT. Row 4 four-frame walk facing UP with back panel visible. Each row follows the same foot cycle. Distinctive silhouette and consistent saturated costume colors. No existing copyrighted characters, no scenery, no ground shadow, no overlapping cells, no blur. Actual usable game sprites.",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "grid": [
+        4,
+        4
+      ],
+      "compiled_cell_size": 32
+    },
+    {
+      "file": "volt.png",
+      "sha256": "227f78d99503f47a3e12de2a310214fffc7a82e42b76dd18b2403192a6c6854a",
+      "tool": "image_gen.imagegen",
+      "mode": "built-in generation",
+      "transparent_background": true,
+      "prompt": "Use case: stylized-concept. Production sprite atlas for the ORIGINAL top-down pixel-art bomb arena game Blast Circuit. Genuine transparent background. Square sheet with STRICT invisible 4x4 grid, exactly sixteen independently crop-safe sprites, equal cell sizes and shared baseline, generous 12 percent margins, no labels or grid or text. Original character: cobalt-blue and cyan slim robot with twin tall swept antenna ears, single wide amber goggle visor, asymmetrical white shoulder plate, blue boots. Premium detailed late-1990s pixel art, dark navy outline, crisp pixel clusters readable at 32x32, top-down three-quarter orthographic, upper-left light. Same character scale and exact alignment in EVERY frame. Row 1 four-frame walk facing DOWN toward viewer: left foot forward, neutral, right foot forward, neutral bob. Row 2 four-frame walk facing LEFT. Row 3 four-frame walk facing RIGHT. Row 4 four-frame walk facing UP with back panel visible. Each row follows the same foot cycle. Distinctive silhouette and consistent saturated costume colors. No existing copyrighted characters, no scenery, no ground shadow, no overlapping cells, no blur. Actual usable game sprites.",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "grid": [
+        4,
+        4
+      ],
+      "compiled_cell_size": 32
+    },
+    {
+      "file": "gilt.png",
+      "sha256": "7caaa096e61c5f2e777390a2652bddf93307cb1e8c319cde2a8df8f4728c70b9",
+      "tool": "image_gen.imagegen",
+      "mode": "built-in generation",
+      "transparent_background": true,
+      "prompt": "Use case: stylized-concept. Production sprite atlas for the ORIGINAL top-down pixel-art bomb arena game Blast Circuit. Genuine transparent background. Square sheet with STRICT invisible 4x4 grid, exactly sixteen independently crop-safe sprites, equal cell sizes and shared baseline, generous 12 percent margins, no labels or grid or text. Original character: golden yellow and orange heavy robot with square riveted helmet, two charcoal goggle lenses, broad shoulder pads, short black apron, heavy brown boots. Premium detailed late-1990s pixel art, dark navy outline, crisp pixel clusters readable at 32x32, top-down three-quarter orthographic, upper-left light. Same character scale and exact alignment in EVERY frame. Row 1 four-frame walk facing DOWN toward viewer: left foot forward, neutral, right foot forward, neutral bob. Row 2 four-frame walk facing LEFT. Row 3 four-frame walk facing RIGHT. Row 4 four-frame walk facing UP with back panel visible. Each row follows the same foot cycle. Distinctive silhouette and consistent saturated costume colors. No existing copyrighted characters, no scenery, no ground shadow, no overlapping cells, no blur. Actual usable game sprites.",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "grid": [
+        4,
+        4
+      ],
+      "compiled_cell_size": 32
+    },
+    {
+      "file": "biomes.png",
+      "sha256": "5701ad190121eb82a5696137fe999216a99739b0db3ad2f7672132c19508dc38",
+      "tool": "image_gen.imagegen",
+      "mode": "built-in generation",
+      "transparent_background": true,
+      "prompt": "Use case: stylized-concept. Asset type: actual pixel-art tiles for original top-down arena game Blast Circuit. A strict invisible 4x4 square grid, exactly 16 independent crop-safe equally sized cells, no labels no grid lines. Premium 16-bit pixel art with crisp pixel clusters, navy outlines, warm upper-left highlights, square top-down three-quarter tiles (not isometric diamonds). TOP TWO ROWS are a copper industrial FOUNDRY: row1 four seamless full-cell low-contrast dark charcoal slate floor textures, subtle copper inset rails and rivets; row2 four isolated block sprites with 10 percent transparent margins: tall indestructible basalt block with glowing copper core, heavy reinforced metal cargo block with double steel straps, same reinforced block with cracked single strap, dark steel perimeter wall. BOTTOM TWO ROWS are a cobalt and violet PRISM VAULT: row3 four seamless full-cell low-contrast dark blue floor panels with faint violet crystal seams; row4 four isolated block sprites: indestructible deep-blue crystal pillar, transparent cyan breakable glass cube holding a small white energy spark, fractured cyan glass cube, blue stone perimeter wall with tiny violet lights. Precise identical square footprint alignment in all cells. Floors opaque edge to edge; space around block objects genuinely transparent. Readable when reduced to32x32 per cell. No characters, bombs, words, scenery, gradient glow, blur, or objects crossing cell boundaries.",
+      "source_dimensions": [
+        1254,
+        1254
+      ],
+      "grid": [
+        4,
+        4
+      ],
+      "compiled_cell_size": 32,
+      "source_row_bands": [
+        [
+          0,
+          289
+        ],
+        [
+          301,
+          590
+        ],
+        [
+          603,
+          874
+        ],
+        [
+          876,
+          1254
+        ]
+      ],
+      "source_column_bands": [
+        [
+          6,
+          309
+        ],
+        [
+          320,
+          622
+        ],
+        [
+          633,
+          935
+        ],
+        [
+          946,
+          1248
+        ]
+      ]
+    },
+    {
+      "file": "reinforced.png",
+      "sha256": "71174f685c6546cc301c365c7161c6f3f59f08f49d11bcc1f17196d4c9d32ecd",
+      "tool": "image_gen.imagegen",
+      "mode": "built-in generation",
+      "transparent_background": true,
+      "prompt": "Use case: stylized-concept. Asset type: production pixel-art sprite atlas for the original top-down bomb arena game Blast Circuit. Create a transparent wide 2:1 image with exactly TWO isolated sprites in an invisible 2-column by 1-row grid. Left cell: INTACT reinforced cargo block. Right cell: the exact same block AFTER ONE BOMB HIT, visibly cracked and dented but still occupying its full square cell. Camera: orthographic top-down three-quarter, axis-aligned square top with short front face, no isometric diamond. Premium 1990s console pixel art with bold clean pixel clusters, effective 32x32 resolution per object. Each block fills about 86 percent of its square cell, centered, equal size and baseline, fully crop-safe. Block design: bright pale ivory/silver square armored crate, dark navy thick outline and feet, unmistakable chunky square silhouette, warm yellow black diagonal caution strip along the front lip, four dark corner rivets, two parallel wide steel reinforcement bands across the top. Bright broad flat top planes clearly contrast against dark teal, brown and purple arena floors. LEFT intact top is mostly bright ivory, no cracks. RIGHT damaged state keeps the same bright edges but has a huge dark jagged diagonal crack across the top, one snapped band and a large dent; visually distinct even when shrunk to 12 pixels. Crisp transparent background around both isolated sprites, no floor, no cast shadow beyond the object footprint, no glow, no scenery, no characters, no text, no labels, no frame lines, no watermark, no blur. Actual usable game tiles, not a promotional illustration.",
+      "source_dimensions": [
+        1774,
+        887
+      ],
+      "grid": [
+        2,
+        1
+      ],
+      "opaque_bounds": [
+        [
+          166,
+          135,
+          777,
+          752
+        ],
+        [
+          997,
+          135,
+          1609,
+          752
+        ]
+      ],
+      "compiled_cell_size": 32,
+      "states": [
+        "intact reinforced crate: two bomb hits",
+        "cracked reinforced crate: one hit remaining"
+      ],
+      "compiled_crop_rectangles": [
+        [
+          144,
+          118,
+          800,
+          774
+        ],
+        [
+          976,
+          118,
+          1632,
+          774
+        ]
+      ]
+    },
+    {
+      "file": "ember_crate.png",
+      "tool": "image_gen.imagegen",
+      "mode": "built-in generation",
+      "transparent_background": true,
+      "prompt": "Production game sprite for the original top-down pixel-art arena game Blast Circuit. Create one isolated square EMBER CRATE on a genuinely transparent background. Premium crisp 16-bit pixel art, effective 32x32 pixel aesthetic with controlled chunky pixels, dark navy outline and upper-left highlights. Orthographic top-down three-quarter view, same square footprint as a Bomberman-style cargo crate but completely original. A sturdy saturated coral-red and burnt-orange fuel cargo container with dark graphite side edges, two brass bands, and a large bright ivory flame emblem centered on its top face. The flame emblem is a clear bold pictogram, not text. Warm yellow corners, high contrast, readable at 32 pixels and clearly distinct from tan wooden crates, white steel reinforced crates, mint steel walls and cyan glass. Compact square shape centered in a square image, occupies 76 percent width and height, ample fully transparent crop-safe margins. NO actual fire burning outside the crate: this is its intact unlit state. No ground plane, no scenery, no words, no logo, no watermark, no gradients or blur, no isometric diamond. This sprite indicates it will burst into lingering fire when destroyed.",
+      "source_dimensions": [
+        1280,
+        1280
+      ],
+      "grid": [
+        1,
+        1
+      ],
+      "crop_rectangle": [
+        170,
+        172,
+        1098,
+        1100
+      ],
+      "compiled_cell_size": 32,
+      "sha256": "a6744e598b7c89cbfcd3e2f3c43f81a678a1ea3562266e86cba6106cf9b34003"
+    }
+  ]
+}

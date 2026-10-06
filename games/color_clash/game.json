@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.7.1",
+  "version": "1.8.1",
   "package_file": "COLOR_CLASH.P4G",
   "component": "color_clash",
   "sources": [
@@ -27,7 +27,7 @@
     "video-highres"
   ],
   "license": "MIT",
-  "assets": "dual-resolution-original-imagegen-card-frames-v3-plus-authorized-gamechangersai-org-logo-and-accessible-code-ui",
+  "assets": "native-resolution-imagegen-card-frames-and-table-materials-plus-authorized-gamechangersai-org-logo-and-crisp-code-ui",
   "enabled": true,
   "multiplayer": {
     "schema": 1,
@@ -36,5 +36,6 @@
     "max_players": 4,
     "message_bytes": 64,
     "protocol": 5
-  }
+  },
+  "launcher_icon": "assets/launcher.p4i"
 }

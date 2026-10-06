@@ -27,6 +27,8 @@ typedef struct {
  * requires NULL and holds its source-reviewed onboard hub in reset until the
  * class driver is ready. A separately gated Waveshare H2 self-powered test
  * also requires NULL and never claims or controls a physical VBUS source.
+ * Tab5 requires NULL and holds its dedicated USB-A power switch off until
+ * class registration; USB-C Serial/JTAG remains independent.
  */
 esp_err_t platform_usb_host_start(
     const platform_usb_fixture_evidence_t *fixture_evidence);
@@ -46,7 +48,8 @@ esp_err_t platform_usb_host_enable_root_port(void);
  * Existing class owners retain valid leases so they can drain disconnects,
  * uninstall, and release their leases. The external fixture still owns its
  * physical VBUS switch. On Olimex, this call asserts the onboard hub reset;
- * board-supplied, current-limited VBUS remains physically present.
+ * board-supplied, current-limited VBUS remains physically present. On Tab5,
+ * this also switches USB-A VBUS off with verified expander readback.
  */
 esp_err_t platform_usb_host_quiesce(void);
 

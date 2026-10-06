@@ -1,0 +1,25 @@
+{
+  "mode": "built-in image_gen",
+  "intent": "generate",
+  "prompt": "Use case: stylized-concept. Asset type: production texture atlas for four original high-resolution card games. Create a flat 2-by-2 square atlas, exactly equal quadrants, each texture filling its full quadrant with no padding and no borders between quadrants. Top-left: deep emerald green card-table woven wool felt, very subtle fine fibers, even ambient lighting, no objects. Top-right: deep midnight teal card-table woven wool felt, very subtle fine fibers, no objects. Bottom-left: elegant symmetrical midnight navy and antique gold playing-card BACK pattern, small interlaced art-deco diamond lattice, refined ornamental linework, no words, letters, logos or symbols of real card brands, borderless repeatable texture. Bottom-right: elegant symmetrical purple and pale silver playing-card BACK pattern with small interlaced art-deco diamond lattice, refined ornamental linework, borderless repeatable texture. Top-down orthographic, completely flat, no perspective, no shadows from external objects, no readable text, no cards or frames, no game UI. Crisp fine material detail intended to survive downsampling to 128x128 pixels per quadrant. Keep felt low-contrast enough for bright playing cards to read clearly. Original artwork.",
+  "source_sha256": "2ce0b7313a819bfe3697f70f55cc43cafc148d2d613f9ad46c6815f800af5546",
+  "source_dimensions": [
+    1254,
+    1254
+  ],
+  "layout": "2x2 equal 627-pixel quadrants: emerald felt, midnight felt, navy-gold back, violet-silver back",
+  "felt_quadrant": 1,
+  "back_quadrant": 3,
+  "include_back": true,
+  "runtime_felt_dimensions": [
+    128,
+    128
+  ],
+  "runtime_back_dimensions": [
+    96,
+    96
+  ],
+  "runtime_bytes": 51200,
+  "license": "Original generated artwork; project MIT license",
+  "text_and_suits": "Exact code-rendered; no generated glyphs"
+}

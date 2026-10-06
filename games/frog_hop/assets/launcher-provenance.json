@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "mode": "built-in image_gen; cover derived from upgraded game artwork",
+  "source": "launcher-source.png",
+  "source_sha256": "6e6a7d00ab2cf3e7832276cf2d58439169859543df6ef2819a0a9459b6afae74",
+  "generation_source": "/Users/billh/.codex/generated_images/01a10e4d-67fb-7561-b76d-25c549064ff2/exec-dd4db504-cc96-42a1-ad7b-8ad7638f72c2.png",
+  "prompt": "Use case: stylized-concept. Asset type: finished landscape 16:9 launcher cover illustration for a console game, optimized for a tiny 128x72 thumbnail. Create ONE cohesive edge-to-edge scene, not a sprite atlas. Clear large silhouettes, center-safe subject, premium polished game illustration with restrained dark background and luminous material detail. Absolutely no title, letters, logos, interface, numbers, watermarks or border. Opaque background. Game: Frog Hop. Reference defines the bright green frog with orange toe pads and mossy logs. A charming bright green frog mid-leap from a mossy log toward a large green lily pad over a blue river, with just a hint of a tiny road and colorful cars far in the background. Large cheerful frog in the center foreground, 3/4 top view, clean silhouette. Keep frog identity and green-orange palette; lush emerald and azure scene. No atlas, no grid.",
+  "reference_assets": [
+    {
+      "path": "games/frog_hop/assets/hires_atlas_v2.png",
+      "sha256": "6258462af6ceb7eb6c1a1363002033fb23cb3d57860d53259dcaf82df3cf4912"
+    }
+  ],
+  "license": "Original AI-generated project artwork, distributed under the project MIT license. No third-party game art.",
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "sha256": "a63636bd22f7b616166a85f677e4053dee650529c76a0842bcc1242cccabaa63",
+    "bytes": 9744,
+    "width": 128,
+    "height": 72,
+    "palette_entries": 256,
+    "palette_format": "little-endian RGB565",
+    "pixels": "row-major uint8 palette indices",
+    "opaque": true
+  },
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "command": "python3 scripts/pack-game-icon.py games/frog_hop/assets/launcher-source.png --output games/frog_hop/assets/launcher.p4i",
+    "description": "Standard center-fit Lanczos resize and 256-color median-cut quantization. No gameplay or runtime assets changed."
+  }
+}

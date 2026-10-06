@@ -1,0 +1,531 @@
+{
+  "schema": 1,
+  "game": "org.p4console.tide-maze",
+  "version": "0.2.1",
+  "status": "host-tested and SDL-played diagnostic candidate; failed device lag acceptance remains open",
+  "prior_operator_feedback": {
+    "result": "FAIL",
+    "feedback": "laggy as crap; feels bad",
+    "known_prior_verified_package": {
+      "bytes": 162612,
+      "sha256": "3acdf93a42bd9c9a6a4e83416240179834f0bf8249036add0ffa8921cf20af2f",
+      "source": "games/tide_maze/PERFORMANCE_REWORK.json"
+    },
+    "timing_package_binding": "The later gameplay log records the same162612byte length but no payload hash; no fresh readback was performed by this agent."
+  },
+  "device_baseline": {
+    "source": {
+      "path": "build-host/wacky-0.54/capture-B.log",
+      "bytes": 9152,
+      "sha256": "adb8a9dc6dbfc709c1ba93ad1f9bbcebae7cb9e625726df19aed8a91ada4df25"
+    },
+    "unit": "B/ST7123",
+    "os": "0.54",
+    "samples": 182,
+    "wall_total_us": 14307954,
+    "average_update_cycles_per_second": 12.72,
+    "wall_avg_us": 78615,
+    "wall_max_us": 86001,
+    "update_render_avg_us": 52298,
+    "present_avg_us": 23515,
+    "transform_avg_us": 19922,
+    "input_avg_us": 2473,
+    "qualification": "Measured failed cadence; update cycles are not independently observed scanouts."
+  },
+  "candidate": {
+    "bytes": 198448,
+    "file": "TIDE_MAZE.P4G",
+    "id": "org.p4console.tide-maze",
+    "multiplayer": {
+      "input_delay_ticks": 0,
+      "max_players": 2,
+      "message_bytes": 64,
+      "min_players": 2,
+      "protocol": 1,
+      "schema": 1,
+      "style": "realtime",
+      "style_code": 2,
+      "tick_rate_hz": 20
+    },
+    "package_sha256": "78a15a65078f2d8667aab279facbf7011911cbb3aeae5768e9208f125a3ab790",
+    "payload_bytes": 198192,
+    "payload_sha256": "92bdc42422d271ffdd8af154b4ee1b6dc93021e40b6e101a0b1779dea7e0a54e",
+    "result": "p4-game-package-built",
+    "stack_frame_limit_bytes": 2048
+  },
+  "package": {
+    "path": "build-host/tide-lag-rework/TIDE_MAZE.P4G",
+    "bytes": 198448,
+    "sha256": "78a15a65078f2d8667aab279facbf7011911cbb3aeae5768e9208f125a3ab790"
+  },
+  "changes": [
+    "Identical water geometry computed once per rolling vertex row:589 height/projection evaluations versus992/944/928 in the three mazes.",
+    "Exact background rendered in18 bands instead of200/480 row calls.",
+    "Exact sphere lighting table35680bytes replaces per-pixel division/remainder/validated draw calls.",
+    "Game-local noinline wrapper retains the shared mesh implementation and holds the palette pointer in a register.",
+    "30ms exponential tilt correction with Q4 retained fractions replaces120ms correction; physics, movement gain, map, protocol1/two seats and save identity unchanged."
+  ],
+  "rv32_review": {
+    "compiler": {
+      "path": "/Users/billh/.espressif/tools/riscv32-esp-elf/esp-14.2.0_20251107/riscv32-esp-elf/bin/riscv32-esp-elf-gcc",
+      "bytes": 1709376,
+      "sha256": "69e796c3a3e35ab36b256209e2d40f21cc946bf842718b4fc6d45159208d7910"
+    },
+    "flags": [
+      "-std=gnu17",
+      "-Os",
+      "-march=rv32imafc_zicsr_zifencei",
+      "-mabi=ilp32f",
+      "-fPIC",
+      "-fvisibility=hidden",
+      "-fno-jump-tables"
+    ],
+    "before_assembly": {
+      "path": "build-host/tide-lag-rework/before/render-rv32.s",
+      "bytes": 627918,
+      "sha256": "85e527c2b3a57a008c1d5e9b85da2a7dcd326380eed20da12a389f7f0b55678c"
+    },
+    "after_assembly": {
+      "path": "build-host/tide-lag-rework/after/render-rv32.s",
+      "bytes": 843169,
+      "sha256": "dcc8c9dbac7d41aca2958bb3e29ccd2fdf9cd015f1875637f794512fecb3dba3"
+    },
+    "stack_usage": {
+      "path": "build-host/tide-lag-rework/after/render-rv32.su",
+      "bytes": 1203,
+      "sha256": "7be63ec8ad267c4fad088f93c534573b7415de568e10e39f38bceed71f1773eb"
+    },
+    "max_game_render_frame_bytes": 1312,
+    "stack_manifest_limit_bytes": 2048,
+    "texture_sample_loop_before_instructions": 16,
+    "texture_sample_loop_after_instructions": 14,
+    "texture_sample_removed": "Per-pixel stack load of palette offset and extra address add; same texture loads/pixels.",
+    "marble_sample_removed": "No divide/remainder/call in the pixel loop; stripe remainder once per row, clipped span writes.",
+    "device_speedup_not_measured": true
+  },
+  "host_tests": {
+    "focused": "9/9 ASan/UBSan pass including192 pre-change complete-frame goldens",
+    "sdl": "5/5 pass",
+    "capture_equality": "16 native/fallback PPM captures byte-identical to before",
+    "latency_before": {
+      "cadence_ms": 16,
+      "target_intent": 800,
+      "intent_at80ms": 406,
+      "time_to90percent_ms": 272,
+      "reversal_sign_ms": 96
+    },
+    "latency_after": {
+      "cadence_ms": 16,
+      "target_intent": 800,
+      "intent_at80ms": 744,
+      "time_to90percent_ms": 80,
+      "reversal_sign_ms": 32
+    },
+    "latency_regression": "8 update cadences, zero-time, reversal, neutral noise, calibration, stale sample; Q4 precision retained",
+    "native_package": "Builder strict undefined-symbol/size/stack gates, transfer preflight and real cartridge icon parser passed",
+    "icon_validation_command": "build-host/p4_game_package/tests/test_p4_game_package --icon build-host/tide-lag-rework/after/payload.elf",
+    "harness_note": "The icon helper expects raw ELF. An initial invocation on the outer P4G container rejected it; extracted payload then passed the real parser."
+  },
+  "benchmarks": {
+    "before_768": {
+      "game": "org.p4console.tide-maze",
+      "frames": 2000,
+      "width": 768,
+      "height": 480,
+      "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+      "changed_frames": 1999,
+      "last_frame_hash": "25511c5d",
+      "update_audio_ms": {
+        "mean": 0.0021,
+        "p50": 0.002,
+        "p95": 0.003,
+        "p99": 0.004,
+        "max": 0.021,
+        "over_33_333ms": 0
+      },
+      "render_ms": {
+        "mean": 0.1427,
+        "p50": 0.136,
+        "p95": 0.188,
+        "p99": 0.244,
+        "max": 0.556,
+        "over_33_333ms": 0
+      },
+      "total_ms": {
+        "mean": 0.1448,
+        "p50": 0.138,
+        "p95": 0.19,
+        "p99": 0.248,
+        "max": 0.56,
+        "over_33_333ms": 0
+      }
+    },
+    "after_768": {
+      "game": "org.p4console.tide-maze",
+      "frames": 2000,
+      "width": 768,
+      "height": 480,
+      "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+      "changed_frames": 1999,
+      "last_frame_hash": "25511c5d",
+      "update_audio_ms": {
+        "mean": 0.002,
+        "p50": 0.002,
+        "p95": 0.003,
+        "p99": 0.003,
+        "max": 0.01,
+        "over_33_333ms": 0
+      },
+      "render_ms": {
+        "mean": 0.1347,
+        "p50": 0.133,
+        "p95": 0.148,
+        "p99": 0.17,
+        "max": 0.318,
+        "over_33_333ms": 0
+      },
+      "total_ms": {
+        "mean": 0.1368,
+        "p50": 0.135,
+        "p95": 0.151,
+        "p99": 0.174,
+        "max": 0.328,
+        "over_33_333ms": 0
+      }
+    },
+    "after_320": {
+      "game": "org.p4console.tide-maze",
+      "frames": 2000,
+      "width": 320,
+      "height": 200,
+      "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+      "changed_frames": 1999,
+      "last_frame_hash": "04ae6a75",
+      "update_audio_ms": {
+        "mean": 0.002,
+        "p50": 0.002,
+        "p95": 0.003,
+        "p99": 0.003,
+        "max": 0.016,
+        "over_33_333ms": 0
+      },
+      "render_ms": {
+        "mean": 0.0427,
+        "p50": 0.042,
+        "p95": 0.046,
+        "p99": 0.055,
+        "max": 0.107,
+        "over_33_333ms": 0
+      },
+      "total_ms": {
+        "mean": 0.0448,
+        "p50": 0.044,
+        "p95": 0.048,
+        "p99": 0.058,
+        "max": 0.109,
+        "over_33_333ms": 0
+      }
+    },
+    "render_mean_change_percent": -5.61,
+    "scope": "Optimized Mac CPU trace2000 active frames, excludes physical sensor, PPA/display and RV32/PSRAM. Not deviceFPS."
+  },
+  "interactive": {
+    "tester": "Codex CUA",
+    "application": {
+      "path": "build-host/tide-lag-rework/play/p4_game_host.app/Contents/MacOS/p4_game_host",
+      "bytes": 1172656,
+      "sha256": "9d5813a4fe4d2edcb21cbe867046481433133b6e8e1295230b0ed704c785482b"
+    },
+    "scenarios": [
+      "Space starts",
+      "Right/Down/Left steer continuously",
+      "Wall approach and braking",
+      "First pearl collected1/4",
+      "Start pause/resume",
+      "Modal click resumes",
+      "Escape exits; process termination confirmed"
+    ],
+    "sampled_title_fps_range": [
+      58.6,
+      60.1
+    ],
+    "scope": "Mac SDL only. Final pure noinline water helper refinement followed play;192 exact-scene goldens and final SDL suite rechecked it.",
+    "touch_limitation": "CUA fast footer Pause taps did not reliably trigger. Canonical touch tests and hitbox geometry pass; no confirmed game hitbox defect. Physical finger pause/steering still required.",
+    "cua_released": true
+  },
+  "source_closure": [
+    {
+      "path": "components/p4_cp437/src/cp437.c",
+      "bytes": 25159,
+      "sha256": "10405ddafb45fbf288362acf6f3b346de0a6483c9e014cc588036300dd521bdf"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/achievements.h",
+      "bytes": 1788,
+      "sha256": "c389a044b056142d11796b8de48a50fa6ce5214e50c733455a32c9a0a663d37d"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/audio.h",
+      "bytes": 3129,
+      "sha256": "8b57ae696ed091bad426e09d6232ea52ab9e9a8bd70741d76f51bdaba4ee87a5"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/audio_pack.h",
+      "bytes": 1548,
+      "sha256": "8dcead613074e3e5db390039754942f432bd4aa024e33f61bff202a9fcc5818e"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/card_art.h",
+      "bytes": 7560,
+      "sha256": "b8af8b6137dd0681d2dc3b7555fb0e8d0ccf9cd064d9f12c1bcb7bfa2214db4f"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/cartridge.h",
+      "bytes": 4880,
+      "sha256": "b3c7f4c0b3e3ff67e9e3ba9a81b162991922c8cf4a819758e4e6a9f9ac518f6a"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/dice.h",
+      "bytes": 1095,
+      "sha256": "4a9ee228bab0aee3b7dd7db43880e3337ec193417ddbd4bc577e6cf2f5ae68d6"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/draw.h",
+      "bytes": 2417,
+      "sha256": "47d5b29c0e736d62f421a231ba7c0fd8a97b7209a580ba5fc9f815c8fbe5ea1a"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/feedback.h",
+      "bytes": 1050,
+      "sha256": "ede8ccc4e9cab3c73b14dd3467a5276794c3cee90006581307bb525040396915"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/game.h",
+      "bytes": 16412,
+      "sha256": "33e65134e86f1597fe732f64df88720c5892280ff31ca00ac9cbee15beac7459"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/input.h",
+      "bytes": 2998,
+      "sha256": "4dd1d878598e81c1ec99d40b095b82202a49e3b80169a7217a6528d8f4ad6eb1"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/mesh.h",
+      "bytes": 5206,
+      "sha256": "3e7dd39f0e2df522a365227ca579e670ca8f8f8dcef841883f26959ea91e1394"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/motion.h",
+      "bytes": 498,
+      "sha256": "08768be7e8788299c44cffcbffafbdfd2d05a5603aa79ae8eaeb6c312cd41abb"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/presentation.h",
+      "bytes": 9371,
+      "sha256": "c82e11e65836eb5de29a473f254d583daaa1946c357f4d8c9b3a76461f272d21"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/presentation_font.h",
+      "bytes": 162003,
+      "sha256": "0bc9a110a5f9b0e8f1cc44ffa212206758ebdd58e15ac488030f65fe72a7f448"
+    },
+    {
+      "path": "components/p4_game_api/include/p4/visual.h",
+      "bytes": 2875,
+      "sha256": "206e74c98b2a47202f0e253f126dcfdf5e57dda6c25de732c0360fe542543979"
+    },
+    {
+      "path": "components/p4_game_api/runtime/cartridge_main.c",
+      "bytes": 14832,
+      "sha256": "a6b7062db30979c4d32728d451793cbde1d1303ceebc524a46b935f193a77c6d"
+    },
+    {
+      "path": "components/p4_game_api/src/audio_pack.c",
+      "bytes": 3437,
+      "sha256": "d12cc933706012124784300f6abb15227d4534a298082ea9e8b23948acd9da71"
+    },
+    {
+      "path": "components/p4_game_api/src/draw.c",
+      "bytes": 12509,
+      "sha256": "3056f2a5b8bb9f9db7c1df2d197e5a676b9c20f12d10398bc92f6c44b887fa36"
+    },
+    {
+      "path": "components/p4_game_api/src/feedback.c",
+      "bytes": 2098,
+      "sha256": "2f05229f018a488576a8bacef4a91096b97e6c0495c51138c4518ee6cd01be4a"
+    },
+    {
+      "path": "components/p4_game_api/src/game_runtime.c",
+      "bytes": 27502,
+      "sha256": "c1ac69e7c45192b287e07fec350d47826888117b1b41e25d90f2e7319d2c1996"
+    },
+    {
+      "path": "components/p4_game_api/src/input.c",
+      "bytes": 10628,
+      "sha256": "b895eff5252e8d141fb49dc3c8e31fbd629bcda72068f14917dcf425bc7a81f7"
+    },
+    {
+      "path": "components/p4_game_api/src/presentation_font.c",
+      "bytes": 193,
+      "sha256": "149b2e510c0a0b8dfe5c4a7ac4be2f8006c4360c09a82c088209f7ece1eb65c5"
+    },
+    {
+      "path": "components/p4_game_api/src/visual.c",
+      "bytes": 9580,
+      "sha256": "8160e9798853236da029abc8bf55e5ddf95909872a830469270afb7fa8ba6e23"
+    },
+    {
+      "path": "games/tide_maze/assets/launcher.p4i",
+      "bytes": 9744,
+      "sha256": "df35281f28e4878b2505e82dfa583f919dbc101d4b7321b455b82628702f9920"
+    },
+    {
+      "path": "games/tide_maze/game.json",
+      "bytes": 1072,
+      "sha256": "31b4e8cac6c655e58f49d82b43d3ba961b2b9219edb23ed97afc55509034b3c1"
+    },
+    {
+      "path": "games/tide_maze/src/generated/cover.inc",
+      "bytes": 329603,
+      "sha256": "8ffa5716335b9289f976ade37ce021577d9f2993bc900f21ae9a7f6786f5f55c"
+    },
+    {
+      "path": "games/tide_maze/src/generated/marble_lighting.inc",
+      "bytes": 126266,
+      "sha256": "882673a3b4e1fc099197f71bc6d38b6c74e6042c761cdb0fb94eab446cb593c9"
+    },
+    {
+      "path": "games/tide_maze/src/generated/water.inc",
+      "bytes": 347256,
+      "sha256": "1b5fab8ab93d590c6b7ec597752c64bada57686d9f7d1bbaa893038a07ae878a"
+    },
+    {
+      "path": "games/tide_maze/src/tide_maze.c",
+      "bytes": 3369,
+      "sha256": "c046a7026ca4cedd430d3648af6506941a05362fa372646034f01aecc19678a7"
+    },
+    {
+      "path": "games/tide_maze/src/tide_maze_internal.h",
+      "bytes": 1983,
+      "sha256": "e79fd996e122032bc1c885ef8ac736123082ed15ca19a867be645910f50a387e"
+    },
+    {
+      "path": "games/tide_maze/src/tide_maze_network.c",
+      "bytes": 5868,
+      "sha256": "ba3e3ecb17f7885203b728449fd55a6a9d471e15e18c890450a0aa8dd1e24c4b"
+    },
+    {
+      "path": "games/tide_maze/src/tide_maze_physics.c",
+      "bytes": 10987,
+      "sha256": "a003398c33c7209adcaa329098743144c3906737485d5ab7b1eaede595358ad5"
+    },
+    {
+      "path": "games/tide_maze/src/tide_maze_render.c",
+      "bytes": 12926,
+      "sha256": "e679cedb034c3c8ae2bdcbaf5d17e040bc5492ef8b627b5119b5162bfed721f8"
+    },
+    {
+      "path": "scripts/build-game-package.py",
+      "bytes": 14250,
+      "sha256": "3c3c5e6a458be87993a90caa6bbf3c42d39e8c2655a1304ba754d286390e65ff"
+    },
+    {
+      "path": "toolchain.lock.json",
+      "bytes": 755,
+      "sha256": "6c45009fd4ba924dac63e442d4bcdbff134cf81037cadb8f2d12209c41564a55"
+    },
+    {
+      "path": "tools/p4-game-host/benchmark_game.c",
+      "bytes": 5562,
+      "sha256": "d923d0d7957bdfde8c8b09ef36b5178ed8d2da43de01bfaf3cdfa2b174b50d35"
+    },
+    {
+      "path": "tools/p4-game-host/frame_pacer.h",
+      "bytes": 588,
+      "sha256": "4ff832b5242db46e176c79e2c4e13d5134e55f089b061014173c3d45d477c9f3"
+    },
+    {
+      "path": "tools/p4-game-host/host_mouse.h",
+      "bytes": 3342,
+      "sha256": "7e09d5ff075109d6118ee7ac497a046274c1d724d2f4032d30584c65f2a10a50"
+    },
+    {
+      "path": "tools/p4-game-host/play_game.c",
+      "bytes": 26251,
+      "sha256": "749d0439cc5ed0cbb88194202406236558b7ac9fd816f128ca09568b71aeeba2"
+    }
+  ],
+  "evidence": [
+    {
+      "path": "build-host/tide-lag-rework/after/benchmark-320.json",
+      "bytes": 525,
+      "sha256": "805242f751d562007521e814f80043e905d210cd5e2cf153c1e3e4722c8ac0d4"
+    },
+    {
+      "path": "build-host/tide-lag-rework/after/benchmark-768.json",
+      "bytes": 525,
+      "sha256": "d8c9534fdbf0c0f5c5e14538b7c0ef366d0d8cddf85e5c0493f25c93bd614bb2"
+    },
+    {
+      "path": "build-host/tide-lag-rework/after/build.log",
+      "bytes": 528,
+      "sha256": "72a96379b2692b7ed99bd7c8d9537590569825652b8873cc6cd61cad394813c1"
+    },
+    {
+      "path": "build-host/tide-lag-rework/after/icon-validation.log",
+      "bytes": 37,
+      "sha256": "26b9d5aa5252f0192eab14018a0ec266c1bfc1552e967541f5d657a465232c84"
+    },
+    {
+      "path": "build-host/tide-lag-rework/after/latency-probe",
+      "bytes": 35648,
+      "sha256": "59b6c4c7d88d87faf946706d760e7db61e70b6bcdf2012471d72e6ef565e62a6"
+    },
+    {
+      "path": "build-host/tide-lag-rework/after/latency.json",
+      "bytes": 105,
+      "sha256": "1b9dc257b7259ee7efb25b2d72a507dd9fe9551f4bd80d558644cda8166d458c"
+    },
+    {
+      "path": "build-host/tide-lag-rework/after/package-validation.json",
+      "bytes": 141,
+      "sha256": "570e6df194288ce37474224864109576e93a80319ac1795bbf0eecbb0ddbc0a5"
+    },
+    {
+      "path": "build-host/tide-lag-rework/after/package.json",
+      "bytes": 525,
+      "sha256": "3ceca28f930fa1d0d24965bfc8ada1cbe48aa0891247e0368bcc01fb2a0b6be2"
+    },
+    {
+      "path": "build-host/tide-lag-rework/after/payload.elf",
+      "bytes": 198192,
+      "sha256": "92bdc42422d271ffdd8af154b4ee1b6dc93021e40b6e101a0b1779dea7e0a54e"
+    },
+    {
+      "path": "build-host/tide-lag-rework/after/pixel-captures.json",
+      "bytes": 1923,
+      "sha256": "2f2cda002c3fcd6aa82562c4e85f7eeb1e9a0139a4139b128b949e334290b52b"
+    },
+    {
+      "path": "build-host/tide-lag-rework/after/sdl-build.log",
+      "bytes": 431,
+      "sha256": "ccea90737e2abf979d8ee8b5d786aa5fd77d793e6c8038a5fa92c3a7a653bc90"
+    },
+    {
+      "path": "build-host/tide-lag-rework/after/sdl-tests.log",
+      "bytes": 678,
+      "sha256": "b69a1830c948af821bf786dc6d8c2a0307b1259a14dda05dd72569fa3075f342"
+    },
+    {
+      "path": "build-host/tide-lag-rework/after/tests.log",
+      "bytes": 1196,
+      "sha256": "239e591672796c32ae6d1b5fc3627bb48502ff8309669cd9f4786c653264f164"
+    }
+  ],
+  "remaining": [
+    "Install the exact candidate on the previously authorized unit without changing OS.",
+    "Measure sustained active game cadence and compare update/render/present phases with baseline; no30FPS claim yet.",
+    "Operator validate physical tilt, reversals, braking, footer touch, audio and linked roles.",
+    "Shared PPA/display baseline23.5ms leaves roughly7.3ms for game+input to reach30FPS; shared source remained untouched."
+  ]
+}

@@ -18,3 +18,22 @@ target_link_libraries(test_clock_control PRIVATE p4_h1_usb_drive_control)
 target_compile_options(test_clock_control PRIVATE -Wall -Wextra -Wconversion -Wshadow -Werror -fsanitize=address,undefined -fno-omit-frame-pointer)
 target_link_options(test_clock_control PRIVATE -fsanitize=address,undefined)
 add_test(NAME usb_clock_control COMMAND test_clock_control)
+
+# Exercise the actual device parser with fake SDK services and real SHA-256.
+add_executable(test_file_transfer_native_only
+    test_file_transfer_native_only.c
+    ../src/file_transfer.c
+    ../../p4_game_package/src/game_package.c
+    ../../p4_game_package/src/game_resource.c
+    ../../p4_game_api/src/game_runtime.c
+    stubs/sha256.c)
+target_include_directories(test_file_transfer_native_only PRIVATE
+    stubs ../include ../../p4_game_package/include ../../p4_game_api/include)
+target_compile_features(test_file_transfer_native_only PRIVATE c_std_11)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(test_file_transfer_native_only PRIVATE
+        -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+        -fsanitize=address,undefined -fno-omit-frame-pointer)
+    target_link_options(test_file_transfer_native_only PRIVATE -fsanitize=address,undefined)
+endif()
+add_test(NAME file_transfer_native_only COMMAND test_file_transfer_native_only)

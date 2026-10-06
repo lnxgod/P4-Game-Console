@@ -1,0 +1,27 @@
+{
+  "schema": 1,
+  "mode": "Exact reuse of existing original project illustration",
+  "source": "launcher-source.png",
+  "source_sha256": "dc1d61ac482a48f0b125e496a1b262680918e93a2351e7c1f7c533d2f22bc406",
+  "original_source": "games/lord/assets/source/title-background-generated.png",
+  "original_provenance": "games/lord/assets/README.md",
+  "original_generation": {
+    "generator": "built-in OpenAI image generation",
+    "date": "2026-08-18",
+    "description": "Original red dragon above a medieval town; no upstream LORD artwork."
+  },
+  "license": "Original project artwork; no third-party game art. Existing game code/license remains unchanged.",
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "reproduce": "python3 games/lord/tools/pack_launcher.py",
+    "description": "Center-fit128x72 Lanczos,256 RGB565 palette entries,opaque indexed pixels.",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "recipe_sha256": "5adefb65d0c953eba8646e43815de9a0e9433a1b551fe17524914b5d45e66926"
+  },
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "bytes": 9744,
+    "sha256": "f03ae3e767ed0762d07c5564c24bf7683e4c93043727fb862385869b2e3fd405",
+    "format": "P4ICON1,128x72,256 RGB565 palette entries,opaque indexed pixels"
+  }
+}

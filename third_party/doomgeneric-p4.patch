@@ -1,0 +1,241 @@
+diff --git a/doomgeneric/d_loop.c b/doomgeneric/d_loop.c
+index 1939dbd..d45d9bf 100644
+--- a/doomgeneric/d_loop.c
++++ b/doomgeneric/d_loop.c
+@@ -39,6 +39,7 @@
+ #include "net_server.h"
+ #include "net_sdl.h"
+ #include "net_loop.h"
++#include "p4_doom_net.h"
+ 
+ // The complete set of data for a particular tic.
+ 
+@@ -177,16 +178,19 @@ static boolean BuildNewTic(void)
+     memset(&cmd, 0, sizeof(ticcmd_t));
+     loop_interface->BuildTiccmd(&cmd, maketic);
+ 
+-#ifdef FEATURE_MULTIPLAYER
++    ticdata[maketic % BACKUPTICS].cmds[localplayer] = cmd;
++    ticdata[maketic % BACKUPTICS].ingame[localplayer] = true;
+ 
+-    if (net_client_connected)
++    if (P4_DoomNetActive())
++    {
++        P4_DoomNetSubmitTic(&cmd, maketic);
++    }
++#ifdef FEATURE_MULTIPLAYER
++    else if (net_client_connected)
+     {
+         NET_CL_SendTiccmd(&cmd, maketic);
+     }
+-
+ #endif
+-    ticdata[maketic % BACKUPTICS].cmds[localplayer] = cmd;
+-    ticdata[maketic % BACKUPTICS].ingame[localplayer] = true;
+ 
+     ++maketic;
+ 
+@@ -212,6 +216,12 @@ void NetUpdate (void)
+     if (singletics)
+         return;
+ 
++    P4_DoomNetPoll();
++    if (P4_DoomNetFailed())
++    {
++        I_Error("P4 multiplayer peer disconnected");
++    }
++
+ #ifdef FEATURE_MULTIPLAYER
+ 
+     // Run network subsystems
+@@ -282,7 +292,7 @@ void D_ReceiveTic(ticcmd_t *ticcmds, boolean *players_mask)
+ 
+     for (i = 0; i < NET_MAXPLAYERS; ++i)
+     {
+-        if (!drone && i == localplayer)
++        if (!P4_DoomNetActive() && !drone && i == localplayer)
+         {
+             // This is us.  Don't overwrite it.
+         }
+@@ -340,9 +350,32 @@ static void BlockUntilStart(net_gamesettings_t *settings,
+ void D_StartNetGame(net_gamesettings_t *settings,
+                     netgame_startup_callback_t callback)
+ {
+-#if ORIGCODE
+     int i;
+ 
++    if (P4_DoomNetActive())
++    {
++        offsetms = 0;
++        recvtic = 0;
++        maketic = 0;
++        if (!P4_DoomNetConfigure(settings))
++        {
++            I_Error("P4 multiplayer configuration failed");
++        }
++        // P4 networking returns only after both peers have exchanged the
++        // same neutral startup tics. Continue command generation at the next
++        // tic so boot-time skew cannot strand either engine at tic zero.
++        maketic = recvtic;
++        localplayer = settings->consoleplayer;
++        for (i = 0; i < NET_MAXPLAYERS; ++i)
++        {
++            local_playeringame[i] = i < settings->num_players;
++        }
++        ticdup = settings->ticdup;
++        new_sync = settings->new_sync;
++        net_client_connected = true;
++        return;
++    }
++#if ORIGCODE
+     offsetms = 0;
+     recvtic = 0;
+ 
+@@ -451,7 +484,7 @@ void D_StartNetGame(net_gamesettings_t *settings,
+ 
+ boolean D_InitNetGame(net_connect_data_t *connect_data)
+ {
+-    boolean result = false;
++    boolean result = P4_DoomNetActive();
+ #ifdef FEATURE_MULTIPLAYER
+     net_addr_t *addr = NULL;
+     int i;
+@@ -559,6 +592,7 @@ boolean D_InitNetGame(net_connect_data_t *connect_data)
+ //
+ void D_QuitNetGame (void)
+ {
++    P4_DoomNetQuit();
+ #ifdef FEATURE_MULTIPLAYER
+     NET_SV_Shutdown();
+     NET_CL_Disconnect();
+@@ -571,6 +605,11 @@ static int GetLowTic(void)
+ 
+     lowtic = maketic;
+ 
++    if (P4_DoomNetActive() && recvtic < lowtic)
++    {
++        lowtic = recvtic;
++    }
++
+ #ifdef FEATURE_MULTIPLAYER
+     if (net_client_connected)
+     {
+diff --git a/doomgeneric/d_loop.h b/doomgeneric/d_loop.h
+index eb87d84..d270d29 100644
+--- a/doomgeneric/d_loop.h
++++ b/doomgeneric/d_loop.h
+@@ -64,6 +64,9 @@ void TryRunTics (void);
+ // Called at start of game loop to initialize timers
+ void D_StartGameLoop(void);
+ 
++// Deliver one complete lockstep tic from an external transport adapter.
++void D_ReceiveTic(ticcmd_t *ticcmds, boolean *players_mask);
++
+ // Initialize networking code and connect to server.
+ 
+ boolean D_InitNetGame(net_connect_data_t *connect_data);
+@@ -78,4 +81,3 @@ extern boolean singletics;
+ extern int gametic, ticdup;
+ 
+ #endif
+-
+diff --git a/doomgeneric/doomgeneric.c b/doomgeneric/doomgeneric.c
+index 881d700..19de5ed 100644
+--- a/doomgeneric/doomgeneric.c
++++ b/doomgeneric/doomgeneric.c
+@@ -5,6 +5,7 @@
+ #include "doomgeneric.h"
+ 
+ pixel_t* DG_ScreenBuffer = NULL;
++static int doomgeneric_quit_requested = 0;
+ 
+ void M_FindResponseFile(void);
+ void D_DoomMain (void);
+@@ -12,6 +13,7 @@ void D_DoomMain (void);
+ 
+ void doomgeneric_Create(int argc, char **argv)
+ {
++	doomgeneric_quit_requested = 0;
+ 	// save arguments
+     myargc = argc;
+     myargv = argv;
+@@ -25,3 +27,12 @@ void doomgeneric_Create(int argc, char **argv)
+ 	D_DoomMain ();
+ }
+ 
++void doomgeneric_RequestQuit(void)
++{
++	doomgeneric_quit_requested = 1;
++}
++
++int doomgeneric_QuitRequested(void)
++{
++	return doomgeneric_quit_requested;
++}
+diff --git a/doomgeneric/doomgeneric.h b/doomgeneric/doomgeneric.h
+index fd8708f..a49685b 100644
+--- a/doomgeneric/doomgeneric.h
++++ b/doomgeneric/doomgeneric.h
+@@ -32,6 +32,8 @@ extern "C" {
+ 
+ void doomgeneric_Create(int argc, char **argv);
+ void doomgeneric_Tick();
++void doomgeneric_RequestQuit(void);
++int doomgeneric_QuitRequested(void);
+ 
+ 
+ //Implement below functions for your platform
+diff --git a/doomgeneric/i_system.c b/doomgeneric/i_system.c
+index 53ab2c9..55d59d0 100644
+--- a/doomgeneric/i_system.c
++++ b/doomgeneric/i_system.c
+@@ -35,6 +35,7 @@
+ #endif
+ 
+ #include "config.h"
++#include "doomgeneric.h"
+ 
+ #include "deh_str.h"
+ #include "doomtype.h"
+@@ -257,6 +258,10 @@ void I_Quit (void)
+         entry = entry->next;
+     }
+ 
++    // DoomGeneric has no process window to close. Tell the platform loop that
++    // cleanup completed so an embedded host can return to its launcher.
++    doomgeneric_RequestQuit();
++
+ #if ORIGCODE
+     SDL_Quit();
+ 
+@@ -575,4 +580,3 @@ boolean I_GetMemoryValue(unsigned int offset, void *value, int size)
+ 
+     return false;
+ }
+-
+diff --git a/doomgeneric/m_menu.c b/doomgeneric/m_menu.c
+index 6df9655..c50611d 100644
+--- a/doomgeneric/m_menu.c
++++ b/doomgeneric/m_menu.c
+@@ -1626,6 +1626,16 @@ boolean M_Responder (event_t* ev)
+     {
+ 	if (messageNeedsInput)
+         {
++            // Embedded touch controls use Enter/Escape for OK/Back. Treat
++            // them as the same explicit Yes/No choices as keyboard Y/N.
++            if (key == KEY_ENTER)
++            {
++                key = key_menu_confirm;
++            }
++            else if (key == KEY_ESCAPE)
++            {
++                key = key_menu_abort;
++            }
+             if (key != ' ' && key != KEY_ESCAPE
+              && key != key_menu_confirm && key != key_menu_abort)
+             {
+@@ -2122,4 +2132,3 @@ void M_Init (void)
+ 
+     //opldev = M_CheckParm("-opldev") > 0;
+ }
+-

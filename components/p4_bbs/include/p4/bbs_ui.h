@@ -50,6 +50,8 @@ typedef struct {
     bool battery_supported;
     bool battery_sample_valid;
     uint8_t battery_percent;
+    bool storage_is_sd, storage_space_valid;
+    uint32_t storage_total_kib, storage_free_kib;
 } p4_bbs_launcher_model_t;
 
 typedef enum {

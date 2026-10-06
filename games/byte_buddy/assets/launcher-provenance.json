@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "mode": "Exact reuse of existing original project illustration",
+  "source": "launcher-source.png",
+  "source_sha256": "1a999f119353b1aa979e5d8947369eee1116c7dcb73e4bf66105d231d4d8d4d2",
+  "original_source": "components/console_shell/assets/nextgen/byte-buddy.png",
+  "original_provenance": "components/console_shell/assets/nextgen/source.json",
+  "original_generation": {
+    "name": "byte-buddy",
+    "prompt": "Generate a production illustration asset based on the approved GameChangersAI interface reference. Output ONLY the Byte Buddy robot cyberspace artwork, absolutely no interface, text, logo, labels, letters, typography, borders, buttons or navigation. Wide 16:9 cinematic illustration. Same friendly polished small black and silver robot with two glowing cyan eyes, a neon cyan crystal above it, geometric deep navy cyberspace portal and grid floor. Robot on RIGHT HALF, calm very dark navy #07121C negative space on LEFT HALF for separately rendered UI title. Elegant Hackers 1995 computer-world atmosphere, inviting and accessible, cyan lighting, crisp 3D forms. This is an illustration asset, not a screen mockup.",
+    "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-2380832c-8437-45eb-a7ab-74f23a2a5f9e.png",
+    "sha256": "1a999f119353b1aa979e5d8947369eee1116c7dcb73e4bf66105d231d4d8d4d2"
+  },
+  "license": "Original project artwork; no third-party game art. Existing game code/license remains unchanged.",
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "reproduce": "python3 games/byte_buddy/tools/pack_launcher.py",
+    "description": "Center-fit128x72 Lanczos,256 RGB565 palette entries,opaque indexed pixels.",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "recipe_sha256": "5adefb65d0c953eba8646e43815de9a0e9433a1b551fe17524914b5d45e66926"
+  },
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "bytes": 9744,
+    "sha256": "b8c1cd3f20aa78b2247fabff8989c5b9a2a3ad2fa28e5c1cdeceaf79426ac56c",
+    "format": "P4ICON1,128x72,256 RGB565 palette entries,opaque indexed pixels"
+  }
+}

@@ -10,7 +10,7 @@ enum {
     NET_KIND_INPUT = 1,
     NET_KIND_SNAPSHOT = 2,
     NET_INPUT_HEARTBEAT_MS = 50,
-    NET_SNAPSHOT_MS = 33,
+    NET_SNAPSHOT_MS = P4_AIR_HOCKEY_SNAPSHOT_MS,
 };
 
 static void write_u16(uint8_t *bytes, uint16_t value)
@@ -100,6 +100,10 @@ static bool apply_snapshot(p4_air_hockey_state_t *state,
         puck_x > P4_GAME_SURFACE_WIDTH || puck_y > P4_GAME_SURFACE_HEIGHT) {
         return false;
     }
+    const p4_air_hockey_pose_t displayed = p4_air_hockey_render_pose(state);
+    const bool snap = !state->snapshot_received || !state->visual_ready ||
+        state->phase != (p4_air_hockey_phase_t)bytes[2] ||
+        state->score[0] != bytes[3] || state->score[1] != bytes[4];
     state->phase = (p4_air_hockey_phase_t)bytes[2];
     state->score[0] = bytes[3];
     state->score[1] = bytes[4];
@@ -118,6 +122,13 @@ static bool apply_snapshot(p4_air_hockey_state_t *state,
     state->phase_timer_ms = read_u16(bytes + 28U);
     state->simulation_tick = read_u16(bytes + 30U);
     state->snapshot_received = true;
+    if (snap) {
+        p4_air_hockey_visual_snap(state);
+    } else {
+        state->previous_pose = displayed;
+        state->client_visual_ms = 0U;
+        state->visual_ready = true;
+    }
     return true;
 }
 
@@ -237,6 +248,11 @@ bool p4_air_hockey_network_update(p4_game_context_t *context,
 {
     if (!status_connected(context, state)) {
         return false;
+    }
+    if (state->network_role == P4_GAME_MULTIPLAYER_ROLE_CLIENT) {
+        const uint32_t remaining = state->client_visual_ms < P4_AIR_HOCKEY_SNAPSHOT_MS
+            ? P4_AIR_HOCKEY_SNAPSHOT_MS - state->client_visual_ms : 0U;
+        state->client_visual_ms += elapsed_ms < remaining ? elapsed_ms : remaining;
     }
     uint16_t world_x = touch_x < P4_GAME_SURFACE_WIDTH ? touch_x : 0U;
     uint16_t world_y = touch_y < P4_GAME_SURFACE_HEIGHT ? touch_y : 0U;

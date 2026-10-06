@@ -1,5 +1,20 @@
 # P4 Console OS
 
+Current Tab5 release: **GameChangersAI OS 0.51**. The native 1280×720
+interface retains the 0.44 layout, cached momentum scrolling, game categories,
+cartridge artwork and protected file actions. The status bar shows game volume
+and opens Sound; startup and game audio default to level 3 through a one-time
+migration that preserves later adjustments. The optimized flying-joystick boot
+uses stationary status/activity dots and an explicit Ready handoff.
+
+0.51 also carries the reviewed triple display buffers, per-buffer damage replay,
+cartridge timing/audio and optional motion snapshots, plus OS-owned local Wi-Fi
+and Bluetooth multiplayer and scoped charging support. Game cartridges remain
+separate installations. See `hardware/evidence/tab5-0.51-combined-testing.json`
+for the exact build and per-unit results; physical gameplay, smoothness and
+wireless acceptance are separate from a successful firmware boot.
+
+
 M5Stack Tab5 is the primary target. Start with
 [`docs/boards/M5STACK_TAB5.md`](../../docs/boards/M5STACK_TAB5.md) and
 `make console-os-tab5-idf` (`make console-os-idf` is its default alias).
@@ -25,20 +40,16 @@ provides startup/game volume controls. Back returns from a detail or utility to
 the same section. Other board targets retain their existing system navigation.
 See `docs/GAME_LIBRARY.md` for the current names and provisional quality ranking.
 
-Boot first displays the official Game Changers AI logo and starts SD
-initialization. Fresh installs start Boot Sounds and Game Audio at 0/10; the
-Audio panel can persist either level from 0 through 10. When Boot Sounds are
-enabled, the sequence plays a classic-PC POST beep, separated hard-disk seek
-clicks, a deliberately paced dual-frequency DTMF dial of `614-276-3639`, and a
-condensed V.25/V.22bis 2400-baud handshake. Display and the
-branded frame still come first, followed by the minimum codec control bus,
-background storage worker, exact P4G catalog worker, boot audio, and input. The branded
-loading screen remains visible with a state-driven SD animation until the
-microSD mount reaches a ready or degraded terminal state; serial evidence reports
-the measured dial and SD initialization durations. Catalog validation overlaps
-the sound sequence on a low-priority PSRAM task, and Program Manager's first frame
-still includes the exact validated P4G catalog. A slow or missing card therefore shows
-explicit loading instead of a black panel. The Windows 3.1 Program Manager is
+Boot first displays the GameChangersAI logo and starts SD initialization.
+Fresh installs start Boot Sounds and Game Audio at 0/10; the Audio panel can
+persist either level from 0 through 10. Tab5 plays an original one-second
+rising-bell treasure fanfare at the saved boot volume. There is no modem noise,
+ATDT/digit dialing or staged desktop wipe on Tab5; other targets retain their
+legacy startup sequences. The branded frame comes first, followed by the
+minimum codec control bus, background storage/catalog workers, boot audio and
+input. Exact game package validation overlaps the sound, and the first desktop
+frame includes the validated catalog. A slow or missing card shows loading
+until storage reaches its ready or degraded state. The Windows 3.1 Program Manager is
 the default launcher. Appearance can switch the current session to the optional
 BBS door view or the Windows, Ocean, and Sunset palettes. There is no CRT
 filter.
@@ -269,6 +280,13 @@ acceptance target; Xbox Wireless Adapter, Xbox 360 wireless, and wired
 XInput/GIP are outside this generic BLE HID path. See `docs/CONTROLLERS.md`
 before making a model-specific support claim.
 
+The installed 0.43 Core OS adds a free-storage percentage beside the battery
+in both launcher themes, refreshes the FAT-space count automatically, and
+refreshes battery changes on every shell page. Tab5 retries a failed battery
+sensor startup; invalid pack voltages remain unavailable. See the
+[Tab5 0.43 notes](../../docs/boards/M5STACK_TAB5.md#043-status-indicators-installed-on-ab)
+for build evidence and the unresolved 0.42 pack-voltage readings.
+
 The current Doom integration accepts `DOOM1.WAD` at the drive root, with the
 exact shareware identity recorded in `third_party/game-data.json`. Copying or
 removing that file does not require a firmware rebuild. Eject the drive before
@@ -318,17 +336,16 @@ Copy the resulting cartridge from `build/game-storage-seed/GAMES/` into
 `docs/GAME_SDK.md` for the API and package contract. This project does not use
 UF2.
 
-Readable Lua `P4CART1` files live under `P4/GAMES/*.P4CART`. Console OS scans
-and validates installed source cartridges and launches the bounded Lua 5.4
-runtime. The old Lua teaching games have been removed; no demo carts are seeded. See `docs/GAME_LIBRARY.md` for the curated native
-library, categories and draft workflow.
+The old Lua runtime, games, tools and skill are removed. Console OS supports
+native cartridges only. See `docs/GAME_LIBRARY.md` for the native library and
+`docs/GAME_STARTERS.md` for creating native games and custom renderers.
 
 The Waveshare 4.3 build obtains its complete executable cartridge catalog from
-microSD while retaining the P4CART compatibility catalog. Build and verify it
+microSD using the native `.P4G` catalog. Build and verify it
 with `make console-os-waveshare-idf`. Connect H2, wait for its volume to mount,
 and run
 `make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES`; the installer
-validates every enabled native cartridge, every declared source cartridge,
+validates every enabled native cartridge
 and every resource sidecar before preserving unrelated files. It requires
 an external USB FAT32 volume named `P4GAMES` and rejects ExFAT. Recover a fresh
 or corrupt card with `diskutil eraseDisk MS-DOS P4GAMES MBRFormat /dev/diskN`

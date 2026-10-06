@@ -9,6 +9,7 @@
 
 #include "p4/draw.h"
 #include "p4/game.h"
+#include "p4/input.h"
 #include "texas_holdem_internal.h"
 
 extern const p4_game_descriptor_t p4_texas_holdem_game;
@@ -211,12 +212,17 @@ static bool update_button(p4_game_instance_t *instance, uint32_t button)
 
 static bool tap(p4_game_instance_t *instance, uint16_t x, uint16_t y)
 {
-    const p4_game_input_t down = {
-        .touch_valid = true,
-        .touch_count = 1U,
-        .touches = {{.x = x, .y = y}},
+    p4_game_input_mapper_t mapper;
+    p4_game_input_mapper_init(&mapper);
+    const p4_physical_touch_t point = {
+        .x = (uint16_t)(P4_INPUT_VIEWPORT_LEFT +
+            ((uint32_t)x * P4_INPUT_VIEWPORT_WIDTH + 319U) / 320U),
+        .y = (uint16_t)(P4_INPUT_VIEWPORT_TOP +
+            ((uint32_t)y * P4_INPUT_VIEWPORT_HEIGHT + 199U) / 200U),
     };
-    const p4_game_input_t up = {0};
+    p4_game_input_t down, up;
+    p4_game_input_mapper_update(&mapper, true, &point, 1U, 0U, &down);
+    p4_game_input_mapper_update(&mapper, true, NULL, 0U, 0U, &up);
     return p4_game_instance_update(instance, &down, 16U) ==
             P4_GAME_CONTINUE &&
         p4_game_instance_update(instance, &up, 16U) == P4_GAME_CONTINUE;
@@ -829,6 +835,41 @@ static bool test_local_lifecycle_render_and_touch(void)
     return true;
 }
 
+static bool test_touch_targets_do_not_trigger_virtual_gamepad(void)
+{
+    for (uint16_t raise_x = 240U; raise_x <= 280U; raise_x += 40U) {
+        audio_mock_t audio = {0};
+        const p4_game_services_t services = local_services(&audio);
+        p4_game_instance_t instance = {0};
+        texas_holdem_state_t state;
+        CHECK(p4_game_instance_start(&instance, &p4_texas_holdem_game,
+            &services, &state, sizeof(state)));
+        /* These are outside visible Exit/Deal but inside old Back/Start. */
+        CHECK(tap(&instance, 48U, 8U));
+        CHECK(tap(&instance, 290U, 8U));
+        CHECK(state.phase == TEXAS_HOLDEM_PHASE_SETUP);
+        CHECK(tap(&instance, 160U, 168U));
+        CHECK(state.pass_required);
+        CHECK(tap(&instance, 290U, 8U));
+        CHECK(state.pass_required);
+        CHECK(tap(&instance, 160U, 134U));
+        CHECK(!state.pass_required);
+        const uint8_t actor = state.current_player;
+        /* The Raise button overlaps former B and A regions. Both points
+         * must raise, never fold or execute the selected Check/Call action. */
+        CHECK(tap(&instance, raise_x, 174U));
+        CHECK(state.round_bet[actor] == 40U);
+        CHECK(state.current_bet == 40U);
+        CHECK((state.folded_mask & (UINT8_C(1) << actor)) == 0U);
+        CHECK(state.stacks[actor] == 960U);
+        CHECK(state.pass_required);
+        CHECK(update_button(&instance, P4_BUTTON_A));
+        CHECK(!state.pass_required);
+        p4_game_instance_stop(&instance);
+    }
+    return true;
+}
+
 static bool test_two_humans_with_host_cpu_seats(void)
 {
     test_link_t link;
@@ -1051,6 +1092,7 @@ int main(void)
         !test_cpu_configuration_and_legal_actions() ||
         !test_local_cpu_lifecycle() ||
         !test_local_lifecycle_render_and_touch() ||
+        !test_touch_targets_do_not_trigger_virtual_gamepad() ||
         !test_two_humans_with_host_cpu_seats() ||
         !test_network_rejects_and_recovers_from_bad_snapshots() ||
         !test_four_player_host_authority_and_peer_loss()) {

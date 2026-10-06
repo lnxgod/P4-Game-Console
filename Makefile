@@ -14,6 +14,13 @@ setup:
 verify:
 	./scripts/verify-env.sh
 
+.PHONY: prepare-game-data game-data-host
+prepare-game-data:
+	python3 scripts/prepare-game-data.py
+
+game-data-host:
+	python3 scripts/tests/test-prepare-game-data.py
+
 build:
 	./scripts/build.sh "$(APP)" "$(BOARD)"
 
@@ -111,6 +118,12 @@ doom-touch-audio-idf: doom-touch-audio-host
 	./scripts/build.sh doom_embedded_touch_audio
 	python3 ./scripts/verify-doom-embedded-touch-audio.py apps/doom_embedded_touch_audio/build build-only
 
+.PHONY: console-startup-host
+console-startup-host:
+	cmake -S components/console_startup -B build-host/console_startup -G Ninja
+	cmake --build build-host/console_startup
+	ctest --test-dir build-host/console_startup --output-on-failure
+
 console-shell-host:
 	cmake -S components/console_shell -B build-host/console_shell -G Ninja
 	cmake --build build-host/console_shell
@@ -174,11 +187,18 @@ p4-game-platform-host:
 	cmake --build build-host/p4_game_platform
 	ctest --test-dir build-host/p4_game_platform --output-on-failure
 
+.PHONY: p4-frame-scheduler-host
+p4-frame-scheduler-host:
+	cmake -S components/p4_frame_scheduler -B build-host/p4_frame_scheduler -G Ninja
+	cmake --build build-host/p4_frame_scheduler
+	ctest --test-dir build-host/p4_frame_scheduler --output-on-failure
+
 p4-content-host:
-	cmake -S components/p4_content_catalog -B build-host/p4_content_catalog -G Ninja
-	cmake --build build-host/p4_content_catalog
-	ctest --test-dir build-host/p4_content_catalog --output-on-failure
+	cmake -S components/p4_usb_content_transfer -B build-host/p4_usb_content_transfer -G Ninja
+	cmake --build build-host/p4_usb_content_transfer
+	ctest --test-dir build-host/p4_usb_content_transfer --output-on-failure
 	python3 scripts/tests/test-p4-content.py
+	python3 scripts/tests/test-native-content-retirement.py
 
 p4-multiplayer-host:
 	cmake -S components/p4_multiplayer -B build-host/p4_multiplayer -G Ninja
@@ -284,11 +304,14 @@ game-registry-check:
 	python3 scripts/p4cart_seed_registry.py --check
 	python3 scripts/tests/test-game-registry.py
 	python3 scripts/tests/test-p4cart-seed-registry.py
+	python3 scripts/tests/test-native-board-verifiers.py
 	python3 scripts/tests/test-game-resource.py
 	python3 scripts/tests/test-protected-game-lineage.py
 	python3 scripts/tests/test-new-game.py
+	python3 scripts/tests/test-native-only-sources.py
+	python3 scripts/tests/test-tab5-warm-boot-capture.py
 
-game-sdk-host: p4-desktop-host p4-game-api-host p4-game-save-host platform-save-seal-host p4-signal-scan-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-content-host p4-multiplayer-host p4-multiplayer-registry-host lord-realm-e2e-host maze-chase-host space-invaders-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host p4-yahtzee-host calculator-host input-test-host av-test-host game-registry-check
+game-sdk-host: p4-desktop-host p4-game-api-host p4-game-save-host platform-save-seal-host p4-signal-scan-host p4-game-package-host p4-os-update-package-host p4-game-platform-host p4-frame-scheduler-host p4-content-host p4-multiplayer-host p4-multiplayer-registry-host lord-realm-e2e-host maze-chase-host space-invaders-host frog-hop-host byte-buddy-host skyline-leap-host solitaire-host p4-yahtzee-host calculator-host input-test-host av-test-host game-registry-check
 
 board-port-check:
 	python3 scripts/board-port.py check
@@ -334,7 +357,7 @@ p4-ble-radio-handoff-host:
 	cmake --build build-host/p4_ble_radio_handoff
 	ctest --test-dir build-host/p4_ble_radio_handoff --output-on-failure
 
-gamepad-host: p4-ble-radio-handoff-host
+gamepad-host: p4-ble-radio-handoff-host gamepad-xusb-host
 	python3 scripts/tests/test-espressif-usb-ext-port-overlay.py
 	python3 scripts/tests/test-espressif-usb-hcd-fsls-overlay.py
 	cmake -S apps/gamepad_diag/tests -B build-host/gamepad_diag_arm -G Ninja
@@ -353,12 +376,23 @@ gamepad-host: p4-ble-radio-handoff-host
 	cmake --build build-host/doom_gamepad_input
 	ctest --test-dir build-host/doom_gamepad_input --output-on-failure
 
+gamepad-xusb-host:
+	cmake -S components/platform_gamepad_xusb -B build-host/platform_gamepad_xusb -G Ninja
+	cmake --build build-host/platform_gamepad_xusb
+	ctest --test-dir build-host/platform_gamepad_xusb --output-on-failure
+
 gamepad-idf: gamepad-host
 	./scripts/build.sh gamepad_diag
 
-.PHONY: console-os-tab5-idf tab5-host
+.PHONY: console-os-tab5-idf tab5-host tab5-usb-host
 
-tab5-host: platform-board-host platform-touch-host console-shell-host platform-game-storage-host p4-os-update-package-host
+tab5-usb-host:
+	cmake -S components/platform_tab5/tests/usb_power -B build-host/tab5-usb-power-isolated -G Ninja
+	cmake --build build-host/tab5-usb-power-isolated
+	ctest --test-dir build-host/tab5-usb-power-isolated --output-on-failure
+
+
+tab5-host: console-settings-host tab5-usb-host platform-board-host platform-touch-host console-shell-host platform-game-storage-host p4-os-update-package-host
 	cmake -S components/platform_tab5/tests -B build-host/platform_tab5 -G Ninja
 	cmake --build build-host/platform_tab5
 	ctest --test-dir build-host/platform_tab5 --output-on-failure
@@ -369,6 +403,14 @@ tab5-host: platform-board-host platform-touch-host console-shell-host platform-g
 	cmake --build build-host/platform_display
 	ctest --test-dir build-host/platform_display --output-on-failure
 
-console-os-tab5-idf: board-port-check tab5-host
+console-os-tab5-idf: board-port-check console-startup-host tab5-host
 	./scripts/build.sh console_os m5stack-tab5
-	python3 scripts/verify-console-os-tab5.py
+	python3 scripts/verify-console-os-tab5.py $(if $(filter 1,$(P4_TAB5_FIRMWARE_ONLY)),--firmware-only,)
+
+.PHONY: gamepad-xusb-host
+
+.PHONY: console-settings-host
+console-settings-host:
+	cmake -S components/platform_console_settings/tests -B build-host/console-settings -G Ninja
+	cmake --build build-host/console-settings
+	ctest --test-dir build-host/console-settings --output-on-failure

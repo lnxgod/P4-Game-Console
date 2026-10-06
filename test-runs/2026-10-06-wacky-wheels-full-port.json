@@ -1,0 +1,148 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-10-06T04:55:27.061696+00:00",
+  "game_id": "org.p4console.wacky-probe",
+  "launcher_id": 9001,
+  "version": "0.1.0",
+  "status": "OS 0.53 and Wacky Wheels 0.1.0 installed and verified on A/B; physical race and local Wi-Fi acceptance pending",
+  "upstream_revision": "7dd510096c58ee84c36970a11c4f57b4a9c2a4cf",
+  "asset_archive_sha256": "ae36b4204f1b44fbdb26294a45495e46616feffcb18e67d48de9324d76bed85f",
+  "packages": {
+    "WACKYTRY.P4G": {
+      "bytes": 67304,
+      "sha256": "ac4d521de3f59cf4e95e3e4981804dc9cfca055c77a57fed516e808e70dc7685"
+    },
+    "WACKYTRY.P4R": {
+      "bytes": 4399076,
+      "sha256": "56373050954dc9126a001bcbdba8f24c7a0b7c65ccd73553ccd0735ef33f09c1"
+    }
+  },
+  "maps": {
+    "asset_sets": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      7,
+      16,
+      17
+    ],
+    "offline_race_courses": [
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "duck_shoot_course": 7,
+    "unused_extra_maps": [
+      16,
+      17
+    ]
+  },
+  "validation": {
+    "wacky_asan_ubsan": {
+      "passed": 15,
+      "failed": 0,
+      "log": "build-host/wacky-p4/final-tests.log",
+      "sha256": "010f0743a660bb6baab091fcdbce053642ae3a56ad2183ea8bc2f4806c540831"
+    },
+    "midi_component": "1/1 ASan/UBSan passed; all 16 original MIDI songs also traversed through loop and emitted nonzero PCM",
+    "voc": "All 36 original VOC assets decoded",
+    "p4_multiplayer": "3/3 component tests and serial relay tests passed",
+    "wifi_adapter": "Real UDP test with three client routes, fourth-route rejection, targeted/broadcast routing and expiry passed",
+    "cartridge": "RISC-V import gate, 4 KiB individual stack limit, Console OS ELF parser and four-player package registration passed",
+    "os": "Pinned firmware-only Tab5 build plus required dependencies and exact build verifier passed",
+    "linked_os_symbols": [
+      "p4_mp_group_begin",
+      "p4_mp_group_receive",
+      "p4_mp_group_poll",
+      "platform_multiplayer_wifi_send_to"
+    ]
+  },
+  "interactive": {
+    "user_quote": "It\u2019s looking pretty good. The sound effects work, everything. We just need to dial it in, make sure the race works and that multiplayer works and we\u2019re solid.",
+    "agent_observed": "Original intro, menu navigation, driver/course selection, course-two starting grid and live race display through desktop UI; user driving observed. Brief UI-tool keystrokes do not constitute a complete manually driven race.",
+    "remaining": "Device speaker quality, actual lap/race feel, physical input, local Wi-Fi Host/Join and sustained linked cadence."
+  },
+  "os": {
+    "ble_multiplayer_enabled": true,
+    "board": "m5stack-tab5",
+    "charger_control_enabled": true,
+    "content_bundle_verified": false,
+    "flash_authorized": true,
+    "hardware_verified": false,
+    "image_bytes": 4510416,
+    "image_sha256": "098c8d66f4e9c1d4f296244975a0a7065b6a3343f4f62ad1bccfe9809bacea15",
+    "native_cartridges": null,
+    "result": "tab5-guarded-install-readback-and-boot-health-passed",
+    "usb_host_enabled": true,
+    "version": "0.53",
+    "wifi_multiplayer_enabled": true,
+    "hardware_verification_scope": "Exact app readback, boot and service-health only; gameplay and linked cadence pending"
+  },
+  "authorization": "hardware/evidence/tab5-0.53-wacky-authorization.json",
+  "authorization_sha256": "902f70ed839e64de5fc0c1170e5a1c21c1d017c179a919974bf8362b31f90aa7",
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "panel": "ST7121",
+      "guarded_receipt": "hardware/backups/tab5-a-install-xezv5v55/receipt.json",
+      "app_readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "runtime_log_sha256": "00268a5199007767603f98ae76269efcf61a65a2d5b61f806526f1cb570d26e5",
+      "gameplay_acceptance": "pending",
+      "content_install": {
+        "cartridge": "push passed; fsync and double-validation activation",
+        "resource": "already-present; hash verified",
+        "log": "build-host/wacky-0.53/content-A.log",
+        "log_sha256": "a9d019cf070a13829dffd30d250968130c7648033596586fbdead25a4c6b014b"
+      },
+      "runtime_registration": {
+        "version": "0.53",
+        "launcher_id": 9001,
+        "game_protocol": 2,
+        "runtime_players": 4,
+        "source_capture": "build-host/tide-maze-fluidity/before-A.log",
+        "excerpt": "build-host/wacky-0.53/registered-A.log",
+        "excerpt_sha256": "2362645f71de927ef184cee01a8cb14fbb9b9ea6c974a569c884ad83444035ce"
+      }
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "panel": "ST7123",
+      "guarded_receipt": "hardware/backups/tab5-b-install-xumyj_49/receipt.json",
+      "app_readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "runtime_log_sha256": "17e7fbee1abf1aa0f8698c07bd35458e581a6b705825bd18c92631c8863b7d09",
+      "gameplay_acceptance": "pending",
+      "content_install": {
+        "cartridge": "push passed; fsync and double-validation activation",
+        "resource": "already-present; hash verified",
+        "log": "build-host/wacky-0.53/content-B.log",
+        "log_sha256": "4e5dd9382a66e1528d63534e2bb630712426ca2c1d71cecd6d1e75083ff6018e"
+      },
+      "runtime_registration": {
+        "version": "0.53",
+        "launcher_id": 9001,
+        "game_protocol": 2,
+        "runtime_players": 4,
+        "source_capture": "build-host/wacky-0.53/play-B.log",
+        "excerpt": "build-host/wacky-0.53/registered-B.log",
+        "excerpt_sha256": "d76115b3017de26e85d39e0a16ffb21548ddc4b73c1bb3b000b3e8621bee3ebc"
+      }
+    }
+  },
+  "limits": [
+    "320x200 original presentation retained; native 768x480 detail not implemented",
+    "Network mode is non-contact, three laps, no item combat or CPU racers; random course from the shared seed",
+    "Upstream two-player shootout and split-screen remain unimplemented; not a full commercial-data port",
+    "Four physical consoles have not been tested; only A/B are connected",
+    "Championship transition tests seed finish state; checkpoint tests place cars on actual checkpoints before real physics/lap evaluation",
+    "Actual-device 30 FPS release floor and physical speaker/touch acceptance remain pending",
+    "Unknown upstream source license and local shareware assets: not published to shipping catalog"
+  ]
+}

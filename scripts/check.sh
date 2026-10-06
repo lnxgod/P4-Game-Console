@@ -44,6 +44,7 @@ python3 "$P4_SCRIPT_DIR/verify-factory-variant.py"
 python3 "$P4_SCRIPT_DIR/verify-display-path.py"
 python3 "$P4_SCRIPT_DIR/verify-touch-path.py"
 python3 "$P4_SCRIPT_DIR/verify-platform-touch.py"
+python3 "$P4_SCRIPT_DIR/tests/test-doom-source-tree.py"
 python3 "$P4_SCRIPT_DIR/doom/verify-metadata.py" "$P4_SCRIPT_DIR/.."
 "$P4_SCRIPT_DIR/build.sh" display_diag
 "$P4_SCRIPT_DIR/doom/verify-doomgeneric.sh"

@@ -77,7 +77,6 @@ target_compile_definitions(console_shell_tab5_preview PRIVATE
     CONSOLE_SHELL_TARGET_WIDTH=1280U
     CONFIG_P4_BOARD_M5STACK_TAB5=1
     CONSOLE_SHELL_TARGET_HEIGHT=720U
-    CONSOLE_SHELL_FORCE_WINDOWS=1
 )
 target_compile_features(console_shell_tab5_preview PRIVATE c_std_11)
 if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")

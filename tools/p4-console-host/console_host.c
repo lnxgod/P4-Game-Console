@@ -11,12 +11,16 @@
 #include "console/shell.h"
 
 enum {
-    HOST_WINDOW_WIDTH = 768,
-    HOST_WINDOW_HEIGHT = 480,
+    HOST_WINDOW_WIDTH = CONSOLE_SHELL_WIDTH,
+    HOST_WINDOW_HEIGHT = CONSOLE_SHELL_HEIGHT,
     HOST_TICK_MS = 16,
 };
 
 static const console_app_descriptor_t apps[] = {
+#if defined(CONFIG_P4_BOARD_M5STACK_TAB5) && CONFIG_P4_BOARD_M5STACK_TAB5
+    {110U,"Byte Buddy","Platform adventure","GAMES/ARCADE",0,0,CONSOLE_PAGE_EXTERNAL,true},
+    {111U,"Blast Circuit","Bomb arena","GAMES/ARCADE",0,0,CONSOLE_PAGE_EXTERNAL,true},
+#endif
     {1U, "DOOM", "SHAREWARE 1.9", "GAMES/ACTION", UINT16_C(0xF904),
      CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
          CONSOLE_CAPABILITY_AUDIO,
@@ -86,12 +90,16 @@ static bool point_from_window(SDL_Renderer *renderer,
         logical_y >= (float)CONSOLE_SHELL_HEIGHT) {
         return false;
     }
+#if defined(CONFIG_P4_BOARD_M5STACK_TAB5) && CONFIG_P4_BOARD_M5STACK_TAB5
+    point->x=(uint16_t)logical_x;point->y=(uint16_t)logical_y;
+#else
     point->x = (uint16_t)(CONSOLE_SHELL_VIEWPORT_LEFT +
         ((uint32_t)logical_x * CONSOLE_SHELL_VIEWPORT_WIDTH) /
             CONSOLE_SHELL_WIDTH);
     point->y = (uint16_t)(CONSOLE_SHELL_VIEWPORT_TOP +
         ((uint32_t)logical_y * CONSOLE_SHELL_VIEWPORT_HEIGHT) /
             CONSOLE_SHELL_HEIGHT);
+#endif
     return true;
 }
 

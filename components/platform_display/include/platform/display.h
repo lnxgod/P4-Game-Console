@@ -113,6 +113,17 @@ esp_err_t platform_display_submit_shell_rgb565(
     size_t source_stride_pixels,
     uint32_t timeout_ms);
 
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+/** Present the native 1280x720 Tab5 UI without scaling. */
+esp_err_t platform_display_submit_ui_rgb565(const uint16_t *source,
+    size_t source_stride_pixels, uint32_t timeout_ms);
+/** Complete authoritative UI source plus all damage since its last submission.
+ * Replays prior damage into the back buffer; retains the scanout reuse fence. */
+esp_err_t platform_display_submit_ui_region_rgb565(const uint16_t *source,
+    size_t source_stride_pixels, const platform_display_rgb565_region_t *region,
+    uint32_t timeout_ms);
+#endif
+
 /** Present reviewed 768x480 legacy content where the board adapter supports it. */
 esp_err_t platform_display_submit_content_rgb565(
     const uint16_t *source,
@@ -137,7 +148,9 @@ esp_err_t platform_display_submit_content_regions_rgb565(
 /**
  * Present a negotiated 768x480 game surface. On Waveshare this preserves the
  * baseline game contract by waiting for the selected panel buffer's refresh
- * before returning; shell content may retain its pipelined handoff.
+ * before returning; shell content may retain its pipelined handoff. Tab5
+ * consumes the source synchronously with PPA, then pipelines scanout through
+ * three owned buffers; a replaced buffer retains a two-refresh reuse fence.
  */
 esp_err_t platform_display_submit_game_content_rgb565(
     const uint16_t *source,

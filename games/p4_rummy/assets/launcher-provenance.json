@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "mode": "built-in image_gen; cover derived from upgraded game artwork",
+  "source": "launcher-source.png",
+  "source_sha256": "9ddcf5a62aeeffd700c5356b0d4c3be40812122d42b9955c46a28715536ec9f1",
+  "generation_source": "/Users/billh/.codex/generated_images/01a10e4d-67fb-7561-b76d-25c549064ff2/exec-aeba4826-b402-4923-b7c8-23d6faa9ade4.png",
+  "prompt": "Use case: stylized-concept. Asset type: finished landscape 16:9 launcher cover illustration for a console game, optimized for a tiny 128x72 thumbnail. Create ONE cohesive edge-to-edge scene, not a sprite atlas. Clear large silhouettes, center-safe subject, premium polished game illustration with restrained dark background and luminous material detail. Absolutely no title, letters, logos, interface, numbers, watermarks or border. Opaque background. Game: Rummy 500. Reference image provides original emerald felt and navy-gold Art Deco card-back materials. Create an elegant curved fan of ivory playing cards bearing large simple red diamond and black club emblems, with a neat three-card meld lying below, on rich emerald felt. One navy-gold patterned card-back partly visible. Friendly warm evening table mood, mint light on white cards. Visually distinct from poker: NO CHIPS and no casino objects. No ranks or lettering. Cards fill central 75 percent.",
+  "reference_assets": [
+    {
+      "path": "games/p4_rummy/assets/table-materials-imagegen.png",
+      "sha256": "2ce0b7313a819bfe3697f70f55cc43cafc148d2d613f9ad46c6815f800af5546"
+    }
+  ],
+  "license": "Original AI-generated project artwork, distributed under the project MIT license. No third-party game art.",
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "sha256": "12fa823bfbc3c970aabd53cc1d02a3345798b63fc786a040836a9108e58ea776",
+    "bytes": 9744,
+    "width": 128,
+    "height": 72,
+    "palette_entries": 256,
+    "palette_format": "little-endian RGB565",
+    "pixels": "row-major uint8 palette indices",
+    "opaque": true
+  },
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "command": "python3 scripts/pack-game-icon.py games/p4_rummy/assets/launcher-source.png --output games/p4_rummy/assets/launcher.p4i",
+    "description": "Standard center-fit Lanczos resize and 256-color median-cut quantization. No gameplay or runtime assets changed."
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "mode": "built-in image_gen; cover derived from upgraded game artwork",
+  "source": "launcher-source.png",
+  "source_sha256": "c79675c914df84cda35b7ecada2db5e017ea06b4ca37e2be56bfa8a342c97c27",
+  "generation_source": "/Users/billh/.codex/generated_images/01a10e4d-67fb-7561-b76d-25c549064ff2/exec-ca956250-e8c3-404e-8b19-f860e070e155.png",
+  "prompt": "Use case: stylized-concept. Asset type: finished landscape 16:9 launcher cover illustration for a console game, optimized for a tiny 128x72 thumbnail. Create ONE cohesive edge-to-edge scene, not a sprite atlas. Clear large silhouettes, center-safe subject, premium polished game illustration with restrained dark background and luminous material detail. Absolutely no title, letters, logos, interface, numbers, watermarks or border. Opaque background. Game: Checkers. Reference defines glossy ruby-red and warm ivory grooved discs, maple and walnut checkerboard, crowned king discs. Compose a close-up dramatic low 3/4 view of a beautiful maple/walnut checkerboard with one large red crowned king in center foreground and two ivory discs farther behind. Fine wood grain, engraved simple golden crown, warm studio glow, dark corners. Clearly CHECKERS discs, not chess pieces. Discs and board fill composition.",
+  "reference_assets": [
+    {
+      "path": "games/checkers/assets/presentation_imagegen_v2.png",
+      "sha256": "cf502792b8fd52fb663ab5f0fbd815beb0dcf54a5713eedbd5a89c91602411d7"
+    }
+  ],
+  "license": "Original AI-generated project artwork, distributed under the project MIT license. No third-party game art.",
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "sha256": "e2ded1a31e27d69f0e8c2c4e1e28ed72b0144eff911cdcf19bc59a0791a59647",
+    "bytes": 9744,
+    "width": 128,
+    "height": 72,
+    "palette_entries": 256,
+    "palette_format": "little-endian RGB565",
+    "pixels": "row-major uint8 palette indices",
+    "opaque": true
+  },
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "command": "python3 scripts/pack-game-icon.py games/checkers/assets/launcher-source.png --output games/checkers/assets/launcher.p4i",
+    "description": "Standard center-fit Lanczos resize and 256-color median-cut quantization. No gameplay or runtime assets changed."
+  }
+}

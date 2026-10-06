@@ -1,0 +1,17 @@
+menu "Tab5 battery hardware"
+config P4_TAB5_CHARGER_500MA
+    bool "Enable qualified 500 mA Tab5 battery charging"
+    depends on P4_BOARD_M5STACK_TAB5
+    default n
+    help
+        Enable only for a verified compatible pack and separately authorized
+        charger control. Disabled by default; voltage/current telemetry remains.
+endmenu
+
+config P4_TAB5_BLE_MULTIPLAYER
+    bool "Tab5 C6 Bluetooth multiplayer"
+    depends on P4_BOARD_M5STACK_TAB5
+    default n
+    help
+        Lazily enable the C6 radio only when the user selects Bluetooth.
+        The build wrapper must supply the Tab5 SDIO transport overlay.

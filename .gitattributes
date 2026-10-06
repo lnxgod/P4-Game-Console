@@ -1,0 +1,6 @@
+# Preserve exact upstream/provenance bytes and unified-diff context whitespace.
+design/tab5-bluetooth/candidate.patch -whitespace
+design/tab5-nextgen/research/Power_Class.inl -whitespace
+games/blast_circuit/assets/music/invention8-mutopia.ly -whitespace
+third_party/arimo/OFL.txt -whitespace
+third_party/doomgeneric-p4.patch -whitespace

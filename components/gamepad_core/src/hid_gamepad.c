@@ -635,10 +635,12 @@ static gamepad_status_t parse_main_input(uint32_t input_flags,
         return GAMEPAD_ERR_LIMIT_EXCEEDED;
     }
 
-    if (!current_collection_selected(parser)) {
-        return GAMEPAD_OK;
-    }
-
+    /*
+     * Input offsets and lengths belong to the interface's Report ID, not to
+     * an Application Collection (HID 1.11 sections 6.2.2.6 and 8.1).
+     * Keep every declared input report so valid secondary reports do not
+     * disconnect the pad, and skipped fields still occupy their wire bits.
+     */
     const uint64_t old_bits = parser->input_bits[parser->globals.report_id];
     if (old_bits + added_bits > GAMEPAD_HID_MAX_REPORT_BYTES * 8U) {
         return GAMEPAD_ERR_LIMIT_EXCEEDED;
@@ -658,7 +660,7 @@ static gamepad_status_t parse_main_input(uint32_t input_flags,
                                   (input_flags & HID_INPUT_RELATIVE) == 0U &&
                                   (input_flags & HID_INPUT_BUFFERED_BYTES) == 0U;
 
-    if (is_data_absolute) {
+    if (current_collection_selected(parser) && is_data_absolute) {
         if ((input_flags & HID_INPUT_VARIABLE) != 0U) {
             for (uint32_t index = 0; index < parser->globals.report_count; ++index) {
                 uint16_t usage_page = 0;

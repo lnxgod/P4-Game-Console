@@ -11,7 +11,10 @@
 #include <string.h>
 
 #include "p4/audio.h"
+#include "host_service.h"
+#include "host_mouse.h"
 #include "p4/achievements.h"
+#include "frame_pacer.h"
 #include "p4/game.h"
 #include "p4/game_save.h"
 #include "p4/input.h"
@@ -23,20 +26,29 @@ extern const p4_game_descriptor_t P4_HOST_GAME_DESCRIPTOR;
 #define P4_HOST_RESOURCE_PATH ""
 #endif
 
+/* Render every60Hz service tick by default; explicit profiling can reduce it. */
+#ifndef P4_HOST_RENDER_DIVISOR
+#define P4_HOST_RENDER_DIVISOR 1
+#endif
+_Static_assert(P4_HOST_RENDER_DIVISOR >= 1 && P4_HOST_RENDER_DIVISOR <= 4,
+               "host render divisor must be 1..4");
+
 enum {
     HOST_SCALE = 3,
-    HOST_SERVICE_INTERVAL_MS = 16,
-    HOST_RENDER_DIVISOR = 2,
+    HOST_SERVICE_INTERVAL_MS = P4_HOST_SERVICE_SLICE_MS,
+    HOST_RENDER_DIVISOR = P4_HOST_RENDER_DIVISOR,
     HOST_RENDER_TARGET_FPS =
-        1000 / (HOST_SERVICE_INTERVAL_MS * HOST_RENDER_DIVISOR),
+        60 / HOST_RENDER_DIVISOR,
     HOST_MASTER_VOLUME_STEP = 8,
     HOST_AUDIO_FRAMES = 256,
+    HOST_AUDIO_PRIME_BLOCKS = 4, // 64 ms covers ordinary render/scheduler jitter.
     HOST_MAX_SMOKE_FRAMES = 100000,
 };
 
 typedef struct {
     SDL_AudioStream *stream;
     p4_audio_mixer_t mixer;
+    uint32_t empty_queue_observations;
 } host_audio_t;
 
 typedef struct {
@@ -203,6 +215,15 @@ static bool start_audio(host_audio_t *audio)
         fprintf(stderr, "audio disabled: %s\n", SDL_GetError());
         return false;
     }
+    const int16_t silence[HOST_AUDIO_FRAMES * P4_GAME_AUDIO_CHANNEL_COUNT] = {0};
+    for (unsigned i = 0U; i < HOST_AUDIO_PRIME_BLOCKS; ++i) {
+        if (!SDL_PutAudioStreamData(audio->stream, silence, (int)sizeof(silence))) {
+            fprintf(stderr, "audio priming failed: %s\n", SDL_GetError());
+            SDL_DestroyAudioStream(audio->stream);
+            audio->stream = NULL;
+            return false;
+        }
+    }
     if (!SDL_SetAudioStreamGain(
             audio->stream, (float)HOST_MASTER_VOLUME_STEP / 10.0F) ||
         !SDL_ResumeAudioStreamDevice(audio->stream)) {
@@ -214,18 +235,27 @@ static bool start_audio(host_audio_t *audio)
     return true;
 }
 
-static bool pump_audio(host_audio_t *audio)
+static bool pump_audio(void *context, uint32_t elapsed_ms)
 {
-    if (audio == NULL || audio->stream == NULL) {
+    host_audio_t *const audio = context;
+    if (audio == NULL || audio->stream == NULL || elapsed_ms == 0U ||
+        elapsed_ms > P4_HOST_SERVICE_SLICE_MS) {
         return false;
+    }
+    const size_t frames = (size_t)elapsed_ms *
+        (P4_GAME_AUDIO_SAMPLE_RATE_HZ / 1000U);
+    const int queued = SDL_GetAudioStreamQueued(audio->stream);
+    if (queued < 0) return false;
+    if (queued == 0 && audio->empty_queue_observations != UINT32_MAX) {
+        ++audio->empty_queue_observations;
     }
     int16_t samples[HOST_AUDIO_FRAMES * P4_GAME_AUDIO_CHANNEL_COUNT];
     if (!p4_audio_mixer_render(
-            &audio->mixer, samples, HOST_AUDIO_FRAMES)) {
+            &audio->mixer, samples, frames)) {
         return false;
     }
     return SDL_PutAudioStreamData(
-        audio->stream, samples, (int)sizeof(samples));
+        audio->stream, samples, (int)(frames * P4_GAME_AUDIO_CHANNEL_COUNT * sizeof(*samples)));
 }
 
 static uint32_t digital_buttons(void)
@@ -308,21 +338,25 @@ static bool touch_from_window(SDL_Renderer *renderer,
     return true;
 }
 
-static size_t mouse_touch(SDL_Renderer *renderer,
-                          uint16_t surface_width,
-                          uint16_t surface_height,
-                          p4_physical_touch_t touch[1])
+static void mouse_event(p4_host_mouse_t *mouse, SDL_Renderer *renderer,
+                        const SDL_Event *event, uint16_t width, uint16_t height)
 {
-    float window_x = 0.0F;
-    float window_y = 0.0F;
-    const SDL_MouseButtonFlags state = SDL_GetMouseState(&window_x, &window_y);
-    if ((state & SDL_BUTTON_LMASK) == 0U) {
-        return 0U;
+    p4_physical_touch_t point;
+    if (event->type == SDL_EVENT_WINDOW_FOCUS_LOST) {
+        p4_host_mouse_cancel(mouse);
+    } else if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN &&
+               event->button.button == SDL_BUTTON_LEFT) {
+        if (touch_from_window(renderer, event->button.x, event->button.y,
+                              width, height, &point)) p4_host_mouse_press(mouse, point);
+        else p4_host_mouse_cancel(mouse);
+    } else if (mouse->collecting_down && event->type == SDL_EVENT_MOUSE_MOTION) {
+        if (touch_from_window(renderer, event->motion.x, event->motion.y,
+                              width, height, &point)) p4_host_mouse_move(mouse, point);
+        else p4_host_mouse_cancel(mouse);
+    } else if (mouse->collecting_down && event->type == SDL_EVENT_MOUSE_BUTTON_UP &&
+               event->button.button == SDL_BUTTON_LEFT) {
+        p4_host_mouse_release(mouse);
     }
-    return touch_from_window(
-        renderer, window_x, window_y,
-        surface_width, surface_height, &touch[0])
-        ? 1U : 0U;
 }
 
 static bool parse_max_frames(int argc, char **argv, uint32_t *max_frames)
@@ -522,6 +556,7 @@ int main(int argc, char **argv)
 
     p4_game_input_mapper_t mapper;
     p4_game_input_mapper_init(&mapper);
+    p4_host_mouse_t mouse = {.current = {.valid = true}};
     p4_game_surface_t surface = {
         .pixels = pixels,
         .stride_pixels = surface_width,
@@ -529,14 +564,18 @@ int main(int argc, char **argv)
         .height = surface_height,
     };
     bool running = true;
+    int exit_status = EXIT_SUCCESS;
     uint32_t service_updates = 0U;
     uint32_t rendered_frames = 0U;
     unsigned render_phase = 0U;
     Uint64 previous_tick = SDL_GetTicks();
+    p4_host_pacer_t pacer = {.deadline_ns = SDL_GetTicksNS()};
+    Uint64 first_present_ns = 0U, last_present_ns = 0U, max_present_gap_ns = 0U;
+    uint32_t gaps_over_30fps = 0U;
+    Uint64 fps_window_ns = 0U;
+    uint32_t fps_window_frames = 0U;
     while (running) {
         uint32_t pulsed_buttons = 0U;
-        p4_physical_touch_t pulsed_touch = {0};
-        bool pulsed_touch_valid = false;
         SDL_Event event;
         while (SDL_PollEvent(&event) != 0) {
             if (event.type == SDL_EVENT_QUIT) {
@@ -544,21 +583,17 @@ int main(int argc, char **argv)
             } else if (event.type == SDL_EVENT_KEY_DOWN &&
                        !event.key.repeat) {
                 pulsed_buttons |= button_for_key(event.key.key);
-            } else if (event.type == SDL_EVENT_MOUSE_BUTTON_DOWN &&
-                       event.button.button == SDL_BUTTON_LEFT) {
-                pulsed_touch_valid = touch_from_window(
-                    renderer, event.button.x, event.button.y,
-                    surface_width, surface_height, &pulsed_touch);
             }
+            mouse_event(&mouse, renderer, &event, surface_width, surface_height);
         }
         if (!running) {
             break;
         }
         Uint64 now = SDL_GetTicks();
-        if (max_frames == 0U &&
-            now - previous_tick < HOST_SERVICE_INTERVAL_MS) {
-            SDL_Delay((Uint32)(HOST_SERVICE_INTERVAL_MS -
-                               (now - previous_tick)));
+        if (max_frames == 0U) {
+            const Uint64 current_ns = SDL_GetTicksNS();
+            const Uint64 target_ns = p4_host_pacer_next(&pacer, current_ns);
+            if (target_ns > current_ns) SDL_DelayPrecise(target_ns - current_ns);
             now = SDL_GetTicks();
         }
         uint64_t elapsed64 = max_frames == 0U
@@ -571,28 +606,23 @@ int main(int argc, char **argv)
             elapsed64 = P4_GAME_MAX_FRAME_DELTA_MS;
         }
 
-        p4_physical_touch_t touch[1];
-        size_t touch_count = mouse_touch(
-            renderer, surface_width, surface_height, touch);
-        if (touch_count == 0U && pulsed_touch_valid) {
-            touch[0] = pulsed_touch;
-            touch_count = 1U;
-        }
+        const p4_host_mouse_sample_t pointer = p4_host_mouse_next(&mouse);
         p4_game_input_t input;
         p4_game_input_mapper_update(
-            &mapper, true, touch, touch_count,
+            &mapper, pointer.valid, &pointer.point, pointer.down ? 1U : 0U,
             digital_buttons() | pulsed_buttons, &input);
-        const p4_game_result_t result = p4_game_instance_update(
-            &instance, &input, (uint32_t)elapsed64);
+        const p4_game_result_t result = p4_host_service_update(
+            &instance, &input, (uint32_t)elapsed64,
+            audio_ready ? pump_audio : NULL, &audio);
         (void)p4_game_save_memory_process(
             &save_memory, P4_GAME_SAVE_MAX_SLOTS);
         if (result == P4_GAME_EXIT_TO_LAUNCHER) {
             running = false;
             continue;
         }
-        if (result != P4_GAME_CONTINUE ||
-            (audio_ready && !pump_audio(&audio))) {
+        if (result != P4_GAME_CONTINUE) {
             fprintf(stderr, "game update/audio failed: %s\n", SDL_GetError());
+            exit_status = EXIT_FAILURE;
             running = false;
             continue;
         }
@@ -613,8 +643,32 @@ int main(int argc, char **argv)
             !SDL_RenderTexture(renderer, texture, NULL, NULL) ||
             !SDL_RenderPresent(renderer)) {
             fprintf(stderr, "game frame failed: %s\n", SDL_GetError());
+            exit_status = EXIT_FAILURE;
             running = false;
             continue;
+        }
+        const Uint64 presented_ns = SDL_GetTicksNS();
+        if (last_present_ns != 0U) {
+            const Uint64 gap = presented_ns - last_present_ns;
+            if (gap > max_present_gap_ns) max_present_gap_ns = gap;
+            if (gap > UINT64_C(33333334)) ++gaps_over_30fps;
+        } else {
+            first_present_ns = presented_ns;
+        }
+        last_present_ns = presented_ns;
+        if (max_frames == 0U) {
+            if (fps_window_ns == 0U) fps_window_ns = presented_ns;
+            else ++fps_window_frames;
+            const Uint64 span = presented_ns - fps_window_ns;
+            if (span >= UINT64_C(1000000000)) {
+                char title[96];
+                (void)snprintf(title, sizeof(title), "%s - %.1f FPS",
+                    P4_HOST_GAME_DESCRIPTOR.title,
+                    (double)fps_window_frames * 1000000000.0 / (double)span);
+                (void)SDL_SetWindowTitle(window, title);
+                fps_window_ns = presented_ns;
+                fps_window_frames = 0U;
+            }
         }
         ++rendered_frames;
         if (max_frames != 0U && rendered_frames >= max_frames) {
@@ -622,6 +676,22 @@ int main(int argc, char **argv)
         }
     }
 
+    if (max_frames == 0U && rendered_frames > 1U && last_present_ns > first_present_ns) {
+        printf("Presentation: target=%dHz average=%.2fFPS max_gap=%.3fms gaps_over_33.333ms=%" PRIu32 "\n",
+               HOST_RENDER_TARGET_FPS,
+               (double)(rendered_frames - 1U) * 1000000000.0 / (double)(last_present_ns - first_present_ns),
+               (double)max_present_gap_ns / 1000000.0, gaps_over_30fps);
+    }
+    if (audio_ready) {
+        p4_audio_mixer_stats_t stats;
+        p4_audio_mixer_get_stats(&audio.mixer, &stats);
+        printf("Audio: submitted=%" PRIu32 " rendered=%" PRIu32
+               " rejected=%" PRIu32 " underrun=%" PRIu32 " clipped=%" PRIu32
+               " empty SDL queue observations=%" PRIu32 "\n",
+               stats.stream_frames_submitted, stats.frames_rendered,
+               stats.stream_blocks_rejected, stats.stream_underrun_frames,
+               stats.clipped_samples, audio.empty_queue_observations);
+    }
     p4_game_instance_stop(&instance);
     if (achievements.count != 0U) {
         printf("Unlocked %zu achievement%s\n", achievements.count,
@@ -640,5 +710,5 @@ int main(int argc, char **argv)
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
-    return EXIT_SUCCESS;
+    return exit_status;
 }

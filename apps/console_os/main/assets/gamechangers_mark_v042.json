@@ -1,0 +1,19 @@
+{
+  "product": "GameChangersAI OS",
+  "version": "0.42",
+  "tool": "built-in image_gen",
+  "intent": "User-authorized refresh of the official joystick mark for a Windows-95-inspired boot screen",
+  "reference": "gamechangers_ai_logo.rgb565",
+  "reference_sha256": "48ee7b2a15a744547884ec6ea7f462277ab60e5dde4d0805bf39db9c0b2bd892",
+  "prompt": "Use case: style-transfer / logo-brand. Input image is the user's official GameChangersAI arcade-console logo, edit target. Create a high-resolution polished version of ONLY the central joystick/controller emblem from this logo, for a Windows 95 inspired GameChangersAI OS boot screen. Preserve the recognizable identity: central upright joystick with round lightbulb-like ball top, concentric neon-green rings at its base, trapezoidal arcade control deck in perspective, green round buttons on both sides, silver/white outline and subtle cyan lower lip, charcoal face. Clean smooth geometric contours and restrained mid-1990s software-logo airbrush highlights; elegant simple emblem, not photorealistic hardware. Remove ALL text, website, horizontal rules, background texture, and the square background. Single centered emblem filling 80% of a square canvas. Actual transparent background. No Windows logo, no letters, no extra motifs. This is a faithful brand refresh, not a different controller design.",
+  "files": {
+    "gamechangers_mark_v042.png": {
+      "bytes": 1007299,
+      "sha256": "910f12d092ed80a06208d3d8e1b97c2eeac6fb02a619836a9a7e7cdde83e106d"
+    },
+    "gamechangers_mark_v042.rgb565a8": {
+      "bytes": 442368,
+      "sha256": "f0dea8368982c71c6d82ce3b6d711cf3d699e66e12c9ef8af93c2133a6bc9683"
+    }
+  }
+}

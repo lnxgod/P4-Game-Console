@@ -1,14 +1,26 @@
 // SPDX-License-Identifier: MIT
 
 #include "console/shell.h"
+#include "console/game_art.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 static const console_app_descriptor_t s_apps[] = {
-    {.id = 1U, .title = "DOOM", .subtitle = "SHAREWARE 1.9",
-     .folder_path = "GAMES/ACTION", .accent_rgb565 = UINT16_C(0xF904),
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    {.id=110U,.title="Byte Buddy",.subtitle="Platform adventure",.folder_path="GAMES/ARCADE",.page=CONSOLE_PAGE_EXTERNAL,.enabled=true},
+    {.id=111U,.title="Blast Circuit",.subtitle="Bomb arena",.folder_path="GAMES/ARCADE",.page=CONSOLE_PAGE_EXTERNAL,.enabled=true},
+    {.id=112U,.title="Solitaire",.subtitle="Cards",.folder_path="GAMES/PUZZLE",.page=CONSOLE_PAGE_EXTERNAL,.enabled=true},
+#endif
+    {.id = 14U, .title = "Chex Quest", .subtitle = "An intergalactic rescue",
+     .folder_path = "GAMES/OPTIONAL", .page = CONSOLE_PAGE_EXTERNAL, .enabled = true,
+     .icon_pixels = console_chex_icon_pixels, .icon_palette = console_chex_icon_palette,
+     .cover = &console_chex_cover},
+    {.id = 1U, .title = "Doom", .subtitle = "Shareware 1.9",
+     .icon_pixels = console_doom_icon_pixels, .icon_palette = console_doom_icon_palette,
+     .cover = &console_doom_cover,
+     .folder_path = "GAMES/SHOOTERS", .accent_rgb565 = UINT16_C(0xF904),
      .capabilities = CONSOLE_CAPABILITY_DISPLAY | CONSOLE_CAPABILITY_TOUCH |
          CONSOLE_CAPABILITY_AUDIO | CONSOLE_CAPABILITY_STORAGE,
      .page = CONSOLE_PAGE_EXTERNAL, .enabled = true},
@@ -64,6 +76,25 @@ static const console_app_descriptor_t s_apps[] = {
 
 static bool select_page(console_shell_t *shell, const char *name)
 {
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    const struct {const char *name;console_page_t page;} native[]={
+        {"appearance",CONSOLE_PAGE_APPEARANCE},{"controllers",CONSOLE_PAGE_CONTROLLERS},
+        {"storage",CONSOLE_PAGE_STORAGE},{"transfer",CONSOLE_PAGE_FILE_TRANSFER},
+        {"usb",CONSOLE_PAGE_USB_DRIVE},{"saves",CONSOLE_PAGE_SAVES},
+        {"achievements",CONSOLE_PAGE_ACHIEVEMENTS},{"terminal",CONSOLE_PAGE_TERMINAL},
+        {"keyboard",CONSOLE_PAGE_TERMINAL},{"delete",CONSOLE_PAGE_FILES}};
+    for(size_t n=0;n<sizeof(native)/sizeof(native[0]);++n)if(strcmp(name,native[n].name)==0){
+        shell->page=native[n].page;shell->ng_keyboard=strcmp(name,"keyboard")==0;return true;}
+#endif
+    if (strcmp(name, "launch-doom") == 0 || strcmp(name, "launch-chex") == 0) {
+        shell->page = CONSOLE_PAGE_EXTERNAL;
+        shell->active_app_id = strcmp(name, "launch-chex") == 0 ? 14U : 1U;
+        return true;
+    }
+    if (strcmp(name, "bbs") == 0) {
+        shell->color_mode = CONSOLE_COLOR_MODE_GAMECHANGERS;
+        return true;
+    }
     if (strncmp(name, "panel", 5) == 0) {
         shell->page = CONSOLE_PAGE_CONTROL_PANEL;
         shell->control_panel_active = true;
@@ -80,6 +111,9 @@ static bool select_page(console_shell_t *shell, const char *name)
         return true;
     }
     if (strcmp(name, "games") == 0) {
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        shell->home_all_programs = true;
+#endif
         (void)strcpy(shell->home_folder_path, "GAMES");
         return true;
     }
@@ -217,7 +251,12 @@ int main(int argc, char **argv)
         .uptime_seconds = 3723U,
         .internal_free_kib = 221U,
         .psram_free_kib = 30128U,
-        .game_storage_kib = 9052U,
+        .game_storage_kib = 32000000U,
+        .game_storage_free_kib = 24000000U,
+        .game_storage_space_valid = true,
+        .game_storage_filesystem_ready = true,
+        .game_storage_card_ready = true,
+        .sd_card_storage = true,
         .game_storage_state = CONSOLE_STORAGE_READY,
         .touch_ready = true,
         .battery_supported = true,
@@ -236,8 +275,13 @@ int main(int argc, char **argv)
         .doom_wad_ready = true,
         .multiplayer_core_ready = true,
         .multiplayer_transport_ready = true,
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+        .multiplayer_transport_encrypted = false,
+        .multiplayer_transport_kind = 0U,
+#else
         .multiplayer_transport_encrypted = true,
         .multiplayer_transport_kind = 1U,
+#endif
         .multiplayer_peer_seen = false,
         .multiplayer_lobby_ready = false,
         .multiplayer_lobby_is_host = false,
@@ -343,6 +387,7 @@ int main(int argc, char **argv)
         strcpy(shell.runtime.multiplayer_game_title, "P4 YAHTZEE");
         shell.multiplayer_selected_row = CONSOLE_MULTIPLAYER_OPTION_DICE;
     }
+    if(strcmp(argv[page_argument],"delete")==0) shell.file_delete_confirm=true;
     const size_t width = present
         ? CONSOLE_SHELL_PRESENT_WIDTH : CONSOLE_SHELL_WIDTH;
     const size_t height = present

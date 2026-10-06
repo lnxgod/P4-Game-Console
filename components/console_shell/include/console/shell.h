@@ -21,7 +21,7 @@
 #endif
 
 #if (CONSOLE_SHELL_TARGET_WIDTH == 800U && \
-     CONSOLE_SHELL_TARGET_HEIGHT == 480U) || CONFIG_P4_BOARD_M5STACK_TAB5
+     CONSOLE_SHELL_TARGET_HEIGHT == 480U)
 #define CONSOLE_SHELL_NATIVE_BBS 1
 #include "p4/bbs_ui.h"
 #else
@@ -36,8 +36,13 @@ enum {
     /* Stable UI coordinate space used for layout and bounded input. */
     CONSOLE_SHELL_LAYOUT_WIDTH = 320,
     CONSOLE_SHELL_LAYOUT_HEIGHT = 200,
-#if (CONSOLE_SHELL_TARGET_WIDTH == 800U && \
-     CONSOLE_SHELL_TARGET_HEIGHT == 480U) || CONFIG_P4_BOARD_M5STACK_TAB5
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    CONSOLE_SHELL_WIDTH = 1280,
+    CONSOLE_SHELL_HEIGHT = 720,
+    CONSOLE_SHELL_PRESENT_WIDTH = 384,
+    CONSOLE_SHELL_PRESENT_HEIGHT = 240,
+#elif (CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+       CONSOLE_SHELL_TARGET_HEIGHT == 480U)
     /* The native BBS and high-resolution paths retain a 768x480 surface. */
     CONSOLE_SHELL_WIDTH = 768,
     CONSOLE_SHELL_HEIGHT = 480,
@@ -122,12 +127,14 @@ typedef enum {
     CONSOLE_PAGE_CONTROLLERS,
     CONSOLE_PAGE_SENSORS,
     CONSOLE_PAGE_CONTROL_PANEL,
+    CONSOLE_PAGE_APPEARANCE,
 } console_page_t;
 
 typedef enum {
     CONSOLE_CONTROLLER_TRANSPORT_NONE = 0,
     CONSOLE_CONTROLLER_TRANSPORT_USB_HID,
     CONSOLE_CONTROLLER_TRANSPORT_BLE_HID,
+    CONSOLE_CONTROLLER_TRANSPORT_USB_XUSB,
 } console_controller_transport_t;
 
 typedef enum {
@@ -149,6 +156,14 @@ typedef enum {
     CONSOLE_COLOR_MODE_COUNT,
 } console_color_mode_t;
 
+/** Optional shell-owned indexed cover, independent of cartridge API v1. */
+typedef struct {
+    const uint8_t *pixels;
+    const uint16_t *palette;
+    uint16_t width;
+    uint16_t height;
+} console_shell_artwork_t;
+
 typedef struct {
     uint32_t id;
     const char *title;
@@ -159,6 +174,11 @@ typedef struct {
     uint32_t capabilities;
     console_page_t page;
     bool enabled;
+    /** Optional catalog-owned 128x72 indexed cartridge artwork. */
+    const uint8_t *icon_pixels;
+    const uint16_t *icon_palette;
+    /** Built-in titles can supply a larger cover without enlarging .p4icon. */
+    const console_shell_artwork_t *cover;
 } console_app_descriptor_t;
 
 typedef struct {
@@ -327,7 +347,7 @@ typedef struct {
     bool multiplayer_transport_ready;
     bool multiplayer_transport_starting;
     bool multiplayer_transport_encrypted;
-    /** 0 = direct/relay UART, 1 = opt-in BLE GATT. */
+    /** 0 = direct/relay UART, 1 = BLE GATT, 2 = standalone local Wi-Fi. */
     uint8_t multiplayer_transport_kind;
     bool multiplayer_peer_seen;
     bool multiplayer_lobby_ready;
@@ -385,6 +405,7 @@ typedef struct {
     uint8_t game_volume_step;
     bool audio_settings_persistent;
     uint32_t game_storage_free_kib;
+    bool game_storage_space_valid;
     uint32_t game_storage_sector_bytes;
     uint32_t game_storage_frequency_khz;
     uint32_t game_storage_root_entries;
@@ -586,6 +607,21 @@ typedef struct {
     uint32_t native_home_scroll_blit_frames;
     uint64_t native_home_shifted_pixels;
     console_shell_native_update_t native_update;
+    /* Native Tab5 presentation state; no game coordinates or hardware handles. */
+    uint16_t ng_focus, ng_focus_ms;
+    size_t ng_list_first, ng_category_first;
+    char ng_category[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
+    int ng_library_scroll, ng_file_scroll, ng_scroll_origin;
+    unsigned ng_scroll_kind;
+    /* Pixel motion uses Q16 velocity, sampled against the shell clock. */
+    unsigned ng_glide_kind;
+    int32_t ng_velocity_q16, ng_glide_q16;
+    int ng_sample_scroll;
+    uint32_t ng_sample_ms;
+    bool ng_categories, ng_file_menu;
+    uint32_t ng_press_identity, ng_press_revision;
+    uint32_t ng_confirm_revision, ng_confirm_source;
+    bool ng_large_text, ng_reduce_motion, ng_keyboard;
     console_shell_runtime_info_t runtime;
     console_shell_contact_t contacts[CONSOLE_SHELL_MAX_CONTACTS];
     size_t contact_count;
@@ -676,7 +712,7 @@ void console_shell_show_home(console_shell_t *shell);
 /** Return the selected shell palette. The setting is session-only. */
 console_color_mode_t console_shell_color_mode(const console_shell_t *shell);
 
-/** True when the current page requires the native 768x480 BBS surface. */
+/** True when the current page requires the native BBS surface. */
 bool console_shell_uses_native_bbs_launcher(const console_shell_t *shell);
 
 /** True when input or runtime state changed since the most recent render. */
@@ -691,7 +727,7 @@ bool console_shell_render_rgb565(console_shell_t *shell,
                                  size_t stride_pixels);
 
 /**
- * Render the Windows home page into a persistent native 768x480 framebuffer.
+ * Render the Windows home page into a persistent native framebuffer (1152x720 on Tab5, 768x480 on Waveshare).
  *
  * The first call and every structural change perform an authoritative full
  * render. Scroll-only frames reuse the existing chrome and shift/redraw only

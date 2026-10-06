@@ -1,0 +1,27 @@
+{
+  "captured_at": "2026-10-05T19:50:53.416908+00:00",
+  "identity_note": "Ports match latest recorded A/B install; no new identity read was performed.",
+  "ports": [
+    {
+      "port": "/dev/cu.usbmodem1101",
+      "mode": "passive read, no commands, no reset request",
+      "samples": [
+        "I (107033) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1139 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=6,97,ESP-ROM:esp32p4-eco2-20240710",
+        "I (6895) tab5_sensors: SENSORS_INIT ina226=ESP_OK bmi270=ESP_OK rx8130=ESP_OK",
+        "I (6898) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1233 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=64,155,-994 gyro_mdps=183,122,-61 rtc_valid=1 date=2026-10-05 time=19:50:38",
+        "I (16910) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1234 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=66,154,-993 gyro_mdps=122,183,-61 rtc_valid=1 date=2026-10-05 time=19:50:48"
+      ]
+    },
+    {
+      "port": "/dev/cu.usbmodem2101",
+      "mode": "passive read, no commands, no reset request",
+      "samples": [
+        "I (105946) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1195 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=9,-8,-998 gyro_mdps=61,-2ESP-ROM:esp32p4-eco2-20240710",
+        "I (5752) tab5_sensors: SENSORS_INIT ina226=ESP_OK bmi270=ESP_OK rx8130=ESP_OK",
+        "I (5755) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1211 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=6,-8,-997 gyro_mdps=61,-244,0 rtc_valid=1 date=2026-10-05 time=19:50:37",
+        "I (15768) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1211 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=9,-9,-996 gyro_mdps=61,-244,61 rtc_valid=1 date=2026-10-05 time=19:50:47"
+      ]
+    }
+  ],
+  "observation_note": "Both streams showed ESP-ROM startup after serial open, despite no commands or reset request. Opening serial coincided with an unexpected reboot; this was not uninterrupted monitoring."
+}

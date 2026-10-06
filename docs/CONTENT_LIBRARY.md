@@ -1,37 +1,23 @@
 # Console OS content library
 
-Console OS mounts microSD without formatting and keeps its catalog scanner
-read-only. The firmware accepts at most 128 `.p4cart` candidates, lists at most
-16 valid carts, and validates every container and payload hash. It does not
-scan unrelated large game-data files at boot. A bad cart is counted and
-ignored; it is never executed.
+Console OS uses native `.P4G` cartridges and their declared `.P4R` resource
+sidecars. See [the SDK](GAME_SDK.md) and
+[the installation skill](../.agents/skills/develop-p4-games/SKILL.md) for
+validated packaging and board-specific transfer. Native game changes do not
+require an OS reflash while their API remains compatible.
 
-The background scanner adds valid carts to the launcher as non-removable
-`CART` entries and reports rejected containers without treating them as native
-games. Launch reopens the selected file, revalidates its complete container and
-source hash, and runs that source through the bounded `p4-lua-5.4-v1` sandbox.
-Native `.P4G` games continue to use the separate reviewed ELF loader.
+The old Lua runtime, games, authoring tools and skill are removed. Console OS
+supports native cartridges only; no Lua inspection, migration or creation
+workflow is retained in the repository.
 
-Script save values currently survive relaunches during the same Console OS
-boot. Durable SD-backed saves across reboot remain pending; the Lua game never
-receives a filesystem path in either case.
-
-## Copy an open P4 Cart
-
-Pack a source project, then let the repository tool validate, stage, sync, read
-back, and atomically activate it on the mounted card:
+For Tab5, leave the card inserted and use the explicit connected port:
 
 ```sh
-python3 game-platform/scripts/p4cart.py pack \
-  /path/to/your-game /tmp/GAME.P4CART
-python3 scripts/p4-content.py cart /tmp/GAME.P4CART \
-  --sd-root /Volumes/P4SD
+python3 scripts/p4-transfer.py push /absolute/path/GAME.P4G --port /dev/cu.usbmodem...
 ```
 
-The destination is `/P4/GAMES/GAME.P4CART`. The tool refuses links,
-invalid names, invalid containers, occupied staging files, and an existing
-destination. Use `--replace` only when replacement is intentional. It never
-formats the card or deletes unrelated content.
+The transfer validates package structure and hashes before atomic activation;
+never use the general file-exchange area to bypass game validation.
 
 ## H1 verified content upload
 
@@ -61,8 +47,7 @@ Quake remains hidden from the current launcher.
 - A missing or unmountable card leaves Console OS and its built-in pages usable
   but exposes no executable P4G apps and marks removable storage unavailable;
   restoring the card rebuilds the catalog.
-- Game Manager refresh performs a new bounded background P4 Cart scan without
-  blocking the launcher or writing the card.
+- Game Manager refresh rebuilds the native game catalog.
 - H1 import never formats the card or accepts a host-supplied destination
   path; only exact OS-known content identities can select fixed targets.
 - Mounted-card imports use the host tool's validate, stage, sync, read-back,

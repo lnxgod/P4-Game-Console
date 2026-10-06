@@ -17,12 +17,8 @@ security sandbox; install only packages you trust. Console OS also reads root
 P4G files from older cards so upgrades do not strand installed games. The copy
 under GAMES takes precedence when both locations contain the same game.
 
-Open, source-included P4 Cart v1 files keep their original layout:
-
-  P4/GAMES/*.P4CART   validated Lua-source cartridges
-
-Game Manager verifies installed Lua source cartridges and launches them through
-the bounded Lua 5.4 runtime. No teaching/demo cartridges ship by default.
+Only native .P4G games and their declared resource sidecars are supported.
+The old Lua game runtime and authoring tools have been removed.
 
 Console OS updates use:
 

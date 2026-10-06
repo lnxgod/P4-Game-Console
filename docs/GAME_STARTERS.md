@@ -9,21 +9,29 @@ questions. Do not ask an author to choose a template, transport or board driver
 before helping with a clear game idea. Ask only for a missing decision that
 changes the experience, such as same-device versus linked-console multiplayer.
 
-## Choose the runtime from the idea
+## Use the native game path
 
 | Need | Starting path |
 | --- | --- |
-| A native game, linked-console multiplayer, or the current native service set | [Native C authoring skill](../.agents/skills/develop-p4-console-games/SKILL.md), Game API v1 and `.P4G` |
-| Readable, small Lua source games or a quick remix | [Lua authoring skill](../.agents/skills/develop-p4-script-games/SKILL.md), `p4-lua-5.4-v1` and `.P4CART` |
+| Any new game or native remix | [Native C authoring skill](../.agents/skills/develop-p4-console-games/SKILL.md), Game API v1 and `.P4G` |
 | Networking added to a native game | Add the [multiplayer skill](../.agents/skills/develop-p4-multiplayer-games/SKILL.md) automatically |
 | Packaging or installing an existing game | [Game package skill](../.agents/skills/develop-p4-games/SKILL.md) |
 | Installing the operating system | [installos](../.agents/skills/installos/SKILL.md) |
 
-Honor an explicit runtime choice. Otherwise native C is the general-purpose
-path for this Console OS; Lua is useful when source readability and compact
-remixing are the priority. If an explicitly requested Lua design needs a service
-that the device adapter does not expose, explain the gap before proposing a
-native version or a runtime extension.
+Native C is the supported game-creation route. Accept free-form mechanics and
+custom engines, including software 3D or raycasting; the examples below do not
+limit the design. Render within the stable Game API and keep hardware ownership
+in Console OS. Shared drawing helpers are optional. C++ integration needs an
+explicitly tested adapter; the current source/package tools support C.
+
+## Presentation defaults
+
+New native scaffolds request 768x480 RGB565 automatically, with a tested
+320x200 fallback and canonical 320x200 touch input. Read [Game art](GAME_ART.md)
+for direct rendering, antialiased typography, card readability, ImageGen source
+textures, deterministic conversion and size budgets. Custom renderers use the
+same negotiated surface, resource limits and [performance contract](GAME_PERFORMANCE.md).
+Preserve simulation and multiplayer coordinates when upgrading graphics.
 
 ## Optional starters and examples
 
@@ -61,7 +69,7 @@ Use the multiplayer skill and the selected example to finish that behavior.
 | --- | --- | --- |
 | Controls | Map normalized Up/Down/Left/Right, A/B, Start/Back and touch to game actions | USB/BLE parsing, mapping, device lifecycle and input snapshots |
 | Multiplayer | Declare the profile; implement bounded game intents/state and offline behavior | Host/Join UI, room discovery, exact-game matching, registration, links and start barrier |
-| Drawing | Use clipped `p4/draw.h`, optional `p4/visual.h`, and the negotiated surface | Panel, rotation, framebuffers and presentation |
+| Drawing | Use a bounded custom software renderer or optional shared drawing/animation helpers on the negotiated RGB565 surface | Panel, rotation, framebuffers and presentation |
 | Sound | Request optional tone/PCM services and tolerate unavailable/full queues | Mixer, codec, volume and hardware sessions |
 | Saves | Validate a versioned snapshot and queue bounded commits through `save` | Durable storage where supported, sealing, recovery and filesystem ownership |
 | Large assets | Declare a validated `.P4R` and consume the immutable resource view | Sidecar matching, loading, memory lifetime and storage location |
@@ -110,8 +118,8 @@ session. Implement the game's rules and synchronization with the public
 
 The current transport adapters support two active human consoles, even though
 manifest bounds allow future four-player support. Same-device pass-and-play
-and CPU seats are separate game mechanics. Lua carts currently have no
-networked Host/Join service and the device adapter fills only player one.
+and CPU seats are separate game mechanics. Check the selected OS adapter and
+exact-device evidence before claiming a supported human-console count.
 
 ## Finish against the selected target
 
@@ -119,7 +127,6 @@ Implement the player's core loop, then tune it in the appropriate local runner.
 For native games use the [SDL3 play-test skill](../.agents/skills/test-p4-games-locally/SKILL.md)
 and the game's focused tests. Multiplayer needs two game instances with
 mocked OS sessions as well; one SDL window does not prove synchronization.
-Lua uses deterministic pack/inspect and the exact Lua runtime smoke.
 
 Validate the manifest and exact package, then install it through the board's
 documented content path. A game update normally needs no OS reflash.
@@ -133,6 +140,5 @@ storage route is SD-only; internal storage plus SD-on-restart is specified in
 implemented. Check [the Tab5 board document](boards/M5STACK_TAB5.md) for newer
 evidence before making a device claim.
 
-Lua authoring starts from the documented lifecycle and manifest contracts in
-`game-platform/api/`; the old teaching games have been removed.
-`game-platform/tests/fixtures/` is test data, never a starter or release library.
+Use the native creator and native tests for new work. No Lua authoring assets,
+fixtures, tools or skill are retained as an alternate game-creation path.

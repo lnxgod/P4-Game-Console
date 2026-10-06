@@ -1,0 +1,823 @@
+{
+  "schema": 1,
+  "game": "p4_yahtzee",
+  "version": "1.4.0",
+  "status": "local-play-tested; build-tested; current game package installed; hardware gameplay pending",
+  "recorded_utc": "2026-10-05T23:28:58.571794+00:00",
+  "source_sha256": "1bd65982bbd6b5ead7e41ac1309381c70a89f482d09158c0c354be3a1cdce242",
+  "source_hash_method": "Sorted game-relative UTF-8 path plus NUL plus binary SHA-256 of each file; excludes LOCAL_TESTING.json, PRESENTATION_TESTING.json, TOUCH_TESTING.json, .DS_Store and __pycache__.",
+  "files": {
+    "CMakeLists 2.txt": "99cb7593f8b27701e14e31da3dab39d3ed04197aef632ca906c69dbf15051ccf",
+    "CMakeLists.txt": "f7e2930a5d6f68f74702032644fd25fdebe318ffb2d746a638860ab18f95cfce",
+    "README 2.md": "dd2164c0648401be9b4918c5153ce13f73b400b7f28a7395b8e8ceecfd6bf8e3",
+    "README.md": "3bb1061e9207ba79bc24e36feba19708eaf68ef74a46e1151891b8aee28f9776",
+    "assets/launcher-provenance.json": "bf6705799c8ecde02ec52ce4a911856242a87b6a5e1060d240ab8679124d7d31",
+    "assets/launcher-source.png": "d0ce9680ac8d4369390eec59e327eb662721ae6d5e838aa50e43eb49a2c2ed07",
+    "assets/launcher.p4i": "2fbde4b442fa4e8124ab0a05b07982f912e13393ba1321dbfdad2279332681f6",
+    "assets/p4_yahtzee_dice_atlas_imagegen_v1.png": "cdd455e654f869886fa28e56ca081b91ee91680cdb4d5762a734fa36cd2205a6",
+    "assets/presentation_imagegen_v2.png": "b855bb532df6eafa54bf956f82568320641435419be2237cc70ace139779bd4f",
+    "assets/presentation_provenance.json": "57fbc2fcddb052b81ef09bf6c8f14e5254c336ac580a90aa53aad56368596589",
+    "game 2.json": "70f8293ad84b1795eb41f49211e31bb99c92817c6f374602ffcd68714e05a3ca",
+    "game.json": "09af39d1aa5fd4dec750d99614103d57f161fb025377bba64e8963010d1ed78a",
+    "src/generated/p4_yahtzee_dice_atlas.inc": "e7362a0a3c35b1271d593e4ecc5eec42317fcba31a803e766577fad84780199b",
+    "src/generated/presentation_assets.inc": "a9832eed3bf4d863cd93ecca1f9807174b0880db5bf3da7884f98f136de90923",
+    "src/p4_yahtzee.c": "3a59f46e7c8468caf98abffcaf0819ede882682adb90e7a48880845a9d264db2",
+    "src/p4_yahtzee_internal.h": "609f4b45e6f49b769e025597f15ecd8107e9bea253537ee651b559aecf425e92",
+    "src/p4_yahtzee_logic.c": "4706cc6aedf9ddeb6a0c400bb3695a6d418aec91c6c29708b95c7bc4cda10b83",
+    "src/p4_yahtzee_network.c": "659342266bafce78b0f38fabb708c77f41b5f0660d989129212aa32572ebb4a9",
+    "src/table_presentation.h": "0466a6ec07d85f97c61dfcc17f56485c079c21c140bcfec020107e32af0b0e13",
+    "tests/CMakeLists.txt": "d0bff0bea989ae5377c49d9940b16d866f939a3b5d1873a115bcf42356244a76",
+    "tests/performance-input.txt": "7aa5126c93fa5eed6fa80462f7b4cf17d8058ed564c60f4933288c280b990309",
+    "tests/test_p4_yahtzee.c": "0caf0bb5a6ed21f833bed66050e26c41f5e851728d5207cc42cd52ac71ea7527",
+    "tests/test_presentation.c": "4d5de551f901e6d0530a87d995fffbe1caa010280bab7d695c1111bc3f74d64b",
+    "tools/CMakeLists.txt": "3387d6e126c2a0982ed6bf74ada71ce1ea9c6df00181a12665743602744e4d87",
+    "tools/convert_presentation.py": "b655cbc0bc3c23d2ebd6e0b136414ac0a4b9de3efa91cc2027f1f73369fb1089",
+    "tools/png_to_dice_atlas.py": "4727656ce151289d161f378d8f7a302597921d2cd71e10c571934617a7596eb8",
+    "tools/render_preview.c": "305f282f8f9d6db7644bc809a744fe5cde32172dfeada66c9733477d4c232075"
+  },
+  "rendering": {
+    "native": [
+      768,
+      480
+    ],
+    "fallback": [
+      320,
+      200
+    ],
+    "touch": [
+      320,
+      200
+    ],
+    "compiled_rgb565_bytes": 205824,
+    "native_font_cell_heights": [
+      24,
+      38
+    ],
+    "fallback_font": "shared compact bitmap font",
+    "complete_frame_upscale": false
+  },
+  "automated": {
+    "focused_ctest": {
+      "command": "ctest --test-dir build-host/p4_yahtzee --output-on-failure",
+      "passed": 2,
+      "failed": 0,
+      "tests": [
+        "p4_yahtzee_tests",
+        "p4_yahtzee_presentation_tests"
+      ],
+      "log": {
+        "path": "build-host/p4_yahtzee/Testing/Temporary/LastTest.log",
+        "sha256": "b7e5cf6daa0029bb6b5fc5d44d327a9468021dbc3a0439594737d71c7311340f"
+      }
+    },
+    "sdl_ctest": "4/4 passed; host smoke, audio/frame timing, runtime error/normal exit status, save suite",
+    "new_checks": [
+      "Guarded padded-stride native and fallback render",
+      "Both opposite framebuffer corners painted",
+      "Same canonical touch target acts in both render modes",
+      "Representative native and fallback play/result captures"
+    ],
+    "existing_rules_and_mock_multiplayer": "passed unchanged",
+    "converter_reproducible": true,
+    "generic_sdl_ctest": {
+      "passed": 5,
+      "failed": 0,
+      "source": "build-host/final-simulator-validation.json"
+    }
+  },
+  "native_frame_review": {
+    "tester": "Codex tabletop/sports agent",
+    "dimensions": [
+      [
+        768,
+        480
+      ],
+      [
+        320,
+        200
+      ]
+    ],
+    "observed": [
+      "Text, sprites and table materials readable in native rendered captures",
+      "No clipping on reviewed main play and result layouts",
+      "Checkers selected/crowned pieces distinguishable",
+      "Yahtzee four-player tracker, held dice and score previews distinct",
+      "Air Hockey rink bounds, goals and reflected client objects align to canonical physics"
+    ]
+  },
+  "interactive": {
+    "status": "local-play-tested",
+    "tester": "Codex primary agent using CUA keyboard and mouse in the real SDL3 simulator",
+    "date": "2026-10-06",
+    "observations": [
+      "Selected four local players; rolled, held both sixes, rerolled and scored 18 in sixes.",
+      "Verified pass-device handoff to player two and rolled player two's dice.",
+      "Checked Back through setup to exit.",
+      "Final direct-touch replay selectedfourplayers, rolled, heldfirstdie, tappedbonusrow withoutcommittingascore, scoredlargestraight40, handedofftoP2 androlledP2. Back returnedthroughsetupandexit. Sampled title59.8\u201360.2FPS."
+    ],
+    "sampled_title_fps_range": [
+      59.8,
+      60.2
+    ],
+    "fps_sample_source_field": "direct_touch_fps_samples",
+    "observation_record": {
+      "fps": [
+        58.1,
+        60.1
+      ],
+      "observations": [
+        "Selected four local players; rolled, held both sixes, rerolled and scored 18 in sixes.",
+        "Verified pass-device handoff to player two and rolled player two's dice.",
+        "Checked Back through setup to exit.",
+        "Final direct-touch replay selectedfourplayers, rolled, heldfirstdie, tappedbonusrow withoutcommittingascore, scoredlargestraight40, handedofftoP2 androlledP2. Back returnedthroughsetupandexit. Sampled title59.8\u201360.2FPS."
+      ],
+      "direct_touch_fps_samples": [
+        59.8,
+        60.2
+      ]
+    },
+    "fps_limitation": "One-second title samples during local play, not a per-frame minimum guarantee or physical-device measurement.",
+    "runtime_equivalence": "Shared raster performance changes are expected in every cartridge relative to the old gameplay package; exact-pixel clipping tests and assembly evidence qualify that helper change, not binary equivalence. Touch input/render changes are also expected. Final source/package hashes, focused tests and current SDL observations identify this revision.",
+    "simulator_validation_source": "build-host/final-simulator-validation.json"
+  },
+  "hardware_acceptance": null,
+  "installed_on_device": true,
+  "package_validation": {
+    "path": "build-host/hires-install-bundle/GAMES/P4_YAHTZEE.P4G",
+    "sha256": "572b28d15f41df8a9af72b10abe22b70923048503c9692b51fbd81cc5ddff51c",
+    "bytes": 265920,
+    "limit_bytes": 524288,
+    "icon_bytes": 9744,
+    "staged_manifest": {
+      "path": "build-host/hires-install-bundle/manifest.json",
+      "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee"
+    },
+    "staged_manifest_entry": "p4_yahtzee",
+    "allocated_code_and_data_unchanged_from_playtested_package": false,
+    "allocated_section_comparison": "historical comparison retained; expected shared raster performance changes and touch input/render changes",
+    "expected_shared_raster_performance_changes": true,
+    "shared_raster_pixel_equivalence_proof": {
+      "path": "build-host/crisp-package/raster-performance/proof.json",
+      "sha256": "49d0d633753d08c467f19c13588eea7f221dd9df26aa7b95493aed685f49bb1c"
+    },
+    "expected_touch_changes": true,
+    "expected_art_layout_animation_changes": false,
+    "changed_allocated_sections": [
+      ".data.rel.ro",
+      ".dynamic",
+      ".got",
+      ".got.plt",
+      ".plt",
+      ".rela.dyn",
+      ".rela.plt",
+      ".rodata",
+      ".text"
+    ],
+    "comparison_baseline": {
+      "path": "build-host/hires-gameplay-packages/P4_YAHTZEE.P4G",
+      "sha256": "d85e3be8f7dd75843906f8fa8f0d4932ada902b5eb9bca583e140700722d0272",
+      "scope": "pre-touch, pre-icon gameplay package"
+    }
+  },
+  "shared_presentation": {
+    "components/p4_game_api/include/p4/presentation.h": "5b4ad858a5497e5fa75f5aa3ad07c65bc4d646095fbc17b012a99bbc20adbab8",
+    "components/p4_game_api/include/p4/presentation_font.h": "0bc9a110a5f9b0e8f1cc44ffa212206758ebdd58e15ac488030f65fe72a7f448",
+    "components/p4_game_api/src/presentation_font.c": "149b2e510c0a0b8dfe5c4a7ac4be2f8006c4360c09a82c088209f7ece1eb65c5"
+  },
+  "artifacts": {
+    "focused_log": {
+      "path": "build-host/p4_yahtzee/Testing/Temporary/LastTest.log",
+      "sha256": "7700cb92baff674bd562775798e52daf4dbf76b7ee7b288d80d3e8341ff261e6"
+    },
+    "sdl_log": {
+      "path": "build-host/play-p4_yahtzee/Testing/Temporary/LastTest.log",
+      "sha256": "f6215ae48011c85405cde4fe772722a57d9d0ff369e0ffedb6f5712489f8ff42"
+    },
+    "simulator": {
+      "path": "build-host/play-p4_yahtzee/p4_game_host.app/Contents/MacOS/p4_game_host",
+      "sha256": "a8c0333e91d93d992a1f631017a478ed750694d6a63c3c531a7c774ca701d73a"
+    },
+    "cpu_benchmark": {
+      "path": "build-host/play-p4_yahtzee/p4_game_benchmark",
+      "sha256": "f5b94e5f4c68a0f14f84f16df546c78711aafed47951523d7e830d6f85e751e7"
+    },
+    "cpu_benchmark_result": {
+      "path": "build-host/table-performance/p4_yahtzee-shared-after.json",
+      "sha256": "a6c10fca639ed18983c638611d7ca3ad22c0dd4c6a92af9aaec60002f99220b3"
+    },
+    "simulator_pacer": {
+      "path": "tools/p4-game-host/frame_pacer.h",
+      "sha256": "4ff832b5242db46e176c79e2c4e13d5134e55f089b061014173c3d45d477c9f3"
+    },
+    "simulator_source": {
+      "path": "tools/p4-game-host/play_game.c",
+      "sha256": "7365a8d5d65fb0c7f3680e51bd7ff138c5667d0844d10c9613364ddef58c3010"
+    }
+  },
+  "captures": {
+    "build-host/p4_yahtzee/hires-captures/initial-320.ppm": "b7421742b3627134b40110653107b4203ee022d80fe6922816695acaa731b936",
+    "build-host/p4_yahtzee/hires-captures/initial-768.ppm": "ab00f52832ec25f03b1f31fa76f3aebddd985c1f4e4f267044778523dde1e13a",
+    "build-host/p4_yahtzee/hires-captures/pass-320.ppm": "cecf0f964d96dad593e1f922dc0eebecc2cdaf96962a5ea60fef976022f5ee27",
+    "build-host/p4_yahtzee/hires-captures/pass-768.ppm": "80c5b5862c98178c67690be6648be4e067714ef73552e6e75eea19dfe87642c4",
+    "build-host/p4_yahtzee/hires-captures/result-320.ppm": "2dbe91c562338e62fc4c28d88de33ea32653241b2d0b670ada9a34eae37a608d",
+    "build-host/p4_yahtzee/hires-captures/result-768.ppm": "4cdfc9a4291d6344c62e5f8828d9cb62766e0a5e7ad8b34b5d91e988107cdfc3",
+    "build-host/p4_yahtzee/hires-captures/scorecard-320.ppm": "6fb2acee376dd27118da824624a84fbd6cbf9bd6a1d906d858556f508f7daae5",
+    "build-host/p4_yahtzee/hires-captures/scorecard-768.ppm": "9068c7aec1e7d312aa7dbb482858f83b23ea80f94efbe71dedea1fcb0f433843"
+  },
+  "previous_presentation_source_sha256": "fa9bbfc30271aec389230875abea557f17749a749153a91e9a56e4a6ea32b5ac",
+  "performance": {
+    "revision_scope": "shared raster optimization; current source benchmark",
+    "scope": "Optimized development-Mac CPU update/render/audio; excludes SDL presentation, physical device, transport and I/O.",
+    "frames_per_resolution": 2000,
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "input_tape": "games/p4_yahtzee/tests/performance-input.txt",
+    "input_sha256": "7aa5126c93fa5eed6fa80462f7b4cf17d8058ed564c60f4933288c280b990309",
+    "benchmark_binary": "build-host/play-p4_yahtzee/p4_game_benchmark",
+    "benchmark_binary_sha256": "c9dfd5be4d3f20f7c3041368c5029e1aabf71917e7c7f7da6b8e2ff6dbbbd886",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.p4-yahtzee",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 470,
+        "last_frame_hash": "412d8b7d",
+        "update_audio_ms": {
+          "mean": 0.0009,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.019,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.1486,
+          "p50": 0.143,
+          "p95": 0.194,
+          "p99": 0.245,
+          "max": 0.489,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1495,
+          "p50": 0.144,
+          "p95": 0.195,
+          "p99": 0.247,
+          "max": 0.492,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.p4-yahtzee",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 470,
+        "last_frame_hash": "54bdeb9b",
+        "update_audio_ms": {
+          "mean": 0.0009,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.014,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.023,
+          "p50": 0.023,
+          "p95": 0.026,
+          "p99": 0.027,
+          "max": 0.044,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0239,
+          "p50": 0.024,
+          "p95": 0.026,
+          "p99": 0.029,
+          "max": 0.047,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "measurement_files": {
+      "768": {
+        "path": "build-host/smoothness-packages/p4_yahtzee/benchmark-768.json",
+        "sha256": "bae33d25d307ae98be4a76c3f18b4ca7e10f4212b2b8ba2ef5ee5933aeaf09f9",
+        "bytes": 525
+      },
+      "320": {
+        "path": "build-host/smoothness-packages/p4_yahtzee/benchmark-320.json",
+        "sha256": "ce7893047bad477d90a12bee82f9f28d5a4123e34c059514e118f6b74f0c5e0f",
+        "bytes": 525
+      }
+    },
+    "motion_coverage": "Four-player repeated roll/hold/score progression with animated dice.",
+    "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+    "hardware_fps_verified": false,
+    "pre_touch_baseline_only": false
+  },
+  "pre_raster_performance": {
+    "target_presented_fps": 30,
+    "budget_ms": 33.333,
+    "device_minimum_fps_verified": false,
+    "host_cpu": "Apple M5 Max, arm64",
+    "build_mode": "Optimized native -O2, no sanitizers; CPU timings exclude SDL presentation/display, physical device, transport and I/O. Shared benchmark includes actual game updates, real 16kHz audio mixing and rendering.",
+    "shared_benchmark": {
+      "game": "org.p4console.p4-yahtzee",
+      "frames": 2000,
+      "width": 768,
+      "height": 480,
+      "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+      "changed_frames": 470,
+      "last_frame_hash": "c74de3c6",
+      "update_audio_ms": {
+        "mean": 0.0009,
+        "p50": 0.001,
+        "p95": 0.001,
+        "p99": 0.002,
+        "max": 0.009,
+        "over_33_333ms": 0
+      },
+      "render_ms": {
+        "mean": 0.1369,
+        "p50": 0.135,
+        "p95": 0.157,
+        "p99": 0.167,
+        "max": 0.282,
+        "over_33_333ms": 0
+      },
+      "total_ms": {
+        "mean": 0.1378,
+        "p50": 0.136,
+        "p95": 0.158,
+        "p99": 0.168,
+        "max": 0.284,
+        "over_33_333ms": 0
+      }
+    },
+    "input_tape": "tests/performance-input.txt",
+    "render_only_conditions": "Same fixed starting scene at768x480; optimized -O2 -DNDEBUG;100 warmup frames then2000 measured render calls, no updates/audio/display; shared presentation optimization is included in the final measurement.",
+    "render_only_before": "Yahtzee render_ms p50=0.3440 p95=0.3500 max=0.4940",
+    "render_only_after": "Yahtzee render_ms p50=0.1490 p95=0.1640 max=0.2480",
+    "visual_equivalence": "All24 existing captures across all3 games, including this game's8 native/fallback states, remain byte-identical after the material optimizations. Dynamic subpixel/cadence behavior is separately regression tested.",
+    "simulator_target_hz": 60,
+    "regressions": [
+      "33ms animation updates and a delayed198ms update reach the same visual timer/RNG state",
+      "Held dice remain stationary; authoritative dice and roll RNG unchanged by animation",
+      "Long update completes the bounded330ms animation with the same final dice"
+    ]
+  },
+  "final_simulator": {
+    "path": "build-host/play-p4_yahtzee/p4_game_host.app/Contents/MacOS/p4_game_host",
+    "sha256": "4c1de79b09fc82df7d626f268cf49bc79ab8d7a9859f0c4e242e85ffb2de0837",
+    "bytes": 1089120,
+    "fps_title_present": true,
+    "tests_passed": 5,
+    "tests_failed": 0,
+    "build_log": {
+      "path": "build-host/smoothness-packages/p4_yahtzee/sdl-build.log",
+      "sha256": "af68671398b9cf1a670f83c1637090d20c036b6ce3223ffee86f625929c299c2",
+      "bytes": 4519
+    },
+    "test_log": {
+      "path": "build-host/smoothness-packages/p4_yahtzee/sdl-tests.log",
+      "sha256": "414dbf6a746d694f4a2d5679586c8e0b3562e554e27ed4d223b4251fb20921a7",
+      "bytes": 758
+    },
+    "evidence_path": "games/p4_yahtzee/LOCAL_TESTING.json"
+  },
+  "shared_raster_validation": {
+    "path": "build-host/crisp-package/raster-performance/proof.json",
+    "sha256": "49d0d633753d08c467f19c13588eea7f221dd9df26aa7b95493aed685f49bb1c",
+    "bytes": 3752
+  },
+  "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+  "raster_revision_package_candidate": {
+    "path": "build-host/smoothness-packages/GAMES/P4_YAHTZEE.P4G",
+    "sha256": "572b28d15f41df8a9af72b10abe22b70923048503c9692b51fbd81cc5ddff51c",
+    "bytes": 265920,
+    "id": "org.p4console.p4-yahtzee",
+    "title": "Yahtzee",
+    "version": "1.4.0",
+    "folder": "GAMES/TABLETOP",
+    "launcher_id": 113,
+    "payload_sha256": "4b18899cd5cd745081b95a43e27b1784cb3037835ca4c2049d24db1484e12bfd",
+    "limit_bytes": 524288,
+    "icon": {
+      "name": ".p4icon",
+      "type": 1,
+      "flags": 0,
+      "address": 0,
+      "size": 9744,
+      "alignment": 1,
+      "sha256": "2fbde4b442fa4e8124ab0a05b07982f912e13393ba1321dbfdad2279332681f6"
+    },
+    "allocated_sections": [
+      {
+        "name": ".hash",
+        "type": 5,
+        "flags": 2,
+        "address": 212,
+        "size": 52,
+        "alignment": 4,
+        "sha256": "dddc5407e4c50e5625ba34c12bbd288130561b2d4f071232af8588301346de19"
+      },
+      {
+        "name": ".dynsym",
+        "type": 11,
+        "flags": 2,
+        "address": 264,
+        "size": 128,
+        "alignment": 4,
+        "sha256": "36eb2b3af7a53d6131f0c14c96fc558626819b3087a9c11257b926f1b139a78a"
+      },
+      {
+        "name": ".dynstr",
+        "type": 3,
+        "flags": 2,
+        "address": 392,
+        "size": 41,
+        "alignment": 1,
+        "sha256": "3ab39b33f56071d112ab0f32fd6e4ce823dee078337d7268264571bc947fe29b"
+      },
+      {
+        "name": ".rela.dyn",
+        "type": 4,
+        "flags": 2,
+        "address": 436,
+        "size": 276,
+        "alignment": 4,
+        "sha256": "7acad065e83e944f11b23a6e0d7de021919af2e5a242e5bdcd6f26add09d145b"
+      },
+      {
+        "name": ".rela.plt",
+        "type": 4,
+        "flags": 66,
+        "address": 712,
+        "size": 72,
+        "alignment": 4,
+        "sha256": "2f45706cb870ce01bac04754637ce93598542cf76dd18f6794eb519f8d282cf6"
+      },
+      {
+        "name": ".plt",
+        "type": 1,
+        "flags": 6,
+        "address": 784,
+        "size": 128,
+        "alignment": 16,
+        "sha256": "abf0944faaea3650d828abd62432b4da359dcc8e2d7a3508de9f55656203ac67"
+      },
+      {
+        "name": ".text",
+        "type": 1,
+        "flags": 6,
+        "address": 912,
+        "size": 15290,
+        "alignment": 2,
+        "sha256": "1b09c6cd770b81280e499d260d89109a8d528294eba84186607164996786fe0b"
+      },
+      {
+        "name": ".rodata",
+        "type": 1,
+        "flags": 2,
+        "address": 16208,
+        "size": 238703,
+        "alignment": 8,
+        "sha256": "8f010e08155f629d181e24975e87c7193edc466331e04587a76ac6a60fcfc53d"
+      },
+      {
+        "name": ".data.rel.ro",
+        "type": 1,
+        "flags": 3,
+        "address": 259008,
+        "size": 104,
+        "alignment": 4,
+        "sha256": "63f72aba589bf173dc135b7cdaaed02b094ce67701985e212283ca12a7a08934"
+      },
+      {
+        "name": ".dynamic",
+        "type": 6,
+        "flags": 3,
+        "address": 259112,
+        "size": 144,
+        "alignment": 4,
+        "sha256": "fcaaff87c90484ca9ab88403a5aade8d43eac8aaf453d7a1988053ccf7986c72"
+      },
+      {
+        "name": ".got",
+        "type": 1,
+        "flags": 3,
+        "address": 259256,
+        "size": 16,
+        "alignment": 4,
+        "sha256": "6975a7211e2e46091a8bbd03816f2c4e938f2f087625ecd4a7411ecb63cc7363"
+      },
+      {
+        "name": ".got.plt",
+        "type": 1,
+        "flags": 3,
+        "address": 259272,
+        "size": 32,
+        "alignment": 4,
+        "sha256": "f2cb9f77415fb9c1cce4f703120eaf4862dafc9dbb804bc26bb5aad4865c9194"
+      }
+    ],
+    "build_log": {
+      "path": "build-host/smoothness-packages/p4_yahtzee/package-build.log",
+      "sha256": "e4d04151274ff820f60a2a5eedf6147f3028ae4b422b408b6cc278b64bb91dba",
+      "bytes": 994
+    },
+    "validation_log": {
+      "path": "build-host/smoothness-packages/p4_yahtzee/package-validation.log",
+      "sha256": "cf52b4358b6ba9b3993b8ee8cb5752e1a5efde36c835bc88e731e2a0756d6950",
+      "bytes": 291
+    }
+  },
+  "raster_revision_captures": {
+    "build-host/smoothness-packages/p4_yahtzee/captures/held-320.ppm": "ed4e194dbd669a63a67393f5d3cf60e955a9e5820aa9bc5011fdf8a1a8baeadd",
+    "build-host/smoothness-packages/p4_yahtzee/captures/held-768.ppm": "e8acf8d2fb8626be3778e0b41459cc487c38762e69d39e3e720ca85c56da436c",
+    "build-host/smoothness-packages/p4_yahtzee/captures/initial-320.ppm": "a3901cd48c3f6beaf9fad682beeec48e73a68b7f36983207088891b5c443737f",
+    "build-host/smoothness-packages/p4_yahtzee/captures/initial-768.ppm": "7c6b95af2aa8e0c8915190899a24da413b3567f1b6875010c080cbb33f2c943b",
+    "build-host/smoothness-packages/p4_yahtzee/captures/pass-320.ppm": "78939ed642e8dafd8ccfd60038b545aaeafb76413f77c7cf13a5da12d9151641",
+    "build-host/smoothness-packages/p4_yahtzee/captures/pass-768.ppm": "0853000b776597f9599711e61733de49a6fe112957f358e737dad7d1ddad80bf",
+    "build-host/smoothness-packages/p4_yahtzee/captures/result-320.ppm": "df562958aceac0aa848ab4a452ca6476f7853dda64c3bba72b21f4b219218cbe",
+    "build-host/smoothness-packages/p4_yahtzee/captures/result-768.ppm": "cf945b30a7bffb24ed9d43a7f958c3787c71595fcb95fc18d208ec9eefce5f90",
+    "build-host/smoothness-packages/p4_yahtzee/captures/scorecard-320.ppm": "51b89321008e81947b77aa58241e689267f9562e093b29cf3c6cd03d13175b80",
+    "build-host/smoothness-packages/p4_yahtzee/captures/scorecard-768.ppm": "a2b48f4d6b3741c064a82bb4c9a4b1799cc7f460f903fae6199c70b03f78d9e6"
+  },
+  "raster_revision_scope": "Shared exact-output raster optimization only; local build/test/CPU validation. No new physical-device acceptance or installation performed by this pass.",
+  "pre_icon_source_sha256": "1bd65982bbd6b5ead7e41ac1309381c70a89f482d09158c0c354be3a1cdce242",
+  "touch_validation": {
+    "path": "build-host/crisp-package/direct-touch-checkers-yahtzee.json",
+    "sha256": "c3dd4c0701629e15ce53ed6d15c8186a7812540a08e6dc593d4c4d656c58b51b",
+    "entry": "p4_yahtzee",
+    "focused_ctest": {
+      "passed": 2,
+      "failed": 0
+    },
+    "captures": {
+      "build-host/p4_yahtzee/direct-touch-captures/held-320.png": "21471f3c73b9e0952b85018b6d29e1fa855b0a8b1f2d0460303e89eb0796431e",
+      "build-host/p4_yahtzee/direct-touch-captures/held-768.png": "e3b3ea57e9df6df41df97698612289618ce3e1dec25f1154b55954a2eacb1ba1",
+      "build-host/p4_yahtzee/direct-touch-captures/initial-320.png": "f83590d776b01c98b6b2fd26c7816e9fcbbcfd95026c13b270dc0e477b7d9b54",
+      "build-host/p4_yahtzee/direct-touch-captures/initial-768.png": "0d3b8184ef610256218d59771c589268376cef71446acb31cabe42e60e9f2bbf",
+      "build-host/p4_yahtzee/direct-touch-captures/pass-320.png": "ee579dc8c76aab114073fa933769d6309d9ddffe4b5a0e130faf589460d551de",
+      "build-host/p4_yahtzee/direct-touch-captures/pass-768.png": "bb1ff6a610101547d85f6f3cfd5168ead5b2d710472cc2cecb43a088fbaf3541",
+      "build-host/p4_yahtzee/direct-touch-captures/result-320.png": "8018ddbd05167bd24aa49817b32e3f531c93d727c590b1a327e62c78b95cb1fa",
+      "build-host/p4_yahtzee/direct-touch-captures/result-768.png": "9e004cd4e8979e5ce0f4dfe00651ad8891536bf7b2569534a6fe193dcb11ac31",
+      "build-host/p4_yahtzee/direct-touch-captures/scorecard-320.png": "8e05303f17ebca99a764f7d5a6caec246e33f4ac315eb84e4ba7576c15699d2f",
+      "build-host/p4_yahtzee/direct-touch-captures/scorecard-768.png": "fea7211510444d4b26942e52bd4eeb3f673a4f3c99a95c04668818a620778322"
+    },
+    "regressions": [
+      "touch arrow changes player count once",
+      "touch start does not accidentally roll",
+      "hold toggles once throughout touch and release",
+      "bonus summary cannot submit three-of-a-kind",
+      "score commits once and retains pass screen",
+      "touch ready does not roll; physical Start resumes",
+      "existing four-player and accessory/network suites"
+    ],
+    "network_protocol_changed": false
+  },
+  "pre_touch_performance": {
+    "revision_scope": "shared raster optimization; current source benchmark",
+    "scope": "Optimized development-Mac CPU update/render/audio; excludes SDL presentation, physical device, transport and I/O.",
+    "frames_per_resolution": 2000,
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "input_tape": "games/p4_yahtzee/tests/performance-input.txt",
+    "input_sha256": "7aa5126c93fa5eed6fa80462f7b4cf17d8058ed564c60f4933288c280b990309",
+    "benchmark_binary": "build-host/play-p4_yahtzee/p4_game_benchmark",
+    "benchmark_binary_sha256": "c9dfd5be4d3f20f7c3041368c5029e1aabf71917e7c7f7da6b8e2ff6dbbbd886",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.p4-yahtzee",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 470,
+        "last_frame_hash": "412d8b7d",
+        "update_audio_ms": {
+          "mean": 0.0009,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.019,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.1486,
+          "p50": 0.143,
+          "p95": 0.194,
+          "p99": 0.245,
+          "max": 0.489,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1495,
+          "p50": 0.144,
+          "p95": 0.195,
+          "p99": 0.247,
+          "max": 0.492,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.p4-yahtzee",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 470,
+        "last_frame_hash": "54bdeb9b",
+        "update_audio_ms": {
+          "mean": 0.0009,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.014,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.023,
+          "p50": 0.023,
+          "p95": 0.026,
+          "p99": 0.027,
+          "max": 0.044,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0239,
+          "p50": 0.024,
+          "p95": 0.026,
+          "p99": 0.029,
+          "max": 0.047,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "measurement_files": {
+      "768": {
+        "path": "build-host/smoothness-packages/p4_yahtzee/benchmark-768.json",
+        "sha256": "bae33d25d307ae98be4a76c3f18b4ca7e10f4212b2b8ba2ef5ee5933aeaf09f9",
+        "bytes": 525
+      },
+      "320": {
+        "path": "build-host/smoothness-packages/p4_yahtzee/benchmark-320.json",
+        "sha256": "ce7893047bad477d90a12bee82f9f28d5a4123e34c059514e118f6b74f0c5e0f",
+        "bytes": 525
+      }
+    },
+    "motion_coverage": "Four-player repeated roll/hold/score progression with animated dice.",
+    "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+    "hardware_fps_verified": false,
+    "pre_touch_baseline_only": false
+  },
+  "pending": [],
+  "current_package_installed_on_device": true,
+  "current_package_installed_units": [
+    "Tab5 A",
+    "Tab5 B"
+  ],
+  "latest_successful_installation_by_unit": {
+    "Tab5 A": {
+      "slug": "p4_yahtzee",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "572b28d15f41df8a9af72b10abe22b70923048503c9692b51fbd81cc5ddff51c",
+      "package_bytes": 265920,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    },
+    "Tab5 B": {
+      "slug": "p4_yahtzee",
+      "title": "Yahtzee",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "572b28d15f41df8a9af72b10abe22b70923048503c9692b51fbd81cc5ddff51c",
+      "package_bytes": 265920,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "P4_YAHTZEE.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=P4_YAHTZEE.P4G bytes=265920 sha256=572b28d15f41df8a9af72b10abe22b70923048503c9692b51fbd81cc5ddff51c seconds=4.6",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "p4_yahtzee"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    }
+  },
+  "installation_history": [
+    {
+      "slug": "p4_yahtzee",
+      "title": "Yahtzee",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "usb_serial_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "4c83ccec9aea6097174807b5b25bf422462cd63d119cefd11e8faefdd4bcb005",
+      "package_bytes": 265832,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T00:30:06.294159+00:00",
+      "verification": {
+        "method": "Native USB transfer: device SHA-256, atomic activation and readback; existing identical files verified by device hash",
+        "log": "build-host/hires-tab5-qualification/A-ready-table-install-retry.log",
+        "log_sha256": "910c61277893523ce5b067b1c8baa5430da58f18ea7f38c0b1e973c1348dcc2d",
+        "bundle_result": "BUNDLE_PASS files=7"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    {
+      "slug": "p4_yahtzee",
+      "title": "Yahtzee",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "usb_serial_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "4c83ccec9aea6097174807b5b25bf422462cd63d119cefd11e8faefdd4bcb005",
+      "package_bytes": 265832,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T00:31:58.157929+00:00",
+      "verification": {
+        "method": "Native USB transfer: device SHA-256, atomic activation and readback; existing identical files verified by device hash",
+        "log": "build-host/hires-tab5-qualification/B-ready-table-install-retry.log",
+        "log_sha256": "c4ea3bb6a76879a2afffe7cb9ea43e6e3caa57bbb890c23be397b8f9d204cab2",
+        "bundle_result": "BUNDLE_PASS files=7"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    {
+      "slug": "p4_yahtzee",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "572b28d15f41df8a9af72b10abe22b70923048503c9692b51fbd81cc5ddff51c",
+      "package_bytes": 265920,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    },
+    {
+      "slug": "p4_yahtzee",
+      "title": "Yahtzee",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "572b28d15f41df8a9af72b10abe22b70923048503c9692b51fbd81cc5ddff51c",
+      "package_bytes": 265920,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "P4_YAHTZEE.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=P4_YAHTZEE.P4G bytes=265920 sha256=572b28d15f41df8a9af72b10abe22b70923048503c9692b51fbd81cc5ddff51c seconds=4.6",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "p4_yahtzee"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    }
+  ],
+  "installation_limitation": "Records identify successful transfers of specific packages to specific units; they do not establish hardware gameplay or frame-rate acceptance."
+}

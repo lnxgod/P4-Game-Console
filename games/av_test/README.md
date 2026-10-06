@@ -11,3 +11,9 @@ codec, I2S, touch, or SD hardware directly.
 
 All visuals and tones are original and code-generated. No raster or
 third-party assets are used. License: MIT.
+
+## Launcher presentation
+
+The cartridge owns its title and `assets/launcher.p4i` icon. Source artwork,
+conversion details and provenance live beside the packed icon. Reproduce it
+with `python3 games/av_test/tools/pack_launcher.py` (offline Pillow only).

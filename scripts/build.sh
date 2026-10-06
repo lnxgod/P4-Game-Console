@@ -28,6 +28,26 @@ case "$P4_BOARD" in
         P4_BUILD_DIR="$P4_APP_DIR/build-tab5"
         P4_BOARD_DEFAULTS="$P4_PROJECT_ROOT/hardware/boards/m5stack-tab5/sdkconfig.defaults"
         P4_BOARD_ARGUMENTS="$P4_APP_DIR/sdkconfig.defaults;$P4_BOARD_DEFAULTS"
+        # Keep a display/audio-only successor on its installed peripheral scope.
+        # The default remains the separate USB-A controller candidate.
+        P4_TAB5_BLE_MULTIPLAYER=${P4_TAB5_BLE_MULTIPLAYER:-1}
+        case "$P4_TAB5_BLE_MULTIPLAYER" in
+            1)
+                P4_TAB5_BLE_CONFIG='CONFIG_P4_TAB5_BLE_MULTIPLAYER=y'
+                P4_BOARD_ARGUMENTS="$P4_BOARD_ARGUMENTS;$P4_PROJECT_ROOT/hardware/boards/m5stack-tab5/sdkconfig.ble.defaults"
+                ;;
+            0) P4_TAB5_BLE_CONFIG='# CONFIG_P4_TAB5_BLE_MULTIPLAYER is not set' ;;
+            *) printf '%s\n' 'P4_TAB5_BLE_MULTIPLAYER must be 0 or 1' >&2; exit 2 ;;
+        esac
+        P4_TAB5_USB_HOST=${P4_TAB5_USB_HOST:-1}
+        case "$P4_TAB5_USB_HOST" in
+            1) P4_TAB5_USB_CONFIG='CONFIG_P4_TAB5_USB_HOST=y' ;;
+            0)
+                P4_TAB5_USB_CONFIG='# CONFIG_P4_TAB5_USB_HOST is not set'
+                P4_BOARD_ARGUMENTS="$P4_BOARD_ARGUMENTS;$P4_PROJECT_ROOT/hardware/boards/m5stack-tab5/sdkconfig.no-usb-host.defaults"
+                ;;
+            *) printf '%s\n' 'P4_TAB5_USB_HOST must be 0 or 1' >&2; exit 2 ;;
+        esac
         ;;
     olimex-esp32-p4-pc)
         P4_BUILD_DIR="$P4_APP_DIR/build-olimex-esp32-p4-pc"
@@ -72,6 +92,10 @@ p4_idf_action() {
         set -- "$P4_IDF_REQUESTED_ACTION"
     fi
     if [ "$P4_APP" = console_os ] &&
+       [ "$P4_BOARD_PROFILE" = m5stack-tab5 ]; then
+        set -- -D "P4_TAB5_USB_HOST_BUILD=$P4_TAB5_USB_HOST" -D "P4_TAB5_BLE_MULTIPLAYER_BUILD=$P4_TAB5_BLE_MULTIPLAYER" "$@"
+    fi
+    if [ "$P4_APP" = console_os ] &&
        [ "$P4_WAVESHARE_CONTROLLER_FIRST_BUILD" -eq 1 ]; then
         idf.py -C "$P4_APP_DIR" -B "$P4_BUILD_DIR" \
             -D IDF_TARGET=esp32p4 \
@@ -95,7 +119,6 @@ p4_console_sd_root_is_exact() {
         -exec basename {} \; | LC_ALL=C sort)
     P4_SD_EXPECTED='DOOM1.WAD
 GAMES
-P4
 README.TXT
 UPDATE'
     [ "$P4_SD_ACTUAL" = "$P4_SD_EXPECTED" ]
@@ -108,7 +131,7 @@ p4_console_sd_prune_generated_conflicts() {
         while IFS= read -r P4_SD_ENTRY; do
             P4_SD_NAME=${P4_SD_ENTRY##*/}
             case "$P4_SD_NAME" in
-                DOOM1.WAD|GAMES|P4|README.TXT|UPDATE)
+                DOOM1.WAD|GAMES|README.TXT|UPDATE)
                     ;;
                 *)
                     printf 'Removing generated SD conflict entry: %s\n' \
@@ -164,6 +187,19 @@ if [ "$P4_APP" = console_os ] &&
     p4_idf_action reconfigure
 fi
 
+# sdkconfig defaults do not override an existing generated configuration.
+# Regenerate when switching the explicit Tab5 USB-A host selection, in either
+# direction, so an incremental build cannot retain the wrong peripheral scope.
+if [ "$P4_APP" = console_os ] &&
+   [ "$P4_BOARD_PROFILE" = m5stack-tab5 ] &&
+   [ -f "$P4_BUILD_DIR/sdkconfig" ] &&
+   { ! grep -Fqx "$P4_TAB5_USB_CONFIG" "$P4_BUILD_DIR/sdkconfig" ||
+     ! grep -Fqx "$P4_TAB5_BLE_CONFIG" "$P4_BUILD_DIR/sdkconfig"; }; then
+    printf 'Regenerating Tab5 Console OS sdkconfig for USB-A host=%s.\n' "$P4_TAB5_USB_HOST"
+    cmake -E remove "$P4_BUILD_DIR/sdkconfig"
+    p4_idf_action reconfigure
+fi
+
 # Finder and interrupted host-copy experiments can leave duplicate top-level
 # entries in this generated tree (for example "GAMES 2"). CMake owns the
 # staging directory and recreates it during configure, so force that safe
@@ -181,7 +217,13 @@ if [ "$P4_APP" = console_os ] &&
     p4_idf_action reconfigure
 fi
 
-p4_idf_action build
+if [ "${P4_TAB5_FIRMWARE_ONLY:-0}" = 1 ]; then
+    [ "$P4_APP" = console_os ] && [ "$P4_BOARD_PROFILE" = m5stack-tab5 ] || exit 2
+    p4_idf_action app
+    p4_idf_action p4_os_update_package
+else
+    p4_idf_action build
+fi
 
 if [ "$P4_APP" = console_os ] &&
    { [ "$P4_BOARD_PROFILE" = m5stack-tab5 ] ||

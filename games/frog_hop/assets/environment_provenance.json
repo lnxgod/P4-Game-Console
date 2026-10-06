@@ -1,0 +1,56 @@
+{
+  "mode": "built-in image_gen",
+  "source": "/Users/billh/.codex/generated_images/01a10e4d-8eac-7052-b410-c517e93f4e11/exec-0c73f84e-ebff-4f5a-b031-100f641840cc.png",
+  "asset": "assets/environment_v1.png",
+  "sha256": "388623113aa9e4e26c4cd97766069b705f90d7092cef4ff2b149fac1ea20abd9",
+  "prompt": "Use case: stylized-concept. Asset type: original seamless game terrain texture atlas for a polished top-down 2D frog river-crossing game at 768x480. Create one square image divided into EXACT four equally sized quadrants, no borders or gutters, no text. TOP LEFT: rich dark turquoise river water viewed straight down, translucent currents, small painterly ripples and submerged rounded stones, no shore, no objects. TOP RIGHT: lush short emerald grass, tiny clover leaves, occasional very small cream flowers, varied organic tufts and subtle soil, no large rocks. BOTTOM LEFT: charcoal blue-gray weathered asphalt road, fine granular aggregate, restrained hairline cracks and subtle tire wear, no lane markings and no objects. BOTTOM RIGHT: warm sandy riverbank earth with smooth small pebbles, moss patches, irregular stone texture, no water. Each quadrant should tile seamlessly in both axes with consistent even lighting and no directional gradient. Style: sophisticated hand-painted late-1990s console 2D terrain with finely controlled pixel-art texture, rich material depth and coherent natural palette, built to downsample to 128x128 pixels per quadrant. Quiet medium-low contrast so bright frog/car/log sprites remain readable. Strict orthographic overhead view. No scenery perspective, no horizon, no characters, no vehicles, no logs, no lily pads, no words, no logos, no UI.",
+  "transparent_background": false,
+  "conversion": {
+    "measured_quadrants": [
+      [
+        0,
+        0,
+        793,
+        496
+      ],
+      [
+        793,
+        0,
+        1586,
+        496
+      ],
+      [
+        0,
+        496,
+        793,
+        992
+      ],
+      [
+        793,
+        496,
+        1586,
+        992
+      ]
+    ],
+    "texture_size": [
+      128,
+      80
+    ],
+    "sampling": "Lanczos reduction to RGB565; tile at one source pixel per native pixel, fallback samples same material field",
+    "texture_static_bytes": 81920,
+    "hero_source": "assets/hires_atlas_v2.png",
+    "hero_crop": [
+      100,
+      95,
+      285,
+      245
+    ],
+    "hero_size": [
+      128,
+      104
+    ],
+    "hero_sampling": "Lanczos, aspect preserved, alpha >=160, RGB565 key 0",
+    "hero_static_bytes": 26624,
+    "total_static_bytes": 108544
+  }
+}

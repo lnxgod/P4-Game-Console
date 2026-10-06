@@ -41,19 +41,19 @@ static const console_app_descriptor_t s_apps[] = {
 
 static const console_app_descriptor_t s_paged_apps[] = {
     {1U, "ONE", "DOOR", "ONE", UINT16_C(0x07ff),
-     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true, NULL, NULL, NULL},
     {2U, "TWO", "DOOR", "TWO", UINT16_C(0xffe0),
-     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true, NULL, NULL, NULL},
     {3U, "THREE", "DOOR", "THREE", UINT16_C(0x07e0),
-     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true, NULL, NULL, NULL},
     {4U, "FOUR", "DOOR", "FOUR", UINT16_C(0xf81f),
-     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true, NULL, NULL, NULL},
     {5U, "FIVE", "DOOR", "FIVE", UINT16_C(0xf800),
-     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true, NULL, NULL, NULL},
     {6U, "SIX", "DOOR", "SIX", UINT16_C(0x001f),
-     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true, NULL, NULL, NULL},
     {7U, "SEVEN", "DOOR", "SEVEN", UINT16_C(0xffff),
-     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true},
+     CONSOLE_CAPABILITY_DISPLAY, CONSOLE_PAGE_EXTERNAL, true, NULL, NULL, NULL},
 };
 
 static console_shell_action_t release_touch(console_shell_t *shell)
@@ -67,9 +67,9 @@ static console_shell_action_t tap_surface(console_shell_t *shell,
 {
     const console_shell_contact_t contact = {
         .x = (uint16_t)(CONSOLE_SHELL_VIEWPORT_LEFT +
-            (uint32_t)surface_x * CONSOLE_SHELL_VIEWPORT_WIDTH / CONSOLE_SHELL_WIDTH),
+            (uint32_t)surface_x * CONSOLE_SHELL_VIEWPORT_WIDTH / P4_ANSI_SURFACE_WIDTH),
         .y = (uint16_t)(CONSOLE_SHELL_VIEWPORT_TOP +
-            (uint32_t)surface_y * CONSOLE_SHELL_VIEWPORT_HEIGHT / CONSOLE_SHELL_HEIGHT),
+            (uint32_t)surface_y * CONSOLE_SHELL_VIEWPORT_HEIGHT / P4_ANSI_SURFACE_HEIGHT),
     };
     (void)console_shell_handle_touch(shell, true, &contact, 1U);
     return release_touch(shell);
@@ -142,22 +142,23 @@ static void render_bbs_reference(console_shell_t *shell,
     shell->home_scroll_row = target_row;
     shell->home_scroll_visual_q16 = (int32_t)(
         (base_row << 16) + fraction_pixels * (1U << 16) / 48U);
+    /* The output may be 1.5x; shift terminal rows before scaling, just as
+     * the two independently rendered page references do. */
     for (unsigned y = 144U; y < 368U; ++y) {
-        const int base_source_y = (int)y + (int)fraction_pixels;
-        if (base_source_y >= 144 && base_source_y < 368) {
-            memcpy(output + (size_t)y * CONSOLE_SHELL_WIDTH,
-                   base + (size_t)base_source_y * CONSOLE_SHELL_WIDTH,
-                   CONSOLE_SHELL_WIDTH * sizeof(*output));
-        }
-        const int adjacent_source_y = (int)y - 48 +
-            (int)fraction_pixels;
-        if (adjacent_source_y >= 144 && adjacent_source_y < 368) {
-            memcpy(output + (size_t)y * CONSOLE_SHELL_WIDTH,
-                   adjacent + (size_t)adjacent_source_y *
-                       CONSOLE_SHELL_WIDTH,
-                   CONSOLE_SHELL_WIDTH * sizeof(*output));
+        for (unsigned page = 0U; page < 2U; ++page) {
+            const int source_y = (int)y + (int)fraction_pixels - (int)page * 48;
+            if (source_y < 144 || source_y >= 368) continue;
+            const uint16_t *source = page == 0U ? base : adjacent;
+            const size_t out0 = y * CONSOLE_SHELL_HEIGHT / P4_ANSI_SURFACE_HEIGHT;
+            const size_t out1 = (y + 1U) * CONSOLE_SHELL_HEIGHT / P4_ANSI_SURFACE_HEIGHT;
+            const size_t src = (size_t)source_y * CONSOLE_SHELL_HEIGHT / P4_ANSI_SURFACE_HEIGHT;
+            for (size_t py = out0; py < out1; ++py)
+                memcpy(output + py * CONSOLE_SHELL_WIDTH,
+                    source + src * CONSOLE_SHELL_WIDTH,
+                    CONSOLE_SHELL_WIDTH * sizeof(*output));
         }
     }
+
     free(adjacent);
 }
 

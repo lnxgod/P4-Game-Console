@@ -1,0 +1,11 @@
+{
+  "generator": "built-in image_gen.imagegen",
+  "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-63491cad-9d3f-45f4-a264-bfed35a5bbcc.png",
+  "source_sha256": "fcc898f6fa57f66fe086abfae4211d39b58940dfab7278a89620e682cccfd33e",
+  "asset": "gamechangers_mark_flight.png",
+  "reference": "gamechangers_mark_v042.png",
+  "packed_bytes": 442368,
+  "packed_sha256": "4cf8a16d89b645fb0f6d8b4d4c6080f73224100f8b42834d9672b1a2283bb11e",
+  "layout": "384x384 RGB565 little endian plus alpha8",
+  "intent": "3D graphite/chrome joystick with lime rings/buttons and cyan edge lighting; transparent production boot sprite"
+}

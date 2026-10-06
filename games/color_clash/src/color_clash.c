@@ -8,6 +8,8 @@
 #include <string.h>
 
 #include "p4/draw.h"
+#include "p4/card_art.h"
+#include "generated/table_materials.inc"
 #include "p4/game.h"
 #include "p4/input.h"
 
@@ -39,7 +41,9 @@ enum {
     HAND_Y = 146,
     HAND_STEP = 34,
     HAND_SWIPE_STEP = 24,
-    HAND_SWIPE_VERTICAL_SLOP = 18,
+    HAND_DRAG_THRESHOLD = 8,
+    PLAY_X = 12, PLAY_Y = 84, PLAY_W = 104, PLAY_H = 27,
+    DROP_X = 125, DROP_Y = 46, DROP_W = 58, DROP_H = 76,
     HAND_PLAYABLE_LIFT = 4,
     HAND_SELECTED_LIFT = 8,
     DRAW_X = 246,
@@ -83,79 +87,17 @@ static const uint8_t s_color_aid_name_chars[COLOR_CLASH_COLOR_AID_COUNT] = {
     8U, 7U, 11U,
 };
 
-static bool high_resolution_surface(const p4_game_surface_t *surface)
-{
-    return surface != NULL &&
-        surface->width == P4_GAME_SURFACE_HIGH_RES_WIDTH &&
-        surface->height == P4_GAME_SURFACE_HIGH_RES_HEIGHT;
-}
+static bool high_resolution_surface(const p4_game_surface_t *s)
+{ return s->width == P4_GAME_SURFACE_HIGH_RES_WIDTH; }
+static int scale_coordinate(const p4_game_surface_t *s,int n)
+{ return p4_ui_x(s,n); }
 
-static int scale_coordinate(const p4_game_surface_t *surface, int value)
-{
-    if (!high_resolution_surface(surface)) {
-        return value;
-    }
-    const int numerator = value * 12;
-    return numerator >= 0 ? (int)((numerator + 2) / 5)
-                          : -(int)((-numerator + 2) / 5);
-}
-
-static int scale_extent(const p4_game_surface_t *surface,
-                        int origin, int extent)
-{
-    return scale_coordinate(surface, origin + extent) -
-        scale_coordinate(surface, origin);
-}
-
-static void high_res_fill_rect(p4_game_surface_t *surface,
-                               int x, int y, int width, int height,
-                               uint16_t color)
-{
-    p4_draw_fill_rect(surface, scale_coordinate(surface, x),
-                      scale_coordinate(surface, y),
-                      scale_extent(surface, x, width),
-                      scale_extent(surface, y, height), color);
-}
-
-static void high_res_rect(p4_game_surface_t *surface,
-                          int x, int y, int width, int height,
-                          uint16_t color)
-{
-    high_res_fill_rect(surface, x, y, width, 1, color);
-    high_res_fill_rect(surface, x, y + height - 1, width, 1, color);
-    high_res_fill_rect(surface, x, y, 1, height, color);
-    high_res_fill_rect(surface, x + width - 1, y, 1, height, color);
-}
-
-static void high_res_fill_circle(p4_game_surface_t *surface,
-                                 int center_x, int center_y, int radius,
-                                 uint16_t color)
-{
-    p4_draw_fill_circle(surface,
-                        scale_coordinate(surface, center_x),
-                        scale_coordinate(surface, center_y),
-                        scale_coordinate(surface, radius), color);
-}
-
-static void high_res_text(p4_game_surface_t *surface,
-                          int x, int y, const char *value,
-                          uint16_t color, unsigned scale,
-                          size_t max_characters)
-{
-    unsigned output_scale = scale;
-    if (high_resolution_surface(surface)) {
-        output_scale = (scale * 12U + 2U) / 5U;
-    }
-    p4_draw_text(surface, scale_coordinate(surface, x),
-                 scale_coordinate(surface, y), value, color,
-                 output_scale, max_characters);
-}
-
-#define p4_draw_fill_rect high_res_fill_rect
-#define p4_draw_rect high_res_rect
-#define p4_draw_fill_circle high_res_fill_circle
-#define p4_draw_text high_res_text
-
+/* Layout stays in canonical touch coordinates. Each primitive and glyph draws
+ * directly into the negotiated surface; there is no scaled low-res frame. */
+#define p4_draw_fill_rect p4_card_fill
+#define p4_draw_rect p4_card_outline
+#define p4_draw_fill_circle p4_card_circle
+#define p4_draw_text p4_card_text
 static size_t append_unsigned(char *text, size_t capacity, size_t length,
                               unsigned value)
 {
@@ -406,7 +348,8 @@ static bool hand_card_at_point(const color_clash_state_t *state,
 static bool begin_hand_touch(color_clash_state_t *state,
                              uint16_t x, uint16_t y)
 {
-    if (state->phase != COLOR_CLASH_TURN ||
+    if ((state->phase != COLOR_CLASH_TURN &&
+         state->phase != COLOR_CLASH_DRAWN_CARD) ||
         !color_clash_local_turn(state) ||
         y < HAND_Y - 8 ||
         y >= HAND_Y + COLOR_CLASH_FRAME_SMALL_HEIGHT) {
@@ -417,7 +360,27 @@ static bool begin_hand_touch(color_clash_state_t *state,
     state->hand_touch_card = NO_CARD;
     state->hand_touch_last_x = x;
     state->hand_touch_start_y = y;
+    state->hand_touch_start_x = x;
+    state->hand_touch_x = x;
+    state->hand_touch_y = y;
+    state->hand_dragging = false;
     (void)hand_card_at_point(state, x, y, &state->hand_touch_card);
+    const uint8_t card = state->hand_touch_card;
+    if (state->phase == COLOR_CLASH_DRAWN_CARD && card != state->selected_card) {
+        state->hand_touch_active = false;
+        return true;
+    }
+    state->hand_touch_count = state->hand_counts[state->local_player_slot];
+    state->hand_touch_revision = state->network_revision;
+    if (card < state->hand_touch_count) {
+        state->hand_touch_value = state->hands[state->local_player_slot][card];
+        const uint8_t visual = color_clash_hand_visual_index(state,state->local_player_slot,card);
+        const int card_x = HAND_X + ((int)visual-(int)hand_window_start(state))*HAND_STEP;
+        const int lift = card == state->selected_card ? HAND_SELECTED_LIFT :
+            (color_clash_hand_card_playable_now(state,state->local_player_slot,card)?HAND_PLAYABLE_LIFT:0);
+        state->hand_touch_offset_x = (int16_t)((int)x-card_x);
+        state->hand_touch_offset_y = (int16_t)((int)y-HAND_Y+lift);
+    }
     return true;
 }
 
@@ -427,10 +390,17 @@ static void update_hand_touch(color_clash_state_t *state,
     if (!state->hand_touch_active) {
         return;
     }
+    state->hand_touch_x = x;
+    state->hand_touch_y = y;
+    if (state->hand_dragging) return;
     const int vertical = (int)y - (int)state->hand_touch_start_y;
-    if (vertical <= -HAND_SWIPE_VERTICAL_SLOP ||
-        vertical >= HAND_SWIPE_VERTICAL_SLOP) {
-        state->hand_touch_scrolled = true;
+    const int dx = (int)x - (int)state->hand_touch_start_x;
+    const int abs_y = vertical < 0 ? -vertical : vertical;
+    const int abs_x = dx < 0 ? -dx : dx;
+    if (!state->hand_touch_scrolled && state->hand_touch_card != NO_CARD &&
+        abs_y >= HAND_DRAG_THRESHOLD && abs_y*2 >= abs_x) {
+        state->hand_dragging = true;
+        return;
     }
     int horizontal = (int)x - (int)state->hand_touch_last_x;
     if (horizontal <= -HAND_SWIPE_STEP) {
@@ -454,29 +424,48 @@ static void update_hand_touch(color_clash_state_t *state,
     }
 }
 
+static bool hand_gesture_current(const color_clash_state_t *state)
+{
+    const uint8_t player=state->local_player_slot, card=state->hand_touch_card;
+    return color_clash_local_turn(state) &&
+        (state->phase==COLOR_CLASH_TURN || state->phase==COLOR_CLASH_DRAWN_CARD) &&
+        state->network_revision==state->hand_touch_revision &&
+        state->hand_counts[player]==state->hand_touch_count &&
+        card<state->hand_counts[player] &&
+        state->hands[player][card]==state->hand_touch_value;
+}
+
+static bool card_over_play(const color_clash_state_t *state)
+{
+    return point_in(state->hand_touch_x,state->hand_touch_y,DROP_X,DROP_Y,DROP_W,DROP_H) ||
+        point_in(state->hand_touch_x,state->hand_touch_y,PLAY_X,PLAY_Y,PLAY_W,PLAY_H);
+}
+
 static void finish_hand_touch(p4_game_context_t *context,
                               color_clash_state_t *state)
 {
-    if (!state->hand_touch_active) {
-        return;
+    if (!state->hand_touch_active) return;
+    const bool dragging=state->hand_dragging, scrolled=state->hand_touch_scrolled;
+    const uint8_t card=state->hand_touch_card;
+    const bool current=hand_gesture_current(state);
+    state->hand_touch_active=false;
+    state->hand_dragging=false;
+    state->hand_touch_scrolled=false;
+    if (!current) return;
+    if (dragging) {
+        if (card_over_play(state) && color_clash_hand_card_playable_now(
+                state,state->local_player_slot,card)) {
+            (void)color_clash_perform_action(context,state,COLOR_CLASH_NET_PLAY,card);
+        }
+    } else if (!scrolled) {
+        if (state->selected_card==card) {
+            (void)color_clash_perform_action(context,state,COLOR_CLASH_NET_PLAY,card);
+        } else {
+            state->selected_card=card;
+            normalize_hand_view(state);
+        }
     }
-    const bool scrolled = state->hand_touch_scrolled;
-    const uint8_t card = state->hand_touch_card;
-    state->hand_touch_active = false;
-    state->hand_touch_scrolled = false;
-    state->hand_touch_card = NO_CARD;
-    if (scrolled || state->phase != COLOR_CLASH_TURN ||
-        !color_clash_local_turn(state) ||
-        card >= state->hand_counts[state->local_player_slot]) {
-        return;
-    }
-    if (state->selected_card == card) {
-        (void)color_clash_perform_action(
-            context, state, COLOR_CLASH_NET_PLAY, card);
-    } else {
-        state->selected_card = card;
-        normalize_hand_view(state);
-    }
+    state->hand_touch_card=NO_CARD;
 }
 
 static void handle_turn_touch(p4_game_context_t *context,
@@ -514,7 +503,13 @@ static void handle_turn_touch(p4_game_context_t *context,
         !color_clash_local_turn(state)) {
         return;
     }
-    if (point_in(x, y, DRAW_X, DRAW_Y, DRAW_W, DRAW_H)) {
+    if (point_in(x,y,PLAY_X,PLAY_Y,PLAY_W,PLAY_H) ||
+        point_in(x,y,DROP_X,DROP_Y,DROP_W,DROP_H)) {
+        (void)color_clash_perform_action(context,state,COLOR_CLASH_NET_PLAY,state->selected_card);
+        return;
+    }
+    if (point_in(x, y, DRAW_X, DRAW_Y, DRAW_W, DRAW_H) ||
+        point_in(x,y,192,54,COLOR_CLASH_FRAME_LARGE_WIDTH,COLOR_CLASH_FRAME_LARGE_HEIGHT)) {
         (void)color_clash_perform_action(
             context, state,
             state->phase == COLOR_CLASH_DRAWN_CARD
@@ -638,6 +633,11 @@ static p4_game_result_t game_update(
     uint32_t elapsed_ms)
 {
     color_clash_state_t *const state = context->state;
+    p4_game_input_t direct_input = *input;
+    if ((input->touch_valid && input->touch_count != 0U) || state->touch_was_down) {
+        direct_input.held=0U; direct_input.pressed=0U; direct_input.released=0U;
+        input=&direct_input;
+    }
     const bool touch_down = input->touch_valid && input->touch_count != 0U;
     const bool touch_pressed = touch_down && !state->touch_was_down;
     const bool touch_released = !touch_down && state->touch_was_down;
@@ -668,7 +668,14 @@ static p4_game_result_t game_update(
         color_clash_poll_network(context, state);
     }
     normalize_hand_view(state);
-    if (touch_pressed) {
+    if (state->hand_touch_active && !hand_gesture_current(state) &&
+        state->hand_touch_card!=NO_CARD) {
+        state->hand_touch_active=false; state->hand_dragging=false;
+    }
+    if (input->touch_count > 1U) {
+        state->hand_touch_active=false; state->hand_dragging=false;
+    }
+    if (touch_pressed && input->touch_count==1U) {
         if (state->phase == COLOR_CLASH_MENU) {
             handle_menu_touch(state, input->touches[0].x,
                               input->touches[0].y);
@@ -967,18 +974,15 @@ static void draw_symbol(p4_game_surface_t *surface, int x, int y,
         label[1] = '2';
     }
     const unsigned label_chars = rank == COLOR_CLASH_DRAW_TWO ? 2U : 1U;
-    const unsigned scale = large ? 2U : 1U;
-    const int text_width = (int)(label_chars * 6U * scale);
-    const int card_width = large ? COLOR_CLASH_FRAME_LARGE_WIDTH
-                                 : COLOR_CLASH_FRAME_SMALL_WIDTH;
-    const int text_y = y + (large ? 25 : 17);
-    p4_draw_text(surface, x + (card_width - text_width) / 2 + 1,
-                 text_y + 1, label, COLOR_BLACK, scale, 2U);
-    p4_draw_text(surface, x + (card_width - text_width) / 2,
-                 text_y, label,
-                 color_clash_card_color(card) == COLOR_CLASH_GOLD
-                    ? COLOR_BLACK : COLOR_TEXT,
-                 scale, 2U);
+    const unsigned font=(unsigned)p4_ui_y(surface,large?18:13);
+    const int card_width=p4_ui_x(surface,large?COLOR_CLASH_FRAME_LARGE_WIDTH:COLOR_CLASH_FRAME_SMALL_WIDTH);
+    const int text_width=p4_ui_text_width(label,font,label_chars);
+    const int left=p4_ui_x(surface,x)+(card_width-text_width)/2;
+    const int top=p4_ui_y(surface,y+(large?24:15));
+    p4_ui_text(surface,left,top,label,
+               color_clash_card_color(card)==COLOR_CLASH_GOLD?COLOR_BLACK:COLOR_TEXT,
+               font,label_chars);
+
 }
 
 static void draw_card(p4_game_surface_t *surface, int x, int y,
@@ -1031,25 +1035,14 @@ static void draw_card(p4_game_surface_t *surface, int x, int y,
 static void draw_card_back(p4_game_surface_t *surface, int x, int y,
                            uint8_t color_aid)
 {
-    p4_draw_fill_rect(surface, x + 2, y + 3,
-                      COLOR_CLASH_FRAME_LARGE_WIDTH,
-                      COLOR_CLASH_FRAME_LARGE_HEIGHT, COLOR_BLACK);
-    p4_draw_fill_rect(surface, x, y, COLOR_CLASH_FRAME_LARGE_WIDTH,
-                      COLOR_CLASH_FRAME_LARGE_HEIGHT, COLOR_PANEL_ALT);
-    p4_draw_rect(surface, x, y, COLOR_CLASH_FRAME_LARGE_WIDTH,
-                 COLOR_CLASH_FRAME_LARGE_HEIGHT, COLOR_GOLD);
-    p4_draw_rect(surface, x + 3, y + 3,
-                 COLOR_CLASH_FRAME_LARGE_WIDTH - 6,
-                 COLOR_CLASH_FRAME_LARGE_HEIGHT - 6, COLOR_ACCENT);
-    for (uint8_t color = 0U; color < COLOR_CLASH_COLOR_COUNT; ++color) {
-        p4_draw_fill_rect(surface, x + 9, y + 14 + (int)color * 8,
-                          24, 5, s_colors[color]);
-        if (color_aid != COLOR_CLASH_COLOR_AID_STANDARD) {
-            draw_color_shape(surface, x + 14,
-                             y + 16 + (int)color * 8,
-                             color, 2);
-        }
+    p4_card_back(surface,x,y,COLOR_CLASH_FRAME_LARGE_WIDTH,
+                  COLOR_CLASH_FRAME_LARGE_HEIGHT,card_table_back,false);
+    p4_draw_fill_rect(surface,x+6,y+25,30,13,COLOR_PANEL);
+    for(uint8_t color=0U;color<COLOR_CLASH_COLOR_COUNT;++color){
+        p4_draw_fill_circle(surface,x+10+(int)color*7,y+31,2,s_colors[color]);
     }
+    (void)color_aid;
+
 }
 
 static void draw_exit(p4_game_surface_t *surface)
@@ -1062,6 +1055,7 @@ static void draw_exit(p4_game_surface_t *surface)
 static void draw_menu(p4_game_surface_t *surface,
                       const color_clash_state_t *state)
 {
+    p4_card_felt(surface,0,0,320,200,card_table_felt);
     p4_draw_text(surface, 82, 10, "COLOR CLASH", COLOR_TEXT, 2U, 11U);
     p4_draw_text(surface, 100, 33, "ONE PLAYER PER P4",
                  COLOR_MUTED, 1U, 17U);
@@ -1107,17 +1101,19 @@ static void draw_menu(p4_game_surface_t *surface,
     p4_draw_rect(surface, 91, MENU_START_Y, 138, MENU_START_H, COLOR_TEXT);
     p4_draw_text(surface, 124, 171, "START PRACTICE",
                  COLOR_BG, 1U, 14U);
-    p4_draw_text(surface, 61, 188, "NETWORK PLAY: OPEN P4MP LOBBY",
+    p4_draw_text(surface, 61, 188, "LINKED PLAY: USE MULTIPLAYER",
                  COLOR_MUTED, 1U, 31U);
 }
 
 static void draw_player_panels(p4_game_surface_t *surface,
                                const color_clash_state_t *state)
 {
-    const int available = 273;
+    p4_ui_text(surface,p4_ui_x(surface,47),p4_ui_y(surface,8),
+               "COLOR CLASH",COLOR_TEXT,surface->width==320U?9U:22U,11U);
+    const int available = 190;
     const int width = available / state->player_count;
     for (uint8_t player = 0U; player < state->player_count; ++player) {
-        const int x = 45 + (int)player * width;
+        const int x = 128 + (int)player * width;
         const bool active = player == state->current_player;
         p4_draw_fill_rect(surface, x, 2, width - 2, 20,
                           active ? COLOR_PANEL_ALT : COLOR_PANEL);
@@ -1135,8 +1131,8 @@ static void draw_player_panels(p4_game_surface_t *surface,
         label[4] = '\0';
         (void)append_unsigned(label, sizeof(label), 4U,
                               state->hand_counts[player]);
-        p4_draw_text(surface, x + 5, 9, label,
-                     active ? COLOR_TEXT : COLOR_MUTED, 1U, 8U);
+        p4_ui_text(surface,p4_ui_x(surface,x+4),p4_ui_y(surface,8),label,
+                   active?COLOR_TEXT:COLOR_MUTED,surface->width==320U?9U:20U,8U);
     }
 }
 
@@ -1214,6 +1210,7 @@ static void draw_hand(p4_game_surface_t *surface,
         if (index == UINT8_MAX) {
             break;
         }
+        if (state->hand_dragging && index==state->hand_touch_card) continue;
         const bool playable = color_clash_hand_card_playable_now(
             state, state->local_player_slot, index);
         const bool selected = index == state->selected_card &&
@@ -1244,7 +1241,7 @@ static void draw_hand(p4_game_surface_t *surface,
         }
         length = append_unsigned(range, sizeof(range), length, count);
         p4_draw_text(surface, 318 - (int)length * 6,
-                     137, range, COLOR_MUTED, 1U, 19U);
+                     191, range, COLOR_MUTED, 1U, 19U);
         p4_draw_text(surface, 133, 191, "< SWIPE >",
                      COLOR_MUTED, 1U, 9U);
     }
@@ -1333,7 +1330,7 @@ static void draw_game_over(p4_game_surface_t *surface,
     p4_draw_text(surface, 126, 86, winner, COLOR_TEXT, 2U, 16U);
     p4_draw_fill_rect(surface, 83, 143, 154, 31, COLOR_ACCENT);
     p4_draw_rect(surface, 83, 143, 154, 31, COLOR_TEXT);
-    p4_draw_text(surface, 112, 154, "A: PLAY AGAIN", COLOR_BG, 1U, 13U);
+    p4_draw_text(surface, 112, 154, "PLAY AGAIN", COLOR_BG, 1U, 10U);
 }
 
 static bool game_render(p4_game_context_t *context,
@@ -1351,7 +1348,7 @@ static bool game_render(p4_game_context_t *context,
     }
     if (state->phase == COLOR_CLASH_NETWORK_WAIT ||
         state->phase == COLOR_CLASH_NETWORK_LOST) {
-        p4_draw_text(surface, 58, 42, "COLOR CLASH P4MP",
+        p4_draw_text(surface, 58, 42, "COLOR CLASH",
                      COLOR_TEXT, 2U, 16U);
         p4_draw_text(surface, 56, 94,
             state->phase == COLOR_CLASH_NETWORK_LOST
@@ -1361,13 +1358,13 @@ static bool game_render(p4_game_context_t *context,
                 ? COLOR_DANGER : COLOR_ACCENT,
             1U, 29U);
         p4_draw_text(surface, 51, 132,
-                     "HOST-AUTHORITATIVE / OS SESSION",
+                     "KEEP EVERY PLAYER CONNECTED",
                      COLOR_MUTED, 1U, 31U);
         draw_exit(surface);
         return true;
     }
     p4_draw_fill_rect(surface, 0, 22, 320, 178, COLOR_TABLE_DARK);
-    p4_draw_fill_rect(surface, 3, 38, 314, 101, COLOR_TABLE);
+    p4_card_felt(surface,3,38,314,101,card_table_felt);
     draw_player_panels(surface, state);
     draw_status(surface, state);
     draw_uno_button(surface, state);
@@ -1390,9 +1387,14 @@ static bool game_render(p4_game_context_t *context,
                  state->phase == COLOR_CLASH_DRAWN_CARD ? "PASS" : "DRAW",
                  color_clash_local_turn(state) ? COLOR_BG : COLOR_MUTED,
                  1U, 4U);
+    const bool playable = color_clash_local_turn(state) &&
+        color_clash_hand_card_playable_now(state,state->local_player_slot,state->selected_card);
+    p4_draw_fill_rect(surface,PLAY_X,PLAY_Y,PLAY_W,PLAY_H,playable?COLOR_ACCENT:COLOR_PANEL);
+    p4_draw_rect(surface,PLAY_X,PLAY_Y,PLAY_W,PLAY_H,COLOR_LINE);
+    p4_draw_text(surface,PLAY_X+38,PLAY_Y+9,"PLAY",playable?COLOR_BG:COLOR_MUTED,1U,4U);
     draw_hand(surface, state);
     if (state->notice_ms != 0U) {
-        p4_draw_fill_rect(surface, 53, 126, 214, 17, COLOR_DANGER);
+        p4_draw_fill_rect(surface, 53, 120, 214, 15, COLOR_DANGER);
         if (state->notice == COLOR_CLASH_NOTICE_UNO_CALLED) {
             char line[18] = "P1 CALLED UNO!";
             line[1] = (char)('1' + state->notice_player);
@@ -1402,7 +1404,7 @@ static bool game_render(p4_game_context_t *context,
             p4_draw_text(surface,
                          state->notice_player == state->local_player_slot
                             ? 115 : 112,
-                         132, line, COLOR_TEXT, 1U,
+                         126, line, COLOR_TEXT, 1U,
                          state->notice_player == state->local_player_slot
                             ? 15U : 14U);
         } else if (state->notice == COLOR_CLASH_NOTICE_UNO_CAUGHT) {
@@ -1414,13 +1416,13 @@ static bool game_render(p4_game_context_t *context,
             p4_draw_text(surface,
                          state->notice_player == state->local_player_slot
                             ? 101 : 103,
-                         132, line, COLOR_TEXT, 1U,
+                         126, line, COLOR_TEXT, 1U,
                          state->notice_player == state->local_player_slot
                             ? 19U : 18U);
         } else {
             const bool draw_four_notice = state->notice ==
                 COLOR_CLASH_NOTICE_DRAW_FOUR_BLOCKED;
-            p4_draw_text(surface, draw_four_notice ? 66 : 70, 132,
+            p4_draw_text(surface, draw_four_notice ? 66 : 70, 126,
                          draw_four_notice
                             ? "DRAW 4 NEEDS NO COLOR MATCH"
                             : "MATCH COLOR OR SYMBOL",
@@ -1428,42 +1430,42 @@ static bool game_render(p4_game_context_t *context,
                          draw_four_notice ? 27U : 21U);
         }
     } else if (state->uno_pending_player < state->player_count) {
-        char prompt[28] = "START/TAP UNO: CATCH P1";
-        uint8_t chars = 23U;
-        prompt[22] = (char)('1' + state->uno_pending_player);
+        char prompt[28] = "TAP UNO TO CATCH P1";
+        uint8_t chars = 18U;
+        prompt[17] = (char)('1' + state->uno_pending_player);
         if (state->uno_pending_player == state->local_player_slot) {
-            memcpy(prompt, "START/TAP: CALL UNO!", 21U);
-            chars = 20U;
+            memcpy(prompt, "TAP TO CALL UNO!", 16U);
+            chars = 15U;
         }
         p4_draw_text(surface,
                      state->uno_pending_player == state->local_player_slot
                         ? 100 : 88,
-                     132, prompt, COLOR_GOLD, 1U, chars);
+                     126, prompt, COLOR_GOLD, 1U, chars);
     } else if (!color_clash_local_turn(state)) {
         const bool cpu_turn = state->mode == COLOR_CLASH_PRACTICE ||
             (state->mode == COLOR_CLASH_NETWORK &&
              state->current_player >= state->human_player_count);
-        p4_draw_text(surface, 25, 132,
+        p4_draw_text(surface, 25, 126,
             cpu_turn
                 ? "BOT IS CHOOSING A CARD..."
                 : "WAITING FOR ANOTHER PLAYER...",
             COLOR_GOLD, 1U, 31U);
     } else if (state->phase == COLOR_CLASH_DRAWN_CARD &&
                can_play_and_call_uno(state)) {
-        p4_draw_text(surface, 70, 132,
-                     "START UNO+PLAY  A PLAY  B PASS",
+        p4_draw_text(surface, 70, 126,
+                     "UNO+PLAY OR PLAY / PASS",
                      COLOR_GOLD, 1U, 30U);
     } else if (state->phase == COLOR_CLASH_DRAWN_CARD) {
-        p4_draw_text(surface, 49, 132,
-                     "A PLAY DRAWN CARD  B/START PASS",
+        p4_draw_text(surface, 49, 126,
+                     "PLAY DRAWN CARD OR PASS",
                      COLOR_GOLD, 1U, 31U);
     } else if (can_play_and_call_uno(state)) {
-        p4_draw_text(surface, 70, 132,
-                     "START UNO+PLAY  A PLAY  B DRAW",
+        p4_draw_text(surface, 70, 126,
+                     "UNO+PLAY OR PLAY / DRAW",
                      COLOR_GOLD, 1U, 30U);
     } else {
-        p4_draw_text(surface, 12, 132,
-                     "LEFT/RIGHT  A PLAY  B/START DRAW",
+        p4_draw_text(surface, 12, 126,
+                     "DRAG A CARD TO THE PILE",
                      COLOR_MUTED, 1U, 34U);
     }
     if (state->phase == COLOR_CLASH_CHOOSE_COLOR ||
@@ -1471,6 +1473,15 @@ static bool game_render(p4_game_context_t *context,
         draw_choice_overlay(surface, state);
     } else if (state->phase == COLOR_CLASH_GAME_OVER) {
         draw_game_over(surface, state);
+    }
+    if (state->hand_dragging && hand_gesture_current(state)) {
+        const bool legal=color_clash_hand_card_playable_now(state,state->local_player_slot,state->hand_touch_card);
+        const uint16_t ink=legal?COLOR_ACCENT:COLOR_DANGER;
+        p4_draw_rect(surface,DROP_X,DROP_Y,DROP_W,DROP_H,ink);
+        p4_draw_rect(surface,DROP_X-1,DROP_Y-1,DROP_W+2,DROP_H+2,ink);
+        draw_card(surface,(int)state->hand_touch_x-state->hand_touch_offset_x,
+            (int)state->hand_touch_y-state->hand_touch_offset_y-3,
+            state->hand_touch_value,false,true,color_aid_mode(state));
     }
     draw_exit(surface);
     return true;

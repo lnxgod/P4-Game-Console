@@ -20,6 +20,7 @@ enum {
 typedef struct {
     int16_t x;
     int16_t y;
+    int16_t previous_y;
     bool active;
 } space_projectile_t;
 
@@ -34,10 +35,20 @@ typedef struct {
     uint32_t respawn_ms;
     uint32_t wave_delay_ms;
     uint32_t held_buttons;
+    /* Presentation only: never sampled by firing, collisions, or the RNG. */
+    uint32_t visual_clock_ms;
+    uint32_t formation_tween_ms;
+    uint32_t impact_ms;
+    int16_t formation_from_x;
+    int16_t formation_from_y;
+    int16_t impact_x;
+    int16_t impact_y;
+    uint8_t impact_frame;
     p4_game_audio_effect_player_t audio;
     int16_t formation_x;
     int16_t formation_y;
     int16_t player_x;
+    int16_t previous_player_x;
     int8_t formation_direction;
     uint8_t lives;
     uint8_t wave;
@@ -47,10 +58,16 @@ typedef struct {
     uint16_t shields[SPACE_SHIELD_COUNT];
     space_projectile_t player_projectiles[SPACE_PLAYER_PROJECTILE_COUNT];
     space_projectile_t enemy_projectiles[SPACE_ENEMY_PROJECTILE_COUNT];
+    bool intro;
+    bool launch_input_blocked;
+    bool title_touch_down;
     bool paused;
     bool game_over;
 } space_invaders_state_t;
 
 void space_invaders_reset(space_invaders_state_t *state);
+/* Presentation position in original world units; rules never consume this. */
+int space_invaders_formation_visual_q8(const space_invaders_state_t *state, bool horizontal);
 
+int space_invaders_motion_visual_q8(int previous, int current, uint32_t remainder_ms);
 #endif

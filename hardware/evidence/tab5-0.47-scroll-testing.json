@@ -1,0 +1,100 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "version": "0.47",
+  "recorded_at": "2026-10-06T00:29:41.741181+00:00",
+  "status": "both-units-readback-and-boot-health-verified-physical-scroll-acceptance-pending",
+  "authorization": {
+    "file": "hardware/evidence/tab5-0.47-scroll-authorization.json",
+    "sha256": "1c5173c5e3551d9ac9a8eb7b2062385b0b15e72e0a49386851ee87fd62cbb307"
+  },
+  "image": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 3932848,
+    "sha256": "c40eb9f3e7227e4cb0e15696a44cb06c8539bd49b478f0cd13c4aa1297be0ba3"
+  },
+  "update": {
+    "file": "local-data/firmware/tab5/0.47/P4UPDATE.P4U",
+    "sha256": "893bff2339ebe2f57cc8c98ea9a29268b720ce74c2c041080f1701c74a32d406"
+  },
+  "trigger": "Operator reported 0.46 scrolling chunky and explicitly requested flash of 0.47.",
+  "changes": [
+    "Cached native viewport row translation and exposed-strip repaint, retained 0.44 art/layout",
+    "Bounded cadence-independent momentum, stop-touch launch suppression, stale/invalid-input and Reduce motion cancellation",
+    "PPA native damage replay across alternating buffers; retained two-refresh reuse fence and full recovery on failed submit",
+    "Categories and protected file controls retained; file listing changes cancel momentum",
+    "One serial timing summary per physical scroll burst"
+  ],
+  "validation": {
+    "prerequisite_tests": 39,
+    "failures": 0,
+    "sanitizers": "ASan/UBSan shell and display layout",
+    "cached_frames_compared_to_full": 240,
+    "host_benchmark": {
+      "cached_total_ms": 199.31,
+      "full_total_ms": 2628.69,
+      "speedup": 13.19,
+      "is_device_fps": false
+    },
+    "display_replay": "20 alternating-buffer frames match complete rotation, including disjoint damage, full transitions and left-edge tall damage",
+    "motion": "cadence independent, monotonic/bounded glide, stopping touch cannot launch, long stalls/stale samples/invalid input/reduced motion stop glide",
+    "firmware_verifier": {
+      "ble_multiplayer_enabled": true,
+      "board": "m5stack-tab5",
+      "charger_control_enabled": true,
+      "content_bundle_verified": false,
+      "flash_authorized": false,
+      "hardware_verified": false,
+      "image_bytes": 3932848,
+      "image_sha256": "c40eb9f3e7227e4cb0e15696a44cb06c8539bd49b478f0cd13c4aa1297be0ba3",
+      "native_cartridges": null,
+      "result": "tab5-build-candidate-verified",
+      "usb_host_enabled": true,
+      "version": "0.47",
+      "wifi_multiplayer_enabled": true
+    }
+  },
+  "units": {
+    "A": {
+      "panel": "ST7121",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "receipt": "hardware/backups/tab5-a-install-2xef33lb/receipt.json",
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "runtime_log": "hardware/backups/tab5-a-install-2xef33lb/runtime.log",
+      "runtime_log_sha256": "4b853c6085bcc480fd7a77a7bcd7f6c89f8f4672092f3cdcc34db8c380c75182",
+      "scroll_timing_lines": [],
+      "display_error_lines": [],
+      "latest_battery_sample": "I (87567) tab5_sensors: SENSORS_SAMPLE battery_valid=1 mv=7804 ma=-486 percent=75 estimate=voltage imu_valid=1 accel_mg=5,65,-1003 gyro_mdps=183,122,-183 rtc_valid=1 date=2026-10-06 time=00:27:39",
+      "physical_smoothness": "pending operator feedback"
+    },
+    "B": {
+      "panel": "ST7123",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "receipt": "hardware/backups/tab5-b-install-59b2x5eu/receipt.json",
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "runtime_log": "hardware/backups/tab5-b-install-59b2x5eu/runtime.log",
+      "runtime_log_sha256": "40ed224ddcad95b9b7677c9f5efcddeaba70ef1a2fdb68d32432e23786009275",
+      "scroll_timing_lines": [],
+      "display_error_lines": [],
+      "latest_battery_sample": "I (56195) tab5_sensors: SENSORS_SAMPLE battery_valid=1 mv=7820 ma=-509 percent=76 estimate=voltage imu_valid=1 accel_mg=117,-36,-990 gyro_mdps=122,-183,122 rtc_valid=1 date=2026-10-06 time=00:29:23",
+      "physical_smoothness": "pending operator feedback"
+    }
+  },
+  "physical_scroll_acceptance": "pending operator feedback; host rendering speedup is not hardware frame-rate proof",
+  "unchanged_limits": [
+    "No new multiplayer or game performance acceptance is implied.",
+    "Game icon content remains the separate remix task."
+  ],
+  "connection_retry": {
+    "receipt": "hardware/backups/tab5-a-install-t5gs3eq_/receipt.json",
+    "reason": "Serial packet noise during initial connection",
+    "write_started": false,
+    "resolution": "Guarded retry succeeded; no write occurred in failed attempt"
+  }
+}

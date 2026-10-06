@@ -1,0 +1,469 @@
+{
+  "schema": 1,
+  "game": "space_invaders",
+  "version": "1.1.0",
+  "tested_at": "2026-10-06T04:26:12.783032+00:00",
+  "status": "local-play-tested",
+  "scope": "Illustrated title with explicit Play/A/Start launch, frozen combat and launch-input release guard; existing movement/combat/audio timings unchanged.",
+  "source_sha256": "5d89a150f7087ae3501f62b8ede993055689cf37ed34a77602f54ed27db89533",
+  "files": {
+    "CMakeLists.txt": "d432f9ee9d141b382d3bad6b1c94fef138d577f74d44de104a9e4433f575a4bd",
+    "README.md": "4e9a359371133158a94e57e036e0ff2129b018177bb4603f29b7b7c70330a971",
+    "assets/hires_atlas_v2.png": "6fad8858843565a2fbdcac4c839ca3b2bf80622607b6e16fbcff6341d0e5ee87",
+    "assets/hires_compiled_preview.png": "984eaabd4cff275268a4d2b0f8f0414eb0c7c3ebc33503e22899a20e894cc62e",
+    "assets/hires_provenance.json": "d2db8006ad2c2cea637701986cc7598cebed1e5dca5f22a6a96d31d7568a5571",
+    "assets/launcher-provenance.json": "0c682132278905569d5ee5cd2e369683e73928e003911f6d9a3142a29035d3d1",
+    "assets/launcher-source.png": "5406ab06bf8a06d0bcd4169dc183174774be1fa25af37f532f8db1da52ca3101",
+    "assets/launcher.p4i": "712bb24c727fb0612afd0974102343be0976c9212ca5a5fd65e041ec339cc9fc",
+    "assets/space_backdrop_provenance.json": "59c2a4b3e3590be49190d89e319987728c5094fb43911ec56097c92b14fa5a2e",
+    "assets/space_backdrop_v3.png": "ee65eae862523aeef797b885b8585f812e6fcc3b492374fe6499791d32bd8d4a",
+    "game.json": "11cc92eca3ed2e13a94b2d6fe8ff5ea10a507fec07756e6807fa7404f802d250",
+    "include/p4_games/space_invaders.h": "e164af58e291575eb0f1467b21400cccca6601383404ffbeb35b288c9cf8732c",
+    "src/generated/hires_art.inc": "b4852cef23d3db7635137adfe78e0bc36ceeb185981e82902df53fdbdd7456fd",
+    "src/generated/space_backdrop.inc": "ae92639b38eaf0799c647ffd461b7f014f58442cb106a0286c6de69597b4bab5",
+    "src/hires.h": "481a635c0d155fdaf984a7a928946fc2d7da5da6ef32cdbad75cfcc3664bc74f",
+    "src/space_invaders.c": "9ada6636afd1ff1fc88465a4368bbb2eb441cc3171931ace0053da2931215329",
+    "src/space_invaders_internal.h": "b659dd463eeea74a2c4620e5c6bfb873751d4e47c024d2c9cd854a79f90ab22d",
+    "tests/CMakeLists.txt": "619ba6c49260cb6eb3b406827d52bbb88ef6a38470ca73a7d25aef0561222336",
+    "tests/performance-input.txt": "dd97d48c89e65db30480a2c4b505f36d7eee6f97e0a318c1ef94b21ab173df77",
+    "tests/test_space_invaders.c": "03486389b06b45c1c1f85848c102eedac626af45ed09e9e0fe58293033e17a47",
+    "tools/CMakeLists.txt": "2df866b4a9271990d02b80a486a16c842760c9e2527318960d5872c487b025fa",
+    "tools/convert_background.py": "23c2c6684f4bdc8b2f05812684f6839d736af676e707e31b64fd2223f710435e",
+    "tools/convert_hires.py": "84f8ed55cba4a730e74cbb06597d04c42dd8a05906baadf012ba676da2bcf077",
+    "tools/render_hires.c": "a6d53a461e3a596e7b012edc7556c36f4028d2e487af6f3872947a9658e0fd68",
+    "tools/render_preview.c": "43065eec3e2d3fad8c1355386289195f327a71283a937320d6399e4617809602"
+  },
+  "source_hash_method": "Sorted game-relative UTF-8 path plus NUL plus binary SHA-256; excludes LOCAL_TESTING.json, PRESENTATION_TESTING.json, TOUCH_TESTING.json, .DS_Store and __pycache__.",
+  "automated": {
+    "focused_ctest": {
+      "passed": 1,
+      "failed": 0,
+      "log": {
+        "path": "build-host/presentation-pass/space_invaders/focused-tests.log",
+        "bytes": 265,
+        "sha256": "afb1a43bae71698016776170b0fb1206f537f496ff04ae0854cdb26bbdece13d"
+      }
+    },
+    "generic_sdl_ctest": {
+      "passed": 5,
+      "failed": 0,
+      "log": {
+        "path": "build-host/presentation-pass/space_invaders/sdl-tests.log",
+        "bytes": 677,
+        "sha256": "db81b31c72d502f6c287b4bbd9353ee8a6dab384daf89885ca8f0ed424142e5b"
+      }
+    },
+    "regression_output": {
+      "path": "build-host/presentation-pass/space_invaders/regression-output.log",
+      "bytes": 635,
+      "sha256": "40a5a9db540d7633466a5597412e6d01c4f241a9ba42e6643fdaab42af6c26cf"
+    }
+  },
+  "captures": {
+    "build-host/presentation-pass/space_invaders/after-damaged-edge-320.ppm": "e9a14704c140b916dfad1a02bc9eaed4b0a8c6a4dead206bfd00a2b7722cfeab",
+    "build-host/presentation-pass/space_invaders/after-damaged-edge-768.ppm": "2261b8a57f1e850bdf68c276a9ba4c7d48bac66ad2800fc37a6455dc116a2e1f",
+    "build-host/presentation-pass/space_invaders/after-game-over-320.ppm": "e0b82195ab2d355eeb5a84c6c5af855f1f535a01cdb047c2d1fae27c3a2b7d0b",
+    "build-host/presentation-pass/space_invaders/after-game-over-768.ppm": "addfe1a65d21e1f1eb2667528788e1e4ad384d32f3cf617be980037f00d90f31",
+    "build-host/presentation-pass/space_invaders/after-gameplay-320.ppm": "175c2dda613a6257306597f67033de6b9804723503161ac3378b073fb595576b",
+    "build-host/presentation-pass/space_invaders/after-gameplay-768.ppm": "800041da3f39d7ec7ecd273dbe0b269b3786742c984440db3f46660febec67c0",
+    "build-host/presentation-pass/space_invaders/after-opening-320.ppm": "282aa4108eb8a4b51690749b8ea7ba3be74af6dac5dc03d56fcf7cafbd37ad32",
+    "build-host/presentation-pass/space_invaders/after-opening-768.ppm": "ccd1f4a38f16d4a59784a709ee87ffb93f6fd1e403fe20000c6582ca7595ddbc",
+    "build-host/presentation-pass/space_invaders/after-paused-320.ppm": "18cdac1f515db46a03ed0bdee5ffaa722a6297af3509ea99f230f494a9d462d4",
+    "build-host/presentation-pass/space_invaders/after-paused-768.ppm": "84752aaf22d25d705ed90320211511a4c52c9898592fba75613bbca3c8780287"
+  },
+  "capture_scope": "Actual-source native/fallback opening, gameplay, pause. Invaders damaged-edge/game-over are seeded fixtures; Frog header-limits uses maximum score/round. Inspected PNGs are derived from these PPMs.",
+  "package_validation": {
+    "path": "build-host/presentation-pass/space_invaders/INVADERS.P4G",
+    "bytes": 402512,
+    "sha256": "d314e8dab365c187035cc47f9cebae203aade492e495301d2e01cb039670e19d",
+    "package": {
+      "path": "build-host/presentation-pass/space_invaders/INVADERS.P4G",
+      "bytes": 402512,
+      "sha256": "d314e8dab365c187035cc47f9cebae203aade492e495301d2e01cb039670e19d"
+    },
+    "header_payload_icon": "passed",
+    "import_allowlist": "passed by pinned packager",
+    "payload_sha256": "423fd4f916ad66eb8e2f5547b18db3c88371eb94903a6ffb185da74eb62599c0",
+    "limit_bytes": 524288,
+    "remaining_bytes": 121776,
+    "validation": {
+      "path": "build-host/presentation-pass/space_invaders/package-validation.json",
+      "bytes": 425,
+      "sha256": "21b77a433195b7c1246a492d81b7caa89db1877426a7500cac529e9d64fb21e5"
+    },
+    "staged": false,
+    "uploaded": false
+  },
+  "artifacts": {
+    "package": {
+      "path": "build-host/presentation-pass/space_invaders/INVADERS.P4G",
+      "bytes": 402512,
+      "sha256": "d314e8dab365c187035cc47f9cebae203aade492e495301d2e01cb039670e19d"
+    },
+    "static_game_image_bytes": 260096,
+    "added_raster_bytes": 0
+  },
+  "performance": {
+    "method": "2000 frames per resolution, real game and tone/PCM mixer, optimized desktop CPU; excludes ESP32 execution/display/transport",
+    "input_tape": {
+      "path": "games/space_invaders/tests/performance-input.txt",
+      "bytes": 1668,
+      "sha256": "dd97d48c89e65db30480a2c4b505f36d7eee6f97e0a318c1ef94b21ab173df77"
+    },
+    "raw_results": {
+      "768": {
+        "path": "build-host/presentation-pass/space_invaders/benchmark-768.json",
+        "bytes": 530,
+        "sha256": "82eeadfa0a5cd92d7d8d168e3b69d6a1e2e71a3b79d4bdc2bcabe15fe087e0e4"
+      },
+      "320": {
+        "path": "build-host/presentation-pass/space_invaders/benchmark-320.json",
+        "bytes": 530,
+        "sha256": "897c2475d1597fa94762c9f9e35039c20bb3de044b91be4da1f19fd29b2adafb"
+      }
+    },
+    "results": {
+      "768": {
+        "game": "org.p4console.space-invaders",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1884,
+        "last_frame_hash": "7fe47951",
+        "update_audio_ms": {
+          "mean": 0.0011,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.019,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0682,
+          "p50": 0.053,
+          "p95": 0.117,
+          "p99": 0.149,
+          "max": 0.352,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0693,
+          "p50": 0.054,
+          "p95": 0.118,
+          "p99": 0.151,
+          "max": 0.355,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.space-invaders",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1881,
+        "last_frame_hash": "b7ee282f",
+        "update_audio_ms": {
+          "mean": 0.001,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.004,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0283,
+          "p50": 0.027,
+          "p95": 0.034,
+          "p99": 0.039,
+          "max": 0.062,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0293,
+          "p50": 0.028,
+          "p95": 0.035,
+          "p99": 0.04,
+          "max": 0.063,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "benchmark_binary": {
+      "path": "build-host/play-space_invaders/p4_game_benchmark",
+      "bytes": 518864,
+      "sha256": "3b0ad70e4164516a0c05168e04b6327a010804682d18e9e3bb86433e71385246"
+    },
+    "rv32_assembly": {
+      "path": "build-host/presentation-pass/space_invaders/after-rv32.s",
+      "bytes": 1451747,
+      "sha256": "0341f19b7a89e0fb30e4174a68b3e7ad79f98ee06a36bc674f0358752579d69e"
+    },
+    "cost_notes": "No new per-pixel game loop or heap allocation. Invaders title reuses three ship sprite draws, existing backdrop and bounded shared text/rectangles; Frog only replaces original HUD labels. Static assembly review is not device-cycle measurement.",
+    "title_only": {
+      "input": {
+        "path": "build-host/presentation-pass/space_invaders/title-input.txt",
+        "bytes": 10,
+        "sha256": "ffb96ec1f4885a36fce52a1105e8b114fe694ef5ce56daff0517781230d61f8e"
+      },
+      "results": {
+        "768": {
+          "game": "org.p4console.space-invaders",
+          "frames": 2000,
+          "width": 768,
+          "height": 480,
+          "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+          "changed_frames": 277,
+          "last_frame_hash": "32237d76",
+          "update_audio_ms": {
+            "mean": 0.0008,
+            "p50": 0.001,
+            "p95": 0.001,
+            "p99": 0.001,
+            "max": 0.016,
+            "over_33_333ms": 0
+          },
+          "render_ms": {
+            "mean": 0.0591,
+            "p50": 0.059,
+            "p95": 0.065,
+            "p99": 0.075,
+            "max": 0.199,
+            "over_33_333ms": 0
+          },
+          "total_ms": {
+            "mean": 0.0599,
+            "p50": 0.059,
+            "p95": 0.066,
+            "p99": 0.076,
+            "max": 0.2,
+            "over_33_333ms": 0
+          }
+        },
+        "320": {
+          "game": "org.p4console.space-invaders",
+          "frames": 2000,
+          "width": 320,
+          "height": 200,
+          "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+          "changed_frames": 555,
+          "last_frame_hash": "3653397e",
+          "update_audio_ms": {
+            "mean": 0.0009,
+            "p50": 0.001,
+            "p95": 0.001,
+            "p99": 0.001,
+            "max": 0.008,
+            "over_33_333ms": 0
+          },
+          "render_ms": {
+            "mean": 0.0293,
+            "p50": 0.028,
+            "p95": 0.033,
+            "p99": 0.037,
+            "max": 0.064,
+            "over_33_333ms": 0
+          },
+          "total_ms": {
+            "mean": 0.0302,
+            "p50": 0.029,
+            "p95": 0.034,
+            "p99": 0.038,
+            "max": 0.065,
+            "over_33_333ms": 0
+          }
+        }
+      }
+    }
+  },
+  "final_simulator": {
+    "path": "build-host/play-space_invaders/p4_game_host.app/Contents/MacOS/p4_game_host",
+    "bytes": 1218352,
+    "sha256": "263d385494a808c5b4ccf0dbf4f449da7bae6ccdd7db7d84c73f29ee062a251a",
+    "build_log": {
+      "path": "build-host/presentation-pass/space_invaders/sdl-build.log",
+      "bytes": 437,
+      "sha256": "238017cadd75151b4230265ea50b968f044463422ab25cb6ddf266b64c7609dc"
+    },
+    "test_log": {
+      "path": "build-host/presentation-pass/space_invaders/sdl-tests.log",
+      "bytes": 677,
+      "sha256": "db81b31c72d502f6c287b4bbd9353ee8a6dab384daf89885ca8f0ed424142e5b"
+    },
+    "tests_passed": 5,
+    "tests_failed": 0
+  },
+  "test_logs": {
+    "build-host/presentation-pass/space_invaders/benchmark-build.log": "c2ed93ffd93c840755c0e91392ae593b1b52de9b7aaf6c208123feaceb1dde2e",
+    "build-host/presentation-pass/space_invaders/captures.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "build-host/presentation-pass/space_invaders/focused-build.log": "97df1603f326ffc016e0bea70e188c28c164c197b50d17a1b999bfddcc037458",
+    "build-host/presentation-pass/space_invaders/focused-tests.log": "afb1a43bae71698016776170b0fb1206f537f496ff04ae0854cdb26bbdece13d",
+    "build-host/presentation-pass/space_invaders/package.log": "6b183432885583eeba2c6aa4ddd47bebdb11dd30730d5c62d289a1d9c7520204",
+    "build-host/presentation-pass/space_invaders/regression-output.log": "40a5a9db540d7633466a5597412e6d01c4f241a9ba42e6643fdaab42af6c26cf",
+    "build-host/presentation-pass/space_invaders/sdl-build.log": "238017cadd75151b4230265ea50b968f044463422ab25cb6ddf266b64c7609dc",
+    "build-host/presentation-pass/space_invaders/sdl-tests.log": "db81b31c72d502f6c287b4bbd9353ee8a6dab384daf89885ca8f0ed424142e5b"
+  },
+  "interactive_play": {
+    "status": "local-play-tested",
+    "tester": "Integrating root agent using CUA in actual final SDL app",
+    "binary_sha256": "263d385494a808c5b4ccf0dbf4f449da7bae6ccdd7db7d84c73f29ee062a251a",
+    "observations": [
+      "Title displayed; touch Play launched combat",
+      "Keyboard movement and fire",
+      "Start paused and Start resumed",
+      "Back exited"
+    ],
+    "not_claimed": [
+      "Sustained held-fire manual timing; automated regression only",
+      "Physical tablet FPS, input, audio or display acceptance",
+      "Full wave clear"
+    ]
+  },
+  "shared_dependencies": {
+    "components/p4_game_api/include/p4/presentation.h": "c82e11e65836eb5de29a473f254d583daaa1946c357f4d8c9b3a76461f272d21",
+    "components/p4_game_api/include/p4/presentation_font.h": "0bc9a110a5f9b0e8f1cc44ffa212206758ebdd58e15ac488030f65fe72a7f448",
+    "components/p4_game_api/src/presentation_font.c": "149b2e510c0a0b8dfe5c4a7ac4be2f8006c4360c09a82c088209f7ece1eb65c5",
+    "components/p4_game_api/src/input.c": "b895eff5252e8d141fb49dc3c8e31fbd629bcda72068f14917dcf425bc7a81f7",
+    "tools/p4-game-host/play_game.c": "749d0439cc5ed0cbb88194202406236558b7ac9fd816f128ca09568b71aeeba2",
+    "tools/p4-game-host/frame_pacer.h": "4ff832b5242db46e176c79e2c4e13d5134e55f089b061014173c3d45d477c9f3",
+    "tools/p4-game-host/benchmark_game.c": "d923d0d7957bdfde8c8b09ef36b5178ed8d2da43de01bfaf3cdfa2b174b50d35",
+    "third_party/arimo/source.json": "13fb89fa53e03f902e0b54ae6cd1cd3e85c7ce3afc5273cf5d9f8b78472d8eba",
+    "third_party/arimo/OFL.txt": "11cce536cd2f3864d767003af5dcd739e2e15818cf2279b6175edeadd3960992",
+    "tools/p4-game-host/host_mouse.h": "7e09d5ff075109d6118ee7ac497a046274c1d724d2f4032d30584c65f2a10a50",
+    "components/p4_game_api/src/draw.c": "3056f2a5b8bb9f9db7c1df2d197e5a676b9c20f12d10398bc92f6c44b887fa36",
+    "components/p4_game_api/src/visual.c": "8160e9798853236da029abc8bf55e5ddf95909872a830469270afb7fa8ba6e23",
+    "tools/p4-game-host/host_service.c": "31f94486708417449b0144c5566dc2a1b32a2c54a7191508d7d0093bdb94e5e9",
+    "scripts/build-game-package.py": "caf815ddcf35e9d09dfb528f0f11f9661ca333310d96ac06a5a62c93a96fafbb"
+  },
+  "previous_evidence": {
+    "path": "build-host/presentation-pass/space_invaders/previous-local-testing.json",
+    "bytes": 22626,
+    "sha256": "88ad9b7a19c8dba94e414f23c1df7f905b5e1c58528f0353617825a853e02147"
+  },
+  "hardware_acceptance": null,
+  "current_package_installed_on_device": false,
+  "current_package_installed_units": [],
+  "installed_on_device": true,
+  "externally_published": false,
+  "installation_limitation": "Prior exact-artifact installation history is retained; this presentation candidate has not been transferred or qualified by this task.",
+  "pending": [
+    "Physical tablet performance/input/display/speaker acceptance",
+    "Parent-controlled installation"
+  ],
+  "latest_successful_installation_by_unit": {
+    "Tab5 A": {
+      "slug": "space_invaders",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "04629fda16e7e99a929db1239a147cc4bf08993c1edb2879baeaadb931334be9",
+      "package_bytes": 336696,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    "Tab5 B": {
+      "slug": "space_invaders",
+      "title": "Space Invaders",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "04629fda16e7e99a929db1239a147cc4bf08993c1edb2879baeaadb931334be9",
+      "package_bytes": 336696,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "INVADERS.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=INVADERS.P4G bytes=336696 sha256=04629fda16e7e99a929db1239a147cc4bf08993c1edb2879baeaadb931334be9 seconds=6.2",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "space_invaders"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    }
+  },
+  "installation_history": [
+    {
+      "slug": "space_invaders",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "f5ecf8ff20339b81b2aa03848849f7e1f741bca3c77e50a07910070edc96bcbd",
+      "package_bytes": 336612,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T00:46:05.227426+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle atomic staging, package validation and device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/B-ready-arcade-install.log",
+        "log_sha256": "401295a2ca9d269515160e49c9a482e577146abc2792149922c3eaaade8a69b2"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    {
+      "slug": "space_invaders",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "04629fda16e7e99a929db1239a147cc4bf08993c1edb2879baeaadb931334be9",
+      "package_bytes": 336696,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    },
+    {
+      "slug": "space_invaders",
+      "title": "Space Invaders",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "04629fda16e7e99a929db1239a147cc4bf08993c1edb2879baeaadb931334be9",
+      "package_bytes": 336696,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "INVADERS.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=INVADERS.P4G bytes=336696 sha256=04629fda16e7e99a929db1239a147cc4bf08993c1edb2879baeaadb931334be9 seconds=6.2",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "space_invaders"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    }
+  ]
+}

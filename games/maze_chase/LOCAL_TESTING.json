@@ -1,0 +1,457 @@
+{
+  "schema": 1,
+  "game": "maze_chase",
+  "version": "1.1.1",
+  "tested_at": "2026-10-06T04:02:25.986391+00:00",
+  "source_sha256": "8f734840fb898fb8dc24a53086dba87c36cfb606223b60f688d5e991464ceb19",
+  "source_hash_method": "Sorted game-relative UTF-8 path plus NUL plus binary SHA-256 of each file; excludes LOCAL_TESTING.json, .DS_Store, __pycache__.",
+  "files": {
+    "CMakeLists.txt": "b7fa46f701cb6e55dd589ea942be9f96f475e1f052fcd59bfb1dc6da3ca49c63",
+    "README.md": "58abe9561e93816f4da0c46c1076d9b042ed442f2e4ab5a37d5e762ba66a0ff5",
+    "assets/chase_characters_v3.png": "708c22bf6f8ca8d8accd4d08392c712006fb6448033e3481cead1e83858dc93a",
+    "assets/chase_compiled_preview.png": "33dcc18d38b2c0f1a7f60744d3a93d89681a1d3f31259ef03b483ba765d193ad",
+    "assets/chase_hero_preview.png": "ddc5315461748cc3d5ba2fe83c007e8a1d1ae82ec28a116b89c31c2e62717302",
+    "assets/chase_provenance.json": "931c60305567d73e07da6d20b9a1091b26880b198308f7cabb7e7b86f96c7393",
+    "assets/hires_atlas_v2.png": "32bc7690a1c7189356c95bb5d318c49e35cf6412caa17a0d7a41c506536128fb",
+    "assets/hires_compiled_preview.png": "316c63f298aefd5037e649d65609156af9356b3c7722cc195977ac23dcc9c315",
+    "assets/hires_provenance.json": "5220691c23c64163dcc60c50d082c241a44438f87becf21eb606b5bbe9ee6b3d",
+    "assets/launcher-provenance.json": "49d54c92eae93c871909b169c170bfd32ac2a226a47a53da03045a800b0b051f",
+    "assets/launcher-source-v2.png": "3aaef108d826c1fe721a23fd58dca168b420fff6711b8339bcf8326a60d4cbbc",
+    "assets/launcher-source.png": "4362dd7d7fc758b5dae2414ef193d92c56ebbcd9f0883a6a92b30b580180b529",
+    "assets/launcher.p4i": "63e06b8908300f1b121b634fc4c7526289c4945b00b01275df928ed4eb669760",
+    "game.json": "19c18ce40c3cb660705e353b761b9ca86e46868e04b1c1dfd7de58907be91b95",
+    "include/p4_games/maze_chase.h": "47833d0b1427b77a78761979d1e5cf8c29dc89b34b02f5b94b6b1282bd680da8",
+    "src/generated/backdrop.inc": "6e62ba077d49cd13b2aeae27cb7c95cae24cd0cf3a4ecb62b6f50c25309c294f",
+    "src/generated/chase_art.inc": "a73a1e8570f9d1d1b42d5247770b9b157f06d224fe9ec45e1a7c9cb490d3ab1c",
+    "src/generated/hires_art.inc": "9ef787fbd8d4df2dc3051c84f9c8c034069c2680d8abffef6157e7ad456da31e",
+    "src/hires.h": "481a635c0d155fdaf984a7a928946fc2d7da5da6ef32cdbad75cfcc3664bc74f",
+    "src/maze_chase.c": "42370ddc0e82629fcb3d64b33faf8099332de104f59741cc2099f5f3137e8338",
+    "src/maze_chase_internal.h": "c45e970ea2c1fd5eef9f33f1043a8c113f34e2339a7cd9c10b284c05de9ef044",
+    "tests/CMakeLists.txt": "ee037c714f3fe3eae1cd37b00ced51b6b9cab3d795dc98728a2f72bd781eec3c",
+    "tests/performance-input.txt": "5f3fa823b96e7c7f8ae0f16819a733dafb9973fa3b83e75f853ad86a929940a1",
+    "tests/test_backdrop.c": "99649139a946f24ec3fca5e3ff235f48763d21d49511d50aad256b5c58e58971",
+    "tests/test_maze_chase.c": "0bfdb07b5b1415456766293fcef8b980d245f76f511ad64c3a3a7f8f7637ffee",
+    "tests/test_touch_pipeline.c": "cd49be238faab6eb14ed6ae6525d126a123a056aa722c132bce636ee49a8c565",
+    "tools/CMakeLists.txt": "7fff11c4a8a081e684741ec22fb998c65c3c40d00bb4862109c11a7f57e08ed8",
+    "tools/convert_chase.py": "dbef3b02b44a5097c86d4d747fbc84bf94b259f326bfeeaef74f33d6319143eb",
+    "tools/convert_hires.py": "5837a4d28d8496d5b3b0b5800c1b4d715021d0a76f0f0d929f3d8c611eb77041",
+    "tools/pack_backdrop.py": "40f2c50d1fac570a5297cbe19d28accb1eda134591d01f636b40d5b37b27d210",
+    "tools/render_backdrop.c": "9202c5ca7eb63f1e0b6a210d27df940ee1d3fb414cce36c6c3059b43d33b58e5",
+    "tools/render_hires.c": "7c2c9902805c5a20d334143748185e58721d8d816a788ad7ee213735fc795d70",
+    "tools/render_preview.c": "b6e7c42b929b29e90a4437b2bfa3fd8bff0c4ad11259a6df2eda332ea9a982ad"
+  },
+  "shared_source_files": {
+    "components/p4_game_api/include/p4/achievements.h": "c389a044b056142d11796b8de48a50fa6ce5214e50c733455a32c9a0a663d37d",
+    "components/p4_game_api/include/p4/audio.h": "9b8fdf601e9a0d767816625572ce454dd49f764f6af98329353c00038ea3d13a",
+    "components/p4_game_api/include/p4/audio_pack.h": "8dcead613074e3e5db390039754942f432bd4aa024e33f61bff202a9fcc5818e",
+    "components/p4_game_api/include/p4/card_art.h": "a63aa762a952e59ffa1bc5a15f755d6da88637045536e3fa00d6bbef4f8081fa",
+    "components/p4_game_api/include/p4/cartridge.h": "b3c7f4c0b3e3ff67e9e3ba9a81b162991922c8cf4a819758e4e6a9f9ac518f6a",
+    "components/p4_game_api/include/p4/dice.h": "4a9ee228bab0aee3b7dd7db43880e3337ec193417ddbd4bc577e6cf2f5ae68d6",
+    "components/p4_game_api/include/p4/draw.h": "47d5b29c0e736d62f421a231ba7c0fd8a97b7209a580ba5fc9f815c8fbe5ea1a",
+    "components/p4_game_api/include/p4/feedback.h": "ede8ccc4e9cab3c73b14dd3467a5276794c3cee90006581307bb525040396915",
+    "components/p4_game_api/include/p4/game.h": "33e65134e86f1597fe732f64df88720c5892280ff31ca00ac9cbee15beac7459",
+    "components/p4_game_api/include/p4/input.h": "4dd1d878598e81c1ec99d40b095b82202a49e3b80169a7217a6528d8f4ad6eb1",
+    "components/p4_game_api/include/p4/motion.h": "08768be7e8788299c44cffcbffafbdfd2d05a5603aa79ae8eaeb6c312cd41abb",
+    "components/p4_game_api/include/p4/presentation.h": "c82e11e65836eb5de29a473f254d583daaa1946c357f4d8c9b3a76461f272d21",
+    "components/p4_game_api/include/p4/presentation_font.h": "0bc9a110a5f9b0e8f1cc44ffa212206758ebdd58e15ac488030f65fe72a7f448",
+    "components/p4_game_api/include/p4/visual.h": "206e74c98b2a47202f0e253f126dcfdf5e57dda6c25de732c0360fe542543979",
+    "components/p4_game_api/src/achievements.c": "7e9fc731cedbf3cc6d93f3a2946972cbcd84a6f5f54d1e71c498f309d1c24a95",
+    "components/p4_game_api/src/audio_mixer.c": "e09639fb540e7854bf2cb4da74439db5dc6b575ac09bacf6bb3a2d4f68f90500",
+    "components/p4_game_api/src/audio_pack.c": "d12cc933706012124784300f6abb15227d4534a298082ea9e8b23948acd9da71",
+    "components/p4_game_api/src/draw.c": "3056f2a5b8bb9f9db7c1df2d197e5a676b9c20f12d10398bc92f6c44b887fa36",
+    "components/p4_game_api/src/feedback.c": "2f05229f018a488576a8bacef4a91096b97e6c0495c51138c4518ee6cd01be4a",
+    "components/p4_game_api/src/game_runtime.c": "c1ac69e7c45192b287e07fec350d47826888117b1b41e25d90f2e7319d2c1996",
+    "components/p4_game_api/src/input.c": "b895eff5252e8d141fb49dc3c8e31fbd629bcda72068f14917dcf425bc7a81f7",
+    "components/p4_game_api/src/presentation_font.c": "149b2e510c0a0b8dfe5c4a7ac4be2f8006c4360c09a82c088209f7ece1eb65c5",
+    "components/p4_game_api/src/visual.c": "8160e9798853236da029abc8bf55e5ddf95909872a830469270afb7fa8ba6e23",
+    "components/p4_cp437/include/p4/cp437.h": "bfbcc829d7c91a1d8c4f1335394a9f78c446fa8146fd4d16c5298142b00e5b55",
+    "components/p4_cp437/src/cp437.c": "10405ddafb45fbf288362acf6f3b346de0a6483c9e014cc588036300dd521bdf",
+    "game-platform/runtime/cartridge_main.c": "a6b7062db30979c4d32728d451793cbde1d1303ceebc524a46b935f193a77c6d"
+  },
+  "scope": "Game-only scenery cost reduction, immediate reversals and continuous portal traversal; response to reported physical tile jumps. Hardware resolution is not yet confirmed.",
+  "checks": {
+    "focused_sanitizer_ctest": "3/3 passed",
+    "generic_sdl_host_ctest": "5/5 passed",
+    "game_registry": "passed; Skyline absent",
+    "primary_tab5_build": "passed; 17 native cartridges; no OS flash",
+    "exact_scene_pixels": "16/16 identical; backdrop reference comparison at both resolutions, normal/clear palettes and padded strides",
+    "movement": "sub-tile frame increments, continuous portal coordinates/split sprite bounds, reversal without unearned pearl, collision/arrival/timer regressions pass"
+  },
+  "benchmarks": {
+    "baseline": {
+      "320": {
+        "game": "org.p4console.maze-chase",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1724,
+        "last_frame_hash": "bf44dc77",
+        "update_audio_ms": {
+          "mean": 0.0012,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.009,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0321,
+          "p50": 0.03,
+          "p95": 0.068,
+          "p99": 0.076,
+          "max": 0.095,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0333,
+          "p50": 0.031,
+          "p95": 0.068,
+          "p99": 0.077,
+          "max": 0.097,
+          "over_33_333ms": 0
+        }
+      },
+      "768": {
+        "game": "org.p4console.maze-chase",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1724,
+        "last_frame_hash": "9754a5a9",
+        "update_audio_ms": {
+          "mean": 0.0013,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.003,
+          "max": 0.016,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.1337,
+          "p50": 0.113,
+          "p95": 0.327,
+          "p99": 0.361,
+          "max": 0.564,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.135,
+          "p50": 0.114,
+          "p95": 0.328,
+          "p99": 0.362,
+          "max": 0.568,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "after": {
+      "320": {
+        "game": "org.p4console.maze-chase",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1724,
+        "last_frame_hash": "bf44dc77",
+        "update_audio_ms": {
+          "mean": 0.0013,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.007,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0194,
+          "p50": 0.017,
+          "p95": 0.055,
+          "p99": 0.064,
+          "max": 0.084,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0207,
+          "p50": 0.018,
+          "p95": 0.056,
+          "p99": 0.065,
+          "max": 0.086,
+          "over_33_333ms": 0
+        }
+      },
+      "768": {
+        "game": "org.p4console.maze-chase",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1724,
+        "last_frame_hash": "9754a5a9",
+        "update_audio_ms": {
+          "mean": 0.0013,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.002,
+          "max": 0.018,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0893,
+          "p50": 0.075,
+          "p95": 0.304,
+          "p99": 0.325,
+          "max": 0.352,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0906,
+          "p50": 0.076,
+          "p95": 0.305,
+          "p99": 0.326,
+          "max": 0.353,
+          "over_33_333ms": 0
+        }
+      }
+    }
+  },
+  "assembly": {
+    "compiler": "esp-14.2.0_20251107/riscv32-esp-elf-gcc",
+    "flags": "-Os -march=rv32imafc_zicsr_zifencei -mabi=ilp32f -fPIC -ffunction-sections -fdata-sections -fvisibility=hidden -fno-jump-tables",
+    "reference": {
+      "path": "build-host/maze-fluid/maze-reference-rv32.s",
+      "bytes": 1031396,
+      "sha256": "b45b21d860bcc10ee4200369bbd3dbb8d7d96be78ffb73910e4a37c03889afcc"
+    },
+    "candidate": {
+      "path": "build-host/maze-fluid/maze-after-rv32.s",
+      "bytes": 1143205,
+      "sha256": "45450c65d35174dc8f4d712a6ffdfff38dcbaf06b58f5e180bde2ce5ad8a7972"
+    },
+    "finding": "Native backdrop inner pixel loop .L238 uses addi/sh/bne; no pixel division, surface validation or wall geometry. Row address multiplication once per row."
+  },
+  "backdrop": {
+    "rom_bytes": 83640,
+    "unique_rows": 314,
+    "runtime_cache_bytes": 0,
+    "native_and_fallback": true
+  },
+  "package": {
+    "path": "build-host/maze-fluid/MAZE.P4G",
+    "bytes": 370576,
+    "sha256": "c45a9f15a3a4545a4a84b085ce08ca7d67e8de4041a2597c12459ff35142d4b7"
+  },
+  "launcher_icon": {
+    "path": "games/maze_chase/assets/launcher.p4i",
+    "bytes": 9744,
+    "sha256": "63e06b8908300f1b121b634fc4c7526289c4945b00b01275df928ed4eb669760"
+  },
+  "interactive": {
+    "operator": "Codex via CUA",
+    "observed": "Keyboard start, left/up/right movement, score progression to 100, collision recovery, rapid reversal inputs and pause; desktop title about 58.4-60.1 FPS.",
+    "not_qualified": [
+      "Physical tablet motion, touch and speakers",
+      "Live mouse/swipe: app target disappeared during click attempts; automated real input pipeline passed",
+      "Full round and power combo completion"
+    ],
+    "additional_session_log": {
+      "path": "build-host/maze-fluid/interactive.log",
+      "bytes": 488,
+      "sha256": "da2015f9cbbe866b856ee55f771d4bebdd131e1b18f56fbf3219840836d1f101"
+    },
+    "additional_session_note": "Second short desktop session recorded 59.95 FPS, max gap 28.169 ms and normal exit; no active gameplay performance claim from that idle session."
+  },
+  "installed": {
+    "schema": 1,
+    "version": "1.1.1",
+    "units": [
+      {
+        "unit": "A",
+        "port": "/dev/cu.usbmodem2101",
+        "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+        "package": "build-host/maze-fluid/MAZE.P4G",
+        "bytes": 370576,
+        "sha256": "c45a9f15a3a4545a4a84b085ce08ca7d67e8de4041a2597c12459ff35142d4b7",
+        "log": "build-host/maze-fluid/install-A.log",
+        "exit_code": 0,
+        "os_version": "0.51",
+        "os_flashed": false,
+        "hardware_gameplay_acceptance": "pending",
+        "verified": true,
+        "log_sha256": "c5384a02250f16f0faeb76876b5d661b87efddc6b1179c41ff4933fdefdebe2b"
+      },
+      {
+        "unit": "B",
+        "port": "/dev/cu.usbmodem1101",
+        "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+        "package": "build-host/maze-fluid/MAZE.P4G",
+        "bytes": 370576,
+        "sha256": "c45a9f15a3a4545a4a84b085ce08ca7d67e8de4041a2597c12459ff35142d4b7",
+        "log": "build-host/maze-fluid/install-B.log",
+        "exit_code": 0,
+        "os_version": "0.51",
+        "os_flashed": false,
+        "hardware_gameplay_acceptance": "pending",
+        "verified": true,
+        "log_sha256": "27921293c8df8bd04ca416f8ba9f1914139f2849f90af2ad5d21485dc47ea948"
+      }
+    ]
+  },
+  "os": {
+    "version": "0.51",
+    "image_sha256": "2edcaf22917a847d927af5af010098d7066baaa93ff68b921b58ee3580c7f08a",
+    "changed": false,
+    "protected_lord_changed": false
+  },
+  "device_cadence": {
+    "status": "pending",
+    "baseline_capture_result": "Both bounded 120-second read-only captures recorded only launcher boot; no Maze Chase timing samples. Device 30 FPS floor and reported jumping remain unverified.",
+    "captures": [
+      {
+        "path": "build-host/maze-fluid/captures/A-maze-baseline/capture.json",
+        "bytes": 928,
+        "sha256": "3d45b15686aec0d3d0ab8387601b1b31997328bcf0190062470ad8fe9736ab84"
+      },
+      {
+        "path": "build-host/maze-fluid/captures/B-maze-baseline/capture.json",
+        "bytes": 928,
+        "sha256": "a1fcb19d36b9f5b0125e58941544b72ad59aa9a64e035808c886d89f5f9e8a25"
+      }
+    ]
+  },
+  "scenes": [
+    {
+      "before": "build-host/maze-fluid/before-fright-warning-320.ppm",
+      "after": "build-host/maze-fluid/after-fright-warning-320.ppm",
+      "identical": true,
+      "sha256": "c82b152dfd117052ae72ddc0cddae08f8e7756312eb64267a3a97eb236be4700"
+    },
+    {
+      "before": "build-host/maze-fluid/before-fright-warning-768.ppm",
+      "after": "build-host/maze-fluid/after-fright-warning-768.ppm",
+      "identical": true,
+      "sha256": "df67cff36a91636249c9c70bab5f3c6b888b50fe820c9f27329789ca699aae30"
+    },
+    {
+      "before": "build-host/maze-fluid/before-game-over-320.ppm",
+      "after": "build-host/maze-fluid/after-game-over-320.ppm",
+      "identical": true,
+      "sha256": "fc6f8b388fc97a092012b1311def9c072c494d1f40a7e5583da682731004efcc"
+    },
+    {
+      "before": "build-host/maze-fluid/before-game-over-768.ppm",
+      "after": "build-host/maze-fluid/after-game-over-768.ppm",
+      "identical": true,
+      "sha256": "83ff528c81597761c8f49b0dc9320af3d640a3612c23dbc164f781655d470d33"
+    },
+    {
+      "before": "build-host/maze-fluid/before-gameplay-320.ppm",
+      "after": "build-host/maze-fluid/after-gameplay-320.ppm",
+      "identical": true,
+      "sha256": "1db5741d2986a2cebb96b101c62c304f99c7438550086eec9aff82434308ea49"
+    },
+    {
+      "before": "build-host/maze-fluid/before-gameplay-768.ppm",
+      "after": "build-host/maze-fluid/after-gameplay-768.ppm",
+      "identical": true,
+      "sha256": "2bd7a3e9184354792e38663a80f760c4f9a7389a79fc1c22906d5e5b19d08c13"
+    },
+    {
+      "before": "build-host/maze-fluid/before-opening-320.ppm",
+      "after": "build-host/maze-fluid/after-opening-320.ppm",
+      "identical": true,
+      "sha256": "c3da29eb220e7e92c6d7889dd65c3483384e7e81d6928866e499560d57224208"
+    },
+    {
+      "before": "build-host/maze-fluid/before-opening-768.ppm",
+      "after": "build-host/maze-fluid/after-opening-768.ppm",
+      "identical": true,
+      "sha256": "f6ab988df6d52067177dfe87b2a350302c49e88de9c7e24204f20d5ff6310a18"
+    },
+    {
+      "before": "build-host/maze-fluid/before-paused-320.ppm",
+      "after": "build-host/maze-fluid/after-paused-320.ppm",
+      "identical": true,
+      "sha256": "e4a5082b1fca3f19b53571eb115a0e70e8186292e1dfce4b9424b21d56e8a58b"
+    },
+    {
+      "before": "build-host/maze-fluid/before-paused-768.ppm",
+      "after": "build-host/maze-fluid/after-paused-768.ppm",
+      "identical": true,
+      "sha256": "d1832ca35543ac1da277f23db407e051d9ebd4a8938623d9f493fb6b8ed08543"
+    },
+    {
+      "before": "build-host/maze-fluid/before-powered-320.ppm",
+      "after": "build-host/maze-fluid/after-powered-320.ppm",
+      "identical": true,
+      "sha256": "75086503b44044cfe03f1b19ac6f5f2126c4d000bbb04035305ab036d5850387"
+    },
+    {
+      "before": "build-host/maze-fluid/before-powered-768.ppm",
+      "after": "build-host/maze-fluid/after-powered-768.ppm",
+      "identical": true,
+      "sha256": "7fe277fdcb8fdb4ef5622794bb1c4585ea8dcebbdf2d681787dd7184698ecec2"
+    },
+    {
+      "before": "build-host/maze-fluid/before-recovery-320.ppm",
+      "after": "build-host/maze-fluid/after-recovery-320.ppm",
+      "identical": true,
+      "sha256": "5ab6ffe7d6a9669f580dd98d0590872e2b9d1eca8076c7d9350a85b227482608"
+    },
+    {
+      "before": "build-host/maze-fluid/before-recovery-768.ppm",
+      "after": "build-host/maze-fluid/after-recovery-768.ppm",
+      "identical": true,
+      "sha256": "a395fc1995905171133ee19109a634e893f3abe95750fe0950c656d2cb31a753"
+    },
+    {
+      "before": "build-host/maze-fluid/before-round-clear-320.ppm",
+      "after": "build-host/maze-fluid/after-round-clear-320.ppm",
+      "identical": true,
+      "sha256": "759c0c82ce0f13b5be1b3ebe18726559f7077ace51bd69c6739731e3632cb5f7"
+    },
+    {
+      "before": "build-host/maze-fluid/before-round-clear-768.ppm",
+      "after": "build-host/maze-fluid/after-round-clear-768.ppm",
+      "identical": true,
+      "sha256": "ec87e318998beb7b5216ea341a516dc3af501fdf23e1a131838f017f377b733c"
+    }
+  ],
+  "prior_version_evidence": {
+    "path": "build-host/maze-fluid/previous-LOCAL_TESTING.json",
+    "bytes": 30095,
+    "sha256": "c6c2775f06daa0570cd6eabcd9b79f24bcb08544fddaa48080c1b5256b5f10d1"
+  },
+  "logs": [
+    {
+      "path": "build-host/maze-fluid/after-tests.log",
+      "bytes": 490,
+      "sha256": "cccca3d1f07fc830da1e4e1f74773b85ab1f777fbf4c57c2fa2b567b81bc9afc"
+    },
+    {
+      "path": "build-host/maze-fluid/after-sdl-tests.log",
+      "bytes": 673,
+      "sha256": "f93b02c4b7235b07620006ef844fdbaa5bd52691d6a41288d4361dc481a2823e"
+    },
+    {
+      "path": "build-host/maze-fluid/registry-check.log",
+      "bytes": 1968,
+      "sha256": "5ee92a655ec2558f81134e5a25c8bab4a40ce85500d1163980f40e39b2ceb8a4"
+    },
+    {
+      "path": "build-host/maze-fluid/tab5-build.log",
+      "bytes": 48076,
+      "sha256": "0104b4392f4f1bcbb1ab0182b7ee8b084358b41873b3b5a8b3fce995c5780f84"
+    },
+    {
+      "path": "build-host/maze-fluid/install-A.log",
+      "bytes": 861,
+      "sha256": "c5384a02250f16f0faeb76876b5d661b87efddc6b1179c41ff4933fdefdebe2b"
+    },
+    {
+      "path": "build-host/maze-fluid/install-B.log",
+      "bytes": 861,
+      "sha256": "27921293c8df8bd04ca416f8ba9f1914139f2849f90af2ad5d21485dc47ea948"
+    }
+  ]
+}

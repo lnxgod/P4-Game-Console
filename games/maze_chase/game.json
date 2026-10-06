@@ -2,14 +2,14 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.0.1",
+  "version": "1.1.1",
   "package_file": "MAZE.P4G",
   "component": "maze_chase",
   "entry_symbol": "p4_maze_chase_game",
   "launcher_id": 100,
   "id": "org.p4console.maze-chase",
   "title": "Maze Chase",
-  "subtitle": "Collect dots. Dodge ghosts.",
+  "subtitle": "Power up. Chase the spirits.",
   "folder": "GAMES/ARCADE",
   "accent_rgb565": "0xffe0",
   "required_capabilities": [
@@ -18,9 +18,11 @@
   ],
   "optional_capabilities": [
     "audio-tone",
-    "audio-stream"
+    "audio-stream",
+    "video-highres"
   ],
   "license": "MIT",
-  "assets": "original-code-rendered-shapes-only",
-  "enabled": true
+  "assets": "original-ImageGen-high-resolution-sprite-atlas-and-native-detail; Arimo-OFL-1.1-presentation-font",
+  "enabled": true,
+  "launcher_icon": "assets/launcher.p4i"
 }

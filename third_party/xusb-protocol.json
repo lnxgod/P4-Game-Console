@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "kind": "protocol-reference-only",
+  "implementation": "Independent project-owned MIT decoder and USB client; no upstream driver source copied or vendored.",
+  "reference": {
+    "project": "Linux xpad",
+    "version": "v6.12",
+    "commit": "adc218676eef25575469234709c2d87185ca223a",
+    "url": "https://raw.githubusercontent.com/torvalds/linux/adc218676eef25575469234709c2d87185ca223a/drivers/input/joystick/xpad.c",
+    "sha256": "44a90b0c8e4e5a054d0f463bf251c478b50ad811a77e2aef307c2738caf6852f",
+    "bytes": 77580
+  },
+  "scope": {
+    "usb_interface": "ff/5d/01 alternate 0",
+    "input_packet": "00 14 followed by wired Xbox 360 input fields, 20 bytes total",
+    "not_implemented": [
+      "Xbox One/Series GIP",
+      "Xbox Wireless Adapter and 360 wireless receiver protocol",
+      "model-specific initialization quirks",
+      "rumble and LED output"
+    ]
+  }
+}

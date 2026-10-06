@@ -1,0 +1,125 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "kind": "wacky-wheels-p4-multiplayer",
+  "status": "host-tested-and-installed-on-Tab5-A-B-gameplay-acceptance-pending",
+  "game_id": "org.p4console.wacky-probe",
+  "mode": "two-player non-contact three-lap sprint on shareware track one; offline seven-CPU racing preserved",
+  "protocol": {
+    "version": 1,
+    "style": "realtime",
+    "players": 2,
+    "message_bytes": 60,
+    "input_bytes": 25,
+    "tick_rate_hz": 12,
+    "simulation_rate_hz": "136/12",
+    "session_binding": "shared seed; locally stable generation",
+    "authority": "host",
+    "max_receives_per_update": 8,
+    "stale_input_ms": 250,
+    "host_freeze_ms": 500,
+    "timeout_ms": 3000
+  },
+  "host": {
+    "asan_ubsan": "3/3 focused tests passed",
+    "two_instances": true,
+    "scripted_frames": 1800,
+    "different_local_generations": true,
+    "independent_framebuffers": true,
+    "packet_loss_and_queue_failure": true,
+    "malformed_stale_sender_and_session_rejection": true,
+    "three_lap_finish_places_and_reverse_crossing": "passed using actual track checkpoint transitions through host physics/lap code",
+    "back_relaunch_and_no_leaks": true,
+    "state_bytes_host": 99328,
+    "peak_engine_heap_bytes_two_instances": 658268,
+    "singleplayer_sanitized_render_ms": {
+      "median": 1.113,
+      "p95": 1.298,
+      "max": 1.384
+    },
+    "visual_inspection": "both host/client views inspected; network HUD moved away from original HUD and speedometer corrected"
+  },
+  "p4": {
+    "compiler": "esp-14.2.0_20251107",
+    "isa": "rv32imafc_zicsr_zifencei",
+    "abi": "ilp32f",
+    "elf_validator": "valid",
+    "frozen_import_allowlist": "pass",
+    "host_join_registry": "accepted by actual Console OS registry",
+    "largest_individual_stack_frame": 2688
+  },
+  "packages": {
+    "WACKYTRY.P4G": {
+      "bytes": 39728,
+      "sha256": "f8ea9d887a4974eb4047a3230e29166d26a0bf62a87ed4b75829ff9c87b551cf"
+    },
+    "WACKYTRY.P4R": {
+      "bytes": 4399076,
+      "sha256": "56373050954dc9126a001bcbdba8f24c7a0b7c65ccd73553ccd0735ef33f09c1"
+    }
+  },
+  "hardware": {
+    "installed": false,
+    "two_tablet_acceptance": false,
+    "bluetooth": "unapplied proposal pending specific radio approval; active firmware/build files unchanged"
+  },
+  "logs": {
+    "ctest": "/tmp/p4-wacky-mp-tests.log",
+    "cross_compile": "/tmp/p4-wacky-mp-cross.log",
+    "package": "/tmp/p4-wacky-mp-package.log"
+  },
+  "source_sha256": {
+    "scripts/wacky/fetch.py": "188e4716336c8b2e771355906f8c68a4bb745c973a50a0ebcaed937bdc28313c",
+    "scripts/wacky/network.c": "87aa0ee8f50cb50d8551e32c9ec35c81814a2597d2b3f435fc0545d1f6352be3",
+    "scripts/wacky/CMakeLists.txt": "e2cf0e7b613bd31ffcb59f859948b76a381b0fba5308a8970d529f1cf8f8a3c9",
+    "scripts/wacky/portable_libc.c": "8cdd37da64b6a99b3889d9b848508ddf108554b3b69df3bc0019f9430c6638ab",
+    "scripts/wacky/probe_checks.c": "54457a86086ccd21bf2dfb8393e0d3d809d4b63d088102c2afca66aa6094dc4f",
+    "scripts/wacky/port_support.h": "3548cdfb170e099706e7f65beb4202ff5a80e6b63a884f7d06f7c64c103efde2",
+    "scripts/wacky/package_probe.py": "299c776228405393bbac3f12696979ce1909f7169b4946a1212ce376486d1fdd",
+    "scripts/wacky/README.md": "52c7c094946f8b607745aaefc0a1aceed63f46b26633ab7b91f5bd345ef65845",
+    "scripts/wacky/network.h": "01285a3c142d2bb319b0291f53b7d8991685c1f2b8d563ea1e21dd2d00d74fe6",
+    "scripts/wacky/network_checks.c": "bc3da445b8e77a2ce758065253582fe808cf135295f7b438de2e8b731cc1c869",
+    "scripts/wacky/validate_elf.c": "e1361d6f857c6bd94e798ea9deea0286817814010f040d21327451e693228b17",
+    "scripts/wacky/port.c": "6379435a76193bbc1c876b86cf29a13b196f5ff24af1c034211db0f66d497965",
+    "scripts/wacky/cross_build.py": "b6a48f870ec029edddb539832a505407ce57fe9a80a930565c08e3a80e9a58a7",
+    "scripts/wacky/SDL.h": "3062cb4951a14fa15609a72ab31a6d309410cb9e571c3dcccfbf5884112dd812",
+    "scripts/wacky/port_support.c": "61e4a9042ad750f4aaf06f29c0b5fb5dc3b5eaed33b2036eaec2c9461810247b",
+    "scripts/wacky/prepare.py": "8d6feef6f20e0bc4847154b160bfcd8249cb0385cc56d976fd2fc1c328dc0be0"
+  },
+  "device_install": {
+    "A": {
+      "content_transfer": {
+        "file": "hardware/backups/tab5-a-install-1iuil9ag/wacky-content-transfer.log",
+        "sha256": "e4cc184b8cc6793343efedf702ac319f138ca8c2739d31c0401199d7da2c8584",
+        "files": 2,
+        "result": "P4_H1 BUNDLE_PASS"
+      },
+      "catalog_log": {
+        "file": "hardware/backups/tab5-a-install-1iuil9ag/post-content-runtime.log",
+        "sha256": "26ef250305c77bc481ac411885b45e8e56e971432a3f196e63a0b3b8e17f68e4"
+      },
+      "game_registered": true,
+      "multiplayer_registered": true,
+      "native_usb_open_caveat": "Opening the serial port coincided with a USB reset; this is a boot/catalog capture, not uninterrupted game-play evidence.",
+      "device_gameplay": "not exercised"
+    },
+    "B": {
+      "content_transfer": {
+        "file": "hardware/backups/tab5-b-install-quoq61ba/wacky-content-transfer.log",
+        "sha256": "05258baa44940817f3362cc02b7165306bc717add2e98d8ad670f1918ff25faa",
+        "files": 2,
+        "result": "P4_H1 BUNDLE_PASS"
+      },
+      "catalog_log": {
+        "file": "hardware/backups/tab5-b-install-quoq61ba/post-content-runtime.log",
+        "sha256": "c10e8e76bf23c9c4b584b9134c594854a771d34058e2b4e57e5ee2fc41f86e79"
+      },
+      "game_registered": true,
+      "multiplayer_registered": true,
+      "native_usb_open_caveat": "Opening the serial port coincided with a USB reset; this is a boot/catalog capture, not uninterrupted game-play evidence.",
+      "device_gameplay": "not exercised"
+    },
+    "os_version": "0.45",
+    "os_evidence": "hardware/evidence/tab5-0.45-core-testing.json"
+  }
+}

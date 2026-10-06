@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "mode": "built-in image_gen; cover derived from upgraded game artwork",
+  "source": "launcher-source.png",
+  "source_sha256": "1dc6193144765d353023004fed3a7b368cec0c20ef98c044a343e3cb24a80a0a",
+  "generation_source": "/Users/billh/.codex/generated_images/01a10e4d-67fb-7561-b76d-25c549064ff2/exec-d200d733-09c6-4438-979a-05be5c2eac47.png",
+  "prompt": "Use case: stylized-concept. Asset type: finished landscape 16:9 launcher cover illustration for a console game, optimized for a tiny 128x72 thumbnail. Create ONE cohesive edge-to-edge scene, not a sprite atlas. Clear large silhouettes, center-safe subject, premium polished game illustration with restrained dark background and luminous material detail. Absolutely no title, letters, logos, interface, numbers, watermarks or border. Opaque background. Game: Color Clash. Reference image defines the game's original ornate elemental card designs. Recompose them as a dynamic fan of FOUR spectacular cards on deep midnight violet: ruby red fiery gold-framed card, golden sun card, cyan wave card, violet crystal card. Maintain the red/gold/cyan/violet order and richly sculpted frames. Cards' central spaces each contain ONE simple matching luminous geometric emblem (diamond, sun circle, wave droplet, crystal). Subtle colored trails behind the fan. All four distinct colors readable at thumbnail size. No game company logos, no ranks or numbers.",
+  "reference_assets": [
+    {
+      "path": "games/color_clash/assets/color_clash_card_frames_imagegen_v3.png",
+      "sha256": "237823be2c22c401a56fe49254ced442ad32788c95b605b63247c2a82ade7ab5"
+    }
+  ],
+  "license": "Original AI-generated project artwork, distributed under the project MIT license. No third-party game art.",
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "sha256": "b336f481067403864560ef2d613cc56c4e8da521669fb581a31816f5121f7450",
+    "bytes": 9744,
+    "width": 128,
+    "height": 72,
+    "palette_entries": 256,
+    "palette_format": "little-endian RGB565",
+    "pixels": "row-major uint8 palette indices",
+    "opaque": true
+  },
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "command": "python3 scripts/pack-game-icon.py games/color_clash/assets/launcher-source.png --output games/color_clash/assets/launcher.p4i",
+    "description": "Standard center-fit Lanczos resize and 256-color median-cut quantization. No gameplay or runtime assets changed."
+  }
+}

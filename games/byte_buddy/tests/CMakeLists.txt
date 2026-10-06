@@ -73,6 +73,7 @@ add_test(
         "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-training.ppm"
         "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-training-track.ppm"
         "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-training-battle.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-preview-genome.ppm"
 )
 
 add_test(
@@ -130,3 +131,43 @@ add_test(
 set_tests_properties(
     byte_buddy_runtime_completion_motion_preview_smoke PROPERTIES
     TIMEOUT 60)
+
+add_test(
+    NAME byte_buddy_native_preview_smoke
+    COMMAND byte_buddy_touch_previews
+        "${BYTE_BUDDY_TEST_ART_PATH}"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-egg.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-hatch.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-power.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-style.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-custom.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-flying.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-elemental.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-play.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-signals.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-track.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-battle.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-training.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-training-track.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-training-battle.ppm"
+        "${CMAKE_CURRENT_BINARY_DIR}/byte-buddy-native-genome.ppm"
+)
+
+set_tests_properties(byte_buddy_native_preview_smoke PROPERTIES
+    ENVIRONMENT "P4_BB_NATIVE_PREVIEW=1")
+
+# Resource-backed optimized evidence uses the actual linked source closure.
+get_target_property(BB_API_DIR p4_game_api SOURCE_DIR)
+get_target_property(BB_API_SOURCES p4_game_api SOURCES)
+set(BB_MEASURE_SOURCES)
+foreach(BB_SOURCE IN LISTS BB_API_SOURCES)
+    list(APPEND BB_MEASURE_SOURCES "${BB_API_DIR}/${BB_SOURCE}")
+endforeach()
+add_executable(byte_buddy_launch_benchmark ../tools/measure_launch.c
+    ../src/byte_buddy.c ../src/byte_buddy_save.c ${BB_MEASURE_SOURCES}
+    "${BB_API_DIR}/../p4_cp437/src/cp437.c")
+target_include_directories(byte_buddy_launch_benchmark PRIVATE
+    ../src "${BB_API_DIR}/include" "${BB_API_DIR}/../p4_cp437/include")
+target_compile_features(byte_buddy_launch_benchmark PRIVATE c_std_11)
+target_compile_options(byte_buddy_launch_benchmark PRIVATE -O2
+    -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror)

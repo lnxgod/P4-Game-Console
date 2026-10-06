@@ -248,21 +248,26 @@ void p4_yahtzee_update_animation(p4_yahtzee_state_t *state,
     if (state == NULL || state->roll_animation_ms == 0U) {
         return;
     }
-    if (elapsed_ms >= state->roll_animation_ms) {
-        state->roll_animation_ms = 0U;
-        state->animation_step_ms = 0U;
-        memcpy(state->animation_dice, state->dice, sizeof(state->dice));
-        return;
-    }
+    if (elapsed_ms > state->roll_animation_ms)
+        elapsed_ms = state->roll_animation_ms;
     state->roll_animation_ms -= elapsed_ms;
-    if (elapsed_ms >= state->animation_step_ms) {
+    /* Preserve the remainder across updates. At 30 FPS, discarding the extra
+     * 11ms stretched a 55ms face step to 66ms. Catch-up stays bounded by the
+     * 330ms roll lifetime, and consumes only the separate cosmetic RNG. */
+    if (state->animation_step_ms == 0U)
+        state->animation_step_ms = ROLL_ANIMATION_STEP_MS;
+    while (elapsed_ms >= state->animation_step_ms) {
+        elapsed_ms -= state->animation_step_ms;
         for (size_t index = 0U; index < P4_YAHTZEE_DICE; ++index) {
             if ((state->held_mask & (UINT8_C(1) << index)) == 0U) {
                 state->animation_dice[index] = random_die(&state->rng);
             }
         }
         state->animation_step_ms = ROLL_ANIMATION_STEP_MS;
-    } else {
-        state->animation_step_ms -= elapsed_ms;
+    }
+    state->animation_step_ms -= elapsed_ms;
+    if (state->roll_animation_ms == 0U) {
+        state->animation_step_ms = 0U;
+        memcpy(state->animation_dice, state->dice, sizeof(state->dice));
     }
 }

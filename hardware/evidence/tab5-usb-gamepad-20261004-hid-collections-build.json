@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "date": "2026-10-04",
+  "board": "m5stack-tab5",
+  "status": "host-and-build-tested-hardware-pending",
+  "hardware_verified": false,
+  "flash_authorized": false,
+  "device_written": false,
+  "supersedes_build_evidence": "hardware/evidence/tab5-usb-gamepad-20261004-doom-input-build.json",
+  "change": "Track HID Input lengths and bit offsets across all application collections on one interface. Valid secondary reports preserve canonical controls; unknown report IDs and invalid lengths remain rejected.",
+  "protocol_reference": {
+    "url": "https://www.usb.org/sites/default/files/hid1_11.pdf",
+    "sections": [
+      "6.2.2.6",
+      "8.1"
+    ],
+    "fixtures": "Synthetic standards-based descriptors, not captures from the unavailable Xbox-compatible controller."
+  },
+  "verification": {
+    "regression_before_fix": "35 assertions failed in the new composite-report tests against the prior parser.",
+    "host": "make gamepad-host: PASS (7 CTest tests and 12 Python overlay tests); gamepad_core built with ASan/UBSan.",
+    "cases": [
+      "Valid secondary gamepad and vendor reports preserve held controls and commit through the shared snapshot model",
+      "Shared non-byte-aligned report offsets include prefix/suffix collections, with and without Report IDs",
+      "Output and Feature items do not change Input offsets",
+      "Secondary reports reject short/long payloads and unknown IDs transactionally",
+      "All declared input reports obey count, accumulated size and report-ID bounds",
+      "Disconnect still neutralizes after mixed primary/secondary reports"
+    ],
+    "build": "scripts/build.sh console_os m5stack-tab5: PASS",
+    "artifact_check": "scripts/verify-console-os-tab5.py: PASS",
+    "artifact": {
+      "image_bytes": 1513728,
+      "image_sha256": "e4e5b4c9db52eb75cd6b4d2e386c718b203ecee5298b109189711c228288a127",
+      "native_cartridges": 16,
+      "usb_host_enabled": true
+    },
+    "scope": "Isolated controller candidate includes the earlier audio/sensor/library snapshot. Newer concurrent native-resolution UI changes in the primary checkout are not included in this image."
+  },
+  "hardware": {
+    "controller_model": null,
+    "tab5_unit": null,
+    "status": "Physical controller acceptance pending. No hardware write performed in this thread.",
+    "acceptance_reference": ".agents/skills/add-usb-gamepad-support/references/acceptance.md",
+    "controller_family": "Third-party Xbox-compatible",
+    "controller_available": false,
+    "identity_source": "Owner clarification: Third-party Xbox-compatible; unavailable right now",
+    "usb_protocol": null,
+    "compatibility": "Unverified. USB HID is implemented; wired XUSB/XInput and GIP require a separate transport adapter."
+  },
+  "source_files_sha256": {
+    "components/gamepad_core/src/hid_gamepad.c": "d7d435916ef16c528f2a75ca7831efab2e179848d4aed63ab922e28837e3e42e",
+    "components/gamepad_core/include/gamepad/hid_gamepad.h": "b7f5a296f6fecb90ee5fde065d39485822459ad00d2e17b70b4269eb31f0a699",
+    "components/gamepad_core/tests/test_gamepad_core.c": "d7aa4a9da1648bb1b8a7eed4f16b8e24e0c7e6cd7193c12462a5689495a9ce0c"
+  },
+  "host_log_sha256": "026838f9b1996f2cb28c3edf5044874120542b0bab95a7ebd6c10792a6052db3",
+  "build_log_sha256": "808b9a248edc8f54900c9fe8045288efb4a359d39710211a3e909bfbb41a3112"
+}

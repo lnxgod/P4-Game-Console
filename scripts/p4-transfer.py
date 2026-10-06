@@ -7,7 +7,6 @@ import argparse
 import json
 from datetime import datetime, timezone
 from contextlib import nullcontext
-import importlib.util
 import re
 import binascii
 import glob
@@ -53,7 +52,9 @@ CLASS_P4G = 1
 CLASS_EXCHANGE = 2
 CLASS_P4R = 3
 CLASS_P4CART = 4
-FILE_CLASSES = {"p4g": CLASS_P4G, "exchange": CLASS_EXCHANGE, "p4r": CLASS_P4R, "p4cart": CLASS_P4CART}
+UPLOAD_FILE_CLASSES = {"p4g": CLASS_P4G, "exchange": CLASS_EXCHANGE, "p4r": CLASS_P4R}
+FILE_CLASSES = UPLOAD_FILE_CLASSES
+RETIRED_CART_MESSAGE = "Lua .P4CART installation is retired; use native .P4G games"
 FLAG_REPLACE = 1
 
 STATUS_OK = 0
@@ -237,7 +238,11 @@ def exchange_name_valid(name: str) -> bool:
 
 
 def checked_remote_name(name: str, file_class: int) -> str:
-    extension = {CLASS_P4G: ".P4G", CLASS_P4R: ".P4R", CLASS_P4CART: ".P4CART"}.get(file_class)
+    if file_class == CLASS_P4CART or Path(name).suffix.lower() == ".p4cart":
+        raise TransferError(RETIRED_CART_MESSAGE)
+    if file_class not in FILE_CLASSES.values():
+        raise TransferError("unsupported transfer class")
+    extension = {CLASS_P4G: ".P4G", CLASS_P4R: ".P4R"}.get(file_class)
     valid = game_name_valid(name, extension) if extension else exchange_name_valid(name)
     if not valid:
         kind = f"uppercase NAME{extension}" if extension else "safe basename"
@@ -281,27 +286,21 @@ def validate_resource_host(data: bytes) -> None:
         raise TransferError("P4R embedded payload digest is invalid")
 
 
-def validate_cart_host(path: Path) -> None:
-    tool = Path(__file__).resolve().parents[1] / "game-platform/scripts/p4cart.py"
-    spec = importlib.util.spec_from_file_location("p4cart_transfer_validator", tool)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    try:
-        module.inspect_cart(path)
-    except (ValueError, OSError) as error:
-        raise TransferError(f"P4CART validation failed: {error}") from error
-
-
 def validate_upload(path: Path, file_class: int) -> tuple[int, bytes]:
+    if file_class == CLASS_P4CART or path.suffix.lower() == ".p4cart":
+        raise TransferError(RETIRED_CART_MESSAGE)
+    if file_class not in UPLOAD_FILE_CLASSES.values():
+        raise TransferError("unsupported upload class")
     if not path.is_file() or path.is_symlink():
         raise TransferError(f"input must be one regular file: {path}")
     size = path.stat().st_size
     maximum = P4G_MAX_BYTES if file_class == CLASS_P4G else EXCHANGE_MAX_BYTES
     if not 0 < size <= maximum:
         raise TransferError(f"input size {size} exceeds the {maximum}-byte bound")
+    with path.open("rb") as stream:
+        if stream.read(8) == b"P4CART1\0":
+            raise TransferError(RETIRED_CART_MESSAGE)
     data = path.read_bytes() if file_class in (CLASS_P4G, CLASS_P4R) else None
-    if file_class == CLASS_P4CART:
-        validate_cart_host(path)
     if data is not None:
         if file_class == CLASS_P4G:
             validate_p4g_host(data)
@@ -543,8 +542,14 @@ def verify_done(done: bytes, expected_size: int, expected_digest: bytes) -> None
 
 
 def push(args: argparse.Namespace) -> None:
-    source = args.input.resolve()
-    file_class = FILE_CLASSES[args.file_class]
+    if args.file_class == "p4cart" or (
+        args.remote_name and Path(args.remote_name).suffix.lower() == ".p4cart"
+    ):
+        raise TransferError(RETIRED_CART_MESSAGE)
+    if args.file_class not in UPLOAD_FILE_CLASSES:
+        raise TransferError("unsupported upload class")
+    source = args.input.expanduser().absolute()
+    file_class = UPLOAD_FILE_CLASSES[args.file_class]
     default_name = source.name.upper() if file_class != CLASS_EXCHANGE else source.name
     name = checked_remote_name(args.remote_name or default_name, file_class)
     size, digest = validate_upload(source, file_class)
@@ -606,6 +611,10 @@ def push(args: argparse.Namespace) -> None:
 
 
 def pull(args: argparse.Namespace) -> None:
+    if args.file_class == "p4cart":
+        raise TransferError(RETIRED_CART_MESSAGE)
+    if args.file_class not in FILE_CLASSES:
+        raise TransferError("unsupported transfer class")
     file_class = FILE_CLASSES[args.file_class]
     name = checked_remote_name(args.remote_name, file_class)
     output = args.output.resolve()
@@ -666,8 +675,6 @@ def pull(args: argparse.Namespace) -> None:
                 validate_p4g_host(temporary.read_bytes())
             elif file_class == CLASS_P4R:
                 validate_resource_host(temporary.read_bytes())
-            elif file_class == CLASS_P4CART:
-                validate_cart_host(temporary)
             temporary.replace(output)
             completed = True
             print(
@@ -681,10 +688,12 @@ def pull(args: argparse.Namespace) -> None:
 
 def removal_input(path: Path) -> tuple[Path, int, int, bytes]:
     source = path.expanduser().absolute()
-    kinds = {".P4G": CLASS_P4G, ".P4R": CLASS_P4R, ".P4CART": CLASS_P4CART}
+    if source.suffix.lower() == ".p4cart":
+        raise TransferError("Lua .P4CART device mutation is retired; existing files are preserved")
+    kinds = {".P4G": CLASS_P4G, ".P4R": CLASS_P4R}
     file_class = kinds.get(source.suffix)
     if file_class is None:
-        raise TransferError("remove requires an exact local .P4G, .P4R or .P4CART copy")
+        raise TransferError("remove requires an exact local .P4G or .P4R copy")
     checked_remote_name(source.name, file_class)
     size, digest = validate_upload(source, file_class)
     return source, file_class, size, digest
@@ -716,10 +725,14 @@ def remove_files(args: argparse.Namespace) -> None:
 def push_bundle(args: argparse.Namespace) -> None:
     root = args.input.resolve()
     entries = []
-    # Resource sidecars precede their native games; Lua carts have their own directory.
+    retired = sorted(path for path in root.rglob("*")
+                     if path.suffix.lower() == ".p4cart")
+    if retired:
+        raise TransferError(f"{RETIRED_CART_MESSAGE}; bundle contains {retired[0].relative_to(root)}")
+    # Validate the entire native bundle before opening the device. Resource
+    # sidecars precede their executables; old source carts are never skipped.
     for directory, extension, kind in (("GAMES", "P4R", "p4r"),
-                                        ("GAMES", "P4G", "p4g"),
-                                        ("P4/GAMES", "P4CART", "p4cart")):
+                                        ("GAMES", "P4G", "p4g")):
         for source in sorted((root / directory).glob(f"*.{extension}")):
             checked_remote_name(source.name, FILE_CLASSES[kind])
             validate_upload(source, FILE_CLASSES[kind])
@@ -826,7 +839,7 @@ def parser() -> argparse.ArgumentParser:
     push_parser.add_argument("input", type=Path)
     push_parser.add_argument("--port")
     push_parser.add_argument(
-        "--class", dest="file_class", choices=tuple(FILE_CLASSES), default="p4g"
+        "--class", dest="file_class", choices=tuple(UPLOAD_FILE_CLASSES), default="p4g"
     )
     push_parser.add_argument("--remote-name")
     push_parser.add_argument("--no-replace", action="store_true")
@@ -845,8 +858,8 @@ def parser() -> argparse.ArgumentParser:
         "--class", dest="file_class", choices=tuple(FILE_CLASSES), default="p4g"
     )
     pull_parser.add_argument("--replace", action="store_true")
-    bundle = subparsers.add_parser("push-bundle", help="install validated native, resource and Lua game files")
-    bundle.add_argument("input", type=Path, help="board bundle root containing GAMES and P4/GAMES")
+    bundle = subparsers.add_parser("push-bundle", help="install validated native P4G games and P4R resources")
+    bundle.add_argument("input", type=Path, help="native board bundle root containing GAMES")
     bundle.add_argument("--port")
     bundle.add_argument("--no-replace", action="store_true")
     bundle.add_argument("--done-timeout", type=bounded_done_timeout, default=600.0)

@@ -13,7 +13,7 @@ if(COMMAND idf_component_register)
     )
 else()
     cmake_minimum_required(VERSION 3.16)
-    project(p4_skyline_leap VERSION 0.1.0 LANGUAGES C)
+    project(p4_skyline_leap VERSION 1.1.0 LANGUAGES C)
     add_subdirectory(
         "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api"
         "${CMAKE_CURRENT_BINARY_DIR}/p4_game_api"
@@ -39,5 +39,12 @@ else()
         target_link_options(skyline_leap_preview PRIVATE
             -fsanitize=address,undefined
         )
+    endif()
+    add_executable(skyline_leap_hires_preview tools/render_hires.c)
+    target_link_libraries(skyline_leap_hires_preview PRIVATE skyline_leap p4_game_api)
+    target_compile_features(skyline_leap_hires_preview PRIVATE c_std_11)
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(skyline_leap_hires_preview PRIVATE -Wall -Wextra -Wconversion -Wshadow -Werror -fsanitize=address,undefined)
+        target_link_options(skyline_leap_hires_preview PRIVATE -fsanitize=address,undefined)
     endif()
 endif()

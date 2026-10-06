@@ -1,0 +1,118 @@
+{
+  "schema": 1,
+  "date": "2026-10-06T04:02:25.986391+00:00",
+  "request": "Require fluid action games; remove Skyline Leap; fix Maze Chase tile-like movement. Board/card turn-based motion is exempt.",
+  "skyline": {
+    "schema": 1,
+    "user_requested": true,
+    "units": [
+      {
+        "unit": "A",
+        "port": "/dev/cu.usbmodem2101",
+        "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+        "file": "SKYLINE.P4G",
+        "sha256": "3201fb4b4a945fb57f607aa7eb5894f217333d47bfaf0b6de8107230ec14da4c",
+        "removed": true,
+        "log": "build-host/maze-fluid/device-before/A/skyline-remove.log",
+        "saves_touched": false
+      },
+      {
+        "unit": "B",
+        "port": "/dev/cu.usbmodem1101",
+        "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+        "file": "SKYLINE.P4G",
+        "sha256": "3201fb4b4a945fb57f607aa7eb5894f217333d47bfaf0b6de8107230ec14da4c",
+        "removed": true,
+        "log": "build-host/maze-fluid/device-before/B/skyline-remove.log",
+        "saves_touched": false
+      }
+    ],
+    "manifest_enabled": false
+  },
+  "maze_chase": {
+    "version": "1.1.1",
+    "package": {
+      "path": "build-host/maze-fluid/MAZE.P4G",
+      "bytes": 370576,
+      "sha256": "c45a9f15a3a4545a4a84b085ce08ca7d67e8de4041a2597c12459ff35142d4b7"
+    },
+    "installations": {
+      "schema": 1,
+      "version": "1.1.1",
+      "units": [
+        {
+          "unit": "A",
+          "port": "/dev/cu.usbmodem2101",
+          "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+          "package": "build-host/maze-fluid/MAZE.P4G",
+          "bytes": 370576,
+          "sha256": "c45a9f15a3a4545a4a84b085ce08ca7d67e8de4041a2597c12459ff35142d4b7",
+          "log": "build-host/maze-fluid/install-A.log",
+          "exit_code": 0,
+          "os_version": "0.51",
+          "os_flashed": false,
+          "hardware_gameplay_acceptance": "pending",
+          "verified": true,
+          "log_sha256": "c5384a02250f16f0faeb76876b5d661b87efddc6b1179c41ff4933fdefdebe2b"
+        },
+        {
+          "unit": "B",
+          "port": "/dev/cu.usbmodem1101",
+          "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+          "package": "build-host/maze-fluid/MAZE.P4G",
+          "bytes": 370576,
+          "sha256": "c45a9f15a3a4545a4a84b085ce08ca7d67e8de4041a2597c12459ff35142d4b7",
+          "log": "build-host/maze-fluid/install-B.log",
+          "exit_code": 0,
+          "os_version": "0.51",
+          "os_flashed": false,
+          "hardware_gameplay_acceptance": "pending",
+          "verified": true,
+          "log_sha256": "27921293c8df8bd04ca416f8ba9f1914139f2849f90af2ad5d21485dc47ea948"
+        }
+      ]
+    },
+    "verification": "games/maze_chase/LOCAL_TESTING.json",
+    "device_fluidity": "pending"
+  },
+  "source_motion_audit": [
+    {
+      "game": "Frog Hop",
+      "finding": "frog_hop_visual_q8 interpolates hops; frog_hop_lane_visual_q8 carries moving platforms; rendering scales Q8 into native pixels.",
+      "device_qualification": "not established by source review"
+    },
+    {
+      "game": "Space Invaders",
+      "finding": "formation_visual_q8 tweens formation steps; motion_visual_q8 interpolates fixed-step actors. Formation cadence intentionally pauses between smooth advances.",
+      "device_qualification": "not established by source review"
+    },
+    {
+      "game": "Air Hockey",
+      "finding": "Paddle/puck fractional physics mapped directly into native coordinates.",
+      "device_qualification": "not established by source review"
+    },
+    {
+      "game": "Blast Circuit",
+      "finding": "Render interpolates from previous grid cell through cooldown and substep accumulator; no structural whole-cell render snapping.",
+      "device_qualification": "not established by source review"
+    },
+    {
+      "game": "Tide Maze",
+      "finding": "Q8 marble physics at 20 ms steps; peer snapshots blend at 50 ms.",
+      "device_qualification": "not established by source review"
+    }
+  ],
+  "retained_wip": [
+    "Byte Buddy and Red Dragon remain under existing WIP policy; no new finding that their action motion is impossible to make fluid."
+  ],
+  "limits": [
+    "Source review is not a complete library play-test.",
+    "Doom and Wacky Wheels were not newly gameplay-qualified in this pass.",
+    "No other title established as incapable of fluid play; Skyline was explicitly removed and Maze repaired as a candidate."
+  ],
+  "policy_files": [
+    "docs/GAME_LIBRARY.md",
+    "docs/GAME_PERFORMANCE.md"
+  ],
+  "cross_chat_status": "Optional status dispatch was rejected by automatic approval review; not sent or retried. Local evidence is the record."
+}

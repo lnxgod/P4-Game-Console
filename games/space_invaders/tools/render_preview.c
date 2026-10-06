@@ -64,6 +64,10 @@ int main(int argc, char **argv)
         .touch_valid = true,
     };
     (void)p4_game_instance_update(&instance, &input, 16U);
+    input=(p4_game_input_t){0};
+    (void)p4_game_instance_update(&instance,&input,0U);
+    input=(p4_game_input_t){.held=P4_BUTTON_A|P4_BUTTON_RIGHT,.pressed=P4_BUTTON_A};
+    (void)p4_game_instance_update(&instance,&input,16U);
     input.pressed = 0U;
     for (unsigned frame = 0U; frame < 24U; ++frame) {
         (void)p4_game_instance_update(&instance, &input, 16U);

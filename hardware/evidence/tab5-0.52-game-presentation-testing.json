@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "recorded_utc": "2026-10-06T04:41:42.556876+00:00",
+  "version": "0.52",
+  "board": "m5stack-tab5",
+  "scope": "Original Doom/Chex cover artwork, branded game-loading screens, cartridge icons for all17 enabled native entries, Invaders/Hockey opening screens, Hockey offline pause, persistent Frog/ColorClash/Yahtzee headers; includes the earlier reviewed shared raster and movement work.",
+  "status": "installed; exact app readback, launcher boot and all22 final content transfers passed",
+  "os": {
+    "ble_multiplayer_enabled": true,
+    "board": "m5stack-tab5",
+    "charger_control_enabled": true,
+    "content_bundle_verified": true,
+    "flash_authorized": false,
+    "hardware_verified": false,
+    "image_bytes": 4508176,
+    "image_sha256": "8d8f23116fcf8421f4339abbde03eaa318988148062353d7bcbd59dc71fd7a5d",
+    "native_cartridges": 17,
+    "result": "tab5-build-candidate-verified",
+    "usb_host_enabled": true,
+    "version": "0.52",
+    "wifi_multiplayer_enabled": true
+  },
+  "authorization": "hardware/evidence/tab5-0.52-game-presentation-authorization.json",
+  "authorization_sha256": "81de2da25b70101742b96c2272e9a1d010a6ce5f4ceb6699bf53d4dfce0c0633",
+  "units": {
+    "A": {
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "panel": "ST7121",
+      "guarded_receipt": "hardware/backups/tab5-a-install-_dis8w34/receipt.json",
+      "app_readback_verified": true,
+      "launcher_ready": true,
+      "post_service_health_ready": true,
+      "content_files_verified": 11,
+      "content_transfer_log": "build-host/game-presentation-0.52/A-game-push.log",
+      "content_transfer_log_sha256": "150f9174f57b9177db5cdd2cd2dab5ef4545ee385c7a02ef478a0b3ee6989f20",
+      "post_content_capture": "build-host/game-presentation-0.52/A-post-content-capture.json",
+      "protected_red_dragon_registered": true,
+      "catalog": {
+        "packages": 18,
+        "valid": 17,
+        "omitted": 0,
+        "note": "One pre-existing non-valid package remains non-launchable. No unknown file deletion was performed."
+      },
+      "post_content_log_sha256": "e15e9be8d06d7faa12747fb6fdf32b9bdd385ea3442911518df2f707f89b2c6e"
+    },
+    "B": {
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "panel": "ST7123",
+      "guarded_receipt": "hardware/backups/tab5-b-install-7_e1x6a5/receipt.json",
+      "app_readback_verified": true,
+      "launcher_ready": true,
+      "post_service_health_ready": true,
+      "content_files_verified": 11,
+      "content_transfer_log": "build-host/game-presentation-0.52/B-game-push.log",
+      "content_transfer_log_sha256": "276fd55a14eae17482000ee04b0ebd789ddb59800c02b702469a17063e6e0e09",
+      "post_content_capture": "build-host/game-presentation-0.52/B-post-content-capture.json",
+      "protected_red_dragon_registered": true,
+      "catalog": {
+        "packages": 20,
+        "valid": 19,
+        "omitted": 0,
+        "note": "One pre-existing non-valid package remains non-launchable. No unknown file deletion was performed."
+      },
+      "post_content_log_sha256": "623a60b7c787baba178f2580ffd8bf2b7bafcf7ea654745779e2eedc1daebd05"
+    }
+  },
+  "final_presentation_packages": {
+    "INPUT.P4G": {
+      "bytes": 51976,
+      "sha256": "6e6b4e11015b6fb55615cf279e74d2858a7c49dc2f2784aba349d1600c681965"
+    },
+    "AVTEST.P4G": {
+      "bytes": 51912,
+      "sha256": "4810d7d94f4c6d6192bebd14dcdff922297b4036b08d69d2c813b74e3b045efe"
+    },
+    "CALC.P4G": {
+      "bytes": 53088,
+      "sha256": "d6b714a12b5ec4d703cf7aad874712636bf7d0c6515484028dc74652defabf6b"
+    },
+    "P4_YAHTZEE.P4G": {
+      "bytes": 321536,
+      "sha256": "6b68116c4c2b72f43acfe6f9a5baca42f40ff9e16fa7c7bec587bc65e5a23388"
+    },
+    "LORD.P4G": {
+      "bytes": 221804,
+      "sha256": "a39820c4a365b3cfd1a8d97e56c61595d57b1805900df9e925bb20593a184f58"
+    },
+    "BYTEBUD.P4G": {
+      "bytes": 207016,
+      "sha256": "5d744681b6ea8791e3617a0aeda9277c02f375685bf189b5110a411bb1eabe67"
+    },
+    "COLOR_CLASH.P4G": {
+      "bytes": 437412,
+      "sha256": "e0fe5b003452fa1c0d01a465506e943fd2bc1924f020461e9f0bf295caef3b18"
+    },
+    "BLAST_CIRCUIT.P4G": {
+      "bytes": 462532,
+      "sha256": "611536b5eb78bdb19d48130cd4dd5a0d6101c7ed8491f41b63bb70f5b91f135c"
+    },
+    "FROGHOP.P4G": {
+      "bytes": 487396,
+      "sha256": "a41c88bcd50311075a8cae6d1a6fd98e959f52b79a8511b6ade903ce891547ee"
+    },
+    "INVADERS.P4G": {
+      "bytes": 402512,
+      "sha256": "d314e8dab365c187035cc47f9cebae203aade492e495301d2e01cb039670e19d"
+    },
+    "P4_AIR_HOCKEY.P4G": {
+      "bytes": 133136,
+      "sha256": "291a9a01375a7b357d6546fcf0b1b8894cf877695dbccd07374716365f84c47d"
+    }
+  },
+  "earlier_nine_game_installations": {
+    "A": "build-host/smoothness-round2/A-final-installation.json",
+    "B": "build-host/smoothness-round2/B-final-installation.json",
+    "note": "Presentation packages supersede overlapping entries; unchanged Checkers, Solitaire, Rummy500 and Holdem remain installed from this round."
+  },
+  "catalog": "build-host/game-presentation-0.52/complete-catalog.json",
+  "validation": {
+    "launcher_sanitizers": "7/7 pass; build-host/library-presentation/shell-tests-final.log",
+    "pixel_version_proof": "build-host/library-presentation/version-label-proof.json",
+    "new_art_converter": "byte-reproducible; original ImageGen prompts/source hashes in components/console_shell/assets/game-covers/source.json",
+    "native_icons": "All17 enabled native icons match exact source9744-byte sections; build-host/library-presentation/enabled-icon-audit.json",
+    "hockey": "build-host/air-hockey-title-round3/handoff.json",
+    "arcade": "build-host/presentation-pass/handoff.json",
+    "cards_and_icons": "build-host/library-presentation/manifest.json",
+    "card_diamonds": "build-host/smoothness-round2/card-diamond/manifest.json",
+    "shared_render": "build-host/shared-render-optimization/proof.json",
+    "table_materials": "build-host/table-material-round2/proof.json",
+    "root_live_play": "build-host/game-presentation-0.52/interactive-observations.json",
+    "final_build": "build-host/library-presentation/tab5-final-build-2.log",
+    "whitespace_diff_check": "passed scoped source paths"
+  },
+  "acceptance_limits": {
+    "actual_device_30_fps_qualified": false,
+    "reason": "No active gameplay timing interval was captured; simulator CPU/FPS is not physicalP4 cadence.",
+    "physical_art_touch_audio_and_linked_play": "Not newly qualified by this install; no claim from boot success.",
+    "cua_touch_limit": "Later injected quick taps/drags were inconsistent; focused game+actualSDL input-queue tests passed. No unsupported input bug fix was made.",
+    "protected_lineage": "New LORD1.8.3 is paired with OS0.52 allowlist; its earlier0.51 payload can be rejected only in the brief OS/content transition. Save identity and save data unchanged.",
+    "separate_project": "Wacky Wheels remains owned by its separate project; its source/art was not replaced.",
+    "wip": "Byte Buddy/Red Dragon remain WIP; only cartridge artwork/version was added.",
+    "chex": "Still optional; no game-data download or install was performed."
+  },
+  "core_rules": [
+    "AGENTS.md invariant10",
+    "docs/GAME_ART.md Complete game presentation"
+  ],
+  "previews": [
+    "build-host/game-presentation-0.52/launch-doom.png",
+    "build-host/game-presentation-0.52/launch-chex.png"
+  ]
+}

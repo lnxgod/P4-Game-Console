@@ -1,0 +1,178 @@
+{
+  "mode": "built-in image_gen",
+  "source": "/Users/billh/.codex/generated_images/01a10e4d-8eac-7052-b410-c517e93f4e11/exec-3c53af34-577a-4526-8d12-11dd59c1628b.png",
+  "asset": "assets/chase_characters_v3.png",
+  "sha256": "708c22bf6f8ca8d8accd4d08392c712006fb6448033e3481cead1e83858dc93a",
+  "prompt": "Use case: stylized-concept. Asset type: original 2D game character animation sprite atlas, polished late-1990s console 2D style, transparent background. EXACT 4 columns and 6 rows of isolated sprites, 24 equal cells, no grid lines, generous transparent gutters. Orthographic overhead characters, crisp silhouettes, sophisticated hand-painted shading with small pixel-art highlights, no scene. Rows 1, 2 and 3 show the SAME original golden spherical mechanical maze explorer, with a tiny cyan eye/visor on upper shell and a hinged crescent biting jaw, no limbs, no antenna; each row faces RIGHT, DOWN, LEFT, UP in that exact order. Row 1 jaw closed (round orb), row 2 jaw halfway open, row 3 jaw wide open in a clear triangular chomp, body shape and scale otherwise consistent. The open jaw points in the facing direction. Row 4 four distinct mischievous floating spirits facing viewer/top-down: coral-red pointed flame spirit with determined eyes, cyan round jelly spirit with curious eyes, violet diamond-shaped wisp with narrowed eyes, orange puffy cloud spirit with shy eyes. Different silhouettes as well as colors. Row 5: frightened midnight-blue spirit with wide white eyes and zigzag mouth; same frightened spirit flashing pale ivory; isolated pair of white eyes with blue pupils used for returning defeated spirits; a small shiny cluster of red berries with two green leaves for bonus pickup. Row 6: small ivory collectible pearl; larger faceted amber power crystal; cyan energy burst; violet energy burst. Every sprite centered and similarly sized, ample transparent padding. Colors luminous but not neon bloom; readable at 32 pixels. Original characters only, no existing franchise character or ROM art, no words, no logo, no UI.",
+  "transparent_background": true,
+  "conversion": {
+    "row_boundaries": [
+      0,
+      250,
+      480,
+      715,
+      990,
+      1246,
+      1536
+    ],
+    "measured_opaque_bounds": [
+      [
+        52,
+        49,
+        223,
+        222
+      ],
+      [
+        304,
+        50,
+        469,
+        222
+      ],
+      [
+        547,
+        49,
+        718,
+        222
+      ],
+      [
+        801,
+        44,
+        968,
+        222
+      ],
+      [
+        52,
+        278,
+        217,
+        449
+      ],
+      [
+        304,
+        280,
+        469,
+        451
+      ],
+      [
+        553,
+        278,
+        718,
+        449
+      ],
+      [
+        803,
+        276,
+        966,
+        454
+      ],
+      [
+        51,
+        510,
+        216,
+        690
+      ],
+      [
+        305,
+        514,
+        468,
+        693
+      ],
+      [
+        554,
+        510,
+        719,
+        690
+      ],
+      [
+        804,
+        506,
+        965,
+        693
+      ],
+      [
+        56,
+        742,
+        206,
+        964
+      ],
+      [
+        296,
+        783,
+        481,
+        953
+      ],
+      [
+        558,
+        737,
+        731,
+        966
+      ],
+      [
+        796,
+        762,
+        976,
+        948
+      ],
+      [
+        36,
+        1018,
+        241,
+        1228
+      ],
+      [
+        292,
+        1022,
+        488,
+        1227
+      ],
+      [
+        571,
+        1087,
+        709,
+        1166
+      ],
+      [
+        815,
+        1043,
+        965,
+        1219
+      ],
+      [
+        98,
+        1345,
+        185,
+        1434
+      ],
+      [
+        315,
+        1272,
+        443,
+        1489
+      ],
+      [
+        528,
+        1267,
+        721,
+        1489
+      ],
+      [
+        790,
+        1268,
+        982,
+        1494
+      ]
+    ],
+    "sampling": "Lanczos reduction, preserve aspect, 2-pixel cell margin; alpha >=160, RGB565 chroma key 0",
+    "cell_size": [
+      48,
+      48
+    ],
+    "sprite_static_bytes": 110592,
+    "title_hero_cell": 8,
+    "title_hero_size": [
+      128,
+      128
+    ],
+    "hero_static_bytes": 32768,
+    "total_static_bytes": 143360
+  }
+}

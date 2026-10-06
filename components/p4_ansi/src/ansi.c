@@ -472,7 +472,7 @@ const p4_ansi_cell_t *p4_ansi_cell(const p4_ansi_terminal_t *terminal,
     return &terminal->cells[cell_index(column, row)];
 }
 
-bool p4_ansi_render_rows_rgb565(const p4_ansi_terminal_t *terminal,
+static bool render_rows(const p4_ansi_terminal_t *terminal,
                                 uint16_t *pixels,
                                 size_t stride_pixels,
                                 size_t width,
@@ -481,20 +481,25 @@ bool p4_ansi_render_rows_rgb565(const p4_ansi_terminal_t *terminal,
                                 size_t row_count,
                                 int32_t y_offset_pixels,
                                 size_t clip_top,
-                                size_t clip_height)
+                                size_t clip_height,
+                                bool scaled)
 {
     if (terminal == NULL || pixels == NULL ||
         width < P4_ANSI_SURFACE_WIDTH ||
         height < P4_ANSI_SURFACE_HEIGHT || stride_pixels < width ||
         first_row > P4_ANSI_ROWS ||
         row_count > P4_ANSI_ROWS - first_row ||
-        clip_top > height || clip_height > height - clip_top) {
+        width > 4096U || height > 4096U ||
+        stride_pixels > SIZE_MAX / height / sizeof(*pixels) ||
+        clip_top > (scaled ? P4_ANSI_SURFACE_HEIGHT : height) ||
+        clip_height > (scaled ? P4_ANSI_SURFACE_HEIGHT : height) - clip_top) {
         return false;
     }
     if (row_count == 0U || clip_height == 0U) {
         return true;
     }
-    const size_t left = (width - P4_ANSI_TEXT_WIDTH) / 2U;
+    const size_t left = scaled ? (P4_ANSI_SURFACE_WIDTH - P4_ANSI_TEXT_WIDTH) / 2U :
+        (width - P4_ANSI_TEXT_WIDTH) / 2U;
     const int64_t clip_bottom = (int64_t)(clip_top + clip_height);
     for (size_t row = first_row; row < first_row + row_count; ++row) {
         const int64_t cell_top =
@@ -549,14 +554,41 @@ bool p4_ansi_render_rows_rgb565(const p4_ansi_terminal_t *terminal,
                     } else if (embolden) {
                         set = (bits & UINT8_C(0x01)) != 0U;
                     }
-                    pixels[(size_t)destination_y * stride_pixels +
-                           cell_left + glyph_column] =
-                        s_dos_palette[set ? foreground : background];
+                    const size_t sx = cell_left + glyph_column;
+                    const size_t sy = (size_t)destination_y;
+                    const size_t x0 = scaled ? sx * width / P4_ANSI_SURFACE_WIDTH : sx;
+                    const size_t x1 = scaled ? (sx + 1U) * width / P4_ANSI_SURFACE_WIDTH : sx + 1U;
+                    const size_t y0 = scaled ? sy * height / P4_ANSI_SURFACE_HEIGHT : sy;
+                    const size_t y1 = scaled ? (sy + 1U) * height / P4_ANSI_SURFACE_HEIGHT : sy + 1U;
+                    for (size_t py = y0; py < y1; ++py) {
+                        for (size_t px = x0; px < x1; ++px) {
+                            pixels[py * stride_pixels + px] =
+                                s_dos_palette[set ? foreground : background];
+                        }
+                    }
                 }
             }
         }
     }
     return true;
+}
+
+bool p4_ansi_render_rows_rgb565(const p4_ansi_terminal_t *terminal,
+    uint16_t *pixels, size_t stride_pixels, size_t width, size_t height,
+    size_t first_row, size_t row_count, int32_t y_offset_pixels,
+    size_t clip_top, size_t clip_height)
+{
+    return render_rows(terminal, pixels, stride_pixels, width, height,
+        first_row, row_count, y_offset_pixels, clip_top, clip_height, false);
+}
+
+bool p4_ansi_render_scaled_rows_rgb565(const p4_ansi_terminal_t *terminal,
+    uint16_t *pixels, size_t stride_pixels, size_t width, size_t height,
+    size_t first_row, size_t row_count, int32_t y_offset_pixels,
+    size_t clip_top, size_t clip_height)
+{
+    return render_rows(terminal, pixels, stride_pixels, width, height,
+        first_row, row_count, y_offset_pixels, clip_top, clip_height, true);
 }
 
 bool p4_ansi_render_rgb565(const p4_ansi_terminal_t *terminal,
@@ -578,4 +610,19 @@ bool p4_ansi_render_rgb565(const p4_ansi_terminal_t *terminal,
     return p4_ansi_render_rows_rgb565(
         terminal, pixels, stride_pixels, width, height,
         0U, P4_ANSI_ROWS, 0, 0U, height);
+}
+
+bool p4_ansi_render_scaled_rgb565(const p4_ansi_terminal_t *terminal,
+    uint16_t *pixels, size_t stride_pixels, size_t width, size_t height)
+{
+    if (terminal == NULL || pixels == NULL || width < P4_ANSI_SURFACE_WIDTH ||
+        height < P4_ANSI_SURFACE_HEIGHT || width > 4096U || height > 4096U ||
+        stride_pixels < width || stride_pixels > SIZE_MAX / height / sizeof(*pixels)) {
+        return false;
+    }
+    for (size_t y = 0U; y < height; ++y) {
+        memset(pixels + y * stride_pixels, 0, width * sizeof(*pixels));
+    }
+    return p4_ansi_render_scaled_rows_rgb565(terminal, pixels, stride_pixels,
+        width, height, 0U, P4_ANSI_ROWS, 0, 0U, P4_ANSI_SURFACE_HEIGHT);
 }

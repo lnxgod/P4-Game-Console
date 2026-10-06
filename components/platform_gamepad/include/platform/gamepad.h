@@ -17,7 +17,7 @@ typedef esp_err_t (*platform_gamepad_snapshot_provider_t)(
 
 /**
  * Register one OS-owned transport. Registration is idempotent per transport;
- * USB HID has deterministic priority when wired and BLE pads coexist.
+ * USB HID, then wired XUSB, then BLE is the deterministic priority order.
  */
 esp_err_t platform_gamepad_register_provider(
     platform_gamepad_transport_t transport,

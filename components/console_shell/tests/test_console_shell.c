@@ -635,8 +635,8 @@ static void test_present_render_contract(void)
     free(present);
 }
 
-#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
-    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+#if (CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+     CONSOLE_SHELL_TARGET_HEIGHT == 480U) || CONFIG_P4_BOARD_M5STACK_TAB5
 static bool output_point_in_layout_rect(size_t x,
                                         size_t y,
                                         unsigned left,
@@ -661,8 +661,8 @@ static bool output_point_in_layout_rect(size_t x,
 
 static void test_native_home_scroll_cache(void)
 {
-#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
-    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+#if (CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+     CONSOLE_SHELL_TARGET_HEIGHT == 480U) || CONFIG_P4_BOARD_M5STACK_TAB5
     enum {
         APP_COUNT = 12,
         STRIDE = CONSOLE_SHELL_WIDTH + 5,
@@ -794,8 +794,8 @@ static void test_native_home_scroll_cache(void)
 #endif
 }
 
-#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
-    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+#if (CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+     CONSOLE_SHELL_TARGET_HEIGHT == 480U) || CONFIG_P4_BOARD_M5STACK_TAB5
 static void check_native_update_covers_frame_diff(
     const uint16_t *before,
     const uint16_t *after,
@@ -846,8 +846,8 @@ static void check_native_update_covers_frame_diff(
 
 static void test_native_home_update_metadata(void)
 {
-#if CONSOLE_SHELL_TARGET_WIDTH == 800U && \
-    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+#if (CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+     CONSOLE_SHELL_TARGET_HEIGHT == 480U) || CONFIG_P4_BOARD_M5STACK_TAB5
     enum { APP_COUNT = 12 };
     console_app_descriptor_t apps[APP_COUNT];
     for (size_t index = 0U; index < APP_COUNT; ++index) {
@@ -885,8 +885,10 @@ static void test_native_home_update_metadata(void)
         &shell, frame, CONSOLE_SHELL_WIDTH));
     CHECK(console_shell_get_native_update(&shell, &update));
     CHECK(update.kind == CONSOLE_SHELL_NATIVE_UPDATE_REGION);
-    CHECK(update.x == 26U && update.y == 103U &&
-          update.width == 722U && update.height == 312U);
+    CHECK(update.x == 11U * CONSOLE_SHELL_WIDTH / 320U &&
+          update.y == 43U * CONSOLE_SHELL_HEIGHT / 200U &&
+          update.x + update.width == 312U * CONSOLE_SHELL_WIDTH / 320U &&
+          update.y + update.height == 173U * CONSOLE_SHELL_HEIGHT / 200U);
     check_native_update_covers_frame_diff(
         previous, frame, &update, "fractional drag");
 
@@ -899,8 +901,10 @@ static void test_native_home_update_metadata(void)
         &shell, frame, CONSOLE_SHELL_WIDTH));
     CHECK(console_shell_get_native_update(&shell, &update));
     CHECK(update.kind == CONSOLE_SHELL_NATIVE_UPDATE_REGION);
-    CHECK(update.x == 19U && update.y == 103U &&
-          update.width == 732U && update.height == 360U);
+    CHECK(update.x == 8U * CONSOLE_SHELL_WIDTH / 320U &&
+          update.y == 43U * CONSOLE_SHELL_HEIGHT / 200U &&
+          update.x + update.width == 313U * CONSOLE_SHELL_WIDTH / 320U &&
+          update.y + update.height == 193U * CONSOLE_SHELL_HEIGHT / 200U);
     check_native_update_covers_frame_diff(
         previous, frame, &update, "row status transition");
 
@@ -979,15 +983,21 @@ static void check_frame_hash(uint64_t actual, uint64_t expected,
 
 static void test_window_manager_visual_contract(void)
 {
-#if (CONSOLE_SHELL_TARGET_WIDTH == 800U && \
-     CONSOLE_SHELL_TARGET_HEIGHT == 480U) || CONFIG_P4_BOARD_M5STACK_TAB5
-    const uint64_t desktop_hash = UINT64_C(0x44ee51847211ee71);
-    const uint64_t elecrow_system_hash = UINT64_C(0xe29f2fdd3c3faa81);
-    const uint64_t olimex_system_hash = UINT64_C(0x4ee9aa1f85dbf4d7);
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    const uint64_t desktop_hash = UINT64_C(0xd2d384b184404f7c);
+    const uint64_t elecrow_system_hash = UINT64_C(0x1dda72439b320ccd);
+    const uint64_t olimex_system_hash = UINT64_C(0x552b449074ff213b);
+#elif CONSOLE_SHELL_TARGET_WIDTH == 800U && \
+    CONSOLE_SHELL_TARGET_HEIGHT == 480U
+    /* Golden frames include the OS 0.52 version label; geometry/art are unchanged. */
+    /* OS0.55 version text is included in these complete-frame fixtures. */
+    const uint64_t desktop_hash = UINT64_C(0x51b009c6332595ad);
+    const uint64_t elecrow_system_hash = UINT64_C(0x1a0c843930ac12fa);
+    const uint64_t olimex_system_hash = UINT64_C(0xdf52d659545ce980);
 #else
-    const uint64_t desktop_hash = UINT64_C(0xc658981647609597);
-    const uint64_t elecrow_system_hash = UINT64_C(0x81938adab227edcf);
-    const uint64_t olimex_system_hash = UINT64_C(0x67f18f6ba8f50b20);
+    const uint64_t desktop_hash = UINT64_C(0xccc0c1f2cc48c588);
+    const uint64_t elecrow_system_hash = UINT64_C(0x0511de79532aa276);
+    const uint64_t olimex_system_hash = UINT64_C(0xe3c7e56d02ddc7fd);
 #endif
     uint16_t *const frame = calloc(
         (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
@@ -1199,6 +1209,31 @@ static void test_controller_setup_actions(void)
     CHECK(tap(&shell, 31U, 182U).type ==
           CONSOLE_ACTION_CONTROLLER_BLE_ENABLE);
     CHECK(tap(&shell, 81U, 182U).type == CONSOLE_ACTION_NONE);
+
+    /* Both wired transports inherit remapping without offering BLE actions. */
+    const console_controller_transport_t transports[] = {
+        CONSOLE_CONTROLLER_TRANSPORT_USB_HID, CONSOLE_CONTROLLER_TRANSPORT_USB_XUSB,
+    };
+    for (size_t index = 0U; index < sizeof(transports)/sizeof(transports[0]); ++index) {
+        shell.runtime = (console_shell_runtime_info_t){
+            .controller_ready = true,
+            .controller_transport = transports[index],
+            .usb_input_host_active = true,
+        };
+        CHECK(tap(&shell, 31U, 182U).type == CONSOLE_ACTION_NONE);
+        CHECK(tap(&shell, 81U, 182U).type == CONSOLE_ACTION_NONE);
+        CHECK(tap(&shell, 131U, 182U).type == CONSOLE_ACTION_NONE);
+        CHECK(tap(&shell, 181U, 182U).type ==
+              CONSOLE_ACTION_CONTROLLER_MAPPING_START);
+        shell.runtime.controller_mapping_active = true;
+        CHECK(tap(&shell, 181U, 182U).type ==
+              CONSOLE_ACTION_CONTROLLER_MAPPING_CANCEL);
+        shell.runtime.controller_mapping_active = false;
+        CHECK(tap(&shell, 231U, 182U).type ==
+              CONSOLE_ACTION_CONTROLLER_MAPPING_RESET);
+        shell.runtime.controller_ready = false;
+        CHECK(tap(&shell, 181U, 182U).type == CONSOLE_ACTION_NONE);
+    }
 
     uint16_t *const frame = calloc(
         (size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT,
@@ -1972,6 +2007,61 @@ static void test_battery_indicator_chrome(void)
     free(frame);
 }
 
+
+static void test_storage_and_battery_status_refresh(void)
+{
+    console_shell_t shell;
+    CHECK(console_shell_init(&shell, s_apps, TEST_APP_COUNT));
+    uint16_t *frame = calloc((size_t)CONSOLE_SHELL_WIDTH * CONSOLE_SHELL_HEIGHT, sizeof(*frame));
+    CHECK(frame != NULL);
+    if (!frame) return;
+    console_shell_runtime_info_t r = {
+        .game_storage_kib = 1000000U, .game_storage_free_kib = 750000U,
+        .game_storage_space_valid = true, .sd_card_storage = true,
+        .battery_supported = true, .battery_sample_valid = true, .battery_percent = 63U,
+    };
+    console_shell_set_runtime_info(&shell, &r);
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    const uint32_t first = indicator_checksum(frame, CONSOLE_SHELL_WIDTH, 112);
+    r.game_storage_free_kib = 200000U; /* Only free space changes; uptime is unchanged. */
+    console_shell_set_runtime_info(&shell, &r);
+    CHECK(shell.dirty);
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    CHECK(indicator_checksum(frame, CONSOLE_SHELL_WIDTH, 112) != first);
+    CHECK(shell.native_update.kind == CONSOLE_SHELL_NATIVE_UPDATE_FULL);
+    const uint32_t available = indicator_checksum(frame, CONSOLE_SHELL_WIDTH, 112);
+    r.game_storage_space_valid = false;
+    console_shell_set_runtime_info(&shell, &r);
+    CHECK(shell.dirty);
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    const uint32_t unavailable = indicator_checksum(frame, CONSOLE_SHELL_WIDTH, 112);
+    CHECK(unavailable != available);
+    r.game_storage_space_valid = true;
+    r.game_storage_free_kib = 1000001U; /* Reject inconsistent measurements. */
+    console_shell_set_runtime_info(&shell, &r);
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    CHECK(indicator_checksum(frame, CONSOLE_SHELL_WIDTH, 112) == unavailable);
+    r.game_storage_free_kib = 0U; /* A genuinely full disk is not unknown. */
+    console_shell_set_runtime_info(&shell, &r);
+    CHECK(console_shell_render_rgb565(&shell, frame, CONSOLE_SHELL_WIDTH));
+    CHECK(indicator_checksum(frame, CONSOLE_SHELL_WIDTH, 112) != unavailable);
+    const console_page_t pages[] = {
+        CONSOLE_PAGE_COLORS, CONSOLE_PAGE_TOUCH, CONSOLE_PAGE_SAVES,
+        CONSOLE_PAGE_ACHIEVEMENTS,
+    };
+    for (size_t i = 0; i < sizeof(pages)/sizeof(pages[0]); ++i) {
+        shell.page = pages[i]; shell.dirty = false;
+        ++r.battery_percent;
+        console_shell_set_runtime_info(&shell, &r);
+        CHECK(shell.dirty);
+        shell.dirty = false;
+        ++r.game_storage_free_kib;
+        console_shell_set_runtime_info(&shell, &r);
+        CHECK(shell.dirty);
+    }
+    free(frame);
+}
+
 static void test_file_manager(void)
 {
     console_shell_t shell;
@@ -2378,6 +2468,7 @@ int main(void)
     test_touch_page_and_runtime();
     test_power_page();
     test_battery_indicator_chrome();
+    test_storage_and_battery_status_refresh();
     test_file_manager();
     test_game_manager();
     test_controller_game_manager();

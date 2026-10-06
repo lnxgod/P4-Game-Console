@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "recorded_at": "2026-10-06T00:52:38.072903+00:00",
+  "status": "implemented-host-tested-awaiting-concurrent-release-coordination",
+  "version": null,
+  "version_reason": "0.48 is owned by the concurrent catalog update; do not overwrite its build or flash it with mismatched source metadata. Assign the next release after coordination.",
+  "changes": [
+    "Game volume level and Muted indicator in status bar, separate one-tap Sound control",
+    "Sound controls use consistent 0-10 levels",
+    "Tab5 boot/game defaults 3; one-time NVS policy 4 migration preserving subsequent adjustments",
+    "Time-driven full-track reversible loading animation plus completed Ready frame"
+  ],
+  "host_validation": {
+    "settings_tests": 1,
+    "startup_tests": 1,
+    "shell_suite_tests": 7,
+    "cached_vs_full_frames": 240,
+    "commands": [
+      "make console-settings-host console-startup-host console-shell-host",
+      "make console-shell-host"
+    ],
+    "result": "pass"
+  },
+  "firmware_built": false,
+  "flashed": false,
+  "physical_acceptance": "pending",
+  "coordination": {
+    "thread_title": "Find gaming platform opportunities",
+    "thread_id": "01a10a7e-934c-78e1-a3b8-f76ae7a343d6",
+    "messaging_authorization": "requested and pending"
+  },
+  "source_sha256": {
+    "components/console_shell/src/nextgen.inc": "ccfc3cb4b07e895be84005d6fc09c07ca62e0849648423b29de06bbb1ff9e10a",
+    "components/console_shell/src/console_shell.c": "fdf594b49d63a917e17de9261a0d36bc683d8998783f6be8589b2e57350d9373",
+    "components/console_shell/tests/test_nextgen.c": "ecadd0c007f0fae3bdcaf1b763ad78530b70c007cdfe9bfd200263a92b756cbb",
+    "components/console_startup/src/startup.c": "fc7665e8b2eb84f56a8b322114b8e9199b9d802655a6c2be51ffd83fd9209903",
+    "components/console_startup/include/console/startup.h": "70c942ac5793cb45cc0a01a6026c28e764f07a38b976c7fa9659832486c9a9b3",
+    "components/console_startup/tests/preview.c": "f2020839ba03973d9e318e174c8d96a2883ba5f2bdecf251e84d0e0da33d5bda",
+    "components/platform_console_settings/include/platform/console_settings.h": "e555a854353365fcb118ed0f727d810cc2a153c863dfca4275de16cc60200596",
+    "components/platform_console_settings/src/platform_console_settings.c": "2718c68b791cef5b4fba81fc49b27174afc8bb920cfb163e1d4b13e207585707",
+    "apps/console_os/main/console_os_main.c": "25b9c2a71cf1a4a4d1274f167a3bc10cc9900072a30fb98957554caf07ae12b5",
+    "Makefile": "cdfdaed9055eea1dfc032dba229b034f4ca5e1216629b52d89f3d308784e2d4e",
+    "components/platform_console_settings/tests/CMakeLists.txt": "33122ac386e9c344d0f1a4a5a5595630308be650bd706fea3cc94e13fac0c135",
+    "components/platform_console_settings/tests/test_settings.c": "5f6b40c52d960fcd97f723f11cc0b24536475502037e6e1ac8cbc92c5feea564",
+    "components/platform_console_settings/tests/stubs/nvs.h": "8a59da8394c67591a2e99ab673339a4c7870b0fb2f2f7ef34afd554709506658",
+    "components/platform_console_settings/tests/stubs/esp_log.h": "8a59da8394c67591a2e99ab673339a4c7870b0fb2f2f7ef34afd554709506658",
+    "components/platform_console_settings/tests/stubs/nvs_flash.h": "8a59da8394c67591a2e99ab673339a4c7870b0fb2f2f7ef34afd554709506658",
+    "components/platform_console_settings/tests/stubs/esp_mac.h": "8a59da8394c67591a2e99ab673339a4c7870b0fb2f2f7ef34afd554709506658",
+    "components/platform_console_settings/tests/stubs/sdk.h": "05ef57b75001ff0866a69c8911cac5ca59658159777d2f410c1a743a5372b22b",
+    "components/platform_console_settings/tests/stubs/esp_err.h": "8a59da8394c67591a2e99ab673339a4c7870b0fb2f2f7ef34afd554709506658"
+  },
+  "future_usability_candidates": [
+    "Status-bar charging indicator",
+    "Favorites and Recently played in Games"
+  ],
+  "superseded_by": "hardware/evidence/tab5-0.51-combined-testing.json",
+  "historical_record_note": "This record describes the earlier host-only checkpoint. The combined0.51 evidence records the later coordinated firmware build/install; its native Tab5 boot uses the newer0.50 flight design."
+}

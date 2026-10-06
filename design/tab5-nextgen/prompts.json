@@ -1,0 +1,295 @@
+{
+  "generator": "built-in image_gen.imagegen",
+  "screens": [
+    {
+      "name": "01-home",
+      "prompt": "Use case: design exploration / UI mockup. Generate one complete polished flat front-on screen for GameChangersAI OS, a handheld game platform on the M5Stack Tab5, 5-inch 1280x720 landscape display. This is the new HOME / GAME LIBRARY screen. 16:9 image, preferably 1536x864 or 1280x720. No tablet/device frame, no perspective. Art direction: the optimistic 1995 film Hackers cyberspace energy matured into an extremely usable contemporary handheld console. Ink navy #07121C, slightly lighter #122735 surfaces, warm white #F4FAFC text, readable pale blue #B4CBD5 secondary text, electric cyan #55E6EC as single interaction accent. NO Windows chrome, no bevels, no microscopic fake telemetry, no scanlines over text, no neon text glow. Big readable labels, around 28-32 px at 1280 wide, 42 px title, spacious 80-pixel-high touch controls. Use the supplied joystick logo as a small brand reference in the header; preserve the identity but simplify its placement. Top: small logo and GameChangersAI, right clean battery and storage indicators. Left slim 200px navigation with Home, Games, Multiplayer, Files, Settings. Main workspace title 'Your games'. One broad selected feature row with original low-poly cyan cyberspace arcade artwork on the right and title 'Byte Buddy' on an opaque calm left region, subtitle 'Explore. Collect. Decode.', substantial cyan 'Play' button. Below exactly three large selectable game-cover tiles: 'Maze Chase', 'Blast Circuit', 'Solitaire' with tasteful original game illustrations. Selected card has unambiguous cyan outline and small play icon. Plenty of negative space. Footer plain 'A Play   B Back' and OS 0.43. Sample battery '72%' is illustrative mock data. Avoid desktop windows, heavy card mosaic, unreadable microtext. Make it exciting through the artwork and composition, calm and highly legible through the typography. This is a visual concept, not a photograph.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-a19e5c4c-88cf-4397-9f4e-3088ab6cf807.png",
+      "original_source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-26ff3eda-6f54-40f4-88dd-0ef5bb17d76a.png",
+      "edits": [
+        {
+          "prompt": "Edit the FIRST attached GameChangersAI OS Home screen, preserving its exact polished navy/cyan interface, layout, logo, all functional navigation, labels, sizes and controls. Make only these changes: remove the invented advertising slogans 'PLAY A BRIGHTER TOMORROW', 'SMALL BOT BIG WORLDS', and the sidebar slogan 'PLAY CREATE SHARE BELONG', leaving calm empty space in their places. Replace only the Blast Circuit game thumbnail with a colorful top-down bomb arena with blocks and small player characters, matching the Blast Circuit cover in the SECOND attached Games screen. Blast Circuit is a bomb arena game, not a space shooter. Keep the first Home image as the output, retain Byte Buddy hero robot, Maze Chase, Solitaire, status bar and Play button. No added text or slogans.",
+          "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-a19e5c4c-88cf-4397-9f4e-3088ab6cf807.png"
+        }
+      ],
+      "output": "design/tab5-nextgen/screens/01-home.png",
+      "sha256": "a9f94988ced5ece76efb93482c7fafd4b11b999daf54caecdb856a2953abcd3b",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "02-games",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. Screen: GAME LIBRARY. Games selected in sidebar. Main title Games with count '18 installed'. Three large category tabs All, Arcade, Puzzle. Six large illustrated covers arranged in 3 columns by 2 rows, with titles on solid opaque bottom strips: Byte Buddy (little friendly cyan robot in data city), Maze Chase (overhead maze and yellow orb), Blast Circuit (top-down arena of bombs and blocks, NOT a spaceship), Solitaire (classic cards), Frog Hop (frog crossing river), Skyline Leap (rooftop jumping). Each cover is a touch action. Show Byte Buddy selected with cyan outline and a clear play glyph. No excessive metadata. Enough room for clear titles at device size. Consistent polished navigation and hierarchy.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-b245c184-24c1-4cc3-a9d9-2be4d6e8b671.png",
+      "output": "design/tab5-nextgen/screens/02-games.png",
+      "sha256": "38eb60c0ef0dcca27bb8cf064dcd805260714a953a4885a6a31c9ea412adaf67",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "03-boot",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. BOOT screen: REMOVE sidebar, status bar, controls and game cards. Center the existing joystick brand emblem above the large exact name GameChangersAI and smaller 'OS 0.43'. Original low-poly cyan luminous data-city silhouette at bottom quarter, vast calm deep navy backdrop. One thin cyan progress line and clear text 'Starting your console'. Premium hacker game console identity, instantly recognizable, high contrast. No fake boot terminal logs, no percent, no slogan, no artificial loading delay suggestion.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-851bc25e-76f5-49b5-9e1b-2d37fc9302e3.png",
+      "output": "design/tab5-nextgen/screens/03-boot.png",
+      "sha256": "d77d58ddab484d58a67234116e466746582381618943a85f7f723e16dd8ffefe",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "04-settings",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. SETTINGS hub screen: Settings active in left navigation. Title 'Settings'. Six large readable rows in two columns: 'Sound' with 'Startup and game volume'; 'Appearance' with 'Theme and text size'; 'Controllers' with 'Buttons and connected devices'; 'Storage' with 'Games and free space'; 'Battery' with 'Power and charge status'; 'System' with 'Clock, sensors and device info'. Simple strong icons and chevrons, airy spacing, focus cyan fill on Sound. No 3D illustrations behind text, no graphs.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-841e5894-e662-4815-83f3-249065905e93.png",
+      "output": "design/tab5-nextgen/screens/04-settings.png",
+      "sha256": "b6f58a123ddd9e91301ebb2bedeb2efb0a63122927345676461196eb20c9b03d",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "05-battery",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. BATTERY detail screen in Settings, with clear Back link and title 'Battery'. Main state is the REAL observed failure, no fake success: large '--%' and label 'Battery reading unavailable'. Show a restrained amber warning symbol, not red panic. Below readable two-column diagnostic rows 'Pack voltage 1.14 V', 'Expected pack 6.0\u20138.4 V', 'Charge state Unknown'. A short clear message 'Check the battery connection.' Secondary text 'Charging status is not yet verified.' No claims of charging, no invented remaining time, no sample 72 percent in header here: use '--'. Large button 'Refresh'. In a small distinct amber inline strip at bottom show 'Low voltage reading'. Dark navy and cyan style, very readable at 5 inches.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-41a1c2ae-bd1a-44e8-a409-e9e0bdcc986e.png",
+      "output": "design/tab5-nextgen/screens/05-battery.png",
+      "sha256": "08d45fcea2fc8db59b635905a9dfa1afb73576010580bf92462f6a5937f47264",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "06-sound",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. SOUND settings screen. Large title Sound with Back. Two generous stacked slider sections labeled 'Startup volume' and 'Game volume', each with large minus and plus buttons, clear segmented level bar and value '6 / 10'. Separate bottom large button 'Preview startup sound', and secondary 'Mute'. A small tasteful cyan waveform diagram off to one side only, not behind labels. No equalizer, no extra audio modes. Settings selected in nav.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-0ebb428c-5f50-449f-b3b9-a1012ddf62d5.png",
+      "output": "design/tab5-nextgen/screens/06-sound.png",
+      "sha256": "4f0adbc508455ba811e9082b73a47fae09c8bdc1b1f65ab00f25579b0696c7b7",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "07-appearance",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. APPEARANCE settings screen. Settings selected. Title Appearance, Back. Main large side-by-side options 'Cyber' (selected cyan) and 'High contrast' with simple miniature screen samples. Below 'Text size' with large buttons 'Standard' and 'Large' (selected). Bottom 'Reduce motion' with an unmistakable toggle showing On. High contrast theme option is off-white background, very dark ink text and cyan focus. Keep every control large. No 3D decoration. Feature proposal visual only.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-f48cf6d7-eef8-4ed3-9c69-6f4c450d5995.png",
+      "output": "design/tab5-nextgen/screens/07-appearance.png",
+      "sha256": "d3d817f128a7ce660e26b1d289f265b3a87ec39ca5c00257471812a7019cafbf",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "08-files",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. FILES screen. Files selected. Main title Files. Breadcrumb 'SD card / Games'. Generous readable list table with columns Name, Type, Size. Four roomy 80px rows: 'ARCADE' Folder; 'PUZZLE' Folder; 'DOOM1.WAD' Game data '4 MB'; 'README.TXT' Text '2 KB'. Highlight ARCADE with pale cyan focus border, large folder icons. Bottom buttons 'Open', 'Refresh', separate subdued 'Delete'. Delete should not look like primary action. Display '18 games installed' in footer context. No marketing, no needless holographic art; clean hacker terminal precision.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-f27dcc55-f766-4ebb-8446-70d0c6ebe4ea.png",
+      "output": "design/tab5-nextgen/screens/08-files.png",
+      "sha256": "2adbf877c108f0b247603bf8cb855f31945aa35e3d72df86efc1c67fb26a938f",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "09-multiplayer",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. MULTIPLAYER screen. Multiplayer selected. Title Multiplayer. Two huge readable choices 'Host a game' and 'Join a game' with simple linked-console icons. Both visibly unavailable but labels still readable. A clear central amber state 'Wireless link unavailable' with short supporting line 'This firmware does not enable the wireless radio.' Bottom secondary 'Back to games'. It must not claim available rooms, online status, working Wi-Fi or an enabled C6. A faint cyberspace connection illustration in a calm right region is optional; no terminal clutter.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-d1e7b12f-15b7-49d7-bb98-71b454fe74d3.png",
+      "output": "design/tab5-nextgen/screens/09-multiplayer.png",
+      "sha256": "acea59f77182881b5de7b2f738c01260555d0f5cb2fa046e27273ff91077c73d",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "10-controllers",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. CONTROLLERS screen under Settings. Title Controllers with Back. Main clear state 'No controller connected'. Show an attractive cyan line drawing of a generic gamepad on left. On right large readable instructions 'Connect a wired controller to USB-A.' Below 'Touch controls are ready'. Bottom two actions 'Button test' and 'Mapping', disabled until controller attached. A separate unobtrusive line 'Bluetooth unavailable in this firmware'. No fake battery or device pairing claims.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-1165fbb5-a7c3-483d-89b5-f9c25745be24.png",
+      "output": "design/tab5-nextgen/screens/10-controllers.png",
+      "sha256": "b03910d4a3ef427f004c419c2fa47cbd50c498e82583670bc2f54c5afe6855ec",
+      "dimensions": [
+        1672,
+        941
+      ],
+      "original_source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-4cf88932-c9b3-4bb9-ba7f-f42772f0d480.png",
+      "edits": [
+        {
+          "name": "10-controllers",
+          "prompt": "Edit this exact GameChangersAI OS Controllers screen solely to improve readability. Preserve all words, all states, all arrangement and the dark navy/cyan design. Make disabled or unavailable button labels and explanatory text clearly readable pale blue #B4CBD5 against dark navy #122735, without giving them cyan active fills. Keep their disabled appearance through neutral backgrounds and explicit unavailable text; never reduce label legibility. No feature should change state or claim to be connected. Preserve everything else.",
+          "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-1165fbb5-a7c3-483d-89b5-f9c25745be24.png"
+        }
+      ]
+    },
+    {
+      "name": "11-storage",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. STORAGE screen under Settings. Title Storage. Main 'SD card' and giant readable '128 GB free' with '256 GB total' and simple horizontal used/free bar. Explicit sample data in this concept. Large rows 'Games 18 installed', 'Saves 6 files', 'Game data 4 MB'. Bottom large actions 'Browse files' and 'Check card'; a small secondary 'Advanced repair' link away from primary actions. All status words legible, no round charts, no random telemetry, no RAM confusion.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-19bd5a96-cce4-4ceb-8d3e-ff5553c4328e.png",
+      "output": "design/tab5-nextgen/screens/11-storage.png",
+      "sha256": "518d888159712502ee91445d175c1f5758591e3a22b21f00afd302ea8437126f",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "12-saves",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. SAVED GAMES screen under Games. Title 'Saved games'. Three generous list rows with game illustration thumbnail at left, title and save label in big white type: 'Byte Buddy' / 'Slot 1'; 'Solitaire' / 'Current game'; 'Maze Chase' / 'High scores'. First row selected cyan. Right of each row clear 'Saved on SD'. Bottom 'Open game' primary and separated subdued 'Delete save'. No invented cloud sync, time played or achievement telemetry. Clean dividers, large controls.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-17dbf688-24e7-49cd-b5eb-ed22638e67c2.png",
+      "output": "design/tab5-nextgen/screens/12-saves.png",
+      "sha256": "59efeed09609889922a02821913297328abed26d1bf55aa6cca00a7f09eb3ddf",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "13-achievements",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. ACHIEVEMENTS screen under Games. Title 'Achievements'. A compact readable 'Your progress' label and '3 unlocked'. Three horizontal spacious achievements: 'First steps' / 'Play your first game' with earned check; 'Maze runner' / 'Complete a maze' with earned check; 'Keep exploring' / 'Try another game' with lock and clear 'Locked'. Simple bold cyan badge illustrations, earned states use white check, locked states still legible; no dense cards or fake global leaderboards. Illustrative data only.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-3ece5f85-1baf-4dd2-99c4-01e6937f554d.png",
+      "original_source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-f779a6cb-21c2-42fd-a0bc-1f021d03fc53.png",
+      "edits": [
+        {
+          "prompt": "Edit this exact GameChangersAI OS Achievements screen. Change the summary count '3 unlocked' to '2 unlocked' because only two achievements in the list are earned. Preserve every other pixel as closely as possible: layout, typography, colors, labels, status bar, all three achievement rows with the last one locked. No other changes.",
+          "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-3ece5f85-1baf-4dd2-99c4-01e6937f554d.png"
+        }
+      ],
+      "output": "design/tab5-nextgen/screens/13-achievements.png",
+      "sha256": "09c4077294e2252953655d49aa924627284651d43f45fce9e6c857ca2d25872e",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "14-transfer",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. FILE TRANSFER screen under Files. Title 'Transfer games'. Main state 'Ready for USB transfer'. A simple clear illustration of laptop connected by USB-C to a small Tab5, on left; right has three large numbered steps 'Connect USB-C', 'Send a game from your computer', 'Wait for verification'. Bottom quiet status 'No transfer in progress' and large 'Back to files'. This is serial content transfer, NOT USB disk drive mode. No fake progress percentage or wirelessly connected labels.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-bebdae42-319b-43b3-94b4-932c5b03456b.png",
+      "output": "design/tab5-nextgen/screens/14-transfer.png",
+      "sha256": "3683cab515842bab0ae1a9842972e9b3692ee36e9eb42fdc3b767048aaef32db",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "15-terminal",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. TERMINAL / BBS screen under Settings advanced. Title Terminal. Large quiet terminal area with highly legible monospace 28px at 1280 width, cyan prompt and white output, no tiny green matrix text. Exact displayed lines: 'GameChangersAI OS 0.43', 'System console', '> help', 'status   files   games', '> _'. Buttons below 'Help', 'Clear', 'Back'. No fake intrusion targets or hacked systems. It should feel like a friendly powerful personal cyberdeck, not Windows. No artwork behind terminal content.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-5fb52234-e3f4-4d88-8ef1-534fab9db782.png",
+      "output": "design/tab5-nextgen/screens/15-terminal.png",
+      "sha256": "e23b6de3db75b815921306d79366195f1a64d6b4804370a04e52ef1367fd0c08",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "16-sensors",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. SENSORS screen under Settings advanced. Title Sensors, Back. A clear stylized Tab5 orientation illustration at left, right three readable rows 'Acceleration' with 'X 0.01 g   Y 0.10 g   Z -1.00 g', 'Rotation' with 'Still', 'Sensor temperature' with '32 C'. Below label 'Live motion readings' and note 'Sensor temperature is not room temperature'. Illustrative values. A simple level guide circle may accompany tablet illustration. No dense scientific tiny-font table or matrix background.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-306a7296-eb84-486a-a77c-0a7eef64b60e.png",
+      "output": "design/tab5-nextgen/screens/16-sensors.png",
+      "sha256": "efd54fdf881cb0e5a9250132cf28b343831d99742cf17b818bf7805db872e050",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "17-system",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. SYSTEM screen under Settings. Title System. Calm spacious aligned rows, using large text and dividers: 'GameChangersAI OS' value '0.43', 'Device' value 'M5Stack Tab5', 'Display' value '1280 x 720', 'Clock' value 'Sync from computer'. Bottom big actions 'Sensors', 'Diagnostics', 'About'. This is consumer-facing settings, no raw silicon addresses, firmware hashes or irrelevant technical lines. Make clock sync action visible. Navy-white-cyan consistent system.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-bea63800-175b-4181-9b59-00b92200eaca.png",
+      "output": "design/tab5-nextgen/screens/17-system.png",
+      "sha256": "af527b4880783754871ebbbf00b6f3afa450cdedba874821f3317bc3f2e84507",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "18-usb-drive",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. USB DRIVE screen under Files. Title 'USB drive'. Main state 'USB drive mode unavailable'. Large USB symbol, concise text 'Use game transfer through USB-C instead.' Primary large action 'Transfer games'. Secondary 'Back to files'. Clearly explain this capability state without a frightening error or simulated mounted disk. Large bright text on opaque dark surfaces. Avoid fake connection progress.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-98a476f9-e205-4d90-95f5-279ab6940226.png",
+      "output": "design/tab5-nextgen/screens/18-usb-drive.png",
+      "sha256": "6b3f5c973aeb4b4ef2cd04314f481b428fac5c969006d4393505675cbdce3a06",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "19-touch-test",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. TOUCH TEST diagnostic screen under Settings. Title 'Touch test'. Short instruction 'Touch anywhere in the test area'. A large empty dark rectangular touch surface with thin cyan edge, a single cyan crosshair at its center, and a small readable label below '1 contact'. Bottom 'Clear' and 'Done' buttons each 90px high. No dense coordinate tables. Diagnostic illustration only. Give nearly all available main content area to the interactive test surface.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-afbff6de-19d3-401d-a29d-87641812c367.png",
+      "output": "design/tab5-nextgen/screens/19-touch-test.png",
+      "sha256": "53b93dbea927d5c4f446ce7382f015840698436d7cd69294d88a840d31acb07f",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "20-display-test",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. DISPLAY TEST diagnostic screen under Settings. Title 'Display test'. Main area has seven clear wide vertical color bars white yellow cyan green magenta red blue, below a single grayscale strip from black to white. No text overlays on swatches. Bottom actions 'Colors', 'Grayscale', 'Done', large and readable. Title, left navigation and system header remain same dark navy/cyan system, test colors isolated to test area. It is a usable screen test, no game art.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-fe3d4608-7b33-4a0c-a1bf-3ba68fecb3f9.png",
+      "output": "design/tab5-nextgen/screens/20-display-test.png",
+      "sha256": "578dc0934cbd8036fd0982caabc67943438c3839b96a581b645e78b583fe8012",
+      "dimensions": [
+        1672,
+        941
+      ],
+      "original_source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-1fee8301-39dd-4b38-a5bf-9b4b887ec649.png",
+      "edits": [
+        {
+          "name": "20-display-test",
+          "prompt": "Make one precise correction to this exact GameChangersAI OS Display test screen: Settings is the ONLY selected navigation item, so keep its cyan selected treatment, and restore Home to the same neutral background and pale label/icon as Games, Multiplayer and Files. Preserve all display test patterns, text, layout, other controls and color calibration elements exactly. Do not add anything.",
+          "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-fe3d4608-7b33-4a0c-a1bf-3ba68fecb3f9.png"
+        }
+      ]
+    },
+    {
+      "name": "21-launch",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. GAME LAUNCH transition screen. Remove sidebar and all normal header/footer navigation. Entire landscape canvas dark navy with original cyan low-poly data-city artwork at right, friendly small cyan robot as Byte Buddy hero. At left large 'Byte Buddy', smaller 'Starting game'. A single thin cyan progress line beneath. Bottom small but readable 'GameChangersAI OS'. No fake percent, no artificial delay, no Cancel once launch begun. Calm quick transition, text on solid dark background, exciting art separated from text.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-094061f9-35a0-4ade-9b8d-320435e40562.png",
+      "output": "design/tab5-nextgen/screens/21-launch.png",
+      "sha256": "1ea909b2f87fb514389f9d88918cea78a3c534eac323e5027496eca1bd3fe398",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "22-game-manager",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. MANAGE GAMES utility screen under Settings Storage. Title 'Manage games'. Clear subtitle 'Installed on SD card'. Three spacious rows 'Byte Buddy', 'Maze Chase', 'Blast Circuit' with package-type label 'Native game' and plain 'Installed'. Select first row cyan outline. Bottom actions 'Play', 'Refresh library', separated subdued 'Remove'. No decorative large illustrations except small actual game icon thumbnails. No fake download store or remote install. Removal should clearly be secondary.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-2852ed78-0fc7-48d6-a174-bee036a3836a.png",
+      "original_source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-c6015d66-a6b6-4544-bbae-0415b0e9c584.png",
+      "edits": [
+        {
+          "prompt": "Edit the FIRST attached GameChangersAI OS Game Manager screen. Preserve its full layout and all labels and controls exactly. Replace only the Blast Circuit thumbnail artwork: it must show a colorful top-down bomb arena with blocks and small player characters, like the Blast Circuit cover in the SECOND attached Games screen. It is not a space shooter. Return the first Game Manager screen with only that thumbnail corrected. No other changes.",
+          "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-2852ed78-0fc7-48d6-a174-bee036a3836a.png"
+        }
+      ],
+      "output": "design/tab5-nextgen/screens/22-game-manager.png",
+      "sha256": "6f05890104f7db786adbd42cc5a8c2101aae7f7be4373174e5b036612f9fe2d8",
+      "dimensions": [
+        1672,
+        941
+      ]
+    },
+    {
+      "name": "23-confirm-delete",
+      "prompt": "Flat front-on 16:9 full-screen UI concept for GameChangersAI OS on a 5-inch 1280x720 M5Stack Tab5. Use the reference HOME image as the exact visual system: ink navy #07121C, surfaces #122735, bright warm-white text #F4FAFC, pale blue secondary text #B4CBD5, cyan #55E6EC focus/action. Large readable 28-32px labels, 40px headings, generous 80px controls and spacing. 1995 Hackers cyberspace spirit with contemporary clarity. Only actual functional labels, no marketing slogans or invented microtext. No device frame, perspective, desktop window chrome, tiny diagnostics or scanline overlays. Header small joystick logo with GameChangersAI; battery/storage values illustrative. Left nav Home, Games, Multiplayer, Files, Settings; footer A Select B Back and OS 0.43. DELETE CONFIRMATION modal over a darkened Files screen. In a large central opaque navy dialog, title 'Delete this save?' and large item name 'Byte Buddy \u2014 Slot 1'. Clear text 'This removes the saved game from the SD card.' Two large separated buttons 'Cancel' selected in cyan and 'Delete save' with amber outline. Bright readable text; no tiny disclaimer, no aggressive red. The background navigation is dimmed and clearly inactive; modal occupies 70 percent width. No game achievement claims. This is destructive confirmation with safe default Cancel.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-51a6b084-367c-464c-85ef-eb60736f33dd.png",
+      "output": "design/tab5-nextgen/screens/23-confirm-delete.png",
+      "sha256": "72f0a3fbf493422e93756b14a01a8155e0f2c1d1e882fa9d561a417af0e444f1",
+      "dimensions": [
+        1672,
+        941
+      ]
+    }
+  ]
+}

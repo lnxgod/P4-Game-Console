@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.0.6",
+  "version": "1.1.0",
   "package_file": "P4_AIR_HOCKEY.P4G",
   "component": "p4_air_hockey",
   "sources": [
@@ -23,10 +23,11 @@
   ],
   "optional_capabilities": [
     "audio-tone",
-    "multiplayer-session"
+    "multiplayer-session",
+    "video-highres"
   ],
   "license": "MIT",
-  "assets": "original-imagegen-rink-v6-and-object-sprites-v1",
+  "assets": "original-imagegen-hd-materials-and-sprites-v2-plus-native-ui",
   "enabled": true,
   "multiplayer": {
     "schema": 1,
@@ -36,5 +37,6 @@
     "tick_rate_hz": 30,
     "message_bytes": 32,
     "protocol": 4
-  }
+  },
+  "launcher_icon": "assets/launcher.p4i"
 }

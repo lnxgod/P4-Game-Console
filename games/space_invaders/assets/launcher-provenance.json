@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "mode": "built-in image_gen; cover derived from upgraded game artwork",
+  "source": "launcher-source.png",
+  "source_sha256": "5406ab06bf8a06d0bcd4169dc183174774be1fa25af37f532f8db1da52ca3101",
+  "generation_source": "/Users/billh/.codex/generated_images/01a10e4d-67fb-7561-b76d-25c549064ff2/exec-eeda0969-3e39-4c0f-9800-ba1d30ed94f9.png",
+  "prompt": "Use case: stylized-concept. Asset type: finished landscape 16:9 launcher cover illustration for a console game, optimized for a tiny 128x72 thumbnail. Create ONE cohesive edge-to-edge scene, not a sprite atlas. Clear large silhouettes, center-safe subject, premium polished game illustration with restrained dark background and luminous material detail. Absolutely no title, letters, logos, interface, numbers, watermarks or border. Opaque background. Game: Space Invaders. Reference defines original silver-blue twin-engine defender ship with orange canopy and purple/teal alien spacecraft. Compose one large silver-blue defender in foreground flying upward into a small wave of three purple and teal alien craft, in deep navy space with cyan engine plumes and a restrained orange blast. Preserve reference ship silhouettes; energetic polished arcade science-fiction cover. No familiar film or commercial franchise spacecraft. Large foreground ship takes half image height.",
+  "reference_assets": [
+    {
+      "path": "games/space_invaders/assets/hires_atlas_v2.png",
+      "sha256": "6fad8858843565a2fbdcac4c839ca3b2bf80622607b6e16fbcff6341d0e5ee87"
+    }
+  ],
+  "license": "Original AI-generated project artwork, distributed under the project MIT license. No third-party game art.",
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "sha256": "712bb24c727fb0612afd0974102343be0976c9212ca5a5fd65e041ec339cc9fc",
+    "bytes": 9744,
+    "width": 128,
+    "height": 72,
+    "palette_entries": 256,
+    "palette_format": "little-endian RGB565",
+    "pixels": "row-major uint8 palette indices",
+    "opaque": true
+  },
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "command": "python3 scripts/pack-game-icon.py games/space_invaders/assets/launcher-source.png --output games/space_invaders/assets/launcher.p4i",
+    "description": "Standard center-fit Lanczos resize and 256-color median-cut quantization. No gameplay or runtime assets changed."
+  }
+}

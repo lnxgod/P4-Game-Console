@@ -63,6 +63,21 @@ coverage/
 /agent-*.png
 /grokcoder-*.png
 
+# Wacky Wheels diagnostic frame dumps are local test output.
+/wacky-client.rgb565
+/wacky-host.rgb565
+/wacky-menu.rgb565
+
+# Reproducible design exports and downloaded research stay local. The curated
+# PNG/HTML galleries, original sources, licenses and provenance remain tracked.
+/design/tab5-nextgen/native/*.ppm
+/design/tab5-nextgen/native/review-[0-4].png
+/design/tab5-nextgen/native/settings.png
+/design/tab5-nextgen/boot-flight/entrance.png
+/design/tab5-nextgen/boot-flight/settled.png
+/design/tab5-nextgen/research/Tab5_Schematics_PDF.pdf
+/design/tab5-nextgen/research/power-schematic.png
+
 # Local logs, editor swaps, and interrupted-patch residue.
 *.log
 *.tmp

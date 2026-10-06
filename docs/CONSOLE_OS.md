@@ -2,7 +2,14 @@
 
 ## Status
 
-Console OS 0.5.12 is the selected production baseline. The 0.5.13, 0.5.14,
+The primary Tab5 release is **GameChangersAI OS 0.51**, combining the 0.50 boot
+and game-performance changes with volume/status, scrolling/category/file-safety,
+shared multiplayer/charging and motion-cartridge support. See
+[the Tab5 board record](boards/M5STACK_TAB5.md) and
+`hardware/evidence/tab5-0.51-combined-testing.json` for current per-unit evidence.
+Game cartridge upgrades remain independently installed and qualified.
+
+For the historical Waveshare deployment, Console OS 0.5.12 is the selected production baseline. The 0.5.13, 0.5.14,
 and 0.5.15 native-scrolling experiments were rejected/not accepted after
 operator comparison; the exact rollback chain restored 0.5.12. Their capture
 tooling and rejected-version changelog entries remain available for a future,
@@ -576,15 +583,10 @@ lengthening the later V.22bis handshake. The timing lives in the shared
 Console OS layer and is identical on Waveshare 4.3 and the Elecrow 10 in
 variant.
 
-The current compatibility successor also restores the original P4 Cart
-Library boundary without replacing the native `.P4G` loader. A bounded PSRAM
-background task scans `P4/GAMES/*.P4CART`, validates complete `P4CART1`
-container geometry plus whole-file and per-payload hashes, and adds valid carts
-to the launcher. At launch, Console OS revalidates and hashes the selected
-source, then runs it in the source-locked Lua 5.4.8 sandbox with bounded heap,
-instructions, host calls, drawing, tone audio, and OS-owned exit handling.
-Source carts never enter the native ELF loader. Saves currently persist across
-relaunches within one boot; durable SD commits remain pending.
+New Console OS builds support native `.P4G` games only. The old Lua catalog,
+launcher, VM, games, tools and skill are removed. Native cartridge entry and
+frame scheduling remain reusable native components, not a script runtime. See
+[the native authoring guide](GAME_STARTERS.md).
 
 ## Board-specific runtime
 
@@ -626,8 +628,7 @@ is refused until Finder ejects the volume or H2 disconnects.
 After the card volume mounts, run
 `make install-waveshare-sd-card SD_MOUNT=/Volumes/P4GAMES`. Eject it in Finder,
 then press **Turn Off USB Mode** to remount and rescan. The same guarded
-installer copies all enabled packages, declared source cartridges, and
-resource sidecars (including `GAMES/BYTEBUD.P4G` and `GAMES/BYTEBUD.P4R`), verifies every
+installer copies all enabled native packages and resource sidecars (including `GAMES/BYTEBUD.P4G` and `GAMES/BYTEBUD.P4R`), verifies every
 hash, and leaves unrelated card data untouched. It requires an external
 USB FAT32 volume named `P4GAMES`; ExFAT is rejected because the pinned firmware
 mount does not support it. Recover a card with `diskutil eraseDisk MS-DOS
@@ -676,7 +677,7 @@ boot
        |     |-- Tools -> Calculator
        |     |-- Tests -> Input Test / AV Test
        |     |-- File Manager -> bounded root list / confirmed delete
-       |     |-- Game Manager -> P4G status/remove, P4CART launch, OS update
+       |     |-- Game Manager -> native P4G status/remove, OS update
        |     |-- Save Manager -> bounded OS-owned slot catalog
        |     |-- Multiplayer -> local session core / transport status
        |     |-- Controllers -> USB/BLE status + pair/disconnect/forget
@@ -816,8 +817,8 @@ File Manager paging, selection, open/up navigation, refresh,
 confirmation/cancel, non-removable directories, unavailable storage, and
 malformed snapshots.
 Game/package tests additionally cover malformed headers, reserved fields,
-ELF/string-table bounds, real seed cartridges, deterministic P4CART packing,
-complete P4CART/payload hashes, Game Manager remove/install confirmation, and
+ELF/string-table bounds, native cartridge validation, rejection of unsupported
+package formats, Game Manager remove/install confirmation, and
 the platform-neutral `.P4U` envelope parser.
 
 The IDF target builds with the locked ESP-IDF 5.5.3 and managed component
@@ -860,3 +861,22 @@ observation on the panel.
 
 WADs, WAD-bearing firmware binaries, and local recovery images remain local
 and must never be pushed to GitHub.
+
+## Tab5 library navigation and file actions (0.46)
+
+The native Games view scrolls continuously by finger drag and shows a scrollbar
+that can also be dragged. Controller directions move through the full filtered
+library and bring the focused tile into view. The Category control derives its
+choices from installed cartridge folder metadata, including categories added by
+future cartridges. All categories restores the complete library. Selecting a
+category starts at the top; an unavailable category falls back to All after a
+catalog change. Scrolling never launches a tile on release, and content clipping
+keeps the fixed navigation, filter and footer controls separate.
+
+Files and Manage games also support touch scrolling and controller navigation.
+The main Open action opens directories; Install update retains its confirmation.
+Ordinary files never map Open to deletion. Removal is available only through the
+small `...` file-actions button, then Delete/Remove, then the named confirmation.
+Cancel is the default. Listing changes or a replaced selection invalidate both
+the actions menu and confirmation; a held press cannot remove a replacement file.
+Game artwork remains owned by cartridge packages and independent remix work.

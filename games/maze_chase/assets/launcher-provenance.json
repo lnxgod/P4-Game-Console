@@ -1,0 +1,17 @@
+{
+  "schema": 1,
+  "mode": "built-in image_gen",
+  "source": "launcher-source-v2.png",
+  "source_sha256": "3aaef108d826c1fe721a23fd58dca168b420fff6711b8339bcf8326a60d4cbbc",
+  "generation_source": "/Users/billh/.codex/generated_images/01a10a7e-934c-78e1-a3b8-f76ae7a343d6/exec-9be1fcfb-c8a3-48c0-b1f5-cf25665ecc0d.png",
+  "prompt": "Polished 16:9 Maze Chase arcade cover: gold mechanical chomping orb with cyan lens and circuit engravings races through luminous cyan labyrinth walls and gold pellets, pursued by coral flame, cyan jelly, violet wisp and orange cloud spirits. High-end hand-painted 2D arcade box art, readable at128x72, no text/logos/UI/watermark. Character identity references: chase_hero_preview.png and chase_compiled_preview.png.",
+  "references": [
+    "chase_hero_preview.png",
+    "chase_compiled_preview.png"
+  ],
+  "packed": "launcher.p4i",
+  "packed_sha256": "63e06b8908300f1b121b634fc4c7526289c4945b00b01275df928ed4eb669760",
+  "packed_bytes": 9744,
+  "format": "P4ICON1 indexed RGB565 128x72",
+  "previous_source_preserved": "launcher-source.png"
+}

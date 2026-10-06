@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1536" height="864" viewBox="0 0 1536 864">
+  <title>DOOM — classic game launcher wordmark</title>
+  <desc>Original editable vector lettering for the classic game entry. Gold and steel-blue angular letters on charcoal. No game-data artwork is embedded.</desc>
+  <defs>
+    <radialGradient id="back"><stop stop-color="#26313d"/><stop offset="1" stop-color="#080b10"/></radialGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop stop-color="#fff0c3"/><stop offset=".09" stop-color="#cfac61"/><stop offset=".4" stop-color="#8e693d"/>
+      <stop offset=".49" stop-color="#e0c386"/><stop offset=".5" stop-color="#6e8fa8"/>
+      <stop offset=".72" stop-color="#314f73"/><stop offset=".95" stop-color="#152b48"/><stop offset="1" stop-color="#7598b1"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2=".3" y2="1"><stop stop-color="#b59e73"/><stop offset="1" stop-color="#0a1725"/></linearGradient>
+    <g id="letters" fill-rule="evenodd">
+      <path d="M154 211 L352 224 L418 294 L418 571 L356 640 L190 663 Z M239 299 L260 566 L317 558 L341 531 L341 329 L317 305 Z"/>
+      <path d="M450 231 L652 239 L700 291 L700 571 L650 618 L456 635 L424 587 L424 288 Z M505 314 L501 546 L527 557 L600 552 L622 532 L622 333 L602 314 Z"/>
+      <path d="M740 239 L943 232 L977 288 L977 589 L945 636 L750 619 L703 571 L703 292 Z M781 314 L779 530 L802 551 L873 557 L900 545 L897 315 Z"/>
+      <path d="M1005 229 L1083 223 L1168 370 L1243 211 L1382 198 L1345 663 L1259 647 L1280 373 L1190 527 L1146 523 L1067 383 L1081 632 L1000 641 Z"/>
+    </g>
+  </defs>
+  <rect width="1536" height="864" fill="url(#back)"/>
+  <path d="M0 730 H1536 M0 738 H1536" stroke="#654732" stroke-opacity=".25"/>
+  <g transform="translate(9 25)"><use xlink:href="#letters" fill="#030507" stroke="#030507" stroke-width="26" stroke-linejoin="bevel"/></g>
+  <use xlink:href="#letters" fill="url(#metal)" stroke="#05070a" stroke-width="23" stroke-linejoin="bevel"/>
+  <use xlink:href="#letters" fill="url(#metal)" stroke="url(#edge)" stroke-width="8" stroke-linejoin="bevel"/>
+  <path d="M167 218 L346 231 L400 288 M459 239 L648 246 L686 291 M748 247 L936 240 L963 286 M1014 236 L1078 231 L1168 390 L1249 220 L1367 208" fill="none" stroke="#ffe9b8" stroke-opacity=".75" stroke-width="4"/>
+  <path d="M239 299 L260 566 L317 558 M505 314 L501 546 L527 557 M781 314 L779 530 L802 551" fill="none" stroke="#070e19" stroke-width="7"/>
+  <path d="M213 688 L1317 688" stroke="#42576c" stroke-width="2"/>
+</svg>

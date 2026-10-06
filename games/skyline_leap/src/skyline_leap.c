@@ -10,7 +10,8 @@
 #include "p4/feedback.h"
 #include "p4/game.h"
 #include "p4/input.h"
-#include "generated/skyline_leap_animation_atlas.inc"
+#include "hires.h"
+#include "generated/hires_city.inc"
 
 enum {
     HUD_HEIGHT = 18,
@@ -183,82 +184,79 @@ static void draw_number(p4_game_surface_t *surface, int x, int y,
         text[--position] = (char)('0' + value % 10U);
         value /= 10U;
     } while (value != 0U && position != 0U);
-    p4_draw_text(surface, x, y, &text[position], color, 1U,
+    hi_text(surface, x, y, &text[position], color, 1U,
                  sizeof(text) - position);
 }
 
 static void draw_atlas_cell(p4_game_surface_t *surface, int x, int y,
                             unsigned row, unsigned frame)
 {
-    const size_t offset = (size_t)row * FRAME_HEIGHT * ATLAS_WIDTH +
-        (size_t)(frame & 3U) * FRAME_WIDTH;
-    p4_draw_sprite_rgb565(surface, x, y,
-                          &s_skyline_leap_animation_pixels[offset],
-                          FRAME_WIDTH, FRAME_HEIGHT, ATLAS_WIDTH,
-                          true, UINT16_C(0x0000));
+    hi_frame(surface,x,y,FRAME_WIDTH,FRAME_HEIGHT,row*4U+(frame&3U));
 }
 
 static void draw_courier(p4_game_surface_t *surface,
                          const skyline_leap_state_t *state)
 {
-    const unsigned row = state->game_over ? COURIER_STATE_ROW : COURIER_RUN_ROW;
-    const unsigned frame = state->game_over ? 3U : state->animation_frame;
-    draw_atlas_cell(surface, state->player_x - 13,
-                    state->player_y - (FRAME_HEIGHT - PLAYER_HEIGHT),
-                    row, frame);
+    unsigned frame=state->animation_frame;
+    unsigned row=COURIER_RUN_ROW;
+    if(state->game_over){row=COURIER_STATE_ROW;frame=3U;}
+    else if(state->pulse_active){row=COURIER_STATE_ROW;frame=2U;}
+    else if(state->velocity_y!=0){row=COURIER_STATE_ROW;frame=state->velocity_y<0?0U:1U;}
+    else if((state->held_buttons&(P4_BUTTON_LEFT|P4_BUTTON_RIGHT))==0U)frame=0U;
+    hi_frame_flip(surface,state->player_x-13,
+        state->player_y-(FRAME_HEIGHT-PLAYER_HEIGHT),FRAME_WIDTH,FRAME_HEIGHT,
+        row*4U+frame,state->facing<0);
 }
 
 static void draw_background(p4_game_surface_t *surface,
                             const skyline_leap_state_t *state)
 {
-    const uint16_t skies[STAGE_COUNT] = {
-        COLOR_SKY, COLOR_DAWN, COLOR_SUNSET, COLOR_NIGHT,
-    };
-    const int stage = stage_index(state);
-    p4_draw_clear(surface, skies[stage]);
-    for (int x = 0; x < P4_GAME_SURFACE_WIDTH; x += 28) {
-        const int height = 14 + ((x / 28 + stage * 3) % 4) * 9;
-        p4_draw_fill_rect(surface, x, FLOOR_TOP - height, 20, height,
-                          COLOR_DARK_STEEL);
-        p4_draw_fill_rect(surface, x + 4, FLOOR_TOP - height + 5, 3, 4,
-                          COLOR_TEAL_LIGHT);
-        p4_draw_fill_rect(surface, x + 12, FLOOR_TOP - height + 13, 3, 4,
-                          COLOR_TEAL_LIGHT);
-    }
-    if (stage == 3) {
-        for (int x = 12; x < P4_GAME_SURFACE_WIDTH; x += 39) {
-            p4_draw_fill_rect(surface, x, PLAY_TOP + (x % 17), 2, 2,
-                              COLOR_CREAM);
-        }
+    const uint16_t skies[STAGE_COUNT]={COLOR_SKY,COLOR_DAWN,COLOR_SUNSET,COLOR_NIGHT};
+    const unsigned stage=(unsigned)stage_index(state);
+    p4_draw_clear(surface,COLOR_NAVY);
+    p4_ui_sprite(surface,0,p4_ui_y(surface,HUD_HEIGHT),surface->width,
+        p4_ui_y(surface,136),hi_city,384,154,false,0U);
+    /* Different atmospheric tints keep all four routes visually distinct. */
+    if(stage!=0U) {
+        for(int y=p4_ui_y(surface,HUD_HEIGHT);y<p4_ui_y(surface,154);++y)
+            for(int x=0;x<(int)surface->width;++x) {
+                uint16_t *pixel=&surface->pixels[(size_t)y*surface->stride_pixels+(size_t)x];
+                *pixel=p4_ui_blend(*pixel,skies[stage],2U);
+            }
     }
 }
 
 static void draw_platform(p4_game_surface_t *surface,
                           const platform_t *platform)
 {
-    p4_draw_fill_rect(surface, platform->x, platform->y,
+    hi_fill_rect(surface, platform->x, platform->y,
                       platform->width, 5, COLOR_STEEL);
-    p4_draw_fill_rect(surface, platform->x, platform->y, platform->width, 1,
+    hi_fill_rect(surface, platform->x, platform->y, platform->width, 1,
                       COLOR_CREAM);
-    p4_draw_fill_rect(surface, platform->x + 3, platform->y + 5,
+    for(int x=platform->x+4;x<platform->x+platform->width-3;x+=9) {
+        hi_rect(surface,x,platform->y+2,5,2,COLOR_DARK_STEEL);
+        if(surface->width==P4_GAME_SURFACE_HIGH_RES_WIDTH)
+            p4_draw_pixel(surface,p4_ui_x(surface,x),p4_ui_y(surface,platform->y+2),COLOR_WHITE);
+    }
+    hi_fill_rect(surface, platform->x + 3, platform->y + 5,
                       platform->width - 6, 3, COLOR_DARK_STEEL);
 }
 
 static void draw_hud(p4_game_surface_t *surface,
                      const skyline_leap_state_t *state)
 {
-    p4_draw_fill_rect(surface, 0, 0, P4_GAME_SURFACE_WIDTH, HUD_HEIGHT,
+    hi_fill_rect(surface, 0, 0, P4_GAME_SURFACE_WIDTH, HUD_HEIGHT,
                       COLOR_NAVY);
-    p4_draw_text(surface, 58, 5, "S", COLOR_TEAL_LIGHT, 1U, 1U);
+    hi_text(surface, 58, 5, "S", COLOR_TEAL_LIGHT, 1U, 1U);
     draw_number(surface, 66, 5, state->score, COLOR_WHITE);
-    p4_draw_text(surface, 126, 5, "L", COLOR_TEAL_LIGHT, 1U, 1U);
+    hi_text(surface, 126, 5, "L", COLOR_TEAL_LIGHT, 1U, 1U);
     draw_number(surface, 134, 5, state->lives, COLOR_WHITE);
-    p4_draw_text(surface, 170, 5, "C", COLOR_TEAL_LIGHT, 1U, 1U);
+    hi_text(surface, 170, 5, "C", COLOR_TEAL_LIGHT, 1U, 1U);
     draw_number(surface, 178, 5, state->shards, COLOR_GOLD);
-    p4_draw_text(surface, 190, 5, "/3", COLOR_CREAM, 1U, 2U);
-    p4_draw_text(surface, 216, 5, "ST", COLOR_TEAL_LIGHT, 1U, 2U);
+    hi_text(surface, 190, 5, "/3", COLOR_CREAM, 1U, 2U);
+    hi_text(surface, 216, 5, "ST", COLOR_TEAL_LIGHT, 1U, 2U);
     draw_number(surface, 233, 5, (uint32_t)state->level + 1U, COLOR_WHITE);
-    p4_draw_text(surface, 241, 5, "/4", COLOR_CREAM, 1U, 2U);
+    hi_text(surface, 241, 5, "/4", COLOR_CREAM, 1U, 2U);
 }
 
 static void draw_stage(p4_game_surface_t *surface,
@@ -272,7 +270,7 @@ static void draw_stage(p4_game_surface_t *surface,
     const bool exit_open = state->shards == SHARD_COUNT;
     draw_atlas_cell(surface, 278, 86, ITEM_ROW, exit_open ? 3U : 1U);
     if (!exit_open) {
-        p4_draw_text(surface, 270, 83, "LOCK", COLOR_CORAL, 1U, 4U);
+        hi_text(surface, 270, 83, "LOCK", COLOR_CORAL, 1U, 4U);
     }
     for (uint8_t item = 0U; item < SHARD_COUNT; ++item) {
         if (!state->shard_collected[item]) {
@@ -295,9 +293,9 @@ static void draw_stage(p4_game_surface_t *surface,
     if (state->pulse_active) {
         const int trail_x = state->pulse_direction > 0
             ? state->pulse_x - PULSE_SIZE - 3 : state->pulse_x + 3;
-        p4_draw_fill_rect(surface, trail_x, state->pulse_y - 1,
+        hi_fill_rect(surface, trail_x, state->pulse_y - 1,
                           PULSE_SIZE, 3, COLOR_TEAL_LIGHT);
-        p4_draw_fill_circle(surface, state->pulse_x, state->pulse_y,
+        hi_circle(surface, state->pulse_x, state->pulse_y,
                             PULSE_SIZE / 2, COLOR_GOLD);
     }
     draw_courier(surface, state);
@@ -307,33 +305,33 @@ static void draw_stage(p4_game_surface_t *surface,
 static void draw_center_panel(p4_game_surface_t *surface, const char *title,
                               const char *detail, uint16_t border)
 {
-    p4_draw_fill_rect(surface, 58, 55, 204, 54, COLOR_NAVY);
-    p4_draw_rect(surface, 58, 55, 204, 54, border);
-    p4_draw_text(surface, 82, 68, title, COLOR_WHITE, 2U, 15U);
-    p4_draw_text(surface, 76, 92, detail, COLOR_CREAM, 1U, 22U);
+    hi_fill_rect(surface, 58, 55, 204, 54, COLOR_NAVY);
+    hi_rect(surface, 58, 55, 204, 54, border);
+    hi_text(surface, 82, 68, title, COLOR_WHITE, 2U, 15U);
+    hi_text(surface, 76, 92, detail, COLOR_CREAM, 1U, 22U);
 }
 
 static void draw_title(p4_game_surface_t *surface,
                        const skyline_leap_state_t *state)
 {
-    p4_draw_clear(surface, COLOR_NIGHT);
+    draw_background(surface,state);
     for (int x = 12; x < P4_GAME_SURFACE_WIDTH; x += 37) {
-        p4_draw_fill_rect(surface, x, 20 + (x % 39), 2, 2, COLOR_CREAM);
+        hi_fill_rect(surface, x, 20 + (x % 39), 2, 2, COLOR_CREAM);
     }
-    p4_draw_text(surface, 76, 20, "SKYLINE LEAP", COLOR_WHITE, 2U, 12U);
-    p4_draw_text(surface, 81, 47, "4 STAGE COURIER RUN", COLOR_TEAL_LIGHT,
+    hi_text(surface, 76, 20, "SKYLINE LEAP", COLOR_WHITE, 2U, 12U);
+    hi_text(surface, 81, 47, "4 STAGE COURIER RUN", COLOR_TEAL_LIGHT,
                  1U, 19U);
     draw_atlas_cell(surface, 139, 65, COURIER_RUN_ROW,
                     state->animation_frame);
     draw_atlas_cell(surface, 218, 76, BOT_ROW,
                     (unsigned)(state->animation_frame + 1U));
     draw_atlas_cell(surface, 54, 76, ITEM_ROW, 0U);
-    p4_draw_text(surface, 89, 111, "COLLECT 3 SHARDS", COLOR_TEAL_LIGHT,
+    hi_text(surface, 89, 111, "COLLECT 3 SHARDS", COLOR_TEAL_LIGHT,
                  1U, 16U);
-    p4_draw_text(surface, 100, 121, "A/UP JUMP  B PULSE", COLOR_GOLD,
+    hi_text(surface, 100, 121, "A/UP JUMP  B PULSE", COLOR_GOLD,
                  1U, 19U);
-    p4_draw_text(surface, 100, 130, "START TO BEGIN", COLOR_WHITE, 1U, 14U);
-    p4_game_draw_standard_controls(surface, COLOR_STEEL, COLOR_TEAL,
+    hi_text(surface, 100, 130, "START TO BEGIN", COLOR_WHITE, 1U, 14U);
+    p4_game_draw_standard_controls(surface, COLOR_TEAL_LIGHT, COLOR_TEAL,
                                    state->held_buttons);
 }
 
@@ -741,7 +739,7 @@ static bool game_render(p4_game_context_t *context,
         return true;
     }
     draw_stage(surface, state);
-    p4_game_feedback_draw_audio_effect(
+    hi_feedback(
         surface, &state->audio,
         state->game_over || state->finale ? 160 : state->player_x,
         state->game_over || state->finale ? 94 : state->player_y + 9);
@@ -754,7 +752,7 @@ static bool game_render(p4_game_context_t *context,
     } else if (state->finale) {
         draw_center_panel(surface, "SKYLINE CLEAR", "A FOR TITLE", COLOR_GOLD);
     }
-    p4_game_draw_standard_controls(surface, COLOR_STEEL, COLOR_TEAL,
+    p4_game_draw_standard_controls(surface, COLOR_TEAL_LIGHT, COLOR_TEAL,
                                    state->held_buttons);
     return true;
 }
@@ -773,7 +771,8 @@ const p4_game_descriptor_t p4_skyline_leap_game = {
     .accent_rgb565 = UINT16_C(0x05dd),
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
-                             P4_GAME_CAP_AUDIO_STREAM,
+                             P4_GAME_CAP_AUDIO_STREAM |
+                             P4_GAME_CAP_VIDEO_HIGH_RES,
     .state_bytes = sizeof(skyline_leap_state_t),
     .start = game_start,
     .update = game_update,

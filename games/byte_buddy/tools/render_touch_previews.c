@@ -536,11 +536,45 @@ static bool animate(p4_game_instance_t *instance, unsigned frames)
     return true;
 }
 
+/* Native output replays the same production state as the canonical semantic
+ * checks. The existing fallback digests remain mandatory and unchanged. */
+static bool render_native_to(p4_game_instance_t *instance, const char *path)
+{
+    enum { WIDTH=768, HEIGHT=480, STRIDE=775, GUARD=31,
+           WORDS=STRIDE*HEIGHT, TOTAL=WORDS+2*GUARD };
+    uint16_t *allocation=malloc(TOTAL*sizeof(*allocation));
+    if (allocation==NULL) return false;
+    for (size_t i=0U;i<TOTAL;++i) allocation[i]=UINT16_C(0x5aa5);
+    p4_game_surface_t native={.pixels=allocation+GUARD,
+        .width=WIDTH,.height=HEIGHT,.stride_pixels=STRIDE};
+    p4_game_instance_t native_instance=*instance;
+    native_instance.services.available_capabilities |= P4_GAME_CAP_VIDEO_HIGH_RES;
+    native_instance.context.services=&native_instance.services;
+    void *before=malloc(p4_byte_buddy_game.state_bytes);
+    if (before==NULL) { free(allocation);return false; }
+    memcpy(before,instance->context.state,p4_byte_buddy_game.state_bytes);
+    bool ok=p4_game_instance_render(&native_instance,&native) &&
+        memcmp(before,instance->context.state,p4_byte_buddy_game.state_bytes)==0;
+    free(before);
+    for (size_t i=0U;i<GUARD;++i) {
+        ok=ok && allocation[i]==UINT16_C(0x5aa5) &&
+            allocation[GUARD+WORDS+i]==UINT16_C(0x5aa5);
+    }
+    for (size_t y=0U;y<HEIGHT;++y) {
+        for (size_t x=WIDTH;x<STRIDE;++x)
+            ok=ok && native.pixels[y*STRIDE+x]==UINT16_C(0x5aa5);
+    }
+    if (ok) ok=write_ppm(path,&native);
+    free(allocation);
+    return ok;
+}
+
 static bool render_to(p4_game_instance_t *instance,
                       p4_game_surface_t *surface, const char *path)
 {
-    return p4_game_instance_render(instance, surface) &&
-        write_ppm(path, surface);
+    if (!p4_game_instance_render(instance,surface)) return false;
+    return getenv("P4_BB_NATIVE_PREVIEW")!=NULL
+        ? render_native_to(instance,path) : write_ppm(path,surface);
 }
 
 static bool render_clip(p4_game_instance_t *instance,
@@ -3786,7 +3820,7 @@ int main(int argc, char **argv)
         strcmp(argv[2], "--review-runtime-completion-motion") == 0;
     unsigned expected_motion_frames = 0U;
     char trailing = '\0';
-    if ((argc != 16 && argc != 3 && !signal_motion && !authored_motion &&
+    if ((argc != 16 && argc != 17 && argc != 3 && !signal_motion && !authored_motion &&
          !authored_review && !exact_animation && !completion_motion &&
          !runtime_completion && !runtime_completion_review) ||
         ((signal_motion || authored_motion || authored_review ||
@@ -3932,13 +3966,13 @@ int main(int argc, char **argv)
     }
     success = success && animate(&instance, 8U) &&
         render_to(&instance, &surface, argv[3]) &&
-        tap(&instance, 180U, 180U) &&
+        tap(&instance, 180U, 180U) && settle_scene_transition(&instance) &&
         render_to(&instance, &surface, argv[4]) &&
-        tap(&instance, 220U, 32U) &&
+        tap(&instance, 220U, 32U) && settle_scene_transition(&instance) &&
         tap(&instance, 130U, 60U) && tap(&instance, 300U, 60U) &&
         tap(&instance, 80U, 180U) &&
         render_to(&instance, &surface, argv[5]) &&
-        tap(&instance, 240U, 180U) && care_credits(&instance, 1U) &&
+        tap(&instance, 240U, 180U) && settle_scene_transition(&instance) && care_credits(&instance, 1U) &&
         animate(&instance, 18U) && render_to(&instance, &surface, argv[6]);
     success = success && care_credits(&instance, 52U) &&
         animate(&instance, 18U) &&
@@ -3946,12 +3980,18 @@ int main(int argc, char **argv)
         care_credits(&instance, 44U) && tap(&instance, 20U, 145U) &&
         animate(&instance, 18U) &&
         render_to(&instance, &surface, argv[8]) &&
-        tap(&instance, 110U, 145U) && tap(&instance, 280U, 80U) &&
+        tap(&instance, 110U, 145U) &&
+        advance_ms(&instance, 3000U) && tap(&instance, 280U, 80U) &&
         animate(&instance, 8U) &&
-        render_to(&instance, &surface, argv[9]) &&
-        advance_ms(&instance, PREVIEW_PLAY_ACTION_AFTER_TAP_MS) &&
-        press_button(&instance, P4_BUTTON_B) &&
-        advance_ms(&instance, 900U) && tap(&instance, 70U, 180U) &&
+        render_to(&instance, &surface, argv[9]);
+    /* A fresh production launch keeps the pinned signal header (LV 1) valid
+     * after the overview now correctly reaches full dragon progression. */
+    p4_game_instance_stop(&instance);
+    memset(state,0,p4_byte_buddy_game.state_bytes);
+    instance=(p4_game_instance_t){0};
+    success=success && p4_game_instance_start(&instance,&p4_byte_buddy_game,
+        &services,state,p4_byte_buddy_game.state_bytes) &&
+        tap(&instance, 70U, 180U) &&
         settle_scene_transition(&instance) &&
         screen_signature_matches(
             &instance, &surface, PREVIEW_SCREEN_SIGNAL_LIST) &&
@@ -3994,6 +4034,17 @@ int main(int argc, char **argv)
         if (training_started) {
             p4_game_instance_stop(&instance);
         }
+    }
+    if (success && argc == 17) {
+        memset(state, 0, p4_byte_buddy_game.state_bytes);
+        instance = (p4_game_instance_t){0};
+        const bool genome_started = p4_game_instance_start(
+            &instance, &p4_byte_buddy_game, &services, state,
+            p4_byte_buddy_game.state_bytes);
+        success = genome_started && care_credits(&instance, 4U) &&
+            tap(&instance, 280U, 180U) && settle_scene_transition(&instance) &&
+            render_to(&instance, &surface, argv[16]);
+        if (genome_started) p4_game_instance_stop(&instance);
     }
     free(art);
     free(state);

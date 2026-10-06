@@ -1,0 +1,62 @@
+{
+  "status": "user-approved-and-applied",
+  "board": "m5stack-tab5",
+  "schematic": {
+    "url": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1132/Tab5_Schematics_PDF.pdf",
+    "sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329",
+    "sheet": 1
+  },
+  "power": {
+    "expander": 68,
+    "pin": 0,
+    "volts": 3.3,
+    "active_high": true,
+    "masked_registers": [
+      3,
+      5,
+      7
+    ],
+    "preserves_other_bits": true
+  },
+  "sdio": {
+    "slot": 1,
+    "clock_khz": 10000,
+    "clk": 12,
+    "cmd": 13,
+    "data": [
+      11,
+      10,
+      9,
+      8
+    ],
+    "c6_enable_gpio": 15,
+    "reset_sequence": "high-low-high"
+  },
+  "versions": {
+    "esp_hosted": "1.4.7",
+    "esp_wifi_remote": "0.14.5",
+    "idf": "5.5.3"
+  },
+  "physical_writes_performed": true,
+  "patch_sha256": "2318d9b204cbffe2f5e5660c05db1580f8f6e15903960adf91664673de1a0272",
+  "base_hashes": {
+    "components/platform_tab5/src/radio_power_control.c": null,
+    "components/platform_tab5/src/radio_power_control.h": null,
+    "components/platform_tab5/tests/test_radio_power.c": null,
+    "components/platform_tab5/tests/CMakeLists.txt": "0cacc824ba01ced291983edbe0a40e6713de8bd0a9c9dfeb0e4a5259bd0bbc31",
+    "components/platform_tab5/CMakeLists.txt": "48f109eebef35f43eb95fe24a1ede5e44c9ad1f59e35a19f6bf7b47e8030bdbf",
+    "components/platform_tab5/Kconfig": "f48b25d96df783ab82f6ce2a90ac1b6d131be4ea2eabfec3e79d2f36a74020f0",
+    "components/platform_tab5/include/platform/tab5.h": "6e48ffcb68d9ed8e760978e999959c523bbfb66497ebfc7ceb2c2d352ec41511",
+    "components/platform_tab5/src/tab5.c": "88c66c6cf0e1614f45cece2f14f1cb86780c0fd715acff001e31aa0efc3f9f8d",
+    "components/platform_radio_hosted/CMakeLists.txt": "6e3a3d612ff3de79181b5d840223c212454a59a4b4fd56901650508926f91f40",
+    "components/platform_radio_hosted/src/platform_radio_hosted.c": "a0a34eff23678e976e4493245e51f4502059df87fbc3ed2f215a4dac28956317",
+    "hardware/boards/m5stack-tab5/sdkconfig.ble.defaults": null,
+    "apps/console_os/CMakeLists.txt": "c9de6e1978cd02a2c47cc2a4bcf6e98e9264fcb93710220038998e8209ed8731",
+    "apps/console_os/main/CMakeLists.txt": "af9f084dce7157758dd5a9fcfcbc634ebb85f6f0cbd40c9f6312e18c6ba3cae4",
+    "scripts/build.sh": "0017edbf359063f11e74664cf7d7d0ce5c1185162342d73687bf60c57c80cd30",
+    "scripts/verify-console-os-tab5.py": "8b48ed2e40e1c3b51f1539e93101ed9f5f4765c332e3c8691140db5d422cd2f1",
+    "scripts/flash-console-os-tab5.py": "a83828ea8bbbc29b0799f39d660df3a401236a90ffba5f74bba5229f2643c4cc"
+  },
+  "approval": "2026-10-05: user explicitly requested Bluetooth between devices and local Wi-Fi Host/Join",
+  "installation_evidence": "hardware/evidence/tab5-0.45-core-testing.json"
+}

@@ -1,0 +1,174 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "version": "0.43",
+  "recorded_at": "2026-10-05T19:02:04.347687+00:00",
+  "status": "both-units-corrected-0.43-readback-boot-health-verified",
+  "authorization": {
+    "file": "hardware/evidence/tab5-console-os-0.43-memory-fix-authorization.json",
+    "sha256": "5bed7ac8bd3c42ed460c8a5162a568b8e05fdd14d8cf78f84fb0c91903b92c85"
+  },
+  "image": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 2032352,
+    "sha256": "b93336fb04b8d66bf2fe38d121cef29ae1c7563887516344523df385bdd2ba43"
+  },
+  "update": {
+    "file": "local-data/firmware/tab5/0.43/P4UPDATE.P4U",
+    "bytes": 2032608,
+    "sha256": "3e05ecbd1ff83a0ada55b1f7ac9cf80c94f2fef02218b2f083486e6aa4604585"
+  },
+  "initial_failure": "hardware/evidence/tab5-console-os-0.43-initial-install-failure.json",
+  "fix": {
+    "component": "components/platform_gamepad_usb/src/platform_gamepad_usb.c",
+    "reason": "Combined native UI and USB build exhausted startup internal/DMA allocation before app_main.",
+    "implementation": "13,580 bytes of task-context CPU-only HID parser, descriptor and copied report buffers placed in Tab5 PSRAM; lifecycle state, spinlocks and USB DMA allocations stay internal.",
+    "linked_buffer_address": "0x48008a30",
+    "internal_dma_reserve_bytes": 65536,
+    "regression_gate": "Tab5 verifier requires the HID buffer symbol in PSRAM and retains the 64 KiB reserve configuration."
+  },
+  "validation": {
+    "host": "make gamepad-host and all console-os-tab5-idf prerequisite tests passed; ASan/UBSan and USB placement negative cases",
+    "build": "make console-os-tab5-idf and scripts/verify-console-os-tab5.py passed",
+    "build_log_sha256": "48bcd5194dd7eab41451afcd95dfe9ed774daa1d1b246368f12813fa0a75a4cc",
+    "hardware": "Sequential exact-identity app-only writes at 0x20000; exact readback before reboot; 0.43 launcher/SD/catalog/USB class services and ten-second health gate on A/B during 45-second captures."
+  },
+  "units": {
+    "A": {
+      "panel": "ST7121",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "port": "/dev/cu.usbmodem1101",
+      "live": {
+        "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+        "revision": "v1.3",
+        "flash_bytes": 16777216
+      },
+      "write_offsets": [
+        "0x20000"
+      ],
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "receipt": {
+        "file": "hardware/backups/tab5-a-install-sgb8ml34/receipt.json",
+        "sha256": "b1d0e19e4da3952bf4696958b3a8ff80939203c6770cc9f207874fd14752fcab"
+      },
+      "runtime_log": {
+        "file": "hardware/backups/tab5-a-install-sgb8ml34/runtime.log",
+        "sha256": "6d72eb9d042f221c4195781c53cb5a7a6900267c6cc130d3d0532e08e13d693a"
+      },
+      "sd_capacity_bytes": 16012804096,
+      "catalog_packages": 16,
+      "catalog_valid": 16,
+      "usb_host_services_ready": true,
+      "controller_input_acceptance": "pending; no specific pad qualified",
+      "battery": {
+        "valid": false,
+        "millivolts": 1136,
+        "milliamps": 0,
+        "percent": null
+      },
+      "serial_markers": [
+        "I (1490) app_init: App version:      0.43",
+        "I (3217) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7121 native=720x1280 logical=1280x720 viewport=1152x720+64+0 format=rgb565",
+        "I (3497) game_storage: P4_GAME_STORAGE READY backend=microSD capacity=16012804096 usb_device_export=0 hot_remove=0",
+        "I (4522) p4_console_os: P4_CONSOLE_OS BOOT_AUDIO status=played profile=treasure-chords sample_rate=16000 frames=16000 volume=6 nominal_ms=1000 elapsed_ms=1067",
+        "I (4554) platform_usb_host: USB_HOST_READY controller=p4-hs peripheral=0 root_port_enabled=0 topology=tab5-usb-a usb_a_power=off usb_c=serial-jtag",
+        "I (4555) platform_gamepad: GAMEPAD_USB_READY tier=generic-hid report_max=1024",
+        "I (4555) gamepad_xusb: XUSB_READY protocol=wired-360 input_only=1",
+        "I (4557) p4_console_os: P4_CONSOLE_OS USB_INPUT_READY classes=gamepad transport=usb topology=tab5-usb-a firmware_vbus_source=1",
+        "I (6212) p4_console_os: P4_CONSOLE_OS GAME_CATALOG available=1 packages=16 valid=16 omitted=0 generation=1 source=microsd-only scan=background worker_low_water_bytes=11288 storage_result=ESP_OK update=0 result=ESP_OK",
+        "I (6355) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (6919) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1135 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=7,96,-1001 gyro_mdps=61,244,-244 rtc_valid=1 date=2026-10-05 time=18:58:46",
+        "I (16369) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized",
+        "I (16931) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1135 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=7,98,-1004 gyro_mdps=61,244,-244 rtc_valid=1 date=2026-10-05 time=18:58:56",
+        "I (26943) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1135 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=6,97,-1002 gyro_mdps=183,183,-183 rtc_valid=1 date=2026-10-05 time=18:59:06",
+        "I (36955) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1136 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=7,98,-1002 gyro_mdps=183,122,-183 rtc_valid=1 date=2026-10-05 time=18:59:16"
+      ]
+    },
+    "B": {
+      "panel": "ST7123",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "port": "/dev/cu.usbmodem2101",
+      "live": {
+        "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+        "revision": "v1.3",
+        "flash_bytes": 16777216
+      },
+      "write_offsets": [
+        "0x20000"
+      ],
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "receipt": {
+        "file": "hardware/backups/tab5-b-install-i8rmgkf0/receipt.json",
+        "sha256": "ffefd1719fa06b1a7743acdbb1bd20adb0b92e834596704613bbe82b96a09995"
+      },
+      "runtime_log": {
+        "file": "hardware/backups/tab5-b-install-i8rmgkf0/runtime.log",
+        "sha256": "2f72b4db3749b85a467661e6cb8b509191f91e5b3ebe1df3198278e66a1c1a20"
+      },
+      "sd_capacity_bytes": 32010928128,
+      "catalog_packages": 18,
+      "catalog_valid": 18,
+      "usb_host_services_ready": true,
+      "controller_input_acceptance": "pending; no specific pad qualified",
+      "battery": {
+        "valid": false,
+        "millivolts": 1194,
+        "milliamps": 0,
+        "percent": null
+      },
+      "serial_markers": [
+        "I (1490) app_init: App version:      0.43",
+        "I (2490) tab5_display: P4_DISPLAY READY board=m5stack-tab5 panel=st7123 native=720x1280 logical=1280x720 viewport=1152x720+64+0 format=rgb565",
+        "I (2725) p4_console_os: P4_CONSOLE_OS BOOT_AUDIO status=muted animation=skipped",
+        "I (2758) platform_usb_host: USB_HOST_READY controller=p4-hs peripheral=0 root_port_enabled=0 topology=tab5-usb-a usb_a_power=off usb_c=serial-jtag",
+        "I (2758) platform_gamepad: GAMEPAD_USB_READY tier=generic-hid report_max=1024",
+        "I (2759) gamepad_xusb: XUSB_READY protocol=wired-360 input_only=1",
+        "I (2761) p4_console_os: P4_CONSOLE_OS USB_INPUT_READY classes=gamepad transport=usb topology=tab5-usb-a firmware_vbus_source=1",
+        "I (2770) game_storage: P4_GAME_STORAGE READY backend=microSD capacity=32010928128 usb_device_export=0 hot_remove=0",
+        "I (5125) p4_console_os: P4_CONSOLE_OS GAME_CATALOG available=1 packages=18 valid=18 omitted=0 generation=1 source=microsd-only scan=background worker_low_water_bytes=11336 storage_result=ESP_OK update=0 result=ESP_OK",
+        "I (5270) p4_console_os: P4_CONSOLE_OS READY board=m5stack-tab5 display=mipi-dsi audio=es8388 storage=microsd removal=power-off-first hardware_acceptance=pending",
+        "I (5831) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1194 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=7,-6,-994 gyro_mdps=122,-305,0 rtc_valid=1 date=2026-10-05 time=19:00:18",
+        "I (15284) p4_console_os: P4_CONSOLE_OS OTA_BOOT_VALID result=ESP_OK was_pending=0 stable_ms=10000 services=initialized",
+        "I (15843) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1194 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=9,-7,-999 gyro_mdps=-61,-183,61 rtc_valid=1 date=2026-10-05 time=19:00:28",
+        "I (25855) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1194 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=7,-9,-995 gyro_mdps=183,-305,61 rtc_valid=1 date=2026-10-05 time=19:00:38",
+        "I (35867) tab5_sensors: SENSORS_SAMPLE battery_valid=0 mv=1194 ma=0 percent=0 estimate=voltage imu_valid=1 accel_mg=7,-8,-997 gyro_mdps=183,-244,61 rtc_valid=1 date=2026-10-05 time=19:00:48"
+      ]
+    }
+  },
+  "preserved": "Bootloader, partition table, OTA selector, existing NVS/preferences, SD game files and saves; no content provisioning or formatting.",
+  "pending": [
+    "Physical confirmation of free-storage indicator",
+    "Actual battery-pack connection/voltage diagnosis: both remain invalid",
+    "Named-controller gameplay and unplug/reconnect testing",
+    "Physical game, touch and speaker acceptance; no sustained controller claim"
+  ],
+  "source_files_sha256": {
+    "apps/console_os/CMakeLists.txt": "54186365c01ca115d23e24ea7df4e0970b103db1bdd30dcb55b3abe14b118541",
+    "apps/console_os/app-metadata.json": "6bbd6941e69a742f85d90c90aa4a9dc6194dc57ca676df08a7f41cb5ab4d8e11",
+    "apps/console_os/main/console_os_main.c": "691835a82fbbb3b1589d792e7b6c24d9f592e73899286f4581cb5349ead5fe6f",
+    "components/console_shell/include/console/brand.h": "e5c166f8c02d6bd0c28c68f1e630e431bdfa28e5d59b1d03066a4cd044f4ce74",
+    "components/console_shell/include/console/shell.h": "44c248709510043309c4e3c73595df295b769cc4f63ccc0222159805a33ba432",
+    "components/console_shell/src/console_shell.c": "643e5afe1424386c2cb1ac236999c14cb888b6b52546bc3e93d75a303388ddbd",
+    "components/console_shell/tests/test_console_shell.c": "3fdf5c9e8536a3e1cf8963b8b39adffcc83d67848ac3d6554ca95bbdb3200e16",
+    "components/console_shell/tools/render_preview.c": "e485cfd478009dc1cac4cce53c9335111588f63fb8872b49342dd5693e474540",
+    "components/p4_bbs/include/p4/bbs_ui.h": "539fb526d3e1ce054958ca0cbc6e8e55b33f92c082200f220e0b662701202da2",
+    "components/p4_bbs/src/bbs_ui.c": "04ff7a2a5373633acb3a4e5f63dd5ec71ab4445b8ec19c18594742549aa53571",
+    "components/p4_bbs/tests/test_bbs_ui.c": "437866159b3b4d2648c40327713ea3d03765fefe5b5b610be18fdc74b9b66e6f",
+    "components/platform_game_storage/include/platform/game_storage.h": "74270cbbdceee05d8e2066f5c93213c8e40df1fccc2f519c7724368a025759bc",
+    "components/platform_game_storage/src/platform_game_storage.c": "b56c60c31a9a909b04093688e2e2a5ee82b6d6c641419afe59bc431f06054b9d",
+    "components/platform_gamepad_xusb/src/xusb_host.c": "126a5b74e50c71628ce00a01443b442715269a74f51a823a62664fc18f6d5d51",
+    "components/platform_tab5/src/sensors.c": "7e5224de62ada2cc96a03be22eb3c2ea0cdd58c94a26938ba3a933200f3fe4a1",
+    "components/platform_tab5/tests/CMakeLists.txt": "03a55ad73f806b15341fdfed16bc484e1ec59f34590b8a057430b6149bd887b1",
+    "components/platform_tab5/tests/mocks/esp_timer.h": "4a5a38dd774ad3c3cb3c2f48f2d3a1f13517591979cf58d3d2ae2947f8480106",
+    "components/platform_tab5/tests/mocks/mock_sdk.h": "1534e2d0817443ce6ce977adfde84d8c2ea78378ec58c55c7b3708eb9118fd7f",
+    "components/platform_tab5/tests/test_sensor_service.c": "32c843b727162a34d2dc4704419c3670d13b430160dde2e12d38798156e74824",
+    "components/platform_usb_host/src/platform_usb_host.c": "ecc1f5dc99adc7dbec9f8bb5f3b7cb69ff2e01607c0e6cbc449674b4ffce7342",
+    "components/platform_gamepad_usb/src/platform_gamepad_usb.c": "489cfcf24fb4d6b18146dbf0174f1a441021b78ea7e949dd3e3400e6b0f6f770",
+    "scripts/verify-console-os-tab5.py": "a3e04ce13ae1fa16e68aeaa0342a500726b904941d163dd2667e5663592e03e5",
+    "scripts/tests/test-tab5-build-features.py": "4bd3bd0689af5122ab75f85c34efdd58ce3f60c92491c08a642b6d095f525500"
+  }
+}

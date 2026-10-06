@@ -1,0 +1,140 @@
+{
+  "schema": 1,
+  "date": "2026-10-04",
+  "board": "m5stack-tab5",
+  "status": "host-and-build-tested-hardware-pending",
+  "hardware_verified": false,
+  "flash_authorized": false,
+  "device_written": false,
+  "supersedes_build_evidence": "hardware/evidence/tab5-usb-gamepad-20261004-hid-collections-build.json",
+  "change": "Add an OS-owned wired Xbox 360-format XUSB client beside HID. Route canonical controls through the existing broker, mapping, launcher, native/Lua games and Doom.",
+  "protocol_reference": "third_party/xusb-protocol.json",
+  "supported_protocol_candidate": "Alternate-zero USB interface ff/5d/01; bounded interrupt IN endpoint; 20-byte wired XUSB input",
+  "not_implemented": [
+    "Xbox One/Series GIP",
+    "Xbox Wireless Adapter / Xbox 360 wireless receiver protocol",
+    "model-specific initialization commands",
+    "rumble and LED output"
+  ],
+  "verification": {
+    "host": "make gamepad-host: PASS; 10 CTest tests plus 12 Python overlay tests, ASan/UBSan enabled on the new protocol, client simulation and broker tests.",
+    "current_primary_shell": "8 CTest tests pass against the current primary checkout, including native-resolution Tab5 tests and wired HID/XUSB remapping.",
+    "feature_gate": "scripts/tests/test-tab5-build-features.py: PASS; rejects missing XUSB component, protocol/client source or linked symbols.",
+    "cases": [
+      "Wired interface selection rejects HID, GIP, receiver protocol, duplicate interfaces and malformed/truncated endpoint descriptors",
+      "All button bits, D-pad diagonals/opposition, independent trigger values and all 65536 values of all four stick axes",
+      "Short/long and invalid packet framing remain transactional; valid non-input packets do not alter controls",
+      "Real USB-client work step tested with a simulated stack: immediate unplug neutralization, delayed cancel completion, stale reports and reconnect during cleanup",
+      "Open/claim/allocation/submission failure cleanup, flush/release/close fault resource retention",
+      "HID then XUSB then BLE priority; shared button remapping and neutral fallback"
+    ],
+    "build": "scripts/build.sh console_os m5stack-tab5: PASS",
+    "artifact_check": "scripts/verify-console-os-tab5.py: PASS",
+    "diagnostics": "41 pre-existing third_party/doomgeneric warnings during full rebuild; no other warnings/errors.",
+    "artifact": {
+      "image_bytes": 1518464,
+      "image_sha256": "2d27c1a0758ae20263997a65d2f4524a3e623bff649ad5c922863896e116fabe",
+      "native_cartridges": 16,
+      "usb_host_enabled": true,
+      "xusb_linked": true
+    },
+    "scope": "Firmware is the isolated controller candidate, based on the earlier audio/sensor/library snapshot; concurrent primary native-resolution UI work is not in this image. The XUSB changes are integrated into primary, whose current shell tests pass separately."
+  },
+  "hardware": {
+    "controller_model": null,
+    "tab5_unit": null,
+    "status": "Physical controller acceptance pending. No hardware write performed in this thread.",
+    "acceptance_reference": ".agents/skills/add-usb-gamepad-support/references/acceptance.md",
+    "controller_family": "Third-party Xbox-compatible",
+    "controller_available": false,
+    "identity_source": "Owner clarification: Third-party Xbox-compatible; unavailable right now",
+    "usb_protocol": null,
+    "compatibility": "Unverified for the owner's controller. HID and wired Xbox 360-format XUSB are implemented and host/build-tested. Xbox One/Series GIP and wireless receiver protocols remain unimplemented."
+  },
+  "source_files_sha256": {
+    "Makefile": "a7dc8a09169a2f5911ee2a61b0e733dd18232e1b4a752cdba3558f976ce40c27",
+    "apps/console_os/CMakeLists.txt": "980f87740bf854ddc0a03afb6e073c172f1aeb9e1c16e6e363389d6b627d000e",
+    "apps/console_os/main/CMakeLists.txt": "ff02b4d1e8fefea363abfa03d9daf3c3386e9a59ab91c31fe49d479b2329b892",
+    "apps/console_os/main/console_os_main.c": "2acc2f640b98885e1561939aa9d3f3c3c7f8e11152d0e41860de22e15beb6878",
+    "components/console_shell/include/console/shell.h": "85028737f0d82b807704f9bc3f8a4b21952174ba05f318171f56308ddef61d4f",
+    "components/console_shell/src/console_shell.c": "0d8a3c547f5a975bf5b36c4eae91ecfa2d10bcfaec72b8dfb1f4812ade3279ca",
+    "components/console_shell/tests/test_console_shell.c": "61583ad0e2afdb0feb22fcdd70d26ea1146fe239efa0cf0402238ef55b403ba7",
+    "components/gamepad_core/CMakeLists.txt": "379a7e15b3e934d905e890b99dd433de1c5cbcf6932ceec2f2f4da24bee5c48a",
+    "components/gamepad_core/include/gamepad/snapshot.h": "452d377e7fe0b09d30e6a685cd61ad3c171d975520a9c9a5958919a820d65a5a",
+    "components/gamepad_core/include/gamepad/xusb.h": "cef757cc02a9740245567f6ab0a2fa2ec5b303a04d69c4549e3ed215cc3ae3a2",
+    "components/gamepad_core/src/snapshot.c": "fce879df1f1f7c9b0b7e0752937778948fe8ede21e3af34f0f479fdf6f8ea7e9",
+    "components/gamepad_core/src/xusb.c": "f4ccd7da3c26ac842026cb3c98eb2f54d892b24a41ce268ff76b626b4e61b759",
+    "components/gamepad_core/tests/CMakeLists.txt": "33803758f50188be1475bd52c28de954edb5cd349678ad2a9cdf53b3e53521de",
+    "components/gamepad_core/tests/test_xusb.c": "7f337163e50100a0c50508193405ee6fc06782afbaa74c350ba270479378b078",
+    "components/platform_gamepad/include/platform/gamepad.h": "c20a93dc8704fba1bd0597d402bfcdbf0d387f1b785c6e1f4ab76e4cdc216463",
+    "components/platform_gamepad/src/platform_gamepad.c": "a76a1ac3a62700e0d38aefe867015e7802f58d5457c754d6b704cea5cdc18255",
+    "components/platform_gamepad_xusb/CMakeLists.txt": "010f30463173fb8c701de18f7f9bbb8e05f8abd817453ab97ac433db849c0465",
+    "components/platform_gamepad_xusb/include/platform_gamepad_xusb/xusb.h": "5d1e3d02d755a37b956a2dbd194e9f04890ac9923c17ff5ac23f45e9f39229e6",
+    "components/platform_gamepad_xusb/src/xusb_host.c": "126a5b74e50c71628ce00a01443b442715269a74f51a823a62664fc18f6d5d51",
+    "components/platform_gamepad_xusb/tests/CMakeLists.txt": "71e4dc8d9ab8728cf18058efb399b1903b9eb724ae573b5d059c6d0fff8c8433",
+    "components/platform_gamepad_xusb/tests/fake_esp.h": "ea9e759f43ef052b6544eebdddf14f0edf8b6a1c6e4b630c22ae675ea1062c66",
+    "components/platform_gamepad_xusb/tests/mocks/esp_err.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/esp_log.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/esp_timer.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/freertos/FreeRTOS.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/freertos/event_groups.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/freertos/task.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/mbedtls/sha256.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/usb/usb_host.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/test_broker.c": "82faa2a4d3d7d44ac9ff80f0a9678895033c03965041d7016d0ee735234aa26e",
+    "components/platform_gamepad_xusb/tests/test_lifecycle.c": "ab7bf5a5e40dce67bbbec9d9481b36412f9789c6d24d3894dd9d3770a9449242",
+    "components/platform_usb_host/include/platform_usb_host/model.h": "af008ec8b86c814ccb52384a075bd2a614d44f209003fb47d81162f070d4d7d5",
+    "scripts/tests/test-tab5-build-features.py": "e4747428a00974f0c16159aee54946f8889c14e563923625a96815b5a305eb2b",
+    "scripts/verify-console-os-tab5.py": "028140673e2068f9384c232ec69fba882b9044539394dd504ce0975de69a5609"
+  },
+  "primary_integration_files_sha256": {
+    "Makefile": "880a5e99b5f52031c1792fdcd0b2708e9cea221d7720c2d5f7c3536318a36171",
+    "apps/console_os/CMakeLists.txt": "7c3a54aacd35014a31739b61ee433007b432c1e2e08767af87de11196d9d2bbb",
+    "apps/console_os/main/CMakeLists.txt": "af9f084dce7157758dd5a9fcfcbc634ebb85f6f0cbd40c9f6312e18c6ba3cae4",
+    "apps/console_os/main/console_os_main.c": "b8645034abe28153b1f8dc26e786ce0f61c3aa9e71f2fd8dbf6fb9b9c80ea36c",
+    "components/console_shell/include/console/shell.h": "0a059bf5f216ec74beaf5809f585e9b4ed690b6ec66ff3caf8a09987e9255eb7",
+    "components/console_shell/src/console_shell.c": "082e66d1ac485c00b1ccfeb52c9ee0ddde6eb2cf8a0aa839ce0a5304206297d8",
+    "components/console_shell/tests/test_console_shell.c": "16a064444e7fef61a27475fe70e3c99f531980b6c2f09e4371f5d965063f90cd",
+    "components/gamepad_core/CMakeLists.txt": "379a7e15b3e934d905e890b99dd433de1c5cbcf6932ceec2f2f4da24bee5c48a",
+    "components/gamepad_core/include/gamepad/snapshot.h": "452d377e7fe0b09d30e6a685cd61ad3c171d975520a9c9a5958919a820d65a5a",
+    "components/gamepad_core/include/gamepad/xusb.h": "cef757cc02a9740245567f6ab0a2fa2ec5b303a04d69c4549e3ed215cc3ae3a2",
+    "components/gamepad_core/src/snapshot.c": "fce879df1f1f7c9b0b7e0752937778948fe8ede21e3af34f0f479fdf6f8ea7e9",
+    "components/gamepad_core/src/xusb.c": "f4ccd7da3c26ac842026cb3c98eb2f54d892b24a41ce268ff76b626b4e61b759",
+    "components/gamepad_core/tests/CMakeLists.txt": "33803758f50188be1475bd52c28de954edb5cd349678ad2a9cdf53b3e53521de",
+    "components/gamepad_core/tests/test_xusb.c": "7f337163e50100a0c50508193405ee6fc06782afbaa74c350ba270479378b078",
+    "components/platform_gamepad/include/platform/gamepad.h": "c20a93dc8704fba1bd0597d402bfcdbf0d387f1b785c6e1f4ab76e4cdc216463",
+    "components/platform_gamepad/src/platform_gamepad.c": "a76a1ac3a62700e0d38aefe867015e7802f58d5457c754d6b704cea5cdc18255",
+    "components/platform_gamepad_xusb/CMakeLists.txt": "010f30463173fb8c701de18f7f9bbb8e05f8abd817453ab97ac433db849c0465",
+    "components/platform_gamepad_xusb/include/platform_gamepad_xusb/xusb.h": "5d1e3d02d755a37b956a2dbd194e9f04890ac9923c17ff5ac23f45e9f39229e6",
+    "components/platform_gamepad_xusb/src/xusb_host.c": "126a5b74e50c71628ce00a01443b442715269a74f51a823a62664fc18f6d5d51",
+    "components/platform_gamepad_xusb/tests/CMakeLists.txt": "71e4dc8d9ab8728cf18058efb399b1903b9eb724ae573b5d059c6d0fff8c8433",
+    "components/platform_gamepad_xusb/tests/fake_esp.h": "ea9e759f43ef052b6544eebdddf14f0edf8b6a1c6e4b630c22ae675ea1062c66",
+    "components/platform_gamepad_xusb/tests/mocks/esp_err.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/esp_log.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/esp_timer.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/freertos/FreeRTOS.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/freertos/event_groups.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/freertos/task.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/mbedtls/sha256.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/mocks/usb/usb_host.h": "2c2d2941a37291f069ceef175c50546d22f2b21290739b5060c07898936c3227",
+    "components/platform_gamepad_xusb/tests/test_broker.c": "82faa2a4d3d7d44ac9ff80f0a9678895033c03965041d7016d0ee735234aa26e",
+    "components/platform_gamepad_xusb/tests/test_lifecycle.c": "ab7bf5a5e40dce67bbbec9d9481b36412f9789c6d24d3894dd9d3770a9449242",
+    "components/platform_usb_host/include/platform_usb_host/model.h": "af008ec8b86c814ccb52384a075bd2a614d44f209003fb47d81162f070d4d7d5",
+    "scripts/tests/test-tab5-build-features.py": "e4747428a00974f0c16159aee54946f8889c14e563923625a96815b5a305eb2b",
+    "scripts/verify-console-os-tab5.py": "028140673e2068f9384c232ec69fba882b9044539394dd504ce0975de69a5609"
+  },
+  "logs": {
+    "controller_host": {
+      "sha256": "6924a8cbef05545f2e605f16c4e3540de2c544389eee31ea678a043153ab5d17"
+    },
+    "candidate_shell": {
+      "sha256": "5c538bc69e4e6460cd7868588866447b808482211629d2a3132517dada2f71e3"
+    },
+    "current_primary_shell": {
+      "sha256": "9dd32341d6df8c21ebe9d264c96a6aad51b8213d30c58e6d0b230d57e7bc8fc8"
+    },
+    "firmware_build": {
+      "sha256": "42de593bed8c0dc94cea9ba10bce1eb41d325dafede8d033032bbfba629a128c"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "generator": "OpenAI built-in ImageGen",
+  "license": "Original AI-generated project artwork. No third-party game art.",
+  "sources": [
+    {
+      "path": "city-source.png",
+      "prompt": "Use case: stylized-concept. Asset type: original native game city background for Byte Buddy, a friendly signal-dragon virtual pet. Create a polished 2D painted sci-fi city at twilight, wide 16:6 panorama, no characters or creatures. Deep ink navy sky, distant indigo towers and antennas, tiny restrained cyan and warm amber lit windows, gentle lavender atmospheric depth. Foreground is a smooth broad rooftop habitat platform, lower middle, inviting quiet breathing space where an animated pet will be rendered separately. Skyline concentrated in outer thirds, open dark center, refined clean silhouettes with crisp material edges, small coherent architectural details, not a UI screen. The top quarter should be calm sky. Designed for a 768x268 in-game view; details must read small. Absolutely no text, logos, symbols, interface, buttons, frames, grids, stars shaped as plus symbols, or baked-in dragon. Original children-friendly futuristic city, sophisticated game environment, readable rather than busy.",
+      "sha256": "1bedd614dd13801fd96e0a678828ce11717c5482a498e7513872020b4240586f"
+    },
+    {
+      "path": "dragon-cover-source.png",
+      "prompt": "Use case: stylized-concept. Asset type: Byte Buddy original dragon virtual-pet game launcher illustration, wide 16:9. A lovable small purple baby dragon with large luminous turquoise eyes, a soft orange belly plate, tiny orange horns, small violet wings, and a friendly curious expression sits proudly on a rooftop nest above a beautiful futuristic twilight city. Polished hand-painted 2D fantasy game illustration, rich deep navy and indigo, restrained cyan city lights and amber highlights, crisp friendly silhouette that reads at 128x72. Dragon centered and large, three-quarter view, whole head, wings and curled tail visible with generous crop-safe margins. Clear eyes and warm personality; coherent with a dragon-raising game. Original creature, not a known franchise. No robot, no text, no letters, no symbols, no logo, no border or UI. Background quiet and cinematic, subject dominant.",
+      "sha256": "11cf5cbf79de77571755306663dfdfbcfda5e62e4d3991b6fe11b8501ee6ec74"
+    }
+  ],
+  "conversion": {
+    "tool": "games/byte_buddy/tools/pack_launch_art.py",
+    "city": "Center-fit 768x268 Lanczos; Pillow median-cut 256 colors, no dithering; RGB565 palette + byte indices; opaque",
+    "city_static_bytes": 206848,
+    "city_include_sha256": "5c110d3dab2229084e349be17117193cc8cc0027ea05603a430c88e169ed9f57",
+    "icon": "Shared pack-game-icon.py: center-fit 128x72 Lanczos, 256 RGB565 colors, opaque P4ICON1",
+    "icon_bytes": 9744,
+    "icon_sha256": "7c420120704fee42159e57e2cd68ac90e22313c6915551dd12759d3faecd3ed3",
+    "pillow_version": "12.3.0"
+  }
+}

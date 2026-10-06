@@ -1,0 +1,29 @@
+{
+  "generator": "built-in image_gen.imagegen",
+  "assets": [
+    {
+      "name": "byte-buddy",
+      "prompt": "Generate a production illustration asset based on the approved GameChangersAI interface reference. Output ONLY the Byte Buddy robot cyberspace artwork, absolutely no interface, text, logo, labels, letters, typography, borders, buttons or navigation. Wide 16:9 cinematic illustration. Same friendly polished small black and silver robot with two glowing cyan eyes, a neon cyan crystal above it, geometric deep navy cyberspace portal and grid floor. Robot on RIGHT HALF, calm very dark navy #07121C negative space on LEFT HALF for separately rendered UI title. Elegant Hackers 1995 computer-world atmosphere, inviting and accessible, cyan lighting, crisp 3D forms. This is an illustration asset, not a screen mockup.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-2380832c-8437-45eb-a7ab-74f23a2a5f9e.png",
+      "sha256": "1a999f119353b1aa979e5d8947369eee1116c7dcb73e4bf66105d231d4d8d4d2"
+    },
+    {
+      "name": "maze",
+      "prompt": "Generate a game cover illustration asset matching the approved reference's Maze Chase artwork: friendly black and silver robot with glowing cyan eyes exploring a geometric dark navy blue maze, bright golden cube goal, polished clean 3D blocks, cyan light. Wide 16:9 composition. Illustration fills whole image. NO text, titles, letters, interface, borders or controls. Same visual world as reference. Keep robot and cube visible within central region.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-b9e9c823-c2e3-4f33-9fc2-0cce719c2c9c.png",
+      "sha256": "4362dd7d7fc758b5dae2414ef193d92c56ebbcd9f0883a6a92b30b580180b529"
+    },
+    {
+      "name": "blast",
+      "prompt": "Generate a game cover illustration asset matching the approved reference's Blast Circuit artwork: top-down isometric navy grid bomb arena, steel blocks, orange wooden crates, round black bombs with fuses, one colorful orange explosion, small friendly black and silver robot with cyan eyes. Wide 16:9 composition. Polished 3D cyberspace game packaging art. NO text, labels, letters, interface, borders, spaceship or controls. Keep identifiable arena subject within central region.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-b8e64dd0-37d7-45ef-a918-858a1d14e83c.png",
+      "sha256": "92826c9a3b1e0069d61ddaa5af09d60ad449dbe5aba9bd9e991c50f3f490a0ca"
+    },
+    {
+      "name": "solitaire",
+      "prompt": "Generate a game cover illustration asset matching the approved reference's Solitaire artwork: four elegant white playing cards fanned over a dark teal geometric landscape with a luminous pale teal moon, calm green grid floor and mountains. Real card suits and small A ranks are allowed on cards ONLY. Wide 16:9 composition. Polished minimalist 3D game packaging art, color restrained teal/mint. NO titles, interface, border or controls.",
+      "source": "/Users/billh/.codex/generated_images/01a10a90-dd3a-7ae3-92d0-c99f4e35c8cb/exec-ad6609a1-6065-4323-82a3-38163b0126c7.png",
+      "sha256": "25adc6c2e35b304449dffe9db026b5b169a410e695cf6daa892b9ded6a4608c1"
+    }
+  ]
+}

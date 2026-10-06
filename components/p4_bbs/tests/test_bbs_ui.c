@@ -71,6 +71,20 @@ int main(void)
     p4_bbs_launcher_model_t unterminated = model;
     memset(unterminated.board_name, 'X', sizeof(unterminated.board_name));
     CHECK(!p4_bbs_build_launcher(&terminal, &unterminated));
+    model.storage_is_sd = true;
+    model.storage_space_valid = true;
+    model.storage_total_kib = UINT32_MAX;
+    model.storage_free_kib = UINT32_MAX;
+    CHECK(p4_bbs_build_launcher(&terminal, &model));
+    const char *full_free = "SD 100% FREE";
+    for (size_t i = 0; i < strlen(full_free); ++i)
+        CHECK(p4_ansi_cell(&terminal, (uint16_t)(54U+i), 7U)->character == (uint8_t)full_free[i]);
+    model.storage_free_kib = 0U;
+    CHECK(p4_bbs_build_launcher(&terminal, &model));
+    CHECK(p4_ansi_cell(&terminal, 58U, 7U)->character == '0');
+    model.storage_space_valid = false;
+    CHECK(p4_bbs_build_launcher(&terminal, &model));
+    CHECK(p4_ansi_cell(&terminal, 58U, 7U)->character == '-');
     model.battery_percent = 0U;
     CHECK(p4_bbs_build_launcher(&terminal, &model));
     CHECK(p4_ansi_cell(&terminal, 74U, 7U)->character == '0');

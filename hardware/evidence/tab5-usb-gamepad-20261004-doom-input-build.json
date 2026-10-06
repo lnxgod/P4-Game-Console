@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "date": "2026-10-04",
+  "board": "m5stack-tab5",
+  "status": "host-and-build-tested-hardware-pending",
+  "hardware_verified": false,
+  "flash_authorized": false,
+  "device_written": false,
+  "supersedes_build_evidence": "hardware/evidence/tab5-usb-gamepad-20261004-build.json",
+  "change": "Merge Doom key ownership across touch and the shared gamepad so releasing one source cannot release a key still held by the other.",
+  "verification": {
+    "host": "CMake/CTest components/doom_gamepad_input: both gamepad adapter and key ownership suites pass with ASan/UBSan.",
+    "cases": [
+      "All 256 key codes and both source ordering directions",
+      "Duplicate events do not change logical state",
+      "Touch release preserves a gamepad-held key",
+      "Gamepad disconnect preserves a touch-held key",
+      "Last owner release neutralizes the key; reconnect can press again",
+      "Independent keys, invalid sources and engine-session reset"
+    ],
+    "build": "scripts/build.sh console_os m5stack-tab5: PASS",
+    "artifact_check": "scripts/verify-console-os-tab5.py: PASS; enabled USB host requires linked key merger",
+    "feature_gate_test": "scripts/tests/test-tab5-build-features.py: PASS",
+    "artifact": {
+      "image_bytes": 1513728,
+      "image_sha256": "8409092e5da819f31af1cde9fc4cc0c7b51b5d5ee01d021c3b97996adbf1ab7b",
+      "native_cartridges": 16,
+      "usb_host_enabled": true
+    }
+  },
+  "hardware": {
+    "controller_model": null,
+    "tab5_unit": null,
+    "status": "Physical controller acceptance pending. No hardware write performed in this thread.",
+    "acceptance_reference": ".agents/skills/add-usb-gamepad-support/references/acceptance.md",
+    "controller_family": "Third-party Xbox-compatible",
+    "controller_available": false,
+    "identity_source": "Owner clarification: Third-party Xbox-compatible; unavailable right now",
+    "usb_protocol": null,
+    "compatibility": "Unverified. USB HID is implemented; wired XUSB/XInput and GIP require a separate transport adapter."
+  },
+  "source_files_sha256": {
+    "components/doom_gamepad_input/CMakeLists.txt": "82d75062a824b12375f0da1e36ba4b0076eff29d8db501fc6514f4079db7267c",
+    "components/doom_gamepad_input/include/doom_gamepad/key_merge.h": "36e0973060e24ec8fbb23a0d461462762d012f508d404fdbaba772cd086639fe",
+    "components/doom_gamepad_input/src/key_merge.c": "b4e01a702d768095f05e15c9ac0318ac00fbffa61ffa5c23bafc1d7884a08c3d",
+    "components/doom_gamepad_input/tests/test_key_merge.c": "657e5729268c9244ce64626aec872747fc600a8e41ff564681903f51140bac7f",
+    "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c": "0bec3a4313a4565fa3cd32df7664ba5ed032ca598272f7636f36ecabfcd53c16",
+    "scripts/verify-console-os-tab5.py": "f95aa60e2b17d1d0bb5ad1ca5493b35a230fb1096ff5584099b9852601c25791",
+    "scripts/tests/test-tab5-build-features.py": "5990dfa83f062d92f1977a347909dda63a395a7f071d6d322dbad066f0a17983"
+  },
+  "build_log_sha256": "571e1b8f8edda68d2fef7cfd2cc03b42cb8d9af3f20f89c4169c07054a9ec36c"
+}

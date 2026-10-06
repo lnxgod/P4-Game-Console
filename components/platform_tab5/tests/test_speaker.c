@@ -4,7 +4,8 @@
 #include <string.h>
 #include "platform/tab5.h"
 #include "mock_sdk.h"
-static uint8_t regs[32];
+static uint8_t regs[32], charger_regs[32];
+static unsigned charger_devices;
 static unsigned input_reads, register_reads, resets, creates, deletes;
 static unsigned init_failures, reset_failures;
 static bool read_timeout, corrupt_latch, corrupt_direction, corrupt_drive;
@@ -17,15 +18,21 @@ void vTaskDelay(unsigned t) {(void)t;}
 esp_err_t i2c_new_master_bus(const i2c_master_bus_config_t *c,i2c_master_bus_handle_t *o) {assert(c->sda_io_num==31&&c->scl_io_num==32);*o=regs;++creates;return 0;}
 esp_err_t i2c_master_bus_reset(i2c_master_bus_handle_t b) {(void)b;++resets;if(reset_failures){--reset_failures;return ESP_ERR_INVALID_STATE;}return 0;}
 esp_err_t i2c_del_master_bus(i2c_master_bus_handle_t b) {assert(b);++deletes;return 0;}
-esp_err_t i2c_master_bus_add_device(i2c_master_bus_handle_t b,const i2c_device_config_t *c,i2c_master_dev_handle_t *o) {assert(b&&c->device_address==0x43);*o=regs;return 0;}
+esp_err_t i2c_master_bus_add_device(i2c_master_bus_handle_t b,const i2c_device_config_t *c,i2c_master_dev_handle_t *o) {assert(b);if(c->device_address==0x44){++charger_devices;*o=charger_regs;}else{assert(c->device_address==0x43);*o=regs;}return 0;}
 esp_err_t i2c_master_transmit_receive(i2c_master_dev_handle_t d,const uint8_t *w,size_t wn,uint8_t *r,size_t rn,int timeout) {
  assert(d&&wn==1&&rn==1&&timeout<=100);++register_reads;
  if(read_timeout)return ESP_ERR_TIMEOUT;
+ if(d==charger_regs){assert(*w==3||*w==5||*w==7||*w==0x0b);*r=charger_regs[*w];return 0;}
  assert(*w==3||*w==5||*w==7);*r=regs[*w];
  if(corrupt_latch&&*w==5)*r^=2;
  if(corrupt_direction&&*w==3)*r&=(uint8_t)~2U;
  if(corrupt_drive&&*w==7)*r|=2;
  return 0;
+}
+esp_err_t i2c_master_transmit(i2c_master_dev_handle_t d,const uint8_t *w,size_t n,int timeout) {
+ assert(d==charger_regs&&n==2&&timeout<=100);
+ assert(w[0]==3||w[0]==5||w[0]==7||w[0]==0x0b);
+ charger_regs[w[0]]=w[1];return ESP_OK;
 }
 esp_err_t i2c_master_probe(i2c_master_bus_handle_t b,int a,int t) {(void)b;(void)a;(void)t;return ESP_FAIL;}
 esp_err_t esp_io_expander_new_i2c_pi4ioe5v6408(i2c_master_bus_handle_t b,int a,esp_io_expander_handle_t *o) {assert(b&&a==0x43);if(init_failures){--init_failures;return ESP_ERR_TIMEOUT;}regs[3]=255;regs[5]=0;regs[7]=255;*o=regs;return 0;}
@@ -41,7 +48,17 @@ esp_err_t esp_lcd_panel_io_rx_param(esp_lcd_panel_io_handle_t h,int c,void *d,si
 int main(int argc, char **argv) {
  unsigned expected_resets=0,expected_deletes=0;
  if(argc>1) {
-   if(!strcmp(argv[1],"retry")) {init_failures=1;expected_resets=1;}
+   if(!strcmp(argv[1],"charger")) {
+     memset(charger_regs,0x5a,sizeof(charger_regs));
+     assert(platform_tab5_charger_init()==ESP_OK);
+     assert((charger_regs[5]&0xa0U)==0xa0U);
+     assert((charger_regs[3]&0xe0U)==0xa0U);
+     assert((charger_regs[5]&0x1fU)==0x1aU);
+     read_timeout=true;assert(platform_tab5_charger_init()==ESP_ERR_TIMEOUT);
+     read_timeout=false;assert(platform_tab5_charger_init()==ESP_OK);
+     assert(charger_devices==1&&creates==1&&resets==0);
+     puts("Tab5 charger API: shared bus, bounded handle and retry PASS");return 0;
+   } else if(!strcmp(argv[1],"retry")) {init_failures=1;expected_resets=1;}
    else if(!strcmp(argv[1],"recreate")) {init_failures=reset_failures=1;expected_resets=expected_deletes=1;}
    else if(!strcmp(argv[1],"bounded")) {
      init_failures=3;reset_failures=2;

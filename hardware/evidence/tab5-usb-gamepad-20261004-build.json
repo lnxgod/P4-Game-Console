@@ -1,0 +1,97 @@
+{
+  "schema": 1,
+  "date": "2026-10-04",
+  "board": "m5stack-tab5",
+  "status": "host-and-build-tested-hardware-pending",
+  "hardware_verified": false,
+  "flash_authorized": false,
+  "device_written": false,
+  "request": "Native USB controller support in the shared OS, inherited by launcher, games and Doom.",
+  "implementation": {
+    "connector": "Dedicated USB-A J10; native HS peripheral 0",
+    "power": "USB5V_EN, active-high PI4IOE5V6408 at 0x44/P3, U27 MT9700",
+    "sequence": "Power off and read back before host install; register HID before root enable and power on; rollback enable failures; quiesce powers off.",
+    "preserved": "Masked register operations preserve every non-USB expander bit; USB-C Serial/JTAG stays independent.",
+    "input": "Existing bounded HID parser, canonical broker, game adapters and immediate disconnect neutralization; wired remapping actions enabled.",
+    "config": "CONFIG_P4_TAB5_USB_HOST=y",
+    "scope": "One direct wired USB HID gamepad. Hub, multiple pad, XInput/GIP, rumble and Bluetooth support are not added."
+  },
+  "official_sources": [
+    {
+      "url": "https://m5stack-doc.oss-cn-shenzhen.aliyuncs.com/1132/Tab5_Schematics_PDF.pdf",
+      "sha256": "13cf3fd9954d39aa198e57b1bb94ec56af7d49107c80a245acc5bd90ac8ea329",
+      "download_bytes": 2319940,
+      "hash_verified": true,
+      "review": "Expander/control, USB connectors and USB-A power switch on pages 1, 4 and 5."
+    },
+    {
+      "url": "https://raw.githubusercontent.com/espressif/esp-bsp/73ee07b1ad56f865f13a2739be8bb6808c1da58a/bsp/m5stack_tab5/src/bsp_feature_en.c",
+      "sha256": "a159383221285fe473ed4d9de65adf85255745ba03be6be967ce87b907b1ae95",
+      "download_bytes": 3108,
+      "hash_verified": true
+    }
+  ],
+  "validation": {
+    "toolchain": "ESP-IDF 5.5.3 / 2c211b236707889e8400c4dc5644dd5c4ee071e0; P4 revision 100..199",
+    "dependencies": "Added pinned espressif/usb 1.5.0 and usb_host_hid 1.2.0 to the Tab5 lock; existing dependency versions/hashes preserved.",
+    "checks": [
+      "make verify: passed before firmware integration",
+      "make gamepad-host: passed, including parser, hotplug model, host lifecycle, Doom adapter and both six-case USB overlay suites",
+      "make tab5-usb-host: passed under ASan/UBSan; all 256 initial output-latch values, non-USB pin preservation and write/readback failure injection",
+      "Current Tab5 board tests: all five speaker, sensor and startup recovery cases passed with USB code integrated",
+      "make console-shell-host: all seven cases passed after integration, including wired-only controller settings",
+      "scripts/build.sh console_os m5stack-tab5: integrated current audio/sensor/game-library snapshot built",
+      "scripts/verify-console-os-tab5.py: passed",
+      "Board profile and board-port contract checks: passed",
+      "USB and multiplayer skill validation: passed"
+    ],
+    "artifact": {
+      "board": "m5stack-tab5",
+      "flash_authorized": false,
+      "hardware_verified": false,
+      "image_bytes": 1513616,
+      "image_sha256": "44199db0bf2af0705023b1da41e49bf0f0b7b97a6197514022aa5497c81ba717",
+      "native_cartridges": 16,
+      "result": "tab5-build-candidate-verified"
+    },
+    "warnings": "No compiler warnings in the final incremental integration build. The initial full build reported existing third-party Doom warnings.",
+    "integration": "USB patch merged into the primary checkout using a three-way merge with current edits preserved; final build ran from an isolated source snapshot."
+  },
+  "pending": {
+    "controller_model": null,
+    "tab5_unit": null,
+    "items": [
+      "Exact physical board/connector and controller identification",
+      "New exact-artifact install authorization with USB-A scope and current recovery binding",
+      "Cold-plug, hotplug, launcher/game/Lua/Doom mapping, held-button disconnect and repeated reconnect",
+      "USB-C content-transfer coexistence and sustained gameplay",
+      "Electrical operation and switch behavior on the named physical unit"
+    ],
+    "acceptance_reference": ".agents/skills/add-usb-gamepad-support/references/acceptance.md",
+    "controller_family": "Third-party Xbox-compatible",
+    "controller_available": false,
+    "identity_source": "Owner clarification: Third-party Xbox-compatible; unavailable right now",
+    "usb_protocol": null,
+    "compatibility": "Unverified. USB HID is implemented; wired XUSB/XInput and GIP require a separate transport adapter."
+  },
+  "source_files_sha256": {
+    "components/platform_tab5/src/tab5.c": "57d866b4c7924d20675f94ed8c91cefeb5b7e7a666e2aee91b74457ae27bbe0f",
+    "components/platform_tab5/src/usb_power_control.c": "22055dff196d1182765cd59e5c355bc0f5936cd61d20ec16d9c660a9504baf0c",
+    "components/platform_tab5/src/usb_power_control.h": "7ae8071ad0aa5f779889c9d85a322d0b8696bb20e0c27da0099a8e1ee52732b1",
+    "components/platform_tab5/tests/test_usb_power.c": "bf90b7d72a2757864f1e041482c47cfc19e2509516716b9e1135050e6b00fbe4",
+    "components/platform_usb_host/src/platform_usb_host.c": "ecc1f5dc99adc7dbec9f8bb5f3b7cb69ff2e01607c0e6cbc449674b4ffce7342",
+    "components/board_deps_tab5/idf_component.yml": "6b32590c6ec0023dd46fad21ab9a7ed7742a3e8b2a7613e198faf0f265b00b0e",
+    "apps/console_os/dependencies-tab5.lock": "0976272e99f67c809157453d67aa455a4b4c779d1b072b3c7a2ac6737eb5fad4",
+    "apps/console_os/main/console_os_main.c": "bb71b2d1ee862f79a370fee2bb2a491c945efe8943532221581ee65d74dcce3c",
+    "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c": "a9a9ea40ca180967b39fad12bf21297d4b1c438827510b32c00b4d52a78fbb16",
+    "hardware/boards/m5stack-tab5/sdkconfig.defaults": "d6982ad8d362281f0e9c696f55e8a725a2de64eaba85abe4617f32c8d67ff6c2",
+    "scripts/build.sh": "892fec248b661ceaab020a024ef20aeacebc297c2e89fa92daa841f63b4f67f5",
+    "scripts/verify-console-os-tab5.py": "fefcf4650003017e48d11bacc0224555ec199404237871e833c07fec3fe43666"
+  },
+  "source_base_commit": "9789174f8a4ad4eac5163e7a089fd3b94da55b73",
+  "local_log_sha256": {
+    "/tmp/tab5-usb-gamepad-host.log": "6b54be5080fe0fc78847a78576c5c891b0e466eb238bc4fe6b79334bbc52221a",
+    "/tmp/tab5-usb-integrated-shell-tests.log": "4191b07f98237f9cb5512c52bfd66115f800fdf5495e487ae17d17df5418a12e",
+    "/tmp/tab5-usb-integrated-build.log": "1082576a183f0c4bd401d208f005fab4a81acca7b1d4acf828e7881bc94c68d4"
+  }
+}

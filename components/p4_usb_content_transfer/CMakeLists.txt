@@ -15,7 +15,6 @@ idf_component_register(
         heap
         log
         mbedtls
-        p4_content_catalog
         p4_game_package
 )
 

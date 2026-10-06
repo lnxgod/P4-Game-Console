@@ -10,3 +10,11 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
         -fsanitize=address,undefined
     )
 endif()
+
+add_executable(maze_chase_backdrop_generator render_backdrop.c)
+target_include_directories(maze_chase_backdrop_generator PRIVATE ../include ../src)
+target_link_libraries(maze_chase_backdrop_generator PRIVATE p4_game_api)
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+    target_compile_options(maze_chase_backdrop_generator PRIVATE -Wall -Wextra -Wconversion -Wshadow -Werror -fsanitize=address,undefined)
+    target_link_options(maze_chase_backdrop_generator PRIVATE -fsanitize=address,undefined)
+endif()

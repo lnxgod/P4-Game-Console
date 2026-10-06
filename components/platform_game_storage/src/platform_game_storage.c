@@ -176,6 +176,14 @@ static uint32_t s_file_mutations;
 static uint32_t s_usb_verified_writes;
 static uint32_t s_usb_write_failures;
 static uint64_t s_free_bytes;
+static uint64_t s_filesystem_bytes;
+static bool s_space_valid;
+#if P4_GAME_STORAGE_SD_BACKEND
+static int64_t s_next_space_sample_us;
+static void refresh_space_locked(void);
+#else
+static void refresh_space_locked(void) { s_space_valid = false; }
+#endif
 static uint32_t s_root_entries;
 static uint32_t s_checks;
 static uint32_t s_recovery_attempts;
@@ -654,6 +662,7 @@ static game_storage_content_t inspect_doom_title_snapshot(
 
 static esp_err_t refresh_locked(void)
 {
+    refresh_space_locked();
 #if P4_GAME_STORAGE_BACKGROUND_CONTENT_SCAN
     if (!game_storage_model_begin_scan(&s_model)) {
         if (s_model.owner != GAME_STORAGE_OWNER_APP) {
@@ -771,13 +780,14 @@ static esp_err_t fail_initialization(esp_err_t error)
 
 #if P4_GAME_STORAGE_SD_BACKEND
 static esp_err_t read_fat_free_space_without_fsinfo_write(
-    uint64_t *out_free_bytes)
+    uint64_t *out_free_bytes, uint64_t *out_total_bytes)
 {
-    if (out_free_bytes == NULL || s_card == NULL) {
-        return out_free_bytes == NULL
+    if (out_free_bytes == NULL || out_total_bytes == NULL || s_card == NULL) {
+        return out_free_bytes == NULL || out_total_bytes == NULL
             ? ESP_ERR_INVALID_ARG : ESP_ERR_INVALID_STATE;
     }
     *out_free_bytes = 0U;
+    *out_total_bytes = 0U;
     const BYTE drive = ff_diskio_get_pdrv_card(s_card);
     if (drive >= FF_VOLUMES || drive > 9U) {
         return ESP_ERR_INVALID_STATE;
@@ -787,15 +797,36 @@ static esp_err_t read_fat_free_space_without_fsinfo_write(
     DWORD free_clusters = 0U;
     const FRESULT fat_result =
         f_getfree(path, &free_clusters, &filesystem);
-    if (fat_result != FR_OK || filesystem == NULL) {
+    if (fat_result != FR_OK || filesystem == NULL || filesystem->n_fatent < 2U ||
+        free_clusters > filesystem->n_fatent - 2U) {
         return ESP_FAIL;
     }
     *out_free_bytes = (uint64_t)free_clusters *
+        (uint64_t)filesystem->csize * s_sector_size_bytes;
+    *out_total_bytes = (uint64_t)(filesystem->n_fatent - 2U) *
         (uint64_t)filesystem->csize * s_sector_size_bytes;
     /* f_getfree marks a freshly counted FAT32 FSInfo cache dirty. This
      * diagnostic is explicitly read-only, so discard only that hint update. */
     filesystem->fsi_flag &= (BYTE)~UINT8_C(1);
     return ESP_OK;
+}
+
+static void refresh_space_locked(void)
+{
+    const int64_t now = esp_timer_get_time();
+    if (!s_card || !s_sd_vfs_mounted || s_model.owner != GAME_STORAGE_OWNER_APP ||
+        s_model.format_required || s_maintenance || s_model.launch_pending) {
+        s_space_valid = false;
+        s_next_space_sample_us = 0;
+        return;
+    }
+    if (now < s_next_space_sample_us) return;
+    s_space_valid = read_fat_free_space_without_fsinfo_write(
+        &s_free_bytes, &s_filesystem_bytes) == ESP_OK && s_filesystem_bytes != 0U;
+    s_next_space_sample_us = now + INT64_C(5000000);
+    /* The first count runs in the background storage-initialization task.
+     * FatFs maintains its free-cluster cache on later allocations/deletions.
+     * A space-query failure hides the estimate; it never formats the volume. */
 }
 
 static void sd_power_set(bool enabled)
@@ -809,6 +840,8 @@ static void sd_power_set(bool enabled)
 
 static esp_err_t release_sd_resources(void)
 {
+    s_space_valid = false;
+    s_next_space_sample_us = 0;
     esp_err_t result = ESP_OK;
     if (s_card != NULL) {
         if (s_sd_vfs_mounted) {
@@ -844,6 +877,10 @@ static esp_err_t mount_sd_at_frequency(uint32_t frequency_khz,
     host.flags = GAME_STORAGE_SD_BUS_WIDTH == 4
         ? SDMMC_HOST_FLAG_4BIT | SDMMC_HOST_FLAG_1BIT
         : SDMMC_HOST_FLAG_1BIT;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    host.flags |= SDMMC_HOST_FLAG_DEINIT_ARG;
+    host.deinit_p = sdmmc_host_deinit_slot;
+#endif
     host.max_freq_khz = (int)frequency_khz;
 
     const sd_pwr_ctrl_ldo_config_t ldo_config = {
@@ -1486,9 +1523,9 @@ esp_err_t platform_game_storage_check_card(void)
         result = sdmmc_get_status(s_card);
     }
 #endif
-    uint64_t free_bytes = 0U;
+    uint64_t free_bytes = 0U, filesystem_bytes = 0U;
     if (result == ESP_OK) {
-        result = read_fat_free_space_without_fsinfo_write(&free_bytes);
+        result = read_fat_free_space_without_fsinfo_write(&free_bytes, &filesystem_bytes);
     }
     uint32_t root_entries = 0U;
     if (result == ESP_OK) {
@@ -1530,6 +1567,8 @@ esp_err_t platform_game_storage_check_card(void)
         }
         s_root_entries = root_entries;
         s_free_bytes = result == ESP_OK ? free_bytes : 0U;
+        s_filesystem_bytes = result == ESP_OK ? filesystem_bytes : 0U;
+        s_space_valid = result == ESP_OK && filesystem_bytes != 0U;
         s_last_check_error = result;
         s_maintenance = false;
         if (result == ESP_OK) {
@@ -1753,6 +1792,10 @@ esp_err_t platform_game_storage_get_status(
     out_status->usb_verified_writes = s_usb_verified_writes;
     out_status->usb_write_failures = s_usb_write_failures;
     out_status->free_bytes = s_free_bytes;
+    out_status->filesystem_bytes = s_filesystem_bytes;
+    out_status->space_valid = s_space_valid &&
+        s_model.owner == GAME_STORAGE_OWNER_APP && !s_model.format_required &&
+        !s_maintenance && !s_model.launch_pending;
     out_status->real_frequency_khz =
 #if P4_GAME_STORAGE_SD_BACKEND
         s_card != NULL ? (uint32_t)s_card->real_freq_khz : 0U;

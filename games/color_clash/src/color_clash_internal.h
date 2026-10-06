@@ -119,6 +119,15 @@ typedef struct {
     uint64_t network_seed;
     uint16_t hand_touch_last_x;
     uint16_t hand_touch_start_y;
+    uint16_t hand_touch_start_x;
+    uint16_t hand_touch_x;
+    uint16_t hand_touch_y;
+    int16_t hand_touch_offset_x;
+    int16_t hand_touch_offset_y;
+    uint8_t hand_touch_value;
+    uint8_t hand_touch_count;
+    uint32_t hand_touch_revision;
+    bool hand_dragging;
     bool touch_was_down;
     bool hand_touch_active;
     bool hand_touch_scrolled;

@@ -15,6 +15,44 @@ enum {
     PUCK_MAX_Y_SPEED = FP(4),
 };
 
+static p4_air_hockey_pose_t current_pose(const p4_air_hockey_state_t *state)
+{
+    return (p4_air_hockey_pose_t){
+        .paddle_x = {state->paddle_x[0], state->paddle_x[1]},
+        .paddle_y = {state->paddle_y[0], state->paddle_y[1]},
+        .puck_x = state->puck_x, .puck_y = state->puck_y,
+    };
+}
+void p4_air_hockey_visual_snap(p4_air_hockey_state_t *state)
+{
+    state->previous_pose = current_pose(state);
+    state->client_visual_ms = 0U;
+    state->visual_ready = true;
+}
+static int32_t interpolate(int32_t previous, int32_t current, uint32_t part, uint32_t whole)
+{
+    /* Legal world/snapshot positions are <=320*256; this bounded product fits
+     * 32 bits and needs no 64-bit arithmetic on the P4. Never extrapolate. */
+    return previous + (current - previous) * (int32_t)part / (int32_t)whole;
+}
+p4_air_hockey_pose_t p4_air_hockey_render_pose(const p4_air_hockey_state_t *state)
+{
+    p4_air_hockey_pose_t pose = current_pose(state);
+    if (!state->visual_ready) return pose;
+    const bool client = state->mode == P4_AIR_HOCKEY_NETWORK &&
+        state->network_role == P4_GAME_MULTIPLAYER_ROLE_CLIENT;
+    const uint32_t whole = client ? P4_AIR_HOCKEY_SNAPSHOT_MS : P4_AIR_HOCKEY_STEP_MS;
+    uint32_t part = client ? state->client_visual_ms : state->step_accumulator_ms;
+    if (part > whole) part = whole;
+    for (unsigned player = 0U; player < P4_AIR_HOCKEY_PLAYERS; ++player) {
+        pose.paddle_x[player] = interpolate(state->previous_pose.paddle_x[player], pose.paddle_x[player], part, whole);
+        pose.paddle_y[player] = interpolate(state->previous_pose.paddle_y[player], pose.paddle_y[player], part, whole);
+    }
+    pose.puck_x = interpolate(state->previous_pose.puck_x, pose.puck_x, part, whole);
+    pose.puck_y = interpolate(state->previous_pose.puck_y, pose.puck_y, part, whole);
+    return pose;
+}
+
 static uint32_t next_random(p4_air_hockey_state_t *state)
 {
     uint32_t value = state->rng;
@@ -72,6 +110,7 @@ void p4_air_hockey_reset_match(p4_air_hockey_state_t *state, uint32_t seed)
     state->network_audio_events = P4_AIR_HOCKEY_EVENT_NONE;
     state->phase = P4_AIR_HOCKEY_SERVE;
     reset_positions(state);
+    p4_air_hockey_visual_snap(state);
 }
 
 void p4_air_hockey_canonical_touch(uint8_t player_slot,
@@ -247,6 +286,9 @@ uint32_t p4_air_hockey_step(p4_air_hockey_state_t *state,
     while (state->step_accumulator_ms >= P4_AIR_HOCKEY_STEP_MS) {
         state->step_accumulator_ms -= P4_AIR_HOCKEY_STEP_MS;
         ++state->simulation_tick;
+        state->previous_pose = current_pose(state);
+        state->visual_ready = true;
+        const p4_air_hockey_phase_t previous_phase = state->phase;
         if (state->phase == P4_AIR_HOCKEY_GAME_OVER ||
             state->phase == P4_AIR_HOCKEY_NETWORK_WAIT) {
             continue;
@@ -267,6 +309,7 @@ uint32_t p4_air_hockey_step(p4_air_hockey_state_t *state,
         } else if (state->phase == P4_AIR_HOCKEY_PLAY) {
             events |= simulate_puck(state);
         }
+        if (state->phase != previous_phase) p4_air_hockey_visual_snap(state);
     }
     return events;
 }

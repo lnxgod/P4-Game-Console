@@ -7,6 +7,7 @@ if(COMMAND idf_component_register)
             "src/dice_accessory.c"
             "src/lobby.c"
             "src/start.c"
+            "src/group.c"
             "src/session.c"
             "src/stream.c"
             "src/ble_frame.c"
@@ -31,6 +32,7 @@ else()
         src/packet.c
         src/lobby.c
         src/start.c
+        src/group.c
         src/session.c
         src/stream.c
         src/ble_frame.c

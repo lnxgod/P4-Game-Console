@@ -9,13 +9,22 @@ import serial
 import time
 
 
+def boot_passed(text, capture_error):
+    """Require the existing reset/OS/OTA proof without the removed Lua scan."""
+    return capture_error is None and all(marker in text for marker in (
+        "CHIP_USB_UART_RESET", "P4_CONSOLE_OS READY board=m5stack-tab5",
+        "OTA_BOOT_VALID result=ESP_OK")) and not any(
+        marker in text for marker in ("FATAL_HOLD", "Guru Meditation", "HALT stage="))
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", required=True)
     parser.add_argument("--unit", required=True, choices=("A", "B"))
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--cycles", type=int, choices=(1, 2, 3), default=3)
-    parser.add_argument("--expected-script-carts", type=int, choices=range(17), default=0)
+    parser.add_argument("--expected-script-carts", type=int, choices=(0,), default=0,
+                        help="compatibility option; only zero is supported (native games only)")
     args = parser.parse_args()
     args.output.mkdir(parents=True, exist_ok=False)
     reports = []
@@ -55,10 +64,7 @@ def main():
             text = re.sub(r"(?i)\b[0-9a-f]{2}(?::[0-9a-f]{2}){5}\b", "[redacted]", received.decode("utf-8", "replace"))
             path = args.output / f"cycle-{cycle}.log"
             path.write_text(text)
-            passed = capture_error is None and all(marker in text for marker in (
-                "CHIP_USB_UART_RESET", "P4_CONSOLE_OS READY board=m5stack-tab5",
-                "OTA_BOOT_VALID result=ESP_OK", f"P4CART_READY valid={args.expected_script_carts} rejected=0")) and not any(
-                marker in text for marker in ("FATAL_HOLD", "Guru Meditation", "HALT stage="))
+            passed = boot_passed(text, capture_error)
             report = {"cycle": cycle, "passed": passed, "seconds": round(time.monotonic() - started, 3),
                       "log": str(path), "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
                       "i2c_retries": text.count("I2C_INIT_RETRY"),

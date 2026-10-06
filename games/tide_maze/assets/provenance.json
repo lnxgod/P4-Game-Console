@@ -1,0 +1,25 @@
+{
+  "schema": 1,
+  "tool": "built-in image_gen",
+  "date": "2026-10-05",
+  "prompt": "Use case: stylized-concept. Asset type: landscape 16:9 launcher artwork for an original console game named Tide Maze, with no lettering. A polished silver-blue glass marble and a smaller warm coral glass marble rolling through an elegant flooded ivory limestone labyrinth, teal transparent water visibly sloshing into a curling wave, tiny luminous pearls along the path. Tactile premium toy diorama, strong clean silhouettes, beautiful caustics, soft sunlight, deep ocean blue backdrop. Central composition crop-safe for a 128x72 thumbnail; large marbles, simple broad maze turns. No text, no logo, no watermark, no UI. Original artwork.",
+  "source": "launcher-source.png",
+  "notice": "Original AI-generated artwork made for Tide Maze; no third-party character or texture assets.",
+  "conversion": {
+    "cover": {
+      "width": 288,
+      "height": 162,
+      "bytes": 93312,
+      "format": "RGB565",
+      "filter": "Pillow Lanczos fit"
+    },
+    "launcher": {
+      "width": 128,
+      "height": 72,
+      "bytes": 9744,
+      "format": "P4ICON1 indexed RGB565",
+      "filter": "Pillow Lanczos fit, median-cut 256 colors"
+    }
+  },
+  "source_sha256": "c591194ced84bd2d21ced913a339fe3f6ea76193bf743515e273f57d97457384"
+}

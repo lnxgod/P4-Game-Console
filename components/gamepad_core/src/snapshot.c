@@ -22,7 +22,8 @@ static bool identity_valid(const platform_gamepad_identity_t *identity)
 {
     if (identity == NULL ||
         (identity->transport != PLATFORM_GAMEPAD_TRANSPORT_USB_HID &&
-         identity->transport != PLATFORM_GAMEPAD_TRANSPORT_BLE_HID)) {
+         identity->transport != PLATFORM_GAMEPAD_TRANSPORT_BLE_HID &&
+         identity->transport != PLATFORM_GAMEPAD_TRANSPORT_USB_XUSB)) {
         return false;
     }
 

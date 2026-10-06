@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.0.1",
+  "version": "1.1.0",
   "package_file": "SKYLINE.P4G",
   "component": "skyline_leap",
   "entry_symbol": "p4_skyline_leap_game",
@@ -10,7 +10,7 @@
   "id": "org.p4console.skyline-leap",
   "title": "Skyline Leap",
   "subtitle": "A rooftop courier adventure",
-  "folder": "GAMES/PLATFORM",
+  "folder": "GAMES/WIP",
   "accent_rgb565": "0x05dd",
   "required_capabilities": [
     "video",
@@ -18,9 +18,11 @@
   ],
   "optional_capabilities": [
     "audio-tone",
-    "audio-stream"
+    "audio-stream",
+    "video-highres"
   ],
   "license": "MIT",
-  "assets": "original-ImageGen-4x4-courier-bot-and-collectible-animation-atlas-and-code-rendered-backgrounds",
-  "enabled": true
+  "assets": "original-ImageGen-high-resolution-sprite-atlas-and-native-detail; Arimo-OFL-1.1-presentation-font",
+  "enabled": false,
+  "launcher_icon": "assets/launcher.p4i"
 }

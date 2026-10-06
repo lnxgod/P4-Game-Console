@@ -24,6 +24,15 @@ four-player transport adapter.
 
 ## Controls
 
+Touch is primary: tap dice to hold or release them, tap an unused score row to
+commit it, and tap Roll/Reroll. The bonus and total rows are display-only.
+Tap the player-count arrows before starting local play; tap the pass panel
+when the next player is ready. The interface uses semantic touch instructions
+and draws no virtual controller. Touch press/hold/release consumes synthesized
+controller bits to prevent duplicate holds, scores, or rolls.
+
+Physical controller/keyboard shortcuts remain available:
+
 - **Start** rolls or rerolls the unheld dice, up to three rolls per turn.
 - On the local-play menu, **Left/Right** selects two, three, or four players.
 - **Left/Right** selects a die; **A** holds or releases it.
@@ -51,19 +60,6 @@ neutral, and the focused category gains a cyan border in either case. Committed
 rows retain a darker locked treatment with a gold edge and explicit `SET`
 marker, so scoring, zero-point, and used categories remain distinct.
 
-## Original generated art
-
-`assets/p4_yahtzee_dice_atlas_imagegen_v1.png` was generated for this game
-with OpenAI ImageGen. It is an original 3x2 atlas containing the six standard
-dice faces on transparent cells; no third-party game art is used. The prompt
-requested polished 16-bit pixel art, warm ivory faces, navy pips, cyan edge
-light, a restrained gold highlight, and exact 1-6 pip layouts.
-
-`tools/png_to_dice_atlas.py` crops the six cells, applies a fixed transparency
-threshold, resizes with nearest-neighbor sampling, and emits the bounded
-RGB565 include at `src/generated/p4_yahtzee_dice_atlas.inc`. Runtime code does
-not decode PNGs or allocate image buffers.
-
 ## Local verification
 
 ```sh
@@ -74,7 +70,7 @@ ctest --test-dir build-host/play-p4_yahtzee --output-on-failure
 make play-game GAME=p4_yahtzee
 ```
 
-The `.P4G` remains installable under `GAMES/ARCADE` without an OS reflash.
+The `.P4G` remains installable under `GAMES/TABLETOP` without an OS reflash.
 
 ## Virtual dice accessory
 
@@ -97,3 +93,64 @@ never advances that stream. This fixes the former every-other-LCG-output parity
 pattern without suppressing naturally repeated dice.
 
 The v2 dice service accepts confirmed Core2 hold/unhold selections for the current player, including the remote player through the shared host. All-held selections can be released; Ready/shake rerolls only unheld dice.
+
+## Native high-resolution presentation
+
+Version 1.4.0 negotiates **768x480** through optional `video-highres`,
+with a complete **320x200** fallback. Touch coordinates remain canonical
+320x200 in both modes. Game geometry is rasterized directly into the supplied
+surface, with native 24/38px antialiased typography in high resolution and
+legible compact bitmap text in fallback; no small framebuffer is enlarged.
+
+The original ImageGen atlas `assets/presentation_imagegen_v2.png` provides
+112px ivory dice and 96px felt, paper and walnut materials.
+The exact built-in generation prompt, source SHA-256, reviewed crops and
+license are recorded in `assets/presentation_provenance.json`. These are
+original project assets distributed under MIT, with no commercial game art.
+The deterministic `tools/convert_presentation.py` converter uses reviewed
+source rectangles, nearest-neighbor sampling, bounded RGB565 arrays and an
+explicit transparent key. Its compiled image budget is **205,824 bytes**;
+font data and game code are additional. Original earlier art remains as
+historical source material and is no longer included by the game renderer.
+
+Run the converter with Pillow installed:
+
+```sh
+python3 tools/convert_presentation.py
+```
+
+Focused tests cover padded framebuffer guards and full-surface rendering at
+both resolutions, canonical touch targets after rendering, and representative
+menus, play and result states. Set `P4_CAPTURE_DIR` to an existing absolute
+directory to retain native PPM captures from the presentation test. The
+existing rules and mocked multiplayer suites remain unchanged. See
+`LOCAL_TESTING.json` for exact automated evidence and pending interactive/
+physical-device acceptance; host tests are not hardware acceptance.
+
+## Frame-time budget
+
+The minimum target is 30 presented frames per second (33.333ms per frame).
+The renderer copies mirrored material row spans and paints visible regions
+without repeatedly painting covered full-screen layers. State, touch targets,
+rule timing and multiplayer packet formats remain unchanged.
+Dice animation retains elapsed-time remainders across updates; delayed
+frames catch up within the bounded 330ms animation without changing real rolls.
+
+The shared optimized CPU benchmark uses real updates, rendering and audio:
+
+```sh
+cmake --build build-host/play-p4_yahtzee --target p4_game_benchmark
+build-host/play-p4_yahtzee/p4_game_benchmark 2000 768 games/p4_yahtzee/tests/performance-input.txt
+```
+
+The input tape exercises real play. Timings in `LOCAL_TESTING.json` describe
+this Mac CPU run, exclude display/transport/device costs, and **do not certify
+30 FPS on the ESP32-P4**. The simulator targets 60Hz; physical Tab5 frame-time
+and presentation measurements remain required for device acceptance.
+
+## Launcher presentation
+
+The cartridge owns its title and `assets/launcher.p4i` icon. Source artwork,
+conversion details and provenance live beside the packed icon. The game name
+stays visible beside player status during play. Existing touch actions and
+setup choices remain direct; no extra launch confirmation is added.

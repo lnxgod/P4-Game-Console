@@ -55,11 +55,20 @@ void p4_draw_fill_rect(p4_game_surface_t *surface,
     if (bottom > surface->height) {
         bottom = surface->height;
     }
-    for (int64_t row = top; row < bottom; ++row) {
-        for (int64_t column = left; column < right; ++column) {
-            surface->pixels[(size_t)row * surface->stride_pixels +
-                            (size_t)column] = color;
-        }
+    /* Clip in 64 bits to accept the full int input range, then walk bounded
+     * native rows. RV32 must not repeat 64-bit comparisons or row address
+     * multiplication for every pixel in a high-resolution clear. */
+    uint16_t *const pixels = surface->pixels;
+    const size_t stride = surface->stride_pixels;
+    const size_t start_x = (size_t)left;
+    const size_t count = (size_t)(right - left);
+    const unsigned end_y = (unsigned)bottom;
+    for (unsigned row = (unsigned)top; row < end_y; ++row) {
+        uint16_t *pixel = pixels + (size_t)row * stride + start_x;
+        uint16_t *const end = pixel + count;
+        do {
+            *pixel++ = color;
+        } while (pixel != end);
     }
 }
 
@@ -93,13 +102,33 @@ void p4_draw_fill_circle(p4_game_surface_t *surface,
     if (!p4_surface_valid(surface) || radius < 0 || radius > 1024) {
         return;
     }
-    const int64_t radius_squared = (int64_t)radius * radius;
-    for (int y = -radius; y <= radius; ++y) {
-        for (int x = -radius; x <= radius; ++x) {
-            if ((int64_t)x * x + (int64_t)y * y <= radius_squared) {
-                p4_draw_pixel(surface, center_x + x, center_y + y, color);
-            }
+    /* Reject using wide bounds once. Any intersecting center is then within
+     * 1024 pixels of the surface, so all row geometry fits signed 32 bits. */
+    if ((int64_t)center_x + radius < 0 || (int64_t)center_y + radius < 0 ||
+        (int64_t)center_x - radius >= surface->width ||
+        (int64_t)center_y - radius >= surface->height) return;
+    int top = center_y - radius, bottom = center_y + radius;
+    if (top < 0) top = 0;
+    if (bottom >= surface->height) bottom = (int)surface->height - 1;
+    const int radius_squared = radius * radius;
+    for (int row = top; row <= bottom; ++row) {
+        const int dy = row - center_y;
+        const int remaining = radius_squared - dy * dy;
+        /* Find floor(sqrt(remaining)) with bounded integer comparisons;
+         * the original circle includes exactly x*x + y*y <= r*r. */
+        int low = 0, high = radius;
+        while (low < high) {
+            const int mid = (low + high + 1) >> 1;
+            if (mid * mid <= remaining) low = mid;
+            else high = mid - 1;
         }
+        int left = center_x - low, right = center_x + low + 1;
+        if (left < 0) left = 0;
+        if (right > surface->width) right = surface->width;
+        if (left >= right) continue;
+        uint16_t *dst = surface->pixels + (size_t)row * surface->stride_pixels + (size_t)left;
+        uint16_t *const end = dst + (size_t)(right - left);
+        do { *dst++ = color; } while (dst != end);
     }
 }
 
@@ -270,15 +299,23 @@ void p4_draw_sprite_rgb565(p4_game_surface_t *surface,
         stride_pixels < width) {
         return;
     }
-    for (size_t row = 0U; row < height; ++row) {
-        for (size_t column = 0U; column < width; ++column) {
-            const uint16_t color = pixels[row * stride_pixels + column];
-            if (!use_transparency || color != transparent_color) {
-                p4_draw_pixel(surface,
-                              x + (int)column,
-                              y + (int)row,
-                              color);
-            }
-        }
+    const int64_t right = (int64_t)x + (int64_t)width;
+    const int64_t bottom = (int64_t)y + (int64_t)height;
+    if (right <= 0 || bottom <= 0 || x >= surface->width || y >= surface->height) return;
+    const size_t first_x = x < 0 ? (size_t)(-(int64_t)x) : 0U;
+    const size_t first_y = y < 0 ? (size_t)(-(int64_t)y) : 0U;
+    const size_t end_x = right > surface->width ? (size_t)((int)surface->width - x) : width;
+    const size_t end_y = bottom > surface->height ? (size_t)((int)surface->height - y) : height;
+    for (size_t row = first_y; row < end_y; ++row) {
+        const uint16_t *src = pixels + row * stride_pixels + first_x;
+        uint16_t *dst = surface->pixels + (size_t)(y + (int)row) * surface->stride_pixels + (size_t)(x + (int)first_x);
+        uint16_t *const end = dst + end_x - first_x;
+        /* Keep original forward read/write order, including aliased source
+         * surfaces; memcpy would silently change that behavior. */
+        do {
+            const uint16_t value = *src++;
+            if (!use_transparency || value != transparent_color) *dst = value;
+            ++dst;
+        } while (dst != end);
     }
 }

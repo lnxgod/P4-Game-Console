@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "mode": "built-in image_gen; cover derived from upgraded game artwork",
+  "source": "launcher-source.png",
+  "source_sha256": "4867608d5c5310313250d6ffe0cd07789cfa2d429e9d24b5243955a6ac0f8bfd",
+  "generation_source": "/Users/billh/.codex/generated_images/01a10e4d-67fb-7561-b76d-25c549064ff2/exec-9fb95055-2cca-4b28-abbd-f2c19fc7c015.png",
+  "prompt": "Use case: stylized-concept. Asset type: finished landscape 16:9 launcher cover illustration for a console game, optimized for a tiny 128x72 thumbnail. Create ONE cohesive edge-to-edge scene, not a sprite atlas. Clear large silhouettes, center-safe subject, premium polished game illustration with restrained dark background and luminous material detail. Absolutely no title, letters, logos, interface, numbers, watermarks or border. Opaque background. Game: Texas Hold'em. Reference image provides original emerald felt and navy-gold Art Deco card-back materials. Create two elegant ivory playing cards with simple large red heart and black spade emblems, resting beside a small stack of red, ivory and gold poker chips on a rich emerald felt table. Warm gold rim light and deep green casino atmosphere. No card ranks or lettering; this is cover art, not a playable hand. The two cards and chips must fill the central 70 percent.",
+  "reference_assets": [
+    {
+      "path": "games/texas_holdem/assets/table-materials-imagegen.png",
+      "sha256": "2ce0b7313a819bfe3697f70f55cc43cafc148d2d613f9ad46c6815f800af5546"
+    }
+  ],
+  "license": "Original AI-generated project artwork, distributed under the project MIT license. No third-party game art.",
+  "packed_icon": {
+    "path": "launcher.p4i",
+    "sha256": "9f22f74f965fc76b1b87105ce26b92c1adc0c36eaec82d936015896ffbbc57fb",
+    "bytes": 9744,
+    "width": 128,
+    "height": 72,
+    "palette_entries": 256,
+    "palette_format": "little-endian RGB565",
+    "pixels": "row-major uint8 palette indices",
+    "opaque": true
+  },
+  "conversion": {
+    "tool": "scripts/pack-game-icon.py",
+    "tool_sha256": "4d11d2a7a058db178bd9346af045b456807209ba5090f649ef15eea22d7cb96f",
+    "command": "python3 scripts/pack-game-icon.py games/texas_holdem/assets/launcher-source.png --output games/texas_holdem/assets/launcher.p4i",
+    "description": "Standard center-fit Lanczos resize and 256-color median-cut quantization. No gameplay or runtime assets changed."
+  }
+}

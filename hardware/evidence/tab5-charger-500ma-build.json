@@ -1,0 +1,21 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "result": "charger-500ma-host-and-build-tested",
+  "hardware_verified": false,
+  "flash_authorized": false,
+  "flashed": false,
+  "app_bytes": 2033136,
+  "app_sha256": "fb6be1211e6427c88bfd0ed31af9b770dbe9457345e3d73f19c5db5a403da95b",
+  "host_tests": "9/9 focused Tab5 tests passed, with ASan/UBSan",
+  "build": "P4_TAB5_USB_HOST=1 make console-os-tab5-idf",
+  "report": "design/tab5-nextgen/BATTERY.md",
+  "live_observations": "design/tab5-nextgen/research/battery-live-read.json",
+  "source_sha256": {
+    "components/platform_tab5/src/charger_control.c": "4275f4338cf3e33b2c0cc8944dbb9e72a3516edcf1c55fd80a890fc76ad584d1",
+    "components/platform_tab5/src/charger_control.h": "3edd09f09c08d9803f40968d7c49285b5f9edb2aba87f569703d336ffae509cc",
+    "components/platform_tab5/src/tab5.c": "88c66c6cf0e1614f45cece2f14f1cb86780c0fd715acff001e31aa0efc3f9f8d",
+    "components/platform_tab5/src/sensors.c": "f94b19a2023154450ef291745d2dcce4894ad73d6045b5043eccd841145accae",
+    "components/platform_tab5/tests/test_charger.c": "52bbee1607fd17c15e4cd5894f870a2d0c0077160be868f9ceb456c86f34df9d"
+  }
+}

@@ -24,6 +24,8 @@ typedef struct {
     char file_name[PLATFORM_GAME_STORAGE_FILE_NAME_MAX_BYTES];
     uint64_t file_bytes;
     p4_game_package_info_t package;
+    bool icon_valid;
+    p4_game_icon_t icon;
     p4_game_package_result_t validation;
     bool in_games_directory;
     bool valid;

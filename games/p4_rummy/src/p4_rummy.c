@@ -7,6 +7,8 @@
 #include <stdint.h>
 
 #include "p4/draw.h"
+#include "p4/card_art.h"
+#include "generated/table_materials.inc"
 #include "p4/game.h"
 #include "p4/input.h"
 
@@ -75,91 +77,17 @@ enum {
     START_Y = 137,
     START_W = 138,
     START_H = 27,
+    DRAG_THRESHOLD = 6,
+    DROP_NONE = 0, DROP_DISCARD = 1, DROP_MELD = 2,
 };
 
-static bool high_resolution_surface(const p4_game_surface_t *surface)
-{
-    return surface != NULL &&
-        surface->width == P4_GAME_SURFACE_HIGH_RES_WIDTH &&
-        surface->height == P4_GAME_SURFACE_HIGH_RES_HEIGHT;
-}
 
-static int scale_coordinate(const p4_game_surface_t *surface, int value)
-{
-    if (!high_resolution_surface(surface)) {
-        return value;
-    }
-    const int numerator = value * 12;
-    return numerator >= 0 ? (numerator + 2) / 5
-                          : -((-numerator + 2) / 5);
-}
-
-static int scale_extent(const p4_game_surface_t *surface,
-                        int origin, int extent)
-{
-    return scale_coordinate(surface, origin + extent) -
-        scale_coordinate(surface, origin);
-}
-
-static void high_res_fill_rect(p4_game_surface_t *surface,
-                               int x, int y, int width, int height,
-                               uint16_t color)
-{
-    p4_draw_fill_rect(surface, scale_coordinate(surface, x),
-                      scale_coordinate(surface, y),
-                      scale_extent(surface, x, width),
-                      scale_extent(surface, y, height), color);
-}
-
-static void high_res_rect(p4_game_surface_t *surface,
-                          int x, int y, int width, int height,
-                          uint16_t color)
-{
-    high_res_fill_rect(surface, x, y, width, 1, color);
-    high_res_fill_rect(surface, x, y + height - 1, width, 1, color);
-    high_res_fill_rect(surface, x, y, 1, height, color);
-    high_res_fill_rect(surface, x + width - 1, y, 1, height, color);
-}
-
-static void high_res_fill_circle(p4_game_surface_t *surface,
-                                 int center_x, int center_y, int radius,
-                                 uint16_t color)
-{
-    p4_draw_fill_circle(surface,
-                        scale_coordinate(surface, center_x),
-                        scale_coordinate(surface, center_y),
-                        scale_coordinate(surface, radius), color);
-}
-
-static void high_res_pixel(p4_game_surface_t *surface,
-                           int x, int y, uint16_t color)
-{
-    high_res_fill_rect(surface, x, y, 1, 1, color);
-}
-
-static void high_res_text(p4_game_surface_t *surface,
-                          int x, int y, const char *value,
-                          uint16_t color, unsigned scale,
-                          size_t max_characters)
-{
-    unsigned output_scale = scale;
-    if (high_resolution_surface(surface)) {
-        output_scale = (scale * 12U + 2U) / 5U;
-    }
-    p4_draw_text(surface, scale_coordinate(surface, x),
-                 scale_coordinate(surface, y), value, color,
-                 output_scale, max_characters);
-}
-
-/* Keep touch/gameplay geometry in canonical 320x200 coordinates while every
- * code-rendered primitive is rasterized directly into the negotiated surface.
- */
-#define p4_draw_fill_rect high_res_fill_rect
-#define p4_draw_rect high_res_rect
-#define p4_draw_fill_circle high_res_fill_circle
-#define p4_draw_pixel high_res_pixel
-#define p4_draw_text high_res_text
-
+/* Layout stays in canonical touch coordinates. Each primitive and glyph draws
+ * directly into the negotiated surface; there is no scaled low-res frame. */
+#define p4_draw_fill_rect p4_card_fill
+#define p4_draw_rect p4_card_outline
+#define p4_draw_fill_circle p4_card_circle
+#define p4_draw_text p4_card_text
 static bool point_in(uint16_t px, uint16_t py,
                      int x, int y, int width, int height)
 {
@@ -256,157 +184,30 @@ static void fill_rounded_rect(p4_game_surface_t *surface,
                               int x, int y, int width, int height,
                               int radius, uint16_t color)
 {
-    if (radius <= 0 || width <= radius * 2 || height <= radius * 2) {
-        p4_draw_fill_rect(surface, x, y, width, height, color);
-        return;
-    }
-    p4_draw_fill_rect(surface, x + radius, y,
-                      width - radius * 2, height, color);
-    p4_draw_fill_rect(surface, x, y + radius,
-                      width, height - radius * 2, color);
-    p4_draw_fill_circle(surface, x + radius, y + radius, radius, color);
-    p4_draw_fill_circle(surface, x + width - radius - 1,
-                        y + radius, radius, color);
-    p4_draw_fill_circle(surface, x + radius,
-                        y + height - radius - 1, radius, color);
-    p4_draw_fill_circle(surface, x + width - radius - 1,
-                        y + height - radius - 1, radius, color);
+    p4_ui_round_rect(surface,p4_ui_x(surface,x),p4_ui_y(surface,y),
+                      p4_ui_x(surface,width),p4_ui_y(surface,height),
+                      p4_ui_x(surface,radius),color);
 }
 
-static void draw_suit(p4_game_surface_t *surface, int x, int y,
-                      uint8_t glyph, uint16_t color,
-                      uint16_t background, unsigned height)
+static void draw_suit(p4_game_surface_t *surface,int x,int y,
+                      uint8_t glyph,uint16_t color,uint16_t background,unsigned height)
 {
-    const bool large = height == P4_DRAW_CP437_FULL_HEIGHT;
-    const int width = large ? 12 : 8;
-    p4_draw_fill_rect(surface, x, y, width, (int)height, background);
-
-    if (!large) {
-        switch (glyph) {
-        case SUIT_HEART_GLYPH:
-            p4_draw_fill_circle(surface, x + 2, y + 2, 2, color);
-            p4_draw_fill_circle(surface, x + 5, y + 2, 2, color);
-            p4_draw_fill_rect(surface, x + 1, y + 2, 6, 2, color);
-            p4_draw_fill_rect(surface, x + 2, y + 4, 4, 2, color);
-            p4_draw_fill_rect(surface, x + 3, y + 6, 2, 1, color);
-            p4_draw_pixel(surface, x + 3, y, background);
-            p4_draw_pixel(surface, x + 4, y, background);
-            p4_draw_pixel(surface, x + 3, y + 1, background);
-            p4_draw_pixel(surface, x + 4, y + 1, background);
-            break;
-        case SUIT_DIAMOND_GLYPH:
-            p4_draw_pixel(surface, x + 3, y + 1, color);
-            p4_draw_fill_rect(surface, x + 2, y + 2, 3, 1, color);
-            p4_draw_fill_rect(surface, x + 1, y + 3, 5, 2, color);
-            p4_draw_fill_rect(surface, x + 2, y + 5, 3, 1, color);
-            p4_draw_pixel(surface, x + 3, y + 6, color);
-            break;
-        case SUIT_CLUB_GLYPH:
-            p4_draw_fill_circle(surface, x + 4, y + 1, 1, color);
-            p4_draw_fill_circle(surface, x + 2, y + 4, 1, color);
-            p4_draw_fill_circle(surface, x + 6, y + 4, 1, color);
-            p4_draw_fill_rect(surface, x + 4, y + 2, 1, 4, color);
-            p4_draw_fill_rect(surface, x + 3, y + 5, 3, 2, color);
-            p4_draw_fill_rect(surface, x + 2, y + 7, 5, 1, color);
-            break;
-        case SUIT_SPADE_GLYPH:
-        default:
-            p4_draw_pixel(surface, x + 3, y, color);
-            p4_draw_fill_rect(surface, x + 2, y + 1, 3, 1, color);
-            p4_draw_fill_rect(surface, x + 1, y + 2, 5, 2, color);
-            p4_draw_fill_rect(surface, x, y + 4, 7, 1, color);
-            p4_draw_fill_rect(surface, x + 3, y + 4, 2, 3, color);
-            p4_draw_fill_rect(surface, x + 2, y + 6, 4, 1, color);
-            break;
-        }
-        return;
-    }
-
-    switch (glyph) {
-    case SUIT_HEART_GLYPH:
-        p4_draw_fill_circle(surface, x + 3, y + 4, 3, color);
-        p4_draw_fill_circle(surface, x + 8, y + 4, 3, color);
-        p4_draw_fill_rect(surface, x + 1, y + 4, 10, 3, color);
-        p4_draw_fill_rect(surface, x + 2, y + 7, 8, 3, color);
-        p4_draw_fill_rect(surface, x + 3, y + 10, 6, 2, color);
-        p4_draw_fill_rect(surface, x + 4, y + 12, 4, 2, color);
-        p4_draw_fill_rect(surface, x + 5, y + 14, 2, 1, color);
-        p4_draw_fill_rect(surface, x + 5, y + 1, 2, 3, background);
-        break;
-    case SUIT_DIAMOND_GLYPH:
-        p4_draw_fill_rect(surface, x + 5, y + 1, 2, 1, color);
-        p4_draw_fill_rect(surface, x + 4, y + 2, 4, 2, color);
-        p4_draw_fill_rect(surface, x + 3, y + 4, 6, 2, color);
-        p4_draw_fill_rect(surface, x + 1, y + 6, 10, 3, color);
-        p4_draw_fill_rect(surface, x + 3, y + 9, 6, 2, color);
-        p4_draw_fill_rect(surface, x + 4, y + 11, 4, 2, color);
-        p4_draw_fill_rect(surface, x + 5, y + 13, 2, 1, color);
-        break;
-    case SUIT_CLUB_GLYPH:
-        p4_draw_fill_circle(surface, x + 6, y + 3, 2, color);
-        p4_draw_fill_circle(surface, x + 3, y + 8, 2, color);
-        p4_draw_fill_circle(surface, x + 9, y + 8, 2, color);
-        p4_draw_fill_rect(surface, x + 5, y + 5, 3, 8, color);
-        p4_draw_fill_rect(surface, x + 3, y + 13, 7, 2, color);
-        break;
-    case SUIT_SPADE_GLYPH:
-    default:
-        p4_draw_fill_rect(surface, x + 5, y + 1, 2, 1, color);
-        p4_draw_fill_rect(surface, x + 4, y + 2, 4, 2, color);
-        p4_draw_fill_rect(surface, x + 3, y + 4, 6, 2, color);
-        p4_draw_fill_circle(surface, x + 3, y + 8, 3, color);
-        p4_draw_fill_circle(surface, x + 8, y + 8, 3, color);
-        p4_draw_fill_rect(surface, x + 1, y + 7, 10, 2, color);
-        p4_draw_fill_rect(surface, x + 5, y + 9, 3, 5, color);
-        p4_draw_fill_rect(surface, x + 3, y + 13, 7, 2, color);
-        break;
-    }
+    (void)background;
+    const unsigned suit=glyph==SUIT_CLUB_GLYPH?0U:glyph==SUIT_DIAMOND_GLYPH?1U:
+        glyph==SUIT_HEART_GLYPH?2U:3U;
+    p4_card_suit(surface,p4_ui_x(surface,x),p4_ui_y(surface,y),
+                 p4_ui_y(surface,(int)height),suit,color);
 }
 
-static void draw_card(p4_game_surface_t *surface, int x, int y,
-                      uint8_t card, bool visible, bool selected)
+static void draw_card(p4_game_surface_t *surface,int x,int y,
+                      uint8_t card,bool visible,bool selected)
 {
-    const uint16_t edge = selected ? COLOR_GOLD : COLOR_TEXT;
-    fill_rounded_rect(surface, x + 2, y + 3,
-                      CARD_W, CARD_H, 3, COLOR_CARD_SHADOW);
-    if (!visible || card == P4_RUMMY_NO_CARD) {
-        fill_rounded_rect(surface, x, y,
-                          CARD_W, CARD_H, 3, edge);
-        fill_rounded_rect(surface, x + 1, y + 1,
-                          CARD_W - 2, CARD_H - 2, 2, COLOR_CARD_BACK_DARK);
-        p4_draw_rect(surface, x + 4, y + 4,
-                     CARD_W - 8, CARD_H - 8, COLOR_ACCENT);
-        p4_draw_rect(surface, x + 6, y + 6,
-                     CARD_W - 12, CARD_H - 12, COLOR_GOLD_DARK);
-        for (int dot_y = y + 9; dot_y <= y + 31; dot_y += 7) {
-            p4_draw_pixel(surface, x + 8, dot_y, COLOR_CARD_BACK);
-            p4_draw_pixel(surface, x + 21, dot_y + 2, COLOR_CARD_BACK);
-        }
-        draw_suit(surface, x + 11, y + 13, SUIT_DIAMOND_GLYPH,
-                  COLOR_CREAM, COLOR_CARD_BACK_DARK,
-                  P4_DRAW_CP437_FULL_HEIGHT);
+    if(!visible || card==P4_RUMMY_NO_CARD){
+        p4_card_back(surface,x,y,CARD_W,CARD_H,card_table_back,selected);
         return;
     }
-    fill_rounded_rect(surface, x, y, CARD_W, CARD_H, 3, edge);
-    fill_rounded_rect(surface, x + 1, y + 1,
-                      CARD_W - 2, CARD_H - 2, 2, COLOR_CARD);
-    if (selected) {
-        p4_draw_rect(surface, x + 1, y + 1, CARD_W - 2,
-                     CARD_H - 2, COLOR_GOLD);
-    }
-    char rank[3] = {0};
-    rank_text(card, rank);
-    const bool ten = (card % 13U) == 8U;
-    const uint16_t color = suit_color(card);
-    p4_draw_text(surface, x + (ten ? 3 : 4), y + 3,
-                 rank, color, 1U, ten ? 2U : 1U);
-    draw_suit(surface, x + (ten ? 19 : 17), y + 3,
-              suit_glyph(card), color,
-              COLOR_CARD, P4_DRAW_CP437_COMPACT_HEIGHT);
-    draw_suit(surface, x + 11, y + 15, suit_glyph(card), color,
-              COLOR_CARD, P4_DRAW_CP437_FULL_HEIGHT);
-    p4_draw_text(surface, x + (ten ? 16 : 21), y + 32,
-                 rank, color, 1U, ten ? 2U : 1U);
+    const unsigned rank=(unsigned)(card%13U)+2U;
+    p4_card_face(surface,x,y,CARD_W,CARD_H,rank==14U?1U:rank,card/13U,selected);
 }
 
 static void draw_mini_card(p4_game_surface_t *surface, int x, int y,
@@ -422,7 +223,7 @@ static void draw_mini_card(p4_game_surface_t *surface, int x, int y,
         p4_draw_text(surface, x + 1, y + 4, rank, color, 1U, 1U);
     } else {
         p4_draw_fill_rect(surface, x + 2, y + 4, 1, 7, color);
-        p4_draw_pixel(surface, x + 1, y + 5, color);
+        p4_card_fill(surface, x + 1, y + 5, 1, 1, color);
         p4_draw_fill_rect(surface, x + 1, y + 10, 3, 1, color);
         p4_draw_rect(surface, x + 5, y + 4, 3, 7, color);
     }
@@ -486,20 +287,13 @@ static void draw_table_base(p4_game_surface_t *surface)
     p4_draw_clear(surface, COLOR_BACKGROUND);
     p4_draw_fill_rect(surface, 0, 18, 320, 182, COLOR_RAIL_DARK);
     p4_draw_fill_rect(surface, 3, 21, 314, 176, COLOR_RAIL);
-    p4_draw_fill_rect(surface, 6, 24, 308, 170, COLOR_FELT);
-    for (int y = 31; y < 194; y += 14) {
-        p4_draw_fill_rect(surface, 7, y, 306, 1, COLOR_FELT_LIGHT);
-    }
-    for (int x = 14; x < 310; x += 22) {
-        p4_draw_pixel(surface, x, 27 + (x % 3), COLOR_GOLD_DARK);
-        p4_draw_pixel(surface, x + 7, 190 - (x % 4), COLOR_GOLD_DARK);
-    }
+    p4_card_felt(surface,6,24,308,170,card_table_felt);
     p4_draw_rect(surface, 5, 23, 310, 172, COLOR_GOLD_DARK);
 }
 
 static void draw_title_bar(p4_game_surface_t *surface)
 {
-    draw_suit(surface, 116, 1, SUIT_HEART_GLYPH,
+    draw_suit(surface, 110, 1, SUIT_HEART_GLYPH,
               COLOR_RED, COLOR_BACKGROUND, P4_DRAW_CP437_FULL_HEIGHT);
     p4_draw_text(surface, 130, 6, "RUMMY 500", COLOR_GOLD, 1U, 9U);
     draw_suit(surface, 191, 1, SUIT_SPADE_GLYPH,
@@ -622,6 +416,7 @@ static void draw_hand(p4_game_surface_t *surface,
     const int start_x = hand_start_x(visible);
     for (uint8_t shown = 0U; shown < visible; ++shown) {
         const uint8_t index = (uint8_t)(window_start + shown);
+        if (state->hand_dragging && index==state->drag_card && player==state->drag_player) continue;
         const bool local = player == state->current_player &&
             p4_rummy_local_turn(state) &&
             state->phase == P4_RUMMY_PHASE_DISCARD;
@@ -708,7 +503,7 @@ static void draw_setup(p4_game_surface_t *surface,
                  can_start ? COLOR_BLACK : COLOR_MUTED, 1U,
                  can_start ? 4U : 13U);
     if (state->human_player_count == 1U && !state->network_mode) {
-        p4_draw_text(surface, 100, 170, "P4MP = 2-4 HUMANS",
+        p4_draw_text(surface, 100, 170, "PLAY WITH FRIENDS",
                      COLOR_MUTED, 1U, 17U);
     } else if (state->network_mode) {
         char linked[24] = {0};
@@ -1081,6 +876,131 @@ static uint8_t touched_discard(const p4_rummy_state_t *state,
     return (uint8_t)(start + shown);
 }
 
+/* Gestures are local presentation state. Drop checks call the existing pure
+ * rules on a bounded copy, and only a legal release sends the normal action. */
+static bool hand_gesture_current(const p4_rummy_state_t *state)
+{
+    return p4_rummy_local_turn(state) && !state->network_request_pending &&
+        state->phase==P4_RUMMY_PHASE_DISCARD && state->revision==state->drag_revision &&
+        state->current_player==state->drag_player &&
+        state->hand_counts[state->drag_player]==state->drag_hand_count &&
+        state->drag_card<state->drag_hand_count &&
+        state->hands[state->drag_player][state->drag_card]==state->drag_value;
+}
+
+static bool begin_hand_touch(p4_rummy_state_t *state,uint16_t x,uint16_t y)
+{
+    if (!p4_rummy_local_turn(state) || state->network_request_pending ||
+        state->phase!=P4_RUMMY_PHASE_DISCARD) return false;
+    const uint8_t player=state->current_player;
+    const uint8_t start=hand_window_start(state,player);
+    const uint8_t visible=hand_window_count(state,player,start);
+    const int left=hand_start_x(visible);
+    for(uint8_t shown=0U;shown<visible;++shown) {
+        const uint8_t card=(uint8_t)(start+shown);
+        const int top=(state->selected_mask&(UINT64_C(1)<<card))!=0U?142:147;
+        if (!point_in(x,y,left+(int)shown*33,top,CARD_W,CARD_H)) continue;
+        state->hand_touch_active=true; state->hand_dragging=false;
+        state->drag_card=card; state->drag_player=player;
+        state->drag_value=state->hands[player][card];
+        state->drag_hand_count=state->hand_counts[player];
+        state->drag_revision=state->revision;
+        state->drag_mask=state->selected_mask|(UINT64_C(1)<<card);
+        state->drag_start_x=x; state->drag_start_y=y;
+        state->drag_x=x; state->drag_y=y;
+        state->drag_offset_x=(int16_t)((int)x-left-(int)shown*33);
+        state->drag_offset_y=(int16_t)((int)y-top);
+        state->drag_drop_kind=DROP_NONE; state->drag_drop_legal=false;
+        return true;
+    }
+    return false;
+}
+
+static void locate_drop(p4_rummy_state_t *state)
+{
+    state->drag_drop_kind=DROP_NONE;
+    state->drag_drop_meld=P4_RUMMY_NO_CARD;
+    state->drag_drop_legal=false;
+    if (!hand_gesture_current(state)) return;
+    const uint16_t x=state->drag_x,y=state->drag_y;
+    for(uint8_t meld=0U;meld<state->meld_count;++meld) {
+        int left=0,top=0;meld_bounds(meld,&left,&top);
+        if(point_in(x,y,left,top,87,17)) {
+            state->drag_drop_kind=DROP_MELD; state->drag_drop_meld=meld;
+            break;
+        }
+    }
+    if (state->drag_drop_kind==DROP_NONE) {
+        if (point_in(x,y,DISCARD_BUTTON_X,DISCARD_BUTTON_Y,DISCARD_BUTTON_W,DISCARD_BUTTON_H) ||
+            point_in(x,y,DISCARD_FAN_X-4,PILE_Y-8,88,CARD_H+16)) {
+            state->drag_drop_kind=DROP_DISCARD;
+        } else if (point_in(x,y,MELD_BUTTON_X,MELD_BUTTON_Y,MELD_BUTTON_W,MELD_BUTTON_H)) {
+            state->drag_drop_kind=DROP_MELD;
+            state->drag_drop_meld=state->selected_meld;
+        }
+    }
+    if (state->drag_drop_kind!=DROP_NONE) {
+        p4_rummy_state_t probe=*state;
+        state->drag_drop_legal=state->drag_drop_kind==DROP_DISCARD
+            ?p4_rummy_discard_card(&probe,state->drag_player,state->drag_card)
+            :p4_rummy_play_meld_to(&probe,state->drag_player,state->drag_mask,state->drag_drop_meld);
+    }
+}
+
+static void update_hand_touch(p4_rummy_state_t *state,uint16_t x,uint16_t y)
+{
+    if (!state->hand_touch_active) return;
+    state->drag_x=x;state->drag_y=y;
+    const int dx=(int)x-(int)state->drag_start_x,dy=(int)y-(int)state->drag_start_y;
+    if (dx>=DRAG_THRESHOLD || dx<=-DRAG_THRESHOLD || dy>=DRAG_THRESHOLD || dy<=-DRAG_THRESHOLD)
+        state->hand_dragging=true;
+    if(state->hand_dragging)locate_drop(state);
+}
+
+static void finish_hand_touch(p4_game_context_t *context,p4_rummy_state_t *state)
+{
+    if(!state->hand_touch_active)return;
+    const bool current=hand_gesture_current(state),dragging=state->hand_dragging;
+    state->hand_touch_active=false;state->hand_dragging=false;
+    if(!current)return;
+    if(!dragging) {
+        state->selected_card=state->drag_card;
+        toggle_selected_card(state);
+        return;
+    }
+    locate_drop(state);
+    if(!state->drag_drop_legal)return;
+    if(state->drag_drop_kind==DROP_DISCARD) {
+        (void)p4_rummy_perform_discard(context,state,state->drag_card);
+    } else {
+        (void)p4_rummy_perform_meld_to(context,state,state->drag_mask,state->drag_drop_meld);
+    }
+}
+
+static void draw_drag(p4_game_surface_t *surface,const p4_rummy_state_t *state)
+{
+    if(!state->hand_dragging || !hand_gesture_current(state))return;
+    const uint16_t ink=state->drag_drop_kind==DROP_NONE?COLOR_GOLD:
+        (state->drag_drop_legal?COLOR_ACCENT:COLOR_RED);
+    int x=MELD_BUTTON_X,y=MELD_BUTTON_Y,w=MELD_BUTTON_W,h=MELD_BUTTON_H;
+    if(state->drag_drop_kind==DROP_DISCARD) {
+        x=DISCARD_FAN_X-4;y=PILE_Y-8;w=88;h=CARD_H+16;
+    } else if(state->drag_drop_meld<state->meld_count) {
+        meld_bounds(state->drag_drop_meld,&x,&y);w=87;h=17;
+    }
+    p4_draw_rect(surface,x-1,y-1,w+2,h+2,ink);
+    p4_draw_rect(surface,x-2,y-2,w+4,h+4,ink);
+    const int left=(int)state->drag_x-state->drag_offset_x;
+    const int top=(int)state->drag_y-state->drag_offset_y-3;
+    draw_card(surface,left,top,state->drag_value,true,true);
+    const uint8_t count=selection_count(state->drag_mask);
+    if(count>1U && state->drag_drop_kind!=DROP_DISCARD) {
+        char label[4]={0};(void)append_unsigned(label,sizeof(label),0U,count);
+        fill_rounded_rect(surface,left+CARD_W-8,top-6,14,12,3,COLOR_PANEL);
+        p4_draw_text(surface,left+CARD_W-5,top-3,label,COLOR_GOLD,1U,2U);
+    }
+}
+
 static void handle_touch(p4_game_context_t *context,
                          p4_rummy_state_t *state,
                          uint16_t x, uint16_t y)
@@ -1210,11 +1130,17 @@ static p4_game_result_t game_update(
         return P4_GAME_ERROR;
     }
     p4_rummy_state_t *const state = context->state;
+    p4_game_input_t direct_input=*input;
+    if((input->touch_valid && input->touch_count!=0U) || state->touch_was_down) {
+        direct_input.held=0U;direct_input.pressed=0U;direct_input.released=0U;
+        input=&direct_input;
+    }
     if ((input->pressed & P4_BUTTON_BACK) != 0U) {
         return P4_GAME_EXIT_TO_LAUNCHER;
     }
     const bool touch_down = input->touch_valid && input->touch_count != 0U;
     const bool touch_pressed = touch_down && !state->touch_was_down;
+    const bool touch_released = !touch_down && state->touch_was_down;
     if (touch_pressed && point_in(input->touches[0].x, input->touches[0].y,
                                   EXIT_X, EXIT_Y, EXIT_W, EXIT_H)) {
         state->touch_was_down = touch_down;
@@ -1222,10 +1148,16 @@ static p4_game_result_t game_update(
     }
 
     p4_rummy_network_poll(context, state, elapsed_ms);
-    if (touch_pressed) {
-        handle_touch(context, state,
-                     input->touches[0].x, input->touches[0].y);
+    if(state->hand_touch_active && (!hand_gesture_current(state) || input->touch_count>1U)) {
+        state->hand_touch_active=false;state->hand_dragging=false;
     }
+    if (touch_pressed && input->touch_count==1U) {
+        if(!begin_hand_touch(state,input->touches[0].x,input->touches[0].y))
+            handle_touch(context,state,input->touches[0].x,input->touches[0].y);
+    } else if(touch_down && state->hand_touch_active) {
+        update_hand_touch(state,input->touches[0].x,input->touches[0].y);
+    }
+    if(touch_released)finish_hand_touch(context,state);
 
     const uint32_t pressed = input->pressed;
     if (state->phase == P4_RUMMY_PHASE_SETUP) {
@@ -1362,6 +1294,7 @@ static bool game_render(p4_game_context_t *context,
     } else {
         draw_table(surface, state);
     }
+    draw_drag(surface,state);
     if (state->peer_lost_fallback) {
         p4_draw_fill_rect(surface, 57, 181, 206, 15, COLOR_BACKGROUND);
         p4_draw_rect(surface, 57, 181, 206, 15, COLOR_RED);

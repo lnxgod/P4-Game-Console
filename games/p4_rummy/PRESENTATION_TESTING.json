@@ -1,0 +1,809 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "game": "p4_rummy",
+  "version": "2.2.0",
+  "status": "local-play-tested; build-tested; current game package installed; hardware gameplay pending",
+  "source_sha256": "6d2843b9417fee17f406719be9d618c4bd1d1a8c37ce6239abaa9381d047e491",
+  "source_files": {
+    "CMakeLists.txt": "7ad918c0a213605897a090a6cb3ba69c171b0311d349885a83d9f43d0a2a286e",
+    "README.md": "165d796f322c37c83863bafac0f09797dd8d773d33ca1250a65e2391b5dd596d",
+    "assets/launcher-provenance.json": "5726885c3b5b0d19790dd7eec7dc54dff5a9379043b6a6e25f49516b3bb52264",
+    "assets/launcher-source.png": "9ddcf5a62aeeffd700c5356b0d4c3be40812122d42b9955c46a28715536ec9f1",
+    "assets/launcher.p4i": "12fa823bfbc3c970aabd53cc1d02a3345798b63fc786a040836a9108e58ea776",
+    "assets/table-materials-imagegen.png": "2ce0b7313a819bfe3697f70f55cc43cafc148d2d613f9ad46c6815f800af5546",
+    "assets/table-materials-provenance.json": "efb9ba46ba86e6f4303d3bc2a45237e4a1e6a98c98d2358b86900c24add5a8bb",
+    "game.json": "4195617b8141e28bfe7d60e8081101d961b80c8ad9c75f49c37f188230603abb",
+    "src/generated/table_materials.inc": "7a65f03b16077a077d7f05e1744697b61e77443861a54e5b2fb3c80aac71e683",
+    "src/p4_rummy.c": "a965f3e01e3385eb68b4627f25a2e62db61743bea9fc993d8e5461d3d31d6d79",
+    "src/p4_rummy_internal.h": "2b03be49b4ff67b3055a23dfa0fd5327c128a62cf0073ca1d6c4a7e6cad495fb",
+    "src/p4_rummy_logic.c": "c41a2430c52bf46116b3089d0e6f6748a2cd31f35eacfaa778e556dab89cd707",
+    "src/p4_rummy_network.c": "05d241c7bdda35b84b149c896ac9a9f7225d9de39cfd12777eb3e1fd3fd90185",
+    "tests/CMakeLists.txt": "1f28ef719e664afe7b634551387ceeb6c719da82d0d095b5ba66cfd407ff7ba8",
+    "tests/test_p4_rummy.c": "ba4e84f7abf1fa15f3a64ec05d914c48b56ad59f936221810719689548615c2e",
+    "tests/test_presentation.c": "7f9a63cf397db89611abac85aa4458c7787beca57b96f62a5b8641fb4b47d810",
+    "tests/test_touch_drag.c": "d5a3205cfc29ebc2eefb5c1885a4bd729731d79625603671a0d4957f9d39f7d8",
+    "tests/touch-performance-input.txt": "f32b8888c2fb4ebb0ff75b6e749d09dc7a4f13d89506869bda0446ca592daa74",
+    "tools/convert_table_materials.py": "829446d812006a775bd7184d60eb3b4a409e5bb0c4e5463566481d851ccda344"
+  },
+  "shared_presentation_dependencies": {
+    "components/p4_game_api/include/p4/card_art.h": "e606ba8b802e7a71dc715264c3c85ed857e507c10d75738de5d174c06cff7a53",
+    "components/p4_game_api/include/p4/presentation.h": "5b4ad858a5497e5fa75f5aa3ad07c65bc4d646095fbc17b012a99bbc20adbab8",
+    "components/p4_game_api/include/p4/presentation_font.h": "0bc9a110a5f9b0e8f1cc44ffa212206758ebdd58e15ac488030f65fe72a7f448",
+    "components/p4_game_api/src/presentation_font.c": "149b2e510c0a0b8dfe5c4a7ac4be2f8006c4360c09a82c088209f7ece1eb65c5"
+  },
+  "automated": {
+    "focused_ctest": {
+      "command": "ctest --test-dir build-host/p4_rummy --output-on-failure",
+      "passed": 3,
+      "failed": 0,
+      "tests": [
+        "p4_rummy_tests",
+        "p4_rummy_presentation_tests",
+        "p4_rummy_touch_drag_tests"
+      ],
+      "log": {
+        "path": "build-host/p4_rummy/Testing/Temporary/LastTest.log",
+        "sha256": "3d8d9c70ba81f3ec3bcbc6315c6bd03cdd84e344abc95ef3eabc145ee74669a0"
+      }
+    },
+    "generic_sdl_ctest": {
+      "passed": 5,
+      "failed": 0,
+      "source": "build-host/final-simulator-validation.json"
+    },
+    "sanitizers": [
+      "address",
+      "undefined"
+    ],
+    "converter_reproducible": true,
+    "render_checks": [
+      "320x200 and 768x480 negotiated surface",
+      "padded stride and allocation guards",
+      "full-frame coverage",
+      "menu and gameplay actual-render captures",
+      "existing Back lifecycle"
+    ],
+    "unchanged_rules_and_multiplayer": "Existing focused suite passed; no game logic or networking source modified."
+  },
+  "visual_review": {
+    "reviewer": "Card-game agent",
+    "inspected": [
+      "native and fallback gameplay",
+      "native and fallback setup/menu"
+    ],
+    "captures": {
+      "build-host/p4_rummy/crisp-captures/p4_rummy-320-0.png": "0678594e75adaefdc179e81ca1b400c59f9bd1f2a2745fd4bcc1564d30784a1c",
+      "build-host/p4_rummy/crisp-captures/p4_rummy-320-1.png": "211d96b6537f9d9a5b7c3c791909d87b53440936a13706814f69fedcdb080ede",
+      "build-host/p4_rummy/crisp-captures/p4_rummy-320-2.png": "2fac8997e0d158002a5b8bf0c8fdd99cc5368660d2dc0baf61bf5722d0b29a5c",
+      "build-host/p4_rummy/crisp-captures/p4_rummy-768-0.png": "532facfa1b6689ba99dd04dbb814f3f6f8e025c964f3ed0ff998e2c3cd39e24a",
+      "build-host/p4_rummy/crisp-captures/p4_rummy-768-1.png": "d133f444b9ab391c2e284931a1155ebf463555e84484b0b5d4f809538197aad9",
+      "build-host/p4_rummy/crisp-captures/p4_rummy-768-2.png": "52f0f0ebad68a7892b590c57bf08294b6efe2be60180eb43e60bb8ee22ae1f31"
+    }
+  },
+  "interactive": {
+    "status": "local-play-tested",
+    "tester": "Codex primary agent using CUA keyboard and mouse in the real SDL3 simulator",
+    "date": "2026-10-06",
+    "observations": [
+      "Drew stock, discarded, observed a CPU meld, and selected/marked cards.",
+      "Replayed draw and selection on the final simulator; corrected title icon spacing is clear.",
+      "Four-seat direct-touch replay on final release-handling runner: selected10/J/Q clubs, played valid run for30 points, discarded4clubs, observed allthree CPU turns including layoff andkingmeld. No virtual gamepad; Escape exited. Sampled title59.1\u201360.2FPS."
+    ],
+    "sampled_title_fps_range": [
+      59.1,
+      60.2
+    ],
+    "fps_sample_source_field": "direct_touch_fps_samples",
+    "observation_record": {
+      "fps": [
+        58.4,
+        60
+      ],
+      "observations": [
+        "Drew stock, discarded, observed a CPU meld, and selected/marked cards.",
+        "Replayed draw and selection on the final simulator; corrected title icon spacing is clear.",
+        "Four-seat direct-touch replay on final release-handling runner: selected10/J/Q clubs, played valid run for30 points, discarded4clubs, observed allthree CPU turns including layoff andkingmeld. No virtual gamepad; Escape exited. Sampled title59.1\u201360.2FPS."
+      ],
+      "direct_touch_fps_samples": [
+        59.1,
+        60.2
+      ],
+      "drag_acceptance": {
+        "automated_game_and_real_sdl_events": "passed",
+        "cua_interactive": "unverified; native automation emitted down then up at0,0 withoutheldmotion, as preserved in build-host/solitaire/cua-drag-events.log",
+        "physical_finger": "pending"
+      }
+    },
+    "fps_limitation": "One-second title samples during local play, not a per-frame minimum guarantee or physical-device measurement.",
+    "runtime_equivalence": "Shared raster performance changes are expected in every cartridge relative to the old gameplay package; exact-pixel clipping tests and assembly evidence qualify that helper change, not binary equivalence. Touch input/render changes are also expected. Final source/package hashes, focused tests and current SDL observations identify this revision.",
+    "simulator_validation_source": "build-host/final-simulator-validation.json"
+  },
+  "art": {
+    "provenance": "assets/table-materials-provenance.json",
+    "mode": "built-in image_gen",
+    "static_material_bytes": 51200,
+    "runtime_image_decoding": false
+  },
+  "hardware_acceptance": null,
+  "installed_on_device": true,
+  "externally_published": false,
+  "pending": [
+    "Native display and physical touch",
+    "ESP32-P4 timing and memory pressure",
+    "Speaker acoustics",
+    "Real linked-console multiplayer"
+  ],
+  "performance": {
+    "revision_scope": "shared raster optimization; current source benchmark",
+    "scope": "Optimized development-Mac CPU update/render/audio; excludes SDL presentation, physical device, transport and I/O.",
+    "frames_per_resolution": 2000,
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "input_tape": "games/p4_rummy/tests/touch-performance-input.txt",
+    "input_sha256": "f32b8888c2fb4ebb0ff75b6e749d09dc7a4f13d89506869bda0446ca592daa74",
+    "benchmark_binary": "build-host/play-p4_rummy/p4_game_benchmark",
+    "benchmark_binary_sha256": "d8af2e3ee1c51214c82e2669a9a9a85acf142483e5710afa7448b3ea06e01ee1",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.p4-rummy",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1980,
+        "last_frame_hash": "1aed0676",
+        "update_audio_ms": {
+          "mean": 0.001,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.004,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.1081,
+          "p50": 0.099,
+          "p95": 0.151,
+          "p99": 0.218,
+          "max": 0.407,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1091,
+          "p50": 0.1,
+          "p95": 0.152,
+          "p99": 0.22,
+          "max": 0.411,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.p4-rummy",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1980,
+        "last_frame_hash": "7deb3d57",
+        "update_audio_ms": {
+          "mean": 0.0008,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.001,
+          "max": 0.002,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0247,
+          "p50": 0.025,
+          "p95": 0.026,
+          "p99": 0.028,
+          "max": 0.057,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0255,
+          "p50": 0.025,
+          "p95": 0.027,
+          "p99": 0.029,
+          "max": 0.059,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "measurement_files": {
+      "768": {
+        "path": "build-host/smoothness-packages/p4_rummy/benchmark-768.json",
+        "sha256": "84f065cfe980e4f98354b67adb0daa1df25e6e1140e345e3357a66a251f6b126",
+        "bytes": 524
+      },
+      "320": {
+        "path": "build-host/smoothness-packages/p4_rummy/benchmark-320.json",
+        "sha256": "9583d8aabc952ee71b3002e85ba2a01c703194178fbdd35ea28f108877e0311b",
+        "bytes": 524
+      }
+    },
+    "motion_coverage": "Existing direct-touch drag/input trace.",
+    "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+    "hardware_fps_verified": false,
+    "pre_touch_baseline_only": false
+  },
+  "final_simulator": {
+    "path": "build-host/play-p4_rummy/p4_game_host.app/Contents/MacOS/p4_game_host",
+    "sha256": "0776a2b3e154934d5b6c70d4c8acffc26bf55e72d1fab57244ca5b8ab9682887",
+    "bytes": 1140432,
+    "fps_title_present": true,
+    "tests_passed": 5,
+    "tests_failed": 0,
+    "build_log": {
+      "path": "build-host/smoothness-packages/p4_rummy/sdl-build.log",
+      "sha256": "462f541563caf0d45a9ab6b987401c3ae420e61ec0ded903e6a32fcefe74d5bf",
+      "bytes": 4493
+    },
+    "test_log": {
+      "path": "build-host/smoothness-packages/p4_rummy/sdl-tests.log",
+      "sha256": "fb8823e5dd9cc6926ce0c3e7944a3e5dea3ebe1d434e98324922532c1f707de2",
+      "bytes": 754
+    },
+    "evidence_path": "games/p4_rummy/PRESENTATION_TESTING.json"
+  },
+  "pre_raster_performance": {
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "scope": "Optimized development-Mac CPU update + render + audio; excludes display, device, transport and presentation scheduling",
+    "frames_per_resolution": 2000,
+    "input_trace": "build-host/crisp-package/card-performance/p4_rummy.txt",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.p4-rummy",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 53,
+        "last_frame_hash": "dd9704fb",
+        "update_audio_ms": {
+          "mean": 0.0011,
+          "p50": 0.001,
+          "p95": 0.002,
+          "p99": 0.012,
+          "max": 0.023,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.1158,
+          "p50": 0.111,
+          "p95": 0.147,
+          "p99": 0.221,
+          "max": 0.391,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1169,
+          "p50": 0.112,
+          "p95": 0.148,
+          "p99": 0.223,
+          "max": 0.394,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.p4-rummy",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 45,
+        "last_frame_hash": "fa62ebeb",
+        "update_audio_ms": {
+          "mean": 0.0009,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.009,
+          "max": 0.02,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0263,
+          "p50": 0.026,
+          "p95": 0.029,
+          "p99": 0.033,
+          "max": 0.06,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0273,
+          "p50": 0.027,
+          "p95": 0.031,
+          "p99": 0.038,
+          "max": 0.06,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "art_equivalence": "All native and fallback capture PNG hashes match the preceding presentation pass",
+    "optimization": "Clipped 128-pixel native felt-row memcpy spans; no extra buffers or game state",
+    "isolated_felt_before_median_us": 80,
+    "isolated_felt_after_median_us": 10,
+    "timing_audit": "No blocking waits; CPU think delays use elapsed_ms. Rummy analysis bounded at 8 cards/256 subsets; Holdem rank evaluation at 21 five-card combinations. No AI rule rewrite needed for measured host budget.",
+    "hardware_fps_verified": false
+  },
+  "source_hash_method": "Sorted game-relative UTF-8 path plus NUL plus binary SHA-256 of each file; excludes LOCAL_TESTING.json, PRESENTATION_TESTING.json, TOUCH_TESTING.json, .DS_Store and __pycache__.",
+  "shared_raster_validation": {
+    "path": "build-host/crisp-package/raster-performance/proof.json",
+    "sha256": "49d0d633753d08c467f19c13588eea7f221dd9df26aa7b95493aed685f49bb1c",
+    "bytes": 3752
+  },
+  "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+  "raster_revision_package_candidate": {
+    "path": "build-host/smoothness-packages/GAMES/P4_RUMMY.P4G",
+    "sha256": "f626853c4970f70a863d3e8638ea88a113becf61e078f2bb78da41bd59796d72",
+    "bytes": 122584,
+    "id": "org.p4console.p4-rummy",
+    "title": "Rummy 500",
+    "version": "2.2.0",
+    "folder": "GAMES/CARDS",
+    "launcher_id": 118,
+    "payload_sha256": "b985f04a483a295544ae4eadb8a3a81bbb3e6205102230ab6a7e8c7f3e7dce53",
+    "limit_bytes": 524288,
+    "icon": {
+      "name": ".p4icon",
+      "type": 1,
+      "flags": 0,
+      "address": 0,
+      "size": 9744,
+      "alignment": 1,
+      "sha256": "12fa823bfbc3c970aabd53cc1d02a3345798b63fc786a040836a9108e58ea776"
+    },
+    "allocated_sections": [
+      {
+        "name": ".hash",
+        "type": 5,
+        "flags": 2,
+        "address": 212,
+        "size": 48,
+        "alignment": 4,
+        "sha256": "319003b6abdf4c44f1447f7aa279af445fc17025d3d91cc91806a0a89cb3554a"
+      },
+      {
+        "name": ".dynsym",
+        "type": 11,
+        "flags": 2,
+        "address": 260,
+        "size": 112,
+        "alignment": 4,
+        "sha256": "9214e49bb754adcf886204fc739fa2cfb264cecf01c2afadf7c0c70cb1ccf138"
+      },
+      {
+        "name": ".dynstr",
+        "type": 3,
+        "flags": 2,
+        "address": 372,
+        "size": 34,
+        "alignment": 1,
+        "sha256": "34cc7ef5f58386f0d5892d0a37fcd268e86f0eb72987a5888b0584bb03c8e53a"
+      },
+      {
+        "name": ".rela.dyn",
+        "type": 4,
+        "flags": 2,
+        "address": 408,
+        "size": 120,
+        "alignment": 4,
+        "sha256": "209b22b9a1bc3dc5f235fe122cff9cafc4a9ad3eaff7eea64e9f932df6b04cd7"
+      },
+      {
+        "name": ".rela.plt",
+        "type": 4,
+        "flags": 66,
+        "address": 528,
+        "size": 60,
+        "alignment": 4,
+        "sha256": "7d2e5382dc2b21575382ad15363b82e4da0efca7b760d051ed2083fd1d17b4ef"
+      },
+      {
+        "name": ".plt",
+        "type": 1,
+        "flags": 6,
+        "address": 592,
+        "size": 112,
+        "alignment": 16,
+        "sha256": "0cf0d46ab4dae1b9990b9d18e5a2a0a509630089407d04f9e2bb4ee5dd3bfeaf"
+      },
+      {
+        "name": ".text",
+        "type": 1,
+        "flags": 6,
+        "address": 704,
+        "size": 27160,
+        "alignment": 2,
+        "sha256": "1013f4791ee15aee5ddb1aaad7c7013baff028d72bb0f082b25c704c4e5cb95d"
+      },
+      {
+        "name": ".rodata",
+        "type": 1,
+        "flags": 2,
+        "address": 27864,
+        "size": 83767,
+        "alignment": 4,
+        "sha256": "68df98f976a2881d9bcb13179f32c597f319a39564010242775ce36511c9b773"
+      },
+      {
+        "name": ".data.rel.ro",
+        "type": 1,
+        "flags": 3,
+        "address": 115728,
+        "size": 52,
+        "alignment": 4,
+        "sha256": "b061f3c27c724d3e3f5f287c0d2b75f6e0f04e364f3cbb7699424db358b329d7"
+      },
+      {
+        "name": ".dynamic",
+        "type": 6,
+        "flags": 3,
+        "address": 115780,
+        "size": 144,
+        "alignment": 4,
+        "sha256": "3370e1e5a79bca03c4aefd0f55a441643ad6818d8815eae59529c99ba7105b6e"
+      },
+      {
+        "name": ".got",
+        "type": 1,
+        "flags": 3,
+        "address": 115924,
+        "size": 16,
+        "alignment": 4,
+        "sha256": "89112daa76e72ca54329c4584dac6a78ea20c82a6d16d6e60f394ad921a67ad9"
+      },
+      {
+        "name": ".got.plt",
+        "type": 1,
+        "flags": 3,
+        "address": 115940,
+        "size": 28,
+        "alignment": 4,
+        "sha256": "38655db0224f87e50596041031e891641cafc7d7a720d7031e7b8ea49d601979"
+      }
+    ],
+    "build_log": {
+      "path": "build-host/smoothness-packages/p4_rummy/package-build.log",
+      "sha256": "c694fd1f30ebbd966f13ca02bfc8e2e6bf621e34e7ca80031ff4758396e156fa",
+      "bytes": 986
+    },
+    "validation_log": {
+      "path": "build-host/smoothness-packages/p4_rummy/package-validation.log",
+      "sha256": "d8e108b63c5fd5dcf8dcfc2fc971640e420593331ce892645590b76dd4883c51",
+      "bytes": 281
+    }
+  },
+  "raster_revision_captures": {
+    "build-host/smoothness-packages/p4_rummy/captures/p4_rummy-320-0.ppm": "787de6bc12ad711a3328cbab583fdf4d3bba1719db378cf308f13c9eba1ebc6e",
+    "build-host/smoothness-packages/p4_rummy/captures/p4_rummy-320-1.ppm": "3ef84c8c3f8245f83b636cf1289d1e3b0c6650328a8d71a999af63402151d2ba",
+    "build-host/smoothness-packages/p4_rummy/captures/p4_rummy-320-2.ppm": "09f5dfcc1f9768c431d7ab256d87a1f6a2afc9d89098843b2cf23febf499a703",
+    "build-host/smoothness-packages/p4_rummy/captures/p4_rummy-768-0.ppm": "c5ea3028ee301a0db627df2ffdb2ca4142c042dcbad033904765a3b4416312a5",
+    "build-host/smoothness-packages/p4_rummy/captures/p4_rummy-768-1.ppm": "664600f3feb277f2c2e3197aed6d8f00ed232a450d1c6f5c94b0eef3607c93fe",
+    "build-host/smoothness-packages/p4_rummy/captures/p4_rummy-768-2.ppm": "12578274b6e491ac29fc0efbeaf7d438b8eb15e47a0c29ddf4db2f68c66b6666",
+    "build-host/smoothness-packages/p4_rummy/captures/p4_rummy-drag-320-0.ppm": "708adc0c1dfc935718699f1069d7bf18e176a904b6b248c7d126c42f83c50769",
+    "build-host/smoothness-packages/p4_rummy/captures/p4_rummy-drag-320-1.ppm": "0be9141c8c7e0ceacbe75088bda41b3f13628a7254ac54e0f7e8209931086b92",
+    "build-host/smoothness-packages/p4_rummy/captures/p4_rummy-drag-320-2.ppm": "0703d6023ff895755b463e537d8729e1f0636fe90cc0fcebc3fde44f6947a162",
+    "build-host/smoothness-packages/p4_rummy/captures/p4_rummy-drag-768-0.ppm": "5dad3614bbc5f9b815e998268619b38810d4ec080574705576bf81bdc2087a49",
+    "build-host/smoothness-packages/p4_rummy/captures/p4_rummy-drag-768-1.ppm": "5086bd48f1e917a128f0abe7ccb89f56d06033983a4c5b4b4fd0533e4f3ba7c9",
+    "build-host/smoothness-packages/p4_rummy/captures/p4_rummy-drag-768-2.ppm": "01988679b0078c2d50e9a64ae19ccc7b801053cc0a2ae5c468381c6f3ed8fdc6"
+  },
+  "raster_revision_scope": "Shared exact-output raster optimization only; local build/test/CPU validation. No new physical-device acceptance or installation performed by this pass.",
+  "pre_icon_source_sha256": "6d2843b9417fee17f406719be9d618c4bd1d1a8c37ce6239abaa9381d047e491",
+  "package_validation": {
+    "path": "build-host/hires-install-bundle/GAMES/P4_RUMMY.P4G",
+    "sha256": "f626853c4970f70a863d3e8638ea88a113becf61e078f2bb78da41bd59796d72",
+    "bytes": 122584,
+    "limit_bytes": 524288,
+    "icon_bytes": 9744,
+    "staged_manifest": {
+      "path": "build-host/hires-install-bundle/manifest.json",
+      "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee"
+    },
+    "staged_manifest_entry": "p4_rummy",
+    "allocated_code_and_data_unchanged_from_playtested_package": false,
+    "allocated_section_comparison": "historical comparison retained; expected shared raster performance changes and touch input/render changes",
+    "expected_shared_raster_performance_changes": true,
+    "shared_raster_pixel_equivalence_proof": {
+      "path": "build-host/crisp-package/raster-performance/proof.json",
+      "sha256": "49d0d633753d08c467f19c13588eea7f221dd9df26aa7b95493aed685f49bb1c"
+    },
+    "expected_touch_changes": true,
+    "expected_art_layout_animation_changes": false,
+    "changed_allocated_sections": [
+      ".data.rel.ro",
+      ".dynamic",
+      ".got",
+      ".got.plt",
+      ".plt",
+      ".rela.dyn",
+      ".rela.plt",
+      ".rodata",
+      ".text"
+    ],
+    "comparison_baseline": {
+      "path": "build-host/hires-gameplay-packages/P4_RUMMY.P4G",
+      "sha256": "eb8a6ab31c8db93fc4261ec62839d15ffa11e3f76e96a08d4176efee41672cad",
+      "scope": "pre-touch, pre-icon gameplay package"
+    }
+  },
+  "touch_validation": {
+    "path": "games/p4_rummy/TOUCH_TESTING.json",
+    "sha256": "85351a7ec8151f38621d5b3bf9580488a3f056d9bcfb1f7e1af9ffe1c5a65e8f",
+    "scope": "Direct touch/drag input and rendering only. Rule, network, manifest and art sources were not modified by this pass.",
+    "focused_ctest": {
+      "passed": 3,
+      "failed": 0,
+      "build_log": {
+        "path": "build-host/smoothness-packages/p4_rummy/focused-build.log",
+        "sha256": "3dc4fab66740e1997a2b505160ca8dcd804177fcf4db5781338daa82ba708913",
+        "bytes": 1478
+      },
+      "test_log": {
+        "path": "build-host/smoothness-packages/p4_rummy/focused-tests.log",
+        "sha256": "f6c1e35e0c303b30297f7782e2b630af32f026a85cc3e61fc476054a38d7665d",
+        "bytes": 549
+      }
+    },
+    "captures": {
+      "build-host/card-touch-captures/p4_rummy-320-0.png": "0678594e75adaefdc179e81ca1b400c59f9bd1f2a2745fd4bcc1564d30784a1c",
+      "build-host/card-touch-captures/p4_rummy-320-1.png": "211d96b6537f9d9a5b7c3c791909d87b53440936a13706814f69fedcdb080ede",
+      "build-host/card-touch-captures/p4_rummy-320-2.png": "2fac8997e0d158002a5b8bf0c8fdd99cc5368660d2dc0baf61bf5722d0b29a5c",
+      "build-host/card-touch-captures/p4_rummy-768-0.png": "532facfa1b6689ba99dd04dbb814f3f6f8e025c964f3ed0ff998e2c3cd39e24a",
+      "build-host/card-touch-captures/p4_rummy-768-1.png": "d133f444b9ab391c2e284931a1155ebf463555e84484b0b5d4f809538197aad9",
+      "build-host/card-touch-captures/p4_rummy-768-2.png": "52f0f0ebad68a7892b590c57bf08294b6efe2be60180eb43e60bb8ee22ae1f31",
+      "build-host/card-touch-captures/p4_rummy-drag-320-0.png": "a7738f80b3e0e9ab2d688a558d008037e6a42b6fd5207ef6f70995c4539f825a",
+      "build-host/card-touch-captures/p4_rummy-drag-320-1.png": "2036207dfffba6a99a994234285282c6cafb1fad73683bb19dbc03040a3bccaa",
+      "build-host/card-touch-captures/p4_rummy-drag-320-2.png": "ed145d0d81db7fe30a845fbaddd3aaebbffdba69c4217cb54e6b32c9dd972666",
+      "build-host/card-touch-captures/p4_rummy-drag-768-0.png": "fdc3082380dd755b66e054bc943925434056fc8fa8cfd1e291d49876c7f8b281",
+      "build-host/card-touch-captures/p4_rummy-drag-768-1.png": "d46dd60767ffe419382a7e72b3f9292693e5b26f8872684404800be7e5f89537",
+      "build-host/card-touch-captures/p4_rummy-drag-768-2.png": "5b025d690842a36b2134920a054cdaaca902a19d2b5924c3be560e6a46408fec"
+    },
+    "limitations": [
+      "No hand reordering",
+      "Existing hand paging/swipe behavior retained",
+      "New drag gestures need parent interactive and physical touch acceptance",
+      "Prior PRESENTATION_TESTING.json cartridge hash describes the preceding art candidate, not this source revision"
+    ]
+  },
+  "pre_touch_performance": {
+    "revision_scope": "shared raster optimization; current source benchmark",
+    "scope": "Optimized development-Mac CPU update/render/audio; excludes SDL presentation, physical device, transport and I/O.",
+    "frames_per_resolution": 2000,
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "input_tape": "games/p4_rummy/tests/touch-performance-input.txt",
+    "input_sha256": "f32b8888c2fb4ebb0ff75b6e749d09dc7a4f13d89506869bda0446ca592daa74",
+    "benchmark_binary": "build-host/play-p4_rummy/p4_game_benchmark",
+    "benchmark_binary_sha256": "d8af2e3ee1c51214c82e2669a9a9a85acf142483e5710afa7448b3ea06e01ee1",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.p4-rummy",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1980,
+        "last_frame_hash": "1aed0676",
+        "update_audio_ms": {
+          "mean": 0.001,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.004,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.1081,
+          "p50": 0.099,
+          "p95": 0.151,
+          "p99": 0.218,
+          "max": 0.407,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1091,
+          "p50": 0.1,
+          "p95": 0.152,
+          "p99": 0.22,
+          "max": 0.411,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.p4-rummy",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1980,
+        "last_frame_hash": "7deb3d57",
+        "update_audio_ms": {
+          "mean": 0.0008,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.001,
+          "max": 0.002,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0247,
+          "p50": 0.025,
+          "p95": 0.026,
+          "p99": 0.028,
+          "max": 0.057,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0255,
+          "p50": 0.025,
+          "p95": 0.027,
+          "p99": 0.029,
+          "max": 0.059,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "measurement_files": {
+      "768": {
+        "path": "build-host/smoothness-packages/p4_rummy/benchmark-768.json",
+        "sha256": "84f065cfe980e4f98354b67adb0daa1df25e6e1140e345e3357a66a251f6b126",
+        "bytes": 524
+      },
+      "320": {
+        "path": "build-host/smoothness-packages/p4_rummy/benchmark-320.json",
+        "sha256": "9583d8aabc952ee71b3002e85ba2a01c703194178fbdd35ea28f108877e0311b",
+        "bytes": 524
+      }
+    },
+    "motion_coverage": "Existing direct-touch drag/input trace.",
+    "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+    "hardware_fps_verified": false,
+    "pre_touch_baseline_only": false
+  },
+  "current_package_installed_on_device": true,
+  "current_package_installed_units": [
+    "Tab5 A",
+    "Tab5 B"
+  ],
+  "latest_successful_installation_by_unit": {
+    "Tab5 A": {
+      "slug": "p4_rummy",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "f626853c4970f70a863d3e8638ea88a113becf61e078f2bb78da41bd59796d72",
+      "package_bytes": 122584,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    },
+    "Tab5 B": {
+      "slug": "p4_rummy",
+      "title": "Rummy 500",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "f626853c4970f70a863d3e8638ea88a113becf61e078f2bb78da41bd59796d72",
+      "package_bytes": 122584,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "P4_RUMMY.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=P4_RUMMY.P4G bytes=122584 sha256=f626853c4970f70a863d3e8638ea88a113becf61e078f2bb78da41bd59796d72 seconds=2.3",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "p4_rummy"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    }
+  },
+  "installation_history": [
+    {
+      "slug": "p4_rummy",
+      "title": "Rummy 500",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "usb_serial_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "6f6a5e9100193cf125a2463b041d41e687ec4e65c03cf55d936320ed600a63d9",
+      "package_bytes": 122504,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T00:30:06.294159+00:00",
+      "verification": {
+        "method": "Native USB transfer: device SHA-256, atomic activation and readback; existing identical files verified by device hash",
+        "log": "build-host/hires-tab5-qualification/A-ready-table-install-retry.log",
+        "log_sha256": "910c61277893523ce5b067b1c8baa5430da58f18ea7f38c0b1e973c1348dcc2d",
+        "bundle_result": "BUNDLE_PASS files=7"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    {
+      "slug": "p4_rummy",
+      "title": "Rummy 500",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "usb_serial_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "6f6a5e9100193cf125a2463b041d41e687ec4e65c03cf55d936320ed600a63d9",
+      "package_bytes": 122504,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T00:31:58.157929+00:00",
+      "verification": {
+        "method": "Native USB transfer: device SHA-256, atomic activation and readback; existing identical files verified by device hash",
+        "log": "build-host/hires-tab5-qualification/B-ready-table-install-retry.log",
+        "log_sha256": "c4ea3bb6a76879a2afffe7cb9ea43e6e3caa57bbb890c23be397b8f9d204cab2",
+        "bundle_result": "BUNDLE_PASS files=7"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": false
+    },
+    {
+      "slug": "p4_rummy",
+      "unit": "Tab5 A",
+      "port": "/dev/cu.usbmodem1101",
+      "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+      "package_sha256": "f626853c4970f70a863d3e8638ea88a113becf61e078f2bb78da41bd59796d72",
+      "package_bytes": 122584,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:02:28.169120+00:00",
+      "verification": {
+        "method": "p4-transfer push-bundle; all13PASS and BUNDLE_PASS with device SHA256 readback",
+        "log": "build-host/hires-tab5-qualification/A-complete-game-install.log",
+        "log_sha256": "e8c6636e5dd0640f3bf64969c6baab22d663c2e707b1e973151b98b2535278b8"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    },
+    {
+      "slug": "p4_rummy",
+      "title": "Rummy 500",
+      "unit": "Tab5 B",
+      "port": "/dev/cu.usbmodem2101",
+      "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+      "package_sha256": "f626853c4970f70a863d3e8638ea88a113becf61e078f2bb78da41bd59796d72",
+      "package_bytes": 122584,
+      "installed_on_device": true,
+      "installed_utc": "2026-10-06T01:03:31.517282+00:00",
+      "installed_time_basis": "Completed transfer log modification time; individual PASS lines have elapsed seconds but no UTC timestamp.",
+      "verified_utc": "2026-10-06T01:03:31.517282+00:00",
+      "verification": {
+        "method": "Native USB transfer with bounded package validation, atomic activation and device SHA-256/readback; already-present results verify the existing file hash.",
+        "log": "build-host/hires-tab5-qualification/B-complete-game-install.log",
+        "log_sha256": "7dabc8d8eabdbb61d93422d386575a72c4414bb4cef28f4fac398a00eafd3fa4",
+        "bundle_result": "BUNDLE_PASS files=13",
+        "file": "P4_RUMMY.P4G",
+        "file_result": "transferred-and-readback-verified",
+        "pass_line": "P4_H1 PASS direction=push name=P4_RUMMY.P4G bytes=122584 sha256=f626853c4970f70a863d3e8638ea88a113becf61e078f2bb78da41bd59796d72 seconds=2.3",
+        "source_manifest": {
+          "path": "build-host/hires-install-bundle/manifest.json",
+          "sha256": "47b62d154249a6a4ae223297741f230e26f6e1891a93e3bea949601b080293ee",
+          "bytes": 46148
+        },
+        "manifest_entry": "p4_rummy"
+      },
+      "hardware_gameplay_acceptance": null,
+      "matches_current_package": true
+    }
+  ],
+  "installation_limitation": "Records identify successful transfers of specific packages to specific units; they do not establish hardware gameplay or frame-rate acceptance."
+}

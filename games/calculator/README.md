@@ -12,3 +12,9 @@ by zero fail closed with `ERROR`.
 
 All visuals are original code-rendered RGB565 primitives. No raster or
 third-party assets are used. License: MIT.
+
+## Launcher presentation
+
+The cartridge owns its title and `assets/launcher.p4i` icon. Source artwork,
+conversion details and provenance live beside the packed icon. Reproduce it
+with `python3 games/calculator/tools/pack_launcher.py` (offline Pillow only).

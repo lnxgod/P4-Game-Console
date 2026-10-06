@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: MIT
 
 #include "platform/radio_hosted.h"
+#include "sdkconfig.h"
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+#include "platform/tab5.h"
+#endif
 
 #pragma GCC diagnostic push
 /* ESP-IDF 5.5.3 has sign-conversion warnings in inline RISC-V headers. */
@@ -8,6 +12,7 @@
 #include "esp_hosted.h"
 #include "esp_log.h"
 #include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
 #pragma GCC diagnostic pop
 
 static const char *const TAG = "p4_hosted_radio";
@@ -33,7 +38,12 @@ esp_err_t platform_radio_hosted_start(void)
     portEXIT_CRITICAL(&s_lock);
 
     ESP_LOGI(TAG, "starting board-authorized C6 SDIO transport");
-    const esp_err_t result = esp_hosted_init();
+    esp_err_t result = ESP_OK;
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    result = platform_tab5_radio_power(true);
+    if (result == ESP_OK) vTaskDelay(pdMS_TO_TICKS(20));
+#endif
+    if (result == ESP_OK) result = esp_hosted_init();
 
     portENTER_CRITICAL(&s_lock);
     s_status.last_error = result;

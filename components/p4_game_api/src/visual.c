@@ -155,42 +155,38 @@ void p4_draw_sprite(p4_game_surface_t *surface, int x, int y,
     if (!p4_surface_valid(surface) || !p4_sprite_valid(sprite)) {
         return;
     }
-    for (size_t row = 0U; row < sprite->height; ++row) {
-        const size_t source_row =
-            (sprite->flip & P4_SPRITE_FLIP_Y) != 0U
+    const int scale = sprite->scale;
+    const int64_t right = (int64_t)x + (int64_t)sprite->width * scale;
+    const int64_t bottom = (int64_t)y + (int64_t)sprite->height * scale;
+    if (right <= 0 || bottom <= 0 || x >= surface->width || y >= surface->height) return;
+    /* An intersecting sprite bounds x/y to +/-32768 before narrowing.
+     * Preserve source-pixel block order for aliased source/destination. */
+    const size_t first_x = x < 0 ? (size_t)(-x / scale) : 0U;
+    const size_t first_y = y < 0 ? (size_t)(-y / scale) : 0U;
+    const size_t end_x = right > surface->width
+        ? (size_t)(((int)surface->width - x + scale - 1) / scale) : sprite->width;
+    const size_t end_y = bottom > surface->height
+        ? (size_t)(((int)surface->height - y + scale - 1) / scale) : sprite->height;
+    for (size_t row = first_y; row < end_y; ++row) {
+        const size_t source_row = (sprite->flip & P4_SPRITE_FLIP_Y) != 0U
             ? sprite->height - row - 1U : row;
-        for (size_t column = 0U; column < sprite->width; ++column) {
-            const size_t source_column =
-                (sprite->flip & P4_SPRITE_FLIP_X) != 0U
+        const uint16_t *src = sprite->pixels +
+            (sprite->source_y + source_row) * sprite->stride_pixels + sprite->source_x;
+        int top = y + (int)row * scale, row_end = top + scale;
+        if (top < 0) top = 0;
+        if (row_end > surface->height) row_end = surface->height;
+        for (size_t column = first_x; column < end_x; ++column) {
+            const size_t source_column = (sprite->flip & P4_SPRITE_FLIP_X) != 0U
                 ? sprite->width - column - 1U : column;
-            const uint16_t color = sprite->pixels[
-                (sprite->source_y + source_row) * sprite->stride_pixels +
-                sprite->source_x + source_column];
-            if (sprite->use_transparency &&
-                color == sprite->transparent_color) {
-                continue;
-            }
-            const int64_t left = (int64_t)x +
-                (int64_t)column * sprite->scale;
-            const int64_t top = (int64_t)y +
-                (int64_t)row * sprite->scale;
-            for (uint8_t repeat_y = 0U;
-                 repeat_y < sprite->scale; ++repeat_y) {
-                const int64_t destination_y = top + repeat_y;
-                if (destination_y < 0 ||
-                    destination_y >= surface->height) {
-                    continue;
-                }
-                uint16_t *const destination = surface->pixels +
-                    (size_t)destination_y * surface->stride_pixels;
-                for (uint8_t repeat_x = 0U;
-                     repeat_x < sprite->scale; ++repeat_x) {
-                    const int64_t destination_x = left + repeat_x;
-                    if (destination_x >= 0 &&
-                        destination_x < surface->width) {
-                        destination[(size_t)destination_x] = color;
-                    }
-                }
+            const uint16_t color = src[source_column];
+            if (sprite->use_transparency && color == sprite->transparent_color) continue;
+            int left = x + (int)column * scale, column_end = left + scale;
+            if (left < 0) left = 0;
+            if (column_end > surface->width) column_end = surface->width;
+            for (int dy = top; dy < row_end; ++dy) {
+                uint16_t *dst = surface->pixels + (size_t)dy * surface->stride_pixels + (size_t)left;
+                uint16_t *const end = dst + (size_t)(column_end - left);
+                do { *dst++ = color; } while (dst != end);
             }
         }
     }

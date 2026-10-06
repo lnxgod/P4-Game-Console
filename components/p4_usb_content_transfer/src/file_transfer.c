@@ -22,7 +22,7 @@
 #include "freertos/task.h"
 #pragma GCC diagnostic pop
 #include "mbedtls/sha256.h"
-#include "p4/content_catalog.h"
+#include "content_limits.h"
 #include "p4/game_package.h"
 #include "p4/game_resource.h"
 
@@ -337,16 +337,8 @@ static bool exchange_name_valid(const char *name)
 static p4_file_transfer_status_t prepare_paths(void)
 {
     const char *const suffix =
-        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_EXCHANGE ? "/TRANSFER" :
-        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4CART ? "/P4/GAMES" : "/GAMES";
-    if (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4CART) {
-        char parent[P4_CONTENT_PATH_BYTES];
-        if (!append_path(parent, sizeof(parent), s_transfer.storage_root, "/P4")) {
-            return P4_FILE_TRANSFER_STATUS_STORAGE;
-        }
-        const p4_file_transfer_status_t parent_status = ensure_directory(parent);
-        if (parent_status != P4_FILE_TRANSFER_STATUS_OK) return parent_status;
-    }
+        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_EXCHANGE
+            ? "/TRANSFER" : "/GAMES";
     char directory[P4_CONTENT_PATH_BYTES];
     if (!append_path(directory, sizeof(directory),
                      s_transfer.storage_root, suffix)) {
@@ -600,13 +592,6 @@ static p4_file_transfer_status_t validate_path(
         (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4G ||
          s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4R)) {
         status = validate_native(path, actual_size);
-    }
-    if (status == P4_FILE_TRANSFER_STATUS_OK &&
-        s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4CART) {
-        p4_content_item_t item;
-        if (p4_content_validate_cart_file(path, &item) != P4_CONTENT_OK) {
-            status = P4_FILE_TRANSFER_STATUS_BAD_PACKAGE;
-        }
     }
     if (status == P4_FILE_TRANSFER_STATUS_OK) {
         if (size_out != NULL) {
@@ -927,8 +912,8 @@ static void accept_request(void)
     }
     if (s_transfer.file_class != P4_FILE_TRANSFER_CLASS_P4G &&
         s_transfer.file_class != P4_FILE_TRANSFER_CLASS_EXCHANGE &&
-        s_transfer.file_class != P4_FILE_TRANSFER_CLASS_P4R &&
-        s_transfer.file_class != P4_FILE_TRANSFER_CLASS_P4CART) {
+        s_transfer.file_class != P4_FILE_TRANSFER_CLASS_P4R) {
+        /* Retired source-cart class 4 remains reserved; reject before storage. */
         reject_request(P4_FILE_TRANSFER_STATUS_UNSUPPORTED);
         return;
     }
@@ -936,8 +921,6 @@ static void accept_request(void)
          !game_name_valid(s_transfer.file_name, ".P4G")) ||
         (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4R &&
          !game_name_valid(s_transfer.file_name, ".P4R")) ||
-        (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_P4CART &&
-         !game_name_valid(s_transfer.file_name, ".P4CART")) ||
         (s_transfer.file_class == P4_FILE_TRANSFER_CLASS_EXCHANGE &&
          !exchange_name_valid(s_transfer.file_name))) {
         reject_request(P4_FILE_TRANSFER_STATUS_BAD_NAME);

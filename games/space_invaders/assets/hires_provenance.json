@@ -1,0 +1,122 @@
+{
+  "version": "1.1.0",
+  "assets": [
+    {
+      "game": "space_invaders",
+      "source": "/Users/billh/.codex/generated_images/01a10e4d-8eac-7052-b410-c517e93f4e11/exec-f810b7e5-a5d7-4e77-b63a-6561f60cd0e0.png",
+      "width": 48,
+      "height": 32,
+      "prompt": "Use case: stylized-concept. Asset type: original arcade space-shooter transparent sprite sheet. Exact regular 4x4 grid of 16 isolated sprites, equal cells, large transparent gutters, no cell borders. Camera strict orthographic top view. Row 1: four frames of a small angular purple alien drone with two curved swept wings, orange cockpit/eyes and silver armor panels, shape animates wings open and closed. Row 2: four frames of a smaller teal enemy fighter with twin forward claws, gold central core and charcoal plating. Row 3: four frames of a friendly white/cobalt starfighter pointed UP, two blue engines, narrow orange cockpit, engine exhaust goes down; slight thrust animation. Row 4: compact intact green-metal bunker shield (side-on arcade shield silhouette), same bunker with battle wear, round coral explosion spark, blue-white energy burst. Richly shaded crisp hand-painted pixel-art sprites designed for a 768x480 native game, approximately 48x32 pixels each on screen. Bold silhouettes, careful reflective panel detail, original designs, no famous game designs. No text, no gridlines, no logo, no background, genuine transparent pixels, nothing cut off at a cell boundary.",
+      "asset": "assets/hires_atlas_v2.png",
+      "sha256": "6fad8858843565a2fbdcac4c839ca3b2bf80622607b6e16fbcff6341d0e5ee87",
+      "mode": "built-in image_gen",
+      "transparent_background": true
+    }
+  ],
+  "conversion": {
+    "cell_dimensions": [
+      80,
+      44
+    ],
+    "measured_opaque_bounds": [
+      [
+        103,
+        23,
+        248,
+        234
+      ],
+      [
+        408,
+        23,
+        644,
+        218
+      ],
+      [
+        704,
+        23,
+        1051,
+        219
+      ],
+      [
+        1127,
+        27,
+        1326,
+        225
+      ],
+      [
+        102,
+        298,
+        248,
+        510
+      ],
+      [
+        448,
+        297,
+        605,
+        511
+      ],
+      [
+        774,
+        295,
+        978,
+        509
+      ],
+      [
+        1153,
+        299,
+        1300,
+        501
+      ],
+      [
+        85,
+        565,
+        266,
+        768
+      ],
+      [
+        435,
+        564,
+        616,
+        803
+      ],
+      [
+        786,
+        558,
+        967,
+        820
+      ],
+      [
+        1136,
+        550,
+        1317,
+        832
+      ],
+      [
+        36,
+        904,
+        315,
+        1039
+      ],
+      [
+        385,
+        903,
+        667,
+        1052
+      ],
+      [
+        765,
+        873,
+        998,
+        1088
+      ],
+      [
+        1094,
+        867,
+        1349,
+        1094
+      ]
+    ],
+    "resize": "Lanczos from measured original ImageGen crops; fitted to existing collision silhouettes; alpha >=160 to RGB565 chroma key 0",
+    "atlas_static_bytes": 112640
+  }
+}

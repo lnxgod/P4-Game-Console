@@ -9,6 +9,7 @@
 #include "p4/input.h"
 #include "p4/visual.h"
 
+#include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -351,6 +352,90 @@ static void test_draw_bounds(void)
     free(allocation);
 }
 
+/* Independent pixel-membership oracle: exercise overflow-prone input values,
+ * both negotiated sizes, unaligned rows, padding and allocation guards. */
+static void test_fill_rect_exact_clipping(void)
+{
+    static const int rectangles[][4] = {
+        {0, 0, INT_MAX, INT_MAX}, {-1, -1, INT_MAX, INT_MAX},
+        {INT_MIN, INT_MIN, INT_MAX, INT_MAX},
+        {INT_MIN, 0, INT_MAX, 1}, {0, INT_MIN, 1, INT_MAX},
+        {INT_MAX, 0, INT_MAX, 1}, {0, INT_MAX, 1, INT_MAX},
+        {INT_MAX - 1, INT_MAX - 1, INT_MAX, INT_MAX},
+        {-20, -20, 40, 40}, {-1, -1, 1, 1}, {-1, -1, 2, 2},
+        {319, 199, 2, 2}, {320, 200, 1, 1},
+        {767, 479, 2, 2}, {768, 480, 1, 1},
+        {767, -1, 100, 100}, {-1, 479, 100, 100},
+        {0, 0, 0, INT_MAX}, {0, 0, INT_MAX, 0},
+        {0, 0, INT_MIN, 1}, {0, 0, 1, INT_MIN},
+        {0, 0, -1, -1}, {10, 20, 1, 1}, {10, 20, 3, 7},
+        {0, 0, 320, 200}, {0, 0, 768, 480},
+        {-769, -481, 1537, 961}, {1, 1, 766, 478},
+    };
+    enum { GUARD = 23 };
+    const uint16_t untouched = UINT16_C(0xa55a);
+    const uint16_t ink = UINT16_C(0x36cf);
+    for (unsigned resolution = 0U; resolution < 2U; ++resolution) {
+        const unsigned width = resolution == 0U ?
+            P4_GAME_SURFACE_WIDTH : P4_GAME_SURFACE_HIGH_RES_WIDTH;
+        const unsigned height = resolution == 0U ?
+            P4_GAME_SURFACE_HEIGHT : P4_GAME_SURFACE_HIGH_RES_HEIGHT;
+        const size_t stride = width + 9U;
+        const size_t words = stride * height;
+        const size_t total = words + 2U * GUARD;
+        uint16_t *const allocation = malloc(total * sizeof(*allocation));
+        CHECK(allocation != NULL);
+        if (allocation == NULL) continue;
+        p4_game_surface_t surface = {
+            .pixels = allocation + GUARD,
+            .stride_pixels = (uint32_t)stride,
+            .width = (uint16_t)width,
+            .height = (uint16_t)height,
+        };
+        for (size_t index = 0U;
+             index < sizeof(rectangles) / sizeof(rectangles[0]); ++index) {
+            for (size_t i = 0U; i < total; ++i) allocation[i] = untouched;
+            const int *const rect = rectangles[index];
+            p4_draw_fill_rect(&surface, rect[0], rect[1], rect[2], rect[3], ink);
+            bool exact = true;
+            for (unsigned row = 0U; row < height; ++row) {
+                for (size_t col = 0U; col < stride; ++col) {
+                    const int64_t dx = (int64_t)col - rect[0];
+                    const int64_t dy = (int64_t)row - rect[1];
+                    const bool inside = col < width && rect[2] > 0 && rect[3] > 0 &&
+                        dx >= 0 && dx < rect[2] && dy >= 0 && dy < rect[3];
+                    if (surface.pixels[(size_t)row * stride + col] !=
+                        (inside ? ink : untouched)) exact = false;
+                }
+            }
+            if (!exact) fprintf(stderr, "fill rect mismatch: resolution %u, case %zu\n",
+                                resolution, index);
+            CHECK(exact);
+            for (size_t i = 0U; i < GUARD; ++i) {
+                CHECK(allocation[i] == untouched);
+                CHECK(allocation[GUARD + words + i] == untouched);
+            }
+        }
+        for (size_t i = 0U; i < total; ++i) allocation[i] = untouched;
+        p4_draw_fill_rect(NULL, 0, 0, INT_MAX, INT_MAX, ink);
+        p4_game_surface_t invalid = surface;
+        invalid.stride_pixels = width - 1U;
+        p4_draw_fill_rect(&invalid, 0, 0, INT_MAX, INT_MAX, ink);
+        invalid = surface;
+        invalid.width = 1U;
+        p4_draw_fill_rect(&invalid, 0, 0, INT_MAX, INT_MAX, ink);
+        invalid = surface;
+        invalid.pixels = NULL;
+        p4_draw_fill_rect(&invalid, 0, 0, INT_MAX, INT_MAX, ink);
+        bool untouched_invalid = true;
+        for (size_t i = 0U; i < total; ++i) {
+            if (allocation[i] != untouched) untouched_invalid = false;
+        }
+        CHECK(untouched_invalid);
+        free(allocation);
+    }
+}
+
 static void test_visual_helpers(void)
 {
     CHECK(p4_q16_to_int_round(p4_q16_from_int(12)) == 12);
@@ -513,19 +598,21 @@ static void test_audio_stream(void)
         source[sample] = INT16_C(1234);
     }
     p4_audio_mixer_stop_all(&mixer);
-    CHECK(p4_audio_mixer_submit_pcm16_stereo(
-        &mixer, source, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
-    CHECK(p4_audio_mixer_submit_pcm16_stereo(
-        &mixer, source, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
+    for (size_t i = 0; i < P4_GAME_AUDIO_STREAM_BUFFER_FRAMES /
+                              P4_GAME_MAX_AUDIO_STREAM_FRAMES; ++i) {
+        CHECK(p4_audio_mixer_submit_pcm16_stereo(
+            &mixer, source, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
+    }
     CHECK(!p4_audio_mixer_submit_pcm16_stereo(&mixer, source, 1U));
     CHECK(p4_audio_mixer_render(
         &mixer, output, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
     CHECK(p4_audio_mixer_submit_pcm16_stereo(
         &mixer, source, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
-    CHECK(p4_audio_mixer_render(
-        &mixer, output, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
-    CHECK(p4_audio_mixer_render(
-        &mixer, output, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
+    for (size_t i = 0; i < P4_GAME_AUDIO_STREAM_BUFFER_FRAMES /
+                              P4_GAME_MAX_AUDIO_STREAM_FRAMES; ++i) {
+        CHECK(p4_audio_mixer_render(
+            &mixer, output, P4_GAME_MAX_AUDIO_STREAM_FRAMES));
+    }
     for (size_t sample = 0U; sample < sizeof(output) / sizeof(output[0]);
          ++sample) {
         CHECK(output[sample] == INT16_C(1234));
@@ -1014,6 +1101,7 @@ int main(void)
 {
     test_input_mapper();
     test_draw_bounds();
+    test_fill_rect_exact_clipping();
     test_visual_helpers();
     test_audio_mixer();
     test_audio_stream();

@@ -128,12 +128,12 @@ def source_text(slug: str, game_id: str, title: str,
 #include \"p4/draw.h\"
 #include \"p4/game.h\"
 #include \"p4/input.h\"
+#include \"p4/presentation.h\"
 
 typedef struct {{
-    int x;
-    int y;
+    int32_t x_q8;
+    int32_t y_q8;
     uint32_t held_buttons;
-    uint32_t move_accumulator_ms;
 }} {slug}_state_t;
 
 static int surface_x(const p4_game_surface_t *surface, int x)
@@ -146,6 +146,19 @@ static int surface_y(const p4_game_surface_t *surface, int y)
     return y * (int)surface->height / P4_GAME_SURFACE_HEIGHT;
 }}
 
+/* Preserve subpixel position until the final native-resolution raster step. */
+static int surface_x_q8(const p4_game_surface_t *surface, int32_t x_q8)
+{{
+    return (int)(x_q8 * (int32_t)surface->width /
+                 (P4_GAME_SURFACE_WIDTH * 256));
+}}
+
+static int surface_y_q8(const p4_game_surface_t *surface, int32_t y_q8)
+{{
+    return (int)(y_q8 * (int32_t)surface->height /
+                 (P4_GAME_SURFACE_HEIGHT * 256));
+}}
+
 static bool game_start(p4_game_context_t *context)
 {{
     if (context == NULL || context->state == NULL ||
@@ -153,7 +166,7 @@ static bool game_start(p4_game_context_t *context)
         return false;
     }}
     {slug}_state_t *const state = context->state;
-    *state = ({slug}_state_t){{.x = 160, .y = 80}};
+    *state = ({slug}_state_t){{.x_q8 = 160 * 256, .y_q8 = 80 * 256}};
     (void)p4_game_play_tone(
         context, 523U, 80U, 3U, P4_WAVE_TRIANGLE);
     return true;
@@ -169,22 +182,21 @@ static p4_game_result_t game_update(
         return P4_GAME_EXIT_TO_LAUNCHER;
     }}
     state->held_buttons = input->held;
-    state->move_accumulator_ms += elapsed_ms;
-    while (state->move_accumulator_ms >= 16U) {{
-        state->move_accumulator_ms -= 16U;
-        if ((input->held & P4_BUTTON_LEFT) != 0U && state->x > 8) {{
-            --state->x;
-        }}
-        if ((input->held & P4_BUTTON_RIGHT) != 0U && state->x < 311) {{
-            ++state->x;
-        }}
-        if ((input->held & P4_BUTTON_UP) != 0U && state->y > 22) {{
-            --state->y;
-        }}
-        if ((input->held & P4_BUTTON_DOWN) != 0U && state->y < 139) {{
-            ++state->y;
-        }}
-    }}
+    /* 62.5 logical pixels/second. A long stall cannot cause an unbounded
+     * catch-up loop or teleport; collision-heavy games can use bounded fixed
+     * simulation steps and interpolate their rendered poses instead. */
+    const uint32_t dt_ms = elapsed_ms > 50U ? 50U : elapsed_ms;
+    const int32_t distance_q8 = (int32_t)dt_ms * 16;
+    const int dx = ((input->held & P4_BUTTON_RIGHT) != 0U ? 1 : 0) -
+                   ((input->held & P4_BUTTON_LEFT) != 0U ? 1 : 0);
+    const int dy = ((input->held & P4_BUTTON_DOWN) != 0U ? 1 : 0) -
+                   ((input->held & P4_BUTTON_UP) != 0U ? 1 : 0);
+    state->x_q8 += dx * distance_q8;
+    state->y_q8 += dy * distance_q8;
+    if (state->x_q8 < 8 * 256) state->x_q8 = 8 * 256;
+    if (state->x_q8 > 311 * 256) state->x_q8 = 311 * 256;
+    if (state->y_q8 < 22 * 256) state->y_q8 = 22 * 256;
+    if (state->y_q8 > 139 * 256) state->y_q8 = 139 * 256;
     if ((input->pressed & P4_BUTTON_A) != 0U) {{
         (void)p4_game_play_tone(
             context, 784U, 100U, 4U, P4_WAVE_SQUARE);
@@ -199,15 +211,15 @@ static bool game_render(p4_game_context_t *context,
         return false;
     }}
     const {slug}_state_t *const state = context->state;
-    const unsigned text_scale =
-        surface->width == P4_GAME_SURFACE_HIGH_RES_WIDTH ? 2U : 1U;
+    const unsigned text_height =
+        surface->width == P4_GAME_SURFACE_HIGH_RES_WIDTH ? 24U : 10U;
     p4_draw_clear(surface, UINT16_C(0x0000));
-    p4_draw_text(surface, surface_x(surface, 8), surface_y(surface, 6),
-                 {c_title}, UINT16_C(0xffff), text_scale, 15U);
-    p4_draw_text(surface, surface_x(surface, 8), surface_y(surface, 16),
-                 \"MOVE + PRESS A\", UINT16_C(0x9cf3), text_scale, 14U);
-    p4_draw_fill_circle(surface, surface_x(surface, state->x),
-                        surface_y(surface, state->y),
+    p4_ui_text(surface, surface_x(surface, 58), surface_y(surface, 5),
+                 {c_title}, UINT16_C(0xffff), text_height, 15U);
+    p4_ui_text(surface, surface_x(surface, 8), surface_y(surface, 28),
+                 \"MOVE + PRESS A\", UINT16_C(0x9cf3), text_height, 14U);
+    p4_draw_fill_circle(surface, surface_x_q8(surface, state->x_q8),
+                        surface_y_q8(surface, state->y_q8),
                         surface_x(surface, 7),
                         UINT16_C({accent}));
     p4_game_draw_standard_controls(
@@ -270,7 +282,8 @@ The current OS links support two human consoles.
     if high_res:
         resolution = """
 
-This starter negotiates optional `video-highres`: a 768x480 RGB565 surface
+This starter follows the default presentation standard in `docs/GAME_ART.md`
+and negotiates optional `video-highres`: a 768x480 RGB565 surface
 where supported, with 320x200 fallback. Touch remains normalized to 320x200;
 scale drawing using `surface->width` and `surface->height`.
 """
@@ -283,6 +296,11 @@ particular template. It starts unpublished (`enabled: false`) so the demo does
 not enter the product catalog. Edit `src/{slug}.c`, and list additional C files
 in `game.json`'s `sources` when splitting the implementation. Keep identities
 in `games/retired.json` reserved.
+
+Native C is the supported authoring route. Custom software 3D, raycasting,
+physics and other engines may draw directly into the negotiated RGB565 surface;
+the supplied 2D drawing helpers are optional. Extend shared platform APIs when
+an engine needs a missing service. Lua source cartridges are retired.
 
 Use only public `p4/` APIs. Console OS owns display, audio, USB/BLE controllers,
 storage, timing and launcher lifecycle. The starter consumes normalized
@@ -306,6 +324,21 @@ Add focused rule/protocol tests as the game grows. Run `make game-registry-check
 after manifest changes. Follow the
 [local testing skill](../../.agents/skills/test-p4-games-locally/SKILL.md) for
 sanitizer smoke and interactive controls/lifecycle checks.
+
+## ESP32-P4 performance
+
+Follow the [game performance contract](../../docs/GAME_PERFORMANCE.md) from
+the first playable build. Target 60 FPS with an actual-device 30 FPS release
+floor. This starter retains fractional positions, scales them only at raster
+time and caps delayed updates at 50 ms. Keep rendering in bounded primitives,
+row spans or a budgeted custom renderer; retain fractional
+motion and animation time, and budget state, art and per-tick work. Review costly
+pixel loops with the pinned RV32 compiler before adding more work.
+
+Benchmark active motion/dragging at native and fallback resolution, then record
+exact package, OS and device cadence for release qualification. Host CPU timing
+and successful installation do not prove tablet FPS; leave device acceptance
+pending until measured.
 
 ## Package for the selected console
 
@@ -355,10 +388,14 @@ def main() -> int:
         help=("add two-player networking metadata (not synchronization) and the "
               "multiplayer-session capability"),
     )
-    parser.add_argument(
-        "--high-res", action="store_true",
-        help=("negotiate a 768x480 RGB565 surface with automatic "
-              "320x200 fallback"),
+    resolution = parser.add_mutually_exclusive_group()
+    resolution.add_argument(
+        "--high-res", dest="high_res", action="store_true", default=True,
+        help="request native 768x480 RGB565 with 320x200 fallback (default)",
+    )
+    resolution.add_argument(
+        "--low-res", dest="high_res", action="store_false",
+        help="explicit legacy exception: request only the 320x200 surface",
     )
     parser.add_argument("--games-root", type=pathlib.Path,
                         default=ROOT / "games")
@@ -415,7 +452,7 @@ def main() -> int:
         "required_capabilities": ["video", "controls"],
         "optional_capabilities": optional_capabilities,
         "license": "MIT",
-        "assets": "original-code-rendered-shapes-only",
+        "assets": "original-code-rendered-shapes-and-pinned-Arimo-OFL-1.1-font",
         "enabled": False,
     }
     if args.multiplayer is not None:

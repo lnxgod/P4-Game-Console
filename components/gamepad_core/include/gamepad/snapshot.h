@@ -18,11 +18,13 @@ typedef enum {
     PLATFORM_GAMEPAD_TRANSPORT_NONE = 0,
     PLATFORM_GAMEPAD_TRANSPORT_USB_HID = 1,
     PLATFORM_GAMEPAD_TRANSPORT_BLE_HID = 2,
+    PLATFORM_GAMEPAD_TRANSPORT_USB_XUSB = 3,
 } platform_gamepad_transport_t;
 
 /**
  * Bounded controller identity. BLE HID devices may not expose USB VID/PID, so
  * those fields are zero unless a trusted PnP-ID characteristic was read.
+ * descriptor_sha256 hashes the HID report descriptor or XUSB configuration.
  */
 typedef struct {
     uint16_t vendor_id;

@@ -1,0 +1,152 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "game": "tide_maze",
+  "version": "0.1.0",
+  "status": "local-play-tested and build-tested; hardware acceptance pending",
+  "source_digest_sha256": "a14729206d46305c9d4f34386651794e025987da743a8b702f19090d2805c62b",
+  "source_sha256": {
+    "games/tide_maze/assets/launcher.p4i": "33892570b3800d9e6b40e320eff359603f8f2fd398c22f93dd2021b325aadb8b",
+    "games/tide_maze/game.json": "c27962657c5c588be6727f13d01ddf3c5c76867e10b82a9ab484e9aaa4412bfa",
+    "games/tide_maze/src/generated/cover.inc": "8ffa5716335b9289f976ade37ce021577d9f2993bc900f21ae9a7f6786f5f55c",
+    "games/tide_maze/src/tide_maze.c": "eaae646b8a1c41a03b8ab6947241b225e77ecfc07c3e89ba194833a346d173c1",
+    "games/tide_maze/src/tide_maze_internal.h": "bb318142ef51508a501b8c5c97baa6f7ac1b098d37ced32764a530e8ab5520e8",
+    "games/tide_maze/src/tide_maze_network.c": "a0bafdf6164b5be00db6718f1aeb30cf2bdbfa8b1a90f0788342a734470be4c0",
+    "games/tide_maze/src/tide_maze_physics.c": "bd439f57e5781235ef853dce3fed665a6e9b091c289373b8d59d9b5541a16920",
+    "games/tide_maze/src/tide_maze_render.c": "8d46ba982e737c811713461821a03d310a4bc511f68cd6400a45ff643e187e18"
+  },
+  "state_bytes_on_mac": 4000,
+  "focused_tests": {
+    "command": "ctest --test-dir build-host/tide_maze --output-on-failure",
+    "result": "PASS",
+    "coverage": [
+      "Three complete maze playthroughs using ordinary controls, no teleportation",
+      "Movement, braking, walls, pickups, exits, time expiry, rescue, restart, pause, Back and touch/button precedence",
+      "10,000 water steps: conserved volume, bounded depth and closed walls",
+      "Injected accelerometer/gyro input on all axes, arbitrary-pose calibration, freshness and out-of-range rejection",
+      "Real host/client instances: input, convergence, queue rejection/recovery, malformed sizes and values, stale/wrong-player packets, shared completion, generation changes, peer loss and fresh solo fallback",
+      "Padded-stride and border guards for eight screens at 320x200 and 768x480"
+    ]
+  },
+  "sdl_sanitizer": {
+    "command": "ctest --test-dir build-host/play-tide_maze --output-on-failure",
+    "result": "5/5 PASS; AddressSanitizer and UndefinedBehaviorSanitizer"
+  },
+  "interactive": {
+    "tester": "Codex through CUA against the visible SDL3 app",
+    "human_playtest": false,
+    "result": "PASS for observed keyboard/touch lifecycle and rendering",
+    "exercised": [
+      "Start",
+      "All four directions and visible marble momentum",
+      "A brake",
+      "B calibration fallback and title orientation selection",
+      "Maze selection",
+      "Mouse drag steering",
+      "Touch Brake/Center/Pause and overlay resume",
+      "Keyboard pause/resume",
+      "Escape/Back exit without sanitizer error"
+    ],
+    "prior_final_physics_run": {
+      "presented_frames": 8067,
+      "average_fps": 59.99,
+      "maximum_gap_ms": 27.97,
+      "gaps_over_33_333_ms": 0
+    },
+    "final_presentation_check": "Final source opened; maze 2, orientation choice, start, movement, pause and native typography visibly checked.",
+    "audio": "Optional absence tolerated; generic mixer benchmark/smoke pass. Speaker acoustics and human sound acceptance not established.",
+    "final_source_run": {
+      "presented_frames": 5550,
+      "average_fps": 59.98,
+      "maximum_gap_ms": 35.425,
+      "gaps_over_33_333_ms": 1,
+      "note": "One desktop presentation gap exceeded the 30 FPS budget while using CUA; optimized CPU maximum was 0.450 ms. This is not a tablet FPS claim."
+    }
+  },
+  "benchmark": {
+    "game": "org.p4console.tide-maze",
+    "frames": 2000,
+    "width": 768,
+    "height": 480,
+    "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+    "changed_frames": 1717,
+    "last_frame_hash": "358b4a70",
+    "update_audio_ms": {
+      "mean": 0.0021,
+      "p50": 0.002,
+      "p95": 0.003,
+      "p99": 0.004,
+      "max": 0.008,
+      "over_33_333ms": 0
+    },
+    "render_ms": {
+      "mean": 0.1162,
+      "p50": 0.109,
+      "p95": 0.165,
+      "p99": 0.234,
+      "max": 0.447,
+      "over_33_333ms": 0
+    },
+    "total_ms": {
+      "mean": 0.1182,
+      "p50": 0.111,
+      "p95": 0.168,
+      "p99": 0.239,
+      "max": 0.45,
+      "over_33_333ms": 0
+    }
+  },
+  "shared_checks": {
+    "game_sdk_host": "PASS",
+    "game_registry": "PASS with 18 enabled packages",
+    "tab5_sensor_host": "12/12 PASS including separate IMU freshness adapter",
+    "cartridge_host_tail_compatibility": "PASS at every truncated host-table byte size",
+    "launcher_version_snapshots": "0.49 overlay reproduced old expectations; 0.50 label hashes updated; matching build tests PASS"
+  },
+  "package": {
+    "path": "apps/console_os/build-tab5/sd-card/GAMES/TIDE_MAZE.P4G",
+    "bytes": 153688,
+    "sha256": "c1fbbd9594a967bea939cfab570c34ee60eaa6761c781de2999c1fcc3e09cc02",
+    "native_parser": "valid",
+    "native_elf_validator": "valid",
+    "transfer_header_and_digest": "PASS",
+    "embedded_launcher_icon": "exact match to assets/launcher.p4i",
+    "stack_frame_limit_bytes": 2048
+  },
+  "tab5_os": {
+    "command": "make console-os-tab5-idf",
+    "result": "tab5-build-candidate-verified",
+    "version": "0.50",
+    "content_bundle_verified": true,
+    "native_cartridges": 18,
+    "image": {
+      "path": "apps/console_os/build-tab5/p4_console_os.bin",
+      "bytes": 3938352,
+      "sha256": "41d35a3322710263ff521fcc244ca6e33693b294348e5cb2e8b78d28be6051e4"
+    },
+    "update": {
+      "path": "apps/console_os/build-tab5/P4UPDATE.P4U",
+      "bytes": 3938608,
+      "sha256": "07ad18839911bc5fee728a77b593d3e98c5c5002d6e20d2e5099c18378b0e6d7"
+    },
+    "installed": false,
+    "flash_authorized": false,
+    "hardware_verified": false
+  },
+  "incidental_build_fix": "Converted one literal backslash-n into a newline in components/console_startup/src/flight.c, retaining the concurrently edited startup animation.",
+  "hardware_pending": [
+    "Guarded exact-unit installation of the motion-aware OS",
+    "Physical six-axis orientation/calibration, latency and comfortable sensitivity",
+    "Shared I2C sampler cadence and touch coexistence",
+    "Native launcher icon/title refresh",
+    "Tablet render/frame deadlines and speaker output",
+    "Two-console Host/Join match over a supported OS link, complete voyage, Back and peer loss"
+  ],
+  "notes": [
+    "No SDK or dependency versions changed.",
+    "No firmware or cartridge was installed on a device.",
+    "The new optional motion bit still requires a validator that knows it; older firmware rejects this cartridge.",
+    "Client water is cosmetic reconstruction; host water alone affects authoritative physics."
+  ],
+  "art_regeneration": "Title RGB565 include and indexed launcher icon reproduce byte-for-byte with the committed converters."
+}

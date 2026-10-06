@@ -88,14 +88,14 @@ per Doom tic and must never see USB handles or raw HID bytes.
 
 D0 is implemented as a silent, headless native build. The adapter uses a 320×200 framebuffer, renders a finite number of frames, prints a diagnostic framebuffer checksum, and exits. It does not contain display, audio, input, USB, SD, or CrowPanel pin code.
 
-The vendored engine is upstream commit `dcb7a8dbc7a16ce3dda29382ac9aae9d77d21284`, root tree `413539bdaa1521af167d9b34e9db0cd193367624`. `make doom-provenance` verifies the locked manifest hash, every vendored file against its upstream Git blob ID, and the presence of the GPL license/readmes. To reproduce the import from a clean local checkout, or by fetching the locked repository when no checkout is supplied:
+The vendored engine is upstream commit `dcb7a8dbc7a16ce3dda29382ac9aae9d77d21284`, root tree `413539bdaa1521af167d9b34e9db0cd193367624`. `make doom-provenance` verifies the locked upstream manifest and the GPL license/readmes. The existing Console OS adaptations are recorded separately in `third_party/doomgeneric-p4.patch`, hash-bound by `third_party/doomgeneric-p4.json`. Verification reverses that patch in a temporary copy and checks every resulting file against its original upstream Git blob ID. This preserves the upstream identity while rejecting unreviewed edits, missing files, extra files and symlinks. The patch covers OS-owned multiplayer tic delivery, return-to-launcher notification and normalized menu confirmation. The headless host build links the existing neutral P4MP stub; its rendering smoke is single-player only. To reproduce the import from a clean local checkout, or by fetching the locked repository when no checkout is supplied:
 
 ```sh
 make doom-vendor DOOMGENERIC_SOURCE=/absolute/path/to/doomgeneric
 make doom-vendor
 ```
 
-The vendor command is deliberately non-destructive: it refuses to replace a divergent vendor tree or manifest.
+The vendor command applies the pinned P4 patch to its pristine staging copy, then compares it with the current tree. It refuses to replace a divergent vendor tree or manifest. Run `python3 scripts/tests/test-doom-source-tree.py` for patch/provenance regression tests.
 
 Build and run the D0 proof with:
 

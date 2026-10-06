@@ -2,10 +2,16 @@
 
 cmake_minimum_required(VERSION 3.16)
 
-set(PROJECT_VER "0.5.12")
+set(PROJECT_VER "0.55")
 
 if(NOT DEFINED P4_BOARD_PROFILE)
     set(P4_BOARD_PROFILE "m5stack-tab5")
+endif()
+if(NOT DEFINED P4_TAB5_BLE_MULTIPLAYER_BUILD)
+    set(P4_TAB5_BLE_MULTIPLAYER_BUILD ON)
+endif()
+if(NOT DEFINED P4_TAB5_USB_HOST_BUILD)
+    set(P4_TAB5_USB_HOST_BUILD ON)
 endif()
 if(NOT DEFINED P4_WAVESHARE_CONTROLLER_FIRST_BUILD)
     set(P4_WAVESHARE_CONTROLLER_FIRST_BUILD OFF)
@@ -31,6 +37,7 @@ if(NOT P4_BOARD_PROFILE STREQUAL "m5stack-tab5" AND
 endif()
 
 set(EXTRA_COMPONENT_DIRS
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/console_startup"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/console_shell"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_ansi"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_bbs"
@@ -45,7 +52,6 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_os_update"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_save_seal"
     "${CMAKE_CURRENT_LIST_DIR}/components/platform_readonly_blob"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_content_catalog"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_desktop"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/gamepad_core"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api"
@@ -56,10 +62,7 @@ set(EXTRA_COMPONENT_DIRS
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_multiplayer_registry"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_usb_content_transfer"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_os_update_package"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_script_audio"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_script_renderer"
-    "${CMAKE_CURRENT_LIST_DIR}/../../game-platform/firmware/components/p4_game_runtime_core"
-    "${CMAKE_CURRENT_LIST_DIR}/../../game-platform/firmware/components/p4_lua_runtime"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_frame_scheduler"
 )
 
 if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
@@ -77,7 +80,12 @@ if(P4_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
     )
 elseif(P4_BOARD_PROFILE STREQUAL "m5stack-tab5")
     list(APPEND EXTRA_COMPONENT_DIRS
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad_xusb"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/board_deps_tab5"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_gamepad_input"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_gamepad_usb"
+        "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_usb_host"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_tab5"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/tab5/platform_audio"
         "${CMAKE_CURRENT_LIST_DIR}/../../components/doom_touch_input"
@@ -88,6 +96,14 @@ elseif(P4_BOARD_PROFILE STREQUAL "m5stack-tab5")
         "${CMAKE_CURRENT_LIST_DIR}/../doom/components/doom_audio"
         "${CMAKE_CURRENT_LIST_DIR}/../doom_audio_probe/components/doom_engine_audio"
     )
+    if(P4_TAB5_BLE_MULTIPLAYER_BUILD)
+        list(APPEND EXTRA_COMPONENT_DIRS
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_multiplayer_wifi"
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_ble_host"
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_radio_hosted"
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_multiplayer_ble"
+            "${CMAKE_CURRENT_LIST_DIR}/../../components/platform_dice_ble")
+    endif()
 elseif(P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
     list(APPEND EXTRA_COMPONENT_DIRS
@@ -162,6 +178,8 @@ elseif(P4_BOARD_PROFILE STREQUAL
 endif()
 idf_build_set_property(MINIMAL_BUILD ON)
 idf_build_set_property(P4_BOARD_PROFILE "${P4_BOARD_PROFILE}")
+idf_build_set_property(P4_TAB5_BLE_MULTIPLAYER_BUILD "${P4_TAB5_BLE_MULTIPLAYER_BUILD}")
+idf_build_set_property(P4_TAB5_USB_HOST_BUILD "${P4_TAB5_USB_HOST_BUILD}")
 idf_build_set_property(P4_WAVESHARE_CONTROLLER_FIRST_BUILD
     "${P4_WAVESHARE_CONTROLLER_FIRST_BUILD}")
 idf_build_set_property(P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD
@@ -173,6 +191,14 @@ idf_build_set_property(P4_WAVESHARE_BLE_GAMEPAD_BUILD
 idf_build_set_property(P4_CONSOLE_RUNTIME_STATS_BUILD
     "${P4_CONSOLE_RUNTIME_STATS_BUILD}")
 project(p4_console_os)
+
+if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5" AND
+   ((P4_TAB5_USB_HOST_BUILD AND NOT CONFIG_P4_TAB5_USB_HOST) OR
+    (NOT P4_TAB5_USB_HOST_BUILD AND CONFIG_P4_TAB5_USB_HOST)))
+    message(FATAL_ERROR
+        "Tab5 USB host component selection and sdkconfig differ; "
+        "rebuild with P4_TAB5_USB_HOST=0 or 1 through scripts/build.sh")
+endif()
 
 if(P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
@@ -212,6 +238,28 @@ if(P4_BOARD_PROFILE STREQUAL
             "and the committed bounded CCCD table; regenerate sdkconfig "
             "with scripts/build-waveshare-console-os.sh")
     endif()
+endif()
+if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5" AND P4_TAB5_BLE_MULTIPLAYER_BUILD)
+    if(NOT CONFIG_P4_TAB5_BLE_MULTIPLAYER OR
+       NOT CONFIG_ESP_HOSTED_SDIO_HOST_INTERFACE OR
+       NOT CONFIG_ESP_HOSTED_SDIO_RESET_ACTIVE_HIGH OR
+       NOT CONFIG_ESP_HOSTED_SDIO_GPIO_RESET_SLAVE EQUAL 15 OR
+       NOT CONFIG_ESP_HOSTED_SDIO_CLOCK_FREQ_KHZ EQUAL 10000 OR
+       NOT CONFIG_ESP_HOSTED_SDIO_PIN_CLK EQUAL 12 OR
+       NOT CONFIG_ESP_HOSTED_SDIO_PIN_CMD EQUAL 13 OR
+       NOT CONFIG_ESP_HOSTED_SDIO_PIN_D0 EQUAL 11 OR
+       NOT CONFIG_ESP_HOSTED_SDIO_PIN_D1 EQUAL 10 OR
+       NOT CONFIG_ESP_HOSTED_SDIO_PIN_D2 EQUAL 9 OR
+       NOT CONFIG_ESP_HOSTED_SDIO_PIN_D3 EQUAL 8 OR
+       NOT CONFIG_BT_NIMBLE_ENABLED OR
+       NOT CONFIG_BT_CONTROLLER_DISABLED OR
+       NOT CONFIG_ESP_HOSTED_ENABLE_BT_NIMBLE OR
+       NOT CONFIG_ESP_HOSTED_NIMBLE_HCI_VHCI OR
+       NOT CONFIG_BT_NIMBLE_NVS_PERSIST)
+        message(FATAL_ERROR "Tab5 BLE requires its exact C6 SDIO/NimBLE overlay; refusing fallback pins")
+    endif()
+elseif(P4_BOARD_PROFILE STREQUAL "m5stack-tab5" AND CONFIG_P4_TAB5_BLE_MULTIPLAYER)
+    message(FATAL_ERROR "Tab5 BLE component selection and sdkconfig differ")
 endif()
 idf_build_get_property(P4_IDF_PYTHON PYTHON)
 get_filename_component(P4_REPOSITORY_ROOT
@@ -359,11 +407,10 @@ endif()
 # This keeps the controller-first H2 image from losing Byte Buddy's passive
 # signal capability while preserving explicit OS-owned startup ordering. The
 # managed component contents remain untouched and authoritative.
-if(P4_BOARD_PROFILE STREQUAL
-       "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
-   (P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD OR
-    P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR
-    P4_WAVESHARE_BLE_GAMEPAD_BUILD))
+if((P4_BOARD_PROFILE STREQUAL "m5stack-tab5" AND P4_TAB5_BLE_MULTIPLAYER_BUILD) OR
+   (P4_BOARD_PROFILE STREQUAL "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
+    (P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD OR
+     P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR P4_WAVESHARE_BLE_GAMEPAD_BUILD)))
     idf_component_get_property(
         P4_HOSTED_COMPONENT_LIB espressif__esp_hosted COMPONENT_LIB)
     get_target_property(
@@ -394,10 +441,10 @@ endif()
 # internal DMA RAM even though 32 MiB of PSRAM is idle. Generate an exact-source
 # overlay that uses ESP-IDF's supported WithCaps API for those worker stacks;
 # the managed component and lockfile remain untouched.
-if(P4_BOARD_PROFILE STREQUAL
-       "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
-   (P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR
-    P4_WAVESHARE_BLE_GAMEPAD_BUILD))
+if((P4_BOARD_PROFILE STREQUAL "m5stack-tab5" AND P4_TAB5_BLE_MULTIPLAYER_BUILD) OR
+   (P4_BOARD_PROFILE STREQUAL "waveshare-esp32-p4-wifi6-touch-lcd-4.3" AND
+    (P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD OR
+     P4_WAVESHARE_BLE_MULTIPLAYER_BUILD OR P4_WAVESHARE_BLE_GAMEPAD_BUILD)))
     set(P4_HOSTED_OS_WRAPPER_UPSTREAM
         "${CMAKE_CURRENT_LIST_DIR}/managed_components/espressif__esp_hosted/host/port/src/os_wrapper.c")
     set(P4_HOSTED_OS_WRAPPER_GENERATOR
@@ -490,7 +537,7 @@ if(NOT P4_LOCAL_DOOM_WAD_BYTES EQUAL 4196020 OR
 endif()
 file(MAKE_DIRECTORY "${P4_GAME_STORAGE_SEED_DIR}")
 file(MAKE_DIRECTORY "${P4_GAME_STORAGE_SEED_DIR}/UPDATE")
-file(MAKE_DIRECTORY "${P4_GAME_STORAGE_SEED_DIR}/P4/GAMES")
+
 configure_file(
     "${CMAKE_CURRENT_LIST_DIR}/game-storage/README.TXT"
     "${P4_GAME_STORAGE_SEED_DIR}/README.TXT"
@@ -514,88 +561,30 @@ if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5")
         "${P4_GAME_STORAGE_SEED_DIR}/README.TXT" COPYONLY)
 endif()
 
-# Seed two open, source-included games for the sandboxed Lua runtime. They
-# remain additive to native P4G games and are loaded only from the SD bundle.
-set(P4_SCRIPT_CART_OUTPUTS)
-function(p4_add_script_cart_seed OUTPUT_NAME TEMPLATE_NAME)
-    set(P4_CART_OUTPUT
-        "${P4_GAME_STORAGE_SEED_DIR}/P4/GAMES/${OUTPUT_NAME}")
-    file(GLOB_RECURSE P4_CART_SOURCES CONFIGURE_DEPENDS
-        "${P4_REPOSITORY_ROOT}/game-platform/templates/${TEMPLATE_NAME}/*")
-    add_custom_command(
-        OUTPUT "${P4_CART_OUTPUT}"
-        COMMAND "${CMAKE_COMMAND}" -E rm -f "${P4_CART_OUTPUT}"
-        COMMAND
-            "${P4_IDF_PYTHON}"
-            "${P4_REPOSITORY_ROOT}/game-platform/scripts/p4cart.py"
-            pack
-            "${P4_REPOSITORY_ROOT}/game-platform/templates/${TEMPLATE_NAME}"
-            "${P4_CART_OUTPUT}"
-        DEPENDS
-            "${P4_REPOSITORY_ROOT}/game-platform/scripts/p4cart.py"
-            ${P4_CART_SOURCES}
-        VERBATIM
-    )
-    set(P4_SCRIPT_CART_OUTPUTS
-        ${P4_SCRIPT_CART_OUTPUTS} "${P4_CART_OUTPUT}" PARENT_SCOPE)
-endfunction()
-
-set(P4_SCRIPT_CART_REGISTRY
-    "${P4_REPOSITORY_ROOT}/scripts/p4cart_seed_registry.py")
-set(P4_SCRIPT_CART_METADATA
-    "${CMAKE_CURRENT_LIST_DIR}/app-metadata.json")
-file(GLOB P4_SCRIPT_CART_MANIFESTS CONFIGURE_DEPENDS
-    "${P4_REPOSITORY_ROOT}/game-platform/templates/*/p4.json")
-set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-    "${P4_SCRIPT_CART_REGISTRY}"
-    "${P4_SCRIPT_CART_METADATA}"
-    ${P4_SCRIPT_CART_MANIFESTS})
-set(P4_GENERATED_SCRIPT_CARTS_CMAKE
-    "${CMAKE_BINARY_DIR}/p4-script-carts.cmake")
-execute_process(
-    COMMAND
-        "${P4_IDF_PYTHON}"
-        "${P4_SCRIPT_CART_REGISTRY}"
-        --metadata "${P4_SCRIPT_CART_METADATA}"
-        --templates-root
-            "${P4_REPOSITORY_ROOT}/game-platform/templates"
-        --output-cmake "${P4_GENERATED_SCRIPT_CARTS_CMAKE}"
-    RESULT_VARIABLE P4_SCRIPT_CART_REGISTRY_RESULT
-    OUTPUT_VARIABLE P4_SCRIPT_CART_REGISTRY_REPORT
-    ERROR_VARIABLE P4_SCRIPT_CART_REGISTRY_ERROR
-)
-if(NOT P4_SCRIPT_CART_REGISTRY_RESULT EQUAL 0)
-    message(FATAL_ERROR
-        "P4 Cart seed validation failed: ${P4_SCRIPT_CART_REGISTRY_ERROR}")
-endif()
-message(STATUS "${P4_SCRIPT_CART_REGISTRY_REPORT}")
-include("${P4_GENERATED_SCRIPT_CARTS_CMAKE}")
-add_custom_target(p4_script_cart_seed ALL
-    DEPENDS ${P4_SCRIPT_CART_OUTPUTS})
-
+# Console OS seeds native P4G games only; source-cart templates are archival.
 string(REPLACE "-gcc" "-strip" P4_RISCV_STRIP "${CMAKE_C_COMPILER}")
 set(P4_PACKAGE_SCRIPT
     "${CMAKE_CURRENT_LIST_DIR}/../../scripts/build-game-package.py")
 set(P4_RESOURCE_SCRIPT
     "${CMAKE_CURRENT_LIST_DIR}/../../scripts/build-game-resource.py")
+# Header-only drawing helpers and converted artwork are compiled into each
+# cartridge. Track them so an incremental build cannot silently ship old art
+# or old raster code after a shared helper/atlas changes.
+file(GLOB_RECURSE P4_CARTRIDGE_SHARED_INPUTS CONFIGURE_DEPENDS
+    "${P4_REPOSITORY_ROOT}/components/p4_game_api/include/p4/*.h"
+    "${P4_REPOSITORY_ROOT}/components/p4_game_api/src/generated/*.inc")
 set(P4_CARTRIDGE_COMMON_SOURCES
+    ${P4_CARTRIDGE_SHARED_INPUTS}
     "${P4_PACKAGE_SCRIPT}"
-    "${CMAKE_CURRENT_LIST_DIR}/../../game-platform/runtime/cartridge_main.c"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/runtime/cartridge_main.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_cp437/include/p4/cp437.h"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_cp437/src/cp437.c"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/cartridge.h"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/game.h"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/audio_pack.h"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/feedback.h"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/visual.h"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/include/p4/draw.h"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/audio_pack.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/draw.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/feedback.c"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/generated/audio_pack.inc"
-    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/generated/feedback_atlas.inc"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/game_runtime.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/input.c"
+    "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/presentation_font.c"
     "${CMAKE_CURRENT_LIST_DIR}/../../components/p4_game_api/src/visual.c"
 )
 
@@ -605,7 +594,8 @@ function(p4_add_seed_game PACKAGE_NAME GAME_NAME RESOURCE_NAME RESOURCE_PAYLOAD)
     set(P4_PACKAGE_OUTPUT
         "${P4_GAME_STORAGE_SEED_DIR}/GAMES/${PACKAGE_NAME}")
     file(GLOB_RECURSE P4_GAME_SOURCES CONFIGURE_DEPENDS
-        "${P4_GAME_DIR}/*.c" "${P4_GAME_DIR}/*.h")
+        "${P4_GAME_DIR}/*.c" "${P4_GAME_DIR}/*.h"
+        "${P4_GAME_DIR}/*.inc" "${P4_GAME_DIR}/*.p4i")
     add_custom_command(
         OUTPUT "${P4_PACKAGE_OUTPUT}"
         COMMAND
@@ -711,14 +701,14 @@ if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5" OR
    P4_BOARD_PROFILE STREQUAL
        "waveshare-esp32-p4-wifi6-touch-lcd-4.3")
     add_custom_target(p4_sd_card_bundle ALL
-        DEPENDS p4_game_packages p4_script_cart_seed
+        DEPENDS p4_game_packages
         COMMENT "Preparing removable microSD game/update bundle"
     )
 else()
     fatfs_create_spiflash_image(
         game_data "${P4_GAME_STORAGE_SEED_DIR}" FLASH_IN_PROJECT)
     add_dependencies(
-        fatfs_game_data_bin p4_game_packages p4_script_cart_seed)
+        fatfs_game_data_bin p4_game_packages)
     add_custom_command(TARGET fatfs_game_data_bin POST_BUILD
         COMMAND
             "${P4_IDF_PYTHON}"
@@ -758,4 +748,31 @@ if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5" OR
             "${P4_GAME_STORAGE_SEED_DIR}/UPDATE/P4UPDATE.P4U"
         VERBATIM
     )
+endif()
+
+# Tab5 storage owns SDMMC slot 0; C6 cleanup must release only slot 1.
+if(P4_BOARD_PROFILE STREQUAL "m5stack-tab5" AND P4_TAB5_BLE_MULTIPLAYER_BUILD)
+    set(P4_SDIO_UPSTREAM "${CMAKE_CURRENT_LIST_DIR}/managed_components/espressif__esp_hosted/host/port/src/sdio_wrapper.c")
+    set(P4_SDIO_GENERATOR "${P4_REPOSITORY_ROOT}/scripts/generate-tab5-hosted-sdio-overlay.py")
+    set(P4_SDIO_GENERATED "${CMAKE_BINARY_DIR}/generated/esp-hosted-1.4.7/sdio_wrapper.c")
+    execute_process(COMMAND "${P4_IDF_PYTHON}" "${P4_SDIO_GENERATOR}" --input "${P4_SDIO_UPSTREAM}" --output "${P4_SDIO_GENERATED}" RESULT_VARIABLE P4_SDIO_RESULT)
+    if(NOT P4_SDIO_RESULT EQUAL 0)
+        message(FATAL_ERROR "Tab5 SDIO slot ownership overlay failed")
+    endif()
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${P4_SDIO_UPSTREAM}" "${P4_SDIO_GENERATOR}")
+    idf_component_get_property(P4_HOSTED_COMPONENT_LIB espressif__esp_hosted COMPONENT_LIB)
+    get_target_property(P4_SDIO_SOURCES ${P4_HOSTED_COMPONENT_LIB} SOURCES)
+    set(P4_SDIO_FILTERED)
+    set(P4_SDIO_MATCHES 0)
+    foreach(P4_SOURCE IN LISTS P4_SDIO_SOURCES)
+        if(P4_SOURCE STREQUAL P4_SDIO_UPSTREAM)
+            math(EXPR P4_SDIO_MATCHES "${P4_SDIO_MATCHES}+1")
+        else()
+            list(APPEND P4_SDIO_FILTERED "${P4_SOURCE}")
+        endif()
+    endforeach()
+    if(NOT P4_SDIO_MATCHES EQUAL 1)
+        message(FATAL_ERROR "Expected one locked Hosted SDIO wrapper")
+    endif()
+    set_property(TARGET ${P4_HOSTED_COMPONENT_LIB} PROPERTY SOURCES "${P4_SDIO_FILTERED};${P4_SDIO_GENERATED}")
 endif()

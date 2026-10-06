@@ -6,6 +6,8 @@
 #include <string.h>
 
 #include "esp_log.h"
+#include "esp_attr.h"
+#include "sdkconfig.h"
 #include "esp_timer.h"
 #include "freertos/event_groups.h"
 #include "freertos/queue.h"
@@ -93,10 +95,7 @@ typedef struct {
     bool pending_finalize;
     bool uninstall_abort_requested;
     esp_err_t uninstall_result;
-    gamepad_hid_layout_t active_layout;
-    uint8_t active_descriptor[GAMEPAD_HID_MAX_DESCRIPTOR_BYTES];
     size_t active_descriptor_size;
-    gamepad_report_slot_t report_slots[GAMEPAD_REPORT_SLOT_COUNT];
     platform_gamepad_usb_stats_t stats;
     volatile uint32_t callback_users;
 } gamepad_service_t;
@@ -105,6 +104,20 @@ static const char *const TAG = "platform_gamepad";
 static portMUX_TYPE s_service_lock = portMUX_INITIALIZER_UNLOCKED;
 static portMUX_TYPE s_snapshot_lock = portMUX_INITIALIZER_UNLOCKED;
 static gamepad_service_t s_service;
+/* These are task-context CPU copies, never USB DMA buffers or ISR state.
+ * Keep Tab5's parser/report storage in PSRAM so the combined native UI + USB
+ * image retains its full internal/DMA reserve before app_main. */
+#if CONFIG_P4_BOARD_M5STACK_TAB5 && CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
+#define GAMEPAD_REPORT_BSS EXT_RAM_BSS_ATTR
+#else
+#define GAMEPAD_REPORT_BSS
+#endif
+static GAMEPAD_REPORT_BSS struct {
+    gamepad_hid_layout_t active_layout;
+    uint8_t active_descriptor[GAMEPAD_HID_MAX_DESCRIPTOR_BYTES];
+    gamepad_report_slot_t report_slots[GAMEPAD_REPORT_SLOT_COUNT];
+} s_report_buffers;
+
 static platform_gamepad_model_t s_model;
 static platform_usb_input_model_t s_aux_input_model;
 
@@ -269,10 +282,10 @@ static int claim_report_slot(hid_host_device_handle_t handle, uint32_t session)
     int selected = -1;
     taskENTER_CRITICAL(&s_service_lock);
     for (size_t index = 0; index < GAMEPAD_REPORT_SLOT_COUNT; ++index) {
-        if (!s_service.report_slots[index].in_use) {
-            s_service.report_slots[index].in_use = true;
-            s_service.report_slots[index].handle = handle;
-            s_service.report_slots[index].session = session;
+        if (!s_report_buffers.report_slots[index].in_use) {
+            s_report_buffers.report_slots[index].in_use = true;
+            s_report_buffers.report_slots[index].handle = handle;
+            s_report_buffers.report_slots[index].session = session;
             selected = (int)index;
             break;
         }
@@ -287,8 +300,8 @@ static void release_report_slot(uint8_t slot_index)
         return;
     }
     taskENTER_CRITICAL(&s_service_lock);
-    memset(&s_service.report_slots[slot_index], 0,
-           sizeof(s_service.report_slots[slot_index]));
+    memset(&s_report_buffers.report_slots[slot_index], 0,
+           sizeof(s_report_buffers.report_slots[slot_index]));
     taskEXIT_CRITICAL(&s_service_lock);
 }
 
@@ -322,7 +335,7 @@ static void hid_interface_callback(hid_host_device_handle_t handle,
             return;
         }
 
-        gamepad_report_slot_t *slot = &s_service.report_slots[slot_number];
+        gamepad_report_slot_t *slot = &s_report_buffers.report_slots[slot_number];
         size_t copied = 0;
         const esp_err_t result = hid_host_device_get_raw_input_report_data(
             handle, slot->data, sizeof(slot->data), &copied);
@@ -510,9 +523,9 @@ static bool manager_finish_interface_close(hid_host_device_handle_t handle,
 static void manager_finalize_disconnect(uint32_t session,
                                         gamepad_close_reason_t reason)
 {
-    memset(&s_service.active_layout, 0, sizeof(s_service.active_layout));
-    memset(s_service.active_descriptor, 0,
-           sizeof(s_service.active_descriptor));
+    memset(&s_report_buffers.active_layout, 0, sizeof(s_report_buffers.active_layout));
+    memset(s_report_buffers.active_descriptor, 0,
+           sizeof(s_report_buffers.active_descriptor));
     s_service.active_descriptor_size = 0;
     taskENTER_CRITICAL(&s_service_lock);
     if (s_service.callback_closed_session == session) {
@@ -594,9 +607,9 @@ static bool manager_reject_open_interface(hid_host_device_handle_t handle,
         s_service.callback_closed_handle = NULL;
     }
     taskEXIT_CRITICAL(&s_service_lock);
-    memset(&s_service.active_layout, 0, sizeof(s_service.active_layout));
-    memset(s_service.active_descriptor, 0,
-           sizeof(s_service.active_descriptor));
+    memset(&s_report_buffers.active_layout, 0, sizeof(s_report_buffers.active_layout));
+    memset(s_report_buffers.active_descriptor, 0,
+           sizeof(s_report_buffers.active_descriptor));
     s_service.active_descriptor_size = 0;
     return true;
 }
@@ -641,16 +654,16 @@ static void manager_handle_connected(hid_host_device_handle_t handle)
     const uint8_t *descriptor =
         hid_host_get_report_descriptor(handle, &descriptor_size);
     if (descriptor == NULL || descriptor_size == 0U ||
-        descriptor_size > sizeof(s_service.active_descriptor)) {
+        descriptor_size > sizeof(s_report_buffers.active_descriptor)) {
         (void)manager_reject_open_interface(handle, "descriptor-size");
         return;
     }
-    memcpy(s_service.active_descriptor, descriptor, descriptor_size);
+    memcpy(s_report_buffers.active_descriptor, descriptor, descriptor_size);
     s_service.active_descriptor_size = descriptor_size;
 
     const gamepad_status_t parse_status = gamepad_hid_parse_descriptor(
-        s_service.active_descriptor, s_service.active_descriptor_size,
-        &s_service.active_layout);
+        s_report_buffers.active_descriptor, s_service.active_descriptor_size,
+        &s_report_buffers.active_layout);
     if (parse_status != GAMEPAD_OK) {
         (void)manager_reject_open_interface(
             handle, gamepad_status_name(parse_status));
@@ -669,7 +682,7 @@ static void manager_handle_connected(hid_host_device_handle_t handle)
         .interface_number = parameters.iface_num,
         .transport = PLATFORM_GAMEPAD_TRANSPORT_USB_HID,
     };
-    if (mbedtls_sha256(s_service.active_descriptor,
+    if (mbedtls_sha256(s_report_buffers.active_descriptor,
                        s_service.active_descriptor_size,
                        identity.descriptor_sha256, 0) != 0) {
         (void)manager_reject_open_interface(handle, "descriptor-hash");
@@ -679,7 +692,7 @@ static void manager_handle_connected(hid_host_device_handle_t handle)
     gamepad_hid_profile_t profile = GAMEPAD_HID_PROFILE_NONE;
     const gamepad_status_t profile_status = gamepad_hid_apply_known_profile(
         identity.vendor_id, identity.product_id, identity.descriptor_sha256,
-        &s_service.active_layout, &profile);
+        &s_report_buffers.active_layout, &profile);
     if (profile_status != GAMEPAD_OK) {
         (void)manager_reject_open_interface(
             handle, gamepad_status_name(profile_status));
@@ -687,7 +700,7 @@ static void manager_handle_connected(hid_host_device_handle_t handle)
     }
 
     const uint32_t capabilities =
-        gamepad_hid_capabilities(&s_service.active_layout);
+        gamepad_hid_capabilities(&s_report_buffers.active_layout);
     uint32_t session = 0;
     taskENTER_CRITICAL(&s_snapshot_lock);
     const gamepad_status_t connect_status = platform_gamepad_model_connect(
@@ -730,7 +743,7 @@ static void manager_handle_report(uint8_t slot_index)
         increment_stat(&s_service.stats.callback_faults);
         return;
     }
-    gamepad_report_slot_t *slot = &s_service.report_slots[slot_index];
+    gamepad_report_slot_t *slot = &s_report_buffers.report_slots[slot_index];
     if (!slot->in_use ||
         !get_active_session(slot->handle, NULL)) {
         release_report_slot(slot_index);
@@ -746,7 +759,7 @@ static void manager_handle_report(uint8_t slot_index)
         current.state.connected != 0U) {
         gamepad_state_t decoded = current.state;
         decode_status = gamepad_hid_decode_report(
-            &s_service.active_layout, slot->data, slot->length, now_us(),
+            &s_report_buffers.active_layout, slot->data, slot->length, now_us(),
             &decoded);
         if (decode_status == GAMEPAD_OK) {
             taskENTER_CRITICAL(&s_snapshot_lock);
@@ -970,6 +983,7 @@ esp_err_t platform_gamepad_usb_start(void)
     memset(&s_service, 0, sizeof(s_service));
     s_service.state = GAMEPAD_SERVICE_STARTING;
     taskEXIT_CRITICAL(&s_service_lock);
+    memset(&s_report_buffers, 0, sizeof(s_report_buffers));
 
     taskENTER_CRITICAL(&s_snapshot_lock);
     platform_gamepad_model_init(&s_model);

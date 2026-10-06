@@ -6,6 +6,7 @@ parse a report map, retain a controller address, or manage a bond.
 
 ```text
 USB HID --------> platform_gamepad_usb --+
+Wired XUSB -----> platform_gamepad_xusb -+
                                           +--> platform_gamepad --> games
 BLE HID/HOGP ---> platform_gamepad_ble ---+                    `--> Doom
                          |
@@ -13,13 +14,47 @@ BLE HID/HOGP ---> platform_gamepad_ble ---+                    `--> Doom
                                       `-------> BLE multiplayer
 ```
 
-The broker gives a connected wired USB controller deterministic priority. If
+The broker chooses connected USB HID, then wired XUSB, then BLE. If
 USB disconnects, an already-connected Bluetooth controller becomes active on
 the next complete snapshot. Every transport publishes the same buttons,
 D-pad, sticks, triggers, sequence, timestamp, capabilities, and descriptor
 SHA-256. A persistent console-wide mapping is then applied before Doom,
-native cartridges, or script games see the snapshot. Disconnect and fatal
+or native cartridges see the snapshot. Disconnect and fatal
 decode paths publish neutral input immediately.
+
+## Tab5 USB and Xbox-compatible controllers
+
+Tab5's default USB-A controller candidate uses shared USB HID and wired XUSB services.
+It is host/build-tested; individual controller compatibility still needs a
+named hardware run. USB-C remains the independent programming/content cable.
+Tab5 Bluetooth controllers are not enabled.
+
+Multi-function HID interfaces retain input lengths and bit offsets across
+application collections. Valid secondary reports leave game controls unchanged;
+unknown IDs and incorrect lengths remain errors. The synthetic descriptor,
+snapshot and sanitizer checks are recorded in
+[`tab5-usb-gamepad-20261004-hid-collections-build.json`](../hardware/evidence/tab5-usb-gamepad-20261004-hid-collections-build.json).
+
+"Xbox-compatible" does not identify the USB protocol. The current candidate
+accepts supported HID gamepad descriptors and the wired Xbox 360-format XUSB
+interface (`ff/5d/01`) used by XInput-mode pads. The OS selects the interface;
+games use the same normalized controls. The new
+[XUSB service](../components/platform_gamepad_xusb/README.md) is host/build-tested,
+with model-specific acceptance pending. Xbox One/Series GIP (`ff/47/d0`),
+wireless receivers and device-specific initialization remain unimplemented.
+A passing protocol test or firmware build does not prove the owner's pad works.
+
+Ask for the brand/model and documented operating mode when available. If a
+controller has selectable modes, capture the USB descriptors in the chosen
+mode before assigning a support tier. Working through DirectInput on Windows
+does not itself prove native USB HID: Microsoft's XUSB driver can export an
+HID interface for legacy applications. See Microsoft's
+[DirectInput and XUSB Devices](https://learn.microsoft.com/en-us/windows/win32/xinput/directinput-and-xusb-devices).
+
+The requested physical acceptance target is a **third-party Xbox-compatible
+controller**. The owner has confirmed it is unavailable right now. The exact
+model, USB mode, VID/PID, descriptor and Tab5 unit remain unknown; do not infer
+them from that description. Resume the named controller run when it is available.
 
 ## Bluetooth support
 
@@ -36,7 +71,7 @@ target. Microsoft distinguishes Bluetooth-capable controllers from older
 Xbox controllers and proprietary Xbox Wireless/USB interfaces in its
 [hardware interface guide](https://learn.microsoft.com/en-us/xbox/gdk/docs/features/common/input/hardware/input-hardware-interfaces?view=gdk-2604).
 This implementation covers a controller only when it exposes BLE HID/HOGP.
-It does not implement Xbox 360 wireless, the Xbox Wireless Adapter, or wired
+The Waveshare BLE service does not implement Xbox 360 wireless, the Xbox Wireless Adapter, or wired
 XInput/GIP; Microsoft's [DirectInput/XUSB mapping notes](https://learn.microsoft.com/en-us/windows/win32/xinput/directinput-and-xusb-devices)
 explain why those vendor-class paths must not be mislabeled generic HID.
 

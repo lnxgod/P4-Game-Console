@@ -474,9 +474,111 @@ static bool test_network_host_authority_and_peer_loss(void)
     return true;
 }
 
+static bool touch_step(p4_game_instance_t *instance, bool down,
+                        uint16_t x, uint16_t y, uint32_t buttons)
+{
+    const p4_game_input_t input = {
+        .pressed = buttons, .held = buttons, .touch_valid = true,
+        .touch_count = down ? 1U : 0U, .touches = {{x, y}},
+    };
+    return p4_game_instance_update(instance, &input, 16U) == P4_GAME_CONTINUE;
+}
+
+static bool test_direct_touch_drag_and_capture(void)
+{
+    audio_mock_t audio = {0};
+    const p4_game_services_t services = local_services(&audio);
+    checkers_state_t state;
+    p4_game_instance_t instance = {0};
+    CHECK(p4_game_instance_start(&instance, &p4_checkers_game, &services,
+                                 &state, sizeof(state)));
+    const uint32_t synthetic = P4_BUTTON_RIGHT | P4_BUTTON_A |
+        P4_BUTTON_B | P4_BUTTON_BACK | P4_BUTTON_START;
+    CHECK(touch_step(&instance, true, 36U, 78U, synthetic));
+    CHECK(state.selected == 17U && state.cursor == 17U);
+    CHECK(touch_step(&instance, true, 16U, 98U, synthetic));
+    CHECK(state.touch_dragging && state.board[17] == CHECKERS_RED_MAN);
+    CHECK(touch_step(&instance, false, 0U, 0U, synthetic));
+    CHECK(state.board[17] == CHECKERS_EMPTY && state.board[24] == CHECKERS_RED_MAN);
+    CHECK(state.revision == 2U && state.current_player == CHECKERS_PLAYER_WHITE);
+    CHECK(!state.touch_dragging);
+    CHECK(touch_step(&instance, false, 0U, 0U, P4_BUTTON_A));
+    CHECK(state.selected == state.cursor); /* Physical controller resumes. */
+
+    checkers_reset_board(&state, 10U);
+    CHECK(touch_step(&instance, true, 36U, 78U, synthetic));
+    CHECK(touch_step(&instance, true, 200U, 155U, synthetic));
+    CHECK(touch_step(&instance, false, 0U, 0U, synthetic));
+    CHECK(state.revision == 10U && state.selected == 17U);
+    CHECK(state.board[17] == CHECKERS_RED_MAN); /* Outside drop snaps back. */
+    CHECK(touch_step(&instance, true, 36U, 78U, synthetic));
+    CHECK(touch_step(&instance, false, 0U, 0U, synthetic));
+    CHECK(state.selected == CHECKERS_NO_SQUARE); /* Tap selected piece cancels. */
+
+    empty_position(&state, CHECKERS_PLAYER_RED);
+    state.board[17] = CHECKERS_RED_MAN;
+    state.board[26] = CHECKERS_WHITE_MAN;
+    state.board[44] = CHECKERS_WHITE_MAN;
+    state.board[62] = CHECKERS_WHITE_MAN;
+    state.red_count = 1U; state.white_count = 3U;
+    CHECK(touch_step(&instance, true, 36U, 78U, synthetic));
+    CHECK(touch_step(&instance, true, 16U, 98U, synthetic));
+    CHECK(touch_step(&instance, false, 0U, 0U, synthetic));
+    CHECK(state.revision == 1U); /* Compulsory capture rejects a simple step. */
+    CHECK(touch_step(&instance, true, 36U, 78U, synthetic));
+    CHECK(touch_step(&instance, true, 76U, 118U, synthetic));
+    CHECK(touch_step(&instance, false, 0U, 0U, synthetic));
+    CHECK(state.forced_piece == 35U && state.selected == 35U);
+    CHECK(state.white_count == 2U && state.current_player == CHECKERS_PLAYER_RED);
+    CHECK(touch_step(&instance, true, 76U, 118U, synthetic));
+    CHECK(touch_step(&instance, false, 0U, 0U, synthetic));
+    CHECK(state.selected == 35U); /* A required continued jump cannot cancel. */
+    CHECK(touch_step(&instance, true, 76U, 118U, synthetic));
+    CHECK(touch_step(&instance, true, 116U, 158U, synthetic));
+    CHECK(touch_step(&instance, false, 0U, 0U, synthetic));
+    CHECK(state.board[53] == CHECKERS_RED_MAN && state.white_count == 1U);
+    CHECK(state.forced_piece == CHECKERS_NO_SQUARE);
+    CHECK(state.current_player == CHECKERS_PLAYER_WHITE);
+    p4_game_instance_stop(&instance);
+    return true;
+}
+
+static bool test_network_flipped_drag(void)
+{
+    test_link_t link; link_init(&link);
+    audio_mock_t host_audio = {0}, client_audio = {0};
+    const p4_game_services_t hs = network_services(&host_audio, &link.endpoint[0]);
+    const p4_game_services_t cs = network_services(&client_audio, &link.endpoint[1]);
+    checkers_state_t h, c; p4_game_instance_t host = {0}, client = {0};
+    CHECK(p4_game_instance_start(&host, &p4_checkers_game, &hs, &h, sizeof(h)));
+    CHECK(p4_game_instance_start(&client, &p4_checkers_game, &cs, &c, sizeof(c)));
+    CHECK(touch_step(&host, false, 0U, 0U, 0U));
+    CHECK(touch_step(&client, false, 0U, 0U, 0U));
+    CHECK(touch_step(&host, true, 36U, 78U, P4_BUTTON_A));
+    CHECK(touch_step(&host, true, 16U, 98U, P4_BUTTON_A));
+    CHECK(touch_step(&host, false, 0U, 0U, P4_BUTTON_A));
+    CHECK(touch_step(&host, false, 0U, 0U, 0U)); /* Publish the move snapshot. */
+    CHECK(touch_step(&client, false, 0U, 0U, 0U));
+    CHECK(c.current_player == CHECKERS_PLAYER_WHITE);
+    CHECK(touch_step(&client, true, 156U, 78U, P4_BUTTON_LEFT));
+    CHECK(c.selected == 40U); /* White sees the board rotated 180 degrees. */
+    CHECK(touch_step(&client, true, 136U, 98U, P4_BUTTON_A));
+    CHECK(touch_step(&client, false, 0U, 0U, P4_BUTTON_A));
+    CHECK(c.network_request_pending);
+    CHECK(touch_step(&host, false, 0U, 0U, 0U));
+    CHECK(touch_step(&client, false, 0U, 0U, 0U));
+    CHECK(h.board[33] == CHECKERS_WHITE_MAN && h.board[40] == CHECKERS_EMPTY);
+    CHECK(memcmp(h.board, c.board, sizeof(h.board)) == 0);
+    CHECK(h.revision == 3U && c.revision == h.revision);
+    p4_game_instance_stop(&host); p4_game_instance_stop(&client);
+    return true;
+}
+
 int main(void)
 {
-    if (!test_initial_position_and_simple_move() ||
+    if (!test_direct_touch_drag_and_capture() ||
+        !test_network_flipped_drag() ||
+        !test_initial_position_and_simple_move() ||
         !test_compulsory_capture_and_multi_jump() ||
         !test_crowning_king_and_game_endings() ||
         !test_descriptor_lifecycle_controller_touch_and_render() ||

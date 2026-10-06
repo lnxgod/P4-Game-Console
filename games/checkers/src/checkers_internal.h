@@ -63,6 +63,14 @@ typedef struct {
     bool network_error;
     bool network_snapshot_dirty;
     bool network_request_pending;
+    uint32_t touch_revision;
+    uint16_t touch_start_x;
+    uint16_t touch_start_y;
+    uint16_t touch_x;
+    uint16_t touch_y;
+    uint8_t touch_origin;
+    bool touch_dragging;
+    bool touch_cancel_selection;
     bool touch_was_down;
     bool peer_lost_fallback;
 } checkers_state_t;

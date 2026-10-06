@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "mode": "built-in image_gen generation",
+  "source": "presentation_imagegen_v2.png",
+  "sha256": "b855bb532df6eafa54bf956f82568320641435419be2237cc70ace139779bd4f",
+  "prompt": "Use case: stylized-concept. Asset type: original high-resolution texture and dice sprite atlas for a polished digital Yahtzee game. Make one exact 3-column by 3-row atlas on a genuinely transparent background. Row 1: three identical ivory resin dice seen perfectly straight overhead with ONE, TWO, and THREE black inset pips respectively. Row 2: identical dice with FOUR, FIVE, and SIX pips respectively. Pip layouts must be conventional and exactly counted. Dice perfectly square with rounded bevelled edges and subtle warm ivory material; no visible side face, no perspective tilt. Each die fills 75 percent of its square cell and is centered, evenly sized, with clear transparent gutters. Row 3: square seamless rich deep emerald green felt fabric material tile; square warm pale ivory paper material tile; square dark walnut wood material tile. Material tiles are flat edge-to-edge squares within centered 75-percent cell footprint. Restrained top-left studio highlights, crisp elegant production-ready game assets designed to downsample cleanly to 110 pixel dice. No text, no logos, no outlines around atlas cells, no other dice or objects, no scenery.",
+  "license": "Original AI-generated artwork for this project, distributed under the project MIT license. No third-party game assets.",
+  "conversion": "tools/convert_presentation.py; source alpha >=160, nearest-neighbor crops, explicit 0xf81f transparency; opaque material interiors; mirrored material row periods are expanded offline to avoid per-frame reconstruction",
+  "groups": [
+    {
+      "name": "yahtzee_dice_hd",
+      "size": 112,
+      "rects": [
+        [
+          54,
+          54,
+          399,
+          389
+        ],
+        [
+          457,
+          54,
+          799,
+          389
+        ],
+        [
+          859,
+          54,
+          1201,
+          389
+        ],
+        [
+          54,
+          447,
+          399,
+          779
+        ],
+        [
+          455,
+          447,
+          799,
+          779
+        ],
+        [
+          857,
+          447,
+          1201,
+          779
+        ]
+      ],
+      "opaque": 0
+    },
+    {
+      "name": "yahtzee_material",
+      "size": 96,
+      "rects": [
+        [
+          59,
+          828,
+          393,
+          1159
+        ],
+        [
+          462,
+          828,
+          795,
+          1159
+        ],
+        [
+          863,
+          828,
+          1194,
+          1159
+        ]
+      ],
+      "opaque": 3,
+      "mirror_rows": true
+    }
+  ]
+}

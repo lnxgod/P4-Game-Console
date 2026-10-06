@@ -13,7 +13,6 @@ import sys
 import tempfile
 
 from p4_multiplayer_manifest import expected_multiplayer_extension
-from p4cart_seed_registry import SeedCart, load_seed_carts
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -184,31 +183,6 @@ def verify_os_update(path: pathlib.Path, app_binary: pathlib.Path) -> dict:
     }
 
 
-def verify_p4cart(path: pathlib.Path, seed: SeedCart) -> dict:
-    inspect = subprocess.run(
-        [sys.executable,
-         str(ROOT / "game-platform/scripts/p4cart.py"),
-         "inspect", str(path)],
-        cwd=ROOT, check=False, text=True,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-    )
-    require(inspect.returncode == 0,
-            f"seed P4 Cart is invalid: {inspect.stderr.strip()}")
-    with tempfile.TemporaryDirectory(prefix="p4cart-seed-") as temporary:
-        rebuilt = pathlib.Path(temporary) / seed.output_name
-        packed = subprocess.run(
-            [sys.executable,
-             str(ROOT / "game-platform/scripts/p4cart.py"),
-             "pack", str(seed.template_directory),
-             str(rebuilt)],
-            cwd=ROOT, check=False, text=True,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        )
-        require(packed.returncode == 0 and rebuilt.read_bytes() == path.read_bytes(),
-                f"seed P4 Cart is not deterministic for {seed.template_name}: "
-                f"{packed.stderr.strip()}")
-    return {"file": str(seed.relative_path), "bytes": path.stat().st_size,
-            "sha256": sha256(path)}
 
 
 def main() -> None:
@@ -279,15 +253,13 @@ def main() -> None:
                 for name in expected_seed_packages),
             "seed package metadata differs")
     legacy = metadata.get("legacy_p4cart", {})
-    p4cart_seeds = load_seed_carts()
-    require(legacy.get("format") == "p4-cart-source-v1" and
-            legacy.get("game_manager_visible") is True and
+    require(legacy.get("retired") is True and
+            legacy.get("game_manager_visible") is False and
             legacy.get("runtime_implemented") is False and
-            legacy.get("seed_cart") == str(p4cart_seeds[0].relative_path) and
-            legacy.get("seed_carts") == [
-                str(seed.relative_path) for seed in p4cart_seeds
-            ],
-            "legacy P4 Cart metadata differs")
+            legacy.get("execution_enabled") is False and
+            legacy.get("seed_carts") == [] and
+            legacy.get("seed_cart") is None,
+            "native-only retirement metadata differs")
     shell = metadata.get("shell", {})
     require(shell.get("dynamic_executable_loading") is True and
             "game-manager" in shell.get("built_in_apps", []),
@@ -327,9 +299,11 @@ def main() -> None:
             project.get("max_rev") == "199",
             "project target or revision bounds differ")
     components = set(project.get("build_components", []))
+    require(not ({"p4_lua_runtime", "p4_script_renderer", "p4_script_audio", "lua"} & components),
+            "retired Lua runtime component linked")
     required_components = {
         "console_shell", "p4_game_api", "p4_game_package",
-        "p4_content_catalog", "p4_multiplayer",
+        "p4_frame_scheduler", "p4_multiplayer",
         "p4_multiplayer_registry", "p4_os_update_package",
         "platform_game_catalog",
         "platform_game_loader", "platform_game_storage",
@@ -393,15 +367,10 @@ def main() -> None:
     require(app_binary.stat().st_size <= OTA0_BYTES,
             "app does not fit the smaller OTA slot")
     os_update = verify_os_update(build / "P4UPDATE.P4U", app_binary)
-    p4carts = [
-        verify_p4cart(
-            build / "game-storage-seed" /
-                pathlib.Path(*seed.relative_path.parts),
-            seed,
-        )
-        for seed in p4cart_seeds
-    ]
 
+    require(not any(p.suffix.lower() == ".p4cart" for p in
+                    (build / "game-storage-seed").rglob("*")),
+            "retired Lua cartridge in native seed bundle")
     package_reports: list[dict] = []
     manifests: list[dict] = []
     for path in sorted((ROOT / "games").glob("*/game.json")):
@@ -486,18 +455,12 @@ def main() -> None:
         require(len(volume_roots) == 1, "generated FAT has wrong volume label")
         volume = volume_roots[0]
         require(sorted(item.name for item in volume.iterdir()) ==
-                sorted(["DOOM1.WAD", "README.TXT", "GAMES", "UPDATE",
-                        "P4"]),
+                sorted(["DOOM1.WAD", "README.TXT", "GAMES", "UPDATE"]),
                 "generated FAT root contents differ")
         require((volume / "GAMES").is_dir() and
                 sorted(item.name for item in (volume / "GAMES").iterdir()) ==
                 sorted(expected_seed_packages + expected_seed_resources),
                 "generated FAT GAMES contents differ")
-        for seed in p4cart_seeds:
-            relative = pathlib.Path(*seed.relative_path.parts)
-            require((volume / relative).read_bytes() ==
-                    (build / "game-storage-seed" / relative).read_bytes(),
-                    f"generated FAT contains the wrong {seed.output_name}")
         require((volume / "UPDATE").is_dir() and
                 not any((volume / "UPDATE").iterdir()),
                 "generated FAT UPDATE directory differs")
@@ -526,10 +489,13 @@ def main() -> None:
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
     require(symbols_result.returncode == 0, "cannot inspect app ELF symbols")
+    require(not any(line.split() and line.split()[-1].startswith(
+                ("lua_", "luaL_", "luaopen_", "p4_lua_"))
+                for line in symbols_result.stdout.splitlines()),
+            "retired Lua VM symbol linked")
     symbols = symbols_result.stdout
     for symbol in (
         "app_main", "console_os_launch_doom", "platform_game_catalog_scan",
-        "p4_content_catalog_scan",
         "p4_mp_session_init",
         "platform_game_loader_run", "p4_game_package_parse",
         "p4_os_update_package_parse", "platform_os_update_install",
@@ -578,11 +544,11 @@ def main() -> None:
             "TinyUSB WRITE(10) does not call the verified platform wrapper")
 
     shell_main = (APP / "main/console_os_main.c").read_text(encoding="utf-8")
+    require("P4CART_SCAN_BEGIN" not in shell_main and "P4CART_READY" not in shell_main,
+            "retired Lua catalog scan remains")
     require("CONSOLE_PAGE_GAMES" in shell_main and
             "native_format=p4-native-elf-v1" in shell_main and
-            "platform_game_loader_run" in shell_main and
-            "P4CART_SCAN_BEGIN" in shell_main and
-            "P4CART_READY" in shell_main,
+            "platform_game_loader_run" in shell_main,
             "Game Manager/cartridge route is absent from Console OS")
     for token in (
         "CONSOLE_APP_FILES", "CONSOLE_APP_GAMES",
@@ -672,8 +638,8 @@ def main() -> None:
             "smallest_ota_free_bytes": OTA0_BYTES - app_binary.stat().st_size,
         },
         "os_update": os_update,
-        "legacy_p4cart": p4carts[0],
-        "legacy_p4carts": p4carts,
+        "legacy_p4cart": None,
+        "legacy_p4carts": [],
         "game_packages": package_reports,
         "game_resources": resource_reports,
         "game_data": {

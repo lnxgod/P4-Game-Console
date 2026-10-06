@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.1.2",
+  "version": "1.2.0",
   "package_file": "TEXAS_HOLDEM.P4G",
   "component": "texas_holdem",
   "sources": [
@@ -23,7 +23,8 @@
   ],
   "optional_capabilities": [
     "audio-tone",
-    "multiplayer-session"
+    "multiplayer-session",
+    "video-highres"
   ],
   "multiplayer": {
     "schema": 1,
@@ -34,6 +35,7 @@
     "protocol": 2
   },
   "license": "MIT",
-  "assets": "original-code-rendered-cards-and-table-only",
-  "enabled": true
+  "assets": "original-imagegen-felt-and-card-backs-plus-native-resolution-code-cards-suits-and-crisp-ui",
+  "enabled": true,
+  "launcher_icon": "assets/launcher.p4i"
 }

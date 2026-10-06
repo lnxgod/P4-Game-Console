@@ -10,10 +10,8 @@ import re
 import struct
 import subprocess
 import sys
-import tempfile
 
 from p4_multiplayer_manifest import expected_multiplayer_extension
-from p4cart_seed_registry import SeedCart, load_seed_carts
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -49,6 +47,7 @@ GAME_CAPABILITIES = {
     "vector-scenes": 1 << 11,
     "video-highres": 1 << 12,
     "dice-accessory": 1 << 13,
+    "motion": 1 << 14,
 }
 
 
@@ -209,31 +208,6 @@ def verify_update(path: pathlib.Path, app: pathlib.Path) -> dict[str, object]:
     return {"file": path.name, "bytes": len(package), "sha256": sha256(path)}
 
 
-def verify_p4cart(path: pathlib.Path, seed: SeedCart) -> dict[str, object]:
-    inspect = subprocess.run(
-        [sys.executable,
-         str(ROOT / "game-platform/scripts/p4cart.py"),
-         "inspect", str(path)],
-        cwd=ROOT, check=False, text=True,
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-    )
-    require(inspect.returncode == 0,
-            f"seed P4 Cart is invalid: {inspect.stderr.strip()}")
-    with tempfile.TemporaryDirectory(prefix="p4cart-seed-") as temporary:
-        rebuilt = pathlib.Path(temporary) / seed.output_name
-        packed = subprocess.run(
-            [sys.executable,
-             str(ROOT / "game-platform/scripts/p4cart.py"),
-             "pack", str(seed.template_directory),
-             str(rebuilt)],
-            cwd=ROOT, check=False, text=True,
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-        )
-        require(packed.returncode == 0 and rebuilt.read_bytes() == path.read_bytes(),
-                f"seed P4 Cart is not deterministic for {seed.template_name}: "
-                f"{packed.stderr.strip()}")
-    return {"file": str(seed.relative_path), "bytes": path.stat().st_size,
-            "sha256": sha256(path)}
 
 
 def main() -> None:
@@ -456,9 +430,11 @@ def main() -> None:
             project.get("max_rev") == "199",
             "project identity or silicon range differs")
     components = set(project.get("build_components", []))
+    require(not ({"p4_lua_runtime", "p4_script_renderer", "p4_script_audio", "lua"} & components),
+            "retired Lua runtime component linked")
     required_components = {
         "board_deps_waveshare", "console_shell", "p4_desktop",
-        "p4_content_catalog", "p4_game_api", "p4_multiplayer",
+        "p4_frame_scheduler", "p4_game_api", "p4_multiplayer",
         "p4_multiplayer_registry",
         "platform_board", "platform_display", "platform_touch",
         "platform_console_settings",
@@ -514,7 +490,7 @@ def main() -> None:
     )
     app_cmake = (APP / "CMakeLists.txt").read_text(encoding="utf-8")
     main_cmake = (APP / "main/CMakeLists.txt").read_text(encoding="utf-8")
-    require('set(PROJECT_VER "0.5.12")' in app_cmake and
+    require('set(PROJECT_VER "0.42")' in app_cmake and
             re.search(
                 r"set\(P4_CONSOLE_RUNTIME_STATS_BUILD OFF\)", app_cmake
             ) is not None and
@@ -523,7 +499,7 @@ def main() -> None:
             "set(P4_CONSOLE_RUNTIME_STATS_ENABLED 1)" in main_cmake and
             "CONSOLE_OS_ENABLE_RUNTIME_STATS=${P4_CONSOLE_RUNTIME_STATS_ENABLED}" in
                 main_cmake,
-            "0.5.12 release must disable periodic runtime stats by default and "
+            "0.42 release must disable periodic runtime stats by default and "
             "wire an explicit diagnostic-build opt-in")
     require("#ifndef CONSOLE_OS_ENABLE_RUNTIME_STATS" in console_source and
             "#define CONSOLE_OS_ENABLE_RUNTIME_STATS 0" in console_source and
@@ -1030,7 +1006,6 @@ def main() -> None:
         "P4_CONSOLE_OS MAIN_STACK stage=core-ready",
         "game_storage_init_worker",
         "wait_for_game_storage_with_boot_animation",
-        "P4CART_SCAN_BEGIN", "P4CART_READY",
         "CONSOLE_APP_USB_DRIVE", "CONSOLE_PAGE_USB_DRIVE",
         "CONSOLE_APP_CONTROLLERS", "CONSOLE_PAGE_CONTROLLERS",
         "CONSOLE_ACTION_CONTROLLER_PAIR",
@@ -1192,9 +1167,8 @@ def main() -> None:
             "platform_os_update_inspect(&s_update_staging)" in catalog_finish and
             "ota_inspect=foreground-internal" in source,
             "PSRAM catalog worker performs cache-disabling OTA inspection")
-    require("CONSOLE_P4CART_SCAN_STACK_BYTES = 24 * 1024" in source and
-            "worker_low_water_bytes=%u runtime=p4-lua-5.4-v1" in source,
-            "legacy cart scan stack regression is not guarded")
+    require("P4CART_SCAN_BEGIN" not in source and "P4CART_READY" not in source,
+            "retired Lua catalog scan remains")
     for token in (
         "_binary_bytebud_p4g_start",
         "platform_game_catalog_add_embedded_fallback",
@@ -1310,8 +1284,7 @@ def main() -> None:
             "return p4_content_transfer_consume(bytes, bytes_length);" in source and
             "p4_h1_usb_drive_control_consume" in source,
             "H1 raw parser priority no longer follows active transfers")
-    require("!p4cart_scan_running()" in source and
-            "content.state != P4_CONTENT_TRANSFER_IDLE" in source and
+    require("content.state != P4_CONTENT_TRANSFER_IDLE" in source and
             "file.state != P4_FILE_TRANSFER_IDLE" in source and
             "platform_game_storage_set_usb_mode(false)" in source and
             "reason=host-not-ejected" in storage_source and
@@ -1382,15 +1355,13 @@ def main() -> None:
             metadata.get("seed_resources", []),
             "built resource sidecar list differs from app metadata")
     legacy = read_json(APP / "app-metadata.json")["legacy_p4cart"]
-    p4cart_seeds = load_seed_carts()
-    require(legacy.get("format") == "p4-cart-source-v1" and
-            legacy.get("game_manager_visible") is True and
+    require(legacy.get("retired") is True and
+            legacy.get("game_manager_visible") is False and
             legacy.get("runtime_implemented") is False and
-            legacy.get("seed_cart") == str(p4cart_seeds[0].relative_path) and
-            legacy.get("seed_carts") == [
-                str(seed.relative_path) for seed in p4cart_seeds
-            ],
-            "legacy P4 Cart metadata differs")
+            legacy.get("execution_enabled") is False and
+            legacy.get("seed_carts") == [] and
+            legacy.get("seed_cart") is None,
+            "native-only retirement metadata differs")
     require(metadata.get("games_embedded_in_ota") is False and
             metadata.get("execution_source") ==
                 "microSD /GAMES/*.P4G with optional same-name .P4R resources; root compatibility",
@@ -1412,6 +1383,10 @@ def main() -> None:
         stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
     require(symbols_result.returncode == 0, "cannot inspect app ELF symbols")
+    require(not any(line.split() and line.split()[-1].startswith(
+                ("lua_", "luaL_", "luaopen_", "p4_lua_"))
+                for line in symbols_result.stdout.splitlines()),
+            "retired Lua VM symbol linked")
     for symbol in (
         "_binary_bytebud_p4g_start",
         "_binary_bytebud_p4g_end",
@@ -1472,12 +1447,8 @@ def main() -> None:
                 symbol_start + symbol_bytes <= external_bss_end,
                 f"{catalog_symbol} must be a 32-entry external-RAM snapshot")
     update = verify_update(bundle / "UPDATE/P4UPDATE.P4U", app)
-    p4carts = [
-        verify_p4cart(
-            bundle / pathlib.Path(*seed.relative_path.parts), seed
-        )
-        for seed in p4cart_seeds
-    ]
+    require(not any(p.suffix.lower() == ".p4cart" for p in bundle.rglob("*")),
+            "retired Lua cartridge in native SD bundle")
 
     print(json.dumps({
         "result": "waveshare-console-os-build-verified",
@@ -1489,8 +1460,8 @@ def main() -> None:
         "games_embedded_in_ota": False,
         "games": reports,
         "game_resources": resource_reports,
-        "legacy_p4cart": p4carts[0],
-        "legacy_p4carts": p4carts,
+        "legacy_p4cart": None,
+        "legacy_p4carts": [],
         "update": update,
         "storage_policy": "app-owned/controller-host by default; USB Drive app exclusively switches H2 to MSC; return requires host eject or disconnect; firmware never formats",
         "hardware_tested": False,

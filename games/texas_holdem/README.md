@@ -60,3 +60,57 @@ ctest --test-dir build-host/play-texas_holdem --output-on-failure
 Console OS discovers `game.json` and packages `TEXAS_HOLDEM.P4G`. Install the
 cartridge through Game Manager, a guarded SD workflow, or the verified H1
 transfer path; a game-only update does not require an OS flash.
+
+## Native-resolution presentation (1.2.0)
+
+The preferred surface is 768x480 RGB565 with an optional `video-highres`
+capability and a complete 320x200 fallback. Fonts, rounded card edges, and
+mathematical suit silhouettes are rasterized at the negotiated resolution;
+no 320x200 framebuffer is enlarged to produce the high-resolution game.
+Input, rules, card identities, saves, and multiplayer messages remain unchanged.
+Exact ranks, numbers, and suits are drawn by code, so generated art cannot
+change card meaning. Small fallback labels retain the proven compact font.
+
+`assets/table-materials-imagegen.png` is original artwork generated with the
+built-in ImageGen tool for this upgrade. It contains emerald and midnight felt
+plus navy/gold and violet/silver card-back material. The exact final prompt,
+source SHA-256, crop layout, and selected quadrants are recorded in
+`assets/table-materials-provenance.json`. The selected felt is 128x128 RGB565
+and the selected card-back material is 96x96 RGB565: **51,200 static bytes**.
+The illustration converter uses area filtering to preserve fine fibers and
+ornamental lines; there is no runtime image decoding or heap allocation.
+The artwork is distributed under the project's MIT license. The shared
+Arimo typography uses the separately recorded SIL OFL license.
+
+Reproduce the material include with Pillow installed:
+
+```sh
+python3 games/texas_holdem/tools/convert_table_materials.py
+```
+
+Focused sanitizer tests include both negotiated surfaces, padded framebuffer
+strides, render captures, and Back lifecycle. Existing rule and multiplayer
+tests remain in place. Optional screenshots come from the actual game renderer:
+
+```sh
+P4_CARD_CAPTURE_DIR=/absolute/existing/output/directory \
+  ctest --test-dir build-host/texas_holdem --output-on-failure
+```
+
+`PRESENTATION_TESTING.json` records this host-validation pass. Native panel,
+physical touch, on-device frame timing, speakers, and real linked consoles
+still require device acceptance. No firmware was installed by this pass.
+
+The felt renderer copies clipped native texture-row spans instead of computing
+an address and wrapping mask for every framebuffer pixel. A 2,000-frame
+isolated host comparison produced identical pixels while reducing median
+felt-render time from 80 microseconds to 10 microseconds. Reproducible action
+traces and complete update/audio/render timings are recorded in
+`PRESENTATION_TESTING.json`. The measured host runs stayed below the 33.333 ms
+budget; these CPU measurements exclude display transfer and do not certify
+30 FPS on the ESP32-P4 hardware.
+
+The table uses direct touch controls for setup, private-card reveal and betting;
+controller-only prompts no longer occupy the table. Touches are handled before
+the shared mapper’s virtual buttons, so Raise cannot accidentally act as Fold.
+Physical keyboard/controller mappings remain available.

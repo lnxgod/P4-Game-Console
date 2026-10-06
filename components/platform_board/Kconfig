@@ -18,6 +18,15 @@ config P4_BOARD_M5STACK_TAB5
 
 endchoice
 
+config P4_TAB5_USB_HOST
+    bool "Enable Tab5 USB-A controller host"
+    default n
+    depends on P4_BOARD_M5STACK_TAB5
+    help
+        Use Tab5's dedicated native high-speed USB-A host and USB5V_EN on
+        expander 0x44/P3. Power is enabled only after the HID driver is ready.
+        USB-C remains native Serial/JTAG for programming and content transfer.
+
 config PLATFORM_BOARD_TARGET_ELECROW_10_1
     bool
     default y if P4_BOARD_ELECROW_CROWPANEL_ADVANCED_10

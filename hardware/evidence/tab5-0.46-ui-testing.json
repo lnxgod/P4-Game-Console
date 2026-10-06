@@ -1,0 +1,144 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "version": "0.46",
+  "recorded_at": "2026-10-06T00:00:19.700158+00:00",
+  "status": "both-units-readback-and-boot-health-verified-physical-navigation-acceptance-pending",
+  "authorization": {
+    "file": "hardware/evidence/tab5-0.46-ui-authorization.json",
+    "sha256": "a263e5d26807cdf9d5ddbf73b465270f43b3dcb6b4c8065850b796490cf32076"
+  },
+  "image": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 3927824,
+    "sha256": "f3a3416317f13e275737cddde417cd043b71955a320341a95011351ed6bba602"
+  },
+  "update": {
+    "file": "local-data/firmware/tab5/0.46/P4UPDATE.P4U",
+    "sha256": "d92c40ba9fbd2435c7776ca48a1d7fdc31e41a06aa3d27a310291366b1ab8b86"
+  },
+  "changes": [
+    "Continuous clipped finger scrolling in Games and Files with draggable bounded scrollbars",
+    "Controller navigation reveals off-screen game/file selections",
+    "Category filter derives full folder identity from cartridge metadata; bounded multi-page chooser, All fallback on removed categories",
+    "Large Delete button replaced with small file-actions overflow menu and named confirmation, default Cancel",
+    "Open cannot invoke deletion for ordinary files; stale listings cancel menus, confirmations and held presses",
+    "Version label in ESP app, interface diagnostics, UI and update package consistently 0.46"
+  ],
+  "validation": {
+    "command": "P4_TAB5_FIRMWARE_ONLY=1 make console-os-tab5-idf",
+    "prerequisite_tests": 39,
+    "failures": 0,
+    "sanitizers": "ASan/UBSan focused shell tests",
+    "coverage": [
+      "touch follows drag before release",
+      "last row reachable, scroll ends clamped",
+      "header/sidebar drag does not scroll library",
+      "controller traverses virtual rows",
+      "metadata filters, category overflow, missing category fallback",
+      "scrollbar bounds",
+      "old large Delete/Open location inert for ordinary files",
+      "explicit overflow-delete-confirm required",
+      "Cancel default on each menu/modal",
+      "held press and changed file listing cannot remove replacement",
+      "directory Open and confirmed OS update remain functional",
+      "all three multiplayer transports remain selectable",
+      "cartridge icon override remains effective",
+      "all native pages preserve RGB565 buffer bounds"
+    ],
+    "build_log_sha256": "d2e20ebc166fe235bfd12fe1fb48ec6120440dfc8d984af06f6c902862ffac86",
+    "visual_review": "Native 1280x720 category/filter, scroll, file overflow and confirmation screens inspected. Synthetic game names and battery values are fixtures, not hardware claims.",
+    "previews": [
+      {
+        "file": "build-host/ui/tab5-0.46/categories.png",
+        "sha256": "ca9d008f67405f65c66ac6803063eca70cc445c1f2f9b06b8529f930916a4051"
+      },
+      {
+        "file": "build-host/ui/tab5-0.46/delete-confirm.png",
+        "sha256": "6fa5c395e8641c59dcae1541be8d0076b3263f2a8f2be4c8a4814b446a3e42b7"
+      },
+      {
+        "file": "build-host/ui/tab5-0.46/file-actions.png",
+        "sha256": "4735defa792f65d76ce8c1140525cac494c28634b5ca23a54e4f761d15b33b62"
+      },
+      {
+        "file": "build-host/ui/tab5-0.46/files.png",
+        "sha256": "8444b0ce0047904614b3f3e344279e1d3579d77d80a220159f02d0f91b174eb9"
+      },
+      {
+        "file": "build-host/ui/tab5-0.46/filtered-library.png",
+        "sha256": "6d498ea8a839f4710c561aaacdeb38000a50a302daffd21f3e7e3c01117eef3c"
+      },
+      {
+        "file": "build-host/ui/tab5-0.46/scrolled-files.png",
+        "sha256": "01abddf1e2195b53b3d9a0f9fe28ad7e45bb12a1b181b6604da05ae9d1a01ba3"
+      },
+      {
+        "file": "build-host/ui/tab5-0.46/scrolled-library.png",
+        "sha256": "434a87ca66c30fd7c35d65a94f1045b59a49d6336627317a36a273d80be30b95"
+      }
+    ]
+  },
+  "preserved": {
+    "game_content": "No cartridge updates or filesystem removals in this UI release",
+    "interface_art_font_startup": {
+      "components/console_shell/src/nextgen_assets.h": "58e2206118d91e01a540f444e1024158b78a0b5c1b46e38cde36657a908899fc",
+      "components/console_shell/include/console/ui_font.h": "cb0bcce3dad0a9f5a24868d158d96e0860b5015c470cebdfb9d007eb9f4e842a",
+      "components/console_startup/src/startup.c": "f10e44c8c4ce4299f1c2b046070de33ad50eb1b5c0194d7caed4ef4d0a4138bd",
+      "apps/console_os/main/assets/gamechangers_mark_v042.rgb565a8": "f0dea8368982c71c6d82ce3b6d711cf3d699e66e12c9ef8af93c2133a6bc9683"
+    },
+    "charging_radio": "0.45 controls unchanged; exact source hashes checked"
+  },
+  "units": {
+    "A": {
+      "live": {
+        "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+        "revision": "v1.3",
+        "flash_bytes": 16777216
+      },
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "receipt": {
+        "file": "hardware/backups/tab5-a-install-d_5_3gf_/receipt.json",
+        "sha256": "34035757fff2ebf715f654273976da7f517603f32dbb37ddf4954055e2c357a9"
+      },
+      "runtime_log": {
+        "file": "hardware/backups/tab5-a-install-d_5_3gf_/runtime.log",
+        "sha256": "cfc1b16d9a04469faeedc8de413edab5fe33e85bc40905de11e50faa34ae0030"
+      },
+      "ui_version_observed": "0.46",
+      "wacky_catalog_preserved": true,
+      "charger_control_readback": true,
+      "charging_observed": true,
+      "physical_navigation_acceptance": "pending operator feedback"
+    },
+    "B": {
+      "live": {
+        "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+        "revision": "v1.3",
+        "flash_bytes": 16777216
+      },
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "receipt": {
+        "file": "hardware/backups/tab5-b-install-r85a86gs/receipt.json",
+        "sha256": "c839492077ea4f067054ddfa7862a27da572e149f375f58d9ec247eac2d52d28"
+      },
+      "runtime_log": {
+        "file": "hardware/backups/tab5-b-install-r85a86gs/runtime.log",
+        "sha256": "786636b02e66a7c9d260cc0ef2b32ec92afaf99be57fdd0b10fbda4b3314f086"
+      },
+      "ui_version_observed": "0.46",
+      "wacky_catalog_preserved": true,
+      "charger_control_readback": true,
+      "charging_observed": true,
+      "physical_navigation_acceptance": "pending operator feedback"
+    }
+  },
+  "pending": [
+    "Operator acceptance of scrolling/touch feel and category choice on the physical tablets",
+    "Earlier two-tablet Bluetooth/Wi-Fi game acceptance remains pending"
+  ]
+}

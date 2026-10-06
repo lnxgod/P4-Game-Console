@@ -1,0 +1,1182 @@
+/* SPDX-License-Identifier: MIT
+ * Tab5's native interface. Included by console_shell.c so the presentation
+ * reuses the same validated service actions as the compact board interfaces.
+ * One scene defines both drawing and hit regions; no bitmap contains controls.
+ */
+#include "nextgen_assets.h"
+#include <stdlib.h>
+enum { NG_W=1280, NG_H=720, NG_MAX_CONTROLS=64,
+    NC_HOME=1,NC_LIBRARY,NC_MULTIPLAYER,NC_FILES,NC_SETTINGS,NC_BACK,
+    NC_PAGE,NC_LAUNCH,NC_PREV,NC_NEXT,NC_FILE_ROW,NC_FILE_PREV,NC_FILE_NEXT,
+    NC_REFRESH,NC_FILE_OPEN,NC_DELETE,NC_CANCEL,NC_CONFIRM,NC_AUDIO,
+    NC_STORAGE,NC_CONTROLLER,NC_USB,NC_MP_VIEW,NC_MP_OPTION,NC_MP_PRIMARY,
+    NC_MP_ROOM,NC_KEY,NC_APPEARANCE,NC_LIST_PREV,NC_LIST_NEXT,NC_MP_OPTIONS,NC_KEYBOARD,NC_FILTER,NC_CATEGORY,NC_CATEGORY_PREV,NC_CATEGORY_NEXT,
+    NC_FILE_MENU,NC_DISMISS,NC_SCROLL,NC_AUDIO_STATUS };
+enum { NG_GRID_TOP=178, NG_GRID_BOTTOM=626, NG_GRID_PITCH=210,
+    NG_FILES_TOP=178, NG_FILES_BOTTOM=536, NG_FILE_PITCH=90 };
+typedef struct { uint16_t id; int16_t x,y,w,h; bool enabled; } ng_control_t;
+typedef struct {
+    console_shell_t *shell; uint16_t *pixels; size_t stride;
+    ng_control_t controls[NG_MAX_CONTROLS]; size_t count;
+    int clip_top,clip_bottom;
+} ng_scene_t;
+#define NG_RGB(r,g,b) ((uint16_t)((((r)>>3)<<11)|(((g)>>2)<<5)|((b)>>3)))
+#define NG_INK NG_RGB(7,18,28)
+#define NG_SURFACE NG_RGB(18,39,53)
+#define NG_WHITE NG_RGB(244,250,252)
+#define NG_MUTED NG_RGB(180,203,213)
+#define NG_CYAN NG_RGB(85,230,236)
+#define NG_LINE NG_RGB(47,83,101)
+#define NG_AMBER NG_RGB(255,205,95)
+static uint16_t ng_id(unsigned kind,unsigned param)
+{ return (uint16_t)(kind*128U+param); }
+static uint16_t ng_mix(uint16_t a,uint16_t b,unsigned alpha)
+{
+    const unsigned inv=15U-alpha;
+    return (uint16_t)((((((unsigned)a>>11U)*alpha+((unsigned)b>>11U)*inv+7U)/15U)<<11U)|
+        ((((((unsigned)a>>5U)&63U)*alpha+(((unsigned)b>>5U)&63U)*inv+7U)/15U)<<5U)|
+        ((((unsigned)a&31U)*alpha+((unsigned)b&31U)*inv+7U)/15U));
+}
+static void ng_rect(ng_scene_t *s,int x,int y,int w,int h,uint16_t color)
+{
+    if (!s->pixels || w<=0 || h<=0) return;
+    int x1=x+w,y1=y+h;if(x<0)x=0;if(y<0)y=0;if(x1>NG_W)x1=NG_W;if(y1>NG_H)y1=NG_H;
+    if(s->clip_bottom){if(y<s->clip_top)y=s->clip_top;if(y1>s->clip_bottom)y1=s->clip_bottom;}
+    for(int row=y;row<y1;++row){
+        uint16_t *p=s->pixels+(size_t)row*s->stride+(size_t)x;
+        for(int col=x;col<x1;++col)*p++=color;
+    }
+}
+static void ng_round(ng_scene_t *s,int x,int y,int w,int h,int radius,uint16_t color)
+{
+    if(!s->pixels)return;
+    for(int row=0;row<h;++row){
+        int dy=row<radius?radius-row-1:(row>=h-radius?row-(h-radius):0);
+        int cut=0;while(cut<radius && (radius-cut)*(radius-cut)+dy*dy>radius*radius)++cut;
+        ng_rect(s,x+cut,y+row,w-cut*2,1,color);
+    }
+}
+static void ng_panel(ng_scene_t *s,int x,int y,int w,int h,uint16_t border,uint16_t fill)
+{ ng_round(s,x,y,w,h,14,border);ng_round(s,x+2,y+2,w-4,h-4,12,fill); }
+static void ng_line(ng_scene_t *s,int x,int y,int x1,int y1,uint16_t color)
+{
+    if(!s->pixels)return;
+    int dx=x1>x?x1-x:x-x1,dy=y1>y?y-y1:y1-y;
+    int sx=x<x1?1:-1,sy=y<y1?1:-1,err=dx+dy;
+    for(;;){ng_rect(s,x,y,3,3,color);if(x==x1&&y==y1)break;
+        const int e=2*err;if(e>=dy){err+=dy;x+=sx;}if(e<=dx){err+=dx;y+=sy;}}
+}
+typedef struct {int size,cell;const uint8_t *alpha,*advance;} ng_font_t;
+static const ng_font_t *ng_font(int size)
+{
+    static const ng_font_t fonts[]={
+        {32,40,ng_font32_alpha,ng_font32_advance},
+        {44,52,ng_font44_alpha,ng_font44_advance},
+        {68,80,ng_font68_alpha,ng_font68_advance}};
+    return &fonts[size>=52?2:size>=36?1:0];
+}
+static int ng_advance(unsigned c,int size)
+{const ng_font_t *font=ng_font(size);return (int)font->advance[c-32U]*size/font->size;}
+static int ng_text_width(const char *str,int size)
+{
+    int width=0;if(!str)return 0;
+    for(size_t i=0;i<128U&&str[i];++i){unsigned c=(unsigned char)str[i];if(c<32U||c>126U)c='?';
+        width+=ng_advance(c,size);}
+    return width;
+}
+static void ng_text(ng_scene_t *s,int x,int y,const char *str,int size,uint16_t color,int max_width)
+{
+    if(!s->pixels||!str||size<8||size>96)return;
+    const ng_font_t *font=ng_font(size);
+    const int side=font->cell*size/font->size;const int limit=x+max_width;
+    for(size_t i=0;i<128U&&str[i];++i){
+        unsigned c=(unsigned char)str[i];if(c<32U||c>126U)c='?';
+        int advance=ng_advance(c,size);
+        if(x+advance>limit)break;
+        for(int yy=0;yy<side&&y+yy<NG_H;++yy){
+            if(y+yy<0||(s->clip_bottom&&(y+yy<s->clip_top||y+yy>=s->clip_bottom)))continue;
+            const unsigned gy=(unsigned)(yy*font->cell/side);
+            for(int xx=0;xx<side&&x+xx<limit&&x+xx<NG_W;++xx){
+                if(x+xx<0)continue;
+                const unsigned gx=(unsigned)(xx*font->cell/side);
+                const unsigned pos=(c-32U)*(unsigned)(font->cell*font->cell)+gy*(unsigned)font->cell+gx;
+                const unsigned packed=font->alpha[pos/2U];
+                const unsigned a=pos%2U?packed&15U:packed>>4U;
+                if(a){uint16_t *dst=s->pixels+(size_t)(y+yy)*s->stride+(size_t)(x+xx);*dst=ng_mix(color,*dst,a);}
+            }
+        }
+        x+=advance;
+    }
+}
+static void ng_label(ng_scene_t *s,int x,int y,const char *text,int size,uint16_t color,int width)
+{
+    if(ng_text_width(text,size)<=width){ng_text(s,x,y,text,size,color,width);return;}
+    char value[128];size_t n=0;int used=0;const int dots=ng_text_width("...",size);
+    while(text[n]&&n<sizeof(value)-4U){unsigned c=(unsigned char)text[n];if(c<32U||c>126U)c='?';
+        int step=ng_advance(c,size);if(used+step+dots>width)break;
+        value[n]=(char)c;used+=step;++n;}
+    memcpy(value+n,"...",4U);ng_text(s,x,y,value,size,color,width);
+}
+static void ng_center(ng_scene_t *s,int x,int y,int w,const char *label,int size,uint16_t color)
+{
+    int tw=ng_text_width(label,size);if(tw>w-24)tw=w-24;
+    ng_label(s,x+(w-tw)/2,y,label,size,color,w-24);
+}
+static void ng_art(ng_scene_t *s,int x,int y,int w,int h,const void *art,int aw,int ah,const uint16_t *palette)
+{
+    if(!s->pixels||!art||w<=0||h<=0)return;
+    int sw=aw,sh=ah;
+    if(aw*h>ah*w)sw=ah*w/h;else sh=aw*h/w;
+    const int ox=(aw-sw)/2,oy=(ah-sh)/2;
+    for(int row=0;row<h;++row){
+        if(y+row<0||y+row>=NG_H||(s->clip_bottom&&(y+row<s->clip_top||y+row>=s->clip_bottom)))continue;
+        const size_t offset=(size_t)(oy+row*sh/h)*(size_t)aw;
+        for(int col=0;col<w;++col)
+            if(x+col>=0&&x+col<NG_W)s->pixels[(size_t)(y+row)*s->stride+(size_t)(x+col)]=palette?palette[((const uint8_t *)art)[offset+(size_t)(ox+col*sw/w)]]:((const uint16_t *)art)[offset+(size_t)(ox+col*sw/w)];
+    }
+}
+static void ng_icon(ng_scene_t *s,int x,int y,unsigned kind,uint16_t color)
+{
+    if(kind==0U){ng_line(s,x,y+16,x+18,y,color);ng_line(s,x+18,y,x+36,y+16,color);
+        ng_rect(s,x+6,y+15,26,24,color);ng_rect(s,x+16,y+25,8,14,NG_INK);}
+    else if(kind==1U){ng_round(s,x,y+8,39,29,9,color);ng_round(s,x+3,y+11,33,23,7,NG_INK);
+        ng_rect(s,x+8,y+18,13,3,color);ng_rect(s,x+13,y+13,3,13,color);
+        ng_rect(s,x+28,y+17,4,4,color);ng_rect(s,x+25,y+24,4,4,color);}
+    else if(kind==2U){ng_round(s,x+5,y,14,14,7,color);ng_round(s,x+24,y+5,12,12,6,color);
+        ng_round(s,x,y+19,24,20,6,color);ng_round(s,x+25,y+23,14,16,5,color);}
+    else if(kind==3U){ng_round(s,x,y+5,18,12,3,color);ng_panel(s,x,y+12,40,28,color,NG_INK);}
+    else if(kind==5U){ng_rect(s,x,y+12,12,16,color);ng_line(s,x+10,y+12,x+24,y+2,color);ng_line(s,x+24,y+2,x+24,y+38,color);ng_line(s,x+24,y+38,x+10,y+27,color);ng_line(s,x+32,y+10,x+38,y+18,color);ng_line(s,x+38,y+18,x+32,y+28,color);}
+    else if(kind==6U){ng_round(s,x,y,40,40,18,color);ng_round(s,x+12,y+22,22,22,10,NG_SURFACE);ng_round(s,x+8,y+8,7,7,3,NG_INK);ng_round(s,x+24,y+8,7,7,3,NG_INK);}
+    else if(kind==7U){ng_panel(s,x+2,y+5,35,31,color,NG_SURFACE);ng_rect(s,x+12,y,14,5,color);ng_rect(s,x+8,y+12,9,18,color);}
+    else if(kind==8U){ng_panel(s,x,y+2,40,36,color,NG_SURFACE);ng_line(s,x+4,y+14,x+34,y+14,color);ng_line(s,x+4,y+25,x+34,y+25,color);}
+    else {ng_round(s,x+6,y+6,28,28,14,color);ng_round(s,x+14,y+14,12,12,6,NG_INK);
+        ng_rect(s,x+17,y,6,9,color);ng_rect(s,x+17,y+31,6,9,color);
+        ng_rect(s,x,y+17,9,6,color);ng_rect(s,x+31,y+17,9,6,color);}
+}
+static void ng_add(ng_scene_t *s,int x,int y,int w,int h,unsigned kind,unsigned param,bool enabled)
+{
+    if(s->clip_bottom){int bottom=y+h;if(y<s->clip_top)y=s->clip_top;if(bottom>s->clip_bottom)bottom=s->clip_bottom;h=bottom-y;}
+    if(s->count>=NG_MAX_CONTROLS||w<=0||h<=0)return;
+    s->controls[s->count++]=(ng_control_t){ng_id(kind,param),(int16_t)x,(int16_t)y,(int16_t)w,(int16_t)h,enabled};
+}
+static bool ng_focused(const ng_scene_t *s,unsigned kind,unsigned param)
+{ return s->shell->ng_focus==ng_id(kind,param); }
+static void ng_button(ng_scene_t *s,int x,int y,int w,int h,const char *label,
+    unsigned kind,unsigned param,bool enabled,bool primary)
+{
+    ng_add(s,x,y,w,h,kind,param,enabled);
+    const bool focused=ng_focused(s,kind,param);
+    const bool pressed=s->shell->press_active&&s->shell->pressed_index==ng_id(kind,param);
+    const uint16_t fill=enabled&&primary?NG_CYAN:NG_SURFACE;
+    ng_panel(s,x,y,w,h,focused&&enabled?ng_mix(NG_WHITE,NG_CYAN,(unsigned)s->shell->ng_focus_ms*15U/100U):(primary&&enabled?NG_CYAN:NG_LINE),fill);
+    if(pressed)ng_round(s,x+5,y+5,w-10,h-10,8,ng_mix(NG_WHITE,fill,3));
+    const int font=s->shell->ng_large_text?32:28;
+    ng_center(s,x,y+(h-font*40/32)/2,w,label,font,enabled?(primary?NG_INK:NG_WHITE):NG_MUTED);
+}
+static bool ng_contains(const char *text,const char *needle)
+{
+    if(!text)return false;
+    char folded[CONSOLE_SHELL_TITLE_MAX_BYTES+1];size_t n=0;
+    for(;n<sizeof(folded)-1U&&text[n];++n){char c=text[n];folded[n]=(c>='a'&&c<='z')?(char)(c-'a'+'A'):c;}
+    folded[n]='\0';return strstr(folded,needle)!=NULL;
+}
+static bool ng_system_utility(const console_app_descriptor_t *app)
+{
+    return app->page==CONSOLE_PAGE_EXTERNAL&&app->folder_path&&
+        (strcmp(app->folder_path,"SYSTEM")==0||strncmp(app->folder_path,"SYSTEM/",7U)==0);
+}
+static bool ng_game(const console_app_descriptor_t *app)
+{ return app->page==CONSOLE_PAGE_EXTERNAL&&!ng_system_utility(app); }
+static size_t ng_games(const console_shell_t *sh,size_t *indices)
+{
+    size_t count=0;const char *preferred[]={"BYTE","MAZE","BLAST","SOLITAIRE"};
+    for(size_t p=0;p<4U;++p)for(size_t i=0;i<sh->app_count;++i)
+        if(ng_game(&sh->apps[i])&&ng_contains(sh->apps[i].title,preferred[p])){
+            bool seen=false;for(size_t j=0;j<count;++j)if(indices[j]==i)seen=true;
+            if(!seen)indices[count++]=i;}
+    for(size_t i=0;i<sh->app_count;++i)if(ng_game(&sh->apps[i])){
+        bool seen=false;for(size_t j=0;j<count;++j)if(indices[j]==i)seen=true;
+        if(!seen)indices[count++]=i;}
+    return count;
+}
+static const char *ng_app_category(const console_app_descriptor_t *app)
+{ return app->folder_path&&app->folder_path[0]?app->folder_path:"OTHER"; }
+static void ng_category_label(const char *path,char out[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES])
+{
+    const char *leaf=strrchr(path,'/');leaf=leaf?leaf+1:path;
+    if(strcmp(leaf,"WIP")==0){(void)snprintf(out,CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES,"Work in progress");return;}
+    size_t i=0;bool initial=true;
+    for(;leaf[i]&&i<CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES-1U;++i){
+        char c=leaf[i];out[i]=!initial&&c>='A'&&c<='Z'?(char)(c-'A'+'a'):c;
+        initial=c==' '||c=='-';}
+    out[i]='\0';
+}
+static size_t ng_categories(const console_shell_t *sh,const char **paths)
+{
+    size_t n=1;paths[0]="";
+    for(size_t i=0;i<sh->app_count;++i)if(ng_game(&sh->apps[i])){
+        const char *path=ng_app_category(&sh->apps[i]);bool seen=false;
+        for(size_t j=1;j<n;++j)if(strcmp(paths[j],path)==0)seen=true;
+        if(!seen)paths[n++]=path;}
+    for(size_t i=2;i<n;++i){const char *path=paths[i];size_t j=i;
+        while(j>1U&&strcmp(paths[j-1U],path)>0){paths[j]=paths[j-1U];--j;}paths[j]=path;}
+    return n;
+}
+static size_t ng_library_games(console_shell_t *sh,size_t *indices)
+{
+    const char *paths[CONSOLE_SHELL_MAX_APPS+1];const size_t categories=ng_categories(sh,paths);
+    bool valid=false;for(size_t i=0;i<categories;++i)if(strcmp(paths[i],sh->ng_category)==0)valid=true;
+    if(!valid){sh->ng_category[0]='\0';sh->ng_library_scroll=0;}
+    const size_t total=ng_games(sh,indices);size_t n=0;
+    for(size_t i=0;i<total;++i)if(!sh->ng_category[0]||strcmp(ng_app_category(&sh->apps[indices[i]]),sh->ng_category)==0)indices[n++]=indices[i];
+    return n;
+}
+static int ng_scroll_max(size_t count,bool library)
+{
+    const int content=library?(int)((count+2U)/3U)*NG_GRID_PITCH-16:(int)count*NG_FILE_PITCH-8;
+    const int viewport=library?NG_GRID_BOTTOM-NG_GRID_TOP:NG_FILES_BOTTOM-NG_FILES_TOP;
+    return content>viewport?content-viewport:0;
+}
+static void ng_set_scroll(console_shell_t *sh,bool library,int value)
+{
+    size_t indices[CONSOLE_SHELL_MAX_APPS];
+    const size_t count=library?ng_library_games(sh,indices):sh->files.entry_count;
+    const int limit=ng_scroll_max(count,library);if(value<0)value=0;if(value>limit)value=limit;
+    int *offset=library?&sh->ng_library_scroll:&sh->ng_file_scroll;
+    if(*offset!=value){*offset=value;sh->dirty=true;}
+}
+static void ng_reveal(console_shell_t *sh,size_t index,bool library)
+{
+    const int top=library?(int)(index/3U)*NG_GRID_PITCH:(int)index*NG_FILE_PITCH;
+    const int height=library?194:82,view=library?NG_GRID_BOTTOM-NG_GRID_TOP:NG_FILES_BOTTOM-NG_FILES_TOP;
+    const int offset=library?sh->ng_library_scroll:sh->ng_file_scroll;
+    if(top<offset)ng_set_scroll(sh,library,top);
+    else if(top+height>offset+view)ng_set_scroll(sh,library,top+height-view);
+}
+static void ng_scrollbar(ng_scene_t *s,size_t count,bool library)
+{
+    const int top=library?NG_GRID_TOP:NG_FILES_TOP,bottom=library?NG_GRID_BOTTOM:NG_FILES_BOTTOM;
+    const int view=bottom-top,limit=ng_scroll_max(count,library);if(!limit)return;
+    const int offset=library?s->shell->ng_library_scroll:s->shell->ng_file_scroll;
+    int thumb=view*view/(view+limit);if(thumb<48)thumb=48;
+    ng_round(s,1238,top,12,view,6,NG_SURFACE);
+    ng_round(s,1238,top+offset*(view-thumb)/limit,12,thumb,6,NG_CYAN);
+    ng_add(s,1230,top,30,view,NC_SCROLL,library?1U:2U,true);
+}
+static void ng_game_art(ng_scene_t *s,const console_app_descriptor_t *app,int x,int y,int w,int h)
+{
+    const console_shell_artwork_t *cover=app->cover;
+    const bool byte_legacy=ng_contains(app->title,"BYTE")&&
+        (!app->icon_pixels||!app->icon_palette||
+         (memcmp(app->icon_pixels,console_byte_legacy_icon_pixels,128U*72U)==0&&
+          memcmp(app->icon_palette,console_byte_legacy_icon_palette,256U*sizeof(uint16_t))==0));
+    if(cover&&cover->pixels&&cover->palette&&cover->width&&cover->height&&
+       cover->width<=1024U&&cover->height<=576U)
+        ng_art(s,x,y,w,h,cover->pixels,cover->width,cover->height,cover->palette);
+    else if(w>400&&byte_legacy)ng_art(s,x,y,w,h,ng_art_byte_buddy,1024,576,ng_art_byte_buddy_palette);
+    else if(app->icon_pixels && app->icon_palette)ng_art(s,x,y,w,h,app->icon_pixels,128,72,app->icon_palette);
+    else if(ng_contains(app->title,"BYTE"))ng_art(s,x,y,w,h,ng_art_byte_buddy,1024,576,ng_art_byte_buddy_palette);
+    else if(ng_contains(app->title,"MAZE"))ng_art(s,x,y,w,h,ng_art_maze,320,180,NULL);
+    else if(ng_contains(app->title,"BLAST"))ng_art(s,x,y,w,h,ng_art_blast,320,180,NULL);
+    else if(ng_contains(app->title,"SOLITAIRE"))ng_art(s,x,y,w,h,ng_art_solitaire,320,180,NULL);
+    else {
+        ng_rect(s,x,y,w,h,NG_SURFACE);
+        for(int line=0;line<5;++line)ng_line(s,x,y+h-20-line*18,x+w-1,y+h-20-line*18,NG_LINE);
+        for(int line=0;line<5;++line)ng_line(s,x+w/2,y+12,x+line*w/4,y+h-1,NG_LINE);
+        ng_icon(s,x+w/2-20,y+h/2-22,1U,app->accent_rgb565?app->accent_rgb565:NG_CYAN);
+    }
+}
+static void ng_game_card(ng_scene_t *s,size_t app_index,int x,int y,int w,int h)
+{
+    const console_app_descriptor_t *app=&s->shell->apps[app_index];
+    ng_add(s,x,y,w,h,NC_LAUNCH,(unsigned)app_index,app->enabled);
+    const bool focused=ng_focused(s,NC_LAUNCH,(unsigned)app_index);
+    ng_panel(s,x,y,w,h,focused?NG_CYAN:NG_LINE,NG_SURFACE);
+    ng_game_art(s,app,x+4,y+4,w-8,h-65);
+    ng_label(s,x+16,y+h-53,app->title,s->shell->ng_large_text?30:26,
+        app->enabled?NG_WHITE:NG_MUTED,w-32);
+    if(!app->enabled)ng_label(s,x+16,y+12,"Unavailable",24,NG_WHITE,w-32);
+}
+static void ng_library_rows(ng_scene_t *s,const size_t *games,size_t count)
+{
+    for(size_t i=0;i<count;++i){const int y=NG_GRID_TOP+(int)(i/3U)*NG_GRID_PITCH-s->shell->ng_library_scroll;
+        if(y+194>s->clip_top&&y<s->clip_bottom)ng_game_card(s,games[i],264+(int)(i%3U)*326,y,310,194);}
+}
+static void ng_file_rows(ng_scene_t *s,size_t count)
+{
+    console_shell_t *sh=s->shell;char value[80];
+    for(size_t i=0;i<count;++i){
+        const console_shell_file_entry_t *entry=&sh->files.entries[i];int y=NG_FILES_TOP+(int)i*NG_FILE_PITCH-sh->ng_file_scroll;
+        if(y+82<=s->clip_top||y>=s->clip_bottom)continue;
+        ng_add(s,264,y,964,82,NC_FILE_ROW,(unsigned)i,true);
+        const bool selected=sh->file_selected_index==i;
+        ng_panel(s,264,y,964,82,selected||ng_focused(s,NC_FILE_ROW,(unsigned)i)?NG_CYAN:NG_LINE,NG_SURFACE);
+        ng_icon(s,282,y+21,entry->is_directory?3U:1U,NG_CYAN);
+        ng_label(s,344,y+18,entry->label,sh->ng_large_text?34:30,NG_WHITE,616);
+        (void)snprintf(value,sizeof(value),entry->is_directory?"Folder":"%lu KB",(unsigned long)entry->size_kib);
+        ng_label(s,990,y+23,value,25,NG_MUTED,235);
+    }
+}
+static void ng_status_row(ng_scene_t *s,int y,const char *label,const char *value,uint16_t color)
+{
+    ng_rect(s,280,y+61,948,1,NG_LINE);
+    ng_label(s,288,y,label,s->shell->ng_large_text?30:28,NG_MUTED,430);
+    ng_label(s,740,y,value,s->shell->ng_large_text?30:28,color,480);
+}
+static void ng_heading(ng_scene_t *s,const char *title)
+{ ng_label(s,264,86,title,44,NG_WHITE,876); }
+static void ng_empty(ng_scene_t *s,const char *title,const char *detail)
+{
+    ng_panel(s,264,172,988,356,NG_LINE,NG_SURFACE);
+    ng_icon(s,720,216,1U,NG_CYAN);
+    ng_center(s,288,298,940,title,36,NG_WHITE);
+    ng_center(s,288,362,940,detail,26,NG_MUTED);
+}
+static void ng_launch(ng_scene_t *s)
+{
+    const console_shell_t *sh=s->shell;
+    const console_app_descriptor_t *app=NULL;
+    for(size_t i=0;i<sh->app_count;++i)if(sh->apps[i].id==sh->active_app_id){app=&sh->apps[i];break;}
+    if(!app){ng_heading(s,"Opening game");ng_empty(s,"Getting ready","");return;}
+    ng_heading(s,app->title);
+    ng_panel(s,264,168,988,448,NG_LINE,NG_SURFACE);
+    ng_game_art(s,app,284,188,600,337);
+    ng_label(s,910,206,"GET READY",24,NG_CYAN,306);
+    char category[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];
+    ng_category_label(ng_app_category(app),category);
+    ng_label(s,910,254,category,30,NG_WHITE,306);
+    ng_label(s,288,558,app->subtitle?app->subtitle:"",28,NG_WHITE,932);
+    ng_label(s,910,452,"Opening...",28,NG_MUTED,306);
+}
+static unsigned ng_nav_selection(const console_shell_t *sh)
+{
+    if(sh->page==CONSOLE_PAGE_EXTERNAL)return 1U;
+    if(sh->page==CONSOLE_PAGE_HOME)return sh->home_all_programs?1U:0U;
+    if(sh->page==CONSOLE_PAGE_MULTIPLAYER)return 2U;
+    if(sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES||
+       sh->page==CONSOLE_PAGE_FILE_TRANSFER||sh->page==CONSOLE_PAGE_USB_DRIVE)return 3U;
+    if(sh->page==CONSOLE_PAGE_SAVES||sh->page==CONSOLE_PAGE_ACHIEVEMENTS)return 1U;
+    return 4U;
+}
+static void ng_chrome(ng_scene_t *s)
+{
+    const console_shell_t *sh=s->shell;char value[64];
+    ng_rect(s,0,0,NG_W,NG_H,NG_INK);ng_rect(s,0,0,240,NG_H,NG_RGB(9,26,38));
+    if(s->pixels)for(size_t y=0;y<64U;++y)for(size_t x=0;x<64U;++x){
+        const size_t i=(y*64U+x)*3U;const unsigned alpha=(unsigned)ng_brand_mark[i+2U]*15U/255U;
+        uint16_t *dst=s->pixels+(y+4U)*s->stride+x+12U;
+        *dst=ng_mix((uint16_t)((unsigned)ng_brand_mark[i]|((unsigned)ng_brand_mark[i+1U]<<8U)),*dst,alpha);
+    }
+    ng_text(s,83,14,"GameChangersAI",30,NG_WHITE,360);
+    const unsigned game_volume=bounded_volume(sh->runtime.game_volume_step);
+    ng_add(s,596,4,196,68,NC_AUDIO_STATUS,0,true);
+    if(ng_focused(s,NC_AUDIO_STATUS,0))ng_panel(s,596,4,196,68,NG_WHITE,NG_INK);
+    ng_icon(s,606,18,5U,game_volume?NG_MUTED:NG_AMBER);
+    if(!game_volume)ng_line(s,606,18,644,54,NG_AMBER);
+    if(game_volume)(void)snprintf(value,sizeof(value),"Game %u/10",game_volume);
+    else (void)snprintf(value,sizeof(value),"Muted");
+    ng_label(s,654,22,value,24,game_volume?NG_WHITE:NG_AMBER,138);
+    if(sh->runtime.game_storage_space_valid){
+        char size[16];p4_format_file_size((uint64_t)sh->runtime.game_storage_free_kib*1024U,size);
+        (void)snprintf(value,sizeof(value),"%s free",size);
+    } else (void)snprintf(value,sizeof(value),"Storage %s",sh->runtime.game_storage_state==CONSOLE_STORAGE_READY?"ready":"unavailable");
+    ng_label(s,814,22,value,24,NG_MUTED,270);
+    (void)snprintf(value,sizeof(value),sh->runtime.battery_sample_valid?"%u%%":"--%%",(unsigned)sh->runtime.battery_percent);
+    ng_label(s,1130,18,value,30,sh->runtime.battery_sample_valid?NG_WHITE:NG_MUTED,110);
+    ng_panel(s,1058,25,51,27,NG_MUTED,NG_INK);ng_rect(s,1109,33,5,12,NG_MUTED);
+    if(sh->runtime.battery_sample_valid)ng_rect(s,1063,30,(int)(sh->runtime.battery_percent>100U?100U:sh->runtime.battery_percent)*41/100,17,NG_CYAN);
+    ng_add(s,1090,0,172,80,NC_PAGE,CONSOLE_PAGE_POWER,true);
+    const char *nav[]={"Home","Games","Multiplayer","Files","Settings"};
+    const unsigned selected=ng_nav_selection(sh);
+    for(unsigned i=0;i<5U;++i){
+        const int y=128+(int)i*94;const bool active=selected==i;
+        ng_add(s,12,y,216,82,NC_HOME+i,0,true);
+        if(active)ng_round(s,12,y,216,82,12,NG_CYAN);
+        if(ng_focused(s,NC_HOME+i,0))ng_panel(s,12,y,216,82,NG_WHITE,active?NG_CYAN:NG_SURFACE);
+        ng_icon(s,30,y+20,i,active?NG_INK:NG_MUTED);
+        ng_text(s,82,y+23,nav[i],24,active?NG_INK:NG_MUTED,140);
+    }
+    ng_text(s,20,664,sh->page==CONSOLE_PAGE_EXTERNAL?"Please wait":"A Select  B Back",22,NG_MUTED,220);
+    ng_text(s,1020,676,"OS " CONSOLE_PRODUCT_VERSION,22,NG_MUTED,220);
+}
+static void ng_home(ng_scene_t *s)
+{
+    console_shell_t *sh=s->shell;size_t games[CONSOLE_SHELL_MAX_APPS];const size_t count=ng_games(sh,games);
+    ng_heading(s,sh->home_all_programs?"Games":"Your games");
+    if(!count){ng_empty(s,"Your library is ready","Add games through Files or USB transfer.");return;}
+    if(!sh->home_all_programs){
+        const console_app_descriptor_t *app=&sh->apps[games[0]];
+        ng_panel(s,264,150,988,282,NG_CYAN,NG_INK);
+        ng_game_art(s,app,268,154,980,274);
+        /* Opaque backing keeps any game's title readable, including fallback art. */
+        ng_round(s,280,174,395,96,10,NG_INK);
+        ng_label(s,296,192,app->title,42,NG_WHITE,370);
+        ng_button(s,292,318,250,84,app->enabled?"Play":"Unavailable",NC_LAUNCH,(unsigned)games[0],app->enabled,true);
+        for(size_t i=1;i<count&&i<4U;++i)ng_game_card(s,games[i],264+(int)(i-1U)*334,450,320,208);
+    } else {
+        const size_t filtered=ng_library_games(sh,games);ng_set_scroll(sh,true,sh->ng_library_scroll);
+        char category[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES],value[64];
+        ng_category_label(sh->ng_category,category);
+        (void)snprintf(value,sizeof(value),"Category: %s",category[0]?category:"All");
+        ng_button(s,640,86,424,64,value,NC_FILTER,0,true,false);
+        (void)snprintf(value,sizeof(value),"%u titles",(unsigned)filtered);ng_label(s,1090,105,value,24,NG_MUTED,162);
+        s->clip_top=NG_GRID_TOP;s->clip_bottom=NG_GRID_BOTTOM;
+        ng_library_rows(s,games,filtered);
+        s->clip_top=0;s->clip_bottom=0;ng_scrollbar(s,filtered,true);
+        ng_label(s,878,643,"Swipe to scroll",22,NG_MUTED,340);
+    }
+}
+static void ng_settings(ng_scene_t *s)
+{
+    ng_heading(s,"Settings");
+    const char *labels[]={"Sound","Appearance","Controllers","Storage","Battery","System"};
+    const char *sub[]={"Startup and game volume","Text and motion","Input and mappings","Games and free space","Power and charge status","Clock, sensors and device"};
+    const console_page_t pages[]={CONSOLE_PAGE_AUDIO,CONSOLE_PAGE_APPEARANCE,CONSOLE_PAGE_CONTROLLERS,CONSOLE_PAGE_STORAGE,CONSOLE_PAGE_POWER,CONSOLE_PAGE_SYSTEM};
+    for(unsigned i=0;i<6U;++i){
+        const int x=264+(int)(i%2U)*506,y=158+(int)(i/2U)*166;
+        ng_add(s,x,y,482,146,NC_PAGE,(unsigned)pages[i],true);
+        ng_panel(s,x,y,482,146,ng_focused(s,NC_PAGE,(unsigned)pages[i])?NG_CYAN:NG_LINE,NG_SURFACE);
+        const unsigned icons[]={5U,6U,1U,8U,7U,4U};
+        ng_icon(s,x+20,y+27,icons[i],NG_CYAN);
+        ng_label(s,x+82,y+24,labels[i],36,NG_WHITE,376);
+        ng_label(s,x+82,y+80,sub[i],24,NG_MUTED,376);
+    }
+}
+
+static void ng_battery(ng_scene_t *s)
+{
+    const console_shell_runtime_info_t *r=&s->shell->runtime;char value[80];
+    ng_heading(s,"Battery");
+    ng_panel(s,264,174,360,476,NG_LINE,NG_SURFACE);
+    ng_round(s,401,232,76,28,8,NG_CYAN);ng_panel(s,346,256,188,260,NG_CYAN,NG_INK);
+    if(r->battery_sample_valid){
+        const int fill=(int)(r->battery_percent>100U?100U:r->battery_percent)*224/100;
+        ng_round(s,361,501-fill,158,fill,6,NG_CYAN);
+    }else ng_center(s,350,333,180,"?",84,NG_AMBER);
+    ng_center(s,280,550,328,r->battery_sample_valid?"Voltage estimate":"Reading unavailable",24,NG_MUTED);
+    (void)snprintf(value,sizeof(value),r->battery_sample_valid?"%u%%":"--%%",(unsigned)r->battery_percent);
+    ng_text(s,666,173,value,68,NG_WHITE,520);
+    ng_label(s,668,274,r->battery_sample_valid?"Battery level":"Battery reading unavailable",32,NG_WHITE,550);
+    (void)snprintf(value,sizeof(value),"%u.%02u V",(unsigned)r->battery_millivolts/1000U,(unsigned)(r->battery_millivolts%1000U)/10U);
+    ng_text(s,668,344,"Pack voltage",26,NG_MUTED,280);ng_text(s,1010,344,r->battery_supported?value:"Unavailable",28,NG_WHITE,220);
+    ng_text(s,668,400,"Charge state",26,NG_MUTED,280);
+    const char *state=!r->battery_sample_valid||!r->battery_current_valid?"Unknown":r->battery_milliamps < -10?"Charging":r->battery_milliamps>10?"Discharging":"Idle / unknown";
+    ng_text(s,1010,400,state,28,NG_WHITE,220);
+    if(r->battery_current_valid&&r->battery_sample_valid){
+        (void)snprintf(value,sizeof(value),"%ld mA",(long)r->battery_milliamps);
+        ng_text(s,668,456,"Measured current",26,NG_MUTED,320);ng_text(s,1010,456,value,28,NG_WHITE,220);
+    }else ng_label(s,668,462,"Check the battery connection.",28,NG_AMBER,550);
+    ng_label(s,668,543,r->battery_sample_valid?"Percentage is estimated from voltage.":"Charging status is not verified.",25,NG_MUTED,550);
+    ng_label(s,668,591,"Updates automatically",24,NG_MUTED,550);
+}
+static void ng_audio(ng_scene_t *s)
+{
+    ng_heading(s,"Sound");char value[32];
+    const uint8_t steps[]={s->shell->runtime.boot_volume_step,s->shell->runtime.game_volume_step};
+    const char *labels[]={"Startup sound","Game volume"};
+    for(unsigned i=0;i<2U;++i){
+        const int y=190+(int)i*198;ng_panel(s,264,y,988,174,NG_LINE,NG_SURFACE);
+        ng_label(s,290,y+18,labels[i],34,NG_WHITE,540);
+        ng_rect(s,296,y+108,476,10,NG_LINE);ng_rect(s,296,y+108,(int)bounded_volume(steps[i])*476/10,10,NG_CYAN);
+        ng_button(s,824,y+45,88,88,"-",NC_AUDIO,i*2U,steps[i]>0U,false);
+        if(steps[i])(void)snprintf(value,sizeof(value),"%u / 10",(unsigned)bounded_volume(steps[i]));
+        else (void)snprintf(value,sizeof(value),"Muted");
+        ng_center(s,918,y+65,210,value,36,NG_WHITE);
+        ng_button(s,1132,y+45,88,88,"+",NC_AUDIO,i*2U+1U,steps[i]<10U,true);
+    }
+    ng_label(s,282,615,s->shell->runtime.audio_settings_persistent?"Volume settings are saved.":"Volume settings apply to this session.",26,NG_MUTED,950);
+}
+static void ng_appearance(ng_scene_t *s)
+{
+    ng_heading(s,"Appearance");
+    ng_panel(s,264,178,988,158,NG_LINE,NG_SURFACE);
+    ng_text(s,290,200,"Large text",34,NG_WHITE,560);
+    ng_text(s,290,255,"Larger controls and list labels",25,NG_MUTED,600);
+    ng_button(s,1040,214,176,88,s->shell->ng_large_text?"On":"Off",NC_APPEARANCE,0,true,s->shell->ng_large_text);
+    ng_panel(s,264,354,988,158,NG_LINE,NG_SURFACE);
+    ng_text(s,290,376,"Reduce motion",34,NG_WHITE,560);
+    ng_text(s,290,431,"Keep navigation feedback still",25,NG_MUTED,600);
+    ng_button(s,1040,390,176,88,s->shell->ng_reduce_motion?"On":"Off",NC_APPEARANCE,1,true,s->shell->ng_reduce_motion);
+    ng_button(s,264,548,472,88,"Display test",NC_PAGE,CONSOLE_PAGE_COLORS,true,false);
+    ng_button(s,760,548,492,88,"Touch test",NC_PAGE,CONSOLE_PAGE_TOUCH,true,false);
+    ng_text(s,280,658,"Appearance settings apply to this session.",22,NG_MUTED,780);
+}
+static const char *ng_storage_name(console_shell_storage_state_t state)
+{
+    switch(state){
+    case CONSOLE_STORAGE_READY:return "Ready";
+    case CONSOLE_STORAGE_MISSING:return "No card";
+    case CONSOLE_STORAGE_INVALID:return "Check contents";
+    case CONSOLE_STORAGE_FORMAT_REQUIRED:return "Format required";
+    case CONSOLE_STORAGE_FAULT:return "Storage fault";
+    default:return "Unavailable";
+    }
+}
+static void ng_storage(ng_scene_t *s)
+{
+    const console_shell_runtime_info_t *r=&s->shell->runtime;char value[80];
+    ng_heading(s,"Storage");
+    ng_panel(s,264,178,988,338,NG_LINE,NG_SURFACE);
+    ng_status_row(s,194,r->sd_card_storage?"SD card":"Game storage",ng_storage_name(r->game_storage_state),NG_CYAN);
+    if(r->game_storage_space_valid){char available[16],total[16];p4_format_file_size((uint64_t)r->game_storage_free_kib*1024U,available);p4_format_file_size((uint64_t)r->game_storage_kib*1024U,total);(void)snprintf(value,sizeof(value),"%s / %s",available,total);}
+    else (void)snprintf(value,sizeof(value),"Unavailable");
+    ng_status_row(s,269,"Free / total",value,NG_WHITE);
+    (void)snprintf(value,sizeof(value),"%u cartridges + %u built-in",(unsigned)r->valid_cart_count,(unsigned)r->builtin_game_count);
+    ng_status_row(s,344,"Installed games",value,NG_WHITE);
+    ng_label(s,290,438,r->game_storage_operation!=CONSOLE_STORAGE_OPERATION_NONE?"Storage operation in progress...":
+        r->game_storage_last_check_ok?"Last check passed":"Use Check card to inspect storage.",26,NG_MUTED,920);
+    ng_button(s,264,548,304,88,"Check card",NC_STORAGE,0,storage_check_enabled(s->shell),false);
+    ng_button(s,606,548,304,88,"Retry mount",NC_STORAGE,1,storage_retry_enabled(s->shell),false);
+    ng_button(s,948,548,304,88,"Repair card",NC_STORAGE,2,storage_repair_enabled(s->shell),false);
+}
+static void ng_files(ng_scene_t *s)
+{
+    console_shell_t *sh=s->shell;const bool games=sh->page==CONSOLE_PAGE_GAMES;
+    ng_heading(s,games?"Manage games":"Files");
+    ng_label(s,280,137,sh->files.path_label,24,NG_MUTED,282);
+    const size_t count=sh->files.entry_count;ng_set_scroll(sh,false,sh->ng_file_scroll);
+    if(!sh->files.available)ng_label(s,292,210,"Storage is unavailable.",34,NG_WHITE,900);
+    else if(!count)ng_label(s,292,210,"This folder is empty.",34,NG_WHITE,900);
+    s->clip_top=NG_FILES_TOP;s->clip_bottom=NG_FILES_BOTTOM;
+    ng_file_rows(s,count);
+    s->clip_top=0;s->clip_bottom=0;ng_scrollbar(s,count,false);
+    const bool selected=sh->file_selected_index<count;
+    ng_button(s,264,558,88,88,"Up",NC_FILE_OPEN,1,sh->files.can_go_up,false);
+    ng_button(s,368,558,136,88,"Prev",NC_FILE_PREV,0,sh->ng_file_scroll>0,false);
+    ng_button(s,520,558,136,88,"Next",NC_FILE_NEXT,0,sh->ng_file_scroll<ng_scroll_max(count,false),false);
+    ng_button(s,672,558,176,88,"Refresh",NC_REFRESH,0,true,false);
+    ng_button(s,864,558,304,88,file_selected_is_installable(sh)?"Install update":"Open",NC_FILE_OPEN,0,selected&&(file_selected_is_openable(sh)||file_selected_is_installable(sh)),true);
+    ng_button(s,1196,574,56,56,"...",NC_FILE_MENU,0,selected&&file_selected_is_removable(sh),false);
+    const char *notice=sh->file_notice==CONSOLE_FILE_NOTICE_ERROR?"Operation failed":
+        sh->file_notice==CONSOLE_FILE_NOTICE_DELETED?"Deleted":
+        sh->file_notice==CONSOLE_FILE_NOTICE_UPDATING?"Installing update...":
+        sh->file_notice==CONSOLE_FILE_NOTICE_REFRESHED?"Refreshed":"";
+    ng_label(s,282,658,notice,22,NG_MUTED,700);
+}
+static void ng_system(ng_scene_t *s)
+{
+    const console_shell_runtime_info_t *r=&s->shell->runtime;char value[80];
+    ng_heading(s,"System");ng_panel(s,264,178,988,260,NG_LINE,NG_SURFACE);
+    ng_status_row(s,188,"GameChangersAI OS",CONSOLE_PRODUCT_VERSION,NG_WHITE);
+    ng_status_row(s,248,"Device","M5Stack Tab5",NG_WHITE);
+    ng_status_row(s,308,"Display","1280 x 720",NG_WHITE);
+    ng_status_row(s,368,"Clock (UTC)",r->rtc_valid?r->rtc_datetime:"Sync from connected computer",r->rtc_valid?NG_WHITE:NG_MUTED);
+    const char *labels[]={"Sensors","Terminal","Touch test","Display test"};
+    const console_page_t pages[]={CONSOLE_PAGE_SENSORS,CONSOLE_PAGE_TERMINAL,CONSOLE_PAGE_TOUCH,CONSOLE_PAGE_COLORS};
+    for(unsigned i=0;i<4U;++i)ng_button(s,264+(int)i*253,458,229,72,labels[i],NC_PAGE,(unsigned)pages[i],true,false);
+    /* Installed utilities remain reachable without appearing in the game library. */
+    unsigned utility=0U;
+    for(size_t i=0;i<s->shell->app_count&&utility<3U;++i)if(ng_system_utility(&s->shell->apps[i])){
+        const console_app_descriptor_t *app=&s->shell->apps[i];
+        ng_button(s,264+(int)utility*334,550,320,72,app->title,NC_LAUNCH,(unsigned)i,app->enabled,false);
+        ++utility;
+    }
+    (void)snprintf(value,sizeof(value),"Uptime %lu s   /   RAM %lu KB   /   PSRAM %lu KB",
+        (unsigned long)r->uptime_seconds,(unsigned long)r->internal_free_kib,(unsigned long)r->psram_free_kib);
+    ng_label(s,282,642,value,24,NG_MUTED,944);
+}
+static void ng_sensors(ng_scene_t *s)
+{
+    const console_shell_runtime_info_t *r=&s->shell->runtime;char value[80];
+    ng_heading(s,"Sensors");ng_panel(s,264,178,988,430,NG_LINE,NG_SURFACE);
+    if(r->motion_valid)(void)snprintf(value,sizeof(value),"%ld  %ld  %ld mg",(long)r->accel_mg[0],(long)r->accel_mg[1],(long)r->accel_mg[2]);
+    else (void)snprintf(value,sizeof(value),"Unavailable");
+    ng_status_row(s,202,"Acceleration X / Y / Z",value,NG_WHITE);
+    if(r->motion_valid)(void)snprintf(value,sizeof(value),"%ld  %ld  %ld mdps",(long)r->gyro_mdps[0],(long)r->gyro_mdps[1],(long)r->gyro_mdps[2]);
+    else (void)snprintf(value,sizeof(value),"Unavailable");
+    ng_status_row(s,285,"Rotation X / Y / Z",value,NG_WHITE);
+    if(r->temperature_valid)(void)snprintf(value,sizeof(value),"%ld C",(long)(r->temperature_millicelsius/1000));
+    else (void)snprintf(value,sizeof(value),"Unavailable");
+    ng_status_row(s,368,"Sensor temperature",value,NG_WHITE);
+    ng_status_row(s,451,"Clock (UTC)",r->rtc_valid?r->rtc_datetime:"Not set",NG_WHITE);
+    ng_label(s,290,545,"Temperature is the sensor die, not the room.",24,NG_MUTED,916);
+    ng_label(s,282,640,"Readings update automatically.",26,NG_MUTED,916);
+}
+static void ng_controllers(ng_scene_t *s)
+{
+    const console_shell_runtime_info_t *r=&s->shell->runtime;
+    ng_heading(s,"Controllers");
+    ng_panel(s,264,178,988,270,NG_LINE,NG_SURFACE);
+    ng_label(s,290,208,r->controller_ready?"Controller connected":"No controller connected",40,NG_WHITE,926);
+    ng_label(s,290,270,r->controller_ready?controller_source_name((uint8_t)r->controller_transport):"Connect a wired controller to USB-A.",28,NG_MUTED,926);
+    ng_label(s,290,324,r->controller_mapping_active?controller_mapping_target_name(r->controller_mapping_target):"Touch controls are ready.",30,NG_CYAN,926);
+    ng_label(s,290,382,r->ble_controller_supported?"Bluetooth controller controls below.":"Bluetooth unavailable in this firmware.",25,NG_MUTED,926);
+    const char *labels[]={r->ble_controller_enabled?"Disable BLE":"Enable BLE","Pair","Disconnect",
+        r->controller_mapping_active?"Cancel mapping":"Map buttons","Reset mapping","Forget bond"};
+    for(unsigned i=0;i<6U;++i)ng_button(s,264+(int)(i%3U)*334,470+(int)(i/3U)*98,320,84,
+        labels[i],NC_CONTROLLER,i,controller_action_enabled(s->shell,i),i==3U&&r->controller_ready);
+}
+static void ng_transfer(ng_scene_t *s)
+{
+    const console_shell_runtime_info_t *r=&s->shell->runtime;char value[80];
+    ng_heading(s,"File transfer");ng_panel(s,264,178,988,388,NG_LINE,NG_SURFACE);
+    ng_label(s,296,204,r->file_transfer_ready?"USB transfer ready":"USB transfer unavailable",38,NG_WHITE,916);
+    ng_label(s,296,265,"Use the connected computer to send files.",28,NG_MUTED,916);
+    ng_label(s,296,331,r->file_transfer_name[0]?r->file_transfer_name:"Waiting for a transfer",30,NG_CYAN,916);
+    (void)snprintf(value,sizeof(value),"%s   %u%%",file_transfer_state_name(r->file_transfer_state),(unsigned)r->file_transfer_progress_percent);
+    ng_label(s,296,390,value,28,NG_WHITE,916);
+    ng_rect(s,296,465,916,14,NG_LINE);
+    unsigned progress=r->file_transfer_progress_percent>100U?100U:r->file_transfer_progress_percent;
+    ng_rect(s,296,465,(int)progress*916/100,14,NG_CYAN);
+    ng_button(s,264,588,304,80,"Files",NC_FILES,0,true,false);
+    ng_button(s,606,588,304,80,"Manage games",NC_PAGE,CONSOLE_PAGE_GAMES,true,false);
+    ng_button(s,948,588,304,80,"USB drive",NC_PAGE,CONSOLE_PAGE_USB_DRIVE,true,false);
+}
+static void ng_usb(ng_scene_t *s)
+{
+    const console_shell_runtime_info_t *r=&s->shell->runtime;
+    ng_heading(s,"USB drive");ng_empty(s,r->usb_storage_supported?
+        (r->usb_drive_active?"USB drive active":"USB drive ready"):"USB drive unavailable",
+        r->usb_storage_supported?"Eject the drive on your computer before returning.":"Use USB file transfer on this Tab5 firmware.");
+    ng_button(s,264,560,474,88,r->usb_drive_active?"Return to console":"Enable USB drive",NC_USB,0,system_usb_button_enabled(s->shell),true);
+    ng_button(s,778,560,474,88,"File transfer",NC_PAGE,CONSOLE_PAGE_FILE_TRANSFER,true,false);
+}
+static void ng_lists(ng_scene_t *s)
+{
+    console_shell_t *sh=s->shell;const bool saves=sh->page==CONSOLE_PAGE_SAVES;
+    const size_t count=saves?sh->saves.count:sh->achievements.count;char value[80];
+    ng_heading(s,saves?"Saved games":"Achievements");
+    const size_t first=sh->ng_list_first<count?sh->ng_list_first:0U;
+    if(!count)ng_empty(s,saves?"No saved games yet":"No achievements yet",saves?"Games save progress through the OS.":"Play a game to start earning achievements.");
+    for(size_t i=first;i<count&&i<first+4U;++i){
+        const int y=178+(int)(i-first)*92;ng_panel(s,264,y,988,84,NG_LINE,NG_SURFACE);
+        const char *title,*description;
+        if(saves){title=sh->saves.slots[i].slot_name;description=sh->saves.slots[i].game_id;}
+        else {const p4_achievement_entry_t *e=p4_achievement_catalog_get(&sh->achievements,i);if(!e)continue;title=e->title;description=e->description;}
+        ng_label(s,290,y+7,title,30,NG_WHITE,916);ng_label(s,290,y+46,description,24,NG_MUTED,916);
+    }
+    ng_button(s,264,574,224,80,"Previous",NC_LIST_PREV,0,first>0U,false);
+    (void)snprintf(value,sizeof(value),"%u %s",(unsigned)count,saves?"saved slots":"unlocked this session");
+    ng_center(s,508,590,480,value,28,NG_MUTED);
+    ng_button(s,1028,574,224,80,"Next",NC_LIST_NEXT,0,first+4U<count,false);
+}
+static void ng_display_test(ng_scene_t *s)
+{
+    ng_heading(s,"Display test");
+    const uint16_t colors[]={0xffff,0xffe0,0x07ff,0x07e0,0xf81f,0xf800,0x001f};
+    for(int i=0;i<7;++i)ng_rect(s,264+i*141,180,141,268,colors[i]);
+    for(int i=0;i<16;++i){const unsigned v=(unsigned)i*17U;ng_rect(s,264+i*61,468,61,74,NG_RGB(v,v,v));}
+    ng_text(s,282,567,"Aa 0123456789",32,NG_WHITE,470);
+    ng_text(s,760,567,"Readable secondary text",26,NG_MUTED,470);
+    ng_button(s,264,616,474,80,"Touch test",NC_PAGE,CONSOLE_PAGE_TOUCH,true,false);
+    ng_button(s,778,616,474,80,"Done",NC_SETTINGS,0,true,true);
+}
+static void ng_touch_test(ng_scene_t *s)
+{
+    ng_heading(s,"Touch test");ng_panel(s,264,178,988,440,NG_LINE,NG_SURFACE);
+    ng_text(s,290,201,"Touch anywhere in the test area",32,NG_WHITE,916);
+    ng_text(s,290,253,"Each contact shows its real screen coordinates.",25,NG_MUTED,916);
+    for(size_t i=0;i<s->shell->contact_count;++i){
+        const console_shell_contact_t *c=&s->shell->contacts[i];char value[48];
+        const int x=(int)c->x,y=(int)c->y;
+        ng_round(s,x-15,y-15,30,30,15,NG_CYAN);
+        (void)snprintf(value,sizeof(value),"X %u  Y %u",(unsigned)c->x,(unsigned)c->y);
+        ng_label(s,290,322+(int)i*48,value,30,NG_WHITE,916);
+    }
+    ng_button(s,264,630,988,80,"Done",NC_SETTINGS,0,true,true);
+}
+static void ng_terminal(ng_scene_t *s)
+{
+    ng_heading(s,"Terminal");
+    char value[P4_TERMINAL_INPUT_BYTES+4];(void)snprintf(value,sizeof(value),"> %s",s->shell->terminal.input);
+    if(!s->shell->ng_keyboard){
+        ng_panel(s,264,178,988,330,NG_LINE,NG_SURFACE);
+        for(size_t i=0;i<s->shell->terminal.line_count;++i)
+            ng_label(s,290,205+(int)i*53,s->shell->terminal.lines[i],28,NG_MUTED,930);
+        ng_panel(s,264,526,988,80,NG_CYAN,NG_INK);ng_label(s,286,547,value,30,NG_WHITE,942);
+        ng_button(s,264,624,988,80,"On-screen keyboard",NC_KEYBOARD,0,true,true);
+        return;
+    }
+    ng_panel(s,264,158,988,76,NG_CYAN,NG_INK);ng_label(s,286,177,value,30,NG_WHITE,942);
+    static const char *rows[]={"1234567890","QWERTYUIOP","ASDFGHJKL","ZXCVBNM./-"};
+    for(unsigned row=0;row<4U;++row)for(unsigned col=0;rows[row][col];++col){
+        const char key=rows[row][col];const int x=264+(int)col*98+(row==2U?36:0);
+        char label[2]={key,0};
+        ng_button(s,x,250+(int)row*84,90,76,label,NC_KEY,(unsigned char)key,true,false);
+    }
+    ng_button(s,264,600,340,72,"Space",NC_KEY,' ',true,false);
+    ng_button(s,620,600,284,72,"Backspace",NC_KEY,8,true,false);
+    ng_button(s,920,600,332,72,"Enter",NC_KEY,13,true,true);
+}
+
+static void ng_mp_value(const console_shell_runtime_info_t *r,unsigned option,char *value,size_t bytes)
+{
+    switch(option){
+    case CONSOLE_MULTIPLAYER_OPTION_GAME:(void)snprintf(value,bytes,"%s",r->multiplayer_game_title);break;
+    case CONSOLE_MULTIPLAYER_OPTION_MODE:(void)snprintf(value,bytes,"%s",multiplayer_mode_name(r->multiplayer_game_mode));break;
+    case CONSOLE_MULTIPLAYER_OPTION_MAP:(void)snprintf(value,bytes,"Episode %u / Map %u",(unsigned)r->multiplayer_episode,(unsigned)r->multiplayer_map);break;
+    case CONSOLE_MULTIPLAYER_OPTION_SKILL:(void)snprintf(value,bytes,"%s",multiplayer_skill_name(r->multiplayer_skill));break;
+    case CONSOLE_MULTIPLAYER_OPTION_MONSTERS:(void)snprintf(value,bytes,"%s",r->multiplayer_no_monsters?"Off":"On");break;
+    case CONSOLE_MULTIPLAYER_OPTION_FAST:(void)snprintf(value,bytes,"%s",r->multiplayer_fast_monsters?"On":"Off");break;
+    case CONSOLE_MULTIPLAYER_OPTION_RESPAWN:(void)snprintf(value,bytes,"%s",r->multiplayer_respawn_monsters?"On":"Off");break;
+    case CONSOLE_MULTIPLAYER_OPTION_TIME_LIMIT:(void)snprintf(value,bytes,"%u minutes",(unsigned)r->multiplayer_time_limit_minutes);break;
+    case CONSOLE_MULTIPLAYER_OPTION_TRANSPORT:(void)snprintf(value,bytes,"%s",r->multiplayer_transport_kind==2U?"Local Wi-Fi":r->multiplayer_transport_kind==1U?"Bluetooth":"USB / wired relay");break;
+    case CONSOLE_MULTIPLAYER_OPTION_DICE:(void)snprintf(value,bytes,"%s",!r->multiplayer_dice_available?"Unavailable":r->multiplayer_dice_enabled?"On":"Off");break;
+    default:(void)snprintf(value,bytes,"%u rooms",(unsigned)r->multiplayer_lobby_count);break;
+    }
+}
+static void ng_multiplayer(ng_scene_t *s)
+{
+    console_shell_t *sh=s->shell;const console_shell_runtime_info_t *r=&sh->runtime;
+    ng_heading(s,sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_ROLE?"Multiplayer":
+        sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_JOIN?"Join game":
+        sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS?"Match settings":"Host game");
+    if(sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_ROLE){
+        ng_panel(s,264,178,988,190,NG_LINE,NG_SURFACE);
+        ng_label(s,292,205,r->multiplayer_transport_ready?"Console link ready":"Set up a console link",38,NG_WHITE,920);
+        ng_label(s,292,270,r->multiplayer_transport_kind==2U?"Host creates a network. No router needed.":r->multiplayer_transport_kind==1U?"Bluetooth transport selected":"USB / wired relay transport",28,NG_MUTED,920);
+        ng_button(s,264,402,474,142,"Host game",NC_MP_VIEW,CONSOLE_MULTIPLAYER_VIEW_HOST,r->multiplayer_core_ready,true);
+        ng_button(s,778,402,474,142,"Join game",NC_MP_VIEW,CONSOLE_MULTIPLAYER_VIEW_JOIN,r->multiplayer_core_ready,false);
+        char transport[80]; ng_mp_value(r,CONSOLE_MULTIPLAYER_OPTION_TRANSPORT,transport,sizeof(transport));
+        ng_button(s,264,580,988,88,transport,NC_MP_OPTION,CONSOLE_MULTIPLAYER_OPTION_TRANSPORT*2U+1U,r->multiplayer_settings_editable,false);
+        return;
+    }
+    if(sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS){
+        const char *names[]={"Game","Mode","Map","Difficulty","Monsters","Fast monsters","Respawn","Time limit","Transport","Rooms","Dice"};
+        const size_t first=sh->ng_list_first<CONSOLE_MULTIPLAYER_OPTION_COUNT?sh->ng_list_first:0U;
+        for(size_t i=first;i<CONSOLE_MULTIPLAYER_OPTION_COUNT&&i<first+4U;++i){
+            const int y=178+(int)(i-first)*94;char value[80];ng_mp_value(r,(unsigned)i,value,sizeof(value));
+            ng_label(s,282,y+4,names[i],26,NG_MUTED,590);
+            ng_label(s,282,y+39,value,30,NG_WHITE,640);
+            const bool enabled=r->multiplayer_settings_editable&&!r->multiplayer_launch_syncing&&i!=CONSOLE_MULTIPLAYER_OPTION_LOBBY&&
+                (i!=CONSOLE_MULTIPLAYER_OPTION_DICE||(!r->multiplayer_game_is_doom&&r->multiplayer_dice_available));
+            ng_button(s,1036,y,88,82,"-",NC_MP_OPTION,(unsigned)i*2U,enabled,false);
+            ng_button(s,1160,y,88,82,"+",NC_MP_OPTION,(unsigned)i*2U+1U,enabled,true);
+        }
+        ng_button(s,264,580,304,88,"Previous",NC_LIST_PREV,0,first>0U,false);
+        ng_button(s,606,580,304,88,"Next",NC_LIST_NEXT,0,first+4U<CONSOLE_MULTIPLAYER_OPTION_COUNT,false);
+        ng_button(s,948,580,304,88,"Done",NC_MP_VIEW,CONSOLE_MULTIPLAYER_VIEW_HOST,true,true);
+        return;
+    }
+    if(sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_JOIN){
+        if(!r->multiplayer_lobby_count)ng_empty(s,"No rooms found",r->multiplayer_lobby_scanning?"Looking for a compatible room...":"Connect the console link and start a host.");
+        for(unsigned i=0;i<r->multiplayer_lobby_count&&i<CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX;++i){
+            const int y=178+(int)i*92;char label[96];
+            (void)snprintf(label,sizeof(label),"%s   %u/%u players",r->multiplayer_lobbies[i].game_title,
+                (unsigned)r->multiplayer_lobbies[i].players_present,(unsigned)r->multiplayer_lobbies[i].player_capacity);
+            ng_button(s,264,y,988,84,label,NC_MP_ROOM,i+1U,r->multiplayer_lobbies[i].game_available,
+                r->multiplayer_lobby_selection==i+1U);
+        }
+    }else {
+        ng_panel(s,264,178,988,250,NG_LINE,NG_SURFACE);
+        ng_label(s,292,199,r->multiplayer_game_title[0]?r->multiplayer_game_title:"Select a game",40,NG_WHITE,914);
+        ng_label(s,292,269,r->multiplayer_launch_syncing?"Synchronizing consoles...":
+            r->multiplayer_peer_seen?"Another console is connected.":"Waiting for another console.",28,NG_MUTED,914);
+        ng_label(s,292,337,r->multiplayer_transport_encrypted?"Encrypted Bluetooth link":r->multiplayer_transport_kind==2U?"Local Wi-Fi · no router or internet":"USB / wired local link",26,NG_CYAN,914);
+        ng_button(s,264,452,988,82,"Match settings",NC_MP_OPTIONS,0,r->multiplayer_settings_editable,false);
+    }
+    const bool enabled=multiplayer_primary_action(sh).type!=CONSOLE_ACTION_NONE;
+    ng_button(s,264,576,988,88,sh->multiplayer_view==CONSOLE_MULTIPLAYER_VIEW_JOIN?"Join selected room":
+        r->multiplayer_can_start?"Start game":"Create room",NC_MP_PRIMARY,0,enabled,true);
+}
+static void ng_modal(ng_scene_t *s)
+{
+    console_shell_t *sh=s->shell;const bool repair=sh->storage_repair_confirm;
+    s->count=0;
+    if(s->pixels)for(int y=0;y<NG_H;++y)for(int x=0;x<NG_W;++x){
+        uint16_t *p=s->pixels+(size_t)y*s->stride+(size_t)x;*p=ng_mix(NG_INK,*p,10);}
+    ng_panel(s,346,194,838,396,NG_CYAN,NG_SURFACE);
+    const bool update=!repair&&file_selected_is_installable(sh);
+    ng_center(s,368,230,790,repair?"Repair this card?":update?"Install this update?":"Delete this file?",42,NG_WHITE);
+    const char *name=repair?"An existing volume may be modified.":
+        sh->file_selected_index<sh->files.entry_count?sh->files.entries[sh->file_selected_index].label:"Selection unavailable";
+    ng_center(s,380,307,766,name,32,NG_MUTED);
+    ng_center(s,380,366,766,repair?"Check card first if you are unsure.":update?"The console will restart after installation.":"This removes the selected file from storage.",24,NG_MUTED);
+    ng_button(s,382,460,358,96,"Cancel",NC_CANCEL,0,true,true);
+    ng_button(s,774,460,374,96,repair?"Repair":update?"Install":"Delete",NC_CONFIRM,0,true,false);
+}
+static void ng_dimmer(ng_scene_t *s)
+{
+    s->count=0;
+    if(s->pixels)for(int y=0;y<NG_H;++y)for(int x=0;x<NG_W;++x){
+        uint16_t *p=s->pixels+(size_t)y*s->stride+(size_t)x;*p=ng_mix(NG_INK,*p,10);}
+    ng_add(s,0,0,NG_W,NG_H,NC_DISMISS,0,true);
+}
+static void ng_category_sheet(ng_scene_t *s)
+{
+    console_shell_t *sh=s->shell;const char *paths[CONSOLE_SHELL_MAX_APPS+1];
+    const size_t count=ng_categories(sh,paths);if(sh->ng_category_first>=count)sh->ng_category_first=0;
+    ng_dimmer(s);ng_panel(s,304,148,900,502,NG_CYAN,NG_SURFACE);
+    ng_label(s,332,170,"Game categories",36,NG_WHITE,660);
+    ng_button(s,1116,164,64,56,"X",NC_CANCEL,0,true,false);
+    for(size_t i=sh->ng_category_first;i<count&&i<sh->ng_category_first+12U;++i){
+        char label[CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES];ng_category_label(paths[i],label);
+        const size_t cell=i-sh->ng_category_first;
+        ng_button(s,328+(int)(cell%3U)*284,238+(int)(cell/3U)*72,268,60,
+            i?label:"All categories",NC_CATEGORY,(unsigned)i,true,strcmp(sh->ng_category,paths[i])==0);}
+    if(count>12U){ng_button(s,328,562,268,64,"Previous",NC_CATEGORY_PREV,0,sh->ng_category_first>0U,false);
+        ng_button(s,896,562,268,64,"Next",NC_CATEGORY_NEXT,0,sh->ng_category_first+12U<count,false);}
+}
+static void ng_file_menu(ng_scene_t *s)
+{
+    console_shell_t *sh=s->shell;
+    if(sh->file_selected_index>=sh->files.entry_count||sh->ng_confirm_revision!=sh->files.revision||
+       sh->ng_confirm_source!=sh->files.entries[sh->file_selected_index].source_index){sh->ng_file_menu=false;return;}
+    ng_dimmer(s);ng_panel(s,898,394,354,158,NG_LINE,NG_SURFACE);
+    ng_label(s,918,412,"File actions",28,NG_WHITE,234);
+    ng_button(s,1184,402,56,56,"X",NC_CANCEL,0,true,false);
+    ng_add(s,914,472,314,60,NC_DELETE,0,file_selected_is_removable(sh));
+    if(ng_focused(s,NC_DELETE,0))ng_round(s,914,472,314,60,8,NG_LINE);
+    ng_label(s,934,489,sh->page==CONSOLE_PAGE_GAMES?"Remove game...":"Delete file...",26,NG_AMBER,282);
+}
+static void ng_build_scene(ng_scene_t *s)
+{
+    ng_chrome(s);
+    switch(s->shell->page){
+    case CONSOLE_PAGE_HOME:ng_home(s);break;
+    case CONSOLE_PAGE_CONTROL_PANEL:ng_settings(s);break;
+    case CONSOLE_PAGE_APPEARANCE:ng_appearance(s);break;
+    case CONSOLE_PAGE_POWER:ng_battery(s);break;
+    case CONSOLE_PAGE_AUDIO:ng_audio(s);break;
+    case CONSOLE_PAGE_SYSTEM:ng_system(s);break;
+    case CONSOLE_PAGE_SENSORS:ng_sensors(s);break;
+    case CONSOLE_PAGE_STORAGE:ng_storage(s);break;
+    case CONSOLE_PAGE_CONTROLLERS:ng_controllers(s);break;
+    case CONSOLE_PAGE_FILES:case CONSOLE_PAGE_GAMES:ng_files(s);break;
+    case CONSOLE_PAGE_FILE_TRANSFER:ng_transfer(s);break;
+    case CONSOLE_PAGE_USB_DRIVE:ng_usb(s);break;
+    case CONSOLE_PAGE_SAVES:case CONSOLE_PAGE_ACHIEVEMENTS:ng_lists(s);break;
+    case CONSOLE_PAGE_COLORS:ng_display_test(s);break;
+    case CONSOLE_PAGE_TOUCH:ng_touch_test(s);break;
+    case CONSOLE_PAGE_TERMINAL:ng_terminal(s);break;
+    case CONSOLE_PAGE_MULTIPLAYER:ng_multiplayer(s);break;
+    case CONSOLE_PAGE_EXTERNAL:ng_launch(s);break;
+    }
+    if(s->shell->page!=CONSOLE_PAGE_HOME&&s->shell->page!=CONSOLE_PAGE_CONTROL_PANEL&&s->shell->page!=CONSOLE_PAGE_EXTERNAL)
+        ng_button(s,1152,82,100,80,"Back",NC_BACK,0,true,false);
+    if(s->shell->page==CONSOLE_PAGE_HOME&&s->shell->home_all_programs){
+        ng_button(s,264,642,200,56,"Saves",NC_PAGE,CONSOLE_PAGE_SAVES,true,false);
+        ng_button(s,488,642,276,56,"Achievements",NC_PAGE,CONSOLE_PAGE_ACHIEVEMENTS,true,false);}
+    if(s->shell->page==CONSOLE_PAGE_FILES){
+        ng_button(s,580,82,284,80,"Manage games",NC_PAGE,CONSOLE_PAGE_GAMES,true,false);
+        ng_button(s,880,82,240,80,"Transfer",NC_PAGE,CONSOLE_PAGE_FILE_TRANSFER,true,false);
+    }
+    if(s->shell->ng_categories)ng_category_sheet(s);
+    if(s->shell->ng_file_menu)ng_file_menu(s);
+    if(s->shell->file_delete_confirm||s->shell->storage_repair_confirm)ng_modal(s);
+    if(s->shell->pointer_visible){
+        const int x=(int)s->shell->pointer_x*NG_W/CONSOLE_SHELL_LAYOUT_WIDTH,y=(int)s->shell->pointer_y*NG_H/CONSOLE_SHELL_LAYOUT_HEIGHT;
+        ng_line(s,x,y,x,y+22,NG_WHITE);ng_line(s,x,y,x+16,y+16,NG_WHITE);ng_line(s,x,y+22,x+7,y+16,NG_WHITE);}
+}
+static const ng_control_t *ng_control(const ng_scene_t *s,uint16_t id)
+{ for(size_t i=0;i<s->count;++i)if(s->controls[i].id==id)return &s->controls[i];return NULL; }
+static const ng_control_t *ng_at(const ng_scene_t *s,uint16_t x,uint16_t y)
+{
+    for(size_t i=s->count;i>0U;--i){const ng_control_t *c=&s->controls[i-1U];
+        if(c->enabled&&x>=(uint16_t)c->x&&y>=(uint16_t)c->y&&x<(uint16_t)(c->x+c->w)&&y<(uint16_t)(c->y+c->h))return c;}
+    return NULL;
+}
+static void ng_initial_focus(console_shell_t *sh)
+{
+    if(sh->ng_focus==0U&&(sh->ng_scroll_kind||sh->ng_glide_kind))return;
+    ng_scene_t scene={.shell=sh};ng_build_scene(&scene);
+    const ng_control_t *current=ng_control(&scene,sh->ng_focus);
+    if(current&&current->enabled)return;
+    sh->ng_focus=0U;
+    for(size_t i=0;i<scene.count;++i)if(scene.controls[i].enabled&&scene.controls[i].x>=264&&scene.controls[i].y>=150){
+        sh->ng_focus=scene.controls[i].id;return;}
+    if(scene.count)sh->ng_focus=scene.controls[0].id;
+}
+static console_shell_action_t ng_open(console_shell_t *sh,console_page_t page)
+{
+    sh->control_panel_active=false;sh->file_delete_confirm=false;sh->storage_repair_confirm=false;
+    sh->ng_list_first=0U;sh->ng_file_scroll=0;sh->ng_focus=0U;sh->ng_keyboard=false;
+    sh->ng_categories=false;sh->ng_file_menu=false;sh->ng_scroll_kind=0;
+    sh->press_active=false;sh->pressed_index=SIZE_MAX;
+    console_shell_action_t action=no_action();
+    if(page==CONSOLE_PAGE_HOME){console_shell_show_home(sh);sh->home_all_programs=false;action=page_changed(0U);}
+    else {
+        bool found=false;
+        for(size_t i=0;i<sh->app_count;++i)if(sh->apps[i].page==page&&sh->apps[i].enabled){
+            action=activate_app_index(sh,i);found=true;break;}
+        if(!found){sh->page=page;sh->active_app_id=0U;sh->dirty=true;action=page_changed(0U);}
+    }
+    ng_initial_focus(sh);return action;
+}
+static console_shell_action_t ng_back(console_shell_t *sh)
+{
+    sh->ng_glide_kind=0;sh->ng_velocity_q16=0;
+    if(sh->ng_categories||sh->ng_file_menu){sh->ng_categories=false;sh->ng_file_menu=false;sh->ng_focus=0U;sh->dirty=true;ng_initial_focus(sh);return no_action();}
+    if(sh->file_delete_confirm||sh->storage_repair_confirm){
+        sh->file_delete_confirm=false;sh->storage_repair_confirm=false;sh->ng_focus=0U;sh->dirty=true;
+        ng_initial_focus(sh);return no_action();}
+    if(sh->ng_keyboard){sh->ng_keyboard=false;sh->ng_focus=0U;sh->dirty=true;ng_initial_focus(sh);return no_action();}
+    if(sh->page==CONSOLE_PAGE_MULTIPLAYER&&sh->multiplayer_view!=CONSOLE_MULTIPLAYER_VIEW_ROLE){
+        sh->ng_list_first=0U;sh->ng_focus=0U;return multiplayer_back_action(sh);}
+    if(sh->page==CONSOLE_PAGE_HOME){
+        if(sh->home_all_programs)return ng_open(sh,CONSOLE_PAGE_HOME);
+        return no_action();}
+    if(sh->page==CONSOLE_PAGE_CONTROL_PANEL)return ng_open(sh,CONSOLE_PAGE_HOME);
+    if(sh->page==CONSOLE_PAGE_FILES&&sh->files.can_go_up)
+        return (console_shell_action_t){.type=CONSOLE_ACTION_FILE_UP,.app_id=sh->active_app_id,.file_source_index=UINT32_MAX};
+    if(ng_nav_selection(sh)==4U)return ng_open(sh,CONSOLE_PAGE_CONTROL_PANEL);
+    console_shell_action_t action=ng_open(sh,CONSOLE_PAGE_HOME);sh->home_all_programs=true;sh->ng_focus=0U;ng_initial_focus(sh);return action;
+}
+static console_shell_action_t ng_activate(console_shell_t *sh,uint16_t id)
+{
+    sh->ng_glide_kind=0;sh->ng_velocity_q16=0;
+    const unsigned kind=id/128U,param=id%128U;
+    ng_scene_t scene={.shell=sh};ng_build_scene(&scene);
+    const ng_control_t *control=ng_control(&scene,id);
+    if(!control||!control->enabled)return no_action();
+    sh->dirty=true;
+    switch(kind){
+    case NC_HOME:return ng_open(sh,CONSOLE_PAGE_HOME);
+    case NC_LIBRARY:{console_shell_action_t a=ng_open(sh,CONSOLE_PAGE_HOME);sh->home_all_programs=true;sh->ng_focus=0U;ng_initial_focus(sh);return a;}
+    case NC_MULTIPLAYER:return ng_open(sh,CONSOLE_PAGE_MULTIPLAYER);
+    case NC_FILES:return ng_open(sh,CONSOLE_PAGE_FILES);
+    case NC_SETTINGS:return ng_open(sh,CONSOLE_PAGE_CONTROL_PANEL);
+    case NC_BACK:return ng_back(sh);
+    case NC_PAGE:return ng_open(sh,(console_page_t)param);
+    case NC_LAUNCH:return activate_app_index(sh,param);
+    case NC_PREV:ng_set_scroll(sh,true,sh->ng_library_scroll-420);sh->ng_focus=0U;break;
+    case NC_NEXT:ng_set_scroll(sh,true,sh->ng_library_scroll+420);sh->ng_focus=0U;break;
+    case NC_FILTER:sh->ng_categories=true;sh->ng_category_first=0;sh->ng_focus=ng_id(NC_CANCEL,0);break;
+    case NC_CATEGORY:{const char *paths[CONSOLE_SHELL_MAX_APPS+1];size_t n=ng_categories(sh,paths);
+        if(param<n){(void)snprintf(sh->ng_category,sizeof(sh->ng_category),"%s",paths[param]);sh->ng_library_scroll=0;}
+        sh->ng_categories=false;sh->ng_focus=0;break;}
+    case NC_CATEGORY_PREV:sh->ng_category_first=sh->ng_category_first>=12U?sh->ng_category_first-12U:0U;sh->ng_focus=ng_id(NC_CANCEL,0);break;
+    case NC_CATEGORY_NEXT:sh->ng_category_first+=12U;sh->ng_focus=ng_id(NC_CANCEL,0);break;
+    case NC_DISMISS:return ng_back(sh);
+    case NC_SCROLL:break;
+    case NC_FILE_MENU:sh->ng_file_menu=true;sh->ng_confirm_revision=sh->files.revision;
+        sh->ng_confirm_source=sh->files.entries[sh->file_selected_index].source_index;sh->ng_focus=ng_id(NC_CANCEL,0);break;
+    case NC_FILE_ROW:sh->file_selected_index=param;sh->file_delete_confirm=false;break;
+    case NC_FILE_PREV:ng_set_scroll(sh,false,sh->ng_file_scroll-360);sh->ng_focus=0;break;
+    case NC_FILE_NEXT:ng_set_scroll(sh,false,sh->ng_file_scroll+360);sh->ng_focus=0;break;
+    case NC_REFRESH:return (console_shell_action_t){.type=sh->page==CONSOLE_PAGE_GAMES?CONSOLE_ACTION_GAME_REFRESH:CONSOLE_ACTION_FILE_REFRESH,.app_id=sh->active_app_id,.file_source_index=UINT32_MAX};
+    case NC_FILE_OPEN:
+        if(param==1U)return (console_shell_action_t){.type=CONSOLE_ACTION_FILE_UP,.app_id=sh->active_app_id,.file_source_index=UINT32_MAX};
+        if(!file_selected_is_openable(sh)&&!file_selected_is_installable(sh))return no_action();
+        sh->ng_confirm_revision=sh->files.revision;sh->ng_confirm_source=sh->file_selected_index<sh->files.entry_count?sh->files.entries[sh->file_selected_index].source_index:UINT32_MAX;
+        {console_shell_action_t a=file_selected_action(sh);if(sh->file_delete_confirm)sh->ng_focus=ng_id(NC_CANCEL,0);return a;}
+    case NC_DELETE:
+        if(!sh->ng_file_menu||!file_selected_is_removable(sh))return no_action();
+        sh->ng_file_menu=false;sh->file_delete_confirm=true;sh->ng_confirm_revision=sh->files.revision;
+        sh->ng_confirm_source=sh->files.entries[sh->file_selected_index].source_index;sh->ng_focus=ng_id(NC_CANCEL,0);break;
+    case NC_CANCEL:return ng_back(sh);
+    case NC_CONFIRM:
+        if(sh->storage_repair_confirm)return storage_action(sh,2U);
+        if(!sh->file_delete_confirm||sh->ng_confirm_revision!=sh->files.revision||
+            sh->file_selected_index>=sh->files.entry_count||sh->ng_confirm_source!=sh->files.entries[sh->file_selected_index].source_index){
+            sh->file_delete_confirm=false;return no_action();}
+        return file_selected_action(sh);
+    case NC_AUDIO_STATUS:return ng_open(sh,CONSOLE_PAGE_AUDIO);
+    case NC_AUDIO:return audio_volume_action(sh,param<2U,param%2U?1:-1);
+    case NC_STORAGE:{console_shell_action_t a=storage_action(sh,param);if(sh->storage_repair_confirm)sh->ng_focus=ng_id(NC_CANCEL,0);return a;}
+    case NC_CONTROLLER:return controller_action(sh,param);
+    case NC_USB:return system_usb_action(sh);
+    case NC_MP_VIEW:sh->ng_list_first=0U;sh->ng_focus=0U;return enter_multiplayer_view(sh,(console_multiplayer_view_t)param);
+    case NC_MP_OPTIONS:sh->ng_list_first=0U;sh->ng_focus=0U;return enter_multiplayer_host_settings(sh);
+    case NC_MP_OPTION:return multiplayer_config_action(sh,(console_multiplayer_option_t)(param/2U),param%2U?1:-1);
+    case NC_MP_PRIMARY:return multiplayer_primary_action(sh);
+    case NC_MP_ROOM:return multiplayer_lobby_select_action(sh,(uint8_t)param);
+    case NC_KEYBOARD:sh->ng_keyboard=!sh->ng_keyboard;sh->ng_focus=0U;break;
+    case NC_KEY:(void)console_shell_handle_text_key(sh,(char)param);break;
+    case NC_APPEARANCE:if(param==0U)sh->ng_large_text=!sh->ng_large_text;else sh->ng_reduce_motion=!sh->ng_reduce_motion;break;
+    case NC_LIST_PREV:sh->ng_list_first=sh->ng_list_first>=4U?sh->ng_list_first-4U:0U;break;
+    case NC_LIST_NEXT:sh->ng_list_first+=4U;break;
+    default:break;
+    }
+    ng_initial_focus(sh);return no_action();
+}
+static console_shell_action_t nextgen_buttons(console_shell_t *sh,uint32_t pressed)
+{
+    if(pressed){sh->ng_glide_kind=0;sh->ng_velocity_q16=0;}
+    if(pressed&CONSOLE_BUTTON_BACK)return ng_back(sh);
+    ng_initial_focus(sh);ng_scene_t scene={.shell=sh};ng_build_scene(&scene);
+    const ng_control_t *from=ng_control(&scene,sh->ng_focus);
+    if(pressed&CONSOLE_BUTTON_ACCEPT)return ng_activate(sh,sh->ng_focus);
+    if((pressed&CONSOLE_BUTTON_REFRESH)&&(sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES))return ng_activate(sh,ng_id(NC_REFRESH,0));
+    if(!from)return no_action();
+    const bool library=sh->page==CONSOLE_PAGE_HOME&&sh->home_all_programs;
+    const unsigned kind=from->id/128U;
+    if((library&&kind==NC_LAUNCH)||((sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES)&&kind==NC_FILE_ROW)){
+        size_t indices[CONSOLE_SHELL_MAX_APPS];const size_t count=library?ng_library_games(sh,indices):sh->files.entry_count;
+        size_t index=from->id%128U;
+        if(library){index=0;while(index<count&&indices[index]!=from->id%128U)++index;}
+        int delta=0;
+        if(pressed&CONSOLE_BUTTON_DOWN)delta=library?3:1;
+        else if(pressed&CONSOLE_BUTTON_UP)delta=library?-3:-1;
+        else if(library&&(pressed&CONSOLE_BUTTON_RIGHT))delta=1;
+        else if(library&&(pressed&CONSOLE_BUTTON_LEFT)&&index%3U!=0U)delta=-1;
+        const int next=(int)index+delta;
+        if(delta&&next>=0&&(size_t)next<count){ng_reveal(sh,(size_t)next,library);
+            sh->ng_focus=ng_id(library?NC_LAUNCH:NC_FILE_ROW,(unsigned)(library?indices[next]:(size_t)next));
+            if(!library)sh->file_selected_index=(size_t)next;
+            sh->dirty=true;sh->ng_focus_ms=100U;return no_action();}
+    }
+    const int cx=from->x+from->w/2,cy=from->y+from->h/2;
+    int best=INT_MAX;uint16_t target=sh->ng_focus;
+    for(size_t i=0;i<scene.count;++i){
+        const ng_control_t *c=&scene.controls[i];if(!c->enabled||c->id==from->id)continue;
+        const int dx=c->x+c->w/2-cx,dy=c->y+c->h/2-cy;int forward=0,side=0;
+        if(pressed&CONSOLE_BUTTON_RIGHT){forward=dx;side=dy;}
+        else if(pressed&CONSOLE_BUTTON_LEFT){forward=-dx;side=dy;}
+        else if(pressed&CONSOLE_BUTTON_DOWN){forward=dy;side=dx;}
+        else if(pressed&CONSOLE_BUTTON_UP){forward=-dy;side=dx;}
+        if(forward<=12)continue;
+        if(side<0)side=-side;
+        const int score=forward+side*4;if(score<best){best=score;target=c->id;}
+    }
+    if(target!=sh->ng_focus){sh->ng_focus=target;sh->dirty=true;sh->ng_focus_ms=100U;}
+    return no_action();
+}
+static console_shell_action_t nextgen_touch(console_shell_t *sh,bool valid,const console_shell_contact_t *contacts,size_t count)
+{
+    remember_contacts(sh,valid,contacts,count);
+    if(!valid||count>1U||(count&&!contacts)){
+        sh->contact_down=true;sh->press_active=false;sh->pressed_index=SIZE_MAX;sh->ng_scroll_kind=0;sh->ng_glide_kind=0;sh->ng_velocity_q16=0;sh->dirty=true;return no_action();}
+    ng_scene_t scene={.shell=sh};ng_build_scene(&scene);
+    if(count==0U){
+        if(!sh->contact_down)return no_action();
+        if(!sh->press_active&&sh->ng_scroll_kind>0U&&sh->ng_scroll_kind<3U&&!sh->ng_reduce_motion&&
+           sh->animation_clock_ms-sh->ng_sample_ms<=80U&&abs(sh->ng_velocity_q16)>=6554){
+            sh->ng_glide_kind=sh->ng_scroll_kind;
+            sh->ng_glide_q16=(sh->ng_scroll_kind==1U?sh->ng_library_scroll:sh->ng_file_scroll)*65536;
+        }
+        sh->contact_down=false;const bool activate=sh->press_active;const size_t id=sh->pressed_index;
+        sh->press_active=false;sh->pressed_index=SIZE_MAX;sh->ng_scroll_kind=0;sh->dirty=true;
+        if(activate&&id<=UINT16_MAX){
+            if(id/128U==NC_LAUNCH&&(id%128U>=sh->app_count||sh->apps[id%128U].id!=sh->ng_press_identity))return no_action();
+            if(id/128U==NC_FILE_ROW&&sh->ng_press_revision!=sh->files.revision)return no_action();
+            return ng_activate(sh,(uint16_t)id);}
+        return no_action();
+    }
+    const uint16_t x=contacts[0].x,y=contacts[0].y;
+    if(x>=NG_W||y>=NG_H){sh->contact_down=true;sh->press_active=false;sh->ng_scroll_kind=0;sh->ng_glide_kind=0;sh->ng_velocity_q16=0;sh->dirty=true;return no_action();}
+    const ng_control_t *hit=ng_at(&scene,x,y);
+    if(!sh->contact_down){
+        const bool stopping=sh->ng_glide_kind!=0U;
+        sh->ng_glide_kind=0;sh->ng_velocity_q16=0;sh->ng_sample_ms=sh->animation_clock_ms;
+        sh->contact_down=true;sh->press_start_physical_x=x;sh->press_start_physical_y=y;sh->ng_scroll_kind=0;
+        sh->press_active=hit!=NULL;sh->pressed_index=hit?hit->id:SIZE_MAX;sh->ng_press_revision=sh->files.revision;
+        const bool modal=sh->file_delete_confirm||sh->storage_repair_confirm||sh->ng_categories||sh->ng_file_menu;
+        const bool library=sh->page==CONSOLE_PAGE_HOME&&sh->home_all_programs;
+        const bool files=sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES;
+        if(!modal&&x>=264U&&((library&&y>=NG_GRID_TOP&&y<NG_GRID_BOTTOM)||(files&&y>=NG_FILES_TOP&&y<NG_FILES_BOTTOM))){
+            sh->ng_scroll_kind=library?1U:2U;sh->ng_scroll_origin=library?sh->ng_library_scroll:sh->ng_file_scroll;sh->ng_sample_scroll=sh->ng_scroll_origin;
+            if(hit&&hit->id/128U==NC_SCROLL){sh->ng_scroll_kind+=2U;sh->press_active=false;}}
+        if(stopping)sh->press_active=false; /* A touch that stops a fling must not launch. */
+        if(hit){sh->ng_focus=hit->id;sh->ng_focus_ms=100U;
+            sh->ng_press_identity=hit->id/128U==NC_LAUNCH&&hit->id%128U<sh->app_count?sh->apps[hit->id%128U].id:0U;}
+        sh->dirty=true;
+    }else {
+        const int dx=(int)x-(int)sh->press_start_physical_x,dy=(int)y-(int)sh->press_start_physical_y;
+        if(sh->press_active&&(dx>14||dx< -14||dy>14||dy< -14||!hit||hit->id!=sh->pressed_index)){sh->press_active=false;sh->dirty=true;}
+        if(sh->ng_scroll_kind&&(!sh->press_active||sh->ng_scroll_kind>=3U)){
+            const bool library=sh->ng_scroll_kind==1U||sh->ng_scroll_kind==3U;
+            if(sh->ng_scroll_kind>=3U){
+                size_t indices[CONSOLE_SHELL_MAX_APPS];const size_t n=library?ng_library_games(sh,indices):sh->files.entry_count;
+                const int top=library?NG_GRID_TOP:NG_FILES_TOP,view=library?NG_GRID_BOTTOM-NG_GRID_TOP:NG_FILES_BOTTOM-NG_FILES_TOP;
+                const int limit=ng_scroll_max(n,library);int thumb=view*view/(view+limit);if(thumb<48)thumb=48;
+                if(view>thumb)ng_set_scroll(sh,library,((int)y-top-thumb/2)*limit/(view-thumb));
+            }else {
+                ng_set_scroll(sh,library,sh->ng_scroll_origin-dy);
+                const int offset=library?sh->ng_library_scroll:sh->ng_file_scroll;
+                const uint32_t dt=sh->animation_clock_ms-sh->ng_sample_ms;
+                if(dt){
+                    int32_t velocity=dt<=80U?(int32_t)((int64_t)(offset-sh->ng_sample_scroll)*65536/(int64_t)dt):0;
+                    if(velocity>196608)velocity=196608;
+                    if(velocity< -196608)velocity= -196608;
+                    sh->ng_velocity_q16=(sh->ng_velocity_q16+velocity)/2;
+                    sh->ng_sample_ms=sh->animation_clock_ms;sh->ng_sample_scroll=offset;
+                }
+            }
+            sh->ng_focus=0U;sh->ng_focus_ms=0;
+        }
+    }
+    return no_action();
+}
+static bool nextgen_advance(console_shell_t *sh,uint32_t elapsed)
+{
+    sh->animation_clock_ms+=elapsed;
+    bool changed=false;
+    if(sh->ng_focus_ms&&!sh->ng_reduce_motion){
+        sh->ng_focus_ms=elapsed>=sh->ng_focus_ms?0U:(uint16_t)(sh->ng_focus_ms-elapsed);changed=true;
+    }
+    if(sh->ng_glide_kind){
+        const bool library=sh->ng_glide_kind==1U;
+        const bool eligible=library?(sh->page==CONSOLE_PAGE_HOME&&sh->home_all_programs):
+            (sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES);
+        if(!eligible||sh->contact_down||sh->ng_reduce_motion||sh->ng_categories||sh->ng_file_menu||sh->file_delete_confirm||elapsed>100U){
+            sh->ng_glide_kind=0;sh->ng_velocity_q16=0;
+        }else{
+            /* Integrate at 1 ms: friction and distance are independent of frame rate. */
+            const int before=library?sh->ng_library_scroll:sh->ng_file_scroll;
+            for(uint32_t ms=0;ms<elapsed&&sh->ng_velocity_q16;++ms){
+                const int32_t old=sh->ng_velocity_q16;
+                sh->ng_velocity_q16=old>0?(old>360?old-360:0):(old< -360?old+360:0);
+                sh->ng_glide_q16+=(old+sh->ng_velocity_q16)/2;
+            }
+            const int desired=sh->ng_glide_q16/65536;ng_set_scroll(sh,library,desired);
+            const int after=library?sh->ng_library_scroll:sh->ng_file_scroll;
+            if(after!=desired||!sh->ng_velocity_q16){sh->ng_glide_kind=0;sh->ng_velocity_q16=0;}
+            changed|=before!=after;
+        }
+    }
+    if(changed)sh->dirty=true;
+    return changed;
+}
+/* Only cache immutable chrome and a list's raster. Catalog identity, style,
+ * selection, file revision and visible status must all match before reuse. */
+static uint64_t ng_cache_signature(const console_shell_t *sh)
+{
+    uint64_t hash=home_cache_signature(sh);
+#define NG_HASH(field) hash=home_cache_hash_bytes(hash,&sh->field,sizeof(sh->field))
+    NG_HASH(page);NG_HASH(ng_category);NG_HASH(ng_focus);NG_HASH(ng_focus_ms);
+    NG_HASH(ng_large_text);NG_HASH(file_selected_index);NG_HASH(file_notice);
+    NG_HASH(runtime.game_volume_step);
+    NG_HASH(runtime.battery_sample_valid);NG_HASH(runtime.battery_percent);NG_HASH(runtime.game_storage_state);
+    if(sh->page!=CONSOLE_PAGE_HOME){NG_HASH(files);}
+    for(size_t i=0;i<sh->app_count;++i){
+        hash=home_cache_hash_bytes(hash,&sh->apps[i].icon_pixels,sizeof(sh->apps[i].icon_pixels));
+        hash=home_cache_hash_bytes(hash,&sh->apps[i].icon_palette,sizeof(sh->apps[i].icon_palette));
+        hash=home_cache_hash_bytes(hash,&sh->apps[i].cover,sizeof(sh->apps[i].cover));
+    }
+#undef NG_HASH
+    return hash;
+}
+static bool nextgen_render(console_shell_t *sh,uint16_t *pixels,size_t stride,bool cached)
+{
+    if(!sh||!pixels||stride<NG_W||stride>SIZE_MAX/NG_H/sizeof(*pixels))return false;
+    /* Loading is a transient, non-interactive view; retain the game tile focus. */
+    if(sh->page!=CONSOLE_PAGE_EXTERNAL)ng_initial_focus(sh);
+    const bool library=sh->page==CONSOLE_PAGE_HOME&&sh->home_all_programs;
+    const bool eligible=(library||sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES)&&
+        !sh->ng_categories&&!sh->ng_file_menu&&!sh->file_delete_confirm&&!sh->storage_repair_confirm&&!sh->pointer_visible&&!sh->press_active;
+    const uint64_t signature=eligible?ng_cache_signature(sh):0;
+    const int offset=library?sh->ng_library_scroll:sh->ng_file_scroll;
+    const int previous=sh->native_home_cache_scroll_q16;
+    const int shift=previous-offset,magnitude=abs(shift);
+    const int top=library?NG_GRID_TOP:NG_FILES_TOP,bottom=library?NG_GRID_BOTTOM:NG_FILES_BOTTOM;
+    ng_scene_t scene={.shell=sh,.pixels=pixels,.stride=stride};
+    if(cached&&eligible&&sh->native_home_cache_valid&&sh->native_home_cache_pixels==(uintptr_t)pixels&&
+       sh->native_home_cache_stride==stride&&sh->native_home_cache_signature==signature&&
+       magnitude>0&&magnitude<bottom-top&&
+       (library||(previous>0&&offset>0&&previous<ng_scroll_max(sh->files.entry_count,false)&&offset<ng_scroll_max(sh->files.entry_count,false)))){
+        /* Move existing whole physical rows, repaint just the newly exposed band. */
+        const size_t bytes=964U*sizeof(*pixels);
+        if(shift<0)for(int y=top;y<bottom-magnitude;++y)
+            memmove(pixels+(size_t)y*stride+264U,pixels+(size_t)(y+magnitude)*stride+264U,bytes);
+        else for(int y=bottom-1;y>=top+magnitude;--y)
+            memmove(pixels+(size_t)y*stride+264U,pixels+(size_t)(y-magnitude)*stride+264U,bytes);
+        scene.clip_top=shift<0?bottom-magnitude:top;scene.clip_bottom=shift<0?bottom:top+magnitude;
+        ng_rect(&scene,264,scene.clip_top,964,scene.clip_bottom-scene.clip_top,NG_INK);
+        size_t games[CONSOLE_SHELL_MAX_APPS];const size_t count=library?ng_library_games(sh,games):sh->files.entry_count;
+        if(library)ng_library_rows(&scene,games,count);else ng_file_rows(&scene,count);
+        scene.clip_top=0;scene.clip_bottom=0;
+        ng_rect(&scene,1230,top,30,bottom-top,NG_INK);ng_scrollbar(&scene,count,library);
+        sh->native_update=(console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_REGION,
+            .x=264,.y=(uint16_t)top,.width=996,.height=(uint16_t)(bottom-top)};
+        ++sh->native_home_scroll_blit_frames;
+        sh->native_home_shifted_pixels+=(uint64_t)(unsigned)(bottom-top-magnitude)*964U;
+    }else{
+        ng_build_scene(&scene);
+        sh->native_update=(console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_FULL};
+        ++sh->native_home_full_frames;
+    }
+    sh->native_home_cache_valid=eligible;sh->native_home_cache_pixels=(uintptr_t)pixels;sh->native_home_cache_stride=stride;
+    sh->native_home_cache_signature=signature;sh->native_home_cache_scroll_q16=offset;
+    sh->dirty=false;++sh->render_generation;return true;
+}

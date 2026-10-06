@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "classification": "host-tested",
+  "scope": "Doom host/provenance and existing multiplayer/storage/USB regression checks; not hardware acceptance",
+  "base_commit": "5a9daeb0359b830624270594189d05b3791a4322",
+  "workspace": "Existing unrelated uncommitted platform work preserved; source hashes below bind this focused run.",
+  "host": "Darwin arm64",
+  "checks": [
+    {
+      "command": "make doom-multiplayer-host",
+      "result": "pass",
+      "ctest_cases": 3
+    },
+    {
+      "command": "make p4-multiplayer-host",
+      "result": "pass",
+      "ctest_cases": 2,
+      "relay_script": "pass"
+    },
+    {
+      "command": "make p4-multiplayer-registry-host",
+      "result": "pass",
+      "ctest_cases": 4
+    },
+    {
+      "command": "make platform-game-storage-host",
+      "result": "pass",
+      "ctest_cases": 3
+    },
+    {
+      "command": "python3 -m unittest scripts/tests/test-doom-source-tree.py scripts/tests/test-p4-usb-content-wire.py",
+      "result": "pass",
+      "test_cases": 14
+    },
+    {
+      "command": "make doom-smoke",
+      "result": "pass",
+      "frames": 8,
+      "resolution": "320x200",
+      "frame_checksum": "ca2ae564e8675a45",
+      "wad_sha256": "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771",
+      "upstream_warning_count": 102
+    }
+  ],
+  "repair": "Original smoke attempt rejected six pre-existing committed engine adaptations. Recorded those as a reversible hash-pinned P4 patch without changing engine bytes or upstream locks, and linked the existing neutral network stub into the host proof.",
+  "limitations": [
+    "No Pure Hell WAD located or validated; author/source/base IWAD/map slot and redistribution terms remain unknown.",
+    "No Pure Hell launcher option or content installation completed.",
+    "The rendering smoke does not exercise live two-engine deathmatch, controls or audio.",
+    "No firmware was built or flashed in this run.",
+    "Tab5 USB relay physical multiplayer acceptance remains pending; C6 radio remains disabled.",
+    "Legacy upstream warnings remain visible; no warning suppressions or toolchain upgrades were added."
+  ],
+  "source_sha256": {
+    "scripts/doom/build-host.sh": "fe8dadd828838677134c70d714c0a1fd844ee8d5044618e0295d703bb3538250",
+    "scripts/doom/verify-doomgeneric.sh": "7438d22967d2be4e5b2da11beb7b67d521c75da4f54accd8e04053e92d5aa9b3",
+    "scripts/doom/vendor-doomgeneric.sh": "b1a3bb019c2be1fb176f1d1b2039f0e17cc21999077e6d221380a891e8869789",
+    "scripts/doom/verify-source-tree.py": "daaabe49e97665372f2208eeaf96c56c888e0bf9e555df299b59e95eff25ef28",
+    "scripts/tests/test-doom-source-tree.py": "d9d0fab97babe84ffead01d02efa38c102f382298f3ba890d39045682cd3fb37",
+    "third_party/doomgeneric-p4.patch": "38c96fb5674cb51d722f717ebcfa479b1e3a6039e98833ae97ce16a3948837be",
+    "third_party/doomgeneric-p4.json": "ceb88825a1c8e11c56af3d017e595cad4fb76f690fe620ec36a4e0f2f23171ca",
+    "components/doom_multiplayer/src/doom_multiplayer.c": "715378311322b5487b1482cec7f4dd8cc1f480361088f76cb8dd2b8c51c18bb7",
+    "components/doom_multiplayer/tests/test_doom_multiplayer.c": "3ca22d6c960ba15c79a0e91cc86dac5ac20d72203c75bdb4e2b2569a2d60787c",
+    "components/p4_multiplayer/src/session.c": "00ebe14e4e9ce837dfebbfac6660f0ceb3b00946820def907ea652b0943ed0f5",
+    "scripts/p4-multiplayer-relay.py": "fe1a01ce86ae57cd98d3bbf0c562a56a7df4a9b491ea2c83b0426d80bbb60545"
+  }
+}

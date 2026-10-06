@@ -3,6 +3,7 @@ set(GAMEPAD_CORE_SOURCES
     src/hid_gamepad.c
     src/mapping.c
     src/snapshot.c
+    src/xusb.c
 )
 
 if(COMMAND idf_component_register)

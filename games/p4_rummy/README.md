@@ -49,20 +49,31 @@ its deadwood.
 
 ## Controls
 
-- Setup: Left/Right changes the number of CPU opponents. In a network room,
-  the host uses it to add CPU seats. A or Start deals immediately.
-- Draw: Up/Down or B switches between stock and the discard pile. Left/Right
-  moves through the discard pile, and A or Start takes the selected card plus
-  every card above it.
-- Play: Left/Right focuses a hand card, B marks or unmarks it, Up/Down chooses
-  a table meld, and Start plays the marked cards. A discards the focused card.
-- Touch/mouse: tap DEAL, tap the stock to draw one, or tap any displayed pile
-  card to take it and the cards above it. Pile arrows reveal older or newer
-  discards when more than five are present. Tap hand cards to mark them. Tap
-  PLAY CARDS for automatic placement, or tap a visible P1-P4 meld to lay the
-  marked cards onto that exact meld. Tap DISCARD to end the turn. Large hands
-  show touchable page arrows. All setup and round-over actions are touchable.
-- Back or the upper-left Exit target returns to the launcher.
+The table uses semantic card actions without a virtual controller overlay.
+
+- Tap DEAL, then tap stock to draw one card or a displayed discard to take that
+  card and everything above it. Pile arrows reveal older/newer discards.
+- Tap hand cards to mark a set/run. Tap PLAY CARDS for automatic placement, or
+  drag one of the marked cards onto PLAY CARDS. The lifted card shows the
+  selected-card count. Dragging an unmarked card includes it with the current
+  selection for that drop.
+- To lay off onto a specific table meld, drag a card/selection onto that meld.
+  Tapping the meld with cards marked remains supported.
+- Drag a single card to the face-up discard pile or DISCARD button to end the
+  turn. Tapping DISCARD still uses the focused card. Required-meld and
+  just-picked-discard restrictions remain enforced.
+- A green drop outline is legal; red rejects the move. Releasing outside a
+  target or on an illegal target leaves hand, selection, score and turn
+  unchanged. Touch page arrows handle large hands; dragging does not reorder
+  cards or move cards across pages.
+- Tap setup controls and round results directly. Exit returns to the launcher.
+
+Keyboard/controller input remains available without controller decoration:
+Left/Right changes setup or card focus; A/Start deals or draws; Up/Down/B changes
+the draw source. During play, B marks a card, Up/Down targets a meld, Start plays
+the selection and A discards. Back exits. Synthetic mapper buttons are ignored
+during touch and release so dragging across old controller regions has no
+extra effect.
 
 ## Multiplayer
 
@@ -91,3 +102,69 @@ ctest --test-dir build-host/play-p4_rummy --output-on-failure
 Console OS discovers `game.json` and packages `P4_RUMMY.P4G`. Install that
 cartridge through Game Manager, a guarded SD workflow, or the verified H1
 transfer path; a game-only update does not require an OS flash.
+
+## Native-resolution presentation (2.2.0)
+
+The preferred surface is 768x480 RGB565 with an optional `video-highres`
+capability and a complete 320x200 fallback. Fonts, rounded card edges, and
+mathematical suit silhouettes are rasterized at the negotiated resolution;
+no 320x200 framebuffer is enlarged to produce the high-resolution game.
+Input, rules, card identities, saves, and multiplayer messages remain unchanged.
+Exact ranks, numbers, and suits are drawn by code, so generated art cannot
+change card meaning. Small fallback labels retain the proven compact font.
+
+`assets/table-materials-imagegen.png` is original artwork generated with the
+built-in ImageGen tool for this upgrade. It contains emerald and midnight felt
+plus navy/gold and violet/silver card-back material. The exact final prompt,
+source SHA-256, crop layout, and selected quadrants are recorded in
+`assets/table-materials-provenance.json`. The selected felt is 128x128 RGB565
+and the selected card-back material is 96x96 RGB565: **51,200 static bytes**.
+The illustration converter uses area filtering to preserve fine fibers and
+ornamental lines; there is no runtime image decoding or heap allocation.
+The artwork is distributed under the project's MIT license. The shared
+Arimo typography uses the separately recorded SIL OFL license.
+
+Reproduce the material include with Pillow installed:
+
+```sh
+python3 games/p4_rummy/tools/convert_table_materials.py
+```
+
+Focused sanitizer tests include both negotiated surfaces, padded framebuffer
+strides, render captures, and Back lifecycle. Existing rule and multiplayer
+tests remain in place. Optional screenshots come from the actual game renderer:
+
+```sh
+P4_CARD_CAPTURE_DIR=/absolute/existing/output/directory \
+  ctest --test-dir build-host/p4_rummy --output-on-failure
+```
+
+`PRESENTATION_TESTING.json` records this host-validation pass. Native panel,
+physical touch, on-device frame timing, speakers, and real linked consoles
+still require device acceptance. No firmware was installed by this pass.
+
+The felt renderer copies clipped native texture-row spans instead of computing
+an address and wrapping mask for every framebuffer pixel. A 2,000-frame
+isolated host comparison produced identical pixels while reducing median
+felt-render time from 80 microseconds to 10 microseconds. Reproducible action
+traces and complete update/audio/render timings are recorded in
+`PRESENTATION_TESTING.json`. The measured host runs stayed below the 33.333 ms
+budget; these CPU measurements exclude display transfer and do not certify
+30 FPS on the ESP32-P4 hardware.
+
+## Direct-touch verification
+
+`tests/test_touch_drag.c` checks canonical touch at both 320x200 and 768x480,
+including lifted-card framebuffer guards, valid and invalid drops, stale-gesture
+cancellation, existing keyboard actions, and synthetic controller isolation.
+The focused rule/network tests remain unchanged. `TOUCH_TESTING.json` records
+this pass separately from the preceding art/package acceptance.
+
+```sh
+cmake --build build-host/play-p4_rummy --target p4_game_benchmark
+build-host/play-p4_rummy/p4_game_benchmark 2000 768 games/p4_rummy/tests/touch-performance-input.txt
+```
+
+The same trace can be run with `320` for the fallback. This measures Mac CPU
+update, audio and rendering during continuous drag; display/device timing,
+physical touch, and linked-console acceptance remain separate checks.

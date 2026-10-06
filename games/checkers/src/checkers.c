@@ -7,6 +7,8 @@
 #include <stdint.h>
 
 #include "p4/draw.h"
+#include "table_presentation.h"
+#include "generated/presentation_assets.inc"
 #include "p4/game.h"
 
 enum {
@@ -180,6 +182,66 @@ static void handle_square_action(p4_game_context_t *context,
     }
 }
 
+/* Raw touch owns a complete gesture. The same sample may also contain OS
+ * virtual-controller bits, so those bits must not replay the action below. */
+static void handle_board_touch(p4_game_context_t *context,
+                                checkers_state_t *state,
+                                const p4_game_input_t *input, bool down)
+{
+    if (down) {
+        const uint16_t x = input->touches[0].x;
+        const uint16_t y = input->touches[0].y;
+        uint8_t square = CHECKERS_NO_SQUARE;
+        const bool on_board = touch_to_square(state, x, y, &square);
+        state->touch_x = x;
+        state->touch_y = y;
+        if (!state->touch_was_down) {
+            state->touch_origin = CHECKERS_NO_SQUARE;
+            state->touch_dragging = false;
+            state->touch_cancel_selection = false;
+            state->touch_start_x = x;
+            state->touch_start_y = y;
+            state->touch_revision = state->revision;
+            if (on_board && piece_is_selectable(state, square)) {
+                state->touch_cancel_selection = state->selected == square;
+                if (!state->touch_cancel_selection)
+                    handle_square_action(context, state, square);
+                state->touch_origin = square;
+                state->cursor = square;
+            } else if (on_board) {
+                handle_square_action(context, state, square);
+            }
+        } else if (state->touch_origin < CHECKERS_BOARD_SQUARES &&
+                   state->selected == state->touch_origin &&
+                   state->revision == state->touch_revision) {
+            const int dx = (int)x - (int)state->touch_start_x;
+            const int dy = (int)y - (int)state->touch_start_y;
+            if (dx > 3 || dx < -3 || dy > 3 || dy < -3)
+                state->touch_dragging = true;
+            if (on_board) state->cursor = square;
+        }
+        return;
+    }
+    if (state->touch_was_down &&
+        state->touch_origin < CHECKERS_BOARD_SQUARES &&
+        state->selected == state->touch_origin &&
+        state->revision == state->touch_revision) {
+        uint8_t destination = CHECKERS_NO_SQUARE;
+        if (state->touch_dragging) {
+            if (touch_to_square(state, state->touch_x, state->touch_y,
+                                &destination) &&
+                destination != state->touch_origin &&
+                checkers_move_is_legal(state, state->touch_origin, destination))
+                handle_square_action(context, state, destination);
+        } else if (state->touch_cancel_selection) {
+            handle_square_action(context, state, state->touch_origin);
+        }
+    }
+    state->touch_origin = CHECKERS_NO_SQUARE;
+    state->touch_dragging = false;
+    state->touch_cancel_selection = false;
+}
+
 static size_t append_unsigned(char *text, size_t capacity, size_t length,
                               unsigned value)
 {
@@ -210,28 +272,25 @@ static void count_text(char text[12], const char *label, unsigned count)
 static void draw_piece(p4_game_surface_t *surface,
                        int center_x, int center_y, uint8_t piece)
 {
-    const bool red = checkers_piece_belongs_to(
-        piece, CHECKERS_PLAYER_RED);
-    const uint16_t edge = red ? COLOR_RED_EDGE : COLOR_WHITE_EDGE;
-    const uint16_t fill = red ? COLOR_RED : COLOR_WHITE;
-    p4_draw_fill_circle(surface, center_x, center_y, 8, edge);
-    p4_draw_fill_circle(surface, center_x, center_y, 6, fill);
-    p4_draw_fill_circle(surface, center_x - 2, center_y - 2, 2,
-                        red ? UINT16_C(0xf3ae) : UINT16_C(0xffff));
-    if (piece == CHECKERS_RED_KING || piece == CHECKERS_WHITE_KING) {
-        p4_draw_fill_circle(surface, center_x, center_y + 1, 3, COLOR_GOLD);
-        p4_draw_fill_circle(surface, center_x - 4, center_y - 2, 2,
-                            COLOR_GOLD);
-        p4_draw_fill_circle(surface, center_x + 4, center_y - 2, 2,
-                            COLOR_GOLD);
-    }
+    unsigned sprite = checkers_piece_belongs_to(piece, CHECKERS_PLAYER_RED) ? 2U : 3U;
+    if (piece == CHECKERS_RED_KING) sprite = 4U;
+    if (piece == CHECKERS_WHITE_KING) sprite = 5U;
+    table_circle(surface, center_x, center_y + 1, 8, 0x18c3U);
+    table_sprite(surface, center_x - 8, center_y - 8, 16, 16,
+                 checkers_art[sprite], 48, true);
 }
 
 static void draw_board(p4_game_surface_t *surface,
                        const checkers_state_t *state)
 {
-    p4_draw_rect(surface, BOARD_X - 2, BOARD_Y - 2,
-                 BOARD_PIXELS + 4, BOARD_PIXELS + 4, COLOR_PANEL_EDGE);
+    table_material(surface, BOARD_X - 2, BOARD_Y - 2,
+                   BOARD_PIXELS + 4, BOARD_PIXELS + 4, checkers_wood_mirrored[0], 48);
+    table_rect(surface, BOARD_X - 2, BOARD_Y - 2,
+               BOARD_PIXELS + 4, BOARD_PIXELS + 4, COLOR_GOLD);
+    const bool dragging = state->touch_was_down && state->touch_dragging &&
+        state->touch_origin < CHECKERS_BOARD_SQUARES &&
+        state->selected == state->touch_origin &&
+        state->revision == state->touch_revision;
     for (int screen_row = 0; screen_row < CHECKERS_BOARD_SIDE; ++screen_row) {
         for (int screen_column = 0; screen_column < CHECKERS_BOARD_SIDE;
              ++screen_column) {
@@ -239,120 +298,121 @@ static void draw_board(p4_game_surface_t *surface,
                 state, screen_row, screen_column);
             const int x = BOARD_X + screen_column * BOARD_CELL;
             const int y = BOARD_Y + screen_row * BOARD_CELL;
-            uint16_t color = ((screen_row + screen_column) & 1) == 0
-                ? COLOR_LIGHT_SQUARE : COLOR_DARK_SQUARE;
-            if (square == state->selected) {
-                color = COLOR_DARK_HIGHLIGHT;
-            }
-            p4_draw_fill_rect(surface, x, y, BOARD_CELL, BOARD_CELL, color);
+            const unsigned wood = (unsigned)((screen_row + screen_column) & 1);
+            table_sprite(surface, x, y, BOARD_CELL, BOARD_CELL,
+                         checkers_art[wood], 48, false);
             if (state->selected != CHECKERS_NO_SQUARE &&
                 checkers_move_is_legal(state, state->selected, square)) {
-                p4_draw_fill_circle(surface, x + BOARD_CELL / 2,
+                table_circle(surface, x + BOARD_CELL / 2,
                                     y + BOARD_CELL / 2, 3, COLOR_LEGAL);
             }
             const uint8_t piece = state->board[square];
-            if (piece != CHECKERS_EMPTY) {
+            if (piece != CHECKERS_EMPTY &&
+                !(dragging && square == state->touch_origin)) {
                 draw_piece(surface, x + BOARD_CELL / 2,
                            y + BOARD_CELL / 2, piece);
             }
             if (square == state->selected) {
-                p4_draw_rect(surface, x + 1, y + 1,
+                table_rect(surface, x + 1, y + 1,
                              BOARD_CELL - 2, BOARD_CELL - 2, COLOR_GOLD);
             }
             if (square == state->cursor) {
-                p4_draw_rect(surface, x, y, BOARD_CELL, BOARD_CELL,
+                table_rect(surface, x, y, BOARD_CELL, BOARD_CELL,
                              COLOR_CURSOR);
-                p4_draw_rect(surface, x + 1, y + 1,
+                table_rect(surface, x + 1, y + 1,
                              BOARD_CELL - 2, BOARD_CELL - 2, COLOR_CURSOR);
             }
         }
     }
+    if (dragging)
+        draw_piece(surface, state->touch_x, state->touch_y,
+                   state->board[state->touch_origin]);
 }
 
 static void draw_status(p4_game_surface_t *surface,
                         const checkers_state_t *state)
 {
     char count[12];
-    p4_draw_fill_rect(surface, PANEL_X, 28, 142, 160, COLOR_PANEL);
-    p4_draw_rect(surface, PANEL_X, 28, 142, 160, COLOR_PANEL_EDGE);
+    table_fill(surface, PANEL_X, 28, 142, 160, COLOR_PANEL);
+    table_rect(surface, PANEL_X, 28, 142, 160, COLOR_PANEL_EDGE);
 
     count_text(count, "RED ", state->red_count);
-    p4_draw_text(surface, 181, 35, count, COLOR_RED, 1U, 11U);
+    table_text(surface, 181, 35, count, COLOR_RED, 1U, 11U);
     count_text(count, "WHITE ", state->white_count);
-    p4_draw_text(surface, 245, 35, count, COLOR_WHITE, 1U, 11U);
+    table_text(surface, 245, 35, count, COLOR_WHITE, 1U, 11U);
 
     if (state->phase == CHECKERS_PHASE_GAME_OVER) {
         if (state->winner == CHECKERS_WINNER_DRAW) {
-            p4_draw_text(surface, 198, 58, "DRAW GAME",
+            table_text(surface, 198, 58, "DRAW GAME",
                          COLOR_GOLD, 1U, 12U);
         } else if (state->winner == CHECKERS_PLAYER_RED) {
-            p4_draw_text(surface, 200, 58, "RED WINS!",
+            table_text(surface, 200, 58, "RED WINS!",
                          COLOR_RED, 1U, 12U);
         } else {
-            p4_draw_text(surface, 194, 58, "WHITE WINS!",
+            table_text(surface, 194, 58, "WHITE WINS!",
                          COLOR_WHITE, 1U, 12U);
         }
-        p4_draw_text(surface, 190, 78, "START OR TAP",
+        table_text(surface, 190, 78, "TAP NEW MATCH",
                      COLOR_TEXT, 1U, 14U);
-        p4_draw_fill_rect(surface, RESTART_X, RESTART_Y,
+        table_fill(surface, RESTART_X, RESTART_Y,
                           RESTART_W, RESTART_H, COLOR_ACCENT);
-        p4_draw_rect(surface, RESTART_X, RESTART_Y,
+        table_rect(surface, RESTART_X, RESTART_Y,
                      RESTART_W, RESTART_H, COLOR_TEXT);
-        p4_draw_text(surface, 210, 153, "NEW MATCH",
+        table_text(surface, 210, 153, "NEW MATCH",
                      COLOR_BACKGROUND, 1U, 10U);
         return;
     }
 
     if (state->network_mode && !state->network_started) {
-        p4_draw_text(surface, 205, 57, "SYNCING...",
+        table_text(surface, 205, 57, "SYNCING...",
                      COLOR_GOLD, 1U, 12U);
     } else if (state->network_mode &&
                state->current_player != state->local_player_slot) {
-        p4_draw_text(surface, 204, 57, "THEIR TURN",
+        table_text(surface, 204, 57, "THEIR TURN",
                      COLOR_MUTED, 1U, 12U);
     } else if (state->network_mode) {
-        p4_draw_text(surface, 207, 57, "YOUR TURN",
+        table_text(surface, 207, 57, "YOUR TURN",
                      COLOR_ACCENT, 1U, 12U);
     } else if (state->current_player == CHECKERS_PLAYER_RED) {
-        p4_draw_text(surface, 202, 57, "RED'S TURN",
+        table_text(surface, 202, 57, "RED'S TURN",
                      COLOR_RED, 1U, 12U);
     } else {
-        p4_draw_text(surface, 194, 57, "WHITE'S TURN",
+        table_text(surface, 194, 57, "WHITE'S TURN",
                      COLOR_WHITE, 1U, 13U);
     }
 
     if (state->forced_piece != CHECKERS_NO_SQUARE) {
-        p4_draw_text(surface, 200, 75, "JUMP AGAIN!",
+        table_text(surface, 200, 75, "JUMP AGAIN!",
                      COLOR_GOLD, 1U, 12U);
     } else if (checkers_player_has_capture(state, state->current_player)) {
-        p4_draw_text(surface, 204, 75, "CAPTURE!",
+        table_text(surface, 204, 75, "CAPTURE!",
                      COLOR_GOLD, 1U, 10U);
     }
     if (state->network_request_pending) {
-        p4_draw_text(surface, 206, 91, "SENDING...",
+        table_text(surface, 206, 91, "SENDING...",
                      COLOR_MUTED, 1U, 11U);
     } else if (state->peer_lost_fallback) {
-        p4_draw_text(surface, 190, 91, "LINK LOST: LOCAL",
+        table_text(surface, 190, 91, "LINK LOST: LOCAL",
                      COLOR_DANGER, 1U, 16U);
     } else if (state->network_mode) {
         const char *const side = state->local_player_slot ==
                 CHECKERS_PLAYER_RED
             ? "YOU ARE RED" : "YOU ARE WHITE";
-        p4_draw_text(surface, 194, 91, side,
+        table_text(surface, 194, 91, side,
                      COLOR_MUTED, 1U, 13U);
     } else {
-        p4_draw_text(surface, 198, 91, "PASS & PLAY",
+        table_text(surface, 198, 91, "PASS & PLAY",
                      COLOR_MUTED, 1U, 13U);
     }
 
-    p4_draw_text(surface, 183, 116, "ARROWS  MOVE",
+    table_text(surface, 183, 116, "TAP A PIECE",
                  COLOR_TEXT, 1U, 14U);
-    p4_draw_text(surface, 183, 130, "A  SELECT/MOVE",
+    table_text(surface, 183, 130, "THEN A GREEN SPOT",
+                 COLOR_TEXT, 1U, 18U);
+    table_text(surface, 183, 144, "OR DRAG TO MOVE",
                  COLOR_TEXT, 1U, 16U);
-    p4_draw_text(surface, 183, 144, "B  CANCEL",
-                 COLOR_TEXT, 1U, 11U);
-    p4_draw_text(surface, 183, 166, "TAP BOARD",
-                 COLOR_MUTED, 1U, 11U);
+    table_text(surface, 183, 166, "TAP PIECE TO CANCEL",
+                 COLOR_MUTED, 1U, 20U);
 }
 
 static bool game_start(p4_game_context_t *context)
@@ -377,13 +437,15 @@ static p4_game_result_t game_update(p4_game_context_t *context,
         return P4_GAME_ERROR;
     }
     checkers_state_t *const state = context->state;
-    if ((input->pressed & P4_BUTTON_BACK) != 0U) {
+    const bool touch_down = input->touch_valid && input->touch_count != 0U;
+    const bool touch_owned = touch_down || state->touch_was_down;
+    const uint32_t pressed = touch_owned ? 0U : input->pressed;
+    if ((pressed & P4_BUTTON_BACK) != 0U) {
         return P4_GAME_EXIT_TO_LAUNCHER;
     }
-    state->held_buttons = input->held;
+    state->held_buttons = touch_owned ? 0U : input->held;
     checkers_network_poll(context, state, elapsed_ms);
 
-    const bool touch_down = input->touch_valid && input->touch_count != 0U;
     if (touch_down && !state->touch_was_down) {
         const uint16_t x = input->touches[0].x;
         const uint16_t y = input->touches[0].y;
@@ -394,28 +456,25 @@ static p4_game_result_t game_update(p4_game_context_t *context,
             point_in(x, y, RESTART_X, RESTART_Y,
                      RESTART_W, RESTART_H)) {
             (void)checkers_restart(context, state);
-        } else {
-            uint8_t square = 0U;
-            if (touch_to_square(state, x, y, &square)) {
-                handle_square_action(context, state, square);
-            }
         }
     }
+    handle_board_touch(context, state, input, touch_down);
     state->touch_was_down = touch_down;
+    if (touch_owned) return P4_GAME_CONTINUE;
 
     if (state->phase == CHECKERS_PHASE_GAME_OVER) {
-        if ((input->pressed & P4_BUTTON_START) != 0U) {
+        if ((pressed & P4_BUTTON_START) != 0U) {
             (void)checkers_restart(context, state);
         }
         return P4_GAME_CONTINUE;
     }
-    move_cursor(state, input->pressed);
-    if ((input->pressed & P4_BUTTON_B) != 0U &&
+    move_cursor(state, pressed);
+    if ((pressed & P4_BUTTON_B) != 0U &&
         state->forced_piece == CHECKERS_NO_SQUARE &&
         !state->network_request_pending) {
         state->selected = CHECKERS_NO_SQUARE;
     }
-    if ((input->pressed & P4_BUTTON_A) != 0U) {
+    if ((pressed & P4_BUTTON_A) != 0U) {
         handle_square_action(context, state, state->cursor);
     }
     return P4_GAME_CONTINUE;
@@ -430,13 +489,13 @@ static bool game_render(p4_game_context_t *context,
     }
     const checkers_state_t *const state = context->state;
     p4_draw_clear(surface, COLOR_BACKGROUND);
-    p4_draw_text(surface, 8, 7, "CHECKERS", COLOR_TEXT, 2U, 8U);
-    p4_draw_text(surface, 178, 8,
+    table_text(surface, 8, 7, "CHECKERS", COLOR_TEXT, 2U, 8U);
+    table_text(surface, 178, 8,
                  state->network_mode ? "2-CONSOLE" : "2-PLAYER LOCAL",
                  COLOR_ACCENT, 1U, 15U);
-    p4_draw_fill_rect(surface, EXIT_X, EXIT_Y, EXIT_W, EXIT_H, COLOR_DANGER);
-    p4_draw_rect(surface, EXIT_X, EXIT_Y, EXIT_W, EXIT_H, COLOR_TEXT);
-    p4_draw_text(surface, EXIT_X + 6, EXIT_Y + 6, "EXIT",
+    table_fill(surface, EXIT_X, EXIT_Y, EXIT_W, EXIT_H, COLOR_DANGER);
+    table_rect(surface, EXIT_X, EXIT_Y, EXIT_W, EXIT_H, COLOR_TEXT);
+    table_text(surface, EXIT_X + 6, EXIT_Y + 6, "EXIT",
                  COLOR_TEXT, 1U, 4U);
     draw_board(surface, state);
     draw_status(surface, state);
@@ -457,7 +516,7 @@ const p4_game_descriptor_t p4_checkers_game = {
     .accent_rgb565 = COLOR_ACCENT,
     .required_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS,
     .optional_capabilities = P4_GAME_CAP_AUDIO_TONE |
-        P4_GAME_CAP_MULTIPLAYER_SESSION,
+        P4_GAME_CAP_MULTIPLAYER_SESSION | P4_GAME_CAP_VIDEO_HIGH_RES,
     .state_bytes = sizeof(checkers_state_t),
     .start = game_start,
     .update = game_update,

@@ -2,7 +2,7 @@
   "schema": 1,
   "format": "p4-native-elf-v1",
   "api_version": 1,
-  "version": "1.0.1",
+  "version": "1.0.2",
   "package_file": "AVTEST.P4G",
   "component": "av_test",
   "entry_symbol": "p4_av_test_game",
@@ -20,6 +20,7 @@
     "audio-tone"
   ],
   "license": "MIT",
-  "assets": "original-code-rendered-shapes-only",
-  "enabled": true
+  "assets": "original-code-rendered-shapes-and-semantic-launcher-icon",
+  "enabled": true,
+  "launcher_icon": "assets/launcher.p4i"
 }

@@ -1,6 +1,7 @@
 #include "gamepad/gamepad.h"
 #include "gamepad/hid_gamepad.h"
 #include "gamepad/mapping.h"
+#include "gamepad/snapshot.h"
 
 #include <limits.h>
 #include <stdio.h>
@@ -376,7 +377,7 @@ static void test_only_first_gamepad_application_is_selected(void)
                                            sizeof(two_gamepad_applications_descriptor),
                                            &layout));
     EXPECT_EQ(2, layout.application_collection_count);
-    EXPECT_EQ(1, layout.report_count);
+    EXPECT_EQ(2, layout.report_count);
     EXPECT_EQ(1, layout.reports[0].report_id);
 
     gamepad_state_t state;
@@ -387,12 +388,161 @@ static void test_only_first_gamepad_application_is_selected(void)
                                         sizeof(selected_report), 45, &state));
     EXPECT_EQ(INT16_MAX, state.left_x);
 
-    const gamepad_state_t before_unselected = state;
+    gamepad_state_t expected = state;
+    expected.sequence++;
+    expected.timestamp_us = 46;
     const uint8_t unselected_report[] = {0x02, 0x01};
-    EXPECT_EQ(GAMEPAD_ERR_REPORT_ID,
+    EXPECT_EQ(GAMEPAD_OK,
               gamepad_hid_decode_report(&layout, unselected_report,
                                         sizeof(unselected_report), 46, &state));
-    EXPECT_TRUE(memcmp(&before_unselected, &state, sizeof(state)) == 0);
+    EXPECT_TRUE(memcmp(&expected, &state, sizeof(state)) == 0);
+
+    const uint8_t short_report[] = {0x02};
+    const uint8_t long_report[] = {0x02, 0x01, 0x00};
+    const uint8_t unknown_report[] = {0x03, 0x01};
+    EXPECT_EQ(GAMEPAD_ERR_REPORT_SIZE, gamepad_hid_decode_report(
+        &layout, short_report, sizeof(short_report), 47, &state));
+    EXPECT_EQ(GAMEPAD_ERR_REPORT_SIZE, gamepad_hid_decode_report(
+        &layout, long_report, sizeof(long_report), 47, &state));
+    EXPECT_EQ(GAMEPAD_ERR_REPORT_ID, gamepad_hid_decode_report(
+        &layout, unknown_report, sizeof(unknown_report), 47, &state));
+    EXPECT_TRUE(memcmp(&expected, &state, sizeof(state)) == 0);
+}
+
+
+/* Synthetic HID fixtures exercise layout rules, not a named controller claim. */
+static void test_shared_report_offsets_cross_application_collections(void)
+{
+    static const uint8_t descriptor[] = {
+        0x06, 0x00, 0xFF, 0x09, 0x01, 0xA1, 0x01, /* vendor application */
+        0x75, 0x03, 0x95, 0x01, 0x81, 0x02,       /* 3 input prefix bits */
+        0x75, 0x08, 0x91, 0x02, 0xB1, 0x02,       /* output/feature != input */
+        0xC0,
+        0x05, 0x01, 0x09, 0x05, 0xA1, 0x01,       /* selected gamepad */
+        0x15, 0x81, 0x25, 0x7F, 0x75, 0x08, 0x95, 0x01,
+        0x09, 0x30, 0x81, 0x02,                   /* X at input bit 3 */
+        0xC0,
+        0x05, 0x01, 0x09, 0x05, 0xA1, 0x01,       /* unselected gamepad */
+        0x15, 0x00, 0x25, 0x1F, 0x75, 0x05, 0x95, 0x01,
+        0x09, 0x31, 0x81, 0x02,                   /* 5 suffix bits, no Y */
+        0xC0,
+    };
+    for (unsigned with_id = 0U; with_id <= 1U; ++with_id) {
+        uint8_t bytes[sizeof(descriptor) + 2U];
+        bytes[0] = 0x85;
+        bytes[1] = 7;
+        memcpy(bytes + 2U, descriptor, sizeof(descriptor));
+        gamepad_hid_layout_t layout;
+        EXPECT_EQ(GAMEPAD_OK, gamepad_hid_parse_descriptor(
+            with_id != 0U ? bytes : descriptor,
+            with_id != 0U ? sizeof(bytes) : sizeof(descriptor), &layout));
+        EXPECT_EQ(1, layout.report_count);
+        EXPECT_EQ(1, layout.field_count);
+        EXPECT_EQ(3, layout.fields[0].bit_offset);
+        EXPECT_EQ(16, layout.reports[0].payload_bits);
+        EXPECT_EQ(2, layout.reports[0].payload_bytes);
+        gamepad_state_t state;
+        connect_state(&state);
+        /* Prefix=7, X=127, suffix=31. Only X may affect canonical state. */
+        const uint8_t report[] = {7, 0xFF, 0xFB};
+        EXPECT_EQ(GAMEPAD_OK, gamepad_hid_decode_report(
+            &layout, report + (with_id != 0U ? 0U : 1U),
+            with_id != 0U ? 3U : 2U, 20U, &state));
+        EXPECT_EQ(INT16_MAX, state.left_x);
+        EXPECT_EQ(0, state.left_y);
+        EXPECT_EQ(0, state.buttons);
+        const gamepad_state_t before_error = state;
+        EXPECT_EQ(GAMEPAD_ERR_REPORT_SIZE, gamepad_hid_decode_report(
+            &layout, report + (with_id != 0U ? 0U : 1U),
+            with_id != 0U ? 2U : 1U, 21U, &state));
+        EXPECT_TRUE(memcmp(&before_error, &state, sizeof(state)) == 0);
+    }
+}
+
+static void test_secondary_reports_remain_bounded(void)
+{
+    uint8_t descriptor[GAMEPAD_HID_MAX_DESCRIPTOR_BYTES];
+    const size_t base = sizeof(two_gamepad_applications_descriptor);
+    memcpy(descriptor, two_gamepad_applications_descriptor, base);
+    size_t length = base;
+    for (uint8_t id = 3U; id <= GAMEPAD_HID_MAX_REPORTS + 1U; ++id) {
+        const uint8_t application[] = {
+            0x06, 0x00, 0xFF, 0x09, 0x01, 0xA1, 0x01,
+            0x85, id, 0x75, 0x08, 0x95, 0x01, 0x81, 0x02, 0xC0,
+        };
+        memcpy(descriptor + length, application, sizeof(application));
+        length += sizeof(application);
+        if (id == GAMEPAD_HID_MAX_REPORTS) {
+            gamepad_hid_layout_t layout;
+            EXPECT_EQ(GAMEPAD_OK, gamepad_hid_parse_descriptor(
+                descriptor, length, &layout));
+            EXPECT_EQ(GAMEPAD_HID_MAX_REPORTS, layout.report_count);
+            gamepad_state_t state;
+            connect_state(&state);
+            const uint8_t vendor_report[] = {id, 0xFF};
+            EXPECT_EQ(GAMEPAD_OK, gamepad_hid_decode_report(
+                &layout, vendor_report, sizeof(vendor_report), 2U, &state));
+            EXPECT_TRUE(gamepad_state_is_neutral(&state));
+        }
+    }
+    expect_parse_error(descriptor, length, GAMEPAD_ERR_LIMIT_EXCEEDED);
+
+    /* Multiple ignored Input items cannot evade the total report bit limit. */
+    memcpy(descriptor, two_gamepad_applications_descriptor, base);
+    static const uint8_t overflow[] = {
+        0x06, 0x00, 0xFF, 0x09, 0x01, 0xA1, 0x01, 0x85, 3,
+        0x75, 32, 0x96, 0, 1, 0x81, 0x02, /* 32 * 256 = 8192 bits */
+        0x75, 1, 0x95, 1, 0x81, 0x02, 0xC0,
+    };
+    memcpy(descriptor + base, overflow, sizeof(overflow));
+    expect_parse_error(descriptor, base + sizeof(overflow),
+                       GAMEPAD_ERR_LIMIT_EXCEEDED);
+
+    /* Report-ID policy applies to the entire interface, not just the pad. */
+    static const uint8_t implicit_id_prefix[] = {
+        0x06, 0x00, 0xFF, 0x09, 0x01, 0xA1, 0x01,
+        0x75, 8, 0x95, 1, 0x81, 0x02, 0xC0,
+    };
+    memcpy(descriptor, implicit_id_prefix, sizeof(implicit_id_prefix));
+    memcpy(descriptor + sizeof(implicit_id_prefix),
+           two_gamepad_applications_descriptor, base);
+    expect_parse_error(descriptor, sizeof(implicit_id_prefix) + base,
+                       GAMEPAD_ERR_MALFORMED);
+}
+
+static void test_secondary_report_commits_without_releasing_held_controls(void)
+{
+    gamepad_hid_layout_t layout;
+    EXPECT_EQ(GAMEPAD_OK, gamepad_hid_parse_descriptor(
+        two_gamepad_applications_descriptor,
+        sizeof(two_gamepad_applications_descriptor), &layout));
+    platform_gamepad_model_t model;
+    platform_gamepad_model_init(&model);
+    const platform_gamepad_identity_t identity = {
+        .transport = PLATFORM_GAMEPAD_TRANSPORT_USB_HID,
+        .descriptor_sha256 = {1},
+    };
+    uint32_t session = 0U;
+    EXPECT_EQ(GAMEPAD_OK, platform_gamepad_model_connect(
+        &model, &identity, gamepad_hid_capabilities(&layout), 1U, &session));
+    const uint8_t reports[][2] = {{1, 0xFF}, {2, 1}, {1, 0}, {2, 0}};
+    for (size_t index = 0U; index < sizeof(reports) / sizeof(reports[0]); ++index) {
+        platform_gamepad_snapshot_t snapshot;
+        EXPECT_EQ(GAMEPAD_OK, platform_gamepad_model_copy(&model, &snapshot));
+        EXPECT_EQ(GAMEPAD_OK, gamepad_hid_decode_report(
+            &layout, reports[index], sizeof(reports[index]), index + 2U,
+            &snapshot.state));
+        EXPECT_EQ(GAMEPAD_OK, platform_gamepad_model_commit_report(
+            &model, session, &snapshot.state));
+        EXPECT_EQ(1, snapshot.state.connected);
+        EXPECT_EQ(index < 2U ? INT16_MAX : INT16_MIN, snapshot.state.left_x);
+        EXPECT_EQ(0, snapshot.state.buttons);
+    }
+    EXPECT_EQ(GAMEPAD_OK, platform_gamepad_model_disconnect(&model, session, 6U));
+    platform_gamepad_snapshot_t disconnected;
+    EXPECT_EQ(GAMEPAD_OK, platform_gamepad_model_copy(&model, &disconnected));
+    EXPECT_TRUE(gamepad_state_is_neutral(&disconnected.state));
+    EXPECT_EQ(0, disconnected.state.connected);
 }
 
 static void test_signed_non_byte_aligned_axes(void)
@@ -1038,6 +1188,9 @@ int main(void)
     test_simple_mapping_hat_and_disconnect();
     test_report_ids_are_incremental_and_transactional();
     test_only_first_gamepad_application_is_selected();
+    test_shared_report_offsets_cross_application_collections();
+    test_secondary_reports_remain_bounded();
+    test_secondary_report_commits_without_releasing_held_controls();
     test_signed_non_byte_aligned_axes();
     test_push_pop_restores_globals();
     test_button_array_replaces_prior_selection();

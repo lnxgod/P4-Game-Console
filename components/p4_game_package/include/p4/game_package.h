@@ -51,6 +51,20 @@ typedef struct {
     char license[P4_GAME_PACKAGE_LICENSE_BYTES];
 } p4_game_package_info_t;
 
+enum {
+    P4_GAME_ICON_WIDTH = 128,
+    P4_GAME_ICON_HEIGHT = 72,
+    P4_GAME_ICON_PIXELS = P4_GAME_ICON_WIDTH * P4_GAME_ICON_HEIGHT,
+    P4_GAME_ICON_BYTES = 16 + 512 + P4_GAME_ICON_PIXELS,
+};
+typedef struct {
+    uint16_t palette[256];
+    uint8_t pixels[P4_GAME_ICON_PIXELS];
+} p4_game_icon_t;
+/** Read an optional .p4icon ELF section after the package digest is verified.
+ * Fixed geometry and palette; malformed or absent artwork returns false. */
+bool p4_game_package_read_icon(const uint8_t *elf, size_t bytes, p4_game_icon_t *out);
+
 typedef enum {
     P4_GAME_PACKAGE_VALID = 0,
     P4_GAME_PACKAGE_BAD_ARGUMENT,

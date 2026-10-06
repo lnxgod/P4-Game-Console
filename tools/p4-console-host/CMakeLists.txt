@@ -10,10 +10,12 @@ add_subdirectory(
     "${CMAKE_CURRENT_LIST_DIR}/../../components/console_shell"
     "${CMAKE_CURRENT_BINARY_DIR}/console_shell"
 )
-target_compile_definitions(console_shell PUBLIC
-    CONSOLE_SHELL_TARGET_WIDTH=768U
-    CONSOLE_SHELL_TARGET_HEIGHT=480U
-)
+option(P4_CONSOLE_HOST_TAB5 "Preview the native Tab5 interface" OFF)
+if(P4_CONSOLE_HOST_TAB5)
+    target_compile_definitions(console_shell PUBLIC CONFIG_P4_BOARD_M5STACK_TAB5=1 CONSOLE_SHELL_TARGET_WIDTH=1280U CONSOLE_SHELL_TARGET_HEIGHT=720U)
+else()
+    target_compile_definitions(console_shell PUBLIC CONSOLE_SHELL_TARGET_WIDTH=768U CONSOLE_SHELL_TARGET_HEIGHT=480U)
+endif()
 
 add_executable(p4_console_host console_host.c)
 set_target_properties(p4_console_host PROPERTIES

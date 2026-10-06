@@ -11,6 +11,7 @@ set(P4_CONSOLE_MAIN_SOURCES
 )
 set(P4_CONSOLE_MAIN_INCLUDE_DIRS ".")
 set(P4_CONSOLE_MAIN_REQUIREMENTS
+    console_startup
     console_shell
     doom_multiplayer
     esp_timer
@@ -20,7 +21,6 @@ set(P4_CONSOLE_MAIN_REQUIREMENTS
     log
     lwip
     mbedtls
-    p4_content_catalog
     p4_bbs
     p4_ble_radio_handoff
     p4_desktop
@@ -29,9 +29,7 @@ set(P4_CONSOLE_MAIN_REQUIREMENTS
     p4_multiplayer
     p4_multiplayer_registry
     p4_usb_content_transfer
-    p4_lua_runtime
-    p4_script_audio
-    p4_script_renderer
+    p4_frame_scheduler
     platform_board
     platform_console_settings
     platform_display
@@ -44,6 +42,8 @@ set(P4_CONSOLE_MAIN_REQUIREMENTS
 )
 
 idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
+idf_build_get_property(P4_TAB5_BLE_MULTIPLAYER_BUILD P4_TAB5_BLE_MULTIPLAYER_BUILD)
+idf_build_get_property(P4_TAB5_USB_HOST_BUILD P4_TAB5_USB_HOST_BUILD)
 idf_build_get_property(P4_WAVESHARE_SIGNAL_SCAN_BUILD
     P4_WAVESHARE_EXPERIMENTAL_SIGNAL_SCAN_BUILD)
 idf_build_get_property(P4_WAVESHARE_BLE_MULTIPLAYER_BUILD
@@ -52,6 +52,7 @@ idf_build_get_property(P4_WAVESHARE_BLE_GAMEPAD_BUILD
     P4_WAVESHARE_BLE_GAMEPAD_BUILD)
 idf_build_get_property(P4_CONSOLE_RUNTIME_STATS_BUILD
     P4_CONSOLE_RUNTIME_STATS_BUILD)
+set(P4_CONSOLE_WIFI_MULTIPLAYER_ENABLED 0)
 set(P4_CONSOLE_SIGNAL_SCAN_ENABLED 0)
 set(P4_CONSOLE_BLE_MULTIPLAYER_ENABLED 0)
 set(P4_CONSOLE_BLE_GAMEPAD_ENABLED 0)
@@ -132,6 +133,16 @@ else()
         endif()
     elseif(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
         set(P4_TOUCH_BOARD_DEPS board_deps_tab5 platform_tab5)
+        if(P4_TAB5_BLE_MULTIPLAYER_BUILD)
+            list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS platform_multiplayer_ble platform_dice_ble platform_multiplayer_wifi)
+            set(P4_CONSOLE_WIFI_MULTIPLAYER_ENABLED 1)
+            set(P4_CONSOLE_BLE_MULTIPLAYER_ENABLED 1)
+        endif()
+        if(P4_TAB5_USB_HOST_BUILD)
+            list(APPEND P4_CONSOLE_MAIN_REQUIREMENTS
+                doom_gamepad_input gamepad_core platform_gamepad
+                platform_gamepad_usb platform_gamepad_xusb platform_usb_host)
+        endif()
     else()
         set(P4_TOUCH_BOARD_DEPS board_deps_elecrow)
     endif()
@@ -174,6 +185,7 @@ target_include_directories(${COMPONENT_LIB} PRIVATE
 target_compile_definitions(${COMPONENT_LIB} PRIVATE
     P4_CONSOLE_OS_EMBEDDED=1
     P4_CONSOLE_SIGNAL_SCAN=${P4_CONSOLE_SIGNAL_SCAN_ENABLED}
+    P4_CONSOLE_WIFI_MULTIPLAYER=${P4_CONSOLE_WIFI_MULTIPLAYER_ENABLED}
     P4_CONSOLE_BLE_MULTIPLAYER=${P4_CONSOLE_BLE_MULTIPLAYER_ENABLED}
     P4_CONSOLE_BLE_GAMEPAD=${P4_CONSOLE_BLE_GAMEPAD_ENABLED}
     P4_BLE_DIAGNOSTIC_AUTOSTART=${P4_CONSOLE_BLE_DIAGNOSTIC_AUTOSTART_ENABLED}
@@ -187,3 +199,19 @@ target_compile_options(${COMPONENT_LIB} PRIVATE
     -Wshadow
     -Werror
 )
+
+# Tab5 uses the reviewed flight mark; compact/legacy boards retain their asset.
+if(CONFIG_P4_BOARD_M5STACK_TAB5)
+    set(P4_GAMECHANGERS_BOOT_MARK "${CMAKE_CURRENT_LIST_DIR}/assets/gamechangers_mark_flight.rgb565a8")
+    set(P4_BOOT_MARK_EXPECTED "4cf8a16d89b645fb0f6d8b4d4c6080f73224100f8b42834d9672b1a2283bb11e")
+else()
+    set(P4_GAMECHANGERS_BOOT_MARK "${CMAKE_CURRENT_LIST_DIR}/assets/gamechangers_mark_v042.rgb565a8")
+    set(P4_BOOT_MARK_EXPECTED "f0dea8368982c71c6d82ce3b6d711cf3d699e66e12c9ef8af93c2133a6bc9683")
+endif()
+file(SHA256 "${P4_GAMECHANGERS_BOOT_MARK}" P4_BOOT_MARK_SHA256)
+file(SIZE "${P4_GAMECHANGERS_BOOT_MARK}" P4_BOOT_MARK_BYTES)
+if(NOT P4_BOOT_MARK_BYTES EQUAL 442368 OR NOT P4_BOOT_MARK_SHA256 STREQUAL P4_BOOT_MARK_EXPECTED)
+    message(FATAL_ERROR "GameChangersAI boot mark differs from reviewed asset")
+endif()
+target_add_binary_data(${COMPONENT_LIB} "${P4_GAMECHANGERS_BOOT_MARK}" BINARY
+    RENAME_TO gamechangers_boot_mark_rgb565a8)

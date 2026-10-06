@@ -1,0 +1,23 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "version": "0.43",
+  "recorded_at": "2026-10-05T18:58:43.281464+00:00",
+  "status": "initial-candidate-rejected-on-hardware",
+  "unit": "A",
+  "image_sha256": "2414f464892cde98c1042f524072d79789b83b9684b5e03403c48d2297465c17",
+  "readback_verified": true,
+  "boot_ready": false,
+  "reason": "ESP-IDF startup could not reserve the 64 KiB internal/DMA pool; abort before app_main.",
+  "receipt": {
+    "file": "hardware/backups/tab5-a-install-v6nv9irj/receipt.json",
+    "sha256": "43bd219abaf8fab70442c744c242a4e4b4ab56254ff67212595641c96fdb8784"
+  },
+  "runtime_log": {
+    "file": "hardware/backups/tab5-a-install-v6nv9irj/runtime.log",
+    "sha256": "342778d0db33c429dc950ab348d9b06323e91a8eeb466dfa1e31c1cd55a1fa01"
+  },
+  "rejected_package": "local-data/firmware/tab5/0.43/rejected-2414f464/P4UPDATE.P4U",
+  "recovery": "A held in loader during correction; B was not written. Corrected image moves CPU-only HID parser/descriptor/report buffers to PSRAM while preserving internal lifecycle state, locks and the 64 KiB DMA reserve.",
+  "successor_authorization": "hardware/evidence/tab5-console-os-0.43-memory-fix-authorization.json"
+}

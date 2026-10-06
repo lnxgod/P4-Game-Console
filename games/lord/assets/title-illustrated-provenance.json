@@ -1,0 +1,30 @@
+{
+  "schema": 1,
+  "generator": "OpenAI built-in image_gen tool",
+  "date": "2026-10-05",
+  "purpose": "Original Red Dragon opening illustration replacing the user-rejected glyph dragon.",
+  "source": "games/lord/assets/source/title-illustrated-v2.png",
+  "source_sha256": "af7ad5763ce1c70421e0a98644d0385e15fe6de86169b196c0839f07eaf24891",
+  "prompt": "title-illustrated-prompt.txt",
+  "prompt_sha256": "f942c6473c7b8b17467d135bdc942ef2d17403f549b72f3b2e9256f93ad8c33e",
+  "license": "Original AI-generated project illustration; no upstream LORD artwork. Existing game license remains unchanged.",
+  "conversion": {
+    "tool": "games/lord/tools/build_illustrated_title.py",
+    "filter": "Lanczos center-fit, median-cut 256-color quantization, no dithering",
+    "sizes": [
+      [
+        736,
+        306
+      ],
+      [
+        304,
+        126
+      ]
+    ],
+    "format": "Opaque uint8 indices with RGB565 palettes",
+    "indexed_bytes": 263520,
+    "palette_bytes": 1024,
+    "runtime_bytes": 264544,
+    "header_sha256": "8843bb9f63a327d3ba3043f7deaf24e70390c095b5664fd287e1e3a256b89244"
+  }
+}

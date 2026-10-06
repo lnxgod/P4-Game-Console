@@ -1,0 +1,36 @@
+{
+  "renderer": "components/console_shell/src/nextgen.inc",
+  "fixture": "components/console_shell/tools/render_preview.c",
+  "dimensions": [
+    1280,
+    720
+  ],
+  "frames": {
+    "boot": "1f34ac2df9a4878aad9a86b74ef6335cd02dd80ddb55470bfdaea0f5149856c7",
+    "home": "23def137df88d1085a0a4f330098524d133a48a3cb60deb71a08305b8e4e50c2",
+    "games": "ec29a2602a111ad3d5f5b86e1aee47939f668fe1916f033ab6077e096225b3de",
+    "panel": "a47c4a1265902e39a79fb03ec7eb92448923db434581c38cfb6ca14ece120a4c",
+    "audio": "c8189aaa5839f511ad56b45fd267565157c97bc4f5f5748ba1acc95801490caa",
+    "appearance": "09e1f28ea7b009bcbd8574c99d893d670e437ed59a16633b6dca262b6b07e831",
+    "controllers": "bed8189c50d110c14dbb50bb686ddd62f31a83a299acb9ba605433fafba4f2ff",
+    "power": "29b1b53dd846d1b31dde66698da962e4eaea07fdc72ff7d0fbf8576998b6994e",
+    "files": "5b8e7deb254a403bcd040544ad1149a0a8851efc8141eef4ffcb3f8ad986784c",
+    "manager": "c495654e89220d28ec1182fbe7575b673d58335bc3ec3c1eba54c610fd9b9135",
+    "storage": "4eb779146157f29005179cf2a3d7d1f1a0e176e1c8cdfcc593ead1068626d726",
+    "transfer": "7e91e58c89973f4669f34ad126c6ba2cb3024bccc27b3e1faefb16260795c0fa",
+    "usb": "bc55932bc0cad9b10976a4ff969877d1ebd8c0121d0cf8630da2ff0bbb67085c",
+    "system": "63adaee35d6be71337bcc31fca0f15e8644466f64e089e23d37442a94c61ac93",
+    "sensors": "8722538b078e5001a8b5eb51a3e457fbad29ca322011e4857c09b57755b3aab7",
+    "saves": "137a22d341728f8398b32c7880e920e670e0abcfcfd286e92d044a7a5e77868f",
+    "achievements": "66f376e29e1896877020946013e42b1315d1d209b4c63852a0897fd43ab7a542",
+    "terminal": "93b6c64a7424de91c50f1b0ea3c44ed88c489a3e140c6537401c7bb681b99c5d",
+    "keyboard": "f0c2b5a56c8bcb95ad883eb16c0b35521c124d887a5d58d7ab62b543446b43d0",
+    "multiplayer": "ab13c0b3324903a9ac417f316ab8ebd8e6265636c500c4b7fabf71aa0ce6e2de",
+    "multiplayer-host": "1bf0829daffadc44b36c18e2725544ae6437b09fd152177b33aa9489b97ea68c",
+    "multiplayer-settings": "fe561743f22e95d324f4823367687e7ba18661117fae870069459beaeb01a1fa",
+    "multiplayer-join": "3dbea944243d7a392d201e4ec270ed80d3c9b5bd66cddf37bb7de0c8eca19f34",
+    "colors": "69728151241d3a5927e5fb3f28e37cfd1a4e500b35a1f190ec21b7ef195f3b24",
+    "touch": "d67e66bd9408ac8542e570c8ca84feb9bea7140300193f62d4c963f7f7254445",
+    "delete": "096dfa1cb4a493c7a0a7fd20f0ab967076cf2066032faf1e906a7859a28ed42c"
+  }
+}

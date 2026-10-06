@@ -1,0 +1,151 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "product": "GameChangersAI OS",
+  "version": "0.45",
+  "recorded_at": "2026-10-05T23:39:17.144326+00:00",
+  "status": "both-units-readback-boot-health-and-live-charging-verified-wireless-acceptance-pending",
+  "authorization": {
+    "file": "hardware/evidence/tab5-0.45-core-authorization.json",
+    "sha256": "cc6d77ee09dc6b9d29e1a4bb7856dcd14579c4b6ee15fe8e4a95c60b776fa2d6"
+  },
+  "image": {
+    "file": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 3924304,
+    "sha256": "ebb10078778e61440442a46ccbde4f041739ca75824a0edccec10e36a3183ce5"
+  },
+  "update": {
+    "file": "local-data/firmware/tab5/0.45/P4UPDATE.P4U",
+    "sha256": "a2094dada3af8452184391a63652f09096424045495c2bbde50fa0998d39e527"
+  },
+  "interface_base": {
+    "version": "0.44",
+    "art_font_startup_sha256": {
+      "components/console_shell/src/nextgen_assets.h": "58e2206118d91e01a540f444e1024158b78a0b5c1b46e38cde36657a908899fc",
+      "components/console_shell/include/console/ui_font.h": "cb0bcce3dad0a9f5a24868d158d96e0860b5015c470cebdfb9d007eb9f4e842a",
+      "components/console_startup/src/startup.c": "f10e44c8c4ce4299f1c2b046070de33ad50eb1b5c0194d7caed4ef4d0a4138bd",
+      "apps/console_os/main/assets/gamechangers_mark_v042.rgb565a8": "f0dea8368982c71c6d82ce3b6d711cf3d699e66e12c9ef8af93c2133a6bc9683"
+    },
+    "git_note": "0.44 exists in the shared working tree; no destructive rebase/reset was performed."
+  },
+  "validation": {
+    "build": "P4_TAB5_FIRMWARE_ONLY=1 make console-os-tab5-idf; exact-artifact verifier passed",
+    "content_bundle_verified": false,
+    "build_prerequisite_tests": 39,
+    "build_prerequisite_failures": 0,
+    "tab5_board_sanitizer_tests": "11/11 passed with Xcode clang 21; old CLT ASan runtime hung before main",
+    "wifi_service": "ASan/UBSan mocked ESP service with real local UDP; packet/session bounds, discovery, association, disconnect and expiry passed",
+    "cartridge_icon": "Actual pinned-objcopy RISC-V ELF round trip and OS parser passed; bounds and malformed section tests passed",
+    "ui": "7/7 shell tests including all transport selectors and cartridge icon override",
+    "build_log_sha256": "10c9c94f9e4c8c056bb40360bc9ac2f42232327a8387c12106b68921353082bb"
+  },
+  "features": {
+    "bluetooth": "OS-owned encrypted P4MP; requires live C6 HCI acceptance",
+    "wifi": "OS-owned two-player standalone open AP/scan/association and bounded P4MP UDP; no router/internet",
+    "charging": "500 mA non-QC, masked expander writes and readback",
+    "cartridge_presentation": "validated P4G header title plus optional digest-bound nonallocated .p4icon section; old art fallback retained"
+  },
+  "diagnostic_label_caveat": "Inherited INTERFACE log text still says version=0.44. ESP app descriptor, rendered product version and update metadata are 0.45. Interface art/font/startup remain identical to the 0.44 base.",
+  "units": {
+    "A": {
+      "port": "/dev/cu.usbmodem1101",
+      "live": {
+        "identity_sha256": "fedb17a5f2b7eb4c4d14bf032bea3623c3fe4c8238e3b622a8fcec8ae54f1f0b",
+        "revision": "v1.3",
+        "flash_bytes": 16777216
+      },
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "receipt": {
+        "file": "hardware/backups/tab5-a-install-1iuil9ag/receipt.json",
+        "sha256": "c0c98c31b170df2b909396c19da51c9cd9b88af0befa3969ae6d101ff4dd1b18"
+      },
+      "runtime_log": {
+        "file": "hardware/backups/tab5-a-install-1iuil9ag/runtime.log",
+        "sha256": "63087a7548b5fedcff725b4bf8cbc55344af135b782b3a0ae439fdd5397b69dc"
+      },
+      "charger_control_readback": true,
+      "battery": {
+        "first_valid_mv": 6814,
+        "last_observed_mv": 6931,
+        "current_ma_range": [
+          -482,
+          -480
+        ],
+        "interpretation": "negative current is charging on the pinned Tab5 shunt wiring; live pack voltage recovers and rises after enable",
+        "full_charge_or_unplugged_test": false
+      },
+      "radio_acceptance": "not exercised during capture",
+      "wacky_wheels": {
+        "content_transfer": {
+          "file": "hardware/backups/tab5-a-install-1iuil9ag/wacky-content-transfer.log",
+          "sha256": "e4cc184b8cc6793343efedf702ac319f138ca8c2739d31c0401199d7da2c8584",
+          "files": 2,
+          "result": "P4_H1 BUNDLE_PASS"
+        },
+        "catalog_log": {
+          "file": "hardware/backups/tab5-a-install-1iuil9ag/post-content-runtime.log",
+          "sha256": "26ef250305c77bc481ac411885b45e8e56e971432a3f196e63a0b3b8e17f68e4"
+        },
+        "game_registered": true,
+        "multiplayer_registered": true,
+        "native_usb_open_caveat": "Opening the serial port coincided with a USB reset; this is a boot/catalog capture, not uninterrupted game-play evidence.",
+        "device_gameplay": "not exercised"
+      }
+    },
+    "B": {
+      "port": "/dev/cu.usbmodem2101",
+      "live": {
+        "identity_sha256": "827c334198f1b196cbd7f7520425156d4c51b85409075eb6ddd1612bf9f57a93",
+        "revision": "v1.3",
+        "flash_bytes": 16777216
+      },
+      "readback_verified": true,
+      "boot_ready": true,
+      "health_ready": true,
+      "receipt": {
+        "file": "hardware/backups/tab5-b-install-quoq61ba/receipt.json",
+        "sha256": "14195d080ad41a884b48b8edb1ab64263e4c2c891fd5f71a4d85da8b1ebd695c"
+      },
+      "runtime_log": {
+        "file": "hardware/backups/tab5-b-install-quoq61ba/runtime.log",
+        "sha256": "8c8aaa56ea7f503ba78632142f255a64d1db375ce65be57a7063eed654e4aeb8"
+      },
+      "charger_control_readback": true,
+      "battery": {
+        "first_valid_mv": 6641,
+        "last_observed_mv": 6840,
+        "steady_current_ma_range": [
+          -503,
+          -501
+        ],
+        "interpretation": "negative current is charging on the pinned Tab5 shunt wiring; live pack voltage recovers and rises after enable",
+        "full_charge_or_unplugged_test": false
+      },
+      "radio_acceptance": "not exercised during capture",
+      "wacky_wheels": {
+        "content_transfer": {
+          "file": "hardware/backups/tab5-b-install-quoq61ba/wacky-content-transfer.log",
+          "sha256": "05258baa44940817f3362cc02b7165306bc717add2e98d8ad670f1918ff25faa",
+          "files": 2,
+          "result": "P4_H1 BUNDLE_PASS"
+        },
+        "catalog_log": {
+          "file": "hardware/backups/tab5-b-install-quoq61ba/post-content-runtime.log",
+          "sha256": "c10e8e76bf23c9c4b584b9134c594854a771d34058e2b4e57e5ee2fc41f86e79"
+        },
+        "game_registered": true,
+        "multiplayer_registered": true,
+        "native_usb_open_caveat": "Opening the serial port coincided with a USB reset; this is a boot/catalog capture, not uninterrupted game-play evidence.",
+        "device_gameplay": "not exercised"
+      }
+    }
+  },
+  "pending": [
+    "Two-tablet Bluetooth Host/Join, encrypted link, game start, Back and disconnect",
+    "Two-tablet standalone Wi-Fi Host/Join without an existing router, game start and disconnect",
+    "Sustained Wacky Wheels device frame timing",
+    "Battery full charge and unplugged runtime acceptance"
+  ]
+}

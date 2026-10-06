@@ -1,0 +1,83 @@
+{
+  "title": "Blast Circuit / Bach arcade playlist",
+  "composer": "Johann Sebastian Bach (1685–1750)",
+  "arrangement_license": "MIT",
+  "recordings_used": [],
+  "sample_rate_hz": 16000,
+  "voices": 5,
+  "percussion_samples": 4,
+  "percussion_pcm_bytes": 17920,
+  "rotation": "Badinerie -> Neon Relay -> Foundry Rush -> Badinerie; continuous across arenas/rounds, 100 ms fades at track boundaries.",
+  "duration_seconds": 241.6,
+  "tracks": [
+    {
+      "title": "Badinerie / Circuit Mix",
+      "work": "BWV 1067, Badinerie",
+      "source_edition": "Sam Franko, violin transcription, G. Schirmer, New York, 1911",
+      "source_catalog": "https://hdl.handle.net/1802/26605",
+      "source_rights": "Sibley Music Library explicitly marks this item public domain.",
+      "source_files": [
+        "assets/music/badinerie-franko-1911-violin.pdf"
+      ],
+      "external_midi_used": false,
+      "transcription": "Approved AABB melody and accompaniment preserved. Ornaments and tied articulations simplified, lead one octave lower.",
+      "bpm": 150,
+      "key": "A minor with source modulations",
+      "ticks": 1280,
+      "tick_frames": 800,
+      "duration_seconds": 64.0,
+      "events": 1274,
+      "source_sha256": {
+        "assets/music/badinerie-franko-1911-violin.pdf": "913179feb0ca304006e8c9d9369be924f4352c92a8dc6c61b5727d8a291db37b"
+      }
+    },
+    {
+      "title": "Invention No. 8 / Neon Relay",
+      "work": "BWV 779",
+      "source_edition": "Bach-Gesellschaft; public-domain engraving by Allen Garvin, Mutopia-2008/06/15-61",
+      "source_catalog": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=61",
+      "source_rights": "Mutopia lists Public Domain; LilyPond source includes the typesetter dedication.",
+      "source_files": [
+        "assets/music/invention8-mutopia.ly",
+        "assets/music/invention8-mutopia.mid"
+      ],
+      "external_midi_used": true,
+      "transcription": "All 34 bars, both contrapuntal parts at written pitch, twice with a stronger answering voice and percussion variation on the second pass. New 3/4 electronic groove.",
+      "bpm": 150,
+      "key": "F major with source modulations",
+      "ticks": 1632,
+      "tick_frames": 800,
+      "duration_seconds": 81.6,
+      "events": 1196,
+      "source_sha256": {
+        "assets/music/invention8-mutopia.ly": "ddc634821a618e9a5e9ffcefbd96005bd02bd1f12573e2fefc4e6e6653d83ebe",
+        "assets/music/invention8-mutopia.mid": "07238719180171f76283756405ee43a0319226e869283bf29affb9e4c360e6f8"
+      }
+    },
+    {
+      "title": "Prelude in C minor / Foundry Rush",
+      "work": "BWV 847, Prelude",
+      "source_edition": "Breitkopf & Hartel, 1866; public-domain engraving by Davide Castellone, Mutopia-2006/07/02-550",
+      "source_catalog": "https://www.mutopiaproject.org/cgibin/piece-info.cgi?id=550",
+      "source_rights": "Mutopia lists Public Domain; LilyPond source includes the typesetter dedication.",
+      "source_files": [
+        "assets/music/prelude2-mutopia.ly",
+        "assets/music/prelude2-mutopia.mid"
+      ],
+      "external_midi_used": true,
+      "transcription": "Driving passage, source bars 1–32, both parts at written pitch; repeated with percussion breakdown/build. Fixed 160 BPM instead of source tempo changes; later cadenza/Adagio omitted.",
+      "bpm": 160,
+      "key": "C minor with source modulations",
+      "ticks": 2048,
+      "tick_frames": 750,
+      "duration_seconds": 96.0,
+      "events": 1918,
+      "source_sha256": {
+        "assets/music/prelude2-mutopia.ly": "2923478f3436ddc12525fab5514e354025a9715205424944fd0e5f7f24ba70d9",
+        "assets/music/prelude2-mutopia.mid": "9e29d5b640d875bcfa93824cc963a4d9419ce2139cfd4e786148d45127e602d8"
+      }
+    }
+  ],
+  "generated_include_sha256": "360163347f0ef9cbca445cf45761ddad8019d81714a393f1e18edc9f0d94d48b",
+  "runtime": "Integer sequencer, five bounded voices, shared original percussion/wavetables, stereo echo; no runtime MIDI, filesystem or external decoder."
+}

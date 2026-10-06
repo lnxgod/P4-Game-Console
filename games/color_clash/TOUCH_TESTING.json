@@ -1,0 +1,266 @@
+{
+  "schema": 1,
+  "game": "color_clash",
+  "tested_at": "2026-10-06T00:04:18.359150+00:00",
+  "scope": "Direct touch/drag input and rendering only. Rule, network, manifest and art sources were not modified by this pass.",
+  "runtime_test_source_sha256": "dc318ee7b4f2d43d3931e8e597c6ce6632caed9d41e19fd9c069e8b66536a1c6",
+  "runtime_test_source_files": {
+    "CMakeLists.txt": "bed4e561d063f0cb52aa225c046d063802fd3c6d20278d4711ae8ec310118ead",
+    "README.md": "913446c51a4c966eaed07abcfbd7e651e950e58bdd5b3ed7640fe3a8e84fbd2a",
+    "src/color_clash.c": "8b933386d5b62f99567c1b76e6b08e4d362c86cb5995fb10fd5dcb490cc6bd0f",
+    "src/color_clash_internal.h": "5ce5af90d4a8a27c379626b8f3dab10fce984ef5f0df87906577984ea82be346",
+    "src/color_clash_logic.c": "c08f416b8cd002f5a66696732550d24b17a895684f0290d544bd35b9487683f3",
+    "src/color_clash_network.c": "ba33d0971247a23cdb13a3295117ccbf5cc09d45f9db5cc45cad8ce81459e9db",
+    "src/generated/color_clash_card_frames.inc": "70df683209789bc074c86a05a016c5e797fbf8a7bffd32d5b7cd76200b80ee70",
+    "src/generated/table_materials.inc": "a8a8d32bc6c81e743343512790ad3cfd3eca52f41f60e400f7becff132ab02e7",
+    "tests/CMakeLists.txt": "f670ef5eba2566dbee8350d80f506bc0beb34189f1a38d50c6164cb7449007fc",
+    "tests/test_color_clash.c": "81e4b2381cdb6d81933d0be5dd15cab096c411ae23a81e2589f60dd32aed7d3d",
+    "tests/test_presentation.c": "e8782504ee83544d928c39b96fbd0f54e813d55c6f0be4001cf8c12982a7f085",
+    "tests/test_touch_drag.c": "a23b41ef389084a7b2f48bdfbe072f37488b56f4f3e487c750cdfa244b25999d",
+    "tests/touch-performance-input.txt": "63457f240ac7659fe51a86cc45a7fae1d484604ebe3167f3d7b1eb18c7e259c4"
+  },
+  "focused_ctest": {
+    "passed": 3,
+    "failed": 0,
+    "build_log": {
+      "path": "build-host/smoothness-packages/color_clash/focused-build.log",
+      "sha256": "4a6648d87fafd28cae4022a8d083d067ec3e1d469d806f8b81deb8334e970bc6",
+      "bytes": 1523
+    },
+    "test_log": {
+      "path": "build-host/smoothness-packages/color_clash/focused-tests.log",
+      "sha256": "716669ae925f5a0c9f0c93fb0c1ec965441124583389c5d8f075562302554698",
+      "bytes": 564
+    }
+  },
+  "generic_sdl_ctest": {
+    "passed": 5,
+    "failed": 0
+  },
+  "test_logs": {
+    "build-host/color_clash/Testing/Temporary/LastTest.log": "5e8efae273baec31ebc287f6ed6858fb1703fab30841b7cfe67ea409f7b11725",
+    "build-host/play-color_clash/Testing/Temporary/LastTest.log": "340442b4b6aff81c37522af8f87c9282a92e290e9c12584edad4c8cebc0a25ff"
+  },
+  "captures": {
+    "build-host/card-touch-captures/color_clash-320-0.png": "0448d5e87eee7c98083611f12bd188928922000a693493744b02152747f94eb3",
+    "build-host/card-touch-captures/color_clash-320-1.png": "ff14637dbedecbd61752e418c2112d35167680903aa06cb6ce00506ea66a36f2",
+    "build-host/card-touch-captures/color_clash-320-2.png": "8d64186d66a960425c7cb9c2a8bb95019c8edb3023f10dff1dd79f397b9e9b6b",
+    "build-host/card-touch-captures/color_clash-768-0.png": "370f6392f1131356cb6ca72f7dae23e80d4fb49b97698accdcbb2f14ab834657",
+    "build-host/card-touch-captures/color_clash-768-1.png": "9d311a4e02a15f575b2027314166f448f7d54c43dd53f7af295c6df24a13b622",
+    "build-host/card-touch-captures/color_clash-768-2.png": "4fcd2a29b1ec0a3836b1fecfb7e29d0ccf9bbbd1b38afaf4647cd9b1feb75c59",
+    "build-host/card-touch-captures/color_clash-drag-320-0.png": "c034d4f3c1b7c98e7608bf5d45e23a72f2a04cac6810a8abf56741030c40c2b0",
+    "build-host/card-touch-captures/color_clash-drag-320-1.png": "c3b8334d1901915985517acbcc071aef43e1eeb86c86f9ebf409e4354d12fcb4",
+    "build-host/card-touch-captures/color_clash-drag-320-2.png": "9ce1336effc0694473e8719d686bac0735d926ae96e29f77e85500599d637395",
+    "build-host/card-touch-captures/color_clash-drag-768-0.png": "38f6a03196cd1b22ed90d9666eeeaf2671854de41b5b55baf28d498564fa53bc",
+    "build-host/card-touch-captures/color_clash-drag-768-1.png": "7aa6e491e9c50058a5d976d1d8e80dc2f659b528b2fdf087197d1e503026cbf3",
+    "build-host/card-touch-captures/color_clash-drag-768-2.png": "5210823f828cce46629a5fa1959ac288d891911752a97735494d65b1da1140af"
+  },
+  "visual_review": "Native and fallback table and drag captures inspected; semantic actions readable, lifted card and valid/invalid target visible.",
+  "performance": {
+    "revision_scope": "shared raster optimization; current source benchmark",
+    "scope": "Optimized development-Mac CPU update/render/audio; excludes SDL presentation, physical device, transport and I/O.",
+    "frames_per_resolution": 2000,
+    "target_fps_minimum": 30,
+    "budget_ms": 33.333333,
+    "input_tape": "games/color_clash/tests/touch-performance-input.txt",
+    "input_sha256": "63457f240ac7659fe51a86cc45a7fae1d484604ebe3167f3d7b1eb18c7e259c4",
+    "benchmark_binary": "build-host/play-color_clash/p4_game_benchmark",
+    "benchmark_binary_sha256": "0eba6639e35c42feb121571721218dfdda058261d6c7cf68de44b654559497b9",
+    "measurements": {
+      "768": {
+        "game": "org.p4console.color-clash",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1979,
+        "last_frame_hash": "21f95036",
+        "update_audio_ms": {
+          "mean": 0.0009,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.021,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.1349,
+          "p50": 0.125,
+          "p95": 0.188,
+          "p99": 0.246,
+          "max": 0.645,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1357,
+          "p50": 0.126,
+          "p95": 0.19,
+          "p99": 0.247,
+          "max": 0.666,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.color-clash",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1979,
+        "last_frame_hash": "9711341d",
+        "update_audio_ms": {
+          "mean": 0.0008,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.001,
+          "max": 0.003,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0227,
+          "p50": 0.022,
+          "p95": 0.026,
+          "p99": 0.027,
+          "max": 0.078,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0236,
+          "p50": 0.023,
+          "p95": 0.027,
+          "p99": 0.028,
+          "max": 0.081,
+          "over_33_333ms": 0
+        }
+      }
+    },
+    "measurement_files": {
+      "768": {
+        "path": "build-host/smoothness-packages/color_clash/benchmark-768.json",
+        "sha256": "8bd94a249f6d65917952c1bd15679359c2ded51c5602f4995c97c5004c3396ce",
+        "bytes": 527
+      },
+      "320": {
+        "path": "build-host/smoothness-packages/color_clash/benchmark-320.json",
+        "sha256": "9b699bb6bf26df92fef74600fe00ebb5b2f2ba8a5de68b53ec873a9d8bfa9c8d",
+        "bytes": 527
+      }
+    },
+    "motion_coverage": "Existing direct-touch drag/input trace.",
+    "shared_raster_source_sha256": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac",
+    "hardware_fps_verified": false
+  },
+  "simulator": {
+    "path": "build-host/play-color_clash/p4_game_host.app/Contents/MacOS/p4_game_host",
+    "sha256": "c13d7502cc1ef2bccb98f5460799bf2c620a8b98086957077dd803a9384d44b4",
+    "bytes": 1490832,
+    "tests_passed": 5,
+    "tests_failed": 0,
+    "build_log": {
+      "path": "build-host/smoothness-packages/color_clash/sdl-build.log",
+      "sha256": "0f53292505c0dba6b1454e76cd66f7682327ceef738c49b1fcf2f4e12fef10e1",
+      "bytes": 4532
+    },
+    "test_log": {
+      "path": "build-host/smoothness-packages/color_clash/sdl-tests.log",
+      "sha256": "8ab257f5963eb9da64d5b19be1af5bd6fc7798f502c90d0f41764a884c261bf6",
+      "bytes": 760
+    }
+  },
+  "shared_dependencies": {
+    "components/p4_game_api/include/p4/card_art.h": "e606ba8b802e7a71dc715264c3c85ed857e507c10d75738de5d174c06cff7a53",
+    "components/p4_game_api/src/input.c": "b895eff5252e8d141fb49dc3c8e31fbd629bcda72068f14917dcf425bc7a81f7",
+    "tools/p4-game-host/play_game.c": "7365a8d5d65fb0c7f3680e51bd7ff138c5667d0844d10c9613364ddef58c3010",
+    "tools/p4-game-host/frame_pacer.h": "4ff832b5242db46e176c79e2c4e13d5134e55f089b061014173c3d45d477c9f3",
+    "components/p4_game_api/src/draw.c": "9ecd24da7185ff76c98abb1cdb6017f34a355b86b1e7e7c11b3da9c54fd20cac"
+  },
+  "interactive": {
+    "status": "Pending parent play of the direct-touch revision"
+  },
+  "hardware_acceptance": null,
+  "installed_on_device": false,
+  "limitations": [
+    "No hand reordering",
+    "Existing hand paging/swipe behavior retained",
+    "New drag gestures need parent interactive and physical touch acceptance",
+    "Prior PRESENTATION_TESTING.json cartridge hash describes the preceding art candidate, not this source revision"
+  ],
+  "pre_raster_performance": {
+    "scope": "Optimized native Mac CPU including real game/audio; excludes SDL display, device and transport",
+    "input_tape": "games/color_clash/tests/touch-performance-input.txt",
+    "input_sha256": "63457f240ac7659fe51a86cc45a7fae1d484604ebe3167f3d7b1eb18c7e259c4",
+    "frames_per_resolution": 2000,
+    "measurements": {
+      "768": {
+        "game": "org.p4console.color-clash",
+        "frames": 2000,
+        "width": 768,
+        "height": 480,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1979,
+        "last_frame_hash": "21f95036",
+        "update_audio_ms": {
+          "mean": 0.0009,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.002,
+          "max": 0.017,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.1281,
+          "p50": 0.121,
+          "p95": 0.171,
+          "p99": 0.21,
+          "max": 0.569,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.1291,
+          "p50": 0.121,
+          "p95": 0.172,
+          "p99": 0.212,
+          "max": 0.586,
+          "over_33_333ms": 0
+        }
+      },
+      "320": {
+        "game": "org.p4console.color-clash",
+        "frames": 2000,
+        "width": 320,
+        "height": 200,
+        "mode": "optimized native host CPU; real game+tone/PCM mixer; excludes display, device and transport",
+        "changed_frames": 1979,
+        "last_frame_hash": "9711341d",
+        "update_audio_ms": {
+          "mean": 0.0008,
+          "p50": 0.001,
+          "p95": 0.001,
+          "p99": 0.001,
+          "max": 0.003,
+          "over_33_333ms": 0
+        },
+        "render_ms": {
+          "mean": 0.0215,
+          "p50": 0.021,
+          "p95": 0.024,
+          "p99": 0.027,
+          "max": 0.072,
+          "over_33_333ms": 0
+        },
+        "total_ms": {
+          "mean": 0.0223,
+          "p50": 0.022,
+          "p95": 0.025,
+          "p99": 0.028,
+          "max": 0.075,
+          "over_33_333ms": 0
+        }
+      }
+    }
+  },
+  "raster_revision_logs": {
+    "build-host/smoothness-packages/color_clash/focused-tests.log": "716669ae925f5a0c9f0c93fb0c1ec965441124583389c5d8f075562302554698",
+    "build-host/smoothness-packages/color_clash/sdl-tests.log": "8ab257f5963eb9da64d5b19be1af5bd6fc7798f502c90d0f41764a884c261bf6"
+  }
+}

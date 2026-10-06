@@ -2,9 +2,10 @@
 
 if(COMMAND idf_component_register)
     idf_component_register(
-        SRCS "src/audio_session.c"
+        SRCS "src/audio_session.c" "src/audio_worker.c"
         INCLUDE_DIRS "include"
-        REQUIRES platform_audio
+        REQUIRES platform_audio p4_game_api
+        PRIV_REQUIRES freertos heap esp_timer
     )
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)
     target_compile_options(${COMPONENT_LIB} PRIVATE

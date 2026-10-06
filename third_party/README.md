@@ -6,13 +6,6 @@ The `third_party/doomgeneric` files are verbatim upstream files. Platform adapte
 
 `game-data.json` records identification and provenance metadata, never game-data bytes. The current D0 development default is an ignored local Doom v1.9 shareware IWAD whose size and SHA-256 are checked before use. Public/reproducible builds should use the separately supplied Freedoom release recorded in the same manifest.
 
-Lua 5.4.8 under `third_party/lua-5.4.8/` is the official source archive from
-lua.org, pinned by archive SHA-256 and a per-file offline manifest. Run
-`scripts/lua/verify-lua.py` to verify it. The Console OS sandbox builds the
-interpreter as a library and does not expose the upstream command-line tools,
-OS library, I/O library, package loader, dynamic loader, or debug library to a
-cartridge.
-
 Never vendor WAD files. Never clone the ESP32P4DOOM reference into this repository's history. Doom engine source belongs under a clearly separated third-party directory; board and game-platform services remain in `components/`.
 
 The Quake engine under `third_party/quakegeneric/` is likewise a verbatim,

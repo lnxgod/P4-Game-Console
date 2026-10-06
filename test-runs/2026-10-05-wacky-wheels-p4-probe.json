@@ -1,0 +1,98 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "kind": "wacky-wheels-p4-feasibility",
+  "upstream": {
+    "url": "https://git.retrodamage.com/jmarshall/wacky-wheels",
+    "revision": "7dd510096c58ee84c36970a11c4f57b4a9c2a4cf"
+  },
+  "shareware": {
+    "url": "https://www.classicdosgames.com/files/games/beavis-soft/1wacky.zip",
+    "zip_bytes": 1655316,
+    "zip_sha256": "3c3c35bb696194b420c5156ac9641819213f01812801f5c1683817c8bb70f4a3",
+    "data_bytes": 4398948,
+    "data_sha256": "ae36b4204f1b44fbdb26294a45495e46616feffcb18e67d48de9324d76bed85f"
+  },
+  "host": {
+    "asan_ubsan": "pass",
+    "tests": [
+      "240-frame shared SDL3 runner smoke",
+      "1800 scripted race steps including steering and fire",
+      "pause/resume, Back/relaunch, invalid resource rejection",
+      "300 batches comparing one render against five renders with identical inputs/time"
+    ],
+    "state_bytes": 99184,
+    "peak_heap_bytes_two_instances": 658268,
+    "render_ms_sanitized_mac": {
+      "median": 1.166,
+      "p95": 1.353,
+      "max": 1.518
+    },
+    "visual_changes": {
+      "smooth": 1220,
+      "smooth_samples": 1500,
+      "sparse": 264,
+      "sparse_samples": 300
+    },
+    "interactive": "initial track visually inspected; user confirmed initial preview looks good; smoothed preview awaiting feedback"
+  },
+  "p4": {
+    "compiler": "esp-14.2.0_20251107",
+    "isa": "rv32imafc_zicsr_zifencei",
+    "abi": "ilp32f",
+    "elf_bytes": 35460,
+    "max_individual_stack_frame_bytes": 2688,
+    "runtime_imports": [
+      "calloc",
+      "free",
+      "memcpy",
+      "memset",
+      "strcmp"
+    ],
+    "console_os_elf_validator": "valid"
+  },
+  "packages": {
+    "WACKYTRY.P4G": {
+      "bytes": 35716,
+      "sha256": "6eeafb1d6f83a54ec8b526cf7f088fdae5f50f9dfe33db49c8111f8768118748"
+    },
+    "WACKYTRY.P4R": {
+      "bytes": 4399076,
+      "sha256": "0b2cc2e4a3741125a1d77a73b6f4d8807cccfa9fea331f1328f1bd27ae82f32b"
+    }
+  },
+  "hardware": {
+    "installed": false,
+    "performance_verified": false
+  },
+  "limitations": [
+    "single-player track 1 only",
+    "no audio or menus",
+    "upstream multiplayer not implemented",
+    "upstream source license unspecified; no release publishing",
+    "Tab5 performance unmeasured"
+  ],
+  "recipe_sha256": {
+    "scripts/wacky/fetch.py": "188e4716336c8b2e771355906f8c68a4bb745c973a50a0ebcaed937bdc28313c",
+    "scripts/wacky/CMakeLists.txt": "48b17ffdd179a944d8c4a4b6facb1276f34900735d5866eb38339f277af0f7a1",
+    "scripts/wacky/portable_libc.c": "8cdd37da64b6a99b3889d9b848508ddf108554b3b69df3bc0019f9430c6638ab",
+    "scripts/wacky/probe_checks.c": "54457a86086ccd21bf2dfb8393e0d3d809d4b63d088102c2afca66aa6094dc4f",
+    "scripts/wacky/port_support.h": "3548cdfb170e099706e7f65beb4202ff5a80e6b63a884f7d06f7c64c103efde2",
+    "scripts/wacky/package_probe.py": "336dd24a97c81523eff906ef8eb0d6b1f0ab1459766185818cbf8cc74f646c56",
+    "scripts/wacky/README.md": "153496d41ee051be6f72ef4efa42f527d460df0ccec2e9db00fea50fe209c8f1",
+    "scripts/wacky/validate_elf.c": "c79b321bfae85fc5c6eda231865757ab7169bd9e05aeeea10e10b4daaabd3141",
+    "scripts/wacky/port.c": "b709285406bc163bec0215bd0bce6fd0febfc5bd6f0c04b18336f411317b5dcb",
+    "scripts/wacky/cross_build.py": "b6a48f870ec029edddb539832a505407ce57fe9a80a930565c08e3a80e9a58a7",
+    "scripts/wacky/SDL.h": "3062cb4951a14fa15609a72ab31a6d309410cb9e571c3dcccfbf5884112dd812",
+    "scripts/wacky/port_support.c": "61e4a9042ad750f4aaf06f29c0b5fb5dc3b5eaed33b2036eaec2c9461810247b",
+    "scripts/wacky/prepare.py": "070c1fcf9da540bf76f4f7f1c2fa59d44d89185d56fa85b1ac816662a742acbb"
+  },
+  "tab5_os_build": {
+    "command": "make verify && make console-os-tab5-idf",
+    "result": "pass",
+    "image_bytes": 3420048,
+    "image_sha256": "d7c9b684cce3146cd4e48bd38e9233b934bfc0e5f5b63e3a3ee144fd22008a43",
+    "flashed": false,
+    "note": "Existing OS compatibility build; Wacky prototype remains a separate local development cartridge."
+  }
+}

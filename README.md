@@ -1,4 +1,13 @@
-# P4 Console OS for M5Stack Tab5
+# Game Changers AI OS
+
+The initial launch of Game Changers AI OS is the foundation for our future
+STEM box: a native ESP32-P4 game console with repository-local AI workflows for
+creating games, testing them and setting up the device. Start with
+[`installos`](.agents/skills/installos/SKILL.md) for first-time installation;
+it prepares the default games and verified Doom shareware data. See the
+[launch quality contract](docs/LAUNCH_QUALITY.md) for release and remix gates.
+The [initial launch notes](docs/INITIAL_LAUNCH.md) describe current game,
+storage and source-publication status.
 
 M5Stack Tab5 is the permanent primary hardware for this game console. Build it
 with `make console-os-tab5-idf` or `make console-os-idf`. Use the connected USB-C
@@ -10,15 +19,22 @@ The [game library](docs/GAME_LIBRARY.md) lists the curated games, categories,
 ranking and release quality bar. New projects stay out of the installed library
 until they are ready.
 
+For a fresh setup, run `make setup` when the pinned tools are absent, then
+`make verify` and `make prepare-game-data`. The last command downloads missing
+Doom shareware into ignored local storage and verifies its pinned size and
+SHA-256 before use. It never installs or commits WAD data. Continue with
+[`installos`](.agents/skills/installos/SKILL.md) for the exact device's guarded
+installation and first-boot checks. Current Tab5 game storage requires microSD;
+Chex Quest is an explicit SD-only option, outside the default bundle.
+
 Console OS has versioned game APIs for drawing, normalized input, bounded
 audio, saves, multiplayer-facing player slots, and return-to-launcher
 lifecycle. Native C games are bounded `.P4G` RISC-V cartridges loaded from
-persistent storage. Open script games are readable Lua `.P4CART` files. Neither
-format is UF2, and installing either one does not require an OS reflash. Maze
-Chase and Space Invaders are finished native references. Retired teaching
-games have been removed from the repository and default library. See
-[the native P4 Game SDK](docs/GAME_SDK.md) and
-[the open script-game platform](game-platform/README.md).
+persistent storage. Native C is the supported game-creation path, including
+custom 2D engines, software 3D and raycasting through the stable APIs. `.P4G`
+is not UF2, and a compatible game update normally needs no OS reflash. The old
+Lua game-creation stack, games, tools and skill are removed. See [the native P4 Game SDK](docs/GAME_SDK.md) and
+[the performance contract](docs/GAME_PERFORMANCE.md).
 
 On the Elecrow target, the Program Manager shell exposes that FAT volume to a
 laptop through J16 USB device mode. On the Olimex ESP32-P4-PC target, games and
@@ -30,20 +46,21 @@ filesystem owner at a time.
 
 ## Make games with the Console API
 
-The repository keeps three game tiers separate so a tiny remix does not lose
-features and a full engine does not weaken the kid-facing sandbox:
+New games use native cartridges. Separately integrated legacy engines retain
+their reviewed OS boundary:
 
 | Tier | Best for | Runtime and delivery |
 |---|---|---|
-| Open script cart | Small, readable, AI-remixable games | Lua source in `.P4CART`, 768x480 logical canvas, SD copy, and one- or multi-part QR payloads |
-| Native cartridge | Faster or more advanced original games | C against P4 Game API v1, packaged as storage-installed `.P4G`, with a portable 320x200 RGB565 surface and optional 768x480 high-res mode |
+| Native cartridge | Original games, remixes and custom 2D/3D engines | C against P4 Game API v1, storage-installed `.P4G`, native 768x480 RGB565 with a tested 320x200 fallback |
 | OS-integrated engine | Separately reviewed legacy ports such as Doom | Engine integration in Console OS plus legally supplied data; requires an OS build and is not a tradeable kid cartridge |
 
-QR cost estimation, splitting, validation, and exact reassembly are
-implemented. QR bitmap rendering and the on-device scan/import UI are still
-pending, so do not describe QR installation as hardware-ready yet.
+Shared drawing helpers are optional; a custom renderer may write the supplied
+surface within the SDK's lifecycle and resource bounds. Current packaging
+supports C sources. C++ ports need an explicitly tested C-ABI/toolchain adapter,
+not an assumed STL/runtime environment. Every engine must prove P4 cadence.
 
-Repository-local Codex skills live under `.agents/skills/`. Open this
+Repository-local Codex skills live under `.agents/skills/`; the
+[complete skill index](.agents/skills/README.md) describes all 14. Open this
 repository at its root and describe the game you want in your own words.
 The skills route ordinary requests automatically; naming a skill is optional.
 [Game starters and OS services](docs/GAME_STARTERS.md) offers examples without
@@ -54,11 +71,11 @@ requiring a template or limiting the idea:
   Quest only with SD. See its [Tab5 storage status](.agents/skills/installos/references/tab5-storage.md)
   for the internal-storage implementation requirements; the current Tab5
   firmware still uses SD.
-- Use `$develop-p4-script-games` for Lua source carts, compact `p4.arcade`
-  helpers, packaging, remixing, and QR-size work.
 - Use `$develop-p4-console-games` to design or change a native C game, its
   manifest, drawing, controls, sound, and launcher category. Include normalized
   controller mappings by default; the OS owns the USB/BLE hardware.
+- Use `$create-p4-game-art` for native-resolution sprites, textures, exact UI
+  and launcher artwork, with source provenance and deterministic asset packing.
 - Add `$develop-p4-multiplayer-games` automatically for linked-console play.
   It guides the game's synchronization through existing OS Host/Join sessions,
   while preserving the original game idea.
@@ -68,14 +85,14 @@ requiring a template or limiting the idea:
   integration, SD/USB copy, install, update, or removal.
 - Add `$add-usb-gamepad-support` when USB or Bluetooth controller transports,
   HID descriptors, mappings, pairing, hot-plug, or game input adapters change.
-- Use `$develop-waveshare-p4-4.3` for a Waveshare firmware build, flash,
+- Use `$develop-waveshare-p4-4-3` for a Waveshare firmware build, flash,
   storage, display, touch, audio, USB-role, or exact-hardware test. Use
   `$develop-esp32-p4-platform` for shared platform or toolchain work.
 
 For example:
 
 ```text
-Use $develop-p4-script-games to make a one-screen original game and report its QR count.
+Use $develop-p4-console-games to make an original native game with a software 3D renderer.
 Use $develop-p4-console-games and $test-p4-games-locally to build and play a native platformer.
 Use $develop-p4-games to package that native game and stage it for the Waveshare SD card.
 ```
@@ -83,9 +100,8 @@ Use $develop-p4-games to package that native game and stage it for the Waveshare
 The same contracts are usable without Codex. Start a native game with
 `python3 scripts/new-game.py "Star Hop" --folder GAMES/ARCADE --dry-run`, or
 start a multiplayer-aware native game with
-`python3 scripts/new-game.py "Dice Link" --multiplayer turn-based`, or
-start a script game from `game-platform/templates/` and use
-`game-platform/scripts/p4cart.py`. Games must stay behind the documented APIs;
+`python3 scripts/new-game.py "Dice Link" --multiplayer turn-based`.
+Games must stay behind the documented APIs;
 they never own display, touch, audio, USB, SD, UART, or raw GPIO drivers.
 
 ## Board profiles
@@ -113,8 +129,8 @@ they never own display, touch, audio, USB, SD, UART, or raw GPIO drivers.
   installed game automatically from the selected room beacon.
   Modern Bluetooth-capable Xbox controllers are the priority target. See
   [Console controllers](docs/CONTROLLERS.md) for exact scope and limits.
-- `elecrow-crowpanel-advanced-10` remains the default target and the only one
-  already seen on exact hardware. Its display/framebuffer and selected runtime
+- `elecrow-crowpanel-advanced-10` is the explicitly selected 10 in variant;
+  M5Stack Tab5 remains the default. Its display/framebuffer and selected runtime
   paths have hardware evidence; the complete new Console OS feature set still
   needs one integrated hardware pass. It keeps the existing 1024x600
   window-manager UI, touch, speaker path, J16 game-storage MSC, and guarded
@@ -124,7 +140,7 @@ they never own display, touch, audio, USB, SD, UART, or raw GPIO drivers.
   the powered four-port USB-A hub for a generic HID gamepad, boot keyboard, and
   boot mouse concurrently. It has no touch; the official ES8311/I2S path drives
   its 3.5mm audio jack, and Doom uses the same storage-backed exclusive handoff
-  as the default Console OS. It is build-tested but
+  as Console OS on the other boards. It is build-tested but
   remains write-locked until the connected unit has a complete factory backup
   and identity-bound manifest.
 

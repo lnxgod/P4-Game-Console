@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "format": "p4-native-elf-v1",
+  "api_version": 1,
+  "version": "0.2.7",
+  "package_file": "BLAST_CIRCUIT.P4G",
+  "component": "blast_circuit",
+  "entry_symbol": "p4_blast_circuit_game",
+  "launcher_id": 119,
+  "id": "org.p4console.blast-circuit",
+  "title": "Blast Circuit",
+  "subtitle": "Four-player bomb battles",
+  "folder": "GAMES/ARCADE",
+  "accent_rgb565": "0x5f79",
+  "required_capabilities": [
+    "video",
+    "controls"
+  ],
+  "optional_capabilities": [
+    "audio-tone",
+    "audio-stream",
+    "video-highres",
+    "multiplayer-session",
+    "save"
+  ],
+  "license": "MIT",
+  "assets": "original-art-and-sound-effects-with-public-domain-bach-arrangements",
+  "enabled": true,
+  "multiplayer": {
+    "schema": 1,
+    "style": "realtime",
+    "min_players": 2,
+    "max_players": 4,
+    "protocol": 3,
+    "tick_rate_hz": 20,
+    "message_bytes": 60
+  },
+  "sources": [
+    "blast_circuit.c",
+    "blast_circuit_audio.c",
+    "blast_circuit_logic.c",
+    "blast_circuit_network.c",
+    "blast_circuit_render.c",
+    "blast_circuit_levels.c"
+  ],
+  "stack_frame_limit_bytes": 2048,
+  "launcher_icon": "assets/launcher.p4i"
+}

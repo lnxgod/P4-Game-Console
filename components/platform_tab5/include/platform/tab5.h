@@ -21,3 +21,11 @@ esp_err_t platform_tab5_display_reset(void);
 esp_err_t platform_tab5_panel_detect(platform_tab5_panel_t *out);
 const char *platform_tab5_panel_name(platform_tab5_panel_t panel);
 esp_err_t platform_tab5_speaker_enable(bool enabled);
+/* USB-A only. Verified, masked writes to USB5V_EN on expander 0x44/P3. */
+esp_err_t platform_tab5_usb_host_power(bool enabled);
+
+/* Standard C145 charging; readback confirms controls, not pack state. */
+esp_err_t platform_tab5_charger_init(void);
+
+/* Serialized and verified P0-only writes to the radio rail at expander 0x44. */
+esp_err_t platform_tab5_radio_power(bool enabled);

@@ -32,7 +32,7 @@ static uint32_t known_capabilities(void)
         P4_GAME_CAP_MODULE_HANDOFF |
         P4_GAME_CAP_VECTOR_SCENES |
         P4_GAME_CAP_VIDEO_HIGH_RES |
-        P4_GAME_CAP_DICE_ACCESSORY;
+        P4_GAME_CAP_DICE_ACCESSORY | P4_GAME_CAP_MOTION;
 }
 
 static uint32_t implemented_service_capabilities(void)
@@ -46,7 +46,7 @@ static uint32_t implemented_service_capabilities(void)
         P4_GAME_CAP_SAVE |
         P4_GAME_CAP_MULTIPLAYER_SESSION |
         P4_GAME_CAP_VIDEO_HIGH_RES |
-        P4_GAME_CAP_DICE_ACCESSORY;
+        P4_GAME_CAP_DICE_ACCESSORY | P4_GAME_CAP_MOTION;
 }
 
 static bool save_snapshot_valid(const p4_game_services_t *services)
@@ -131,6 +131,8 @@ static bool services_valid(const p4_game_services_t *services)
         (services->dice_context == NULL || services->dice_exchange == NULL)) {
         return false;
     }
+    if ((services->available_capabilities & P4_GAME_CAP_MOTION) != 0U &&
+        services->read_motion == NULL) return false;
     if (services->multiplayer_profile != NULL &&
         (((services->available_capabilities &
            P4_GAME_CAP_MULTIPLAYER_SESSION) == 0U) ||
@@ -684,5 +686,23 @@ bool p4_game_dice_exchange(p4_game_context_t *context,
          (status->token != request->token || status->player_slot != request->player_slot))) {
         *status=(p4_dice_status_t){0}; return false;
     }
+    return true;
+}
+
+bool p4_game_read_motion(p4_game_context_t *context, p4_game_motion_t *out)
+{
+    if (out == NULL) return false;
+    memset(out, 0, sizeof(*out));
+    if (context == NULL || context->services == NULL ||
+        !(context->services->available_capabilities & P4_GAME_CAP_MOTION) ||
+        context->services->read_motion == NULL) return false;
+    p4_game_motion_t sample = {0};
+    if (!context->services->read_motion(context->services->motion_context, &sample) ||
+        !sample.valid || sample.age_ms > 150U || sample.sequence == 0U) return false;
+    for (unsigned i = 0; i < 3U; ++i) {
+        if (sample.accel_mg[i] < -4000 || sample.accel_mg[i] > 4000 ||
+            sample.gyro_mdps[i] < -2000000 || sample.gyro_mdps[i] > 2000000) return false;
+    }
+    *out = sample;
     return true;
 }
