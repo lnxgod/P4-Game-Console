@@ -1,3 +1,4 @@
+#include "p4_doom_net.h"
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 2005-2014 Simon Howard
@@ -226,6 +227,7 @@ wad_file_t *W_AddFile (char *filename)
     }
 
     Z_Free(fileinfo);
+    P4_DoomArenaWadLoaded(filename, startlump, newnumlumps-startlump);
 
     if (lumphash != NULL)
     {

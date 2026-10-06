@@ -9,6 +9,7 @@
 
 #include "esp_err.h"
 #include "platform/game_storage_types.h"
+#include "platform/doom_arena_content.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,10 +31,15 @@ extern "C" {
 #define PLATFORM_GAME_STORAGE_CHEX_WAD_BYTES UINT64_C(12361532)
 #define PLATFORM_GAME_STORAGE_CHEX_DEH_PATH "/game-data/CHEX.DEH"
 #define PLATFORM_GAME_STORAGE_CHEX_DEH_BYTES UINT64_C(20367)
+#define PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_PATH "/game-data/FREEDOOM2.WAD"
+#define PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES UINT64_C(28787748)
+#define PLATFORM_GAME_STORAGE_DWANGO5_WAD_BYTES UINT64_C(2109396)
+#define PLATFORM_GAME_STORAGE_PUREHELL_WAD_BYTES UINT64_C(875026)
 
 typedef enum {
     PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM = 0,
     PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST,
+    PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI,
     PLATFORM_GAME_STORAGE_DOOM_TITLE_COUNT,
 } platform_game_storage_doom_title_t;
 
@@ -290,6 +296,10 @@ esp_err_t platform_game_storage_get_locked_doom_snapshot(
 
 /** True only after platform_game_storage_lock_for_game succeeds. */
 bool platform_game_storage_game_locked(void);
+/** Dedicated SD-backed, block-verified arena stream; no full-WAD allocation. */
+esp_err_t platform_game_storage_read_arena_wad(unsigned file, size_t offset, void *out, size_t bytes);
+/** Cheap presence/size preflight; the terminal lease performs full validation. */
+bool platform_game_storage_arena_present(void);
 
 const char *platform_game_storage_state_name(
     platform_game_storage_state_t state);

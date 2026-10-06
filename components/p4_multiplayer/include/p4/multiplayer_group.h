@@ -4,6 +4,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>
+#include "p4/multiplayer.h"
+/* Group controls exceed the fixed eight-byte PING/PONG payload. */
+#define P4_MP_GROUP_PACKET_TYPE P4_MP_PACKET_GAME_MESSAGE
 enum { P4_MP_GROUP_BYTES=12, P4_MP_GROUP_HOLD_MS=1000, P4_MP_GROUP_TIMEOUT_MS=8000 };
 typedef enum { P4_MP_GROUP_IDLE, P4_MP_GROUP_WAITING, P4_MP_GROUP_COMMITTED,
  P4_MP_GROUP_DUE, P4_MP_GROUP_FAILED } p4_mp_group_phase_t;

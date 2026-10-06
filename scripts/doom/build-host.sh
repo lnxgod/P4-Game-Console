@@ -12,6 +12,10 @@ P4_DG_BUILD_DIR="$P4_DG_ROOT/build-host/doom"
 P4_DG_OUTPUT="$P4_DG_BUILD_DIR/doomgeneric-headless"
 P4_DG_WARNING_LOG="$P4_DG_BUILD_DIR/upstream-warnings.log"
 P4_DG_CC=${CC:-cc}
+P4_DG_SANITIZERS=
+if [ "${P4_DOOM_ASAN:-0}" = 1 ]; then
+    P4_DG_SANITIZERS="-fsanitize=address -fno-omit-frame-pointer"
+fi
 
 if [ ! -f "$P4_DG_SOURCE_DIR/doomgeneric.c" ]; then
     echo "doomgeneric source is missing; run make doom-vendor" >&2
@@ -74,7 +78,7 @@ set -- \
 : >"$P4_DG_WARNING_LOG"
 if ! (
     cd "$P4_DG_OBJECT_DIR/upstream"
-    "$P4_DG_CC" \
+    "$P4_DG_CC" $P4_DG_SANITIZERS \
         -std=c99 -O2 -g0 -Wall -Wextra \
         -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE \
         -DNORMALUNIX -DLINUX -DSNDSERV \
@@ -87,21 +91,38 @@ fi
 
 # Project-authored adapter diagnostics are fatal. Warning isolation above does
 # not suppress or weaken warnings for code maintained by this project.
-"$P4_DG_CC" \
+"$P4_DG_CC" $P4_DG_SANITIZERS \
     -std=c99 -O2 -g0 -Wall -Wextra -Wpedantic -Werror \
     -D_POSIX_C_SOURCE=200809L -D_DEFAULT_SOURCE \
     -DDOOMGENERIC_RESX=320 -DDOOMGENERIC_RESY=200 \
+    -DP4_DOOM_ARENA_HOST_TEST="${P4_DOOM_ARENA_HOST_TEST:-0}" \
     -I"$P4_DG_SOURCE_DIR" -c "$P4_DG_ADAPTER" \
     -o "$P4_DG_OBJECT_DIR/doomgeneric_headless.o"
 
 # The production engine calls the P4MP seam even in a single-player build.
 # Compile its existing neutral adapter with project-owned warnings fatal.
-"$P4_DG_CC" -std=c99 -O2 -g0 -Wall -Wextra -Werror \
+"$P4_DG_CC" $P4_DG_SANITIZERS -std=c99 -O2 -g0 -Wall -Wextra -Werror \
     -isystem "$P4_DG_SOURCE_DIR" -I"$P4_DG_NET_DIR" \
     -c "$P4_DG_NET_DIR/p4_doom_net_stub.c" \
     -o "$P4_DG_OBJECT_DIR/p4_doom_net_stub.o"
 
-"$P4_DG_CC" "$P4_DG_OBJECT_DIR/upstream"/*.o \
+if [ "${P4_DOOM_ARENA_HOST_TEST:-0}" = 1 ]; then
+    P4_DG_OUTPUT="$P4_DG_BUILD_DIR/doom-arena-headless"
+    for P4_DG_EXTRA in \
+        "$P4_DG_ROOT/apps/console_os/main/doom_gc_engine.c" \
+        "$P4_DG_ROOT/components/doom_multiplayer/src/doom_arena.c" \
+        "$P4_DG_ROOT/apps/doom/host/doom_arena_smoke.c"
+    do
+        "$P4_DG_CC" $P4_DG_SANITIZERS -std=c99 -O2 -g -Wall -Wextra -Wconversion -Wshadow -Werror \
+            -DP4_DOOM_ARENA_HOST_TEST=1 \
+            -isystem "$P4_DG_SOURCE_DIR" -I"$P4_DG_NET_DIR" \
+            -I"$P4_DG_ROOT/components/doom_multiplayer/include" \
+            -I"$P4_DG_ROOT/components/p4_multiplayer/include" \
+            -c "$P4_DG_EXTRA" -o "$P4_DG_OBJECT_DIR/upstream/$(basename "$P4_DG_EXTRA" .c).o"
+    done
+fi
+
+"$P4_DG_CC" $P4_DG_SANITIZERS "$P4_DG_OBJECT_DIR/upstream"/*.o \
     "$P4_DG_OBJECT_DIR/doomgeneric_headless.o" \
     "$P4_DG_OBJECT_DIR/p4_doom_net_stub.o" -o "$P4_DG_OUTPUT" -lm
 

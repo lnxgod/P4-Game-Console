@@ -1,3 +1,4 @@
+#include "p4_doom_net.h"
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 2005-2014 Simon Howard
@@ -622,7 +623,7 @@ void S_ChangeMusic(int musicnum, int looping)
         music = &S_music[musicnum];
     }
 
-    if (mus_playing == music)
+    if (mus_playing == music && P4_DoomArenaMusicLump(music->lumpnum)==music->lumpnum)
     {
         return;
     }
@@ -637,6 +638,7 @@ void S_ChangeMusic(int musicnum, int looping)
         music->lumpnum = W_GetNumForName(namebuf);
     }
 
+    music->lumpnum = P4_DoomArenaMusicLump(music->lumpnum);
     music->data = W_CacheLumpNum(music->lumpnum, PU_STATIC);
 
     handle = I_RegisterSong(music->data, W_LumpLength(music->lumpnum));

@@ -646,6 +646,13 @@ static multiplayer_option_layout_t multiplayer_launch_layout(
     };
 }
 
+static const size_t s_multiplayer_arena_navigation_rows[] = {
+    CONSOLE_MULTIPLAYER_OPTION_TRANSPORT,
+    CONSOLE_MULTIPLAYER_OPTION_GAME,
+    CONSOLE_MULTIPLAYER_OPTION_MAP,
+    CONSOLE_MULTIPLAYER_OPTION_COUNT,
+};
+
 static const size_t s_multiplayer_doom_navigation_rows[] = {
     CONSOLE_MULTIPLAYER_OPTION_TRANSPORT,
     CONSOLE_MULTIPLAYER_OPTION_GAME,
@@ -702,6 +709,10 @@ static const size_t *multiplayer_navigation_rows(
         *count = sizeof(s_multiplayer_join_navigation_rows) /
             sizeof(s_multiplayer_join_navigation_rows[0]);
         return s_multiplayer_join_navigation_rows;
+    }
+    if (shell != NULL && shell->runtime.multiplayer_game_is_arena) {
+        *count=sizeof(s_multiplayer_arena_navigation_rows)/sizeof(s_multiplayer_arena_navigation_rows[0]);
+        return s_multiplayer_arena_navigation_rows;
     }
     if (shell != NULL && !shell->runtime.multiplayer_game_is_doom &&
         shell->runtime.multiplayer_dice_available) {
@@ -1700,6 +1711,10 @@ static console_shell_action_t multiplayer_config_action(
           shell->multiplayer_view != CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS))) {
         return no_action();
     }
+    if (shell->runtime.multiplayer_game_is_arena &&
+        option != CONSOLE_MULTIPLAYER_OPTION_GAME &&
+        option != CONSOLE_MULTIPLAYER_OPTION_MAP &&
+        option != CONSOLE_MULTIPLAYER_OPTION_TRANSPORT) return no_action();
     shell->multiplayer_selected_row = (size_t)option;
     shell->dirty = true;
     const console_shell_action_t action = {
@@ -1758,7 +1773,8 @@ static console_shell_action_t enter_multiplayer_host_settings(
         return no_action();
     }
     shell->multiplayer_view = CONSOLE_MULTIPLAYER_VIEW_HOST_SETTINGS;
-    shell->multiplayer_selected_row = shell->runtime.multiplayer_game_is_doom
+    shell->multiplayer_selected_row = shell->runtime.multiplayer_game_is_arena
+        ? (size_t)CONSOLE_MULTIPLAYER_OPTION_MAP : shell->runtime.multiplayer_game_is_doom
         ? (size_t)CONSOLE_MULTIPLAYER_OPTION_MODE
         : (size_t)CONSOLE_MULTIPLAYER_OPTION_GAME;
     shell->dirty = true;
@@ -2031,6 +2047,10 @@ static size_t control_at(const console_shell_t *shell,
                         option != CONSOLE_MULTIPLAYER_OPTION_TRANSPORT) {
                         continue;
                     }
+                    if (shell->runtime.multiplayer_game_is_arena &&
+                        option != CONSOLE_MULTIPLAYER_OPTION_GAME &&
+                        option != CONSOLE_MULTIPLAYER_OPTION_MAP &&
+                        option != CONSOLE_MULTIPLAYER_OPTION_TRANSPORT) continue;
                     if (option == CONSOLE_MULTIPLAYER_OPTION_DICE &&
                         (!shell->runtime.multiplayer_dice_available ||
                          shell->runtime.multiplayer_game_is_doom)) continue;
@@ -3738,6 +3758,7 @@ void console_shell_set_runtime_info(
             runtime->multiplayer_game_ready ||
         shell->runtime.multiplayer_game_is_doom !=
             runtime->multiplayer_game_is_doom ||
+        shell->runtime.multiplayer_game_is_arena != runtime->multiplayer_game_is_arena ||
         shell->runtime.multiplayer_dice_available != runtime->multiplayer_dice_available ||
         shell->runtime.multiplayer_dice_enabled != runtime->multiplayer_dice_enabled ||
         shell->runtime.multiplayer_game_selection !=
@@ -6725,7 +6746,12 @@ static void draw_multiplayer_host(const console_shell_t *shell,
               "MATCH", COLOR_CYAN, 1U, 5U);
     char summary_one[48];
     char summary_two[48];
-    if (shell->runtime.multiplayer_game_is_doom) {
+    if (shell->runtime.multiplayer_game_is_arena) {
+        strcpy(summary_one,"4 PLAYER ARENA / MAP VOTING");
+        if (shell->runtime.multiplayer_map<=2U)
+            strcpy(summary_two,shell->runtime.multiplayer_map==2U ? "PURE HELL / ROCKETS FIRST" : "PURE HELL / SHOTGUNS FIRST");
+        else (void)snprintf(summary_two,sizeof(summary_two),"DWANGO 5 / MAP%02u",(unsigned)shell->runtime.multiplayer_map-2U);
+    } else if (shell->runtime.multiplayer_game_is_doom) {
         (void)snprintf(
             summary_one, sizeof(summary_one), "%s / E%uM%u / %s",
             multiplayer_mode_name(shell->runtime.multiplayer_game_mode),
@@ -6809,7 +6835,8 @@ static void draw_multiplayer_host(const console_shell_t *shell,
             launch, sizeof(launch), "VERIFYING GAME DATA %u%%",
             (unsigned)shell->runtime.content_validation_progress_percent);
     } else if (!shell->runtime.multiplayer_game_ready) {
-        strcpy(launch, "SELECTED GAME NOT READY");
+        strcpy(launch, shell->runtime.multiplayer_game_is_arena ?
+            "NEEDS WI-FI + ARENA PACK ON SD" : "SELECTED GAME NOT READY");
     } else if (shell->runtime.multiplayer_launch_syncing) {
         strcpy(launch, "STARTING TOGETHER...");
     } else if (shell->runtime.multiplayer_can_start) {
@@ -6894,7 +6921,17 @@ static void draw_multiplayer(const console_shell_t *shell,
         shell, pixels, stride, CONSOLE_MULTIPLAYER_OPTION_GAME,
         "GAME", game);
 
-    if (shell->runtime.multiplayer_game_is_doom) {
+    if (shell->runtime.multiplayer_game_is_arena) {
+        draw_text(pixels,stride,8,87,"ARENA / CHANGE IN GAME BY VOTE",COLOR_CYAN,1U,32U);
+        char arena_name[32];
+        if (shell->runtime.multiplayer_map<=2U)
+            strcpy(arena_name,shell->runtime.multiplayer_map==2U ? "PURE HELL ROCKETS" : "PURE HELL SHOTGUNS");
+        else (void)snprintf(arena_name,sizeof(arena_name),"DWANGO 5 MAP%02u",(unsigned)shell->runtime.multiplayer_map-2U);
+        draw_multiplayer_option(shell,pixels,stride,CONSOLE_MULTIPLAYER_OPTION_MAP,"MAP",arena_name);
+        draw_text(pixels,stride,8,137,"15 SECONDS IDLE: TAKE A BREAK",COLOR_WHITE,1U,32U);
+        draw_text(pixels,stride,8,151,"MOVE OR FIRE TO STAY ACTIVE",COLOR_WHITE,1U,32U);
+        draw_text(pixels,stride,8,165,"USE TO RETURN WITH ZERO KILLS",COLOR_WHITE,1U,32U);
+    } else if (shell->runtime.multiplayer_game_is_doom) {
         draw_text(pixels, stride, 8, 87, "MATCH SETUP",
                   COLOR_CYAN, 1U, 11U);
         fill_rect(pixels, stride, 81, 90, 231, 1, COLOR_GROUP);

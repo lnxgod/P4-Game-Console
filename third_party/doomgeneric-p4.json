@@ -2,11 +2,13 @@
   "schema": 1,
   "upstream_commit": "dcb7a8dbc7a16ce3dda29382ac9aae9d77d21284",
   "patch": "third_party/doomgeneric-p4.patch",
-  "patch_sha256": "38c96fb5674cb51d722f717ebcfa479b1e3a6039e98833ae97ce16a3948837be",
+  "patch_sha256": "ea8141b6a5e51cfe02f8215bc93e90df018153f8b3fdef4e944bab413019d6b3",
   "changes": [
     "OS-owned P4MP tic delivery and synchronized engine startup (d_loop.c/h).",
     "Quit notification for returning to the launcher (doomgeneric.c/h, i_system.c).",
-    "Enter/Escape confirmation for normalized embedded controls (m_menu.c)."
+    "Normalized Enter/Escape confirmation and optional arena map-vote menu hooks (m_menu.c).",
+    "Optional arena tic, kill, map-exit and HUD hooks; frozen break actors stay harmless and hidden.",
+    "Isolated map/music selection from exact admitted PWADs; synchronized vote bytes and safe voted-map respawn ordering."
   ],
-  "note": "Existing committed adaptations, reviewed and captured without changing engine bytes. Reverse application must reproduce every blob in the original upstream manifest."
+  "note": "Explicit local adaptations. Reverse application must reproduce every blob in the original upstream manifest."
 }

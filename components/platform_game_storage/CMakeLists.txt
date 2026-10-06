@@ -2,6 +2,8 @@ set(PLATFORM_GAME_STORAGE_MODEL_SOURCES
     src/game_storage_model.c
     src/game_storage_files.c
     src/msc_write_policy.c
+    src/verified_reader.c
+    src/verified_wad.c
 )
 
 if(COMMAND idf_component_register)

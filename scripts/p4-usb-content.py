@@ -8,6 +8,7 @@ import binascii
 from dataclasses import dataclass
 import glob
 import hashlib
+import json
 import struct
 import sys
 import time
@@ -39,6 +40,7 @@ CONTENT_KIND_QUAKE_SHAREWARE = 1
 CONTENT_KIND_DOOM_SHAREWARE = 2
 CONTENT_KIND_CHEX_QUEST_WAD = 3
 CONTENT_KIND_CHEX_QUEST_DEH = 4
+CONTENT_KIND_FREEDOOM2 = 5
 
 STATUS_NAMES = {
     0: "ok",
@@ -100,6 +102,27 @@ CONTENT_SPECS = {
 }
 
 
+ARENA_BUNDLE = json.loads((ROOT / "third_party/game-data.json").read_text())["game_changers_ai_bundle"]
+for arena_file in ARENA_BUNDLE["files"]:
+    CONTENT_SPECS[arena_file["command"]] = ContentSpec(
+        command=arena_file["command"], kind=arena_file["usb_kind"],
+        bytes=arena_file["size_bytes"], sha256=arena_file["sha256"],
+        default_path=ROOT / arena_file["local_path"],
+    )
+
+
+def arena_inputs(iwad: Path, pack: Path, dwango: Path):
+    result = []
+    for entry in ARENA_BUNDLE["files"]:
+        spec = CONTENT_SPECS[entry["command"]]
+        path = iwad if entry["symbol"] == "BASE" else (dwango if entry["symbol"].startswith("DWANGO") else pack) / entry["filename"]
+        result.append((spec, path.resolve()))
+    # No serial connection or device writes until every local input passes.
+    for spec, path in result:
+        validate_content(path, spec)
+    return result
+
+
 def crc32(data: bytes) -> int:
     return binascii.crc32(data) & 0xFFFF_FFFF
 
@@ -109,7 +132,7 @@ def validate_content(path: Path, spec: ContentSpec) -> bytes:
         raise TransferError(f"input must be one regular file: {path}")
     if path.stat().st_size != spec.bytes:
         raise TransferError(
-            f"wrong {spec.command} shareware size: "
+            f"wrong {spec.command} content size: "
             f"expected {spec.bytes}, got {path.stat().st_size}"
         )
     digest = hashlib.sha256()
@@ -118,7 +141,7 @@ def validate_content(path: Path, spec: ContentSpec) -> bytes:
             digest.update(block)
     if digest.hexdigest() != spec.sha256:
         raise TransferError(
-            f"input is not the exact supported {spec.command} shareware data"
+            f"input is not the exact supported {spec.command} content"
         )
     return digest.digest()
 
@@ -318,12 +341,17 @@ def parser() -> argparse.ArgumentParser:
     for command, spec in CONTENT_SPECS.items():
         content = subparsers.add_parser(
             command,
-            help=f"install the exact supported {command} shareware data",
+            help=f"install the exact supported {command} game data",
         )
         content.add_argument(
             "input", nargs="?", type=Path, default=spec.default_path
         )
         content.add_argument("--port")
+    arena = subparsers.add_parser("game-changers-ai", help="install the verified Freedoom + Pure Hell + DWANGO 5 bundle and notices")
+    arena.add_argument("input", nargs="?", type=Path, default=CONTENT_SPECS["freedoom2"].default_path)
+    arena.add_argument("--dwango", type=Path, default=CONTENT_SPECS["dwango5"].default_path.parent)
+    arena.add_argument("--pack", type=Path, default=CONTENT_SPECS["pure-hell"].default_path.parent)
+    arena.add_argument("--port")
     chex = subparsers.add_parser(
         "chex",
         help="install the verified CHEX.WAD and CHEX.DEH pair",
@@ -343,8 +371,12 @@ def parser() -> argparse.ArgumentParser:
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
     try:
+        arena_files = arena_inputs(args.input, args.pack, args.dwango) if args.kind == "game-changers-ai" else []
         port = args.port or detect_port()
-        if args.kind == "chex":
+        if arena_files:
+            for spec, path in arena_files:
+                install_content(spec, path, port)
+        elif args.kind == "chex":
             install_content(
                 CONTENT_SPECS["chex-wad"], args.wad.resolve(), port
             )

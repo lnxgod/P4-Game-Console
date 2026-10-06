@@ -359,6 +359,7 @@ typedef struct {
     bool multiplayer_settings_editable;
     bool multiplayer_game_ready;
     bool multiplayer_game_is_doom;
+    bool multiplayer_game_is_arena;
     bool multiplayer_dice_available;
     bool multiplayer_dice_enabled;
     uint8_t multiplayer_game_selection;

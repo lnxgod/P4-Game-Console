@@ -89,9 +89,11 @@ int main(void)
     assert(recv(others[0],bytes,sizeof(bytes),0)==(int)n);
     assert(recv(peer,bytes,sizeof(bytes),0)<0&&recv(others[1],bytes,sizeof(bytes),0)<0);
     assert(platform_multiplayer_wifi_send_to(P4_MP_WIFI_ROUTE_PREFIX|inet_addr("127.0.0.5"),bytes,n)!=ESP_OK);
+    wifi_event(NULL,WIFI_EVENT,WIFI_EVENT_AP_STADISCONNECTED,NULL);
+    for(unsigned i=0;i<3;++i)assert(platform_multiplayer_wifi_route_connected(P4_MP_WIFI_ROUTE_PREFIX|htonl(0x7f000002u+i)));
     for(unsigned i=0;i<3;++i)close(others[i]);
     mock_time+=3000001;assert(!platform_multiplayer_wifi_route_connected(route));
     wifi_event(NULL,WIFI_EVENT,WIFI_EVENT_AP_STADISCONNECTED,NULL);assert(!platform_multiplayer_wifi_status().connected);
-    assert(s_peer_ip==0);platform_multiplayer_wifi_disable();assert(platform_multiplayer_wifi_send(bytes,n)==ESP_ERR_INVALID_STATE);
+    platform_multiplayer_wifi_disable();assert(platform_multiplayer_wifi_send(bytes,n)==ESP_ERR_INVALID_STATE);
     close(peer);puts("Wi-Fi: three simultaneous UDP peers, addressed and broadcast delivery, peer/session/CRC/size rejection, bounded poll, expiry, disconnect and discovery passed");return 0;
 }

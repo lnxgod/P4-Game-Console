@@ -4,6 +4,8 @@ import importlib.util
 from pathlib import Path
 import sys
 import unittest
+import tempfile
+import hashlib
 from unittest.mock import patch
 
 path = Path(__file__).resolve().parents[1] / 'p4-usb-content.py'
@@ -46,6 +48,34 @@ class WireTests(unittest.TestCase):
     def test_deferred_wad_scan_does_not_hide_successful_reboot(self):
         port = Port([b'CONTENT_VALIDATION_DEFERRED\r\nP4_USB_CONTENT READY\r\n'])
         self.assertTrue(wire.wait_for_content_ready(port, wire.WireReader(port), 1))
+
+class ArenaBundleTests(unittest.TestCase):
+    def test_bundle_has_unique_wire_ids_and_three_separate_wads(self):
+        entries = wire.ARENA_BUNDLE['files']
+        self.assertEqual(len(entries), 11)
+        self.assertEqual(len({f['usb_kind'] for f in entries}), 11)
+        self.assertTrue(all(f['usb_kind'] > 4 for f in entries))
+        self.assertEqual([f['filename'] for f in entries[:3]], ['FREEDOOM2.WAD', 'PUREHELL.WAD', 'DWANGO5.WAD'])
+    def test_all_inputs_preflight_before_serial_and_notices_are_required(self):
+        with patch.object(wire, 'validate_content') as validate, patch.object(wire.serial, 'Serial') as serial:
+            files = wire.arena_inputs(Path('/base.wad'), Path('/pure'), Path('/dwango'))
+            self.assertEqual(validate.call_count, 11)
+            self.assertEqual(files[2][1], Path('/dwango/DWANGO5.WAD'))
+            self.assertEqual(files[-1][1].parent, Path('/dwango'))
+            serial.assert_not_called()
+            validate.side_effect = [None]*5 + [wire.TransferError('missing credits')]
+            with self.assertRaises(wire.TransferError):
+                wire.arena_inputs(Path('/base.wad'), Path('/pure'), Path('/dwango'))
+            serial.assert_not_called()
+    def test_exact_hash_rejects_same_size_corruption(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / 'notice.txt'
+            path.write_bytes(b'credits')
+            spec = wire.ContentSpec('test', 15, 7, hashlib.sha256(b'credits').hexdigest(), path)
+            wire.validate_content(path, spec)
+            path.write_bytes(b'corrupt')
+            with self.assertRaises(wire.TransferError):
+                wire.validate_content(path, spec)
 
 if __name__ == '__main__':
     unittest.main()

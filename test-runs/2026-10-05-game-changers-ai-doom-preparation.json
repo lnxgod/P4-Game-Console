@@ -1,0 +1,212 @@
+{
+  "schema": 1,
+  "date": "2026-10-05",
+  "recorded_at_utc": "2026-10-06T04:22:02.843718+00:00",
+  "classification": "host-tested",
+  "status": "bounded-assessment-and-local-data-preparation-complete; edition-not-implemented",
+  "base_commit": "5a9daeb0359b830624270594189d05b3791a4322",
+  "target": "m5stack-tab5",
+  "requested_humans": 4,
+  "runtime_source_changed": false,
+  "dependency_locks_changed": false,
+  "firmware_built": false,
+  "hardware_written": false,
+  "game_data": {
+    "id": "freedoom-0.13.0-phase-2",
+    "filename": "freedoom2.wad",
+    "local_path": "local-data/doom/freedoom2.wad",
+    "kind": "IWAD",
+    "version": "0.13.0",
+    "size_bytes": 28787748,
+    "sha256": "a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b",
+    "source": "https://github.com/freedoom/freedoom/releases/tag/v0.13.0",
+    "source_commit": "cfb8644b1a8dc7d7d2177e6a892ccaa2922bdaae",
+    "source_archive": {
+      "filename": "freedoom-0.13.0.zip",
+      "url": "https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0.zip",
+      "size_bytes": 24143781,
+      "sha256": "3f9b264f3e3ce503b4fb7f6bdcb1f419d93c7b546f4df3e874dd878db9688f59",
+      "checksum_url": "https://github.com/freedoom/freedoom/releases/download/v0.13.0/freedoom-0.13.0-CHECKSUM"
+    },
+    "license": "BSD-3-Clause",
+    "notice": "Official Phase 2 data for local preparation; preserve COPYING.txt and credits. Keep WAD and archive under ignored local-data/doom. This identity does not enable Console OS installation or runtime support."
+  },
+  "archive_verification": {
+    "upstream_sha256_match": true,
+    "pgp_signature_verified": false,
+    "directory_and_each_lump_bounds_checked": true,
+    "lumps": 3610,
+    "map_markers": 32,
+    "freedoom_and_super_shotgun_sprite_markers_present": true,
+    "notices_preserved": "local-data/doom/freedoom-0.13.0-release/",
+    "ignored_paths_verified": true
+  },
+  "host_recipe": {
+    "source": "/Users/billh/Documents/ChatGPT/esp32-p4 2/scripts/doom/build-host.sh",
+    "source_sha256": "fe8dadd828838677134c70d714c0a1fd844ee8d5044618e0295d703bb3538250",
+    "adaptation": "P4_DG_ROOT assignment replaced with P4_ASSESS_ROOT environment value for the isolated checkout; all engine/build inputs unchanged.",
+    "provenance_files": {
+      "/Users/billh/Documents/ChatGPT/esp32-p4 2/scripts/doom/verify-source-tree.py": "daaabe49e97665372f2208eeaf96c56c888e0bf9e555df299b59e95eff25ef28",
+      "/Users/billh/Documents/ChatGPT/esp32-p4 2/third_party/doomgeneric-p4.json": "ceb88825a1c8e11c56af3d017e595cad4fb76f690fe620ec36a4e0f2f23171ca",
+      "/Users/billh/Documents/ChatGPT/esp32-p4 2/third_party/doomgeneric-p4.patch": "38c96fb5674cb51d722f717ebcfa479b1e3a6039e98833ae97ce16a3948837be"
+    },
+    "environment": {
+      "SDKROOT": "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk",
+      "CC": "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/clang",
+      "P4_ASSESS_ROOT": "/Users/billh/.codex/worktrees/7f01/esp32-p4 2"
+    },
+    "initial_attempt": "Xcode clang lacked SDKROOT and failed to find macOS C headers; retry sets the installed SDK path explicitly."
+  },
+  "source_proof": {
+    "result": "pass",
+    "files": 205,
+    "method": "Existing saved-project verify-source-tree.py check(saved_project, isolated_checkout/third_party/doomgeneric); reverse-patch copied engine and verify every pinned upstream blob. No engine or lock edits.",
+    "scope": "Existing P4MP/quit/menu patch plus pinned upstream, not pristine upstream only."
+  },
+  "checks": [
+    {
+      "command": "make doom-multiplayer-host",
+      "result": "pass",
+      "ctest_cases": 3,
+      "log": "build-host/doom_multiplayer/Testing/Temporary/LastTest.log",
+      "log_sha256": "4aea0510b2ee01512556641aecfdf304959a1b6cd9cb1d68755feb2c12b92a06"
+    },
+    {
+      "command": "make p4-multiplayer-host",
+      "result": "pass",
+      "ctest_cases": 2,
+      "log": "build-host/p4_multiplayer/Testing/Temporary/LastTest.log",
+      "log_sha256": "14cb0b87c50bf948401d214f2c9ad79cc9062e6dd3b07f2a4c658a7d1fdbdd58"
+    },
+    {
+      "command": "make p4-multiplayer-registry-host",
+      "result": "pass",
+      "ctest_cases": 4,
+      "log": "build-host/p4_multiplayer_registry/Testing/Temporary/LastTest.log",
+      "log_sha256": "1a66eb7b4bbe3f56243fa69c5410008c5e5433c838fe4a7290ed778f01d86499"
+    },
+    {
+      "command": "make platform-game-storage-host",
+      "result": "pass",
+      "ctest_cases": 3,
+      "log": "build-host/platform_game_storage/Testing/Temporary/LastTest.log",
+      "log_sha256": "080982d284e7c8a2aede7b08bc319df0405c1b96270e4733c7c8b1325404945a"
+    },
+    {
+      "command": "python3 scripts/tests/test-p4-multiplayer-relay.py",
+      "result": "pass",
+      "scope": "host relay framing; no physical ports"
+    },
+    {
+      "command": "python3 -m unittest scripts/tests/test-p4-usb-content-wire.py",
+      "result": "pass",
+      "test_cases": 4
+    },
+    {
+      "command": "python3 scripts/doom/verify-metadata.py .",
+      "result": "pass"
+    },
+    {
+      "command": "sh scripts/doom/smoke-host.sh local-data/doom/freedoom2.wad",
+      "result": "pass",
+      "frames": 8,
+      "resolution": "320x200",
+      "frame_checksum": "5fbe012e5ede3e85",
+      "log": "build-host/game-changers-ai/freedoom2-smoke.log",
+      "log_sha256": "c472c29631bdbee99fc7efdd5b874e6fb5d25848feec3816be1e104e85c0ca32",
+      "limits": "Finite silent headless rendering, not interactive gameplay, weapon firing or multiplayer execution."
+    },
+    {
+      "command": "P4_DOOM_MAX_FRAMES=35 build-host/doom/doomgeneric-headless -iwad <absolute local-data/doom/freedoom2.wad> -warp 1 -skill 3 -nosound -nomusic -nosfx",
+      "result": "pass",
+      "frames": 35,
+      "resolution": "320x200",
+      "frame_checksum": "2fef8f6447ee39cc",
+      "log": "build-host/game-changers-ai/freedoom2-map01.log",
+      "log_sha256": "b087a2ee6e10c0f0541b10bbe06e66c129ad44333f379e338dbef2f95d273d08",
+      "limits": "Finite silent headless rendering, not interactive gameplay, weapon firing or multiplayer execution."
+    },
+    {
+      "command": "sh scripts/doom/smoke-host.sh local-data/doom/doom1.wad",
+      "result": "pass",
+      "frames": 8,
+      "resolution": "320x200",
+      "frame_checksum": "ca2ae564e8675a45",
+      "log": "build-host/game-changers-ai/shareware-smoke.log",
+      "log_sha256": "1b028dbe81c97f344d12a7c226a3899be8b65e4cd73331cc6a020054a38ce671",
+      "limits": "Finite silent headless rendering, not interactive gameplay, weapon firing or multiplayer execution."
+    }
+  ],
+  "known_engine_warnings": {
+    "count": 102,
+    "log": "build-host/doom/upstream-warnings.log",
+    "new_suppressions": false,
+    "runtime_freedoom_compatibility_warning": true
+  },
+  "memory_lower_bound": {
+    "wad_bytes": 28787748,
+    "engine_min_zone_bytes": 6291456,
+    "sum_bytes": 35079204,
+    "tab5_psram_bytes": 33554432,
+    "excludes": "framebuffers, rendering caches outside the zone, audio, network, join checkpoints and OS state",
+    "conclusion": "Existing whole-WAD PSRAM snapshot cannot support full Phase 2."
+  },
+  "local_source_sha256": {
+    "toolchain.lock.json": "6c45009fd4ba924dac63e442d4bcdbff134cf81037cadb8f2d12209c41564a55",
+    "third_party/source-lock.json": "ff1464236e6d8474264bdcc1ab7b0637f8679ffd96320a92ba616a5c2cc129fe",
+    "third_party/doomgeneric.git-tree": "499fd1de6e8809099ba1ae5c75fb5eebde7a66f68950acfb9c72683c5279f2fe",
+    "apps/console_os/main/doom_p4mp_adapter.c": "fea1aef4e17de6e143ae3f392d660d1ceb632934b01d43186a9c95d8e58ce05a",
+    "apps/console_os/main/doom_p4mp_adapter.h": "0b50c99819b79595925b1e3677eebd48239b472a8b8da8fb6606517e47cd35c6",
+    "components/doom_multiplayer/src/doom_multiplayer.c": "715378311322b5487b1482cec7f4dd8cc1f480361088f76cb8dd2b8c51c18bb7",
+    "components/p4_multiplayer/src/session.c": "00ebe14e4e9ce837dfebbfac6660f0ceb3b00946820def907ea652b0943ed0f5",
+    "components/platform_game_storage/src/platform_game_storage.c": "1b37e9365c3853266e4a13dece104fe930a8aa14240fb65193ed23f6067b6817",
+    "apps/console_os/components/platform_readonly_blob/platform_game_storage_blob.c": "180252a39ae463a6bdba5c8091ea4762bb2bc3a9f8af68e56ac99660f746dc9d",
+    "components/p4_usb_content_transfer/src/content_transfer.c": "9b83702e8bf4b67d64079fb2a083d295c6b2ebca450839ac3f898c6b0cc3e497",
+    "scripts/p4-usb-content.py": "abdabbdf968fee2dc697554d6af123288305750eb4d0407078c07cb756f240ed",
+    "apps/doom/host/doomgeneric_headless.c": "bbc1772719f867a554a6ebe6d845f0685c2da1fc77fc695a87ac4d640b30dff0",
+    "apps/doom_audio_probe/components/doom_engine_audio/p4_doom_net_stub.c": "8c63af158451aad6342abd1d20c2520692acbcb798ca772f90c0fe05f402e0ba",
+    "third_party/doomgeneric/doomgeneric/d_loop.c": "e88f5e1c2f9b186294211901b0e6c9959ca072e2d6e241e527ee29bc95ddfe5a",
+    "third_party/doomgeneric/doomgeneric/p_saveg.c": "00618c964bea7664fef9f6b15e76f5b6d8766d7bebb4e0e979f0c2e4d8289cb5",
+    "third_party/doomgeneric/doomgeneric/i_system.c": "d6631ec491d5add8a50cf4cdc154877dda1e7b18019fd45207edc8378d48ef1b",
+    "third_party/doomgeneric/doomgeneric/doomfeatures.h": "01fd54d8060c650933f1d65c90fbd04355637b9ec66108e65cda0ef1bba4b929",
+    "third_party/game-data.json": "a22584bd8c3ac85d981eea0f0cdf545c6757606ea00699007adce0a53275a2a4"
+  },
+  "read_only_primary_sources": {
+    "root": "/Users/billh/Documents/ChatGPT/esp32-p4 2",
+    "scope": "Uncommitted in-progress target context; these newer OS paths were inspected, not compiled here.",
+    "sha256": {
+      "apps/console_os/main/console_os_main.c": "b27b780f8be68f74bdcef5e090e0325abda64dbde378e181216c819c3ac6d037",
+      "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c": "0bec3a4313a4565fa3cd32df7664ba5ed032ca598272f7636f36ecabfcd53c16",
+      "components/platform_game_storage/src/platform_game_storage.c": "a5865c44726d10bf3a1772ae2068a65f6040ce791e5c157d03b391dc9f930bb5",
+      "components/platform_multiplayer_wifi/src/platform_multiplayer_wifi.c": "2345bab59fe660291e0eec87cc90532cd217e13c4502e143d6f71f579b4dfa16",
+      "docs/MULTIPLAYER.md": "43bf9382b745d7793f86383d9b7c346049c2deb9c2c4a5275863ddbf86ccb194",
+      "docs/boards/M5STACK_TAB5.md": "d90dcf5ee841650b298624a0e0e41d41f63a321a673419faae46035f49598dfe",
+      "hardware/evidence/tab5-0.45-core-testing.json": "5be80d3e64bd1cfa244653ce5177b308b6e07ca0a6b2413e4de52cd85d9f59d6",
+      ".agents/skills/develop-p4-multiplayer-games/SKILL.md": "58a5729ce447526a403fecca6be44e425a4eaba7d07e1a47327256ef7db8abf3"
+    }
+  },
+  "confirmed_rules": [
+    "Four simultaneous human console players maximum.",
+    "Separate Game Changers AI title; preserve working shareware Doom.",
+    "Active arena joining/leaving without restarting the arena.",
+    "Each active player has a current-visit kill total visible to everyone.",
+    "Totals survive arena cycles; quit or idle removal ends the visit; rejoin starts at zero.",
+    "Level exits cycle the supplied arena set."
+  ],
+  "pending": [
+    "Host departure policy: room closes, host migration, or persistent coordinator.",
+    "Idle duration and warning.",
+    "microSD in participating consoles; full Phase 2 cannot fit in 16 MiB flash.",
+    "Exact arena PWADs, order, format/engine requirements, and notices.",
+    "Four-peer OS transport implementation and validation.",
+    "Complete deterministic checkpoint/catch-up and repeated admission proof.",
+    "Exact Tab5 units and separate hardware authorization/acceptance."
+  ],
+  "limitations": [
+    "No custom arena archive supplied or retrieved.",
+    "No four-engine network harness or mid-game admission implemented/tested.",
+    "Host tests do not qualify Tab5 memory, SD latency, speaker, controls, frame rate, or radio.",
+    "Legacy Doom does not use the native Game API SDL runner.",
+    "Saved-project Tab5 radio evidence leaves physical multiplayer acceptance pending."
+  ]
+}

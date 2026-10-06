@@ -20,6 +20,7 @@
 
 
 // Data.
+#include "p4_doom_net.h"
 #include "doomdef.h"
 #include "dstrings.h"
 #include "sounds.h"
@@ -670,6 +671,9 @@ P_KillMobj
     mobjtype_t	item;
     mobj_t*	mo;
 	
+    if (source && source->player && target->player)
+        P4_DoomArenaKill((int)(source->player - players),
+                         (int)(target->player - players));
     target->flags &= ~(MF_SHOOTABLE|MF_FLOAT|MF_SKULLFLY);
 
     if (target->type != MT_SKULL)

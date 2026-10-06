@@ -4,3 +4,6 @@ design/tab5-nextgen/research/Power_Class.inl -whitespace
 games/blast_circuit/assets/music/invention8-mutopia.ly -whitespace
 third_party/arimo/OFL.txt -whitespace
 third_party/doomgeneric-p4.patch -whitespace
+
+# Keep this hash-admitted original pack byte-for-byte on every host.
+/game-data/pure-hell/v0.5/* -text -whitespace

@@ -1,0 +1,705 @@
+{
+  "schema": 1,
+  "recorded_at_utc": "2026-10-06T06:10:04.945459+00:00",
+  "task": "Game Changers AI: supplied Pure Hell v0.5 plus selectable DWANGO 5 and synchronized map voting",
+  "branch": "codex/game-changers-ai",
+  "base_commit": "a07e566e3063b19ac4db7f71aa642bda0598cdbb",
+  "git_state": "Feature edits are uncommitted in the isolated checkout. Base commit is the captured saved-project snapshot, not a feature-only commit.",
+  "source_identity_encoding": "SHA-256 of sorted changed/new source paths, NUL, then their binary SHA-256; receipt files excluded",
+  "source_sha256": "3e8dbf1d8505f8cc36d09bafb7af9791156960e1ec11fec9bb77f1c74d34a311",
+  "source_files": [
+    {
+      "path": ".gitignore",
+      "bytes": 2126,
+      "sha256": "83ecb22fd8c54c8b40af9538e4497b89eebd3db110022202789dd5066da9264c"
+    },
+    {
+      "path": "apps/console_os/CMakeLists.txt",
+      "bytes": 38713,
+      "sha256": "1c92d043409ea6c6e73c968a7c1aa6ba9bfa7bbbe4d3881d2010aeb707be915d"
+    },
+    {
+      "path": "apps/console_os/app-metadata.json",
+      "bytes": 14806,
+      "sha256": "77821b1739c48b2c9fd865daabaf403e40efdee502f82a872f7e2499704c4807"
+    },
+    {
+      "path": "apps/console_os/components/platform_readonly_blob/platform_game_storage_blob.c",
+      "bytes": 15841,
+      "sha256": "c4d91c1d4ebda3e2102c804503ee191933945e1806389e4205bd079a730aeb08"
+    },
+    {
+      "path": "apps/console_os/main/CMakeLists.txt",
+      "bytes": 7921,
+      "sha256": "43c54d6f2850728c019dc437079be93ffb5caf255ee0655bdc0b33abdd6a83cc"
+    },
+    {
+      "path": "apps/console_os/main/console_os_main.c",
+      "bytes": 449779,
+      "sha256": "e5de3f55fd85ece8bf05d770a0e7770cef73eadabc4682a6dda27e4f38a6456a"
+    },
+    {
+      "path": "apps/console_os/main/doom_gc_engine.c",
+      "bytes": 11428,
+      "sha256": "e6fb2dc17596df6d08cc4defc15cf18470ac07f035375e7ea8cb780929245620"
+    },
+    {
+      "path": "apps/console_os/main/doom_gc_p4mp.c",
+      "bytes": 10512,
+      "sha256": "afbe6ef3599ddfb4907c63f66b14314bf8c8b3359e99e28418d491a8e29a3958"
+    },
+    {
+      "path": "apps/console_os/main/doom_gc_p4mp.h",
+      "bytes": 581,
+      "sha256": "0125fe2258dc974031ba3bf19eacfd7aa6ac6c37c5ce25e1028ac6ed3b082b5a"
+    },
+    {
+      "path": "apps/console_os/main/doom_p4mp_adapter.c",
+      "bytes": 27722,
+      "sha256": "2b6239b3197701fe9b8ccf980c5b69ab9cf7b65b77baf50d0240e42c135b508c"
+    },
+    {
+      "path": "apps/console_os/main/doom_p4mp_adapter.h",
+      "bytes": 1334,
+      "sha256": "9232903f2138fde49e93b7c7b23e9fcf45aa24bfe2fd093cbfbd215e50a357ca"
+    },
+    {
+      "path": "apps/doom/host/doom_arena_smoke.c",
+      "bytes": 10280,
+      "sha256": "0ede16edad49160f02135e7f7030782a2116d62d91bfbf857bc28088e5dc3b73"
+    },
+    {
+      "path": "apps/doom/host/doomgeneric_headless.c",
+      "bytes": 4863,
+      "sha256": "145145eda7ce5399fe62806790fbd194bf3ac792297a56c9555195689a0a68f8"
+    },
+    {
+      "path": "apps/doom_audio_probe/components/doom_engine_audio/p4_doom_net.h",
+      "bytes": 1382,
+      "sha256": "629ca9d19ba8903f331d791c9d56e3b2f293c195cd1262164cb80cd32c12b0e9"
+    },
+    {
+      "path": "apps/doom_audio_probe/components/doom_engine_audio/p4_doom_net_stub.c",
+      "bytes": 1662,
+      "sha256": "eb749aec7de178280d5c6528276d1c6170349300189c3491b74f6316c356a234"
+    },
+    {
+      "path": "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c",
+      "bytes": 56593,
+      "sha256": "d6bc743aa6e9ae188e131e93a84dba5022d7fe4c32a6d910548e9c9bbdd770fb"
+    },
+    {
+      "path": "components/console_shell/include/console/brand.h",
+      "bytes": 175,
+      "sha256": "7b8ffb104f10db96cd457ced8172f884ff08a03d7cc8bb82fc905dd9253a34b1"
+    },
+    {
+      "path": "components/console_shell/include/console/shell.h",
+      "bytes": 26974,
+      "sha256": "9396ee9bb5fc9e64d14a0bd927b7f671e9ca21e2b3812131e6c50794e414d086"
+    },
+    {
+      "path": "components/console_shell/src/console_shell.c",
+      "bytes": 317950,
+      "sha256": "f914e0c14c39ae72a2f14f0b6aff48f62d2bf9272052e4494eb9268d447a4984"
+    },
+    {
+      "path": "components/console_shell/tests/test_console_shell.c",
+      "bytes": 101626,
+      "sha256": "f4ec5ad25402807a845bad372bbf1ea844411717c47bbe8218db1f6a851dd43a"
+    },
+    {
+      "path": "components/doom_multiplayer/CMakeLists.txt",
+      "bytes": 1431,
+      "sha256": "817070a75b44a2d15b776076e72fa2e72fc2c6b9fc5e52c8b6fb1b7f9863a1ff"
+    },
+    {
+      "path": "components/doom_multiplayer/include/p4/doom_arena.h",
+      "bytes": 2445,
+      "sha256": "5695dca922354333af54e37849b8c32965767780b3993efbd6665a145793bf31"
+    },
+    {
+      "path": "components/doom_multiplayer/include/p4/doom_lockstep.h",
+      "bytes": 1994,
+      "sha256": "9d6088fb6fcc947f667fa254f3f03dabf082e6508b8c515d67d9fecad6d354c7"
+    },
+    {
+      "path": "components/doom_multiplayer/include/p4/doom_multiplayer.h",
+      "bytes": 6886,
+      "sha256": "a289a9305e9c153c963ab71c2dab3f5f5502bec3052ebbfe85f2de3f1aaaaaae"
+    },
+    {
+      "path": "components/doom_multiplayer/src/doom_arena.c",
+      "bytes": 7390,
+      "sha256": "45ab002556ed5a24592611a579d1d0ac3a9c077ba74e7b11999e2464648364b6"
+    },
+    {
+      "path": "components/doom_multiplayer/src/doom_lockstep.c",
+      "bytes": 5295,
+      "sha256": "ec541c21f241719eca791e1900649424bd6c042ac497423d4b7700674584afdb"
+    },
+    {
+      "path": "components/doom_multiplayer/src/doom_multiplayer.c",
+      "bytes": 16383,
+      "sha256": "874ee188d63b2920f0973e9b44f20fea4808311e1729115b1a741fcdb74add5b"
+    },
+    {
+      "path": "components/doom_multiplayer/tests/CMakeLists.txt",
+      "bytes": 2245,
+      "sha256": "0d759acecac7064241d4cd17d3470fceaf1c15ce87d837250652e8127c24f57b"
+    },
+    {
+      "path": "components/doom_multiplayer/tests/mocks/esp_err.h",
+      "bytes": 134,
+      "sha256": "d63f1f209f767767c2513313e5b6e5781dc485c5b0e5de66d51d24c786ab1469"
+    },
+    {
+      "path": "components/doom_multiplayer/tests/mocks/esp_log.h",
+      "bytes": 49,
+      "sha256": "605b8b3cc6ee7747c797658e3ec12cdaf3dc8f8840345ad306666b12ff6682e8"
+    },
+    {
+      "path": "components/doom_multiplayer/tests/mocks/esp_timer.h",
+      "bytes": 67,
+      "sha256": "82a7c14acf5d1cdcbea1b23bab880c69562da88013adc34ff5f2ae2115fb08d1"
+    },
+    {
+      "path": "components/doom_multiplayer/tests/mocks/freertos/FreeRTOS.h",
+      "bytes": 44,
+      "sha256": "0ccb47032f5fd0b9ddbd24467031540872bcf1ce7735888031243cd70e87fb82"
+    },
+    {
+      "path": "components/doom_multiplayer/tests/mocks/freertos/task.h",
+      "bytes": 43,
+      "sha256": "3eec1d0f08a0b88c9e5736a06c9a722442b00e430f5ac686b765331d8e1a4763"
+    },
+    {
+      "path": "components/doom_multiplayer/tests/test_doom_arena.c",
+      "bytes": 6639,
+      "sha256": "075939fe238442219c21c30e82bf1b0f4c851a644f7b56953df796e9fca488b6"
+    },
+    {
+      "path": "components/doom_multiplayer/tests/test_doom_gc_adapter.c",
+      "bytes": 5813,
+      "sha256": "cebe7699ab4f9496c7793c0f6561d7b0dbb71be3184f9997c6b6c11f2fd4ee09"
+    },
+    {
+      "path": "components/doom_multiplayer/tests/test_doom_lockstep.c",
+      "bytes": 3411,
+      "sha256": "7d66709e6466d1f5e48a159325685123014c19185840dedb8a5e312e400ff700"
+    },
+    {
+      "path": "components/doom_multiplayer/tests/test_doom_multiplayer.c",
+      "bytes": 13160,
+      "sha256": "31298fabc40ba872a38b2c6a650b6d7515bdec1c9a9632e638cc78d4fc30ee5e"
+    },
+    {
+      "path": "components/p4_multiplayer/include/p4/multiplayer_group.h",
+      "bytes": 1128,
+      "sha256": "44588df982eb7644e9fdd0471ddfb29a6d3d0713f766ae15a217fd3b8f06fc35"
+    },
+    {
+      "path": "components/p4_multiplayer/tests/test_group.c",
+      "bytes": 1860,
+      "sha256": "8a106af46f2ea2e24dba210e2fcc070f3f45f5fa450eddd6379da73c6042c286"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/CMakeLists.txt",
+      "bytes": 1389,
+      "sha256": "e8da46593b55a89f50d274a6237fbd278638aea39ccee3c48f0e8edcc286e34b"
+    },
+    {
+      "path": "components/p4_usb_content_transfer/src/content_transfer.c",
+      "bytes": 29298,
+      "sha256": "330c448ee670e5ba8abb7122f4bfa0a194a50c1b961b2e22d2b6efd0938db6d6"
+    },
+    {
+      "path": "components/platform_game_storage/CMakeLists.txt",
+      "bytes": 3773,
+      "sha256": "b113908cbbcbfbbb4063369e2fc36400ec0e1d57d9b9c475e1db11f97b72fa01"
+    },
+    {
+      "path": "components/platform_game_storage/include/platform/doom_arena_content.h",
+      "bytes": 1974,
+      "sha256": "2962710d481421a25e7d951059026102e990dae2f3e0a8f0b7621d7c7d695c54"
+    },
+    {
+      "path": "components/platform_game_storage/include/platform/game_storage.h",
+      "bytes": 12115,
+      "sha256": "a05477fe4f10e5b541329f754f78d1d7312f8a18afd7a84c91f08df70d35e9fc"
+    },
+    {
+      "path": "components/platform_game_storage/src/platform_game_storage.c",
+      "bytes": 97406,
+      "sha256": "a2f5c0fed96c5d99ad234279f0f3088d3083fbd8aed7ca9647db2809c364ad18"
+    },
+    {
+      "path": "components/platform_game_storage/src/verified_reader.c",
+      "bytes": 1287,
+      "sha256": "5b618ebd343d6b11a1774cbff69004c52b95b092bb49106383aec088a0f33e9e"
+    },
+    {
+      "path": "components/platform_game_storage/src/verified_reader.h",
+      "bytes": 792,
+      "sha256": "3ce80630edd79b76e0bed0d0fb9fd67ceee2e55740e27b67a565ceaa5541aa34"
+    },
+    {
+      "path": "components/platform_game_storage/src/verified_wad.c",
+      "bytes": 2840,
+      "sha256": "30aeb1424f3084e39129fbf73f51a97ab631369b3d3e1d6bab1703cd768d0ace"
+    },
+    {
+      "path": "components/platform_game_storage/src/verified_wad.h",
+      "bytes": 363,
+      "sha256": "b9b437ccf231cd9ec60696e3d12eff8c1b9c6920daa2a11814d2ea8373430860"
+    },
+    {
+      "path": "components/platform_game_storage/tests/CMakeLists.txt",
+      "bytes": 3530,
+      "sha256": "0bd8856c9d7ac3faa1f2a3eb11c85ae32cc6f957a630879b0ae74eaf9a59352e"
+    },
+    {
+      "path": "components/platform_game_storage/tests/mocks/esp_err.h",
+      "bytes": 159,
+      "sha256": "9643a4c9e5f9bda4f844188d29eef8351f3955fea77ad3b05ccdcb06833c03f0"
+    },
+    {
+      "path": "components/platform_game_storage/tests/mocks/esp_log.h",
+      "bytes": 53,
+      "sha256": "3f82d33314a6ee7efd5b047d043b60e24b98d16249b9bea96d0afa3646e774a3"
+    },
+    {
+      "path": "components/platform_game_storage/tests/mocks/esp_vfs.h",
+      "bytes": 761,
+      "sha256": "2116b5283cbb60ba9f6af4984cde54c2b5e79b3b8cb125c9c06bd60763ebd804"
+    },
+    {
+      "path": "components/platform_game_storage/tests/mocks/freertos/FreeRTOS.h",
+      "bytes": 54,
+      "sha256": "eabec18b02a76d4d5ef29bdb6af0d04d6097368111dc0b23e6f893e9c6daba03"
+    },
+    {
+      "path": "components/platform_game_storage/tests/mocks/freertos/semphr.h",
+      "bytes": 349,
+      "sha256": "cbaaaffec7cfaedb7d9c78fd19d495e687e06c47f9f44532001d3fb4edbbe4ab"
+    },
+    {
+      "path": "components/platform_game_storage/tests/test_arena_vfs.c",
+      "bytes": 3737,
+      "sha256": "669994a49db8d65b6dca4e3614c20ea8347d1a3817444e5c4975c49429dbe634"
+    },
+    {
+      "path": "components/platform_game_storage/tests/test_verified_reader.c",
+      "bytes": 1662,
+      "sha256": "e35f031883b78eff57c7d405e20a1c166091b4e29720ae1409d28e342c3a0795"
+    },
+    {
+      "path": "components/platform_game_storage/tests/test_verified_wad.c",
+      "bytes": 3282,
+      "sha256": "8f24c0e04195ba8c0446f856c38cab795db23ce267188ff2f43373071ee0a076"
+    },
+    {
+      "path": "components/platform_multiplayer_wifi/src/platform_multiplayer_wifi.c",
+      "bytes": 15550,
+      "sha256": "138c7b4378c6110520071e230264236563484a2e40263e8b9742b3a72a927cea"
+    },
+    {
+      "path": "components/platform_multiplayer_wifi/tests/test_wifi.c",
+      "bytes": 7292,
+      "sha256": "eb419c0156c89cdbcd2e5106e5cb99948dcab27e14ac4d0b8ccd003d2af141f3"
+    },
+    {
+      "path": "docs/GAME_CHANGERS_AI_DOOM.md",
+      "bytes": 9665,
+      "sha256": "4191a88a3847d7df0fc8c348ed90543c6f541d3d1ddca51a01f8f4a9ff4fb564"
+    },
+    {
+      "path": "docs/MULTIPLAYER.md",
+      "bytes": 17886,
+      "sha256": "e83419663480df21678addbe8d4a4b198a6568ff8b3bf1fb2e398582641766e1"
+    },
+    {
+      "path": "docs/boards/M5STACK_TAB5.md",
+      "bytes": 38076,
+      "sha256": "96af0b4bdda035ee05e4ec3c0b3386f26fc3787e1a4b25f3fd3a947c9fcc7eec"
+    },
+    {
+      "path": "scripts/doom/arena-content.py",
+      "bytes": 3831,
+      "sha256": "814f8459dbe64df6bc97d78840516e5185bfebd960d66be7d598db641a7aab8b"
+    },
+    {
+      "path": "scripts/doom/build-host.sh",
+      "bytes": 6430,
+      "sha256": "a6688f2296d791251965e57b10e421f1427e314cd52f01a2d9b411e9a16ab2f7"
+    },
+    {
+      "path": "scripts/p4-usb-content.py",
+      "bytes": 14130,
+      "sha256": "44276a06314592286f5b8e4d59e8b743e7688a9506ffcc5eb476a492812298a2"
+    },
+    {
+      "path": "scripts/tests/test-p4-usb-content-wire.py",
+      "bytes": 3786,
+      "sha256": "2d4a0dd64a0f185182787b7acae954814b5262ac36521b2d7691677fcf49862a"
+    },
+    {
+      "path": "third_party/doomgeneric-p4.json",
+      "bytes": 845,
+      "sha256": "821c751b7fa7259bc39297fee989196453971f1a65b5468c8e15fcf551db3041"
+    },
+    {
+      "path": "third_party/doomgeneric-p4.patch",
+      "bytes": 14981,
+      "sha256": "ea8141b6a5e51cfe02f8215bc93e90df018153f8b3fdef4e944bab413019d6b3"
+    },
+    {
+      "path": "third_party/doomgeneric/doomgeneric/g_game.c",
+      "bytes": 53860,
+      "sha256": "c4b1e565ce869df9e60e2f2e77c3e9d2236085a39ff7939563af3040263e3ef0"
+    },
+    {
+      "path": "third_party/doomgeneric/doomgeneric/hu_stuff.c",
+      "bytes": 12282,
+      "sha256": "15865275696b0433c407366f2d4312f2f41a365ec0dc1e9713e8ec29b4a30f6e"
+    },
+    {
+      "path": "third_party/doomgeneric/doomgeneric/m_menu.c",
+      "bytes": 39771,
+      "sha256": "2c89e9d3cbb7df1970c486cfb89707db586fd6c5f11ed8d6a35181ddbf5d4e50"
+    },
+    {
+      "path": "third_party/doomgeneric/doomgeneric/p_inter.c",
+      "bytes": 19133,
+      "sha256": "ffaa4f356ef81c0f02436df3fde35ca4d819ff19f66681df60f5d05364645836"
+    },
+    {
+      "path": "third_party/doomgeneric/doomgeneric/p_mobj.c",
+      "bytes": 21446,
+      "sha256": "dbaffbae44118d6bdda0564000b4ff3efa9fa6ce87915fdcb24188267719e5c1"
+    },
+    {
+      "path": "third_party/doomgeneric/doomgeneric/p_setup.c",
+      "bytes": 19048,
+      "sha256": "5f4afec0de1c361c13b684893de38be3b81b8bb65e370917a473c1c7fc0209ab"
+    },
+    {
+      "path": "third_party/doomgeneric/doomgeneric/p_tick.c",
+      "bytes": 3121,
+      "sha256": "2cf657cbd59da70dbd39c4f6f3bdb6250d3a13f53f76d8b133be0553ee925efc"
+    },
+    {
+      "path": "third_party/doomgeneric/doomgeneric/r_things.c",
+      "bytes": 20770,
+      "sha256": "3a67d954bcb29b4cb83447e7e1f1ee78a956a454c9851d7e6bcfbf80a116a8e0"
+    },
+    {
+      "path": "third_party/doomgeneric/doomgeneric/s_sound.c",
+      "bytes": 14607,
+      "sha256": "cef308810fccdd7a45375cbe770fb560047147c3944677af9768d1b539042833"
+    },
+    {
+      "path": "third_party/doomgeneric/doomgeneric/st_stuff.c",
+      "bytes": 29834,
+      "sha256": "821d4e5b90c8c2f7f1cf0e707b8de0de5e459add06acfefb20d488b56a775263"
+    },
+    {
+      "path": "third_party/doomgeneric/doomgeneric/w_wad.c",
+      "bytes": 12870,
+      "sha256": "d7e66be2d9e851f5e2194a9611e2e3c24e3328d4d8f00339ee2750e767e47eb1"
+    },
+    {
+      "path": "third_party/game-data.json",
+      "bytes": 14198,
+      "sha256": "8f06912a1de2d4540e1423213f02acbf561832f269a187d17e516525830d065f"
+    }
+  ],
+  "target": "m5stack-tab5",
+  "console_os_version": "0.53",
+  "behavior": {
+    "server": "one fixed playing host plus up to three guests on OS local Wi-Fi",
+    "default_rotation": [
+      1,
+      2
+    ],
+    "host_selection": "Pure Hell MAP01/MAP02 or DWANGO5 MAP01..24",
+    "map_votes": "strict majority of active connected players; immediate switch; 20-second ballot; 5-second cooldown; preserve visit scores",
+    "idle": "525 simulation tics / 15 seconds without movement or fire; break resets score; release/press Use returns at zero",
+    "late_join": "not implemented; connected break/return fallback; new/disconnected consoles join before start",
+    "map_sources": "original WAD bytes unchanged; isolated DWANGO map/music indices; Freedoom textures, sounds, skies and UI",
+    "shareware": "ordinary Doom remains separate"
+  },
+  "inputs": [
+    {
+      "symbol": "BASE",
+      "usb_kind": 5,
+      "directory": "",
+      "filename": "FREEDOOM2.WAD",
+      "local_path": "local-data/doom/freedoom2.wad",
+      "command": "freedoom2",
+      "size_bytes": 28787748,
+      "sha256": "a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b"
+    },
+    {
+      "symbol": "PWAD",
+      "usb_kind": 6,
+      "directory": "",
+      "filename": "PUREHELL.WAD",
+      "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/PUREHELL.WAD",
+      "command": "pure-hell",
+      "size_bytes": 875026,
+      "sha256": "b0e8ab211fe263bdf263b219cd0f3584cac0071ec1cf3ce73defa843f00a3663"
+    },
+    {
+      "symbol": "DWANGO",
+      "usb_kind": 13,
+      "directory": "",
+      "filename": "DWANGO5.WAD",
+      "local_path": "local-data/doom/arena-inbox/dwango5/DWANGO5.WAD",
+      "command": "dwango5",
+      "size_bytes": 2109396,
+      "sha256": "2b7658f126321fc2ccf953dbbe8d585b4162350080b9715b46fc617d32cdb13a"
+    },
+    {
+      "symbol": "COPYING",
+      "usb_kind": 7,
+      "directory": "/GCADOOM",
+      "filename": "Freedoom-0.13.0-COPYING.txt",
+      "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/Freedoom-0.13.0-COPYING.txt",
+      "command": "arena-copying",
+      "size_bytes": 1644,
+      "sha256": "7c62f2c520769c798774f416637eec4921e5f0aafdac1245ae7c8a8cf65fe102"
+    },
+    {
+      "symbol": "CREDITS_MUSIC",
+      "usb_kind": 8,
+      "directory": "/GCADOOM",
+      "filename": "Freedoom-0.13.0-CREDITS-MUSIC.txt",
+      "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/Freedoom-0.13.0-CREDITS-MUSIC.txt",
+      "command": "arena-credits-music",
+      "size_bytes": 9388,
+      "sha256": "2bb77677bbc4e587bba44ccb6514ee0f5397c7bb8ae9580b9188d3d6a57c0a31"
+    },
+    {
+      "symbol": "CREDITS",
+      "usb_kind": 9,
+      "directory": "/GCADOOM",
+      "filename": "Freedoom-0.13.0-CREDITS.txt",
+      "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/Freedoom-0.13.0-CREDITS.txt",
+      "command": "arena-credits",
+      "size_bytes": 15872,
+      "sha256": "72364333d295c598d75ef9553d3b3661ad0b60e27271c87b7637c74b2f46918a"
+    },
+    {
+      "symbol": "README",
+      "usb_kind": 10,
+      "directory": "/GCADOOM",
+      "filename": "README.txt",
+      "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/README.txt",
+      "command": "arena-readme",
+      "size_bytes": 4220,
+      "sha256": "e10bcbce5d602672fd7dcac442861d9675db902c3669fb7b9510062def04832d"
+    },
+    {
+      "symbol": "MANIFEST",
+      "usb_kind": 11,
+      "directory": "/GCADOOM",
+      "filename": "build-manifest.json",
+      "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/build-manifest.json",
+      "command": "arena-manifest",
+      "size_bytes": 2823,
+      "sha256": "90b9629971c5af62a7aa2406727c2153ebaca567a3b0fbcd002e8115f8c8c721"
+    },
+    {
+      "symbol": "MIDI",
+      "usb_kind": 12,
+      "directory": "/GCADOOM",
+      "filename": "Beasts-of-Horizon.mid",
+      "local_path": "local-data/doom/arena-inbox/Pure-Hell-v0.5/Beasts-of-Horizon.mid",
+      "command": "arena-midi",
+      "size_bytes": 43798,
+      "sha256": "01c7618d0e03224156f29cdb07895ca224f0a30ba41fe67595fffadf0454fa89"
+    },
+    {
+      "symbol": "DWANGO_NOTICE",
+      "usb_kind": 14,
+      "directory": "/GCADOOM",
+      "filename": "DWANGO5.TXT",
+      "local_path": "local-data/doom/arena-inbox/dwango5/DWANGO5.TXT",
+      "command": "dwango5-notice",
+      "size_bytes": 2234,
+      "sha256": "bfb0a573af27da78ac853deedd7754c73e53f472798f5f129500eedbef856cf1"
+    },
+    {
+      "symbol": "DWANGO_DIZ",
+      "usb_kind": 15,
+      "directory": "/GCADOOM",
+      "filename": "FILE_ID.DIZ",
+      "local_path": "local-data/doom/arena-inbox/dwango5/FILE_ID.DIZ",
+      "command": "dwango5-diz",
+      "size_bytes": 210,
+      "sha256": "faaa4a0867d05ea49114b9e05ddad783062b9ddba64f8716d5f2556d63aac485"
+    }
+  ],
+  "bundle_content_sha256": "6fbdec7a25f87088884382706fbe2c73dba284c3139ee04f1113d7fb7bba3960",
+  "local_staging": "build-host/game-changers-ai/sd-card; all eleven source and staged files checked for exact SHA-256 and Git ignore coverage",
+  "firmware": {
+    "path": "apps/console_os/build-tab5/p4_console_os.bin",
+    "bytes": 4530208,
+    "sha256": "073c5b92ad71e88d8fcca290b42c14a7b23d66e85ae0e9453a78ea7acbf0d6d1"
+  },
+  "update_package": {
+    "path": "apps/console_os/build-tab5/P4UPDATE.P4U",
+    "bytes": 4530464,
+    "sha256": "217113c069372566755b4881a7123ad77e329ed2c302db4dd7e06f97370a62cd"
+  },
+  "firmware_verifier": {
+    "ble_multiplayer_enabled": true,
+    "board": "m5stack-tab5",
+    "charger_control_enabled": true,
+    "content_bundle_verified": false,
+    "flash_authorized": false,
+    "hardware_verified": false,
+    "image_bytes": 4530208,
+    "image_sha256": "073c5b92ad71e88d8fcca290b42c14a7b23d66e85ae0e9453a78ea7acbf0d6d1",
+    "native_cartridges": null,
+    "result": "tab5-build-candidate-verified",
+    "usb_host_enabled": true,
+    "version": "0.53",
+    "wifi_multiplayer_enabled": true
+  },
+  "verifier_scope_note": "firmware-only verifier does not verify the native cartridge content bundle; the arena data was independently validated and staged locally.",
+  "tests": [
+    {
+      "path": "build-host/game-changers-ai/arena-core-tests.log",
+      "bytes": 1654,
+      "sha256": "c9e675fb35142097e1a2c6ece42ddc9522c6ea54abed17a714b47bbd796712b0",
+      "status": "passed",
+      "description": "Seven CTests: four-state rules/votes, codecs, lockstep and four production adapters with loss/duplicates/departure."
+    },
+    {
+      "path": "build-host/game-changers-ai/arena-shell-tests.log",
+      "bytes": 1517,
+      "sha256": "e69aaef0d80691ad5879b43aeb7060d4e1ff5d7551028cada63c55e4f08ed2c3",
+      "status": "passed",
+      "description": "Seven CTests including editable arena map row and locked non-map rules."
+    },
+    {
+      "path": "build-host/game-changers-ai/arena-storage-tests.log",
+      "bytes": 1533,
+      "sha256": "fee35b63e2de67a8d65ddd8d3413df9d31f605d1e6a3343beaf71ae33d15da4e",
+      "status": "passed",
+      "description": "Six sanitizer CTests including three-stream production VFS isolation and ordinary Doom regression."
+    },
+    {
+      "path": "build-host/game-changers-ai/arena-usb-tests.log",
+      "bytes": 105,
+      "sha256": "83166b089fbcb82fac63f22522fa6ae99bb5e46368cd35d756277fd463dd6346",
+      "status": "passed",
+      "description": "Seven Python tests, required bundle preflight before serial and exact hash rejection."
+    },
+    {
+      "path": "build-host/game-changers-ai/arena-engine-smoke-final.log",
+      "bytes": 4845,
+      "sha256": "e09974eb440e6646b489b901c3f3ef5f513dc8dc0bb6d235dd192ea07dc6037a",
+      "status": "passed",
+      "description": "AddressSanitizer full engine: Pure Hell exits, all 24 DWANGO maps, controller proposal, synchronized majority, retained scores/visits/membership; no old-world thinkers after passed vote."
+    },
+    {
+      "path": "build-host/game-changers-ai/arena-host-map02.log",
+      "bytes": 2351,
+      "sha256": "4b2e7792b3e521c036514af354e6b01ae7a581c0c59999eb0c66998ce5c08fe6",
+      "status": "passed",
+      "description": "AddressSanitizer engine initial Pure Hell MAP02 and secret exit to MAP01."
+    },
+    {
+      "path": "build-host/game-changers-ai/arena-host-dwango24.log",
+      "bytes": 2345,
+      "sha256": "cb2c0d262308a9ac8860085f44ae6093616e6fde3bb179f2e2d71792f41f8a2a",
+      "status": "passed",
+      "description": "AddressSanitizer engine initial DWANGO MAP24 and secret exit to DWANGO MAP01."
+    },
+    {
+      "path": "build-host/game-changers-ai/arena-ordinary-doom.log",
+      "bytes": 1725,
+      "sha256": "3bb01b8bbb5b86cf9d5ee4889cdefea130c28b7c685bdaa149b141234ef4d8b0",
+      "status": "passed",
+      "description": "AddressSanitizer ordinary shareware engine, 35 frames, neutral arena hooks."
+    },
+    {
+      "path": "build-host/game-changers-ai/arena-ordinary-freedoom.log",
+      "bytes": 2058,
+      "sha256": "c77089d6ab04dd8fd600cae334df209e308410fd5898a2fb4fe4f187dc9d41e2",
+      "status": "passed",
+      "description": "AddressSanitizer ordinary Freedoom engine, 35 frames, neutral arena hooks."
+    },
+    {
+      "path": "build-host/game-changers-ai/arena-input-validation.log",
+      "bytes": 92,
+      "sha256": "3723c1701e137887ca3dc0abe288d6b1cdd23398864a2b9c36a0b86c4f6c24a9",
+      "status": "passed",
+      "description": "Actual three WADs through production block reader and directory validator."
+    },
+    {
+      "path": "build-host/game-changers-ai/arena-source-verification.log",
+      "bytes": 80,
+      "sha256": "6c761af0d63eb536725598ef7a916a2ebca20c5404a3656c46e36c3149c9c44f",
+      "status": "passed",
+      "description": "Patched engine reverses to all 205 original pinned source blobs."
+    },
+    {
+      "path": "build-host/game-changers-ai/arena-bundle-validation.log",
+      "bytes": 105,
+      "sha256": "747b070f6adab922f45e662d960a495d94989fe5a324b8c1161e15e1b039abe6",
+      "status": "passed",
+      "description": "Eleven exact local bundle inputs; generated header and composite room identity match metadata."
+    },
+    {
+      "path": "build-host/game-changers-ai/arena-tab5-build-final.log",
+      "bytes": 18050,
+      "sha256": "8ccf526c690265c599fc6b9f75f2a47f889384ed07945eb6b1f5ac388f1caa59",
+      "status": "passed",
+      "description": "Pinned IDF 5.5.3 Tab5 firmware build, its prerequisites and firmware-only verifier. No device I/O."
+    }
+  ],
+  "screenshots": [
+    {
+      "path": "build-host/game-changers-ai/arena-picker.png",
+      "bytes": 22894,
+      "sha256": "5cfac8ceca08761f4c23a000c955cd1b71a6da039a6528728a21d3b616432f4c"
+    },
+    {
+      "path": "build-host/game-changers-ai/arena-dwango.png",
+      "bytes": 59543,
+      "sha256": "d4b140bd8d0f05602af16a2f6e54ee2ae2de493e906b92a47082a15cd20a6a9e"
+    }
+  ],
+  "inspection": "Assistant inspected captured 320x200 picker and DWANGO gameplay; no human interactive gameplay or audible music test.",
+  "fixed_during_validation": [
+    "Voted reload now skips vanilla old-world rebirth; no old-map trigger/thinker runs after a passed vote schedules load.",
+    "Bounded private lump-name formatting compiles with the pinned RISC-V GCC format diagnostics."
+  ],
+  "provenance": {
+    "source_lock_unchanged": true,
+    "toolchain_lock_unchanged": true,
+    "component_lock_unchanged": true,
+    "engine_patch": {
+      "path": "third_party/doomgeneric-p4.patch",
+      "bytes": 14981,
+      "sha256": "ea8141b6a5e51cfe02f8215bc93e90df018153f8b3fdef4e944bab413019d6b3"
+    }
+  },
+  "hardware": {
+    "flashed": false,
+    "verified": false,
+    "serial_ports_opened": false,
+    "pending": [
+      "four physical consoles discovery/startup and synchronization",
+      "controller/touch usability",
+      "audible map music and effects",
+      "SD latency and memory headroom",
+      "sustained device cadence and 30 FPS floor",
+      "loss/recovery"
+    ]
+  }
+}

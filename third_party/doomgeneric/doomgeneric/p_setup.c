@@ -1,3 +1,4 @@
+#include "p4_doom_net.h"
 //
 // Copyright(C) 1993-1996 Id Software, Inc.
 // Copyright(C) 2005-2014 Simon Howard
@@ -788,7 +789,7 @@ P_SetupLevel
 	lumpname[4] = 0;
     }
 
-    lumpnum = W_GetNumForName (lumpname);
+    lumpnum = P4_DoomArenaMapLump(W_GetNumForName (lumpname));
 	
     leveltime = 0;
 	

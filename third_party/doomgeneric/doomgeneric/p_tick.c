@@ -18,10 +18,12 @@
 //
 
 
+#include "p4_doom_net.h"
 #include "z_zone.h"
 #include "p_local.h"
 
 #include "doomstat.h"
+#include "d_main.h"
 
 
 int	leveltime;
@@ -138,8 +140,12 @@ void P_Ticker (void)
     }
     
 		
+    P4_DoomArenaTicker();
+    // A passed vote has scheduled a new world. Do not run old-map triggers
+    // or thinkers that could overwrite that selection with an exit action.
+    if (P4_DoomArenaActive() && gameaction == ga_loadlevel) return;
     for (i=0 ; i<MAXPLAYERS ; i++)
-	if (playeringame[i])
+	if (playeringame[i] && P4_DoomArenaPlayerActive(i))
 	    P_PlayerThink (&players[i]);
 			
     P_RunThinkers ();
