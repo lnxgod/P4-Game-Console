@@ -1,81 +1,95 @@
-# Repository cleanup audit — 2026-10-06
+# Consolidated repository cleanup audit — 2026-10-06
 
-The behavior-preserving cleanup is complete on `codex/repository-cleanup-execution`,
+The source cleanup is complete on **`codex/repository-cleanup-execution`**,
 based on `origin/main` at `615321ff45020387fba96572b5b42376b0d1be52`.
-The canonical Tab5 firmware and 17-cartridge native bundle build and verify.
-No hardware was flashed, no remote branch was deleted, and nothing was published
-or merged. Detailed hashes, branch tips, PRs and check results are in
-[the evidence record](../test-runs/2026-10-06-repository-cleanup.json).
+The consolidated implementation is **`94edf8ca0bd13bddcb69635ac0530f519c09258b`**;
+the following evidence commit changes only this report and its
+[JSON record](../test-runs/2026-10-06-repository-cleanup.json).
+No hardware was accessed or flashed, and nothing was published or merged.
 
-- [x] **Git baseline, PRs and local work.** Fetched `origin`; GitHub confirms
-  `main` is default and all PRs #1–#13 are merged, with no open PRs. An already
-  merged PR does not make subsequent branch commits obsolete: the source
-  `codex/m5stack-tab5` checkout was clean at `0b2376b`, but its two Byte Buddy /
-  content-evidence commits are absent from this baseline. They remain intact.
-  This cleanup uses its own attached managed worktree.
-- [x] **Lua retirement.** Searched the complete tracked tree, including hidden
-  skills, manifests, dependencies, build hooks, tools and documentation. No Lua
-  game, interpreter, authoring stack or skill remains. Removed the launcher's
-  stale “P4CART LUA PENDING” promise, unused shell transfer class and old capacity
-  comment; changed desktop/preview fixtures to native `.P4G` examples and current
-  storage folders. Corrected the old scanner description and future IGM proposal.
-  Wire class 4 remains reserved and rejected; native-only guards and tests still
-  prevent old cartridges from being installed or mutated. Historical evidence
-  and users' existing archived files are preserved.
-- [x] **Unused testing tools.** Removed the uncalled substring parser from
-  `gamepad-diag-capture.py`, the uncalled legacy central-flash verifier from
-  `verify-audio-direct-diag.py`, and the unused `p4g_name_valid` wrapper. Removed
-  the 0.4.85/0.4.86 capture wrappers: they only set obsolete fixed version/hash
-  values and invoke the retained configurable 0.4.84 capture tool; no maintained
-  command, test or installer consumes them. Their only tracked references were
-  historical whole-tree hash inventories. Those inventories are unchanged.
-- [x] **Dead code, assets and configuration.** Removed LORD's superseded
-  `lord_title_art.h`, its generated ANSI preview and unused `build_title_art.py`.
-  Current C sources use `lord_illustrated_title.h`; original source artwork,
-  prompts, provenance and rejection/acceptance records remain. Fixed the SDL
-  Console OS preview's stale descriptor initializers, which failed the existing
-  `-Werror` build after artwork fields were added. No game rules, active game
-  rendering, manifests, IDs, saves or network protocols changed.
-- [x] **All repository skills and AGENTS.md.** Read all 14 skills, their
-  references and UI metadata; checked commands/paths against current code and
-  Make targets. Corrected Tab5 USB-A guidance, the optional multiplayer
-  capability, Elecrow-only capacity wording, repetitive/conflicting test scope,
-  historical app-count claims and a cross-skill reference. Clarified implemented
-  Waveshare display/audio routing and Elecrow framebuffer/PDM behavior. Marked
-  the Elecrow installation snapshot with its date and made its skill UI explicitly
-  Elecrow-specific. No abandoned skill resource was found. `installos` still
-  asks about SD, provisions verified Doom, offers Chex only with explicit SD
-  selection, and accurately reports the unimplemented Tab5 internal-storage route.
-- [x] **Validation.** Existing parser, restore, transfer, native-source, registry,
-  host preview and affected game checks pass. The full Tab5 target and bundle
-  verifier pass with the pinned SDK and unchanged component locks. The one
-  historical Elecrow artifact-dependent test is listed below as unexercised.
-- [x] **Evidence and review.** Three implementation commits separate Lua/preview
-  cleanup (`8ae63bb`), unused tools/assets (`7819597`) and skills (`3b28df9`).
-  This audit and its JSON record preserve the removal rationale, original hashes,
-  source binding, retained work and acceptance limits. Logs and the full patch
-  remain ignored under `build-host/repository-cleanup/`.
+The other completed cleanup branch, `codex/repository-cleanup` at
+`5b585f2c33d0534353d310d88fd211c55e92e07d`, remains clean and recoverable in
+worktree `1f75`. Its [labeled historical report](REPOSITORY_CLEANUP_2026_10_06_1F75.md)
+and [unchanged JSON evidence](../test-runs/2026-10-06-repository-cleanup-1f75.json)
+are preserved. Those build hashes describe that branch only. The earlier
+canonical report remains recoverable at `78d3d1a`; this audit supersedes its
+incorrect Waveshare audio routing and gamepad-parser removal conclusions.
 
-The inventory covered all **2,560 baseline tracked files**. Consumer tracing
-included dynamic Python imports, CLI/Make/CMake entrypoints, manifest-generated
-asset names and immutable digest dependencies. It is a structural and consumer
-audit, not a formal proof that every possible runtime branch is reachable.
+## Requirement-by-requirement result
 
-| Scope | Baseline files | Disposition |
-| --- | ---: | --- |
-| `.agents`, root instructions/build/config/docs | 42 | All skills/instructions, defaults, references and locks reviewed; targeted corrections above |
-| `apps`, `components` | 920 | Build/source consumers traced; shell remnants corrected; board and reusable-service boundaries retained |
-| `games` | 503 | Manifest/source/generated-asset consumers traced; obsolete LORD outputs removed; active game work preserved |
-| `scripts`, `tools` | 273 | Test/workflow/import/hash consumers traced; only proven unused surfaces removed |
-| `docs`, `design` | 97 | Maintained links and Lua claims checked; design galleries and manifest-driven sources retained |
-| `hardware`, `test-runs` | 354 | Historical acceptance, rejected candidates, bindings and recovery evidence preserved |
-| `third_party`, `ports`, `game-data` | 371 | Pinned provenance, ports, licenses and existing original game data retained unchanged |
+| Requirement | Final evidence and disposition |
+| --- | --- |
+| Baseline, PRs, branches and worktrees | Main baseline and all 13 merged PRs recorded; final GitHub recheck finds no open PRs. Eight proven merged, unattached local refs were removed earlier. All remote refs, active/unmerged work and registered worktrees remain. |
+| Retired Lua stack | Complete tracked-tree audit finds no Lua game, runtime, dependency, authoring tool or skill. Removed stale shell enum/display branch/promise and converted fixtures to native `.P4G`. Reserved wire class 4 and native-only rejection tests remain. |
+| Unused tools and dead assets | Removed two uncalled Python helpers, two superseded capture wrappers and three inactive LORD art/converter files. No live consumers remain. Exact-file recovery dependencies and historical records are preserved. |
+| All skills and AGENTS.md | All 14 skills and supporting resources reviewed. Final corrections cover native multiplayer, Tab5 SD/USB workflows, Waveshare audio/display routing, Elecrow migration/PCM/framebuffer history, and proportional testing. Fourteen schema validators pass; code tracing substantiates corrected claims. |
+| Protected contracts | No change against baseline to toolchain/component locks, hardware profiles/backups/authorizations, retired IDs, manifests, gameplay/save/network code, vendor source, ports or game-data. |
+| Validation | New recovery/native-only checks, shell and both preview modes pass. Consolidated Tab5 build and 17-cartridge verifier pass. Earlier unaffected checks remain source-bound historical evidence; one Elecrow artifact-dependent test remains unexercised. |
+| Reviewability | All 26 paths differing between the two completed branches have an explicit disposition in JSON. Original branches/reports remain recoverable; final implementation and artifact hashes are bound separately. |
 
-Eight local branch refs were deleted only after verifying ancestry to the
-baseline and absence from every worktree registration. Full recovery SHAs are
-in the JSON record.
+## Scope and consolidation decisions
 
-| Deleted local branch | Tip |
+The inventory covers all **2,560 baseline tracked files**: root/instructions
+and `.agents` 42; apps/components 920; games 503; scripts/tools 273;
+docs/design 97; hardware/test-runs 354; third_party/ports/game-data 371.
+Tracing included Make/CMake, dynamic imports, command entrypoints, manifests,
+generated assets and whole-file digest consumers. This is a structural and
+consumer audit, not a formal runtime-reachability proof.
+
+The branch comparison retained justified changes from both implementations:
+
+- Corrected Waveshare audio to the actual chain: Console OS selects the counted
+  adapter in `apps/doom_embedded_touch_audio/components/platform_audio`, which
+  calls `components/platform_audio_es8311`. The component README now separates
+  that active backend from its historical Elecrow codec investigation. ES7210
+  microphone support remains unclaimed.
+- Imported the recorded Elecrow dual-OTA migration: its app is at `0x20000`;
+  the earlier `0x10000` folder image is historical. The migration's startup PASS
+  does not close its pending J16 cartridge/OTA/operator acceptance.
+- Preserved the canonical native-game skill's **optional** `multiplayer-session`
+  capability and enabled Tab5 USB-A host candidate. The other branch's required
+  capability and disabled-host wording conflicted with `GAME_SDK.md` and
+  `scripts/build.sh`.
+- Clarified AGENTS.md's current Tab5 SD requirement and art-skill routing;
+  corrected Console OS version 0.56 and Tab5's one-time 3/10 audio defaults.
+  Preserved existing WAD, protected-content and exact-board restrictions.
+- Added two missing artwork initializer tails in the Tab5 preview, completing
+  the earlier generic-preview repair. Both previews now use `GAMES`, `SAVES`
+  and `MAZE.P4G`; Games shows `SELECT A NATIVE P4G GAME`.
+- Extended native-only source checks to reject both retired runtime directories.
+  Kept canonical precise LORD title-source provenance and the explicitly future
+  native IGM proposal. Equivalent prose and whitespace variants were not duplicated.
+
+## Removals and deliberate retention
+
+| Removed item | Consumer proof |
+| --- | --- |
+| `_verify_central_flash_path_legacy` | No callers; active `verify_central_flash_path` remains. Other Python AST is identical to baseline. |
+| `p4g_name_valid` | No callers; active validation uses `game_name_valid`. Other Python AST is identical to baseline. |
+| Capture wrappers `0.4.85` and `0.4.86` | No maintained caller; only obsolete fixed version/hash overrides around retained configurable `0.4.84` implementation. |
+| LORD `lord_title_art.h`, `title-background-ansi.png`, `build_title_art.py` | No active include/build/converter consumer; current C uses `lord_illustrated_title.h`. Original art, prompts and provenance remain. |
+| Shell P4CART enum/display label and Lua-pending notice | Only unreachable shell presentation consumed the enum; protocol rejection remains at the transfer boundary. |
+
+The gamepad capture parser's trial removal was **reversed**. Although uncalled,
+its containing file is revalidated by recovery gate inventories. It is now
+byte-identical to baseline, SHA-256
+`941792e627fc49e303353d38578ae1b30426f99cc15973bc568ebac01af6a473`.
+The two dormant E6 installer helpers likewise remain because seven frozen
+installer/verifier paths consume that complete file's hash. No sealed digest
+was changed to accommodate cleanup.
+
+Retained native-only guards protect archived user files and reject unsupported
+cartridges. Historical hash inventories, recovery transports, accepted and
+rejected hardware evidence, current host/Realm tools and manifest-driven Maze
+and LORD artwork remain. Five missing screenshot links in vendored READMEs
+remain unchanged with their pinned upstream bytes. All 199 maintained relative
+Markdown links resolve.
+
+## Branch and work preservation
+
+These eight deleted local refs remain recoverable through their merged tips:
+
+| Local branch | Tip |
 | --- | --- |
 | `codex/doom-arena-release` | `3670f7892d74` |
 | `codex/doom-multiplayer-engine-barrier` | `a36e523a8412` |
@@ -86,55 +100,56 @@ in the JSON record.
 | `codex/usb-game-storage-program-manager` | `5348cd2025e6` |
 | `codex/wireless-multiplayer` | `5ec54214193d` |
 
-The unmerged Byte Buddy H1, Skyline, game-suite, game-changers, Tab5 and Tide Maze
-tips remain. Both Byte Buddy checkouts, the active Tide Maze checkout, the source
-checkout used by “Analyze Whackey Racers,” and the separate active cleanup
-checkout remain intact. All remote refs and all eight missing/prunable worktree
-registrations remain; some retain unmerged or detached historical work. Local
-`main` was not reset or advanced behind another checkout's back.
+Final recheck confirms each is an ancestor of the baseline and has no worktree
+attachment. Full SHAs are in JSON. No additional refs were deleted during
+consolidation. All retained branch tips preserve their original commits, all
+remote refs are unchanged, and all eight prunable registrations remain.
 
-Some apparently unused items have real consumers. The E6 installer's two
-uncalled helper functions remain because the **whole file hash** is required by
-seven frozen installer/verifier paths. A trial removal exposed that dependency;
-the exact original bytes were restored and the affected checks rerun. Current
-game/console host runners, Realm hub tests, hardware fixtures, old exact-artifact
-installers and recovery transports remain supported verification/evidence paths.
-The Maze illustration and LORD native/fallback previews have manifest/converter
-consumers. Vendored README image links refer to five absent upstream screenshots;
-editing pinned upstream bytes to repair those cosmetic links is outside this
-cleanup. There are **zero broken maintained relative Markdown links**.
+The source checkout is still clean at `0b2376b`, including its two commits not
+in the main baseline. Tide Maze's ongoing modified/untracked work, both Byte
+Buddy checkouts, Skyline/game-suite/game-changers branches, Wacky Wheels work
+and both cleanup checkouts remain intact. Local `main` was not moved.
 
-| Check | Final result |
+## Validation and artifact binding
+
+Only checks warranted by the consolidation were rerun:
+
+| Check | Result |
 | --- | --- |
-| `make verify` | PASS — existing ESP-IDF 5.5.3, commit `2c211b236707889e8400c4dc5644dd5c4ee071e0`, existing Python 3.11 environment |
-| `make game-registry-check` | PASS — 17 enabled native games; source/seed/board/resource/lineage/generator checks |
-| `make console-shell-host`, `make p4-desktop-host` | PASS — 7/7 and 1/1 |
-| `make console-os-host` | PASS — 8/8, including SDL dummy ASan/UBSan smoke |
-| `make p4-content-host` | PASS — 3/3 CTest; 8 content and 5 native-bundle tests |
-| `cmake -S games/lord -B build-host/lord -G Ninja`, build, CTest | PASS — 3/3 including presentation and gameplay trace |
-| All 46 `scripts/tests/test-*.py` entrypoints | 45 PASS; 1 lacks the separate historical Elecrow build artifact |
-| `test-project-env.sh`, `test-app-readback.sh` | PASS |
-| Skill validator | PASS — 14/14; referenced paths and metadata reviewed |
-| Syntax / links / whitespace | PASS — 463 JSON, 214 project Python, 69 project shell files; maintained Markdown links; `git diff --check` |
-| `make console-os-tab5-idf` | PASS — all target host dependencies; full firmware and 17-cartridge bundle verified |
+| Gamepad diagnostic gate/state/install/restore/flash-route tests | All five entrypoints pass after restoring exact capture-script bytes; no hardware access. |
+| Native-only source contract | PASS; 17 enabled native games and strengthened retired-directory guards. |
+| Shell host | 7/7 PASS, ASan/UBSan. |
+| Generic SDL preview | 8/8 PASS, including dummy-video smoke. |
+| Tab5 SDL preview | 8/8 PASS with `P4_CONSOLE_HOST_TAB5=ON`, including dummy-video smoke. |
+| Skills, JSON, Python and links | 14/14 skills, 465 JSON files, 212 maintained Python files, 199 maintained links; no failures. Python count excludes both vendor and port trees. |
+| Removal/protection checks | Both remaining Python ASTs match after removing only named definitions; no live removed-item consumers; protected paths unchanged; whitespace clean. |
+| Locked Tab5 build and verifier | PASS from clean implementation commit `94edf8c`; all 17 cartridges and update package verified. |
 
-The worktree initially lacked a selected SDK/Python environment; pointing to the
-existing pinned checkout and its `idf5.5_py3.11_env` resolved that without an
-installation or upgrade. Two USB-overlay tests needed managed components; they
-passed after the Tab5 build populated the locked dependencies. The preview
-initializer error was corrected and its complete target passed afterward.
+The system Python lacked PyYAML; skill validation reused the existing pinned
+IDF Python environment without installation. The firmware build reused the
+already verified ESP-IDF 5.5.3 checkout at commit `2c211b2` and its existing
+`idf5.5_py3.11_env`. Focused host checks had passed, so the build wrapper and
+Tab5 verifier ran directly without repeating unrelated Make dependencies.
 
-`test-console-os-game-manager-migrate.py` requires verified historical Elecrow
-artifacts under `apps/console_os/build`; that directory is absent in this fresh
-worktree. It remains in the existing Elecrow build workflow. Tab5 output cannot
-satisfy that exact-board test, and no sealed evidence was rewritten to make it
-pass. Additional board builds, interactive gameplay and hardware testing are not
-claimed. No gameplay behavior changed; actual-device cadence and existing failed
-device acceptance remain unchanged.
-
-The verified Tab5 candidate is 4,317,760 bytes, SHA-256
+The build log confirms `console_shell.c` recompiled. The resulting application
+is still **4,317,760 bytes**, SHA-256
 `2a2cde5dd8cf46e1366f318f0db1a5c4755078b8c5af2cafefe8e70b835f7959`.
-It was built from the cleanup code before the local commits, so its embedded
-build label is the baseline commit; the JSON records the modified-source binding.
-It has **no flash authorization or hardware acceptance**. WADs, firmware,
-cartridges, build products and recovery images were not added to Git.
+The regenerated **4,318,016-byte** `P4UPDATE.P4U` records build ID
+`94edf8ca0bd1`, SHA-256
+`44ceaaeb95abc77cff3b03794988f5b27796c2b7bb9546e80164400f09c79b59`.
+The application project version is 0.56. JSON binds the consolidated source
+tree, diff, code snapshot, logs and package hashes; identical application bytes
+do not substitute for that source binding. Artifacts and logs remain ignored
+under `apps/console_os/build-tab5` and `build-host/repository-cleanup`.
+
+Earlier canonical validation remains recorded separately: pinned environment,
+registry, desktop/content/LORD tests, two shell scripts and 45 of 46 script
+entrypoints passed. `test-console-os-game-manager-migrate.py` exited with the
+missing separate historical Elecrow artifact prerequisite. It remains
+unexercised, not a PASS or a Tab5-compatible test.
+
+No new interactive gameplay, alternate-board build matrix, serial, touch,
+acoustic, controller, multiplayer or device-cadence acceptance is claimed.
+Existing failed and pending acceptance remains unchanged. The candidate has
+**no flash authorization or hardware acceptance**. No firmware, cartridge,
+WAD, recovery image or generated build output was added to Git.
