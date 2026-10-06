@@ -50,6 +50,10 @@ end-to-end lobby/configuration test with burst loss.
   loss/duplicate/peer-departure test and three new virtual-time stall tests.
 - Local Wi-Fi socket/mocked-platform suite: 1/1 passes, including expired-route
   replacement. This does not test a physical C6 radio or FreeRTOS concurrency.
+- Tab5 firmware builds and passes the complete candidate verifier at source
+  `73b0bda17a4847cdcd5fdcbfcfe991a00cca58d3`: 4,318,272-byte image and 17 verified
+  native cartridges. Existing vendored Doom warnings remain; no warning was
+  reported in the three changed production translation units.
 - Baseline suites passed before the new fault cases. Host/client stall cases
   and route replacement failed on the original production implementations.
   The handoff probe reproduces the sparse roster and unresolved partial launch;
