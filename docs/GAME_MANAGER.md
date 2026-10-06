@@ -1,5 +1,8 @@
 # USB Game Manager and OS updates
 
+This page describes the Elecrow 10 in storage and migration route. Tab5 uses
+its separate [native USB content and guarded update workflow](boards/M5STACK_TAB5.md).
+
 The `P4 GAMES` volume on J16 is the persistent user-storage boundary. It is
 the existing wear-levelled FAT partition at flash offset `0x710000`; this
 design does not move or erase it. The Console OS and a laptop never mount the
@@ -84,7 +87,21 @@ The first migration to this partition table still requires J1 because the
 bootloader and partition table themselves must change once. Later OS updates
 use J16 and preserve all files in `P4 GAMES`.
 
-For the exact bound development tablet, the guarded migration route is:
+The one-time migration was [accepted on 2026-08-14](../hardware/test-runs/2026-08-14-console-os-game-manager-migration.json).
+Its retained installer also supports interrupted-transaction recovery. Ordinary
+Elecrow successor builds do not need to repeat its artifact test. When reviewing
+that migration route, check its prepared artifacts explicitly:
+
+```sh
+make console-os-game-manager-migration-check
+```
+
+This read-only check requires the matching committed Elecrow build at
+`apps/console_os/build`, including its bootloader, partition table, OTA data
+and update package. It does not build or flash. Missing local artifacts are a
+prerequisite failure; a Tab5 build cannot satisfy this check.
+
+The existing migration/recovery command is:
 
 ```sh
 install -d -m 700 \

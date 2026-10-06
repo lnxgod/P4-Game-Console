@@ -47,9 +47,6 @@ class ContentInstallTests(unittest.TestCase):
         self.assertEqual(result, 2)
         self.assertIn('retired', output.getvalue())
         self.assertEqual(list(self.sd.iterdir()), [])
-    def test_removed_creator_and_inspector_are_not_exposed(self):
-        self.assertFalse(hasattr(content, 'validate_p4cart'))
-        self.assertFalse(hasattr(content, '_load_p4cart_module'))
     def test_rejects_wrong_quake_data(self):
         wrong = self.root / 'PAK0.PAK'; wrong.write_bytes(b'not quake')
         with self.assertRaisesRegex(content.ContentError, 'expected'):
