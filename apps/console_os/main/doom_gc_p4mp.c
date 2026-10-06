@@ -87,6 +87,12 @@ static void receive_frame(void *context, uint64_t route,
             (void)p4_doom_lockstep_ack(&gc.sync,slot,e.packet.ack);
         }
         if (gc.sync.peer_ack[slot]!=before) gc.progress_ms[slot]=millis();
+    } else if (slot==0 && e.type==P4_MP_EVENT_PING &&
+               e.packet.payload_length==8 &&
+               memcmp(e.packet.payload,"GCAHOST!",8)==0) {
+        /* A live host can be waiting for another guest's missing command.
+         * Its session-validated heartbeat keeps healthy clients connected. */
+        gc.progress_ms[0]=millis();
     } else if (slot==0 && e.type==P4_MP_EVENT_GAME_MESSAGE && gc.configuring &&
                p4_doom_lockstep_receive(&gc.sync,e.packet.payload,e.packet.payload_length)) {
         gc.progress_ms[0]=millis();
@@ -157,6 +163,19 @@ static void deliver(void)
     }
 }
 
+static bool peer_blocks_progress(uint8_t slot)
+{
+    if (gc.sync.peer_ack[slot]<gc.sync.next_output) return true;
+    const p4_doom_mp_tic_queue_t *queue=&gc.sync.input;
+    const uint32_t tick=queue->next_tick;
+    const size_t index=tick%P4_DOOM_MP_TIC_RING_SIZE;
+    /* Do not blame guests for a host that has not built its own next tic,
+     * or for another guest when their required command is already queued. */
+    const bool local_ready=queue->valid[0][index] && queue->tags[0][index]==tick;
+    const bool peer_ready=queue->valid[slot][index] && queue->tags[slot][index]==tick;
+    return local_ready && !peer_ready;
+}
+
 void p4_doom_gc_poll(void)
 {
     if (!gc.prepared || gc.failed) return;
@@ -167,8 +186,10 @@ void p4_doom_gc_poll(void)
     if (gc.failed) return;
     for (uint8_t i=0;i<gc.config.player_count;++i) {
         if (!gc.routes[i]) continue;
-        if (gc.configured && (!gc.transport.connected(gc.transport.context,gc.routes[i]) ||
-            now-gc.progress_ms[i]>10000)) departed(i);
+        if (!gc.configured) continue;
+        if (host() && !peer_blocks_progress(i)) gc.progress_ms[i]=now;
+        if (!gc.transport.connected(gc.transport.context,gc.routes[i]) ||
+            now-gc.progress_ms[i]>10000) departed(i);
     }
     if (gc.failed || !gc.configuring) return;
     if (host() && gc.ready==(1U<<gc.config.player_count)-1U)

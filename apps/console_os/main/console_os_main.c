@@ -5258,6 +5258,18 @@ static void multiplayer_frame_received(
             return;
         }
     }
+    if (event.type == P4_MP_EVENT_PEER_LEFT) {
+        /* Session receive has already removed this peer. Waiting for its
+         * timeout would leave holes in the contiguous lobby slot assignment,
+         * especially when it was not the most recently accepted guest. */
+        if (s_multiplayer_session.role == P4_MP_ROLE_HOST &&
+            !s_multiplayer_launch_due &&
+            reopen_multiplayer_host_lobby() == ESP_OK) {
+            return;
+        }
+        reset_multiplayer_lobby("peer-left");
+        return;
+    }
     if(multiplayer_group_enabled() && event.type==P4_MP_EVENT_GAME_MESSAGE &&
        event.packet.payload_length==P4_MP_GROUP_BYTES && !memcmp(event.packet.payload,"P4GS",4)) {
         if(s_multiplayer_lobby_state==CONSOLE_MP_LOBBY_CONNECTED &&
