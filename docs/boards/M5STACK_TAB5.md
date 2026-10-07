@@ -926,3 +926,43 @@ device recording contains no scrolling gestures, so actual repair skips,
 current-image timing and owner smoothness acceptance remain pending. The 0.66
 Files measurements above apply to that image. See the
 [exact 0.67 image and startup recording](../../hardware/evidence/owner-tab5-0.67-renderer-testing-20261007.json).
+
+## 0.79 internal repository merge and owner review
+
+The `codex/smooth-scrolling-internal` branch merges the private repository's
+0.78 commit `b728dfbe548288ba4b3171fc1326a737d26d0ef6` with the preserved owner
+scrolling work. Firmware source commit
+`79e9bdd21203f30910ed99891545df08c611ade2` retains the Games and Files raster
+caches, physical scroll translation and endpoint patch, fractional momentum,
+independent core-0 input and joined core-1 rendering. It also retains the newer
+loading, multiplayer, native-video, debug and storage contracts. Snapshot CPU
+reads now revoke the affected DMA-clean proof before copying; worker ownership,
+teardown and loading handoff have focused sanitizer coverage.
+
+All five core skills now apply the shared
+[smooth scrolling and P4 resource contract](../GAME_PERFORMANCE.md) to apps and
+games. It requires useful work on both application cores through owned services,
+relevant DMA/PPA/cache resources, and separate measured input, rendering,
+submission and panel-pacing evidence. Existing SDK, hardware scope and native
+resolution contracts remain in force.
+
+The exact 0.79 image (4,513,392 bytes, SHA-256
+`000c7463f4231bc8b432d423b2c81a3e33a93a69393eae18332947d45d0d8b22`)
+passed the pinned build/verifier, guarded app-only device checksum, launcher
+boot and OTA health. The install preserves the owner's boot/layout, selected
+peripherals, SD cartridges and saves. The used authorization remains immutable;
+its evidence annotates one inherited top-level source-history field while the
+exact source archive, nested commit and update build ID bind the merged source.
+
+The final recording contains seven scrolling bursts: 301 physical delta frames,
+one authoritative fallback, two previous-context endpoint reuses and 55 glide
+frames. It records no panic, display submission timeout, PPA failure or UI join
+timeout. Reported consumed motion to submission start is 8.897–15.818 ms; each
+burst retains its most recent gesture's onset value, so this range cannot bound
+every onset. It is not contact-to-visible latency or proof of panel-rate
+presentation. A post-game burst also contains a 75.350 ms touch-to-submit
+outlier that the aggregation cannot place precisely at onset. The owner's
+review is positive, with a small remaining delay before an initial swipe
+registers. Keep immediate-onset and near-60-Hz acceptance open; separate
+Games/Files and game-return qualification has not been explicitly reported.
+See the [exact merged image, checks and review](../../hardware/evidence/owner-tab5-0.79-renderer-testing-20261007.json).
