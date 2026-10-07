@@ -208,6 +208,10 @@ if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
             message(FATAL_ERROR "${retired_override} is retired: Tab5 requires native 768x480 rendering")
         endif()
     endforeach()
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE
+        DOOM_VIDEO_NATIVE_TAB5=1
+        P4_DOOM_NATIVE_WIDTH=768 P4_DOOM_NATIVE_HEIGHT=480
+        DOOMGENERIC_RESX=768 DOOMGENERIC_RESY=480)
 endif()
 target_compile_features(${COMPONENT_LIB} PRIVATE c_std_11)
 target_compile_options(${COMPONENT_LIB} PRIVATE

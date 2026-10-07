@@ -21,6 +21,7 @@ spec.loader.exec_module(extract)
 
 FIXTURE = r'''
 #include <assert.h>
+#include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>
 #include <stdarg.h>
@@ -42,11 +43,16 @@ enum { ARENA_WAD_COUNT=3 };
 typedef struct { FILE *stream; } p4_storage_cursor_t;
 typedef struct { unsigned updates; } mbedtls_sha256_context;
 static bool s_initialized=true;
+static game_storage_model_t s_model;
 static platform_game_storage_doom_load_progress_t s_doom_load_progress;
 static FILE *s_arena_file[ARENA_WAD_COUNT];
 static p4_storage_cursor_t s_arena_cursor[ARENA_WAD_COUNT];
 static uint8_t *s_arena_hashes[ARENA_WAD_COUNT];
 static p4_verified_reader_t s_arena_reader[ARENA_WAD_COUNT];
+static uint8_t *s_arena_base_pending,*s_arena_base_resident;
+static size_t s_arena_base_resident_bytes;
+typedef struct { const uint8_t *data; size_t bytes; } arena_memory_span_t;
+typedef struct { size_t total_free_bytes,largest_free_block,minimum_free_bytes; } multi_heap_info_t;
 static struct { const char *path; size_t bytes; const char *sha256; }
     s_arena_content[P4_GCA_FILE_COUNT];
 static uint8_t s_hash_buffer[P4_VERIFIED_BLOCK_BYTES];
@@ -83,6 +89,13 @@ static void fixture_log(const char *tag,const char *format,...) {
     }
 }
 static void *heap_caps_malloc(size_t size,unsigned caps) { (void)caps;return malloc(size); }
+static void heap_caps_free(void *data) { free(data); }
+static void heap_caps_get_info(multi_heap_info_t *info,unsigned caps) {
+    (void)info;(void)caps;assert(0 && "Disabled BASE residency must not query PSRAM");
+}
+static size_t heap_caps_get_total_size(unsigned caps) {
+    (void)caps;assert(0 && "Disabled BASE residency must not query PSRAM");return 0;
+}
 static void content_validation_note_bytes(size_t size) { (void)size; }
 static void mbedtls_sha256_init(mbedtls_sha256_context *sha) { memset(sha,0,sizeof(*sha)); }
 static int mbedtls_sha256_starts(mbedtls_sha256_context *sha,int kind) { (void)sha;(void)kind;return 0; }
@@ -152,6 +165,7 @@ static void progress(void *context) {
 }
 int main(int argc,char **argv) {
     assert(argc==2);
+    assert(!P4_ARENA_BASE_PSRAM_ENABLED);
     char names[P4_GCA_FILE_COUNT][32];
     for(unsigned i=0;i<P4_GCA_FILE_COUNT;++i){
         snprintf(names[i],sizeof(names[i]),"small-file-%u",i);
@@ -170,7 +184,7 @@ int main(int argc,char **argv) {
     else assert(!strcmp(argv[1],"success"));
     esp_err_t error=ESP_OK;
     const game_storage_content_t result=inspect_doom_title_snapshot(
-        PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI,&error,progress,&callback_calls);
+        PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI,PLATFORM_GAME_STORAGE_VERIFY_FULL_CONTENT,&error,progress,&callback_calls);
     assert(!latest.active&&!latest.checking_structure&&callback_calls>=2);
     assert(logged_read_calls==read_calls);
     assert(logged_read_max_us==(read_calls?1100001U:0U));
@@ -182,7 +196,7 @@ int main(int argc,char **argv) {
         assert(result==GAME_STORAGE_CONTENT_READY&&error==ESP_OK&&saw_complete&&saw_structure);
         /* An unrelated title cannot inherit stale Arena success or counters. */
         assert(inspect_doom_title_snapshot(PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM,
-            &error,NULL,NULL)==GAME_STORAGE_CONTENT_READY);
+            PLATFORM_GAME_STORAGE_VERIFY_FULL_CONTENT,&error,NULL,NULL)==GAME_STORAGE_CONTENT_READY);
         assert(platform_game_storage_get_doom_load_progress(&latest)==ESP_OK);
         assert(!latest.complete&&!latest.active&&latest.bytes_total==0);
     }else{
@@ -196,6 +210,7 @@ int main(int argc,char **argv) {
     assert(platform_game_storage_get_doom_load_progress(&latest)==ESP_ERR_INVALID_STATE);
     assert(!latest.active&&!latest.complete&&latest.bytes_total==0);
     release_locked_doom_snapshot();
+    assert(!s_arena_base_pending&&!s_arena_base_resident&&!s_arena_base_resident_bytes);
     for(unsigned i=0;i<P4_GCA_FILE_COUNT;++i)(void)unlink(names[i]);
     return 0;
 }
@@ -210,9 +225,13 @@ class LoadingProgressTests(unittest.TestCase):
         cls.directory = Path(cls.temp.name)
         source = (ROOT / "components/platform_game_storage/src/platform_game_storage.c").read_text()
         units = [extract.function(source, name) for name in (
-            "platform_game_storage_get_doom_load_progress", "inspect_arena_stream",
+            "arena_psram_observe", "arena_psram_has_reserve", "arena_base_snapshot_begin",
+            "arena_base_snapshot_recheck", "arena_read_memory",
+            "platform_game_storage_get_doom_load_progress", "inspect_arena_structure", "inspect_arena_stream",
             "inspect_doom_title_snapshot")]
-        (cls.directory / "progress.c").write_text(FIXTURE + "\n".join(units) + CASES)
+        gates = source[source.index("#ifndef P4_ARENA_BASE_PSRAM"):
+                       source.index("#define P4_GAME_STORAGE_SD_BACKEND")]
+        (cls.directory / "progress.c").write_text(FIXTURE + gates + "\n".join(units) + CASES)
         (cls.directory / "esp_err.h").write_text(
             "#pragma once\ntypedef int esp_err_t;\n#define ESP_OK 0\n#define ESP_FAIL -1\n" +
             "\n".join(f"#define {name} {i+1}" for i, name in enumerate((

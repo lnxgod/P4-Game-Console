@@ -39,7 +39,7 @@ void startup_vfs_open(void)
 {
     static const uint8_t marker=1;
     const platform_readonly_blob_config_t config={"/doom","freedoom2.wad",&marker,
-        (size_t)PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES};
+        (size_t)PLATFORM_GAME_STORAGE_ARENA_BASE_WAD_BYTES};
     assert(platform_readonly_blob_register(&config)==ESP_OK);
     wad_fd=ops->open_p(vfs_context,"freedoom2.wad",O_RDONLY,0);assert(wad_fd>=0);
 }

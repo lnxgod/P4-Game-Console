@@ -33,6 +33,14 @@
 #ifndef CONFIG_P4_BOARD_M5STACK_TAB5
 #define CONFIG_P4_BOARD_M5STACK_TAB5 0
 #endif
+#ifndef P4_ARENA_BASE_PSRAM
+#define P4_ARENA_BASE_PSRAM 0
+#endif
+#define P4_ARENA_BASE_PSRAM_ENABLED \
+    (CONFIG_P4_BOARD_M5STACK_TAB5 && P4_ARENA_BASE_PSRAM)
+#define ARENA_BASE_PSRAM_CAP ((size_t)12U * 1024U * 1024U)
+#define ARENA_ZONE_BYTES ((size_t)6U * 1024U * 1024U)
+#define ARENA_PSRAM_RESERVE ((size_t)4U * 1024U * 1024U)
 #define P4_GAME_STORAGE_SD_BACKEND \
     (CONFIG_P4_BOARD_M5STACK_TAB5 || CONFIG_P4_BOARD_OLIMEX_ESP32_P4_PC_REV_B || \
      CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3)
@@ -82,6 +90,7 @@
 #include "storage_block_read.h"
 #if CONFIG_P4_BOARD_M5STACK_TAB5
 #include "sd_metadata.h"
+#include "trusted_wad_table.h"
 #endif
 #include "verified_wad.h"
 #include "game_storage_model.h"
@@ -213,7 +222,15 @@ static game_storage_content_t s_chex_content = GAME_STORAGE_CONTENT_UNKNOWN;
 enum { ARENA_WAD_COUNT = 3 };
 static FILE *s_arena_file[ARENA_WAD_COUNT];
 static p4_storage_cursor_t s_arena_cursor[ARENA_WAD_COUNT];
+/* Owned allocations only. Trusted firmware tables are borrowed directly by
+ * the readers and must never be stored here or passed to heap_caps_free. */
 static uint8_t *s_arena_hashes[ARENA_WAD_COUNT];
+/* Only the storage owner can publish or free these buffers. A pending copy is
+ * never reachable through the public read API. Retain the verified SD reader
+ * even while resident, so late admission fallback needs no new filesystem I/O. */
+static uint8_t *s_arena_base_pending;
+static uint8_t *s_arena_base_resident;
+static size_t s_arena_base_resident_bytes;
 #if CONFIG_SPIRAM_ALLOW_BSS_SEG_EXTERNAL_MEMORY
 /* Task-owned stream caches; the storage/DMA staging buffer stays internal. */
 static EXT_RAM_BSS_ATTR p4_verified_reader_t s_arena_reader[ARENA_WAD_COUNT];
@@ -311,6 +328,11 @@ esp_err_t platform_game_storage_get_doom_load_progress(
 static void release_locked_doom_snapshot(void)
 {
     arena_sprite_end_locked();
+    heap_caps_free(s_arena_base_pending);
+    heap_caps_free(s_arena_base_resident);
+    s_arena_base_pending = NULL;
+    s_arena_base_resident = NULL;
+    s_arena_base_resident_bytes = 0U;
     for (unsigned i=0; i<ARENA_WAD_COUNT; ++i) {
         if (s_arena_file[i]) (void)fclose(s_arena_file[i]);
         s_arena_file[i]=NULL;
@@ -673,23 +695,123 @@ static bool arena_read_block(void *context,size_t offset,void *out,size_t bytes)
 static bool arena_digest(const void *data,size_t bytes,uint8_t digest[32])
 { return mbedtls_sha256(data,bytes,digest,0)==0; }
 
+static void arena_psram_observe(const char *stage, const char *reason,
+                                size_t requested, multi_heap_info_t *info)
+{
+    const uint32_t caps = MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT;
+    heap_caps_get_info(info, caps);
+    if (!stage) return; /* Actual zone-entry hook has no synchronous logging. */
+    ESP_LOGI(TAG, "ARENA_PSRAM_V1 generation=%" PRIu32
+        " observed_us=%" PRIi64 " stage=%s reason=%s requested=%u resident=%u"
+        " total=%u free=%u largest=%u boot_min_free=%u",
+        s_model.generation, esp_timer_get_time(), stage, reason,
+        (unsigned)requested, (unsigned)s_arena_base_resident_bytes,
+        (unsigned)heap_caps_get_total_size(caps), (unsigned)info->total_free_bytes,
+        (unsigned)info->largest_free_block, (unsigned)info->minimum_free_bytes);
+}
+
+static bool arena_psram_has_reserve(const multi_heap_info_t *info, size_t zone)
+{
+    return zone <= SIZE_MAX - ARENA_PSRAM_RESERVE &&
+        info->total_free_bytes >= zone + ARENA_PSRAM_RESERVE &&
+        info->largest_free_block >= zone;
+}
+
+static void arena_base_snapshot_begin(unsigned file, size_t size)
+{
+    if (!P4_ARENA_BASE_PSRAM_ENABLED || file != P4_GCA_BASE) return;
+    multi_heap_info_t info;
+    arena_psram_observe("before-allocation", "candidate", size, &info);
+    const size_t required = ARENA_ZONE_BYTES + ARENA_PSRAM_RESERVE;
+    if (!size || size > ARENA_BASE_PSRAM_CAP ||
+        info.total_free_bytes < required ||
+        size > info.total_free_bytes - required || info.largest_free_block < size) {
+        arena_psram_observe("fallback", "initial-admission", size, &info);
+        return;
+    }
+    /* Exactly one attempt, exclusively in SPIRAM. Allocation failure is an
+     * optimization fallback; the complete full-content scan still runs. */
+    s_arena_base_pending = heap_caps_malloc(size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    arena_psram_observe("after-allocation", s_arena_base_pending ? "allocated" : "allocation-failed", size, &info);
+    if (s_arena_base_pending && !arena_psram_has_reserve(&info, ARENA_ZONE_BYTES)) {
+        heap_caps_free(s_arena_base_pending);
+        s_arena_base_pending = NULL;
+        arena_psram_observe("fallback", "post-allocation-admission", size, &info);
+    }
+}
+
+static void arena_base_snapshot_recheck(size_t zone, const char *stage)
+{
+    if (!s_arena_base_resident) return;
+    multi_heap_info_t info;
+    arena_psram_observe(stage, "admission", s_arena_base_resident_bytes, &info);
+    if (!arena_psram_has_reserve(&info, zone)) {
+        const size_t requested = s_arena_base_resident_bytes;
+        heap_caps_free(s_arena_base_resident);
+        s_arena_base_resident = NULL;
+        s_arena_base_resident_bytes = 0U;
+        /* The original verified SD callback/digests were retained. Drop cache
+         * and failure flags so no temporary resident validation state leaks. */
+        s_arena_reader[P4_GCA_BASE].cached = false;
+        s_arena_reader[P4_GCA_BASE].failed = false;
+        if (stage) arena_psram_observe("fallback", stage, requested, &info);
+    }
+}
+
+typedef struct { const uint8_t *data; size_t bytes; } arena_memory_span_t;
+static bool arena_read_memory(void *context, size_t offset, void *out, size_t bytes)
+{
+    const arena_memory_span_t *span = context;
+    if (!span || !span->data || (!out && bytes) || offset > span->bytes ||
+        bytes > span->bytes - offset) return false;
+    if (bytes) memcpy(out, span->data + offset, bytes);
+    return true;
+}
+
+static game_storage_content_t inspect_arena_structure(
+    unsigned file, esp_err_t *error,
+    platform_game_storage_progress_fn_t progress, void *context)
+{
+    s_doom_load_progress.checking_trusted_metadata = false;
+    const int64_t structure_started_us=esp_timer_get_time();
+    s_doom_load_progress.checking_structure = true;
+    if (progress != NULL) progress(context);
+    const bool structure_valid=p4_verified_wad_validate_with_progress(
+            &s_arena_reader[file],(p4_wad_kind_t)file,progress,context);
+    ESP_LOGI(TAG,"P4_GAME_STORAGE STRUCTURE_COST file=%u valid=%u elapsed_us=%" PRIu64,
+        file,structure_valid?1U:0U,
+        (uint64_t)(esp_timer_get_time()-structure_started_us));
+    if (!structure_valid) {
+        *error=ESP_ERR_INVALID_RESPONSE; return GAME_STORAGE_CONTENT_INVALID;
+    }
+    *error=ESP_OK;
+    return GAME_STORAGE_CONTENT_READY;
+}
+
 static game_storage_content_t inspect_arena_stream(
     unsigned file, esp_err_t *error,
     platform_game_storage_progress_fn_t progress, void *context)
 {
     s_doom_load_progress.file_index = (uint16_t)file;
     s_doom_load_progress.checking_structure = false;
+    s_doom_load_progress.checking_trusted_metadata = false;
     const size_t size=s_arena_content[file].bytes;
-    const size_t blocks=(size+P4_VERIFIED_BLOCK_BYTES-1U)/P4_VERIFIED_BLOCK_BYTES;
-    struct stat metadata;
-    if (stat(s_arena_content[file].path,&metadata)!=0) {
-        *error=ESP_ERR_NOT_FOUND; return GAME_STORAGE_CONTENT_MISSING;
-    }
-    if (!S_ISREG(metadata.st_mode) || metadata.st_size!=(off_t)size) {
+    const size_t blocks=size/P4_VERIFIED_BLOCK_BYTES+
+        (size%P4_VERIFIED_BLOCK_BYTES!=0U?1U:0U);
+    if (!size || blocks>SIZE_MAX/P4_VERIFIED_DIGEST_BYTES) {
         *error=ESP_ERR_INVALID_SIZE; return GAME_STORAGE_CONTENT_INVALID;
     }
     FILE *stream=fopen(s_arena_content[file].path,"rb");
-    if (!stream) { *error=ESP_FAIL; return GAME_STORAGE_CONTENT_INVALID; }
+    if (!stream) {
+        *error=errno==ENOENT?ESP_ERR_NOT_FOUND:ESP_FAIL;
+        return *error==ESP_ERR_NOT_FOUND?GAME_STORAGE_CONTENT_MISSING:GAME_STORAGE_CONTENT_INVALID;
+    }
+    struct stat metadata;
+    if (fstat(fileno(stream),&metadata)!=0 || !S_ISREG(metadata.st_mode) ||
+        metadata.st_size<0 || (uintmax_t)metadata.st_size!=(uintmax_t)size) {
+        (void)fclose(stream);
+        *error=ESP_ERR_INVALID_SIZE; return GAME_STORAGE_CONTENT_INVALID;
+    }
     p4_storage_cursor_t local_cursor={.stream=stream};
     p4_storage_cursor_t *cursor=&local_cursor;
     uint8_t *hashes=NULL;
@@ -701,6 +823,7 @@ static game_storage_content_t inspect_arena_stream(
         s_arena_hashes[file]=hashes;
         if (!hashes) { *error=ESP_ERR_NO_MEM; return GAME_STORAGE_CONTENT_INVALID; }
     }
+    arena_base_snapshot_begin(file, size);
     /* The startup scan reads ahead in a transient, aligned Tab5 PSRAM buffer.
      * Hashes and progress still advance one verified block at a time. A failed
      * allocation keeps the existing 4 KiB path; runtime cache misses always
@@ -749,6 +872,10 @@ static game_storage_content_t inspect_arena_stream(
             if (!valid) ++read_errors;
         }
         const uint8_t *block_data=scan_buffer+(offset-batch_offset);
+        if (valid && file == P4_GCA_BASE && s_arena_base_pending) {
+            memcpy(s_arena_base_pending + offset, block_data, n);
+            block_data = s_arena_base_pending + offset;
+        }
         if (valid && hashes) {
             step_us=esp_timer_get_time();
             valid=arena_digest(block_data,n,hashes+block*32U);
@@ -798,24 +925,84 @@ static game_storage_content_t inspect_arena_stream(
     if (file<ARENA_WAD_COUNT) {
         s_arena_reader[file]=(p4_verified_reader_t){.context=cursor,.read=arena_read_block,
             .sha256=arena_digest,.digests=hashes,.size=size,.digest_bytes=blocks*32U};
-        const int64_t structure_started_us=esp_timer_get_time();
-        s_doom_load_progress.checking_structure = true;
-        if (progress != NULL) progress(context);
-        const bool structure_valid=p4_verified_wad_validate_with_progress(
-                &s_arena_reader[file],(p4_wad_kind_t)file,progress,context);
-        ESP_LOGI(TAG,"P4_GAME_STORAGE STRUCTURE_COST file=%u valid=%u elapsed_us=%" PRIu64,
-            file,structure_valid?1U:0U,
-            (uint64_t)(esp_timer_get_time()-structure_started_us));
+        arena_memory_span_t pending = {s_arena_base_pending, size};
+        const bool validate_resident = file == P4_GCA_BASE && s_arena_base_pending;
+        if (validate_resident) {
+            s_arena_reader[file].context = &pending;
+            s_arena_reader[file].read = arena_read_memory;
+        }
+        const bool structure_valid = inspect_arena_structure(
+            file,error,progress,context) == GAME_STORAGE_CONTENT_READY;
+        /* Restore before either success or failure. On failure the enclosing
+         * launch aborts; on memory fallback this remains a usable SD reader. */
+        if (validate_resident) {
+            s_arena_reader[file].context = cursor;
+            s_arena_reader[file].read = arena_read_block;
+            s_arena_reader[file].cached = false;
+            s_arena_reader[file].failed = false;
+        }
         if (!structure_valid) {
             *error=ESP_ERR_INVALID_RESPONSE; return GAME_STORAGE_CONTENT_INVALID;
+        }
+        if (validate_resident) {
+            s_arena_base_resident = s_arena_base_pending;
+            s_arena_base_pending = NULL;
+            s_arena_base_resident_bytes = size;
+            multi_heap_info_t info;
+            arena_psram_observe("verified-snapshot", "full-sha256-and-structure", size, &info);
         }
     }
     *error=ESP_OK;
     return GAME_STORAGE_CONTENT_READY;
 }
 
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+static game_storage_content_t inspect_arena_trusted(
+    unsigned file, esp_err_t *error,
+    platform_game_storage_progress_fn_t progress, void *context)
+{
+    static const char *const symbols[ARENA_WAD_COUNT]={"BASE","PWAD","DWANGO"};
+    static const uint8_t content_sha256[32]=P4_GCA_CONTENT_SHA256;
+    _Static_assert(P4_GCA_BASE==0 && P4_GCA_PWAD==1 && P4_GCA_DWANGO==2,
+                   "trusted tables must retain authoritative file order");
+    if (file>=ARENA_WAD_COUNT) {
+        *error=ESP_ERR_INVALID_ARG; return GAME_STORAGE_CONTENT_INVALID;
+    }
+    s_doom_load_progress.file_index=(uint16_t)file;
+    s_doom_load_progress.checking_structure=false;
+    s_doom_load_progress.checking_trusted_metadata=true;
+    if (progress != NULL) progress(context);
+    p4_trusted_wad_view_t table;
+    if (!p4_trusted_wad_table_validate(&p4_arena_trusted_wad_tables[file],file,
+            symbols[file],s_arena_content[file].path,s_arena_content[file].bytes,
+            s_arena_content[file].sha256,content_sha256,arena_digest,&table)) {
+        *error=ESP_ERR_INVALID_CRC; return GAME_STORAGE_CONTENT_INVALID;
+    }
+    FILE *stream=fopen(s_arena_content[file].path,"rb");
+    if (!stream) {
+        *error=errno==ENOENT?ESP_ERR_NOT_FOUND:ESP_FAIL;
+        return *error==ESP_ERR_NOT_FOUND?GAME_STORAGE_CONTENT_MISSING:GAME_STORAGE_CONTENT_INVALID;
+    }
+    struct stat metadata;
+    if (fstat(fileno(stream),&metadata)!=0 || !S_ISREG(metadata.st_mode) ||
+        metadata.st_size<0 || (uintmax_t)metadata.st_size!=(uintmax_t)s_arena_content[file].bytes) {
+        (void)fclose(stream);
+        *error=ESP_ERR_INVALID_SIZE; return GAME_STORAGE_CONTENT_INVALID;
+    }
+    s_arena_file[file]=stream;
+    s_arena_cursor[file]=(p4_storage_cursor_t){.stream=stream};
+    /* Only this reader borrows ROM. s_arena_hashes remains NULL, so partial
+     * failures and repeated cleanup cannot mistake const metadata for heap. */
+    s_arena_reader[file]=(p4_verified_reader_t){.context=&s_arena_cursor[file],
+        .read=arena_read_block,.sha256=arena_digest,.digests=table.digests,
+        .size=s_arena_content[file].bytes,.digest_bytes=table.digest_bytes};
+    return inspect_arena_structure(file,error,progress,context);
+}
+#endif
+
 static game_storage_content_t inspect_doom_title_snapshot(
     platform_game_storage_doom_title_t title,
+    platform_game_storage_verification_t verification,
     esp_err_t *out_error,
     platform_game_storage_progress_fn_t progress, void *context)
 {
@@ -829,23 +1016,42 @@ static game_storage_content_t inspect_doom_title_snapshot(
 
     release_locked_doom_snapshot();
     memset(&s_doom_load_progress, 0, sizeof(s_doom_load_progress));
+    s_doom_load_progress.verification=verification;
     const int64_t started_us = esp_timer_get_time();
     game_storage_content_t selected = GAME_STORAGE_CONTENT_INVALID;
     if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI) {
         s_doom_load_progress.active = true;
         s_doom_load_progress.file_count = P4_GCA_FILE_COUNT;
-        for (unsigned i=0; i<P4_GCA_FILE_COUNT; ++i)
-            s_doom_load_progress.bytes_total += s_arena_content[i].bytes;
+        /* Fix the scan contract before the first callback. Even if admission
+         * later falls back, a selected base-copy experiment fully checks BASE. */
+        const bool snapshot_base = P4_ARENA_BASE_PSRAM_ENABLED &&
+            s_arena_content[P4_GCA_BASE].bytes > 0U &&
+            s_arena_content[P4_GCA_BASE].bytes <= ARENA_BASE_PSRAM_CAP;
+        for (unsigned i=0; i<P4_GCA_FILE_COUNT; ++i) {
+            if (verification==PLATFORM_GAME_STORAGE_VERIFY_FULL_CONTENT ||
+                i>=ARENA_WAD_COUNT || (i==P4_GCA_BASE && snapshot_base))
+                s_doom_load_progress.bytes_total += s_arena_content[i].bytes;
+        }
         if (progress != NULL) progress(context);
         selected = GAME_STORAGE_CONTENT_READY;
-        for (unsigned i=0; i<P4_GCA_FILE_COUNT && selected==GAME_STORAGE_CONTENT_READY; ++i)
-            selected = inspect_arena_stream(i,out_error,progress,context);
+        for (unsigned i=0; i<P4_GCA_FILE_COUNT && selected==GAME_STORAGE_CONTENT_READY; ++i) {
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+            if (verification==PLATFORM_GAME_STORAGE_VERIFY_TRUSTED_ON_READ &&
+                i<ARENA_WAD_COUNT && !(i==P4_GCA_BASE && snapshot_base))
+                selected=inspect_arena_trusted(i,out_error,progress,context);
+            else
+#endif
+                selected=inspect_arena_stream(i,out_error,progress,context);
+        }
+        if (selected == GAME_STORAGE_CONTENT_READY && *out_error == ESP_OK)
+            arena_base_snapshot_recheck(ARENA_ZONE_BYTES, "bundle-validated");
         s_doom_load_progress.active = false;
         s_doom_load_progress.checking_structure = false;
+        s_doom_load_progress.checking_trusted_metadata = false;
         s_doom_load_progress.complete =
             selected == GAME_STORAGE_CONTENT_READY && *out_error == ESP_OK;
         if (progress != NULL) progress(context);
-        s_locked_wad_size_bytes=(size_t)PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES;
+        s_locked_wad_size_bytes = (size_t)s_arena_content[P4_GCA_BASE].bytes;
     } else if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM) {
         selected = inspect_exact_file(
             PLATFORM_GAME_STORAGE_DOOM_WAD_PATH,
@@ -899,13 +1105,16 @@ static game_storage_content_t inspect_doom_title_snapshot(
     s_locked_snapshot_title = title;
     ESP_LOGI(TAG,
              "P4_GAME_STORAGE LOCKED_SNAPSHOT_READY title=%s "
-             "wad_bytes=%u deh_bytes=%u source=single-pass-exact-sha256 "
+             "wad_bytes=%u deh_bytes=%u source=%s "
              "target=%s elapsed_ms=%lld",
              title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM
                  ? "doom" : title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI ? "game-changers-ai" : "chex",
              (unsigned)s_locked_wad_size_bytes,
              (unsigned)s_locked_deh_size_bytes,
-             title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI ? "verified-sd-blocks" : "psram",
+             verification==PLATFORM_GAME_STORAGE_VERIFY_TRUSTED_ON_READ
+                 ? "trusted-metadata-verified-on-read" : "single-pass-exact-sha256",
+             title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI
+                 ? (s_arena_base_resident ? "verified-base-psram-pwads-sd" : "verified-sd-blocks") : "psram",
              (long long)((esp_timer_get_time() - started_us) /
                  INT64_C(1000)));
     return GAME_STORAGE_CONTENT_READY;
@@ -2902,7 +3111,21 @@ esp_err_t platform_game_storage_lock_for_doom_title_with_progress(
     platform_game_storage_doom_title_t title,
     platform_game_storage_progress_fn_t progress, void *context)
 {
-    if (title >= PLATFORM_GAME_STORAGE_DOOM_TITLE_COUNT) {
+    return platform_game_storage_lock_for_doom_title_with_policy(title,
+        PLATFORM_GAME_STORAGE_VERIFY_FULL_CONTENT,progress,context);
+}
+
+esp_err_t platform_game_storage_lock_for_doom_title_with_policy(
+    platform_game_storage_doom_title_t title,
+    platform_game_storage_verification_t verification,
+    platform_game_storage_progress_fn_t progress, void *context)
+{
+    if ((unsigned)title >= PLATFORM_GAME_STORAGE_DOOM_TITLE_COUNT ||
+        (verification!=PLATFORM_GAME_STORAGE_VERIFY_FULL_CONTENT &&
+         verification!=PLATFORM_GAME_STORAGE_VERIFY_TRUSTED_ON_READ) ||
+        (verification==PLATFORM_GAME_STORAGE_VERIFY_TRUSTED_ON_READ &&
+         (!CONFIG_P4_BOARD_M5STACK_TAB5 ||
+          title!=PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI))) {
         return ESP_ERR_INVALID_ARG;
     }
     if (!s_initialized || !lock_storage()) {
@@ -2924,7 +3147,7 @@ esp_err_t platform_game_storage_lock_for_doom_title_with_progress(
 #if !P4_GAME_STORAGE_USB_EXPORT
     esp_err_t result = ESP_OK;
     const game_storage_content_t selected =
-        inspect_doom_title_snapshot(title, &result, progress, context);
+        inspect_doom_title_snapshot(title, verification, &result, progress, context);
     if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM) {
         s_doom_content = selected;
     } else if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST) {
@@ -2958,11 +3181,13 @@ esp_err_t platform_game_storage_lock_for_doom_title_with_progress(
         if (app_owned) {
             ESP_LOGI(TAG,
                      "P4_GAME_STORAGE CONTENT_VALIDATION_ON_DEMAND "
-                     "title=%s full_sha256=required snapshot=single-pass",
+                     "title=%s verification=%s",
                      title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM
-                         ? "doom" : "chex");
+                         ? "doom" : title==PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI ? "arena" : "chex",
+                     verification==PLATFORM_GAME_STORAGE_VERIFY_TRUSTED_ON_READ
+                         ? "trusted-metadata-verified-on-read" : "full-content-sha256");
             const game_storage_content_t selected =
-                inspect_doom_title_snapshot(title, &result, progress, context);
+                inspect_doom_title_snapshot(title, verification, &result, progress, context);
             if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM) {
                 s_doom_content = selected;
             } else if (title == PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST) {
@@ -3088,12 +3313,38 @@ bool platform_game_storage_arena_present(void)
 esp_err_t platform_game_storage_read_arena_wad(unsigned file,size_t offset,void *out,size_t bytes)
 {
     if (!s_initialized || !lock_storage()) return ESP_ERR_INVALID_STATE;
+    arena_memory_span_t resident = {s_arena_base_resident, s_arena_base_resident_bytes};
     const bool valid=s_model.owner==GAME_STORAGE_OWNER_GAME &&
         s_locked_snapshot_title==PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI &&
         file<ARENA_WAD_COUNT && s_arena_file[file] &&
-        p4_verified_read(&s_arena_reader[file],offset,out,bytes);
+        (file == P4_GCA_BASE && s_arena_base_resident
+            ? arena_read_memory(&resident, offset, out, bytes)
+            : p4_verified_read(&s_arena_reader[file],offset,out,bytes));
     unlock_storage();
     return valid?ESP_OK:ESP_FAIL;
+}
+
+esp_err_t platform_game_storage_prepare_doom_zone(
+    size_t zone_bytes, size_t *out_arena_resident_bytes)
+{
+    if (out_arena_resident_bytes) *out_arena_resident_bytes = 0U;
+    /* The engine owner cannot wait behind another storage operation at the
+     * malloc boundary. A missed admission leaves ownership untouched and is
+     * reported by copied diagnostics; the allocator keeps its usual policy. */
+    if (!s_initialized || !s_lock ||
+        xSemaphoreTakeRecursive(s_lock, 0U) != pdTRUE) return ESP_ERR_INVALID_STATE;
+    if (s_model.owner != GAME_STORAGE_OWNER_GAME ||
+        s_locked_snapshot_title >= PLATFORM_GAME_STORAGE_DOOM_TITLE_COUNT) {
+        unlock_storage();
+        return ESP_ERR_INVALID_STATE;
+    }
+    if (s_locked_snapshot_title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI) {
+        arena_base_snapshot_recheck(zone_bytes, NULL);
+        if (out_arena_resident_bytes)
+            *out_arena_resident_bytes = s_arena_base_resident_bytes;
+    }
+    unlock_storage();
+    return ESP_OK;
 }
 
 /* Optional Tab5 sprite-startup window. No normal reader policy is changed. */
@@ -3104,6 +3355,7 @@ bool platform_game_storage_arena_sprite_begin(unsigned file)
     bool started = false;
     if (!s_arena_sprite_buffer && s_model.owner == GAME_STORAGE_OWNER_GAME &&
         s_locked_snapshot_title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI &&
+        !(file == P4_GCA_BASE && s_arena_base_resident) &&
         file < ARENA_WAD_COUNT && s_arena_file[file] && !s_arena_reader[file].failed) {
         uint8_t *buffer = heap_caps_aligned_alloc(64, P4_VERIFIED_WINDOW_BYTES,
                                                  MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);

@@ -85,6 +85,62 @@ static void check_featured_game(void)
     puts("TAB5 FEATURED PASS blast_first=1 wacky_fallback=1 byte_not_promoted=1");
 }
 
+static void check_disabled_reason(void)
+{
+    init();
+    char reason[CONSOLE_SHELL_SUBTITLE_MAX_BYTES];
+    memset(reason, 'R', sizeof(reason));
+    apps[0].disabled_reason=reason;
+    console_shell_t validation;
+    assert(!console_shell_init(&validation,apps,23U));
+    reason[sizeof(reason)-1U]='\0';
+    assert(console_shell_init(&validation,apps,23U));
+    apps[0].disabled_reason=NULL;
+    assert(console_shell_init(&validation,apps,23U));
+    apps[0].enabled=false;shell.home_all_programs=true;render();
+    const size_t words=721U*stride;
+    uint16_t *fallback=malloc(words*sizeof(*fallback));assert(fallback);
+    uint16_t *reference=malloc(1280U*720U*sizeof(*reference));assert(reference);
+    memcpy(fallback,pixels,words*sizeof(*fallback));
+    (void)strcpy(reason,"Update game for Tab5");apps[0].disabled_reason=reason;
+    uint32_t full_frames=shell.native_home_full_frames;
+    shell.ng_library_scroll=1;render();
+    assert(shell.native_home_full_frames==full_frames+1U);
+    console_shell_t fresh=shell;
+    assert(console_shell_render_rgb565(&fresh,reference,1280U));
+    for(size_t y=0;y<720U;++y)
+        assert(memcmp(pixels+y*stride,reference+y*1280U,1280U*sizeof(*reference))==0);
+    assert(tap(400,230).type==CONSOLE_ACTION_NONE);
+    assert(shell.page==CONSOLE_PAGE_HOME&&shell.active_app_id==0U);
+    /* The cache must track contents even when the catalog reuses its buffer. */
+    (void)strcpy(reason,"Install an update");full_frames=shell.native_home_full_frames;
+    shell.ng_library_scroll=2;render();
+    assert(shell.native_home_full_frames==full_frames+1U);
+    fresh=shell;assert(console_shell_render_rgb565(&fresh,reference,1280U));
+    for(size_t y=0;y<720U;++y)
+        assert(memcmp(pixels+y*stride,reference+y*1280U,1280U*sizeof(*reference))==0);
+    apps[0].disabled_reason=NULL;shell.ng_library_scroll=0;render();
+    assert(memcmp(fallback,pixels,words*sizeof(*fallback))==0);
+    /* The disabled featured card also explains itself, and cannot launch. */
+    assert(console_shell_init(&shell,apps,1U));render();
+    memcpy(fallback,pixels,words*sizeof(*fallback));
+    apps[0].disabled_reason=reason;render();
+    assert(memcmp(fallback,pixels,words*sizeof(*fallback))!=0);
+    assert(tap(420,360).type==CONSOLE_ACTION_NONE);
+    assert(shell.page==CONSOLE_PAGE_HOME&&shell.active_app_id==0U);
+    assert(key(CONSOLE_BUTTON_ACCEPT).type!=CONSOLE_ACTION_LAUNCH);
+    assert(shell.page!=CONSOLE_PAGE_EXTERNAL&&shell.active_app_id!=apps[0].id);
+    /* A catalog change between press and release must not launch a stale tile. */
+    apps[0].enabled=true;assert(console_shell_init(&shell,apps,1U));render();
+    const console_shell_contact_t down={.x=420,.y=360};
+    assert(console_shell_handle_touch(&shell,true,&down,1U).type==CONSOLE_ACTION_NONE);
+    apps[0].enabled=false;
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE);
+    assert(shell.page==CONSOLE_PAGE_HOME&&shell.active_app_id==0U);
+    free(fallback);free(reference);init();
+    puts("TAB5 DISABLED REASON PASS bounded=1 cache_contents=1 fallback_unchanged=1 no_launch=1");
+}
+
 static void check_game_covers(void)
 {
     init();
@@ -516,6 +572,7 @@ int main(int argc,char **argv)
     check_loading_progress();
     check_loading_region_cache();
     check_featured_game();
+    check_disabled_reason();
     check_scroll_cache();check_scroll_motion();check_catalog_grouping();
     check_multiplayer_hierarchy();
     init();

@@ -2,6 +2,11 @@
 
 #include "p4_doom_net.h"
 
+__attribute__((weak)) void P4_DoomBeforeZoneAllocation(size_t requested_bytes)
+{ (void)requested_bytes; }
+__attribute__((weak)) void P4_DoomAfterZoneAllocation(size_t requested_bytes, int allocated)
+{ (void)requested_bytes; (void)allocated; }
+
 __attribute__((weak)) boolean P4_DoomNetActive(void)
 {
     return false;

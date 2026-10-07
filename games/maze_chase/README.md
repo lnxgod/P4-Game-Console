@@ -8,9 +8,9 @@
 
 **Local preview:** `make play-game GAME=maze_chase` from the repository root.
 
-Version 1.1.1, device qualification pending. Guide the golden chomping explorer through an original 25×13 labyrinth, collect every pearl, and turn the tables on four pursuing spirits with power crystals. This overhaul keeps the stable game ID, title, launcher ID, and Game API v1 ownership boundaries.
+Version 1.1.2, device qualification pending. Guide the golden chomping explorer through an original 25×13 labyrinth, collect every pearl, and turn the tables on four pursuing spirits with power crystals. This overhaul keeps the stable game ID, title, launcher ID, and Game API v1 ownership boundaries.
 
-The playable maze uses 2.49 times the previous screen area. Connected cyan wall runs, rounded corners, subtle original circuit etching, luminous pickups, distinct spirit silhouettes, directional chomp frames, and a composed title/pause/result presentation draw directly into **768×480 RGB565**. A **320×200 fallback** retains the same complete board and controls. Neither mode stretches a low-resolution framebuffer.
+The playable maze uses 2.49 times the previous screen area. Connected cyan wall runs, rounded corners, subtle original circuit etching, luminous pickups, distinct spirit silhouettes, directional chomp frames, and a composed title/pause/result presentation draw directly into **768×480 RGB565**. Version 1.1.2 requires `video-highres` in the manifest and C descriptor. The **320×200** source path retains the complete board and controls only for explicitly requested legacy maintenance and labeled host diagnostics. Rendering draws directly into the supplied surface; no completed low-resolution framebuffer is enlarged.
 
 ## Arcade loop
 
@@ -25,7 +25,7 @@ Positions, rendered motion, pellet arrival, and contact share one current-to-tar
 
 Keyboard/controller: arrows or WASD move; Space/Z is A; Enter/P is Start; Escape/Backspace/Q is Back. A or a direction starts the run; Start pauses/resumes; A retries after a loss; Back exits.
 
-Touch coordinates remain canonical **320×200** at both resolutions. The compact `< v ^ >` buttons occupy x4–26, 28–50, 52–74, and 76–98 at y173–198. GO/RETRY is x264–316 in the same bottom strip. EXIT and PAUSE/RESUME remain in the top corners. Swipe in the maze to choose a direction. A contact keeps its starting role: a board swipe cannot turn into Exit or Pause when it reaches a screen edge. The game consumes its direct-touch controls before the old platform virtual-pad synthesis; physical controls continue to work when no finger is down.
+Touch coordinates remain canonical **320×200 input units** on the native surface and in explicit legacy diagnostics. The compact `< v ^ >` buttons occupy x4–26, 28–50, 52–74, and 76–98 at y173–198. GO/RETRY is x264–316 in the same bottom strip. EXIT and PAUSE/RESUME remain in the top corners. Swipe in the maze to choose a direction. A contact keeps its starting role: a board swipe cannot turn into Exit or Pause when it reaches a screen edge. The game consumes its direct-touch controls before the old platform virtual-pad synthesis; physical controls continue to work when no finger is down.
 
 ## Original artwork and budget
 
@@ -44,7 +44,10 @@ python3 games/maze_chase/tools/convert_chase.py
 cmake -S games/maze_chase -B build-host/maze_chase -G Ninja
 cmake --build build-host/maze_chase
 ctest --test-dir build-host/maze_chase --output-on-failure
+# Default captures use the maintained 768×480 surface.
 build-host/maze_chase/maze_chase_hires_preview build-host/maze_chase/overhaul
+# Add explicitly labeled legacy diagnostic captures only when needed.
+build-host/maze_chase/maze_chase_hires_preview build-host/maze_chase/diagnostic --legacy
 cmake -S tools/p4-game-host -B build-host/play-maze_chase -G Ninja -DP4_GAME=maze_chase
 cmake --build build-host/play-maze_chase
 ctest --test-dir build-host/play-maze_chase --output-on-failure
@@ -57,7 +60,8 @@ continuous tunnel coordinates and split sprites, per-frame sub-tile actor
 movement, and exact backdrop pixels with padded-stride guards. Five generic
 SDL host checks also pass.
 
-Version 1.1.1 precomputes the unchanged scenery at both native resolutions.
+Version 1.1.1 introduced precomputed scenery for native 768×480 and legacy
+320×200 source paths.
 Deduplicated color-run rows use **83,640 cartridge bytes**, no heap/cache and no
 retained framebuffer. Every supplied frame is completely redrawn. Regenerate
 scenery after changing its procedural authoring code:
@@ -87,10 +91,11 @@ mouse/mapper/service pipeline passed. Live swipe, full-round completion and
 speaker quality remain unqualified. A bounded read-only capture on both
 physical tablets recorded launcher activity only, with no Maze gameplay samples.
 
-The primary Tab5 build packages **370,576 bytes**, including the unchanged
+The recorded 1.1.1 Tab5 build packaged **370,576 bytes**, including the unchanged
 9,744-byte cartridge-owned launcher icon. `LOCAL_TESTING.json` binds the source,
-checks, benchmark, package and per-unit transfer evidence. This is a game-only
-update for the existing OS 0.51; physical fluidity acceptance remains pending.
+checks, benchmark, package and per-unit transfer evidence for that historical
+OS 0.51 game-only update. Version 1.1.2 is a separate required-native cartridge;
+physical fluidity acceptance remains pending.
 
 ## Maintained Tab5 native rendering
 
@@ -113,3 +118,7 @@ explicitly labeled 320×200 diagnostic captures through a temporary legacy
 descriptor copy.
 
 `tools/render_preview.c` also captures native 768×480 by default.
+
+Checkpoint `41dfbe6` records focused ASan/UBSan and native SDL smoke checks
+for its source revision. These historical host results do not qualify the
+merged Console OS or establish physical device acceptance.

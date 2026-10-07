@@ -48,6 +48,9 @@
 #include "i_video.h"
 
 #include "i_system.h"
+#ifdef P4_DOOM_ENGINE_PERF
+#include "p4_doom_net.h"
+#endif
 
 #include "w_wad.h"
 #include "z_zone.h"
@@ -117,7 +120,13 @@ static byte *AutoAllocMemory(int *size, int default_ram, int min_ram)
 
         *size = default_ram * 1024 * 1024;
 
+#ifdef P4_DOOM_ENGINE_PERF
+        P4_DoomBeforeZoneAllocation((size_t)*size);
+#endif
         zonemem = malloc(*size);
+#ifdef P4_DOOM_ENGINE_PERF
+        P4_DoomAfterZoneAllocation((size_t)*size, zonemem != NULL);
+#endif
 
         // Failed to allocate?  Reduce zone size until we reach a size
         // that is acceptable.

@@ -102,7 +102,7 @@
 #define EMBEDDED_WAD_BYTES ((size_t)4196020U)
 #define EMBEDDED_WAD_PATH "/doom/doom1.wad"
 #define OVERLAY_PIXELS \
-    ((size_t)DOOM_TOUCH_FRAME_WIDTH * (size_t)DOOM_TOUCH_FRAME_HEIGHT)
+    ((size_t)DOOM_VIDEO_WIDTH * (size_t)DOOM_VIDEO_HEIGHT)
 
 #ifndef P4_CONSOLE_OS_EMBEDDED
 extern const uint8_t _binary_doom_shareware_wad_start[];
@@ -126,11 +126,12 @@ static uint64_t s_frame_acquire_us;
 #endif
 static uint8_t s_backend_volume_step = DOOM_BACKEND_VOLUME_DEFAULT_STEP;
 
-/* Measurement-only opt-in; retain the zone-backed framebuffer by default. */
+/* Legacy measurement-only opt-in. Native pixels stay in the PSRAM-backed
+ * engine zone; a 768x480 indexed frame cannot consume internal DMA memory. */
 #ifndef P4_DOOM_INDEXED_DRAM_EXPERIMENT
 #define P4_DOOM_INDEXED_DRAM_EXPERIMENT 0
 #endif
-#if P4_DOOM_INDEXED_DRAM_EXPERIMENT && \
+#if P4_DOOM_INDEXED_DRAM_EXPERIMENT && !DOOM_VIDEO_NATIVE_TAB5 && \
     defined(P4_CONSOLE_OS_EMBEDDED) && CONFIG_P4_BOARD_M5STACK_TAB5
 #define P4_DOOM_INDEXED_DRAM_ENABLED 1
 #else
@@ -250,6 +251,12 @@ static bool s_cleanup_complete;
 static bool s_console_os_launch_active;
 #endif
 
+_Static_assert(SCREENWIDTH == DOOM_VIDEO_WIDTH && SCREENHEIGHT == DOOM_VIDEO_HEIGHT,
+               "engine raster and presentation packet dimensions must match");
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+_Static_assert(DOOM_VIDEO_WIDTH == 768U && DOOM_VIDEO_HEIGHT == 480U,
+               "maintained Tab5 renders the native game surface");
+#endif
 _Static_assert(sizeof(pixel_t) == sizeof(uint32_t),
                "E5 requires the engine's default 32-bit pixels");
 _Static_assert(DOOM_AUDIO_OUTPUT_RATE_HZ == PLATFORM_AUDIO_SAMPLE_RATE_HZ,
@@ -294,6 +301,89 @@ static doom_perf_state_t s_perf;
 static uint64_t doom_perf_now(void)
 {
     return (uint64_t)esp_timer_get_time();
+}
+
+/* Sole engine-owner state. No collector is called from map/checkpoint hooks.
+ * Deferred diagnostics receives only value copies of these observations. */
+static doom_memory_diag_t s_memory_diag;
+static uint64_t s_memory_pending_us[DOOM_MEMORY_PHASE_COUNT];
+static uint32_t s_memory_pending_mask;
+
+static void doom_memory_observe(doom_memory_phase_t phase, uint64_t event_us)
+{
+    if (!s_memory_diag.present || (unsigned)phase >= DOOM_MEMORY_PHASE_COUNT) return;
+    multi_heap_info_t info;
+    heap_caps_get_info(&info, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+    const uint64_t observed_us = doom_perf_now();
+    s_memory_diag.phases[phase] = (doom_memory_observation_t){
+        .event_us = event_us, .observed_us = observed_us,
+        .free_bytes = info.total_free_bytes,
+        .largest_bytes = info.largest_free_block,
+        .boot_min_free = info.minimum_free_bytes,
+    };
+    s_memory_diag.valid_mask |= UINT32_C(1) << (unsigned)phase;
+    if (!s_memory_diag.sample_count ||
+        info.total_free_bytes < s_memory_diag.sampled_min_free)
+        s_memory_diag.sampled_min_free = info.total_free_bytes;
+    if (s_memory_diag.sample_count < UINT32_MAX) ++s_memory_diag.sample_count;
+}
+
+static void doom_memory_begin(void)
+{
+    memset(&s_memory_diag, 0, sizeof(s_memory_diag));
+    memset(s_memory_pending_us, 0, sizeof(s_memory_pending_us));
+    s_memory_pending_mask = 0U;
+    s_memory_diag.present = true;
+    s_memory_diag.sampled_since_us = doom_perf_now();
+    doom_memory_observe(DOOM_MEMORY_ENGINE_START, s_memory_diag.sampled_since_us);
+}
+
+static void doom_memory_mark(doom_memory_phase_t phase)
+{
+    if (!s_memory_diag.present || (unsigned)phase >= DOOM_MEMORY_PHASE_COUNT) return;
+    const uint32_t bit = UINT32_C(1) << (unsigned)phase;
+    if ((s_memory_diag.valid_mask | s_memory_pending_mask) & bit) return;
+    s_memory_pending_us[phase] = doom_perf_now();
+    s_memory_pending_mask |= bit;
+}
+
+static void doom_memory_service_events(void)
+{
+    if (!s_memory_pending_mask) return;
+    for (unsigned phase = DOOM_MEMORY_FIRST_MAP;
+         phase <= DOOM_MEMORY_CHECKPOINT_RESTORE; ++phase) {
+        const uint32_t bit = UINT32_C(1) << phase;
+        if (!(s_memory_pending_mask & bit)) continue;
+        doom_memory_observe((doom_memory_phase_t)phase, s_memory_pending_us[phase]);
+        s_memory_pending_mask &= ~bit;
+    }
+}
+
+void P4_DoomBeforeZoneAllocation(size_t requested_bytes)
+{
+    if (!s_memory_diag.present) return;
+    size_t resident_bytes = 0U;
+    s_memory_diag.zone_admission_error = platform_game_storage_prepare_doom_zone(
+        requested_bytes, &resident_bytes);
+    s_memory_diag.zone_requested_bytes = requested_bytes;
+    s_memory_diag.arena_resident_bytes = resident_bytes;
+    doom_memory_observe(DOOM_MEMORY_PRE_ZONE, doom_perf_now());
+}
+
+void P4_DoomAfterZoneAllocation(size_t requested_bytes, int allocated)
+{
+    if (!s_memory_diag.present) return;
+    s_memory_diag.zone_requested_bytes = requested_bytes;
+    if (s_memory_diag.zone_allocation_attempts < UINT32_MAX)
+        ++s_memory_diag.zone_allocation_attempts;
+    s_memory_diag.zone_allocation_succeeded = allocated != 0;
+    doom_memory_observe(DOOM_MEMORY_POST_ZONE, doom_perf_now());
+}
+
+void p4_doom_memory_checkpoint(bool restored)
+{
+    doom_memory_mark(restored ? DOOM_MEMORY_CHECKPOINT_RESTORE
+                              : DOOM_MEMORY_CHECKPOINT_CAPTURE);
 }
 
 /* Called only by this engine owner task. No external work or recursion. */
@@ -360,6 +450,8 @@ static void doom_perf_dg_end(void)
 #define log_performance_stats(display) ((void)(display))
 #define doom_diagnostics_begin() ((void)0)
 #define doom_diagnostics_end() ((void)0)
+#define doom_memory_begin() ((void)0)
+#define doom_memory_service_events() ((void)0)
 #endif
 
 /* The engine owner alone captures counters and serializes sampler lifetime.
@@ -1105,7 +1197,9 @@ static uint32_t s_startup_failure_visible_ms;
 #if P4_DOOM_STARTUP_UI
 static void startup_text_scaled(const char *text, unsigned y, unsigned scale)
 {
-    if (y >= DOOM_TOUCH_FRAME_HEIGHT) return;
+    if (text == NULL || y >= DOOM_TOUCH_FRAME_HEIGHT || scale == 0U) return;
+    /* Layout and touch units remain canonical. Sample the original font at
+     * the actual destination resolution instead of enlarging a painted frame. */
     unsigned width = 0U;
     size_t length = 0U;
     while (length < 48U && text[length] != '\0') {
@@ -1114,14 +1208,18 @@ static void startup_text_scaled(const char *text, unsigned y, unsigned scale)
     }
     unsigned x = width < DOOM_TOUCH_FRAME_WIDTH
         ? (DOOM_TOUCH_FRAME_WIDTH - width) / 2U : 0U;
+    const unsigned top = y * DOOM_VIDEO_HEIGHT / DOOM_TOUCH_FRAME_HEIGHT;
+    const unsigned glyph_h = (28U / scale) * DOOM_VIDEO_HEIGHT / DOOM_TOUCH_FRAME_HEIGHT;
+    const unsigned glyph_w = (24U / scale) * DOOM_VIDEO_WIDTH / DOOM_TOUCH_FRAME_WIDTH;
     for (size_t i = 0U; i < length && x < DOOM_TOUCH_FRAME_WIDTH; ++i) {
         const unsigned char ch = (unsigned char)text[i];
-        for (unsigned gy = 0U; gy < 28U / scale && gy < DOOM_TOUCH_FRAME_HEIGHT - y; ++gy) {
-            for (unsigned gx = 0U; gx < 24U / scale && gx < DOOM_TOUCH_FRAME_WIDTH - x; ++gx) {
-                if (p4_ui_glyph_alpha(ch, gx * scale, gy * scale) >= 8U) {
-                    s_overlay_buffer[(y + gy) * DOOM_TOUCH_FRAME_WIDTH + x + gx] =
-                        UINT32_C(0x00ffffff);
-                }
+        const unsigned left = x * DOOM_VIDEO_WIDTH / DOOM_TOUCH_FRAME_WIDTH;
+        for (unsigned gy = 0U; gy < glyph_h && gy < DOOM_VIDEO_HEIGHT - top; ++gy) {
+            uint32_t *row = s_overlay_buffer + (top + gy) * DOOM_VIDEO_WIDTH + left;
+            for (unsigned gx = 0U; gx < glyph_w && gx < DOOM_VIDEO_WIDTH - left; ++gx) {
+                const unsigned fx = gx * DOOM_TOUCH_FRAME_WIDTH * scale / DOOM_VIDEO_WIDTH;
+                const unsigned fy = gy * DOOM_TOUCH_FRAME_HEIGHT * scale / DOOM_VIDEO_HEIGHT;
+                if (p4_ui_glyph_alpha(ch, fx, fy) >= 8U) row[gx] = UINT32_C(0x00ffffff);
             }
         }
         x += p4_ui_font_advance[ch >= 32U && ch <= 126U ? ch - 32U : 31U] / scale;
@@ -1133,6 +1231,10 @@ static void startup_text_scaled(const char *text, unsigned y, unsigned scale)
 void P4_DoomLoadingProgress(p4_doom_engine_loading_phase_t phase,
                           uint32_t completed, uint32_t total)
 {
+#if P4_DOOM_USB_DEBUG
+    if (phase == P4_DOOM_ENGINE_LOADING_MAP && total && completed >= total)
+        doom_memory_mark(DOOM_MEMORY_FIRST_MAP);
+#endif
     if (!s_startup_ui_active) return;
     /* Checkpoint restore may call G_InitNew after Create returns. Its map
      * callbacks must not hide the authoritative transfer/catch-up stage. */
@@ -1215,14 +1317,16 @@ static esp_err_t submit_startup_frame(void)
 #else
     const size_t bar_top = 94U;
 #endif
-    for (size_t y = 0U; y < DOOM_TOUCH_FRAME_HEIGHT; ++y) {
-        for (size_t x = 0U; x < DOOM_TOUCH_FRAME_WIDTH; ++x) {
-            const bool border = x < 4U || x >= DOOM_TOUCH_FRAME_WIDTH - 4U ||
-                y < 4U || y >= DOOM_TOUCH_FRAME_HEIGHT - 4U;
-            const bool scanline = (y % 16U) == 0U;
-            const bool center_bar = y >= bar_top && y < bar_top + 12U &&
-                x >= 48U && x < DOOM_TOUCH_FRAME_WIDTH - 48U;
-            s_overlay_buffer[y * DOOM_TOUCH_FRAME_WIDTH + x] = border
+    for (size_t y = 0U; y < DOOM_VIDEO_HEIGHT; ++y) {
+        const size_t cy = y * DOOM_TOUCH_FRAME_HEIGHT / DOOM_VIDEO_HEIGHT;
+        for (size_t x = 0U; x < DOOM_VIDEO_WIDTH; ++x) {
+            const size_t cx = x * DOOM_TOUCH_FRAME_WIDTH / DOOM_VIDEO_WIDTH;
+            const bool border = cx < 4U || cx >= DOOM_TOUCH_FRAME_WIDTH - 4U ||
+                cy < 4U || cy >= DOOM_TOUCH_FRAME_HEIGHT - 4U;
+            const bool scanline = (cy % 16U) == 0U;
+            const bool center_bar = cy >= bar_top && cy < bar_top + 12U &&
+                cx >= 48U && cx < DOOM_TOUCH_FRAME_WIDTH - 48U;
+            s_overlay_buffer[y * DOOM_VIDEO_WIDTH + x] = border
                 ? UINT32_C(0x0000ffff)
                 : center_bar
                     ? UINT32_C(0x000080ff)
@@ -1231,8 +1335,8 @@ static esp_err_t submit_startup_frame(void)
                         : UINT32_C(0x00000818);
 #if P4_DOOM_STARTUP_UI
             if (s_startup_ui_active && center_bar) {
-                const size_t offset = x - 48U;
-                s_overlay_buffer[y * DOOM_TOUCH_FRAME_WIDTH + x] =
+                const size_t offset = cx - 48U;
+                s_overlay_buffer[y * DOOM_VIDEO_WIDTH + x] =
                     failed ? UINT32_C(0x00802020) :
                     (total ? offset < (size_t)((uint64_t)completed * 224U / total)
                            : offset / 56U == phase && offset % 56U < 40U)
@@ -1475,7 +1579,9 @@ static void log_runtime_stats(void)
     /* Foreground-owned scratch; the consumer receives only a value copy. */
     static doom_diag_snapshot_t snapshot;
     memset(&snapshot, 0, sizeof(snapshot));
+    doom_memory_observe(DOOM_MEMORY_RUNTIME, doom_perf_now());
     snapshot.captured_us = doom_perf_now();
+    snapshot.memory = s_memory_diag;
     snapshot.perf = s_perf;
     snapshot.frame_count = s_frame_count;
     snapshot.touch_polls = s_touch_polls;
@@ -1753,8 +1859,12 @@ void DG_Init(void)
 #endif
     ESP_LOGI(TAG,
              "P4_DOOM_E6 VIDEO_READY input=0x00RRGGBB overlay=touch "
-             "output=rgb565 source=320x200 logical=%ux%u native=%ux%u "
+             "output=rgb565 source=%ux%u surface=%ux%u logical=%ux%u native=%ux%u "
              "rotation_cw=%u viewport=%ux%u margins=%u/%u/%u/%u",
+             (unsigned)DOOM_VIDEO_WIDTH,
+             (unsigned)DOOM_VIDEO_HEIGHT,
+             (unsigned)DOOM_VIDEO_WIDTH,
+             (unsigned)DOOM_VIDEO_HEIGHT,
              (unsigned)PLATFORM_DISPLAY_WIDTH,
              (unsigned)PLATFORM_DISPLAY_HEIGHT,
              (unsigned)PLATFORM_DISPLAY_NATIVE_WIDTH,
@@ -1902,13 +2012,15 @@ void DG_DrawFrame(void)
     s_frame_acquire_us = 0U;
 #endif
     phase_started = doom_perf_now();
-    if (!doom_touch_audio_compose_frame(
+    if (!doom_touch_audio_compose_frame_sized(
             (const uint32_t *)DG_ScreenBuffer, DOOM_VIDEO_WIDTH,
-            s_overlay_buffer, DOOM_VIDEO_WIDTH, &s_touch_input)) {
+            s_overlay_buffer, DOOM_VIDEO_WIDTH, DOOM_VIDEO_WIDTH, DOOM_VIDEO_HEIGHT,
+            &s_touch_input)) {
         doom_touch_input_init(&s_touch_input);
-        if (!doom_touch_audio_compose_frame(
+        if (!doom_touch_audio_compose_frame_sized(
                 (const uint32_t *)DG_ScreenBuffer, DOOM_VIDEO_WIDTH,
-                s_overlay_buffer, DOOM_VIDEO_WIDTH, &s_touch_input)) {
+                s_overlay_buffer, DOOM_VIDEO_WIDTH, DOOM_VIDEO_WIDTH, DOOM_VIDEO_HEIGHT,
+                &s_touch_input)) {
             s_frame_error = ESP_ERR_INVALID_STATE;
             doom_perf_end(DOOM_PERF_COMPOSE, phase_started);
             goto done;
@@ -2187,14 +2299,14 @@ void app_main(void)
     const bool chex =
         title == PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST;
     const bool arena = title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI;
-    const size_t wad_size = arena ? (size_t)PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES : chex
+    const size_t wad_size = arena ? (size_t)PLATFORM_GAME_STORAGE_ARENA_BASE_WAD_BYTES : chex
         ? (size_t)PLATFORM_GAME_STORAGE_CHEX_WAD_BYTES
         : (size_t)PLATFORM_GAME_STORAGE_DOOM_WAD_BYTES;
     const char *const wad_file_name = arena ? "freedoom2.wad" : chex ? "chex.wad" : "doom1.wad";
     const char *const wad_path = arena ? "/doom/freedoom2.wad" : chex ? "/doom/chex.wad" : EMBEDDED_WAD_PATH;
-    const char *const wad_identity = arena ? "freedoom-phase2-0.13.0" : chex
+    const char *const wad_identity = arena ? P4_GCA_BASE_IDENTITY : chex
         ? "chex-quest-1.0" : "doom-shareware-1.9";
-    const char *const wad_sha256 = arena ? "a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b" : chex
+    const char *const wad_sha256 = arena ? P4_GCA_BASE_SHA256_HEX : chex
         ? "d8eb5277918883f490fb1a4be3c9a8588df2dbaee6dc4beb8df4929148bbffb1"
         : "1d7d43be501e67d927e415e0b8f3e29c3bf33075e859721816f652a526cac771";
 #else
@@ -2307,6 +2419,7 @@ void app_main(void)
         engine_argv[engine_argc++]="-nomusic";
     }
 #if defined(P4_CONSOLE_OS_EMBEDDED) && CONFIG_P4_BOARD_M5STACK_TAB5
+    doom_memory_begin();
     ESP_LOGI(TAG,
              "P4_DOOM MEMORY stage=engine-start internal_free=%u "
              "internal_largest=%u dma_free=%u dma_largest=%u psram_free=%u",
@@ -2347,6 +2460,10 @@ void app_main(void)
     doomgeneric_Create(engine_argc, engine_argv);
     P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_READY, 0U, 0U);
     verify_audio_start_or_safe_degrade(sound_enabled);
+#if P4_DOOM_USB_DEBUG
+    doom_memory_observe(DOOM_MEMORY_ENGINE_READY, doom_perf_now());
+#endif
+    doom_memory_service_events();
 #if P4_DOOM_INDEXED_DRAM_ENABLED
     indexed_framebuffer_heap("engine-ready");
 #endif
@@ -2364,6 +2481,7 @@ void app_main(void)
 #endif
     for (;;) {
         doomgeneric_Tick();
+        doom_memory_service_events();
         if (doomgeneric_QuitRequested()) {
             /* Tick has returned; retire the snapshot generation before resources. */
             doom_diagnostics_end();

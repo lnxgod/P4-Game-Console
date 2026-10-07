@@ -18,6 +18,19 @@ static void begin(p4_game_instance_t *game,tm_state *s,endpoint *e){
  if(e){svc.available_capabilities|=P4_GAME_CAP_MULTIPLAYER_SESSION;svc.multiplayer_context=e;svc.multiplayer_read_status=status;svc.multiplayer_send=send;svc.multiplayer_receive=receive;svc.multiplayer_profile=&profile;}
  assert(p4_game_instance_start(game,&p4_tide_maze_game,&svc,s,sizeof(*s)));
 }
+static void native_mode(void){
+ assert((p4_tide_maze_game.required_capabilities&P4_GAME_CAP_VIDEO_HIGH_RES)!=0U);
+ assert((p4_tide_maze_game.optional_capabilities&P4_GAME_CAP_VIDEO_HIGH_RES)==0U);
+ tm_state s={0};p4_game_instance_t g={0};
+ p4_game_services_t legacy={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS,.game_id=p4_tide_maze_game.id};
+ assert(!p4_game_instance_start(&g,&p4_tide_maze_game,&legacy,&s,sizeof(s)));
+ assert(!g.active);
+ begin(&g,&s,NULL);
+ uint16_t *pixels=calloc(320U*200U,sizeof(*pixels));assert(pixels);
+ p4_game_surface_t f={.pixels=pixels,.stride_pixels=320,.width=320,.height=200};
+ assert(!p4_game_instance_render(&g,&f));
+ p4_game_instance_stop(&g);free(pixels);
+}
 static void tick(p4_game_instance_t *g,uint32_t held,uint32_t pressed){p4_game_input_t in={.held=held,.pressed=pressed};assert(p4_game_instance_update(g,&in,20)==P4_GAME_CONTINUE);}
 static int volume(tm_state *s){int sum=0;for(int i=0;i<TM_CELLS;++i)sum+=s->water[i];return sum;}
 static void maps(void){
@@ -130,13 +143,15 @@ static void network(void){
 static void frames(const char *directory){
  for(unsigned w=320;w<=768;w+=448){unsigned h=w==320?200:480,stride=w+7;size_t words=(size_t)stride*h+32;
   uint16_t *data=malloc(words*sizeof(*data));assert(data);tm_state s={0};p4_game_instance_t g={0};begin(&g,&s,NULL);
-  if(w==320)g.services.available_capabilities&=~(uint32_t)P4_GAME_CAP_VIDEO_HIGH_RES;
   p4_game_surface_t f={.pixels=data+16,.stride_pixels=stride,.width=(uint16_t)w,.height=(uint16_t)h};
   const tm_phase phases[]={TM_TITLE,TM_PLAY,TM_PAUSE,TM_CLEAR,TM_WON,TM_LOST,TM_LINK_LOST,TM_WAIT};
   for(unsigned p=0;p<8;++p){for(size_t i=0;i<words;++i)data[i]=0xa55a;
    tm_reset(&s,p%TM_LEVELS);s.intent[0]=(tm_intent){1000,-850,900,1000,false};
    for(unsigned tick=0;tick<100;++tick)tm_fluid(&s);
-   s.animation_ms=1777U+p*137U;s.phase=phases[p];assert(p4_game_instance_render(&g,&f));
+   s.animation_ms=1777U+p*137U;s.phase=phases[p];
+   /* Direct callback guards preserve the legacy renderer source contract;
+    * maintained runtime launches require the native surface above. */
+   assert(w==320?tm_render(&g.context,&f):p4_game_instance_render(&g,&f));
    for(unsigned i=0;i<16;++i){assert(data[i]==0xa55a);assert(data[words-1-i]==0xa55a);}
    for(unsigned y=0;y<h;++y)for(unsigned x=w;x<stride;++x)assert(f.pixels[(size_t)y*stride+x]==0xa55a);
    if(directory){char path[512];snprintf(path,sizeof(path),"%s/tide-%u-%u.ppm",directory,w,p);FILE *file=fopen(path,"wb");assert(file);fprintf(file,"P6\n%u %u\n255\n",w,h);
@@ -144,4 +159,4 @@ static void frames(const char *directory){
   }free(data);
  }
 }
-int main(int argc,char **argv){maps();rules();complete_voyage();water();sensors();network();frames(argc>1?argv[1]:NULL);printf("Tide Maze: rules, connectivity, conservative water, six-axis input, two-instance protocol and guarded frames PASS; state=%zu\n",sizeof(tm_state));return 0;}
+int main(int argc,char **argv){native_mode();maps();rules();complete_voyage();water();sensors();network();frames(argc>1?argv[1]:NULL);printf("Tide Maze: native launch requirement, rules, connectivity, conservative water, six-axis input, two-instance protocol and guarded frames PASS; state=%zu\n",sizeof(tm_state));return 0;}

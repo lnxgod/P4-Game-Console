@@ -13,12 +13,28 @@ Right cycle color bars, a geometry grid, checkerboard pixels, and a color
 gradient. A plays a four-step tone sequence, B pauses or resumes the 30 Hz
 motion marker, Start resets its counters, and Back returns to Program Manager.
 
-The app uses only the 320x200 RGB565 surface, normalized controls, bounded
-timing, and the optional host-owned tone service. It does not access display,
-codec, I2S, touch, or SD hardware directly.
+Version 1.0.3 requires `video-highres` in both `game.json` and its C descriptor.
+On maintained Tab5, the app draws its patterns, motion marker and text directly
+into the native 768×480 RGB565 surface. Touch coordinates remain canonical
+320×200 input units. The 320×200 rendering branch is retained only for explicitly
+requested legacy diagnostics/source maintenance; the released descriptor
+rejects a low-resolution launch.
 
-All visuals and tones are original and code-generated. No raster or
-third-party assets are used. License: MIT.
+The app uses normalized controls, bounded timing and the optional host-owned
+tone service. It does not access display, codec, I2S, touch or SD hardware
+directly. The 30 Hz motion-marker update is separate from display frame cadence.
+
+The diagnostic patterns, primitives and tones are original and code-generated
+under MIT. Native text uses the shared pinned Arimo font, licensed separately
+under [SIL OFL 1.1](../../third_party/arimo/OFL.txt).
+
+On 2026-10-07, the native 768×480 SDL smoke and shared ASan/UBSan utility tests
+passed, including all four patterns, surface/stride guards and rejection of
+low-resolution services. The native host capture was visually checked for
+readability. Run `make av-test-host` for SDL smoke and `make calculator-host`
+for the shared utility regressions. Host tests and captures do not establish
+Tab5 FPS acceptance: the 60 FPS target and actual-device 30 FPS release floor
+remain pending measurement for this version.
 
 ## Launcher presentation
 

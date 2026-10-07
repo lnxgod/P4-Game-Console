@@ -288,12 +288,15 @@ esp_err_t platform_game_storage_get_doom_load_progress(
     platform_game_storage_doom_load_progress_t *out) {
     *out=fixture_load_progress; return progress_result;
 }
-esp_err_t platform_game_storage_lock_for_doom_title_with_progress(
+esp_err_t platform_game_storage_lock_for_doom_title_with_policy(
     platform_game_storage_doom_title_t title,
+    platform_game_storage_verification_t verification,
     platform_game_storage_progress_fn_t progress,void *context) {
+    REQUIRE(verification == (title==PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI
+        ? PLATFORM_GAME_STORAGE_VERIFY_TRUSTED_ON_READ : PLATFORM_GAME_STORAGE_VERIFY_FULL_CONTENT));
     ++storage_calls; require_loading();
     fixture_load_progress=(platform_game_storage_doom_load_progress_t){
-        .active=true,.bytes_total=1000000,.file_count=16};
+        .verification=verification,.active=true,.bytes_total=1000000,.file_count=16};
     for (unsigned i=0;i<3;++i) { progress(context); require_loading(); }
     fixture_load_progress.active=false;
     fixture_load_progress.complete=storage_result==ESP_OK;
@@ -408,7 +411,7 @@ static void test_loading_progress(void) {
     (void)snprintf(s_shell.loading.detail,sizeof(s_shell.loading.detail),"preserved");
     present_doom_file_loading(&context,NULL);
     REQUIRE(loading_views==1 && !strcmp(last_loading.title,"Doom Arena by Game Changers"));
-    REQUIRE(!strcmp(last_loading.stage,"1/3 Check files") && last_loading.progress_percent==0);
+    REQUIRE(!strcmp(last_loading.stage,"1/3 Prepare files") && !last_loading.progress_visible);
     REQUIRE(!s_shell.loading.active && !strcmp(s_shell.loading.detail,"preserved"));
     fixture_load_progress=(platform_game_storage_doom_load_progress_t){
         .active=true,.bytes_checked=250000,.bytes_total=1000000,.file_count=16};
@@ -442,6 +445,21 @@ static void test_loading_progress(void) {
     REQUIRE(!s_shell.loading.active && !strcmp(s_shell.loading.detail,"preserved"));
     context.arena=false;poll_doom_multiplayer_loading(&context);
     REQUIRE(loading_views==6 && network_polls==9);
+    context.arena=true;progress_result=ESP_OK;
+    fixture_load_progress=(platform_game_storage_doom_load_progress_t){
+        .verification=PLATFORM_GAME_STORAGE_VERIFY_TRUSTED_ON_READ,
+        .active=true,.checking_trusted_metadata=true,.file_count=16};
+    fixture_now_ms+=500;poll_doom_multiplayer_loading(&context);
+    REQUIRE(!last_loading.progress_visible && !strcmp(last_loading.stage,"1/3 Prepare WAD digests"));
+    fixture_load_progress.checking_trusted_metadata=false;
+    fixture_load_progress.bytes_total=97747;fixture_load_progress.bytes_checked=48000;
+    fixture_now_ms+=500;poll_doom_multiplayer_loading(&context);
+    REQUIRE(last_loading.progress_percent==49 && !strcmp(last_loading.stage,"1/3 Check support files"));
+    REQUIRE(strstr(last_loading.detail,"48 / 97 KB")!=NULL);
+    fixture_load_progress.complete=true;fixture_load_progress.active=false;
+    poll_doom_multiplayer_loading(&context);
+    REQUIRE(!strcmp(last_loading.stage,"1/3 Files ready") && last_loading.progress_percent==100);
+
 #ifdef P4_HAS_DOOM_LOADING_REGION_COST
     /* Slow rendering must not consume the 500 ms work interval. Service
      * polls continue on suppressed frames; a failure still paints now. */

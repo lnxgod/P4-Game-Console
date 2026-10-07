@@ -110,7 +110,7 @@ static void begin(pair *p, uint32_t seed, bool chaos) {
         e->wire = &p->wire; e->slot = i;
         p4_game_services_t services = {
             .available_capabilities = P4_GAME_CAP_VIDEO | P4_GAME_CAP_CONTROLS |
-                P4_GAME_CAP_MULTIPLAYER_SESSION,
+                P4_GAME_CAP_VIDEO_HIGH_RES | P4_GAME_CAP_MULTIPLAYER_SESSION,
             .game_id = p4_tide_maze_game.id, .multiplayer_context = e,
             .multiplayer_read_status = read_status, .multiplayer_send = transmit,
             .multiplayer_receive = receive, .multiplayer_profile = &profile
@@ -307,7 +307,7 @@ static void cooperative_voyage(uint32_t seed) {
         seed,p.wire.transmitted,p.wire.dropped,p.wire.duplicated,p.wire.reordered);
 }
 static void start_solo(p4_game_instance_t *g, tm_state *s) {
-    p4_game_services_t services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS,
+    p4_game_services_t services={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_VIDEO_HIGH_RES,
         .game_id=p4_tide_maze_game.id};
     assert(p4_game_instance_start(g,&p4_tide_maze_game,&services,s,sizeof(*s)));
     p4_game_input_t in={.pressed=P4_BUTTON_A};

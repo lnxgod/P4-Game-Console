@@ -82,7 +82,8 @@ target_include_directories(test_content_transfer_batch PRIVATE
     stubs ../include ../../platform_game_storage/include)
 target_compile_features(test_content_transfer_batch PRIVATE c_std_11)
 target_compile_definitions(test_content_transfer_batch PRIVATE
-    PACK_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/../../../game-data/pure-hades/v0.6")
+    PACK_ROOT="${CMAKE_CURRENT_SOURCE_DIR}/../../../game-data/pure-hades/v0.6"
+    ARENA_NOTICE_PATH="${CMAKE_CURRENT_SOURCE_DIR}/../../../game-data/arena-compact-v1/NOTICE.txt")
 target_compile_options(test_content_transfer_batch PRIVATE
     -Wall -Wextra -Wconversion -Wshadow -Werror
     -fsanitize=address,undefined -fno-omit-frame-pointer)

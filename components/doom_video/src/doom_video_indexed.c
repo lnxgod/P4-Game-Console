@@ -137,3 +137,40 @@ bool doom_video_convert_indexed_touch_to_rgb565(
     }
     return true;
 }
+
+bool doom_video_convert_indexed_touch_to_rgb565_768x480(
+    const uint8_t *source, size_t stride, const uint32_t palette[256],
+    uint32_t active_actions, uint16_t *dest, size_t pitch,
+    uint32_t *row_scratch)
+{
+    const uint32_t valid_actions = (UINT32_C(1) << DOOM_TOUCH_ACTION_COUNT) - UINT32_C(1);
+    indexed_buffer_range_t ranges[4];
+    if (stride < 768U || pitch < 768U || (active_actions & ~valid_actions) != 0U ||
+        !indexed_buffer_range(source, stride, 480U, sizeof(*source), _Alignof(uint8_t), &ranges[0]) ||
+        !indexed_buffer_range(palette, 256U, 1U, sizeof(*palette), _Alignof(uint32_t), &ranges[1]) ||
+        !indexed_buffer_range(dest, pitch, 480U, sizeof(*dest), _Alignof(uint16_t), &ranges[2]) ||
+        !indexed_buffer_range(row_scratch, 768U, 1U, sizeof(*row_scratch), _Alignof(uint32_t), &ranges[3])) return false;
+    for (size_t a = 0U; a < 4U; ++a)
+        for (size_t b = a + 1U; b < 4U; ++b)
+            if (ranges[a].begin < ranges[b].end && ranges[b].begin < ranges[a].end) return false;
+    uint16_t palette565[256];
+    for (size_t i = 0U; i < 256U; ++i) palette565[i] = indexed_pack_rgb565(palette[i]);
+    for (size_t y = 0U; y < 480U; ++y) {
+        const uint8_t *const input = source + y * stride;
+        uint16_t *const output = dest + y * pitch;
+        if (!doom_touch_overlay_row_may_draw_sized(y, 768U, 480U)) {
+            for (size_t x = 0U; x < 768U; x += 4U) {
+                output[x] = palette565[input[x]];
+                output[x + 1U] = palette565[input[x + 1U]];
+                output[x + 2U] = palette565[input[x + 2U]];
+                output[x + 3U] = palette565[input[x + 3U]];
+            }
+        } else {
+            for (size_t x = 0U; x < 768U; ++x) row_scratch[x] = palette[input[x]];
+            (void)doom_touch_overlay_render_row_xrgb8888_sized(
+                row_scratch, 768U, y, 768U, 480U, active_actions);
+            for (size_t x = 0U; x < 768U; ++x) output[x] = indexed_pack_rgb565(row_scratch[x]);
+        }
+    }
+    return true;
+}

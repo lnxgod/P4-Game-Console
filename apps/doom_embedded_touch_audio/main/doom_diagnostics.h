@@ -49,6 +49,33 @@ typedef struct {
     bool present, active, stats_valid, age_valid;
 } doom_touch_sampler_diag_t;
 
+typedef enum {
+    DOOM_MEMORY_ENGINE_START,
+    DOOM_MEMORY_PRE_ZONE,
+    DOOM_MEMORY_POST_ZONE,
+    DOOM_MEMORY_ENGINE_READY,
+    DOOM_MEMORY_FIRST_MAP,
+    DOOM_MEMORY_CHECKPOINT_CAPTURE,
+    DOOM_MEMORY_CHECKPOINT_RESTORE,
+    DOOM_MEMORY_RUNTIME,
+    DOOM_MEMORY_PHASE_COUNT
+} doom_memory_phase_t;
+
+/* Scalar owner observations. Event hooks mark time only; observed_us may be
+ * later, after the engine call returns. boot_min_free is the SDK's sum of
+ * per-region lifetime minima, not a simultaneous or game-local minimum. */
+typedef struct {
+    uint64_t event_us, observed_us, free_bytes, largest_bytes, boot_min_free;
+} doom_memory_observation_t;
+typedef struct {
+    doom_memory_observation_t phases[DOOM_MEMORY_PHASE_COUNT];
+    uint64_t sampled_since_us, sampled_min_free;
+    uint64_t zone_requested_bytes, arena_resident_bytes;
+    uint32_t sample_count, valid_mask, zone_allocation_attempts;
+    int32_t zone_admission_error;
+    bool present, zone_allocation_succeeded;
+} doom_memory_diag_t;
+
 typedef struct {
     uint64_t captured_us;
     doom_perf_state_t perf;
@@ -58,6 +85,7 @@ typedef struct {
     platform_audio_telemetry_t backend;
     p4_doom_net_stats_t net;
     doom_touch_sampler_diag_t touch_sampler;
+    doom_memory_diag_t memory;
     uint32_t frame_count, touch_polls, touch_failures, touch_retries;
     bool composite_gate, touch_gate, audio_gate;
     bool display_valid, audio_valid, backend_valid;

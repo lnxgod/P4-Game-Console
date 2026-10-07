@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "recorded_at": "2026-10-07T20:51:50.893173+00:00",
+  "source": "Direct user feedback in active Codex conversation",
+  "user_statements": [
+    "ok looks good",
+    "the gam run well"
+  ],
+  "result": "operator-reports-game-running-well",
+  "observed_scope": "Positive visual and gameplay feedback; exact game, unit, session and audio/rejoin scenarios were not specified.",
+  "last_recorded_install": {
+    "file": "hardware/test-runs/2026-10-07-tab5-077-multiplayer-debug-install.json",
+    "sha256": "971447d28c22c536f3ef884fb628643f014bd1ac525e4fb007e18e43b4c94fd8",
+    "version": "0.77",
+    "application": {
+      "file": "apps/console_os/build-tab5/p4_console_os.bin",
+      "bytes": 4481408,
+      "sha256": "59de8d8306f07624f579afe11aea82e171925e9ab7eebf649535b6a66e96e9b4",
+      "version": "0.77",
+      "write_offset": "0x20000"
+    }
+  },
+  "live_firmware_verified_this_observation": false,
+  "device_interaction": "No serial connection, reset, flash, input injection or content change made while user is playing.",
+  "pending": [
+    "Identify current game/unit/session before binding the feedback to an artifact",
+    "User confirmation of music and sound effects",
+    "Guest leaves and rejoins ongoing host game",
+    "Native 768x480 surface and sustained device frame cadence"
+  ],
+  "prior_failures": "Existing watchdog and gameplay failure records remain intact; this report does not erase them."
+}

@@ -150,6 +150,7 @@ For firmware development or a revision without a CI package, build from source:
 make setup                  # Install the pinned tools if they are absent
 make verify
 make prepare-game-data      # Fetch and verify missing Doom shareware locally
+python3 scripts/doom/arena-content.py --fetch  # Prepare pinned compact Arena inputs
 make console-os-tab5-idf
 ```
 

@@ -51,12 +51,12 @@ void platform_game_storage_arena_sprite_end(void) { ++sprite_ends; }
 int main(void)
 {
     assert(!platform_readonly_blob_loading_progress());
-    platform_readonly_blob_config_t config={"/doom","freedoom2.wad",doom,(size_t)PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES};
+    platform_readonly_blob_config_t config={"/doom","freedoom2.wad",doom,(size_t)PLATFORM_GAME_STORAGE_ARENA_BASE_WAD_BYTES};
     locked=false; assert(platform_readonly_blob_register(&config)==ESP_ERR_INVALID_STATE); locked=true;
     fail_read=true; assert(platform_readonly_blob_register(&config)==ESP_FAIL); fail_read=false;
     assert(platform_readonly_blob_register(&config)==ESP_OK && last_file==2);
     const char *names[]={"/freedoom2.wad","/purehades.wad","/dwango5.wad"};
-    const off_t sizes[]={PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES,PLATFORM_GAME_STORAGE_PUREHADES_WAD_BYTES,PLATFORM_GAME_STORAGE_DWANGO5_WAD_BYTES};
+    const off_t sizes[]={PLATFORM_GAME_STORAGE_ARENA_BASE_WAD_BYTES,PLATFORM_GAME_STORAGE_PUREHADES_WAD_BYTES,PLATFORM_GAME_STORAGE_DWANGO5_WAD_BYTES};
     int fd[3]; uint8_t data[8];
     for(unsigned i=0;i<3;++i) {
         assert(ops->open_p(ctx,names[i],O_WRONLY,0)==-1 && errno==EROFS);

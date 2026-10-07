@@ -18,8 +18,26 @@ equals, Back returns to Program Manager, and the keypad can be tapped directly.
 Results are bounded to -999,999,999 through 999,999,999; overflow and division
 by zero fail closed with `ERROR`.
 
-All visuals are original code-rendered RGB565 primitives. No raster or
-third-party assets are used. License: MIT.
+Version 1.0.3 requires `video-highres` in both `game.json` and its C descriptor.
+On maintained Tab5, keys, the result display and text are rasterized directly into
+the native 768×480 RGB565 surface. Touch coordinates remain canonical 320×200
+input units. The native keypad and its hit-testing fit above the D-pad touch
+region, so the C key can be tapped without also pressing Up. The original
+320×200 layout/rendering branch remains available for explicitly requested legacy
+diagnostics/source maintenance; the released descriptor rejects a low-resolution
+launch.
+
+The calculator visuals are original code-rendered RGB565 primitives under MIT.
+Native text uses the shared pinned Arimo font, licensed separately under
+[SIL OFL 1.1](../../third_party/arimo/OFL.txt).
+
+On 2026-10-07, the ASan/UBSan arithmetic/lifecycle and shared utility tests passed,
+as did the native 768×480 SDL smoke. The utility tests cover surface/stride guards,
+low-resolution service rejection and all 16 mapped keypad taps against rendered
+key borders. The native host capture was visually checked for readability.
+Reproduce the host checks with `make calculator-host`. Host tests and captures
+do not establish Tab5 FPS acceptance: the 60 FPS target and actual-device 30 FPS
+release floor remain pending measurement for this version.
 
 ## Launcher presentation
 

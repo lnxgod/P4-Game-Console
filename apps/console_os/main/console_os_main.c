@@ -1428,28 +1428,6 @@ _Static_assert((int)CONSOLE_SHELL_MAX_CONTACTS ==
                "console contact bound must match the touch service");
 #endif
 
-static bool native_game_surface(
-    const platform_game_catalog_entry_t *game,
-    uint16_t *width, uint16_t *height)
-{
-#if CONFIG_P4_BOARD_M5STACK_TAB5
-    const cartridge_video_policy_t policy = CARTRIDGE_VIDEO_TAB5;
-#elif CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
-    const cartridge_video_policy_t policy = CARTRIDGE_VIDEO_LEGACY_HIGH_RES;
-#else
-    const cartridge_video_policy_t policy = CARTRIDGE_VIDEO_LEGACY;
-#endif
-    return game != NULL && game->valid && cartridge_video_select(policy,
-        game->package.required_capabilities, game->package.optional_capabilities,
-        width, height);
-}
-
-static bool native_game_video_supported(const platform_game_catalog_entry_t *game)
-{
-    uint16_t width = 0U, height = 0U;
-    return native_game_surface(game, &width, &height);
-}
-
 static bool append_app(const console_app_descriptor_t *app)
 {
     if (app == NULL || s_app_count >= CONSOLE_SHELL_MAX_APPS) {
@@ -1480,6 +1458,28 @@ static uint32_t shell_capabilities(uint32_t game_capabilities)
     return capabilities;
 }
 
+static bool native_game_surface(
+    const platform_game_catalog_entry_t *game,
+    uint16_t *width, uint16_t *height)
+{
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    const cartridge_video_policy_t policy = CARTRIDGE_VIDEO_TAB5;
+#elif CONFIG_P4_BOARD_WAVESHARE_ESP32_P4_WIFI6_TOUCH_LCD_4_3
+    const cartridge_video_policy_t policy = CARTRIDGE_VIDEO_LEGACY_HIGH_RES;
+#else
+    const cartridge_video_policy_t policy = CARTRIDGE_VIDEO_LEGACY;
+#endif
+    return game != NULL && game->valid && cartridge_video_select(policy,
+        game->package.required_capabilities, game->package.optional_capabilities,
+        width, height);
+}
+
+static bool native_game_video_supported(const platform_game_catalog_entry_t *game)
+{
+    uint16_t width = 0U, height = 0U;
+    return native_game_surface(game, &width, &height);
+}
+
 static bool build_app_registry(void)
 {
     s_app_count = 0U;
@@ -1497,6 +1497,7 @@ static bool build_app_registry(void)
             game->package.folder[0] == '\0') {
             return false;
         }
+        const bool video_supported = native_game_video_supported(game);
         const console_app_descriptor_t launcher = {
             .id = game->package.launcher_id,
             .title = game->package.title,
@@ -1509,7 +1510,12 @@ static bool build_app_registry(void)
                 game->package.required_capabilities |
                 game->package.optional_capabilities),
             .page = CONSOLE_PAGE_EXTERNAL,
-            .enabled = native_game_video_supported(game),
+            .enabled = video_supported,
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+            .disabled_reason = video_supported ? NULL : "Update game for Tab5",
+#else
+            .disabled_reason = video_supported ? NULL : "Unsupported game video",
+#endif
         };
         if (!append_app(&launcher)) {
             return false;
@@ -2937,7 +2943,7 @@ static bool multiplayer_settings_editable(void)
 static bool native_game_supports_multiplayer(
     const platform_game_catalog_entry_t *game)
 {
-    return game != NULL && game->valid &&
+    return native_game_video_supported(game) &&
         p4_mp_game_package_is_registerable(
             &game->package,
             CONSOLE_NATIVE_MULTIPLAYER_RUNTIME_PLAYERS);
@@ -2949,7 +2955,7 @@ static void rebuild_multiplayer_game_registry(void)
     for (size_t index = 0U; index < s_game_catalog.entry_count; ++index) {
         const platform_game_catalog_entry_t *const game =
             &s_game_catalog.entries[index];
-        if (!game->valid) {
+        if (!native_game_video_supported(game)) {
             continue;
         }
         if (protected_game_lineage_check(&game->package) ==
@@ -10102,6 +10108,8 @@ static void present_doom_file_loading(
 {
 #if CONFIG_P4_BOARD_M5STACK_TAB5
     if (loading == NULL || !loading->arena || loading->shell == NULL) return;
+    const bool lazy = progress == NULL ||
+        progress->verification == PLATFORM_GAME_STORAGE_VERIFY_TRUSTED_ON_READ;
     const uint64_t now_ms = (uint64_t)esp_timer_get_time() / UINT64_C(1000);
     console_shell_t *shell = loading->shell;
     const console_shell_loading_info_t previous = shell->loading;
@@ -10113,14 +10121,15 @@ static void present_doom_file_loading(
     (void)snprintf(shell->loading.title, sizeof(shell->loading.title),
         "Doom Arena by Game Changers");
     (void)snprintf(shell->loading.stage, sizeof(shell->loading.stage),
-        "1/3 Check files");
+        "%s", lazy ? "1/3 Prepare files" : "1/3 Check files");
     if (progress == NULL) {
+        shell->loading.progress_visible = false;
         (void)snprintf(shell->loading.detail, sizeof(shell->loading.detail),
-            "Starting file checks");
+            "Preparing game files");
     } else if (progress->complete) {
         shell->loading.progress_percent = 100U;
         (void)snprintf(shell->loading.stage, sizeof(shell->loading.stage),
-            "1/3 Files verified");
+            "%s", lazy ? "1/3 Files ready" : "1/3 Files verified");
         (void)snprintf(shell->loading.detail, sizeof(shell->loading.detail),
             "Starting engine...");
     } else if (!progress->active) {
@@ -10129,6 +10138,12 @@ static void present_doom_file_loading(
             "1/3 File check failed");
         (void)snprintf(shell->loading.detail, sizeof(shell->loading.detail),
             "Returning to menu");
+    } else if (progress->checking_trusted_metadata) {
+        shell->loading.progress_visible = false;
+        (void)snprintf(shell->loading.stage, sizeof(shell->loading.stage),
+            "1/3 Prepare WAD digests");
+        (void)snprintf(shell->loading.detail, sizeof(shell->loading.detail),
+            "WAD %u of 3", (unsigned)progress->file_index + 1U);
     } else if (progress->checking_structure) {
         shell->loading.progress_visible = false;
         (void)snprintf(shell->loading.stage, sizeof(shell->loading.stage),
@@ -10142,6 +10157,15 @@ static void present_doom_file_loading(
         /* This percentage measures finite hashing bytes only. Completion
          * still requires each exact digest and WAD structure above. */
         shell->loading.progress_percent = (uint8_t)(percent < 100U ? percent : 100U);
+        if (lazy) {
+            (void)snprintf(shell->loading.stage, sizeof(shell->loading.stage),
+                "1/3 Check support files");
+            (void)snprintf(shell->loading.detail, sizeof(shell->loading.detail),
+                "%lu / %lu KB  %u%%",
+                (unsigned long)(progress->bytes_checked / 1000U),
+                (unsigned long)(progress->bytes_total / 1000U),
+                (unsigned)shell->loading.progress_percent);
+        } else {
         const uint64_t checked_tenths = progress->bytes_checked / 100000U;
         const uint64_t total_tenths = progress->bytes_total / 100000U;
         (void)snprintf(shell->loading.detail, sizeof(shell->loading.detail),
@@ -10151,6 +10175,7 @@ static void present_doom_file_loading(
             (unsigned long)(total_tenths / 10U),
             (unsigned long)(total_tenths % 10U),
             (unsigned)shell->loading.progress_percent);
+        }
     }
     const int64_t paint_started_us = esp_timer_get_time();
     s_ui_timing_last_render_us = 0;
@@ -10267,6 +10292,10 @@ static void launch_doom_exclusive(
         .started_ms = (uint64_t)esp_timer_get_time() / UINT64_C(1000),
         .arena = title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI,
     };
+    const platform_game_storage_verification_t verification =
+        loading.arena && CONFIG_P4_BOARD_M5STACK_TAB5
+            ? PLATFORM_GAME_STORAGE_VERIFY_TRUSTED_ON_READ
+            : PLATFORM_GAME_STORAGE_VERIFY_FULL_CONTENT;
     if (loading.arena && CONFIG_P4_BOARD_M5STACK_TAB5)
         present_doom_file_loading(&loading, NULL);
     else present_game_loading(shell, loading.app_id);
@@ -10274,7 +10303,7 @@ static void launch_doom_exclusive(
         title == PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST
             ? s_game_storage_status.chex_quest_ready
             : s_game_storage_status.doom_wad_ready;
-    if (!title_already_verified) {
+    if (loading.arena || !title_already_verified) {
 #if !CONFIG_P4_BOARD_M5STACK_TAB5
         const char *const label =
             title == PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST
@@ -10289,9 +10318,11 @@ static void launch_doom_exclusive(
 #endif
         ESP_LOGI(TAG,
                  "P4_CONSOLE_OS WAD_VALIDATION_ON_DEMAND title=%s "
-                 "trigger=launch full_sha256=1 boot_scan=0",
+                 "trigger=launch verification=%s boot_scan=0",
                  title == PLATFORM_GAME_STORAGE_DOOM_TITLE_CHEX_QUEST
-                    ? "chex" : "doom");
+                    ? "chex" : loading.arena ? "arena" : "doom",
+                 verification == PLATFORM_GAME_STORAGE_VERIFY_TRUSTED_ON_READ
+                    ? "trusted-metadata-verified-on-read" : "full-content-sha256");
     }
     esp_err_t result = p4_doom_p4mp_prepare(
         multiplayer != NULL ? &s_multiplayer_session : NULL,
@@ -10315,8 +10346,8 @@ static void launch_doom_exclusive(
          * prepared adapter alive on this task without signaling engine READY
          * until the exact title snapshot has passed validation. */
         poll_doom_multiplayer_loading(NULL);
-        result = platform_game_storage_lock_for_doom_title_with_progress(
-            title, poll_doom_multiplayer_loading, &loading);
+        result = platform_game_storage_lock_for_doom_title_with_policy(
+            title, verification, poll_doom_multiplayer_loading, &loading);
         poll_doom_multiplayer_loading(result == ESP_OK ? &loading : NULL);
     } else {
         result = platform_game_storage_lock_for_doom_title(title);

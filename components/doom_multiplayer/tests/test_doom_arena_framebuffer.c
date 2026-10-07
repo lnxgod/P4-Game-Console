@@ -34,6 +34,8 @@ static byte frame[SCREENWIDTH*SCREENHEIGHT], background[SCREENWIDTH*SCREENHEIGHT
 byte *I_VideoBuffer=frame;
 static byte *dest_screen=frame, *background_buffer=background;
 static vpatchclipfunc_t patchclip_callback;
+static int dest_origin_y, dest_height=SCREENHEIGHT;
+byte *tinttable, *xlatab;
 static hu_stext_t w_message;
 static hu_itext_t w_chat;
 static hu_textline_t w_title;
@@ -47,7 +49,7 @@ void P_MobjThinker(mobj_t *origin) { (void)origin; abort(); }
 void G_DeathMatchSpawnPlayer(int slot) { (void)slot; }
 void AM_Stop(void) { automapactive=false; }
 void M_StartControlPanel(void) { menuactive=true; }
-void V_MarkRect(int x,int y,int w,int h) { (void)x;(void)y; if(w==320 && h==168) ++border_marks; }
+void V_MarkRect(int x,int y,int w,int h) { (void)x;(void)y; if(w==SCREENWIDTH && h==P4_DOOM_SCALE_Y(168)) ++border_marks; }
 void V_DrawPatchDirect(int x,int y,patch_t *p) { V_DrawPatch(x,y,p); }
 void HUlib_drawSText(hu_stext_t *text) { (void)text; }
 void HUlib_drawIText(hu_itext_t *text) { (void)text; }
@@ -66,10 +68,10 @@ void R_RenderPlayerView(player_t *player)
 void ST_Drawer(boolean fullscreen, boolean refresh)
 {
     if(!fullscreen && refresh)
-        for(int y=168;y<200;++y) for(int x=0;x<320;++x)
-            frame[y*320+x]=(byte)(170+(x+y)%40);
+        for(int y=P4_DOOM_SCALE_Y(168);y<SCREENHEIGHT;++y) for(int x=0;x<SCREENWIDTH;++x)
+            frame[y*SCREENWIDTH+x]=(byte)(170+(x+y)%40);
 }
-void AM_Drawer(void) { memset(frame,42,320*168); }
+void AM_Drawer(void) { memset(frame,42,SCREENWIDTH*P4_DOOM_SCALE_Y(168)); }
 void WI_Drawer(void) { memset(frame,43,sizeof(frame)); }
 void F_Drawer(void) { memset(frame,44,sizeof(frame)); }
 void D_PageDrawer(void) { memset(frame,45,sizeof(frame)); }
@@ -91,7 +93,7 @@ int wipe_StartScreen(int x,int y,int width,int height) { (void)x;(void)y;(void)w
 int wipe_EndScreen(int x,int y,int width,int height) { (void)x;(void)y;(void)width;(void)height; abort(); }
 int wipe_ScreenWipe(int type,int x,int y,int width,int height,int tics) { (void)type;(void)x;(void)y;(void)width;(void)height;(void)tics; abort(); }
 #define DEH_String(value) (value)
-#define SBARHEIGHT 32
+#define SBARHEIGHT (SCREENHEIGHT-P4_DOOM_SCALE_Y(168))
 #include "render_functions.h"
 
 static void assert_frame(const byte *expected,const char *transition)
@@ -106,7 +108,7 @@ static void assert_frame(const byte *expected,const char *transition)
 static void set_view(int width,int height)
 {
     scaledviewwidth=width; viewheight=height;
-    viewwindowx=(320-width)/2; viewwindowy=width==320 ? 0 : (168-height)/2;
+    viewwindowx=(SCREENWIDTH-width)/2; viewwindowy=width==SCREENWIDTH ? 0 : (P4_DOOM_SCALE_Y(168)-height)/2;
     setsizeneeded=true;
     for(unsigned i=0;i<sizeof(frame);++i) background[i]=(byte)(5+i%37);
     memcpy(frame,background,sizeof(frame));
@@ -116,27 +118,28 @@ int main(void)
 {
     /* Both compact labels are transparent pixel art: white foreground, black
      * shadow, and untouched gameplay in the spaces between the letters. */
-    byte controls[2][120];
+    static byte controls[2][SCREENWIDTH*SCREENHEIGHT];
     for(unsigned label=0;label<2;++label) {
         memset(frame,77,sizeof(frame)); scores_open=label!=0;
         draw_score_control();
         unsigned white=0,shadow=0,untouched=0;
-        for(unsigned py=0;py<200;++py) for(unsigned px=0;px<320;++px) {
-            const byte pixel=frame[py*320+px];
-            if(px<101 || px>=121 || py<20 || py>=26) {
+        for(unsigned py=0;py<SCREENHEIGHT;++py) for(unsigned px=0;px<SCREENWIDTH;++px) {
+            const byte pixel=frame[py*SCREENWIDTH+px];
+            if(px<P4_DOOM_SCALE_X(101) || px>=P4_DOOM_SCALE_X(121) ||
+               py<P4_DOOM_SCALE_Y(20) || py>=P4_DOOM_SCALE_Y(26)) {
                 assert(pixel==77);
                 continue;
             }
-            controls[label][(py-20)*20+px-101]=pixel;
+            controls[label][py*SCREENWIDTH+px]=pixel;
             if(pixel==4) ++white;
             else if(pixel==0) ++shadow;
             else { assert(pixel==77); ++untouched; }
         }
         assert(white>=40 && shadow>0 && untouched>0);
-        assert(frame[20*320+104]==77); /* First inter-letter gap. */
+        assert(frame[P4_DOOM_SCALE_Y(20)*SCREENWIDTH+P4_DOOM_SCALE_X(104)]==77); /* First inter-letter gap. */
         /* The leading S has a middle bar and open lower-left; C does not. */
-        assert(frame[22*320+102]==(label ? 0 : 4));
-        assert(frame[23*320+101]==(label ? 4 : 77));
+        assert(frame[P4_DOOM_SCALE_Y(22)*SCREENWIDTH+P4_DOOM_SCALE_X(102)]==(label ? 0 : 4));
+        assert(frame[P4_DOOM_SCALE_Y(23)*SCREENWIDTH+P4_DOOM_SCALE_X(101)]==(label ? 4 : 77));
     }
     assert(memcmp(controls[0],controls[1],sizeof(controls[0]))!=0);
     /* A valid 3x5 Doom column patch: real text layout and patch drawing. */
@@ -154,7 +157,7 @@ int main(void)
     const int widths[]={320,320,288,192,96};
     const int heights[]={200,168,144,96,48};
     for(unsigned size=0;size<sizeof(widths)/sizeof(widths[0]);++size) {
-        p4_doom_gc_engine_begin(4,1); set_view(widths[size],heights[size]);
+        p4_doom_gc_engine_begin(4,1); set_view(P4_DOOM_SCALE_X(widths[size]),P4_DOOM_SCALE_Y(heights[size]));
         /* Establish the no-overlay scene and let vanilla's three border
          * refresh frames expire, as on a device left running for a while. */
         active=false; for(unsigned i=0;i<5;++i) D_Display();
@@ -164,12 +167,14 @@ int main(void)
         /* Only the 20x6 label and its shadow may cover gameplay. The old
          * 62x28 opaque button must not return; untouched pixels are exact. */
         unsigned control_changed=0;
-        for(unsigned py=0;py<200;++py) for(unsigned px=0;px<320;++px) {
-            if(frame[py*320+px]==plain[py*320+px]) continue;
-            assert(px>=101 && px<121 && py>=20 && py<26);
+        for(unsigned py=0;py<SCREENHEIGHT;++py) for(unsigned px=0;px<SCREENWIDTH;++px) {
+            if(frame[py*SCREENWIDTH+px]==plain[py*SCREENWIDTH+px]) continue;
+            assert(px>=P4_DOOM_SCALE_X(101) && px<P4_DOOM_SCALE_X(121) &&
+                   py>=P4_DOOM_SCALE_Y(20) && py<P4_DOOM_SCALE_Y(26));
             ++control_changed;
         }
-        assert(control_changed>0 && control_changed<=120);
+        assert(control_changed>0 && control_changed<=(P4_DOOM_SCALE_X(121)-P4_DOOM_SCALE_X(101))*
+               (P4_DOOM_SCALE_Y(26)-P4_DOOM_SCALE_Y(20)));
         for(unsigned i=0;i<5;++i) D_Display();
         assert_frame(expected,"score target remains whole");
         setsizeneeded=true; D_Display();
@@ -204,6 +209,7 @@ int main(void)
         assert(border_marks==before); /* Ordinary Doom keeps its redraw policy. */
     }
     assert(!frame_tail && frame_finishes>0);
-    puts("Arena framebuffer: score touch/Start, break, vote, Back menu and automap transitions passed across 5 view sizes");
+    printf("Arena framebuffer %dx%d: ",SCREENWIDTH,SCREENHEIGHT);
+    puts(" score touch/Start, break, vote, Back menu and automap transitions passed across 5 view sizes");
     return 0;
 }

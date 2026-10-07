@@ -5,7 +5,7 @@
 This guide describes one Doom-based game mode in the monorepo. Console OS
 is the shared platform that hosts it; Pure Hades is one of its content packs.
 
-M5Stack Tab5 candidate, Console OS **0.63**. This is a special selection inside
+M5Stack Tab5 compact-content integration candidate for Console OS **0.81**. This is a special selection inside
 **Multiplayer**, with no separate launcher tile. Ordinary Doom shareware and
 Chex Quest retain their separate content and two-player adapters. Installation and physical acceptance are recorded separately below.
 
@@ -68,20 +68,39 @@ kills; holding Use across the timeout cannot immediately undo the break.
 
 A departed or timed-out guest is removed at a host-authored tic. The remaining
 players continue. Host shutdown ends the session; there is no host migration.
-This is the accepted **connected break/return fallback**: new or physically
-disconnected consoles must join in the initial lobby. True live admission into
-an already-running world is not implemented. Bluetooth and the serial relay
-retain their existing two-console scope; this four-slot mode uses local Wi-Fi.
+The current candidate also implements bounded late admission and guest return
+using host checkpoints and replay. Matching content and an available eligible
+seat are required. Repeated join, leave and rejoin during a running match still
+need final two-device acceptance on the merged firmware. The connected
+break/return path remains separate from a disconnected guest's rejoin.
+Bluetooth and the serial relay retain their existing two-console scope; this
+four-slot mode uses local Wi-Fi.
 
 ## Exact content and storage
 
-The three unchanged input WADs are:
+The selected Arena-only bundle uses these three exact WADs:
 
 | File | Bytes | SHA-256 |
 | --- | ---: | --- |
-| FREEDOOM2.WAD | 28,787,748 | `a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b` |
+| GCADOOM/ARENA2.WAD | 12,253,462 | `18dd25d6ed8b719c9d1417324d7ceaaa943af907ae1005e9a36101c0bbe5c1c4` |
 | PUREHADES.WAD | 2,313,392 | `ab027fbeebe20787214a3bc1239bba73271030dc284cd108c20ae8bc73752fc8` |
 | DWANGO5.WAD | 2,109,396 | `2b7658f126321fc2ccf953dbbe8d585b4162350080b9715b46fc617d32cdb13a` |
+
+`ARENA2.WAD` is a deterministic derivative of the unmodified Freedoom 0.13.0
+Phase 2 input (28,787,748 bytes, SHA-256
+`a8772e088847032510d97ba2312406a6998f21cbab44d4ff10696faa9c0ecd4b`).
+The recipe removes unused campaign geometry and unused wall patches, retaining
+all 29 selectable Arena maps in their unchanged PWADs. Retained texture records
+and artwork bytes, all sprites/flats, UI, sound and music are preserved. All 32
+base map markers remain for the engine's lookup contract. This file is **not a
+campaign IWAD**. The original local `freedoom2.wad` and SD `/FREEDOOM2.WAD`
+remain separate; the `freedoom2` USB command still installs the original.
+
+The generator is [`arena-compact.py`](../scripts/doom/arena-compact.py); its
+versioned [recipe](../third_party/arena-compact-v1.json) and
+[derivative notice](../game-data/arena-compact-v1/NOTICE.txt) pin the transformation.
+Generation preserves original inputs and refuses conflicting outputs. Both
+original and generated WADs remain ignored local files, outside Git.
 
 Pure Hades v0.6 replaces Pure Hell. Its authoritative source is
 [lnxgod/pure-hades](https://github.com/lnxgod/pure-hades/tree/142c6ff56ff8fb9eee40e6b2ea7875a0424337e8).
@@ -91,8 +110,8 @@ use CC BY-SA 4.0, original Python source uses MIT, and Freedoom-derived artwork
 retains its BSD notices. All 44 upstream files are hash-pinned in
 `third_party/pure-hades.json`; the WAD is reproducible from those sources.
 
-The USB bundle contains **16 required files**: three WADs plus the pack README,
-manifest, credits, tracklist and licenses, and both DWANGO notices. Notices
+The USB bundle contains **17 required files**: three WADs plus the pack README,
+manifest, credits, tracklist and licenses, both DWANGO notices and `ARENA-BASE.txt`. Notices
 retain their `licenses/` and `music/` paths under `/GCADOOM`. The five map MIDI
 tracks are embedded in the WAD; the full source pack also carries their original
 standalone files. Startup exact-hashes every required file, including notices.
@@ -105,28 +124,35 @@ on an existing SD card is not loaded by this firmware.
 No WAD is embedded in firmware. This integration does not grant redistribution
 rights to DWANGO or its music.
 
-The engine loads Freedoom Phase 2 plus both PWADs. It records each admitted
+The engine loads the compact Freedoom-derived Arena base plus both PWADs. It records each admitted
 pack's map/music indices and isolates DWANGO's global lump names in memory.
 Selecting a DWANGO arena selects its geometry and map music explicitly, while
 Freedoom supplies textures, sounds, skies and interface graphics. DWANGO's old
-global sound/graphic replacements do not overwrite Pure Hades. The input files
-remain byte-for-byte unchanged. General DeHackEd/Boom/MBF/UDMF/ACS compatibility
+global sound/graphic replacements do not overwrite Pure Hades. Both PWAD input files
+remain byte-for-byte unchanged; the compact base is a separately identified derivative. General DeHackEd/Boom/MBF/UDMF/ACS compatibility
 and arbitrary user WAD selection are not implied.
 
 The room identity hashes the three ordered WAD digests, with a versioned
-prefix: `363c69fd5b0ae3faa5360d96624414e6dabd2d4c9c86d1eab518899d8095358b`.
+prefix: `89ae377759fd397d811812304e42de8591aa1fcff54a6c4bf137dd57b8f76793`.
 The special mode advertises protocol 5; ordinary Doom keeps protocol 3.
 The generated content header and USB admission table share the pinned metadata.
 
-The base WAD cannot fit beside the engine's 6 MiB zone in Tab5's 32 MiB PSRAM.
-The OS therefore retains read-only streams under its storage lease, hashes each
-whole WAD and records SHA-256 per 4096-byte block during the same pass. Runtime
-cache misses verify those digests. Corruption/short reads permanently fail the
-reader. Three digest tables and block caches total about **266 KiB**, rather
-than retaining 32 MiB of WAD snapshots. Ordinary Doom/Chex keep their existing
-immutable PSRAM snapshots. USB/content writes remain excluded during play.
+The compact base is 57.4% smaller than the original, and the three WADs total
+16,676,250 bytes. It changes numeric texture indices, so every peer must use
+this exact new content identity; checkpoints from the original bundle are not
+compatible. Startup still validates required content and excludes USB/content
+writes while the game holds its storage lease. Verified SD readers fail closed
+on corruption or short reads. A smaller package alone does not enable a PSRAM
+resident path or establish runtime memory margin, loading speed or device FPS.
+Those require separate implementation and hardware qualification.
 
-From a fresh clone, fetch the pinned external files and stage the complete
+Byte-preservation/dependency tests and four sanitizer-enabled actual-engine
+host runs covered all 29 maps, including DWANGO entry/rotation and Arena UI.
+They do not establish device artwork/audio acceptance, checkpoint rejoin,
+PSRAM high-water marks, or faster joins on hardware. Earlier hardware results
+below concern their recorded older content and firmware identities.
+
+From a fresh clone, fetch the pinned original inputs, generate the compact base, and stage the complete
 bundle without touching a device. Downloads and extracted files must pass
 size and SHA-256 checks; conflicting existing files are never overwritten.
 
@@ -144,18 +170,20 @@ python3 scripts/doom/arena-content.py --stage build-host/game-changers-ai/sd-car
 
 When separately installing approved content, the aggregate USB command checks
 all local files before opening serial, installs each exact-hash file, and
-keeps one USB connection open for the entire bundle. Firmware 0.58 returns
-the transfer service to idle after each file without rebooting:
+keeps one USB connection open for the entire bundle. The matching compact-content
+firmware returns the transfer service to idle after each file without rebooting:
 
 ```sh
 python3 scripts/p4-usb-content.py game-changers-ai \
-  local-data/doom/freedoom2.wad \
+  local-data/doom/arena-compact-v1/ARENA2.WAD \
   --pack game-data/pure-hades/v0.6 \
   --dwango local-data/doom/arena-inbox/dwango5 --port /dev/cu.<tab5>
 ```
 
 Use the guarded Tab5 installation workflow for firmware; this command installs
-content only and requires the matching 0.58 firmware.
+content only and requires matching compact-content firmware on every peer.
+Use 0.80 or a successor: 0.79 admitted the content IDs but retained the wrong
+startup VFS size, which prevented gameplay startup with the compact base.
 
 ## Synchronization and validation
 
@@ -165,7 +193,9 @@ commands; the fixed host publishes ordered four-slot batches and membership.
 The 40-byte payload fits the existing 64-byte GAME_MESSAGE boundary. Source
 routes, sequence windows, acknowledgments and bounded retries handle loss and
 duplicates. Heartbeats continue while a missing guest stalls input. Runtime
-JOIN cannot allocate a new member.
+JOIN uses a separate bounded admission path to allocate an eligible unused
+seat; returning guests use their existing seat and resume ticket. Checkpoint
+restore and authoritative replay catch a guest up before activation.
 
 Votes use two reserved chat bytes in that same ordered tic stream, with bounded
 opcodes, a generation token in a disjoint byte range and a three-tic partial-command lifetime. No second
@@ -218,6 +248,20 @@ All consoles need the 0.58 firmware and replacement content bundle together.
 The old Pure Hell bundle is incompatible with protocol 5. The earlier 0.53 receipts remain historical host/build evidence. The prior
 [implementation receipt](../test-runs/2026-10-05-game-changers-ai-doom-implementation.json)
 is historical and predates the supplied PWAD/voting work.
+
+## Tab5 0.80 startup checkpoint and 0.81 integration candidate
+
+The [0.80 checkpoint](ARENA_HANDOFF_080.md) records verified compact content
+on both Tab5 cards and a guarded 0.80 flash on A. A reached Arena gameplay at
+an observed native 768×480 surface. Its brief stationary capture measured
+approximately **13.4 FPS**, below the 30 FPS release floor. Codec and music
+telemetry were active; audible music and effects were not confirmed. B remained
+on 0.79 at that checkpoint.
+
+Version 0.81 integrates that checkpoint with the core repository. Its device
+installation, repeated live join/leave/rejoin, input responsiveness, overlay
+dismissal, sustained cadence and audible sound need their own exact-artifact
+evidence. The earlier startup pass does not close those acceptance gates.
 
 ## Tab5 0.65 two-unit runtime result
 

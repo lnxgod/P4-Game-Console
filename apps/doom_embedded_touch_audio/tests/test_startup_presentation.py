@@ -42,7 +42,10 @@ void P4_DoomNetGetLoadingProgress(p4_doom_loading_progress_t *out)
 { *out = network_progress; }
 #define DOOM_TOUCH_FRAME_WIDTH 320U
 #define DOOM_TOUCH_FRAME_HEIGHT 200U
+#ifndef DOOM_VIDEO_WIDTH
 #define DOOM_VIDEO_WIDTH 320U
+#define DOOM_VIDEO_HEIGHT 200U
+#endif
 #define DOOM_FIRST_FRAME_TIMEOUT_MS 250U
 #define DOOM_SUBMIT_TIMEOUT_MS 100U
 #define DOOM_STATS_INTERVAL_FRAMES 150U
@@ -64,9 +67,9 @@ static void doom_perf_dg_begin(void) {}
 static void doom_perf_dg_end(void) {}
 static void doom_perf_end(unsigned phase, uint64_t started)
 { (void)phase; (void)started; }
-static uint32_t frame[320U * 200U];
-static uint32_t captured[320U * 200U];
-static uint32_t game[320U * 200U];
+static uint32_t frame[DOOM_VIDEO_WIDTH * DOOM_VIDEO_HEIGHT];
+static uint32_t captured[DOOM_VIDEO_WIDTH * DOOM_VIDEO_HEIGHT];
+static uint32_t game[DOOM_VIDEO_WIDTH * DOOM_VIDEO_HEIGHT];
 #if CONFIG_P4_BOARD_M5STACK_TAB5
 static uint32_t *s_overlay_buffer, *DG_ScreenBuffer;
 static uint64_t s_frame_acquire_us;
@@ -143,6 +146,8 @@ static void vTaskDelay(TickType_t ticks)
 #if P4_DOOM_USB_DEBUG
 #define P4_BUTTON_BACK 128U
 #define P4_BUTTON_B 32U
+enum { DOOM_MEMORY_FIRST_MAP };
+static void doom_memory_mark(unsigned phase) { assert(phase == DOOM_MEMORY_FIRST_MAP); }
 static uint32_t debug_buttons;
 static unsigned debug_polls;
 static void console_os_debug_poll(void) { ++debug_polls; }
@@ -163,7 +168,7 @@ void p4_doom_startup_status(bool waiting);
 static int doom_video_submit_xrgb8888(const uint32_t *pixels, unsigned stride,
                                      uint32_t timeout)
 {
-    assert(stride == 320U && timeout <= 250U);
+    assert(stride == DOOM_VIDEO_WIDTH && timeout <= 250U);
     ++submits;
     memcpy(captured, pixels, sizeof(captured));
     if (reenter) p4_doom_startup_status(false);
@@ -182,7 +187,7 @@ static int doom_video_publish_xrgb8888(bool initial, uint32_t timeout)
 {
     (void)initial;
     assert(frame_leased);
-    const int result = doom_video_submit_xrgb8888(frame,320U,timeout);
+    const int result = doom_video_submit_xrgb8888(frame,DOOM_VIDEO_WIDTH,timeout);
     frame_leased = false;
     return result;
 }
@@ -194,10 +199,11 @@ static void P4_DoomNetPoll(void)
 }
 static void P4_DoomNetPollFrameTail(bool allow)
 { (void)allow; P4_DoomNetPoll(); }
-static bool doom_touch_audio_compose_frame(const uint32_t *pixels, unsigned in,
-    uint32_t *overlay, unsigned out, const int *input)
+static bool doom_touch_audio_compose_frame_sized(const uint32_t *pixels, unsigned in,
+    uint32_t *overlay, unsigned out, unsigned width, unsigned height, const int *input)
 {
-    assert(in == 320U && out == 320U && input == &s_touch_input);
+    assert(in == DOOM_VIDEO_WIDTH && out == DOOM_VIDEO_WIDTH &&
+           width == DOOM_VIDEO_WIDTH && height == DOOM_VIDEO_HEIGHT && input == &s_touch_input);
     if (overlay != pixels) memcpy(overlay, pixels, sizeof(frame));
     return true;
 }
@@ -207,12 +213,13 @@ static void log_runtime_stats(void) { ++logs; }
 /* PRODUCTION_STATE */
 /* PRODUCTION_FUNCTIONS */
 
+#define SAMPLE(y,x) ((((y)*DOOM_VIDEO_HEIGHT+199U)/200U)*DOOM_VIDEO_WIDTH+((x)*DOOM_VIDEO_WIDTH+319U)/320U)
 static unsigned ink(unsigned top, unsigned bottom)
 {
     unsigned count = 0;
     for (unsigned y = top; y < bottom; ++y)
         for (unsigned x = 4U; x < 316U; ++x)
-            if (captured[y * 320U + x] == 0x00ffffffU) ++count;
+            if (captured[SAMPLE(y,x)] == 0x00ffffffU) ++count;
     return count;
 }
 
@@ -245,23 +252,25 @@ static void expect_text(const char *text, unsigned y, unsigned scale)
     /* Match actual submitted pixels against the compiled-in real glyphs. */
     uint32_t *const saved_overlay = s_overlay_buffer;
     s_overlay_buffer = frame;
-    uint32_t saved[28U * 320U];
-    const size_t bytes = 28U / scale * 320U * sizeof(uint32_t);
-    memcpy(saved, frame + y * 320U, bytes);
-    memset(frame + y * 320U, 0, bytes);
+    const unsigned top = y * DOOM_VIDEO_HEIGHT / 200U;
+    const unsigned count = (28U / scale) * DOOM_VIDEO_HEIGHT / 200U;
+    uint32_t saved[68U * DOOM_VIDEO_WIDTH];
+    const size_t bytes = count * DOOM_VIDEO_WIDTH * sizeof(uint32_t);
+    memcpy(saved, frame + top * DOOM_VIDEO_WIDTH, bytes);
+    memset(frame + top * DOOM_VIDEO_WIDTH, 0, bytes);
     startup_text_scaled(text, y, scale);
-    for (unsigned i = 0; i < 28U / scale * 320U; ++i)
-        assert((captured[y * 320U + i] == 0x00ffffffU) ==
-               (frame[y * 320U + i] == 0x00ffffffU));
-    memcpy(frame + y * 320U, saved, bytes);
+    for (unsigned i = 0; i < count * DOOM_VIDEO_WIDTH; ++i)
+        assert((captured[top * DOOM_VIDEO_WIDTH + i] == 0x00ffffffU) ==
+               (frame[top * DOOM_VIDEO_WIDTH + i] == 0x00ffffffU));
+    memcpy(frame + top * DOOM_VIDEO_WIDTH, saved, bytes);
     s_overlay_buffer = saved_overlay;
 }
 
 int main(void)
 {
-    /* Legacy startup retains its existing frame. */
+    /* Startup without the Arena status panel fills its complete surface. */
     assert(submit_startup_frame() == ESP_OK);
-    assert(captured[100U * 320U + 160U] == 0x000080ffU);
+    assert(captured[SAMPLE(100U,160U)] == 0x000080ffU);
     assert(ink(44U, 72U) == 0U);
 
     start(1000U);
@@ -278,8 +287,8 @@ int main(void)
     clock_ms = 1500U;
     p4_doom_startup_status(false);
     assert(submits == ++before);
-    assert(captured[110U * 320U + 64U] == 0x00001838U);
-    assert(captured[110U * 320U + 112U] == 0x000080ffU);
+    assert(captured[SAMPLE(110U,64U)] == 0x00001838U);
+    assert(captured[SAMPLE(110U,112U)] == 0x000080ffU);
 
     /* Engine loops only report work; the service paints a phase immediately,
        then rate-limits actual completed-item changes to two frames/second. */
@@ -292,7 +301,7 @@ int main(void)
     expect_text("50%  675 / 1350 items", 130U, 2U);
     assert(s_startup_ui_started_ms == 1000U);
     for (unsigned x = 48U; x < 272U; ++x)
-        assert(captured[110U * 320U + x] ==
+        assert(captured[SAMPLE(110U,x)] ==
                (x < 160U ? 0x000080ffU : 0x00001838U));
     P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_SPRITES, 1000U, 1350U);
     p4_doom_startup_status(false);
@@ -323,8 +332,8 @@ int main(void)
     assert(submits == ++before);
     expect_text("Catching up to host", 78U, 2U);
     expect_text("25%  30 / 120 tics", 130U, 2U);
-    assert(captured[110U * 320U + 103U] == 0x000080ffU);
-    assert(captured[110U * 320U + 104U] == 0x00001838U);
+    assert(captured[SAMPLE(110U,103U)] == 0x000080ffU);
+    assert(captured[SAMPLE(110U,104U)] == 0x00001838U);
 
     /* Unknown totals remain explicit waiting; no invented percentage. */
     network_progress = (p4_doom_loading_progress_t){P4_DOOM_LOADING_WAITING_HOST,0U,0U};
@@ -362,7 +371,7 @@ int main(void)
     expect_text("Join failed", 44U, 1U);
     expect_text("Returning Home...", 78U, 2U);
     expect_text("Connection did not complete", 130U, 2U);
-    assert(captured[110U * 320U + 160U] == 0x00802020U);
+    assert(captured[SAMPLE(110U,160U)] == 0x00802020U);
     clock_ms += 1000U;
     p4_doom_startup_status(false);
     assert(submits == before);
@@ -375,7 +384,7 @@ int main(void)
     assert(clock_ms == 64001U && delays == 100U); /* No repeated cleanup delay. */
 
     /* First engine frame retires loading before either network poll. */
-    for (unsigned i = 0; i < 320U * 200U; ++i) game[i] = 0x00123456U;
+    for (unsigned i = 0; i < DOOM_VIDEO_WIDTH * DOOM_VIDEO_HEIGHT; ++i) game[i] = 0x00123456U;
     inject_poll = true;
 #if CONFIG_P4_BOARD_M5STACK_TAB5
     assert(DG_PrepareFrame());
@@ -387,7 +396,9 @@ int main(void)
     assert(!frame_leased && s_overlay_buffer == NULL && DG_ScreenBuffer == NULL);
 #endif
     assert(submits == ++before && polls == 2U && s_frame_count == 1U);
-    assert(!s_startup_ui_active && captured[110U * 320U + 160U] == 0x00123456U);
+    assert(!s_startup_ui_active && captured[SAMPLE(110U,160U)] == 0x00123456U);
+    for (unsigned i=0; i<DOOM_VIDEO_WIDTH*DOOM_VIDEO_HEIGHT; ++i)
+        assert(captured[i] == game[i]); /* No retained loading bars or text. */
     clock_ms += 1000U;
     p4_doom_startup_status(true);
     P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_SPRITES, 0U, 2U);
@@ -406,7 +417,7 @@ int main(void)
     p4_doom_startup_status(false);
     assert(submits == ++before);
     expect_text("100%  4294967295 / 4294967295 items", 130U, 2U);
-    assert(captured[110U * 320U + 271U] == 0x000080ffU);
+    assert(captured[SAMPLE(110U,271U)] == 0x000080ffU);
     P4_DoomLoadingProgress(P4_DOOM_ENGINE_LOADING_MAP,UINT32_MAX,13U);
     p4_doom_startup_status(false);
     assert(submits == ++before && s_startup_engine_completed == 13U);
@@ -502,6 +513,15 @@ int main(void)
     startup_text_scaled("A long label that exceeds the screen width considerably", 195U, 1U);
     startup_text_scaled("Outside", UINT32_MAX, 2U);
     assert(logs == 0U);
+    /* Startup fills every actual pixel, not just a 320x200 prefix. */
+    s_startup_ui_active = false;
+    memset(frame, 0xad, sizeof(frame));
+#if CONFIG_P4_BOARD_M5STACK_TAB5
+    s_overlay_buffer = NULL;
+#endif
+    assert(submit_startup_frame() == ESP_OK);
+    for (unsigned i=0; i<DOOM_VIDEO_WIDTH*DOOM_VIDEO_HEIGHT; ++i)
+        assert(frame[i] != UINT32_C(0xadadadad));
     puts("Doom startup presentation: measured engine/transfer/replay progress, failure, throttle, lifecycle and bounds passed");
     return 0;
 }
@@ -523,17 +543,19 @@ def main() -> None:
     with tempfile.TemporaryDirectory(prefix="p4-doom-startup-") as directory:
         folder = Path(directory)
         test = folder / "test.c"
-        test.write_text(HARNESS.replace("/* LOADING_API */", api)
+        harness = (HARNESS.replace("/* LOADING_API */", api)
                         .replace("/* PRODUCTION_STATE */", state.group(1))
                         .replace("/* PRODUCTION_FUNCTIONS */",
                                  "#if CONFIG_P4_BOARD_M5STACK_TAB5\n" + tab5_prepare + "\n#endif\n" + production))
         binary = folder / "test"
-        for tab5, debug in ((0,0),(1,0),(1,1)):
+        for tab5, debug, actual_native in ((0,0,False),(1,0,False),(1,1,False),(1,1,True)):
+            test.write_text(harness)
             subprocess.run([
                 os.environ.get("CC", "cc"), "-std=c11", "-Wall", "-Wextra",
                 "-Wconversion", "-Wshadow", "-Werror", "-fsanitize=address,undefined",
                 "-fno-omit-frame-pointer", "-DCONFIG_P4_BOARD_M5STACK_TAB5="+str(tab5), str(test),
                 "-DP4_DOOM_USB_DEBUG="+str(debug),
+                *(["-DDOOM_VIDEO_WIDTH=768U","-DDOOM_VIDEO_HEIGHT=480U"] if actual_native else []),
                 str(ROOT / "components/p4_game_api/src/presentation_font.c"),
                 "-I", str(ROOT / "components/p4_game_api/include"),
                 "-o", str(binary),

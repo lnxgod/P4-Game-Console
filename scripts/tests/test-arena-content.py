@@ -50,6 +50,50 @@ class FetchTests(unittest.TestCase):
         self.network = patch.object(arena.urllib.request, 'urlopen',
             side_effect=lambda request, timeout:io.BytesIO(self.archives[request.full_url])).start()
 
+    def compact_bundle(self):
+        metadata_path = self.root/'third_party/game-data.json'
+        metadata = json.loads(metadata_path.read_text())
+        metadata['game_data'][0].update(self.files[0])
+        metadata_path.write_text(json.dumps(metadata))
+        payload = b'compact derivative'
+        entry = dict(self.files[0], filename='ARENA2.WAD', local_path='inputs/ARENA2.WAD',
+                     size_bytes=len(payload), sha256=hashlib.sha256(payload).hexdigest())
+        self.data = dict(self.data, base_game_data_id='p4-arena-compact-v1',
+                         files=[entry, *self.files[1:]])
+        return entry, payload
+
+    def test_derivative_fetch_preserves_original_and_derives_after_verified_inputs(self):
+        entry, payload = self.compact_bundle()
+        def derive(data):
+            self.assertEqual((self.root/self.files[0]['local_path']).read_bytes(), b'BASE')
+            self.assertTrue(all((self.root/f['local_path']).is_file() for f in self.files))
+            (self.root/entry['local_path']).write_bytes(payload)
+        with patch.object(arena, 'derive_compact_base', side_effect=derive) as generated:
+            arena.fetch(self.data)
+            generated.assert_called_once_with(self.data)
+        self.assertEqual((self.root/entry['local_path']).read_bytes(), payload)
+        self.assertEqual((self.root/self.files[0]['local_path']).read_bytes(), b'BASE')
+        self.assertEqual(self.network.call_count, 2)
+
+    def test_conflicting_original_stops_derivative_before_download_or_generation(self):
+        self.compact_bundle()
+        path = self.root/self.files[0]['local_path'];path.parent.mkdir();path.write_bytes(b'wrong')
+        with patch.object(arena, 'derive_compact_base') as generated:
+            with self.assertRaisesRegex(ValueError, 'Conflicting existing content'):
+                arena.fetch(self.data)
+            generated.assert_not_called()
+        self.network.assert_not_called()
+        self.assertEqual(path.read_bytes(), b'wrong')
+
+    def test_conflicting_derivative_stops_before_original_download(self):
+        entry, _ = self.compact_bundle()
+        path = self.root/entry['local_path'];path.parent.mkdir();path.write_bytes(b'wrong')
+        with patch.object(arena, 'derive_compact_base') as generated:
+            with self.assertRaisesRegex(ValueError, 'Conflicting existing content'):
+                arena.fetch(self.data)
+            generated.assert_not_called()
+        self.network.assert_not_called()
+
     def test_only_verified_named_members_and_idempotent_fetch(self):
         arena.fetch(self.data)
         self.assertEqual(self.network.call_count, 2)

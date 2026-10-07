@@ -28,4 +28,9 @@ bool doom_touch_audio_compose_frame(
     const doom_touch_input_t *input
 );
 
+bool doom_touch_audio_compose_frame_sized(
+    const uint32_t *source, size_t source_stride_pixels,
+    uint32_t *destination, size_t destination_stride_pixels,
+    size_t width, size_t height, const doom_touch_input_t *input);
+
 #endif

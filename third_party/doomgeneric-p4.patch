@@ -1,4 +1,30 @@
-diff --git a/doomgeneric/d_loop.c b/doomgeneric/d_loop.c
+--- a/doomgeneric/am_map.c
++++ b/doomgeneric/am_map.c
+@@ -199,7 +199,7 @@
+ 
+ boolean    	automapactive = false;
+ static int 	finit_width = SCREENWIDTH;
+-static int 	finit_height = SCREENHEIGHT - 32;
++static int 	finit_height = P4_DOOM_SCALE_Y(168);
+ 
+ // location of window on screen
+ static int 	f_x;
+@@ -1318,12 +1318,12 @@
+ 	{
+ 	    //      w = SHORT(marknums[i]->width);
+ 	    //      h = SHORT(marknums[i]->height);
+-	    w = 5; // because something's wrong with the wad, i guess
+-	    h = 6; // because something's wrong with the wad, i guess
++	    w = P4_DOOM_SCALE_X(5); // because something's wrong with the wad, i guess
++	    h = P4_DOOM_SCALE_Y(6); // because something's wrong with the wad, i guess
+ 	    fx = CXMTOF(markpoints[i].x);
+ 	    fy = CYMTOF(markpoints[i].y);
+ 	    if (fx >= f_x && fx <= f_w - w && fy >= f_y && fy <= f_h - h)
+-		V_DrawPatch(fx, fy, marknums[i]);
++		V_DrawPatchNative(fx, fy, marknums[i]);
+ 	}
+     }
+ 
 --- a/doomgeneric/d_loop.c
 +++ b/doomgeneric/d_loop.c
 @@ -23,6 +23,7 @@
@@ -339,7 +365,6 @@ diff --git a/doomgeneric/d_loop.c b/doomgeneric/d_loop.c
 +    p4_checkpoint_oldentertics = I_GetTime();
 +    return true;
 +}
-diff --git a/doomgeneric/d_loop.h b/doomgeneric/d_loop.h
 --- a/doomgeneric/d_loop.h
 +++ b/doomgeneric/d_loop.h
 @@ -53,6 +53,8 @@
@@ -375,7 +400,6 @@ diff --git a/doomgeneric/d_loop.h b/doomgeneric/d_loop.h
  
  #endif
 -
-diff --git a/doomgeneric/d_main.c b/doomgeneric/d_main.c
 --- a/doomgeneric/d_main.c
 +++ b/doomgeneric/d_main.c
 @@ -73,6 +73,8 @@
@@ -387,11 +411,31 @@ diff --git a/doomgeneric/d_main.c b/doomgeneric/d_main.c
  
  //
  // D-DoomLoop()
-@@ -260,7 +262,10 @@
+@@ -215,12 +217,12 @@
+ 			break;
+ 		if (automapactive)
+ 			AM_Drawer ();
+-		if (wipe || (viewheight != 200 && fullscreen) )
++		if (wipe || (viewheight != SCREENHEIGHT && fullscreen) )
+ 			redrawsbar = true;
+ 		if (inhelpscreensstate && !inhelpscreens)
+ 			redrawsbar = true;              // just put away the help screen
+-		ST_Drawer (viewheight == 200, redrawsbar );
+-		fullscreen = viewheight == 200;
++		ST_Drawer (viewheight == SCREENHEIGHT, redrawsbar );
++		fullscreen = viewheight == SCREENHEIGHT;
+ 		break;
+ 
+       case GS_INTERMISSION:
+@@ -258,9 +260,12 @@
+     }
+ 
      // see if the border needs to be updated to the screen
-     if (gamestate == GS_LEVEL && !automapactive && scaledviewwidth != 320)
-     {
+-    if (gamestate == GS_LEVEL && !automapactive && scaledviewwidth != 320)
+-    {
 -		if (menuactive || menuactivestate || !viewactivestate)
++    if (gamestate == GS_LEVEL && !automapactive && scaledviewwidth != SCREENWIDTH)
++    {
 +		// Arena widgets can cover retained pixels outside the 3D view.
 +		// Restore those pixels every frame before drawing the current HUD.
 +		if (menuactive || menuactivestate || !viewactivestate
@@ -410,6 +454,20 @@ diff --git a/doomgeneric/d_main.c b/doomgeneric/d_main.c
  
      if (testcontrols)
      {
+@@ -285,10 +294,10 @@
+     if (paused)
+     {
+ 		if (automapactive)
+-			y = 4;
++			y = P4_DOOM_SCALE_Y(4);
+ 		else
+-			y = viewwindowy+4;
+-		V_DrawPatchDirect(viewwindowx + (scaledviewwidth - 68) / 2, y,
++			y = viewwindowy + P4_DOOM_SCALE_Y(4);
++		V_DrawPatchNative(viewwindowx + (scaledviewwidth - P4_DOOM_SCALE_X(68)) / 2, y,
+ 							  W_CacheLumpName (DEH_String("M_PAUSE"), PU_CACHE));
+     }
+ 
 @@ -301,7 +310,9 @@
      // normal update
      if (!wipe)
@@ -457,7 +515,6 @@ diff --git a/doomgeneric/d_main.c b/doomgeneric/d_main.c
      D_DoomLoop ();
  }
 -
-diff --git a/doomgeneric/d_net.c b/doomgeneric/d_net.c
 --- a/doomgeneric/d_net.c
 +++ b/doomgeneric/d_net.c
 @@ -37,6 +37,7 @@
@@ -500,7 +557,6 @@ diff --git a/doomgeneric/d_net.c b/doomgeneric/d_net.c
      }
  }
 -
-diff --git a/doomgeneric/doomgeneric.c b/doomgeneric/doomgeneric.c
 --- a/doomgeneric/doomgeneric.c
 +++ b/doomgeneric/doomgeneric.c
 @@ -5,6 +5,7 @@
@@ -541,7 +597,6 @@ diff --git a/doomgeneric/doomgeneric.c b/doomgeneric/doomgeneric.c
 +{
 +	return doomgeneric_quit_requested;
 +}
-diff --git a/doomgeneric/doomgeneric.h b/doomgeneric/doomgeneric.h
 --- a/doomgeneric/doomgeneric.h
 +++ b/doomgeneric/doomgeneric.h
 @@ -32,11 +32,17 @@
@@ -562,7 +617,86 @@ diff --git a/doomgeneric/doomgeneric.h b/doomgeneric/doomgeneric.h
  void DG_SleepMs(uint32_t ms);
  uint32_t DG_GetTicksMs();
  int DG_GetKey(int* pressed, unsigned char* key);
-diff --git a/doomgeneric/g_game.c b/doomgeneric/g_game.c
+--- a/doomgeneric/f_finale.c
++++ b/doomgeneric/f_finale.c
+@@ -284,7 +284,7 @@
+ 	}
+ 		
+ 	w = SHORT (hu_font[c]->width);
+-	if (cx+w > SCREENWIDTH)
++	if (cx+w > P4_DOOM_CANONICAL_WIDTH)
+ 	    break;
+ 	V_DrawPatch(cx, cy, hu_font[c]);
+ 	cx+=w;
+@@ -569,34 +569,9 @@
+ // F_DrawPatchCol
+ //
+ void
+-F_DrawPatchCol
+-( int		x,
+-  patch_t*	patch,
+-  int		col )
+-{
+-    column_t*	column;
+-    byte*	source;
+-    byte*	dest;
+-    byte*	desttop;
+-    int		count;
+-	
+-    column = (column_t *)((byte *)patch + LONG(patch->columnofs[col]));
+-    desttop = I_VideoBuffer + x;
+-
+-    // step through the posts in a column
+-    while (column->topdelta != 0xff )
+-    {
+-	source = (byte *)column + 3;
+-	dest = desttop + column->topdelta*SCREENWIDTH;
+-	count = column->length;
+-		
+-	while (count--)
+-	{
+-	    *dest = *source++;
+-	    dest += SCREENWIDTH;
+-	}
+-	column = (column_t *)(  (byte *)column + column->length + 4 );
+-    }
++F_DrawPatchCol(int x, patch_t *patch, int col)
++{
++    V_DrawPatchColumn(x, 0, patch, col);
+ }
+ 
+ 
+@@ -624,7 +599,7 @@
+     if (scrolled < 0)
+ 	scrolled = 0;
+ 		
+-    for ( x=0 ; x<SCREENWIDTH ; x++)
++    for ( x=0 ; x<P4_DOOM_CANONICAL_WIDTH ; x++)
+     {
+ 	if (x+scrolled < 320)
+ 	    F_DrawPatchCol (x, p1, x+scrolled);
+@@ -636,8 +611,8 @@
+ 	return;
+     if (finalecount < 1180)
+     {
+-        V_DrawPatch((SCREENWIDTH - 13 * 8) / 2,
+-                    (SCREENHEIGHT - 8 * 8) / 2, 
++        V_DrawPatch((P4_DOOM_CANONICAL_WIDTH - 13 * 8) / 2,
++                    (P4_DOOM_CANONICAL_HEIGHT - 8 * 8) / 2, 
+                     W_CacheLumpName(DEH_String("END0"), PU_CACHE));
+ 	laststage = 0;
+ 	return;
+@@ -653,8 +628,8 @@
+     }
+ 	
+     DEH_snprintf(name, 10, "END%i", stage);
+-    V_DrawPatch((SCREENWIDTH - 13 * 8) / 2, 
+-                (SCREENHEIGHT - 8 * 8) / 2, 
++    V_DrawPatch((P4_DOOM_CANONICAL_WIDTH - 13 * 8) / 2, 
++                (P4_DOOM_CANONICAL_HEIGHT - 8 * 8) / 2, 
+                 W_CacheLumpName (name,PU_CACHE));
+ }
+ 
 --- a/doomgeneric/g_game.c
 +++ b/doomgeneric/g_game.c
 @@ -17,6 +17,7 @@
@@ -640,7 +774,44 @@ diff --git a/doomgeneric/g_game.c b/doomgeneric/g_game.c
      gameaction = ga_nothing; 
   
      for (i=0 ; i<MAXPLAYERS ; i++) 
-diff --git a/doomgeneric/hu_stuff.c b/doomgeneric/hu_stuff.c
+--- a/doomgeneric/hu_lib.c
++++ b/doomgeneric/hu_lib.c
+@@ -111,7 +111,7 @@
+ 	    && c <= '_')
+ 	{
+ 	    w = SHORT(l->f[c - l->sc]->width);
+-	    if (x+w > SCREENWIDTH)
++	    if (x+w > P4_DOOM_CANONICAL_WIDTH)
+ 		break;
+ 	    V_DrawPatchDirect(x, l->y, l->f[c - l->sc]);
+ 	    x += w;
+@@ -119,14 +119,14 @@
+ 	else
+ 	{
+ 	    x += 4;
+-	    if (x >= SCREENWIDTH)
++	    if (x >= P4_DOOM_CANONICAL_WIDTH)
+ 		break;
+ 	}
+     }
+ 
+     // draw the cursor if requested
+     if (drawcursor
+-	&& x + SHORT(l->f['_' - l->sc]->width) <= SCREENWIDTH)
++	&& x + SHORT(l->f['_' - l->sc]->width) <= P4_DOOM_CANONICAL_WIDTH)
+     {
+ 	V_DrawPatchDirect(x, l->y, l->f['_' - l->sc]);
+     }
+@@ -148,7 +148,8 @@
+ 	viewwindowx && l->needsupdate)
+     {
+ 	lh = SHORT(l->f[0]->height) + 1;
+-	for (y=l->y,yoffset=y*SCREENWIDTH ; y<l->y+lh ; y++,yoffset+=SCREENWIDTH)
++	for (y=P4_DOOM_SCALE_Y(l->y),yoffset=y*SCREENWIDTH ;
++             y<P4_DOOM_SCALE_Y(l->y+lh) ; y++,yoffset+=SCREENWIDTH)
+ 	{
+ 	    if (y < viewwindowy || y >= viewwindowy + viewheight)
+ 		R_VideoErase(yoffset, SCREENWIDTH); // erase entire line
 --- a/doomgeneric/hu_stuff.c
 +++ b/doomgeneric/hu_stuff.c
 @@ -16,6 +16,7 @@
@@ -672,7 +843,6 @@ diff --git a/doomgeneric/hu_stuff.c b/doomgeneric/hu_stuff.c
  
      // tick down message counter if message is up
      if (message_counter && !--message_counter)
-diff --git a/doomgeneric/i_system.c b/doomgeneric/i_system.c
 --- a/doomgeneric/i_system.c
 +++ b/doomgeneric/i_system.c
 @@ -35,6 +35,7 @@
@@ -683,7 +853,31 @@ diff --git a/doomgeneric/i_system.c b/doomgeneric/i_system.c
  
  #include "deh_str.h"
  #include "doomtype.h"
-@@ -256,6 +257,10 @@
+@@ -47,6 +48,9 @@
+ #include "i_video.h"
+ 
+ #include "i_system.h"
++#ifdef P4_DOOM_ENGINE_PERF
++#include "p4_doom_net.h"
++#endif
+ 
+ #include "w_wad.h"
+ #include "z_zone.h"
+@@ -116,7 +120,13 @@
+ 
+         *size = default_ram * 1024 * 1024;
+ 
++#ifdef P4_DOOM_ENGINE_PERF
++        P4_DoomBeforeZoneAllocation((size_t)*size);
++#endif
+         zonemem = malloc(*size);
++#ifdef P4_DOOM_ENGINE_PERF
++        P4_DoomAfterZoneAllocation((size_t)*size, zonemem != NULL);
++#endif
+ 
+         // Failed to allocate?  Reduce zone size until we reach a size
+         // that is acceptable.
+@@ -256,6 +266,10 @@
          entry->func();
          entry = entry->next;
      }
@@ -694,12 +888,11 @@ diff --git a/doomgeneric/i_system.c b/doomgeneric/i_system.c
  
  #if ORIGCODE
      SDL_Quit();
-@@ -575,4 +580,3 @@
+@@ -575,4 +589,3 @@
  
      return false;
  }
 -
-diff --git a/doomgeneric/i_video.c b/doomgeneric/i_video.c
 --- a/doomgeneric/i_video.c
 +++ b/doomgeneric/i_video.c
 @@ -38,6 +38,7 @@
@@ -827,16 +1020,23 @@ diff --git a/doomgeneric/i_video.c b/doomgeneric/i_video.c
  
      for (i = 0; i < in_pixels; i++)
      {
-@@ -287,7 +382,7 @@
+@@ -286,8 +381,14 @@
+     }
  
  
++#if P4_DOOM_NATIVE_RASTER
++    /* Native rendering must never silently use the generic frame scaler. */
++    if (fb_scaling != 1 || s_Fb.xres != SCREENWIDTH || s_Fb.yres != SCREENHEIGHT)
++        I_Error("Native Doom requires an exact %dx%d output", SCREENWIDTH, SCREENHEIGHT);
++#endif
++
      /* Allocate screen to draw to */
 -	I_VideoBuffer = (byte*)Z_Malloc (SCREENWIDTH * SCREENHEIGHT, PU_STATIC, NULL);  // For DOOM to draw on
 +	I_AllocateVideoBuffer();
  
  	screenvisible = true;
  
-@@ -297,7 +392,13 @@
+@@ -297,7 +398,13 @@
  
  void I_ShutdownGraphics (void)
  {
@@ -851,16 +1051,15 @@ diff --git a/doomgeneric/i_video.c b/doomgeneric/i_video.c
  }
  
  void I_StartFrame (void)
-@@ -323,6 +424,23 @@
+@@ -323,6 +430,22 @@
      int y;
      int x_offset, y_offset, x_offset_end;
      unsigned char *line_in, *line_out;
 +
 +#ifdef P4_DOOM_XRGB_FASTPATH
-+    /* Only the exact default 320x200 RGB888 presentation can use this hook.
-+     * CMAP256, alternate dimensions/formats/scales and legacy platforms keep
-+     * the original prepare/expand/draw route. Palette already includes gamma. */
-+    if (SCREENWIDTH == 320 && SCREENHEIGHT == 200 && fb_scaling == 1 &&
++    /* One indexed sample per native output pixel. Palette includes gamma;
++     * alternate formats/scales retain the original prepare/expand/draw route. */
++    if (fb_scaling == 1 &&
 +        s_Fb.xres == SCREENWIDTH && s_Fb.yres == SCREENHEIGHT &&
 +        s_Fb.bits_per_pixel == 32 &&
 +        s_Fb.red.offset == 16 && s_Fb.green.offset == 8 && s_Fb.blue.offset == 0 &&
@@ -875,7 +1074,7 @@ diff --git a/doomgeneric/i_video.c b/doomgeneric/i_video.c
  
      /* Offsets in case FB is bigger than DOOM */
      /* 600 = s_Fb heigt, 200 screenheight */
-@@ -366,6 +484,8 @@
+@@ -366,6 +489,8 @@
          line_in += SCREENWIDTH;
      }
  
@@ -884,7 +1083,7 @@ diff --git a/doomgeneric/i_video.c b/doomgeneric/i_video.c
  	DG_DrawFrame();
  }
  
-@@ -410,6 +530,11 @@
+@@ -410,6 +535,11 @@
          colors[i].r = gammatable[usegamma][*palette++];
          colors[i].g = gammatable[usegamma][*palette++];
          colors[i].b = gammatable[usegamma][*palette++];
@@ -896,18 +1095,44 @@ diff --git a/doomgeneric/i_video.c b/doomgeneric/i_video.c
      }
  
  #ifdef CMAP256
-diff --git a/doomgeneric/i_video.h b/doomgeneric/i_video.h
 --- a/doomgeneric/i_video.h
 +++ b/doomgeneric/i_video.h
-@@ -20,6 +20,7 @@
+@@ -20,12 +20,30 @@
  #ifndef __I_VIDEO__
  #define __I_VIDEO__
  
 +#include <stddef.h>
  #include "doomtype.h"
  
- // Screen width and height.
-@@ -100,6 +101,12 @@
+-// Screen width and height.
+-
+-#define SCREENWIDTH  320
+-#define SCREENHEIGHT 200
++// The renderer raster and the classic asset/input coordinate system are
++// separate. Legacy builds retain the original raster; Tab5 defines 768x480.
++#define P4_DOOM_CANONICAL_WIDTH 320
++#define P4_DOOM_CANONICAL_HEIGHT 200
++#ifndef P4_DOOM_NATIVE_WIDTH
++#define P4_DOOM_NATIVE_WIDTH P4_DOOM_CANONICAL_WIDTH
++#endif
++#ifndef P4_DOOM_NATIVE_HEIGHT
++#define P4_DOOM_NATIVE_HEIGHT P4_DOOM_CANONICAL_HEIGHT
++#endif
++#define SCREENWIDTH P4_DOOM_NATIVE_WIDTH
++#define SCREENHEIGHT P4_DOOM_NATIVE_HEIGHT
++#define P4_DOOM_SCALE_X(value) ((value) * SCREENWIDTH / P4_DOOM_CANONICAL_WIDTH)
++#define P4_DOOM_SCALE_Y(value) ((value) * SCREENHEIGHT / P4_DOOM_CANONICAL_HEIGHT)
++#define P4_DOOM_NATIVE_RASTER (SCREENWIDTH != 320 || SCREENHEIGHT != 200)
++#if SCREENWIDTH < 320 || SCREENHEIGHT < 200 || SCREENWIDTH > 1120 || SCREENHEIGHT > 832
++#error Doom raster dimensions exceed the renderer lookup bounds
++#endif
++#if SCREENWIDTH * 200 != SCREENHEIGHT * 320
++#error Doom native raster must preserve the canonical aspect ratio
++#endif
+ 
+ // Screen width used for "squash" scale functions
+ 
+@@ -100,6 +118,12 @@
  
  void I_ShutdownGraphics(void);
  
@@ -920,7 +1145,6 @@ diff --git a/doomgeneric/i_video.h b/doomgeneric/i_video.h
  // Takes full 8 bit values.
  void I_SetPalette (byte* palette);
  int I_GetPaletteIndex(int r, int g, int b);
-diff --git a/doomgeneric/m_menu.c b/doomgeneric/m_menu.c
 --- a/doomgeneric/m_menu.c
 +++ b/doomgeneric/m_menu.c
 @@ -1,3 +1,4 @@
@@ -928,6 +1152,15 @@ diff --git a/doomgeneric/m_menu.c b/doomgeneric/m_menu.c
  //
  // Copyright(C) 1993-1996 Id Software, Inc.
  // Copyright(C) 2005-2014 Simon Howard
+@@ -1390,7 +1391,7 @@
+ 	}
+ 		
+ 	w = SHORT (hu_font[c]->width);
+-	if (cx+w > SCREENWIDTH)
++	if (cx+w > P4_DOOM_CANONICAL_WIDTH)
+ 	    break;
+ 	V_DrawPatchDirect(cx, cy, hu_font[c]);
+ 	cx+=w;
 @@ -1562,6 +1563,8 @@
      if (key == -1)
  	return false;
@@ -954,7 +1187,7 @@ diff --git a/doomgeneric/m_menu.c b/doomgeneric/m_menu.c
              if (key != ' ' && key != KEY_ESCAPE
               && key != key_menu_confirm && key != key_menu_abort)
              {
-@@ -1958,6 +1971,7 @@
+@@ -1958,13 +1971,14 @@
      char               *name;
      int			start;
  
@@ -962,12 +1195,28 @@ diff --git a/doomgeneric/m_menu.c b/doomgeneric/m_menu.c
      inhelpscreens = false;
      
      // Horiz. & Vertically center string and print it.
+     if (messageToPrint)
+     {
+ 	start = 0;
+-	y = SCREENHEIGHT/2 - M_StringHeight(messageString) / 2;
++	y = P4_DOOM_CANONICAL_HEIGHT/2 - M_StringHeight(messageString) / 2;
+ 	while (messageString[start] != '\0')
+ 	{
+ 	    int foundnewline = 0;
+@@ -1992,7 +2006,7 @@
+                 start += strlen(string);
+             }
+ 
+-	    x = SCREENWIDTH/2 - M_StringWidth(string) / 2;
++	    x = P4_DOOM_CANONICAL_WIDTH/2 - M_StringWidth(string) / 2;
+ 	    M_WriteText(x, y, string);
+ 	    y += SHORT(hu_font[0]->height);
+ 	}
 @@ -2122,4 +2136,3 @@
  
      //opldev = M_CheckParm("-opldev") > 0;
  }
 -
-diff --git a/doomgeneric/p_inter.c b/doomgeneric/p_inter.c
 --- a/doomgeneric/p_inter.c
 +++ b/doomgeneric/p_inter.c
 @@ -20,6 +20,7 @@
@@ -988,7 +1237,6 @@ diff --git a/doomgeneric/p_inter.c b/doomgeneric/p_inter.c
      target->flags &= ~(MF_SHOOTABLE|MF_FLOAT|MF_SKULLFLY);
  
      if (target->type != MT_SKULL)
-diff --git a/doomgeneric/p_mobj.c b/doomgeneric/p_mobj.c
 --- a/doomgeneric/p_mobj.c
 +++ b/doomgeneric/p_mobj.c
 @@ -16,6 +16,7 @@
@@ -1009,7 +1257,6 @@ diff --git a/doomgeneric/p_mobj.c b/doomgeneric/p_mobj.c
      // momentum movement
      if (mobj->momx
  	|| mobj->momy
-diff --git a/doomgeneric/p_setup.c b/doomgeneric/p_setup.c
 --- a/doomgeneric/p_setup.c
 +++ b/doomgeneric/p_setup.c
 @@ -1,3 +1,4 @@
@@ -1086,7 +1333,6 @@ diff --git a/doomgeneric/p_setup.c b/doomgeneric/p_setup.c
  
  
 -
-diff --git a/doomgeneric/p_tick.c b/doomgeneric/p_tick.c
 --- a/doomgeneric/p_tick.c
 +++ b/doomgeneric/p_tick.c
 @@ -18,10 +18,12 @@
@@ -1116,7 +1362,6 @@ diff --git a/doomgeneric/p_tick.c b/doomgeneric/p_tick.c
  	    P_PlayerThink (&players[i]);
  			
      P_RunThinkers ();
-diff --git a/doomgeneric/r_data.c b/doomgeneric/r_data.c
 --- a/doomgeneric/r_data.c
 +++ b/doomgeneric/r_data.c
 @@ -18,6 +18,8 @@
@@ -1193,7 +1438,7 @@ diff --git a/doomgeneric/r_data.c b/doomgeneric/r_data.c
  	x1 = patch->originx;
  	x2 = x1 + SHORT(realpatch->width);
  	
-@@ -373,6 +413,11 @@
+@@ -373,16 +413,22 @@
      Z_Free(patchcount);
  }
  
@@ -1205,7 +1450,53 @@ diff --git a/doomgeneric/r_data.c b/doomgeneric/r_data.c
  
  
  
-@@ -467,6 +512,8 @@
+ //
+ // R_GetColumn
+ //
+-byte*
+-R_GetColumn
++static byte*
++R_GetColumnData
+ ( int		tex,
+-  int		col )
++  int		col,
++  int            *wrapheight )
+ {
+     int		lump;
+     int		ofs;
+@@ -391,13 +437,31 @@
+     lump = texturecolumnlump[tex][col];
+     ofs = texturecolumnofs[tex][col];
+     
++    if (wrapheight != NULL)
++        *wrapheight = 128;
++
+     if (lump > 0)
+ 	return (byte *)W_CacheLumpNum(lump,PU_CACHE)+ofs;
+ 
++    if (wrapheight != NULL && lump < 0 && textures[tex]->height > 0
++        && textures[tex]->height < 128)
++        *wrapheight = textures[tex]->height;
++
+     if (!texturecomposite[tex])
+ 	R_GenerateComposite (tex);
+ 
+     return texturecomposite[tex] + ofs;
++}
++
++
++byte *R_GetColumn(int tex, int col)
++{
++    return R_GetColumnData(tex, col, NULL);
++}
++
++byte *R_GetColumnForOpaque(int tex, int col, int *wrapheight)
++{
++    return R_GetColumnData(tex, col, wrapheight);
+ }
+ 
+ 
+@@ -467,6 +531,8 @@
      char*		name_p;
      
      int*		patchlookup;
@@ -1214,7 +1505,7 @@ diff --git a/doomgeneric/r_data.c b/doomgeneric/r_data.c
      
      int			totalwidth;
      int			nummappatches;
-@@ -548,6 +595,8 @@
+@@ -548,6 +614,8 @@
              printf("\b");
      }
  	
@@ -1223,7 +1514,7 @@ diff --git a/doomgeneric/r_data.c b/doomgeneric/r_data.c
      for (i=0 ; i<numtextures ; i++, directory++)
      {
  	if (!(i&63))
-@@ -603,6 +652,8 @@
+@@ -603,6 +671,8 @@
  	textureheight[i] = texture->height<<FRACBITS;
  		
  	totalwidth += texture->width;
@@ -1232,7 +1523,7 @@ diff --git a/doomgeneric/r_data.c b/doomgeneric/r_data.c
      }
  
      Z_Free(patchlookup);
-@@ -613,8 +664,21 @@
+@@ -613,8 +683,21 @@
      
      // Precalculate whatever possible.	
  
@@ -1255,7 +1546,7 @@ diff --git a/doomgeneric/r_data.c b/doomgeneric/r_data.c
      
      // Create translation table for global animation.
      texturetranslation = Z_Malloc ((numtextures+1)*sizeof(*texturetranslation), PU_STATIC, 0);
-@@ -655,7 +719,8 @@
+@@ -655,7 +738,8 @@
  void R_InitSpriteLumps (void)
  {
      int		i;
@@ -1265,7 +1556,7 @@ diff --git a/doomgeneric/r_data.c b/doomgeneric/r_data.c
  	
      firstspritelump = W_GetNumForName (DEH_String("S_START")) + 1;
      lastspritelump = W_GetNumForName (DEH_String("S_END")) - 1;
-@@ -665,16 +730,27 @@
+@@ -665,16 +749,27 @@
      spriteoffset = Z_Malloc (numspritelumps*sizeof(*spriteoffset), PU_STATIC, 0);
      spritetopoffset = Z_Malloc (numspritelumps*sizeof(*spritetopoffset), PU_STATIC, 0);
  	
@@ -1298,24 +1589,138 @@ diff --git a/doomgeneric/r_data.c b/doomgeneric/r_data.c
  }
  
  
-@@ -909,4 +985,3 @@
+@@ -909,4 +1004,3 @@
  
  
  
 -
-diff --git a/doomgeneric/r_draw.c b/doomgeneric/r_draw.c
+--- a/doomgeneric/r_data.h
++++ b/doomgeneric/r_data.h
+@@ -32,6 +32,10 @@
+   int		col );
+ 
+ 
++// Opaque wall/sky lookup. Short composites return their allocation height;
++// raw patch columns and textures >= 128 retain legacy 128-row sampling.
++byte *R_GetColumnForOpaque(int tex, int col, int *wrapheight);
++
+ // I/O, setting up the stuff.
+ void R_InitData (void);
+ void R_PrecacheLevel (void);
+--- a/doomgeneric/r_defs.h
++++ b/doomgeneric/r_defs.h
+@@ -37,6 +37,14 @@
+ #include "i_video.h"
+ 
+ #include "v_patch.h"
++
++// Unclipped projected edges grow with native resolution. Keep their fixed
++// point products wide until clipping; legacy render arithmetic is unchanged.
++#if P4_DOOM_NATIVE_RASTER
++typedef int64_t p4_screenfrac_t;
++#else
++typedef fixed_t p4_screenfrac_t;
++#endif
+ 
+ 
+ 
+@@ -420,6 +428,17 @@
+ //
+ // Now what is a visplane, anyway?
+ // 
++// Plane bounds represent every native Y plus an out-of-range sentinel.
++// Edge sentinels live inside the arrays, avoiding out-of-array indexing.
++#if SCREENHEIGHT < 255
++typedef byte p4_plane_y_t;
++#else
++typedef uint16_t p4_plane_y_t;
++#endif
++#define P4_PLANE_UNSET ((p4_plane_y_t) ~(p4_plane_y_t) 0)
++#define P4_PLANE_TOP(plane, x) ((plane)->top[(x) + 1])
++#define P4_PLANE_BOTTOM(plane, x) ((plane)->bottom[(x) + 1])
++
+ typedef struct
+ {
+   fixed_t		height;
+@@ -428,17 +447,8 @@
+   int			minx;
+   int			maxx;
+   
+-  // leave pads for [minx-1]/[maxx+1]
+-  
+-  byte		pad1;
+-  // Here lies the rub for all
+-  //  dynamic resize/change of resolution.
+-  byte		top[SCREENWIDTH];
+-  byte		pad2;
+-  byte		pad3;
+-  // See above.
+-  byte		bottom[SCREENWIDTH];
+-  byte		pad4;
++  p4_plane_y_t top[SCREENWIDTH + 2];
++  p4_plane_y_t bottom[SCREENWIDTH + 2];
+ 
+ } visplane_t;
+ 
 --- a/doomgeneric/r_draw.c
 +++ b/doomgeneric/r_draw.c
-@@ -128,6 +128,8 @@
+@@ -42,7 +42,7 @@
+ #define MAXHEIGHT			832
+ 
+ // status bar height at bottom of screen
+-#define SBARHEIGHT		32
++#define SBARHEIGHT (SCREENHEIGHT - P4_DOOM_SCALE_Y(168))
+ 
+ //
+ // All drawing to the view buffer is accomplished in this file.
+@@ -87,6 +87,7 @@
+ fixed_t			dc_texturemid;
+ 
+ // first pixel in a column (possibly virtual) 
++int dc_sourceheight = 128;
+ byte*			dc_source;		
+ 
+ // just for profiling 
+@@ -128,6 +129,38 @@
      //  which is the only mapping to be done.
      fracstep = dc_iscale; 
      frac = dc_texturemid + (dc_yl-centery)*fracstep; 
 +    const byte *source = dc_source;
 +    const lighttable_t *colormap = dc_colormap;
++
++    // Short composites are allocated at their declared height. Wrap within
++    // that column instead of reading the next column or the zone header.
++    // Keep the original 128-row loop below for raw posts and tall textures.
++    if (dc_sourceheight > 0 && dc_sourceheight < 128)
++    {
++        const int height = dc_sourceheight;
++        const int mask = height - 1;
++        if ((height & mask) == 0)
++        {
++            do
++            {
++                *dest = colormap[source[(frac >> FRACBITS) & mask]];
++                dest += SCREENWIDTH;
++                frac += fracstep;
++            } while (count--);
++        }
++        else
++        {
++            do
++            {
++                int row = (frac >> FRACBITS) % height;
++                if (row < 0) row += height;
++                *dest = colormap[source[row]];
++                dest += SCREENWIDTH;
++                frac += fracstep;
++            } while (count--);
++        }
++        return;
++    }
  
      // Inner loop that does the actual texture mapping,
      //  e.g. a DDA-lile scaling.
-@@ -136,7 +138,7 @@
+@@ -136,7 +169,7 @@
      {
  	// Re-map color indices from wall texture column
  	//  using a lighting/special effects LUT.
@@ -1324,7 +1729,52 @@ diff --git a/doomgeneric/r_draw.c b/doomgeneric/r_draw.c
  	
  	dest += SCREENWIDTH; 
  	frac += fracstep;
-@@ -618,6 +620,9 @@
+@@ -238,6 +271,35 @@
+     
+     fracstep = dc_iscale; 
+     frac = dc_texturemid + (dc_yl-centery)*fracstep;
++
++    if (dc_sourceheight > 0 && dc_sourceheight < 128)
++    {
++        const int height = dc_sourceheight;
++        const int mask = height - 1;
++        if ((height & mask) == 0)
++        {
++            do
++            {
++                *dest2 = *dest = dc_colormap[dc_source[(frac >> FRACBITS) & mask]];
++                dest += SCREENWIDTH;
++                dest2 += SCREENWIDTH;
++                frac += fracstep;
++            } while (count--);
++        }
++        else
++        {
++            do
++            {
++                int row = (frac >> FRACBITS) % height;
++                if (row < 0) row += height;
++                *dest2 = *dest = dc_colormap[dc_source[row]];
++                dest += SCREENWIDTH;
++                dest2 += SCREENWIDTH;
++                frac += fracstep;
++            } while (count--);
++        }
++        return;
++    }
+     
+     do 
+     {
+@@ -599,7 +661,7 @@
+     if (ds_x2 < ds_x1
+ 	|| ds_x1<0
+ 	|| ds_x2>=SCREENWIDTH
+-	|| (unsigned)ds_y>SCREENHEIGHT)
++	|| (unsigned)ds_y>=SCREENHEIGHT)
+     {
+ 	I_Error( "R_DrawSpan: %i to %i at %i",
+ 		 ds_x1,ds_x2,ds_y);
+@@ -618,6 +680,9 @@
           | ((ds_ystep >> 6)  & 0x0000ffff);
  
      dest = ylookup[ds_y] + columnofs[ds_x1];
@@ -1334,7 +1784,7 @@ diff --git a/doomgeneric/r_draw.c b/doomgeneric/r_draw.c
  
      // We do not check for zero spans here?
      count = ds_x2 - ds_x1;
-@@ -631,7 +636,7 @@
+@@ -631,7 +696,7 @@
  
  	// Lookup pixel from flat texture tile,
  	//  re-index using light/colormap.
@@ -1343,7 +1793,145 @@ diff --git a/doomgeneric/r_draw.c b/doomgeneric/r_draw.c
  
          position += step;
  
-diff --git a/doomgeneric/r_main.c b/doomgeneric/r_main.c
+@@ -728,7 +793,7 @@
+     if (ds_x2 < ds_x1
+ 	|| ds_x1<0
+ 	|| ds_x2>=SCREENWIDTH
+-	|| (unsigned)ds_y>SCREENHEIGHT)
++	|| (unsigned)ds_y>=SCREENHEIGHT)
+     {
+ 	I_Error( "R_DrawSpan: %i to %i at %i",
+ 		 ds_x1,ds_x2,ds_y);
+@@ -872,39 +937,39 @@
+      
+     // Draw screen and bezel; this is done to a separate screen buffer.
+ 
+-    V_UseBuffer(background_buffer);
++    V_UseBufferRegion(background_buffer, 0, SCREENHEIGHT - SBARHEIGHT);
+ 
+     patch = W_CacheLumpName(DEH_String("brdr_t"),PU_CACHE);
+ 
+-    for (x=0 ; x<scaledviewwidth ; x+=8)
+-	V_DrawPatch(viewwindowx+x, viewwindowy-8, patch);
++    for (x=0 ; x<scaledviewwidth ; x+=P4_DOOM_SCALE_X(8))
++	V_DrawPatchNative(viewwindowx+x, viewwindowy-P4_DOOM_SCALE_Y(8), patch);
+     patch = W_CacheLumpName(DEH_String("brdr_b"),PU_CACHE);
+ 
+-    for (x=0 ; x<scaledviewwidth ; x+=8)
+-	V_DrawPatch(viewwindowx+x, viewwindowy+viewheight, patch);
++    for (x=0 ; x<scaledviewwidth ; x+=P4_DOOM_SCALE_X(8))
++	V_DrawPatchNative(viewwindowx+x, viewwindowy+viewheight, patch);
+     patch = W_CacheLumpName(DEH_String("brdr_l"),PU_CACHE);
+ 
+-    for (y=0 ; y<viewheight ; y+=8)
+-	V_DrawPatch(viewwindowx-8, viewwindowy+y, patch);
++    for (y=0 ; y<viewheight ; y+=P4_DOOM_SCALE_Y(8))
++	V_DrawPatchNative(viewwindowx-P4_DOOM_SCALE_X(8), viewwindowy+y, patch);
+     patch = W_CacheLumpName(DEH_String("brdr_r"),PU_CACHE);
+ 
+-    for (y=0 ; y<viewheight ; y+=8)
+-	V_DrawPatch(viewwindowx+scaledviewwidth, viewwindowy+y, patch);
++    for (y=0 ; y<viewheight ; y+=P4_DOOM_SCALE_Y(8))
++	V_DrawPatchNative(viewwindowx+scaledviewwidth, viewwindowy+y, patch);
+ 
+     // Draw beveled edge. 
+-    V_DrawPatch(viewwindowx-8,
+-                viewwindowy-8,
++    V_DrawPatchNative(viewwindowx-P4_DOOM_SCALE_X(8),
++                viewwindowy-P4_DOOM_SCALE_Y(8),
+                 W_CacheLumpName(DEH_String("brdr_tl"),PU_CACHE));
+     
+-    V_DrawPatch(viewwindowx+scaledviewwidth,
+-                viewwindowy-8,
++    V_DrawPatchNative(viewwindowx+scaledviewwidth,
++                viewwindowy-P4_DOOM_SCALE_Y(8),
+                 W_CacheLumpName(DEH_String("brdr_tr"),PU_CACHE));
+     
+-    V_DrawPatch(viewwindowx-8,
++    V_DrawPatchNative(viewwindowx-P4_DOOM_SCALE_X(8),
+                 viewwindowy+viewheight,
+                 W_CacheLumpName(DEH_String("brdr_bl"),PU_CACHE));
+     
+-    V_DrawPatch(viewwindowx+scaledviewwidth,
++    V_DrawPatchNative(viewwindowx+scaledviewwidth,
+                 viewwindowy+viewheight,
+                 W_CacheLumpName(DEH_String("brdr_br"),PU_CACHE));
+ 
+@@ -938,38 +1003,28 @@
+ // Draws the border around the view
+ //  for different size windows?
+ //
+-void R_DrawViewBorder (void) 
+-{ 
+-    int		top;
+-    int		side;
+-    int		ofs;
+-    int		i; 
+- 
+-    if (scaledviewwidth == SCREENWIDTH) 
+-	return; 
+-  
+-    top = ((SCREENHEIGHT-SBARHEIGHT)-viewheight)/2; 
+-    side = (SCREENWIDTH-scaledviewwidth)/2; 
+- 
+-    // copy top and one line of left side 
+-    R_VideoErase (0, top*SCREENWIDTH+side); 
+- 
+-    // copy one line of right side and bottom 
+-    ofs = (viewheight+top)*SCREENWIDTH-side; 
+-    R_VideoErase (ofs, top*SCREENWIDTH+side); 
+- 
+-    // copy sides using wraparound 
+-    ofs = top*SCREENWIDTH + SCREENWIDTH-side; 
+-    side <<= 1;
+-    
+-    for (i=1 ; i<viewheight ; i++) 
+-    { 
+-	R_VideoErase (ofs, side); 
+-	ofs += SCREENWIDTH; 
+-    } 
+-
+-    // ? 
+-    V_MarkRect (0,0,SCREENWIDTH, SCREENHEIGHT-SBARHEIGHT); 
+-} 
+- 
+- 
++void R_DrawViewBorder (void)
++{
++    int top, left, right, bottom, ofs, i;
++
++    if (scaledviewwidth == SCREENWIDTH)
++        return;
++
++    top = viewwindowy;
++    left = viewwindowx;
++    right = SCREENWIDTH - left - scaledviewwidth;
++    bottom = SCREENHEIGHT - SBARHEIGHT - top - viewheight;
++
++    // Native scaling can leave unequal margins (e.g. 38 and 39 pixels).
++    // Restore every border pixel without touching the freshly rendered view.
++    R_VideoErase(0, top * SCREENWIDTH + left);
++    ofs = top * SCREENWIDTH + left + scaledviewwidth;
++    for (i = 1; i < viewheight; ++i)
++    {
++        R_VideoErase(ofs, right + left);
++        ofs += SCREENWIDTH;
++    }
++    R_VideoErase(ofs, right + bottom * SCREENWIDTH);
++
++    V_MarkRect(0, 0, SCREENWIDTH, SCREENHEIGHT - SBARHEIGHT);
++}
+--- a/doomgeneric/r_draw.h
++++ b/doomgeneric/r_draw.h
+@@ -31,6 +31,8 @@
+ extern fixed_t		dc_texturemid;
+ 
+ // first pixel in a column
++// Height of a contiguous short composite column; 128 selects legacy sampling.
++extern int dc_sourceheight;
+ extern byte*		dc_source;		
+ 
+ 
 --- a/doomgeneric/r_main.c
 +++ b/doomgeneric/r_main.c
 @@ -28,6 +28,7 @@
@@ -1354,7 +1942,75 @@ diff --git a/doomgeneric/r_main.c b/doomgeneric/r_main.c
  
  #include "m_bbox.h"
  #include "m_menu.h"
-@@ -862,6 +863,7 @@
+@@ -482,17 +483,20 @@
+     num = FixedMul(projection,sineb)<<detailshift;
+     den = FixedMul(rw_distance,sinea);
+ 
++    const fixed_t maxscale = (fixed_t)((int64_t)64 * FRACUNIT * SCREENWIDTH
++                                      / P4_DOOM_CANONICAL_WIDTH);
++    const fixed_t minscale = P4_DOOM_SCALE_X(256);
+     if (den > num>>16)
+     {
+ 	scale = FixedDiv (num, den);
+ 
+-	if (scale > 64*FRACUNIT)
+-	    scale = 64*FRACUNIT;
+-	else if (scale < 256)
+-	    scale = 256;
++	if (scale > maxscale)
++	    scale = maxscale;
++	else if (scale < minscale)
++	    scale = minscale;
+     }
+     else
+-	scale = 64*FRACUNIT;
++	scale = maxscale;
+ 	
+     return scale;
+ }
+@@ -622,7 +626,7 @@
+ 	startmap = ((LIGHTLEVELS-1-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
+ 	for (j=0 ; j<MAXLIGHTZ ; j++)
+ 	{
+-	    scale = FixedDiv ((SCREENWIDTH/2*FRACUNIT), (j+1)<<LIGHTZSHIFT);
++	    scale = FixedDiv ((P4_DOOM_CANONICAL_WIDTH/2*FRACUNIT), (j+1)<<LIGHTZSHIFT);
+ 	    scale >>= LIGHTSCALESHIFT;
+ 	    level = startmap - scale/DISTMAP;
+ 	    
+@@ -657,7 +661,9 @@
+ {
+     setsizeneeded = true;
+     setblocks = blocks;
+-    setdetail = detail;
++    // Native Tab5 always rasterizes every column, including after loading
++    // an older low-detail preference. Legacy builds preserve that preference.
++    setdetail = P4_DOOM_NATIVE_RASTER ? 0 : detail;
+ }
+ 
+ 
+@@ -682,8 +688,8 @@
+     }
+     else
+     {
+-	scaledviewwidth = setblocks*32;
+-	viewheight = (setblocks*168/10)&~7;
++	scaledviewwidth = P4_DOOM_SCALE_X(setblocks*32);
++	viewheight = P4_DOOM_SCALE_Y((setblocks*168/10)&~7);
+     }
+     
+     detailshift = setdetail;
+@@ -715,8 +721,8 @@
+     R_InitTextureMapping ();
+     
+     // psprite scales
+-    pspritescale = FRACUNIT*viewwidth/SCREENWIDTH;
+-    pspriteiscale = FRACUNIT*SCREENWIDTH/viewwidth;
++    pspritescale = FRACUNIT*viewwidth/P4_DOOM_CANONICAL_WIDTH;
++    pspriteiscale = FRACUNIT*P4_DOOM_CANONICAL_WIDTH/viewwidth;
+     
+     // thing clipping
+     for (i=0 ; i<viewwidth ; i++)
+@@ -862,6 +868,7 @@
  //
  void R_RenderPlayerView (player_t* player)
  {	
@@ -1362,7 +2018,7 @@ diff --git a/doomgeneric/r_main.c b/doomgeneric/r_main.c
      R_SetupFrame (player);
  
      // Clear buffers.
-@@ -869,23 +871,30 @@
+@@ -869,23 +876,30 @@
      R_ClearDrawSegs ();
      R_ClearPlanes ();
      R_ClearSprites ();
@@ -1395,18 +2051,155 @@ diff --git a/doomgeneric/r_main.c b/doomgeneric/r_main.c
 -}
 +    NetUpdateRenderTail ();
 +}
-diff --git a/doomgeneric/r_segs.c b/doomgeneric/r_segs.c
+--- a/doomgeneric/r_main.h
++++ b/doomgeneric/r_main.h
+@@ -25,6 +25,26 @@
+ 
+ 
+ 
++
++static inline p4_screenfrac_t R_ScreenFixedMul(fixed_t a, fixed_t b)
++{
++#if P4_DOOM_NATIVE_RASTER
++    return ((int64_t)a * b) >> FRACBITS;
++#else
++    return FixedMul(a, b);
++#endif
++}
++
++// Lighting distance is defined in the original raster's projection units.
++// Scale it once per column/sprite, never in a pixel loop.
++static inline fixed_t R_CanonicalScale(fixed_t scale)
++{
++#if P4_DOOM_NATIVE_RASTER
++    return (fixed_t)((int64_t)scale * P4_DOOM_CANONICAL_WIDTH / SCREENWIDTH);
++#else
++    return scale;
++#endif
++}
+ 
+ //
+ // POV related.
+--- a/doomgeneric/r_plane.c
++++ b/doomgeneric/r_plane.c
+@@ -290,7 +290,7 @@
+     }
+ 
+     for (x=intrl ; x<= intrh ; x++)
+-	if (pl->top[x] != 0xff)
++	if (P4_PLANE_TOP(pl, x) != P4_PLANE_UNSET)
+ 	    break;
+ 
+     if (x > intrh)
+@@ -399,14 +399,14 @@
+ 	    dc_texturemid = skytexturemid;
+ 	    for (x=pl->minx ; x <= pl->maxx ; x++)
+ 	    {
+-		dc_yl = pl->top[x];
+-		dc_yh = pl->bottom[x];
++		dc_yl = P4_PLANE_TOP(pl, x);
++		dc_yh = P4_PLANE_BOTTOM(pl, x);
+ 
+ 		if (dc_yl <= dc_yh)
+ 		{
+ 		    angle = (viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
+ 		    dc_x = x;
+-		    dc_source = R_GetColumn(skytexture, angle);
++		    dc_source = R_GetColumnForOpaque(skytexture, angle, &dc_sourceheight);
+ 		    colfunc ();
+ 		}
+ 	    }
+@@ -428,17 +428,17 @@
+ 
+ 	planezlight = zlight[light];
+ 
+-	pl->top[pl->maxx+1] = 0xff;
+-	pl->top[pl->minx-1] = 0xff;
++	P4_PLANE_TOP(pl, pl->maxx+1) = P4_PLANE_UNSET;
++	P4_PLANE_TOP(pl, pl->minx-1) = P4_PLANE_UNSET;
+ 		
+ 	stop = pl->maxx + 1;
+ 
+ 	for (x=pl->minx ; x<= stop ; x++)
+ 	{
+-	    R_MakeSpans(x,pl->top[x-1],
+-			pl->bottom[x-1],
+-			pl->top[x],
+-			pl->bottom[x]);
++	    R_MakeSpans(x,P4_PLANE_TOP(pl, x-1),
++			P4_PLANE_BOTTOM(pl, x-1),
++			P4_PLANE_TOP(pl, x),
++			P4_PLANE_BOTTOM(pl, x));
+ 	}
+ 	
+         W_ReleaseLumpNum(lumpnum);
 --- a/doomgeneric/r_segs.c
 +++ b/doomgeneric/r_segs.c
-@@ -196,10 +196,22 @@
+@@ -71,16 +71,16 @@
+ int		worldhigh;
+ int		worldlow;
+ 
+-fixed_t		pixhigh;
+-fixed_t		pixlow;
+-fixed_t		pixhighstep;
+-fixed_t		pixlowstep;
+-
+-fixed_t		topfrac;
+-fixed_t		topstep;
+-
+-fixed_t		bottomfrac;
+-fixed_t		bottomstep;
++p4_screenfrac_t pixhigh;
++p4_screenfrac_t pixlow;
++p4_screenfrac_t pixhighstep;
++p4_screenfrac_t pixlowstep;
++
++p4_screenfrac_t topfrac;
++p4_screenfrac_t topstep;
++
++p4_screenfrac_t bottomfrac;
++p4_screenfrac_t bottomstep;
+ 
+ 
+ lighttable_t**	walllights;
+@@ -159,7 +159,7 @@
+ 	{
+ 	    if (!fixedcolormap)
+ 	    {
+-		index = spryscale>>LIGHTSCALESHIFT;
++		index = R_CanonicalScale(spryscale)>>LIGHTSCALESHIFT;
+ 
+ 		if (index >=  MAXLIGHTSCALE )
+ 		    index = MAXLIGHTSCALE-1;
+@@ -167,7 +167,7 @@
+ 		dc_colormap = walllights[index];
+ 	    }
+ 			
+-	    sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
++	    sprtopscreen = centeryfrac - R_ScreenFixedMul(dc_texturemid, spryscale);
+ 	    dc_iscale = 0xffffffffu / (unsigned)spryscale;
+ 	    
+ 	    // draw the texture
+@@ -196,10 +196,33 @@
  #define HEIGHTBITS		12
  #define HEIGHTUNIT		(1<<HEIGHTBITS)
  
 +/* Opaque tiers share one setup per column. Masked-only columns prepare
 + * their own drawing parameters later in R_RenderMaskedSegRange. */
++// The native projection can place an edge tens of thousands of rows off
++// screen. Bound it before narrowing to the renderer's short clip arrays.
++static inline int R_ClipColumnEdge(int y)
++{
++#if P4_DOOM_NATIVE_RASTER
++    if (y < -1) return -1;
++    if (y > viewheight) return viewheight;
++#endif
++    return y;
++}
++
 +static inline void R_SetWallColumn(void)
 +{
-+    unsigned index = rw_scale >> LIGHTSCALESHIFT;
++    unsigned index = R_CanonicalScale(rw_scale) >> LIGHTSCALESHIFT;
 +    if (index >= MAXLIGHTSCALE)
 +        index = MAXLIGHTSCALE - 1;
 +    dc_colormap = walllights[index];
@@ -1422,7 +2215,7 @@ diff --git a/doomgeneric/r_segs.c b/doomgeneric/r_segs.c
      int			yl;
      int			yh;
      int			mid;
-@@ -209,6 +221,7 @@
+@@ -209,6 +232,7 @@
  
      for ( ; rw_x < rw_stopx ; rw_x++)
      {
@@ -1430,7 +2223,29 @@ diff --git a/doomgeneric/r_segs.c b/doomgeneric/r_segs.c
  	// mark floor / ceiling areas
  	yl = (topfrac+HEIGHTUNIT-1)>>HEIGHTBITS;
  
-@@ -256,15 +269,7 @@
+@@ -226,8 +250,8 @@
+ 
+ 	    if (top <= bottom)
+ 	    {
+-		ceilingplane->top[rw_x] = top;
+-		ceilingplane->bottom[rw_x] = bottom;
++		P4_PLANE_TOP(ceilingplane, rw_x) = top;
++		P4_PLANE_BOTTOM(ceilingplane, rw_x) = bottom;
+ 	    }
+ 	}
+ 		
+@@ -244,8 +268,8 @@
+ 		top = ceilingclip[rw_x]+1;
+ 	    if (top <= bottom)
+ 	    {
+-		floorplane->top[rw_x] = top;
+-		floorplane->bottom[rw_x] = bottom;
++		P4_PLANE_TOP(floorplane, rw_x) = top;
++		P4_PLANE_BOTTOM(floorplane, rw_x) = bottom;
+ 	    }
+ 	}
+ 	
+@@ -256,15 +280,7 @@
  	    angle = (rw_centerangle + xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
  	    texturecolumn = rw_offset-FixedMul(finetangent[angle],rw_distance);
  	    texturecolumn >>= FRACBITS;
@@ -1447,7 +2262,7 @@ diff --git a/doomgeneric/r_segs.c b/doomgeneric/r_segs.c
  	}
          else
          {
-@@ -277,6 +282,7 @@
+@@ -277,10 +293,11 @@
  	if (midtexture)
  	{
  	    // single sided line
@@ -1455,7 +2270,12 @@ diff --git a/doomgeneric/r_segs.c b/doomgeneric/r_segs.c
  	    dc_yl = yl;
  	    dc_yh = yh;
  	    dc_texturemid = rw_midtexturemid;
-@@ -299,6 +305,11 @@
+-	    dc_source = R_GetColumn(midtexture,texturecolumn);
++	    dc_source = R_GetColumnForOpaque(midtexture,texturecolumn,&dc_sourceheight);
+ 	    colfunc ();
+ 	    ceilingclip[rw_x] = viewheight;
+ 	    floorclip[rw_x] = -1;
+@@ -299,21 +316,26 @@
  
  		if (mid >= yl)
  		{
@@ -1467,7 +2287,26 @@ diff --git a/doomgeneric/r_segs.c b/doomgeneric/r_segs.c
  		    dc_yl = yl;
  		    dc_yh = mid;
  		    dc_texturemid = rw_toptexturemid;
-@@ -328,6 +339,11 @@
+-		    dc_source = R_GetColumn(toptexture,texturecolumn);
++		    dc_source = R_GetColumnForOpaque(toptexture,texturecolumn,&dc_sourceheight);
+ 		    colfunc ();
+-		    ceilingclip[rw_x] = mid;
++		    ceilingclip[rw_x] = R_ClipColumnEdge(mid);
+ 		}
+ 		else
+-		    ceilingclip[rw_x] = yl-1;
++		    ceilingclip[rw_x] = R_ClipColumnEdge(yl-1);
+ 	    }
+ 	    else
+ 	    {
+ 		// no top wall
+ 		if (markceiling)
+-		    ceilingclip[rw_x] = yl-1;
++		    ceilingclip[rw_x] = R_ClipColumnEdge(yl-1);
+ 	    }
+ 			
+ 	    if (bottomtexture)
+@@ -328,22 +350,27 @@
  		
  		if (mid <= yh)
  		{
@@ -1479,12 +2318,68 @@ diff --git a/doomgeneric/r_segs.c b/doomgeneric/r_segs.c
  		    dc_yl = mid;
  		    dc_yh = yh;
  		    dc_texturemid = rw_bottomtexturemid;
-@@ -740,4 +756,3 @@
+-		    dc_source = R_GetColumn(bottomtexture,
+-					    texturecolumn);
++		    dc_source = R_GetColumnForOpaque(bottomtexture,
++					    texturecolumn,&dc_sourceheight);
+ 		    colfunc ();
+-		    floorclip[rw_x] = mid;
++		    floorclip[rw_x] = R_ClipColumnEdge(mid);
+ 		}
+ 		else
+-		    floorclip[rw_x] = yh+1;
++		    floorclip[rw_x] = R_ClipColumnEdge(yh+1);
+ 	    }
+ 	    else
+ 	    {
+ 		// no bottom wall
+ 		if (markfloor)
+-		    floorclip[rw_x] = yh+1;
++		    floorclip[rw_x] = R_ClipColumnEdge(yh+1);
+ 	    }
+ 			
+ 	    if (maskedtexture)
+@@ -677,11 +704,11 @@
+     worldtop >>= 4;
+     worldbottom >>= 4;
+ 	
+-    topstep = -FixedMul (rw_scalestep, worldtop);
+-    topfrac = (centeryfrac>>4) - FixedMul (worldtop, rw_scale);
+-
+-    bottomstep = -FixedMul (rw_scalestep,worldbottom);
+-    bottomfrac = (centeryfrac>>4) - FixedMul (worldbottom, rw_scale);
++    topstep = -R_ScreenFixedMul (rw_scalestep, worldtop);
++    topfrac = (centeryfrac>>4) - R_ScreenFixedMul (worldtop, rw_scale);
++
++    bottomstep = -R_ScreenFixedMul (rw_scalestep,worldbottom);
++    bottomfrac = (centeryfrac>>4) - R_ScreenFixedMul (worldbottom, rw_scale);
+ 	
+     if (backsector)
+     {	
+@@ -690,14 +717,14 @@
+ 
+ 	if (worldhigh < worldtop)
+ 	{
+-	    pixhigh = (centeryfrac>>4) - FixedMul (worldhigh, rw_scale);
+-	    pixhighstep = -FixedMul (rw_scalestep,worldhigh);
++	    pixhigh = (centeryfrac>>4) - R_ScreenFixedMul (worldhigh, rw_scale);
++	    pixhighstep = -R_ScreenFixedMul (rw_scalestep,worldhigh);
+ 	}
+ 	
+ 	if (worldlow > worldbottom)
+ 	{
+-	    pixlow = (centeryfrac>>4) - FixedMul (worldlow, rw_scale);
+-	    pixlowstep = -FixedMul (rw_scalestep,worldlow);
++	    pixlow = (centeryfrac>>4) - R_ScreenFixedMul (worldlow, rw_scale);
++	    pixlowstep = -R_ScreenFixedMul (rw_scalestep,worldlow);
+ 	}
+     }
+     
+@@ -740,4 +767,3 @@
      }
      ds_p++;
  }
 -
-diff --git a/doomgeneric/r_things.c b/doomgeneric/r_things.c
 --- a/doomgeneric/r_things.c
 +++ b/doomgeneric/r_things.c
 @@ -19,6 +19,7 @@
@@ -1495,7 +2390,52 @@ diff --git a/doomgeneric/r_things.c b/doomgeneric/r_things.c
  #include <stdio.h>
  #include <stdlib.h>
  
-@@ -471,6 +472,8 @@
+@@ -338,12 +339,12 @@
+ short*		mceilingclip;
+ 
+ fixed_t		spryscale;
+-fixed_t		sprtopscreen;
++p4_screenfrac_t sprtopscreen;
+ 
+ void R_DrawMaskedColumn (column_t* column)
+ {
+-    int		topscreen;
+-    int 	bottomscreen;
++    p4_screenfrac_t topscreen;
++    p4_screenfrac_t bottomscreen;
+     fixed_t	basetexturemid;
+ 	
+     basetexturemid = dc_texturemid;
+@@ -352,8 +353,8 @@
+     {
+ 	// calculate unclipped screen coordinates
+ 	//  for post
+-	topscreen = sprtopscreen + spryscale*column->topdelta;
+-	bottomscreen = topscreen + spryscale*column->length;
++	topscreen = sprtopscreen + (p4_screenfrac_t)spryscale*column->topdelta;
++	bottomscreen = topscreen + (p4_screenfrac_t)spryscale*column->length;
+ 
+ 	dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
+ 	dc_yh = (bottomscreen-1)>>FRACBITS;
+@@ -371,6 +372,8 @@
+ 
+ 	    // Drawn by either R_DrawColumn
+ 	    //  or (SHADOW) R_DrawFuzzColumn.
++	    // Each masked wall/sprite post keeps its existing sampler.
++	    dc_sourceheight = 128;
+ 	    colfunc ();	
+ 	}
+ 	column = (column_t *)(  (byte *)column + column->length + 4);
+@@ -417,7 +420,7 @@
+     dc_texturemid = vis->texturemid;
+     frac = vis->startfrac;
+     spryscale = vis->scale;
+-    sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
++    sprtopscreen = centeryfrac - R_ScreenFixedMul(dc_texturemid,spryscale);
+ 	
+     for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
+     {
+@@ -471,6 +474,8 @@
      angle_t		ang;
      fixed_t		iscale;
      
@@ -1504,7 +2444,7 @@ diff --git a/doomgeneric/r_things.c b/doomgeneric/r_things.c
      // transform the origin point
      tr_x = thing->x - viewx;
      tr_y = thing->y - viewy;
-@@ -484,7 +487,6 @@
+@@ -484,7 +489,6 @@
      if (tz < MINZ)
  	return;
      
@@ -1512,7 +2452,7 @@ diff --git a/doomgeneric/r_things.c b/doomgeneric/r_things.c
  	
      gxt = -FixedMul(tr_x,viewsin); 
      gyt = FixedMul(tr_y,viewcos); 
-@@ -493,6 +495,8 @@
+@@ -493,6 +497,8 @@
      // too far off the side?
      if (abs(tx)>(tz<<2))
  	return;
@@ -1521,7 +2461,16 @@ diff --git a/doomgeneric/r_things.c b/doomgeneric/r_things.c
      
      // decide which patch to use for sprite relative to player
  #ifdef RANGECHECK
-@@ -737,6 +741,8 @@
+@@ -586,7 +592,7 @@
+     else
+     {
+ 	// diminished light
+-	index = xscale>>(LIGHTSCALESHIFT-detailshift);
++	index = R_CanonicalScale(xscale)>>(LIGHTSCALESHIFT-detailshift);
+ 
+ 	if (index >= MAXLIGHTSCALE) 
+ 	    index = MAXLIGHTSCALE-1;
+@@ -737,6 +743,8 @@
  //
  void R_DrawPlayerSprites (void)
  {
@@ -1530,7 +2479,17 @@ diff --git a/doomgeneric/r_things.c b/doomgeneric/r_things.c
      int		i;
      int		lightnum;
      pspdef_t*	psp;
-diff --git a/doomgeneric/s_sound.c b/doomgeneric/s_sound.c
+--- a/doomgeneric/r_things.h
++++ b/doomgeneric/r_things.h
+@@ -37,7 +37,7 @@
+ extern short*		mfloorclip;
+ extern short*		mceilingclip;
+ extern fixed_t		spryscale;
+-extern fixed_t		sprtopscreen;
++extern p4_screenfrac_t sprtopscreen;
+ 
+ extern fixed_t		pspritescale;
+ extern fixed_t		pspriteiscale;
 --- a/doomgeneric/s_sound.c
 +++ b/doomgeneric/s_sound.c
 @@ -1,3 +1,4 @@
@@ -1613,7 +2572,52 @@ diff --git a/doomgeneric/s_sound.c b/doomgeneric/s_sound.c
      }
  }
 -
-diff --git a/doomgeneric/st_stuff.c b/doomgeneric/st_stuff.c
+--- a/doomgeneric/st_lib.c
++++ b/doomgeneric/st_lib.c
+@@ -80,6 +80,16 @@
+ //  based on differences from the old number.
+ // Note: worth the trouble?
+ //
++// Copy the same native pixel interval used by the scaled status asset. Its
++// 168-row canonical origin has a fractional native position at 768x480.
++static void STlib_restoreBackground(int x, int y, int w, int h)
++{
++    int nx = P4_DOOM_SCALE_X(x), ny = P4_DOOM_SCALE_Y(y);
++    V_CopyRect(nx, ny - ST_NATIVE_Y, st_backing_screen,
++               P4_DOOM_SCALE_X(x + w) - nx, P4_DOOM_SCALE_Y(y + h) - ny,
++               nx, ny);
++}
++
+ void
+ STlib_drawNum
+ ( st_number_t*	n,
+@@ -115,7 +125,7 @@
+     if (n->y - ST_Y < 0)
+ 	I_Error("drawNum: n->y - ST_Y < 0");
+ 
+-    V_CopyRect(x, n->y - ST_Y, st_backing_screen, w*numdigits, h, x, n->y);
++    STlib_restoreBackground(x, n->y, w*numdigits, h);
+ 
+     // if non-number, do not draw it
+     if (num == 1994)
+@@ -223,7 +233,7 @@
+ 	    if (y - ST_Y < 0)
+ 		I_Error("updateMultIcon: y - ST_Y < 0");
+ 
+-	    V_CopyRect(x, y-ST_Y, st_backing_screen, w, h, x, y);
++	    STlib_restoreBackground(x, y, w, h);
+ 	}
+ 	V_DrawPatch(mi->x, mi->y, mi->p[*mi->inum]);
+ 	mi->oldinum = *mi->inum;
+@@ -275,7 +285,7 @@
+ 	if (*bi->val)
+ 	    V_DrawPatch(bi->x, bi->y, bi->p);
+ 	else
+-	    V_CopyRect(x, y-ST_Y, st_backing_screen, w, h, x, y);
++	    STlib_restoreBackground(x, y, w, h);
+ 
+ 	bi->oldval = *bi->val;
+     }
 --- a/doomgeneric/st_stuff.c
 +++ b/doomgeneric/st_stuff.c
 @@ -20,6 +20,7 @@
@@ -1624,6 +2628,37 @@ diff --git a/doomgeneric/st_stuff.c b/doomgeneric/st_stuff.c
  #include <stdio.h>
  
  #include "i_system.h"
+@@ -254,7 +255,7 @@
+ #define ST_OUTHEIGHT		1
+ 
+ #define ST_MAPTITLEX \
+-    (SCREENWIDTH - ST_MAPWIDTH * ST_CHATFONTWIDTH)
++    (P4_DOOM_CANONICAL_WIDTH - ST_MAPWIDTH * ST_CHATFONTWIDTH)
+ 
+ #define ST_MAPTITLEY		0
+ #define ST_MAPHEIGHT		1
+@@ -418,16 +419,16 @@
+ 
+     if (st_statusbaron)
+     {
+-        V_UseBuffer(st_backing_screen);
+-
+-	V_DrawPatch(ST_X, 0, sbar);
++        V_UseBufferRegion(st_backing_screen, ST_NATIVE_Y, ST_NATIVE_HEIGHT);
++
++	V_DrawPatch(ST_X, ST_Y, sbar);
+ 
+ 	if (netgame)
+-	    V_DrawPatch(ST_FX, 0, faceback);
++	    V_DrawPatch(ST_FX, ST_Y, faceback);
+ 
+         V_RestoreBuffer();
+ 
+-	V_CopyRect(ST_X, 0, st_backing_screen, ST_WIDTH, ST_HEIGHT, ST_X, ST_Y);
++	V_CopyRect(0, 0, st_backing_screen, SCREENWIDTH, ST_NATIVE_HEIGHT, 0, ST_NATIVE_Y);
+     }
+ 
+ }
 @@ -733,7 +734,8 @@
    
      if (priority < 8)
@@ -1657,12 +2692,505 @@ diff --git a/doomgeneric/st_stuff.c b/doomgeneric/st_stuff.c
      ST_updateWidgets();
      st_oldhealth = plyr->health;
  
-@@ -1413,4 +1424,3 @@
+@@ -1411,6 +1422,5 @@
+ void ST_Init (void)
+ {
      ST_loadData();
-     st_backing_screen = (byte *) Z_Malloc(ST_WIDTH * ST_HEIGHT, PU_STATIC, 0);
- }
+-    st_backing_screen = (byte *) Z_Malloc(ST_WIDTH * ST_HEIGHT, PU_STATIC, 0);
+-}
 -
-diff --git a/doomgeneric/w_file.h b/doomgeneric/w_file.h
++    st_backing_screen = (byte *) Z_Malloc(SCREENWIDTH * ST_NATIVE_HEIGHT, PU_STATIC, 0);
++}
+--- a/doomgeneric/st_stuff.h
++++ b/doomgeneric/st_stuff.h
+@@ -22,14 +22,17 @@
+ #define __STSTUFF_H__
+ 
+ #include "doomtype.h"
++#include "i_video.h"
+ #include "d_event.h"
+ #include "m_cheat.h"
+ 
+ // Size of statusbar.
+ // Now sensitive for scaling.
+ #define ST_HEIGHT	32
+-#define ST_WIDTH	SCREENWIDTH
+-#define ST_Y		(SCREENHEIGHT - ST_HEIGHT)
++#define ST_WIDTH	P4_DOOM_CANONICAL_WIDTH
++#define ST_Y		(P4_DOOM_CANONICAL_HEIGHT - ST_HEIGHT)
++#define ST_NATIVE_Y	P4_DOOM_SCALE_Y(ST_Y)
++#define ST_NATIVE_HEIGHT (SCREENHEIGHT - ST_NATIVE_Y)
+ 
+ 
+ //
+--- a/doomgeneric/v_video.c
++++ b/doomgeneric/v_video.c
+@@ -56,6 +56,10 @@
+ // The screen buffer that the v_video.c code draws to.
+ 
+ static byte *dest_screen = NULL;
++// Alternate native buffers can represent a vertical region of the screen.
++// Keeping its global origin preserves the fractional 12/5 UI scaling phase.
++static int dest_origin_y;
++static int dest_height = SCREENHEIGHT;
+ 
+ int dirtybox[4]; 
+ 
+@@ -90,14 +94,15 @@
+     byte *dest; 
+  
+ #ifdef RANGECHECK 
+-    if (srcx < 0
++    if (width < 0 || height < 0
++     || srcx < 0
+      || srcx + width > SCREENWIDTH
+      || srcy < 0
+      || srcy + height > SCREENHEIGHT 
+      || destx < 0
+      || destx + width > SCREENWIDTH
+-     || desty < 0
+-     || desty + height > SCREENHEIGHT)
++     || desty < dest_origin_y
++     || desty + height > dest_origin_y + dest_height)
+     {
+         I_Error ("Bad V_CopyRect");
+     }
+@@ -106,7 +111,7 @@
+     V_MarkRect(destx, desty, width, height); 
+  
+     src = source + SCREENWIDTH * srcy + srcx; 
+-    dest = dest_screen + SCREENWIDTH * desty + destx; 
++    dest = dest_screen + SCREENWIDTH * (desty - dest_origin_y) + destx; 
+ 
+     for ( ; height>0 ; height--) 
+     { 
+@@ -131,13 +136,140 @@
+     patchclip_callback = func;
+ }
+ 
++// UI assets retain Doom's canonical coordinate system. Each post is painted
++// directly into the native raster; there is no low-resolution rendered frame.
++#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
++static void V_NativePatch(int x, int y, patch_t *patch, boolean flipped,
++                          int blend, boolean native_anchor, int only_column)
++{
++    int width = SHORT(patch->width), height = SHORT(patch->height);
++    int col, start = only_column < 0 ? 0 : only_column;
++    int end = only_column < 0 ? width : only_column + 1;
++    int origin_x, origin_y;
++
++    if (width <= 0 || height <= 0 || start < 0 || end > width)
++        return;
++    if (only_column < 0)
++    {
++        if (native_anchor)
++        {
++            x -= P4_DOOM_SCALE_X(SHORT(patch->leftoffset));
++            y -= P4_DOOM_SCALE_Y(SHORT(patch->topoffset));
++        }
++        else
++        {
++            x -= SHORT(patch->leftoffset);
++            y -= SHORT(patch->topoffset);
++        }
++        if (patchclip_callback && !patchclip_callback(patch, x, y))
++            return;
++        // Keep Doom's canonical UI rejection before reading any column table
++        // (the intentional invalid intermission patch relies on this).
++        if (!native_anchor && blend != 3
++            && (x < 0 || y < 0 || x + width > P4_DOOM_CANONICAL_WIDTH
++                || y + height > P4_DOOM_CANONICAL_HEIGHT))
++            I_Error("Bad native V_DrawPatch x=%i y=%i width=%i height=%i",
++                    x, y, width, height);
++    }
++    origin_x = native_anchor ? x : 0;
++    origin_y = native_anchor ? y : 0;
++    for (col = start; col < end; ++col)
++    {
++        int draw_col = only_column < 0 ? col : 0;
++        int x0 = origin_x + P4_DOOM_SCALE_X((native_anchor ? 0 : x) + draw_col);
++        int x1 = origin_x + P4_DOOM_SCALE_X((native_anchor ? 0 : x) + draw_col + 1);
++        int source_col = flipped ? width - col - 1 : col;
++        column_t *post = (column_t *) ((byte *)patch + LONG(patch->columnofs[source_col]));
++        if (x0 < 0) x0 = 0;
++        if (x1 > SCREENWIDTH) x1 = SCREENWIDTH;
++        if (x0 >= x1) continue;
++        while (post->topdelta != 0xff)
++        {
++            const byte *source = (byte *)post + 3;
++            int row;
++            for (row = 0; row < post->length; ++row)
++            {
++                int sy = post->topdelta + row;
++                int y0 = origin_y + P4_DOOM_SCALE_Y((native_anchor ? 0 : y) + sy);
++                int y1 = origin_y + P4_DOOM_SCALE_Y((native_anchor ? 0 : y) + sy + 1);
++                int dy;
++                if (y0 < dest_origin_y) y0 = dest_origin_y;
++                if (y1 > dest_origin_y + dest_height) y1 = dest_origin_y + dest_height;
++                for (dy = y0; dy < y1; ++dy)
++                {
++                    byte *dest = dest_screen + (dy - dest_origin_y) * SCREENWIDTH + x0;
++                    if (blend == 0)
++                        memset(dest, source[row], x1 - x0);
++                    else
++                    {
++                        int dx;
++                        for (dx = x0; dx < x1; ++dx, ++dest)
++                        {
++                            if (blend == 3)
++                                *dest = tinttable[*dest << 8];
++                            else if (blend == 2)
++                                *dest = xlatab[*dest + (source[row] << 8)];
++                            else
++                                *dest = tinttable[(*dest << 8) + source[row]];
++                        }
++                    }
++                }
++            }
++            post = (column_t *) ((byte *)post + post->length + 4);
++        }
++    }
++    if (dest_screen == I_VideoBuffer)
++        V_MarkRect(0, 0, SCREENWIDTH, SCREENHEIGHT);
++}
++#endif
++
++// Native anchors are used by native world borders and automap markers. The
++// patch asset itself is still scaled, rather than changing world coordinates.
++void V_DrawPatchNative(int x, int y, patch_t *patch)
++{
++#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
++    V_NativePatch(x, y, patch, false, 0, true, -1);
++#else
++    V_DrawPatch(x, y, patch);
++#endif
++}
++
++void V_DrawPatchColumn(int x, int y, patch_t *patch, int col)
++{
++#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
++    V_NativePatch(x, y, patch, false, 0, false, col);
++#else
++    column_t *post;
++    if (col < 0 || col >= SHORT(patch->width) || x < 0 || x >= SCREENWIDTH)
++        return;
++    post = (column_t *) ((byte *)patch + LONG(patch->columnofs[col]));
++    while (post->topdelta != 0xff)
++    {
++        const byte *source = (byte *)post + 3;
++        int row;
++        for (row = 0; row < post->length; ++row)
++        {
++            int dy = y + post->topdelta + row;
++            if (dy >= dest_origin_y && dy < dest_origin_y + dest_height)
++                dest_screen[(dy - dest_origin_y) * SCREENWIDTH + x] = source[row];
++        }
++        post = (column_t *) ((byte *)post + post->length + 4);
++    }
++#endif
++}
++
+ //
+ // V_DrawPatch
+ // Masks a column based masked pic to the screen. 
+ //
+ 
+ void V_DrawPatch(int x, int y, patch_t *patch)
+-{ 
++{
++#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
++    V_NativePatch(x, y, patch, false, 0, false, -1);
++    return;
++#endif
++ 
+     int count;
+     int col;
+     column_t *column;
+@@ -169,7 +301,7 @@
+     V_MarkRect(x, y, SHORT(patch->width), SHORT(patch->height));
+ 
+     col = 0;
+-    desttop = dest_screen + y * SCREENWIDTH + x;
++    desttop = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x;
+ 
+     w = SHORT(patch->width);
+ 
+@@ -202,6 +334,11 @@
+ 
+ void V_DrawPatchFlipped(int x, int y, patch_t *patch)
+ {
++#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
++    V_NativePatch(x, y, patch, true, 0, false, -1);
++    return;
++#endif
++
+     int count;
+     int col; 
+     column_t *column; 
+@@ -233,7 +370,7 @@
+     V_MarkRect (x, y, SHORT(patch->width), SHORT(patch->height));
+ 
+     col = 0;
+-    desttop = dest_screen + y * SCREENWIDTH + x;
++    desttop = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x;
+ 
+     w = SHORT(patch->width);
+ 
+@@ -278,6 +415,11 @@
+ 
+ void V_DrawTLPatch(int x, int y, patch_t * patch)
+ {
++#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
++    V_NativePatch(x, y, patch, false, 1, false, -1);
++    return;
++#endif
++
+     int count, col;
+     column_t *column;
+     byte *desttop, *dest, *source;
+@@ -295,7 +437,7 @@
+     }
+ 
+     col = 0;
+-    desttop = dest_screen + y * SCREENWIDTH + x;
++    desttop = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x;
+ 
+     w = SHORT(patch->width);
+     for (; col < w; x++, col++, desttop++)
+@@ -328,6 +470,11 @@
+ 
+ void V_DrawXlaPatch(int x, int y, patch_t * patch)
+ {
++#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
++    V_NativePatch(x, y, patch, false, 2, false, -1);
++    return;
++#endif
++
+     int count, col;
+     column_t *column;
+     byte *desttop, *dest, *source;
+@@ -343,7 +490,7 @@
+     }
+ 
+     col = 0;
+-    desttop = dest_screen + y * SCREENWIDTH + x;
++    desttop = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x;
+ 
+     w = SHORT(patch->width);
+     for(; col < w; x++, col++, desttop++)
+@@ -377,6 +524,11 @@
+ 
+ void V_DrawAltTLPatch(int x, int y, patch_t * patch)
+ {
++#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
++    V_NativePatch(x, y, patch, false, 1, false, -1);
++    return;
++#endif
++
+     int count, col;
+     column_t *column;
+     byte *desttop, *dest, *source;
+@@ -394,7 +546,7 @@
+     }
+ 
+     col = 0;
+-    desttop = dest_screen + y * SCREENWIDTH + x;
++    desttop = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x;
+ 
+     w = SHORT(patch->width);
+     for (; col < w; x++, col++, desttop++)
+@@ -427,6 +579,14 @@
+ 
+ void V_DrawShadowedPatch(int x, int y, patch_t *patch)
+ {
++#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
++    // Tint the shadow before painting the foreground so overlapping posts are
++    // consistently hidden by the native asset.
++    V_NativePatch(x + 2, y + 2, patch, false, 3, false, -1);
++    V_NativePatch(x, y, patch, false, 0, false, -1);
++    return;
++#endif
++
+     int count, col;
+     column_t *column;
+     byte *desttop, *dest, *source;
+@@ -445,8 +605,8 @@
+     }
+ 
+     col = 0;
+-    desttop = dest_screen + y * SCREENWIDTH + x;
+-    desttop2 = dest_screen + (y + 2) * SCREENWIDTH + x + 2;
++    desttop = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x;
++    desttop2 = dest_screen + (y + 2 - dest_origin_y) * SCREENWIDTH + x + 2;
+ 
+     w = SHORT(patch->width);
+     for (; col < w; x++, col++, desttop++, desttop2++)
+@@ -505,10 +665,11 @@
+     byte *dest; 
+  
+ #ifdef RANGECHECK 
+-    if (x < 0
++    if (width < 0 || height < 0
++     || x < 0
+      || x + width >SCREENWIDTH
+-     || y < 0
+-     || y + height > SCREENHEIGHT)
++     || y < dest_origin_y
++     || y + height > dest_origin_y + dest_height)
+     {
+ 	I_Error ("Bad V_DrawBlock");
+     }
+@@ -516,7 +677,7 @@
+  
+     V_MarkRect (x, y, width, height); 
+  
+-    dest = dest_screen + y * SCREENWIDTH + x; 
++    dest = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x; 
+ 
+     while (height--) 
+     { 
+@@ -528,49 +689,29 @@
+ 
+ void V_DrawFilledBox(int x, int y, int w, int h, int c)
+ {
+-    uint8_t *buf, *buf1;
+-    int x1, y1;
+-
+-    buf = I_VideoBuffer + SCREENWIDTH * y + x;
+-
+-    for (y1 = 0; y1 < h; ++y1)
+-    {
+-        buf1 = buf;
+-
+-        for (x1 = 0; x1 < w; ++x1)
+-        {
+-            *buf1++ = c;
+-        }
+-
+-        buf += SCREENWIDTH;
+-    }
++    int x0, x1, y0, y1, row;
++    if (w <= 0 || h <= 0) return;
++    x0 = P4_DOOM_SCALE_X(x);
++    x1 = P4_DOOM_SCALE_X(x + w);
++    y0 = P4_DOOM_SCALE_Y(y);
++    y1 = P4_DOOM_SCALE_Y(y + h);
++    if (x0 < 0) x0 = 0;
++    if (x1 > SCREENWIDTH) x1 = SCREENWIDTH;
++    if (y0 < 0) y0 = 0;
++    if (y1 > SCREENHEIGHT) y1 = SCREENHEIGHT;
++    if (x0 >= x1) return;
++    for (row = y0; row < y1; ++row)
++        memset(I_VideoBuffer + SCREENWIDTH * row + x0, c, x1 - x0);
+ }
+ 
+ void V_DrawHorizLine(int x, int y, int w, int c)
+ {
+-    uint8_t *buf;
+-    int x1;
+-
+-    buf = I_VideoBuffer + SCREENWIDTH * y + x;
+-
+-    for (x1 = 0; x1 < w; ++x1)
+-    {
+-        *buf++ = c;
+-    }
++    V_DrawFilledBox(x, y, w, 1, c);
+ }
+ 
+ void V_DrawVertLine(int x, int y, int h, int c)
+ {
+-    uint8_t *buf;
+-    int y1;
+-
+-    buf = I_VideoBuffer + SCREENWIDTH * y + x;
+-
+-    for (y1 = 0; y1 < h; ++y1)
+-    {
+-        *buf = c;
+-        buf += SCREENWIDTH;
+-    }
++    V_DrawFilledBox(x, y, 1, h, c);
+ }
+ 
+ void V_DrawBox(int x, int y, int w, int h, int c)
+@@ -588,7 +729,16 @@
+  
+ void V_DrawRawScreen(byte *raw)
+ {
+-    memcpy(dest_screen, raw, SCREENWIDTH * SCREENHEIGHT);
++    int x, y;
++    // A raw screen is a static 320x200 asset, not a rendered world frame.
++    for (y = dest_origin_y; y < dest_origin_y + dest_height; ++y)
++    {
++        const byte *source = raw + (y * P4_DOOM_CANONICAL_HEIGHT / SCREENHEIGHT)
++                                  * P4_DOOM_CANONICAL_WIDTH;
++        byte *dest = dest_screen + (y - dest_origin_y) * SCREENWIDTH;
++        for (x = 0; x < SCREENWIDTH; ++x)
++            dest[x] = source[x * P4_DOOM_CANONICAL_WIDTH / SCREENWIDTH];
++    }
+ }
+ 
+ //
+@@ -606,6 +756,17 @@
+ void V_UseBuffer(byte *buffer)
+ {
+     dest_screen = buffer;
++    dest_origin_y = 0;
++    dest_height = SCREENHEIGHT;
++}
++
++void V_UseBufferRegion(byte *buffer, int origin_y, int height)
++{
++    if (!buffer || origin_y < 0 || height <= 0 || origin_y + height > SCREENHEIGHT)
++        I_Error("Bad V_UseBufferRegion");
++    dest_screen = buffer;
++    dest_origin_y = origin_y;
++    dest_height = height;
+ }
+ 
+ // Restore screen buffer to the i_video screen buffer.
+@@ -613,6 +774,8 @@
+ void V_RestoreBuffer(void)
+ {
+     dest_screen = I_VideoBuffer;
++    dest_origin_y = 0;
++    dest_height = SCREENHEIGHT;
+ }
+ 
+ //
+@@ -872,7 +1035,7 @@
+ 
+     // Calculate box position
+ 
+-    box_x = SCREENWIDTH - MOUSE_SPEED_BOX_WIDTH - 10;
++    box_x = P4_DOOM_CANONICAL_WIDTH - MOUSE_SPEED_BOX_WIDTH - 10;
+     box_y = 15;
+ 
+     V_DrawFilledBox(box_x, box_y,
+--- a/doomgeneric/v_video.h
++++ b/doomgeneric/v_video.h
+@@ -54,7 +54,11 @@
+                 int width, int height,
+                 int destx, int desty);
+ 
++// Patch, text and filled UI primitives take canonical 320x200 coordinates.
++// World framebuffer copies/blocks and dirty rectangles take native pixels.
+ void V_DrawPatch(int x, int y, patch_t *patch);
++void V_DrawPatchNative(int x, int y, patch_t *patch);
++void V_DrawPatchColumn(int x, int y, patch_t *patch, int col);
+ void V_DrawPatchFlipped(int x, int y, patch_t *patch);
+ void V_DrawTLPatch(int x, int y, patch_t *patch);
+ void V_DrawAltTLPatch(int x, int y, patch_t * patch);
+@@ -80,6 +84,8 @@
+ // Temporarily switch to using a different buffer to draw graphics, etc.
+ 
+ void V_UseBuffer(byte *buffer);
++// A short buffer with SCREENWIDTH stride, anchored at a native screen row.
++void V_UseBufferRegion(byte *buffer, int origin_y, int height);
+ 
+ // Return to using the normal screen buffer to draw graphics.
+ 
 --- a/doomgeneric/w_file.h
 +++ b/doomgeneric/w_file.h
 @@ -67,6 +67,8 @@
@@ -1674,7 +3202,6 @@ diff --git a/doomgeneric/w_file.h b/doomgeneric/w_file.h
  
  // Read data from the specified file into the provided buffer.  The
  // data is read from the specified offset from the start of the file.
-diff --git a/doomgeneric/w_file_stdc.c b/doomgeneric/w_file_stdc.c
 --- a/doomgeneric/w_file_stdc.c
 +++ b/doomgeneric/w_file_stdc.c
 @@ -29,6 +29,15 @@
@@ -1701,7 +3228,6 @@ diff --git a/doomgeneric/w_file_stdc.c b/doomgeneric/w_file_stdc.c
      fclose(stdc_wad->fstream);
      Z_Free(stdc_wad);
  }
-diff --git a/doomgeneric/w_wad.c b/doomgeneric/w_wad.c
 --- a/doomgeneric/w_wad.c
 +++ b/doomgeneric/w_wad.c
 @@ -1,3 +1,4 @@
@@ -1760,7 +3286,6 @@ diff --git a/doomgeneric/w_wad.c b/doomgeneric/w_wad.c
  
  
  //
-diff --git a/doomgeneric/w_wad.h b/doomgeneric/w_wad.h
 --- a/doomgeneric/w_wad.h
 +++ b/doomgeneric/w_wad.h
 @@ -62,6 +62,8 @@
@@ -1772,3 +3297,96 @@ diff --git a/doomgeneric/w_wad.h b/doomgeneric/w_wad.h
  
  void*	W_CacheLumpNum (int lump, int tag);
  void*	W_CacheLumpName (char* name, int tag);
+--- a/doomgeneric/wi_stuff.c
++++ b/doomgeneric/wi_stuff.c
+@@ -80,7 +80,7 @@
+ #define SP_STATSY		50
+ 
+ #define SP_TIMEX		16
+-#define SP_TIMEY		(SCREENHEIGHT-32)
++#define SP_TIMEY		(P4_DOOM_CANONICAL_HEIGHT-32)
+ 
+ 
+ // NET GAME STUFF
+@@ -420,13 +420,13 @@
+     if (gamemode != commercial || wbs->last < NUMCMAPS)
+     {
+         // draw <LevelName> 
+-        V_DrawPatch((SCREENWIDTH - SHORT(lnames[wbs->last]->width))/2,
++        V_DrawPatch((P4_DOOM_CANONICAL_WIDTH - SHORT(lnames[wbs->last]->width))/2,
+                     y, lnames[wbs->last]);
+ 
+         // draw "Finished!"
+         y += (5*SHORT(lnames[wbs->last]->height))/4;
+ 
+-        V_DrawPatch((SCREENWIDTH - SHORT(finished->width)) / 2, y, finished);
++        V_DrawPatch((P4_DOOM_CANONICAL_WIDTH - SHORT(finished->width)) / 2, y, finished);
+     }
+     else if (wbs->last == NUMCMAPS)
+     {
+@@ -439,7 +439,7 @@
+         // bits of memory at this point, but let's try to be accurate
+         // anyway.  This deliberately triggers a V_DrawPatch error.
+ 
+-        patch_t tmp = { SCREENWIDTH, SCREENHEIGHT, 1, 1, 
++        patch_t tmp = { P4_DOOM_CANONICAL_WIDTH, P4_DOOM_CANONICAL_HEIGHT, 1, 1, 
+                         { 0, 0, 0, 0, 0, 0, 0, 0 } };
+ 
+         V_DrawPatch(0, y, &tmp);
+@@ -454,14 +454,14 @@
+     int y = WI_TITLEY;
+ 
+     // draw "Entering"
+-    V_DrawPatch((SCREENWIDTH - SHORT(entering->width))/2,
++    V_DrawPatch((P4_DOOM_CANONICAL_WIDTH - SHORT(entering->width))/2,
+ 		y,
+                 entering);
+ 
+     // draw level
+     y += (5*SHORT(lnames[wbs->next]->height))/4;
+ 
+-    V_DrawPatch((SCREENWIDTH - SHORT(lnames[wbs->next]->width))/2,
++    V_DrawPatch((P4_DOOM_CANONICAL_WIDTH - SHORT(lnames[wbs->next]->width))/2,
+ 		y, 
+                 lnames[wbs->next]);
+ 
+@@ -489,9 +489,9 @@
+ 	bottom = top + SHORT(c[i]->height);
+ 
+ 	if (left >= 0
+-	    && right < SCREENWIDTH
++	    && right < P4_DOOM_CANONICAL_WIDTH
+ 	    && top >= 0
+-	    && bottom < SCREENHEIGHT)
++	    && bottom < P4_DOOM_CANONICAL_HEIGHT)
+ 	{
+ 	    fits = true;
+ 	}
+@@ -1459,21 +1459,21 @@
+     WI_drawLF();
+ 
+     V_DrawPatch(SP_STATSX, SP_STATSY, kills);
+-    WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY, cnt_kills[0]);
++    WI_drawPercent(P4_DOOM_CANONICAL_WIDTH - SP_STATSX, SP_STATSY, cnt_kills[0]);
+ 
+     V_DrawPatch(SP_STATSX, SP_STATSY+lh, items);
+-    WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY+lh, cnt_items[0]);
++    WI_drawPercent(P4_DOOM_CANONICAL_WIDTH - SP_STATSX, SP_STATSY+lh, cnt_items[0]);
+ 
+     V_DrawPatch(SP_STATSX, SP_STATSY+2*lh, sp_secret);
+-    WI_drawPercent(SCREENWIDTH - SP_STATSX, SP_STATSY+2*lh, cnt_secret[0]);
++    WI_drawPercent(P4_DOOM_CANONICAL_WIDTH - SP_STATSX, SP_STATSY+2*lh, cnt_secret[0]);
+ 
+     V_DrawPatch(SP_TIMEX, SP_TIMEY, timepatch);
+-    WI_drawTime(SCREENWIDTH/2 - SP_TIMEX, SP_TIMEY, cnt_time);
++    WI_drawTime(P4_DOOM_CANONICAL_WIDTH/2 - SP_TIMEX, SP_TIMEY, cnt_time);
+ 
+     if (wbs->epsd < 3)
+     {
+-	V_DrawPatch(SCREENWIDTH/2 + SP_TIMEX, SP_TIMEY, par);
+-	WI_drawTime(SCREENWIDTH - SP_TIMEX, SP_TIMEY, cnt_par);
++	V_DrawPatch(P4_DOOM_CANONICAL_WIDTH/2 + SP_TIMEX, SP_TIMEY, par);
++	WI_drawTime(P4_DOOM_CANONICAL_WIDTH - SP_TIMEX, SP_TIMEY, cnt_par);
+     }
+ 
+ }

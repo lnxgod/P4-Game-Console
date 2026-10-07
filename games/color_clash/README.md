@@ -93,13 +93,12 @@ The runtime combines original RGB565 drawing primitives, shared font glyphs,
 and the reviewed ImageGen frame atlas; it has no copied commercial card art,
 radio driver, socket, or raw hardware access.
 
-When Console OS offers the optional `video-highres` capability,
-Color Clash 1.8.0 renders directly at 768x480 with its native card atlas,
-crisp antialiased typography, and original ImageGen table material and deck
-back. Older consoles retain a readable 320x200 surface and compact atlas.
-Touch coordinates remain in the Game API's normalized 320x200 input space, so
-the same card, swipe, Draw, UNO, and Exit hit regions work in either video
-mode.
+Color Clash 1.8.2 requires `video-highres` and renders directly at 768×480
+with its native card atlas, antialiased typography, and original ImageGen table
+material and deck back. Legacy source retains its compact atlas for explicit
+legacy diagnostics. Touch coordinates remain in the Game API's canonical
+320×200 input space, so card, swipe, Draw, UNO and Exit hit regions keep their
+established meaning.
 
 ## Card art and logo provenance
 
@@ -154,15 +153,17 @@ cmake --build build-host/play-color_clash
 ctest --test-dir build-host/play-color_clash --output-on-failure
 ```
 
-## Native-resolution presentation (1.8.0)
+## Native-resolution presentation
 
-The preferred surface is 768x480 RGB565 with an optional `video-highres`
-capability and a complete 320x200 fallback. Fonts, rounded card edges, and
-mathematical suit silhouettes are rasterized at the negotiated resolution;
-no 320x200 framebuffer is enlarged to produce the high-resolution game.
+Version 1.8.2 requires `video-highres` in the manifest and C descriptor.
+The maintained Tab5 surface is **768×480 RGB565**. Fonts, rounded card edges,
+and mathematical suit silhouettes are rasterized directly into that surface;
+no completed 320×200 frame is enlarged. Canonical 320×200 touch coordinates
+remain input units. The compact legacy renderer is preserved only for
+explicitly requested legacy maintenance and labeled host diagnostics.
 Input, rules, card identities, saves, and multiplayer messages remain unchanged.
 Exact ranks, numbers, and suits are drawn by code, so generated art cannot
-change card meaning. Small fallback labels retain the proven compact font.
+change card meaning. Explicit legacy diagnostics retain the proven compact font.
 
 `assets/table-materials-imagegen.png` is original artwork generated with the
 built-in ImageGen tool for this upgrade. It contains emerald and midnight felt
@@ -181,9 +182,9 @@ Reproduce the material include with Pillow installed:
 python3 games/color_clash/tools/convert_table_materials.py
 ```
 
-Focused sanitizer tests include both negotiated surfaces, padded framebuffer
-strides, render captures, and Back lifecycle. Existing rule and multiplayer
-tests remain in place. Optional screenshots come from the actual game renderer:
+Focused sanitizer tests cover the required native surface and explicit legacy
+diagnostic copies, padded framebuffer strides, render captures, and Back
+lifecycle. Existing rule and multiplayer tests remain in place. Optional screenshots come from the actual game renderer:
 
 ```sh
 P4_CARD_CAPTURE_DIR=/absolute/existing/output/directory \
@@ -216,9 +217,11 @@ cmake --build build-host/play-color_clash --target p4_game_benchmark
 build-host/play-color_clash/p4_game_benchmark 2000 768 games/color_clash/tests/touch-performance-input.txt
 ```
 
-The same trace can be run with `320` for the fallback. This measures Mac CPU
-update, audio and rendering during continuous drag; display/device timing,
-physical touch, and linked-console acceptance remain separate checks.
+The maintained benchmark uses `768`; the required descriptor rejects a
+320×200 run. Earlier fallback timings remain historical evidence, and explicit
+legacy fixture copies preserve that source path. The benchmark measures Mac
+CPU update, audio and rendering during continuous drag; display/device timing,
+physical touch and linked-console acceptance remain separate checks.
 
 ## Launcher presentation
 
@@ -240,5 +243,9 @@ Acceptance requires the exact cartridge/package, Console OS artifact and Tab5
 unit, the observed runtime surface, and cadence measured during busy gameplay.
 Readable title/ready, play, pause and results views must be checked on that same
 device. These physical readability and cadence gates remain pending until
-measured for this exact candidate. This isolated review source has not yet been
-rebuilt or device-tested; working-tree host tests do not verify it.
+measured for this exact candidate. A merge or firmware installation does not
+close these physical acceptance gates.
+
+Checkpoint `41dfbe6` records focused ASan/UBSan and native SDL smoke checks
+for its source revision. These historical host results do not qualify the
+merged Console OS or establish physical device acceptance.

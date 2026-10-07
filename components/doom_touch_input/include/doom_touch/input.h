@@ -121,11 +121,10 @@ bool doom_touch_input_next(
 bool doom_touch_input_idle(const doom_touch_input_t *input);
 
 /**
- * Copy one 320x200 XRGB8888 Doom frame and add the touch-control overlay.
+ * Legacy 320x200 compositor; native surfaces use the sized API below.
  *
  * Source and destination may be identical. Strides are measured in pixels and
- * must be at least 320. The overlay is intentionally rendered in the game's
- * logical surface so every board uses the same aspect-fit display adapter.
+ * must be at least 320. This preserves the legacy board source contract.
  */
 bool doom_touch_overlay_render_xrgb8888(
     const uint32_t *source,
@@ -158,6 +157,19 @@ bool doom_touch_overlay_render_row_xrgb8888(
  * or rows. Invalid y values return true so callers cannot skip validation.
  */
 bool doom_touch_overlay_row_may_draw(size_t y);
+
+/** Draw directly into a bounded actual-size surface (320..768 by 200..480).
+ * Touch geometry remains in canonical 320x200 units. Strides include padding;
+ * only width pixels are modified per row. All validation precedes writes.
+ * Source and destination may be identical with identical strides, but otherwise
+ * cannot overlap. The row variant neither owns nor retains its supplied row. */
+bool doom_touch_overlay_render_xrgb8888_sized(
+    const uint32_t *source, size_t source_stride, uint32_t *destination,
+    size_t destination_stride, size_t width, size_t height, uint32_t active_actions);
+bool doom_touch_overlay_render_row_xrgb8888_sized(
+    uint32_t *row, size_t row_pixels, size_t y, size_t width, size_t height,
+    uint32_t active_actions);
+bool doom_touch_overlay_row_may_draw_sized(size_t y, size_t width, size_t height);
 
 #ifdef __cplusplus
 }

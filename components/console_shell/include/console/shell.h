@@ -179,6 +179,9 @@ typedef struct {
     const uint16_t *icon_palette;
     /** Built-in titles can supply a larger cover without enlarging .p4icon. */
     const console_shell_artwork_t *cover;
+    /** Optional catalog-owned reason for a disabled app, including its NUL
+     * within CONSOLE_SHELL_SUBTITLE_MAX_BYTES. NULL keeps the default label. */
+    const char *disabled_reason;
 } console_app_descriptor_t;
 
 typedef struct {

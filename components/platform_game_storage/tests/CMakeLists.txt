@@ -123,3 +123,14 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     target_link_options(test_sd_metadata PRIVATE -fsanitize=address,undefined)
 endif()
 add_test(NAME sd_metadata COMMAND test_sd_metadata)
+
+add_executable(test_trusted_wad_table test_trusted_wad_table.c
+    ../../p4_usb_content_transfer/tests/stubs/sha256.c)
+target_include_directories(test_trusted_wad_table PRIVATE ../../p4_usb_content_transfer/tests/stubs)
+target_link_libraries(test_trusted_wad_table PRIVATE platform_game_storage_model)
+target_compile_definitions(test_trusted_wad_table PRIVATE _POSIX_C_SOURCE=200809L)
+target_compile_options(test_trusted_wad_table PRIVATE
+    -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror
+    -fsanitize=address,undefined -fno-omit-frame-pointer)
+target_link_options(test_trusted_wad_table PRIVATE -fsanitize=address,undefined)
+add_test(NAME trusted_wad_table COMMAND test_trusted_wad_table)

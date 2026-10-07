@@ -81,6 +81,10 @@ add_test(
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/test_startup_presentation.py
 )
 add_test(
+    NAME doom_startup_wad_vfs
+    COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/test_startup_wad_vfs.py
+)
+add_test(
     NAME doom_arena_score_touch
     COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/test_arena_score_touch.py
 )

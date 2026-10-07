@@ -67,11 +67,13 @@ transfer path; a game-only update does not require an OS flash.
 
 ## Native high-resolution presentation
 
-Version 1.1.0 negotiates **768x480** through optional `video-highres`,
-with a complete **320x200** fallback. Touch coordinates remain canonical
-320x200 in both modes. Game geometry is rasterized directly into the supplied
-surface, with native 24/38px antialiased typography in high resolution and
-legible compact bitmap text in fallback; no small framebuffer is enlarged.
+Version 1.1.2 requires `video-highres` in both the manifest and C
+descriptor and renders directly at **768×480 RGB565** on maintained Tab5.
+Touch coordinates remain canonical 320×200 input units. Geometry and native
+24/38px antialiased typography are rasterized into the supplied surface;
+no completed low-resolution frame is enlarged. The compact 320×200 source
+path remains for explicitly requested legacy maintenance and labeled host
+diagnostics; it is not an admitted maintained-game surface.
 
 The original ImageGen atlas `assets/presentation_imagegen_v2.png` provides
 48px maple/walnut board materials and lacquer red/ivory men and crowned kings.
@@ -90,16 +92,17 @@ python3 tools/convert_presentation.py
 ```
 
 Focused tests cover padded framebuffer guards and full-surface rendering at
-both resolutions, canonical touch targets after rendering, and representative
-menus, play and result states. Set `P4_CAPTURE_DIR` to an existing absolute
+768×480 plus explicit legacy diagnostic copies, canonical touch targets after
+rendering, and representative menus, play and result states. Set `P4_CAPTURE_DIR` to an existing absolute
 directory to retain native PPM captures from the presentation test. The
-existing rules and mocked multiplayer suites remain unchanged. See
+existing rules and mocked multiplayer suites retain their coverage. See
 `LOCAL_TESTING.json` for exact automated evidence and pending interactive/
 physical-device acceptance; host tests are not hardware acceptance.
 
 ## Frame-time budget
 
-The minimum target is 30 presented frames per second (33.333ms per frame).
+The target is 60 FPS. Release acceptance requires at least 30 presented frames
+per second (33.333ms per frame) measured on the actual Tab5 at 768×480.
 The renderer copies mirrored material row spans and paints visible regions
 without repeatedly painting covered full-screen layers. Canonical touch targets,
 rule timing and multiplayer packet formats remain unchanged.
@@ -129,5 +132,9 @@ Acceptance requires the exact cartridge/package, Console OS artifact and Tab5
 unit, the observed runtime surface, and cadence measured during busy gameplay.
 Readable title/ready, play, pause and results views must be checked on that same
 device. These physical readability and cadence gates remain pending until
-measured for this exact candidate. This isolated review source has not yet been
-rebuilt or device-tested; working-tree host tests do not verify it.
+measured for this exact candidate. A merge or firmware installation does not
+close these physical acceptance gates.
+
+Checkpoint `41dfbe6` records focused ASan/UBSan and native SDL smoke checks
+for its source revision. These historical host results do not qualify the
+merged Console OS or establish physical device acceptance.

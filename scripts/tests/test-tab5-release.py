@@ -261,6 +261,9 @@ def verify(build, firmware_only=False):
         with self.assertRaisesRegex(portable.ReleaseError, "source commit differs"):
             portable.validate_release(self.directory, expected_source_commit="0" * 40)
         for name in ("toolchain.lock.json", "scripts/build-os-update.py",
+                     "scripts/doom/arena-trusted-digests.py",
+                     "scripts/doom/arena-content.py", "scripts/doom/arena-compact.py",
+                     "scripts/prepare-game-data.py",
                      "apps/console_os/main/assets/gamechangers_ai_logo.rgb565",
                      "apps/console_os/main/assets/gamechangers_mark_flight.rgb565a8",
                      "apps/doom_embedded_touch_audio/main/runtime_gate.c"):

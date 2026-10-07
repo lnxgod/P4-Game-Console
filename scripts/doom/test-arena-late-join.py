@@ -30,6 +30,12 @@ def source(relative):
         return OVERRIDE / relative
     return ROOT / relative
 
+def selected_wads():
+    metadata = json.loads(source(Path("third_party/game-data.json")).read_text())
+    entries = {entry["symbol"]: entry for entry in metadata["game_changers_ai_bundle"]["files"]}
+    return [(entries[symbol], source(Path(entries[symbol]["local_path"])))
+            for symbol in ("BASE", "PWAD", "DWANGO")]
+
 def run(command, **kwargs):
     subprocess.run([str(value) for value in command], check=True, **kwargs)
 
@@ -75,12 +81,10 @@ def write_manifest(upstream=None, extras=None):
                         sorted((ROOT / "components/p4_multiplayer/include").rglob("*.h"))]
     vendor_headers = [path for path in sorted(source(Path("third_party/doomgeneric/doomgeneric")).rglob("*.h"))]
     inputs = [*upstream, *extras, *vendor_headers, *project_headers, source(Path("apps/doom/host/doom_late_join_digest.h")),
-              Path(__file__).resolve(), ROOT / "toolchain.lock.json", ROOT / "third_party/game-data.json",
+              Path(__file__).resolve(), ROOT / "toolchain.lock.json", source(Path("third_party/game-data.json")),
               ROOT / "third_party/source-lock.json", source(Path("third_party/doomgeneric-p4.json")),
               source(Path("third_party/doomgeneric-p4.patch")),
-              ROOT / "local-data/doom/freedoom2.wad",
-              ROOT / "game-data/pure-hades/v0.6/PUREHADES.WAD",
-              ROOT / "local-data/doom/arena-inbox/dwango5/DWANGO5.WAD"]
+              *[path for _, path in selected_wads()]]
     manifest = {"repo_root": str(ROOT), "source_override": str(OVERRIDE) if OVERRIDE else None,
                 "asan": bool(SANITIZERS), "compiler": subprocess.check_output([CC, "--version"], text=True).splitlines()[0],
                 "fixture": "deterministic gameplay under identical headless presentation; synthetic clock; canonical-tic damage/item fixtures; no device or P4MP transport acceptance",
@@ -95,9 +99,9 @@ def process(role, tag=None):
                        P4_LATE_JOIN_STATES=str(OUT / (tag + "-states.txt")),
                        XDG_DATA_HOME=str(OUT / "userdata"),
                        ASAN_OPTIONS="detect_leaks=0:abort_on_error=1")
-    command = [OUT / "doom-arena-late-join", "-iwad", ROOT / "local-data/doom/freedoom2.wad",
-               "-file", ROOT / "game-data/pure-hades/v0.6/PUREHADES.WAD",
-               ROOT / "local-data/doom/arena-inbox/dwango5/DWANGO5.WAD",
+    wad_paths = [path for _, path in selected_wads()]
+    command = [OUT / "doom-arena-late-join", "-iwad", wad_paths[0],
+               "-file", *wad_paths[1:],
                "-warp", "1", "-skill", "3", "-config", OUT / (role + ".cfg"),
                "-extraconfig", OUT / (role + "-extra.cfg")]
     with (OUT / (tag + ".log")).open("w") as log:
@@ -142,15 +146,12 @@ def compare():
 
 
 def validate_wads():
-    metadata = json.loads((ROOT / "third_party/game-data.json").read_text())
-    entries = {entry["symbol"]: entry for entry in metadata["game_changers_ai_bundle"]["files"]}
-    for symbol in ("BASE", "PWAD", "DWANGO"):
-        entry = entries[symbol]
-        path = ROOT / entry["local_path"]
-        if path.stat().st_size != entry["size_bytes"] or hashlib.sha256(path.read_bytes()).hexdigest() != entry["sha256"]:
+    for entry, path in selected_wads():
+        if path.is_symlink() or not path.is_file() or path.stat().st_size != entry["size_bytes"] or hashlib.sha256(path.read_bytes()).hexdigest() != entry["sha256"]:
             raise RuntimeError("pinned WAD mismatch: " + str(path))
         if not entry.get("repository_asset"):
-            run(["git", "check-ignore", "-q", entry["local_path"]], cwd=ROOT)
+            run(["git", "check-ignore", "-q", path], cwd=ROOT)
+
 
 def negative_control(variable, tag, fault, reason):
     previous = os.environ.get(variable)

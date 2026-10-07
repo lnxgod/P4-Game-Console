@@ -42,6 +42,15 @@ bool doom_video_convert_indexed_touch_to_rgb565(
     bool prescale
 );
 
+/** Convert a native 768x480 indexed raster one-to-one, drawing touch controls
+ * directly into native rows. No completed low-resolution raster is generated.
+ * All range/alignment/immutability rules above apply with 480 rows, width 768,
+ * and row_scratch[768]. The complete palette is copied with its frame packet. */
+bool doom_video_convert_indexed_touch_to_rgb565_768x480(
+    const uint8_t *source, size_t stride, const uint32_t palette[256],
+    uint32_t active_actions, uint16_t *dest, size_t pitch,
+    uint32_t *row_scratch);
+
 #ifdef __cplusplus
 }
 #endif

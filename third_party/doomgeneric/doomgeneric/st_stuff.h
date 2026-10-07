@@ -22,14 +22,17 @@
 #define __STSTUFF_H__
 
 #include "doomtype.h"
+#include "i_video.h"
 #include "d_event.h"
 #include "m_cheat.h"
 
 // Size of statusbar.
 // Now sensitive for scaling.
 #define ST_HEIGHT	32
-#define ST_WIDTH	SCREENWIDTH
-#define ST_Y		(SCREENHEIGHT - ST_HEIGHT)
+#define ST_WIDTH	P4_DOOM_CANONICAL_WIDTH
+#define ST_Y		(P4_DOOM_CANONICAL_HEIGHT - ST_HEIGHT)
+#define ST_NATIVE_Y	P4_DOOM_SCALE_Y(ST_Y)
+#define ST_NATIVE_HEIGHT (SCREENHEIGHT - ST_NATIVE_Y)
 
 
 //

@@ -297,7 +297,8 @@ static void ng_game_card(ng_scene_t *s,size_t app_index,int x,int y,int w,int h)
     ng_game_art(s,app,x+4,y+4,w-8,h-65);
     ng_label(s,x+16,y+h-53,app->title,s->shell->ng_large_text?30:26,
         app->enabled?NG_WHITE:NG_MUTED,w-32);
-    if(!app->enabled)ng_label(s,x+16,y+12,"Unavailable",24,NG_WHITE,w-32);
+    if(!app->enabled)ng_label(s,x+16,y+12,
+        app->disabled_reason?app->disabled_reason:"Unavailable",24,NG_WHITE,w-32);
 }
 static void ng_library_rows(ng_scene_t *s,const size_t *games,size_t count)
 {
@@ -434,7 +435,10 @@ static void ng_home(ng_scene_t *s)
         /* Opaque backing keeps any game's title readable, including fallback art. */
         ng_round(s,280,174,395,96,10,NG_INK);
         ng_label(s,296,192,app->title,42,NG_WHITE,370);
-        ng_button(s,292,318,250,84,app->enabled?"Play":"Unavailable",NC_LAUNCH,(unsigned)games[0],app->enabled,true);
+        const bool have_reason=!app->enabled&&app->disabled_reason;
+        ng_button(s,292,318,have_reason?500:250,84,
+            app->enabled?"Play":(have_reason?app->disabled_reason:"Unavailable"),
+            NC_LAUNCH,(unsigned)games[0],app->enabled,true);
         for(size_t i=1;i<count&&i<4U;++i)ng_game_card(s,games[i],264+(int)(i-1U)*334,450,320,208);
     } else {
         const size_t filtered=ng_library_games(sh,games);ng_set_scroll(sh,true,sh->ng_library_scroll);

@@ -135,3 +135,37 @@ if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
     set_source_files_properties("${P4_DOOMGENERIC_DIR}/tables.c" PROPERTIES
         COMPILE_OPTIONS -Wno-sign-conversion)
 endif()
+
+# Native Tab5 proof uses the real one-to-one converters, native touch rows,
+# and shared two-slot ownership service with a pthread scheduler and panel mock.
+find_package(Threads REQUIRED)
+add_executable(doom_video_native_tests
+    test_doom_video_native.c
+    ../src/doom_video_indexed.c
+    ../../doom_touch_input/src/overlay.c)
+add_executable(doom_video_native_worker_tests
+    test_doom_video_native_worker.c
+    ../src/doom_video_indexed.c
+    ../../doom_touch_input/src/overlay.c
+    ../../platform_display/src/display_worker.c)
+foreach(test_target IN ITEMS doom_video_native_tests doom_video_native_worker_tests)
+    target_link_libraries(${test_target} PRIVATE doom_video Threads::Threads)
+    target_include_directories(${test_target} PRIVATE
+        "${CMAKE_CURRENT_LIST_DIR}/mocks"
+        "${CMAKE_CURRENT_LIST_DIR}/../../doom_touch_input/include"
+        "${CMAKE_CURRENT_LIST_DIR}/../../platform_display/include")
+    target_compile_definitions(${test_target} PRIVATE
+        CONFIG_P4_BOARD_M5STACK_TAB5=1 DOOM_VIDEO_NATIVE_TAB5=1
+        P4_DOOM_INDEXED_PACKET_EXPERIMENT=1 P4_DOOM_TAB5_FUSED_PRESCALE=0)
+    target_compile_features(${test_target} PRIVATE c_std_11)
+    if(CMAKE_C_COMPILER_ID MATCHES "Clang|GNU")
+        target_compile_options(${test_target} PRIVATE
+            -Wall -Wextra -Wpedantic -Wconversion -Wshadow -Werror)
+        if(DOOM_VIDEO_ENABLE_SANITIZERS)
+            target_compile_options(${test_target} PRIVATE
+                -fsanitize=address,undefined -fno-omit-frame-pointer)
+            target_link_options(${test_target} PRIVATE -fsanitize=address,undefined)
+        endif()
+    endif()
+    add_test(NAME ${test_target} COMMAND ${test_target})
+endforeach()

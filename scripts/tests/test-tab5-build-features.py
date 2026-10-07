@@ -94,12 +94,13 @@ assert re.findall(r"^CONFIG_LWIP_UDP_RECVMBOX_SIZE=(.*)$", defaults, re.M) == ["
 # FatFs needs two header/terminator words plus two words per fragment.
 manifest = json.loads((root / "third_party/game-data.json").read_text())
 wad_bytes = max(entry["size_bytes"] for entry in
-                manifest["game_changers_ai_bundle"]["files"]
+                manifest["game_changers_ai_bundle"]["files"] +
+                [g for g in manifest["game_data"] if g["id"] == "freedoom-0.13.0-phase-2"]
                 if entry["filename"].upper().endswith(".WAD"))
 words = int(re.search(r"^CONFIG_FATFS_FAST_SEEK_BUFFER_SIZE=(\d+)$",
                       defaults, re.M)[1])
 assert "CONFIG_FATFS_SECTOR_512=y" in (root / "apps/console_os/sdkconfig.defaults").read_text().splitlines()
-assert words == 2 + 2 * ((wad_bytes + 511) // 512), "map must cover full fragmentation of pinned Arena WADs"
+assert words == 2 + 2 * ((wad_bytes + 511) // 512), "map must cover full fragmentation of pinned Arena and original campaign WADs"
 storage = (root / "components/platform_game_storage/src/platform_game_storage.c").read_text()
 max_files = int(re.search(r"GAME_STORAGE_MAX_FILES = (\d+)", storage)[1])
 assert words * 4 <= 450000, "per-file map exceeded reviewed PSRAM budget"

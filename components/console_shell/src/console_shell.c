@@ -478,6 +478,10 @@ static bool registry_is_valid(const console_app_descriptor_t *apps,
                 CONSOLE_SHELL_TITLE_MAX_BYTES ||
             bounded_length(app->subtitle, CONSOLE_SHELL_SUBTITLE_MAX_BYTES) >=
                 CONSOLE_SHELL_SUBTITLE_MAX_BYTES ||
+            (app->disabled_reason != NULL &&
+             bounded_length(app->disabled_reason,
+                            CONSOLE_SHELL_SUBTITLE_MAX_BYTES) >=
+                 CONSOLE_SHELL_SUBTITLE_MAX_BYTES) ||
             !folder_path_is_valid(app->folder_path) ||
             !valid_page(app->page) ||
             (app->capabilities & ~known_capabilities) != 0U) {
@@ -4915,7 +4919,9 @@ static size_t draw_home_tiles(console_shell_t *shell,
             if (app != NULL) {
                 draw_centered_text(
                     pixels, stride, left, top + 40, TILE_WIDTH,
-                    app->enabled ? app->subtitle : "OFFLINE",
+                    app->enabled ? app->subtitle :
+                        (app->disabled_reason != NULL
+                            ? app->disabled_reason : "OFFLINE"),
                     pressed ? COLOR_WHITE : COLOR_DARK, 13U);
             } else {
                 draw_program_count(
@@ -7295,6 +7301,8 @@ static uint64_t home_cache_signature(const console_shell_t *shell)
             hash, app->title, CONSOLE_SHELL_TITLE_MAX_BYTES);
         hash = home_cache_hash_text(
             hash, app->subtitle, CONSOLE_SHELL_SUBTITLE_MAX_BYTES);
+        hash = home_cache_hash_text(
+            hash, app->disabled_reason, CONSOLE_SHELL_SUBTITLE_MAX_BYTES);
         hash = home_cache_hash_text(
             hash, app->folder_path, CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES);
         hash = home_cache_hash_bytes(

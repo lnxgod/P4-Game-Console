@@ -1,0 +1,33 @@
+{
+  "schema": 1,
+  "at": "2026-10-07T22:11:08.965032+00:00",
+  "result": "fail",
+  "scope": "Pure Hades Map 1 host solo startup on Tab5 A",
+  "version": "0.79",
+  "firmware_sha256": "89728152ed07b6d4cb11126981ef31c2b43fd4a7831064937c29037e6252b478",
+  "install": {
+    "file": "hardware/backups/tab5-a-install-73j03zyw/receipt.json",
+    "bytes": 1628,
+    "sha256": "336263fb2aced506928f5a97167bad75e9691650c9c6020d41fdaa942358c290"
+  },
+  "content_log": {
+    "file": "build-host/rollout-final-079/content-a.log",
+    "bytes": 5571,
+    "sha256": "5357fe0a06e0ad2e7d61873018f47546b11b6870f887c303daab31cbf3b7f70d"
+  },
+  "raw": {
+    "file": "build-host/rollout-final-079/a-solo-after-reset.rx",
+    "bytes": 409225,
+    "sha256": "b33c97089405120f0c1c926ed8e4c496f4c662b9bfb36206c0e29355ace0fecf"
+  },
+  "decoded": {
+    "file": "build-host/rollout-final-079/a-solo-startup-failure.txt",
+    "bytes": 49951,
+    "sha256": "199cc759beb86cb0116d2970a928eaebdc078cb18a4df6a098aff918244f4688"
+  },
+  "failure": "P4_DOOM_E6 HALT stage=wad-vfs-register error=ESP_ERR_INVALID_ARG; firmware restarted to shell; no gameplay reached",
+  "debug_bad_frames": 0,
+  "debug_remaining_bytes": 0,
+  "gameplay_fps": "not measured; engine startup failed",
+  "music_sfx": "not verified"
+}

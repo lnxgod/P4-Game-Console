@@ -1,13 +1,16 @@
 set(DOOM_VIDEO_CONVERSION_SOURCE src/doom_video_convert.c)
 option(P4_DOOM_INDEXED_PACKET_EXPERIMENT
-       "Opt-in immutable indexed Doom frame packets on Tab5" OFF)
+       "Immutable indexed Doom frame packets (required on Tab5)" ON)
 
 option(P4_DOOM_TAB5_FUSED_PRESCALE
-       "Fuse Doom RGB565 conversion and Tab5 6:5 prescale" ON)
+       "Legacy completed-frame prescale (forbidden on Tab5)" OFF)
 
 if(COMMAND idf_component_register)
     idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
     if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
+        if(P4_DOOM_TAB5_FUSED_PRESCALE OR NOT P4_DOOM_INDEXED_PACKET_EXPERIMENT)
+            message(FATAL_ERROR "Tab5 requires native 768x480 indexed packets; disable fused prescale and enable indexed packets")
+        endif()
         set(DOOM_VIDEO_ADAPTER_SOURCE src/doom_video_tab5_worker.c src/doom_video_metrics.c)
         if(P4_DOOM_INDEXED_PACKET_EXPERIMENT)
             list(APPEND DOOM_VIDEO_CONVERSION_SOURCE src/doom_video_indexed.c)
@@ -33,7 +36,7 @@ if(COMMAND idf_component_register)
         target_compile_definitions(${COMPONENT_LIB} PRIVATE
             P4_DOOM_TAB5_FUSED_PRESCALE=$<BOOL:${P4_DOOM_TAB5_FUSED_PRESCALE}>)
         target_compile_definitions(${COMPONENT_LIB} PUBLIC
-            P4_DOOM_INDEXED_PACKET_EXPERIMENT=$<BOOL:${P4_DOOM_INDEXED_PACKET_EXPERIMENT}>)
+            P4_DOOM_INDEXED_PACKET_EXPERIMENT=1 DOOM_VIDEO_NATIVE_TAB5=1)
     endif()
     target_compile_features(${COMPONENT_LIB} PUBLIC c_std_11)
     target_compile_options(${COMPONENT_LIB} PRIVATE

@@ -39,12 +39,11 @@ case "$P4_BOARD" in
             0) P4_TAB5_BLE_CONFIG='# CONFIG_P4_TAB5_BLE_MULTIPLAYER is not set' ;;
             *) printf '%s\n' 'P4_TAB5_BLE_MULTIPLAYER must be 0 or 1' >&2; exit 2 ;;
         esac
-        # Always pass the chosen value to CMake: an existing OFF cache must
-        # not silently disable the default Tab5 fused renderer candidate.
-        P4_DOOM_TAB5_FUSED_PRESCALE=${P4_DOOM_TAB5_FUSED_PRESCALE:-ON}
+        # A stale build cache must not restore completed-frame upscaling.
+        P4_DOOM_TAB5_FUSED_PRESCALE=${P4_DOOM_TAB5_FUSED_PRESCALE:-OFF}
         case "$P4_DOOM_TAB5_FUSED_PRESCALE" in
-            ON|OFF) ;;
-            *) printf '%s\n' 'P4_DOOM_TAB5_FUSED_PRESCALE must be ON or OFF' >&2; exit 2 ;;
+            OFF) ;;
+            *) printf '%s\n' 'Tab5 requires native 768x480 rendering; P4_DOOM_TAB5_FUSED_PRESCALE must be OFF' >&2; exit 2 ;;
         esac
         P4_TAB5_USB_HOST=${P4_TAB5_USB_HOST:-1}
         case "$P4_TAB5_USB_HOST" in

@@ -5,8 +5,12 @@
 #include <stddef.h>
 #include <stdint.h>
 enum { P4_VERIFIED_BLOCK_BYTES=4096, P4_VERIFIED_DIGEST_BYTES=32 };
-/* Caller supplies a trusted per-block table made during whole-file SHA-256
- * verification under its storage lease. All callbacks are serialized by caller. */
+/* Caller supplies trusted per-block digests: either made during whole-file
+ * verification under this lease, or firmware-owned metadata generated from the
+ * exact pinned whole file and bound to the firmware artifact. Every consumed
+ * block, including an unpadded tail, is still verified before its bytes escape.
+ * Unconsumed media blocks are not verified by metadata alone. Caller serializes
+ * all callbacks and keeps borrowed digest storage alive for the entire lease. */
 typedef struct {
     void *context;
     bool (*read)(void *, size_t offset, void *, size_t bytes);

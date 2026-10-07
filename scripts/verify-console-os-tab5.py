@@ -5,6 +5,7 @@ import hashlib
 import json
 import pathlib
 import re
+import shlex
 import struct
 import subprocess
 import sys
@@ -54,6 +55,87 @@ def verify_udp_mailbox(sdk: str) -> None:
     """Keep the per-socket UDP receive queue at the reviewed Tab5 bound."""
     values = re.findall(r"^CONFIG_LWIP_UDP_RECVMBOX_SIZE=(.*)$", sdk, re.M)
     require(values == ["32"], "Tab5 UDP receive mailbox must be exactly 32")
+
+
+def compile_definitions(command: dict) -> dict[str, list[str | None]]:
+    """Keep every -D/-U occurrence so a later override cannot hide drift."""
+    arguments = command.get("arguments")
+    if arguments is None:
+        arguments = shlex.split(command["command"])
+    require(isinstance(arguments, list) and
+            all(isinstance(arg, str) for arg in arguments),
+            "invalid compiler arguments")
+    definitions: dict[str, list[str | None]] = {}
+    index = 0
+    while index < len(arguments):
+        arg = arguments[index]
+        if arg.startswith(("-D", "-U")):
+            operation, value = arg[:2], arg[2:]
+            if not value:
+                index += 1
+                require(index < len(arguments), "missing compiler macro operand")
+                value = arguments[index]
+            name, separator, content = value.partition("=")
+            require(bool(name), "empty compiler macro name")
+            definitions.setdefault(name, []).append(
+                None if operation == "-U" else content if separator else "1")
+        index += 1
+    return definitions
+
+
+def verify_native_video(commands: list[dict]) -> None:
+    """Check compiled source/flag contracts, not runtime FPS or acceptance."""
+    dimensions = {"P4_DOOM_NATIVE_WIDTH": "768", "P4_DOOM_NATIVE_HEIGHT": "480",
+                  "DOOMGENERIC_RESX": "768", "DOOMGENERIC_RESY": "480"}
+    native = {"DOOM_VIDEO_NATIVE_TAB5": "1"}
+    indexed = {**native, "P4_DOOM_INDEXED_PACKET_EXPERIMENT": "1"}
+    required_sources = {
+        "apps/console_os/main/console_os_main.c": {**dimensions, **native},
+        "apps/doom_embedded_touch_audio/main/doom_embedded_touch_audio_main.c":
+            {**dimensions, **native},
+        "components/doom_video/src/doom_video_tab5_worker.c": indexed,
+        "components/doom_video/src/doom_video_indexed.c": indexed,
+    }
+    vendor_prefix = "third_party/doomgeneric/doomgeneric/"
+    for name in ("r_draw.c", "r_main.c", "r_plane.c", "v_video.c", "i_video.c",
+                 "doomgeneric.c"):
+        required_sources[vendor_prefix + name] = dimensions
+    forbidden_enabled = (
+        "P4_CONSOLE_NATIVE_AIR_LOW_RES", "P4_CONSOLE_NATIVE_TIDE_BLAST_LOW_RES",
+        "P4_CONSOLE_NATIVE_CHECKERS_LOW_RES", "P4_DOOM_TAB5_FUSED_PRESCALE",
+    )
+    seen: set[str] = set()
+    for command in commands:
+        source = pathlib.Path(command["file"])
+        if not source.is_absolute():
+            source = pathlib.Path(command["directory"]) / source
+        source_path = source.resolve().as_posix()
+        definitions = compile_definitions(command)
+        for name in forbidden_enabled:
+            require(name not in definitions or definitions[name] == ["0"],
+                    f"retired Tab5 video override: {name} in {source.name}")
+        require(not source_path.endswith("/components/doom_video/src/doom_video_espidf.c"),
+                "legacy Doom video adapter compiled for Tab5")
+        expected = {}
+        for suffix, values in required_sources.items():
+            if source_path.endswith("/" + suffix):
+                seen.add(suffix)
+                expected.update(values)
+        # Every compiled vendor translation unit shares raster dimensions,
+        # including ones not in the minimum required renderer source set.
+        if "/" + vendor_prefix in source_path:
+            expected.update(dimensions)
+        for name, value in expected.items():
+            require(definitions.get(name) == [value],
+                    f"native Tab5 video requires exactly one {name}={value} in {source.name}")
+        # Optional explicit raster/path flags must also agree in video sources.
+        if expected:
+            for name, value in {**dimensions, **indexed}.items():
+                if name in definitions:
+                    require(definitions[name] == [value],
+                            f"conflicting native Tab5 video flag {name} in {source.name}")
+    require(set(required_sources) <= seen,
+            "missing native Tab5 video source: " + ", ".join(sorted(set(required_sources) - seen)))
 
 
 def verify_usb_host(enabled: bool, components: set[str], sources: set[str], symbols: str) -> None:
@@ -146,6 +228,7 @@ def verify(build: pathlib.Path, firmware_only: bool = False) -> dict:
     else:
         require(not radio_components & components, "BLE service linked in radio-off build")
     commands = json.loads((build / "compile_commands.json").read_text())
+    verify_native_video(commands)
     sources = {pathlib.Path(command["file"]).name for command in commands}
     for name in ("platform_display_tab5.c", "platform_touch_tab5.c", "platform_audio_tab5.c", "tab5.c",
                  "sensors.c", "sensor_decode.c"):

@@ -2,7 +2,7 @@
   "schema": 1,
   "upstream_commit": "dcb7a8dbc7a16ce3dda29382ac9aae9d77d21284",
   "patch": "third_party/doomgeneric-p4.patch",
-  "patch_sha256": "5dfc80aa620cda1dd4507aa079d20982afb603de62b167b6911eaffbb0593403",
+  "patch_sha256": "ad516136e96f343d61ac324f882677cda5b175ab0294a0e41a680b274ec2d3cc",
   "changes": [
     "OS-owned P4MP tic delivery and synchronized engine startup (d_loop.c/h).",
     "Quit notification for returning to the launcher (doomgeneric.c/h, i_system.c).",
@@ -24,7 +24,10 @@
     "Optional paired indexed-framebuffer loan with exact zone fallback and idempotent ownership-aware shutdown; platform opt-in allocation remains disabled by default.",
     "Optional immutable indexed-frame and gamma-corrected RGB888 palette presentation hook, retaining the default weak fallback and exact format gate; Tab5 packet opt-in remains disabled by default.",
     "Optional descriptor-bound sprite-header startup window; stdc FILE hints bracket R_InitSpriteLumps and close, retaining exact range reads, normal-reader fallback when unavailable, and per-block verification before prefetched bytes are exposed.",
-    "Owner-task scalar startup progress for completed texture setup and lookup work, sprite headers, and map setup steps; callbacks never perform per-item rendering or I/O."
+    "Owner-task scalar startup progress for completed texture setup and lookup work, sprite headers, and map setup steps; callbacks never perform per-item rendering or I/O.",
+    "Optional owner-bound scalar callbacks around actual Doom zone allocation, preserving zone allocation semantics and weak host defaults.",
+    "Bound short composite texture columns to their actual height in normal and low-detail drawing; raw, masked and tall texture paths retain their existing behavior.",
+    "Tab5 renders directly at native 768x480 with widened visplanes, scaled view and weapon geometry, native UI rasterization, phase-correct status restoration, and exact asymmetric viewport border restoration; legacy source dimensions remain unchanged."
   ],
   "note": "Explicit local adaptations. Reverse application must reproduce every blob in the original upstream manifest."
 }

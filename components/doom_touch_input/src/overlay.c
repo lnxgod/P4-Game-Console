@@ -62,7 +62,7 @@ typedef struct {
     uint32_t color;
 } logical_control_t;
 
-/* Controls live in the shared 320x200 surface and map through its viewport. */
+/* Control geometry uses canonical 320x200 input units at every raster size. */
 static const logical_control_t s_controls[] = {
     {289, 151, 35, DOOM_TOUCH_ACTION_FIRE, s_circle_35, UINT32_C(0x00ff3030)},
     {237, 162, 19, DOOM_TOUCH_ACTION_USE, s_circle_19, UINT32_C(0x0030d0ff)},
@@ -105,21 +105,22 @@ static bool frame_range(
     return true;
 }
 
-static void draw_span(
+static void draw_span_width(
     uint32_t *destination,
     size_t stride,
     int y,
     int left,
     int right,
     bool active,
-    uint32_t color
+    uint32_t color,
+    size_t width
 )
 {
     if (left < 0) {
         left = 0;
     }
-    if (right >= (int)DOOM_TOUCH_FRAME_WIDTH) {
-        right = (int)DOOM_TOUCH_FRAME_WIDTH - 1;
+    if (right >= (int)width) {
+        right = (int)width - 1;
     }
     if (left > right) {
         return;
@@ -149,6 +150,13 @@ static void draw_span(
                       UINT32_C(0x0000ff00));
         }
     }
+}
+
+static void draw_span(uint32_t *destination, size_t stride, int y,
+                      int left, int right, bool active, uint32_t color)
+{
+    draw_span_width(destination, stride, y, left, right, active, color,
+                    DOOM_TOUCH_FRAME_WIDTH);
 }
 
 static void draw_circle(
@@ -474,5 +482,129 @@ bool doom_touch_overlay_render_row_xrgb8888(
     };
     draw_row_letter_5x7(row, y, 269, LETTER_CENTER_Y, yes_rows);
     draw_row_letter_5x7(row, y, 49, LETTER_CENTER_Y, no_rows);
+    return true;
+}
+
+/* Rasterize the controls into the real destination. Only the bounded control
+ * geometry uses canonical input units; no small image is created or enlarged.
+ * Half-open span edges use ceil so x*320/width gives the same hit coordinate. */
+static size_t overlay_edge(size_t edge, size_t width)
+{
+    return (edge * width + DOOM_TOUCH_FRAME_WIDTH - 1U) / DOOM_TOUCH_FRAME_WIDTH;
+}
+
+static bool overlay_size_valid(size_t width, size_t height)
+{
+    return width >= DOOM_TOUCH_FRAME_WIDTH && width <= 768U &&
+           height >= DOOM_TOUCH_FRAME_HEIGHT && height <= 480U;
+}
+
+static void sized_span(uint32_t *row, size_t width, int left, int right,
+                       bool active, uint32_t color)
+{
+    if (left < 0) left = 0;
+    if (right >= (int)DOOM_TOUCH_FRAME_WIDTH) right = (int)DOOM_TOUCH_FRAME_WIDTH - 1;
+    if (left > right) return;
+    draw_span_width(row, width, 0, (int)overlay_edge((size_t)left, width),
+        (int)overlay_edge((size_t)right + 1U, width) - 1, active, color, width);
+}
+
+bool doom_touch_overlay_row_may_draw_sized(size_t y, size_t width, size_t height)
+{
+    if (!overlay_size_valid(width, height) || y >= height) return true;
+    return doom_touch_overlay_row_may_draw(y * DOOM_TOUCH_FRAME_HEIGHT / height);
+}
+
+bool doom_touch_overlay_render_row_xrgb8888_sized(
+    uint32_t *row, size_t row_pixels, size_t y, size_t width, size_t height,
+    uint32_t active_actions)
+{
+    const uint32_t valid_mask = (UINT32_C(1) << DOOM_TOUCH_ACTION_COUNT) - 1U;
+    if (!overlay_size_valid(width, height) || !row || row_pixels < width ||
+        y >= height || row_pixels > SIZE_MAX / sizeof(*row) ||
+        (uintptr_t)row % _Alignof(uint32_t) != 0U ||
+        (uintptr_t)row > UINTPTR_MAX - row_pixels * sizeof(*row) ||
+        (active_actions & ~valid_mask) != 0U) return false;
+    const size_t cy = y * DOOM_TOUCH_FRAME_HEIGHT / height;
+    const int dy = (int)cy - DPAD_CENTER_Y;
+    if (dy >= -DPAD_RADIUS && dy <= DPAD_RADIUS) {
+        const int ay = dy < 0 ? -dy : dy;
+        const int extent = ay <= 14 ? DPAD_RADIUS : 14;
+        const int middle = ay < extent ? ay : extent;
+        const int edges[4] = {-extent, -middle, middle + 1, extent + 1};
+        const doom_touch_action_t actions[3] = {
+            DOOM_TOUCH_ACTION_LEFT, dy < 0 ? DOOM_TOUCH_ACTION_UP : DOOM_TOUCH_ACTION_DOWN,
+            DOOM_TOUCH_ACTION_RIGHT};
+        for (unsigned i = 0U; i < 3U; ++i) {
+            const int left = edges[i], right = edges[i + 1U] - 1;
+            const bool active = (active_actions & action_bit(actions[i])) != 0U;
+            if (active || dy <= -11 || dy >= 11) {
+                sized_span(row,width,49+left,49+right,active,UINT32_C(0x00d0d0d0));
+            } else {
+                if (left <= -11) sized_span(row,width,49+left,
+                    49+(right < -11 ? right : -11),false,UINT32_C(0x00d0d0d0));
+                if (right >= 11) sized_span(row,width,
+                    49+(left > 11 ? left : 11),49+right,false,UINT32_C(0x00d0d0d0));
+            }
+        }
+    }
+    for (size_t i = 0U; i < sizeof(s_controls)/sizeof(s_controls[0]); ++i) {
+        const logical_control_t *c = &s_controls[i];
+        const int delta = (int)cy - c->center_y;
+        const int ay = delta < 0 ? -delta : delta;
+        if (ay > c->radius) continue;
+        const circle_span_t span = c->spans[ay];
+        const bool active = (active_actions & action_bit(c->action)) != 0U;
+        if (active || span.hole < 0) {
+            sized_span(row,width,c->center_x-span.outer,c->center_x+span.outer,active,c->color);
+        } else {
+            sized_span(row,width,c->center_x-span.outer,c->center_x-span.hole-1,false,c->color);
+            sized_span(row,width,c->center_x+span.hole+1,c->center_x+span.outer,false,c->color);
+        }
+    }
+    static const uint8_t glyphs[2][7] = {
+        {0x11,0x11,0x0a,0x04,0x04,0x04,0x04},
+        {0x11,0x19,0x15,0x13,0x11,0x11,0x11}};
+    const int glyph_y = (int)cy - (LETTER_CENTER_Y - LETTER_HALF_HEIGHT);
+    if (glyph_y >= 0 && glyph_y < LETTER_HALF_HEIGHT * 2) {
+        for (unsigned g = 0U; g < 2U; ++g) {
+            const size_t left = (g == 0U ? 269U : 49U) - 5U;
+            for (unsigned col = 0U; col < 5U; ++col) {
+                if (!(glyphs[g][glyph_y / 2] & (1U << (4U - col)))) continue;
+                const size_t first = overlay_edge(left + col * 2U, width);
+                const size_t end = overlay_edge(left + col * 2U + 2U, width);
+                for (size_t x = first; x < end; ++x) row[x] = UINT32_C(0x00ffffff);
+            }
+        }
+    }
+    return true;
+}
+
+bool doom_touch_overlay_render_xrgb8888_sized(
+    const uint32_t *source, size_t source_stride, uint32_t *destination,
+    size_t destination_stride, size_t width, size_t height, uint32_t active_actions)
+{
+    const uint32_t valid_mask = (UINT32_C(1) << DOOM_TOUCH_ACTION_COUNT) - 1U;
+    if (!overlay_size_valid(width,height) || !source || !destination ||
+        source_stride < width || destination_stride < width ||
+        source_stride > SIZE_MAX / height / sizeof(*source) ||
+        destination_stride > SIZE_MAX / height / sizeof(*destination) ||
+        (uintptr_t)source % _Alignof(uint32_t) != 0U ||
+        (uintptr_t)destination % _Alignof(uint32_t) != 0U ||
+        (active_actions & ~valid_mask) != 0U) return false;
+    const size_t sb = source_stride * height * sizeof(*source);
+    const size_t db = destination_stride * height * sizeof(*destination);
+    const uintptr_t sp = (uintptr_t)source, dp = (uintptr_t)destination;
+    if (sp > UINTPTR_MAX - sb || dp > UINTPTR_MAX - db ||
+        (source == destination && source_stride != destination_stride) ||
+        (source != destination && sp < dp + db && dp < sp + sb)) return false;
+    for (size_t y = 0U; y < height; ++y) {
+        uint32_t *row = destination + y * destination_stride;
+        if (source != destination) memcpy(row,source + y * source_stride,width * sizeof(*row));
+        if (doom_touch_overlay_row_may_draw_sized(y,width,height)) {
+            (void)doom_touch_overlay_render_row_xrgb8888_sized(
+                row,destination_stride,y,width,height,active_actions);
+        }
+    }
     return true;
 }

@@ -37,7 +37,7 @@ extern short		screenheightarray[SCREENWIDTH];
 extern short*		mfloorclip;
 extern short*		mceilingclip;
 extern fixed_t		spryscale;
-extern fixed_t		sprtopscreen;
+extern p4_screenfrac_t sprtopscreen;
 
 extern fixed_t		pspritescale;
 extern fixed_t		pspriteiscale;

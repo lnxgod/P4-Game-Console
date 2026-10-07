@@ -208,6 +208,8 @@ class LiteSourceTests(unittest.TestCase):
                          "games/byte_buddy/assets/launch-v5/launcher.p4i",
                          "games/lord/src/generated/lord_illustrated_title.h",
                          "design/tab5-bluetooth/proposal.json",
+                         "game-data/pure-hades/v0.6/PUREHADES.WAD",
+                         "game-data/pure-hades/v0.6/LICENSE",
                          "apps/console_os/main/assets/gamechangers_mark_flight.rgb565a8"):
                 self.assertIn(path, names)
             self.assertFalse(any(packager.is_authoring_media(name) for name in names))

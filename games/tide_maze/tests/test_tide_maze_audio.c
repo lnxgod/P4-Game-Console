@@ -29,7 +29,7 @@ static bool tone(void *p,const p4_tone_t *t){
 static void stop(void *p){++((endpoint*)p)->stops;}
 static const p4_game_multiplayer_profile_t profile={.schema=1,.style=P4_GAME_MULTIPLAYER_STYLE_REALTIME,.min_players=2,.max_players=2,.tick_rate_hz=20,.message_bytes=64,.protocol=1};
 static void begin(p4_game_instance_t *g,tm_state *s,endpoint *e){
- p4_game_services_t svc={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_AUDIO_TONE|P4_GAME_CAP_MULTIPLAYER_SESSION,
+ p4_game_services_t svc={.available_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_VIDEO_HIGH_RES|P4_GAME_CAP_AUDIO_TONE|P4_GAME_CAP_MULTIPLAYER_SESSION,
  .game_id=p4_tide_maze_game.id,.audio_context=e,.play_tone=tone,.stop_audio=stop,
  .multiplayer_context=e,.multiplayer_read_status=status,.multiplayer_send=send,.multiplayer_receive=receive,.multiplayer_profile=&profile};
  assert(p4_game_instance_start(g,&p4_tide_maze_game,&svc,s,sizeof(*s)));

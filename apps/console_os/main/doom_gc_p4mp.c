@@ -228,6 +228,10 @@ static uint8_t initial_count(void)
  * or call the engine: this hook also runs under the readonly VFS lock. */
 __attribute__((weak)) void p4_doom_startup_status(bool waiting) { (void)waiting; }
 
+/* Owner-only scalar observation. Applications may defer heap sampling until
+ * the engine call returns; the default does no work. */
+__attribute__((weak)) void p4_doom_memory_checkpoint(bool restored) { (void)restored; }
+
 static void session_timeout(void)
 {
     if (!gc.configured) return;
@@ -1402,8 +1406,11 @@ boolean P4_DoomNetCheckpointBoundary(void)
          * deferred/failed capture, when reporting foreground boundary cost. */
         if (elapsed>0 && (uint64_t)elapsed>gc.checkpoint_capture_max_us)
             gc.checkpoint_capture_max_us=(uint64_t)elapsed>UINT32_MAX?UINT32_MAX:(uint32_t)elapsed;
-        if (started) ESP_LOGI("doom_gc","GAME_CHANGERS_AI CHECKPOINT_CAPTURE slots=%u boundary_max_us=%u",
-            (unsigned)started,(unsigned)gc.checkpoint_capture_max_us);
+        if (started) {
+            p4_doom_memory_checkpoint(false);
+            ESP_LOGI("doom_gc","GAME_CHANGERS_AI CHECKPOINT_CAPTURE slots=%u boundary_max_us=%u",
+                (unsigned)started,(unsigned)gc.checkpoint_capture_max_us);
+        }
         return false;
     }
     if (!gc.replaying || gc.checkpoint_guest_restored) return false;
@@ -1425,6 +1432,7 @@ boolean P4_DoomNetCheckpointBoundary(void)
     gc.checkpoint_guest_restored=true;gc.progress_ms[0]=millis();
     gc.loading_replay_base=next_tic;gc.loading_replay_played=next_tic;
     gc.checkpoint_control_ms=0;gc.next_send_ms=0;
+    p4_doom_memory_checkpoint(true);
     ESP_LOGI("doom_gc","GAME_CHANGERS_AI CHECKPOINT_RESTORED tic=%u bytes=%u",
         (unsigned)next_tic,(unsigned)length);
     return true;

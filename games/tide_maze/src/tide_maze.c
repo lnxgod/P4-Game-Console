@@ -62,7 +62,7 @@ static void stop(p4_game_context_t *ctx){p4_game_stop_audio(ctx);}
 const p4_game_descriptor_t p4_tide_maze_game={
  .api_version=P4_GAME_API_VERSION,.launcher_id=120,.id="org.p4console.tide-maze",
  .title="Tide Maze",.subtitle="Tilt, slosh and escape together",
- .accent_rgb565=0x2e5b,.required_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS,
- .optional_capabilities=P4_GAME_CAP_AUDIO_TONE|P4_GAME_CAP_VIDEO_HIGH_RES|P4_GAME_CAP_MOTION|P4_GAME_CAP_MULTIPLAYER_SESSION,
+ .accent_rgb565=0x2e5b,.required_capabilities=P4_GAME_CAP_VIDEO|P4_GAME_CAP_CONTROLS|P4_GAME_CAP_VIDEO_HIGH_RES,
+ .optional_capabilities=P4_GAME_CAP_AUDIO_TONE|P4_GAME_CAP_MOTION|P4_GAME_CAP_MULTIPLAYER_SESSION,
  .state_bytes=sizeof(tm_state),.start=start,.update=update,.render=tm_render,.stop=stop
 };

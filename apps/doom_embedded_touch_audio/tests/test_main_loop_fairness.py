@@ -31,7 +31,7 @@ HARNESS = r'''
 #define ESP_LOGI(...) ((void)0)
 static jmp_buf done;
 static unsigned ticks, blocks, diagnostic_ends, closes, cleanups, rendered;
-static unsigned net_polls, input_polls, mode;
+static unsigned net_polls, input_polls, memory_services, mode;
 static int s_frame_error;
 static bool s_indexed_engine_live;
 static char order[8192];
@@ -45,6 +45,7 @@ static void doomgeneric_Tick(void) {
     if (mode == 0U) ++rendered;
     if (mode == 4U && ticks == 4U) s_frame_error = 7;
 }
+static void doom_memory_service_events(void) { ++memory_services; }
 static bool doomgeneric_QuitRequested(void) {
     return (mode == 3U || mode == 5U) && ticks == 4U;
 }
@@ -71,7 +72,7 @@ static void actual_outer_loop(void) {
 int main(void) {
     for (mode = 0U; mode < 6U; ++mode) {
         ticks = blocks = diagnostic_ends = closes = cleanups = rendered = 0U;
-        net_polls = input_polls = order_n = 0U;
+        net_polls = input_polls = memory_services = order_n = 0U;
         s_frame_error = ESP_OK; s_indexed_engine_live = true;
         int result = setjmp(done);
         if (result == 0) actual_outer_loop();
@@ -79,6 +80,7 @@ int main(void) {
         const unsigned completed = terminal ? 3U : 1000U;
         assert(ticks == (terminal ? 4U : 1000U));
         assert(net_polls == ticks && input_polls == ticks);
+        assert(memory_services == ticks);
 #if defined(P4_CONSOLE_OS_EMBEDDED) && CONFIG_P4_BOARD_M5STACK_TAB5
         assert(blocks == completed);
         for (unsigned i = 0U; i < completed; ++i) {

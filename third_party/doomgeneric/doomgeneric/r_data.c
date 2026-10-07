@@ -424,10 +424,11 @@ void R_GenerateLookup(int texnum)
 //
 // R_GetColumn
 //
-byte*
-R_GetColumn
+static byte*
+R_GetColumnData
 ( int		tex,
-  int		col )
+  int		col,
+  int            *wrapheight )
 {
     int		lump;
     int		ofs;
@@ -436,13 +437,31 @@ R_GetColumn
     lump = texturecolumnlump[tex][col];
     ofs = texturecolumnofs[tex][col];
     
+    if (wrapheight != NULL)
+        *wrapheight = 128;
+
     if (lump > 0)
 	return (byte *)W_CacheLumpNum(lump,PU_CACHE)+ofs;
+
+    if (wrapheight != NULL && lump < 0 && textures[tex]->height > 0
+        && textures[tex]->height < 128)
+        *wrapheight = textures[tex]->height;
 
     if (!texturecomposite[tex])
 	R_GenerateComposite (tex);
 
     return texturecomposite[tex] + ofs;
+}
+
+
+byte *R_GetColumn(int tex, int col)
+{
+    return R_GetColumnData(tex, col, NULL);
+}
+
+byte *R_GetColumnForOpaque(int tex, int col, int *wrapheight)
+{
+    return R_GetColumnData(tex, col, wrapheight);
 }
 
 

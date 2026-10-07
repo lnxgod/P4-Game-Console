@@ -290,7 +290,7 @@ R_CheckPlane
     }
 
     for (x=intrl ; x<= intrh ; x++)
-	if (pl->top[x] != 0xff)
+	if (P4_PLANE_TOP(pl, x) != P4_PLANE_UNSET)
 	    break;
 
     if (x > intrh)
@@ -399,14 +399,14 @@ void R_DrawPlanes (void)
 	    dc_texturemid = skytexturemid;
 	    for (x=pl->minx ; x <= pl->maxx ; x++)
 	    {
-		dc_yl = pl->top[x];
-		dc_yh = pl->bottom[x];
+		dc_yl = P4_PLANE_TOP(pl, x);
+		dc_yh = P4_PLANE_BOTTOM(pl, x);
 
 		if (dc_yl <= dc_yh)
 		{
 		    angle = (viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
 		    dc_x = x;
-		    dc_source = R_GetColumn(skytexture, angle);
+		    dc_source = R_GetColumnForOpaque(skytexture, angle, &dc_sourceheight);
 		    colfunc ();
 		}
 	    }
@@ -428,17 +428,17 @@ void R_DrawPlanes (void)
 
 	planezlight = zlight[light];
 
-	pl->top[pl->maxx+1] = 0xff;
-	pl->top[pl->minx-1] = 0xff;
+	P4_PLANE_TOP(pl, pl->maxx+1) = P4_PLANE_UNSET;
+	P4_PLANE_TOP(pl, pl->minx-1) = P4_PLANE_UNSET;
 		
 	stop = pl->maxx + 1;
 
 	for (x=pl->minx ; x<= stop ; x++)
 	{
-	    R_MakeSpans(x,pl->top[x-1],
-			pl->bottom[x-1],
-			pl->top[x],
-			pl->bottom[x]);
+	    R_MakeSpans(x,P4_PLANE_TOP(pl, x-1),
+			P4_PLANE_BOTTOM(pl, x-1),
+			P4_PLANE_TOP(pl, x),
+			P4_PLANE_BOTTOM(pl, x));
 	}
 	
         W_ReleaseLumpNum(lumpnum);

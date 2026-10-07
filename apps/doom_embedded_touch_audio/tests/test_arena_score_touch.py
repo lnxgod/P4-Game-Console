@@ -77,7 +77,7 @@ def main():
     with tempfile.TemporaryDirectory(prefix='p4-arena-touch-') as directory:
         path = Path(directory)
         (path/'test.c').write_text(HARNESS.replace('/* TOUCH_HOOK */',hook))
-        for width,height in ((1280,720),(1024,600),(800,480)):
+        for width,height in ((1280,720),(1024,600),(800,480),(768,480)):
             binary=path/f'test-{width}'
             subprocess.run([os.environ.get('CC','cc'),'-std=c11','-Wall','-Wextra',
                 '-Wconversion','-Wshadow','-Werror','-fsanitize=address,undefined',
@@ -86,7 +86,7 @@ def main():
                 '-I',str(ROOT/'apps/console_os/main'),str(path/'test.c'),
                 str(ROOT/'components/doom_touch_input/src/input.c'),'-o',str(binary)],check=True)
             subprocess.run([str(binary)],check=True)
-    print('Arena SCORE touch: all 320x200 hit points, 3 viewports, multitouch, neutral passed')
+    print('Arena SCORE touch: all 320x200 hit points, 4 viewports, multitouch, neutral passed')
 
 if __name__=='__main__':
     main()

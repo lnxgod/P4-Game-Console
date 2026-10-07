@@ -178,8 +178,9 @@ def real_directory(path: Path) -> None:
         directory.mkdir(mode=0o700)
 
 
-def require_source_archive_stamp() -> None:
-    stamp = ROOT / ".p4-source.json"
+def require_source_archive_stamp(*, root: Path | None = None) -> None:
+    root = ROOT if root is None else Path(root)
+    stamp = root / ".p4-source.json"
     try:
         if not stat.S_ISREG(stamp.lstat().st_mode):
             raise PreparationError("source archive stamp must be a regular file")
@@ -206,31 +207,32 @@ def require_source_archive_stamp() -> None:
         raise PreparationError("invalid source archive stamp")
 
 
-def require_ignored(path: Path) -> None:
+def require_ignored(path: Path, *, root: Path | None = None) -> None:
+    root = ROOT if root is None else Path(root)
     try:
-        relative = path.relative_to(ROOT)
+        relative = path.relative_to(root)
     except ValueError as error:
         raise PreparationError("--output-root must be inside this checkout at an ignored location") from error
-    metadata = ROOT / ".git"
+    metadata = root / ".git"
     if metadata.exists() or metadata.is_symlink():
-        checked = subprocess.run(["git", "check-ignore", "-q", "--", str(relative)], cwd=ROOT,
+        checked = subprocess.run(["git", "check-ignore", "-q", "--", str(relative)], cwd=root,
                                  stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
     else:
-        require_source_archive_stamp()
+        require_source_archive_stamp(root=root)
         # Evaluate the archive's own ignore rules without discovering a parent
         # checkout, using user/global exclusions, or creating metadata in ROOT.
         env = {key: value for key, value in os.environ.items() if not key.startswith("GIT_")}
         env.update(GIT_CONFIG_NOSYSTEM="1", GIT_CONFIG_GLOBAL=os.devnull)
         with tempfile.TemporaryDirectory(prefix="p4-source-ignore-") as temporary:
             initialized = subprocess.run(["git", "init", "--quiet", "--bare", "--template=", temporary],
-                                         cwd=ROOT, env=env, stdout=subprocess.DEVNULL,
+                                         cwd=root, env=env, stdout=subprocess.DEVNULL,
                                          stderr=subprocess.PIPE, text=True)
             if initialized.returncode != 0:
                 raise PreparationError("cannot evaluate source archive ignore rules")
             checked = subprocess.run(
                 ["git", "-c", f"core.excludesFile={os.devnull}", "--git-dir", temporary,
-                 "--work-tree", str(ROOT), "check-ignore", "--no-index", "-q", "--", str(relative)],
-                cwd=ROOT, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
+                 "--work-tree", str(root), "check-ignore", "--no-index", "-q", "--", str(relative)],
+                cwd=root, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True)
     if checked.returncode != 0:
         raise PreparationError(f"destination is not Git-ignored: {relative}")
 

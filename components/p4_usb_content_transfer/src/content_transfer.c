@@ -132,6 +132,17 @@ static const content_spec_t CONTENT_SPECS[] = {
     P4_GCA_CONTENT_FILES(GCA_SPEC)
 #undef GCA_SPEC
     {
+        .kind = CONTENT_KIND_FREEDOOM2,
+        .bytes = P4_FREEDOOM2_ORIGINAL_BYTES,
+        .sha256_hex = P4_FREEDOOM2_ORIGINAL_SHA256_HEX,
+        .label = "freedoom2-original",
+        .directory_suffix = "",
+        .target_name = "FREEDOOM2.WAD",
+        .temporary_name = "P4FD2.TMP",
+        .required_directories = NULL,
+        .required_directory_count = 0U,
+    },
+    {
         .kind = CONTENT_KIND_QUAKE_SHAREWARE,
         .bytes = P4_CONTENT_QUAKE_SHAREWARE_BYTES,
         .sha256_hex = QUAKE_SHA256_HEX,

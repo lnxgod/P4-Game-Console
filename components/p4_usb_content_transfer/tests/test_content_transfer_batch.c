@@ -3,6 +3,7 @@
  * replaced. The SHA-256 adapter uses the repository's real portable hash. */
 #include "fake_sdk.h"
 #include "p4/content_transfer.h"
+#include "platform/doom_arena_content.h"
 #include <assert.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -40,6 +41,15 @@ static void manifest(uint8_t kind,const uint8_t *data,size_t length) {
  response_bytes=0;for(size_t i=0;i<48;i+=8)(void)p4_content_transfer_consume(m+i,8);
  assert(response_bytes>=11 && !memcmp(response,"P4R1",4));
 }
+static void identity_manifest(uint8_t kind,uint32_t length,const char *hex) {
+ uint8_t m[48]={'P','4','M','1',kind};put32(m+8,length);
+ for(size_t i=0;i<32;++i){unsigned byte=0;assert(sscanf(hex+2*i,"%2x",&byte)==1);m[12+i]=(uint8_t)byte;}
+ put32(m+44,crc(m,44));response_bytes=0;(void)p4_content_transfer_consume(m,sizeof(m));
+ assert(response_bytes>=11 && !memcmp(response,"P4R1",4));
+}
+static void timeout_transfer(void) {
+ now_us+=16000000;p4_content_transfer_poll();assert(p4_content_transfer_info().last_status==8);
+}
 static void payload(const uint8_t *data,size_t length,bool bad_crc) {
  uint8_t c[4112]={'P','4','C','1'};assert(length<=4096);c[8]=(uint8_t)length;c[9]=(uint8_t)(length>>8);
  put32(c+12,crc(data,length)^(bad_crc?1U:0U));memcpy(c+16,data,length);response_bytes=0;
@@ -69,6 +79,24 @@ int main(void) {
  manifest(16,data,n);assert(response[4]==0);payload(data,n,false);assert(p4_content_transfer_info().generation==3);resume();
  n=load("CREDITS.md",data);manifest(17,data,n);assert(response[4]==0);now_us+=16000000;p4_content_transfer_poll();assert(p4_content_transfer_info().last_status==8);resume();
  manifest(17,data,n);assert(response[4]==0);payload(data,n,false);assert(p4_content_transfer_info().generation==4);resume();
+ /* Original campaign and compact Arena have distinct, exact destinations.
+  * The large payloads are not allocated: actual parser admission, mismatch
+  * rejection and timeout cleanup run against their pinned manifests. */
+ char target[512];
+ identity_manifest(21,P4_GCA_BASE_WAD_BYTES,"18dd25d6ed8b719c9d1417324d7ceaaa943af907ae1005e9a36101c0bbe5c1c4");
+ assert(response[4]==0);snprintf(target,sizeof(target),"%s/GCADOOM/GCA21.TMP",root);assert(access(target,F_OK)==0);
+ timeout_transfer();assert(access(target,F_OK)!=0);resume();
+ identity_manifest(5,P4_FREEDOOM2_ORIGINAL_BYTES,P4_FREEDOOM2_ORIGINAL_SHA256_HEX);
+ assert(response[4]==0);snprintf(target,sizeof(target),"%s/P4FD2.TMP",root);assert(access(target,F_OK)==0);
+ timeout_transfer();assert(access(target,F_OK)!=0);resume();
+ identity_manifest(21,P4_FREEDOOM2_ORIGINAL_BYTES,P4_FREEDOOM2_ORIGINAL_SHA256_HEX);
+ assert(response[4]==7 && !p4_content_transfer_info().busy);
+ assert(p4_content_transfer_info().generation==4);
+ snprintf(target,sizeof(target),"%s/GCADOOM/GCA21.TMP",root);assert(access(target,F_OK)!=0);
+ snprintf(target,sizeof(target),"%s/GCADOOM/ARENA2.WAD",root);assert(access(target,F_OK)!=0);
+ FILE *notice=fopen(ARENA_NOTICE_PATH,"rb");assert(notice);n=fread(data,1,sizeof(data),notice);assert(n>0 && n<sizeof(data) && feof(notice));assert(fclose(notice)==0);
+ manifest(22,data,n);assert(response[4]==0);payload(data,n,false);assert(p4_content_transfer_info().generation==5);resume();
+ snprintf(target,sizeof(target),"%s/GCADOOM/ARENA-BASE.txt",root);assert(unlink(target)==0);
  /* The real service links without esp_restart and accepts the next file after
   * success, duplicate, CRC failure and a disconnected-sender timeout. */
  char path[512];const char *files[]={"GCADOOM/licenses/MIT.txt","GCADOOM/licenses/Freedoom-0.13.0-COPYING.txt","GCADOOM/LICENSE","GCADOOM/CREDITS.md"};

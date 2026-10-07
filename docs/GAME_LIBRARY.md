@@ -110,7 +110,7 @@ outside the accepted port.
 - Tide Maze: removed from the product/default library at the owner’s request
   on 2026-10-07 after unacceptable tilt/gameplay feel and lag. Its manifest is
   disabled. Source, package/save identity and historical failed acceptance are
-  preserved; later unverified development reworks must not ship by default.
+  preserved; the unverified 0.2.4 development source must not ship by default.
   See [its README and acceptance notes](../games/tide_maze/README.md).
 
 - Asteroids, Asteroids 2 and Breakout: removed at the owner's request. Their

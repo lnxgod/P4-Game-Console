@@ -483,17 +483,20 @@ fixed_t R_ScaleFromGlobalAngle (angle_t visangle)
     num = FixedMul(projection,sineb)<<detailshift;
     den = FixedMul(rw_distance,sinea);
 
+    const fixed_t maxscale = (fixed_t)((int64_t)64 * FRACUNIT * SCREENWIDTH
+                                      / P4_DOOM_CANONICAL_WIDTH);
+    const fixed_t minscale = P4_DOOM_SCALE_X(256);
     if (den > num>>16)
     {
 	scale = FixedDiv (num, den);
 
-	if (scale > 64*FRACUNIT)
-	    scale = 64*FRACUNIT;
-	else if (scale < 256)
-	    scale = 256;
+	if (scale > maxscale)
+	    scale = maxscale;
+	else if (scale < minscale)
+	    scale = minscale;
     }
     else
-	scale = 64*FRACUNIT;
+	scale = maxscale;
 	
     return scale;
 }
@@ -623,7 +626,7 @@ void R_InitLightTables (void)
 	startmap = ((LIGHTLEVELS-1-i)*2)*NUMCOLORMAPS/LIGHTLEVELS;
 	for (j=0 ; j<MAXLIGHTZ ; j++)
 	{
-	    scale = FixedDiv ((SCREENWIDTH/2*FRACUNIT), (j+1)<<LIGHTZSHIFT);
+	    scale = FixedDiv ((P4_DOOM_CANONICAL_WIDTH/2*FRACUNIT), (j+1)<<LIGHTZSHIFT);
 	    scale >>= LIGHTSCALESHIFT;
 	    level = startmap - scale/DISTMAP;
 	    
@@ -658,7 +661,9 @@ R_SetViewSize
 {
     setsizeneeded = true;
     setblocks = blocks;
-    setdetail = detail;
+    // Native Tab5 always rasterizes every column, including after loading
+    // an older low-detail preference. Legacy builds preserve that preference.
+    setdetail = P4_DOOM_NATIVE_RASTER ? 0 : detail;
 }
 
 
@@ -683,8 +688,8 @@ void R_ExecuteSetViewSize (void)
     }
     else
     {
-	scaledviewwidth = setblocks*32;
-	viewheight = (setblocks*168/10)&~7;
+	scaledviewwidth = P4_DOOM_SCALE_X(setblocks*32);
+	viewheight = P4_DOOM_SCALE_Y((setblocks*168/10)&~7);
     }
     
     detailshift = setdetail;
@@ -716,8 +721,8 @@ void R_ExecuteSetViewSize (void)
     R_InitTextureMapping ();
     
     // psprite scales
-    pspritescale = FRACUNIT*viewwidth/SCREENWIDTH;
-    pspriteiscale = FRACUNIT*SCREENWIDTH/viewwidth;
+    pspritescale = FRACUNIT*viewwidth/P4_DOOM_CANONICAL_WIDTH;
+    pspriteiscale = FRACUNIT*P4_DOOM_CANONICAL_WIDTH/viewwidth;
     
     // thing clipping
     for (i=0 ; i<viewwidth ; i++)

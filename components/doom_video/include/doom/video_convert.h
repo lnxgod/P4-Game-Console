@@ -23,6 +23,13 @@ bool doom_video_convert_xrgb8888_to_rgb565_384x240(
     const uint32_t *source, size_t source_stride_pixels,
     uint16_t *destination, size_t destination_stride_pixels);
 
+/** Convert a native 768x480 XRGB raster one-to-one to RGB565. Strides count
+ * pixels. Complete declared stride*height source/destination ranges must be
+ * disjoint and aligned; invalid arguments are rejected before any write. */
+bool doom_video_convert_xrgb8888_to_rgb565_768x480(
+    const uint32_t *source, size_t source_stride_pixels,
+    uint16_t *destination, size_t destination_stride_pixels);
+
 #ifdef __cplusplus
 }
 #endif

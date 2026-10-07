@@ -48,6 +48,9 @@ SOURCE_FIXED = (
     "scripts/p4_prebuilt.py", "scripts/package-tab5-release.py",
     "scripts/build.sh", "scripts/lib/project-env.sh", "scripts/build-game-package.py",
     "scripts/build-game-resource.py", "scripts/build-os-update.py", "scripts/p4_multiplayer_manifest.py",
+    "scripts/doom/arena-trusted-digests.py", "scripts/doom/arena-content.py",
+    "scripts/doom/arena-compact.py",
+    "scripts/prepare-game-data.py",
     "scripts/generate-tab5-hosted-sdio-overlay.py", "Makefile",
 )
 MAX_FILES = 256

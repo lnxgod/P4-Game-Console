@@ -255,7 +255,7 @@
 #define ST_OUTHEIGHT		1
 
 #define ST_MAPTITLEX \
-    (SCREENWIDTH - ST_MAPWIDTH * ST_CHATFONTWIDTH)
+    (P4_DOOM_CANONICAL_WIDTH - ST_MAPWIDTH * ST_CHATFONTWIDTH)
 
 #define ST_MAPTITLEY		0
 #define ST_MAPHEIGHT		1
@@ -419,16 +419,16 @@ void ST_refreshBackground(void)
 
     if (st_statusbaron)
     {
-        V_UseBuffer(st_backing_screen);
+        V_UseBufferRegion(st_backing_screen, ST_NATIVE_Y, ST_NATIVE_HEIGHT);
 
-	V_DrawPatch(ST_X, 0, sbar);
+	V_DrawPatch(ST_X, ST_Y, sbar);
 
 	if (netgame)
-	    V_DrawPatch(ST_FX, 0, faceback);
+	    V_DrawPatch(ST_FX, ST_Y, faceback);
 
         V_RestoreBuffer();
 
-	V_CopyRect(ST_X, 0, st_backing_screen, ST_WIDTH, ST_HEIGHT, ST_X, ST_Y);
+	V_CopyRect(0, 0, st_backing_screen, SCREENWIDTH, ST_NATIVE_HEIGHT, 0, ST_NATIVE_Y);
     }
 
 }
@@ -1422,5 +1422,5 @@ void ST_Stop (void)
 void ST_Init (void)
 {
     ST_loadData();
-    st_backing_screen = (byte *) Z_Malloc(ST_WIDTH * ST_HEIGHT, PU_STATIC, 0);
+    st_backing_screen = (byte *) Z_Malloc(SCREENWIDTH * ST_NATIVE_HEIGHT, PU_STATIC, 0);
 }

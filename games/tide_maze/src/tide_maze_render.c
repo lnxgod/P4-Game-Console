@@ -2,6 +2,7 @@
 #include "tide_maze_internal.h"
 #include "p4/presentation.h"
 #include "p4/mesh.h"
+#include "tide_maze_water_projection.h"
 #include "generated/water.inc"
 #include "generated/marble_lighting.inc"
 
@@ -33,23 +34,26 @@ static void box(p4_game_surface_t *f,int x,int y,int w,int h,int bottom,int top,
  face(f,d,c,cc,dd,front);face(f,a,b,c,d,cap);
 }
 typedef struct { point position; int height; } water_vertex;
-static int surface_height(const tm_state *s,int x,int y,unsigned phase_a,unsigned phase_b){
+static int surface_height(const tm_state *s,int x,int y,unsigned phase_a,unsigned phase_b,bool *used){
  int sum=0,n=0;
  for(int dy=-1;dy<=0;++dy)for(int dx=-1;dx<=0;++dx){int xx=x+dx,yy=y+dy;
   if(xx>=0&&xx<TM_W&&yy>=0&&yy<TM_H&&s->wet[yy*TM_W+xx]){sum+=s->water[yy*TM_W+xx];++n;}}
- int level=n?sum/n:320;
+ *used=n!=0;int level=n?sum/n:320;
  /* The solver drives the large slosh. Two small travelling waves prevent a
   * stationary, tile-coloured surface; phase is evaluated every render. */
  int ripple=wave[(phase_a+(unsigned)x*5U+(unsigned)y*3U)%64U]+wave[(phase_b+(unsigned)x*2U+64U-(unsigned)y%64U)%64U];
  return 2*TM_Q+tm_clamp((level-320)*2,-TM_Q,2*TM_Q)+ripple*2/3;
 }
-/* Three rolling vertex rows replace four independent height/projection queries
- * for every water cell. Geometry and painter order remain exactly the same. */
+/* Three rolling rows retain every used height. A drawn wet cell contributes to
+ * all four corner stencils, so a vertex with no wet neighbor is never consumed.
+ * Static grid projection constants retain both native and legacy scene pixels. */
 static void water_row(p4_game_surface_t *f,const tm_state *s,int y,water_vertex *row){
  const unsigned phase_a=s->animation_ms/19U,phase_b=s->animation_ms/27U;
+ const bool native=f->width==P4_GAME_SURFACE_HIGH_RES_WIDTH;
  for(int x=0;x<=TM_W;++x){
-  row[x].height=surface_height(s,x,y,phase_a,phase_b);
-  row[x].position=project(f,x*8*TM_Q,y*8*TM_Q,row[x].height);
+  bool used;
+  row[x].height=surface_height(s,x,y,phase_a,phase_b,&used);
+  row[x].position=used?tm_water_project(&tm_water_projection[y][x],row[x].height,native):(point){0,0};
  }
 }
 /* Compile the bounded shared raster with an already-resolved palette pointer.

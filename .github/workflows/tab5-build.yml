@@ -75,8 +75,10 @@ jobs:
           make setup
           make verify
 
-      - name: Prepare the exact local-only Doom input
-        run: make prepare-game-data
+      - name: Prepare the exact local-only Doom and compact Arena inputs
+        run: |
+          make prepare-game-data
+          python3 scripts/doom/arena-content.py --fetch
 
       - name: Build and verify the full Tab5 firmware and standard game bundle
         run: |

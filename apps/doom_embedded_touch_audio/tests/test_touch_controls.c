@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "doomkeys.h"
 
@@ -142,11 +143,45 @@ static void test_app_compositor(void)
     free(source);
 }
 
+
+static void test_native_app_compositor(void)
+{
+    enum { width = 768, height = 480, guard = 16 };
+    const size_t pixels = (size_t)width * height;
+    uint32_t *allocation = malloc((pixels + 2U * guard) * sizeof(*allocation));
+    uint32_t *reference = malloc(pixels * sizeof(*reference));
+    assert(allocation && reference);
+    for (size_t i = 0; i < pixels + 2U * guard; ++i) allocation[i] = 0x00aabbccU;
+    uint32_t *destination = allocation + guard;
+    doom_touch_input_t input;
+    doom_touch_input_init(&input);
+    input.active_actions = UINT32_C(1) << DOOM_TOUCH_ACTION_FIRE;
+    assert(doom_touch_audio_compose_frame_sized(destination, width, reference,
+                                              width, width, height, &input));
+    assert(doom_touch_audio_compose_frame_sized(destination, width, destination,
+                                              width, width, height, &input));
+    assert(memcmp(reference, destination, pixels * sizeof(*reference)) == 0);
+    assert(destination[240U * width + 384U] == 0x00aabbccU);
+    assert(destination[((151U * height + 199U) / 200U) * width +
+                       (289U * width + 319U) / 320U] != 0x00aabbccU);
+    for (size_t i = 0; i < guard; ++i) {
+        assert(allocation[i] == 0x00aabbccU);
+        assert(destination[pixels + i] == 0x00aabbccU);
+    }
+    input.version = 0U;
+    assert(!doom_touch_audio_compose_frame_sized(destination, width, destination,
+                                               width, width, height, &input));
+    assert(memcmp(reference, destination, pixels * sizeof(*reference)) == 0);
+    free(reference);
+    free(allocation);
+}
+
 int main(void)
 {
     test_action_mapping();
     test_platform_frame_conversion();
     test_force_neutral_discards_pending_presses();
     test_app_compositor();
+    test_native_app_compositor();
     return 0;
 }

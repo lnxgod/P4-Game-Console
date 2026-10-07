@@ -85,3 +85,33 @@ bool doom_video_convert_xrgb8888_to_rgb565_384x240(
     }
     return true;
 }
+
+/* Native transport performs no scaling. Validate the entire declared ranges,
+ * including padding, so malformed extents fail before pointer arithmetic. */
+bool doom_video_convert_xrgb8888_to_rgb565_768x480(
+    const uint32_t *source, size_t source_stride_pixels,
+    uint16_t *destination, size_t destination_stride_pixels)
+{
+    if (source == NULL || destination == NULL ||
+        source_stride_pixels < 768U || destination_stride_pixels < 768U ||
+        source_stride_pixels > SIZE_MAX / (480U * sizeof(*source)) ||
+        destination_stride_pixels > SIZE_MAX / (480U * sizeof(*destination)) ||
+        (uintptr_t)source % _Alignof(uint32_t) != 0U ||
+        (uintptr_t)destination % _Alignof(uint16_t) != 0U) return false;
+    const size_t source_bytes = source_stride_pixels * 480U * sizeof(*source);
+    const size_t destination_bytes = destination_stride_pixels * 480U * sizeof(*destination);
+    const uintptr_t first = (uintptr_t)source, second = (uintptr_t)destination;
+    if (first > UINTPTR_MAX - source_bytes || second > UINTPTR_MAX - destination_bytes ||
+        (first < second + destination_bytes && second < first + source_bytes)) return false;
+    for (size_t y = 0U; y < 480U; ++y) {
+        const uint32_t *const input = source + y * source_stride_pixels;
+        uint16_t *const output = destination + y * destination_stride_pixels;
+        for (size_t x = 0U; x < 768U; x += 4U) {
+            output[x] = xrgb8888_to_rgb565(input[x]);
+            output[x + 1U] = xrgb8888_to_rgb565(input[x + 1U]);
+            output[x + 2U] = xrgb8888_to_rgb565(input[x + 2U]);
+            output[x + 3U] = xrgb8888_to_rgb565(input[x + 3U]);
+        }
+    }
+    return true;
+}

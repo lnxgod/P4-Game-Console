@@ -31,6 +31,8 @@ extern fixed_t		dc_iscale;
 extern fixed_t		dc_texturemid;
 
 // first pixel in a column
+// Height of a contiguous short composite column; 128 selects legacy sampling.
+extern int dc_sourceheight;
 extern byte*		dc_source;		
 
 

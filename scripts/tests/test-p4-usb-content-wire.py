@@ -6,6 +6,8 @@ import sys
 import unittest
 import tempfile
 import hashlib
+import io
+import struct
 from unittest.mock import patch, MagicMock
 
 path = Path(__file__).resolve().parents[1] / 'p4-usb-content.py'
@@ -42,6 +44,30 @@ class WireTests(unittest.TestCase):
         reader = wire.WireReader(Port([b'log\r\n' + ack + done]))
         self.assertEqual(reader.frame(b'P4A1', 9, 1), ack)
         self.assertEqual(reader.frame(b'P4D1', 41, 1), done)
+    def test_raw_log_records_each_received_byte_once_across_frames(self):
+        ack = b'P4A1' + bytes(5)
+        done = b'P4D1' + bytes(37)
+        blocks = [b'log\r\n' + ack[:2], ack[2:] + done]
+        raw = io.BytesIO()
+        reader = wire.WireReader(Port(blocks), raw_log=raw)
+        self.assertEqual(reader.frame(wire.ACK_MAGIC, 9, 1), ack)
+        self.assertEqual(reader.frame(wire.DONE_MAGIC, 41, 1), done)
+        self.assertEqual(raw.getvalue(), b''.join(blocks))
+    def test_terminal_during_ack_preserves_ready_and_whole_file_retry(self):
+        for status in (0, 4, 8):
+            with self.subTest(status=status):
+                done = b'P4D1' + struct.pack('<BI', status, 4096) + bytes(32)
+                ready = b'P4_USB_CONTENT READY resume=1 reboot=0\n'
+                blocks = [b'diagnostic\r\n' + done[:7], done[7:] + ready]
+                raw = io.BytesIO()
+                port = Port(blocks)
+                reader = wire.WireReader(port, raw_log=raw)
+                with self.assertRaisesRegex(wire.TransferTimeout,
+                        rf'status={wire.status_name(status)}\({status}\) received_bytes=4096'):
+                    reader.frame(wire.ACK_MAGIC, 9, 1)
+                self.assertTrue(wire.wait_for_content_ready(port, reader, 1))
+                self.assertEqual(reader.resume_events, 1)
+                self.assertEqual(raw.getvalue(), b''.join(blocks))
     def test_reboot_retries_manifest_once_when_service_starts(self):
         ready = b'P4R1' + bytes(7)
         port = Port([b'boot\r\nP4_USB_CON', b'TENT READY native\r\n', ready])
@@ -57,13 +83,31 @@ class WireTests(unittest.TestCase):
         self.assertTrue(wire.wait_for_content_ready(port, wire.WireReader(port), 1))
 
 class BatchTests(unittest.TestCase):
+    def test_raw_log_cli_is_optional_and_refuses_to_overwrite_before_port_open(self):
+        with tempfile.TemporaryDirectory() as directory:
+            raw_path = Path(directory) / 'received.bin'
+            port = MagicMock(); port.__enter__.return_value = port
+            def observe(spec, path, selected_port, **kwargs):
+                kwargs['reader'].observe(b'raw received bytes')
+            with patch.object(wire, 'open_port', return_value=port) as opened, \
+                 patch.object(wire, 'validate_content'), \
+                 patch.object(wire, 'install_content', side_effect=observe):
+                self.assertEqual(wire.main(['arena-base', '--port', 'test-port',
+                                           '--raw-log', str(raw_path)]), 0)
+                opened.assert_called_once_with('test-port')
+            self.assertEqual(raw_path.read_bytes(), b'raw received bytes')
+            with patch.object(wire, 'open_port') as opened, patch.object(wire, 'validate_content'):
+                self.assertEqual(wire.main(['arena-base', '--port', 'test-port',
+                                           '--raw-log', str(raw_path)]), 2)
+                opened.assert_not_called()
+            self.assertEqual(raw_path.read_bytes(), b'raw received bytes')
     def test_whole_bundle_uses_one_connection_and_reader(self):
         port=MagicMock();port.__enter__.return_value=port
         with patch.object(wire,'open_port',return_value=port) as opened, \
              patch.object(wire,'validate_content'), patch.object(wire,'install_content') as install:
             self.assertEqual(wire.main(['game-changers-ai','--port','test-port']),0)
             opened.assert_called_once_with('test-port')
-            self.assertEqual(install.call_count,16)
+            self.assertEqual(install.call_count,17)
             readers=[c.kwargs['reader'] for c in install.call_args_list]
             self.assertTrue(all(r is readers[0] for r in readers))
             self.assertTrue(all(c.kwargs['connection'] is port for c in install.call_args_list))
@@ -72,10 +116,10 @@ class BatchTests(unittest.TestCase):
         with patch.object(wire,'open_port',return_value=port) as opened, \
              patch.object(wire,'validate_content'), \
              patch.object(wire,'wait_for_content_ready',return_value=True) as ready, \
-             patch.object(wire,'install_content',side_effect=[wire.TransferTimeout('ack')]+[None]*16) as install:
+             patch.object(wire,'install_content',side_effect=[wire.TransferTimeout('ack')]+[None]*17) as install:
             self.assertEqual(wire.main(['game-changers-ai','--port','test-port']),0)
             opened.assert_called_once_with('test-port');ready.assert_called_once()
-            self.assertEqual(install.call_count,17)
+            self.assertEqual(install.call_count,18)
             self.assertEqual(install.call_args_list[0],install.call_args_list[1])
     def test_timeout_stops_if_device_not_ready_or_retry_fails(self):
         for idle in [False,True]:
@@ -96,23 +140,46 @@ class BatchTests(unittest.TestCase):
 class ArenaBundleTests(unittest.TestCase):
     def test_bundle_has_unique_wire_ids_and_three_separate_wads(self):
         entries = wire.ARENA_BUNDLE['files']
-        self.assertEqual(len(entries), 16)
-        self.assertEqual(len({f['usb_kind'] for f in entries}), 16)
+        self.assertEqual(len(entries), 17)
+        self.assertEqual(len({f['usb_kind'] for f in entries}), 17)
         self.assertTrue(all(f['usb_kind'] > 4 for f in entries))
-        self.assertEqual([f['filename'] for f in entries[:3]], ['FREEDOOM2.WAD', 'PUREHADES.WAD', 'DWANGO5.WAD'])
+        self.assertEqual([f['filename'] for f in entries[:3]], ['ARENA2.WAD', 'PUREHADES.WAD', 'DWANGO5.WAD'])
     def test_all_inputs_preflight_before_serial_and_notices_are_required(self):
         with patch.object(wire, 'validate_content') as validate, patch.object(wire.serial, 'Serial') as serial:
             files = wire.arena_inputs(Path('/base.wad'), Path('/pure'), Path('/dwango'))
-            self.assertEqual(validate.call_count, 16)
+            self.assertEqual(validate.call_count, 17)
             self.assertEqual(files[2][1], Path('/dwango/DWANGO5.WAD'))
             self.assertEqual(files[3][1], Path('/pure/licenses/Freedoom-0.13.0-COPYING.txt'))
             self.assertEqual(files[8][1], Path('/pure/music/tracklist.json'))
-            self.assertEqual(files[-1][1].parent, Path('/dwango'))
+            self.assertEqual(files[-2][1].parent, Path('/dwango'))
+            self.assertEqual(files[-1][1], wire.ROOT / 'game-data/arena-compact-v1/NOTICE.txt')
             serial.assert_not_called()
             validate.side_effect = [None]*5 + [wire.TransferError('missing credits')]
             with self.assertRaises(wire.TransferError):
                 wire.arena_inputs(Path('/base.wad'), Path('/pure'), Path('/dwango'))
             serial.assert_not_called()
+    def test_original_campaign_and_arena_have_separate_commands_and_wire_ids(self):
+        original, compact = wire.CONTENT_SPECS['freedoom2'], wire.CONTENT_SPECS['arena-base']
+        self.assertEqual((original.kind, original.bytes), (5, 28787748))
+        self.assertEqual((compact.kind, compact.bytes), (21, 12253462))
+        self.assertNotEqual(original.sha256, compact.sha256)
+        self.assertNotEqual(original.default_path, compact.default_path)
+        self.assertEqual(wire.CONTENT_SPECS['arena-base-notice'].kind, 22)
+    def test_missing_derivative_notice_prevents_usb_open(self):
+        with patch.object(wire, 'open_port') as opened, patch.object(wire, 'validate_content',
+                side_effect=[None]*16 + [wire.TransferError('missing derivative notice')]):
+            self.assertEqual(wire.main(['game-changers-ai', '--port', 'test-port']), 2)
+            opened.assert_not_called()
+    def test_symlink_input_is_rejected_before_usb_for_batch_and_individual(self):
+        with tempfile.TemporaryDirectory() as directory:
+            target = Path(directory) / 'real.wad'
+            target.write_bytes(b'content')
+            link = Path(directory) / 'link.wad'
+            link.symlink_to(target)
+            for command in ('game-changers-ai', 'arena-base', 'freedoom2'):
+                with self.subTest(command=command), patch.object(wire, 'open_port') as opened:
+                    self.assertEqual(wire.main([command, str(link), '--port', 'test-port']), 2)
+                    opened.assert_not_called()
     def test_exact_hash_rejects_same_size_corruption(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'notice.txt'

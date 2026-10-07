@@ -4,6 +4,12 @@
 #define P4_DOOM_NET_H
 
 #include <stdint.h>
+#include <stddef.h>
+
+/* Optional application-owned admission immediately before a zone malloc.
+ * The default is a no-op; the hook must not change the requested zone size. */
+void P4_DoomBeforeZoneAllocation(size_t requested_bytes);
+void P4_DoomAfterZoneAllocation(size_t requested_bytes, int allocated);
 #include "d_ticcmd.h"
 #include "doomtype.h"
 #include "net_defs.h"

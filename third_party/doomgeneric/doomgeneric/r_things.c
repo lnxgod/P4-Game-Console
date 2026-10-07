@@ -339,12 +339,12 @@ short*		mfloorclip;
 short*		mceilingclip;
 
 fixed_t		spryscale;
-fixed_t		sprtopscreen;
+p4_screenfrac_t sprtopscreen;
 
 void R_DrawMaskedColumn (column_t* column)
 {
-    int		topscreen;
-    int 	bottomscreen;
+    p4_screenfrac_t topscreen;
+    p4_screenfrac_t bottomscreen;
     fixed_t	basetexturemid;
 	
     basetexturemid = dc_texturemid;
@@ -353,8 +353,8 @@ void R_DrawMaskedColumn (column_t* column)
     {
 	// calculate unclipped screen coordinates
 	//  for post
-	topscreen = sprtopscreen + spryscale*column->topdelta;
-	bottomscreen = topscreen + spryscale*column->length;
+	topscreen = sprtopscreen + (p4_screenfrac_t)spryscale*column->topdelta;
+	bottomscreen = topscreen + (p4_screenfrac_t)spryscale*column->length;
 
 	dc_yl = (topscreen+FRACUNIT-1)>>FRACBITS;
 	dc_yh = (bottomscreen-1)>>FRACBITS;
@@ -372,6 +372,8 @@ void R_DrawMaskedColumn (column_t* column)
 
 	    // Drawn by either R_DrawColumn
 	    //  or (SHADOW) R_DrawFuzzColumn.
+	    // Each masked wall/sprite post keeps its existing sampler.
+	    dc_sourceheight = 128;
 	    colfunc ();	
 	}
 	column = (column_t *)(  (byte *)column + column->length + 4);
@@ -418,7 +420,7 @@ R_DrawVisSprite
     dc_texturemid = vis->texturemid;
     frac = vis->startfrac;
     spryscale = vis->scale;
-    sprtopscreen = centeryfrac - FixedMul(dc_texturemid,spryscale);
+    sprtopscreen = centeryfrac - R_ScreenFixedMul(dc_texturemid,spryscale);
 	
     for (dc_x=vis->x1 ; dc_x<=vis->x2 ; dc_x++, frac += vis->xiscale)
     {
@@ -590,7 +592,7 @@ void R_ProjectSprite (mobj_t* thing)
     else
     {
 	// diminished light
-	index = xscale>>(LIGHTSCALESHIFT-detailshift);
+	index = R_CanonicalScale(xscale)>>(LIGHTSCALESHIFT-detailshift);
 
 	if (index >= MAXLIGHTSCALE) 
 	    index = MAXLIGHTSCALE-1;

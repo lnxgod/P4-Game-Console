@@ -26,6 +26,26 @@
 
 
 
+static inline p4_screenfrac_t R_ScreenFixedMul(fixed_t a, fixed_t b)
+{
+#if P4_DOOM_NATIVE_RASTER
+    return ((int64_t)a * b) >> FRACBITS;
+#else
+    return FixedMul(a, b);
+#endif
+}
+
+// Lighting distance is defined in the original raster's projection units.
+// Scale it once per column/sprite, never in a pixel loop.
+static inline fixed_t R_CanonicalScale(fixed_t scale)
+{
+#if P4_DOOM_NATIVE_RASTER
+    return (fixed_t)((int64_t)scale * P4_DOOM_CANONICAL_WIDTH / SCREENWIDTH);
+#else
+    return scale;
+#endif
+}
+
 //
 // POV related.
 //

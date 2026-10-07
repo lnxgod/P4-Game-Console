@@ -56,6 +56,10 @@ byte *xlatab = NULL;
 // The screen buffer that the v_video.c code draws to.
 
 static byte *dest_screen = NULL;
+// Alternate native buffers can represent a vertical region of the screen.
+// Keeping its global origin preserves the fractional 12/5 UI scaling phase.
+static int dest_origin_y;
+static int dest_height = SCREENHEIGHT;
 
 int dirtybox[4]; 
 
@@ -90,14 +94,15 @@ void V_CopyRect(int srcx, int srcy, byte *source,
     byte *dest; 
  
 #ifdef RANGECHECK 
-    if (srcx < 0
+    if (width < 0 || height < 0
+     || srcx < 0
      || srcx + width > SCREENWIDTH
      || srcy < 0
      || srcy + height > SCREENHEIGHT 
      || destx < 0
      || destx + width > SCREENWIDTH
-     || desty < 0
-     || desty + height > SCREENHEIGHT)
+     || desty < dest_origin_y
+     || desty + height > dest_origin_y + dest_height)
     {
         I_Error ("Bad V_CopyRect");
     }
@@ -106,7 +111,7 @@ void V_CopyRect(int srcx, int srcy, byte *source,
     V_MarkRect(destx, desty, width, height); 
  
     src = source + SCREENWIDTH * srcy + srcx; 
-    dest = dest_screen + SCREENWIDTH * desty + destx; 
+    dest = dest_screen + SCREENWIDTH * (desty - dest_origin_y) + destx; 
 
     for ( ; height>0 ; height--) 
     { 
@@ -131,13 +136,140 @@ void V_SetPatchClipCallback(vpatchclipfunc_t func)
     patchclip_callback = func;
 }
 
+// UI assets retain Doom's canonical coordinate system. Each post is painted
+// directly into the native raster; there is no low-resolution rendered frame.
+#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
+static void V_NativePatch(int x, int y, patch_t *patch, boolean flipped,
+                          int blend, boolean native_anchor, int only_column)
+{
+    int width = SHORT(patch->width), height = SHORT(patch->height);
+    int col, start = only_column < 0 ? 0 : only_column;
+    int end = only_column < 0 ? width : only_column + 1;
+    int origin_x, origin_y;
+
+    if (width <= 0 || height <= 0 || start < 0 || end > width)
+        return;
+    if (only_column < 0)
+    {
+        if (native_anchor)
+        {
+            x -= P4_DOOM_SCALE_X(SHORT(patch->leftoffset));
+            y -= P4_DOOM_SCALE_Y(SHORT(patch->topoffset));
+        }
+        else
+        {
+            x -= SHORT(patch->leftoffset);
+            y -= SHORT(patch->topoffset);
+        }
+        if (patchclip_callback && !patchclip_callback(patch, x, y))
+            return;
+        // Keep Doom's canonical UI rejection before reading any column table
+        // (the intentional invalid intermission patch relies on this).
+        if (!native_anchor && blend != 3
+            && (x < 0 || y < 0 || x + width > P4_DOOM_CANONICAL_WIDTH
+                || y + height > P4_DOOM_CANONICAL_HEIGHT))
+            I_Error("Bad native V_DrawPatch x=%i y=%i width=%i height=%i",
+                    x, y, width, height);
+    }
+    origin_x = native_anchor ? x : 0;
+    origin_y = native_anchor ? y : 0;
+    for (col = start; col < end; ++col)
+    {
+        int draw_col = only_column < 0 ? col : 0;
+        int x0 = origin_x + P4_DOOM_SCALE_X((native_anchor ? 0 : x) + draw_col);
+        int x1 = origin_x + P4_DOOM_SCALE_X((native_anchor ? 0 : x) + draw_col + 1);
+        int source_col = flipped ? width - col - 1 : col;
+        column_t *post = (column_t *) ((byte *)patch + LONG(patch->columnofs[source_col]));
+        if (x0 < 0) x0 = 0;
+        if (x1 > SCREENWIDTH) x1 = SCREENWIDTH;
+        if (x0 >= x1) continue;
+        while (post->topdelta != 0xff)
+        {
+            const byte *source = (byte *)post + 3;
+            int row;
+            for (row = 0; row < post->length; ++row)
+            {
+                int sy = post->topdelta + row;
+                int y0 = origin_y + P4_DOOM_SCALE_Y((native_anchor ? 0 : y) + sy);
+                int y1 = origin_y + P4_DOOM_SCALE_Y((native_anchor ? 0 : y) + sy + 1);
+                int dy;
+                if (y0 < dest_origin_y) y0 = dest_origin_y;
+                if (y1 > dest_origin_y + dest_height) y1 = dest_origin_y + dest_height;
+                for (dy = y0; dy < y1; ++dy)
+                {
+                    byte *dest = dest_screen + (dy - dest_origin_y) * SCREENWIDTH + x0;
+                    if (blend == 0)
+                        memset(dest, source[row], x1 - x0);
+                    else
+                    {
+                        int dx;
+                        for (dx = x0; dx < x1; ++dx, ++dest)
+                        {
+                            if (blend == 3)
+                                *dest = tinttable[*dest << 8];
+                            else if (blend == 2)
+                                *dest = xlatab[*dest + (source[row] << 8)];
+                            else
+                                *dest = tinttable[(*dest << 8) + source[row]];
+                        }
+                    }
+                }
+            }
+            post = (column_t *) ((byte *)post + post->length + 4);
+        }
+    }
+    if (dest_screen == I_VideoBuffer)
+        V_MarkRect(0, 0, SCREENWIDTH, SCREENHEIGHT);
+}
+#endif
+
+// Native anchors are used by native world borders and automap markers. The
+// patch asset itself is still scaled, rather than changing world coordinates.
+void V_DrawPatchNative(int x, int y, patch_t *patch)
+{
+#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
+    V_NativePatch(x, y, patch, false, 0, true, -1);
+#else
+    V_DrawPatch(x, y, patch);
+#endif
+}
+
+void V_DrawPatchColumn(int x, int y, patch_t *patch, int col)
+{
+#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
+    V_NativePatch(x, y, patch, false, 0, false, col);
+#else
+    column_t *post;
+    if (col < 0 || col >= SHORT(patch->width) || x < 0 || x >= SCREENWIDTH)
+        return;
+    post = (column_t *) ((byte *)patch + LONG(patch->columnofs[col]));
+    while (post->topdelta != 0xff)
+    {
+        const byte *source = (byte *)post + 3;
+        int row;
+        for (row = 0; row < post->length; ++row)
+        {
+            int dy = y + post->topdelta + row;
+            if (dy >= dest_origin_y && dy < dest_origin_y + dest_height)
+                dest_screen[(dy - dest_origin_y) * SCREENWIDTH + x] = source[row];
+        }
+        post = (column_t *) ((byte *)post + post->length + 4);
+    }
+#endif
+}
+
 //
 // V_DrawPatch
 // Masks a column based masked pic to the screen. 
 //
 
 void V_DrawPatch(int x, int y, patch_t *patch)
-{ 
+{
+#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
+    V_NativePatch(x, y, patch, false, 0, false, -1);
+    return;
+#endif
+ 
     int count;
     int col;
     column_t *column;
@@ -169,7 +301,7 @@ void V_DrawPatch(int x, int y, patch_t *patch)
     V_MarkRect(x, y, SHORT(patch->width), SHORT(patch->height));
 
     col = 0;
-    desttop = dest_screen + y * SCREENWIDTH + x;
+    desttop = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x;
 
     w = SHORT(patch->width);
 
@@ -202,6 +334,11 @@ void V_DrawPatch(int x, int y, patch_t *patch)
 
 void V_DrawPatchFlipped(int x, int y, patch_t *patch)
 {
+#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
+    V_NativePatch(x, y, patch, true, 0, false, -1);
+    return;
+#endif
+
     int count;
     int col; 
     column_t *column; 
@@ -233,7 +370,7 @@ void V_DrawPatchFlipped(int x, int y, patch_t *patch)
     V_MarkRect (x, y, SHORT(patch->width), SHORT(patch->height));
 
     col = 0;
-    desttop = dest_screen + y * SCREENWIDTH + x;
+    desttop = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x;
 
     w = SHORT(patch->width);
 
@@ -278,6 +415,11 @@ void V_DrawPatchDirect(int x, int y, patch_t *patch)
 
 void V_DrawTLPatch(int x, int y, patch_t * patch)
 {
+#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
+    V_NativePatch(x, y, patch, false, 1, false, -1);
+    return;
+#endif
+
     int count, col;
     column_t *column;
     byte *desttop, *dest, *source;
@@ -295,7 +437,7 @@ void V_DrawTLPatch(int x, int y, patch_t * patch)
     }
 
     col = 0;
-    desttop = dest_screen + y * SCREENWIDTH + x;
+    desttop = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x;
 
     w = SHORT(patch->width);
     for (; col < w; x++, col++, desttop++)
@@ -328,6 +470,11 @@ void V_DrawTLPatch(int x, int y, patch_t * patch)
 
 void V_DrawXlaPatch(int x, int y, patch_t * patch)
 {
+#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
+    V_NativePatch(x, y, patch, false, 2, false, -1);
+    return;
+#endif
+
     int count, col;
     column_t *column;
     byte *desttop, *dest, *source;
@@ -343,7 +490,7 @@ void V_DrawXlaPatch(int x, int y, patch_t * patch)
     }
 
     col = 0;
-    desttop = dest_screen + y * SCREENWIDTH + x;
+    desttop = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x;
 
     w = SHORT(patch->width);
     for(; col < w; x++, col++, desttop++)
@@ -377,6 +524,11 @@ void V_DrawXlaPatch(int x, int y, patch_t * patch)
 
 void V_DrawAltTLPatch(int x, int y, patch_t * patch)
 {
+#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
+    V_NativePatch(x, y, patch, false, 1, false, -1);
+    return;
+#endif
+
     int count, col;
     column_t *column;
     byte *desttop, *dest, *source;
@@ -394,7 +546,7 @@ void V_DrawAltTLPatch(int x, int y, patch_t * patch)
     }
 
     col = 0;
-    desttop = dest_screen + y * SCREENWIDTH + x;
+    desttop = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x;
 
     w = SHORT(patch->width);
     for (; col < w; x++, col++, desttop++)
@@ -427,6 +579,14 @@ void V_DrawAltTLPatch(int x, int y, patch_t * patch)
 
 void V_DrawShadowedPatch(int x, int y, patch_t *patch)
 {
+#if SCREENWIDTH != P4_DOOM_CANONICAL_WIDTH || SCREENHEIGHT != P4_DOOM_CANONICAL_HEIGHT
+    // Tint the shadow before painting the foreground so overlapping posts are
+    // consistently hidden by the native asset.
+    V_NativePatch(x + 2, y + 2, patch, false, 3, false, -1);
+    V_NativePatch(x, y, patch, false, 0, false, -1);
+    return;
+#endif
+
     int count, col;
     column_t *column;
     byte *desttop, *dest, *source;
@@ -445,8 +605,8 @@ void V_DrawShadowedPatch(int x, int y, patch_t *patch)
     }
 
     col = 0;
-    desttop = dest_screen + y * SCREENWIDTH + x;
-    desttop2 = dest_screen + (y + 2) * SCREENWIDTH + x + 2;
+    desttop = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x;
+    desttop2 = dest_screen + (y + 2 - dest_origin_y) * SCREENWIDTH + x + 2;
 
     w = SHORT(patch->width);
     for (; col < w; x++, col++, desttop++, desttop2++)
@@ -505,10 +665,11 @@ void V_DrawBlock(int x, int y, int width, int height, byte *src)
     byte *dest; 
  
 #ifdef RANGECHECK 
-    if (x < 0
+    if (width < 0 || height < 0
+     || x < 0
      || x + width >SCREENWIDTH
-     || y < 0
-     || y + height > SCREENHEIGHT)
+     || y < dest_origin_y
+     || y + height > dest_origin_y + dest_height)
     {
 	I_Error ("Bad V_DrawBlock");
     }
@@ -516,7 +677,7 @@ void V_DrawBlock(int x, int y, int width, int height, byte *src)
  
     V_MarkRect (x, y, width, height); 
  
-    dest = dest_screen + y * SCREENWIDTH + x; 
+    dest = dest_screen + (y - dest_origin_y) * SCREENWIDTH + x; 
 
     while (height--) 
     { 
@@ -528,49 +689,29 @@ void V_DrawBlock(int x, int y, int width, int height, byte *src)
 
 void V_DrawFilledBox(int x, int y, int w, int h, int c)
 {
-    uint8_t *buf, *buf1;
-    int x1, y1;
-
-    buf = I_VideoBuffer + SCREENWIDTH * y + x;
-
-    for (y1 = 0; y1 < h; ++y1)
-    {
-        buf1 = buf;
-
-        for (x1 = 0; x1 < w; ++x1)
-        {
-            *buf1++ = c;
-        }
-
-        buf += SCREENWIDTH;
-    }
+    int x0, x1, y0, y1, row;
+    if (w <= 0 || h <= 0) return;
+    x0 = P4_DOOM_SCALE_X(x);
+    x1 = P4_DOOM_SCALE_X(x + w);
+    y0 = P4_DOOM_SCALE_Y(y);
+    y1 = P4_DOOM_SCALE_Y(y + h);
+    if (x0 < 0) x0 = 0;
+    if (x1 > SCREENWIDTH) x1 = SCREENWIDTH;
+    if (y0 < 0) y0 = 0;
+    if (y1 > SCREENHEIGHT) y1 = SCREENHEIGHT;
+    if (x0 >= x1) return;
+    for (row = y0; row < y1; ++row)
+        memset(I_VideoBuffer + SCREENWIDTH * row + x0, c, x1 - x0);
 }
 
 void V_DrawHorizLine(int x, int y, int w, int c)
 {
-    uint8_t *buf;
-    int x1;
-
-    buf = I_VideoBuffer + SCREENWIDTH * y + x;
-
-    for (x1 = 0; x1 < w; ++x1)
-    {
-        *buf++ = c;
-    }
+    V_DrawFilledBox(x, y, w, 1, c);
 }
 
 void V_DrawVertLine(int x, int y, int h, int c)
 {
-    uint8_t *buf;
-    int y1;
-
-    buf = I_VideoBuffer + SCREENWIDTH * y + x;
-
-    for (y1 = 0; y1 < h; ++y1)
-    {
-        *buf = c;
-        buf += SCREENWIDTH;
-    }
+    V_DrawFilledBox(x, y, 1, h, c);
 }
 
 void V_DrawBox(int x, int y, int w, int h, int c)
@@ -588,7 +729,16 @@ void V_DrawBox(int x, int y, int w, int h, int c)
  
 void V_DrawRawScreen(byte *raw)
 {
-    memcpy(dest_screen, raw, SCREENWIDTH * SCREENHEIGHT);
+    int x, y;
+    // A raw screen is a static 320x200 asset, not a rendered world frame.
+    for (y = dest_origin_y; y < dest_origin_y + dest_height; ++y)
+    {
+        const byte *source = raw + (y * P4_DOOM_CANONICAL_HEIGHT / SCREENHEIGHT)
+                                  * P4_DOOM_CANONICAL_WIDTH;
+        byte *dest = dest_screen + (y - dest_origin_y) * SCREENWIDTH;
+        for (x = 0; x < SCREENWIDTH; ++x)
+            dest[x] = source[x * P4_DOOM_CANONICAL_WIDTH / SCREENWIDTH];
+    }
 }
 
 //
@@ -606,6 +756,17 @@ void V_Init (void)
 void V_UseBuffer(byte *buffer)
 {
     dest_screen = buffer;
+    dest_origin_y = 0;
+    dest_height = SCREENHEIGHT;
+}
+
+void V_UseBufferRegion(byte *buffer, int origin_y, int height)
+{
+    if (!buffer || origin_y < 0 || height <= 0 || origin_y + height > SCREENHEIGHT)
+        I_Error("Bad V_UseBufferRegion");
+    dest_screen = buffer;
+    dest_origin_y = origin_y;
+    dest_height = height;
 }
 
 // Restore screen buffer to the i_video screen buffer.
@@ -613,6 +774,8 @@ void V_UseBuffer(byte *buffer)
 void V_RestoreBuffer(void)
 {
     dest_screen = I_VideoBuffer;
+    dest_origin_y = 0;
+    dest_height = SCREENHEIGHT;
 }
 
 //
@@ -872,7 +1035,7 @@ void V_DrawMouseSpeedBox(int speed)
 
     // Calculate box position
 
-    box_x = SCREENWIDTH - MOUSE_SPEED_BOX_WIDTH - 10;
+    box_x = P4_DOOM_CANONICAL_WIDTH - MOUSE_SPEED_BOX_WIDTH - 10;
     box_y = 15;
 
     V_DrawFilledBox(box_x, box_y,

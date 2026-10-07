@@ -100,7 +100,8 @@ python3 scripts/fetch-prebuilt.py \
 An access error or missing release stops the download; the downloader does not
 try the public upstream, fall back to `latest`, or compile implicitly. A local
 firmware change requires a new build. The existing source-build route remains
-`make setup`, `make verify`, `make prepare-game-data`, then
+`make setup`, `make verify`, `make prepare-game-data`,
+`python3 scripts/doom/arena-content.py --fetch`, then
 `make console-os-tab5-idf` (use Python 3.10 or newer for the source tools).
 SDK setup now uses a shallow pinned clone and parallel shallow submodules,
 and reuses a discovered matching SDK and the existing project tools cache.

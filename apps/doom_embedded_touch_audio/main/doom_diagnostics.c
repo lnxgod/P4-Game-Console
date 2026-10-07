@@ -356,6 +356,55 @@ static bool emit_touch_sampler(const doom_diag_snapshot_t *snapshot,
     return admit_line(used);
 }
 
+/* Separate schema and copied observations; no consumer heap/storage access.
+ * Static phase observations retain their event and sample times on repetition. */
+static bool emit_memory(const doom_diag_snapshot_t *snapshot,
+                         const p4_diag_record_t *record)
+{
+    static const char *const names[DOOM_MEMORY_PHASE_COUNT] = {
+        "engine-start", "pre-zone", "post-zone", "engine-ready", "first-map",
+        "checkpoint-capture", "checkpoint-restore", "runtime"
+    };
+    _Static_assert(DOOM_MEMORY_PHASE_COUNT == 8, "MEMORY_V1 phase mapping is fixed");
+    const doom_memory_diag_t *const memory = &snapshot->memory;
+    unsigned parts = 0U;
+    for (unsigned phase = 0U; phase < DOOM_MEMORY_PHASE_COUNT; ++phase)
+        if (memory->present && (memory->valid_mask & (UINT32_C(1) << phase))) ++parts;
+    unsigned part = 0U;
+    for (unsigned phase = 0U; phase <= DOOM_MEMORY_PHASE_COUNT; ++phase) {
+        const bool valid = phase < DOOM_MEMORY_PHASE_COUNT && memory->present &&
+            (memory->valid_mask & (UINT32_C(1) << phase));
+        if (!valid && (phase < DOOM_MEMORY_PHASE_COUNT || parts)) continue;
+        if (!p4_diag_is_current(&s_mailbox, record)) return false;
+        const doom_memory_observation_t observation = valid
+            ? memory->phases[phase] : (doom_memory_observation_t){0};
+        size_t used = 0U;
+        if (!append_format(&used, "\nP4_DOOM MEMORY_V1"
+            " memory_schema=1 diag_generation=%" PRIu32 " diag_sequence=%" PRIu64
+            " diag_capture_us=%" PRIu64 " diag_emit_us=%" PRIu64
+            " memory_part=%u memory_parts=%u phase_index=%u phase=%s"
+            " memory_present=%u observation_valid=%u event_us=%" PRIu64
+            " observed_us=%" PRIu64 " free=%" PRIu64 " largest=%" PRIu64
+            " boot_min_free=%" PRIu64 " sampled_since_us=%" PRIu64
+            " sampled_min_free=%" PRIu64 " sample_count=%" PRIu32
+            " zone_requested=%" PRIu64 " arena_resident=%" PRIu64
+            " zone_admission_error=%" PRId32 " zone_attempts=%" PRIu32
+            " zone_allocated=%u\n",
+            record->generation, record->sequence, record->captured_us,
+            (uint64_t)esp_timer_get_time(), ++part, parts ? parts : 1U,
+            phase, valid ? names[phase] : "none", memory->present ? 1U : 0U,
+            valid ? 1U : 0U, observation.event_us, observation.observed_us,
+            observation.free_bytes, observation.largest_bytes,
+            observation.boot_min_free, memory->sampled_since_us,
+            memory->sampled_min_free, memory->sample_count,
+            memory->zone_requested_bytes, memory->arena_resident_bytes,
+            memory->zone_admission_error, memory->zone_allocation_attempts,
+            memory->zone_allocation_succeeded ? 1U : 0U) ||
+            !p4_diag_is_current(&s_mailbox, record) || !admit_line(used)) return false;
+    }
+    return true;
+}
+
 static bool drain_one(void)
 {
     if (!p4_diag_try_take(&s_mailbox, &s_record)) return false;
@@ -365,6 +414,7 @@ static bool drain_one(void)
         if (s_snapshot.captured_us == s_record.captured_us &&
             emit_snapshot(&s_snapshot, &s_record)) {
             (void)emit_touch_sampler(&s_snapshot, &s_record);
+            (void)emit_memory(&s_snapshot, &s_record);
             emit_transport_status();
         }
     }

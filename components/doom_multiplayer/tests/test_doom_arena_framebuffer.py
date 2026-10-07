@@ -34,14 +34,18 @@ with tempfile.TemporaryDirectory(prefix="p4-arena-framebuffer-") as temp:
     temp = Path(temp)
     definitions = []
     for name, functions in {
-        "v_video.c": ["V_DrawFilledBox", "V_DrawPatch"],
+        "v_video.c": ["V_NativePatch", "V_DrawFilledBox", "V_DrawPatch"],
         "hu_lib.c": ["HUlib_clearTextLine", "HUlib_initTextLine", "HUlib_addCharToTextLine", "HUlib_drawTextLine"],
         "hu_stuff.c": ["HU_Drawer", "HU_Erase"],
         "r_draw.c": ["R_VideoErase", "R_DrawViewBorder"],
         "d_main.c": ["D_Display"],
     }.items():
         source = (VENDOR / name).read_text()
-        definitions.extend(function(source, value) for value in functions)
+        for value in functions:
+            definition = function(source, value)
+            if value == "V_NativePatch":
+                definition = "#if P4_DOOM_NATIVE_RASTER\n" + definition + "\n#endif"
+            definitions.append(definition)
     (temp / "render_functions.h").write_text("\n".join(definitions))
     command = [os.environ.get("CC", "cc"), "-std=c11", "-g", "-O1", "-fsanitize=address,undefined",
                "-fno-omit-frame-pointer", "-DRANGECHECK", "-I" + str(temp),
@@ -52,5 +56,7 @@ with tempfile.TemporaryDirectory(prefix="p4-arena-framebuffer-") as temp:
                str(ROOT / "components/doom_multiplayer/tests/test_doom_arena_framebuffer.c"),
                str(ROOT / "components/doom_multiplayer/src/doom_arena.c"),
                "-o", str(temp / "framebuffer")]
-    subprocess.run(command, check=True)
-    subprocess.run([str(temp / "framebuffer")], check=True)
+    for width, height in ((320,200),(768,480)):
+        subprocess.run(command + [f"-DP4_DOOM_NATIVE_WIDTH={width}",
+                                  f"-DP4_DOOM_NATIVE_HEIGHT={height}"], check=True)
+        subprocess.run([str(temp / "framebuffer")], check=True)

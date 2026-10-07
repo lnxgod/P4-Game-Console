@@ -381,6 +381,12 @@ void I_InitGraphics (void)
     }
 
 
+#if P4_DOOM_NATIVE_RASTER
+    /* Native rendering must never silently use the generic frame scaler. */
+    if (fb_scaling != 1 || s_Fb.xres != SCREENWIDTH || s_Fb.yres != SCREENHEIGHT)
+        I_Error("Native Doom requires an exact %dx%d output", SCREENWIDTH, SCREENHEIGHT);
+#endif
+
     /* Allocate screen to draw to */
 	I_AllocateVideoBuffer();
 
@@ -426,10 +432,9 @@ void I_FinishUpdate (void)
     unsigned char *line_in, *line_out;
 
 #ifdef P4_DOOM_XRGB_FASTPATH
-    /* Only the exact default 320x200 RGB888 presentation can use this hook.
-     * CMAP256, alternate dimensions/formats/scales and legacy platforms keep
-     * the original prepare/expand/draw route. Palette already includes gamma. */
-    if (SCREENWIDTH == 320 && SCREENHEIGHT == 200 && fb_scaling == 1 &&
+    /* One indexed sample per native output pixel. Palette includes gamma;
+     * alternate formats/scales retain the original prepare/expand/draw route. */
+    if (fb_scaling == 1 &&
         s_Fb.xres == SCREENWIDTH && s_Fb.yres == SCREENHEIGHT &&
         s_Fb.bits_per_pixel == 32 &&
         s_Fb.red.offset == 16 && s_Fb.green.offset == 8 && s_Fb.blue.offset == 0 &&

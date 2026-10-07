@@ -125,7 +125,7 @@ static bool resolve_path(
     }
     if (context->title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI &&
         strcmp(path,"freedoom2.wad")==0) {
-        *size_bytes=PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES;
+        *size_bytes=PLATFORM_GAME_STORAGE_ARENA_BASE_WAD_BYTES;
         return true;
     }
     if (context->title == PLATFORM_GAME_STORAGE_DOOM_TITLE_GAME_CHANGERS_AI &&
@@ -568,7 +568,7 @@ esp_err_t platform_readonly_blob_register(
 {
     const bool arena_config = config && config->file_name &&
         strcmp(config->file_name,"freedoom2.wad")==0 &&
-        config->size_bytes==(size_t)PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES;
+        config->size_bytes==(size_t)PLATFORM_GAME_STORAGE_ARENA_BASE_WAD_BYTES;
     const bool doom_config = config != NULL &&
         config->file_name != NULL &&
         strcmp(config->file_name, "doom1.wad") == 0 &&
@@ -606,7 +606,7 @@ esp_err_t platform_readonly_blob_register(
             result=platform_game_storage_read_arena_wad(P4_GCA_PWAD,0,probe,sizeof(probe));
         if (result==ESP_OK)
             result=platform_game_storage_read_arena_wad(P4_GCA_DWANGO,0,probe,sizeof(probe));
-        snapshot.wad_size_bytes=(size_t)PLATFORM_GAME_STORAGE_FREEDOOM2_WAD_BYTES;
+        snapshot.wad_size_bytes=(size_t)PLATFORM_GAME_STORAGE_ARENA_BASE_WAD_BYTES;
     } else result = platform_game_storage_get_locked_doom_snapshot(s_context.title,&snapshot);
     if (result != ESP_OK) {
         s_context.title = PLATFORM_GAME_STORAGE_DOOM_TITLE_DOOM;
