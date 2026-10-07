@@ -67,6 +67,9 @@ configured ASan/UBSan checks. `make p4-multiplayer-host` passes the three shared
 cases (already included in that twelve) and the Python relay checks. Logs are
 under ignored `build-host/doom-arena-handoff-fix/`. Follow-up build identities
 are recorded in `test-runs/2026-10-06-doom-arena-handoff-fix.json`.
+The Tab5 build and complete verifier pass at `34fffb440be1`: the image is
+4,318,512 bytes and the bundle contains 17 verified native cartridges. Nothing
+was flashed; on-device acceptance remains pending.
 
 ## Initial review validation and continuing limits
 

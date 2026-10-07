@@ -1,0 +1,147 @@
+{
+  "schema": 1,
+  "date": "2026-10-06",
+  "scope": "Fix lost Game Changers AI Doom arena start commits across lobby-to-engine handoff",
+  "branch": "codex/doom-arena-multiplayer-review",
+  "base_commit": "0338291",
+  "implementation_commit": "34fffb440be1981a9c6e8f1e305fbc6d42db760b",
+  "supersedes_finding": {
+    "record": "test-runs/2026-10-06-doom-arena-review.json",
+    "id": "group-start-commit-loss",
+    "old_status": "open-reproduced",
+    "status": "fixed-host-and-build-tested"
+  },
+  "behavior": [
+    "The already-committed host replies to valid late lobby READY while Doom configures, using the original session/seed token and roster.",
+    "Shared group parsing checks framing, sender, token, count and reserved bytes; session and route validation happen before the helper.",
+    "Replies are limited to ten per second per peer and stop after configuration.",
+    "Lobby READY does not satisfy engine readiness. Every engine must send GCAREADY before the host produces canonical ticks.",
+    "A peer that remains in the lobby triggers the existing 30-second configuration failure without delivering ticks.",
+    "Existing wire format, game protocol 4 and eight-second guest lobby timeout are preserved. Native-game handoff is unchanged."
+  ],
+  "commands": [
+    {
+      "command": "ctest --test-dir build-host/doom_multiplayer -R '^doom_gc_handoff_loss$' --output-on-failure",
+      "result": "failed-before-fix",
+      "log": "handoff-before.log",
+      "observed": "Guest lobby reaches FAILED after missing original commit burst."
+    },
+    {
+      "command": "ctest --test-dir build-host/doom_multiplayer -R '^doom_gc_handoff_loss$' --output-on-failure",
+      "result": "passed-after-fix",
+      "log": "handoff-after.log"
+    },
+    {
+      "command": "make doom-multiplayer-host",
+      "result": "passed-12-of-12",
+      "log": "doom-after.log"
+    },
+    {
+      "command": "make p4-multiplayer-host",
+      "environment": "existing IDF Python 3.11 bin first in PATH",
+      "result": "passed-3-of-3-and-python-relay",
+      "log": "p4-after.log",
+      "note": "These three CTest cases are already included in the twelve; not counted twice."
+    },
+    {
+      "command": "./scripts/build.sh console_os m5stack-tab5",
+      "environment": "existing pinned SDK via P4_IDF_PATH and existing Python 3.11 via IDF_PYTHON_ENV_PATH",
+      "result": "passed",
+      "log": "tab5-build.log"
+    },
+    {
+      "command": "python scripts/verify-console-os-tab5.py",
+      "result": "passed",
+      "log": "tab5-verify.log"
+    }
+  ],
+  "test_scope": {
+    "new_handoff_regression": "Four processes use real production P4MP sessions, group barrier and Doom adapter over datagram sockets. Host COMMIT to guest 1 is dropped for 1400ms, with additional loss and duplication. All peers configure, exchange canonical commands, then handle guest departure and host shutdown.",
+    "negative_cases": "Malformed recovery frames, wrong token/roster/sender, duplicate commit launch stability, valid lobby READY flood without engine READY, reply rate bound and configuration deadline.",
+    "limits": "Engine tic delivery is mocked. This is not a full rendered Doom engine, physical radio or multiplayer device acceptance.",
+    "unique_ctest_cases_passed": 12,
+    "python_relay_suite": "passed",
+    "sanitizers": [
+      "AddressSanitizer",
+      "UndefinedBehaviorSanitizer"
+    ]
+  },
+  "firmware": {
+    "target": "m5stack-tab5",
+    "source_commit": "34fffb440be1981a9c6e8f1e305fbc6d42db760b",
+    "esp_idf_version": "5.5.3",
+    "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+    "build": "passed",
+    "verifier": {
+      "ble_multiplayer_enabled": true,
+      "board": "m5stack-tab5",
+      "charger_control_enabled": true,
+      "content_bundle_verified": true,
+      "flash_authorized": false,
+      "hardware_verified": false,
+      "image_bytes": 4318512,
+      "image_sha256": "14c2efff26b3c41bf3052578caa17ebf2f8e29b4b9a62eb6f1fd758da38401d8",
+      "native_cartridges": 17,
+      "result": "tab5-build-candidate-verified",
+      "usb_host_enabled": true,
+      "version": "0.56",
+      "wifi_multiplayer_enabled": true
+    },
+    "artifacts": {
+      "p4_console_os.bin": {
+        "bytes": 4318512,
+        "sha256": "14c2efff26b3c41bf3052578caa17ebf2f8e29b4b9a62eb6f1fd758da38401d8"
+      },
+      "P4UPDATE.P4U": {
+        "bytes": 4318768,
+        "sha256": "696a298a95e427bf202ce4b5f6e93d0d8d05dcbab28fcf1b5b02fcddac8ecb76"
+      }
+    }
+  },
+  "hardware_tested": false,
+  "flashed": false,
+  "published": false,
+  "performance_gain_measured": false,
+  "local_logs": {
+    "build-after.log": {
+      "path": "build-host/doom-arena-handoff-fix/build-after.log",
+      "bytes": 1149,
+      "sha256": "be5530dde2e0bab1629853e06003046105266c6d70718bc47070df6e5dd415e9"
+    },
+    "doom-after.log": {
+      "path": "build-host/doom-arena-handoff-fix/doom-after.log",
+      "bytes": 2302,
+      "sha256": "5d2974cd64ca693c9c3ea1d21e882ad0551c94d8292dd47cfc6895e7ece1eac5"
+    },
+    "handoff-after.log": {
+      "path": "build-host/doom-arena-handoff-fix/handoff-after.log",
+      "bytes": 295,
+      "sha256": "e670c15dd45ecf4853a29a7446f7cb60482b73edebf1079455fb72f9024bdaf1"
+    },
+    "handoff-before.log": {
+      "path": "build-host/doom-arena-handoff-fix/handoff-before.log",
+      "bytes": 512,
+      "sha256": "2b6151d215317a21e35aee2989a095df1a8e642f622b6ae7ec6711ac51d8e5f5"
+    },
+    "p4-after.log": {
+      "path": "build-host/doom-arena-handoff-fix/p4-after.log",
+      "bytes": 1269,
+      "sha256": "fcd19c5f2906c943a54b22a94d5e8b32adb7303992499a5d403192a950414724"
+    },
+    "repro-build.log": {
+      "path": "build-host/doom-arena-handoff-fix/repro-build.log",
+      "bytes": 734,
+      "sha256": "1df4511787a93bccbd48b6e5c9364714e7a7e3486deb7d84824f84ae7f170877"
+    },
+    "tab5-build.log": {
+      "path": "build-host/doom-arena-handoff-fix/tab5-build.log",
+      "bytes": 5003,
+      "sha256": "7cada7c59a9f3beb67d06fb4728c04d1c25a674ab0d8b4a95368bfbf4e9563e4"
+    },
+    "tab5-verify.log": {
+      "path": "build-host/doom-arena-handoff-fix/tab5-verify.log",
+      "bytes": 435,
+      "sha256": "9817acba67852aae679a61c13a1b61a9fd4dfc39a24c8a21a66d9d2660489178"
+    }
+  }
+}
