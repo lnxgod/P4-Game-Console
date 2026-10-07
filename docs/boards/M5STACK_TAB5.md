@@ -3,15 +3,19 @@
 M5Stack Tab5 is the permanent primary target. `make console-os-idf` aliases
 `make console-os-tab5-idf`; Elecrow now requires `make console-os-elecrow-idf`.
 
-The current arena successor is **0.56**, based on the native 0.55 launch.
-Both A/ST7121 and B/ST7123 have exact application readback, launcher/health
-checks, eleven verified arena-content files each, and healthy post-transfer
-warm boots in [the installation record](../../test-runs/2026-10-06-doom-arena-install.json).
-The [Game Changers AI mode](../GAME_CHANGERS_AI_DOOM.md) adds four-slot local
-Wi-Fi play, verified SD-backed Freedoom/Pure Hell/DWANGO 5 reads, host map
-selection, in-game voting and connected idle breaks. Four-console gameplay
-and device cadence remain pending. The existing 0.55 Red Dragon payload is
-unchanged and still registers on both units.
+The current arena successor is **0.57**, based on the native 0.55 launch and
+merged multiplayer reliability fixes. Both A/ST7121 and B/ST7123 have passed
+application verification and launcher/health checks in
+[the Pure Hades installation record](../../test-runs/2026-10-06-pure-hades-integration.json).
+The [Game Changers AI mode](../GAME_CHANGERS_AI_DOOM.md) now uses the five-map
+Pure Hades v0.6 replacement plus optional DWANGO 5. All consoles require the
+new protocol-5 firmware and 16-file content bundle together. The existing 0.55
+Red Dragon payload is unchanged. Physical multiplayer gameplay and device
+cadence remain operator acceptance work.
+
+Routine app installs now use device checksum verification. A's installation was
+already running when the preference changed and completed full readback; B used
+device checksums. Full app readback is optional for recovery/diagnostics.
 
 The earlier Tab5 presentation release was **0.52**. Both A/ST7121 and B/ST7123
 have exact 4,508,176-byte application readback, launcher boot, post-service
@@ -417,9 +421,10 @@ Use `scripts/flash-console-os-tab5.py` with the pinned IDF Python environment.
 Its default mode checks local inputs only. `--install` requires an explicit port,
 unit A/B, authorization file and its SHA-256. It stages immutable image bytes,
 checks the full recovery snapshot, verifies live identity/revision/flash/security,
-and uses the same open connection for predecessor comparison, write and exact
-readback. A failed check leaves the unit unmodified or in the loader after a
-write failure. The app-only route also verifies the bootloader, partitions and
+and uses the same open connection for predecessor comparison, write and device
+checksum verification. Full app readback is optional with
+`--verification full-readback` for recovery or diagnostics. A failed check leaves the unit unmodified or in the
+loader after a write failure. The app-only route also verifies the bootloader, partitions and
 CRC-valid active OTA slot; it preserves the existing OTA selector.
 
 Both units' current artifact, install receipts, SD sizes, upload hashes and

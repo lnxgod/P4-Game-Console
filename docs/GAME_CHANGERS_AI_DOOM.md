@@ -200,6 +200,17 @@ The old Pure Hell bundle is incompatible with protocol 5. The earlier 0.53 recei
 [implementation receipt](../test-runs/2026-10-05-game-changers-ai-doom-implementation.json)
 is historical and predates the supplied PWAD/voting work.
 
+## Tab5 0.57 Pure Hades successor
+
+The [0.57 receipt](../test-runs/2026-10-06-pure-hades-integration.json) binds
+firmware, Pure Hades source, host tests and the two separately backed-up Tab5s.
+A/ST7121 and B/ST7123 passed app verification and launcher/health startup.
+Firmware SHA-256 is
+`a535203480cfee9b2f54d2c40b038870f6389e0035bcc7e8058f19bacf535671`
+(4,319,568 bytes). A completed full readback; B used device checksums after the
+operator requested routine flashes avoid full readbacks. Physical gameplay,
+controls, audio and sustained multiplayer cadence still need testing.
+
 ## Historical Tab5 0.56 installation (Pure Hell)
 
 [The exact installation record](../test-runs/2026-10-06-doom-arena-install.json)
