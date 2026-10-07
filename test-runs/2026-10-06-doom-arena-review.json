@@ -1,0 +1,183 @@
+{
+  "schema": 1,
+  "date": "2026-10-06",
+  "scope": "Game Changers AI Doom arena multiplayer review",
+  "branch": "codex/doom-arena-multiplayer-review",
+  "base_commit": "20aeac7008a81c3c3afa7c2b9d670f5ab6af860d",
+  "implementation_commit": "73b0bda17a4847cdcd5fdcbfcfe991a00cca58d3",
+  "esp_idf_version": "5.5.3",
+  "esp_idf_commit": "2c211b236707889e8400c4dc5644dd5c4ee071e0",
+  "summary": {
+    "findings_fixed": 3,
+    "confirmed_findings_open": 1,
+    "distinct_ctest_cases_passed": 11,
+    "hardware_tested": false,
+    "performance_gain_measured": false,
+    "published": false
+  },
+  "findings": [
+    {
+      "id": "stalled-guest-disconnect-cascade",
+      "priority": "P1",
+      "status": "fixed-host-and-build-tested",
+      "proof": "Host/client virtual-time regressions failed before fix; both pass after, with paused-host and true host-loss controls."
+    },
+    {
+      "id": "expired-wifi-route-exhaustion",
+      "priority": "P2",
+      "status": "fixed-host-and-build-tested",
+      "proof": "Socket-backed replacement-route regression failed before fix and passes after; healthy routes remain usable."
+    },
+    {
+      "id": "lobby-leave-sparse-roster",
+      "priority": "P2",
+      "status": "fixed-build-tested",
+      "proof": "Production session/group probe confirms slots 0,2,3 reject a three-player start; Console OS now handles PEER_LEFT via existing reopen/reset flow. Full UI acceptance pending."
+    },
+    {
+      "id": "group-start-commit-loss",
+      "priority": "P1",
+      "status": "open-reproduced",
+      "proof": "Drop only host COMMIT to guest 1 for 1400ms. Ten retries are lost; host and guests 2/3 reach DUE, guest 1 reaches FAILED at 8000ms. Not fixed; end-to-end handoff test required."
+    }
+  ],
+  "commands": [
+    {
+      "command": "make doom-multiplayer-host p4-multiplayer-host",
+      "result": "baseline-passed",
+      "log": "baseline-host.log"
+    },
+    {
+      "command": "ctest --test-dir build-host/doom_multiplayer -R \"doom_gc_(stalled_guest|host_heartbeat)\" --output-on-failure",
+      "result": "expected-regression-failures-before-fix",
+      "log": "stall-before.log"
+    },
+    {
+      "command": "make doom-multiplayer-host",
+      "result": "passed-10-of-10",
+      "log": "doom-after.log"
+    },
+    {
+      "command": "cmake -S components/platform_multiplayer_wifi/tests -B build-host/platform_multiplayer_wifi -G Ninja && cmake --build build-host/platform_multiplayer_wifi && ctest --test-dir build-host/platform_multiplayer_wifi --output-on-failure",
+      "result": "passed-1-of-1",
+      "log": "wifi-after.log"
+    },
+    {
+      "command": "build-host/doom-arena-review/handoff-probe",
+      "result": "reproduced-two-failure-modes-not-a-fix-test",
+      "log": "handoff-probe.log"
+    },
+    {
+      "command": "./scripts/build.sh console_os m5stack-tab5",
+      "environment": "existing pinned SDK via P4_IDF_PATH and Python 3.11 environment via IDF_PYTHON_ENV_PATH",
+      "result": "passed",
+      "log": "tab5-build.log"
+    },
+    {
+      "command": "/Users/billh/.espressif/python_env/idf5.5_py3.11_env/bin/python scripts/verify-console-os-tab5.py",
+      "result": "passed",
+      "log": "tab5-verify.log"
+    }
+  ],
+  "retained_failures": [
+    "Stalled guest/client regression cases failed against original production code.",
+    "Replacement Wi-Fi route regression failed against original production code.",
+    "First Wi-Fi after-fix test needed the existing socket suite delivery wait before nonblocking recv; final run passes.",
+    "Open group start commit-loss defect remains reproduced.",
+    "Existing vendored Doom compiler warnings remain; no warnings were reported in the three changed production translation units."
+  ],
+  "firmware": {
+    "target": "m5stack-tab5",
+    "source_commit": "73b0bda17a4847cdcd5fdcbfcfe991a00cca58d3",
+    "build": "passed",
+    "verifier": {
+      "ble_multiplayer_enabled": true,
+      "board": "m5stack-tab5",
+      "charger_control_enabled": true,
+      "content_bundle_verified": true,
+      "flash_authorized": false,
+      "hardware_verified": false,
+      "image_bytes": 4318272,
+      "image_sha256": "6aa34c712c5543cb82f63089cab8f8457674ffe6c5794eb2af3af02431e8760b",
+      "native_cartridges": 17,
+      "result": "tab5-build-candidate-verified",
+      "usb_host_enabled": true,
+      "version": "0.56",
+      "wifi_multiplayer_enabled": true
+    },
+    "hardware_tested": false,
+    "artifacts": {
+      "p4_console_os.bin": {
+        "bytes": 4318272,
+        "sha256": "6aa34c712c5543cb82f63089cab8f8457674ffe6c5794eb2af3af02431e8760b"
+      },
+      "P4UPDATE.P4U": {
+        "bytes": 4318528,
+        "sha256": "e4145d3f843fd1d6c46e082ae627293c12793e051bda8ba68376f5152ebd90c4"
+      }
+    }
+  },
+  "hardware_acceptance_pending": [
+    "two-, three- and four-Tab5 gameplay",
+    "stalled guest and radio loss recovery",
+    "explicit leave and Back during lobby/start",
+    "map voting and score preservation"
+  ],
+  "local_logs": {
+    "baseline-host.log": {
+      "path": "build-host/doom-arena-review/baseline-host.log",
+      "bytes": 6057,
+      "sha256": "de0c5940430e2ac1bb1a50b4e3d526ffee90763e4db1558eb239aa3d8b225ea7"
+    },
+    "doom-after.log": {
+      "path": "build-host/doom-arena-review/doom-after.log",
+      "bytes": 1786,
+      "sha256": "40b8a9d765fc642b3763c0d53adc309e801cede47553b862dd23fa11778930ba"
+    },
+    "handoff-probe.c": {
+      "path": "build-host/doom-arena-review/handoff-probe.c",
+      "bytes": 2192,
+      "sha256": "85e2632c61db65c892d67236ed174a50287c5427b1493eb474860e36d779c334"
+    },
+    "handoff-probe.log": {
+      "path": "build-host/doom-arena-review/handoff-probe.log",
+      "bytes": 165,
+      "sha256": "2ea528b393e65805a8eae7b10f43429bb16bbeba8bcd9707e9d833c65bce2786"
+    },
+    "repro-build.log": {
+      "path": "build-host/doom-arena-review/repro-build.log",
+      "bytes": 141,
+      "sha256": "fbd44a3b7f022bc4f301256ff39f06011e32c54d7584854aea07dadfe5a8923b"
+    },
+    "stall-before.log": {
+      "path": "build-host/doom-arena-review/stall-before.log",
+      "bytes": 778,
+      "sha256": "ed562a3e42e40cc43c06dd31992fbd3954599bb027efc3d335e2e164ff5635f4"
+    },
+    "tab5-build.log": {
+      "path": "build-host/doom-arena-review/tab5-build.log",
+      "bytes": 58896,
+      "sha256": "a37d03ec8a928bf7f6e3f4833b5c136f55936d13cfe7143793a475697ba12ad6"
+    },
+    "tab5-verify.log": {
+      "path": "build-host/doom-arena-review/tab5-verify.log",
+      "bytes": 435,
+      "sha256": "ef5d74ed74050c9cf01d436547a0ee3cb30a1e5632beea0768d634fdacfa365c"
+    },
+    "wifi-after.log": {
+      "path": "build-host/doom-arena-review/wifi-after.log",
+      "bytes": 399,
+      "sha256": "f0c9b63c1960e7dd27556c567366164dc8c1731dcb9736587685c1a5afb8c0a8"
+    },
+    "wifi-before.log": {
+      "path": "build-host/doom-arena-review/wifi-before.log",
+      "bytes": 496,
+      "sha256": "d038e4fed00eea32faa5bd21dbf2481d9522455d3eb88f35196a72e7b2d52e2a"
+    },
+    "wifi-repro-build.log": {
+      "path": "build-host/doom-arena-review/wifi-repro-build.log",
+      "bytes": 891,
+      "sha256": "1347bc5e52b59f1534a12a606da4c6cfdd130a100badaecba6b099c30165ff32"
+    }
+  }
+}

@@ -33,7 +33,7 @@ bool platform_ble_host_ready(void){return true;}
 platform_ble_host_status_t platform_ble_host_status(void){return (platform_ble_host_status_t){.state=PLATFORM_BLE_HOST_READY};}
 static unsigned received;
 static void frame(void *ctx,uint64_t route,const uint8_t *bytes,size_t n)
-{(void)ctx;assert((route&UINT64_C(0xffffffff00000000))==P4_MP_WIFI_ROUTE_PREFIX);assert(ntohl((uint32_t)route)>=0x7f000002u&&ntohl((uint32_t)route)<=0x7f000004u);p4_mp_packet_view_t packet;assert(p4_mp_packet_decode(bytes,n,&packet)==P4_MP_OK);++received;}
+{(void)ctx;assert((route&UINT64_C(0xffffffff00000000))==P4_MP_WIFI_ROUTE_PREFIX);assert(ntohl((uint32_t)route)>=0x7f000002u&&ntohl((uint32_t)route)<=0x7f000005u);p4_mp_packet_view_t packet;assert(p4_mp_packet_decode(bytes,n,&packet)==P4_MP_OK);++received;}
 static size_t packet(uint8_t *out,uint32_t session)
 {const uint8_t stamp[8]={0};size_t n=0;assert(p4_mp_packet_encode(P4_MP_PACKET_PING,session,42,1,0,stamp,8,out,P4_MP_MAX_DATAGRAM_BYTES,&n)==P4_MP_OK);return n;}
 static void transmit(int fd,const void *bytes,size_t n)
@@ -91,6 +91,18 @@ int main(void)
     assert(platform_multiplayer_wifi_send_to(P4_MP_WIFI_ROUTE_PREFIX|inet_addr("127.0.0.5"),bytes,n)!=ESP_OK);
     wifi_event(NULL,WIFI_EVENT,WIFI_EVENT_AP_STADISCONNECTED,NULL);
     for(unsigned i=0;i<3;++i)assert(platform_multiplayer_wifi_route_connected(P4_MP_WIFI_ROUTE_PREFIX|htonl(0x7f000002u+i)));
+    /* A departed lobby guest must release capacity without restarting the
+     * host; two still-active guests keep their routes and a fourth IP joins. */
+    mock_time+=2900000;
+    for(unsigned i=0;i<2;++i) { transmit(others[i],bytes,n);platform_multiplayer_wifi_poll(); }
+    mock_time+=200001;
+    transmit(others[2],bytes,n);platform_multiplayer_wifi_poll();
+    assert(received==15);
+    assert(!platform_multiplayer_wifi_route_connected(route));
+    for(unsigned i=1;i<4;++i)assert(platform_multiplayer_wifi_route_connected(P4_MP_WIFI_ROUTE_PREFIX|htonl(0x7f000002u+i)));
+    assert(platform_multiplayer_wifi_send_to(P4_MP_WIFI_ROUTE_PREFIX|inet_addr("127.0.0.5"),bytes,n)==ESP_OK);
+    usleep(1000);assert(recv(others[2],bytes,sizeof(bytes),0)==(int)n);
+    assert(platform_multiplayer_wifi_send_to(route,bytes,n)!=ESP_OK);
     for(unsigned i=0;i<3;++i)close(others[i]);
     mock_time+=3000001;assert(!platform_multiplayer_wifi_route_connected(route));
     wifi_event(NULL,WIFI_EVENT,WIFI_EVENT_AP_STADISCONNECTED,NULL);assert(!platform_multiplayer_wifi_status().connected);

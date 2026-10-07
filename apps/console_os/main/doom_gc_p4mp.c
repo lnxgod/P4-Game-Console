@@ -2,6 +2,7 @@
 #include "doom_gc_p4mp.h"
 #include "p4/doom_lockstep.h"
 #include "p4/doom_arena.h"
+#include "p4/multiplayer_group.h"
 #include "d_loop.h"
 #include <string.h>
 #pragma GCC diagnostic push
@@ -30,6 +31,7 @@ static P4_ARENA_LARGE_BSS struct {
     p4_doom_p4mp_transport_t transport;
     p4_doom_lockstep_t sync;
     uint64_t routes[4], progress_ms[4], next_send_ms, next_keepalive_ms;
+    uint64_t next_start_reply_ms[4];
     uint32_t saved_timeout;
     uint8_t ready;
     bool prepared, configuring, configured, failed;
@@ -74,6 +76,20 @@ static void receive_frame(void *context, uint64_t route,
         departed(slot); return;
     }
     if (host()) {
+        /* A guest may have missed every lobby COMMIT before the host handed
+         * the session to Doom. Recover its repeated READY here until all
+         * engines are ready; lobby READY must never set gc.ready. */
+        const uint64_t now=millis();
+        uint8_t commit[P4_MP_GROUP_BYTES];
+        if (!gc.configured && e.type==P4_MP_EVENT_GAME_MESSAGE &&
+            now>=gc.next_start_reply_ms[slot] &&
+            p4_mp_group_commit_reply(
+                p4_mp_group_token(gc.config.session_id,gc.config.session_seed),
+                gc.config.player_count,slot,e.packet.payload,e.packet.payload_length,commit)) {
+            gc.next_start_reply_ms[slot]=now+100;
+            send_packet(slot,P4_MP_GROUP_PACKET_TYPE,commit,sizeof(commit));
+            return;
+        }
         const uint32_t before=gc.sync.peer_ack[slot];
         if (e.type==P4_MP_EVENT_INPUT) {
             p4_mp_input_t input;
@@ -87,6 +103,12 @@ static void receive_frame(void *context, uint64_t route,
             (void)p4_doom_lockstep_ack(&gc.sync,slot,e.packet.ack);
         }
         if (gc.sync.peer_ack[slot]!=before) gc.progress_ms[slot]=millis();
+    } else if (slot==0 && e.type==P4_MP_EVENT_PING &&
+               e.packet.payload_length==8 &&
+               memcmp(e.packet.payload,"GCAHOST!",8)==0) {
+        /* A live host can be waiting for another guest's missing command.
+         * Its session-validated heartbeat keeps healthy clients connected. */
+        gc.progress_ms[0]=millis();
     } else if (slot==0 && e.type==P4_MP_EVENT_GAME_MESSAGE && gc.configuring &&
                p4_doom_lockstep_receive(&gc.sync,e.packet.payload,e.packet.payload_length)) {
         gc.progress_ms[0]=millis();
@@ -157,6 +179,19 @@ static void deliver(void)
     }
 }
 
+static bool peer_blocks_progress(uint8_t slot)
+{
+    if (gc.sync.peer_ack[slot]<gc.sync.next_output) return true;
+    const p4_doom_mp_tic_queue_t *queue=&gc.sync.input;
+    const uint32_t tick=queue->next_tick;
+    const size_t index=tick%P4_DOOM_MP_TIC_RING_SIZE;
+    /* Do not blame guests for a host that has not built its own next tic,
+     * or for another guest when their required command is already queued. */
+    const bool local_ready=queue->valid[0][index] && queue->tags[0][index]==tick;
+    const bool peer_ready=queue->valid[slot][index] && queue->tags[slot][index]==tick;
+    return local_ready && !peer_ready;
+}
+
 void p4_doom_gc_poll(void)
 {
     if (!gc.prepared || gc.failed) return;
@@ -167,8 +202,10 @@ void p4_doom_gc_poll(void)
     if (gc.failed) return;
     for (uint8_t i=0;i<gc.config.player_count;++i) {
         if (!gc.routes[i]) continue;
-        if (gc.configured && (!gc.transport.connected(gc.transport.context,gc.routes[i]) ||
-            now-gc.progress_ms[i]>10000)) departed(i);
+        if (!gc.configured) continue;
+        if (host() && !peer_blocks_progress(i)) gc.progress_ms[i]=now;
+        if (!gc.transport.connected(gc.transport.context,gc.routes[i]) ||
+            now-gc.progress_ms[i]>10000) departed(i);
     }
     if (gc.failed || !gc.configuring) return;
     if (host() && gc.ready==(1U<<gc.config.player_count)-1U)

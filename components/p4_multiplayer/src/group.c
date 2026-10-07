@@ -1,6 +1,25 @@
 // SPDX-License-Identifier: MIT
 #include "p4/multiplayer_group.h"
 #include <string.h>
+uint16_t p4_mp_group_token(uint32_t session_id,uint64_t seed) {
+ uint32_t mixed=session_id^(uint32_t)seed^(uint32_t)(seed>>32U);
+ mixed^=mixed>>16U;
+ const uint16_t token=(uint16_t)mixed;
+ return token?token:1U;
+}
+
+bool p4_mp_group_commit_reply(uint16_t token,uint8_t count,uint8_t sender,
+ const uint8_t *request,size_t length,uint8_t out[P4_MP_GROUP_BYTES]) {
+ if(!out||count<2||count>P4_MP_MAX_PLAYERS)return false;
+ /* Reuse the live barrier's version, kind, sender, token, roster and reserved
+  * byte validation. A committed host accepts only a guest's READY. */
+ p4_mp_group_start_t committed={.phase=P4_MP_GROUP_COMMITTED,.host=true,
+  .count=count,.token=token};
+ if(!p4_mp_group_receive(&committed,0,sender,token,request,length,0))return false;
+ memmove(out,request,P4_MP_GROUP_BYTES);out[5]=3;
+ return true;
+}
+
 bool p4_mp_group_begin(p4_mp_group_start_t *g,uint16_t token,uint8_t count,uint64_t now) {
  if(!g||!token||count<2||count>4||g->phase!=P4_MP_GROUP_IDLE)return false;
  *g=(p4_mp_group_start_t){.phase=P4_MP_GROUP_WAITING,.host=true,.count=count,

@@ -22,4 +22,11 @@ bool p4_mp_group_receive(p4_mp_group_start_t *,uint8_t local_slot,uint8_t sender
  uint16_t expected_token,const uint8_t *,size_t,uint64_t now_ms);
 /* Returns a retry packet when due; the OS sends it over its existing session. */
 bool p4_mp_group_poll(p4_mp_group_start_t *,uint64_t now_ms,uint8_t out[P4_MP_GROUP_BYTES]);
+/* Stable lobby/start binding, also used when a game takes over the session. */
+uint16_t p4_mp_group_token(uint32_t session_id,uint64_t session_seed);
+/* An already-committed host may recover a guest still retrying lobby READY.
+ * Call only for an admitted, session-validated sender during bounded startup;
+ * the caller must rate-limit replies and still require game-level readiness. */
+bool p4_mp_group_commit_reply(uint16_t token,uint8_t count,uint8_t sender,
+ const uint8_t *request,size_t length,uint8_t out[P4_MP_GROUP_BYTES]);
 #endif

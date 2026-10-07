@@ -4,6 +4,12 @@ M5Stack Tab5 candidate, Console OS **0.56**. This is a special selection inside
 **Multiplayer**, with no separate launcher tile. Ordinary Doom shareware and
 Chex Quest retain their separate content and two-player adapters. Installation and physical acceptance are recorded separately below.
 
+The [2026-10-06 multiplayer review](DOOM_ARENA_MULTIPLAYER_REVIEW_2026_10_06.md)
+records local fixes for stalled guests, expired Wi-Fi routes, lobby departures
+and lost start messages. Doom now answers valid late lobby retries during
+configuration and waits for every engine to be ready before producing gameplay
+ticks. The four-process loss regression passes; physical acceptance is pending.
+
 ## Playing and choosing arenas
 
 Use **Multiplayer → Host → Game Changers AI**, select **Local Wi-Fi**, and let

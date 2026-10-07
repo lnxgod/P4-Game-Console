@@ -50,6 +50,27 @@ static void close_link_locked(void)
     s_peer_ip=0; s_local_ip=0; s_gateway_ip=0; s_last_rx=0;
     s_ip_ready=false; s_associated=false;
 }
+/* The transport's three-second lease already defines route liveness. Release
+ * expired entries as well, so earlier lobby visitors cannot exhaust capacity. */
+static void expire_routes_locked(void)
+{
+    const int64_t now=esp_timer_get_time();
+    bool primary_live=false;
+    for (unsigned i=0;i<3;++i) {
+        if (s_peer_ips[i] && now-s_peer_seen[i]>=INT64_C(3000000)) {
+            s_peer_ips[i]=0; s_peer_seen[i]=0;
+        }
+        if (s_peer_ips[i] && s_peer_ips[i]==s_peer_ip) primary_live=true;
+    }
+    if (!primary_live) {
+        s_peer_ip=0;
+        for (unsigned i=0;i<3;++i) if (s_peer_ips[i]) { s_peer_ip=s_peer_ips[i]; break; }
+    }
+    s_status.route_id=s_peer_ip ? P4_MP_WIFI_ROUTE_PREFIX|s_peer_ip : 0;
+    s_status.connected=s_peer_ip!=0;
+    if (!s_peer_ip) s_last_rx=0;
+}
+
 static void wifi_event(void *arg, esp_event_base_t base, int32_t id, void *data)
 {
     (void)arg;
@@ -243,6 +264,7 @@ void platform_multiplayer_wifi_poll(void)
     for(unsigned i=0;i<8;++i) {
         uint8_t bytes[P4_MP_MAX_DATAGRAM_BYTES+1]; struct sockaddr_in from; socklen_t len=sizeof(from);
         LOCK();
+        expire_routes_locked();
         ssize_t n=s_socket>=0?recvfrom(s_socket,bytes,sizeof(bytes),MSG_DONTWAIT,(struct sockaddr *)&from,&len):-1;
         if(n<0) { UNLOCK(); break; }
         p4_mp_packet_view_t packet;
@@ -273,6 +295,7 @@ esp_err_t platform_multiplayer_wifi_send_to(uint64_t route,const uint8_t *bytes,
        (route&&(route&UINT64_C(0xffffffff00000000))!=P4_MP_WIFI_ROUTE_PREFIX))return ESP_ERR_INVALID_ARG;
     LOCK();
     if(s_socket<0||!s_status.ready){UNLOCK();return ESP_ERR_INVALID_STATE;}
+    expire_routes_locked();
     unsigned sent=0;bool ok=true;
     for(unsigned i=0;i<3;++i) {
         uint32_t dest=s_peer_ips[i];if(!dest||(route&&(uint32_t)route!=dest))continue;

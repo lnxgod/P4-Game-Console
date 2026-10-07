@@ -3,7 +3,39 @@
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+static void commit_recovery(void) {
+ const uint16_t token=p4_mp_group_token(7,1);
+ assert(token==6 && p4_mp_group_token(0,0)==1);
+ p4_mp_group_start_t host={0},guest={0};uint8_t request[12],reply[12];
+ assert(p4_mp_group_begin(&host,token,4,0));
+ assert(p4_mp_group_poll(&host,0,request));
+ assert(p4_mp_group_receive(&guest,3,0,token,request,12,0));
+ assert(p4_mp_group_poll(&guest,0,request));
+ assert(p4_mp_group_commit_reply(token,4,3,request,12,reply));
+ assert(p4_mp_group_receive(&guest,3,0,token,reply,12,1400));
+ assert(guest.phase==P4_MP_GROUP_COMMITTED && guest.launch_ms==2400);
+ assert(p4_mp_group_receive(&guest,3,0,token,reply,12,1500));
+ assert(guest.launch_ms==2400); /* Retries cannot postpone launch. */
+ assert(!p4_mp_group_commit_reply(token,4,0,request,12,reply));
+ assert(!p4_mp_group_commit_reply(token,4,4,request,12,reply));
+ assert(!p4_mp_group_commit_reply(token,3,2,request,12,reply));
+ assert(!p4_mp_group_commit_reply(token,5,3,request,12,reply));
+ assert(!p4_mp_group_commit_reply(token+1,4,3,request,12,reply));
+ assert(!p4_mp_group_commit_reply(0,4,3,request,12,reply));
+ assert(!p4_mp_group_commit_reply(token,4,3,request,11,reply));
+ assert(!p4_mp_group_commit_reply(token,4,3,request,13,reply));
+ assert(!p4_mp_group_commit_reply(token,4,3,NULL,12,reply));
+ assert(!p4_mp_group_commit_reply(token,4,3,request,12,NULL));
+ for(unsigned i=0;i<12;++i) {
+  uint8_t bad[12];memcpy(bad,request,12);bad[i]^=0x80;
+  assert(!p4_mp_group_commit_reply(token,4,3,bad,12,reply));
+ }
+ for(uint8_t kind=1;kind<=3;kind+=2) {
+  request[5]=kind;assert(!p4_mp_group_commit_reply(token,4,3,request,12,reply));
+ }
+}
 int main(void) {
+ commit_recovery();
  for(uint8_t count=2;count<=4;++count) {
   p4_mp_group_start_t g[4]={0};uint8_t b[12];assert(p4_mp_group_begin(&g[0],77,count,0));
   for(uint64_t now=0;now<2000;now+=20)for(uint8_t i=0;i<count;++i) {

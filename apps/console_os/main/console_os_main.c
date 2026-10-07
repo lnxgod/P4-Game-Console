@@ -3868,15 +3868,8 @@ static uint32_t next_discovery_sequence(void)
 
 static uint16_t multiplayer_start_token(void)
 {
-    const uint64_t seed = s_multiplayer_launch_session_seed;
-    uint32_t mixed = s_multiplayer_session.session_id ^
-        (uint32_t)seed ^ (uint32_t)(seed >> 32U);
-    mixed ^= mixed >> 16U;
-    uint16_t token = (uint16_t)mixed;
-    if (token == 0U) {
-        token = 1U;
-    }
-    return token;
+    return p4_mp_group_token(s_multiplayer_session.session_id,
+                             s_multiplayer_launch_session_seed);
 }
 
 static bool multiplayer_content_ready_for(size_t selection)
@@ -5257,6 +5250,18 @@ static void multiplayer_frame_received(
             native_multiplayer_mark_peer_left();
             return;
         }
+    }
+    if (event.type == P4_MP_EVENT_PEER_LEFT) {
+        /* Session receive has already removed this peer. Waiting for its
+         * timeout would leave holes in the contiguous lobby slot assignment,
+         * especially when it was not the most recently accepted guest. */
+        if (s_multiplayer_session.role == P4_MP_ROLE_HOST &&
+            !s_multiplayer_launch_due &&
+            reopen_multiplayer_host_lobby() == ESP_OK) {
+            return;
+        }
+        reset_multiplayer_lobby("peer-left");
+        return;
     }
     if(multiplayer_group_enabled() && event.type==P4_MP_EVENT_GAME_MESSAGE &&
        event.packet.payload_length==P4_MP_GROUP_BYTES && !memcmp(event.packet.payload,"P4GS",4)) {
