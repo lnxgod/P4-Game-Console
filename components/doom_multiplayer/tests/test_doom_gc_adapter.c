@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
 #include "doom_gc_p4mp.h"
+#include "p4/multiplayer_group.h"
 #include <assert.h>
 #include <fcntl.h>
 #include <errno.h>
@@ -10,6 +11,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <signal.h>
 
 static int sockets[3][2];
 static uint8_t self;
@@ -17,6 +19,10 @@ static unsigned received,sent;
 static p4_doom_p4mp_frame_handler_t handler;
 static void *handler_context;
 static uint8_t last_mask;
+static bool handoff_case;
+static int64_t started_us;
+static p4_mp_session_t *lobby_session;
+static p4_mp_group_start_t lobby_start;
 int64_t esp_timer_get_time(void)
 { struct timespec t; assert(clock_gettime(CLOCK_MONOTONIC,&t)==0); return (int64_t)t.tv_sec*1000000+t.tv_nsec/1000; }
 void vTaskDelay(unsigned ms) { usleep(ms*1000U); }
@@ -45,6 +51,12 @@ static esp_err_t send_to(void *ctx,uint64_t route,const uint8_t *data,size_t len
     /* Drop traffic including startup, INPUT, batches and acknowledgments. */
     p4_mp_packet_view_t packet;
     assert(p4_mp_packet_decode(data,length,&packet)==P4_MP_OK);
+    /* Lose the entire original one-second commit burst for guest 1. Other
+     * peers replace their lobby handlers with the real Doom adapter first. */
+    if (handoff_case && !self && route==2 &&
+        packet.type==P4_MP_GROUP_PACKET_TYPE && packet.payload_length==P4_MP_GROUP_BYTES &&
+        !memcmp(packet.payload,"P4GS",4) && packet.payload[5]==3 &&
+        esp_timer_get_time()-started_us<1400000) return ESP_OK;
     /* Force loss of the departing guest's LEAVE: other clients must survive
      * the host waiting for that guest's full session timeout. */
     if ((self==3 && packet.type==P4_MP_PACKET_LEAVE) || sent%11U==0) return ESP_OK;
@@ -69,6 +81,41 @@ static void poll(void *ctx)
         }
     }
 }
+static uint16_t start_token(void)
+{
+    return p4_mp_group_token(7,1);
+}
+static void lobby_frame(void *ctx,uint64_t route,const uint8_t *data,size_t n)
+{
+    (void)ctx;p4_mp_event_t event;
+    const uint64_t now=(uint64_t)esp_timer_get_time()/1000U;
+    if (p4_mp_session_receive(lobby_session,route,now,data,n,&event)!=P4_MP_OK) return;
+    if (event.type==P4_MP_EVENT_GAME_MESSAGE)
+        (void)p4_mp_group_receive(&lobby_start,self,event.player_slot,start_token(),
+            event.packet.payload,event.packet.payload_length,now);
+}
+static void enter_from_lobby(p4_mp_session_t *session)
+{
+    lobby_session=session;
+    assert(set_handler(NULL,lobby_frame,NULL)==ESP_OK);
+    if (!self) assert(p4_mp_group_begin(&lobby_start,start_token(),4,
+        (uint64_t)esp_timer_get_time()/1000U));
+    while (lobby_start.phase!=P4_MP_GROUP_DUE) {
+        poll(NULL);
+        uint8_t payload[P4_MP_GROUP_BYTES];
+        if (p4_mp_group_poll(&lobby_start,(uint64_t)esp_timer_get_time()/1000U,payload)) {
+            for (uint8_t slot=0;slot<4;++slot) {
+                if (slot==self || (self && slot!=0)) continue;
+                uint8_t data[P4_MP_MAX_DATAGRAM_BYTES];size_t n=0;
+                assert(p4_mp_session_encode(session,P4_MP_GROUP_PACKET_TYPE,0,payload,
+                    sizeof(payload),data,sizeof(data),&n)==P4_MP_OK);
+                assert(send_to(NULL,slot+1U,data,n)==ESP_OK);
+            }
+        }
+        assert(lobby_start.phase!=P4_MP_GROUP_FAILED);
+        usleep(1000);
+    }
+}
 static void run(uint8_t slot)
 {
     self=slot;
@@ -91,9 +138,11 @@ static void run(uint8_t slot)
         .setup={.game=P4_DOOM_MP_GAME_GAME_CHANGERS_AI,.mode=P4_DOOM_MP_MODE_ALTDEATH,
             .episode=1,.map=26,.skill=3,.no_monsters=true}};
     const p4_doom_p4mp_transport_t transport={.set_handler=set_handler,.send_to=send_to,.poll=poll,.connected=connected};
+    if (handoff_case) enter_from_lobby(&session);
     assert(p4_doom_gc_prepare(&session,&config,&transport)==ESP_OK);
     net_gamesettings_t settings;
     assert(p4_doom_gc_configure(&settings));
+    if (handoff_case) assert(esp_timer_get_time()-started_us>=1400000);
     assert(received==2 && settings.consoleplayer==slot && settings.num_players==4 && settings.map==24);
     for (unsigned tick=2;tick<160;++tick) {
         if (slot==3 && tick==120) {
@@ -117,8 +166,10 @@ static void run(uint8_t slot)
     }
     _exit(0);
 }
-int main(void)
+int main(int argc,char **argv)
 {
+    assert(argc==1 || (argc==2 && !strcmp(argv[1],"handoff")));
+    handoff_case=argc==2;started_us=esp_timer_get_time();
     alarm(30);
     for (unsigned i=0;i<3;++i) {
         assert(socketpair(AF_UNIX,SOCK_DGRAM,0,sockets[i])==0);
@@ -130,7 +181,15 @@ int main(void)
         children[slot]=fork(); assert(children[slot]>=0);
         if (!children[slot]) run(slot);
     }
-    for (unsigned i=0;i<4;++i) { int status; assert(waitpid(children[i],&status,0)>0); assert(WIFEXITED(status) && WEXITSTATUS(status)==0); }
+    for (unsigned i=0;i<4;++i) {
+        int status;const pid_t done=waitpid(-1,&status,0);assert(done>0);
+        for (unsigned j=0;j<4;++j) if(children[j]==done)children[j]=0;
+        if (!WIFEXITED(status) || WEXITSTATUS(status)!=0) {
+            for (unsigned j=0;j<4;++j) if(children[j]>0)(void)kill(children[j],SIGKILL);
+            while(waitpid(-1,NULL,0)>0) {}
+            return 1;
+        }
+    }
     puts("Doom adapter: four real session instances, lossy duplicated socket transport, guest departure and host shutdown passed");
     return 0;
 }

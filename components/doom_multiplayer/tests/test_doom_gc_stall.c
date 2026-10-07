@@ -14,7 +14,9 @@ static void *handler_context;
 static uint32_t ack[4];
 static unsigned delivered;
 static uint8_t last_mask;
-static bool client_case, silent_host;
+static bool client_case, silent_host, lobby_only;
+static unsigned start_replies;
+static uint64_t last_start_reply_ms;
 int64_t esp_timer_get_time(void) { return (int64_t)now_ms*1000; }
 void vTaskDelay(unsigned ms) { now_ms+=ms; }
 void p4_doom_gc_engine_begin(uint8_t count,uint8_t map) { assert(count==4 && map==1); }
@@ -37,7 +39,13 @@ static esp_err_t send_to(void *ctx,uint64_t route,const uint8_t *data,size_t n)
 {
     (void)ctx;assert(route>=1 && route<=4);
     p4_mp_packet_view_t p;assert(p4_mp_packet_decode(data,n,&p)==P4_MP_OK);
-    if(p.type==P4_MP_PACKET_GAME_MESSAGE) {
+    if(p.type==P4_MP_PACKET_GAME_MESSAGE && p.payload_length==12 &&
+       !memcmp(p.payload,"P4GS",4)) {
+        assert(lobby_only && route==4 && p.payload[5]==3);
+        if(start_replies)assert(now_ms-last_start_reply_ms>=100);
+        last_start_reply_ms=now_ms;++start_replies;
+    } else if(p.type==P4_MP_PACKET_GAME_MESSAGE) {
+        assert(p.payload_length==40 && !memcmp(p.payload,"GC",2));
         const uint8_t *b=p.payload+4;
         const uint32_t tick=(uint32_t)b[0]|(uint32_t)b[1]<<8|(uint32_t)b[2]<<16|(uint32_t)b[3]<<24;
         if(tick==ack[route-1U])++ack[route-1U];
@@ -58,7 +66,12 @@ static void poll(void *ctx)
         }
         receive(0,P4_MP_PACKET_PING,(const uint8_t *)"GCAHOST!",8,0);
     } else {
-        for(unsigned i=1;i<4;++i)receive(i,P4_MP_PACKET_PING,(const uint8_t *)"GCAREADY",8,ack[i]);
+        for(unsigned i=1;i<4;++i) {
+            if(lobby_only && i==3) {
+                const uint8_t ready[12]={'P','4','G','S',1,2,4,0,6,0,0,0};
+                receive(i,P4_MP_PACKET_GAME_MESSAGE,ready,sizeof(ready),0);
+            } else receive(i,P4_MP_PACKET_PING,(const uint8_t *)"GCAREADY",8,ack[i]);
+        }
     }
 }
 static void submit_remote(unsigned slot,uint32_t tick)
@@ -71,8 +84,9 @@ static void submit_remote(unsigned slot,uint32_t tick)
 int main(int argc,char **argv)
 {
     assert(argc==2);client_case=strcmp(argv[1],"client")==0;
+    lobby_only=strcmp(argv[1],"lobby-only")==0;
     const bool paused_host=strcmp(argv[1],"host-paused")==0;
-    assert(client_case||paused_host||strcmp(argv[1],"host")==0);
+    assert(client_case||paused_host||lobby_only||strcmp(argv[1],"host")==0);
     assert(p4_mp_session_host_start(&peers[0],7,100,3000)==P4_MP_OK);
     for(uint8_t i=1;i<4;++i) {
         assert(p4_mp_session_accept_peer(&peers[0],100U+i,i+1U,i,1,now_ms)==P4_MP_OK);
@@ -87,7 +101,14 @@ int main(int argc,char **argv)
             .episode=1,.map=1,.skill=3,.no_monsters=true}};
     const p4_doom_p4mp_transport_t transport={.set_handler=set_handler,.send_to=send_to,.poll=poll,.connected=connected};
     assert(p4_doom_gc_prepare(&peers[local],&config,&transport)==ESP_OK);
-    net_gamesettings_t settings;assert(p4_doom_gc_configure(&settings));assert(delivered==2);
+    net_gamesettings_t settings;const boolean configured=p4_doom_gc_configure(&settings);
+    if(lobby_only) {
+        assert(!configured && p4_doom_gc_failed() && delivered==0);
+        assert(now_ms>=30100 && now_ms<30200);
+        assert(start_replies==300); /* Replies are bounded at ten/second. */
+        p4_doom_gc_quit();puts("PASS: lobby retries cannot bypass engine readiness or its deadline");return 0;
+    }
+    assert(configured);assert(delivered==2);
     ticcmd_t neutral={0};
     if(!paused_host)p4_doom_gc_submit(&neutral,2);
     if(!client_case && !paused_host) { submit_remote(1,2);submit_remote(2,2); }

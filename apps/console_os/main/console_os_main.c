@@ -3868,15 +3868,8 @@ static uint32_t next_discovery_sequence(void)
 
 static uint16_t multiplayer_start_token(void)
 {
-    const uint64_t seed = s_multiplayer_launch_session_seed;
-    uint32_t mixed = s_multiplayer_session.session_id ^
-        (uint32_t)seed ^ (uint32_t)(seed >> 32U);
-    mixed ^= mixed >> 16U;
-    uint16_t token = (uint16_t)mixed;
-    if (token == 0U) {
-        token = 1U;
-    }
-    return token;
+    return p4_mp_group_token(s_multiplayer_session.session_id,
+                             s_multiplayer_launch_session_seed);
 }
 
 static bool multiplayer_content_ready_for(size_t selection)

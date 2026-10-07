@@ -322,6 +322,13 @@ stays the server even while its player takes a break. After 15 seconds without
 movement/fire, that visit ends; Use returns the connected player at zero.
 New/disconnected consoles join at the initial lobby, not during a running world.
 
+During arena startup, the Doom adapter continues answering valid lobby READY
+retries with COMMIT after taking over the session. This recovers a guest that
+missed the original commit burst. Session/seed and roster checks remain in force,
+replies are bounded, and only all-player engine readiness releases canonical
+tics. The four-process lobby-to-Doom burst-loss regression covers this recovery;
+the shared native-game handoff is a separate path.
+
 See [mode behavior, storage, tests and limitations](GAME_CHANGERS_AI_DOOM.md).
 This source/build candidate does not extend historical two-board radio evidence
 to four physical consoles. The supplied Pure Hell two-map loop is the default;
