@@ -6,7 +6,7 @@ import sys
 import unittest
 import tempfile
 import hashlib
-from unittest.mock import patch
+from unittest.mock import patch, MagicMock
 
 path = Path(__file__).resolve().parents[1] / 'p4-usb-content.py'
 spec = importlib.util.spec_from_file_location('usb_content_wire', path)
@@ -48,6 +48,23 @@ class WireTests(unittest.TestCase):
     def test_deferred_wad_scan_does_not_hide_successful_reboot(self):
         port = Port([b'CONTENT_VALIDATION_DEFERRED\r\nP4_USB_CONTENT READY\r\n'])
         self.assertTrue(wire.wait_for_content_ready(port, wire.WireReader(port), 1))
+
+class BatchTests(unittest.TestCase):
+    def test_whole_bundle_uses_one_connection_and_reader(self):
+        port=MagicMock();port.__enter__.return_value=port
+        with patch.object(wire,'open_port',return_value=port) as opened, \
+             patch.object(wire,'validate_content'), patch.object(wire,'install_content') as install:
+            self.assertEqual(wire.main(['game-changers-ai','--port','test-port']),0)
+            opened.assert_called_once_with('test-port')
+            self.assertEqual(install.call_count,16)
+            readers=[c.kwargs['reader'] for c in install.call_args_list]
+            self.assertTrue(all(r is readers[0] for r in readers))
+            self.assertTrue(all(c.kwargs['connection'] is port for c in install.call_args_list))
+    def test_batch_preflight_failure_never_opens_usb(self):
+        with patch.object(wire,'open_port') as opened, \
+             patch.object(wire,'validate_content',side_effect=wire.TransferError('missing')):
+            self.assertEqual(wire.main(['game-changers-ai','--port','test-port']),2)
+            opened.assert_not_called()
 
 class ArenaBundleTests(unittest.TestCase):
     def test_bundle_has_unique_wire_ids_and_three_separate_wads(self):

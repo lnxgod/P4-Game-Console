@@ -16,7 +16,6 @@
 #pragma GCC diagnostic ignored "-Wsign-conversion"
 #include "esp_log.h"
 #include "esp_heap_caps.h"
-#include "esp_system.h"
 #include "esp_task_wdt.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -32,7 +31,7 @@ enum {
     MANIFEST_CRC_OFFSET = 44,
     CHUNK_HEADER_BYTES = 16,
     TRANSFER_TIMEOUT_US = 15000000,
-    RESTART_DELAY_US = 350000,
+    RESUME_DELAY_US = 350000,
     CONTENT_KIND_QUAKE_SHAREWARE = 1,
     CONTENT_KIND_DOOM_SHAREWARE = 2,
     CONTENT_KIND_CHEX_QUEST_WAD = 3,
@@ -97,9 +96,10 @@ typedef struct {
     uint32_t expected_sequence;
     uint32_t expected_bytes;
     uint32_t received_bytes;
+    uint32_t generation;
     int descriptor;
     int64_t last_activity_us;
-    int64_t restart_at_us;
+    int64_t resume_at_us;
     uint8_t expected_digest[P4_CONTENT_SHA256_BYTES];
     uint8_t last_status;
     uint8_t magic_used;
@@ -299,8 +299,9 @@ static void terminal(wire_status_t status, const uint8_t digest[32])
     s_transfer.public_state = status == WIRE_STATUS_OK ?
         P4_CONTENT_TRANSFER_INSTALLED : P4_CONTENT_TRANSFER_FAILED;
     s_transfer.parser = PARSER_TERMINAL;
+    if (status == WIRE_STATUS_OK) ++s_transfer.generation;
     send_done(status, digest);
-    s_transfer.restart_at_us = esp_timer_get_time() + RESTART_DELAY_US;
+    s_transfer.resume_at_us = esp_timer_get_time() + RESUME_DELAY_US;
 }
 
 static bool append_path(char *output, size_t output_size,
@@ -847,8 +848,21 @@ void p4_content_transfer_poll(void)
     }
     const int64_t now = esp_timer_get_time();
     if (s_transfer.parser == PARSER_TERMINAL) {
-        if (now >= s_transfer.restart_at_us) {
-            esp_restart();
+        if (now >= s_transfer.resume_at_us) {
+            /* Drain the completion at transfer baud, then rearm this same
+             * connection. Never reboot merely to finish or retry a file. */
+            s_transfer.resume_at_us = now + RESUME_DELAY_US;
+            if (s_transfer.transport.wait_tx(s_transfer.transport.context, 200U) != ESP_OK ||
+                s_transfer.transport.set_baud(s_transfer.transport.context,
+                                               s_transfer.transport.idle_baud) != ESP_OK) {
+                s_transfer.last_status = WIRE_STATUS_IO;
+                s_transfer.public_state = P4_CONTENT_TRANSFER_FAILED;
+                return;
+            }
+            static const uint8_t ready[] = "P4_USB_CONTENT READY resume=1 reboot=0\n";
+            if (!transport_send(ready, sizeof(ready)-1U)) return;
+            reset_idle_parser();
+            s_transfer.public_state = P4_CONTENT_TRANSFER_IDLE;
         }
         return;
     }
@@ -873,6 +887,7 @@ p4_content_transfer_info_t p4_content_transfer_info(void)
         .expected_bytes = s_transfer.expected_bytes,
         .progress_percent = percent,
         .last_status = s_transfer.last_status,
+        .generation = s_transfer.generation,
         .ready = s_transfer.initialized,
         .busy = s_transfer.public_state != P4_CONTENT_TRANSFER_IDLE,
     };

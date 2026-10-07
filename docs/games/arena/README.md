@@ -24,7 +24,7 @@ serial retain their separate two-player behavior.
 
 ## Build, content and launch
 
-The game is integrated in the Tab5 0.57 OS source. Use
+The game is integrated in the Tab5 0.58 OS source. Use
 `make console-os-tab5-idf` and the [guarded Tab5 route](../../boards/M5STACK_TAB5.md)
 for firmware. Each console also needs the identical verified **16-file bundle**
 on microSD: Freedoom Phase 2, Pure Hades, DWANGO 5, MIDI and the required notices.

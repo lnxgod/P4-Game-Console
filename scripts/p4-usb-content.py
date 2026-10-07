@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+from contextlib import nullcontext
 import binascii
 from dataclasses import dataclass
 import glob
@@ -250,14 +251,14 @@ def wait_for_content_ready(
         return False
 
 
-def install_content(spec: ContentSpec, path: Path, port: str) -> None:
+def install_content(spec: ContentSpec, path: Path, port: str, *, connection=None, reader=None) -> None:
     print(f"P4_H1 validating kind={spec.command} path={path}")
     digest = validate_content(path, spec)
     manifest = make_manifest(spec.kind, spec.bytes, digest)
 
-    with open_port(port) as connection:
-        print(f"P4_H1 connecting port={port} baud={IDLE_BAUD}")
-        reader = WireReader(connection)
+    with (open_port(port) if connection is None else nullcontext(connection)) as connection:
+        print(f"P4_H1 using port={port} baud={IDLE_BAUD}")
+        reader = reader if reader is not None else WireReader(connection)
         time.sleep(0.25)
         write_all(connection, manifest)
         # Already-installed content is re-hashed before the badge reports that
@@ -325,9 +326,9 @@ def install_content(spec: ContentSpec, path: Path, port: str) -> None:
         )
         if not wait_for_content_ready(connection, reader):
             raise TransferError(
-                "content activated, but the reboot log did not confirm it before timeout"
+                "content activated, but the transfer service did not return to ready before timeout"
             )
-        print(f"P4_H1 PASS rebooted=1 transfer_service=ready kind={spec.command} hash=verified")
+        print(f"P4_H1 PASS transfer_service=ready kind={spec.command} hash=verified")
 
 
 def parser() -> argparse.ArgumentParser:
@@ -374,18 +375,20 @@ def main(argv: list[str] | None = None) -> int:
         arena_files = arena_inputs(args.input, args.pack, args.dwango) if args.kind == "game-changers-ai" else []
         port = args.port or detect_port()
         if arena_files:
-            for spec, path in arena_files:
-                install_content(spec, path, port)
+            files = arena_files
         elif args.kind == "chex":
-            install_content(
-                CONTENT_SPECS["chex-wad"], args.wad.resolve(), port
-            )
-            install_content(
-                CONTENT_SPECS["chex-deh"], args.deh.resolve(), port
-            )
+            files = [(CONTENT_SPECS["chex-wad"], args.wad.resolve()),
+                     (CONTENT_SPECS["chex-deh"], args.deh.resolve())]
         else:
-            spec = CONTENT_SPECS[args.kind]
-            install_content(spec, args.input.resolve(), port)
+            files = [(CONTENT_SPECS[args.kind], args.input.resolve())]
+        # Preflight the complete batch before opening native USB. Reopening
+        # between files can itself reset the Tab5 on this host.
+        for spec, path in files:
+            validate_content(path, spec)
+        with open_port(port) as connection:
+            reader = WireReader(connection)
+            for spec, path in files:
+                install_content(spec, path, port, connection=connection, reader=reader)
     except (OSError, serial.SerialException, TransferError) as error:
         print(f"P4_H1 FAILED reason={error}", file=sys.stderr)
         return 2

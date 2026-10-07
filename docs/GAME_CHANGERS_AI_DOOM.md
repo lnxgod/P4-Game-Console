@@ -5,7 +5,7 @@
 This guide describes one Doom-based game mode in the monorepo. Console OS
 is the shared platform that hosts it; Pure Hades is one of its content packs.
 
-M5Stack Tab5 candidate, Console OS **0.57**. This is a special selection inside
+M5Stack Tab5 candidate, Console OS **0.58**. This is a special selection inside
 **Multiplayer**, with no separate launcher tile. Ordinary Doom shareware and
 Chex Quest retain their separate content and two-player adapters. Installation and physical acceptance are recorded separately below.
 
@@ -131,7 +131,8 @@ python3 scripts/doom/arena-content.py --stage build-host/game-changers-ai/sd-car
 
 When separately installing approved content, the aggregate USB command checks
 all local files before opening serial, installs each exact-hash file, and
-reboots through the existing service:
+keeps one USB connection open for the entire bundle. Firmware 0.58 returns
+the transfer service to idle after each file without rebooting:
 
 ```sh
 python3 scripts/p4-usb-content.py game-changers-ai \
@@ -200,7 +201,7 @@ headroom, sustained frame cadence, and loss/recovery checks. A build does not
 qualify the device's 30 FPS release floor.
 
 The Pure Hades successor is based on the merged multiplayer reliability fixes.
-All consoles need the 0.57 firmware and replacement content bundle together.
+All consoles need the 0.58 firmware and replacement content bundle together.
 The old Pure Hell bundle is incompatible with protocol 5. The earlier 0.53 receipts remain historical host/build evidence. The prior
 [implementation receipt](../test-runs/2026-10-05-game-changers-ai-doom-implementation.json)
 is historical and predates the supplied PWAD/voting work.

@@ -134,6 +134,9 @@ esp_err_t platform_game_storage_init(void);
 /** Refresh the cached game-file inventory after an ownership generation. */
 esp_err_t platform_game_storage_refresh(void);
 
+/** Invalidate content caches after a verified app-owned USB content write. */
+esp_err_t platform_game_storage_content_changed(void);
+
 /**
  * Start exact Doom/Chex validation without blocking the Console OS task.
  *

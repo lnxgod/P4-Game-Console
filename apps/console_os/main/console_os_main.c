@@ -537,6 +537,7 @@ static unsigned s_game_catalog_scan_low_water_bytes;
 static int64_t s_game_catalog_scan_started_us;
 static p4_mp_game_registry_t s_multiplayer_game_registry;
 static uint32_t s_file_transfer_generation_seen;
+static uint32_t s_content_transfer_generation_seen;
 #if CONFIG_P4_BOARD_M5STACK_TAB5
 static p4_clock_control_t s_clock_control;
 #endif
@@ -5375,6 +5376,15 @@ static void poll_multiplayer_link(const console_shell_t *shell)
         &s_h1_usb_drive_control,
         (uint64_t)esp_timer_get_time() / UINT64_C(1000));
 #endif
+    const p4_content_transfer_info_t content_after = p4_content_transfer_info();
+    if (content_after.generation != s_content_transfer_generation_seen &&
+        platform_game_storage_content_changed() == ESP_OK) {
+        s_content_transfer_generation_seen = content_after.generation;
+        s_file_listing_seen = false;
+        sync_game_storage();
+        ESP_LOGI(TAG, "P4_CONSOLE_OS CONTENT_ACTIVATED generation=%lu reboot=0",
+                 (unsigned long)content_after.generation);
+    }
     const p4_file_transfer_info_t file_after = p4_file_transfer_info();
     if (file_after.generation != s_file_transfer_generation_seen) {
         s_file_transfer_generation_seen = file_after.generation;
