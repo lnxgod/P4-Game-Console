@@ -1,0 +1,6 @@
+interface:
+  display_name: "ESP32 - Elecrow Sound"
+  short_description: "Fix the older Elecrow 10-inch speaker"
+  default_prompt: "Use $esp32-elecrow-sound to implement or diagnose sound on the Elecrow 10 in variant using its pinned factory audio path."
+policy:
+  allow_implicit_invocation: true

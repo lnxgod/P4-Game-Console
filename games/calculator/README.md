@@ -1,5 +1,13 @@
 # Calculator
 
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included system utility. **Folder:** `SYSTEM/TOOLS`.
+
+**Package:** `CALC.P4G`. **Players:** One operator; no linked game mode.
+
+**Local preview:** `make play-game GAME=calculator` from the repository root.
+
 Calculator is an original, code-rendered integer desk calculator packaged as
 `CALC.P4G`. It appears under `SYSTEM/TOOLS` and runs entirely through P4 Game
 API v1, so it can be added, replaced, or removed from microSD without changing

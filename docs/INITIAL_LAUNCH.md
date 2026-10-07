@@ -22,7 +22,7 @@ future generated game will meet the floor without testing.
 
 ## Initial configuration
 
-Start with [installos](../.agents/skills/installos/SKILL.md). It checks the
+Start with [esp32-setup](../.agents/skills/esp32-setup/SKILL.md). It checks the
 pinned environment, asks about microSD, downloads and verifies Doom v1.9
 shareware when missing, builds the basic native bundle and uses the exact-unit
 guarded installation route. It then checks storage, clock, saved preferences,

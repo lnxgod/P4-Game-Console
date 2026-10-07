@@ -1,0 +1,6 @@
+interface:
+  display_name: "ESP32 - Set Up"
+  short_description: "Set up a Tab5 with Console OS and games"
+  default_prompt: "Use $esp32-setup to set up Console OS, ask whether I have a microSD card, and install basic games plus Doom with the supported storage route."
+policy:
+  allow_implicit_invocation: true

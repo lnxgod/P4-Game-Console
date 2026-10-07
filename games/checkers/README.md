@@ -1,5 +1,15 @@
 # Checkers
 
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included. **Folder:** `GAMES/TABLETOP`.
+
+**Package:** `CHECKERS.P4G`. **Players:** 2 on one device or 2 linked.
+
+**Local preview:** `make play-game GAME=checkers` from the repository root.
+
+Linked counts describe the game profile; see [transport and hardware limits](../README.md#test-status-and-multiplayer).
+
 Checkers is an original, textured two-player game for P4 Game API v1.
 An ordinary launcher start is same-device play; a Console OS Host/Join start
 uses the already-established turn-based multiplayer session. The cartridge

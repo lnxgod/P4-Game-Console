@@ -1,5 +1,11 @@
 # Pure Hell v0.5
 
+[Monorepo](../../README.md) · [Arena game](../../docs/games/arena/README.md)
+
+Pure Hell is a two-map content pack for the arena game, not Console OS or a
+standalone cartridge. The game mode and this preserved map pack have separate
+source, data and verification records.
+
 [Download PUREHELL.WAD](v0.5/PUREHELL.WAD) — 875,026 bytes, SHA-256
 `b0e8ab211fe263bdf263b219cd0f3584cac0071ec1cf3ce73defa843f00a3663`.
 

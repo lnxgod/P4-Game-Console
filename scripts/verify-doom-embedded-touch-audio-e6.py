@@ -74,9 +74,9 @@ FACTORY_ENTRYPOINTS = {
     "platform_audio_factory_destroy",
 }
 SOURCE_PATHS = {
-    ".agents/skills/develop-esp32-p4-platform/references/elecrow-10-in-variant.md",
-    ".agents/skills/use-elecrow-p4-audio/SKILL.md",
-    ".agents/skills/use-elecrow-p4-audio/references/factory-audio-contract.md",
+    ".agents/skills/esp32-fix-console/references/elecrow-10-in-variant.md",
+    ".agents/skills/esp32-elecrow-sound/SKILL.md",
+    ".agents/skills/esp32-elecrow-sound/references/factory-audio-contract.md",
     "apps/doom_embedded_touch_audio/CMakeLists.txt",
     "apps/doom_embedded_touch_audio/README.md",
     "apps/doom_embedded_touch_audio/app-metadata.json",

@@ -1,4 +1,12 @@
-# Byte Buddy: Signal Dragons
+# Byte Buddy
+
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included work in progress; requires resource sidecar. **Folder:** `GAMES/WIP`.
+
+**Package:** `BYTEBUD.P4G` + `BYTEBUD.P4R`. **Players:** Solo.
+
+**Local preview:** `make play-game GAME=byte_buddy` from the repository root.
 
 Byte Buddy is an original, touch-first dragon-raising pet for P4 Game API v1.
 The pet begins as a mystery egg and changes according to both the amount and

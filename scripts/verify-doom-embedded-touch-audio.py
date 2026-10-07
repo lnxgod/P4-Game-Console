@@ -20,7 +20,7 @@ AUTH = ROOT / "hardware/evidence/doom-embedded-touch-audio-e5-persistent-demo-au
 RUNTIME_BASIS = ROOT / "hardware/evidence/elecrow-10.1-factory-touch-audio-runtime-basis.json"
 BOARD_PROFILE = ROOT / "hardware/board-profile.json"
 TOUCH_PATH_VERIFIER = ROOT / "scripts/verify-touch-path.py"
-VARIANT_REFERENCE = ROOT / ".agents/skills/develop-esp32-p4-platform/references/elecrow-10-in-variant.md"
+VARIANT_REFERENCE = ROOT / ".agents/skills/esp32-fix-console/references/elecrow-10-in-variant.md"
 POST_RUN = ROOT / "hardware/test-runs/2026-08-13-doom-e5-touch-only-persistent.json"
 RUNTIME_RAW = ROOT / "hardware/test-runs/2026-08-13-doom-e5-touch-only-runtime.raw"
 RUNTIME_SUMMARY = ROOT / "hardware/test-runs/2026-08-13-doom-e5-touch-only-runtime.json"
@@ -138,12 +138,12 @@ INVENTORY_TREES = (
     ROOT / "components/platform_touch",
 )
 INVENTORY_FIXED = {
-    ".agents/skills/develop-esp32-p4-platform/SKILL.md",
-    ".agents/skills/develop-esp32-p4-platform/references/elecrow-10-in-variant.md",
-    ".agents/skills/develop-esp32-p4-platform/references/hardware-safety.md",
-    ".agents/skills/develop-esp32-p4-platform/references/workflow.md",
-    ".agents/skills/use-elecrow-p4-display/SKILL.md",
-    ".agents/skills/use-elecrow-p4-display/references/display-contract.md",
+    ".agents/skills/esp32-fix-console/SKILL.md",
+    ".agents/skills/esp32-fix-console/references/elecrow-10-in-variant.md",
+    ".agents/skills/esp32-fix-console/references/hardware-safety.md",
+    ".agents/skills/esp32-fix-console/references/workflow.md",
+    ".agents/skills/esp32-elecrow-screen/SKILL.md",
+    ".agents/skills/esp32-elecrow-screen/references/display-contract.md",
     "Makefile",
     "hardware/board-profile.json",
     "hardware/evidence/elecrow-10.1-factory-touch-audio-runtime-basis.json",
@@ -629,9 +629,9 @@ def main() -> None:
         "scripts/tests/test-doom-e5-gate.py",
         "hardware/evidence/elecrow-10.1-factory-touch-audio-runtime-basis.json",
         "hardware/board-profile.json",
-        ".agents/skills/develop-esp32-p4-platform/SKILL.md",
-        ".agents/skills/develop-esp32-p4-platform/references/elecrow-10-in-variant.md",
-        ".agents/skills/use-elecrow-p4-display/SKILL.md",
+        ".agents/skills/esp32-fix-console/SKILL.md",
+        ".agents/skills/esp32-fix-console/references/elecrow-10-in-variant.md",
+        ".agents/skills/esp32-elecrow-screen/SKILL.md",
         "toolchain.lock.json",
     }
     require(required_inventory_paths <= set(source_inventory), "critical source inventory is incomplete")

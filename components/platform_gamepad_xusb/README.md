@@ -25,7 +25,7 @@ than freeing live USB memory. Stop requires a quiescing shared host.
 
 The console logs `XUSB_READY` and `XUSB_CONNECTED` with VID/PID, interface and
 configuration SHA-256. Those markers prove software state only; use the
-[controller acceptance checklist](../../.agents/skills/add-usb-gamepad-support/references/acceptance.md)
+[controller acceptance checklist](../../.agents/skills/esp32-controllers/references/acceptance.md)
 for physical buttons, axes, hotplug and sustained gameplay.
 
 Run `make gamepad-host`. It covers the protocol's strict framing and all stick

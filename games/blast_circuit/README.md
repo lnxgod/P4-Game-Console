@@ -1,5 +1,15 @@
 # Blast Circuit
 
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included candidate. **Folder:** `GAMES/ARCADE`.
+
+**Package:** `BLAST_CIRCUIT.P4G`. **Players:** Solo vs bots; 2–4 linked.
+
+**Local preview:** `make play-game GAME=blast_circuit` from the repository root.
+
+Linked counts describe the game profile; see [transport and hardware limits](../README.md#test-status-and-multiplayer).
+
 An original four-player bomb arena game for P4 Console OS. Version 0.2 adds
 three arenas, four individually animated robot designs, 30 original sound
 cues, an arena workshop, three custom slots, and host-to-peer level sharing.

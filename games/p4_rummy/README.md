@@ -1,11 +1,22 @@
-# P4 Rummy 500
+# Rummy 500
 
-P4 Rummy 500 is an original, quick-playing Rummy variant for one to four players.
+[Game index](../README.md) · [Build and install](../README.md#build-and-play) · [Console OS](../../apps/console_os/README.md)
+
+**Availability:** Included. **Folder:** `GAMES/CARDS`.
+
+**Package:** `P4_RUMMY.P4G`. **Players:** Solo vs CPUs; 2–4 linked.
+
+**Local preview:** `make play-game GAME=p4_rummy` from the repository root.
+
+Linked counts describe the game profile; see [transport and hardware limits](../README.md#test-status-and-multiplayer).
+
+Rummy 500 is an original, quick-playing Rummy variant for one to four players.
 Offline play puts one person against one to three CPU opponents and starts the
 table immediately without a pass-and-play gate. Human multiplayer uses an
 OS-owned P4MP room on separate consoles. A two-console room can add up to two
-host-controlled CPU seats; the manifest is ready for future four-player
-Console OS transports.
+host-controlled CPU seats. Tab5 Local Wi-Fi supports up to four humans where
+the OS admits that roster; Bluetooth and USB serial remain two-console links.
+This protocol capacity does not establish physical four-device acceptance.
 
 P4 Rummy is an enabled core seed cartridge: Console OS includes
 `P4_RUMMY.P4G` in every generated game-storage bundle while keeping it

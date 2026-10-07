@@ -1,6 +1,0 @@
-interface:
-  display_name: "P4 Multiplayer Game Authoring"
-  short_description: "Build games on existing P4 multiplayer sessions"
-  default_prompt: "Use $develop-p4-multiplayer-games with the game-authoring skill to implement my multiplayer idea using Console OS sessions and normalized controls."
-policy:
-  allow_implicit_invocation: true

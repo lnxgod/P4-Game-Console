@@ -1,5 +1,11 @@
 # Game library
 
+See the [monorepo inventory](../README.md#native-game-inventory) and
+[native game index](../games/README.md) for every title and its own README.
+Engine games, the arena mode and experimental ports are listed separately in
+the [engine-game inventory](../README.md#engine-games-and-ports). This document
+records library policy and historical review; it is not the OS overview.
+
 Tab5 is the primary Console OS target. The enabled native bundle contains
 12 main-library games, two available works in progress, and three utilities.
 Doom v1.9 shareware is the default engine-data title; provisioning includes its
