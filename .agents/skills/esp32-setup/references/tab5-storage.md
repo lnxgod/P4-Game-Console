@@ -87,10 +87,10 @@ enabling Tab5 USB-A host power or USB Drive/MSC. The existing Elecrow flash
 backend is tied to MSC and must be adapted deliberately rather than selected
 by changing Tab5's board identity.
 
-A layout migration must preserve affected current flash data, verify the old
-layout and active OS slot, and bind the complete new layout/filesystem and
-recovery bytes to the exact unit. Test interrupted migration and wrong-device
-rejection before any hardware claim.
+A layout migration must preserve affected user content, verify the old layout
+and active OS slot, and bind the complete new layout/filesystem to the exact
+unit. Firmware backups and captured recovery bytes are never required. Test
+interrupted migration and wrong-device rejection before any hardware claim.
 
 ## Current SD setup checklist
 
@@ -100,8 +100,9 @@ Preserve its files; neither mount failure nor setup authorizes formatting.
 Run `python3 scripts/prepare-game-data.py` to prepare default Doom locally; add
 `--chex --sd` only for explicit Chex selection. This does not touch the device.
 
-Build/verify the exact Tab5 candidate, preserve and bind the unit's backup, then
-use its guarded install and the native USB content commands in the board
+Build/verify the exact Tab5 candidate and use its guarded install without
+creating or refreshing a firmware backup. Backups are never required; they run
+only as a separately requested operation. Use the native USB content commands in the board
 document. Retain the content transfer/readback receipts separately from local
 acquisition output. Verify the clock, saved preferences, catalog, required
 resources, Doom, return to launcher and restart/save behavior. Hardware results

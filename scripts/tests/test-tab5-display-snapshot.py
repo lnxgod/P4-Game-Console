@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Compile the unchanged Tab5 scanout copy and retirement fence on the host.
+"""Compile the production Tab5 scanout copy and retirement fence on the host.
 
 The real frame queue is retained; semaphore and cache calls are hardware
 boundaries. These tests do not open a device or build firmware.
@@ -49,17 +49,21 @@ enum { ESP_OK, ESP_ERR_INVALID_ARG, ESP_ERR_INVALID_STATE, ESP_ERR_TIMEOUT,
        ESP_FAIL, pdTRUE=1, ESP_CACHE_MSYNC_FLAG_DIR_M2C=8 };
 #define pdMS_TO_TICKS(ms) ((TickType_t)(ms)/10U)
 #define FRAME_BYTES ((size_t)720U*1280U*sizeof(uint16_t))
-static uint16_t frames[TAB5_FRAME_COUNT][720U*1280U];
+#define COPY_CACHE_CHUNK_BYTES ((size_t)32768U)
+#define CACHE_CHUNKS ((FRAME_BYTES+COPY_CACHE_CHUNK_BYTES-1U)/COPY_CACHE_CHUNK_BYTES)
+_Alignas(64) static uint16_t frames[TAB5_FRAME_COUNT][720U*1280U];
 static uint16_t output[720U*1280U+16U];
 static uint16_t *s_frames[TAB5_FRAME_COUNT]={frames[0],frames[1],frames[2]};
 static tab5_frame_queue_t s_queue;
+static bool s_frame_dma_clean[TAB5_FRAME_COUNT]={true,true,true};
 static bool s_ready=true,s_pattern;
 static SemaphoreHandle_t s_lock=1,s_refresh=2;
 static struct {uint32_t submits_completed;} s_stats;
 static uint32_t s_refresh_count;
 static TickType_t ticks=100U,lock_elapsed,refresh_budget;
 static unsigned take_calls,give_calls,refresh_calls,cache_calls,copy_calls;
-static bool held,lock_timeout,refresh_timeout,cache_failure;
+static bool held,lock_timeout,refresh_timeout;
+static unsigned cache_failure_chunk;
 static TickType_t xTaskGetTickCount(void){return ticks;}
 static int xSemaphoreTake(SemaphoreHandle_t semaphore,TickType_t budget)
 {
@@ -81,19 +85,29 @@ static int xSemaphoreGive(SemaphoreHandle_t semaphore)
 static esp_err_t esp_cache_msync(void *source,size_t bytes,int flags)
 {
     assert(held && !s_queue.pending[s_queue.selected] && s_queue.completed>0U);
-    assert(source==s_frames[s_queue.selected] && bytes==1843200U);
+    const size_t offset=(size_t)cache_calls*COPY_CACHE_CHUNK_BYTES;
+    const size_t remaining=FRAME_BYTES-offset;
+    assert(source==(uint8_t *)s_frames[s_queue.selected]+offset);
+    assert((uintptr_t)source%64U==0U);
+    assert(bytes==(remaining>COPY_CACHE_CHUNK_BYTES?COPY_CACHE_CHUNK_BYTES:remaining));
+    assert(bytes<=32768U && bytes%64U==0U && offset%64U==0U);
     assert(flags==ESP_CACHE_MSYNC_FLAG_DIR_M2C && copy_calls==0U);
     ++cache_calls;
-    if(cache_failure)return ESP_FAIL;
+    if(cache_failure_chunk==cache_calls)return ESP_FAIL;
     /* Simulate the first and final DMA-written pixels becoming CPU-visible. */
-    s_frames[s_queue.selected][0]=0x1234U;
-    s_frames[s_queue.selected][720U*1280U-1U]=0xabcdU;
+    if(offset==0U)s_frames[s_queue.selected][0]=0x1234U;
+    if(offset+bytes==FRAME_BYTES)s_frames[s_queue.selected][720U*1280U-1U]=0xabcdU;
     return ESP_OK;
 }
 static void *snapshot_memcpy(void *destination,const void *source,size_t bytes)
 {
-    assert(held && cache_calls==1U && !cache_failure);
+    assert(held && cache_calls==CACHE_CHUNKS && !cache_failure_chunk);
     assert(!s_queue.pending[s_queue.selected] && s_queue.completed>0U);
+    /* Revocation precedes this read; cached pixels cannot later be written
+     * through the DMA-only target path without an authoritative rebuild. */
+    assert(!s_frame_dma_clean[s_queue.selected]);
+    for(unsigned i=0U;i<TAB5_FRAME_COUNT;++i)
+        if(i!=s_queue.selected)assert(s_frame_dma_clean[i]);
     assert(destination==output && source==s_frames[s_queue.selected] && bytes==1843200U);
     ++copy_calls;return memcpy(destination,source,bytes);
 }
@@ -105,6 +119,7 @@ CASES = r'''
 static void no_pixels(void)
 {
     assert(copy_calls==0U);
+    for(unsigned i=0U;i<TAB5_FRAME_COUNT;++i)assert(s_frame_dma_clean[i]);
     for(size_t i=0;i<sizeof(output)/sizeof(output[0]);++i)assert(output[i]==0xbeefU);
 }
 static void released(void)
@@ -137,7 +152,8 @@ int main(int argc,char **argv)
     else if(strcmp(argv[1],"pattern")==0)s_pattern=true;
     else if(strcmp(argv[1],"failed")==0)s_queue.failed=true;
     else if(strcmp(argv[1],"no-frame")==0)s_queue.completed=0U;
-    else if(strcmp(argv[1],"cache-failure")==0)cache_failure=true;
+    else if(strcmp(argv[1],"cache-failure")==0)cache_failure_chunk=1U;
+    else if(strcmp(argv[1],"cache-partial-failure")==0)cache_failure_chunk=3U;
     else if(strncmp(argv[1],"pending",7)==0) {
         s_queue.pending[2]=true;s_queue.published_at[2]=5U;s_refresh_count=5U;
         lock_elapsed=3U;
@@ -152,10 +168,12 @@ int main(int argc,char **argv)
     } else if(refresh_timeout || lock_elapsed==10U) {
         assert(result==ESP_ERR_TIMEOUT && cache_calls==0U);no_pixels();
         assert(refresh_calls==(refresh_timeout?1U:0U));
-    } else if(cache_failure) {
-        assert(result==ESP_FAIL && cache_calls==1U);no_pixels();
+    } else if(cache_failure_chunk) {
+        assert(result==ESP_FAIL && cache_calls==cache_failure_chunk);no_pixels();
     } else {
-        assert(result==ESP_OK && cache_calls==1U && copy_calls==1U);
+        assert(result==ESP_OK && cache_calls==CACHE_CHUNKS && copy_calls==1U);
+        for(unsigned i=0U;i<TAB5_FRAME_COUNT;++i)
+            assert(s_frame_dma_clean[i]==(i!=s_queue.selected));
         assert(output[0]==0x1234U && output[720U*1280U-1U]==0xabcdU);
         for(size_t i=1;i<720U*1280U-1U;++i)
             assert(output[i]==(uint16_t)(s_queue.selected*1000U+i%997U));
@@ -178,7 +196,7 @@ class DisplaySnapshotTests(unittest.TestCase):
         source = SOURCE.read_text()
         path = directory / "snapshot.c"
         path.write_text(FIXTURE + "\n".join(function(source, name) for name in
-            ["finish_pending", "platform_display_copy_scanout_rgb565"]) + CASES)
+            ["finish_pending", "cache_chunks", "platform_display_copy_scanout_rgb565"]) + CASES)
         cls.executable = directory / "snapshot"
         command = [os.environ.get("CC", "cc"), "-std=c11", "-Wall", "-Wextra", "-Werror",
                    "-fsanitize=address,undefined", "-fno-omit-frame-pointer",
@@ -222,7 +240,9 @@ class DisplaySnapshotTests(unittest.TestCase):
         self.run_case("pending-budget-exhausted")
 
     def test_cache_failure_releases_lock_without_copy(self):
-        self.run_case("cache-failure")
+        for case in ["cache-failure", "cache-partial-failure"]:
+            with self.subTest(case=case):
+                self.run_case(case)
 
 
 if __name__ == "__main__":

@@ -111,8 +111,9 @@ The recovery directory
 `hardware/local-state/console-os-folder-clean-install-20260814`
 contains the successful immutable ledger and predecessor preimage. Do not delete,
 overwrite, or reuse it for another installation. A new build needs new dated
-evidence, a new authorization digest, a new frozen outer route, and a unique
-recovery directory.
+evidence, a new authorization digest, a reviewed backup-free route and an
+ignored receipt directory. Firmware backups and snapshots are never required;
+recovery can rebuild the reviewed old source.
 
 ## RDID container-byte evidence
 

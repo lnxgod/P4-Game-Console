@@ -14,11 +14,15 @@ enum { NG_W=1280, NG_H=720, NG_MAX_CONTROLS=64,
     NC_FILE_MENU,NC_DISMISS,NC_SCROLL,NC_AUDIO_STATUS,NC_MP_GAME,NC_MP_TRANSPORT };
 enum { NG_GRID_TOP=178, NG_GRID_BOTTOM=626, NG_GRID_PITCH=210,
     NG_FILES_TOP=178, NG_FILES_BOTTOM=536, NG_FILE_PITCH=90 };
-typedef struct { uint16_t id; int16_t x,y,w,h; bool enabled; } ng_control_t;
+typedef struct { uint16_t id; int16_t x,y,w,h; bool enabled,animated; } ng_control_t;
 typedef struct {
     console_shell_t *shell; uint16_t *pixels; size_t stride;
     ng_control_t controls[NG_MAX_CONTROLS]; size_t count;
     int clip_top,clip_bottom;
+    int origin_x,origin_y,width,height;
+    int damage_left,damage_top,damage_right,damage_bottom;
+    int raster_scroll;
+    bool cache_base,skip_rows;
 } ng_scene_t;
 #define NG_RGB(r,g,b) ((uint16_t)((((r)>>3)<<11)|(((g)>>2)<<5)|((b)>>3)))
 #define NG_INK NG_RGB(7,18,28)
@@ -37,13 +41,38 @@ static uint16_t ng_mix(uint16_t a,uint16_t b,unsigned alpha)
         ((((((unsigned)a>>5U)&63U)*alpha+(((unsigned)b>>5U)&63U)*inv+7U)/15U)<<5U)|
         ((((unsigned)a&31U)*alpha+((unsigned)b&31U)*inv+7U)/15U));
 }
+static void ng_clip(const ng_scene_t *s,int *x,int *y,int *right,int *bottom)
+{
+    const int left=s->origin_x,top=s->origin_y;
+    const int limit_x=left+(s->width?s->width:NG_W),limit_y=top+(s->height?s->height:NG_H);
+    if(*x<left){*x=left;}
+    if(*y<top){*y=top;}
+    if(*right>limit_x){*right=limit_x;}
+    if(*bottom>limit_y){*bottom=limit_y;}
+    if(s->clip_bottom){
+        if(*y<s->clip_top){*y=s->clip_top;}
+        if(*bottom>s->clip_bottom){*bottom=s->clip_bottom;}
+    }
+    if(s->damage_right>s->damage_left){
+        if(*x<s->damage_left){*x=s->damage_left;}
+        if(*right>s->damage_right){*right=s->damage_right;}
+        if(*y<s->damage_top){*y=s->damage_top;}
+        if(*bottom>s->damage_bottom){*bottom=s->damage_bottom;}
+    }
+}
+static uint16_t *ng_pixel(ng_scene_t *s,int x,int y)
+{
+    int right=x+1,bottom=y+1,left=x,top=y;ng_clip(s,&left,&top,&right,&bottom);
+    if(left>=right||top>=bottom)return NULL;
+    return s->pixels+(size_t)(y-s->origin_y)*s->stride+(size_t)(x-s->origin_x);
+}
 static void ng_rect(ng_scene_t *s,int x,int y,int w,int h,uint16_t color)
 {
     if (!s->pixels || w<=0 || h<=0) return;
-    int x1=x+w,y1=y+h;if(x<0)x=0;if(y<0)y=0;if(x1>NG_W)x1=NG_W;if(y1>NG_H)y1=NG_H;
-    if(s->clip_bottom){if(y<s->clip_top)y=s->clip_top;if(y1>s->clip_bottom)y1=s->clip_bottom;}
+    int x1=x+w,y1=y+h;ng_clip(s,&x,&y,&x1,&y1);
+    if(x>=x1||y>=y1)return;
     for(int row=y;row<y1;++row){
-        uint16_t *p=s->pixels+(size_t)row*s->stride+(size_t)x;
+        uint16_t *p=s->pixels+(size_t)(row-s->origin_y)*s->stride+(size_t)(x-s->origin_x);
         for(int col=x;col<x1;++col)*p++=color;
     }
 }
@@ -58,6 +87,32 @@ static void ng_round(ng_scene_t *s,int x,int y,int w,int h,int radius,uint16_t c
 }
 static void ng_panel(ng_scene_t *s,int x,int y,int w,int h,uint16_t border,uint16_t fill)
 { ng_round(s,x,y,w,h,14,border);ng_round(s,x+2,y+2,w-4,h-4,12,fill); }
+static int ng_round_cut(int row,int height,int radius)
+{
+    const int dy=row<radius?radius-row-1:(row>=height-radius?row-(height-radius):0);
+    int cut=0;while(cut<radius&&(radius-cut)*(radius-cut)+dy*dy>radius*radius)++cut;
+    return cut;
+}
+/* Repaint only the outer panel ring; cached text and artwork stay immutable. */
+static void ng_panel_border(ng_scene_t *s,int x,int y,int w,int h,uint16_t color,bool artwork)
+{
+    for(int row=0;row<h;++row){
+        const int cut=ng_round_cut(row,h,14),left=x+cut,right=x+w-cut;
+        if(row<2||row>=h-2)ng_rect(s,left,y+row,right-left,1,color);
+        else{
+            const int inside=ng_round_cut(row-2,h-4,12);
+            int inside_left=x+2+inside,inside_right=x+w-2-inside;
+            /* Artwork is rectangular and overwrites rounded panel corners in
+             * the authoritative draw order; focus must not paint over it. */
+            if(artwork&&row>=4&&row<h-61){
+                if(inside_left>x+4)inside_left=x+4;
+                if(inside_right<x+w-4)inside_right=x+w-4;
+            }
+            ng_rect(s,left,y+row,inside_left-left,1,color);
+            ng_rect(s,inside_right,y+row,right-inside_right,1,color);
+        }
+    }
+}
 static void ng_line(ng_scene_t *s,int x,int y,int x1,int y1,uint16_t color)
 {
     if(!s->pixels)return;
@@ -89,20 +144,23 @@ static void ng_text(ng_scene_t *s,int x,int y,const char *str,int size,uint16_t 
     if(!s->pixels||!str||size<8||size>96)return;
     const ng_font_t *font=ng_font(size);
     const int side=font->cell*size/font->size;const int limit=x+max_width;
+    uint8_t sample[128];
+    for(int pos=0;pos<side;++pos)sample[pos]=(uint8_t)(pos*font->cell/side);
     for(size_t i=0;i<128U&&str[i];++i){
         unsigned c=(unsigned char)str[i];if(c<32U||c>126U)c='?';
         int advance=ng_advance(c,size);
         if(x+advance>limit)break;
-        for(int yy=0;yy<side&&y+yy<NG_H;++yy){
-            if(y+yy<0||(s->clip_bottom&&(y+yy<s->clip_top||y+yy>=s->clip_bottom)))continue;
-            const unsigned gy=(unsigned)(yy*font->cell/side);
-            for(int xx=0;xx<side&&x+xx<limit&&x+xx<NG_W;++xx){
-                if(x+xx<0)continue;
-                const unsigned gx=(unsigned)(xx*font->cell/side);
-                const unsigned pos=(c-32U)*(unsigned)(font->cell*font->cell)+gy*(unsigned)font->cell+gx;
+        int left=x,top=y,right=x+side,bottom=y+side;if(right>limit)right=limit;
+        ng_clip(s,&left,&top,&right,&bottom);
+        if(left>=right||top>=bottom){x+=advance;continue;}
+        for(int row=top;row<bottom;++row){
+            const unsigned base=(c-32U)*(unsigned)(font->cell*font->cell)+(unsigned)sample[row-y]*(unsigned)font->cell;
+            uint16_t *dst=s->pixels+(size_t)(row-s->origin_y)*s->stride+(size_t)(left-s->origin_x);
+            for(int col=left;col<right;++col,++dst){
+                const unsigned pos=base+(unsigned)sample[col-x];
                 const unsigned packed=font->alpha[pos/2U];
                 const unsigned a=pos%2U?packed&15U:packed>>4U;
-                if(a){uint16_t *dst=s->pixels+(size_t)(y+yy)*s->stride+(size_t)(x+xx);*dst=ng_mix(color,*dst,a);}
+                if(a)*dst=a==15U?color:ng_mix(color,*dst,a);
             }
         }
         x+=advance;
@@ -128,11 +186,18 @@ static void ng_art(ng_scene_t *s,int x,int y,int w,int h,const void *art,int aw,
     int sw=aw,sh=ah;
     if(aw*h>ah*w)sw=ah*w/h;else sh=aw*h/w;
     const int ox=(aw-sw)/2,oy=(ah-sh)/2;
-    for(int row=0;row<h;++row){
-        if(y+row<0||y+row>=NG_H||(s->clip_bottom&&(y+row<s->clip_top||y+row>=s->clip_bottom)))continue;
-        const size_t offset=(size_t)(oy+row*sh/h)*(size_t)aw;
-        for(int col=0;col<w;++col)
-            if(x+col>=0&&x+col<NG_W)s->pixels[(size_t)(y+row)*s->stride+(size_t)(x+col)]=palette?palette[((const uint8_t *)art)[offset+(size_t)(ox+col*sw/w)]]:((const uint16_t *)art)[offset+(size_t)(ox+col*sw/w)];
+    int left=x,top=y,right=x+w,bottom=y+h;ng_clip(s,&left,&top,&right,&bottom);
+    if(left>=right||top>=bottom)return;
+    const int step=sw/w,remainder=sw%w,start=(left-x)*sw;
+    for(int row=top;row<bottom;++row){
+        const size_t offset=(size_t)(oy+(row-y)*sh/h)*(size_t)aw;
+        int sample_x=ox+start/w,fraction=start%w;
+        uint16_t *dst=s->pixels+(size_t)(row-s->origin_y)*s->stride+(size_t)(left-s->origin_x);
+        for(int col=left;col<right;++col){
+            const size_t index=offset+(size_t)sample_x;
+            *dst++=palette?palette[((const uint8_t *)art)[index]]:((const uint16_t *)art)[index];
+            sample_x+=step;fraction+=remainder;if(fraction>=w){fraction-=w;++sample_x;}
+        }
     }
 }
 static void ng_icon(ng_scene_t *s,int x,int y,unsigned kind,uint16_t color)
@@ -155,16 +220,19 @@ static void ng_icon(ng_scene_t *s,int x,int y,unsigned kind,uint16_t color)
 }
 static void ng_add(ng_scene_t *s,int x,int y,int w,int h,unsigned kind,unsigned param,bool enabled)
 {
+    if(s->cache_base)return;
     if(s->clip_bottom){int bottom=y+h;if(y<s->clip_top)y=s->clip_top;if(bottom>s->clip_bottom)bottom=s->clip_bottom;h=bottom-y;}
     if(s->count>=NG_MAX_CONTROLS||w<=0||h<=0)return;
-    s->controls[s->count++]=(ng_control_t){ng_id(kind,param),(int16_t)x,(int16_t)y,(int16_t)w,(int16_t)h,enabled};
+    s->controls[s->count++]=(ng_control_t){ng_id(kind,param),(int16_t)x,(int16_t)y,(int16_t)w,(int16_t)h,enabled,false};
 }
 static bool ng_focused(const ng_scene_t *s,unsigned kind,unsigned param)
-{ return s->shell->ng_focus==ng_id(kind,param); }
+{ return !s->cache_base&&s->shell->ng_focus==ng_id(kind,param); }
 static void ng_button(ng_scene_t *s,int x,int y,int w,int h,const char *label,
     unsigned kind,unsigned param,bool enabled,bool primary)
 {
+    const size_t before=s->count;
     ng_add(s,x,y,w,h,kind,param,enabled);
+    if(s->count>before)s->controls[s->count-1U].animated=true;
     const bool focused=ng_focused(s,kind,param);
     const bool pressed=s->shell->press_active&&s->shell->pressed_index==ng_id(kind,param);
     const uint16_t fill=enabled&&primary?NG_CYAN:NG_SURFACE;
@@ -267,6 +335,7 @@ static void ng_scrollbar(ng_scene_t *s,size_t count,bool library)
 }
 static void ng_game_art(ng_scene_t *s,const console_app_descriptor_t *app,int x,int y,int w,int h)
 {
+    if(!s->pixels)return;
     const console_shell_artwork_t *cover=app->cover;
     const bool byte_legacy=ng_contains(app->title,"BYTE")&&
         (!app->icon_pixels||!app->icon_palette||
@@ -288,6 +357,14 @@ static void ng_game_art(ng_scene_t *s,const console_app_descriptor_t *app,int x,
         ng_icon(s,x+w/2-20,y+h/2-22,1U,app->accent_rgb565?app->accent_rgb565:NG_CYAN);
     }
 }
+static bool ng_game_art_is_generic(const console_app_descriptor_t *app)
+{
+    const console_shell_artwork_t *cover=app->cover;
+    return !(cover&&cover->pixels&&cover->palette&&cover->width&&cover->height&&
+        cover->width<=1024U&&cover->height<=576U)&&!(app->icon_pixels&&app->icon_palette)&&
+        !ng_contains(app->title,"BYTE")&&!ng_contains(app->title,"MAZE")&&
+        !ng_contains(app->title,"BLAST")&&!ng_contains(app->title,"SOLITAIRE");
+}
 static void ng_game_card(ng_scene_t *s,size_t app_index,int x,int y,int w,int h)
 {
     const console_app_descriptor_t *app=&s->shell->apps[app_index];
@@ -302,17 +379,20 @@ static void ng_game_card(ng_scene_t *s,size_t app_index,int x,int y,int w,int h)
 }
 static void ng_library_rows(ng_scene_t *s,const size_t *games,size_t count)
 {
-    for(size_t i=0;i<count;++i){const int y=NG_GRID_TOP+(int)(i/3U)*NG_GRID_PITCH-s->shell->ng_library_scroll;
+    if(s->skip_rows)return;
+    const int offset=s->cache_base?s->raster_scroll:s->shell->ng_library_scroll;
+    for(size_t i=0;i<count;++i){const int y=NG_GRID_TOP+(int)(i/3U)*NG_GRID_PITCH-offset;
         if(y+194>s->clip_top&&y<s->clip_bottom)ng_game_card(s,games[i],264+(int)(i%3U)*326,y,310,194);}
 }
 static void ng_file_rows(ng_scene_t *s,size_t count)
 {
+    if(s->skip_rows)return;
     console_shell_t *sh=s->shell;char value[80];
     for(size_t i=0;i<count;++i){
-        const console_shell_file_entry_t *entry=&sh->files.entries[i];int y=NG_FILES_TOP+(int)i*NG_FILE_PITCH-sh->ng_file_scroll;
+        const console_shell_file_entry_t *entry=&sh->files.entries[i];int y=NG_FILES_TOP+(int)i*NG_FILE_PITCH-(s->cache_base?s->raster_scroll:sh->ng_file_scroll);
         if(y+82<=s->clip_top||y>=s->clip_bottom)continue;
         ng_add(s,264,y,964,82,NC_FILE_ROW,(unsigned)i,true);
-        const bool selected=sh->file_selected_index==i;
+        const bool selected=!s->cache_base&&sh->file_selected_index==i;
         ng_panel(s,264,y,964,82,selected||ng_focused(s,NC_FILE_ROW,(unsigned)i)?NG_CYAN:NG_LINE,NG_SURFACE);
         ng_icon(s,282,y+21,entry->is_directory?3U:1U,NG_CYAN);
         ng_label(s,344,y+18,entry->label,sh->ng_large_text?34:30,NG_WHITE,616);
@@ -385,11 +465,19 @@ static unsigned ng_nav_selection(const console_shell_t *sh)
 static void ng_chrome(ng_scene_t *s)
 {
     const console_shell_t *sh=s->shell;char value[64];
-    ng_rect(s,0,0,NG_W,NG_H,NG_INK);ng_rect(s,0,0,240,NG_H,NG_RGB(9,26,38));
+    if(s->skip_rows){
+        /* The immutable raster replaces this whole rectangle; do not dirty
+         * it with a redundant CPU clear before the non-overlapping copy. */
+        const bool library=sh->page==CONSOLE_PAGE_HOME&&sh->home_all_programs;
+        const int top=library?NG_GRID_TOP:NG_FILES_TOP,bottom=library?NG_GRID_BOTTOM:NG_FILES_BOTTOM;
+        ng_rect(s,0,0,NG_W,top,NG_INK);ng_rect(s,0,bottom,NG_W,NG_H-bottom,NG_INK);
+        ng_rect(s,0,top,264,bottom-top,NG_INK);ng_rect(s,1228,top,NG_W-1228,bottom-top,NG_INK);
+    }else ng_rect(s,0,0,NG_W,NG_H,NG_INK);
+    ng_rect(s,0,0,240,NG_H,NG_RGB(9,26,38));
     if(s->pixels)for(size_t y=0;y<64U;++y)for(size_t x=0;x<64U;++x){
         const size_t i=(y*64U+x)*3U;const unsigned alpha=(unsigned)ng_brand_mark[i+2U]*15U/255U;
-        uint16_t *dst=s->pixels+(y+4U)*s->stride+x+12U;
-        *dst=ng_mix((uint16_t)((unsigned)ng_brand_mark[i]|((unsigned)ng_brand_mark[i+1U]<<8U)),*dst,alpha);
+        uint16_t *dst=ng_pixel(s,(int)x+12,(int)y+4);
+        if(dst&&alpha)*dst=ng_mix((uint16_t)((unsigned)ng_brand_mark[i]|((unsigned)ng_brand_mark[i+1U]<<8U)),*dst,alpha);
     }
     ng_text(s,83,14,"GameChangersAI",30,NG_WHITE,360);
     const unsigned game_volume=bounded_volume(sh->runtime.game_volume_step);
@@ -556,6 +644,16 @@ static void ng_storage(ng_scene_t *s)
     ng_button(s,606,548,304,88,"Retry mount",NC_STORAGE,1,storage_retry_enabled(s->shell),false);
     ng_button(s,948,548,304,88,"Repair card",NC_STORAGE,2,storage_repair_enabled(s->shell),false);
 }
+static void ng_file_scroll_buttons(ng_scene_t *s)
+{
+    const console_shell_t *sh=s->shell;
+    /* This exact rectangle is also the stationary patch on endpoint changes.
+     * Restore the INK gap between the two buttons as well as both controls. */
+    ng_rect(s,368,558,288,88,NG_INK);
+    ng_button(s,368,558,136,88,"Prev",NC_FILE_PREV,0,sh->ng_file_scroll>0,false);
+    ng_button(s,520,558,136,88,"Next",NC_FILE_NEXT,0,
+        sh->ng_file_scroll<ng_scroll_max(sh->files.entry_count,false),false);
+}
 static void ng_files(ng_scene_t *s)
 {
     console_shell_t *sh=s->shell;const bool games=sh->page==CONSOLE_PAGE_GAMES;
@@ -569,8 +667,7 @@ static void ng_files(ng_scene_t *s)
     s->clip_top=0;s->clip_bottom=0;ng_scrollbar(s,count,false);
     const bool selected=sh->file_selected_index<count;
     ng_button(s,264,558,88,88,"Up",NC_FILE_OPEN,1,sh->files.can_go_up,false);
-    ng_button(s,368,558,136,88,"Prev",NC_FILE_PREV,0,sh->ng_file_scroll>0,false);
-    ng_button(s,520,558,136,88,"Next",NC_FILE_NEXT,0,sh->ng_file_scroll<ng_scroll_max(count,false),false);
+    ng_file_scroll_buttons(s);
     ng_button(s,672,558,176,88,"Refresh",NC_REFRESH,0,true,false);
     ng_button(s,864,558,304,88,file_selected_is_installable(sh)?"Install update":"Open",NC_FILE_OPEN,0,selected&&(file_selected_is_openable(sh)||file_selected_is_installable(sh)),true);
     ng_button(s,1196,574,56,56,"...",NC_FILE_MENU,0,selected&&file_selected_is_removable(sh),false);
@@ -989,7 +1086,9 @@ static const ng_control_t *ng_at(const ng_scene_t *s,uint16_t x,uint16_t y)
 }
 static void ng_initial_focus(console_shell_t *sh)
 {
-    if(sh->ng_focus==0U&&(sh->ng_scroll_kind||sh->ng_glide_kind))return;
+    /* Keep the displayed content focus attached to its row throughout motion,
+     * even after it moves offscreen; physical translation preserves its ring. */
+    if(sh->ng_scroll_kind||sh->ng_glide_kind)return;
     ng_scene_t scene={.shell=sh};ng_build_scene(&scene);
     const ng_control_t *current=ng_control(&scene,sh->ng_focus);
     if(current&&current->enabled)return;
@@ -1004,7 +1103,7 @@ static console_shell_action_t ng_open(console_shell_t *sh,console_page_t page)
     if(page==CONSOLE_PAGE_MULTIPLAYER&&sh->page==page)return no_action();
     sh->control_panel_active=false;sh->file_delete_confirm=false;sh->storage_repair_confirm=false;
     sh->ng_list_first=0U;sh->ng_file_scroll=0;sh->ng_focus=0U;sh->ng_keyboard=false;
-    sh->ng_categories=false;sh->ng_file_menu=false;sh->ng_scroll_kind=0;
+    sh->ng_categories=false;sh->ng_file_menu=false;sh->ng_scroll_kind=0;sh->ng_content_drag_started=false;sh->ng_deferred_content_focus=false;
     sh->press_active=false;sh->pressed_index=SIZE_MAX;
     console_shell_action_t action=no_action();
     if(page==CONSOLE_PAGE_HOME){console_shell_show_home(sh);sh->home_all_programs=false;action=page_changed(0U);}
@@ -1118,6 +1217,9 @@ static console_shell_action_t ng_activate(console_shell_t *sh,uint16_t id)
 static console_shell_action_t nextgen_buttons(console_shell_t *sh,uint32_t pressed)
 {
     if(pressed){sh->ng_glide_kind=0;sh->ng_velocity_q16=0;}
+    if(pressed&&sh->contact_down&&sh->ng_content_drag_started&&sh->ng_scroll_kind>0U&&sh->ng_scroll_kind<3U){
+        sh->ng_focus=0;sh->ng_deferred_content_focus=false;
+    }
     if(pressed&CONSOLE_BUTTON_BACK)return ng_back(sh);
     ng_initial_focus(sh);ng_scene_t scene={.shell=sh};ng_build_scene(&scene);
     const ng_control_t *from=ng_control(&scene,sh->ng_focus);
@@ -1157,39 +1259,64 @@ static console_shell_action_t nextgen_buttons(console_shell_t *sh,uint32_t press
     if(target!=sh->ng_focus){sh->ng_focus=target;sh->dirty=true;sh->ng_focus_ms=100U;}
     return no_action();
 }
+static bool ng_content_press(const console_shell_t *sh,size_t id)
+{
+    return (sh->page==CONSOLE_PAGE_HOME&&sh->home_all_programs&&id/128U==NC_LAUNCH)||
+        ((sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES)&&id/128U==NC_FILE_ROW);
+}
+static bool ng_commit_content_focus(console_shell_t *sh)
+{
+    if(!sh->ng_deferred_content_focus||!sh->contact_down||!sh->press_active||sh->ng_content_drag_started||
+       !ng_content_press(sh,sh->pressed_index)||sh->pressed_index>UINT16_MAX||sh->pointer_visible||
+       sh->ng_categories||sh->ng_file_menu||sh->file_delete_confirm||sh->storage_repair_confirm)return false;
+    const size_t id=sh->pressed_index;
+    if(id/128U==NC_LAUNCH&&(id%128U>=sh->app_count||sh->apps[id%128U].id!=sh->ng_press_identity))return false;
+    if(id/128U==NC_FILE_ROW&&sh->ng_press_revision!=sh->files.revision)return false;
+    sh->ng_focus=(uint16_t)id;sh->ng_focus_ms=100;sh->ng_deferred_content_focus=false;sh->dirty=true;
+    return true;
+}
+static bool ng_content_drag_eligible(const console_shell_t *sh)
+{
+    if(!sh->contact_down||!sh->ng_content_drag_started||sh->press_active||sh->ng_reduce_motion||sh->pointer_visible||
+       sh->ng_categories||sh->ng_file_menu||sh->file_delete_confirm||sh->storage_repair_confirm)return false;
+    if(sh->ng_scroll_kind==1U)return sh->page==CONSOLE_PAGE_HOME&&sh->home_all_programs;
+    return sh->ng_scroll_kind==2U&&(sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES)&&
+        sh->ng_press_revision==sh->files.revision;
+}
 static console_shell_action_t nextgen_touch(console_shell_t *sh,bool valid,const console_shell_contact_t *contacts,size_t count)
 {
     remember_contacts(sh,valid,contacts,count);
     if(!valid||count>1U||(count&&!contacts)){
-        sh->contact_down=true;sh->press_active=false;sh->pressed_index=SIZE_MAX;sh->ng_scroll_kind=0;sh->ng_glide_kind=0;sh->ng_velocity_q16=0;sh->dirty=true;return no_action();}
+        sh->contact_down=true;sh->press_active=false;sh->pressed_index=SIZE_MAX;sh->ng_scroll_kind=0;sh->ng_content_drag_started=false;sh->ng_deferred_content_focus=false;sh->ng_glide_kind=0;sh->ng_velocity_q16=0;sh->dirty=true;return no_action();}
     ng_scene_t scene={.shell=sh};ng_build_scene(&scene);
     if(count==0U){
         if(!sh->contact_down)return no_action();
-        if(!sh->press_active&&sh->ng_scroll_kind>0U&&sh->ng_scroll_kind<3U&&!sh->ng_reduce_motion&&
+        if(ng_content_drag_eligible(sh)&&
            sh->animation_clock_ms-sh->ng_sample_ms<=80U&&abs(sh->ng_velocity_q16)>=6554){
             sh->ng_glide_kind=sh->ng_scroll_kind;
             sh->ng_glide_q16=(sh->ng_scroll_kind==1U?sh->ng_library_scroll:sh->ng_file_scroll)*65536;
         }
-        sh->contact_down=false;const bool activate=sh->press_active;const size_t id=sh->pressed_index;
-        sh->press_active=false;sh->pressed_index=SIZE_MAX;sh->ng_scroll_kind=0;sh->dirty=true;
-        if(activate&&id<=UINT16_MAX){
-            if(id/128U==NC_LAUNCH&&(id%128U>=sh->app_count||sh->apps[id%128U].id!=sh->ng_press_identity))return no_action();
-            if(id/128U==NC_FILE_ROW&&sh->ng_press_revision!=sh->files.revision)return no_action();
-            if(id/128U==NC_MP_ROOM){
-                const size_t row=id%128U;
-                if(row==0U||row>sh->runtime.multiplayer_lobby_count||row>CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX||
-                    sh->runtime.multiplayer_lobbies[row-1U].session_id!=sh->ng_press_identity)return no_action();
-            }
-            return ng_activate(sh,(uint16_t)id);}
+        const size_t id=sh->pressed_index;bool activate=sh->press_active&&id<=UINT16_MAX;
+        if(activate&&id/128U==NC_LAUNCH&&(id%128U>=sh->app_count||sh->apps[id%128U].id!=sh->ng_press_identity))activate=false;
+        if(activate&&id/128U==NC_FILE_ROW&&sh->ng_press_revision!=sh->files.revision)activate=false;
+        if(activate&&id/128U==NC_MP_ROOM){
+            const size_t row=id%128U;
+            if(row==0U||row>sh->runtime.multiplayer_lobby_count||row>CONSOLE_MULTIPLAYER_LOBBY_LIST_MAX||
+                sh->runtime.multiplayer_lobbies[row-1U].session_id!=sh->ng_press_identity)activate=false;
+        }
+        if(activate&&sh->ng_deferred_content_focus)(void)ng_commit_content_focus(sh);
+        sh->contact_down=false;sh->press_active=false;sh->pressed_index=SIZE_MAX;sh->ng_scroll_kind=0;
+        sh->ng_content_drag_started=false;sh->ng_deferred_content_focus=false;sh->dirty=true;
+        if(activate)return ng_activate(sh,(uint16_t)id);
         return no_action();
     }
     const uint16_t x=contacts[0].x,y=contacts[0].y;
-    if(x>=NG_W||y>=NG_H){sh->contact_down=true;sh->press_active=false;sh->ng_scroll_kind=0;sh->ng_glide_kind=0;sh->ng_velocity_q16=0;sh->dirty=true;return no_action();}
+    if(x>=NG_W||y>=NG_H){sh->contact_down=true;sh->press_active=false;sh->ng_scroll_kind=0;sh->ng_content_drag_started=false;sh->ng_deferred_content_focus=false;sh->ng_glide_kind=0;sh->ng_velocity_q16=0;sh->dirty=true;return no_action();}
     const ng_control_t *hit=ng_at(&scene,x,y);
     if(!sh->contact_down){
         const bool stopping=sh->ng_glide_kind!=0U;
         sh->ng_glide_kind=0;sh->ng_velocity_q16=0;sh->ng_sample_ms=sh->animation_clock_ms;
-        sh->contact_down=true;sh->press_start_physical_x=x;sh->press_start_physical_y=y;sh->ng_scroll_kind=0;
+        sh->contact_down=true;sh->press_start_physical_x=x;sh->press_start_physical_y=y;sh->ng_scroll_kind=0;sh->ng_content_drag_started=false;sh->ng_deferred_content_focus=false;
         sh->press_active=hit!=NULL;sh->pressed_index=hit?hit->id:SIZE_MAX;sh->ng_press_revision=sh->files.revision;
         const bool modal=sh->file_delete_confirm||sh->storage_repair_confirm||sh->ng_categories||sh->ng_file_menu;
         const bool library=sh->page==CONSOLE_PAGE_HOME&&sh->home_all_programs;
@@ -1198,7 +1325,10 @@ static console_shell_action_t nextgen_touch(console_shell_t *sh,bool valid,const
             sh->ng_scroll_kind=library?1U:2U;sh->ng_scroll_origin=library?sh->ng_library_scroll:sh->ng_file_scroll;sh->ng_sample_scroll=sh->ng_scroll_origin;
             if(hit&&hit->id/128U==NC_SCROLL){sh->ng_scroll_kind+=2U;sh->press_active=false;}}
         if(stopping)sh->press_active=false; /* A touch that stops a fling must not launch. */
-        if(hit){sh->ng_focus=hit->id;sh->ng_focus_ms=100U;
+        if(hit){
+            const bool content=ng_content_press(sh,hit->id);
+            sh->ng_deferred_content_focus=content&&!stopping;
+            if(!content&&!stopping){sh->ng_focus=hit->id;sh->ng_focus_ms=100U;}
             sh->ng_press_identity=hit->id/128U==NC_LAUNCH&&hit->id%128U<sh->app_count?sh->apps[hit->id%128U].id:0U;
             if(hit->id/128U==NC_MP_ROOM){
                 const size_t row=hit->id%128U;
@@ -1209,7 +1339,10 @@ static console_shell_action_t nextgen_touch(console_shell_t *sh,bool valid,const
         sh->dirty=true;
     }else {
         const int dx=(int)x-(int)sh->press_start_physical_x,dy=(int)y-(int)sh->press_start_physical_y;
-        if(sh->press_active&&(dx>14||dx< -14||dy>14||dy< -14||!hit||hit->id!=sh->pressed_index)){sh->press_active=false;sh->dirty=true;}
+        const bool drag=sh->ng_scroll_kind>0U&&sh->ng_scroll_kind<3U&&(dy>=6||dy<= -6);
+        if(drag){sh->ng_content_drag_started=true;sh->ng_deferred_content_focus=false;}
+        if(sh->press_active&&(drag||dx>14||dx< -14||dy>14||dy< -14||!hit||hit->id!=sh->pressed_index)){
+            sh->press_active=false;sh->ng_deferred_content_focus=false;sh->dirty=true;}
         if(sh->ng_scroll_kind&&(!sh->press_active||sh->ng_scroll_kind>=3U)){
             const bool library=sh->ng_scroll_kind==1U||sh->ng_scroll_kind==3U;
             if(sh->ng_scroll_kind>=3U){
@@ -1229,7 +1362,8 @@ static console_shell_action_t nextgen_touch(console_shell_t *sh,bool valid,const
                     sh->ng_sample_ms=sh->animation_clock_ms;sh->ng_sample_scroll=offset;
                 }
             }
-            sh->ng_focus=0U;sh->ng_focus_ms=0;
+            /* Retain content focus so the already displayed highlight moves
+             * with its card/row and needs no full-viewport repair on onset. */
         }
     }
     return no_action();
@@ -1245,15 +1379,27 @@ static bool nextgen_advance(console_shell_t *sh,uint32_t elapsed)
         const bool library=sh->ng_glide_kind==1U;
         const bool eligible=library?(sh->page==CONSOLE_PAGE_HOME&&sh->home_all_programs):
             (sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES);
-        if(!eligible||sh->contact_down||sh->ng_reduce_motion||sh->ng_categories||sh->ng_file_menu||sh->file_delete_confirm||elapsed>100U){
+        if(!eligible||sh->contact_down||sh->ng_reduce_motion||sh->pointer_visible||sh->ng_categories||sh->ng_file_menu||
+           sh->file_delete_confirm||sh->storage_repair_confirm||(!library&&sh->ng_press_revision!=sh->files.revision)||elapsed>100U){
             sh->ng_glide_kind=0;sh->ng_velocity_q16=0;
         }else{
-            /* Integrate at 1 ms: friction and distance are independent of frame rate. */
+            /* Integrate at 1 ms so every cadence follows the same Q16 path.
+             * Proportional damping eases a fast flick; the small deceleration
+             * floor brings slow drags to rest without a long fractional tail. */
             const int before=library?sh->ng_library_scroll:sh->ng_file_scroll;
+            size_t games[CONSOLE_SHELL_MAX_APPS];
+            const size_t count=library?ng_library_games(sh,games):sh->files.entry_count;
+            const int32_t maximum=ng_scroll_max(count,library)*65536;
             for(uint32_t ms=0;ms<elapsed&&sh->ng_velocity_q16;++ms){
                 const int32_t old=sh->ng_velocity_q16;
-                sh->ng_velocity_q16=old>0?(old>360?old-360:0):(old< -360?old+360:0);
+                const int64_t speed=old<0?-(int64_t)old:old;
+                int64_t decrement=(speed+179)/180;
+                if(decrement<96){decrement=96;}
+                const int32_t next=(int32_t)(speed>decrement?speed-decrement:0);
+                sh->ng_velocity_q16=old<0?-next:next;
                 sh->ng_glide_q16+=(old+sh->ng_velocity_q16)/2;
+                if(sh->ng_glide_q16<0){sh->ng_glide_q16=0;sh->ng_velocity_q16=0;}
+                else if(sh->ng_glide_q16>maximum){sh->ng_glide_q16=maximum;sh->ng_velocity_q16=0;}
             }
             const int desired=sh->ng_glide_q16/65536;ng_set_scroll(sh,library,desired);
             const int after=library?sh->ng_library_scroll:sh->ng_file_scroll;
@@ -1264,31 +1410,215 @@ static bool nextgen_advance(console_shell_t *sh,uint32_t elapsed)
     if(changed)sh->dirty=true;
     return changed;
 }
-/* Only cache immutable chrome and a list's raster. Catalog identity, style,
- * selection, file revision and visible status must all match before reuse. */
-static uint64_t ng_cache_signature(const console_shell_t *sh)
+enum { NG_RASTER_STRIDE=1024,NG_LIBRARY_RASTER_HEIGHT=1280,NG_FILE_RASTER_HEIGHT=768,
+    NG_RASTER_BYTES=4*1024*1024 };
+
+static uint64_t ng_catalog_signature(const console_shell_t *sh)
 {
-    uint64_t hash=home_cache_signature(sh);
-#define NG_HASH(field) hash=home_cache_hash_bytes(hash,&sh->field,sizeof(sh->field))
-    NG_HASH(page);NG_HASH(ng_category);NG_HASH(ng_focus);NG_HASH(ng_focus_ms);
-    /* A launch frame may only reuse its own static identity and chrome. */
-    if(sh->page==CONSOLE_PAGE_EXTERNAL){NG_HASH(active_app_id);NG_HASH(loading.title);}
-    NG_HASH(ng_large_text);NG_HASH(file_selected_index);NG_HASH(file_notice);
-    NG_HASH(runtime.game_volume_step);
-    NG_HASH(runtime.battery_sample_valid);NG_HASH(runtime.battery_percent);NG_HASH(runtime.game_storage_state);
-    if(sh->page!=CONSOLE_PAGE_HOME){NG_HASH(files);}
+    uint64_t hash=UINT64_C(1469598103934665603);
+    hash=home_cache_hash_bytes(hash,&sh->app_count,sizeof(sh->app_count));
     for(size_t i=0;i<sh->app_count;++i){
-        hash=home_cache_hash_bytes(hash,&sh->apps[i].icon_pixels,sizeof(sh->apps[i].icon_pixels));
-        hash=home_cache_hash_bytes(hash,&sh->apps[i].icon_palette,sizeof(sh->apps[i].icon_palette));
-        hash=home_cache_hash_bytes(hash,&sh->apps[i].cover,sizeof(sh->apps[i].cover));
+        const console_app_descriptor_t *app=&sh->apps[i];
+        hash=home_cache_hash_bytes(hash,app,sizeof(*app));
+        hash=home_cache_hash_text(hash,app->title,CONSOLE_SHELL_TITLE_MAX_BYTES);
+        hash=home_cache_hash_text(hash,app->subtitle,CONSOLE_SHELL_SUBTITLE_MAX_BYTES);
+        hash=home_cache_hash_text(hash,app->disabled_reason,CONSOLE_SHELL_SUBTITLE_MAX_BYTES);
+        hash=home_cache_hash_text(hash,app->folder_path,CONSOLE_SHELL_FOLDER_PATH_MAX_BYTES);
+        if(app->cover)hash=home_cache_hash_bytes(hash,app->cover,sizeof(*app->cover));
+    }
+    return hash;
+}
+static uint64_t ng_raster_signature(const console_shell_t *sh,bool library)
+{
+    uint64_t hash=home_cache_hash_bytes(UINT64_C(1469598103934665603),&sh->ng_large_text,sizeof(sh->ng_large_text));
+    if(library){
+        const uint64_t catalog=ng_catalog_signature(sh);
+        hash=home_cache_hash_bytes(hash,&catalog,sizeof(catalog));
+        hash=home_cache_hash_bytes(hash,sh->ng_category,sizeof(sh->ng_category));
+    }else hash=home_cache_hash_bytes(hash,&sh->files,sizeof(sh->files));
+    return hash;
+}
+static size_t ng_raster_count(const console_shell_t *sh,bool library)
+{
+    if(!library)return sh->files.available?sh->files.entry_count:0U;
+    size_t games[CONSOLE_SHELL_MAX_APPS],count=ng_games(sh,games),filtered=0;
+    for(size_t i=0;i<count;++i)
+        if(!sh->ng_category[0]||strcmp(ng_app_category(&sh->apps[games[i]]),sh->ng_category)==0)++filtered;
+    return filtered;
+}
+static bool ng_raster_covers(const console_shell_t *sh,bool library)
+{
+    const console_shell_native_raster_cache_t *cache=&sh->native_rasters[library?0:1];
+    const int offset=library?sh->ng_library_scroll:sh->ng_file_scroll;
+    const int view=library?NG_GRID_BOTTOM-NG_GRID_TOP:NG_FILES_BOTTOM-NG_FILES_TOP;
+    return cache->pixels&&cache->valid&&cache->signature==ng_raster_signature(sh,library)&&
+        offset>=cache->content_origin&&offset+view<=cache->content_origin+(int)cache->height;
+}
+static bool ng_raster_dma_clean(const console_shell_native_raster_cache_t *cache)
+{
+    return cache->valid&&cache->preparation_epoch!=0&&
+        cache->published_epoch==cache->preparation_epoch&&cache->published_rows==cache->height;
+}
+static bool ng_prepare_raster(console_shell_t *sh,bool library,uint16_t rows)
+{
+    console_shell_native_raster_cache_t *cache=&sh->native_rasters[library?0:1];
+    const size_t count=ng_raster_count(sh,library);if(!cache->pixels||!count)return false;
+    if(ng_raster_covers(sh,library)&&(!sh->native_publish||ng_raster_dma_clean(cache)))return false;
+    const uint64_t signature=ng_raster_signature(sh,library);
+    const int view=library?NG_GRID_BOTTOM-NG_GRID_TOP:NG_FILES_BOTTOM-NG_FILES_TOP;
+    const int top=library?NG_GRID_TOP:NG_FILES_TOP,limit=ng_scroll_max(count,library);
+    int offset=library?sh->ng_library_scroll:sh->ng_file_scroll;
+    if(offset<0){offset=0;}
+    if(offset>limit){offset=limit;}
+    if(cache->preparation_epoch==0||cache->signature!=signature||offset<cache->content_origin||offset+view>cache->content_origin+(int)cache->height){
+        int origin=offset-((int)cache->height-view)/2,max_origin=limit+view-(int)cache->height;
+        if(max_origin<0){max_origin=0;}
+        if(origin<0){origin=0;}
+        if(origin>max_origin){origin=max_origin;}
+        /* A recenter can repaint the same address with the same content hash.
+         * Revoke the previous publication before any source pixel is written. */
+        if(cache->preparation_epoch==UINT64_MAX)return false;
+        ++cache->preparation_epoch;
+        cache->published_epoch=0;cache->published_rows=0;
+        cache->signature=signature;cache->content_origin=origin;cache->prepared_rows=0;cache->valid=false;
+    }
+    const uint16_t remaining=(uint16_t)(cache->height-cache->prepared_rows);
+    const uint16_t painted=rows>remaining?remaining:rows;
+    if(painted){
+        ng_scene_t scene={.shell=sh,.pixels=cache->pixels,.stride=NG_RASTER_STRIDE,
+            .origin_x=264,.origin_y=top,.width=964,.height=cache->height,
+            .clip_top=top+(int)cache->prepared_rows,.clip_bottom=top+(int)cache->prepared_rows+(int)painted,
+            .raster_scroll=cache->content_origin,.cache_base=true};
+        ng_rect(&scene,264,scene.clip_top,964,(int)painted,NG_INK);
+        if(library){size_t games[CONSOLE_SHELL_MAX_APPS];const size_t n=ng_library_games(sh,games);ng_library_rows(&scene,games,n);}
+        else ng_file_rows(&scene,count);
+        cache->prepared_rows=(uint16_t)(cache->prepared_rows+painted);cache->valid=cache->prepared_rows==cache->height;
+    }
+    bool published=false;
+    if(sh->native_publish&&cache->published_rows<cache->prepared_rows){
+        const uint16_t dirty=(uint16_t)(cache->prepared_rows-cache->published_rows);
+        const console_shell_rgb565_publication_t publication={.pixels=cache->pixels,
+            .stride_pixels=NG_RASTER_STRIDE,.height=cache->height,.first_row=cache->published_rows,
+            .row_count=dirty>rows?rows:dirty};
+        published=true;
+        if(sh->native_publish(sh->native_copy_context,&publication)){
+            cache->published_epoch=cache->preparation_epoch;
+            cache->published_rows=(uint16_t)(cache->published_rows+publication.row_count);
+        }
+    }
+    return painted>0||published;
+}
+static uint64_t ng_chrome_signature(const console_shell_t *sh)
+{
+    uint64_t hash=UINT64_C(1469598103934665603);
+#define NG_HASH(field) hash=home_cache_hash_bytes(hash,&sh->field,sizeof(sh->field))
+    NG_HASH(runtime.game_volume_step);NG_HASH(runtime.game_storage_space_valid);
+    NG_HASH(runtime.game_storage_free_kib);NG_HASH(runtime.game_storage_state);
+    NG_HASH(runtime.battery_sample_valid);NG_HASH(runtime.battery_percent);
+#undef NG_HASH
+    return hash;
+}
+static uint64_t ng_structure_signature(const console_shell_t *sh)
+{
+    uint64_t hash=UINT64_C(1469598103934665603);
+#define NG_HASH(field) hash=home_cache_hash_bytes(hash,&sh->field,sizeof(sh->field))
+    NG_HASH(page);NG_HASH(home_all_programs);NG_HASH(ng_large_text);NG_HASH(ng_reduce_motion);
+    NG_HASH(ng_category);NG_HASH(ng_categories);NG_HASH(ng_file_menu);NG_HASH(ng_keyboard);
+    NG_HASH(file_delete_confirm);NG_HASH(storage_repair_confirm);NG_HASH(pointer_visible);
+#undef NG_HASH
+    return hash;
+}
+static uint64_t ng_content_signature(const console_shell_t *sh)
+{
+    uint64_t hash=ng_catalog_signature(sh);
+#define NG_HASH(field) hash=home_cache_hash_bytes(hash,&sh->field,sizeof(sh->field))
+    if(sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES){NG_HASH(files);NG_HASH(file_notice);}
+    else if(sh->page==CONSOLE_PAGE_EXTERNAL){
+        /* Launch progress is the only dynamic region; title/app identity must
+         * invalidate its static artwork and chrome before that region reuses. */
+        NG_HASH(active_app_id);NG_HASH(loading.active);NG_HASH(loading.title);
+    }else if(sh->page!=CONSOLE_PAGE_HOME&&sh->page!=CONSOLE_PAGE_CONTROL_PANEL){
+        NG_HASH(runtime);NG_HASH(active_app_id);NG_HASH(saves);NG_HASH(achievements);NG_HASH(terminal);
+        NG_HASH(multiplayer_view);NG_HASH(multiplayer_selected_row);NG_HASH(multiplayer_role_selection);
+        NG_HASH(ng_list_first);NG_HASH(contacts);NG_HASH(contact_count);NG_HASH(pointer_x);NG_HASH(pointer_y);
     }
 #undef NG_HASH
     return hash;
 }
-static bool nextgen_render(console_shell_t *sh,uint16_t *pixels,size_t stride,bool cached)
+static void ng_damage(ng_scene_t *s,int x,int y,int w,int h)
+{
+    int right=x+w,bottom=y+h;
+    if(x<0){x=0;}
+    if(y<0){y=0;}
+    if(right>NG_W){right=NG_W;}
+    if(bottom>NG_H){bottom=NG_H;}
+    if(x>=right||y>=bottom)return;
+    if(s->damage_right<=s->damage_left){s->damage_left=x;s->damage_top=y;s->damage_right=right;s->damage_bottom=bottom;}
+    else{
+        if(x<s->damage_left){s->damage_left=x;}
+        if(y<s->damage_top){s->damage_top=y;}
+        if(right>s->damage_right){s->damage_right=right;}
+        if(bottom>s->damage_bottom){s->damage_bottom=bottom;}
+    }
+}
+static void ng_control_damage(ng_scene_t *draw,const ng_scene_t *controls,size_t id)
+{
+    if(id>UINT16_MAX)return;
+    const ng_control_t *control=ng_control(controls,(uint16_t)id);
+    if(control)ng_damage(draw,control->x,control->y,control->w,control->h);
+}
+static void ng_copy_raster_region(console_shell_t *sh,ng_scene_t *scene,bool library,int left,int first_y,int right,int last_y)
+{
+    const console_shell_native_raster_cache_t *cache=&sh->native_rasters[library?0:1];
+    const int top=library?NG_GRID_TOP:NG_FILES_TOP;
+    const int offset=library?sh->ng_library_scroll:sh->ng_file_scroll;
+    const console_shell_rgb565_copy_t copy={.source=cache->pixels,.source_stride_pixels=NG_RASTER_STRIDE,
+        .source_height=cache->height,.destination=scene->pixels,.destination_stride_pixels=scene->stride,.destination_height=NG_H,
+        .source_x=(uint16_t)(left-264),.source_y=(uint16_t)(offset-cache->content_origin+first_y-top),.destination_x=(uint16_t)left,.destination_y=(uint16_t)first_y,
+        .width=(uint16_t)(right-left),.height=(uint16_t)(last_y-first_y),.source_dma_clean=sh->native_publish&&ng_raster_dma_clean(cache)};
+    if(!sh->native_copy||!sh->native_copy(sh->native_copy_context,&copy))
+        for(size_t row=0;row<copy.height;++row)
+            memcpy(copy.destination+(row+copy.destination_y)*copy.destination_stride_pixels+copy.destination_x,
+                copy.source+(row+copy.source_y)*copy.source_stride_pixels+copy.source_x,(size_t)copy.width*sizeof(uint16_t));
+    scene->clip_top=first_y;scene->clip_bottom=last_y;
+    if(library){
+        size_t games[CONSOLE_SHELL_MAX_APPS];const size_t count=ng_library_games(sh,games);
+        for(size_t i=0;i<count;++i)if(sh->ng_focus==ng_id(NC_LAUNCH,(unsigned)games[i])){
+            const int x=264+(int)(i%3U)*326,y=top+(int)(i/3U)*NG_GRID_PITCH-offset;
+            ng_panel_border(scene,x,y,310,194,NG_CYAN,true);
+            /* Generic line art uses three-pixel strokes that spill beyond its
+             * rectangle into the panel ring. Restore that cheap art in the
+             * authoritative draw order after changing the cached border. */
+            if(ng_game_art_is_generic(&sh->apps[games[i]]))
+                ng_game_art(scene,&sh->apps[games[i]],x+4,y+4,302,129);
+        }
+    }else for(size_t i=0;i<sh->files.entry_count;++i)
+        if(sh->file_selected_index==i||sh->ng_focus==ng_id(NC_FILE_ROW,(unsigned)i))
+            ng_panel_border(scene,264,top+(int)i*NG_FILE_PITCH-offset,964,82,NG_CYAN,false);
+    scene->clip_top=0;scene->clip_bottom=0;++sh->native_raster_copy_frames;
+}
+static void ng_copy_raster_strip(console_shell_t *sh,ng_scene_t *scene,bool library,int first_y,int last_y)
+{
+    ng_copy_raster_region(sh,scene,library,264,first_y,1228,last_y);
+}
+static void ng_copy_raster(console_shell_t *sh,ng_scene_t *scene,bool library)
+{
+    ng_copy_raster_strip(sh,scene,library,library?NG_GRID_TOP:NG_FILES_TOP,
+        library?NG_GRID_BOTTOM:NG_FILES_BOTTOM);
+}
+static void ng_stationary_damage(const console_shell_t *sh,ng_scene_t *scene,const ng_scene_t *controls,
+    uint64_t chrome,uint16_t focus_ms,bool visible_press,size_t visible_pressed,bool list,int top)
+{
+    if(chrome!=sh->ng_frame_chrome_signature)ng_damage(scene,0,0,NG_W,80);
+    if(sh->ng_focus!=sh->ng_previous_focus||focus_ms!=sh->ng_previous_focus_ms){
+        ng_control_damage(scene,controls,sh->ng_previous_focus);ng_control_damage(scene,controls,sh->ng_focus);}
+    if(visible_press!=sh->ng_previous_press_active||visible_pressed!=sh->ng_previous_pressed_index){
+        ng_control_damage(scene,controls,sh->ng_previous_pressed_index);ng_control_damage(scene,controls,visible_pressed);}
+    if(list&&sh->file_selected_index!=sh->ng_previous_file_selected)ng_damage(scene,264,top,988,700-top);
+}
+static bool nextgen_render(console_shell_t *sh,uint16_t *pixels,size_t stride,bool cached,bool physical_scroll)
 {
     if(!sh||!pixels||stride<NG_W||stride>SIZE_MAX/NG_H/sizeof(*pixels))return false;
-    /* Loading is a transient, non-interactive view; retain the game tile focus. */
     if(sh->page!=CONSOLE_PAGE_EXTERNAL)ng_initial_focus(sh);
     const bool library=sh->page==CONSOLE_PAGE_HOME&&sh->home_all_programs;
     bool loading=sh->page==CONSOLE_PAGE_EXTERNAL&&sh->loading.active;
@@ -1297,47 +1627,146 @@ static bool nextgen_render(console_shell_t *sh,uint16_t *pixels,size_t stride,bo
         for(size_t i=0;i<sh->app_count;++i)if(sh->apps[i].id==sh->active_app_id){found=true;break;}
         loading=found;
     }
-    const bool eligible=(loading||library||sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES)&&
-        !sh->ng_categories&&!sh->ng_file_menu&&!sh->file_delete_confirm&&!sh->storage_repair_confirm&&!sh->pointer_visible&&!sh->press_active;
-    const uint64_t signature=eligible?ng_cache_signature(sh):0;
-    const int offset=library?sh->ng_library_scroll:sh->ng_file_scroll;
-    const int previous=sh->native_home_cache_scroll_q16;
-    const int shift=previous-offset,magnitude=abs(shift);
-    const int top=library?NG_GRID_TOP:NG_FILES_TOP,bottom=library?NG_GRID_BOTTOM:NG_FILES_BOTTOM;
+    const bool list=library||sh->page==CONSOLE_PAGE_FILES||sh->page==CONSOLE_PAGE_GAMES;
+    const bool eligible=!sh->ng_categories&&!sh->ng_file_menu&&!sh->file_delete_confirm&&!sh->storage_repair_confirm&&!sh->pointer_visible;
+    const uint64_t structure=ng_structure_signature(sh),content=ng_content_signature(sh),chrome=ng_chrome_signature(sh);
+    ng_scene_t controls={.shell=sh};ng_build_scene(&controls);
+    const ng_control_t *focused=ng_control(&controls,sh->ng_focus);
+    const uint16_t focus_ms=focused&&focused->animated?sh->ng_focus_ms:0;
+    uint64_t signature=home_cache_hash_bytes(structure,&content,sizeof(content));
+    signature=home_cache_hash_bytes(signature,&chrome,sizeof(chrome));
+#define NG_HASH(field) signature=home_cache_hash_bytes(signature,&sh->field,sizeof(sh->field))
+    NG_HASH(ng_focus);
+    /* List cards/rows have only a focus border, never a pressed fill. Their
+     * transient hit state must not change the stationary pixel context. */
+    const bool visible_press=sh->press_active&&!ng_content_press(sh,sh->pressed_index);
+    signature=home_cache_hash_bytes(signature,&visible_press,sizeof(visible_press));
+    const size_t visible_pressed=visible_press?sh->pressed_index:0U;
+    signature=home_cache_hash_bytes(signature,&visible_pressed,sizeof(visible_pressed));
+    NG_HASH(file_selected_index);
+#undef NG_HASH
+    signature=home_cache_hash_bytes(signature,&focus_ms,sizeof(focus_ms));
+    const int offset=library?sh->ng_library_scroll:sh->ng_file_scroll,previous=sh->native_home_cache_scroll_q16;
+    const int shift=previous-offset,magnitude=abs(shift),top=library?NG_GRID_TOP:NG_FILES_TOP,bottom=library?NG_GRID_BOTTOM:NG_FILES_BOTTOM;
+    const int limit=list?ng_scroll_max(ng_raster_count(sh,library),library):0;
+    uint64_t previous_signature=signature;
+    bool edge_changed=false;
+    if(list&&!library){
+        const uint8_t edges=(uint8_t)((offset==0?1U:0U)|(offset==limit?2U:0U));
+        const uint8_t previous_edges=(uint8_t)((previous==0?1U:0U)|(previous==limit?2U:0U));
+        /* Keep endpoint state in the current slot context. Deriving the prior
+         * context from the same stationary base proves that only these two
+         * explicit footer controls changed during the translation. */
+        previous_signature=home_cache_hash_bytes(signature,&previous_edges,sizeof(previous_edges));
+        signature=home_cache_hash_bytes(signature,&edges,sizeof(edges));
+        edge_changed=edges!=previous_edges;
+    }
+    const bool reuse=cached&&eligible&&sh->native_home_cache_valid&&sh->native_home_cache_pixels==(uintptr_t)pixels&&sh->native_home_cache_stride==stride;
+    const bool same=reuse&&sh->ng_frame_structure_signature==structure&&sh->ng_frame_content_signature==content;
+    const bool tagged=list&&eligible&&ng_raster_count(sh,library)>0;
+    const bool scroll=physical_scroll&&tagged&&same&&previous_signature==sh->native_home_cache_signature&&
+        magnitude>0&&magnitude<bottom-top;
     ng_scene_t scene={.shell=sh,.pixels=pixels,.stride=stride};
-    if(cached&&eligible&&loading&&sh->native_home_cache_valid&&
-       sh->native_home_cache_pixels==(uintptr_t)pixels&&
-       sh->native_home_cache_stride==stride&&sh->native_home_cache_signature==signature){
+    if(cached&&eligible&&loading&&!sh->press_active&&same&&!sh->native_logical_incomplete&&
+       signature==sh->native_home_cache_signature){
         ng_rect(&scene,NG_LOADING_X,NG_LOADING_Y,NG_LOADING_W,NG_LOADING_H,NG_SURFACE);
         ng_launch_progress(&scene);
         sh->native_update=(console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_REGION,
             .x=NG_LOADING_X,.y=NG_LOADING_Y,.width=NG_LOADING_W,.height=NG_LOADING_H};
-    }else if(cached&&eligible&&sh->native_home_cache_valid&&sh->native_home_cache_pixels==(uintptr_t)pixels&&
-       sh->native_home_cache_stride==stride&&sh->native_home_cache_signature==signature&&
-       magnitude>0&&magnitude<bottom-top&&
-       (library||(previous>0&&offset>0&&previous<ng_scroll_max(sh->files.entry_count,false)&&offset<ng_scroll_max(sh->files.entry_count,false)))){
-        /* Move existing whole physical rows, repaint just the newly exposed band. */
-        const size_t bytes=964U*sizeof(*pixels);
-        if(shift<0)for(int y=top;y<bottom-magnitude;++y)
-            memmove(pixels+(size_t)y*stride+264U,pixels+(size_t)(y+magnitude)*stride+264U,bytes);
-        else for(int y=bottom-1;y>=top+magnitude;--y)
-            memmove(pixels+(size_t)y*stride+264U,pixels+(size_t)(y-magnitude)*stride+264U,bytes);
-        scene.clip_top=shift<0?bottom-magnitude:top;scene.clip_bottom=shift<0?bottom:top+magnitude;
-        ng_rect(&scene,264,scene.clip_top,964,scene.clip_bottom-scene.clip_top,NG_INK);
-        size_t games[CONSOLE_SHELL_MAX_APPS];const size_t count=library?ng_library_games(sh,games):sh->files.entry_count;
-        if(library)ng_library_rows(&scene,games,count);else ng_file_rows(&scene,count);
-        scene.clip_top=0;scene.clip_bottom=0;
-        ng_rect(&scene,1230,top,30,bottom-top,NG_INK);ng_scrollbar(&scene,count,library);
-        sh->native_update=(console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_REGION,
-            .x=264,.y=(uint16_t)top,.width=996,.height=(uint16_t)(bottom-top)};
-        ++sh->native_home_scroll_blit_frames;
-        sh->native_home_shifted_pixels+=(uint64_t)(unsigned)(bottom-top-magnitude)*964U;
-    }else{
+        ++sh->native_home_dynamic_frames;
+    }else if(sh->page==CONSOLE_PAGE_EXTERNAL){
+        /* A static launch identity/chrome change, missing game or inactive
+         * progress must reconstruct the complete non-interactive cover. */
         ng_build_scene(&scene);
         sh->native_update=(console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_FULL};
-        ++sh->native_home_full_frames;
+        sh->native_logical_incomplete=false;++sh->native_home_full_frames;
+    }else if(scroll){
+        const int first=shift<0?bottom-magnitude:top,last=shift<0?bottom:top+magnitude;
+        if(ng_raster_covers(sh,library))ng_copy_raster_strip(sh,&scene,library,first,last);
+        else{
+            scene.clip_top=first;scene.clip_bottom=last;ng_rect(&scene,264,first,964,last-first,NG_INK);
+            size_t games[CONSOLE_SHELL_MAX_APPS];const size_t count=library?ng_library_games(sh,games):sh->files.entry_count;
+            if(library)ng_library_rows(&scene,games,count);else ng_file_rows(&scene,count);
+            scene.clip_top=0;scene.clip_bottom=0;
+        }
+        ng_rect(&scene,1228,top,32,bottom-top,NG_INK);ng_scrollbar(&scene,ng_raster_count(sh,library),library);
+        sh->native_update=(console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_SCROLL,
+            .x=264,.y=(uint16_t)top,.width=996,.height=(uint16_t)(bottom-top)};
+        if(edge_changed){
+            ng_file_scroll_buttons(&scene);
+            sh->native_update.scroll_stationary_x=368;sh->native_update.scroll_stationary_y=558;
+            sh->native_update.scroll_stationary_width=288;sh->native_update.scroll_stationary_height=88;
+        }
+        sh->native_logical_incomplete=true;++sh->native_home_scroll_blit_frames;
+    }else if(physical_scroll&&same&&signature==sh->native_home_cache_signature&&(!list||!magnitude)){
+        /* The selected physical frame is already current. Keep stale logical
+         * interior pixels private until an ordinary render needs them. */
+        sh->native_update=(console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_NONE};
+    }else if(sh->native_logical_incomplete){
+        /* A failed/unsupported physical translation cannot submit stale
+         * logical interior pixels, even when the stationary context matches. */
+        ng_scene_t changed={.shell=sh};
+        if(physical_scroll&&same&&!magnitude)
+            ng_stationary_damage(sh,&changed,&controls,chrome,focus_ms,visible_press,visible_pressed,list,top);
+        if(cached&&tagged&&ng_raster_covers(sh,library)){
+            scene.skip_rows=true;ng_build_scene(&scene);ng_copy_raster(sh,&scene,library);
+        }else ng_build_scene(&scene);
+        sh->native_update=changed.damage_right>changed.damage_left?
+            (console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_REGION,
+                .x=(uint16_t)changed.damage_left,.y=(uint16_t)changed.damage_top,
+                .width=(uint16_t)(changed.damage_right-changed.damage_left),.height=(uint16_t)(changed.damage_bottom-changed.damage_top)}:
+            (console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_FULL};
+        sh->native_logical_incomplete=false;++sh->native_home_full_frames;
+    }else if(same&&signature==sh->native_home_cache_signature&&(!list||!magnitude)){
+        sh->native_update=(console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_NONE};
+    }else if(same){
+        ng_stationary_damage(sh,&scene,&controls,chrome,focus_ms,visible_press,visible_pressed,list,top);
+        if(list&&magnitude){
+            ng_damage(&scene,264,top,996,bottom-top);
+            if(!library){
+                if((previous==0)!=(offset==0)||(previous==limit)!=(offset==limit))ng_damage(&scene,264,548,988,152);}
+        }
+        const bool intersects_list=list&&scene.damage_right>264&&scene.damage_left<1228&&scene.damage_top<bottom&&scene.damage_bottom>top;
+        if(intersects_list&&ng_raster_count(sh,library)&&ng_raster_covers(sh,library)){
+            scene.skip_rows=true;ng_build_scene(&scene);
+            const int left=scene.damage_left>264?scene.damage_left:264,right=scene.damage_right<1228?scene.damage_right:1228;
+            const int first=scene.damage_top>top?scene.damage_top:top,last=scene.damage_bottom<bottom?scene.damage_bottom:bottom;
+            ng_copy_raster_region(sh,&scene,library,left,first,right,last);
+            if(magnitude)++sh->native_home_scroll_blit_frames;
+        }else if(list&&magnitude>0&&magnitude<bottom-top&&signature==sh->native_home_cache_signature&&
+            (library||(previous>0&&offset>0&&previous<ng_scroll_max(sh->files.entry_count,false)&&offset<ng_scroll_max(sh->files.entry_count,false)))){
+            const size_t bytes=964U*sizeof(*pixels);
+            if(shift<0)for(int y=top;y<bottom-magnitude;++y)memmove(pixels+(size_t)y*stride+264U,pixels+(size_t)(y+magnitude)*stride+264U,bytes);
+            else for(int y=bottom-1;y>=top+magnitude;--y)memmove(pixels+(size_t)y*stride+264U,pixels+(size_t)(y-magnitude)*stride+264U,bytes);
+            scene.clip_top=shift<0?bottom-magnitude:top;scene.clip_bottom=shift<0?bottom:top+magnitude;
+            ng_rect(&scene,264,scene.clip_top,964,scene.clip_bottom-scene.clip_top,NG_INK);
+            size_t games[CONSOLE_SHELL_MAX_APPS];const size_t count=library?ng_library_games(sh,games):sh->files.entry_count;
+            if(library)ng_library_rows(&scene,games,count);else ng_file_rows(&scene,count);
+            scene.clip_top=0;scene.clip_bottom=0;ng_rect(&scene,1230,top,30,bottom-top,NG_INK);ng_scrollbar(&scene,count,library);
+            ++sh->native_home_scroll_blit_frames;sh->native_home_shifted_pixels+=(uint64_t)(unsigned)(bottom-top-magnitude)*964U;
+        }else if(scene.damage_right>scene.damage_left)ng_build_scene(&scene);
+        sh->native_update=scene.damage_right>scene.damage_left?
+            (console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_REGION,.x=(uint16_t)scene.damage_left,.y=(uint16_t)scene.damage_top,
+                .width=(uint16_t)(scene.damage_right-scene.damage_left),.height=(uint16_t)(scene.damage_bottom-scene.damage_top)}:
+            (console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_NONE};
+        ++sh->native_home_dynamic_frames;
+    }else{
+        if(cached&&tagged&&ng_raster_covers(sh,library)){
+            scene.skip_rows=true;ng_build_scene(&scene);ng_copy_raster(sh,&scene,library);
+        }else ng_build_scene(&scene);
+        sh->native_update=(console_shell_native_update_t){.kind=CONSOLE_SHELL_NATIVE_UPDATE_FULL};++sh->native_home_full_frames;
+    }
+    if(tagged){
+        sh->native_update.scroll_context_valid=true;sh->native_update.scroll_context=signature;
+        sh->native_update.previous_scroll_context=scroll?previous_signature:signature;
+        sh->native_update.previous_scroll_offset=reuse?previous:offset;sh->native_update.current_scroll_offset=offset;
+        sh->native_update.viewport_x=264;sh->native_update.viewport_y=(uint16_t)top;
+        sh->native_update.viewport_width=964;sh->native_update.viewport_height=(uint16_t)(bottom-top);
     }
     sh->native_home_cache_valid=eligible;sh->native_home_cache_pixels=(uintptr_t)pixels;sh->native_home_cache_stride=stride;
     sh->native_home_cache_signature=signature;sh->native_home_cache_scroll_q16=offset;
+    sh->ng_frame_structure_signature=structure;sh->ng_frame_content_signature=content;sh->ng_frame_chrome_signature=chrome;
+    sh->ng_previous_focus=sh->ng_focus;sh->ng_previous_focus_ms=focus_ms;sh->ng_previous_pressed_index=visible_pressed;
+    sh->ng_previous_press_active=visible_press;sh->ng_previous_file_selected=sh->file_selected_index;
     sh->dirty=false;++sh->render_generation;return true;
 }

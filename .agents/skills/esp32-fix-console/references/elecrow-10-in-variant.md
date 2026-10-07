@@ -1,6 +1,6 @@
 # Elecrow 10 in variant
 
-Use **10 in variant** as the stable project name for the Elecrow CrowPanel Advanced 10.1-inch ESP32-P4 unit. The vendor model/SKU is DHE04310D. The connected unit is ESP32-P4 v1.3 with 16 MiB flash and 32 MiB PSRAM; bind writes to the hashed device identity in `hardware/board-profile.json` and `hardware/backups/manifest.json`.
+Use **10 in variant** as the stable project name for the Elecrow CrowPanel Advanced 10.1-inch ESP32-P4 unit. The vendor model/SKU is DHE04310D. The connected unit is ESP32-P4 v1.3 with 16 MiB flash and 32 MiB PSRAM; bind writes to the hashed device identity in `hardware/board-profile.json`. A firmware backup or backup manifest is never required for flashing.
 
 ## Evidence hierarchy
 
@@ -31,7 +31,7 @@ Use **10 in variant** as the stable project name for the Elecrow CrowPanel Advan
 - Bound writes and fail closed: on any write/stop error request and verify GPIO30 high first, retain resources if cleanup cannot be proven, and reject restart from FAILED_SAFE.
 - Doom audio is 16 kHz PCM. Backend volume step 10/10 is unity gain, not 10 percent; lower steps attenuate proportionally. The exact-unit E6 music build uses step 6/10 and mixes validated WAD MUS through a bounded procedural synth above the platform boundary; it needs no external MIDI hardware, codec transaction, or SoundFont and makes no bit-exact OPL claim. Adapter telemetry is pre-attenuation while factory-backend telemetry is post-attenuation: at step 6, require at least `floor(adapter_peak * 6 / 10)`, cap the backend peak at 19660, and allow integer attenuation to reduce non-zero counts. Independently sampled counter surplus must be bounded by the corresponding frame/sample delta rather than forced equal. The factory UI volume is a separate 0..100 setting and normally attenuates its source.
 - Published schematics show an ES8311/NS4263B route and mark the direct NS4168 route NC. Their outputs can converge on the speaker pairs. Prefer a powered-off population/continuity proof before GPIO30-low. For this exact bound unit only, an explicit operator-accepted factory-replay authorization may substitute after recording the known-working factory history, prior nondamaging bounded GPIO30-low run, unresolved risk, exact allowed GPIOs, and rollback. Such an exception is not population proof, amplifier-state proof, or family-wide authorization.
-- That exact-unit exception has been exercised: the owner confirmed Doom SFX and recognizable MUS music, and the Console OS Game API v1 artifact has an active factory-audio release. Treat audio as working and runtime-authorized on device identity `4ea036…`, not blocked. Continue to bind each changed audio-capable artifact to a fresh release and guarded rollback route; never generalize the result to another board.
+- That exact-unit exception has been exercised: the owner confirmed Doom SFX and recognizable MUS music, and the Console OS Game API v1 artifact has an active factory-audio release. Treat audio as working and runtime-authorized on device identity `4ea036…`, not blocked. Continue to bind each changed audio-capable artifact to a fresh release and reviewed install route without firmware backups, with explicit recovery from rebuilt old source; never generalize the result to another board.
 
 ## Doom touch and optional-sound image
 

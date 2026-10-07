@@ -45,10 +45,10 @@ HOST_TOOL_PATHS = {
     "scripts/lib/project-env.sh",
     "scripts/build.sh",
     "scripts/verify-readback-chunks.py",
+    "scripts/verify-live-app-layout.py",
     "scripts/verify-metadata.py",
     "scripts/verify-env.sh",
     "toolchain.lock.json",
-    "hardware/backups/manifest.json",
 }
 SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 
@@ -159,7 +159,12 @@ def verify_authorization(mode: str) -> None:
             and boundary.get("reusable_platform_audio_authorized") is False,
             "authorization escaped its narrow exception boundary")
     tooling = authorization.get("exact_host_tooling")
-    require(isinstance(tooling, dict) and set(tooling) == HOST_TOOL_PATHS,
+    require(isinstance(tooling, dict), "authorization host-tool inventory must be an object")
+    # Dated evidence may record this old prerequisite; it never participates
+    # in current flash authorization or file validation.
+    tooling = {relative: digest for relative, digest in tooling.items()
+               if relative != "hardware/backups/manifest.json"}
+    require(set(tooling) == HOST_TOOL_PATHS,
             "authorization host-tool inventory is incomplete or overbroad")
     for relative, expected_hash in tooling.items():
         require(isinstance(expected_hash, str)

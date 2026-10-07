@@ -1,0 +1,68 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "unit": {
+    "label": "owner-tab5 (separate from historical A/B)",
+    "identity_sha256": "874fda1216cb831ec52a01b468ef00582273a6a4448bbc661bd0ed05dbc48b43",
+    "chip_revision": "v1.3",
+    "panel": "ST7121",
+    "port": "/dev/cu.usbmodem1101"
+  },
+  "version": "0.63",
+  "recorded_at": "2026-10-07T20:01:02.392547+00:00",
+  "status": "device-checksum-passed-display-init-failed-not-usable",
+  "image": {
+    "installed_copy": "hardware/backups/tab5-a-install-x9wm9bus/0x20000.bin",
+    "bytes": 4349536,
+    "sha256": "4c439a7b7ec8a2d0685b6787721e9818874b579effc247ef18f9ada71ff34d9c"
+  },
+  "authorization": {
+    "file": "hardware/backups/owner-tab5-renderer-0.63-authorization-20261007.json",
+    "sha256": "17b28543a6b97a8c3110cdd13d9e31a92f460fa4bb5eff97775790c81b20aa8e"
+  },
+  "source_snapshot": {
+    "file": "hardware/backups/owner-tab5-renderer-0.63-source-20261007.zip",
+    "sha256": "857ad9b5dc0a3923cd70c550ea83f9007b4f652faaa316306211f9e5440de64c"
+  },
+  "install": {
+    "receipt": "hardware/backups/tab5-a-install-x9wm9bus/receipt.json",
+    "write_offsets": [
+      "0x20000"
+    ],
+    "verification_method": "device-checksum",
+    "checksum_verified": true,
+    "readback_verified": false,
+    "boot_ready": false,
+    "health_ready": false
+  },
+  "validation": {
+    "host_checks": "Shell7/7 plus final focused Tab5 check; display6/6; timing/helper2/2 ASan/UBSan passed",
+    "firmware_verifier": {
+      "ble_multiplayer_enabled": true,
+      "board": "m5stack-tab5",
+      "charger_control_enabled": true,
+      "content_bundle_verified": false,
+      "flash_authorized": false,
+      "hardware_verified": false,
+      "image_bytes": 4349536,
+      "image_sha256": "4c439a7b7ec8a2d0685b6787721e9818874b579effc247ef18f9ada71ff34d9c",
+      "native_cartridges": null,
+      "result": "tab5-build-candidate-verified",
+      "usb_host_enabled": true,
+      "version": "0.63",
+      "wifi_multiplayer_enabled": true
+    },
+    "limitation": "Host math/pixel checks and firmware build did not exercise hardware cache API semantics."
+  },
+  "runtime": {
+    "file": "hardware/backups/tab5-a-install-x9wm9bus/runtime.log",
+    "sha256": "55341d3a8e3e08a2f6ed62e1c5cf83d3ba80a88a1f0582ebb0d5404d8991b542",
+    "failure": "Pinned esp_cache_msync rejects M2C with ESP_CACHE_MSYNC_FLAG_UNALIGNED. Display initialization entered FATAL_HOLD with ESP_ERR_INVALID_ARG at3635ms.",
+    "bursts": []
+  },
+  "physical_acceptance": {
+    "status": "not-requested-because-boot-failed",
+    "scroll_target_met": false
+  },
+  "successor_plan": "0.64 uses DIR_M2C only for aligned bases, full framebuffer size and bounded chunks. Failure to establish optional DMA cleanliness falls back to ordinary PPA warm-up without preventing display initialization. Recovery uses the exact failed0.63 installed image as identity-bound predecessor."
+}

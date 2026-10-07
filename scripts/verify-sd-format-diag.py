@@ -335,16 +335,10 @@ def verify_build(build_dir: pathlib.Path, mode: str) -> None:
     binary = checked_build_file(build_dir, app.get("file"), "application binary")
     elf = checked_build_file(build_dir, description.get("app_elf"), "application ELF")
 
-    manifest = load_json(ROOT / "hardware/backups/manifest.json")
-    factory_apps = [
-        item for item in manifest.get("factory_partition_table", [])
-        if item.get("type") == "app" and item.get("subtype") == "factory"
-    ]
-    require(len(factory_apps) == 1, "saved factory application is ambiguous")
-    capacity = parse_size(factory_apps[0]["size"])
-    require(int(factory_apps[0]["offset"], 0) == EXPECTED_APP_OFFSET, "saved app offset differs")
-
+    # Retain the reviewed artifact boundary; the installer checks the live table.
     artifacts = evidence.get("artifacts", {})
+    capacity = artifacts.get("saved_factory_app_partition_bytes")
+    require(capacity == 11 * 1024 * 1024, "reviewed app capacity differs")
     require(artifacts.get("application_offset") == EXPECTED_APP_OFFSET, "recorded app offset differs")
     require(artifacts.get("saved_factory_app_partition_bytes") == capacity, "recorded app capacity differs")
     require(binary.stat().st_size <= capacity, "application exceeds saved factory app partition")

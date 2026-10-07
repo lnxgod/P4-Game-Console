@@ -109,18 +109,21 @@ Exact tag, commit, gitlinks, cleanliness and tool overrides remain enforced.
 
 ## Install through the guarded workflow
 
-A downloadable build does not authorize a flash. Preserve the complete factory
-image and exact-unit binding first, then follow the
-[Tab5 installation guide](boards/M5STACK_TAB5.md). The current guarded installer
-supports the recorded A/B units; it does not provision an unknown new unit.
-A new unit needs a reviewed full-backup and authorization onboarding step.
+A downloadable build does not authorize a flash. Establish the exact-unit
+binding and follow the [Tab5 installation guide](boards/M5STACK_TAB5.md). Do not
+create or refresh a firmware backup as part of flashing, including on a new
+unit; backups run only as a separately requested operation and are never a
+flashing prerequisite. Preserve existing recovery artifacts; recovery can rebuild
+old source. A/B/C select entries in the reviewed authorization. Every unit,
+including a new Tab5, needs its own confirmed model and hashed live identity.
 
 Use the same digest-bound local authorization as a source-built install, with
 an additional `prebuilt_manifest_sha256` equal to the verified package's
 `manifest.json` SHA-256. Keep the existing four canonical artifact path keys
 under `apps/console_os/build-tab5/`; their byte lengths and SHA-256 values must
 match the corresponding files in the fetched `firmware/` directory. Review
-the exact feature flags and predecessor/backup bindings. No release manifest
+the exact feature flags and any app-only predecessor build-artifact binding.
+No firmware backup or backup manifest is required. No release manifest
 contains or replaces local device authorization.
 
 ```sh
@@ -132,8 +135,10 @@ python scripts/flash-console-os-tab5.py \
 ```
 
 This performs local checks only. Add the authorized explicit `--port` and
-`--install` for a write. The installer retains full backup, model, identity,
-security, revision, capacity, predecessor, partition and active-slot gates.
+`--install` for a write. The installer neither reads nor creates firmware
+backups, and retains model, identity, security, revision, capacity, artifact and
+app-only predecessor/partition/active-slot gates. First-layout installation
+requires no old firmware; app-only predecessors use reviewed build artifacts.
 Routine writes use device checksum verification; optional full readback remains
 available for recovery or diagnostics. Receipts bind the prebuilt manifest too.
 

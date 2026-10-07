@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reject wrong devices, silicon, flash capacity, security and image families."""
+"""Keep exact-unit, silicon, security and image gates without firmware snapshot reads."""
 import importlib.util
 import pathlib
 import struct
@@ -28,12 +28,17 @@ class Device:
 class Gates(unittest.TestCase):
     def setUp(self):
         self.device = Device()
+        self.device.read_flash = Mock(side_effect=AssertionError('Identity checks must not read firmware'))
         self.identity = installer.sha(bytes(self.device.read_mac()).hex().encode('ascii'))
     def test_matching_unit(self):
-        self.assertEqual(installer.validate_live(self.device, self.identity)['revision'], 'v1.3')
+        live = installer.validate_live(self.device, self.identity)
+        self.assertEqual(live, {'identity_sha256': self.identity, 'revision': 'v1.3',
+                                'flash_bytes': 16777216})
+        self.device.read_flash.assert_not_called()
     def test_wrong_identity(self):
         with self.assertRaisesRegex(ValueError, 'identity'):
             installer.validate_live(self.device, '0'*64)
+        self.device.read_flash.assert_not_called()
     def test_unsafe_devices(self):
         for key, value in [('CHIP_NAME', 'ESP32-C6'), ('major', 3), ('size', 0x194046),
                            ('secure', True), ('encrypted', True), ('secure_download_mode', True)]:

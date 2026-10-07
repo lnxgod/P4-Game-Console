@@ -15,7 +15,9 @@ display, touch, audio, SD, H1 transfer, H2 USB Host, controller, BLE, and Consol
 OS runs. Each dated record applies only to its named resources, artifact and
 units. Reconcile the current board documentation, manifest and retained ledger;
 do not infer live state or a new artifact authorization from past acceptance.
-Preserve the normal first-write backup gate for every newly connected unit.
+Follow `AGENTS.md`: firmware backups run only on explicit user request,
+including for newly connected units, and are never a flashing prerequisite.
+Preserve existing recovery artifacts; recovery can rebuild old source.
 Never enable an Elecrow pin map under a Waveshare build flag.
 
 ## Port boundary
@@ -65,17 +67,20 @@ controllers, while the USB Drive app explicitly stops Host/HID, unmounts FAT,
 and switches it to TinyUSB MSC. The Mac and Console OS must never own the SD
 filesystem concurrently.
 
-For an already backed-up exact unit, reuse its verified complete factory
-backup; do not repeat it routinely. Before writing, require a recorded guarded
-route matching the exact unit, candidate artifact, current predecessor and live
-partition layout, with recovery bytes and security checks. The recorded
+Firmware backups, snapshots and backup manifests are never required for
+flashing. Do not capture firmware or ask for backup confirmation. Use a
+reviewed backup-free route that checks the exact unit, candidate build artifact,
+applicable predecessor, live partition layout and security state directly.
+Dated snapshot-based installers remain historical/recovery tooling; do not
+select them for new writes. The recorded
 `0x20000` app offset is valid only when that route proves the matching layout.
 If no matching authorization and route exists, stop before writing and prepare
 a separately recorded successor authorization; do not repurpose a frozen
 installer. Resolve each H1 port to its stored identity, flash units sequentially,
 and require esptool hash verification. Parallel CH343 writes have caused a port
-drop and are not an accepted workflow. A new or unknown unit still requires the
-complete first-write backup from `AGENTS.md`.
+drop and are not an accepted workflow. A new or unknown unit needs its own
+identity binding and guarded authorization, without any firmware backup
+requirement. Recovery can use a rebuild of the reviewed old source.
 
 Native cartridges can be installed live without changing firmware:
 

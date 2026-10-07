@@ -116,17 +116,25 @@ with tempfile.TemporaryDirectory() as temporary:
     build = Path(temporary)
     sdkconfig = build / "sdkconfig"
     features = "CONFIG_P4_TAB5_USB_HOST=y\nCONFIG_P4_TAB5_BLE_MULTIPLAYER=y\n"
-    complete_config = seek_config + mailbox_config
+    cache_config = ("CONFIG_ESP_MM_CACHE_MSYNC_C2M_CHUNKED_OPS=y\n"
+                    "CONFIG_ESP_MM_CACHE_MSYNC_C2M_CHUNKED_OPS_MAX_LEN=0x8000\n")
+    assert all(line in defaults.splitlines() for line in cache_config.splitlines())
+    complete_config = seek_config + mailbox_config + cache_config
     cases = (
         ("missing-defaults", "console_os", "m5stack-tab5", "", True, True),
         ("small-seek-map", "console_os", "m5stack-tab5", complete_config.replace("=112456", "=64"), True, True),
         ("missing-psram", "console_os", "m5stack-tab5", complete_config.replace("CONFIG_FATFS_ALLOC_PREFER_EXTRAM=y\n", ""), True, True),
-        ("missing-mailbox", "console_os", "m5stack-tab5", seek_config, True, True),
+        ("missing-mailbox", "console_os", "m5stack-tab5", seek_config + cache_config, True, True),
         ("old-mailbox", "console_os", "m5stack-tab5", complete_config.replace("=32", "=6"), True, True),
         ("zero-mailbox", "console_os", "m5stack-tab5", complete_config.replace("=32", "=0"), True, True),
         ("oversized-mailbox", "console_os", "m5stack-tab5", complete_config.replace("=32", "=64"), True, True),
-        ("commented-mailbox", "console_os", "m5stack-tab5", seek_config + "# " + mailbox_config, True, True),
+        ("commented-mailbox", "console_os", "m5stack-tab5", seek_config + cache_config + "# " + mailbox_config, True, True),
         ("malformed-mailbox", "console_os", "m5stack-tab5", complete_config.replace("=32", "=320"), True, True),
+        ("missing-cache-policy", "console_os", "m5stack-tab5", seek_config + mailbox_config, True, True),
+        ("disabled-cache-chunks", "console_os", "m5stack-tab5", complete_config.replace("CHUNKED_OPS=y", "CHUNKED_OPS=n"), True, True),
+        ("missing-cache-chunk-bound", "console_os", "m5stack-tab5", complete_config.replace("CONFIG_ESP_MM_CACHE_MSYNC_C2M_CHUNKED_OPS_MAX_LEN=0x8000\n", ""), True, True),
+        ("oversized-cache-chunks", "console_os", "m5stack-tab5", complete_config.replace("MAX_LEN=0x8000", "MAX_LEN=0x10000"), True, True),
+        ("zero-cache-chunks", "console_os", "m5stack-tab5", complete_config.replace("MAX_LEN=0x8000", "MAX_LEN=0"), True, True),
         ("exact-defaults", "console_os", "m5stack-tab5", complete_config, True, False),
         ("legacy-board", "console_os", "elecrow-crowpanel-advanced-10", "", True, False),
         ("other-app", "bringup", "m5stack-tab5", "", True, False),
@@ -151,4 +159,4 @@ p4_idf_action() { [ "$1" = reconfigure ] && printf 'RECONFIGURED\\n'; }
                                 check=True, text=True, capture_output=True)
         assert result.stdout.count("RECONFIGURED") == int(expected), name
         assert sdkconfig.exists() == (exists and not expected), name
-print(f"Tab5 bounded fast-seek/UDP mailbox and incremental-config gates PASS ({len(cases)} regeneration cases)")
+print(f"Tab5 bounded fast-seek/UDP mailbox/cache chunks and incremental-config gates PASS ({len(cases)} regeneration cases)")

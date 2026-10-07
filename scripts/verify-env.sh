@@ -16,14 +16,13 @@ command -v cmake >/dev/null
 command -v ninja >/dev/null
 python3 -m json.tool "$P4_PROJECT_ROOT/toolchain.lock.json" >/dev/null
 python3 -m json.tool "$P4_PROJECT_ROOT/hardware/board-profile.json" >/dev/null
-python3 -m json.tool "$P4_PROJECT_ROOT/hardware/backups/manifest.json" >/dev/null
 for P4_METADATA_FILE in \
     "$P4_PROJECT_ROOT"/hardware/test-runs/*.json \
     "$P4_PROJECT_ROOT"/third_party/*.json
 do
     python3 -m json.tool "$P4_METADATA_FILE" >/dev/null
 done
-python3 "$P4_SCRIPT_DIR/verify-metadata.py"
+python3 "$P4_SCRIPT_DIR/verify-metadata.py" --flash-preflight
 python3 "$P4_SCRIPT_DIR/verify-board-profiles.py"
 
 printf 'Environment OK: ESP-IDF %s (%s) at %s\n' \

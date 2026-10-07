@@ -105,60 +105,72 @@ overwrite a shared working tree to manufacture a clean base.
 For OS interface, scrolling, versioning and firmware-only successors, read
 [core successor contracts](references/core-successors.md).
 
-For a multicore service change, follow `docs/GAME_PERFORMANCE.md`. The maintained
-Tab5 candidate keeps game/update/render on core 0, PPA presentation on core 1 at
-priority 2, and native audio output on core 1 at priority 4. Console OS owns
-exactly two native PSRAM framebuffer leases. Read the supplied pixel pointer
-and stride each frame; they may change on every frame. Render the complete
-current frame, never cache the pixel pointer across callbacks, and leave a
-committed source immutable until backend consumption. Preserve bounded
-admission, backpressure, reuse fences and drained/joined teardown before freeing
-OS-owned buffers/context or returning display ownership to the launcher.
-The native backend retains only OS-owned callbacks and pixel buffers, so
-cartridge unload does not invalidate an in-flight frame. A failed join
-retains the worker and its resources until safe shutdown. Synchronous
-recovery preserves
-direct 768x480; never add a low-resolution fallback.
+Always apply the [app/game performance contract](../../../docs/GAME_PERFORMANCE.md)
+to shared OS work: all scrollable surfaces must follow contact promptly and
+remain smooth at panel rate, near 60 FPS. Plan and use relevant rendering,
+cache/DMA and pacing resources plus both P4 application cores for independent
+input, logic/render and audio through owned, joined services. Preserve native
+game resolution, immutable-source/dirty proof and conservative buffer retirement;
+never move hardware ownership into apps or cartridges.
+
+The maintained Tab5 native-game candidate keeps game/update/render on core 0,
+PPA presentation on core 1 at priority 2, and audio output on core 1 at priority 4.
+Console OS owns exactly two native PSRAM game framebuffer leases. Read the
+supplied pixel pointer and stride each frame; they may change on every frame.
+Render the complete current frame, never cache the pixel pointer across
+callbacks, and leave a committed source immutable until backend consumption.
+Preserve bounded admission, backpressure, reuse fences and drained/joined
+teardown before freeing OS-owned buffers/context or returning display ownership
+to the launcher. The native backend retains only OS-owned callbacks and pixel
+buffers, so cartridge unload does not invalidate an in-flight frame. A failed
+join retains the worker and its resources until safe shutdown. Synchronous
+recovery preserves direct 768x480; never add a low-resolution fallback.
 
 Test rotating leases, source lifetime, concurrent producer/consumer work,
 backpressure, stop/restart and failure paths with race detection where available.
-On the exact OS/package/unit, record actual core IDs/priorities, completed-backend
-frame intervals and concurrent stage timing showing game/update/render work
-overlapping presentation. Keep accepted submissions, backend completions and
-physical scanout evidence distinct. Include queue/backend timeouts, hard errors,
-audio queue rejections, underruns, clipping, write failures and stack reserve.
-Exercise busy play, title/ready, pause and results, plus synchronous native
-recovery. Worker creation and host tests leave achieved device 30 FPS and
-readability pending; this implementation remains a candidate until measured.
+On the exact OS/package/unit, record actual core IDs/priorities and accelerator
+paths, completed-backend frame intervals and concurrent stage timing showing
+game/update/render work overlapping presentation. Keep accepted submissions,
+backend completions and physical scanout evidence distinct. Include
+queue/backend timeouts, hard errors, audio queue rejections, underruns, clipping,
+write failures and stack reserve. Exercise busy play, title/ready, pause and
+results, plus synchronous native recovery. Apply the shared contract's separate
+input/render/submission/pacing and glide/cold-cache measurements for scrolling.
+Worker creation, enabled SMP and host tests cannot qualify device cadence or
+readability; acceptance remains pending until measured.
 
 ## Guarded Tab5 installation and evidence
 
-Before a new unit's first project write, preserve its complete factory flash,
-confirm the byte count and SHA-256, and bind its hashed live-device identity in
-`hardware/backups/manifest.json`. For an exact unit already registered, verify
-and reuse its recorded backup rather than repeating the factory read. Never
-store or print its raw base identity or erase the whole flash to solve a build
-or connection problem.
+Firmware backups, snapshots and backup manifests are never a prerequisite for
+flashing, on any board or route, including a new unit's first write. Do not
+capture firmware or ask for backup confirmation. Backups run only as a separate
+explicitly requested operation; recovery can rebuild old source. Preserve
+existing recovery files and manifests. Never store or print a raw base identity
+or erase the whole flash to solve a build or connection problem.
 
 Use `scripts/flash-console-os-tab5.py` from the pinned environment with an
 explicit unit, port, authorization file and digest. The default is a local-only
-check; `--install` performs the guarded write and capture. The current script
-supports only registered units A and B. A new Tab5 needs its own backup,
-identity binding and guarded onboarding support; never relabel it as A/B or
-inherit another unit's authorization. Continue local preparation until its
-write route is supported. Generic `make flash-app` and `make monitor` commands
+check; `--install` performs the guarded write and startup-log capture. The current script
+uses A/B/C to select entries in the reviewed authorization. Each Tab5, including
+a new unit, needs its own confirmed model and hashed live identity; never
+inherit another unit's authorization. Neither a backup file nor a backup
+manifest is read or required. Generic `make flash-app` and `make monitor` commands
 use legacy build directories and are not the Tab5 installer or monitor route.
 
-Preserve exact-unit identity, silicon revision, flash/security state, recovery,
-predecessor, partition/active-slot and immutable-artifact checks. An app-only
-write leaves the OTA selector unchanged. A partition change requires a
-layout-aware migration and verified recovery coverage. Honor installation
+Preserve exact-unit identity, silicon revision, flash/security state, applicable
+predecessor, partition/active-slot and immutable-artifact checks. App-only
+predecessor checks use a reviewed earlier build artifact. A first-layout write
+does not need the old firmware. An app-only write leaves the OTA selector
+unchanged. A partition change requires a layout-aware migration that preserves
+affected user content, without requiring a firmware backup. Honor installation
 authorization already given in the session without asking for it again.
 
 Routine authorized Tab5 app flashes use device checksum verification. Use
 `--verification full-readback` only for recovery, diagnostics or an explicit
 request. Record the method that ran; checksum evidence is not full readback.
-Other boards retain their exact installer contracts.
+Other boards retain their device/image verification contracts; none may require
+or capture a firmware backup for flashing. Historical snapshot-based installers
+remain recovery/history tools; prepare new writes through a backup-free route.
 
 Before qualifying an OS update, check
 [protected game payloads](../../../docs/GAME_SDK.md#protected-game-payloads).

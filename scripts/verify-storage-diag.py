@@ -232,14 +232,7 @@ def main() -> None:
     binary = checked_build_path(build_dir, app.get("file"), "application binary")
     elf = checked_build_path(build_dir, description.get("app_elf"), "application ELF")
 
-    manifest = load_json(ROOT / "hardware/backups/manifest.json")
-    factory_apps = [
-        entry for entry in manifest.get("factory_partition_table", [])
-        if entry.get("type") == "app" and entry.get("subtype") == "factory"
-    ]
-    require(len(factory_apps) == 1 and int(factory_apps[0]["offset"], 0) == 0x10000, "saved factory app is ambiguous")
-    require(factory_apps[0].get("size") == "11M", "saved factory app capacity changed")
-
+    # Installed layout is checked directly by the flash route; no recovery image is needed.
     artifacts = build_evidence.get("artifacts", {})
     require(artifacts.get("saved_factory_app_partition_bytes") == 11 * 1024 * 1024, "wrong saved factory capacity")
     require(binary.stat().st_size < artifacts["saved_factory_app_partition_bytes"], "binary exceeds saved factory app capacity")

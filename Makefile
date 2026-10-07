@@ -17,6 +17,8 @@ install-path-host:
 	python3 scripts/tests/test-fetch-prebuilt.py
 	python3 scripts/tests/test-tab5-prebuilt-install.py
 	python3 scripts/tests/test-tab5-install.py
+	python3 scripts/tests/test-backup-free-flash.py
+	python3 scripts/tests/test-dice-core2-install.py
 	python3 scripts/tests/test-tab5-release.py
 	python3 scripts/tests/test-lite-source.py
 	python3 scripts/tests/test-install-tools.py

@@ -29,6 +29,26 @@ with **Make Game**. Compatible cartridge updates normally need no OS reflash.
 Shared audio, display, storage, build or device problems use **Fix Console**;
 its Tab5 route owns the dual-core and guarded-flash contracts.
 Documentation-only work needs reference/skill validation, not a firmware build.
+Flashing never requires a firmware backup, snapshot or backup manifest, on any
+board or route. Do not create or refresh one or ask for backup confirmation.
+Backups run only as a separately requested operation. Recovery can rebuild old
+source. Preserve existing recovery artifacts and device/image checks; use
+reviewed build artifacts and direct device checks rather than captured firmware.
+
+## Always keep scrolling and resource use responsive
+
+For every app/game or OS change, apply the shared
+[smooth scrolling](../../../docs/GAME_PERFORMANCE.md#always-preserve-smooth-scrolling)
+and [P4 resource/core requirements](../../../docs/GAME_PERFORMANCE.md#always-use-relevant-resources-and-both-p4-application-cores).
+All scrollable surfaces must always follow contact promptly and remain smooth
+at panel rate, near 60 FPS, with velocity-aware stopping and intact taps/actions.
+Always plan use of all relevant resources and both application cores through
+owned OS services; static surfaces need no invented motion or work.
+Route reusable cache/DMA, scheduling or ownership changes through **Fix Console**;
+keep game mechanics in **Make Game** and verify with **Test Game**. Record
+actual input/render/submission/pacing, glide/cold-cache and core/accelerator
+evidence before closing a device performance claim. Existing authorization
+and peripheral scope still govern any hardware run.
 
 ## Require native game resolution
 

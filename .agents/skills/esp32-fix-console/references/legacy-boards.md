@@ -50,8 +50,9 @@ make flash-app APP=<app> PORT=/dev/cu.<port>
 make monitor APP=<app> PORT=/dev/cu.<port>
 ```
 
-These examples are not authorization. Preserve the app metadata's write gates,
-full backup and exact-unit checks; choose the built app and verified artifact.
+These examples are not authorization. Follow `AGENTS.md`'s explicit-request-only
+firmware backup policy. Preserve existing recovery artifacts, the app metadata's
+write gates and exact-unit checks; choose the built app and verified artifact.
 Use `make flash` only for an intentionally reviewed bootloader or partition-table
 change. Retain the board's required readback and acceptance contract. These
 build directories and commands do not install or monitor Tab5 Console OS.
@@ -61,9 +62,9 @@ build directories and commands do not install or monitor Tab5 Console OS.
 Read `docs/boards/OLIMEX_ESP32_P4_PC.md` and
 `hardware/boards/olimex-esp32-p4-pc-rev-b.json`. USB-C is native Serial/JTAG;
 the powered USB-A hub is the HID-host path. Persistent game storage is microSD,
-not USB MSC. Before a newly connected P4-PC's first write, preserve its complete
-16 MiB factory image and hashed live identity and deliberately authorize the
-profile's write gate.
+not USB MSC. Before a newly connected P4-PC's first write, bind its hashed live
+identity and deliberately authorize the profile's write gate. Do not capture
+firmware unless the user explicitly requests a backup.
 
 Do not use the Elecrow audio route. Use the official Rev.B ES8311 service in
 `components/olimex/platform_audio` on shared I2C1 and I2S1. The external result is
@@ -84,9 +85,12 @@ candidate artifact, current predecessor and live partition layout. The historica
 `0x20000` app offset is usable only when that route proves the matching layout.
 
 For the two recorded development units, resolve each H1 port to its stored
-identity, reuse its registered factory backup and flash sequentially. Never run
+identity, preserve its registered recovery artifacts and flash sequentially. Never run
 simultaneous CH343 writes: a parallel two-board attempt dropped a port and is
 not an accepted install method. Require esptool's post-write hash verification
 before resetting each unit. A new unit
-needs its own complete factory backup and hashed live-device binding before
-its first project write.
+needs its own hashed live-device binding and guarded authorization. Do not
+create or refresh firmware backups as part of flashing. Backups, snapshots and
+backup manifests are never required on any route. Use reviewed backup-free
+installers for new writes; dated snapshot-based routes remain historical/recovery
+tooling. Recovery can rebuild the reviewed old source.

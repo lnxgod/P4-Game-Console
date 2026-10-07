@@ -31,9 +31,14 @@ source/toolchain limits.
 ## Load the game contract
 
 Use the canonical [ESP32-P4 performance contract](../../../docs/GAME_PERFORMANCE.md)
-when authoring or qualifying a game. It covers bounded rendering, active traces
-and the actual-device 30 FPS release floor; host tests and package transfers
-remain distinct from device qualification.
+when authoring or qualifying a game. Always preserve near-60 panel-rate smooth
+scrolling on every scrollable app/game surface and plan use of all relevant
+resources and both P4 application cores through reusable owned OS services.
+The contract defines independent input/render/submission/pacing, glide/cold-cache
+and actual core/accelerator evidence. The actual-device 30 FPS game release
+floor does not waive scrolling quality; host tests and package transfers remain
+distinct from device qualification. Preserve failed/pending gates when merely
+packaging or transferring a candidate; this guidance grants no new hardware scope.
 
 Read these files before changing a game:
 
@@ -100,8 +105,10 @@ unless that artwork work is requested; respect an existing parallel remix.
 - Treat tone audio as optional and tolerate `p4_game_play_tone()` returning
   false. Put reusable services in `components/`, never in a game.
 - Use the shared OS multicore services described in `docs/GAME_PERFORMANCE.md`.
-  Tab5 OS 0.54 moves native audio output onto P4 core 1 while game callbacks
-  remain on core 0; cartridges must not create their own hardware-owning tasks.
+  Always use relevant resources and both P4 application cores through those
+  owners: game callbacks remain on core 0 and independent shared video/audio
+  services can run on core 1. Cartridges must not create private tasks or take
+  display/DMA/audio ownership.
   Bounded PCM submissions can fail under backpressure. Preserve buffer lifetimes
   and test uneven delivery, stop/restart and teardown. Actual core IDs, underrun
   counters and device cadence are required before claiming a multicore speedup.

@@ -214,9 +214,7 @@ def main() -> None:
     flash_args = load_json(build_dir / "flasher_args.json")
     app = flash_args.get("app", {})
     require(int(str(app.get("offset")), 0) == 0x10000, "application offset is not 0x10000")
-    manifest = load_json(ROOT / "hardware/backups/manifest.json")
-    factory_apps = [p for p in manifest.get("factory_partition_table", []) if p.get("type") == "app" and p.get("subtype") == "factory"]
-    require(len(factory_apps) == 1 and int(factory_apps[0]["offset"], 0) == 0x10000, "factory application offset is not 0x10000")
+    # Installed layout is checked directly by the flash route; no recovery image is needed.
     binary = checked_build_path(build_dir, app.get("file"), "application binary")
     elf = checked_build_path(build_dir, description.get("app_elf"), "application ELF")
     artifacts = build_evidence.get("artifacts", {})

@@ -33,7 +33,10 @@ and never substitutes an upstream or older image for a missing build.
 
 Prebuilt firmware avoids local compilation. It does not supply Doom/Chex data
 or authorize writing a device. Current Tab5 content still requires microSD;
-preserve the exact-unit backup and guarded installation checks.
+preserve existing recovery artifacts and guarded installation checks. Do not
+create or refresh firmware backups as part of flashing; backups run only on
+explicit user request and are never a flashing prerequisite. Recovery can
+rebuild old source.
 
 ## Validation limits
 

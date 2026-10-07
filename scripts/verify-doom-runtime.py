@@ -442,14 +442,7 @@ def verify_build_graph(build_dir: pathlib.Path, evidence: dict) -> tuple[pathlib
     )
     require(generated_capacity == evidence["build"]["generated_app_partition_bytes"] == 1048576,
             "generated application capacity changed")
-    manifest = load_json(ROOT / "hardware/backups/manifest.json")
-    factory = [
-        entry for entry in manifest.get("factory_partition_table", [])
-        if entry.get("type") == "app" and entry.get("subtype") == "factory"
-    ]
-    require(len(factory) == 1 and int(factory[0]["offset"], 0) == 0x10000,
-            "saved factory application is ambiguous")
-    require(factory[0].get("size") == "11M", "saved factory capacity changed")
+    # Installed layout is checked directly by the flash route; no recovery image is needed.
     require(binary.stat().st_size <= generated_capacity and binary.stat().st_size <= 11 * 1024 * 1024,
             "application exceeds an applicable partition capacity")
 

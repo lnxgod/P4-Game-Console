@@ -42,8 +42,11 @@ instead be gamepad, keyboard, or mouse. Laptop content mutation must use either
 the single-owner USB-device MSC workflow or powered-off removable media; the
 script rejects an unrecognized concurrency model.
 
-Before the first write to any new board, preserve its complete factory flash,
-record byte count and SHA-256, bind it to a hash of the live device identity,
-and review a target-specific flash authorization. A build or inherited adapter
+Before the first write to any new board, bind its hashed live-device identity
+and review a target-specific flash authorization. Do not create or refresh a
+firmware backup as part of flashing; backups run only when the user explicitly
+requests that separate operation; backups are never required for flashing.
+Recovery can rebuild old source. Preserve existing recovery artifacts and device,
+security, partition and artifact checks. A build or inherited adapter
 claim does not replace HDMI/panel, storage, audio, input, update/rollback, and
 UI hardware acceptance.

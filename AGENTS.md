@@ -64,7 +64,7 @@ Keep these rules true for every change:
 
 1. Treat `toolchain.lock.json` and committed ESP Component Manager lockfiles as authoritative. Do not silently upgrade SDKs or components.
 2. Do not hard-code an Elecrow pin map unless the exact size/SKU/revision is recorded, or a narrowly scoped peripheral authorization proves the relevant circuit invariant across every published revision. A scoped authorization never unlocks unrelated pins or peripherals.
-3. Never write to a new board before preserving its complete factory flash and recording its size, SHA-256, and hashed live-device binding in a manifest.
+3. Firmware backups, snapshots and backup manifests are never required for flashing, on any board or route, including a new unit's first write. Do not create or refresh them as part of flashing or ask for backup confirmation. Run a backup only when the user explicitly requests that separate operation. Recovery can use firmware rebuilt from old source. Preserve existing recovery files/manifests and exact-unit, board/revision, security, partition, applicable predecessor and artifact checks; validate these directly against the device and reviewed build artifacts, without requiring captured firmware. Use backup-free install routes; historical snapshot-based installers are recovery/history tooling, not prerequisites for new flashes.
 4. Never recommend a passive OTG adapter for this Elecrow panel. Treat its USB-C port as sink-wired unless the exact PCB proves otherwise; controller tests need a powered, current-limited, backfeed-safe host shim.
 5. Put reusable services in `components/`; games consume stable platform APIs and never own USB host handles, display drivers, or raw peripheral callbacks.
 6. Treat USB and BLE HID descriptors/reports as untrusted input. Bound all lengths/counts, require encrypted identity-bound BLE pairing, and neutralize controller state immediately on disconnect.
@@ -75,6 +75,8 @@ Keep these rules true for every change:
 10. Every released game needs recognizable launcher artwork and a coherent opening/ready view, legible game identity during play, and appropriate pause/results screens. Follow [the complete presentation contract](docs/GAME_ART.md#complete-game-presentation); native games carry their own validated launcher icon. Preserve direct-touch card/board play and multiplayer start barriers.
 
 11. Apply [launch and remix quality](docs/LAUNCH_QUALITY.md) when preparing Game Changers AI OS releases: preserve gameplay/save identities during visual remixes, exclude incomplete prototypes from default bundles, use artwork matching the actual title, and retain failed device acceptance until retested.
+
+12. Always apply [smooth scrolling and P4 resource use](docs/GAME_PERFORMANCE.md) to all apps/games: every scrollable surface follows contact promptly and scrolls at panel rate near 60 FPS with smooth velocity-aware stopping and intact taps/actions/layout. Always plan use of relevant available resources and both application cores through reusable, owned/joined OS services. Preserve cache/dirty proof and buffer retirement; record actual core/accelerator use and separate input, render, submission/pacing, glide and cold-cache evidence. Static surfaces need no artificial work; hardware scope and native game resolution remain unchanged.
 
 ## Set up Doom game data on a fresh clone
 
@@ -141,6 +143,8 @@ acceptance notes. See
 
 Routine authorized Tab5 app flashes use device checksum verification; do not
 transfer a full app readback on every flash. Use `--verification full-readback`
-only for recovery, diagnostics, or an explicit request. Preserve exact-unit,
-backup, security, predecessor, partition and artifact checks. Record which
+only for recovery, diagnostics, or an explicit request. Firmware backups are
+explicit-request-only and never a flashing prerequisite; flashing never triggers
+one automatically. Preserve
+exact-unit, security, predecessor, partition and artifact checks. Record which
 verification method ran; a checksum result is not full readback evidence.

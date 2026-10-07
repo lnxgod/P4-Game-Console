@@ -1,0 +1,67 @@
+{
+  "schema": 1,
+  "board": "m5stack-tab5",
+  "version": "0.82",
+  "operation": "app-only",
+  "install_authorized": true,
+  "firmware_only": true,
+  "verification_method": "device-checksum",
+  "created_at": "2026-10-07T23:31:46.153435+00:00",
+  "user_authorization": "flash that firmware to the tablet c first rember no backups",
+  "scope": "Install existing Console OS 0.82 smooth scrolling firmware on exact tablet C first. App range only, with installed 0.81 layout and device checksum verified. Preserve current peripheral feature selection. No firmware backup capture or requirement. Physical scrolling acceptance remains pending.",
+  "usb_host_enabled": true,
+  "charger_control_enabled": true,
+  "ble_multiplayer_enabled": true,
+  "wifi_multiplayer_enabled": true,
+  "units": {
+    "C": {
+      "model_confirmed": true,
+      "identity_sha256": "874fda1216cb831ec52a01b468ef00582273a6a4448bbc661bd0ed05dbc48b43",
+      "expected_port": "/dev/cu.usbmodem2101",
+      "model_evidence": {
+        "file": "build-host/tab5-c-081/receipt.json",
+        "bytes": 2131,
+        "sha256": "2cdc25dca7f626c481f724c587df6531f652e7eee2de8f14e7c461bc273e7954"
+      },
+      "predecessor": {
+        "file": "build-host/tab5-c-081/source/apps/console_os/build-tab5/p4_console_os.bin",
+        "bytes": 4622288,
+        "sha256": "464c5b48cd52b47c8d40353c6444916186f32e5589f36d2ecfe625bcc3c53d44"
+      },
+      "predecessor_version": "0.81"
+    }
+  },
+  "artifacts": {
+    "0x2000": {
+      "file": "apps/console_os/build-tab5/bootloader/bootloader.bin",
+      "bytes": 23136,
+      "sha256": "058cf4c0434733d72800c383e1bddb54aa33cf667b21254c8bd9d2f4f7f43443"
+    },
+    "0x8000": {
+      "file": "apps/console_os/build-tab5/partition_table/partition-table.bin",
+      "bytes": 3072,
+      "sha256": "606f2ba90d4e68e36eb704e2dff8e2b509ce2adf1a398297d1fe0fc626590871"
+    },
+    "0x10000": {
+      "file": "apps/console_os/build-tab5/ota_data_initial.bin",
+      "bytes": 8192,
+      "sha256": "7d2c7ac4888bfd75cd5f56e8d61f69595121183afc81556c876732fd3782c62f"
+    },
+    "0x20000": {
+      "file": "apps/console_os/build-tab5/p4_console_os.bin",
+      "bytes": 4658864,
+      "sha256": "42b7dc35cfcbf366ff8bd4574b7a1d33c6692f10ebfaaff6ad54e5825543fc45"
+    }
+  },
+  "toolchain_binding": {
+    "file": "toolchain.lock.json",
+    "bytes": 755,
+    "sha256": "6c45009fd4ba924dac63e442d4bcdbff134cf81037cadb8f2d12209c41564a55"
+  },
+  "build_integration_evidence": {
+    "file": "build-host/merge-scroll-082/integration-receipt.json",
+    "bytes": 8090,
+    "sha256": "ea73ba312574660893a0d4313e72b52df2659e6b624d505636c8cf4ba9dc6396"
+  },
+  "physical_acceptance": "pending"
+}

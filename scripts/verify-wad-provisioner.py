@@ -76,15 +76,12 @@ def parse_size(value: str) -> int:
     return number * multiplier
 
 
-def factory_partition_from_manifest() -> tuple[int, int]:
-    manifest = load_json(ROOT / "hardware/backups/manifest.json")
-    matches = [
-        item
-        for item in manifest.get("factory_partition_table", [])
-        if item.get("type") == "app" and item.get("subtype") == "factory"
-    ]
-    require(len(matches) == 1, "backup manifest must contain one factory app partition")
-    return int(matches[0]["offset"], 0), parse_size(matches[0]["size"])
+def factory_partition_from_reviewed_source() -> tuple[int, int]:
+    # The committed build layout is the recovery source, independent of any
+    # captured firmware. The flash route checks the actual live partition.
+    partition = factory_partition_from_csv(ROOT / "apps/wad_provisioner/partitions.csv")
+    require(partition == (0x10000, 11 * 1024 * 1024), "reviewed factory app boundary changed")
+    return partition
 
 
 def factory_partition_from_csv(path: pathlib.Path) -> tuple[int, int]:
@@ -141,9 +138,9 @@ def verify_input(wad_path: pathlib.Path, partitions_path: pathlib.Path) -> None:
     require(wad_path.is_file(), f"local WAD is missing: {wad_path}")
     require(wad_path.stat().st_size == EXPECTED_WAD_BYTES, "local WAD byte count differs")
     require(sha256_file(wad_path) == EXPECTED_WAD_SHA256, "local WAD SHA-256 differs")
-    manifest_partition = factory_partition_from_manifest()
+    reviewed_partition = factory_partition_from_reviewed_source()
     csv_partition = factory_partition_from_csv(partitions_path)
-    require(csv_partition == manifest_partition, "custom factory partition differs from saved factory layout")
+    require(csv_partition == reviewed_partition, "custom factory partition differs from reviewed source layout")
     require(csv_partition[0] == EXPECTED_APP_OFFSET, "factory app offset is not 0x10000")
     require(EXPECTED_WAD_BYTES < csv_partition[1], "WAD alone cannot fit in factory app partition")
     print(
@@ -453,7 +450,7 @@ def verify_build(
     require(int(str(app.get("offset")), 0) == EXPECTED_APP_OFFSET, "built app offset differs")
     binary = checked_build_file(build_dir, app.get("file"), "application binary")
     elf = checked_build_file(build_dir, description.get("app_elf"), "application ELF")
-    _, capacity = factory_partition_from_manifest()
+    _, capacity = factory_partition_from_reviewed_source()
     artifacts = build_evidence.get("artifacts", {})
     require(artifacts.get("application_offset") == EXPECTED_APP_OFFSET, "recorded app offset differs")
     require(artifacts.get("saved_factory_app_partition_bytes") == capacity, "recorded app capacity differs")

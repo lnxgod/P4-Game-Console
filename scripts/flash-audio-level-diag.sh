@@ -73,7 +73,7 @@ trap 'p4_signal 143' TERM
 p4_require_app "$P4_APP"
 p4_require_port "$P4_PORT"
 p4_activate_idf
-python3 "$P4_SCRIPT_DIR/verify-metadata.py" >/dev/null
+python3 "$P4_SCRIPT_DIR/verify-metadata.py" --flash-preflight >/dev/null
 
 # Build once, then seal the exact independently reviewed identity. There is no
 # build or generic idf.py flash after this verifier passes.
@@ -123,40 +123,16 @@ done
 python3 "$P4_CAPTURE" check-issuable --state "$P4_STATE" \
     --authorization "$P4_AUTH"
 
-P4_MANIFEST="$P4_PROJECT_ROOT/hardware/backups/manifest.json"
-P4_BACKUP_REL=$(python3 -c \
-    'import json,sys; print(json.load(open(sys.argv[1]))["backup"]["file"])' \
-    "$P4_MANIFEST")
-P4_BACKUP_EXPECTED=$(python3 -c \
-    'import json,sys; print(json.load(open(sys.argv[1]))["backup"]["sha256"])' \
-    "$P4_MANIFEST")
-P4_BACKUP_BYTES=$(python3 -c \
-    'import json,sys; print(json.load(open(sys.argv[1]))["backup"]["bytes"])' \
-    "$P4_MANIFEST")
+P4_DEVICE_PROFILE="$P4_PROJECT_ROOT/hardware/board-profile.json"
 P4_DEVICE_IDENTITY_EXPECTED=$(python3 -c \
-    'import json,sys; print(json.load(open(sys.argv[1]))["device"]["identity"]["sha256"])' \
-    "$P4_MANIFEST")
+    'import json,sys; print(json.load(open(sys.argv[1]))["device_identity"]["sha256"])' \
+    "$P4_DEVICE_PROFILE")
 P4_DEVICE_FLASH_BYTES=$(python3 -c \
-    'import json,sys; print(json.load(open(sys.argv[1]))["device"]["flash_bytes"])' \
-    "$P4_MANIFEST")
-P4_FACTORY_OFFSET=$(python3 -c '
-import json,sys
-d=json.load(open(sys.argv[1])); p=[x for x in d["factory_partition_table"] if x["type"]=="app" and x["subtype"]=="factory"]
-if len(p)!=1: raise SystemExit("expected one factory app")
-print(p[0]["offset"])
-' "$P4_MANIFEST")
-P4_BACKUP="$P4_PROJECT_ROOT/$P4_BACKUP_REL"
-if [ ! -f "$P4_BACKUP" ] || \
-   [ "$(p4_sha256_file "$P4_BACKUP")" != "$P4_BACKUP_EXPECTED" ] || \
-   [ "$(wc -c < "$P4_BACKUP" | tr -d ' ')" != "$P4_BACKUP_BYTES" ] || \
-   [ "$P4_BACKUP_BYTES" != "$P4_DEVICE_FLASH_BYTES" ]; then
-    printf 'Refusing D2.4: complete factory backup is missing or invalid.\n' >&2
-    exit 1
-fi
-if [ "$((P4_AUTH_OFFSET))" -ne "$((P4_FACTORY_OFFSET))" ]; then
-    printf 'Refusing D2.4: authorized offset differs from saved factory app.\n' >&2
-    exit 1
-fi
+    'import json,sys; print(json.load(open(sys.argv[1]))["measured"]["flash_bytes"])' \
+    "$P4_DEVICE_PROFILE")
+P4_DEVICE_REVISION_EXPECTED=$(python3 -c \
+    'import json,sys; print(json.load(open(sys.argv[1]))["measured"]["chip_revision"])' \
+    "$P4_DEVICE_PROFILE")
 
 P4_RESERVATION_ACTIVE=true
 python3 "$P4_CAPTURE" reserve --state "$P4_STATE" \
@@ -174,12 +150,16 @@ P4_EXPECTED_FLASH_LABEL=$(python3 -c \
     'import sys; n=int(sys.argv[1]); assert n>0 and n%(1024*1024)==0; print(f"{n//(1024*1024)}MB")' \
     "$P4_DEVICE_FLASH_BYTES")
 printf '%s\n' "$P4_PROBE" | grep -F "Detected flash size: $P4_EXPECTED_FLASH_LABEL" >/dev/null || {
-    printf 'Refusing D2.4: live flash size differs from backup manifest.\n' >&2
+    printf 'Refusing D2.4: live flash size differs from reviewed profile.\n' >&2
+    exit 1
+}
+printf '%s\n' "$P4_PROBE" | grep -F "(revision $P4_DEVICE_REVISION_EXPECTED)" >/dev/null || {
+    printf 'Refusing D2.4: live chip revision differs from reviewed profile.\n' >&2
     exit 1
 }
 P4_DEVICE_IDENTITY_ACTUAL=$(p4_read_device_identity_hash "$P4_PORT" no_reset)
 if [ "$P4_DEVICE_IDENTITY_ACTUAL" != "$P4_DEVICE_IDENTITY_EXPECTED" ]; then
-    printf 'Refusing D2.4: connected device identity differs from backup.\n' >&2
+    printf 'Refusing D2.4: connected device identity differs from reviewed profile.\n' >&2
     exit 1
 fi
 P4_SECURITY=$(esptool.py --chip esp32p4 --port "$P4_PORT" \
@@ -187,6 +167,10 @@ P4_SECURITY=$(esptool.py --chip esp32p4 --port "$P4_PORT" \
 printf '%s\n' "$P4_SECURITY" | p4_redact_device_identifiers
 printf '%s\n' "$P4_SECURITY" | grep -F 'Secure Boot: Disabled' >/dev/null || exit 1
 printf '%s\n' "$P4_SECURITY" | grep -F 'Flash Encryption: Disabled' >/dev/null || exit 1
+
+python3 "$P4_SCRIPT_DIR/verify-live-app-layout.py" \
+    --port "$P4_PORT" --offset "$P4_AUTH_OFFSET" \
+    --bytes "$P4_AUTH_BYTES" --flash-bytes "$P4_DEVICE_FLASH_BYTES"
 
 # Recheck the sealed snapshot immediately before and after the exact app-only
 # write. The CPU remains in the ROM loader throughout.

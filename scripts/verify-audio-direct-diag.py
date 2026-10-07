@@ -1094,23 +1094,14 @@ def main() -> None:
         and flash_args.get("extra_esptool_args", {}).get("after") == "no_reset",
         "generated offsets, flash size, or no-reset action changed",
     )
-    manifest = load_json(ROOT / "hardware/backups/manifest.json")
-    factory_apps = [
-        item for item in manifest.get("factory_partition_table", [])
-        if item.get("type") == "app" and item.get("subtype") == "factory"
-    ]
-    require(
-        len(factory_apps) == 1
-        and int(factory_apps[0].get("offset"), 0) == APP_OFFSET
-        and factory_apps[0].get("size") == "11M",
-        "saved factory application boundary changed",
-    )
-
+    # Installed layout is checked directly by the flash route; no recovery image is needed.
     binary = checked_child(build_dir, app.get("file"), "application binary")
     elf = checked_child(build_dir, description.get("app_elf"), "application ELF")
     bootloader_binary = checked_child(build_dir, bootloader.get("file"), "bootloader binary")
     partition_binary = checked_child(build_dir, partition.get("file"), "partition table binary")
     artifacts = evidence.get("artifacts", {})
+    require(artifacts.get("saved_factory_app_partition_bytes") == 11 * 1024 * 1024,
+            "reviewed app capacity changed")
     exact_artifacts = (
         (binary, APP_BYTES, APP_SHA256, "app_binary_bytes", "app_binary_sha256"),
         (elf, ELF_BYTES, ELF_SHA256, "elf_bytes", "elf_sha256"),

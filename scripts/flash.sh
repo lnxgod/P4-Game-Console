@@ -266,49 +266,21 @@ if [ "$P4_APP" != gamepad_diag ]; then
     p4_require_port "$P4_PORT"
 fi
 p4_activate_idf
-python3 "$P4_SCRIPT_DIR/verify-metadata.py" >/dev/null
+python3 "$P4_SCRIPT_DIR/verify-metadata.py" --flash-preflight >/dev/null
 
-P4_MANIFEST="$P4_PROJECT_ROOT/hardware/backups/manifest.json"
-P4_BACKUP_REL=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["backup"]["file"])' "$P4_MANIFEST")
-P4_BACKUP_EXPECTED=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["backup"]["sha256"])' "$P4_MANIFEST")
-P4_BACKUP_EXPECTED_BYTES=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["backup"]["bytes"])' "$P4_MANIFEST")
-P4_DEVICE_FLASH_BYTES=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["device"]["flash_bytes"])' "$P4_MANIFEST")
-P4_DEVICE_IDENTITY_EXPECTED=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["device"]["identity"]["sha256"])' "$P4_MANIFEST")
-P4_FACTORY_APP_OFFSET=$(python3 -c '
-import json, sys
-data = json.load(open(sys.argv[1]))
-parts = data["factory_partition_table"]
-matches = [part for part in parts if part["type"] == "app" and part["subtype"] == "factory"]
-if len(matches) != 1:
-    raise SystemExit("manifest must contain exactly one factory app partition")
-print(matches[0]["offset"])
-' "$P4_MANIFEST")
-P4_BACKUP_PATH="$P4_PROJECT_ROOT/$P4_BACKUP_REL"
-
-if [ ! -f "$P4_BACKUP_PATH" ]; then
-    printf 'Refusing to flash: local factory backup is missing at %s\n' "$P4_BACKUP_PATH" >&2
-    exit 1
-fi
-
-P4_BACKUP_ACTUAL=$(p4_sha256_file "$P4_BACKUP_PATH")
-if [ "$P4_BACKUP_ACTUAL" != "$P4_BACKUP_EXPECTED" ]; then
-    printf 'Refusing to flash: factory backup hash does not match its manifest.\n' >&2
-    exit 1
-fi
-
-P4_BACKUP_ACTUAL_BYTES=$(wc -c < "$P4_BACKUP_PATH" | tr -d ' ')
-if [ "$P4_BACKUP_ACTUAL_BYTES" != "$P4_BACKUP_EXPECTED_BYTES" ] || \
-   [ "$P4_BACKUP_ACTUAL_BYTES" != "$P4_DEVICE_FLASH_BYTES" ]; then
-    printf 'Refusing to flash: factory backup byte count does not match its manifest/device size.\n' >&2
-    exit 1
-fi
+# The reviewed device profile supplies identity and capacity independently of
+# optional recovery images. Flashing never opens a firmware backup/manifest.
+P4_DEVICE_PROFILE="$P4_PROJECT_ROOT/hardware/board-profile.json"
+P4_DEVICE_FLASH_BYTES=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["measured"]["flash_bytes"])' "$P4_DEVICE_PROFILE")
+P4_DEVICE_IDENTITY_EXPECTED=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["device_identity"]["sha256"])' "$P4_DEVICE_PROFILE")
+P4_DEVICE_REVISION_EXPECTED=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["measured"]["chip_revision"])' "$P4_DEVICE_PROFILE")
 
 P4_EXPECTED_FLASH_LABEL=$(python3 -c '
 import sys
 size = int(sys.argv[1])
 unit = 1024 * 1024
 if size <= 0 or size % unit:
-    raise SystemExit("manifest flash size is not a positive whole number of MiB")
+    raise SystemExit("profile flash size is not a positive whole number of MiB")
 print(f"{size // unit}MB")
 ' "$P4_DEVICE_FLASH_BYTES")
 if [ "$P4_APP" = audio_direct_diag ]; then
@@ -363,14 +335,19 @@ P4_PROBE_OUTPUT=$(esptool.py --chip esp32p4 --port "$P4_PORT" \
 }
 printf '%s\n' "$P4_PROBE_OUTPUT" | p4_redact_device_identifiers
 if ! printf '%s\n' "$P4_PROBE_OUTPUT" | grep -F "Detected flash size: $P4_EXPECTED_FLASH_LABEL" >/dev/null; then
-    printf 'Refusing to flash: live flash size does not match manifest (%s).\n' \
+    printf 'Refusing to flash: live flash size does not match reviewed profile (%s).\n' \
         "$P4_EXPECTED_FLASH_LABEL" >&2
+    exit 1
+fi
+
+if ! printf '%s\n' "$P4_PROBE_OUTPUT" | grep -F "(revision $P4_DEVICE_REVISION_EXPECTED)" >/dev/null; then
+    printf 'Refusing to flash: live chip revision does not match reviewed profile.\n' >&2
     exit 1
 fi
 
 P4_DEVICE_IDENTITY_ACTUAL=$(p4_read_device_identity_hash "$P4_PORT" "$P4_PROBE_AFTER")
 if [ "$P4_DEVICE_IDENTITY_ACTUAL" != "$P4_DEVICE_IDENTITY_EXPECTED" ]; then
-    printf 'Refusing to flash: connected board identity does not match the factory backup manifest.\n' >&2
+    printf 'Refusing to flash: connected board identity does not match the reviewed device profile.\n' >&2
     exit 1
 fi
 
@@ -616,12 +593,15 @@ if [ "$P4_APP" = audio_direct_diag ]; then
     python3 "$P4_SCRIPT_DIR/verify-audio-direct-diag.py" \
         "$P4_BUILD_DIR" "$P4_FLASH_TARGET"
 fi
-if [ "$P4_FLASH_TARGET" = app-flash ]; then
-    if [ "$((P4_BUILT_APP_OFFSET))" -ne "$((P4_FACTORY_APP_OFFSET))" ]; then
-        printf 'Refusing app-only flash: built app offset %s does not match saved factory offset %s.\n' \
-            "$P4_BUILT_APP_OFFSET" "$P4_FACTORY_APP_OFFSET" >&2
-        exit 1
-    fi
+if [ "$P4_FLASH_TARGET" = app-flash ] && \
+   [ "$P4_APP" != gamepad_diag ] && \
+   [ "$P4_APP" != doom_embedded_touch_audio ]; then
+    # Exclusive installers validate their layout on their retained UART handle.
+    # Other app-only routes inspect only the small live partition table.
+    P4_LAYOUT_APP_BYTES=$(wc -c < "$P4_BUILT_APP_PATH" | tr -d ' ')
+    python3 "$P4_SCRIPT_DIR/verify-live-app-layout.py" \
+        --port "$P4_PORT" --offset "$P4_BUILT_APP_OFFSET" \
+        --bytes "$P4_LAYOUT_APP_BYTES" --flash-bytes "$P4_DEVICE_FLASH_BYTES"
 fi
 
 if [ "$P4_APP" = audio_direct_diag ]; then

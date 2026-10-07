@@ -154,20 +154,23 @@ needed for saves and atomic uploads. Retain two appropriately sized OS update
 slots where supported. Account for temporary replacement files and firmware
 update staging, not only steady-state content size.
 
-Before writing a new unit, preserve its complete flash and bind its size/hash
-and hashed device identity in the backup manifest. For an existing unit, verify
-the recorded backup and preserve current content affected by a layout migration.
+Firmware backups, snapshots and backup manifests are never required for an
+install, including a new unit. Do not capture firmware or ask for backup
+confirmation. Backups run only as a separately requested operation; recovery
+can rebuild old source. Preserve existing recovery artifacts and current user
+content affected by a layout migration.
 Use the exact-board guarded installer with immutable artifact hashes and an
-explicit port. A partition change needs a layout-aware migration and verified
-recovery coverage; an app-only install cannot create internal game storage.
+explicit port. A partition change needs a layout-aware migration that preserves user
+content without requiring a firmware backup; an app-only install cannot create internal game storage.
 Honor installation authorization already given in the session without asking
 for the same permission again.
 
 For a prebuilt Tab5 SD route, use the verified package's `firmware/` and
 `content/` directories and `--prebuilt` guarded install as documented in
 `docs/INSTALL_PREBUILT.md`. The local authorization must bind the manifest
-digest as well as all image hashes; preserve all device/backup/predecessor
-checks. A source build instead uses the locked environment and:
+digest as well as all image hashes; preserve all device checks and app-only
+predecessor checks against reviewed build artifacts. No backup file or manifest
+is required. A source build instead uses the locked environment and:
 ```sh
 make console-os-tab5-idf
 ```
@@ -179,10 +182,10 @@ an existing exact-unit authorization; use the matching
 
 Use `scripts/flash-console-os-tab5.py` with the exact unit, authorization digest
 and port as documented in `docs/boards/M5STACK_TAB5.md`. Its current guarded
-route supports registered units A and B only. A new Tab5 needs its own backup,
-identity binding and guarded onboarding support; never relabel it as A/B or
-inherit another unit's authorization. Continue local preparation until its
-write route is supported. After a verified install, load content over the
+route uses A/B/C to select reviewed authorization entries. Every Tab5, including
+a new unit, needs its own confirmed model and hashed live identity; never
+inherit another unit's authorization. First-layout installation requires no old
+firmware. After a verified install, load content over the
 connected native USB-C cable:
 ```sh
 python scripts/p4-transfer.py push-bundle apps/console_os/build-tab5/sd-card --port <explicit-port>

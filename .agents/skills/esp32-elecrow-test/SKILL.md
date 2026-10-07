@@ -9,15 +9,17 @@ This skill is for the Elecrow 10 in variant only. Tab5 uses
 `docs/boards/M5STACK_TAB5.md` and `$esp32-fix-console`; Waveshare uses
 `$esp32-waveshare`. Never inherit this route's authorization or offsets.
 Test the software and the named tablet as separate stages. Preserve the
-currently working image until the successor passes exact readback and retained
-startup capture.
+existing recovery artifacts until the successor passes exact readback and
+retained startup capture. Do not create or refresh firmware backups as part of
+flashing; backups run only as a separately requested operation and are never a
+flashing prerequisite. Recovery can rebuild old source.
 
 ## Load the governing contracts
 
 Also use these repository skills:
 
 - `$esp32-fix-console` for the locked toolchain, board identity,
-  backup, write, recovery, and evidence rules.
+  write, recovery, evidence and no-backup rules.
 - `$esp32-elecrow-screen` for launcher or game pixels on the 10 in panel.
 - `$esp32-elecrow-sound` whenever a build can energize native-game or Doom
   sound, even if startup acceptance intentionally keeps the amplifier off.
@@ -40,11 +42,13 @@ Choose exactly one initial scope:
    do not open the programming UART.
 2. **Test the installed image**: use passive serial observation and manual
    checks; do not reflash an artifact that is already installed.
-3. **Install a changed build**: create a new exact-artifact successor route,
-   preserve the live predecessor, write only the app partition, read it all
-   back, and capture startup on the retained UART.
-4. **Recover an interrupted install**: inspect the durable ledger first and
-   use only the installer bound to that ledger.
+3. **Install a changed build**: create a new exact-artifact successor route
+   without firmware backups, use reviewed build artifacts for applicable
+   predecessor checks, write only the app partition, verify the candidate and
+   capture startup on the retained UART.
+4. **Recover an interrupted install**: inspect its receipt and use a reviewed
+   artifact rebuilt from old source. For a historical snapshot transaction,
+   inspect its original ledger and use the installer bound to that ledger.
 
 A build hash change invalidates every prior flash authorization. Executed
 routes, authorizations, recovery directories, and hardware records are
@@ -122,48 +126,63 @@ commercial WAD, a WAD-bearing firmware image, or local recovery data.
 
 ## Install only through a successor route
 
+Firmware backups, snapshots and backup manifests are never required for a
+flash. Use a reviewed backup-free successor route; frozen snapshot-based
+installers remain historical/recovery tooling. An install request does not
+select a backup. Recovery can use firmware rebuilt from the reviewed old source.
+For same-layout updates on a dual-OTA unit, qualify the implemented `.P4U`
+inactive-slot updater; its physical J16/OTA acceptance remains pending.
+
 Before any write:
 
 1. Resolve one explicit serial device and prove no monitor owns it.
 2. Verify the hashed exact-unit identity, ESP32-P4 revision v1.3, 16 MiB
-   flash, 32 MiB PSRAM, factory backup manifest, and current predecessor.
+   flash, 32 MiB PSRAM, live layout, security state and applicable predecessor
+   against reviewed build artifacts.
 3. Create immutable build evidence for the exact candidate.
 4. Create a new exact-unit audio release when the candidate contains the
    factory audio path. Bind the owner's direction, the same known GPIO path,
-   reduced volume, recovery bytes, and connected-unit-only topology exception.
-5. Create a new authorization, installer wrapper, outer route, and unique 0700
-   ignored recovery directory. Use the executed Game API v1 files as a pattern,
-   but never modify them to target different bytes.
-6. Dry-load the frozen route, validate every digest and geometry field, test
+   reduced volume and connected-unit-only topology exception.
+5. Create a new authorization and backup-free installer route with an ignored
+   receipt directory. Preserve existing historical installers and recovery
+   evidence; do not inherit their snapshot requirements.
+6. Dry-load the new route, validate every digest and geometry field, test
    the exact startup parser with representative markers, and prove wrong
    identity/artifact values fail before opening the UART.
 
 The transaction must retain one exclusive UART from loader entry through:
 
 - live identity, security, flash, and partition checks;
-- a sealed live preimage covering the complete successor mutation span;
+- any applicable predecessor comparison against reviewed build artifacts,
+  without reading or saving a firmware snapshot;
 - one app-partition write only;
 - byte-for-byte readback of the complete padded span;
 - one application launch; and
 - ordered launcher startup capture.
 
-Mark `restore_required` durably before the first flash command. On every caught
-post-mutation failure, restore and read back the sealed predecessor before
-exiting. Do not use generic `idf.py flash`, a full-project write, an erase, or
-`--force`.
+Record write start and failure in the install receipt. On a failed write, retain
+the loader and evidence for explicit recovery using a reviewed artifact rebuilt
+from old source; do not capture firmware or require automatic snapshot rollback.
+Do not use generic `idf.py flash`, a full-project write, an erase, or `--force`.
 
 ## Respond to a stopped transaction
 
-Read the ledger before doing anything else.
+For a new backup-free route, read its receipt and diagnose the failed write
+before a separately authorized rebuild/recovery. No backup is required.
+
+For an interrupted historical snapshot-based transaction only, read its
+original ledger before doing anything else:
 
 - If `install_write_attempt_count` is `0` and `restore_required` is `false`,
   no recovery write is justified. Preserve/archive that attempt and use only a
   hardware reset to relaunch the unchanged predecessor.
-- If `restore_required` is `true`, run the exact successor installer's
-  `recover` command against its original recovery directory. Do not create a
-  substitute preimage.
-- If restoration cannot be proven, stop with the ledger active and report that
-  recovery is required.
+- If `restore_required` is `true`, recovery can rebuild the reviewed old source
+  and use a new exact-unit artifact-bound route. Preserve the original ledger.
+  An explicitly selected existing snapshot may instead use the historical
+  installer's `recover` command and original directory; never invent a substitute
+  preimage or require a backup.
+- If restoration cannot be proven, retain the ledger and report the unresolved
+  recovery result; prepare the reviewed rebuild without capturing firmware.
 
 Do not blind-retry a repeated hardware boundary. Diagnose the pinned source and
 record the no-write attempts. Any normalization exception must bind the exact

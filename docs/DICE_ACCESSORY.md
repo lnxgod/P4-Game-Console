@@ -177,16 +177,22 @@ python scripts/install-dice-core2.py --port /dev/cu.EXACT_PORT --install
 ```
 
 Without `--install` the script only checks the gates. It requires the recorded
-full 16 MiB factory backup and hashed identity, exact ESP32 revision and flash
-size, unchanged partition table, expected active OTA app0, and matching
-artifact digest. It writes only the existing app at 0x10000, reads back the
-entire application, and compares the complete lower 64 KiB before resetting.
+hashed identity, exact ESP32 revision and flash size, unchanged partition table,
+expected active OTA app0, and matching
+artifact digest. It writes only the existing app at 0x10000 and verifies device
+checksums for the application and unchanged lower 64 KiB before resetting.
+Only the bounded partition table and OTA selectors are read from the device;
+no firmware backup or full application readback is required.
 Each install writes a separate timestamped, artifact-bound receipt and boot
 log in `hardware/test-runs/`, preserving earlier evidence.
 The firmware stores its M5Stack board detection, radio calibration and BLE
 bonds in existing NVS; it never formats or erases NVS on an error. Never use
 the generic `idf.py flash` suggestion printed by the build for this unit.
-A different Core2 must first have its own complete backup and profile.
+A different Core2 must first have its own profile, hashed identity and guarded
+authorization; the existing exact-unit installer cannot be reused for it. Do
+not create or refresh firmware backups as part of flashing. Backups run only
+as a separately requested operation and are never a flashing prerequisite;
+preserve existing recovery artifacts. Recovery can rebuild old source.
 
 The Waveshare needs its board-specific guarded app install at 0x20000 plus
 the updated `GAMES/P4_YAHTZEE.P4G` through H1 or the documented SD workflow.

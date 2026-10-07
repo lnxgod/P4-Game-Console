@@ -90,11 +90,14 @@ unplugging a device neutralizes its held state before the next game update.
 
 ## First-device flash and acceptance gate
 
-Before any write, enter the ROM loader through the board's documented
-BOOT/RESET controls and create a complete 16 MiB backup with the repository
-backup command. Hold BOOT, tap and release RST, then release BOOT and use the
-manual-loader route so the native USB probe does not reset back into the
-factory application:
+Before any write, verify the exact unit, live chip revision, flash size,
+security state, partition layout and target-specific authorization. Do not
+create or refresh a firmware backup as part of flashing. Preserve existing
+recovery artifacts. Review and enable `flash_authorized` only for that exact unit.
+
+Only when the user explicitly requests a firmware backup, hold BOOT, tap and
+release RST, then release BOOT and use the manual-loader route so the native USB
+probe does not reset back into the factory application:
 
 ```sh
 ./scripts/backup-flash.sh --manual-loader \
@@ -102,9 +105,11 @@ factory application:
   --output hardware/backups/olimex-esp32-p4-pc-rev-b-factory-before-project.bin
 ```
 
-Record its byte count and SHA-256 and bind it to a hash of the live device
-identity without storing the raw identifier. Only then may
-`flash_authorized` be reviewed and enabled for that exact unit.
+For that requested backup, record its byte count and SHA-256 and bind it to a
+hash of the live device identity without storing the raw identifier. This
+operation runs only on explicit backup request and is never required for a
+flash. Recovery can rebuild old source; validate the exact unit, layout and
+reviewed artifacts directly without requiring captured firmware.
 
 The first full flash must use the generated bootloader, partition table, OTA
 data, and OTA-0 image together because this profile has two 8,323,072-byte OTA

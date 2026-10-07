@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import pathlib
@@ -32,8 +33,10 @@ def sha256_file(path: pathlib.Path) -> str:
     return digest.hexdigest()
 
 
-def main() -> None:
-    manifest = load("hardware/backups/manifest.json")
+def main(*, audit_backups: bool = True) -> None:
+    # Flashing validates the independent board/evidence contract. Recovery
+    # images and their historical manifest belong only to the explicit audit.
+    manifest = load("hardware/backups/manifest.json") if audit_backups else None
     profile = load("hardware/board-profile.json")
     identification = profile.get("identification")
     require(isinstance(identification, dict), "board profile identification must be an object")
@@ -59,35 +62,27 @@ def main() -> None:
     backup_baseline = load(backup_baseline_path)
 
     require(
-        manifest.get("schema") == profile.get("schema") ==
+        profile.get("schema") ==
         test_run.get("schema") == backup_baseline.get("schema") == 1,
         "unsupported or inconsistent hardware metadata schema",
     )
 
-    manifest_identity = manifest["device"]["identity"]
     profile_identity = profile["device_identity"]
-    identity_hash = manifest_identity["sha256"]
+    identity_hash = profile_identity["sha256"]
     require(SHA256_RE.fullmatch(identity_hash) is not None, "invalid device identity hash")
-    require(manifest_identity == profile_identity, "board profile identity differs from backup manifest")
-    require(manifest_identity["raw_value_stored"] is False, "raw device identity must not be stored")
+    require(profile_identity["raw_value_stored"] is False, "raw device identity must not be stored")
     require(
         test_run["hardware"]["device_identity_sha256"] == identity_hash,
-        "test run identity differs from backup manifest",
-    )
-    require(
-        manifest["restore"]["requires_matching_live_device_identity"] is True,
-        "restore policy must require a matching live identity",
+        "test run identity differs from board profile",
     )
 
     require(
-        manifest["device"]["revision"]
-        == profile["measured"]["chip_revision"]
+        profile["measured"]["chip_revision"]
         == test_run["hardware"]["chip_revision"],
         "chip revision differs across evidence files",
     )
     require(
-        manifest["device"]["flash_bytes"]
-        == profile["measured"]["flash_bytes"]
+        profile["measured"]["flash_bytes"]
         == test_run["hardware"]["flash_bytes"],
         "flash size differs across evidence files",
     )
@@ -98,12 +93,22 @@ def main() -> None:
         and variant_evidence.get("result") == "pass",
         "firmware-variant evidence must be a passing, narrowly classified result",
     )
-    variant_backup = variant_evidence.get("factory_backup")
-    require(isinstance(variant_backup, dict), "firmware-variant backup evidence must be an object")
-    require(
-        all(variant_backup.get(field) == manifest["backup"].get(field) for field in ("file", "bytes", "sha256")),
-        "firmware-variant evidence is not bound to the recovery backup",
-    )
+    if audit_backups:
+        require(manifest.get("schema") == 1, "unsupported backup metadata schema")
+        require(manifest["device"]["identity"] == profile_identity,
+                "board profile identity differs from backup manifest")
+        require(manifest["device"]["revision"] == profile["measured"]["chip_revision"],
+                "backup device revision differs from board profile")
+        require(manifest["device"]["flash_bytes"] == profile["measured"]["flash_bytes"],
+                "backup device flash size differs from board profile")
+        require(manifest["restore"]["requires_matching_live_device_identity"] is True,
+                "restore policy must require a matching live identity")
+        variant_backup = variant_evidence.get("factory_backup")
+        require(isinstance(variant_backup, dict), "firmware-variant backup evidence must be an object")
+        require(
+            all(variant_backup.get(field) == manifest["backup"].get(field) for field in ("file", "bytes", "sha256")),
+            "firmware-variant evidence is not bound to the recovery backup",
+        )
     conclusion = variant_evidence.get("conclusion")
     require(isinstance(conclusion, dict), "firmware-variant conclusion must be an object")
     require(conclusion.get("scope") == "factory_firmware_variant", "screen/SKU evidence scope is too broad")
@@ -354,42 +359,43 @@ def main() -> None:
             "pin map cannot be authorized from a firmware-variant identification alone",
         )
 
-    backup = manifest["backup"]
-    backup_root = (ROOT / "hardware/backups").resolve()
-    backup_path = (ROOT / backup["file"]).resolve()
-    require(backup_path.is_relative_to(backup_root), "backup path leaves hardware/backups")
-    require(SHA256_RE.fullmatch(backup["sha256"]) is not None, "invalid backup SHA-256")
-    if backup_path.exists():
-        require(backup_path.stat().st_size == backup["bytes"], "local backup byte count differs from manifest")
-        require(sha256_file(backup_path) == backup["sha256"], "local backup hash differs from manifest")
-
-        selected_offset = int(variants_by_id["inch10_1"]["backup_full_asset_occurrence_offsets"][0], 16)
-        with backup_path.open("rb") as source:
-            source.seek(selected_offset)
-            selected_bytes = source.read(selected_asset["bytes"])
-        require(
-            len(selected_bytes) == selected_asset["bytes"]
-            and hashlib.sha256(selected_bytes).hexdigest() == selected_asset["sha256"],
-            "saved backup does not contain the pinned 10.1-inch asset at the recorded offset",
-        )
-
-        prefix_offset = int(
-            backup_baseline["checks"]["factory_prefix_readback_offset"], 0)
-        prefix_bytes = backup_baseline["checks"]["factory_prefix_readback_bytes"]
-        require(prefix_offset == 0, "M0 factory-prefix evidence must start at offset 0")
-        with backup_path.open("rb") as source:
-            expected_prefix_hash = hashlib.sha256(source.read(prefix_bytes)).hexdigest()
-        require(
-            expected_prefix_hash ==
-            backup_baseline["checks"]["factory_prefix_readback_sha256"],
-            "recorded factory-prefix hash differs from the saved backup",
-        )
-
     checks = backup_baseline["checks"]
-    require(checks["factory_backup_bytes"] == backup["bytes"], "test run backup byte count differs from manifest")
-    require(checks["factory_backup_sha256"] == backup["sha256"], "test run backup hash differs from manifest")
-    require(checks["factory_backup_sha256_verified_before_write"] is True, "pre-write backup check not recorded")
-    require(checks["factory_prefix_readback_matches_backup"] is True, "factory-prefix readback did not pass")
+    if audit_backups:
+        backup = manifest["backup"]
+        backup_root = (ROOT / "hardware/backups").resolve()
+        backup_path = (ROOT / backup["file"]).resolve()
+        require(backup_path.is_relative_to(backup_root), "backup path leaves hardware/backups")
+        require(SHA256_RE.fullmatch(backup["sha256"]) is not None, "invalid backup SHA-256")
+        if backup_path.exists():
+            require(backup_path.stat().st_size == backup["bytes"], "local backup byte count differs from manifest")
+            require(sha256_file(backup_path) == backup["sha256"], "local backup hash differs from manifest")
+
+            selected_offset = int(variants_by_id["inch10_1"]["backup_full_asset_occurrence_offsets"][0], 16)
+            with backup_path.open("rb") as source:
+                source.seek(selected_offset)
+                selected_bytes = source.read(selected_asset["bytes"])
+            require(
+                len(selected_bytes) == selected_asset["bytes"]
+                and hashlib.sha256(selected_bytes).hexdigest() == selected_asset["sha256"],
+                "saved backup does not contain the pinned 10.1-inch asset at the recorded offset",
+            )
+
+            prefix_offset = int(
+                backup_baseline["checks"]["factory_prefix_readback_offset"], 0)
+            prefix_bytes = backup_baseline["checks"]["factory_prefix_readback_bytes"]
+            require(prefix_offset == 0, "M0 factory-prefix evidence must start at offset 0")
+            with backup_path.open("rb") as source:
+                expected_prefix_hash = hashlib.sha256(source.read(prefix_bytes)).hexdigest()
+            require(
+                expected_prefix_hash ==
+                backup_baseline["checks"]["factory_prefix_readback_sha256"],
+                "recorded factory-prefix hash differs from the saved backup",
+            )
+
+        require(checks["factory_backup_bytes"] == backup["bytes"], "test run backup byte count differs from manifest")
+        require(checks["factory_backup_sha256"] == backup["sha256"], "test run backup hash differs from manifest")
+        require(checks["factory_backup_sha256_verified_before_write"] is True, "pre-write backup check not recorded")
+        require(checks["factory_prefix_readback_matches_backup"] is True, "factory-prefix readback did not pass")
     require(checks["installed_app_readback_matches_binary"] is True, "application readback did not pass")
     require(
         checks["installed_app_readback_bytes"] ==
@@ -403,7 +409,7 @@ def main() -> None:
     )
 
     for relative_path in (
-        "hardware/backups/manifest.json",
+        *(("hardware/backups/manifest.json",) if audit_backups else ()),
         "hardware/board-profile.json",
         variant_evidence_path,
         display_evidence_path,
@@ -421,4 +427,8 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--flash-preflight", action="store_true",
+                        help="validate board/evidence without reading backup files or their manifest")
+    args = parser.parse_args()
+    main(audit_backups=not args.flash_preflight)

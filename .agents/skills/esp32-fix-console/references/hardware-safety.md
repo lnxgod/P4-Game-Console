@@ -1,17 +1,22 @@
 # Hardware safety gates
 
-## Before a new unit's first project write
+## Before flashing
 
-- Read and hash the full external flash.
-- Store the binary outside Git and its byte count/hash in `hardware/backups/manifest.json`.
-- Bind the backup to the physical unit with the SHA-256 of its normalized base identity. Never store or print the raw identifier.
-- Confirm the detected flash size before reading or restoring.
+- Do not create or refresh a firmware backup, including before a new unit's first write. Backups run only when the user explicitly requests a backup.
+- Firmware backups, snapshots and backup manifests are never required for flashing, on any board or route. Preserve existing recovery files and manifests. Recovery can rebuild old source; validate the device and reviewed artifacts directly.
+- Confirm the exact unit, board/revision, detected flash size, security state, partition layout, predecessor and authorized artifact. Bind identity with a SHA-256; never store or print the raw identifier.
 - Start with pin-independent firmware when the exact PCB profile is unresolved.
 
-For an exact unit already registered in the manifest, verify and reuse its
-recorded backup rather than repeating the factory read. Preserve current data
-affected by a layout migration. Use firmware supported by the selected board;
-the current Tab5 build route supports Console OS, not legacy `bringup` apps.
+Preserve current user data affected by a layout migration. Use firmware
+supported by the selected board; the current Tab5 build route supports Console
+OS, not legacy `bringup` apps.
+
+## Explicitly requested firmware backup
+
+Only for a user-requested backup, read the full detected flash, store the binary
+outside Git, and record its byte count, SHA-256 and hashed live-device binding
+in `hardware/backups/manifest.json`. A flash request alone does not select this
+operation.
 
 ## Before enabling a peripheral
 
@@ -23,8 +28,8 @@ the current Tab5 build route supports Console OS, not legacy `bringup` apps.
 - If an exact-unit owner explicitly directs replay of a previously working
   factory peripheral despite a documented unresolved topology risk, preserve
   that as a separate operator-accepted exception: bind one hashed identity,
-  pinned factory source, prior nondamaging evidence, exact GPIOs, recovery
-  bytes, and the accepted risk. Do not rewrite the topology review or expand
+  pinned factory source, prior nondamaging evidence, exact GPIOs, and the
+  accepted risk. Do not rewrite the topology review or expand
   the exception to another unit, revision, or peripheral.
 
 ## USB-specific rule
@@ -33,4 +38,4 @@ USB data connectivity does not imply host-power capability. A valid host fixture
 
 ## Recovery
 
-Prefer a targeted app/partition write over an erase. Routine authorized Tab5 successors use device checksum verification; use full readback only for recovery, diagnostics or an explicit request, and record which method ran. Other boards keep their exact installer verification contract. If recovery is required, require the live identity hash to match the backup, identify the exact flash offsets from the saved partition table, and make restoration a separate, explicit operation.
+Prefer a targeted app/partition write over an erase. Routine authorized Tab5 successors use device checksum verification; use full readback only for recovery, diagnostics or an explicit request, and record which method ran. Other boards retain their device/image verification contracts without requiring firmware backups. If recovery is required, rebuild the reviewed old source, bind the resulting artifact to the exact live identity and layout, and make restoration a separate, explicit operation. An existing matching recovery image can also be used when explicitly selected; it is never a flashing prerequisite.

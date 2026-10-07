@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Install a hash-bound Tab5 candidate on one backed-up unit; retain recovery evidence."""
+"""Install a hash-bound candidate on an exact authorized Tab5 without firmware backups."""
 from __future__ import annotations
 import argparse
 import binascii
@@ -47,7 +47,7 @@ def validate_live(esp, identity):
     require(esp.CHIP_NAME == 'ESP32-P4', 'connected chip is not ESP32-P4')
     require(not esp.secure_download_mode, 'secure download mode unsupported')
     actual = sha(bytes(esp.read_mac()).hex().encode('ascii'))
-    require(actual == identity, 'live identity differs from selected backed-up unit')
+    require(actual == identity, 'live identity differs from selected authorized unit')
     major, minor = esp.get_major_chip_version(), esp.get_minor_chip_version()
     require(major == 1 and 0 <= minor <= 99, 'live silicon outside locked revision 1.x family')
     require((esp.flash_id() >> 16) == 0x18, 'live flash is not 16 MiB')
@@ -65,14 +65,6 @@ def prepare(auth, unit, prebuilt=None):
     require(selected['model_confirmed'] is True, 'physical Tab5 model unconfirmed')
     identity = selected['identity_sha256']
     require(re.fullmatch('[0-9a-f]{64}', identity) is not None, 'invalid identity binding')
-    manifest = json.loads((ROOT / 'hardware/backups/manifest.json').read_text())
-    matches = [d for d in manifest['additional_devices'] if d['device']['identity']['sha256'] == identity]
-    require(len(matches) == 1, 'unit must have exactly one full backup record')
-    backup = matches[0]['backup']
-    require(backup['bytes'] == 16777216 and backup['sha256'] == selected['backup_sha256'],
-            'authorization and backup manifest differ')
-    recovery = (ROOT / backup['file']).read_bytes()
-    require(len(recovery) == 16777216 and sha(recovery) == backup['sha256'], 'backup corrupt or incomplete')
     firmware_only = auth.get("firmware_only", False)
     require(not firmware_only or auth["operation"] == "app-only", "firmware-only requires app-only installation")
     if prebuilt is None:
@@ -121,7 +113,7 @@ def prepare(auth, unit, prebuilt=None):
         validate_image(predecessor)
     else:
         predecessor = None
-    return identity, recovery, artifacts, predecessor
+    return identity, artifacts, predecessor
 
 
 def flash_range_matches(esp, offset, data, verification):
@@ -138,7 +130,7 @@ def main():
     parser.add_argument('--authorization-sha256', required=True)
     parser.add_argument('--prebuilt', type=pathlib.Path,
                         help='verified exact-revision release directory; no ESP-IDF required')
-    parser.add_argument('--unit', choices=('A', 'B'), required=True)
+    parser.add_argument('--unit', choices=('A', 'B', 'C'), required=True)
     parser.add_argument('--port')
     parser.add_argument('--verification', choices=('device-checksum', 'full-readback'),
                         default='device-checksum', help='full readback is optional for recovery/diagnostics')
@@ -150,15 +142,19 @@ def main():
     raw = args.authorization.read_bytes()
     require(sha(raw) == args.authorization_sha256, 'authorization digest differs')
     auth = json.loads(raw)
-    identity, recovery, artifacts, predecessor = prepare(auth, args.unit, args.prebuilt)
-    print(f'Tab5 {args.unit}: artifact and complete backup verified', flush=True)
+    identity, artifacts, predecessor = prepare(auth, args.unit, args.prebuilt)
+    print(f'Tab5 {args.unit}: authorized artifacts verified; no firmware backup required or created', flush=True)
     if not args.install:
         return
     require(args.port is not None and pathlib.Path(args.port).is_char_device(), 'explicit live serial port required')
     import esptool
     import serial
     require(esptool.__version__ == '4.12.0', 'use make install-tools or the pinned IDF Python environment (esptool 4.12.0)')
-    run = pathlib.Path(tempfile.mkdtemp(prefix=f'tab5-{args.unit.lower()}-install-', dir=ROOT / 'hardware/backups'))
+    # This ignored directory holds candidate staging and install evidence only.
+    # No live firmware snapshot or backup manifest is needed or created.
+    evidence_root = ROOT / 'hardware/backups'
+    evidence_root.mkdir(parents=True, exist_ok=True)
+    run = pathlib.Path(tempfile.mkdtemp(prefix=f'tab5-{args.unit.lower()}-install-', dir=evidence_root))
     staged = {}
     for offset, data in artifacts.items():
         path = run / f'{offset}.bin'
@@ -170,6 +166,7 @@ def main():
                'authorization_sha256': args.authorization_sha256, 'artifacts': auth['artifacts'],
                'port': args.port, 'write_started': False, 'readback_verified': False,
                'verification_method': args.verification, 'checksum_verified': False,
+               'firmware_backup_created': False,
                'boot_ready': False, 'physical_acceptance': 'pending'}
     if args.prebuilt is not None:
         receipt['prebuilt_manifest_sha256'] = auth['prebuilt_manifest_sha256']
@@ -208,16 +205,14 @@ def main():
                     'installed app differs from authorized predecessor')
             writes = {'0x20000': artifacts['0x20000']}
         else:
-            # Verify the ranges to be replaced still match the captured predecessor.
-            for offset, data in artifacts.items():
-                start = int(offset, 0)
-                require(flash_range_matches(esp, start, recovery[start:start+len(data)], args.verification), 'live predecessor differs from backup; no write performed')
+            # First-layout writes are bounded by exact authorized artifact ranges;
+            # they do not read or capture the previously installed firmware.
             writes = artifacts
         quiet(lambda: validate_live(esp, identity))
         receipt['write_offsets'] = list(writes)
         receipt['write_started'] = True
         save()
-        print(f'Tab5 {args.unit}: identity, security and predecessor matched; writing {len(writes)} reviewed range(s)', flush=True)
+        print(f'Tab5 {args.unit}: identity, security and authorized artifacts matched; writing {len(writes)} reviewed range(s)', flush=True)
         # The verified connection already owns a running stub; do not upload it again.
         command = ['--chip', 'esp32p4', '--port', args.port, '--no-stub', '--baud', '921600', '--after', 'no_reset_stub', 'write_flash',
                    '--flash_mode', 'keep', '--flash_freq', 'keep', '--flash_size', 'keep']

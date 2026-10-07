@@ -1,11 +1,16 @@
 if(COMMAND idf_component_register)
     idf_build_get_property(P4_ACTIVE_BOARD_PROFILE P4_BOARD_PROFILE)
+    set(PLATFORM_DISPLAY_PRIVATE_INCLUDES "src" "../platform_tab5/vendor")
     if(P4_ACTIVE_BOARD_PROFILE STREQUAL "m5stack-tab5")
         set(PLATFORM_DISPLAY_DRIVER_SOURCE "src/platform_display_tab5.c")
         set(PLATFORM_DISPLAY_WORKER_SOURCES
             src/display_worker.c src/display_worker_esp.c)
-        set(PLATFORM_DISPLAY_DRIVER_REQUIREMENTS platform_tab5 esp_driver_ledc esp_driver_gpio esp_driver_ppa esp_mm
+        set(PLATFORM_DISPLAY_DRIVER_REQUIREMENTS platform_tab5 esp_driver_ledc esp_driver_gpio esp_driver_ppa esp_mm bootloader_support
             espressif__esp_lcd_ili9881c espressif__esp_lcd_st7123)
+        # The reviewed adapter intentionally uses the pinned SDK's private
+        # copier; keep this include private and do not modify/vendor the SDK.
+        idf_component_get_property(P4_ESP_LCD_COMPONENT_DIR esp_lcd COMPONENT_DIR)
+        list(APPEND PLATFORM_DISPLAY_PRIVATE_INCLUDES "${P4_ESP_LCD_COMPONENT_DIR}/priv_include")
     elseif(P4_ACTIVE_BOARD_PROFILE STREQUAL "olimex-esp32-p4-pc")
         set(PLATFORM_DISPLAY_DRIVER_SOURCE "src/platform_display_olimex.c")
         set(PLATFORM_DISPLAY_DRIVER_REQUIREMENTS
@@ -35,7 +40,7 @@ if(COMMAND idf_component_register)
             "src/platform_display_layout.c"
             ${PLATFORM_DISPLAY_WORKER_SOURCES}
         INCLUDE_DIRS "include"
-        PRIV_INCLUDE_DIRS "src" "../platform_tab5/vendor"
+        PRIV_INCLUDE_DIRS ${PLATFORM_DISPLAY_PRIVATE_INCLUDES}
         REQUIRES
             esp_hw_support
             esp_lcd

@@ -282,12 +282,12 @@ owns the codec or pins. This source path builds with pinned
 required physical acceptance item.
 
 This target is source-reviewed and build-tested only. The connected USB serial
-endpoint has been observed, but a successful ROM-loader identity read, complete
-16 MiB factory backup, HDMI observation, card test, audible audio test, and
-named HID device run are still required. `flash_authorized` must remain false
-until the backup has
-the exact byte count, SHA-256, and hashed live-device binding required by the
-repository flash gate. See `docs/boards/OLIMEX_ESP32_P4_PC.md` for the operator
+endpoint has been observed, but a successful ROM-loader identity read, HDMI
+observation, card test, audible audio test, and named HID device run are still
+required. `flash_authorized` must remain false until exact-unit identity and a
+target-specific guarded authorization are established. Firmware backups run
+only as a separately requested operation and are never required for flashing;
+do not create or refresh one as part of flashing. Recovery can rebuild old source. See `docs/boards/OLIMEX_ESP32_P4_PC.md` for the operator
 workflow.
 
 ## Primary references

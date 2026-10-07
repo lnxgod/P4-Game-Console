@@ -250,8 +250,11 @@ static void check_loading_region_cache(void)
         if(frame==18U){shell.loading.active=true;full=true;}
         if(frame==20U){shell.page=CONSOLE_PAGE_HOME;full=true;}
         if(frame==21U){shell.page=CONSOLE_PAGE_EXTERNAL;full=true;}
-        render();
+        /* Main uses the opt-in scroll entry point even on a launch cover. */
+        if(frame%2U)assert(console_shell_render_native_scroll_rgb565(&shell,pixels,stride));
+        else render();
         console_shell_native_update_t update;assert(console_shell_get_native_update(&shell,&update));
+        assert(!update.scroll_context_valid&&!shell.native_logical_incomplete);
         assert(update.kind==(full?CONSOLE_SHELL_NATIVE_UPDATE_FULL:CONSOLE_SHELL_NATIVE_UPDATE_REGION));
         if(!full)assert(update.x==910U&&update.y==340U&&update.width==306U&&update.height==164U);
         console_shell_t exact=shell;
@@ -263,7 +266,7 @@ static void check_loading_region_cache(void)
         }
     }
     free(before);free(reference);
-    puts("TAB5 LOADING REGION PASS pixel_exact=24 bounded_damage=1 invalidation=1 no_stale_bar=1");
+    puts("TAB5 LOADING REGION PASS pixel_exact=24 bounded_damage=1 invalidation=1 no_stale_bar=1 native_entry=1");
 }
 
 static void check_scroll_cache(void)
@@ -323,6 +326,774 @@ static void check_scroll_motion(void)
     c.y=500;(void)console_shell_handle_touch(&shell,true,&c,1);(void)console_shell_advance(&shell,120);
     (void)console_shell_handle_touch(&shell,true,NULL,0);assert(!shell.ng_glide_kind);
     puts("TAB5 SCROLL MOTION PASS cadence_independent=1 bounded=1 stop_touch_safe=1 stale_cancel=1");
+}
+static void begin_hint_drag(bool files)
+{
+    init();
+    if(files){
+        shell.page=CONSOLE_PAGE_FILES;shell.files.available=true;shell.files.entry_count=12;shell.files.revision=7U;
+        for(unsigned i=0;i<12U;++i)snprintf(shell.files.entries[i].label,sizeof(shell.files.entries[i].label),"Hint file %u",i);
+        shell.ng_file_scroll=200;
+    }else {shell.home_all_programs=true;shell.ng_library_scroll=200;}
+    console_shell_contact_t contact={.x=900,.y=500};
+    assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+    (void)console_shell_advance(&shell,120U);contact.y=450;
+    assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+    assert(shell.contact_down&&!shell.press_active&&shell.ng_content_drag_started&&shell.ng_velocity_q16==0);
+}
+static void advance_hint_cadence(console_shell_t *target,unsigned cadence,unsigned total)
+{
+    for(unsigned elapsed=0;elapsed<total;){
+        const unsigned step=total-elapsed<cadence?total-elapsed:cadence;
+        const int previous=target->ng_glide_kind==2U?target->ng_file_scroll:target->ng_library_scroll;
+        const int32_t speed=abs(target->ng_velocity_q16);
+        (void)console_shell_advance(target,step);
+        assert(abs(target->ng_velocity_q16)<=speed);
+        const int offset=target->ng_glide_kind==2U?target->ng_file_scroll:target->ng_library_scroll;
+        if(target->page==CONSOLE_PAGE_HOME)assert(abs(offset-previous)<=(int)(step*3U));
+        elapsed+=step;
+    }
+}
+static void check_release_velocity_hints(void)
+{
+    assert(!console_shell_set_native_scroll_release_velocity(NULL,65536));
+    const unsigned cadences[]={1U,7U,16U,33U,64U};
+    for(unsigned files=0;files<2U;++files)for(unsigned negative=0;negative<2U;++negative){
+        begin_hint_drag(files!=0U);
+        assert(console_shell_set_native_scroll_release_velocity(&shell,negative?-196608:196608));
+        assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE);
+        assert(shell.ng_glide_kind==(files?2U:1U)&&!shell.ng_content_drag_started);
+        console_shell_t initial=shell,expected=shell;
+        advance_hint_cadence(&expected,1U,1000U);
+        assert(!expected.ng_glide_kind&&!expected.ng_velocity_q16);
+        if(files)assert(expected.ng_file_scroll==(negative?0:714));
+        for(size_t i=0;i<sizeof(cadences)/sizeof(cadences[0]);++i){
+            console_shell_t actual=initial;advance_hint_cadence(&actual,cadences[i],1000U);
+            assert(actual.ng_library_scroll==expected.ng_library_scroll&&actual.ng_file_scroll==expected.ng_file_scroll);
+            assert(actual.ng_glide_q16==expected.ng_glide_q16&&!actual.ng_glide_kind&&!actual.ng_velocity_q16);
+        }
+        shell=initial;(void)console_shell_advance(&shell,1U);
+        if(!negative||!files)assert(shell.ng_glide_q16%65536!=0);
+        assert(abs(shell.ng_velocity_q16)>190000); /* A fast flick eases rather than stopping suddenly. */
+        console_shell_contact_t stop={.x=350,.y=240};
+        assert(console_shell_handle_touch(&shell,true,&stop,1).type==CONSOLE_ACTION_NONE);
+        assert(!shell.ng_glide_kind&&!shell.ng_content_drag_started);
+        (void)console_shell_advance(&shell,1U);stop.y=238U;
+        assert(console_shell_handle_touch(&shell,true,&stop,1).type==CONSOLE_ACTION_NONE);
+        assert(!shell.press_active&&!shell.ng_content_drag_started);
+        const int32_t before=shell.ng_velocity_q16;
+        assert(!console_shell_set_native_scroll_release_velocity(&shell,131072));
+        assert(shell.ng_velocity_q16==before);
+        assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE&&!shell.ng_glide_kind);
+    }
+    begin_hint_drag(false);const int slow_start=shell.ng_library_scroll;
+    assert(console_shell_set_native_scroll_release_velocity(&shell,9830));
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE&&shell.ng_glide_kind==1U);
+    advance_hint_cadence(&shell,16U,1000U);
+    assert(shell.ng_library_scroll>slow_start&&shell.ng_library_scroll-slow_start<=8&&!shell.ng_glide_kind);
+    begin_hint_drag(false);assert(console_shell_set_native_scroll_release_velocity(&shell,6553));
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE&&!shell.ng_glide_kind);
+    begin_hint_drag(false);assert(console_shell_set_native_scroll_release_velocity(&shell,65536));
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE&&shell.ng_glide_kind==1U);
+    console_shell_contact_t jitter={.x=350,.y=240};
+    assert(console_shell_handle_touch(&shell,true,&jitter,1).type==CONSOLE_ACTION_NONE);
+    (void)console_shell_advance(&shell,5U);jitter.y=238U;
+    assert(console_shell_handle_touch(&shell,true,&jitter,1).type==CONSOLE_ACTION_NONE);
+    assert(shell.ng_velocity_q16>6554&&!shell.ng_content_drag_started&&!shell.press_active);
+    /* No hint call: the legacy estimator alone cannot restart this stop tap. */
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE&&!shell.ng_glide_kind);
+    begin_hint_drag(false);assert(console_shell_set_native_scroll_release_velocity(&shell,INT32_MAX));
+    assert(shell.ng_velocity_q16==196608);assert(console_shell_set_native_scroll_release_velocity(&shell,INT32_MIN));
+    assert(shell.ng_velocity_q16==-196608);assert(console_shell_set_native_scroll_release_velocity(&shell,65536));
+    (void)console_shell_advance(&shell,81U);
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE&&!shell.ng_glide_kind);
+    begin_hint_drag(false);shell.ng_reduce_motion=true;
+    assert(!console_shell_set_native_scroll_release_velocity(&shell,65536));
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE&&!shell.ng_glide_kind);
+    begin_hint_drag(false);shell.ng_scroll_kind=3U;
+    assert(!console_shell_set_native_scroll_release_velocity(&shell,65536));
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE&&!shell.ng_glide_kind);
+    begin_hint_drag(true);++shell.files.revision;
+    assert(!console_shell_set_native_scroll_release_velocity(&shell,65536));
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE&&!shell.ng_glide_kind);
+    begin_hint_drag(true);assert(console_shell_set_native_scroll_release_velocity(&shell,65536));
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE&&shell.ng_glide_kind==2U);
+    ++shell.files.revision;(void)console_shell_advance(&shell,16U);assert(!shell.ng_glide_kind&&!shell.ng_velocity_q16);
+    begin_hint_drag(false);assert(console_shell_handle_touch(&shell,false,NULL,0).type==CONSOLE_ACTION_NONE);
+    assert(!console_shell_set_native_scroll_release_velocity(&shell,65536));
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE&&!shell.ng_glide_kind);
+    init();shell.home_all_programs=true;console_shell_contact_t contact={.x=350,.y=240};
+    assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE&&shell.press_active);
+    assert(!console_shell_set_native_scroll_release_velocity(&shell,65536));
+    (void)console_shell_handle_touch(&shell,false,NULL,0);(void)console_shell_handle_touch(&shell,true,NULL,0);
+    puts("TAB5 RELEASE HINT PASS fresh_real_drag_only=1 fast_easing=1 slow_short_coast=1 fractional=1 five_cadences=1 endpoints=1 stale_cancel=1 stop_jitter_safe=1 no_launch=1");
+}
+static void compare_cached_frame(uint16_t *reference,uint16_t *previous)
+{
+    console_shell_t expected=shell;
+    memcpy(previous,pixels,721U*stride*sizeof(*pixels));
+    memcpy(reference,pixels,721U*stride*sizeof(*pixels));
+    render();assert(console_shell_render_rgb565(&expected,reference,stride));
+    console_shell_native_update_t update;assert(console_shell_get_native_update(&shell,&update));
+    for(size_t y=0;y<721U;++y)for(size_t x=0;x<stride;++x){
+        const size_t pos=y*stride+x;
+        if(pixels[pos]!=reference[pos]){
+            fprintf(stderr,"DYNAMIC mismatch page=%u offset=%d/%d x=%zu y=%zu actual=%04x expected=%04x\n",
+                (unsigned)shell.page,shell.ng_library_scroll,shell.ng_file_scroll,x,y,pixels[pos],reference[pos]);abort();}
+        const bool damaged=update.kind==CONSOLE_SHELL_NATIVE_UPDATE_FULL||
+            (update.kind==CONSOLE_SHELL_NATIVE_UPDATE_REGION&&x>=update.x&&y>=update.y&&
+             x<(size_t)update.x+update.width&&y<(size_t)update.y+update.height);
+        if(!damaged)assert(pixels[pos]==previous[pos]);
+    }
+}
+static void check_dynamic_damage(void)
+{
+    init();uint16_t *reference=malloc(721U*stride*sizeof(*reference)),*previous=malloc(721U*stride*sizeof(*previous));
+    assert(reference&&previous);
+    compare_cached_frame(reference,previous);assert(shell.native_update.kind==CONSOLE_SHELL_NATIVE_UPDATE_NONE);
+    console_shell_contact_t contact={.x=100,.y=454};
+    (void)console_shell_handle_touch(&shell,true,&contact,1);compare_cached_frame(reference,previous);
+    (void)console_shell_handle_touch(&shell,true,NULL,0);compare_cached_frame(reference,previous);
+    assert(shell.page==CONSOLE_PAGE_FILES);
+    shell.page=CONSOLE_PAGE_CONTROL_PANEL;shell.ng_focus=0;compare_cached_frame(reference,previous);
+    console_shell_runtime_info_t runtime=shell.runtime;++runtime.uptime_seconds;
+    console_shell_set_runtime_info(&shell,&runtime);compare_cached_frame(reference,previous);
+    assert(shell.native_update.kind==CONSOLE_SHELL_NATIVE_UPDATE_NONE);
+    runtime.battery_sample_valid=true;runtime.battery_percent=73;
+    console_shell_set_runtime_info(&shell,&runtime);compare_cached_frame(reference,previous);
+    assert(shell.native_update.kind==CONSOLE_SHELL_NATIVE_UPDATE_REGION&&shell.native_update.height<=80U);
+    contact=(console_shell_contact_t){.x=450,.y=220};
+    (void)console_shell_handle_touch(&shell,true,&contact,1);compare_cached_frame(reference,previous);
+    (void)console_shell_handle_touch(&shell,true,NULL,0);compare_cached_frame(reference,previous);
+    assert(shell.page==CONSOLE_PAGE_AUDIO);
+    contact=(console_shell_contact_t){.x=865,.y=275};
+    (void)console_shell_handle_touch(&shell,true,&contact,1);compare_cached_frame(reference,previous);
+    for(unsigned frame=0;frame<8U;++frame){(void)console_shell_advance(&shell,16);compare_cached_frame(reference,previous);}
+    (void)console_shell_handle_touch(&shell,true,NULL,0);compare_cached_frame(reference,previous);
+    init();contact=(console_shell_contact_t){.x=420,.y=360};
+    (void)console_shell_handle_touch(&shell,true,&contact,1);compare_cached_frame(reference,previous);
+    for(unsigned frame=0;frame<8U;++frame){(void)console_shell_advance(&shell,16);compare_cached_frame(reference,previous);}
+    free(reference);free(previous);puts("TAB5 DYNAMIC DAMAGE PASS full_equivalent=1 unchanged_skipped=1 damage_covers_changes=1");
+}
+typedef struct {
+    unsigned copies,clean_copies,dirty_copies,publications;
+    uint16_t last_height,last_width;
+    uint64_t published_epochs[2];
+    uint16_t published_rows[2];
+    bool fail,fail_publish,fail_last;
+} copy_test_t;
+static bool copy_raster(void *context,const console_shell_rgb565_copy_t *copy)
+{
+    copy_test_t *state=context;++state->copies;
+    state->last_height=copy->height;state->last_width=copy->width;
+    if(copy->source_dma_clean){
+        const unsigned page=copy->source==shell.native_rasters[0].pixels?0U:1U;
+        assert(state->published_epochs[page]==shell.native_rasters[page].preparation_epoch);
+        assert(state->published_rows[page]==shell.native_rasters[page].height);
+        ++state->clean_copies;
+    }else ++state->dirty_copies;
+    assert(copy->source_x+copy->width<=copy->source_stride_pixels);
+    assert(copy->source_y+copy->height<=copy->source_height);
+    assert(copy->destination_x+copy->width<=copy->destination_stride_pixels);
+    assert(copy->destination_y+copy->height<=copy->destination_height);
+    const uintptr_t source=(uintptr_t)copy->source,destination=(uintptr_t)copy->destination;
+    const size_t source_bytes=copy->source_stride_pixels*copy->source_height*sizeof(uint16_t);
+    const size_t destination_bytes=copy->destination_stride_pixels*copy->destination_height*sizeof(uint16_t);
+    assert(source+source_bytes<=destination||destination+destination_bytes<=source);
+    if(state->fail)return false;
+    for(size_t row=0;row<copy->height;++row)
+        memcpy(copy->destination+(row+copy->destination_y)*copy->destination_stride_pixels+copy->destination_x,
+            copy->source+(row+copy->source_y)*copy->source_stride_pixels+copy->source_x,(size_t)copy->width*sizeof(uint16_t));
+    return true;
+}
+static bool publish_raster(void *context,const console_shell_rgb565_publication_t *publication)
+{
+    copy_test_t *state=context;++state->publications;
+    assert(!shell.contact_down&&!shell.ng_scroll_kind&&!shell.ng_glide_kind);
+    assert(publication->stride_pixels==1024U&&publication->row_count>0&&publication->row_count<=64U);
+    const unsigned page=publication->pixels==shell.native_rasters[0].pixels?0U:1U;
+    const console_shell_native_raster_cache_t *cache=&shell.native_rasters[page];
+    assert(publication->pixels==cache->pixels&&publication->height==cache->height);
+    assert(publication->first_row==cache->published_rows);
+    assert((unsigned)publication->first_row+publication->row_count<=cache->prepared_rows);
+    if(state->published_epochs[page]!=cache->preparation_epoch){
+        assert(cache->published_epoch==0&&cache->published_rows==0);
+        state->published_epochs[page]=cache->preparation_epoch;state->published_rows[page]=0;
+    }
+    assert(state->published_rows[page]==publication->first_row);
+    if(state->fail_publish||(state->fail_last&&(unsigned)publication->first_row+publication->row_count==publication->height))return false;
+    state->published_rows[page]=(uint16_t)(state->published_rows[page]+publication->row_count);
+    return true;
+}
+static void prepare_rasters(void)
+{
+    unsigned slices=0;
+    while(!console_shell_native_cache_ready(&shell)){
+        assert(console_shell_prepare_native_cache(&shell,64));assert(++slices<=64U);
+    }
+    assert(!console_shell_prepare_native_cache(&shell,64));
+}
+static void check_immutable_rasters(void)
+{
+    init();const size_t bytes=console_shell_native_cache_storage_bytes();assert(bytes==4U*1024U*1024U);
+    uint16_t *allocation=aligned_alloc(64,bytes+128U);assert(allocation);
+    for(size_t i=0;i<(bytes+128U)/sizeof(uint16_t);++i)allocation[i]=0xdead;
+    uint16_t *arena=allocation+32U,*snapshot=malloc(bytes);assert(snapshot);
+    uint16_t *reference=malloc(721U*stride*sizeof(*reference)),*previous=malloc(721U*stride*sizeof(*previous));assert(reference&&previous);
+    copy_test_t copy={0};
+    assert(!console_shell_attach_native_cache(&shell,arena+1,bytes,copy_raster,NULL,&copy));
+    assert(!console_shell_attach_native_cache(&shell,arena,bytes-64U,copy_raster,NULL,&copy));
+    assert(console_shell_attach_native_cache(&shell,arena,bytes,copy_raster,NULL,&copy));
+    prepare_rasters();assert(shell.native_rasters[0].valid&&!shell.native_rasters[1].valid);
+    (void)tap(100,265);compare_cached_frame(reference,previous);
+    console_shell_contact_t contact={.x=350,.y=230};
+    (void)console_shell_handle_touch(&shell,true,&contact,1);compare_cached_frame(reference,previous);
+    (void)console_shell_advance(&shell,16);compare_cached_frame(reference,previous);
+    contact.x=370;(void)console_shell_handle_touch(&shell,true,&contact,1);compare_cached_frame(reference,previous);
+    console_shell_runtime_info_t runtime=shell.runtime;runtime.battery_sample_valid=true;runtime.battery_percent=73;
+    console_shell_set_runtime_info(&shell,&runtime);compare_cached_frame(reference,previous);
+    assert(shell.native_update.kind==CONSOLE_SHELL_NATIVE_UPDATE_REGION&&shell.native_update.height<=80U);
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE);compare_cached_frame(reference,previous);
+    memcpy(snapshot,arena,bytes);shell.ng_scroll_kind=1;shell.ng_focus=0;shell.ng_focus_ms=0;
+    const int offsets[]={6,60,180,410,780,832,900,1006,720,450,120,0};
+    for(size_t i=0;i<sizeof(offsets)/sizeof(offsets[0]);++i){
+        shell.ng_library_scroll=offsets[i];compare_cached_frame(reference,previous);
+        assert(!console_shell_prepare_native_cache(&shell,64));assert(memcmp(snapshot,arena,bytes)==0);
+    }
+    assert(copy.copies>6U);
+    shell.ng_scroll_kind=0;shell.ng_library_scroll=900;prepare_rasters();
+    shell.ng_scroll_kind=1;shell.ng_focus=0;shell.ng_library_scroll=1006;compare_cached_frame(reference,previous);
+    copy.fail=true;shell.ng_library_scroll=990;compare_cached_frame(reference,previous);copy.fail=false;
+    const uint64_t library_signature=shell.native_rasters[0].signature;
+    shell.ng_scroll_kind=0;shell.page=CONSOLE_PAGE_FILES;shell.files.available=true;shell.files.entry_count=12;
+    for(unsigned i=0;i<12U;++i)snprintf(shell.files.entries[i].label,sizeof(shell.files.entries[i].label),"File %u",i);
+    shell.ng_file_scroll=0;compare_cached_frame(reference,previous);prepare_rasters();
+    assert(shell.native_rasters[0].valid&&shell.native_rasters[0].signature==library_signature);
+    shell.ng_scroll_kind=2;shell.ng_focus=0;
+    for(int offset=0;offset<=410;offset+=41){shell.ng_file_scroll=offset;compare_cached_frame(reference,previous);}
+    shell.file_selected_index=3;compare_cached_frame(reference,previous);
+    shell.ng_file_scroll=714;compare_cached_frame(reference,previous);
+    shell.ng_scroll_kind=0;prepare_rasters();shell.ng_scroll_kind=2;
+    shell.ng_file_scroll=690;compare_cached_frame(reference,previous);
+    ++shell.files.revision;shell.ng_file_scroll=640;compare_cached_frame(reference,previous);
+    assert(!console_shell_native_cache_ready(&shell));shell.ng_scroll_kind=0;prepare_rasters();
+    const uint64_t file_signature=shell.native_rasters[1].signature;
+    apps[0].title="Changed raster title";assert(!console_shell_native_cache_ready(&shell));prepare_rasters();
+    assert(shell.native_rasters[1].valid&&shell.native_rasters[1].signature==file_signature);
+    for(size_t i=0;i<32U;++i){assert(allocation[i]==0xdead);assert(allocation[32U+bytes/sizeof(uint16_t)+i]==0xdead);}
+    for(size_t row=0;row<2048U;++row)for(size_t x=964U;x<1024U;++x)assert(arena[row*1024U+x]==0xdead);
+    assert(shell.native_raster_copy_frames>15U);
+    console_shell_detach_native_cache(&shell);
+    assert(!shell.native_raster_arena&&!shell.native_rasters[0].pixels&&!shell.native_rasters[1].pixels&&!shell.native_copy);
+    compare_cached_frame(reference,previous);
+    free(reference);free(previous);free(snapshot);free(allocation);
+    puts("TAB5 IMMUTABLE RASTER PASS bounded_4mib=1 nonoverlap=1 idle_slices=1 full_equivalent=1 fallback=1 release=1");
+}
+static void check_small_drag(void)
+{
+    init();(void)tap(100,265);
+    console_shell_contact_t contact={.x=350,.y=250};
+    (void)console_shell_handle_touch(&shell,true,&contact,1);
+    contact.y=245;(void)console_shell_handle_touch(&shell,true,&contact,1);
+    assert(shell.ng_library_scroll==0&&shell.press_active);
+    contact.y=244;(void)console_shell_handle_touch(&shell,true,&contact,1);
+    assert(shell.ng_library_scroll==6&&!shell.press_active);
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE);
+    shell.page=CONSOLE_PAGE_FILES;shell.files.available=true;shell.files.entry_count=1;shell.files.revision=4;
+    strcpy(shell.files.entries[0].label,"File");contact=(console_shell_contact_t){.x=350,.y=210};
+    (void)console_shell_handle_touch(&shell,true,&contact,1);++shell.files.revision;
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE);
+    puts("TAB5 DRAG ONSET PASS native_pixels=6 tap_slop=1 release_suppressed=1 revision_guard=1");
+}
+
+enum { TEST_PHYSICAL_STRIDE=725,TEST_PHYSICAL_ROWS=1281 };
+static void rotate_test_region(uint16_t *physical,const uint16_t *logical,
+    unsigned x,unsigned y,unsigned width,unsigned height)
+{
+    for(unsigned row=y;row<y+height;++row)for(unsigned col=x;col<x+width;++col)
+        physical[(size_t)(1279U-col)*TEST_PHYSICAL_STRIDE+row]=logical[(size_t)row*stride+col];
+}
+static void compose_scroll_test(uint16_t *physical,const uint16_t *previous,
+    const console_shell_native_update_t *update)
+{
+    const int shift=update->previous_scroll_offset-update->current_scroll_offset;
+    const unsigned amount=(unsigned)abs(shift),left=update->viewport_y;
+    const unsigned first_row=1280U-update->viewport_x-update->viewport_width;
+    for(unsigned row=first_row;row<1280U-update->viewport_x;++row)
+        for(unsigned x=left;x<left+update->viewport_height;++x){
+            const int source=(int)x-shift;
+            if(source>=(int)left&&source<(int)(left+update->viewport_height))
+                physical[(size_t)row*TEST_PHYSICAL_STRIDE+x]=previous[(size_t)row*TEST_PHYSICAL_STRIDE+(unsigned)source];
+        }
+    const unsigned first=shift<0?(unsigned)update->viewport_y+update->viewport_height-amount:update->viewport_y;
+    rotate_test_region(physical,pixels,update->viewport_x,first,update->viewport_width,amount);
+    rotate_test_region(physical,pixels,1228U,update->viewport_y,32U,update->viewport_height);
+    if(update->scroll_stationary_width&&update->scroll_stationary_height)
+        rotate_test_region(physical,pixels,update->scroll_stationary_x,update->scroll_stationary_y,
+            update->scroll_stationary_width,update->scroll_stationary_height);
+}
+static void check_physical_scroll_contract(void)
+{
+    const size_t logical_bytes=721U*stride*sizeof(uint16_t);
+    const size_t physical_bytes=(size_t)TEST_PHYSICAL_ROWS*TEST_PHYSICAL_STRIDE*sizeof(uint16_t);
+    uint16_t *reference=malloc(logical_bytes),*previous=malloc(logical_bytes);
+    uint16_t *physical=malloc(physical_bytes),*old_physical=malloc(physical_bytes),*expected_physical=malloc(physical_bytes);
+    assert(reference&&previous&&physical&&old_physical&&expected_physical);
+    unsigned scroll_frames=0,full_fallbacks=0;
+    for(unsigned cached=0;cached<2U;++cached){
+        init();uint16_t *arena=NULL;copy_test_t copy={0};
+        if(cached){
+            arena=aligned_alloc(64,console_shell_native_cache_storage_bytes());assert(arena);
+            assert(console_shell_attach_native_cache(&shell,arena,console_shell_native_cache_storage_bytes(),copy_raster,NULL,&copy));
+        }
+        for(unsigned files=0;files<2U;++files){
+            if(files){
+                shell.page=CONSOLE_PAGE_FILES;shell.files.available=true;shell.files.entry_count=12;
+                shell.file_selected_index=3U;
+                for(unsigned i=0;i<12U;++i)snprintf(shell.files.entries[i].label,sizeof(shell.files.entries[i].label),"Scroll file %u",i);
+                shell.ng_file_scroll=100;
+            }else {shell.page=CONSOLE_PAGE_HOME;shell.home_all_programs=true;shell.ng_library_scroll=100;}
+            shell.ng_focus=0;shell.ng_focus_ms=0;shell.ng_scroll_kind=0;
+            if(cached)prepare_rasters();
+            shell.ng_scroll_kind=files?2U:1U;
+            render();assert(shell.native_update.scroll_context_valid&&!shell.native_logical_incomplete);
+            for(size_t i=0;i<physical_bytes/sizeof(uint16_t);++i)physical[i]=expected_physical[i]=0xdead;
+            rotate_test_region(physical,pixels,0,0,1280,720);
+            const int offsets[]={107,113,96,115,109,124,121,131,126,140,900,891,0,7,15,714,701,693};
+            for(size_t frame=0;frame<sizeof(offsets)/sizeof(offsets[0]);++frame){
+                if(files)shell.ng_file_scroll=offsets[frame];else shell.ng_library_scroll=offsets[frame];
+                if(frame==4U){++shell.runtime.game_volume_step;}
+                if(frame==6U){if(files)++shell.files.revision;else apps[1].title="Scroll changed";}
+                if(frame==8U){shell.file_selected_index=5U;}
+                copy.fail=frame==9U;
+                console_shell_t expected=shell;
+                memcpy(previous,pixels,logical_bytes);memcpy(reference,pixels,logical_bytes);
+                memcpy(old_physical,physical,physical_bytes);
+                const unsigned copies_before=copy.copies;
+                const console_shell_native_update_t prior_update=shell.native_update;
+                assert(console_shell_render_native_scroll_rgb565(&shell,pixels,stride));
+                assert(console_shell_render_rgb565(&expected,reference,stride));
+                const console_shell_native_update_t update=shell.native_update;
+                assert(update.scroll_context_valid&&update.viewport_x==264U&&update.viewport_y==178U&&update.viewport_width==964U);
+                assert(update.viewport_height==(files?358U:448U));
+                if(update.kind==CONSOLE_SHELL_NATIVE_UPDATE_SCROLL){
+                    assert(prior_update.scroll_context_valid&&prior_update.scroll_context==update.previous_scroll_context);
+                    assert(prior_update.current_scroll_offset==update.previous_scroll_offset);
+                    const int shift=update.previous_scroll_offset-update.current_scroll_offset;
+                    const unsigned amount=(unsigned)abs(shift);
+                    const unsigned first=shift<0?178U+update.viewport_height-amount:178U;
+                    assert(amount>0U&&amount<update.viewport_height&&shell.native_logical_incomplete);
+                    for(size_t y=0;y<721U;++y)for(size_t x=0;x<stride;++x){
+                        const bool strip=x>=264U&&x<1228U&&y>=first&&y<first+amount;
+                        const bool bar=x>=1228U&&x<1260U&&y>=178U&&y<178U+update.viewport_height;
+                        const bool patch=x>=update.scroll_stationary_x&&y>=update.scroll_stationary_y&&
+                            x<(size_t)update.scroll_stationary_x+update.scroll_stationary_width&&
+                            y<(size_t)update.scroll_stationary_y+update.scroll_stationary_height;
+                        if(strip||bar||patch)assert(pixels[y*stride+x]==reference[y*stride+x]);
+                        else assert(pixels[y*stride+x]==previous[y*stride+x]);
+                    }
+                    if(copy.copies>copies_before){assert(copy.copies==copies_before+1U&&copy.last_height==amount);}
+                    compose_scroll_test(physical,old_physical,&update);++scroll_frames;
+                }else{
+                    assert(!shell.native_logical_incomplete);
+                    assert(memcmp(pixels,reference,logical_bytes)==0);
+                    rotate_test_region(physical,pixels,0,0,1280,720);++full_fallbacks;
+                }
+                if(files&&prior_update.scroll_context_valid&&
+                    ((prior_update.current_scroll_offset==0)!=(update.current_scroll_offset==0)||
+                     (prior_update.current_scroll_offset==714)!=(update.current_scroll_offset==714)))
+                    assert(prior_update.scroll_context!=update.scroll_context);
+                rotate_test_region(expected_physical,reference,0,0,1280,720);
+                assert(memcmp(physical,expected_physical,physical_bytes)==0);
+                if(frame==2U&&update.kind==CONSOLE_SHELL_NATIVE_UPDATE_SCROLL){
+                    memcpy(previous,pixels,logical_bytes);const unsigned before_none=copy.copies;
+                    shell.pressed_index=12345U;assert(!shell.press_active);
+                    assert(console_shell_render_native_scroll_rgb565(&shell,pixels,stride));
+                    assert(shell.native_update.kind==CONSOLE_SHELL_NATIVE_UPDATE_NONE&&shell.native_logical_incomplete);
+                    assert(shell.native_update.scroll_context_valid&&shell.native_update.scroll_context==update.scroll_context);
+                    assert(memcmp(pixels,previous,logical_bytes)==0&&copy.copies==before_none);
+                }
+                if(frame==3U||frame==10U){
+                    /* Pre-mutation display rejection must reconstruct a full source. */
+                    const unsigned before_fallback=copy.copies;
+                    render();assert(!shell.native_logical_incomplete);
+                    assert(memcmp(pixels,reference,logical_bytes)==0);
+                    if(update.kind==CONSOLE_SHELL_NATIVE_UPDATE_SCROLL)assert(shell.native_update.kind==CONSOLE_SHELL_NATIVE_UPDATE_FULL);
+                    if(cached&&frame==3U){assert(copy.copies==before_fallback+1U&&copy.last_height==update.viewport_height);}
+                }
+            }
+            shell.ng_scroll_kind=0;render();assert(!shell.native_logical_incomplete);
+            console_shell_t expected=shell;memcpy(reference,pixels,logical_bytes);
+            assert(console_shell_render_rgb565(&expected,reference,stride));assert(memcmp(pixels,reference,logical_bytes)==0);
+            shell.pointer_visible=true;assert(console_shell_render_native_scroll_rgb565(&shell,pixels,stride));
+            assert(!shell.native_update.scroll_context_valid&&!shell.native_logical_incomplete);shell.pointer_visible=false;
+        }
+        /* Switching the logical source cannot translate its unrelated prior contents. */
+        shell.page=CONSOLE_PAGE_HOME;shell.home_all_programs=true;shell.ng_library_scroll=100;
+        shell.ng_scroll_kind=1U;shell.ng_focus=0;shell.ng_focus_ms=0;render();
+        shell.ng_library_scroll=107;assert(console_shell_render_native_scroll_rgb565(&shell,pixels,stride));
+        assert(shell.native_logical_incomplete);
+        console_shell_t expected=shell;assert(console_shell_render_rgb565(&expected,reference,stride));
+        assert(console_shell_render_native_scroll_rgb565(&shell,previous,stride));
+        assert(shell.native_update.kind==CONSOLE_SHELL_NATIVE_UPDATE_FULL&&!shell.native_logical_incomplete);
+        assert(memcmp(previous,reference,logical_bytes)==0);
+        render();shell.ng_library_scroll=113;assert(console_shell_render_native_scroll_rgb565(&shell,pixels,stride));
+        assert(shell.native_logical_incomplete);
+        shell.page=CONSOLE_PAGE_EXTERNAL;shell.active_app_id=100U;
+        expected=shell;assert(console_shell_render_rgb565(&expected,reference,stride));
+        assert(console_shell_render_native_scroll_rgb565(&shell,pixels,stride));
+        assert(!shell.native_update.scroll_context_valid&&!shell.native_logical_incomplete);
+        assert(memcmp(pixels,reference,logical_bytes)==0);
+        shell.page=CONSOLE_PAGE_HOME;shell.home_all_programs=true;shell.ng_focus=0;render();
+        shell.ng_library_scroll=119;assert(console_shell_render_native_scroll_rgb565(&shell,pixels,stride));
+        assert(shell.native_logical_incomplete);
+        expected=shell;assert(console_shell_render_rgb565(&expected,reference,stride));
+        if(cached){console_shell_detach_native_cache(&shell);free(arena);}
+        else console_shell_invalidate_native_cache(&shell);
+        render();assert(shell.native_update.kind==CONSOLE_SHELL_NATIVE_UPDATE_FULL&&!shell.native_logical_incomplete);
+        assert(memcmp(pixels,reference,logical_bytes)==0);
+    }
+    assert(scroll_frames>=30U&&full_fallbacks>=10U);
+    free(reference);free(previous);free(physical);free(old_physical);free(expected_physical);
+    printf("TAB5 PHYSICAL SCROLL PASS frames=%u fallbacks=%u exact_rotated_pixels=1 strip_only=1 complete_fallback=1 padded_guards=1\n",scroll_frames,full_fallbacks);
+}
+/* Model the selected physical frame exactly as the production CCW mapping.
+ * A REGION is allowed only after the logical source becomes authoritative. */
+static console_shell_native_update_t check_optin_physical(uint16_t *physical,uint16_t *old_physical,
+    uint16_t *expected_physical,uint16_t *reference)
+{
+    const size_t logical_bytes=721U*stride*sizeof(uint16_t);
+    const size_t physical_bytes=(size_t)TEST_PHYSICAL_ROWS*TEST_PHYSICAL_STRIDE*sizeof(uint16_t);
+    console_shell_t expected=shell;memcpy(reference,pixels,logical_bytes);
+    memcpy(old_physical,physical,physical_bytes);
+    assert(console_shell_render_native_scroll_rgb565(&shell,pixels,stride));
+    assert(console_shell_render_rgb565(&expected,reference,stride));
+    const console_shell_native_update_t update=shell.native_update;
+    if(update.kind==CONSOLE_SHELL_NATIVE_UPDATE_SCROLL)compose_scroll_test(physical,old_physical,&update);
+    else if(update.kind==CONSOLE_SHELL_NATIVE_UPDATE_FULL)rotate_test_region(physical,pixels,0,0,1280,720);
+    else if(update.kind==CONSOLE_SHELL_NATIVE_UPDATE_REGION){
+        assert(!shell.native_logical_incomplete);
+        rotate_test_region(physical,pixels,update.x,update.y,update.width,update.height);
+    }
+    if(!shell.native_logical_incomplete)for(size_t y=0;y<721U;++y)for(size_t x=0;x<stride;++x)if(pixels[y*stride+x]!=reference[y*stride+x]){
+        fprintf(stderr,"ONSET mismatch page=%u offset=%d/%d glide=%u touch=%u focus=%u update=%u box=%u,%u,%u,%u x=%zu y=%zu actual=%04x expected=%04x\n",
+            (unsigned)shell.page,shell.ng_library_scroll,shell.ng_file_scroll,(unsigned)shell.ng_glide_kind,(unsigned)shell.contact_down,
+            (unsigned)shell.ng_focus,(unsigned)update.kind,update.x,update.y,update.width,update.height,x,y,pixels[y*stride+x],reference[y*stride+x]);abort();
+    }
+    rotate_test_region(expected_physical,reference,0,0,1280,720);
+    assert(memcmp(physical,expected_physical,physical_bytes)==0);
+    for(size_t y=0;y<720U;++y)for(size_t x=1280U;x<stride;++x)assert(pixels[y*stride+x]==0xdead);
+    for(size_t x=0;x<stride;++x)assert(pixels[720U*stride+x]==0xdead);
+    return update;
+}
+static void check_deferred_content_focus(void)
+{
+    const size_t logical_bytes=721U*stride*sizeof(uint16_t);
+    const size_t physical_bytes=(size_t)TEST_PHYSICAL_ROWS*TEST_PHYSICAL_STRIDE*sizeof(uint16_t);
+    uint16_t *reference=malloc(logical_bytes),*previous=malloc(logical_bytes);
+    uint16_t *physical=malloc(physical_bytes),*old_physical=malloc(physical_bytes),*expected_physical=malloc(physical_bytes);
+    assert(reference&&previous&&physical&&old_physical&&expected_physical);
+    for(unsigned cached=0;cached<2U;++cached)for(unsigned files=0;files<2U;++files){
+        init();uint16_t *arena=NULL;copy_test_t copy={0};
+        shell.page=files?CONSOLE_PAGE_FILES:CONSOLE_PAGE_HOME;shell.home_all_programs=true;
+        if(files){
+            shell.files.available=true;shell.files.entry_count=12;shell.files.revision=7;
+            shell.file_selected_index=3;
+            for(unsigned i=0;i<12U;++i)snprintf(shell.files.entries[i].label,sizeof(shell.files.entries[i].label),"Focus file %u",i);
+            shell.ng_file_scroll=100;
+        }else shell.ng_library_scroll=100;
+        shell.ng_focus=0;shell.ng_focus_ms=0;
+        if(cached){
+            arena=aligned_alloc(64,console_shell_native_cache_storage_bytes());assert(arena);
+            assert(console_shell_attach_native_cache(&shell,arena,console_shell_native_cache_storage_bytes(),copy_raster,NULL,&copy));
+            prepare_rasters();
+        }
+        render();const uint16_t initial_focus=shell.ng_focus;assert(initial_focus);
+        for(size_t i=0;i<physical_bytes/sizeof(uint16_t);++i)physical[i]=expected_physical[i]=0xdead;
+        rotate_test_region(physical,pixels,0,0,1280,720);
+        /* Start from an already translated frame: a DOWN then its first 6px
+         * drag must retain that context rather than rebuild stale interiors. */
+        shell.ng_scroll_kind=files?2U:1U;
+        if(files)shell.ng_file_scroll=107;else shell.ng_library_scroll=107;
+        assert(check_optin_physical(physical,old_physical,expected_physical,reference).kind==CONSOLE_SHELL_NATIVE_UPDATE_SCROLL);
+        shell.ng_scroll_kind=0;const uint64_t context=shell.native_update.scroll_context;
+        console_shell_contact_t contact={.x=350,.y=files?300U:350U};
+        assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+        assert(shell.ng_deferred_content_focus&&shell.press_active&&shell.ng_focus==initial_focus);
+        const unsigned before_none=copy.copies;
+        assert(check_optin_physical(physical,old_physical,expected_physical,reference).kind==CONSOLE_SHELL_NATIVE_UPDATE_NONE);
+        assert(shell.native_logical_incomplete&&shell.native_update.scroll_context==context&&copy.copies==before_none);
+        contact.y=(uint16_t)(contact.y-6U);
+        assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+        assert(shell.ng_content_drag_started&&!shell.ng_deferred_content_focus&&!shell.press_active&&shell.ng_focus==initial_focus);
+        assert(!console_shell_commit_native_content_press_highlight(&shell));
+        assert(check_optin_physical(physical,old_physical,expected_physical,reference).kind==CONSOLE_SHELL_NATIVE_UPDATE_SCROLL);
+        assert(shell.native_update.scroll_context==context);
+        contact.y=200;
+        assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+        assert(check_optin_physical(physical,old_physical,expected_physical,reference).kind==CONSOLE_SHELL_NATIVE_UPDATE_SCROLL);
+        assert(shell.ng_focus==initial_focus);
+        assert(console_shell_set_native_scroll_release_velocity(&shell,65536));
+        assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE&&shell.ng_glide_kind);
+        unsigned ticks=0;
+        do{
+            assert(++ticks<100U);(void)console_shell_advance(&shell,16U);
+            (void)check_optin_physical(physical,old_physical,expected_physical,reference);
+            if(shell.ng_glide_kind)assert(shell.ng_focus==initial_focus);
+        }while(shell.ng_glide_kind);
+        assert(!shell.contact_down&&!shell.press_active);
+        /* A stop-fling touch keeps the visible focus, never commits a card
+         * highlight or activates; even small fast jitter cannot restart it. */
+        shell.ng_glide_kind=files?2U:1U;shell.ng_velocity_q16=65536;
+        shell.ng_glide_q16=(files?shell.ng_file_scroll:shell.ng_library_scroll)*65536;
+        const uint16_t stop_focus=shell.ng_focus;
+        contact=(console_shell_contact_t){.x=350,.y=230};
+        assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+        assert(!shell.ng_glide_kind&&!shell.press_active&&!shell.ng_deferred_content_focus&&shell.ng_focus==stop_focus);
+        assert(!console_shell_commit_native_content_press_highlight(&shell));
+        (void)check_optin_physical(physical,old_physical,expected_physical,reference);
+        (void)console_shell_advance(&shell,5U);contact.y=228;
+        assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+        assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE&&!shell.ng_glide_kind);
+        (void)check_optin_physical(physical,old_physical,expected_physical,reference);
+        /* A held highlight uses only actual old/new row or card damage while
+         * the complete source exists, including a narrow cache rectangle. */
+        shell.ng_focus=0;if(files)shell.ng_file_scroll=100;else shell.ng_library_scroll=100;
+        render();if(cached)prepare_rasters();rotate_test_region(physical,pixels,0,0,1280,720);
+        contact=(console_shell_contact_t){.x=350,.y=files?300U:350U};
+        const uint16_t old_focus=shell.ng_focus;
+        assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE&&shell.ng_deferred_content_focus);
+        assert(console_shell_commit_native_content_press_highlight(&shell)&&shell.ng_focus!=old_focus);
+        assert(shell.contact_down&&shell.press_active&&!shell.ng_deferred_content_focus);
+        assert(!console_shell_commit_native_content_press_highlight(&shell));
+        const unsigned copies_before=copy.copies;
+        const console_shell_native_update_t held=check_optin_physical(physical,old_physical,expected_physical,reference);
+        assert(held.kind==CONSOLE_SHELL_NATIVE_UPDATE_REGION&&held.width<=964U&&held.height<(files?358U:448U));
+        if(cached){assert(copy.copies==copies_before+1U&&copy.last_height==held.height&&copy.last_width==held.width);}
+        (void)console_shell_handle_touch(&shell,false,NULL,0);(void)console_shell_handle_touch(&shell,true,NULL,0);
+        /* Highlight after a translated frame restores authoritative logical
+         * pixels, but its proven physical damage remains a bounded REGION. */
+        shell.ng_focus=0;if(files)shell.ng_file_scroll=100;else shell.ng_library_scroll=100;
+        render();rotate_test_region(physical,pixels,0,0,1280,720);shell.ng_scroll_kind=files?2U:1U;
+        if(files)shell.ng_file_scroll=107;else shell.ng_library_scroll=107;
+        assert(check_optin_physical(physical,old_physical,expected_physical,reference).kind==CONSOLE_SHELL_NATIVE_UPDATE_SCROLL);
+        shell.ng_scroll_kind=0;
+        contact=(console_shell_contact_t){.x=350,.y=files?300U:350U};
+        assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+        assert(console_shell_commit_native_content_press_highlight(&shell));
+        assert(check_optin_physical(physical,old_physical,expected_physical,reference).kind==CONSOLE_SHELL_NATIVE_UPDATE_REGION);
+        assert(!shell.native_logical_incomplete);
+        (void)console_shell_handle_touch(&shell,false,NULL,0);(void)console_shell_handle_touch(&shell,true,NULL,0);
+        if(cached){console_shell_detach_native_cache(&shell);free(arena);}
+    }
+    init();shell.home_all_programs=true;render();
+    console_shell_contact_t contact={.x=350,.y=420};
+    assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE&&shell.ng_deferred_content_focus);
+    const size_t target=shell.pressed_index;
+    assert(console_shell_handle_touch(&shell,true,NULL,0).app_id==103U&&shell.ng_focus==target);
+    init();shell.home_all_programs=true;render();
+    assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+    ++apps[3].id;assert(!console_shell_commit_native_content_press_highlight(&shell));
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE);
+    shell.page=CONSOLE_PAGE_FILES;shell.files.available=true;shell.files.entry_count=4;shell.files.revision=9;shell.ng_file_scroll=0;shell.ng_focus=0;
+    for(unsigned i=0;i<4U;++i)snprintf(shell.files.entries[i].label,sizeof(shell.files.entries[i].label),"Tap file %u",i);
+    render();contact=(console_shell_contact_t){.x=350,.y=300};
+    assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+    ++shell.files.revision;assert(!console_shell_commit_native_content_press_highlight(&shell));
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE);
+    assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+    const size_t file_target=shell.pressed_index;
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE);
+    assert(shell.ng_focus==file_target&&shell.file_selected_index==1U);
+    assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+    const uint16_t untouched=shell.ng_focus;contact.x=375;
+    assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+    assert(!shell.ng_deferred_content_focus&&!console_shell_commit_native_content_press_highlight(&shell)&&shell.ng_focus==untouched);
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE);
+    init();shell.home_all_programs=true;render();
+    contact=(console_shell_contact_t){.x=350,.y=420};
+    assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+    contact.y=414;assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+    assert(shell.ng_content_drag_started&&key(CONSOLE_BUTTON_ACCEPT).type==CONSOLE_ACTION_NONE);
+    assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE);
+    free(reference);free(previous);free(physical);free(old_physical);free(expected_physical);
+    puts("TAB5 CONTENT FOCUS PASS first_drag_delta=1 deferred_hold=1 tap_commit=1 bounded_damage=1 incomplete_region_authoritative=1 glide_pixels=1 stop_safe=1 stale_cancel=1");
+}
+
+static void check_file_endpoint_patches(void)
+{
+    const size_t logical_bytes=721U*stride*sizeof(uint16_t);
+    const size_t physical_bytes=(size_t)TEST_PHYSICAL_ROWS*TEST_PHYSICAL_STRIDE*sizeof(uint16_t);
+    uint16_t *reference=malloc(logical_bytes),*previous=malloc(logical_bytes);
+    uint16_t *physical=malloc(physical_bytes),*old=malloc(physical_bytes),*expected=malloc(physical_bytes);
+    assert(reference&&previous&&physical&&old&&expected);
+    unsigned patched=0;
+    for(unsigned cached=0;cached<2U;++cached)for(unsigned long_list=0;long_list<2U;++long_list){
+        init();assert(tap(100,454).type==CONSOLE_ACTION_PAGE_CHANGED);
+        console_shell_file_listing_t listing={.available=true,.entry_count=long_list?12U:5U,
+            .total_visible_entries=long_list?12U:5U,.revision=11,.storage_generation=1};
+        strcpy(listing.path_label,"SD card /");
+        const char *names[]={"GAMES","SAVES","chex.deh","chex.wad","doom1.wad"};
+        for(size_t i=0;i<listing.entry_count;++i){
+            if(i<5U)strcpy(listing.entries[i].label,names[i]);
+            else snprintf(listing.entries[i].label,sizeof(listing.entries[i].label),"Additional file %zu.wad",i);
+            listing.entries[i].source_index=(uint32_t)i;listing.entries[i].is_directory=i<2U;
+            listing.entries[i].removable=i>=2U;listing.entries[i].size_kib=i==2U?9U:i==3U?12098U:i==4U?4098U:0U;
+        }
+        assert(console_shell_set_file_listing(&shell,&listing));render();(void)console_shell_advance(&shell,200U);render();
+        uint16_t *arena=NULL;copy_test_t copy={0};
+        if(cached){
+            arena=aligned_alloc(64,console_shell_native_cache_storage_bytes());assert(arena);
+            assert(console_shell_attach_native_cache(&shell,arena,console_shell_native_cache_storage_bytes(),copy_raster,publish_raster,&copy));
+            prepare_rasters();render();
+        }
+        for(size_t i=0;i<physical_bytes/sizeof(uint16_t);++i)physical[i]=expected[i]=0xdead;
+        rotate_test_region(physical,pixels,0,0,1280,720);shell.ng_scroll_kind=2U;
+        const int short_offsets[]={6,12,84,78,1,0,84,0};
+        const int long_offsets[]={6,20,350,700,714,707,701,353,14,0,6};
+        const int *offsets=long_list?long_offsets:short_offsets;
+        const size_t frames=long_list?sizeof(long_offsets)/sizeof(*long_offsets):sizeof(short_offsets)/sizeof(*short_offsets);
+        const int limit=long_list?714:84;
+        for(size_t frame=0;frame<frames;++frame){
+            const int prior=shell.ng_file_scroll;const uint64_t prior_context=shell.native_update.scroll_context;
+            const unsigned before=copy.copies;memcpy(previous,pixels,logical_bytes);shell.ng_file_scroll=offsets[frame];
+            const console_shell_native_update_t update=check_optin_physical(physical,old,expected,reference);
+            assert(update.kind==CONSOLE_SHELL_NATIVE_UPDATE_SCROLL&&shell.native_logical_incomplete);
+            assert(update.previous_scroll_context==prior_context&&update.previous_scroll_offset==prior&&update.current_scroll_offset==offsets[frame]);
+            const bool edge=(prior==0)!=(offsets[frame]==0)||(prior==limit)!=(offsets[frame]==limit);
+            assert((update.scroll_context!=prior_context)==edge);
+            if(edge){
+                assert(update.scroll_stationary_x==368U&&update.scroll_stationary_y==558U&&
+                    update.scroll_stationary_width==288U&&update.scroll_stationary_height==88U);++patched;
+            }else assert(!update.scroll_stationary_width&&!update.scroll_stationary_height);
+            const unsigned amount=(unsigned)abs(prior-offsets[frame]);
+            const unsigned first=prior<offsets[frame]?536U-amount:178U;
+            for(size_t y=0;y<721U;++y)for(size_t x=0;x<stride;++x){
+                const bool strip=x>=264U&&x<1228U&&y>=first&&y<first+amount;
+                const bool bar=x>=1228U&&x<1260U&&y>=178U&&y<536U;
+                const bool footer=edge&&x>=368U&&x<656U&&y>=558U&&y<646U;
+                if(strip||bar||footer)assert(pixels[y*stride+x]==reference[y*stride+x]);
+                else assert(pixels[y*stride+x]==previous[y*stride+x]);
+            }
+            if(!cached)assert(copy.copies==before);
+            else if(!long_list)assert(copy.copies==before+1U&&copy.last_width==964U&&copy.last_height==amount);
+        }
+        /* Real root-list first drag, fast endpoint flick and return preserve
+         * controls while acceleration also works with no prepared raster. */
+        shell.ng_scroll_kind=0;shell.ng_focus=0;shell.ng_file_scroll=0;render();
+        if(!long_list){
+            rotate_test_region(physical,pixels,0,0,1280,720);
+            console_shell_contact_t contact={.x=350,.y=220};
+            assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+            contact.y=214;assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+            assert(check_optin_physical(physical,old,expected,reference).kind==CONSOLE_SHELL_NATIVE_UPDATE_SCROLL&&shell.ng_file_scroll==6);
+            contact.y=130;assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+            assert(check_optin_physical(physical,old,expected,reference).kind==CONSOLE_SHELL_NATIVE_UPDATE_SCROLL&&shell.ng_file_scroll==84);
+            assert(console_shell_set_native_scroll_release_velocity(&shell,196608));
+            assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE);
+            (void)console_shell_advance(&shell,16U);(void)check_optin_physical(physical,old,expected,reference);
+            assert(shell.ng_file_scroll==84&&!shell.ng_glide_kind);
+            contact=(console_shell_contact_t){.x=350,.y=300};
+            assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+            contact.y=306;assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+            assert(check_optin_physical(physical,old,expected,reference).kind==CONSOLE_SHELL_NATIVE_UPDATE_SCROLL&&shell.ng_file_scroll==78);
+            contact.y=390;assert(console_shell_handle_touch(&shell,true,&contact,1).type==CONSOLE_ACTION_NONE);
+            assert(check_optin_physical(physical,old,expected,reference).kind==CONSOLE_SHELL_NATIVE_UPDATE_SCROLL&&shell.ng_file_scroll==0);
+            assert(console_shell_set_native_scroll_release_velocity(&shell,-196608));
+            assert(console_shell_handle_touch(&shell,true,NULL,0).type==CONSOLE_ACTION_NONE);
+            (void)console_shell_advance(&shell,16U);(void)check_optin_physical(physical,old,expected,reference);
+            assert(shell.ng_file_scroll==0&&!shell.ng_glide_kind);
+            render();assert(!shell.native_logical_incomplete);
+            assert(tap(430,600).type==CONSOLE_ACTION_NONE&&shell.ng_file_scroll==0); /* Disabled Prev. */
+            assert(tap(580,600).type==CONSOLE_ACTION_NONE&&shell.ng_file_scroll==84);render();
+            assert(tap(580,600).type==CONSOLE_ACTION_NONE&&shell.ng_file_scroll==84); /* Disabled Next. */
+            assert(tap(430,600).type==CONSOLE_ACTION_NONE&&shell.ng_file_scroll==0);render();
+            assert(tap(760,600).type==CONSOLE_ACTION_FILE_REFRESH);
+            assert(tap(1000,600).type==CONSOLE_ACTION_FILE_OPEN);
+            assert(tap(300,600).type==CONSOLE_ACTION_NONE); /* Root Up disabled. */
+        }
+        /* Endpoint provenance cannot authorize unrelated selected/focus or
+         * revision changes; ordinary reconstruction remains exact. */
+        shell.ng_scroll_kind=2U;shell.ng_file_scroll=6;render();rotate_test_region(physical,pixels,0,0,1280,720);
+        shell.ng_file_scroll=0;shell.file_selected_index=2;
+        assert(check_optin_physical(physical,old,expected,reference).kind!=CONSOLE_SHELL_NATIVE_UPDATE_SCROLL);
+        shell.ng_file_scroll=6;++shell.files.revision;
+        assert(check_optin_physical(physical,old,expected,reference).kind!=CONSOLE_SHELL_NATIVE_UPDATE_SCROLL);
+        shell.ng_scroll_kind=0;shell.ng_file_scroll=0;render();
+        listing.can_go_up=true;listing.revision=12;assert(console_shell_set_file_listing(&shell,&listing));render();
+        assert(tap(300,600).type==CONSOLE_ACTION_FILE_UP);
+        if(cached){console_shell_detach_native_cache(&shell);free(arena);}
+    }
+    assert(patched>=20U);free(reference);free(previous);free(physical);free(old);free(expected);
+    printf("TAB5 FILE ENDPOINT PASS patches=%u five_root_entries=1 cold_strip_only=1 warm_strip_only=1 prior_context_exact=1 footer_pixels=1 controls=1 stale_fallback=1\n",patched);
+}
+
+static void check_raster_publication(void)
+{
+    init();const size_t bytes=console_shell_native_cache_storage_bytes();
+    uint16_t *arena=aligned_alloc(64,bytes);assert(arena);
+    uint16_t *reference=malloc(721U*stride*sizeof(*reference)),*previous=malloc(721U*stride*sizeof(*previous));assert(reference&&previous);
+    copy_test_t copy={0};assert(console_shell_attach_native_cache(&shell,arena,bytes,copy_raster,publish_raster,&copy));
+    assert(console_shell_prepare_native_cache(&shell,16));
+    assert(shell.native_rasters[0].preparation_epoch==1&&shell.native_rasters[0].prepared_rows==16&&shell.native_rasters[0].published_rows==16);
+    assert(!console_shell_native_cache_ready(&shell));prepare_rasters();
+    assert(shell.native_rasters[0].published_epoch==shell.native_rasters[0].preparation_epoch);
+    assert(shell.native_rasters[0].published_rows==shell.native_rasters[0].height);
+    (void)tap(100,265);compare_cached_frame(reference,previous);
+    shell.ng_scroll_kind=1;shell.ng_focus=0;shell.ng_library_scroll=6;compare_cached_frame(reference,previous);
+    assert(copy.clean_copies>0&&copy.dirty_copies==0);
+
+    /* Recenter the same allocation and catalogue: the previous clean epoch
+     * must be revoked before the first newly painted slice is published. */
+    const uint64_t signature=shell.native_rasters[0].signature,epoch=shell.native_rasters[0].preparation_epoch;
+    const uint16_t *const source=shell.native_rasters[0].pixels;
+    shell.ng_scroll_kind=0;shell.ng_library_scroll=900;copy.fail_last=true;
+    assert(console_shell_prepare_native_cache(&shell,64));
+    assert(shell.native_rasters[0].pixels==source&&shell.native_rasters[0].signature==signature);
+    assert(shell.native_rasters[0].preparation_epoch==epoch+1U&&shell.native_rasters[0].published_rows==64);
+    for(unsigned slice=1;slice<20U;++slice)assert(console_shell_prepare_native_cache(&shell,64));
+    assert(shell.native_rasters[0].valid&&shell.native_rasters[0].prepared_rows==1280&&shell.native_rasters[0].published_rows==1216);
+    assert(!console_shell_native_cache_ready(&shell));
+    shell.ng_scroll_kind=1;shell.ng_focus=0;shell.ng_library_scroll=906;compare_cached_frame(reference,previous);
+    assert(copy.dirty_copies>0);
+    const unsigned attempts=copy.publications;
+    assert(!console_shell_prepare_native_cache(&shell,16));
+    shell.ng_scroll_kind=0;shell.contact_down=true;assert(!console_shell_prepare_native_cache(&shell,16));
+    shell.contact_down=false;shell.ng_glide_kind=1;assert(!console_shell_prepare_native_cache(&shell,16));
+    shell.ng_glide_kind=0;assert(copy.publications==attempts);
+    copy.fail_last=false;
+    for(unsigned slice=0;slice<4U;++slice){
+        assert(console_shell_prepare_native_cache(&shell,16));
+        assert(shell.native_rasters[0].preparation_epoch==epoch+1U&&shell.native_rasters[0].prepared_rows==1280);
+    }
+    assert(console_shell_native_cache_ready(&shell));
+    const unsigned clean=copy.clean_copies;
+    shell.ng_scroll_kind=1;shell.ng_focus=0;shell.ng_library_scroll=912;compare_cached_frame(reference,previous);
+    assert(copy.clean_copies==clean+1U);
+
+    /* Persistent publication failure still permits CPU-valid raster copies;
+     * the other page's publication epoch and clean prefix remain independent. */
+    shell.ng_scroll_kind=0;shell.page=CONSOLE_PAGE_FILES;shell.files.available=true;shell.files.entry_count=12;
+    for(unsigned i=0;i<12U;++i)snprintf(shell.files.entries[i].label,sizeof(shell.files.entries[i].label),"File %u",i);
+    shell.ng_file_scroll=0;compare_cached_frame(reference,previous);copy.fail_publish=true;
+    for(unsigned slice=0;slice<12U;++slice)assert(console_shell_prepare_native_cache(&shell,64));
+    assert(shell.native_rasters[1].valid&&shell.native_rasters[1].published_rows==0);
+    assert(shell.native_rasters[0].preparation_epoch==epoch+1U&&shell.native_rasters[0].published_rows==1280);
+    shell.ng_scroll_kind=2;shell.ng_focus=0;shell.ng_file_scroll=41;compare_cached_frame(reference,previous);
+    assert(!console_shell_native_cache_ready(&shell));
+    shell.ng_scroll_kind=0;copy.fail_publish=false;prepare_rasters();
+    assert(shell.native_rasters[1].preparation_epoch==1&&shell.native_rasters[1].published_rows==768);
+    const uint64_t file_epoch=shell.native_rasters[1].preparation_epoch;
+    ++shell.files.revision;assert(console_shell_prepare_native_cache(&shell,16));
+    assert(shell.native_rasters[1].preparation_epoch==file_epoch+1U&&shell.native_rasters[1].published_rows==16);
+    assert(shell.native_rasters[0].preparation_epoch==epoch+1U);prepare_rasters();
+    const uint64_t ready_file_epoch=shell.native_rasters[1].published_epoch;
+    apps[0].title="New publication catalogue";assert(console_shell_prepare_native_cache(&shell,16));
+    assert(shell.native_rasters[0].preparation_epoch==epoch+2U&&shell.native_rasters[0].published_rows==16);
+    assert(shell.native_rasters[1].published_epoch==ready_file_epoch&&shell.native_rasters[1].published_rows==768);
+    prepare_rasters();console_shell_detach_native_cache(&shell);assert(!shell.native_publish);
+    free(reference);free(previous);free(arena);
+    puts("TAB5 PUBLICATION PASS current_epoch_only=1 bounded_retry=1 dirty_cpu_fallback=1 independent_pages=1 idle_only=1");
 }
 static void check_catalog_grouping(void)
 {
@@ -562,6 +1333,37 @@ static void check_multiplayer_hierarchy(void)
     capture("multiplayer-large-text");
     puts("TAB5 MULTIPLAYER PASS: game/connection/role hierarchy, per-game settings, join state and room identity");
 }
+static void check_multiplayer_native_cache(void)
+{
+    multiplayer_fixture();
+    uint16_t *reference=malloc(1280U*720U*sizeof(*reference));assert(reference);
+    for(unsigned frame=0;frame<7U;++frame){
+        if(frame==1U){
+            shell.runtime.multiplayer_games[1].available=true;
+            (void)snprintf(shell.runtime.multiplayer_status,sizeof(shell.runtime.multiplayer_status),"Catalog changed");
+        }
+        if(frame==2U){shell.multiplayer_view=CONSOLE_MULTIPLAYER_VIEW_TRANSPORT;shell.runtime.multiplayer_game_selection=2;}
+        if(frame==3U){shell.runtime.multiplayer_transport_starting=true;}
+        if(frame==4U){
+            shell.multiplayer_view=CONSOLE_MULTIPLAYER_VIEW_JOIN;
+            shell.runtime.multiplayer_lobby_count=1;
+            shell.runtime.multiplayer_lobbies[0]=(console_multiplayer_lobby_display_t){
+                .session_id=123,.players_present=1,.player_capacity=2,.game_available=true,.game_title="DOOM"};
+        }
+        if(frame==5U){shell.runtime.multiplayer_lobbies[0].session_id=456;}
+        assert(console_shell_render_native_scroll_rgb565(&shell,pixels,stride));
+        console_shell_native_update_t update;assert(console_shell_get_native_update(&shell,&update));
+        assert(update.kind==(frame==6U?CONSOLE_SHELL_NATIVE_UPDATE_NONE:CONSOLE_SHELL_NATIVE_UPDATE_FULL));
+        assert(!update.scroll_context_valid&&!shell.native_logical_incomplete);
+        console_shell_t exact=shell;assert(console_shell_render_rgb565(&exact,reference,1280U));
+        for(size_t y=0;y<720U;++y){
+            assert(memcmp(pixels+y*stride,reference+y*1280U,1280U*sizeof(*pixels))==0);
+            for(size_t x=1280U;x<stride;++x)assert(pixels[y*stride+x]==0xdead);
+        }
+    }
+    free(reference);
+    puts("TAB5 MULTIPLAYER NATIVE CACHE PASS runtime_and_view_invalidation=1 pixel_exact=7 no_scroll_tag=1");
+}
 int main(int argc,char **argv)
 {
     capture_prefix=argc>1?argv[1]:NULL;
@@ -573,8 +1375,10 @@ int main(int argc,char **argv)
     check_loading_region_cache();
     check_featured_game();
     check_disabled_reason();
-    check_scroll_cache();check_scroll_motion();check_catalog_grouping();
+    check_scroll_cache();check_scroll_motion();check_release_velocity_hints();check_catalog_grouping();
     check_multiplayer_hierarchy();
+    check_multiplayer_native_cache();
+    check_dynamic_damage();check_immutable_rasters();check_small_drag();check_raster_publication();check_physical_scroll_contract();check_deferred_content_focus();check_file_endpoint_patches();
     init();
     /* Every shell page reports the effective game master volume, and the
      * status target has its own identity rather than duplicating Sound tiles. */

@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import pathlib
@@ -596,16 +597,22 @@ def verify_engine_provenance() -> None:
     )
 
 
-def verify_saved_factory_layout() -> None:
-    manifest = load_json(ROOT / "hardware/backups/manifest.json")
+def verify_reviewed_source_layout() -> None:
+    # Preserve the full reviewed source layout without a captured firmware image.
+    with (APP_DIR / "partitions.csv").open(newline="") as source:
+        rows = [row for row in csv.reader(line for line in source
+                if not line.lstrip().startswith("#")) if row]
+    require(all(len(row) >= 5 for row in rows), "malformed source partition layout")
+    layout = [{"name": row[0].strip(), "type": row[1].strip(),
+               "subtype": row[2].strip(), "offset": row[3].strip(),
+               "size": row[4].strip()} for row in rows]
     expected = [
         {"name": "nvs", "type": "data", "subtype": "nvs", "offset": "0x9000", "size": "24K"},
         {"name": "phy_init", "type": "data", "subtype": "phy", "offset": "0xf000", "size": "4K"},
         {"name": "factory", "type": "app", "subtype": "factory", "offset": "0x10000", "size": "11M"},
         {"name": "storage", "type": "data", "subtype": "spiffs", "offset": "0xb10000", "size": "4M"},
     ]
-    require(manifest.get("factory_partition_table") == expected,
-            "saved factory partition layout changed")
+    require(layout == expected, "reviewed source partition layout changed")
 
 
 def verify_build_graph(build_dir: pathlib.Path, evidence: dict, wad: bytes) -> pathlib.Path:
@@ -1023,7 +1030,7 @@ def main() -> None:
     wad = verify_local_wad()
     verify_source_contract()
     verify_engine_provenance()
-    verify_saved_factory_layout()
+    verify_reviewed_source_layout()
     binary = verify_build_graph(build_dir, evidence, wad)
     print(
         "doom_embedded_audio verification: PASS "

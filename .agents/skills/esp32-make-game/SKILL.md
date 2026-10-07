@@ -187,9 +187,15 @@ metadata into `p4_game_descriptor_t`; that descriptor is the stable API ABI.
   helpers are optional building blocks for the game's engine; custom rendering
   still uses the OS-owned lifecycle, timing and supplied surface.
 - Apply the canonical [ESP32-P4 performance contract](../../../docs/GAME_PERFORMANCE.md)
-  from the first playable build: bounded shared raster work, fractional motion,
-  pinned RV32 hot-path review and exact-device cadence evidence. Target 60 FPS;
-  qualify the actual-device 30 FPS release floor separately from host success.
+  from the first playable build. Every scrollable menu or playfield must always
+  follow contact promptly and scroll near panel-rate 60 FPS, with velocity-aware
+  stopping and preserved taps/rules. Always plan use of all relevant rendering,
+  caching/DMA and multicore OS services; use both P4 application cores for useful
+  independent work without private cartridge tasks or raw driver ownership.
+  Keep bounded raster work, fractional motion, pinned RV32 hot-path review and
+  separate input/render/submission/pacing, glide/cold-cache and actual
+  core/accelerator evidence. The game's actual-device 30 FPS floor does not
+  waive smooth scrolling; device gates remain separate from host success.
 - Use `p4/audio.h` for host-owned sound. For simple effects, request
   `audio-tone` and call `p4_game_play_tone()`.
 - Stop all requested sound in the game's `stop` callback.
